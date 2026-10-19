@@ -20,3 +20,8 @@ packages/core/api-report.md
 # recipe is a fragment prettier cannot even parse. Formatting them also rewrites the exact
 # text `pikku examples add` writes into a user's project.
 packages/cli/examples/
+
+# The registry SDK the CLI commits is the extracted tarball, byte for byte (its
+# lock entry pins the sha512); formatting it would make it differ from what the
+# registry serves.
+packages/cli/.pikku/remote/

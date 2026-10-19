@@ -5,7 +5,12 @@ echo "Starting Pikku CLI build process..."
 
 # Clean .pikku directory and dist
 test -f package.json || { echo "Refusing to run outside package root"; exit 1; }
-rm -rf -- .pikku dist
+# .pikku/remote is kept: it holds the registry SDK the CLI commits, which the
+# offline addon sync below reads (knowledge: the-cli-commits-its-registry-sdk).
+if [ -d .pikku ]; then
+  find .pikku -mindepth 1 -maxdepth 1 ! -name remote -exec rm -rf -- {} +
+fi
+rm -rf -- dist
 
 # Collect the worked examples into src/examples.gen.ts before anything compiles.
 # The recipes are real files; the bundler only carries the JS import graph, so a
@@ -197,6 +202,22 @@ _old_names() {
 }
 _old=pers; _old="${_old}ona"
 _Old=Pers; _Old="${_Old}ona"
+# The pinned CLI predates versioned remote addon packages: it reads
+# '@pikkustudio/addon-registry@^1.0.0' as an npm package missing from
+# devDependencies (PKU338, critical) and stops. It also ignores --config, so the
+# file cannot be skipped through ignoreFiles. src/registry.wiring.ts is moved
+# out of its sight for this stage and put back right after (or on any exit);
+# the local CLI below wires it.
+_registry_wiring=src/registry.wiring.ts
+_registry_hidden_dir=$(mktemp -d)
+_restore_registry_wiring() {
+  if [ -f "$_registry_hidden_dir/registry.wiring.ts" ]; then
+    mv "$_registry_hidden_dir/registry.wiring.ts" "$_registry_wiring"
+  fi
+  rm -rf "$_registry_hidden_dir"
+}
+trap 'rm -rf "$_bootstrap_dir"; _restore_registry_wiring' EXIT
+mv "$_registry_wiring" "$_registry_hidden_dir/registry.wiring.ts"
 "$_bootstrap_dir/node_modules/.bin/pikku" bootstrap
 while IFS= read -r -d '' f; do
   tmp=$(mktemp)
@@ -213,7 +234,7 @@ while IFS= read -r -d '' f; do
       -e "s|${_Old}s|VirtualUsers|g" \
       -e "s|${_Old}|VirtualUser|g" \
       "$f" | _old_names > "$tmp" && mv "$tmp" "$f"
-done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
+done < <(find .pikku -path .pikku/remote -prune -o \( -name '*.ts' -o -name '*.json' \) -print0)
 # Write the leaf subpath entries the pinned CLI predates. `#pikku/<leaf>`
 # resolves to `.pikku/<leaf>/index.ts`, and this source tree imports through
 # those specifiers — so without them neither the pinned CLI's own schema pass
@@ -230,6 +251,7 @@ write_leaf_indexes() {
 
 write_leaf_indexes
 "$_bootstrap_dir/node_modules/.bin/pikku"
+_restore_registry_wiring
 rm -rf "$_bootstrap_dir"
 
 # Patch stale forge references from published CLI (renamed to node/)
@@ -281,7 +303,7 @@ while IFS= read -r -d '' f; do
       -e "s|${_Old}s|VirtualUsers|g" \
       -e "s|${_Old}|VirtualUser|g" \
       "$f" | _old_names > "$tmp" && mv "$tmp" "$f"
-done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
+done < <(find .pikku -path .pikku/remote -prune -o \( -name '*.ts' -o -name '*.json' \) -print0)
 
 # Build TypeScript (may fail if published CLI generates stale types)
 echo "Building TypeScript to dist..."

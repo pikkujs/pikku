@@ -1,0 +1,2185 @@
+{
+  "getOpenApi": {
+    "pikkuFuncId": "getOpenApi",
+    "functionType": "user",
+    "funcWrapper": "pikkuSessionlessFunc",
+    "sessionless": true,
+    "name": "getOpenApi",
+    "inputSchemaName": "GetOpenApiInput",
+    "outputSchemaName": "GetOpenApiOutput",
+    "inputs": [
+      "GetOpenApiInput"
+    ],
+    "outputs": [
+      "GetOpenApiOutput"
+    ],
+    "expose": true,
+    "auth": false,
+    "remote": true,
+    "implementationHash": "4645d0ef363fb568",
+    "contractHash": "6b29fe8eb0e3ee1e",
+    "inputHash": "7ea7a356",
+    "outputHash": "11df7a8f",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db"
+      ]
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "latestVersion": {
+              "type": "string"
+            },
+            "provider": {
+              "type": "string"
+            },
+            "service": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "openapiVer": {
+              "type": "string"
+            },
+            "swaggerUrl": {
+              "type": "string"
+            },
+            "swaggerYamlUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "logo": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "added": {
+              "type": "string"
+            },
+            "updated": {
+              "type": "string"
+            },
+            "preferred": {
+              "type": "boolean"
+            },
+            "securitySchemes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "servers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "totalOperations": {
+              "type": "number"
+            },
+            "http": {
+              "type": "object",
+              "properties": {
+                "get": {
+                  "type": "number"
+                },
+                "post": {
+                  "type": "number"
+                },
+                "put": {
+                  "type": "number"
+                },
+                "patch": {
+                  "type": "number"
+                },
+                "delete": {
+                  "type": "number"
+                },
+                "head": {
+                  "type": "number"
+                },
+                "options": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "get",
+                "post",
+                "put",
+                "patch",
+                "delete",
+                "head",
+                "options"
+              ],
+              "additionalProperties": false
+            },
+            "contentTypes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "authTypes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "resources": {
+              "type": "number"
+            },
+            "tools": {
+              "type": "number"
+            },
+            "accessVerified": {
+              "type": "boolean"
+            },
+            "accessStatus": {
+              "type": "string",
+              "enum": [
+                "unknown",
+                "public",
+                "auth_required",
+                "offline",
+                "error"
+              ]
+            },
+            "accessVerifiedAt": {
+              "type": "string"
+            },
+            "accessError": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "authType": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "authLocation": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "authParamName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "authHeaderPrefix": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "tokenAcquisition": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "perUser": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "apiStatus": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "pricingModel": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "freeTier": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "deprecated": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "pagination": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "dataFormats": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "enriched": {
+              "type": "boolean"
+            },
+            "enrichedAt": {
+              "type": "string"
+            },
+            "enrichConfidence": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "enrichSource": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "enrichment": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "codegen": {
+              "type": "object",
+              "properties": {
+                "addon": {
+                  "type": "string"
+                },
+                "credential": {
+                  "type": "string",
+                  "enum": [
+                    "oauth2",
+                    "bearer",
+                    "apikey"
+                  ]
+                },
+                "authType": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "functions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "functionCount": {
+                  "type": "number"
+                },
+                "declarations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "secret",
+                          "variable"
+                        ]
+                      },
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "codegenAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "version",
+            "provider",
+            "service",
+            "title",
+            "description",
+            "openapiVer",
+            "swaggerUrl",
+            "swaggerYamlUrl",
+            "logo",
+            "categories",
+            "tags",
+            "added",
+            "updated",
+            "preferred"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "getPackage": {
+    "pikkuFuncId": "getPackage",
+    "functionType": "user",
+    "funcWrapper": "pikkuSessionlessFunc",
+    "sessionless": true,
+    "name": "getPackage",
+    "inputSchemaName": "GetPackageInput",
+    "outputSchemaName": "GetPackageOutput",
+    "inputs": [
+      "GetPackageInput"
+    ],
+    "outputs": [
+      "GetPackageOutput"
+    ],
+    "expose": true,
+    "auth": false,
+    "remote": true,
+    "implementationHash": "f41d97789c5c69d9",
+    "contractHash": "67c69bf7c79de9aa",
+    "inputHash": "72b90323",
+    "outputHash": "940499f2",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db"
+      ]
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "displayName": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "author": {
+              "type": "string"
+            },
+            "repository": {
+              "type": "string"
+            },
+            "license": {
+              "type": "string"
+            },
+            "readme": {
+              "type": "string"
+            },
+            "icon": {
+              "type": "string"
+            },
+            "publishedAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            },
+            "publisher": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "org",
+                        "user"
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "functions": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "agents": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "secrets": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "credentials": {
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "variables": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "httpRoutes": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "channels": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "cli": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "mcp": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "schemas": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "displayName",
+            "version",
+            "description",
+            "author",
+            "publishedAt",
+            "updatedAt",
+            "publisher",
+            "tags",
+            "categories",
+            "functions",
+            "agents",
+            "secrets",
+            "credentials",
+            "variables",
+            "httpRoutes",
+            "channels",
+            "cli",
+            "mcp",
+            "schemas"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "getPackageDownload": {
+    "pikkuFuncId": "getPackageDownload",
+    "functionType": "user",
+    "funcWrapper": "pikkuSessionlessFunc",
+    "sessionless": true,
+    "name": "getPackageDownload",
+    "inputSchemaName": "GetPackageDownloadInput",
+    "outputSchemaName": "GetPackageDownloadOutput",
+    "inputs": [
+      "GetPackageDownloadInput"
+    ],
+    "outputs": [
+      "GetPackageDownloadOutput"
+    ],
+    "expose": true,
+    "auth": false,
+    "remote": true,
+    "implementationHash": "671467ffd9bf4531",
+    "contractHash": "a96df1fa2b53d53f",
+    "inputHash": "ddf23192",
+    "outputHash": "10e2801d",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db",
+        "registryStore"
+      ]
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "expiresInSeconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "url",
+        "expiresInSeconds"
+      ],
+      "additionalProperties": false
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "getPackageIcon": {
+    "pikkuFuncId": "getPackageIcon",
+    "functionType": "user",
+    "funcWrapper": "pikkuSessionlessFunc",
+    "sessionless": true,
+    "name": "getPackageIcon",
+    "inputSchemaName": "GetPackageIconInput",
+    "outputSchemaName": "GetPackageIconOutput",
+    "inputs": [
+      "GetPackageIconInput"
+    ],
+    "outputs": [
+      "GetPackageIconOutput"
+    ],
+    "expose": true,
+    "auth": false,
+    "remote": true,
+    "implementationHash": "f9675f0ed8c95b85",
+    "contractHash": "8406957ca72843c7",
+    "inputHash": "56223318",
+    "outputHash": "2e202e2d",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db"
+      ]
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "listOpenApiCategories": {
+    "pikkuFuncId": "listOpenApiCategories",
+    "functionType": "user",
+    "funcWrapper": "pikkuSessionlessFunc",
+    "sessionless": true,
+    "name": "listOpenApiCategories",
+    "inputSchemaName": null,
+    "outputSchemaName": "ListOpenApiCategoriesOutput",
+    "inputs": [],
+    "outputs": [
+      "ListOpenApiCategoriesOutput"
+    ],
+    "expose": true,
+    "auth": false,
+    "remote": true,
+    "implementationHash": "301790d6c026a1e5",
+    "contractHash": "497acaf3d5d34e21",
+    "inputHash": "59afe225",
+    "outputHash": "81226cdd",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db"
+      ]
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "listOpenApiProviders": {
+    "pikkuFuncId": "listOpenApiProviders",
+    "functionType": "user",
+    "funcWrapper": "pikkuSessionlessFunc",
+    "sessionless": true,
+    "name": "listOpenApiProviders",
+    "inputSchemaName": null,
+    "outputSchemaName": "ListOpenApiProvidersOutput",
+    "inputs": [],
+    "outputs": [
+      "ListOpenApiProvidersOutput"
+    ],
+    "expose": true,
+    "auth": false,
+    "remote": true,
+    "implementationHash": "21a26f261f6c451a",
+    "contractHash": "730910601fc08861",
+    "inputHash": "6c3bd16c",
+    "outputHash": "12788180",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db"
+      ]
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "apiCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "provider",
+          "apiCount"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "listOpenApis": {
+    "pikkuFuncId": "listOpenApis",
+    "functionType": "user",
+    "funcWrapper": "pikkuSessionlessFunc",
+    "sessionless": true,
+    "name": "listOpenApis",
+    "inputSchemaName": "ListOpenApisInput",
+    "outputSchemaName": "ListOpenApisOutput",
+    "inputs": [
+      "ListOpenApisInput"
+    ],
+    "outputs": [
+      "ListOpenApisOutput"
+    ],
+    "expose": true,
+    "auth": false,
+    "remote": true,
+    "implementationHash": "9dc5a22389a4c43b",
+    "contractHash": "7a6258f516bb6502",
+    "inputHash": "1bf34930",
+    "outputHash": "42fe3df5",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db"
+      ]
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "accessStatus": {
+          "type": "string"
+        },
+        "cursor": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "apis": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "latestVersion": {
+                "type": "string"
+              },
+              "provider": {
+                "type": "string"
+              },
+              "service": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "openapiVer": {
+                "type": "string"
+              },
+              "swaggerUrl": {
+                "type": "string"
+              },
+              "swaggerYamlUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "logo": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "categories": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "added": {
+                "type": "string"
+              },
+              "updated": {
+                "type": "string"
+              },
+              "preferred": {
+                "type": "boolean"
+              },
+              "securitySchemes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "servers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "totalOperations": {
+                "type": "number"
+              },
+              "http": {
+                "type": "object",
+                "properties": {
+                  "get": {
+                    "type": "number"
+                  },
+                  "post": {
+                    "type": "number"
+                  },
+                  "put": {
+                    "type": "number"
+                  },
+                  "patch": {
+                    "type": "number"
+                  },
+                  "delete": {
+                    "type": "number"
+                  },
+                  "head": {
+                    "type": "number"
+                  },
+                  "options": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "get",
+                  "post",
+                  "put",
+                  "patch",
+                  "delete",
+                  "head",
+                  "options"
+                ],
+                "additionalProperties": false
+              },
+              "contentTypes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "authTypes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "resources": {
+                "type": "number"
+              },
+              "tools": {
+                "type": "number"
+              },
+              "accessVerified": {
+                "type": "boolean"
+              },
+              "accessStatus": {
+                "type": "string",
+                "enum": [
+                  "unknown",
+                  "public",
+                  "auth_required",
+                  "offline",
+                  "error"
+                ]
+              },
+              "accessVerifiedAt": {
+                "type": "string"
+              },
+              "accessError": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "authType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "authLocation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "authParamName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "authHeaderPrefix": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "tokenAcquisition": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "perUser": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "apiStatus": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "pricingModel": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "freeTier": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "deprecated": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "pagination": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dataFormats": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "enriched": {
+                "type": "boolean"
+              },
+              "enrichedAt": {
+                "type": "string"
+              },
+              "enrichConfidence": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "enrichSource": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "enrichment": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "codegen": {
+                "type": "object",
+                "properties": {
+                  "addon": {
+                    "type": "string"
+                  },
+                  "credential": {
+                    "type": "string",
+                    "enum": [
+                      "oauth2",
+                      "bearer",
+                      "apikey"
+                    ]
+                  },
+                  "authType": {
+                    "type": "string"
+                  },
+                  "command": {
+                    "type": "string"
+                  },
+                  "functions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "functionCount": {
+                    "type": "number"
+                  },
+                  "declarations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "secret",
+                            "variable"
+                          ]
+                        },
+                        "id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "id"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              "codegenAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "version",
+              "provider",
+              "service",
+              "title",
+              "description",
+              "openapiVer",
+              "swaggerUrl",
+              "swaggerYamlUrl",
+              "logo",
+              "categories",
+              "tags",
+              "added",
+              "updated",
+              "preferred"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "total": {
+          "type": "number"
+        },
+        "nextCursor": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "apis",
+        "total",
+        "nextCursor"
+      ],
+      "additionalProperties": false
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "listPackageCategories": {
+    "pikkuFuncId": "listPackageCategories",
+    "functionType": "user",
+    "funcWrapper": "pikkuSessionlessFunc",
+    "sessionless": true,
+    "name": "listPackageCategories",
+    "inputSchemaName": null,
+    "outputSchemaName": "ListPackageCategoriesOutput",
+    "inputs": [],
+    "outputs": [
+      "ListPackageCategoriesOutput"
+    ],
+    "expose": true,
+    "auth": false,
+    "remote": true,
+    "implementationHash": "e16d856ddec5fb80",
+    "contractHash": "7aebaf1ede042227",
+    "inputHash": "46ef71ad",
+    "outputHash": "f7882ea4",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db"
+      ]
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "listPackages": {
+    "pikkuFuncId": "listPackages",
+    "functionType": "user",
+    "funcWrapper": "pikkuSessionlessFunc",
+    "sessionless": true,
+    "name": "listPackages",
+    "inputSchemaName": "ListPackagesInput",
+    "outputSchemaName": "ListPackagesOutput",
+    "inputs": [
+      "ListPackagesInput"
+    ],
+    "outputs": [
+      "ListPackagesOutput"
+    ],
+    "expose": true,
+    "auth": false,
+    "remote": true,
+    "implementationHash": "989caee3229ec5d2",
+    "contractHash": "a52c8ab5fc03e1b9",
+    "inputHash": "9086f44c",
+    "outputHash": "f344acb6",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db"
+      ]
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "sort": {
+          "type": "string"
+        },
+        "cursor": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string"
+        },
+        "official": {
+          "description": "'true' narrows to first-party @pikku/addon-* packages.",
+          "type": "string"
+        },
+        "names": {
+          "description": "Comma-separated package names — the gallery's \"Installed\" filter.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "packages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "author": {
+                "type": "string"
+              },
+              "icon": {
+                "type": "string"
+              },
+              "publishedAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              },
+              "publisher": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "org",
+                          "user"
+                        ]
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "id",
+                      "name"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "categories": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "functions": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              },
+              "agents": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "displayName",
+              "version",
+              "description",
+              "author",
+              "publishedAt",
+              "updatedAt",
+              "publisher",
+              "tags",
+              "categories",
+              "functions",
+              "agents"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "total": {
+          "type": "number"
+        },
+        "nextCursor": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "packages",
+        "total",
+        "nextCursor"
+      ],
+      "additionalProperties": false
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "publishPackage": {
+    "pikkuFuncId": "publishPackage",
+    "functionType": "user",
+    "funcWrapper": "pikkuFunc",
+    "sessionless": false,
+    "name": "publishPackage",
+    "inputSchemaName": "PublishPackageInput",
+    "outputSchemaName": "PublishPackageOutput",
+    "inputs": [
+      "PublishPackageInput"
+    ],
+    "outputs": [
+      "PublishPackageOutput"
+    ],
+    "expose": true,
+    "auth": true,
+    "remote": true,
+    "implementationHash": "41452d8fc7230a38",
+    "permissions": [
+      {
+        "type": "wire",
+        "name": "canPublishArtifact",
+        "inline": false
+      }
+    ],
+    "contractHash": "fecaed1ad9de8240",
+    "inputHash": "1e1044f3",
+    "outputHash": "035d9aae",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db",
+        "registryStore",
+        "ingestionService"
+      ]
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "artifactKey": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "public",
+            "org"
+          ]
+        }
+      },
+      "required": [
+        "artifactKey"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "displayName": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "author": {
+              "type": "string"
+            },
+            "repository": {
+              "type": "string"
+            },
+            "license": {
+              "type": "string"
+            },
+            "readme": {
+              "type": "string"
+            },
+            "icon": {
+              "type": "string"
+            },
+            "publishedAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            },
+            "publisher": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "org",
+                        "user"
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "functions": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "agents": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "secrets": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "credentials": {
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "variables": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "httpRoutes": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "channels": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "cli": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "mcp": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "schemas": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "displayName",
+            "version",
+            "description",
+            "author",
+            "publishedAt",
+            "updatedAt",
+            "publisher",
+            "tags",
+            "categories",
+            "functions",
+            "agents",
+            "secrets",
+            "credentials",
+            "variables",
+            "httpRoutes",
+            "channels",
+            "cli",
+            "mcp",
+            "schemas"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "sdk"
+            },
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "integrity": {
+              "type": "string"
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "public",
+                "org"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "name",
+            "version",
+            "integrity",
+            "visibility"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "requestPublishUrl": {
+    "pikkuFuncId": "requestPublishUrl",
+    "functionType": "user",
+    "funcWrapper": "pikkuFunc",
+    "sessionless": false,
+    "name": "requestPublishUrl",
+    "inputSchemaName": "RequestPublishUrlInput",
+    "outputSchemaName": "RequestPublishUrlOutput",
+    "inputs": [
+      "RequestPublishUrlInput"
+    ],
+    "outputs": [
+      "RequestPublishUrlOutput"
+    ],
+    "expose": true,
+    "auth": true,
+    "remote": true,
+    "implementationHash": "ca76b4ca34146d4a",
+    "permissions": [
+      {
+        "type": "wire",
+        "name": "canPublishPackageName",
+        "inline": false
+      }
+    ],
+    "contractHash": "f0c0e3e2974d32b9",
+    "inputHash": "3c8f555c",
+    "outputHash": "a819e371",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "registryStore"
+      ]
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "packageName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "package",
+            "sdk"
+          ]
+        }
+      },
+      "required": [
+        "packageName",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "uploadUrl": {
+          "type": "string"
+        },
+        "artifactKey": {
+          "type": "string"
+        },
+        "expiresInSeconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "uploadUrl",
+        "artifactKey",
+        "expiresInSeconds"
+      ],
+      "additionalProperties": false
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "resolveSdk": {
+    "pikkuFuncId": "resolveSdk",
+    "functionType": "user",
+    "funcWrapper": "pikkuSessionlessFunc",
+    "sessionless": true,
+    "name": "resolveSdk",
+    "inputSchemaName": "ResolveSdkInput",
+    "outputSchemaName": "ResolveSdkOutput",
+    "inputs": [
+      "ResolveSdkInput"
+    ],
+    "outputs": [
+      "ResolveSdkOutput"
+    ],
+    "expose": true,
+    "auth": false,
+    "remote": true,
+    "readonly": true,
+    "implementationHash": "c5b4a9376c5520ef",
+    "contractHash": "0a2c32d2f3ea4a64",
+    "inputHash": "194b83df",
+    "outputHash": "90751e16",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db",
+        "registryStore"
+      ]
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "range": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "name",
+        "range"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "integrity": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "integrity",
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  },
+  "searchPackages": {
+    "pikkuFuncId": "searchPackages",
+    "functionType": "user",
+    "funcWrapper": "pikkuSessionlessFunc",
+    "sessionless": true,
+    "name": "searchPackages",
+    "inputSchemaName": "SearchPackagesInput",
+    "outputSchemaName": "SearchPackagesOutput",
+    "inputs": [
+      "SearchPackagesInput"
+    ],
+    "outputs": [
+      "SearchPackagesOutput"
+    ],
+    "expose": true,
+    "auth": false,
+    "remote": true,
+    "implementationHash": "e2193b30e2973ef9",
+    "contractHash": "46f91b4fbf67f851",
+    "inputHash": "bc071063",
+    "outputHash": "2cf7a3d3",
+    "singletonServicesOnly": true,
+    "services": {
+      "optimized": true,
+      "services": [
+        "db"
+      ]
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "repository": {
+            "type": "string"
+          },
+          "license": {
+            "type": "string"
+          },
+          "readme": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "org",
+                      "user"
+                    ]
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "id",
+                  "name"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "functions": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "agents": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "secrets": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "credentials": {
+            "default": {},
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "variables": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "httpRoutes": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "channels": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "cli": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "mcp": {
+            "anyOf": [
+              {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schemas": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "displayName",
+          "version",
+          "description",
+          "author",
+          "publishedAt",
+          "updatedAt",
+          "publisher",
+          "tags",
+          "categories",
+          "functions",
+          "agents",
+          "secrets",
+          "credentials",
+          "variables",
+          "httpRoutes",
+          "channels",
+          "cli",
+          "mcp",
+          "schemas"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "versions": [
+      1
+    ],
+    "latestVersion": 1
+  }
+}

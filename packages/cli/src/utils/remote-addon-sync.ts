@@ -17,29 +17,21 @@ import {
 } from '@pikku/inspector/lite'
 import { findSourceFiles } from './find-source-files.js'
 import { readTgz, writeSdkEntries } from './extract-tgz.js'
+import type { FlattenedRPCMap } from '../../.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.js'
 
 /** Where versioned `wireRemoteAddon` packages resolve when `pikku.config.json` sets no `registry`. */
 export const DEFAULT_ADDON_REGISTRY = 'https://registry.pikkustudio.app'
 
 /**
- * The registry's resolve endpoint, appended to `registry`. A public pikku RPC,
- * so the body is `{ data: { name, range } }`.
+ * `registry:resolveSdk`, typed by the registry's own SDK, which the CLI commits
+ * under `.pikku/remote` (knowledge: the-cli-commits-its-registry-sdk).
  */
-export const RESOLVE_SDK_PATH = '/rpc/registry:resolveSdk'
+type RegistryResolveSdk = FlattenedRPCMap['registry:resolveSdk']
+export type ResolveSdkRequest = RegistryResolveSdk['input']
+/** The highest SDK satisfying the range: its version, `sha512-<base64>` integrity and a short-lived signed URL. */
+export type ResolvedSdk = RegistryResolveSdk['output']
 
-/** What `registry:resolveSdk` answers: the highest SDK satisfying the range. */
-export type ResolvedSdk = {
-  version: string
-  /** `sha512-<base64>` of the tarball at `url`. */
-  integrity: string
-  /** A short-lived signed URL for the tarball. Fetched without credentials. */
-  url: string
-}
-
-export type ResolveSdk = (request: {
-  name: string
-  range: string
-}) => Promise<ResolvedSdk>
+export type ResolveSdk = (request: ResolveSdkRequest) => Promise<ResolvedSdk>
 
 export type DownloadSdk = (url: string) => Promise<Buffer>
 
@@ -79,65 +71,42 @@ export const resolveRegistryToken = async (): Promise<string | null> => {
   return process.env.PIKKU_REGISTRY_TOKEN?.trim() || null
 }
 
-/** `resolveSdk` and `download` against a registry over HTTP. */
-export const createRegistryClient = ({
-  registry,
-  token,
-  fetch = globalThis.fetch,
-}: {
+/** The registry the project's `pikku.config.json` names, else the default. */
+export const registryUrl = (config: unknown): string =>
+  (config as { registry?: string } | undefined)?.registry ??
+  DEFAULT_ADDON_REGISTRY
+
+/**
+ * The `registry` remote addon's bearer: the token from
+ * {@link resolveRegistryToken}, or null — a call with no credential — when
+ * there is none or the registry is plain http.
+ */
+export const registryCredential = async (
   registry: string
-  token: string | null
-  fetch?: typeof globalThis.fetch
-}): { resolveSdk: ResolveSdk; download: DownloadSdk } => {
-  const endpoint = new URL(`${registry.replace(/\/+$/, '')}${RESOLVE_SDK_PATH}`)
-  return {
-    resolveSdk: async ({ name, range }) => {
-      const headers: Record<string, string> = {
-        'content-type': 'application/json',
-      }
-      if (token && mayCarryCredential(endpoint)) {
-        headers.authorization = `Bearer ${token}`
-      }
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ data: { name, range } }),
-      })
-      if (!response.ok) {
-        const detail = (await response.text().catch(() => '')).slice(0, 300)
-        throw new Error(
-          `${endpoint.origin} could not resolve ${name}@${range}: HTTP ${response.status}${detail ? ` ${detail}` : ''}`
-        )
-      }
-      const body: any = await response.json()
-      if (
-        typeof body?.version !== 'string' ||
-        typeof body?.integrity !== 'string' ||
-        typeof body?.url !== 'string'
-      ) {
-        throw new Error(
-          `${endpoint.origin} answered ${name}@${range} without a version, integrity and url`
-        )
-      }
-      return { version: body.version, integrity: body.integrity, url: body.url }
-    },
-    download: async (url) => {
-      const target = new URL(url, endpoint)
-      if (target.protocol !== 'https:' && !isLoopback(target)) {
-        throw new Error(
-          `refusing to download an SDK over ${target.protocol} from ${target.origin}`
-        )
-      }
-      const response = await fetch(target)
-      if (!response.ok) {
-        throw new Error(
-          `downloading ${target.origin}${target.pathname} failed: HTTP ${response.status}`
-        )
-      }
-      return Buffer.from(await response.arrayBuffer())
-    },
+): Promise<string | null> =>
+  mayCarryCredential(new URL(registry)) ? resolveRegistryToken() : null
+
+/**
+ * The SDK download: a plain GET of the signed URL `resolveSdk` answered, sent
+ * without credentials. `fetch` is injectable for tests.
+ */
+export const createSdkDownloader =
+  (fetch: typeof globalThis.fetch = globalThis.fetch): DownloadSdk =>
+  async (url) => {
+    const target = new URL(url)
+    if (target.protocol !== 'https:' && !isLoopback(target)) {
+      throw new Error(
+        `refusing to download an SDK over ${target.protocol} from ${target.origin}`
+      )
+    }
+    const response = await fetch(target)
+    if (!response.ok) {
+      throw new Error(
+        `downloading ${target.origin}${target.pathname} failed: HTTP ${response.status}`
+      )
+    }
+    return Buffer.from(await response.arrayBuffer())
   }
-}
 
 export const sha512Integrity = (data: Buffer): string =>
   `sha512-${createHash('sha512').update(data).digest('base64')}`
@@ -430,22 +399,24 @@ export type AddonSyncConfig = {
   rootDir: string
   srcDirectories: string[]
   ignoreFiles?: string[]
-  registry?: string
 }
 
 /**
  * Finds the project's versioned `wireRemoteAddon` packages and syncs their
- * SDKs: the first step of `pikku all`. Null when the project has none and no lock, so nothing ran. The
- * registry client is built only when a spec needs the network.
+ * SDKs: the first step of `pikku all`. Null when the project has none and no
+ * lock, so nothing ran. The registry is called only when a spec needs the
+ * network, through `resolveSdk` — the CLI's `registry:resolveSdk`, or a stub.
  */
 export const runAddonSync = async ({
   config,
   logger,
-  client,
+  resolveSdk,
+  download = createSdkDownloader(),
 }: {
   config: AddonSyncConfig
   logger: SyncLogger
-  client?: { resolveSdk: ResolveSdk; download: DownloadSdk }
+  resolveSdk: ResolveSdk
+  download?: DownloadSdk
 }): Promise<SyncResult | null> => {
   const specs = await collectRemoteAddonSdkSpecs({
     ...config,
@@ -457,18 +428,11 @@ export const runAddonSync = async ({
   ) {
     return null
   }
-  let lazy: { resolveSdk: ResolveSdk; download: DownloadSdk } | undefined =
-    client
-  const registry = async () =>
-    (lazy ??= createRegistryClient({
-      registry: config.registry ?? DEFAULT_ADDON_REGISTRY,
-      token: await resolveRegistryToken(),
-    }))
   return syncRemoteAddonSdks({
     rootDir: config.rootDir,
     specs,
-    resolveSdk: async (request) => (await registry()).resolveSdk(request),
-    download: async (url) => (await registry()).download(url),
+    resolveSdk,
+    download,
     logger,
   })
 }
