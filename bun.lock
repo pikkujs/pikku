@@ -2168,10 +2168,22 @@
         "@pikku/deploy": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
+        "@verifier/contrib-bad": "workspace:*",
+        "@verifier/contrib-notify": "workspace:*",
+        "@verifier/contrib-select": "workspace:*",
         "@verifier/host-mail": "workspace:*",
         "@verifier/log-addon": "workspace:*",
         "tsx": "^4.23.15",
       },
+    },
+    "verifiers/dev-platform-contributors/contrib-bad": {
+      "name": "@verifier/contrib-bad",
+    },
+    "verifiers/dev-platform-contributors/contrib-notify": {
+      "name": "@verifier/contrib-notify",
+    },
+    "verifiers/dev-platform-contributors/contrib-select": {
+      "name": "@verifier/contrib-select",
     },
     "verifiers/dev-platform-contributors/host-mail": {
       "name": "@verifier/host-mail",
@@ -4012,6 +4024,12 @@
     "@ungap/structured-clone": ["@ungap/structured-clone@1.4.0", "", {}, "sha512-1mEZtMKPM09vDmQt5y7YvmN2+DFTP7Tg0EWXdic8/C6VRnpb33e4ghisCIE3WZjsE2N8mf+QV1Zqh7ZFYLWInQ=="],
 
     "@vercel/oidc": ["@vercel/oidc@3.2.0", "", {}, "sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug=="],
+
+    "@verifier/contrib-bad": ["@verifier/contrib-bad@workspace:verifiers/dev-platform-contributors/contrib-bad"],
+
+    "@verifier/contrib-notify": ["@verifier/contrib-notify@workspace:verifiers/dev-platform-contributors/contrib-notify"],
+
+    "@verifier/contrib-select": ["@verifier/contrib-select@workspace:verifiers/dev-platform-contributors/contrib-select"],
 
     "@verifier/host-mail": ["@verifier/host-mail@workspace:verifiers/dev-platform-contributors/host-mail"],
 

@@ -99,7 +99,7 @@ const packageExportSpecifier = (
   return undefined
 }
 
-const localSpecifier = (
+export const localSpecifier = (
   specifier: string,
   target: DevPlatformServicesTarget
 ): string => {

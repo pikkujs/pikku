@@ -213,6 +213,13 @@ export interface PikkuCLICoreOutputFiles {
   // Platform services a host injects over the local ones in `pikku dev`
   devPlatformServicesFile: string
 
+  // Contributors the project opted in to (`wireAddon({ contributors })`),
+  // resolved for `pikku dev`
+  devContributorsFile: string
+
+  // The contributors this package registers — present when it calls defineContributors
+  contributorsMetaJsonFile: string
+
   // Middleware
   middlewareFile: string
   middlewareGroupsMetaJsonFile: string

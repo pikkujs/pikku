@@ -393,6 +393,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Outgoing webhooks', 'pikkuOutgoingWebhooks', null),
       workflow.do('Addon types', 'pikkuAddonTypes', null),
       workflow.do('Screens', 'pikkuScreens', null),
+      workflow.do('Contributors', 'pikkuContributors', null),
     ])
 
     if (hasInternalRPCs) {

@@ -300,7 +300,9 @@ export const dev = pikkuSessionlessFunc<
     const localServices = await mergeDevPlatformServices(
       baseLocalServices,
       config.rootDir,
-      config.devPlatformServicesFile
+      config.devPlatformServicesFile,
+      process.env,
+      config.devContributorsFile
     )
 
     const singletonServices = await userCreateSingletonServices(
