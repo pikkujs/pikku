@@ -9,7 +9,7 @@ npx tsx src/check-dev-platform-services.ts
 
 echo "--- a contributor need nothing meets fails codegen ---"
 rm -rf .pikku-missing-need
-if output=$(npx pikku all -c pikku.missing-need.config.json 2>&1); then
+if output=$(npx pikku all -c "$PWD/pikku.missing-need.config.json" 2>&1); then
   echo "✗ codegen succeeded although 'needs-kysely' needs kysely and nothing provides it"
   exit 1
 fi
