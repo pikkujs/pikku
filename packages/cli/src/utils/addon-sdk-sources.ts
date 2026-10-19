@@ -115,5 +115,13 @@ export const serializeSdkSources = (
     },
     functionsMeta: paths.functionsMetaJsonFile,
     schemaDirectory: paths.schemaDirectory,
+    contractFunctionIds: [
+      ...new Set([
+        ...Object.values(rpc.remoteMeta),
+        ...Object.values(exposedWorkflows).map(
+          ({ pikkuFuncId }) => pikkuFuncId
+        ),
+      ]),
+    ],
   }
 }

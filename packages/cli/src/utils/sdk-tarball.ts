@@ -86,9 +86,15 @@ export const unpackTarGz = (archive: Buffer): Map<string, Buffer> => {
     if (header.every((byte) => byte === 0)) break
     const name = readString(header, 0, 100)
     const prefix = readString(header, 345, 155)
-    const size = parseInt(readString(header, 124, 12).trim() || '0', 8)
+    const sizeText = readString(header, 124, 12).trim() || '0'
+    const size = /^[0-7]+$/.test(sizeText) ? parseInt(sizeText, 8) : NaN
     const type = String.fromCharCode(header[156] || 48)
     const start = offset + BLOCK
+    if (!Number.isSafeInteger(size) || size > tar.length - start) {
+      throw new Error(
+        `Not a valid SDK archive: the entry at byte ${offset} has size '${sizeText}'.`
+      )
+    }
     if (type === '0' || type === '\0') {
       const path = (prefix ? `${prefix}/${name}` : name).replace(
         /^(\.\/|package\/)/,
