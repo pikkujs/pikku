@@ -92,7 +92,20 @@ const generatedImports = (file: string) => {
  * dependency on the functions template — which makes a bare specifier a legal
  * imports target — it has no alias mechanism and keeps the relative path.
  */
-const withoutAlias = new Set(['bun', 'starter-template'])
+/**
+ * Standalone templates: whole projects pinned to a released API, with their own
+ * workspaces and tsconfig layout, not runtime layers over `functions`.
+ */
+const standalone = new Set([
+  'online-shop',
+  'field-service',
+  'hotel-management',
+  'public-content',
+  'team-saas',
+  'workflow-automation',
+])
+
+const withoutAlias = new Set(['bun', 'starter-template', ...standalone])
 
 describe('templates ship the #pikku alias', () => {
   test('no template reaches generated output through a relative path', () => {
@@ -171,6 +184,7 @@ describe('templates ship the #pikku alias', () => {
     const offenders: string[] = []
 
     for (const template of templateNames()) {
+      if (standalone.has(template)) continue
       const declare = (
         source: string,
         targets: string | string[] | undefined
