@@ -303,10 +303,15 @@ func ConvertDslToGraph(name string, meta *Object) *Object {
 	} else if meta.Get("dsl") == false {
 		source = "complex"
 	}
+	var scenario any
+	if Truthy(meta.Get("scenario")) {
+		scenario = true
+	}
 	return Obj(
 		"name", name,
 		"pikkuFuncId", meta.Get("pikkuFuncId"),
 		"source", source,
+		"scenario", scenario,
 		"title", meta.Get("title"),
 		"description", meta.Get("description"),
 		"tags", meta.Get("tags"),
