@@ -93,6 +93,7 @@
     "./state": "./dist/pikku-state.js",
     "./classification": "./dist/classification/index.js",
     "./utils": "./dist/utils.js",
+    "./contributors": "./dist/contributors/index.js",
     "./lifecycle": "./dist/lifecycle.js",
     "./schema": "./dist/schema.js",
     "./testing": "./dist/testing/index.js",
