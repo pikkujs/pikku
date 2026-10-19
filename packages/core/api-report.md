@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3308 observable things**: 1109 exported names, plus
-2199 members on the classes and interfaces among them, reachable
+**3309 observable things**: 1109 exported names, plus
+2200 members on the classes and interfaces among them, reachable
 through 62 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -28,7 +28,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./trigger` | 42 | 42 | 13 |
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
-| `./cli` | 16 | 14 | 26 |
+| `./cli` | 16 | 14 | 27 |
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
@@ -4310,6 +4310,7 @@ export interface CLICommandMeta {
   subcommands?: Record<string, CLICommandMeta>
   middleware?: MiddlewareMetadata[]
   isDefault?: boolean
+  hidden?: boolean
 }
 export class CLIError extends Error {
   constructor(message: string, public exitCode: number = 1)
@@ -4371,6 +4372,7 @@ export type CoreCLICommandConfig<
   auth?: boolean
   permissions?: any[]
   isDefault?: boolean
+  hidden?: boolean
 }
 export type CorePikkuCLIRender<
   Data,
