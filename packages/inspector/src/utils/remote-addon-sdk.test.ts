@@ -273,7 +273,7 @@ describe('loadAddonFunctionsMeta (versioned wireRemoteAddon)', () => {
 })
 
 describe('findWireRemoteAddonSpecs', () => {
-  test('finds each literal with its range and where it sits', () => {
+  test('finds each literal with its range and line', () => {
     const source = `import { wireRemoteAddon } from '@pikku/core/addon'
 wireRemoteAddon({
   name: 'cloudapi',
@@ -289,10 +289,7 @@ wireRemoteAddon({ name: 'dyn', package: PKG, serverUrl: '' })
     assert.equal(specs[0]!.name, NAME)
     assert.equal(specs[0]!.range, '^1.4.0')
     assert.equal(specs[0]!.line, 4)
-    assert.equal(
-      source.slice(specs[0]!.start, specs[0]!.end),
-      `'${NAME}@^1.4.0'`
-    )
+    assert.equal(specs[0]!.spec, `${NAME}@^1.4.0`)
     assert.equal(specs[1]!.range, undefined)
   })
 })

@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { parseRemoteAddonPackage } from './remote-addon-sdk.js'
 
-/** A `wireRemoteAddon({ package })` found in source, with where its literal sits so it can be rewritten. */
+/** A `wireRemoteAddon({ package })` found in source, with the line its literal sits on. */
 export type WireRemoteAddonSpec = {
   /** The `name` option, when it is a literal. */
   namespace?: string
@@ -9,9 +9,6 @@ export type WireRemoteAddonSpec = {
   spec: string
   name: string
   range?: string
-  /** Offsets of the literal in the file, quotes included. */
-  start: number
-  end: number
   /** 1-based line of the literal. */
   line: number
 }
@@ -61,15 +58,15 @@ export const findWireRemoteAddonSpecs = (
       if (literal) {
         try {
           const { name, range } = parseRemoteAddonPackage(literal.text)
-          const start = literal.getStart(sourceFile)
           found.push({
             namespace,
             spec: literal.text,
             name,
             range,
-            start,
-            end: literal.getEnd(),
-            line: sourceFile.getLineAndCharacterOfPosition(start).line + 1,
+            line:
+              sourceFile.getLineAndCharacterOfPosition(
+                literal.getStart(sourceFile)
+              ).line + 1,
           })
         } catch {
           // reported by the inspection

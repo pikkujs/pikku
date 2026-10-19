@@ -435,8 +435,7 @@ export type AddonSyncConfig = {
 
 /**
  * Finds the project's versioned `wireRemoteAddon` packages and syncs their
- * SDKs: the first step of `pikku all`, and the re-sync after
- * `pikku update --update`. Null when the project has none and no lock, so nothing ran. The
+ * SDKs: the first step of `pikku all`. Null when the project has none and no lock, so nothing ran. The
  * registry client is built only when a spec needs the network.
  */
 export const runAddonSync = async ({
