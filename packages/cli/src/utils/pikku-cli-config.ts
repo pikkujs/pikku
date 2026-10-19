@@ -558,7 +558,7 @@ const _getPikkuCLIConfig = async (
       virtualUser: 'virtualUserFunctionsFile',
       workflow: 'workflowRoutesFile',
       events: 'eventsChannelFile',
-      remoteRpc: 'remoteRpcWorkersFile',
+      meshRpc: 'meshRpcWorkersFile',
       remoteJobs: 'remoteJobsFile',
     }
     const scaffoldBlock = result.scaffold as
@@ -575,18 +575,18 @@ const _getPikkuCLIConfig = async (
         : join(result.rootDir, resolved.path)
     }
 
-    if (result.scaffold?.remoteRpc && !result.remoteRpcWorkersFile) {
-      result.remoteRpcWorkersFile = join(
+    if (result.scaffold?.meshRpc && !result.meshRpcWorkersFile) {
+      result.meshRpcWorkersFile = join(
         resolvedScaffoldDir,
         'rpc',
-        'rpc-remote.gen.ts'
+        'rpc-mesh.gen.ts'
       )
     }
-    if (result.scaffold?.remoteRpc && !result.remoteRpcSchemasFile) {
-      result.remoteRpcSchemasFile = join(
+    if (result.scaffold?.meshRpc && !result.meshRpcSchemasFile) {
+      result.meshRpcSchemasFile = join(
         resolvedScaffoldDir,
         'rpc',
-        'rpc-remote.schemas.gen.ts'
+        'rpc-mesh.schemas.gen.ts'
       )
     }
     if (result.scaffold?.graph && !result.graphWiringsFile) {

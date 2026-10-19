@@ -1,39 +1,39 @@
-export interface RemoteRPCGenOutput {
+export interface MeshRPCGenOutput {
   schemas: string
   functions: string
 }
 
 /**
- * Generate remote internal RPC queue worker and HTTP endpoint
+ * Generate mesh RPC queue worker and HTTP endpoint
  */
-export const serializeRemoteRPC = (
+export const serializeMeshRPC = (
   leaf: (name: string) => string
-): RemoteRPCGenOutput => {
+): MeshRPCGenOutput => {
   const schemas = `/**
- * Auto-generated remote internal RPC schemas
+ * Auto-generated mesh RPC schemas
  * Do not edit manually - regenerate with 'npx pikku'
  */
 import { z } from 'zod'
 
-export const RemoteRPCCall = z.object({
+export const MeshRPCCall = z.object({
   rpcName: z.string(),
   data: z.unknown().optional(),
 })
 `
 
   const functions = `/**
- * Auto-generated remote internal RPC queue worker and HTTP endpoint
+ * Auto-generated mesh RPC queue worker and HTTP endpoint
  * Do not edit manually - regenerate with 'npx pikku'
  */
 import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { wireHTTP } from '${leaf('http')}'
 import { wireQueueWorker } from '${leaf('queue')}'
-import { pikkuRemoteAuthMiddleware } from '@pikku/core/middleware'
-import { RemoteRPCCall } from './rpc-remote.schemas.gen.js'
+import { pikkuMeshAuthMiddleware } from '@pikku/core/middleware'
+import { MeshRPCCall } from './rpc-mesh.schemas.gen.js'
 
-export const remoteRPCHandler = pikkuSessionlessFunc({
+export const meshRPCHandler = pikkuSessionlessFunc({
   tags: ['pikku'],
-  input: RemoteRPCCall,
+  input: MeshRPCCall,
   func: async (_services, { rpcName, data }, { rpc }) => {
     return await (rpc.invoke as any)(rpcName, data)
   },
@@ -41,18 +41,18 @@ export const remoteRPCHandler = pikkuSessionlessFunc({
 })
 
 wireQueueWorker({
-  name: 'pikku-remote-internal-rpc',
+  name: 'pikku-mesh-rpc',
   tags: ['pikku'],
-  func: remoteRPCHandler,
+  func: meshRPCHandler,
 })
 
 wireHTTP({
-  route: '/remote/rpc/:rpcName',
+  route: '/mesh/rpc/:rpcName',
   method: 'post',
   auth: false,
   tags: ['pikku'],
-  middleware: [pikkuRemoteAuthMiddleware],
-  func: remoteRPCHandler,
+  middleware: [pikkuMeshAuthMiddleware],
+  func: meshRPCHandler,
 })
 `
 

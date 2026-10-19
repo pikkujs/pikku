@@ -20,13 +20,13 @@ export const greet = pikkuSessionlessFunc<
   },
 })
 
-export const remoteGreet = pikkuSessionlessFunc<
+export const meshGreet = pikkuSessionlessFunc<
   { name: string; greeting?: string },
   { message: string; timestamp: number; serverPort: number }
 >({
   expose: true,
   func: async ({ logger }, data, { rpc }) => {
-    logger.info(`Calling greet via rpc.remote()`)
-    return await rpc.remote('greet', data)
+    logger.info(`Calling greet via rpc.mesh()`)
+    return await rpc.mesh('greet', data)
   },
 })

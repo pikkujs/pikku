@@ -277,8 +277,8 @@ jobs:
             bullmq,
             workflows-bullmq,
             workflows-pg-boss,
-            remote-rpc-pg,
-            remote-rpc-redis,
+            mesh-rpc-pg,
+            mesh-rpc-redis,
           ]
     steps:
       - name: Check out repository code

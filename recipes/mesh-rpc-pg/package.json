@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/templates-remote-rpc-redis",
+  "name": "@pikku/templates-mesh-rpc-pg",
   "main": "src/start.ts",
   "type": "module",
   "private": true,
@@ -10,17 +10,20 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "start": "tsx src/start.ts",
     "dev": "tsx watch src/start.ts | pino-pretty -i time,hostname,pid",
-    "test": "bash ../functions/run-tests.sh --url http://localhost:3001 --http",
-    "test:http-fetch": "tsx client/test-remote-rpc.ts"
+    "migrate": "pikku db generate && pikku db migrate",
+    "test": "npm run migrate && bash ../functions/run-tests.sh --url http://localhost:3001 --http",
+    "test:http-fetch": "tsx client/test-mesh-rpc.ts"
   },
   "dependencies": {
     "@pikku/core": "^0.12.145",
     "@pikku/express": "^0.12.18",
     "@pikku/jose": "^0.12.10",
-    "@pikku/redis": "^0.12.24",
+    "@pikku/kysely-postgres": "^0.12.28",
     "@pikku/schema-cfworker": "^0.12.9",
-    "ioredis": "^6.0.0",
+    "kysely": "^0.29.6",
+    "kysely-postgres-js": "^5.0.1",
     "pino-pretty": "^13.2.0",
+    "postgres": "^3.4.9",
     "tslib": "^2.8.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"

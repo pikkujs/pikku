@@ -35,7 +35,7 @@ export type SharedPikkuConfig = {
     agent?: unknown
     workflow?: unknown
     events?: unknown
-    remoteRpc?: unknown
+    meshRpc?: unknown
   }
   db?: {
     engine?: 'sqlite' | 'postgres' | 'mysql'

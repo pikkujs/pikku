@@ -443,7 +443,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       depth: 0,
       global: false,
       invoke: async (rpcName: string) => refuseInternal(rpcName),
-      remote: async (rpcName: string) => refuseInternal(rpcName),
+      mesh: async (rpcName: string) => refuseInternal(rpcName),
       exposed: async (rpcName: string) => refuseInternal(rpcName),
       rpcWithWire: async (rpcName: string) => refuseInternal(rpcName),
       startWorkflow: async (name: string) => refuseInternal(name),

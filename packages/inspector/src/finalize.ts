@@ -149,7 +149,9 @@ export const finalizeInspectorState = async <
     annotateHttpRouteAuth(state)
     // Last of the validators: they read function meta and every wireAddon
     // declaration together, so they need the whole program inspected.
-    validateExposedFunctionsGated(logger, state)
+    validateExposedFunctionsGated(logger, state, {
+      isAddon: options.isAddon === true,
+    })
     validateTagsResolveToMiddleware(logger, state)
 
     if (options.openAPI) {

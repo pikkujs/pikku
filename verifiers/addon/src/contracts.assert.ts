@@ -122,8 +122,8 @@ if (toolNames.length === 1 && toolNames[0] === 'ext:goodbye') {
   passed = false
 }
 
-// `expose: ['goodbye']` is the app choosing what `rpc.exposed` — and so
-// `POST /rpc/:rpcName` — reaches. Neither function declared `expose: true`.
+// `expose: ['goodbye']` is the app opting in to what `rpc.exposed` — and so
+// `POST /rpc/:rpcName` — reaches, out of what the addon declared exposed.
 const rpc = rpcService.getContextRPCService(
   (await createSingletonServices(await createConfig())) as any,
   {}

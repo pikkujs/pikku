@@ -15,11 +15,16 @@ import type { InspectorLogger, InspectorState } from '../types.js'
  */
 export function validateExposedFunctionsGated(
   logger: InspectorLogger,
-  state: InspectorState
+  state: InspectorState,
+  { isAddon = false }: { isAddon?: boolean } = {}
 ): void {
   const ungated: string[] = []
 
-  for (const [funcName, meta] of Object.entries(state.functions.meta)) {
+  // An addon's own `expose: true` only makes a function eligible: nothing is
+  // reachable until a host's `wireAddon` opts in, and that host is warned below.
+  for (const [funcName, meta] of isAddon
+    ? []
+    : Object.entries(state.functions.meta)) {
     if (!meta.expose) continue
     if (gatesItself(meta)) continue
     if (isGatedByItsAddon(state, meta.packageName)) continue
@@ -27,20 +32,23 @@ export function validateExposedFunctionsGated(
     ungated.push(funcName)
   }
 
-  // A `wireAddon` expose list can open an addon function its author never
-  // exposed, so the app that listed it is the one to tell. The namespaced call
-  // is governed by that instance's config alone.
+  // An addon function is exposed only when the app's `wireAddon` opts in, so
+  // the app that opted in is the one to tell. The namespaced call is governed
+  // by that instance's config alone.
   //
   // knowledge: decisions/security/wire-addon-expose-selects-the-rpc-surface.md
   for (const [namespace, declaration] of state.rpc?.wireAddonDeclarations ??
     []) {
-    if (!Array.isArray(declaration.expose)) continue
+    if (!declaration.expose) continue
     if (declaration.auth === true) continue
     if (declaration.scopes && declaration.scopes.length > 0) continue
     const addonMeta = state.addonFunctions?.[namespace] ?? {}
-    for (const funcName of declaration.expose) {
+    const selected = Array.isArray(declaration.expose)
+      ? declaration.expose
+      : Object.keys(addonMeta)
+    for (const funcName of selected) {
       const meta = addonMeta[funcName]
-      if (!meta || gatesItself(meta)) continue
+      if (!meta?.expose || gatesItself(meta)) continue
       ungated.push(`${namespace}:${funcName}`)
     }
   }

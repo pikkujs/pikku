@@ -17,7 +17,7 @@
     "pikkuChannelMiddlewareFactory",
     "pikkuMiddleware",
     "pikkuMiddlewareFactory",
-    "pikkuRemoteAuthMiddleware",
+    "pikkuMeshAuthMiddleware",
     "remoteJobsSecret",
     "requireOrigin",
     "runMiddleware",
@@ -195,7 +195,7 @@
     "wireHTTP",
     "wireHTTPRoutes"
   ],
-  "./remote": ["buildRemoteHeaders"],
+  "./mesh": ["buildMeshHeaders"],
   "./queue": [
     "QueueJobDiscardedError",
     "QueueJobFailedError",
@@ -235,7 +235,8 @@
     "PikkuRPCService",
     "RPCNotFoundError",
     "RemoteAddonConfigError",
-    "RemoteAddonRequestError",
+    "RemoteAddonFailedError",
+    "RemoteAddonTimeoutError",
     "rpcService"
   ],
   "./addon": [
@@ -529,7 +530,7 @@
   ],
   "./crypto-utils": [
     "MIN_KEY_MATERIAL_LENGTH",
-    "REMOTE_SESSION_INFO",
+    "MESH_SESSION_INFO",
     "assertStrongKeyMaterial",
     "decodeBase64UrlText",
     "decryptJSON",

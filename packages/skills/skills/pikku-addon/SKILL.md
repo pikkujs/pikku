@@ -49,7 +49,7 @@ wireAddon({
   rpcEndpoint?: string,            // Optional remote RPC endpoint for distributed execution
   auth?: boolean,                  // Require a session for every function in the addon
   mcp?: boolean | string[],        // true: every function the addon declared mcp: true; a list: the tools this app offers, typed against the addon's function names
-  expose?: boolean | string[],     // what rpc.exposed / POST /rpc may reach: unset/true = the addon's own expose: true, false = none, a list = exactly those (typed; PKU343 on unknown names)
+  expose?: boolean | string[],     // opt-in: what rpc.exposed / POST /rpc may reach. true = every function the addon declared expose: true, a list = those of them named (typed; PKU343 on unknown or undeclared names), unset/false = none
   tags?: string[],                 // Tags applied to all addon functions
   scopes?: string[],               // Required of every function, on top of its own
   secretOverrides?: Record<string, string>,      // Remap secret names (and grant them)
@@ -381,9 +381,10 @@ and the frontend calls `rpc.invoke('todos:listTodos', …)` (over HTTP,
 Use `ref('todos:listTodos')` on an HTTP or MCP wiring only when the addon needs
 a route of its own. Don't write an app function that calls `rpc.invoke` and
 returns the result unchanged: it's a second name and a second schema for the
-same thing, and it drifts. `expose: true` exposes only what the addon itself
-declared `expose: true` — an OpenAPI-generated addon declares none, so list
-the names.
+same thing, and it drifts. Nothing in an addon is reachable over `/rpc` until
+the wiring opts in, and it can only open what the addon itself declared
+`expose: true` — an OpenAPI-generated addon declares every operation, so list
+the ones the frontend needs.
 
 Write your own function when the app needs the data narrowed, typed, or
 combined (a flag the upstream sends as `"0"`, a total summed from several

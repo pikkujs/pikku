@@ -20,8 +20,8 @@ import {
 
 test('ordinary queue names pass through unchanged', () => {
   assert.equal(
-    subjectForQueue('pikku', 'pikku-remote-internal-rpc'),
-    'pikku.pikku-remote-internal-rpc'
+    subjectForQueue('pikku', 'pikku-mesh-rpc'),
+    'pikku.pikku-mesh-rpc'
   )
 })
 

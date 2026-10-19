@@ -11,13 +11,13 @@ tags: bullmq, scheduler, sessions, rpc
 as `{ rpcName, data?, session? }` (lines 17-21).
 
 **Delayed.** `scheduleRPC` takes an optional `session` (line 56) and puts it in the job data (lines 62-66). The
-job is added to the `pikku-remote-internal-rpc` queue with the delay (lines 69-72). `getTask` returns the stored
+job is added to the `pikku-mesh-rpc` queue with the delay (lines 69-72). `getTask` returns the stored
 `session` (line 116). `getAllTasks` returns only the id, rpc name and time (lines 133-137). The session is
 therefore stored in Redis with the job.
 
-**What runs it.** This file has no worker for that queue. The CLI generates one, `remoteRPCHandler`, whose
+**What runs it.** This file has no worker for that queue. The CLI generates one, `meshRPCHandler`, whose
 function destructures only `{ rpcName, data }` and calls `rpc.invoke(rpcName, data)`
-(`packages/cli/src/functions/wirings/rpc/serialize-remote-rpc.ts:37-39`). It is wired to the queue at lines
+(`packages/cli/src/functions/wirings/rpc/serialize-mesh-rpc.ts:37-39`). It is wired to the queue at lines
 43-47 of the same file. Nothing in that handler reads the job's `session`.
 
 **Recurring.** `start` creates a worker on `pikku-recurring-scheduled-task` (lines 161-169) that calls

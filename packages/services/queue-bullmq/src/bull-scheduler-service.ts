@@ -30,7 +30,7 @@ export class BullSchedulerService extends SchedulerService {
 
   constructor(private redisConnectionOptions: ConnectionOptions) {
     super()
-    this.queue = new Queue('pikku-remote-internal-rpc', {
+    this.queue = new Queue('pikku-mesh-rpc', {
       connection: redisConnectionOptions,
     })
     this.recurringQueue = new Queue(RECURRING_QUEUE_NAME, {
@@ -66,7 +66,7 @@ export class BullSchedulerService extends SchedulerService {
     }
 
     // Use add() with delay for one-off delayed execution
-    const job = await this.queue.add('pikku-remote-internal-rpc', jobData, {
+    const job = await this.queue.add('pikku-mesh-rpc', jobData, {
       delay: delayMs, // delay in milliseconds
       jobId: `${rpcName}-${Date.now()}`, // Ensure uniqueness
     })

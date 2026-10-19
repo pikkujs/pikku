@@ -35,7 +35,7 @@ interface ScheduledJobData {
 /**
  * Queue recurring cron fires land on.
  *
- * Deliberately separate from `pikku-remote-internal-rpc` (where one-off
+ * Deliberately separate from `pikku-mesh-rpc` (where one-off
  * `scheduleRPC` calls land): that queue is a registered pikku worker whose
  * consumer is owned by the queue registry, and a recurring task is not an RPC
  * invocation — it goes through `runScheduledTask`, which resolves the task's
@@ -45,7 +45,7 @@ interface ScheduledJobData {
 const RECURRING_TASK_QUEUE = 'pikku-recurring-scheduled-task'
 
 /** Queue a one-off `scheduleRPC` fires onto — a registered pikku worker. */
-const REMOTE_RPC_QUEUE = 'pikku-remote-internal-rpc'
+const MESH_RPC_QUEUE = 'pikku-mesh-rpc'
 
 /** Concurrent in-flight scheduled tasks. */
 const RECURRING_MAX_ACK_PENDING = 5
@@ -166,7 +166,7 @@ export class NatsSchedulerService extends SchedulerService {
   ): Promise<string> {
     const delayMs =
       typeof delay === 'string' ? parseDurationString(delay) : delay
-    const subject = scheduleSubjectFor(this.subjectPrefix, REMOTE_RPC_QUEUE)
+    const subject = scheduleSubjectFor(this.subjectPrefix, MESH_RPC_QUEUE)
     const hdrs = headers()
     // A timestamp already in the past fires immediately rather than erroring,
     // which matches pg-boss's `startAfter` with an elapsed date.
@@ -176,7 +176,7 @@ export class NatsSchedulerService extends SchedulerService {
     )
     hdrs.set(
       SCHEDULE_TARGET_HEADER,
-      subjectForQueue(this.subjectPrefix, REMOTE_RPC_QUEUE)
+      subjectForQueue(this.subjectPrefix, MESH_RPC_QUEUE)
     )
     await this.js.publish(
       subject,

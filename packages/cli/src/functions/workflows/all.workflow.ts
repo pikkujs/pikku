@@ -438,13 +438,13 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Workflow', 'pikkuWorkflow', null),
     ])
 
-    let remoteRPC = false
+    let meshRPC = false
     let webhook = false
     let webhookSources = false
     let remoteJobs = false
     let workflowRoutes = false
     if (!config.addon) {
-      remoteRPC = await workflow.do('Remote RPC', 'pikkuRemoteRPC', null)
+      meshRPC = await workflow.do('Mesh RPC', 'pikkuMeshRPC', null)
       webhook = await workflow.do('Webhook', 'pikkuWebhook', null)
       webhookSources = await workflow.do(
         'Webhook sources',
@@ -478,7 +478,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     if (
       workflows ||
-      remoteRPC ||
+      meshRPC ||
       webhook ||
       webhookSources ||
       remoteJobs ||

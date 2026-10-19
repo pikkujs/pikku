@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3309 observable things**: 1109 exported names, plus
+**3310 observable things**: 1110 exported names, plus
 2200 members on the classes and interfaces among them, reachable
 through 62 entry points.
 
@@ -48,7 +48,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./addon` | 13 | 13 | 2 |
 | `./scope` | 15 | 15 | 0 |
-| `./rpc` | 7 | 7 | 6 |
+| `./rpc` | 8 | 8 | 6 |
 | `./workflow/types` | 47 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
@@ -73,7 +73,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./node-host-resolver` | 2 | 2 | 0 |
 | `./oauth2` | 2 | 2 | 0 |
 | `./services/in-memory-trigger` | 1 | 1 | 1 |
-| `./remote` | 1 | 1 | 0 |
+| `./mesh` | 1 | 1 | 0 |
 | `./lifecycle` | 3 | 1 | 0 |
 | `.` | 8 | 0 | 0 |
 
@@ -131,11 +131,11 @@ export type PikkuWire<
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
   channel: [IsChannel] extends [null]
-    ? PikkuChannel<unknown, Out, TypedRPC['remote']>
-    : PikkuChannel<unknown, Out, TypedRPC['remote']> | undefined
+    ? PikkuChannel<unknown, Out, TypedRPC['mesh']>
+    : PikkuChannel<unknown, Out, TypedRPC['mesh']> | undefined
   scheduledTask: PikkuScheduledTask
   queue: PikkuQueue
-  cli: PikkuCLI<TypedRPC['remote']>
+  cli: PikkuCLI<TypedRPC['mesh']>
   workflow: TypedWorkflow
   scenario: TypedScenario
   virtualUsers: TScenarioVirtualUsers
@@ -282,7 +282,7 @@ export type GetCredential<TCredentials = Record<string, unknown>> =
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; uses?: Record<string, string>; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; contentBucket?: string; contentGrants?: Record<string, 'read' | 'write'>; globalContent?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; uses?: Record<string, string>; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; contentBucket?: string; contentGrants?: Record<string, 'read' | 'write'>; globalContent?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string; remoteTimeoutMs?: number; remoteHeaders?: (services: any, wire: any) => Record<string, string> | Promise<Record<string, string>> } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
@@ -327,11 +327,11 @@ export type PikkuWire<
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
   channel: [IsChannel] extends [null]
-    ? PikkuChannel<unknown, Out, TypedRPC['remote']>
-    : PikkuChannel<unknown, Out, TypedRPC['remote']> | undefined
+    ? PikkuChannel<unknown, Out, TypedRPC['mesh']>
+    : PikkuChannel<unknown, Out, TypedRPC['mesh']> | undefined
   scheduledTask: PikkuScheduledTask
   queue: PikkuQueue
-  cli: PikkuCLI<TypedRPC['remote']>
+  cli: PikkuCLI<TypedRPC['mesh']>
   workflow: TypedWorkflow
   scenario: TypedScenario
   virtualUsers: TScenarioVirtualUsers
@@ -504,9 +504,9 @@ export interface PikkuAgentMiddlewareHooks< State extends Record<string, unknown
 }
 pikkuChannelMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, Event = unknown>(middleware: CorePikkuChannelMiddleware<SingletonServices, Event>) => CorePikkuChannelMiddleware<SingletonServices, Event>
 pikkuChannelMiddlewareFactory: <In = any>(factory: CorePikkuChannelMiddlewareFactory<In>) => CorePikkuChannelMiddlewareFactory<In>
+pikkuMeshAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 pikkuMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, UserSession extends CoreUserSession = CoreUserSession>(middleware: CorePikkuMiddleware<SingletonServices, UserSession> | CorePikkuMiddlewareConfig<SingletonServices, UserSession>) => CorePikkuMiddleware<SingletonServices, UserSession>
 pikkuMiddlewareFactory: <In = any>(factory: CorePikkuMiddlewareFactory<In>) => CorePikkuMiddlewareFactory<In>
-pikkuRemoteAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 remoteJobsSecret: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 requireOrigin: CorePikkuMiddlewareFactory<{ origins?: string[] | ((services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => string[] | Promise<string[]>) | undefined; }>
 runMiddleware: <Middleware extends CorePikkuMiddleware<any, any>>(services: Parameters<Middleware>[0], wire: Parameters<Middleware>[1], middlewares: readonly Middleware[], main?: (() => Promise<unknown>) | undefined) => Promise<unknown>
@@ -2995,10 +2995,10 @@ wireHTTP: <In, Out, Route extends string, PikkuFunction extends CorePikkuFunctio
 wireHTTPRoutes: (config: WireHTTPRoutesConfig) => void
 ```
 
-## ./remote
+## ./mesh
 
 ```ts
-buildRemoteHeaders: (jwt: JWTService | undefined, secrets: SecretService | undefined, funcName: string, session?: unknown, traceId?: string | undefined) => Promise<Record<string, string>>
+buildMeshHeaders: (jwt: JWTService | undefined, secrets: SecretService | undefined, funcName: string, session?: unknown, traceId?: string | undefined) => Promise<Record<string, string>>
 ```
 
 ## ./queue
@@ -3393,7 +3393,7 @@ wireTriggerWebhookSource: <Events extends Record<string, StandardSchemaV1>>(sour
 ```ts
 export type PikkuRPC<
   Invoke extends (...args: any[]) => any = (...args: any[]) => any,
-  Remote extends (...args: any[]) => any = (...args: any[]) => any,
+  Mesh extends (...args: any[]) => any = (...args: any[]) => any,
   startWorkflow extends (...args: any[]) => any = (...args: any[]) => any,
   AgentRun extends (...args: any[]) => any = (...args: any[]) => any,
   AgentStream extends (...args: any[]) => any = (...args: any[]) => any,
@@ -3401,7 +3401,7 @@ export type PikkuRPC<
   depth: number
   global: boolean
   invoke: Invoke
-  remote: Remote
+  mesh: Mesh
   exposed: (name: string, data: any) => Promise<any>
   rpcWithWire: <In = any, Out = any>(
     rpcName: string,
@@ -3434,9 +3434,11 @@ export class PikkuRPCService< Services extends CoreServices, TypedRPC = PikkuRPC
 export class RemoteAddonConfigError extends PikkuError {
   constructor(namespace: string, detail: string)
 }
-export class RemoteAddonRequestError extends PikkuError {
-  public readonly httpStatus: number
-  constructor(namespace: string, fnName: string, status: number, detail: string)
+export class RemoteAddonFailedError extends PikkuError {
+  constructor(namespace: string, fnName: string)
+}
+export class RemoteAddonTimeoutError extends PikkuError {
+  constructor(namespace: string, fnName: string, timeoutMs: number)
 }
 export type RPCMeta = {
   pikkuFuncId: string
@@ -3521,6 +3523,12 @@ export type WireRemoteAddonConfig = {
   auth?: RemoteAddonAuth
   remoteName?: (fn: string) => string
   tags?: string[]
+  expose?: boolean | string[]
+  timeoutMs?: number
+  headers?: (
+    services: CoreServices,
+    wire: PikkuWire
+  ) => Record<string, string> | Promise<Record<string, string>>
 }
 ```
 
@@ -6396,8 +6404,8 @@ export interface EnvelopeEncryptResult {
 envelopeRewrap: (oldKEK: CryptoKey, newKEK: CryptoKey, wrappedDEK: string) => Promise<WrappedValue>
 generateDEK: () => Promise<string>
 generateKEKSalt: () => string
+MESH_SESSION_INFO: "pikku:mesh-session"
 MIN_KEY_MATERIAL_LENGTH: 32
-REMOTE_SESSION_INFO: "pikku:remote-session"
 signWithKeyMaterial: (name: string, keyMaterial: string, info: string, payload: string) => Promise<string>
 unwrapDEK: (kek: CryptoKey, wrappedDEK: string) => Promise<string>
 verifyWithKeyMaterial: (name: string, keyMaterial: string, info: string, payload: string, signature: string) => Promise<boolean>
@@ -6428,7 +6436,7 @@ initializePikkuState: (packageName: string) => void
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; uses?: Record<string, string>; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; contentBucket?: string; contentGrants?: Record<string, 'read' | 'write'>; globalContent?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; uses?: Record<string, string>; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; contentBucket?: string; contentGrants?: Record<string, 'read' | 'write'>; globalContent?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string; remoteTimeoutMs?: number; remoteHeaders?: (services: any, wire: any) => Record<string, string> | Promise<Record<string, string>> } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }

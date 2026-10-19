@@ -32,14 +32,8 @@ export const SCAFFOLD_OUTPUTS: ReadonlyArray<{
 }> = [
   ['rpc', 'publicRpcFile', 'rpc', 'rpc-public.gen.ts', true],
   ['rpc', 'publicRpcSchemasFile', 'rpc', 'rpc-public.schemas.gen.ts', false],
-  ['remoteRpc', 'remoteRpcWorkersFile', 'rpc', 'rpc-remote.gen.ts', true],
-  [
-    'remoteRpc',
-    'remoteRpcSchemasFile',
-    'rpc',
-    'rpc-remote.schemas.gen.ts',
-    false,
-  ],
+  ['meshRpc', 'meshRpcWorkersFile', 'rpc', 'rpc-mesh.gen.ts', true],
+  ['meshRpc', 'meshRpcSchemasFile', 'rpc', 'rpc-mesh.schemas.gen.ts', false],
   ['graph', 'graphWiringsFile', 'graph', 'graph.wirings.gen.ts', true],
   ['webhook', 'webhookWorkersFile', 'webhook', 'webhook.gen.ts', true],
   ['webhook', 'webhookSchemasFile', 'webhook', 'webhook.schemas.gen.ts', false],

@@ -73,10 +73,10 @@ export interface PikkuCLICoreOutputFiles {
   // RPC Remote — the `remote: true` surface a wireRemoteAddon consumer imports
   rpcRemoteMapDeclarationFile: string
 
-  // Remote RPC workers (derived from scaffold.pikkuDir when scaffold.remoteRpc is enabled).
-  // Optional: left undefined when scaffold.remoteRpc is not enabled, so consumers must guard.
-  remoteRpcWorkersFile?: string
-  remoteRpcSchemasFile?: string
+  // Mesh RPC workers (derived from scaffold.pikkuDir when scaffold.meshRpc is enabled).
+  // Optional: left undefined when scaffold.meshRpc is not enabled, so consumers must guard.
+  meshRpcWorkersFile?: string
+  meshRpcSchemasFile?: string
 
   // wireAddon for @pikku/addon-graph (derived from scaffold.pikkuDir when scaffold.graph is enabled).
   // Optional: left undefined when scaffold.graph is not enabled, so consumers must guard.
@@ -903,7 +903,7 @@ export type PikkuCLIInput = {
     agent?: PikkuScaffoldFeature
     workflow?: PikkuScaffoldFeature
     events?: PikkuScaffoldFeature
-    remoteRpc?: PikkuScaffoldFeature
+    meshRpc?: PikkuScaffoldFeature
     /**
      * HTTP routes an external dispatcher posts to so a runtime that holds
      * neither a queue consumer nor a clock still runs its queue workers and

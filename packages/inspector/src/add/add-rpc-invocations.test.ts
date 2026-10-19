@@ -297,7 +297,7 @@ describe('add-rpc-invocations — per-function invokes', () => {
     return { state, dir, warnings }
   }
 
-  test('literal rpc.invoke / rpc.remote names are recorded on the caller', async () => {
+  test('literal rpc.invoke / rpc.mesh names are recorded on the caller', async () => {
     const { state, dir } = await inspectWithWarnings(`
 import { pikkuFunc } from '@pikku/core'
 export const getCandidateResult = pikkuFunc({
@@ -307,7 +307,7 @@ export const getCandidateResults = pikkuFunc({
   func: async ({ translation }: any, _data: unknown, { rpc }: any) => {
     await rpc.invoke("byDoubleQuotes")
     await rpc!.invoke(\`byTemplate\`)
-    await rpc.remote('byRemote')
+    await rpc.mesh('byMesh')
     return rpc.invoke('getCandidateResult', {})
   },
 })
@@ -315,7 +315,7 @@ export const getCandidateResults = pikkuFunc({
     try {
       assert.deepStrictEqual(
         state.functions.meta['getCandidateResults']?.invokes,
-        ['byDoubleQuotes', 'byRemote', 'byTemplate', 'getCandidateResult']
+        ['byDoubleQuotes', 'byMesh', 'byTemplate', 'getCandidateResult']
       )
       assert.strictEqual(
         state.functions.meta['getCandidateResult']?.invokes,

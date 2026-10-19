@@ -88,7 +88,7 @@ describe('AWSSecrets', () => {
   })
 
   // An outage must not read as "not configured": core's remote call treats
-  // an absent PIKKU_REMOTE_SECRET as "send unauthenticated".
+  // an absent PIKKU_MESH_SECRET as "send unauthenticated".
   test('hasSecret rethrows a backend failure', async () => {
     const outage = Object.assign(new Error('Rate exceeded'), {
       name: 'ThrottlingException',
@@ -98,7 +98,7 @@ describe('AWSSecrets', () => {
       .rejects(outage)
 
     const service = new AWSSecrets({ awsRegion: 'us-east-1' } as any)
-    await assert.rejects(() => service.hasSecret('PIKKU_REMOTE_SECRET'), outage)
+    await assert.rejects(() => service.hasSecret('PIKKU_MESH_SECRET'), outage)
   })
 
   test('getSecrets omits missing secrets and rethrows a backend failure', async () => {

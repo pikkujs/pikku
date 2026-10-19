@@ -22,7 +22,7 @@ func SortedKeys(m map[string]bool) []string {
 }
 
 // InvokedRpcs is collectInvokedRpcNames: the names a handler passes as a
-// literal to rpc.invoke / rpc.remote, and the source text of the calls whose
+// literal to rpc.invoke / rpc.mesh, and the source text of the calls whose
 // name is computed.
 type InvokedRpcs struct {
 	Names   []string
@@ -38,7 +38,7 @@ func CollectInvokedRpcNames(body *ast.Node) InvokedRpcs {
 		}
 		pa := n.Expression()
 		m := pa.Name().Text()
-		if (m == "invoke" || m == "remote") && IsRpcExpr(pa.Expression()) {
+		if (m == "invoke" || m == "mesh") && IsRpcExpr(pa.Expression()) {
 			if args := n.Arguments(); len(args) > 0 {
 				if isLiteralName(args[0]) {
 					names[args[0].Text()] = true

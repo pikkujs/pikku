@@ -184,7 +184,7 @@ import {
   enableAgent,
   enableWorkflow,
   enableEvents,
-  enableRemoteRpc,
+  enableMeshRpc,
   enableRemoteJobs,
   enableWebhook,
 } from './functions/commands/enable.js'
@@ -1769,10 +1769,10 @@ wireCLI({
           description:
             'Enable the realtime events channel + SSE stream (scaffolds events.gen.ts)',
         }),
-        'remote-rpc': pikkuCLICommand({
-          func: enableRemoteRpc,
+        'mesh-rpc': pikkuCLICommand({
+          func: enableMeshRpc,
           description:
-            'Enable the remote internal RPC queue worker + HTTP endpoint (scaffolds rpc-remote.gen.ts)',
+            'Enable the mesh RPC queue worker + HTTP endpoint (scaffolds rpc-mesh.gen.ts)',
         }),
         oxlint: pikkuCLICommand({
           func: enableOxlint,

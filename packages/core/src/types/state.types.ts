@@ -106,7 +106,7 @@ export interface PikkuPackageState {
         rpcEndpoint?: string
         auth?: boolean
         tags?: string[]
-        /** Which functions `rpc.exposed` may call: unset/`true` keeps the addon's own `expose`, `false` none, a list exactly those */
+        /** Which functions `rpc.exposed` may call, from those the addon declared `expose: true`: `true` all of them, a list those named, unset/`false` none */
         expose?: boolean | string[]
         /** Required of every function in this package, on top of the function's own */
         scopes?: string[]
@@ -143,6 +143,13 @@ export interface PikkuPackageState {
           | { resolve: (services: any, wire: any) => string | Promise<string> }
         /** Map consumer-facing fn name → remote fn name (wireRemoteAddon) */
         remoteName?: (fn: string) => string
+        /** Milliseconds a remote addon call may take before it is aborted (wireRemoteAddon) */
+        remoteTimeoutMs?: number
+        /** Extra headers sent on every call to the hosted addon (wireRemoteAddon) */
+        remoteHeaders?: (
+          services: any,
+          wire: any
+        ) => Record<string, string> | Promise<Record<string, string>>
       }
     >
   }

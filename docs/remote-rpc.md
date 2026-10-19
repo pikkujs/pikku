@@ -1,17 +1,19 @@
-# Remote RPC — the mesh vs. `wireRemoteAddon`
+# The mesh vs. `wireRemoteAddon`
 
-The word **"remote"** shows up in three subtly different places in pikku. They
-are _not_ duplicates — they are two transports over a single idea plus one
-convenience method — but the shared name causes confusion, so this document
-pins down exactly what each one is, when it runs, and how to reason about them.
+Two transports call a function out of process. They used to share the word
+"remote" — `/remote/rpc`, `PIKKU_REMOTE_SECRET`, `rpc.remote()` — and that made
+them look like one feature. They are not. The **mesh** is your own app split
+across units, trusting each other. **`wireRemoteAddon`** is a client calling
+somebody's hosted addon over its public RPC route. Everything mesh-side is now
+named `mesh`; "remote" is left to remote addons.
 
-## The one idea: `remote: true`
+## The flag: `remote: true`
 
-A function flagged `remote: true` is **invocable out-of-process** — something
-outside this runtime may call it by name.
+A function flagged `remote: true` is **invocable out of process**.
 
 ```ts
 export const getOpenApi = pikkuSessionlessFunc({
+  expose: true,
   remote: true,
   func: async (_services, { name }) => {
     /* ... */
@@ -19,41 +21,41 @@ export const getOpenApi = pikkuSessionlessFunc({
 })
 ```
 
-That single flag drives two very different transports:
+The flag is read in two places, which is why it was not renamed:
 
-|                 | **Mesh** (deploymentService)                                                                                        | **`wireRemoteAddon`** (HTTP)                                                                   |
-| --------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Who calls it    | your own gateways, `rpc.remote()`, and the `rpc.invoke()` fallback                                                  | a consumer's `rpc('ns:fn')`                                                                    |
-| What it targets | **your own** worker/lambda — _same app_, split across units                                                         | a **hosted addon package** — _different app_                                                   |
-| Transport       | service binding (`env.X.fetch()`), Lambda invoke, Azure, or a queue                                                 | plain HTTPS `POST`                                                                             |
-| Auth            | **trust**: `PIKKU_REMOTE_SECRET`-signed JWT with the session encrypted in the payload (`pikkuRemoteAuthMiddleware`) | **client**: a bearer token the consumer binds from a credential/secret; the addon validates it |
-| Endpoint        | `POST /remote/rpc/:rpcName`                                                                                         | `POST {serverUrl}/remote/rpc/:rpcName`                                                         |
-| Wired by        | `pikku enable remote-rpc` (mesh mode)                                                                               | `wireRemoteAddon` on the consumer (host-serving is a follow-up — see below)                    |
+- **the remote-addon contract** — `rpc.remoteMeta` and the `.remote.gen` map a
+  `wireRemoteAddon` consumer imports, and the host's refusal of anything outside
+  that contract (see below);
+- **split deploys** — the deploy analyzer and per-unit codegen give a
+  `remote: true` function a `/mesh/rpc/<fn>` route in its unit.
 
-Both target the same `POST /remote/rpc/:rpcName` shape. Today the only generated
-handler (`serialize-remote-rpc.ts`) is the **mesh** one, gated by
-`pikkuRemoteAuthMiddleware` (a `PIKKU_REMOTE_SECRET`-signed JWT). This PR ships the
-**consumer** side of `wireRemoteAddon` — the typed dispatch, the `.remote.gen` map,
-and the dev-dependency/auth validation. Serving a public, client-authenticated
-remote surface on the host (a distinct route/auth that never hijacks the trusted
-mesh handler) is a separate follow-up landed alongside the cloud registry
-integration — it is intentionally _not_ folded into the mesh handler here.
+|                 | **Mesh** (deploymentService)                                                                                         | **`wireRemoteAddon`** (HTTP)                                                                  |
+| --------------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Who calls it    | your own gateways, `rpc.mesh()`, and the `rpc.invoke()` fallback                                                     | a consumer's `rpc('ns:fn')`, and `rpc.exposed` when the wiring sets `expose`                  |
+| What it targets | **your own** worker/lambda — _same app_, split across units                                                          | a **hosted addon** — _different app_                                                          |
+| Transport       | service binding (`env.X.fetch()`), Lambda invoke, Azure, or a queue                                                  | plain HTTPS `POST`                                                                            |
+| Auth            | **trust**: `PIKKU_MESH_SECRET`-signed JWT (`aud: 'pikku-mesh'`), session encrypted in it (`pikkuMeshAuthMiddleware`) | **client**: a bearer token the consumer binds from a credential/secret; the host validates it |
+| Endpoint        | `POST /mesh/rpc/:rpcName`                                                                                            | `POST {serverUrl}/rpc/:rpcName` with `{ rpcName, data }` — the host's public RPC route        |
+| Wired by        | `pikku enable mesh-rpc` (mesh mode)                                                                                  | `wireRemoteAddon` on the consumer; the host needs `scaffold.rpc`                              |
+
+The two never share a handler: the mesh route only accepts mesh JWTs, and a
+remote-addon call never carries one.
 
 ## The three call forms
 
 ```
 rpc.invoke('fn', data)   local-first — runs 'fn' locally if it exists here,
                          otherwise falls back to deploymentService.invoke
-rpc.remote('fn', data)   force-remote — always deploymentService.invoke,
+rpc.mesh('fn', data)     always deploymentService.invoke,
                          throws if no deploymentService is configured
 rpc('ns:fn', data)       wireRemoteAddon — dispatches over HTTP to the host
                          at the namespace's serverUrl, as an authenticated client
 ```
 
-`invoke` vs `remote` matter when a function is bundled into more than one unit:
-`invoke` runs your local copy; `remote` forces the call out to the authoritative
+`invoke` vs `mesh` matter when a function is bundled into more than one unit:
+`invoke` runs your local copy; `mesh` forces the call out to the authoritative
 unit. This is why the framework's own gateways (agent, MCP, channel, workflow
-orchestrator) call `rpc.remote()` — they must dispatch to the _function's_ worker,
+orchestrator) call `rpc.mesh()` — they must dispatch to the _function's_ worker,
 not a local shadow.
 
 ## Why a Cloudflare deploy _is_ the mesh
@@ -64,14 +66,14 @@ Worker. Gateways reach those functions through `CloudflareDeploymentService`:
 ```ts
 // packages/runtimes/cloudflare/src/cloudflare-deployment-service.ts
 const request = new Request(
-  `http://internal/remote/rpc/${encodeURIComponent(funcName)}`,
+  `http://internal/mesh/rpc/${encodeURIComponent(funcName)}`,
   { method: 'POST', headers, body: JSON.stringify({ data }) }
 )
 const response = await binding.fetch(request) // env.FUNC_WORKER.fetch() — free, ~0ms, internal
 ```
 
-`headers.Authorization` is a `PIKKU_REMOTE_SECRET`-signed JWT
-(`aud: 'pikku-remote'`, session encrypted) — i.e. exactly the mesh. So a
+`headers.Authorization` is a `PIKKU_MESH_SECRET`-signed JWT
+(`aud: 'pikku-mesh'`, session encrypted) — i.e. exactly the mesh. So a
 per-function Cloudflare (or Lambda, or Azure) deploy is the mesh with the
 transport swapped from a public URL to a service binding. `deploymentService` is
 implemented by the `cloudflare`, `aws-lambda`, and `azure-functions` runtimes and
@@ -90,9 +92,12 @@ host) and wire it:
 ```ts
 wireRemoteAddon({
   name: 'registry',
-  package: '@pikkustudio/addon-registry', // devDependency
-  serverUrl: (services) => services.variables.get('PIKKUSTUDIO_API_URL'),
-  auth: { credentialId: 'cloudRegistryToken' }, // see below; omit if public
+  package: '@acme/addon-registry', // devDependency
+  serverUrl: (services) => services.variables.get('REGISTRY_API_URL'),
+  auth: { credentialId: 'registryToken' }, // see below; omit if public
+  expose: ['getOpenApi'], // optional: forward POST /rpc/registry:getOpenApi
+  timeoutMs: 10_000, // optional, defaults to 30s
+  headers: (services, wire) => ({ 'x-tenant': 'acme' }), // optional
 })
 
 // fully typed against the addon's `.remote.gen` map:
@@ -109,6 +114,38 @@ type RemoteAddonAuth =
   | { resolve: (services, wire) => string | Promise<string> } // custom
 // omit `auth` entirely when the addon's remote surface is public
 ```
+
+### What goes over the wire
+
+`rpc('registry:getOpenApi', data)` posts to `{serverUrl}/rpc/getOpenApi` with
+the body `{ "rpcName": "getOpenApi", "data": … }` — the shape the host's
+`/rpc/:rpcName` route and the generated fetch client already use. Every call
+carries `x-pikku-remote-contract: 1`, and the host's `rpc.exposed` then answers
+only functions that are `expose: true` **and** `remote: true`. A consumer
+holding a token can never use it to reach the host's other exposed functions,
+and the header can only narrow what the host answers.
+
+So a host serves a function to remote-addon consumers by marking it
+`expose: true, remote: true` and serving the public RPC route (`scaffold.rpc`).
+
+### Exposing it from the consumer
+
+`expose` works as it does on `wireAddon`: off by default, `true` forwards every
+contract function, a list only those named. The forward runs inside
+`rpc.exposed`, after the caller's `addonMayReach` check, so an addon calling
+`/rpc` can reach a remote addon only through its `uses`. Server-side
+`rpc('ns:fn')` is never affected by `expose`.
+
+### Errors
+
+The host's body is never passed through as text:
+
+| Host answers                                   | Consumer throws                                           |
+| ---------------------------------------------- | --------------------------------------------------------- |
+| 4xx naming a `PikkuError` registered here      | that error class, with the host's status and message      |
+| any other 4xx, or an unreadable body           | the standard error for that status, with no upstream text |
+| 5xx, a network failure or an unreadable result | `RemoteAddonFailedError` (502), the detail logged locally |
+| no answer within `timeoutMs`                   | `RemoteAddonTimeoutError` (504)                           |
 
 ### Codegen
 
@@ -136,13 +173,13 @@ contracts and export functions; the consuming app does the wiring).
 
 ## Key files
 
-| File                                                                | Responsibility                                                                       |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `packages/core/src/wirings/addon/wire-remote-addon.ts`              | the `wireRemoteAddon` primitive + `RemoteAddonAuth`                                  |
-| `packages/core/src/wirings/rpc/rpc-runner.ts`                       | `executeAddonFunction` → `invokeRemoteAddonFunction` (HTTP dispatch); `rpc.remote()` |
-| `packages/core/src/wirings/addon/remote-addon-auth.ts`              | `resolveRemoteAddonToken` (credential/secret/custom; fails closed)                   |
-| `packages/core/src/middleware/remote-auth.ts`                       | `pikkuRemoteAuthMiddleware` — the **mesh** trust gate                                |
-| `packages/runtimes/*/src/*-deployment-service.ts`                   | per-runtime `deploymentService.invoke` (service binding / lambda / queue)            |
-| `packages/cli/src/functions/wirings/rpc/serialize-remote-rpc.ts`    | the generated **mesh** `/remote/rpc/:rpcName` handler (`pikkuRemoteAuthMiddleware`)  |
-| `packages/cli/src/functions/wirings/rpc/serialize-typed-rpc-map.ts` | picks `.remote.gen` vs `.internal.gen` per addon namespace                           |
-| `packages/inspector/src/utils/post-process.ts`                      | `validateRemoteAddonDependencies` (PKU338) + `validateRemoteAddonAuth` (PKU339)      |
+| File                                                                | Responsibility                                                                     |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `packages/core/src/wirings/addon/wire-remote-addon.ts`              | the `wireRemoteAddon` primitive, `RemoteAddonAuth`, `REMOTE_CONTRACT_HEADER`       |
+| `packages/core/src/wirings/rpc/rpc-runner.ts`                       | `executeAddonFunction` → `invokeRemoteAddonFunction` (HTTP dispatch); `rpc.mesh()` |
+| `packages/core/src/wirings/addon/remote-addon-auth.ts`              | `resolveRemoteAddonToken` (credential/secret/custom; fails closed)                 |
+| `packages/core/src/middleware/mesh-auth.ts`                         | `pikkuMeshAuthMiddleware` — the **mesh** trust gate                                |
+| `packages/runtimes/*/src/*-deployment-service.ts`                   | per-runtime `deploymentService.invoke` (service binding / lambda / queue)          |
+| `packages/cli/src/functions/wirings/rpc/serialize-mesh-rpc.ts`      | the generated **mesh** `/mesh/rpc/:rpcName` handler (`pikkuMeshAuthMiddleware`)    |
+| `packages/cli/src/functions/wirings/rpc/serialize-typed-rpc-map.ts` | picks `.remote.gen` vs `.internal.gen` per addon namespace                         |
+| `packages/inspector/src/utils/post-process.ts`                      | `validateRemoteAddonDependencies` (PKU338) + `validateRemoteAddonAuth` (PKU339)    |

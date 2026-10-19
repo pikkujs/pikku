@@ -30,7 +30,7 @@ transport reserialization cannot change the digest.
 
 The key is expanded with HKDF from `PIKKU_QUEUE_IDENTITY_SECRET`, read through
 the `SecretService`, under the `pikku:queue-identity` info namespace — the same
-deployment secret therefore cannot produce a key that opens the remote-RPC
+deployment secret therefore cannot produce a key that opens the mesh RPC
 envelope. `signWithKeyMaterial` / `verifyWithKeyMaterial` in
 `packages/core/src/crypto-utils.ts` are WebCrypto-only because that file is in
 the Cloudflare Workers build; the `node:crypto` helpers behind

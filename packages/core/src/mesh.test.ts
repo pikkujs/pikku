@@ -1,7 +1,7 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
-import { buildRemoteHeaders } from './remote.js'
-import { pikkuRemoteAuthMiddleware } from './middleware/remote-auth.js'
+import { buildMeshHeaders } from './mesh.js'
+import { pikkuMeshAuthMiddleware } from './middleware/mesh-auth.js'
 import { resetPikkuState } from './pikku-state.js'
 import { WeakKeyMaterialError } from './errors/errors.js'
 import { createSecretValue } from './classification/secret-value.js'
@@ -14,12 +14,12 @@ const algorithmName = (algorithm: AlgorithmIdentifier): string =>
   typeof algorithm === 'string' ? algorithm : algorithm.name
 
 const STRONG_SECRET = 'a'.repeat(43)
-const WEAK_SECRET = 'dev-remote-secret'
+const WEAK_SECRET = 'dev-mesh-secret'
 
 const createSecrets = (secret: string) => ({
-  hasSecret: async (key: string) => key === 'PIKKU_REMOTE_SECRET',
+  hasSecret: async (key: string) => key === 'PIKKU_MESH_SECRET',
   getSecret: async (key: string) => {
-    if (key === 'PIKKU_REMOTE_SECRET') return createSecretValue(secret)
+    if (key === 'PIKKU_MESH_SECRET') return createSecretValue(secret)
     throw new Error(`Secret ${key} not found`)
   },
 })
@@ -36,7 +36,7 @@ const createJWT = () => ({
 
 const createRequest = (
   headers: Record<string, string>,
-  path = '/remote/rpc/myFunc'
+  path = '/mesh/rpc/myFunc'
 ) => ({
   header: (name: string) => headers[name.toLowerCase()] || headers[name],
   path: () => path,
@@ -47,7 +47,7 @@ const roundTrip = async (secret: string, session: unknown) => {
   const jwt = createJWT()
   const secrets = createSecrets(secret)
 
-  const headers = await buildRemoteHeaders(
+  const headers = await buildMeshHeaders(
     jwt as any,
     secrets as any,
     'myFunc',
@@ -55,7 +55,7 @@ const roundTrip = async (secret: string, session: unknown) => {
   )
 
   let received: unknown
-  await pikkuRemoteAuthMiddleware(
+  await pikkuMeshAuthMiddleware(
     { secrets, jwt } as any,
     {
       http: {
@@ -70,7 +70,7 @@ const roundTrip = async (secret: string, session: unknown) => {
   return received
 }
 
-describe('remote RPC session round trip', () => {
+describe('mesh RPC session round trip', () => {
   test('round-trips the session through header build and middleware verify', async () => {
     const session = { userId: 'user-1', role: 'admin' }
     assert.deepStrictEqual(await roundTrip(STRONG_SECRET, session), session)
@@ -78,7 +78,7 @@ describe('remote RPC session round trip', () => {
 
   test('a header built with one secret is rejected by a peer holding another', async () => {
     const jwt = createJWT()
-    const headers = await buildRemoteHeaders(
+    const headers = await buildMeshHeaders(
       jwt as any,
       createSecrets(STRONG_SECRET) as any,
       'myFunc',
@@ -86,7 +86,7 @@ describe('remote RPC session round trip', () => {
     )
 
     await assert.rejects(() =>
-      pikkuRemoteAuthMiddleware(
+      pikkuMeshAuthMiddleware(
         { secrets: createSecrets('b'.repeat(43)), jwt } as any,
         {
           http: {
@@ -119,11 +119,11 @@ describe('remote RPC session round trip', () => {
   })
 })
 
-describe('PIKKU_REMOTE_SECRET strength', () => {
-  test('buildRemoteHeaders rejects a secret shorter than 32 characters', async () => {
+describe('PIKKU_MESH_SECRET strength', () => {
+  test('buildMeshHeaders rejects a secret shorter than 32 characters', async () => {
     await assert.rejects(
       () =>
-        buildRemoteHeaders(
+        buildMeshHeaders(
           createJWT() as any,
           createSecrets(WEAK_SECRET) as any,
           'myFunc',
@@ -133,10 +133,10 @@ describe('PIKKU_REMOTE_SECRET strength', () => {
     )
   })
 
-  test('buildRemoteHeaders rejects a weak secret even with no session to encrypt', async () => {
+  test('buildMeshHeaders rejects a weak secret even with no session to encrypt', async () => {
     await assert.rejects(
       () =>
-        buildRemoteHeaders(
+        buildMeshHeaders(
           createJWT() as any,
           createSecrets(WEAK_SECRET) as any,
           'myFunc'
@@ -147,7 +147,7 @@ describe('PIKKU_REMOTE_SECRET strength', () => {
 
   test('the middleware rejects a weak secret rather than authenticating with it', async () => {
     const jwt = createJWT()
-    const headers = await buildRemoteHeaders(
+    const headers = await buildMeshHeaders(
       jwt as any,
       createSecrets(STRONG_SECRET) as any,
       'myFunc',
@@ -156,7 +156,7 @@ describe('PIKKU_REMOTE_SECRET strength', () => {
 
     await assert.rejects(
       () =>
-        pikkuRemoteAuthMiddleware(
+        pikkuMeshAuthMiddleware(
           { secrets: createSecrets(WEAK_SECRET), jwt } as any,
           {
             http: {
@@ -176,9 +176,9 @@ describe('PIKKU_REMOTE_SECRET strength', () => {
   })
 })
 
-describe('reading PIKKU_REMOTE_SECRET', () => {
+describe('reading PIKKU_MESH_SECRET', () => {
   test('sends an unauthenticated call when no secret is configured', async () => {
-    const headers = await buildRemoteHeaders(
+    const headers = await buildMeshHeaders(
       createJWT() as any,
       {
         hasSecret: async () => false,
@@ -192,7 +192,7 @@ describe('reading PIKKU_REMOTE_SECRET', () => {
   })
 
   test('sends an unauthenticated call when there is no secrets service', async () => {
-    const headers = await buildRemoteHeaders(
+    const headers = await buildMeshHeaders(
       createJWT() as any,
       undefined,
       'myFunc'
@@ -204,7 +204,7 @@ describe('reading PIKKU_REMOTE_SECRET', () => {
     const backendError = new Error('vault unreachable')
     await assert.rejects(
       () =>
-        buildRemoteHeaders(
+        buildMeshHeaders(
           createJWT() as any,
           {
             hasSecret: async () => true,
@@ -216,7 +216,7 @@ describe('reading PIKKU_REMOTE_SECRET', () => {
         ),
       (err: unknown) =>
         err instanceof Error &&
-        err.message.includes('PIKKU_REMOTE_SECRET') &&
+        err.message.includes('PIKKU_MESH_SECRET') &&
         err.cause === backendError
     )
   })
@@ -224,7 +224,7 @@ describe('reading PIKKU_REMOTE_SECRET', () => {
   test('fails closed when the secrets backend errors on lookup', async () => {
     await assert.rejects(
       () =>
-        buildRemoteHeaders(
+        buildMeshHeaders(
           createJWT() as any,
           {
             hasSecret: async () => {
@@ -234,7 +234,7 @@ describe('reading PIKKU_REMOTE_SECRET', () => {
           } as any,
           'myFunc'
         ),
-      /PIKKU_REMOTE_SECRET/
+      /PIKKU_MESH_SECRET/
     )
   })
 })

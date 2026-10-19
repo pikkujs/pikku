@@ -2,10 +2,10 @@ import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import type { PikkuRawWire } from '../../types/core.types.js'
 import type { AgentInterruptResult } from '../agent/agent-interrupt.js'
 
-/** The `rpc` object on a function's wire. An app's generated types narrow `invoke`, `remote`, `startWorkflow` and `agent` to its own functions, workflows and agents; see {@link PikkuRPCService} for how each call is routed. */
+/** The `rpc` object on a function's wire. An app's generated types narrow `invoke`, `mesh`, `startWorkflow` and `agent` to its own functions, workflows and agents; see {@link PikkuRPCService} for how each call is routed. */
 export type PikkuRPC<
   Invoke extends (...args: any[]) => any = (...args: any[]) => any,
-  Remote extends (...args: any[]) => any = (...args: any[]) => any,
+  Mesh extends (...args: any[]) => any = (...args: any[]) => any,
   startWorkflow extends (...args: any[]) => any = (...args: any[]) => any,
   AgentRun extends (...args: any[]) => any = (...args: any[]) => any,
   AgentStream extends (...args: any[]) => any = (...args: any[]) => any,
@@ -13,7 +13,7 @@ export type PikkuRPC<
   depth: number
   global: boolean
   invoke: Invoke
-  remote: Remote
+  mesh: Mesh
   exposed: (name: string, data: any) => Promise<any>
   /** Invoke an RPC with explicit wire fields merged over the caller's. */
   rpcWithWire: <In = any, Out = any>(
@@ -66,7 +66,7 @@ export interface ResolvedFunction {
     package: string
     auth?: boolean
     tags?: string[]
-    /** Set by the consuming app: which functions `rpc.exposed` may call */
+    /** Set by the consuming app: which of the addon's declared-exposed functions `rpc.exposed` may call */
     expose?: boolean | string[]
     rpcEndpoint?: string
     secretOverrides?: Record<string, string>
@@ -94,5 +94,10 @@ export interface ResolvedFunction {
       | { secretId: string }
       | { resolve: (services: any, wire: any) => string | Promise<string> }
     remoteName?: (fn: string) => string
+    remoteTimeoutMs?: number
+    remoteHeaders?: (
+      services: any,
+      wire: any
+    ) => Record<string, string> | Promise<Record<string, string>>
   }
 }

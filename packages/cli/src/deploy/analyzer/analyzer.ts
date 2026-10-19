@@ -440,7 +440,7 @@ export function analyzeDeployment(
       const funcName = funcMeta.name ?? funcId
       const remoteRoute = {
         method: 'post',
-        route: prefixed(`/remote/rpc/${funcName}`),
+        route: prefixed(`/mesh/rpc/${funcName}`),
         pikkuFuncId: funcId,
       }
       const fetchHandler = handlers.find(
@@ -492,14 +492,15 @@ export function analyzeDeployment(
   // ── Step 1b: Addon units ───────────────────────────────────────────
   const addonUnitByRpcName = new Map<string, string>()
   for (const [namespace, addonMeta] of entries(state.addonFunctions ?? {})) {
-    // The wiring's `expose` decides when it is `false` or a list; otherwise
-    // the addon's own `expose: true` does — the same rule `rpc.exposed`
+    // The addon must declare the function `expose: true` and the wiring must
+    // opt in, with `true` or a list naming it — the same rule `rpc.exposed`
     // applies at runtime, so the unit carries exactly what can be called.
     const wiredExpose = state.rpc?.wireAddonDeclarations?.get(namespace)?.expose
     const isExposed = (funcName: string, meta: { expose?: boolean }) =>
-      Array.isArray(wiredExpose)
+      !!meta.expose &&
+      (Array.isArray(wiredExpose)
         ? wiredExpose.includes(funcName)
-        : wiredExpose !== false && !!meta.expose
+        : wiredExpose === true)
     const wired = entries(addonMeta).filter(
       ([funcName, meta]) =>
         isExposed(funcName, meta) ||
@@ -535,7 +536,7 @@ export function analyzeDeployment(
         })
         routes.push({
           method: 'post',
-          route: prefixed(`/remote/rpc/${rpcName}`),
+          route: prefixed(`/mesh/rpc/${rpcName}`),
           pikkuFuncId: rpcName,
         })
       }

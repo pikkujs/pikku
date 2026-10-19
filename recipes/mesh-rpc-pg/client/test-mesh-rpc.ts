@@ -1,7 +1,7 @@
 /**
  * Waits for the server to be *routable*, not merely listening.
  *
- * An accepted socket says nothing about this test: `remoteGreet` resolves its
+ * An accepted socket says nothing about this test: `meshGreet` resolves its
  * target through the deployment registry, and both servers register themselves
  * after they start serving. Probing the port returns during that window, so the
  * call lands on an empty registry and fails with "No deployment found" — which
@@ -15,7 +15,7 @@ async function waitForRemoteRouting(
   let lastError = 'no response'
   while (Date.now() - start < timeoutMs) {
     try {
-      const res = await fetch(`http://localhost:${port}/rpc/remoteGreet`, {
+      const res = await fetch(`http://localhost:${port}/rpc/meshGreet`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: { name: 'Ready', greeting: 'Hi' } }),
@@ -34,11 +34,11 @@ async function waitForRemoteRouting(
   )
 }
 
-async function testRemoteRpc(
+async function testMeshRpc(
   fromPort: number,
   expectOtherPort: number
 ): Promise<void> {
-  const res = await fetch(`http://localhost:${fromPort}/rpc/remoteGreet`, {
+  const res = await fetch(`http://localhost:${fromPort}/rpc/meshGreet`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ data: { name: 'Test', greeting: 'Hi' } }),
@@ -47,7 +47,7 @@ async function testRemoteRpc(
   if (!res.ok) {
     const body = await res.text()
     throw new Error(
-      `POST /rpc/remoteGreet on ${fromPort} failed: ${res.status} ${body}`
+      `POST /rpc/meshGreet on ${fromPort} failed: ${res.status} ${body}`
     )
   }
 
@@ -59,11 +59,11 @@ async function testRemoteRpc(
 
   if (result.serverPort === fromPort) {
     console.log(
-      `  [port ${fromPort}] rpc.remote() routed to itself (only 2 servers, both valid targets)`
+      `  [port ${fromPort}] rpc.mesh() routed to itself (only 2 servers, both valid targets)`
     )
   } else if (result.serverPort === expectOtherPort) {
     console.log(
-      `  [port ${fromPort}] rpc.remote() routed to port ${expectOtherPort}`
+      `  [port ${fromPort}] rpc.mesh() routed to port ${expectOtherPort}`
     )
   } else {
     throw new Error(`Unexpected serverPort: ${result.serverPort}`)
@@ -71,25 +71,25 @@ async function testRemoteRpc(
 }
 
 async function main(): Promise<void> {
-  console.log('Remote RPC Two-Server Test')
+  console.log('Mesh RPC Two-Server Test')
   console.log('==========================\n')
 
   console.log('Waiting for both servers...')
   await Promise.all([waitForRemoteRouting(3001), waitForRemoteRouting(3002)])
   console.log('Both servers ready.\n')
 
-  console.log('Test 1: Call /rpc/remoteGreet on port 3001')
+  console.log('Test 1: Call /rpc/meshGreet on port 3001')
   console.log(
-    '  remoteGreet -> rpc.remote("greet") -> DeploymentService lookup -> HTTP /rpc/greet'
+    '  meshGreet -> rpc.mesh("greet") -> DeploymentService lookup -> HTTP /rpc/greet'
   )
-  await testRemoteRpc(3001, 3002)
+  await testMeshRpc(3001, 3002)
   console.log('  PASSED\n')
 
-  console.log('Test 2: Call /rpc/remoteGreet on port 3002')
+  console.log('Test 2: Call /rpc/meshGreet on port 3002')
   console.log(
-    '  remoteGreet -> rpc.remote("greet") -> DeploymentService lookup -> HTTP /rpc/greet'
+    '  meshGreet -> rpc.mesh("greet") -> DeploymentService lookup -> HTTP /rpc/greet'
   )
-  await testRemoteRpc(3002, 3001)
+  await testMeshRpc(3002, 3001)
   console.log('  PASSED\n')
 
   console.log('All tests passed!')

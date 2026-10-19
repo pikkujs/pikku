@@ -59,15 +59,17 @@ const wireAll = () => {
   wireAddon({
     name: 'mail',
     package: '@addon/mail',
+    expose: true,
     uses: { '@addon/stripe': 'stripe' },
   })
   wireAddon({
     name: 'stripe',
     package: '@addon/stripe',
+    expose: true,
     uses: { '@addon/crm': 'crm' },
   })
-  wireAddon({ name: 'crm', package: '@addon/crm' })
-  wireAddon({ name: 'vault', package: '@addon/vault' })
+  wireAddon({ name: 'crm', package: '@addon/crm', expose: true })
+  wireAddon({ name: 'vault', package: '@addon/vault', expose: true })
   registerFunction('send', '@addon/mail')
   registerFunction('charge', '@addon/stripe')
   registerFunction('contact', '@addon/crm')
@@ -76,10 +78,8 @@ const wireAll = () => {
 }
 
 const callers = {
-  rpc: (
-    service: ContextAwareRPCService,
-    name: string
-  ): Promise<unknown> => service.rpc(name, {}),
+  rpc: (service: ContextAwareRPCService, name: string): Promise<unknown> =>
+    service.rpc(name, {}),
   rpcWithWire: (
     service: ContextAwareRPCService,
     name: string
@@ -97,7 +97,10 @@ describe('an addon can only call the addons it is wired to', () => {
     describe(`through ${via}`, () => {
       test('an addon it lists is reachable', async () => {
         assert.equal(
-          await call(addonCaller('mail', '@addon/mail'), '@addon/stripe:charge'),
+          await call(
+            addonCaller('mail', '@addon/mail'),
+            '@addon/stripe:charge'
+          ),
           'charge'
         )
       })
@@ -148,7 +151,8 @@ describe('an addon can only call the addons it is wired to', () => {
           uses: { '@addon/ghost': 'ghost' },
         })
         await assert.rejects(
-          () => call(addonCaller('broken', '@addon/broken'), '@addon/ghost:boo'),
+          () =>
+            call(addonCaller('broken', '@addon/broken'), '@addon/ghost:boo'),
           RPCNotFoundError
         )
       })
@@ -178,7 +182,10 @@ describe('an addon cannot reach anything outside its wiring', () => {
   for (const [via, call] of Object.entries(callers)) {
     describe(`through ${via}`, () => {
       test('its own functions answer to their bare name', async () => {
-        assert.equal(await call(addonCaller('mail', '@addon/mail'), 'send'), 'send')
+        assert.equal(
+          await call(addonCaller('mail', '@addon/mail'), 'send'),
+          'send'
+        )
       })
 
       test('a host function is not reachable by bare name', async () => {
@@ -217,7 +224,10 @@ describe('an addon cannot reach anything outside its wiring', () => {
           RPCNotFoundError
         )
         assert.deepEqual(invoked, [])
-        assert.equal(await call(host(deployment), 'missingEverywhere'), 'leaked')
+        assert.equal(
+          await call(host(deployment), 'missingEverywhere'),
+          'leaked'
+        )
         assert.deepEqual(invoked, ['missingEverywhere'])
       })
     })
@@ -242,7 +252,11 @@ describe('an addon can only start the workflows of addons it is wired to', () =>
           },
         },
       } as never,
-      { wireType: 'http', wireId: namespace, addonNamespace: namespace } as never,
+      {
+        wireType: 'http',
+        wireId: namespace,
+        addonNamespace: namespace,
+      } as never,
       { requiresAuth: false },
       packageName
     )
@@ -383,7 +397,11 @@ const secretService = (): SecretService =>
   }) as unknown as SecretService
 
 const parent = () =>
-  ({ config: {}, logger, secrets: secretService() }) as unknown as CoreSingletonServices
+  ({
+    config: {},
+    logger,
+    secrets: secretService(),
+  }) as unknown as CoreSingletonServices
 
 const registerSecretAddon = (packageName: string, declared: string[]) => {
   pikkuState(packageName, 'package', 'factories', {

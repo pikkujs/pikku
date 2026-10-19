@@ -13,14 +13,14 @@
 | Method                           | Purpose                                   |
 | -------------------------------- | ----------------------------------------- |
 | `rpc.invoke(name, data)`         | Internal call to any wired function       |
-| `rpc.remote(name, data)`         | Remote call via DeploymentService         |
+| `rpc.mesh(name, data)`           | Mesh call via DeploymentService           |
 | `rpc.exposed(name, data)`        | Call functions marked with `expose: true` |
 | `rpc.startWorkflow(name, input)` | Start a workflow (see `pikku-workflow`)   |
 | `rpc.agent.run/stream(...)`      | Run an AI agent (see `pikku-agent`)       |
 | `rpc.agent.resume/approve(...)`  | Answer a tool-approval interrupt          |
 | `rpc.agent.interrupt(runId)`     | Stop an in-flight run                     |
 
-`rpc.invoke`, `rpc.remote` and `rpc.startWorkflow` are typed off the generated
+`rpc.invoke`, `rpc.mesh` and `rpc.startWorkflow` are typed off the generated
 RPC map, so the name and the payload are checked. `rpc.exposed` is deliberately
 `(name: string, data: any) => Promise<any>` — it exists to dispatch a name that
 arrived from outside, which by definition cannot be checked at compile time.

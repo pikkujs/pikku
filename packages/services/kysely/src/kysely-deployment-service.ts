@@ -1,4 +1,4 @@
-import { buildRemoteHeaders } from '@pikku/core/remote'
+import { buildMeshHeaders } from '@pikku/core/mesh'
 import type {
   DeploymentService,
   DeploymentServiceConfig,
@@ -96,7 +96,7 @@ export class KyselyDeploymentService implements DeploymentService {
     session?: unknown,
     traceId?: string
   ): Promise<unknown> {
-    const headers = await buildRemoteHeaders(
+    const headers = await buildMeshHeaders(
       this.jwt,
       this.secrets,
       funcName,
@@ -125,7 +125,7 @@ export class KyselyDeploymentService implements DeploymentService {
     }
 
     const endpoint = result[0].endpoint
-    const url = `${endpoint}/remote/rpc/${encodeURIComponent(funcName)}`
+    const url = `${endpoint}/mesh/rpc/${encodeURIComponent(funcName)}`
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -137,7 +137,7 @@ export class KyselyDeploymentService implements DeploymentService {
 
     if (!response.ok) {
       throw new Error(
-        `Remote RPC call to '${funcName}' failed: ${response.status}`
+        `Mesh RPC call to '${funcName}' failed: ${response.status}`
       )
     }
 

@@ -904,6 +904,10 @@ function generateFunctionFile(
     funcConfig.push('  mcp: true,')
   }
 
+  // Eligible for a host's `wireAddon({ expose })` list, which decides what is
+  // actually reachable; without this no list could open an operation.
+  funcConfig.push('  expose: true,')
+
   // Bug 3: Avoid duplicate identifier when camelName is 'data' (TS2300)
   const inputParamName = camelName === 'data' ? 'inputData' : 'data'
   const funcParams = hasInput

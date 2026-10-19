@@ -9,23 +9,27 @@ tags: rpc
 
 `wireAddon` bundles an addon's functions in-process: the package is a production
 dependency and its handlers run inside the consumer. `wireRemoteAddon`
-(`packages/core/src/wirings/rpc/wire-remote-addon.ts`) does the opposite — the
+(`packages/core/src/wirings/addon/wire-remote-addon.ts`) does the opposite — the
 package is installed as a **devDependency**, contributing types only, and the
 handlers run on the host at `serverUrl`. `pikku verify` enforces the
 devDependency placement.
 
 `ContextAwareRPCService.resolveAddonFunction` in `rpc-runner.ts` therefore checks
 `resolved.addonConfig?.remote` _before_ it looks for local function meta, and
-`executeAddonFunction` routes the remote call to `invokeRemoteAddonFunction`. That method POSTs the addon's own function
-name — the bare name, not the namespaced `ns:fn` form, optionally remapped by
-`remoteName` — to `${serverUrl}/remote/rpc/:rpcName`, authenticating as a client
-with the token bound in `wireRemoteAddon({ auth })`. There is no local meta entry
+`executeAddonFunction` routes the remote call to `invokeRemoteAddonFunction`. That
+method POSTs the addon's own function name — the bare name, not the namespaced
+`ns:fn` form, optionally remapped by `remoteName` — to the host's public
+`${serverUrl}/rpc/:rpcName` route, with the body `{ rpcName, data }` that route
+and the generated fetch client already use. It authenticates as a client with
+the token bound in `wireRemoteAddon({ auth })`, never on the host's
+`/mesh/rpc` route, which only accepts mesh tokens. There is no local meta entry
 to fall back on, which is why a missing `serverUrl` raises
-`RemoteAddonConfigError` rather than degrading to a local lookup, and a non-2xx
-response raises `RemoteAddonRequestError` with a truncated body for context.
+`RemoteAddonConfigError` rather than degrading to a local lookup. How a failed
+call is reported is in
+[remote addon errors are rebuilt, not passed through](../security/remote-addon-errors-are-rebuilt-not-passed-through.md).
 
 **What this rules out:** moving the `remote` check after the local meta lookup
 (the lookup will always miss and mask the real error), sending the namespaced
-name over the wire, and promoting the addon to a production dependency so its
+name over the wire, posting to the mesh route, and promoting the addon to a production dependency so its
 handlers can be "used directly" — that defeats the point of the remote wiring and
 puts the host's code in the consumer's bundle.

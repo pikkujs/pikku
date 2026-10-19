@@ -139,16 +139,16 @@ const templates = [
     supports: ['cli'],
   },
   {
-    template: 'remote-rpc-pg',
+    template: 'mesh-rpc-pg',
     description:
-      'A two-server remote RPC template with PostgreSQL deployment discovery',
-    supports: ['http', 'remote-rpc'],
+      'A two-server mesh RPC template with PostgreSQL deployment discovery',
+    supports: ['http', 'mesh-rpc'],
   },
   {
-    template: 'remote-rpc-redis',
+    template: 'mesh-rpc-redis',
     description:
-      'A two-server remote RPC template with Redis deployment discovery',
-    supports: ['http', 'remote-rpc'],
+      'A two-server mesh RPC template with Redis deployment discovery',
+    supports: ['http', 'mesh-rpc'],
   },
   {
     template: 'workflows-pg-boss',

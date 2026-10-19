@@ -8,5 +8,6 @@ import { wireAddon } from '#pikku/addon'
 wireAddon({
   name: 'emails-promo',
   package: '@pikku/addon-emails',
+  expose: true,
   secretOverrides: { EMAILS_CREDENTIALS: 'EMAILS_PROMO_CREDENTIALS' },
 })

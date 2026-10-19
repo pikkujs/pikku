@@ -9,9 +9,9 @@ import { wireAddon } from '#pikku/addon'
 /**
  * `mcp` names the tools this app offers, rather than deferring to the addon:
  * `goodbye` never declared itself one, and `hello` — which did — stays out of
- * the menu because the list does not name it. `expose` does the same for
- * `rpc.exposed`: neither function declared `expose: true`, and only the one
- * the list names becomes callable.
+ * the menu because the list does not name it. `expose` opts in to
+ * `rpc.exposed` from what the addon declared: `goodbye` is declared
+ * `expose: true` and listed, so it becomes callable; `hello` is neither.
  */
 wireAddon({
   name: 'ext',

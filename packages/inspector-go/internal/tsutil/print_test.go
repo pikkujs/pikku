@@ -62,11 +62,11 @@ func TestCollectStartedWorkflows(t *testing.T) {
 func TestCollectInvokedRpcNames(t *testing.T) {
 	sf := sourcescan.Parse("a.ts", `async () => {
 	await rpc.invoke('a', {})
-	await rpc!.remote(name, {})
+	await rpc!.mesh(name, {})
 	await other.invoke(name, {})
 }`, core.ScriptKindTS)
 	got := tsutil.CollectInvokedRpcNames(sf.Statements.Nodes[0])
-	if !slices.Equal(got.Names, []string{"a"}) || !slices.Equal(got.Dynamic, []string{"rpc!.remote(name, {})"}) {
+	if !slices.Equal(got.Names, []string{"a"}) || !slices.Equal(got.Dynamic, []string{"rpc!.mesh(name, {})"}) {
 		t.Errorf("got %+v", got)
 	}
 }
