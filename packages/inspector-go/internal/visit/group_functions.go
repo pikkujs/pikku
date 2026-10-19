@@ -394,6 +394,15 @@ func (s *Context) addFunctions(node *ast.Node) {
 	if len(inputNames) > 1 {
 		s.Log.Warn("More than one input type detected, only the first one will be used as a schema.")
 	}
+	if s.Options.IsAddon && m.Remote != nil && *m.Remote && !isScenarioStep && !isWebhookReceive {
+		if violation := addonZodContractViolation(tm, addonContractTypeSource{
+			name: name, usesGenerics: len(node.TypeArguments()) > 0,
+			hasInputSchema: inputSchemaRef != nil, hasOutputSchema: outputSchemaRef != nil,
+			inputNames: inputNames, outputNames: outputNames,
+		}); violation != "" {
+			s.Log.Critical(diag.AddonRemoteContractNotZod, violation)
+		}
+	}
 	if len(inputTypes) > 0 {
 		s.typesLookup[pikkuFuncId] = inputTypes
 	}

@@ -352,6 +352,85 @@ run(
   remoteAddonDir
 )
 
+// The remote addon's consumers get its contract as a types-only SDK. Its one
+// remote function is zod-typed (PKU922 refuses a generic one), so the SDK can
+// carry it without a single import into the addon's src/.
+const sdkPackDir = join(remoteAddonDir, '.pikku', 'sdk-pack')
+run(
+  'remote addon: pikku sdk',
+  'node',
+  [PIKKU, 'sdk', '--pack-dir', sdkPackDir],
+  remoteAddonDir
+)
+console.log('\n▶ assert: the remote addon’s SDK is types only')
+const sdkTarball = join(
+  sdkPackDir,
+  'pikku-verifier-db-remote-addon-0.1.0.sdk.tgz'
+)
+check(
+  existsSync(sdkTarball),
+  'pikku sdk packed <scope>-<name>-<version>.sdk.tgz'
+)
+const sdkEntries = execFileSync('tar', ['tzf', sdkTarball], {
+  encoding: 'utf8',
+})
+  .split('\n')
+  .filter(Boolean)
+  .sort()
+check(
+  sdkEntries.join(',') ===
+    [
+      'agent/pikku-agent-map.gen.d.ts',
+      'function/pikku-functions-meta.gen.json',
+      'manifest.json',
+      'rpc/pikku-rpc-wirings-map.remote.gen.d.ts',
+      'workflow/pikku-workflow-map.gen.d.ts',
+    ].join(','),
+  `the SDK holds exactly the five spec files (${sdkEntries.join(', ')})`
+)
+const sdkDir = join(remoteAddonDir, '.pikku', 'sdk')
+const sdkManifest = JSON.parse(
+  readFileSync(join(sdkDir, 'manifest.json'), 'utf8')
+)
+check(
+  sdkManifest.name === REMOTE_ADDON_PKG &&
+    sdkManifest.version === '0.1.0' &&
+    typeof sdkManifest.pikkuCore === 'string' &&
+    /^[0-9a-f]{64}$/.test(sdkManifest.contractHash),
+  'manifest.json carries name, version, pikkuCore and contractHash'
+)
+const sdkMeta = JSON.parse(
+  readFileSync(
+    join(sdkDir, 'function', 'pikku-functions-meta.gen.json'),
+    'utf8'
+  )
+)
+check(
+  Object.keys(sdkMeta).join(',') === 'listNotes' &&
+    /^[0-9a-f]{16}$/.test(sdkMeta.listNotes.contractHash ?? ''),
+  'the SDK meta lists the remote function with its contract hash'
+)
+const sdkRpcMap = readFileSync(
+  join(sdkDir, 'rpc', 'pikku-rpc-wirings-map.remote.gen.d.ts'),
+  'utf8'
+)
+const sdkImports = [...sdkRpcMap.matchAll(/from '([^']+)'/g)].map((m) => m[1])
+check(
+  sdkImports.every((s) => s.startsWith('../') || s.startsWith('@pikku/core/')),
+  `the remote map imports only its siblings and @pikku/core (${sdkImports.join(', ')})`
+)
+contains(
+  sdkRpcMap,
+  "readonly 'listNotes': RPCHandler<null, ListNotesOutput>",
+  'the remote map types the zod contract'
+)
+check(
+  !/CountNotes|countNotes/.test(
+    [...sdkEntries].map((e) => readFileSync(join(sdkDir, e), 'utf8')).join('\n')
+  ),
+  'the internal countNotes and its CountNotesOutput type are nowhere in the SDK'
+)
+
 console.log('\n▶ assert: the published artifact describes the addon’s table')
 // An addon roots its whole generated tree under `.pikku/addon`, so that every
 // leaf it authors is reached as `#pikku/addon/<leaf>` and cannot be shadowed by
