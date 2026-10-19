@@ -50,7 +50,12 @@ export const DispatchChat = ({ threadId }: { threadId: string }) => {
         onChange={(event) => setMessage(event.target.value)}
         placeholder="Who is free this afternoon?"
       />
-      <button onClick={ask} disabled={pending || message.length === 0}>
+      <button
+        // ask() catches its own errors into component state, so the promise
+        // never rejects.
+        onClick={() => void ask()}
+        disabled={pending || message.length === 0}
+      >
         {pending ? 'Thinking…' : 'Ask'}
       </button>
       {reply ? <p>{reply}</p> : null}

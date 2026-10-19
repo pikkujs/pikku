@@ -97,6 +97,8 @@ const generatedImports = (file: string) => {
  * workspaces and tsconfig layout, not runtime layers over `functions`.
  */
 const standalone = new Set([
+  // Self-contained workspace-member projects (scaffolded whole, not layered
+  // over `functions`); they import generated output by relative path.
   'online-shop',
   'field-service',
   'hotel-management',

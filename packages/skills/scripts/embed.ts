@@ -27,8 +27,8 @@ const skillsRoot = join(root, 'skills')
  * regions a skill needs without one silently shadowing the other.
  */
 const SNIPPET_SOURCES = [
-  join(root, '..', '..', 'examples', 'online-shop'),
-  join(root, '..', '..', 'examples', 'field-service'),
+  join(root, '..', '..', 'templates', 'online-shop'),
+  join(root, '..', '..', 'templates', 'field-service'),
 ]
 
 /** Every file under skills/, as POSIX-relative paths, sorted for a stable diff. */

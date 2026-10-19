@@ -32,12 +32,12 @@
     "events": true
   },
   "scenarios": {
-    "emailDomain": "actors.local",
+    "emailDomain": "virtualuser.local",
     "environments": {
       "local": {
         "apiUrl": "http://localhost:4013",
         "appUrl": "http://localhost:7213",
-        "signInPath": "/api/auth/sign-in/actor"
+        "signInPath": "/api/auth/sign-in/virtual-user"
       }
     }
   },
@@ -45,7 +45,7 @@
     "local": {
       "apiUrl": "http://localhost:4013",
       "appUrl": "http://localhost:7213",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     }
   }
 }

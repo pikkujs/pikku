@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { pikkuFunc } from '#pikku/function'
 import { currentCompanyId } from '../../lib/tenant.js'
 import { WrongCompanyError } from '../../errors.js'
-import { JobStatus } from '../../lib/job.schema.js'
+import { JobStatus } from '../../lib/job-schemas.js'
 import { canDispatch, isAssignedTechnician } from '../../security.js'
 
 export const SetJobStatusInput = z.object({

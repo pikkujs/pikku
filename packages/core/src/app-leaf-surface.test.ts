@@ -54,8 +54,6 @@ const skipped = new Set([
   'starter-template',
   // Standalone templates: pinned snapshots of a released API with their own
   // workspaces, so they can reach past a leaf the current leaf layout carries.
-  'online-shop',
-  'field-service',
   'hotel-management',
   'public-content',
   'team-saas',

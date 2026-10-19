@@ -5,8 +5,6 @@
 // current workspace (peer-range consistency, renamed vocabulary) do not apply
 // to them; they are validated by scaffolding and building them instead.
 export const STANDALONE_TEMPLATES = [
-  'online-shop',
-  'field-service',
   'hotel-management',
   'public-content',
   'team-saas',

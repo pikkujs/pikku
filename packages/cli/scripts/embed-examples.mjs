@@ -26,7 +26,7 @@ const repoRoot = join(root, '..', '..')
 // generated client, which a file beside the CLI could never be.
 const SOURCE_DIRS = [
   join(root, 'examples'),
-  join(repoRoot, 'examples/field-service/apps/app/src/examples'),
+  join(repoRoot, 'templates/field-service/apps/app/src/examples'),
 ]
 
 const HEADER_FIELDS = new Set([

@@ -20,7 +20,7 @@ import (
 // TestSchemaParity compares GenerateAll with the TS generateAllSchemas on real
 // projects. Each reference is written by bench/ref-schemas.mjs:
 //
-//	node bench/ref-schemas.mjs ../../examples/online-shop /tmp/ref-online-shop.json
+//	node bench/ref-schemas.mjs ../../templates/online-shop /tmp/ref-online-shop.json
 //	PIKKU_SCHEMA_PARITY_REF=/tmp/ref-online-shop.json go test ./internal/schemas -run Parity -v
 //
 // PIKKU_SCHEMA_PARITY_REF takes a comma-separated list. Set

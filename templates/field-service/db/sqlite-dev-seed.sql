@@ -10,13 +10,13 @@ INSERT INTO company (company_id, name, slug) VALUES
 ON CONFLICT DO NOTHING;
 
 -- The invitation list. `scenarios.emailDomain` in pikku.config.json is what
--- turns the persona id `dana` into dana@actors.local, so these addresses are
--- the same ones the actors sign in with.
+-- turns the virtual user id `dana` into dana@virtualuser.local, so these addresses are
+-- the same ones the virtual users sign in with.
 INSERT INTO membership (membership_id, company_id, email) VALUES
-  ('mem_dana',  'co_northwind', 'dana@actors.local'),
-  ('mem_theo',  'co_northwind', 'theo@actors.local'),
-  ('mem_casey', 'co_northwind', 'casey@actors.local'),
-  ('mem_maya',  'co_southgate', 'maya@actors.local')
+  ('mem_dana',  'co_northwind', 'dana@virtualuser.local'),
+  ('mem_theo',  'co_northwind', 'theo@virtualuser.local'),
+  ('mem_casey', 'co_northwind', 'casey@virtualuser.local'),
+  ('mem_maya',  'co_southgate', 'maya@virtualuser.local')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO customer (customer_id, company_id, name, address, phone, email) VALUES
@@ -26,7 +26,7 @@ INSERT INTO customer (customer_id, company_id, name, address, phone, email) VALU
 ON CONFLICT DO NOTHING;
 
 INSERT INTO technician (technician_id, company_id, email, name, skills, is_active) VALUES
-  ('tec_theo',  'co_northwind', 'theo@actors.local', 'Theo Bright',   '["gas","boiler"]', 1),
+  ('tec_theo',  'co_northwind', 'theo@virtualuser.local', 'Theo Bright',   '["gas","boiler"]', 1),
   ('tec_rosa',  'co_northwind', NULL,                'Rosa Kandel',   '["boiler","plumbing"]', 1),
   ('tec_iver',  'co_southgate', NULL,                'Iver Lassiter', '["electrical"]', 1)
 ON CONFLICT DO NOTHING;

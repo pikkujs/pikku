@@ -238,7 +238,7 @@ const projectEntryPoint = async (
 /**
  * An example names a snippet rather than restating it, and both entrypoints
  * resolve against the same map — the regions come from one running application
- * (`examples/online-shop`), not from whichever template happened to hold them.
+ * (`templates/online-shop`), not from whichever template happened to hold them.
  */
 export const buildSurfaceDoc = async ({
   version,

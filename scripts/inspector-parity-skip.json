@@ -4,14 +4,6 @@
     "reason": "not a workspace package (excluded in the root package.json), so its dependencies are not installed in the monorepo"
   },
   {
-    "project": "templates/online-shop",
-    "reason": "a standalone template with its own workspaces and lockfile (excluded from the root package.json), so its dependencies are not installed in the monorepo"
-  },
-  {
-    "project": "templates/field-service",
-    "reason": "a standalone template with its own workspaces and lockfile (excluded from the root package.json), so its dependencies are not installed in the monorepo"
-  },
-  {
     "project": "templates/hotel-management",
     "reason": "a standalone template with its own workspaces and lockfile (excluded from the root package.json), so its dependencies are not installed in the monorepo"
   },

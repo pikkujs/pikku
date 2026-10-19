@@ -1,31 +1,20 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "rootDir": ".",
-  "tsconfig": "tsconfig.json",
-  "srcDirectories": [
-    "packages/functions/src",
-    "packages/functions/test"
-  ],
-  "ignoreFiles": [
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "**/*.example.ts",
-    "**/node_modules/**",
-    "**/dist/**"
-  ],
-  "outDir": "packages/functions/.pikku",
-  "emailTemplatesDir": "emails",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["./src", "./test"],
+  "outDir": "./.pikku",
+  "emailTemplatesDir": "./emails",
   "clientFiles": {
-    "rpcMapDeclarationFile": "packages/functions-sdk/src/pikku/rpc-map.gen.d.ts",
-    "httpMapDeclarationFile": "packages/functions-sdk/src/pikku/http-map.gen.d.ts",
-    "fetchFile": "packages/functions-sdk/src/pikku/pikku-fetch.gen.ts",
-    "rpcWiringsFile": "packages/functions-sdk/src/pikku/pikku-rpc.gen.ts",
-    "reactQueryFile": "packages/functions-sdk/src/pikku/api.gen.ts",
-    "websocketFile": "packages/functions-sdk/src/pikku/pikku-websocket.gen.ts",
-    "realtimeFile": "packages/functions-sdk/src/pikku/realtime.gen.ts"
+    "rpcMapDeclarationFile": ".pikku/rpc-map.gen.d.ts",
+    "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts",
+    "fetchFile": ".pikku/pikku-fetch.gen.ts",
+    "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts",
+    "websocketFile": ".pikku/pikku-websocket.gen.ts",
+    "realtimeFile": ".pikku/realtime.gen.ts"
   },
   "packageMappings": {
-    "packages/functions": "@project/functions"
+    ".": "@pikku/example-online-shop"
   },
   "schema": {
     "supportsImportAttributes": true
@@ -39,30 +28,32 @@
     "sizeLimit": "10mb"
   },
   "scaffold": {
-    "pikkuDir": "packages/functions/src/scaffold",
+    "pikkuDir": "src/scaffold",
     "console": true,
     "rpc": true,
     "agent": true,
     "workflow": true,
     "scenarios": true,
+    "virtualUser": true,
     "events": true,
-    "virtualUser": true
+    "webhook": true,
+    "analytics": true
   },
   "scenarios": {
-    "emailDomain": "actors.local",
+    "emailDomain": "virtualuser.local",
     "environments": {
       "local": {
         "apiUrl": "http://localhost:4011",
         "appUrl": "http://localhost:7211",
-        "signInPath": "/api/auth/sign-in/actor"
+        "signInPath": "/api/auth/sign-in/virtual-user"
       },
       "sandbox": {
         "apiUrl": "http://localhost:4000",
-        "signInPath": "/api/auth/sign-in/actor"
+        "signInPath": "/api/auth/sign-in/virtual-user"
       },
       "coverage": {
         "apiUrl": "http://localhost:4010",
-        "signInPath": "/api/auth/sign-in/actor"
+        "signInPath": "/api/auth/sign-in/virtual-user"
       }
     }
   },
@@ -70,15 +61,18 @@
     "local": {
       "apiUrl": "http://localhost:4011",
       "appUrl": "http://localhost:7211",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     },
     "sandbox": {
       "apiUrl": "http://localhost:4000",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     },
     "coverage": {
       "apiUrl": "http://localhost:4010",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     }
+  },
+  "allow": {
+    "complexWorkflows": true
   }
 }

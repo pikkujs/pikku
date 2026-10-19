@@ -23,6 +23,7 @@ import {
   mergeJsonFiles,
   preparePackageJsonForYarnLink,
   removeFunctionsOnlyFiles,
+  resolveWorkspaceProtocol,
   replaceFunctionReferences,
   serverlessChanges,
   updatePackageJSONScripts,
@@ -215,8 +216,6 @@ const templates = [
  * pikkujs/pikku repo. Value: the directory name under `templates/`.
  */
 const standaloneTemplates: Record<string, string> = {
-  'online-shop': 'online-shop',
-  'field-service': 'field-service',
   'hotel-management': 'hotel-management',
   'public-content': 'public-content',
   'team-saas': 'team-saas',
@@ -476,6 +475,7 @@ async function cloneRepo(
 async function setupRepo(cliOptions: CliOptions, repoName: string) {
   const { name } = cliOptions
   const targetPath = await cloneRepo(cliOptions, repoName)
+  resolveWorkspaceProtocol(targetPath)
 
   await installDependencies(targetPath, cliOptions)
 

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuFunc } from '#pikku/function'
 import { currentCompanyId } from '../../lib/tenant.js'
-import { JobStatus, JobSummary } from '../../lib/job.schema.js'
+import { JobStatus, JobSummary } from '../../lib/job-schemas.js'
 
 export const ListJobsInput = z.object({
   status: JobStatus.optional(),

@@ -213,7 +213,7 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
       [],
       `${missing.join(', ')} carry no example. These are the exports a reader ` +
         `reaches for first, and a signature alone does not show the shape of the ` +
-        `object they take. Wrap the real usage in examples/online-shop in ` +
+        `object they take. Wrap the real usage in templates/online-shop in ` +
         `"// @snippet start <name>" and point an "@example snippet: <name>" at it.`
     )
   })
@@ -230,7 +230,7 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
       missing.length <= FUNCTIONS_WITHOUT_EXAMPLE,
       `${missing.length} callables carry no example, up from ` +
         `${FUNCTIONS_WITHOUT_EXAMPLE}. Every door the doc lists is a door somebody ` +
-        `has to walk through: show it being used in examples/online-shop and point ` +
+        `has to walk through: show it being used in templates/online-shop and point ` +
         `an "@example snippet: <name>" at the region:\n  ` +
         `${[...new Set(missing)].sort().join(', ')}`
     )

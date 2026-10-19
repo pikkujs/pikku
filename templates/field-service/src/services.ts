@@ -12,6 +12,7 @@ import { TypedSecretService } from '../.pikku/secrets/pikku-secrets.gen.js'
 import { TypedVariablesService } from '../.pikku/variables/pikku-variables.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { Kysely } from 'kysely'
+import { GeneratedTemplateEmailService } from './lib/email-service.js'
 import type { DB } from '#pikku/db/schema.gen.js'
 
 // @snippet start shopServices
@@ -26,16 +27,19 @@ export const createSingletonServices = pikkuServices(
     const logger = existingServices?.logger ?? new JsonConsoleLogger()
     const schema = existingServices?.schema ?? new CFWorkerSchemaService(logger)
     const emailService =
-      existingServices?.emailService ?? new LocalEmailService()
-    // The durable audit sink. In a deployed stage fabric injects the platform's
+      existingServices?.emailService ??
+      new GeneratedTemplateEmailService({
+        delegate: new LocalEmailService(),
+      })
+    // The durable audit sink. In a deployed stage cloud injects the platform's
     // audit service; locally it falls back to a no-op so nothing is persisted.
     const audit = existingServices?.audit ?? new NoopAuditService()
     // kysely is injected by pikku dev (node:sqlite) or the CF Worker workflow (libsql).
-    // The template never constructs its own dialect — dialects are fabric/runtime
+    // The template never constructs its own dialect — dialects are cloud/runtime
     // concerns — so it must always be provided by the runtime.
     if (!existingServices?.kysely) {
       throw new Error(
-        'kysely service was not injected by the runtime (pikku dev / fabric)'
+        'kysely service was not injected by the runtime (pikku dev / cloud)'
       )
     }
     const kysely: Kysely<DB> = existingServices.kysely

@@ -12,6 +12,7 @@ import {
   replaceFunctionReferences,
   cleanTSConfig,
   removeFunctionsOnlyFiles,
+  resolveWorkspaceProtocol,
   wranglerChanges,
   serverlessChanges,
   updatePackageJSONScripts,
@@ -887,5 +888,26 @@ describe('retrying a transient download', () => {
       /attempt 3/
     )
     assert.equal(attempts, 3)
+  })
+})
+
+describe('resolveWorkspaceProtocol', () => {
+  test('points workspace: ranges at latest and leaves others alone', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pikku-ws-'))
+    fs.writeFileSync(
+      path.join(dir, 'package.json'),
+      JSON.stringify({
+        dependencies: { '@pikku/kysely': 'workspace:^', zod: '^4' },
+        devDependencies: { '@pikku/cli': 'workspace:*' },
+      })
+    )
+    resolveWorkspaceProtocol(dir)
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(dir, 'package.json'), 'utf-8')
+    )
+    assert.equal(pkg.dependencies['@pikku/kysely'], 'latest')
+    assert.equal(pkg.dependencies.zod, '^4')
+    assert.equal(pkg.devDependencies['@pikku/cli'], 'latest')
+    fs.rmSync(dir, { recursive: true })
   })
 })

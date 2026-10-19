@@ -649,3 +649,34 @@ export async function withNetworkRetry<T>(
 
   throw lastError
 }
+
+/**
+ * Templates that are workspace members of the pikku monorepo declare their
+ * sibling packages as `workspace:*` / `workspace:^`, which no registry install
+ * understands. In a scaffolded project those packages come from npm, so point
+ * them at the latest published release.
+ */
+export function resolveWorkspaceProtocol(targetPath: string): void {
+  const packageFilePath = path.join(targetPath, 'package.json')
+  if (!fs.existsSync(packageFilePath)) return
+  const packageJson = JSON.parse(fs.readFileSync(packageFilePath, 'utf-8'))
+  let changed = false
+  for (const depType of [
+    'dependencies',
+    'devDependencies',
+    'peerDependencies',
+    'optionalDependencies',
+  ] as const) {
+    const deps = packageJson[depType] as Record<string, string> | undefined
+    if (!deps) continue
+    for (const [pkg, range] of Object.entries(deps)) {
+      if (typeof range === 'string' && range.startsWith('workspace:')) {
+        deps[pkg] = 'latest'
+        changed = true
+      }
+    }
+  }
+  if (changed) {
+    fs.writeFileSync(packageFilePath, JSON.stringify(packageJson, null, 2) + '\n')
+  }
+}

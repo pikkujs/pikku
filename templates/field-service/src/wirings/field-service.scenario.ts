@@ -11,19 +11,19 @@ export const dispatcherPutsWorkOnAVan = pikkuScenario({
   description:
     'Raise a job against a customer, assign it, and watch the technician close it.',
   tags: ['dispatch'],
-  func: async ({ logger }, _input, { scenario, actors }) => {
-    if (!actors?.dana || !actors?.theo) {
+  func: async ({ logger }, _input, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.dana || !virtualUsers?.theo) {
       throw new Error(
-        'dispatcherPutsWorkOnAVan needs the `dana` and `theo` actors — run via `pikku scenario run`'
+        'dispatcherPutsWorkOnAVan needs the `dana` and `theo` virtual users — run via `pikku scenario run`'
       )
     }
-    const { dana, theo } = actors
+    const { dana, theo } = virtualUsers
 
     const customers = await scenario.do(
       'Dana opens the customer list',
       'listCustomers',
       null,
-      { actor: dana }
+      { virtualUser: dana }
     )
     const site = customers.customers[0]
     if (!site)
@@ -37,14 +37,14 @@ export const dispatcherPutsWorkOnAVan = pikkuScenario({
         title: 'Pressure dropping overnight',
         priority: 'urgent',
       },
-      { actor: dana }
+      { virtualUser: dana }
     )
 
     const technicians = await scenario.do(
       'Dana looks at who is free',
       'listTechnicians',
       null,
-      { actor: dana }
+      { virtualUser: dana }
     )
     const theoRow = technicians.technicians.find(
       (t) => t.name === 'Theo Bright'
@@ -56,7 +56,7 @@ export const dispatcherPutsWorkOnAVan = pikkuScenario({
       'Dana sends Theo',
       'assignJob',
       { jobId: job.jobId, technicianId: theoRow.technicianId },
-      { actor: dana }
+      { virtualUser: dana }
     )
 
     // Theo holds `jobs:progress` and is the assigned technician, so he passes
@@ -66,7 +66,7 @@ export const dispatcherPutsWorkOnAVan = pikkuScenario({
       'Theo starts work',
       'setJobStatus',
       { jobId: job.jobId, status: 'in_progress' },
-      { actor: theo }
+      { virtualUser: theo }
     )
 
     await scenario.do(
@@ -77,21 +77,21 @@ export const dispatcherPutsWorkOnAVan = pikkuScenario({
         technicianId: theoRow.technicianId,
         notes: 'Expansion vessel recharged, pressure holding at 1.2 bar.',
       },
-      { actor: theo }
+      { virtualUser: theo }
     )
 
     await scenario.do(
       'Theo closes the job',
       'setJobStatus',
       { jobId: job.jobId, status: 'done' },
-      { actor: theo }
+      { virtualUser: theo }
     )
 
     const settled = await scenario.do(
       'The job reads as done',
       'getJob',
       { jobId: job.jobId },
-      { actor: dana }
+      { virtualUser: dana }
     )
     if (settled.status !== 'done') {
       throw new Error(`Job ended in ${settled.status}, not done`)
@@ -120,19 +120,19 @@ export const anotherCompanyCannotSeeTheBoard = pikkuScenario({
   description:
     'A dispatcher at a different service company is refused, with a 404 rather than a 403.',
   tags: ['dispatch', 'security'],
-  func: async (_services, _input, { scenario, actors }) => {
-    if (!actors?.dana || !actors?.maya) {
+  func: async (_services, _input, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.dana || !virtualUsers?.maya) {
       throw new Error(
-        'anotherCompanyCannotSeeTheBoard needs the `dana` and `maya` actors — run via `pikku scenario run`'
+        'anotherCompanyCannotSeeTheBoard needs the `dana` and `maya` virtual users — run via `pikku scenario run`'
       )
     }
-    const { dana, maya } = actors
+    const { dana, maya } = virtualUsers
 
     const northwind = await scenario.do(
       'Dana lists her own board',
       'listJobs',
       {},
-      { actor: dana }
+      { virtualUser: dana }
     )
     const target = northwind.jobs[0]
     if (!target) throw new Error('Northwind has no jobs to try to leak')
@@ -141,7 +141,7 @@ export const anotherCompanyCannotSeeTheBoard = pikkuScenario({
       'Maya lists her own board',
       'listJobs',
       {},
-      { actor: maya }
+      { virtualUser: maya }
     )
     if (southgate.jobs.some((j) => j.jobId === target.jobId)) {
       throw new Error('A Northwind job appeared on the Southgate board')
@@ -180,20 +180,20 @@ export const customerSeesOnlyTheirOwnWork = pikkuScenario({
   title: 'Customer contact sees only what they should',
   description: 'The customer reads jobs and is refused every write.',
   tags: ['dispatch', 'security'],
-  func: async (_services, _input, { scenario, actors }) => {
-    if (!actors?.casey) {
+  func: async (_services, _input, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.casey) {
       throw new Error(
-        'customerSeesOnlyTheirOwnWork needs the `casey` actor — run via `pikku scenario run`'
+        'customerSeesOnlyTheirOwnWork needs the `casey` virtual user — run via `pikku scenario run`'
       )
     }
-    const { casey } = actors
+    const { casey } = virtualUsers
 
     await scenario.do(
       'Casey reads the jobs on her site',
       'listJobs',
       {},
       {
-        actor: casey,
+        virtualUser: casey,
       }
     )
 

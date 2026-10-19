@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { pikkuFunc } from '#pikku/function'
 import { currentCompanyId } from '../../lib/tenant.js'
 import { WrongCompanyError } from '../../errors.js'
-import { JobPriority } from '../../lib/job.schema.js'
+import { JobPriority } from '../../lib/job-schemas.js'
 
 export const RaiseJobInput = z.object({
   customerId: z.string(),
