@@ -621,6 +621,78 @@ describe('virtual user sign-in', () => {
     assert.equal((await res.json()).user.email, 'customer@virtualuser.local')
   })
 
+  test('under `pikku dev` sign-in grants the declared app scope and roles, once', async () => {
+    const roles = new Map<string, string[]>()
+    const scopes = new Map<string, string[]>()
+    const scopeService = {
+      listUserRoles: async (id: string) => roles.get(id) ?? [],
+      listUserScopes: async (id: string) => scopes.get(id) ?? [],
+      addUserToRole: async (id: string, role: string) => {
+        roles.set(id, [...(roles.get(id) ?? []), role])
+      },
+      addScopeToUser: async (id: string, scope: string) => {
+        scopes.set(id, [...(scopes.get(id) ?? []), scope])
+      },
+    }
+    const db = emptyDb()
+    const auth = makeAuth(db, {
+      scopeService,
+      virtualUserSignIn: {
+        virtualUsers: [
+          { ...virtualUsers[1]!, roles: ['studio'] },
+          virtualUsers[0]!,
+        ],
+        allowed: () => true,
+      },
+    })
+
+    assert.equal((await signInVirtualUser(auth, 'admin')).status, 200)
+    assert.equal((await signInVirtualUser(auth, 'admin')).status, 200)
+    const adminId = db.user!.find(
+      (row) => row.email === 'admin@virtualuser.local'
+    )!.id
+    assert.deepEqual(roles.get(adminId), ['studio'])
+    assert.deepEqual(scopes.get(adminId), ['app:admin'])
+  })
+
+  test('on a stage sign-in grants nothing, provisioning does', async () => {
+    clearGateEnv()
+    const granted: string[] = []
+    const scopeService = {
+      listUserRoles: async () => [],
+      listUserScopes: async () => [],
+      addUserToRole: async (_id: string, role: string) => {
+        granted.push(role)
+      },
+      addScopeToUser: async (_id: string, scope: string) => {
+        granted.push(scope)
+      },
+    }
+    const db = emptyDb()
+    db.user!.push({
+      id: 'provisioned-1',
+      email: 'admin@virtualuser.local',
+      name: 'Admin',
+      virtualUser: true,
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    const auth = makeAuth(db, {
+      allowSignIn: VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE,
+      scopeService,
+      virtualUserSignIn: {
+        virtualUsers: [{ ...virtualUsers[1]!, roles: ['studio'] }],
+        allowed: () => true,
+      },
+    })
+    const res: Response = await signInInProcess(auth, {
+      email: 'admin@virtualuser.local',
+    })
+    assert.equal(res.status, 200)
+    assert.deepEqual(granted, [])
+  })
+
   test('asks `allowed` on every call', async () => {
     const db = emptyDb()
     let allowed = false

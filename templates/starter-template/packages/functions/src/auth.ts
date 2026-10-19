@@ -37,6 +37,7 @@ export const auth = pikkuBetterAuth(
     variables,
     emailService,
     logger,
+    scopeService,
   }) => {
     // `.reveal()` at the sink, not earlier: getSecret hands back a nominal
     // SecretValue that no concretely-typed parameter accepts, so every disclosure
@@ -164,6 +165,9 @@ export const auth = pikkuBetterAuth(
           virtualUserSignIn: {
             virtualUsers: virtualUserList,
           },
+          // Under `pikku dev` sign-in creates the virtual user's account, so it
+          // also grants the roles defineVirtualUsers declares for it.
+          scopeService,
         }),
         pikkuBan(),
       ],
