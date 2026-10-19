@@ -157,6 +157,10 @@ describe('an addon calls another by the alias it declared', () => {
           }),
         AddonNotUsedError
       )
+      await assert.rejects(
+        () => agent.approve('run-1', [], 'stripe:support'),
+        AddonNotUsedError
+      )
     })
 
     test('does not let the addon reach the target by its wired name instead', async () => {

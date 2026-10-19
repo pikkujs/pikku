@@ -117,7 +117,9 @@ export const createAgentRPC = (
           runId,
           approvals,
           { sessionService: options.sessionService },
-          expectedAgentName
+          expectedAgentName === undefined
+            ? undefined
+            : mapAddonCall(wire.addonNamespace, expectedAgentName)
         )
       ),
   }
