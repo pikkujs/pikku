@@ -1,6 +1,8 @@
 package visit
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -35,5 +37,25 @@ func TestAddonZodContractViolation(t *testing.T) {
 		if !strings.Contains(v, want) {
 			t.Errorf("violation %q lacks %q", v, want)
 		}
+	}
+}
+
+func TestNamedSourceTypesKnowsCoreByPackageName(t *testing.T) {
+	root := t.TempDir()
+	declareIn := func(dir, pkg string) string {
+		if err := os.MkdirAll(filepath.Join(root, dir, "src"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, dir, "package.json"), []byte(`{"name":"`+pkg+`"}`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return filepath.Join(root, dir, "src", "types.ts")
+	}
+	tm := typesmap.New()
+	tm.AddType("Note", declareIn("packages/core", "@acme/core"))
+	tm.AddType("MCPToolResponse", declareIn("pikku/core", "@pikku/core"))
+
+	if got := namedSourceTypes(tm, []string{"Note", "MCPToolResponse"}); !reflect.DeepEqual(got, []string{"Note"}) {
+		t.Fatalf("an addon's own packages/core is source, @pikku/core is not: got %v", got)
 	}
 }

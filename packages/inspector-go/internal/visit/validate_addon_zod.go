@@ -10,7 +10,13 @@ import (
 
 // Port of utils/validate-addon-zod-contract.ts.
 
-var pikkuCorePathRe = regexp.MustCompile(`[\\/]@pikku[\\/]core[\\/]|[\\/]packages[\\/]core[\\/]`)
+var pikkuCoreInstallRe = regexp.MustCompile(`[\\/]node_modules[\\/]@pikku[\\/]core[\\/]`)
+
+// isPikkuCorePath recognises core by its install path or by the name in the
+// nearest package.json, never by a directory name an addon could also use.
+func isPikkuCorePath(path string) bool {
+	return pikkuCoreInstallRe.MatchString(path) || findPackageNameForFile(path) == "@pikku/core"
+}
 
 func namedSourceTypes(tm *typesmap.TypesMap, names []string) []string {
 	found := map[string]bool{}
@@ -30,7 +36,7 @@ func namedSourceTypes(tm *typesmap.TypesMap, names []string) []string {
 		if err != nil {
 			return
 		}
-		if meta.Path != nil && *meta.Path != "" && !pikkuCorePathRe.MatchString(*meta.Path) {
+		if meta.Path != nil && *meta.Path != "" && !isPikkuCorePath(*meta.Path) {
 			found[meta.OriginalName] = true
 		}
 	}
