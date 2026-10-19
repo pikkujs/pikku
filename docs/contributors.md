@@ -45,6 +45,28 @@ export const queueDeploy: Contributor = {
 
 `defineContributors` is read statically by the inspector. It must be called with an object literal, and every `dev` / `deploy` value must be a reference to an `export const` (not an inline object or a call), because the build imports just that variant. A name defined twice is an error (PKU361), as is anything the inspector cannot read statically (PKU360). Run `pikku all` in the addon: it writes `.pikku/contributors/pikku-contributors-meta.gen.json`, which a host reads to opt in. Ship `.pikku` in the package's `files`, as for any addon metadata.
 
+### Typed services in a project: `#pikku/contributor`
+
+An addon cannot know the services of the project that wires it, so addons author against `@pikku/core/contributors`, where `services` is untyped. A project that declares contributors of its own imports the same surface from `#pikku/contributor`, which `pikku all` generates against the project's own `SingletonServices` (the way `#pikku/setup` types `pikkuServerLifecycle`):
+
+```ts
+import { defineContributors } from '#pikku/contributor'
+import type { Contributor } from '#pikku/contributor'
+
+export const ledgerDev: Contributor = {
+  provides: ['ledger'],
+  needs: ['logger'],
+  run(services) {
+    // services is SingletonServices: logger is a Logger, ledger is your type
+    services.ledger = { record: (event) => services.logger.info(event) }
+  },
+}
+
+export const contributors = defineContributors({ ledger: { dev: ledgerDev } })
+```
+
+The generated module is types plus core's own helper: its one runtime import is `@pikku/core/contributors`, and the services type is an `import type`, so a bundle that includes a contributor never pulls in the project's function types, services or any other `#pikku/*` module. It is not generated for an addon, and `pikku validate` points a project that imports `@pikku/core/contributors` at it.
+
 **Put each `dev` and `deploy` variant in its own module.** The build imports the module that exports the selected variant. If `queueDev` and `queueDeploy` share a file, both are bundled into every target, including production bundles. Shared helpers go in a third module that both import.
 
 ### The `Contributor` fields

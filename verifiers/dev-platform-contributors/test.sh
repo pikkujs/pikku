@@ -27,6 +27,13 @@ echo "--- wireAddon contributor names are typed from the addon's meta ---"
 echo "✓ a registered name typechecks, an unregistered one is a compile error"
 npx tsx src/check-contributors.ts
 
+echo "--- #pikku/contributor: typed services for a project, erased at runtime ---"
+rm -rf scenarios/typed/.pikku
+(cd scenarios/typed && npx pikku all >/dev/null)
+(cd scenarios/typed && npx tsc --noEmit -p tsconfig.type-tests.json)
+echo "✓ services are the project's SingletonServices, not any"
+npx tsx src/check-typed-contributor.ts
+
 echo "--- real pikku dev / pikku serve processes: contributor hooks around the app lifecycle ---"
 (cd scenarios/lifecycle && npx tsc --noEmit -p .)
 npx tsx src/check-lifecycle.ts
