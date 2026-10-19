@@ -748,6 +748,9 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
         [
           'build',
           '--compile',
+          ...(process.env.PIKKU_COMPILE_TARGET
+            ? [`--target=${process.env.PIKKU_COMPILE_TARGET}`]
+            : []),
           '--minify',
           `--outfile=${binaryPath}`,
           join(outDir, 'bundle.js'),
