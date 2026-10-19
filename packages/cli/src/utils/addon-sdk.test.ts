@@ -22,9 +22,9 @@ import {
   SDK_FUNCTIONS_META,
   SDK_MANIFEST,
   SDK_RPC_MAP,
-  SDK_SCHEMAS,
   SDK_WORKFLOW_MAP,
   sdkDefaultVersions,
+  sdkSchemas,
   type SdkManifest,
 } from './addon-sdk.js'
 import { packTarGz, unpackTarGz } from './sdk-tarball.js'
@@ -114,7 +114,7 @@ const withAddonOutput = (
 const INFO = { name: '@acme/notes', version: '1.0.0', pikkuCore: '^0.12.0' }
 
 describe('buildSdkFiles', () => {
-  test('emits exactly the six spec files', () => {
+  test('emits exactly the five spec files', () => {
     withAddonOutput({}, (sources) => {
       const { files, manifest } = buildSdkFiles(sources, INFO)
       assert.deepEqual(
@@ -124,7 +124,6 @@ describe('buildSdkFiles', () => {
           SDK_FUNCTIONS_META,
           SDK_MANIFEST,
           SDK_RPC_MAP,
-          SDK_SCHEMAS,
           SDK_WORKFLOW_MAP,
         ].sort()
       )
@@ -225,10 +224,13 @@ describe('buildSdkFiles', () => {
       },
     }
     withAddonOutput({ meta }, (sources) => {
-      assert.deepEqual(
-        JSON.parse(buildSdkFiles(sources, INFO).files.get(SDK_SCHEMAS)!),
-        { ListNotesOutput: { type: 'array' } }
+      const sdk = JSON.parse(
+        buildSdkFiles(sources, INFO).files.get(SDK_FUNCTIONS_META)!
       )
+      // In the meta itself, so the SDK stays at the five files a registry accepts.
+      assert.deepEqual(sdk.listNotes.outputSchema, { type: 'array' })
+      assert.equal(sdk.listNotes.inputSchema, undefined)
+      assert.deepEqual(sdkSchemas(sdk), { ListNotesOutput: { type: 'array' } })
     })
   })
 
@@ -347,8 +349,13 @@ describe('checkSdkBump', () => {
   describe('with the schemas packed', () => {
     const NOTES = 'ListNotesOutput'
     const withSchema = (schema: unknown) => ({
-      functions: { listNotes: fn(String(JSON.stringify(schema).length)) },
-      schemas: { [NOTES]: schema },
+      functions: {
+        listNotes: {
+          ...fn(String(JSON.stringify(schema).length)),
+          outputSchemaName: NOTES,
+          outputSchema: schema,
+        },
+      },
     })
     const strict = {
       type: 'object',

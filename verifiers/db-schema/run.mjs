@@ -384,10 +384,9 @@ check(
       'function/pikku-functions-meta.gen.json',
       'manifest.json',
       'rpc/pikku-rpc-wirings-map.remote.gen.d.ts',
-      'schemas/pikku-sdk-schemas.gen.json',
       'workflow/pikku-workflow-map.gen.d.ts',
     ].join(','),
-  `the SDK holds exactly the six spec files (${sdkEntries.join(', ')})`
+  `the SDK holds exactly the five spec files (${sdkEntries.join(', ')})`
 )
 const sdkDir = join(remoteAddonDir, '.pikku', 'sdk')
 const sdkManifest = JSON.parse(
