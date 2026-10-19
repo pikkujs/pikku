@@ -77,6 +77,12 @@ export type {
   DelegatedCredentials,
   UpstreamIdentity,
 } from './delegated-auth-plugin.js'
+export { betterAuthOAuthAccessToken } from './auth-session-oauth.js'
+export type {
+  BetterAuthOAuthAccessTokenOptions,
+  OAuthAccessTokenPayload,
+  OAuthTokenIssuer,
+} from './auth-session-oauth.js'
 export { betterAuthStatelessSession } from './auth-session-stateless.js'
 export { STATELESS_COOKIE_CACHE_MAX_AGE } from './stateless-cookie-default.js'
 export type {
