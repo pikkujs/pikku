@@ -60,7 +60,7 @@ and answers `{"id","result"|"error"}` per line.
   did not touch.
 - The cache is a read-through optimisation. A cold process gives the same
   answer, so the stateless/serverless rule holds.
-- Measured on examples/online-shop (123 functions):
+- Measured on templates/online-shop (123 functions):
   - cold: 224 ms, 0 files reused
   - warm: 140 ms, 1933 reused
   - one function file touched: 175 ms, 1932 reused
@@ -117,7 +117,7 @@ Rules that bite:
 
 ## Parity
 
-The ported sections must match exactly on examples/online-shop and
+The ported sections must match exactly on templates/online-shop and
 recipes/functions:
 - functions (meta, files, typesMap)
 - http
@@ -128,15 +128,15 @@ recipes/functions:
 B=$(mktemp -d)
 go build -o $B/pikku-inspect ./cmd/pikku-inspect
 # TS reference: the analyze steps through packages/inspector/dist (build it first)
-node bench/ref-analyze.mjs ../../examples/online-shop $B/ts.json --schemas
-$B/pikku-inspect -schemas ../../examples/online-shop > $B/go.json
+node bench/ref-analyze.mjs ../../templates/online-shop $B/ts.json --schemas
+$B/pikku-inspect -schemas ../../templates/online-shop > $B/go.json
 python3 bench/compare.py $B/ts.json $B/go.json            # per-section summary + diagnostics multiset
 python3 bench/compare.py $B/ts.json $B/go.json -v --only=functions.typesMap
 # schemas only, against the pre-schema TS state
-node bench/ref-schemas.mjs ../../examples/online-shop $B/ref.json
+node bench/ref-schemas.mjs ../../templates/online-shop $B/ref.json
 PIKKU_SCHEMA_PARITY_REF=$B/ref.json go test ./internal/schemas -run Parity -v
 # timing + RSS
-bench/bench.sh ../../examples/online-shop $B/pikku-inspect 3 $B/bench [--schemas]
+bench/bench.sh ../../templates/online-shop $B/pikku-inspect 3 $B/bench [--schemas]
 ```
 
 Notes on the comparison:

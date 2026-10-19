@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * `pikku inspector parity` on every project under examples/, recipes/ and
+ * `pikku inspector parity` on every project under templates/, recipes/ and
  * verifiers/ (nested ones included), so a fix that lands with a verifier is
  * proven for both inspectors.
  *
@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url'
 
 const REPO = fileURLToPath(new URL('..', import.meta.url))
 const CLI = join(REPO, 'packages/cli/dist/bin/pikku.js')
-const GROUPS = ['examples', 'recipes', 'verifiers']
+const GROUPS = ['templates', 'recipes', 'verifiers']
 const NOT_PROJECTS = new Set([
   'node_modules',
   '.pikku',

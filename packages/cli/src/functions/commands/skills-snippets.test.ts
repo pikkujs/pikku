@@ -9,7 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..', '..', '..', '..', '..')
 // Earlier sources win a name collision, matching scripts/embed.ts.
 const snippetSources = ['online-shop', 'field-service'].map((name) =>
-  join(repoRoot, 'examples', name)
+  join(repoRoot, 'templates', name)
 )
 
 /**

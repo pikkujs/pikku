@@ -384,7 +384,7 @@ _cli_bin="$PWD/dist/bin/pikku.js"
 node dist/src/functions/surface/generate-surface-doc.js \
   --app ../../recipes/functions \
   --addon ../../recipes/function-addon \
-  --snippets ../../examples/online-shop \
+  --snippets ../../templates/online-shop \
   --out surface.json \
   --snippets-out snippets.json \
   --snippets-meta-out snippets-meta.json

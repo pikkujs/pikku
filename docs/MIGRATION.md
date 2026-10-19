@@ -526,4 +526,4 @@ Created by `pikku db generate`:
 - the `audit` and `virtual-user` tables, which used to be created at boot;
 - the removal of `user.role` and `session.impersonatedBy` once `admin()` is dropped, and the `banned`, `banReason` and `banExpires` columns that `pikkuBan()` adds.
 
-`examples/online-shop/db/sqlite/` and `recipes/starter-template/db/sqlite/` contain the rename migrations as they were applied to those projects.
+`templates/online-shop/db/sqlite/` and `recipes/starter-template/db/sqlite/` contain the rename migrations as they were applied to those projects.

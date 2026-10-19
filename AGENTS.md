@@ -63,7 +63,7 @@ A bun workspace monorepo with strict TypeScript and Husky pre-commit hooks:
 - `packages/` — the Pikku packages
 - `recipes/` — runtime templates
 - `verifiers/` — verifier suites (see Testing)
-- `examples/` — running applications CI compiles; `online-shop` is the doc snippet source
+- `templates/` — running applications CI compiles; `online-shop` is the doc snippet source
 - `e2e/` — end-to-end project
 - `benchmarks/`, `docs/`, `scripts/`
 
@@ -307,7 +307,7 @@ An `@example` names a region, never restates code:
 ```
 
 The region is a `// @snippet start <name>` … `// @snippet end <name>` pair in
-`examples/online-shop`, the only source — an export missing an example gets the
+`templates/online-shop`, the only source — an export missing an example gets the
 usage written there first. Regions may nest, `.sql` files use `--` markers, and
 `packages/cli/build.sh` collects them into the `snippets.json` the CLI ships.
 

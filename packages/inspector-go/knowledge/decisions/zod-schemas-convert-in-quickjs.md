@@ -32,7 +32,7 @@ Such a schema, or every schema of a module that does not load, goes to the Node
 converter. Without `node` on the PATH or the script on disk (inside a compiled
 CLI), it is an error naming the package, never a silent conversion.
 
-On examples/field-service (81 schemas) the in-binary conversion is about
+On templates/field-service (81 schemas) the in-binary conversion is about
 0.1 s and the binary's peak is about 200 MB, against 0.34–0.77 s and a separate
 Node process peaking at 167 MB beside the binary's own. It adds about 8.5 MB to
 each binary (3.3 MB gzipped).

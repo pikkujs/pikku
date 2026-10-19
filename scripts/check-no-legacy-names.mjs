@@ -22,7 +22,7 @@ const ALLOWED_FILES = [
   /(^|\/)bun\.lock$/,
   // Applied migrations are history, and the rename migrations must name the
   // column they rename.
-  /^(examples|recipes)\/[^/]+\/db\/[^/]+\/\d{4}-[^/]*\.sql$/,
+  /^(templates|recipes)\/[^/]+\/db\/[^/]+\/\d{4}-[^/]*\.sql$/,
   // The upgrade guide has to name what it renames, or nobody can search for it.
   /^docs\/MIGRATION\.md$/,
 ]
