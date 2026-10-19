@@ -16,7 +16,8 @@
     "@verifier/host-mail": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
     "@types/node": "^26",
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "@verifier/log-addon": "workspace:*"
   },
   "scripts": {
     "build": "tsc -b",

@@ -39,12 +39,14 @@ export type {
 } from './platform-service-contributor.js'
 
 export {
+  ContributorDependencyError,
   DEFAULT_BINDING_SOURCES,
   assertContributorsSupported,
   collectContributorImports,
   collectContributorLines,
   contributorBindingSources,
   dedupeContributors,
+  orderContributors,
   partitionContributors,
 } from './platform-service-contributor.js'
 
