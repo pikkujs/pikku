@@ -3447,7 +3447,7 @@ export type RPCMeta = {
 }
 export class RPCNotFoundError extends PikkuError {
   public readonly rpcName: string
-  constructor(rpcName: string)
+  constructor(rpcName: string, message = `RPC function not found: ${rpcName}`)
 }
 rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, PikkuRPC>
 ```

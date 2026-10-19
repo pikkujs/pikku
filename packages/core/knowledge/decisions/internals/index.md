@@ -12,6 +12,7 @@ caller is entitled to assume.
 <!-- pikku:knowledge-index -->
 
 - [A credential name declared twice must agree on its schema and its type](a-credential-name-declared-twice-must-agree-on-schema-and-type.md) — validateAndBuildCredentialDefinitionsMeta throws when two declarations of one credential name differ in schema or in type, and otherwise keeps the first declaration
+- [A remote call always names a version, and an unknown version is refused](a-remote-call-always-names-a-version.md) — invokeRemoteAddonFunction sends fn@vN — the caller's, or the newest in the consumer's SDK — and rpcExposed answers a version it no longer has with RPCNotFoundError instead of the latest
 - [declareScopes lets an app grant a scope whose addon it does not wire](a-grant-can-name-a-scope-declared-without-its-addon.md) — defineScope is a no-op read by the CLI, and declareScopes declares scope ids so a grant is valid without wiring the addon that owns the scope tree
 - [A held run is woken later, not retried](a-held-run-is-woken-later-not-retried.md) — An orchestrator message that finds its run held enqueues a fresh wake-up a second later instead of failing, because the queue's retry budget is for real failures and a long pass outlasts it
 - [A latency budget is asserted by its cause, not by the clock](a-latency-budget-is-asserted-by-its-cause.md) — The per-request key derivation and mesh RPC round-trip tests count WebCrypto calls and check the algorithm instead of timing them, because a millisecond budget fails under CI load while the regression it guards is a choice of KDF
