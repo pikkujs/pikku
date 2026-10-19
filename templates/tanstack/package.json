@@ -25,7 +25,7 @@
     "tsx": "^4.23.15"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.193",
+    "@pikku/cli": "^0.12.194",
     "@playwright/test": "1.64.1",
     "@standard-schema/spec": "^1.1.0",
     "@types/node": "^26",
