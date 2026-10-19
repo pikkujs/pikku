@@ -8,6 +8,8 @@ export type {
   CredentialOverrideMeta,
   ScreensManifestMeta,
   AddonScreenMeta,
+  AddonContributorRef,
+  AddonContributorsMeta,
   InspectorDiagnostic,
   InspectorFilters,
   InspectorHTTPState,
