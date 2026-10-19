@@ -5,7 +5,7 @@
 - Package Structure
 - pikku.config.json
 - package.json (key fields)
-- Platform service contributors (`pikku.contributors`)
+- Platform service contributors (`defineContributors`)
 - tsconfig.json (key fields)
 
 `npx pikku new addon` scaffolds these files. You rarely hand-edit them — consult this when wiring exports or config by hand.
@@ -105,57 +105,70 @@ live in a file that never imports `#pikku` — see "Functions" in the skill.
 writes `@my-org/addon-todos/.pikku/rpc/...`, exactly as it would in an
 application, and the leaf stays the package's own business.
 
-## Platform service contributors (`pikku.contributors`)
+## Platform service contributors (`defineContributors`)
 
-An addon can ship code that runs in the **host's** generated
-`createPlatformServices` — a log source over the host's database, a client
-built from a host secret. `wireAddon` has no field for it; the package declares
-it in its own `package.json`, the same shape as the host's `dev.contributors`:
-
-```json
-{
-  "exports": {
-    "./contributors": {
-      "types": "./dist/src/contributors.d.ts",
-      "import": "./dist/src/contributors.js"
-    }
-  },
-  "pikku": {
-    "contributors": [
-      { "module": "@my-org/addon-logs/contributors", "export": "logSources" }
-    ]
-  }
-}
-```
-
-`module` resolves from the addon's package directory. Every app that wires the
-addon (not `wireRemoteAddon`) picks the contributors up: `pikku all` emits them
-into `.pikku/pikku-dev-platform-services.gen.ts` for `pikku dev`, and
-`pikku deploy plan` / `apply` hands them to the provider adapter, after the
-app's own `deploy.contributors`.
-
-Declare what a contributor reads and sets, rather than relying on list order:
+An addon can ship code that builds services for the **host's** target — a log
+source over the host's database, a client built from a host secret. The addon
+registers them in code with `defineContributors`; nothing goes in `package.json`
+and `wireAddon` of the addon itself has no field for it. A host that wants one
+opts in by name with `wireAddon({ contributors: ['log-sources'] })`, and gets
+nothing it did not list.
 
 ```ts
-export const logSources: PlatformServiceContributor = {
-  name: 'log-sources',
+// src/contributors.ts
+import { defineContributors } from '@pikku/core/contributors'
+import { logSourcesDev } from './log-sources-dev.js'
+import { logSourcesDeploy } from './log-sources-deploy.js'
+
+export const contributors = defineContributors({
+  'log-sources': { dev: logSourcesDev, deploy: logSourcesDeploy },
+})
+```
+
+```ts
+// src/log-sources-deploy.ts — each variant in its OWN module
+import type { Contributor } from '@pikku/core/contributors'
+import { kyselyLogSource } from './log-source.js'
+
+export const logSourcesDeploy: Contributor = {
   needs: ['kysely'], // runtime.kysely, or a contributor's services.kysely
   provides: ['logSources', 'logSources.workspace'],
-  imports: [`import { kyselyLogSource } from '@my-org/addon-logs/log-source'`],
-  emit: () => [
-    `  services.logSources = { workspace: kyselyLogSource(runtime.kysely) }`,
-  ],
+  run: (services, _env, runtime) => {
+    services.logSources = { workspace: kyselyLogSource(runtime.kysely) }
+  },
 }
 ```
 
-Contributors are sorted so each runs after every contributor providing one of
-its `needs`; a dotted need (`logSources.stage`) is met by a provider of the key
-or of its prefix. Emitted lines read services the entry built before them as
-`runtime.<name>` — `pikku dev` has logger, variables, secrets, schema and (with
-`db`) kysely; the standalone entry has logger, kysely (with a database) and its
-scheduler/queue/workflow/trigger services and event hub. Codegen **fails** on a
-need nothing meets, on two contributors providing the same key, and on a cycle,
-naming the contributors involved.
+Rules the inspector and the build enforce:
+
+- `defineContributors` takes an object literal keyed by contributor name; each
+  `dev` / `deploy` value must be a reference to an `export const`. Anything else
+  is PKU360; a name defined twice is PKU361.
+- **Each variant lives in its own module.** The build imports the module that
+  exports the selected variant, so a `dev` and a `deploy` variant sharing a file
+  both reach every bundle, production included.
+- A contributor with no variant for a target is simply not part of it.
+- Run `pikku all` in the addon: it writes
+  `.pikku/contributors/pikku-contributors-meta.gen.json`, which a host reads to
+  opt in (an unknown name is PKU363). Ship `.pikku` in `files`.
+- Contributors run after every contributor providing one of their `needs`; a
+  dotted need (`logSources.stage`) is met by a provider of the key or its
+  prefix. `run` reads services the target built before it as `runtime.<name>` —
+  `pikku dev` has logger, variables, secrets, schema and (with `db`) kysely; the
+  standalone entry has logger, kysely (with a database) and its
+  scheduler/queue/workflow/trigger services and event hub.
+- Two contributors providing the same key (after `when` / `requires` filtering)
+  is a build error naming both, except that a target's baseline services may be
+  replaced. A decorator declares `provides: []`. A contributor providing what it
+  needs is a cycle. An unmet `needs` is a build error.
+- `requires: ['cloudflare']` on a contributor a host opted in to, for a target
+  that cannot supply it, is a build error; use `when` to say "not here".
+- `onServerStart` / `onServerStop` run only where the server lifecycle runs
+  (dev, serve, standalone, generic server entry, Cloudflare container). On a
+  Worker `onServerStart` is a build error and `onServerStop` a warning.
+- Fail closed: a contributor whose bindings are missing at startup throws.
+
+Full reference: `docs/contributors.md` in the pikku repo.
 
 ## tsconfig.json (key fields)
 
