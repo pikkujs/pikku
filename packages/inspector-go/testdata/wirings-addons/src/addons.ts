@@ -22,6 +22,7 @@ wireAddon({
   globalSecrets: true as any,
   contentBucket: 'shop-content',
   contentGrants: { images: 'read' },
+  contributors: ['inbox', 'cache', 'mailer'],
 })
 
 wireAddon({
@@ -31,7 +32,11 @@ wireAddon({
   mcp: true,
   mcpEndpoint: '/mcp/bare-tools',
 })
-wireAddon({ name: 'unbuilt', package: '@fixture/unbuilt' })
+wireAddon({
+  name: 'unbuilt',
+  package: '@fixture/unbuilt',
+  contributors: someList,
+})
 wireAddon({
   name: 'missing',
   package: '@fixture/not-installed',

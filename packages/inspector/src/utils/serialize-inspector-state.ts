@@ -187,6 +187,7 @@ export interface SerializableInspectorState {
           contentBucket?: string
           contentGrants?: Record<string, string>
           globalContent?: string
+          contributors?: string[]
         },
       ]
     >
@@ -312,6 +313,8 @@ export interface SerializableInspectorState {
   remoteAddonFunctions?: InspectorState['remoteAddonFunctions']
   studio?: InspectorState['studio']
   addonStudio?: InspectorState['addonStudio']
+  contributorsManifest?: InspectorState['contributorsManifest']
+  optedInContributors?: InspectorState['optedInContributors']
   addonContributors?: InspectorState['addonContributors']
   exportedContracts: InspectorState['exportedContracts']
 }
@@ -552,6 +555,8 @@ export function serializeInspectorState(
     remoteAddonFunctions: state.remoteAddonFunctions,
     studio: state.studio,
     addonStudio: state.addonStudio,
+    contributorsManifest: state.contributorsManifest,
+    optedInContributors: state.optedInContributors,
     addonContributors: state.addonContributors,
     exportedContracts: state.exportedContracts,
   }
@@ -795,6 +800,8 @@ export function deserializeInspectorState(
       : {}),
     studio: data.studio,
     addonStudio: data.addonStudio,
+    contributorsManifest: data.contributorsManifest,
+    optedInContributors: data.optedInContributors,
     addonContributors: data.addonContributors,
     exportedContracts: data.exportedContracts || {
       http: {},

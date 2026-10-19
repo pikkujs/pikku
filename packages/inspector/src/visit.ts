@@ -24,6 +24,7 @@ import { addGateway } from './add/add-gateway.js'
 import { addRPCInvocations } from './add/add-rpc-invocations.js'
 import { addWireAddon } from './add/add-wire-addon.js'
 import { addPikkuStudio } from './add/add-pikku-studio.js'
+import { addDefineContributors } from './add/add-define-contributors.js'
 import { addWireRemoteAddon } from './add/add-wire-remote-addon.js'
 import { addMiddleware } from './add/add-middleware.js'
 import { addPermission } from './add/add-permission.js'
@@ -115,6 +116,7 @@ export const visitSetup = (
   addRPCInvocations(node, state, logger)
   addWireAddon(node, state, logger)
   addPikkuStudio(node, state, logger)
+  addDefineContributors(logger, node, checker, state)
   addWireRemoteAddon(node, state, logger)
   addMiddleware(logger, node, checker, state, options)
   addPermission(logger, node, checker, state, options)

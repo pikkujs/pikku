@@ -27,6 +27,8 @@ type addonDecl struct {
 	auth        *bool
 	scopes      []string
 	uses        *state.Record[string]
+	// contributors are the addon contributor names the project opted in to.
+	contributors []string
 	// secretOverrides / variableOverrides / credentialOverrides. A
 	// credential override is a string or an object { name?, mode? }.
 	overrides map[string]*state.Record[*ojson]
@@ -158,6 +160,7 @@ func (s *Context) addWireAddon(node *ast.Node) {
 		tags, scopes, secretGrants, credentialGrants any
 		uses, secretOv, variableOv, contentGrants    *state.Record[string]
 		credentialOv                                 *state.Record[*ojson]
+		contributorNames                             []string
 	)
 	decl := &addonDecl{}
 	strp := func(v string) *string { return &v }
@@ -229,6 +232,13 @@ func (s *Context) addWireAddon(node *ast.Node) {
 			contentGrants = parseStringRecord(init)
 		case key == "globalContent":
 			globalCont = strp(literalOrText(init))
+		case key == "contributors":
+			if names, ok := parseStringArray(init); ok {
+				decl.contributors = names
+				contributorNames = names
+			} else {
+				s.Log.Critical(diag.AddonContributorsNotStatic, "wireAddon's contributors must be an array of string literals, got: "+tsutil.NodeText(init))
+			}
 		}
 	}
 	if name == "" || pkg == "" {
@@ -268,6 +278,9 @@ func (s *Context) addWireAddon(node *ast.Node) {
 	o.set("contentBucket", nilIfNil(contentBucket))
 	o.set("contentGrants", nilIfNil(contentGrants))
 	o.set("globalContent", nilIfNil(globalCont))
+	if contributorNames != nil {
+		o.set("contributors", contributorNames)
+	}
 	s.declareAddon(name, decl, o.raw())
 }
 

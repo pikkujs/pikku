@@ -82,7 +82,11 @@ type State struct {
 	Studio               Raw                             `json:"studio,omitempty"`
 	AddonStudio          Raw                             `json:"addonStudio,omitempty"`
 	AddonContributors    Raw                             `json:"addonContributors,omitempty"`
-	ExportedContracts    ExportedContracts               `json:"exportedContracts"`
+	// ContributorsManifest is what defineContributors registers; OptedInContributors
+	// is what wireAddon({ contributors }) selected from each addon's manifest.
+	ContributorsManifest Raw               `json:"contributorsManifest,omitempty"`
+	OptedInContributors  Raw               `json:"optedInContributors,omitempty"`
+	ExportedContracts    ExportedContracts `json:"exportedContracts"`
 
 	// CoreTypeProperties replaces the live `typesLookup` entries for the core
 	// interfaces (CoreConfig / CoreSingletonServices / CoreServices /
