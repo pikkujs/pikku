@@ -69,6 +69,7 @@ const config = () => ({
 const inspectorState = (): InspectorState =>
   ({
     rootDir: root,
+    serviceAggregation: { requiredServices: new Set<string>() },
     functions: {
       meta: { createTodo: { pikkuFuncId: 'createTodo', name: 'createTodo' } },
     },

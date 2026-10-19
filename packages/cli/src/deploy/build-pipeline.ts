@@ -39,9 +39,9 @@ import { readCoercionMap } from '../functions/db/db-codegen.js'
 import type { BundleResult } from './bundler/types.js'
 import type { ProviderAdapter } from '@pikku/deploy'
 import {
-  loadUserConfigForDb,
-  type UserConfigShape,
-} from '../functions/commands/db-shared.js'
+  buildContributorPlatform,
+  detectDatabaseDialect,
+} from '../contributors/contributor-platform.js'
 import {
   generateServerEntrySource,
   SERVER_DOCKERFILE,
@@ -170,38 +170,6 @@ function resolveProjectVersion(projectDir: string): string | undefined {
 }
 
 /**
- * The project's own database declaration, or nothing it could read.
- *
- * A config that throws, or names no `createConfig` at all, is reported as no
- * declaration rather than as a build failure: it is only ever one of two
- * signals here, and the directory conventions still answer for a project whose
- * config needs an environment this build does not have.
- */
-async function loadConfiguredDb(
-  projectDir: string,
-  srcDirectories: string[],
-  logger: BuildLogger
-): Promise<UserConfigShape | null> {
-  try {
-    return await loadUserConfigForDb({
-      config: { rootDir: projectDir, srcDirectories },
-      logger: {
-        error: (msg) => logger.debug(msg),
-        warn: (msg) => logger.debug(msg),
-      },
-    })
-  } catch (error: any) {
-    logger.debug(
-      `Could not read createConfig to resolve the deploy database: ${error?.message ?? error}`
-    )
-    return null
-  }
-}
-
-const listAll = (names: string[]): string =>
-  `${names.length === 2 ? 'both' : 'all of'} ${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
-
-/**
  * The database a standalone bundle has to open for itself.
  *
  * Every other provider deploys onto a host that supplies `kysely` — `pikku dev`
@@ -255,32 +223,12 @@ export async function resolveStandaloneDb(
     }
   | undefined
 > {
-  const present = (['sqlite', 'postgres', 'mysql'] as const).filter((engine) =>
-    existsSync(join(projectDir, 'db', engine))
+  const chosen = await detectDatabaseDialect(
+    projectDir,
+    srcDirectories,
+    logger,
+    'a standalone build'
   )
-
-  if (present.length > 1) {
-    throw new Error(
-      `This project has ${listAll(present.map((engine) => `db/${engine}`))} migrations, so a standalone build cannot tell which database the app is meant to open. Keep the one this app deploys against.`
-    )
-  }
-
-  const userConfig = await loadConfiguredDb(projectDir, srcDirectories, logger)
-
-  const configured = (
-    [
-      ['postgres', 'postgresUrl'],
-      ['sqlite', 'sqliteDb'],
-      ['mysql', 'mysqlUrl'],
-    ] as const
-  ).filter(([, key]) => userConfig?.[key])
-  if (configured.length > 1) {
-    throw new Error(
-      `createConfig sets ${listAll(configured.map(([, key]) => key))}, so a standalone build cannot tell which database the app is meant to open. Configure exactly one database dialect.`
-    )
-  }
-
-  const chosen = configured[0]?.[0] ?? present[0]
   if (chosen === 'mysql') {
     throw new Error(
       'This project is on MySQL, and the standalone bundle has no MySQL driver yet — it opens a SQLite file or a postgres.js connection. Build it as a server deployment, or run it against sqlite or postgres.'
@@ -510,6 +458,16 @@ export async function runBuildPipeline(options: {
             : undefined,
         }
       ),
+      // The whole app is this one unit, so the facts are the app's own — the
+      // same ones `pikku dev` hands its contributors.
+      contributorPlatform: await buildContributorPlatform({
+        projectDir,
+        pikkuDir,
+        srcDirectories: options.srcDirectories ?? ['src'],
+        logger,
+        serviceNames: inspectorState.serviceAggregation.requiredServices,
+        subject: 'a standalone build',
+      }),
       lifecycle: resolveLifecycle(unitDir, inspectorState),
     }
     const source = provider.generateEntrySource(ctx as never)
@@ -704,6 +662,24 @@ export async function runBuildPipeline(options: {
         ...(getEntryContext(unitDir, pikkuDir, unit, inspectorState) as object),
         lifecycle: resolveLifecycle(unitDir, inspectorState),
         coercionMap,
+        contributorPlatform: await buildContributorPlatform({
+          projectDir,
+          pikkuDir: options.outDir ?? join(projectDir, '.pikku'),
+          srcDirectories: options.srcDirectories ?? ['src'],
+          logger,
+          serviceNames: unit.services.map((s) => s.sourceServiceName),
+          needs: {
+            queue: unit.services.some((s) => s.capability === 'queue'),
+            workflow: unit.services.some(
+              (s) => s.capability === 'workflow-state'
+            ),
+            agent: unit.services.some(
+              (s) =>
+                s.capability === 'ai-storage' || s.capability === 'ai-model'
+            ),
+          },
+          subject: 'a deploy build',
+        }),
       }
       const source =
         unit.target === 'server'
