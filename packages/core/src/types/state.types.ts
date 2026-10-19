@@ -140,7 +140,12 @@ export interface PikkuPackageState {
         remoteAuth?:
           | { credentialId: string }
           | { secretId: string }
-          | { resolve: (services: any, wire: any) => string | Promise<string> }
+          | {
+              resolve: (
+                services: any,
+                wire: any
+              ) => string | null | Promise<string | null>
+            }
         /** Map consumer-facing fn name → remote fn name (wireRemoteAddon) */
         remoteName?: (fn: string) => string
         /** Milliseconds a remote addon call may take before it is aborted (wireRemoteAddon) */

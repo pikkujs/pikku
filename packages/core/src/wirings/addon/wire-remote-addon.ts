@@ -7,10 +7,11 @@ export type RemoteAddonAuth =
   | { credentialId: string }
   | { secretId: string }
   | {
+      /** `null` sends this call without a credential, for a public surface. */
       resolve: (
         services: CoreServices,
         wire: PikkuWire
-      ) => string | Promise<string>
+      ) => string | null | Promise<string | null>
     }
 
 /**

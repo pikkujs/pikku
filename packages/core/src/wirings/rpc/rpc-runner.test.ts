@@ -1252,6 +1252,53 @@ describe('wireRemoteAddon dispatch', () => {
     }
   })
 
+  test('a resolver answering null sends the call without a credential', async () => {
+    stubFetch()
+    try {
+      wireRemoteAddon({
+        name: 'registry',
+        package: '@pikkustudio/addon-registry',
+        serverUrl: 'https://api.example.com',
+        auth: { resolve: () => null },
+      })
+      const service = new ContextAwareRPCService(
+        createServices(),
+        {} as never,
+        {}
+      )
+
+      await service.rpc('registry:listOpenApis', {})
+      assert.equal(calls[0]!.init.headers.authorization, undefined)
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  test('a resolver answering an empty token fails closed', async () => {
+    stubFetch()
+    try {
+      wireRemoteAddon({
+        name: 'registry',
+        package: '@pikkustudio/addon-registry',
+        serverUrl: 'https://api.example.com',
+        auth: { resolve: () => '' },
+      })
+      const service = new ContextAwareRPCService(
+        createServices(),
+        {} as never,
+        {}
+      )
+
+      await assert.rejects(
+        () => service.rpc('registry:listOpenApis', {}),
+        RemoteAddonAuthError
+      )
+      assert.equal(calls.length, 0)
+    } finally {
+      restoreFetch()
+    }
+  })
+
   test('fails closed when a bound credential resolves empty', async () => {
     stubFetch()
     try {

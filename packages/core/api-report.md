@@ -282,7 +282,7 @@ export type GetCredential<TCredentials = Record<string, unknown>> =
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; uses?: Record<string, string>; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; contentBucket?: string; contentGrants?: Record<string, 'read' | 'write'>; globalContent?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string; remoteTimeoutMs?: number; remoteHeaders?: (services: any, wire: any) => Record<string, string> | Promise<Record<string, string>> } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; uses?: Record<string, string>; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; contentBucket?: string; contentGrants?: Record<string, 'read' | 'write'>; globalContent?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | null | Promise<string | null> }; remoteName?: (fn: string) => string; remoteTimeoutMs?: number; remoteHeaders?: (services: any, wire: any) => Record<string, string> | Promise<Record<string, string>> } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
@@ -3470,7 +3470,7 @@ export type RemoteAddonAuth =
       resolve: (
         services: CoreServices,
         wire: PikkuWire
-      ) => string | Promise<string>
+      ) => string | null | Promise<string | null>
     }
 export type RemoteAddonAuthBinding =
   | { credentialId: string }
@@ -3479,7 +3479,11 @@ export type RemoteAddonAuthBinding =
       resolve: (
         services: CoreServices,
         wire: PikkuRawWire
-      ) => string | SecretValue<string> | Promise<string | SecretValue<string>>
+      ) =>
+        | string
+        | SecretValue<string>
+        | null
+        | Promise<string | SecretValue<string> | null>
     }
 export class RemoteAddonAuthError extends PikkuError {
   public readonly namespace: string
@@ -6436,7 +6440,7 @@ initializePikkuState: (packageName: string) => void
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; uses?: Record<string, string>; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; contentBucket?: string; contentGrants?: Record<string, 'read' | 'write'>; globalContent?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string; remoteTimeoutMs?: number; remoteHeaders?: (services: any, wire: any) => Record<string, string> | Promise<Record<string, string>> } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; uses?: Record<string, string>; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; contentBucket?: string; contentGrants?: Record<string, 'read' | 'write'>; globalContent?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | null | Promise<string | null> }; remoteName?: (fn: string) => string; remoteTimeoutMs?: number; remoteHeaders?: (services: any, wire: any) => Record<string, string> | Promise<Record<string, string>> } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
