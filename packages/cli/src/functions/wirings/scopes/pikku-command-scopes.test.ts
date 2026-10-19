@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { withAddonOrigin, withAppScopes } from './pikku-command-scopes.js'
+import {
+  projectScopeDefinitions,
+  withAddonOrigin,
+  withAppScopes,
+} from './pikku-command-scopes.js'
 
 const virtualUser = (id: string, app?: string) =>
   ({ id, name: id, roles: [], goals: [], tags: [], runnable: true, app }) as any
@@ -33,7 +37,10 @@ describe('withAppScopes', () => {
   test('refuses a hand-declared app root, naming where it came from', () => {
     assert.throws(
       () =>
-        withAppScopes([scope('app', 'src/scopes.ts')], [virtualUser('a', 'staff')]),
+        withAppScopes(
+          [scope('app', 'src/scopes.ts')],
+          [virtualUser('a', 'staff')]
+        ),
       /reserved.*src\/scopes\.ts/s
     )
   })
@@ -76,5 +83,26 @@ describe('withAddonOrigin', () => {
 
   test('leaves an app that is not an addon alone', () => {
     assert.equal(withAddonOrigin(declared, undefined, undefined), declared)
+  })
+})
+
+describe('projectScopeDefinitions', () => {
+  test('is the declarations plus the app tree, stamped for an addon', () => {
+    const state = {
+      scopes: {
+        definitions: [{ ...scope('billing'), origin: { kind: 'app' } }],
+      },
+      virtualUsers: { definitions: [virtualUser('a', 'staff')] },
+    } as any
+
+    assert.deepEqual(
+      projectScopeDefinitions(state, {}).map((d) => d.name),
+      ['billing', 'app']
+    )
+    assert.deepEqual(
+      projectScopeDefinitions(state, { addonName: '@acme/addon-billing' })[0]
+        ?.origin,
+      { kind: 'addon', package: '@acme/addon-billing', displayName: undefined }
+    )
   })
 })

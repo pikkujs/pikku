@@ -4,6 +4,7 @@ import { codegenStateFile, runCodegenChild } from './codegen-child.js'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
+import { projectScopeDefinitions } from '../wirings/scopes/pikku-command-scopes.js'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import { ConsoleLogger, InMemoryTriggerSourceStore } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
@@ -188,7 +189,9 @@ export const serve = pikkuSessionlessFunc<
       {
         logger,
         requiredServices,
-        scopes: flattenScopeDefinitions(inspectorState.scopes.definitions),
+        scopes: flattenScopeDefinitions(
+          projectScopeDefinitions(inspectorState, config)
+        ),
         systemRoles: flattenSystemRoleDefinitions(
           inspectorState.systemRoles.definitions
         ),

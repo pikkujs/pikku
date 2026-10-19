@@ -10,6 +10,7 @@ import {
 } from '../../../utils/ensure-package-dependency.js'
 import type { Config } from '../../../../types/application-types.js'
 import type { CLILogger } from '../../../services/cli-logger.service.js'
+import { projectScopeDefinitions } from '../scopes/pikku-command-scopes.js'
 import {
   localServicesPackages,
   serializeLocalServices,
@@ -79,7 +80,9 @@ export const writeLocalServices = async (
     localServicesFile: file,
     packageMappings: config.packageMappings,
     requiredServices: visitState.serviceAggregation.requiredServices,
-    scopes: flattenScopeDefinitions(visitState.scopes.definitions),
+    scopes: flattenScopeDefinitions(
+      projectScopeDefinitions(visitState, config)
+    ),
     systemRoles: flattenSystemRoleDefinitions(
       visitState.systemRoles.definitions
     ),
