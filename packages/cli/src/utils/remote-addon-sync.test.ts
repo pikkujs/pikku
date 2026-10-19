@@ -5,6 +5,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -34,8 +35,10 @@ import { addonGeneratedImport } from './remote-addon-import.js'
 import { runUpdate } from '../functions/commands/update.js'
 import { renderUpdate } from '../functions/commands/update-render.js'
 
-/** packages/cli, whose committed registry SDK the offline test syncs against. */
+/** packages/cli: its registry wiring and lock are what the CLI's own build syncs. */
 const CLI_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
+/** A cut-down registry SDK, standing in for the one the registry serves. */
+const REGISTRY_SDK_FIXTURE = join(CLI_ROOT, 'test-fixtures', 'registry-sdk')
 
 /** A gzipped ustar archive of `files`, written the way `npm pack` lays one out. */
 const makeTgz = (
@@ -498,22 +501,103 @@ describe('the registry remote addon', () => {
     await assert.rejects(() => download('http://cdn.example.test/a.tgz'))
   })
 
-  test("the CLI's own sync is satisfied offline by the committed SDK", async () => {
-    const offline = async (): Promise<never> => {
-      throw new Error('the committed registry SDK must not need the network')
-    }
-    const result = await runAddonSync({
-      config: { rootDir: CLI_ROOT, srcDirectories: ['src'] },
-      logger: { debug: () => {}, diagnostic: () => {} },
-      resolveSdk: offline,
-      download: offline,
-    })
-    assert.ok(result)
-    assert.equal(result.lockChanged, false)
-    assert.deepEqual(
-      result.sdks.map((sdk) => [sdk.name, sdk.version]),
-      [['@pikkustudio/addon-registry', '1.0.0']]
+  /**
+   * A project holding only the CLI's own src/registry.wiring.ts, and its
+   * pikku-addons.lock when `withLock` is set.
+   */
+  const cliRegistryProject = ({ withLock }: { withLock: boolean }) => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'pikku-cli-registry-'))
+    mkdirSync(join(rootDir, 'src'))
+    writeFileSync(
+      join(rootDir, 'src', 'registry.wiring.ts'),
+      readFileSync(join(CLI_ROOT, 'src', 'registry.wiring.ts'))
     )
+    if (withLock) {
+      writeFileSync(
+        join(rootDir, 'pikku-addons.lock'),
+        readFileSync(join(CLI_ROOT, 'pikku-addons.lock'))
+      )
+    }
+    return rootDir
+  }
+  const fixtureTgz = () => {
+    const files: Record<string, string> = {}
+    const walk = (dir: string, prefix: string) => {
+      for (const entry of readdirSync(join(REGISTRY_SDK_FIXTURE, dir), {
+        withFileTypes: true,
+      })) {
+        const path = dir ? `${dir}/${entry.name}` : entry.name
+        if (entry.isDirectory()) walk(path, prefix)
+        else
+          files[`${prefix}${path}`] = readFileSync(
+            join(REGISTRY_SDK_FIXTURE, path),
+            'utf-8'
+          )
+      }
+    }
+    walk('', 'package/')
+    return makeTgz(files)
+  }
+
+  test("the CLI's build syncs the registry SDK like any consumer", async () => {
+    const rootDir = cliRegistryProject({ withLock: false })
+    try {
+      const registry = fakeRegistry({ '1.0.0': fixtureTgz() })
+      const result = await runAddonSync({
+        config: { rootDir, srcDirectories: ['src'] },
+        logger: { debug: () => {}, diagnostic: () => {} },
+        resolveSdk: registry.resolveSdk,
+        download: registry.download,
+      })
+      assert.deepEqual(registry.calls.resolve, [
+        { name: '@pikkustudio/addon-registry', range: '^1.0.0' },
+      ])
+      assert.deepEqual(
+        result?.sdks.map((sdk) => [sdk.name, sdk.version, sdk.source]),
+        [['@pikkustudio/addon-registry', '1.0.0', 'downloaded']]
+      )
+      const sdkDir = join(
+        rootDir,
+        '.pikku',
+        'remote',
+        '@pikkustudio',
+        'addon-registry@1.0.0'
+      )
+      assert.match(
+        readFileSync(
+          join(sdkDir, 'rpc', 'pikku-rpc-wirings-map.remote.gen.d.ts'),
+          'utf-8'
+        ),
+        /resolveSdk: RPCHandler<ResolveSdkInput, ResolveSdkOutput>/
+      )
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test("the CLI's committed lock pins the exact registry SDK its build fetches", async () => {
+    const rootDir = cliRegistryProject({ withLock: true })
+    try {
+      const registry = fakeRegistry({ '1.0.0': fixtureTgz() })
+      await assert.rejects(
+        () =>
+          runAddonSync({
+            config: { rootDir, srcDirectories: ['src'] },
+            logger: { debug: () => {}, diagnostic: () => {} },
+            resolveSdk: registry.resolveSdk,
+            download: registry.download,
+          }),
+        (error: unknown) =>
+          error instanceof RemoteAddonSyncError &&
+          error.code === ErrorCode.REMOTE_ADDON_SDK_INTEGRITY_MISMATCH
+      )
+      assert.deepEqual(registry.calls.resolve, [
+        { name: '@pikkustudio/addon-registry', range: '1.0.0' },
+      ])
+      assert.equal(registry.calls.download, 0)
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true })
+    }
   })
 })
 

@@ -6,7 +6,10 @@ import semver from 'semver'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { checkLockedSdk, readAddonsLock } from '@pikku/inspector/lite'
 import { findSourceFiles } from '../../utils/find-source-files.js'
-import type { ResolveSdk } from '../../utils/remote-addon-sync.js'
+import type {
+  RegistryInvoke,
+  ResolveSdk,
+} from '../../utils/remote-addon-sync.js'
 
 export type PackageManager = 'bun' | 'npm' | 'yarn' | 'pnpm' | 'unknown'
 
@@ -750,7 +753,8 @@ export const pikkuUpdate = pikkuSessionlessFunc<UpdateInput, UpdateResult>({
         rootDir: config.rootDir,
         srcDirectories: config.srcDirectories,
         ignoreFiles: config.ignoreFiles,
-        resolveSdk: (request) => rpc.invoke('registry:resolveSdk', request),
+        resolveSdk: (request) =>
+          (rpc.invoke as RegistryInvoke)('registry:resolveSdk', request),
       },
     })
   },

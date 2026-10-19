@@ -9,7 +9,7 @@ description: Rules chosen in the pikku CLI, and what each one rules out
 A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
-- [The CLI commits its registry SDK](the-cli-commits-its-registry-sdk.md) — the CLI calls the registry through the registry's own SDK, committed under .pikku/remote with its lock entry, so its build syncs offline
+- [The CLI syncs its registry SDK like any consumer](the-cli-syncs-its-registry-sdk-like-any-consumer.md) — the CLI calls the registry through the registry's own SDK, which its build syncs into .pikku/remote; only pikku-addons.lock is committed
 - [A versioned remote addon is pinned by the range it was resolved for](a-versioned-remote-addon-is-pinned-by-the-range-it-was-resolved-for.md) — pikku-addons.lock records range, version and integrity per SDK; a locked version that still satisfies the range is kept, files on disk are trusted only through the integrity marker, and a pinned version the registry now serves differently fails closed
 - [A Cloudflare unit registers its addons' functions and schemas on first use, not at startup](a-cloudflare-unit-registers-addon-functions-on-first-use.md) — Per-unit codegen for a provider with lazyAddonRegistration splits each addon's published bootstrap, imports its meta statically and its function and schema registrations from an exported loadAddons, which the Cloudflare entry awaits before building services
 - [A config that extends another merges into it, and only srcDirectories concatenates](extends-merges-and-only-srcdirectories-concatenates.md) — `extends` deep-merges objects, appends srcDirectories, replaces every other array, treats null as removal, and resolves each layer's paths against its own file before merging

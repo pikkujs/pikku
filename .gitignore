@@ -17,11 +17,6 @@ dist
 
 my-app
 .pikku
-# The CLI commits its registry SDK and the lock that pins it (see the CLI's
-# knowledge note the-cli-commits-its-registry-sdk); the rest of its .pikku is generated.
-!packages/cli/.pikku
-packages/cli/.pikku/*
-!packages/cli/.pikku/remote
 # The SDK tarball `pikku all` packs beside an addon's package.json.
 *.sdk.tgz
 .deploy
