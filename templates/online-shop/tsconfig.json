@@ -31,6 +31,5 @@
     }
   },
   "include": ["src/", "test/", ".pikku/*"],
-  "exclude": ["node_modules"],
-  "files": []
+  "exclude": ["node_modules"]
 }
