@@ -23,6 +23,7 @@ import {
 import { readTgz } from './extract-tgz.js'
 import { addonGeneratedImport } from './remote-addon-import.js'
 import { runUpdate } from '../functions/commands/update.js'
+import { renderUpdate } from '../functions/commands/update-render.js'
 
 /** A gzipped ustar archive of `files`, written the way `npm pack` lays one out. */
 const makeTgz = (
@@ -507,11 +508,11 @@ describe('pikku update with a versioned wireRemoteAddon', () => {
     project: ReturnType<typeof makeProject>,
     registry: ReturnType<typeof fakeRegistry>,
     apply: boolean,
-    resync?: () => Promise<unknown>
+    coreRange = '^0.12.5'
   ) => {
     writeFileSync(
       join(project.rootDir, 'package.json'),
-      `${JSON.stringify({ name: 'app', dependencies: { '@pikku/core': '^0.12.5' } }, null, 2)}\n`
+      `${JSON.stringify({ name: 'app', dependencies: { '@pikku/core': coreRange } }, null, 2)}\n`
     )
     return runUpdate({
       rootDir: project.rootDir,
@@ -527,7 +528,6 @@ describe('pikku update with a versioned wireRemoteAddon', () => {
       remoteAddons: {
         ...project.config,
         resolveSdk: registry.resolveSdk,
-        resync,
       },
     })
   }
@@ -549,6 +549,7 @@ describe('pikku update with a versioned wireRemoteAddon', () => {
         latest: '2.0.0',
         target: '^2.0.0',
         status: 'outdated',
+        line: 5,
       })
       // The npm entry is untouched by the addon check.
       assert.ok(
@@ -574,28 +575,55 @@ describe('pikku update with a versioned wireRemoteAddon', () => {
     }
   })
 
-  test('--update rewrites the literal in place and re-syncs', async () => {
+  test('the report prints the hand edit with file:line', async () => {
     const project = makeProject('^1.4.0')
     try {
       await sync(project, fakeRegistry(PUBLISHED))
-      let resynced = 0
+      const result = await update(project, fakeRegistry(PUBLISHED), false)
+      const lines: string[] = []
+      const log = console.log
+      console.log = (...args: unknown[]) => {
+        lines.push(args.join(' '))
+      }
+      try {
+        renderUpdate(undefined, result)
+      } finally {
+        console.log = log
+      }
+      assert.ok(
+        lines.some((line) =>
+          line.includes(
+            `src/addons.ts:5  change '${NAME}@^1.4.0' to '${NAME}@^2.0.0'`
+          )
+        ),
+        lines.join('\n')
+      )
+    } finally {
+      rmSync(project.rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('--update leaves source byte-identical and still writes package.json', async () => {
+    const project = makeProject('^1.4.0')
+    try {
+      await sync(project, fakeRegistry(PUBLISHED))
+      const before = readFileSync(project.file)
       const result = await update(
         project,
         fakeRegistry(PUBLISHED),
         true,
-        async () => {
-          resynced++
-        }
+        '^0.12.0'
       )
-      assert.deepEqual(result.written, ['src/addons.ts'])
-      assert.equal(resynced, 1)
-      assert.equal(result.addonsSynced, true)
-      const source = readFileSync(project.file, 'utf-8')
-      assert.match(
-        source,
-        new RegExp(`package: '${NAME.replace('/', '\\/')}@\\^2\\.0\\.0',`)
+      assert.deepEqual(result.written, ['package.json'])
+      assert.ok(readFileSync(project.file).equals(before))
+      assert.equal(
+        JSON.parse(readFileSync(join(project.rootDir, 'package.json'), 'utf-8'))
+          .dependencies['@pikku/core'],
+        '^0.12.5'
       )
-      assert.doesNotMatch(source, /\^1\.4\.0/)
+      const entry = result.entries.find((e) => e.field === 'wireRemoteAddon')!
+      assert.equal(entry.status, 'outdated')
+      assert.equal(entry.target, '^2.0.0')
     } finally {
       rmSync(project.rootDir, { recursive: true, force: true })
     }

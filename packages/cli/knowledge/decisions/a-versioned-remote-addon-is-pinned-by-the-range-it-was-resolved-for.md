@@ -8,8 +8,8 @@ tags: cli, addons, remote, registry, lock
 # A versioned remote addon is pinned by the range it was resolved for
 
 The remote addon sync (`packages/cli/src/utils/remote-addon-sync.ts`) runs only as
-the first step of `pikku all` and after `pikku update --update` rewrites a
-range; there is no standalone command. It writes one
+the first step of `pikku all`; there is no standalone command, and
+`pikku update` never runs it. It writes one
 entry per package to `pikku-addons.lock`: the `range` the source asked for, the
 `version` it resolved to, and the tarball's `sha512-` integrity. Each extracted
 SDK carries that integrity in `.pikku/remote/<name>@<version>/.integrity`.
@@ -21,7 +21,9 @@ SDK carries that integrity in `.pikku/remote/<name>@<version>/.integrity`.
   sync runs.
 - **A locked version that still satisfies a moved range is kept.** The sync
   only rewrites the recorded range; it does not re-resolve. Upgrading is
-  `pikku update --update`, which rewrites the range in the `.ts` file first.
+  editing the range in the `.ts` file by hand. `pikku update` reports the
+  latest SDK and prints the file:line and the new literal, but it never
+  rewrites source, not even with `--update`.
 - **Matching lock and files means no network.** A pinned version whose files
   are missing is asked for by exact version, and the registry must answer with
   the pinned integrity; otherwise the sync fails with PKU352 and installs

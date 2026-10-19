@@ -1,5 +1,5 @@
 import { added, changed, dim, removed, table } from '../../utils/output.js'
-import type { UpdateResult, UpdateStatus } from './update.js'
+import type { UpdateEntry, UpdateResult, UpdateStatus } from './update.js'
 
 const STATUS_LABEL: Record<UpdateStatus, string> = {
   current: dim('current'),
@@ -16,6 +16,24 @@ const STATUS_LABEL: Record<UpdateStatus, string> = {
  * that matter under twenty that don't, which is what a monorepo run looks like.
  */
 const QUIET: UpdateStatus[] = ['current', 'linked']
+
+const isRemoteAddon = (entry: UpdateEntry) => entry.field === 'wireRemoteAddon'
+
+/**
+ * `pikku update` never writes source, so a versioned wireRemoteAddon that is
+ * behind gets the exact edit to make instead.
+ */
+const remoteAddonEdit = (entry: UpdateEntry): string | null => {
+  if (!isRemoteAddon(entry)) return null
+  const at = `${entry.manifest}:${entry.line ?? '?'}`
+  if (entry.status === 'outdated' && entry.target) {
+    return `${at}  change '${entry.package}@${entry.range}' to '${entry.package}@${entry.target}'`
+  }
+  if (entry.status === 'stale-install') {
+    return `${at}  run \`pikku all\` to sync '${entry.package}@${entry.range}'`
+  }
+  return null
+}
 
 export const renderUpdate = (
   _services: unknown,
@@ -35,7 +53,11 @@ export const renderUpdate = (
     entry.range,
     entry.installed ?? dim('—'),
     entry.latest ?? dim('—'),
-    entry.target ? added(entry.target) : dim('—'),
+    entry.target
+      ? applied && isRemoteAddon(entry)
+        ? changed(entry.target)
+        : added(entry.target)
+      : dim('—'),
     STATUS_LABEL[entry.status],
     ...(multiManifest ? [dim(entry.manifest)] : []),
   ])
@@ -63,6 +85,13 @@ export const renderUpdate = (
     ) {
       console.log(`${dim('•')} ${entry.package}: ${dim(entry.reason)}`)
     }
+  }
+
+  const edits = entries.map(remoteAddonEdit).filter((edit) => edit !== null)
+  if (edits.length > 0) {
+    console.log()
+    console.log(changed('Remote addons to edit by hand:'))
+    for (const edit of edits) console.log(`  ${edit}`)
   }
 
   if (peers.length > 0) {
@@ -107,15 +136,20 @@ export const renderUpdate = (
 
   if (applied) {
     if (result.written.length === 0) {
-      console.log(added('✓') + '  ' + dim('nothing to write — already current'))
+      console.log(
+        added('✓') +
+          '  ' +
+          dim(
+            edits.length > 0
+              ? 'no package.json range to write'
+              : 'nothing to write — already current'
+          )
+      )
     } else {
       console.log(
         added('✓') +
           `  ${result.written.length} file${result.written.length !== 1 ? 's' : ''} updated`
       )
-      if (result.addonsSynced) {
-        console.log(added('✓') + '  ' + dim('remote addon SDKs synced'))
-      }
       if (result.written.some((path) => path.endsWith('.json')))
         console.log(
           result.installed
@@ -129,9 +163,22 @@ export const renderUpdate = (
               )
         )
     }
-  } else if (summary.outdated > 0 || summary.staleInstall > 0) {
+    if (edits.length > 0) {
+      console.log(
+        dim(
+          '   remote addon ranges are not rewritten — edit them by hand; the next `pikku all` resolves and locks them'
+        )
+      )
+    }
+  } else if (
+    entries.some(
+      (entry) =>
+        !isRemoteAddon(entry) &&
+        (entry.status === 'outdated' || entry.status === 'stale-install')
+    )
+  ) {
     console.log(dim('   run `pikku update --update` to apply'))
-  } else {
+  } else if (edits.length === 0) {
     console.log(added('✓') + '  ' + dim('every @pikku dependency is current'))
   }
 }

@@ -365,7 +365,8 @@ A `wireRemoteAddon` whose `package` carries a range (`'@scope/name@^1.4.0'`)
 is not installed at all: `pikku all` downloads its SDK into
 `.pikku/remote` and pins it in `pikku-addons.lock` (commit the lock). If
 codegen reports PKU338 for one, run `pikku all`, not an install; to move
-to a newer SDK, `pikku update --update` rewrites the range and syncs.
+to a newer SDK, edit the range by hand (`pikku update` prints the file:line
+and the new literal; it never rewrites source), then run `pikku all`.
 
 ### Call via RPC
 

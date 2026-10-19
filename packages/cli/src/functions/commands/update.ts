@@ -11,7 +11,6 @@ import {
   createRegistryClient,
   resolveRegistryToken,
   type ResolveSdk,
-  runAddonSync,
 } from '../../utils/remote-addon-sync.js'
 
 export type PackageManager = 'bun' | 'npm' | 'yarn' | 'pnpm' | 'unknown'
@@ -23,7 +22,11 @@ export type DependencyField =
   | 'optionalDependencies'
   | 'overrides'
   | 'resolutions'
-  /** A versioned `wireRemoteAddon({ package: '@scope/name@^1.4.0' })`; its manifest is the .ts file. */
+  /**
+   * A versioned `wireRemoteAddon({ package: '@scope/name@^1.4.0' })`; its
+   * manifest is the .ts file. `pikku update` only reports these: the range is
+   * edited by hand and the next `pikku all` resolves and locks it.
+   */
   | 'wireRemoteAddon'
 
 export type UpdateStatus =
@@ -42,6 +45,8 @@ export type UpdateEntry = {
   target: string | null
   status: UpdateStatus
   reason?: string
+  /** For a wireRemoteAddon entry: the 1-based line of its `package` literal in `manifest`. */
+  line?: number
 }
 
 export type PeerFinding = {
@@ -66,11 +71,9 @@ export type UpdateResult = {
   entries: UpdateEntry[]
   peers: PeerFinding[]
   applied: boolean
-  /** Manifests (and wiring files holding a versioned wireRemoteAddon) rewritten by `--update`, relative to the project root. */
+  /** package.json files rewritten by `--update`, relative to the project root. Source files are never written. */
   written: string[]
   installed: boolean
-  /** Whether the remote addon SDKs were synced again after a wireRemoteAddon range was rewritten. */
-  addonsSynced?: boolean
   summary: {
     checked: number
     outdated: number
@@ -101,8 +104,6 @@ export type RemoteAddonUpdateOptions = {
   ignoreFiles?: string[]
   /** Answers `{ name, range: '*' }` with the highest published SDK. */
   resolveSdk: ResolveSdk
-  /** Runs after `--update` rewrote a spec, to bring the SDKs and lock in line. */
-  resync?: () => Promise<unknown>
 }
 
 /** The range `resolveSdk` is asked for to find an SDK's latest version. */
@@ -345,19 +346,17 @@ const writeManifest = (
   )
 }
 
-type RemoteAddonSource = { path: string; relative: string }
-
 /**
  * One entry per versioned `wireRemoteAddon` literal. `installed` is the SDK
  * version pikku-addons.lock pins, when the SDK on disk matches it; when it
- * does not the entry is `stale-install` until `pikku all` syncs it.
+ * does not the entry is `stale-install` until `pikku all` syncs it. Nothing
+ * here writes: an outdated entry carries the line to edit by hand.
  */
 const collectRemoteAddonEntries = async (
   root: string,
   options: RemoteAddonUpdateOptions
 ): Promise<{
   entries: UpdateEntry[]
-  sources: RemoteAddonSource[]
   cores: { name: string; version: string; pikkuCore: string }[]
 }> => {
   const files = await findSourceFiles(
@@ -365,7 +364,12 @@ const collectRemoteAddonEntries = async (
     options.srcDirectories,
     options.ignoreFiles ?? []
   )
-  const found: { source: RemoteAddonSource; name: string; range: string }[] = []
+  const found: {
+    manifest: string
+    line: number
+    name: string
+    range: string
+  }[] = []
   for (const path of files.sort()) {
     const text = readFileSync(path, 'utf-8')
     if (!text.includes('wireRemoteAddon')) continue
@@ -373,16 +377,14 @@ const collectRemoteAddonEntries = async (
     for (const spec of findWireRemoteAddonSpecs(path, text)) {
       if (!spec.range) continue
       found.push({
-        source: {
-          path,
-          relative: relative(root, path).split(sep).join('/'),
-        },
+        manifest: relative(root, path).split(sep).join('/'),
+        line: spec.line,
         name: spec.name,
         range: spec.range,
       })
     }
   }
-  if (found.length === 0) return { entries: [], sources: [], cores: [] }
+  if (found.length === 0) return { entries: [], cores: [] }
 
   let lock: ReturnType<typeof readAddonsLock> | null = null
   try {
@@ -412,20 +414,21 @@ const collectRemoteAddonEntries = async (
     string,
     { name: string; version: string; pikkuCore: string }
   >()
-  for (const { source, name, range } of found) {
+  for (const { manifest, line, name, range } of found) {
     const locked = lock
       ? checkLockedSdk(options.rootDir, name, range, lock)
       : ({ ok: false, reason: 'pikku-addons.lock cannot be read' } as const)
     const latestVersion = latest.get(name) ?? null
     const entry: UpdateEntry = {
       package: name,
-      manifest: source.relative,
+      manifest,
       field: 'wireRemoteAddon',
       range,
       installed: locked.ok ? locked.entry.version : null,
       latest: latestVersion,
       target: null,
       status: 'current',
+      line,
     }
     if (locked.ok && locked.manifest.pikkuCore) {
       cores.set(name, {
@@ -450,51 +453,7 @@ const collectRemoteAddonEntries = async (
     }
     entries.push(entry)
   }
-  const sources = [
-    ...new Map(found.map(({ source }) => [source.path, source])).values(),
-  ]
-  return { entries, sources, cores: [...cores.values()] }
-}
-
-/**
- * Writes each outdated wireRemoteAddon entry's target range into its
- * `package` literal, keeping the quote style. Returns the files changed.
- */
-const rewriteRemoteAddonSpecs = async (
-  sources: RemoteAddonSource[],
-  entries: UpdateEntry[]
-): Promise<string[]> => {
-  const written: string[] = []
-  for (const source of sources) {
-    const targets = new Map(
-      entries
-        .filter(
-          (entry) =>
-            entry.field === 'wireRemoteAddon' &&
-            entry.manifest === source.relative &&
-            entry.target
-        )
-        .map((entry) => [`${entry.package}@${entry.range}`, entry])
-    )
-    if (targets.size === 0) continue
-    const text = readFileSync(source.path, 'utf-8')
-    const { findWireRemoteAddonSpecs } = await import('@pikku/inspector')
-    const specs = findWireRemoteAddonSpecs(source.path, text)
-    let next = text
-    for (const spec of [...specs].sort((a, b) => b.start - a.start)) {
-      const entry = spec.range
-        ? targets.get(`${spec.name}@${spec.range}`)
-        : undefined
-      if (!entry) continue
-      const quote = text[spec.start]
-      next = `${next.slice(0, spec.start)}${quote}${spec.name}@${entry.target}${quote}${next.slice(spec.end)}`
-    }
-    if (next !== text) {
-      writeFileSync(source.path, next, 'utf-8')
-      written.push(source.relative)
-    }
-  }
-  return written
+  return { entries, cores: [...cores.values()] }
 }
 
 export const runUpdate = async ({
@@ -596,7 +555,7 @@ export const runUpdate = async ({
 
   const remote = remoteAddons
     ? await collectRemoteAddonEntries(root, remoteAddons)
-    : { entries: [], sources: [], cores: [] }
+    : { entries: [], cores: [] }
   entries.push(...remote.entries)
 
   /**
@@ -739,19 +698,6 @@ export const runUpdate = async ({
     }
   }
 
-  let resynced = false
-  if (apply) {
-    const rewrittenSources = await rewriteRemoteAddonSpecs(
-      remote.sources,
-      entries
-    )
-    written.push(...rewrittenSources)
-    if (rewrittenSources.length > 0 && install && remoteAddons?.resync) {
-      await remoteAddons.resync()
-      resynced = true
-    }
-  }
-
   let ranInstall = false
   const manifestsWritten = written.some((path) => path.endsWith('.json'))
   if (apply && install && manifestsWritten && packageManager !== 'unknown') {
@@ -780,7 +726,6 @@ export const runUpdate = async ({
     applied: apply,
     written,
     installed: ranInstall,
-    ...(remoteAddons ? { addonsSynced: resynced } : {}),
     summary: {
       checked: entries.length,
       outdated: count('outdated'),
@@ -794,7 +739,7 @@ export const runUpdate = async ({
 }
 
 export const pikkuUpdate = pikkuSessionlessFunc<UpdateInput, UpdateResult>({
-  func: async ({ config, logger }, input) => {
+  func: async ({ config }, input) => {
     const updatePeers = input?.updatePeers === true
     let client: ReturnType<typeof createRegistryClient> | undefined
     const registryClient = async () =>
@@ -818,16 +763,6 @@ export const pikkuUpdate = pikkuSessionlessFunc<UpdateInput, UpdateResult>({
         ignoreFiles: config.ignoreFiles,
         resolveSdk: async (request) =>
           (await registryClient()).resolveSdk(request),
-        resync: () =>
-          runAddonSync({
-            config,
-            logger,
-            client: {
-              resolveSdk: async (request) =>
-                (await registryClient()).resolveSdk(request),
-              download: async (url) => (await registryClient()).download(url),
-            },
-          }),
       },
     })
   },
