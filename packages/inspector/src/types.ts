@@ -694,17 +694,6 @@ export interface InspectorServiceTypes {
   secretAliases: string[]
 }
 
-export interface AddonContributorRef {
-  module: string
-  export?: string
-}
-
-export interface AddonContributorsMeta {
-  packageName: string
-  packageDir: string
-  contributors: AddonContributorRef[]
-}
-
 export interface InspectorState {
   /** Set when this package calls `definePlugin`: the screens it ships. */
   studio?: StudioMeta
@@ -714,12 +703,6 @@ export interface InspectorState {
   contributorsManifest?: ContributorsManifestMeta
   /** Per wired addon namespace, the contributors `wireAddon({ contributors })` opted in to. */
   optedInContributors?: Record<string, OptedInContributorsMeta>
-  /**
-   * Platform service contributors each wired, non-remote addon declares in its
-   * `package.json` under `pikku.contributors`, by namespace. `module` resolves
-   * from `packageDir`.
-   */
-  addonContributors?: Record<string, AddonContributorsMeta>
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
   wireServicesTypeImportMap: PathToNameAndType

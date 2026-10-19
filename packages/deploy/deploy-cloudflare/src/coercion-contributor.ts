@@ -1,10 +1,11 @@
-import type {
-  EntryGenerationContext,
-  PlatformServiceContributor,
-} from '@pikku/deploy'
+import type { Contributor } from '@pikku/core/contributors'
+import { createCoercionPlugin } from '@pikku/kysely'
 
-const hasCoercionMap = (ctx: EntryGenerationContext) =>
-  Object.keys(ctx.coercionMap ?? {}).length > 0
+/** The name the adapter selects the coercion contributor under. */
+export const COERCION_CONTRIBUTOR_NAME = 'kysely-coercion'
+
+const hasCoercionMap = (map: object | undefined): boolean =>
+  Object.keys(map ?? {}).length > 0
 
 /**
  * Attaches the app's column coercion map to the `kysely` the platform services
@@ -13,24 +14,18 @@ const hasCoercionMap = (ctx: EntryGenerationContext) =>
  * without this a deployed query returns those raw values where the same query
  * under `pikku dev` returns a Date, a boolean and an object.
  *
- * It wraps the instance an earlier contributor built, so it has to run after
- * the one that sets `services.kysely`. The adapter appends it last for that
- * reason.
+ * It decorates (empty `provides`) the instance the contributor providing
+ * `kysely` built, so it runs after it. The adapter selects it itself, and only
+ * when the app has a map and something provides `kysely`.
  */
-export const coercionContributor: PlatformServiceContributor = {
-  name: 'kysely-coercion',
-  imports: (_platform, ctx) =>
-    hasCoercionMap(ctx)
-      ? [`import { createCoercionPlugin } from '@pikku/kysely'`]
-      : [],
-  emit: ({ ctx }) =>
-    hasCoercionMap(ctx)
-      ? [
-          `  if (services.kysely) {`,
-          `    services.kysely = services.kysely.withPlugin(`,
-          `      createCoercionPlugin({ map: ${JSON.stringify(ctx.coercionMap)} })`,
-          `    )`,
-          `  }`,
-        ]
-      : [],
+export const coercionContributor: Contributor = {
+  provides: [],
+  needs: ['kysely'],
+  when: (platform) => hasCoercionMap(platform.db?.coercionMap),
+  run(services, _env, _runtime, platform) {
+    if (!services.kysely) return
+    services.kysely = services.kysely.withPlugin(
+      createCoercionPlugin({ map: platform.db!.coercionMap! })
+    )
+  },
 }

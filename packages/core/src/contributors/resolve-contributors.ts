@@ -19,7 +19,12 @@ const satisfies = (provided: string, need: string): boolean =>
 
 export interface SkippedContributor {
   name: string
-  reason: 'when' | 'requires'
+  /**
+   * `when` returned false; the target cannot supply its `requires` (checked
+   * only once `when` passed, so this one is a contributor the build wanted);
+   * or it was `optional` and nothing meets a need of it.
+   */
+  reason: 'when' | 'requires' | 'needs'
 }
 
 /**
@@ -40,10 +45,12 @@ export const selectContributors = <T extends NamedContributor<any, any>>(
   for (const entry of contributors) {
     const requires =
       entry.contributor.requires ?? DEFAULT_CONTRIBUTOR_BINDING_SOURCES
-    if (!requires.every((source) => supported.includes(source))) {
-      skipped.push({ name: entry.name, reason: 'requires' })
-    } else if (entry.contributor.when?.(options.platform) === false) {
+    // `when` first: a contributor that is not meant for this build is never
+    // reported as one the target failed to support.
+    if (entry.contributor.when?.(options.platform) === false) {
       skipped.push({ name: entry.name, reason: 'when' })
+    } else if (!requires.every((source) => supported.includes(source))) {
+      skipped.push({ name: entry.name, reason: 'requires' })
     } else {
       selected.push(entry)
     }
@@ -92,6 +99,9 @@ export const orderContributors = <T extends NamedContributor<any, any>>(
   const dependencies = new Map<T, T[]>()
   for (const entry of contributors) {
     const deps = new Set<T>()
+    // A contributor that provides what it needs (`provides: ['x'], needs: ['x']`,
+    // even for a baseline x) depends on itself, which is a cycle; a decorator
+    // declares empty `provides` and reads x from `services`/`runtime` instead.
     for (const need of entry.contributor.needs ?? []) {
       const providers = contributors.filter((other) =>
         (other.contributor.provides ?? []).some((key) => satisfies(key, need))
@@ -144,20 +154,65 @@ export const orderContributors = <T extends NamedContributor<any, any>>(
   return ordered
 }
 
-/** Filters by `when`/`requires`, then checks clashes and orders what is left. */
+/**
+ * Drops, repeatedly, the `optional` contributors whose `needs` nothing left
+ * provides, so one that only decorates a service (a wrapper around
+ * `services.kysely`) applies when the service exists and is not an error when
+ * it does not.
+ */
+const dropUnmetOptional = <T extends NamedContributor<any, any>>(
+  selected: readonly T[],
+  optional: ReadonlySet<string>,
+  runtime: readonly string[]
+): { kept: T[]; dropped: SkippedContributor[] } => {
+  let kept = [...selected]
+  const dropped: SkippedContributor[] = []
+  for (;;) {
+    const unmet = kept.find(
+      (entry) =>
+        optional.has(entry.name) &&
+        (entry.contributor.needs ?? []).some(
+          (need) =>
+            !runtime.some((key) => satisfies(key, need)) &&
+            !kept.some(
+              (other) =>
+                other !== entry &&
+                (other.contributor.provides ?? []).some((key) =>
+                  satisfies(key, need)
+                )
+            )
+        )
+    )
+    if (!unmet) return { kept, dropped }
+    kept = kept.filter((entry) => entry !== unmet)
+    dropped.push({ name: unmet.name, reason: 'needs' })
+  }
+}
+
+/**
+ * Filters by `when`/`requires`, then checks clashes and orders what is left.
+ * Names in `optional` are dropped, rather than failing the build, when a need
+ * of theirs is met by nothing.
+ */
 export const resolveContributors = <T extends NamedContributor<any, any>>(
   contributors: readonly T[],
   options: {
     platform: ContributorPlatform
     supported?: readonly ContributorBindingSource[]
+    optional?: ReadonlySet<string>
   }
 ): { ordered: T[]; skipped: SkippedContributor[] } => {
   const { selected, skipped } = selectContributors(contributors, options)
+  const { kept, dropped } = dropUnmetOptional(
+    selected,
+    options.optional ?? new Set(),
+    options.platform.runtimeServices ?? []
+  )
   return {
-    ordered: orderContributors(selected, {
+    ordered: orderContributors(kept, {
       runtime: options.platform.runtimeServices,
     }),
-    skipped,
+    skipped: [...skipped, ...dropped],
   }
 }
 

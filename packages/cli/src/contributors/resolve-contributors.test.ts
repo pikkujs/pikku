@@ -110,11 +110,20 @@ describe('resolveTargetContributors', () => {
     assert.ok(ordered[0]!.module.endsWith('addon/dist/src/a.js'))
   })
 
+  test('an addon built with rootDir src (no src/ in dist) resolves too', async () => {
+    install('addon', ['dist/a.js'])
+    modules['dist/a.js'] = { aDev: { provides: ['a'], run() {} } }
+    const { ordered } = await run(
+      stateFor({ a: { dev: { module: 'src/a.ts', export: 'aDev' } } })
+    )
+    assert.ok(ordered[0]!.module.endsWith('addon/dist/a.js'))
+  })
+
   test('a module that exists nowhere is an error naming both places', async () => {
     install('addon', [])
     await assert.rejects(
       run(stateFor({ a: { dev: { module: 'src/a.ts', export: 'aDev' } } })),
-      /neither .*src\/a\.ts nor .*dist\/src\/a\.js exists/
+      /none of .*src\/a\.ts, .*dist\/src\/a\.js, .*dist\/a\.js exists/
     )
   })
 
@@ -208,5 +217,94 @@ describe('resolveTargetContributors', () => {
       (await run(state, 'dev', { ...platform, unit: 'worker' })).ordered.length,
       0
     )
+  })
+
+  test('an opted-in contributor whose requires the target cannot meet is an error naming it', async () => {
+    install('addon', ['src/q.ts'])
+    modules['src/q.ts'] = {
+      q: { provides: ['q'], requires: ['cloudflare'], run() {} },
+    }
+    const state = stateFor({
+      queue: { deploy: { module: 'src/q.ts', export: 'q' } },
+    })
+    await assert.rejects(
+      resolveTargetContributors({
+        state,
+        rootDir: root,
+        target: 'deploy',
+        platform,
+        supported: ['env'],
+        targetLabel: 'The standalone deploy',
+        load,
+      }),
+      (error: Error) =>
+        /The standalone deploy cannot supply what a contributor/.test(
+          error.message
+        ) &&
+        /'queue' of addon 'ns' \(addon\) requires cloudflare/.test(
+          error.message
+        )
+    )
+  })
+
+  test('the same requires is satisfied where the target supplies it', async () => {
+    install('addon', ['src/q.ts'])
+    modules['src/q.ts'] = {
+      q: { provides: ['q'], requires: ['cloudflare'], run() {} },
+    }
+    const state = stateFor({
+      queue: { deploy: { module: 'src/q.ts', export: 'q' } },
+    })
+    const result = await resolveTargetContributors({
+      state,
+      rootDir: root,
+      target: 'deploy',
+      platform,
+      supported: ['env', 'cloudflare'],
+      load,
+    })
+    assert.deepEqual(
+      result.ordered.map((c) => c.name),
+      ['queue']
+    )
+  })
+
+  test('a contributor with no variant for the target is silently not part of it', async () => {
+    install('addon', ['src/d.ts'])
+    modules['src/d.ts'] = { d: { provides: ['d'], run() {} } }
+    const state = stateFor({
+      devOnly: { dev: { module: 'src/d.ts', export: 'd' } },
+    })
+    const result = await resolveTargetContributors({
+      state,
+      rootDir: root,
+      target: 'deploy',
+      platform,
+      supported: ['env'],
+      load,
+    })
+    assert.deepEqual(result.ordered, [])
+    assert.deepEqual(result.withoutVariant, ['devOnly'])
+    assert.deepEqual(result.skipped, [])
+  })
+
+  test('an optional extra is left out when nothing provides what it needs', async () => {
+    const result = await resolveTargetContributors({
+      state: stateFor({}),
+      rootDir: root,
+      target: 'deploy',
+      platform,
+      extra: [
+        {
+          name: 'decorator',
+          contributor: { provides: [], needs: ['kysely'], run() {} },
+          module: '/x/decorator.ts',
+          export: 'decorator',
+          optional: true,
+        },
+      ],
+      load,
+    })
+    assert.deepEqual(result.ordered, [])
   })
 })

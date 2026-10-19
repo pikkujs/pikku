@@ -3,6 +3,7 @@ import { dirname, join, parse, posix, resolve } from 'node:path'
 import {
   resolveContributors,
   type Contributor,
+  DEFAULT_CONTRIBUTOR_BINDING_SOURCES,
   type ContributorBindingSource,
   type ContributorPlatform,
   type ContributorTarget,
@@ -108,20 +109,33 @@ export const optedInVariants = (
  * The file an addon's recorded module is to be imported from. The inspector
  * records the `.ts` source, which is what a workspace addon (or one that ships
  * its source) has on disk. A published addon ships only its build, so the same
- * path is looked for under `dist/` as `.js`.
+ * path is looked for under `dist/` as `.js`: first keeping the `src/` prefix
+ * (`rootDir: "."`, which is what the repo's addons build with), then without it
+ * (`rootDir: "src"`).
  */
 export const locateContributorModule = (variant: OptedInVariant): string => {
   const source = resolve(variant.packageDir, variant.module)
   if (existsSync(source)) return source
-  const built = resolve(
-    variant.packageDir,
-    'dist',
-    posix.normalize(variant.module).replace(/\.[cm]?tsx?$/, '.js')
-  )
-  if (existsSync(built)) return built
+  const asJs = posix.normalize(variant.module).replace(/\.[cm]?tsx?$/, '.js')
+  const built = [asJs, asJs.replace(/^src\//, '')]
+    .filter((path, index, all) => all.indexOf(path) === index)
+    .map((path) => resolve(variant.packageDir, 'dist', path))
+  const found = built.find((candidate) => existsSync(candidate))
+  if (found) return found
   throw new Error(
-    `Contributor '${variant.name}' of addon '${variant.namespace}' (${variant.packageName}) is recorded at ${variant.module}, but neither ${source} nor ${built} exists.`
+    `Contributor '${variant.name}' of addon '${variant.namespace}' (${variant.packageName}) is recorded at ${variant.module}, but none of ${[source, ...built].join(', ')} exists.`
   )
+}
+
+/** A contributor the caller selects itself, beside the opted-in ones. */
+export interface ExtraContributor {
+  name: string
+  contributor: Contributor<any, any>
+  /** Absolute path of the module that exports it. */
+  module: string
+  export: string
+  /** Left out, not an error, when nothing meets a service it needs. */
+  optional?: boolean
 }
 
 /**
@@ -130,6 +144,13 @@ export const locateContributorModule = (variant: OptedInVariant): string => {
  * rules out, then checks clashes and orders what is left. Both `when` and
  * `requires` are evaluated here, at build time; the generated file never sees
  * them.
+ *
+ * A contributor with no variant for the target is simply not part of it. One
+ * the project opted in to whose variant `requires` a binding the target cannot
+ * supply is an error naming it: the app was written to use it, so building
+ * without it would ship a different app (`when` returning false is the way to
+ * say "not here"). `extra` contributors skip the opt-in lookup and are never
+ * an error for `requires`.
  *
  * A host may pass a platform widened with its own facts (`unit`, say); only
  * the contributors that declare that type read them.
@@ -142,6 +163,9 @@ export const resolveTargetContributors = async <
   target: ContributorTarget
   platform: TPlatform
   supported?: readonly ContributorBindingSource[]
+  extra?: readonly ExtraContributor[]
+  /** Names the target in the unsupported-`requires` error ("the standalone target"). */
+  targetLabel?: string
   load?: (file: string) => Promise<Record<string, any>>
 }): Promise<ResolvedContributors> => {
   const load = options.load ?? loadUserModule
@@ -163,10 +187,38 @@ export const resolveTargetContributors = async <
       return { name: variant.name, contributor: loaded, module, variant }
     })
   )
-  const { ordered, skipped } = resolveContributors(entries, {
+  const extras = (options.extra ?? []).map((extra) => ({
+    name: extra.name,
+    contributor: extra.contributor as Contributor<any, TPlatform>,
+    module: extra.module,
+    variant: { export: extra.export } as { export: string } | OptedInVariant,
+  }))
+  const { ordered, skipped } = resolveContributors([...entries, ...extras], {
     platform: options.platform,
     supported: options.supported,
+    optional: new Set(
+      (options.extra ?? []).filter((e) => e.optional).map((e) => e.name)
+    ),
   })
+  const opted = new Map(entries.map((entry) => [entry.name, entry.variant]))
+  const unsupported = skipped.filter(
+    ({ name, reason }) => reason === 'requires' && opted.has(name)
+  )
+  if (unsupported.length > 0) {
+    const detail = unsupported
+      .map(({ name }) => {
+        const variant = opted.get(name)!
+        const needed = (
+          entries.find((entry) => entry.name === name)!.contributor.requires ??
+          DEFAULT_CONTRIBUTOR_BINDING_SOURCES
+        ).join(', ')
+        return `'${name}' of addon '${variant.namespace}' (${variant.packageName}) requires ${needed}`
+      })
+      .join('; ')
+    throw new Error(
+      `${options.targetLabel ?? `The ${options.target} target`} cannot supply what ${unsupported.length === 1 ? 'a contributor' : 'contributors'} the project opted in to with wireAddon need${unsupported.length === 1 ? 's' : ''}: ${detail}. Remove it from wireAddon({ contributors }), or give the addon a variant for this target.`
+    )
+  }
   return {
     ordered: ordered.map(({ name, module, variant, contributor }) => ({
       name,

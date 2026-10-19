@@ -5,11 +5,7 @@ import { readFile } from 'node:fs/promises'
 import { existsSync, readFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
-import type {
-  EntryGenerationContext,
-  PlatformServiceContributor,
-  ProviderAdapter,
-} from '@pikku/deploy'
+import type { EntryGenerationContext, ProviderAdapter } from '@pikku/deploy'
 import type { InspectorState } from '@pikku/inspector'
 import type { Logger } from '@pikku/core/services'
 import {
@@ -19,7 +15,6 @@ import {
   PikkuDeployBuildFailedError,
 } from '../../deploy/build-pipeline.js'
 import { nativeSidecars, servedFrontend } from '../../utils/frontend.js'
-import { loadDeployContributors } from './deploy-contributors.js'
 
 // A bundler reads anything not starting with `./` or `../` as a bare package
 // specifier, and a path into a dot-directory (`.pikku/...`) starts with a dot
@@ -307,7 +302,6 @@ export async function resolveProvider(
   options?: {
     projectDir?: string
     nativeSidecars?: Array<{ name: string; dir: string }>
-    contributors?: PlatformServiceContributor[]
   }
 ): Promise<ProviderAdapter> {
   const name = providerName ?? config?.deploy?.defaultProvider ?? 'cloudflare'
@@ -443,15 +437,10 @@ export const deployApply = pikkuSessionlessFunc<
   func: async ({ logger, config, getInspectorState, bundler }, data) => {
     const projectDir = config.rootDir
     const fromPlan = data?.fromPlan ?? false
-    // A plan already holds the generated entries, so its contributors were
-    // baked in when it was made.
     const inspectorState = fromPlan ? undefined : await getInspectorState(true)
     const provider = await resolveProvider(config, data?.provider, {
       projectDir,
       nativeSidecars: nativeSidecars(config.frontends),
-      contributors: inspectorState
-        ? await loadDeployContributors(config, inspectorState)
-        : [],
     })
     const resultFile = data?.resultFile
 

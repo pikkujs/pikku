@@ -2,24 +2,15 @@
 set -e
 
 echo "=== Dev Platform Contributors Verifier ==="
+echo "--- a project that opts in to nothing generates no contributors file ---"
+rm -rf .pikku
 npx pikku
-test -f .pikku/pikku-dev-platform-services.gen.ts
+if [ -e .pikku/contributors/pikku-dev-contributors.gen.ts ]; then
+  echo "✗ a contributors file was generated for a project that opted in to none"
+  exit 1
+fi
 npx tsc -b
-npx tsx src/check-dev-platform-services.ts
-
-echo "--- a contributor need nothing meets fails codegen ---"
-rm -rf .pikku-missing-need
-if output=$(npx pikku all -c "$PWD/pikku.missing-need.config.json" 2>&1); then
-  echo "✗ codegen succeeded although 'needs-kysely' needs kysely and nothing provides it"
-  exit 1
-fi
-rm -rf .pikku-missing-need
-if ! grep -q "Contributor 'needs-kysely' needs 'kysely', which nothing provides" <<<"$output"; then
-  echo "$output"
-  echo "✗ codegen failed without naming the unmet need"
-  exit 1
-fi
-echo "✓ an unmet need fails codegen and names the contributor"
+echo "✓ no contributors, no generated file"
 echo "--- opted-in contributors: dev and deploy variants across addons ---"
 for addon in contrib-notify contrib-select contrib-bad; do
   (cd "$addon" && npx pikku all >/dev/null)
@@ -57,4 +48,17 @@ expect_failure() { # scenario, message
 expect_failure dup "Contributors 'dup-a' and 'dup-b' both provide 'shared'"
 expect_failure ghost "Contributor 'needs-ghost' needs 'ghost', which nothing provides"
 expect_failure cycle "depend on each other in a cycle: cycle-a -> cycle-b -> cycle-a"
+echo "--- a database on disk that the pikku config does not declare is refused ---"
+rm -rf scenarios/pg/.pikku-nodb
+if output=$(cd scenarios/pg && npx pikku all -c "$PWD/pikku.nodb.config.json" 2>&1); then
+  echo "✗ codegen succeeded although db/postgres exists and the pikku config has no db"
+  exit 1
+fi
+rm -rf scenarios/pg/.pikku-nodb
+if ! grep -q "the pikku config has no \`db\`" <<<"$output"; then
+  echo "$output"
+  echo "✗ codegen failed without naming the missing db"
+  exit 1
+fi
+echo "✓ kysely baseline disagreement fails codegen"
 echo "=== All tests passed ==="

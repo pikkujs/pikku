@@ -57,7 +57,7 @@ export const serializeContributors = ({
     ...(imports.length > 0 ? [''] : []),
     `const platform: any = ${JSON.stringify(platform)}`,
     ``,
-    `export const createPlatformServices = async (env: Record<string, string | undefined>, runtime: ${SERVICES_TYPE} = {}): Promise<${SERVICES_TYPE}> => {`,
+    `export const createPlatformServices = async (env: Record<string, any>, runtime: ${SERVICES_TYPE} = {}): Promise<${SERVICES_TYPE}> => {`,
     `  const services: ${SERVICES_TYPE} = {}`,
     ...runs,
     `  return services`,

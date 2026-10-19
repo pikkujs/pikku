@@ -315,7 +315,6 @@ export interface SerializableInspectorState {
   addonStudio?: InspectorState['addonStudio']
   contributorsManifest?: InspectorState['contributorsManifest']
   optedInContributors?: InspectorState['optedInContributors']
-  addonContributors?: InspectorState['addonContributors']
   exportedContracts: InspectorState['exportedContracts']
 }
 
@@ -557,7 +556,6 @@ export function serializeInspectorState(
     addonStudio: state.addonStudio,
     contributorsManifest: state.contributorsManifest,
     optedInContributors: state.optedInContributors,
-    addonContributors: state.addonContributors,
     exportedContracts: state.exportedContracts,
   }
 }
@@ -802,7 +800,6 @@ export function deserializeInspectorState(
     addonStudio: data.addonStudio,
     contributorsManifest: data.contributorsManifest,
     optedInContributors: data.optedInContributors,
-    addonContributors: data.addonContributors,
     exportedContracts: data.exportedContracts || {
       http: {},
       cli: {},

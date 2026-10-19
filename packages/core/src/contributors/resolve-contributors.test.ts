@@ -199,4 +199,45 @@ describe('resolveContributors', () => {
     )
     assert.deepEqual(names(ordered), ['queue', 'reader'])
   })
+
+  test('a requires the target cannot supply is not reported when when already ruled the contributor out', () => {
+    const { skipped } = resolveContributors(
+      [entry('d1', { requires: ['cloudflare'], when: () => false })],
+      { platform: platform(), supported: ['env'] }
+    )
+    assert.deepEqual(skipped, [{ name: 'd1', reason: 'when' }])
+  })
+
+  test('an optional contributor is dropped when nothing meets its need, kept when something does', () => {
+    const wrap = entry('coercion', { needs: ['kysely'] })
+    const optional = new Set(['coercion'])
+    const dropped = resolveContributors([wrap], {
+      platform: platform(),
+      optional,
+    })
+    assert.deepEqual(names(dropped.ordered), [])
+    assert.deepEqual(dropped.skipped, [{ name: 'coercion', reason: 'needs' }])
+
+    const kept = resolveContributors(
+      [wrap, entry('kysely', { provides: ['kysely'] })],
+      { platform: platform(), optional }
+    )
+    assert.deepEqual(names(kept.ordered), ['kysely', 'coercion'])
+    const baseline = resolveContributors([wrap], {
+      platform: platform({ runtimeServices: ['kysely'] }),
+      optional,
+    })
+    assert.deepEqual(names(baseline.ordered), ['coercion'])
+  })
+
+  test('a contributor that provides and needs the same key, baseline or not, is a cycle', () => {
+    assert.throws(
+      () =>
+        resolveContributors(
+          [entry('self', { provides: ['logger'], needs: ['logger'] })],
+          { platform: platform({ runtimeServices: ['logger'] }) }
+        ),
+      /cycle: self -> self/
+    )
+  })
 })

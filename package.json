@@ -29,11 +29,10 @@
       "verifiers/addon-dependencies/stripe",
       "verifiers/addon-dependencies/billing",
       "verifiers/addon-dependencies/host",
-      "verifiers/dev-platform-contributors/host-mail",
-      "verifiers/dev-platform-contributors/log-addon",
       "verifiers/dev-platform-contributors/contrib-notify",
       "verifiers/dev-platform-contributors/contrib-select",
-      "verifiers/dev-platform-contributors/contrib-bad"
+      "verifiers/dev-platform-contributors/contrib-bad",
+      "verifiers/deploy-standalone/contrib-marker"
     ]
   },
   "scripts": {

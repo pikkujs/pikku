@@ -1,19 +1,7 @@
 import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { dirname, isAbsolute, join, posix, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type {
-  ContributorPlatform,
-  EntryGenerationContext,
-  PlatformServiceContributor,
-} from '@pikku/deploy'
-import {
-  collectContributorImports,
-  collectContributorLines,
-  dedupeContributors,
-} from '@pikku/deploy'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-
-const SERVICES_TYPE = 'Record<string, any>'
 
 export interface DevPlatformServicesTarget {
   file: string
@@ -31,27 +19,6 @@ export const devRuntimeServices = (options: { db: boolean }): string[] => [
   'schema',
   ...(options.db ? ['kysely'] : []),
 ]
-
-export const devContributorPlatform = (
-  requiredServices: Iterable<string>,
-  runtimeServices: string[] = devRuntimeServices({ db: false })
-): ContributorPlatform => {
-  const serviceNames = [...requiredServices]
-  return {
-    serviceNames,
-    runtimeServices,
-    needsQueue: serviceNames.includes('queueService'),
-    needsWorkflow: serviceNames.includes('workflowService'),
-    needsAgent: serviceNames.includes('agentRunner'),
-  }
-}
-
-const devContext = (unitDir: string): EntryGenerationContext =>
-  ({
-    unit: { name: 'dev', role: 'function', services: [] },
-    unitDir,
-    servicesType: SERVICES_TYPE,
-  }) as unknown as EntryGenerationContext
 
 const realpath = (path: string): string => {
   try {
@@ -113,41 +80,4 @@ export const localSpecifier = (
     packageExportSpecifier(path, dirname(target.file)) ??
     getFileImportRelativePath(target.file, path, target.packageMappings ?? {})
   )
-}
-
-const SPECIFIER = /(\bfrom\s*|\bimport\s*\(\s*|^\s*import\s+)(['"])([^'"]+)\2/g
-
-export const rewriteImportSpecifiers = (
-  line: string,
-  target: DevPlatformServicesTarget
-): string =>
-  line.replace(
-    SPECIFIER,
-    (_match, prefix: string, quote: string, specifier: string) =>
-      `${prefix}${quote}${localSpecifier(specifier, target)}${quote}`
-  )
-
-export const serializeDevPlatformServices = (
-  contributors: readonly PlatformServiceContributor[],
-  platform: ContributorPlatform,
-  target?: DevPlatformServicesTarget
-): string => {
-  const unique = dedupeContributors(contributors)
-  const ctx = devContext(target ? dirname(target.file) : '')
-  const local = (lines: string[]) =>
-    target ? lines.map((line) => rewriteImportSpecifiers(line, target)) : lines
-  const imports = local(collectContributorImports(unique, platform, ctx))
-  const lines = local(
-    collectContributorLines(unique, { ctx, platform, isGateway: false })
-  )
-  return [
-    ...imports,
-    ...(imports.length > 0 ? [''] : []),
-    `export const createPlatformServices = async (env: Record<string, string | undefined>, runtime: ${SERVICES_TYPE} = {}): Promise<${SERVICES_TYPE}> => {`,
-    `  const services: ${SERVICES_TYPE} = {}`,
-    ...lines,
-    `  return services`,
-    `}`,
-    ``,
-  ].join('\n')
 }
