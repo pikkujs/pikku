@@ -78,6 +78,65 @@ func readAddonNeeds(dirs []string, pkg string) []string {
 	return pj.get("pikku").get("uses").strings()
 }
 
+// readAddonContributors is the platform service contributors an addon declares
+// in its package.json under pikku.contributors, as { packageName, packageDir,
+// contributors }, or nil when it declares none.
+func readAddonContributors(dirs []string, pkg string) (*ojson, error) {
+	dir := findInstalledPackageDir(dirs, pkg)
+	if dir == "" {
+		return nil, nil
+	}
+	pj, err := readJSONFile(filepath.Join(dir, "package.json"))
+	if err != nil {
+		return nil, nil
+	}
+	pikku := pj.get("pikku")
+	if !pikku.has("contributors") {
+		return nil, nil
+	}
+	declared := pikku.get("contributors")
+	malformed := fmt.Errorf("%s declares pikku.contributors in its package.json, but it is not a list of { module, export? }.", pkg)
+	if declared == nil || !declared.isArr {
+		return nil, malformed
+	}
+	refs := &ojson{isArr: true, arr: []*ojson{}}
+	for _, entry := range declared.arr {
+		module, ok := entry.get("module").str()
+		if !entry.isObject() || !ok {
+			return nil, malformed
+		}
+		ref := newOObject()
+		ref.set("module", ojsonString(module))
+		if entry.has("export") {
+			name, ok := entry.get("export").str()
+			if !ok {
+				return nil, malformed
+			}
+			ref.set("export", ojsonString(name))
+		}
+		refs.arr = append(refs.arr, ref)
+	}
+	if len(refs.arr) == 0 {
+		return nil, nil
+	}
+	out := newOObject()
+	out.set("packageName", ojsonString(pkg))
+	out.set("packageDir", ojsonString(dir))
+	out.set("contributors", refs)
+	return out, nil
+}
+
+func (s *Context) recordAddonContributors(ns string, contributors *ojson) {
+	all := newOObject()
+	if len(s.State.AddonContributors) > 0 && string(s.State.AddonContributors) != "null" {
+		if existing, err := parseOJSON(s.State.AddonContributors); err == nil && existing.isObject() {
+			all = existing
+		}
+	}
+	all.set(ns, contributors)
+	s.State.AddonContributors = all.raw()
+}
+
 // namespaceAddonWebhookSources names an addon's webhook sources after the
 // namespace it is wired under.
 func namespaceAddonWebhookSources(sources *ojson, namespace string) *state.Record[*ojson] {
@@ -252,6 +311,12 @@ func (s *Context) LoadAddonFunctionsMeta() {
 func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	dirs := addonResolutionDirs(s.RootDir, decl.file)
 	req := addonResolver(dirs)
+
+	if contributors, err := readAddonContributors(dirs, decl.pkg); err != nil {
+		s.Log.Error(fmt.Sprintf("wireAddon('%s'): %s", ns, err.Error()))
+	} else if contributors != nil {
+		s.recordAddonContributors(ns, contributors)
+	}
 
 	for _, needed := range readAddonNeeds(dirs, decl.pkg) {
 		if decl.uses == nil || decl.uses.At(needed) == "" {

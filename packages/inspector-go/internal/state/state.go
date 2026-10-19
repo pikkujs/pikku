@@ -79,6 +79,7 @@ type State struct {
 	AddonFunctions        Record[*Record[*FunctionMeta]] `json:"addonFunctions"`
 	ScreensManifest       Raw                            `json:"screensManifest,omitempty"`
 	AddonScreens          Raw                            `json:"addonScreens,omitempty"`
+	AddonContributors     Raw                            `json:"addonContributors,omitempty"`
 	ExportedContracts     ExportedContracts              `json:"exportedContracts"`
 
 	// CoreTypeProperties replaces the live `typesLookup` entries for the core
