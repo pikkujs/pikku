@@ -74,6 +74,12 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'The events a project can measure, declared by name so the generated ingest knows what to accept. Where they go is an AnalyticsService on singleton services; what a function records into is the analytics service on the invocation.',
   },
+  contributor: {
+    step: 'enhance it',
+    skill: null,
+    summary:
+      "Services the target the app runs on owns, such as a queue or a database client built from a binding, declared as contributors typed against this project's own singleton services. An addon registers its contributors with core's untyped helper instead, and a project opts in to them by name with `wireAddon`.",
+  },
   utils: {
     step: 'enhance it',
     skill: null,

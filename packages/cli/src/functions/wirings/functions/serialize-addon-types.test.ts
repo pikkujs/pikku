@@ -134,6 +134,14 @@ describe('installing an addon reaches core through its own subpath', () => {
   })
 })
 
+describe('the contributor leaf', () => {
+  test('is reached as #pikku/contributor from contributorTypesFile', () => {
+    const leaf = leafEntries.find(([name]) => name === 'contributor')
+
+    assert.deepEqual(leaf?.[1], ['contributorTypesFile'])
+  })
+})
+
 describe('typed contributor names on wireAddon', () => {
   test('an addon with contributors types the names of its package', () => {
     const content = serializeAddonInstallTypes(

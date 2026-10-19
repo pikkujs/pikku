@@ -372,6 +372,14 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    if (!result.contributorTypesFile) {
+      result.contributorTypesFile = join(
+        result.outDir,
+        'contributor',
+        'pikku-contributor-types.gen.ts'
+      )
+    }
+
     // Sits in the same directory as the better-auth wrapper so both reach the
     // reader as `#pikku/auth`, but is written unconditionally: every project
     // decides who may call a function, only some projects use better-auth.

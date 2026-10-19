@@ -30,6 +30,13 @@ generated `#pikku/addon` wrapper, next to the function-name union `mcp` and
 `expose` already use. No inspector state is added. An addon whose meta cannot be
 read falls back to `string`, and PKU363 stays the build-time backstop.
 
+A project that declares contributors imports `defineContributors` and
+`Contributor` from the generated `#pikku/contributor`, typed against its own
+`SingletonServices`. It is generated for an application and not for an addon
+(an addon has no services type of its own, so it keeps core's untyped helper),
+and it is erased at runtime: the only runtime import is `@pikku/core/contributors`
+and the services type arrives through `import type`.
+
 **Why:**
 
 - Real modules are typed and testable, where string-emitted lines were
