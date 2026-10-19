@@ -18,6 +18,8 @@ import type {
   ProviderAdapter,
 } from '@pikku/deploy'
 import {
+  composedLifecycleLines,
+  entryLifecycleVariable,
   nodeBuiltinExternals,
   SERVER_READY_MARKER,
   withDeployUnit,
@@ -338,12 +340,12 @@ const lifecycleImportLines = (
  * request — a seeded admin account, a schema probe — is finished when one
  * arrives.
  */
-const lifecycleStartLines = (): string[] => [
-  `  await __pikkuLifecycle?.beforeStart?.(singletonServices)`,
+const lifecycleStartLines = (variable: string): string[] => [
+  `  await ${variable}?.beforeStart?.(singletonServices)`,
 ]
 
-const lifecycleAfterStartLines = (): string[] => [
-  `  await __pikkuLifecycle?.afterStart?.(singletonServices)`,
+const lifecycleAfterStartLines = (variable: string): string[] => [
+  `  await ${variable}?.afterStart?.(singletonServices)`,
 ]
 
 /**
@@ -358,9 +360,10 @@ const shutdownHooksArg = (ctx: EntryGenerationContext): string => {
   const before: string[] = []
   const after: string[] = []
 
-  if (ctx.lifecycle) {
-    before.push(`await __pikkuLifecycle?.beforeStop?.(singletonServices)`)
-    after.push(`await __pikkuLifecycle?.afterStop?.(singletonServices)`)
+  const lifecycle = entryLifecycleVariable(ctx)
+  if (lifecycle) {
+    before.push(`await ${lifecycle}?.beforeStop?.(singletonServices)`)
+    after.push(`await ${lifecycle}?.afterStop?.(singletonServices)`)
   }
   if (ctx.db?.engine === 'postgres') {
     after.push(`await __pikkuPg.close()`)
@@ -462,6 +465,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     }
     return {
       supported: STANDALONE_BINDING_SOURCES,
+      runsServerLifecycle: true,
       runtimeServices: runtimeServiceNames(ctx),
       widenPlatform: (platform) => withDeployUnit(platform, ctx.unit),
     }
@@ -487,6 +491,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   }
 
   generateEntrySource(ctx: EntryGenerationContext): string {
+    const lifecycle = entryLifecycleVariable(ctx)
     return [
       `// Generated standalone entry — all functions in one process`,
       `import { ConsoleLogger, InMemoryTriggerSourceStore } from '@pikku/core/services'`,
@@ -517,6 +522,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...(ctx.db ? dbImportLines(ctx.db) : []),
       ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
       ...this.contributorImportLines(ctx),
+      ...composedLifecycleLines(ctx).imports,
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -524,6 +530,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ctx.mcpImport,
       `import '${ctx.bootstrapPath}'`,
       ``,
+      ...composedLifecycleLines(ctx).declaration,
+      ...(ctx.platformServices ? [``] : []),
       `const logger = new ConsoleLogger()`,
       `const port = parseInt(process.env.PORT || '${this.port}', 10)`,
       `const hostname = process.env.HOST || '0.0.0.0'`,
@@ -579,10 +587,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  await server.init()`,
       `  await singletonServices.schedulerService?.start()`,
       `  await singletonServices.triggerService?.start()`,
-      ...(ctx.lifecycle ? lifecycleStartLines() : []),
+      ...(lifecycle ? lifecycleStartLines(lifecycle) : []),
       `  server.enableExitOnSignals(${shutdownHooksArg(ctx)})`,
       `  await server.start()`,
-      ...(ctx.lifecycle ? lifecycleAfterStartLines() : []),
+      ...(lifecycle ? lifecycleAfterStartLines(lifecycle) : []),
       ...sidecarHandshakeLines(),
       `}`,
       ``,

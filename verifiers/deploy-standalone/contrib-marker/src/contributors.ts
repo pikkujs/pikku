@@ -1,4 +1,6 @@
 import { defineContributors } from '@pikku/core/contributors'
+import { hookA } from './hook-a.js'
+import { hookB } from './hook-b.js'
 import { markerDeploy } from './marker.js'
 import { markerReaderDeploy } from './marker-reader.js'
 import { notOptedInDeploy } from './not-opted-in.js'
@@ -10,5 +12,8 @@ import { notOptedInDeploy } from './not-opted-in.js'
 export const contributors = defineContributors({
   'marker-reader': { deploy: markerReaderDeploy },
   marker: { deploy: markerDeploy },
+  // Registered out of order again: hook-b needs hook-a, which decides the hook order.
+  'hook-b': { deploy: hookB },
+  'hook-a': { deploy: hookA },
   'not-opted-in': { deploy: notOptedInDeploy },
 })

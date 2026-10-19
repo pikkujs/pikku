@@ -476,6 +476,7 @@ export async function runBuildPipeline(options: {
       ctx,
       state: inspectorState,
       projectDir,
+      warn: (message) => logger.info(`Warning: ${message}`),
     })
     const source = provider.generateEntrySource(ctx)
 
@@ -698,9 +699,9 @@ export async function runBuildPipeline(options: {
         ctx,
         state: inspectorState,
         projectDir,
-        // The provider-agnostic server entry builds no platform services.
-        entrySupportsPlatformServices:
-          unit.target !== 'server' || !!provider.generateServerEntrySource,
+        genericServerEntry:
+          unit.target === 'server' && !provider.generateServerEntrySource,
+        warn: (message) => logger.info(`Warning: ${message}`),
       })
       const source =
         unit.target === 'server'

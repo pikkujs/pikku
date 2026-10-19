@@ -605,6 +605,7 @@
     "selectContributors"
   ],
   "./lifecycle": [
+    "composeServerLifecycle",
     "onShutdownSignals",
     "pikkuServerLifecycle",
     "stopSingletonServices"

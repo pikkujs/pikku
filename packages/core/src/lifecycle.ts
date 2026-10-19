@@ -85,3 +85,79 @@ export const onShutdownSignals = (
     for (const [signal, handler] of handlers) proc.off(signal, handler)
   }
 }
+
+/** A contributor's `onServerStart` / `onServerStop`, as the generated platform-services file lists it. */
+export interface ContributorServerHook {
+  name: string
+  run: (services: any) => void | Promise<void>
+}
+
+const describeError = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error)
+
+/**
+ * Composes the server lifecycle around the app's own: contributor start hooks
+ * run first, in order, then the app's `beforeStart`; the app's `afterStart` and
+ * `beforeStop` are unchanged; after the app's `afterStop` the stop hooks run
+ * (already in reverse run order, as the generated file lists them).
+ *
+ * A start hook that throws aborts startup with an error naming the contributor.
+ * Every stop hook is attempted even if an earlier one (or the app's
+ * `afterStop`) threw; the failures are then thrown together, each named.
+ */
+export const composeServerLifecycle = <
+  SS extends CoreSingletonServices = CoreSingletonServices,
+>(
+  app: ServerLifecycle<SS> | undefined,
+  hooks: {
+    start?: readonly ContributorServerHook[]
+    stop?: readonly ContributorServerHook[]
+  }
+): ServerLifecycle<SS> => ({
+  beforeStart: async (services) => {
+    for (const hook of hooks.start ?? []) {
+      try {
+        await hook.run(services)
+      } catch (error) {
+        throw new Error(
+          `Contributor '${hook.name}' failed in onServerStart: ${describeError(error)}`,
+          { cause: error }
+        )
+      }
+    }
+    await app?.beforeStart?.(services)
+  },
+  afterStart: (services) => app?.afterStart?.(services),
+  beforeStop: (services) => app?.beforeStop?.(services),
+  afterStop: async (services) => {
+    const failures: string[] = []
+    const errors: unknown[] = []
+    let hookFailed = false
+    try {
+      await app?.afterStop?.(services)
+    } catch (error) {
+      failures.push(`the app's afterStop: ${describeError(error)}`)
+      errors.push(error)
+    }
+    for (const hook of hooks.stop ?? []) {
+      try {
+        await hook.run(services)
+      } catch (error) {
+        hookFailed = true
+        failures.push(
+          `contributor '${hook.name}' onServerStop: ${describeError(error)}`
+        )
+        errors.push(error)
+      }
+    }
+    if (errors.length === 1 && failures.length === 1 && !hookFailed) {
+      throw errors[0]
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(
+        errors,
+        `Server stop failed: ${failures.join('; ')}`
+      )
+    }
+  },
+})

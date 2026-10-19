@@ -61,6 +61,14 @@ export interface ContributorSupport {
    * replaced by a contributor providing the same key.
    */
   runtimeServices: readonly string[]
+  /**
+   * Whether the unit's entry runs the server lifecycle, and so calls a
+   * contributor's `onServerStart` / `onServerStop` (a server or container
+   * entry does; a Worker or Lambda handler does not). A selected contributor
+   * with `onServerStart` is a build error where this is false; `onServerStop`
+   * only warns. Required, so a new provider has to decide.
+   */
+  runsServerLifecycle: boolean
   /** Widens the platform before resolution; `withDeployUnit` is the usual one. */
   widenPlatform?(platform: ContributorPlatform): ContributorPlatform
   /** Contributors this provider selects itself, in addition to the opted-in ones. */
@@ -78,3 +86,48 @@ export interface EntryPlatformServices {
    */
   importPath: string
 }
+
+/** The variable generated entries call the (possibly composed) server lifecycle on. */
+export const appLifecycleVariable = '__pikkuLifecycle'
+export const composedLifecycleVariable = '__pikkuServerLifecycle'
+
+/**
+ * The variable an entry calls `beforeStart`/`afterStart`/`beforeStop`/`afterStop`
+ * on, or undefined when it has no lifecycle to run: the app declares none and
+ * no contributor was selected. With a platform-services file the lifecycle is
+ * the composed one, so contributor hooks bracket the app's; without, it is the
+ * app's own and the entry reads exactly as it always did.
+ */
+export const entryLifecycleVariable = (
+  ctx: Pick<EntryGenerationContextLike, 'lifecycle' | 'platformServices'>
+): string | undefined =>
+  ctx.platformServices
+    ? composedLifecycleVariable
+    : ctx.lifecycle
+      ? appLifecycleVariable
+      : undefined
+
+type EntryGenerationContextLike = {
+  lifecycle?: unknown
+  platformServices?: EntryPlatformServices
+}
+
+/**
+ * The import and declaration lines that build the composed lifecycle from the
+ * generated file's hook lists and the app's lifecycle (imported as
+ * `__pikkuLifecycle` by the entry). Empty without a platform-services file.
+ */
+export const composedLifecycleLines = (
+  ctx: EntryGenerationContextLike
+): { imports: string[]; declaration: string[] } =>
+  ctx.platformServices
+    ? {
+        imports: [
+          `import { composeServerLifecycle } from '@pikku/core/lifecycle'`,
+          `import { serverStartHooks as __pikkuStartHooks, serverStopHooks as __pikkuStopHooks } from '${ctx.platformServices.importPath}'`,
+        ],
+        declaration: [
+          `const ${composedLifecycleVariable} = composeServerLifecycle(${ctx.lifecycle ? appLifecycleVariable : 'undefined'}, { start: __pikkuStartHooks, stop: __pikkuStopHooks })`,
+        ],
+      }
+    : { imports: [], declaration: [] }

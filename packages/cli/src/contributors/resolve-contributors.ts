@@ -41,6 +41,12 @@ export interface ResolvedContributors {
   skipped: SkippedContributor[]
   /** Opted in, but with no variant for this target. */
   withoutVariant: string[]
+  /**
+   * Selected contributors whose `onServerStop` can never run, because the target
+   * does not run the server lifecycle (`runsServerLifecycle: false`). Only a
+   * warning: a missed teardown is harmless, unlike a missed `onServerStart`.
+   */
+  ignoredStopHooks: string[]
 }
 
 type OptedInState = Pick<InspectorState, 'optedInContributors'> & {
@@ -166,6 +172,16 @@ export const resolveTargetContributors = async <
   extra?: readonly ExtraContributor[]
   /** Names the target in the unsupported-`requires` error ("the standalone target"). */
   targetLabel?: string
+  /**
+   * Whether the target runs the server lifecycle (`pikku dev`, a server or
+   * container entry) and so calls `onServerStart` / `onServerStop`. Defaults to
+   * true. When false, a selected contributor with `onServerStart` is an error
+   * (it would silently never run) and one with `onServerStop` is reported in
+   * `ignoredStopHooks`.
+   */
+  runsServerLifecycle?: boolean
+  /** Names what is being built in the `onServerStart` error ("unit 'api'"). */
+  unitLabel?: string
   load?: (file: string) => Promise<Record<string, any>>
 }): Promise<ResolvedContributors> => {
   const load = options.load ?? loadUserModule
@@ -219,7 +235,26 @@ export const resolveTargetContributors = async <
       `${options.targetLabel ?? `The ${options.target} target`} cannot supply what ${unsupported.length === 1 ? 'a contributor' : 'contributors'} the project opted in to with wireAddon need${unsupported.length === 1 ? 's' : ''}: ${detail}. Remove it from wireAddon({ contributors }), or give the addon a variant for this target.`
     )
   }
+  const runsServerLifecycle = options.runsServerLifecycle ?? true
+  if (!runsServerLifecycle) {
+    const starting = ordered.filter(
+      ({ contributor }) => typeof contributor.onServerStart === 'function'
+    )
+    if (starting.length > 0) {
+      const where = options.unitLabel ? ` in ${options.unitLabel}` : ''
+      throw new Error(
+        `${options.targetLabel ?? `The ${options.target} target`} does not run the server lifecycle, so onServerStart would never be called: ${starting.map(({ name }) => `contributor '${name}'`).join(', ')}${where}. Remove ${starting.length === 1 ? 'it' : 'them'} from wireAddon({ contributors }), or deploy this unit as a server (container) target.`
+      )
+    }
+  }
   return {
+    ignoredStopHooks: runsServerLifecycle
+      ? []
+      : ordered
+          .filter(
+            ({ contributor }) => typeof contributor.onServerStop === 'function'
+          )
+          .map(({ name }) => name),
     ordered: ordered.map(({ name, module, variant, contributor }) => ({
       name,
       module,

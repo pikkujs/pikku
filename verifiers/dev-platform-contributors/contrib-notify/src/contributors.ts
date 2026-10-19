@@ -1,6 +1,10 @@
 import { defineContributors } from '@pikku/core/contributors'
 import { blobDeploy, blobDev } from './blob.js'
 import { cacheDeploy, cacheDev } from './cache.js'
+import { hookA } from './hook-a.js'
+import { hookB } from './hook-b.js'
+import { hookC } from './hook-c.js'
+import { hookStopOnly } from './hook-stop-only.js'
 import { loggerPrefixDeploy, loggerPrefixDev } from './logger-prefix.js'
 import { notifierDeploy, notifierDev } from './notifier.js'
 import { notifierAuditDeploy, notifierAuditDev } from './notifier-audit.js'
@@ -17,4 +21,9 @@ export const contributors = defineContributors({
   cache: { dev: cacheDev, deploy: cacheDeploy },
   unused: { dev: unusedDev },
   'unit-tag': { deploy: unitTagDeploy },
+  // Registered out of order on purpose: the hooks follow `needs`, not this list.
+  'hook-c': { dev: hookC, deploy: hookC },
+  'hook-b': { dev: hookB, deploy: hookB },
+  'hook-a': { dev: hookA, deploy: hookA },
+  'hook-stop-only': { deploy: hookStopOnly },
 })
