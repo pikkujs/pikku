@@ -83,16 +83,6 @@ export const memberWorksTheirBoardInTheBrowser = pikkuScenario<void, { landed: s
       { actor: actors.dana },
     )
 
-    // the analytics beacon — an HTTP-only surface. Posting from the browser rather than
-    // exposing it over RPC keeps the boundary it demonstrates intact.
-    await scenario.then(
-      'posts to /api/analytics',
-      'postsTo',
-      { path: '/api/analytics', body: '{"events":[{"event":{"name":"page_viewed","path":"/app/issues"}}]}', minStatus: 0,
-        maxStatus: 299 },
-      { actor: actors.dana },
-    )
-
     // The realtime surface, opened and closed deliberately. Visiting the page
     // already runs this handler, but nothing asserted the socket reached OPEN —
     // a channel with a broken route or a failing auth check looks identical to

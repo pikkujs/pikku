@@ -6,12 +6,10 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { AuthCard, type AuthFormValues } from '@/components/AuthCard'
 import { EMAIL_IN_USE, registerWithPassword, signInWithGoogle } from '@/lib/auth'
-import { useAnalytics } from '@/hooks/useAnalytics'
 
 export const SignupPage: FC = () => {
   useLocale()
   const navigate = useNavigate()
-  const analytics = useAnalytics()
   const appName = m.app__name()
 
   const signUp = useMutation({
@@ -20,11 +18,7 @@ export const SignupPage: FC = () => {
         name: values.name,
         redirectPath: '/app',
       }),
-    // The outcome event fires from `onSuccess`, where the account actually
-    // exists — not from the submit handler, which also runs for every failed
-    // attempt. This is the pattern the event registry asks for.
     onSuccess: () => {
-      analytics.event('signed_up', {})
       navigate({ to: '/app' })
     },
   })

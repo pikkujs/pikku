@@ -24,9 +24,3 @@ export type RPCInput<Name extends keyof FlattenedRPCMap> = FlattenedRPCMap[Name]
 /** The output type of an RPC — index into it for a row type. */
 export type RPCOutput<Name extends keyof FlattenedRPCMap> = FlattenedRPCMap[Name]['output']
 
-// The analytics registry, re-exported for the frontend. Same reach as the
-// `.pikku` import above, and type-only, so nothing backend ends up in the
-// browser bundle. This is what makes `analytics.event()` typed at the call site:
-// the event name and its payload come from the one zod union the ingest
-// validates against, so a typo is a build error rather than a forked series.
-export type { AnalyticsEvent } from '../../functions/src/analytics/registry.js'

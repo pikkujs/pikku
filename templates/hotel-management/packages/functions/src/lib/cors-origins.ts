@@ -10,7 +10,7 @@ defineVariable({
   name: 'corsOrigins',
   displayName: 'Allowed Browser Origins',
   description:
-    'Comma-separated list of origins allowed to call this API from a browser, e.g. "https://app.example.com". Also the allowlist the analytics ingest enforces server-side. Unset falls back to FRONTEND_URL plus localhost.',
+    'Comma-separated list of origins allowed to call this API from a browser, e.g. "https://app.example.com". Unset falls back to FRONTEND_URL plus localhost.',
   variableId: 'CORS_ORIGINS',
   schema: CorsOriginsSchema,
 })
@@ -35,9 +35,6 @@ defineVariable({
  * This lives in `lib/` rather than beside the CORS middleware because a file
  * holding zod schemas may not also make wiring calls (PKU490): the CLI imports
  * schema files at runtime, and the wiring side-effects crash without a server.
- *
- * Shared with the analytics origin lock so the server-side check enforces
- * exactly the list CORS advertises; two lists would drift and disagree.
  */
 export async function allowedOrigins(
   variables: SingletonServices['variables'],

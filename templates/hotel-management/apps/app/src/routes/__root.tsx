@@ -4,7 +4,6 @@ import {
   HeadContent,
   Outlet,
   Scripts,
-  useRouterState,
   type ErrorComponentProps,
 } from '@tanstack/react-router'
 import {
@@ -37,8 +36,6 @@ import {
 } from '@project/mantine-themes'
 import { defaultLocale, localeDir, supportedLocales, setActiveLocale } from '@/i18n/config'
 import { apiUrl } from '@/lib/env'
-import { registerAnalyticsClickListener } from '@/lib/analytics-click'
-import { recordEvent } from '@/lib/analytics'
 import { PreferencesContext } from '@/contexts/preferences'
 import { DefaultErrorPage } from '@/components/DefaultErrorPage'
 import { DefaultNotFoundPage } from '@/components/DefaultNotFoundPage'
@@ -148,23 +145,6 @@ function RootDocument({ children }: { children: ReactNode }) {
     document.documentElement.lang = locale
     document.documentElement.dir = localeDir(locale)
   }, [locale])
-
-  // One delegated listener for every `data-analytics-click` in the app,
-  // including portalled content (modals, menus, dropdowns) — see
-  // lib/analytics-click.ts for why it must be capture-phase.
-  useEffect(() => registerAnalyticsClickListener(), [])
-
-  // The matched route id (`/app/account`), not `location.pathname`. A pathname
-  // carries every id and slug the app has, and `path` is a queryable column on
-  // the raw stream — so the pathname version turns one series into thousands
-  // and puts identifiers into the analytics store. The route id is the same
-  // information at the cardinality of the route table.
-  const routeId = useRouterState({
-    select: (state) => state.matches.at(-1)?.routeId ?? state.location.pathname,
-  })
-  useEffect(() => {
-    recordEvent('page_viewed', { path: routeId })
-  }, [routeId])
 
   // Fabric console live-preview: postMessage injects a theme spec to override
   // the active theme without persisting. Accepts `theme` (a full spec) or the

@@ -268,15 +268,7 @@ export const capturesPage = pikkuScenarioStep({
 
     const issues = actor.takeIssues()
 
-    // The analytics beacon is fired and then abandoned when the page navigates,
-    // so `net::ERR_ABORTED` against it is the design working rather than a
-    // fault. Counting it made every single page report `clean: false`, which
-    // costs the flag the only thing it is for — being believed when it is false.
-    const failedRequests = issues.failedRequests.filter(
-      (request) => !(request.includes('/analytics') && request.includes('ERR_ABORTED')),
-    )
-
-    return { file, pathname, status, ...issues, failedRequests }
+    return { file, pathname, status, ...issues }
   },
 })
 
@@ -456,8 +448,8 @@ export const PostsToInput = z.object({
    * Highest status treated as success.
    *
    * Defaulted rather than optional because the first version of this step
-   * returned the status and asserted nothing — so a 403 from the analytics
-   * origin lock passed exactly like a 204, and the step could not fail.
+   * returned the status and asserted nothing — so a 403 from an origin
+   * lock passed exactly like a 204, and the step could not fail.
    */
   maxStatus: z.number().default(299),
   /**
@@ -482,16 +474,16 @@ export const PostsToOutput = z.object({
 /**
  * POST to a route from inside the signed-in browser.
  *
- * The reason this exists: not every surface is RPC. A gateway receiver, an
- * analytics beacon and an MCP endpoint are all reachable only over their own
+ * The reason this exists: not every surface is RPC. A gateway receiver and an
+ * MCP endpoint are all reachable only over their own
  * HTTP route, so `scenario.do` cannot call them and they went untested — while
  * the alternative, exposing them over the generic RPC endpoint purely so a test
  * could reach them, would weaken exactly the boundary they demonstrate.
  *
  * Issued from the browser context rather than from Node so the request carries
- * the real session cookie and the real `Origin` header. The analytics ingest
+ * the real session cookie and the real `Origin` header. An origin-locked route
  * rejects a request without one, and a test that cannot produce a correct
- * Origin cannot prove the ingest works.
+ * Origin cannot prove the route works.
  */
 export const postsTo = pikkuScenarioStep({
   name: 'postsTo',
