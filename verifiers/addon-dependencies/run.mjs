@@ -35,11 +35,19 @@ const stripeDir = join(here, 'stripe')
 const billingDir = join(here, 'billing')
 const hostDir = join(here, 'host')
 
+class CheckFailed extends Error {}
+
+/** Throws rather than exits, so withFile puts an edited fixture back first. */
 const fail = (message, output) => {
   if (output) console.error(output)
   console.error(`✗ ${message}`)
-  process.exit(1)
+  throw new CheckFailed(message)
 }
+
+process.on('uncaughtException', (error) => {
+  if (!(error instanceof CheckFailed)) console.error(error)
+  process.exit(1)
+})
 
 const run = (file, args, cwd) => {
   const result = spawnSync(file, args, { cwd, encoding: 'utf8' })
