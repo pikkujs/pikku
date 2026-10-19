@@ -27,6 +27,8 @@ import {
   listDevVirtualUsers,
 } from './dev-virtual-users.js'
 import type { DevSignInVirtualUser } from './dev-virtual-users.js'
+import { grantVirtualUserAccess } from './provision-virtual-users.js'
+import type { ProvisionVirtualUsersServices } from './provision-virtual-users.js'
 
 /** Options for {@link pikkuVirtualUser}. */
 export interface VirtualUserPluginOptions {
@@ -74,6 +76,13 @@ export interface VirtualUserPluginOptions {
     featureFlags?: FeatureFlagSource
     allowed?: () => boolean | Promise<boolean>
   }
+  /**
+   * The app's scope service. Under `pikku dev`, where sign-in creates virtual
+   * user accounts on demand, each sign-in also grants the app scope and roles the
+   * virtual user declares (additively, never revoking). A deployed stage leaves
+   * this to `provisionVirtualUsers`.
+   */
+  scopeService?: ProvisionVirtualUsersServices['scopeService']
   /** Defaults to `console`: `virtualUser()` is wired inside `betterAuth({...})`, where the app's logger is often not in scope. */
   logger?: Pick<Logger, 'info' | 'warn'>
   /**
@@ -240,6 +249,13 @@ export const pikkuVirtualUser = (
           message: 'Failed to create virtual user user',
         })
       }
+    }
+
+    const declaration = options.virtualUserSignIn?.virtualUsers.find(
+      (candidate) => candidate.email?.toLowerCase() === email
+    )
+    if (gate.mayProvision && options.scopeService && declaration) {
+      await grantVirtualUserAccess(options.scopeService, user.id, declaration)
     }
 
     const session = await ctx.context.internalAdapter.createSession(user.id)

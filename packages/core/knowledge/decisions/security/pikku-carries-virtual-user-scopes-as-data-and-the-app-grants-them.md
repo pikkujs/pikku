@@ -21,6 +21,10 @@ app passes in. Its doc comment says it is additive — it creates and grants, ne
 deletes or revokes — and that it throws rather than grant a virtual user's roles to
 an address a real user already holds.
 
+Under `pikku dev`, where `pikkuVirtualUser` creates accounts on sign-in, the
+same grant (`grantVirtualUserAccess`) runs on each sign-in when the app passes
+its `scopeService` to the plugin. A deployed stage never grants on sign-in.
+
 Core cannot do the granting: which scope store exists, whether roles have been
 created, and what a role means are all the application's own. Worse, a framework
 that granted scopes from wherever it was handed a virtual user would be a framework

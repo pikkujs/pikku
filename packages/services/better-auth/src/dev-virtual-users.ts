@@ -37,6 +37,8 @@ export type DevSignInVirtualUser = {
   jobTitle?: string
   email?: string
   app?: string
+  /** Roles sign-in grants under `pikku dev`, when the plugin is given a `scopeService`. */
+  roles?: readonly string[]
   runnable?: boolean
 }
 

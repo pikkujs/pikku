@@ -83,6 +83,43 @@ type VirtualUserRow = {
 } & Record<string, unknown>
 
 /**
+ * Grant one virtual user account the app scope and roles its declaration names,
+ * skipping what it already holds. Additive: it never revokes.
+ *
+ * Shared by {@link provisionVirtualUsers} and by `pikkuVirtualUser`'s sign-in
+ * under `pikku dev`, the one place that creates virtual user accounts on demand.
+ */
+export const grantVirtualUserAccess = async (
+  scopeService: ProvisionVirtualUsersServices['scopeService'],
+  userId: string,
+  virtualUser: { app?: string; roles?: readonly string[] }
+): Promise<{ granted: number; appsGranted: number; held: number }> => {
+  const result = { granted: 0, appsGranted: 0, held: 0 }
+  if (virtualUser.app) {
+    const scope = appScopeId(virtualUser.app)
+    const heldScopes = new Set(await scopeService.listUserScopes(userId))
+    if (heldScopes.has(scope)) {
+      result.held++
+    } else {
+      await scopeService.addScopeToUser(userId, scope)
+      result.appsGranted++
+    }
+  }
+  const roles = virtualUser.roles ?? []
+  if (roles.length === 0) return result
+  const already = new Set(await scopeService.listUserRoles(userId))
+  for (const role of roles) {
+    if (already.has(role)) {
+      result.held++
+      continue
+    }
+    await scopeService.addUserToRole(userId, role)
+    result.granted++
+  }
+  return result
+}
+
+/**
  * Provision the declared virtual users into the environment this process is running
  * in: their accounts, and the roles they declare.
  *
@@ -230,30 +267,14 @@ export const provisionVirtualUsers = async (
       result.unbanned++
     }
 
-    if (virtualUser.app) {
-      const scope = appScopeId(virtualUser.app)
-      const heldScopes = new Set(await scopeService.listUserScopes(user.id))
-      if (heldScopes.has(scope)) {
-        result.held++
-      } else {
-        await scopeService.addScopeToUser(user.id, scope)
-        result.appsGranted++
-      }
-    }
-
-    const roles = virtualUser.roles ?? []
-    if (roles.length === 0) {
-      continue
-    }
-    const already = new Set(await scopeService.listUserRoles(user.id))
-    for (const role of roles) {
-      if (already.has(role)) {
-        result.held++
-        continue
-      }
-      await scopeService.addUserToRole(user.id, role)
-      result.granted++
-    }
+    const grants = await grantVirtualUserAccess(
+      scopeService,
+      user.id,
+      virtualUser
+    )
+    result.granted += grants.granted
+    result.appsGranted += grants.appsGranted
+    result.held += grants.held
   }
 
   // Every virtual user row, not only the ones this run touched: what makes an account
