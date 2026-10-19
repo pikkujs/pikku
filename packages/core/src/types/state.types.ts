@@ -146,7 +146,7 @@ export interface PikkuPackageState {
                 wire: any
               ) => string | null | Promise<string | null>
             }
-        /** Map consumer-facing fn name → remote fn name (wireRemoteAddon) */
+        /** Map consumer-facing base fn name → remote fn name (wireRemoteAddon); `@vN` is appended after */
         remoteName?: (fn: string) => string
         /** Milliseconds a remote addon call may take before it is aborted (wireRemoteAddon) */
         remoteTimeoutMs?: number

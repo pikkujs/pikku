@@ -1391,6 +1391,25 @@ describe('wireRemoteAddon dispatch', () => {
     }
   })
 
+  test('remaps the base name of a versioned call and keeps its version', async () => {
+    stubFetch()
+    try {
+      const names: Record<string, string> = { getOpenApi: 'openapi.get' }
+      wireRegistry({ remoteName: (fn: string) => names[fn] ?? fn })
+      const service = new ContextAwareRPCService(
+        createServices(),
+        {} as never,
+        {}
+      )
+
+      await service.rpc('registry:getOpenApi@v2', {})
+
+      assert.equal(JSON.parse(calls[0]!.init.body).rpcName, 'openapi.get@v2')
+    } finally {
+      restoreFetch()
+    }
+  })
+
   test('adds the headers hook, but never over the auth, trace or contract headers', async () => {
     stubFetch()
     try {

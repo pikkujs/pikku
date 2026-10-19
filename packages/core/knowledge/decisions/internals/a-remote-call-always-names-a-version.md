@@ -33,6 +33,11 @@ and the SDK needs updating. `handleHTTPError` keeps that message, so the
 consumer sees it. The one exception is `fn@v1` against an unversioned `fn`,
 which is its own v1 — the contract hashes count it that way too.
 
+**`remoteName` maps the base name.** A wiring's `remoteName` receives `fn`,
+never `fn@vN`, and the chosen version is appended to what it returns. A
+lookup-table mapping (`{ getOpenApi: 'openapi.get' }`) therefore still reaches
+the host as `openapi.get@v2`.
+
 **What it rules out:**
 
 - a consumer pinned to v2 silently receiving v3's output shape;
