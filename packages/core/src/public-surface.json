@@ -596,6 +596,14 @@
     "pikkuServerLifecycle",
     "stopSingletonServices"
   ],
+  "./contributors": [
+    "ContributorDependencyError",
+    "DEFAULT_CONTRIBUTOR_BINDING_SOURCES",
+    "defineContributors",
+    "orderContributors",
+    "resolveContributors",
+    "selectContributors"
+  ],
   "./lifecycle": [
     "onShutdownSignals",
     "pikkuServerLifecycle",
