@@ -187,4 +187,32 @@ describe('core import checks', () => {
 
     assert.equal((await runCoreImportChecks(root)).length, 1)
   })
+
+  test('leaves a nested Pikku project to its own run', async () => {
+    const root = await project()
+    await write(root, 'packages/addon-x/pikku.config.json', '{}\n')
+    await write(
+      root,
+      'packages/addon-x/src/a.ts',
+      `import { NotFoundError } from '@pikku/core/errors'\n`
+    )
+
+    assert.deepEqual(await runCoreImportChecks(root), [])
+    assert.equal(
+      (await runCoreImportChecks(join(root, 'packages/addon-x'))).length,
+      1
+    )
+  })
+
+  test('points an addon at its own leaves under #pikku/addon', async () => {
+    const root = await project('{ "addon": { "displayName": "X" } }\n')
+    await write(
+      root,
+      'src/a.ts',
+      `import { NotFoundError } from '@pikku/core/errors'\n`
+    )
+
+    const hints = (await runCoreImportChecks(root)).map((f) => f.fixHint)
+    assert.deepEqual(hints, ["Import the same names from '#pikku/addon/error'"])
+  })
 })

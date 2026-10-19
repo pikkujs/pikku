@@ -112,11 +112,13 @@ const severityFor = (
 export const runCoreImportChecks = async (
   dir: string
 ): Promise<ValidateFinding[]> => {
-  const pikkuConfig = await readJsonSafe<{ lint?: unknown }>(
+  const pikkuConfig = await readJsonSafe<{ lint?: unknown; addon?: unknown }>(
     join(dir, 'pikku.config.json')
   )
   const severity = severityFor(pikkuConfig)
   if (severity === 'off') return []
+  // An addon's generated tree roots one level down (see pikku-cli-config.ts).
+  const leafPrefix = pikkuConfig?.addon ? '#pikku/addon/' : '#pikku/'
 
   const findings: ValidateFinding[] = []
   let scenarioEntry: string | undefined
@@ -134,7 +136,7 @@ export const runCoreImportChecks = async (
       const leaf = LEAF_FOR_SUBPATH.get(specifier)
       const alias = SCENARIO_SUBPATHS.has(specifier)
         ? (scenarioEntry ??= await scenarioAlias(dir))
-        : leaf && `#pikku/${leaf}`
+        : leaf && `${leafPrefix}${leaf}`
 
       findings.push({
         id: 'core-import',
