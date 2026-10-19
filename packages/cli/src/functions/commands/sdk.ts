@@ -10,7 +10,6 @@ import {
   readPackageInfo,
   sdkTarballName,
   SDK_FUNCTIONS_META,
-  SDK_SCHEMAS,
   type SdkBumpCheck,
   type SdkManifest,
 } from '../../utils/addon-sdk.js'
@@ -66,10 +65,7 @@ export const pikkuSdk = pikkuSessionlessFunc<SdkInput, SdkResult>({
       const source = resolve(config.rootDir, data.bumpFrom)
       const check = checkSdkBump(
         loadPreviousSdk(source),
-        {
-          functions: JSON.parse(files.get(SDK_FUNCTIONS_META)!),
-          schemas: JSON.parse(files.get(SDK_SCHEMAS)!),
-        },
+        { functions: JSON.parse(files.get(SDK_FUNCTIONS_META)!) },
         version,
         data.bumpFrom
       )

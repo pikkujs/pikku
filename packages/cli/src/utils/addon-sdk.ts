@@ -21,8 +21,6 @@ export const SDK_RPC_MAP = 'rpc/pikku-rpc-wirings-map.remote.gen.d.ts'
 export const SDK_WORKFLOW_MAP = 'workflow/pikku-workflow-map.gen.d.ts'
 export const SDK_AGENT_MAP = 'agent/pikku-agent-map.gen.d.ts'
 export const SDK_FUNCTIONS_META = 'function/pikku-functions-meta.gen.json'
-/** The JSON schemas the contract functions name, by schema name, for `--bump-from`. */
-export const SDK_SCHEMAS = 'schemas/pikku-sdk-schemas.gen.json'
 
 export interface SdkManifest {
   name: string
@@ -218,6 +216,10 @@ type FunctionMetaEntry = {
   versions?: number[]
   /** The version a call without `@vN` is sent to. */
   latestVersion?: number
+  /** The JSON schema `inputSchemaName` names, so `--bump-from` can diff it. */
+  inputSchema?: unknown
+  /** The JSON schema `outputSchemaName` names. */
+  outputSchema?: unknown
   [key: string]: unknown
 }
 
@@ -261,8 +263,16 @@ export const sdkFunctionsMeta = (
     const meta = functionsMeta[id]!
     if (!contract.has(id)) continue
     const baseName = parseVersionedId(id).baseName
+    const inputSchema = meta.inputSchemaName
+      ? readSchema(schemaDirectory, meta.inputSchemaName)
+      : undefined
+    const outputSchema = meta.outputSchemaName
+      ? readSchema(schemaDirectory, meta.outputSchemaName)
+      : undefined
     out[id] = {
       ...meta,
+      ...(inputSchema !== undefined ? { inputSchema } : {}),
+      ...(outputSchema !== undefined ? { outputSchema } : {}),
       contractHash: computeContractHash({
         functionKey: baseName,
         inputSchema: contractSide(schemaDirectory, meta.inputs),
@@ -300,18 +310,21 @@ export const sdkDefaultVersions = (
   return out
 }
 
-/** The schemas the SDK's functions name, so `--bump-from` can diff them. */
+/**
+ * The schemas an SDK's functions carry, by the name each one is filed under,
+ * for `surface-diff`. An SDK cut before schemas were packed carries none.
+ */
 export const sdkSchemas = (
-  functions: Record<string, FunctionMetaEntry>,
-  schemaDirectory: string
+  functions: Record<string, FunctionMetaEntry>
 ): Record<string, unknown> => {
   const out: Record<string, unknown> = {}
-  const names = Object.values(functions)
-    .flatMap((meta) => [meta.inputSchemaName, meta.outputSchemaName])
-    .filter((name): name is string => !!name)
-  for (const name of [...new Set(names)].sort()) {
-    const schema = readSchema(schemaDirectory, name)
-    if (schema !== undefined) out[name] = schema
+  for (const meta of Object.values(functions)) {
+    if (meta.inputSchemaName && meta.inputSchema !== undefined) {
+      out[meta.inputSchemaName] = meta.inputSchema
+    }
+    if (meta.outputSchemaName && meta.outputSchema !== undefined) {
+      out[meta.outputSchemaName] = meta.outputSchema
+    }
   }
   return out
 }
@@ -394,11 +407,6 @@ export const buildSdkFiles = (
     sources.contractFunctionIds
   )
   files.set(SDK_FUNCTIONS_META, JSON.stringify(functions, null, 2) + '\n')
-  files.set(
-    SDK_SCHEMAS,
-    JSON.stringify(sdkSchemas(functions, sources.schemaDirectory), null, 2) +
-      '\n'
-  )
 
   const manifest: SdkManifest = {
     name: info.name,
@@ -410,15 +418,10 @@ export const buildSdkFiles = (
   return { files, manifest }
 }
 
-/** An SDK's contract: its function meta, and the schemas those name. */
+/** An SDK's contract: its function meta, each entry carrying its schemas. */
 export interface SdkContract {
   functions: Record<string, FunctionMetaEntry>
-  /** Absent from an SDK cut before schemas were packed. */
-  schemas?: Record<string, unknown>
 }
-
-const readIfExists = (path: string): string | undefined =>
-  existsSync(path) ? readFileSync(path, 'utf-8') : undefined
 
 /** A previous SDK, as a `.sdk.tgz`, an unpacked SDK directory, or its manifest.json. */
 export const loadPreviousSdk = (
@@ -427,11 +430,9 @@ export const loadPreviousSdk = (
   if (!existsSync(source)) throw new Error(`Previous SDK not found: ${source}`)
   let manifestText: string | undefined
   let metaText: string | undefined
-  let schemasText: string | undefined
   if (statSync(source).isDirectory()) {
     manifestText = readFileSync(join(source, SDK_MANIFEST), 'utf-8')
     metaText = readFileSync(join(source, SDK_FUNCTIONS_META), 'utf-8')
-    schemasText = readIfExists(join(source, SDK_SCHEMAS))
   } else if (source.endsWith('.json')) {
     manifestText = readFileSync(source, 'utf-8')
     const sibling = join(dirname(source), SDK_FUNCTIONS_META)
@@ -441,12 +442,10 @@ export const loadPreviousSdk = (
       )
     }
     metaText = readFileSync(sibling, 'utf-8')
-    schemasText = readIfExists(join(dirname(source), SDK_SCHEMAS))
   } else {
     const files = unpackTarGz(readFileSync(source))
     manifestText = files.get(SDK_MANIFEST)?.toString('utf-8')
     metaText = files.get(SDK_FUNCTIONS_META)?.toString('utf-8')
-    schemasText = files.get(SDK_SCHEMAS)?.toString('utf-8')
   }
   if (!manifestText || !metaText) {
     throw new Error(
@@ -456,7 +455,6 @@ export const loadPreviousSdk = (
   return {
     manifest: JSON.parse(manifestText),
     functions: JSON.parse(metaText),
-    ...(schemasText ? { schemas: JSON.parse(schemasText) } : {}),
   }
 }
 
@@ -467,10 +465,7 @@ export const loadPreviousSdk = (
  * `surface-diff` counts a moved hash as breaking. A version the SDK still
  * carries is published, so dropping `fn@v1` for `fn@v2` is a removal.
  */
-export const sdkSurface = ({
-  functions,
-  schemas = {},
-}: SdkContract): Surface => ({
+export const sdkSurface = ({ functions }: SdkContract): Surface => ({
   schemaVersion: SURFACE_SCHEMA_VERSION,
   generatedAt: '',
   functions: Object.fromEntries(
@@ -488,7 +483,7 @@ export const sdkSurface = ({
       ]
     })
   ),
-  schemas,
+  schemas: sdkSchemas(functions),
   wirings: {},
   publishedVersions: Object.fromEntries(
     Object.entries(functions).map(([id, meta]) => [

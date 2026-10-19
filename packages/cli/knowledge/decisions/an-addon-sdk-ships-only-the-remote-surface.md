@@ -1,21 +1,20 @@
 ---
 type: decision
 title: An addon SDK ships only the remote surface, and its version is checked against the last one
-description: pikku sdk re-serializes the remote RPC map, exposed workflows and a pruned types map into six files, refuses any import outside the SDK and @pikku/core, and with --bump-from refuses a version below the surface-diff bump
+description: pikku sdk re-serializes the remote RPC map, exposed workflows and a pruned types map into five files, refuses any import outside the SDK and @pikku/core, and with --bump-from refuses a version below the surface-diff bump
 tags: [cli, addon, sdk]
 ---
 
 # An addon SDK ships only the remote surface, and its version is checked against the last one
 
 `pikku sdk` (`functions/commands/sdk.ts`) writes `.pikku/sdk/` and packs
-`<scope>-<name>-<version>.sdk.tgz` with exactly six files, all at the archive root:
+`<scope>-<name>-<version>.sdk.tgz` with exactly five files, all at the archive root:
 
 - `manifest.json`
 - `rpc/pikku-rpc-wirings-map.remote.gen.d.ts`
 - `workflow/pikku-workflow-map.gen.d.ts`
 - `agent/pikku-agent-map.gen.d.ts`
 - `function/pikku-functions-meta.gen.json`
-- `schemas/pikku-sdk-schemas.gen.json`
 
 **The maps are re-serialized, not copied.** The addon's own generated maps
 describe its whole app: every custom type is aliased into every map, and the
@@ -36,7 +35,10 @@ carries `versions` — every version of its base name in the SDK — and
 `latestVersion`, the one a consumer's bare `ns:fn` is sent to (see core's
 [a remote call always names a version](../../../core/knowledge/decisions/internals/a-remote-call-always-names-a-version.md)).
 `rpc.remoteMeta` lists `fn` and each remote `fn@vN`, so the remote map types
-both. The schemas file holds the JSON schemas the entries name.
+both. Each entry also carries the JSON schemas it names (`inputSchema`,
+`outputSchema`), so `--bump-from` can tell a loosened contract from a
+tightened one. They live in the meta rather than a sixth file because the
+registry's publish check accepts exactly these five paths.
 
 **Types only.** The shared custom-types file is inlined as the
 `declare namespace __PikkuCustomTypes` that the map already reads. Each
