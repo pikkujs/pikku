@@ -127,7 +127,7 @@ writeFileSync(
 wireAddon({
   name: 'marker',
   package: '@verifier/contrib-marker',
-  contributors: ['marker-reader', 'marker', 'hook-b', 'hook-a'],
+  contributors: ['lazy-reader', 'marker-reader', 'marker', 'hook-b', 'hook-a'],
 })
 `
 )
@@ -143,7 +143,12 @@ const log = (line: string) => {
 
 export const lifecycle = pikkuServerLifecycle({
   beforeStart: (services) =>
-    log('app:beforeStart hookB=' + ((services as any).hookB ?? 'missing')),
+    log(
+      'app:beforeStart hookB=' +
+        ((services as any).hookB ?? 'missing') +
+        ' lazy=' +
+        ((services as any).lazyReader?.readHookB() ?? 'missing')
+    ),
   afterStart: () => log('app:afterStart'),
   beforeStop: () => log('app:beforeStop'),
   afterStop: () => log('app:afterStop'),
@@ -619,7 +624,7 @@ if (!BUN_AVAILABLE) {
       // Contributor hooks against the app's own serverLifecycle, read from the
       // log both wrote to while the compiled binary was running.
       await check(
-        'runtime: contributor start hooks run first, then the app lifecycle, and the app sees contributor services',
+        'runtime: contributor start hooks run first, then the app lifecycle, the app sees contributor services, and a run that finished earlier reads a later provider through the live bag',
         async () => {
           for (
             let i = 0;
@@ -630,7 +635,7 @@ if (!BUN_AVAILABLE) {
           const expected = [
             'start:hook-a',
             'start:hook-b',
-            'app:beforeStart hookB=a>b',
+            'app:beforeStart hookB=a>b lazy=a>b',
             'app:afterStart',
           ]
           if (JSON.stringify(readHookLog()) !== JSON.stringify(expected))
@@ -650,7 +655,7 @@ if (!BUN_AVAILABLE) {
           const expected = [
             'start:hook-a',
             'start:hook-b',
-            'app:beforeStart hookB=a>b',
+            'app:beforeStart hookB=a>b lazy=a>b',
             'app:afterStart',
             'app:beforeStop',
             'app:afterStop',
