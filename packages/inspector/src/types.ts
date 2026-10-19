@@ -793,7 +793,7 @@ export interface InspectorState {
         /**
          * wireRemoteAddon: the semver range written after the package name
          * (`@scope/name@^1.4.0`). Present means the contract comes from the
-         * SDK `pikku addon sync` downloads, not from an installed package.
+         * SDK `pikku all` downloads, not from an installed package.
          */
         range?: string
         /** wireRemoteAddon: whether an `auth` binding was supplied (vs a public surface) */

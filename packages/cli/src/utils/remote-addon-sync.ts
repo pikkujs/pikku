@@ -315,7 +315,7 @@ export const syncRemoteAddonSdks = async ({
   } catch (e: any) {
     throw new RemoteAddonSyncError(
       ErrorCode.REMOTE_ADDON_PACKAGE_INVALID,
-      `${e?.message ?? e}. Delete it and run 'pikku addon sync' to write a fresh one.`
+      `${e?.message ?? e}. Delete it and run 'pikku all' to write a fresh one.`
     )
   }
   const lock = emptyAddonsLock()
@@ -424,4 +424,52 @@ export const syncRemoteAddonSdks = async ({
     await writeFile(lockPath, next)
   }
   return { sdks, lock, lockChanged }
+}
+
+export type AddonSyncConfig = {
+  rootDir: string
+  srcDirectories: string[]
+  ignoreFiles?: string[]
+  registry?: string
+}
+
+/**
+ * Finds the project's versioned `wireRemoteAddon` packages and syncs their
+ * SDKs: the first step of `pikku all`, and the re-sync after
+ * `pikku update --update`. Null when the project has none and no lock, so nothing ran. The
+ * registry client is built only when a spec needs the network.
+ */
+export const runAddonSync = async ({
+  config,
+  logger,
+  client,
+}: {
+  config: AddonSyncConfig
+  logger: SyncLogger
+  client?: { resolveSdk: ResolveSdk; download: DownloadSdk }
+}): Promise<SyncResult | null> => {
+  const specs = await collectRemoteAddonSdkSpecs({
+    ...config,
+    ignoreFiles: config.ignoreFiles ?? [],
+  })
+  if (
+    specs.length === 0 &&
+    !existsSync(join(config.rootDir, ADDONS_LOCK_FILE))
+  ) {
+    return null
+  }
+  let lazy: { resolveSdk: ResolveSdk; download: DownloadSdk } | undefined =
+    client
+  const registry = async () =>
+    (lazy ??= createRegistryClient({
+      registry: config.registry ?? DEFAULT_ADDON_REGISTRY,
+      token: await resolveRegistryToken(),
+    }))
+  return syncRemoteAddonSdks({
+    rootDir: config.rootDir,
+    specs,
+    resolveSdk: async (request) => (await registry()).resolveSdk(request),
+    download: async (url) => (await registry()).download(url),
+    logger,
+  })
 }

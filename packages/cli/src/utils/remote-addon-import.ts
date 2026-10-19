@@ -7,7 +7,7 @@ import { checkLockedSdk } from '@pikku/inspector/lite'
  *
  * An installed addon is reached through its package: `<package>/.pikku/<leaf>`.
  * A versioned `wireRemoteAddon` has no package installed; its types are in the
- * SDK `pikku addon sync` extracted, so the import is a relative path from
+ * SDK the sync in `pikku all` extracted, so the import is a relative path from
  * `fromFile` into `.pikku/remote/<name>@<version>/<leaf>`. When that SDK does
  * not match the lock the package path is kept, and the inspector has already
  * reported PKU338 for it.

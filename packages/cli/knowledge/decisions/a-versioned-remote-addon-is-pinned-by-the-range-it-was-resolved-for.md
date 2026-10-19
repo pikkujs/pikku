@@ -7,7 +7,9 @@ tags: cli, addons, remote, registry, lock
 
 # A versioned remote addon is pinned by the range it was resolved for
 
-`pikku addon sync` (`packages/cli/src/utils/remote-addon-sync.ts`) writes one
+The remote addon sync (`packages/cli/src/utils/remote-addon-sync.ts`) runs only as
+the first step of `pikku all` and after `pikku update --update` rewrites a
+range; there is no standalone command. It writes one
 entry per package to `pikku-addons.lock`: the `range` the source asked for, the
 `version` it resolved to, and the tarball's `sha512-` integrity. Each extracted
 SDK carries that integrity in `.pikku/remote/<name>@<version>/.integrity`.
