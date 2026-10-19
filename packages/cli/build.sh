@@ -5,8 +5,9 @@ echo "Starting Pikku CLI build process..."
 
 # Clean .pikku directory and dist
 test -f package.json || { echo "Refusing to run outside package root"; exit 1; }
-# .pikku/remote is kept: it holds the registry SDK the CLI commits, which the
-# offline addon sync below reads (knowledge: the-cli-commits-its-registry-sdk).
+# .pikku/remote is kept: it caches the registry SDK the local CLI's `pikku all`
+# syncs below, checked against pikku-addons.lock's sha512 on every run
+# (knowledge: the-cli-syncs-its-registry-sdk-like-any-consumer).
 if [ -d .pikku ]; then
   find .pikku -mindepth 1 -maxdepth 1 ! -name remote -exec rm -rf -- {} +
 fi
@@ -206,18 +207,34 @@ _Old=Pers; _Old="${_Old}ona"
 # '@pikkustudio/addon-registry@^1.0.0' as an npm package missing from
 # devDependencies (PKU338, critical) and stops. It also ignores --config, so the
 # file cannot be skipped through ignoreFiles. src/registry.wiring.ts is moved
-# out of its sight for this stage and put back right after (or on any exit);
-# the local CLI below wires it.
+# out of its sight for this stage and put back right after (or on any exit).
+#
+# Codegen that ran without the wiring does not import it, so it is added to the
+# bootstrap by hand: the CLI built from this stage is the one whose `pikku all`
+# below syncs the registry SDK, and it needs the wiring to call the registry.
+# knowledge: the-cli-syncs-its-registry-sdk-like-any-consumer
 _registry_wiring=src/registry.wiring.ts
 _registry_hidden_dir=$(mktemp -d)
+_hide_registry_wiring() {
+  mv "$_registry_wiring" "$_registry_hidden_dir/registry.wiring.ts"
+  cp pikku-addons.lock "$_registry_hidden_dir/pikku-addons.lock"
+}
 _restore_registry_wiring() {
   if [ -f "$_registry_hidden_dir/registry.wiring.ts" ]; then
     mv "$_registry_hidden_dir/registry.wiring.ts" "$_registry_wiring"
   fi
-  rm -rf "$_registry_hidden_dir"
+  # A run that never saw the wiring rewrites the lock without its entry.
+  if [ -f "$_registry_hidden_dir/pikku-addons.lock" ]; then
+    mv "$_registry_hidden_dir/pikku-addons.lock" pikku-addons.lock
+  fi
 }
-trap 'rm -rf "$_bootstrap_dir"; _restore_registry_wiring' EXIT
-mv "$_registry_wiring" "$_registry_hidden_dir/registry.wiring.ts"
+_import_registry_wiring() {
+  if ! grep -qx "import '../src/registry.wiring.js'" .pikku/pikku-bootstrap.gen.ts; then
+    printf "\nimport '../src/registry.wiring.js'\n" >> .pikku/pikku-bootstrap.gen.ts
+  fi
+}
+trap 'rm -rf "$_bootstrap_dir"; _restore_registry_wiring; rm -rf "$_registry_hidden_dir"' EXIT
+_hide_registry_wiring
 "$_bootstrap_dir/node_modules/.bin/pikku" bootstrap
 while IFS= read -r -d '' f; do
   tmp=$(mktemp)
@@ -252,6 +269,7 @@ write_leaf_indexes() {
 write_leaf_indexes
 "$_bootstrap_dir/node_modules/.bin/pikku"
 _restore_registry_wiring
+_import_registry_wiring
 rm -rf "$_bootstrap_dir"
 
 # Patch stale forge references from published CLI (renamed to node/)
@@ -345,7 +363,22 @@ fi
 # chmod that makes `dist/bin/pikku.js` executable only happens further down, so
 # execing it directly here exits 126 — and an `npx` that cannot find a runnable
 # local bin goes to the registry and runs the published CLI instead.
-node dist/bin/pikku.js
+#
+# This run syncs the registry SDK into .pikku/remote, like any consumer's
+# `pikku all`. PIKKU_CLI_WITHOUT_REGISTRY_SDK=1 builds without it, for as long
+# as the registry does not serve @pikkustudio/addon-registry (CI sets it): the
+# wiring is hidden from codegen as in the bootstrap stage and imported by hand,
+# so the CLI still calls the registry at runtime, and `registry:resolveSdk` is
+# typed by the contract remote-addon-sync.ts mirrors instead of by the SDK.
+if [ "${PIKKU_CLI_WITHOUT_REGISTRY_SDK:-}" = "1" ]; then
+  echo "PIKKU_CLI_WITHOUT_REGISTRY_SDK=1: building without the registry SDK."
+  _hide_registry_wiring
+  node dist/bin/pikku.js
+  _restore_registry_wiring
+  _import_registry_wiring
+else
+  node dist/bin/pikku.js
+fi
 
 # Patch stale startWorkflow calls in generated scaffold (data arg needs cast with new TypedStartWorkflow)
 for f in src/scaffold/workflow-routes.gen.ts; do

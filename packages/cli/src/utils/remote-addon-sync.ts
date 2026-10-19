@@ -23,15 +23,32 @@ import type { FlattenedRPCMap } from '../../.pikku/rpc/pikku-rpc-wirings-map.int
 export const DEFAULT_ADDON_REGISTRY = 'https://registry.pikkustudio.app'
 
 /**
- * `registry:resolveSdk`, typed by the registry's own SDK, which the CLI commits
- * under `.pikku/remote` (knowledge: the-cli-commits-its-registry-sdk).
+ * `registry:resolveSdk`'s contract while the registry's SDK is not synced: a
+ * build with `PIKKU_CLI_WITHOUT_REGISTRY_SDK=1` (build.sh) has no such key in
+ * its RPC map, until the registry serves its own SDK.
+ * knowledge: the-cli-syncs-its-registry-sdk-like-any-consumer
  */
-type RegistryResolveSdk = FlattenedRPCMap['registry:resolveSdk']
+type UnsyncedRegistryResolveSdk = {
+  input: { name: string; range: string }
+  output: { version: string; integrity: string; url: string }
+}
+
+/** `registry:resolveSdk`, typed by the registry's own SDK whenever it is synced. */
+type RegistryResolveSdk =
+  FlattenedRPCMap extends Record<'registry:resolveSdk', infer Contract>
+    ? Contract
+    : UnsyncedRegistryResolveSdk
 export type ResolveSdkRequest = RegistryResolveSdk['input']
 /** The highest SDK satisfying the range: its version, `sha512-<base64>` integrity and a short-lived signed URL. */
 export type ResolvedSdk = RegistryResolveSdk['output']
 
 export type ResolveSdk = (request: ResolveSdkRequest) => Promise<ResolvedSdk>
+
+/** `rpc.invoke` seen only as `registry:resolveSdk`, which compiles with or without the synced SDK. */
+export type RegistryInvoke = (
+  name: 'registry:resolveSdk',
+  request: ResolveSdkRequest
+) => Promise<ResolvedSdk>
 
 export type DownloadSdk = (url: string) => Promise<Buffer>
 

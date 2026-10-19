@@ -14,6 +14,7 @@ import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
 import {
   RemoteAddonSyncError,
   runAddonSync,
+  type RegistryInvoke,
 } from '../../utils/remote-addon-sync.js'
 import { writeSchemaArtifact } from '../db/local-db.js'
 import { ensureDbTypes } from '../db/ensure-db-types.js'
@@ -115,8 +116,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         await runAddonSync({
           config,
           logger,
-          // Typed by the registry SDK the CLI commits; a lock hit never calls it.
-          resolveSdk: (request) => rpc.invoke('registry:resolveSdk', request),
+          // Typed by the registry's synced SDK (see RegistryInvoke); a lock hit never calls it.
+          resolveSdk: (request) =>
+            (rpc.invoke as RegistryInvoke)('registry:resolveSdk', request),
         })
       } catch (e: any) {
         if (e instanceof RemoteAddonSyncError) {

@@ -1,9 +1,9 @@
 import { wireRemoteAddon } from '../.pikku/addon/index.js'
 import { registryCredential, registryUrl } from './utils/remote-addon-sync.js'
 
-// The CLI calls the addon registry through the registry's own SDK, committed
-// under .pikku/remote with its pikku-addons.lock entry, so the CLI builds and
-// syncs offline. knowledge: the-cli-commits-its-registry-sdk
+// The CLI calls the addon registry through the registry's own SDK, which its
+// build syncs into .pikku/remote like any consumer's, pinned by the committed
+// pikku-addons.lock. knowledge: the-cli-syncs-its-registry-sdk-like-any-consumer
 //
 // Its own file because build.sh's bootstrap stage runs a published CLI that
 // predates versioned packages and has to be told to skip it.
