@@ -117,7 +117,7 @@ wireRemoteAddon({
 })
 ```
 
-`pikku addon sync` (also the first step of `pikku all`) resolves the range
+The first step of `pikku all` resolves the range
 against the registry (`registry` in `pikku.config.json`, default
 `https://registry.pikkustudio.app`), downloads the addon's SDK, checks its
 sha512, and extracts it to `.pikku/remote/<name>@<version>/`. The version and
@@ -189,10 +189,10 @@ rpc('registry:getOpenApi') is typed
 | Code     | Rule                                                                                                                                                                                            |
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PKU338` | a `wireRemoteAddon` package must be in **`devDependencies`** (types only) — not `dependencies`, not missing. This is the mirror image of `wireAddon`, which _requires_ a production dependency. |
-| `PKU338` | (versioned `package`) the SDK under `.pikku/remote` must match `pikku-addons.lock` for that range — run `pikku addon sync`. No devDependency is needed.                                         |
+| `PKU338` | (versioned `package`) the SDK under `.pikku/remote` must match `pikku-addons.lock` for that range — run `pikku all`. No devDependency is needed.                                                |
 | `PKU350` | `package` must be a string literal, so the range can be read without running the file.                                                                                                          |
-| `PKU351` | (warning, `pikku addon sync`/`pikku all`) the SDK's `manifest.pikkuCore` does not cover the installed `@pikku/core`.                                                                            |
-| `PKU352` | (`pikku addon sync`) the downloaded tarball's sha512 does not match the registry's or the lock's; nothing is installed.                                                                         |
+| `PKU351` | (warning, `pikku all`/`pikku update`) the SDK's `manifest.pikkuCore` does not cover the installed `@pikku/core`.                                                                                |
+| `PKU352` | (`pikku all`/`pikku update`) the downloaded tarball's sha512 does not match the registry's or the lock's; nothing is installed.                                                                 |
 | `PKU353` | `package` is not a valid spec: a trailing `@` with no range, a range semver cannot read, or one package wired at two ranges.                                                                    |
 | `PKU339` | a bound `auth.credentialId` / `auth.secretId` must reference a credential/secret the consumer actually wires.                                                                                   |
 

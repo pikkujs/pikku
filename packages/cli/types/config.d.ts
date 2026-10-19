@@ -561,7 +561,7 @@ export type PikkuCLIInput = {
   }
 
   /**
-   * The registry `pikku addon sync` resolves versioned `wireRemoteAddon`
+   * The registry `pikku all` and `pikku update` resolve versioned `wireRemoteAddon`
    * packages (`package: '@scope/name@^1.4.0'`) against. Defaults to
    * `https://registry.pikkustudio.app`.
    */

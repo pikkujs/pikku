@@ -114,7 +114,7 @@ export const renderUpdate = (
           `  ${result.written.length} file${result.written.length !== 1 ? 's' : ''} updated`
       )
       if (result.addonsSynced) {
-        console.log(added('✓') + '  ' + dim('pikku addon sync completed'))
+        console.log(added('✓') + '  ' + dim('remote addon SDKs synced'))
       }
       if (result.written.some((path) => path.endsWith('.json')))
         console.log(

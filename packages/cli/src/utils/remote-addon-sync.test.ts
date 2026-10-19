@@ -191,7 +191,7 @@ describe('readTgz', () => {
   })
 })
 
-describe('pikku addon sync', () => {
+describe('remote addon SDK sync', () => {
   test('a lock miss resolves the range, extracts the SDK and writes the lock', async () => {
     const project = makeProject('^1.4.0')
     try {
@@ -421,11 +421,11 @@ describe('createRegistryClient', () => {
       'https://registry.example.test/rpc/registry:resolveSdk'
     )
     assert.equal(requests[0]!.init?.method, 'POST')
-    assert.deepEqual(JSON.parse(requests[0]!.init?.body as string), {
+    assert.deepEqual(JSON.parse(requests[0]!.init!.body as string), {
       data: { name: NAME, range: '^1.4.0' },
     })
     assert.equal(
-      (requests[0]!.init?.headers as Record<string, string>).authorization,
+      (requests[0]!.init!.headers as Record<string, string>).authorization,
       'Bearer tok'
     )
     assert.deepEqual(
@@ -568,7 +568,7 @@ describe('pikku update with a versioned wireRemoteAddon', () => {
       const entry = result.entries.find((e) => e.field === 'wireRemoteAddon')!
       assert.equal(entry.status, 'stale-install')
       assert.equal(entry.installed, null)
-      assert.match(entry.reason!, /pikku addon sync/)
+      assert.match(entry.reason!, /pikku all/)
     } finally {
       rmSync(project.rootDir, { recursive: true, force: true })
     }

@@ -385,7 +385,7 @@ func validateRemoteAddonDependencies(log *diag.Logger, st *state.State) {
 		if reason == "" {
 			continue
 		}
-		log.Critical(diag.RemoteAddonNotDevDependency, "Remote addon '"+e.namespace+"' ('"+e.decl.pkg()+"@"+e.decl.rng()+"') has no SDK matching "+remotesdk.LockFile+": "+reason+". Run 'pikku addon sync' to download it.")
+		log.Critical(diag.RemoteAddonNotDevDependency, "Remote addon '"+e.namespace+"' ('"+e.decl.pkg()+"@"+e.decl.rng()+"') has no SDK matching "+remotesdk.LockFile+": "+reason+". Run 'pikku all' to download it.")
 	}
 
 	for _, e := range decls {

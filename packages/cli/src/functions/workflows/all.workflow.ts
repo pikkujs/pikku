@@ -11,8 +11,10 @@ import {
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
 import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
-import { runAddonSync } from '../commands/addon-sync.js'
-import { RemoteAddonSyncError } from '../../utils/remote-addon-sync.js'
+import {
+  RemoteAddonSyncError,
+  runAddonSync,
+} from '../../utils/remote-addon-sync.js'
 import { writeSchemaArtifact } from '../db/local-db.js'
 import { ensureDbTypes } from '../db/ensure-db-types.js'
 import {
@@ -74,7 +76,7 @@ const scaffoldFiles = (
 }
 
 const RUN_RECORDS_DIR = 'runs'
-// `pikku addon sync` writes SDKs into .pikku/remote before anything is
+// The remote addon sync writes SDKs into .pikku/remote before anything is
 // generated, so its presence says nothing about whether codegen has run.
 const REMOTE_SDK_DIR = 'remote'
 
@@ -111,7 +113,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         if (e instanceof RemoteAddonSyncError) {
           logger.critical(e.code, e.message)
         } else {
-          logger.error(`pikku addon sync failed: ${e?.message ?? e}`)
+          logger.error(`Syncing remote addon SDKs failed: ${e?.message ?? e}`)
         }
       }
     })

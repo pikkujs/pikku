@@ -1,6 +1,6 @@
 // Package remotesdk ports utils/remote-addon-sdk.ts: the versioned
 // wireRemoteAddon package spec, pikku-addons.lock and the SDKs
-// `pikku addon sync` extracts under .pikku/remote.
+// `pikku all` extracts under .pikku/remote.
 package remotesdk
 
 import (

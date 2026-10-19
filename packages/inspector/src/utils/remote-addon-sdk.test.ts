@@ -225,7 +225,7 @@ describe('validateRemoteAddonDependencies (versioned wireRemoteAddon)', () => {
         criticals[0]!.code,
         ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY
       )
-      assert.match(criticals[0]!.message, /pikku addon sync/)
+      assert.match(criticals[0]!.message, /pikku all/)
     } finally {
       rmSync(rootDir, { recursive: true, force: true })
     }

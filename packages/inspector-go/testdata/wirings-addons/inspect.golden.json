@@ -1630,7 +1630,7 @@
     {
       "level": "critical",
       "code": "PKU338",
-      "message": "Remote addon 'unsynced' ('@fixture/unsynced@^2.0.0') has no SDK matching pikku-addons.lock: pikku-addons.lock has no entry for it. Run 'pikku addon sync' to download it."
+      "message": "Remote addon 'unsynced' ('@fixture/unsynced@^2.0.0') has no SDK matching pikku-addons.lock: pikku-addons.lock has no entry for it. Run 'pikku all' to download it."
     },
     {
       "level": "critical",

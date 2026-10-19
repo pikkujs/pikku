@@ -11,8 +11,8 @@ import {
   createRegistryClient,
   resolveRegistryToken,
   type ResolveSdk,
+  runAddonSync,
 } from '../../utils/remote-addon-sync.js'
-import { runAddonSync } from './addon-sync.js'
 
 export type PackageManager = 'bun' | 'npm' | 'yarn' | 'pnpm' | 'unknown'
 
@@ -69,7 +69,7 @@ export type UpdateResult = {
   /** Manifests (and wiring files holding a versioned wireRemoteAddon) rewritten by `--update`, relative to the project root. */
   written: string[]
   installed: boolean
-  /** Whether `pikku addon sync` ran after a wireRemoteAddon range was rewritten. */
+  /** Whether the remote addon SDKs were synced again after a wireRemoteAddon range was rewritten. */
   addonsSynced?: boolean
   summary: {
     checked: number
@@ -350,7 +350,7 @@ type RemoteAddonSource = { path: string; relative: string }
 /**
  * One entry per versioned `wireRemoteAddon` literal. `installed` is the SDK
  * version pikku-addons.lock pins, when the SDK on disk matches it; when it
- * does not the entry is `stale-install` until `pikku addon sync` runs.
+ * does not the entry is `stale-install` until `pikku all` syncs it.
  */
 const collectRemoteAddonEntries = async (
   root: string,
@@ -388,7 +388,7 @@ const collectRemoteAddonEntries = async (
   try {
     lock = readAddonsLock(options.rootDir)
   } catch {
-    // Reported as stale below; `pikku addon sync` explains what is wrong.
+    // Reported as stale below; the sync in `pikku all` explains what is wrong.
   }
   const latest = new Map<string, string | null>()
   const reasons = new Map<string, string>()
@@ -446,7 +446,7 @@ const collectRemoteAddonEntries = async (
       entry.target = rewritten
     } else if (!locked.ok) {
       entry.status = 'stale-install'
-      entry.reason = `${locked.reason} — run \`pikku addon sync\``
+      entry.reason = `${locked.reason} — run \`pikku all\``
     }
     entries.push(entry)
   }

@@ -800,7 +800,7 @@ export function validateRemoteAddonDependencies(
     return manifest
   }
 
-  // A versioned remote addon's contract is the SDK `pikku addon sync`
+  // A versioned remote addon's contract is the SDK `pikku all`
   // downloaded, so what has to hold is that the SDK on disk is the one the
   // lock pins, not that a package is installed.
   let lock: AddonsLock | Error | undefined
@@ -828,7 +828,7 @@ export function validateRemoteAddonDependencies(
     if (reason === null) continue
     logger.critical(
       ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY,
-      `Remote addon '${namespace}' ('${decl.package}@${decl.range}') has no SDK matching ${ADDONS_LOCK_FILE}: ${reason}. Run 'pikku addon sync' to download it.`
+      `Remote addon '${namespace}' ('${decl.package}@${decl.range}') has no SDK matching ${ADDONS_LOCK_FILE}: ${reason}. Run 'pikku all' to download it.`
     )
   }
 

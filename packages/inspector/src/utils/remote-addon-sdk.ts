@@ -3,7 +3,7 @@ import { join } from 'path'
 
 /** Committed beside pikku.config.json: the SDK version and integrity each versioned `wireRemoteAddon` resolved to. */
 export const ADDONS_LOCK_FILE = 'pikku-addons.lock'
-/** Where `pikku addon sync` extracts SDKs, relative to the project root. Gitignored with the rest of `.pikku`. */
+/** Where `pikku all` extracts SDKs, relative to the project root. Gitignored with the rest of `.pikku`. */
 export const REMOTE_SDK_DIR = join('.pikku', 'remote')
 /** Written into an extracted SDK: the integrity of the tarball it came from. */
 export const SDK_INTEGRITY_MARKER = '.integrity'
