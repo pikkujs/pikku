@@ -4,9 +4,14 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeScopesTypes } from './serialize-scopes-types.js'
 import { serializeScopesClient } from './serialize-scopes-client.js'
 import { validateAndBuildScopeDefinitionsMeta } from '@pikku/core/scope'
-import { APP_SCOPE_ROOT, buildAppScopeDefinition } from '@pikku/core/virtual-user'
+import {
+  APP_SCOPE_ROOT,
+  buildAppScopeDefinition,
+} from '@pikku/core/virtual-user'
 import type { VirtualUserDefinitions } from '@pikku/core/virtual-user'
 import type { ScopeDefinitions } from '@pikku/core/scope'
+import type { InspectorState } from '@pikku/inspector'
+import type { Config } from '../../../../types/application-types.js'
 
 /**
  * The declared scopes, plus the `app` tree derived from the virtual users.
@@ -51,6 +56,22 @@ export const withAddonOrigin = (
   )
 }
 
+/**
+ * Every scope tree the app owns: what it declares, the `app` tree its virtual
+ * users imply, stamped as an addon's when it is one. The generated `SCOPES` and
+ * a deploy's scope sync read this, so a local scope store must sync it too, or a
+ * virtual user's `app:` grant has no scope to point at.
+ */
+export const projectScopeDefinitions = (
+  state: Pick<InspectorState, 'scopes' | 'virtualUsers'>,
+  config: Pick<Config, 'addonName' | 'addon'>
+): ScopeDefinitions =>
+  withAddonOrigin(
+    withAppScopes(state.scopes.definitions, state.virtualUsers.definitions),
+    config.addonName,
+    config.addon
+  )
+
 export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
   func: async ({ logger, config, getInspectorState }, data) => {
     const { scopesFile, scopesMetaJsonFile } = config
@@ -69,11 +90,7 @@ export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
     const bootstrap = data?.bootstrap ?? false
     const state = await getInspectorState(false, bootstrap, bootstrap)
 
-    const definitions = withAddonOrigin(
-      withAppScopes(state.scopes.definitions, state.virtualUsers.definitions),
-      config.addonName,
-      config.addon
-    )
+    const definitions = projectScopeDefinitions(state, config)
 
     const content = serializeScopesTypes({
       definitions,

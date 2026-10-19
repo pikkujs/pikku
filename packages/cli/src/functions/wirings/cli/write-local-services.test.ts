@@ -1,11 +1,18 @@
 import { describe, test, after } from 'node:test'
 import assert from 'node:assert'
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   hasLocalCLIEntrypoint,
   projectHasDatabase,
+  writeLocalServices,
 } from './write-local-services.js'
 
 describe('hasLocalCLIEntrypoint', () => {
@@ -79,5 +86,49 @@ describe('projectHasDatabase', () => {
       assert.strictEqual(projectHasDatabase({ rootDir: dir }, none), true)
       rmSync(dir, { recursive: true, force: true })
     }
+  })
+})
+
+// `pikku dev` syncs the local scope store from what this file bakes. Without the
+// `app` tree the virtual users imply, their `app:` grant has no scope row and
+// virtual-user sign-in fails, though a deploy syncs the same app fine.
+describe('writeLocalServices', () => {
+  test('bakes the app tree the virtual users imply into the declared scopes', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'pikku-local-services-'))
+    after(() => rmSync(rootDir, { recursive: true, force: true }))
+    writeFileSync(
+      join(rootDir, 'package.json'),
+      JSON.stringify({ name: 'app', dependencies: { '@pikku/kysely': '*' } })
+    )
+    const localServicesFile = join(rootDir, '.pikku', 'local-services.gen.ts')
+    const logger = { info: () => {}, debug: () => {}, warn: () => {} } as any
+
+    await writeLocalServices(
+      logger,
+      { rootDir, outDir: join(rootDir, '.pikku'), localServicesFile } as any,
+      {
+        serviceAggregation: { requiredServices: new Set(['scopeService']) },
+        scopes: { definitions: [{ name: 'billing', scopes: {} }] },
+        systemRoles: { definitions: [] },
+        virtualUsers: {
+          definitions: [
+            {
+              id: 'staffer',
+              name: 'staffer',
+              roles: [],
+              goals: [],
+              tags: [],
+              runnable: true,
+              app: 'staff',
+            },
+          ],
+        },
+      } as any
+    )
+
+    const code = readFileSync(localServicesFile, 'utf-8')
+    const baked = code.slice(code.indexOf('const declaredScopes'))
+    assert.match(baked, /"app:staff"/)
+    assert.match(baked, /"billing"/)
   })
 })

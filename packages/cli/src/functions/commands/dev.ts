@@ -15,6 +15,7 @@ import {
   reconcileAddonRegistry,
 } from '@pikku/core/dev'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
+import { projectScopeDefinitions } from '../wirings/scopes/pikku-command-scopes.js'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import {
   ConsoleLogger,
@@ -287,7 +288,9 @@ export const dev = pikkuSessionlessFunc<
       {
         logger,
         requiredServices,
-        scopes: flattenScopeDefinitions(inspectorState.scopes.definitions),
+        scopes: flattenScopeDefinitions(
+          projectScopeDefinitions(inspectorState, config)
+        ),
         systemRoles: flattenSystemRoleDefinitions(
           inspectorState.systemRoles.definitions
         ),
