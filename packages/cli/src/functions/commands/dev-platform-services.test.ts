@@ -139,3 +139,56 @@ describe('loadDevContributors', () => {
     )
   })
 })
+
+describe('mergeDevPlatformServices with the opted-in contributors file', () => {
+  let root: string
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'pikku-dev-two-files-'))
+  })
+  afterEach(() => rmSync(root, { recursive: true, force: true }))
+
+  const generated = (name: string, body: string) => {
+    writeFileSync(
+      join(root, name),
+      `export const createPlatformServices = async (env, runtime = {}) => { ${body} }\n`
+    )
+  }
+
+  test('both files run, the second sees and beats the first', async () => {
+    generated('old.gen.js', `return { a: 'old', b: 'old' }`)
+    generated('new.gen.js', `return { b: 'new', sawA: runtime.a }`)
+    const merged = await mergeDevPlatformServices(
+      { local: 1 },
+      root,
+      'old.gen.ts',
+      {},
+      'new.gen.ts'
+    )
+    assert.deepEqual(merged, { local: 1, a: 'old', b: 'new', sawA: 'old' })
+  })
+
+  test('only the opted-in file existing still applies', async () => {
+    generated('new.gen.js', `return { b: 'new' }`)
+    const merged = await mergeDevPlatformServices(
+      { local: 1 },
+      root,
+      'old.gen.ts',
+      {},
+      'new.gen.ts'
+    )
+    assert.deepEqual(merged, { local: 1, b: 'new' })
+  })
+
+  test('production skips both', async () => {
+    generated('new.gen.js', `return { b: 'new' }`)
+    const local = { local: 1 }
+    const merged = await mergeDevPlatformServices(
+      local,
+      root,
+      'old.gen.ts',
+      { NODE_ENV: 'production' },
+      'new.gen.ts'
+    )
+    assert.strictEqual(merged, local)
+  })
+})

@@ -1214,6 +1214,23 @@ const _getPikkuCLIConfig = async (
       result.flagsMetaJsonFile = join(scopesDir, 'pikku-flags-meta.gen.json')
     }
 
+    // Contributors, when the package calls defineContributors: the meta is
+    // published beside the other generated files so a host can opt in, and the
+    // dev file is what `pikku dev` loads for the contributors a project wired.
+    const contributorsDir = join(result.outDir, 'contributors')
+    if (!result.contributorsMetaJsonFile) {
+      result.contributorsMetaJsonFile = join(
+        contributorsDir,
+        'pikku-contributors-meta.gen.json'
+      )
+    }
+    if (!result.devContributorsFile) {
+      result.devContributorsFile = join(
+        contributorsDir,
+        'pikku-dev-contributors.gen.ts'
+      )
+    }
+
     // Addon screens, when the package declares any. Their own directory:
     // the host imports the screens file and the meta is published beside it.
     const screensDir = join(result.outDir, 'screens')
