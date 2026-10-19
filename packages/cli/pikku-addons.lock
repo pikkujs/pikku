@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "sdks": {
     "@pikkustudio/addon-registry": {
-      "range": "^1.0.0",
-      "version": "1.0.0",
-      "integrity": "sha512-6kdGcQ59eUdAmfoY/s8WWx7j0DOTIaguI0zlDoqOqrlAHspjOn80S0oAWICWneX98aCPp3u8ZiJ3TPnusIycOA=="
+      "range": "^0.12.0",
+      "version": "0.12.0",
+      "integrity": "sha512-+yhMz6wAycIk4URRiOCoupo0HsmDxjbv+5sF85zJ+tn+ecJPezFXmMVxLY4MopRUvwp2ny1D3T1/VEC/tMzoOg=="
     }
   }
 }

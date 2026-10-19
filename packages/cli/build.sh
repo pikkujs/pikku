@@ -204,7 +204,7 @@ _old_names() {
 _old=pers; _old="${_old}ona"
 _Old=Pers; _Old="${_Old}ona"
 # The pinned CLI predates versioned remote addon packages: it reads
-# '@pikkustudio/addon-registry@^1.0.0' as an npm package missing from
+# '@pikkustudio/addon-registry@^0.12.0' as an npm package missing from
 # devDependencies (PKU338, critical) and stops. It also ignores --config, so the
 # file cannot be skipped through ignoreFiles. src/registry.wiring.ts is moved
 # out of its sight for this stage and put back right after (or on any exit).

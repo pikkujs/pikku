@@ -9,7 +9,7 @@ import { registryCredential, registryUrl } from './utils/remote-addon-sync.js'
 // predates versioned packages and has to be told to skip it.
 wireRemoteAddon({
   name: 'registry',
-  package: '@pikkustudio/addon-registry@^1.0.0',
+  package: '@pikkustudio/addon-registry@^0.12.0',
   serverUrl: ({ config }) => registryUrl(config),
   // The registry host serves the addon under its own `registry` namespace.
   remoteName: (fn) => `registry:${fn}`,

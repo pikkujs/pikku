@@ -9,7 +9,7 @@ tags: cli, addons, registry, sdk, build
 
 The CLI resolves versioned `wireRemoteAddon` packages against the addon
 registry, and it calls the registry the way a project calls any hosted addon:
-`src/registry.wiring.ts` wires `@pikkustudio/addon-registry@^1.0.0` with
+`src/registry.wiring.ts` wires `@pikkustudio/addon-registry@^0.12.0` with
 `wireRemoteAddon`, and `pikku all` and `pikku update` call
 `registry:resolveSdk`. The request and response types come from the registry's
 SDK, not a hand-written client.
