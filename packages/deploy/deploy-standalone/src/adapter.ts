@@ -423,11 +423,27 @@ export interface StandaloneProviderAdapterOptions {
   port?: number
 }
 
+/**
+ * What the entry has built by the time `createPlatformServices` runs, passed
+ * to it as `runtime`.
+ */
+const runtimeServiceNames = (ctx: EntryGenerationContext): string[] => [
+  'logger',
+  ...(ctx.db ? ['kysely'] : []),
+  'schedulerService',
+  'queueService',
+  'workflowService',
+  'triggerService',
+  'triggerSourceStore',
+  'eventHub',
+]
+
 const contributorPlatform = (
   ctx: EntryGenerationContext
 ): ContributorPlatform => {
   const services = ctx.unit.services ?? []
   return {
+    runtimeServices: runtimeServiceNames(ctx),
     serviceNames: services.map((s) => s.sourceServiceName),
     needsQueue: services.some((s) => s.capability === 'queue'),
     needsWorkflow: services.some((s) => s.capability === 'workflow-state'),
@@ -469,7 +485,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   private platformServicesBlock(ctx: EntryGenerationContext): string[] {
     if (this.contributors.length === 0) return []
     return [
-      `const createPlatformServices = async (env: Record<string, string | undefined>): Promise<${ctx.servicesType}> => {`,
+      `const createPlatformServices = async (env: Record<string, string | undefined>, runtime: Record<string, any> = {}): Promise<${ctx.servicesType}> => {`,
       `  const services: ${ctx.servicesType} = {}`,
       ...collectContributorLines(this.contributors, {
         ctx,
@@ -482,10 +498,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     ]
   }
 
-  private platformServicesCallLines(): string[] {
+  private platformServicesCallLines(ctx: EntryGenerationContext): string[] {
     if (this.contributors.length === 0) return []
     return [
-      `  const platformServices = await createPlatformServices(process.env as Record<string, string | undefined>)`,
+      `  const platformServices = await createPlatformServices(process.env as Record<string, string | undefined>, { ${runtimeServiceNames(ctx).join(', ')} })`,
     ]
   }
 
@@ -546,7 +562,6 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...this.platformServicesBlock(ctx),
       `async function main() {`,
       `  const config = await ${ctx.configVar}()`,
-      ...this.platformServicesCallLines(),
       `  const schedulerService = new InMemorySchedulerService()`,
       `  const queueService = new InMemoryQueueService()`,
       `  const workflowService = new InMemoryWorkflowService()`,
@@ -557,6 +572,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...(ctx.db ? dbSetupLines(ctx.db) : []),
       ...triggerSourceStoreLines(ctx.db !== undefined),
       ...commandDispatchLines(ctx),
+      ...this.platformServicesCallLines(ctx),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
       ...(ctx.db ? [`    kysely,`] : []),

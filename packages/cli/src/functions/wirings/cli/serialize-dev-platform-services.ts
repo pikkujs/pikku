@@ -20,12 +20,26 @@ export interface DevPlatformServicesTarget {
   packageMappings?: Record<string, string>
 }
 
+/**
+ * The local services `pikku dev` has built before it calls
+ * `createPlatformServices`, handed over as `runtime`.
+ */
+export const devRuntimeServices = (options: { db: boolean }): string[] => [
+  'logger',
+  'variables',
+  'secrets',
+  'schema',
+  ...(options.db ? ['kysely'] : []),
+]
+
 export const devContributorPlatform = (
-  requiredServices: Iterable<string>
+  requiredServices: Iterable<string>,
+  runtimeServices: string[] = devRuntimeServices({ db: false })
 ): ContributorPlatform => {
   const serviceNames = [...requiredServices]
   return {
     serviceNames,
+    runtimeServices,
     needsQueue: serviceNames.includes('queueService'),
     needsWorkflow: serviceNames.includes('workflowService'),
     needsAgent: serviceNames.includes('agentRunner'),
@@ -129,7 +143,7 @@ export const serializeDevPlatformServices = (
   return [
     ...imports,
     ...(imports.length > 0 ? [''] : []),
-    `export const createPlatformServices = async (env: Record<string, string | undefined>): Promise<${SERVICES_TYPE}> => {`,
+    `export const createPlatformServices = async (env: Record<string, string | undefined>, runtime: ${SERVICES_TYPE} = {}): Promise<${SERVICES_TYPE}> => {`,
     `  const services: ${SERVICES_TYPE} = {}`,
     ...lines,
     `  return services`,

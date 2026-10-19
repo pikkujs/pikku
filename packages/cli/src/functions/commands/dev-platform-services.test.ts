@@ -78,6 +78,24 @@ describe('mergeDevPlatformServices', () => {
     assert.equal(merged.other, 1)
   })
 
+  test('contributors read the local services as runtime', async () => {
+    writeFileSync(
+      join(root, file),
+      serializeDevPlatformServices(
+        [
+          {
+            name: 'reader',
+            needs: ['emailService'],
+            emit: () => [`  services.seen = runtime.emailService`],
+          },
+        ],
+        { ...platform, runtimeServices: ['emailService'] }
+      )
+    )
+    const merged = await mergeDevPlatformServices(localServices, root, file, {})
+    assert.strictEqual(merged.seen, spied)
+  })
+
   test('NODE_ENV=production ignores the file', async () => {
     writeGenerated()
     const merged = await mergeDevPlatformServices(localServices, root, file, {
