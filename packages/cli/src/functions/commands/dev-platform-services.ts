@@ -15,5 +15,8 @@ export const mergeDevPlatformServices = async <T extends Record<string, any>>(
   )
   if (!path) return localServices
   const { createPlatformServices } = await loadUserModule(path)
-  return { ...localServices, ...(await createPlatformServices(env)) }
+  return {
+    ...localServices,
+    ...(await createPlatformServices(env, localServices)),
+  }
 }

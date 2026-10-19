@@ -60,7 +60,7 @@ describe(`StandaloneProviderAdapter contributors`, () => {
     assert.match(source, /import { Browser } from '\.\/browser\.js'/)
     assert.match(
       source,
-      /const createPlatformServices = async \(env: Record<string, string \| undefined>\): Promise<Record<string, unknown>> => \{/
+      /const createPlatformServices = async \(env: Record<string, string \| undefined>, runtime: Record<string, any> = \{\}\): Promise<Record<string, unknown>> => \{/
     )
     assert.match(
       source,
@@ -69,7 +69,7 @@ describe(`StandaloneProviderAdapter contributors`, () => {
     assert.match(source, /services\.browser = new Browser\(env, logger\)/)
     assert.match(
       source,
-      /const platformServices = await createPlatformServices\(process\.env as Record<string, string \| undefined>\)/
+      /const platformServices = await createPlatformServices\(process\.env as Record<string, string \| undefined>, \{ logger, schedulerService, queueService, workflowService, triggerService, triggerSourceStore, eventHub \}\)/
     )
     assert.match(
       source,
@@ -86,5 +86,59 @@ describe(`StandaloneProviderAdapter contributors`, () => {
         }),
       /standalone adapter only provides env bindings; unsupported contributors: queue-binding \(requires cloudflare\)/
     )
+  })
+
+  test('a contributor reading the database runs after it is opened', () => {
+    const sources: PlatformServiceContributor = {
+      name: 'sources',
+      needs: ['kysely'],
+      provides: ['logSources'],
+      emit: () => [`  services.logSources = { workspace: runtime.kysely }`],
+    }
+    const source = new StandaloneProviderAdapter({
+      contributors: [sources],
+    }).generateEntrySource({
+      ...(ctx as object),
+      db: { engine: 'sqlite' },
+    } as never)
+
+    const call = source.indexOf('await createPlatformServices(')
+    assert.ok(call > source.indexOf('const kysely ='))
+    assert.match(
+      source.slice(call),
+      /^await createPlatformServices\(process\.env as Record<string, string \| undefined>, \{ logger, kysely, /
+    )
+  })
+
+  test('a need neither the runtime nor a contributor meets fails generation', () => {
+    const sources: PlatformServiceContributor = {
+      name: 'sources',
+      needs: ['kysely'],
+      emit: () => [],
+    }
+    assert.throws(
+      () =>
+        new StandaloneProviderAdapter({
+          contributors: [sources],
+        }).generateEntrySource(ctx),
+      /'sources' needs 'kysely', which nothing provides/
+    )
+  })
+
+  test('contributors are emitted in dependency order', () => {
+    const reader: PlatformServiceContributor = {
+      name: 'reader',
+      needs: ['cloudSession'],
+      emit: () => [`  // reader`],
+    }
+    const session: PlatformServiceContributor = {
+      name: 'session',
+      provides: ['cloudSession'],
+      emit: () => [`  // session`],
+    }
+    const source = new StandaloneProviderAdapter({
+      contributors: [reader, session],
+    }).generateEntrySource(ctx)
+    assert.ok(source.indexOf('// session') < source.indexOf('// reader'))
   })
 })

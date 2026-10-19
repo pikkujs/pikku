@@ -387,7 +387,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     platform: PlatformImports
   ): string[] {
     return [
-      `const createPlatformServices = async (env: Record<string, string | undefined>): Promise<${ctx.servicesType}> => {`,
+      `const createPlatformServices = async (env: Record<string, string | undefined>, runtime: Record<string, any> = {}): Promise<${ctx.servicesType}> => {`,
       `  const services: ${ctx.servicesType} = {}`,
       `  const logger = new JsonConsoleLogger()`,
       `  services.logger = logger`,
@@ -686,7 +686,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     platform: PlatformImports
   ): string[] {
     const lines = [
-      `const createPlatformServices = async (env: CloudflareEnv): Promise<${ctx.servicesType}> => {`,
+      `const createPlatformServices = async (env: CloudflareEnv, runtime: Record<string, any> = {}): Promise<${ctx.servicesType}> => {`,
       `  const services: ${ctx.servicesType} = {}`,
       `  const logger = new JsonConsoleLogger()`,
       `  services.logger = logger`,
@@ -742,7 +742,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     bindingsMap: string
   ): string[] {
     const lines = [
-      `const createPlatformServices = async (env: CloudflareEnv): Promise<${ctx.servicesType}> => {`,
+      `const createPlatformServices = async (env: CloudflareEnv, runtime: Record<string, any> = {}): Promise<${ctx.servicesType}> => {`,
       `  const services: ${ctx.servicesType} = {}`,
       `  const logger = new JsonConsoleLogger()`,
       `  services.logger = logger`,

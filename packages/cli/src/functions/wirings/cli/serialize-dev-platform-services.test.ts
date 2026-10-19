@@ -16,6 +16,7 @@ import ts from 'typescript'
 import type { PlatformServiceContributor } from '@pikku/deploy'
 import {
   devContributorPlatform,
+  devRuntimeServices,
   serializeDevPlatformServices,
 } from './serialize-dev-platform-services.js'
 
@@ -35,13 +36,50 @@ describe('serializeDevPlatformServices', () => {
       [
         `import { HostEmailService } from './host-email.js'`,
         ``,
-        `export const createPlatformServices = async (env: Record<string, string | undefined>): Promise<Record<string, any>> => {`,
+        `export const createPlatformServices = async (env: Record<string, string | undefined>, runtime: Record<string, any> = {}): Promise<Record<string, any>> => {`,
         `  const services: Record<string, any> = {}`,
         `  services.emailService = new HostEmailService(env.MAIL_URL)`,
         `  return services`,
         `}`,
         ``,
       ].join('\n')
+    )
+  })
+
+  test('contributors run in needs/provides order and may read runtime services', () => {
+    const reader: PlatformServiceContributor = {
+      name: 'reader',
+      needs: ['logSources', 'kysely'],
+      emit: () => [`  services.reader = [services.logSources, runtime.kysely]`],
+    }
+    const sources: PlatformServiceContributor = {
+      name: 'sources',
+      provides: ['logSources'],
+      emit: () => [`  services.logSources = {}`],
+    }
+    const code = serializeDevPlatformServices(
+      [reader, sources],
+      devContributorPlatform([], devRuntimeServices({ db: true }))
+    )
+    assert.ok(
+      code.indexOf('services.logSources = {}') <
+        code.indexOf('services.reader =')
+    )
+  })
+
+  test('a runtime need the dev server does not hold fails codegen', () => {
+    const reader: PlatformServiceContributor = {
+      name: 'reader',
+      needs: ['kysely'],
+      emit: () => [],
+    }
+    assert.throws(
+      () =>
+        serializeDevPlatformServices(
+          [reader],
+          devContributorPlatform([], devRuntimeServices({ db: false }))
+        ),
+      /'reader' needs 'kysely', which nothing provides/
     )
   })
 
