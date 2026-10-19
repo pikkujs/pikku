@@ -1,8 +1,8 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { assertSameCompany } from '../src/lib/tenant.js'
-import { WrongCompanyError } from '../src/errors.js'
+import { assertSameCompany } from './tenant.js'
+import { WrongCompanyError } from '../errors.js'
 
 /**
  * The tenant boundary is one comparison, so it gets one test — but it is the

@@ -13,6 +13,6 @@
       "#pikku/*": ["./.pikku/*"]
     }
   },
-  "include": ["src/", "test/", ".pikku/*"],
+  "include": ["src/", ".pikku/*"],
   "files": []
 }

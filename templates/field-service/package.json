@@ -36,7 +36,7 @@
     "build": "pikku all && pikku db migrate && tsc --noEmit && tsc --noEmit -p apps/app/tsconfig.json",
     "tsc": "tsc --noEmit",
     "pikku": "pikku all && pikku db migrate",
-    "test": "bun test test"
+    "test": "bun test src"
   },
   "imports": {
     "#pikku/*.gen.js": "./.pikku/*.gen.ts",
