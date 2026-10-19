@@ -1,0 +1,300 @@
+import { test, describe } from 'node:test'
+import assert from 'node:assert/strict'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+import {
+  buildSdkFiles,
+  checkSdkBump,
+  listImportSpecifiers,
+  loadPreviousSdk,
+  rewriteSdkFile,
+  SdkImportError,
+  sdkTarballName,
+  SDK_AGENT_MAP,
+  SDK_FUNCTIONS_META,
+  SDK_MANIFEST,
+  SDK_RPC_MAP,
+  SDK_WORKFLOW_MAP,
+  type SdkManifest,
+} from './addon-sdk.js'
+import { packTarGz, unpackTarGz } from './sdk-tarball.js'
+
+const RPC_MAP = [
+  "import type * as __PikkuCustomTypes from '../pikku-custom-types.gen.d.js'",
+  'export type ListNotesOutput = __PikkuCustomTypes.ListNotesOutput',
+  'export type RPCMap = {',
+  "  readonly 'listNotes': RPCHandler<null, ListNotesOutput>,",
+  '}',
+  "import type { FlattenedWorkflowMap } from '../workflow/pikku-workflow-map.gen.d.js'",
+  "import type { AgentMap } from '../agent/pikku-agent-map.gen.d.js'",
+  "import type { PikkuRPC } from '@pikku/core/rpc'",
+  '',
+].join('\n')
+
+const CUSTOM_TYPES = [
+  "import type { MCPToolResponse } from '@pikku/core/mcp'",
+  'export type ListNotesOutput = { id: string; body: string }[]',
+  '',
+].join('\n')
+
+/** An addon's `.pikku/addon` tree, as `pikku all` leaves it. */
+const withAddonOutput = (
+  overrides: { rpcMap?: string; meta?: Record<string, unknown> },
+  run: (sources: Parameters<typeof buildSdkFiles>[0], root: string) => void
+) => {
+  const root = mkdtempSync(join(tmpdir(), 'pikku-sdk-'))
+  const out = join(root, '.pikku', 'addon')
+  const write = (path: string, content: string) => {
+    mkdirSync(dirname(join(out, path)), { recursive: true })
+    writeFileSync(join(out, path), content)
+  }
+  write(
+    'rpc/pikku-rpc-wirings-map.remote.gen.d.ts',
+    overrides.rpcMap ?? RPC_MAP
+  )
+  write(
+    'workflow/pikku-workflow-map.gen.d.ts',
+    'export type FlattenedWorkflowMap = {}\n'
+  )
+  write('agent/pikku-agent-map.gen.d.ts', 'export type AgentMap = {}\n')
+  write('pikku-custom-types.gen.d.ts', CUSTOM_TYPES)
+  write(
+    'schemas/schemas/ListNotesOutput.schema.json',
+    JSON.stringify({ type: 'array' })
+  )
+  write(
+    'function/pikku-functions-meta.gen.json',
+    JSON.stringify(
+      overrides.meta ?? {
+        listNotes: { remote: true, inputs: [], outputs: ['ListNotesOutput'] },
+        renameNote: { expose: true, inputs: [], outputs: [] },
+        internalOnly: { inputs: [], outputs: [] },
+      }
+    )
+  )
+  try {
+    const declaration = (path: string) => ({
+      path: join(out, path),
+      content: readFileSync(join(out, path), 'utf-8'),
+    })
+    run(
+      {
+        rpcMap: declaration('rpc/pikku-rpc-wirings-map.remote.gen.d.ts'),
+        workflowMap: declaration('workflow/pikku-workflow-map.gen.d.ts'),
+        agentMap: declaration('agent/pikku-agent-map.gen.d.ts'),
+        customTypes: declaration('pikku-custom-types.gen.d.ts'),
+        functionsMeta: join(out, 'function/pikku-functions-meta.gen.json'),
+        schemaDirectory: join(out, 'schemas'),
+      },
+      root
+    )
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+}
+
+const INFO = { name: '@acme/notes', version: '1.0.0', pikkuCore: '^0.12.0' }
+
+describe('buildSdkFiles', () => {
+  test('emits exactly the five spec files', () => {
+    withAddonOutput({}, (sources) => {
+      const { files, manifest } = buildSdkFiles(sources, INFO)
+      assert.deepEqual(
+        [...files.keys()].sort(),
+        [
+          SDK_AGENT_MAP,
+          SDK_FUNCTIONS_META,
+          SDK_MANIFEST,
+          SDK_RPC_MAP,
+          SDK_WORKFLOW_MAP,
+        ].sort()
+      )
+      assert.deepEqual(Object.keys(manifest), [
+        'name',
+        'version',
+        'pikkuCore',
+        'contractHash',
+      ])
+      assert.match(manifest.contractHash, /^[0-9a-f]{64}$/)
+      assert.deepEqual(JSON.parse(files.get(SDK_MANIFEST)!), manifest)
+    })
+  })
+
+  test('re-points sibling imports and inlines the custom types', () => {
+    withAddonOutput({}, (sources) => {
+      const rpcMap = buildSdkFiles(sources, INFO).files.get(SDK_RPC_MAP)!
+      assert.deepEqual(listImportSpecifiers(rpcMap).sort(), [
+        '../agent/pikku-agent-map.gen.d.js',
+        '../workflow/pikku-workflow-map.gen.d.js',
+        '@pikku/core/mcp',
+        '@pikku/core/rpc',
+      ])
+      assert.match(rpcMap, /declare namespace __PikkuCustomTypes \{/)
+      assert.match(
+        rpcMap,
+        /export type ListNotesOutput = \{ id: string; body: string \}\[\]/
+      )
+      assert.ok(!rpcMap.includes('pikku-custom-types'))
+    })
+  })
+
+  test('refuses a map that imports from the addon source', () => {
+    const rpcMap = `import type { Note } from '../../../src/notes.js'\n${RPC_MAP}`
+    withAddonOutput({ rpcMap }, (sources) => {
+      assert.throws(
+        () => buildSdkFiles(sources, INFO),
+        (error: unknown) =>
+          error instanceof SdkImportError &&
+          /imports '\.\.\/\.\.\/\.\.\/src\/notes\.js'/.test(error.message) &&
+          /zod/.test(error.message)
+      )
+    })
+  })
+
+  test('refuses a package import other than @pikku/core', () => {
+    const rpcMap = `import type { Kysely } from 'kysely'\n${RPC_MAP}`
+    withAddonOutput({ rpcMap }, (sources) => {
+      assert.throws(() => buildSdkFiles(sources, INFO), SdkImportError)
+    })
+  })
+
+  test('the meta keeps remote and exposed functions, each with a contract hash', () => {
+    withAddonOutput({}, (sources) => {
+      const meta = JSON.parse(
+        buildSdkFiles(sources, INFO).files.get(SDK_FUNCTIONS_META)!
+      )
+      assert.deepEqual(Object.keys(meta), ['listNotes', 'renameNote'])
+      assert.match(meta.listNotes.contractHash, /^[0-9a-f]{16}$/)
+      assert.match(meta.renameNote.contractHash, /^[0-9a-f]{16}$/)
+    })
+  })
+
+  test('an addon with no generated output is told to run pikku all', () => {
+    withAddonOutput({}, (sources) => {
+      assert.throws(
+        () =>
+          buildSdkFiles(
+            { ...sources, functionsMeta: sources.functionsMeta + '.gone' },
+            INFO
+          ),
+        /Run `pikku all` in the addon before `pikku sdk`/
+      )
+    })
+  })
+})
+
+test('rewriteSdkFile refuses a relative import that leaves the SDK', () => {
+  assert.throws(
+    () =>
+      rewriteSdkFile(
+        SDK_WORKFLOW_MAP,
+        '/a/.pikku/addon/workflow/pikku-workflow-map.gen.d.ts',
+        "import type { X } from '../../src/x.js'\n",
+        new Map(),
+        { path: '/a/.pikku/addon/pikku-custom-types.gen.d.ts', content: '' }
+      ),
+    SdkImportError
+  )
+})
+
+describe('checkSdkBump', () => {
+  const previous = (
+    version: string,
+    functions: Record<
+      string,
+      { contractHash: string; outputSchemaName: string }
+    >
+  ) => ({
+    manifest: {
+      name: '@acme/notes',
+      version,
+      pikkuCore: '^0.12.0',
+      contractHash: '',
+    } satisfies SdkManifest,
+    functions,
+  })
+  // The SDK carries hashes, not schemas, so every named schema is unresolved
+  // and a moved hash is all surface-diff has to go on.
+  const fn = (contractHash: string) => ({
+    contractHash,
+    outputSchemaName: 'ListNotesOutput',
+  })
+  const base = { listNotes: fn('aaaa') }
+
+  test('an unchanged contract needs a patch', () => {
+    const check = checkSdkBump(previous('1.2.3', base), base, '1.2.4', 'prev')
+    assert.equal(check.changes.verdict, 'patch')
+    assert.equal(check.requiredVersion, '1.2.4')
+  })
+
+  test('an added function needs a minor', () => {
+    const current = { ...base, addNote: fn('bbbb') }
+    assert.equal(
+      checkSdkBump(previous('1.2.3', base), current, '1.3.0', 'prev')
+        .requiredVersion,
+      '1.3.0'
+    )
+    assert.throws(
+      () => checkSdkBump(previous('1.2.3', base), current, '1.2.4', 'prev'),
+      /SDK version 1\.2\.4 is too low: the contract change since 1\.2\.3 is minor, so the SDK must be at least 1\.3\.0/
+    )
+  })
+
+  test('a removed function needs a major', () => {
+    assert.throws(
+      () => checkSdkBump(previous('1.2.3', base), {}, '1.3.0', 'prev'),
+      /is major, so the SDK must be at least 2\.0\.0/
+    )
+  })
+
+  test('a changed contract hash needs a major', () => {
+    const changed = { listNotes: fn('cccc') }
+    assert.equal(
+      checkSdkBump(previous('1.2.3', base), changed, '2.0.0', 'prev').changes
+        .verdict,
+      'major'
+    )
+  })
+})
+
+test('a packed SDK unpacks to the same files, and reloads as a previous SDK', () => {
+  withAddonOutput({}, (sources, root) => {
+    const { files, manifest } = buildSdkFiles(sources, INFO)
+    const tgz = packTarGz(
+      [...files].map(([path, content]) => ({
+        path,
+        content: Buffer.from(content),
+      }))
+    )
+    const unpacked = unpackTarGz(tgz)
+    assert.deepEqual(
+      new Map([...unpacked].map(([p, c]) => [p, c.toString()])),
+      files
+    )
+    const tgzPath = join(root, sdkTarballName(INFO.name, INFO.version))
+    writeFileSync(tgzPath, tgz)
+    const loaded = loadPreviousSdk(tgzPath)
+    assert.deepEqual(loaded.manifest, manifest)
+    assert.deepEqual(Object.keys(loaded.functions), ['listNotes', 'renameNote'])
+  })
+})
+
+test('the same SDK packs to the same bytes', () => {
+  const entries = [{ path: 'manifest.json', content: Buffer.from('{}') }]
+  assert.deepEqual(packTarGz(entries), packTarGz(entries))
+})
+
+test('sdkTarballName follows npm pack naming', () => {
+  assert.equal(
+    sdkTarballName('@acme/notes', '1.2.3'),
+    'acme-notes-1.2.3.sdk.tgz'
+  )
+  assert.equal(sdkTarballName('notes', '0.1.0'), 'notes-0.1.0.sdk.tgz')
+})

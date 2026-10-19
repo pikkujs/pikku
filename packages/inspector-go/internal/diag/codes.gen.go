@@ -90,6 +90,7 @@ const (
 	PiiInOutput                       Code = "PKU910"
 	AddonWiringNotAllowed             Code = "PKU920"
 	AddonContractHandlersNotAllowed   Code = "PKU921"
+	AddonRemoteContractNotZod         Code = "PKU922"
 	RpcInvocationTypeCast             Code = "PKU940"
 	KnowledgeNoteMissing              Code = "PKU960"
 	SecretServiceAliased              Code = "PKU950"

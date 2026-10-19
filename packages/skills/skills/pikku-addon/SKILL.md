@@ -279,6 +279,36 @@ everything else. Leave it out and the addon installs fine and fails to typecheck
 in every app that depends on it, which is what `pikku validate` is there to
 catch before you publish.
 
+### Remote functions and the SDK
+
+A `remote: true` function is called over the wire by apps that use
+`wireRemoteAddon`. Those apps build against the addon's SDK, not its source, so
+**a remote function's input and output must be exported zod schemas**. If it
+uses generics (`pikkuSessionlessFunc<In, Out>`) or returns a type declared in
+`src/`, codegen fails with PKU922. Functions that are not remote can keep their
+generics.
+
+```typescript
+export const NoteRows = z.array(z.object({ id: z.string(), body: z.string() }))
+
+export const listNotes = pikkuSessionlessFunc({
+  output: NoteRows,
+  func: async ({ kysely }) =>
+    kysely.selectFrom('notes').select(['id', 'body']).execute(),
+  remote: true,
+})
+```
+
+```bash
+yarn pikku all && yarn pikku sdk                      # .pikku/sdk/ + <scope>-<name>-<version>.sdk.tgz
+yarn pikku sdk --version 1.3.0 --bump-from ./prev.sdk.tgz
+```
+
+The SDK carries only the remote RPCs, the `expose: true` workflows and the types
+they reach. `--bump-from` refuses a version below what the change since the
+previous SDK requires: major for a removed or changed contract, minor for an
+added one. `--pack-dir` sets where the `.sdk.tgz` is written.
+
 ### Database tables
 
 An addon may **ship** tables. It must never **create** them: it runs inside the

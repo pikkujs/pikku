@@ -58,6 +58,7 @@ import { findPiiPaths } from '../utils/check-pii-output.js'
 import { findClassifiedSinks } from '../utils/check-classified-sinks.js'
 import { isScenarioInstrumentationFunction } from './scenario-instrumentation.js'
 import { resolveCalleeName } from '../utils/resolve-callee-name.js'
+import { addonZodContractViolation } from '../utils/validate-addon-zod-contract.js'
 import type { NodeType } from '@pikku/core/node'
 
 const isValidVariableName = (name: string) => {
@@ -1213,6 +1214,20 @@ export const addFunctions: AddWiring = (
     logger.warn(
       'More than one input type detected, only the first one will be used as a schema.'
     )
+  }
+
+  if (options.isAddon && remote && !notRpc) {
+    const violation = addonZodContractViolation(state.functions.typesMap, {
+      name,
+      usesGenerics: (typeArguments?.length ?? 0) > 0,
+      hasInputSchema: !!inputSchemaRef,
+      hasOutputSchema: !!outputSchemaRef,
+      inputNames,
+      outputNames,
+    })
+    if (violation) {
+      logger.critical(ErrorCode.ADDON_REMOTE_CONTRACT_NOT_ZOD, violation)
+    }
   }
 
   // Store the input type for later use

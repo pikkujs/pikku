@@ -9,6 +9,7 @@
  * reachable from this file imports `typescript`.
  */
 export { getInitialInspectorState } from './initial-state.js'
+export { TypesMap } from './types-map.js'
 export { ErrorCode } from './error-codes.js'
 export type { DiagnosticSeverity, CodedDiagnostic } from './error-codes.js'
 export { AUTH_HANDLER_FUNC_ID } from './utils/inspector-constants.js'
@@ -32,6 +33,7 @@ export {
 } from './utils/custom-types-generator.js'
 export { unresolvedSchemaReferences } from './utils/post-process.js'
 export {
+  computeContractHash,
   createEmptyManifest,
   serializeManifest,
 } from './utils/contract-hashes.js'

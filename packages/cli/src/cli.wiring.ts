@@ -14,6 +14,7 @@ import { refCLI } from '../.pikku/function/index.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { pikkuDist } from './functions/commands/dist.js'
+import { pikkuSdk } from './functions/commands/sdk.js'
 import { watch } from './functions/commands/watch.js'
 import { login, logout, whoami } from './functions/commands/login.js'
 import { dev } from './functions/commands/dev.js'
@@ -443,6 +444,27 @@ wireCLI({
         distDir: {
           description:
             "Where to copy to. Defaults to the tsconfig's compilerOptions.outDir",
+          type: 'string',
+        },
+      },
+    }),
+    sdk: pikkuCLICommand({
+      func: pikkuSdk,
+      description:
+        "Pack an addon's types-only SDK — the remote RPC, workflow and agent maps and the remote/exposed function meta — into .pikku/sdk/ and <scope>-<name>-<version>.sdk.tgz. Run it after pikku all",
+      options: {
+        version: {
+          description: 'SDK version. Defaults to the version in package.json',
+          type: 'string',
+        },
+        bumpFrom: {
+          description:
+            'The previous SDK (.sdk.tgz, unpacked directory, or its manifest.json). Fails unless the version is at least the major/minor/patch bump the contract change requires',
+          type: 'string',
+        },
+        packDir: {
+          description:
+            'Where to write the .sdk.tgz. Defaults to the package root',
           type: 'string',
         },
       },
