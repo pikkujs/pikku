@@ -1,3 +1,19 @@
+## 0.12.194
+
+### Patch Changes
+
+- 9898d08: `pikku bootstrap` now writes `.pikku/error`, so `#pikku/error` resolves when `pikku all` runs after it.
+- b4b73bb: `@pikku/core` is a regular dependency of the CLI again, not a peer. bunx reuses its install directory and lockfile, and bun keeps a locked peer even when a newer CLI's range excludes it, so `bunx --bun @pikku/cli@latest update` loaded a stale core and died on `Cannot find package '@pikku/core'` before reaching any command.
+- 8c18696: Stop compiling the darwin-x64 native binary and drop the Intel branch of the Homebrew cask. Intel Macs are no longer a supported host.
+- e2fb104: Starter template: stamp testids before tanstackStart. The testIds vite plugin ran after tanstackStart's route code-splitter, so client and SSR builds anchored different source lines and pages failed to hydrate when the source anchors were on. The plugin now runs its transform with hook order `pre` and sits before `tanstackStart()` in the vite config.
+- 0f3501f: `pikku validate` no longer double-reports a workspace addon or misreads a shipped addon file. The core-import and barrel checks stop walking into a nested directory that has its own `pikku.config.json`, since that project is validated on its own; inside an addon the core-import fix now names the addon's own leaf (`#pikku/addon/error`, not `#pikku/error`, which does not resolve there); and the shipped-import check ignores imports that only appear in comments, such as the usage example at the top of `classification-map.gen.d.ts`.
+- bca0f10: `pikku validate` no longer fails a fresh starter template. The core-import rule now points `@pikku/core/flag` at `#pikku/scopes` and `@pikku/core/analytics` at `#pikku/analytics` (the scopes leaf also re-exports the `DeclaredFlag` type), and the component literal-string rule ignores strings inside class builders such as `cva`, `cn` and `clsx`, so a variant like `heading: 'font-heading text-xl'` is no longer read as text to translate.
+- Updated dependencies [bca0f10]
+- Updated dependencies [424072d]
+  - @pikku/inspector@0.12.108
+  - @pikku/inspector-go@0.12.3
+  - @pikku/better-auth@0.12.58
+
 ## 0.12.193
 
 ### Patch Changes

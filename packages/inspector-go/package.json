@@ -1,6 +1,6 @@
 {
   "name": "@pikku/inspector-go",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -41,7 +41,7 @@
     "prepublishOnly": "bun run build && node scripts/check-platform-binary.mjs"
   },
   "dependencies": {
-    "@pikku/inspector": "^0.12.107"
+    "@pikku/inspector": "^0.12.108"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.144"
