@@ -303,7 +303,7 @@ func ConvertDslToGraph(name string, meta *Object) *Object {
 	} else if meta.Get("dsl") == false {
 		source = "complex"
 	}
-	var scenario any
+	var scenario any = Undefined
 	if Truthy(meta.Get("scenario")) {
 		scenario = true
 	}
