@@ -1,28 +1,16 @@
 #!/bin/bash
-# Runs the packed CLI through bunx in a clean dir against the workspace core,
-# then checks that a bunx cache whose lockfile holds a @pikku/core below the
-# CLI's range moves core forward when the CLI is upgraded.
+# Runs the packed CLI through bunx in a clean dir against the workspace's own
+# @pikku packages (see cli-bunx-smoke-pack.mjs), then checks that a bunx cache
+# whose lockfile holds a @pikku/core below the CLI's range moves core forward
+# when the CLI is upgraded.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-(cd "$root/packages/core" && npm pack --ignore-scripts --pack-destination "$work" >/dev/null 2>&1)
-(cd "$root/packages/cli" && npm pack --ignore-scripts --pack-destination "$work" >/dev/null 2>&1)
-core_tgz=$(ls "$work"/pikku-core-*.tgz)
+core_range=$(bun "$root/scripts/cli-bunx-smoke-pack.mjs" "$root" "$work")
 published_tgz=$(ls "$work"/pikku-cli-*.tgz)
-
-mkdir "$work/cli" && tar xzf "$published_tgz" -C "$work/cli"
-core_range=$(bun -e '
-  const p = await Bun.file(process.argv[1]).json()
-  const range = p.dependencies?.["@pikku/core"] ?? p.peerDependencies?.["@pikku/core"]
-  for (const field of ["dependencies", "peerDependencies"])
-    if (p[field]?.["@pikku/core"]) p[field]["@pikku/core"] = "file:" + process.argv[2]
-  await Bun.write(process.argv[1], JSON.stringify(p, null, 2))
-  console.log(range)
-' "$work/cli/package/package.json" "$core_tgz")
-(cd "$work/cli/package" && npm pack --ignore-scripts --pack-destination "$work/cli" >/dev/null 2>&1)
 cli_tgz=$(ls "$work"/cli/pikku-cli-*.tgz)
 
 stale_core=$(npm view @pikku/core versions --json | bun -e '
