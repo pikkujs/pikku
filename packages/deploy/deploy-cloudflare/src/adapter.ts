@@ -29,7 +29,12 @@ import type {
   RuntimeProfile,
   RuntimeTier,
 } from '@pikku/deploy'
-import { unitWiresRemoteJobInbox, withDeployUnit } from '@pikku/deploy'
+import {
+  composedLifecycleLines,
+  entryLifecycleVariable,
+  unitWiresRemoteJobInbox,
+  withDeployUnit,
+} from '@pikku/deploy'
 
 import {
   COERCION_CONTRIBUTOR_NAME,
@@ -209,6 +214,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     const gateway = ['mcp', 'agent', 'workflow'].includes(ctx.unit.role)
     return {
       supported: container ? ['env'] : CLOUDFLARE_BINDING_SOURCES,
+      runsServerLifecycle: container,
       runtimeServices: [
         'logger',
         'schema',
@@ -350,6 +356,8 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
    */
   generateServerEntrySource(ctx: EntryGenerationContext): string {
     const platform = this.resolvePlatformImports(ctx.unit)
+    const lifecycle = entryLifecycleVariable(ctx)
+    const composed = composedLifecycleLines(ctx)
 
     const lines: string[] = [
       `// Generated server (container) entry for "${ctx.unit.name}" (${ctx.unit.role})`,
@@ -358,11 +366,19 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `import { JsonConsoleLogger, LocalVariablesService, LocalSecretService } from '@pikku/core/services'`,
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       ...this.contributorImports(ctx),
+      ...(ctx.lifecycle
+        ? [
+            `import { ${ctx.lifecycle.variable} as __pikkuLifecycle } from '${ctx.lifecycle.importPath}'`,
+          ]
+        : []),
+      ...composed.imports,
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
       `import '${ctx.bootstrapPath}'`,
       ``,
+      ...composed.declaration,
+      ...(composed.declaration.length > 0 ? [``] : []),
       ...this.generateServerPlatformServicesBlock(ctx, platform),
       ``,
       `const PORT = Number(process.env.PORT ?? 8080)`,
@@ -384,9 +400,19 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `    { ...config, hostname: HOST, port: PORT, healthCheckPath: '/__pikku/health' },`,
       `    singletonServices.logger,`,
       `  )`,
-      `  server.enableExitOnSignals()`,
+      `  server.enableExitOnSignals(${
+        lifecycle
+          ? `{ beforeStop: () => ${lifecycle}?.beforeStop?.(singletonServices), afterStop: () => ${lifecycle}?.afterStop?.(singletonServices) }`
+          : ''
+      })`,
       `  await server.init()`,
+      ...(lifecycle
+        ? [`  await ${lifecycle}?.beforeStart?.(singletonServices)`]
+        : []),
       `  await server.start()`,
+      ...(lifecycle
+        ? [`  await ${lifecycle}?.afterStart?.(singletonServices)`]
+        : []),
       `}`,
       ``,
       `main().catch((err) => {`,

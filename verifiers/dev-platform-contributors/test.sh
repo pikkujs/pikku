@@ -16,13 +16,17 @@ for addon in contrib-notify contrib-select contrib-bad; do
   (cd "$addon" && npx pikku all >/dev/null)
   test -f "$addon/.pikku/addon/contributors/pikku-contributors-meta.gen.json"
 done
-for scenario in multi pg sqlite; do
+for scenario in multi pg sqlite lifecycle; do
   rm -rf "scenarios/$scenario/.pikku"
   (cd "scenarios/$scenario" && npx pikku all >/dev/null)
   test -f "scenarios/$scenario/.pikku/contributors/pikku-dev-contributors.gen.ts"
 done
 (cd scenarios/multi && npx tsc --noEmit -p .)
 npx tsx src/check-contributors.ts
+
+echo "--- real pikku dev / pikku serve processes: contributor hooks around the app lifecycle ---"
+(cd scenarios/lifecycle && npx tsc --noEmit -p .)
+npx tsx src/check-lifecycle.ts
 
 echo "--- the generated file is removed once no contributors remain ---"
 (cd scenarios/multi && npx pikku all -c "$PWD/pikku.off.config.json" >/dev/null)

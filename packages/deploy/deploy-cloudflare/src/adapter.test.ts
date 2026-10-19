@@ -441,3 +441,90 @@ describe('NODE_ENV on Workers', () => {
     assert.equal(await isProductionBuiltWith(adapter.getDefine()), true)
   })
 })
+
+describe('CloudflareProviderAdapter container server lifecycle', () => {
+  const lifecycle = { importPath: './lifecycle.js', variable: 'lifecycle' }
+  const generate = (extra: object) =>
+    new CloudflareProviderAdapter({}).generateServerEntrySource({
+      ...(ctx as object),
+      ...extra,
+    } as never)
+  const at = (source: string, needle: string) => {
+    const index = source.indexOf(needle)
+    assert.notEqual(index, -1, `missing: ${needle}`)
+    return index
+  }
+
+  test('the app lifecycle runs around server.start() and owns the shutdown hooks', () => {
+    const source = generate({ lifecycle })
+    assert.match(
+      source,
+      /import \{ lifecycle as __pikkuLifecycle \} from '\.\/lifecycle\.js'/
+    )
+    assert.ok(
+      at(source, '__pikkuLifecycle?.beforeStart') <
+        at(source, 'server.start()') &&
+        at(source, 'server.start()') <
+          at(source, '__pikkuLifecycle?.afterStart')
+    )
+    assert.match(
+      source,
+      /enableExitOnSignals\(\{ beforeStop: \(\) => __pikkuLifecycle\?\.beforeStop\?\.\(singletonServices\), afterStop: \(\) => __pikkuLifecycle\?\.afterStop\?\.\(singletonServices\) \}\)/
+    )
+  })
+
+  test('no lifecycle and no contributors: the entry runs none, as it always read', () => {
+    const source = generate({})
+    assert.doesNotMatch(source, /Lifecycle|beforeStart/)
+    assert.match(source, /server\.enableExitOnSignals\(\)/)
+  })
+
+  test('contributor hooks bracket the app lifecycle: start first, stop after afterStop', () => {
+    const source = generate({ lifecycle, platformServices })
+    assert.match(
+      source,
+      /import \{ serverStartHooks as __pikkuStartHooks, serverStopHooks as __pikkuStopHooks \} from '\.\/platform-services\.gen\.js'/
+    )
+    assert.match(
+      source,
+      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks, stop: __pikkuStopHooks \}\)/
+    )
+    assert.ok(
+      at(source, 'createPlatformServices(env)') <
+        at(source, 'createSingletonServices(config'),
+      'contributor services exist before the app builds its own'
+    )
+    assert.ok(
+      at(source, 'server.init()') <
+        at(source, '__pikkuServerLifecycle?.beforeStart') &&
+        at(source, '__pikkuServerLifecycle?.beforeStart') <
+          at(source, 'server.start()') &&
+        at(source, 'server.start()') <
+          at(source, '__pikkuServerLifecycle?.afterStart')
+    )
+    assert.match(
+      source,
+      /enableExitOnSignals\(\{ beforeStop: \(\) => __pikkuServerLifecycle\?\.beforeStop\?\.\(singletonServices\), afterStop: \(\) => __pikkuServerLifecycle\?\.afterStop\?\.\(singletonServices\) \}\)/
+    )
+  })
+
+  test('the worker entry never imports or runs the hooks', () => {
+    const source = new CloudflareProviderAdapter({}).generateEntrySource({
+      ...(ctx as object),
+      unit: { ...(unit as object), target: 'serverless' },
+      lifecycle,
+      platformServices,
+    } as never)
+    assert.doesNotMatch(source, /serverStartHooks|composeServerLifecycle/)
+  })
+
+  test('only the container target runs the server lifecycle', () => {
+    const support = (target: string) =>
+      new CloudflareProviderAdapter({}).contributorSupport({
+        ...(ctx as object),
+        unit: { ...(unit as object), target },
+      } as never)
+    assert.equal(support('server').runsServerLifecycle, true)
+    assert.equal(support('serverless').runsServerLifecycle, false)
+  })
+})

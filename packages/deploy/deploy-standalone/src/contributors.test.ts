@@ -130,3 +130,67 @@ describe(`StandaloneProviderAdapter contributors`, () => {
     )
   })
 })
+
+describe(`StandaloneProviderAdapter contributor server hooks`, () => {
+  const lifecycle = { importPath: './lifecycle.js', variable: 'lifecycle' }
+  const platformServices = { importPath: './platform-services.gen.js' }
+  const generate = (extra: object) =>
+    new StandaloneProviderAdapter({}).generateEntrySource({
+      ...(ctx as object),
+      ...extra,
+    } as never)
+  const at = (source: string, needle: string) => {
+    const index = source.indexOf(needle)
+    assert.notEqual(index, -1, `missing: ${needle}`)
+    return index
+  }
+
+  test('runs the server lifecycle', () => {
+    assert.equal(
+      new StandaloneProviderAdapter({}).contributorSupport(ctx)
+        .runsServerLifecycle,
+      true
+    )
+  })
+
+  test('without contributors the entry reads as it did: the app lifecycle alone', () => {
+    const source = generate({ lifecycle })
+    assert.doesNotMatch(source, /composeServerLifecycle|serverStartHooks/)
+    assert.match(source, /__pikkuLifecycle\?\.beforeStart/)
+  })
+
+  test('the composed lifecycle starts contributors first and stops them after afterStop, on the signal path too', () => {
+    const source = generate({ lifecycle, platformServices })
+    assert.match(
+      source,
+      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks, stop: __pikkuStopHooks \}\)/
+    )
+    assert.ok(
+      at(source, '__pikkuServerLifecycle?.beforeStart') <
+        at(source, 'await server.start()') &&
+        at(source, 'await server.start()') <
+          at(source, '__pikkuServerLifecycle?.afterStart')
+    )
+    assert.match(
+      source,
+      /server\.enableExitOnSignals\(\{ beforeStop: async \(\) => \{ await __pikkuServerLifecycle\?\.beforeStop\?\.\(singletonServices\) \}, afterStop: async \(\) => \{ await __pikkuServerLifecycle\?\.afterStop\?\.\(singletonServices\) \} \}\)/
+    )
+  })
+
+  test('contributor hooks run even when the app declares no lifecycle', () => {
+    const source = generate({ platformServices })
+    assert.match(source, /composeServerLifecycle\(undefined,/)
+    assert.match(source, /__pikkuServerLifecycle\?\.beforeStart/)
+  })
+
+  test('the pool is closed after the contributors stop', () => {
+    const source = generate({
+      platformServices,
+      db: { engine: 'postgres' },
+    })
+    assert.match(
+      source,
+      /afterStop: async \(\) => \{ await __pikkuServerLifecycle\?\.afterStop\?\.\(singletonServices\); await __pikkuPg\.close\(\) \}/
+    )
+  })
+})

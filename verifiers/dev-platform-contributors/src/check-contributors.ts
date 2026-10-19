@@ -400,6 +400,88 @@ await assert.rejects(
   /The cloudflare deploy cannot supply what a contributor.*'edge-queue'.*requires cloudflare/s
 )
 
+// A Worker never runs the server lifecycle, so a contributor with
+// `onServerStart` bundled into one is a build error naming contributor and
+// unit; the same contributor on a container (server target) unit works, and
+// `onServerStop` alone only warns.
+await assert.rejects(
+  generate(
+    cloudflare,
+    unitCtx('cloudflare', 'edge-hooks', 'serverless', { db: undefined }),
+    stateOf(['blob'], [])
+  ),
+  (error: Error) =>
+    /contributor 'blob' in unit 'edge-hooks'/.test(error.message) &&
+    /onServerStart would never be called/.test(error.message)
+)
+const containerCtx = unitCtx('cloudflare', 'box-hooks', 'server')
+const container = await generate(
+  cloudflare,
+  containerCtx,
+  stateOf(['blob'], [])
+)
+assert.ok(container, 'the container unit takes the onServerStart contributor')
+const containerEntry = cloudflare.generateServerEntrySource({
+  ...containerCtx,
+  lifecycle: { importPath: './lifecycle.js', variable: 'lifecycle' },
+  platformServices: container,
+})
+assert.match(containerEntry, /composeServerLifecycle\(__pikkuLifecycle,/)
+assert.match(containerEntry, /__pikkuServerLifecycle\?\.beforeStart/)
+const stopWarnings: string[] = []
+const stopOnlyCtx = unitCtx('cloudflare', 'edge-stop', 'serverless', {
+  db: undefined,
+})
+const stopOnly = await writeUnitPlatformServices({
+  provider: cloudflare,
+  ctx: stopOnlyCtx,
+  state: stateOf(['hook-stop-only'], []),
+  projectDir: scenarioDir,
+  warn: (message: string) => stopWarnings.push(message),
+})
+assert.ok(stopOnly, 'onServerStop alone does not fail the Worker build')
+assert.equal(stopWarnings.length, 1)
+assert.match(stopWarnings[0]!, /'hook-stop-only'.*onServerStop.*'edge-stop'/)
+// A Worker with no hooks at all warns about nothing.
+stopWarnings.length = 0
+await writeUnitPlatformServices({
+  provider: cloudflare,
+  ctx: workerCtx,
+  state: workerState,
+  projectDir: scenarioDir,
+  warn: (message: string) => stopWarnings.push(message),
+})
+assert.deepEqual(stopWarnings, [])
+
+// The standalone target runs the server lifecycle, so it takes the hooks and
+// its entry composes them around the app's.
+const hooked = await generate(
+  standalone,
+  unitCtx('standalone', 'hooked', 'server'),
+  stateOf(['hook-c', 'hook-b', 'hook-a'], [])
+)
+assert.ok(hooked)
+const hookedSource = read(
+  join(deployRoot, 'standalone/hooked/platform-services.gen.ts')
+)
+assert.deepEqual(
+  [
+    ...hookedSource.matchAll(
+      /\{ name: "(hook-\w)", run: \(services\) => contributor\d+\.onServerStart/g
+    ),
+  ].map((m) => m[1]),
+  ['hook-a', 'hook-b', 'hook-c']
+)
+assert.deepEqual(
+  [
+    ...hookedSource.matchAll(
+      /\{ name: "(hook-\w)", run: \(services\) => contributor\d+\.onServerStop/g
+    ),
+  ].map((m) => m[1]),
+  ['hook-c', 'hook-b', 'hook-a'],
+  'stop hooks are listed in reverse run order'
+)
+
 // The Worker bundle (esbuild, browser platform) keeps working and carries only
 // the selected contributors.
 const bundled = await build({

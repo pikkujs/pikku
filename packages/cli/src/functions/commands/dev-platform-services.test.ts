@@ -3,7 +3,10 @@ import assert from 'node:assert'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { mergeDevPlatformServices } from './dev-platform-services.js'
+import {
+  loadDevPlatformServices,
+  mergeDevPlatformServices,
+} from './dev-platform-services.js'
 
 describe('mergeDevPlatformServices', () => {
   let root: string
@@ -53,5 +56,39 @@ describe('mergeDevPlatformServices', () => {
       }),
       local
     )
+  })
+
+  describe('server lifecycle hooks', () => {
+    const withHooks = () =>
+      writeFileSync(
+        join(root, 'contributors.gen.js'),
+        `export const createPlatformServices = async () => ({ x: 1 })\n` +
+          `export const serverStartHooks = [{ name: 'a', run: () => {} }]\n` +
+          `export const serverStopHooks = [{ name: 'a', run: () => {} }]\n`
+      )
+
+    test("the file's hook lists come back beside the merged services", async () => {
+      withHooks()
+      const loaded = await loadDevPlatformServices({ local: 1 }, root, file, {})
+      assert.deepEqual(loaded.services, { local: 1, x: 1 })
+      assert.deepEqual(
+        loaded.startHooks.map((h) => h.name),
+        ['a']
+      )
+      assert.deepEqual(
+        loaded.stopHooks.map((h) => h.name),
+        ['a']
+      )
+    })
+
+    test('production and a missing file mean no hooks', async () => {
+      withHooks()
+      const production = await loadDevPlatformServices({}, root, file, {
+        NODE_ENV: 'production',
+      })
+      assert.deepEqual([production.startHooks, production.stopHooks], [[], []])
+      const missing = await loadDevPlatformServices({}, root, 'nope.gen.ts', {})
+      assert.deepEqual([missing.startHooks, missing.stopHooks], [[], []])
+    })
   })
 })

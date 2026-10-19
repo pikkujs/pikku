@@ -307,4 +307,60 @@ describe('resolveTargetContributors', () => {
     })
     assert.deepEqual(result.ordered, [])
   })
+
+  describe('server lifecycle hooks on a target without one', () => {
+    const hooked = () => {
+      install('addon', ['src/a.ts'])
+      modules['src/a.ts'] = {
+        starts: { provides: ['a'], run() {}, onServerStart() {} },
+        stops: { provides: ['b'], run() {}, onServerStop() {} },
+      }
+      return stateFor({
+        starts: { deploy: { module: 'src/a.ts', export: 'starts' } },
+        stops: { deploy: { module: 'src/a.ts', export: 'stops' } },
+      })
+    }
+    const resolve = (runsServerLifecycle: boolean, state: never) =>
+      resolveTargetContributors({
+        state,
+        rootDir: root,
+        target: 'deploy',
+        platform,
+        load,
+        runsServerLifecycle,
+        unitLabel: "unit 'edge'",
+      })
+
+    test('onServerStart is an error naming the contributor and the unit', async () => {
+      await assert.rejects(
+        resolve(false, hooked()),
+        /contributor 'starts' in unit 'edge'/
+      )
+    })
+
+    test('onServerStop alone is reported, not thrown', async () => {
+      install('addon', ['src/a.ts'])
+      modules['src/a.ts'] = {
+        stops: { provides: ['b'], run() {}, onServerStop() {} },
+      }
+      const result = await resolve(
+        false,
+        stateFor({ stops: { deploy: { module: 'src/a.ts', export: 'stops' } } })
+      )
+      assert.deepEqual(result.ignoredStopHooks, ['stops'])
+      assert.equal(result.ordered.length, 1)
+    })
+
+    test('a target that runs the lifecycle reports nothing ignored', async () => {
+      const result = await resolve(true, hooked())
+      assert.deepEqual(result.ignoredStopHooks, [])
+      assert.deepEqual(
+        result.ordered.map((c) => c.hooks),
+        [
+          { start: true, stop: false },
+          { start: false, stop: true },
+        ]
+      )
+    })
+  })
 })

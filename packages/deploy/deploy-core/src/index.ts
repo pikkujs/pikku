@@ -38,7 +38,13 @@ export type {
   EntryPlatformServices,
   FrameworkContributor,
 } from './contributor-support.js'
-export { withDeployUnit } from './contributor-support.js'
+export {
+  appLifecycleVariable,
+  composedLifecycleLines,
+  composedLifecycleVariable,
+  entryLifecycleVariable,
+  withDeployUnit,
+} from './contributor-support.js'
 
 export { nodeBuiltinExternals } from './node-builtins.js'
 
