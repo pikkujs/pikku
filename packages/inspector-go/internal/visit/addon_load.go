@@ -115,6 +115,54 @@ func readAddonContributors(dirs []string, pkg string) (*ojson, error) {
 	return out, nil
 }
 
+// recordOptedInContributors resolves wireAddon({ contributors }) against what
+// the addon registered. A name it does not register is an error rather than a
+// skip: the project asked for a service and would otherwise build without it.
+func (s *Context) recordOptedInContributors(ns string, decl *addonDecl, req addonResolver) {
+	registered := newOObject()
+	if path := resolveAddonMeta(req, decl.pkg, "contributors/pikku-contributors-meta"); path != "" {
+		meta, err := readJSONFile(path)
+		if err != nil {
+			s.Log.Critical(diag.AddonContributorUnknown, fmt.Sprintf(
+				"wireAddon('%s') opts in to contributors, but the contributors manifest of %s could not be read: %s", ns, decl.pkg, err.Error()))
+			return
+		}
+		if meta.get("contributors").isObject() {
+			registered = meta.get("contributors")
+		}
+	}
+	selected := newOObject()
+	for _, name := range decl.contributors {
+		if !registered.has(name) {
+			known := []string{}
+			registered.obj.Each(func(k string, _ *ojson) { known = append(known, k) })
+			hint := "It registers none; add a defineContributors call to the package and run pikku all in it."
+			if len(known) > 0 {
+				hint = "It registers: " + strings.Join(known, ", ") + "."
+			}
+			s.Log.Critical(diag.AddonContributorUnknown, fmt.Sprintf(
+				"wireAddon('%s') opts in to contributor '%s', but %s registers no such contributor. %s", ns, name, decl.pkg, hint))
+			continue
+		}
+		selected.set(name, registered.get(name))
+	}
+	if selected.obj.Len() == 0 {
+		return
+	}
+	entry := newOObject()
+	entry.set("packageName", ojsonString(decl.pkg))
+	entry.set("contributors", selected)
+
+	all := newOObject()
+	if len(s.State.OptedInContributors) > 0 && string(s.State.OptedInContributors) != "null" {
+		if existing, err := parseOJSON(s.State.OptedInContributors); err == nil && existing.isObject() {
+			all = existing
+		}
+	}
+	all.set(ns, entry)
+	s.State.OptedInContributors = all.raw()
+}
+
 func (s *Context) recordAddonContributors(ns string, contributors *ojson) {
 	all := newOObject()
 	if len(s.State.AddonContributors) > 0 && string(s.State.AddonContributors) != "null" {
@@ -342,6 +390,9 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	}
 
 	s.recordDeclaredUses(ns, decl, dirs)
+	if len(decl.contributors) > 0 {
+		s.recordOptedInContributors(ns, decl, req)
+	}
 
 	if decl.ui {
 		if err := s.loadAddonStudio(ns, decl, req); err != nil {

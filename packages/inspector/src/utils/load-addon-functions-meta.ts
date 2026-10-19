@@ -7,6 +7,7 @@ import type {
   InspectorState,
   InspectorLogger,
   StudioMeta,
+  ContributorsManifestMeta,
 } from '../types.js'
 import {
   addonResolutionDirs,
@@ -271,6 +272,67 @@ const loadStudioMeta = async (
   return JSON.parse(await readFile(path, 'utf-8')) as StudioMeta
 }
 
+const loadContributorsManifest = async (
+  require: AddonResolver,
+  packageName: string
+): Promise<ContributorsManifestMeta> => {
+  const path = resolveAddonMeta(
+    require,
+    packageName,
+    'contributors/pikku-contributors-meta'
+  )
+  if (!path) return {}
+  const meta = JSON.parse(await readFile(path, 'utf-8'))
+  return (meta?.contributors ?? {}) as ContributorsManifestMeta
+}
+
+/**
+ * Resolves `wireAddon({ contributors })` against what the addon registered.
+ * A name the addon does not register is an error rather than a skip: the
+ * project asked for a service and would otherwise build without it.
+ */
+const recordOptedInContributors = async (
+  logger: InspectorLogger,
+  state: InspectorState,
+  require: AddonResolver,
+  namespace: string,
+  packageName: string,
+  names: string[]
+): Promise<void> => {
+  let registered: ContributorsManifestMeta
+  try {
+    registered = await loadContributorsManifest(require, packageName)
+  } catch (e) {
+    logger.critical(
+      ErrorCode.ADDON_CONTRIBUTOR_UNKNOWN,
+      `wireAddon('${namespace}') opts in to contributors, but the contributors manifest of ${packageName} could not be read: ${e instanceof Error ? e.message : e}`
+    )
+    return
+  }
+  const selected: ContributorsManifestMeta = {}
+  for (const name of names) {
+    if (!Object.hasOwn(registered, name)) {
+      const known = Object.keys(registered)
+      logger.critical(
+        ErrorCode.ADDON_CONTRIBUTOR_UNKNOWN,
+        `wireAddon('${namespace}') opts in to contributor '${name}', but ${packageName} registers no such contributor. ${
+          known.length > 0
+            ? `It registers: ${known.join(', ')}.`
+            : 'It registers none; add a defineContributors call to the package and run pikku all in it.'
+        }`
+      )
+      continue
+    }
+    selected[name] = registered[name]!
+  }
+  if (Object.keys(selected).length > 0) {
+    ;(state.optedInContributors ??= {})[namespace] = {
+      packageName,
+      contributors: selected,
+    }
+  }
+}
+
 const isContributorRef = (value: unknown): value is AddonContributorRef =>
   !!value &&
   typeof value === 'object' &&
@@ -415,6 +477,16 @@ export async function loadAddonFunctionsMeta(
         )
       }
       recordDeclaredUses(logger, namespace, decl, dirs)
+      if (decl.contributors && decl.contributors.length > 0) {
+        await recordOptedInContributors(
+          logger,
+          state,
+          require,
+          namespace,
+          decl.package,
+          decl.contributors
+        )
+      }
       if (decl.ui) {
         let manifest: Awaited<ReturnType<typeof loadStudioMeta>> | undefined
         let unreadable = false
