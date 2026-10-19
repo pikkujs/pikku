@@ -25,10 +25,10 @@ export type WireAddonConfig = {
   mcp?: boolean | string[]
   /**
    * Which of the addon's functions `rpc.exposed` may call, under
-   * `<name>:<function>`. Unset or `true` keeps the functions the addon itself
-   * declared `expose: true`; `false` exposes none of them; a list names exactly
-   * the functions to expose, whether or not the addon declared them, and is
-   * typed against the addon's function names.
+   * `<name>:<function>`. Only functions the addon itself declared
+   * `expose: true` can ever be exposed: `true` exposes all of them, a list
+   * only those it names, and unset or `false` none. A listed function the
+   * addon did not declare stays unexposed.
    *
    * knowledge: decisions/security/wire-addon-expose-selects-the-rpc-surface.md
    */
@@ -140,8 +140,8 @@ export const wireAddon = (config: WireAddonConfig): void => {
 
 /**
  * Whether `rpc.exposed` may reach an addon function through the instance that
- * resolved it. The wiring's `expose` decides when it is `false` or a list;
- * otherwise the addon's own `expose: true` does.
+ * resolved it. Both sides must agree: the addon declares the function
+ * `expose: true`, and the wiring opts in with `true` or a list naming it.
  *
  * knowledge: decisions/security/wire-addon-expose-selects-the-rpc-surface.md
  */
@@ -150,13 +150,13 @@ export const isAddonFunctionExposed = (
   functionName: string,
   declaredExpose: boolean | undefined
 ): boolean => {
+  if (declaredExpose !== true) {
+    return false
+  }
   if (Array.isArray(expose)) {
     return expose.includes(functionName)
   }
-  if (expose === false) {
-    return false
-  }
-  return declaredExpose === true
+  return expose === true
 }
 
 /**

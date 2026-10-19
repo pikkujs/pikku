@@ -11,6 +11,7 @@ currently makes a choice that nobody has defended — the choice stays, the doub
 gets recorded.
 
 <!-- pikku:knowledge-index -->
+
 - [Does a bearer JWT with no identity claim count as a session?](a-bearer-jwt-with-no-identity-becomes-a-session.md) — The cookie middleware refuses an identity-less JWT, but authBearer sets whatever decode returns, so the two paths disagree
 - [A channel's middleware list accepts bare factories that nothing ever resolves](channel-middleware-accepts-bare-factories-that-nothing-resolves.md) — CoreChannel.channelMiddleware admits CorePikkuChannelMiddlewareFactory, but no runner calls one, so a bare factory would stall the chain
 - [Does a delayed RPC run as the session it was scheduled with?](does-a-delayed-rpc-run-as-the-session-it-was-scheduled-with.md) — The in-memory scheduler stores the session it is given and returns it from getTask, but the delayed run invokes the RPC with no session
@@ -24,7 +25,7 @@ gets recorded.
 - [Is the agent score worker reachable without a session?](is-the-agent-score-worker-reachable-without-a-session.md) — The score worker is registered as sessionless with the helper function type, and this file wires no route or expose for it
 - [May a scheduled test on live change data?](live-scheduled-tests-may-write.md) — Scheduled runs against a live app may only read, or may write with an explicit per-schedule approval; the choice is not made
 - [Who calls provisionVirtualUsers?](provision-virtual-users-has-no-caller-in-this-repo.md) — provisionVirtualUsers is additive and can ban orphans, but no caller exists in this repo outside tests and skill docs, and the route its doc comment names no longer exists
-- [Does a non-remote request need a remote token once the secret is set?](remote-secret-refuses-requests-without-a-remote-token-on-every-path.md) — With PIKKU_REMOTE_SECRET set, pikkuRemoteAuthMiddleware refuses any request lacking a Bearer header, not only /remote/rpc paths; the no-secret branch is path-scoped
+- [Does a non-mesh request need a mesh token once the secret is set?](mesh-secret-refuses-requests-without-a-mesh-token-on-every-path.md) — With PIKKU_MESH_SECRET set, pikkuMeshAuthMiddleware refuses any request lacking a Bearer header, not only /mesh/rpc paths; the no-secret branch is path-scoped
 - [Should a scoped secret view throw from hasSecret for a disallowed key?](should-a-scoped-secret-view-throw-from-has-secret-for-a-disallowed-key.md) — The SecretService contract says hasSecret answers for any key and must not throw, but the scoped view throws for keys outside its set
 - [Should a Bearer token that does not verify be anonymous or refused?](should-a-wrong-bearer-token-be-anonymous-or-refused.md) — authBearer refuses a malformed scheme with InvalidSessionError but lets a well-formed wrong token through as anonymous, and no comment says why
 - [Should an outgoing webhook go out unsigned when its configured signing secret resolves empty?](should-an-empty-webhook-signing-secret-send-unsigned.md) — When config.webhook.secret names a secret that resolves to nothing, the delivery is logged as unsigned and enqueued without a signature
@@ -36,4 +37,5 @@ gets recorded.
 - [Pikku Studio Cloud has to create, hold and deliver the stage virtual user keys](virtual-user-keys-on-cloud-stages-are-pikku-studios-to-build.md) — This repo defines the variables and verifies statements; generating a pair per stage and signing for stage callers is Pikku Studio Cloud work that has not been done or checked
 - [A virtual user statement can be replayed once per instance](virtual-user-statement-replay-is-per-process.md) — The one-time id store is an in-memory map, so on several instances or Worker isolates each accepts a statement once
 - [What should an impersonated session carry?](what-an-impersonated-session-carries.md) — An impersonated session without a mapSession is just { userId }, dropping the orgId and virtualUser fields a normal session has; nobody has said whether that is intended
+
 <!-- /pikku:knowledge-index -->

@@ -53,7 +53,7 @@ function isRpcReceiver(node: ts.Expression): boolean {
  * is not bundled in the caller's deploy unit, cross to another unit through the
  * `DeploymentService`.
  */
-const CROSS_UNIT_RPC_METHODS = new Set(['invoke', 'remote'])
+const CROSS_UNIT_RPC_METHODS = new Set(['invoke', 'mesh'])
 
 /** The name argument when it is statically known: `'x'`, `"x"` or `` `x` ``. */
 function literalRpcName(arg: ts.Expression): string | undefined {
@@ -65,7 +65,7 @@ function literalRpcName(arg: ts.Expression): string | undefined {
 
 /**
  * The RPC names a function handler calls through `rpc.invoke(...)` /
- * `rpc.remote(...)`, read from its own body.
+ * `rpc.mesh(...)`, read from its own body.
  *
  * This is what the deploy planner uses to bind a unit to the units its
  * functions call: without it, a caller and callee split into different units

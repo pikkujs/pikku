@@ -175,7 +175,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
       exportedName: string
       /**
        * RPC names this function's own body calls by literal name through
-       * `rpc.invoke(...)` / `rpc.remote(...)`. The deploy planner binds the
+       * `rpc.invoke(...)` / `rpc.mesh(...)`. The deploy planner binds the
        * function's unit to each callee's unit from this; a call with a computed
        * name is not listed, and is warned about instead.
        */

@@ -1,18 +1,18 @@
 /**
- * Cloudflare deployment service — routes remote() calls through service bindings.
+ * Cloudflare deployment service — routes mesh() calls through service bindings.
  *
  * When a gateway (agent, MCP, channel, workflow orchestrator) calls
- * remote('funcName'), this service dispatches to the function's worker
+ * mesh('funcName'), this service dispatches to the function's worker
  * via env.FUNC_WORKER.fetch(). Free, ~0ms, internal.
  *
- * Session propagation uses the existing pikkuRemoteAuthMiddleware:
- * JWT signed with PIKKU_REMOTE_SECRET, session encrypted in payload.
+ * Session propagation uses the existing pikkuMeshAuthMiddleware:
+ * JWT signed with PIKKU_MESH_SECRET, session encrypted in payload.
  */
 
 import type { DeploymentService, DeploymentConfig } from '@pikku/core/services'
 import type { JWTService } from '@pikku/core/services'
 import type { SecretService } from '@pikku/core/services'
-import { buildRemoteHeaders } from '@pikku/core/remote'
+import { buildMeshHeaders } from '@pikku/core/mesh'
 
 export type CloudflareEnv = Record<string, unknown>
 
@@ -57,7 +57,7 @@ export class CloudflareDeploymentService implements DeploymentService {
       )
     }
 
-    const headers = await buildRemoteHeaders(
+    const headers = await buildMeshHeaders(
       this.jwt,
       this.secrets,
       funcName,
@@ -66,7 +66,7 @@ export class CloudflareDeploymentService implements DeploymentService {
     )
 
     const request = new Request(
-      `http://internal/remote/rpc/${encodeURIComponent(funcName)}`,
+      `http://internal/mesh/rpc/${encodeURIComponent(funcName)}`,
       {
         method: 'POST',
         headers,
@@ -84,7 +84,7 @@ export class CloudflareDeploymentService implements DeploymentService {
         errorBody = await response.text()
       }
       throw new Error(
-        `Remote RPC call to '${funcName}' failed: ${response.status} ${response.statusText}. ${errorBody}`
+        `Mesh RPC call to '${funcName}' failed: ${response.status} ${response.statusText}. ${errorBody}`
       )
     }
 
@@ -93,7 +93,7 @@ export class CloudflareDeploymentService implements DeploymentService {
     } catch {
       const text = await response.text()
       throw new Error(
-        `Remote RPC call to '${funcName}' returned non-JSON response: ${text}`
+        `Mesh RPC call to '${funcName}' returned non-JSON response: ${text}`
       )
     }
   }

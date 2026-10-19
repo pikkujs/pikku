@@ -3,28 +3,28 @@ import type { SecretService } from './services/secret-service.js'
 import {
   assertStrongKeyMaterial,
   encryptWithKeyMaterial,
-  REMOTE_SESSION_INFO,
+  MESH_SESSION_INFO,
 } from './crypto-utils.js'
 
 /**
- * An unset secret means remote auth is not configured, so the call goes out
+ * An unset secret means mesh auth is not configured, so the call goes out
  * unauthenticated. A secrets backend that fails is a different thing: sending
  * the call anyway would only earn a 401 from the peer with no hint why.
  */
-const readRemoteSecret = async (
+const readMeshSecret = async (
   secrets: SecretService | undefined
 ): Promise<string | undefined> => {
   if (!secrets) {
     return undefined
   }
   try {
-    if (!(await secrets.hasSecret('PIKKU_REMOTE_SECRET'))) {
+    if (!(await secrets.hasSecret('PIKKU_MESH_SECRET'))) {
       return undefined
     }
-    return (await secrets.getSecret('PIKKU_REMOTE_SECRET')).reveal()
+    return (await secrets.getSecret('PIKKU_MESH_SECRET')).reveal()
   } catch (cause) {
     throw new Error(
-      'Could not read PIKKU_REMOTE_SECRET from the secrets service; refusing to send an unauthenticated remote call',
+      'Could not read PIKKU_MESH_SECRET from the secrets service; refusing to send an unauthenticated mesh call',
       { cause }
     )
   }
@@ -32,10 +32,10 @@ const readRemoteSecret = async (
 
 /**
  * Authorization headers carrying a JWT-signed session and traceId for
- * `pikkuRemoteAuthMiddleware` on the receiving end. Used by every deployment
+ * `pikkuMeshAuthMiddleware` on the receiving end. Used by every deployment
  * service regardless of transport (HTTP, Lambda Invoke, service bindings).
  */
-export async function buildRemoteHeaders(
+export async function buildMeshHeaders(
   jwt: JWTService | undefined,
   secrets: SecretService | undefined,
   funcName: string,
@@ -47,15 +47,15 @@ export async function buildRemoteHeaders(
     ...(traceId && { 'x-request-id': traceId }),
   }
 
-  const secret = await readRemoteSecret(secrets)
+  const secret = await readMeshSecret(secrets)
 
   if (secret && jwt) {
-    assertStrongKeyMaterial('PIKKU_REMOTE_SECRET', secret)
+    assertStrongKeyMaterial('PIKKU_MESH_SECRET', secret)
     const sessionEnc = session
       ? await encryptWithKeyMaterial(
-          'PIKKU_REMOTE_SECRET',
+          'PIKKU_MESH_SECRET',
           secret,
-          REMOTE_SESSION_INFO,
+          MESH_SESSION_INFO,
           {
             session,
           }
@@ -64,7 +64,7 @@ export async function buildRemoteHeaders(
     const token = await jwt.encode(
       { value: 5, unit: 'minute' },
       {
-        aud: 'pikku-remote',
+        aud: 'pikku-mesh',
         fn: funcName,
         iat: Math.floor(Date.now() / 1000),
         session: sessionEnc,

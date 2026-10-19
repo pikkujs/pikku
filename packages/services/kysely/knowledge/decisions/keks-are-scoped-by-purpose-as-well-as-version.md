@@ -10,7 +10,7 @@ tags: [security, encryption, kysely, keys]
 `KyselySecretService` already versions its key-encrypting key: each row stores a
 `keyVersion` beside its `ciphertext` and `wrappedDek`, per-version salts live in
 their own table, and `rotateKEK` walks rows through `envelopeRewrap`. Version is
-the *when* of a key. It is not the *what* — one KEK per version means every
+the _when_ of a key. It is not the _what_ — one KEK per version means every
 encrypted column in the database is protected by the same secret, so unlocking
 anything unlocks everything.
 
@@ -29,13 +29,13 @@ for every id. Scoping by tenant, or by purpose, replaces the resolver.
 
 Separate purposes derive from the same key material rather than requiring
 separate passphrases. `expandKeyMaterial(keyMaterial, info, salt)` is the HKDF
-helper already used for `REMOTE_SESSION_INFO`, and a distinct `info` string per
+helper already used for `MESH_SESSION_INFO`, and a distinct `info` string per
 purpose yields independent keys from one unlock — which is what makes multiple
 KEKs practical for a single-user app at all.
 
 The envelope survives all of this unchanged. Core's decision that
 [secrets use a per-secret DEK wrapped by a KEK](../../../../core/knowledge/decisions/security/core-secrets-use-a-per-secret-dek-wrapped-by-a-kek.md)
-already rules out collapsing it, and scoping is the argument *for* the envelope
+already rules out collapsing it, and scoping is the argument _for_ the envelope
 rather than against it: rescoping or rotating a key rewraps DEKs, touching a
 small constant per row, while a design that encrypted values directly under the
 KEK would have to decrypt and re-encrypt every value.

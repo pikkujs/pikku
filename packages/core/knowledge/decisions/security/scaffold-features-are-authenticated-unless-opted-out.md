@@ -34,7 +34,7 @@ The type is now `boolean | { auth?: boolean; path?: string }`. `true` means
 enabled **and authenticated**; a surface becomes public only by writing
 `{ auth: false }`. Omitting a field can then never open anything — the failure
 mode of a forgotten flag is a locked door. Features with no auth dimension
-(`webhook`, `remoteRpc`, whose generator hardcodes `auth: false`) simply ignore
+(`webhook`, `meshRpc`, whose generator hardcodes `auth: false`) simply ignore
 it.
 
 The object form is also what makes the legacy strings safe to remove. An

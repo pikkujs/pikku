@@ -655,6 +655,20 @@ describe('MCP flag', () => {
   })
 })
 
+describe('expose', () => {
+  test('declares every operation exposed, so a host list can opt in', () => {
+    const spec = makeSpec({
+      operations: [makeOp({ operationId: 'listItems' })],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+    })
+    assert.match(files['src/functions/listItems.function.ts']!, /expose: true,/)
+  })
+})
+
 // ---------------------------------------------------------------------------
 // camelCase flag
 // ---------------------------------------------------------------------------

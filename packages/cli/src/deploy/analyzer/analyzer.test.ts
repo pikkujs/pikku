@@ -873,11 +873,16 @@ describe('analyzeDeployment - the remote job inbox lands on the work', () => {
 
 /**
  * A project with the generic `/rpc/:rpcName` dispatcher, one ordinary
- * function, and one wired addon publishing an exposed and a non-exposed
- * function.
+ * function, and one addon publishing an exposed and a non-exposed function,
+ * wired with `expose: true`.
  */
 function stateWithAddon(): InspectorState {
   return {
+    rpc: {
+      wireAddonDeclarations: new Map([
+        ['admin', { package: '@x/admin', expose: true }],
+      ]),
+    },
     functions: {
       meta: {
         rpcCaller: { pikkuFuncId: 'rpcCaller', name: 'rpcCaller' },
@@ -952,7 +957,7 @@ describe('analyzeDeployment - addon units', () => {
     )
   })
 
-  const withWiredExpose = (expose: boolean | string[]) => {
+  const withWiredExpose = (expose: boolean | string[] | undefined) => {
     const state = stateWithAddon()
     ;(state as any).rpc = {
       wireAddonDeclarations: new Map([
@@ -962,11 +967,27 @@ describe('analyzeDeployment - addon units', () => {
     return analyze(state)
   }
 
-  test('a wireAddon expose list decides the unit, undeclared functions included', () => {
-    const unit = withWiredExpose(['internalSweep']).units.find(
+  test('a wireAddon without expose leaves the addon without a unit', () => {
+    assert.equal(
+      withWiredExpose(undefined).units.some((u) => u.name === 'addon-admin'),
+      false
+    )
+  })
+
+  test('a wireAddon expose list narrows the unit to the declared functions it names', () => {
+    const unit = withWiredExpose(['createUser']).units.find(
       (u) => u.name === 'addon-admin'
     )
-    assert.deepEqual(unit?.functionIds, ['admin:internalSweep'])
+    assert.deepEqual(unit?.functionIds, ['admin:createUser'])
+  })
+
+  test('a wireAddon expose list cannot expose a function the addon did not declare', () => {
+    assert.equal(
+      withWiredExpose(['internalSweep']).units.some(
+        (u) => u.name === 'addon-admin'
+      ),
+      false
+    )
   })
 
   test('wireAddon expose: false leaves the addon without a unit or a dispatch', () => {
@@ -986,7 +1007,7 @@ describe('analyzeDeployment - addon units', () => {
       .map((r) => r.route)
     assert.deepEqual(routes, [
       '/rpc/admin:createUser',
-      '/remote/rpc/admin:createUser',
+      '/mesh/rpc/admin:createUser',
     ])
   })
 
@@ -1065,6 +1086,11 @@ function stateWithRules(): InspectorState {
           expose: true,
         },
       },
+    },
+    rpc: {
+      wireAddonDeclarations: new Map([
+        ['admin', { package: '@pikku/addon-admin', expose: true }],
+      ]),
     },
     agents: { agentsMeta: {} },
     mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },

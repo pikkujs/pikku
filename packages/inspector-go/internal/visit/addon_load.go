@@ -361,6 +361,9 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 			if !meta.has(fn) {
 				s.Log.Critical(diag.AddonExposeFunctionNotFound, fmt.Sprintf(
 					"wireAddon('%s') lists '%s' under expose, but %s publishes no such function.", ns, fn, decl.pkg))
+			} else if m := fns.At(fn); m == nil || m.Expose == nil || !*m.Expose {
+				s.Log.Critical(diag.AddonExposeFunctionNotFound, fmt.Sprintf(
+					"wireAddon('%s') lists '%s' under expose, but %s does not declare it expose: true, so it stays unexposed.", ns, fn, decl.pkg))
 			}
 		}
 	}

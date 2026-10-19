@@ -5,9 +5,9 @@ import { wireAddon } from '#pikku/addon'
  * functions declares itself a tool, so the list is the only thing that puts one
  * on the menu — and it puts exactly one there.
  *
- * `expose` does the same for `POST /rpc`: the addon declares `listTodos` and
- * `resetTodos` exposed, and the list adds `getTodo`, which it does not.
- * `deleteTodo` stays unreachable over RPC.
+ * `expose` does the same for `POST /rpc`, from the functions the addon itself
+ * declares exposed — `listTodos`, `resetTodos` and `getTodo`. `deleteTodo` is
+ * not one of them, so no list could open it, and it stays unreachable over RPC.
  */
 wireAddon({
   name: 'todos',

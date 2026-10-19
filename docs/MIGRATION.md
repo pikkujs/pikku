@@ -24,6 +24,32 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### The mesh is named `mesh`, and remote addons use the public RPC route
+
+Cross-unit RPC inside one app (the deploymentService "mesh") no longer shares the word "remote" with `wireRemoteAddon`. See [`remote-rpc.md`](./remote-rpc.md).
+
+| Before                                          | After                                       |
+| ----------------------------------------------- | ------------------------------------------- |
+| `PIKKU_REMOTE_SECRET`                           | `PIKKU_MESH_SECRET`                         |
+| `POST /remote/rpc/:rpcName`                     | `POST /mesh/rpc/:rpcName`                   |
+| `rpc.remote(name, data)`                        | `rpc.mesh(name, data)`                      |
+| `pikkuRemoteAuthMiddleware`                     | `pikkuMeshAuthMiddleware`                   |
+| `@pikku/core/remote`, `buildRemoteHeaders`      | `@pikku/core/mesh`, `buildMeshHeaders`      |
+| `pikku enable remote-rpc`, `scaffold.remoteRpc` | `pikku enable mesh-rpc`, `scaffold.meshRpc` |
+| queue `pikku-remote-internal-rpc`               | queue `pikku-mesh-rpc`                      |
+
+Mesh tokens now use audience `pikku-mesh` and a new session-encryption info string, so deploy every unit of a split app together. Search: `rg -n "PIKKU_REMOTE_SECRET|remote/rpc|rpc\.remote\(|pikkuRemoteAuth|core/remote|remoteRpc|remote-rpc"`.
+
+`remote: true` on a function is unchanged: it still publishes the function to `wireRemoteAddon` consumers and gives it a mesh route in split deploys.
+
+### `wireAddon` and `wireRemoteAddon` `expose` is opt-in
+
+An addon's `expose: true` functions are no longer reachable through `rpc.exposed` (`POST /rpc/:rpcName`) just because the addon is installed. Add `expose: true` to the `wireAddon` call to keep them, or a list to choose some. A list can no longer open a function the addon did not declare `expose: true`; PKU343 now names such an entry. Server-side `rpc('ns:fn')` calls are unaffected. Search: `rg -n "wireAddon\(" -A6`.
+
+### `wireRemoteAddon` posts to the host's public RPC route
+
+A remote-addon call now goes to `{serverUrl}/rpc/<fn>`, with the header `x-pikku-remote-contract: 1`. A host serving a remote addon needs `scaffold.rpc`, and each function it serves to consumers must be `expose: true` and `remote: true`; the host refuses any other function on such a call. `RemoteAddonRequestError` is gone: a failed call throws the host's registered `PikkuError`, the standard error for its status, `RemoteAddonFailedError` (502) or `RemoteAddonTimeoutError` (504). `wireRemoteAddon` gains `expose`, `timeoutMs` (default 30s) and `headers`.
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.

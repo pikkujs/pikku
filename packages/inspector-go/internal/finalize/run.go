@@ -84,7 +84,7 @@ func Run(log *diag.Logger, st *state.State, opts Options) error {
 		validateScenarioSteps(log, st)
 		validateScenarioFeatures(log, st)
 		annotateHTTPRouteAuth(st)
-		validateExposedFunctionsGated(log, st)
+		validateExposedFunctionsGated(log, st, opts.IsAddon)
 		validateTagsResolveToMiddleware(log, st)
 
 		if len(opts.OpenAPI) > 0 && string(opts.OpenAPI) != "null" {

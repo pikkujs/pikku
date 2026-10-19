@@ -5,6 +5,7 @@ export const goodbye = pikkuSessionlessFunc<
   { message: string }
 >({
   description: 'Sends a farewell message',
+  expose: true,
   func: async ({ logger }, data) => {
     const message = `Goodbye, ${data.name}!`
     logger.info(`Addon: ${message}`)

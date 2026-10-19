@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import {
+  isAddonFunctionExposed,
   resolveAddonFunctionTarget,
   resolveAddonScopes,
   wireAddon,
@@ -169,5 +170,30 @@ describe('resolveAddonScopes', () => {
     wireAddon({ name: 'mail', package: '@addon/mail' })
 
     assert.deepEqual(resolveAddonScopes('@addon/stripe', 'mail'), ['admin'])
+  })
+})
+
+describe('isAddonFunctionExposed', () => {
+  test('is opt-in, and only ever narrows what the addon declared', () => {
+    const cases: Array<
+      [boolean | string[] | undefined, boolean | undefined, boolean]
+    > = [
+      [undefined, true, false],
+      [false, true, false],
+      [true, true, true],
+      [true, undefined, false],
+      [true, false, false],
+      [['fn'], true, true],
+      [['fn'], undefined, false],
+      [['other'], true, false],
+      [[], true, false],
+    ]
+    for (const [expose, declared, expected] of cases) {
+      assert.equal(
+        isAddonFunctionExposed(expose, 'fn', declared),
+        expected,
+        `expose=${JSON.stringify(expose)} declared=${declared}`
+      )
+    }
   })
 })

@@ -10,10 +10,11 @@ A rule about how core behaves: what runs where, in what order, and what a
 caller is entitled to assume.
 
 <!-- pikku:knowledge-index -->
+
 - [A credential name declared twice must agree on its schema and its type](a-credential-name-declared-twice-must-agree-on-schema-and-type.md) — validateAndBuildCredentialDefinitionsMeta throws when two declarations of one credential name differ in schema or in type, and otherwise keeps the first declaration
 - [declareScopes lets an app grant a scope whose addon it does not wire](a-grant-can-name-a-scope-declared-without-its-addon.md) — defineScope is a no-op read by the CLI, and declareScopes declares scope ids so a grant is valid without wiring the addon that owns the scope tree
 - [A held run is woken later, not retried](a-held-run-is-woken-later-not-retried.md) — An orchestrator message that finds its run held enqueues a fresh wake-up a second later instead of failing, because the queue's retry budget is for real failures and a long pass outlasts it
-- [A latency budget is asserted by its cause, not by the clock](a-latency-budget-is-asserted-by-its-cause.md) — The per-request key derivation and remote RPC round-trip tests count WebCrypto calls and check the algorithm instead of timing them, because a millisecond budget fails under CI load while the regression it guards is a choice of KDF
+- [A latency budget is asserted by its cause, not by the clock](a-latency-budget-is-asserted-by-its-cause.md) — The per-request key derivation and mesh RPC round-trip tests count WebCrypto calls and check the algorithm instead of timing them, because a millisecond budget fails under CI load while the regression it guards is a choice of KDF
 - [A non-streaming agent run registers with agentRunState on the same terms as a streaming one](a-non-streaming-agent-run-registers-with-agentrunstate-too.md) — Otherwise interruptAgent finds the run, passes the ownership check, then cannot stop it — and reports that as if the run were on another host
 - [With scenarios.reset on, the dev seed is the fixture every assertion is written against](a-reset-suite-makes-the-dev-seed-the-fixture.md) — The rollback restores the database as the suite found it, so seed rows are the shared baseline — which makes an absolute date in the seed a test that expires
 - [A resumed turn is as interruptible as the first one](a-resumed-agent-turn-is-as-interruptible-as-the-first.md) — It is the same person listening to the same voice, and after an approval it is where most of the reply actually gets spoken
@@ -69,7 +70,7 @@ caller is entitled to assume.
 - [CLI stdout is reserved for machine-readable output](cli-stdout-is-reserved-for-machine-readable-output.md) — The default renderer emits single-line NDJSON, diagnostics go to stderr, and --json only hijacks rendering for commands that declared a renderer
 - [CLI unknown long options warn instead of failing](cli-unknown-long-options-warn-instead-of-failing.md) — Unrecognised --long options are accepted, warned about and dropped so older binaries tolerate newer invocations, while unknown short flags stay hard errors
 - [A column's at-rest form is an axis of its own](core-column-form-is-an-axis-of-its-own.md) — How a value is stored is independent of how sensitive it is, so form carries a required nominal brand on writes while classification stays optional on reads
-- [The data-classification brand is an optional property](core-data-classification-brand-is-an-optional-property.md) — Making __classification__ required would break ordinary Kysely operands, so the brand only constrains values flowing out
+- [The data-classification brand is an optional property](core-data-classification-brand-is-an-optional-property.md) — Making **classification** required would break ordinary Kysely operands, so the brand only constrains values flowing out
 - [The function runner restores the wire fields it overwrites](core-function-runner-restores-the-wire-fields-it-overwrites.md) — One wire object is reused across nested calls, so functionId, audit, addonNamespace and rpc are saved and put back in a finally
 - [Core has no runtime import cycles; mutual recursion is reached lazily](core-has-no-runtime-import-cycles.md) — The rpc runner reaches the function runner, and an agent's sub-agent tool reaches the agent runners, through a dynamic import, so no module is part of a static cycle
 - [Hot reload merges generated meta and never replaces it](core-hot-reload-merges-generated-meta-never-replaces-it.md) — Reloading codegen output must preserve runtime-registered meta, which no generated JSON contains
@@ -182,4 +183,5 @@ caller is entitled to assume.
 - [A workflow step's recorded `rpcName` is provenance only — nothing dispatches off it](workflow-step-rpc-name-is-provenance-only.md) — It exists so a reader can join a runtime step row back to the declaration that produced it, especially when the durable name was built in a loop
 - [A suspend or approval `reason` is the step's durable identity, not just a message](workflow-suspend-and-approval-reasons-are-durable-step-identities.md) — The reason is namespaced and used raw as the step key, so it must be derived deterministically across replays
 - [A suspended workflow run keeps its in-process context; only terminal runs release it](workflow-suspended-runs-keep-their-in-process-context.md) — `suspended` is absent from the terminal set on purpose, and a context is dropped only when nothing is holding it open
+
 <!-- /pikku:knowledge-index -->

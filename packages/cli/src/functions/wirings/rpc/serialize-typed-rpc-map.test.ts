@@ -20,7 +20,7 @@ describe('serializeTypedRPCMap', () => {
     },
   } as any
 
-  test('uses strict voidish detection for RPCInvoke and RPCRemote', () => {
+  test('uses strict voidish detection for RPCInvoke and RPCMesh', () => {
     const result = serializeTypedRPCMap(
       logger,
       '/tmp/pikku-rpc-map.gen.d.ts',

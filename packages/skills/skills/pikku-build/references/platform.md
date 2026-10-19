@@ -60,7 +60,7 @@ Most surfaces are switched on by the CLI rather than hand-wired:
 bunx --bun pikku enable workflow      # workflow workers
 bunx --bun pikku enable agent         # public agent endpoints
 bunx --bun pikku enable events        # realtime events channel + SSE stream
-bunx --bun pikku enable remote-rpc    # internal RPC queue worker + HTTP endpoint
+bunx --bun pikku enable mesh-rpc      # mesh RPC queue worker + HTTP endpoint
 bunx --bun pikku enable webhook       # outgoing webhook delivery queue worker
 bunx --bun pikku enable scenarios     # scenario instrumentation
 bunx --bun pikku enable rpc           # public RPC endpoint

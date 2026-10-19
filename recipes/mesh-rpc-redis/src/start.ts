@@ -11,12 +11,12 @@ const PORTS = [3001, 3002]
 // holding it can mint a token as any user. A fixed literal here would ship that
 // power to every deployment of this template, so an unset variable gets a fresh
 // random secret instead — shared with the servers spawned below, and gone on
-// restart. Set PIKKU_REMOTE_SECRET to a value of your own to keep tokens valid
+// restart. Set PIKKU_MESH_SECRET to a value of your own to keep tokens valid
 // across restarts and across separately-started servers.
-if (!process.env.PIKKU_REMOTE_SECRET) {
-  process.env.PIKKU_REMOTE_SECRET = randomBytes(32).toString('hex')
+if (!process.env.PIKKU_MESH_SECRET) {
+  process.env.PIKKU_MESH_SECRET = randomBytes(32).toString('hex')
   console.warn(
-    'PIKKU_REMOTE_SECRET is not set — generated an ephemeral one for this run. Set it explicitly before deploying.'
+    'PIKKU_MESH_SECRET is not set — generated an ephemeral one for this run. Set it explicitly before deploying.'
   )
 }
 

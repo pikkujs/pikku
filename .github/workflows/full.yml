@@ -635,8 +635,8 @@ jobs:
             bullmq,
             workflows-bullmq,
             workflows-pg-boss,
-            remote-rpc-pg,
-            remote-rpc-redis,
+            mesh-rpc-pg,
+            mesh-rpc-redis,
             # ai-postgres is disabled: it drives a live agent turn, and the
             # OPENAI_API_KEY it runs against has no credits left, so both the
             # yarn and bun jobs burn five minutes retrying and fail on `You have

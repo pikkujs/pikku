@@ -10,7 +10,7 @@ type SurfaceFeature =
   | 'agent'
   | 'workflow'
   | 'events'
-  | 'remoteRpc'
+  | 'meshRpc'
   | 'remoteJobs'
 
 type WorkerFeature = 'webhook'
@@ -45,13 +45,11 @@ async function enableFeature(
 }
 
 export const enableRpc = pikkuVoidFunc({
-  func: async ({ logger, config }) =>
-    enableFeature('rpc', logger, config),
+  func: async ({ logger, config }) => enableFeature('rpc', logger, config),
 })
 
 export const enableConsole = pikkuVoidFunc({
-  func: async ({ logger, config }) =>
-    enableFeature('console', logger, config),
+  func: async ({ logger, config }) => enableFeature('console', logger, config),
 })
 
 export const enableScenarios = pikkuVoidFunc({
@@ -60,23 +58,19 @@ export const enableScenarios = pikkuVoidFunc({
 })
 
 export const enableAgent = pikkuVoidFunc({
-  func: async ({ logger, config }) =>
-    enableFeature('agent', logger, config),
+  func: async ({ logger, config }) => enableFeature('agent', logger, config),
 })
 
 export const enableWorkflow = pikkuVoidFunc({
-  func: async ({ logger, config }) =>
-    enableFeature('workflow', logger, config),
+  func: async ({ logger, config }) => enableFeature('workflow', logger, config),
 })
 
 export const enableEvents = pikkuVoidFunc({
-  func: async ({ logger, config }) =>
-    enableFeature('events', logger, config),
+  func: async ({ logger, config }) => enableFeature('events', logger, config),
 })
 
-export const enableRemoteRpc = pikkuVoidFunc({
-  func: async ({ logger, config }) =>
-    enableFeature('remoteRpc', logger, config),
+export const enableMeshRpc = pikkuVoidFunc({
+  func: async ({ logger, config }) => enableFeature('meshRpc', logger, config),
 })
 
 export const enableRemoteJobs = pikkuVoidFunc({
@@ -85,6 +79,5 @@ export const enableRemoteJobs = pikkuVoidFunc({
 })
 
 export const enableWebhook = pikkuVoidFunc({
-  func: async ({ logger, config }) =>
-    enableFeature('webhook', logger, config),
+  func: async ({ logger, config }) => enableFeature('webhook', logger, config),
 })

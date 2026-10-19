@@ -29,7 +29,7 @@
     "workflow": true,
     "console": true,
     "events": true,
-    "remoteRpc": true,
+    "meshRpc": true,
     "webhook": true,
     "pikkuDir": "pikku"
   },

@@ -146,7 +146,7 @@ sleeper could not have identified the sleeping step even if the lookup had
 succeeded.
 
 The BullMQ and pg-boss schedulers already do the right thing: enqueue
-`{ rpcName, data, session }` and have the generated `pikku-remote-internal-rpc`
+`{ rpcName, data, session }` and have the generated `pikku-mesh-rpc`
 worker call `rpc.invoke(rpcName, data)`. The in-memory implementation was the
 odd one out.
 

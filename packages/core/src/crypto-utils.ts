@@ -149,10 +149,10 @@ export const decryptJSON = async <T>(
 }
 
 /**
- * Namespaces the remote-RPC session key so the same deployment secret used for
+ * Namespaces the mesh-RPC session key so the same deployment secret used for
  * another purpose derives a different key. See knowledge/crypto.md.
  */
-export const REMOTE_SESSION_INFO = 'pikku:remote-session'
+export const MESH_SESSION_INFO = 'pikku:mesh-session'
 
 /** Shortest key material, in characters, that the `*WithKeyMaterial` helpers accept. */
 export const MIN_KEY_MATERIAL_LENGTH = 32
@@ -210,7 +210,7 @@ const expandKeyMaterial = async (
  * high-entropy key material by HKDF-SHA256, with a fresh random salt per call.
  *
  * `info` domain-separates the derived key, so the same deployment secret used for
- * two purposes (e.g. {@link REMOTE_SESSION_INFO}) yields two unrelated keys.
+ * two purposes (e.g. {@link MESH_SESSION_INFO}) yields two unrelated keys.
  *
  * @param name - The key material's name, for the weak-key error.
  * @param keyMaterial - At least {@link MIN_KEY_MATERIAL_LENGTH} characters.

@@ -1,19 +1,19 @@
 /**
- * Lambda deployment service — routes remote() calls via Lambda Invoke.
+ * Lambda deployment service — routes mesh() calls via Lambda Invoke.
  *
  * When a gateway (agent, MCP, channel, workflow orchestrator) calls
- * remote('funcName'), this service dispatches to the function's Lambda
+ * mesh('funcName'), this service dispatches to the function's Lambda
  * via the AWS SDK InvokeCommand. Equivalent to Cloudflare's service bindings.
  *
- * Session propagation uses the existing pikkuRemoteAuthMiddleware:
- * JWT signed with PIKKU_REMOTE_SECRET, session encrypted in payload.
+ * Session propagation uses the existing pikkuMeshAuthMiddleware:
+ * JWT signed with PIKKU_MESH_SECRET, session encrypted in payload.
  */
 
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
 import type { DeploymentService, DeploymentConfig } from '@pikku/core/services'
 import type { JWTService } from '@pikku/core/services'
 import type { SecretService } from '@pikku/core/services'
-import { buildRemoteHeaders } from '@pikku/core/remote'
+import { buildMeshHeaders } from '@pikku/core/mesh'
 
 export class LambdaDeploymentService implements DeploymentService {
   private client: LambdaClient
@@ -46,7 +46,7 @@ export class LambdaDeploymentService implements DeploymentService {
       )
     }
 
-    const headers = await buildRemoteHeaders(
+    const headers = await buildMeshHeaders(
       this.jwt,
       this.secrets,
       funcName,
@@ -55,7 +55,7 @@ export class LambdaDeploymentService implements DeploymentService {
     )
 
     // Build an API Gateway v2 event for the target Lambda
-    const rpcPath = `/remote/rpc/${encodeURIComponent(funcName)}`
+    const rpcPath = `/mesh/rpc/${encodeURIComponent(funcName)}`
     const apiGatewayEvent = {
       httpMethod: 'POST',
       path: rpcPath,
@@ -87,12 +87,12 @@ export class LambdaDeploymentService implements DeploymentService {
         ? new TextDecoder().decode(response.Payload)
         : 'Unknown error'
       throw new Error(
-        `Remote RPC call to '${funcName}' failed: Lambda error: ${errorPayload}`
+        `Mesh RPC call to '${funcName}' failed: Lambda error: ${errorPayload}`
       )
     }
 
     if (!response.Payload) {
-      throw new Error(`Remote RPC call to '${funcName}' returned no payload`)
+      throw new Error(`Mesh RPC call to '${funcName}' returned no payload`)
     }
 
     // The Lambda returns an API Gateway response shape
@@ -100,7 +100,7 @@ export class LambdaDeploymentService implements DeploymentService {
 
     if (lambdaResult.statusCode && lambdaResult.statusCode >= 400) {
       throw new Error(
-        `Remote RPC call to '${funcName}' failed: ${lambdaResult.statusCode} ${lambdaResult.body}`
+        `Mesh RPC call to '${funcName}' failed: ${lambdaResult.statusCode} ${lambdaResult.body}`
       )
     }
 

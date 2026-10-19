@@ -242,9 +242,19 @@ describe('validateExposedFunctionsGated', () => {
 
     assert.equal(diagnostics.length, 0)
   })
+
+  test('stays silent in an addon build, where expose only marks eligibility', () => {
+    validateExposedFunctionsGated(
+      logger,
+      stateWith({ credentialGet: ungatedFunction() }),
+      { isAddon: true }
+    )
+
+    assert.equal(warning(), undefined)
+  })
 })
 
-describe('validateExposedFunctionsGated — wireAddon expose lists', () => {
+describe('validateExposedFunctionsGated — wireAddon expose', () => {
   const withAddon = (
     declaration: Record<string, unknown>,
     addonMeta: Record<string, unknown>
@@ -253,11 +263,21 @@ describe('validateExposedFunctionsGated — wireAddon expose lists', () => {
     addonFunctions: { shop: addonMeta },
   })
 
-  test('warns when the list opens an ungated addon function', () => {
+  test('warns when a list exposes an ungated addon function', () => {
     run(
       withAddon(
         { expose: ['voidInvoice'] },
-        { voidInvoice: { sessionless: true } }
+        { voidInvoice: { sessionless: true, expose: true } }
+      )
+    )
+    assert.match(warning()!.message, /shop:voidInvoice/)
+  })
+
+  test('warns when expose: true exposes an ungated addon function', () => {
+    run(
+      withAddon(
+        { expose: true },
+        { voidInvoice: { sessionless: true, expose: true } }
       )
     )
     assert.match(warning()!.message, /shop:voidInvoice/)
@@ -268,21 +288,31 @@ describe('validateExposedFunctionsGated — wireAddon expose lists', () => {
       withAddon(
         { expose: ['voidInvoice', 'getOrder'] },
         {
-          voidInvoice: { sessionless: false },
-          getOrder: { sessionless: true, auth: true },
+          voidInvoice: { sessionless: false, expose: true },
+          getOrder: { sessionless: true, auth: true, expose: true },
         }
       )
     )
     run(
       withAddon(
         { expose: ['voidInvoice'], auth: true },
+        { voidInvoice: { sessionless: true, expose: true } }
+      )
+    )
+    assert.equal(warning(), undefined)
+  })
+
+  test('says nothing about a listed function the addon did not declare exposed', () => {
+    run(
+      withAddon(
+        { expose: ['voidInvoice'] },
         { voidInvoice: { sessionless: true } }
       )
     )
     assert.equal(warning(), undefined)
   })
 
-  test('says nothing about an addon left on its own declarations', () => {
+  test('says nothing about an addon the app did not opt in to exposing', () => {
     run(withAddon({}, { voidInvoice: { sessionless: true, expose: true } }))
     assert.equal(warning(), undefined)
   })

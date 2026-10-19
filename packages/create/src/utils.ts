@@ -279,7 +279,7 @@ const FILE_FEATURE_MAPPING = {
   'workflow.': ['workflows'],
   'graph.': ['workflows'],
   'cli.': ['cli'],
-  'remote-rpc.': ['remote-rpc'],
+  'mesh-rpc.': ['mesh-rpc'],
 } as const
 
 /**

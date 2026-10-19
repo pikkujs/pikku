@@ -82,7 +82,7 @@ export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
     : [name: Name, data: FlattenedRPCMap[Name]['input']]
 ) => Promise<FlattenedRPCMap[Name]['output']>
 
-export type RPCRemote = <Name extends keyof FlattenedRPCMap>(
+export type RPCMesh = <Name extends keyof FlattenedRPCMap>(
   ...args: IsVoidishInput<FlattenedRPCMap[Name]['input']> extends true
     ? [name: Name]
     : [name: Name, data: FlattenedRPCMap[Name]['input']]
@@ -128,7 +128,7 @@ type TypedAgentStream = [keyof FlattenedAgentMap] extends [never]
       options?: { requiresToolApproval?: 'all' | 'explicit' | false }
     ) => Promise<void>
 
-export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote, TypedStartWorkflow, TypedAgentRun, TypedAgentStream>
+export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCMesh, TypedStartWorkflow, TypedAgentRun, TypedAgentStream>
   `
 }
 

@@ -28,7 +28,7 @@ rather than an ordering accident (`http-runner.test.ts`, "setSession from
 middleware").
 
 The built-in auth middleware — `authCookie`, `authBearer`, `authAPIKey`,
-`pikkuRemoteAuthMiddleware`, `addonScopeCap`, the better-auth session
+`pikkuMeshAuthMiddleware`, `addonScopeCap`, the better-auth session
 middleware and the CLI's studio and virtual-user sessions — call
 `setInitialSession`, because they restore an identity the caller already holds.
 

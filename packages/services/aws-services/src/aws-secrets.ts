@@ -27,7 +27,7 @@ export class AWSSecrets implements SecretService {
    * The secret's string value, or `undefined` when it does not exist or holds
    * no string. Anything else — throttling, an expired role, a network failure —
    * is thrown: reporting it as absent would let a caller treat an outage as
-   * "not configured", which for `PIKKU_REMOTE_SECRET` means sending remote
+   * "not configured", which for `PIKKU_MESH_SECRET` means sending remote
    * calls unauthenticated.
    */
   private async fetchSecretString(

@@ -16,7 +16,7 @@ import {
  * inbound route of its own.
  *
  * It slots into the existing `services.deploymentService` hole, leaving
- * `rpc.remote` resolution, session propagation and traceId plumbing unchanged.
+ * `rpc.mesh` resolution, session propagation and traceId plumbing unchanged.
  */
 export class ChannelDeploymentService implements DeploymentService {
   public readonly registry: ChannelRPCRegistry

@@ -3,6 +3,7 @@ export {
   rpcService,
   RPCNotFoundError,
   RemoteAddonConfigError,
-  RemoteAddonRequestError,
+  RemoteAddonFailedError,
+  RemoteAddonTimeoutError,
 } from './rpc-runner.js'
 export type { PikkuRPC, RPCMeta } from './rpc-types.js'

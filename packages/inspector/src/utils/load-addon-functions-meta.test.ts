@@ -320,8 +320,15 @@ describe('loadAddonFunctionsMeta — wireAddon expose lists', () => {
     assert.match(criticals[0]!, /getOrdr/)
   })
 
-  test('published names, including undeclared ones, and booleans pass', async () => {
-    assert.deepEqual(await criticalsFor(['getOrder', 'voidInvoice']), [])
+  test('a published name the addon does not declare exposed fails the build', async () => {
+    const criticals = await criticalsFor(['getOrder', 'voidInvoice'])
+    assert.equal(criticals.length, 1)
+    assert.match(criticals[0]!, /PKU343/)
+    assert.match(criticals[0]!, /voidInvoice.*does not declare it expose: true/)
+  })
+
+  test('declared-exposed names and booleans pass', async () => {
+    assert.deepEqual(await criticalsFor(['getOrder']), [])
     assert.deepEqual(await criticalsFor(false), [])
     assert.deepEqual(await criticalsFor(true), [])
   })

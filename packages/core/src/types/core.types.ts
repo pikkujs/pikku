@@ -323,21 +323,21 @@ export type PikkuWire<
    * sets it; services that log fall back to the singleton logger.
    */
   logger: Logger
-  /** Trace ID for distributed tracing — propagated across remote RPC calls via the x-request-id header */
+  /** Trace ID for distributed tracing — propagated across mesh RPC calls via the x-request-id header */
   traceId: string
   functionId: string
   addonNamespace: string
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
-  // `channel.remote` is typed off the same generated map as `rpc.remote`, so
+  // `channel.remote` is typed off the same generated map as `rpc.mesh`, so
   // calling back into the connected peer is checked against the app's own
   // function contracts rather than being a string and an `any`.
   channel: [IsChannel] extends [null]
-    ? PikkuChannel<unknown, Out, TypedRPC['remote']>
-    : PikkuChannel<unknown, Out, TypedRPC['remote']> | undefined
+    ? PikkuChannel<unknown, Out, TypedRPC['mesh']>
+    : PikkuChannel<unknown, Out, TypedRPC['mesh']> | undefined
   scheduledTask: PikkuScheduledTask
   queue: PikkuQueue
-  cli: PikkuCLI<TypedRPC['remote']>
+  cli: PikkuCLI<TypedRPC['mesh']>
   workflow: TypedWorkflow
   scenario: TypedScenario
   virtualUsers: TScenarioVirtualUsers

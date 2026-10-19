@@ -74,28 +74,39 @@ func gatesItself(meta *state.FunctionMeta) bool {
 		len(meta.Permissions) > 0
 }
 
-func validateExposedFunctionsGated(log *diag.Logger, st *state.State) {
+func validateExposedFunctionsGated(log *diag.Logger, st *state.State, isAddon bool) {
 	var ungated []string
 	// TS also skips a function whose meta.packageName names a gated addon;
 	// local function meta never carries packageName (FunctionMeta has no such
 	// field), so that branch cannot fire here.
-	st.Functions.Meta.Each(func(name string, meta *state.FunctionMeta) {
-		if meta == nil || !isTruePtr(meta.Expose) || gatesItself(meta) {
-			return
-		}
-		ungated = append(ungated, name)
-	})
+	if !isAddon {
+		st.Functions.Meta.Each(func(name string, meta *state.FunctionMeta) {
+			if meta == nil || !isTruePtr(meta.Expose) || gatesItself(meta) {
+				return
+			}
+			ungated = append(ungated, name)
+		})
+	}
 	for _, e := range addonDecls(st) {
-		if !isArray(e.decl.Expose) || isTrue(e.decl.Auth) || len(e.decl.Scopes) > 0 {
+		exposeAll := isTrue(e.decl.Expose)
+		if (!exposeAll && !isArray(e.decl.Expose)) || isTrue(e.decl.Auth) || len(e.decl.Scopes) > 0 {
 			continue
 		}
 		fns := st.AddonFunctions.At(e.namespace)
-		for _, fn := range decode[[]string](state.Raw(e.decl.Expose)) {
+		var selected []string
+		if exposeAll {
+			if fns != nil {
+				fns.Each(func(fn string, _ *state.FunctionMeta) { selected = append(selected, fn) })
+			}
+		} else {
+			selected = decode[[]string](state.Raw(e.decl.Expose))
+		}
+		for _, fn := range selected {
 			var meta *state.FunctionMeta
 			if fns != nil {
 				meta = fns.At(fn)
 			}
-			if meta == nil || gatesItself(meta) {
+			if meta == nil || !isTruePtr(meta.Expose) || gatesItself(meta) {
 				continue
 			}
 			ungated = append(ungated, e.namespace+":"+fn)

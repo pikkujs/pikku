@@ -1,20 +1,20 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
-import { pikkuRemoteAuthMiddleware } from './remote-auth.js'
+import { pikkuMeshAuthMiddleware } from './mesh-auth.js'
 import { UnauthorizedError } from '../errors/errors.js'
 import { resetPikkuState } from '../pikku-state.js'
-import { encryptWithKeyMaterial, REMOTE_SESSION_INFO } from '../crypto-utils.js'
+import { encryptWithKeyMaterial, MESH_SESSION_INFO } from '../crypto-utils.js'
 import { createSecretValue } from '../classification/secret-value.js'
 
 beforeEach(() => {
   resetPikkuState()
 })
 
-const TEST_SECRET = 'test-remote-secret-key-with-enough-entropy'
+const TEST_SECRET = 'test-mesh-secret-key-with-enough-entropy'
 
 const createMockSecrets = (secret?: string) => ({
   getSecret: async (key: string) => {
-    if (key === 'PIKKU_REMOTE_SECRET' && secret !== undefined) {
+    if (key === 'PIKKU_MESH_SECRET' && secret !== undefined) {
       return createSecretValue(secret)
     }
     throw new Error(`Secret ${key} not found`)
@@ -39,10 +39,10 @@ const createMockRequest = (
   method: () => method,
 })
 
-describe('pikkuRemoteAuthMiddleware', () => {
+describe('pikkuMeshAuthMiddleware', () => {
   test('should call next when no http.request', async () => {
     let nextCalled = false
-    await pikkuRemoteAuthMiddleware(
+    await pikkuMeshAuthMiddleware(
       { secrets: createMockSecrets(TEST_SECRET) } as any,
       { http: {} } as any,
       async () => {
@@ -54,7 +54,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
 
   test('should call next when no secrets service', async () => {
     let nextCalled = false
-    await pikkuRemoteAuthMiddleware(
+    await pikkuMeshAuthMiddleware(
       {} as any,
       { http: { request: createMockRequest() } } as any,
       async () => {
@@ -64,9 +64,9 @@ describe('pikkuRemoteAuthMiddleware', () => {
     assert.strictEqual(nextCalled, true)
   })
 
-  test('should call next when PIKKU_REMOTE_SECRET not found', async () => {
+  test('should call next when PIKKU_MESH_SECRET not found', async () => {
     let nextCalled = false
-    await pikkuRemoteAuthMiddleware(
+    await pikkuMeshAuthMiddleware(
       { secrets: createMockSecrets() } as any,
       { http: { request: createMockRequest() } } as any,
       async () => {
@@ -76,22 +76,22 @@ describe('pikkuRemoteAuthMiddleware', () => {
     assert.strictEqual(nextCalled, true)
   })
 
-  test('should throw when PIKKU_REMOTE_SECRET set but no jwt service', async () => {
+  test('should throw when PIKKU_MESH_SECRET set but no jwt service', async () => {
     await assert.rejects(
       () =>
-        pikkuRemoteAuthMiddleware(
+        pikkuMeshAuthMiddleware(
           { secrets: createMockSecrets(TEST_SECRET) } as any,
           { http: { request: createMockRequest() } } as any,
           async () => {}
         ),
-      { message: 'PIKKU_REMOTE_SECRET set but JWT service missing' }
+      { message: 'PIKKU_MESH_SECRET set but JWT service missing' }
     )
   })
 
   test('should throw UnauthorizedError when no authorization header', async () => {
     await assert.rejects(
       () =>
-        pikkuRemoteAuthMiddleware(
+        pikkuMeshAuthMiddleware(
           {
             secrets: createMockSecrets(TEST_SECRET),
             jwt: createMockJWT(),
@@ -106,7 +106,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
   test('should throw UnauthorizedError for non-Bearer scheme', async () => {
     await assert.rejects(
       () =>
-        pikkuRemoteAuthMiddleware(
+        pikkuMeshAuthMiddleware(
           {
             secrets: createMockSecrets(TEST_SECRET),
             jwt: createMockJWT(),
@@ -125,7 +125,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
   test('should throw UnauthorizedError when Bearer has no token', async () => {
     await assert.rejects(
       () =>
-        pikkuRemoteAuthMiddleware(
+        pikkuMeshAuthMiddleware(
           {
             secrets: createMockSecrets(TEST_SECRET),
             jwt: createMockJWT(),
@@ -142,7 +142,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
   test('should throw UnauthorizedError when JWT decode fails', async () => {
     await assert.rejects(
       () =>
-        pikkuRemoteAuthMiddleware(
+        pikkuMeshAuthMiddleware(
           {
             secrets: createMockSecrets(TEST_SECRET),
             jwt: createMockJWT(null, true),
@@ -160,10 +160,10 @@ describe('pikkuRemoteAuthMiddleware', () => {
     )
   })
 
-  test('should throw UnauthorizedError when audience is not pikku-remote', async () => {
+  test('should throw UnauthorizedError when audience is not pikku-mesh', async () => {
     await assert.rejects(
       () =>
-        pikkuRemoteAuthMiddleware(
+        pikkuMeshAuthMiddleware(
           {
             secrets: createMockSecrets(TEST_SECRET),
             jwt: createMockJWT({ aud: 'wrong-audience' }),
@@ -184,7 +184,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
   test('should throw UnauthorizedError when audience is missing', async () => {
     await assert.rejects(
       () =>
-        pikkuRemoteAuthMiddleware(
+        pikkuMeshAuthMiddleware(
           {
             secrets: createMockSecrets(TEST_SECRET),
             jwt: createMockJWT({}),
@@ -204,10 +204,10 @@ describe('pikkuRemoteAuthMiddleware', () => {
 
   test('should call next for valid token with correct audience', async () => {
     let nextCalled = false
-    await pikkuRemoteAuthMiddleware(
+    await pikkuMeshAuthMiddleware(
       {
         secrets: createMockSecrets(TEST_SECRET),
-        jwt: createMockJWT({ aud: 'pikku-remote' }),
+        jwt: createMockJWT({ aud: 'pikku-mesh' }),
       } as any,
       {
         http: {
@@ -223,10 +223,10 @@ describe('pikkuRemoteAuthMiddleware', () => {
 
   test('should accept Authorization header (capitalized)', async () => {
     let nextCalled = false
-    await pikkuRemoteAuthMiddleware(
+    await pikkuMeshAuthMiddleware(
       {
         secrets: createMockSecrets(TEST_SECRET),
-        jwt: createMockJWT({ aud: 'pikku-remote' }),
+        jwt: createMockJWT({ aud: 'pikku-mesh' }),
       } as any,
       {
         http: {
@@ -244,16 +244,16 @@ describe('pikkuRemoteAuthMiddleware', () => {
     test('should throw UnauthorizedError when token fn does not match requested function', async () => {
       await assert.rejects(
         () =>
-          pikkuRemoteAuthMiddleware(
+          pikkuMeshAuthMiddleware(
             {
               secrets: createMockSecrets(TEST_SECRET),
-              jwt: createMockJWT({ aud: 'pikku-remote', fn: 'allowedFunc' }),
+              jwt: createMockJWT({ aud: 'pikku-mesh', fn: 'allowedFunc' }),
             } as any,
             {
               http: {
                 request: createMockRequest(
                   { authorization: 'Bearer valid-token' },
-                  '/remote/rpc/otherFunc'
+                  '/mesh/rpc/otherFunc'
                 ),
               },
             } as any,
@@ -264,21 +264,21 @@ describe('pikkuRemoteAuthMiddleware', () => {
     })
 
     test('enforces the fn binding even when the path prefix varies in case', async () => {
-      // The router matches /remote/rpc/ case-insensitively, so /Remote/RPC/
+      // The router matches /mesh/rpc/ case-insensitively, so /Mesh/RPC/
       // reaches the same handler. The fn-binding check must run for it too, or
       // a token scoped to one function invokes any other by varying the case.
       await assert.rejects(
         () =>
-          pikkuRemoteAuthMiddleware(
+          pikkuMeshAuthMiddleware(
             {
               secrets: createMockSecrets(TEST_SECRET),
-              jwt: createMockJWT({ aud: 'pikku-remote', fn: 'allowedFunc' }),
+              jwt: createMockJWT({ aud: 'pikku-mesh', fn: 'allowedFunc' }),
             } as any,
             {
               http: {
                 request: createMockRequest(
                   { authorization: 'Bearer valid-token' },
-                  '/Remote/RPC/otherFunc'
+                  '/Mesh/RPC/otherFunc'
                 ),
               },
             } as any,
@@ -288,16 +288,16 @@ describe('pikkuRemoteAuthMiddleware', () => {
       )
     })
 
-    test('requires authorization for a case-varied remote path when no secret is set', async () => {
-      // The no-secret branch must also treat /REMOTE/RPC/ as remote, or a
+    test('requires authorization for a case-varied mesh path when no secret is set', async () => {
+      // The no-secret branch must also treat /MESH/RPC/ as a mesh path, or a
       // misconfigured mesh silently serves it unauthenticated.
       await assert.rejects(
         () =>
-          pikkuRemoteAuthMiddleware(
+          pikkuMeshAuthMiddleware(
             { secrets: createMockSecrets(undefined) } as any,
             {
               http: {
-                request: createMockRequest({}, '/REMOTE/RPC/anyFunc'),
+                request: createMockRequest({}, '/MESH/RPC/anyFunc'),
               },
             } as any,
             async () => {}
@@ -308,16 +308,16 @@ describe('pikkuRemoteAuthMiddleware', () => {
 
     test('should allow when token fn matches requested function', async () => {
       let nextCalled = false
-      await pikkuRemoteAuthMiddleware(
+      await pikkuMeshAuthMiddleware(
         {
           secrets: createMockSecrets(TEST_SECRET),
-          jwt: createMockJWT({ aud: 'pikku-remote', fn: 'myFunc' }),
+          jwt: createMockJWT({ aud: 'pikku-mesh', fn: 'myFunc' }),
         } as any,
         {
           http: {
             request: createMockRequest(
               { authorization: 'Bearer valid-token' },
-              '/remote/rpc/myFunc'
+              '/mesh/rpc/myFunc'
             ),
           },
         } as any,
@@ -330,16 +330,16 @@ describe('pikkuRemoteAuthMiddleware', () => {
 
     test('should allow any RPC call when token has no fn claim', async () => {
       let nextCalled = false
-      await pikkuRemoteAuthMiddleware(
+      await pikkuMeshAuthMiddleware(
         {
           secrets: createMockSecrets(TEST_SECRET),
-          jwt: createMockJWT({ aud: 'pikku-remote' }),
+          jwt: createMockJWT({ aud: 'pikku-mesh' }),
         } as any,
         {
           http: {
             request: createMockRequest(
               { authorization: 'Bearer valid-token' },
-              '/remote/rpc/anyFunc'
+              '/mesh/rpc/anyFunc'
             ),
           },
         } as any,
@@ -352,10 +352,10 @@ describe('pikkuRemoteAuthMiddleware', () => {
 
     test('should skip fn check for non-RPC paths even if fn in token', async () => {
       let nextCalled = false
-      await pikkuRemoteAuthMiddleware(
+      await pikkuMeshAuthMiddleware(
         {
           secrets: createMockSecrets(TEST_SECRET),
-          jwt: createMockJWT({ aud: 'pikku-remote', fn: 'someFunc' }),
+          jwt: createMockJWT({ aud: 'pikku-mesh', fn: 'someFunc' }),
         } as any,
         {
           http: {
@@ -374,16 +374,16 @@ describe('pikkuRemoteAuthMiddleware', () => {
 
     test('should handle URI-encoded function names', async () => {
       let nextCalled = false
-      await pikkuRemoteAuthMiddleware(
+      await pikkuMeshAuthMiddleware(
         {
           secrets: createMockSecrets(TEST_SECRET),
-          jwt: createMockJWT({ aud: 'pikku-remote', fn: 'my func' }),
+          jwt: createMockJWT({ aud: 'pikku-mesh', fn: 'my func' }),
         } as any,
         {
           http: {
             request: createMockRequest(
               { authorization: 'Bearer valid-token' },
-              '/remote/rpc/my%20func'
+              '/mesh/rpc/my%20func'
             ),
           },
         } as any,
@@ -399,20 +399,20 @@ describe('pikkuRemoteAuthMiddleware', () => {
     test('should decrypt and set session when payload.session exists', async () => {
       const sessionData = { userId: 'user-1', role: 'admin' }
       const encryptedSession = await encryptWithKeyMaterial(
-        'PIKKU_REMOTE_SECRET',
+        'PIKKU_MESH_SECRET',
         TEST_SECRET,
-        REMOTE_SESSION_INFO,
+        MESH_SESSION_INFO,
         {
           session: sessionData,
         }
       )
       let receivedSession: any
 
-      await pikkuRemoteAuthMiddleware(
+      await pikkuMeshAuthMiddleware(
         {
           secrets: createMockSecrets(TEST_SECRET),
           jwt: createMockJWT({
-            aud: 'pikku-remote',
+            aud: 'pikku-mesh',
             session: encryptedSession,
           }),
         } as any,
@@ -433,11 +433,11 @@ describe('pikkuRemoteAuthMiddleware', () => {
     test('should throw UnauthorizedError when session decryption fails', async () => {
       await assert.rejects(
         () =>
-          pikkuRemoteAuthMiddleware(
+          pikkuMeshAuthMiddleware(
             {
               secrets: createMockSecrets(TEST_SECRET),
               jwt: createMockJWT({
-                aud: 'pikku-remote',
+                aud: 'pikku-mesh',
                 session: 'invalid-encrypted-data',
               }),
             } as any,
@@ -457,20 +457,20 @@ describe('pikkuRemoteAuthMiddleware', () => {
 
     test('should skip setInitialSession when setInitialSession is not available', async () => {
       const encryptedSession = await encryptWithKeyMaterial(
-        'PIKKU_REMOTE_SECRET',
+        'PIKKU_MESH_SECRET',
         TEST_SECRET,
-        REMOTE_SESSION_INFO,
+        MESH_SESSION_INFO,
         {
           session: { userId: 'u1' },
         }
       )
       let nextCalled = false
 
-      await pikkuRemoteAuthMiddleware(
+      await pikkuMeshAuthMiddleware(
         {
           secrets: createMockSecrets(TEST_SECRET),
           jwt: createMockJWT({
-            aud: 'pikku-remote',
+            aud: 'pikku-mesh',
             session: encryptedSession,
           }),
         } as any,
@@ -489,18 +489,18 @@ describe('pikkuRemoteAuthMiddleware', () => {
 
     test('should skip setInitialSession when decrypted.session is falsy', async () => {
       const encryptedSession = await encryptWithKeyMaterial(
-        'PIKKU_REMOTE_SECRET',
+        'PIKKU_MESH_SECRET',
         TEST_SECRET,
-        REMOTE_SESSION_INFO,
+        MESH_SESSION_INFO,
         { session: null }
       )
       let setInitialSessionCalled = false
 
-      await pikkuRemoteAuthMiddleware(
+      await pikkuMeshAuthMiddleware(
         {
           secrets: createMockSecrets(TEST_SECRET),
           jwt: createMockJWT({
-            aud: 'pikku-remote',
+            aud: 'pikku-mesh',
             session: encryptedSession,
           }),
         } as any,
@@ -522,10 +522,10 @@ describe('pikkuRemoteAuthMiddleware', () => {
       let setInitialSessionCalled = false
       let nextCalled = false
 
-      await pikkuRemoteAuthMiddleware(
+      await pikkuMeshAuthMiddleware(
         {
           secrets: createMockSecrets(TEST_SECRET),
-          jwt: createMockJWT({ aud: 'pikku-remote' }),
+          jwt: createMockJWT({ aud: 'pikku-mesh' }),
         } as any,
         {
           http: {

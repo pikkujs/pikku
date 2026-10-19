@@ -106,11 +106,11 @@ export function collectFilterNames(
     unit.functionIds.some((id) => functionsMeta[id]?.expose) ||
     routes.some(
       (route) =>
-        route.route.includes('/rpc/') && !route.route.includes('/remote/rpc/')
+        route.route.includes('/rpc/') && !route.route.includes('/mesh/rpc/')
     )
-  const hasRemote =
+  const hasMesh =
     unit.functionIds.some((id) => functionsMeta[id]?.remote) ||
-    routes.some((route) => route.route.includes('/remote/rpc/'))
+    routes.some((route) => route.route.includes('/mesh/rpc/'))
 
   if (hasExposed) {
     // Include the RPC catch-all scaffold function + route
@@ -118,11 +118,11 @@ export function collectFilterNames(
     names.add('/rpc/:rpcName')
     names.add('http:post:/rpc/:rpcName')
   }
-  if (hasRemote) {
-    // Include the remote RPC scaffold function + route
-    names.add('remoteRPCHandler')
-    names.add('/remote/rpc/:rpcName')
-    names.add('http:post:/remote/rpc/:rpcName')
+  if (hasMesh) {
+    // Include the mesh RPC scaffold function + route
+    names.add('meshRPCHandler')
+    names.add('/mesh/rpc/:rpcName')
+    names.add('http:post:/mesh/rpc/:rpcName')
   }
 
   switch (unit.role) {

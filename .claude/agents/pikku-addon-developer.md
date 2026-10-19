@@ -185,6 +185,7 @@ import { wireAddon } from '#pikku/addon'
 wireAddon({
   name: 'todos',
   package: '@my-org/addon-todos',
+  expose: true, // opt in: the addon's `expose: true` functions answer POST /rpc
   auth: false,
   tags: ['public'],
   secretOverrides: { API_KEY: 'TODOS_API_KEY' },

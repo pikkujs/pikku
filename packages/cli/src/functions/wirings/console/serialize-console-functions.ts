@@ -106,6 +106,7 @@ export const consoleRoutes = defineHTTPRoutes({
 wireAddon({
   name: 'console',
   package: '@pikku/addon-console',
+  expose: true,
   scopes: ['pikku:console'],
   globalSecrets:
     'the console administers secrets an operator names at runtime, so no static declaration can cover them',
