@@ -6,7 +6,11 @@
   "dev": {
     "contributors": [
       { "module": "@verifier/host-mail/contributor" },
-      { "module": "./contributors/audit.contributor.ts", "export": "audit" }
+      { "module": "./contributors/audit.contributor.ts", "export": "audit" },
+      {
+        "module": "./contributors/log-reader.contributor.ts",
+        "export": "logReader"
+      }
     ]
   }
 }

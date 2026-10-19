@@ -78,9 +78,20 @@ process.on('SIGTERM', () => {
   process.exit(143)
 })
 const pinnedConfig = JSON.parse(originalConfig)
+// Two contributors listed out of order: `marker-reader` needs what `marker`
+// provides, and `marker` needs the entry's own logger.
+const CONTRIBUTORS_MODULE = join(
+  process.cwd(),
+  'contributors',
+  'marker.contributor.ts'
+)
 pinnedConfig.deploy = {
   ...pinnedConfig.deploy,
   grouping: { strategy: 'function' },
+  contributors: [
+    { module: CONTRIBUTORS_MODULE, export: 'markerReader' },
+    { module: CONTRIBUTORS_MODULE, export: 'marker' },
+  ],
 }
 writeFileSync(CONFIG_FILE, JSON.stringify(pinnedConfig, null, 2))
 
@@ -176,6 +187,26 @@ await check('entry: bootstrap import + main()', () => {
   if (!e.includes('enableExitOnSignals'))
     throw new Error('Missing graceful shutdown')
 })
+
+await check(
+  'entry: deploy.contributors run in needs/provides order with runtime services',
+  () => {
+    const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
+    const marker = e.indexOf('services.platformMarker = {')
+    const reader = e.indexOf('services.platformMarkerSeen =')
+    if (marker < 0 || reader < 0)
+      throw new Error('deploy.contributors were not emitted into the entry')
+    if (marker > reader)
+      throw new Error('marker-reader ran before the marker it needs')
+    const call = e.indexOf('await createPlatformServices(process.env')
+    if (call < 0 || !/createPlatformServices\([^)]*\{ logger,/.test(e))
+      throw new Error(
+        'createPlatformServices is not handed the runtime services'
+      )
+    if (call < e.search(/(const|let) triggerSourceStore/))
+      throw new Error('createPlatformServices runs before the runtime is built')
+  }
+)
 
 // ---------------------------------------------------------------------------
 // Compile to a single executable with bun, then hit endpoints.

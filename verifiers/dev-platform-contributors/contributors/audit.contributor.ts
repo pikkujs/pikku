@@ -3,6 +3,7 @@ import type { PlatformServiceContributor } from '@pikku/deploy'
 
 export const audit: PlatformServiceContributor = {
   name: 'audit',
+  provides: ['auditLog'],
   imports: [
     `import { AuditLog } from ${JSON.stringify(fileURLToPath(new URL('../src/audit-log.ts', import.meta.url)))}`,
   ],
