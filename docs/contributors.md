@@ -107,7 +107,18 @@ wireAddon({
 })
 ```
 
-A name the addon does not register is a build error (PKU363) that lists the names it does register. A list the inspector cannot read statically is PKU362.
+The names are typed. `pikku all` reads the contributors meta each wired addon published (`.pikku/contributors/pikku-contributors-meta.gen.json`) and writes the union of its names into `#pikku/addon`, so an editor completes the valid names and `tsc` rejects one the addon does not register:
+
+```ts
+wireAddon({
+  name: 'jobs',
+  package: '@my-org/addon-jobs',
+  // error: Type '"quue"' is not assignable to type '"queue" | "audit"'
+  contributors: ['quue'],
+})
+```
+
+The type is the editor-time guard; the build is the backstop. A name the addon does not register is also a build error (PKU363) that lists the names it does register, and it applies when the type could not help: an addon whose meta is not installed (a remote addon, or one that has not run `pikku all` yet) types its names as plain `string`. A list the inspector cannot read statically is PKU362.
 
 The services contributors build reach your app as the second argument of `createSingletonServices(config, existingServices)`, so read them from `existingServices` and put them on the object you return.
 

@@ -23,6 +23,13 @@ A provider describes its runtime through `ProviderAdapter.contributorSupport`
 (`ContributorSupport`: `supported`, `runtimeServices`, the required
 `runsServerLifecycle`, `widenPlatform`, `framework`).
 
+The names in `wireAddon({ contributors })` are typed per package. `pikku all`
+reads the contributors meta each wired addon published (the file the inspector
+validates against, so the two cannot disagree) and writes the union into the
+generated `#pikku/addon` wrapper, next to the function-name union `mcp` and
+`expose` already use. No inspector state is added. An addon whose meta cannot be
+read falls back to `string`, and PKU363 stays the build-time backstop.
+
 **Why:**
 
 - Real modules are typed and testable, where string-emitted lines were

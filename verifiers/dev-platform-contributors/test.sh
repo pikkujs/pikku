@@ -22,6 +22,9 @@ for scenario in multi pg sqlite lifecycle; do
   test -f "scenarios/$scenario/.pikku/contributors/pikku-dev-contributors.gen.ts"
 done
 (cd scenarios/multi && npx tsc --noEmit -p .)
+echo "--- wireAddon contributor names are typed from the addon's meta ---"
+(cd scenarios/multi && npx tsc --noEmit -p tsconfig.type-tests.json)
+echo "✓ a registered name typechecks, an unregistered one is a compile error"
 npx tsx src/check-contributors.ts
 
 echo "--- real pikku dev / pikku serve processes: contributor hooks around the app lifecycle ---"
