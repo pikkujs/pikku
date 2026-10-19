@@ -7,8 +7,8 @@ import type { Config } from '../../../../types/application-types.js'
 import type { CLILogger } from '../../../services/cli-logger.service.js'
 import { loadUserModule } from '../../commands/load-user-project.js'
 import { resolveFromProject } from '../../../utils/resolve-from-project.js'
+import { buildContributorPlatform } from '../../../contributors/contributor-platform.js'
 import {
-  devContributorPlatform,
   devRuntimeServices,
   serializeDevPlatformServices,
 } from './serialize-dev-platform-services.js'
@@ -137,10 +137,15 @@ export const writeDevPlatformServices = async (
   const contributors = await loadDevContributors(config.rootDir, refs)
   const code = serializeDevPlatformServices(
     contributors,
-    devContributorPlatform(
-      visitState.serviceAggregation.requiredServices,
-      devRuntimeServices({ db: config.db !== undefined })
-    ),
+    await buildContributorPlatform({
+      projectDir: config.rootDir,
+      pikkuDir: config.outDir,
+      srcDirectories: config.srcDirectories,
+      logger: { debug: (msg) => logger.debug(msg) },
+      serviceNames: visitState.serviceAggregation.requiredServices,
+      runtimeServices: devRuntimeServices({ db: config.db !== undefined }),
+      subject: 'pikku dev',
+    }),
     {
       file: config.devPlatformServicesFile,
       packageMappings: config.packageMappings,

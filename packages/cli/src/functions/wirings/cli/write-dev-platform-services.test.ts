@@ -36,7 +36,12 @@ describe('writeDevPlatformServices', () => {
   test('no contributors configured writes nothing', async () => {
     await writeDevPlatformServices(
       logger,
-      { rootDir: root, devPlatformServicesFile } as never,
+      {
+        rootDir: root,
+        outDir: root,
+        srcDirectories: ['src'],
+        devPlatformServicesFile,
+      } as never,
       state
     )
     assert.equal(existsSync(devPlatformServicesFile), false)
@@ -48,6 +53,8 @@ describe('writeDevPlatformServices', () => {
       logger,
       {
         rootDir: root,
+        outDir: root,
+        srcDirectories: ['src'],
         devPlatformServicesFile,
         dev: { contributors: [] },
       } as never,
@@ -65,6 +72,8 @@ describe('writeDevPlatformServices', () => {
       logger,
       {
         rootDir: root,
+        outDir: root,
+        srcDirectories: ['src'],
         devPlatformServicesFile,
         dev: { contributors: [{ module: './email.ts', export: 'email' }] },
       } as never,
@@ -95,6 +104,8 @@ describe('writeDevPlatformServices', () => {
       logger,
       {
         rootDir: root,
+        outDir: root,
+        srcDirectories: ['src'],
         devPlatformServicesFile,
         dev: { contributors: [{ module: '@host/mail/contributor' }] },
       } as never,
@@ -138,6 +149,8 @@ describe('writeDevPlatformServices', () => {
       logger,
       {
         rootDir: root,
+        outDir: root,
+        srcDirectories: ['src'],
         devPlatformServicesFile,
         dev: { contributors: [{ module: './reader.ts' }] },
       } as never,
@@ -168,7 +181,12 @@ describe('writeDevPlatformServices', () => {
     )
     await writeDevPlatformServices(
       logger,
-      { rootDir: root, devPlatformServicesFile } as never,
+      {
+        rootDir: root,
+        outDir: root,
+        srcDirectories: ['src'],
+        devPlatformServicesFile,
+      } as never,
       {
         ...(state as object),
         addonContributors: {
@@ -196,6 +214,8 @@ describe('writeDevPlatformServices', () => {
         logger,
         {
           rootDir: root,
+          outDir: root,
+          srcDirectories: ['src'],
           devPlatformServicesFile,
           dev: { contributors: [{ module: './loop.ts' }] },
         } as never,
