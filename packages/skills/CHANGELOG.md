@@ -1,5 +1,12 @@
 # @pikku/skills
 
+## 0.12.60
+
+### Patch Changes
+
+- 7b1d0e6: A pikku config that `extends` another now merges into it instead of replacing whole fields: objects merge key by key, `srcDirectories` appends the child's entries to the parent's (duplicates dropped), any other array or value the child sets replaces the parent's, and `null` removes a parent value. Paths are resolved relative to the file that declares them, output files are derived from the merged `outDir`, and an `extends` cycle is refused instead of recursing forever.
+- a9318bd: Platform service contributors declare `needs` and `provides` and run in the order those require; an unmet need, a key provided twice or a cycle fails codegen by name. Generated `createPlatformServices(env, runtime)` receives the services the entry already built (`runtime.kysely` on standalone, after the database opens). Addons ship contributors in their package.json under `pikku.contributors`, picked up by `pikku dev` codegen and by `pikku deploy plan` / `apply`, which now also pass `deploy.contributors` from `pikku.config.json` to the adapter.
+
 ## 0.12.59
 
 ### Patch Changes

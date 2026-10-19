@@ -1,3 +1,13 @@
+## 0.12.109
+
+### Patch Changes
+
+- 679068f: `pikku cloud login` registers a git credential helper for the cloud git host, so `git push` to a project's repo there authenticates with your login. `pikku cloud logout` forgets the token and removes the helper. CLI commands can set `hidden: true` to stay out of `--help`.
+- a9318bd: Platform service contributors declare `needs` and `provides` and run in the order those require; an unmet need, a key provided twice or a cycle fails codegen by name. Generated `createPlatformServices(env, runtime)` receives the services the entry already built (`runtime.kysely` on standalone, after the database opens). Addons ship contributors in their package.json under `pikku.contributors`, picked up by `pikku dev` codegen and by `pikku deploy plan` / `apply`, which now also pass `deploy.contributors` from `pikku.config.json` to the adapter.
+- 0b0a75d: Scenario workflow meta now carries `scenario: true` alongside `source: 'scenario'`, so Studio and the console can tell a scenario from a real workflow. The console's workflow count no longer includes scenarios.
+- Updated dependencies [679068f]
+  - @pikku/core@0.12.145
+
 ## 0.12.108
 
 ### Patch Changes
