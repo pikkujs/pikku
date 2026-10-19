@@ -8,13 +8,10 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { gunzipSync, gzipSync } from 'node:zlib'
 import { dirname, join } from 'node:path'
 import {
   buildSdkFiles,
-  checkSdkBump,
   listImportSpecifiers,
-  loadPreviousSdk,
   rewriteSdkFile,
   SdkImportError,
   sdkTarballName,
@@ -24,10 +21,9 @@ import {
   SDK_RPC_MAP,
   SDK_WORKFLOW_MAP,
   sdkDefaultVersions,
-  sdkSchemas,
-  type SdkManifest,
 } from './addon-sdk.js'
-import { packTarGz, unpackTarGz } from './sdk-tarball.js'
+import { packTarGz } from './sdk-tarball.js'
+import { readTgz } from './extract-tgz.js'
 
 const RPC_MAP = [
   "import type * as __PikkuCustomTypes from '../pikku-custom-types.gen.d.js'",
@@ -228,7 +224,6 @@ describe('buildSdkFiles', () => {
       // In the meta itself, so the SDK stays at the five files a registry accepts.
       assert.deepEqual(sdk.listNotes.outputSchema, { type: 'array' })
       assert.equal(sdk.listNotes.inputSchema, undefined)
-      assert.deepEqual(sdkSchemas(sdk), { ListNotesOutput: { type: 'array' } })
     })
   })
 
@@ -240,7 +235,7 @@ describe('buildSdkFiles', () => {
             { ...sources, functionsMeta: sources.functionsMeta + '.gone' },
             INFO
           ),
-        /Run `pikku all` in the addon before `pikku sdk`/
+        /`pikku all` writes it before it packs the SDK/
       )
     })
   })
@@ -260,213 +255,20 @@ test('rewriteSdkFile refuses a relative import that leaves the SDK', () => {
   )
 })
 
-describe('checkSdkBump', () => {
-  const previous = (
-    version: string,
-    functions: Record<
-      string,
-      { contractHash: string; outputSchemaName: string }
-    >
-  ) => ({
-    manifest: {
-      name: '@acme/notes',
-      version,
-      pikkuCore: '^0.12.0',
-      contractHash: '',
-    } satisfies SdkManifest,
-    functions,
-  })
-  // Without the packed schemas every named schema is unresolved, and a moved
-  // hash is all surface-diff has to go on — as for an SDK cut before them.
-  const fn = (contractHash: string) => ({
-    contractHash,
-    outputSchemaName: 'ListNotesOutput',
-  })
-  const base = { listNotes: fn('aaaa') }
-
-  test('an unchanged contract needs a patch', () => {
-    const check = checkSdkBump(
-      previous('1.2.3', base),
-      { functions: base },
-      '1.2.4',
-      'prev'
-    )
-    assert.equal(check.changes.verdict, 'patch')
-    assert.equal(check.requiredVersion, '1.2.4')
-  })
-
-  test('an added function needs a minor', () => {
-    const current = { ...base, addNote: fn('bbbb') }
-    assert.equal(
-      checkSdkBump(
-        previous('1.2.3', base),
-        { functions: current },
-        '1.3.0',
-        'prev'
-      ).requiredVersion,
-      '1.3.0'
-    )
-    assert.throws(
-      () =>
-        checkSdkBump(
-          previous('1.2.3', base),
-          { functions: current },
-          '1.2.4',
-          'prev'
-        ),
-      /SDK version 1\.2\.4 is too low: the contract change since 1\.2\.3 is minor, so the SDK must be at least 1\.3\.0/
-    )
-  })
-
-  test('a removed function needs a major', () => {
-    assert.throws(
-      () =>
-        checkSdkBump(
-          previous('1.2.3', base),
-          { functions: {} },
-          '1.3.0',
-          'prev'
-        ),
-      /is major, so the SDK must be at least 2\.0\.0/
-    )
-  })
-
-  test('a changed contract hash needs a major', () => {
-    const changed = { listNotes: fn('cccc') }
-    assert.equal(
-      checkSdkBump(
-        previous('1.2.3', base),
-        { functions: changed },
-        '2.0.0',
-        'prev'
-      ).changes.verdict,
-      'major'
-    )
-  })
-
-  describe('with the schemas packed', () => {
-    const NOTES = 'ListNotesOutput'
-    const withSchema = (schema: unknown) => ({
-      functions: {
-        listNotes: {
-          ...fn(String(JSON.stringify(schema).length)),
-          outputSchemaName: NOTES,
-          outputSchema: schema,
-        },
-      },
-    })
-    const strict = {
-      type: 'object',
-      properties: { id: { type: 'string' } },
-      required: ['id'],
-    }
-    const prior = (schema: unknown) => ({
-      ...previous('1.2.3', {}),
-      ...withSchema(schema),
-    })
-
-    test('a contract loosened in place needs only a minor', () => {
-      const loosened = {
-        type: 'object',
-        properties: { id: { type: 'string' }, tag: { type: 'string' } },
-        required: ['id'],
-      }
-      const check = checkSdkBump(
-        prior(strict),
-        withSchema(loosened),
-        '1.3.0',
-        'prev'
-      )
-      assert.equal(check.changes.verdict, 'minor')
-    })
-
-    test('a contract tightened in place needs a major', () => {
-      const tightened = { ...strict, required: [] }
-      assert.equal(
-        checkSdkBump(prior(strict), withSchema(tightened), '2.0.0', 'prev')
-          .changes.verdict,
-        'major'
-      )
-    })
-  })
-
-  test('a new function version beside the old one needs a minor', () => {
-    const v1 = { ...fn('aaaa'), versions: [1], latestVersion: 1 }
-    const both = {
-      'listNotes@v1': { ...v1, versions: [1, 2], latestVersion: 2 },
-      'listNotes@v2': { ...fn('bbbb'), versions: [1, 2], latestVersion: 2 },
-    }
-    assert.equal(
-      checkSdkBump(
-        previous('1.2.3', { 'listNotes@v1': v1 }),
-        { functions: both },
-        '1.3.0',
-        'prev'
-      ).changes.verdict,
-      'minor'
-    )
-  })
-
-  test('dropping a function version needs a major', () => {
-    const both = {
-      'listNotes@v1': { ...fn('aaaa'), versions: [1, 2], latestVersion: 2 },
-      'listNotes@v2': { ...fn('bbbb'), versions: [1, 2], latestVersion: 2 },
-    }
-    const onlyV2 = {
-      'listNotes@v2': { ...fn('bbbb'), versions: [2], latestVersion: 2 },
-    }
-    assert.equal(
-      checkSdkBump(
-        previous('1.2.3', both),
-        { functions: onlyV2 },
-        '2.0.0',
-        'prev'
-      ).changes.verdict,
-      'major'
-    )
-  })
-})
-
-test('a packed SDK unpacks to the same files, and reloads as a previous SDK', () => {
-  withAddonOutput({}, (sources, root) => {
-    const { files, manifest } = buildSdkFiles(sources, INFO)
+test('a packed SDK reads back as the same files a consumer extracts', () => {
+  withAddonOutput({}, (sources) => {
+    const { files } = buildSdkFiles(sources, INFO)
     const tgz = packTarGz(
       [...files].map(([path, content]) => ({
         path,
         content: Buffer.from(content),
       }))
     )
-    const unpacked = unpackTarGz(tgz)
     assert.deepEqual(
-      new Map([...unpacked].map(([p, c]) => [p, c.toString()])),
+      new Map(readTgz(tgz).map(({ path, data }) => [path, data.toString()])),
       files
     )
-    const tgzPath = join(root, sdkTarballName(INFO.name, INFO.version))
-    writeFileSync(tgzPath, tgz)
-    const loaded = loadPreviousSdk(tgzPath)
-    assert.deepEqual(loaded.manifest, manifest)
-    assert.deepEqual(Object.keys(loaded.functions), [
-      'listNotes',
-      'publishNoteWorkflow',
-    ])
   })
-})
-
-test('an archive entry with a malformed size is refused, not looped on', () => {
-  const tar = Buffer.from(
-    gunzipSync(
-      packTarGz([{ path: 'manifest.json', content: Buffer.from('{}') }])
-    )
-  )
-  for (const size of ['-0001000', '99999999', '7777777']) {
-    const header = Buffer.alloc(12)
-    header.write(size)
-    header.copy(tar, 124)
-    assert.throws(
-      () => unpackTarGz(gzipSync(tar)),
-      /Not a valid SDK archive: the entry at byte 0 has size/
-    )
-  }
 })
 
 test('the same SDK packs to the same bytes', () => {

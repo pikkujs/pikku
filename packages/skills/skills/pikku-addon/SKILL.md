@@ -309,14 +309,14 @@ export const listNotes = pikkuSessionlessFunc({
 ```
 
 ```bash
-yarn pikku all && yarn pikku sdk                      # .pikku/sdk/ + <scope>-<name>-<version>.sdk.tgz
-yarn pikku sdk --version 1.3.0 --bump-from ./prev.sdk.tgz
+yarn pikku all            # also writes .pikku/sdk/ + <scope>-<name>-<version>.sdk.tgz
+yarn pikku versions check # fails on a remote contract changed without a new version
 ```
 
-The SDK carries only the remote RPCs, the `expose: true` workflows and the types
-they reach. `--bump-from` refuses a version below what the change since the
-previous SDK requires: major for a removed or changed contract, minor for an
-added one. `--pack-dir` sets where the `.sdk.tgz` is written.
+In an addon, `pikku all` packs the SDK on every run, at the package.json
+version. The SDK carries only the remote RPCs, the `expose: true` workflows and
+the types they reach. Changing a published `remote: true` contract needs a new
+`version` on the function, which `pikku versions check` enforces.
 
 ### Database tables
 

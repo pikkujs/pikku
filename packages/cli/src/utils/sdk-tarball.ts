@@ -1,7 +1,7 @@
-import { gunzipSync, gzipSync } from 'node:zlib'
+import { gzipSync } from 'node:zlib'
 
 /**
- * A minimal ustar writer and reader for addon SDK artifacts. An SDK is a handful
+ * A minimal ustar writer for addon SDK artifacts. An SDK is a handful
  * of small text files, so the archive is built in memory: no dependency, and the
  * same inputs always produce the same bytes (fixed mtime, mode and owner).
  */
@@ -68,41 +68,4 @@ export const packTarGz = (entries: TarEntry[]): Buffer => {
   }
   chunks.push(Buffer.alloc(BLOCK * 2))
   return gzipSync(Buffer.concat(chunks), { level: 9 })
-}
-
-const readString = (buf: Buffer, offset: number, length: number) => {
-  const raw = buf.subarray(offset, offset + length)
-  const end = raw.indexOf(0)
-  return raw.subarray(0, end === -1 ? raw.length : end).toString('utf-8')
-}
-
-/** Regular files only, keyed by path with any leading `./` or `package/` dropped. */
-export const unpackTarGz = (archive: Buffer): Map<string, Buffer> => {
-  const tar = gunzipSync(archive)
-  const files = new Map<string, Buffer>()
-  let offset = 0
-  while (offset + BLOCK <= tar.length) {
-    const header = tar.subarray(offset, offset + BLOCK)
-    if (header.every((byte) => byte === 0)) break
-    const name = readString(header, 0, 100)
-    const prefix = readString(header, 345, 155)
-    const sizeText = readString(header, 124, 12).trim() || '0'
-    const size = /^[0-7]+$/.test(sizeText) ? parseInt(sizeText, 8) : NaN
-    const type = String.fromCharCode(header[156] || 48)
-    const start = offset + BLOCK
-    if (!Number.isSafeInteger(size) || size > tar.length - start) {
-      throw new Error(
-        `Not a valid SDK archive: the entry at byte ${offset} has size '${sizeText}'.`
-      )
-    }
-    if (type === '0' || type === '\0') {
-      const path = (prefix ? `${prefix}/${name}` : name).replace(
-        /^(\.\/|package\/)/,
-        ''
-      )
-      files.set(path, Buffer.from(tar.subarray(start, start + size)))
-    }
-    offset = start + Math.ceil(size / BLOCK) * BLOCK
-  }
-  return files
 }

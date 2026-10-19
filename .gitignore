@@ -22,6 +22,8 @@ my-app
 !packages/cli/.pikku
 packages/cli/.pikku/*
 !packages/cli/.pikku/remote
+# The SDK tarball `pikku all` packs beside an addon's package.json.
+*.sdk.tgz
 .deploy
 .tmp-pii-gate-*
 console-app
