@@ -44,15 +44,17 @@ export const serializeAddonsMeta = (
  * leaving the resolver to fall back to Node's per-package `imports`.
  */
 export const serializeAddonInstallTypes = (
-  addonFunctionNames: Record<string, string[]> = {}
+  addonFunctionNames: Record<string, string[]> = {},
+  addonContributorNames: Record<string, string[]> = {}
 ) => {
-  const packages = Object.entries(addonFunctionNames).filter(
-    ([, names]) => names.length > 0
-  )
+  const nonEmpty = (byPackage: Record<string, string[]>) =>
+    Object.entries(byPackage).filter(([, names]) => names.length > 0)
+  const packages = nonEmpty(addonFunctionNames)
+  const contributorPackages = nonEmpty(addonContributorNames)
 
   // Nothing installed yet — the bootstrap run writes this before any addon's
   // metadata has been read, and a project with no addons never gets more.
-  if (packages.length === 0) {
+  if (packages.length === 0 && contributorPackages.length === 0) {
     return `/**
  * Installing an addon into this application
  */
@@ -61,14 +63,14 @@ export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'
 `
   }
 
-  const entries = packages
-    .map(
-      ([pkg, names]) =>
-        `  ${JSON.stringify(pkg)}: ${names
-          .map((name) => JSON.stringify(name))
-          .join(' | ')}`
-    )
-    .join('\n')
+  const union = (names: string[]) =>
+    names.map((name) => JSON.stringify(name)).join(' | ')
+  const entries = (byPackage: [string, string[]][]) =>
+    byPackage.length === 0
+      ? '  // none'
+      : byPackage
+          .map(([pkg, names]) => `  ${JSON.stringify(pkg)}: ${union(names)}`)
+          .join('\n')
 
   return `/**
  * Installing an addon into this application
@@ -83,11 +85,24 @@ export { wireRemoteAddon } from '@pikku/core/addon'
  * The functions each installed addon publishes. \`mcp\` and \`expose\` name them.
  */
 type AddonFunctions = {
-${entries}
+${entries(packages)}
 }
 
 type AddonFunctionName<Package extends string> =
   Package extends keyof AddonFunctions ? AddonFunctions[Package] : string
+
+/**
+ * The contributors each installed addon registers with \`defineContributors\`,
+ * read from the addon's generated contributors meta. \`contributors\` names them.
+ * An addon whose meta is not installed is not listed here, so its names fall
+ * back to \`string\` and the build-time check (PKU363) is what catches a typo.
+ */
+type AddonContributors = {
+${entries(contributorPackages)}
+}
+
+type AddonContributorName<Package extends string> =
+  Package extends keyof AddonContributors ? AddonContributors[Package] : string
 
 /**
  * Installs an addon into this project: its functions, wirings and scopes become
@@ -96,14 +111,20 @@ type AddonFunctionName<Package extends string> =
  * \`mcp: true\` offers every function the addon itself declared as a tool; a list
  * names the functions to offer, checked against the ones the addon publishes.
  * \`expose\` works the same way for \`rpc.exposed\`, and \`false\` exposes none.
+ * \`contributors\` names the contributors the addon registers; a name it does not
+ * register is a type error.
  *
  * @example snippet: addonWiring
  */
 export const wireAddon = <Package extends string>(
-  config: Omit<WireAddonConfig, 'package' | 'mcp' | 'expose'> & {
+  config: Omit<
+    WireAddonConfig,
+    'package' | 'mcp' | 'expose' | 'contributors'
+  > & {
     package: Package
     mcp?: boolean | AddonFunctionName<Package>[]
     expose?: boolean | AddonFunctionName<Package>[]
+    contributors?: AddonContributorName<Package>[]
   }
 ): void => wireAddonCore(config)
 `
