@@ -9,6 +9,7 @@ import { resolveScaffoldFeature } from './resolve-scaffold-feature.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
+import { loadExtendedConfigInput } from './pikku-cli-config-extends.js'
 
 const CLIENT_FILE_KEYS = [
   'fetchFile',
@@ -257,59 +258,28 @@ const _getPikkuCLIConfig = async (
   }
 
   try {
-    let result: PikkuCLIConfig
     const file = await readFile(configFile, 'utf-8')
     const configDir = dirname(configFile)
-    const config: PikkuCLIConfig = JSON.parse(file)
-    if (config.extends) {
-      const extendedConfig = await getPikkuCLIConfig(
-        logger,
-        resolve(configDir, config.extends),
-        [],
-        exitProcess
-      )
-      result = {
-        ...extendedConfig,
-        ...config,
-        configDir,
-        packageMappings: {
-          ...extendedConfig.packageMappings,
-          ...config.packageMappings,
-        },
-        ignoreFiles: config.ignoreFiles ??
-          extendedConfig.ignoreFiles ?? [
-            '**/*.test.ts',
-            '**/*.spec.ts',
-            '**/node_modules/**',
-            '**/dist/**',
-          ],
-        schema: {
-          additionalProperties: false,
-          supportsImportAttributes: true,
-          ...extendedConfig.schema,
-          ...config.schema,
-        },
-      }
-    } else {
-      result = {
-        ...config,
-        configDir,
-        packageMappings: config.packageMappings || {},
-        rootDir: config.rootDir
-          ? resolve(configDir, config.rootDir)
-          : configDir,
-        ignoreFiles: config.ignoreFiles ?? [
-          '**/*.test.ts',
-          '**/*.spec.ts',
-          '**/node_modules/**',
-          '**/dist/**',
-        ],
-        schema: {
-          additionalProperties: false,
-          supportsImportAttributes: true,
-          ...config.schema,
-        },
-      }
+    const parsed: PikkuCLIConfig = JSON.parse(file)
+    const config: PikkuCLIConfig = parsed.extends
+      ? ((await loadExtendedConfigInput(configFile)) as PikkuCLIConfig)
+      : parsed
+    const result: PikkuCLIConfig = {
+      ...config,
+      configDir,
+      packageMappings: config.packageMappings || {},
+      rootDir: config.rootDir ? resolve(configDir, config.rootDir) : configDir,
+      ignoreFiles: config.ignoreFiles ?? [
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        '**/node_modules/**',
+        '**/dist/**',
+      ],
+      schema: {
+        additionalProperties: false,
+        supportsImportAttributes: true,
+        ...config.schema,
+      },
     }
 
     if (result.outDir && !isAbsolute(result.outDir)) {

@@ -124,6 +124,13 @@ Config lives in `pikku.config.json`:
 }
 ```
 
+A config can `extends` another (`"extends": "./pikku.config.json"`) and state only
+what differs. The child merges into the parent: objects merge key by key,
+`srcDirectories` is the parent's list plus the child's new entries, every other
+array and value the child sets replaces the parent's, and `null` removes a
+parent value. Each file's paths are relative to that file, and `rootDir` is
+inherited unless the child sets its own.
+
 ## Project Structure Convention
 
 ```text
