@@ -1,3 +1,9 @@
+## 0.12.14
+
+### Patch Changes
+
+- a1aae90: Fetch runtime templates from the repository's `recipes/` directory (renamed from `templates/`).
+
 ## 0.12.13
 
 ### Patch Changes

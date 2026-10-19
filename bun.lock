@@ -516,7 +516,7 @@
     },
     "packages/create": {
       "name": "create-pikku",
-      "version": "0.12.13",
+      "version": "0.12.14",
       "bin": "dist/index.js",
       "dependencies": {
         "@inquirer/prompts": "^8.7.3",
