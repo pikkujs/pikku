@@ -50,6 +50,8 @@ export interface SdkSources {
   customTypes: SdkDeclaration
   functionsMeta: string
   schemaDirectory: string
+  /** The functions the maps declare: the remote RPCs and the exposed workflows. */
+  contractFunctionIds: string[]
 }
 
 const IDENTIFIER = /[A-Za-z_$][\w$]*/g
@@ -241,7 +243,7 @@ const contractSide = (
 }
 
 /**
- * The functions a consumer can call — `remote: true` or `expose: true` — each
+ * The functions a consumer can call — those the SDK's maps declare — each
  * stamped with its contract hash, computed the same way the inspector does,
  * and with the versions of its base name the SDK can call. A consumer sends a
  * call without `@vN` to `latestVersion`: the newest version in this SDK, not
@@ -249,13 +251,15 @@ const contractSide = (
  */
 export const sdkFunctionsMeta = (
   functionsMeta: Record<string, FunctionMetaEntry>,
-  schemaDirectory: string
+  schemaDirectory: string,
+  contractFunctionIds: Iterable<string>
 ): Record<string, FunctionMetaEntry> => {
   const out: Record<string, FunctionMetaEntry> = {}
   const versions = new Map<string, number[]>()
+  const contract = new Set(contractFunctionIds)
   for (const id of Object.keys(functionsMeta).sort()) {
     const meta = functionsMeta[id]!
-    if (meta.remote !== true && meta.expose !== true) continue
+    if (!contract.has(id)) continue
     const baseName = parseVersionedId(id).baseName
     out[id] = {
       ...meta,
@@ -386,7 +390,8 @@ export const buildSdkFiles = (
   }
   const functions = sdkFunctionsMeta(
     JSON.parse(readFileSync(sources.functionsMeta, 'utf-8')),
-    sources.schemaDirectory
+    sources.schemaDirectory,
+    sources.contractFunctionIds
   )
   files.set(SDK_FUNCTIONS_META, JSON.stringify(functions, null, 2) + '\n')
   files.set(

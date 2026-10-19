@@ -27,7 +27,9 @@ pruned map holds only the types reachable from:
 - the `expose: true` workflows.
 
 Agents and graphs have no `expose`, so the SDK's agent map is always empty.
-The function meta keeps `remote || expose` entries and stamps each one with a
+The function meta keeps exactly the functions the maps declare (the remote
+RPCs and the exposed workflows' functions; an exposed-only RPC is refused to a
+remote caller, so it stays out) and stamps each one with a
 `contractHash` (the inspector's `computeContractHash`, so it matches
 `versions.pikku.json`, which covers remote functions too). Each entry also
 carries `versions` — every version of its base name in the SDK — and

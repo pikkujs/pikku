@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { gunzipSync, gzipSync } from 'node:zlib'
 import { dirname, join } from 'node:path'
 import {
   buildSdkFiles,
@@ -48,7 +49,12 @@ const CUSTOM_TYPES = [
 
 /** An addon's `.pikku/addon` tree, as `pikku all` leaves it. */
 const withAddonOutput = (
-  overrides: { rpcMap?: string; meta?: Record<string, unknown> },
+  overrides: {
+    rpcMap?: string
+    meta?: Record<string, { remote?: boolean }>
+    /** The functions the maps declare; the remote ones when not given. */
+    contract?: string[]
+  },
   run: (sources: Parameters<typeof buildSdkFiles>[0], root: string) => void
 ) => {
   const root = mkdtempSync(join(tmpdir(), 'pikku-sdk-'))
@@ -71,16 +77,14 @@ const withAddonOutput = (
     'schemas/schemas/ListNotesOutput.schema.json',
     JSON.stringify({ type: 'array' })
   )
-  write(
-    'function/pikku-functions-meta.gen.json',
-    JSON.stringify(
-      overrides.meta ?? {
-        listNotes: { remote: true, inputs: [], outputs: ['ListNotesOutput'] },
-        renameNote: { expose: true, inputs: [], outputs: [] },
-        internalOnly: { inputs: [], outputs: [] },
-      }
-    )
-  )
+  const meta = overrides.meta ?? {
+    listNotes: { remote: true, inputs: [], outputs: ['ListNotesOutput'] },
+    // Exposed but not remote: a remote-addon caller is refused it.
+    renameNote: { expose: true, inputs: [], outputs: [] },
+    publishNoteWorkflow: { inputs: [], outputs: [] },
+    internalOnly: { inputs: [], outputs: [] },
+  }
+  write('function/pikku-functions-meta.gen.json', JSON.stringify(meta))
   try {
     const declaration = (path: string) => ({
       path: join(out, path),
@@ -94,6 +98,11 @@ const withAddonOutput = (
         customTypes: declaration('pikku-custom-types.gen.d.ts'),
         functionsMeta: join(out, 'function/pikku-functions-meta.gen.json'),
         schemaDirectory: join(out, 'schemas'),
+        contractFunctionIds:
+          overrides.contract ??
+          (overrides.meta
+            ? Object.keys(meta).filter((id) => meta[id]!.remote === true)
+            : ['listNotes', 'publishNoteWorkflow']),
       },
       root
     )
@@ -168,14 +177,16 @@ describe('buildSdkFiles', () => {
     })
   })
 
-  test('the meta keeps remote and exposed functions, each with a contract hash', () => {
+  test('the meta keeps what the maps declare, each with a contract hash', () => {
     withAddonOutput({}, (sources) => {
       const meta = JSON.parse(
         buildSdkFiles(sources, INFO).files.get(SDK_FUNCTIONS_META)!
       )
-      assert.deepEqual(Object.keys(meta), ['listNotes', 'renameNote'])
+      // renameNote is exposed but not remote, so the SDK cannot call it, and
+      // changing it must not move the SDK's hash or its bump.
+      assert.deepEqual(Object.keys(meta), ['listNotes', 'publishNoteWorkflow'])
       assert.match(meta.listNotes.contractHash, /^[0-9a-f]{16}$/)
-      assert.match(meta.renameNote.contractHash, /^[0-9a-f]{16}$/)
+      assert.match(meta.publishNoteWorkflow.contractHash, /^[0-9a-f]{16}$/)
     })
   })
 
@@ -184,7 +195,7 @@ describe('buildSdkFiles', () => {
       'listNotes@v1': { remote: true, version: 1, inputs: [], outputs: [] },
       'listNotes@v3': { remote: true, version: 3, inputs: [], outputs: [] },
       'listNotes@v2': { remote: true, version: 2, inputs: [], outputs: [] },
-      renameNote: { expose: true, inputs: [], outputs: [] },
+      renameNote: { remote: true, inputs: [], outputs: [] },
       'internalOnly@v4': { version: 4, inputs: [], outputs: [] },
     }
     withAddonOutput({ meta }, (sources) => {
@@ -429,8 +440,28 @@ test('a packed SDK unpacks to the same files, and reloads as a previous SDK', ()
     writeFileSync(tgzPath, tgz)
     const loaded = loadPreviousSdk(tgzPath)
     assert.deepEqual(loaded.manifest, manifest)
-    assert.deepEqual(Object.keys(loaded.functions), ['listNotes', 'renameNote'])
+    assert.deepEqual(Object.keys(loaded.functions), [
+      'listNotes',
+      'publishNoteWorkflow',
+    ])
   })
+})
+
+test('an archive entry with a malformed size is refused, not looped on', () => {
+  const tar = Buffer.from(
+    gunzipSync(
+      packTarGz([{ path: 'manifest.json', content: Buffer.from('{}') }])
+    )
+  )
+  for (const size of ['-0001000', '99999999', '7777777']) {
+    const header = Buffer.alloc(12)
+    header.write(size)
+    header.copy(tar, 124)
+    assert.throws(
+      () => unpackTarGz(gzipSync(tar)),
+      /Not a valid SDK archive: the entry at byte 0 has size/
+    )
+  }
 })
 
 test('the same SDK packs to the same bytes', () => {

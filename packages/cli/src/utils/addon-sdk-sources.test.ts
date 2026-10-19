@@ -155,8 +155,13 @@ describe('serializeSdkSources', () => {
       inputType: 'null',
       outputType: 'ListNotesOutput',
     }
-    const rpcMap = serializeSdkSources(logger, state, paths('/unused')).rpcMap
-      .content
+    const sources = serializeSdkSources(logger, state, paths('/unused'))
+    const rpcMap = sources.rpcMap.content
+    assert.deepEqual(sources.contractFunctionIds, [
+      'listNotes@v2',
+      'listNotes@v1',
+      'publishNoteWorkflow',
+    ])
     assert.match(
       rpcMap,
       /readonly 'listNotes': RPCHandler<null, ListNotesOutput>/
