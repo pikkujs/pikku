@@ -423,6 +423,14 @@ export type PikkuFrontend = Omit<PikkuFrontendInput, 'serve'> & {
 export type PikkuCLIInput = {
   $schema?: string
 
+  /**
+   * Another config file, relative to this one, to start from. This file merges
+   * into it: objects merge key by key, `srcDirectories` appends this file's
+   * entries to the parent's (duplicates dropped), any other array or value set
+   * here replaces the parent's, and `null` removes it. Paths are resolved
+   * relative to the file that declares them; `rootDir` is inherited unless set
+   * here.
+   */
   extends?: string
 
   rootDir: string
