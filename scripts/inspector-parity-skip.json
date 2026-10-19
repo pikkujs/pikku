@@ -4,22 +4,6 @@
     "reason": "not a workspace package (excluded in the root package.json), so its dependencies are not installed in the monorepo"
   },
   {
-    "project": "templates/hotel-management",
-    "reason": "a standalone template with its own workspaces and lockfile (excluded from the root package.json), so its dependencies are not installed in the monorepo"
-  },
-  {
-    "project": "templates/public-content",
-    "reason": "a standalone template with its own workspaces and lockfile (excluded from the root package.json), so its dependencies are not installed in the monorepo"
-  },
-  {
-    "project": "templates/team-saas",
-    "reason": "a standalone template with its own workspaces and lockfile (excluded from the root package.json), so its dependencies are not installed in the monorepo"
-  },
-  {
-    "project": "templates/workflow-automation",
-    "reason": "a standalone template with its own workspaces and lockfile (excluded from the root package.json), so its dependencies are not installed in the monorepo"
-  },
-  {
     "project": "verifiers/binary",
     "reason": "a config for `pikku binary` alone (srcDirectories is empty), so `pikku all` has no project to generate"
   },

@@ -764,10 +764,8 @@ jobs:
       fail-fast: false
       matrix:
         template:
-          - hotel-management
-          - public-content
-          - team-saas
-          - workflow-automation
+          - online-shop
+          - field-service
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup

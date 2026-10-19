@@ -93,18 +93,14 @@ const generatedImports = (file: string) => {
  * imports target — it has no alias mechanism and keeps the relative path.
  */
 /**
- * Standalone templates: whole projects pinned to a released API, with their own
- * workspaces and tsconfig layout, not runtime layers over `functions`.
+ * Standalone templates: whole projects with their own
+ * tsconfig layout, not runtime layers over `functions`.
  */
 const standalone = new Set([
   // Self-contained workspace-member projects (scaffolded whole, not layered
   // over `functions`); they import generated output by relative path.
   'online-shop',
   'field-service',
-  'hotel-management',
-  'public-content',
-  'team-saas',
-  'workflow-automation',
 ])
 
 const withoutAlias = new Set(['bun', 'starter-template', ...standalone])

@@ -178,30 +178,6 @@ const templates = [
     supports: ['http', 'fullstack'],
   },
   {
-    template: 'hotel-management',
-    description:
-      'Hotel management — bookings, arrivals, housekeeping, operations',
-    supports: ['http', 'fullstack'],
-  },
-  {
-    template: 'public-content',
-    description:
-      'Public content — editorial queue, scheduled publishing and a live feed',
-    supports: ['http', 'fullstack'],
-  },
-  {
-    template: 'team-saas',
-    description:
-      'Team SaaS — organisations, roles, scopes and billing surfaces',
-    supports: ['http', 'fullstack'],
-  },
-  {
-    template: 'workflow-automation',
-    description:
-      'Workflow automation — triggers, scheduled sweeps, approvals and agents',
-    supports: ['http', 'fullstack', 'workflows'],
-  },
-  {
     template: 'starter-template',
     description:
       'The opinionated Pikku Studio starter — backend + SDK + frontend scaffolds + pikkuScenario e2e',
@@ -216,10 +192,8 @@ const templates = [
  * pikkujs/pikku repo. Value: the directory name under `templates/`.
  */
 const standaloneTemplates: Record<string, string> = {
-  'hotel-management': 'hotel-management',
-  'public-content': 'public-content',
-  'team-saas': 'team-saas',
-  'workflow-automation': 'workflow-automation',
+  'online-shop': 'online-shop',
+  'field-service': 'field-service',
 }
 
 type PackageManager = (typeof packageManagers)[number]

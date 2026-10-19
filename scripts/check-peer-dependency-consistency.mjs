@@ -44,7 +44,6 @@ import {
   isParseable,
   isSatisfiable,
 } from './semver-ranges.mjs'
-import { STANDALONE_TEMPLATES } from './standalone-templates.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SCAN_DIRS = ['packages', 'templates']
@@ -64,13 +63,6 @@ function findPackageJsons(dir, out = []) {
     if (entry === 'node_modules' || entry === 'dist' || entry === '.deploy')
       continue
     const full = join(dir, entry)
-    // Pinned snapshots of a released API, not workspace members.
-    if (
-      full.startsWith(join(ROOT, 'templates') + '/') &&
-      STANDALONE_TEMPLATES.includes(entry) &&
-      dir === join(ROOT, 'templates')
-    )
-      continue
     if (statSync(full).isDirectory()) findPackageJsons(full, out)
     else if (entry === 'package.json') out.push(full)
   }

@@ -94,14 +94,10 @@ npm create pikku@latest -- --template express --name my-app --install --package-
 Complete standalone projects, all served from `templates/` in
 [pikkujs/pikku](https://github.com/pikkujs/pikku/tree/main/templates).
 
-| Template              | Description                                   |
-| --------------------- | --------------------------------------------- |
-| `online-shop`         | Online shop with queues, auth, workflows, AI  |
-| `field-service`       | Field service management                      |
-| `hotel-management`    | Bookings, arrivals, housekeeping, operations  |
-| `public-content`      | Editorial queue, scheduled publishing, feed   |
-| `team-saas`           | Organisations, roles, scopes, billing         |
-| `workflow-automation` | Triggers, scheduled sweeps, approvals, agents |
+| Template        | Description                                  |
+| --------------- | -------------------------------------------- |
+| `online-shop`   | Online shop with queues, auth, workflows, AI |
+| `field-service` | Field service management                     |
 
 ### Specialized Templates
 

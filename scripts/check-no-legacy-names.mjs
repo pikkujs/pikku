@@ -4,7 +4,6 @@
 // from pieces so this file does not contain them either.
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { STANDALONE_TEMPLATES } from './standalone-templates.mjs'
 
 const a = 'ac' + 'tor'
 const p = 'pers' + 'ona'
@@ -28,10 +27,6 @@ const ALLOWED_FILES = [
   /^docs\/MIGRATION\.md$/,
 ]
 
-// Standalone templates are pinned snapshots of a released API, which still
-// spells these names (see scripts/standalone-templates.mjs).
-const STANDALONE = new RegExp(`^templates/(${STANDALONE_TEMPLATES.join('|')})/`)
-
 // The GitHub Actions context property, which is not ours to rename.
 const EXTERNAL = new RegExp(`github\\.${a}`, 'g')
 
@@ -44,7 +39,6 @@ const files = execFileSync('git', ['ls-files', '-z'], {
 
 const offenders = []
 for (const file of files) {
-  if (STANDALONE.test(file)) continue
   const names = PATTERNS.some((re) => re.test(file))
   PATTERNS.forEach((re) => (re.lastIndex = 0))
   if (names) offenders.push(`${file} (file name)`)
