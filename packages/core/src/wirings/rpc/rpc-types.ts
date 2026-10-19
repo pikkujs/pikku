@@ -92,7 +92,12 @@ export interface ResolvedFunction {
     remoteAuth?:
       | { credentialId: string }
       | { secretId: string }
-      | { resolve: (services: any, wire: any) => string | Promise<string> }
+      | {
+          resolve: (
+            services: any,
+            wire: any
+          ) => string | null | Promise<string | null>
+        }
     remoteName?: (fn: string) => string
     remoteTimeoutMs?: number
     remoteHeaders?: (
