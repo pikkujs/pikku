@@ -504,6 +504,62 @@ describe('override validation resolves the override target (value), not the logi
     assert.equal(criticals.length, 2)
   })
 
+  const aliasState = (uses: Record<string, string>, stripePackage: string) => {
+    const state = makeOverrideState(
+      'credentials',
+      [],
+      {},
+      'credentialOverrides'
+    )
+    state.rpc.wireAddonDeclarations.set('mail', {
+      package: '@a/mail',
+      uses,
+      declaredUses: ['stripe'],
+      dependencies: [
+        { alias: 'stripe', package: '@a/addon-stripe', range: '^0.12.0' },
+      ],
+    } as never)
+    state.rpc.wireAddonDeclarations.set('payments', {
+      package: stripePackage,
+    } as never)
+    return state
+  }
+
+  test('validateAddonUses accepts an alias mapped to an instance of its declared package', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAddonUses(
+      logger,
+      aliasState({ stripe: 'payments' }, '@a/addon-stripe')
+    )
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateAddonUses flags an alias mapped to an instance of another package (PKU347)', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAddonUses(
+      logger,
+      aliasState({ stripe: 'payments' }, '@a/addon-paypal')
+    )
+    assert.deepEqual(
+      criticals.map((c) => c.code),
+      ['PKU347']
+    )
+    assert.match(criticals[0]!.message, /@a\/addon-stripe as 'stripe'/)
+  })
+
+  test('validateAddonUses refuses a mapping the addon never declared (PKU355)', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAddonUses(
+      logger,
+      aliasState({ stripe: 'payments', crm: 'payments' }, '@a/addon-stripe')
+    )
+    assert.deepEqual(
+      criticals.map((c) => c.code),
+      ['PKU355']
+    )
+    assert.match(criticals[0]!.message, /'crm'/)
+  })
+
   test('validateAddonContentGrants accepts a grant under a wired addon bucket, by name or contentBucket', () => {
     const { logger, criticals } = makeCriticalLogger()
     const state = makeOverrideState(

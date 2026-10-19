@@ -4,6 +4,7 @@ import { loadUserConfigForDb } from '../commands/db-shared.js'
 import { unresolvedSchemaReferences } from '@pikku/inspector/lite'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
+import { checkAddonDependencyVersions } from '../../utils/addon-dependencies.js'
 import { warnOnSplitTypeIdentity } from '../validate/type-identity-checks.js'
 import {
   pruneLegacyScaffoldFiles,
@@ -474,6 +475,19 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('RPC remote map', 'pikkuRPCRemoteMap', null),
       workflow.do('Workflow', 'pikkuWorkflow', null),
     ])
+
+    // The inspector checks that a wired addon's declared dependencies are
+    // mapped to the right packages; whether the versions fit needs semver,
+    // which stays out of the inspector.
+    await workflow.do('Addon dependency versions', async () => {
+      const { rpc: rpcState } = await getInspectorState()
+      for (const problem of checkAddonDependencyVersions(
+        config.rootDir,
+        rpcState.wireAddonDeclarations
+      )) {
+        logger.critical(problem.code, problem.message)
+      }
+    })
 
     let meshRPC = false
     let webhook = false

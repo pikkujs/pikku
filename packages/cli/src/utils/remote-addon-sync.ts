@@ -16,6 +16,11 @@ import {
   type AddonsLock,
 } from '@pikku/inspector/lite'
 import { findSourceFiles } from './find-source-files.js'
+import {
+  addonDependencySdkSpecs,
+  checkWorkspaceDependencySdks,
+  resolveAddonDependencies,
+} from './addon-dependencies.js'
 import { readTgz, writeSdkEntries } from './extract-tgz.js'
 import type { FlattenedRPCMap } from '../../.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.js'
 
@@ -416,11 +421,36 @@ export type AddonSyncConfig = {
   rootDir: string
   srcDirectories: string[]
   ignoreFiles?: string[]
+  /** Set when the project is an addon: its `pikku.uses` dependencies are synced too. */
+  addon?: unknown
 }
 
 /**
- * Finds the project's versioned `wireRemoteAddon` packages and syncs their
- * SDKs: the first step of `pikku all`. Null when the project has none and no
+ * The wiring's specs and the addon's dependency specs, one per package. A
+ * package asked for at two ranges is an error: the lock holds one SDK each.
+ */
+export const mergeSdkSpecs = (
+  wired: RemoteAddonSdkSpec[],
+  dependencies: RemoteAddonSdkSpec[]
+): RemoteAddonSdkSpec[] => {
+  const byName = new Map(wired.map((spec) => [spec.name, spec]))
+  for (const spec of dependencies) {
+    const seen = byName.get(spec.name)
+    if (seen && seen.range !== spec.range) {
+      throw new RemoteAddonSyncError(
+        ErrorCode.REMOTE_ADDON_PACKAGE_INVALID,
+        `${spec.name} is asked for at '${seen.range}' (${seen.at}) and at '${spec.range}' (${spec.at}). ${ADDONS_LOCK_FILE} holds one SDK per package; use the same range in both.`
+      )
+    }
+    if (!seen) byName.set(spec.name, spec)
+  }
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/**
+ * Finds the project's versioned `wireRemoteAddon` packages — and, in an addon,
+ * the registry packages its `pikku.uses` declares — and syncs their SDKs: the
+ * first step of `pikku all`. Null when the project has none and no
  * lock, so nothing ran. The registry is called only when a spec needs the
  * network, through `resolveSdk` — the CLI's `registry:resolveSdk`, or a stub.
  */
@@ -435,10 +465,19 @@ export const runAddonSync = async ({
   resolveSdk: ResolveSdk
   download?: DownloadSdk
 }): Promise<SyncResult | null> => {
-  const specs = await collectRemoteAddonSdkSpecs({
-    ...config,
-    ignoreFiles: config.ignoreFiles ?? [],
-  })
+  const dependencies = config.addon
+    ? resolveAddonDependencies(config.rootDir)
+    : []
+  for (const problem of checkWorkspaceDependencySdks(dependencies)) {
+    logger.diagnostic({ severity: 'critical', ...problem })
+  }
+  const specs = mergeSdkSpecs(
+    await collectRemoteAddonSdkSpecs({
+      ...config,
+      ignoreFiles: config.ignoreFiles ?? [],
+    }),
+    addonDependencySdkSpecs(dependencies)
+  )
   if (
     specs.length === 0 &&
     !existsSync(join(config.rootDir, ADDONS_LOCK_FILE))

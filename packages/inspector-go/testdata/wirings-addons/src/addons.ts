@@ -68,3 +68,11 @@ wireRemoteAddon({
   package: '@fixture/unsynced@^2.0.0',
   serverUrl: 'https://unsynced',
 })
+// Declares { pay, mail, norange } in its package.json: 'mail' maps to an
+// instance of another package (PKU347), 'extra' was never declared (PKU355),
+// 'norange' has no range (PKU356).
+wireAddon({
+  name: 'billing',
+  package: '@fixture/billing-addon',
+  uses: { pay: 'cloudapi', mail: 'shop', extra: 'bare' },
+})

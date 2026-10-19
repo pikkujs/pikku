@@ -543,17 +543,28 @@ export function validateAddonUses(
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
 
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
-    for (const [pkg, target] of Object.entries(addonDecl.uses ?? {})) {
+    for (const [name, target] of Object.entries(addonDecl.uses ?? {})) {
+      if (addonDecl.declaredUses && !addonDecl.declaredUses.includes(name)) {
+        logger.critical(
+          ErrorCode.ADDON_USES_NOT_DECLARED,
+          `Addon '${namespace}' maps '${name}' to '${target}', but ${addonDecl.package} does not declare '${name}' in the pikku.uses of its package.json. It declares: ${addonDecl.declaredUses.join(', ') || 'nothing'}. Remove '${name}' from uses, or have the addon declare it.`
+        )
+        continue
+      }
+      const expected =
+        addonDecl.dependencies?.find((d) => d.alias === name)?.package ?? name
       const wired = wireAddonDeclarations.get(target)
       if (!wired) {
         logger.critical(
           ErrorCode.ADDON_USES_NOT_WIRED,
-          `Addon '${namespace}' uses '${pkg}' as '${target}', but no addon is wired under the name '${target}'. Wired: ${Array.from(wireAddonDeclarations.keys()).join(', ')}`
+          `Addon '${namespace}' uses '${name}' as '${target}', but no addon is wired under the name '${target}'. Wired: ${Array.from(wireAddonDeclarations.keys()).join(', ')}`
         )
-      } else if (wired.package !== pkg) {
+      } else if (wired.package !== expected) {
         logger.critical(
           ErrorCode.ADDON_USES_NOT_WIRED,
-          `Addon '${namespace}' uses '${pkg}' as '${target}', but '${target}' is wired from '${wired.package}'.`
+          expected === name
+            ? `Addon '${namespace}' uses '${name}' as '${target}', but '${target}' is wired from '${wired.package}'.`
+            : `Addon '${namespace}' calls ${expected} as '${name}', mapped to '${target}', but '${target}' is wired from '${wired.package}'.`
         )
       }
     }

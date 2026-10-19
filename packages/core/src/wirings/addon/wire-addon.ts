@@ -56,10 +56,14 @@ export type WireAddonConfig = {
   /** Required of every function in the addon, on top of the function's own. */
   scopes?: string[]
   /**
-   * The other addons this one may call, as `{ '<package>': '<name>' }`: the
-   * package it was written against, and the name that package is wired under
-   * in this app. The addon calls `'<package>:<function>'`; anything it did not
-   * list is refused, whatever else the app has wired.
+   * The other addons this one may call, as `{ '<alias>': '<name>' }`: the name
+   * the addon calls another by, and the name that addon is wired under in this
+   * app — by `wireAddon` or `wireRemoteAddon`, either serves. The alias is the
+   * one the addon's package.json declares under `pikku.uses`
+   * (`{ "stripe": "@acme/addon-stripe@^1.0.0" }`), or, for an addon that lists
+   * plain names, the package name itself. The addon calls
+   * `'<alias>:<function>'`; anything it did not declare, or this app did not
+   * map, is refused, whatever else the app has wired.
    */
   uses?: Record<string, string>
   /** Points a secret the addon reads at a different key in this deployment, so two instances can hold different credentials. */

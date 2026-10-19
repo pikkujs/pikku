@@ -1,5 +1,6 @@
 import type * as ts from 'typescript'
 import type { SecretUsage } from './utils/extract-secret-usage.js'
+import type { AddonDependency } from './utils/addon-dependencies.js'
 import type { SurfaceUsageCounts } from './utils/extract-surface-usage.js'
 import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
 import type { GatewaysMeta } from '@pikku/core/gateway'
@@ -766,8 +767,20 @@ export interface InspectorState {
         /** Declared with `ui: true`: the package must ship screens, and the host mounts them. */
         ui?: boolean
         rpcEndpoint?: string
-        /** The other addons this instance may call: package -> the name it is wired under. */
+        /**
+         * The other addons this instance may call: the name the addon calls
+         * (its declared alias, or the package name) -> the name the target is
+         * wired under in this app.
+         */
         uses?: Record<string, string>
+        /**
+         * The names the addon's package.json declares under `pikku.uses`, in
+         * either form. Read when its meta loads; absent when it declares
+         * nothing, which leaves `uses` unchecked against a declaration.
+         */
+        declaredUses?: string[]
+        /** The `{ alias: 'package@range' }` form of `pikku.uses`, per alias. */
+        dependencies?: AddonDependency[]
         /**
          * `true` offers every function the addon declared `mcp: true`; a list
          * names the functions to offer, whatever the addon declared. Absent

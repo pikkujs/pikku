@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
@@ -65,16 +66,35 @@ func validateAddonUses(log *diag.Logger, st *state.State) {
 		if e.decl.Uses == nil {
 			continue
 		}
-		e.decl.Uses.Each(func(pkg string, targetRaw json.RawMessage) {
+		e.decl.Uses.Each(func(name string, targetRaw json.RawMessage) {
 			target := templateValue(targetRaw)
+			if e.decl.DeclaredUses != nil && !slices.Contains(*e.decl.DeclaredUses, name) {
+				declared := "nothing"
+				if len(*e.decl.DeclaredUses) > 0 {
+					declared = strings.Join(*e.decl.DeclaredUses, ", ")
+				}
+				log.Critical(diag.AddonUsesNotDeclared, "Addon '"+e.namespace+"' maps '"+name+"' to '"+target+"', but "+jsString(e.decl.Package)+" does not declare '"+name+"' in the pikku.uses of its package.json. It declares: "+declared+". Remove '"+name+"' from uses, or have the addon declare it.")
+				return
+			}
+			expected := name
+			for _, d := range e.decl.Dependencies {
+				if d.Alias == name {
+					expected = d.Package
+					break
+				}
+			}
 			wiredRaw, ok := st.RPC.WireAddonDeclarations.Get(target)
 			if !ok || !truthy(json.RawMessage(wiredRaw)) {
-				log.Critical(diag.AddonUsesNotWired, "Addon '"+e.namespace+"' uses '"+pkg+"' as '"+target+"', but no addon is wired under the name '"+target+"'. Wired: "+strings.Join(st.RPC.WireAddonDeclarations.Keys(), ", "))
+				log.Critical(diag.AddonUsesNotWired, "Addon '"+e.namespace+"' uses '"+name+"' as '"+target+"', but no addon is wired under the name '"+target+"'. Wired: "+strings.Join(st.RPC.WireAddonDeclarations.Keys(), ", "))
 				return
 			}
 			wired := decode[addonDecl](wiredRaw)
-			if wired.Package == nil || *wired.Package != pkg {
-				log.Critical(diag.AddonUsesNotWired, "Addon '"+e.namespace+"' uses '"+pkg+"' as '"+target+"', but '"+target+"' is wired from '"+jsString(wired.Package)+"'.")
+			if wired.Package == nil || *wired.Package != expected {
+				if expected == name {
+					log.Critical(diag.AddonUsesNotWired, "Addon '"+e.namespace+"' uses '"+name+"' as '"+target+"', but '"+target+"' is wired from '"+jsString(wired.Package)+"'.")
+				} else {
+					log.Critical(diag.AddonUsesNotWired, "Addon '"+e.namespace+"' calls "+expected+" as '"+name+"', mapped to '"+target+"', but '"+target+"' is wired from '"+jsString(wired.Package)+"'.")
+				}
 			}
 		})
 	}

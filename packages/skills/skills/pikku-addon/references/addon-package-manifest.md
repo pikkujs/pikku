@@ -81,6 +81,12 @@ package that declared them, and the extra segment is what stops a linked addon's
 }
 ```
 
+**`pikku.uses` names the addons this addon calls**, as
+`{ "<alias>": "<package>@<range>" }`. The addon calls `<alias>:<fn>`, typed from
+that package's SDK, and the app wiring it maps each alias with `wireAddon`
+`uses` (see "Calling another addon" in the skill). The older list form,
+`["kysely"]`, names keys the app must map, with no SDK or version check.
+
 **`imports` names `dist`, never the source tree.** `files: ["dist"]` is the whole
 published package, and `pikku dist` copies `.pikku` and `types` into it — so a
 `#pikku/*` target under `./.pikku/` resolves for the author and for nobody else.

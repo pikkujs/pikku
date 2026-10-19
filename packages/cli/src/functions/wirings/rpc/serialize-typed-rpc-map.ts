@@ -6,7 +6,14 @@ import { addonGeneratedImport } from '../../../utils/remote-addon-import.js'
 
 type WireAddonDeclarations = Map<
   string,
-  { package: string; range?: string; rpcEndpoint?: string; remote?: boolean }
+  {
+    package: string
+    range?: string
+    rpcEndpoint?: string
+    remote?: boolean
+    /** An addon's dependency in the same workspace: the SDK it generated. */
+    sdkDir?: string
+  }
 >
 
 export const serializeTypedRPCMap = (

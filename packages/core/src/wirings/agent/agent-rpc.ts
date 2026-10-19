@@ -7,6 +7,7 @@ import type {
 } from './agent.types.js'
 import type { StreamAgentOptions } from './agent-prepare.js'
 import { pikkuState } from '../../pikku-state.js'
+import { mapAddonCall } from '../addon/addon-reach.js'
 import { runAgent, resumeAgentSync } from './agent-runner.js'
 import { streamAgent, resumeAgent, interruptAgent } from './agent-stream.js'
 import { wrapChannelWithAGUI } from './agent-agui.js'
@@ -48,7 +49,13 @@ export const createAgentRPC = (
 
   return {
     run: async (agentName: string, input: AgentInput) =>
-      asRunResult(await runAgent(agentName, input, params())),
+      asRunResult(
+        await runAgent(
+          mapAddonCall(wire.addonNamespace, agentName),
+          input,
+          params()
+        )
+      ),
 
     stream: async (
       agentName: string,
@@ -63,7 +70,7 @@ export const createAgentRPC = (
     ) => {
       let currentRunId: string | undefined
       await streamAgent(
-        agentName,
+        mapAddonCall(wire.addonNamespace, agentName),
         input,
         wrapChannelWithAGUI(streamingChannel(), {
           threadId: input.threadId,

@@ -136,6 +136,8 @@ type addonDecl struct {
 	CredentialOverrides *state.Record[json.RawMessage] `json:"credentialOverrides"`
 	CredentialGrants    []string                       `json:"credentialGrants"`
 	Uses                *state.Record[json.RawMessage] `json:"uses"`
+	DeclaredUses        *[]string                      `json:"declaredUses"`
+	Dependencies        []addonDependency              `json:"dependencies"`
 	ContentBucket       *string                        `json:"contentBucket"`
 	ContentGrants       *state.Record[json.RawMessage] `json:"contentGrants"`
 	AuthCredentialId    *string                        `json:"authCredentialId"`
@@ -144,6 +146,13 @@ type addonDecl struct {
 	Scopes              []json.RawMessage              `json:"scopes"`
 	Expose              json.RawMessage                `json:"expose"`
 	Tags                []string                       `json:"tags"`
+}
+
+// addonDependency is one entry of a wired addon's declared pikku.uses map.
+type addonDependency struct {
+	Alias   string `json:"alias"`
+	Package string `json:"package"`
+	Range   string `json:"range"`
 }
 
 func (d addonDecl) pkg() string {

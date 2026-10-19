@@ -47,6 +47,7 @@ wireAddon({
   name: string,                    // Namespace for addon functions (e.g. 'todos')
   package: string,                 // NPM package name (e.g. '@pikku/addon-todos')
   rpcEndpoint?: string,            // Optional remote RPC endpoint for distributed execution
+  uses?: Record<string, string>,   // alias the addon declared → name this app wired it under (only declared aliases; PKU355)
   auth?: boolean,                  // Require a session for every function in the addon
   mcp?: boolean | string[],        // true: every function the addon declared mcp: true; a list: the tools this app offers, typed against the addon's function names
   expose?: boolean | string[],     // opt-in: what rpc.exposed / POST /rpc may reach. true = every function the addon declared expose: true, a list = those of them named (typed; PKU343 on unknown or undeclared names), unset/false = none
@@ -317,6 +318,55 @@ In an addon, `pikku all` packs the SDK on every run, at the package.json
 version. The SDK carries only the remote RPCs, the `expose: true` workflows and
 the types they reach. Changing a published `remote: true` contract needs a new
 `version` on the function, which `pikku versions check` enforces.
+
+### Calling another addon
+
+Declare it in the addon's **package.json** (not pikku.config.json), by the
+alias your code calls it by and a range:
+
+```json
+"pikku": { "uses": { "stripe": "@pikkustudio/addon-stripe@^0.12.0" } }
+```
+
+Then call it typed, with no cast and no hand-written wrapper:
+
+```typescript
+const charge = await rpc.invoke('stripe:charge', { amountCents })
+await rpc.startWorkflow('stripe:refund', { chargeId: charge.chargeId })
+```
+
+`pikku all` in the addon types `stripe:*` from the dependency's SDK (its remote
+surface). A package in the same workspace is read from its own
+`<outDir>/sdk`, so run `pikku all` there first (PKU338 if missing, PKU354 if
+its version is outside the range); anything else is fetched from the registry
+and pinned in `pikku-addons.lock`. Never cast `rpc` or call by the package
+name; the alias is the only name that works.
+
+The app wiring your addon maps the alias with `uses`, local or remote alike:
+
+```typescript
+wireRemoteAddon({
+  name: 'payments',
+  package: '@pikkustudio/addon-stripe@^0.12.0',
+  serverUrl,
+})
+wireAddon({
+  name: 'billing',
+  package: '@acme/addon-billing',
+  uses: { stripe: 'payments' },
+})
+```
+
+| Code   | The app's `pikku all` fails when                                    |
+| ------ | ------------------------------------------------------------------- |
+| PKU348 | an alias the addon declared is not mapped                           |
+| PKU347 | it is mapped to a name not wired, or wired from another package     |
+| PKU355 | `uses` maps a name the addon did not declare                        |
+| PKU354 | the mapped instance's version is outside the range                  |
+| PKU356 | the addon's `pikku.uses` entry is malformed (alias, type, no range) |
+
+At runtime an unmapped alias, or the wired name called directly, throws
+`AddonNotUsedError` (403) for invoke, workflows and agents.
 
 ### Database tables
 
