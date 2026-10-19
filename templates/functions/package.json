@@ -5,9 +5,9 @@
   "dependencies": {
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
-    "@pikku/better-auth": "^0.12.58",
+    "@pikku/better-auth": "^0.12.59",
     "@pikku/code-edit": "workspace:*",
-    "@pikku/core": "^0.12.144",
+    "@pikku/core": "^0.12.145",
     "@pikku/jose": "workspace:^",
     "@pikku/kysely": "workspace:^",
     "@pikku/schema-cfworker": "^0.12.9",
@@ -21,7 +21,7 @@
   "devDependencies": {
     "@aws-sdk/client-sqs": "^3.1152.0",
     "@modelcontextprotocol/sdk": "1.32.1",
-    "@pikku/cli": "^0.12.194",
+    "@pikku/cli": "^0.12.195",
     "@pikku/cloudflare": "workspace:*",
     "@pikku/azure-functions": "workspace:*",
     "@pikku/bun-server": "workspace:*",
