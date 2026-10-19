@@ -1,0 +1,75 @@
+{
+  "name": "publishWorkflow",
+  "pikkuFuncId": "publishWorkflow",
+  "source": "dsl",
+  "nodes": {
+    "Render": {
+      "nodeId": "Render",
+      "rpcName": "renderPost",
+      "next": "Mark live",
+      "input": {
+        "postId": {
+          "$ref": "trigger",
+          "path": "postId"
+        }
+      },
+      "outputVar": "rendered",
+      "stepHash": "28d2e969eba6"
+    },
+    "Mark live": {
+      "nodeId": "Mark live",
+      "rpcName": "markLive",
+      "next": "Announce",
+      "input": {
+        "postId": {
+          "$ref": "trigger",
+          "path": "postId"
+        }
+      },
+      "stepHash": "6819f2aeb046"
+    },
+    "Announce": {
+      "nodeId": "Announce",
+      "rpcName": "announcePost",
+      "next": "step_3",
+      "input": {
+        "postId": {
+          "$ref": "trigger",
+          "path": "postId"
+        }
+      },
+      "stepHash": "e33457b9db2b"
+    },
+    "step_3": {
+      "nodeId": "step_3",
+      "flow": "return",
+      "outputs": {
+        "postId": {
+          "from": "input",
+          "path": "postId"
+        },
+        "readingMinutes": {
+          "from": "outputVar",
+          "name": "rendered",
+          "path": "readingMinutes"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "Render"
+  ],
+  "graphHash": "f1791b9cbaf1",
+  "deterministic": true,
+  "plannedSteps": [
+    {
+      "stepName": "Render"
+    },
+    {
+      "stepName": "Mark live"
+    },
+    {
+      "stepName": "Announce"
+    }
+  ]
+}

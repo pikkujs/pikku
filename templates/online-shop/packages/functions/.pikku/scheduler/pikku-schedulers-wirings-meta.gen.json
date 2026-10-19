@@ -1,0 +1,29 @@
+{
+  "dailySalesReport": {
+    "pikkuFuncId": "dailySalesReport",
+    "name": "dailySalesReport",
+    "schedule": "0 6 * * *",
+    "middleware": [
+      {
+        "type": "wire",
+        "name": "timingMiddleware",
+        "inline": true
+      }
+    ]
+  },
+  "cleanupAbandonedBaskets": {
+    "pikkuFuncId": "cleanupAbandonedBaskets",
+    "name": "cleanupAbandonedBaskets",
+    "schedule": "0 3 * * *"
+  },
+  "conditionalReport": {
+    "pikkuFuncId": "conditionalReport",
+    "name": "conditionalReport",
+    "schedule": "0 7 * * *"
+  },
+  "sweepLowStock": {
+    "pikkuFuncId": "sweepLowStock",
+    "name": "sweepLowStock",
+    "schedule": "*/5 * * * *"
+  }
+}

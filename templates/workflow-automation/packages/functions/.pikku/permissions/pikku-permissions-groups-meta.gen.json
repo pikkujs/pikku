@@ -1,0 +1,38 @@
+{
+  "definitions": {
+    "isFlowOwner": {
+      "services": {
+        "optimized": true,
+        "services": [
+          "kysely"
+        ]
+      },
+      "wires": {
+        "optimized": true,
+        "wires": [
+          "session"
+        ]
+      },
+      "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/permissions.ts",
+      "position": 644,
+      "exportedName": "isFlowOwner"
+    },
+    "isThreadOwner": {
+      "services": {
+        "optimized": true,
+        "services": [
+          "agentRunService"
+        ]
+      },
+      "wires": {
+        "optimized": true,
+        "wires": [
+          "session"
+        ]
+      },
+      "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/scaffold/agent/agent.gen.ts",
+      "position": 738,
+      "exportedName": "isThreadOwner"
+    }
+  }
+}

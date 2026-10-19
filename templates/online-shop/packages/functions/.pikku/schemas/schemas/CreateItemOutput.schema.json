@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"itemId":{"type":"string"},"name":{"type":"string"},"slug":{"type":"string"},"priceCents":{"type":"number"},"stock":{"type":"number"}},"required":["itemId","name","slug","priceCents","stock"],"additionalProperties":false}

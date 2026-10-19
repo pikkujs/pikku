@@ -1,0 +1,7 @@
+{{t.confirmEmail.heading}}
+
+{{t.confirmEmail.intro}}
+
+{{confirmUrl}}
+
+{{t.confirmEmail.expiry}}

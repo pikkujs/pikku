@@ -77,7 +77,7 @@ pikku app new admin --serves staff --virtual-users manager,mechanic
 ```
 
 One command does every step this section used to list by hand: it fetches
-`pikkujs/starter-template`'s `apps/app`, re-points its `package.json` at the
+`templates/starter-template/apps/app` in `pikkujs/pikku`, re-points its `package.json` at the
 new name, its own dev/preview port and its own `--tsBuildInfoFile`, stamps
 `app: '<slug>'` onto each named virtual user in `defineVirtualUsers({…})`, adds the
 `frontends` entry to `pikku.config.json`, and re-runs `bun install`. `pikku app

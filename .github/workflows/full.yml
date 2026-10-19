@@ -757,6 +757,39 @@ jobs:
       SLS_NOTIFICATIONS_MODE: off
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  templates-standalone-download:
+    name: Standalone templates download (${{ matrix.template }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        template:
+          - nextjs-full
+          - online-shop
+          - field-service
+          - hotel-management
+          - public-content
+          - team-saas
+          - workflow-automation
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          node-version: 24
+      # Standalone templates live in templates/<name> of this repo and are
+      # fetched by `create-pikku` from the single repo at the branch under test.
+      - name: Scaffold from templates/${{ matrix.template }}
+        run: |
+          cd packages/create
+          node ./dist/index.js --template "$TEMPLATE" --version "$VERSION" \
+            --name ../../../standalone-app --package-manager npm --skip-install
+          test -f ../../../standalone-app/package.json
+        env:
+          TEMPLATE: ${{ matrix.template }}
+          VERSION: ${{ github.ref_name }}
+
   template-runtime-targets:
     name: Template Functions Runtimes (${{ matrix.version }}, ${{ matrix.target }})
     runs-on: ubuntu-24.04

@@ -1,0 +1,44 @@
+{
+  "events": {
+    "name": "events",
+    "route": "/events",
+    "input": null,
+    "connect": null,
+    "disconnect": null,
+    "message": null,
+    "messageWirings": {
+      "action": {
+        "subscribe": {
+          "pikkuFuncId": "realtimeSubscribe"
+        },
+        "unsubscribe": {
+          "pikkuFuncId": "realtimeUnsubscribe"
+        }
+      }
+    },
+    "binary": null,
+    "tags": [
+      "pikku:realtime"
+    ]
+  },
+  "editorial": {
+    "name": "editorial",
+    "route": "/editorial",
+    "input": null,
+    "connect": {
+      "pikkuFuncId": "onConnect"
+    },
+    "disconnect": {
+      "pikkuFuncId": "onDisconnect"
+    },
+    "message": null,
+    "messageWirings": {
+      "action": {
+        "watchEditorial": {
+          "pikkuFuncId": "watchEditorial"
+        }
+      }
+    },
+    "binary": null
+  }
+}

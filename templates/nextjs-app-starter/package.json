@@ -1,0 +1,40 @@
+{
+  "name": "@pikku/nextjs-app-starter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "postinstall": "npm run prebuild",
+    "prebuild": "npx --yes @pikku/cli@latest",
+    "tsc": "tsc",
+    "ncu:pikku": "ncu -f '/@pikku/.*/' -u && npm install"
+  },
+  "dependencies": {
+    "@pikku/core": "^0.8.2",
+    "@pikku/fetch": "^0.8.0",
+    "@pikku/jose": "^0.8.0",
+    "@pikku/next": "^0.8.0",
+    "next": "^15",
+    "react": "^19",
+    "react-dom": "^19",
+    "tsx": "^4.19.2",
+    "tslib": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@pikku/cli": "^0.8.3",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  },
+  "packageManager": "^npm@10.8.2",
+  "engines": {
+    "node": ">=20"
+  }
+}

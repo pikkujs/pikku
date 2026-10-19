@@ -1,0 +1,42 @@
+{
+  "src": "/Users/yasser/git/pikku/templates/workflow-automation/emails",
+  "themeHash": "2f05b4c018a552f96e8b4fc6162e77e4e875415b6fdc452f916db2b854d169c1",
+  "templates": {
+    "confirm-email": {
+      "variables": [
+        "appName",
+        "confirmUrl",
+        "email"
+      ],
+      "hasHtml": true,
+      "hasSubject": true,
+      "hasText": true,
+      "locales": {
+        "en": {
+          "contentHash": "e49c45478b1d75150830e881994b5f9099cd1efa566833656b66a469e9bb1171",
+          "htmlHash": "14c6c1762c066e59ef9a47b8538b6704fe901d2b635bd9511d87dad7d1166652",
+          "subjectHash": "b324e2812c0c11425d24d5c03c507b63e9824ad761a0b9b3faab2fdb135fb238",
+          "textHash": "5f4849e86acf50e88b6a6ee76bbd1a1ed425ccf79c54123b356d7e72c22ff8d4"
+        }
+      }
+    },
+    "reset-password": {
+      "variables": [
+        "appName",
+        "email",
+        "resetUrl"
+      ],
+      "hasHtml": true,
+      "hasSubject": true,
+      "hasText": true,
+      "locales": {
+        "en": {
+          "contentHash": "a2ff7c5c1e9a837993712f689265ecae12abcd3e45337982b748b9ab35ee80f9",
+          "htmlHash": "00e7019cfe4b4d0079ededc15fc2b1d18ed8d72526f4310af5a62e819a79b0d5",
+          "subjectHash": "51e6d5c21ce62ed7152b30bc285f654082b496a8ee5437608dcbe8f51de7c71a",
+          "textHash": "8277ba18d4b8bc8f9c039aebf2645bb32116483193eaa17e3d7fd5ddb9ac8886"
+        }
+      }
+    }
+  }
+}

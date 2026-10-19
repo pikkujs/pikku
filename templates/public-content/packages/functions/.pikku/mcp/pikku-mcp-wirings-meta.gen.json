@@ -1,0 +1,13 @@
+{
+  "resourcesMeta": {},
+  "toolsMeta": {
+    "listPublishedTool": {
+      "pikkuFuncId": "listPublishedTool",
+      "name": "listPublishedTool",
+      "description": "List the publication’s published posts, newest first",
+      "inputSchema": "ListPublishedToolInput",
+      "outputSchema": "MCPToolResponse"
+    }
+  },
+  "promptsMeta": {}
+}

@@ -1,0 +1,50 @@
+{
+  "name": "memberSeesOnlyTheirWorkspace",
+  "pikkuFuncId": "memberSeesOnlyTheirWorkspace",
+  "source": "scenario",
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "Member lists their organisations"
+    },
+    "Member lists their organisations": {
+      "nodeId": "Member lists their organisations",
+      "rpcName": "listMyOrgs",
+      "next": "step_2",
+      "outputVar": "mine",
+      "stepHash": "b70724608e95"
+    },
+    "step_2": {
+      "nodeId": "step_2",
+      "flow": "branch",
+      "branches": [],
+      "next": "Member lists issues in that organisation"
+    },
+    "Member lists issues in that organisation": {
+      "nodeId": "Member lists issues in that organisation",
+      "rpcName": "listIssues",
+      "next": "step_4",
+      "input": {
+        "limit": 10
+      },
+      "outputVar": "issues",
+      "stepHash": "4886049b4f6e"
+    },
+    "step_4": {
+      "nodeId": "step_4",
+      "flow": "return",
+      "outputs": {
+        "issueCount": {
+          "from": "expression",
+          "expression": "issues.issues.length"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "35d500dde6c9"
+}

@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"orderId":{"type":"string"},"status":{"type":"string"},"totalCents":{"type":"number"}},"required":["orderId","status","totalCents"],"additionalProperties":false}

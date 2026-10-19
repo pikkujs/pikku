@@ -1,0 +1,10 @@
+{
+  "webchat": {
+    "pikkuFuncId": "handleChatMessage",
+    "name": "webchat",
+    "type": "websocket",
+    "route": "/chat",
+    "auth": false,
+    "gateway": true
+  }
+}

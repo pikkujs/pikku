@@ -1,0 +1,19 @@
+{
+  "basePath": "/api/auth",
+  "hasCredentials": true,
+  "providers": [],
+  "plugins": [
+    {
+      "id": "actor",
+      "displayName": "Actor"
+    },
+    {
+      "id": "ban",
+      "displayName": "Ban"
+    },
+    {
+      "id": "fabric",
+      "displayName": "Fabric"
+    }
+  ]
+}

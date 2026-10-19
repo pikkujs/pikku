@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"eligible":{"type":"boolean"},"totalCents":{"type":["number"]}},"required":["eligible","totalCents"],"additionalProperties":false,"definitions":{}}

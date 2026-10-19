@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"pathname":{"type":"string"},"email":{"type":"string"}},"required":["pathname","email"],"additionalProperties":false,"definitions":{}}

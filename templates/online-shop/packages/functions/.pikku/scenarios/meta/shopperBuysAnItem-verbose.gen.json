@@ -1,0 +1,111 @@
+{
+  "name": "shopperBuysAnItem",
+  "pikkuFuncId": "shopperBuysAnItem",
+  "source": "scenario",
+  "title": "Shopper buys an item",
+  "description": "Browse the catalogue, fill a basket and pay for an order.",
+  "tags": [
+    "checkout"
+  ],
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "Shopper opens their basket"
+    },
+    "Shopper opens their basket": {
+      "nodeId": "Shopper opens their basket",
+      "rpcName": "getBasket",
+      "stepName": "Shopper opens their basket",
+      "next": "Shopper browses the catalogue",
+      "outputVar": "basket",
+      "stepHash": "175cf333fa5b"
+    },
+    "Shopper browses the catalogue": {
+      "nodeId": "Shopper browses the catalogue",
+      "rpcName": "listItems",
+      "stepName": "Shopper browses the catalogue",
+      "next": "step_3",
+      "input": {
+        "search": "mug"
+      },
+      "outputVar": "catalogue",
+      "stepHash": "24da124677d3"
+    },
+    "step_3": {
+      "nodeId": "step_3",
+      "flow": "branch",
+      "branches": [],
+      "next": "Shopper adds a mug to the basket"
+    },
+    "Shopper adds a mug to the basket": {
+      "nodeId": "Shopper adds a mug to the basket",
+      "rpcName": "addToBasket",
+      "stepName": "Shopper adds a mug to the basket",
+      "next": "Shopper checks out",
+      "input": {
+        "basketId": {
+          "$ref": "basket",
+          "path": "basketId"
+        },
+        "quantity": 1
+      },
+      "stepHash": "cb1e9dc721d9"
+    },
+    "Shopper checks out": {
+      "nodeId": "Shopper checks out",
+      "rpcName": "createOrder",
+      "stepName": "Shopper checks out",
+      "next": "Order is paid",
+      "input": {
+        "basketId": {
+          "$ref": "basket",
+          "path": "basketId"
+        },
+        "shippingAddress": {
+          "line1": "1 High Street",
+          "city": "London",
+          "postcode": "N1 1AA",
+          "country": "GB"
+        }
+      },
+      "outputVar": "order",
+      "stepHash": "0b108c73b8f9"
+    },
+    "Order is paid": {
+      "nodeId": "Order is paid",
+      "rpcName": "getOrder",
+      "stepName": "Order is paid",
+      "next": "step_7",
+      "expectEventually": true,
+      "input": {
+        "orderId": {
+          "$ref": "order",
+          "path": "orderId"
+        }
+      },
+      "stepHash": "5ca020f59c16"
+    },
+    "step_7": {
+      "nodeId": "step_7",
+      "flow": "return",
+      "outputs": {
+        "orderId": {
+          "from": "outputVar",
+          "name": "order",
+          "path": "orderId"
+        },
+        "totalCents": {
+          "from": "outputVar",
+          "name": "order",
+          "path": "totalCents"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "d3285ca7d507"
+}

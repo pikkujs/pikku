@@ -1820,7 +1820,7 @@ wireCLI({
             },
             template: {
               description:
-                'Template to scaffold from — a giget source or a path in the repo (defaults to gh:pikkujs/starter-template/apps/app)',
+                'Template to scaffold from — a giget source or a path in the repo (defaults to gh:pikkujs/pikku/templates/starter-template/apps/app)',
             },
             primary: {
               description: 'Make this the primary frontend',

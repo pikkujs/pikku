@@ -1,0 +1,73 @@
+{
+  "visitor": {
+    "id": "visitor",
+    "name": "Visitor",
+    "roles": [
+      "customer"
+    ],
+    "goals": [],
+    "tags": [],
+    "runnable": true,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/personas.virtual-user.ts",
+    "jobTitle": "Synthetic health-check user",
+    "personality": "Signs in and checks their own session — proves auth end to end",
+    "account": {},
+    "email": "visitor@actors.local"
+  },
+  "shopper": {
+    "id": "shopper",
+    "name": "Susan",
+    "roles": [
+      "customer"
+    ],
+    "goals": [
+      "Get the weekly order in under five minutes"
+    ],
+    "tags": [],
+    "runnable": true,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/personas.virtual-user.ts",
+    "jobTitle": "Buys for a small café",
+    "description": "Orders stock every week and watches the margins",
+    "personality": "Hunts cheap deals. Tries three coupon codes before giving up, and abandons a basket if checkout asks for anything unexpected.",
+    "disposition": "careless",
+    "account": {},
+    "email": "shopper@actors.local"
+  },
+  "priya": {
+    "id": "priya",
+    "name": "Priya from Support",
+    "roles": [
+      "support"
+    ],
+    "goals": [
+      "Resolve the customer’s problem without escalating"
+    ],
+    "tags": [],
+    "runnable": true,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/personas.virtual-user.ts",
+    "jobTitle": "Customer support",
+    "description": "Handles refunds and cancellations for other people’s orders",
+    "personality": "Methodical. Reads the order history before touching anything, and says what she changed.",
+    "account": {},
+    "email": "priya@actors.local"
+  },
+  "alex": {
+    "id": "alex",
+    "name": "Alex the Owner",
+    "roles": [
+      "admin"
+    ],
+    "goals": [
+      "Keep stock accurate",
+      "See what sold this week"
+    ],
+    "tags": [],
+    "runnable": true,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/personas.virtual-user.ts",
+    "jobTitle": "Shop owner",
+    "description": "Runs the shop — prices, stock and who works here",
+    "personality": "Impatient. Knows the catalogue by heart and expects bulk actions to exist.",
+    "account": {},
+    "email": "alex@actors.local"
+  }
+}

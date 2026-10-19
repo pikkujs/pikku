@@ -1,0 +1,19 @@
+{
+  "basePath": "/api/auth",
+  "hasCredentials": true,
+  "providers": [],
+  "plugins": [
+    {
+      "id": "pikkuActor",
+      "displayName": "Actor"
+    },
+    {
+      "id": "pikkuBan",
+      "displayName": "Ban"
+    },
+    {
+      "id": "pikkuFabric",
+      "displayName": "Fabric"
+    }
+  ]
+}

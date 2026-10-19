@@ -1,0 +1,33 @@
+{
+  "pikku-virtual-user-runs": {
+    "pikkuFuncId": "executeVirtualUserRun",
+    "name": "pikku-virtual-user-runs",
+    "tags": [
+      "pikku"
+    ]
+  },
+  "stripe-webhook-event": {
+    "pikkuFuncId": "applyStripeEvent",
+    "name": "stripe-webhook-event"
+  },
+  "send-order-confirmation": {
+    "pikkuFuncId": "sendOrderConfirmation",
+    "name": "send-order-confirmation"
+  },
+  "audit-event": {
+    "pikkuFuncId": "writeAuditEvent",
+    "name": "audit-event"
+  },
+  "process-export": {
+    "pikkuFuncId": "processExport",
+    "name": "process-export"
+  },
+  "wf-orchestrator-checkout-workflow": {
+    "name": "wf-orchestrator-checkout-workflow",
+    "pikkuFuncId": "pikkuWorkflowOrchestrator:checkoutWorkflow"
+  },
+  "wf-orchestrator-refund-workflow": {
+    "name": "wf-orchestrator-refund-workflow",
+    "pikkuFuncId": "pikkuWorkflowOrchestrator:refundWorkflow"
+  }
+}

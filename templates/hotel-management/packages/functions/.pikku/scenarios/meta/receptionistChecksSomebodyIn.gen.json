@@ -1,0 +1,62 @@
+{
+  "name": "receptionistChecksSomebodyIn",
+  "pikkuFuncId": "receptionistChecksSomebodyIn",
+  "source": "scenario",
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "Receptionist opens the board"
+    },
+    "Receptionist opens the board": {
+      "nodeId": "Receptionist opens the board",
+      "rpcName": "listRooms",
+      "next": "step_2",
+      "outputVar": "rooms",
+      "stepHash": "170248dadb35"
+    },
+    "step_2": {
+      "nodeId": "step_2",
+      "flow": "filter",
+      "sourceVar": "rooms.rooms",
+      "itemVar": "r",
+      "condition": {
+        "type": "or",
+        "conditions": [
+          {
+            "type": "simple",
+            "expression": "r.housekeepingStatus === 'clean'"
+          },
+          {
+            "type": "simple",
+            "expression": "r.housekeepingStatus === 'inspected'"
+          }
+        ]
+      },
+      "outputVar": "ready",
+      "next": "step_3"
+    },
+    "step_3": {
+      "nodeId": "step_3",
+      "flow": "branch",
+      "branches": [],
+      "next": "step_4"
+    },
+    "step_4": {
+      "nodeId": "step_4",
+      "flow": "return",
+      "outputs": {
+        "readyRooms": {
+          "from": "outputVar",
+          "name": "ready",
+          "path": "length"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "0d9c3f580346"
+}

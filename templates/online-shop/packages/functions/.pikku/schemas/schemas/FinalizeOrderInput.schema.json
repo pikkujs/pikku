@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"orderId":{"type":"string"},"basketId":{"type":"string"},"userId":{"type":"string"},"status":{"type":"string","enum":["paid","payment_failed"]}},"required":["orderId","basketId","userId","status"],"additionalProperties":false,"definitions":{}}

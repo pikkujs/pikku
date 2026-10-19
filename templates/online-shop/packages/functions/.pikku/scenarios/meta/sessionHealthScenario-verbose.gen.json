@@ -1,0 +1,45 @@
+{
+  "name": "sessionHealthScenario",
+  "pikkuFuncId": "sessionHealthScenario",
+  "source": "scenario",
+  "title": "Session health (scenario)",
+  "tags": [
+    "scenario"
+  ],
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "an actor signs in and reads their session"
+    },
+    "an actor signs in and reads their session": {
+      "nodeId": "an actor signs in and reads their session",
+      "rpcName": "getSession",
+      "stepName": "an actor signs in and reads their session",
+      "next": "step_2",
+      "outputVar": "session",
+      "stepHash": "b279c2de8d07"
+    },
+    "step_2": {
+      "nodeId": "step_2",
+      "flow": "return",
+      "outputs": {
+        "email": {
+          "from": "outputVar",
+          "name": "session",
+          "path": "email"
+        },
+        "userId": {
+          "from": "outputVar",
+          "name": "session",
+          "path": "userId"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "e6fdda9fa66b"
+}

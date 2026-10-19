@@ -1,0 +1,14 @@
+{
+  "execute-flow-run": {
+    "pikkuFuncId": "executeFlowRun",
+    "name": "execute-flow-run"
+  },
+  "audit-event": {
+    "pikkuFuncId": "writeAuditEvent",
+    "name": "audit-event"
+  },
+  "wf-orchestrator-publish-flow": {
+    "name": "wf-orchestrator-publish-flow",
+    "pikkuFuncId": "pikkuWorkflowOrchestrator:publishFlow"
+  }
+}

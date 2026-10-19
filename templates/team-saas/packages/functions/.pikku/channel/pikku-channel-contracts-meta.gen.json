@@ -1,0 +1,10 @@
+{
+  "realtimeRoutes": {
+    "subscribe": {
+      "pikkuFuncId": "realtimeSubscribe"
+    },
+    "unsubscribe": {
+      "pikkuFuncId": "realtimeUnsubscribe"
+    }
+  }
+}

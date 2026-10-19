@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    // @pikku/playwright is here for its `declare module` augmentation, not for
+    // anything it exports. @pikku/core never imports playwright — it has to stay
+    // usable on edge runtimes — so its PikkuBrowserWire declares only `actor`,
+    // `goto` and `screenshot`; the driver adds `page` and `context` back. The
+    // runner already supplies those at run time (it dynamically imports the
+    // driver named by scenarios.browserDriver and hands each browser step the
+    // ActorSession), so this is purely what makes them visible to the type
+    // checker. Without it every `browser.page` in test/scenarios stops
+    // compiling, and each new browser-step file has to re-import the
+    // augmentation by hand.
+    "types": ["node", "@pikku/playwright"],
+    // `types` entries resolve against these roots, so the last one is what lets
+    // the scoped @pikku/playwright above be found — it is a real dependency of
+    // packages/functions, not an @types package. Because `types` is set
+    // explicitly, only the packages named there are pulled in; adding a root
+    // does not make everything under it global.
+    "typeRoots": [
+      "./node_modules/@types",
+      "./packages/functions/node_modules/@types",
+      "./packages/functions/node_modules"
+    ]
+  },
+  "include": ["packages/functions/src", "packages/functions/test"]
+}

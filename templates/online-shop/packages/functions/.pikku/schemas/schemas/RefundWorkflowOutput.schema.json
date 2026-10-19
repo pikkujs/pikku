@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"orderId":{"type":"string"},"refunded":{"type":"boolean"},"message":{"type":"string"}},"required":["orderId","refunded","message"],"additionalProperties":false,"definitions":{}}

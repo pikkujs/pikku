@@ -27,14 +27,14 @@ import {
   type PikkuAppNewOutput,
 } from './app-new.schemas.js'
 
-const DEFAULT_TEMPLATE = 'gh:pikkujs/starter-template/apps/app'
+const DEFAULT_TEMPLATE = 'gh:pikkujs/pikku/templates/starter-template/apps/app'
 
 const CONFIG_FILE = 'pikku.config.json'
 
 /**
  * Add a frontend, scaffolded from the starter template.
  *
- * The app comes from `pikkujs/starter-template`, not from the app already in
+ * The app comes from `templates/starter-template` in `pikkujs/pikku`, not from the app already in
  * the project: copying the working app drags its screens, routes and nav into
  * an audience that never asked for them, and leaves the caller deleting
  * someone else's product before writing their own.

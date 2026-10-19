@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"name":{"type":"string"},"slug":{"type":"string"},"ownerId":{"type":"string"}},"required":["name","slug","ownerId"],"additionalProperties":false,"definitions":{}}

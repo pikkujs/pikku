@@ -1,0 +1,195 @@
+{
+  "name": "shopperBuysAnItemInTheBrowser",
+  "pikkuFuncId": "shopperBuysAnItemInTheBrowser",
+  "source": "scenario",
+  "actors": [
+    "visitor"
+  ],
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "opens the app"
+    },
+    "opens the app": {
+      "nodeId": "opens the app",
+      "rpcName": "opensPage",
+      "scenarioStepPhase": "then",
+      "next": "clicks through to the catalogue",
+      "actor": "visitor",
+      "input": {
+        "path": "/app"
+      },
+      "stepHash": "a1b115870778"
+    },
+    "clicks through to the catalogue": {
+      "nodeId": "clicks through to the catalogue",
+      "rpcName": "clicks",
+      "scenarioStepPhase": "then",
+      "next": "is on the catalogue",
+      "actor": "visitor",
+      "input": {
+        "name": "Catalogue"
+      },
+      "stepHash": "ac34ef39c0cc"
+    },
+    "is on the catalogue": {
+      "nodeId": "is on the catalogue",
+      "rpcName": "restsOnPath",
+      "scenarioStepPhase": "then",
+      "next": "sees a mug for sale",
+      "actor": "visitor",
+      "input": {
+        "path": "/app/catalogue"
+      },
+      "stepHash": "2ce381da8644"
+    },
+    "sees a mug for sale": {
+      "nodeId": "sees a mug for sale",
+      "rpcName": "seesText",
+      "scenarioStepPhase": "then",
+      "next": "adds it to the basket",
+      "actor": "visitor",
+      "input": {
+        "text": "Enamel coffee mug"
+      },
+      "stepHash": "2aae7df5a56b"
+    },
+    "adds it to the basket": {
+      "nodeId": "adds it to the basket",
+      "rpcName": "clicksNear",
+      "scenarioStepPhase": "then",
+      "next": "opens the basket",
+      "actor": "visitor",
+      "input": {
+        "near": "Enamel coffee mug",
+        "name": "Add to basket"
+      },
+      "stepHash": "3a6aa8f112de"
+    },
+    "opens the basket": {
+      "nodeId": "opens the basket",
+      "rpcName": "clicks",
+      "scenarioStepPhase": "then",
+      "next": "sees the mug in it",
+      "actor": "visitor",
+      "input": {
+        "name": "Basket"
+      },
+      "outputVar": "basket",
+      "stepHash": "3296d3674a2c"
+    },
+    "sees the mug in it": {
+      "nodeId": "sees the mug in it",
+      "rpcName": "seesText",
+      "scenarioStepPhase": "then",
+      "next": "checks out",
+      "actor": "visitor",
+      "input": {
+        "text": "Enamel coffee mug"
+      },
+      "stepHash": "1e606e3f57f7"
+    },
+    "checks out": {
+      "nodeId": "checks out",
+      "rpcName": "clicks",
+      "scenarioStepPhase": "then",
+      "next": "sees the order confirmed",
+      "actor": "visitor",
+      "input": {
+        "name": "Checkout"
+      },
+      "stepHash": "69617423cd64"
+    },
+    "sees the order confirmed": {
+      "nodeId": "sees the order confirmed",
+      "rpcName": "seesText",
+      "scenarioStepPhase": "then",
+      "next": "opens operations",
+      "actor": "visitor",
+      "input": {
+        "text": "Order"
+      },
+      "stepHash": "3a7049c6a458"
+    },
+    "opens operations": {
+      "nodeId": "opens operations",
+      "rpcName": "clicks",
+      "scenarioStepPhase": "then",
+      "next": "sees the live panel",
+      "actor": "visitor",
+      "input": {
+        "name": "Manage"
+      },
+      "stepHash": "b8d1c8dd20a7"
+    },
+    "sees the live panel": {
+      "nodeId": "sees the live panel",
+      "rpcName": "seesText",
+      "scenarioStepPhase": "then",
+      "next": "is refused an unsigned payment webhook",
+      "actor": "visitor",
+      "input": {
+        "text": "activity"
+      },
+      "stepHash": "307e158db39f"
+    },
+    "is refused an unsigned payment webhook": {
+      "nodeId": "is refused an unsigned payment webhook",
+      "rpcName": "postsTo",
+      "scenarioStepPhase": "then",
+      "next": "posts to /api/analytics",
+      "actor": "visitor",
+      "input": {
+        "path": "/api/webhooks/stripe",
+        "body": "{\"type\":\"payment_intent.succeeded\",\"data\":{\"object\":{\"id\":\"pi_coverage\"}}}",
+        "minStatus": 400,
+        "maxStatus": 499
+      },
+      "stepHash": "d505a35383c3"
+    },
+    "posts to /api/analytics": {
+      "nodeId": "posts to /api/analytics",
+      "rpcName": "postsTo",
+      "scenarioStepPhase": "then",
+      "next": "subscribes to the channel",
+      "actor": "visitor",
+      "input": {
+        "path": "/api/analytics",
+        "body": "{\"events\":[{\"event\":{\"name\":\"page_viewed\",\"path\":\"/app/catalogue\"}}]}",
+        "minStatus": 0,
+        "maxStatus": 299
+      },
+      "stepHash": "f13e90d1da33"
+    },
+    "subscribes to the channel": {
+      "nodeId": "subscribes to the channel",
+      "rpcName": "subscribesToChannel",
+      "scenarioStepPhase": "then",
+      "next": "step_15",
+      "actor": "visitor",
+      "input": {
+        "route": "/orders/status",
+        "action": "subscribeToOrder",
+        "unsubscribeAction": "unsubscribeFromOrder"
+      },
+      "stepHash": "77ad7f7aed7e"
+    },
+    "step_15": {
+      "nodeId": "step_15",
+      "flow": "return",
+      "outputs": {
+        "landed": {
+          "from": "outputVar",
+          "name": "basket",
+          "path": "pathname"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "845066010fad"
+}

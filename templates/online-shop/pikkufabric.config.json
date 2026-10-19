@@ -1,0 +1,16 @@
+{
+  "projectId": "__PROJECT_ID__",
+  "frontends": {
+    "app": {
+      "cwd": "apps/app",
+      "primary": true,
+      "deploy": true,
+      "kind": "ssr",
+      "dev": {
+        "command": ["yarn", "dev"],
+        "port": 7104,
+        "healthPath": "/"
+      }
+    }
+  }
+}

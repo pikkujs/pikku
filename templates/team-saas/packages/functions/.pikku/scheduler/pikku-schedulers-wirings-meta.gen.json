@@ -1,0 +1,12 @@
+{
+  "expireInvitations": {
+    "pikkuFuncId": "expireInvitations",
+    "name": "expireInvitations",
+    "schedule": "0 * * * *"
+  },
+  "sweepSeatUsage": {
+    "pikkuFuncId": "sweepSeatUsage",
+    "name": "sweepSeatUsage",
+    "schedule": "*/5 * * * *"
+  }
+}

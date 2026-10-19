@@ -1,0 +1,51 @@
+{
+  "visitor": {
+    "id": "visitor",
+    "name": "Visitor",
+    "roles": [
+      "author"
+    ],
+    "goals": [],
+    "tags": [],
+    "runnable": true,
+    "sourceFile": "/Users/yasser/git/pikku/templates/public-content/packages/functions/src/personas.virtual-user.ts",
+    "jobTitle": "Synthetic health-check user",
+    "personality": "Signs in and checks their own session — proves auth end to end",
+    "account": {}
+  },
+  "mira": {
+    "id": "mira",
+    "name": "Mira Kovač",
+    "roles": [
+      "author"
+    ],
+    "goals": [
+      "Get a piece finished without anyone seeing it early"
+    ],
+    "tags": [],
+    "runnable": true,
+    "sourceFile": "/Users/yasser/git/pikku/templates/public-content/packages/functions/src/personas.virtual-user.ts",
+    "jobTitle": "Writer",
+    "description": "Writes and edits her own drafts, cannot publish them",
+    "personality": "Rewrites the opening four times. Leaves things in draft for weeks and expects them to still be private.",
+    "account": {}
+  },
+  "jon": {
+    "id": "jon",
+    "name": "Jon Adeyemi",
+    "roles": [
+      "editor"
+    ],
+    "goals": [
+      "Ship the week’s posts on time",
+      "Never publish something early"
+    ],
+    "tags": [],
+    "runnable": true,
+    "sourceFile": "/Users/yasser/git/pikku/templates/public-content/packages/functions/src/personas.virtual-user.ts",
+    "jobTitle": "Editor",
+    "description": "Decides what goes live and when",
+    "personality": "Reads the whole thing before touching the button, and schedules rather than publishing on a Friday.",
+    "account": {}
+  }
+}

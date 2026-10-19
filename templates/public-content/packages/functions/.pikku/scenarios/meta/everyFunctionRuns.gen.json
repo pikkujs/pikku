@@ -1,0 +1,121 @@
+{
+  "name": "everyFunctionRuns",
+  "pikkuFuncId": "everyFunctionRuns",
+  "source": "scenario",
+  "actors": [
+    "jon"
+  ],
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "reads the session"
+    },
+    "reads the session": {
+      "nodeId": "reads the session",
+      "rpcName": "getSession",
+      "next": "lists the public index",
+      "actor": "jon",
+      "outputVar": "session",
+      "stepHash": "faea284ade4f"
+    },
+    "lists the public index": {
+      "nodeId": "lists the public index",
+      "rpcName": "listPublished",
+      "next": "step_3",
+      "actor": "jon",
+      "input": {
+        "limit": 20
+      },
+      "outputVar": "published",
+      "stepHash": "eff7f62a3f6c"
+    },
+    "step_3": {
+      "nodeId": "step_3",
+      "flow": "branch",
+      "branches": [],
+      "next": "reads one in full"
+    },
+    "reads one in full": {
+      "nodeId": "reads one in full",
+      "rpcName": "getPost",
+      "next": "lists the editorial queue",
+      "actor": "jon",
+      "outputVar": "post",
+      "stepHash": "3b4996fe648e"
+    },
+    "lists the editorial queue": {
+      "nodeId": "lists the editorial queue",
+      "rpcName": "listDrafts",
+      "next": "step_6",
+      "actor": "jon",
+      "input": {
+        "limit": 50
+      },
+      "outputVar": "drafts",
+      "stepHash": "2f53a4d8fb5f"
+    },
+    "step_6": {
+      "nodeId": "step_6",
+      "flow": "branch",
+      "branches": [],
+      "next": "publishes one directly"
+    },
+    "publishes one directly": {
+      "nodeId": "publishes one directly",
+      "rpcName": "publishPost",
+      "next": "runs the publish workflow",
+      "actor": "jon",
+      "stepHash": "47c292ffa9ed"
+    },
+    "runs the publish workflow": {
+      "nodeId": "runs the publish workflow",
+      "rpcName": "startPublish",
+      "next": "sweeps anything now due",
+      "actor": "jon",
+      "outputVar": "started",
+      "stepHash": "98c6b88cc64a"
+    },
+    "sweeps anything now due": {
+      "nodeId": "sweeps anything now due",
+      "rpcName": "publishScheduled",
+      "next": "notices due posts",
+      "actor": "jon",
+      "stepHash": "1229db26f4a0"
+    },
+    "notices due posts": {
+      "nodeId": "notices due posts",
+      "rpcName": "sweepDuePosts",
+      "next": "calls listPublishedTool",
+      "actor": "jon",
+      "stepHash": "04bd4d2603e4"
+    },
+    "calls listPublishedTool": {
+      "nodeId": "calls listPublishedTool",
+      "rpcName": "callsMcpTool",
+      "scenarioStepPhase": "then",
+      "next": "step_12",
+      "actor": "jon",
+      "input": {
+        "tool": "listPublishedTool",
+        "args": "{\"limit\":5}"
+      },
+      "stepHash": "bd99216dc84e"
+    },
+    "step_12": {
+      "nodeId": "step_12",
+      "flow": "return",
+      "outputs": {
+        "checked": {
+          "from": "literal",
+          "value": 10
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "1f3b3f37f01f"
+}

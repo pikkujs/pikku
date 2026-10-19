@@ -1,0 +1,1910 @@
+{
+  "bySpecifier": {
+    "#pikku/addon": {
+      "wireAddon": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "wireRemoteAddon": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/agent": {
+      "agent": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "agentApprove": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "agentResume": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "agentStream": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAgent": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAgentJudge": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAgentScorer": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/auth": {
+      "addGlobalPermission": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "defineCredential": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAuth": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuPermission": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuPermission": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuPermissionFactory": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/channel": {
+      "defineChannelRoutes": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuChannelConnectionFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuChannelDisconnectionFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuChannelFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/error": {
+      "addError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "AIProviderAuthError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "AIProviderNotConfiguredError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "BadGatewayError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "BadRequestError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ConflictError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ErrorDetails": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ExpectationFailedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ForbiddenError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "GatewayTimeoutError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "GoneError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "HTTPVersionNotSupportedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "InternalServerError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "InvalidMiddlewareWireError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "InvalidOriginError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "InvalidSessionError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "isExpectedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "LengthRequiredError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "LocalEnvironmentOnlyError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "LockedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MaxComputeTimeReachedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MethodNotAllowedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MissingCredentialError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MissingSchemaError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MissingScopeError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MissingServiceError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MissingSessionError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "NotAcceptableError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "NotFoundError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "NotImplementedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PayloadTooLargeError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PaymentRequiredError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuMissingMetaError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PreconditionFailedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ProxyAuthenticationRequiredError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "RangeNotSatisfiableError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ReadonlySessionError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "RequestTimeoutError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "SerializedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ServiceUnavailableError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "SystemRoleImmutableError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "SystemRoleShadowedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TooManyRequestsError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "UnauthorizedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "UnprocessableContentError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "UnsupportedMediaTypeError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "URITooLongError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "WeakKeyMaterialError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/function": {
+      "InferSchemaOutput": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "NodeConfig": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuApprovalDescription": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuApprovalDescription": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuFunction": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuFunctionConfig": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuFunctionSessionless": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuListFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuRemoteChannelFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuSessionlessFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuVoidFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ref": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "refChannel": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "refCLI": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "refHTTP": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "Services": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "Session": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "SingletonServices": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "WiredServices": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/http": {
+      "defineHTTPRoutes": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/mcp": {
+      "pikkuMCPPromptFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuMCPResourceFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuMCPToolFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/middleware": {
+      "addChannelMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "addGlobalMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "addHTTPMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "addTagMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "authAPIKey": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "authBearer": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "authCookie": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "cors": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MiddlewarePriority": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAgentMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuChannelMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuChannelMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuChannelMiddlewareFactory": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuMiddlewareFactory": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "requireOrigin": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/scenarios": {
+      "createCookieJar": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "createScenarioRunner": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAddonScenarioStep": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuBrowserWire": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuFeature": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuFeatureEntry": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuFunctionScenario": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuFunctionScenarioStep": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuPlatformScenarioStep": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuScenario": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuScenarioHook": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuScenarioHook": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuScenarioRef": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuScenarioStep": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pollUntil": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "postScenarioJson": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "readScenarioHttpResponse": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "requireScenarioEnv": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ScenarioHttpResponse": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ScenarioSurface": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TestIdSelector": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedPersonas": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedScenario": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedScenarioSteps": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/scopes": {
+      "defineScope": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "defineSystemRole": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/secrets": {
+      "CredentialsMap": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "defineSecret": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedSecretService": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/setup": {
+      "AddonBaseServices": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "Config": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAddonConfig": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAddonServices": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAddonWireServices": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuConfig": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuServices": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuWireServices": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/trigger": {
+      "pikkuTriggerFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/variables": {
+      "defineVariable": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedVariablesService": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "VariablesMap": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/addon/workflow": {
+      "PikkuFunctionWorkflow": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuWorkflowComplexFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuWorkflowFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuWorkflowGraph": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedWorkflow": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "WorkflowCancelledException": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/agent": {
+      "agent": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.agent.ts"
+        ]
+      },
+      "agentApprove": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "agentResume": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "agentStream": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAgent": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.agent.ts"
+        ]
+      },
+      "pikkuAgentJudge": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAgentScorer": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/auth": {
+      "addGlobalPermission": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "defineCredential": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAuth": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuBetterAuth": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/auth.ts"
+        ]
+      },
+      "pikkuPermission": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/permissions.ts"
+        ]
+      },
+      "PikkuPermission": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuPermissionFactory": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/channel": {
+      "defineChannelRoutes": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuChannelConnectionFunc": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.channel.ts"
+        ]
+      },
+      "pikkuChannelDisconnectionFunc": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.channel.ts"
+        ]
+      },
+      "pikkuChannelFunc": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.channel.ts"
+        ]
+      },
+      "wireChannel": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.channel.ts"
+        ]
+      }
+    },
+    "#pikku/cli": {
+      "defineCLICommands": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuCLICommand": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.cli.ts"
+        ]
+      },
+      "pikkuCLIRender": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "wireCLI": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.cli.ts"
+        ]
+      }
+    },
+    "#pikku/db": {
+      "DB": {
+        "imports": 2,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/application-types.d.ts",
+          "packages/functions/src/services.ts"
+        ]
+      }
+    },
+    "#pikku/error": {
+      "addError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "AIProviderAuthError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "AIProviderNotConfiguredError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "BadGatewayError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "BadRequestError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ConflictError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ErrorDetails": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ExpectationFailedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ForbiddenError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "GatewayTimeoutError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "GoneError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "HTTPVersionNotSupportedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "InternalServerError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "InvalidMiddlewareWireError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "InvalidOriginError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "InvalidSessionError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "isExpectedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "LengthRequiredError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "LocalEnvironmentOnlyError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "LockedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MaxComputeTimeReachedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MethodNotAllowedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MissingCredentialError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MissingSchemaError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MissingScopeError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MissingServiceError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MissingSessionError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "NotAcceptableError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "NotFoundError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "NotImplementedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PayloadTooLargeError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PaymentRequiredError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuMissingMetaError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PreconditionFailedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ProxyAuthenticationRequiredError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "RangeNotSatisfiableError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ReadonlySessionError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "RequestTimeoutError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "SerializedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ServiceUnavailableError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "SystemRoleImmutableError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "SystemRoleShadowedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TooManyRequestsError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "UnauthorizedError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "UnprocessableContentError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "UnsupportedMediaTypeError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "URITooLongError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "WeakKeyMaterialError": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/function": {
+      "InferSchemaOutput": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "NodeConfig": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuApprovalDescription": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuApprovalDescription": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuFunc": {
+        "imports": 5,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/functions/cancel-run.function.ts",
+          "packages/functions/src/functions/get-session.function.ts",
+          "packages/functions/src/functions/list-runs.function.ts",
+          "packages/functions/src/functions/run-flow.function.ts",
+          "packages/functions/src/wires/automation.workflow.ts"
+        ]
+      },
+      "PikkuFunction": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuFunctionConfig": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuFunctionSessionless": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuListFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuRemoteChannelFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuSessionlessFunc": {
+        "imports": 5,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/functions/execute-flow-run.function.ts",
+          "packages/functions/src/functions/on-webhook-received.function.ts",
+          "packages/functions/src/functions/record-analytics-events.function.ts",
+          "packages/functions/src/functions/write-audit-event.function.ts",
+          "packages/functions/src/wires/automation.workflow.ts"
+        ]
+      },
+      "pikkuVoidFunc": {
+        "imports": 2,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/functions/sweep-pending-webhooks.function.ts",
+          "packages/functions/src/functions/sweep-stuck-runs.function.ts"
+        ]
+      },
+      "ref": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "refChannel": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "refCLI": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "refHTTP": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "Services": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "Session": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "SingletonServices": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "WiredServices": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/gateway": {
+      "GatewayAdapter": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "GatewayInboundMessage": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "GatewayOutboundMessage": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "GatewayTransportType": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "GatewayWiring": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuGatewayAdapterFactory": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "WebhookVerificationResult": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "wireGateway": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/http": {
+      "defineHTTPRoutes": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "wireHTTP": {
+        "imports": 3,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.agent.ts",
+          "packages/functions/src/wires/http/analytics.http.ts",
+          "packages/functions/src/wires/http/automation.http.ts"
+        ]
+      },
+      "wireHTTPRoutes": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/mcp": {
+      "pikkuMCPPromptFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuMCPResourceFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuMCPToolFunc": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.mcp.ts"
+        ]
+      },
+      "wireMCPPrompt": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "wireMCPResource": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/middleware": {
+      "addChannelMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "addGlobalMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "addHTTPMiddleware": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/middleware/cors.middleware.ts"
+        ]
+      },
+      "addTagMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "authAPIKey": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "authBearer": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "authCookie": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "cors": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "MiddlewarePriority": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuAgentMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuChannelMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuChannelMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuChannelMiddlewareFactory": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuMiddleware": {
+        "imports": 2,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/middleware/analytics-origin.middleware.ts",
+          "packages/functions/src/middleware/cors.middleware.ts"
+        ]
+      },
+      "PikkuMiddleware": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuMiddlewareFactory": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "requireOrigin": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/queue": {
+      "wireQueueWorker": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.queue.ts"
+        ]
+      }
+    },
+    "#pikku/scenarios": {
+      "createCookieJar": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "createScenarioRunner": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "personaConfigs": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/server-lifecycle.ts"
+        ]
+      },
+      "personaEnvironments": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/server-lifecycle.ts"
+        ]
+      },
+      "pikkuAddonScenarioStep": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuBrowserWire": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuFeature": {
+        "imports": 5,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/test/scenarios/auth.scenario.ts",
+          "packages/functions/test/scenarios/coverage.scenario.ts",
+          "packages/functions/test/scenarios/journey.scenario.ts",
+          "packages/functions/test/scenarios/pages.scenario.ts",
+          "packages/functions/test/scenarios/screenshots.scenario.ts"
+        ]
+      },
+      "PikkuFeatureEntry": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuFunctionScenario": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuFunctionScenarioStep": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuPlatformScenarioStep": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuScenario": {
+        "imports": 7,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/functions/operations.scenario.ts",
+          "packages/functions/src/functions/session-health.scenario.ts",
+          "packages/functions/test/scenarios/auth.scenario.ts",
+          "packages/functions/test/scenarios/coverage.scenario.ts",
+          "packages/functions/test/scenarios/journey.scenario.ts",
+          "packages/functions/test/scenarios/pages.scenario.ts",
+          "packages/functions/test/scenarios/screenshots.scenario.ts"
+        ]
+      },
+      "pikkuScenarioHook": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuScenarioHook": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "PikkuScenarioRef": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuScenarioStep": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/test/scenarios/browser.steps.ts"
+        ]
+      },
+      "pollUntil": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "postScenarioJson": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "readScenarioHttpResponse": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "requireScenarioEnv": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ScenarioHttpResponse": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "ScenarioSurface": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TestIdSelector": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedPersonas": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedScenario": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedScenarioSteps": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/scheduler": {
+      "wireScheduler": {
+        "imports": 2,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.cron.ts",
+          "packages/functions/src/wires/automation.trigger.ts"
+        ]
+      }
+    },
+    "#pikku/scopes": {
+      "definePersonas": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/personas.virtual-user.ts"
+        ]
+      },
+      "defineScope": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/scopes.ts"
+        ]
+      },
+      "defineSystemRole": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/roles.ts"
+        ]
+      },
+      "SCOPES": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/services.ts"
+        ]
+      },
+      "SYSTEM_ROLES": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/services.ts"
+        ]
+      }
+    },
+    "#pikku/secrets": {
+      "CredentialsMap": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "defineSecret": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedSecretService": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/setup": {
+      "Config": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuConfig": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/config.ts"
+        ]
+      },
+      "pikkuServices": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/services.ts"
+        ]
+      },
+      "pikkuWireServices": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/services.ts"
+        ]
+      }
+    },
+    "#pikku/trigger": {
+      "pikkuTriggerFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "wireTrigger": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.trigger.ts"
+        ]
+      },
+      "wireTriggerSource": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/variables": {
+      "defineVariable": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedVariablesService": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "VariablesMap": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    },
+    "#pikku/workflow": {
+      "PikkuFunctionWorkflow": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuWorkflowComplexFunc": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "pikkuWorkflowFunc": {
+        "imports": 1,
+        "seenIn": [
+          "@project/functions"
+        ],
+        "files": [
+          "packages/functions/src/wires/automation.workflow.ts"
+        ]
+      },
+      "pikkuWorkflowGraph": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "TypedWorkflow": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      },
+      "WorkflowCancelledException": {
+        "imports": 0,
+        "seenIn": [],
+        "files": []
+      }
+    }
+  }
+}

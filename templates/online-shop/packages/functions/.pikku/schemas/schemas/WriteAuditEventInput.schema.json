@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"entityType":{"type":"string"},"entityId":{"type":"string"},"action":{"type":"string"},"actorId":{"type":"string"},"payload":{"type":"object","propertyNames":{"type":"string"},"additionalProperties":{}}},"required":["entityType","entityId","action"],"additionalProperties":false}

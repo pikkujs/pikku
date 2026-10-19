@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"orgId":{"type":"string"},"projectId":{"type":"string"}},"required":["orgId","projectId"],"additionalProperties":false,"definitions":{}}

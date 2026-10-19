@@ -1,0 +1,84 @@
+{
+  "authFeature": {
+    "id": "authFeature",
+    "name": "Authentication",
+    "description": "A signed-in session reaches the gated app and identifies its user",
+    "tags": [
+      "auth",
+      "smoke"
+    ],
+    "entries": [
+      {
+        "scenario": "signedInActorReachesTheAppScenario"
+      }
+    ],
+    "unresolvedEntries": 0,
+    "hasBefore": false,
+    "hasAfter": false
+  },
+  "coverageFeature": {
+    "id": "coverageFeature",
+    "name": "Coverage",
+    "description": "Every callable function runs at least once",
+    "tags": [
+      "coverage"
+    ],
+    "entries": [
+      {
+        "scenario": "everyFunctionRuns"
+      }
+    ],
+    "unresolvedEntries": 0,
+    "hasBefore": false,
+    "hasAfter": false
+  },
+  "journeyFeature": {
+    "id": "journeyFeature",
+    "name": "Browser journey",
+    "description": "The job this app exists for, performed by clicking",
+    "tags": [
+      "journey"
+    ],
+    "entries": [
+      {
+        "scenario": "receptionistWorksTheDeskInTheBrowser"
+      }
+    ],
+    "unresolvedEntries": 0,
+    "hasBefore": false,
+    "hasAfter": false
+  },
+  "pagesFeature": {
+    "id": "pagesFeature",
+    "name": "Every page loads",
+    "description": "Every static route renders cleanly for a signed-in user",
+    "tags": [
+      "pages",
+      "smoke"
+    ],
+    "entries": [
+      {
+        "scenario": "everyPageLoadsScenario"
+      }
+    ],
+    "unresolvedEntries": 0,
+    "hasBefore": false,
+    "hasAfter": false
+  },
+  "screenshotsFeature": {
+    "id": "screenshotsFeature",
+    "name": "Screenshots",
+    "description": "Capture every page for visual review at both widths",
+    "tags": [
+      "screenshots"
+    ],
+    "entries": [
+      {
+        "scenario": "capturesEveryPageScenario"
+      }
+    ],
+    "unresolvedEntries": 0,
+    "hasBefore": false,
+    "hasAfter": false
+  }
+}

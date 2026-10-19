@@ -1,0 +1,20 @@
+{
+  "resourcesMeta": {},
+  "toolsMeta": {
+    "listRunsTool": {
+      "pikkuFuncId": "listRunsTool",
+      "name": "listRunsTool",
+      "description": "List recent flow runs, optionally filtered by flow or status — use this to answer \"did it run\" and \"why did it fail\"",
+      "inputSchema": "ListRunsToolInput",
+      "outputSchema": "MCPToolResponse"
+    },
+    "cancelRunTool": {
+      "pikkuFuncId": "cancelRunTool",
+      "name": "cancelRunTool",
+      "description": "Cancel a queued or in-flight run",
+      "inputSchema": "CancelRunToolInput",
+      "outputSchema": "MCPToolResponse"
+    }
+  },
+  "promptsMeta": {}
+}

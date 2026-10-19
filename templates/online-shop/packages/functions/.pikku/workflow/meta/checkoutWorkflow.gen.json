@@ -1,0 +1,129 @@
+{
+  "name": "checkoutWorkflow",
+  "pikkuFuncId": "checkoutWorkflow",
+  "source": "dsl",
+  "nodes": {
+    "Validate basket": {
+      "nodeId": "Validate basket",
+      "rpcName": "validateBasket",
+      "next": "Create order",
+      "input": {
+        "basketId": {
+          "$ref": "trigger",
+          "path": "basketId"
+        }
+      },
+      "outputVar": "basket",
+      "stepHash": "4aad9f8b729b"
+    },
+    "Create order": {
+      "nodeId": "Create order",
+      "rpcName": "createOrderRecord",
+      "next": "Process payment",
+      "input": {
+        "userId": {
+          "$ref": "trigger",
+          "path": "userId"
+        },
+        "totalCents": {
+          "$ref": "basket",
+          "path": "totalCents"
+        },
+        "shippingAddress": {
+          "$ref": "trigger",
+          "path": "shippingAddress"
+        },
+        "items": {
+          "$ref": "basket",
+          "path": "items"
+        }
+      },
+      "outputVar": "order",
+      "stepHash": "d9f5259769a2"
+    },
+    "Process payment": {
+      "nodeId": "Process payment",
+      "rpcName": "chargeCard",
+      "next": "Finalize",
+      "input": {
+        "orderId": {
+          "$ref": "order",
+          "path": "orderId"
+        },
+        "totalCents": {
+          "$ref": "basket",
+          "path": "totalCents"
+        },
+        "cardToken": {
+          "$ref": "trigger",
+          "path": "cardToken"
+        }
+      },
+      "outputVar": "payment",
+      "stepHash": "8805e3ccda04"
+    },
+    "Finalize": {
+      "nodeId": "Finalize",
+      "rpcName": "finalizeOrder",
+      "next": "step_4",
+      "input": {
+        "orderId": {
+          "$ref": "order",
+          "path": "orderId"
+        },
+        "basketId": {
+          "$ref": "trigger",
+          "path": "basketId"
+        },
+        "userId": {
+          "$ref": "trigger",
+          "path": "userId"
+        },
+        "status": {
+          "$ref": "trigger",
+          "path": "status"
+        }
+      },
+      "stepHash": "d934097a2178"
+    },
+    "step_4": {
+      "nodeId": "step_4",
+      "flow": "return",
+      "outputs": {
+        "orderId": {
+          "from": "outputVar",
+          "name": "order",
+          "path": "orderId"
+        },
+        "status": {
+          "from": "input",
+          "path": "status"
+        },
+        "totalCents": {
+          "from": "outputVar",
+          "name": "basket",
+          "path": "totalCents"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "Validate basket"
+  ],
+  "graphHash": "3ccc0acaecea",
+  "deterministic": true,
+  "plannedSteps": [
+    {
+      "stepName": "Validate basket"
+    },
+    {
+      "stepName": "Create order"
+    },
+    {
+      "stepName": "Process payment"
+    },
+    {
+      "stepName": "Finalize"
+    }
+  ]
+}

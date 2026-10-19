@@ -1,0 +1,86 @@
+{
+  "corsOrigins": {
+    "name": "corsOrigins",
+    "displayName": "Allowed Browser Origins",
+    "description": "Comma-separated list of origins allowed to call this API from a browser, e.g. \"https://app.example.com\". Also the allowlist the analytics ingest enforces server-side. Unset falls back to FRONTEND_URL plus localhost.",
+    "variableId": "CORS_ORIGINS",
+    "schema": "VariableSchema_corsOrigins",
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/lib/cors-origins.ts"
+  },
+  "frontendUrl": {
+    "name": "frontendUrl",
+    "displayName": "Frontend URL",
+    "description": "This app's own web origin. Used as the single-entry CORS allowlist when CORS_ORIGINS is not set.",
+    "variableId": "FRONTEND_URL",
+    "schema": "VariableSchema_frontendUrl",
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/lib/cors-origins.ts"
+  },
+  "oauthProxyUrl": {
+    "name": "oauthProxyUrl",
+    "displayName": "OAuth Proxy URL",
+    "description": "Origin of the host OAuth proxy this stage signs in through.",
+    "variableId": "OAUTH_PROXY_URL",
+    "schema": "VariableSchema_oauthProxyUrl",
+    "optional": true,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/scaffold/auth/auth-secrets.gen.ts"
+  },
+  "oauthProxyProviders": {
+    "name": "oauthProxyProviders",
+    "displayName": "OAuth Proxy Providers",
+    "description": "Comma-separated providers that sign in through the proxy, for example google,github.",
+    "variableId": "OAUTH_PROXY_PROVIDERS",
+    "schema": "VariableSchema_oauthProxyProviders",
+    "optional": true,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/scaffold/auth/auth-secrets.gen.ts"
+  },
+  "oauthProxyKeyId": {
+    "name": "oauthProxyKeyId",
+    "displayName": "OAuth Proxy Key ID",
+    "description": "Identifier the proxy uses to find this stage key. Sent in the OAuth state.",
+    "variableId": "OAUTH_PROXY_KEY_ID",
+    "schema": "VariableSchema_oauthProxyKeyId",
+    "optional": true,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/scaffold/auth/auth-secrets.gen.ts"
+  },
+  "sessionCookieCacheMaxAge": {
+    "name": "sessionCookieCacheMaxAge",
+    "displayName": "Session Cookie Lifetime (seconds)",
+    "description": "How long the signed session cookie is trusted before the API re-reads the session from the database. Also the longest a ban or a revoked session can go unnoticed. Defaults to 86400 (one day).",
+    "variableId": "SESSION_COOKIE_CACHE_MAX_AGE",
+    "schema": "VariableSchema_sessionCookieCacheMaxAge",
+    "optional": true,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/scaffold/auth/auth-secrets.gen.ts"
+  },
+  "databaseUrl": {
+    "name": "databaseUrl",
+    "displayName": "Database URL",
+    "description": "Primary database connection string (Postgres or libsql URL)",
+    "variableId": "DATABASE_URL",
+    "schema": "VariableSchema_databaseUrl",
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.variable.ts"
+  },
+  "lowStockThreshold": {
+    "name": "lowStockThreshold",
+    "displayName": "Low Stock Threshold",
+    "description": "Item stock level that triggers a low-stock alert",
+    "variableId": "LOW_STOCK_THRESHOLD",
+    "schema": "VariableSchema_lowStockThreshold",
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.variable.ts"
+  },
+  "scenarioActorSecret": {
+    "name": "scenarioActorSecret",
+    "displayName": "Scenario Actor Secret",
+    "description": "Impersonation secret for `pikku scenario run` actors. Leave unset to disable actor sign-in",
+    "variableId": "SCENARIO_ACTOR_SECRET",
+    "schema": "VariableSchema_scenarioActorSecret",
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.variable.ts"
+  },
+  "betterAuthUrl": {
+    "name": "betterAuthUrl",
+    "displayName": "Better Auth Base URL",
+    "description": "Public origin the API is served from, used for auth callbacks and redirects",
+    "variableId": "BETTER_AUTH_URL",
+    "schema": "VariableSchema_betterAuthUrl",
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.variable.ts"
+  }
+}

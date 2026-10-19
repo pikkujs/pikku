@@ -1,0 +1,29 @@
+{
+  "programs": {
+    "flow": {
+      "program": "flow",
+      "commands": {
+        "runs": {
+          "pikkuFuncId": "listRuns",
+          "positionals": [],
+          "options": {},
+          "description": "List recent runs, newest first"
+        },
+        "run": {
+          "pikkuFuncId": "runFlow",
+          "positionals": [],
+          "options": {},
+          "description": "Start a flow by hand"
+        },
+        "cancel": {
+          "pikkuFuncId": "cancelRun",
+          "positionals": [],
+          "options": {},
+          "description": "Cancel a queued or running execution"
+        }
+      },
+      "options": {}
+    }
+  },
+  "renderers": {}
+}

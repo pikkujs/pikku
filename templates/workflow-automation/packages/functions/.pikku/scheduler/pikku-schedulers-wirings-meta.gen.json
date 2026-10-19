@@ -1,0 +1,12 @@
+{
+  "sweepStuckRuns": {
+    "pikkuFuncId": "sweepStuckRuns",
+    "name": "sweepStuckRuns",
+    "schedule": "*/10 * * * *"
+  },
+  "sweepPendingWebhooks": {
+    "pikkuFuncId": "sweepPendingWebhooks",
+    "name": "sweepPendingWebhooks",
+    "schedule": "*/5 * * * *"
+  }
+}

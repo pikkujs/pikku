@@ -1,0 +1,6 @@
+{
+  "seats-exceeded": {
+    "pikkuFuncId": "onSeatsExceeded",
+    "name": "seats-exceeded"
+  }
+}

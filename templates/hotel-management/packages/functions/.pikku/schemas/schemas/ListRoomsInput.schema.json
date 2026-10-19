@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"floor":{"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991},"housekeepingStatus":{"type":"string","enum":["clean","dirty","inspected","out_of_service"]}},"additionalProperties":false}

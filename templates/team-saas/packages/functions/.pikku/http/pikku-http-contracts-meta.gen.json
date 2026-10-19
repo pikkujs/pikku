@@ -1,0 +1,88 @@
+{
+  "agentRoutes": {
+    "basePath": "",
+    "tags": [
+      "pikku:public"
+    ],
+    "auth": false,
+    "routes": {
+      "agentRun": {
+        "auth": null,
+        "contentType": null,
+        "method": "post",
+        "route": "/rpc/agent/:agentName",
+        "sse": null,
+        "timeout": null,
+        "func": {
+          "pikkuFuncId": "agentCaller"
+        }
+      },
+      "agentStream": {
+        "auth": null,
+        "contentType": null,
+        "method": "post",
+        "route": "/rpc/agent/:agentName/stream",
+        "sse": true,
+        "timeout": null,
+        "func": {
+          "pikkuFuncId": "agentStreamCaller"
+        }
+      },
+      "agentApprove": {
+        "auth": null,
+        "contentType": null,
+        "method": "post",
+        "route": "/rpc/agent/:agentName/approve",
+        "sse": null,
+        "timeout": null,
+        "func": {
+          "pikkuFuncId": "agentApproveCaller"
+        }
+      },
+      "agentResume": {
+        "auth": null,
+        "contentType": null,
+        "method": "post",
+        "route": "/rpc/agent/:agentName/resume",
+        "sse": true,
+        "timeout": null,
+        "func": {
+          "pikkuFuncId": "agentResumeCaller"
+        }
+      }
+    }
+  },
+  "consoleRoutes": {
+    "basePath": "",
+    "tags": [
+      "pikku"
+    ],
+    "auth": false,
+    "routes": {
+      "workflowRunStream": {
+        "auth": null,
+        "contentType": null,
+        "method": "get",
+        "route": "/workflow-run/:runId/stream",
+        "sse": true,
+        "timeout": null,
+        "func": {
+          "pikkuFuncId": "console:streamWorkflowRun",
+          "packageName": "@pikku/addon-console"
+        }
+      },
+      "scenarioArtifact": {
+        "auth": true,
+        "contentType": null,
+        "method": "get",
+        "route": "/scenario-run/:runId/artifact",
+        "sse": null,
+        "timeout": null,
+        "func": {
+          "pikkuFuncId": "console:getScenarioArtifact",
+          "packageName": "@pikku/addon-console"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "sweepNoShows": {
+    "pikkuFuncId": "sweepNoShows",
+    "name": "sweepNoShows",
+    "schedule": "0 4 * * *"
+  },
+  "sweepDueArrivals": {
+    "pikkuFuncId": "sweepDueArrivals",
+    "name": "sweepDueArrivals",
+    "schedule": "*/5 * * * *"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "everyPageLoadsScenario",
+  "pikkuFuncId": "everyPageLoadsScenario",
+  "source": "scenario",
+  "actors": [
+    "visitor"
+  ],
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "every page loads without errors"
+    },
+    "every page loads without errors": {
+      "nodeId": "every page loads without errors",
+      "rpcName": "sweepsAllPages",
+      "scenarioStepPhase": "then",
+      "next": "step_2",
+      "actor": "visitor",
+      "input": {
+        "repoRoot": "../.."
+      },
+      "outputVar": "swept",
+      "stepHash": "e5f9c60e8679"
+    },
+    "step_2": {
+      "nodeId": "step_2",
+      "flow": "return",
+      "outputs": {
+        "routes": {
+          "from": "outputVar",
+          "name": "swept",
+          "path": "routes"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "b2b9adc34290"
+}

@@ -1,0 +1,36 @@
+{
+  "author": {
+    "name": "author",
+    "displayName": "Author",
+    "description": "Write and edit posts, including drafts nobody else can see",
+    "scopes": [
+      "posts:read",
+      "posts:write"
+    ],
+    "sourceFile": "/Users/yasser/git/pikku/templates/public-content/packages/functions/src/roles.ts"
+  },
+  "editor": {
+    "name": "editor",
+    "displayName": "Editor",
+    "description": "Everything an author can do, plus publishing and scheduling",
+    "scopes": [
+      "posts",
+      "tags:write",
+      "analytics:read"
+    ],
+    "sourceFile": "/Users/yasser/git/pikku/templates/public-content/packages/functions/src/roles.ts"
+  },
+  "admin": {
+    "name": "admin",
+    "displayName": "Administrator",
+    "description": "Everything, plus console administration",
+    "scopes": [
+      "posts",
+      "tags",
+      "analytics",
+      "pikku:console",
+      "virtualUser"
+    ],
+    "sourceFile": "/Users/yasser/git/pikku/templates/public-content/packages/functions/src/roles.ts"
+  }
+}

@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"basketId":{"type":"string"},"itemId":{"type":"string"},"quantity":{"default":1,"type":"integer","minimum":1,"maximum":9007199254740991}},"required":["basketId","itemId"],"additionalProperties":false}

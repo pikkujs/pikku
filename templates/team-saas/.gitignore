@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.pikku/db/*.sqlite
+*.tsbuildinfo
+*.sqlite
+*.sqlite-journal
+.env
+.env.local
+apps/*/src/routeTree.gen.ts
+apps/*/src/paraglide/

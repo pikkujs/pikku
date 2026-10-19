@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":100},"slug":{"type":"string","minLength":1,"maxLength":100,"pattern":"^[a-z0-9-]+$"},"description":{"type":"string"}},"required":["name","slug"],"additionalProperties":false}

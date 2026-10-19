@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"passed":{"type":"boolean","const":true}},"required":["passed"],"additionalProperties":false,"definitions":{}}

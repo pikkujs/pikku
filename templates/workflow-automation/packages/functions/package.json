@@ -1,0 +1,38 @@
+{
+  "name": "@project/functions",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "scripts": {
+    "db:types": "pikku db types"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^2.0.48",
+    "@pikku/addon-console": "^0.12.47",
+    "@pikku/ai-vercel": "^0.12.13",
+    "@pikku/better-auth": "^0.12.31",
+    "@pikku/cloudflare": "^0.12.22",
+    "@pikku/core": "^0.12.97",
+    "@pikku/kysely": "^0.13.22",
+    "@pikku/kysely-sqlite": "^0.12.13",
+    "@pikku/schema-cfworker": "^0.12.6",
+    "@standard-schema/spec": "^1.1.0",
+    "ai": "^6.0.0",
+    "better-auth": "^1.6.18",
+    "kysely": "^0.29.0",
+    "tsx": "^4.21.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@pikku/deploy-standalone": "^0.12.12",
+    "@pikku/playwright": "^0.12.79",
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^22",
+    "typescript": "^5.9.3"
+  }
+}

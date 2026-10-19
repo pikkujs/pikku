@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"issueId":{"type":"string"},"resolution":{"type":"string","enum":["done","closed"]}},"required":["issueId"],"additionalProperties":false,"definitions":{}}

@@ -1,0 +1,6 @@
+{
+  "automation-due": {
+    "pikkuFuncId": "onWebhookReceived",
+    "name": "automation-due"
+  }
+}

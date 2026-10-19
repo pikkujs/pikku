@@ -1,0 +1,16 @@
+{
+  "appName": "Pikku Starter",
+  "fonts": {
+    "body": "Inter, Arial, sans-serif"
+  },
+  "colors": {
+    "canvas": "#07090d",
+    "surface": "#161616",
+    "border": "#2a2a2a",
+    "text": "#e8e8e8",
+    "muted": "#888888",
+    "accent": "#60a5fa",
+    "button": "#3b82f6",
+    "buttonText": "#ffffff"
+  }
+}

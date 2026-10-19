@@ -1,0 +1,58 @@
+{
+  "name": "shopperAsksTheAssistant",
+  "pikkuFuncId": "shopperAsksTheAssistant",
+  "source": "scenario",
+  "title": "Shopper gets help from the assistant",
+  "description": "The shop assistant finds a product and adds it to the basket.",
+  "tags": [
+    "agents"
+  ],
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "Shopper chats to the assistant"
+    },
+    "Shopper chats to the assistant": {
+      "nodeId": "Shopper chats to the assistant",
+      "flow": "inline",
+      "next": "step_2"
+    },
+    "step_2": {
+      "nodeId": "step_2",
+      "flow": "branch",
+      "branches": [],
+      "next": "Basket really has the mug"
+    },
+    "Basket really has the mug": {
+      "nodeId": "Basket really has the mug",
+      "rpcName": "getBasket",
+      "stepName": "Basket really has the mug",
+      "next": "step_4",
+      "outputVar": "basket",
+      "stepHash": "27878b13e578"
+    },
+    "step_4": {
+      "nodeId": "step_4",
+      "flow": "branch",
+      "branches": [],
+      "next": "step_5"
+    },
+    "step_5": {
+      "nodeId": "step_5",
+      "flow": "return",
+      "outputs": {
+        "itemCount": {
+          "from": "outputVar",
+          "name": "basket",
+          "path": "itemCount"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "2493022d1616"
+}

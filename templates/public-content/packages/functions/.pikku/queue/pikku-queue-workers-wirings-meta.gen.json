@@ -1,0 +1,14 @@
+{
+  "record-view": {
+    "pikkuFuncId": "recordView",
+    "name": "record-view"
+  },
+  "audit-event": {
+    "pikkuFuncId": "writeAuditEvent",
+    "name": "audit-event"
+  },
+  "wf-orchestrator-publish-workflow": {
+    "name": "wf-orchestrator-publish-workflow",
+    "pikkuFuncId": "pikkuWorkflowOrchestrator:publishWorkflow"
+  }
+}

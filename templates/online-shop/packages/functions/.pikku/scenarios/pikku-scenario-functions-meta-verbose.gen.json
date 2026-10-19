@@ -1,0 +1,1013 @@
+{
+  "sessionHealthScenario": {
+    "pikkuFuncId": "sessionHealthScenario",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenario",
+    "sessionless": true,
+    "name": "sessionHealthScenario",
+    "services": {
+      "optimized": true,
+      "services": [
+        "logger"
+      ]
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "scenario",
+        "actors"
+      ]
+    },
+    "inputSchemaName": null,
+    "outputSchemaName": "SessionHealthScenarioOutput",
+    "inputs": [],
+    "outputs": [
+      "SessionHealthScenarioOutput"
+    ],
+    "scenario": true,
+    "implementationHash": "17f0bbd4dde1ce02",
+    "title": "Session health (scenario)",
+    "tags": [
+      "scenario"
+    ],
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/functions/session-health.scenario.ts",
+    "exportedName": "sessionHealthScenario",
+    "bodyStart": 28,
+    "bodyEnd": 41,
+    "contractHash": "b28a58eb62a2c6fd",
+    "inputHash": "bd605e05",
+    "outputHash": "a130cbe6",
+    "singletonServicesOnly": true
+  },
+  "stripeReportsPayment": {
+    "pikkuFuncId": "stripeReportsPayment",
+    "functionType": "user",
+    "funcWrapper": "pikkuAddonScenarioStep",
+    "sessionless": true,
+    "name": "stripeReportsPayment",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "rpc"
+      ]
+    },
+    "invokes": [
+      "applyStripeEvent"
+    ],
+    "inputSchemaName": "StripeReportsPaymentInput",
+    "outputSchemaName": null,
+    "inputs": [
+      "StripeReportsPaymentInput"
+    ],
+    "outputs": [],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "default"
+    ],
+    "scenarioStepKind": "addon",
+    "scenarioStepAddon": "stripe",
+    "scenarioStepTemplate": "Stripe confirms payment for {orderId}",
+    "implementationHash": "d5e844e963054b43",
+    "description": "delivers a payment_intent.succeeded event for an order",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.scenario-steps.ts",
+    "exportedName": "stripeReportsPayment",
+    "bodyStart": 27,
+    "bodyEnd": 35,
+    "contractHash": "8c172d8c3b4d0de0",
+    "inputHash": "c78aa573",
+    "outputHash": "105f814a",
+    "singletonServicesOnly": true
+  },
+  "shipsTheOrder": {
+    "pikkuFuncId": "shipsTheOrder",
+    "functionType": "user",
+    "funcWrapper": "pikkuPlatformScenarioStep",
+    "sessionless": true,
+    "name": "shipsTheOrder",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "rpc"
+      ]
+    },
+    "invokes": [
+      "notifyOrderShipped"
+    ],
+    "inputSchemaName": "ShipsTheOrderInput",
+    "outputSchemaName": "ShipsTheOrderOutput",
+    "inputs": [
+      "ShipsTheOrderInput"
+    ],
+    "outputs": [
+      "ShipsTheOrderOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "default"
+    ],
+    "scenarioStepKind": "platform",
+    "scenarioStepTemplate": "ships order {orderId}",
+    "implementationHash": "e377ecb42b82aa11",
+    "description": "ships an order, which is what tells the shopper it is on its way",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.scenario-steps.ts",
+    "exportedName": "shipsTheOrder",
+    "bodyStart": 48,
+    "bodyEnd": 49,
+    "contractHash": "723bb33db5d5dc20",
+    "inputHash": "8f40b086",
+    "outputHash": "754a4399",
+    "singletonServicesOnly": true
+  },
+  "startsCheckoutOverHttp": {
+    "pikkuFuncId": "startsCheckoutOverHttp",
+    "functionType": "user",
+    "funcWrapper": "pikkuPlatformScenarioStep",
+    "sessionless": true,
+    "name": "startsCheckoutOverHttp",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "scenarioStep"
+      ]
+    },
+    "inputSchemaName": "StartsCheckoutOverHttpInput",
+    "outputSchemaName": "StartsCheckoutOverHttpOutput",
+    "inputs": [
+      "StartsCheckoutOverHttpInput"
+    ],
+    "outputs": [
+      "StartsCheckoutOverHttpOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "default"
+    ],
+    "scenarioStepKind": "platform",
+    "implementationHash": "c0c1db23840c5802",
+    "description": "starts the checkout workflow over HTTP and waits for it to settle",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.scenario-steps.ts",
+    "exportedName": "startsCheckoutOverHttp",
+    "bodyStart": 79,
+    "bodyEnd": 101,
+    "contractHash": "866abb5f257a846b",
+    "inputHash": "de1a3978",
+    "outputHash": "74f1e1bd",
+    "singletonServicesOnly": true
+  },
+  "signsUpShopper": {
+    "pikkuFuncId": "signsUpShopper",
+    "functionType": "user",
+    "funcWrapper": "pikkuPlatformScenarioStep",
+    "sessionless": true,
+    "name": "signsUpShopper",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "scenarioStep"
+      ]
+    },
+    "inputSchemaName": "SignsUpShopperInput",
+    "outputSchemaName": "SignsUpShopperOutput",
+    "inputs": [
+      "SignsUpShopperInput"
+    ],
+    "outputs": [
+      "SignsUpShopperOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "default"
+    ],
+    "scenarioStepKind": "platform",
+    "implementationHash": "410aa67892bc895a",
+    "description": "signs a new shopper up and reads the session back",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.scenario-steps.ts",
+    "exportedName": "signsUpShopper",
+    "bodyStart": 113,
+    "bodyEnd": 124,
+    "contractHash": "b23fbca781bc58d7",
+    "inputHash": "c31791f0",
+    "outputHash": "4b8516da",
+    "singletonServicesOnly": true
+  },
+  "shopperBuysAnItem": {
+    "pikkuFuncId": "shopperBuysAnItem",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenario",
+    "sessionless": true,
+    "name": "shopperBuysAnItem",
+    "services": {
+      "optimized": true,
+      "services": [
+        "logger"
+      ]
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "scenario",
+        "actors"
+      ]
+    },
+    "inputSchemaName": null,
+    "outputSchemaName": "ShopperBuysAnItemOutput",
+    "inputs": [],
+    "outputs": [
+      "ShopperBuysAnItemOutput"
+    ],
+    "scenario": true,
+    "implementationHash": "4717e77a8fba4ce8",
+    "title": "Shopper buys an item",
+    "tags": [
+      "checkout"
+    ],
+    "description": "Browse the catalogue, fill a basket and pay for an order.",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.scenario.ts",
+    "exportedName": "shopperBuysAnItem",
+    "bodyStart": 13,
+    "bodyEnd": 66,
+    "contractHash": "ec991de7ecbf3ec5",
+    "inputHash": "c22138d6",
+    "outputHash": "7f04e386",
+    "singletonServicesOnly": true
+  },
+  "shopperAsksTheAssistant": {
+    "pikkuFuncId": "shopperAsksTheAssistant",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenario",
+    "sessionless": true,
+    "name": "shopperAsksTheAssistant",
+    "services": {
+      "optimized": true,
+      "services": [
+        "logger"
+      ]
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "scenario",
+        "actors"
+      ]
+    },
+    "inputSchemaName": null,
+    "outputSchemaName": "ShopperAsksTheAssistantOutput",
+    "inputs": [],
+    "outputs": [
+      "ShopperAsksTheAssistantOutput"
+    ],
+    "scenario": true,
+    "implementationHash": "44fe3aa314a94fe4",
+    "title": "Shopper gets help from the assistant",
+    "tags": [
+      "agents"
+    ],
+    "description": "The shop assistant finds a product and adds it to the basket.",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.scenario.ts",
+    "exportedName": "shopperAsksTheAssistant",
+    "bodyStart": 80,
+    "bodyEnd": 104,
+    "contractHash": "5bae8309c7cafd6e",
+    "inputHash": "db130ce1",
+    "outputHash": "2d895abd",
+    "singletonServicesOnly": true
+  },
+  "signedInActorReachesTheAppScenario": {
+    "pikkuFuncId": "signedInActorReachesTheAppScenario",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenario",
+    "sessionless": true,
+    "name": "signedInActorReachesTheAppScenario",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "scenario",
+        "actors"
+      ]
+    },
+    "inputSchemaName": null,
+    "outputSchemaName": "SignedInActorReachesTheAppScenarioOutput",
+    "inputs": [],
+    "outputs": [
+      "SignedInActorReachesTheAppScenarioOutput"
+    ],
+    "scenario": true,
+    "implementationHash": "74ca80dca8d35477",
+    "title": "A signed-in user reaches the app",
+    "tags": [
+      "scenario",
+      "auth",
+      "smoke"
+    ],
+    "description": "The session cookie carries into the browser and the route guard admits it",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/auth.scenario.ts",
+    "exportedName": "signedInActorReachesTheAppScenario",
+    "bodyStart": 30,
+    "bodyEnd": 68,
+    "contractHash": "bcac1c5e71fc7071",
+    "inputHash": "bea55478",
+    "outputHash": "5e03efd8",
+    "singletonServicesOnly": true
+  },
+  "opensPage": {
+    "pikkuFuncId": "opensPage",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "opensPage",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "OpensPageInput",
+    "outputSchemaName": "OpensPageOutput",
+    "inputs": [
+      "OpensPageInput"
+    ],
+    "outputs": [
+      "OpensPageOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "opens {path}",
+    "implementationHash": "7bf881d02774d9c2",
+    "description": "opens an app page as the signed-in actor",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "opensPage",
+    "bodyStart": 56,
+    "bodyEnd": 65,
+    "contractHash": "edb740c50579fb63",
+    "inputHash": "6ef318ba",
+    "outputHash": "cde56954",
+    "singletonServicesOnly": true
+  },
+  "seesText": {
+    "pikkuFuncId": "seesText",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "seesText",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "SeesTextInput",
+    "outputSchemaName": "SeesTextOutput",
+    "inputs": [
+      "SeesTextInput"
+    ],
+    "outputs": [
+      "SeesTextOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "sees {text}",
+    "implementationHash": "0502fc8fedaa333c",
+    "description": "waits for text to appear on the current page",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "seesText",
+    "bodyStart": 85,
+    "bodyEnd": 86,
+    "contractHash": "2ecfd4a1af1eed76",
+    "inputHash": "cadae61c",
+    "outputHash": "f12765f0",
+    "singletonServicesOnly": true
+  },
+  "restsOnPath": {
+    "pikkuFuncId": "restsOnPath",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "restsOnPath",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "RestsOnPathInput",
+    "outputSchemaName": "RestsOnPathOutput",
+    "inputs": [
+      "RestsOnPathInput"
+    ],
+    "outputs": [
+      "RestsOnPathOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "is on {path}",
+    "implementationHash": "93160648033a41e0",
+    "description": "asserts the browser came to rest on an app path",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "restsOnPath",
+    "bodyStart": 124,
+    "bodyEnd": 132,
+    "contractHash": "31caec930ea7e893",
+    "inputHash": "76a2ed38",
+    "outputHash": "b28b5f54",
+    "singletonServicesOnly": true
+  },
+  "sweepsAllPages": {
+    "pikkuFuncId": "sweepsAllPages",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "sweepsAllPages",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "SweepsAllPagesInput",
+    "outputSchemaName": "SweepsAllPagesOutput",
+    "inputs": [
+      "SweepsAllPagesInput"
+    ],
+    "outputs": [
+      "SweepsAllPagesOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "every page loads without errors",
+    "implementationHash": "112cd4ec21d00210",
+    "description": "visits every static route and fails on any runtime error",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "sweepsAllPages",
+    "bodyStart": 168,
+    "bodyEnd": 171,
+    "contractHash": "b9775d597942be0b",
+    "inputHash": "7012a113",
+    "outputHash": "87f44271",
+    "singletonServicesOnly": true
+  },
+  "capturesPage": {
+    "pikkuFuncId": "capturesPage",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "capturesPage",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "CapturesPageInput",
+    "outputSchemaName": "CapturesPageOutput",
+    "inputs": [
+      "CapturesPageInput"
+    ],
+    "outputs": [
+      "CapturesPageOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "captures {path} as {name}",
+    "implementationHash": "cd5f36cec984ab37",
+    "description": "screenshots an app page as the signed-in actor",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "capturesPage",
+    "bodyStart": 225,
+    "bodyEnd": 279,
+    "contractHash": "a1344e5b78ef685e",
+    "inputHash": "ab2ec9d7",
+    "outputHash": "530b1976",
+    "singletonServicesOnly": true
+  },
+  "clicks": {
+    "pikkuFuncId": "clicks",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "clicks",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "ClicksInput",
+    "outputSchemaName": "ClicksOutput",
+    "inputs": [
+      "ClicksInput"
+    ],
+    "outputs": [
+      "ClicksOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "clicks {name}",
+    "implementationHash": "6702bc003c8deec4",
+    "description": "clicks a link or button by its visible label",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "clicks",
+    "bodyStart": 309,
+    "bodyEnd": 328,
+    "contractHash": "b29f371920e321e6",
+    "inputHash": "41313a54",
+    "outputHash": "b73b0c52",
+    "singletonServicesOnly": true
+  },
+  "doesNotSeeText": {
+    "pikkuFuncId": "doesNotSeeText",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "doesNotSeeText",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "DoesNotSeeTextInput",
+    "outputSchemaName": "DoesNotSeeTextOutput",
+    "inputs": [
+      "DoesNotSeeTextInput"
+    ],
+    "outputs": [
+      "DoesNotSeeTextOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "does not see {text}",
+    "implementationHash": "ae041a7166f5a155",
+    "description": "asserts text is absent from the current page",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "doesNotSeeText",
+    "bodyStart": 355,
+    "bodyEnd": 365,
+    "contractHash": "ad77445e29acd38f",
+    "inputHash": "16b5bda2",
+    "outputHash": "e19dd522",
+    "singletonServicesOnly": true
+  },
+  "clicksNear": {
+    "pikkuFuncId": "clicksNear",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "clicksNear",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "ClicksNearInput",
+    "outputSchemaName": "ClicksNearOutput",
+    "inputs": [
+      "ClicksNearInput"
+    ],
+    "outputs": [
+      "ClicksNearOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "clicks {name} next to {near}",
+    "implementationHash": "a83f8a19c9a06187",
+    "description": "clicks a control inside the row or card containing some text",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "clicksNear",
+    "bodyStart": 401,
+    "bodyEnd": 411,
+    "contractHash": "4a42ea04a5ae4799",
+    "inputHash": "502e02fc",
+    "outputHash": "a846d399",
+    "singletonServicesOnly": true
+  },
+  "typesInto": {
+    "pikkuFuncId": "typesInto",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "typesInto",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "TypesIntoInput",
+    "outputSchemaName": "TypesIntoOutput",
+    "inputs": [
+      "TypesIntoInput"
+    ],
+    "outputs": [
+      "TypesIntoOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "types {text} into {label}",
+    "implementationHash": "516c3f96289a8e79",
+    "description": "types text into a field found by its label",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "typesInto",
+    "bodyStart": 439,
+    "bodyEnd": 446,
+    "contractHash": "47b49a4d591b1a8f",
+    "inputHash": "704b38cc",
+    "outputHash": "0a127c58",
+    "singletonServicesOnly": true
+  },
+  "postsTo": {
+    "pikkuFuncId": "postsTo",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "postsTo",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "PostsToInput",
+    "outputSchemaName": "PostsToOutput",
+    "inputs": [
+      "PostsToInput"
+    ],
+    "outputs": [
+      "PostsToOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "posts to {path}",
+    "implementationHash": "7ec7677038d8199d",
+    "description": "posts to an app route from the signed-in browser",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "postsTo",
+    "bodyStart": 503,
+    "bodyEnd": 526,
+    "contractHash": "73ad8d18ab5aa637",
+    "inputHash": "024a7b17",
+    "outputHash": "254eca7c",
+    "singletonServicesOnly": true
+  },
+  "subscribesToChannel": {
+    "pikkuFuncId": "subscribesToChannel",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "subscribesToChannel",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "SubscribesToChannelInput",
+    "outputSchemaName": "SubscribesToChannelOutput",
+    "inputs": [
+      "SubscribesToChannelInput"
+    ],
+    "outputs": [
+      "SubscribesToChannelOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "subscribes to {route}",
+    "implementationHash": "27b54f5396f636c3",
+    "description": "opens an app channel and sends its subscribe action",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "subscribesToChannel",
+    "bodyStart": 567,
+    "bodyEnd": 607,
+    "contractHash": "c6993df825994c89",
+    "inputHash": "bae9de57",
+    "outputHash": "6ea80919",
+    "singletonServicesOnly": true
+  },
+  "callsMcpTool": {
+    "pikkuFuncId": "callsMcpTool",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenarioStep",
+    "sessionless": true,
+    "name": "callsMcpTool",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "browser"
+      ]
+    },
+    "inputSchemaName": "CallsMcpToolInput",
+    "outputSchemaName": "CallsMcpToolOutput",
+    "inputs": [
+      "CallsMcpToolInput"
+    ],
+    "outputs": [
+      "CallsMcpToolOutput"
+    ],
+    "scenarioStep": true,
+    "scenarioStepSurfaces": [
+      "browser"
+    ],
+    "scenarioStepRequiresActor": true,
+    "scenarioStepTemplate": "calls the {tool} MCP tool",
+    "implementationHash": "b168787400d445b8",
+    "description": "calls an MCP tool with a real MCP client, as the signed-in actor",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/browser.steps.ts",
+    "exportedName": "callsMcpTool",
+    "bodyStart": 647,
+    "bodyEnd": 693,
+    "contractHash": "4d1095c402284bf1",
+    "inputHash": "f2e8172a",
+    "outputHash": "5ecd0034",
+    "singletonServicesOnly": true
+  },
+  "everyFunctionRuns": {
+    "pikkuFuncId": "everyFunctionRuns",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenario",
+    "sessionless": true,
+    "name": "everyFunctionRuns",
+    "services": {
+      "optimized": true,
+      "services": [
+        "logger"
+      ]
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "scenario",
+        "actors"
+      ]
+    },
+    "inputSchemaName": null,
+    "outputSchemaName": "EveryFunctionRunsOutput",
+    "inputs": [],
+    "outputs": [
+      "EveryFunctionRunsOutput"
+    ],
+    "scenario": true,
+    "implementationHash": "55a49508d730265f",
+    "title": "Every callable function runs",
+    "tags": [
+      "scenario",
+      "coverage"
+    ],
+    "description": "Invokes each callable function once, so an uncallable one fails loudly",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/coverage.scenario.ts",
+    "exportedName": "everyFunctionRuns",
+    "bodyStart": 21,
+    "bodyEnd": 141,
+    "contractHash": "09ff5e63357ff1e4",
+    "inputHash": "588222a5",
+    "outputHash": "c7a53e2a",
+    "singletonServicesOnly": true
+  },
+  "shopperBuysAnItemInTheBrowser": {
+    "pikkuFuncId": "shopperBuysAnItemInTheBrowser",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenario",
+    "sessionless": true,
+    "name": "shopperBuysAnItemInTheBrowser",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "scenario",
+        "actors"
+      ]
+    },
+    "inputSchemaName": null,
+    "outputSchemaName": "ShopperBuysAnItemInTheBrowserOutput",
+    "inputs": [],
+    "outputs": [
+      "ShopperBuysAnItemInTheBrowserOutput"
+    ],
+    "scenario": true,
+    "implementationHash": "da51f82294ba7637",
+    "title": "A shopper fills a basket and checks out",
+    "tags": [
+      "scenario",
+      "journey"
+    ],
+    "description": "The journey the home page promises, performed by clicking rather than over RPC",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/journey.scenario.ts",
+    "exportedName": "shopperBuysAnItemInTheBrowser",
+    "bodyStart": 24,
+    "bodyEnd": 106,
+    "contractHash": "86c6ff001855265a",
+    "inputHash": "8b13350f",
+    "outputHash": "9adb2911",
+    "singletonServicesOnly": true
+  },
+  "everyPageLoadsScenario": {
+    "pikkuFuncId": "everyPageLoadsScenario",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenario",
+    "sessionless": true,
+    "name": "everyPageLoadsScenario",
+    "services": {
+      "optimized": true,
+      "services": []
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "scenario",
+        "actors"
+      ]
+    },
+    "inputSchemaName": null,
+    "outputSchemaName": "EveryPageLoadsScenarioOutput",
+    "inputs": [],
+    "outputs": [
+      "EveryPageLoadsScenarioOutput"
+    ],
+    "scenario": true,
+    "implementationHash": "66603a257dc68d99",
+    "title": "Every page loads cleanly when signed in",
+    "tags": [
+      "scenario",
+      "pages",
+      "smoke"
+    ],
+    "description": "The baseline reliability gate — no page errors for a signed-in user",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/pages.scenario.ts",
+    "exportedName": "everyPageLoadsScenario",
+    "bodyStart": 21,
+    "bodyEnd": 39,
+    "contractHash": "c9ed3a193312a2f6",
+    "inputHash": "8db7c3cf",
+    "outputHash": "b5aed092",
+    "singletonServicesOnly": true
+  },
+  "capturesEveryPageScenario": {
+    "pikkuFuncId": "capturesEveryPageScenario",
+    "functionType": "user",
+    "funcWrapper": "pikkuScenario",
+    "sessionless": true,
+    "name": "capturesEveryPageScenario",
+    "services": {
+      "optimized": true,
+      "services": [
+        "logger"
+      ]
+    },
+    "wires": {
+      "optimized": true,
+      "wires": [
+        "scenario",
+        "actors"
+      ]
+    },
+    "inputSchemaName": null,
+    "outputSchemaName": "CapturesEveryPageScenarioOutput",
+    "inputs": [],
+    "outputs": [
+      "CapturesEveryPageScenarioOutput"
+    ],
+    "scenario": true,
+    "implementationHash": "9d76b97887e7eb70",
+    "title": "Capture every page for review",
+    "tags": [
+      "scenario",
+      "screenshots"
+    ],
+    "description": "Screenshots the app as a signed-in user, at desktop and phone widths",
+    "isDirectFunction": false,
+    "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/test/scenarios/screenshots.scenario.ts",
+    "exportedName": "capturesEveryPageScenario",
+    "bodyStart": 52,
+    "bodyEnd": 81,
+    "contractHash": "39556a8f17d52fd0",
+    "inputHash": "1b1e7272",
+    "outputHash": "87089750",
+    "singletonServicesOnly": true
+  }
+}

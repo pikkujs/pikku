@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "rootDir": ".",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["./src", "./test"],
+  "outDir": "./.pikku",
+  "emailTemplatesDir": "./emails",
+  "clientFiles": {
+    "rpcMapDeclarationFile": ".pikku/rpc-map.gen.d.ts",
+    "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts",
+    "fetchFile": ".pikku/pikku-fetch.gen.ts",
+    "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts",
+    "websocketFile": ".pikku/pikku-websocket.gen.ts",
+    "realtimeFile": ".pikku/realtime.gen.ts",
+    "reactQueryFile": "apps/app/src/pikku/api.gen.ts"
+  },
+  "packageMappings": {
+    ".": "@pikku/example-field-service"
+  },
+  "schema": {
+    "supportsImportAttributes": true
+  },
+  "dev": {
+    "db": true
+  },
+  "scaffold": {
+    "pikkuDir": "src/scaffold",
+    "rpc": true,
+    "agent": true,
+    "workflow": true,
+    "scenarios": true,
+    "events": true
+  },
+  "scenarios": {
+    "emailDomain": "actors.local",
+    "environments": {
+      "local": {
+        "apiUrl": "http://localhost:4013",
+        "appUrl": "http://localhost:7213",
+        "signInPath": "/api/auth/sign-in/actor"
+      }
+    }
+  },
+  "environments": {
+    "local": {
+      "apiUrl": "http://localhost:4013",
+      "appUrl": "http://localhost:7213",
+      "signInPath": "/api/auth/sign-in/actor"
+    }
+  }
+}

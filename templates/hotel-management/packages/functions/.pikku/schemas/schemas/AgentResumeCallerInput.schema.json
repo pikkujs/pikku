@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"agentName":{"type":"string"},"runId":{"type":"string"},"toolCallId":{"type":"string"},"approved":{"type":"boolean"}},"required":["agentName","runId","toolCallId","approved"],"additionalProperties":false}

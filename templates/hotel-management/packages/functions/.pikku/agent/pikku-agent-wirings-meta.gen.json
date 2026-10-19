@@ -1,0 +1,20 @@
+{
+  "agentsMeta": {
+    "frontDeskAssistant": {
+      "name": "front-desk-assistant",
+      "description": "Helps the front desk find a room and check a guest in.",
+      "goal": "Answer questions about room availability and check guests in against their booking.",
+      "model": "openai/gpt-4o-mini",
+      "sourceFile": "/Users/yasser/git/pikku/templates/hotel-management/packages/functions/src/wires/hotel.agent.ts",
+      "exportedName": "frontDeskAssistant",
+      "maxSteps": 10,
+      "tools": [
+        "listRooms",
+        "checkIn"
+      ],
+      "inputSchema": null,
+      "outputSchema": null,
+      "workingMemorySchema": null
+    }
+  }
+}

@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"route":{"type":"string"},"action":{"type":"string"},"unsubscribeAction":{"type":"string"}},"required":["route","action"],"additionalProperties":false}

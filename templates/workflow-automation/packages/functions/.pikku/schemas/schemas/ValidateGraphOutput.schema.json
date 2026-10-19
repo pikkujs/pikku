@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"flowVersionId":{"type":"string"},"nodeCount":{}},"required":["flowVersionId","nodeCount"],"additionalProperties":false,"definitions":{}}

@@ -1,0 +1,81 @@
+{
+  "name": "capturesEveryPageScenario",
+  "pikkuFuncId": "capturesEveryPageScenario",
+  "source": "scenario",
+  "context": {
+    "files": {
+      "type": "array",
+      "default": []
+    },
+    "clean": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "step_1"
+    },
+    "step_1": {
+      "nodeId": "step_1",
+      "flow": "fanout",
+      "sourceVar": "CAPTURES",
+      "itemVar": "capture",
+      "mode": "sequential",
+      "childEntry": "captures ${capture.name}",
+      "next": "step_2"
+    },
+    "captures ${capture.name}": {
+      "nodeId": "captures ${capture.name}",
+      "rpcName": "capturesPage",
+      "scenarioStepPhase": "then",
+      "actor": "visitor",
+      "input": {
+        "path": {
+          "$ref": "$item",
+          "path": "path"
+        },
+        "name": {
+          "$ref": "$item",
+          "path": "name"
+        },
+        "outDir": "screenshots",
+        "width": {
+          "$ref": "$item",
+          "path": "width"
+        },
+        "height": {
+          "$ref": "$item",
+          "path": "height"
+        },
+        "scheme": {
+          "$ref": "$item",
+          "path": "scheme"
+        }
+      },
+      "outputVar": "shot",
+      "stepHash": "576faa290d97"
+    },
+    "step_2": {
+      "nodeId": "step_2",
+      "flow": "return",
+      "outputs": {
+        "files": {
+          "from": "stateVar",
+          "name": "files"
+        },
+        "clean": {
+          "from": "stateVar",
+          "name": "clean"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "c11c810dd443"
+}

@@ -1,0 +1,104 @@
+{
+  "name": "refundWorkflow",
+  "pikkuFuncId": "refundWorkflow",
+  "source": "dsl",
+  "nodes": {
+    "Check order": {
+      "nodeId": "Check order",
+      "rpcName": "checkOrderRefundable",
+      "next": "step_1",
+      "input": {
+        "orderId": {
+          "$ref": "trigger",
+          "path": "orderId"
+        }
+      },
+      "outputVar": "check",
+      "stepHash": "5167d79ffa2a"
+    },
+    "step_1": {
+      "nodeId": "step_1",
+      "flow": "branch",
+      "branches": [
+        {
+          "condition": {
+            "type": "simple",
+            "expression": "!check.eligible"
+          },
+          "entry": "step_1_branch0_0"
+        }
+      ],
+      "next": "Cooling-off delay"
+    },
+    "step_1_branch0_0": {
+      "nodeId": "step_1_branch0_0",
+      "flow": "return",
+      "outputs": {
+        "orderId": {
+          "from": "input",
+          "path": "orderId"
+        },
+        "refunded": {
+          "from": "literal",
+          "value": false
+        },
+        "message": {
+          "from": "literal",
+          "value": "Order is not eligible for a refund."
+        }
+      }
+    },
+    "Cooling-off delay": {
+      "nodeId": "Cooling-off delay",
+      "flow": "sleep",
+      "duration": "5s",
+      "next": "Issue refund"
+    },
+    "Issue refund": {
+      "nodeId": "Issue refund",
+      "rpcName": "issueRefund",
+      "next": "step_4",
+      "input": {
+        "orderId": {
+          "$ref": "trigger",
+          "path": "orderId"
+        }
+      },
+      "stepHash": "65c4ac1a7bad"
+    },
+    "step_4": {
+      "nodeId": "step_4",
+      "flow": "return",
+      "outputs": {
+        "orderId": {
+          "from": "input",
+          "path": "orderId"
+        },
+        "refunded": {
+          "from": "literal",
+          "value": true
+        },
+        "message": {
+          "from": "expression",
+          "expression": "`Refunded ${(check.totalCents / 100).toFixed(2)} — reason: ${data.reason}`"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "Check order"
+  ],
+  "graphHash": "968e2d66a867",
+  "deterministic": false,
+  "plannedSteps": [
+    {
+      "stepName": "Check order"
+    },
+    {
+      "stepName": "Cooling-off delay"
+    },
+    {
+      "stepName": "Issue refund"
+    }
+  ]
+}

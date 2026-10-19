@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"bookingId":{"type":"string"},"status":{"type":"string"},"totalCents":{"type":"number"},"nights":{"type":"number"}},"required":["bookingId","status","totalCents","nights"],"additionalProperties":false}

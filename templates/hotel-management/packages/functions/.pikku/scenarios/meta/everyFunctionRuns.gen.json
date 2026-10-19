@@ -1,0 +1,175 @@
+{
+  "name": "everyFunctionRuns",
+  "pikkuFuncId": "everyFunctionRuns",
+  "source": "scenario",
+  "actors": [
+    "rafa"
+  ],
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "reads the session"
+    },
+    "reads the session": {
+      "nodeId": "reads the session",
+      "rpcName": "getSession",
+      "next": "lists the board",
+      "actor": "rafa",
+      "outputVar": "session",
+      "stepHash": "faea284ade4f"
+    },
+    "lists the board": {
+      "nodeId": "lists the board",
+      "rpcName": "listRooms",
+      "next": "step_3",
+      "actor": "rafa",
+      "outputVar": "rooms",
+      "stepHash": "011642cdad4a"
+    },
+    "step_3": {
+      "nodeId": "step_3",
+      "flow": "branch",
+      "branches": [],
+      "next": "lists arrivals"
+    },
+    "lists arrivals": {
+      "nodeId": "lists arrivals",
+      "rpcName": "listArrivals",
+      "next": "takes a booking",
+      "actor": "rafa",
+      "stepHash": "b95e70dc0991"
+    },
+    "takes a booking": {
+      "nodeId": "takes a booking",
+      "rpcName": "createBooking",
+      "next": "runs the reservation workflow",
+      "actor": "rafa",
+      "input": {
+        "roomTypeId": "rt_double",
+        "arrival": {
+          "$ref": "trigger",
+          "path": "today"
+        },
+        "departure": {
+          "$ref": "trigger",
+          "path": "tomorrow"
+        },
+        "guests": 2
+      },
+      "outputVar": "booking",
+      "stepHash": "ce534b598128"
+    },
+    "runs the reservation workflow": {
+      "nodeId": "runs the reservation workflow",
+      "rpcName": "startReservation",
+      "next": "lists the housekeeping board",
+      "actor": "rafa",
+      "input": {
+        "bookingId": {
+          "$ref": "booking",
+          "path": "bookingId"
+        }
+      },
+      "stepHash": "583ef163686c"
+    },
+    "lists the housekeeping board": {
+      "nodeId": "lists the housekeeping board",
+      "rpcName": "listHousekeepingTasks",
+      "next": "step_8",
+      "actor": "rafa",
+      "outputVar": "tasks",
+      "stepHash": "5c064f0bf3ee"
+    },
+    "step_8": {
+      "nodeId": "step_8",
+      "flow": "branch",
+      "branches": [],
+      "next": "step_9"
+    },
+    "step_9": {
+      "nodeId": "step_9",
+      "flow": "branch",
+      "branches": [
+        {
+          "condition": {
+            "type": "simple",
+            "expression": "actors.priya"
+          },
+          "entry": "completes a housekeeping task"
+        }
+      ],
+      "next": "queues a turnover"
+    },
+    "completes a housekeeping task": {
+      "nodeId": "completes a housekeeping task",
+      "rpcName": "completeHousekeepingTask",
+      "next": "queues a turnover",
+      "actor": "priya",
+      "stepHash": "619cfd3d0c21"
+    },
+    "queues a turnover": {
+      "nodeId": "queues a turnover",
+      "rpcName": "scheduleTurnover",
+      "next": "sweeps no-shows",
+      "actor": "rafa",
+      "input": {
+        "priority": "normal"
+      },
+      "stepHash": "55319d9784c4"
+    },
+    "sweeps no-shows": {
+      "nodeId": "sweeps no-shows",
+      "rpcName": "sweepNoShows",
+      "next": "runs the scheduled sweep",
+      "actor": "rafa",
+      "stepHash": "3e3433d042bf"
+    },
+    "runs the scheduled sweep": {
+      "nodeId": "runs the scheduled sweep",
+      "rpcName": "sweepDueArrivals",
+      "next": "calls listRoomsTool",
+      "actor": "rafa",
+      "stepHash": "70c9b6a952f7"
+    },
+    "calls listRoomsTool": {
+      "nodeId": "calls listRoomsTool",
+      "rpcName": "callsMcpTool",
+      "scenarioStepPhase": "then",
+      "next": "calls checkInTool",
+      "actor": "rafa",
+      "input": {
+        "tool": "listRoomsTool",
+        "args": "{}"
+      },
+      "stepHash": "1811e53be9a7"
+    },
+    "calls checkInTool": {
+      "nodeId": "calls checkInTool",
+      "rpcName": "callsMcpTool",
+      "scenarioStepPhase": "then",
+      "next": "step_15",
+      "actor": "rafa",
+      "input": {
+        "tool": "checkInTool",
+        "args": "{\"bookingId\":\"bk_probe\"}"
+      },
+      "stepHash": "ad18dd2206c4"
+    },
+    "step_15": {
+      "nodeId": "step_15",
+      "flow": "return",
+      "outputs": {
+        "checked": {
+          "from": "literal",
+          "value": 12
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "af52a66c0068"
+}

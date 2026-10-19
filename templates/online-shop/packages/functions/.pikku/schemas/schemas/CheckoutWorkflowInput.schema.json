@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"basketId":{"type":"string"},"userId":{"type":"string"},"shippingAddress":{},"cardToken":{"type":"string"}},"required":["basketId","userId","shippingAddress"],"additionalProperties":false,"definitions":{}}

@@ -1,0 +1,75 @@
+{
+  "name": "reserveStay",
+  "pikkuFuncId": "reserveStay",
+  "source": "dsl",
+  "nodes": {
+    "Charge deposit": {
+      "nodeId": "Charge deposit",
+      "rpcName": "chargeDeposit",
+      "next": "Confirm booking",
+      "input": {
+        "bookingId": {
+          "$ref": "trigger",
+          "path": "bookingId"
+        }
+      },
+      "outputVar": "payment",
+      "stepHash": "43b29edef8dc"
+    },
+    "Confirm booking": {
+      "nodeId": "Confirm booking",
+      "rpcName": "confirmBooking",
+      "next": "Notify guest",
+      "input": {
+        "bookingId": {
+          "$ref": "trigger",
+          "path": "bookingId"
+        }
+      },
+      "stepHash": "be2b52551b49"
+    },
+    "Notify guest": {
+      "nodeId": "Notify guest",
+      "rpcName": "notifyGuest",
+      "next": "step_3",
+      "input": {
+        "bookingId": {
+          "$ref": "trigger",
+          "path": "bookingId"
+        }
+      },
+      "stepHash": "841b5d313130"
+    },
+    "step_3": {
+      "nodeId": "step_3",
+      "flow": "return",
+      "outputs": {
+        "bookingId": {
+          "from": "input",
+          "path": "bookingId"
+        },
+        "chargedCents": {
+          "from": "outputVar",
+          "name": "payment",
+          "path": "chargedCents"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "Charge deposit"
+  ],
+  "graphHash": "01ddaa80e858",
+  "deterministic": true,
+  "plannedSteps": [
+    {
+      "stepName": "Charge deposit"
+    },
+    {
+      "stepName": "Confirm booking"
+    },
+    {
+      "stepName": "Notify guest"
+    }
+  ]
+}

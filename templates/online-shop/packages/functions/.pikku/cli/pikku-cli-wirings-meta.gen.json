@@ -1,0 +1,39 @@
+{
+  "programs": {
+    "shop": {
+      "program": "shop",
+      "commands": {
+        "report": {
+          "pikkuFuncId": "dailySalesReport",
+          "positionals": [],
+          "options": {},
+          "description": "Generate the daily sales report"
+        },
+        "cleanup": {
+          "pikkuFuncId": "cleanupAbandonedBaskets",
+          "positionals": [],
+          "options": {},
+          "description": "Remove baskets abandoned for more than 24 h"
+        },
+        "items": {
+          "pikkuFuncId": "listItems",
+          "positionals": [],
+          "options": {},
+          "description": "List all items in the catalogue"
+        }
+      },
+      "options": {}
+    }
+  },
+  "renderers": {
+    "itemRenderer": {
+      "name": "itemRenderer",
+      "exportedName": "itemRenderer",
+      "services": {
+        "optimized": true,
+        "services": []
+      },
+      "filePath": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.cli.ts"
+    }
+  }
+}

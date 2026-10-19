@@ -1,0 +1,199 @@
+{
+  "name": "readerBrowsesTheJournalInTheBrowser",
+  "pikkuFuncId": "readerBrowsesTheJournalInTheBrowser",
+  "source": "scenario",
+  "title": "A reader browses the journal and sees only published work",
+  "description": "Opens the journal by clicking, reads a published post, and proves the draft and the scheduled post are absent",
+  "tags": [
+    "scenario",
+    "journey"
+  ],
+  "actors": [
+    "jon"
+  ],
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "opens the app"
+    },
+    "opens the app": {
+      "nodeId": "opens the app",
+      "rpcName": "opensPage",
+      "stepName": "opens the app",
+      "scenarioStepPhase": "then",
+      "next": "clicks through to the Journal",
+      "actor": "jon",
+      "input": {
+        "path": "/app"
+      },
+      "stepHash": "a1b115870778"
+    },
+    "clicks through to the Journal": {
+      "nodeId": "clicks through to the Journal",
+      "rpcName": "clicks",
+      "stepName": "clicks through to the Journal",
+      "scenarioStepPhase": "then",
+      "next": "is on the journal",
+      "actor": "jon",
+      "input": {
+        "name": "Journal"
+      },
+      "outputVar": "arrived",
+      "stepHash": "4354e2bff9a0"
+    },
+    "is on the journal": {
+      "nodeId": "is on the journal",
+      "rpcName": "restsOnPath",
+      "stepName": "is on the journal",
+      "scenarioStepPhase": "then",
+      "next": "sees a published post",
+      "actor": "jon",
+      "input": {
+        "path": "/app/journal"
+      },
+      "stepHash": "cb718e93a676"
+    },
+    "sees a published post": {
+      "nodeId": "sees a published post",
+      "rpcName": "seesText",
+      "stepName": "sees a published post",
+      "scenarioStepPhase": "then",
+      "next": "sees who wrote it",
+      "actor": "jon",
+      "input": {
+        "text": "The ledger nobody reads until it matters"
+      },
+      "stepHash": "60b5a0fe2514"
+    },
+    "sees who wrote it": {
+      "nodeId": "sees who wrote it",
+      "rpcName": "seesText",
+      "stepName": "sees who wrote it",
+      "scenarioStepPhase": "then",
+      "next": "sees the scheduled post is not yet live",
+      "actor": "jon",
+      "input": {
+        "text": "Mira Halloran"
+      },
+      "stepHash": "b766fcbfe0a9"
+    },
+    "sees the scheduled post is not yet live": {
+      "nodeId": "sees the scheduled post is not yet live",
+      "rpcName": "seesText",
+      "stepName": "sees the scheduled post is not yet live",
+      "scenarioStepPhase": "then",
+      "next": "sees a draft waiting",
+      "actor": "jon",
+      "input": {
+        "text": "Scheduled"
+      },
+      "stepHash": "712e60be1bdc"
+    },
+    "sees a draft waiting": {
+      "nodeId": "sees a draft waiting",
+      "rpcName": "seesText",
+      "stepName": "sees a draft waiting",
+      "scenarioStepPhase": "then",
+      "next": "publishes it",
+      "actor": "jon",
+      "input": {
+        "text": "Untitled — the retry piece"
+      },
+      "stepHash": "2aeb7cf8b7d2"
+    },
+    "publishes it": {
+      "nodeId": "publishes it",
+      "rpcName": "clicksNear",
+      "stepName": "publishes it",
+      "scenarioStepPhase": "then",
+      "next": "sees it in the published list",
+      "actor": "jon",
+      "input": {
+        "near": "Untitled — the retry piece",
+        "name": "Publish"
+      },
+      "stepHash": "4f108122ba3b"
+    },
+    "sees it in the published list": {
+      "nodeId": "sees it in the published list",
+      "rpcName": "seesText",
+      "stepName": "sees it in the published list",
+      "scenarioStepPhase": "then",
+      "next": "opens operations",
+      "actor": "jon",
+      "input": {
+        "text": "Untitled — the retry piece"
+      },
+      "stepHash": "56de30e496a0"
+    },
+    "opens operations": {
+      "nodeId": "opens operations",
+      "rpcName": "clicks",
+      "stepName": "opens operations",
+      "scenarioStepPhase": "then",
+      "next": "sees the live panel",
+      "actor": "jon",
+      "input": {
+        "name": "Operations"
+      },
+      "stepHash": "b8d1c8dd20a7"
+    },
+    "sees the live panel": {
+      "nodeId": "sees the live panel",
+      "rpcName": "seesText",
+      "stepName": "sees the live panel",
+      "scenarioStepPhase": "then",
+      "next": "posts to /api/analytics",
+      "actor": "jon",
+      "input": {
+        "text": "activity"
+      },
+      "stepHash": "307e158db39f"
+    },
+    "posts to /api/analytics": {
+      "nodeId": "posts to /api/analytics",
+      "rpcName": "postsTo",
+      "stepName": "posts to /api/analytics",
+      "scenarioStepPhase": "then",
+      "next": "subscribes to the channel",
+      "actor": "jon",
+      "input": {
+        "path": "/api/analytics",
+        "body": "{\"events\":[{\"event\":{\"name\":\"page_viewed\",\"path\":\"/app/journal\"}}]}",
+        "minStatus": 0,
+        "maxStatus": 299
+      },
+      "stepHash": "f13e90d1da33"
+    },
+    "subscribes to the channel": {
+      "nodeId": "subscribes to the channel",
+      "rpcName": "subscribesToChannel",
+      "stepName": "subscribes to the channel",
+      "scenarioStepPhase": "then",
+      "next": "step_14",
+      "actor": "jon",
+      "input": {
+        "route": "/editorial",
+        "action": "watchEditorial"
+      },
+      "stepHash": "77ad7f7aed7e"
+    },
+    "step_14": {
+      "nodeId": "step_14",
+      "flow": "return",
+      "outputs": {
+        "landed": {
+          "from": "outputVar",
+          "name": "arrived",
+          "path": "pathname"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "713f384b878f"
+}

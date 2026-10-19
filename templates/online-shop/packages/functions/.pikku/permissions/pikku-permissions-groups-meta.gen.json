@@ -1,0 +1,48 @@
+{
+  "definitions": {
+    "isThreadOwner": {
+      "services": {
+        "optimized": true,
+        "services": [
+          "agentRunService"
+        ]
+      },
+      "wires": {
+        "optimized": true,
+        "wires": [
+          "session"
+        ]
+      },
+      "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/scaffold/agent/agent.gen.ts",
+      "position": 738,
+      "exportedName": "isThreadOwner"
+    },
+    "isAuthenticated": {
+      "services": {
+        "optimized": true,
+        "services": []
+      },
+      "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.security.ts",
+      "position": 127,
+      "exportedName": "isAuthenticated",
+      "requiresData": false
+    },
+    "isOrderOwner": {
+      "services": {
+        "optimized": true,
+        "services": [
+          "kysely"
+        ]
+      },
+      "wires": {
+        "optimized": true,
+        "wires": [
+          "session"
+        ]
+      },
+      "sourceFile": "/Users/yasser/git/pikku/website/.template-online-shop/packages/functions/src/wirings/shop.security.ts",
+      "position": 319,
+      "exportedName": "isOrderOwner"
+    }
+  }
+}

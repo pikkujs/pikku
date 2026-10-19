@@ -1,0 +1,73 @@
+{
+  "name": "signedInActorReachesTheAppScenario",
+  "pikkuFuncId": "signedInActorReachesTheAppScenario",
+  "source": "scenario",
+  "actors": [
+    "visitor"
+  ],
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "opens the app"
+    },
+    "opens the app": {
+      "nodeId": "opens the app",
+      "rpcName": "opensPage",
+      "scenarioStepPhase": "when",
+      "next": "step_2",
+      "actor": "visitor",
+      "input": {
+        "path": "/app"
+      },
+      "outputVar": "landed",
+      "stepHash": "a1b115870778"
+    },
+    "step_2": {
+      "nodeId": "step_2",
+      "flow": "branch",
+      "branches": [],
+      "next": "stays in the app"
+    },
+    "stays in the app": {
+      "nodeId": "stays in the app",
+      "rpcName": "restsOnPath",
+      "scenarioStepPhase": "then",
+      "next": "reads their own session",
+      "actor": "visitor",
+      "input": {
+        "path": "/app"
+      },
+      "stepHash": "4c824ba1502e"
+    },
+    "reads their own session": {
+      "nodeId": "reads their own session",
+      "rpcName": "getSession",
+      "next": "step_5",
+      "actor": "visitor",
+      "outputVar": "session",
+      "stepHash": "b75dab917cb0"
+    },
+    "step_5": {
+      "nodeId": "step_5",
+      "flow": "return",
+      "outputs": {
+        "pathname": {
+          "from": "outputVar",
+          "name": "landed",
+          "path": "pathname"
+        },
+        "email": {
+          "from": "outputVar",
+          "name": "session",
+          "path": "email"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "4f5bc35d965b"
+}

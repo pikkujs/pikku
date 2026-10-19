@@ -1,0 +1,226 @@
+{
+  "pikku": {
+    "name": "pikku",
+    "displayName": "Pikku Console",
+    "description": "The console's own administrative capabilities",
+    "scopes": {
+      "console": {
+        "displayName": "Console",
+        "description": "Everything reachable through the console, by area",
+        "scopes": {
+          "secrets": {
+            "description": "The application's secrets",
+            "scopes": {
+              "read": {
+                "description": "Read secret values and check whether one is set"
+              },
+              "write": {
+                "description": "Set and overwrite secret values"
+              }
+            }
+          },
+          "variables": {
+            "description": "The application's variables",
+            "scopes": {
+              "read": {
+                "description": "Read variable values"
+              },
+              "write": {
+                "description": "Set and overwrite variable values"
+              }
+            }
+          },
+          "addons": {
+            "description": "Installed and available addons",
+            "scopes": {
+              "read": {
+                "description": "Browse the addon catalogue and what this application has installed"
+              },
+              "install": {
+                "description": "Install an addon and write its wiring file — it runs code from the registry"
+              }
+            }
+          },
+          "credentials": {
+            "description": "Per-user credentials an agent needs connected",
+            "scopes": {
+              "read": {
+                "description": "Check which credentials the caller has connected"
+              }
+            }
+          },
+          "wirings": {
+            "description": "Wiring metadata and function source",
+            "scopes": {
+              "read": {
+                "description": "Read routes, channels, schemas, webhook deliveries and function source"
+              }
+            }
+          },
+          "security": {
+            "description": "The security audit",
+            "scopes": {
+              "read": {
+                "description": "Read the last security audit"
+              },
+              "run": {
+                "description": "Run the security audit"
+              }
+            }
+          },
+          "workflows": {
+            "description": "Workflow runs",
+            "scopes": {
+              "read": {
+                "description": "Read workflow runs and their steps"
+              },
+              "manage": {
+                "description": "Delete workflow runs"
+              }
+            }
+          },
+          "scenarios": {
+            "description": "Scenario runs and what they recorded",
+            "scopes": {
+              "read": {
+                "description": "Read past scenario runs, their steps, and their screenshots and video"
+              },
+              "manage": {
+                "description": "Delete scenario runs and their artifacts"
+              }
+            }
+          },
+          "agents": {
+            "description": "AI agents and their threads",
+            "scopes": {
+              "read": {
+                "description": "Read agent threads, runs, and source"
+              },
+              "manage": {
+                "description": "Delete threads and change agent configuration"
+              }
+            }
+          },
+          "virtualUsers": {
+            "description": "Virtual user runs and their transcripts",
+            "scopes": {
+              "read": {
+                "description": "Read what the virtual users found and every turn they took"
+              },
+              "run": {
+                "description": "Turn a persona loose on this application"
+              },
+              "schedule": {
+                "description": "Decide which personas keep using this application on their own"
+              }
+            }
+          },
+          "db": {
+            "description": "The database schema",
+            "scopes": {
+              "read": {
+                "description": "Read the schema the application runs on"
+              }
+            }
+          },
+          "knowledge": {
+            "description": "The knowledge notes",
+            "scopes": {
+              "read": {
+                "description": "Read the knowledge notes"
+              }
+            }
+          },
+          "emails": {
+            "description": "Email templates",
+            "scopes": {
+              "read": {
+                "description": "Render a template preview"
+              },
+              "write": {
+                "description": "Edit email templates"
+              }
+            }
+          },
+          "code": {
+            "description": "Editing the application source",
+            "scopes": {
+              "write": {
+                "description": "Rewrite function bodies and configuration, and change dependencies"
+              }
+            }
+          }
+        }
+      }
+    },
+    "sourceFile": "/home/runner/work/pikku/pikku/packages/addon/pikku-console/src/scopes.ts"
+  },
+  "virtualUser": {
+    "name": "virtualUser",
+    "displayName": "Virtual Users",
+    "description": "Run personas against this application and read what they found",
+    "scopes": {
+      "run": {
+        "description": "Start a virtual user run"
+      },
+      "read": {
+        "description": "Read a run's findings"
+      },
+      "schedule": {
+        "description": "Decide that a persona keeps running on its own"
+      }
+    },
+    "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/scaffold/virtual-user/virtual-user.gen.ts"
+  },
+  "flows": {
+    "name": "flows",
+    "displayName": "Flows",
+    "description": "The automations themselves",
+    "scopes": {
+      "read": {
+        "description": "See flows and their definitions"
+      },
+      "write": {
+        "description": "Create and edit flows"
+      },
+      "publish": {
+        "description": "Activate a flow so it runs on its trigger"
+      },
+      "run": {
+        "description": "Start a flow by hand"
+      }
+    },
+    "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/scopes.ts"
+  },
+  "runs": {
+    "name": "runs",
+    "displayName": "Runs",
+    "description": "Executions and their step-by-step history",
+    "scopes": {
+      "read": {
+        "description": "See runs and step output"
+      },
+      "cancel": {
+        "description": "Stop a run that is in flight"
+      },
+      "replay": {
+        "description": "Re-run a past execution with its original input"
+      }
+    },
+    "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/scopes.ts"
+  },
+  "connections": {
+    "name": "connections",
+    "displayName": "Connections",
+    "description": "Credentials the flows use to reach other systems",
+    "scopes": {
+      "read": {
+        "description": "See which connections exist"
+      },
+      "link": {
+        "description": "Connect or disconnect a third-party account"
+      }
+    },
+    "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/scopes.ts"
+  }
+}

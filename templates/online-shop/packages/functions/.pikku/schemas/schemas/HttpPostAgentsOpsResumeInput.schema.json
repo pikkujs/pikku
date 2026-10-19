@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"runId":{"type":"string"},"toolCallId":{"type":"string"},"approved":{"type":"boolean"}},"required":["runId","toolCallId","approved"],"additionalProperties":false,"definitions":{}}

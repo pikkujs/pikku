@@ -171,12 +171,63 @@ const templates = [
     supports: [],
   },
   {
+    template: 'online-shop',
+    description:
+      'Online shop — full-stack TypeScript backend with queues, auth, workflows and AI agents',
+    supports: ['http', 'fullstack'],
+  },
+  {
+    template: 'field-service',
+    description: 'Field service management app',
+    supports: ['http', 'fullstack'],
+  },
+  {
+    template: 'hotel-management',
+    description:
+      'Hotel management — bookings, arrivals, housekeeping, operations',
+    supports: ['http', 'fullstack'],
+  },
+  {
+    template: 'public-content',
+    description:
+      'Public content — editorial queue, scheduled publishing and a live feed',
+    supports: ['http', 'fullstack'],
+  },
+  {
+    template: 'team-saas',
+    description:
+      'Team SaaS — organisations, roles, scopes and billing surfaces',
+    supports: ['http', 'fullstack'],
+  },
+  {
+    template: 'workflow-automation',
+    description:
+      'Workflow automation — triggers, scheduled sweeps, approvals and agents',
+    supports: ['http', 'fullstack', 'workflows'],
+  },
+  {
     template: 'starter-template',
     description:
       'The opinionated Pikku Studio starter — backend + SDK + frontend scaffolds + pikkuScenario e2e',
     supports: ['http', 'fullstack'],
   },
 ] as const
+
+/**
+ * Templates that are a whole standalone project (own workspaces, lockfile and
+ * config) rather than a runtime layer merged over `functions`. They are
+ * downloaded as-is from their own directory under `templates/` in the single
+ * pikkujs/pikku repo. Value: the directory name under `templates/`.
+ */
+const standaloneTemplates: Record<string, string> = {
+  'nextjs-full': 'nextjs-app-starter',
+  'online-shop': 'online-shop',
+  'field-service': 'field-service',
+  'hotel-management': 'hotel-management',
+  'public-content': 'public-content',
+  'team-saas': 'team-saas',
+  'workflow-automation': 'workflow-automation',
+}
 
 type PackageManager = (typeof packageManagers)[number]
 
@@ -390,7 +441,7 @@ async function downloadWithRetry(
 async function cloneRepo(
   cliOptions: CliOptions,
   repoName: string,
-  source = `gh:pikkujs/${repoName}`
+  source = `${BASE_URL}/${repoName}`
 ) {
   const { version, name } = cliOptions
   const targetPath = path.join(process.cwd(), name)
@@ -521,8 +572,8 @@ async function run() {
     frontend: cliOptions.frontend,
   }
 
-  if (template === 'nextjs-full') {
-    await setupRepo(selectedOptions, 'nextjs-app-starter')
+  if (standaloneTemplates[template]) {
+    await setupRepo(selectedOptions, standaloneTemplates[template])
   } else if (template === 'starter-template') {
     await setupCloud(selectedOptions)
   } else {

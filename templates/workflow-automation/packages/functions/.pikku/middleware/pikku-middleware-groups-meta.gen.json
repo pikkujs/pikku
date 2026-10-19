@@ -1,0 +1,102 @@
+{
+  "definitions": {
+    "analyticsOriginMiddleware": {
+      "services": {
+        "optimized": true,
+        "services": [
+          "variables"
+        ]
+      },
+      "wires": {
+        "optimized": true,
+        "wires": [
+          "http"
+        ]
+      },
+      "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/middleware/analytics-origin.middleware.ts",
+      "position": 2729,
+      "exportedName": "analyticsOriginMiddleware",
+      "name": "analyticsOrigin",
+      "description": "Rejects analytics beacons that did not come from this app."
+    },
+    "corsMiddleware": {
+      "services": {
+        "optimized": true,
+        "services": [
+          "variables",
+          "services"
+        ]
+      },
+      "wires": {
+        "optimized": true,
+        "wires": [
+          "http",
+          "wire"
+        ]
+      },
+      "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/middleware/cors.middleware.ts",
+      "position": 690,
+      "exportedName": null
+    },
+    "virtualUserPlatformSession": {
+      "services": {
+        "optimized": true,
+        "services": []
+      },
+      "wires": {
+        "optimized": true,
+        "wires": [
+          "setSession"
+        ]
+      },
+      "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/scaffold/virtual-user/virtual-user.gen.ts",
+      "position": 8574,
+      "exportedName": "virtualUserPlatformSession"
+    }
+  },
+  "instances": {
+    "http:*:0": {
+      "definitionId": "corsMiddleware",
+      "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/middleware/cors.middleware.ts",
+      "position": 1255,
+      "isFactoryCall": false
+    },
+    "global:middleware:0": {
+      "definitionId": "betterAuthStatelessSession",
+      "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/scaffold/auth/auth-middleware.gen.ts",
+      "position": 282,
+      "isFactoryCall": true
+    },
+    "global:middleware:1": {
+      "definitionId": "authBearer",
+      "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/scaffold/auth/auth-middleware.gen.ts",
+      "position": 282,
+      "isFactoryCall": true
+    }
+  },
+  "httpGroups": {
+    "*": {
+      "exportName": null,
+      "sourceFile": "/Users/yasser/git/pikku/templates/workflow-automation/packages/functions/src/middleware/cors.middleware.ts",
+      "position": 1255,
+      "services": {
+        "optimized": false,
+        "services": [
+          "variables",
+          "services"
+        ]
+      },
+      "count": 1,
+      "instanceIds": [
+        "http:*:0"
+      ],
+      "isFactory": false
+    }
+  },
+  "tagGroups": {},
+  "channelMiddleware": {
+    "definitions": {},
+    "instances": {},
+    "tagGroups": {}
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "name": "memberWorksTheirBoardInTheBrowser",
+  "pikkuFuncId": "memberWorksTheirBoardInTheBrowser",
+  "source": "scenario",
+  "actors": [
+    "dana"
+  ],
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "opens the app"
+    },
+    "opens the app": {
+      "nodeId": "opens the app",
+      "rpcName": "opensPage",
+      "scenarioStepPhase": "then",
+      "next": "clicks through to Issues",
+      "actor": "dana",
+      "input": {
+        "path": "/app"
+      },
+      "stepHash": "a1b115870778"
+    },
+    "clicks through to Issues": {
+      "nodeId": "clicks through to Issues",
+      "rpcName": "clicks",
+      "scenarioStepPhase": "then",
+      "next": "is on the board",
+      "actor": "dana",
+      "input": {
+        "name": "Issues"
+      },
+      "outputVar": "arrived",
+      "stepHash": "69b0045a24cd"
+    },
+    "is on the board": {
+      "nodeId": "is on the board",
+      "rpcName": "restsOnPath",
+      "scenarioStepPhase": "then",
+      "next": "the board names its workspace",
+      "actor": "dana",
+      "input": {
+        "path": "/app/issues"
+      },
+      "stepHash": "1c1dbf746512"
+    },
+    "the board names its workspace": {
+      "nodeId": "the board names its workspace",
+      "rpcName": "seesText",
+      "scenarioStepPhase": "then",
+      "next": "sees Acme's urgent issue",
+      "actor": "dana",
+      "input": {
+        "text": "Acme Instruments"
+      },
+      "stepHash": "0b5bd4afd419"
+    },
+    "sees Acme's urgent issue": {
+      "nodeId": "sees Acme's urgent issue",
+      "rpcName": "seesText",
+      "scenarioStepPhase": "then",
+      "next": "sees its status in full",
+      "actor": "dana",
+      "input": {
+        "text": "Sessions drop when the worker restarts"
+      },
+      "stepHash": "95261bbd6148"
+    },
+    "sees its status in full": {
+      "nodeId": "sees its status in full",
+      "rpcName": "seesText",
+      "scenarioStepPhase": "then",
+      "next": "does not see Northwind's work",
+      "actor": "dana",
+      "input": {
+        "text": "In progress"
+      },
+      "stepHash": "bd3984c53f13"
+    },
+    "does not see Northwind's work": {
+      "nodeId": "does not see Northwind's work",
+      "rpcName": "doesNotSeeText",
+      "scenarioStepPhase": "then",
+      "next": "nor its second issue",
+      "actor": "dana",
+      "input": {
+        "text": "Basket empties on sign-in"
+      },
+      "stepHash": "976dbe179daf"
+    },
+    "nor its second issue": {
+      "nodeId": "nor its second issue",
+      "rpcName": "doesNotSeeText",
+      "scenarioStepPhase": "then",
+      "next": "writes what is wrong",
+      "actor": "dana",
+      "input": {
+        "text": "Out-of-stock items still purchasable"
+      },
+      "stepHash": "278f77d10eaa"
+    },
+    "writes what is wrong": {
+      "nodeId": "writes what is wrong",
+      "rpcName": "typesInto",
+      "scenarioStepPhase": "then",
+      "next": "raises it",
+      "actor": "dana",
+      "input": {
+        "label": "What is wrong?",
+        "text": "Search returns archived projects"
+      },
+      "stepHash": "be0142708111"
+    },
+    "raises it": {
+      "nodeId": "raises it",
+      "rpcName": "clicks",
+      "scenarioStepPhase": "then",
+      "next": "sees it on the board",
+      "actor": "dana",
+      "input": {
+        "name": "Raise it"
+      },
+      "stepHash": "a02d44d48be8"
+    },
+    "sees it on the board": {
+      "nodeId": "sees it on the board",
+      "rpcName": "seesText",
+      "scenarioStepPhase": "then",
+      "next": "closes it",
+      "actor": "dana",
+      "input": {
+        "text": "Search returns archived projects"
+      },
+      "stepHash": "f09e8563529d"
+    },
+    "closes it": {
+      "nodeId": "closes it",
+      "rpcName": "clicksNear",
+      "scenarioStepPhase": "then",
+      "next": "sees it done",
+      "actor": "dana",
+      "input": {
+        "near": "Search returns archived projects",
+        "name": "Close"
+      },
+      "stepHash": "19c0f7dba077"
+    },
+    "sees it done": {
+      "nodeId": "sees it done",
+      "rpcName": "seesText",
+      "scenarioStepPhase": "then",
+      "next": "opens operations",
+      "actor": "dana",
+      "input": {
+        "text": "Done"
+      },
+      "stepHash": "d7536c574695"
+    },
+    "opens operations": {
+      "nodeId": "opens operations",
+      "rpcName": "clicks",
+      "scenarioStepPhase": "then",
+      "next": "sees the live panel",
+      "actor": "dana",
+      "input": {
+        "name": "Operations"
+      },
+      "stepHash": "b8d1c8dd20a7"
+    },
+    "sees the live panel": {
+      "nodeId": "sees the live panel",
+      "rpcName": "seesText",
+      "scenarioStepPhase": "then",
+      "next": "posts to /api/analytics",
+      "actor": "dana",
+      "input": {
+        "text": "activity"
+      },
+      "stepHash": "307e158db39f"
+    },
+    "posts to /api/analytics": {
+      "nodeId": "posts to /api/analytics",
+      "rpcName": "postsTo",
+      "scenarioStepPhase": "then",
+      "next": "subscribes to the channel",
+      "actor": "dana",
+      "input": {
+        "path": "/api/analytics",
+        "body": "{\"events\":[{\"event\":{\"name\":\"page_viewed\",\"path\":\"/app/issues\"}}]}",
+        "minStatus": 0,
+        "maxStatus": 299
+      },
+      "stepHash": "f13e90d1da33"
+    },
+    "subscribes to the channel": {
+      "nodeId": "subscribes to the channel",
+      "rpcName": "subscribesToChannel",
+      "scenarioStepPhase": "then",
+      "next": "step_18",
+      "actor": "dana",
+      "input": {
+        "route": "/board",
+        "action": "watchOrg"
+      },
+      "stepHash": "77ad7f7aed7e"
+    },
+    "step_18": {
+      "nodeId": "step_18",
+      "flow": "return",
+      "outputs": {
+        "landed": {
+          "from": "outputVar",
+          "name": "arrived",
+          "path": "pathname"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "ad6973310bda"
+}

@@ -1,0 +1,6 @@
+{
+  "low-stock": {
+    "pikkuFuncId": "onLowStock",
+    "name": "low-stock"
+  }
+}

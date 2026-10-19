@@ -1,0 +1,23 @@
+{
+  "programs": {
+    "hotel": {
+      "program": "hotel",
+      "commands": {
+        "rooms": {
+          "pikkuFuncId": "listRooms",
+          "positionals": [],
+          "options": {},
+          "description": "List rooms and their housekeeping status"
+        },
+        "no-shows": {
+          "pikkuFuncId": "sweepNoShows",
+          "positionals": [],
+          "options": {},
+          "description": "Mark yesterday’s unarrived bookings as no-shows"
+        }
+      },
+      "options": {}
+    }
+  },
+  "renderers": {}
+}

@@ -1,0 +1,43 @@
+{
+  "name": "operatorReadsTheQueue",
+  "pikkuFuncId": "operatorReadsTheQueue",
+  "source": "scenario",
+  "title": "An operator reads the run queue",
+  "description": "Proves runs:read is enough to see the queue without any flow scope.",
+  "tags": [
+    "operations"
+  ],
+  "nodes": {
+    "step_0": {
+      "nodeId": "step_0",
+      "flow": "branch",
+      "branches": [],
+      "next": "Operator lists recent runs"
+    },
+    "Operator lists recent runs": {
+      "nodeId": "Operator lists recent runs",
+      "rpcName": "listRuns",
+      "stepName": "Operator lists recent runs",
+      "next": "step_2",
+      "input": {
+        "limit": 25
+      },
+      "outputVar": "runs",
+      "stepHash": "45f79f365176"
+    },
+    "step_2": {
+      "nodeId": "step_2",
+      "flow": "return",
+      "outputs": {
+        "runCount": {
+          "from": "expression",
+          "expression": "runs.runs.length"
+        }
+      }
+    }
+  },
+  "entryNodeIds": [
+    "step_0"
+  ],
+  "graphHash": "b661da1ce24c"
+}

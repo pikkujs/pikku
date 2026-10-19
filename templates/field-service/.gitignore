@@ -1,0 +1,6 @@
+node_modules
+.pikku
+dist
+*.sqlite
+*.sqlite-*
+.env
