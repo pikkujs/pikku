@@ -8,7 +8,7 @@ import {
   type ContributorTarget,
   type SkippedContributor,
 } from '@pikku/core/contributors'
-import { addonResolutionDirs } from '@pikku/inspector'
+import { addonResolutionDirs } from '@pikku/inspector/lite'
 import type { InspectorState } from '@pikku/inspector'
 import { loadUserModule } from '../functions/commands/load-user-project.js'
 
