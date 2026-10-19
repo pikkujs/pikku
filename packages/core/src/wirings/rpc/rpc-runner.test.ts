@@ -1278,6 +1278,50 @@ describe('wireRemoteAddon dispatch', () => {
     }
   })
 
+  test("a call without a version goes to the latest version in the consumer's SDK", async () => {
+    stubFetch()
+    try {
+      wireRegistry()
+      // What codegen registers from the SDK the consumer built against.
+      pikkuState('@acme/addon-registry', 'rpc', 'meta', {
+        getOpenApi: 'getOpenApi@v2',
+      })
+      const service = new ContextAwareRPCService(
+        createServices(),
+        {} as never,
+        {}
+      )
+
+      await service.rpc('registry:getOpenApi', {})
+
+      assert.equal(calls[0]!.url, 'https://api.example.com/rpc/getOpenApi%40v2')
+      assert.equal(JSON.parse(calls[0]!.init.body).rpcName, 'getOpenApi@v2')
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  test('an explicit version is sent as it is', async () => {
+    stubFetch()
+    try {
+      wireRegistry()
+      pikkuState('@acme/addon-registry', 'rpc', 'meta', {
+        getOpenApi: 'getOpenApi@v2',
+      })
+      const service = new ContextAwareRPCService(
+        createServices(),
+        {} as never,
+        {}
+      )
+
+      await service.rpc('registry:getOpenApi@v1', {})
+
+      assert.equal(JSON.parse(calls[0]!.init.body).rpcName, 'getOpenApi@v1')
+    } finally {
+      restoreFetch()
+    }
+  })
+
   test('remaps the function name and encodes it into the path', async () => {
     stubFetch()
     try {
@@ -1668,6 +1712,68 @@ describe('rpcExposed on a host answering a remote-addon call', () => {
 
     assert.deepEqual(await service.rpcExposed('deleteEverything', {}), {
       ran: 'deleteEverything',
+    })
+  })
+
+  describe('versions', () => {
+    const registerVersions = (versions: number[]) => {
+      const rpc = pikkuState(null, 'rpc', 'meta')
+      for (const v of versions) {
+        const id = `getOpenApi@v${v}`
+        rpc[id] = id
+        registerFunction(id, async () => ({ ran: id }), { expose: true })
+        ;(pikkuState(null, 'function', 'meta')[id] as any).remote = true
+      }
+      rpc.getOpenApi = `getOpenApi@v${Math.max(...versions)}`
+    }
+    const service = () =>
+      new ContextAwareRPCService(createServices(), contractWire, {})
+
+    test('an existing v1 is still served after v2 is added', async () => {
+      registerVersions([1, 2])
+      assert.deepEqual(await service().rpcExposed('getOpenApi@v1', {}), {
+        ran: 'getOpenApi@v1',
+      })
+      assert.deepEqual(await service().rpcExposed('getOpenApi', {}), {
+        ran: 'getOpenApi@v2',
+      })
+    })
+
+    test('a removed v1 is a 404 telling the caller to update its SDK, not the latest', async () => {
+      registerVersions([2, 3])
+      await assert.rejects(
+        () => service().rpcExposed('getOpenApi@v1', {}),
+        (error: unknown) =>
+          error instanceof RPCNotFoundError &&
+          error.rpcName === 'getOpenApi@v1' &&
+          /Version 1 of 'getOpenApi' is no longer served here; update the SDK/.test(
+            error.message
+          )
+      )
+    })
+
+    test('the same refusal holds on the public /rpc route', async () => {
+      registerVersions([2])
+      const ordinary = new ContextAwareRPCService(
+        createServices(),
+        {} as never,
+        {}
+      )
+      await assert.rejects(
+        () => ordinary.rpcExposed('getOpenApi@v1', {}),
+        RPCNotFoundError
+      )
+    })
+
+    test('an unversioned function answers as its own v1', async () => {
+      registerExposed('getOpenApi', true)
+      assert.deepEqual(await service().rpcExposed('getOpenApi@v1', {}), {
+        ran: 'getOpenApi',
+      })
+      await assert.rejects(
+        () => service().rpcExposed('getOpenApi@v2', {}),
+        RPCNotFoundError
+      )
     })
   })
 

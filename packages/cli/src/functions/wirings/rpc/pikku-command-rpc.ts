@@ -3,6 +3,8 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { withoutScenarios } from '../scenarios/scenario-partition.js'
+import { sdkDefaultVersions } from '../../../utils/addon-sdk.js'
+import type { InspectorState } from '@pikku/inspector'
 
 export function filterInternalRPCMeta(
   internalMeta: Record<string, string>,
@@ -17,9 +19,41 @@ export function filterInternalRPCMeta(
   return filteredInternalMeta
 }
 
+/**
+ * For each versioned remote addon, by package: the id a call without `@vN` is
+ * sent to — the newest version in the SDK this project built against, so a
+ * host that has moved on to `fn@v3` still gets `fn@v2` from a v2 consumer.
+ */
+export function remoteAddonDefaultVersions(
+  state: Pick<InspectorState, 'remoteAddonFunctions'> & {
+    rpc: Pick<InspectorState['rpc'], 'wireAddonDeclarations'>
+  }
+): Record<string, Record<string, string>> {
+  const out: Record<string, Record<string, string>> = {}
+  for (const [namespace, decl] of state.rpc.wireAddonDeclarations) {
+    const functions = state.remoteAddonFunctions?.[namespace]
+    if (!decl.remote || !functions) continue
+    const defaults = sdkDefaultVersions(functions)
+    if (Object.keys(defaults).length > 0) out[decl.package] = defaults
+  }
+  return out
+}
+
+const serializeRemoteDefaults = (
+  defaults: Record<string, Record<string, string>>
+): string =>
+  Object.entries(defaults)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([pkg, meta]) =>
+        `pikkuState(${JSON.stringify(pkg)}, 'rpc', 'meta', ${JSON.stringify(meta, null, 2)})`
+    )
+    .join('\n')
+
 export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { rpc, functions } = await getInspectorState()
+    const state = await getInspectorState()
+    const { rpc, functions } = state
     const {
       rpcInternalWiringMetaFile,
       rpcInternalWiringMetaJsonFile,
@@ -38,6 +72,11 @@ export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
       rpc.internalMeta,
       withoutScenarios(functions.meta)
     )
+
+    // A remote addon's calls go out with the version its SDK names; the host
+    // never picks one for them.
+    const remoteDefaults = remoteAddonDefaultVersions(state)
+    const lines = ["import { pikkuState } from '@pikku/core/state'"]
 
     if (Object.keys(filteredInternalMeta).length > 0) {
       await writeFileInDir(
@@ -59,14 +98,18 @@ export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
 
       const packageNameArg = config.addonName ? `'${config.addonName}'` : 'null'
 
-      await writeFileInDir(
-        logger,
-        rpcInternalWiringMetaFile,
-        `import { pikkuState } from '@pikku/core/state'\n${importStatement}\npikkuState(${packageNameArg}, 'rpc', 'meta', metaData as Record<string, string>)`
+      lines.push(
+        importStatement,
+        `pikkuState(${packageNameArg}, 'rpc', 'meta', metaData as Record<string, string>)`
       )
-      return true
     }
-    return false
+    if (Object.keys(remoteDefaults).length > 0) {
+      lines.push(serializeRemoteDefaults(remoteDefaults))
+    }
+    if (lines.length === 1) return false
+
+    await writeFileInDir(logger, rpcInternalWiringMetaFile, lines.join('\n'))
+    return true
   },
   middleware: [
     logCommandInfoAndTime({

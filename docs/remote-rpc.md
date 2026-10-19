@@ -155,6 +155,44 @@ and the header can only narrow what the host answers.
 So a host serves a function to remote-addon consumers by marking it
 `expose: true, remote: true` and serving the public RPC route (`scaffold.rpc`).
 
+### Versions
+
+A host changes a remote contract by adding a version, never by editing one:
+`pikku versions check` covers `remote: true` functions like any other, so a
+changed contract without a bump fails. The old version keeps being served.
+
+```ts
+// host
+export const listNotesV1 = pikkuSessionlessFunc({
+  version: 1,
+  remote: true,
+  expose: true,
+  output: NoteIds,
+  func,
+})
+export const listNotes = pikkuSessionlessFunc({
+  remote: true,
+  expose: true,
+  output: NoteRows,
+  func,
+}) // v2
+```
+
+`pikku sdk` records each contract function's `versions` and `latestVersion` in
+the SDK's function meta, and the remote map types both `listNotes` and every
+`listNotes@vN`. On the consumer:
+
+- `rpc('notes:listNotes@v1', …)` posts `/rpc/listNotes@v1`, unchanged;
+- `rpc('notes:listNotes', …)` posts the newest version **in the consumer's
+  SDK** (`/rpc/listNotes@v2`), never whatever the host has added since. Codegen
+  registers that default in the rpc meta file.
+
+A version the host no longer serves is a 404 `RPCNotFoundError` saying so, and
+that the SDK needs updating; the host never answers it with its latest. With
+`--bump-from`, `pikku sdk` reads the previous SDK's schemas: a contract loosened
+in place is minor, tightened is major, a new version beside the old one is
+minor, and a dropped version is major.
+
 ### Exposing it from the consumer
 
 `expose` works as it does on `wireAddon`: off by default, `true` forwards every

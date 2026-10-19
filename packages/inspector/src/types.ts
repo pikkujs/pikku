@@ -31,6 +31,15 @@ import type { VirtualUserDefinitions } from '@pikku/core/virtual-user'
 import type { VariableDefinitions } from '@pikku/core/variable'
 import type { TypesMap } from './types-map.js'
 import type { FunctionsMeta } from '@pikku/core/services'
+
+/**
+ * A remote addon SDK's function meta: each contract function, with the
+ * versions of its name the SDK can call and the one a call without `@vN` goes to.
+ */
+export type RemoteAddonFunctionsMeta = Record<
+  string,
+  FunctionsMeta[string] & { versions?: number[]; latestVersion?: number }
+>
 import type {
   FunctionServicesMeta,
   FunctionWiresMeta,
@@ -954,7 +963,7 @@ export interface InspectorState {
   diagnostics: InspectorDiagnostic[]
   addonFunctions: Record<string, FunctionsMeta> // namespace -> addon's function metadata
   /** The function metadata of each versioned `wireRemoteAddon`'s SDK, by namespace. Kept apart from `addonFunctions`: none of it runs here. */
-  remoteAddonFunctions?: Record<string, FunctionsMeta>
+  remoteAddonFunctions?: Record<string, RemoteAddonFunctionsMeta>
   exportedContracts: InspectorExportedContractsState
   program: ts.Program | null // Retained for incremental re-inspection
 }

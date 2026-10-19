@@ -69,8 +69,8 @@ const resolveWireSession = async (wire: PikkuRawWire) =>
  */
 export class RPCNotFoundError extends PikkuError {
   public readonly rpcName: string
-  constructor(rpcName: string) {
-    super(`RPC function not found: ${rpcName}`)
+  constructor(rpcName: string, message = `RPC function not found: ${rpcName}`) {
+    super(message)
     this.rpcName = rpcName
   }
 }
@@ -308,6 +308,27 @@ const resolvePikkuFunction = (
 }
 
 /**
+ * A caller from outside names `fn@vN` because it was built against that
+ * version. Serving it the latest instead would hand it a contract it does not
+ * know, so a version this host no longer has is refused, not resolved to the
+ * base name the way an internal caller's is. An unversioned function is its
+ * own v1.
+ */
+const refuseUnknownVersion = (rpcName: string): void => {
+  const { baseName, version } = parseVersionedId(rpcName)
+  if (version === null) return
+  const rpc = pikkuState(null, 'rpc', 'meta')
+  if (rpc[rpcName]) return
+  const current = rpc[baseName]
+  if (!current) return
+  if (version === 1 && parseVersionedId(current).version === null) return
+  throw new RPCNotFoundError(
+    rpcName,
+    `RPC function not found: ${rpcName}. Version ${version} of '${baseName}' is no longer served here; update the SDK this call was built against.`
+  )
+}
+
+/**
  * Marks an addon RPC name that could not be resolved. Module-private on purpose:
  * resolution failure must never be conflated with an `RPCNotFoundError` thrown by
  * a function that already started executing, and it must never escape to callers.
@@ -358,7 +379,7 @@ export class ContextAwareRPCService {
         if (
           !isAddonFunctionExposed(
             resolvedAddon.addonConfig.expose,
-            resolvedAddon.function,
+            parseVersionedId(resolvedAddon.function).baseName,
             true
           )
         ) {
@@ -372,6 +393,7 @@ export class ContextAwareRPCService {
         ]
       }
     } else {
+      if (!this.packageName) refuseUnknownVersion(funcName)
       const resolved = resolvePikkuFunction(funcName, this.packageName)
       functionMeta = pikkuState(resolved.packageName, 'function', 'meta')[
         resolved.pikkuFuncId
@@ -605,7 +627,14 @@ export class ContextAwareRPCService {
       throw new RemoteAddonConfigError(namespace, 'serverUrl resolved empty')
     }
 
-    const remoteFn = cfg.remoteName ? cfg.remoteName(fnName) : fnName
+    // The host serves `fn` as its own latest, which may be newer than the
+    // contract this consumer was built against, so a call always names a
+    // version: the caller's, or the newest in the SDK (registered by codegen).
+    const versionedFn =
+      parseVersionedId(fnName).version !== null
+        ? fnName
+        : (pikkuState(cfg.package, 'rpc', 'meta')[fnName] ?? fnName)
+    const remoteFn = cfg.remoteName ? cfg.remoteName(versionedFn) : versionedFn
     const token = await resolveRemoteAddonToken(
       cfg.remoteAuth,
       this.services,
