@@ -4,35 +4,26 @@ import { loadUserModule } from './load-user-project.js'
 
 /**
  * Merges the generated platform services over the local ones, before the
- * app's `createSingletonServices` sees them.
- *
- * Two files can exist: the one `dev.contributors` and package.json contributors
- * produce, and the one for the contributors the project opted in to with
- * `wireAddon`. The second is spread last, so a contributor that replaces a
- * baseline or earlier service wins.
+ * app's `createSingletonServices` sees them. The file holds the contributors
+ * the project opted in to with `wireAddon`; it is spread last, so a
+ * contributor that replaces a baseline service wins.
  */
 export const mergeDevPlatformServices = async <T extends Record<string, any>>(
   localServices: T,
   rootDir: string,
-  devPlatformServicesFile: string,
-  env: Record<string, string | undefined> = process.env,
-  devContributorsFile?: string
+  devContributorsFile: string,
+  env: Record<string, string | undefined> = process.env
 ): Promise<T & Record<string, any>> => {
   if (env.NODE_ENV === 'production') return localServices
-  let services: Record<string, any> = localServices
-  for (const file of [devPlatformServicesFile, devContributorsFile]) {
-    if (!file) continue
-    const tsPath = resolve(rootDir, file)
-    const path = [tsPath, tsPath.replace(/\.ts$/, '.js')].find((candidate) =>
-      existsSync(candidate)
-    )
-    if (!path) continue
-    const { createPlatformServices } = await loadUserModule(path)
-    services = Object.assign(
-      {},
-      services,
-      await createPlatformServices(env, services)
-    )
-  }
-  return services as T & Record<string, any>
+  const tsPath = resolve(rootDir, devContributorsFile)
+  const path = [tsPath, tsPath.replace(/\.ts$/, '.js')].find((candidate) =>
+    existsSync(candidate)
+  )
+  if (!path) return localServices
+  const { createPlatformServices } = await loadUserModule(path)
+  return Object.assign(
+    {},
+    localServices,
+    await createPlatformServices(env, localServices)
+  ) as T & Record<string, any>
 }

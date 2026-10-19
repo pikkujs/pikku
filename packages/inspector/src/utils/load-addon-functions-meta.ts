@@ -2,8 +2,6 @@ import { existsSync } from 'fs'
 import { readFile, readdir } from 'fs/promises'
 import { join, dirname, relative } from 'path'
 import type {
-  AddonContributorRef,
-  AddonContributorsMeta,
   InspectorState,
   InspectorLogger,
   StudioMeta,
@@ -333,50 +331,6 @@ const recordOptedInContributors = async (
   }
 }
 
-const isContributorRef = (value: unknown): value is AddonContributorRef =>
-  !!value &&
-  typeof value === 'object' &&
-  typeof (value as AddonContributorRef).module === 'string' &&
-  ((value as AddonContributorRef).export === undefined ||
-    typeof (value as AddonContributorRef).export === 'string')
-
-/**
- * The platform service contributors an addon declares in its package.json,
- * `"pikku": { "contributors": [{ "module", "export" }] }` — the same shape as
- * `dev.contributors`. `wireAddon` has no place for them: a contributor emits
- * code into the host's entry, so it belongs to the package, not the wiring.
- */
-export const readAddonContributors = async (
-  dirs: string[],
-  packageName: string
-): Promise<AddonContributorsMeta | null> => {
-  const packageDir = findInstalledPackageDir(dirs, packageName)
-  if (!packageDir) return null
-  let declared: unknown
-  try {
-    const pkg = JSON.parse(
-      await readFile(join(packageDir, 'package.json'), 'utf-8')
-    )
-    declared = pkg?.pikku?.contributors
-  } catch {
-    return null
-  }
-  if (declared === undefined) return null
-  if (!Array.isArray(declared) || !declared.every(isContributorRef)) {
-    throw new Error(
-      `${packageName} declares pikku.contributors in its package.json, but it is not a list of { module, export? }.`
-    )
-  }
-  if (declared.length === 0) return null
-  return {
-    packageName,
-    packageDir,
-    contributors: declared.map(({ module, export: name }) =>
-      name === undefined ? { module } : { module, export: name }
-    ),
-  }
-}
-
 /**
  * A versioned remote addon's function metadata comes from the SDK `pikku addon
  * sync` extracted, and only when it matches the lock — a stale or missing SDK
@@ -466,16 +420,6 @@ export async function loadAddonFunctionsMeta(
     const dirs = addonResolutionDirs(state.rootDir, decl.file)
     const require = createAddonResolver(dirs)
     try {
-      try {
-        const contributors = await readAddonContributors(dirs, decl.package)
-        if (contributors) {
-          ;(state.addonContributors ??= {})[namespace] = contributors
-        }
-      } catch (error) {
-        logger.error(
-          `wireAddon('${namespace}'): ${error instanceof Error ? error.message : error}`
-        )
-      }
       recordDeclaredUses(logger, namespace, decl, dirs)
       if (decl.contributors && decl.contributors.length > 0) {
         await recordOptedInContributors(

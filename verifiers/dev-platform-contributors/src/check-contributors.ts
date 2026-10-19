@@ -1,8 +1,9 @@
 // Checks what `pikku all` generated for the scenario projects, then drives the
-// shared resolver and serializer for the `deploy` target, which no adapter uses
-// yet (so there is no `pikku` command to run it through).
+// deploy target through the real adapters: the shared per-unit writer asks the
+// standalone and Cloudflare adapters what their runtime supports, resolves,
+// writes the file their entries import, and the entries are generated here.
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -12,9 +13,12 @@ const cliDist = resolve(verifier, '../../packages/cli/dist/src/contributors')
 const { resolveTargetContributors } = await import(
   pathToFileURL(join(cliDist, 'resolve-contributors.js')).href
 )
-const { serializeContributors } = await import(
-  pathToFileURL(join(cliDist, 'serialize-contributors.js')).href
+const { writeUnitPlatformServices } = await import(
+  pathToFileURL(resolve(cliDist, '../deploy/platform-services.js')).href
 )
+const { StandaloneProviderAdapter } = await import('@pikku/deploy-standalone')
+const { CloudflareProviderAdapter } = await import('@pikku/deploy-cloudflare')
+const { build } = await import('esbuild')
 
 const generated = (scenario: string) =>
   join(
@@ -171,7 +175,7 @@ for (const [scenario, engine, imp] of [
   assert.equal(built.store.engine, engine)
 }
 
-// --- deploy: same resolver and serializer, the other variants --------------
+// --- deploy: the real adapters, the shared per-unit writer ----------------
 const scenarioDir = join(verifier, 'scenarios/multi')
 const optedIn = (addon: string, names: string[]) => {
   const meta = JSON.parse(
@@ -185,27 +189,15 @@ const optedIn = (addon: string, names: string[]) => {
   )
   return Object.fromEntries(names.map((n) => [n, meta.contributors[n]]))
 }
-const state = {
+const stateOf = (notify: string[], select: string[]) => ({
   optedInContributors: {
     notify: {
       packageName: '@verifier/contrib-notify',
-      contributors: optedIn('contrib-notify', [
-        'notifier-audit',
-        'notifier',
-        'logger-prefix',
-        'blob',
-        'cache',
-        'unused',
-      ]),
+      contributors: optedIn('contrib-notify', notify),
     },
     select: {
       packageName: '@verifier/contrib-select',
-      contributors: optedIn('contrib-select', [
-        'store-postgres',
-        'store-sqlite',
-        'queue-real',
-        'queue-noop',
-      ]),
+      contributors: optedIn('contrib-select', select),
     },
   },
   rpc: {
@@ -214,58 +206,94 @@ const state = {
       ['select', { file: join(scenarioDir, 'src/addons.ts') }],
     ]),
   },
-}
+})
+const state = stateOf(
+  ['notifier-audit', 'notifier', 'logger-prefix', 'blob', 'cache', 'unused'],
+  ['store-postgres', 'store-sqlite', 'queue-real', 'queue-noop']
+)
 const basePlatform = {
   serviceNames: ['queueService'],
   needsQueue: true,
   needsWorkflow: false,
   needsAgent: false,
-  runtimeServices: ['logger', 'variables', 'secrets', 'schema'],
 }
 const platform = {
   ...basePlatform,
   db: { engine: 'postgres' as const, coercionMap: { users: { id: 'int' } } },
 }
-const resolved = await resolveTargetContributors({
-  state,
-  rootDir: scenarioDir,
-  target: 'deploy',
-  platform,
-})
+const deployRoot = join(scenarioDir, '.pikku/deploy-check')
+rmSync(deployRoot, { recursive: true, force: true })
+const unitCtx = (
+  provider: string,
+  name: string,
+  target: string,
+  extra = {}
+) => {
+  const unitDir = join(deployRoot, provider, name)
+  mkdirSync(unitDir, { recursive: true })
+  return {
+    unit: {
+      name,
+      role: 'function',
+      target,
+      functionIds: [],
+      services: [{ capability: 'queue', sourceServiceName: 'queueService' }],
+      handlers: [],
+      dependsOn: [],
+      tags: [],
+    },
+    unitDir,
+    bootstrapPath: './.pikku/pikku-bootstrap.gen.js',
+    configImport: '',
+    configVar: 'createConfig',
+    servicesImport: '',
+    servicesVar: 'createSingletonServices',
+    singletonServicesImport: '',
+    servicesType: 'Record<string, any>',
+    mcpImport: '',
+    mcpServerOption: '',
+    contributorPlatform: platform,
+    db: { engine: 'postgres' },
+    ...extra,
+  } as any
+}
+const generate = (provider: any, ctx: any, st: any) =>
+  writeUnitPlatformServices({
+    provider,
+    ctx,
+    state: st,
+    projectDir: scenarioDir,
+  })
+
+const standalone = new StandaloneProviderAdapter({})
+const standaloneCtx = unitCtx('standalone', 'api', 'server')
+const written = await generate(standalone, standaloneCtx, state)
+assert.equal(written?.importPath, './platform-services.gen.js')
+const standaloneFile = join(standaloneCtx.unitDir, 'platform-services.gen.ts')
+const deploySource = read(standaloneFile)
 assert.deepEqual(
-  resolved.ordered.map((c: any) => c.name).sort(),
+  [...deploySource.matchAll(/^import \{ (\w+) as contributor\d+ \}/gm)]
+    .map((m) => m[1])
+    .sort(),
   [
-    'blob',
-    'cache',
-    'logger-prefix',
-    'notifier',
-    'notifier-audit',
-    'queue-real',
-    'store-postgres',
+    'blobDeploy',
+    'cacheDeploy',
+    'loggerPrefixDeploy',
+    'notifierAuditDeploy',
+    'notifierDeploy',
+    'queueRealDeploy',
+    'storePostgresDeploy',
   ],
   'deploy selects by the same platform facts'
 )
-assert.deepEqual(
-  resolved.withoutVariant,
-  ['unused'],
-  'unused has no deploy variant'
-)
-const deploySource = serializeContributors({
-  contributors: resolved.ordered,
-  platform,
-  specifier: (c: any) => pathToFileURL(c.module).href,
-})
 assert.ok(
   !/Dev\b/.test(deploySource.replace(/\/\/.*$/gm, '')),
   'no dev variant in the deploy file'
 )
 assert.ok(
-  !deploySource.includes('queue-noop') && !deploySource.includes('store-sqlite')
+  !deploySource.includes('queue-noop') && !deploySource.includes('unused')
 )
-assert.ok(!deploySource.includes('unused.ts'))
-const deployFile = join(scenarioDir, '.pikku/contributors/check-deploy.gen.ts')
-writeFileSync(deployFile, deploySource)
-const deployed = await import(pathToFileURL(deployFile).href)
+const deployed = await import(pathToFileURL(standaloneFile).href)
 const built = await deployed.createPlatformServices({}, { logger })
 assert.equal(built.store.target, 'deploy')
 assert.deepEqual(
@@ -277,14 +305,122 @@ assert.equal(built.queueClient.kind, 'real')
 assert.equal(built.notifier.audited, 'deploy')
 assert.equal(built.notifier.serviceCount, 1)
 
-// A widened platform is passed through to `when`.
-const widened = await resolveTargetContributors({
-  state,
-  rootDir: scenarioDir,
-  target: 'deploy',
-  platform: { ...basePlatform, needsQueue: false },
+// The standalone entry imports exactly that file and spreads what it returns.
+const standaloneEntry = standalone.generateEntrySource({
+  ...standaloneCtx,
+  platformServices: written,
 })
-assert.ok(widened.ordered.some((c: any) => c.name === 'queue-noop'))
-assert.ok(!widened.ordered.some((c: any) => c.name === 'queue-real'))
+assert.match(
+  standaloneEntry,
+  /import \{ createPlatformServices \} from '\.\/platform-services\.gen\.js'/
+)
+assert.match(standaloneEntry, /\.\.\.platformServices,/)
+
+// The platform is widened with the unit: a host contributor reads it in `when`
+// and `run`, and `pikku dev`, which has no unit, leaves it out.
+const tagState = stateOf(['unit-tag'], [])
+const tagged = await generate(
+  standalone,
+  unitCtx('standalone', 'tagged', 'server'),
+  tagState
+)
+assert.ok(tagged, 'unit-tag is selected on a deploy, where the unit exists')
+const taggedFile = join(
+  deployRoot,
+  'standalone/tagged/platform-services.gen.ts'
+)
+assert.equal(
+  (
+    await (
+      await import(pathToFileURL(taggedFile).href)
+    ).createPlatformServices({}, {})
+  ).unitTag,
+  'tagged'
+)
+
+// An opted-in contributor whose `requires` the target cannot supply is a build
+// error naming it, not a silent omission.
+await assert.rejects(
+  generate(
+    standalone,
+    unitCtx('standalone', 'edge', 'server'),
+    stateOf([], ['edge-queue'])
+  ),
+  (error: Error) =>
+    /The standalone deploy cannot supply what a contributor/.test(
+      error.message
+    ) &&
+    /'edge-queue' of addon 'select'.*requires cloudflare/.test(error.message)
+)
+// ... while one with no deploy variant at all is just not part of the target.
+const devOnly = await generate(
+  standalone,
+  unitCtx('standalone', 'devonly', 'server'),
+  stateOf(['unused'], [])
+)
+assert.equal(devOnly, undefined)
+
+// Cloudflare: a Worker supplies cloudflare bindings, and the adapter itself
+// selects column coercion beside what the project opted in to.
+const cloudflare = new CloudflareProviderAdapter({})
+const workerCtx = unitCtx('cloudflare', 'edge', 'serverless', { db: undefined })
+const workerState = stateOf(['unit-tag'], ['edge-queue', 'kysely-fake'])
+const worker = await generate(cloudflare, workerCtx, workerState)
+const workerFile = join(workerCtx.unitDir, 'platform-services.gen.ts')
+const workerSource = read(workerFile)
+assert.match(workerSource, /edgeQueueDeploy/)
+assert.match(
+  workerSource,
+  /kysely-coercion|coercionContributor/,
+  'the adapter selects coercion itself'
+)
+const workerServices = await (
+  await import(pathToFileURL(workerFile).href)
+).createPlatformServices({ QUEUE: 'queue-binding' }, {})
+assert.equal(workerServices.edgeQueue, 'queue-binding')
+assert.equal(
+  workerServices.kysely.plugins.length,
+  1,
+  'coercion decorated the platform kysely'
+)
+assert.equal(workerServices.unitTag, 'edge')
+const workerEntry = cloudflare.generateEntrySource({
+  ...workerCtx,
+  platformServices: worker,
+})
+assert.match(workerEntry, /__pikkuContributorServices\(env, services\)/)
+
+// The same project on the container (node, env only) cannot take the binding.
+await assert.rejects(
+  generate(
+    cloudflare,
+    unitCtx('cloudflare', 'box', 'server'),
+    stateOf([], ['edge-queue'])
+  ),
+  /The cloudflare deploy cannot supply what a contributor.*'edge-queue'.*requires cloudflare/s
+)
+
+// The Worker bundle (esbuild, browser platform) keeps working and carries only
+// the selected contributors.
+const bundled = await build({
+  entryPoints: [workerFile],
+  bundle: true,
+  write: false,
+  platform: 'browser',
+  format: 'esm',
+  logLevel: 'silent',
+  external: ['@pikku/kysely', 'kysely'],
+})
+const bundle = bundled.outputFiles[0]!.text
+assert.ok(bundle.includes('edgeQueue'))
+assert.ok(
+  !bundle.includes('queueClient'),
+  'an unselected contributor is not bundled'
+)
+
+// Opting in to nothing writes no file and clears a stale one.
+const none = await generate(standalone, standaloneCtx, stateOf([], []))
+assert.equal(none, undefined)
+assert.equal(existsSync(standaloneFile), false)
 
 console.log('contributors: all checks passed')

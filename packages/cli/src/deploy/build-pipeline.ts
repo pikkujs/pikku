@@ -37,7 +37,8 @@ import { getDeadGenFilePatterns } from './bundler/bundler.js'
 import { verifyUnitsRuntime } from './runtime-verifier.js'
 import { readCoercionMap } from '../functions/db/db-codegen.js'
 import type { BundleResult } from './bundler/types.js'
-import type { ProviderAdapter } from '@pikku/deploy'
+import type { EntryGenerationContext, ProviderAdapter } from '@pikku/deploy'
+import { writeUnitPlatformServices } from './platform-services.js'
 import {
   buildContributorPlatform,
   detectDatabaseDialect,
@@ -432,13 +433,13 @@ export async function runBuildPipeline(options: {
     )
     if (embedded.length > 0) logger.info(`Embedded: ${embedded.join(', ')}`)
 
-    const ctx = {
+    const ctx: EntryGenerationContext = {
       ...(getEntryContext(
         unitDir,
         pikkuDir,
         singleUnit,
         inspectorState
-      ) as object),
+      ) as EntryGenerationContext),
       frontend: frontendMount,
       embedded: embedded.length > 0,
       version: resolveProjectVersion(projectDir),
@@ -470,7 +471,13 @@ export async function runBuildPipeline(options: {
       }),
       lifecycle: resolveLifecycle(unitDir, inspectorState),
     }
-    const source = provider.generateEntrySource(ctx as never)
+    ctx.platformServices = await writeUnitPlatformServices({
+      provider,
+      ctx,
+      state: inspectorState,
+      projectDir,
+    })
+    const source = provider.generateEntrySource(ctx)
 
     const entryPath = join(unitDir, 'entry.ts')
     await writeFile(entryPath, source, 'utf-8')
@@ -658,8 +665,13 @@ export async function runBuildPipeline(options: {
       const entryPath = join(unitDir, 'entry.ts')
       await mkdir(unitDir, { recursive: true })
 
-      const ctx = {
-        ...(getEntryContext(unitDir, pikkuDir, unit, inspectorState) as object),
+      const ctx: EntryGenerationContext = {
+        ...(getEntryContext(
+          unitDir,
+          pikkuDir,
+          unit,
+          inspectorState
+        ) as EntryGenerationContext),
         lifecycle: resolveLifecycle(unitDir, inspectorState),
         coercionMap,
         contributorPlatform: await buildContributorPlatform({
@@ -681,11 +693,20 @@ export async function runBuildPipeline(options: {
           subject: 'a deploy build',
         }),
       }
+      ctx.platformServices = await writeUnitPlatformServices({
+        provider,
+        ctx,
+        state: inspectorState,
+        projectDir,
+        // The provider-agnostic server entry builds no platform services.
+        entrySupportsPlatformServices:
+          unit.target !== 'server' || !!provider.generateServerEntrySource,
+      })
       const source =
         unit.target === 'server'
-          ? (provider.generateServerEntrySource?.(ctx as never) ??
-            generateServerEntrySource(ctx as never))
-          : provider.generateEntrySource(ctx as never)
+          ? (provider.generateServerEntrySource?.(ctx) ??
+            generateServerEntrySource(ctx))
+          : provider.generateEntrySource(ctx)
 
       await writeFile(entryPath, source, 'utf-8')
       if (unit.target === 'server') {

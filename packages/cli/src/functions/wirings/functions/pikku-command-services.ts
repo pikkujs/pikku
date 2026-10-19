@@ -6,7 +6,6 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { writeLocalServices } from '../cli/write-local-services.js'
 import { writeDevContributors } from '../cli/write-dev-contributors.js'
-import { writeDevPlatformServices } from '../cli/write-dev-platform-services.js'
 
 export const serializeServicesMap = (
   allSingletonServices: string[],
@@ -192,7 +191,6 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
     await writeLocalServices(logger, config, visitState)
-    await writeDevPlatformServices(logger, config, visitState)
     await writeDevContributors(logger, config, visitState)
   },
   middleware: [

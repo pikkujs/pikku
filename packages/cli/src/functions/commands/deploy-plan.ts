@@ -11,7 +11,6 @@ import {
 } from '../../deploy/build-pipeline.js'
 import type { DeployProvider } from '../../deploy/plan/provider.js'
 import { resolveProvider, getEntryContext } from './deploy-apply.js'
-import { loadDeployContributors } from './deploy-contributors.js'
 import { servedFrontend } from '../../utils/frontend.js'
 
 function sanitizeProjectId(raw: string): string {
@@ -71,7 +70,6 @@ export const deployPlan = pikkuSessionlessFunc<
     const projectId = await resolveProjectId(projectDir)
     const provider = await resolveProvider(config, data?.provider, {
       projectDir,
-      contributors: await loadDeployContributors(config, inspectorState),
     })
 
     const result = await runBuildPipeline({

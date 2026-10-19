@@ -16,6 +16,8 @@ import {
   writeFileSync,
   existsSync,
   readdirSync,
+  mkdirSync,
+  symlinkSync,
   statSync,
   rmSync,
 } from 'fs'
@@ -78,20 +80,54 @@ process.on('SIGTERM', () => {
   process.exit(143)
 })
 const pinnedConfig = JSON.parse(originalConfig)
-// Two contributors listed out of order: `marker-reader` needs what `marker`
-// provides, and `marker` needs the entry's own logger.
-const CONTRIBUTORS_MODULE = join(
-  process.cwd(),
-  'contributors',
-  'marker.contributor.ts'
+// The project opts in to two contributors of an addon with wireAddon. They are
+// registered out of order (`marker-reader` needs what `marker` provides, and
+// `marker` needs the entry's own logger), and the addon registers a third the
+// project does not opt in to. The shared recipe project is wired for the run
+// only: the addon is linked into its node_modules and a wiring file is written
+// into src, and both are removed on exit like the pinned config.
+const ADDON_DIR = join(process.cwd(), 'contrib-marker')
+const ADDON_LINK = join(
+  FUNCTIONS_DIR,
+  'node_modules',
+  '@verifier',
+  'contrib-marker'
+)
+const WIRING_FILE = join(FUNCTIONS_DIR, 'src', 'zz-contributors-wiring.ts')
+const unwireContributors = () => {
+  rmSync(WIRING_FILE, { force: true })
+  rmSync(ADDON_LINK, { force: true })
+}
+process.on('exit', unwireContributors)
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    unwireContributors()
+    restoreConfig()
+    process.exit(130)
+  })
+}
+execFileSync('node', [PIKKU_BIN, 'all'], {
+  cwd: ADDON_DIR,
+  stdio: 'pipe',
+  timeout: 60_000,
+})
+mkdirSync(join(FUNCTIONS_DIR, 'node_modules', '@verifier'), { recursive: true })
+rmSync(ADDON_LINK, { force: true })
+symlinkSync(ADDON_DIR, ADDON_LINK, 'dir')
+writeFileSync(
+  WIRING_FILE,
+  `import { wireAddon } from '#pikku/addon'
+
+wireAddon({
+  name: 'marker',
+  package: '@verifier/contrib-marker',
+  contributors: ['marker-reader', 'marker'],
+})
+`
 )
 pinnedConfig.deploy = {
   ...pinnedConfig.deploy,
   grouping: { strategy: 'function' },
-  contributors: [
-    { module: CONTRIBUTORS_MODULE, export: 'markerReader' },
-    { module: CONTRIBUTORS_MODULE, export: 'marker' },
-  ],
 }
 writeFileSync(CONFIG_FILE, JSON.stringify(pinnedConfig, null, 2))
 
@@ -189,15 +225,43 @@ await check('entry: bootstrap import + main()', () => {
 })
 
 await check(
-  'entry: deploy.contributors run in needs/provides order with runtime services',
+  'entry: opted-in contributors run in needs/provides order with runtime services',
   () => {
     const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
-    const marker = e.indexOf('services.platformMarker = {')
-    const reader = e.indexOf('services.platformMarkerSeen =')
+    if (
+      !/import \{ createPlatformServices \} from '\.\/platform-services\.gen\.js'/.test(
+        e
+      )
+    )
+      throw new Error(
+        'the entry does not import the generated platform services'
+      )
+    const generated = readText(
+      join(DEPLOY_DIR, unitName, 'platform-services.gen.ts')
+    )
+    const marker = generated.indexOf('markerDeploy ')
+    const reader = generated.indexOf('markerReaderDeploy')
     if (marker < 0 || reader < 0)
-      throw new Error('deploy.contributors were not emitted into the entry')
-    if (marker > reader)
-      throw new Error('marker-reader ran before the marker it needs')
+      throw new Error('the opted-in contributors were not generated')
+    if (!/contributor\d+\.run/.test(generated))
+      throw new Error('nothing runs them')
+    const order = [...generated.matchAll(/^\s*await contributor(\d+)\.run/gm)]
+    const names = [
+      ...generated.matchAll(/import \{ (\w+) as contributor(\d+) \}/g),
+    ]
+    const byIndex = Object.fromEntries(names.map((m) => [m[2], m[1]]))
+    const ran = order.map((m) => byIndex[m[1]!])
+    if (ran.indexOf('markerDeploy') > ran.indexOf('markerReaderDeploy'))
+      throw new Error(
+        'marker-reader ran before the marker it needs: ' + ran.join(' -> ')
+      )
+    if (
+      generated.includes('notOptedInDeploy') ||
+      generated.includes('NEVER_BUNDLED')
+    )
+      throw new Error(
+        'a contributor the project did not opt in to was generated'
+      )
     const call = e.indexOf('await createPlatformServices(process.env')
     if (call < 0 || !/createPlatformServices\([^)]*\{ logger,/.test(e))
       throw new Error(
@@ -205,8 +269,20 @@ await check(
       )
     if (call < e.search(/(const|let) triggerSourceStore/))
       throw new Error('createPlatformServices runs before the runtime is built')
+    if (!/\.\.\.platformServices,/.test(e))
+      throw new Error(
+        'the contributed services are not spread into the singleton services'
+      )
   }
 )
+
+await check('entry: the adapter widened the platform with the unit', () => {
+  const generated = readText(
+    join(DEPLOY_DIR, unitName, 'platform-services.gen.ts')
+  )
+  if (!new RegExp(`"unit":\\{"name":"${unitName}"`).test(generated))
+    throw new Error('the platform in the generated file carries no unit')
+})
 
 // ---------------------------------------------------------------------------
 // Compile to a single executable with bun, then hit endpoints.
@@ -302,6 +378,19 @@ if (!BUN_AVAILABLE) {
     if (s.size < 1024 * 1024)
       throw new Error(`Binary too small: ${(s.size / 1024).toFixed(0)}KB`)
   })
+
+  await check(
+    'bundle: carries the opted-in contributors and only those',
+    () => {
+      const bundle = readText(join(DEPLOY_DIR, unitName, 'bundle.js'))
+      if (!bundle.includes('wireAddon.contributors'))
+        throw new Error('the opted-in contributors are not in the bundle')
+      if (bundle.includes('NEVER_BUNDLED_MARKER'))
+        throw new Error(
+          'a contributor the project did not opt in to was bundled'
+        )
+    }
+  )
 
   if (existsSync(binaryPath)) {
     try {

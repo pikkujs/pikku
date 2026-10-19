@@ -480,6 +480,10 @@
       "dependencies": {
         "@pikku/deploy": "^0.12.17",
       },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.144",
+        "@pikku/kysely": "^0.13.39",
+      },
     },
     "packages/deploy/deploy-core": {
       "name": "@pikku/deploy",
@@ -490,6 +494,9 @@
       "devDependencies": {
         "@types/semver": "^7.8.0",
         "tsx": "^4.23.15",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.144",
       },
     },
     "packages/deploy/deploy-serverless": {
@@ -505,6 +512,9 @@
       "dependencies": {
         "@pikku/deploy": "^0.12.17",
         "@pikku/migrator-sql": "^0.12.9",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.144",
       },
     },
     "packages/deprecated/auth-js": {
@@ -2166,7 +2176,11 @@
         "@pikku/core": "workspace:*",
         "@pikku/deploy-standalone": "workspace:*",
         "@types/node": "^26",
+        "@verifier/contrib-marker": "workspace:*",
       },
+    },
+    "verifiers/deploy-standalone/contrib-marker": {
+      "name": "@verifier/contrib-marker",
     },
     "verifiers/dev-bun": {
       "name": "@pikku/verifiers-dev-bun",
@@ -2186,13 +2200,13 @@
       "devDependencies": {
         "@pikku/cli": "workspace:*",
         "@pikku/deploy": "workspace:*",
+        "@pikku/deploy-cloudflare": "workspace:*",
+        "@pikku/deploy-standalone": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
         "@verifier/contrib-bad": "workspace:*",
         "@verifier/contrib-notify": "workspace:*",
         "@verifier/contrib-select": "workspace:*",
-        "@verifier/host-mail": "workspace:*",
-        "@verifier/log-addon": "workspace:*",
         "tsx": "^4.23.15",
       },
     },
@@ -2204,12 +2218,6 @@
     },
     "verifiers/dev-platform-contributors/contrib-select": {
       "name": "@verifier/contrib-select",
-    },
-    "verifiers/dev-platform-contributors/host-mail": {
-      "name": "@verifier/host-mail",
-    },
-    "verifiers/dev-platform-contributors/log-addon": {
-      "name": "@verifier/log-addon",
     },
     "verifiers/disabled-functions": {
       "name": "@pikku/verifiers-disabled-functions",
@@ -4055,13 +4063,11 @@
 
     "@verifier/contrib-bad": ["@verifier/contrib-bad@workspace:verifiers/dev-platform-contributors/contrib-bad"],
 
+    "@verifier/contrib-marker": ["@verifier/contrib-marker@workspace:verifiers/deploy-standalone/contrib-marker"],
+
     "@verifier/contrib-notify": ["@verifier/contrib-notify@workspace:verifiers/dev-platform-contributors/contrib-notify"],
 
     "@verifier/contrib-select": ["@verifier/contrib-select@workspace:verifiers/dev-platform-contributors/contrib-select"],
-
-    "@verifier/host-mail": ["@verifier/host-mail@workspace:verifiers/dev-platform-contributors/host-mail"],
-
-    "@verifier/log-addon": ["@verifier/log-addon@workspace:verifiers/dev-platform-contributors/log-addon"],
 
     "@vitejs/plugin-react": ["@vitejs/plugin-react@6.1.2", "", { "dependencies": { "@rolldown/pluginutils": "^1.0.1" }, "peerDependencies": { "@rolldown/plugin-babel": "^0.1.7 || ^0.2.0", "babel-plugin-react-compiler": "^1.0.0", "oxc-transform-react": "^0.152.0", "vite": "^8.0.0" }, "optionalPeers": ["@rolldown/plugin-babel", "babel-plugin-react-compiler", "oxc-transform-react"] }, "sha512-fhJNGUdscQa4HkI0xFxwonWyhnVReCPDbXI7FH7jmzpnVCrFQI7PRrhWecO263610vOrs9tr2Y4xcf8uAdFxbw=="],
 

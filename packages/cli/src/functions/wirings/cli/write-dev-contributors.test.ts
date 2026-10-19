@@ -10,7 +10,10 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { writeDevContributors } from './write-dev-contributors.js'
+import {
+  reconcileDevKysely,
+  writeDevContributors,
+} from './write-dev-contributors.js'
 
 const logger = new Proxy({}, { get: () => () => {} }) as never
 
@@ -97,5 +100,36 @@ describe('writeDevContributors', () => {
     assert.match(source, /import \{ mailDev as contributor0 \}/)
     assert.ok(!source.includes('otherDev'))
     assert.match(source, /export const createPlatformServices/)
+  })
+})
+
+describe('reconcileDevKysely', () => {
+  const base = {
+    serviceNames: [],
+    needsQueue: false,
+    needsWorkflow: false,
+    needsAgent: false,
+  }
+
+  test('the dev baseline has kysely exactly when the pikku config has a db', () => {
+    assert.ok(
+      reconcileDevKysely(base, true).runtimeServices?.includes('kysely')
+    )
+    assert.ok(
+      !reconcileDevKysely(base, false).runtimeServices?.includes('kysely')
+    )
+  })
+
+  test('a database found on disk but absent from the pikku config is an error', () => {
+    assert.throws(
+      () => reconcileDevKysely({ ...base, db: { engine: 'sqlite' } }, false),
+      /sqlite database.*no `db`/
+    )
+  })
+
+  test('a config db with no engine the platform knows (mysql) keeps kysely', () => {
+    const platform = reconcileDevKysely(base, true)
+    assert.equal(platform.db, undefined)
+    assert.ok(platform.runtimeServices?.includes('kysely'))
   })
 })

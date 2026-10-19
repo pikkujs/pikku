@@ -44,13 +44,13 @@ export type { DeployOptions, DeployResult } from './deploy.js'
 import { CloudflareProviderAdapter } from './adapter.js'
 import type { CloudflareProviderAdapterOptions } from './adapter.js'
 export { CloudflareProviderAdapter }
-export type {
-  PlatformServiceContributor,
-  CloudflareProviderAdapterOptions,
-} from './adapter.js'
+export type { CloudflareProviderAdapterOptions } from './adapter.js'
 export const createAdapter = (options: CloudflareProviderAdapterOptions = {}) =>
   new CloudflareProviderAdapter(options)
-export { coercionContributor } from './coercion-contributor.js'
+export {
+  COERCION_CONTRIBUTOR_NAME,
+  coercionContributor,
+} from './coercion-contributor.js'
 export type { CloudflareInfraManifest } from './infra-manifest.js'
 
 // Types

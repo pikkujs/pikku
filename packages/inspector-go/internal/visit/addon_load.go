@@ -67,54 +67,6 @@ func readResolvedJSON(req addonResolver, id string) (*ojson, error) {
 	return readJSONFile(p)
 }
 
-// readAddonContributors is the platform service contributors an addon declares
-// in its package.json under pikku.contributors, as { packageName, packageDir,
-// contributors }, or nil when it declares none.
-func readAddonContributors(dirs []string, pkg string) (*ojson, error) {
-	dir := findInstalledPackageDir(dirs, pkg)
-	if dir == "" {
-		return nil, nil
-	}
-	pj, err := readJSONFile(filepath.Join(dir, "package.json"))
-	if err != nil {
-		return nil, nil
-	}
-	pikku := pj.get("pikku")
-	if !pikku.has("contributors") {
-		return nil, nil
-	}
-	declared := pikku.get("contributors")
-	malformed := fmt.Errorf("%s declares pikku.contributors in its package.json, but it is not a list of { module, export? }.", pkg)
-	if declared == nil || !declared.isArr {
-		return nil, malformed
-	}
-	refs := &ojson{isArr: true, arr: []*ojson{}}
-	for _, entry := range declared.arr {
-		module, ok := entry.get("module").str()
-		if !entry.isObject() || !ok {
-			return nil, malformed
-		}
-		ref := newOObject()
-		ref.set("module", ojsonString(module))
-		if entry.has("export") {
-			name, ok := entry.get("export").str()
-			if !ok {
-				return nil, malformed
-			}
-			ref.set("export", ojsonString(name))
-		}
-		refs.arr = append(refs.arr, ref)
-	}
-	if len(refs.arr) == 0 {
-		return nil, nil
-	}
-	out := newOObject()
-	out.set("packageName", ojsonString(pkg))
-	out.set("packageDir", ojsonString(dir))
-	out.set("contributors", refs)
-	return out, nil
-}
-
 // recordOptedInContributors resolves wireAddon({ contributors }) against what
 // the addon registered. A name it does not register is an error rather than a
 // skip: the project asked for a service and would otherwise build without it.
@@ -161,17 +113,6 @@ func (s *Context) recordOptedInContributors(ns string, decl *addonDecl, req addo
 	}
 	all.set(ns, entry)
 	s.State.OptedInContributors = all.raw()
-}
-
-func (s *Context) recordAddonContributors(ns string, contributors *ojson) {
-	all := newOObject()
-	if len(s.State.AddonContributors) > 0 && string(s.State.AddonContributors) != "null" {
-		if existing, err := parseOJSON(s.State.AddonContributors); err == nil && existing.isObject() {
-			all = existing
-		}
-	}
-	all.set(ns, contributors)
-	s.State.AddonContributors = all.raw()
 }
 
 // namespaceAddonWebhookSources names an addon's webhook sources after the
@@ -382,12 +323,6 @@ func (s *Context) loadRemoteAddonSdkMeta(ns string, decl *addonDecl) {
 func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	dirs := addonResolutionDirs(s.RootDir, decl.file)
 	req := addonResolver(dirs)
-
-	if contributors, err := readAddonContributors(dirs, decl.pkg); err != nil {
-		s.Log.Error(fmt.Sprintf("wireAddon('%s'): %s", ns, err.Error()))
-	} else if contributors != nil {
-		s.recordAddonContributors(ns, contributors)
-	}
 
 	s.recordDeclaredUses(ns, decl, dirs)
 	if len(decl.contributors) > 0 {

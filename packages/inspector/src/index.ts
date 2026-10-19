@@ -13,8 +13,6 @@ export type {
   ContributorVariantsMeta,
   ContributorsManifestMeta,
   OptedInContributorsMeta,
-  AddonContributorRef,
-  AddonContributorsMeta,
   InspectorDiagnostic,
   InspectorFilters,
   InspectorHTTPState,

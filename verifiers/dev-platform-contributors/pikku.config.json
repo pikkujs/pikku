@@ -2,15 +2,5 @@
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "srcDirectories": ["./src", "./types"],
   "outDir": "./.pikku",
-  "tsconfig": "./tsconfig.json",
-  "dev": {
-    "contributors": [
-      { "module": "@verifier/host-mail/contributor" },
-      { "module": "./contributors/audit.contributor.ts", "export": "audit" },
-      {
-        "module": "./contributors/log-reader.contributor.ts",
-        "export": "logReader"
-      }
-    ]
-  }
+  "tsconfig": "./tsconfig.json"
 }

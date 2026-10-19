@@ -81,7 +81,6 @@ type State struct {
 	RemoteAddonFunctions *Record[*Record[*FunctionMeta]] `json:"remoteAddonFunctions,omitempty"`
 	Studio               Raw                             `json:"studio,omitempty"`
 	AddonStudio          Raw                             `json:"addonStudio,omitempty"`
-	AddonContributors    Raw                             `json:"addonContributors,omitempty"`
 	// ContributorsManifest is what defineContributors registers; OptedInContributors
 	// is what wireAddon({ contributors }) selected from each addon's manifest.
 	ContributorsManifest Raw               `json:"contributorsManifest,omitempty"`

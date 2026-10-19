@@ -11,23 +11,21 @@
  * bundle into a single self-contained executable via `bun build --compile`.
  * No runtime needed on the target host.
  */
+import type { ContributorBindingSource } from '@pikku/core/contributors'
 import type {
-  BindingSource,
-  ContributorPlatform,
+  ContributorSupport,
   EntryGenerationContext,
-  PlatformServiceContributor,
   ProviderAdapter,
 } from '@pikku/deploy'
 import {
-  assertContributorsSupported,
-  collectContributorImports,
-  collectContributorLines,
-  dedupeContributors,
   nodeBuiltinExternals,
   SERVER_READY_MARKER,
+  withDeployUnit,
 } from '@pikku/deploy'
 
-export const STANDALONE_BINDING_SOURCES: readonly BindingSource[] = ['env']
+export const STANDALONE_BINDING_SOURCES: readonly ContributorBindingSource[] = [
+  'env',
+]
 
 /**
  * Directory the built frontend is copied to, both inside the unit and beside
@@ -419,7 +417,6 @@ export interface StandaloneProviderAdapterOptions {
    * this in from the config.
    */
   nativeSidecars?: ReadonlyArray<{ name: string; dir: string }>
-  contributors?: PlatformServiceContributor[]
   port?: number
 }
 
@@ -438,21 +435,6 @@ const runtimeServiceNames = (ctx: EntryGenerationContext): string[] => [
   'eventHub',
 ]
 
-const contributorPlatform = (
-  ctx: EntryGenerationContext
-): ContributorPlatform => {
-  const services = ctx.unit.services ?? []
-  return {
-    runtimeServices: runtimeServiceNames(ctx),
-    serviceNames: services.map((s) => s.sourceServiceName),
-    needsQueue: services.some((s) => s.capability === 'queue'),
-    needsWorkflow: services.some((s) => s.capability === 'workflow-state'),
-    needsAgent: services.some(
-      (s) => s.capability === 'ai-storage' || s.capability === 'ai-model'
-    ),
-  }
-}
-
 export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly name = 'standalone'
   readonly deployDirName = 'standalone'
@@ -460,53 +442,47 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly bundlesSqliteLibrary = true
   private readonly port: number
   readonly nativeSidecars: ReadonlyArray<{ name: string; dir: string }>
-  readonly contributors: PlatformServiceContributor[]
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
     this.port = options.port ?? 3000
     this.nativeSidecars = options.nativeSidecars ?? []
-    this.contributors = dedupeContributors(options.contributors)
-    assertContributorsSupported(
-      this.contributors,
-      STANDALONE_BINDING_SOURCES,
-      this.name
-    )
+  }
+
+  /**
+   * The entry holds `kysely` when it opens a database, and the contributors'
+   * platform says it has one from the same facts, so the two must agree: a
+   * contributor selected on `platform.db` would otherwise read a `runtime.kysely`
+   * that is not there, or the reverse.
+   */
+  contributorSupport(ctx: EntryGenerationContext): ContributorSupport {
+    if (ctx.contributorPlatform && !ctx.db !== !ctx.contributorPlatform.db) {
+      throw new Error(
+        `The standalone entry ${ctx.db ? 'opens' : 'does not open'} a database but the contributor platform says the project ${ctx.contributorPlatform.db ? 'has' : 'has no'} one; both are read from the project's database declaration and must agree.`
+      )
+    }
+    return {
+      supported: STANDALONE_BINDING_SOURCES,
+      runtimeServices: runtimeServiceNames(ctx),
+      widenPlatform: (platform) => withDeployUnit(platform, ctx.unit),
+    }
   }
 
   private contributorImportLines(ctx: EntryGenerationContext): string[] {
-    if (this.contributors.length === 0) return []
-    return collectContributorImports(
-      this.contributors,
-      contributorPlatform(ctx),
-      ctx
-    )
-  }
-
-  private platformServicesBlock(ctx: EntryGenerationContext): string[] {
-    if (this.contributors.length === 0) return []
+    if (!ctx.platformServices) return []
     return [
-      `const createPlatformServices = async (env: Record<string, string | undefined>, runtime: Record<string, any> = {}): Promise<${ctx.servicesType}> => {`,
-      `  const services: ${ctx.servicesType} = {}`,
-      ...collectContributorLines(this.contributors, {
-        ctx,
-        platform: contributorPlatform(ctx),
-        isGateway: false,
-      }),
-      `  return services`,
-      `}`,
-      ``,
+      `import { createPlatformServices } from '${ctx.platformServices.importPath}'`,
     ]
   }
 
   private platformServicesCallLines(ctx: EntryGenerationContext): string[] {
-    if (this.contributors.length === 0) return []
+    if (!ctx.platformServices) return []
     return [
       `  const platformServices = await createPlatformServices(process.env as Record<string, string | undefined>, { ${runtimeServiceNames(ctx).join(', ')} })`,
     ]
   }
 
-  private platformServicesSpreadLines(): string[] {
-    if (this.contributors.length === 0) return []
+  private platformServicesSpreadLines(ctx: EntryGenerationContext): string[] {
+    if (!ctx.platformServices) return []
     return [`    ...platformServices,`]
   }
 
@@ -559,7 +535,6 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ``,
       ...commandParseLines(ctx),
       ``,
-      ...this.platformServicesBlock(ctx),
       `async function main() {`,
       `  const config = await ${ctx.configVar}()`,
       `  const schedulerService = new InMemorySchedulerService()`,
@@ -583,7 +558,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `    triggerService,`,
       `    triggerSourceStore,`,
       `    eventHub,`,
-      ...this.platformServicesSpreadLines(),
+      ...this.platformServicesSpreadLines(ctx),
       `  })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,

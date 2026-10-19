@@ -1,6 +1,5 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import type { PlatformServiceContributor } from '@pikku/deploy'
 
 import { StandaloneProviderAdapter } from './adapter.js'
 
@@ -22,51 +21,24 @@ const ctx = {
   mcpServerOption: '',
 } as never
 
-const kysely: PlatformServiceContributor = {
-  name: 'kysely',
-  imports: [`import { Kysely } from 'kysely'`],
-  emit: () => [`  if (env.DATABASE_URL) services.kysely = new Kysely({})`],
-}
-
-const browser: PlatformServiceContributor = {
-  name: 'browser',
-  imports: (platform) =>
-    platform.serviceNames.includes('browser')
-      ? [`import { Browser } from './browser.js'`]
-      : [],
-  emit: () => [`  services.browser = new Browser(env, logger)`],
-}
-
-const queueBinding: PlatformServiceContributor = {
-  name: 'queue-binding',
-  requires: ['cloudflare'],
-  emit: () => [`  services.queue = env.QUEUE`],
-}
-
 describe(`StandaloneProviderAdapter contributors`, () => {
-  test('without contributors the entry has no platform services block', () => {
+  test('without a generated platform-services file the entry has none', () => {
     const source = new StandaloneProviderAdapter({}).generateEntrySource(ctx)
 
     assert.doesNotMatch(source, /createPlatformServices/)
     assert.doesNotMatch(source, /platformServices/)
   })
 
-  test('contributor imports, lines and the spread are all emitted', () => {
-    const source = new StandaloneProviderAdapter({
-      contributors: [kysely, browser],
-    }).generateEntrySource(ctx)
+  test('the entry imports the generated file, calls it and spreads it last', () => {
+    const source = new StandaloneProviderAdapter({}).generateEntrySource({
+      ...(ctx as object),
+      platformServices: { importPath: './platform-services.gen.js' },
+    } as never)
 
-    assert.match(source, /import { Kysely } from 'kysely'/)
-    assert.match(source, /import { Browser } from '\.\/browser\.js'/)
     assert.match(
       source,
-      /const createPlatformServices = async \(env: Record<string, string \| undefined>, runtime: Record<string, any> = \{\}\): Promise<Record<string, unknown>> => \{/
+      /import \{ createPlatformServices \} from '\.\/platform-services\.gen\.js'/
     )
-    assert.match(
-      source,
-      /if \(env\.DATABASE_URL\) services\.kysely = new Kysely\(\{\}\)/
-    )
-    assert.match(source, /services\.browser = new Browser\(env, logger\)/)
     assert.match(
       source,
       /const platformServices = await createPlatformServices\(process\.env as Record<string, string \| undefined>, \{ logger, schedulerService, queueService, workflowService, triggerService, triggerSourceStore, eventHub \}\)/
@@ -76,30 +48,14 @@ describe(`StandaloneProviderAdapter contributors`, () => {
       /eventHub,\n    \.\.\.platformServices,\n  \}\)/,
       'contributed services must be spread last so they override the defaults'
     )
+    assert.doesNotMatch(source, /const createPlatformServices = async/)
   })
 
-  test('a contributor that needs cloudflare bindings is refused up front', () => {
-    assert.throws(
-      () =>
-        new StandaloneProviderAdapter({
-          contributors: [kysely, queueBinding],
-        }),
-      /standalone adapter only provides env bindings; unsupported contributors: queue-binding \(requires cloudflare\)/
-    )
-  })
-
-  test('a contributor reading the database runs after it is opened', () => {
-    const sources: PlatformServiceContributor = {
-      name: 'sources',
-      needs: ['kysely'],
-      provides: ['logSources'],
-      emit: () => [`  services.logSources = { workspace: runtime.kysely }`],
-    }
-    const source = new StandaloneProviderAdapter({
-      contributors: [sources],
-    }).generateEntrySource({
+  test('contributors run after the database is opened and see it as runtime.kysely', () => {
+    const source = new StandaloneProviderAdapter({}).generateEntrySource({
       ...(ctx as object),
       db: { engine: 'sqlite' },
+      platformServices: { importPath: './platform-services.gen.js' },
     } as never)
 
     const call = source.indexOf('await createPlatformServices(')
@@ -110,35 +66,67 @@ describe(`StandaloneProviderAdapter contributors`, () => {
     )
   })
 
-  test('a need neither the runtime nor a contributor meets fails generation', () => {
-    const sources: PlatformServiceContributor = {
-      name: 'sources',
-      needs: ['kysely'],
-      emit: () => [],
-    }
-    assert.throws(
-      () =>
-        new StandaloneProviderAdapter({
-          contributors: [sources],
-        }).generateEntrySource(ctx),
-      /'sources' needs 'kysely', which nothing provides/
+  test('contributorSupport offers env bindings only, and the runtime services the entry holds', () => {
+    const support = new StandaloneProviderAdapter({}).contributorSupport(
+      ctx as never
+    )
+    assert.deepEqual([...support.supported], ['env'])
+    assert.ok(support.runtimeServices.includes('logger'))
+    assert.ok(!support.runtimeServices.includes('kysely'))
+    assert.ok(
+      new StandaloneProviderAdapter({})
+        .contributorSupport({
+          ...(ctx as object),
+          db: { engine: 'sqlite' },
+        } as never)
+        .runtimeServices.includes('kysely')
     )
   })
 
-  test('contributors are emitted in dependency order', () => {
-    const reader: PlatformServiceContributor = {
-      name: 'reader',
-      needs: ['cloudSession'],
-      emit: () => [`  // reader`],
+  test('the platform is widened with the unit being generated', () => {
+    const support = new StandaloneProviderAdapter({}).contributorSupport(
+      ctx as never
+    )
+    const platform = support.widenPlatform!({
+      serviceNames: [],
+      needsQueue: false,
+      needsWorkflow: false,
+      needsAgent: false,
+    }) as unknown as { unit: { name: string } }
+    assert.equal(platform.unit.name, 'app')
+  })
+
+  test('a database the entry opens but the contributor platform lacks is an error', () => {
+    const adapter = new StandaloneProviderAdapter({})
+    const platform = {
+      serviceNames: [],
+      needsQueue: false,
+      needsWorkflow: false,
+      needsAgent: false,
     }
-    const session: PlatformServiceContributor = {
-      name: 'session',
-      provides: ['cloudSession'],
-      emit: () => [`  // session`],
-    }
-    const source = new StandaloneProviderAdapter({
-      contributors: [reader, session],
-    }).generateEntrySource(ctx)
-    assert.ok(source.indexOf('// session') < source.indexOf('// reader'))
+    assert.throws(
+      () =>
+        adapter.contributorSupport({
+          ...(ctx as object),
+          db: { engine: 'sqlite' },
+          contributorPlatform: platform,
+        } as never),
+      /opens a database but the contributor platform says the project has no one/
+    )
+    assert.throws(
+      () =>
+        adapter.contributorSupport({
+          ...(ctx as object),
+          contributorPlatform: { ...platform, db: { engine: 'sqlite' } },
+        } as never),
+      /does not open a database but the contributor platform says the project has one/
+    )
+    assert.doesNotThrow(() =>
+      adapter.contributorSupport({
+        ...(ctx as object),
+        db: { engine: 'sqlite' },
+        contributorPlatform: { ...platform, db: { engine: 'sqlite' } },
+      } as never)
+    )
   })
 })

@@ -334,30 +334,3 @@ func TestReadAddonDependencies(t *testing.T) {
 		t.Errorf("invalid = %q", got.invalid)
 	}
 }
-
-func TestReadAddonContributors(t *testing.T) {
-	root := t.TempDir()
-	writeFiles(t, root, map[string]string{
-		"node_modules/@s/cloud/package.json": `{"pikku": {"contributors": [{"module": "@s/cloud/contributors", "export": "session"}, {"module": "./stage.js"}]}}`,
-		"node_modules/none/package.json":     `{"pikku": {"uses": []}}`,
-		"node_modules/bad/package.json":      `{"pikku": {"contributors": [{"export": "x"}]}}`,
-	})
-	got, err := readAddonContributors([]string{root}, "@s/cloud")
-	if err != nil || got == nil {
-		t.Fatalf("contributors = %v, %v", got, err)
-	}
-	want := `{"packageName":"@s/cloud","packageDir":"` + filepath.Join(root, "node_modules", "@s/cloud") +
-		`","contributors":[{"module":"@s/cloud/contributors","export":"session"},{"module":"./stage.js"}]}`
-	if string(got.raw()) != want {
-		t.Errorf("contributors = %s\nwant %s", got.raw(), want)
-	}
-	if got, err := readAddonContributors([]string{root}, "none"); got != nil || err != nil {
-		t.Errorf("none = %v, %v", got, err)
-	}
-	if got, err := readAddonContributors([]string{root}, "absent"); got != nil || err != nil {
-		t.Errorf("absent = %v, %v", got, err)
-	}
-	if _, err := readAddonContributors([]string{root}, "bad"); err == nil {
-		t.Error("malformed contributors were accepted")
-	}
-}
