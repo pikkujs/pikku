@@ -1,12 +1,15 @@
 import type { TypesMap } from '../types-map.js'
+import { findPackageNameForFile } from './resolve-addon-package.js'
 
 /**
  * A type declared in `@pikku/core` is part of the SDK's allowed import set, so
  * naming one (an MCP response, say) does not drag the addon's source along.
+ * Core is recognised by its install path or by the name in the nearest
+ * package.json, never by a directory name an addon could also use.
  */
 const isPikkuCorePath = (path: string): boolean =>
-  /[\\/]@pikku[\\/]core[\\/]/.test(path) ||
-  /[\\/]packages[\\/]core[\\/]/.test(path)
+  /[\\/]node_modules[\\/]@pikku[\\/]core[\\/]/.test(path) ||
+  findPackageNameForFile(path) === '@pikku/core'
 
 /**
  * The named, source-declared types a function's input or output resolves to:

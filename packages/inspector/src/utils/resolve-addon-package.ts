@@ -5,7 +5,7 @@ import { dirname, join, parse } from 'path'
 
 const packageNameCache = new Map<string, string | null>()
 
-const findPackageNameForFile = (filePath: string): string | null => {
+export const findPackageNameForFile = (filePath: string): string | null => {
   if (packageNameCache.has(filePath)) {
     return packageNameCache.get(filePath)!
   }
