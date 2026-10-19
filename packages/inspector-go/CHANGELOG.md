@@ -1,5 +1,16 @@
 # @pikku/inspector-go
 
+## 0.12.4
+
+### Patch Changes
+
+- a9318bd: Platform service contributors declare `needs` and `provides` and run in the order those require; an unmet need, a key provided twice or a cycle fails codegen by name. Generated `createPlatformServices(env, runtime)` receives the services the entry already built (`runtime.kysely` on standalone, after the database opens). Addons ship contributors in their package.json under `pikku.contributors`, picked up by `pikku dev` codegen and by `pikku deploy plan` / `apply`, which now also pass `deploy.contributors` from `pikku.config.json` to the adapter.
+- Updated dependencies [679068f]
+- Updated dependencies [a9318bd]
+- Updated dependencies [0b0a75d]
+  - @pikku/core@0.12.145
+  - @pikku/inspector@0.12.109
+
 ## 0.12.3
 
 ### Patch Changes

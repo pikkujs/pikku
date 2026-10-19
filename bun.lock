@@ -325,7 +325,7 @@
     },
     "packages/addon/pikku-console": {
       "name": "@pikku/addon-console",
-      "version": "0.12.64",
+      "version": "0.12.65",
       "dependencies": {
         "@pikku/code-edit": "^0.12.8",
         "@pikku/knowledge": "^0.12.21",
@@ -390,7 +390,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.194",
+      "version": "0.12.195",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -492,7 +492,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.144",
+      "version": "0.12.145",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -539,14 +539,14 @@
     },
     "packages/deploy/deploy-cloudflare": {
       "name": "@pikku/deploy-cloudflare",
-      "version": "0.12.22",
+      "version": "0.12.23",
       "dependencies": {
         "@pikku/deploy": "^0.12.16",
       },
     },
     "packages/deploy/deploy-core": {
       "name": "@pikku/deploy",
-      "version": "0.12.16",
+      "version": "0.12.17",
       "dependencies": {
         "semver": "^7.8.5",
       },
@@ -564,7 +564,7 @@
     },
     "packages/deploy/deploy-standalone": {
       "name": "@pikku/deploy-standalone",
-      "version": "0.12.27",
+      "version": "0.12.28",
       "dependencies": {
         "@pikku/deploy": "^0.12.16",
         "@pikku/migrator-sql": "^0.12.9",
@@ -641,7 +641,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.108",
+      "version": "0.12.109",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
         "openapi-types": "^12.1.3",
@@ -661,7 +661,7 @@
     },
     "packages/inspector-go": {
       "name": "@pikku/inspector-go",
-      "version": "0.12.3",
+      "version": "0.12.4",
       "dependencies": {
         "@pikku/inspector": "^0.12.108",
       },
@@ -1085,7 +1085,7 @@
     },
     "packages/services/better-auth": {
       "name": "@pikku/better-auth",
-      "version": "0.12.58",
+      "version": "0.12.59",
       "dependencies": {
         "@pikku/jose": "^0.12.10",
       },
@@ -1323,7 +1323,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.59",
+      "version": "0.12.60",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",
@@ -5916,8 +5916,6 @@
     "@pikku/templates-workflows-pg-boss/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "@pikku/templates-ws-server/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
-
-    "@pikku/uws/uWebSockets.js": ["uWebSockets.js@github:uNetworking/uWebSockets.js#dddd8ff", {}, "uNetworking-uWebSockets.js-dddd8ff", "sha512-fDaDQQEj+Jn8LsDXGGE629Nna1MGnRS8j9kxsaqtPHBMq3pBDIbKs2sGxk1QMWpQ78+o4F9jV/tuBZZqfanBWQ=="],
 
     "@sinonjs/samsam/type-detect": ["type-detect@4.1.0", "", {}, "sha512-Acylog8/luQ8L7il+geoSxhEkazvkslg7PSNKOX59mbB9cOveP5aq9h74Y7YU8yDpJwetzQQrfIwtf4Wp4LKcw=="],
 

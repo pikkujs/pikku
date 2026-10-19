@@ -1,6 +1,6 @@
 {
   "name": "@pikku/deploy-standalone",
-  "version": "0.12.27",
+  "version": "0.12.28",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -27,7 +27,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@pikku/deploy": "^0.12.16",
+    "@pikku/deploy": "^0.12.17",
     "@pikku/migrator-sql": "^0.12.9"
   }
 }

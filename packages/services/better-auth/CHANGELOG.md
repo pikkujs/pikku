@@ -1,5 +1,13 @@
 # @pikku/better-auth
 
+## 0.12.59
+
+### Patch Changes
+
+- 3a543d8: `betterAuthOAuthAccessToken` resolves the session from an OAuth access token on `Authorization: Bearer`, verified locally against the authorization server's JWKS. An MCP client that signed in through better-auth's `oauthProvider` can now call the app's `/mcp` and RPCs as that user.
+- Updated dependencies [679068f]
+  - @pikku/core@0.12.145
+
 ## 0.12.58
 
 ### Patch Changes

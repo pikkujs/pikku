@@ -1,3 +1,26 @@
+## 0.12.195
+
+### Patch Changes
+
+- 679068f: `pikku cloud login` registers a git credential helper for the cloud git host, so `git push` to a project's repo there authenticates with your login. `pikku cloud logout` forgets the token and removes the helper. CLI commands can set `hidden: true` to stay out of `--help`.
+- 7b1d0e6: A pikku config that `extends` another now merges into it instead of replacing whole fields: objects merge key by key, `srcDirectories` appends the child's entries to the parent's (duplicates dropped), any other array or value the child sets replaces the parent's, and `null` removes a parent value. Paths are resolved relative to the file that declares them, output files are derived from the merged `outDir`, and an `extends` cycle is refused instead of recursing forever.
+- a9318bd: Platform service contributors declare `needs` and `provides` and run in the order those require; an unmet need, a key provided twice or a cycle fails codegen by name. Generated `createPlatformServices(env, runtime)` receives the services the entry already built (`runtime.kysely` on standalone, after the database opens). Addons ship contributors in their package.json under `pikku.contributors`, picked up by `pikku dev` codegen and by `pikku deploy plan` / `apply`, which now also pass `deploy.contributors` from `pikku.config.json` to the adapter.
+- e7c739a: `pikku dev`, `pikku serve` and the generated local services now sync the same scopes a deploy does, including the `app` tree derived from your virtual users. Before, the local scope store lacked it, so a virtual user's `app:` grant had no scope to point at and virtual-user sign-in returned a 500 under `pikku dev` while deployed stages worked.
+- Updated dependencies [3a543d8]
+- Updated dependencies [679068f]
+- Updated dependencies [7b1d0e6]
+- Updated dependencies [a9318bd]
+- Updated dependencies [0b0a75d]
+- Updated dependencies [c09cd23]
+  - @pikku/better-auth@0.12.59
+  - @pikku/core@0.12.145
+  - @pikku/inspector@0.12.109
+  - @pikku/skills@0.12.60
+  - @pikku/deploy@0.12.17
+  - @pikku/inspector-go@0.12.4
+  - @pikku/deploy-standalone@0.12.28
+  - @pikku/deploy-cloudflare@0.12.23
+
 ## 0.12.194
 
 ### Patch Changes

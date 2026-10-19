@@ -1,5 +1,14 @@
 # @pikku/deploy-standalone
 
+## 0.12.28
+
+### Patch Changes
+
+- a9318bd: Platform service contributors declare `needs` and `provides` and run in the order those require; an unmet need, a key provided twice or a cycle fails codegen by name. Generated `createPlatformServices(env, runtime)` receives the services the entry already built (`runtime.kysely` on standalone, after the database opens). Addons ship contributors in their package.json under `pikku.contributors`, picked up by `pikku dev` codegen and by `pikku deploy plan` / `apply`, which now also pass `deploy.contributors` from `pikku.config.json` to the adapter.
+- c09cd23: `pikku deploy apply -p standalone` cross-compiles when `PIKKU_COMPILE_TARGET` is set (for example `bun-linux-arm64`), passing it to `bun build --compile --target`.
+- Updated dependencies [a9318bd]
+  - @pikku/deploy@0.12.17
+
 ## 0.12.27
 
 ### Patch Changes

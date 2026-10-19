@@ -1,3 +1,17 @@
+## 0.12.65
+
+### Patch Changes
+
+- 0b0a75d: Scenario workflow meta now carries `scenario: true` alongside `source: 'scenario'`, so Studio and the console can tell a scenario from a real workflow. The console's workflow count no longer includes scenarios.
+- Updated dependencies [3a543d8]
+- Updated dependencies [679068f]
+- Updated dependencies [7b1d0e6]
+- Updated dependencies [a9318bd]
+- Updated dependencies [e7c739a]
+  - @pikku/better-auth@0.12.59
+  - @pikku/cli@0.12.195
+  - @pikku/core@0.12.145
+
 ## 0.12.64
 
 ### Patch Changes
