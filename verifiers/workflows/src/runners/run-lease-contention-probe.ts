@@ -71,12 +71,9 @@ export class RunLeaseProbe implements LeaseService {
   }
 
   async release(lease: Lease) {
-    try {
-      await this.inner.release(lease)
-    } finally {
-      this.held.get(holdingOf(lease))?.()
-      this.held.delete(holdingOf(lease))
-    }
+    this.held.get(holdingOf(lease))?.()
+    this.held.delete(holdingOf(lease))
+    await this.inner.release(lease)
   }
 
   get(key: string) {
