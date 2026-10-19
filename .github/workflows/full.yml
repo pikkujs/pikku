@@ -77,7 +77,15 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: packages/inspector-go/go.mod
-          cache-dependency-path: packages/inspector-go/**/go.sum
+          cache: false
+      # Its own entry, holding every release target, which Publish restores.
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-release-${{ hashFiles('packages/inspector-go/go.mod', 'packages/inspector-go/go.sum') }}
+          restore-keys: go-release-
       - name: Check the typescript-go pin and generated shims
         run: bash scripts/check-tsgo-pin.sh
       - name: go vet

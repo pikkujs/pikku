@@ -123,7 +123,19 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: packages/inspector-go/go.mod
-          cache-dependency-path: packages/inspector-go/**/go.sum
+          cache: false
+      # Restores what Full Suite's inspector-go job compiled for every target on
+      # this commit's run, so only the linker runs here. setup-go's own cache is
+      # keyed per runner, so every Go job shared one entry holding only host
+      # (linux/amd64, no -trimpath) objects, and all four targets compiled cold:
+      # 5-8 minutes on every publish.
+      - uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-release-${{ hashFiles('packages/inspector-go/go.mod', 'packages/inspector-go/go.sum') }}
+          restore-keys: go-release-
       - name: Cross-compile pikku-inspect for every target
         run: node packages/inspector-go/scripts/build-go.mjs --all
       - name: Check every target has its binary
