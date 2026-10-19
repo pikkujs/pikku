@@ -367,6 +367,10 @@ func (s *Context) processCLICommand(name string, node *ast.Node, program cliProg
 			case ast.KindFalseKeyword:
 				meta.set("isDefault", false)
 			}
+		case "hidden":
+			if init.Kind == ast.KindTrueKeyword {
+				meta.set("hidden", true)
+			}
 		}
 	}
 

@@ -586,6 +586,12 @@ function processCommand(
           meta.isDefault = prop.initializer.kind === ts.SyntaxKind.TrueKeyword
         }
         break
+
+      case 'hidden':
+        if (prop.initializer.kind === ts.SyntaxKind.TrueKeyword) {
+          meta.hidden = true
+        }
+        break
     }
   }
 

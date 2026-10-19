@@ -25,7 +25,10 @@ export interface AuthFile {
   defaultApiUrl?: string
 }
 
-const authFilePath = () => join(homedir(), '.pikkustudio', 'auth.json')
+// HOME first: bun's homedir() ignores a HOME changed at runtime, so tests that
+// point HOME at a temp dir would otherwise overwrite the real login.
+const authFilePath = () =>
+  join(process.env.HOME || homedir(), '.pikkustudio', 'auth.json')
 
 export async function readAuthFile(): Promise<AuthFile> {
   if (!existsSync(authFilePath())) return { tokens: {} }

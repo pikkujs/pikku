@@ -636,6 +636,7 @@ export function generateCommandHelp(
     lines.push('Commands:')
 
     for (const [name, cmd] of Object.entries(meta.commands)) {
+      if (cmd.hidden) continue
       const desc = cmd.description || ''
       const defaultMarker = cmd.isDefault ? ' (default)' : ''
       lines.push(`  ${name.padEnd(20)} ${desc}${defaultMarker}`)
@@ -680,6 +681,7 @@ export function generateCommandHelp(
       lines.push('')
       lines.push('Subcommands:')
       for (const [name, sub] of Object.entries(commandMeta.subcommands)) {
+        if (sub.hidden) continue
         const desc = sub.description || ''
         lines.push(`  ${name.padEnd(20)} ${desc}`)
       }

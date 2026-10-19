@@ -9,6 +9,7 @@ import {
 import { getCloudRPC } from '../lib/http.js'
 import { deriveConsoleUrl } from '../lib/console-url.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
+import { cloudGitHost, registerGitHelper } from '../lib/git-credential.js'
 
 export const CloudLoginInput = z.object({
   apiKey: z.string().optional(),
@@ -60,6 +61,22 @@ function openBrowser(url: string): void {
 }
 
 /**
+ * Lets `git push` to the cloud git server authenticate with this login. Best
+ * effort: a machine without git still gets its token saved.
+ */
+async function registerCloudGitHelper(apiUrl: string): Promise<void> {
+  const host = cloudGitHost(apiUrl)
+  if (!host) return
+  try {
+    await registerGitHelper(host)
+  } catch (err) {
+    console.warn(
+      `[cloud] could not register the git credential helper for ${host}: ${(err as Error).message}`
+    )
+  }
+}
+
+/**
  * Device-authorization-style CLI login. Server mints a short code, user types
  * it on the console's /cli-auth page (logging in via Better Auth if not already
  * signed in). CLI polls until the row flips to 'confirmed' and grabs the
@@ -93,6 +110,7 @@ export const CloudLogin = pikkuSessionlessFunc({
       auth.defaultApiUrl = apiUrl
       await writeAuthFile(auth)
       console.log(`[cloud] saved token for ${apiUrl}`)
+      await registerCloudGitHelper(apiUrl)
       return { ok: true, apiUrl }
     }
 
@@ -143,6 +161,7 @@ export const CloudLogin = pikkuSessionlessFunc({
         auth.defaultApiUrl = apiUrl
         await writeAuthFile(auth)
         console.log(`[cloud] logged in; token saved for ${apiUrl}`)
+        await registerCloudGitHelper(apiUrl)
         return { ok: true, apiUrl }
       }
     }
