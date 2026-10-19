@@ -360,7 +360,7 @@ export const filterAllMetaByAddon = (
     counts: {
       ...meta.counts,
       functions: functions.length,
-      workflows: Object.keys(workflows).length,
+      workflows: Object.values(workflows).filter((w) => !w.scenario).length,
       httpRoutes: httpMeta.length,
       channels: Object.keys(channelsMeta).length,
       mcpTools: mcpMeta.filter((i) => i.method === 'tool').length,
@@ -672,7 +672,7 @@ export class WiringService {
 
     const counts: MetaCounts = {
       functions: Object.values(functions).filter(isAppFunction).length,
-      workflows: Object.keys(workflows).length,
+      workflows: Object.values(workflows).filter((w) => !w.scenario).length,
       httpRoutes: httpMeta.length,
       channels: Object.keys(channelsMeta).length,
       mcpTools: mcpMeta.filter((i) => i.method === 'tool').length,
