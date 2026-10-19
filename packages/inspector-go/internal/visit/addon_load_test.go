@@ -304,21 +304,34 @@ func TestReadRequiredParentServices(t *testing.T) {
 	}
 }
 
-func TestReadAddonNeeds(t *testing.T) {
+func TestReadAddonDependencies(t *testing.T) {
 	root := t.TempDir()
 	writeFiles(t, root, map[string]string{
 		"node_modules/@s/addon/package.json": `{"pikku": {"uses": ["email", 3, "db"]}}`,
+		"node_modules/@s/deps/package.json":  `{"pikku": {"uses": {"stripe": "@acme/addon-stripe@^0.12.0", "crm": "@acme/crm", "bad:x": "@a/b@^1.0.0", "n": 12}}}`,
 		"node_modules/none/package.json":     `{}`,
-		"app/package.json":                   `{}`,
 	})
-	if got := readAddonNeeds([]string{filepath.Join(root, "app")}, "@s/addon"); !reflect.DeepEqual(got, []string{"email", "db"}) {
-		t.Errorf("needs = %v", got)
+	dir := func(pkg string) string { return filepath.Join(root, "node_modules", pkg) }
+	if got := readAddonDependencies(dir("@s/addon")); got.form != "list" || !reflect.DeepEqual(got.declaredNames(), []string{"email", "db"}) {
+		t.Errorf("list = %+v", got)
 	}
-	if got := readAddonNeeds([]string{root}, "none"); len(got) != 0 {
-		t.Errorf("no uses = %v", got)
+	if got := readAddonDependencies(dir("none")); got.form != "none" {
+		t.Errorf("none = %+v", got)
 	}
-	if got := readAddonNeeds([]string{root}, "absent"); got != nil {
-		t.Errorf("absent = %v", got)
+	if got := readAddonDependencies(dir("absent")); got.form != "none" {
+		t.Errorf("absent = %+v", got)
+	}
+	got := readAddonDependencies(dir("@s/deps"))
+	if got.form != "map" || !reflect.DeepEqual(got.dependencies, []addonDependency{{alias: "stripe", pkg: "@acme/addon-stripe", rng: "^0.12.0"}}) {
+		t.Errorf("map = %+v", got)
+	}
+	want := []string{
+		"pikku.uses.crm is '@acme/crm', which has no version range. Write '@acme/crm@^1.0.0': the app that wires this addon is checked against it.",
+		"pikku.uses names 'bad:x', which is not a valid alias. An alias starts with a letter and holds only letters, digits, '-' and '_'.",
+		"pikku.uses.n must be a string '<package>@<range>', got 12.",
+	}
+	if !reflect.DeepEqual(got.invalid, want) {
+		t.Errorf("invalid = %q", got.invalid)
 	}
 }
 

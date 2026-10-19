@@ -67,18 +67,6 @@ func readResolvedJSON(req addonResolver, id string) (*ojson, error) {
 	return readJSONFile(p)
 }
 
-func readAddonNeeds(dirs []string, pkg string) []string {
-	dir := findInstalledPackageDir(dirs, pkg)
-	if dir == "" {
-		return nil
-	}
-	pj, err := readJSONFile(filepath.Join(dir, "package.json"))
-	if err != nil {
-		return nil
-	}
-	return pj.get("pikku").get("uses").strings()
-}
-
 // readAddonContributors is the platform service contributors an addon declares
 // in its package.json under pikku.contributors, as { packageName, packageDir,
 // contributors }, or nil when it declares none.
@@ -353,13 +341,7 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 		s.recordAddonContributors(ns, contributors)
 	}
 
-	for _, needed := range readAddonNeeds(dirs, decl.pkg) {
-		if decl.uses == nil || decl.uses.At(needed) == "" {
-			s.Log.Critical(diag.AddonNeedsNotMapped, fmt.Sprintf(
-				"%s needs %s, but wireAddon('%s') does not map it. Wire %s and add uses: { '%s': '<name>' } to this wireAddon.",
-				decl.pkg, needed, ns, needed, needed))
-		}
-	}
+	s.recordDeclaredUses(ns, decl, dirs)
 
 	if decl.ui {
 		if err := s.loadAddonScreens(ns, decl, req); err != nil {

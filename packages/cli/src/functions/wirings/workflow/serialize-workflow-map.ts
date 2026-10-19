@@ -20,7 +20,7 @@ const key = (name: string) => JSON.stringify(name)
 
 type WireAddonDeclarations = Map<
   string,
-  { package: string; range?: string; rpcEndpoint?: string }
+  { package: string; range?: string; rpcEndpoint?: string; sdkDir?: string }
 >
 
 export const serializeWorkflowMap = (

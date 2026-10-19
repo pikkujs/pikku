@@ -1,6 +1,6 @@
 import { existsSync } from 'fs'
 import { readFile, readdir } from 'fs/promises'
-import { join, dirname, parse, relative } from 'path'
+import { join, dirname, relative } from 'path'
 import type {
   AddonContributorRef,
   AddonContributorsMeta,
@@ -15,6 +15,11 @@ import {
 } from './addon-resolution.js'
 import { ErrorCode } from '../error-codes.js'
 import { checkLockedSdk, type LockedSdk } from './remote-addon-sdk.js'
+import {
+  declaredAddonNames,
+  findInstalledPackageDir,
+  readAddonDependencies,
+} from './addon-dependencies.js'
 import type { WebhookSourceMeta, WebhookSourcesMeta } from '@pikku/core/trigger'
 import type { ScopeOrigin } from '@pikku/core/scope'
 import type {
@@ -157,25 +162,6 @@ const resolveAddonMeta = (
   return null
 }
 
-const findInstalledPackageDir = (
-  dirs: string[],
-  packageName: string
-): string | null => {
-  for (const start of dirs) {
-    const root = parse(start).root
-    let dir = start
-    while (dir) {
-      const candidate = join(dir, 'node_modules', packageName)
-      if (existsSync(join(candidate, 'package.json'))) return candidate
-      if (dir === root) break
-      const parent = dirname(dir)
-      if (parent === dir) break
-      dir = parent
-    }
-  }
-  return null
-}
-
 export const describeMissingAddonMeta = (
   namespace: string,
   packageName: string,
@@ -285,23 +271,6 @@ const loadScreensManifest = async (
   return JSON.parse(await readFile(path, 'utf-8')) as ScreensManifestMeta
 }
 
-const readAddonNeeds = async (
-  dirs: string[],
-  packageName: string
-): Promise<string[]> => {
-  const dir = findInstalledPackageDir(dirs, packageName)
-  if (!dir) return []
-  try {
-    const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf-8'))
-    const uses = pkg?.pikku?.uses
-    return Array.isArray(uses)
-      ? uses.filter((u): u is string => typeof u === 'string')
-      : []
-  } catch {
-    return []
-  }
-}
-
 const isContributorRef = (value: unknown): value is AddonContributorRef =>
   !!value &&
   typeof value === 'object' &&
@@ -371,6 +340,50 @@ const loadRemoteAddonSdkMeta = async (
   )
 }
 
+/**
+ * Reads the addons a wired package says it calls (`pikku.uses` in its
+ * package.json) onto its declaration, and reports each one this wiring leaves
+ * unmapped. Whether a mapping points at the right package, and whether the
+ * wiring maps a name the package never declared, is `validateAddonUses`' call
+ * once every wiring is known.
+ */
+const recordDeclaredUses = (
+  logger: InspectorLogger,
+  namespace: string,
+  decl: InspectorState['rpc']['wireAddonDeclarations'] extends Map<
+    string,
+    infer D
+  >
+    ? D
+    : never,
+  dirs: string[]
+): void => {
+  const packageDir = findInstalledPackageDir(dirs, decl.package)
+  if (!packageDir) return
+  const declared = readAddonDependencies(packageDir)
+  if (declared.form === 'none') return
+  if (declared.form === 'map') {
+    for (const message of declared.invalid) {
+      logger.critical(
+        ErrorCode.ADDON_DEPENDENCY_INVALID,
+        `${decl.package} (wired as '${namespace}'): ${message}`
+      )
+    }
+    decl.dependencies = declared.dependencies
+  }
+  decl.declaredUses = declaredAddonNames(declared)
+  for (const needed of decl.declaredUses) {
+    if (decl.uses?.[needed]) continue
+    const dependency = decl.dependencies?.find((d) => d.alias === needed)
+    logger.critical(
+      ErrorCode.ADDON_NEEDS_NOT_MAPPED,
+      dependency
+        ? `${decl.package} calls ${dependency.package}@${dependency.range} as '${needed}', but wireAddon('${namespace}') does not map it. Wire ${dependency.package} and add uses: { '${needed}': '<name>' } to this wireAddon.`
+        : `${decl.package} needs ${needed}, but wireAddon('${namespace}') does not map it. Wire ${needed} and add uses: { '${needed}': '<name>' } to this wireAddon.`
+    )
+  }
+}
+
 export async function loadAddonFunctionsMeta(
   logger: InspectorLogger,
   state: InspectorState
@@ -401,14 +414,7 @@ export async function loadAddonFunctionsMeta(
           `wireAddon('${namespace}'): ${error instanceof Error ? error.message : error}`
         )
       }
-      for (const needed of await readAddonNeeds(dirs, decl.package)) {
-        if (!decl.uses?.[needed]) {
-          logger.critical(
-            ErrorCode.ADDON_NEEDS_NOT_MAPPED,
-            `${decl.package} needs ${needed}, but wireAddon('${namespace}') does not map it. Wire ${needed} and add uses: { '${needed}': '<name>' } to this wireAddon.`
-          )
-        }
-      }
+      recordDeclaredUses(logger, namespace, decl, dirs)
       if (decl.ui) {
         let manifest:
           Awaited<ReturnType<typeof loadScreensManifest>> | undefined

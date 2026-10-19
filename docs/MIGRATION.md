@@ -50,6 +50,18 @@ An addon's `expose: true` functions are no longer reachable through `rpc.exposed
 
 A remote-addon call now goes to `{serverUrl}/rpc/<fn>`, with the header `x-pikku-remote-contract: 1`. A host serving a remote addon needs `scaffold.rpc`, and each function it serves to consumers must be `expose: true` and `remote: true`; the host refuses any other function on such a call. `RemoteAddonRequestError` is gone: a failed call throws the host's registered `PikkuError`, the standard error for its status, `RemoteAddonFailedError` (502) or `RemoteAddonTimeoutError` (504). `wireRemoteAddon` gains `expose`, `timeoutMs` (default 30s) and `headers`.
 
+### `wireAddon` `uses` may map only what the addon declares
+
+When an addon declares `pikku.uses` in its `package.json`, every key of `uses`
+on its `wireAddon` must be one of those names. A key the addon does not declare
+is now a build error (PKU355) instead of extra reach the addon never asked for.
+Remove the key, or have the addon declare it. Addons that declare nothing are
+unaffected. Search: `rg -n "uses:" -B4 | rg "wireAddon"`.
+
+An addon can now declare `pikku.uses` as `{ alias: 'package@range' }` and call
+the dependency by the alias with full types. See
+[An addon calling another addon](./remote-rpc.md#an-addon-calling-another-addon).
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.

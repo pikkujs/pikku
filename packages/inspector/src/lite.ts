@@ -68,3 +68,13 @@ export type {
   RemoteAddonPackageSpec,
   LockedSdk,
 } from './utils/remote-addon-sdk.js'
+export {
+  declaredAddonNames,
+  findInstalledPackageDir,
+  parseAddonDependencies,
+  readAddonDependencies,
+} from './utils/addon-dependencies.js'
+export type {
+  AddonDependency,
+  AddonDependencies,
+} from './utils/addon-dependencies.js'

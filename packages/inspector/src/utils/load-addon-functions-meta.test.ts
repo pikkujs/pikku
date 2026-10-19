@@ -551,3 +551,69 @@ describe('loadAddonFunctionsMeta — addons an addon needs', () => {
     assert.deepEqual(await criticalsFor({ '@addon/crm': 'crm' }), [])
   })
 })
+
+describe('loadAddonFunctionsMeta — addons an addon calls by alias', () => {
+  let rootDir: string
+
+  const writeUses = (uses: unknown) =>
+    writeFileSync(
+      join(rootDir, 'node_modules', ADDON, 'package.json'),
+      JSON.stringify({ name: ADDON, pikku: { uses } })
+    )
+
+  before(() => {
+    rootDir = mkdtempSync(join(tmpdir(), 'pikku-addon-deps-'))
+    writeAddonFixture(rootDir)
+  })
+
+  after(() => {
+    rmSync(rootDir, { recursive: true, force: true })
+  })
+
+  const load = async (uses: Record<string, string> | undefined) => {
+    const criticals: { code: string; message: string }[] = []
+    const log = {
+      ...logger,
+      critical: (code: unknown, message: string) =>
+        criticals.push({ code: String(code), message }),
+    } as unknown as InspectorLogger
+    const state = makeState(
+      rootDir,
+      new Map<string, any>([['slack', { package: ADDON, uses }]])
+    )
+    await loadAddonFunctionsMeta(log, state)
+    return { criticals, decl: state.rpc.wireAddonDeclarations.get('slack')! }
+  }
+
+  test('records the declared aliases and their package and range', async () => {
+    writeUses({ stripe: '@acme/addon-stripe@^0.12.0' })
+    const { criticals, decl } = await load({ stripe: 'payments' })
+    assert.deepEqual(criticals, [])
+    assert.deepEqual(decl.declaredUses, ['stripe'])
+    assert.deepEqual(decl.dependencies, [
+      { alias: 'stripe', package: '@acme/addon-stripe', range: '^0.12.0' },
+    ])
+  })
+
+  test('PKU348 names the package and range of an unmapped alias', async () => {
+    writeUses({ stripe: '@acme/addon-stripe@^0.12.0' })
+    const { criticals } = await load(undefined)
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, 'PKU348')
+    assert.match(criticals[0]!.message, /@acme\/addon-stripe@\^0\.12\.0/)
+  })
+
+  test('PKU356 for an alias without a range, a bad alias, or a non-string spec', async () => {
+    writeUses({
+      stripe: '@acme/addon-stripe',
+      'bad:alias': '@acme/x@^1.0.0',
+      crm: 12,
+    })
+    const { criticals, decl } = await load({})
+    assert.deepEqual(
+      criticals.map((c) => c.code),
+      ['PKU356', 'PKU356', 'PKU356']
+    )
+    assert.deepEqual(decl.dependencies, [])
+  })
+})

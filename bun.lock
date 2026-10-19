@@ -235,8 +235,8 @@
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/cli": "^0.12.195",
-        "@pikku/core": "^0.12.145",
+        "@pikku/cli": "^0.12.196",
+        "@pikku/core": "^0.12.146",
         "zod": "^4",
       },
     },
@@ -255,8 +255,8 @@
       },
       "peerDependencies": {
         "@pikku/addon-changes-cli": "^0.12.2",
-        "@pikku/cli": "^0.12.195",
-        "@pikku/core": "^0.12.145",
+        "@pikku/cli": "^0.12.196",
+        "@pikku/core": "^0.12.146",
         "zod": "^4",
       },
     },
@@ -341,21 +341,21 @@
         "@pikku/better-auth": "^0.12.59",
         "@pikku/bun-server": "^0.12.15",
         "@pikku/code-edit": "^0.12.8",
-        "@pikku/core": "^0.12.145",
+        "@pikku/core": "^0.12.146",
         "@pikku/deploy": "^0.12.17",
         "@pikku/deploy-cloudflare": "^0.12.23",
         "@pikku/deploy-standalone": "^0.12.28",
         "@pikku/fetch": "^0.12.13",
-        "@pikku/inspector": "^0.12.109",
-        "@pikku/inspector-go": "^0.12.4",
+        "@pikku/inspector": "^0.12.110",
+        "@pikku/inspector-go": "^0.12.5",
         "@pikku/knowledge": "^0.12.21",
-        "@pikku/kysely": "^0.13.39",
+        "@pikku/kysely": "^0.13.40",
         "@pikku/migrator-sql": "^0.12.9",
         "@pikku/n8n-import": "^0.0.9",
         "@pikku/node-http-server": "^0.12.21",
-        "@pikku/openapi-parser": "^0.12.24",
+        "@pikku/openapi-parser": "^0.12.25",
         "@pikku/schedule": "^0.12.11",
-        "@pikku/skills": "^0.12.60",
+        "@pikku/skills": "^0.12.61",
         "@pikku/websocket": "^0.12.6",
         "@types/cookie": "^1.0.0",
         "@types/json-schema": "^7.0.15",
@@ -589,27 +589,27 @@
         "zod": "^4.6.7",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.145",
+        "@pikku/core": "^0.12.146",
         "@types/node": "^26.6.5",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.145",
+        "@pikku/core": "^0.12.146",
       },
     },
     "packages/inspector-go": {
       "name": "@pikku/inspector-go",
       "version": "0.12.5",
       "dependencies": {
-        "@pikku/inspector": "^0.12.109",
+        "@pikku/inspector": "^0.12.110",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.145",
+        "@pikku/core": "^0.12.146",
         "@types/node": "^24.13.3",
         "ajv": "^8.20.0",
         "tinyglobby": "^0.2.17",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.145",
+        "@pikku/core": "^0.12.146",
       },
     },
     "packages/knowledge": {
@@ -842,7 +842,7 @@
         "@modelcontextprotocol/sdk": "1.32.1",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.144",
+        "@pikku/core": "^0.12.146",
       },
     },
     "packages/runtimes/next": {
@@ -1084,7 +1084,7 @@
         "postgres": "^3.4.9",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.144",
+        "@pikku/core": "^0.12.146",
       },
     },
     "packages/services/kysely-bun-sqlite": {
@@ -1838,6 +1838,53 @@
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
         "tsx": "^4.23.15",
+        "zod": "^4",
+      },
+    },
+    "verifiers/addon-dependencies": {
+      "name": "@pikku/verifiers-addon-dependencies",
+    },
+    "verifiers/addon-dependencies/billing": {
+      "name": "@pikku/verifiers-addon-deps-billing",
+      "version": "1.0.0",
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@pikku/verifiers-addon-deps-stripe": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/core": "*",
+        "zod": "^4",
+      },
+    },
+    "verifiers/addon-dependencies/host": {
+      "name": "@pikku/verifiers-addon-deps-host",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@pikku/verifiers-addon-deps-billing": "workspace:*",
+        "@pikku/verifiers-addon-deps-stripe": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "zod": "^4",
+      },
+    },
+    "verifiers/addon-dependencies/stripe": {
+      "name": "@pikku/verifiers-addon-deps-stripe",
+      "version": "1.2.0",
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/core": "*",
         "zod": "^4",
       },
     },
@@ -3428,6 +3475,14 @@
     "@pikku/verifier-registry-consumer": ["@pikku/verifier-registry-consumer@workspace:verifiers/addon-registry/consumer"],
 
     "@pikku/verifiers-addon": ["@pikku/verifiers-addon@workspace:verifiers/addon"],
+
+    "@pikku/verifiers-addon-dependencies": ["@pikku/verifiers-addon-dependencies@workspace:verifiers/addon-dependencies"],
+
+    "@pikku/verifiers-addon-deps-billing": ["@pikku/verifiers-addon-deps-billing@workspace:verifiers/addon-dependencies/billing"],
+
+    "@pikku/verifiers-addon-deps-host": ["@pikku/verifiers-addon-deps-host@workspace:verifiers/addon-dependencies/host"],
+
+    "@pikku/verifiers-addon-deps-stripe": ["@pikku/verifiers-addon-deps-stripe@workspace:verifiers/addon-dependencies/stripe"],
 
     "@pikku/verifiers-addon-openapi": ["@pikku/verifiers-addon-openapi@workspace:verifiers/addon-openapi"],
 

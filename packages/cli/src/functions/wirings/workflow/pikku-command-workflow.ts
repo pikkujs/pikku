@@ -19,6 +19,7 @@ import { serializeScenarioWorkflowMeta } from '../scenarios/serialize-scenario-m
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeMetaSidecar } from '../../../utils/write-wiring-meta.js'
 import { join, dirname } from 'path'
+import { withAddonDependencies } from '../../../utils/addon-dependencies.js'
 import { rm } from 'fs/promises'
 
 type WorkflowCommandInput = {
@@ -353,7 +354,10 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
             workflows.meta,
             workflows.graphMeta,
             config.customTypesDeclarationFile,
-            visitState.rpc?.wireAddonDeclarations,
+            withAddonDependencies(
+              config,
+              visitState.rpc?.wireAddonDeclarations
+            ),
             config.rootDir
           )
     )

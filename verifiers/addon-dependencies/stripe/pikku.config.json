@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src", "types"],
+  "outDir": "./.pikku",
+  "addon": {
+    "displayName": "Stripe (verifier)",
+    "description": "The addon another addon calls",
+    "categories": ["Utility"]
+  }
+}

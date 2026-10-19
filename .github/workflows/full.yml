@@ -274,6 +274,7 @@ jobs:
             addon-registry,
             addon-treeshake,
             addon-workspace,
+            addon-dependencies,
             analytics,
             classification,
             gateway,

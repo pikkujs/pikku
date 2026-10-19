@@ -241,6 +241,77 @@ rpc('registry:getOpenApi') is typed
 `wireRemoteAddon` is also banned _inside_ an addon package (addons declare
 contracts and export functions; the consuming app does the wiring).
 
+## An addon calling another addon
+
+An addon declares the addons it calls in its own `package.json`, under
+`pikku.uses`, each by the alias its code calls it by and a version range:
+
+```json
+{
+  "name": "@acme/addon-billing",
+  "pikku": {
+    "uses": { "stripe": "@pikkustudio/addon-stripe@^0.12.0" }
+  }
+}
+```
+
+Its functions then call the dependency by that alias, typed, with no cast:
+
+```ts
+const charge = await rpc.invoke('stripe:charge', { amountCents })
+await rpc.startWorkflow('stripe:refund', { chargeId: charge.chargeId })
+```
+
+`pikku all` in the addon reads the dependency's SDK, the same `.remote.gen`
+maps a versioned `wireRemoteAddon` consumer reads, and merges them into the
+addon's typed `rpc` under the alias: `invoke`, `startWorkflow` and the agents.
+
+- A dependency that is a package in the same workspace is read from the SDK it
+  generated in place (`<package>/<outDir>/sdk`). Run `pikku all` in it first.
+  Its version must satisfy the range (PKU354).
+- Any other dependency is fetched from the registry and pinned in
+  `pikku-addons.lock`, as for a versioned `wireRemoteAddon`.
+
+The SDK describes the remote surface only, so the types are the same whether
+the app wires the dependency with `wireAddon` or `wireRemoteAddon`.
+
+### The app decides what the alias reaches
+
+The alias is a key of `uses` on the app's `wireAddon`. The app maps it to the
+addon instance it wired, by whatever name it chose:
+
+```ts
+wireRemoteAddon({
+  name: 'payments',
+  package: '@pikkustudio/addon-stripe@^0.12.0',
+  serverUrl: 'https://stripe.example.com',
+})
+wireAddon({
+  name: 'billing',
+  package: '@acme/addon-billing',
+  uses: { stripe: 'payments' },
+})
+```
+
+At runtime, billing's `stripe:charge` runs as `payments:charge`. An alias the
+app did not map is refused with `AddonNotUsedError` (403), for invoke,
+`startWorkflow` and agent `run`/`stream` alike, and so is the wired name
+(`payments:charge`) called directly. Nothing the addon declares grants it
+anything; only the app's `uses` does.
+
+`pikku all` in the app checks the mapping before anything runs:
+
+| Code     | Rule                                                                                                                                                                                                                   |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PKU348` | the addon declares an alias the `wireAddon` does not map.                                                                                                                                                              |
+| `PKU347` | the alias is mapped to a name that is not wired, or that is wired from a different package than the one the addon declared.                                                                                            |
+| `PKU355` | `uses` maps a name the addon does not declare. An addon reaches only what it asked for.                                                                                                                                |
+| `PKU354` | the instance the alias is mapped to is a version the range does not accept: the installed version, or for a versioned `wireRemoteAddon` the version `pikku-addons.lock` pins. A version that cannot be read fails too. |
+| `PKU356` | the addon's `pikku.uses` entry is malformed: an alias that is not an identifier, a value that is not a string, a missing or invalid range.                                                                             |
+
+The older list form, `"uses": ["kysely"]`, still works: the names are the keys
+the app has to map, with no SDK and no version check.
+
 ## Key files
 
 | File                                                                | Responsibility                                                                     |

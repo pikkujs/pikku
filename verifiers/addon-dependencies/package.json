@@ -1,0 +1,9 @@
+{
+  "name": "@pikku/verifiers-addon-dependencies",
+  "type": "module",
+  "private": true,
+  "description": "An addon calling another by the alias its package.json declares, typed through the other's SDK",
+  "scripts": {
+    "test": "node run.mjs"
+  }
+}

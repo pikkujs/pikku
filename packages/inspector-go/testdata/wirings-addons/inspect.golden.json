@@ -740,7 +740,8 @@
         "public",
         "custom",
         "cloudapi",
-        "unsynced"
+        "unsynced",
+        "billing"
       ],
       "wireAddonDeclarations": [
         [
@@ -793,7 +794,11 @@
             "contentBucket": "shop-content",
             "contentGrants": {
               "images": "read"
-            }
+            },
+            "declaredUses": [
+              "kysely",
+              "email"
+            ]
           }
         ],
         [
@@ -866,6 +871,34 @@
             "file": "<fixture>/src/addons.ts",
             "remote": true,
             "hasAuth": false
+          }
+        ],
+        [
+          "billing",
+          {
+            "package": "@fixture/billing-addon",
+            "file": "<fixture>/src/addons.ts",
+            "uses": {
+              "pay": "cloudapi",
+              "mail": "shop",
+              "extra": "bare"
+            },
+            "dependencies": [
+              {
+                "alias": "pay",
+                "package": "@fixture/cloud-api",
+                "range": "^1.4.0"
+              },
+              {
+                "alias": "mail",
+                "package": "@fixture/bare-addon",
+                "range": "^1.0.0"
+              }
+            ],
+            "declaredUses": [
+              "pay",
+              "mail"
+            ]
           }
         ]
       ],
@@ -1542,6 +1575,15 @@
     },
     {
       "level": "critical",
+      "code": "PKU356",
+      "message": "@fixture/billing-addon (wired as 'billing'): pikku.uses.norange is '@fixture/public', which has no version range. Write '@fixture/public@^1.0.0': the app that wires this addon is checked against it."
+    },
+    {
+      "level": "warn",
+      "message": "wireAddon('billing') (declared in src/addons.ts): @fixture/billing-addon is installed at <fixture>/node_modules/@fixture/billing-addon but has not been built — its dist/.pikku/addon/function/pikku-functions-meta.gen.json does not exist. Run the addon's build (pikku all && tsc && pikku dist) in <fixture>/node_modules/@fixture/billing-addon."
+    },
+    {
+      "level": "critical",
       "code": "PKU236",
       "message": "No valid 'func' property for gateway 'nofunc'."
     },
@@ -1615,12 +1657,22 @@
     {
       "level": "critical",
       "code": "PKU347",
-      "message": "Addon 'shop' uses 'kysely' as 'db', but no addon is wired under the name 'db'. Wired: shop, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced"
+      "message": "Addon 'shop' uses 'kysely' as 'db', but no addon is wired under the name 'db'. Wired: shop, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing"
+    },
+    {
+      "level": "critical",
+      "code": "PKU347",
+      "message": "Addon 'billing' calls @fixture/bare-addon as 'mail', mapped to 'shop', but 'shop' is wired from '@fixture/shop-addon'."
+    },
+    {
+      "level": "critical",
+      "code": "PKU355",
+      "message": "Addon 'billing' maps 'extra' to 'bare', but @fixture/billing-addon does not declare 'extra' in the pikku.uses of its package.json. It declares: pay, mail. Remove 'extra' from uses, or have the addon declare it."
     },
     {
       "level": "critical",
       "code": "PKU349",
-      "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced"
+      "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing"
     },
     {
       "level": "critical",
@@ -1654,7 +1706,7 @@
     }
   ],
   "validationPass": {
-    "start": 24,
-    "end": 36
+    "start": 26,
+    "end": 40
   }
 }

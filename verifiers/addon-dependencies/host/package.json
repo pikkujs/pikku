@@ -1,0 +1,20 @@
+{
+  "name": "@pikku/verifiers-addon-deps-host",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "An app that wires billing and must give it the stripe it declares",
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@pikku/verifiers-addon-deps-billing": "workspace:*",
+    "@pikku/verifiers-addon-deps-stripe": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "zod": "^4"
+  }
+}

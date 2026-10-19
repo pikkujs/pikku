@@ -24,6 +24,7 @@
   },
   "sideEffects": [
     "./dist/errors/errors.js",
+    "./dist/wirings/addon/addon-reach.js",
     "./dist/wirings/addon/remote-addon-auth.js",
     "./dist/wirings/agent/agent-rpc.js",
     "./dist/wirings/rpc/rpc-runner.js",

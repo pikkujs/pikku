@@ -9,6 +9,7 @@ description: Rules chosen in inspector, and what each one rules out
 A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
+
 - [A versioned remote addon's SDK metadata is kept apart from addonFunctions](remote-addon-sdk-metadata-is-kept-apart-from-addon-functions.md) — The functions meta of a synced SDK loads into state.remoteAddonFunctions, never addonFunctions, and only when the SDK matches pikku-addons.lock
 - [A channel with auth false marks its connect and disconnect handlers sessionless](a-channel-with-auth-false-marks-its-connect-and-disconnect-sessionless.md) — The inspector synthesises metadata for a channel's connect and disconnect functions and sets sessionless from the channel's auth
 - [A declared scope id never shadows a definition](a-declared-scope-id-never-shadows-a-definition.md) — A bare declareScopes id is added only when no definition already holds it, so an addon's richer scope tree is kept
@@ -40,5 +41,6 @@ A rule that was chosen, and what it rules out.
 - [The inspector records an agent's permissions only to aggregate the services they need, never to check access](the-inspector-records-agent-permissions-only-to-aggregate-services.md) — addAgent adds the agent's permission names to usedPermissions, and post-process reads that set only to collect each permission's services
 - [Vault secrets reach no sink, and PII is kept out of logs, the console and webhooks only](vault-secrets-reach-no-sink-and-pii-stays-out-of-logs-and-webhooks.md) — check-classified-sinks rejects revealed secrets in every listed sink and PII only in the logger, console and webhook sinks
 - [Webhook gateway wrappers are registered sessionless, and gateway auth is enforced inside the handler call](webhook-gateway-wrappers-are-sessionless-and-gateway-auth-runs-inside-the-handler.md) — The inspector and the runtime both register a webhook gateway's POST and verify routes as sessionless with auth false, so the route never demands a session and the gateway's own auth flag is applied only when the handler runs
+- [An addon declares the addons it calls in package.json, and the app's uses may map only those](an-addon-declares-the-addons-it-calls.md) — pikku.uses in an addon's package.json names each addon it calls by alias and package@range; a wireAddon that leaves one unmapped (PKU348), maps it to another package (PKU347) or maps an undeclared name (PKU355) is refused, and a malformed entry is PKU356
 
 <!-- /pikku:knowledge-index -->

@@ -9,6 +9,7 @@ description: Rules chosen in the pikku CLI, and what each one rules out
 A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
+
 - [The CLI syncs its registry SDK like any consumer](the-cli-syncs-its-registry-sdk-like-any-consumer.md) — the CLI calls the registry through the registry's own SDK, which its build syncs into .pikku/remote; only pikku-addons.lock is committed
 - [A versioned remote addon is pinned by the range it was resolved for](a-versioned-remote-addon-is-pinned-by-the-range-it-was-resolved-for.md) — pikku-addons.lock records range, version and integrity per SDK; a locked version that still satisfies the range is kept, files on disk are trusted only through the integrity marker, and a pinned version the registry now serves differently fails closed
 - [A Cloudflare unit registers its addons' functions and schemas on first use, not at startup](a-cloudflare-unit-registers-addon-functions-on-first-use.md) — Per-unit codegen for a provider with lazyAddonRegistration splits each addon's published bootstrap, imports its meta statically and its function and schema registrations from an exported loadAddons, which the Cloudflare entry awaits before building services
@@ -97,5 +98,6 @@ A rule that was chosen, and what it rules out.
 - [A trigger webhook receive is public and runs only from its source's route, never as an RPC](webhook-receive-is-public-and-runs-only-from-its-source-route.md) — pikkuWebhookReceive forces auth false, and its func receives services with secrets omitted, so a receive can run only through its source's route
 - [A wireAddon credential mode is applied at codegen, not at runtime](wire-addon-credential-mode-is-applied-at-codegen.md) — pikku-command-credentials resolves wireAddon mode overrides into the credentials meta file, so the console reads the final mode from disk
 - [Inspector parity runs on every example, template and verifier](inspector-parity-runs-on-every-project.md) — pikku inspector parity runs codegen with both inspectors and fails unless the saved state, the generated files and the diagnostics match; CI runs it on every project in the repo, so a fix covered by a verifier is covered for both engines
+- [An addon calls another addon through that addon's SDK, read in place when it is in the workspace](an-addon-calls-another-through-its-sdk.md) — pikku all in an addon merges each pikku.uses dependency's SDK into its internal RPC and workflow maps under its alias; the app checks the wired version against the range (PKU354)
 
 <!-- /pikku:knowledge-index -->

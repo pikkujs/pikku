@@ -1,4 +1,9 @@
-import { addonCallerOf, addonMayReach } from '../addon/addon-reach.js'
+import {
+  AddonNotUsedError,
+  addonCallerOf,
+  addonMayReach,
+  mapAddonCall,
+} from '../addon/addon-reach.js'
 import type {
   CoreServices,
   PikkuWire,
@@ -226,17 +231,7 @@ const remoteAddonResponseError = async (
   return new RemoteAddonFailedError(namespace, fnName)
 }
 
-export class AddonNotUsedError extends PikkuError {
-  constructor(caller: string, target: string) {
-    super(
-      `Addon '${caller}' called '${target}' but does not list it in its wireAddon 'uses'.`
-    )
-  }
-}
-addError(AddonNotUsedError, {
-  status: 403,
-  message: 'Addon called another addon it does not use.',
-})
+export { AddonNotUsedError }
 
 export const resolveNamespace = (
   namespacedFunction: string
@@ -498,15 +493,7 @@ export class ContextAwareRPCService {
   }
 
   private mapUsedAddon(funcName: string): string {
-    const caller = this.wire.addonNamespace
-    if (!caller) return funcName
-    const colon = funcName.indexOf(':')
-    const prefix = funcName.slice(0, colon)
-    if (prefix === caller) return funcName
-    const uses = pikkuState(null, 'addons', 'packages').get(caller)?.uses
-    const mapped = uses?.[prefix]
-    if (mapped) return `${mapped}${funcName.slice(colon)}`
-    throw new AddonNotUsedError(caller, funcName)
+    return mapAddonCall(this.wire.addonNamespace, funcName)
   }
 
   /**
