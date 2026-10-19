@@ -12,6 +12,7 @@ import type { CoreAgent } from './agent.types.js'
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import { InMemoryAgentRunStateService } from '../../services/in-memory-agent-run-state-service.js'
 import { ForbiddenError } from '../../errors/errors.js'
+import { wireAddon } from '../addon/wire-addon.js'
 
 describe('agent helpers', () => {
   describe('agent', () => {
@@ -293,6 +294,28 @@ describe('agentApprove is scoped to the agent its route was built for', () => {
     assert.strictEqual(result.result, 'done')
     assert.strictEqual(deployed, 1)
     assert.strictEqual((await agentRunState.getRun(runId))?.status, 'completed')
+  })
+
+  test('an addon approves its run through the alias the app mapped', async () => {
+    registerAgent('payments:support')
+    wireAddon({
+      name: 'billing',
+      package: '@acme/addon-billing',
+      uses: { stripe: 'payments' },
+    })
+    const runId = await suspendedRun('payments:support')
+    const agent = createAgentRPC({ addonNamespace: 'billing' } as any, {
+      sessionService: { get: () => ({ userId: owner }) } as any,
+    })
+
+    const result = await agent.approve(
+      runId,
+      [{ toolCallId: 'tc-payments:support', approved: true }],
+      'stripe:support'
+    )
+
+    assert.strictEqual(result.runId, runId)
+    assert.strictEqual(deployed, 1)
   })
 })
 
