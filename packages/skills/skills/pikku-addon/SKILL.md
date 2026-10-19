@@ -289,7 +289,16 @@ uses generics (`pikkuSessionlessFunc<In, Out>`) or returns a type declared in
 generics.
 
 ```typescript
+// src/functions/listNotes.schemas.ts
+import { z } from 'zod'
+
 export const NoteRows = z.array(z.object({ id: z.string(), body: z.string() }))
+```
+
+```typescript
+// src/functions/listNotes.function.ts
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
+import { NoteRows } from './listNotes.schemas.js'
 
 export const listNotes = pikkuSessionlessFunc({
   output: NoteRows,

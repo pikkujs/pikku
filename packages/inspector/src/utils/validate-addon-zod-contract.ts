@@ -78,7 +78,8 @@ export const addonZodContractViolation = (
   return (
     `Addon function '${fn.name}' is remote: true but ${problems.join(' and ')}. ` +
     `A remote addon's contract ships as a types-only SDK, so its input and output must be zod schemas: ` +
-    `declare \`input: z.object({...})\` and \`output: z.object({...})\` on the function and drop the generics. ` +
+    `export each schema as a zod variable from a file that does not import #pikku (a sibling <fn>.schemas.ts), ` +
+    `reference it as \`input:\` / \`output:\` on the function, and drop the generics. ` +
     `TypeScript types would make the SDK import from the addon's src/, which the consumer does not have.`
   )
 }
