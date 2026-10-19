@@ -98,6 +98,7 @@ export interface ResolvedFunction {
             wire: any
           ) => string | null | Promise<string | null>
         }
+    /** Maps the base fn name; a versioned call appends `@vN` after it. */
     remoteName?: (fn: string) => string
     remoteTimeoutMs?: number
     remoteHeaders?: (

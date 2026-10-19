@@ -634,7 +634,12 @@ export class ContextAwareRPCService {
       parseVersionedId(fnName).version !== null
         ? fnName
         : (pikkuState(cfg.package, 'rpc', 'meta')[fnName] ?? fnName)
-    const remoteFn = cfg.remoteName ? cfg.remoteName(versionedFn) : versionedFn
+    // `remoteName` maps the base name; the version rides on the mapped name,
+    // so a lookup-table mapping still matches a versioned call.
+    const { baseName, version } = parseVersionedId(versionedFn)
+    const remoteFn = cfg.remoteName
+      ? `${cfg.remoteName(baseName)}${version !== null ? `@v${version}` : ''}`
+      : versionedFn
     const token = await resolveRemoteAddonToken(
       cfg.remoteAuth,
       this.services,

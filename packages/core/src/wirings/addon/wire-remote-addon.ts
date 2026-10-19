@@ -42,7 +42,10 @@ export type WireRemoteAddonConfig = {
   serverUrl: string | ((services: CoreServices) => string | Promise<string>)
   /** Omit when the addon declares its remote surface public. */
   auth?: RemoteAddonAuth
-  /** Map a consumer-facing fn name → the remote fn name, when they differ (rare). */
+  /**
+   * Map a consumer-facing fn name → the remote fn name, when they differ (rare).
+   * It gets the base name; a versioned call appends `@vN` to what it returns.
+   */
   remoteName?: (fn: string) => string
   /** Applied to every function the addon contributes, so tag middleware and permissions reach them. */
   tags?: string[]
