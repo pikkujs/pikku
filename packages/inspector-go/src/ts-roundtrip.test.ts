@@ -17,7 +17,7 @@ const repo = (path: string) =>
   fileURLToPath(new URL(`../../../${path}`, import.meta.url))
 
 // Only projects the build generates: their Zod schemas import from `.pikku`,
-// and CI's build output carries it for recipes/ but not examples/.
+// and CI's build output carries it for recipes/ but not templates/.
 const PROJECTS = ['recipes/functions']
 
 const assertSame = (actual: unknown, expected: unknown) => {

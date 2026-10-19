@@ -43,7 +43,7 @@ because: The native engine is several times faster, uses far less memory and
   diagnostics match; CI runs it on every example, template and verifier (see
   the CLI's `inspector-parity-runs-on-every-project` decision).
   `finalize-parity.ts` feeds the Go finalize the TypeScript analysis alone, on
-  `recipes/functions` and `examples/field-service`.
+  `recipes/functions` and `templates/field-service`.
 - **One resolver.** `createConfig` resolves the engine once and records it, so
   the inspection, the source helpers in `inspector-helpers.ts`
   (`collectSurface`, `readModuleSpecifiers`, `readJsxLiteralText`,

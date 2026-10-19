@@ -6,7 +6,7 @@
  *
  *   bun parity/helpers.ts [--bin <pikku-inspect>] [--project <dir>]...
  *
- * Defaults to examples/online-shop and every template. Exit status 1 when a
+ * Defaults to templates/online-shop and every template. Exit status 1 when a
  * helper differs beyond union order. PARITY_DUMP=<dir> writes both sides of a
  * differing surface there, union-sorted.
  */
@@ -38,7 +38,7 @@ if (bin) process.env.PIKKU_INSPECTOR_GO_BIN = resolve(bin)
 const projects = flag('--project').length
   ? flag('--project').map((p) => resolve(p))
   : [
-      join(REPO, 'examples/online-shop'),
+      join(REPO, 'templates/online-shop'),
       ...readdirSync(join(REPO, 'recipes'))
         .map((t) => join(REPO, 'recipes', t))
         .filter((d) => existsSync(join(d, 'package.json'))),

@@ -13,8 +13,8 @@ save the same inspector state (`--stateOutput`, timings aside), generate the
 same files (`pikku all`'s own run records aside) and log the same `[PKU…]`
 diagnostics.
 
-`scripts/inspector-parity.mjs` runs it on every directory under `examples/`,
-`templates/` and `verifiers/` with a `pikku.config.json`, nested ones included,
+`scripts/inspector-parity.mjs` runs it on every directory under `templates/`,
+`recipes/` and `verifiers/` with a `pikku.config.json`, nested ones included,
 and CI runs that in four shards on every pull request.
 
 A fix to the TypeScript inspector already lands with a verifier (the PR
