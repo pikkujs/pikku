@@ -4,10 +4,6 @@
     "reason": "not a workspace package (excluded in the root package.json), so its dependencies are not installed in the monorepo"
   },
   {
-    "project": "verifiers/addon-dependencies/billing",
-    "reason": "calls the stripe addon through the SDK stripe's `pikku all` writes to stripe/.pikku/sdk; parity generates into a temporary directory, so that SDK never exists and billing fails closed with PKU338. The verifier runs stripe first and covers billing; the inspector checks are covered on host/ and in inspector-go's wirings-addons golden"
-  },
-  {
     "project": "verifiers/binary",
     "reason": "a config for `pikku binary` alone (srcDirectories is empty), so `pikku all` has no project to generate"
   },

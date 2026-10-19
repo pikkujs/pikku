@@ -6,11 +6,18 @@
  *
  *   node scripts/inspector-parity.mjs [--shard <k>/<n>] [--project <dir>]...
  *
+ * The --project dirs run as one group.
+ *
  * --shard k/n takes every n-th top-level project directory, keeping a
  * verifier's nested projects together. A project that fails only because its
  * codegen does (it needs a database, or is not installed) is skipped when
  * inspector-parity-skip.json says why; an entry for a project that passes is
  * a failure until it is removed, so the list only shrinks.
+ *
+ * Parity generates into a temporary directory, so it never leaves behind the
+ * `.pikku/sdk` an addon calling another through `pikku.uses` is typed from.
+ * Each addon another member of its group calls that way is generated for real
+ * first, the addons it calls before it.
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
@@ -71,7 +78,7 @@ const inShard = (items) => {
 }
 
 const groups = values('--project').length
-  ? values('--project').map((p) => [resolve(p)])
+  ? [values('--project').map((p) => resolve(p))]
   : inShard(discover())
 
 const skips = new Map(
@@ -98,9 +105,66 @@ const outcome = (run) =>
       ? 'differ'
       : 'failed'
 
+const readJson = (path) => {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'))
+  } catch {
+    return undefined
+  }
+}
+
+/** The packages `dir` calls through the `{ alias: 'package@range' }` form of pikku.uses. */
+const usesPackages = (dir) => {
+  const uses = readJson(join(dir, 'package.json'))?.pikku?.uses
+  if (!uses || Array.isArray(uses) || typeof uses !== 'object') return []
+  return Object.values(uses)
+    .filter((spec) => typeof spec === 'string' && spec.lastIndexOf('@') > 0)
+    .map((spec) => spec.slice(0, spec.lastIndexOf('@')))
+}
+
+/**
+ * Addons in `group` that another member calls through pikku.uses, each after
+ * the addons it calls itself.
+ */
+const addonsToGenerate = (group) => {
+  const byName = new Map(
+    group.flatMap((dir) => {
+      const name = readJson(join(dir, 'package.json'))?.name
+      return name ? [[name, dir]] : []
+    })
+  )
+  const ordered = []
+  const visit = (name, seen) => {
+    if (ordered.includes(name) || seen.has(name)) return
+    seen.add(name)
+    for (const dep of usesPackages(byName.get(name))) {
+      if (byName.has(dep)) visit(dep, seen)
+    }
+    ordered.push(name)
+  }
+  const called = group.flatMap(usesPackages).filter((n) => byName.has(n))
+  for (const name of [...new Set(called)].sort((a, b) => a.localeCompare(b))) visit(name, new Set())
+  return ordered.map((name) => byName.get(name))
+}
+
+const generate = (dir) =>
+  spawnSync('node', [CLI, 'all'], {
+    cwd: dir,
+    encoding: 'utf8',
+    env: { ...process.env, FORCE_COLOR: '0' },
+  })
+
 let failures = 0
 const summary = { agree: 0, differ: 0, failed: 0, skipped: 0 }
 for (const group of groups) {
+  for (const dir of addonsToGenerate(group)) {
+    const run = generate(dir)
+    if (run.status !== 0) {
+      console.log(
+        `\n== ${relative(REPO, dir)}: pikku all failed before parity\n${`${run.stdout}\n${run.stderr}`.trimEnd().split('\n').slice(-20).join('\n')}`
+      )
+    }
+  }
   // A consumer generated from its addon fails until the addon has been, so a
   // project that fails is retried once the rest of its group has run.
   const runs = new Map(group.map((dir) => [dir, parity(dir)]))
