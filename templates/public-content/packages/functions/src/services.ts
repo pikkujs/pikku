@@ -17,7 +17,6 @@ import { TypedVariablesService } from '../.pikku/variables/pikku-variables.gen.j
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { Kysely } from 'kysely'
 import type { VercelAgentRunner } from '@pikku/ai-vercel'
-import { GeneratedTemplateEmailService } from './lib/email-service.js'
 import type { DB } from '#pikku/db/schema.gen.js'
 
 export const createSingletonServices = pikkuServices(async (config, existingServices) => {
@@ -28,10 +27,7 @@ export const createSingletonServices = pikkuServices(async (config, existingServ
   const logger = existingServices?.logger ?? new JsonConsoleLogger()
   const schema = existingServices?.schema ?? new CFWorkerSchemaService(logger)
   const emailService =
-    existingServices?.emailService ??
-    new GeneratedTemplateEmailService({
-      delegate: new LocalEmailService(),
-    })
+    existingServices?.emailService ?? new LocalEmailService()
   // The durable audit sink. In a deployed stage fabric injects the platform's
   // audit service; locally it falls back to a no-op so nothing is persisted.
   const audit = existingServices?.audit ?? new NoopAuditService()
