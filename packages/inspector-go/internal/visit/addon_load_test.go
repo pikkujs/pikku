@@ -334,3 +334,22 @@ func TestReadAddonDependencies(t *testing.T) {
 		t.Errorf("invalid = %q", got.invalid)
 	}
 }
+
+func TestHasLegacyContributors(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		"node_modules/legacy/package.json": `{"pikku": {"contributors": ["./x.js"]}}`,
+		"node_modules/clean/package.json":  `{"pikku": {"uses": ["db"]}}`,
+		"app/package.json":                 `{}`,
+	})
+	dirs := []string{filepath.Join(root, "app")}
+	if !hasLegacyContributors(dirs, "legacy") {
+		t.Error("pikku.contributors not reported")
+	}
+	if hasLegacyContributors(dirs, "clean") {
+		t.Error("clean package reported")
+	}
+	if hasLegacyContributors(dirs, "absent") {
+		t.Error("absent package reported")
+	}
+}

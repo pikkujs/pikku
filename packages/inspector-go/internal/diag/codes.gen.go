@@ -53,6 +53,7 @@ const (
 	ContributorNameDuplicated         Code = "PKU361"
 	AddonContributorsNotStatic        Code = "PKU362"
 	AddonContributorUnknown           Code = "PKU363"
+	AddonLegacyContributors           Code = "PKU364"
 	DbColumnNameTypeContradiction     Code = "PKU480"
 	DbJsonColumnUntyped               Code = "PKU481"
 	DbFormatOnNonString               Code = "PKU482"

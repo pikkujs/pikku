@@ -151,6 +151,8 @@ Rules the inspector and the build enforce:
 - Run `pikku all` in the addon: it writes
   `.pikku/contributors/pikku-contributors-meta.gen.json`, which a host reads to
   opt in (an unknown name is PKU363). Ship `.pikku` in `files`.
+- `pikku.contributors` in `package.json` is removed and is now an error
+  (PKU364), not silently ignored.
 - Contributors run after every contributor providing one of their `needs`; a
   dotted need (`logSources.stage`) is met by a provider of the key or its
   prefix. `run` reads services the target built before it as `runtime.<name>` —

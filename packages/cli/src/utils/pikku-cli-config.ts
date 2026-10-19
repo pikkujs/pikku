@@ -1337,6 +1337,15 @@ const _getPikkuCLIConfig = async (
       }
     }
 
+    for (const section of ['dev', 'deploy'] as const) {
+      const value = (result as Record<string, any>)[section]
+      if (value && typeof value === 'object' && 'contributors' in value) {
+        throw new PikkuCLIConfigError(
+          `${section}.contributors is no longer read — remove it from ${result.configDir}/pikku.config.json. Register the contributors with defineContributors in an addon and opt in with wireAddon({ contributors: [...] }); see docs/contributors.md`
+        )
+      }
+    }
+
     // Resolve clientFiles paths relative to configDir
     if (result.clientFiles) {
       if ('startServerFnsFile' in result.clientFiles) {
