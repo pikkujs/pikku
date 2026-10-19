@@ -1302,6 +1302,10 @@ wireCLI({
               description: 'Most state differences to list',
               default: '20',
             },
+            expectFailure: {
+              description:
+                'For a project whose codegen is meant to fail: the text both engines must fail with. They must still agree on state, files and diagnostics',
+            },
           },
         }),
       },
