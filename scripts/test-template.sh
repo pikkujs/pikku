@@ -3,7 +3,7 @@
 # Script to test a Pikku template by creating a test app and running tests
 # Usage: ./test-template.sh <template-name> [version/branch-name]
 #
-# template-name: Must be one of the folder names in templates/ directory
+# template-name: Must be one of the folder names in recipes/ directory
 # version/branch-name: Optional, defaults to current branch
 
 set -e
@@ -40,7 +40,7 @@ retry() {
 # Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-TEMPLATES_DIR="$PROJECT_ROOT/templates"
+TEMPLATES_DIR="$PROJECT_ROOT/recipes"
 TEST_APP_DIR="$PROJECT_ROOT/../test-app"
 
 # Parse arguments
@@ -73,7 +73,7 @@ fi
 
 # Validate template exists
 if [ ! -d "$TEMPLATES_DIR/$TEMPLATE_NAME" ]; then
-    log_error "Template '$TEMPLATE_NAME' not found in templates directory"
+    log_error "Template '$TEMPLATE_NAME' not found in recipes directory"
     echo ""
     echo "Available templates:"
     ls -1 "$TEMPLATES_DIR" | sed 's/^/  - /'
@@ -174,12 +174,12 @@ const root = process.env.PROJECT_ROOT;
 const pkgPath = 'package.json';
 const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 
-// Scan every workspace member dir for @pikku/* packages. 'templates' must be
+// Scan every workspace member dir for @pikku/* packages. 'recipes' must be
 // included alongside 'packages' so workspace-only deps that live under
-// templates/ (e.g. @pikku/templates-function-addon) also get a local path —
+// recipes/ (e.g. @pikku/templates-function-addon) also get a local path —
 // otherwise their 'workspace:*' specifier survives and bun, lacking a workspace,
 // fails to resolve it.
-const dirs = ['packages', 'templates'];
+const dirs = ['packages', 'recipes'];
 const files = dirs.flatMap((d) =>
   execSync(
     'find ' + root + '/' + d + ' -name package.json -not -path \"*/node_modules/*\" -maxdepth 4',
@@ -301,7 +301,7 @@ fi
 # Serverless-target templates: re-run codegen with --target serverless so
 # server-only functions (e.g. those depending on metaService → node:fs) are
 # pruned from the bundle. metaService is declared serverlessIncompatible in
-# templates/functions/pikku.config.json.
+# recipes/functions/pikku.config.json.
 case "$TEMPLATE_NAME" in
     aws-lambda|aws-lambda-websocket|cloudflare-workers|cloudflare-websocket|nextjs|nextjs-full)
         log_info "Regenerating with --target serverless for $TEMPLATE_NAME..."

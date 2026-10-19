@@ -35,7 +35,7 @@ import { tmpdir } from 'os'
 import { spawnSync } from 'child_process'
 import fs, { unlinkSync, writeFileSync } from 'fs'
 
-const BASE_URL = 'gh:pikkujs/pikku/templates'
+const BASE_URL = 'gh:pikkujs/pikku/recipes'
 const DEFAULT_TEMPLATE = 'starter-template'
 const DEFAULT_PROJECT_NAME = 'my-app'
 const DEFAULT_PIKKUSTUDIO_APP = 'app'

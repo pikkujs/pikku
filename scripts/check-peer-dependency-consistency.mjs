@@ -46,7 +46,7 @@ import {
 } from './semver-ranges.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const SCAN_DIRS = ['packages', 'templates']
+const SCAN_DIRS = ['packages', 'recipes']
 // Rule 3 also covers the workspaces that only consume packages.
 const CONSUMER_DIRS = ['examples', 'verifiers', 'e2e']
 const DEPENDENCY_FIELDS = [

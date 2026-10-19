@@ -11,13 +11,13 @@ import (
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/protocol"
 )
 
-// fixtureRequest inspects the repo's templates/functions, the smaller parity
+// fixtureRequest inspects the repo's recipes/functions, the smaller parity
 // project; it needs `bun install` to have run.
 func fixtureRequest(t *testing.T, setupOnly bool) protocol.Request {
 	t.Helper()
-	root, _ := filepath.Abs("../../../../templates/functions")
+	root, _ := filepath.Abs("../../../../recipes/functions")
 	if _, err := os.Stat(filepath.Join(root, "node_modules")); err != nil {
-		t.Skip("templates/functions is not installed")
+		t.Skip("recipes/functions is not installed")
 	}
 	files := findSourceFiles(filepath.ToSlash(root), []string{"src"})
 	return protocol.Request{RouteFiles: files, Options: protocol.Options{

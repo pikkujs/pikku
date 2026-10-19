@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from '
 import { join, resolve } from 'node:path'
 
 const root = resolve(process.argv[2] ?? process.cwd())
-const template = join(root, 'templates', 'starter-template')
+const template = join(root, 'recipes', 'starter-template')
 const sections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies', 'overrides']
 
 const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'))

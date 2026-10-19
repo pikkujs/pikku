@@ -1595,7 +1595,7 @@ export async function runProjectChecks(
             lines(
               'Remove "i18next", "react-i18next" and "i18next-browser-languagedetector".',
               'Add "@inlang/paraglide-js" (devDependencies) and the src/i18n scaffold.',
-              'Reference: templates/starter-template/apps/app.'
+              'Reference: recipes/starter-template/apps/app.'
             )
           )
         }
@@ -1628,7 +1628,7 @@ export async function runProjectChecks(
               '2. messages/<locale>.json + project.inlang/settings.json (snake_case keys).',
               '3. src/i18n scaffold: config.ts (useLocale), messages.ts (branded `m`), ident.ts.',
               '4. vite.config: paraglideVitePlugin({ project: "./project.inlang", outdir: "./src/paraglide" }).',
-              'Route every user-visible string through `m.*()`; reference templates/starter-template/apps/app/src/i18n.'
+              'Route every user-visible string through `m.*()`; reference recipes/starter-template/apps/app/src/i18n.'
             )
           )
         } else if (!hasMessagesDir || !hasInlangProject) {

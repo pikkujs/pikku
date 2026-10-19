@@ -118,7 +118,7 @@ Rules that bite:
 ## Parity
 
 The ported sections must match exactly on examples/online-shop and
-templates/functions:
+recipes/functions:
 - functions (meta, files, typesMap)
 - http
 - queueWorkers
@@ -150,7 +150,7 @@ Notes on the comparison:
 
 Current status (with schemas):
 
-| section | online-shop | templates/functions |
+| section | online-shop | recipes/functions |
 |---|---|---|
 | functions.meta / files | OK | OK |
 | functions.typesMap | OK | OK |
@@ -207,7 +207,7 @@ Each of these was found by a parity diff. Each is handled where noted.
 - **`#imports` resolution.** tsgo resolves package.json `#imports` subpaths
   with `.js`→`.ts` substitution; TS 6 does not. Go therefore sweeps generated
   files that TS never loads:
-  - templates/functions: 79 vs 77 project files (`.pikku/agent/pikku-agent-types.gen.ts`, `.pikku/services/pikku-meta-service.gen.ts`)
+  - recipes/functions: 79 vs 77 project files (`.pikku/agent/pikku-agent-types.gen.ts`, `.pikku/services/pikku-meta-service.gen.ts`)
   - online-shop: 160 vs 151
 
   So far this has added no state. Watch for it when porting a group that

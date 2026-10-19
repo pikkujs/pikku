@@ -74,7 +74,7 @@ builds anyway (`config`, `logger`, `variables`, `schema`, `secrets`, and the
 per-request `rpc`/`mcp`/`channel`/`userSession`). Units are named for that set —
 `svc-todo-store`, `svc-event-hub-todo-store`, `svc-base` for functions needing
 nothing else — and each records it as `servicesKey` in the manifest. On the
-`templates/functions` app it turns 44 units into 10.
+`recipes/functions` app it turns 44 units into 10.
 
 The deploy target is part of the key, so a `server` unit is named `-server` and
 can never merge with its serverless twin. That is what keeps `services` from

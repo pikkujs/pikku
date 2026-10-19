@@ -18,7 +18,7 @@ const PROJECTS = [
     name: 'pikku-perauset',
   },
   {
-    dir: resolve(import.meta.dirname, '../../..', 'templates/functions'),
+    dir: resolve(import.meta.dirname, '../../..', 'recipes/functions'),
     name: 'templates-functions',
   },
 ]

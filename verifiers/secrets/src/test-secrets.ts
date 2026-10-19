@@ -2,7 +2,7 @@
  * Test file to verify TypedSecretService type inference works correctly.
  * This test validates both compile-time types and runtime behavior.
  *
- * This validates the same pattern used in templates/function-addon:
+ * This validates the same pattern used in recipes/function-addon:
  * - defineSecret with Zod schema for type-safe secrets
  * - TypedSecretService provides compile-time validated access
  */

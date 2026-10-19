@@ -70,7 +70,7 @@ runs:
       shell: bash
       run: |
         start=$SECONDS
-        cd templates/function-addon && bun run pikku && bun run build
+        cd recipes/function-addon && bun run pikku && bun run build
         echo "::notice::⏱ Build function-addon template: $((SECONDS - start))s"
     - name: Generate pikku files
       shell: bash
@@ -91,7 +91,7 @@ runs:
     #
     # The node_modules prune keeps every dependency's own dist and .pikku out.
     #
-    # `templates/functions/pikku` is the scaffold directory that config's
+    # `recipes/functions/pikku` is the scaffold directory that config's
     # `scaffold.pikkuDir` names, and it is build output exactly as `.pikku`
     # is. It has to travel with it: a variable or a secret declared in a
     # scaffold is imported by name from `.pikku`, so shipping one without the
@@ -101,9 +101,9 @@ runs:
       shell: bash
       run: |
         {
-          find packages templates -name node_modules -prune -o -type d \( -name dist -o -name .pikku \) -print -prune \
+          find packages recipes -name node_modules -prune -o -type d \( -name dist -o -name .pikku \) -print -prune \
             -o -path 'packages/*' -type d -name bin -print -prune
-          for dir in templates/functions/pikku; do
+          for dir in recipes/functions/pikku; do
             [ -d "$dir" ] && echo "$dir"
           done
         } > "$RUNNER_TEMP/build-output.list"
