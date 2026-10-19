@@ -1,6 +1,6 @@
 {
   "name": "@pikkustudio/addon-registry",
-  "version": "1.0.0",
+  "version": "0.12.0",
   "pikkuCore": "^0.12.0",
   "contractHash": "fixture"
 }

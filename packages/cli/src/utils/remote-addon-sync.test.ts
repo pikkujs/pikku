@@ -542,7 +542,7 @@ describe('the registry remote addon', () => {
   test("the CLI's build syncs the registry SDK like any consumer", async () => {
     const rootDir = cliRegistryProject({ withLock: false })
     try {
-      const registry = fakeRegistry({ '1.0.0': fixtureTgz() })
+      const registry = fakeRegistry({ '0.12.0': fixtureTgz() })
       const result = await runAddonSync({
         config: { rootDir, srcDirectories: ['src'] },
         logger: { debug: () => {}, diagnostic: () => {} },
@@ -550,18 +550,18 @@ describe('the registry remote addon', () => {
         download: registry.download,
       })
       assert.deepEqual(registry.calls.resolve, [
-        { name: '@pikkustudio/addon-registry', range: '^1.0.0' },
+        { name: '@pikkustudio/addon-registry', range: '^0.12.0' },
       ])
       assert.deepEqual(
         result?.sdks.map((sdk) => [sdk.name, sdk.version, sdk.source]),
-        [['@pikkustudio/addon-registry', '1.0.0', 'downloaded']]
+        [['@pikkustudio/addon-registry', '0.12.0', 'downloaded']]
       )
       const sdkDir = join(
         rootDir,
         '.pikku',
         'remote',
         '@pikkustudio',
-        'addon-registry@1.0.0'
+        'addon-registry@0.12.0'
       )
       assert.match(
         readFileSync(
@@ -578,7 +578,7 @@ describe('the registry remote addon', () => {
   test("the CLI's committed lock pins the exact registry SDK its build fetches", async () => {
     const rootDir = cliRegistryProject({ withLock: true })
     try {
-      const registry = fakeRegistry({ '1.0.0': fixtureTgz() })
+      const registry = fakeRegistry({ '0.12.0': fixtureTgz() })
       await assert.rejects(
         () =>
           runAddonSync({
@@ -592,7 +592,7 @@ describe('the registry remote addon', () => {
           error.code === ErrorCode.REMOTE_ADDON_SDK_INTEGRITY_MISMATCH
       )
       assert.deepEqual(registry.calls.resolve, [
-        { name: '@pikkustudio/addon-registry', range: '1.0.0' },
+        { name: '@pikkustudio/addon-registry', range: '0.12.0' },
       ])
       assert.equal(registry.calls.download, 0)
     } finally {
