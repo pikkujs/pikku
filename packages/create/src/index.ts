@@ -104,11 +104,6 @@ const templates = [
     supports: ['http', 'fullstack'],
   },
   {
-    template: 'nextjs-full',
-    description: 'A Nextjs simple book application',
-    supports: ['http', 'fullstack'],
-  },
-  {
     template: 'tanstack',
     description: 'A TanStack Start frontend served by pikku from one origin',
     supports: ['http', 'fullstack'],
@@ -220,7 +215,6 @@ const templates = [
  * pikkujs/pikku repo. Value: the directory name under `templates/`.
  */
 const standaloneTemplates: Record<string, string> = {
-  'nextjs-full': 'nextjs-app-starter',
   'online-shop': 'online-shop',
   'field-service': 'field-service',
   'hotel-management': 'hotel-management',

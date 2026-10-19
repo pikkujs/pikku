@@ -303,7 +303,7 @@ fi
 # pruned from the bundle. metaService is declared serverlessIncompatible in
 # templates/functions/pikku.config.json.
 case "$TEMPLATE_NAME" in
-    aws-lambda|aws-lambda-websocket|cloudflare-workers|cloudflare-websocket|nextjs|nextjs-full)
+    aws-lambda|aws-lambda-websocket|cloudflare-workers|cloudflare-websocket|nextjs)
         log_info "Regenerating with --target serverless for $TEMPLATE_NAME..."
         if [ "$PACKAGE_MANAGER" = "yarn" ]; then
             # `yarn pikku all` would treat `all` as a yarn subcommand; use `yarn run`
@@ -327,7 +327,7 @@ case "$TEMPLATE_NAME" in
     # These templates type-check as part of their own build: a frontend build
     # generates sources (Next's route types, TanStack's route tree) that a bare
     # `tsc` run beforehand would not find.
-    nextjs|nextjs-full|tanstack)
+    nextjs|tanstack)
         if ! "$PACKAGE_MANAGER" run build; then
             log_error "Build failed"
             exit 1

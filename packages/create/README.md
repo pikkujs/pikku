@@ -87,7 +87,6 @@ npm create pikku@latest -- --template express --name my-app --install --package-
 | Template           | Description                  | Features         |
 | ------------------ | ---------------------------- | ---------------- |
 | `nextjs`           | Next.js hello world template | HTTP, Full-stack |
-| `nextjs-full`      | Next.js book application     | HTTP, Full-stack |
 | `starter-template` | Opinionated starter template | HTTP, Full-stack |
 
 ### Application Templates

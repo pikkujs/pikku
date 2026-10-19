@@ -660,8 +660,6 @@ jobs:
             template: cloudflare-websocket
           - package-manager: bun
             template: nextjs
-          - package-manager: bun
-            template: nextjs-full
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -766,7 +764,6 @@ jobs:
       fail-fast: false
       matrix:
         template:
-          - nextjs-full
           - online-shop
           - field-service
           - hotel-management
