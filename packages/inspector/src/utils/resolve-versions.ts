@@ -92,7 +92,6 @@ export function resolveLatestVersions(
       if (state.rpc.exposedMeta[baseName] === oldId) {
         state.rpc.exposedMeta[baseName] = newId
       }
-
       updateWiringReferences(state, oldId, newId)
     } else {
       const latest = group.explicit.reduce((a, b) =>
@@ -116,6 +115,27 @@ export function resolveLatestVersions(
         const fileEntry = state.rpc.internalFiles.get(latestId)
         if (fileEntry) {
           state.rpc.exposedFiles.set(latestId, fileEntry)
+        }
+      }
+    }
+
+    // A remote caller names a version the same way: `fn` is the latest remote
+    // version, and every remote `fn@vN` stays callable by its own id.
+    const remote = [
+      ...group.explicit,
+      ...(group.unversioned
+        ? [{ id: state.rpc.internalMeta[baseName]!, version: maxVersion + 1 }]
+        : []),
+    ].filter(({ id }) => functionsMeta[id]?.remote === true)
+    if (remote.length > 0) {
+      state.rpc.remoteMeta[baseName] = remote.reduce((a, b) =>
+        a.version > b.version ? a : b
+      ).id
+      for (const { id } of remote) {
+        state.rpc.remoteMeta[id] = id
+        const fileEntry = state.rpc.internalFiles.get(id)
+        if (fileEntry) {
+          state.rpc.remoteFiles.set(id, fileEntry)
         }
       }
     }

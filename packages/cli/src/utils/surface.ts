@@ -169,8 +169,6 @@ export function readSurface(
 
   for (const [id, raw] of Object.entries(snapshot.functions ?? {})) {
     const meta = (raw ?? {}) as FunctionMetaEntry
-    // A remote function is another service's surface, not this one's.
-    if (meta.remote === true) continue
     const parsed = parseVersionedId(id)
     const inputSchemaName = meta.inputSchemaName ?? null
     const outputSchemaName = meta.outputSchemaName ?? null

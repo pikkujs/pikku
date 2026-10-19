@@ -384,9 +384,10 @@ check(
       'function/pikku-functions-meta.gen.json',
       'manifest.json',
       'rpc/pikku-rpc-wirings-map.remote.gen.d.ts',
+      'schemas/pikku-sdk-schemas.gen.json',
       'workflow/pikku-workflow-map.gen.d.ts',
     ].join(','),
-  `the SDK holds exactly the five spec files (${sdkEntries.join(', ')})`
+  `the SDK holds exactly the six spec files (${sdkEntries.join(', ')})`
 )
 const sdkDir = join(remoteAddonDir, '.pikku', 'sdk')
 const sdkManifest = JSON.parse(
@@ -406,9 +407,17 @@ const sdkMeta = JSON.parse(
   )
 )
 check(
-  Object.keys(sdkMeta).join(',') === 'listNotes' &&
-    /^[0-9a-f]{16}$/.test(sdkMeta.listNotes.contractHash ?? ''),
-  'the SDK meta lists the remote function with its contract hash'
+  Object.keys(sdkMeta).join(',') === 'listNotes@v1,listNotes@v2' &&
+    Object.values(sdkMeta).every((m) =>
+      /^[0-9a-f]{16}$/.test(m.contractHash ?? '')
+    ),
+  `the SDK meta lists both versions of the remote function with their contract hashes (${Object.keys(sdkMeta).join(', ')})`
+)
+check(
+  Object.values(sdkMeta).every(
+    (m) => m.versions?.join(',') === '1,2' && m.latestVersion === 2
+  ),
+  'each SDK entry carries the versions the SDK can call and the latest of them'
 )
 const sdkRpcMap = readFileSync(
   join(sdkDir, 'rpc', 'pikku-rpc-wirings-map.remote.gen.d.ts'),
@@ -423,6 +432,16 @@ contains(
   sdkRpcMap,
   "readonly 'listNotes': RPCHandler<null, ListNotesOutput>",
   'the remote map types the zod contract'
+)
+contains(
+  sdkRpcMap,
+  "readonly 'listNotes@v1': RPCHandler<null, ListNotesV1Output>",
+  'the remote map keeps v1 callable by its own id'
+)
+contains(
+  sdkRpcMap,
+  "readonly 'listNotes@v2': RPCHandler<null, ListNotesOutput>",
+  'the remote map names the latest version explicitly too'
 )
 check(
   !/CountNotes|countNotes/.test(

@@ -210,7 +210,7 @@ func BuildCurrentContracts(st *state.State) *Contracts {
 	cache := &schemaCache{schemas: &st.Schemas}
 	tm := st.Functions.TypesMap
 	st.Functions.Meta.Each(func(id string, meta *state.FunctionMeta) {
-		if meta == nil || boolPtrTrue(meta.Remote) || boolPtrTrue(meta.WebhookReceive) {
+		if meta == nil || boolPtrTrue(meta.WebhookReceive) {
 			return
 		}
 		key, version := contractVersion(id, meta)
@@ -246,7 +246,7 @@ func ComputeContractHashes(st *state.State) *Contracts {
 func ExtractContractsFromMeta(st *state.State) *Contracts {
 	result := &Contracts{}
 	st.Functions.Meta.Each(func(id string, meta *state.FunctionMeta) {
-		if meta == nil || boolPtrTrue(meta.Remote) || boolPtrTrue(meta.WebhookReceive) || meta.ContractHash == "" {
+		if meta == nil || boolPtrTrue(meta.WebhookReceive) || meta.ContractHash == "" {
 			return
 		}
 		key, version := contractVersion(id, meta)
