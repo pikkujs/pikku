@@ -18,7 +18,7 @@ When the package is inspected as an addon (`isAddon`), `addFunctions` checks eve
   declared in the addon's source, followed through custom aliases. Types from
   `@pikku/core` are allowed.
 
-**Why:** `pikku sdk` ships a remote addon's contract as a types-only SDK that may
+**Why:** an addon's `pikku all` packs a remote addon's contract as a types-only SDK that may
 import nothing but its own files and `@pikku/core`. A zod schema becomes an inline
 custom type. A TypeScript type becomes `import type { X } from '../../../src/...'`,
 a path the consumer does not have.

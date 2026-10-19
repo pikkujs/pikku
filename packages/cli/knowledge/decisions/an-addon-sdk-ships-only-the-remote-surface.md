@@ -1,14 +1,17 @@
 ---
 type: decision
-title: An addon SDK ships only the remote surface, and its version is checked against the last one
-description: pikku sdk re-serializes the remote RPC map, exposed workflows and a pruned types map into five files, refuses any import outside the SDK and @pikku/core, and with --bump-from refuses a version below the surface-diff bump
+title: An addon SDK ships only the remote surface, and pikku all packs it on every run
+description: For an addon, pikku all re-serializes the remote RPC map, exposed workflows and a pruned types map into five files, refuses any import outside the SDK and @pikku/core, and packs them at the package.json version; pikku versions check, not the SDK step, gates a contract change
 tags: [cli, addon, sdk]
 ---
 
-# An addon SDK ships only the remote surface, and its version is checked against the last one
+# An addon SDK ships only the remote surface, and pikku all packs it on every run
 
-`pikku sdk` (`functions/commands/sdk.ts`) writes `.pikku/sdk/` and packs
-`<scope>-<name>-<version>.sdk.tgz` with exactly five files, all at the archive root:
+For an addon (`"addon": true`), `pikku all` ends with the `pikkuAddonSdk` step
+(`functions/wirings/addon-sdk/pikku-command-addon-sdk.ts`). It writes
+`.pikku/sdk/` and packs `<scope>-<name>-<version>.sdk.tgz` beside package.json
+with exactly five files, all at the archive root. An app gets neither, and
+there is no separate command to remember:
 
 - `manifest.json`
 - `rpc/pikku-rpc-wirings-map.remote.gen.d.ts`
@@ -36,8 +39,8 @@ carries `versions` — every version of its base name in the SDK — and
 [a remote call always names a version](../../../core/knowledge/decisions/internals/a-remote-call-always-names-a-version.md)).
 `rpc.remoteMeta` lists `fn` and each remote `fn@vN`, so the remote map types
 both. Each entry also carries the JSON schemas it names (`inputSchema`,
-`outputSchema`), so `--bump-from` can tell a loosened contract from a
-tightened one. They live in the meta rather than a sixth file because the
+`outputSchema`), so a consumer or registry can read the contract without the
+addon. They live in the meta rather than a sixth file because the
 registry's publish check accepts exactly these five paths.
 
 **Types only.** The shared custom-types file is inlined as the
@@ -46,16 +49,21 @@ relative import is re-pointed at its SDK sibling. Any other import is refused,
 with a pointer to zod (PKU922). This covers a `src/` path and any package other
 than `@pikku/core`.
 
-**Version.** The version comes from `--version`, or else from `package.json`.
-`--bump-from <tgz|dir|manifest.json>` diffs the previous SDK's meta against this
-one with `surface-diff`, and refuses a version below
-`bumpVersion(previous, verdict)`. With both SDKs' schemas, a contract changed in
-place is classed as loosened (minor) or tightened (major); against an SDK cut
-before schemas were packed, a moved hash counts as major. Adding `fn@v2` beside
-`fn@v1` is minor, and dropping `fn@v1` is a removal, so major.
+**Version.** The version is package.json's, and the step packs nothing (with a
+warning) when it is not semver or when package.json names no `@pikku/core`. The
+archive is deterministic (fixed mtime, mode and owner), so the same contract
+packs to the same bytes and the registry's integrity tells a re-run from a
+change.
+
+**The bump is not this step's call.** `pikku versions check` covers
+`remote: true` functions, so a remote contract changed without a new
+`version` fails there, the same gate as every other function. An SDK step that
+diffed against the previous SDK would be a second gate, with its own rules,
+over the same contracts.
 
 **What it rules out:**
 
 - an SDK that leaks internal function or workflow types;
 - an SDK that imports the addon's source;
-- republishing a changed contract under a patch or minor bump.
+- a second, SDK-only version gate beside `pikku versions check`;
+- an addon build whose SDK is stale because a second command was skipped.

@@ -4,4 +4,4 @@
 '@pikku/cli': patch
 ---
 
-Add `pikku sdk`, which packs an addon's remote contract into a types-only `<scope>-<name>-<version>.sdk.tgz` (manifest, remote RPC map, exposed workflow map, agent map, and remote/exposed function meta with contract hashes). The command refuses any import outside the SDK and `@pikku/core`, and with `--bump-from` it refuses a version below the bump the contract change requires. Inside an addon, a `remote: true` function typed with generics or a named source type is now critical PKU922: its input and output must be zod schemas.
+For an addon, `pikku all` now packs its remote contract into a types-only `.pikku/sdk/` and `<scope>-<name>-<version>.sdk.tgz` at the package.json version (manifest, remote RPC map, exposed workflow map, agent map, and remote/exposed function meta with contract hashes and schemas). The archive is deterministic, and the SDK refuses any import outside itself and `@pikku/core`. Inside an addon, a `remote: true` function typed with generics or a named source type is now critical PKU922: its input and output must be zod schemas.

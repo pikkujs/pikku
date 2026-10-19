@@ -352,24 +352,18 @@ run(
   remoteAddonDir
 )
 
-// The remote addon's consumers get its contract as a types-only SDK. Its one
-// remote function is zod-typed (PKU922 refuses a generic one), so the SDK can
-// carry it without a single import into the addon's src/.
-const sdkPackDir = join(remoteAddonDir, '.pikku', 'sdk-pack')
-run(
-  'remote addon: pikku sdk',
-  'node',
-  [PIKKU, 'sdk', '--pack-dir', sdkPackDir],
-  remoteAddonDir
-)
+// The remote addon's consumers get its contract as a types-only SDK, which
+// `pikku all` cut beside package.json at its version. Its remote function is
+// zod-typed (PKU922 refuses a generic one), so the SDK can carry it without a
+// single import into the addon's src/.
 console.log('\n▶ assert: the remote addon’s SDK is types only')
 const sdkTarball = join(
-  sdkPackDir,
+  remoteAddonDir,
   'pikku-verifier-db-remote-addon-0.1.0.sdk.tgz'
 )
 check(
   existsSync(sdkTarball),
-  'pikku sdk packed <scope>-<name>-<version>.sdk.tgz'
+  'pikku all packed <scope>-<name>-<version>.sdk.tgz on its own'
 )
 const sdkEntries = execFileSync('tar', ['tzf', sdkTarball], {
   encoding: 'utf8',
@@ -448,6 +442,59 @@ check(
   ),
   'the internal countNotes and its CountNotesOutput type are nowhere in the SDK'
 )
+
+// The same contract packs to the same bytes, so a registry can tell a re-run
+// from a changed SDK by its integrity alone.
+const firstPack = readFileSync(sdkTarball)
+run('remote addon: pikku all (again)', 'node', [PIKKU, 'all'], remoteAddonDir)
+check(
+  readFileSync(sdkTarball).equals(firstPack),
+  'a second pikku all packs the same SDK bytes'
+)
+
+// No SDK step decides whether the version moved: `pikku versions check` does,
+// and it covers `remote: true` functions. A manifest that recorded another
+// output for the published listNotes@v2 is a contract change without a bump.
+const versionsFile = join(remoteAddonDir, 'versions.pikku.json')
+try {
+  run(
+    'remote addon: pikku versions init',
+    'node',
+    [PIKKU, 'versions', 'init'],
+    remoteAddonDir
+  )
+  // `init` writes an empty manifest; `update` records the current contracts.
+  run(
+    'remote addon: pikku versions update',
+    'node',
+    [PIKKU, 'versions', 'update'],
+    remoteAddonDir
+  )
+  run(
+    'remote addon: pikku versions check',
+    'node',
+    [PIKKU, 'versions', 'check'],
+    remoteAddonDir
+  )
+  const versions = JSON.parse(readFileSync(versionsFile, 'utf8'))
+  check(
+    versions.contracts.listNotes?.versions?.['2'] !== undefined,
+    'versions init records the remote listNotes@v2 contract'
+  )
+  versions.contracts.listNotes.versions['2'].outputHash = '00000000'
+  writeFileSync(versionsFile, JSON.stringify(versions, null, 2))
+  const drifted = expectFailure(
+    'remote addon: pikku versions check (listNotes changed without a bump)',
+    [PIKKU, 'versions', 'check'],
+    remoteAddonDir
+  )
+  check(
+    drifted.status !== 0,
+    'pikku versions check refuses a remote contract change without a version bump'
+  )
+} finally {
+  rmSync(versionsFile, { force: true })
+}
 
 console.log('\n▶ assert: the published artifact describes the addon’s table')
 // An addon roots its whole generated tree under `.pikku/addon`, so that every

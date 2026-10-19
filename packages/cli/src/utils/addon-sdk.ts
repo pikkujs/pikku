@@ -1,13 +1,8 @@
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, posix, relative, resolve } from 'node:path'
-import semver from 'semver'
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, join, posix, resolve } from 'node:path'
 import { computeContractHash, TypesMap } from '@pikku/inspector/lite'
 import { parseVersionedId } from '@pikku/core/utils'
-import { bumpVersion } from './release.js'
-import { SURFACE_SCHEMA_VERSION, type Surface } from './surface.js'
-import { computeSurfaceDiff, type SurfaceChanges } from './surface-diff.js'
-import { unpackTarGz } from './sdk-tarball.js'
 
 /**
  * An addon SDK is the types-only contract a `wireRemoteAddon` consumer builds
@@ -216,7 +211,7 @@ type FunctionMetaEntry = {
   versions?: number[]
   /** The version a call without `@vN` is sent to. */
   latestVersion?: number
-  /** The JSON schema `inputSchemaName` names, so `--bump-from` can diff it. */
+  /** The JSON schema `inputSchemaName` names. */
   inputSchema?: unknown
   /** The JSON schema `outputSchemaName` names. */
   outputSchema?: unknown
@@ -312,25 +307,6 @@ export const sdkDefaultVersions = (
   return out
 }
 
-/**
- * The schemas an SDK's functions carry, by the name each one is filed under,
- * for `surface-diff`. An SDK cut before schemas were packed carries none.
- */
-export const sdkSchemas = (
-  functions: Record<string, FunctionMetaEntry>
-): Record<string, unknown> => {
-  const out: Record<string, unknown> = {}
-  for (const meta of Object.values(functions)) {
-    if (meta.inputSchemaName && meta.inputSchema !== undefined) {
-      out[meta.inputSchemaName] = meta.inputSchema
-    }
-    if (meta.outputSchemaName && meta.outputSchema !== undefined) {
-      out[meta.outputSchemaName] = meta.outputSchema
-    }
-  }
-  return out
-}
-
 export const aggregateContractHash = (
   functions: Record<string, { contractHash?: string }>
 ): string => {
@@ -400,7 +376,7 @@ export const buildSdkFiles = (
 
   if (!existsSync(sources.functionsMeta)) {
     throw new Error(
-      `${sources.functionsMeta} does not exist. Run \`pikku all\` in the addon before \`pikku sdk\`.`
+      `${sources.functionsMeta} does not exist. \`pikku all\` writes it before it packs the SDK.`
     )
   }
   const functions = sdkFunctionsMeta(
@@ -418,114 +394,4 @@ export const buildSdkFiles = (
   }
   files.set(SDK_MANIFEST, JSON.stringify(manifest, null, 2) + '\n')
   return { files, manifest }
-}
-
-/** An SDK's contract: its function meta, each entry carrying its schemas. */
-export interface SdkContract {
-  functions: Record<string, FunctionMetaEntry>
-}
-
-/** A previous SDK, as a `.sdk.tgz`, an unpacked SDK directory, or its manifest.json. */
-export const loadPreviousSdk = (
-  source: string
-): SdkContract & { manifest: SdkManifest } => {
-  if (!existsSync(source)) throw new Error(`Previous SDK not found: ${source}`)
-  let manifestText: string | undefined
-  let metaText: string | undefined
-  if (statSync(source).isDirectory()) {
-    manifestText = readFileSync(join(source, SDK_MANIFEST), 'utf-8')
-    metaText = readFileSync(join(source, SDK_FUNCTIONS_META), 'utf-8')
-  } else if (source.endsWith('.json')) {
-    manifestText = readFileSync(source, 'utf-8')
-    const sibling = join(dirname(source), SDK_FUNCTIONS_META)
-    if (!existsSync(sibling)) {
-      throw new Error(
-        `${relative(process.cwd(), sibling)} is missing beside ${source}; --bump-from needs the previous SDK's function meta to diff against.`
-      )
-    }
-    metaText = readFileSync(sibling, 'utf-8')
-  } else {
-    const files = unpackTarGz(readFileSync(source))
-    manifestText = files.get(SDK_MANIFEST)?.toString('utf-8')
-    metaText = files.get(SDK_FUNCTIONS_META)?.toString('utf-8')
-  }
-  if (!manifestText || !metaText) {
-    throw new Error(
-      `${source} is not an addon SDK: it needs ${SDK_MANIFEST} and ${SDK_FUNCTIONS_META}.`
-    )
-  }
-  return {
-    manifest: JSON.parse(manifestText),
-    functions: JSON.parse(metaText),
-  }
-}
-
-/**
- * An SDK's contract as a surface `surface-diff` can compare. With the schemas
- * the functions name, a changed contract is told apart as loosened (minor) or
- * tightened (major); an SDK cut before schemas were packed has only hashes, and
- * `surface-diff` counts a moved hash as breaking. A version the SDK still
- * carries is published, so dropping `fn@v1` for `fn@v2` is a removal.
- */
-export const sdkSurface = ({ functions }: SdkContract): Surface => ({
-  schemaVersion: SURFACE_SCHEMA_VERSION,
-  generatedAt: '',
-  functions: Object.fromEntries(
-    Object.entries(functions).map(([id, meta]) => {
-      const parsed = parseVersionedId(id)
-      return [
-        id,
-        {
-          key: parsed.baseName,
-          version: versionOf(id, meta),
-          inputSchemaName: meta.inputSchemaName ?? null,
-          outputSchemaName: meta.outputSchemaName ?? null,
-          contractHash: meta.contractHash,
-        },
-      ]
-    })
-  ),
-  schemas: sdkSchemas(functions),
-  wirings: {},
-  publishedVersions: Object.fromEntries(
-    Object.entries(functions).map(([id, meta]) => [
-      parseVersionedId(id).baseName,
-      meta.versions ?? [versionOf(id, meta)],
-    ])
-  ),
-})
-
-export interface SdkBumpCheck {
-  previousVersion: string
-  requiredVersion: string
-  changes: SurfaceChanges
-}
-
-/**
- * The lowest version this SDK may be published at, given the previous one, and
- * a refusal when `version` is below it.
- */
-export const checkSdkBump = (
-  previous: SdkContract & { manifest: SdkManifest },
-  current: SdkContract,
-  version: string,
-  baseline: string
-): SdkBumpCheck => {
-  const changes = computeSurfaceDiff(
-    sdkSurface(previous),
-    sdkSurface(current),
-    baseline
-  )
-  const previousVersion = previous.manifest.version
-  const requiredVersion = bumpVersion(previousVersion, changes.verdict)
-  if (semver.lt(version, requiredVersion)) {
-    const reasons = changes.changes
-      .map((c) => `  - ${c.id}: ${c.reasons.join('; ')}`)
-      .join('\n')
-    throw new Error(
-      `SDK version ${version} is too low: the contract change since ${previousVersion} is ${changes.verdict}, so the SDK must be at least ${requiredVersion}.` +
-        (reasons ? `\n${reasons}` : '')
-    )
-  }
-  return { previousVersion, requiredVersion, changes }
 }

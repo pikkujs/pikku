@@ -178,7 +178,7 @@ export const listNotes = pikkuSessionlessFunc({
 }) // v2
 ```
 
-`pikku sdk` records each contract function's `versions` and `latestVersion` in
+An addon's `pikku all` packs its SDK, which records each contract function's `versions` and `latestVersion` in
 the SDK's function meta, and the remote map types both `listNotes` and every
 `listNotes@vN`. On the consumer:
 
@@ -189,10 +189,9 @@ the SDK's function meta, and the remote map types both `listNotes` and every
   versioned keeps its bare name.
 
 A version the host no longer serves is a 404 `RPCNotFoundError` saying so, and
-that the SDK needs updating; the host never answers it with its latest. With
-`--bump-from`, `pikku sdk` reads the previous SDK's schemas: a contract loosened
-in place is minor, tightened is major, a new version beside the old one is
-minor, and a dropped version is major.
+that the SDK needs updating; the host never answers it with its latest.
+`pikku versions check` covers `remote: true` functions, so changing a published
+remote contract without a new `version` fails it, as for any other function.
 
 ### Exposing it from the consumer
 

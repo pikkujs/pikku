@@ -702,6 +702,12 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     await workflow.do('Versions update', 'pikkuVersionsUpdate', null)
 
+    // An addon's types-only SDK, from the maps and meta written above, at the
+    // package.json version. `pikku versions check` gates a contract change.
+    if (config.addon) {
+      await workflow.do('Addon SDK', 'pikkuAddonSdk', null)
+    }
+
     // Last, because a leaf index only exists for an entry file that was
     // actually generated — that absence is what makes `#pikku/http` fail to
     // resolve in an addon rather than resolve to a module missing the export.
