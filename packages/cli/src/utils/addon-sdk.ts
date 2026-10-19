@@ -295,8 +295,10 @@ export const sdkFunctionsMeta = (
 }
 
 /**
- * The id a call without `@vN` goes to, for each base name in an SDK's meta.
- * Every id carries its version, an unversioned function's being v1.
+ * The id a call without `@vN` goes to, for each base name in an SDK's meta
+ * whose latest version the host files under `fn@vN`. A function that was never
+ * versioned is filed under its bare name, so its calls keep that name: a host
+ * looks an addon function up by its exact id, and has no `fn@v1` for it.
  */
 export const sdkDefaultVersions = (
   functions: Record<string, FunctionMetaEntry>
@@ -304,8 +306,8 @@ export const sdkDefaultVersions = (
   const out: Record<string, string> = {}
   for (const [id, meta] of Object.entries(functions)) {
     if (meta.latestVersion === undefined) continue
-    const { baseName } = parseVersionedId(id)
-    out[baseName] = formatVersionedId(baseName, meta.latestVersion)
+    const { baseName, version } = parseVersionedId(id)
+    if (version === meta.latestVersion) out[baseName] = id
   }
   return out
 }

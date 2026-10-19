@@ -18,6 +18,10 @@ the consumer's codegen fills from the SDK's `latestVersion` (cli
 `remoteAddonDefaultVersions`, written into the rpc meta file). So
 `POST /rpc/fn@v2` goes out even after the host has added v3. An SDK cut before
 versions were packed registers nothing, and the bare name is sent as before.
+Neither does a function that was never versioned: the default is the SDK's own
+id for the latest version, and for an unversioned `fn` that id is `fn`. A host
+looks an addon's function up by its exact id (`function.meta[fn]`), so
+sending `fn@v1` there would be a 404 against every host, old or new.
 
 **The host does not fall back.** `resolvePikkuFunction` resolves an unknown
 `fn@vN` to `rpc[fn]` — internal callers rely on that (workflows and the
