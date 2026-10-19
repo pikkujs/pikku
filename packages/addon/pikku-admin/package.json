@@ -1,6 +1,6 @@
 {
   "name": "@pikku/addon-admin",
-  "version": "0.12.14",
+  "version": "0.12.15",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -36,7 +36,7 @@
   },
   "peerDependencies": {
     "@pikku/better-auth": "^0.12.57",
-    "@pikku/core": "^0.12.144",
+    "@pikku/core": "^0.12.146",
     "zod": "^4"
   },
   "peerDependenciesMeta": {
@@ -46,7 +46,7 @@
   },
   "devDependencies": {
     "@pikku/better-auth": "^0.12.57",
-    "@pikku/cli": "^0.12.192",
+    "@pikku/cli": "^0.12.196",
     "@pikku/core": "*",
     "@standard-schema/spec": "^1.1.0",
     "zod": "^4"

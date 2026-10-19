@@ -1,5 +1,28 @@
 # @pikku/inspector-go
 
+## 0.12.5
+
+### Patch Changes
+
+- c416188: `wireRemoteAddon({ package: '@scope/name@^1.4.0' })` pins a remote addon by version range instead of a devDependency. The first step of `pikku all` resolves the range against the addon registry (`registry` in `pikku.config.json`, default `https://registry.pikkustudio.app`), verifies the SDK's sha512, extracts it to `.pikku/remote/<name>@<version>` and records it in the committed `pikku-addons.lock`. Codegen imports the remote addon's RPC, workflow and agent maps from the SDK, PKU338 checks the SDK against the lock, and `pikku update` reports versioned addons with the exact hand edit (file:line, old and new literal); it never rewrites source, and `--update` only touches package.json. New codes: PKU350 (package not a literal), PKU351 (SDK built for another @pikku/core), PKU352 (integrity mismatch), PKU353 (invalid package spec).
+- fda33d9: For an addon, `pikku all` now packs its remote contract into a types-only `.pikku/sdk/` and `<scope>-<name>-<version>.sdk.tgz` at the package.json version (manifest, remote RPC map, exposed workflow map, agent map, and remote/exposed function meta with contract hashes and schemas). The archive is deterministic, and the SDK refuses any import outside itself and `@pikku/core`. Inside an addon, a `remote: true` function typed with generics or a named source type is now critical PKU922: its input and output must be zod schemas.
+- c2314ca: Separate the mesh from remote addons, make addon `expose` opt-in, and stop passing remote addon errors through.
+
+  **Breaking — the mesh is renamed.** `PIKKU_REMOTE_SECRET` → `PIKKU_MESH_SECRET`, `POST /remote/rpc/:rpcName` → `POST /mesh/rpc/:rpcName`, `rpc.remote()` → `rpc.mesh()`, `pikkuRemoteAuthMiddleware` → `pikkuMeshAuthMiddleware`, `@pikku/core/remote` (`buildRemoteHeaders`) → `@pikku/core/mesh` (`buildMeshHeaders`), `pikku enable remote-rpc` / `scaffold.remoteRpc` → `pikku enable mesh-rpc` / `scaffold.meshRpc`, and the queue `pikku-remote-internal-rpc` → `pikku-mesh-rpc`. Mesh tokens now use audience `pikku-mesh` and HKDF info `pikku:mesh-session`, so every unit of a split deploy must be released together. `remote: true` on a function is unchanged.
+
+  **Breaking — `wireAddon({ expose })` is opt-in.** Installing an addon no longer puts its `expose: true` functions on `POST /rpc`. `expose: true` on the wiring opens them, a list opens the named ones, and a list can no longer open a function the addon did not declare `expose: true` (PKU343). The "exposed function has no gate" warning moves from the addon's own build to the app that opts in. OpenAPI-generated addons now declare every operation `expose: true`, so their install-time lists keep working.
+
+  **Breaking — `wireRemoteAddon` uses the host's public RPC route.** Calls go to `{serverUrl}/rpc/<fn>` with `{ rpcName, data }` and `x-pikku-remote-contract: 1`; a host answers such a call only for functions that are `expose: true` and `remote: true`. `wireRemoteAddon` gains `expose` (forwarded from `rpc.exposed`, after the caller's `addonMayReach` check), `timeoutMs` (default 30s) and a `headers` hook. `RemoteAddonRequestError` is removed: a registered `PikkuError` named by a 4xx is rebuilt with its status and message, any other 4xx becomes the standard error for its status without the body, and a 5xx, network failure or unreadable body becomes `RemoteAddonFailedError` (502) and is logged on the consumer. A timeout is `RemoteAddonTimeoutError` (504).
+
+- 6fe33e9: Remote addon calls now carry a function version. `pikku versions check` covers `remote: true` functions. The addon SDK records each contract function's `versions` and `latestVersion` and types `fn` and every `fn@vN` in the remote map. A consumer sends an explicit `ns:fn@vN` as it is and a bare `ns:fn` to the newest version in its SDK. On the host, `rpc.exposed` answers a version it no longer serves with a 404 `RPCNotFoundError` instead of falling back to the latest. `RPCNotFoundError` takes an optional message.
+- Updated dependencies [c416188]
+- Updated dependencies [fda33d9]
+- Updated dependencies [c2314ca]
+- Updated dependencies [bf1b54c]
+- Updated dependencies [6fe33e9]
+  - @pikku/core@0.12.146
+  - @pikku/inspector@0.12.110
+
 ## 0.12.4
 
 ### Patch Changes

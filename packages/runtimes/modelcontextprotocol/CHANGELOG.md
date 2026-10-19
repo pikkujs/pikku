@@ -1,3 +1,14 @@
+## 0.12.19
+
+### Patch Changes
+
+- 3ff405b: An MCP server whose every tool, resource and prompt needs a session now challenges `tools/list`, `resources/list` and `prompts/list` without credentials, as it already did `initialize`. Before, the list of names was readable by anyone.
+- Updated dependencies [c416188]
+- Updated dependencies [c2314ca]
+- Updated dependencies [bf1b54c]
+- Updated dependencies [6fe33e9]
+  - @pikku/core@0.12.146
+
 ## 0.12.18
 
 ### Patch Changes
