@@ -139,6 +139,34 @@ describe('serializeSdkSources', () => {
       rmSync(root, { recursive: true, force: true })
     }
   })
+
+  test('a versioned remote function is callable as fn and as each fn@vN', () => {
+    const state = addonState()
+    state.rpc.remoteMeta = {
+      listNotes: 'listNotes@v2',
+      'listNotes@v1': 'listNotes@v1',
+      'listNotes@v2': 'listNotes@v2',
+    }
+    state.resolvedIOTypes['listNotes@v1'] = {
+      inputType: 'null',
+      outputType: 'NoteRow',
+    }
+    state.resolvedIOTypes['listNotes@v2'] = {
+      inputType: 'null',
+      outputType: 'ListNotesOutput',
+    }
+    const rpcMap = serializeSdkSources(logger, state, paths('/unused')).rpcMap
+      .content
+    assert.match(
+      rpcMap,
+      /readonly 'listNotes': RPCHandler<null, ListNotesOutput>/
+    )
+    assert.match(rpcMap, /readonly 'listNotes@v1': RPCHandler<null, NoteRow>/)
+    assert.match(
+      rpcMap,
+      /readonly 'listNotes@v2': RPCHandler<null, ListNotesOutput>/
+    )
+  })
 })
 
 test('pruneTypesMap follows custom types to what they reference', () => {

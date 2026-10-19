@@ -11,6 +11,23 @@ import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 export const NoteRows = z.array(z.object({ id: z.string(), body: z.string() }))
 
+export const NoteIds = z.array(z.object({ id: z.string() }))
+
+/**
+ * The first version of `listNotes`, still served to consumers whose SDK was
+ * cut before the body was added. A versioned remote function is called as
+ * `listNotes@v1`; `listNotes` alone is the latest.
+ */
+export const listNotesV1 = pikkuSessionlessFunc({
+  description: 'Lists the ids of the notes stored on the host',
+  version: 1,
+  func: async ({ kysely }) =>
+    await kysely.selectFrom('notes').select(['id']).orderBy('id').execute(),
+  output: NoteIds,
+  remote: true,
+  tags: ['addon'],
+})
+
 export const listNotes = pikkuSessionlessFunc({
   description: 'Lists the notes stored on the host that runs this addon',
   func: async ({ kysely }) =>

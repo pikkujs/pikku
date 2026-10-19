@@ -138,6 +138,33 @@ func (s *Context) ResolveLatestVersions() {
 				}
 			}
 		}
+		// A remote caller names a version the same way: base is the latest
+		// remote version, and every remote id stays callable by its own name.
+		remote := []explicit{}
+		candidates := append([]explicit(nil), g.explicit...)
+		if g.unversioned != "" {
+			candidates = append(candidates, explicit{st.RPC.InternalMeta.At(base), maxVersion + 1})
+		}
+		for _, e := range candidates {
+			if m := meta.At(e.id); m != nil && m.Remote != nil && *m.Remote {
+				remote = append(remote, e)
+			}
+		}
+		if len(remote) > 0 {
+			latestRemote := remote[0]
+			for _, e := range remote[1:] {
+				if !(latestRemote.version > e.version) {
+					latestRemote = e
+				}
+			}
+			st.RPC.RemoteMeta.Set(base, latestRemote.id)
+			for _, e := range remote {
+				st.RPC.RemoteMeta.Set(e.id, e.id)
+				if f, ok := st.RPC.InternalFiles.Get(e.id); ok {
+					st.RPC.RemoteFiles.Set(e.id, f)
+				}
+			}
+		}
 		for _, e := range g.explicit {
 			st.RPC.InvokedFunctions.Add(e.id)
 		}

@@ -21,6 +21,8 @@ function makeState(
       internalFiles: rpc?.internalFiles ?? new Map(),
       exposedMeta: {},
       exposedFiles: new Map(),
+      remoteMeta: {},
+      remoteFiles: new Map(),
       invokedFunctions: new Set(),
       usedAddons: new Set(),
     },
@@ -277,6 +279,60 @@ describe('resolveLatestVersions', () => {
       'createUserV1'
     )
     assert.ok(state.rpc.exposedFiles.has('createUser@v2'))
+  })
+
+  test('remoteMeta carries every remote version, the base naming the latest', () => {
+    const state = makeState({
+      'createUser@v1': {
+        pikkuFuncId: 'createUser@v1',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        version: 1,
+        remote: true,
+      },
+      createUser: {
+        pikkuFuncId: 'createUser',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        remote: true,
+      },
+    })
+    state.rpc.remoteMeta['createUser'] = 'createUser'
+    const { logger } = makeLogger()
+
+    resolveLatestVersions(state, logger)
+
+    assert.deepEqual(state.rpc.remoteMeta, {
+      createUser: 'createUser@v2',
+      'createUser@v1': 'createUser@v1',
+      'createUser@v2': 'createUser@v2',
+    })
+  })
+
+  test('remoteMeta leaves out a version that is not remote', () => {
+    const state = makeState({
+      'createUser@v1': {
+        pikkuFuncId: 'createUser@v1',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        version: 1,
+      },
+      'createUser@v2': {
+        pikkuFuncId: 'createUser@v2',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        version: 2,
+        remote: true,
+      },
+    })
+    const { logger } = makeLogger()
+
+    resolveLatestVersions(state, logger)
+
+    assert.deepEqual(state.rpc.remoteMeta, {
+      createUser: 'createUser@v2',
+      'createUser@v2': 'createUser@v2',
+    })
   })
 
   test('exposedMeta unchanged when base name is not exposed', () => {

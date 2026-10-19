@@ -21,7 +21,9 @@ import {
   SDK_FUNCTIONS_META,
   SDK_MANIFEST,
   SDK_RPC_MAP,
+  SDK_SCHEMAS,
   SDK_WORKFLOW_MAP,
+  sdkDefaultVersions,
   type SdkManifest,
 } from './addon-sdk.js'
 import { packTarGz, unpackTarGz } from './sdk-tarball.js'
@@ -103,7 +105,7 @@ const withAddonOutput = (
 const INFO = { name: '@acme/notes', version: '1.0.0', pikkuCore: '^0.12.0' }
 
 describe('buildSdkFiles', () => {
-  test('emits exactly the five spec files', () => {
+  test('emits exactly the six spec files', () => {
     withAddonOutput({}, (sources) => {
       const { files, manifest } = buildSdkFiles(sources, INFO)
       assert.deepEqual(
@@ -113,6 +115,7 @@ describe('buildSdkFiles', () => {
           SDK_FUNCTIONS_META,
           SDK_MANIFEST,
           SDK_RPC_MAP,
+          SDK_SCHEMAS,
           SDK_WORKFLOW_MAP,
         ].sort()
       )
@@ -176,6 +179,48 @@ describe('buildSdkFiles', () => {
     })
   })
 
+  test('each function carries the versions of its name and the latest of them', () => {
+    const meta = {
+      'listNotes@v1': { remote: true, version: 1, inputs: [], outputs: [] },
+      'listNotes@v3': { remote: true, version: 3, inputs: [], outputs: [] },
+      'listNotes@v2': { remote: true, version: 2, inputs: [], outputs: [] },
+      renameNote: { expose: true, inputs: [], outputs: [] },
+      'internalOnly@v4': { version: 4, inputs: [], outputs: [] },
+    }
+    withAddonOutput({ meta }, (sources) => {
+      const sdk = JSON.parse(
+        buildSdkFiles(sources, INFO).files.get(SDK_FUNCTIONS_META)!
+      )
+      for (const id of ['listNotes@v1', 'listNotes@v2', 'listNotes@v3']) {
+        assert.deepEqual(sdk[id].versions, [1, 2, 3])
+        assert.equal(sdk[id].latestVersion, 3)
+      }
+      assert.deepEqual(sdk.renameNote.versions, [1])
+      assert.equal(sdk.renameNote.latestVersion, 1)
+      assert.deepEqual(sdkDefaultVersions(sdk), {
+        listNotes: 'listNotes@v3',
+        renameNote: 'renameNote@v1',
+      })
+    })
+  })
+
+  test('the schemas the contract names travel with it', () => {
+    const meta = {
+      listNotes: {
+        remote: true,
+        inputs: [],
+        outputs: ['ListNotesOutput'],
+        outputSchemaName: 'ListNotesOutput',
+      },
+    }
+    withAddonOutput({ meta }, (sources) => {
+      assert.deepEqual(
+        JSON.parse(buildSdkFiles(sources, INFO).files.get(SDK_SCHEMAS)!),
+        { ListNotesOutput: { type: 'array' } }
+      )
+    })
+  })
+
   test('an addon with no generated output is told to run pikku all', () => {
     withAddonOutput({}, (sources) => {
       assert.throws(
@@ -220,8 +265,8 @@ describe('checkSdkBump', () => {
     } satisfies SdkManifest,
     functions,
   })
-  // The SDK carries hashes, not schemas, so every named schema is unresolved
-  // and a moved hash is all surface-diff has to go on.
+  // Without the packed schemas every named schema is unresolved, and a moved
+  // hash is all surface-diff has to go on — as for an SDK cut before them.
   const fn = (contractHash: string) => ({
     contractHash,
     outputSchemaName: 'ListNotesOutput',
@@ -229,7 +274,12 @@ describe('checkSdkBump', () => {
   const base = { listNotes: fn('aaaa') }
 
   test('an unchanged contract needs a patch', () => {
-    const check = checkSdkBump(previous('1.2.3', base), base, '1.2.4', 'prev')
+    const check = checkSdkBump(
+      previous('1.2.3', base),
+      { functions: base },
+      '1.2.4',
+      'prev'
+    )
     assert.equal(check.changes.verdict, 'patch')
     assert.equal(check.requiredVersion, '1.2.4')
   })
@@ -237,19 +287,35 @@ describe('checkSdkBump', () => {
   test('an added function needs a minor', () => {
     const current = { ...base, addNote: fn('bbbb') }
     assert.equal(
-      checkSdkBump(previous('1.2.3', base), current, '1.3.0', 'prev')
-        .requiredVersion,
+      checkSdkBump(
+        previous('1.2.3', base),
+        { functions: current },
+        '1.3.0',
+        'prev'
+      ).requiredVersion,
       '1.3.0'
     )
     assert.throws(
-      () => checkSdkBump(previous('1.2.3', base), current, '1.2.4', 'prev'),
+      () =>
+        checkSdkBump(
+          previous('1.2.3', base),
+          { functions: current },
+          '1.2.4',
+          'prev'
+        ),
       /SDK version 1\.2\.4 is too low: the contract change since 1\.2\.3 is minor, so the SDK must be at least 1\.3\.0/
     )
   })
 
   test('a removed function needs a major', () => {
     assert.throws(
-      () => checkSdkBump(previous('1.2.3', base), {}, '1.3.0', 'prev'),
+      () =>
+        checkSdkBump(
+          previous('1.2.3', base),
+          { functions: {} },
+          '1.3.0',
+          'prev'
+        ),
       /is major, so the SDK must be at least 2\.0\.0/
     )
   })
@@ -257,8 +323,89 @@ describe('checkSdkBump', () => {
   test('a changed contract hash needs a major', () => {
     const changed = { listNotes: fn('cccc') }
     assert.equal(
-      checkSdkBump(previous('1.2.3', base), changed, '2.0.0', 'prev').changes
-        .verdict,
+      checkSdkBump(
+        previous('1.2.3', base),
+        { functions: changed },
+        '2.0.0',
+        'prev'
+      ).changes.verdict,
+      'major'
+    )
+  })
+
+  describe('with the schemas packed', () => {
+    const NOTES = 'ListNotesOutput'
+    const withSchema = (schema: unknown) => ({
+      functions: { listNotes: fn(String(JSON.stringify(schema).length)) },
+      schemas: { [NOTES]: schema },
+    })
+    const strict = {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+    }
+    const prior = (schema: unknown) => ({
+      ...previous('1.2.3', {}),
+      ...withSchema(schema),
+    })
+
+    test('a contract loosened in place needs only a minor', () => {
+      const loosened = {
+        type: 'object',
+        properties: { id: { type: 'string' }, tag: { type: 'string' } },
+        required: ['id'],
+      }
+      const check = checkSdkBump(
+        prior(strict),
+        withSchema(loosened),
+        '1.3.0',
+        'prev'
+      )
+      assert.equal(check.changes.verdict, 'minor')
+    })
+
+    test('a contract tightened in place needs a major', () => {
+      const tightened = { ...strict, required: [] }
+      assert.equal(
+        checkSdkBump(prior(strict), withSchema(tightened), '2.0.0', 'prev')
+          .changes.verdict,
+        'major'
+      )
+    })
+  })
+
+  test('a new function version beside the old one needs a minor', () => {
+    const v1 = { ...fn('aaaa'), versions: [1], latestVersion: 1 }
+    const both = {
+      'listNotes@v1': { ...v1, versions: [1, 2], latestVersion: 2 },
+      'listNotes@v2': { ...fn('bbbb'), versions: [1, 2], latestVersion: 2 },
+    }
+    assert.equal(
+      checkSdkBump(
+        previous('1.2.3', { 'listNotes@v1': v1 }),
+        { functions: both },
+        '1.3.0',
+        'prev'
+      ).changes.verdict,
+      'minor'
+    )
+  })
+
+  test('dropping a function version needs a major', () => {
+    const both = {
+      'listNotes@v1': { ...fn('aaaa'), versions: [1, 2], latestVersion: 2 },
+      'listNotes@v2': { ...fn('bbbb'), versions: [1, 2], latestVersion: 2 },
+    }
+    const onlyV2 = {
+      'listNotes@v2': { ...fn('bbbb'), versions: [2], latestVersion: 2 },
+    }
+    assert.equal(
+      checkSdkBump(
+        previous('1.2.3', both),
+        { functions: onlyV2 },
+        '2.0.0',
+        'prev'
+      ).changes.verdict,
       'major'
     )
   })
