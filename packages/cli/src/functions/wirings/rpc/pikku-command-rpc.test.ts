@@ -76,10 +76,8 @@ describe('remoteAddonDefaultVersions', () => {
     } as never)
 
     assert.deepEqual(result, {
-      '@acme/notes': {
-        listNotes: 'listNotes@v2',
-        renameNote: 'renameNote@v1',
-      },
+      // renameNote was never versioned, so its calls keep the bare name.
+      '@acme/notes': { listNotes: 'listNotes@v2' },
     })
   })
 

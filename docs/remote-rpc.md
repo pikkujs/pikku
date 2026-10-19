@@ -185,7 +185,8 @@ the SDK's function meta, and the remote map types both `listNotes` and every
 - `rpc('notes:listNotes@v1', …)` posts `/rpc/listNotes@v1`, unchanged;
 - `rpc('notes:listNotes', …)` posts the newest version **in the consumer's
   SDK** (`/rpc/listNotes@v2`), never whatever the host has added since. Codegen
-  registers that default in the rpc meta file.
+  registers that default in the rpc meta file. A function the addon never
+  versioned keeps its bare name.
 
 A version the host no longer serves is a 404 `RPCNotFoundError` saying so, and
 that the SDK needs updating; the host never answers it with its latest. With

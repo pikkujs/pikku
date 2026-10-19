@@ -207,10 +207,8 @@ describe('buildSdkFiles', () => {
       }
       assert.deepEqual(sdk.renameNote.versions, [1])
       assert.equal(sdk.renameNote.latestVersion, 1)
-      assert.deepEqual(sdkDefaultVersions(sdk), {
-        listNotes: 'listNotes@v3',
-        renameNote: 'renameNote@v1',
-      })
+      // renameNote was never versioned: the host knows it only as renameNote.
+      assert.deepEqual(sdkDefaultVersions(sdk), { listNotes: 'listNotes@v3' })
     })
   })
 
