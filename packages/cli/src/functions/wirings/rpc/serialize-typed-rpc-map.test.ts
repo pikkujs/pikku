@@ -1,5 +1,8 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { serializeTypedRPCMap } from './serialize-typed-rpc-map.js'
 
 describe('serializeTypedRPCMap', () => {
@@ -100,5 +103,56 @@ describe('serializeTypedRPCMap', () => {
     // A second declaration drops every optional field the runner honours —
     // model, temperature, attachments, context — from the call site.
     assert.doesNotMatch(result, /interface AgentInput/)
+  })
+
+  test('a versioned remote addon imports its maps from the synced SDK', () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'pikku-rpc-map-sdk-'))
+    const name = '@pikkustudio/addon-registry'
+    try {
+      const integrity = 'sha512-AAAA'
+      writeFileSync(
+        join(rootDir, 'pikku-addons.lock'),
+        JSON.stringify({
+          lockfileVersion: 1,
+          sdks: { [name]: { range: '^1.4.0', version: '1.4.2', integrity } },
+        })
+      )
+      const sdk = join(rootDir, '.pikku', 'remote', `${name}@1.4.2`)
+      mkdirSync(sdk, { recursive: true })
+      writeFileSync(
+        join(sdk, 'manifest.json'),
+        JSON.stringify({ name, version: '1.4.2' })
+      )
+      writeFileSync(join(sdk, '.integrity'), integrity)
+
+      const result = serializeTypedRPCMap(
+        logger,
+        join(rootDir, '.pikku', 'rpc', 'pikku-rpc-wirings-map.gen.d.ts'),
+        {},
+        emptyTypesMap,
+        {},
+        {},
+        join(rootDir, '.pikku', 'pikku-custom-types.gen.d.ts'),
+        new Map([
+          ['registry', { package: name, range: '^1.4.0', remote: true }],
+        ]),
+        undefined,
+        undefined,
+        rootDir
+      )
+
+      assert.ok(
+        result.includes(
+          `import type { RPCMap as RegistryRPCMap } from '../remote/${name}@1.4.2/rpc/pikku-rpc-wirings-map.remote.gen.js'`
+        )
+      )
+      assert.ok(
+        result.includes(
+          `import type { AgentMap as RegistryAgentMap } from '../remote/${name}@1.4.2/agent/pikku-agent-map.gen.d.js'`
+        )
+      )
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true })
+    }
   })
 })

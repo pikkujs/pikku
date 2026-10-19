@@ -361,6 +361,12 @@ covered, and writes only the delta after an addon upgrade. An addon wired with
 `wireRemoteAddon` contributes no schema at all: its tables belong to the
 deployment that runs its functions.
 
+A `wireRemoteAddon` whose `package` carries a range (`'@scope/name@^1.4.0'`)
+is not installed at all: `pikku addon sync` downloads its SDK into
+`.pikku/remote` and pins it in `pikku-addons.lock` (commit the lock). If
+codegen reports PKU338 for one, run `pikku addon sync`, not an install; to move
+to a newer SDK, `pikku update --update` rewrites the range and syncs.
+
 ### Call via RPC
 
 ```typescript

@@ -738,7 +738,9 @@
         "missing",
         "registry",
         "public",
-        "custom"
+        "custom",
+        "cloudapi",
+        "unsynced"
       ],
       "wireAddonDeclarations": [
         [
@@ -844,6 +846,26 @@
             "file": "<fixture>/src/addons.ts",
             "remote": true,
             "hasAuth": true
+          }
+        ],
+        [
+          "cloudapi",
+          {
+            "package": "@fixture/cloud-api",
+            "range": "^1.4.0",
+            "file": "<fixture>/src/addons.ts",
+            "remote": true,
+            "hasAuth": false
+          }
+        ],
+        [
+          "unsynced",
+          {
+            "package": "@fixture/unsynced",
+            "range": "^2.0.0",
+            "file": "<fixture>/src/addons.ts",
+            "remote": true,
+            "hasAuth": false
           }
         ]
       ],
@@ -1312,6 +1334,21 @@
         }
       }
     },
+    "remoteAddonFunctions": {
+      "cloudapi": {
+        "getProject": {
+          "pikkuFuncId": "getProject",
+          "functionType": "user",
+          "remote": true,
+          "inputs": [
+            "GetProjectInput"
+          ],
+          "outputs": [
+            "Project"
+          ]
+        }
+      }
+    },
     "screensManifest": {
       "title": "Admin",
       "icon": "gear",
@@ -1578,17 +1615,22 @@
     {
       "level": "critical",
       "code": "PKU347",
-      "message": "Addon 'shop' uses 'kysely' as 'db', but no addon is wired under the name 'db'. Wired: shop, bare, unbuilt, missing, registry, public, custom"
+      "message": "Addon 'shop' uses 'kysely' as 'db', but no addon is wired under the name 'db'. Wired: shop, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced"
     },
     {
       "level": "critical",
       "code": "PKU349",
-      "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, unbuilt, missing, registry, public, custom"
+      "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced"
     },
     {
       "level": "critical",
       "code": "PKU340",
       "message": "Addon 'missing' ('@fixture/not-installed') is wired with wireAddon but cannot be resolved from <fixture> — every ref('missing:…') will resolve to nothing and the surface will be dead at runtime. Add it to the dependencies of <fixture>/package.json and install, or remove the wireAddon call."
+    },
+    {
+      "level": "critical",
+      "code": "PKU338",
+      "message": "Remote addon 'unsynced' ('@fixture/unsynced@^2.0.0') has no SDK matching pikku-addons.lock: pikku-addons.lock has no entry for it. Run 'pikku addon sync' to download it."
     },
     {
       "level": "critical",
@@ -1613,6 +1655,6 @@
   ],
   "validationPass": {
     "start": 24,
-    "end": 35
+    "end": 36
   }
 }

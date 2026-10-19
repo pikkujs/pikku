@@ -25,6 +25,12 @@ import { flattenScopeDefinitions } from '@pikku/core/scope'
 import type { WorkflowStepMeta } from '@pikku/core/workflow'
 import type { ScenarioStepMeta } from '@pikku/core/scenario'
 import { addonResolutionDirs } from './addon-resolution.js'
+import {
+  ADDONS_LOCK_FILE,
+  checkLockedSdk,
+  readAddonsLock,
+  type AddonsLock,
+} from './remote-addon-sdk.js'
 
 /**
  * Stamp the inspected authorize/callbacks service set onto the generated auth
@@ -794,8 +800,40 @@ export function validateRemoteAddonDependencies(
     return manifest
   }
 
+  // A versioned remote addon's contract is the SDK `pikku addon sync`
+  // downloaded, so what has to hold is that the SDK on disk is the one the
+  // lock pins, not that a package is installed.
+  let lock: AddonsLock | Error | undefined
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    if (!decl.remote) continue
+    if (!decl.remote || !decl.range) continue
+    if (lock === undefined) {
+      try {
+        lock = readAddonsLock(state.rootDir)
+      } catch (e) {
+        lock = e instanceof Error ? e : new Error(String(e))
+      }
+    }
+    const reason =
+      lock instanceof Error
+        ? lock.message
+        : (() => {
+            const locked = checkLockedSdk(
+              state.rootDir,
+              decl.package,
+              decl.range!,
+              lock
+            )
+            return locked.ok ? null : locked.reason
+          })()
+    if (reason === null) continue
+    logger.critical(
+      ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY,
+      `Remote addon '${namespace}' ('${decl.package}@${decl.range}') has no SDK matching ${ADDONS_LOCK_FILE}: ${reason}. Run 'pikku addon sync' to download it.`
+    )
+  }
+
+  for (const [namespace, decl] of wireAddonDeclarations.entries()) {
+    if (!decl.remote || decl.range) continue
     const pkgJsonPath = join(
       addonResolutionDirs(state.rootDir, decl.file)[0],
       'package.json'

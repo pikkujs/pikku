@@ -353,7 +353,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
             workflows.meta,
             workflows.graphMeta,
             config.customTypesDeclarationFile,
-            visitState.rpc?.wireAddonDeclarations
+            visitState.rpc?.wireAddonDeclarations,
+            config.rootDir
           )
     )
 

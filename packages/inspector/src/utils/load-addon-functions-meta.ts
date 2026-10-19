@@ -14,6 +14,7 @@ import {
   type AddonResolver,
 } from './addon-resolution.js'
 import { ErrorCode } from '../error-codes.js'
+import { checkLockedSdk, type LockedSdk } from './remote-addon-sdk.js'
 import type { WebhookSourceMeta, WebhookSourcesMeta } from '@pikku/core/trigger'
 import type { ScopeOrigin } from '@pikku/core/scope'
 import type {
@@ -345,6 +346,31 @@ export const readAddonContributors = async (
   }
 }
 
+/**
+ * A versioned remote addon's function metadata comes from the SDK `pikku addon
+ * sync` extracted, and only when it matches the lock — a stale or missing SDK
+ * is reported by `validateRemoteAddonDependencies`, not loaded half-way.
+ */
+const loadRemoteAddonSdkMeta = async (
+  state: InspectorState,
+  namespace: string,
+  packageName: string,
+  range: string
+): Promise<void> => {
+  let locked: LockedSdk
+  try {
+    locked = checkLockedSdk(state.rootDir, packageName, range)
+  } catch {
+    return
+  }
+  if (!locked.ok) return
+  const metaPath = join(locked.dir, 'function', 'pikku-functions-meta.gen.json')
+  if (!existsSync(metaPath)) return
+  ;(state.remoteAddonFunctions ??= {})[namespace] = JSON.parse(
+    await readFile(metaPath, 'utf-8')
+  )
+}
+
 export async function loadAddonFunctionsMeta(
   logger: InspectorLogger,
   state: InspectorState
@@ -356,7 +382,12 @@ export async function loadAddonFunctionsMeta(
     // Remote addons (wireRemoteAddon) ship as a devDependency: types only.
     // Their functions, secrets, variables, schemas and services live on the
     // HOST that runs them — never load or require any of that here.
-    if (decl.remote) continue
+    if (decl.remote) {
+      if (decl.range) {
+        await loadRemoteAddonSdkMeta(state, namespace, decl.package, decl.range)
+      }
+      continue
+    }
     const dirs = addonResolutionDirs(state.rootDir, decl.file)
     const require = createAddonResolver(dirs)
     try {

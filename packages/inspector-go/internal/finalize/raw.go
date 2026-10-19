@@ -127,6 +127,7 @@ type withMiddleware struct {
 // addonDecl is a wireAddonDeclarations entry.
 type addonDecl struct {
 	Package             *string                        `json:"package"`
+	Range               *string                        `json:"range"`
 	File                *string                        `json:"file"`
 	Remote              json.RawMessage                `json:"remote"`
 	SecretOverrides     *state.Record[json.RawMessage] `json:"secretOverrides"`
@@ -150,6 +151,14 @@ func (d addonDecl) pkg() string {
 		return ""
 	}
 	return *d.Package
+}
+
+// rng is a versioned wireRemoteAddon's range, "" when unversioned.
+func (d addonDecl) rng() string {
+	if d.Range == nil {
+		return ""
+	}
+	return *d.Range
 }
 
 // remote is `decl.remote` read for truthiness.

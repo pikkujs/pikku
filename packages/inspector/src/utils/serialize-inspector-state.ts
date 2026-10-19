@@ -169,6 +169,7 @@ export interface SerializableInspectorState {
         string,
         {
           package: string
+          range?: string
           file?: string
           rpcEndpoint?: string
           remote?: boolean
@@ -307,6 +308,7 @@ export interface SerializableInspectorState {
   openAPISpec: Record<string, any> | null
   diagnostics: InspectorDiagnostic[]
   addonFunctions: InspectorState['addonFunctions']
+  remoteAddonFunctions?: InspectorState['remoteAddonFunctions']
   screensManifest?: InspectorState['screensManifest']
   addonScreens?: InspectorState['addonScreens']
   addonContributors?: InspectorState['addonContributors']
@@ -543,6 +545,7 @@ export function serializeInspectorState(
     openAPISpec: state.openAPISpec,
     diagnostics: state.diagnostics,
     addonFunctions: state.addonFunctions,
+    remoteAddonFunctions: state.remoteAddonFunctions,
     screensManifest: state.screensManifest,
     addonScreens: state.addonScreens,
     addonContributors: state.addonContributors,
@@ -782,6 +785,9 @@ export function deserializeInspectorState(
     openAPISpec: data.openAPISpec || null,
     diagnostics: data.diagnostics || [],
     addonFunctions: data.addonFunctions || {},
+    ...(data.remoteAddonFunctions
+      ? { remoteAddonFunctions: data.remoteAddonFunctions }
+      : {}),
     screensManifest: data.screensManifest,
     addonScreens: data.addonScreens,
     addonContributors: data.addonContributors,

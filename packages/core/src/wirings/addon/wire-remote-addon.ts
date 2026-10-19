@@ -1,5 +1,6 @@
 import { pikkuState } from '../../pikku-state.js'
 import type { CoreServices, PikkuWire } from '../../types/core.types.js'
+import { parseRemoteAddonPackage } from './remote-addon-package.js'
 
 /** Sent as `Authorization: Bearer <token>`; a non-default header is declared by the addon. */
 export type RemoteAddonAuth =
@@ -29,7 +30,12 @@ export const DEFAULT_REMOTE_ADDON_TIMEOUT_MS = 30_000
 export type WireRemoteAddonConfig = {
   /** Consumer-facing namespace, e.g. `registry` → `rpc('registry:getOpenApi')` */
   name: string
-  /** Must be installed as a devDependency — `pikku verify` enforces this. */
+  /**
+   * The contract package, as a string literal. `@scope/name@^1.4.0` pins a
+   * range: `pikku addon sync` downloads the addon's SDK from the registry and
+   * records it in `pikku-addons.lock`. A bare `@scope/name` must be installed
+   * as a devDependency instead — `pikku verify` enforces both.
+   */
   package: string
   /** Where the addon is deployed, e.g. `https://registry.example.com`. A function when it varies per environment. */
   serverUrl: string | ((services: CoreServices) => string | Promise<string>)
@@ -64,7 +70,7 @@ export type WireRemoteAddonConfig = {
  */
 export const wireRemoteAddon = (config: WireRemoteAddonConfig): void => {
   pikkuState(null, 'addons', 'packages').set(config.name, {
-    package: config.package,
+    package: parseRemoteAddonPackage(config.package).name,
     tags: config.tags,
     remote: true,
     serverUrl: config.serverUrl,

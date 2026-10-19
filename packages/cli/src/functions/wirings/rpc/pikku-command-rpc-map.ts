@@ -37,7 +37,8 @@ export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
       config.customTypesDeclarationFile,
       rpc.wireAddonDeclarations,
       workflowMapPath,
-      agentMapPath
+      agentMapPath,
+      config.rootDir
     )
     await writeCustomTypesFile(
       logger,
@@ -87,7 +88,8 @@ export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
       config.customTypesDeclarationFile,
       rpc.wireAddonDeclarations,
       workflowMapPath,
-      agentMapPath
+      agentMapPath,
+      config.rootDir
     )
     await writeCustomTypesFile(
       logger,
@@ -141,7 +143,8 @@ export const pikkuRPCRemoteMap = pikkuSessionlessFunc<void, void>({
       config.customTypesDeclarationFile,
       rpc.wireAddonDeclarations,
       workflowMapPath,
-      agentMapPath
+      agentMapPath,
+      config.rootDir
     )
     await writeCustomTypesFile(
       logger,

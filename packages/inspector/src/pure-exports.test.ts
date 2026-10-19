@@ -25,6 +25,10 @@ const PURE_EXPORTS = [
   'getFilesAndMethods',
   'resolveFunctionMeta',
   'addonResolutionDirs',
+  'parseRemoteAddonPackage',
+  'readAddonsLock',
+  'serializeAddonsLock',
+  'checkLockedSdk',
 ]
 
 const srcDir = dirname(fileURLToPath(import.meta.url))

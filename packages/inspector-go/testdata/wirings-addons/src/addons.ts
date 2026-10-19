@@ -56,3 +56,15 @@ wireRemoteAddon({
   serverUrl: 'https://c',
   auth: { resolve: () => 'x' },
 })
+// Versioned: the SDK under .pikku/remote matches pikku-addons.lock.
+wireRemoteAddon({
+  name: 'cloudapi',
+  package: '@fixture/cloud-api@^1.4.0',
+  serverUrl: 'https://cloud',
+})
+// Versioned, never synced: PKU338.
+wireRemoteAddon({
+  name: 'unsynced',
+  package: '@fixture/unsynced@^2.0.0',
+  serverUrl: 'https://unsynced',
+})

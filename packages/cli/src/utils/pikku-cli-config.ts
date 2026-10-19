@@ -10,6 +10,7 @@ import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
 import { loadExtendedConfigInput } from './pikku-cli-config-extends.js'
+import { DEFAULT_ADDON_REGISTRY } from './remote-addon-sync.js'
 
 const CLIENT_FILE_KEYS = [
   'fetchFile',
@@ -269,6 +270,7 @@ const _getPikkuCLIConfig = async (
       configDir,
       packageMappings: config.packageMappings || {},
       rootDir: config.rootDir ? resolve(configDir, config.rootDir) : configDir,
+      registry: config.registry ?? DEFAULT_ADDON_REGISTRY,
       ignoreFiles: config.ignoreFiles ?? [
         '**/*.test.ts',
         '**/*.spec.ts',

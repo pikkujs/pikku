@@ -2,10 +2,11 @@ import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import type { TypesMap } from '@pikku/inspector'
 import { serializeCustomTypesImport } from '../../../utils/custom-types-file.js'
 import type { Logger } from '@pikku/core/services'
+import { addonGeneratedImport } from '../../../utils/remote-addon-import.js'
 
 type WireAddonDeclarations = Map<
   string,
-  { package: string; rpcEndpoint?: string; remote?: boolean }
+  { package: string; range?: string; rpcEndpoint?: string; remote?: boolean }
 >
 
 export const serializeTypedRPCMap = (
@@ -18,7 +19,9 @@ export const serializeTypedRPCMap = (
   customTypesFile: string,
   wireAddonDeclarations?: WireAddonDeclarations,
   workflowMapPath?: string,
-  agentMapPath?: string
+  agentMapPath?: string,
+  /** The project root, where a versioned remote addon's SDK is found. */
+  rootDir?: string
 ) => {
   const requiredTypes = new Set<string>()
   const serializedRPCs = generateRPCs(rpcMeta, resolvedIOTypes, requiredTypes)
@@ -47,7 +50,8 @@ export const serializeTypedRPCMap = (
 
   const addonImports = generateAddonImports(
     wireAddonDeclarations,
-    relativeToPath
+    relativeToPath,
+    rootDir
   )
 
   const mergedRPCMap = generateMergedRPCMap(wireAddonDeclarations)
@@ -91,7 +95,7 @@ export type RPCMesh = <Name extends keyof FlattenedRPCMap>(
 ${workflowMapPath ? `import type { FlattenedWorkflowMap } from '${workflowMapPath}'` : `type FlattenedWorkflowMap = {}`}
 
 ${agentMapPath ? `import type { AgentMap } from '${agentMapPath}'` : `type AgentMap = {}`}
-${generateAddonAgentImports(wireAddonDeclarations)}
+${generateAddonAgentImports(wireAddonDeclarations, relativeToPath, rootDir)}
 ${generateMergedAgentMap(wireAddonDeclarations)}
 
 import type { PikkuRPC } from '@pikku/core/rpc'
@@ -134,7 +138,8 @@ export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCMesh, TypedStartWorkflow, Typ
 
 function generateAddonImports(
   wireAddonDeclarations: WireAddonDeclarations | undefined,
-  relativeToPath: string
+  relativeToPath: string,
+  rootDir: string | undefined
 ): string {
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
     return ''
@@ -149,7 +154,13 @@ function generateAddonImports(
     const mapFile = decl.remote
       ? 'pikku-rpc-wirings-map.remote.gen.js'
       : 'pikku-rpc-wirings-map.internal.gen.js'
-    imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${decl.package}/.pikku/rpc/${mapFile}'\n`
+    const from = addonGeneratedImport(
+      decl,
+      `rpc/${mapFile}`,
+      relativeToPath,
+      rootDir
+    )
+    imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${from}'\n`
   }
   return imports
 }
@@ -206,7 +217,9 @@ function toPascalCase(str: string): string {
 }
 
 function generateAddonAgentImports(
-  wireAddonDeclarations: WireAddonDeclarations | undefined
+  wireAddonDeclarations: WireAddonDeclarations | undefined,
+  relativeToPath: string,
+  rootDir: string | undefined
 ): string {
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
     return ''
@@ -214,7 +227,13 @@ function generateAddonAgentImports(
 
   let imports = '\n// Addon package Agent maps\n'
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    imports += `import type { AgentMap as ${toPascalCase(namespace)}AgentMap } from '${decl.package}/.pikku/agent/pikku-agent-map.gen.d.js'\n`
+    const from = addonGeneratedImport(
+      decl,
+      'agent/pikku-agent-map.gen.d.js',
+      relativeToPath,
+      rootDir
+    )
+    imports += `import type { AgentMap as ${toPascalCase(namespace)}AgentMap } from '${from}'\n`
   }
   return imports
 }
