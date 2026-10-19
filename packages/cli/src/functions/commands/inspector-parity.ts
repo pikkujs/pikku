@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -20,6 +20,8 @@ import {
 export type InspectorParityInput = {
   config?: string
   details?: string
+  /** Text both engines' failing `pikku all` must log, for a project whose codegen is meant to fail. */
+  expectFailure?: string
 }
 
 export type InspectorParityResult = {
@@ -165,6 +167,12 @@ const tail = (text: string, lines = 40): string =>
  * Runs `pikku all` with the TypeScript inspector and then the native one, each
  * from the same generated state, and fails unless both save the same inspector
  * state, generate the same files and log the same diagnostics.
+ *
+ * A project whose codegen is meant to fail (a verifier of a build error) names
+ * the message with `--expectFailure`: both engines must then fail with it,
+ * and still agree on the state they saved, the files they wrote before
+ * failing and the diagnostics they logged. A run that succeeds, or fails
+ * without the message, is a failure.
  */
 export const inspectorParity = pikkuSessionlessFunc<
   InspectorParityInput,
@@ -173,6 +181,7 @@ export const inspectorParity = pikkuSessionlessFunc<
   func: async ({ config, logger }, input) => {
     const { rootDir, outDir } = config
     const limit = Number(input?.details ?? 20)
+    const expectFailure = input?.expectFailure
     const extraArgs = input?.config ? ['--config', input.config] : []
     const stateDir = mkdtempSync(join(tmpdir(), 'pikku-inspector-parity-'))
     const snapshot = GeneratedSnapshot.take(rootDir, outDir)
@@ -188,13 +197,22 @@ export const inspectorParity = pikkuSessionlessFunc<
           `--stateOutput=${stateFile}`,
           ...extraArgs,
         ])
-        if (code !== 0) {
+        if (expectFailure ? code === 0 : code !== 0) {
           throw new Error(
-            `pikku all --inspector ${engine} exited with ${code}:\n${tail(log)}`
+            expectFailure
+              ? `pikku all --inspector ${engine} succeeded, but ${JSON.stringify(expectFailure)} was expected to fail it:\n${tail(log)}`
+              : `pikku all --inspector ${engine} exited with ${code}:\n${tail(log)}`
+          )
+        }
+        if (expectFailure && !log.replace(ANSI, '').includes(expectFailure)) {
+          throw new Error(
+            `pikku all --inspector ${engine} failed without ${JSON.stringify(expectFailure)}:\n${tail(log)}`
           )
         }
         runs[engine] = {
-          state: readFileSync(stateFile, 'utf-8'),
+          state: existsSync(stateFile)
+            ? readFileSync(stateFile, 'utf-8')
+            : '{}',
           files: hashGeneratedOutput(rootDir, outDir),
           log,
         }
