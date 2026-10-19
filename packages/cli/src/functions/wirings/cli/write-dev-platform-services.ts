@@ -9,12 +9,36 @@ import { loadUserModule } from '../../commands/load-user-project.js'
 import { resolveFromProject } from '../../../utils/resolve-from-project.js'
 import {
   devContributorPlatform,
+  devRuntimeServices,
   serializeDevPlatformServices,
 } from './serialize-dev-platform-services.js'
 
 type ContributorRef = NonNullable<
   NonNullable<Config['dev']>['contributors']
 >[number]
+
+/**
+ * A contributor reference plus where to resolve it from: the project for
+ * `dev.contributors` / `deploy.contributors`, the addon's own package for one
+ * an addon declares in its `package.json` `pikku.contributors`.
+ */
+export interface LocatedContributorRef extends ContributorRef {
+  fromDir?: string
+  origin?: string
+}
+
+/** Contributor references every non-remote addon declares in its package.json. */
+export const addonContributorRefs = (
+  state: Pick<InspectorState, 'addonContributors'>
+): LocatedContributorRef[] =>
+  Object.entries(state.addonContributors ?? {}).flatMap(
+    ([namespace, { packageDir, packageName, contributors }]) =>
+      contributors.map((ref) => ({
+        ...ref,
+        fromDir: packageDir,
+        origin: `addon '${namespace}' (${packageName})`,
+      }))
+  )
 
 const IMPORT_CONDITIONS = ['import', 'node', 'default']
 
@@ -38,7 +62,8 @@ const exportedImport = (exports: unknown, subpath: string) => {
 
 export const resolveContributorModule = (
   rootDir: string,
-  specifier: string
+  specifier: string,
+  origin = 'dev.contributors'
 ): string => {
   if (specifier.startsWith('.') || isAbsolute(specifier)) {
     return resolve(rootDir, specifier)
@@ -59,20 +84,20 @@ export const resolveContributorModule = (
   }
   const resolved = resolveFromProject(rootDir, specifier)
   if (resolved) return resolved
-  throw new Error(
-    `dev.contributors: cannot resolve '${specifier}' from ${rootDir}`
-  )
+  throw new Error(`${origin}: cannot resolve '${specifier}' from ${rootDir}`)
 }
 
 export const loadDevContributors = async (
   rootDir: string,
-  refs: readonly ContributorRef[]
+  refs: readonly LocatedContributorRef[],
+  defaultOrigin = 'dev.contributors'
 ): Promise<PlatformServiceContributor[]> => {
   const contributors: PlatformServiceContributor[] = []
   for (const ref of refs) {
     const exportName = ref.export ?? 'default'
+    const origin = ref.origin ?? defaultOrigin
     const loaded = await loadUserModule(
-      resolveContributorModule(rootDir, ref.module)
+      resolveContributorModule(ref.fromDir ?? rootDir, ref.module, origin)
     )
     const contributor = loaded[exportName]
     if (
@@ -81,7 +106,7 @@ export const loadDevContributors = async (
       typeof contributor.emit !== 'function'
     ) {
       throw new Error(
-        `dev.contributors: '${exportName}' exported by ${ref.module} is not a PlatformServiceContributor ({ name, emit })`
+        `${origin}: '${exportName}' exported by ${ref.module} is not a PlatformServiceContributor ({ name, emit })`
       )
     }
     contributors.push(contributor)
@@ -90,16 +115,19 @@ export const loadDevContributors = async (
 }
 
 /**
- * Writes the dev platform-services file from `dev.contributors`, and removes a
- * stale one when none are configured so a project without them generates
- * exactly what it did before.
+ * Writes the dev platform-services file from `dev.contributors` and the
+ * contributors addons declare, and removes a stale one when there are none so
+ * a project without them generates exactly what it did before.
  */
 export const writeDevPlatformServices = async (
   logger: CLILogger,
   config: Config,
   visitState: InspectorState
 ): Promise<void> => {
-  const refs = config.dev?.contributors ?? []
+  const refs: LocatedContributorRef[] = [
+    ...(config.dev?.contributors ?? []),
+    ...addonContributorRefs(visitState),
+  ]
   if (refs.length === 0) {
     await removeFileInDir(logger, config.devPlatformServicesFile, {
       logRemove: false,
@@ -109,7 +137,10 @@ export const writeDevPlatformServices = async (
   const contributors = await loadDevContributors(config.rootDir, refs)
   const code = serializeDevPlatformServices(
     contributors,
-    devContributorPlatform(visitState.serviceAggregation.requiredServices),
+    devContributorPlatform(
+      visitState.serviceAggregation.requiredServices,
+      devRuntimeServices({ db: config.db !== undefined })
+    ),
     {
       file: config.devPlatformServicesFile,
       packageMappings: config.packageMappings,
