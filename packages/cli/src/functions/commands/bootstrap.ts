@@ -5,6 +5,8 @@ export const bootstrap = pikkuVoidFunc({
   func: async ({ logger, getInspectorState }, _data, { rpc }) => {
     await getInspectorState(false, true, true)
 
+    await rpc.invoke('pikkuErrorTypes')
+
     // Before function types: they import ScopeId from the scopes codegen.
     await rpc.invoke('pikkuScopes', { bootstrap: true })
     // Before function types too: virtual users import SystemRoleName.
