@@ -1,7 +1,7 @@
 /**
  * Offline verifier for `deploy.grouping`.
  *
- * Runs a real `pikku` + `deploy plan` against templates/functions three times —
+ * Runs a real `pikku` + `deploy plan` against recipes/functions three times —
  * ungrouped, grouped by tag, and with a grouping that spans deploy targets —
  * and asserts on the manifest and the bundles that actually got built. The unit
  * tests cover the resolver in isolation; this covers everything downstream of
@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, existsSync, statSync } from 'fs'
 import { join } from 'path'
 
 const REPO_ROOT = join(process.cwd(), '..', '..')
-const FUNCTIONS_DIR = join(REPO_ROOT, 'templates', 'functions')
+const FUNCTIONS_DIR = join(REPO_ROOT, 'recipes', 'functions')
 const PIKKU_BIN = join(REPO_ROOT, 'packages', 'cli', 'dist', 'bin', 'pikku.js')
 const CONFIG_FILE = join(FUNCTIONS_DIR, 'pikku.config.json')
 const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'cloudflare')
@@ -113,7 +113,7 @@ process.on('SIGINT', () => {
 })
 
 try {
-  console.log('Setting up: pikku codegen against templates/functions...')
+  console.log('Setting up: pikku codegen against recipes/functions...')
   execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
   execSync(`node ${PIKKU_BIN}`, {
     cwd: FUNCTIONS_DIR,

@@ -364,7 +364,7 @@ chmod +x dist/bin/pikku.js
 # Both modes are generated rather than listed: the app/addon difference lives in
 # the codegen (an addon's leaves omit `wireHTTP` and friends), so the only
 # honest way to describe it is to run the codegen twice and read what came out.
-# templates/functions wires the console, whose functions require `pikku:console`,
+# recipes/functions wires the console, whose functions require `pikku:console`,
 # a scope @pikku/addon-console declares. A release builds packages before addons,
 # so without this the scope is undeclared here and the inspector fails with
 # PKU124. Declaring it in the template instead collides with the addon once built.
@@ -379,11 +379,11 @@ rm -rf "$_shim_dir"
 
 echo "Generating the public surface doc..."
 _cli_bin="$PWD/dist/bin/pikku.js"
-(cd ../../templates/function-addon && node "$_cli_bin")
-(cd ../../templates/functions && node "$_cli_bin")
+(cd ../../recipes/function-addon && node "$_cli_bin")
+(cd ../../recipes/functions && node "$_cli_bin")
 node dist/src/functions/surface/generate-surface-doc.js \
-  --app ../../templates/functions \
-  --addon ../../templates/function-addon \
+  --app ../../recipes/functions \
+  --addon ../../recipes/function-addon \
   --snippets ../../examples/online-shop \
   --out surface.json \
   --snippets-out snippets.json \

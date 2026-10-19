@@ -1,7 +1,7 @@
 /**
  * Verifier: `pikku dev` auto-selects the bun runtime when the CLI runs under bun.
  *
- * Boots `pikku dev` against templates/functions with the CLI executed by bun
+ * Boots `pikku dev` against recipes/functions with the CLI executed by bun
  * (`bun <pikku-bin> dev`), so `typeof Bun !== 'undefined'` inside the command is
  * true. Asserts the dev server reports `pikku-bun-server` (the Bun.serve path)
  * rather than the node http server, and that it actually serves requests.
@@ -16,7 +16,7 @@ import { execFileSync, spawn } from 'child_process'
 import { rmSync } from 'fs'
 import { join } from 'path'
 
-const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'templates', 'functions')
+const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'recipes', 'functions')
 const REPO_ROOT = join(process.cwd(), '..', '..')
 const PIKKU_BIN = join(REPO_ROOT, 'packages', 'cli', 'dist', 'bin', 'pikku.js')
 const PORT = 4099
@@ -36,7 +36,7 @@ if (!hasBun()) {
   process.exit(0)
 }
 
-console.log('Setting up: pikku codegen for templates/functions...')
+console.log('Setting up: pikku codegen for recipes/functions...')
 rmSync(join(FUNCTIONS_DIR, '.deploy'), { recursive: true, force: true })
 rmSync(join(FUNCTIONS_DIR, 'src', 'scaffold'), {
   recursive: true,

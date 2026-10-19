@@ -39,8 +39,8 @@ const projects = flag('--project').length
   ? flag('--project').map((p) => resolve(p))
   : [
       join(REPO, 'examples/online-shop'),
-      ...readdirSync(join(REPO, 'templates'))
-        .map((t) => join(REPO, 'templates', t))
+      ...readdirSync(join(REPO, 'recipes'))
+        .map((t) => join(REPO, 'recipes', t))
         .filter((d) => existsSync(join(d, 'package.json'))),
     ]
 

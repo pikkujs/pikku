@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-// Load the real inspector state from templates/functions
+// Load the real inspector state from recipes/functions
 let realState: Omit<InspectorState, 'typesLookup'>
 try {
   const stateJson = readFileSync(
@@ -1050,7 +1050,7 @@ describe('filterInspectorState', () => {
     })
   })
 
-  describe('Real data tests (from templates/functions)', () => {
+  describe('Real data tests (from recipes/functions)', () => {
     test('should have loaded real state correctly', () => {
       assert.ok(realState)
       assert.ok(realState.http)

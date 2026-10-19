@@ -234,7 +234,7 @@ in the harness by making `key` optional and falling back to the run id.
 
 ## 8. `yarn build` generated apps before the addons they reference — FIXED
 
-`templates/nextjs` printed this on every build:
+`recipes/nextjs` printed this on every build:
 
 ```
 [pikku] Skipping HTTP route 'GET /workflow-run/:runId/stream' — metadata not found.
@@ -263,7 +263,7 @@ build:packages && yarn pikku && build:addons && build:templates
                   the apps      apps were just generated against
 ```
 
-Regenerating `templates/functions` once the addons were built put the route
+Regenerating `recipes/functions` once the addons were built put the route
 straight into the meta, which confirmed the ordering as the cause. CI's e2e job
 sidesteps this with a bespoke two-pass `e2e-codegen` action; the templates path
 had no equivalent.

@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url'
  * where `.pikku` becomes `pikku-gen`.
  */
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
-const templatesDir = join(repoRoot, 'templates')
+const templatesDir = join(repoRoot, 'recipes')
 const skipped = new Set([
   'node_modules',
   'dist',
@@ -137,12 +137,12 @@ describe('templates ship the #pikku alias', () => {
 
       const tsconfigPath = join(templatesDir, template, 'tsconfig.json')
       if (!existsSync(tsconfigPath)) {
-        offenders.push(`templates/${template}/tsconfig.json  missing`)
+        offenders.push(`recipes/${template}/tsconfig.json  missing`)
         continue
       }
       const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf8'))
       if (!tsconfig.compilerOptions?.paths?.['#pikku/*']) {
-        offenders.push(`templates/${template}/tsconfig.json  missing paths`)
+        offenders.push(`recipes/${template}/tsconfig.json  missing paths`)
       }
     }
 
@@ -188,7 +188,7 @@ describe('templates ship the #pikku alias', () => {
       if (existsSync(tsconfigPath)) {
         const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf8'))
         declare(
-          `templates/${template}/tsconfig.json`,
+          `recipes/${template}/tsconfig.json`,
           tsconfig.compilerOptions?.paths?.['#pikku/*']
         )
       }
@@ -197,7 +197,7 @@ describe('templates ship the #pikku alias', () => {
         readFileSync(join(templatesDir, template, 'package.json'), 'utf8')
       )
       declare(
-        `templates/${template}/package.json`,
+        `recipes/${template}/package.json`,
         pkg.imports?.['#pikku/*'] as string | string[] | undefined
       )
     }
@@ -231,7 +231,7 @@ describe('templates ship the #pikku alias', () => {
       for (const [specifier, target] of Object.entries(pkg.imports ?? {})) {
         if (typeof target === 'string' && target.startsWith('../')) {
           offenders.push(
-            `templates/${template}/package.json  ${specifier} -> ${target}`
+            `recipes/${template}/package.json  ${specifier} -> ${target}`
           )
         }
       }

@@ -33,7 +33,7 @@ for (let i = 0; i < args.length; i++) {
 if (projects.length === 0) {
   projects.push(
     join(REPO, 'examples/online-shop'),
-    join(REPO, 'templates/functions')
+    join(REPO, 'recipes/functions')
   )
 }
 

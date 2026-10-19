@@ -46,7 +46,7 @@ yarn cli user list --limit 10
 
 ### 4. Run Remote CLI (via Channel)
 
-First, you'll need a WebSocket server running (see templates/functions for a full example with server).
+First, you'll need a WebSocket server running (see recipes/functions for a full example with server).
 
 ```bash
 # Set the WebSocket URL (optional, defaults to ws://localhost:3000/cli)
@@ -134,11 +134,11 @@ The key to this template is the `pikku.config.json` file:
 
 - `srcDirectories`: Points to `../functions/src` to reuse existing CLI functions
 - `entrypoints`: Maps the program name (`my-cli`) to both CLI and channel configurations
-- Both approaches share the same functions from templates/functions
+- Both approaches share the same functions from recipes/functions
 
 ## Available Commands
 
-This template uses the CLI commands defined in `templates/functions`:
+This template uses the CLI commands defined in `recipes/functions`:
 
 ### greet
 
@@ -193,7 +193,7 @@ File operations.
 
 ### Transport-Agnostic Functions
 
-The CLI functions in `templates/functions/src/cli.functions.ts` are written once:
+The CLI functions in `recipes/functions/src/cli.functions.ts` are written once:
 
 ```typescript
 export const greetUser: CorePikkuFunc<
@@ -237,7 +237,7 @@ Pikku CLI automatically generates:
 
 ### 1. Add New Commands
 
-Add functions to `templates/functions/src/cli.functions.ts`:
+Add functions to `recipes/functions/src/cli.functions.ts`:
 
 ```typescript
 export const newCommand: CorePikkuFunc<Input, Output> = async (
@@ -250,7 +250,7 @@ export const newCommand: CorePikkuFunc<Input, Output> = async (
 
 ### 2. Wire the Command
 
-Update `templates/functions/src/cli.wiring.ts`:
+Update `recipes/functions/src/cli.wiring.ts`:
 
 ```typescript
 wireCLI({
@@ -302,7 +302,7 @@ Each program can have its own set of commands and entrypoints.
 
 ## Setting Up a WebSocket Server
 
-To use the remote CLI, you need a WebSocket server. See `templates/functions` for a complete example with:
+To use the remote CLI, you need a WebSocket server. See `recipes/functions` for a complete example with:
 
 - Express server setup
 - WebSocket channel wiring

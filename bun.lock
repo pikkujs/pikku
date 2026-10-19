@@ -1341,7 +1341,7 @@
         "react": "^18 || ^19",
       },
     },
-    "templates/ai-postgres": {
+    "recipes/ai-postgres": {
       "name": "@pikku/templates-ai-postgres",
       "dependencies": {
         "@ai-sdk/anthropic": "^4.0.82",
@@ -1364,7 +1364,7 @@
         "@types/node": "^26",
       },
     },
-    "templates/aws-lambda": {
+    "recipes/aws-lambda": {
       "name": "@pikku/templates-aws-lambda",
       "dependencies": {
         "@pikku/aws-services": "^0.12.15",
@@ -1391,7 +1391,7 @@
         "typescript": "^6.0.3",
       },
     },
-    "templates/aws-lambda-websocket": {
+    "recipes/aws-lambda-websocket": {
       "name": "@pikku/templates-aws-lambda-websocket",
       "dependencies": {
         "@pikku/aws-services": "^0.12.15",
@@ -1421,7 +1421,7 @@
         "typescript": "^6.0.3",
       },
     },
-    "templates/bullmq": {
+    "recipes/bullmq": {
       "name": "@pikku/templates-bullmq",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1435,7 +1435,7 @@
         "@types/node": "^26",
       },
     },
-    "templates/bun": {
+    "recipes/bun": {
       "name": "@pikku/templates-bun",
       "dependencies": {
         "@pikku/bun-server": "^0.12.14",
@@ -1449,7 +1449,7 @@
         "@types/bun": "^1.4.3",
       },
     },
-    "templates/cli": {
+    "recipes/cli": {
       "name": "@pikku/templates-cli",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1464,7 +1464,7 @@
         "typescript": "^6.0.3",
       },
     },
-    "templates/cloudflare-websocket": {
+    "recipes/cloudflare-websocket": {
       "name": "@pikku/templates-cloudflare-websocket",
       "dependencies": {
         "@pikku/cloudflare": "^0.12.29",
@@ -1479,7 +1479,7 @@
         "wrangler": "^4.151.1",
       },
     },
-    "templates/cloudflare-workers": {
+    "recipes/cloudflare-workers": {
       "name": "@pikku/templates-cloudflare-workers",
       "dependencies": {
         "@pikku/cloudflare": "^0.12.29",
@@ -1493,7 +1493,7 @@
         "wrangler": "^4.151.1",
       },
     },
-    "templates/express": {
+    "recipes/express": {
       "name": "@pikku/templates-express-server",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1510,7 +1510,7 @@
         "tsx": "^4.23.15",
       },
     },
-    "templates/express-middleware": {
+    "recipes/express-middleware": {
       "name": "@pikku/templates-express-middleware",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1531,7 +1531,7 @@
         "typescript": "^6.0.3",
       },
     },
-    "templates/fastify": {
+    "recipes/fastify": {
       "name": "@pikku/templates-fastify-server",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1546,7 +1546,7 @@
         "@types/node": "^26",
       },
     },
-    "templates/fastify-plugin": {
+    "recipes/fastify-plugin": {
       "name": "@pikku/templates-fastify-plugin",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1564,7 +1564,7 @@
         "fastify": "^5.12.7",
       },
     },
-    "templates/function-addon": {
+    "recipes/function-addon": {
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
@@ -1579,7 +1579,7 @@
         "zod": "^4",
       },
     },
-    "templates/functions": {
+    "recipes/functions": {
       "name": "@pikku/templates-functions",
       "dependencies": {
         "@pikku/addon-console": "workspace:*",
@@ -1629,7 +1629,7 @@
         "wrangler": "^4.151.1",
       },
     },
-    "templates/mcp-server": {
+    "recipes/mcp-server": {
       "name": "@pikku/templates-mcp-server",
       "version": "0.1.4",
       "dependencies": {
@@ -1645,7 +1645,7 @@
         "typescript": "^6.0.3",
       },
     },
-    "templates/nextjs": {
+    "recipes/nextjs": {
       "name": "@pikku/templates-nextjs",
       "dependencies": {
         "@next/swc-darwin-arm64": "^16.4.2",
@@ -1672,7 +1672,7 @@
         "typescript": "^6.0.3",
       },
     },
-    "templates/pg-boss": {
+    "recipes/pg-boss": {
       "name": "@pikku/templates-pg-boss",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1686,7 +1686,7 @@
         "@types/node": "^26",
       },
     },
-    "templates/remote-rpc-pg": {
+    "recipes/remote-rpc-pg": {
       "name": "@pikku/templates-remote-rpc-pg",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1708,7 +1708,7 @@
         "@types/node": "^26",
       },
     },
-    "templates/remote-rpc-redis": {
+    "recipes/remote-rpc-redis": {
       "name": "@pikku/templates-remote-rpc-redis",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1728,7 +1728,7 @@
         "@types/node": "^26",
       },
     },
-    "templates/tanstack": {
+    "recipes/tanstack": {
       "name": "@pikku/templates-tanstack",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1753,7 +1753,7 @@
         "vite": "^8.3.4",
       },
     },
-    "templates/uws": {
+    "recipes/uws": {
       "name": "@pikku/templates-uws",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1770,7 +1770,7 @@
         "typescript": "^6.0.3",
       },
     },
-    "templates/workflows-bullmq": {
+    "recipes/workflows-bullmq": {
       "name": "@pikku/templates-workflows-bullmq",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1788,7 +1788,7 @@
         "@types/node": "^26",
       },
     },
-    "templates/workflows-pg-boss": {
+    "recipes/workflows-pg-boss": {
       "name": "@pikku/templates-workflows-pg-boss",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -1809,7 +1809,7 @@
         "@types/node": "^26",
       },
     },
-    "templates/ws": {
+    "recipes/ws": {
       "name": "@pikku/templates-ws-server",
       "dependencies": {
         "@pikku/core": "^0.12.142",
@@ -3365,53 +3365,53 @@
 
     "@pikku/tanstack-start": ["@pikku/tanstack-start@workspace:packages/runtimes/tanstack-start"],
 
-    "@pikku/templates-ai-postgres": ["@pikku/templates-ai-postgres@workspace:templates/ai-postgres"],
+    "@pikku/templates-ai-postgres": ["@pikku/templates-ai-postgres@workspace:recipes/ai-postgres"],
 
-    "@pikku/templates-aws-lambda": ["@pikku/templates-aws-lambda@workspace:templates/aws-lambda"],
+    "@pikku/templates-aws-lambda": ["@pikku/templates-aws-lambda@workspace:recipes/aws-lambda"],
 
-    "@pikku/templates-aws-lambda-websocket": ["@pikku/templates-aws-lambda-websocket@workspace:templates/aws-lambda-websocket"],
+    "@pikku/templates-aws-lambda-websocket": ["@pikku/templates-aws-lambda-websocket@workspace:recipes/aws-lambda-websocket"],
 
-    "@pikku/templates-bullmq": ["@pikku/templates-bullmq@workspace:templates/bullmq"],
+    "@pikku/templates-bullmq": ["@pikku/templates-bullmq@workspace:recipes/bullmq"],
 
-    "@pikku/templates-bun": ["@pikku/templates-bun@workspace:templates/bun"],
+    "@pikku/templates-bun": ["@pikku/templates-bun@workspace:recipes/bun"],
 
-    "@pikku/templates-cli": ["@pikku/templates-cli@workspace:templates/cli"],
+    "@pikku/templates-cli": ["@pikku/templates-cli@workspace:recipes/cli"],
 
-    "@pikku/templates-cloudflare-websocket": ["@pikku/templates-cloudflare-websocket@workspace:templates/cloudflare-websocket"],
+    "@pikku/templates-cloudflare-websocket": ["@pikku/templates-cloudflare-websocket@workspace:recipes/cloudflare-websocket"],
 
-    "@pikku/templates-cloudflare-workers": ["@pikku/templates-cloudflare-workers@workspace:templates/cloudflare-workers"],
+    "@pikku/templates-cloudflare-workers": ["@pikku/templates-cloudflare-workers@workspace:recipes/cloudflare-workers"],
 
-    "@pikku/templates-express-middleware": ["@pikku/templates-express-middleware@workspace:templates/express-middleware"],
+    "@pikku/templates-express-middleware": ["@pikku/templates-express-middleware@workspace:recipes/express-middleware"],
 
-    "@pikku/templates-express-server": ["@pikku/templates-express-server@workspace:templates/express"],
+    "@pikku/templates-express-server": ["@pikku/templates-express-server@workspace:recipes/express"],
 
-    "@pikku/templates-fastify-plugin": ["@pikku/templates-fastify-plugin@workspace:templates/fastify-plugin"],
+    "@pikku/templates-fastify-plugin": ["@pikku/templates-fastify-plugin@workspace:recipes/fastify-plugin"],
 
-    "@pikku/templates-fastify-server": ["@pikku/templates-fastify-server@workspace:templates/fastify"],
+    "@pikku/templates-fastify-server": ["@pikku/templates-fastify-server@workspace:recipes/fastify"],
 
-    "@pikku/templates-function-addon": ["@pikku/templates-function-addon@workspace:templates/function-addon"],
+    "@pikku/templates-function-addon": ["@pikku/templates-function-addon@workspace:recipes/function-addon"],
 
-    "@pikku/templates-functions": ["@pikku/templates-functions@workspace:templates/functions"],
+    "@pikku/templates-functions": ["@pikku/templates-functions@workspace:recipes/functions"],
 
-    "@pikku/templates-mcp-server": ["@pikku/templates-mcp-server@workspace:templates/mcp-server"],
+    "@pikku/templates-mcp-server": ["@pikku/templates-mcp-server@workspace:recipes/mcp-server"],
 
-    "@pikku/templates-nextjs": ["@pikku/templates-nextjs@workspace:templates/nextjs"],
+    "@pikku/templates-nextjs": ["@pikku/templates-nextjs@workspace:recipes/nextjs"],
 
-    "@pikku/templates-pg-boss": ["@pikku/templates-pg-boss@workspace:templates/pg-boss"],
+    "@pikku/templates-pg-boss": ["@pikku/templates-pg-boss@workspace:recipes/pg-boss"],
 
-    "@pikku/templates-remote-rpc-pg": ["@pikku/templates-remote-rpc-pg@workspace:templates/remote-rpc-pg"],
+    "@pikku/templates-remote-rpc-pg": ["@pikku/templates-remote-rpc-pg@workspace:recipes/remote-rpc-pg"],
 
-    "@pikku/templates-remote-rpc-redis": ["@pikku/templates-remote-rpc-redis@workspace:templates/remote-rpc-redis"],
+    "@pikku/templates-remote-rpc-redis": ["@pikku/templates-remote-rpc-redis@workspace:recipes/remote-rpc-redis"],
 
-    "@pikku/templates-tanstack": ["@pikku/templates-tanstack@workspace:templates/tanstack"],
+    "@pikku/templates-tanstack": ["@pikku/templates-tanstack@workspace:recipes/tanstack"],
 
-    "@pikku/templates-uws": ["@pikku/templates-uws@workspace:templates/uws"],
+    "@pikku/templates-uws": ["@pikku/templates-uws@workspace:recipes/uws"],
 
-    "@pikku/templates-workflows-bullmq": ["@pikku/templates-workflows-bullmq@workspace:templates/workflows-bullmq"],
+    "@pikku/templates-workflows-bullmq": ["@pikku/templates-workflows-bullmq@workspace:recipes/workflows-bullmq"],
 
-    "@pikku/templates-workflows-pg-boss": ["@pikku/templates-workflows-pg-boss@workspace:templates/workflows-pg-boss"],
+    "@pikku/templates-workflows-pg-boss": ["@pikku/templates-workflows-pg-boss@workspace:recipes/workflows-pg-boss"],
 
-    "@pikku/templates-ws-server": ["@pikku/templates-ws-server@workspace:templates/ws"],
+    "@pikku/templates-ws-server": ["@pikku/templates-ws-server@workspace:recipes/ws"],
 
     "@pikku/uws": ["@pikku/uws@workspace:packages/runtimes/uws-server"],
 

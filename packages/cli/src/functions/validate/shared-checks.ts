@@ -822,7 +822,7 @@ export async function runSharedProjectChecks(
             'Import the type only, then load the package when you build the service:',
             `  const mod = await import('${module}')`,
             '  if (mod.SomeExport) { ... }',
-            'See templates/starter-template/packages/functions/src/services.ts for the shape.'
+            'See recipes/starter-template/packages/functions/src/services.ts for the shape.'
           )
         )
       }

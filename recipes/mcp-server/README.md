@@ -65,7 +65,7 @@ The server uses stdio transport and can be integrated with any MCP client. Examp
     "pikku-mcp": {
       "command": "node",
       "args": ["dist/mcp-server.js"],
-      "cwd": "/path/to/templates/modelcontrolprotocol"
+      "cwd": "/path/to/recipes/modelcontrolprotocol"
     }
   }
 }

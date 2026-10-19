@@ -37,7 +37,7 @@ function getFreePort(): Promise<number> {
   })
 }
 
-const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'templates', 'functions')
+const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'recipes', 'functions')
 const REPO_ROOT = join(process.cwd(), '..', '..')
 const PIKKU_BIN = join(REPO_ROOT, 'packages', 'cli', 'dist', 'bin', 'pikku.js')
 const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'standalone')

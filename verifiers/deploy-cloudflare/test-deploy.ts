@@ -1,7 +1,7 @@
 /**
  * Offline verifier for Cloudflare deploy pipeline.
  *
- * Has its own pikku.config.json extending templates/functions.
+ * Has its own pikku.config.json extending recipes/functions.
  * Runs pikku + deploy plan from this directory, asserts actual content.
  */
 
@@ -18,7 +18,7 @@ import {
 import { join } from 'path'
 import { createHash } from 'crypto'
 
-const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'templates', 'functions')
+const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'recipes', 'functions')
 const REPO_ROOT = join(process.cwd(), '..', '..')
 const PIKKU_BIN = join(REPO_ROOT, 'packages', 'cli', 'dist', 'bin', 'pikku.js')
 const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'cloudflare')

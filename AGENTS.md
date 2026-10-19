@@ -61,7 +61,7 @@ A TypeScript framework that normalizes the different ways you interact with Node
 A bun workspace monorepo with strict TypeScript and Husky pre-commit hooks:
 
 - `packages/` — the Pikku packages
-- `templates/` — runtime templates
+- `recipes/` — runtime templates
 - `verifiers/` — verifier suites (see Testing)
 - `examples/` — running applications CI compiles; `online-shop` is the doc snippet source
 - `e2e/` — end-to-end project
@@ -189,7 +189,7 @@ type check stay on 7.
 
 ### Testing templates
 
-Build a real app from the template rather than testing inside `templates/` — that's the only way code generation (workflow workers, queue processors, …) runs properly, the app is structured as end users see it, dependencies are linked as they would be, and tests run in the right environment.
+Build a real app from the template rather than testing inside `recipes/` — that's the only way code generation (workflow workers, queue processors, …) runs properly, the app is structured as end users see it, dependencies are linked as they would be, and tests run in the right environment.
 
 This is the one flow that uses yarn: `create-pikku`'s `--yarn-link` links the
 local packages with `yarn link`, which has no bun equivalent in the tool.

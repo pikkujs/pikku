@@ -1,6 +1,6 @@
 [
   {
-    "project": "templates/starter-template",
+    "project": "recipes/starter-template",
     "reason": "not a workspace package (excluded in the root package.json), so its dependencies are not installed in the monorepo"
   },
   {

@@ -23,7 +23,7 @@ const validateOutput = ajv.compile(schema('output'))
 
 describe('protocol JSON Schemas', async () => {
   const project = fileURLToPath(
-    new URL('../../../templates/functions', import.meta.url)
+    new URL('../../../recipes/functions', import.meta.url)
   )
   const { routeFiles, options } = await projectInput(project)
   const input: InspectorGoInput = {
