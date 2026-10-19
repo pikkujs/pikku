@@ -9,7 +9,7 @@ description: Rules chosen in inspector, and what each one rules out
 A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
-
+- [A versioned remote addon's SDK metadata is kept apart from addonFunctions](remote-addon-sdk-metadata-is-kept-apart-from-addon-functions.md) — The functions meta of a synced SDK loads into state.remoteAddonFunctions, never addonFunctions, and only when the SDK matches pikku-addons.lock
 - [A channel with auth false marks its connect and disconnect handlers sessionless](a-channel-with-auth-false-marks-its-connect-and-disconnect-sessionless.md) — The inspector synthesises metadata for a channel's connect and disconnect functions and sets sessionless from the channel's auth
 - [A declared scope id never shadows a definition](a-declared-scope-id-never-shadows-a-definition.md) — A bare declareScopes id is added only when no definition already holds it, so an addon's richer scope tree is kept
 - [A workflow DSL step's virtual user is the literal name written in its options object](a-dsl-step-virtual-user-is-the-literal-name-in-its-options.md) — The DSL extractor reads a step's virtual user from a property access or string-keyed element access in the options literal, and leaves it undefined when the value is not static

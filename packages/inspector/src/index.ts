@@ -83,3 +83,24 @@ export {
   addonResolutionDirs,
   createAddonResolver,
 } from './utils/addon-resolution.js'
+export {
+  ADDONS_LOCK_FILE,
+  REMOTE_SDK_DIR,
+  SDK_INTEGRITY_MARKER,
+  parseRemoteAddonPackage,
+  emptyAddonsLock,
+  readAddonsLock,
+  serializeAddonsLock,
+  remoteSdkDir,
+  readSdkManifest,
+  checkLockedSdk,
+} from './utils/remote-addon-sdk.js'
+export { findWireRemoteAddonSpecs } from './utils/find-wire-remote-addon-specs.js'
+export type {
+  AddonsLock,
+  AddonsLockEntry,
+  RemoteAddonSdkManifest,
+  RemoteAddonPackageSpec,
+  LockedSdk,
+} from './utils/remote-addon-sdk.js'
+export type { WireRemoteAddonSpec } from './utils/find-wire-remote-addon-specs.js'

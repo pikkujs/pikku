@@ -1,5 +1,7 @@
 import * as ts from 'typescript'
 import type { InspectorState, InspectorLogger } from '../types.js'
+import { ErrorCode } from '../error-codes.js'
+import { parseRemoteAddonPackage } from '../utils/remote-addon-sdk.js'
 
 /**
  * Detect wireRemoteAddon({ name: '...', package: '...' }) call expressions and
@@ -24,6 +26,7 @@ export function addWireRemoteAddon(
 
   let name: string | undefined
   let pkg: string | undefined
+  let pkgNode: ts.Expression | undefined
   // The auth binding is a runtime closure; we only extract the statically
   // knowable slot names so `pikku verify` can check they exist in the
   // consumer's own wirings. `hasAuth` distinguishes "public" (omitted) from
@@ -37,8 +40,11 @@ export function addWireRemoteAddon(
     const key = prop.name.text
     if (key === 'name' && ts.isStringLiteral(prop.initializer)) {
       name = prop.initializer.text
-    } else if (key === 'package' && ts.isStringLiteral(prop.initializer)) {
-      pkg = prop.initializer.text
+    } else if (key === 'package') {
+      pkgNode = prop.initializer
+      if (ts.isStringLiteralLike(prop.initializer)) {
+        pkg = prop.initializer.text
+      }
     } else if (
       key === 'auth' &&
       ts.isObjectLiteralExpression(prop.initializer)
@@ -65,11 +71,33 @@ export function addWireRemoteAddon(
     }
   }
 
+  if (pkgNode && pkg === undefined) {
+    logger.critical(
+      ErrorCode.REMOTE_ADDON_PACKAGE_NOT_STATIC,
+      `wireRemoteAddon(${name ? `'${name}'` : '…'}) in ${node.getSourceFile().fileName} sets package to '${pkgNode.getText()}', which is not a string literal. Write the package (and its version range) inline, e.g. package: '@scope/addon@^1.0.0', so it can be read without running the file.`
+    )
+    return
+  }
   if (!name || !pkg) return
 
-  logger.debug(`• Found wireRemoteAddon: ${name} → ${pkg} (remote)`)
+  let packageName: string
+  let range: string | undefined
+  try {
+    ;({ name: packageName, range } = parseRemoteAddonPackage(pkg))
+  } catch (e) {
+    logger.critical(
+      ErrorCode.REMOTE_ADDON_PACKAGE_INVALID,
+      `wireRemoteAddon('${name}'): ${e instanceof Error ? e.message : e}`
+    )
+    return
+  }
+
+  logger.debug(
+    `• Found wireRemoteAddon: ${name} → ${packageName}${range ? `@${range}` : ''} (remote)`
+  )
   state.rpc.wireAddonDeclarations.set(name, {
-    package: pkg,
+    package: packageName,
+    ...(range ? { range } : {}),
     file: node.getSourceFile().fileName,
     remote: true,
     hasAuth,

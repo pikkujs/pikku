@@ -14,7 +14,9 @@ import (
 // in the analysis (the addon loader, resolveAddonName); raw is what the state
 // serializes.
 type addonDecl struct {
-	pkg    string
+	pkg string
+	// rng is a versioned wireRemoteAddon's range; "" when unversioned.
+	rng    string
 	file   string
 	remote bool
 	ui     bool

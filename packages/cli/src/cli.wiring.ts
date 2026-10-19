@@ -156,6 +156,7 @@ import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
 import { pikkuAddonsAdd } from './functions/commands/addons.js'
+import { pikkuAddonSync } from './functions/commands/addon-sync.js'
 import { pikkuAppNew, renderAppNew } from './functions/commands/app-new.js'
 import {
   appList,
@@ -1550,6 +1551,16 @@ wireCLI({
             }),
           },
         },
+      },
+    },
+    addon: {
+      description: 'SDKs of the remote addons this app calls',
+      subcommands: {
+        sync: pikkuCLICommand({
+          func: pikkuAddonSync,
+          description:
+            "Download the SDK of each versioned wireRemoteAddon package ('@scope/name@^1.4.0') from the registry into .pikku/remote, and pin it in pikku-addons.lock. Uses the lock and touches no network when the SDKs on disk already match it",
+        }),
       },
     },
     addons: {

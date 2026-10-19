@@ -560,6 +560,13 @@ export type PikkuCLIInput = {
     ignore?: string[]
   }
 
+  /**
+   * The registry `pikku addon sync` resolves versioned `wireRemoteAddon`
+   * packages (`package: '@scope/name@^1.4.0'`) against. Defaults to
+   * `https://registry.pikkustudio.app`.
+   */
+  registry?: string
+
   /** Settings for deploying this project on Pikku Pikku Studio Cloud. */
   cloud?: {
     /**

@@ -111,19 +111,23 @@ export const renderUpdate = (
     } else {
       console.log(
         added('✓') +
-          `  ${result.written.length} package.json file${result.written.length !== 1 ? 's' : ''} updated`
+          `  ${result.written.length} file${result.written.length !== 1 ? 's' : ''} updated`
       )
-      console.log(
-        result.installed
-          ? added('✓') +
-              '  ' +
-              dim(`${result.packageManager} install completed`)
-          : dim(
-              result.packageManager === 'unknown'
-                ? '   no lockfile found — install with your package manager'
-                : `   skipped install — run \`${result.packageManager} install\``
-            )
-      )
+      if (result.addonsSynced) {
+        console.log(added('✓') + '  ' + dim('pikku addon sync completed'))
+      }
+      if (result.written.some((path) => path.endsWith('.json')))
+        console.log(
+          result.installed
+            ? added('✓') +
+                '  ' +
+                dim(`${result.packageManager} install completed`)
+            : dim(
+                result.packageManager === 'unknown'
+                  ? '   no lockfile found — install with your package manager'
+                  : `   skipped install — run \`${result.packageManager} install\``
+              )
+        )
     }
   } else if (summary.outdated > 0 || summary.staleInstall > 0) {
     console.log(dim('   run `pikku update --update` to apply'))

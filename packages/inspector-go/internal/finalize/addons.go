@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/remotesdk"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
 )
 
@@ -364,8 +365,31 @@ func validateRemoteAddonDependencies(log *diag.Logger, st *state.State) {
 		return m
 	}
 
+	var lock *remotesdk.Lock
+	var lockErr error
+	lockRead := false
 	for _, e := range decls {
-		if !e.decl.remote() {
+		if !e.decl.remote() || e.decl.rng() == "" {
+			continue
+		}
+		if !lockRead {
+			lock, lockErr = remotesdk.ReadLock(st.RootDir)
+			lockRead = true
+		}
+		var reason string
+		if lockErr != nil {
+			reason = lockErr.Error()
+		} else {
+			_, reason = remotesdk.Check(st.RootDir, e.decl.pkg(), e.decl.rng(), lock)
+		}
+		if reason == "" {
+			continue
+		}
+		log.Critical(diag.RemoteAddonNotDevDependency, "Remote addon '"+e.namespace+"' ('"+e.decl.pkg()+"@"+e.decl.rng()+"') has no SDK matching "+remotesdk.LockFile+": "+reason+". Run 'pikku addon sync' to download it.")
+	}
+
+	for _, e := range decls {
+		if !e.decl.remote() || e.decl.rng() != "" {
 			continue
 		}
 		pkgJSONPath := filepath.Join(addonResolutionDirs(st.RootDir, e.decl.File)[0], "package.json")

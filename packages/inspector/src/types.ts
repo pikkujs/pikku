@@ -790,6 +790,12 @@ export interface InspectorState {
         scopes?: string[]
         /** True when declared via `wireRemoteAddon` — import the addon's `.remote.gen` map, not `.internal.gen` */
         remote?: boolean
+        /**
+         * wireRemoteAddon: the semver range written after the package name
+         * (`@scope/name@^1.4.0`). Present means the contract comes from the
+         * SDK `pikku addon sync` downloads, not from an installed package.
+         */
+        range?: string
         /** wireRemoteAddon: whether an `auth` binding was supplied (vs a public surface) */
         hasAuth?: boolean
         /** wireRemoteAddon: statically-known `auth.credentialId`, for verify */
@@ -947,6 +953,8 @@ export interface InspectorState {
   openAPISpec: Record<string, any> | null
   diagnostics: InspectorDiagnostic[]
   addonFunctions: Record<string, FunctionsMeta> // namespace -> addon's function metadata
+  /** The function metadata of each versioned `wireRemoteAddon`'s SDK, by namespace. Kept apart from `addonFunctions`: none of it runs here. */
+  remoteAddonFunctions?: Record<string, FunctionsMeta>
   exportedContracts: InspectorExportedContractsState
   program: ts.Program | null // Retained for incremental re-inspection
 }

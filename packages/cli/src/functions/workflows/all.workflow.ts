@@ -11,6 +11,8 @@ import {
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
 import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
+import { runAddonSync } from '../commands/addon-sync.js'
+import { RemoteAddonSyncError } from '../../utils/remote-addon-sync.js'
 import { writeSchemaArtifact } from '../db/local-db.js'
 import { ensureDbTypes } from '../db/ensure-db-types.js'
 import {
@@ -72,10 +74,15 @@ const scaffoldFiles = (
 }
 
 const RUN_RECORDS_DIR = 'runs'
+// `pikku addon sync` writes SDKs into .pikku/remote before anything is
+// generated, so its presence says nothing about whether codegen has run.
+const REMOTE_SDK_DIR = 'remote'
 
 const hasGeneratedOutput = (outDir: string): boolean =>
   existsSync(outDir) &&
-  readdirSync(outDir).some((entry) => entry !== RUN_RECORDS_DIR)
+  readdirSync(outDir).some(
+    (entry) => entry !== RUN_RECORDS_DIR && entry !== REMOTE_SDK_DIR
+  )
 
 export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
   title: 'Pikku All',
@@ -91,6 +98,23 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await pruneLegacyScaffoldFiles(config)
     await refreshScaffoldsImportingRemovedEntryPoints(config)
     await removeRetiredScaffoldFiles(config)
+
+    // Before the first inspection: codegen imports the remote addons' types
+    // from their SDKs, and the inspector refuses an SDK that does not match
+    // pikku-addons.lock. A sync that cannot reach the registry is reported and
+    // left to that check (PKU338), so an offline build with a matching lock
+    // still runs.
+    await workflow.do('Sync remote addon SDKs', async () => {
+      try {
+        await runAddonSync({ config, logger })
+      } catch (e: any) {
+        if (e instanceof RemoteAddonSyncError) {
+          logger.critical(e.code, e.message)
+        } else {
+          logger.error(`pikku addon sync failed: ${e?.message ?? e}`)
+        }
+      }
+    })
 
     const needsBootstrap = !hasGeneratedOutput(config.outDir)
     // Only a MySQL project needs its createConfig read this early: its scratch

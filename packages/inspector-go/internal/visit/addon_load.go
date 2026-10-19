@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/remotesdk"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
 )
 
@@ -300,12 +301,46 @@ func (s *Context) LoadAddonFunctionsMeta() {
 	for _, ns := range s.addonOrder {
 		decl := s.addons[ns]
 		if decl.remote {
+			if decl.rng != "" {
+				s.loadRemoteAddonSdkMeta(ns, decl)
+			}
 			continue
 		}
 		if err := s.loadAddon(ns, decl); err != nil {
 			s.Log.Warn(fmt.Sprintf("Failed to load addon function metadata for '%s' (%s): %s", ns, decl.pkg, err.Error()))
 		}
 	}
+}
+
+// loadRemoteAddonSdkMeta is loadRemoteAddonSdkMeta: a versioned remote
+// addon's function metadata, read from its SDK only when it matches the lock.
+func (s *Context) loadRemoteAddonSdkMeta(ns string, decl *addonDecl) {
+	lock, err := remotesdk.ReadLock(s.RootDir)
+	if err != nil {
+		return
+	}
+	dir, reason := remotesdk.Check(s.RootDir, decl.pkg, decl.rng, lock)
+	if reason != "" {
+		return
+	}
+	meta, err := readJSONFile(filepath.Join(dir, "function", "pikku-functions-meta.gen.json"))
+	if err != nil {
+		return
+	}
+	fns := state.NewRecord[*FunctionMeta]()
+	if meta.isObject() {
+		meta.obj.Each(func(name string, entry *ojson) {
+			m := &FunctionMeta{}
+			raw := entry.raw()
+			_ = json.Unmarshal(raw, m)
+			m.Verbatim = raw
+			fns.Set(name, m)
+		})
+	}
+	if s.State.RemoteAddonFunctions == nil {
+		s.State.RemoteAddonFunctions = state.NewRecord[*state.Record[*FunctionMeta]]()
+	}
+	s.State.RemoteAddonFunctions.Set(ns, fns)
 }
 
 func (s *Context) loadAddon(ns string, decl *addonDecl) error {

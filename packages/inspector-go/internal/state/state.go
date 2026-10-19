@@ -77,10 +77,12 @@ type State struct {
 	OpenAPISpec           Raw                            `json:"openAPISpec"`
 	Diagnostics           List[InspectorDiagnostic]      `json:"diagnostics"`
 	AddonFunctions        Record[*Record[*FunctionMeta]] `json:"addonFunctions"`
-	ScreensManifest       Raw                            `json:"screensManifest,omitempty"`
-	AddonScreens          Raw                            `json:"addonScreens,omitempty"`
-	AddonContributors     Raw                            `json:"addonContributors,omitempty"`
-	ExportedContracts     ExportedContracts              `json:"exportedContracts"`
+	// RemoteAddonFunctions is each versioned wireRemoteAddon's SDK metadata.
+	RemoteAddonFunctions *Record[*Record[*FunctionMeta]] `json:"remoteAddonFunctions,omitempty"`
+	ScreensManifest      Raw                             `json:"screensManifest,omitempty"`
+	AddonScreens         Raw                             `json:"addonScreens,omitempty"`
+	AddonContributors    Raw                             `json:"addonContributors,omitempty"`
+	ExportedContracts    ExportedContracts               `json:"exportedContracts"`
 
 	// CoreTypeProperties replaces the live `typesLookup` entries for the core
 	// interfaces (CoreConfig / CoreSingletonServices / CoreServices /
