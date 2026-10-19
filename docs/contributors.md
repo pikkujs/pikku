@@ -171,6 +171,8 @@ The Cloudflare adapter selects the optional contributor `kysely-coercion` itself
 | The same contributor name twice                                           | PKU361                                                                   |
 | `wireAddon({ contributors })` with a non-literal list                     | PKU362                                                                   |
 | An opt-in name the addon does not register                                | PKU363                                                                   |
+| `pikku.contributors` still in an addon's `package.json`                   | PKU364 (a hard error, no longer silently ignored)                        |
+| `dev.contributors` or `deploy.contributors` still in `pikku.config.json`  | the CLI refuses to load the config, naming the key                       |
 | Two contributors providing one key (after `when` and `requires`)          | `Contributors 'a' and 'b' both provide 'key'`                            |
 | A `needs` nothing provides                                                | `Contributor 'a' needs 'key', which nothing provides`                    |
 | `provides` and `needs` forming a loop, including a self-loop              | `Contributors depend on each other in a cycle`                           |

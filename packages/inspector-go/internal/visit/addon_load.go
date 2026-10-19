@@ -67,6 +67,20 @@ func readResolvedJSON(req addonResolver, id string) (*ojson, error) {
 	return readJSONFile(p)
 }
 
+// hasLegacyContributors reports a package.json still carrying
+// pikku.contributors, the removed string-emitting route.
+func hasLegacyContributors(dirs []string, pkg string) bool {
+	dir := findInstalledPackageDir(dirs, pkg)
+	if dir == "" {
+		return false
+	}
+	pj, err := readJSONFile(filepath.Join(dir, "package.json"))
+	if err != nil {
+		return false
+	}
+	return pj.get("pikku").has("contributors")
+}
+
 // recordOptedInContributors resolves wireAddon({ contributors }) against what
 // the addon registered. A name it does not register is an error rather than a
 // skip: the project asked for a service and would otherwise build without it.
@@ -327,6 +341,13 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	s.recordDeclaredUses(ns, decl, dirs)
 	if len(decl.contributors) > 0 {
 		s.recordOptedInContributors(ns, decl, req)
+	}
+
+	if hasLegacyContributors(dirs, decl.pkg) {
+		s.Log.Critical(diag.AddonLegacyContributors, fmt.Sprintf(
+			"%s still declares \"pikku.contributors\" in its package.json, which is no longer read. "+
+				"Remove it, register the contributors with defineContributors in the addon's source, and opt in with wireAddon('%s', { contributors: [...] }). See docs/contributors.md.",
+			decl.pkg, ns))
 	}
 
 	if decl.ui {

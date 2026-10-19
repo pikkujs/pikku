@@ -617,3 +617,46 @@ describe('loadAddonFunctionsMeta — addons an addon calls by alias', () => {
     assert.deepEqual(decl.dependencies, [])
   })
 })
+
+describe('loadAddonFunctionsMeta — legacy pikku.contributors in an addon', () => {
+  let rootDir: string
+
+  before(() => {
+    rootDir = mkdtempSync(join(tmpdir(), 'pikku-addon-legacy-contributors-'))
+    writeAddonFixture(rootDir)
+  })
+
+  after(() => {
+    rmSync(rootDir, { recursive: true, force: true })
+  })
+
+  const criticalsFor = async (pikku: Record<string, unknown>) => {
+    writeFileSync(
+      join(rootDir, 'node_modules', ADDON, 'package.json'),
+      JSON.stringify({ name: ADDON, pikku })
+    )
+    const criticals: { code: unknown; message: string }[] = []
+    const log = {
+      ...logger,
+      critical: (code: unknown, message: string) =>
+        criticals.push({ code, message }),
+    } as unknown as InspectorLogger
+    await loadAddonFunctionsMeta(
+      log,
+      makeState(rootDir, new Map<string, any>([['slack', { package: ADDON }]]))
+    )
+    return criticals
+  }
+
+  test('reports pikku.contributors instead of ignoring it', async () => {
+    const criticals = await criticalsFor({ contributors: ['./c.js'] })
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, 'PKU364')
+    assert.match(criticals[0]!.message, /defineContributors/)
+    assert.match(criticals[0]!.message, /docs\/contributors\.md/)
+  })
+
+  test('an addon without it is clean', async () => {
+    assert.deepEqual(await criticalsFor({}), [])
+  })
+})

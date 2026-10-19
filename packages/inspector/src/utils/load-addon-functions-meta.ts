@@ -332,6 +332,25 @@ const recordOptedInContributors = async (
 }
 
 /**
+ * `pikku.contributors` in an addon's package.json was the string-emitting
+ * contributor route. It is no longer read, so it is reported rather than left
+ * to stop applying silently.
+ */
+const hasLegacyContributors = async (
+  dirs: string[],
+  packageName: string
+): Promise<boolean> => {
+  const dir = findInstalledPackageDir(dirs, packageName)
+  if (!dir) return false
+  try {
+    const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf-8'))
+    return pkg?.pikku?.contributors !== undefined
+  } catch {
+    return false
+  }
+}
+
+/**
  * A versioned remote addon's function metadata comes from the SDK `pikku addon
  * sync` extracted, and only when it matches the lock — a stale or missing SDK
  * is reported by `validateRemoteAddonDependencies`, not loaded half-way.
@@ -429,6 +448,12 @@ export async function loadAddonFunctionsMeta(
           namespace,
           decl.package,
           decl.contributors
+        )
+      }
+      if (await hasLegacyContributors(dirs, decl.package)) {
+        logger.critical(
+          ErrorCode.ADDON_LEGACY_CONTRIBUTORS,
+          `${decl.package} still declares "pikku.contributors" in its package.json, which is no longer read. Remove it, register the contributors with defineContributors in the addon's source, and opt in with wireAddon('${namespace}', { contributors: [...] }). See docs/contributors.md.`
         )
       }
       if (decl.ui) {

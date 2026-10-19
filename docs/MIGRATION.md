@@ -121,7 +121,7 @@ naming no function of the addon (PKU359) and any non-literal field (PKU345).
 
 Contributors are now plain `Contributor` objects an addon registers with `defineContributors`, and a project opts in by name. The string-emitting `PlatformServiceContributor` is gone. The full reference is [`contributors.md`](./contributors.md).
 
-**Removed config, with no replacement key.** These are no longer read, and nothing warns about them, so a leftover entry means the contributor silently stops applying. Delete them and use the new route below.
+**Removed config, with no replacement key.** These are no longer read, and a leftover entry is now a hard error rather than a silent drop: the CLI refuses `dev.contributors` and `deploy.contributors` in `pikku.config.json` by name when it loads the config, and the inspector reports an addon whose `package.json` still has `pikku.contributors` (PKU364). Delete them and use the new route below.
 
 | Before                                                                          | After                                                                                                                     |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -165,7 +165,7 @@ A contributor is no longer `{ name, needs, provides, imports, emit }`. It is `{ 
 - An opted-in contributor whose `requires` the target cannot supply (for example `requires: ['cloudflare']` in a standalone build) is a build error naming it. A contributor with no variant for the target is silently not part of it.
 - Two contributors providing one key after `when` and `requires` filtering is a build error naming both. A target's baseline services may still be replaced.
 - `onServerStart` on a unit that does not run the server lifecycle (a Cloudflare Worker) is a build error; `onServerStop` there is a warning.
-- Unknown or unreadable opt-ins and registrations are PKU360 to PKU363.
+- Unknown or unreadable opt-ins and registrations are PKU360 to PKU363; a leftover `pikku.contributors` in an addon's `package.json` is PKU364.
 
 **Lifecycle hooks, by target.** `pikku serve` now loads the generated platform services and runs contributor hooks (both `pikku dev` and `pikku serve` skip the file when `NODE_ENV=production`). The generic server entry now supports contributors. The Cloudflare container entry now runs the app's own `serverLifecycle`, which it never did before: an app with a lifecycle that was deployed there will start running its hooks. Start hooks run before the app's `beforeStart`, stop hooks after its `afterStop`.
 
