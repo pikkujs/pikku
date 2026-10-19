@@ -1,4 +1,4 @@
-import { describe, test } from 'node:test'
+import { afterEach, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { gzipSync } from 'node:zlib'
 import {
@@ -11,19 +11,31 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { wireRemoteAddon } from '@pikku/core/addon'
+import { rpcService } from '@pikku/core/rpc'
+import { pikkuState, resetPikkuState } from '@pikku/core/state'
 import { ErrorCode } from '@pikku/inspector/lite'
 import {
-  RESOLVE_SDK_PATH,
+  DEFAULT_ADDON_REGISTRY,
   RemoteAddonSyncError,
   collectRemoteAddonSdkSpecs,
-  createRegistryClient,
+  createSdkDownloader,
+  registryCredential,
+  registryUrl,
+  runAddonSync,
   sha512Integrity,
   syncRemoteAddonSdks,
+  type ResolveSdkRequest,
+  type ResolvedSdk,
 } from './remote-addon-sync.js'
 import { readTgz } from './extract-tgz.js'
 import { addonGeneratedImport } from './remote-addon-import.js'
 import { runUpdate } from '../functions/commands/update.js'
 import { renderUpdate } from '../functions/commands/update-render.js'
+
+/** packages/cli, whose committed registry SDK the offline test syncs against. */
+const CLI_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 /** A gzipped ustar archive of `files`, written the way `npm pack` lays one out. */
 const makeTgz = (
@@ -390,70 +402,118 @@ describe('remote addon SDK sync', () => {
   })
 })
 
-describe('createRegistryClient', () => {
-  test('POSTs { data: { name, range } } with the bearer, and downloads without it', async () => {
-    const requests: { url: string; init?: RequestInit }[] = []
-    const fetch = (async (url: URL | string, init?: RequestInit) => {
+describe('the registry remote addon', () => {
+  const REGISTRY = 'https://registry.example.test'
+  const RESOLVED: ResolvedSdk = {
+    version: '1.4.2',
+    integrity: 'sha512-x',
+    url: 'https://cdn.example.test/a.tgz?sig=1',
+  }
+
+  /**
+   * Wires `registry` exactly as src/registry.wiring.ts does, with core's real
+   * remote dispatch, and answers every POST with `RESOLVED`.
+   */
+  const wireRegistry = (config: { registry?: string }) => {
+    resetPikkuState()
+    const services = { logger: console, config } as never
+    pikkuState(null, 'package', 'singletonServices', services)
+    wireRemoteAddon({
+      name: 'registry',
+      package: '@pikkustudio/addon-registry',
+      serverUrl: ({ config }) => registryUrl(config),
+      remoteName: (fn) => `registry:${fn}`,
+      auth: {
+        resolve: ({ config }) => registryCredential(registryUrl(config)),
+      },
+    })
+    const requests: { url: string; init: RequestInit }[] = []
+    globalThis.fetch = (async (url: URL | string, init: RequestInit) => {
       requests.push({ url: String(url), init })
-      if (String(url).endsWith(RESOLVE_SDK_PATH)) {
-        return new Response(
-          JSON.stringify({
-            version: '1.4.2',
-            integrity: 'sha512-x',
-            url: 'https://cdn.example.test/a.tgz?sig=1',
-          }),
-          { status: 200 }
-        )
-      }
-      return new Response(new Uint8Array([1, 2, 3]))
+      return new Response(JSON.stringify(RESOLVED))
     }) as typeof globalThis.fetch
-    const client = createRegistryClient({
-      registry: 'https://registry.example.test/',
-      token: 'tok',
-      fetch,
-    })
-    assert.deepEqual(await client.resolveSdk({ name: NAME, range: '^1.4.0' }), {
-      version: '1.4.2',
-      integrity: 'sha512-x',
-      url: 'https://cdn.example.test/a.tgz?sig=1',
-    })
-    assert.equal(
-      requests[0]!.url,
-      'https://registry.example.test/rpc/registry:resolveSdk'
-    )
-    assert.equal(requests[0]!.init?.method, 'POST')
-    assert.deepEqual(JSON.parse(requests[0]!.init!.body as string), {
-      data: { name: NAME, range: '^1.4.0' },
-    })
-    assert.equal(
-      (requests[0]!.init!.headers as Record<string, string>).authorization,
-      'Bearer tok'
-    )
-    assert.deepEqual(
-      [...(await client.download('https://cdn.example.test/a.tgz?sig=1'))],
-      [1, 2, 3]
-    )
-    assert.equal(requests[1]!.init, undefined)
+    const rpc = rpcService.getContextRPCService(services, {} as never) as {
+      invoke: ResolveSdkInvoke
+    }
+    return { rpc, requests }
+  }
+  type ResolveSdkInvoke = (
+    name: 'registry:resolveSdk',
+    data: ResolveSdkRequest
+  ) => Promise<ResolvedSdk>
+
+  const realFetch = globalThis.fetch
+  const realToken = process.env.PIKKU_REGISTRY_TOKEN
+  afterEach(() => {
+    globalThis.fetch = realFetch
+    if (realToken === undefined) delete process.env.PIKKU_REGISTRY_TOKEN
+    else process.env.PIKKU_REGISTRY_TOKEN = realToken
   })
 
-  test('never sends the bearer to a plain-http registry', async () => {
-    let headers: Record<string, string> = {}
-    const fetch = (async (_url: URL, init?: RequestInit) => {
-      headers = init?.headers as Record<string, string>
-      return new Response(
-        JSON.stringify({
-          version: '1.0.0',
-          integrity: 'sha512-x',
-          url: 'https://a/b.tgz',
-        })
-      )
-    }) as typeof globalThis.fetch
-    await createRegistryClient({
+  test('resolveSdk is a typed call to the registry host', async () => {
+    const { rpc, requests } = wireRegistry({ registry: REGISTRY })
+    const resolved = await rpc.invoke('registry:resolveSdk', {
+      name: NAME,
+      range: '^1.4.0',
+    })
+    assert.deepEqual(resolved, RESOLVED)
+    assert.equal(requests.length, 1)
+    assert.equal(
+      requests[0]!.url,
+      `${REGISTRY}/rpc/${encodeURIComponent('registry:resolveSdk')}`
+    )
+    assert.equal(requests[0]!.init.method, 'POST')
+    assert.deepEqual(JSON.parse(requests[0]!.init.body as string), {
+      rpcName: 'registry:resolveSdk',
+      data: { name: NAME, range: '^1.4.0' },
+    })
+  })
+
+  test('never sends a credential to a plain-http registry', async () => {
+    process.env.PIKKU_REGISTRY_TOKEN = 'tok'
+    const { rpc, requests } = wireRegistry({
       registry: 'http://registry.example.test',
-      token: 'tok',
-      fetch,
-    }).resolveSdk({ name: NAME, range: '*' })
+    })
+    await rpc.invoke('registry:resolveSdk', { name: NAME, range: '*' })
+    const headers = requests[0]!.init.headers as Record<string, string>
     assert.equal(headers.authorization, undefined)
+  })
+
+  test('the registry defaults to the hosted one', () => {
+    assert.equal(registryUrl({}), DEFAULT_ADDON_REGISTRY)
+    assert.equal(registryUrl({ registry: REGISTRY }), REGISTRY)
+  })
+
+  test('the download is a GET without credentials, and refuses plain http', async () => {
+    const requests: { url: string; init?: RequestInit }[] = []
+    const download = createSdkDownloader((async (
+      url: URL | string,
+      init?: RequestInit
+    ) => {
+      requests.push({ url: String(url), init })
+      return new Response(new Uint8Array([1, 2, 3]))
+    }) as typeof globalThis.fetch)
+    assert.deepEqual([...(await download(RESOLVED.url))], [1, 2, 3])
+    assert.equal(requests[0]!.init, undefined)
+    await assert.rejects(() => download('http://cdn.example.test/a.tgz'))
+  })
+
+  test("the CLI's own sync is satisfied offline by the committed SDK", async () => {
+    const offline = async (): Promise<never> => {
+      throw new Error('the committed registry SDK must not need the network')
+    }
+    const result = await runAddonSync({
+      config: { rootDir: CLI_ROOT, srcDirectories: ['src'] },
+      logger: { debug: () => {}, diagnostic: () => {} },
+      resolveSdk: offline,
+      download: offline,
+    })
+    assert.ok(result)
+    assert.equal(result.lockChanged, false)
+    assert.deepEqual(
+      result.sdks.map((sdk) => [sdk.name, sdk.version]),
+      [['@pikkustudio/addon-registry', '1.0.0']]
+    )
   })
 })
 

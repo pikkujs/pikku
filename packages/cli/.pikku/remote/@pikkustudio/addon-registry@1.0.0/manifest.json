@@ -1,0 +1,6 @@
+{
+  "name": "@pikkustudio/addon-registry",
+  "version": "1.0.0",
+  "pikkuCore": "^0.12.142",
+  "contractHash": "dd79a2c753ab4fcd654d79f53a05a24792de65987b34b8a57e01d812329d77bb"
+}

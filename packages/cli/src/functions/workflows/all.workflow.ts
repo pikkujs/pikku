@@ -88,7 +88,11 @@ const hasGeneratedOutput = (outDir: string): boolean =>
 
 export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
   title: 'Pikku All',
-  func: async ({ logger, config, getInspectorState }, _data, { workflow }) => {
+  func: async (
+    { logger, config, getInspectorState },
+    _data,
+    { workflow, rpc }
+  ) => {
     // Preflight: a split @pikku/core install silently breaks wiring registration
     // (workflows/RPCs "disappear"), so refuse to codegen against it.
     await assertSingleCoreVersion(config.rootDir, logger)
@@ -108,7 +112,12 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     // still runs.
     await workflow.do('Sync remote addon SDKs', async () => {
       try {
-        await runAddonSync({ config, logger })
+        await runAddonSync({
+          config,
+          logger,
+          // Typed by the registry SDK the CLI commits; a lock hit never calls it.
+          resolveSdk: (request) => rpc.invoke('registry:resolveSdk', request),
+        })
       } catch (e: any) {
         if (e instanceof RemoteAddonSyncError) {
           logger.critical(e.code, e.message)

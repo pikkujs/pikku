@@ -6,12 +6,7 @@ import semver from 'semver'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { checkLockedSdk, readAddonsLock } from '@pikku/inspector/lite'
 import { findSourceFiles } from '../../utils/find-source-files.js'
-import {
-  DEFAULT_ADDON_REGISTRY,
-  createRegistryClient,
-  resolveRegistryToken,
-  type ResolveSdk,
-} from '../../utils/remote-addon-sync.js'
+import type { ResolveSdk } from '../../utils/remote-addon-sync.js'
 
 export type PackageManager = 'bun' | 'npm' | 'yarn' | 'pnpm' | 'unknown'
 
@@ -739,14 +734,8 @@ export const runUpdate = async ({
 }
 
 export const pikkuUpdate = pikkuSessionlessFunc<UpdateInput, UpdateResult>({
-  func: async ({ config }, input) => {
+  func: async ({ config }, input, { rpc }) => {
     const updatePeers = input?.updatePeers === true
-    let client: ReturnType<typeof createRegistryClient> | undefined
-    const registryClient = async () =>
-      (client ??= createRegistryClient({
-        registry: config.registry ?? DEFAULT_ADDON_REGISTRY,
-        token: await resolveRegistryToken(),
-      }))
     return runUpdate({
       rootDir: config.rootDir,
       apply: input?.update === true || updatePeers,
@@ -761,8 +750,7 @@ export const pikkuUpdate = pikkuSessionlessFunc<UpdateInput, UpdateResult>({
         rootDir: config.rootDir,
         srcDirectories: config.srcDirectories,
         ignoreFiles: config.ignoreFiles,
-        resolveSdk: async (request) =>
-          (await registryClient()).resolveSdk(request),
+        resolveSdk: (request) => rpc.invoke('registry:resolveSdk', request),
       },
     })
   },
