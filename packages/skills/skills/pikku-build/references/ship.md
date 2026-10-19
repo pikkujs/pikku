@@ -25,12 +25,16 @@ with Node, or a self-contained executable compiled with `bun build --compile`.
 factories the deploy codegen expects, and hand-rolling an `ExportedHandler` is
 how a worker deploy fails at runtime instead of at build.
 
-Platform services a host injects into the bundle come from contributors:
-`deploy.contributors` in `pikku.config.json` (`[{ "module", "export"? }]`, the
-same shape as `dev.contributors`) plus the `pikku.contributors` every wired addon
-declares in its package.json. `plan` and `apply` pass them all to the adapter,
-which orders them by `needs`/`provides` and, on standalone, runs them after the
-database is open, with `runtime.logger` and `runtime.kysely` in reach.
+Platform services an addon builds for the bundle come from contributors the
+project opted in to with `wireAddon({ contributors: [...] })`; the addon
+registers them with `defineContributors`. `plan` and `apply` select the `deploy`
+variant of each, drop what `when` rules out, order them by `needs`/`provides`
+and, on standalone, run them after the database is open, with `runtime.logger`
+and `runtime.kysely` in reach. Standalone, the generic server entry and the
+Cloudflare adapter support contributors; a provider without `contributorSupport`
+fails the build when a project opts in to one with a deploy variant. On a
+Cloudflare Worker a contributor with `onServerStart` is a build error. See
+`docs/contributors.md`.
 
 Always run `plan` before `apply`, and read it. It names what will be created,
 updated and deleted — the deletions are the reason to look.

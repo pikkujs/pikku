@@ -117,6 +117,64 @@ naming no function of the addon (PKU359) and any non-literal field (PKU345).
 `pikku new addon-ui` scaffolds the new form. Search:
 `rg -n "defineScreens|ScreensManifest|AddonScreen"`.
 
+### Platform-service contributors are declared in code and opted in with `wireAddon`
+
+Contributors are now plain `Contributor` objects an addon registers with `defineContributors`, and a project opts in by name. The string-emitting `PlatformServiceContributor` is gone. The full reference is [`contributors.md`](./contributors.md).
+
+**Removed config, with no replacement key.** These are no longer read, and nothing warns about them, so a leftover entry means the contributor silently stops applying. Delete them and use the new route below.
+
+| Before                                                                          | After                                                                                                                     |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `dev.contributors` in `pikku.config.json`                                       | `defineContributors` in an addon, `wireAddon({ contributors })`                                                           |
+| `deploy.contributors` in `pikku.config.json`                                    | the same                                                                                                                  |
+| `"pikku": { "contributors": [...] }` in an addon's `package.json`               | `defineContributors` in the addon's source                                                                                |
+| `devPlatformServicesFile` (config output, `pikku-dev-platform-services.gen.ts`) | `devContributorsFile` (`.pikku/contributors/pikku-dev-contributors.gen.ts`), plus `contributorsMetaJsonFile` for an addon |
+
+To migrate a host-level contributor, move it into an addon (or a workspace package wired as one), export each variant from its own module, register it, and opt in:
+
+```ts
+// before: pikku.config.json  { "dev": { "contributors": [{ "module": "./dev/email.ts", "export": "email" }] } }
+// after, in the addon:
+export const contributors = defineContributors({
+  email: { dev: emailDev, deploy: emailDeploy },
+})
+// after, in the project:
+wireAddon({
+  name: 'mail',
+  package: '@my-org/addon-mail',
+  contributors: ['email'],
+})
+```
+
+A contributor is no longer `{ name, needs, provides, imports, emit }`. It is `{ provides, needs, requires, when, run(services, env, runtime, platform), onServerStart, onServerStop }`, and `run` assigns to `services` instead of returning source lines. A host that injects an addon (CI, Studio) writes a gitignored wiring file with the `wireAddon` call.
+
+**Removed API.**
+
+| Package                                                                 | Removed                                                                                                                                                                                                                                                                                                                                                                             |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@pikku/deploy`, `@pikku/deploy-cloudflare`, `@pikku/deploy-standalone` | `PlatformServiceContributor`, `BindingSource`, the old string-based `ContributorPlatform`, `collectContributorImports`, `collectContributorLines`, `dedupeContributors`, `partitionContributors`, `assertContributorsSupported`, `contributorBindingSources`, `DEFAULT_BINDING_SOURCES`, and `orderContributors` / `ContributorDependencyError` (now in `@pikku/core/contributors`) |
+| The standalone and Cloudflare `createAdapter` / adapter options         | `contributors` (the Cloudflare `coercion` option stays)                                                                                                                                                                                                                                                                                                                             |
+| `@pikku/cli`                                                            | `mergeDevPlatformServices` keeps its name and return value, but its third argument is now the `devContributorsFile` path (it was `devPlatformServicesFile`). `loadDevPlatformServices` (new) also returns the start and stop hooks                                                                                                                                                  |
+
+**New in `@pikku/core`:** the `@pikku/core/contributors` entry point (`defineContributors`, the `Contributor`, `ContributorPlatform`, `ContributorDb`, `ContributorBindingSource` and `ContributorVariants` types, `resolveContributors`, `orderContributors`, `selectContributors`) and `composeServerLifecycle` in `@pikku/core/lifecycle`. `wireAddon` accepts `contributors: string[]`.
+
+**New build errors and behaviour.**
+
+- `pikku all` (and so `pikku dev`) fails when the project declares a database (`createConfig` or `db/<dialect>`) but the pikku config has no `db`, once contributors are opted in. Set `db` or remove the declaration.
+- A provider adapter with no `contributorSupport` fails the build when a project opts in to a contributor with a `deploy` variant. `ContributorSupport.runsServerLifecycle` is a new **required** field for third-party providers; set it to `true` only if the entry calls the server lifecycle.
+- An opted-in contributor whose `requires` the target cannot supply (for example `requires: ['cloudflare']` in a standalone build) is a build error naming it. A contributor with no variant for the target is silently not part of it.
+- Two contributors providing one key after `when` and `requires` filtering is a build error naming both. A target's baseline services may still be replaced.
+- `onServerStart` on a unit that does not run the server lifecycle (a Cloudflare Worker) is a build error; `onServerStop` there is a warning.
+- Unknown or unreadable opt-ins and registrations are PKU360 to PKU363.
+
+**Lifecycle hooks, by target.** `pikku serve` now loads the generated platform services and runs contributor hooks (both `pikku dev` and `pikku serve` skip the file when `NODE_ENV=production`). The generic server entry now supports contributors. The Cloudflare container entry now runs the app's own `serverLifecycle`, which it never did before: an app with a lifecycle that was deployed there will start running its hooks. Start hooks run before the app's `beforeStart`, stop hooks after its `afterStop`.
+
+**Cloudflare coercion** is now the named optional contributor `kysely-coercion` (`COERCION_CONTRIBUTOR_NAME`, `coercionContributor`). It applies only when some contributor provides `kysely` and the app has a coercion map. A deploy where `kysely` came from outside the contributors no longer gets the map from the adapter.
+
+**New peer dependencies.** `@pikku/core` is a peer of `@pikku/deploy`, `@pikku/deploy-standalone` and `@pikku/deploy-cloudflare`, and `@pikku/kysely` is a peer of `@pikku/deploy-cloudflare`. `pikku update --update-peers` writes them.
+
+Search: `rg -n "\"contributors\"|PlatformServiceContributor|devPlatformServicesFile|collectContributor|dedupeContributors|partitionContributors|assertContributorsSupported|contributorBindingSources"`, and check the hits in `pikku.config.json` and addon `package.json` files for `"contributors"` under `"dev"`, `"deploy"` and `"pikku"`.
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.
