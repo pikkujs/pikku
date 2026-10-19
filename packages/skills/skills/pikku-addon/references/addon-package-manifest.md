@@ -5,6 +5,7 @@
 - Package Structure
 - pikku.config.json
 - package.json (key fields)
+- Platform service contributors (`pikku.contributors`)
 - tsconfig.json (key fields)
 
 `npx pikku new addon` scaffolds these files. You rarely hand-edit them — consult this when wiring exports or config by hand.
@@ -97,6 +98,58 @@ live in a file that never imports `#pikku` — see "Functions" in the skill.
 **`exports` targets carry the `addon` segment; the subpaths do not.** A consumer
 writes `@my-org/addon-todos/.pikku/rpc/...`, exactly as it would in an
 application, and the leaf stays the package's own business.
+
+## Platform service contributors (`pikku.contributors`)
+
+An addon can ship code that runs in the **host's** generated
+`createPlatformServices` — a log source over the host's database, a client
+built from a host secret. `wireAddon` has no field for it; the package declares
+it in its own `package.json`, the same shape as the host's `dev.contributors`:
+
+```json
+{
+  "exports": {
+    "./contributors": {
+      "types": "./dist/src/contributors.d.ts",
+      "import": "./dist/src/contributors.js"
+    }
+  },
+  "pikku": {
+    "contributors": [
+      { "module": "@my-org/addon-logs/contributors", "export": "logSources" }
+    ]
+  }
+}
+```
+
+`module` resolves from the addon's package directory. Every app that wires the
+addon (not `wireRemoteAddon`) picks the contributors up: `pikku all` emits them
+into `.pikku/pikku-dev-platform-services.gen.ts` for `pikku dev`, and
+`pikku deploy plan` / `apply` hands them to the provider adapter, after the
+app's own `deploy.contributors`.
+
+Declare what a contributor reads and sets, rather than relying on list order:
+
+```ts
+export const logSources: PlatformServiceContributor = {
+  name: 'log-sources',
+  needs: ['kysely'], // runtime.kysely, or a contributor's services.kysely
+  provides: ['logSources', 'logSources.workspace'],
+  imports: [`import { kyselyLogSource } from '@my-org/addon-logs/log-source'`],
+  emit: () => [
+    `  services.logSources = { workspace: kyselyLogSource(runtime.kysely) }`,
+  ],
+}
+```
+
+Contributors are sorted so each runs after every contributor providing one of
+its `needs`; a dotted need (`logSources.stage`) is met by a provider of the key
+or of its prefix. Emitted lines read services the entry built before them as
+`runtime.<name>` — `pikku dev` has logger, variables, secrets, schema and (with
+`db`) kysely; the standalone entry has logger, kysely (with a database) and its
+scheduler/queue/workflow/trigger services and event hub. Codegen **fails** on a
+need nothing meets, on two contributors providing the same key, and on a cycle,
+naming the contributors involved.
 
 ## tsconfig.json (key fields)
 

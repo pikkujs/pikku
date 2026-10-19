@@ -179,8 +179,12 @@ in the repo, green or red on every future run.
 }
 ```
 
-The module exports a `PlatformServiceContributor` (`{ name, imports?, emit }`, the
-type `@pikku/deploy` takes). `pikku all` writes `.pikku/pikku-dev-platform-services.gen.ts`
+The module exports a `PlatformServiceContributor` (`{ name, needs?, provides?, imports?, emit }`, the
+type `@pikku/deploy` takes). Addons the project wires add their own, declared in their
+package.json as `pikku.contributors` (see the pikku-addon skill's package manifest
+reference). Contributors run in the order their `needs`/`provides` require, and the
+generated `createPlatformServices(env, runtime)` gets the local services as `runtime`;
+an unmet need, a key provided twice or a cycle fails `pikku all`. `pikku all` writes `.pikku/pikku-dev-platform-services.gen.ts`
 from them, and `pikku dev` merges what it returns over the local services before
 `createSingletonServices` runs, so a contributed `emailService` beats
 `LocalEmailService` (and the test-mode spy). Nothing is written without

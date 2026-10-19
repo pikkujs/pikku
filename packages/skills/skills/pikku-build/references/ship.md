@@ -25,6 +25,13 @@ with Node, or a self-contained executable compiled with `bun build --compile`.
 factories the deploy codegen expects, and hand-rolling an `ExportedHandler` is
 how a worker deploy fails at runtime instead of at build.
 
+Platform services a host injects into the bundle come from contributors:
+`deploy.contributors` in `pikku.config.json` (`[{ "module", "export"? }]`, the
+same shape as `dev.contributors`) plus the `pikku.contributors` every wired addon
+declares in its package.json. `plan` and `apply` pass them all to the adapter,
+which orders them by `needs`/`provides` and, on standalone, runs them after the
+database is open, with `runtime.logger` and `runtime.kysely` in reach.
+
 Always run `plan` before `apply`, and read it. It names what will be created,
 updated and deleted — the deletions are the reason to look.
 
