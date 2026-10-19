@@ -1,3 +1,4 @@
+export { renderAuthGit } from './functions/auth-git.function.js'
 export { renderAddonGet } from './functions/addon-get.function.js'
 export { renderAddonSearch } from './functions/addon-search.function.js'
 export { renderAddonVerify } from './functions/addon-verify.function.js'

@@ -149,6 +149,8 @@ export const CONFIG_FREE_COMMANDS = new Set([
   'skills.install',
   'doc',
   'cloud.login',
+  'cloud.logout',
+  'cloud.auth.git',
   'cloud.report',
   'changes',
   'changes.list',
@@ -167,6 +169,13 @@ export const CONFIG_FREE_COMMANDS = new Set([
   'changes.next',
 ])
 
+/**
+ * Commands another program reads the stdout of, such as git reading a
+ * credential helper's answer, so nothing but the command's own output may be
+ * printed — not even the logo.
+ */
+export const SILENT_COMMANDS = new Set(['cloud.auth.git'])
+
 export const createConfig: CreateConfig<
   Config,
   [PikkuCLIConfig, string[]?]
@@ -184,7 +193,7 @@ export const createConfig: CreateConfig<
 
   logger.setOutputMode(outputMode)
 
-  if ((data as any).silent) {
+  if ((data as any).silent || SILENT_COMMANDS.has(commandPath.join('.'))) {
     logLevel = LogLevel.critical
     isSilent = true
   } else if ((data as any).loglevel) {

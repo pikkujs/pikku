@@ -44,6 +44,19 @@ describe('createConfig', () => {
     assert.equal(config.scaffold?.addonDir, undefined)
   })
 
+  test('the git credential helper prints no logo, even without --silent', async () => {
+    await inProjectlessDir()
+    const logged: unknown[] = []
+    const original = console.log
+    console.log = (...args: unknown[]) => logged.push(args)
+    try {
+      await createConfig({} as any, {} as any, ['cloud', 'auth', 'git'])
+    } finally {
+      console.log = original
+    }
+    assert.deepEqual(logged, [])
+  })
+
   test('a command that reads the project still demands a config', async () => {
     await inProjectlessDir()
 
@@ -70,6 +83,11 @@ describe('CONFIG_FREE_COMMANDS', () => {
 
   test('cloud login runs before there is a project to be inside', () => {
     assert.ok(CONFIG_FREE_COMMANDS.has('cloud.login'))
+  })
+
+  test('the git credential helper and logout run from any directory', () => {
+    assert.ok(CONFIG_FREE_COMMANDS.has('cloud.auth.git'))
+    assert.ok(CONFIG_FREE_COMMANDS.has('cloud.logout'))
   })
 })
 

@@ -1,5 +1,7 @@
 import { defineCLICommands, pikkuCLICommand } from '#pikku/addon/cli'
 import { CloudLogin } from './functions/login.function.js'
+import { CloudLogout } from './functions/logout.function.js'
+import { CloudAuthGit, renderAuthGit } from './functions/auth-git.function.js'
 import { CloudStatus, renderStatus } from './functions/status.function.js'
 import { CloudInit } from './functions/init.function.js'
 import { CloudLink } from './functions/link.function.js'
@@ -91,6 +93,26 @@ export const cloudCommands = defineCLICommands({
       },
     },
   }),
+  logout: pikkuCLICommand({
+    func: CloudLogout,
+    description: 'Forget the saved cloud token and the git credential helper',
+    options: {
+      apiUrl: { description: 'Override the cloud API URL to log out of' },
+    },
+  }),
+  auth: {
+    description: 'Credential helpers registered by login',
+    hidden: true,
+    subcommands: {
+      git: pikkuCLICommand({
+        parameters: '<operation>',
+        func: CloudAuthGit,
+        render: renderAuthGit,
+        description: 'Git credential helper for the cloud git server',
+        hidden: true,
+      }),
+    },
+  },
   status: pikkuCLICommand({
     func: CloudStatus,
     render: renderStatus,

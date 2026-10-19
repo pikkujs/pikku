@@ -6946,6 +6946,16 @@ export type MintRepoWriteCredentialOutput = {
   commitName: string
   commitEmail: string
 }
+export type GetGitCredentialInput = {
+  protocol?: string | undefined
+  host: string
+  path: string
+}
+export type GetGitCredentialOutput = {
+  username: string
+  password: string
+  expiresAt: string
+}
 export type NotifyOrchestratorReadyInput = {
   sandboxId: string
   sandboxInstanceId: string
@@ -10717,6 +10727,10 @@ export type RPCMap = {
   readonly mintRepoWriteCredential: RPCHandler<
     MintRepoWriteCredentialInput,
     MintRepoWriteCredentialOutput
+  >
+  readonly getGitCredential: RPCHandler<
+    GetGitCredentialInput,
+    GetGitCredentialOutput
   >
   readonly startGitProviderLinking: RPCHandler<
     StartGitProviderLinkingInput,
