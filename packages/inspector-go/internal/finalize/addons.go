@@ -35,6 +35,12 @@ func validateSecretOverrides(log *diag.Logger, st *state.State) {
 		return
 	}
 	secretIds := definitionIds(st.Secrets.Definitions, "secretId")
+	// auth-secrets.gen.ts declares it, but that file is written after the first
+	// inspection of a fresh project, so its defineSecret is not seen yet — the
+	// same fallback validateSecretUsage takes.
+	if authDefinition(st) != nil {
+		secretIds.add("BETTER_AUTH_SECRET")
+	}
 	for _, e := range decls {
 		if e.decl.SecretOverrides != nil {
 			e.decl.SecretOverrides.Each(func(logical string, resolved json.RawMessage) {

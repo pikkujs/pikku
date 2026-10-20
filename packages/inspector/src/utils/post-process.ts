@@ -505,6 +505,10 @@ export function validateSecretOverrides(
   const secretIds = new Set(
     state.secrets.definitions.map((d: any) => d.secretId ?? d.name)
   )
+  // auth-secrets.gen.ts declares it, but that file is written after the first
+  // inspection of a fresh project, so its defineSecret is not seen yet — the
+  // same fallback validateSecretUsage takes.
+  if (state.auth?.definition) secretIds.add('BETTER_AUTH_SECRET')
 
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
     for (const [logicalName, resolvedName] of Object.entries(
