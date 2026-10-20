@@ -69,8 +69,11 @@ const collectUses = (
  * exposed, published or offered to MCP, and not called by name. Addon
  * functions are never judged: an addon project's own functions are all addon
  * functions, and a consumer's state holds no addon functions in
- * `functions.meta`. Neither are scenarios, workflows, inline wiring functions
- * or disabled functions.
+ * `functions.meta`. Neither are scenarios, inline wiring functions or disabled
+ * functions. A workflow is a function like any other: it is used when it is
+ * wired, exposed, or started by a literal name — `rpc.startWorkflow`,
+ * `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, another
+ * workflow's step, or the generated client helpers.
  */
 export const findUnusedFunctions = (
   state: InspectorState,
@@ -82,22 +85,44 @@ export const findUnusedFunctions = (
   for (const id of Object.values(state.rpc.exposedMeta)) uses.add(id)
   const seen = new WeakSet<object>()
   for (const [section, value] of Object.entries(state)) {
-    if (NOT_USES.has(section) || section === 'rpc') continue
+    if (NOT_USES.has(section) || section === 'rpc' || section === 'workflows')
+      continue
     collectUses(value, uses, seen)
   }
-  for (const workflowName of state.workflows.invokedWorkflows) {
-    const workflowMeta = (
-      state.workflows.meta as Record<string, { pikkuFuncId?: string }>
-    )[workflowName]
-    uses.add(workflowMeta?.pikkuFuncId ?? workflowName)
+  // A workflow's own meta and graph name the workflow itself; only what its
+  // steps call counts as a use.
+  const { meta: workflowsMeta, graphMeta } = state.workflows
+  for (const entries of [workflowsMeta, graphMeta] as Array<
+    Record<string, { pikkuFuncId?: string; name?: string }>
+  >) {
+    for (const [workflowName, entry] of Object.entries(entries ?? {})) {
+      const calls = new Set<string>()
+      collectUses(entry, calls, seen)
+      calls.delete(workflowName)
+      if (entry?.pikkuFuncId) calls.delete(entry.pikkuFuncId)
+      for (const call of calls) uses.add(call)
+    }
+  }
+  // Workflows started by name: client helpers, `startWorkflow` and
+  // `runToCompletion` calls, and each function's own `rpc.startWorkflow`.
+  const startedWorkflows = new Set(state.workflows.invokedWorkflows)
+  for (const meta of Object.values(state.functions.meta)) {
+    for (const name of meta.startsWorkflows ?? []) startedWorkflows.add(name)
+  }
+  for (const workflowName of startedWorkflows) uses.add(workflowName)
+  // A workflow named by its workflow name, by any of the above or by
+  // `rpc.invoke` and step calls, uses the function behind it.
+  for (const [workflowName, entry] of Object.entries(
+    workflowsMeta as Record<string, { pikkuFuncId?: string }>
+  )) {
+    if (uses.has(workflowName) && entry?.pikkuFuncId)
+      uses.add(entry.pikkuFuncId)
   }
 
   const unused: UnusedFunction[] = []
   for (const [pikkuFuncId, meta] of Object.entries(state.functions.meta)) {
     if (meta.functionType !== 'user') continue
     if (meta.funcWrapper && RUN_BY_SCENARIOS.has(meta.funcWrapper)) continue
-    // Workflows are started by the workflow runner, by name the build cannot always see.
-    if (meta.funcWrapper?.startsWith('pikkuWorkflow')) continue
     if (meta.expose || meta.remote || meta.mcp) continue
     if (uses.has(pikkuFuncId) || (meta.name && uses.has(meta.name))) continue
     unused.push({

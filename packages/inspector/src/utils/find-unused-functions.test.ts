@@ -44,6 +44,25 @@ const func = (name: string, config = '') => [
 ]
 
 const IMPORT = "import { pikkuSessionlessFunc } from '@pikku/core'"
+const WF_IMPORT = "import { pikkuWorkflowFunc } from '@pikku/core/workflow'"
+
+const workflowFunc = (name: string, body = '  return {}') => [
+  `export const ${name} = pikkuWorkflowFunc(async (_s, _input, { workflow }) => {`,
+  body,
+  '})',
+]
+
+/** A workflow `onboard`, plus an exposed function whose body is `call`. */
+const startedBy = (call: string) => ({
+  'wf.ts': [WF_IMPORT, ...workflowFunc('onboard')],
+  'funcs.ts': [
+    IMPORT,
+    'export const starter = pikkuSessionlessFunc({',
+    '  expose: true,',
+    `  func: async ({ workflowService }, _d, { rpc }) => { ${call} },`,
+    '})',
+  ],
+})
 
 describe('findUnusedFunctions', () => {
   test('a function wired to a transport is used', async () => {
@@ -98,6 +117,67 @@ describe('findUnusedFunctions', () => {
       { 'funcs.ts': [IMPORT, ...func('addonOnly')] },
       { addon: true }
     )
+    assert.deepEqual(unused, [])
+  })
+
+  test('a workflow nothing starts is reported', async () => {
+    const unused = await unusedIn({
+      'wf.ts': [WF_IMPORT, ...workflowFunc('onboard')],
+    })
+    assert.deepEqual(unused, ['onboard'])
+  })
+
+  test('a workflow started by rpc.startWorkflow is used', async () => {
+    const unused = await unusedIn(
+      startedBy("await rpc.startWorkflow('onboard', {})")
+    )
+    assert.deepEqual(unused, [])
+  })
+
+  test('a workflow started by the workflow service is used', async () => {
+    for (const call of [
+      "await workflowService.startWorkflow('onboard', {}, rpc)",
+      "await workflowService.runToCompletion('onboard', {}, rpc)",
+    ]) {
+      assert.deepEqual(await unusedIn(startedBy(call)), [], call)
+    }
+  })
+
+  test('a workflow called by name through rpc.invoke is used', async () => {
+    const unused = await unusedIn(startedBy("await rpc.invoke('onboard', {})"))
+    assert.deepEqual(unused, [])
+  })
+
+  test("a workflow run as another workflow's step is used", async () => {
+    const unused = await unusedIn({
+      'wf.ts': [
+        WF_IMPORT,
+        ...workflowFunc('onboard'),
+        ...workflowFunc(
+          'signup',
+          "  return await workflow.do('Onboard', 'onboard', {})"
+        ),
+      ],
+      'funcs.ts': [
+        IMPORT,
+        'export const starter = pikkuSessionlessFunc({',
+        '  expose: true,',
+        "  func: async (_s, _d, { rpc }) => { await rpc.startWorkflow('signup', {}) },",
+        '})',
+      ],
+    })
+    assert.deepEqual(unused, [])
+  })
+
+  test('a workflow wired to a scheduler is used', async () => {
+    const unused = await unusedIn({
+      'wf.ts': [WF_IMPORT, ...workflowFunc('nightly')],
+      'cron.ts': [
+        "import { wireScheduler } from '@pikku/core/scheduler'",
+        "import { nightly } from './wf.js'",
+        "wireScheduler({ name: 'nightly', schedule: '0 0 * * *', func: nightly })",
+      ],
+    })
     assert.deepEqual(unused, [])
   })
 })

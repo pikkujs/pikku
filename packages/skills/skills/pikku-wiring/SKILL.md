@@ -174,6 +174,12 @@ by name (`rpc.invoke`, a workflow step, an agent tool) — `[PKU563]`, naming th
 function and its file. `pikku all` still builds; only verify fails. Addon
 functions are never flagged, in the addon or in an app that uses it.
 
+Workflows are checked too. A workflow is used when it is wired, exposed, or
+started by a literal name: `rpc.startWorkflow('name')`,
+`workflowService.startWorkflow` / `runToCompletion('name')`,
+`rpc.invoke('name')`, another workflow's step, or a client helper. A workflow
+started only through a computed name is flagged.
+
 To keep a function in the source but out of the build, mark it `disabled`:
 
 ```typescript
