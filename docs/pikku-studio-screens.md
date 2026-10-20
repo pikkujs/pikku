@@ -1,0 +1,83 @@
+# Addon screens in Pikku Studio: `pikkuStudio`
+
+An addon can ship screens that Pikku Studio mounts. It declares them with
+`pikkuStudio` in its own source, usually `src/screens.ts`, and the app opts in
+by wiring the addon with `ui: true`. `pikku new addon-ui <name>` scaffolds an
+addon that already has one.
+
+```ts
+import { pikkuStudio } from '@pikku/core/addon'
+
+export default pikkuStudio({
+  title: 'invoices__title',
+  screens: [
+    {
+      path: '/invoices',
+      title: 'invoices_list__title',
+      scope: 'project',
+      nav: {
+        area: 'project',
+        icon: 'receipt',
+        order: 30,
+        badge: 'unpaidCount',
+      },
+      needsApp: true,
+      scopes: ['invoices:read'],
+      component: () => import('./screens/Invoices.js'),
+    },
+    {
+      path: '/invoices/settings',
+      title: 'invoices_settings__title',
+      scope: 'team',
+      nav: { area: 'team', icon: 'settings', order: 40 },
+      component: () => import('./screens/Settings.js'),
+    },
+  ],
+})
+```
+
+## Screen fields
+
+| Field                | Meaning                                                                                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`               | The route path.                                                                                                                                                                             |
+| `title`              | A message key in the addon's catalog. It is also the nav label.                                                                                                                             |
+| `component` or `app` | A lazy `() => import('...')` the host renders, or `app`, a static program it serves in a sandboxed iframe.                                                                                  |
+| `scope`              | `'studio'` gives `/<path>`, `'team'` gives `/<team>/<path>`, `'project'` gives `/<team>/<project>[/<target>]/<path>`.                                                                       |
+| `nav?`               | `{ area: 'rail' \| 'team' \| 'project' \| 'account', icon, order, badge? }`. `badge` names a function of the addon that returns a count. Without `nav` the screen is routed but not listed. |
+| `replaces?`          | `true` takes over the core screen at the same path. Only first-party addons may use it.                                                                                                     |
+| `needsApp?`          | Project screens only. Defaults to `false`.                                                                                                                                                  |
+| `layout?`            | `'bare'` renders the screen without the shell.                                                                                                                                              |
+| `scopes?`            | Hides the screen and its nav from viewers without access. This is not access control: the addon's functions must enforce the same scopes.                                                   |
+
+The manifest `title` is a message key too: the addon's name in Studio.
+
+## Messages
+
+Titles are keys in `messages/{locale}.json` at the root of the addon's package,
+next to its `package.json`. There is no field naming the catalog.
+
+```json
+{
+  "invoices__title": "Invoices",
+  "invoices_list__title": "All invoices",
+  "invoices_settings__title": "Invoice settings"
+}
+```
+
+## What `pikku all` checks
+
+The inspector reads `pikkuStudio` statically and writes the screens into the
+addon's `studio` metadata. It fails the build on:
+
+| Code   | When                                                                              |
+| ------ | --------------------------------------------------------------------------------- |
+| PKU345 | a field is not a literal: a variable, a call, a spread or a value outside its set |
+| PKU357 | two screens of the addon use the same path                                        |
+| PKU358 | a title key is missing from `messages/en.json`                                    |
+| PKU359 | a `nav.badge` names no function of the addon                                      |
+
+A key missing from any other locale's catalog is a warning.
+
+`pikkuStudio` replaces `defineScreens`, which is removed; see
+[MIGRATION.md](./MIGRATION.md#definescreens-is-now-pikkustudio).
