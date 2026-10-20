@@ -171,6 +171,7 @@ export const inventoryGetHistory = pikkuSessionlessFunc<
     }>
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Get Inventory History',
   func: async ({ logger }, data) => {
     logger.info(`Getting inventory history for product: ${data.productId}`)

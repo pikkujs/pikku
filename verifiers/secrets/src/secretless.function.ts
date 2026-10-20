@@ -8,6 +8,7 @@ export const SecretlessOutput = z.object({ ok: z.boolean() })
  * compile. If this stops erroring the boundary has regressed.
  */
 export const reachesForSecrets = pikkuSessionlessFunc({
+  disabled: 'no callers found, 2026-10-20',
   output: SecretlessOutput,
   // @ts-expect-error - 'secrets' is not available inside a pikku function
   func: async ({ secrets }) => {
@@ -17,6 +18,7 @@ export const reachesForSecrets = pikkuSessionlessFunc({
 })
 
 export const usesOnlyAllowedServices = pikkuSessionlessFunc({
+  disabled: 'no callers found, 2026-10-20',
   output: SecretlessOutput,
   func: async ({ logger }) => {
     logger.info('secretless')

@@ -26,6 +26,7 @@ export const emailSendBulk = pikkuSessionlessFunc<
   { recipients: string[]; subject: string; body: string; from?: string },
   { id: string; recipientCount: number; status: string; sentAt: string }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Send Bulk Email',
   func: async ({ logger }, data) => {
     logger.info(`Sending bulk email to ${data.recipients.length} recipients`)
@@ -61,6 +62,7 @@ export const emailVerify = pikkuSessionlessFunc<
   { email: string },
   { email: string; valid: boolean; deliverable: boolean; reason?: string }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Verify Email',
   func: async ({ logger }, data) => {
     logger.info(`Verifying email: ${data.email}`)
@@ -84,6 +86,7 @@ export const emailGetStatus = pikkuSessionlessFunc<
     bouncedAt?: string
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Get Email Status',
   func: async ({ logger }, data) => {
     logger.info(`Getting email status: ${data.emailId}`)
@@ -105,6 +108,7 @@ export const emailSchedule = pikkuSessionlessFunc<
     scheduledFor: string
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Schedule Email',
   func: async ({ logger }, data) => {
     logger.info(`Scheduling email to: ${data.to} for ${data.sendAt}`)

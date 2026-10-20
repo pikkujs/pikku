@@ -7,5 +7,6 @@ export const greetThroughAddon = pikkuSessionlessFunc<
   { name: string },
   { message: string; timestamp: number; noopCalls: number }
 >({
+  disabled: 'no callers found, 2026-10-20',
   func: async (_, data, { rpc }) => rpc.invoke('ext:hello', data),
 })

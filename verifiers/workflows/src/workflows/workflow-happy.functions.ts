@@ -72,6 +72,7 @@ export const happyRetry = pikkuSessionlessFunc<
     }>
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   func: async ({ workflowService, logger }, data, { rpc }) => {
     // Start the workflow
     const { runId } = await rpc.startWorkflow('happyRetryWorkflow', data)
