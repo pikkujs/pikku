@@ -58,6 +58,10 @@ import { findPiiPaths } from '../utils/check-pii-output.js'
 import { findClassifiedSinks } from '../utils/check-classified-sinks.js'
 import { isScenarioInstrumentationFunction } from './scenario-instrumentation.js'
 import { resolveCalleeName } from '../utils/resolve-callee-name.js'
+import {
+  readFunctionDisabled,
+  recordDisabledFunction,
+} from './check-disabled-references.js'
 import { addonZodContractViolation } from '../utils/validate-addon-zod-contract.js'
 import type { NodeType } from '@pikku/core/node'
 
@@ -556,7 +560,25 @@ export const addFunctions: AddWiring = (
     state.rootDir
   )
 
-  if (!pikkuFuncId || pikkuFuncId.startsWith('__temp_')) {
+  if (!pikkuFuncId) return
+
+  // Before the inline (`__temp_`) bail-out: a disabled function defined inline
+  // in a wiring is still used by it, and is refused rather than skipped.
+  const disabled =
+    args[0] && ts.isObjectLiteralExpression(args[0])
+      ? readFunctionDisabled(args[0], name, logger)
+      : null
+  if (disabled) {
+    recordDisabledFunction(logger, state, node, pikkuFuncId, {
+      name,
+      sourceFile: node.getSourceFile().fileName,
+      ...(exportedName ? { exportedName } : {}),
+      ...disabled,
+    })
+    return
+  }
+
+  if (pikkuFuncId.startsWith('__temp_')) {
     return
   }
 

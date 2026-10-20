@@ -33,6 +33,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Map(),
       approvalDescriptions: {},
       dynamicImportIds: new Set(),
+      disabled: {},
     },
     http: {
       metaInputTypes: new Map(),

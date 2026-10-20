@@ -41,6 +41,7 @@ import { addOutgoingWebhook } from './add/add-outgoing-webhook.js'
 import { addAgentScorer } from './add/add-agent-scorer.js'
 import { addApprovalDescription } from './add/add-approval-description.js'
 import { checkIndirectRegistrations } from './add/check-indirect-registrations.js'
+import { checkDisabledReferences } from './add/check-disabled-references.js'
 
 export const visitSetup = (
   logger: InspectorLogger,
@@ -184,6 +185,7 @@ export const visitRoutes = (
   addFeature(logger, node, checker, state, nextOptions)
   addAgent(logger, node, checker, state, nextOptions)
   addAgentScorer(logger, node, checker, state, nextOptions)
+  checkDisabledReferences(logger, node, checker, state, nextOptions)
 
   ts.forEachChild(node, (child) =>
     visitRoutes(logger, checker, child, state, nextOptions)

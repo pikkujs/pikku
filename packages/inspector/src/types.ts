@@ -131,6 +131,20 @@ export interface InspectorFunctionState {
    * inspection pass — deliberately not part of the serialized function meta.
    */
   dynamicImportIds: Set<string>
+  /**
+   * Functions declared with `disabled`, keyed by pikkuFuncId. They are in no
+   * other part of the state: nothing is generated for them, and a reference
+   * to one is PKU562.
+   */
+  disabled: Record<string, DisabledFunctionMeta>
+}
+
+export interface DisabledFunctionMeta {
+  name: string
+  sourceFile: string
+  exportedName?: string
+  /** The string `disabled` was given, when it was not just `true`. */
+  reason?: string
 }
 
 export interface InspectorChannelState {

@@ -285,7 +285,10 @@ export const getCommonWireMetaData = (
 
       if (
         propName === 'disabled' &&
-        prop.initializer.kind === ts.SyntaxKind.TrueKeyword
+        (prop.initializer.kind === ts.SyntaxKind.TrueKeyword ||
+          ((ts.isStringLiteral(prop.initializer) ||
+            ts.isNoSubstitutionTemplateLiteral(prop.initializer)) &&
+            prop.initializer.text !== ''))
       ) {
         metadata.disabled = true
       } else if (propName === 'title') {

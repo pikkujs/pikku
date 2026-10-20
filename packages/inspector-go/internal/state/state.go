@@ -104,6 +104,17 @@ type Functions struct {
 	Files                Map[FileExport]               `json:"files"`
 	ApprovalDescriptions Record[*MiddlewareDefinition] `json:"approvalDescriptions"`
 	DynamicImportIds     Set                           `json:"dynamicImportIds"`
+	// Disabled holds the functions declared with `disabled`, left out of
+	// everything else; nil (and absent) when there are none.
+	Disabled *Record[*DisabledFunctionMeta] `json:"disabled,omitempty"`
+}
+
+// DisabledFunctionMeta is a function declared with `disabled: true | 'reason'`.
+type DisabledFunctionMeta struct {
+	Name         string `json:"name"`
+	SourceFile   string `json:"sourceFile"`
+	ExportedName string `json:"exportedName,omitempty"`
+	Reason       string `json:"reason,omitempty"`
 }
 
 type HTTP struct {

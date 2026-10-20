@@ -33,6 +33,10 @@ export {
 } from './utils/custom-types-generator.js'
 export { unresolvedSchemaReferences } from './utils/post-process.js'
 export {
+  findUnusedFunctions,
+  type UnusedFunction,
+} from './utils/find-unused-functions.js'
+export {
   computeContractHash,
   createEmptyManifest,
   serializeManifest,

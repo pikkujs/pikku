@@ -101,6 +101,7 @@ export interface SerializableInspectorState {
     files: Array<[string, { path: string; exportedName: string }]>
     approvalDescriptions: InspectorState['functions']['approvalDescriptions']
     dynamicImportIds?: string[]
+    disabled?: InspectorState['functions']['disabled']
   }
   http: {
     metaInputTypes: Array<
@@ -384,6 +385,9 @@ export function serializeInspectorState(
       files: Array.from(state.functions.files.entries()),
       approvalDescriptions: state.functions.approvalDescriptions,
       dynamicImportIds: Array.from(state.functions.dynamicImportIds ?? []),
+      ...(Object.keys(state.functions.disabled ?? {}).length > 0
+        ? { disabled: state.functions.disabled }
+        : {}),
     },
     http: {
       metaInputTypes: Array.from(state.http.metaInputTypes.entries()),
@@ -620,6 +624,7 @@ export function deserializeInspectorState(
       files: new Map(data.functions.files),
       approvalDescriptions: (data.functions as any).approvalDescriptions || {},
       dynamicImportIds: new Set(data.functions.dynamicImportIds ?? []),
+      disabled: data.functions.disabled ?? {},
     },
     http: {
       metaInputTypes: new Map(data.http.metaInputTypes),

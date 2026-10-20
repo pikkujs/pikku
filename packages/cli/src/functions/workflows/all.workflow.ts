@@ -1,7 +1,11 @@
 import { existsSync, readdirSync } from 'fs'
-import { join } from 'path'
+import { join, relative } from 'path'
 import { loadUserConfigForDb } from '../commands/db-shared.js'
-import { unresolvedSchemaReferences } from '@pikku/inspector/lite'
+import {
+  ErrorCode,
+  findUnusedFunctions,
+  unresolvedSchemaReferences,
+} from '@pikku/inspector/lite'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
 import { checkAddonDependencyVersions } from '../../utils/addon-dependencies.js'
@@ -734,6 +738,38 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await workflow.do('Surface usage', async () => {
       const { surfaceUsage } = await getInspectorState()
       await writeSurfaceUsage(logger, config, surfaceUsage ?? {})
+    })
+
+    // Disabled functions are left out of everything above; say which, once.
+    // An app function nothing uses fails `pikku verify` (error, not critical,
+    // so the build itself still goes through). Addon functions are never judged.
+    await workflow.do('Disabled and unused functions', async () => {
+      const state = await getInspectorState()
+      const disabled = Object.values(state.functions.disabled ?? {})
+      if (disabled.length > 0) {
+        logger.warn(
+          `${disabled.length} disabled function${disabled.length === 1 ? '' : 's'} left out of the build:\n` +
+            disabled
+              .map(
+                (fn) =>
+                  `  ${fn.name} (${relative(config.rootDir, fn.sourceFile)})` +
+                  (fn.reason ? `: ${fn.reason}` : '')
+              )
+              .join('\n')
+        )
+      }
+      for (const fn of findUnusedFunctions(state, { addon: !!config.addon })) {
+        logger.diagnostic({
+          severity: 'error',
+          code: ErrorCode.UNUSED_FUNCTION,
+          message:
+            `'${fn.name ?? fn.pikkuFuncId}'` +
+            (fn.sourceFile
+              ? ` in ${relative(config.rootDir, fn.sourceFile)}`
+              : '') +
+            ' is not wired, exposed or called by anything. Use it, or mark it `disabled`.',
+        })
+      }
     })
 
     await workflow.do('Bootstrap', 'pikkuBootstrap', { allImports })

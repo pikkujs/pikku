@@ -59,6 +59,8 @@ const (
 	SchemaReferenceUnresolved         Code = "PKU463"
 	InlineSchema                      Code = "PKU489"
 	FunctionMetadataNotFound          Code = "PKU559"
+	DisabledFunctionReferenced        Code = "PKU562"
+	UnusedFunction                    Code = "PKU563"
 	DuplicateAuthDefinition           Code = "PKU581"
 	AuthNotExported                   Code = "PKU582"
 	DuplicateVirtualUsersDefinition   Code = "PKU585"

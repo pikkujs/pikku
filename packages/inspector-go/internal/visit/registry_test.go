@@ -35,6 +35,7 @@ func TestRegisteredGroups(t *testing.T) {
 			"addVariable", "addHTTPRoute", "addHTTPRoutes", "addSchedule", "addTrigger", "addQueueWorker", "addChannel",
 			"addGateway", "addCLI", "addCLIRenderers",
 			"addMCPResource", "addMCPPrompt", "addWorkflowGraph", "addFeature", "addAgent", "addAgentScorer",
+			"checkDisabledReferences",
 		},
 	}
 	for p, names := range want {

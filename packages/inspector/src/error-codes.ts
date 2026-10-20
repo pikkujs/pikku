@@ -72,6 +72,8 @@ export enum ErrorCode {
 
   // Function errors
   FUNCTION_METADATA_NOT_FOUND = 'PKU559',
+  DISABLED_FUNCTION_REFERENCED = 'PKU562',
+  UNUSED_FUNCTION = 'PKU563',
 
   // Auth errors
   DUPLICATE_AUTH_DEFINITION = 'PKU581',

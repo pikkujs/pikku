@@ -34,28 +34,29 @@ const (
 
 // visitRoutes
 const (
-	OrderCheckAddonBans   = 0
-	OrderAddAuth          = 10
-	OrderAddSecret        = 20
-	OrderAddCredential    = 30
-	OrderAddScope         = 40
-	OrderAddSystemRole    = 50
-	OrderAddFeatureFlag   = 60
-	OrderAddVirtualUsers  = 70
-	OrderAddVariable      = 80
-	OrderAddHTTPRoute     = 90
-	OrderAddHTTPRoutes    = 100
-	OrderAddSchedule      = 110
-	OrderAddTrigger       = 120
-	OrderAddQueueWorker   = 130
-	OrderAddChannel       = 140
-	OrderAddGateway       = 150
-	OrderAddCLI           = 160
-	OrderAddCLIRenderers  = 170
-	OrderAddMCPResource   = 180
-	OrderAddMCPPrompt     = 190
-	OrderAddWorkflowGraph = 200
-	OrderAddFeature       = 210
-	OrderAddAgent         = 220
-	OrderAddAgentScorer   = 230
+	OrderCheckAddonBans    = 0
+	OrderAddAuth           = 10
+	OrderAddSecret         = 20
+	OrderAddCredential     = 30
+	OrderAddScope          = 40
+	OrderAddSystemRole     = 50
+	OrderAddFeatureFlag    = 60
+	OrderAddVirtualUsers   = 70
+	OrderAddVariable       = 80
+	OrderAddHTTPRoute      = 90
+	OrderAddHTTPRoutes     = 100
+	OrderAddSchedule       = 110
+	OrderAddTrigger        = 120
+	OrderAddQueueWorker    = 130
+	OrderAddChannel        = 140
+	OrderAddGateway        = 150
+	OrderAddCLI            = 160
+	OrderAddCLIRenderers   = 170
+	OrderAddMCPResource    = 180
+	OrderAddMCPPrompt      = 190
+	OrderAddWorkflowGraph  = 200
+	OrderAddFeature        = 210
+	OrderAddAgent          = 220
+	OrderAddAgentScorer    = 230
+	OrderCheckDisabledRefs = 240
 )
