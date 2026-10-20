@@ -607,26 +607,37 @@ export interface InspectorFeature {
 export type CredentialOverrideMeta =
   string | { name?: string; mode?: 'singleton' | 'wire' }
 
-/** A screen of an addon as `defineScreens` declares it, read statically. */
-export type AddonScreenMeta = {
+/** A screen's nav entry as `pikkuStudio` declares it, read statically. */
+export type StudioNavMeta = {
+  area: 'rail' | 'team' | 'project' | 'account'
+  icon: string
+  order: number
+  badge?: string
+}
+
+/** A screen of an addon as `pikkuStudio` declares it, read statically. */
+export type StudioScreenMeta = {
   path: string
   title: string
-  nav?: boolean
+  scope: 'studio' | 'team' | 'project'
+  nav?: StudioNavMeta
+  replaces?: boolean
+  needsApp?: boolean
+  layout?: 'bare'
   scopes?: string[]
 } & (
   | { component: string; app?: undefined }
   | { app: string; component?: undefined }
 )
 
-export type ScreensManifestMeta = {
+export type StudioMeta = {
   title: string
-  icon?: string
-  /** The source file whose `defineScreens` call declared this manifest. */
+  /** The source file whose `pikkuStudio` call declared this manifest. */
   file: string
-  screens: AddonScreenMeta[]
+  screens: StudioScreenMeta[]
   /**
    * The addon's role: every scope its own functions require, derived by
-   * `pikku all` and never declared. Absent from the raw `defineScreens` read.
+   * `pikku all` and never declared. Absent from the raw `pikkuStudio` read.
    * On a wired instance it also carries the host's `wireAddon` scopes, which
    * the runner demands of every function in the package.
    */
@@ -654,10 +665,10 @@ export interface AddonContributorsMeta {
 }
 
 export interface InspectorState {
-  /** Set when this package calls `defineScreens`: the screens it ships. */
-  screensManifest?: ScreensManifestMeta
-  /** The screens of the addons this project wires with `ui: true`, by namespace. */
-  addonScreens?: Record<string, ScreensManifestMeta>
+  /** Set when this package calls `pikkuStudio`: the screens it ships. */
+  studio?: StudioMeta
+  /** The `pikkuStudio` metadata of the addons this project wires with `ui: true`, by namespace. */
+  addonStudio?: Record<string, StudioMeta>
   /**
    * Platform service contributors each wired, non-remote addon declares in its
    * `package.json` under `pikku.contributors`, by namespace. `module` resolves

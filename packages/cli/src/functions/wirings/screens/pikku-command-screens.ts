@@ -22,40 +22,37 @@ export const pikkuScreens = pikkuSessionlessFunc<void, boolean>({
       return false
     }
 
-    const { screensManifest, addonScreens, functions, rpc } =
-      await getInspectorState()
-    if (installedAddonsFile && addonRolesFile && addonScreens) {
-      const installed = Object.entries(addonScreens).map(
-        ([name, manifest]) => ({
-          name,
-          package: rpc.wireAddonDeclarations.get(name)!.package,
-          manifest,
-        })
-      )
+    const { studio, addonStudio, functions, rpc } = await getInspectorState()
+    if (installedAddonsFile && addonRolesFile && addonStudio) {
+      const installed = Object.entries(addonStudio).map(([name, manifest]) => ({
+        name,
+        package: rpc.wireAddonDeclarations.get(name)!.package,
+        manifest,
+      }))
       await writeFileInDir(
         logger,
         installedAddonsFile,
         serializeInstalledAddons(installed)
       )
-      await writeFileInDir(logger, addonRolesFile, serializeAddonRoles(installed))
+      await writeFileInDir(
+        logger,
+        addonRolesFile,
+        serializeAddonRoles(installed)
+      )
     }
-    if (!screensManifest) {
+    if (!studio) {
       return false
     }
 
     await writeFileInDir(
       logger,
       screensMetaJsonFile,
-      serializeScreensMeta(
-        screensManifest,
-        rootDir,
-        deriveScreensScopes(functions.meta)
-      )
+      serializeScreensMeta(studio, rootDir, deriveScreensScopes(functions.meta))
     )
     await writeFileInDir(
       logger,
       screensFile,
-      serializeScreens(screensManifest, screensFile)
+      serializeScreens(studio, screensFile)
     )
     return true
   },

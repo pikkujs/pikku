@@ -62,6 +62,29 @@ An addon can now declare `pikku.uses` as `{ alias: 'package@range' }` and call
 the dependency by the alias with full types. See
 [An addon calling another addon](./remote-rpc.md#an-addon-calling-another-addon).
 
+### `defineScreens` is now `pikkuStudio`
+
+An addon declares its Studio screens with `pikkuStudio` from
+`@pikku/core/addon`. `defineScreens`, `ScreensManifest`, `AddonScreen`,
+`AddonComponentScreen` and `AddonAppScreen` are removed with no alias; the
+types are `StudioManifest`, `StudioScreen`, `StudioComponentScreen`,
+`StudioAppScreen` and `StudioNav`.
+
+| Before                          | After                                                                            |
+| ------------------------------- | -------------------------------------------------------------------------------- |
+| `defineScreens({ title, ... })` | `pikkuStudio({ title, screens })`                                                |
+| `title: 'Inbox'`                | `title: 'inbox__title'`, a key in `messages/{locale}.json`                       |
+| top-level `icon`                | removed; a screen's `nav.icon`                                                   |
+| `nav: true`                     | `nav: { area: 'rail' \| 'team' \| 'project' \| 'account', icon, order, badge? }` |
+| screens under `/addons/<name>`  | `scope: 'studio' \| 'team' \| 'project'` gives the path prefix                   |
+
+Every screen now needs a `scope`. Titles are message keys: add each one to the
+addon's `messages/en.json` (next to its `package.json`), or `pikku all` fails
+with PKU358. The build also fails on a duplicate path (PKU357), a `nav.badge`
+naming no function of the addon (PKU359) and any non-literal field (PKU345).
+`pikku new addon-ui` scaffolds the new form. Search:
+`rg -n "defineScreens|ScreensManifest|AddonScreen"`.
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.

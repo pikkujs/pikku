@@ -52,6 +52,7 @@ wireAddon({
   mcp?: boolean | string[],        // true: every function the addon declared mcp: true; a list: the tools this app offers, typed against the addon's function names
   expose?: boolean | string[],     // opt-in: what rpc.exposed / POST /rpc may reach. true = every function the addon declared expose: true, a list = those of them named (typed; PKU343 on unknown or undeclared names), unset/false = none
   tags?: string[],                 // Tags applied to all addon functions
+  ui?: boolean,                    // Mount the screens the addon declares with pikkuStudio
   scopes?: string[],               // Required of every function, on top of its own
   secretOverrides?: Record<string, string>,      // Remap secret names (and grant them)
   variableOverrides?: Record<string, string>,    // Remap variable names
@@ -367,6 +368,67 @@ wireAddon({
 
 At runtime an unmapped alias, or the wired name called directly, throws
 `AddonNotUsedError` (403) for invoke, workflows and agents.
+
+### Studio screens
+
+An addon declares the screens it adds to Pikku Studio with `pikkuStudio`, in
+`src/screens.ts` (`pikku new addon-ui <name>` scaffolds one). It replaces
+`defineScreens`, which no longer exists.
+
+```typescript
+import { pikkuStudio } from '@pikku/core/addon'
+
+export default pikkuStudio({
+  title: 'invoices__title', // message key: the addon's name in Studio
+  screens: [
+    {
+      path: '/invoices',
+      title: 'invoices_list__title', // message key, also the nav label
+      scope: 'project', // 'studio' → /<path>, 'team' → /<team>/<path>,
+      // 'project' → /<team>/<project>[/<target>]/<path>
+      nav: {
+        area: 'project',
+        icon: 'receipt',
+        order: 30,
+        badge: 'unpaidCount',
+      },
+      needsApp: true, // project screens only; default false
+      scopes: ['invoices:read'], // hides the screen; NOT access control
+      component: () => import('./screens/Invoices.js'),
+    },
+    {
+      path: '/invoices/print',
+      title: 'invoices_print__title',
+      scope: 'project',
+      layout: 'bare',
+      app: 'print',
+    },
+  ],
+})
+```
+
+- A screen is a lazy `component` or an `app`, never both. `nav` is optional:
+  without it the screen is routed but not listed. `nav.area` is `'rail'`,
+  `'team'`, `'project'` or `'account'`; `badge` names one of the addon's
+  functions that returns a count.
+- `replaces: true` takes over the core screen at the same path (first-party
+  addons only; Studio enforces that). `layout: 'bare'` renders without the shell.
+- Titles are message keys in the addon's `messages/{locale}.json`, found by
+  convention next to its `package.json`; there is no field for them.
+- `scopes` only hide the screen. The addon's functions must enforce the same
+  scopes.
+
+The inspector reads every field statically, so each must be a literal.
+`pikku all` fails on:
+
+| Code   | When                                                         |
+| ------ | ------------------------------------------------------------ |
+| PKU345 | a field is not a literal (variable, call, spread, bad value) |
+| PKU357 | two screens of the addon use the same path                   |
+| PKU358 | a title key is missing from `messages/en.json`               |
+| PKU359 | `nav.badge` names no function of the addon                   |
+
+A key missing from another locale's catalog is a warning.
 
 ### Database tables
 

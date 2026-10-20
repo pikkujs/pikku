@@ -52,10 +52,18 @@ const makeState = (rootDir: string, decls: Map<string, any>) =>
 describe('loadAddonFunctionsMeta — ui: true', () => {
   let rootDir: string
   const manifest = {
-    title: 'Invoices',
+    title: 'invoices__title',
     file: 'x.ts',
     scopes: ['invoices:read', 'invoices:write'],
-    screens: [{ path: '/', title: 'Overview', component: './screens/o' }],
+    screens: [
+      {
+        path: '/invoices',
+        title: 'invoices_overview__title',
+        scope: 'project',
+        nav: { area: 'project', icon: 'receipt', order: 30 },
+        component: './screens/o',
+      },
+    ],
   }
 
   before(() => {
@@ -70,13 +78,11 @@ describe('loadAddonFunctionsMeta — ui: true', () => {
     criticals = []
     const state = makeState(
       rootDir,
-      new Map([
-        ['invoices', { package: '@acme/addon-invoices', ui: true }],
-      ])
+      new Map([['invoices', { package: '@acme/addon-invoices', ui: true }]])
     )
     await loadAddonFunctionsMeta(logger, state)
     assert.deepEqual(criticals, [])
-    assert.deepEqual(state.addonScreens?.invoices, manifest)
+    assert.deepEqual(state.addonStudio?.invoices, manifest)
   })
 
   test('the wired role is the derived scopes plus the host scopes on that instance', async () => {
@@ -95,7 +101,7 @@ describe('loadAddonFunctionsMeta — ui: true', () => {
       ])
     )
     await loadAddonFunctionsMeta(logger, state)
-    assert.deepEqual(state.addonScreens?.invoices?.scopes, [
+    assert.deepEqual(state.addonStudio?.invoices?.scopes, [
       'admin',
       'invoices:read',
       'invoices:write',
@@ -111,7 +117,7 @@ describe('loadAddonFunctionsMeta — ui: true', () => {
     await loadAddonFunctionsMeta(logger, state)
     assert.equal(criticals.length, 1)
     assert.match(criticals[0]!, /PKU346.*addon-plain.*declares no screens/)
-    assert.equal(state.addonScreens?.plain, undefined)
+    assert.equal(state.addonStudio?.plain, undefined)
   })
 
   test('a package that ships screens is ignored unless the wiring sets ui', async () => {
@@ -122,7 +128,7 @@ describe('loadAddonFunctionsMeta — ui: true', () => {
     )
     await loadAddonFunctionsMeta(logger, state)
     assert.deepEqual(criticals, [])
-    assert.equal(state.addonScreens?.invoices, undefined)
+    assert.equal(state.addonStudio?.invoices, undefined)
   })
 
   test('wireAddon on the same package stays valid', async () => {

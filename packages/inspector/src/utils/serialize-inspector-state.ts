@@ -309,8 +309,8 @@ export interface SerializableInspectorState {
   diagnostics: InspectorDiagnostic[]
   addonFunctions: InspectorState['addonFunctions']
   remoteAddonFunctions?: InspectorState['remoteAddonFunctions']
-  screensManifest?: InspectorState['screensManifest']
-  addonScreens?: InspectorState['addonScreens']
+  studio?: InspectorState['studio']
+  addonStudio?: InspectorState['addonStudio']
   addonContributors?: InspectorState['addonContributors']
   exportedContracts: InspectorState['exportedContracts']
 }
@@ -546,8 +546,8 @@ export function serializeInspectorState(
     diagnostics: state.diagnostics,
     addonFunctions: state.addonFunctions,
     remoteAddonFunctions: state.remoteAddonFunctions,
-    screensManifest: state.screensManifest,
-    addonScreens: state.addonScreens,
+    studio: state.studio,
+    addonStudio: state.addonStudio,
     addonContributors: state.addonContributors,
     exportedContracts: state.exportedContracts,
   }
@@ -788,8 +788,8 @@ export function deserializeInspectorState(
     ...(data.remoteAddonFunctions
       ? { remoteAddonFunctions: data.remoteAddonFunctions }
       : {}),
-    screensManifest: data.screensManifest,
-    addonScreens: data.addonScreens,
+    studio: data.studio,
+    addonStudio: data.addonStudio,
     addonContributors: data.addonContributors,
     exportedContracts: data.exportedContracts || {
       http: {},

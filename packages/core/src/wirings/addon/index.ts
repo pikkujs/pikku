@@ -1,12 +1,13 @@
 export { wireAddon } from './wire-addon.js'
 export type { WireAddonConfig } from './wire-addon.js'
-export { defineScreens } from './define-screens.js'
+export { pikkuStudio } from './pikku-studio.js'
 export type {
-  ScreensManifest,
-  AddonScreen,
-  AddonComponentScreen,
-  AddonAppScreen,
-} from './define-screens.js'
+  StudioManifest,
+  StudioScreen,
+  StudioComponentScreen,
+  StudioAppScreen,
+  StudioNav,
+} from './pikku-studio.js'
 export { wireRemoteAddon } from './wire-remote-addon.js'
 export type {
   WireRemoteAddonConfig,

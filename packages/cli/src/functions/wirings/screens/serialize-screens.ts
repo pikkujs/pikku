@@ -1,5 +1,5 @@
 import { dirname, relative, resolve, posix } from 'path'
-import type { ScreensManifestMeta } from '@pikku/inspector'
+import type { StudioMeta, StudioScreenMeta } from '@pikku/inspector'
 
 const toPosix = (nativePath: string): string => nativePath.replace(/\\/g, '/')
 
@@ -14,21 +14,30 @@ const componentImport = (
   return path.startsWith('.') ? path : `./${path}`
 }
 
+/** Every field of a screen but its component or app, in declaration order. */
+const screenFields = (screen: StudioScreenMeta): string[] => [
+  `path: ${JSON.stringify(screen.path)}`,
+  `title: ${JSON.stringify(screen.title)}`,
+  `scope: ${JSON.stringify(screen.scope)}`,
+  ...(screen.nav ? [`nav: ${JSON.stringify(screen.nav)}`] : []),
+  ...(screen.replaces !== undefined ? [`replaces: ${screen.replaces}`] : []),
+  ...(screen.needsApp !== undefined ? [`needsApp: ${screen.needsApp}`] : []),
+  ...(screen.layout ? [`layout: ${JSON.stringify(screen.layout)}`] : []),
+  ...(screen.scopes ? [`scopes: ${JSON.stringify(screen.scopes)}`] : []),
+]
+
 /**
  * The addon's screens as the host imports them. Each component is a lazy
  * import, so the host's bundler splits it and nothing loads until its route is
  * visited.
  */
 export const serializeScreens = (
-  manifest: ScreensManifestMeta,
+  manifest: StudioMeta,
   screensFile: string
 ): string => {
   const entries = manifest.screens.map((screen) => {
     const fields = [
-      `path: ${JSON.stringify(screen.path)}`,
-      `title: ${JSON.stringify(screen.title)}`,
-      ...(screen.nav !== undefined ? [`nav: ${screen.nav}`] : []),
-      ...(screen.scopes ? [`scopes: ${JSON.stringify(screen.scopes)}`] : []),
+      ...screenFields(screen),
       screen.component !== undefined
         ? `component: () => import(${JSON.stringify(componentImport(manifest.file, screensFile, screen.component))})`
         : `app: ${JSON.stringify(screen.app)}`,
@@ -57,7 +66,7 @@ export const deriveScreensScopes = (
  * the author's machine path.
  */
 export const serializeScreensMeta = (
-  manifest: ScreensManifestMeta,
+  manifest: StudioMeta,
   rootDir: string,
   scopes: string[]
 ): string =>
@@ -74,7 +83,7 @@ export const serializeScreensMeta = (
 export type InstalledAddonScreens = {
   name: string
   package: string
-  manifest: ScreensManifestMeta
+  manifest: StudioMeta
 }
 
 /** A component path as the package exports it: relative to `src/`, without the extension. */
@@ -95,10 +104,7 @@ export const serializeInstalledAddons = (
   const entries = addons.map(({ name, package: pkg, manifest }) => {
     const screens = manifest.screens.map((screen) => {
       const fields = [
-        `path: ${JSON.stringify(screen.path)}`,
-        `title: ${JSON.stringify(screen.title)}`,
-        ...(screen.nav !== undefined ? [`nav: ${screen.nav}`] : []),
-        ...(screen.scopes ? [`scopes: ${JSON.stringify(screen.scopes)}`] : []),
+        ...screenFields(screen),
         screen.component !== undefined
           ? `component: () => import(${JSON.stringify(`${pkg}/${packageSubpath(manifest.file, screen.component)}`)}) as never`
           : `app: ${JSON.stringify(screen.app)}`,
@@ -109,7 +115,6 @@ export const serializeInstalledAddons = (
       '  {',
       `    name: ${JSON.stringify(name)},`,
       `    title: ${JSON.stringify(manifest.title)},`,
-      ...(manifest.icon ? [`    icon: ${JSON.stringify(manifest.icon)},`] : []),
       '    screens: [',
       ...screens,
       '    ],',
