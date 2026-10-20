@@ -8,8 +8,9 @@ import (
 )
 
 // The cases of packages/inspector/src/add/add-file-with-factory.test.ts
-// (PKU564): a factory call inside a cast, `satisfies`, `!` or parentheses
-// fails the build, naming the export and its line, and is not registered.
+// (PKU564): a factory call inside a cast (`as`, `<T>`, `!`) fails the build,
+// naming the export and its line, and is not registered. `satisfies` and
+// parentheses are read through: the factory registers as if direct.
 
 func hiddenFactories(t *testing.T, lines ...string) ([]string, int) {
 	t.Helper()
@@ -33,10 +34,9 @@ func TestHiddenFactoryFormsArePKU564(t *testing.T) {
 		{"as unknown as", "pikkuAddonServices", "pikkuAddonServices(async () => ({ noop: 1 })) as unknown as CreateSingletonServices", "an `as` cast", "the cast"},
 		{"as", "pikkuServices", "pikkuServices(async () => ({})) as any", "an `as` cast", "the cast"},
 		{"angle-bracket", "pikkuWireServices", "<any>pikkuWireServices(async () => ({}))", "a `<T>` cast", "the cast"},
-		{"satisfies", "pikkuConfig", "pikkuConfig(async () => ({})) satisfies unknown", "a `satisfies` expression", "`satisfies`"},
 		{"non-null", "pikkuAddonWireServices", "pikkuAddonWireServices(async () => ({}))!", "a non-null assertion (`!`)", "the `!`"},
-		{"parentheses", "pikkuServerLifecycle", "(pikkuServerLifecycle({}))", "parentheses", "the parentheses"},
-		{"cast in parentheses", "pikkuAddonConfig", "(pikkuAddonConfig(async () => ({})) as any)", "parentheses", "the parentheses"},
+		{"cast in parentheses", "pikkuAddonConfig", "(pikkuAddonConfig(async () => ({})) as any)", "an `as` cast", "the cast"},
+		{"cast under satisfies", "pikkuConfig", "pikkuConfig(async () => ({}))! satisfies unknown", "a non-null assertion (`!`)", "the `!`"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -73,5 +73,46 @@ func TestDirectFactoryIsNotPKU564(t *testing.T) {
 	}
 	if registered != 1 {
 		t.Errorf("%d factories registered, want 1", registered)
+	}
+}
+
+func TestSatisfiesAndParenthesesAreReadThrough(t *testing.T) {
+	cases := []struct{ name, wrapper, initializer string }{
+		{"satisfies", "pikkuConfig", "pikkuConfig(async () => ({})) satisfies unknown"},
+		{"parentheses", "pikkuServerLifecycle", "(pikkuServerLifecycle({}))"},
+		{"parentheses around satisfies", "pikkuWireServices", "(pikkuWireServices(async ({ logger }) => ({})) satisfies unknown)"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, registered := hiddenFactories(t,
+				"import { "+c.wrapper+" } from '#pikku'",
+				"export const factory = "+c.initializer,
+			)
+			if len(got) != 0 {
+				t.Errorf("PKU564 = %s", strings.Join(got, "\n"))
+			}
+			if registered != 1 {
+				t.Errorf("%d factories registered, want 1", registered)
+			}
+		})
+	}
+}
+
+func TestAddonFactoryUnderSatisfiesKeepsItsContract(t *testing.T) {
+	res := inspectFiles(t, map[string][]string{"services.ts": {
+		"import { pikkuAddonServices } from '#pikku'",
+		"export const createSingletonServices = pikkuAddonServices(",
+		"  async (_config, { logger }) => ({ noop: logger })",
+		") satisfies unknown",
+	}}, false)
+	st := res.State
+	if !st.AddonServicesFactorySeen {
+		t.Errorf("addon services factory not seen")
+	}
+	if strings.Join(st.AddonRequiredParentServices, ",") != "logger" {
+		t.Errorf("required parent services = %v, want [logger]", st.AddonRequiredParentServices)
+	}
+	if strings.Join(st.AddonCreatedServices, ",") != "noop" {
+		t.Errorf("created services = %v, want [noop]", st.AddonCreatedServices)
 	}
 }

@@ -13,7 +13,8 @@ bound to:
 | `pikkuAddonConfig`       | `CreateConfig`            |
 | `pikkuServerLifecycle`   | `ServerLifecycle`         |
 
-It reads the call itself. A call inside a cast is invisible to it:
+It reads the call itself, through `satisfies` and parentheses, which leave the
+factory's type as written. A call inside a cast is invisible to it:
 
 ```ts
 export const createSingletonServices = pikkuAddonServices(
@@ -31,12 +32,20 @@ Now the build fails:
 [PKU564] 'createSingletonServices' at src/services.ts:4 wraps pikkuAddonServices(...) in an `as` cast. The inspector reads a factory only from a direct pikkuAddonServices(...) call, so this one would not be registered and nothing it provides would exist at runtime. Remove the cast, and fix the type mismatch it hides in the factory itself.
 ```
 
-The same applies to `as`, `<T>` casts, `satisfies`, a non-null assertion (`!`)
-and parentheses, nested or not. Both inspectors report it the same way.
+The same applies to `as`, `<T>` casts and a non-null assertion (`!`), nested or
+not, and also when `satisfies` or parentheses sit between the cast and the call.
+Both inspectors report it the same way.
+
+`satisfies` and parentheses on their own are fine. These register as if direct:
+
+```ts
+export const createConfig = pikkuConfig(async () => ({ ... })) satisfies CreateConfig<Config>
+export const createWireServices = (pikkuWireServices(async () => ({ ... })))
+```
 
 ## Fixing it
 
-Remove the wrapper and export the call as it is. An addon whose `Config` adds
+Remove the cast and export the call as it is (`satisfies` may stay). An addon whose `Config` adds
 required fields, or whose services narrow a core service's type, needs no cast:
 the slot core registers addon factories in accepts any package's factory. Any other cast was there because the
 factory's type did not match what it was cast to, so fix that mismatch in the
