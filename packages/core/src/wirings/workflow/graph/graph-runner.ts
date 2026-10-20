@@ -1039,7 +1039,7 @@ export async function executeGraphStep(
   try {
     let result: any
 
-    const subWorkflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
+    const subWorkflowMeta = getWorkflowMeta(rpcName)
     const agentMeta = subWorkflowMeta
       ? undefined
       : pikkuState(null, 'agent', 'agentsMeta')[rpcName]
@@ -1145,7 +1145,7 @@ async function executeGraphNodeInline(
   try {
     let result: any
 
-    const subWorkflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
+    const subWorkflowMeta = getWorkflowMeta(rpcName)
     const agentMeta = subWorkflowMeta
       ? undefined
       : pikkuState(null, 'agent', 'agentsMeta')[rpcName]

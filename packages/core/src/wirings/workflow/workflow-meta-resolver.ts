@@ -43,3 +43,10 @@ export const resolveWorkflowMeta = (
     resolvedName: localName,
   }
 }
+
+/**
+ * Whether a step's rpcName names a workflow — the app's, or an addon's by
+ * `namespace:name` — and so starts a child run rather than an RPC.
+ */
+export const isWorkflowName = (name: string): boolean =>
+  resolveWorkflowMeta(name) !== null
