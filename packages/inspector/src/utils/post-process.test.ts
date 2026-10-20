@@ -390,6 +390,62 @@ describe('aggregateRequiredServices — per-function addon services', () => {
   })
 })
 
+describe('aggregateRequiredServices — incomingWebhookService an addon forwards', () => {
+  const adminAddon = (extra: Record<string, any> = {}) => ({
+    usedFunctions: [
+      'admin:listIncomingWebhookReceipts',
+      'admin:listScopes',
+      ...Object.keys(extra).map((id) => `admin:${id}`),
+    ],
+    addonFunctions: {
+      admin: {
+        listIncomingWebhookReceipts: {
+          services: { optimized: true, services: ['incomingWebhookService'] },
+        },
+        listScopes: {
+          services: { optimized: true, services: ['scopeService'] },
+        },
+        ...extra,
+      },
+    },
+    addonRequiredParentServices: ['scopeService', 'incomingWebhookService'],
+  })
+
+  test('is not required when the app wires no incoming webhook', () => {
+    const state = makeState(adminAddon())
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(!required.has('incomingWebhookService'))
+    assert.ok(required.has('scopeService'))
+  })
+
+  test('is not required through the parent blanket either', () => {
+    const state = makeState(
+      adminAddon({
+        ownStore: { services: { optimized: true, services: ['addonStore'] } },
+      })
+    )
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(!required.has('incomingWebhookService'))
+    assert.ok(required.has('scopeService'))
+  })
+
+  test('is required when the app wires a webhook source', () => {
+    const state = makeState({
+      ...adminAddon(),
+      functionsMeta: { 'http:post:/webhooks/stripe': {} },
+      webhookSourceMeta: {
+        stripe: { method: 'post', route: '/webhooks/stripe' },
+      },
+    })
+    aggregateRequiredServices(state)
+    assert.ok(
+      state.serviceAggregation.requiredServices.has('incomingWebhookService')
+    )
+  })
+})
+
 describe('aggregateRequiredServices — the auth factory’s own services', () => {
   test('an auth definition contributes its services before its handler exists', () => {
     // The state a clean checkout produces: the project declares

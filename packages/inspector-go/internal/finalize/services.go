@@ -237,7 +237,8 @@ func aggregateRequiredServices(st *state.State) {
 			}
 		})
 	}
-	if hasWebhookSources || st.Functions.Meta.Has("queue:pikku-incoming-webhooks") {
+	wiresIncomingWebhooks := hasWebhookSources || st.Functions.Meta.Has("queue:pikku-incoming-webhooks")
+	if wiresIncomingWebhooks {
 		required.Add("incomingWebhookService")
 		required.Add("queueService")
 	}
@@ -324,6 +325,11 @@ func aggregateRequiredServices(st *state.State) {
 			addonFn[ns+":"+id] = addonServices{services, true}
 		})
 	})
+	// An addon forwarding incomingWebhookService reads it when the app has one;
+	// only the app's own webhook sources make it keep receipts.
+	readOnlyIfPresent := func(s string) bool {
+		return s == "incomingWebhookService" && !wiresIncomingWebhooks
+	}
 	parentDeclared := st.AddonRequiredParentServices
 	parentDeclaredSet := map[string]bool{}
 	for _, s := range parentDeclared {
@@ -341,6 +347,9 @@ func aggregateRequiredServices(st *state.State) {
 			continue
 		}
 		for _, s := range entry.services {
+			if readOnlyIfPresent(s) {
+				continue
+			}
 			if parentDeclaredSet[s] {
 				required.Add(s)
 			} else if !internalServices[s] && !defaultServices[s] {
@@ -350,7 +359,9 @@ func aggregateRequiredServices(st *state.State) {
 	}
 	if usesAddonFn && addonFactoryNeeded {
 		for _, s := range parentDeclared {
-			required.Add(s)
+			if !readOnlyIfPresent(s) {
+				required.Add(s)
+			}
 		}
 	}
 

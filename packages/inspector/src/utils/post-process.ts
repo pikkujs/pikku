@@ -316,10 +316,10 @@ export function aggregateRequiredServices(
     ({ method, route }) =>
       state.functions.meta[`http:${method}:${route}`] !== undefined
   )
-  if (
+  const wiresIncomingWebhooks =
     hasWebhookSources ||
     state.functions.meta['queue:pikku-incoming-webhooks'] !== undefined
-  ) {
+  if (wiresIncomingWebhooks) {
     requiredServices.add('incomingWebhookService')
     requiredServices.add('queueService')
   }
@@ -426,6 +426,13 @@ export function aggregateRequiredServices(
       )
     }
   }
+  // An addon forwarding `incomingWebhookService` (pikku-admin lists receipts)
+  // reads it when the app has one; it never makes the app keep receipts. Only
+  // the app's own webhook sources do, so only they bring in the service and its
+  // tables — otherwise an app with no webhook wired fails to boot on a
+  // `webhook_receipt` table nothing writes to.
+  const readOnlyIfPresent = (service: string) =>
+    service === 'incomingWebhookService' && !wiresIncomingWebhooks
   const parentDeclared = state.addonRequiredParentServices ?? []
   const parentDeclaredSet = new Set(parentDeclared)
   const defaultServices = new Set([
@@ -446,6 +453,9 @@ export function aggregateRequiredServices(
       continue
     }
     for (const service of services) {
+      if (readOnlyIfPresent(service)) {
+        continue
+      }
       if (parentDeclaredSet.has(service)) {
         requiredServices.add(service)
       } else if (
@@ -458,7 +468,9 @@ export function aggregateRequiredServices(
   }
   if (usesAddonFn && addonFactoryNeeded) {
     for (const service of parentDeclared) {
-      requiredServices.add(service)
+      if (!readOnlyIfPresent(service)) {
+        requiredServices.add(service)
+      }
     }
   }
 
