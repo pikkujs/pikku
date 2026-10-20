@@ -70,6 +70,8 @@ func (s *Context) getCommonWireMetaData(obj *ast.Node) commonMeta {
 		case "disabled":
 			if init.Kind == ast.KindTrueKeyword {
 				m.disabled = true
+			} else if (ast.IsStringLiteral(init) || ast.IsNoSubstitutionTemplateLiteral(init)) && init.Text() != "" {
+				m.disabled = true
 			}
 		case "title":
 			if v, err := s.extractStringLiteral(init); err == nil {

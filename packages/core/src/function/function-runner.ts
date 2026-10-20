@@ -117,6 +117,15 @@ export const addFunction = (
   funcConfig: CorePikkuFunctionConfig<any, any, any, any, any>,
   packageName: string | null = null
 ) => {
+  if (funcConfig.disabled) {
+    throw new Error(
+      `Function '${funcName}' is disabled` +
+        (typeof funcConfig.disabled === 'string'
+          ? ` (${funcConfig.disabled})`
+          : '') +
+        ' and cannot be registered.'
+    )
+  }
   pikkuState(packageName, 'function', 'functions').set(funcName, funcConfig)
 }
 

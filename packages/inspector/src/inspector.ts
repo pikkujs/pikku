@@ -23,6 +23,7 @@ import { loadAddonFunctionsMeta } from './utils/load-addon-functions-meta.js'
 import { resolveServiceTypes } from './utils/resolve-service-types.js'
 import { finalizeInspectorState } from './finalize.js'
 import { getInitialInspectorState } from './initial-state.js'
+import { checkDisabledWorkflowSteps } from './add/check-disabled-references.js'
 
 export { getInitialInspectorState }
 
@@ -208,6 +209,7 @@ export const analyzeProgram = async (
       `Visit routes phase completed in ${(performance.now() - startRoutes).toFixed(0)}ms`
     )
 
+    checkDisabledWorkflowSteps(logger, state)
     validateWebhookSourceTriggers(logger, state)
 
     resolveLatestVersions(state, logger)

@@ -66,6 +66,7 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 	if !req.Options.SetupOnly {
 		ctx.Sweep(visit.PhaseFunctions, prog.ProjectFiles)
 		ctx.Sweep(visit.PhaseRoutes, prog.ProjectFiles)
+		ctx.CheckDisabledWorkflowSteps()
 		ctx.ValidateWebhookSourceTriggers()
 		ctx.ResolveLatestVersions()
 	}

@@ -274,6 +274,14 @@ export type CorePikkuFunctionConfig<
   version?: number
   /** Filters this function in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
+  /**
+   * Switches the function off: `true`, or a string saying why. The build
+   * leaves it out of every map, client and wiring, and refuses (PKU562)
+   * anything that still references it, so marking a function believed dead
+   * proves it. The source keeps type-checking; deleting the flag turns it
+   * back on.
+   */
+  disabled?: true | string
   /** Makes the function callable from outside as `POST /rpc/<name>`. Without a session requirement, a permission or an addon gate, that means callable by anyone. */
   expose?: boolean
   /**

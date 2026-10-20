@@ -2199,6 +2199,18 @@
     "verifiers/dev-platform-contributors/log-addon": {
       "name": "@verifier/log-addon",
     },
+    "verifiers/disabled-functions": {
+      "name": "@pikku/verifiers-disabled-functions",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "zod": "^4",
+      },
+    },
     "verifiers/feature-flags": {
       "name": "@pikku/verifiers-feature-flags",
       "dependencies": {
@@ -3521,6 +3533,8 @@
     "@pikku/verifiers-dev-bun": ["@pikku/verifiers-dev-bun@workspace:verifiers/dev-bun"],
 
     "@pikku/verifiers-dev-platform-contributors": ["@pikku/verifiers-dev-platform-contributors@workspace:verifiers/dev-platform-contributors"],
+
+    "@pikku/verifiers-disabled-functions": ["@pikku/verifiers-disabled-functions@workspace:verifiers/disabled-functions"],
 
     "@pikku/verifiers-feature-flags": ["@pikku/verifiers-feature-flags@workspace:verifiers/feature-flags"],
 

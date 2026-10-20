@@ -24,6 +24,16 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### `pikku verify` fails on an app function nothing uses
+
+An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked.
+
+To fix it, use the function or mark it `disabled: true | 'reason'`, which leaves it out of the build. A reference to a disabled function fails the build with `PKU562`. See [`disabled-functions.md`](./disabled-functions.md).
+
+To find the affected functions, run `pikku all` and look for `PKU563`.
+
+A string `disabled` on a wiring (`wireHTTP({ disabled: 'reason', ... })`) now disables it, the same way `disabled: true` already did.
+
 ### The mesh is named `mesh`, and remote addons use the public RPC route
 
 Cross-unit RPC inside one app (the deploymentService "mesh") no longer shares the word "remote" with `wireRemoteAddon`. See [`remote-rpc.md`](./remote-rpc.md).

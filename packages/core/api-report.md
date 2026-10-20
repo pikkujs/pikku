@@ -584,6 +584,7 @@ export type CorePikkuFunctionConfig<
   override?: string
   version?: number
   tags?: string[]
+  disabled?: true | string
   expose?: boolean
   permissionsInBody?: boolean
   remote?: boolean

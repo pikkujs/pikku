@@ -187,6 +187,16 @@ export function addMessagesRoutes(
         chanInit = resolved
       }
     }
+    // ...or is the defineChannelRoutes call itself, written inline
+    if (
+      ts.isCallExpression(chanInit) &&
+      ts.isIdentifier(chanInit.expression) &&
+      chanInit.expression.text === 'defineChannelRoutes' &&
+      chanInit.arguments[0] &&
+      ts.isObjectLiteralExpression(chanInit.arguments[0])
+    ) {
+      chanInit = chanInit.arguments[0]
+    }
 
     const refContract = resolveRefContract(
       chanInit,
