@@ -126,37 +126,55 @@ var wrapperFactoryTypes = map[string]string{
 	"pikkuServerLifecycle":   "ServerLifecycle",
 }
 
-// describeFactoryWrapper is how a wrapper around a factory call reads in
-// PKU564: the form, and what to remove. ok is false for no wrapper.
-func describeFactoryWrapper(n *ast.Node) (form, remove string, ok bool) {
+// describeFactoryCast is how a cast around a factory call reads in PKU564:
+// the form, and what to remove. ok is false for anything but a cast.
+func describeFactoryCast(n *ast.Node) (form, remove string, ok bool) {
 	switch {
 	case ast.IsAsExpression(n):
 		return "an `as` cast", "the cast", true
 	case ast.IsTypeAssertion(n):
 		return "a `<T>` cast", "the cast", true
-	case ast.IsSatisfiesExpression(n):
-		return "a `satisfies` expression", "`satisfies`", true
 	case ast.IsNonNullExpression(n):
 		return "a non-null assertion (`!`)", "the `!`", true
-	case ast.IsParenthesizedExpression(n):
-		return "parentheses", "the parentheses", true
 	}
 	return "", "", false
 }
 
+// isTransparentWrapper: `satisfies` and parentheses leave the value's type as
+// written, so a factory inside them is read as a direct call.
+func isTransparentWrapper(n *ast.Node) bool {
+	return n != nil && (ast.IsSatisfiesExpression(n) || ast.IsParenthesizedExpression(n))
+}
+
+func unwrapTransparent(n *ast.Node) *ast.Node {
+	for isTransparentWrapper(n) {
+		n = n.Expression()
+	}
+	return n
+}
+
 // checkHiddenFactory ports add-file-with-factory.ts checkHiddenFactory: a
-// factory call inside a cast, `satisfies`, `!` or parentheses would be left
-// out of the build without a word, so it fails the build instead.
+// factory call inside a cast (`as`, `<T>`, `!`) fails the build rather than
+// being seen through, since the cast hides a mismatch the factory should fix.
 func (s *Context) checkHiddenFactory(node *ast.Node) {
 	if !ast.IsVariableDeclaration(node) || node.Initializer() == nil {
 		return
 	}
-	form, remove, ok := describeFactoryWrapper(node.Initializer())
-	if !ok {
-		return
+	inner := node.Initializer()
+	form, remove, cast := "", "", false
+	for inner != nil {
+		if f, r, ok := describeFactoryCast(inner); ok {
+			if !cast {
+				form, remove, cast = f, r, true
+			}
+			inner = inner.Expression()
+		} else if isTransparentWrapper(inner) {
+			inner = inner.Expression()
+		} else {
+			break
+		}
 	}
-	inner := unwrapExpression(node.Initializer())
-	if inner == nil || !ast.IsCallExpression(inner) || !ast.IsIdentifier(inner.Expression()) {
+	if !cast || inner == nil || !ast.IsCallExpression(inner) || !ast.IsIdentifier(inner.Expression()) {
 		return
 	}
 	wrapper := inner.Expression().Text()
@@ -192,7 +210,7 @@ func (s *Context) addFileWithFactory(node *ast.Node, methods *state.PathToNameAn
 	}
 	fileName := ast.GetSourceFileOfNode(node).FileName()
 	variableName := tsutil.NodeText(node.Name())
-	init := node.Initializer()
+	init := unwrapTransparent(node.Initializer())
 
 	if init != nil && ast.IsCallExpression(init) && ast.IsIdentifier(init.Expression()) {
 		wrapper := init.Expression().Text()
@@ -248,7 +266,7 @@ func (s *Context) addFileWithFactory(node *ast.Node, methods *state.PathToNameAn
 		TypePath: declarationPath(s.Checker.GetSymbolAtLocation(ident)),
 	})
 	if expected == "CreateWireServices" && withState {
-		if fn := functionNodeOf(init); fn != nil {
+		if fn := functionNodeOf(node.Initializer()); fn != nil {
 			s.State.WireServicesMeta.Set(variableName, extractServicesFromFunction(fn))
 		}
 	}

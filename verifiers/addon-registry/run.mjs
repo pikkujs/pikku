@@ -9,6 +9,8 @@
  * addons/ sits outside the consumer's tsconfig/pikku scan, so it never collides
  * with the app's own CoreConfig.
  *   0. a cast around pikkuAddonServices(...) fails pikku all with PKU564
+ *   0b. `satisfies` and parentheses around it are read through: pikku all
+ *       passes and generates pikku-package.gen.ts
  *   1. pikku all on the source addon
  *   1b. tsc --noEmit on the source                        (node category narrowing,
  *       and pikku-package.gen.ts for an addon Config/services core's types reject)
@@ -89,6 +91,44 @@ function capture(file, args, cwd) {
   }
   console.log(
     '✓ a cast around pikkuAddonServices(...) fails the build (PKU564)'
+  )
+}
+
+// 0b. `satisfies` and parentheses leave the factory's type as written, so the
+// inspector reads through them: the build passes and the factory is registered,
+// which is what generates the addon's pikku-package.gen.ts.
+{
+  const servicesPath = join(sourceDir, 'src', 'services.ts')
+  const packageGen = join(sourceDir, '.pikku', 'addon', 'pikku-package.gen.ts')
+  const original = readFileSync(servicesPath, 'utf8')
+  let result
+  try {
+    rmSync(packageGen, { force: true })
+    writeFileSync(
+      servicesPath,
+      original
+        .replace(
+          'export const createSingletonServices = pikkuAddonServices(',
+          'export const createSingletonServices = (pikkuAddonServices('
+        )
+        .replace(/\n\)\n$/, '\n) satisfies unknown)\n')
+    )
+    result = spawnSync('node', [PIKKU, 'all'], {
+      cwd: sourceDir,
+      encoding: 'utf8',
+    })
+  } finally {
+    writeFileSync(servicesPath, original)
+  }
+  const output = `${result.stdout}${result.stderr}`
+  if (result.status !== 0 || /PKU564/.test(output) || !existsSync(packageGen)) {
+    console.error(output)
+    throw new Error(
+      '(pikkuAddonServices(...) satisfies unknown) did not build and register the factory'
+    )
+  }
+  console.log(
+    '✓ satisfies and parentheses around pikkuAddonServices(...) are read through'
   )
 }
 

@@ -12,9 +12,27 @@
     "addonCreatedServices": [],
     "addonServicesFactorySeen": false,
     "addonServerlessIncompatible": [],
-    "configFactories": [],
+    "configFactories": [
+      [
+        "<fixture>/src/services.ts",
+        [
+          {
+            "variable": "createConfig",
+            "type": "CreateConfig",
+            "typePath": "<fixture>/src/services.ts"
+          }
+        ]
+      ]
+    ],
     "serverLifecycleFactories": [],
-    "filesAndMethods": {},
+    "filesAndMethods": {
+      "pikkuConfigFactory": {
+        "file": "<fixture>/src/services.ts",
+        "type": "CreateConfig",
+        "variable": "createConfig",
+        "typePath": "<fixture>/src/services.ts"
+      }
+    },
     "filesAndMethodsErrors": [
       [
         "No CoreUserSession found",
@@ -275,11 +293,6 @@
     {
       "level": "critical",
       "code": "PKU564",
-      "message": "'createConfig' at src/services.ts:9 wraps pikkuAddonConfig(...) in a `satisfies` expression. The inspector reads a factory only from a direct pikkuAddonConfig(...) call, so this one would not be registered and nothing it provides would exist at runtime. Remove `satisfies`, and fix the type mismatch it hides in the factory itself."
-    },
-    {
-      "level": "critical",
-      "code": "PKU564",
       "message": "'createSingletonServices' at src/services.ts:11 wraps pikkuAddonServices(...) in an `as` cast. The inspector reads a factory only from a direct pikkuAddonServices(...) call, so this one would not be registered and nothing it provides would exist at runtime. Remove the cast, and fix the type mismatch it hides in the factory itself."
     },
     {
@@ -289,7 +302,7 @@
     }
   ],
   "validationPass": {
-    "start": 3,
-    "end": 3
+    "start": 2,
+    "end": 2
   }
 }

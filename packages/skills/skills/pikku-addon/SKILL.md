@@ -162,10 +162,10 @@ export const createSingletonServices = pikkuAddonServices(
 ```
 
 Export the call as it is. A cast around it (`pikkuAddonServices(...) as unknown
-as CreateSingletonServices<...>`, `satisfies`, `!`, parentheses) hides the factory
+as CreateSingletonServices<...>`, `<T>`, `!`) hides the factory
 from the inspector, which would leave it unregistered and the addon's workflows
 failing at runtime; the build fails with `PKU564` instead. Fix the type the cast
-was hiding.
+was hiding. `satisfies` and parentheses are fine: the inspector reads through them.
 
 `secrets` and `variables` arrive **typed against the addon's own declarations**,
 and a secret is a `SecretValue` — `.reveal()` is the only way to the plaintext

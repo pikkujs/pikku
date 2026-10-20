@@ -36,7 +36,7 @@ A string `disabled` on a wiring (`wireHTTP({ disabled: 'reason', ... })`) now di
 
 ### A cast around a service factory fails the build
 
-A factory export wrapped in a cast, `satisfies`, a non-null assertion or parentheses now fails `pikku all` with `PKU564`. That covers `pikkuServices`, `pikkuAddonServices`, `pikkuWireServices`, `pikkuAddonWireServices`, `pikkuConfig`, `pikkuAddonConfig` and `pikkuServerLifecycle`:
+A factory export wrapped in a cast (`as`, `<T>`) or a non-null assertion (`!`) now fails `pikku all` with `PKU564`. `satisfies` and parentheses are not casts: a factory inside them is read through and registered as before. That covers `pikkuServices`, `pikkuAddonServices`, `pikkuWireServices`, `pikkuAddonWireServices`, `pikkuConfig`, `pikkuAddonConfig` and `pikkuServerLifecycle`:
 
 ```ts
 // Before: built, but the factory was never registered. An addon written this

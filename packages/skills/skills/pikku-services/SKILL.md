@@ -75,10 +75,11 @@ service's paths and size limit; omitting it does not disable it.
   inspector reads the destructuring pattern to build the manifest; a cast makes
   the service invisible to it, so tree-shaking drops what the function needs.
 - **Do not cast a service factory.** `pikkuServices(...) as X` (or `as unknown
-as`, `satisfies`, `!`, `<X>`, parentheses) hides the call from the inspector,
+as`, `!`, `<X>`) hides the call from the inspector,
   so the factory would not be registered; the build fails with `PKU564`
   instead. Export the direct `pikkuServices(...)` / `pikkuWireServices(...)` /
   `pikkuConfig(...)` call and fix the type mismatch the cast was hiding.
+  `satisfies` and parentheses are fine: the inspector reads through them.
 - **Do not hand-roll an audit table.** `auditLog.write()` on an `audit: true`
   function enriches the event with the function id, wire type, trace id and user
   identity; an `insertInto('audit_log')` of your own gets none of that, and a

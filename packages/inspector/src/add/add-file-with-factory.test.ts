@@ -244,67 +244,59 @@ describe('pikkuAddonWireServices — what an addon builds per wire', () => {
   })
 })
 
-describe('PKU564 — a factory hidden behind a wrapper fails the build', () => {
+describe('PKU564 — a factory behind a cast fails the build', () => {
   const hidden = (criticals: Array<{ code: ErrorCode; message: string }>) =>
     criticals.filter((c) => c.code === ErrorCode.FACTORY_NOT_A_DIRECT_CALL)
 
   const cases: Array<{
     name: string
     wrapper: string
-    initializer: string[]
+    initializer: string
     form: string
     remove: string
   }> = [
     {
       name: 'an `as unknown as` cast',
       wrapper: 'pikkuAddonServices',
-      initializer: [
+      initializer:
         'pikkuAddonServices(async () => ({ noop: 1 })) as unknown as CreateSingletonServices',
-      ],
       form: 'an `as` cast',
       remove: 'the cast',
     },
     {
       name: 'an `as` cast',
       wrapper: 'pikkuServices',
-      initializer: ['pikkuServices(async () => ({})) as any'],
+      initializer: 'pikkuServices(async () => ({})) as any',
       form: 'an `as` cast',
       remove: 'the cast',
     },
     {
       name: 'a `<T>` cast',
       wrapper: 'pikkuWireServices',
-      initializer: ['<any>pikkuWireServices(async () => ({}))'],
+      initializer: '<any>pikkuWireServices(async () => ({}))',
       form: 'a `<T>` cast',
       remove: 'the cast',
     },
     {
-      name: 'a `satisfies` expression',
-      wrapper: 'pikkuConfig',
-      initializer: ['pikkuConfig(async () => ({})) satisfies unknown'],
-      form: 'a `satisfies` expression',
-      remove: '`satisfies`',
-    },
-    {
       name: 'a non-null assertion',
       wrapper: 'pikkuAddonWireServices',
-      initializer: ['pikkuAddonWireServices(async () => ({}))!'],
+      initializer: 'pikkuAddonWireServices(async () => ({}))!',
       form: 'a non-null assertion (`!`)',
       remove: 'the `!`',
     },
     {
-      name: 'parentheses',
-      wrapper: 'pikkuServerLifecycle',
-      initializer: ['(pikkuServerLifecycle({}))'],
-      form: 'parentheses',
-      remove: 'the parentheses',
-    },
-    {
       name: 'a cast inside parentheses',
       wrapper: 'pikkuAddonConfig',
-      initializer: ['(pikkuAddonConfig(async () => ({})) as any)'],
-      form: 'parentheses',
-      remove: 'the parentheses',
+      initializer: '(pikkuAddonConfig(async () => ({})) as any)',
+      form: 'an `as` cast',
+      remove: 'the cast',
+    },
+    {
+      name: 'a cast under `satisfies`',
+      wrapper: 'pikkuConfig',
+      initializer: 'pikkuConfig(async () => ({}))! satisfies unknown',
+      form: 'a non-null assertion (`!`)',
+      remove: 'the `!`',
     },
   ]
 
@@ -316,7 +308,7 @@ describe('PKU564 — a factory hidden behind a wrapper fails the build', () => {
           `import { ${c.wrapper} } from '#pikku'`,
           'type CreateSingletonServices = unknown',
           '',
-          `export const factory = ${c.initializer.join('\n')}`,
+          `export const factory = ${c.initializer}`,
         ].join('\n')
       )
       const found = hidden(criticals)
@@ -348,5 +340,65 @@ describe('PKU564 — a factory hidden behind a wrapper fails the build', () => {
     )
     assert.deepEqual(hidden(criticals), [])
     assert.equal(state.singletonServicesFactories.size, 1)
+  })
+})
+
+describe('`satisfies` and parentheses around a factory are read through', () => {
+  const readThrough: Array<{
+    name: string
+    wrapper: string
+    initializer: string
+    registered: (state: Awaited<ReturnType<typeof inspect>>) => number
+  }> = [
+    {
+      name: '`satisfies`',
+      wrapper: 'pikkuConfig',
+      initializer: 'pikkuConfig(async () => ({})) satisfies unknown',
+      registered: (state) => state.configFactories.size,
+    },
+    {
+      name: 'parentheses',
+      wrapper: 'pikkuServerLifecycle',
+      initializer: '(pikkuServerLifecycle({}))',
+      registered: (state) => state.serverLifecycleFactories.size,
+    },
+    {
+      name: 'parentheses around `satisfies`',
+      wrapper: 'pikkuWireServices',
+      initializer:
+        '(pikkuWireServices(async ({ logger }) => ({})) satisfies unknown)',
+      registered: (state) => state.wireServicesFactories.size,
+    },
+  ]
+
+  for (const c of readThrough) {
+    test(`${c.wrapper}(...) in ${c.name} is registered, without PKU564`, async () => {
+      const { state, criticals } = await inspectSource(
+        'pikku-transparent-factory-',
+        [
+          `import { ${c.wrapper} } from '#pikku'`,
+          `export const factory = ${c.initializer}`,
+        ].join('\n')
+      )
+      assert.deepEqual(criticals, [])
+      assert.equal(c.registered(state), 1)
+    })
+  }
+
+  test('an addon services factory under `satisfies` still declares its contract', async () => {
+    const { state, criticals } = await inspectSource(
+      'pikku-transparent-addon-',
+      [
+        "import { pikkuAddonServices } from '#pikku'",
+        'export const createSingletonServices = pikkuAddonServices(',
+        '  async (_config, { logger }) => ({ noop: logger })',
+        ') satisfies unknown',
+      ].join('\n')
+    )
+    assert.deepEqual(criticals, [])
+    assert.equal(state.singletonServicesFactories.size, 1)
+    assert.equal(state.addonServicesFactorySeen, true)
+    assert.deepEqual(state.addonRequiredParentServices, ['logger'])
+    assert.deepEqual(state.addonCreatedServices, ['noop'])
   })
 })
