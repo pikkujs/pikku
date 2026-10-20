@@ -9365,6 +9365,27 @@ export type SetProjectFavoriteInput = {
 export type SetProjectFavoriteOutput = {
   favorite: boolean
 }
+export type SetProjectRepoInput = {
+  projectId: string
+  target: 'gitea' | 'github' | 'url'
+  repoUrl?: string | undefined
+  dryRun?: boolean | undefined
+}
+export type SetProjectRepoOutput = {
+  projectId: string
+  dryRun: boolean
+  copied: boolean
+  from: {
+    provider: 'github' | 'gitea'
+    repoUrl: string
+  }
+  to: {
+    provider: 'github' | 'gitea'
+    repoUrl: string
+    cloneUrl: string
+  }
+  steps: string[]
+}
 export type SetProjectSettingsInput = {
   projectId: string
   set: {
@@ -11040,6 +11061,7 @@ export type RPCMap = {
     TransferProjectInput,
     TransferProjectOutput
   >
+  readonly setProjectRepo: RPCHandler<SetProjectRepoInput, SetProjectRepoOutput>
   readonly updateProject: RPCHandler<UpdateProjectInput, UpdateProjectOutput>
   readonly crawlSiteResult: RPCHandler<
     CrawlSiteResultInput,
