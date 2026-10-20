@@ -44,6 +44,17 @@ func (s *Context) visitRPCInvocations(node *ast.Node) {
 		}
 	}
 
+	// rpc.startWorkflow('...'), workflowService.startWorkflow('...') and
+	// workflowService.runToCompletion('...') start a workflow by name.
+	if ast.IsPropertyAccessExpression(expr) {
+		switch expr.Name().Text() {
+		case "startWorkflow", "runToCompletion":
+			if first != nil && (ast.IsStringLiteral(first) || ast.IsNoSubstitutionTemplateLiteral(first)) {
+				st.Workflows.InvokedWorkflows.Add(first.Text())
+			}
+		}
+	}
+
 	if isAgentInvocation(expr) {
 		if first != nil && ast.IsStringLiteral(first) {
 			file := ast.GetSourceFileOfNode(node).FileName()

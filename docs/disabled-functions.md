@@ -28,6 +28,8 @@ Anything that still references a disabled function fails the build with `PKU562`
 
 `pikku verify` fails on an app function that nothing uses: not wired to any transport, not exposed (`expose`, `remote`, `mcp`), and not called by name (`rpc.invoke`, workflow steps, agent tools). `pikku all` reports each one as `PKU563` at `error` severity but still builds.
 
-Scenarios, workflows and inline wiring functions are never reported. Neither are addon functions: an addon project is never checked, and an app is checked only for its own functions.
+A workflow is checked like any other function. It counts as used when it is wired or exposed, or started by a literal name: `rpc.startWorkflow('name')`, `workflowService.startWorkflow('name')` or `runToCompletion('name')`, `rpc.invoke('name')`, another workflow's step, or the client helpers (`workflowStart('name')` and the rest). A workflow started only by a computed name is reported.
+
+Scenarios and inline wiring functions are never reported. Neither are addon functions: an addon project is never checked, and an app is checked only for its own functions.
 
 Fix it by using the function or marking it `disabled`.

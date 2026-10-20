@@ -26,7 +26,7 @@ Version numbers in brackets are the release of the named package that shipped th
 
 ### `pikku verify` fails on an app function nothing uses
 
-An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked.
+An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked. Workflows are checked too: a workflow that is not wired, exposed or started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step) is reported.
 
 To fix it, use the function or mark it `disabled: true | 'reason'`, which leaves it out of the build. A reference to a disabled function fails the build with `PKU562`. See [`disabled-functions.md`](./disabled-functions.md).
 
