@@ -107,6 +107,22 @@ describe('disabled functions', () => {
     )
   })
 
+  test('a stale reference in a generated file is not an error', async () => {
+    await withProject(
+      {
+        'funcs.ts': FUNCS,
+        'pikku-http-wirings.gen.ts': [
+          "import { wireHTTP } from '@pikku/core/http'",
+          "import { oldReport } from './funcs.js'",
+          "wireHTTP({ method: 'get', route: '/report', func: oldReport })",
+        ],
+      },
+      (_state, diagnostics) => {
+        assert.deepEqual(referenced(diagnostics), [])
+      }
+    )
+  })
+
   test('rpc.invoke by name of a disabled function is refused', async () => {
     await withProject(
       {

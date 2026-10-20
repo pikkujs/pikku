@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/microsoft/typescript-go/shim/ast"
 	"github.com/microsoft/typescript-go/shim/scanner"
@@ -209,8 +210,19 @@ func (s *Context) disabledByName(name string) *state.DisabledFunctionMeta {
 	return found
 }
 
+// isGeneratedFile is whether a node sits in a generated file. This run
+// rewrites those from its own state, which leaves disabled functions out, so a
+// reference there is the last run's and is about to go.
+func isGeneratedFile(node *ast.Node) bool {
+	file := ast.GetSourceFileOfNode(node).FileName()
+	return strings.HasSuffix(file, ".gen.ts") || strings.HasSuffix(file, ".gen.js")
+}
+
 func (s *Context) checkDisabledReferences(node *ast.Node) {
 	if s.State.Functions.Disabled == nil || s.State.Functions.Disabled.Len() == 0 {
+		return
+	}
+	if isGeneratedFile(node) {
 		return
 	}
 

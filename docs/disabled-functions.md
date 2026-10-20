@@ -20,6 +20,10 @@ Anything that still references a disabled function fails the build with `PKU562`
 - a workflow step that calls it
 - a disabled function defined inline in a wiring
 
+References in generated files (`*.gen.ts`, `*.gen.js`) are not counted: `pikku all` rewrites those from the current functions, so one left over from the last run is replaced rather than refused.
+
+A disabled function's body is still type-checked against the generated RPC maps. A function it calls by name, such as a step in a disabled workflow, has to stay enabled while that body names it.
+
 `pikku all` prints one warning listing the disabled functions, each with its file and reason.
 
 `disabled` must be `true`, `false` or a string literal. A computed value is refused (`INVALID_VALUE`) and the function is treated as disabled.
@@ -30,6 +34,6 @@ Anything that still references a disabled function fails the build with `PKU562`
 
 A workflow is checked like any other function. It counts as used when it is wired or exposed, or started by a literal name: `rpc.startWorkflow('name')`, `workflowService.startWorkflow('name')` or `runToCompletion('name')`, `rpc.invoke('name')`, another workflow's step, or the client helpers (`workflowStart('name')` and the rest). A workflow started only by a computed name is reported.
 
-Scenarios and inline wiring functions are never reported. Neither are addon functions: an addon project is never checked, and an app is checked only for its own functions.
+Scenarios, inline wiring functions and functions in generated scaffolds (`*.gen.ts`, which cannot take a `disabled` that the next run would overwrite) are never reported. Neither are addon functions: an addon project is never checked, and an app is checked only for its own functions.
 
 Fix it by using the function or marking it `disabled`.

@@ -124,6 +124,9 @@ export const findUnusedFunctions = (
     if (meta.functionType !== 'user') continue
     if (meta.funcWrapper && RUN_BY_SCENARIOS.has(meta.funcWrapper)) continue
     if (meta.expose || meta.remote || meta.mcp) continue
+    // A generated scaffold is rewritten on every run, so `disabled` cannot be
+    // added to it; what it leaves unwired it leaves for the project to wire.
+    if (meta.sourceFile?.endsWith('.gen.ts')) continue
     if (uses.has(pikkuFuncId) || (meta.name && uses.has(meta.name))) continue
     unused.push({
       pikkuFuncId,
