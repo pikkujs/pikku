@@ -690,6 +690,38 @@ describe('override validation resolves the override target (value), not the logi
     assert.match(criticals[0]!.message, /STRIPE_KEY/)
   })
 
+  test('validateSecretOverrides accepts a BETTER_AUTH_SECRET grant when the project has auth, before auth-secrets.gen.ts exists', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', [], {
+      secretGrants: ['BETTER_AUTH_SECRET'],
+    })
+    ;(state as any).auth = { definition: {} }
+    validateSecretOverrides(logger, state)
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateSecretOverrides accepts an override onto BETTER_AUTH_SECRET when the project has auth', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', [], {
+      secretGrants: ['AUTH_SECRET'],
+      secretOverrides: { AUTH_SECRET: 'BETTER_AUTH_SECRET' },
+    })
+    ;(state as any).auth = { definition: {} }
+    validateSecretOverrides(logger, state)
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateSecretOverrides still flags a BETTER_AUTH_SECRET grant when the project has no auth', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', [], {
+      secretGrants: ['BETTER_AUTH_SECRET'],
+    })
+    validateSecretOverrides(logger, state)
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.INVALID_VALUE)
+    assert.match(criticals[0]!.message, /Available secrets: none/)
+  })
+
   test('validateSecretOverrides resolves a grant through its override before looking it up', () => {
     const { logger, criticals } = makeCriticalLogger()
     const state = makeGrantState('secrets', ['PROD_EMAIL_KEY'], {
