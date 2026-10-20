@@ -1352,8 +1352,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         throw new Error(`Workflow run not found: ${runId}`)
       }
 
-      const meta = pikkuState(null, 'workflows', 'meta')
-      const workflowMeta = meta[run.workflow]
+      const workflowMeta = resolveWorkflowMeta(run.workflow)?.meta
 
       const isGraphWorkflow = workflowMeta?.source === 'graph'
       let graphNodeId: string | undefined
@@ -1378,7 +1377,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           run.workflow
         )
       } else {
-        if (meta[rpcName]) {
+        if (resolveWorkflowMeta(rpcName)) {
           result = await startQueuedChildStep(
             {
               startWorkflow: (...args) => this.startWorkflow(...args),
@@ -1623,7 +1622,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         if (resolvedStepOptions.virtualUser) {
           return resolvedStepOptions.virtualUser.invoke(rpcName, data)
         }
-        if (pikkuState(null, 'workflows', 'meta')[rpcName]) {
+        if (resolveWorkflowMeta(rpcName)) {
           return runInlineChildStep(
             {
               startWorkflow: (...args) => this.startWorkflow(...args),
