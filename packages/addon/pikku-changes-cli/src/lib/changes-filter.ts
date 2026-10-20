@@ -1,4 +1,8 @@
-import { toBoardStatus, type BoardChange, type BoardStatus } from './changes-board.js'
+import {
+  toBoardStatus,
+  type BoardChange,
+  type BoardStatus,
+} from './changes-board.js'
 
 export type ChangesFilter = {
   status?: BoardStatus[]
@@ -18,7 +22,10 @@ export const filterChanges = (
   const shown = changes.filter((change) => {
     const status = toBoardStatus(change.status)
     if (wanted && !wanted.has(status)) return false
-    if (filter.specialist && change.specialist !== filter.specialist)
+    if (
+      filter.specialist &&
+      (change as { specialist?: string }).specialist !== filter.specialist
+    )
       return false
     if (needle) {
       const body = (change as { body?: string }).body ?? ''
