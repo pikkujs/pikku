@@ -187,6 +187,16 @@ const invokedRpcName = (node: ts.CallExpression): string | undefined => {
 }
 
 /**
+ * Whether a node sits in a generated file. This run rewrites those from its own
+ * state, which leaves disabled functions out, so a reference there is the last
+ * run's and is about to go.
+ */
+const isGenerated = (node: ts.Node): boolean => {
+  const fileName = node.getSourceFile().fileName
+  return fileName.endsWith('.gen.ts') || fileName.endsWith('.gen.js')
+}
+
+/**
  * PKU562: anything that still references a disabled function — a wiring, an
  * agent's tools, an `rpc.invoke` by name, any other code. Runs in the routes
  * sweep, after every function is registered, so it sees the whole set.
@@ -198,6 +208,7 @@ export const checkDisabledReferences: AddWiring = (
   state
 ) => {
   if (Object.keys(state.functions.disabled).length === 0) return
+  if (isGenerated(node)) return
 
   if (ts.isCallExpression(node)) {
     const invoked = invokedRpcName(node)

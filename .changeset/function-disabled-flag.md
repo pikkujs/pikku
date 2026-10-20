@@ -10,4 +10,6 @@ Functions take `disabled: true | 'reason'`. A disabled function is left out of t
 
 `pikku verify` now fails on an app function that is not wired, exposed or called by name (`PKU563`, an `error` diagnostic that `pikku all` prints but does not fail on). Addon functions are never checked; workflows are, and count as used when started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step). Use the function or mark it `disabled`.
 
+References in generated files (`*.gen.ts` / `*.gen.js`) do not count for `PKU562`, so disabling a function no longer fails the next `pikku all` on the previous run's output. Functions in generated scaffolds are never `PKU563`.
+
 An inline `defineChannelRoutes({...})` inside `wireChannel`'s `onMessageWiring` is now read, so its message routes reach the channel meta.

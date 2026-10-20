@@ -112,6 +112,13 @@ describe('findUnusedFunctions', () => {
     assert.deepEqual(unused, [])
   })
 
+  test('an unwired function in a generated scaffold is not reported', async () => {
+    const unused = await unusedIn({
+      'virtual-user.gen.ts': [IMPORT, ...func('tickSchedules')],
+    })
+    assert.deepEqual(unused, [])
+  })
+
   test('an unused addon function is not reported', async () => {
     const unused = await unusedIn(
       { 'funcs.ts': [IMPORT, ...func('addonOnly')] },
