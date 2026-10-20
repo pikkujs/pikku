@@ -306,6 +306,7 @@ jobs:
             validate,
             mcp-auth,
             virtual-users,
+            pikku-studio,
           ]
     steps:
       - uses: actions/checkout@v7

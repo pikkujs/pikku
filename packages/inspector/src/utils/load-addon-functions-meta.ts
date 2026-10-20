@@ -6,7 +6,7 @@ import type {
   AddonContributorsMeta,
   InspectorState,
   InspectorLogger,
-  ScreensManifestMeta,
+  StudioMeta,
 } from '../types.js'
 import {
   addonResolutionDirs,
@@ -258,17 +258,17 @@ export const namespaceAddonWebhookSources = (
  * package's function metadata so that wiring handlers (channels, HTTP routes,
  * schedules, etc.) can look up addon function types during the routes sweep.
  */
-const loadScreensManifest = async (
+const loadStudioMeta = async (
   require: AddonResolver,
   packageName: string
-): Promise<ScreensManifestMeta | null> => {
+): Promise<StudioMeta | null> => {
   const path = resolveAddonMeta(
     require,
     packageName,
     'screens/pikku-screens-meta'
   )
   if (!path) return null
-  return JSON.parse(await readFile(path, 'utf-8')) as ScreensManifestMeta
+  return JSON.parse(await readFile(path, 'utf-8')) as StudioMeta
 }
 
 const isContributorRef = (value: unknown): value is AddonContributorRef =>
@@ -416,11 +416,10 @@ export async function loadAddonFunctionsMeta(
       }
       recordDeclaredUses(logger, namespace, decl, dirs)
       if (decl.ui) {
-        let manifest:
-          Awaited<ReturnType<typeof loadScreensManifest>> | undefined
+        let manifest: Awaited<ReturnType<typeof loadStudioMeta>> | undefined
         let unreadable = false
         try {
-          manifest = await loadScreensManifest(require, decl.package)
+          manifest = await loadStudioMeta(require, decl.package)
         } catch (e) {
           logger.critical(
             ErrorCode.ADDON_UI_HAS_NO_SCREENS,
@@ -433,10 +432,10 @@ export async function loadAddonFunctionsMeta(
         } else if (!manifest || manifest.screens.length === 0) {
           logger.critical(
             ErrorCode.ADDON_UI_HAS_NO_SCREENS,
-            `wireAddon('${namespace}') sets ui: true, but ${decl.package} declares no screens. Add a defineScreens call to the package, or drop ui.`
+            `wireAddon('${namespace}') sets ui: true, but ${decl.package} declares no screens. Add a pikkuStudio call to the package, or drop ui.`
           )
         } else {
-          ;(state.addonScreens ??= {})[namespace] = {
+          ;(state.addonStudio ??= {})[namespace] = {
             ...manifest,
             scopes: [
               ...new Set([...(manifest.scopes ?? []), ...(decl.scopes ?? [])]),

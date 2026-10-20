@@ -2330,6 +2330,21 @@
         "tsx": "^4.23.15",
       },
     },
+    "verifiers/pikku-studio": {
+      "name": "@pikku/verifiers-pikku-studio",
+      "version": "1.0.0",
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/core": "*",
+        "zod": "^4",
+      },
+    },
     "verifiers/release": {
       "name": "@pikku/verifiers-release",
       "devDependencies": {
@@ -3537,6 +3552,8 @@
     "@pikku/verifiers-middleware-and-permissions": ["@pikku/verifiers-middleware-and-permissions@workspace:verifiers/middleware-and-permissions"],
 
     "@pikku/verifiers-next-better-auth": ["@pikku/verifiers-next-better-auth@workspace:verifiers/next-better-auth"],
+
+    "@pikku/verifiers-pikku-studio": ["@pikku/verifiers-pikku-studio@workspace:verifiers/pikku-studio"],
 
     "@pikku/verifiers-release": ["@pikku/verifiers-release@workspace:verifiers/release"],
 

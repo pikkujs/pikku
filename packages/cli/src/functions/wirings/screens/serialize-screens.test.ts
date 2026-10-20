@@ -9,18 +9,26 @@ import {
 } from './serialize-screens.js'
 
 const manifest = {
-  title: 'Invoices',
-  icon: 'receipt',
+  title: 'invoices__title',
   file: '/pkg/src/screens.ts',
   screens: [
     {
-      path: '/',
-      title: 'Overview',
-      nav: true,
+      path: '/invoices',
+      title: 'invoices_overview__title',
+      scope: 'project',
+      nav: { area: 'project', icon: 'receipt', order: 30, badge: 'unpaid' },
+      needsApp: true,
       scopes: ['invoices:read'],
       component: './screens/overview',
     },
-    { path: '/report', title: 'Report', app: './dist' },
+    {
+      path: '/report',
+      title: 'invoices_report__title',
+      scope: 'studio',
+      replaces: true,
+      layout: 'bare',
+      app: './dist',
+    },
   ],
 }
 
@@ -37,6 +45,21 @@ describe('serializeScreens', () => {
     assert.match(out, /scopes: \["invoices:read"\]/)
     assert.match(out, /app: "\.\/dist"/)
     assert.match(out, /as const/)
+  })
+
+  test('carries every pikkuStudio field through', () => {
+    const out = serializeScreens(
+      manifest as any,
+      '/pkg/.pikku/screens/pikku-screens.gen.ts'
+    )
+    assert.match(
+      out,
+      /path: "\/invoices", title: "invoices_overview__title", scope: "project", nav: \{"area":"project","icon":"receipt","order":30,"badge":"unpaid"\}, needsApp: true, scopes: \["invoices:read"\]/
+    )
+    assert.match(
+      out,
+      /path: "\/report", title: "invoices_report__title", scope: "studio", replaces: true, layout: "bare", app: "\.\/dist"/
+    )
   })
 })
 
@@ -94,6 +117,16 @@ describe('host emit', () => {
       serializeInstalledAddons(installed as any),
       /import\("@acme\/addon-invoices\/screens\/overview"\)/
     )
+  })
+
+  test('carries scope, nav, replaces, needsApp and layout to the host', () => {
+    const out = serializeInstalledAddons(installed as any)
+    assert.match(out, /title: "invoices__title"/)
+    assert.match(
+      out,
+      /scope: "project", nav: \{"area":"project","icon":"receipt","order":30,"badge":"unpaid"\}, needsApp: true/
+    )
+    assert.match(out, /scope: "studio", replaces: true, layout: "bare"/)
   })
 
   test('the role map is plain data', () => {

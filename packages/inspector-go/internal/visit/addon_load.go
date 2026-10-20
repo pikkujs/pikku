@@ -344,7 +344,7 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	s.recordDeclaredUses(ns, decl, dirs)
 
 	if decl.ui {
-		if err := s.loadAddonScreens(ns, decl, req); err != nil {
+		if err := s.loadAddonStudio(ns, decl, req); err != nil {
 			return err
 		}
 	}
@@ -402,7 +402,7 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	return nil
 }
 
-func (s *Context) loadAddonScreens(ns string, decl *addonDecl, req addonResolver) error {
+func (s *Context) loadAddonStudio(ns string, decl *addonDecl, req addonResolver) error {
 	var manifest *ojson
 	if path := resolveAddonMeta(req, decl.pkg, "screens/pikku-screens-meta"); path != "" {
 		m, err := readJSONFile(path)
@@ -424,7 +424,7 @@ func (s *Context) loadAddonScreens(ns string, decl *addonDecl, req addonResolver
 	}
 	if manifest == nil || len(manifest.get("screens").arr) == 0 {
 		s.Log.Critical(diag.AddonUiHasNoScreens, fmt.Sprintf(
-			"wireAddon('%s') sets ui: true, but %s declares no screens. Add a defineScreens call to the package, or drop ui.", ns, decl.pkg))
+			"wireAddon('%s') sets ui: true, but %s declares no screens. Add a pikkuStudio call to the package, or drop ui.", ns, decl.pkg))
 		return nil
 	}
 	seen := map[string]bool{}
@@ -444,13 +444,13 @@ func (s *Context) loadAddonScreens(ns string, decl *addonDecl, req addonResolver
 	entry.set("scopes", arr)
 
 	all := newOObject()
-	if len(s.State.AddonScreens) > 0 && string(s.State.AddonScreens) != "null" {
-		if existing, err := parseOJSON(s.State.AddonScreens); err == nil && existing.isObject() {
+	if len(s.State.AddonStudio) > 0 && string(s.State.AddonStudio) != "null" {
+		if existing, err := parseOJSON(s.State.AddonStudio); err == nil && existing.isObject() {
 			all = existing
 		}
 	}
 	all.set(ns, entry)
-	s.State.AddonScreens = all.raw()
+	s.State.AddonStudio = all.raw()
 	return nil
 }
 

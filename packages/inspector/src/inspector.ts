@@ -13,6 +13,7 @@ import { createNestedProjectFilter } from './utils/nested-project-filter.js'
 import { toProgramPath } from './utils/program-path.js'
 import { resolveLatestVersions } from './utils/resolve-versions.js'
 import { validateWebhookSourceTriggers } from './add/add-trigger.js'
+import { validatePikkuStudio } from './add/add-pikku-studio.js'
 import { generateAllSchemas } from './utils/schema-generator.js'
 import { extractSecretUsage } from './utils/extract-secret-usage.js'
 import {
@@ -209,6 +210,7 @@ export const analyzeProgram = async (
     )
 
     validateWebhookSourceTriggers(logger, state)
+    validatePikkuStudio(logger, state)
 
     resolveLatestVersions(state, logger)
 

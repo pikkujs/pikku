@@ -79,8 +79,8 @@ type State struct {
 	AddonFunctions        Record[*Record[*FunctionMeta]] `json:"addonFunctions"`
 	// RemoteAddonFunctions is each versioned wireRemoteAddon's SDK metadata.
 	RemoteAddonFunctions *Record[*Record[*FunctionMeta]] `json:"remoteAddonFunctions,omitempty"`
-	ScreensManifest      Raw                             `json:"screensManifest,omitempty"`
-	AddonScreens         Raw                             `json:"addonScreens,omitempty"`
+	Studio               Raw                             `json:"studio,omitempty"`
+	AddonStudio          Raw                             `json:"addonStudio,omitempty"`
 	AddonContributors    Raw                             `json:"addonContributors,omitempty"`
 	ExportedContracts    ExportedContracts               `json:"exportedContracts"`
 

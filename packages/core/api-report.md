@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3310 observable things**: 1110 exported names, plus
+**3311 observable things**: 1111 exported names, plus
 2200 members on the classes and interfaces among them, reachable
 through 62 entry points.
 
@@ -45,8 +45,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./scheduler` | 10 | 10 | 8 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
+| `./addon` | 14 | 14 | 2 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
-| `./addon` | 13 | 13 | 2 |
 | `./scope` | 15 | 15 | 0 |
 | `./rpc` | 8 | 8 | 6 |
 | `./workflow/types` | 47 | 1 | 11 |
@@ -3455,14 +3455,7 @@ rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefi
 ## ./addon
 
 ```ts
-export type AddonAppScreen = AddonScreenBase & {
-  app: string
-}
-export type AddonComponentScreen = AddonScreenBase & {
-  component: () => Promise<{ default: unknown }>
-}
-export type AddonScreen = AddonComponentScreen | AddonAppScreen
-defineScreens: (manifest: ScreensManifest) => ScreensManifest
+pikkuStudio: (manifest: StudioManifest) => StudioManifest
 export type RemoteAddonAuth =
   | { credentialId: string }
   | { secretId: string }
@@ -3490,11 +3483,23 @@ export class RemoteAddonAuthError extends PikkuError {
   constructor(namespace: string, detail: string)
 }
 resolveRemoteAddonToken: (auth: RemoteAddonAuthBinding | undefined, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, wire: PikkuRawWire, namespace: string) => Promise<string | null>
-export type ScreensManifest = {
-  title: string
-  icon?: string
-  screens: AddonScreen[]
+export type StudioAppScreen = StudioScreenBase & {
+  app: string
 }
+export type StudioComponentScreen = StudioScreenBase & {
+  component: () => Promise<{ default: unknown }>
+}
+export type StudioManifest = {
+  title: string
+  screens: StudioScreen[]
+}
+export type StudioNav = {
+  area: 'rail' | 'team' | 'project' | 'account'
+  icon: string
+  order: number
+  badge?: string
+}
+export type StudioScreen = StudioComponentScreen | StudioAppScreen
 wireAddon: (config: WireAddonConfig) => void
 export type WireAddonConfig = {
   name: string

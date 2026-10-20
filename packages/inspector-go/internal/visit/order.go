@@ -18,7 +18,7 @@ const (
 	OrderAddOutgoingWebhook         = 90
 	OrderAddRPCInvocations          = 100
 	OrderAddWireAddon               = 110
-	OrderAddDefineScreens           = 120
+	OrderAddPikkuStudio             = 120
 	OrderAddWireRemoteAddon         = 130
 	OrderAddMiddleware              = 140
 	OrderAddPermission              = 150
