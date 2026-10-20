@@ -62,7 +62,7 @@ func (s *Context) describeDisabled(meta *state.DisabledFunctionMeta) string {
 	return fmt.Sprintf("'%s' is disabled%s in %s", meta.Name, reason, s.relToRoot(meta.SourceFile))
 }
 
-func (s *Context) disabledPosition(node *ast.Node) string {
+func (s *Context) nodePosition(node *ast.Node) string {
 	sf := ast.GetSourceFileOfNode(node)
 	line := scanner.GetECMALineOfPosition(sf, tsutil.NodeStart(node)) + 1
 	return fmt.Sprintf("%s:%d", s.relToRoot(sf.FileName()), line)
@@ -98,7 +98,7 @@ func (s *Context) recordDisabledFunction(node *ast.Node, pikkuFuncId string, met
 	}
 	s.Log.Critical(diag.DisabledFunctionReferenced, fmt.Sprintf(
 		"A function declared `disabled` is defined inline at %s%s, which still uses it. Remove what uses it, or remove `disabled`.",
-		s.disabledPosition(node), inside))
+		s.nodePosition(node), inside))
 }
 
 // disabledByLocalName indexes disabled functions by the name code reaches
@@ -237,7 +237,7 @@ func (s *Context) checkDisabledReferences(node *ast.Node) {
 		}
 		s.Log.Critical(diag.DisabledFunctionReferenced, fmt.Sprintf(
 			"%s, but %s('%s') calls it at %s. Remove the call, or remove `disabled`.",
-			s.describeDisabled(meta), tsutil.NodeText(node.Expression()), invoked, s.disabledPosition(node)))
+			s.describeDisabled(meta), tsutil.NodeText(node.Expression()), invoked, s.nodePosition(node)))
 		return
 	}
 
@@ -274,7 +274,7 @@ func (s *Context) checkDisabledReferences(node *ast.Node) {
 	}
 	s.Log.Critical(diag.DisabledFunctionReferenced, fmt.Sprintf(
 		"%s, but %s at %s. Remove the reference, or remove `disabled`.",
-		s.describeDisabled(meta), what, s.disabledPosition(node)))
+		s.describeDisabled(meta), what, s.nodePosition(node)))
 }
 
 func collectRpcNames(value any, into map[string]bool) {

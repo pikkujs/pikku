@@ -1,5 +1,8 @@
 import * as ts from 'typescript'
-import { addFileWithFactory } from './add/add-file-with-factory.js'
+import {
+  addFileWithFactory,
+  checkHiddenFactory,
+} from './add/add-file-with-factory.js'
 import { addFileExtendsCoreType } from './add/add-file-extends-core-type.js'
 import { addHTTPRoute } from './add/add-http-route.js'
 import { addHTTPRoutes } from './add/add-http-routes.js'
@@ -105,6 +108,7 @@ export const visitSetup = (
     state.serverLifecycleFactories,
     'ServerLifecycle'
   )
+  checkHiddenFactory(logger, node, state)
 
   addAnalytics(logger, node, checker, state)
   addOutgoingWebhook(logger, node, checker, state)

@@ -24,7 +24,7 @@ func TestRegisteredGroups(t *testing.T) {
 			"addFileExtendsCoreType CoreSingletonServices", "addFileExtendsCoreType CoreServices",
 			"addFileExtendsCoreType CoreUserSession", "addFileExtendsCoreType CoreConfig",
 			"addFileWithFactory CreateSingletonServices", "addFileWithFactory CreateWireServices",
-			"addFileWithFactory CreateConfig", "addFileWithFactory ServerLifecycle",
+			"addFileWithFactory CreateConfig", "addFileWithFactory ServerLifecycle", "checkHiddenFactory",
 			"addAnalytics", "addOutgoingWebhook",
 			"addRPCInvocations", "addWireAddon", "addDefineScreens", "addWireRemoteAddon", "addMiddleware", "addPermission", "checkIndirectRegistrations",
 			"addApprovalDescription", "addWorkflow",
