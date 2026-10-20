@@ -287,6 +287,7 @@ jobs:
             workflows,
             variables,
             functions,
+            disabled-functions,
             hmr,
             dev-bun,
             dev-platform-contributors,
