@@ -37,7 +37,7 @@
     "pikku": "pikku",
     "serialize-dsl": "npx tsx src/tests/serialize-dsl.test.ts",
     "serialize-graph": "npx tsx src/tests/serialize-graph.test.ts",
-    "test": "pikku && npx tsx --test src/tests/complex-inline.assert.ts && npx tsx --test src/tests/dsl-validation.assert.ts && npx tsx --test src/tests/graph-foreach.assert.ts && npx tsx --test src/tests/planned-steps.assert.ts && npx tsx --test src/tests/scenario.assert.ts && npx tsx src/tests/serialize-dsl.test.ts",
+    "test": "pikku && npx tsx --test src/tests/complex-inline.assert.ts && npx tsx --test src/tests/dsl-validation.assert.ts && npx tsx --test src/tests/graph-foreach.assert.ts && npx tsx --test src/tests/planned-steps.assert.ts && npx tsx --test src/tests/scenario.assert.ts && npx tsx --test src/tests/run-lease-contention-probe.assert.ts && npx tsx src/tests/serialize-dsl.test.ts",
     "migrate": "pikku db generate && pikku db migrate",
     "test:bullmq": "npx tsx src/runners/bullmq.runner.ts",
     "test:pgboss": "bun run migrate && npx tsx src/runners/pgboss.runner.ts",

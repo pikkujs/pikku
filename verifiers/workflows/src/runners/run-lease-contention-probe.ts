@@ -12,9 +12,10 @@ export type Interval = [string, number, number]
  */
 const now = () => Number(process.hrtime.bigint()) / 1e6
 
-class IntervalRecorder {
+export class IntervalRecorder {
   readonly intervals: Interval[] = []
   private inside = new Map<string, number>()
+  private opened = new Set<[string, number]>()
   maxInside = 0
 
   /** Opens an interval for `runId`; the returned function closes it. */
@@ -22,11 +23,25 @@ class IntervalRecorder {
     const count = (this.inside.get(runId) ?? 0) + 1
     this.inside.set(runId, count)
     this.maxInside = Math.max(this.maxInside, count)
-    const start = now()
+    const entry: [string, number] = [runId, now()]
+    this.opened.add(entry)
     return () => {
-      this.intervals.push([runId, start, now()])
+      this.opened.delete(entry)
+      this.intervals.push([runId, entry[1], now()])
       this.inside.set(runId, this.inside.get(runId)! - 1)
     }
+  }
+
+  /**
+   * The intervals still open, cut at this instant. A report taken while a run
+   * is being worked on catches a holder between the end of its pass and its
+   * release — `holdLease` checks the lease once more before releasing it — so
+   * a holder must count from the moment it was granted, not the moment it is
+   * given back.
+   */
+  stillOpen(): Interval[] {
+    const at = now()
+    return [...this.opened].map(([runId, start]) => [runId, start, at])
   }
 
   async around<T>(runId: string, fn: () => Promise<T>): Promise<T> {
@@ -108,6 +123,24 @@ export const recordingPasses = <T extends WorkflowServiceClass>(Base: T) => {
   }
   return Recording
 }
+
+/**
+ * The passes no holder of the same run's lease spans: a pass ran under the
+ * lease only if one was granted before it began and not given back until it
+ * ended. Passes and holders must come from the same process — a lease held by
+ * another worker does not cover this one's pass.
+ */
+export const passesOutsideLease = (
+  passes: Interval[],
+  holders: Interval[]
+): Interval[] =>
+  passes.filter(
+    ([runId, start, end]) =>
+      !holders.some(
+        ([holderRunId, holderStart, holderEnd]) =>
+          holderRunId === runId && holderStart <= start && holderEnd >= end
+      )
+  )
 
 /** The most intervals for one run that were ever open at the same instant. */
 export const maxOverlap = (intervals: Interval[]): number => {
