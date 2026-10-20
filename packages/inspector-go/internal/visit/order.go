@@ -14,6 +14,7 @@ const (
 	OrderCreateWireServices         = 50 // addFileWithFactory CreateWireServices
 	OrderCreateConfig               = 60 // addFileWithFactory CreateConfig
 	OrderServerLifecycle            = 70 // addFileWithFactory ServerLifecycle
+	OrderCheckHiddenFactory         = 75
 	OrderAddAnalytics               = 80
 	OrderAddOutgoingWebhook         = 90
 	OrderAddRPCInvocations          = 100

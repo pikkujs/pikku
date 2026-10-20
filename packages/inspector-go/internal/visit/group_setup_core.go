@@ -6,6 +6,7 @@ import (
 
 	"github.com/microsoft/typescript-go/shim/ast"
 
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsutil"
 )
@@ -30,6 +31,7 @@ func init() {
 	factory(OrderCreateWireServices, "CreateWireServices", true, func(s *state.State) *state.PathToNameAndType { return &s.WireServicesFactories })
 	factory(OrderCreateConfig, "CreateConfig", false, func(s *state.State) *state.PathToNameAndType { return &s.ConfigFactories })
 	factory(OrderServerLifecycle, "ServerLifecycle", false, func(s *state.State) *state.PathToNameAndType { return &s.ServerLifecycleFactories })
+	Register(Visitor{Name: "checkHiddenFactory", Phase: PhaseSetup, Order: OrderCheckHiddenFactory, Visit: (*Context).checkHiddenFactory})
 }
 
 func appendNameAndType(m *state.PathToNameAndType, file string, e state.NameAndType) {
@@ -122,6 +124,50 @@ var wrapperFactoryTypes = map[string]string{
 	"pikkuWireServices":      "CreateWireServices",
 	"pikkuAddonWireServices": "CreateWireServices",
 	"pikkuServerLifecycle":   "ServerLifecycle",
+}
+
+// describeFactoryWrapper is how a wrapper around a factory call reads in
+// PKU564: the form, and what to remove. ok is false for no wrapper.
+func describeFactoryWrapper(n *ast.Node) (form, remove string, ok bool) {
+	switch {
+	case ast.IsAsExpression(n):
+		return "an `as` cast", "the cast", true
+	case ast.IsTypeAssertion(n):
+		return "a `<T>` cast", "the cast", true
+	case ast.IsSatisfiesExpression(n):
+		return "a `satisfies` expression", "`satisfies`", true
+	case ast.IsNonNullExpression(n):
+		return "a non-null assertion (`!`)", "the `!`", true
+	case ast.IsParenthesizedExpression(n):
+		return "parentheses", "the parentheses", true
+	}
+	return "", "", false
+}
+
+// checkHiddenFactory ports add-file-with-factory.ts checkHiddenFactory: a
+// factory call inside a cast, `satisfies`, `!` or parentheses would be left
+// out of the build without a word, so it fails the build instead.
+func (s *Context) checkHiddenFactory(node *ast.Node) {
+	if !ast.IsVariableDeclaration(node) || node.Initializer() == nil {
+		return
+	}
+	form, remove, ok := describeFactoryWrapper(node.Initializer())
+	if !ok {
+		return
+	}
+	inner := unwrapExpression(node.Initializer())
+	if inner == nil || !ast.IsCallExpression(inner) || !ast.IsIdentifier(inner.Expression()) {
+		return
+	}
+	wrapper := inner.Expression().Text()
+	if _, known := wrapperFactoryTypes[wrapper]; !known {
+		return
+	}
+	s.Log.Critical(diag.FactoryNotADirectCall, fmt.Sprintf(
+		"'%s' at %s wraps %s(...) in %s. "+
+			"The inspector reads a factory only from a direct %s(...) call, so this one would not be registered and nothing it provides would exist at runtime. "+
+			"Remove %s, and fix the type mismatch it hides in the factory itself.",
+		tsutil.NodeText(node.Name()), s.nodePosition(node), wrapper, form, wrapper, remove))
 }
 
 func functionNodeOf(n *ast.Node) *ast.Node {

@@ -61,6 +61,7 @@ const (
 	FunctionMetadataNotFound          Code = "PKU559"
 	DisabledFunctionReferenced        Code = "PKU562"
 	UnusedFunction                    Code = "PKU563"
+	FactoryNotADirectCall             Code = "PKU564"
 	DuplicateAuthDefinition           Code = "PKU581"
 	AuthNotExported                   Code = "PKU582"
 	DuplicateVirtualUsersDefinition   Code = "PKU585"

@@ -1,5 +1,11 @@
 import * as ts from 'typescript'
-import type { PathToNameAndType, InspectorState } from '../types.js'
+import { relative } from 'node:path'
+import type {
+  PathToNameAndType,
+  InspectorState,
+  InspectorLogger,
+} from '../types.js'
+import { ErrorCode } from '../error-codes.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'
 
 // Mapping of wrapper function names to their corresponding types
@@ -11,6 +17,71 @@ const wrapperFunctionMap: Record<string, string> = {
   pikkuWireServices: 'CreateWireServices',
   pikkuAddonWireServices: 'CreateWireServices',
   pikkuServerLifecycle: 'ServerLifecycle',
+}
+
+type Wrapper = { form: string; remove: string }
+
+/** How a wrapper around an expression reads in a diagnostic, or undefined for none. */
+const describeWrapper = (expression: ts.Expression): Wrapper | undefined => {
+  if (ts.isAsExpression(expression)) {
+    return { form: 'an `as` cast', remove: 'the cast' }
+  }
+  if (ts.isTypeAssertionExpression(expression)) {
+    return { form: 'a `<T>` cast', remove: 'the cast' }
+  }
+  if (ts.isSatisfiesExpression(expression)) {
+    return { form: 'a `satisfies` expression', remove: '`satisfies`' }
+  }
+  if (ts.isNonNullExpression(expression)) {
+    return { form: 'a non-null assertion (`!`)', remove: 'the `!`' }
+  }
+  if (ts.isParenthesizedExpression(expression)) {
+    return { form: 'parentheses', remove: 'the parentheses' }
+  }
+  return undefined
+}
+
+/**
+ * A factory binding whose wrapper call sits inside a cast, `satisfies`, `!` or
+ * parentheses. addFileWithFactory reads only the call itself, so the factory
+ * would be left out of the build without a word; it fails the build instead.
+ */
+export const checkHiddenFactory = (
+  logger: InspectorLogger,
+  node: ts.Node,
+  state: InspectorState
+) => {
+  if (!ts.isVariableDeclaration(node) || !node.initializer) return
+  const outer = describeWrapper(node.initializer)
+  if (!outer) return
+
+  let inner: ts.Expression = node.initializer
+  while (describeWrapper(inner)) {
+    inner = (
+      inner as
+        | ts.AssertionExpression
+        | ts.SatisfiesExpression
+        | ts.NonNullExpression
+        | ts.ParenthesizedExpression
+    ).expression
+  }
+  if (
+    !ts.isCallExpression(inner) ||
+    !ts.isIdentifier(inner.expression) ||
+    !wrapperFunctionMap[inner.expression.text]
+  ) {
+    return
+  }
+
+  const sourceFile = node.getSourceFile()
+  const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart())
+  const wrapper = inner.expression.text
+  logger.critical(
+    ErrorCode.FACTORY_NOT_A_DIRECT_CALL,
+    `'${node.name.getText()}' at ${relative(state.rootDir, sourceFile.fileName)}:${line + 1} wraps ${wrapper}(...) in ${outer.form}. ` +
+      `The inspector reads a factory only from a direct ${wrapper}(...) call, so this one would not be registered and nothing it provides would exist at runtime. ` +
+      `Remove ${outer.remove}, and fix the type mismatch it hides in the factory itself.`
+  )
 }
 
 /**

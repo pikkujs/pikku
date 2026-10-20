@@ -34,6 +34,28 @@ To find the affected functions, run `pikku all` and look for `PKU563`.
 
 A string `disabled` on a wiring (`wireHTTP({ disabled: 'reason', ... })`) now disables it, the same way `disabled: true` already did.
 
+### A cast around a service factory fails the build
+
+A factory export wrapped in a cast, `satisfies`, a non-null assertion or parentheses now fails `pikku all` with `PKU564`. That covers `pikkuServices`, `pikkuAddonServices`, `pikkuWireServices`, `pikkuAddonWireServices`, `pikkuConfig`, `pikkuAddonConfig` and `pikkuServerLifecycle`:
+
+```ts
+// Before: built, but the factory was never registered. An addon written this
+// way generated no pikku-package.gen.ts, and its workflows failed at runtime
+// with WorkflowNotFoundError.
+export const createSingletonServices = pikkuAddonServices(
+  async (config, services) => ({ ... })
+) as unknown as CreateSingletonServices<Config, SingletonServices>
+
+// After: export the call itself, and fix the type mismatch the cast hid.
+export const createSingletonServices = pikkuAddonServices(
+  async (config, services) => ({ ... })
+)
+```
+
+The cast was usually there because the generated `pikku-package.gen.ts` did not type-check: core typed the slot every addon's factory is registered in against `CoreConfig` and `CoreSingletonServices`, which refused an addon `Config` with required fields or services narrowing a core one. That slot is now typed loosely (core), so removing the cast is enough for that case.
+
+To find the affected code, run `pikku all` and look for `PKU564`. The message names the export and its file and line. See [`service-factories.md`](./service-factories.md).
+
 ### The mesh is named `mesh`, and remote addons use the public RPC route
 
 Cross-unit RPC inside one app (the deploymentService "mesh") no longer shares the word "remote" with `wireRemoteAddon`. See [`remote-rpc.md`](./remote-rpc.md).

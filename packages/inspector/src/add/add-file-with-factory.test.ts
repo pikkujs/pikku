@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { inspect } from '../inspector.js'
-import type { ErrorCode } from '../error-codes.js'
+import { ErrorCode } from '../error-codes.js'
 import type { InspectorLogger } from '../types.js'
 import {
   serializeInspectorState,
@@ -241,5 +241,112 @@ describe('pikkuAddonWireServices — what an addon builds per wire', () => {
       "stripe is destructured off the callback's own parameter, so the " +
         'consumer of this addon is not the one who owes it'
     )
+  })
+})
+
+describe('PKU564 — a factory hidden behind a wrapper fails the build', () => {
+  const hidden = (criticals: Array<{ code: ErrorCode; message: string }>) =>
+    criticals.filter((c) => c.code === ErrorCode.FACTORY_NOT_A_DIRECT_CALL)
+
+  const cases: Array<{
+    name: string
+    wrapper: string
+    initializer: string[]
+    form: string
+    remove: string
+  }> = [
+    {
+      name: 'an `as unknown as` cast',
+      wrapper: 'pikkuAddonServices',
+      initializer: [
+        'pikkuAddonServices(async () => ({ noop: 1 })) as unknown as CreateSingletonServices',
+      ],
+      form: 'an `as` cast',
+      remove: 'the cast',
+    },
+    {
+      name: 'an `as` cast',
+      wrapper: 'pikkuServices',
+      initializer: ['pikkuServices(async () => ({})) as any'],
+      form: 'an `as` cast',
+      remove: 'the cast',
+    },
+    {
+      name: 'a `<T>` cast',
+      wrapper: 'pikkuWireServices',
+      initializer: ['<any>pikkuWireServices(async () => ({}))'],
+      form: 'a `<T>` cast',
+      remove: 'the cast',
+    },
+    {
+      name: 'a `satisfies` expression',
+      wrapper: 'pikkuConfig',
+      initializer: ['pikkuConfig(async () => ({})) satisfies unknown'],
+      form: 'a `satisfies` expression',
+      remove: '`satisfies`',
+    },
+    {
+      name: 'a non-null assertion',
+      wrapper: 'pikkuAddonWireServices',
+      initializer: ['pikkuAddonWireServices(async () => ({}))!'],
+      form: 'a non-null assertion (`!`)',
+      remove: 'the `!`',
+    },
+    {
+      name: 'parentheses',
+      wrapper: 'pikkuServerLifecycle',
+      initializer: ['(pikkuServerLifecycle({}))'],
+      form: 'parentheses',
+      remove: 'the parentheses',
+    },
+    {
+      name: 'a cast inside parentheses',
+      wrapper: 'pikkuAddonConfig',
+      initializer: ['(pikkuAddonConfig(async () => ({})) as any)'],
+      form: 'parentheses',
+      remove: 'the parentheses',
+    },
+  ]
+
+  for (const c of cases) {
+    test(`${c.name} around ${c.wrapper}(...) is PKU564, naming the export and line`, async () => {
+      const { state, criticals } = await inspectSource(
+        'pikku-hidden-factory-',
+        [
+          `import { ${c.wrapper} } from '#pikku'`,
+          'type CreateSingletonServices = unknown',
+          '',
+          `export const factory = ${c.initializer.join('\n')}`,
+        ].join('\n')
+      )
+      const found = hidden(criticals)
+      assert.equal(found.length, 1, JSON.stringify(criticals))
+      assert.equal(
+        found[0]!.message,
+        `'factory' at services.ts:4 wraps ${c.wrapper}(...) in ${c.form}. ` +
+          `The inspector reads a factory only from a direct ${c.wrapper}(...) call, so this one would not be registered and nothing it provides would exist at runtime. ` +
+          `Remove ${c.remove}, and fix the type mismatch it hides in the factory itself.`
+      )
+      assert.equal(state.singletonServicesFactories.size, 0)
+      assert.equal(state.wireServicesFactories.size, 0)
+      assert.equal(state.configFactories.size, 0)
+      assert.equal(state.serverLifecycleFactories.size, 0)
+    })
+  }
+
+  test('a direct call, a cast inside the factory, and a cast around another call are not PKU564', async () => {
+    const { state, criticals } = await inspectSource(
+      'pikku-direct-factory-',
+      [
+        "import { pikkuServices } from '#pikku'",
+        'declare const other: () => unknown',
+        'export const createSingletonServices = pikkuServices(',
+        '  async () => ({ schema: {} as any })',
+        ')',
+        'export const notAFactory = other() as any',
+      ].join('\n')
+    )
+    assert.deepEqual(hidden(criticals), [])
+    assert.equal(state.singletonServicesFactories.size, 1)
   })
 })
