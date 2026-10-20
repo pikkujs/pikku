@@ -81,46 +81,49 @@ export const onboardingWorkflow = pikkuWorkflowComplexFunc<
 export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
   { email: string; userId: string },
   any
->(async ({ workflowService, logger }, data, { rpc }) => {
-  const { runId } = await rpc.startWorkflow('onboardingWorkflow', data)
-  logger.info(`[TEST] Workflow started: ${runId}`)
+>({
+  disabled: 'no callers found, 2026-10-20',
+  func: async ({ workflowService, logger }, data, { rpc }) => {
+    const { runId } = await rpc.startWorkflow('onboardingWorkflow', data)
+    logger.info(`[TEST] Workflow started: ${runId}`)
 
-  // Poll for workflow completion
-  const maxAttempts = 30
-  const pollIntervalMs = 1000
+    // Poll for workflow completion
+    const maxAttempts = 30
+    const pollIntervalMs = 1000
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const run = await workflowService!.getRun(runId)
-    logger.info(`[TEST] Workflow status: ${run?.status}`)
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const run = await workflowService!.getRun(runId)
+      logger.info(`[TEST] Workflow status: ${run?.status}`)
 
-    if (!run) {
-      throw new Error(`Workflow not found: ${runId}`)
-    }
-
-    if (run.status === 'completed') {
-      logger.info(`[TEST] Workflow completed successfully`)
-      // Get all step attempts to return for validation
-      const steps = await workflowService!.getRunHistory(runId)
-      return {
-        ...run.output,
-        steps: steps.map((s: any) => ({
-          stepName: s.stepName,
-          status: s.status,
-          attemptCount: s.attemptCount,
-          error: s.error ? { message: s.error.message } : undefined,
-        })),
+      if (!run) {
+        throw new Error(`Workflow not found: ${runId}`)
       }
+
+      if (run.status === 'completed') {
+        logger.info(`[TEST] Workflow completed successfully`)
+        // Get all step attempts to return for validation
+        const steps = await workflowService!.getRunHistory(runId)
+        return {
+          ...run.output,
+          steps: steps.map((s: any) => ({
+            stepName: s.stepName,
+            status: s.status,
+            attemptCount: s.attemptCount,
+            error: s.error ? { message: s.error.message } : undefined,
+          })),
+        }
+      }
+
+      if (run.status === 'failed') {
+        throw new Error(run.error?.message || 'Workflow failed')
+      }
+
+      // Wait before polling again
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
     }
 
-    if (run.status === 'failed') {
-      throw new Error(run.error?.message || 'Workflow failed')
-    }
-
-    // Wait before polling again
-    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
-  }
-
-  throw new Error(`Workflow timeout after ${maxAttempts} attempts`)
+    throw new Error(`Workflow timeout after ${maxAttempts} attempts`)
+  },
 })
 
 /**
@@ -137,27 +140,30 @@ export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
 export const onboardingDSLWorkflow = pikkuWorkflowFunc<
   { email: string; userId: string; sendWelcome: boolean },
   { userId: string; welcomeSent: boolean }
->(async ({}, data, { workflow }) => {
-  // Step 1: Create user profile
-  const user = await workflow.do('Create user profile', 'createUserProfile', {
-    email: data.email,
-    userId: data.userId,
-  })
-
-  // Step 2: Wait for profile to propagate
-  await workflow.sleep('Wait for profile sync', '1s')
-
-  // Step 3: Conditionally send welcome email
-  if (data.sendWelcome) {
-    await workflow.do('Send welcome email', 'sendEmail', {
-      to: user.email,
-      subject: 'Welcome!',
-      body: `Hello ${user.name}, welcome to our platform!`,
+>({
+  disabled: 'no callers found, 2026-10-20',
+  func: async ({}, data, { workflow }) => {
+    // Step 1: Create user profile
+    const user = await workflow.do('Create user profile', 'createUserProfile', {
+      email: data.email,
+      userId: data.userId,
     })
-  }
 
-  return {
-    userId: user.id,
-    welcomeSent: data.sendWelcome,
-  }
+    // Step 2: Wait for profile to propagate
+    await workflow.sleep('Wait for profile sync', '1s')
+
+    // Step 3: Conditionally send welcome email
+    if (data.sendWelcome) {
+      await workflow.do('Send welcome email', 'sendEmail', {
+        to: user.email,
+        subject: 'Welcome!',
+        body: `Hello ${user.name}, welcome to our platform!`,
+      })
+    }
+
+    return {
+      userId: user.id,
+      welcomeSent: data.sendWelcome,
+    }
+  },
 })

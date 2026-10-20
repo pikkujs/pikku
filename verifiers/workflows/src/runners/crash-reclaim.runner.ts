@@ -221,16 +221,32 @@ const attemptsOf = async (h: Harness, runId: string) =>
     status: row.status,
   }))
 
-const start = (h: Harness, workflow: string, crashes: number) =>
-  h.workflowService
-    .startWorkflow(workflow, { crashes }, { type: 'test' }, null as any)
-    .then(({ runId }) => runId)
+/** Each workflow this runner drives, started by its literal name. */
+const starters = {
+  crashReclaimWorkflow: (h: Harness, crashes: number) =>
+    h.workflowService.startWorkflow(
+      'crashReclaimWorkflow',
+      { crashes },
+      { type: 'test' },
+      null as any
+    ),
+  crashReclaimGraph: (h: Harness, crashes: number) =>
+    h.workflowService.startWorkflow(
+      'crashReclaimGraph',
+      { crashes },
+      { type: 'test' },
+      null as any
+    ),
+}
+
+const start = (h: Harness, workflow: keyof typeof starters, crashes: number) =>
+  starters[workflow](h, crashes).then(({ runId }) => runId)
 
 /** Kill the worker on attempt 1, let its lease lapse, and sweep into a new one. */
 async function reclaimAfterOneCrash(
   h: Harness,
   label: string,
-  workflow: string
+  workflow: keyof typeof starters
 ): Promise<void> {
   console.log(`\n--- ${label} ---`)
   const first = await spawnWorker('w1')

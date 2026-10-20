@@ -34,6 +34,7 @@ export const testAddonHello = pikkuSessionlessFunc<
   TestAddonHelloInput,
   TestAddonHelloOutput
 >({
+  disabled: 'no callers found, 2026-10-20',
   func: async (_, data, { rpc }) => {
     return await rpc.invoke('ext:hello', data)
   },
