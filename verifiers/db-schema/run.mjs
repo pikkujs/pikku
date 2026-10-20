@@ -41,7 +41,7 @@
  *   13. app:   pikku db baseline               → adopts a database that already has it
  *   14. app:   pikku db baseline               → refuses one that is actually behind
  */
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { DatabaseSync } from 'node:sqlite'
 import {
   existsSync,
@@ -119,6 +119,18 @@ const contains = (haystack, needle, label) =>
 function run(label, file, args, cwd = here) {
   console.log(`\n▶ ${label}`)
   execFileSync(file, args, { cwd, stdio: 'inherit', env })
+}
+
+/** Run a command that must succeed, and hand back everything it printed. */
+function captureAll(label, file, args, cwd = here) {
+  console.log(`\n▶ ${label}`)
+  const result = spawnSync(file, args, { cwd, encoding: 'utf8', env })
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`
+  process.stdout.write(output)
+  if (result.status !== 0) {
+    throw new Error(`${label} exited ${result.status ?? result.signal}`)
+  }
+  return output
 }
 
 function capture(label, file, args, cwd = here) {
@@ -574,7 +586,14 @@ check(
 
 // 3-4. The consumer discovers the addon because it is wired, then writes one
 //      migration per source.
-run('app: pikku all', 'node', [PIKKU, 'all'])
+const firstBuild = captureAll('app: pikku all', 'node', [PIKKU, 'all'])
+// The addon is granted BETTER_AUTH_SECRET (labels.functions.ts), which only
+// auth-secrets.gen.ts declares — a file this clean build writes after its
+// first inspection. That inspection must still count the secret as declared.
+check(
+  !firstBuild.includes('PKU124'),
+  'a clean build does not report the addon grant of BETTER_AUTH_SECRET as targeting nothing (PKU124)'
+)
 const generated = capture('app: pikku db generate', 'node', [
   PIKKU,
   'db',
