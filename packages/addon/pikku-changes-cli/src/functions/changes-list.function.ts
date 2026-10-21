@@ -16,6 +16,19 @@ import {
   type BoardGroup,
   type BoardStatus,
 } from '../lib/changes-board.js'
+import { filterChanges } from '../lib/changes-filter.js'
+import { SPECIALISTS } from '../lib/specialists.js'
+
+const STATUSES = [
+  'backlog',
+  'ready',
+  'in_progress',
+  'needs_answer',
+  'done',
+  'dismissed',
+] as const
+
+const FETCH_ALL = 5000
 
 export const ChangesListInput = z.object({
   apiUrl: z.string().optional(),
@@ -26,11 +39,30 @@ export const ChangesListInput = z.object({
   pickupOnly: z.boolean().optional(),
   includeDone: z.boolean().optional(),
   limit: z.number().optional(),
+  status: z
+    .array(z.enum(STATUSES))
+    .optional()
+    .describe(
+      'Only these columns: backlog, ready, in_progress, needs_answer, done, dismissed — repeatable'
+    ),
+  specialist: z
+    .enum(SPECIALISTS)
+    .optional()
+    .describe('Only changes the given specialist builds'),
+  search: z
+    .string()
+    .optional()
+    .describe('Only changes whose title or body contains this text'),
+  all: z
+    .boolean()
+    .optional()
+    .describe('Show every change in each column instead of the first 50'),
 })
 
 export const ChangesListOutput = z.object({
   changes: z.any(),
   groups: z.any(),
+  totals: z.record(z.string(), z.number()).optional(),
 })
 
 export const ChangesList = pikkuSessionlessFunc({
@@ -42,15 +74,31 @@ export const ChangesList = pikkuSessionlessFunc({
       input.apiUrl,
       input.projectId
     )
-    return await rpc.invoke('listChanges', {
+    const wanted = input.status ? new Set<string>(input.status) : null
+    const closed = !!wanted && (wanted.has('done') || wanted.has('dismissed'))
+    const listed = await rpc.invoke('listChanges', {
       projectId: requireProjectId(projectId),
       stageId: input.stageId,
       route: input.route,
       groupId: input.groupId,
       pickupOnly: input.pickupOnly ?? false,
-      includeDone: input.includeDone ?? false,
-      limit: input.limit ?? 50,
+      includeDone: (input.includeDone ?? false) || closed,
+      limit: FETCH_ALL,
     })
+    const { shown, totals } = filterChanges(listed.changes as BoardChange[], {
+      status: input.status,
+      specialist: input.specialist,
+      search: input.search,
+      cap: input.all ? Infinity : (input.limit ?? 50),
+    })
+    const groupIds = new Set(shown.map((change) => change.groupId))
+    return {
+      changes: shown,
+      groups: (listed.groups as BoardGroup[]).filter((group) =>
+        groupIds.has(group.groupId)
+      ),
+      totals,
+    }
   },
 })
 
@@ -99,20 +147,36 @@ const line =
 
 export const renderChangesList = (
   _s: unknown,
-  { changes, groups }: { changes: BoardChange[]; groups: Group[] }
+  {
+    changes,
+    groups,
+    totals,
+  }: {
+    changes: BoardChange[]
+    groups: Group[]
+    totals?: Record<string, number>
+  }
 ): void => {
   if (!changes.length) {
     console.log(dim('  Nothing open.'))
     return
   }
   const now = Date.now()
-  const columns: BoardStatus[] = changes.some((c) => c.status === 'done')
-    ? [...COLUMNS, 'done']
-    : [...COLUMNS]
+  const columns: BoardStatus[] = [
+    ...COLUMNS,
+    ...(['done', 'dismissed'] as const).filter((status) =>
+      changes.some((c) => c.status === status)
+    ),
+  ]
   columns.forEach((status, index) => {
     const cards = changes.filter((change) => change.status === status)
+    const total = totals?.[status] ?? cards.length
     if (index) console.log('')
-    console.log(`${COLUMN_LABELS[status]} (${cards.length})`)
+    console.log(
+      `${COLUMN_LABELS[status]} (${total})${
+        total > cards.length ? dim(` — showing ${cards.length}, --all for the rest`) : ''
+      }`
+    )
     cards.forEach(line(groups, now))
   })
 }
