@@ -22,13 +22,6 @@ concurrency:
   group: publish-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  # The CLI builds without the registry SDK until registry.pikkustudio.app serves
-  # @pikkustudio/addon-registry; drop this line then. The published CLI still
-  # calls the registry; only the compile-time types differ. See
-  # packages/cli/build.sh and knowledge note the-cli-syncs-its-registry-sdk-like-any-consumer.
-  PIKKU_CLI_WITHOUT_REGISTRY_SDK: '1'
-
 jobs:
   # Full Suite is the whole of CI on main — validate, lint, build, unit, e2e,
   # verifiers, templates, examples — so a publish needs the run to have

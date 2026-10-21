@@ -28,11 +28,13 @@ its `pikku all` (the second stage) syncs the SDK into `.pikku/remote`, the
 same way any consumer's would. `.pikku/remote` survives the clean step as a
 cache; the lock check decides whether it is reused.
 
-**Until the registry serves its own SDK,** `PIKKU_CLI_WITHOUT_REGISTRY_SDK=1`
-builds without it. CI (develop, full, publish) sets it. The second stage then
-also runs with the wiring hidden and the lock restored afterwards, the wiring
-import is appended again, and `remote-addon-sync.ts` types `registry:resolveSdk`
-from a contract it mirrors instead of the generated map:
+**The registry serves its own SDK** from `api.pikkustudio.app`, so every
+build, CI included, syncs it and checks it against the lock.
+`PIKKU_CLI_WITHOUT_REGISTRY_SDK=1` still builds without it, for a machine with
+no network to the registry. The second stage then also runs with the wiring
+hidden and the lock restored afterwards, the wiring import is appended again,
+and `remote-addon-sync.ts` types `registry:resolveSdk` from a contract it
+mirrors instead of the generated map:
 
 ```ts
 type RegistryResolveSdk =
@@ -42,8 +44,7 @@ type RegistryResolveSdk =
 ```
 
 A CLI built this way still wires and calls the registry at runtime; only the
-compile-time types differ. Remove the variable from the three workflows once
-the registry serves `@pikkustudio/addon-registry`.
+compile-time types differ.
 
 **Tests** never touch the network or a synced SDK. `remote-addon-sync.test.ts`
 syncs the CLI's real `src/registry.wiring.ts` against `test-fixtures/registry-sdk/`,
