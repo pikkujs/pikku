@@ -13,7 +13,10 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 
 import { resolveStandaloneDb } from './build-pipeline.js'
-import { SQLITE_LIBRARY_ENV } from '../functions/db/sqlite/sqlite-library.js'
+import {
+  SQLITE_LIBRARY_ENV,
+  type SqliteBuildTarget,
+} from '../functions/db/sqlite/sqlite-library.js'
 
 /** sqlite-vec's library for this platform: `vec0.dylib`, `vec0.so`, `vec0.dll`. */
 const VEC0 = basename(
@@ -42,7 +45,11 @@ const writeMigrations = (engine: 'sqlite' | 'postgres' | 'mysql') => {
   writeFileSync(join(dir, '0001-init.sql'), 'select 1;', 'utf-8')
 }
 
-const resolve = (sqliteExtensions?: string[], withSqliteLibrary = false) =>
+const resolve = (
+  sqliteExtensions?: string[],
+  withSqliteLibrary = false,
+  compileTarget?: SqliteBuildTarget
+) =>
   resolveStandaloneDb(
     projectDir,
     pikkuDir,
@@ -50,8 +57,11 @@ const resolve = (sqliteExtensions?: string[], withSqliteLibrary = false) =>
     ['src'],
     silentLogger,
     sqliteExtensions,
-    { withSqliteLibrary }
+    { withSqliteLibrary, compileTarget }
   )
+
+/** An architecture that is never this machine's, so the target is always cross. */
+const otherArch = process.arch === 'arm64' ? 'x64' : 'arm64'
 
 /** Runs `body` with PIKKU_SQLITE_LIBRARY set, restoring whatever was there. */
 const withLibraryEnv = async (value: string, body: () => Promise<void>) => {
@@ -273,11 +283,88 @@ describe('resolveStandaloneDb', () => {
       })
     })
 
+    test("is not staged for a Linux target, which opens bun's own SQLite", async () => {
+      writeMigrations('sqlite')
+      const library = join(root, 'libsqlite3.3.53.4.dylib')
+      writeFileSync(library, 'lib')
+
+      for (const arch of [process.arch, otherArch]) {
+        await withLibraryEnv(library, async () => {
+          assert.deepEqual(
+            await resolve([], true, { platform: 'linux', arch }),
+            { engine: 'sqlite' }
+          )
+        })
+        assert.equal(existsSync(join(unitDir, 'sqlite-extensions')), false)
+        assert.equal(
+          existsSync(join(unitDir, 'sqlite-extensions.gen.js')),
+          false
+        )
+      }
+    })
+
+    test('a macOS target on another architecture needs one named', async () => {
+      writeMigrations('sqlite')
+      const previous = process.env[SQLITE_LIBRARY_ENV]
+      delete process.env[SQLITE_LIBRARY_ENV]
+      try {
+        await assert.rejects(
+          resolve([], true, { platform: 'darwin', arch: otherArch }),
+          (error: Error) => {
+            assert.match(error.message, new RegExp(`darwin-${otherArch}`))
+            assert.match(error.message, /PIKKU_SQLITE_LIBRARY/)
+            return true
+          }
+        )
+      } finally {
+        if (previous !== undefined) process.env[SQLITE_LIBRARY_ENV] = previous
+      }
+
+      const library = join(root, 'libsqlite3.dylib')
+      writeFileSync(library, 'lib')
+      await withLibraryEnv(library, async () => {
+        assert.deepEqual(
+          await resolve([], true, { platform: 'darwin', arch: otherArch }),
+          { engine: 'sqlite', sqliteLibrary: 'libsqlite3.dylib' }
+        )
+      })
+    })
+
     test('is not staged for a runtime that does not ask for one', async () => {
       writeMigrations('sqlite')
       await withLibraryEnv(join(root, 'missing.dylib'), async () => {
         const db = await resolve()
         assert.equal(db?.sqliteLibrary, undefined)
+      })
+    })
+  })
+
+  describe('a build compiled for another platform', () => {
+    const elsewhere = { platform: 'linux' as const, arch: otherArch }
+
+    test("refuses the default sqlite-vec, which resolves to this machine's build", async () => {
+      writeMigrations('sqlite')
+      await assert.rejects(
+        resolve(undefined, true, elsewhere),
+        (error: Error) => {
+          assert.match(
+            error.message,
+            new RegExp(`compiled for linux-${otherArch}`)
+          )
+          assert.match(error.message, /sqlite-vec/)
+          assert.match(error.message, /set db\.sqliteExtensions to \[\]/)
+          return true
+        }
+      )
+    })
+
+    test('ships an extension the project names by path', async () => {
+      writeMigrations('sqlite')
+      const extension = join(root, 'vec0.so')
+      writeFileSync(extension, 'ext')
+      assert.deepEqual(await resolve([extension], true, elsewhere), {
+        engine: 'sqlite',
+        sqliteExtensions: ['vec0.so'],
       })
     })
   })
