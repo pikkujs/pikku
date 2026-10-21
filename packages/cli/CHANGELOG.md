@@ -1,3 +1,41 @@
+## 0.12.197
+
+### Patch Changes
+
+- e26796f: An addon can call another addon with full types. It declares the dependency in its package.json as `"pikku": { "uses": { "stripe": "@pikkustudio/addon-stripe@^0.12.0" } }` and calls `rpc.invoke('stripe:charge', ...)`, `rpc.startWorkflow('stripe:...')` or an agent with no cast. `pikku all` in the addon types `stripe:*` from the dependency's SDK: a workspace package's own `.pikku/sdk`, or a registry SDK pinned in `pikku-addons.lock`.
+
+  The app maps the alias with `wireAddon({ ..., uses: { stripe: '<wired name>' } })`, whether the target is wired with `wireAddon` or `wireRemoteAddon`. New codes: PKU354 (the wired instance's version is outside the declared range), PKU355 (`uses` maps a name the addon did not declare), PKU356 (a malformed `pikku.uses` entry). PKU347 and PKU348 now also cover the alias form.
+
+  Breaking (fail-closed): for an addon that declares `pikku.uses`, a `wireAddon` `uses` key it did not declare is now an error (PKU355). Agent `run`/`stream` from an addon now go through `uses` like invoke and workflows, so an unmapped agent call throws `AddonNotUsedError`. See docs/MIGRATION.md.
+
+- 61201f1: The CLI's registry SDK is `@pikkustudio/addon-registry@^0.12.0`, not `^1.0.0`: `src/registry.wiring.ts` and the committed `pikku-addons.lock` now pin 0.12.0.
+- fd0c346: Functions take `disabled: true | 'reason'`. A disabled function is left out of the build entirely (meta, RPC maps, clients, addon SDKs, MCP, CLI, HTTP and every wiring) and `addFunction` refuses it at run time. Anything that still references one — a wiring, `rpc.invoke('name')`, a workflow step, an agent tool, or an inline definition inside a wiring — fails the build with `PKU562`, naming both sides. `pikku all` lists the disabled functions once, with file and reason.
+
+  `pikku verify` now fails on an app function that is not wired, exposed or called by name (`PKU563`, an `error` diagnostic that `pikku all` prints but does not fail on). Addon functions are never checked; workflows are, and count as used when started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step). Use the function or mark it `disabled`.
+
+  References in generated files (`*.gen.ts` / `*.gen.js`) do not count for `PKU562`, so disabling a function no longer fails the next `pikku all` on the previous run's output. Functions in generated scaffolds are never `PKU563`.
+
+  An inline `defineChannelRoutes({...})` inside `wireChannel`'s `onMessageWiring` is now read, so its message routes reach the channel meta.
+
+- 28a0d77: An addon declares its Pikku Studio screens with `pikkuStudio({ title, screens })` from `@pikku/core/addon`. Each screen has a `path`, a `title` (a message key in the addon's `messages/{locale}.json`, also the nav label), a lazy `component` or an `app`, and a `scope`: `'studio'` (`/<path>`), `'team'` (`/<team>/<path>`) or `'project'` (`/<team>/<project>[/<target>]/<path>`). Optional: `nav: { area: 'rail' | 'team' | 'project' | 'account', icon, order, badge? }` where `badge` names a function of the addon returning a count, `replaces`, `needsApp` (project screens only, default false), `layout: 'bare'` and `scopes` (hide the screen; not access control). Both inspectors emit the screens in the `studio` metadata, and `pikku new addon-ui` scaffolds the new form with a `messages/en.json`.
+
+  New codes: PKU357 (two screens of an addon use the same path), PKU358 (a title key missing from the addon's `messages/en.json`), PKU359 (a `nav.badge` naming no function of the addon). A non-literal field is PKU345, and a key missing from another locale is a warning.
+
+  Breaking: `defineScreens` and its types (`ScreensManifest`, `AddonScreen`, `AddonComponentScreen`, `AddonAppScreen`) are removed with no alias, the manifest's top-level `icon` is gone, and `nav` is an object instead of a boolean. The serialized inspector state's `screensManifest`/`addonScreens` are now `studio`/`addonStudio`. See docs/MIGRATION.md.
+
+- Updated dependencies [8f850a5]
+- Updated dependencies [e26796f]
+- Updated dependencies [6524233]
+- Updated dependencies [2fdd2d2]
+- Updated dependencies [fd0c346]
+- Updated dependencies [3abfbf4]
+- Updated dependencies [28a0d77]
+- Updated dependencies [576f2f2]
+  - @pikku/core@0.12.147
+  - @pikku/inspector@0.12.111
+  - @pikku/inspector-go@0.12.6
+  - @pikku/skills@0.12.62
+
 ## 0.12.196
 
 ### Patch Changes

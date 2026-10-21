@@ -327,7 +327,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.196",
+      "version": "0.12.197",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -429,7 +429,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.146",
+      "version": "0.12.147",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -578,7 +578,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.110",
+      "version": "0.12.111",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
         "openapi-types": "^12.1.3",
@@ -598,7 +598,7 @@
     },
     "packages/inspector-go": {
       "name": "@pikku/inspector-go",
-      "version": "0.12.5",
+      "version": "0.12.6",
       "dependencies": {
         "@pikku/inspector": "^0.12.110",
       },
@@ -1260,7 +1260,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.61",
+      "version": "0.12.62",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",
