@@ -26,6 +26,10 @@ import {
 } from './codegen/per-unit-codegen.js'
 import { materializeFrontend } from './frontend-assets.js'
 import { stageSqliteExtensions } from './sqlite-extension-assets.js'
+import {
+  parseBunCompileTarget,
+  type SqliteBuildTarget,
+} from '../functions/db/sqlite/sqlite-library.js'
 import { stageEmbeddedFiles } from './embedded-assets.js'
 import { assertFrontendBuilt } from '../utils/frontend.js'
 import type { Bundler } from './bundler/bundler.interface.js'
@@ -238,7 +242,10 @@ export async function resolveStandaloneDb(
   srcDirectories: string[],
   logger: BuildLogger,
   sqliteExtensions?: string[],
-  { withSqliteLibrary = false }: { withSqliteLibrary?: boolean } = {}
+  {
+    withSqliteLibrary = false,
+    compileTarget,
+  }: { withSqliteLibrary?: boolean; compileTarget?: SqliteBuildTarget } = {}
 ): Promise<
   | {
       engine: 'sqlite' | 'postgres'
@@ -295,6 +302,7 @@ export async function resolveStandaloneDb(
     engine === 'sqlite'
       ? await stageSqliteExtensions(projectDir, unitDir, sqliteExtensions, {
           withLibrary: withSqliteLibrary,
+          compileTarget,
         })
       : { extensions: [], library: undefined }
   if (extensions.length > 0) {
@@ -493,7 +501,14 @@ export async function runBuildPipeline(options: {
         options.srcDirectories ?? ['src'],
         logger,
         options.sqliteExtensions,
-        { withSqliteLibrary: provider.bundlesSqliteLibrary }
+        {
+          withSqliteLibrary: provider.bundlesSqliteLibrary,
+          // Only the compiled bun binary is cross-built; see the standalone
+          // adapter's `bun build --compile --target`.
+          compileTarget: provider.bundlesSqliteLibrary
+            ? parseBunCompileTarget(process.env.PIKKU_COMPILE_TARGET)
+            : undefined,
+        }
       ),
       lifecycle: resolveLifecycle(unitDir, inspectorState),
     }

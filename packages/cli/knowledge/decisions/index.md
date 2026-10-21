@@ -10,6 +10,7 @@ A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
 
+- [A cross-compiled standalone build ships SQLite libraries only for its target, and refuses what it can only find for the host](a-cross-compiled-standalone-ships-sqlite-libraries-only-for-its-target.md) — With PIKKU_COMPILE_TARGET set, the bun standalone build stages a libsqlite3 only for a macOS target, refuses package-resolved SQLite extensions when the target differs from the host, and accepts extensions named by path
 - [The CLI syncs its registry SDK like any consumer](the-cli-syncs-its-registry-sdk-like-any-consumer.md) — the CLI calls the registry through the registry's own SDK, which its build syncs into .pikku/remote; only pikku-addons.lock is committed
 - [A versioned remote addon is pinned by the range it was resolved for](a-versioned-remote-addon-is-pinned-by-the-range-it-was-resolved-for.md) — pikku-addons.lock records range, version and integrity per SDK; a locked version that still satisfies the range is kept, files on disk are trusted only through the integrity marker, and a pinned version the registry now serves differently fails closed
 - [A Cloudflare unit registers its addons' functions and schemas on first use, not at startup](a-cloudflare-unit-registers-addon-functions-on-first-use.md) — Per-unit codegen for a provider with lazyAddonRegistration splits each addon's published bootstrap, imports its meta statically and its function and schema registrations from an exported loadAddons, which the Cloudflare entry awaits before building services
