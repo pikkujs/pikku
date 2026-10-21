@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3311 observable things**: 1111 exported names, plus
-2200 members on the classes and interfaces among them, reachable
-through 62 entry points.
+**3349 observable things**: 1127 exported names, plus
+2222 members on the classes and interfaces among them, reachable
+through 63 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -32,6 +32,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
+| `./contributors` | 14 | 14 | 20 |
 | `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
@@ -68,13 +69,13 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/in-memory-queue` | 1 | 1 | 4 |
 | `./services/istanbul-coverage` | 1 | 1 | 4 |
 | `./services/local-content-request-handler` | 5 | 5 | 0 |
+| `./lifecycle` | 5 | 3 | 2 |
 | `./node` | 3 | 3 | 0 |
 | `./services/local-gateway` | 1 | 1 | 2 |
 | `./node-host-resolver` | 2 | 2 | 0 |
 | `./oauth2` | 2 | 2 | 0 |
 | `./services/in-memory-trigger` | 1 | 1 | 1 |
 | `./mesh` | 1 | 1 | 0 |
-| `./lifecycle` | 3 | 1 | 0 |
 | `.` | 8 | 0 | 0 |
 
 ## .
@@ -3524,6 +3525,7 @@ export type WireAddonConfig = {
   contentBucket?: string
   contentGrants?: Record<string, 'read' | 'write'>
   globalContent?: string
+  contributors?: string[]
 }
 wireRemoteAddon: (config: WireRemoteAddonConfig) => void
 export type WireRemoteAddonConfig = {
@@ -6569,9 +6571,62 @@ export type RequireAtLeastOne<T> = {
 stopSingletonServices: () => Promise<void>
 ```
 
+## ./contributors
+
+```ts
+export interface Contributor< TServices = any, TPlatform extends ContributorPlatform = ContributorPlatform, > {
+  provides?: string[]
+  needs?: string[]
+  requires?: ContributorBindingSource[]
+  when?(platform: TPlatform): boolean
+  run(services: TServices, env: Record<string, string | undefined>, runtime: Record<string, any>, platform: TPlatform): void | Promise<void>
+  onServerStart?(services: TServices): void | Promise<void>
+  onServerStop?(services: TServices): void | Promise<void>
+}
+export type ContributorBindingSource = 'env' | 'cloudflare'
+export type ContributorDb = {
+  engine: 'sqlite' | 'postgres'
+  coercionMap?: Record<string, Record<string, 'date' | 'bool' | 'json'>>
+}
+export class ContributorDependencyError extends Error {
+  constructor(message: string)
+}
+export interface ContributorPlatform {
+  serviceNames: string[]
+  needsQueue: boolean
+  needsWorkflow: boolean
+  needsAgent: boolean
+  runtimeServices?: string[]
+  db?: ContributorDb
+}
+export type ContributorTarget = 'dev' | 'deploy'
+export interface ContributorVariants< TServices = any, TPlatform extends ContributorPlatform = ContributorPlatform, > {
+  dev?: Contributor<TServices, TPlatform>
+  deploy?: Contributor<TServices, TPlatform>
+}
+DEFAULT_CONTRIBUTOR_BINDING_SOURCES: readonly ContributorBindingSource[]
+defineContributors: <const T extends Record<string, ContributorVariants<any, ContributorPlatform>>>(contributors: T) => T
+export interface NamedContributor< TServices = any, TPlatform extends ContributorPlatform = ContributorPlatform, > {
+  name: string
+  contributor: Contributor<TServices, TPlatform>
+}
+orderContributors: <T extends NamedContributor<any, any>>(contributors: readonly T[], options?: { runtime?: readonly string[] | undefined; }) => T[]
+resolveContributors: <T extends NamedContributor<any, any>>(contributors: readonly T[], options: { platform: ContributorPlatform; supported?: readonly ContributorBindingSource[] | undefined; optional?: ReadonlySet<string> | undefined; }) => { ordered: T[]; skipped: SkippedContributor[]; }
+selectContributors: <T extends NamedContributor<any, any>>(contributors: readonly T[], options: { platform: ContributorPlatform; supported?: readonly ContributorBindingSource[] | undefined; }) => { selected: T[]; skipped: SkippedContributor[]; }
+export interface SkippedContributor {
+  name: string
+  reason: 'when' | 'requires' | 'needs'
+}
+```
+
 ## ./lifecycle
 
 ```ts
+composeServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(app: ServerLifecycle<SS> | undefined, hooks: { start?: readonly ContributorServerHook[] | undefined; stop?: readonly ContributorServerHook[] | undefined; }) => ServerLifecycle<SS>
+export interface ContributorServerHook {
+  name: string
+  run: (services: any) => void | Promise<void>
+}
 onShutdownSignals: (run: (signal: NodeJS.Signals) => void | Promise<void>, signals?: NodeJS.Signals[]) => () => void
 pikkuServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(lifecycle: ServerLifecycle<SS>) => ServerLifecycle<SS>
 stopSingletonServices: () => Promise<void>
