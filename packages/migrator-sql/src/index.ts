@@ -13,6 +13,7 @@ export {
   baselineMigrations,
   pendingMigrations,
   MigrationDriftError,
+  MigrationFailedError,
   MIGRATION_TRACKING_TABLE,
   type MigrationExecutor,
   type MigrateResult,

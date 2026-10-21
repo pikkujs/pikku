@@ -755,6 +755,39 @@ check(
   `\`${REMOTE_TABLE}\` is not in this database — the remote addon reads it on another one`
 )
 
+// 10b. A tarball packed on macOS carries an AppleDouble `._<name>.sql` beside
+//      every file. Extracted on Linux it is a real file that sorts before the
+//      migrations, and it is binary: Bun's sqlite refuses it and fails the whole
+//      migrate, node's reads it as empty and records a migration that is not one.
+console.log('\n▶ migrate: an AppleDouble ._ file beside the migrations')
+const appliedBefore = await store.appliedCount()
+const appleDouble = join(MIGRATIONS_DIR, `._${authFile}`)
+writeFileSync(
+  appleDouble,
+  Buffer.concat([
+    Buffer.from([0x00, 0x05, 0x16, 0x07, 0x00, 0x02, 0x00, 0x00]),
+    Buffer.from('Mac OS X        ', 'ascii'),
+    Buffer.alloc(139),
+  ])
+)
+const withAppleDouble = spawnSync('node', [PIKKU, 'db', 'migrate'], {
+  cwd: here,
+  encoding: 'utf8',
+  env,
+})
+rmSync(appleDouble)
+process.stdout.write(
+  `${withAppleDouble.stdout ?? ''}${withAppleDouble.stderr ?? ''}`
+)
+check(
+  withAppleDouble.status === 0,
+  'db migrate leaves the ._ file alone instead of running it as SQL'
+)
+check(
+  (await store.appliedCount()) === appliedBefore,
+  'the ._ file is not recorded as an applied migration'
+)
+
 // 11. Running it again must be a no-op, or every deploy grows a migration.
 const again = capture('app: pikku db generate (again)', 'node', [
   PIKKU,
