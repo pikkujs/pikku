@@ -29,10 +29,6 @@ concurrency:
 # spawned bundles via process.env. Build-only dummy, ≥32 chars — never a real secret.
 env:
   BETTER_AUTH_SECRET: ci-build-only-better-auth-secret-not-real
-  # The CLI builds without the registry SDK until registry.pikkustudio.app serves
-  # @pikkustudio/addon-registry; drop this line then. See packages/cli/build.sh
-  # and knowledge note the-cli-syncs-its-registry-sdk-like-any-consumer.
-  PIKKU_CLI_WITHOUT_REGISTRY_SDK: '1'
 
 jobs:
   validate-deps:
