@@ -119,7 +119,7 @@ wireRemoteAddon({
 
 The first step of `pikku all` resolves the range
 against the registry (`registry` in `pikku.config.json`, default
-`https://registry.pikkustudio.app`), downloads the addon's SDK, checks its
+`https://api.pikkustudio.app`), downloads the addon's SDK, checks its
 sha512, and extracts it to `.pikku/remote/<name>@<version>/`. The version and
 integrity go in `pikku-addons.lock`, which is committed; `.pikku/remote` is not.
 With the lock and the files in agreement, a sync makes no network call. Codegen

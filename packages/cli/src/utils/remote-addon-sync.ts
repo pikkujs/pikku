@@ -25,7 +25,7 @@ import { readTgz, writeSdkEntries } from './extract-tgz.js'
 import type { FlattenedRPCMap } from '../../.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.js'
 
 /** Where versioned `wireRemoteAddon` packages resolve when `pikku.config.json` sets no `registry`. */
-export const DEFAULT_ADDON_REGISTRY = 'https://registry.pikkustudio.app'
+export const DEFAULT_ADDON_REGISTRY = 'https://api.pikkustudio.app'
 
 /**
  * `registry:resolveSdk`'s contract while the registry's SDK is not synced: a
