@@ -3456,7 +3456,7 @@ rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefi
 ## ./addon
 
 ```ts
-pikkuStudio: (manifest: StudioManifest) => StudioManifest
+definePlugin: (manifest: StudioManifest) => StudioManifest
 export type RemoteAddonAuth =
   | { credentialId: string }
   | { secretId: string }

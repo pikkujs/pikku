@@ -51,7 +51,7 @@ export type StudioAppScreen = StudioScreenBase & {
 /** One screen an addon ships: either a component the host renders or a static app it serves in a sandboxed iframe. */
 export type StudioScreen = StudioComponentScreen | StudioAppScreen
 
-/** The manifest passed to `pikkuStudio`: the addon's title, a message key, and its screens. */
+/** The manifest passed to `definePlugin`: the addon's title, a message key, and its screens. */
 export type StudioManifest = {
   title: string
   screens: StudioScreen[]
@@ -63,4 +63,4 @@ export type StudioManifest = {
  * message keys in the addon's own catalog, `messages/{locale}.json`: a key
  * missing from `messages/en.json` fails the build.
  */
-export const pikkuStudio = (manifest: StudioManifest) => manifest
+export const definePlugin = (manifest: StudioManifest) => manifest

@@ -241,7 +241,7 @@
   ],
   "./addon": [
     "RemoteAddonAuthError",
-    "pikkuStudio",
+    "definePlugin",
     "resolveRemoteAddonToken",
     "wireAddon",
     "wireRemoteAddon"

@@ -424,7 +424,7 @@ func (s *Context) loadAddonStudio(ns string, decl *addonDecl, req addonResolver)
 	}
 	if manifest == nil || len(manifest.get("screens").arr) == 0 {
 		s.Log.Critical(diag.AddonUiHasNoScreens, fmt.Sprintf(
-			"wireAddon('%s') sets ui: true, but %s declares no screens. Add a pikkuStudio call to the package, or drop ui.", ns, decl.pkg))
+			"wireAddon('%s') sets ui: true, but %s declares no screens. Add a definePlugin call to the package, or drop ui.", ns, decl.pkg))
 		return nil
 	}
 	seen := map[string]bool{}

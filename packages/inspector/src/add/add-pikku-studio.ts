@@ -123,7 +123,7 @@ const readScreen = (
 ): StudioScreenMeta | undefined => {
   if (!ts.isObjectLiteralExpression(element)) {
     fail(
-      `A pikkuStudio screen must be an object literal, got: ${element.getText()}`
+      `A definePlugin screen must be an object literal, got: ${element.getText()}`
     )
     return undefined
   }
@@ -190,7 +190,7 @@ const readScreen = (
   if (!ok) return undefined
   if (!path || !title || !scope || (!component && !app)) {
     fail(
-      `A pikkuStudio screen needs a literal path, title and scope, and either a lazy component or an app: ${element.getText()}`
+      `A definePlugin screen needs a literal path, title and scope, and either a lazy component or an app: ${element.getText()}`
     )
     return undefined
   }
@@ -214,7 +214,7 @@ const readScreen = (
 }
 
 /**
- * Detect `pikkuStudio({ title, screens })` and record it as the package's
+ * Detect `definePlugin({ title, screens })` and record it as the package's
  * `studio` metadata. Every field must be a literal: one that is not is
  * reported and its screen left out, since a screen the host cannot read would
  * otherwise vanish with no sign.
@@ -226,7 +226,7 @@ export function addPikkuStudio(
 ) {
   if (!ts.isCallExpression(node)) return
   const { expression, arguments: args } = node
-  if (!ts.isIdentifier(expression) || expression.text !== 'pikkuStudio') return
+  if (!ts.isIdentifier(expression) || expression.text !== 'definePlugin') return
 
   const [firstArg] = args
   if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) return
@@ -240,7 +240,7 @@ export function addPikkuStudio(
   for (const prop of firstArg.properties) {
     const key = propName(prop)
     if (!key || !ts.isPropertyAssignment(prop)) {
-      fail(`A pikkuStudio field must be a literal, got: ${prop.getText()}`)
+      fail(`A definePlugin field must be a literal, got: ${prop.getText()}`)
       continue
     }
 
@@ -249,13 +249,13 @@ export function addPikkuStudio(
         title = prop.initializer.text
       } else {
         fail(
-          `pikkuStudio's title must be a literal, got: ${prop.initializer.getText()}`
+          `definePlugin's title must be a literal, got: ${prop.initializer.getText()}`
         )
       }
     } else if (key === 'screens') {
       if (!ts.isArrayLiteralExpression(prop.initializer)) {
         fail(
-          `pikkuStudio's screens must be an array literal, got: ${prop.initializer.getText()}`
+          `definePlugin's screens must be an array literal, got: ${prop.initializer.getText()}`
         )
         continue
       }
@@ -267,7 +267,7 @@ export function addPikkuStudio(
   }
 
   if (!title) {
-    fail(`pikkuStudio needs a literal title`)
+    fail(`definePlugin needs a literal title`)
     return
   }
 
@@ -276,13 +276,13 @@ export function addPikkuStudio(
     if (seen.has(screen.path)) {
       logger.critical(
         ErrorCode.STUDIO_SCREEN_PATH_DUPLICATE,
-        `pikkuStudio declares two screens at '${screen.path}'; each screen needs its own path`
+        `definePlugin declares two screens at '${screen.path}'; each screen needs its own path`
       )
     }
     seen.add(screen.path)
   }
 
-  logger.debug(`• Found pikkuStudio: ${title} (${screens.length} screens)`)
+  logger.debug(`• Found definePlugin: ${title} (${screens.length} screens)`)
   state.studio = {
     title,
     file: node.getSourceFile().fileName,
@@ -310,7 +310,7 @@ const readCatalog = (file: string): Record<string, unknown> | undefined => {
 }
 
 /**
- * The checks on `pikkuStudio` that need the whole package: every title is a
+ * The checks on `definePlugin` that need the whole package: every title is a
  * key in the addon's `messages/en.json` (a key missing from another locale is
  * a warning), and every nav badge names one of the addon's functions.
  */
@@ -329,7 +329,7 @@ export function validatePikkuStudio(
     if (!en || !Object.hasOwn(en, key)) {
       logger.critical(
         ErrorCode.STUDIO_MESSAGE_KEY_MISSING,
-        `pikkuStudio uses the message key '${key}', which is missing from the addon's messages/en.json`
+        `definePlugin uses the message key '${key}', which is missing from the addon's messages/en.json`
       )
     }
   }
@@ -342,7 +342,7 @@ export function validatePikkuStudio(
       for (const key of new Set(keys)) {
         if (!Object.hasOwn(catalog, key)) {
           logger.warn(
-            `pikkuStudio uses the message key '${key}', which is missing from the addon's messages/${name}`
+            `definePlugin uses the message key '${key}', which is missing from the addon's messages/${name}`
           )
         }
       }

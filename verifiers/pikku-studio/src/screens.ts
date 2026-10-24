@@ -1,6 +1,6 @@
-import { pikkuStudio } from '@pikku/core/addon'
+import { definePlugin } from '@pikku/core/addon'
 
-export default pikkuStudio({
+export default definePlugin({
   title: 'studio_verifier__title',
   screens: [
     {

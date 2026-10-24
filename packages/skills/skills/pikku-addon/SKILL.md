@@ -52,7 +52,7 @@ wireAddon({
   mcp?: boolean | string[],        // true: every function the addon declared mcp: true; a list: the tools this app offers, typed against the addon's function names
   expose?: boolean | string[],     // opt-in: what rpc.exposed / POST /rpc may reach. true = every function the addon declared expose: true, a list = those of them named (typed; PKU343 on unknown or undeclared names), unset/false = none
   tags?: string[],                 // Tags applied to all addon functions
-  ui?: boolean,                    // Mount the screens the addon declares with pikkuStudio
+  ui?: boolean,                    // Mount the screens the addon declares with definePlugin
   scopes?: string[],               // Required of every function, on top of its own
   secretOverrides?: Record<string, string>,      // Remap secret names (and grant them)
   variableOverrides?: Record<string, string>,    // Remap variable names
@@ -377,14 +377,14 @@ At runtime an unmapped alias, or the wired name called directly, throws
 
 ### Studio screens
 
-An addon declares the screens it adds to Pikku Studio with `pikkuStudio`, in
+An addon declares the screens it adds to Pikku Studio with `definePlugin`, in
 `src/screens.ts` (`pikku new addon-ui <name>` scaffolds one). It replaces
 `defineScreens`, which no longer exists.
 
 ```typescript
-import { pikkuStudio } from '@pikku/core/addon'
+import { definePlugin } from '@pikku/core/addon'
 
-export default pikkuStudio({
+export default definePlugin({
   title: 'invoices__title', // message key: the addon's name in Studio
   screens: [
     {

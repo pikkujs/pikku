@@ -48,7 +48,7 @@ export type WireAddonConfig = {
   /** Filters this addon in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
   /**
-   * Mounts the screens the addon ships (see `pikkuStudio`) in the host, each at
+   * Mounts the screens the addon ships (see `definePlugin`) in the host, each at
    * the path its `scope` gives it. Without it the addon's screens are ignored.
    * The package must declare at least one, or `pikku all` rejects the wiring.
    */

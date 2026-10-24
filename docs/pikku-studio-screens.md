@@ -1,14 +1,14 @@
-# Addon screens in Pikku Studio: `pikkuStudio`
+# Addon screens in Pikku Studio: `definePlugin`
 
 An addon can ship screens that Pikku Studio mounts. It declares them with
-`pikkuStudio` in its own source, usually `src/screens.ts`, and the app opts in
+`definePlugin` in its own source, usually `src/screens.ts`, and the app opts in
 by wiring the addon with `ui: true`. `pikku new addon-ui <name>` scaffolds an
 addon that already has one.
 
 ```ts
-import { pikkuStudio } from '@pikku/core/addon'
+import { definePlugin } from '@pikku/core/addon'
 
-export default pikkuStudio({
+export default definePlugin({
   title: 'invoices__title',
   screens: [
     {
@@ -67,7 +67,7 @@ next to its `package.json`. There is no field naming the catalog.
 
 ## What `pikku all` checks
 
-The inspector reads `pikkuStudio` statically and writes the screens into the
+The inspector reads `definePlugin` statically and writes the screens into the
 addon's `studio` metadata. It fails the build on:
 
 | Code   | When                                                                              |
@@ -79,5 +79,5 @@ addon's `studio` metadata. It fails the build on:
 
 A key missing from any other locale's catalog is a warning.
 
-`pikkuStudio` replaces `defineScreens`, which is removed; see
+`definePlugin` replaces `defineScreens`, which is removed; see
 [MIGRATION.md](./MIGRATION.md#definescreens-is-now-pikkustudio).

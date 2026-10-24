@@ -621,7 +621,7 @@ export interface InspectorFeature {
 export type CredentialOverrideMeta =
   string | { name?: string; mode?: 'singleton' | 'wire' }
 
-/** A screen's nav entry as `pikkuStudio` declares it, read statically. */
+/** A screen's nav entry as `definePlugin` declares it, read statically. */
 export type StudioNavMeta = {
   area: 'rail' | 'team' | 'project' | 'account'
   icon: string
@@ -629,7 +629,7 @@ export type StudioNavMeta = {
   badge?: string
 }
 
-/** A screen of an addon as `pikkuStudio` declares it, read statically. */
+/** A screen of an addon as `definePlugin` declares it, read statically. */
 export type StudioScreenMeta = {
   path: string
   title: string
@@ -646,12 +646,12 @@ export type StudioScreenMeta = {
 
 export type StudioMeta = {
   title: string
-  /** The source file whose `pikkuStudio` call declared this manifest. */
+  /** The source file whose `definePlugin` call declared this manifest. */
   file: string
   screens: StudioScreenMeta[]
   /**
    * The addon's role: every scope its own functions require, derived by
-   * `pikku all` and never declared. Absent from the raw `pikkuStudio` read.
+   * `pikku all` and never declared. Absent from the raw `definePlugin` read.
    * On a wired instance it also carries the host's `wireAddon` scopes, which
    * the runner demands of every function in the package.
    */
@@ -679,9 +679,9 @@ export interface AddonContributorsMeta {
 }
 
 export interface InspectorState {
-  /** Set when this package calls `pikkuStudio`: the screens it ships. */
+  /** Set when this package calls `definePlugin`: the screens it ships. */
   studio?: StudioMeta
-  /** The `pikkuStudio` metadata of the addons this project wires with `ui: true`, by namespace. */
+  /** The `definePlugin` metadata of the addons this project wires with `ui: true`, by namespace. */
   addonStudio?: Record<string, StudioMeta>
   /**
    * Platform service contributors each wired, non-remote addon declares in its

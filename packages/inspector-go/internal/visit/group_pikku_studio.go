@@ -86,7 +86,7 @@ func quotedList(values []string) string {
 }
 
 func (s *Context) addPikkuStudio(node *ast.Node) {
-	obj := wiringCall(node, "pikkuStudio")
+	obj := wiringCall(node, "definePlugin")
 	if obj == nil {
 		return
 	}
@@ -97,7 +97,7 @@ func (s *Context) addPikkuStudio(node *ast.Node) {
 	for _, p := range obj.Properties() {
 		key, ok := propKey(p)
 		if !ok || key == "" {
-			fail("A pikkuStudio field must be a literal, got: " + tsutil.NodeText(p))
+			fail("A definePlugin field must be a literal, got: " + tsutil.NodeText(p))
 			continue
 		}
 		init := p.Initializer()
@@ -106,11 +106,11 @@ func (s *Context) addPikkuStudio(node *ast.Node) {
 			if ast.IsStringLiteral(init) {
 				title = init.Text()
 			} else {
-				fail("pikkuStudio's title must be a literal, got: " + tsutil.NodeText(init))
+				fail("definePlugin's title must be a literal, got: " + tsutil.NodeText(init))
 			}
 		case "screens":
 			if !ast.IsArrayLiteralExpression(init) {
-				fail("pikkuStudio's screens must be an array literal, got: " + tsutil.NodeText(init))
+				fail("definePlugin's screens must be an array literal, got: " + tsutil.NodeText(init))
 				continue
 			}
 			for _, el := range init.Elements() {
@@ -122,18 +122,18 @@ func (s *Context) addPikkuStudio(node *ast.Node) {
 		}
 	}
 	if title == "" {
-		fail("pikkuStudio needs a literal title")
+		fail("definePlugin needs a literal title")
 		return
 	}
 	seen := map[string]bool{}
 	for _, path := range paths {
 		if seen[path] {
 			s.Log.Critical(diag.StudioScreenPathDuplicate, fmt.Sprintf(
-				"pikkuStudio declares two screens at '%s'; each screen needs its own path", path))
+				"definePlugin declares two screens at '%s'; each screen needs its own path", path))
 		}
 		seen[path] = true
 	}
-	s.Log.Debugf("• Found pikkuStudio: %s (%d screens)", title, len(screens))
+	s.Log.Debugf("• Found definePlugin: %s (%d screens)", title, len(screens))
 	raws := make([]state.Raw, len(screens))
 	for i := range screens {
 		raws[i] = screens[i].raw()
@@ -222,7 +222,7 @@ func hasStringLiteralProp(obj *ast.Node, key string) bool {
 func (s *Context) readStudioScreen(el *ast.Node, fail func(string)) (jsObject, string, bool) {
 	var o jsObject
 	if !ast.IsObjectLiteralExpression(el) {
-		fail("A pikkuStudio screen must be an object literal, got: " + tsutil.NodeText(el))
+		fail("A definePlugin screen must be an object literal, got: " + tsutil.NodeText(el))
 		return o, "", false
 	}
 	var path, title, scope, layout, component, app string
@@ -306,7 +306,7 @@ func (s *Context) readStudioScreen(el *ast.Node, fail func(string)) (jsObject, s
 		return o, "", false
 	}
 	if path == "" || title == "" || scope == "" || (component == "" && app == "") {
-		fail("A pikkuStudio screen needs a literal path, title and scope, and either a lazy component or an app: " + tsutil.NodeText(el))
+		fail("A definePlugin screen needs a literal path, title and scope, and either a lazy component or an app: " + tsutil.NodeText(el))
 		return o, "", false
 	}
 	if component != "" && app != "" {
@@ -412,7 +412,7 @@ func (s *Context) ValidatePikkuStudio() {
 	for _, key := range keys {
 		if _, ok := en[key]; !ok {
 			s.Log.Critical(diag.StudioMessageKeyMissing, fmt.Sprintf(
-				"pikkuStudio uses the message key '%s', which is missing from the addon's messages/en.json", key))
+				"definePlugin uses the message key '%s', which is missing from the addon's messages/en.json", key))
 		}
 	}
 	if messagesDir != "" {
@@ -429,7 +429,7 @@ func (s *Context) ValidatePikkuStudio() {
 				for _, key := range keys {
 					if _, ok := catalog[key]; !ok {
 						s.Log.Warn(fmt.Sprintf(
-							"pikkuStudio uses the message key '%s', which is missing from the addon's messages/%s", key, name))
+							"definePlugin uses the message key '%s', which is missing from the addon's messages/%s", key, name))
 					}
 				}
 			}

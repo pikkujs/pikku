@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "description": "An addon declaring Studio screens with pikkuStudio, and the build failures the inspector raises for them",
+  "description": "An addon declaring Studio screens with definePlugin, and the build failures the inspector raises for them",
   "imports": {
     "#pikku/*.js": "./.pikku/*.ts",
     "#pikku/*": "./.pikku/*/index.ts"

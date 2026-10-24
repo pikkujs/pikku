@@ -94,9 +94,9 @@ An addon can now declare `pikku.uses` as `{ alias: 'package@range' }` and call
 the dependency by the alias with full types. See
 [An addon calling another addon](./remote-rpc.md#an-addon-calling-another-addon).
 
-### `defineScreens` is now `pikkuStudio`
+### `defineScreens` is now `definePlugin`
 
-An addon declares its Studio screens with `pikkuStudio` from
+An addon declares its Studio screens with `definePlugin` from
 `@pikku/core/addon`. `defineScreens`, `ScreensManifest`, `AddonScreen`,
 `AddonComponentScreen` and `AddonAppScreen` are removed with no alias; the
 types are `StudioManifest`, `StudioScreen`, `StudioComponentScreen`,
@@ -104,7 +104,7 @@ types are `StudioManifest`, `StudioScreen`, `StudioComponentScreen`,
 
 | Before                          | After                                                                            |
 | ------------------------------- | -------------------------------------------------------------------------------- |
-| `defineScreens({ title, ... })` | `pikkuStudio({ title, screens })`                                                |
+| `defineScreens({ title, ... })` | `definePlugin({ title, screens })`                                                |
 | `title: 'Inbox'`                | `title: 'inbox__title'`, a key in `messages/{locale}.json`                       |
 | top-level `icon`                | removed; a screen's `nav.icon`                                                   |
 | `nav: true`                     | `nav: { area: 'rail' \| 'team' \| 'project' \| 'account', icon, order, badge? }` |

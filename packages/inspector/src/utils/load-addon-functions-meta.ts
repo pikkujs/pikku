@@ -432,7 +432,7 @@ export async function loadAddonFunctionsMeta(
         } else if (!manifest || manifest.screens.length === 0) {
           logger.critical(
             ErrorCode.ADDON_UI_HAS_NO_SCREENS,
-            `wireAddon('${namespace}') sets ui: true, but ${decl.package} declares no screens. Add a pikkuStudio call to the package, or drop ui.`
+            `wireAddon('${namespace}') sets ui: true, but ${decl.package} declares no screens. Add a definePlugin call to the package, or drop ui.`
           )
         } else {
           ;(state.addonStudio ??= {})[namespace] = {
