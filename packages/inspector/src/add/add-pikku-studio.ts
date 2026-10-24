@@ -226,7 +226,7 @@ export function addPikkuStudio(
 ) {
   if (!ts.isCallExpression(node)) return
   const { expression, arguments: args } = node
-  if (!ts.isIdentifier(expression) || expression.text !== 'definePlugin') return
+  if (!ts.isIdentifier(expression) || expression.text !== 'definePlugin' && expression.text !== 'pikkuStudio') return
 
   const [firstArg] = args
   if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) return

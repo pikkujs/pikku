@@ -102,6 +102,11 @@ describe('addPikkuStudio', () => {
     ])
   })
 
+  test('the deprecated pikkuStudio name is still recognised', () => {
+    inspect(`pikkuStudio({ title: TITLE, screens: [] })`)
+    assert.match(criticals[0] ?? '', /^PKU345: definePlugin's title must be a literal/)
+  })
+
   test('a screen without nav is routed but carries no nav entry', () => {
     inspect(`
       definePlugin({
