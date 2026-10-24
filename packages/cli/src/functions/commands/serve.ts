@@ -8,6 +8,7 @@ import { projectScopeDefinitions } from '../wirings/scopes/pikku-command-scopes.
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import { ConsoleLogger, InMemoryTriggerSourceStore } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
+import { composeServerLifecycle } from '@pikku/core/lifecycle'
 import { pikkuState } from '@pikku/core/state'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
@@ -33,6 +34,7 @@ import {
 } from './load-user-project.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
+import { loadDevPlatformServices } from './dev-platform-services.js'
 import { resolveFrontendMount } from './serve-frontend.js'
 import { servedFrontend } from '../../utils/frontend.js'
 import { serverReadyLine } from '../../server/server-ready.js'
@@ -172,7 +174,7 @@ export const serve = pikkuSessionlessFunc<
     // (so sqlite extensions and embedded postgres apply), its event hub and
     // content store, and the gates read off the live inspector rather than the
     // ones baked in at the last codegen.
-    const localServices = await createLocalServices(
+    const baseLocalServices = await createLocalServices(
       userConfig,
       {
         kysely: kysely ?? null,
@@ -196,6 +198,17 @@ export const serve = pikkuSessionlessFunc<
           inspectorState.systemRoles.definitions
         ),
       }
+    )
+
+    const {
+      services: localServices,
+      startHooks,
+      stopHooks,
+    } = await loadDevPlatformServices(
+      baseLocalServices,
+      config.rootDir,
+      config.devContributorsFile,
+      process.env
     )
 
     const singletonServices = await userCreateSingletonServices(
@@ -237,12 +250,15 @@ export const serve = pikkuSessionlessFunc<
       { contentSigningJWT }
     )
 
-    const lifecycle = await loadLifecycle()
+    const lifecycle = composeServerLifecycle(await loadLifecycle(), {
+      start: startHooks,
+      stop: stopHooks,
+    })
 
     await pikkuServer.init()
-    await lifecycle?.beforeStart?.(resolvedServices)
+    await lifecycle.beforeStart?.(resolvedServices)
     await pikkuServer.start()
-    await lifecycle?.afterStart?.(resolvedServices)
+    await lifecycle.afterStart?.(resolvedServices)
 
     // Not `resolvedPort`: `--port 0` asks the OS for a free port, and every URL
     // announced from here has to name the one it actually handed out.
@@ -259,10 +275,14 @@ export const serve = pikkuSessionlessFunc<
     const onSigint = async () => {
       logger.info('Stopping server...')
       try {
-        await lifecycle?.beforeStop?.(resolvedServices)
+        await lifecycle.beforeStop?.(resolvedServices)
         await stopSingletonServices()
         await pikkuServer.stop()
-        await lifecycle?.afterStop?.(resolvedServices)
+        await lifecycle.afterStop?.(resolvedServices)
+      } catch (error) {
+        logger.error(
+          `Error stopping server: ${error instanceof Error ? error.message : String(error)}`
+        )
       } finally {
         process.exit(0)
       }

@@ -13,11 +13,14 @@
   "devDependencies": {
     "@pikku/cli": "workspace:*",
     "@pikku/deploy": "workspace:*",
-    "@verifier/host-mail": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
     "@types/node": "^26",
     "tsx": "^4.23.15",
-    "@verifier/log-addon": "workspace:*"
+    "@verifier/contrib-notify": "workspace:*",
+    "@verifier/contrib-select": "workspace:*",
+    "@verifier/contrib-bad": "workspace:*",
+    "@pikku/deploy-standalone": "workspace:*",
+    "@pikku/deploy-cloudflare": "workspace:*"
   },
   "scripts": {
     "build": "tsc -b",

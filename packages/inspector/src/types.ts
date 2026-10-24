@@ -658,6 +658,33 @@ export type StudioMeta = {
   scopes?: string[]
 }
 
+/**
+ * Where a contributor variant lives, so a host can import only that variant.
+ * `module` is the source file that declares it (absolute while it is in
+ * inspector state, relative to the addon package in the published meta);
+ * `export` is the name that module exports it under.
+ */
+export type ContributorRef = {
+  module: string
+  export: string
+}
+
+/** One `defineContributors` entry: each variant optional, each its own import. */
+export type ContributorVariantsMeta = {
+  dev?: ContributorRef
+  deploy?: ContributorRef
+}
+
+/** The contributors an addon registers, keyed by name. */
+export type ContributorsManifestMeta = Record<string, ContributorVariantsMeta>
+
+/** The contributors a project opted in to for one wired addon. */
+export type OptedInContributorsMeta = {
+  packageName: string
+  /** Each opted-in name with the variants the addon recorded; `module` is relative to the addon package. */
+  contributors: ContributorsManifestMeta
+}
+
 export interface InspectorServiceTypes {
   /** Property names of the project's SingletonServices type, sorted. */
   singletonServices: string[] | null
@@ -667,28 +694,15 @@ export interface InspectorServiceTypes {
   secretAliases: string[]
 }
 
-export interface AddonContributorRef {
-  module: string
-  export?: string
-}
-
-export interface AddonContributorsMeta {
-  packageName: string
-  packageDir: string
-  contributors: AddonContributorRef[]
-}
-
 export interface InspectorState {
   /** Set when this package calls `pikkuStudio`: the screens it ships. */
   studio?: StudioMeta
   /** The `pikkuStudio` metadata of the addons this project wires with `ui: true`, by namespace. */
   addonStudio?: Record<string, StudioMeta>
-  /**
-   * Platform service contributors each wired, non-remote addon declares in its
-   * `package.json` under `pikku.contributors`, by namespace. `module` resolves
-   * from `packageDir`.
-   */
-  addonContributors?: Record<string, AddonContributorsMeta>
+  /** Set when this package calls `defineContributors`: the contributors it registers, by name. */
+  contributorsManifest?: ContributorsManifestMeta
+  /** Per wired addon namespace, the contributors `wireAddon({ contributors })` opted in to. */
+  optedInContributors?: Record<string, OptedInContributorsMeta>
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
   wireServicesTypeImportMap: PathToNameAndType
@@ -873,6 +887,8 @@ export interface InspectorState {
          * `ContentService` instead of one scoped to its own folder.
          */
         globalContent?: string
+        /** The addon contributor names this project opted in to, as `wireAddon({ contributors })` listed them. */
+        contributors?: string[]
       }
     >
     wireAddonFiles: Set<string>

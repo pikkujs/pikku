@@ -166,29 +166,31 @@ it is worth writing as a browser step on §7's scenario and running
 `pikku scenario run local --spawn --run browser`: same clicks, same assertions,
 in the repo, green or red on every future run.
 
-**A host can inject platform services into `pikku dev`** the way a deploy does, with
-`dev.contributors` in `pikku.config.json`:
+**A project can take platform services from an addon's contributors.** The addon
+registers them with `defineContributors` (an object keyed by name, each with an
+optional `dev` and `deploy` variant that is a plain `Contributor`), and the
+project opts in by name:
 
-```json
-{
-  "dev": {
-    "contributors": [
-      { "module": "./dev/email-contributor.ts", "export": "email" }
-    ]
-  }
-}
+```ts
+wireAddon({
+  name: 'inbox',
+  package: '@my-org/addon-inbox',
+  contributors: ['inbox'],
+})
 ```
 
-The module exports a `PlatformServiceContributor` (`{ name, needs?, provides?, imports?, emit }`, the
-type `@pikku/deploy` takes). Addons the project wires add their own, declared in their
-package.json as `pikku.contributors` (see the pikku-addon skill's package manifest
-reference). Contributors run in the order their `needs`/`provides` require, and the
-generated `createPlatformServices(env, runtime)` gets the local services as `runtime`;
-an unmet need, a key provided twice or a cycle fails `pikku all`. `pikku all` writes `.pikku/pikku-dev-platform-services.gen.ts`
-from them, and `pikku dev` merges what it returns over the local services before
+Nothing is injected without that list. `pikku all` resolves the `dev` variants
+(dropping what `when` or `requires` rules out, ordering by `needs`/`provides`)
+and writes `.pikku/contributors/pikku-dev-contributors.gen.ts`; `pikku dev` and
+`pikku serve` merge what it builds over the local services before
 `createSingletonServices` runs, so a contributed `emailService` beats
-`LocalEmailService` (and the test-mode spy). Nothing is written without
-contributors, `pikku serve` never loads it, and `NODE_ENV=production` ignores it. An import a contributor names by `file://` URL or absolute path is written as the package export that points at it, or as a path relative to `.pikku/`, so the file typechecks under the project's tsconfig as long as the lines a contributor emits are typed.
+`LocalEmailService` (and the test-mode spy). Both skip the file under
+`NODE_ENV=production`. A contributor's `onServerStart` runs before the app's
+`beforeStart`; its `onServerStop` after the app's `afterStop`. An unmet need, a
+key provided twice or a cycle fails `pikku all`, and so does a declared database
+(`createConfig` or `db/<dialect>`) with no `db` in the pikku config. A host that
+injects an addon (CI, Studio) writes a gitignored wiring file containing
+`wireAddon({ name, package, contributors })`. Reference: `docs/contributors.md`.
 
 ## 6a. Close the changeset against its plan, not against your memory
 

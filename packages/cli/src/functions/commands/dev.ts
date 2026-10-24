@@ -25,6 +25,7 @@ import {
 } from '@pikku/core/services'
 import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { stopSingletonServices } from '@pikku/core/utils'
+import { composeServerLifecycle } from '@pikku/core/lifecycle'
 import { pikkuState } from '@pikku/core/state'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
@@ -49,7 +50,7 @@ import {
   loadUserModule,
 } from './load-user-project.js'
 import { createDevCredentialService } from './dev-credentials.js'
-import { mergeDevPlatformServices } from './dev-platform-services.js'
+import { loadDevPlatformServices } from './dev-platform-services.js'
 import { reconcileDevWebhooks } from './dev-webhook-registrations.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
@@ -297,10 +298,15 @@ export const dev = pikkuSessionlessFunc<
       }
     )
 
-    const localServices = await mergeDevPlatformServices(
+    const {
+      services: localServices,
+      startHooks,
+      stopHooks,
+    } = await loadDevPlatformServices(
       baseLocalServices,
       config.rootDir,
-      config.devPlatformServicesFile
+      config.devContributorsFile,
+      process.env
     )
 
     const singletonServices = await userCreateSingletonServices(
@@ -353,12 +359,15 @@ export const dev = pikkuSessionlessFunc<
       { contentSigningJWT, mcpJson, mcpSurfaces }
     )
 
-    const lifecycle = await loadLifecycle()
+    const lifecycle = composeServerLifecycle(await loadLifecycle(), {
+      start: startHooks,
+      stop: stopHooks,
+    })
 
     await pikkuServer.init()
-    await lifecycle?.beforeStart?.(resolvedServices)
+    await lifecycle.beforeStart?.(resolvedServices)
     await pikkuServer.start()
-    await lifecycle?.afterStart?.(resolvedServices)
+    await lifecycle.afterStart?.(resolvedServices)
 
     // Not `resolvedPort`: `--port 0` asks the OS for a free port, and every URL
     // announced from here has to name the one it actually handed out.
@@ -400,11 +409,15 @@ export const dev = pikkuSessionlessFunc<
     const onSigint = async () => {
       logger.info('Stopping dev server...')
       try {
-        await lifecycle?.beforeStop?.(resolvedServices)
+        await lifecycle.beforeStop?.(resolvedServices)
         await stopSingletonServices()
         await watcher?.close()
         await pikkuServer.stop()
-        await lifecycle?.afterStop?.(resolvedServices)
+        await lifecycle.afterStop?.(resolvedServices)
+      } catch (error) {
+        logger.error(
+          `Error stopping dev server: ${error instanceof Error ? error.message : String(error)}`
+        )
       } finally {
         clearDevAddress(resolvedRuntimeDir)
         process.exit(0)

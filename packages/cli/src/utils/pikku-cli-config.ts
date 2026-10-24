@@ -372,6 +372,14 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    if (!result.contributorTypesFile) {
+      result.contributorTypesFile = join(
+        result.outDir,
+        'contributor',
+        'pikku-contributor-types.gen.ts'
+      )
+    }
+
     // Sits in the same directory as the better-auth wrapper so both reach the
     // reader as `#pikku/auth`, but is written unconditionally: every project
     // decides who may call a function, only some projects use better-auth.
@@ -964,13 +972,6 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    if (!result.devPlatformServicesFile) {
-      result.devPlatformServicesFile = join(
-        result.outDir,
-        'pikku-dev-platform-services.gen.ts'
-      )
-    }
-
     // Middleware
     if (!result.middlewareFile) {
       result.middlewareFile = join(middlewareDir, 'pikku-middleware.gen.ts')
@@ -1214,6 +1215,23 @@ const _getPikkuCLIConfig = async (
       result.flagsMetaJsonFile = join(scopesDir, 'pikku-flags-meta.gen.json')
     }
 
+    // Contributors, when the package calls defineContributors: the meta is
+    // published beside the other generated files so a host can opt in, and the
+    // dev file is what `pikku dev` loads for the contributors a project wired.
+    const contributorsDir = join(result.outDir, 'contributors')
+    if (!result.contributorsMetaJsonFile) {
+      result.contributorsMetaJsonFile = join(
+        contributorsDir,
+        'pikku-contributors-meta.gen.json'
+      )
+    }
+    if (!result.devContributorsFile) {
+      result.devContributorsFile = join(
+        contributorsDir,
+        'pikku-dev-contributors.gen.ts'
+      )
+    }
+
     // Addon screens, when the package declares any. Their own directory:
     // the host imports the screens file and the meta is published beside it.
     const screensDir = join(result.outDir, 'screens')
@@ -1324,6 +1342,15 @@ const _getPikkuCLIConfig = async (
             result[objectKey] = join(result.rootDir, result[objectKey])
           }
         }
+      }
+    }
+
+    for (const section of ['dev', 'deploy'] as const) {
+      const value = (result as Record<string, any>)[section]
+      if (value && typeof value === 'object' && 'contributors' in value) {
+        throw new PikkuCLIConfigError(
+          `${section}.contributors is no longer read — remove it from ${result.configDir}/pikku.config.json. Register the contributors with defineContributors in an addon and opt in with wireAddon({ contributors: [...] }); see docs/contributors.md`
+        )
       }
     }
 

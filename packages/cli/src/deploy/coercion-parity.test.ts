@@ -14,6 +14,7 @@ import {
 } from 'kysely'
 import { createCoercionPlugin, type CoercionMap } from '@pikku/kysely'
 import { CloudflareProviderAdapter } from '@pikku/deploy-cloudflare'
+import { writeUnitPlatformServices } from './platform-services.js'
 import {
   generateSchemaTypes,
   readCoercionMap,
@@ -94,14 +95,48 @@ const generateDevMap = async (dialect: 'sqlite' | 'postgres') => {
 }
 
 /**
- * Runs the block a Cloudflare entry's `createPlatformServices` gets from the
- * default coercion contributor against a platform-built kysely.
+ * Runs the real pipeline step for a Cloudflare unit: the adapter selects the
+ * coercion contributor, the shared writer generates the platform-services file
+ * next to the entry, and that file is imported and run against a raw kysely.
+ * The project opts in to one contributor that provides `kysely`; without
+ * something providing it the coercion contributor has nothing to decorate.
  */
-const applyCloudflareEntry = (
+const applyCloudflareEntry = async (
   coercionMap: CoercionMap | undefined,
-  kysely: Kysely<any>
+  kysely: Kysely<any>,
+  options: { providesKysely?: boolean } = {}
 ) => {
-  const source = new CloudflareProviderAdapter().generateEntrySource({
+  const root = mkdtempSync(join(tmpdir(), 'coercion-parity-unit-'))
+  const unitDir = join(root, 'api')
+  mkdirSync(unitDir, { recursive: true })
+  mkdirSync(join(root, 'node_modules', 'addon', 'src'), { recursive: true })
+  writeFileSync(join(root, 'node_modules', 'addon', 'package.json'), '{}')
+  writeFileSync(
+    join(root, 'node_modules', 'addon', 'src', 'kysely.ts'),
+    `export const kysely = { provides: ['kysely'], run(services: any) { services.kysely = (globalThis as any).__parityKysely } }\n`
+  )
+  const state = {
+    optedInContributors:
+      options.providesKysely === false
+        ? {}
+        : {
+            db: {
+              packageName: 'addon',
+              contributors: {
+                kysely: {
+                  deploy: { module: 'src/kysely.ts', export: 'kysely' },
+                },
+              },
+            },
+          },
+    rpc: {
+      wireAddonDeclarations: new Map([
+        ['db', { file: join(root, 'src/a.ts') }],
+      ]),
+    },
+  } as never
+  const adapter = new CloudflareProviderAdapter()
+  const ctx = {
     unit: {
       name: 'api',
       role: 'function',
@@ -112,29 +147,28 @@ const applyCloudflareEntry = (
       dependsOn: [],
       tags: [],
     },
-    unitDir: '/build/api',
-    bootstrapPath: './.pikku/pikku-bootstrap.gen.js',
-    configImport: '',
-    configVar: 'createConfig',
-    servicesImport: '',
-    servicesVar: 'createSingletonServices',
-    singletonServicesImport: '',
-    servicesType: 'Record<string, any>',
-    mcpImport: '',
-    mcpServerOption: '',
-    coercionMap,
+    unitDir,
+    contributorPlatform: {
+      serviceNames: [],
+      needsQueue: false,
+      needsWorkflow: false,
+      needsAgent: false,
+      ...(coercionMap ? { db: { engine: 'sqlite', coercionMap } } : {}),
+    },
+  } as never
+  const platformServices = await writeUnitPlatformServices({
+    provider: adapter,
+    ctx,
+    state,
+    projectDir: root,
   })
-  const block = /\n {2}if \(services\.kysely\) \{\n[\s\S]*?\n {2}\}\n/.exec(
-    source
-  )?.[0]
-  const services: { kysely: Kysely<any> } = { kysely }
-  if (block) {
-    new Function('services', 'createCoercionPlugin', block)(
-      services,
-      createCoercionPlugin
-    )
-  }
-  return services.kysely
+  if (!platformServices) return kysely
+  ;(globalThis as any).__parityKysely = kysely
+  const { createPlatformServices } = await import(
+    join(unitDir, 'platform-services.gen.ts')
+  )
+  const services = await createPlatformServices({}, {})
+  return services.kysely as Kysely<any>
 }
 
 const stored = {
@@ -161,7 +195,10 @@ describe('a Cloudflare deploy coerces columns the way pikku dev does', () => {
       const raw = new Kysely<any>({ dialect: answering([stored[dialect]]) })
 
       const dev = raw.withPlugin(createCoercionPlugin({ map: devMap }))
-      const deployed = applyCloudflareEntry(readCoercionMap(coercionFile), raw)
+      const deployed = await applyCloudflareEntry(
+        readCoercionMap(coercionFile),
+        raw
+      )
 
       const query = (db: Kysely<any>) =>
         db.selectFrom('todo').selectAll().executeTakeFirstOrThrow()
@@ -184,7 +221,18 @@ describe('a Cloudflare deploy coerces columns the way pikku dev does', () => {
     assert.equal(readCoercionMap(join(dir, 'coercion.gen.ts')), undefined)
 
     const raw = new Kysely<any>({ dialect: answering([stored.sqlite]) })
-    assert.equal(applyCloudflareEntry(undefined, raw), raw)
+    assert.equal(await applyCloudflareEntry(undefined, raw), raw)
+  })
+
+  test('a map with nothing providing kysely leaves the unit without the plugin', async () => {
+    const { coercionFile } = await generateDevMap('sqlite')
+    const raw = new Kysely<any>({ dialect: answering([stored.sqlite]) })
+    const services = await applyCloudflareEntry(
+      readCoercionMap(coercionFile),
+      raw,
+      { providesKysely: false }
+    )
+    assert.equal(services, raw)
   })
 
   test('uuid columns never reach the map', async () => {

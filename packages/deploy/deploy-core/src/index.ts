@@ -33,22 +33,18 @@ export type {
 } from './provider-adapter.js'
 
 export type {
-  BindingSource,
-  ContributorPlatform,
-  PlatformServiceContributor,
-} from './platform-service-contributor.js'
-
+  ContributorSupport,
+  DeployContributorPlatform,
+  EntryPlatformServices,
+  FrameworkContributor,
+} from './contributor-support.js'
 export {
-  ContributorDependencyError,
-  DEFAULT_BINDING_SOURCES,
-  assertContributorsSupported,
-  collectContributorImports,
-  collectContributorLines,
-  contributorBindingSources,
-  dedupeContributors,
-  orderContributors,
-  partitionContributors,
-} from './platform-service-contributor.js'
+  appLifecycleVariable,
+  composedLifecycleLines,
+  composedLifecycleVariable,
+  entryLifecycleVariable,
+  withDeployUnit,
+} from './contributor-support.js'
 
 export { nodeBuiltinExternals } from './node-builtins.js'
 

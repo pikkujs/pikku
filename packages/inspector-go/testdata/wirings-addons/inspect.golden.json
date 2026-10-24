@@ -795,6 +795,11 @@
             "contentGrants": {
               "images": "read"
             },
+            "contributors": [
+              "inbox",
+              "cache",
+              "mailer"
+            ],
             "declaredUses": [
               "kysely",
               "email"
@@ -1473,6 +1478,47 @@
         ]
       }
     },
+    "contributorsManifest": {
+      "inbox": {
+        "dev": {
+          "module": "<fixture>/src/contributors/inbox.ts",
+          "export": "inboxDev"
+        },
+        "deploy": {
+          "module": "<fixture>/src/contributors/inbox.ts",
+          "export": "inboxDeploy"
+        }
+      },
+      "cache": {
+        "deploy": {
+          "module": "<fixture>/src/contributors.ts",
+          "export": "cacheDeploy"
+        }
+      }
+    },
+    "optedInContributors": {
+      "shop": {
+        "packageName": "@fixture/shop-addon",
+        "contributors": {
+          "inbox": {
+            "dev": {
+              "module": "src/contributors/inbox.ts",
+              "export": "inboxDev"
+            },
+            "deploy": {
+              "module": "src/contributors/inbox.ts",
+              "export": "inboxDeploy"
+            }
+          },
+          "cache": {
+            "deploy": {
+              "module": "src/contributors.ts",
+              "export": "cacheDeploy"
+            }
+          }
+        }
+      }
+    },
     "exportedContracts": {
       "http": {},
       "cli": {},
@@ -1556,8 +1602,43 @@
   "diagnostics": [
     {
       "level": "critical",
+      "code": "PKU362",
+      "message": "wireAddon's contributors must be an array of string literals, got: someList"
+    },
+    {
+      "level": "critical",
       "code": "PKU344",
       "message": "wireAddon's expose must be true, false or an array of string literals, got: someList"
+    },
+    {
+      "level": "critical",
+      "code": "PKU360",
+      "message": "Contributor 'decorator' dev 'hidden' is not exported by <fixture>/src/contributors.ts"
+    },
+    {
+      "level": "critical",
+      "code": "PKU360",
+      "message": "Contributor 'inline' dev must be a reference to an exported const so a host can import just that variant, got: { run() {} }"
+    },
+    {
+      "level": "critical",
+      "code": "PKU360",
+      "message": "Contributor 'neither' declares neither dev nor deploy"
+    },
+    {
+      "level": "critical",
+      "code": "PKU360",
+      "message": "Contributor 'stray' takes only dev and deploy, got: prod: cacheDeploy"
+    },
+    {
+      "level": "critical",
+      "code": "PKU361",
+      "message": "Contributor 'inbox' is defined twice. A contributor name belongs to one defineContributors entry."
+    },
+    {
+      "level": "critical",
+      "code": "PKU360",
+      "message": "defineContributors must be called with an object literal keyed by contributor name, got: dynamic"
     },
     {
       "level": "critical",
@@ -1613,6 +1694,11 @@
       "level": "critical",
       "code": "PKU348",
       "message": "@fixture/shop-addon needs email, but wireAddon('shop') does not map it. Wire email and add uses: { 'email': '<name>' } to this wireAddon."
+    },
+    {
+      "level": "critical",
+      "code": "PKU363",
+      "message": "wireAddon('shop') opts in to contributor 'mailer', but @fixture/shop-addon registers no such contributor. It registers: inbox, cache."
     },
     {
       "level": "critical",
@@ -1788,7 +1874,7 @@
     }
   ],
   "validationPass": {
-    "start": 34,
-    "end": 48
+    "start": 42,
+    "end": 56
   }
 }

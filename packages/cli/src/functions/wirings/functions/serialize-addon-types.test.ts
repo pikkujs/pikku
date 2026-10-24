@@ -134,6 +134,67 @@ describe('installing an addon reaches core through its own subpath', () => {
   })
 })
 
+describe('the contributor leaf', () => {
+  test('is reached as #pikku/contributor from contributorTypesFile', () => {
+    const leaf = leafEntries.find(([name]) => name === 'contributor')
+
+    assert.deepEqual(leaf?.[1], ['contributorTypesFile'])
+  })
+})
+
+describe('typed contributor names on wireAddon', () => {
+  test('an addon with contributors types the names of its package', () => {
+    const content = serializeAddonInstallTypes(
+      {},
+      { '@scope/mail': ['mailer', 'audit-log'], '@scope/db': ['pg'] }
+    )
+
+    assert.match(
+      content,
+      /type AddonContributors = \{\n  "@scope\/mail": "mailer" \| "audit-log"\n  "@scope\/db": "pg"\n\}/
+    )
+    assert.match(content, /contributors\?: AddonContributorName<Package>\[\]/)
+    assert.ok(content.includes("'package' | 'mcp' | 'expose' | 'contributors'"))
+  })
+
+  test('a package with no meta falls back to string, so builds do not break', () => {
+    const content = serializeAddonInstallTypes(
+      {},
+      { '@scope/mail': ['mailer'] }
+    )
+
+    assert.match(
+      content,
+      /Package extends keyof AddonContributors \? AddonContributors\[Package\] : string/
+    )
+  })
+
+  test('contributors alone are enough to get the typed wrapper', () => {
+    const content = serializeAddonInstallTypes(
+      {},
+      { '@scope/mail': ['mailer'] }
+    )
+
+    assert.ok(
+      content.includes('export const wireAddon = <Package extends string>')
+    )
+    assert.ok(!content.includes('export { wireAddon, wireRemoteAddon }'))
+  })
+
+  test('functions alone leave the contributor map empty, not absent', () => {
+    const content = serializeAddonInstallTypes({ '@scope/mail': ['send'] })
+
+    assert.match(content, /type AddonContributors = \{\n  \/\/ none\n\}/)
+  })
+
+  test('nothing installed keeps the plain re-export', () => {
+    assert.match(
+      serializeAddonInstallTypes({}, {}),
+      /export \{ wireAddon, wireRemoteAddon \} from '@pikku\/core\/addon'/
+    )
+  })
+})
+
 describe('serializeAddonsMeta', () => {
   test("lists a local addon's functions and marks a remote one", () => {
     const meta = JSON.parse(

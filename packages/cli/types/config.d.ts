@@ -210,8 +210,12 @@ export interface PikkuCLICoreOutputFiles {
   // `pikku serve` injects them into createSingletonServices
   localServicesFile: string
 
-  // Platform services a host injects over the local ones in `pikku dev`
-  devPlatformServicesFile: string
+  // Contributors the project opted in to (`wireAddon({ contributors })`),
+  // resolved for `pikku dev`
+  devContributorsFile: string
+
+  // The contributors this package registers — present when it calls defineContributors
+  contributorsMetaJsonFile: string
 
   // Middleware
   middlewareFile: string
@@ -222,6 +226,11 @@ export interface PikkuCLICoreOutputFiles {
 
   // Config and service factories (the leaf `#pikku/setup` resolves to)
   setupTypesFile: string
+
+  // Contributor types (the leaf `#pikku/contributor` resolves to). Types only,
+  // with the runtime helper re-exported from core; an application gets it, an
+  // addon does not.
+  contributorTypesFile: string
 
   // Permissions, auth gates and credential definitions (part of `#pikku/auth`)
   authGuardsFile: string
@@ -621,28 +630,6 @@ export type PikkuCLIInput = {
   schema?: {
     additionalProperties?: boolean
     supportsImportAttributes?: boolean
-  }
-
-  /**
-   * Platform services a host injects into `pikku dev`, the way a deploy
-   * injects them into a bundle.
-   */
-  dev?: {
-    /**
-     * Modules exporting a `PlatformServiceContributor`. Codegen turns them,
-     * together with the contributors addons declare in their `package.json`
-     * (`pikku.contributors`), into `createPlatformServices(env, runtime)`;
-     * `pikku dev` merges what it returns over the local services. Contributors
-     * run in the order their `needs`/`provides` require, and `runtime` holds
-     * the local logger, variables, secrets, schema and (with `db`) kysely.
-     * Never read by `pikku serve`, and ignored when `NODE_ENV=production`.
-     */
-    contributors?: Array<{
-      /** Relative to the project root, or a package specifier. */
-      module: string
-      /** Defaults to `default`. */
-      export?: string
-    }>
   }
 
   db?: {
@@ -1053,17 +1040,6 @@ export type PikkuCLIInput = {
   deploy?: {
     providers: Record<string, string>
     defaultProvider?: string
-    /**
-     * Modules exporting a `PlatformServiceContributor`, passed to the deploy
-     * adapter by `pikku deploy plan` / `apply` along with the contributors
-     * addons declare in their `package.json` (`pikku.contributors`).
-     */
-    contributors?: Array<{
-      /** Relative to the project root, or a package specifier. */
-      module: string
-      /** Defaults to `default`. */
-      export?: string
-    }>
     serverlessIncompatible?: string[]
     /**
      * Default deploy target for functions that don't declare an explicit

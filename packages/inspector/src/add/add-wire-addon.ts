@@ -99,11 +99,7 @@ export function addWireAddon(
   if (!ts.isCallExpression(node)) return
 
   const { expression, arguments: args } = node
-  if (
-    !ts.isIdentifier(expression) ||
-    expression.text !== 'wireAddon'
-  )
-    return
+  if (!ts.isIdentifier(expression) || expression.text !== 'wireAddon') return
 
   const [firstArg] = args
   if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) return
@@ -129,6 +125,7 @@ export function addWireAddon(
   let contentBucket: string | undefined
   let contentGrants: Record<string, string> | undefined
   let globalContent: string | undefined
+  let contributors: string[] | undefined
 
   for (const prop of firstArg.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -233,6 +230,16 @@ export function addWireAddon(
       ts.isObjectLiteralExpression(prop.initializer)
     ) {
       contentGrants = parseStringRecord(prop.initializer)
+    } else if (key === 'contributors') {
+      contributors = parseStringArray(prop.initializer)
+      // An unreadable list read as "none" would silently drop services the
+      // project asked for.
+      if (contributors === undefined) {
+        logger.critical(
+          ErrorCode.ADDON_CONTRIBUTORS_NOT_STATIC,
+          `wireAddon's contributors must be an array of string literals, got: ${prop.initializer.getText()}`
+        )
+      }
     } else if (key === 'globalContent') {
       globalContent = ts.isStringLiteral(prop.initializer)
         ? prop.initializer.text
@@ -265,6 +272,7 @@ export function addWireAddon(
     contentBucket,
     contentGrants,
     globalContent,
+    ...(contributors ? { contributors } : {}),
   })
   state.rpc.usedAddons.add(name)
   state.rpc.wireAddonFiles.add(node.getSourceFile().fileName)
