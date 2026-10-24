@@ -1597,17 +1597,17 @@
     {
       "level": "critical",
       "code": "PKU345",
-      "message": "A pikkuStudio screen must be an object literal, got: { title: 'No path', app: 'z' } as any"
+      "message": "A definePlugin screen must be an object literal, got: { title: 'No path', app: 'z' } as any"
     },
     {
       "level": "critical",
       "code": "PKU345",
-      "message": "A pikkuStudio screen must be an object literal, got: 'not-an-object' as any"
+      "message": "A definePlugin screen must be an object literal, got: 'not-an-object' as any"
     },
     {
       "level": "critical",
       "code": "PKU357",
-      "message": "pikkuStudio declares two screens at '/docs'; each screen needs its own path"
+      "message": "definePlugin declares two screens at '/docs'; each screen needs its own path"
     },
     {
       "level": "critical",
@@ -1627,7 +1627,7 @@
     {
       "level": "critical",
       "code": "PKU346",
-      "message": "wireAddon('bare') sets ui: true, but @fixture/bare-addon declares no screens. Add a pikkuStudio call to the package, or drop ui."
+      "message": "wireAddon('bare') sets ui: true, but @fixture/bare-addon declares no screens. Add a definePlugin call to the package, or drop ui."
     },
     {
       "level": "warn",
@@ -1701,15 +1701,15 @@
     {
       "level": "critical",
       "code": "PKU358",
-      "message": "pikkuStudio uses the message key 'admin_missing__title', which is missing from the addon's messages/en.json"
+      "message": "definePlugin uses the message key 'admin_missing__title', which is missing from the addon's messages/en.json"
     },
     {
       "level": "warn",
-      "message": "pikkuStudio uses the message key 'admin_inbox__title', which is missing from the addon's messages/de.json"
+      "message": "definePlugin uses the message key 'admin_inbox__title', which is missing from the addon's messages/de.json"
     },
     {
       "level": "warn",
-      "message": "pikkuStudio uses the message key 'admin_missing__title', which is missing from the addon's messages/de.json"
+      "message": "definePlugin uses the message key 'admin_missing__title', which is missing from the addon's messages/de.json"
     },
     {
       "level": "critical",

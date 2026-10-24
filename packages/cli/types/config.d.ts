@@ -298,7 +298,7 @@ export interface PikkuCLICoreOutputFiles {
   // Feature flags metadata JSON
   flagsMetaJsonFile: string
 
-  // Addon screens manifest metadata JSON — present when the package calls pikkuStudio
+  // Addon screens manifest metadata JSON — present when the package calls definePlugin
   screensMetaJsonFile: string
 
   // Addon screens (lazy imports of each screen) — what the host imports

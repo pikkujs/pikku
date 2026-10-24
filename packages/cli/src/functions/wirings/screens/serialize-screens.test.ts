@@ -47,7 +47,7 @@ describe('serializeScreens', () => {
     assert.match(out, /as const/)
   })
 
-  test('carries every pikkuStudio field through', () => {
+  test('carries every definePlugin field through', () => {
     const out = serializeScreens(
       manifest as any,
       '/pkg/.pikku/screens/pikku-screens.gen.ts'

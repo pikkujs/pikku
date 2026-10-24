@@ -4,7 +4,7 @@ import { addonUiFiles } from './new-addon-ui.js'
 
 test('the scaffold declares screens, so the host can mount them', () => {
   const files = addonUiFiles('invoice-tracker')
-  assert.match(files['src/screens.ts'], /pikkuStudio/)
+  assert.match(files['src/screens.ts'], /definePlugin/)
   assert.doesNotMatch(files['src/screens.ts'], /defineScreens/)
   assert.match(files['src/screens.ts'], /title: 'invoice_tracker__title'/)
   assert.match(files['src/screens.ts'], /scope: 'project'/)

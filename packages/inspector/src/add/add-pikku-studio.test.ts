@@ -54,7 +54,7 @@ beforeEach(() => {
 describe('addPikkuStudio', () => {
   test('records every field of every screen as studio metadata', () => {
     inspect(`
-      pikkuStudio({
+      definePlugin({
         title: 'cloud.title',
         screens: [
           { path: '/billing', title: 'cloud.billing', scope: 'team',
@@ -104,7 +104,7 @@ describe('addPikkuStudio', () => {
 
   test('a screen without nav is routed but carries no nav entry', () => {
     inspect(`
-      pikkuStudio({
+      definePlugin({
         title: 't',
         screens: [{ path: '/a', title: 'a', scope: 'team', component: () => import('./a') }],
       })
@@ -133,7 +133,7 @@ describe('addPikkuStudio', () => {
     }
     for (const [field, screen] of Object.entries(cases)) {
       test(field, () => {
-        inspect(`pikkuStudio({ title: 't', screens: [${screen}] })`)
+        inspect(`definePlugin({ title: 't', screens: [${screen}] })`)
         assert.ok(criticals.length >= 1, `no critical for ${field}`)
         assert.match(criticals[0]!, /^PKU345: /)
         assert.deepEqual(state.studio.screens, [])
@@ -141,26 +141,26 @@ describe('addPikkuStudio', () => {
     }
 
     test('the addon title', () => {
-      inspect(`pikkuStudio({ title: TITLE, screens: [] })`)
+      inspect(`definePlugin({ title: TITLE, screens: [] })`)
       assert.match(
         criticals[0]!,
-        /^PKU345: pikkuStudio's title must be a literal/
+        /^PKU345: definePlugin's title must be a literal/
       )
       assert.equal(state.studio, undefined)
     })
 
     test('the screens list', () => {
-      inspect(`pikkuStudio({ title: 't', screens: SCREENS })`)
+      inspect(`definePlugin({ title: 't', screens: SCREENS })`)
       assert.match(
         criticals[0]!,
-        /^PKU345: pikkuStudio's screens must be an array literal/
+        /^PKU345: definePlugin's screens must be an array literal/
       )
     })
   })
 
   test('a scope outside studio, team and project is refused', () => {
     inspect(`
-      pikkuStudio({ title: 't', screens: [{ path: '/a', title: 'a', scope: 'org', component: () => import('./a') }] })
+      definePlugin({ title: 't', screens: [{ path: '/a', title: 'a', scope: 'org', component: () => import('./a') }] })
     `)
     assert.match(
       criticals[0]!,
@@ -170,7 +170,7 @@ describe('addPikkuStudio', () => {
 
   test('rejects a screen that is both a component and an app', () => {
     inspect(`
-      pikkuStudio({
+      definePlugin({
         title: 'X',
         screens: [{ path: '/', title: 'A', scope: 'team', app: './a', component: () => import('./a') }],
       })
@@ -181,7 +181,7 @@ describe('addPikkuStudio', () => {
 
   test('fails the build on two screens with the same path', () => {
     inspect(`
-      pikkuStudio({
+      definePlugin({
         title: 't',
         screens: [
           { path: '/billing', title: 'a', scope: 'team', component: () => import('./a') },
@@ -190,7 +190,7 @@ describe('addPikkuStudio', () => {
       })
     `)
     assert.deepEqual(criticals, [
-      "PKU357: pikkuStudio declares two screens at '/billing'; each screen needs its own path",
+      "PKU357: definePlugin declares two screens at '/billing'; each screen needs its own path",
     ])
   })
 })
@@ -219,7 +219,7 @@ describe('validatePikkuStudio', () => {
 
   const studio = (title: string, screen: string) =>
     inspect(
-      `pikkuStudio({ title: '${title}', screens: [${screen}] })`,
+      `definePlugin({ title: '${title}', screens: [${screen}] })`,
       join(root, 'src', 'screens.ts')
     )
 
@@ -239,7 +239,7 @@ describe('validatePikkuStudio', () => {
     )
     validatePikkuStudio(logger, state)
     assert.deepEqual(criticals, [
-      "PKU358: pikkuStudio uses the message key 'cloud_plans', which is missing from the addon's messages/en.json",
+      "PKU358: definePlugin uses the message key 'cloud_plans', which is missing from the addon's messages/en.json",
     ])
   })
 
@@ -250,7 +250,7 @@ describe('validatePikkuStudio', () => {
     )
     validatePikkuStudio(logger, state)
     assert.deepEqual(criticals, [
-      "PKU358: pikkuStudio uses the message key 'cloud_name', which is missing from the addon's messages/en.json",
+      "PKU358: definePlugin uses the message key 'cloud_name', which is missing from the addon's messages/en.json",
     ])
   })
 
@@ -262,7 +262,7 @@ describe('validatePikkuStudio', () => {
     validatePikkuStudio(logger, state)
     assert.deepEqual(criticals, [])
     assert.deepEqual(warnings, [
-      "pikkuStudio uses the message key 'cloud_billing', which is missing from the addon's messages/de.json",
+      "definePlugin uses the message key 'cloud_billing', which is missing from the addon's messages/de.json",
     ])
   })
 

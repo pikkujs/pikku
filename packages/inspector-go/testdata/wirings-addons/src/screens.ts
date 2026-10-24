@@ -1,6 +1,6 @@
-import { pikkuStudio } from '@pikku/core/addon'
+import { definePlugin } from '@pikku/core/addon'
 
-export const screens = pikkuStudio({
+export const screens = definePlugin({
   title: 'admin__title',
   screens: [
     {

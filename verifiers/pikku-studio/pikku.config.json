@@ -5,7 +5,7 @@
   "outDir": "./.pikku",
   "addon": {
     "displayName": "Pikku Studio (verifier)",
-    "description": "Declares Studio screens with pikkuStudio",
+    "description": "Declares Studio screens with definePlugin",
     "categories": ["Utility"]
   }
 }

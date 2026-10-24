@@ -1,11 +1,11 @@
 ---
 type: decision
-title: Every pikkuStudio field must be a literal, or the build reports a critical error
+title: Every definePlugin field must be a literal, or the build reports a critical error
 description: add-pikku-studio reads the manifest and each screen by AST and reports ADDON_SCREENS_NOT_STATIC (PKU345) for a non-literal value, a spread or a value outside a field's allowed set
 tags: [inspector, screens, studio, scopes]
 ---
 
-# Every pikkuStudio field must be a literal, or the build reports a critical error
+# Every definePlugin field must be a literal, or the build reports a critical error
 
 `addPikkuStudio` in `packages/inspector/src/add/add-pikku-studio.ts` reads the
 manifest `title` and every screen field (`path`, `title`, `scope`, `nav`,
@@ -16,7 +16,7 @@ with "A screen's scopes must be an array of string literals" when it returns
 nothing (lines 162-169); `component` must be a literal lazy import
 (lines 171-176). `scope`, `nav.area` and `layout` must be one of their literal
 values. That `needsApp` belongs only on a `'project'` screen is held by the
-type (`StudioScreen` in `packages/core/src/wirings/addon/pikku-studio.ts`), not
+type (`StudioScreen` in `packages/core/src/wirings/addon/define-plugin.ts`), not
 by the inspector.
 
 The Go port (`packages/inspector-go/internal/visit/group_pikku_studio.go`)

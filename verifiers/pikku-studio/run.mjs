@@ -1,5 +1,5 @@
 /**
- * An addon declaring its Studio screens with pikkuStudio.
+ * An addon declaring its Studio screens with definePlugin.
  *
  *   1. pikku all             → passes, and the screens meta carries every
  *                              field as written (scope, nav, badge, needsApp,
@@ -66,7 +66,7 @@ const expectFailure = (code, message) => {
 }
 
 const ok = pikkuAll()
-if (ok.status !== 0) fail('pikku all failed on a valid pikkuStudio', ok.output)
+if (ok.status !== 0) fail('pikku all failed on a valid definePlugin', ok.output)
 
 const metaPath = join(
   here,

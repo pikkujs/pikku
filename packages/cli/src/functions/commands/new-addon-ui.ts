@@ -89,9 +89,9 @@ export const addonUiFiles = (name: string): Record<string, string> => {
       null,
       2
     ),
-    'src/screens.ts': `import { pikkuStudio } from '@pikku/core/addon'
+    'src/screens.ts': `import { definePlugin } from '@pikku/core/addon'
 
-export default pikkuStudio({
+export default definePlugin({
   title: '${key}__title',
   screens: [
     {

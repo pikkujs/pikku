@@ -1,14 +1,14 @@
 ---
 type: decision
 title: Addon screen scopes hide a screen and do not enforce access
-description: The scopes on a pikkuStudio screen state what a viewer must hold to see the screen; the addon's own functions are the access check
+description: The scopes on a definePlugin screen state what a viewer must hold to see the screen; the addon's own functions are the access check
 tags: core, addons, screens, security
 ---
 
 # Addon screen scopes hide a screen and do not enforce access
 
-`packages/core/src/wirings/addon/pikku-studio.ts:24-25` documents `scopes` on a
-`pikkuStudio` screen as hiding the screen and its nav from viewers without
+`packages/core/src/wirings/addon/define-plugin.ts:24-25` documents `scopes` on a
+`definePlugin` screen as hiding the screen and its nav from viewers without
 access, and says the addon's functions must enforce the same scopes, because
 hiding a screen is not access control.
 
