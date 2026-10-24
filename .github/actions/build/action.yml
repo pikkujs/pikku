@@ -78,13 +78,13 @@ runs:
         start=$SECONDS
         bun run pikku
         echo "::notice::⏱ Generate pikku files: $((SECONDS - start))s"
-    - name: Build templates
+    - name: Build recipes
       if: ${{ inputs.templates == 'true' }}
       shell: bash
       run: |
         start=$SECONDS
-        bun run build:templates
-        echo "::notice::⏱ Build templates: $((SECONDS - start))s"
+        bun run build:recipes
+        echo "::notice::⏱ Build recipes: $((SECONDS - start))s"
 
     # One tar rather than the tree: upload-artifact sends each file on its own,
     # and ~16 MB of small build files took two minutes that way.
