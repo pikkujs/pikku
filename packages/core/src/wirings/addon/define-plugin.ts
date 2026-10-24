@@ -64,3 +64,6 @@ export type StudioManifest = {
  * missing from `messages/en.json` fails the build.
  */
 export const definePlugin = (manifest: StudioManifest) => manifest
+
+/** @deprecated Renamed to `definePlugin`. */
+export const pikkuStudio = definePlugin

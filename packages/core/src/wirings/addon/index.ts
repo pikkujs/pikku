@@ -1,6 +1,6 @@
 export { wireAddon } from './wire-addon.js'
 export type { WireAddonConfig } from './wire-addon.js'
-export { definePlugin } from './define-plugin.js'
+export { definePlugin, pikkuStudio } from './define-plugin.js'
 export type {
   StudioManifest,
   StudioScreen,
