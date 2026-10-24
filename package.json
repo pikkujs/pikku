@@ -15,7 +15,6 @@
       "packages/gateways/*",
       "packages/runtimes/*",
       "packages/deploy/*",
-      "packages/deprecated/*",
       "recipes/*",
       "!recipes/starter-template",
       "templates/*",
