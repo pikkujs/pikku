@@ -37,7 +37,7 @@
     "virtualUser": true,
     "events": true,
     "webhook": true,
-    "analytics": true
+    "analytics": { "originLock": false }
   },
   "scenarios": {
     "emailDomain": "virtualuser.local",

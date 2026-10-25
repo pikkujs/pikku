@@ -13,6 +13,7 @@ import { warnOnSplitTypeIdentity } from '../validate/type-identity-checks.js'
 import {
   pruneLegacyScaffoldFiles,
   refreshScaffoldsImportingRemovedEntryPoints,
+  removeDisabledOriginScaffolds,
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
 import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
@@ -33,6 +34,7 @@ import {
 type ScaffoldGenerator =
   | 'pikkuPublicRPC'
   | 'pikkuAnalytics'
+  | 'pikkuCors'
   | 'pikkuFeatureFlagsScaffold'
   | 'pikkuConsoleFunctions'
   | 'pikkuVirtualUserFunctions'
@@ -53,6 +55,10 @@ const scaffoldFiles = (
     files.push({ file: config.publicRpcFile, generator: 'pikkuPublicRPC' })
   if (config.scaffold?.analytics && config.analyticsFile)
     files.push({ file: config.analyticsFile, generator: 'pikkuAnalytics' })
+  // The origins file is wanted by `scaffold.cors` and by the analytics origin
+  // lock alike, so the one generator is queued for whichever needs it.
+  if (config.corsOriginsFile)
+    files.push({ file: config.corsOriginsFile, generator: 'pikkuCors' })
   if (config.scaffold?.featureFlags && config.featureFlagsFile)
     files.push({
       file: config.featureFlagsFile,
@@ -110,6 +116,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await pruneLegacyScaffoldFiles(config)
     await refreshScaffoldsImportingRemovedEntryPoints(config)
     await removeRetiredScaffoldFiles(config)
+    await removeDisabledOriginScaffolds(config)
 
     // Before the first inspection: codegen imports the remote addons' types
     // from their SDKs, and the inspector refuses an SDK that does not match
@@ -375,6 +382,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await Promise.all([
       workflow.do('Graph wirings', 'pikkuGraphWirings', null),
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
+      workflow.do('CORS scaffold', 'pikkuCors', null),
       workflow.do('Analytics ingest', 'pikkuAnalytics', null),
       workflow.do('Feature flag wire', 'pikkuFeatureFlagsScaffold', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),

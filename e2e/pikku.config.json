@@ -43,7 +43,7 @@
     "agent": true,
     "workflow": true,
     "webhook": true,
-    "analytics": true,
+    "analytics": { "originLock": false },
     "featureFlags": true
   },
   "emailTemplatesDir": "emails",

@@ -1,4 +1,6 @@
 import { dirname, relative } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
@@ -11,6 +13,12 @@ import {
 } from './serialize-analytics.js'
 import { analyticsSchemasFile } from '../../../utils/analytics-schemas-file.js'
 import { isDeployCodegen } from '../../../utils/is-deploy-codegen.js'
+import { analyticsOriginLockEnabled } from '../../../utils/resolve-scaffold-feature.js'
+import {
+  AUTO_GENERATED_HEADER,
+  serializeAnalyticsOrigin,
+} from '../cors/serialize-cors.js'
+import { siblingSpecifier } from '../cors/pikku-command-cors.js'
 
 /**
  * ESM specifier from the generated ingest to one of the app's
@@ -86,6 +94,34 @@ export const pikkuAnalytics = pikkuSessionlessFunc<void, boolean>({
     )
     await writeFileInDir(logger, config.analyticsFile, functions)
     await removeLegacyScaffoldFile(config.analyticsFile)
+
+    // The origin lock is a file of its own, written only while the option is on
+    // and removed when it is turned off, so `originLock: false` leaves no trace.
+    const originFile = config.analyticsOriginFile
+    if (analyticsOriginLockEnabled(config.scaffold)) {
+      if (!originFile || !config.corsOriginsFile) {
+        logger.error(
+          `scaffold.analytics.originLock is on but no CORS origins file was resolved, so the lock has no allowlist to enforce.`
+        )
+      } else {
+        await writeFileInDir(
+          logger,
+          originFile,
+          serializeAnalyticsOrigin(
+            leaf,
+            siblingSpecifier(originFile, config.corsOriginsFile),
+            config.globalHTTPPrefix || ''
+          )
+        )
+        await removeLegacyScaffoldFile(originFile)
+      }
+    } else if (
+      originFile &&
+      existsSync(originFile) &&
+      readFileSync(originFile, 'utf8').includes(AUTO_GENERATED_HEADER)
+    ) {
+      await rm(originFile, { force: true })
+    }
     return true
   },
   middleware: [

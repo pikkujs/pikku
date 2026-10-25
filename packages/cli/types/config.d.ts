@@ -17,12 +17,37 @@ import { PikkuWiringTypes } from '@pikku/core/types'
  * type carried once and some configs still do, and which would otherwise load
  * clean while configuring nothing. See `resolveScaffoldFeature`.
  */
-export type PikkuScaffoldFeature =
+export type PikkuScaffoldFeature<Options extends object = {}> =
   | boolean
-  | {
+  | ({
       /** Write the generated file here instead of deriving it from `pikkuDir`. */
       path?: string
-    }
+    } & Options)
+
+/**
+ * Options a scaffold feature takes beyond `path`. `true` means every default
+ * below, so a config that only ever set `true` is unchanged.
+ */
+export type PikkuAnalyticsScaffoldOptions = {
+  /**
+   * Generate an origin lock on `POST /analytics` (`analytics-origin.gen.ts`):
+   * a request whose `Origin` is not this app's own or listed in `CORS_ORIGINS`
+   * is refused with a 403, and a request with no `Origin` is refused too.
+   * Defaults to true. Set false for an app with native clients, which send no
+   * `Origin`. Implies the shared `allowedOrigins` helper and the `CORS_ORIGINS`
+   * variable (`cors/cors-origins.gen.ts`), generated even without `scaffold.cors`.
+   */
+  originLock?: boolean
+}
+
+export type PikkuCorsScaffoldOptions = {
+  /**
+   * The dev server port used for the localhost fallbacks when `CORS_ORIGINS`
+   * is unset. Defaults to the port of the primary frontend's `dev` block (else
+   * the first frontend with one), else 7104.
+   */
+  port?: number
+}
 
 export interface PikkuCLICoreOutputFiles {
   // Base directory
@@ -97,6 +122,14 @@ export interface PikkuCLICoreOutputFiles {
   // Product-analytics ingest (derived from scaffold.pikkuDir when scaffold.analytics is enabled).
   // Optional: left undefined when scaffold.analytics is not enabled, so consumers must guard.
   analyticsFile?: string
+  // The origin lock attached to `/analytics`, beside analyticsFile. Derived with
+  // it; whether it is written is scaffold.analytics.originLock (default on).
+  analyticsOriginFile?: string
+  // CORS middleware (derived from scaffold.pikkuDir when scaffold.cors is enabled).
+  corsFile?: string
+  // CORS_ORIGINS variable + allowedOrigins helper, beside corsFile. Generated
+  // when scaffold.cors or the analytics origin lock needs it.
+  corsOriginsFile?: string
   // The read wire a client asks for its own flags on (derived from
   // scaffold.pikkuDir when scaffold.featureFlags is enabled).
   // Optional: left undefined when the feature is off, so consumers must guard.
@@ -870,11 +903,19 @@ export type PikkuCLIInput = {
      * A typed `POST /analytics` ingest, validated against the events the app
      * declares with `defineAnalyticsEvents`. Generates the wire and its schemas
      * only — where events go is the `AnalyticsService` on singleton services,
-     * which defaults to logging them. No middleware is emitted: an origin lock
-     * suits a browser-only app and breaks a native one, so it stays the
-     * project's call.
+     * which defaults to logging them. An origin lock on the route is generated
+     * too (`originLock`, default true); pass `{ "originLock": false }` for an app
+     * with native clients, which send no `Origin`.
      */
-    analytics?: PikkuScaffoldFeature
+    analytics?: PikkuScaffoldFeature<PikkuAnalyticsScaffoldOptions>
+    /**
+     * CORS for the whole API: the `CORS_ORIGINS` variable (comma-separated
+     * origins, optional), an `allowedOrigins(variables)` helper that falls back
+     * to the localhost dev origins, and a `*` HTTP middleware built per request
+     * from it. Read through the `variables` service, never `process.env`, so it
+     * works on Workers.
+     */
+    cors?: PikkuScaffoldFeature<PikkuCorsScaffoldOptions>
     /**
      * A `GET /feature-flags` returning every declared flag resolved for the
      * caller, typed by this app's `FeatureFlagName`. Generated into the app
