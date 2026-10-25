@@ -236,6 +236,60 @@ const walk = async (dir: string, base = ''): Promise<string[]> => {
 }
 
 /**
+ * Source files the platform adds to a project rather than the app's author
+ * writing them: scaffold output and `.gen.` files. Mirrors `isPlatformSource`
+ * in the CLI's surface snapshot, which makes the same call.
+ */
+const isPlatformSource = (sourceFile: string): boolean =>
+  /(^|[\\/])scaffold[\\/]/.test(sourceFile) ||
+  /\.gen\.[cm]?[jt]s$/.test(sourceFile)
+
+/**
+ * The functions and tables the framework put in the project, not the app: a
+ * function generated into the scaffold (session, agent, workflow and
+ * virtual-user endpoints) and a table a generated migration creates (Better
+ * Auth's, the runtime services', an addon's). A note describes what the app
+ * does, so none of these is a capability somebody forgot to write down.
+ *
+ * Read from the codegen output. A function counts when its source file is
+ * platform code; a table counts when the schema records a `source` for it, which
+ * is only ever set for tables a generated migration declares — a table without
+ * one is the project's own.
+ */
+export const collectPlatformResources = async (
+  outDir: string
+): Promise<Map<ResourcePrefix, Set<string>>> => {
+  const platform = new Map<ResourcePrefix, Set<string>>()
+
+  const functions = await readJson(
+    join(outDir, 'function', 'pikku-functions-meta-verbose.gen.json')
+  )
+  if (functions && typeof functions === 'object') {
+    const ids = Object.entries(functions as Record<string, unknown>)
+      .filter(([, meta]) => {
+        const file = (meta as { sourceFile?: unknown } | null)?.sourceFile
+        return typeof file === 'string' && isPlatformSource(file)
+      })
+      .map(([id]) => id)
+    if (ids.length > 0) platform.set('func', new Set(ids))
+  }
+
+  const schema = (await readJson(
+    join(outDir, 'db', 'pikku-db-schema.gen.json')
+  )) as { tables?: { name?: unknown; source?: unknown }[] } | null
+  if (Array.isArray(schema?.tables)) {
+    const ids = schema.tables
+      .filter(
+        (table) => typeof table?.name === 'string' && typeof table.source === 'string'
+      )
+      .map((table) => table.name as string)
+    if (ids.length > 0) platform.set('table', new Set(ids))
+  }
+
+  return platform
+}
+
+/**
  * Every id this project's code currently offers, keyed by prefix — the
  * right-hand side of a `resource:` check.
  *

@@ -257,6 +257,33 @@ describe('orphans', () => {
     assert.deepEqual(result.orphans, [])
   })
 
+  test('does not report what the platform put in the project', async () => {
+    const root = await project({
+      '.pikku/function/pikku-functions-meta.gen.json': {
+        getSession: {},
+        agentCaller: {},
+        checkout: {},
+      },
+      '.pikku/function/pikku-functions-meta-verbose.gen.json': {
+        getSession: { sourceFile: '/app/src/functions/get-session.function.ts' },
+        agentCaller: { sourceFile: '/app/src/scaffold/agent/agent.gen.ts' },
+        checkout: { sourceFile: '/app/src/functions/checkout.function.ts' },
+      },
+      '.pikku/db/pikku-db-schema.gen.json': {
+        tables: [
+          { name: 'user', source: 'better-auth', origin: 'Better Auth' },
+          { name: 'orders', columns: [] },
+        ],
+        enums: [],
+      },
+    })
+    const result = await check(root)
+    assert.deepEqual(
+      result.orphans.map((orphan) => orphan.uri).sort(),
+      ['func:checkout', 'func:getSession', 'table:orders']
+    )
+  })
+
   test('an empty orphanPrefixes turns the report off', async () => {
     const root = await project(FUNC_META)
     const result = await checkKnowledgeResources(root, join(root, '.pikku'), {
