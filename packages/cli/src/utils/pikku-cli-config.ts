@@ -5,7 +5,10 @@ import type {
   PikkuCLIInput,
   PikkuScaffoldFeature,
 } from '../../types/config.js'
-import { resolveScaffoldFeature } from './resolve-scaffold-feature.js'
+import {
+  analyticsOriginLockEnabled,
+  resolveScaffoldFeature,
+} from './resolve-scaffold-feature.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
@@ -561,6 +564,7 @@ const _getPikkuCLIConfig = async (
     const SCAFFOLD_OUTPUT_FIELDS: Record<string, string> = {
       rpc: 'publicRpcFile',
       analytics: 'analyticsFile',
+      cors: 'corsFile',
       featureFlags: 'featureFlagsFile',
       agent: 'publicAgentFile',
       console: 'consoleFunctionsFile',
@@ -646,6 +650,33 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'analytics',
         'analytics.gen.ts'
+      )
+    }
+    if (result.scaffold?.cors && !result.corsFile) {
+      result.corsFile = join(resolvedScaffoldDir, 'cors', 'cors.gen.ts')
+    }
+    // The origins helper sits beside the middleware when there is one, and is
+    // also wanted by the analytics origin lock on its own, so it is derived
+    // from either. Never settable: the generated imports reach it as a sibling.
+    const analyticsOriginLock =
+      analyticsOriginLockEnabled(result.scaffold) &&
+      Boolean(result.analyticsFile)
+    if (
+      (resolveScaffoldFeature('cors', result.scaffold?.cors).enabled ||
+        analyticsOriginLock) &&
+      !result.corsOriginsFile
+    ) {
+      result.corsOriginsFile = join(
+        result.corsFile
+          ? dirname(result.corsFile)
+          : join(resolvedScaffoldDir, 'cors'),
+        'cors-origins.gen.ts'
+      )
+    }
+    if (result.scaffold?.analytics && result.analyticsFile) {
+      result.analyticsOriginFile = join(
+        dirname(result.analyticsFile),
+        'analytics-origin.gen.ts'
       )
     }
     if (result.scaffold?.featureFlags && !result.featureFlagsFile) {
