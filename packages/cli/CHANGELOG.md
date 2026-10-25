@@ -1,3 +1,25 @@
+## 0.12.198
+
+### Patch Changes
+
+- d9be115: `pikku mocks add <rpc>` writes a mock in one step: it checks the RPC is a function of the project, writes `.mocks/<rpc.name>/<state>.json` and `<state>.meta.json` in the format `mocks diff`, `sync` and `check` read, keeps exactly one default, checks the body against the function's output, can declare the `--flag` in the project's flags file, and prints the stub hook call to use. It never overwrites a mock without `--force`.
+- edd7abf: Platform-service contributors are plain objects an addon registers with `defineContributors` (new `@pikku/core/contributors`) and a project opts in to by name with `wireAddon({ contributors })`. `dev.contributors`, `deploy.contributors`, addon `pikku.contributors`, the string-emitting `PlatformServiceContributor` API and its helpers, the adapter `contributors` option and the `devPlatformServicesFile` config output are removed, and a leftover one is a hard error: the CLI refuses the config keys by name and the inspector reports an addon `package.json` with `pikku.contributors` as PKU364 (see `docs/MIGRATION.md`). Contributors can declare `onServerStart` / `onServerStop`, run around the app's server lifecycle in `pikku dev`, `pikku serve`, the generic server entry, standalone and the Cloudflare container entry (which now runs the app's own `serverLifecycle`); on a Worker `onServerStart` is a build error. `ProviderAdapter.contributorSupport` gains a required `runsServerLifecycle`. `@pikku/core` is a new peer dependency of the deploy packages and `@pikku/kysely` of `@pikku/deploy-cloudflare`. The names in `wireAddon({ contributors })` are typed from the addon's published contributors meta, so a name the addon does not register fails `tsc` and completes in the editor. A project gets a generated `#pikku/contributor` (`defineContributors` and `Contributor` typed against its own singleton services, type-only apart from core's helper); addons keep using `@pikku/core/contributors`.
+- 8a4233a: Breaking: `pikkuStudio` is now `definePlugin`. An addon declares the screens and nav it brings to Studio with `definePlugin({ title, screens })` from `@pikku/core/addon`. The manifest shape is unchanged; rename the import and the call. `pikku new addon-ui` scaffolds the new name.
+- 4af4a6d: `pikku ui theme apply --mode dark` derives every token for a dark design: `--page`/`--ink` are the dark ground and its text, and card, muted, border, input, the `-foreground` tokens and ring are derived for it, written to both `:root` and `.dark` with `color-scheme: dark`. Derived foregrounds are now contrast-checked against their fill on the light path too (no more white on a light primary), and apply prints a contrast report. Default light output is unchanged.
+- Updated dependencies [3562771]
+- Updated dependencies [d9be115]
+- Updated dependencies [edd7abf]
+- Updated dependencies [8a4233a]
+- Updated dependencies [4af4a6d]
+  - @pikku/core@0.12.148
+  - @pikku/skills@0.12.63
+  - @pikku/inspector@0.12.112
+  - @pikku/inspector-go@0.12.7
+  - @pikku/deploy@0.12.18
+  - @pikku/deploy-cloudflare@0.12.24
+  - @pikku/deploy-standalone@0.12.29
+  - @pikku/code-edit@0.12.9
+
 ## 0.12.197
 
 ### Patch Changes
