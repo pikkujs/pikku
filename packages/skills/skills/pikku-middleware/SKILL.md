@@ -82,7 +82,7 @@ wireHTTP({
 Runs before everything else, across every wire type: HTTP, Queue, Channel, Trigger, Scheduler, Workflow, Agent, CLI, MCP. Use it for cross-cutting concerns (e.g. telemetry) that must wrap every invocation regardless of transport.
 
 ```typescript
-import { addGlobalMiddleware } from '@pikku/core/middleware'
+import { addGlobalMiddleware } from '#pikku/middleware'
 import { telemetryOuter, telemetryInner } from '@pikku/core/middleware'
 
 addGlobalMiddleware([telemetryOuter({ environmentId: env.STAGE_ID })]) // wraps the full call
@@ -95,7 +95,7 @@ addGlobalMiddleware([telemetryInner({ environmentId: env.STAGE_ID })]) // closes
 
 ```typescript
 import { addHTTPMiddleware } from '@pikku/core/http'
-import { cors, authBearer } from '@pikku/core/middleware'
+import { cors, authBearer } from '#pikku/middleware'
 
 // All routes
 addHTTPMiddleware('*', [

@@ -197,7 +197,7 @@ function authMiddleware(req, res, next) {
 **Pikku:**
 
 ```typescript
-import { authBearer } from '@pikku/core/middleware'
+import { authBearer } from '#pikku/middleware'
 
 // One line - handles token extraction, JWT verification, session population
 addHTTPMiddleware('*', [authBearer({})])
