@@ -335,7 +335,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       )
     }
     await Promise.all(typeGenerators)
-    await workflow.do('CLI types', 'pikkuCLITypes', null)
+    await workflow.do('CLI types', 'pikkuCLITypes', {})
 
     const [middleware, permissions] = await Promise.all([
       workflow.do('Middleware', 'pikkuMiddleware', null),
@@ -399,7 +399,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('VirtualUsers', 'pikkuVirtualUsers', {}),
       workflow.do('Variables', 'pikkuVariables', null),
       workflow.do('Outgoing webhooks', 'pikkuOutgoingWebhooks', null),
-      workflow.do('Addon types', 'pikkuAddonTypes', null),
+      workflow.do('Addon types', 'pikkuAddonTypes', {}),
       workflow.do('Screens', 'pikkuScreens', null),
       workflow.do('Contributors', 'pikkuContributors', null),
     ])
@@ -486,7 +486,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('RPC internal map', 'pikkuRPCInternalMap', null),
       workflow.do('RPC exposed map', 'pikkuRPCExposedMap', null),
       workflow.do('RPC remote map', 'pikkuRPCRemoteMap', null),
-      workflow.do('Workflow', 'pikkuWorkflow', null),
+      workflow.do('Workflow', 'pikkuWorkflow', {}),
     ])
 
     // The inspector checks that a wired addon's declared dependencies are

@@ -14,7 +14,7 @@ import {
   serializeAddonTypes,
 } from './serialize-addon-types.js'
 
-type AddonTypesCommandInput = {
+export type AddonTypesCommandInput = {
   bootstrap?: boolean
 }
 

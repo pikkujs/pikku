@@ -16,7 +16,7 @@ import type {
 // the console). Bun is fully supported; other package managers are detected but
 // stubbed with a `note` until their audit/outdated shapes are normalised.
 
-type AuditInput = {
+export type AuditInput = {
   outdated?: boolean
 }
 

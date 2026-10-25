@@ -22,7 +22,7 @@ import { join, dirname } from 'path'
 import { withAddonDependencies } from '../../../utils/addon-dependencies.js'
 import { rm } from 'fs/promises'
 
-type WorkflowCommandInput = {
+export type WorkflowCommandInput = {
   bootstrap?: boolean
 }
 
