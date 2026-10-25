@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3349 observable things**: 1127 exported names, plus
+**3350 observable things**: 1128 exported names, plus
 2222 members on the classes and interfaces among them, reachable
 through 63 entry points.
 
@@ -45,8 +45,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./utils` | 22 | 19 | 2 |
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./scheduler` | 10 | 10 | 8 |
+| `./addon` | 15 | 15 | 2 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
-| `./addon` | 14 | 14 | 2 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./scope` | 15 | 15 | 0 |
 | `./rpc` | 8 | 8 | 6 |
@@ -3458,6 +3458,7 @@ rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefi
 
 ```ts
 definePlugin: (manifest: StudioManifest) => StudioManifest
+pikkuStudio: (manifest: StudioManifest) => StudioManifest
 export type RemoteAddonAuth =
   | { credentialId: string }
   | { secretId: string }
