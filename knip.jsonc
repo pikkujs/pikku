@@ -41,6 +41,12 @@
     "go",
   ],
 
+  // `pikkuStudio` is kept as a deprecated alias of `definePlugin` for apps
+  // that have not renamed yet; two names for one value is the point.
+  "ignoreIssues": {
+    "packages/core/src/wirings/addon/define-plugin.ts": ["duplicates"],
+  },
+
   // Build output and generated sources are not hand-authored, and their
   // imports are already accounted for by the source they are generated from.
   "ignore": ["**/dist/**", "**/.pikku/**", "**/*.gen.ts", "**/*.gen.d.ts"],
