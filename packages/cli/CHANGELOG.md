@@ -1,3 +1,14 @@
+## 0.12.199
+
+### Patch Changes
+
+- 0a56d98: `pikku validate` no longer warns that `packages/functions/.pikku/function/index.js` is missing. The check dated from the old sandbox that ran `pikku dev` under bare Node and needed a `.js` wrapper beside each generated `.ts`; the file is gitignored and nothing in `pikku all` or `pikku cloud smoke` creates it, so every fresh checkout, the starter template included, carried the warning.
+- a249251: `pikku validate` no longer reports scaffold-generated functions and framework tables as "exists in the code and no note describes it". A function whose source is scaffold output or a `.gen.` file, and a table a generated migration creates (Better Auth, the runtime services, an addon), are put in the project by the platform, so there is nothing for a note to say about them; a fresh starter reported about 75 of these. The app's own functions and tables are still reported.
+- Updated dependencies [a249251]
+- Updated dependencies [5ea2815]
+  - @pikku/knowledge@0.12.22
+  - @pikku/skills@0.12.64
+
 ## 0.12.198
 
 ### Patch Changes
