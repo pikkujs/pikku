@@ -92,6 +92,7 @@ import {
   mocksCheck,
   renderMocksCheck,
 } from './functions/commands/mocks-check.js'
+import { mocksAdd, renderMocksAdd } from './functions/commands/mocks-add.js'
 import { mocksDiff, renderMocksDiff } from './functions/commands/mocks-diff.js'
 import { mocksSync, renderMocksSync } from './functions/commands/mocks-sync.js'
 import {
@@ -1111,6 +1112,58 @@ wireCLI({
       description:
         'Mock data for RPCs, kept in .mocks/ and checked against the functions it stands in for',
       subcommands: {
+        add: pikkuCLICommand({
+          func: mocksAdd,
+          render: renderMocksAdd,
+          parameters: '<rpc>',
+          description:
+            'Add a mock for an RPC in one step. Checks the RPC is a function of the project, writes .mocks/<rpc with : as .>/<state>.json and <state>.meta.json (label, description, state, default, status), keeps exactly one default (the first mock is the default; --default moves it), checks the body against the function output, and with --flag declares the feature flag in the project flags file. Prints the stub hook to use. Never overwrites a mock without --force. The body is required unless the mock is an error mock, or an empty mock of a function that returns a list.',
+          options: {
+            state: {
+              description: 'healthy (default), empty, error or slow',
+              type: 'string',
+            },
+            name: {
+              description:
+                'Mock name, the file name without .json (default: the state); use it for a second mock of the same state',
+              type: 'string',
+            },
+            label: {
+              description: 'Label shown in the mock picker',
+              type: 'string',
+            },
+            description: {
+              description: 'What the mock stands for',
+              type: 'string',
+            },
+            default: {
+              description:
+                'Make this the mock the screen opens with, clearing the previous default',
+              default: false,
+            },
+            status: {
+              description: 'HTTP status of an error mock (default 500)',
+              type: 'number',
+            },
+            flag: {
+              description:
+                'Feature flag the stub hook publishes behind; added to the flags file when it is not declared yet',
+              type: 'string',
+            },
+            body: {
+              description: 'The response, as JSON text',
+              type: 'string',
+            },
+            from: {
+              description: 'Read the response from a JSON file',
+              type: 'string',
+            },
+            force: {
+              description: 'Overwrite a mock that already exists',
+              default: false,
+            },
+          },
+        }),
         diff: pikkuCLICommand({
           func: mocksDiff,
           render: renderMocksDiff,

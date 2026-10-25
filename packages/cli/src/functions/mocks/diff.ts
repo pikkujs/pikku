@@ -18,6 +18,7 @@ export interface SurfaceView {
       version: number
       outputSchemaName: string | null
       expose?: boolean
+      readonly?: boolean
       platform?: boolean
     }
   >
