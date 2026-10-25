@@ -7,6 +7,7 @@ description: Rules chosen in @pikku/better-auth, and what each one rules out
 # Decisions
 
 <!-- pikku:knowledge-index -->
+- [The Better Auth browser glue lives in the package and takes its URLs as arguments](the-browser-glue-lives-in-the-package-and-takes-its-urls-as-arguments.md) — @pikku/better-auth/client and /vite hold the sign-in client, cookie refresh, route gates and the cross-site session relay, parameterised by apiUrl, paths and the session fetcher, with the relay's header names defined once
 
 - [A banned user is refused at session creation and the ban lapses on expiry](a-banned-user-is-refused-at-session-creation-and-lapses-on-expiry.md) — The pikku ban plugin refuses a session for a banned user at creation, clears an expired ban only when that happens, and a ban written by an admin ends existing sessions at once
 - [A credential link is keyed by the linking user and never signs anyone in](a-credential-link-is-keyed-by-the-linking-user-and-never-signs-anyone-in.md) — Connecting an OAuth credential stores its account row under the linking user's id rather than the provider's identity, and the callback refuses any flow that is not a link

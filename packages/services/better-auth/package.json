@@ -35,7 +35,8 @@
   "peerDependencies": {
     "@pikku/core": "^0.12.145",
     "better-auth": "^1.7.5",
-    "zod": "^4"
+    "zod": "^4",
+    "vite": "^5 || ^6 || ^7"
   },
   "devDependencies": {
     "@better-auth/api-key": "^1.7.10",
@@ -46,7 +47,8 @@
     "better-call": "1.4.2",
     "jose": "^6.2.12",
     "kysely": "^0.29.6",
-    "nanostores": "^1.5.5"
+    "nanostores": "^1.5.5",
+    "vite": "^7.0.0"
   },
   "exports": {
     ".": {
@@ -57,6 +59,19 @@
       "types": "./dist/constants.d.ts",
       "import": "./dist/constants.js"
     },
+    "./vite": {
+      "types": "./dist/vite/index.d.ts",
+      "import": "./dist/vite/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
+    },
     "./package.json": "./package.json"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   }
 }

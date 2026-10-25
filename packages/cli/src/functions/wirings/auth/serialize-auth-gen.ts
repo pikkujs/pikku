@@ -33,6 +33,13 @@ function variableSchemaName(name: string, field: string): string {
 }
 
 /**
+ * Secrets the generated auth file declares that `pikku dev` creates for a new
+ * checkout: a committed value would be the same in every scaffold, and a
+ * missing one fails the first sign-up.
+ */
+export const AUTH_GENERATED_DEV_SECRETS = ['BETTER_AUTH_SECRET'] as const
+
+/**
  * The two files generated from a `pikkuBetterAuth` export.
  *
  * They are split because the CLI's schema/wiring-separation rule (PKU490)

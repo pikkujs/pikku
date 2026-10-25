@@ -239,11 +239,29 @@ pikku.fetch.setHeader('x-tenant', tenantId)
 `authHeaders.jwt` becomes `Authorization: Bearer …` and `authHeaders.apiKey`
 becomes `X-API-KEY`; setting a JWT takes precedence over an API key.
 
+## Generated client files
+
+Name any of these under `clientFiles` in `pikku.config.json` and `pikku all` writes them, with
+import paths computed from the config:
+
+- `typesFile` — `RPCInput<'name'>`, `RPCOutput<'name'>`, `FlattenedRPCMap` (and `AnalyticsEvent`
+  when `scaffold.analytics` is on). Use these instead of reaching into the functions package.
+- `envFile` — `apiUrl()`, `basePath()`, `appHref(path)`.
+- `rpcFile` — `rpc()`, a client for code outside React such as a route `beforeLoad`. It forwards
+  the request cookie during SSR (TanStack Start). Needs `envFile`.
+- `authClientFile` — the Better Auth client glue from `@pikku/better-auth/client`. Needs
+  `rpcFile`, `envFile` and a `getSession` function; `clientAuth` sets the login and home paths.
+
+In `vite.config.ts`, `pikkuVite()` from `@pikku/vite` adds `testIds()` and, with Better Auth, the
+dev cross-site session plugin. `pikku dev` runs every frontend that sets `dev.command`
+(`--frontend a,b`, `--no-frontends`) and creates `BETTER_AUTH_SECRET` in `.env` on first run.
+
 ## What NOT to do
 
 - Don't instantiate `PikkuFetch`/`PikkuRPC` inside a component — `createPikku`
   goes once at the app root, the instance flows through Context.
 - Don't call `usePikkuRPC()` outside a `<PikkuProvider>` — it throws.
+- Don't copy a `rpc.ts` or `env.ts` between apps — generate them with `rpcFile` and `envFile`.
 - Don't write a custom RPC client. The generated one already covers every
   exposed function with full types.
 - Don't hardcode user-facing strings. Every display string goes through an

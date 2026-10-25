@@ -628,6 +628,15 @@ wireCLI({
           description:
             'Repoint model aliases for this run, e.g. \'cheap:openai/gpt-5-nano,tool:anthropic/claude-haiku-4-5\'. Overrides the "models" table in pikku.config.json without editing it',
         },
+        frontends: {
+          description:
+            'Run every frontend that sets "dev.command" beside the API; --no-frontends runs the API alone',
+          default: true,
+        },
+        frontend: {
+          description:
+            'Run only these frontends (comma separated names from "frontends" in pikku.config.json)',
+        },
       },
     }),
     serve: pikkuCLICommand({

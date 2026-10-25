@@ -72,6 +72,22 @@ import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 import { addGlobalMiddleware } from '@pikku/core/middleware'
 import { startRunTelemetry } from '../../utils/run-telemetry.js'
 import { servedFrontend } from '../../utils/frontend.js'
+import {
+  betterAuthGeneratedSecrets,
+  declaredGeneratedSecrets,
+  ensureDevSecrets,
+  fillMissing,
+  frontendEnv,
+  missingRequiredSecrets,
+  readEnvFile,
+} from './dev-env.js'
+import {
+  parseFrontendNames,
+  selectDevFrontends,
+  startDevFrontends,
+  type RunningFrontends,
+} from './dev-frontends.js'
+import { AUTH_GENERATED_DEV_SECRETS } from '../wirings/auth/serialize-auth-gen.js'
 
 export const dev = pikkuSessionlessFunc<
   {
@@ -81,6 +97,8 @@ export const dev = pikkuSessionlessFunc<
     coverage?: boolean
     test?: boolean
     model?: string
+    frontends?: boolean
+    frontend?: string
   },
   void
 >({
@@ -94,8 +112,20 @@ export const dev = pikkuSessionlessFunc<
       variables,
       devServerRunner,
     },
-    { port, watch, hmr, coverage, test, model }
+    { port, watch, hmr, coverage, test, model, frontends, frontend }
   ) => {
+    // Resolve the frontends to run before anything starts, so a typo in
+    // --frontend fails in a second rather than after codegen.
+    const devFrontends =
+      frontends === false
+        ? []
+        : selectDevFrontends(config.frontends, parseFrontendNames(frontend))
+    // What the shell gave us, before any .env is merged in: a frontend's own
+    // .env has to be able to override the root one, which it could not if the
+    // root values were already indistinguishable from the process's.
+    const shellEnv = { ...process.env }
+    const rootEnvPath = join(config.rootDir, '.env')
+    fillMissing(process.env, readEnvFile(rootEnvPath))
     process.env.PIKKU_ENV ??= resolveDevEnvironmentName(
       config.environments ?? {}
     )
@@ -153,6 +183,34 @@ export const dev = pikkuSessionlessFunc<
     await runCodegen()
 
     const inspectorState = await getInspectorState()
+
+    // Secrets are created here, after codegen has said what the app declares
+    // and before anything reads them: the services below and every frontend
+    // child see the same values.
+    const generatedSecrets = [
+      ...(inspectorState.auth.definition
+        ? betterAuthGeneratedSecrets(AUTH_GENERATED_DEV_SECRETS)
+        : []),
+      ...declaredGeneratedSecrets(inspectorState.secrets.definitions),
+    ]
+    const generatedNames = ensureDevSecrets(rootEnvPath, generatedSecrets)
+    if (generatedNames.length > 0) {
+      logger.info(`dev: generated ${generatedNames.join(', ')} in .env`)
+    }
+    fillMissing(process.env, readEnvFile(rootEnvPath))
+    // A vault holds secrets that never appear in .env, so there is nothing to
+    // say about them here.
+    for (const name of vaultConnectionFromEnv()
+      ? []
+      : missingRequiredSecrets(
+          inspectorState.secrets.definitions,
+          process.env,
+          generatedSecrets
+        )) {
+      logger.warn(
+        `dev: required secret ${name} is not set — add ${name}=... to .env or export it before running pikku dev`
+      )
+    }
     const { pikkuConfigFactory, singletonServicesFactory } =
       inspectorState.filesAndMethods
 
@@ -376,7 +434,7 @@ export const dev = pikkuSessionlessFunc<
     // Serving the built frontend here would hand you whatever the last build
     // produced, with no HMR and no warning that it is stale. The frontend's own
     // dev server owns dev; it proxies its API calls back to this port.
-    if (servedFrontend(config.frontends)) {
+    if (servedFrontend(config.frontends) && devFrontends.length === 0) {
       logger.info(
         `Frontend not served in dev — run your frontend dev server and proxy its API calls to http://${hostname}:${boundPort}`
       )
@@ -405,9 +463,10 @@ export const dev = pikkuSessionlessFunc<
     process.once('exit', () => clearDevAddress(resolvedRuntimeDir))
 
     let watcher: FSWatcher | undefined
+    let runningFrontends: RunningFrontends | undefined
 
-    const onSigint = async () => {
-      logger.info('Stopping dev server...')
+    const shutdown = async (exitCode: number) => {
+      runningFrontends?.stop()
       try {
         await lifecycle.beforeStop?.(resolvedServices)
         await stopSingletonServices()
@@ -420,12 +479,42 @@ export const dev = pikkuSessionlessFunc<
         )
       } finally {
         clearDevAddress(resolvedRuntimeDir)
-        process.exit(0)
+        process.exit(exitCode)
       }
     }
     // Fire-and-forget signal handler: the finally block always exits the process,
     // so there is no caller to propagate a rejection to.
-    process.once('SIGINT', () => void onSigint())
+    process.once('SIGINT', () => {
+      logger.info('Stopping dev server...')
+      void shutdown(0)
+    })
+
+    if (devFrontends.length > 0) {
+      const apiUrl = `http://${hostname}:${boundPort}`
+      const rootEnv = readEnvFile(rootEnvPath)
+      try {
+        runningFrontends = await startDevFrontends({
+          frontends: devFrontends,
+          write: (line) => console.log(line),
+          envFor: (frontend) => {
+            const env = frontendEnv(shellEnv, rootEnv, frontend.cwd)
+            env.VITE_API_PROXY ??= apiUrl
+            return env
+          },
+        })
+      } catch (error) {
+        logger.error(error instanceof Error ? error.message : String(error))
+        await shutdown(1)
+        return
+      }
+      for (const { name, url, primary } of runningFrontends.urls) {
+        logger.info(`  ${name}${primary ? ' (primary)' : ''}: ${url}`)
+      }
+      void runningFrontends.failure.then(({ name, reason }) => {
+        logger.error(`dev: frontend "${name}" ${reason} — stopping everything`)
+        return shutdown(1)
+      })
+    }
 
     const devReloader = enableHmr
       ? await pikkuDevReloader({
