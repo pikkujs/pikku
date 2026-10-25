@@ -29,7 +29,7 @@ export const PROBLEM_REASON: Record<
   'no-mock': () => 'there is no .mocks/ directory for this RPC',
 }
 
-const readDeclaredFlags = (pikkuDir: string): string[] => {
+export const readDeclaredFlags = (pikkuDir: string): string[] => {
   try {
     return Object.keys(
       JSON.parse(

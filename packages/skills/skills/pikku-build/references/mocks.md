@@ -10,6 +10,18 @@ Read this when a screen needs data no function returns yet, or returns in a diff
 
 The app loads its mocks with `registerPikkuMocks()` from the generated `mocks.gen.ts` beside `api.gen.ts`, called when `import.meta.env.DEV || import.meta.env.VITE_MOCK`. It covers the app's `.mocks/` and every wired addon's, so never glob `.mocks` or `node_modules` by hand.
 
+## Adding a mock
+
+`pikku mocks add <rpc>` does the whole job. It checks the RPC is a real function, writes `.mocks/<rpc with : as .>/<state>.json` and `<state>.meta.json`, keeps exactly one default (the first mock is the default, `--default` moves it) and prints the stub hook to use. The response comes from `--body '<json>'` or `--from <file>`; an error mock and an empty mock of a list have a default body.
+
+```
+pikku mocks add classes:month --body '[{"id":"c1","name":"Yoga"}]' --flag classMonth
+pikku mocks add classes:month --state empty
+pikku mocks add classes:month --state error --status 500
+```
+
+`--flag <name>` declares the flag in the project's `defineFeatureFlags({ ... })` file when it is not there yet, or prints the entry to add by hand. Nothing is overwritten without `--force`. A body that differs from the function's output is written anyway and reported, because a stub may stand in for data the function does not return yet.
+
 ## Addon mocks
 
 An addon ships default mocks in its own package as `.mocks/<function>/<scenario>.json`, named without a namespace, and lists `.mocks` in `files`. An app that wires the addon as `studio` gets them as `studio:<function>`. The app's `.mocks/studio.<function>/` adds scenarios; one with the same name replaces the addon's, and a `default: true` in the app wins over the addon's default. Put mocks for an addon's functions in the addon, and only the app's own variations in the app.
