@@ -545,6 +545,32 @@ export type PikkuCLIInput = {
     websocketFile?: string
     rpcWiringsFile?: string
     reactQueryFile?: string
+    /**
+     * Emit the frontend's record types here: `RPCInput<Name>`, `RPCOutput<Name>`,
+     * `FlattenedRPCMap`, and `AnalyticsEvent` when `scaffold.analytics` is on.
+     * Import paths are computed from this config, so a component never reaches
+     * into the functions package.
+     */
+    typesFile?: string
+    /**
+     * Emit `apiUrl()`, `basePath()` and `appHref()` here: the API base from
+     * `VITE_API_URL`, falling back to the page origin plus `/api`.
+     */
+    envFile?: string
+    /**
+     * Emit `rpc()` here, a PikkuRPC client for code outside React (route
+     * `beforeLoad` gates) that forwards the request's cookie during SSR.
+     * TanStack Start only. Requires `rpcWiringsFile` and `envFile`.
+     */
+    rpcFile?: string
+    /**
+     * Emit the Better Auth client glue here: sign-in/out/up, password reset, the
+     * session cookie refresh and the `requireAuthentication` /
+     * `redirectIfAuthenticated` route gates, built on `@pikku/better-auth/client`.
+     * TanStack Router only. Requires `rpcFile`, `envFile` and a `getSession`
+     * function; where people are sent is set by `clientAuth`.
+     */
+    authClientFile?: string
     realtimeFile?: string
     /**
      * Optional import for the EventHubTopics type so the realtime client is
@@ -591,6 +617,16 @@ export type PikkuCLIInput = {
      * `@pikku/core` — a server package — to check a permission.
      */
     scopesFile?: string
+  }
+
+  /** Where the generated Better Auth client (`clientFiles.authClientFile`) sends people. */
+  clientAuth?: {
+    /** Where a signed-out visitor is sent. Default `/auth/login`. */
+    loginPath?: string
+    /** Where a signed-in visitor lands. Default `/`. */
+    homePath?: string
+    /** Where the emailed password-reset link lands. Default `/auth/reset-password`. */
+    resetPasswordPath?: string
   }
 
   /** Directory containing email templates, locales, partials, and theme.json. */

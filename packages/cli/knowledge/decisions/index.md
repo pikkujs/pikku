@@ -9,6 +9,8 @@ description: Rules chosen in the pikku CLI, and what each one rules out
 A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
+- [The frontend client files are generated from clientFiles, not copied into each app](frontend-client-files-are-generated-from-config.md) — typesFile, envFile, rpcFile and authClientFile in clientFiles make the CLI emit RPCInput/RPCOutput types, apiUrl(), an isomorphic rpc() client and the Better Auth client glue, with import paths computed from the config
+- [pikku dev runs every frontend with a dev command and owns the dev .env](pikku-dev-runs-every-frontend-and-owns-the-dev-env.md) — pikku dev starts each frontend that sets dev.command beside the API, parses the root .env once for all of them, generates the secrets the app declares, and stops everything when any process dies
 
 - [A cross-compiled standalone build ships SQLite libraries only for its target, and refuses what it can only find for the host](a-cross-compiled-standalone-ships-sqlite-libraries-only-for-its-target.md) — With PIKKU_COMPILE_TARGET set, the bun standalone build stages a libsqlite3 only for a macOS target, refuses package-resolved SQLite extensions when the target differs from the host, and accepts extensions named by path
 - [The CLI syncs its registry SDK like any consumer](the-cli-syncs-its-registry-sdk-like-any-consumer.md) — the CLI calls the registry through the registry's own SDK, which its build syncs into .pikku/remote; only pikku-addons.lock is committed

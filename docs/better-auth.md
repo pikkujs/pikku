@@ -91,6 +91,24 @@ whose `get` returns parsed objects instead of JSON strings also works.
 session in a Next.js route or a TanStack loader. Given a factory, it builds the
 singleton services and the instance on the first call and reuses them.
 
+## The browser side
+
+`@pikku/better-auth/client` holds the calls every frontend makes, so an app does not copy them.
+`createBetterAuthApp({ apiUrl, fetchSession, redirect })` returns `signInWithPassword`,
+`registerWithPassword`, `signInWithGoogle`, `requestPasswordReset`, `resetPassword`,
+`changePassword`, `signOut`, the session cookie refresh, and the route gates
+`requireAuthentication` and `redirectIfAuthenticated`. Set `clientFiles.authClientFile` in
+`pikku.config.json` and `pikku all` writes that three-line wrapper for you (it needs
+`clientFiles.rpcFile` and `envFile` too, and a `getSession` function). `clientAuth.loginPath`,
+`homePath` and `resetPasswordPath` choose where people are sent.
+
+`@pikku/better-auth/vite` exports `crossSiteSession()`, a dev-only Vite plugin that keeps the
+session working in browsers that block third-party cookies when the app is previewed in an iframe.
+`pikkuVite()` from `@pikku/vite` adds it for you.
+
+`pikku dev` creates `BETTER_AUTH_SECRET` in `.env` on the first run, and starts every frontend
+that sets `dev.command` beside the API.
+
 ## What is safe to turn on
 
 **Virtual user sign-in** opens under `pikku dev`

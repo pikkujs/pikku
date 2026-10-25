@@ -23,9 +23,19 @@ export { asI18n, asI18nStub, sep } from './i18n-types.js'
 // list, its storage key and its startup policy, and passes in Paraglide's
 // `overwriteGetLocale` from its own compiled runtime — this package never
 // imports one app's generated output.
-export { createLocaleStore } from './locale-store.js'
-export type { CreateLocaleStoreOptions, LocaleStore } from './locale-store.js'
-
+export {
+  createLocaleStore,
+  createAppI18n,
+  brandMessages,
+} from './locale-store.js'
+export type {
+  CreateLocaleStoreOptions,
+  LocaleStore,
+  CreateAppI18nOptions,
+  AppI18n,
+  ParaglideRuntime,
+  BrandedMessages,
+} from './locale-store.js'
 
 // Buffered product-analytics client, typed against the app's own event union.
 // The app owns the union and the endpoint; this package owns the transport.

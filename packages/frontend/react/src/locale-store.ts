@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import type { I18nString } from './i18n-types.js'
 
 /**
  * Locales whose scripts run right-to-left. The whole layout mirrors off the
@@ -209,5 +210,140 @@ export const createLocaleStore = <L extends string>(
     toLocale,
     subscribe,
     isI18nDebug,
+  }
+}
+
+/** A Paraglide message namespace with every message function returning `I18nString`. */
+export type BrandedMessages<T> = {
+  [K in keyof T]: T[K] extends (...args: infer A) => unknown
+    ? (...args: A) => I18nString
+    : T[K]
+}
+
+/**
+ * Wrap a compiled Paraglide namespace (`import { m } from '../paraglide/messages.js'`)
+ * so every message returns the branded `I18nString` the `@pikku/react` gate
+ * accepts, passing each rendered string through `mask`. `mask` is how i18n-debug
+ * mode blocks out translated text.
+ *
+ * The whole namespace is wrapped, which forgoes Paraglide's per-message
+ * tree-shaking: locale files are kilobytes and the catalogue of a typical app is
+ * small enough to ship.
+ */
+export const brandMessages = <T extends object>(
+  paraglideMessages: T,
+  mask: (rendered: string) => string = (rendered) => rendered
+): BrandedMessages<T> => {
+  const raw = paraglideMessages as unknown as Record<string, unknown>
+  const wrapped: Record<string, unknown> = {}
+  for (const key of Object.keys(raw)) {
+    const message = raw[key]
+    wrapped[key] =
+      typeof message === 'function'
+        ? (...args: unknown[]) =>
+            mask((message as (...a: unknown[]) => string)(...args))
+        : message
+  }
+  return wrapped as unknown as BrandedMessages<T>
+}
+
+/** The slice of Paraglide's compiled `runtime.js` the app i18n reads. */
+export interface ParaglideRuntime<L extends string> {
+  locales: readonly L[]
+  baseLocale: L
+  overwriteGetLocale: (getLocale: () => L) => void
+}
+
+export interface CreateAppI18nOptions<M extends object, L extends string> {
+  /** Paraglide's compiled message namespace: `import { m } from '../paraglide/messages.js'`. */
+  messages: M
+  /** Paraglide's compiled runtime: `import * as runtime from '../paraglide/runtime.js'`. */
+  runtime: ParaglideRuntime<L>
+  /** The app's `active.json`: the locale a first-time visitor opens in. */
+  active: { defaultLocale: string }
+  /** The i18n-debug pseudo-locale, as in {@link CreateLocaleStoreOptions.debugLocale}. */
+  debugLocale?: string
+}
+
+export interface AppI18n<M extends object, L extends string> extends Omit<
+  LocaleStore<L>,
+  'subscribe'
+> {
+  /** The branded, debug-maskable message namespace — the only way to reach a message. */
+  m: BrandedMessages<M>
+  supportedLocales: readonly L[]
+  /** The locale a first-time visitor opens the app in. */
+  defaultLocale: L
+  /** The locale for a URL path (`/de/...`), else the browser language, else {@link AppI18n.defaultLocale}. */
+  detectLocale: (pathname: string) => L
+  /** Mask a rendered string when debug mode is on; otherwise pass it through. */
+  maskI18n: (rendered: string) => string
+}
+
+/**
+ * Everything an app's `i18n/` folder used to hold, from the three things only
+ * the app has: its compiled Paraglide output and its `active.json`.
+ *
+ * `defaultLocale` is the language the app speaks to its own users, picked when
+ * the project was created and written into `active.json` by `pikku i18n`. It is
+ * deliberately not Paraglide's `baseLocale`: that names the message SOURCE
+ * (`messages/en.json`), the catalogue every other locale is cloned from and
+ * translated against, so it has to stay `en` for `pikku i18n --add-locale` to
+ * work. Seeding the whole app from it is what made an Arabic app open in English
+ * LTR until the user found the switcher. It falls back to the base locale when
+ * the pick was never compiled (a locale dropped from `settings.json` after it
+ * was chosen).
+ *
+ * Add a language: drop `messages/<lang>.json` next to `en.json`, add the code to
+ * `project.inlang/settings.json` `locales`, and recompile — or run
+ * `pikku i18n --add-locale <lang>`, which does both. Content is reachable via the
+ * `/<lang>` URL prefix (e.g. `/de`); the base locale needs none.
+ *
+ * Every translated string is masked to block glyphs (█) in i18n-debug mode, so
+ * any readable text left on screen never went through a message. Toggle it with
+ * `?i18n-debug` in the URL or `localStorage['i18n-debug'] = '1'` (`I18N_DEBUG=1`
+ * for SSR).
+ */
+export const createAppI18n = <M extends object, L extends string>(
+  options: CreateAppI18nOptions<M, L>
+): AppI18n<M, L> => {
+  const { messages, runtime, active, debugLocale } = options
+  const supportedLocales = runtime.locales
+  const defaultLocale: L = supportedLocales.includes(active.defaultLocale as L)
+    ? (active.defaultLocale as L)
+    : runtime.baseLocale
+
+  // A visitor starts in the app's default locale; the app's own switcher
+  // (persist + <html dir>) calls `setActiveLocale`.
+  const { subscribe: _subscribe, ...store } = createLocaleStore<L>({
+    locales: supportedLocales,
+    defaultLocale,
+    overwriteGetLocale: runtime.overwriteGetLocale as (
+      getLocale: () => string
+    ) => void,
+    debugLocale,
+    detectInitialLocale: ({ defaultLocale: initial }) => initial,
+  })
+
+  const maskI18n = (rendered: string): string =>
+    store.isI18nDebug() ? rendered.replace(/\S/g, '█') : rendered
+
+  const detectLocale = (pathname: string): L => {
+    const segment = pathname.split('/')[1] as L
+    if (supportedLocales.includes(segment)) return segment
+    if (typeof navigator !== 'undefined') {
+      const browserLang = navigator.language?.split('-')[0] as L
+      if (supportedLocales.includes(browserLang)) return browserLang
+    }
+    return defaultLocale
+  }
+
+  return {
+    ...store,
+    m: brandMessages(messages, maskI18n),
+    supportedLocales,
+    defaultLocale,
+    detectLocale,
+    maskI18n,
   }
 }
