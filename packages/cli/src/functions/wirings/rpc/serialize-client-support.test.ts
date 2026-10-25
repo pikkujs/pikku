@@ -66,7 +66,7 @@ describe('serializeAuthClient', () => {
     assert.match(out, /rpc\(\)\.invoke\("getSession", \{\}\)/)
     assert.match(
       out,
-      /createBetterAuthApp\(\{\n  apiUrl,\n  fetchSession,\n  redirect,\n\}\)/
+      /createBetterAuthApp\(\{\n  apiUrl,\n  fetchSession,\n  redirect: gateRedirect,\n\}\)/
     )
   })
   test('passes configured paths through', () => {

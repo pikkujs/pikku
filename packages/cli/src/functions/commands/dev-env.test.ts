@@ -50,6 +50,12 @@ describe('frontendEnv', () => {
     assert.equal(env.Y, 'shell')
     assert.equal(env.Z, 'root')
   })
+  test('a process value that only mirrors the root .env can be overridden by the frontend', () => {
+    const dir = tmp()
+    writeFileSync(join(dir, '.env'), 'X=frontend\n')
+    const env = frontendEnv({ X: 'root' }, { X: 'root' }, dir)
+    assert.equal(env.X, 'frontend')
+  })
   test('works with no frontend .env', () => {
     assert.equal(frontendEnv({}, { Z: 'root' }, tmp()).Z, 'root')
   })

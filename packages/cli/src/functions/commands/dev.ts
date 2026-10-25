@@ -484,10 +484,12 @@ export const dev = pikkuSessionlessFunc<
     }
     // Fire-and-forget signal handler: the finally block always exits the process,
     // so there is no caller to propagate a rejection to.
-    process.once('SIGINT', () => {
-      logger.info('Stopping dev server...')
-      void shutdown(0)
-    })
+    for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+      process.once(signal, () => {
+        logger.info('Stopping dev server...')
+        void shutdown(0)
+      })
+    }
 
     if (devFrontends.length > 0) {
       const apiUrl = `http://${hostname}:${boundPort}`

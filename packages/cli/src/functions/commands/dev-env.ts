@@ -35,8 +35,13 @@ export const fillMissing = (
 
 /**
  * The environment one frontend child runs with: the process environment, then
- * the root `.env`, then the frontend's own `.env`. Anything already set in the
+ * the frontend's own `.env`, then the root `.env`. Anything already set in the
  * process wins over both files; the frontend's file wins over the root's.
+ *
+ * Bun loads the working directory's `.env` into the process before this CLI
+ * starts, so a process value equal to the root file's is indistinguishable from
+ * one the root file put there. Those are treated as the root file's, which is
+ * what lets a frontend's own `.env` override them.
  */
 export const frontendEnv = (
   base: Env,
@@ -44,6 +49,9 @@ export const frontendEnv = (
   frontendDir: string
 ): Env => {
   const env: Env = { ...base }
+  for (const [key, value] of Object.entries(rootEnv)) {
+    if (env[key] === value) delete env[key]
+  }
   fillMissing(env, readEnvFile(`${frontendDir}/.env`))
   fillMissing(env, rootEnv)
   return env
