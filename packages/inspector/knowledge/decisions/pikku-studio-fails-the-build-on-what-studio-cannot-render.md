@@ -21,6 +21,13 @@ inspector only recognises a call to `definePlugin`.
   `messages/{locale}.json` it is a warning (line 344).
 - A `nav.badge` that names no function in `state.functions.meta` is
   `STUDIO_BADGE_FUNCTION_NOT_FOUND` (PKU359, line 356).
+- A screen's `agent` is checked in the same pass: a name outside
+  `/^[a-z][a-z0-9-]*$/`, a missing or blank `agents/<name>.md`, or a file
+  without frontmatter `title` and `description` is
+  `STUDIO_SCREEN_AGENT_INVALID` (PKU365). Those two frontmatter values are
+  message keys, so one missing from `messages/en.json` is PKU358. A valid agent
+  gets `agentTitle` and `agentDescription` written onto its screen in
+  `state.studio`, so Studio reads them from the generated meta.
 
 The Go inspector runs the same check (`ValidatePikkuStudio` in
 `internal/visit/group_pikku_studio.go`, called from `internal/analyze/analyze.go`).

@@ -54,6 +54,7 @@ const (
 	AddonContributorsNotStatic        Code = "PKU362"
 	AddonContributorUnknown           Code = "PKU363"
 	AddonLegacyContributors           Code = "PKU364"
+	StudioScreenAgentInvalid          Code = "PKU365"
 	DbColumnNameTypeContradiction     Code = "PKU480"
 	DbJsonColumnUntyped               Code = "PKU481"
 	DbFormatOnNonString               Code = "PKU482"

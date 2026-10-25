@@ -639,6 +639,11 @@ export type StudioScreenMeta = {
   needsApp?: boolean
   layout?: 'bare'
   scopes?: string[]
+  agent?: string
+  /** Message key from the agent file's frontmatter, filled by validation. */
+  agentTitle?: string
+  /** Message key from the agent file's frontmatter, filled by validation. */
+  agentDescription?: string
 } & (
   | { component: string; app?: undefined }
   | { app: string; component?: undefined }

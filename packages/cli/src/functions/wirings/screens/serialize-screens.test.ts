@@ -19,6 +19,9 @@ const manifest = {
       nav: { area: 'project', icon: 'receipt', order: 30, badge: 'unpaid' },
       needsApp: true,
       scopes: ['invoices:read'],
+      agent: 'invoice-helper',
+      agentTitle: 'invoices_agent__title',
+      agentDescription: 'invoices_agent__description',
       component: './screens/overview',
     },
     {
@@ -54,7 +57,7 @@ describe('serializeScreens', () => {
     )
     assert.match(
       out,
-      /path: "\/invoices", title: "invoices_overview__title", scope: "project", nav: \{"area":"project","icon":"receipt","order":30,"badge":"unpaid"\}, needsApp: true, scopes: \["invoices:read"\]/
+      /path: "\/invoices", title: "invoices_overview__title", scope: "project", nav: \{"area":"project","icon":"receipt","order":30,"badge":"unpaid"\}, needsApp: true, scopes: \["invoices:read"\], agent: "invoice-helper", agentTitle: "invoices_agent__title", agentDescription: "invoices_agent__description"/
     )
     assert.match(
       out,
