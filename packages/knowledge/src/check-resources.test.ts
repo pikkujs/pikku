@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
@@ -257,17 +257,18 @@ describe('orphans', () => {
     assert.deepEqual(result.orphans, [])
   })
 
-  test('does not report what the platform put in the project', async () => {
+  test('does not report what the platform put in the project (scaffold dir read from the config)', async () => {
     const root = await project({
       '.pikku/function/pikku-functions-meta.gen.json': {
         getSession: {},
         agentCaller: {},
         checkout: {},
       },
+      'pikku.config.json': { scaffold: { pikkuDir: 'src/generated' } },
       '.pikku/function/pikku-functions-meta-verbose.gen.json': {
-        getSession: { sourceFile: '/app/src/functions/get-session.function.ts' },
-        agentCaller: { sourceFile: '/app/src/scaffold/agent/agent.gen.ts' },
-        checkout: { sourceFile: '/app/src/functions/checkout.function.ts' },
+        getSession: { sourceFile: 'src/functions/get-session.function.ts' },
+        agentCaller: { sourceFile: 'src/generated/agent/agent.gen.ts' },
+        checkout: { sourceFile: 'src/functions/checkout.function.ts' },
       },
       '.pikku/db/pikku-db-schema.gen.json': {
         tables: [
@@ -281,6 +282,26 @@ describe('orphans', () => {
     assert.deepEqual(
       result.orphans.map((orphan) => orphan.uri).sort(),
       ['func:checkout', 'func:getSession', 'table:orders']
+    )
+  })
+
+  test('without a configured scaffold dir, src/scaffold is the platform code', async () => {
+    const root = await project({
+      '.pikku/function/pikku-functions-meta.gen.json': { agentCaller: {}, checkout: {} },
+      '.pikku/function/pikku-functions-meta-verbose.gen.json': {
+        agentCaller: { sourceFile: `${'ROOT'}/src/scaffold/agent/agent.gen.ts` },
+        checkout: { sourceFile: `${'ROOT'}/src/functions/checkout.function.ts` },
+      },
+    })
+    const verbose = join(root, '.pikku/function/pikku-functions-meta-verbose.gen.json')
+    await writeFile(
+      verbose,
+      (await readFile(verbose, 'utf8')).replaceAll('ROOT', root),
+      'utf8'
+    )
+    assert.deepEqual(
+      (await check(root)).orphans.map((orphan) => orphan.uri),
+      ['func:checkout']
     )
   })
 

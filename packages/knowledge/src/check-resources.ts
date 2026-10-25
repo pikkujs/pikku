@@ -213,7 +213,7 @@ export const checkKnowledgeResources = async (
   }
 
   const orphans: ResourceOrphan[] = []
-  const platform = await collectPlatformResources(outDir)
+  const platform = await collectPlatformResources(root, outDir)
   for (const prefix of orphanPrefixes) {
     const ignored = baseline?.get(prefix)
     const generated = platform.get(prefix)
