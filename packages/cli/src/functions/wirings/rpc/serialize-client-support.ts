@@ -174,7 +174,7 @@ export const serializeAuthClient = (
   const options = [
     `  apiUrl,`,
     `  fetchSession,`,
-    `  redirect,`,
+    `  redirect: gateRedirect,`,
     ...(paths.loginPath
       ? [`  loginPath: ${JSON.stringify(paths.loginPath)},`]
       : []),
@@ -197,6 +197,12 @@ export {
   isUnauthorized,
 } from '@pikku/better-auth/client'
 export type { AuthSession } from '@pikku/better-auth/client'
+
+// Annotated so the router's registered route types do not feed back into this
+// file: a route's \`beforeLoad\` reads these gates, so inferring through
+// \`redirect\` would make the route tree depend on itself.
+const gateRedirect = (options: { to: string }): unknown =>
+  redirect(options as never)
 
 export const fetchSession = () => rpc().invoke(${JSON.stringify(sessionRpc)}, {})
 

@@ -273,6 +273,9 @@ export const createConfig: CreateConfig<
   return {
     ...cliConfig,
     ...dataWithoutOutDir,
+    // `pikku dev --frontends` is a flag, and the spread above would replace the
+    // project's `frontends` table with its boolean.
+    frontends: cliConfig.frontends,
     inspector,
     tags: cliConfig.tags,
     filters: parseCLIFilters(data, cliConfig),

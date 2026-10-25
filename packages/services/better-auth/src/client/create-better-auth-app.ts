@@ -20,7 +20,7 @@ export interface BetterAuthAppOptions<Session> {
 /**
  * Everything a Better Auth frontend needs besides its screens: the account
  * flows, the cookie refresh, and the route gates. The Pikku CLI generates the
- * one call to this from the app's `clientFiles.authFile`, wiring in the app's
+ * one call to this from the app's `clientFiles.authClientFile`, wiring in the app's
  * own `apiUrl`, RPC client and router.
  */
 export const createBetterAuthApp = <Session>(
