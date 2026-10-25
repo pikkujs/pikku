@@ -1472,6 +1472,20 @@
           "scope": "team",
           "agent": "Bad_Name",
           "app": "y"
+        },
+        {
+          "path": "/assist-studio",
+          "title": "admin_docs__title",
+          "scope": "team",
+          "agent": "studio:knowledge",
+          "app": "y"
+        },
+        {
+          "path": "/assist-studio-bad",
+          "title": "admin_docs__title",
+          "scope": "team",
+          "agent": "studio:Bad",
+          "app": "y"
         }
       ]
     },
@@ -1833,7 +1847,12 @@
     {
       "level": "critical",
       "code": "PKU365",
-      "message": "Screen '/assist-bad-name' has the agent 'Bad_Name', which is not a valid name: use lowercase letters, digits and hyphens, starting with a letter"
+      "message": "Screen '/assist-bad-name' has the agent 'Bad_Name', which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships"
+    },
+    {
+      "level": "critical",
+      "code": "PKU365",
+      "message": "Screen '/assist-studio-bad' has the agent 'studio:Bad', which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships"
     },
     {
       "level": "warn",
@@ -1907,7 +1926,7 @@
     }
   ],
   "validationPass": {
-    "start": 44,
-    "end": 58
+    "start": 45,
+    "end": 59
   }
 }

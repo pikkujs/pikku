@@ -335,8 +335,25 @@ describe('validatePikkuStudio', () => {
   test('fails on an agent name that is not lowercase-hyphen', () => {
     agentScreen('Billing_Helper')
     validatePikkuStudio(logger, state)
-    assert.match(criticals[0]!, /^PKU365: .*not a valid name/)
+    assert.match(criticals[0]!, /^PKU365: .*not a valid agent/)
   })
+
+  test('a studio agent passes with no agents folder and records no titles', () => {
+    agentScreen('studio:knowledge')
+    validatePikkuStudio(logger, state)
+    assert.deepEqual(criticals, [])
+    assert.equal(state.studio.screens[0].agent, 'studio:knowledge')
+    assert.equal(state.studio.screens[0].agentTitle, undefined)
+    assert.equal(state.studio.screens[0].agentDescription, undefined)
+  })
+
+  for (const bad of ['studio:Bad', 'studio:', 'studio:1x']) {
+    test(`fails on the invalid studio agent '${bad}'`, () => {
+      agentScreen(bad)
+      validatePikkuStudio(logger, state)
+      assert.match(criticals[0]!, /^PKU365: .*'studio:<name>'/)
+    })
+  }
 
   test('fails on an agent with no file', () => {
     agentScreen('ghost')
