@@ -4,6 +4,7 @@ import {
   RESOURCE_PREFIXES,
   type ResourcePrefix,
   collectKnownResources,
+  collectPlatformResources,
   parseResourceUri,
 } from './resource-uri.js'
 
@@ -138,9 +139,10 @@ export type ResourceCheckOptions = {
    */
   known?: Map<ResourcePrefix, Set<string>>
   /**
-   * Ids that exist for reasons no note will ever cover — a template's own auth
-   * and health functions, a framework table. Subtracted from the orphan report
-   * only; a note may still point at one, and it resolves.
+   * Ids that exist for reasons no note will ever cover. Subtracted from the
+   * orphan report only; a note may still point at one, and it resolves. The
+   * scaffold's functions and the framework's tables are always part of it (see
+   * `collectPlatformResources`); this adds to them.
    */
   baseline?: Map<ResourcePrefix, Set<string>>
   /** Defaults to {@link ORPHAN_PREFIXES}; an empty array turns the report off. */
@@ -211,11 +213,13 @@ export const checkKnowledgeResources = async (
   }
 
   const orphans: ResourceOrphan[] = []
+  const platform = await collectPlatformResources(root, outDir)
   for (const prefix of orphanPrefixes) {
     const ignored = baseline?.get(prefix)
+    const generated = platform.get(prefix)
     for (const id of known.get(prefix) ?? []) {
       const uri = `${prefix}:${id}`
-      if (claimed.has(uri) || ignored?.has(id)) continue
+      if (claimed.has(uri) || ignored?.has(id) || generated?.has(id)) continue
       orphans.push({ uri, prefix, id })
     }
   }
