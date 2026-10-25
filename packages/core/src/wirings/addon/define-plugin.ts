@@ -25,7 +25,9 @@ type StudioScreenBase = {
   scopes?: string[]
   /**
    * The agent that answers in Studio's chat panel while this screen is open.
-   * Resolves to `agents/<name>.md` in the addon package: the agent's
+   * `'studio:<name>'` names an agent Studio ships (e.g. `'studio:knowledge'`);
+   * `pikku all` only checks its format. A bare name is an agent the addon ships:
+   * it resolves to `agents/<name>.md` in the addon package: the agent's
    * instructions, which name the skills it follows. Its frontmatter has a
    * `title` and a `description`, both message keys in the addon's catalog.
    * Lowercase letters, digits and hyphens, starting with a letter. Leave it out and the chat is unchanged.

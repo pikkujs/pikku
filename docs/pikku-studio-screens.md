@@ -48,7 +48,7 @@ export default definePlugin({
 | `replaces?`          | `true` takes over the core screen at the same path. Only first-party addons may use it.                                                                                                                                              |
 | `needsApp?`          | Project screens only. Defaults to `false`.                                                                                                                                                                                           |
 | `layout?`            | `'bare'` renders the screen without the shell.                                                                                                                                                                                       |
-| `agent?`             | The agent that answers in Studio's chat panel, in a second tab beside the general chat, while this screen is open. A name (`/^[a-z][a-z0-9-]*$/`) that resolves to `agents/<name>.md` in the addon's package. See [Agents](#agents). |
+| `agent?`             | The agent that answers in Studio's chat panel, in a second tab beside the general chat, while this screen is open. Either a name (`/^[a-z][a-z0-9-]*$/`) for an agent the addon ships, resolving to `agents/<name>.md` in its package, or `studio:<name>` for an agent Studio ships. See [Agents](#agents). |
 | `scopes?`            | Hides the screen and its nav from viewers without access. This is not access control: the addon's functions must enforce the same scopes.                                                                                            |
 
 The manifest `title` is a message key too: the addon's name in Studio.
@@ -84,7 +84,13 @@ description: invoices_agent__description
 You are the invoices agent. Follow the invoice-triage skill.
 ```
 
-`pikku all` records `agent`, `agentTitle` and `agentDescription` on the screen,
+`agent: 'studio:<name>'` (for example `'studio:knowledge'`) picks an agent Studio
+itself ships. `pikku all` cannot see Studio's agents, so it only checks the
+format (`/^studio:[a-z][a-z0-9-]*$/`): no file is looked up, and no
+`agentTitle` or `agentDescription` is recorded, because Studio takes them from
+its own catalog. The addon needs no `agents/` folder for it.
+
+For an agent the addon ships, `pikku all` records `agent`, `agentTitle` and `agentDescription` on the screen,
 so Studio reads them without opening the markdown. A screen without `agent`
 leaves the chat as it is.
 
@@ -99,7 +105,7 @@ addon's `studio` metadata. It fails the build on:
 | PKU357 | two screens of the addon use the same path                                                                                                    |
 | PKU358 | a title key, or an agent's `title` / `description` key, is missing from `messages/en.json`                                                    |
 | PKU359 | a `nav.badge` names no function of the addon                                                                                                  |
-| PKU365 | an `agent` is not `/^[a-z][a-z0-9-]*$/`, has no non-empty `agents/<name>.md`, or that file lacks frontmatter with a `title` and `description` |
+| PKU365 | an `agent` is neither a name `/^[a-z][a-z0-9-]*$/` nor `studio:<name>`; or a name has no non-empty `agents/<name>.md`, or that file lacks frontmatter with a `title` and `description` |
 
 A key missing from any other locale's catalog is a warning.
 

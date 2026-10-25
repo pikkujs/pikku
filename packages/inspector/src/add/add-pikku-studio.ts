@@ -310,6 +310,7 @@ const packageRoot = (file: string): string | undefined => {
 }
 
 const AGENT_NAME = /^[a-z][a-z0-9-]*$/
+const STUDIO_AGENT = /^studio:[a-z][a-z0-9-]*$/
 
 /** The text of a file that exists and is not blank, else undefined. */
 const readNonEmpty = (file: string): string | undefined => {
@@ -391,9 +392,16 @@ export function validatePikkuStudio(
           ErrorCode.STUDIO_SCREEN_AGENT_INVALID,
           `Screen '${screen.path}' has the agent '${agent}', ${reason}`
         )
-      if (!AGENT_NAME.test(agent)) {
+      if (agent.startsWith('studio:')) {
+        // An agent Studio ships: pikku cannot see it, so only the format is checked.
+        if (!STUDIO_AGENT.test(agent)) {
+          invalid(
+            "which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships"
+          )
+        }
+      } else if (!AGENT_NAME.test(agent)) {
         invalid(
-          'which is not a valid name: use lowercase letters, digits and hyphens, starting with a letter'
+          "which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships"
         )
       } else {
         const text = root

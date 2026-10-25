@@ -480,6 +480,7 @@ func (s *Context) ValidatePikkuStudio() {
 	}
 }
 
+var studioAgentRef = regexp.MustCompile(`^studio:[a-z][a-z0-9-]*$`)
 var studioAgentName = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 var studioFrontmatter = regexp.MustCompile(`(?s)^---\r?\n(.*?)\r?\n---(?:\r?\n|$)`)
 var studioFrontmatterLine = regexp.MustCompile(`^([A-Za-z][\w-]*):\s*(.*?)\s*$`)
@@ -493,8 +494,15 @@ func (s *Context) validateStudioAgent(screenPath, agent, root string, en map[str
 			"Screen '%s' has the agent '%s', %s", screenPath, agent, reason))
 		return ""
 	}
+	if strings.HasPrefix(agent, "studio:") {
+		// An agent Studio ships: only the format can be checked.
+		if !studioAgentRef.MatchString(agent) {
+			return invalid("which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships")
+		}
+		return ""
+	}
 	if !studioAgentName.MatchString(agent) {
-		return invalid("which is not a valid name: use lowercase letters, digits and hyphens, starting with a letter")
+		return invalid("which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships")
 	}
 	var text string
 	if root != "" {
