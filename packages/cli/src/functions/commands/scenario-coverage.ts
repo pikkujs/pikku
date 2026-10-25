@@ -8,9 +8,14 @@ import {
 } from '@pikku/core/scenario/coverage'
 import { dim } from '../../utils/output.js'
 
+// Declared here, not imported: the schema generator only finds a named type in a
+// source file of this project, so a type that lives in another package's
+// declaration file yields no schema (PKU463).
+export interface ScenarioCoverageReport extends ScenarioCoverage {}
+
 export const scenarioCoverage = pikkuSessionlessFunc<
   { routes?: string },
-  ScenarioCoverage
+  ScenarioCoverageReport
 >({
   func: async ({ config }, { routes }) =>
     readScenarioCoverage(
