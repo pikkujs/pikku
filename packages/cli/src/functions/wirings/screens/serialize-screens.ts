@@ -24,6 +24,15 @@ const screenFields = (screen: StudioScreenMeta): string[] => [
   ...(screen.needsApp !== undefined ? [`needsApp: ${screen.needsApp}`] : []),
   ...(screen.layout ? [`layout: ${JSON.stringify(screen.layout)}`] : []),
   ...(screen.scopes ? [`scopes: ${JSON.stringify(screen.scopes)}`] : []),
+  ...(screen.agent !== undefined
+    ? [`agent: ${JSON.stringify(screen.agent)}`]
+    : []),
+  ...(screen.agentTitle !== undefined
+    ? [`agentTitle: ${JSON.stringify(screen.agentTitle)}`]
+    : []),
+  ...(screen.agentDescription !== undefined
+    ? [`agentDescription: ${JSON.stringify(screen.agentDescription)}`]
+    : []),
 ]
 
 /**

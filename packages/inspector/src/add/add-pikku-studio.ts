@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { existsSync, readFileSync, readdirSync } from 'fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import { dirname, join } from 'path'
 import { ErrorCode } from '../error-codes.js'
 import type {
@@ -137,6 +137,7 @@ const readScreen = (
   let scopes: string[] | undefined
   let component: string | undefined
   let app: string | undefined
+  let agent: string | undefined
   let ok = true
   for (const field of element.properties) {
     const key = propName(field)
@@ -158,6 +159,8 @@ const readScreen = (
       continue
     } else if (key === 'replaces') read = replaces = booleanLiteral(value)
     else if (key === 'needsApp') read = needsApp = booleanLiteral(value)
+    else if (key === 'agent')
+      read = agent = ts.isStringLiteral(value) ? value.text : undefined
     else if (key === 'layout') read = layout = oneOf(value, ['bare'] as const)
     else if (key === 'scopes') {
       read = scopes = stringArray(value)
@@ -209,6 +212,7 @@ const readScreen = (
     ...(needsApp !== undefined ? { needsApp } : {}),
     ...(layout ? { layout } : {}),
     ...(scopes ? { scopes } : {}),
+    ...(agent !== undefined ? { agent } : {}),
     ...(component ? { component } : { app: app! }),
   } as StudioScreenMeta
 }
@@ -226,7 +230,11 @@ export function addPikkuStudio(
 ) {
   if (!ts.isCallExpression(node)) return
   const { expression, arguments: args } = node
-  if (!ts.isIdentifier(expression) || expression.text !== 'definePlugin' && expression.text !== 'pikkuStudio') return
+  if (
+    !ts.isIdentifier(expression) ||
+    (expression.text !== 'definePlugin' && expression.text !== 'pikkuStudio')
+  )
+    return
 
   const [firstArg] = args
   if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) return
@@ -301,6 +309,32 @@ const packageRoot = (file: string): string | undefined => {
   }
 }
 
+const AGENT_NAME = /^[a-z][a-z0-9-]*$/
+
+/** The text of a file that exists and is not blank, else undefined. */
+const readNonEmpty = (file: string): string | undefined => {
+  try {
+    if (!statSync(file).isFile()) return undefined
+    const text = readFileSync(file, 'utf-8')
+    return text.trim() === '' ? undefined : text
+  } catch {
+    return undefined
+  }
+}
+
+/** The `key: value` lines of a leading `---` block; undefined when there is none. */
+const readFrontmatter = (text: string): Record<string, string> | undefined => {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text)
+  if (!match) return undefined
+  const fields: Record<string, string> = {}
+  for (const line of match[1]!.split(/\r?\n/)) {
+    const pair = /^([A-Za-z][\w-]*):\s*(.*?)\s*$/.exec(line)
+    if (!pair) continue
+    fields[pair[1]!] = pair[2]!.replace(/^(['"])(.*)\1$/, '$2')
+  }
+  return fields
+}
+
 const readCatalog = (file: string): Record<string, unknown> | undefined => {
   try {
     return JSON.parse(readFileSync(file, 'utf-8'))
@@ -350,6 +384,46 @@ export function validatePikkuStudio(
   }
 
   for (const screen of studio.screens) {
+    const agent = screen.agent
+    if (agent !== undefined) {
+      const invalid = (reason: string) =>
+        logger.critical(
+          ErrorCode.STUDIO_SCREEN_AGENT_INVALID,
+          `Screen '${screen.path}' has the agent '${agent}', ${reason}`
+        )
+      if (!AGENT_NAME.test(agent)) {
+        invalid(
+          'which is not a valid name: use lowercase letters, digits and hyphens, starting with a letter'
+        )
+      } else {
+        const text = root
+          ? readNonEmpty(join(root, 'agents', `${agent}.md`))
+          : undefined
+        const fields = text === undefined ? undefined : readFrontmatter(text)
+        if (text === undefined) {
+          invalid(`but the addon has no non-empty agents/${agent}.md`)
+        } else if (!fields) {
+          invalid(
+            `whose agents/${agent}.md has no frontmatter; it needs a title and a description`
+          )
+        } else {
+          for (const field of ['title', 'description'] as const) {
+            const key = fields[field]
+            if (!key) {
+              invalid(
+                `whose agents/${agent}.md frontmatter has no ${field}; it must be a message key`
+              )
+            } else if (!en || !Object.hasOwn(en, key)) {
+              logger.critical(
+                ErrorCode.STUDIO_MESSAGE_KEY_MISSING,
+                `definePlugin uses the message key '${key}', which is missing from the addon's messages/en.json`
+              )
+            } else if (field === 'title') screen.agentTitle = key
+            else screen.agentDescription = key
+          }
+        }
+      }
+    }
     const badge = screen.nav?.badge
     if (badge !== undefined && !state.functions.meta[badge]) {
       logger.critical(

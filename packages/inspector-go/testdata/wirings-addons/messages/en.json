@@ -4,5 +4,7 @@
   "admin_users__title": "Users",
   "admin_docs__title": "Docs",
   "admin_welcome__title": "Welcome",
-  "admin_inbox__title": "Inbox"
+  "admin_inbox__title": "Inbox",
+  "admin_agent__title": "Assistant",
+  "admin_agent__description": "Assistant for admin"
 }
