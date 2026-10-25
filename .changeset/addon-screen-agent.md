@@ -1,7 +1,7 @@
 ---
-'@pikku/core': minor
-'@pikku/inspector': minor
-'@pikku/cli': minor
+'@pikku/core': patch
+'@pikku/inspector': patch
+'@pikku/cli': patch
 '@pikku/skills': patch
 ---
 
