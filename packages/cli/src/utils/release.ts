@@ -1,7 +1,17 @@
+import { existsSync } from 'fs'
+import { join } from 'path'
 import type { Surface } from './surface.js'
 import type { SurfaceChange, SurfaceChanges, Verdict } from './surface-diff.js'
 
-export const SNAPSHOT_FILE = 'surface.pikku.json'
+export const SNAPSHOT_FILE = 'pikku.surface.json'
+export const LEGACY_SNAPSHOT_FILE = 'surface.pikku.json'
+
+export function findSnapshotFile(dir: string): string | undefined {
+  for (const name of [SNAPSHOT_FILE, LEGACY_SNAPSHOT_FILE]) {
+    if (existsSync(join(dir, name))) return name
+  }
+  return undefined
+}
 export const CHANGELOG_FILE = 'CHANGELOG.md'
 export const CHANGELOG_TITLE = '# Changelog'
 

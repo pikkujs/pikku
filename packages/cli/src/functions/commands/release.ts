@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { dirname, join, resolve } from 'path'
 import { PikkuError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -21,6 +21,8 @@ import {
   CHANGELOG_FILE,
   CHANGELOG_TITLE,
   COMMIT_FORMAT,
+  findSnapshotFile,
+  LEGACY_SNAPSHOT_FILE,
   parseCommits,
   prependChangelog,
   readPackageVersion,
@@ -105,7 +107,8 @@ export async function diffSurface(
   config: ReleaseConfig,
   input: ReleaseDiffInput
 ): Promise<ReleaseDiffResult> {
-  const against = input.against ?? join(config.rootDir, SNAPSHOT_FILE)
+  const baselineName = findSnapshotFile(config.rootDir) ?? SNAPSHOT_FILE
+  const against = input.against ?? join(config.rootDir, baselineName)
   if (!input.against && !existsSync(against)) {
     throw new PikkuError(
       `No ${SNAPSHOT_FILE} to compare against. Run \`pikku release init\`, or pass --against <path|url>.`
@@ -119,7 +122,7 @@ export async function diffSurface(
   const changes = computeSurfaceDiff(
     before,
     after,
-    input.against ?? SNAPSHOT_FILE
+    input.against ?? baselineName
   )
   const out = input.out
     ? resolve(config.rootDir, input.out)
@@ -200,10 +203,11 @@ export const pikkuReleaseInit = pikkuSessionlessFunc<
     const skipped: string[] = []
 
     const snapshotPath = join(config.rootDir, SNAPSHOT_FILE)
-    if (existsSync(snapshotPath) && !input?.force) {
-      skipped.push(SNAPSHOT_FILE)
+    if (findSnapshotFile(config.rootDir) && !input?.force) {
+      skipped.push(findSnapshotFile(config.rootDir)!)
     } else {
       await snapshotSurface(config, { out: snapshotPath })
+      rmSync(join(config.rootDir, LEGACY_SNAPSHOT_FILE), { force: true })
       written.push(SNAPSHOT_FILE)
     }
 
@@ -272,16 +276,23 @@ export const pikkuReleasePrepare = pikkuSessionlessFunc<
     }
 
     const snapshotPath = join(cwd, SNAPSHOT_FILE)
-    if (!existsSync(snapshotPath)) {
+    const legacyPath = join(cwd, LEGACY_SNAPSHOT_FILE)
+    const baselinePath = existsSync(snapshotPath) ? snapshotPath : legacyPath
+    const migrating = baselinePath === legacyPath && existsSync(legacyPath)
+    if (!existsSync(baselinePath)) {
       throw new PikkuError(
         `No ${SNAPSHOT_FILE} on ${s.trunk}. Run \`pikku release init\` and commit what it writes.`
       )
     }
     const [before, after] = await Promise.all([
-      loadSurface(snapshotPath),
+      loadSurface(baselinePath),
       currentSurface(config),
     ])
-    const surface = computeSurfaceDiff(before, after, SNAPSHOT_FILE)
+    const surface = computeSurfaceDiff(
+      before,
+      after,
+      migrating ? LEGACY_SNAPSHOT_FILE : SNAPSHOT_FILE
+    )
 
     const packagePath = join(cwd, 'package.json')
     const packageJson = readFileSync(packagePath, 'utf-8')
@@ -314,9 +325,12 @@ export const pikkuReleasePrepare = pikkuSessionlessFunc<
       surface,
       commits: commits.length,
       changelog,
-      files: ['package.json', CHANGELOG_FILE, SNAPSHOT_FILE].map(
-        (file) => `${prefix}${file}`
-      ),
+      files: [
+        'package.json',
+        CHANGELOG_FILE,
+        SNAPSHOT_FILE,
+        ...(migrating ? [LEGACY_SNAPSHOT_FILE] : []),
+      ].map((file) => `${prefix}${file}`),
     }
     if (input?.dryRun) return result
 
@@ -331,6 +345,7 @@ export const pikkuReleasePrepare = pikkuSessionlessFunc<
       'utf-8'
     )
     writeFileSync(snapshotPath, serializeSnapshot(after), 'utf-8')
+    if (migrating) rmSync(legacyPath)
     writeJson(join(resolve(cwd, config.outDir), 'release.gen.json'), result)
     return result
   },

@@ -526,7 +526,7 @@ wireCLI({
           options: {
             against: {
               description:
-                'Baseline to compare against instead of surface.pikku.json: a .pikku directory, a snapshot file, or a snapshot URL',
+                'Baseline to compare against instead of pikku.surface.json: a .pikku directory, a snapshot file, or a snapshot URL',
             },
             out: {
               description:
@@ -554,10 +554,10 @@ wireCLI({
           func: pikkuReleaseInit,
           render: renderReleaseInit,
           description:
-            'Write surface.pikku.json and CHANGELOG.md, the baseline the first release is measured against',
+            'Write pikku.surface.json and CHANGELOG.md, the baseline the first release is measured against',
           options: {
             force: {
-              description: 'Overwrite an existing surface.pikku.json',
+              description: 'Overwrite an existing pikku.surface.json',
               default: false,
             },
           },
