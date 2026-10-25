@@ -90,8 +90,9 @@ pikku ui theme apply --preset quorum --structure monopro
 | `--structure <id>`                     | swap in another preset's structure (depth) under this brand                                                              |
 | `--primary`, `--secondary`, `--accent` | brand colours, hex                                                                                                       |
 | `--font-heading`, `--font-body`        | Google Fonts families                                                                                                    |
-| `--page`                               | light-mode page colour (`structure.page`) — paper, linen, bone instead of white                                          |
-| `--ink`                                | light-mode text colour (`structure.ink`)                                                                                 |
+| `--mode light\|dark`                   | `light` (default). `dark` makes `--page`/`--ink` the dark ground and its text (see Dark designs)                         |
+| `--page`                               | page colour (`structure.page`) — paper, linen, bone instead of white; with `--mode dark`, the dark ground                |
+| `--ink`                                | text colour (`structure.ink`); with `--mode dark`, the text on the dark ground                                           |
 
 Flags are flat scalars, one value each; there is no nested `--colors` object. One call writes the
 theme, makes it active, regenerates `themes/index.ts` (so the running app reloads) and re-brands
@@ -101,6 +102,27 @@ that theme file.
 Fine-grained structure tweaks the flags do not cover (a shadow scale, the radius base) are edits to
 the active `themes/<id>.json` `structure`, followed by `pikku ui theme apply` to regenerate
 `theme.css`; keep them in the theme, not in components.
+
+## Dark designs
+
+`--page`/`--ink` are light-mode colours unless you pass `--mode dark`. For a design that is dark
+(a dark reference, a dark ground in the brief) always pass `--mode dark` with its ground and text:
+
+```bash
+pikku ui theme apply --preset linear --mode dark \
+  --primary '#c6ff3d' --secondary '#22262d' --page '#14161a' --ink '#eef1f4'
+```
+
+Every other token is derived for that ground: card and popover a step lighter, muted a further
+step, muted text a mid tone of the ink at 4.5:1 or better, border and input visibly above the card,
+and each `-foreground` black or white by contrast against its actual fill (so a lime primary gets a
+dark label). The same values are written to `:root` and `.dark` (with `color-scheme: dark`), so a
+stored scheme or `class="dark"` never switches to the preset's unrelated greys. Without
+`--mode dark`, a dark `--page` is derived as a light ground and comes out wrong.
+
+After every apply the command prints a contrast report (text/page, muted-text/page,
+primary-foreground/primary, border/page, input/page) and warns on any pair under its target; fix
+the colours and re-run, the exit code stays 0.
 
 ## Colour rule
 

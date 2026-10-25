@@ -1541,8 +1541,20 @@ wireCLI({
                   description: 'Heading font, a Google Fonts family',
                 },
                 fontBody: { description: 'Body font, a Google Fonts family' },
-                page: { description: 'Light-mode page colour, as hex' },
-                ink: { description: 'Light-mode text colour, as hex' },
+                mode: {
+                  description:
+                    'light (default) or dark. With dark, --page and --ink are the dark ground and the text on it, and card, muted, border, input and every foreground are derived for that ground (written to :root and .dark, color-scheme: dark)',
+                  choices: ['light', 'dark'] as const,
+                  default: 'light' as const,
+                },
+                page: {
+                  description:
+                    'Page colour, as hex: the light-mode page, or the dark ground with --mode dark',
+                },
+                ink: {
+                  description:
+                    'Text colour, as hex: the light-mode text, or the text on the dark ground with --mode dark',
+                },
               },
             }),
           },

@@ -48,12 +48,13 @@ export const pikkuThemeApply = pikkuSessionlessFunc<
     fontBody?: string
     page?: string
     ink?: string
+    mode?: 'light' | 'dark'
   },
   void
 >({
   func: async ({ config }, input) => {
     const workspace = new ThemeWorkspace(findWorkspaceRoot(config.rootDir))
-    const { id, theme, emails } = await workspace.apply({
+    const { id, theme, emails, contrast } = await workspace.apply({
       preset: input.preset,
       structure: input.structure,
       colors: {
@@ -64,13 +65,16 @@ export const pikkuThemeApply = pikkuSessionlessFunc<
       fonts: { heading: input.fontHeading, body: input.fontBody },
       page: input.page,
       ink: input.ink,
+      mode: input.mode,
     })
     process.stdout.write(
       `${JSON.stringify(
         {
           applied: id,
           colors: theme.brand.colors,
+          mode: theme.structure.mode ?? 'light',
           fonts: theme.brand.fonts,
+          contrast,
           emails: emails
             ? 'emails/theme.json re-branded; set its appName to the app name.'
             : 'no emails/ to re-brand',
@@ -79,5 +83,15 @@ export const pikkuThemeApply = pikkuSessionlessFunc<
         2
       )}\n`
     )
+    const lines = contrast.map(
+      (c) =>
+        `  ${c.ok ? 'ok  ' : 'WARN'} ${c.pair} ${c.ratio.toFixed(2)}:1 (target ${c.target}:1)`
+    )
+    process.stderr.write(`Contrast report\n${lines.join('\n')}\n`)
+    for (const c of contrast.filter((c) => !c.ok)) {
+      process.stderr.write(
+        `warning: ${c.pair} is ${c.ratio.toFixed(2)}:1, under ${c.target}:1. Adjust --page, --ink or the brand colours.\n`
+      )
+    }
   },
 })
