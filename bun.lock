@@ -327,7 +327,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.198",
+      "version": "0.12.199",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -522,7 +522,7 @@
     },
     "packages/frontend/react": {
       "name": "@pikku/react",
-      "version": "0.12.17",
+      "version": "0.12.18",
       "dependencies": {
         "@pikku/fetch": "^0.12.13",
       },
@@ -539,7 +539,7 @@
     },
     "packages/frontend/vite": {
       "name": "@pikku/vite",
-      "version": "0.12.0",
+      "version": "0.12.1",
       "dependencies": {
         "@babel/core": "^7.26.0",
       },
@@ -626,7 +626,7 @@
     },
     "packages/knowledge": {
       "name": "@pikku/knowledge",
-      "version": "0.12.21",
+      "version": "0.12.22",
       "dependencies": {
         "zod": "^4.6.7",
       },
@@ -1034,7 +1034,7 @@
     },
     "packages/services/better-auth": {
       "name": "@pikku/better-auth",
-      "version": "0.12.59",
+      "version": "0.12.60",
       "dependencies": {
         "@pikku/jose": "^0.12.10",
       },
@@ -1277,7 +1277,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.63",
+      "version": "0.12.64",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",

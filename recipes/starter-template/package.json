@@ -24,7 +24,7 @@
     "@pikku/addon-console": "^0.12.65",
     "@pikku/ai-vercel": "^0.12.16",
     "@pikku/assistant-ui": "^0.12.14",
-    "@pikku/better-auth": "^0.12.59",
+    "@pikku/better-auth": "^0.12.60",
     "@pikku/bun-server": "^0.12.15",
     "@pikku/cloudflare": "^0.12.31",
     "@pikku/core": "0.12.148",
@@ -33,14 +33,14 @@
     "@pikku/kysely-bun-sqlite": "^0.12.11",
     "@pikku/kysely-node-sqlite": "^0.12.10",
     "@pikku/kysely-sqlite": "^0.12.18",
-    "@pikku/react": "^0.12.17",
+    "@pikku/react": "^0.12.18",
     "@pikku/schedule": "^0.12.11",
     "@pikku/schema-cfworker": "^0.12.9",
     "ai": "^7.0.143",
     "sqlite-vec": "^0.1.9"
   },
   "devDependencies": {
-    "@pikku/cli": "0.12.198",
+    "@pikku/cli": "0.12.199",
     "@pikku/deploy-standalone": "^0.12.29",
     "@types/node": "^26",
     "oxfmt": "^0.73.0",
@@ -48,11 +48,11 @@
     "typescript": "^6.0.3"
   },
   "overrides": {
-    "@pikku/cli": "0.12.198",
+    "@pikku/cli": "0.12.199",
     "@pikku/core": "0.12.148",
     "@pikku/deploy": "0.12.18",
     "@pikku/fetch": "0.12.13",
-    "@pikku/knowledge": "0.12.21",
+    "@pikku/knowledge": "0.12.22",
     "@pikku/kysely": "0.13.40",
     "@pikku/ws": "0.12.11",
     "typescript": "^6.0.3"

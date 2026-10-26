@@ -1,3 +1,29 @@
+## 0.12.199
+
+### Patch Changes
+
+- f7bd66b: The CLI's own commands now generate every schema their contract names. Seven input types were declared but not exported (`AuditInput`, `EmailsInitInput`, `InfoInput`, `LoginOptions`, `CLITypesCommandInput`, `AddonTypesCommandInput`, `WorkflowCommandInput`), `scenarioRun` named `ScenarioSurface` from another package, and `scenarioCoverage` returned a type from another package's declaration file; the schema generator found none of them, so `pikku all` on the CLI itself reported PKU463 and PKU456. Exporting the types, spelling the surface union out, and declaring `ScenarioCoverageReport` locally clears both.
+- b86450a: `pikku dev` now runs every frontend that sets `dev.command`, not just the API. Each starts in its own directory beside the server, its output is prefixed with its name, `--frontend a,b` picks some and `--no-frontends` runs the API alone, and if any process dies everything stops and the command exits non-zero. The root `.env` is parsed once and passed to the API and every frontend (a frontend's own `.env` overrides it for that child, and nothing already set is replaced), and `BETTER_AUTH_SECRET` plus any secret declared with `generate` is appended to `.env` on the first run, with a message naming each required secret that cannot be generated.
+
+  `pikku all` can also generate the frontend client files from `clientFiles`: `typesFile` (`RPCInput`, `RPCOutput`, `AnalyticsEvent`), `envFile` (`apiUrl`, `basePath`, `appHref`), `rpcFile` (an isomorphic `rpc()` client for route guards) and `authClientFile` (the Better Auth client glue). `clientAuth` sets where that glue sends people.
+
+- 0a56d98: `pikku validate` no longer warns that `packages/functions/.pikku/function/index.js` is missing. The check dated from the old sandbox that ran `pikku dev` under bare Node and needed a `.js` wrapper beside each generated `.ts`; the file is gitignored and nothing in `pikku all` or `pikku cloud smoke` creates it, so every fresh checkout, the starter template included, carried the warning.
+- a249251: `pikku validate` no longer reports scaffold-generated functions and framework tables as "exists in the code and no note describes it". A function whose source is scaffold output or a `.gen.` file, and a table a generated migration creates (Better Auth, the runtime services, an addon), are put in the project by the platform, so there is nothing for a note to say about them; a fresh starter reported about 75 of these. The app's own functions and tables are still reported.
+- 1e18a07: The release baseline is now `pikku.surface.json` (was `surface.pikku.json`). `pikku release init` writes the new name; `release diff` and `release prepare` still read a legacy `surface.pikku.json`, and `prepare` migrates it to the new name.
+- 953dc28: A `scaffold` flag may now be an object of options instead of `true` (`true` still means every default). New `scaffold.cors` generates the `CORS_ORIGINS` variable, an `allowedOrigins(variables)` helper (the list, else `localhost` and `127.0.0.1` on the primary frontend's dev port, or `scaffold.cors.port`) and a `*` CORS middleware, all read through the `variables` service so they work on Workers. They are written to `<pikkuDir>/cors/cors-origins.gen.ts` and `cors.gen.ts`, split because a schema file may not also wire (PKU490). There is no `FRONTEND_URL` variable.
+
+  `scaffold.analytics` gains `originLock` (default `true`): `<pikkuDir>/analytics/analytics-origin.gen.ts` attaches core's `requireOrigin` to `/analytics`, checked against the same `allowedOrigins`, so a missing or foreign `Origin` gets a 403 inside the CORS headers. The lock needs the shared helper, so `cors-origins.gen.ts` is generated for it even without `scaffold.cors`; the CORS middleware itself still needs `scaffold.cors`. Set `{ "analytics": { "originLock": false } }` for an app with native clients, which send no `Origin`.
+
+  An existing `scaffold.analytics: true` now gets the lock and the `CORS_ORIGINS` variable. A project that declares `CORS_ORIGINS` itself should delete that declaration or set `originLock: false`.
+
+- Updated dependencies [b86450a]
+- Updated dependencies [a249251]
+- Updated dependencies [b86450a]
+- Updated dependencies [5ea2815]
+  - @pikku/better-auth@0.12.60
+  - @pikku/knowledge@0.12.22
+  - @pikku/skills@0.12.64
+
 ## 0.12.198
 
 ### Patch Changes
