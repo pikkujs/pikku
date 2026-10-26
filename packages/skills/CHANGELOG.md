@@ -1,5 +1,12 @@
 # @pikku/skills
 
+## 0.12.64
+
+### Patch Changes
+
+- b86450a: The pikku-react skill now documents the generated client files (`typesFile`, `envFile`, `rpcFile`, `authClientFile`), `pikkuVite()`, and what `pikku dev` runs and generates.
+- 5ea2815: The middleware examples import `cors`, `authBearer`, `pikkuChannelMiddleware` and `addGlobalMiddleware` from `#pikku/middleware` instead of `@pikku/core/middleware`: app code reaches Pikku through the generated alias, and `pikku validate` reports the other form as an error.
+
 ## 0.12.63
 
 ### Patch Changes
