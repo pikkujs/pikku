@@ -64,25 +64,39 @@ const pack = (dir, dest) => {
 
 const final = join(work, 'deps')
 const staged = join(work, 'staged')
-const tarballs = Object.fromEntries(
-  [...closure].map((n) => [n, join(final, tarballName(workspace.get(n).pkg))])
-)
+const tarballsIn = (dir, skip = []) =>
+  Object.fromEntries(
+    [...closure]
+      .filter((n) => !skip.includes(n))
+      .map((n) => [n, join(dir, tarballName(workspace.get(n).pkg))])
+  )
+const tarballs = tarballsIn(final)
 
-const pointAtTarballs = (pkg) => {
+// The "as published" variant must still install from the registry: a release
+// PR bumps packages that are not published yet, so their ranges cannot resolve
+// there. It links every closure package except @pikku/core, which the stale
+// cache check needs to take from the registry.
+const registryCore = join(work, 'deps-registry-core')
+const tarballsNoCore = tarballsIn(registryCore, ['@pikku/core'])
+
+const pointAtTarballs = (pkg, links = tarballs) => {
   for (const field of ['dependencies', 'peerDependencies'])
     for (const name of Object.keys(pkg[field] ?? {}))
-      if (tarballs[name]) pkg[field][name] = 'file:' + tarballs[name]
+      if (links[name]) pkg[field][name] = 'file:' + links[name]
   return pkg
 }
 
-const repack = (name, from, dest) => {
+const repack = (name, from, dest, links = tarballs) => {
   const tgz = join(from, tarballName(workspace.get(name).pkg))
   const out = join(work, 'unpacked', tarballName(workspace.get(name).pkg))
   mkdirSync(out, { recursive: true })
   execFileSync('tar', ['xzf', tgz, '-C', out])
   const manifest = join(out, 'package', 'package.json')
   const pkg = JSON.parse(readFileSync(manifest, 'utf8'))
-  writeFileSync(manifest, JSON.stringify(pointAtTarballs(pkg), null, 2))
+  writeFileSync(
+    manifest,
+    JSON.stringify(pointAtTarballs(pkg, links), null, 2)
+  )
   pack(join(out, 'package'), dest)
   return pkg
 }
@@ -90,13 +104,16 @@ const repack = (name, from, dest) => {
 for (const name of closure) {
   pack(workspace.get(name).dir, staged)
   repack(name, staged, final)
+  if (name !== '@pikku/core')
+    repack(name, staged, registryCore, tarballsNoCore)
 }
 
-pack(workspace.get('@pikku/cli').dir, work)
+pack(workspace.get('@pikku/cli').dir, staged)
 const cli = workspace.get('@pikku/cli').pkg
 const range =
   cli.dependencies?.['@pikku/core'] ?? cli.peerDependencies?.['@pikku/core']
 if (!tarballs['@pikku/core'])
   throw new Error('@pikku/core is not in the CLI closure')
-repack('@pikku/cli', work, join(work, 'cli'))
+repack('@pikku/cli', staged, join(work, 'cli'))
+repack('@pikku/cli', staged, work, tarballsNoCore)
 console.log(range)
