@@ -104,7 +104,10 @@ describe('addPikkuStudio', () => {
 
   test('the deprecated pikkuStudio name is still recognised', () => {
     inspect(`pikkuStudio({ title: TITLE, screens: [] })`)
-    assert.match(criticals[0] ?? '', /^PKU345: definePlugin's title must be a literal/)
+    assert.match(
+      criticals[0] ?? '',
+      /^PKU345: definePlugin's title must be a literal/
+    )
   })
 
   test('a screen without nav is routed but carries no nav entry', () => {
@@ -200,6 +203,23 @@ describe('addPikkuStudio', () => {
   })
 })
 
+describe('addPikkuStudio agent', () => {
+  test('reads a literal agent', () => {
+    inspect(
+      `definePlugin({ title: 't', screens: [{ path: '/a', title: 'a', scope: 'team', agent: 'helper', component: () => import('./a') }] })`
+    )
+    assert.equal(state.studio.screens[0].agent, 'helper')
+    assert.deepEqual(criticals, [])
+  })
+
+  test('a non-literal agent fails with PKU345', () => {
+    inspect(
+      `definePlugin({ title: 't', screens: [{ path: '/a', title: 'a', scope: 'team', agent: NAME, component: () => import('./a') }] })`
+    )
+    assert.match(criticals[0]!, /^PKU345: A screen's agent must be a literal/)
+  })
+})
+
 describe('validatePikkuStudio', () => {
   let root: string
   before(() => {
@@ -214,6 +234,21 @@ describe('validatePikkuStudio', () => {
         cloud_title: 'Cloud',
         cloud_billing: 'Billing',
       })
+    )
+    mkdirSync(join(root, 'agents'), { recursive: true })
+    writeFileSync(
+      join(root, 'agents', 'billing-helper.md'),
+      '---\ntitle: cloud_billing\ndescription: "cloud_title"\n---\nYou are the billing agent. Follow the billing skill.\n'
+    )
+    writeFileSync(join(root, 'agents', 'empty.md'), '  \n')
+    writeFileSync(join(root, 'agents', 'plain.md'), 'You are an agent.\n')
+    writeFileSync(
+      join(root, 'agents', 'no-desc.md'),
+      '---\ntitle: cloud_billing\n---\nHi\n'
+    )
+    writeFileSync(
+      join(root, 'agents', 'bad-key.md'),
+      '---\ntitle: cloud_billing\ndescription: cloud_nope\n---\nHi\n'
     )
     writeFileSync(
       join(root, 'messages', 'de.json'),
@@ -279,6 +314,78 @@ describe('validatePikkuStudio', () => {
     validatePikkuStudio(logger, state)
     assert.deepEqual(criticals, [
       "PKU359: Screen '/billing' has the nav badge 'unpaidCount', which names no function in this addon",
+    ])
+  })
+
+  const agentScreen = (agent: string) =>
+    studio(
+      'cloud_title',
+      `{ path: '/billing', title: 'cloud_billing', scope: 'team', agent: '${agent}', component: () => import('./a') }`
+    )
+
+  test('a screen agent with a file and frontmatter passes and records its keys', () => {
+    agentScreen('billing-helper')
+    validatePikkuStudio(logger, state)
+    assert.deepEqual(criticals, [])
+    assert.equal(state.studio.screens[0].agent, 'billing-helper')
+    assert.equal(state.studio.screens[0].agentTitle, 'cloud_billing')
+    assert.equal(state.studio.screens[0].agentDescription, 'cloud_title')
+  })
+
+  test('fails on an agent name that is not lowercase-hyphen', () => {
+    agentScreen('Billing_Helper')
+    validatePikkuStudio(logger, state)
+    assert.match(criticals[0]!, /^PKU365: .*not a valid agent/)
+  })
+
+  test('a studio agent passes with no agents folder and records no titles', () => {
+    agentScreen('studio:knowledge')
+    validatePikkuStudio(logger, state)
+    assert.deepEqual(criticals, [])
+    assert.equal(state.studio.screens[0].agent, 'studio:knowledge')
+    assert.equal(state.studio.screens[0].agentTitle, undefined)
+    assert.equal(state.studio.screens[0].agentDescription, undefined)
+  })
+
+  for (const bad of ['studio:Bad', 'studio:', 'studio:1x']) {
+    test(`fails on the invalid studio agent '${bad}'`, () => {
+      agentScreen(bad)
+      validatePikkuStudio(logger, state)
+      assert.match(criticals[0]!, /^PKU365: .*'studio:<name>'/)
+    })
+  }
+
+  test('fails on an agent with no file', () => {
+    agentScreen('ghost')
+    validatePikkuStudio(logger, state)
+    assert.deepEqual(criticals, [
+      "PKU365: Screen '/billing' has the agent 'ghost', but the addon has no non-empty agents/ghost.md",
+    ])
+  })
+
+  test('fails on an empty agent file', () => {
+    agentScreen('empty')
+    validatePikkuStudio(logger, state)
+    assert.match(criticals[0]!, /^PKU365: .*no non-empty agents\/empty\.md/)
+  })
+
+  test('fails on an agent file without frontmatter', () => {
+    agentScreen('plain')
+    validatePikkuStudio(logger, state)
+    assert.match(criticals[0]!, /^PKU365: .*has no frontmatter/)
+  })
+
+  test('fails on frontmatter missing the description', () => {
+    agentScreen('no-desc')
+    validatePikkuStudio(logger, state)
+    assert.match(criticals[0]!, /^PKU365: .*frontmatter has no description/)
+  })
+
+  test('fails on a frontmatter key missing from en.json', () => {
+    agentScreen('bad-key')
+    validatePikkuStudio(logger, state)
+    assert.deepEqual(criticals, [
+      "PKU358: definePlugin uses the message key 'cloud_nope', which is missing from the addon's messages/en.json",
     ])
   })
 

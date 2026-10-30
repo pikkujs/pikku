@@ -424,18 +424,27 @@ export default definePlugin({
   addons only; Studio enforces that). `layout: 'bare'` renders without the shell.
 - Titles are message keys in the addon's `messages/{locale}.json`, found by
   convention next to its `package.json`; there is no field for them.
+- `agent: 'name'` makes that agent answer in Studio's chat panel (a second tab
+  beside the general chat) while the screen is open. It resolves to
+  `agents/<name>.md` at the addon's package root: the agent's instructions,
+  which name the skills it follows (plain folders `skills/<name>/SKILL.md`).
+  `agent: 'studio:<name>'` instead picks an agent Studio ships; `pikku all` only
+  checks the format and looks up no file.
+  The file starts with frontmatter whose `title` and `description` are message
+  keys in `messages/en.json`. The name matches `/^[a-z][a-z0-9-]*$/`.
 - `scopes` only hide the screen. The addon's functions must enforce the same
   scopes.
 
 The inspector reads every field statically, so each must be a literal.
 `pikku all` fails on:
 
-| Code   | When                                                         |
-| ------ | ------------------------------------------------------------ |
-| PKU345 | a field is not a literal (variable, call, spread, bad value) |
-| PKU357 | two screens of the addon use the same path                   |
-| PKU358 | a title key is missing from `messages/en.json`               |
-| PKU359 | `nav.badge` names no function of the addon                   |
+| Code   | When                                                                                                 |
+| ------ | ---------------------------------------------------------------------------------------------------- |
+| PKU345 | a field is not a literal (variable, call, spread, bad value)                                         |
+| PKU357 | two screens of the addon use the same path                                                           |
+| PKU358 | a title or agent frontmatter key is missing from `messages/en.json`                                  |
+| PKU359 | `nav.badge` names no function of the addon                                                           |
+| PKU365 | `agent` is neither a name nor `studio:<name>`, or a name has no non-empty `agents/<name>.md`, or no frontmatter `title` and `description` |
 
 A key missing from another locale's catalog is a warning.
 

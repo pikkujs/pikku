@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -225,7 +226,7 @@ func (s *Context) readStudioScreen(el *ast.Node, fail func(string)) (jsObject, s
 		fail("A definePlugin screen must be an object literal, got: " + tsutil.NodeText(el))
 		return o, "", false
 	}
-	var path, title, scope, layout, component, app string
+	var path, title, scope, layout, component, app, agent string
 	var nav *jsObject
 	var replaces, needsApp *bool
 	var scopes []string
@@ -267,6 +268,10 @@ func (s *Context) readStudioScreen(el *ast.Node, fail func(string)) (jsObject, s
 			var b bool
 			if b, read = studioBool(v); read {
 				needsApp = &b
+			}
+		case "agent":
+			if read = ast.IsStringLiteral(v); read {
+				agent = v.Text()
 			}
 		case "layout":
 			layout, read = studioOneOf(v, []string{"bare"})
@@ -331,6 +336,9 @@ func (s *Context) readStudioScreen(el *ast.Node, fail func(string)) (jsObject, s
 	if scopes != nil {
 		o.set("scopes", scopes)
 	}
+	if agent != "" {
+		o.set("agent", agent)
+	}
 	if component != "" {
 		o.set("component", component)
 	} else {
@@ -343,8 +351,9 @@ type studioView struct {
 	Title   string `json:"title"`
 	File    string `json:"file"`
 	Screens []struct {
-		Path  string `json:"path"`
-		Title string `json:"title"`
+		Path  string  `json:"path"`
+		Title string  `json:"title"`
+		Agent *string `json:"agent"`
 		Nav   *struct {
 			Badge *string `json:"badge"`
 		} `json:"nav"`
@@ -435,7 +444,21 @@ func (s *Context) ValidatePikkuStudio() {
 			}
 		}
 	}
-	for _, screen := range studio.Screens {
+	var rawStudio struct {
+		Title   string            `json:"title"`
+		File    string            `json:"file"`
+		Screens []json.RawMessage `json:"screens"`
+	}
+	_ = json.Unmarshal(s.State.Studio, &rawStudio)
+	patched := false
+	for i, screen := range studio.Screens {
+		if screen.Agent != nil {
+			if extra := s.validateStudioAgent(screen.Path, *screen.Agent, studioPackageRoot(studio.File), en); extra != "" && i < len(rawStudio.Screens) {
+				raw := string(rawStudio.Screens[i])
+				rawStudio.Screens[i] = json.RawMessage(strings.TrimSuffix(raw, "}") + extra + "}")
+				patched = true
+			}
+		}
 		if screen.Nav == nil || screen.Nav.Badge == nil {
 			continue
 		}
@@ -444,4 +467,88 @@ func (s *Context) ValidatePikkuStudio() {
 				"Screen '%s' has the nav badge '%s', which names no function in this addon", screen.Path, *screen.Nav.Badge))
 		}
 	}
+	if patched {
+		raws := make([]state.Raw, len(rawStudio.Screens))
+		for i, r := range rawStudio.Screens {
+			raws[i] = state.Raw(r)
+		}
+		var o jsObject
+		o.set("title", rawStudio.Title)
+		o.set("file", rawStudio.File)
+		o.set("screens", raws)
+		s.State.Studio = o.raw()
+	}
+}
+
+var studioAgentRef = regexp.MustCompile(`^studio:[a-z][a-z0-9-]*$`)
+var studioAgentName = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+var studioFrontmatter = regexp.MustCompile(`(?s)^---\r?\n(.*?)\r?\n---(?:\r?\n|$)`)
+var studioFrontmatterLine = regexp.MustCompile(`^([A-Za-z][\w-]*):\s*(.*?)\s*$`)
+
+// validateStudioAgent is the agent branch of validatePikkuStudio. It returns
+// the `,"agentTitle":..,"agentDescription":..` fields to append to the screen,
+// or "" when the agent is invalid.
+func (s *Context) validateStudioAgent(screenPath, agent, root string, en map[string]json.RawMessage) string {
+	invalid := func(reason string) string {
+		s.Log.Critical(diag.StudioScreenAgentInvalid, fmt.Sprintf(
+			"Screen '%s' has the agent '%s', %s", screenPath, agent, reason))
+		return ""
+	}
+	if strings.HasPrefix(agent, "studio:") {
+		// An agent Studio ships: only the format can be checked.
+		if !studioAgentRef.MatchString(agent) {
+			return invalid("which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships")
+		}
+		return ""
+	}
+	if !studioAgentName.MatchString(agent) {
+		return invalid("which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships")
+	}
+	var text string
+	if root != "" {
+		if b, err := os.ReadFile(filepath.Join(root, "agents", agent+".md")); err == nil {
+			text = string(b)
+		}
+	}
+	if strings.TrimSpace(text) == "" {
+		return invalid(fmt.Sprintf("but the addon has no non-empty agents/%s.md", agent))
+	}
+	m := studioFrontmatter.FindStringSubmatch(text)
+	if m == nil {
+		return invalid(fmt.Sprintf("whose agents/%s.md has no frontmatter; it needs a title and a description", agent))
+	}
+	fields := map[string]string{}
+	for _, line := range strings.Split(m[1], "\n") {
+		if pair := studioFrontmatterLine.FindStringSubmatch(strings.TrimRight(line, "\r")); pair != nil {
+			v := pair[2]
+			if len(v) >= 2 && (v[0] == '"' || v[0] == '\'') && v[len(v)-1] == v[0] {
+				v = v[1 : len(v)-1]
+			}
+			fields[pair[1]] = v
+		}
+	}
+	out := ""
+	ok := true
+	for _, field := range []string{"title", "description"} {
+		key := fields[field]
+		if key == "" {
+			invalid(fmt.Sprintf("whose agents/%s.md frontmatter has no %s; it must be a message key", agent, field))
+			ok = false
+		} else if _, has := en[key]; !has {
+			s.Log.Critical(diag.StudioMessageKeyMissing, fmt.Sprintf(
+				"definePlugin uses the message key '%s', which is missing from the addon's messages/en.json", key))
+			ok = false
+		} else {
+			name := "agentTitle"
+			if field == "description" {
+				name = "agentDescription"
+			}
+			b, _ := json.Marshal(key)
+			out += fmt.Sprintf(`,"%s":%s`, name, b)
+		}
+	}
+	if !ok {
+		return ""
+	}
+	return out
 }

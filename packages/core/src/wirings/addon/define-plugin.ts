@@ -23,6 +23,16 @@ type StudioScreenBase = {
   layout?: 'bare'
   /** Hides the screen and its nav for viewers without access. The addon's functions must enforce the same scopes: hiding a screen is not access control. */
   scopes?: string[]
+  /**
+   * The agent that answers in Studio's chat panel while this screen is open.
+   * `'studio:<name>'` names an agent Studio ships (e.g. `'studio:knowledge'`);
+   * `pikku all` only checks its format. A bare name is an agent the addon ships:
+   * it resolves to `agents/<name>.md` in the addon package: the agent's
+   * instructions, which name the skills it follows. Its frontmatter has a
+   * `title` and a `description`, both message keys in the addon's catalog.
+   * Lowercase letters, digits and hyphens, starting with a letter. Leave it out and the chat is unchanged.
+   */
+  agent?: string
 } & (
   | {
       /** `'studio'` gives `/<path>`, `'team'` gives `/<team>/<path>`. */
