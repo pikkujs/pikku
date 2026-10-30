@@ -4,6 +4,7 @@ import { rm } from 'fs/promises'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
+import { addonContributorNames } from './addon-contributor-names.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { join } from 'path'
 import {
@@ -13,7 +14,7 @@ import {
   serializeAddonTypes,
 } from './serialize-addon-types.js'
 
-type AddonTypesCommandInput = {
+export type AddonTypesCommandInput = {
   bootstrap?: boolean
 }
 
@@ -74,7 +75,10 @@ export const pikkuAddonTypes = pikkuSessionlessFunc<
       await writeFileInDir(
         logger,
         addonTypesFile,
-        serializeAddonInstallTypes(state ? addonFunctionNames(state) : {})
+        serializeAddonInstallTypes(
+          state ? addonFunctionNames(state) : {},
+          state ? addonContributorNames(state) : {}
+        )
       )
       if (state) {
         await writeFileInDir(

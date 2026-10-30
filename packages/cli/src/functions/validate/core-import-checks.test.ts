@@ -215,4 +215,27 @@ describe('core import checks', () => {
     const hints = (await runCoreImportChecks(root)).map((f) => f.fixHint)
     assert.deepEqual(hints, ["Import the same names from '#pikku/addon/error'"])
   })
+
+  test('points a project at #pikku/contributor for the typed helper', async () => {
+    const root = await project()
+    await write(
+      root,
+      'src/a.ts',
+      `import { defineContributors } from '@pikku/core/contributors'\n`
+    )
+
+    const hints = (await runCoreImportChecks(root)).map((f) => f.fixHint)
+    assert.deepEqual(hints, ["Import the same names from '#pikku/contributor'"])
+  })
+
+  test('lets an addon author contributors against core, which has no such leaf for it', async () => {
+    const root = await project('{ "addon": { "displayName": "X" } }\n')
+    await write(
+      root,
+      'src/a.ts',
+      `import { defineContributors } from '@pikku/core/contributors'\n`
+    )
+
+    assert.deepEqual(await runCoreImportChecks(root), [])
+  })
 })

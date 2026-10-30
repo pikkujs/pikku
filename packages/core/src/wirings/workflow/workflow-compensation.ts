@@ -9,6 +9,7 @@ import {
 import { pikkuState } from '../../pikku-state.js'
 import { resolveNamespace } from '../rpc/rpc-runner.js'
 import { runningStepLease } from './workflow-step-lease.js'
+import { isWorkflowName } from './workflow-meta-resolver.js'
 import { planUnwind, type UnwindRecord } from './workflow-unwind-plan.js'
 import type {
   StepState,
@@ -357,8 +358,7 @@ export const functionHasCompensation = (rpcName: string): boolean => {
 }
 
 export const isChildWorkflowRecord = (record: UnwindRecord): boolean =>
-  !!record.rpcName &&
-  pikkuState(null, 'workflows', 'meta')[record.rpcName] !== undefined
+  !!record.rpcName && isWorkflowName(record.rpcName)
 
 export const recordHasCompensation = (record: UnwindRecord): boolean =>
   isChildWorkflowRecord(record)

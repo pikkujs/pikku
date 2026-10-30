@@ -1798,3 +1798,17 @@ describe('runPikkuFunc - inline compensate', () => {
     await assert.rejects(run('plain:compensate', {}), /Function not found/)
   })
 })
+
+describe('disabled functions', () => {
+  test('a disabled function cannot be registered', () => {
+    assert.throws(
+      () =>
+        addFunction('retired', {
+          disabled: 'no callers',
+          func: async () => 'never',
+        }),
+      /Function 'retired' is disabled \(no callers\) and cannot be registered\./
+    )
+    assert.ok(!pikkuState(null, 'function', 'functions').has('retired'))
+  })
+})

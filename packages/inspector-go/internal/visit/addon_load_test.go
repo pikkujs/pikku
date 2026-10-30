@@ -335,29 +335,21 @@ func TestReadAddonDependencies(t *testing.T) {
 	}
 }
 
-func TestReadAddonContributors(t *testing.T) {
+func TestHasLegacyContributors(t *testing.T) {
 	root := t.TempDir()
 	writeFiles(t, root, map[string]string{
-		"node_modules/@s/cloud/package.json": `{"pikku": {"contributors": [{"module": "@s/cloud/contributors", "export": "session"}, {"module": "./stage.js"}]}}`,
-		"node_modules/none/package.json":     `{"pikku": {"uses": []}}`,
-		"node_modules/bad/package.json":      `{"pikku": {"contributors": [{"export": "x"}]}}`,
+		"node_modules/legacy/package.json": `{"pikku": {"contributors": ["./x.js"]}}`,
+		"node_modules/clean/package.json":  `{"pikku": {"uses": ["db"]}}`,
+		"app/package.json":                 `{}`,
 	})
-	got, err := readAddonContributors([]string{root}, "@s/cloud")
-	if err != nil || got == nil {
-		t.Fatalf("contributors = %v, %v", got, err)
+	dirs := []string{filepath.Join(root, "app")}
+	if !hasLegacyContributors(dirs, "legacy") {
+		t.Error("pikku.contributors not reported")
 	}
-	want := `{"packageName":"@s/cloud","packageDir":"` + filepath.Join(root, "node_modules", "@s/cloud") +
-		`","contributors":[{"module":"@s/cloud/contributors","export":"session"},{"module":"./stage.js"}]}`
-	if string(got.raw()) != want {
-		t.Errorf("contributors = %s\nwant %s", got.raw(), want)
+	if hasLegacyContributors(dirs, "clean") {
+		t.Error("clean package reported")
 	}
-	if got, err := readAddonContributors([]string{root}, "none"); got != nil || err != nil {
-		t.Errorf("none = %v, %v", got, err)
-	}
-	if got, err := readAddonContributors([]string{root}, "absent"); got != nil || err != nil {
-		t.Errorf("absent = %v, %v", got, err)
-	}
-	if _, err := readAddonContributors([]string{root}, "bad"); err == nil {
-		t.Error("malformed contributors were accepted")
+	if hasLegacyContributors(dirs, "absent") {
+		t.Error("absent package reported")
 	}
 }

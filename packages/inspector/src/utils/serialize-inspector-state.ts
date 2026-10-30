@@ -101,6 +101,7 @@ export interface SerializableInspectorState {
     files: Array<[string, { path: string; exportedName: string }]>
     approvalDescriptions: InspectorState['functions']['approvalDescriptions']
     dynamicImportIds?: string[]
+    disabled?: InspectorState['functions']['disabled']
   }
   http: {
     metaInputTypes: Array<
@@ -186,6 +187,7 @@ export interface SerializableInspectorState {
           contentBucket?: string
           contentGrants?: Record<string, string>
           globalContent?: string
+          contributors?: string[]
         },
       ]
     >
@@ -309,9 +311,10 @@ export interface SerializableInspectorState {
   diagnostics: InspectorDiagnostic[]
   addonFunctions: InspectorState['addonFunctions']
   remoteAddonFunctions?: InspectorState['remoteAddonFunctions']
-  screensManifest?: InspectorState['screensManifest']
-  addonScreens?: InspectorState['addonScreens']
-  addonContributors?: InspectorState['addonContributors']
+  studio?: InspectorState['studio']
+  addonStudio?: InspectorState['addonStudio']
+  contributorsManifest?: InspectorState['contributorsManifest']
+  optedInContributors?: InspectorState['optedInContributors']
   exportedContracts: InspectorState['exportedContracts']
 }
 
@@ -384,6 +387,9 @@ export function serializeInspectorState(
       files: Array.from(state.functions.files.entries()),
       approvalDescriptions: state.functions.approvalDescriptions,
       dynamicImportIds: Array.from(state.functions.dynamicImportIds ?? []),
+      ...(Object.keys(state.functions.disabled ?? {}).length > 0
+        ? { disabled: state.functions.disabled }
+        : {}),
     },
     http: {
       metaInputTypes: Array.from(state.http.metaInputTypes.entries()),
@@ -546,9 +552,10 @@ export function serializeInspectorState(
     diagnostics: state.diagnostics,
     addonFunctions: state.addonFunctions,
     remoteAddonFunctions: state.remoteAddonFunctions,
-    screensManifest: state.screensManifest,
-    addonScreens: state.addonScreens,
-    addonContributors: state.addonContributors,
+    studio: state.studio,
+    addonStudio: state.addonStudio,
+    contributorsManifest: state.contributorsManifest,
+    optedInContributors: state.optedInContributors,
     exportedContracts: state.exportedContracts,
   }
 }
@@ -620,6 +627,7 @@ export function deserializeInspectorState(
       files: new Map(data.functions.files),
       approvalDescriptions: (data.functions as any).approvalDescriptions || {},
       dynamicImportIds: new Set(data.functions.dynamicImportIds ?? []),
+      disabled: data.functions.disabled ?? {},
     },
     http: {
       metaInputTypes: new Map(data.http.metaInputTypes),
@@ -788,9 +796,10 @@ export function deserializeInspectorState(
     ...(data.remoteAddonFunctions
       ? { remoteAddonFunctions: data.remoteAddonFunctions }
       : {}),
-    screensManifest: data.screensManifest,
-    addonScreens: data.addonScreens,
-    addonContributors: data.addonContributors,
+    studio: data.studio,
+    addonStudio: data.addonStudio,
+    contributorsManifest: data.contributorsManifest,
+    optedInContributors: data.optedInContributors,
     exportedContracts: data.exportedContracts || {
       http: {},
       cli: {},

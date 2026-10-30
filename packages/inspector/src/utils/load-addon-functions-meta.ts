@@ -2,11 +2,10 @@ import { existsSync } from 'fs'
 import { readFile, readdir } from 'fs/promises'
 import { join, dirname, relative } from 'path'
 import type {
-  AddonContributorRef,
-  AddonContributorsMeta,
   InspectorState,
   InspectorLogger,
-  ScreensManifestMeta,
+  StudioMeta,
+  ContributorsManifestMeta,
 } from '../types.js'
 import {
   addonResolutionDirs,
@@ -258,60 +257,96 @@ export const namespaceAddonWebhookSources = (
  * package's function metadata so that wiring handlers (channels, HTTP routes,
  * schedules, etc.) can look up addon function types during the routes sweep.
  */
-const loadScreensManifest = async (
+const loadStudioMeta = async (
   require: AddonResolver,
   packageName: string
-): Promise<ScreensManifestMeta | null> => {
+): Promise<StudioMeta | null> => {
   const path = resolveAddonMeta(
     require,
     packageName,
     'screens/pikku-screens-meta'
   )
   if (!path) return null
-  return JSON.parse(await readFile(path, 'utf-8')) as ScreensManifestMeta
+  return JSON.parse(await readFile(path, 'utf-8')) as StudioMeta
 }
 
-const isContributorRef = (value: unknown): value is AddonContributorRef =>
-  !!value &&
-  typeof value === 'object' &&
-  typeof (value as AddonContributorRef).module === 'string' &&
-  ((value as AddonContributorRef).export === undefined ||
-    typeof (value as AddonContributorRef).export === 'string')
+const loadContributorsManifest = async (
+  require: AddonResolver,
+  packageName: string
+): Promise<ContributorsManifestMeta> => {
+  const path = resolveAddonMeta(
+    require,
+    packageName,
+    'contributors/pikku-contributors-meta'
+  )
+  if (!path) return {}
+  const meta = JSON.parse(await readFile(path, 'utf-8'))
+  return (meta?.contributors ?? {}) as ContributorsManifestMeta
+}
 
 /**
- * The platform service contributors an addon declares in its package.json,
- * `"pikku": { "contributors": [{ "module", "export" }] }` — the same shape as
- * `dev.contributors`. `wireAddon` has no place for them: a contributor emits
- * code into the host's entry, so it belongs to the package, not the wiring.
+ * Resolves `wireAddon({ contributors })` against what the addon registered.
+ * A name the addon does not register is an error rather than a skip: the
+ * project asked for a service and would otherwise build without it.
  */
-export const readAddonContributors = async (
+const recordOptedInContributors = async (
+  logger: InspectorLogger,
+  state: InspectorState,
+  require: AddonResolver,
+  namespace: string,
+  packageName: string,
+  names: string[]
+): Promise<void> => {
+  let registered: ContributorsManifestMeta
+  try {
+    registered = await loadContributorsManifest(require, packageName)
+  } catch (e) {
+    logger.critical(
+      ErrorCode.ADDON_CONTRIBUTOR_UNKNOWN,
+      `wireAddon('${namespace}') opts in to contributors, but the contributors manifest of ${packageName} could not be read: ${e instanceof Error ? e.message : e}`
+    )
+    return
+  }
+  const selected: ContributorsManifestMeta = {}
+  for (const name of names) {
+    if (!Object.hasOwn(registered, name)) {
+      const known = Object.keys(registered)
+      logger.critical(
+        ErrorCode.ADDON_CONTRIBUTOR_UNKNOWN,
+        `wireAddon('${namespace}') opts in to contributor '${name}', but ${packageName} registers no such contributor. ${
+          known.length > 0
+            ? `It registers: ${known.join(', ')}.`
+            : 'It registers none; add a defineContributors call to the package and run pikku all in it.'
+        }`
+      )
+      continue
+    }
+    selected[name] = registered[name]!
+  }
+  if (Object.keys(selected).length > 0) {
+    ;(state.optedInContributors ??= {})[namespace] = {
+      packageName,
+      contributors: selected,
+    }
+  }
+}
+
+/**
+ * `pikku.contributors` in an addon's package.json was the string-emitting
+ * contributor route. It is no longer read, so it is reported rather than left
+ * to stop applying silently.
+ */
+const hasLegacyContributors = async (
   dirs: string[],
   packageName: string
-): Promise<AddonContributorsMeta | null> => {
-  const packageDir = findInstalledPackageDir(dirs, packageName)
-  if (!packageDir) return null
-  let declared: unknown
+): Promise<boolean> => {
+  const dir = findInstalledPackageDir(dirs, packageName)
+  if (!dir) return false
   try {
-    const pkg = JSON.parse(
-      await readFile(join(packageDir, 'package.json'), 'utf-8')
-    )
-    declared = pkg?.pikku?.contributors
+    const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf-8'))
+    return pkg?.pikku?.contributors !== undefined
   } catch {
-    return null
-  }
-  if (declared === undefined) return null
-  if (!Array.isArray(declared) || !declared.every(isContributorRef)) {
-    throw new Error(
-      `${packageName} declares pikku.contributors in its package.json, but it is not a list of { module, export? }.`
-    )
-  }
-  if (declared.length === 0) return null
-  return {
-    packageName,
-    packageDir,
-    contributors: declared.map(({ module, export: name }) =>
-      name === undefined ? { module } : { module, export: name }
-    ),
+    return false
   }
 }
 
@@ -404,23 +439,28 @@ export async function loadAddonFunctionsMeta(
     const dirs = addonResolutionDirs(state.rootDir, decl.file)
     const require = createAddonResolver(dirs)
     try {
-      try {
-        const contributors = await readAddonContributors(dirs, decl.package)
-        if (contributors) {
-          ;(state.addonContributors ??= {})[namespace] = contributors
-        }
-      } catch (error) {
-        logger.error(
-          `wireAddon('${namespace}'): ${error instanceof Error ? error.message : error}`
+      recordDeclaredUses(logger, namespace, decl, dirs)
+      if (decl.contributors && decl.contributors.length > 0) {
+        await recordOptedInContributors(
+          logger,
+          state,
+          require,
+          namespace,
+          decl.package,
+          decl.contributors
         )
       }
-      recordDeclaredUses(logger, namespace, decl, dirs)
+      if (await hasLegacyContributors(dirs, decl.package)) {
+        logger.critical(
+          ErrorCode.ADDON_LEGACY_CONTRIBUTORS,
+          `${decl.package} still declares "pikku.contributors" in its package.json, which is no longer read. Remove it, register the contributors with defineContributors in the addon's source, and opt in with wireAddon('${namespace}', { contributors: [...] }). See docs/contributors.md.`
+        )
+      }
       if (decl.ui) {
-        let manifest:
-          Awaited<ReturnType<typeof loadScreensManifest>> | undefined
+        let manifest: Awaited<ReturnType<typeof loadStudioMeta>> | undefined
         let unreadable = false
         try {
-          manifest = await loadScreensManifest(require, decl.package)
+          manifest = await loadStudioMeta(require, decl.package)
         } catch (e) {
           logger.critical(
             ErrorCode.ADDON_UI_HAS_NO_SCREENS,
@@ -433,10 +473,10 @@ export async function loadAddonFunctionsMeta(
         } else if (!manifest || manifest.screens.length === 0) {
           logger.critical(
             ErrorCode.ADDON_UI_HAS_NO_SCREENS,
-            `wireAddon('${namespace}') sets ui: true, but ${decl.package} declares no screens. Add a defineScreens call to the package, or drop ui.`
+            `wireAddon('${namespace}') sets ui: true, but ${decl.package} declares no screens. Add a definePlugin call to the package, or drop ui.`
           )
         } else {
-          ;(state.addonScreens ??= {})[namespace] = {
+          ;(state.addonStudio ??= {})[namespace] = {
             ...manifest,
             scopes: [
               ...new Set([...(manifest.scopes ?? []), ...(decl.scopes ?? [])]),

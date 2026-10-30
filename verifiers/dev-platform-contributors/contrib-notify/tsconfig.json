@@ -1,0 +1,10 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "node18",
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "include": ["src/", "types/"]
+}

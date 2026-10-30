@@ -54,6 +54,15 @@ export const SCAFFOLD_OUTPUTS: ReadonlyArray<{
   ],
   ['analytics', 'analyticsFile', 'analytics', 'analytics.gen.ts', true],
   [
+    'analytics',
+    'analyticsOriginFile',
+    'analytics',
+    'analytics-origin.gen.ts',
+    false,
+  ],
+  ['cors', 'corsFile', 'cors', 'cors.gen.ts', true],
+  ['cors', 'corsOriginsFile', 'cors', 'cors-origins.gen.ts', false],
+  [
     'featureFlags',
     'featureFlagsFile',
     'feature-flags',

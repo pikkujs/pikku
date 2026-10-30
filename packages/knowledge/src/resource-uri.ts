@@ -1,5 +1,5 @@
 import { readFile, readdir } from 'node:fs/promises'
-import { join } from 'node:path'
+import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 
 /**
  * How a knowledge note points at the thing in the code it is about
@@ -233,6 +233,77 @@ const walk = async (dir: string, base = ''): Promise<string[]> => {
     )
   )
   return nested.flat()
+}
+
+/**
+ * The directory the project's scaffold is generated into: `scaffold.pikkuDir`
+ * from pikku.config.json, or beside the first source directory when it is not
+ * set (the CLI's own default). Read from the config rather than assumed, because
+ * a project can move it.
+ */
+const scaffoldDirOf = async (root: string): Promise<string> => {
+  const config = (await readJson(join(root, 'pikku.config.json'))) as {
+    scaffold?: { pikkuDir?: unknown }
+    srcDirectories?: unknown
+  } | null
+  const configured = config?.scaffold?.pikkuDir
+  if (typeof configured === 'string') return resolve(root, configured)
+  const first = Array.isArray(config?.srcDirectories)
+    ? config.srcDirectories[0]
+    : undefined
+  return resolve(root, typeof first === 'string' ? first : 'src', 'scaffold')
+}
+
+const isInside = (dir: string, file: string): boolean => {
+  const rel = relative(dir, resolve(file))
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel) && !rel.startsWith(sep)
+}
+
+/**
+ * The functions and tables the framework put in the project, not the app: a
+ * function generated into the scaffold directory (session, agent, workflow and
+ * virtual-user endpoints) and a table a generated migration creates (Better
+ * Auth's, the runtime services', an addon's). A note describes what the app
+ * does, so none of these is a capability somebody forgot to write down.
+ *
+ * Read from the codegen output. A function counts when its source file is inside
+ * the project's scaffold directory; a table counts when the schema records a
+ * `source` for it, which is only ever set for tables a generated migration
+ * declares (a table without one is the project's own).
+ */
+export const collectPlatformResources = async (
+  root: string,
+  outDir: string
+): Promise<Map<ResourcePrefix, Set<string>>> => {
+  const platform = new Map<ResourcePrefix, Set<string>>()
+
+  const functions = await readJson(
+    join(outDir, 'function', 'pikku-functions-meta-verbose.gen.json')
+  )
+  if (functions && typeof functions === 'object') {
+    const scaffold = await scaffoldDirOf(root)
+    const ids = Object.entries(functions as Record<string, unknown>)
+      .filter(([, meta]) => {
+        const file = (meta as { sourceFile?: unknown } | null)?.sourceFile
+        return typeof file === 'string' && isInside(scaffold, resolve(root, file))
+      })
+      .map(([id]) => id)
+    if (ids.length > 0) platform.set('func', new Set(ids))
+  }
+
+  const schema = (await readJson(
+    join(outDir, 'db', 'pikku-db-schema.gen.json')
+  )) as { tables?: { name?: unknown; source?: unknown }[] } | null
+  if (Array.isArray(schema?.tables)) {
+    const ids = schema.tables
+      .filter(
+        (table) => typeof table?.name === 'string' && typeof table.source === 'string'
+      )
+      .map((table) => table.name as string)
+    if (ids.length > 0) platform.set('table', new Set(ids))
+  }
+
+  return platform
 }
 
 /**

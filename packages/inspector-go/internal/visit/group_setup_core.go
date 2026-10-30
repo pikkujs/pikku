@@ -6,6 +6,7 @@ import (
 
 	"github.com/microsoft/typescript-go/shim/ast"
 
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsutil"
 )
@@ -30,6 +31,7 @@ func init() {
 	factory(OrderCreateWireServices, "CreateWireServices", true, func(s *state.State) *state.PathToNameAndType { return &s.WireServicesFactories })
 	factory(OrderCreateConfig, "CreateConfig", false, func(s *state.State) *state.PathToNameAndType { return &s.ConfigFactories })
 	factory(OrderServerLifecycle, "ServerLifecycle", false, func(s *state.State) *state.PathToNameAndType { return &s.ServerLifecycleFactories })
+	Register(Visitor{Name: "checkHiddenFactory", Phase: PhaseSetup, Order: OrderCheckHiddenFactory, Visit: (*Context).checkHiddenFactory})
 }
 
 func appendNameAndType(m *state.PathToNameAndType, file string, e state.NameAndType) {
@@ -124,6 +126,68 @@ var wrapperFactoryTypes = map[string]string{
 	"pikkuServerLifecycle":   "ServerLifecycle",
 }
 
+// describeFactoryCast is how a cast around a factory call reads in PKU564:
+// the form, and what to remove. ok is false for anything but a cast.
+func describeFactoryCast(n *ast.Node) (form, remove string, ok bool) {
+	switch {
+	case ast.IsAsExpression(n):
+		return "an `as` cast", "the cast", true
+	case ast.IsTypeAssertion(n):
+		return "a `<T>` cast", "the cast", true
+	case ast.IsNonNullExpression(n):
+		return "a non-null assertion (`!`)", "the `!`", true
+	}
+	return "", "", false
+}
+
+// isTransparentWrapper: `satisfies` and parentheses leave the value's type as
+// written, so a factory inside them is read as a direct call.
+func isTransparentWrapper(n *ast.Node) bool {
+	return n != nil && (ast.IsSatisfiesExpression(n) || ast.IsParenthesizedExpression(n))
+}
+
+func unwrapTransparent(n *ast.Node) *ast.Node {
+	for isTransparentWrapper(n) {
+		n = n.Expression()
+	}
+	return n
+}
+
+// checkHiddenFactory ports add-file-with-factory.ts checkHiddenFactory: a
+// factory call inside a cast (`as`, `<T>`, `!`) fails the build rather than
+// being seen through, since the cast hides a mismatch the factory should fix.
+func (s *Context) checkHiddenFactory(node *ast.Node) {
+	if !ast.IsVariableDeclaration(node) || node.Initializer() == nil {
+		return
+	}
+	inner := node.Initializer()
+	form, remove, cast := "", "", false
+	for inner != nil {
+		if f, r, ok := describeFactoryCast(inner); ok {
+			if !cast {
+				form, remove, cast = f, r, true
+			}
+			inner = inner.Expression()
+		} else if isTransparentWrapper(inner) {
+			inner = inner.Expression()
+		} else {
+			break
+		}
+	}
+	if !cast || inner == nil || !ast.IsCallExpression(inner) || !ast.IsIdentifier(inner.Expression()) {
+		return
+	}
+	wrapper := inner.Expression().Text()
+	if _, known := wrapperFactoryTypes[wrapper]; !known {
+		return
+	}
+	s.Log.Critical(diag.FactoryNotADirectCall, fmt.Sprintf(
+		"'%s' at %s wraps %s(...) in %s. "+
+			"The inspector reads a factory only from a direct %s(...) call, so this one would not be registered and nothing it provides would exist at runtime. "+
+			"Remove %s, and fix the type mismatch it hides in the factory itself.",
+		tsutil.NodeText(node.Name()), s.nodePosition(node), wrapper, form, wrapper, remove))
+}
+
 func functionNodeOf(n *ast.Node) *ast.Node {
 	if n != nil && (ast.IsArrowFunction(n) || ast.IsFunctionExpression(n)) {
 		return n
@@ -146,7 +210,7 @@ func (s *Context) addFileWithFactory(node *ast.Node, methods *state.PathToNameAn
 	}
 	fileName := ast.GetSourceFileOfNode(node).FileName()
 	variableName := tsutil.NodeText(node.Name())
-	init := node.Initializer()
+	init := unwrapTransparent(node.Initializer())
 
 	if init != nil && ast.IsCallExpression(init) && ast.IsIdentifier(init.Expression()) {
 		wrapper := init.Expression().Text()
@@ -202,7 +266,7 @@ func (s *Context) addFileWithFactory(node *ast.Node, methods *state.PathToNameAn
 		TypePath: declarationPath(s.Checker.GetSymbolAtLocation(ident)),
 	})
 	if expected == "CreateWireServices" && withState {
-		if fn := functionNodeOf(init); fn != nil {
+		if fn := functionNodeOf(node.Initializer()); fn != nil {
 			s.State.WireServicesMeta.Set(variableName, extractServicesFromFunction(fn))
 		}
 	}

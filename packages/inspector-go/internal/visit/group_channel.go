@@ -241,6 +241,12 @@ func (s *Context) addMessageRoutesOf(entries []channelEntry) *channelMessageWiri
 				chanInit = resolved
 			}
 		}
+		// ...or is the defineChannelRoutes call itself, written inline
+		if ast.IsCallExpression(chanInit) && ast.IsIdentifier(chanInit.Expression()) && chanInit.Expression().Text() == "defineChannelRoutes" {
+			if args := chanInit.Arguments(); len(args) > 0 && ast.IsObjectLiteralExpression(args[0]) {
+				chanInit = args[0]
+			}
+		}
 		if contract, ok := resolveRefContract(chanInit, "refChannel", &s.State.ExportedContracts.AddonChannel); ok {
 			if !e.keyOK {
 				continue

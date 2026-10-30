@@ -1,7 +1,11 @@
 import { existsSync, readdirSync } from 'fs'
-import { join } from 'path'
+import { join, relative } from 'path'
 import { loadUserConfigForDb } from '../commands/db-shared.js'
-import { unresolvedSchemaReferences } from '@pikku/inspector/lite'
+import {
+  ErrorCode,
+  findUnusedFunctions,
+  unresolvedSchemaReferences,
+} from '@pikku/inspector/lite'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
 import { checkAddonDependencyVersions } from '../../utils/addon-dependencies.js'
@@ -9,6 +13,7 @@ import { warnOnSplitTypeIdentity } from '../validate/type-identity-checks.js'
 import {
   pruneLegacyScaffoldFiles,
   refreshScaffoldsImportingRemovedEntryPoints,
+  removeDisabledOriginScaffolds,
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
 import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
@@ -29,6 +34,7 @@ import {
 type ScaffoldGenerator =
   | 'pikkuPublicRPC'
   | 'pikkuAnalytics'
+  | 'pikkuCors'
   | 'pikkuFeatureFlagsScaffold'
   | 'pikkuConsoleFunctions'
   | 'pikkuVirtualUserFunctions'
@@ -49,6 +55,10 @@ const scaffoldFiles = (
     files.push({ file: config.publicRpcFile, generator: 'pikkuPublicRPC' })
   if (config.scaffold?.analytics && config.analyticsFile)
     files.push({ file: config.analyticsFile, generator: 'pikkuAnalytics' })
+  // The origins file is wanted by `scaffold.cors` and by the analytics origin
+  // lock alike, so the one generator is queued for whichever needs it.
+  if (config.corsOriginsFile)
+    files.push({ file: config.corsOriginsFile, generator: 'pikkuCors' })
   if (config.scaffold?.featureFlags && config.featureFlagsFile)
     files.push({
       file: config.featureFlagsFile,
@@ -106,6 +116,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await pruneLegacyScaffoldFiles(config)
     await refreshScaffoldsImportingRemovedEntryPoints(config)
     await removeRetiredScaffoldFiles(config)
+    await removeDisabledOriginScaffolds(config)
 
     // Before the first inspection: codegen imports the remote addons' types
     // from their SDKs, and the inspector refuses an SDK that does not match
@@ -324,7 +335,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       )
     }
     await Promise.all(typeGenerators)
-    await workflow.do('CLI types', 'pikkuCLITypes', null)
+    await workflow.do('CLI types', 'pikkuCLITypes', {})
 
     const [middleware, permissions] = await Promise.all([
       workflow.do('Middleware', 'pikkuMiddleware', null),
@@ -371,6 +382,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await Promise.all([
       workflow.do('Graph wirings', 'pikkuGraphWirings', null),
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
+      workflow.do('CORS scaffold', 'pikkuCors', null),
       workflow.do('Analytics ingest', 'pikkuAnalytics', null),
       workflow.do('Feature flag wire', 'pikkuFeatureFlagsScaffold', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
@@ -387,8 +399,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('VirtualUsers', 'pikkuVirtualUsers', {}),
       workflow.do('Variables', 'pikkuVariables', null),
       workflow.do('Outgoing webhooks', 'pikkuOutgoingWebhooks', null),
-      workflow.do('Addon types', 'pikkuAddonTypes', null),
+      workflow.do('Addon types', 'pikkuAddonTypes', {}),
       workflow.do('Screens', 'pikkuScreens', null),
+      workflow.do('Contributors', 'pikkuContributors', null),
     ])
 
     if (hasInternalRPCs) {
@@ -473,7 +486,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('RPC internal map', 'pikkuRPCInternalMap', null),
       workflow.do('RPC exposed map', 'pikkuRPCExposedMap', null),
       workflow.do('RPC remote map', 'pikkuRPCRemoteMap', null),
-      workflow.do('Workflow', 'pikkuWorkflow', null),
+      workflow.do('Workflow', 'pikkuWorkflow', {}),
     ])
 
     // The inspector checks that a wired addon's declared dependencies are
@@ -734,6 +747,38 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await workflow.do('Surface usage', async () => {
       const { surfaceUsage } = await getInspectorState()
       await writeSurfaceUsage(logger, config, surfaceUsage ?? {})
+    })
+
+    // Disabled functions are left out of everything above; say which, once.
+    // An app function nothing uses fails `pikku verify` (error, not critical,
+    // so the build itself still goes through). Addon functions are never judged.
+    await workflow.do('Disabled and unused functions', async () => {
+      const state = await getInspectorState()
+      const disabled = Object.values(state.functions.disabled ?? {})
+      if (disabled.length > 0) {
+        logger.warn(
+          `${disabled.length} disabled function${disabled.length === 1 ? '' : 's'} left out of the build:\n` +
+            disabled
+              .map(
+                (fn) =>
+                  `  ${fn.name} (${relative(config.rootDir, fn.sourceFile)})` +
+                  (fn.reason ? `: ${fn.reason}` : '')
+              )
+              .join('\n')
+        )
+      }
+      for (const fn of findUnusedFunctions(state, { addon: !!config.addon })) {
+        logger.diagnostic({
+          severity: 'error',
+          code: ErrorCode.UNUSED_FUNCTION,
+          message:
+            `'${fn.name ?? fn.pikkuFuncId}'` +
+            (fn.sourceFile
+              ? ` in ${relative(config.rootDir, fn.sourceFile)}`
+              : '') +
+            ' is not wired, exposed or called by anything. Use it, or mark it `disabled`.',
+        })
+      }
     })
 
     await workflow.do('Bootstrap', 'pikkuBootstrap', { allImports })

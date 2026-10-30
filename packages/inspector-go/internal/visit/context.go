@@ -60,7 +60,9 @@ type Context struct {
 
 	// gateNames caches localGateNames per file (check_indirect.go).
 	gateNames map[*ast.SourceFile]map[string]bool
-	coreTypes []coreType
+	// disabledIndex caches disabledByLocalName (check_disabled.go).
+	disabledIndex map[string][]*state.DisabledFunctionMeta
+	coreTypes     []coreType
 
 	// cliConfigTypeWarned is add-cli.ts's module-level configTypeWarningShown.
 	cliConfigTypeWarned bool

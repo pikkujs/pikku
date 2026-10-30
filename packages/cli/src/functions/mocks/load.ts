@@ -5,7 +5,7 @@ import type { SurfaceView } from './diff.js'
 
 const readFunctionMeta = (
   pikkuDir: string
-): Record<string, { expose?: boolean }> => {
+): Record<string, { expose?: boolean; readonly?: boolean }> => {
   try {
     return JSON.parse(
       readFileSync(
@@ -27,7 +27,7 @@ export const loadSurface = (rootDir: string, outDir: string): SurfaceView => {
     functions: Object.fromEntries(
       Object.entries(surface.functions).map(([id, fn]) => [
         id,
-        { ...fn, expose: meta[id]?.expose },
+        { ...fn, expose: meta[id]?.expose, readonly: meta[id]?.readonly },
       ])
     ),
     schemas: surface.schemas,

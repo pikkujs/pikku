@@ -1,0 +1,52 @@
+{
+  "name": "@pikku/vite",
+  "version": "0.12.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/frontend/vite"
+  },
+  "description": "Vite plugins for Pikku frontends — scenario test ids and the Better Auth cross-site session relay, applied from pikku.config.json",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "tsc": "tsc && tsc -p tsconfig.tests.json",
+    "build": "bun run clean && tsc -b",
+    "test": "bun test --timeout 120000 src",
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@babel/core": "^7.26.0"
+  },
+  "peerDependencies": {
+    "@pikku/better-auth": "^0.12.60",
+    "vite": "^5 || ^6 || ^7"
+  },
+  "peerDependenciesMeta": {
+    "@pikku/better-auth": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@pikku/better-auth": "workspace:*",
+    "@types/babel__core": "^7.20.5",
+    "vite": "^7.0.0"
+  }
+}

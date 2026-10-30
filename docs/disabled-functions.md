@@ -1,0 +1,39 @@
+# Disabled and unused functions
+
+## `disabled`
+
+Every function definer (`pikkuFunc`, `pikkuSessionlessFunc`, `pikkuWorkflowFunc`, ...) accepts `disabled`:
+
+```typescript
+export const oldReport = pikkuSessionlessFunc({
+  disabled: 'replaced by liveReport', // or `true`
+  func: async () => 'old',
+})
+```
+
+A disabled function is left out of the build completely: function meta, RPC maps, clients, addon contracts and SDKs, MCP, CLI, HTTP and every other wiring. `addFunction` throws for it at run time, so it cannot be called.
+
+Anything that still references a disabled function fails the build with `PKU562`, naming the disabled function's file and the reference's location:
+
+- a wiring or any other code that references it
+- `rpc.invoke('oldReport')` / `rpc.mesh('oldReport')`
+- a workflow step that calls it
+- a disabled function defined inline in a wiring
+
+References in generated files (`*.gen.ts`, `*.gen.js`) are not counted: `pikku all` rewrites those from the current functions, so one left over from the last run is replaced rather than refused.
+
+A disabled function's body is still type-checked against the generated RPC maps. A function it calls by name, such as a step in a disabled workflow, has to stay enabled while that body names it.
+
+`pikku all` prints one warning listing the disabled functions, each with its file and reason.
+
+`disabled` must be `true`, `false` or a string literal. A computed value is refused (`INVALID_VALUE`) and the function is treated as disabled.
+
+## Unused functions
+
+`pikku verify` fails on an app function that nothing uses: not wired to any transport, not exposed (`expose`, `remote`, `mcp`), and not called by name (`rpc.invoke`, workflow steps, agent tools). `pikku all` reports each one as `PKU563` at `error` severity but still builds.
+
+A workflow is checked like any other function. It counts as used when it is wired or exposed, or started by a literal name: `rpc.startWorkflow('name')`, `workflowService.startWorkflow('name')` or `runToCompletion('name')`, `rpc.invoke('name')`, another workflow's step, or the client helpers (`workflowStart('name')` and the rest). A workflow started only by a computed name is reported.
+
+Scenarios, inline wiring functions and functions in generated scaffolds (`*.gen.ts`, which cannot take a `disabled` that the next run would overwrite) are never reported. Neither are addon functions: an addon project is never checked, and an app is checked only for its own functions.
+
+Fix it by using the function or marking it `disabled`.

@@ -109,6 +109,7 @@ export const notifyWebhook = pikkuSessionlessFunc<
     sentAt: string
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Send Webhook Notification',
   func: async ({ logger }, data) => {
     logger.info(`Sending webhook notification to: ${data.url}`)

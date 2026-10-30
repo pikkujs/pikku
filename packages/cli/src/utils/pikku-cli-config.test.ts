@@ -83,6 +83,26 @@ describe('getPikkuCLIConfig', () => {
     )
   })
 
+  for (const section of ['dev', 'deploy']) {
+    test(`rejects ${section}.contributors by name and says how to migrate`, async () => {
+      const root = await writeConfig({
+        [section]: { contributors: ['./c.ts'] },
+      })
+
+      await assert.rejects(
+        () =>
+          getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+        (e: Error) => {
+          assert.ok(e.message.includes(`${section}.contributors`))
+          assert.match(e.message, /defineContributors/)
+          assert.match(e.message, /wireAddon/)
+          assert.match(e.message, /docs\/contributors\.md/)
+          return true
+        }
+      )
+    })
+  }
+
   test('rejects a console scaffold still carrying the removed auth key', async () => {
     const root = await writeConfig({
       scaffold: { console: { auth: false } },

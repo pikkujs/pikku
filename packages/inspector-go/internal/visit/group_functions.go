@@ -74,7 +74,23 @@ func (s *Context) addFunctions(node *ast.Node) {
 
 	fn := s.extractFunctionName(node)
 	pikkuFuncId, name := fn.pikkuFuncId, fn.name
-	if pikkuFuncId == "" || strings.HasPrefix(pikkuFuncId, "__temp_") {
+	if pikkuFuncId == "" {
+		return
+	}
+	// Before the inline (`__temp_`) bail-out: a disabled function defined
+	// inline in a wiring is still used by it, and is refused rather than skipped.
+	if ast.IsObjectLiteralExpression(args[0]) {
+		if reason, disabled := s.readFunctionDisabled(args[0], name); disabled {
+			s.recordDisabledFunction(node, pikkuFuncId, &state.DisabledFunctionMeta{
+				Name:         name,
+				SourceFile:   ast.GetSourceFileOfNode(node).FileName(),
+				ExportedName: fn.exportedName,
+				Reason:       reason,
+			})
+			return
+		}
+	}
+	if strings.HasPrefix(pikkuFuncId, "__temp_") {
 		return
 	}
 	if isScenarioInstrumentation(pikkuFuncId) || isScenarioInstrumentation(name) {

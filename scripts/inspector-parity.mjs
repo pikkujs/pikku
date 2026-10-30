@@ -18,6 +18,18 @@
  * `.pikku/sdk` an addon calling another through `pikku.uses` is typed from.
  * Each addon another member of its group calls that way is generated for real
  * first, the addons it calls before it.
+ *
+ * Two things a verifier's projects can need beyond a plain `pikku all`:
+ *
+ * - An addon the group's other projects opt in to has to be generated before
+ *   they are: they read its generated metadata, which a clean tree does not
+ *   have, and the parity run restores each project it checks to the state it
+ *   found. inspector-parity-addons-first.json lists such addons; each gets a
+ *   plain `pikku all` before its group's parity runs, and its output stays.
+ * - A project that verifies a build error fails on purpose.
+ *   inspector-parity-expected-failures.json names the message, and the
+ *   command then requires both engines to fail with it and still agree. A
+ *   project that stops failing, or fails otherwise, is a failure.
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
@@ -90,12 +102,58 @@ const skips = new Map(
   ).map(({ project, reason }) => [project, reason])
 )
 
+const addonsFirst = new Set(
+  JSON.parse(
+    readFileSync(
+      new URL('./inspector-parity-addons-first.json', import.meta.url),
+      'utf8'
+    )
+  )
+)
+
+const expectedFailures = new Map(
+  JSON.parse(
+    readFileSync(
+      new URL('./inspector-parity-expected-failures.json', import.meta.url),
+      'utf8'
+    )
+  ).map(({ project, message }) => [project, message])
+)
+
+const generateAddons = (group) => {
+  for (const dir of group.filter((dir) =>
+    addonsFirst.has(relative(REPO, dir))
+  )) {
+    const run = spawnSync('node', [CLI, 'all'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, FORCE_COLOR: '0' },
+    })
+    if (run.status !== 0) {
+      console.log(
+        `\n== ${relative(REPO, dir)}: pikku all failed before the group's parity runs\n` +
+          `${run.stdout}\n${run.stderr}`
+            .trimEnd()
+            .split('\n')
+            .slice(-20)
+            .join('\n')
+            .replace(/^/gm, '   ')
+      )
+    }
+  }
+}
+
 const parity = (dir) =>
-  spawnSync('node', [CLI, 'inspector', 'parity'], {
+  spawnSync('node', [CLI, 'inspector', 'parity', ...expectFailureArgs(dir)], {
     cwd: dir,
     encoding: 'utf8',
     env: { ...process.env, FORCE_COLOR: '0' },
   })
+
+const expectFailureArgs = (dir) => {
+  const message = expectedFailures.get(relative(REPO, dir))
+  return message ? ['--expectFailure', message] : []
+}
 
 /** Exit 1 is a difference the command reported; anything else is a failed run. */
 const outcome = (run) =>
@@ -165,6 +223,7 @@ for (const group of groups) {
       )
     }
   }
+  generateAddons(group)
   // A consumer generated from its addon fails until the addon has been, so a
   // project that fails is retried once the rest of its group has run.
   const runs = new Map(group.map((dir) => [dir, parity(dir)]))

@@ -79,10 +79,13 @@ type State struct {
 	AddonFunctions        Record[*Record[*FunctionMeta]] `json:"addonFunctions"`
 	// RemoteAddonFunctions is each versioned wireRemoteAddon's SDK metadata.
 	RemoteAddonFunctions *Record[*Record[*FunctionMeta]] `json:"remoteAddonFunctions,omitempty"`
-	ScreensManifest      Raw                             `json:"screensManifest,omitempty"`
-	AddonScreens         Raw                             `json:"addonScreens,omitempty"`
-	AddonContributors    Raw                             `json:"addonContributors,omitempty"`
-	ExportedContracts    ExportedContracts               `json:"exportedContracts"`
+	Studio               Raw                             `json:"studio,omitempty"`
+	AddonStudio          Raw                             `json:"addonStudio,omitempty"`
+	// ContributorsManifest is what defineContributors registers; OptedInContributors
+	// is what wireAddon({ contributors }) selected from each addon's manifest.
+	ContributorsManifest Raw               `json:"contributorsManifest,omitempty"`
+	OptedInContributors  Raw               `json:"optedInContributors,omitempty"`
+	ExportedContracts    ExportedContracts `json:"exportedContracts"`
 
 	// CoreTypeProperties replaces the live `typesLookup` entries for the core
 	// interfaces (CoreConfig / CoreSingletonServices / CoreServices /
@@ -104,6 +107,17 @@ type Functions struct {
 	Files                Map[FileExport]               `json:"files"`
 	ApprovalDescriptions Record[*MiddlewareDefinition] `json:"approvalDescriptions"`
 	DynamicImportIds     Set                           `json:"dynamicImportIds"`
+	// Disabled holds the functions declared with `disabled`, left out of
+	// everything else; nil (and absent) when there are none.
+	Disabled *Record[*DisabledFunctionMeta] `json:"disabled,omitempty"`
+}
+
+// DisabledFunctionMeta is a function declared with `disabled: true | 'reason'`.
+type DisabledFunctionMeta struct {
+	Name         string `json:"name"`
+	SourceFile   string `json:"sourceFile"`
+	ExportedName string `json:"exportedName,omitempty"`
+	Reason       string `json:"reason,omitempty"`
 }
 
 type HTTP struct {

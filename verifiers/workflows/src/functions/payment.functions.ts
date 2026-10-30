@@ -64,6 +64,7 @@ export const paymentVerify = pikkuSessionlessFunc<
   { paymentId: string },
   { id: string; verified: boolean; status: string; verifiedAt: string }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Verify Payment',
   func: async ({ logger }, data) => {
     logger.info(`Verifying payment: ${data.paymentId}`)
@@ -87,6 +88,7 @@ export const paymentGet = pikkuSessionlessFunc<
     createdAt: string
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Get Payment',
   func: async ({ logger }, data) => {
     logger.info(`Getting payment: ${data.paymentId}`)
@@ -111,6 +113,7 @@ export const paymentMethodGet = pikkuSessionlessFunc<
     expiryYear: number
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Get Payment Method',
   func: async ({ logger }, data) => {
     logger.info(`Getting payment method: ${data.paymentMethodId}`)

@@ -67,63 +67,66 @@ func readResolvedJSON(req addonResolver, id string) (*ojson, error) {
 	return readJSONFile(p)
 }
 
-// readAddonContributors is the platform service contributors an addon declares
-// in its package.json under pikku.contributors, as { packageName, packageDir,
-// contributors }, or nil when it declares none.
-func readAddonContributors(dirs []string, pkg string) (*ojson, error) {
+// hasLegacyContributors reports a package.json still carrying
+// pikku.contributors, the removed string-emitting route.
+func hasLegacyContributors(dirs []string, pkg string) bool {
 	dir := findInstalledPackageDir(dirs, pkg)
 	if dir == "" {
-		return nil, nil
+		return false
 	}
 	pj, err := readJSONFile(filepath.Join(dir, "package.json"))
 	if err != nil {
-		return nil, nil
+		return false
 	}
-	pikku := pj.get("pikku")
-	if !pikku.has("contributors") {
-		return nil, nil
-	}
-	declared := pikku.get("contributors")
-	malformed := fmt.Errorf("%s declares pikku.contributors in its package.json, but it is not a list of { module, export? }.", pkg)
-	if declared == nil || !declared.isArr {
-		return nil, malformed
-	}
-	refs := &ojson{isArr: true, arr: []*ojson{}}
-	for _, entry := range declared.arr {
-		module, ok := entry.get("module").str()
-		if !entry.isObject() || !ok {
-			return nil, malformed
-		}
-		ref := newOObject()
-		ref.set("module", ojsonString(module))
-		if entry.has("export") {
-			name, ok := entry.get("export").str()
-			if !ok {
-				return nil, malformed
-			}
-			ref.set("export", ojsonString(name))
-		}
-		refs.arr = append(refs.arr, ref)
-	}
-	if len(refs.arr) == 0 {
-		return nil, nil
-	}
-	out := newOObject()
-	out.set("packageName", ojsonString(pkg))
-	out.set("packageDir", ojsonString(dir))
-	out.set("contributors", refs)
-	return out, nil
+	return pj.get("pikku").has("contributors")
 }
 
-func (s *Context) recordAddonContributors(ns string, contributors *ojson) {
+// recordOptedInContributors resolves wireAddon({ contributors }) against what
+// the addon registered. A name it does not register is an error rather than a
+// skip: the project asked for a service and would otherwise build without it.
+func (s *Context) recordOptedInContributors(ns string, decl *addonDecl, req addonResolver) {
+	registered := newOObject()
+	if path := resolveAddonMeta(req, decl.pkg, "contributors/pikku-contributors-meta"); path != "" {
+		meta, err := readJSONFile(path)
+		if err != nil {
+			s.Log.Critical(diag.AddonContributorUnknown, fmt.Sprintf(
+				"wireAddon('%s') opts in to contributors, but the contributors manifest of %s could not be read: %s", ns, decl.pkg, err.Error()))
+			return
+		}
+		if meta.get("contributors").isObject() {
+			registered = meta.get("contributors")
+		}
+	}
+	selected := newOObject()
+	for _, name := range decl.contributors {
+		if !registered.has(name) {
+			known := []string{}
+			registered.obj.Each(func(k string, _ *ojson) { known = append(known, k) })
+			hint := "It registers none; add a defineContributors call to the package and run pikku all in it."
+			if len(known) > 0 {
+				hint = "It registers: " + strings.Join(known, ", ") + "."
+			}
+			s.Log.Critical(diag.AddonContributorUnknown, fmt.Sprintf(
+				"wireAddon('%s') opts in to contributor '%s', but %s registers no such contributor. %s", ns, name, decl.pkg, hint))
+			continue
+		}
+		selected.set(name, registered.get(name))
+	}
+	if selected.obj.Len() == 0 {
+		return
+	}
+	entry := newOObject()
+	entry.set("packageName", ojsonString(decl.pkg))
+	entry.set("contributors", selected)
+
 	all := newOObject()
-	if len(s.State.AddonContributors) > 0 && string(s.State.AddonContributors) != "null" {
-		if existing, err := parseOJSON(s.State.AddonContributors); err == nil && existing.isObject() {
+	if len(s.State.OptedInContributors) > 0 && string(s.State.OptedInContributors) != "null" {
+		if existing, err := parseOJSON(s.State.OptedInContributors); err == nil && existing.isObject() {
 			all = existing
 		}
 	}
-	all.set(ns, contributors)
-	s.State.AddonContributors = all.raw()
+	all.set(ns, entry)
+	s.State.OptedInContributors = all.raw()
 }
 
 // namespaceAddonWebhookSources names an addon's webhook sources after the
@@ -335,16 +338,20 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	dirs := addonResolutionDirs(s.RootDir, decl.file)
 	req := addonResolver(dirs)
 
-	if contributors, err := readAddonContributors(dirs, decl.pkg); err != nil {
-		s.Log.Error(fmt.Sprintf("wireAddon('%s'): %s", ns, err.Error()))
-	} else if contributors != nil {
-		s.recordAddonContributors(ns, contributors)
+	s.recordDeclaredUses(ns, decl, dirs)
+	if len(decl.contributors) > 0 {
+		s.recordOptedInContributors(ns, decl, req)
 	}
 
-	s.recordDeclaredUses(ns, decl, dirs)
+	if hasLegacyContributors(dirs, decl.pkg) {
+		s.Log.Critical(diag.AddonLegacyContributors, fmt.Sprintf(
+			"%s still declares \"pikku.contributors\" in its package.json, which is no longer read. "+
+				"Remove it, register the contributors with defineContributors in the addon's source, and opt in with wireAddon('%s', { contributors: [...] }). See docs/contributors.md.",
+			decl.pkg, ns))
+	}
 
 	if decl.ui {
-		if err := s.loadAddonScreens(ns, decl, req); err != nil {
+		if err := s.loadAddonStudio(ns, decl, req); err != nil {
 			return err
 		}
 	}
@@ -402,7 +409,7 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	return nil
 }
 
-func (s *Context) loadAddonScreens(ns string, decl *addonDecl, req addonResolver) error {
+func (s *Context) loadAddonStudio(ns string, decl *addonDecl, req addonResolver) error {
 	var manifest *ojson
 	if path := resolveAddonMeta(req, decl.pkg, "screens/pikku-screens-meta"); path != "" {
 		m, err := readJSONFile(path)
@@ -424,7 +431,7 @@ func (s *Context) loadAddonScreens(ns string, decl *addonDecl, req addonResolver
 	}
 	if manifest == nil || len(manifest.get("screens").arr) == 0 {
 		s.Log.Critical(diag.AddonUiHasNoScreens, fmt.Sprintf(
-			"wireAddon('%s') sets ui: true, but %s declares no screens. Add a defineScreens call to the package, or drop ui.", ns, decl.pkg))
+			"wireAddon('%s') sets ui: true, but %s declares no screens. Add a definePlugin call to the package, or drop ui.", ns, decl.pkg))
 		return nil
 	}
 	seen := map[string]bool{}
@@ -444,13 +451,13 @@ func (s *Context) loadAddonScreens(ns string, decl *addonDecl, req addonResolver
 	entry.set("scopes", arr)
 
 	all := newOObject()
-	if len(s.State.AddonScreens) > 0 && string(s.State.AddonScreens) != "null" {
-		if existing, err := parseOJSON(s.State.AddonScreens); err == nil && existing.isObject() {
+	if len(s.State.AddonStudio) > 0 && string(s.State.AddonStudio) != "null" {
+		if existing, err := parseOJSON(s.State.AddonStudio); err == nil && existing.isObject() {
 			all = existing
 		}
 	}
 	all.set(ns, entry)
-	s.State.AddonScreens = all.raw()
+	s.State.AddonStudio = all.raw()
 	return nil
 }
 

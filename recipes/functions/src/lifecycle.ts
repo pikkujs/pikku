@@ -1,7 +1,8 @@
 import { pikkuServerLifecycle } from '#pikku/setup'
 
 /**
- * Server lifecycle hooks, run by `pikku dev` and `pikku serve`.
+ * Server lifecycle hooks, run by `pikku dev`, `pikku serve` and the generated
+ * server entries (generic server, standalone and Cloudflare container).
  *
  * Every hook is optional and receives the singleton services after they have
  * been created, so startup work that needs a service — migrations, seeding,
@@ -14,7 +15,7 @@ import { pikkuServerLifecycle } from '#pikku/setup'
  * live service goes in beforeStop.
  *
  * Runtimes that own their own entrypoint (Express, Fastify, uWS, Lambda,
- * Cloudflare, Next.js) do not run these hooks — do that work in start.ts.
+ * Cloudflare Workers, Next.js) do not run these hooks — do that work in start.ts.
  */
 export const lifecycle = pikkuServerLifecycle({
   afterStart: async ({ logger }) => {

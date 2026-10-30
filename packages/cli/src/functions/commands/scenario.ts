@@ -18,7 +18,7 @@ import {
 import { pikkuState, getAllPackageStates } from '@pikku/core/state'
 import type { PikkuRPC } from '@pikku/core/rpc'
 import type { CoreWorkflow } from '@pikku/core/workflow'
-import type { CoreFeature, ScenarioSurface } from '@pikku/core/scenario'
+import type { CoreFeature } from '@pikku/core/scenario'
 
 import { loadScenarioBootstrap } from './load-user-project.js'
 import {
@@ -161,7 +161,9 @@ export const scenarioRun = pikkuSessionlessFunc<
     tags?: string
     excludeTags?: string
     coverage?: boolean
-    run?: ScenarioSurface
+    // Spelled out, not `ScenarioSurface`: the schema generator cannot see through
+    // a type alias imported from another package (PKU456). Assignable to it.
+    run?: 'browser' | 'cli' | 'default'
     strict?: boolean
     spawn?: boolean
     keepAlive?: boolean

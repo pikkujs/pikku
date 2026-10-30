@@ -1,5 +1,11 @@
 import * as ts from 'typescript'
-import type { PathToNameAndType, InspectorState } from '../types.js'
+import { relative } from 'node:path'
+import type {
+  PathToNameAndType,
+  InspectorState,
+  InspectorLogger,
+} from '../types.js'
+import { ErrorCode } from '../error-codes.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'
 
 // Mapping of wrapper function names to their corresponding types
@@ -11,6 +17,80 @@ const wrapperFunctionMap: Record<string, string> = {
   pikkuWireServices: 'CreateWireServices',
   pikkuAddonWireServices: 'CreateWireServices',
   pikkuServerLifecycle: 'ServerLifecycle',
+}
+
+type Cast = { form: string; remove: string }
+
+/** How a cast around an expression reads in a diagnostic, or undefined for none. */
+const describeCast = (expression: ts.Expression): Cast | undefined => {
+  if (ts.isAsExpression(expression)) {
+    return { form: 'an `as` cast', remove: 'the cast' }
+  }
+  if (ts.isTypeAssertionExpression(expression)) {
+    return { form: 'a `<T>` cast', remove: 'the cast' }
+  }
+  if (ts.isNonNullExpression(expression)) {
+    return { form: 'a non-null assertion (`!`)', remove: 'the `!`' }
+  }
+  return undefined
+}
+
+/** `satisfies` and parentheses leave the value's type as written, so a factory inside them is read as a direct call. */
+const isTransparent = (
+  expression: ts.Expression
+): expression is ts.SatisfiesExpression | ts.ParenthesizedExpression =>
+  ts.isSatisfiesExpression(expression) ||
+  ts.isParenthesizedExpression(expression)
+
+const unwrapTransparent = (expression: ts.Expression): ts.Expression => {
+  while (isTransparent(expression)) expression = expression.expression
+  return expression
+}
+
+/**
+ * A factory binding whose wrapper call sits inside a cast: `as`, `<T>` or `!`.
+ * A cast changes the type the inspector would read, and hides a mismatch the
+ * factory should fix, so it fails the build instead of being seen through.
+ */
+export const checkHiddenFactory = (
+  logger: InspectorLogger,
+  node: ts.Node,
+  state: InspectorState
+) => {
+  if (!ts.isVariableDeclaration(node) || !node.initializer) return
+
+  let inner: ts.Expression = node.initializer
+  let cast: Cast | undefined
+  for (;;) {
+    const found = describeCast(inner)
+    if (found) {
+      cast ??= found
+      inner = (inner as ts.AssertionExpression | ts.NonNullExpression)
+        .expression
+    } else if (isTransparent(inner)) {
+      inner = inner.expression
+    } else {
+      break
+    }
+  }
+  if (
+    !cast ||
+    !ts.isCallExpression(inner) ||
+    !ts.isIdentifier(inner.expression) ||
+    !wrapperFunctionMap[inner.expression.text]
+  ) {
+    return
+  }
+
+  const sourceFile = node.getSourceFile()
+  const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart())
+  const wrapper = inner.expression.text
+  logger.critical(
+    ErrorCode.FACTORY_NOT_A_DIRECT_CALL,
+    `'${node.name.getText()}' at ${relative(state.rootDir, sourceFile.fileName)}:${line + 1} wraps ${wrapper}(...) in ${cast.form}. ` +
+      `The inspector reads a factory only from a direct ${wrapper}(...) call, so this one would not be registered and nothing it provides would exist at runtime. ` +
+      `Remove ${cast.remove}, and fix the type mismatch it hides in the factory itself.`
+  )
 }
 
 /**
@@ -151,8 +231,9 @@ export const addFileWithFactory = (
 
     // Check for wrapper function calls FIRST (e.g., pikkuConfig(...), pikkuServices(...))
     // This handles both cases: with and without explicit type annotations
-    if (node.initializer && ts.isCallExpression(node.initializer)) {
-      const callExpression = node.initializer
+    const initializer = node.initializer && unwrapTransparent(node.initializer)
+    if (initializer && ts.isCallExpression(initializer)) {
+      const callExpression = initializer
       const expression = callExpression.expression
 
       if (ts.isIdentifier(expression)) {

@@ -1,3 +1,93 @@
+## 0.12.199
+
+### Patch Changes
+
+- f7bd66b: The CLI's own commands now generate every schema their contract names. Seven input types were declared but not exported (`AuditInput`, `EmailsInitInput`, `InfoInput`, `LoginOptions`, `CLITypesCommandInput`, `AddonTypesCommandInput`, `WorkflowCommandInput`), `scenarioRun` named `ScenarioSurface` from another package, and `scenarioCoverage` returned a type from another package's declaration file; the schema generator found none of them, so `pikku all` on the CLI itself reported PKU463 and PKU456. Exporting the types, spelling the surface union out, and declaring `ScenarioCoverageReport` locally clears both.
+- b86450a: `pikku dev` now runs every frontend that sets `dev.command`, not just the API. Each starts in its own directory beside the server, its output is prefixed with its name, `--frontend a,b` picks some and `--no-frontends` runs the API alone, and if any process dies everything stops and the command exits non-zero. The root `.env` is parsed once and passed to the API and every frontend (a frontend's own `.env` overrides it for that child, and nothing already set is replaced), and `BETTER_AUTH_SECRET` plus any secret declared with `generate` is appended to `.env` on the first run, with a message naming each required secret that cannot be generated.
+
+  `pikku all` can also generate the frontend client files from `clientFiles`: `typesFile` (`RPCInput`, `RPCOutput`, `AnalyticsEvent`), `envFile` (`apiUrl`, `basePath`, `appHref`), `rpcFile` (an isomorphic `rpc()` client for route guards) and `authClientFile` (the Better Auth client glue). `clientAuth` sets where that glue sends people.
+
+- 0a56d98: `pikku validate` no longer warns that `packages/functions/.pikku/function/index.js` is missing. The check dated from the old sandbox that ran `pikku dev` under bare Node and needed a `.js` wrapper beside each generated `.ts`; the file is gitignored and nothing in `pikku all` or `pikku cloud smoke` creates it, so every fresh checkout, the starter template included, carried the warning.
+- a249251: `pikku validate` no longer reports scaffold-generated functions and framework tables as "exists in the code and no note describes it". A function whose source is scaffold output or a `.gen.` file, and a table a generated migration creates (Better Auth, the runtime services, an addon), are put in the project by the platform, so there is nothing for a note to say about them; a fresh starter reported about 75 of these. The app's own functions and tables are still reported.
+- 1e18a07: The release baseline is now `pikku.surface.json` (was `surface.pikku.json`). `pikku release init` writes the new name; `release diff` and `release prepare` still read a legacy `surface.pikku.json`, and `prepare` migrates it to the new name.
+- 953dc28: A `scaffold` flag may now be an object of options instead of `true` (`true` still means every default). New `scaffold.cors` generates the `CORS_ORIGINS` variable, an `allowedOrigins(variables)` helper (the list, else `localhost` and `127.0.0.1` on the primary frontend's dev port, or `scaffold.cors.port`) and a `*` CORS middleware, all read through the `variables` service so they work on Workers. They are written to `<pikkuDir>/cors/cors-origins.gen.ts` and `cors.gen.ts`, split because a schema file may not also wire (PKU490). There is no `FRONTEND_URL` variable.
+
+  `scaffold.analytics` gains `originLock` (default `true`): `<pikkuDir>/analytics/analytics-origin.gen.ts` attaches core's `requireOrigin` to `/analytics`, checked against the same `allowedOrigins`, so a missing or foreign `Origin` gets a 403 inside the CORS headers. The lock needs the shared helper, so `cors-origins.gen.ts` is generated for it even without `scaffold.cors`; the CORS middleware itself still needs `scaffold.cors`. Set `{ "analytics": { "originLock": false } }` for an app with native clients, which send no `Origin`.
+
+  An existing `scaffold.analytics: true` now gets the lock and the `CORS_ORIGINS` variable. A project that declares `CORS_ORIGINS` itself should delete that declaration or set `originLock: false`.
+
+- Updated dependencies [b86450a]
+- Updated dependencies [a249251]
+- Updated dependencies [b86450a]
+- Updated dependencies [5ea2815]
+  - @pikku/better-auth@0.12.60
+  - @pikku/knowledge@0.12.22
+  - @pikku/skills@0.12.64
+
+## 0.12.198
+
+### Patch Changes
+
+- d9be115: `pikku mocks add <rpc>` writes a mock in one step: it checks the RPC is a function of the project, writes `.mocks/<rpc.name>/<state>.json` and `<state>.meta.json` in the format `mocks diff`, `sync` and `check` read, keeps exactly one default, checks the body against the function's output, can declare the `--flag` in the project's flags file, and prints the stub hook call to use. It never overwrites a mock without `--force`.
+- edd7abf: Platform-service contributors are plain objects an addon registers with `defineContributors` (new `@pikku/core/contributors`) and a project opts in to by name with `wireAddon({ contributors })`. `dev.contributors`, `deploy.contributors`, addon `pikku.contributors`, the string-emitting `PlatformServiceContributor` API and its helpers, the adapter `contributors` option and the `devPlatformServicesFile` config output are removed, and a leftover one is a hard error: the CLI refuses the config keys by name and the inspector reports an addon `package.json` with `pikku.contributors` as PKU364 (see `docs/MIGRATION.md`). Contributors can declare `onServerStart` / `onServerStop`, run around the app's server lifecycle in `pikku dev`, `pikku serve`, the generic server entry, standalone and the Cloudflare container entry (which now runs the app's own `serverLifecycle`); on a Worker `onServerStart` is a build error. `ProviderAdapter.contributorSupport` gains a required `runsServerLifecycle`. `@pikku/core` is a new peer dependency of the deploy packages and `@pikku/kysely` of `@pikku/deploy-cloudflare`. The names in `wireAddon({ contributors })` are typed from the addon's published contributors meta, so a name the addon does not register fails `tsc` and completes in the editor. A project gets a generated `#pikku/contributor` (`defineContributors` and `Contributor` typed against its own singleton services, type-only apart from core's helper); addons keep using `@pikku/core/contributors`.
+- 8a4233a: Breaking: `pikkuStudio` is now `definePlugin`. An addon declares the screens and nav it brings to Studio with `definePlugin({ title, screens })` from `@pikku/core/addon`. The manifest shape is unchanged; rename the import and the call. `pikku new addon-ui` scaffolds the new name.
+- 4af4a6d: `pikku ui theme apply --mode dark` derives every token for a dark design: `--page`/`--ink` are the dark ground and its text, and card, muted, border, input, the `-foreground` tokens and ring are derived for it, written to both `:root` and `.dark` with `color-scheme: dark`. Derived foregrounds are now contrast-checked against their fill on the light path too (no more white on a light primary), and apply prints a contrast report. Default light output is unchanged.
+- Updated dependencies [3562771]
+- Updated dependencies [d9be115]
+- Updated dependencies [edd7abf]
+- Updated dependencies [8a4233a]
+- Updated dependencies [4af4a6d]
+  - @pikku/core@0.12.148
+  - @pikku/skills@0.12.63
+  - @pikku/inspector@0.12.112
+  - @pikku/inspector-go@0.12.7
+  - @pikku/deploy@0.12.18
+  - @pikku/deploy-cloudflare@0.12.24
+  - @pikku/deploy-standalone@0.12.29
+  - @pikku/code-edit@0.12.9
+
+## 0.12.197
+
+### Patch Changes
+
+- e26796f: An addon can call another addon with full types. It declares the dependency in its package.json as `"pikku": { "uses": { "stripe": "@pikkustudio/addon-stripe@^0.12.0" } }` and calls `rpc.invoke('stripe:charge', ...)`, `rpc.startWorkflow('stripe:...')` or an agent with no cast. `pikku all` in the addon types `stripe:*` from the dependency's SDK: a workspace package's own `.pikku/sdk`, or a registry SDK pinned in `pikku-addons.lock`.
+
+  The app maps the alias with `wireAddon({ ..., uses: { stripe: '<wired name>' } })`, whether the target is wired with `wireAddon` or `wireRemoteAddon`. New codes: PKU354 (the wired instance's version is outside the declared range), PKU355 (`uses` maps a name the addon did not declare), PKU356 (a malformed `pikku.uses` entry). PKU347 and PKU348 now also cover the alias form.
+
+  Breaking (fail-closed): for an addon that declares `pikku.uses`, a `wireAddon` `uses` key it did not declare is now an error (PKU355). Agent `run`/`stream` from an addon now go through `uses` like invoke and workflows, so an unmapped agent call throws `AddonNotUsedError`. See docs/MIGRATION.md.
+
+- 61201f1: The CLI's registry SDK is `@pikkustudio/addon-registry@^0.12.0`, not `^1.0.0`: `src/registry.wiring.ts` and the committed `pikku-addons.lock` now pin 0.12.0.
+- fd0c346: Functions take `disabled: true | 'reason'`. A disabled function is left out of the build entirely (meta, RPC maps, clients, addon SDKs, MCP, CLI, HTTP and every wiring) and `addFunction` refuses it at run time. Anything that still references one — a wiring, `rpc.invoke('name')`, a workflow step, an agent tool, or an inline definition inside a wiring — fails the build with `PKU562`, naming both sides. `pikku all` lists the disabled functions once, with file and reason.
+
+  `pikku verify` now fails on an app function that is not wired, exposed or called by name (`PKU563`, an `error` diagnostic that `pikku all` prints but does not fail on). Addon functions are never checked; workflows are, and count as used when started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step). Use the function or mark it `disabled`.
+
+  References in generated files (`*.gen.ts` / `*.gen.js`) do not count for `PKU562`, so disabling a function no longer fails the next `pikku all` on the previous run's output. Functions in generated scaffolds are never `PKU563`.
+
+  An inline `defineChannelRoutes({...})` inside `wireChannel`'s `onMessageWiring` is now read, so its message routes reach the channel meta.
+
+- 28a0d77: An addon declares its Pikku Studio screens with `pikkuStudio({ title, screens })` from `@pikku/core/addon`. Each screen has a `path`, a `title` (a message key in the addon's `messages/{locale}.json`, also the nav label), a lazy `component` or an `app`, and a `scope`: `'studio'` (`/<path>`), `'team'` (`/<team>/<path>`) or `'project'` (`/<team>/<project>[/<target>]/<path>`). Optional: `nav: { area: 'rail' | 'team' | 'project' | 'account', icon, order, badge? }` where `badge` names a function of the addon returning a count, `replaces`, `needsApp` (project screens only, default false), `layout: 'bare'` and `scopes` (hide the screen; not access control). Both inspectors emit the screens in the `studio` metadata, and `pikku new addon-ui` scaffolds the new form with a `messages/en.json`.
+
+  New codes: PKU357 (two screens of an addon use the same path), PKU358 (a title key missing from the addon's `messages/en.json`), PKU359 (a `nav.badge` naming no function of the addon). A non-literal field is PKU345, and a key missing from another locale is a warning.
+
+  Breaking: `defineScreens` and its types (`ScreensManifest`, `AddonScreen`, `AddonComponentScreen`, `AddonAppScreen`) are removed with no alias, the manifest's top-level `icon` is gone, and `nav` is an object instead of a boolean. The serialized inspector state's `screensManifest`/`addonScreens` are now `studio`/`addonStudio`. See docs/MIGRATION.md.
+
+- 648f969: The default addon registry is `https://api.pikkustudio.app`, not `https://registry.pikkustudio.app`. A `pikku.config.json` without `registry` now resolves versioned `wireRemoteAddon` packages against the host that serves `registry:resolveSdk`.
+- cbba7bd: A standalone bun build cross-compiled with `PIKKU_COMPILE_TARGET` no longer ships the build machine's SQLite libraries. Built on a Mac for `bun-linux-arm64`, the artifact used to carry Homebrew's Mach-O `libsqlite3.*.dylib` (and a darwin `vec0.dylib` when sqlite-vec was loaded) and point bun at it on Linux. The libsqlite3 is now staged only for a macOS target; Linux uses bun's built-in SQLite, which loads extensions. A package extension such as the default `sqlite-vec` now fails a cross build, since only the host's build of it can be found: set `db.sqliteExtensions` to `[]`, or name the target's library file by path. A macOS target on another architecture needs `PIKKU_SQLITE_LIBRARY` to name a libsqlite3 for it. An unreadable `PIKKU_COMPILE_TARGET` is refused.
+- Updated dependencies [8f850a5]
+- Updated dependencies [e26796f]
+- Updated dependencies [6524233]
+- Updated dependencies [2fdd2d2]
+- Updated dependencies [fd0c346]
+- Updated dependencies [3abfbf4]
+- Updated dependencies [a28fefd]
+- Updated dependencies [28a0d77]
+- Updated dependencies [576f2f2]
+  - @pikku/core@0.12.147
+  - @pikku/inspector@0.12.111
+  - @pikku/inspector-go@0.12.6
+  - @pikku/skills@0.12.62
+  - @pikku/migrator-sql@0.12.10
+
 ## 0.12.196
 
 ### Patch Changes

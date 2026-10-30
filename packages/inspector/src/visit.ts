@@ -1,5 +1,8 @@
 import * as ts from 'typescript'
-import { addFileWithFactory } from './add/add-file-with-factory.js'
+import {
+  addFileWithFactory,
+  checkHiddenFactory,
+} from './add/add-file-with-factory.js'
 import { addFileExtendsCoreType } from './add/add-file-extends-core-type.js'
 import { addHTTPRoute } from './add/add-http-route.js'
 import { addHTTPRoutes } from './add/add-http-routes.js'
@@ -20,7 +23,8 @@ import { addChannel } from './add/add-channel.js'
 import { addGateway } from './add/add-gateway.js'
 import { addRPCInvocations } from './add/add-rpc-invocations.js'
 import { addWireAddon } from './add/add-wire-addon.js'
-import { addDefineScreens } from './add/add-define-screens.js'
+import { addPikkuStudio } from './add/add-pikku-studio.js'
+import { addDefineContributors } from './add/add-define-contributors.js'
 import { addWireRemoteAddon } from './add/add-wire-remote-addon.js'
 import { addMiddleware } from './add/add-middleware.js'
 import { addPermission } from './add/add-permission.js'
@@ -41,6 +45,7 @@ import { addOutgoingWebhook } from './add/add-outgoing-webhook.js'
 import { addAgentScorer } from './add/add-agent-scorer.js'
 import { addApprovalDescription } from './add/add-approval-description.js'
 import { checkIndirectRegistrations } from './add/check-indirect-registrations.js'
+import { checkDisabledReferences } from './add/check-disabled-references.js'
 
 export const visitSetup = (
   logger: InspectorLogger,
@@ -104,12 +109,14 @@ export const visitSetup = (
     state.serverLifecycleFactories,
     'ServerLifecycle'
   )
+  checkHiddenFactory(logger, node, state)
 
   addAnalytics(logger, node, checker, state)
   addOutgoingWebhook(logger, node, checker, state)
   addRPCInvocations(node, state, logger)
   addWireAddon(node, state, logger)
-  addDefineScreens(node, state, logger)
+  addPikkuStudio(node, state, logger)
+  addDefineContributors(logger, node, checker, state)
   addWireRemoteAddon(node, state, logger)
   addMiddleware(logger, node, checker, state, options)
   addPermission(logger, node, checker, state, options)
@@ -184,6 +191,7 @@ export const visitRoutes = (
   addFeature(logger, node, checker, state, nextOptions)
   addAgent(logger, node, checker, state, nextOptions)
   addAgentScorer(logger, node, checker, state, nextOptions)
+  checkDisabledReferences(logger, node, checker, state, nextOptions)
 
   ts.forEachChild(node, (child) =>
     visitRoutes(logger, checker, child, state, nextOptions)

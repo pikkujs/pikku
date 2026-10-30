@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3310 observable things**: 1110 exported names, plus
-2200 members on the classes and interfaces among them, reachable
-through 62 entry points.
+**3350 observable things**: 1128 exported names, plus
+2222 members on the classes and interfaces among them, reachable
+through 63 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -32,6 +32,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
+| `./contributors` | 14 | 14 | 20 |
 | `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
@@ -44,9 +45,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./utils` | 22 | 19 | 2 |
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./scheduler` | 10 | 10 | 8 |
+| `./addon` | 15 | 15 | 2 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
-| `./addon` | 13 | 13 | 2 |
 | `./scope` | 15 | 15 | 0 |
 | `./rpc` | 8 | 8 | 6 |
 | `./workflow/types` | 47 | 1 | 11 |
@@ -68,13 +69,13 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/in-memory-queue` | 1 | 1 | 4 |
 | `./services/istanbul-coverage` | 1 | 1 | 4 |
 | `./services/local-content-request-handler` | 5 | 5 | 0 |
+| `./lifecycle` | 5 | 3 | 2 |
 | `./node` | 3 | 3 | 0 |
 | `./services/local-gateway` | 1 | 1 | 2 |
 | `./node-host-resolver` | 2 | 2 | 0 |
 | `./oauth2` | 2 | 2 | 0 |
 | `./services/in-memory-trigger` | 1 | 1 | 1 |
 | `./mesh` | 1 | 1 | 0 |
-| `./lifecycle` | 3 | 1 | 0 |
 | `.` | 8 | 0 | 0 |
 
 ## .
@@ -297,7 +298,7 @@ export interface PikkuPackageState {
   channelMiddleware: { tagGroup: Record<string, CorePikkuChannelMiddleware[]> }
   permissions: { global: (CorePermissionGroup | CorePikkuPermission)[] }
   misc: { errors: Map<PikkuErrorConstructor, ErrorDetails>; schemas: Map<string, any>; middleware: Record<string, CorePikkuMiddleware[]>; channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>; permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]> }
-  package: { factories: { createConfig?: CreateConfig<CoreConfig>; createSingletonServices?: CreateSingletonServices< CoreConfig, CoreSingletonServices >; createWireServices?: CreateWireServices< CoreSingletonServices, CoreServices, CoreUserSession > } | null; singletonServices: CoreSingletonServices | null; authFactory:; ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
+  package: { factories: { createConfig?: CreateConfig<any>; createSingletonServices?: CreateSingletonServices<any, any>; createWireServices?: CreateWireServices<any, any, any> } | null; singletonServices: CoreSingletonServices | null; authFactory:; ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
 }
 export type PikkuWire<
   In = unknown,
@@ -584,6 +585,7 @@ export type CorePikkuFunctionConfig<
   override?: string
   version?: number
   tags?: string[]
+  disabled?: true | string
   expose?: boolean
   permissionsInBody?: boolean
   remote?: boolean
@@ -3455,14 +3457,8 @@ rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefi
 ## ./addon
 
 ```ts
-export type AddonAppScreen = AddonScreenBase & {
-  app: string
-}
-export type AddonComponentScreen = AddonScreenBase & {
-  component: () => Promise<{ default: unknown }>
-}
-export type AddonScreen = AddonComponentScreen | AddonAppScreen
-defineScreens: (manifest: ScreensManifest) => ScreensManifest
+definePlugin: (manifest: StudioManifest) => StudioManifest
+pikkuStudio: (manifest: StudioManifest) => StudioManifest
 export type RemoteAddonAuth =
   | { credentialId: string }
   | { secretId: string }
@@ -3490,11 +3486,23 @@ export class RemoteAddonAuthError extends PikkuError {
   constructor(namespace: string, detail: string)
 }
 resolveRemoteAddonToken: (auth: RemoteAddonAuthBinding | undefined, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, wire: PikkuRawWire, namespace: string) => Promise<string | null>
-export type ScreensManifest = {
-  title: string
-  icon?: string
-  screens: AddonScreen[]
+export type StudioAppScreen = StudioScreenBase & {
+  app: string
 }
+export type StudioComponentScreen = StudioScreenBase & {
+  component: () => Promise<{ default: unknown }>
+}
+export type StudioManifest = {
+  title: string
+  screens: StudioScreen[]
+}
+export type StudioNav = {
+  area: 'rail' | 'team' | 'project' | 'account'
+  icon: string
+  order: number
+  badge?: string
+}
+export type StudioScreen = StudioComponentScreen | StudioAppScreen
 wireAddon: (config: WireAddonConfig) => void
 export type WireAddonConfig = {
   name: string
@@ -3518,6 +3526,7 @@ export type WireAddonConfig = {
   contentBucket?: string
   contentGrants?: Record<string, 'read' | 'write'>
   globalContent?: string
+  contributors?: string[]
 }
 wireRemoteAddon: (config: WireRemoteAddonConfig) => void
 export type WireRemoteAddonConfig = {
@@ -6432,7 +6441,7 @@ export type WebhookPayload = string | Uint8Array
 ## ./state
 
 ```ts
-addPackageServiceFactories: (packageName: string, factories: { createConfig?: CreateConfig<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; createSingletonServices?: CreateSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>> | undefined; createWireServices?: CreateWireServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession> | undefined; }) => void
+addPackageServiceFactories: (packageName: string, factories: { createConfig?: CreateConfig<any> | undefined; createSingletonServices?: CreateSingletonServices<any, any> | undefined; createWireServices?: CreateWireServices<any, any, any> | undefined; }) => void
 getAllPackageStates: () => Map<string, PikkuPackageState>
 getCreateWireServices: () => CreateWireServices | undefined
 getSingletonServices: () => CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>
@@ -6455,7 +6464,7 @@ export interface PikkuPackageState {
   channelMiddleware: { tagGroup: Record<string, CorePikkuChannelMiddleware[]> }
   permissions: { global: (CorePermissionGroup | CorePikkuPermission)[] }
   misc: { errors: Map<PikkuErrorConstructor, ErrorDetails>; schemas: Map<string, any>; middleware: Record<string, CorePikkuMiddleware[]>; channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>; permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]> }
-  package: { factories: { createConfig?: CreateConfig<CoreConfig>; createSingletonServices?: CreateSingletonServices< CoreConfig, CoreSingletonServices >; createWireServices?: CreateWireServices< CoreSingletonServices, CoreServices, CoreUserSession > } | null; singletonServices: CoreSingletonServices | null; authFactory:; ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
+  package: { factories: { createConfig?: CreateConfig<any>; createSingletonServices?: CreateSingletonServices<any, any>; createWireServices?: CreateWireServices<any, any, any> } | null; singletonServices: CoreSingletonServices | null; authFactory:; ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
 }
 pikkuState: <Type extends keyof PikkuPackageState, Content extends keyof PikkuPackageState[Type]>(packageName: string | null, type: Type, content: Content, value?: PikkuPackageState[Type][Content] | undefined) => PikkuPackageState[Type][Content]
 resetPikkuState: () => void
@@ -6563,9 +6572,62 @@ export type RequireAtLeastOne<T> = {
 stopSingletonServices: () => Promise<void>
 ```
 
+## ./contributors
+
+```ts
+export interface Contributor< TServices = any, TPlatform extends ContributorPlatform = ContributorPlatform, > {
+  provides?: string[]
+  needs?: string[]
+  requires?: ContributorBindingSource[]
+  when?(platform: TPlatform): boolean
+  run(services: TServices, env: Record<string, string | undefined>, runtime: Record<string, any>, platform: TPlatform): void | Promise<void>
+  onServerStart?(services: TServices): void | Promise<void>
+  onServerStop?(services: TServices): void | Promise<void>
+}
+export type ContributorBindingSource = 'env' | 'cloudflare'
+export type ContributorDb = {
+  engine: 'sqlite' | 'postgres'
+  coercionMap?: Record<string, Record<string, 'date' | 'bool' | 'json'>>
+}
+export class ContributorDependencyError extends Error {
+  constructor(message: string)
+}
+export interface ContributorPlatform {
+  serviceNames: string[]
+  needsQueue: boolean
+  needsWorkflow: boolean
+  needsAgent: boolean
+  runtimeServices?: string[]
+  db?: ContributorDb
+}
+export type ContributorTarget = 'dev' | 'deploy'
+export interface ContributorVariants< TServices = any, TPlatform extends ContributorPlatform = ContributorPlatform, > {
+  dev?: Contributor<TServices, TPlatform>
+  deploy?: Contributor<TServices, TPlatform>
+}
+DEFAULT_CONTRIBUTOR_BINDING_SOURCES: readonly ContributorBindingSource[]
+defineContributors: <const T extends Record<string, ContributorVariants<any, ContributorPlatform>>>(contributors: T) => T
+export interface NamedContributor< TServices = any, TPlatform extends ContributorPlatform = ContributorPlatform, > {
+  name: string
+  contributor: Contributor<TServices, TPlatform>
+}
+orderContributors: <T extends NamedContributor<any, any>>(contributors: readonly T[], options?: { runtime?: readonly string[] | undefined; }) => T[]
+resolveContributors: <T extends NamedContributor<any, any>>(contributors: readonly T[], options: { platform: ContributorPlatform; supported?: readonly ContributorBindingSource[] | undefined; optional?: ReadonlySet<string> | undefined; }) => { ordered: T[]; skipped: SkippedContributor[]; }
+selectContributors: <T extends NamedContributor<any, any>>(contributors: readonly T[], options: { platform: ContributorPlatform; supported?: readonly ContributorBindingSource[] | undefined; }) => { selected: T[]; skipped: SkippedContributor[]; }
+export interface SkippedContributor {
+  name: string
+  reason: 'when' | 'requires' | 'needs'
+}
+```
+
 ## ./lifecycle
 
 ```ts
+composeServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(app: ServerLifecycle<SS> | undefined, hooks: { start?: readonly ContributorServerHook[] | undefined; stop?: readonly ContributorServerHook[] | undefined; }) => ServerLifecycle<SS>
+export interface ContributorServerHook {
+  name: string
+  run: (services: any) => void | Promise<void>
+}
 onShutdownSignals: (run: (signal: NodeJS.Signals) => void | Promise<void>, signals?: NodeJS.Signals[]) => () => void
 pikkuServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(lifecycle: ServerLifecycle<SS>) => ServerLifecycle<SS>
 stopSingletonServices: () => Promise<void>

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "admin__title": "Admin",
+  "admin_users__title": "Users",
+  "admin_docs__title": "Docs",
+  "admin_welcome__title": "Welcome",
+  "admin_inbox__title": "Inbox"
+}

@@ -1,3 +1,52 @@
+## 0.12.112
+
+### Patch Changes
+
+- edd7abf: Platform-service contributors are plain objects an addon registers with `defineContributors` (new `@pikku/core/contributors`) and a project opts in to by name with `wireAddon({ contributors })`. `dev.contributors`, `deploy.contributors`, addon `pikku.contributors`, the string-emitting `PlatformServiceContributor` API and its helpers, the adapter `contributors` option and the `devPlatformServicesFile` config output are removed, and a leftover one is a hard error: the CLI refuses the config keys by name and the inspector reports an addon `package.json` with `pikku.contributors` as PKU364 (see `docs/MIGRATION.md`). Contributors can declare `onServerStart` / `onServerStop`, run around the app's server lifecycle in `pikku dev`, `pikku serve`, the generic server entry, standalone and the Cloudflare container entry (which now runs the app's own `serverLifecycle`); on a Worker `onServerStart` is a build error. `ProviderAdapter.contributorSupport` gains a required `runsServerLifecycle`. `@pikku/core` is a new peer dependency of the deploy packages and `@pikku/kysely` of `@pikku/deploy-cloudflare`. The names in `wireAddon({ contributors })` are typed from the addon's published contributors meta, so a name the addon does not register fails `tsc` and completes in the editor. A project gets a generated `#pikku/contributor` (`defineContributors` and `Contributor` typed against its own singleton services, type-only apart from core's helper); addons keep using `@pikku/core/contributors`.
+- 8a4233a: Breaking: `pikkuStudio` is now `definePlugin`. An addon declares the screens and nav it brings to Studio with `definePlugin({ title, screens })` from `@pikku/core/addon`. The manifest shape is unchanged; rename the import and the call. `pikku new addon-ui` scaffolds the new name.
+- Updated dependencies [3562771]
+- Updated dependencies [edd7abf]
+- Updated dependencies [8a4233a]
+  - @pikku/core@0.12.148
+
+## 0.12.111
+
+### Patch Changes
+
+- e26796f: An addon can call another addon with full types. It declares the dependency in its package.json as `"pikku": { "uses": { "stripe": "@pikkustudio/addon-stripe@^0.12.0" } }` and calls `rpc.invoke('stripe:charge', ...)`, `rpc.startWorkflow('stripe:...')` or an agent with no cast. `pikku all` in the addon types `stripe:*` from the dependency's SDK: a workspace package's own `.pikku/sdk`, or a registry SDK pinned in `pikku-addons.lock`.
+
+  The app maps the alias with `wireAddon({ ..., uses: { stripe: '<wired name>' } })`, whether the target is wired with `wireAddon` or `wireRemoteAddon`. New codes: PKU354 (the wired instance's version is outside the declared range), PKU355 (`uses` maps a name the addon did not declare), PKU356 (a malformed `pikku.uses` entry). PKU347 and PKU348 now also cover the alias form.
+
+  Breaking (fail-closed): for an addon that declares `pikku.uses`, a `wireAddon` `uses` key it did not declare is now an error (PKU355). Agent `run`/`stream` from an addon now go through `uses` like invoke and workflows, so an unmapped agent call throws `AddonNotUsedError`. See docs/MIGRATION.md.
+
+- 6524233: An addon granted `BETTER_AUTH_SECRET` (or an override onto it) no longer fails the first `pikku all` of a clean better-auth project with PKU124 "targets a secret that does not exist. Available secrets: none". The secret is declared by `auth-secrets.gen.ts`, which that first inspection runs before; the addon-grant check now takes the same fallback the secret-usage check already did. A project without `pikkuBetterAuth` still gets PKU124 for that grant.
+- 2fdd2d2: A service factory export wrapped in a cast now fails the build with `PKU564` (`FACTORY_NOT_A_DIRECT_CALL`, critical), in both inspectors. That covers `as`, `<T>`, `satisfies`, a non-null assertion and parentheses around `pikkuServices`, `pikkuAddonServices`, `pikkuWireServices`, `pikkuAddonWireServices`, `pikkuConfig`, `pikkuAddonConfig` or `pikkuServerLifecycle`. Before, the inspector skipped the factory without a word: an addon written as `pikkuAddonServices(...) as unknown as CreateSingletonServices<...>` generated no `pikku-package.gen.ts`, and its workflows failed at runtime with `WorkflowNotFoundError`. The message names the export, its file and line, and asks for the cast to be removed and the type it hid to be fixed.
+
+  Core's package factory slots (`PikkuPackageState['package']['factories']`, which every generated `pikku-package.gen.ts` assigns) are now typed `CreateConfig<any>`, `CreateSingletonServices<any, any>` and `CreateWireServices<any, any, any>`. Typed against `CoreConfig` / `CoreSingletonServices`, they refused an addon whose `Config` has required fields of its own or whose services narrow a core one, which is what pushed addons into the cast. Such an addon's factory now type-checks as written.
+
+- fd0c346: Functions take `disabled: true | 'reason'`. A disabled function is left out of the build entirely (meta, RPC maps, clients, addon SDKs, MCP, CLI, HTTP and every wiring) and `addFunction` refuses it at run time. Anything that still references one — a wiring, `rpc.invoke('name')`, a workflow step, an agent tool, or an inline definition inside a wiring — fails the build with `PKU562`, naming both sides. `pikku all` lists the disabled functions once, with file and reason.
+
+  `pikku verify` now fails on an app function that is not wired, exposed or called by name (`PKU563`, an `error` diagnostic that `pikku all` prints but does not fail on). Addon functions are never checked; workflows are, and count as used when started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step). Use the function or mark it `disabled`.
+
+  References in generated files (`*.gen.ts` / `*.gen.js`) do not count for `PKU562`, so disabling a function no longer fails the next `pikku all` on the previous run's output. Functions in generated scaffolds are never `PKU563`.
+
+  An inline `defineChannelRoutes({...})` inside `wireChannel`'s `onMessageWiring` is now read, so its message routes reach the channel meta.
+
+- 3abfbf4: An app now requires `incomingWebhookService`, and the `incoming-webhook` schema it owns, only when it wires incoming webhooks (a webhook source or the `pikku-incoming-webhooks` queue worker). An addon that forwards the service, as `@pikku/addon-admin` does to list receipts, used to make every app that wired it require the service too: the generated local services then called `KyselyIncomingWebhookService.init()`, and an app whose migrations had no `webhook_receipt` table failed to boot over a table nothing writes to. Such an app now gets the queue-only service and the addon's receipt functions return an empty list. An app that does wire incoming webhooks still requires the service and still fails at boot when its tables are missing.
+- 28a0d77: An addon declares its Pikku Studio screens with `pikkuStudio({ title, screens })` from `@pikku/core/addon`. Each screen has a `path`, a `title` (a message key in the addon's `messages/{locale}.json`, also the nav label), a lazy `component` or an `app`, and a `scope`: `'studio'` (`/<path>`), `'team'` (`/<team>/<path>`) or `'project'` (`/<team>/<project>[/<target>]/<path>`). Optional: `nav: { area: 'rail' | 'team' | 'project' | 'account', icon, order, badge? }` where `badge` names a function of the addon returning a count, `replaces`, `needsApp` (project screens only, default false), `layout: 'bare'` and `scopes` (hide the screen; not access control). Both inspectors emit the screens in the `studio` metadata, and `pikku new addon-ui` scaffolds the new form with a `messages/en.json`.
+
+  New codes: PKU357 (two screens of an addon use the same path), PKU358 (a title key missing from the addon's `messages/en.json`), PKU359 (a `nav.badge` naming no function of the addon). A non-literal field is PKU345, and a key missing from another locale is a warning.
+
+  Breaking: `defineScreens` and its types (`ScreensManifest`, `AddonScreen`, `AddonComponentScreen`, `AddonAppScreen`) are removed with no alias, the manifest's top-level `icon` is gone, and `nav` is an object instead of a boolean. The serialized inspector state's `screensManifest`/`addonScreens` are now `studio`/`addonStudio`. See docs/MIGRATION.md.
+
+- 576f2f2: PKU564 now fails only on a real cast around a service factory: `as`, `<T>` or a non-null assertion (`!`). `satisfies` and parentheses leave the factory's type as written, so the inspector reads through them: `pikkuConfig(...) satisfies CreateConfig<Config>` or `(pikkuWireServices(...))` registers exactly like a direct call, addon contract included. A cast with `satisfies` or parentheses between it and the call is still PKU564, and the message names the outermost cast.
+- Updated dependencies [8f850a5]
+- Updated dependencies [e26796f]
+- Updated dependencies [2fdd2d2]
+- Updated dependencies [fd0c346]
+- Updated dependencies [28a0d77]
+  - @pikku/core@0.12.147
+
 ## 0.12.110
 
 ### Patch Changes

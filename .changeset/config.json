@@ -12,10 +12,6 @@
     "tag": false
   },
   "ignore": [
-    "@pikku/e2e",
-    "@pikku/auth-js",
-    "@pikku/external-console",
-    "@pikku/pg",
-    "pikku-vscode"
+    "@pikku/e2e"
   ]
 }

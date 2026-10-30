@@ -1,5 +1,15 @@
 # @pikku/mongodb
 
+## 0.12.26
+
+### Patch Changes
+
+- 62ca6b6: The `@pikku/mongodb` test script downloads the mongod binary once before its parallel test workers start, so two workers no longer race to download it into a cold cache and fail with a lockfile error.
+- Updated dependencies [3562771]
+- Updated dependencies [edd7abf]
+- Updated dependencies [8a4233a]
+  - @pikku/core@0.12.148
+
 ## 0.12.25
 
 ### Patch Changes

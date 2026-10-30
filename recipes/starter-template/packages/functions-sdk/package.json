@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@pikku/fetch": "^0.12.13",
-    "@pikku/react": "^0.12.17",
+    "@pikku/react": "^0.12.18",
     "@tanstack/react-query": "^5.104.3"
   }
 }

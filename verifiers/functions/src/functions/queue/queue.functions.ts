@@ -17,6 +17,7 @@ export const queueWorkerWithMiddleware = pikkuSessionlessFunc<
   { message: string },
   { result: string }
 >({
+  disabled: 'no callers found, 2026-10-20',
   func: async ({ logger }, data) => {
     logger.info('Processing message with middleware support')
     return { result: `processed: ${data.message}` }

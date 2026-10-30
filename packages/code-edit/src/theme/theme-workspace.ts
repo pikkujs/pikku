@@ -2,9 +2,14 @@ import { existsSync } from 'node:fs'
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { composeTheme, type ThemeInput } from './compose.js'
-import { themeToCss } from './css.js'
+import { themeContrast, themeToCss, type ContrastCheck } from './css.js'
 import { applyEmailTheme } from './email-theme.js'
-import { THEME_ID_RE, type Density, type Radius, type Theme } from './presets.js'
+import {
+  THEME_ID_RE,
+  type Density,
+  type Radius,
+  type Theme,
+} from './presets.js'
 
 export type ThemeEntry = {
   id: string
@@ -13,7 +18,11 @@ export type ThemeEntry = {
   bases?: Record<string, string>
 }
 
-export type ThemeTokens = { spacing: string[]; radius: string[]; fontSizes: string[] }
+export type ThemeTokens = {
+  spacing: string[]
+  radius: string[]
+  fontSizes: string[]
+}
 
 export type ThemeSpec = {
   name?: string
@@ -53,12 +62,19 @@ export class ThemeWorkspace {
   readonly packageDir: string
   private themesDir: string
 
-  constructor(private workspaceRoot: string, packageDir = THEME_PACKAGE_DIR) {
+  constructor(
+    private workspaceRoot: string,
+    packageDir = THEME_PACKAGE_DIR
+  ) {
     this.packageDir = join(workspaceRoot, packageDir)
     this.themesDir = join(this.packageDir, 'themes')
   }
 
-  async list(): Promise<{ themes: ThemeEntry[]; activeId: string; tokens: ThemeTokens }> {
+  async list(): Promise<{
+    themes: ThemeEntry[]
+    activeId: string
+    tokens: ThemeTokens
+  }> {
     const themes: ThemeEntry[] = []
     for (const id of await this.ids()) {
       const spec = await this.read(id).catch(() => undefined)
@@ -67,48 +83,75 @@ export class ThemeWorkspace {
       themes.push({
         id,
         name: typeof spec.name === 'string' && spec.name ? spec.name : id,
-        ...(typeof spec.description === 'string' ? { description: spec.description } : {}),
+        ...(typeof spec.description === 'string'
+          ? { description: spec.description }
+          : {}),
         ...(colors && typeof colors === 'object' ? { bases: colors } : {}),
       })
     }
-    return { themes, activeId: await this.activeId(), tokens: await this.tokens() }
+    return {
+      themes,
+      activeId: await this.activeId(),
+      tokens: await this.tokens(),
+    }
   }
 
-  async active(): Promise<{ id: string; spec: ThemeSpec; tokens: ThemeTokens }> {
+  async active(): Promise<{
+    id: string
+    spec: ThemeSpec
+    tokens: ThemeTokens
+  }> {
     const id = await this.activeId()
     return { id, spec: await this.read(id), tokens: await this.tokens() }
   }
 
   async setActive(id: string): Promise<string> {
-    if (!existsSync(this.specPath(id))) throw new ThemeError(`Unknown theme: ${id}`, 'missing')
+    if (!existsSync(this.specPath(id)))
+      throw new ThemeError(`Unknown theme: ${id}`, 'missing')
     await writeJson(join(this.packageDir, 'active.json'), { id })
     await this.writeCss(id)
     return id
   }
 
   async create(id: string, name: string): Promise<string> {
-    if (existsSync(this.specPath(id))) throw new ThemeError(`Theme ${id} already exists`, 'invalid')
+    if (existsSync(this.specPath(id)))
+      throw new ThemeError(`Theme ${id} already exists`, 'invalid')
     const base = await this.read(await this.activeId())
     await writeJson(this.specPath(id), { ...base, name })
     return this.setActive(id)
   }
 
   async delete(id: string): Promise<string> {
-    if (id === 'default') throw new ThemeError('The default theme cannot be deleted', 'invalid')
+    if (id === 'default')
+      throw new ThemeError('The default theme cannot be deleted', 'invalid')
     const path = this.specPath(id)
-    if (!existsSync(path)) throw new ThemeError(`Unknown theme: ${id}`, 'missing')
+    if (!existsSync(path))
+      throw new ThemeError(`Unknown theme: ${id}`, 'missing')
     await rm(path)
-    const activeId = (await this.activeId()) === id ? 'default' : await this.activeId()
+    const activeId =
+      (await this.activeId()) === id ? 'default' : await this.activeId()
     return this.setActive(activeId)
   }
 
   /** Writes a composed theme under its id, makes it active, and re-brands the project's emails. */
-  async apply(input: ThemeInput): Promise<{ id: string; theme: Theme; emails: boolean }> {
+  async apply(
+    input: ThemeInput
+  ): Promise<{
+    id: string
+    theme: Theme
+    emails: boolean
+    contrast: ContrastCheck[]
+  }> {
     const { id, theme } = composeTheme(input)
     await mkdir(this.themesDir, { recursive: true })
     await writeJson(this.specPath(id), theme)
     await this.setActive(id)
-    return { id, theme, emails: applyEmailTheme(this.workspaceRoot, theme) }
+    return {
+      id,
+      theme,
+      emails: applyEmailTheme(this.workspaceRoot, theme),
+      contrast: themeContrast(theme),
+    }
   }
 
   async update(patch: ThemeSpecPatch): Promise<void> {
@@ -120,10 +163,16 @@ export class ThemeWorkspace {
           throw new ThemeError(`Invalid colour ${key}: ${hex}`, 'invalid')
         }
       }
-      spec.brand = { ...spec.brand, colors: { ...spec.brand?.colors, ...patch.colors } }
+      spec.brand = {
+        ...spec.brand,
+        colors: { ...spec.brand?.colors, ...patch.colors },
+      }
     }
     if (patch.fonts) {
-      spec.brand = { ...spec.brand, fonts: { ...spec.brand?.fonts, ...patch.fonts } }
+      spec.brand = {
+        ...spec.brand,
+        fonts: { ...spec.brand?.fonts, ...patch.fonts },
+      }
     }
     const { colors: _c, fonts: _f, shadows, ...scalars } = patch
     const structure: Record<string, unknown> = { ...spec.structure }
@@ -131,7 +180,10 @@ export class ThemeWorkspace {
       if (value !== undefined) structure[key] = value
     }
     if (shadows) {
-      structure.shadows = { ...(structure.shadows as Record<string, string>), ...shadows }
+      structure.shadows = {
+        ...(structure.shadows as Record<string, string>),
+        ...shadows,
+      }
     }
     spec.structure = structure
     await writeJson(this.specPath(id), spec)
@@ -139,7 +191,8 @@ export class ThemeWorkspace {
   }
 
   private specPath(id: string): string {
-    if (!THEME_ID_RE.test(id)) throw new ThemeError(`Invalid theme id: ${id}`, 'invalid')
+    if (!THEME_ID_RE.test(id))
+      throw new ThemeError(`Invalid theme id: ${id}`, 'invalid')
     return join(this.themesDir, `${id}.json`)
   }
 
@@ -152,7 +205,9 @@ export class ThemeWorkspace {
   }
 
   private async ids(): Promise<string[]> {
-    const entries = await readdir(this.themesDir, { withFileTypes: true }).catch(() => [])
+    const entries = await readdir(this.themesDir, {
+      withFileTypes: true,
+    }).catch(() => [])
     return entries
       .filter((e) => e.isFile() && e.name.endsWith('.json'))
       .map((e) => e.name.slice(0, -'.json'.length))
@@ -162,7 +217,9 @@ export class ThemeWorkspace {
 
   private async activeId(): Promise<string> {
     try {
-      const { id } = JSON.parse(await readFile(join(this.packageDir, 'active.json'), 'utf-8'))
+      const { id } = JSON.parse(
+        await readFile(join(this.packageDir, 'active.json'), 'utf-8')
+      )
       if (typeof id === 'string' && THEME_ID_RE.test(id)) return id
     } catch {}
     return 'default'
@@ -174,9 +231,15 @@ export class ThemeWorkspace {
       .catch(() => ({}) as Record<string, unknown>)
     const keys = (field: string) => {
       const value = base[field]
-      return value && typeof value === 'object' && !Array.isArray(value) ? Object.keys(value) : DEFAULT_SCALE
+      return value && typeof value === 'object' && !Array.isArray(value)
+        ? Object.keys(value)
+        : DEFAULT_SCALE
     }
-    return { spacing: keys('spacing'), radius: keys('radius'), fontSizes: keys('fontSizes') }
+    return {
+      spacing: keys('spacing'),
+      radius: keys('radius'),
+      fontSizes: keys('fontSizes'),
+    }
   }
 
   private async writeCss(id: string): Promise<void> {
@@ -189,6 +252,10 @@ export class ThemeWorkspace {
       },
       structure: (spec.structure ?? {}) as Theme['structure'],
     }
-    await writeFile(join(this.packageDir, 'theme.css'), themeToCss(theme), 'utf-8')
+    await writeFile(
+      join(this.packageDir, 'theme.css'),
+      themeToCss(theme),
+      'utf-8'
+    )
   }
 }

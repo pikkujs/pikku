@@ -241,7 +241,8 @@
   ],
   "./addon": [
     "RemoteAddonAuthError",
-    "defineScreens",
+    "definePlugin",
+    "pikkuStudio",
     "resolveRemoteAddonToken",
     "wireAddon",
     "wireRemoteAddon"
@@ -595,7 +596,16 @@
     "pikkuServerLifecycle",
     "stopSingletonServices"
   ],
+  "./contributors": [
+    "ContributorDependencyError",
+    "DEFAULT_CONTRIBUTOR_BINDING_SOURCES",
+    "defineContributors",
+    "orderContributors",
+    "resolveContributors",
+    "selectContributors"
+  ],
   "./lifecycle": [
+    "composeServerLifecycle",
     "onShutdownSignals",
     "pikkuServerLifecycle",
     "stopSingletonServices"

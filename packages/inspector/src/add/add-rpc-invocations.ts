@@ -191,6 +191,23 @@ export function addRPCInvocations(
       }
     }
 
+    // rpc.startWorkflow('...'), workflowService.startWorkflow('...') and
+    // workflowService.runToCompletion('...') start a workflow by name
+    if (
+      ts.isPropertyAccessExpression(expression) &&
+      (expression.name.text === 'startWorkflow' ||
+        expression.name.text === 'runToCompletion')
+    ) {
+      const [firstArg] = args
+      if (
+        firstArg &&
+        (ts.isStringLiteral(firstArg) ||
+          ts.isNoSubstitutionTemplateLiteral(firstArg))
+      ) {
+        state.workflows.invokedWorkflows.add(firstArg.text)
+      }
+    }
+
     const agentCall = agentInvocationName(expression)
     if (agentCall) {
       const [firstArg] = args

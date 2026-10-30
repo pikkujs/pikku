@@ -13,6 +13,7 @@ import { createNestedProjectFilter } from './utils/nested-project-filter.js'
 import { toProgramPath } from './utils/program-path.js'
 import { resolveLatestVersions } from './utils/resolve-versions.js'
 import { validateWebhookSourceTriggers } from './add/add-trigger.js'
+import { validatePikkuStudio } from './add/add-pikku-studio.js'
 import { generateAllSchemas } from './utils/schema-generator.js'
 import { extractSecretUsage } from './utils/extract-secret-usage.js'
 import {
@@ -23,6 +24,7 @@ import { loadAddonFunctionsMeta } from './utils/load-addon-functions-meta.js'
 import { resolveServiceTypes } from './utils/resolve-service-types.js'
 import { finalizeInspectorState } from './finalize.js'
 import { getInitialInspectorState } from './initial-state.js'
+import { checkDisabledWorkflowSteps } from './add/check-disabled-references.js'
 
 export { getInitialInspectorState }
 
@@ -208,7 +210,9 @@ export const analyzeProgram = async (
       `Visit routes phase completed in ${(performance.now() - startRoutes).toFixed(0)}ms`
     )
 
+    checkDisabledWorkflowSteps(logger, state)
     validateWebhookSourceTriggers(logger, state)
+    validatePikkuStudio(logger, state)
 
     resolveLatestVersions(state, logger)
 

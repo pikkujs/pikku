@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src", "types"],
+  "outDir": "./.pikku",
+  "addon": {
+    "displayName": "Pikku Studio (verifier)",
+    "description": "Declares Studio screens with definePlugin",
+    "categories": ["Utility"]
+  }
+}

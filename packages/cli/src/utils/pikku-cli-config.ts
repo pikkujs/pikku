@@ -5,7 +5,10 @@ import type {
   PikkuCLIInput,
   PikkuScaffoldFeature,
 } from '../../types/config.js'
-import { resolveScaffoldFeature } from './resolve-scaffold-feature.js'
+import {
+  analyticsOriginLockEnabled,
+  resolveScaffoldFeature,
+} from './resolve-scaffold-feature.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
@@ -18,6 +21,10 @@ const CLIENT_FILE_KEYS = [
   'realtimeFile',
   'rpcWiringsFile',
   'reactQueryFile',
+  'typesFile',
+  'envFile',
+  'rpcFile',
+  'authClientFile',
   'queueWiringsFile',
   'mcpJsonFile',
   'nextBackendFile',
@@ -372,6 +379,14 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    if (!result.contributorTypesFile) {
+      result.contributorTypesFile = join(
+        result.outDir,
+        'contributor',
+        'pikku-contributor-types.gen.ts'
+      )
+    }
+
     // Sits in the same directory as the better-auth wrapper so both reach the
     // reader as `#pikku/auth`, but is written unconditionally: every project
     // decides who may call a function, only some projects use better-auth.
@@ -553,6 +568,7 @@ const _getPikkuCLIConfig = async (
     const SCAFFOLD_OUTPUT_FIELDS: Record<string, string> = {
       rpc: 'publicRpcFile',
       analytics: 'analyticsFile',
+      cors: 'corsFile',
       featureFlags: 'featureFlagsFile',
       agent: 'publicAgentFile',
       console: 'consoleFunctionsFile',
@@ -638,6 +654,33 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'analytics',
         'analytics.gen.ts'
+      )
+    }
+    if (result.scaffold?.cors && !result.corsFile) {
+      result.corsFile = join(resolvedScaffoldDir, 'cors', 'cors.gen.ts')
+    }
+    // The origins helper sits beside the middleware when there is one, and is
+    // also wanted by the analytics origin lock on its own, so it is derived
+    // from either. Never settable: the generated imports reach it as a sibling.
+    const analyticsOriginLock =
+      analyticsOriginLockEnabled(result.scaffold) &&
+      Boolean(result.analyticsFile)
+    if (
+      (resolveScaffoldFeature('cors', result.scaffold?.cors).enabled ||
+        analyticsOriginLock) &&
+      !result.corsOriginsFile
+    ) {
+      result.corsOriginsFile = join(
+        result.corsFile
+          ? dirname(result.corsFile)
+          : join(resolvedScaffoldDir, 'cors'),
+        'cors-origins.gen.ts'
+      )
+    }
+    if (result.scaffold?.analytics && result.analyticsFile) {
+      result.analyticsOriginFile = join(
+        dirname(result.analyticsFile),
+        'analytics-origin.gen.ts'
       )
     }
     if (result.scaffold?.featureFlags && !result.featureFlagsFile) {
@@ -964,13 +1007,6 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    if (!result.devPlatformServicesFile) {
-      result.devPlatformServicesFile = join(
-        result.outDir,
-        'pikku-dev-platform-services.gen.ts'
-      )
-    }
-
     // Middleware
     if (!result.middlewareFile) {
       result.middlewareFile = join(middlewareDir, 'pikku-middleware.gen.ts')
@@ -1214,6 +1250,23 @@ const _getPikkuCLIConfig = async (
       result.flagsMetaJsonFile = join(scopesDir, 'pikku-flags-meta.gen.json')
     }
 
+    // Contributors, when the package calls defineContributors: the meta is
+    // published beside the other generated files so a host can opt in, and the
+    // dev file is what `pikku dev` loads for the contributors a project wired.
+    const contributorsDir = join(result.outDir, 'contributors')
+    if (!result.contributorsMetaJsonFile) {
+      result.contributorsMetaJsonFile = join(
+        contributorsDir,
+        'pikku-contributors-meta.gen.json'
+      )
+    }
+    if (!result.devContributorsFile) {
+      result.devContributorsFile = join(
+        contributorsDir,
+        'pikku-dev-contributors.gen.ts'
+      )
+    }
+
     // Addon screens, when the package declares any. Their own directory:
     // the host imports the screens file and the meta is published beside it.
     const screensDir = join(result.outDir, 'screens')
@@ -1324,6 +1377,15 @@ const _getPikkuCLIConfig = async (
             result[objectKey] = join(result.rootDir, result[objectKey])
           }
         }
+      }
+    }
+
+    for (const section of ['dev', 'deploy'] as const) {
+      const value = (result as Record<string, any>)[section]
+      if (value && typeof value === 'object' && 'contributors' in value) {
+        throw new PikkuCLIConfigError(
+          `${section}.contributors is no longer read — remove it from ${result.configDir}/pikku.config.json. Register the contributors with defineContributors in an addon and opt in with wireAddon({ contributors: [...] }); see docs/contributors.md`
+        )
       }
     }
 

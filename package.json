@@ -15,7 +15,6 @@
       "packages/gateways/*",
       "packages/runtimes/*",
       "packages/deploy/*",
-      "packages/deprecated/*",
       "recipes/*",
       "!recipes/starter-template",
       "templates/*",
@@ -30,8 +29,10 @@
       "verifiers/addon-dependencies/stripe",
       "verifiers/addon-dependencies/billing",
       "verifiers/addon-dependencies/host",
-      "verifiers/dev-platform-contributors/host-mail",
-      "verifiers/dev-platform-contributors/log-addon"
+      "verifiers/dev-platform-contributors/contrib-notify",
+      "verifiers/dev-platform-contributors/contrib-select",
+      "verifiers/dev-platform-contributors/contrib-bad",
+      "verifiers/deploy-standalone/contrib-marker"
     ]
   },
   "scripts": {
@@ -42,10 +43,10 @@
     "tsc": "bun run --filter '*' tsc",
     "build:packages": "bun run --filter '@pikku/core' build && bun run --filter './packages/**' --filter '!@pikku/core' --filter '!@pikku/addon-*' build",
     "build:addons": "bun run --filter './packages/addon/**' build",
-    "build:templates": "bun run --filter './recipes/**' --filter '!@project/root' build",
+    "build:recipes": "bun run --filter './recipes/**' --filter '!@project/root' build",
     "build:examples": "bun run --filter './templates/**' build",
     "build:verifiers": "bun run --filter './verifiers/**' build",
-    "build": "bun run build:packages && bun install && bun run build:addons && bun run pikku && bun run build:templates",
+    "build": "bun run build:packages && bun install && bun run build:addons && bun run pikku && bun run build:recipes",
     "check:licenses": "node scripts/check-licenses.mjs",
     "check:repository": "node scripts/check-repository-field.mjs",
     "check:workspace-protocol": "node scripts/check-no-workspace-protocol.mjs",

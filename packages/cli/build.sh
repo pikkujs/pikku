@@ -365,11 +365,11 @@ fi
 # local bin goes to the registry and runs the published CLI instead.
 #
 # This run syncs the registry SDK into .pikku/remote, like any consumer's
-# `pikku all`. PIKKU_CLI_WITHOUT_REGISTRY_SDK=1 builds without it, for as long
-# as the registry does not serve @pikkustudio/addon-registry (CI sets it): the
-# wiring is hidden from codegen as in the bootstrap stage and imported by hand,
-# so the CLI still calls the registry at runtime, and `registry:resolveSdk` is
-# typed by the contract remote-addon-sync.ts mirrors instead of by the SDK.
+# `pikku all`. PIKKU_CLI_WITHOUT_REGISTRY_SDK=1 builds without it, for a
+# machine that cannot reach the registry: the wiring is hidden from codegen as
+# in the bootstrap stage and imported by hand, so the CLI still calls the
+# registry at runtime, and `registry:resolveSdk` is typed by the contract
+# remote-addon-sync.ts mirrors instead of by the SDK.
 if [ "${PIKKU_CLI_WITHOUT_REGISTRY_SDK:-}" = "1" ]; then
   echo "PIKKU_CLI_WITHOUT_REGISTRY_SDK=1: building without the registry SDK."
   _hide_registry_wiring

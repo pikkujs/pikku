@@ -39,7 +39,7 @@
     "workflow": true,
     "scenarios": true,
     "events": false,
-    "analytics": true,
+    "analytics": { "originLock": false },
     "virtualUser": true
   },
   "scenarios": {

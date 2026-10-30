@@ -16,6 +16,8 @@ import {
   writeFileSync,
   existsSync,
   readdirSync,
+  mkdirSync,
+  symlinkSync,
   statSync,
   rmSync,
 } from 'fs'
@@ -78,20 +80,84 @@ process.on('SIGTERM', () => {
   process.exit(143)
 })
 const pinnedConfig = JSON.parse(originalConfig)
-// Two contributors listed out of order: `marker-reader` needs what `marker`
-// provides, and `marker` needs the entry's own logger.
-const CONTRIBUTORS_MODULE = join(
-  process.cwd(),
-  'contributors',
-  'marker.contributor.ts'
+// The project opts in to two contributors of an addon with wireAddon. They are
+// registered out of order (`marker-reader` needs what `marker` provides, and
+// `marker` needs the entry's own logger), and the addon registers a third the
+// project does not opt in to. The shared recipe project is wired for the run
+// only: the addon is linked into its node_modules and a wiring file is written
+// into src, and both are removed on exit like the pinned config.
+const ADDON_DIR = join(process.cwd(), 'contrib-marker')
+const ADDON_LINK = join(
+  FUNCTIONS_DIR,
+  'node_modules',
+  '@verifier',
+  'contrib-marker'
+)
+const WIRING_FILE = join(FUNCTIONS_DIR, 'src', 'zz-contributors-wiring.ts')
+// The app's own serverLifecycle is swapped for one that logs to the same file
+// the contributor hooks log to, so their relative order can be read back from
+// the compiled binary. Restored on exit like the config and the wiring.
+const LIFECYCLE_FILE = join(FUNCTIONS_DIR, 'src', 'lifecycle.ts')
+const originalLifecycle = readFileSync(LIFECYCLE_FILE, 'utf-8')
+const unwireContributors = () => {
+  rmSync(WIRING_FILE, { force: true })
+  rmSync(ADDON_LINK, { force: true })
+  writeFileSync(LIFECYCLE_FILE, originalLifecycle)
+}
+process.on('exit', unwireContributors)
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    unwireContributors()
+    restoreConfig()
+    process.exit(130)
+  })
+}
+execFileSync('node', [PIKKU_BIN, 'all'], {
+  cwd: ADDON_DIR,
+  stdio: 'pipe',
+  timeout: 60_000,
+})
+mkdirSync(join(FUNCTIONS_DIR, 'node_modules', '@verifier'), { recursive: true })
+rmSync(ADDON_LINK, { force: true })
+symlinkSync(ADDON_DIR, ADDON_LINK, 'dir')
+writeFileSync(
+  WIRING_FILE,
+  `import { wireAddon } from '#pikku/addon'
+
+wireAddon({
+  name: 'marker',
+  package: '@verifier/contrib-marker',
+  contributors: ['lazy-reader', 'marker-reader', 'marker', 'hook-b', 'hook-a'],
+})
+`
+)
+writeFileSync(
+  LIFECYCLE_FILE,
+  `import { appendFileSync } from 'node:fs'
+import { pikkuServerLifecycle } from '#pikku/setup'
+
+const log = (line: string) => {
+  const file = process.env.PIKKU_HOOK_LOG
+  if (file) appendFileSync(file, line + '\\n')
+}
+
+export const lifecycle = pikkuServerLifecycle({
+  beforeStart: (services) =>
+    log(
+      'app:beforeStart hookB=' +
+        ((services as any).hookB ?? 'missing') +
+        ' lazy=' +
+        ((services as any).lazyReader?.readHookB() ?? 'missing')
+    ),
+  afterStart: () => log('app:afterStart'),
+  beforeStop: () => log('app:beforeStop'),
+  afterStop: () => log('app:afterStop'),
+})
+`
 )
 pinnedConfig.deploy = {
   ...pinnedConfig.deploy,
   grouping: { strategy: 'function' },
-  contributors: [
-    { module: CONTRIBUTORS_MODULE, export: 'markerReader' },
-    { module: CONTRIBUTORS_MODULE, export: 'marker' },
-  ],
 }
 writeFileSync(CONFIG_FILE, JSON.stringify(pinnedConfig, null, 2))
 
@@ -189,15 +255,43 @@ await check('entry: bootstrap import + main()', () => {
 })
 
 await check(
-  'entry: deploy.contributors run in needs/provides order with runtime services',
+  'entry: opted-in contributors run in needs/provides order with runtime services',
   () => {
     const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
-    const marker = e.indexOf('services.platformMarker = {')
-    const reader = e.indexOf('services.platformMarkerSeen =')
+    if (
+      !/import \{ createPlatformServices \} from '\.\/platform-services\.gen\.js'/.test(
+        e
+      )
+    )
+      throw new Error(
+        'the entry does not import the generated platform services'
+      )
+    const generated = readText(
+      join(DEPLOY_DIR, unitName, 'platform-services.gen.ts')
+    )
+    const marker = generated.indexOf('markerDeploy ')
+    const reader = generated.indexOf('markerReaderDeploy')
     if (marker < 0 || reader < 0)
-      throw new Error('deploy.contributors were not emitted into the entry')
-    if (marker > reader)
-      throw new Error('marker-reader ran before the marker it needs')
+      throw new Error('the opted-in contributors were not generated')
+    if (!/contributor\d+\.run/.test(generated))
+      throw new Error('nothing runs them')
+    const order = [...generated.matchAll(/^\s*await contributor(\d+)\.run/gm)]
+    const names = [
+      ...generated.matchAll(/import \{ (\w+) as contributor(\d+) \}/g),
+    ]
+    const byIndex = Object.fromEntries(names.map((m) => [m[2], m[1]]))
+    const ran = order.map((m) => byIndex[m[1]!])
+    if (ran.indexOf('markerDeploy') > ran.indexOf('markerReaderDeploy'))
+      throw new Error(
+        'marker-reader ran before the marker it needs: ' + ran.join(' -> ')
+      )
+    if (
+      generated.includes('notOptedInDeploy') ||
+      generated.includes('NEVER_BUNDLED')
+    )
+      throw new Error(
+        'a contributor the project did not opt in to was generated'
+      )
     const call = e.indexOf('await createPlatformServices(process.env')
     if (call < 0 || !/createPlatformServices\([^)]*\{ logger,/.test(e))
       throw new Error(
@@ -205,8 +299,20 @@ await check(
       )
     if (call < e.search(/(const|let) triggerSourceStore/))
       throw new Error('createPlatformServices runs before the runtime is built')
+    if (!/\.\.\.platformServices,/.test(e))
+      throw new Error(
+        'the contributed services are not spread into the singleton services'
+      )
   }
 )
+
+await check('entry: the adapter widened the platform with the unit', () => {
+  const generated = readText(
+    join(DEPLOY_DIR, unitName, 'platform-services.gen.ts')
+  )
+  if (!new RegExp(`"unit":\\{"name":"${unitName}"`).test(generated))
+    throw new Error('the platform in the generated file carries no unit')
+})
 
 // ---------------------------------------------------------------------------
 // Compile to a single executable with bun, then hit endpoints.
@@ -220,9 +326,22 @@ const binaryPath = join(DEPLOY_DIR, unitName, 'server')
 
 let serverProc: ReturnType<typeof spawn> | null = null
 
+const HOOK_LOG = join(DEPLOY_DIR, 'hook-order.log')
+const readHookLog = (): string[] =>
+  existsSync(HOOK_LOG)
+    ? readFileSync(HOOK_LOG, 'utf-8').trim().split('\n').filter(Boolean)
+    : []
+
 async function startBinary(): Promise<void> {
+  rmSync(HOOK_LOG, { force: true })
   const proc = spawn(binaryPath, [], {
-    env: { ...process.env, PORT: String(port), HOST: '0.0.0.0' },
+    env: {
+      ...process.env,
+      PORT: String(port),
+      HOST: '0.0.0.0',
+      PIKKU_HOOK_LOG: HOOK_LOG,
+      PIKKU_HOOK_FAIL: '',
+    },
     stdio: 'pipe',
     cwd: join(DEPLOY_DIR, unitName),
   })
@@ -283,6 +402,45 @@ async function startBinary(): Promise<void> {
   })
 }
 
+/**
+ * Runs the compiled binary with extra env on its own port, until it exits by
+ * itself (a startup failure) or, with `stopWithSigterm`, once it is serving
+ * and has been sent SIGTERM.
+ */
+async function runToExit(
+  env: Record<string, string>,
+  options: { stopWithSigterm?: boolean } = {}
+): Promise<{ code: number | null; output: string }> {
+  rmSync(HOOK_LOG, { force: true })
+  const ownPort = await getFreePort()
+  const proc = spawn(binaryPath, [], {
+    env: {
+      ...process.env,
+      PORT: String(ownPort),
+      HOST: '0.0.0.0',
+      PIKKU_HOOK_LOG: HOOK_LOG,
+      ...env,
+    },
+    stdio: 'pipe',
+    cwd: join(DEPLOY_DIR, unitName),
+  })
+  let output = ''
+  proc.stdout?.on('data', (d) => (output += d.toString()))
+  proc.stderr?.on('data', (d) => (output += d.toString()))
+  const exited = new Promise<number | null>((resolve) =>
+    proc.on('exit', resolve)
+  )
+  const deadline = setTimeout(() => proc.kill('SIGKILL'), 20_000)
+  if (options.stopWithSigterm) {
+    for (let i = 0; i < 100 && !readHookLog().includes('app:afterStart'); i++)
+      await new Promise((r) => setTimeout(r, 100))
+    proc.kill('SIGTERM')
+  }
+  const code = await exited
+  clearTimeout(deadline)
+  return { code, output }
+}
+
 if (!BUN_AVAILABLE) {
   console.log('bun not found on PATH — skipping compile + runtime checks.\n')
 } else {
@@ -302,6 +460,19 @@ if (!BUN_AVAILABLE) {
     if (s.size < 1024 * 1024)
       throw new Error(`Binary too small: ${(s.size / 1024).toFixed(0)}KB`)
   })
+
+  await check(
+    'bundle: carries the opted-in contributors and only those',
+    () => {
+      const bundle = readText(join(DEPLOY_DIR, unitName, 'bundle.js'))
+      if (!bundle.includes('wireAddon.contributors'))
+        throw new Error('the opted-in contributors are not in the bundle')
+      if (bundle.includes('NEVER_BUNDLED_MARKER'))
+        throw new Error(
+          'a contributor the project did not opt in to was bundled'
+        )
+    }
+  )
 
   if (existsSync(binaryPath)) {
     try {
@@ -447,6 +618,94 @@ if (!BUN_AVAILABLE) {
               `Expected 101 Switching Protocols, got: ${statusLine}`
             )
           }
+        }
+      )
+
+      // Contributor hooks against the app's own serverLifecycle, read from the
+      // log both wrote to while the compiled binary was running.
+      await check(
+        'runtime: contributor start hooks run first, then the app lifecycle, the app sees contributor services, and a run that finished earlier reads a later provider through the live bag',
+        async () => {
+          for (
+            let i = 0;
+            i < 50 && !readHookLog().includes('app:afterStart');
+            i++
+          )
+            await new Promise((r) => setTimeout(r, 100))
+          const expected = [
+            'start:hook-a',
+            'start:hook-b',
+            'app:beforeStart hookB=a>b lazy=a>b',
+            'app:afterStart',
+          ]
+          if (JSON.stringify(readHookLog()) !== JSON.stringify(expected))
+            throw new Error(`got ${JSON.stringify(readHookLog())}`)
+        }
+      )
+
+      await check(
+        'runtime: SIGTERM stops the app first, then the contributors in reverse',
+        async () => {
+          const proc = serverProc!
+          const exited = new Promise<number | null>((resolve) =>
+            proc.on('exit', resolve)
+          )
+          proc.kill('SIGTERM')
+          await exited
+          const expected = [
+            'start:hook-a',
+            'start:hook-b',
+            'app:beforeStart hookB=a>b lazy=a>b',
+            'app:afterStart',
+            'app:beforeStop',
+            'app:afterStop',
+            'stop:hook-b',
+            'stop:hook-a',
+          ]
+          if (JSON.stringify(readHookLog()) !== JSON.stringify(expected))
+            throw new Error(`got ${JSON.stringify(readHookLog())}`)
+        }
+      )
+
+      await check(
+        'runtime: a failing onServerStart aborts startup naming the contributor',
+        async () => {
+          const result = await runToExit({ PIKKU_HOOK_FAIL: 'start:hook-b' })
+          if (result.code === 0 || result.code === null)
+            throw new Error(`expected a non-zero exit, got ${result.code}`)
+          if (
+            !/Contributor 'hook-b' failed in onServerStart/.test(result.output)
+          )
+            throw new Error(
+              `error does not name the contributor:\n${result.output}`
+            )
+          if (
+            JSON.stringify(readHookLog()) !==
+            JSON.stringify(['start:hook-a', 'start:hook-b'])
+          )
+            throw new Error(`got ${JSON.stringify(readHookLog())}`)
+        }
+      )
+
+      await check(
+        'runtime: every onServerStop is attempted when one throws',
+        async () => {
+          const result = await runToExit(
+            { PIKKU_HOOK_FAIL: 'stop:hook-b' },
+            { stopWithSigterm: true }
+          )
+          if (
+            !/afterStop failed during shutdown[\s\S]*hook-b stop exploded/.test(
+              result.output
+            )
+          )
+            throw new Error(`the failure was not reported:\n${result.output}`)
+          const log = readHookLog()
+          if (
+            JSON.stringify(log.slice(-3)) !==
+            JSON.stringify(['app:afterStop', 'stop:hook-b', 'stop:hook-a'])
+          )
+            throw new Error(`got ${JSON.stringify(log)}`)
         }
       )
     } catch (e) {

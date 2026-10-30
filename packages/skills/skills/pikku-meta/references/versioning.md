@@ -137,11 +137,11 @@ the manifest alone. Fix the contract or bump the version, then run it again.
 `check` is a within-repo gate — "you changed a contract without bumping
 `version:`". `release` is a release question — "what does this build owe the
 clients of the last release, and how do we ship it?". The baseline is
-`surface.pikku.json`, the snapshot committed by the previous release.
+`pikku.surface.json`, the snapshot committed by the previous release.
 
 ```bash
 npx pikku release init                                   # first run: snapshot + CHANGELOG.md
-npx pikku release diff                                   # vs surface.pikku.json
+npx pikku release diff                                   # vs pikku.surface.json
 npx pikku release diff --against https://api.acme.com/surface.json  # vs any baseline
 npx pikku release diff --fail-on major                   # PR gate
 npx pikku release snapshot --out surface.json            # write a snapshot
@@ -162,7 +162,7 @@ writes it; it never commits, tags or pushes. Who does that is your call — you
 with plain git, or a platform with its own credentials.
 
 `prepare` runs on a checkout of `origin/staging` after `pikku all`. It diffs the
-surface against `surface.pikku.json`, reads the commits production does not have
+surface against `pikku.surface.json`, reads the commits production does not have
 yet, bumps `package.json`, prepends a `CHANGELOG.md` section and rewrites the
 snapshot. No commits since the last release means nothing to release. It
 refuses when `main` has commits `staging` lacks (merge `main` into `staging`
@@ -174,7 +174,7 @@ Shipping is then one commit on top of that trunk sha:
 
 ```bash
 npx pikku release prepare
-git add package.json CHANGELOG.md surface.pikku.json
+git add package.json CHANGELOG.md pikku.surface.json
 git commit -m "release: v0.4.0"
 git tag v0.4.0
 git push --atomic origin HEAD:staging HEAD:main v0.4.0

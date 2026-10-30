@@ -167,6 +167,36 @@ cron expression can decide which tasks fire. `pikku-deploy` has the comparison.
 Enabling the RPC endpoint says the endpoint exists, not who may call it — each
 `expose: true` function is still gated by its own `auth`, permissions and scopes.
 
+## A function nothing uses: wire it or disable it
+
+`pikku verify` fails on an app function that is not wired, exposed, or called
+by name (`rpc.invoke`, a workflow step, an agent tool) — `[PKU563]`, naming the
+function and its file. `pikku all` still builds; only verify fails. Addon
+functions are never flagged, in the addon or in an app that uses it.
+
+Workflows are checked too. A workflow is used when it is wired, exposed, or
+started by a literal name: `rpc.startWorkflow('name')`,
+`workflowService.startWorkflow` / `runToCompletion('name')`,
+`rpc.invoke('name')`, another workflow's step, or a client helper. A workflow
+started only through a computed name is flagged.
+
+To keep a function in the source but out of the build, mark it `disabled`:
+
+```typescript
+export const oldReport = pikkuSessionlessFunc({
+  disabled: 'replaced by liveReport', // or `true`
+  func: async () => 'old',
+})
+```
+
+A disabled function is left out of everything: meta, RPC maps, clients, MCP,
+CLI, HTTP, addon SDKs. It cannot be registered at runtime either. Anything
+that still references it — a wiring, an `rpc.invoke('oldReport')`, a workflow
+step, an agent tool — fails the build with `[PKU562]`, naming both sides.
+`pikku all` lists the disabled functions once, with file and reason.
+
+The value must be `true` or a string literal; a computed value is refused.
+
 ## What NOT to do
 
 - Do not import a wiring factory from `@pikku/core/*`. It compiles and silently

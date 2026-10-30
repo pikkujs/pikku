@@ -273,6 +273,9 @@ export const createConfig: CreateConfig<
   return {
     ...cliConfig,
     ...dataWithoutOutDir,
+    // `pikku dev --frontends` is a flag, and the spread above would replace the
+    // project's `frontends` table with its boolean.
+    frontends: cliConfig.frontends,
     inspector,
     tags: cliConfig.tags,
     filters: parseCLIFilters(data, cliConfig),
@@ -390,6 +393,12 @@ export const createSingletonServices: CreateSingletonServices<
         // this the route is written and never registered: no HTTP wiring, no
         // entry in the fetch client, an endpoint that 404s.
         config.analyticsFile,
+        // The analytics origin lock and the CORS middleware are middleware
+        // registrations nothing imports, and the origins file carries the
+        // CORS_ORIGINS variable definition the deploy plan reads.
+        config.analyticsOriginFile,
+        config.corsFile,
+        config.corsOriginsFile,
         // Same for the feature flag read wire.
         config.featureFlagsFile,
         // The auth scaffold (catch-all routes + session middleware) and its

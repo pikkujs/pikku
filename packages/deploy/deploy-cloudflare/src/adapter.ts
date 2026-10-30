@@ -17,42 +17,55 @@ import {
   generateServerProxyBundle,
   serverProxyConstants,
 } from './server-proxy-entry.js'
+import { extname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import type { ContributorBindingSource } from '@pikku/core/contributors'
 import type {
-  BindingSource,
-  ContributorPlatform,
+  ContributorSupport,
   DeploymentManifest,
   DeploymentUnit,
   EntryGenerationContext,
-  PlatformServiceContributor,
   ProviderAdapter,
   RuntimeProfile,
   RuntimeTier,
 } from '@pikku/deploy'
 import {
-  assertContributorsSupported,
-  collectContributorImports,
-  collectContributorLines,
-  dedupeContributors,
-  partitionContributors,
+  composedLifecycleLines,
+  entryLifecycleVariable,
   unitWiresRemoteJobInbox,
+  withDeployUnit,
 } from '@pikku/deploy'
 
-import { coercionContributor } from './coercion-contributor.js'
+import {
+  COERCION_CONTRIBUTOR_NAME,
+  coercionContributor,
+} from './coercion-contributor.js'
 
-export type { PlatformServiceContributor } from '@pikku/deploy'
-
-export const CLOUDFLARE_BINDING_SOURCES: readonly BindingSource[] = [
+export const CLOUDFLARE_BINDING_SOURCES: readonly ContributorBindingSource[] = [
   'env',
   'cloudflare',
 ]
 
-export type PlatformImports = ContributorPlatform & {
+export type PlatformImports = {
   cfImports: string[]
   needsD1: boolean
+  needsQueue: boolean
+  needsWorkflow: boolean
+  needsAgent: boolean
 }
 
+/** The module the generated platform-services file imports the coercion contributor from. */
+const COERCION_MODULE = fileURLToPath(
+  new URL(`./coercion-contributor${extname(import.meta.url)}`, import.meta.url)
+)
+
+/**
+ * The name the generated entry imports the project's contributor services
+ * under; it never clashes with an app's own identifiers.
+ */
+const CONTRIBUTOR_SERVICES = '__pikkuContributorServices'
+
 export interface CloudflareProviderAdapterOptions {
-  contributors?: PlatformServiceContributor[]
   /**
    * Override whether the deploy pipeline emits per-step workflow queues.
    * Defaults to `false` (CF's DO-backed workflow runtime needs no queue
@@ -79,8 +92,9 @@ export interface CloudflareProviderAdapterOptions {
   compatDate?: string
   /**
    * Attach the app's generated column coercion map to the platform's `kysely`,
-   * as `pikku dev` does. On by default; turn it off for a platform whose own
-   * kysely contributor already applies the map.
+   * as `pikku dev` does, by selecting the `kysely-coercion` contributor beside
+   * the ones the project opted in to. On by default; turn it off for a platform
+   * whose own kysely contributor already applies the map.
    */
   coercion?: boolean
 }
@@ -180,28 +194,78 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
   readonly httpQueueJobs: boolean
   readonly compatDate: string
 
-  private readonly contributors: PlatformServiceContributor[]
+  private readonly coercion: boolean
 
   constructor(options: CloudflareProviderAdapterOptions = {}) {
     this.workflowQueues = options.workflowQueues ?? false
     this.httpQueueJobs = options.httpQueueJobs ?? false
     this.compatDate = options.compatDate ?? DEFAULT_COMPAT_DATE
-    this.contributors = dedupeContributors([
-      ...(options.coercion === false ? [] : [coercionContributor]),
-      ...(options.contributors ?? []),
-    ])
-    // Last, so it wraps the kysely any other contributor built.
-    const coercion = this.contributors.findIndex(
-      (c) => c.name === coercionContributor.name
-    )
-    if (coercion >= 0) {
-      this.contributors.push(...this.contributors.splice(coercion, 1))
+    this.coercion = options.coercion !== false
+  }
+
+  /**
+   * Services the entry holds when the contributors run: what the Worker (or
+   * the Node container) builds before it calls them. A container has no
+   * bindings, so it holds only the logger and schema and supplies `env` alone.
+   */
+  contributorSupport(ctx: EntryGenerationContext): ContributorSupport {
+    const container = ctx.unit.target === 'server'
+    const platform = this.resolvePlatformImports(ctx.unit)
+    const gateway = ['mcp', 'agent', 'workflow'].includes(ctx.unit.role)
+    return {
+      supported: container ? ['env'] : CLOUDFLARE_BINDING_SOURCES,
+      runsServerLifecycle: container,
+      runtimeServices: [
+        'logger',
+        'schema',
+        ...(container
+          ? []
+          : [
+              ...(platform.needsQueue ? ['queueService'] : []),
+              ...(platform.needsWorkflow ? ['workflowService'] : []),
+              ...(platform.needsAgent
+                ? ['agentStorage', 'agentRunService', 'agentRunState']
+                : []),
+              ...(gateway || ctx.unit.dependsOn.length > 0
+                ? ['deploymentService']
+                : []),
+            ]),
+      ],
+      widenPlatform: (base) => withDeployUnit(base, ctx.unit),
+      framework: this.coercion
+        ? [
+            {
+              name: COERCION_CONTRIBUTOR_NAME,
+              contributor: coercionContributor,
+              module: COERCION_MODULE,
+              export: 'coercionContributor',
+              optional: true,
+            },
+          ]
+        : [],
     }
-    assertContributorsSupported(
-      this.contributors,
-      CLOUDFLARE_BINDING_SOURCES,
-      this.name
-    )
+  }
+
+  /** The import of the generated file holding the unit's contributors, if any. */
+  private contributorImports(ctx: EntryGenerationContext): string[] {
+    return ctx.platformServices
+      ? [
+          `import { createPlatformServices as ${CONTRIBUTOR_SERVICES} } from '${ctx.platformServices.importPath}'`,
+        ]
+      : []
+  }
+
+  /**
+   * Runs the contributors against the bag the entry has built so far, which
+   * they read as `runtime`, and merges what they set over it, so a contributor
+   * may replace a baseline service.
+   */
+  private contributorLines(ctx: EntryGenerationContext): string[] {
+    return ctx.platformServices
+      ? [
+          `  Object.assign(services, await ${CONTRIBUTOR_SERVICES}(env, services))`,
+        ]
+      : []
   }
 
   /**
@@ -216,37 +280,6 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
 
   getPlatform(): 'browser' {
     return 'browser'
-  }
-
-  private contributorImports(
-    ctx: EntryGenerationContext,
-    platform: PlatformImports,
-    sources: readonly BindingSource[] = CLOUDFLARE_BINDING_SOURCES
-  ): string[] {
-    return collectContributorImports(
-      this.contributorsFor(sources),
-      platform,
-      ctx
-    )
-  }
-
-  private contributorLines(
-    ctx: EntryGenerationContext,
-    platform: PlatformImports,
-    isGateway: boolean,
-    sources: readonly BindingSource[] = CLOUDFLARE_BINDING_SOURCES
-  ): string[] {
-    return collectContributorLines(this.contributorsFor(sources), {
-      ctx,
-      platform,
-      isGateway,
-    })
-  }
-
-  private contributorsFor(
-    sources: readonly BindingSource[]
-  ): PlatformServiceContributor[] {
-    return partitionContributors(this.contributors, sources).supported
   }
 
   /**
@@ -281,7 +314,6 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       needsQueue,
       needsWorkflow,
       needsAgent,
-      serviceNames: unit.services.map((s) => s.sourceServiceName),
     }
   }
 
@@ -324,6 +356,8 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
    */
   generateServerEntrySource(ctx: EntryGenerationContext): string {
     const platform = this.resolvePlatformImports(ctx.unit)
+    const lifecycle = entryLifecycleVariable(ctx)
+    const composed = composedLifecycleLines(ctx)
 
     const lines: string[] = [
       `// Generated server (container) entry for "${ctx.unit.name}" (${ctx.unit.role})`,
@@ -331,12 +365,20 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `import { pikkuState } from '@pikku/core/state'`,
       `import { JsonConsoleLogger, LocalVariablesService, LocalSecretService } from '@pikku/core/services'`,
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
-      ...this.contributorImports(ctx, platform, ['env']),
+      ...this.contributorImports(ctx),
+      ...(ctx.lifecycle
+        ? [
+            `import { ${ctx.lifecycle.variable} as __pikkuLifecycle } from '${ctx.lifecycle.importPath}'`,
+          ]
+        : []),
+      ...composed.imports,
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
       `import '${ctx.bootstrapPath}'`,
       ``,
+      ...composed.declaration,
+      ...(composed.declaration.length > 0 ? [``] : []),
       ...this.generateServerPlatformServicesBlock(ctx, platform),
       ``,
       `const PORT = Number(process.env.PORT ?? 8080)`,
@@ -358,9 +400,19 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `    { ...config, hostname: HOST, port: PORT, healthCheckPath: '/__pikku/health' },`,
       `    singletonServices.logger,`,
       `  )`,
-      `  server.enableExitOnSignals()`,
+      `  server.enableExitOnSignals(${
+        lifecycle
+          ? `{ beforeStop: () => ${lifecycle}?.beforeStop?.(singletonServices), afterStop: () => ${lifecycle}?.afterStop?.(singletonServices) }`
+          : ''
+      })`,
       `  await server.init()`,
+      ...(lifecycle
+        ? [`  await ${lifecycle}?.beforeStart?.(singletonServices)`]
+        : []),
       `  await server.start()`,
+      ...(lifecycle
+        ? [`  await ${lifecycle}?.afterStart?.(singletonServices)`]
+        : []),
       `}`,
       ``,
       `main().catch((err) => {`,
@@ -392,7 +444,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `  const logger = new JsonConsoleLogger()`,
       `  services.logger = logger`,
       `  services.schema = new CFWorkerSchemaService(logger)`,
-      ...this.contributorLines(ctx, platform, false, ['env']),
+      ...this.contributorLines(ctx),
       `  return services`,
       `}`,
     ]
@@ -444,7 +496,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(ctx, platform),
+      ...this.contributorImports(ctx),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -507,7 +559,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(ctx, platform),
+      ...this.contributorImports(ctx),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -604,7 +656,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(ctx, platform),
+      ...this.contributorImports(ctx),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -727,7 +779,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
         `  )`
       )
     }
-    lines.push(...this.contributorLines(ctx, platform, false))
+    lines.push(...this.contributorLines(ctx))
     lines.push(`  return services`, `}`)
     return lines
   }
@@ -781,7 +833,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `    ${bindingsMap}`,
       `  )`
     )
-    lines.push(...this.contributorLines(ctx, platform, true))
+    lines.push(...this.contributorLines(ctx))
     lines.push(`  return services`, `}`)
     return lines
   }

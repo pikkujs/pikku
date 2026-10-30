@@ -24,6 +24,38 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### `pikku verify` fails on an app function nothing uses
+
+An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked. Workflows are checked too: a workflow that is not wired, exposed or started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step) is reported.
+
+To fix it, use the function or mark it `disabled: true | 'reason'`, which leaves it out of the build. A reference to a disabled function fails the build with `PKU562`. See [`disabled-functions.md`](./disabled-functions.md).
+
+To find the affected functions, run `pikku all` and look for `PKU563`.
+
+A string `disabled` on a wiring (`wireHTTP({ disabled: 'reason', ... })`) now disables it, the same way `disabled: true` already did.
+
+### A cast around a service factory fails the build
+
+A factory export wrapped in a cast (`as`, `<T>`) or a non-null assertion (`!`) now fails `pikku all` with `PKU564`. `satisfies` and parentheses are not casts: a factory inside them is read through and registered as before. That covers `pikkuServices`, `pikkuAddonServices`, `pikkuWireServices`, `pikkuAddonWireServices`, `pikkuConfig`, `pikkuAddonConfig` and `pikkuServerLifecycle`:
+
+```ts
+// Before: built, but the factory was never registered. An addon written this
+// way generated no pikku-package.gen.ts, and its workflows failed at runtime
+// with WorkflowNotFoundError.
+export const createSingletonServices = pikkuAddonServices(
+  async (config, services) => ({ ... })
+) as unknown as CreateSingletonServices<Config, SingletonServices>
+
+// After: export the call itself, and fix the type mismatch the cast hid.
+export const createSingletonServices = pikkuAddonServices(
+  async (config, services) => ({ ... })
+)
+```
+
+The cast was usually there because the generated `pikku-package.gen.ts` did not type-check: core typed the slot every addon's factory is registered in against `CoreConfig` and `CoreSingletonServices`, which refused an addon `Config` with required fields or services narrowing a core one. That slot is now typed loosely (core), so removing the cast is enough for that case.
+
+To find the affected code, run `pikku all` and look for `PKU564`. The message names the export and its file and line. See [`service-factories.md`](./service-factories.md).
+
 ### The mesh is named `mesh`, and remote addons use the public RPC route
 
 Cross-unit RPC inside one app (the deploymentService "mesh") no longer shares the word "remote" with `wireRemoteAddon`. See [`remote-rpc.md`](./remote-rpc.md).
@@ -61,6 +93,87 @@ unaffected. Search: `rg -n "uses:" -B4 | rg "wireAddon"`.
 An addon can now declare `pikku.uses` as `{ alias: 'package@range' }` and call
 the dependency by the alias with full types. See
 [An addon calling another addon](./remote-rpc.md#an-addon-calling-another-addon).
+
+### `defineScreens` is now `definePlugin`
+
+An addon declares its Studio screens with `definePlugin` from
+`@pikku/core/addon`. `defineScreens`, `ScreensManifest`, `AddonScreen`,
+`AddonComponentScreen` and `AddonAppScreen` are removed with no alias; the
+types are `StudioManifest`, `StudioScreen`, `StudioComponentScreen`,
+`StudioAppScreen` and `StudioNav`.
+
+| Before                          | After                                                                            |
+| ------------------------------- | -------------------------------------------------------------------------------- |
+| `defineScreens({ title, ... })` | `definePlugin({ title, screens })`                                                |
+| `title: 'Inbox'`                | `title: 'inbox__title'`, a key in `messages/{locale}.json`                       |
+| top-level `icon`                | removed; a screen's `nav.icon`                                                   |
+| `nav: true`                     | `nav: { area: 'rail' \| 'team' \| 'project' \| 'account', icon, order, badge? }` |
+| screens under `/addons/<name>`  | `scope: 'studio' \| 'team' \| 'project'` gives the path prefix                   |
+
+Every screen now needs a `scope`. Titles are message keys: add each one to the
+addon's `messages/en.json` (next to its `package.json`), or `pikku all` fails
+with PKU358. The build also fails on a duplicate path (PKU357), a `nav.badge`
+naming no function of the addon (PKU359) and any non-literal field (PKU345).
+`pikku new addon-ui` scaffolds the new form. Search:
+`rg -n "defineScreens|ScreensManifest|AddonScreen"`.
+
+### Platform-service contributors are declared in code and opted in with `wireAddon`
+
+Contributors are now plain `Contributor` objects an addon registers with `defineContributors`, and a project opts in by name. The string-emitting `PlatformServiceContributor` is gone. The full reference is [`contributors.md`](./contributors.md).
+
+**Removed config, with no replacement key.** These are no longer read, and a leftover entry is now a hard error rather than a silent drop: the CLI refuses `dev.contributors` and `deploy.contributors` in `pikku.config.json` by name when it loads the config, and the inspector reports an addon whose `package.json` still has `pikku.contributors` (PKU364). Delete them and use the new route below.
+
+| Before                                                                          | After                                                                                                                     |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `dev.contributors` in `pikku.config.json`                                       | `defineContributors` in an addon, `wireAddon({ contributors })`                                                           |
+| `deploy.contributors` in `pikku.config.json`                                    | the same                                                                                                                  |
+| `"pikku": { "contributors": [...] }` in an addon's `package.json`               | `defineContributors` in the addon's source                                                                                |
+| `devPlatformServicesFile` (config output, `pikku-dev-platform-services.gen.ts`) | `devContributorsFile` (`.pikku/contributors/pikku-dev-contributors.gen.ts`), plus `contributorsMetaJsonFile` for an addon |
+
+To migrate a host-level contributor, move it into an addon (or a workspace package wired as one), export each variant from its own module, register it, and opt in:
+
+```ts
+// before: pikku.config.json  { "dev": { "contributors": [{ "module": "./dev/email.ts", "export": "email" }] } }
+// after, in the addon:
+export const contributors = defineContributors({
+  email: { dev: emailDev, deploy: emailDeploy },
+})
+// after, in the project:
+wireAddon({
+  name: 'mail',
+  package: '@my-org/addon-mail',
+  contributors: ['email'],
+})
+```
+
+A contributor is no longer `{ name, needs, provides, imports, emit }`. It is `{ provides, needs, requires, when, run(services, env, runtime, platform), onServerStart, onServerStop }`, and `run` assigns to `services` instead of returning source lines. A host that injects an addon (CI, Studio) writes a gitignored wiring file with the `wireAddon` call.
+
+**Removed API.**
+
+| Package                                                                 | Removed                                                                                                                                                                                                                                                                                                                                                                             |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@pikku/deploy`, `@pikku/deploy-cloudflare`, `@pikku/deploy-standalone` | `PlatformServiceContributor`, `BindingSource`, the old string-based `ContributorPlatform`, `collectContributorImports`, `collectContributorLines`, `dedupeContributors`, `partitionContributors`, `assertContributorsSupported`, `contributorBindingSources`, `DEFAULT_BINDING_SOURCES`, and `orderContributors` / `ContributorDependencyError` (now in `@pikku/core/contributors`) |
+| The standalone and Cloudflare `createAdapter` / adapter options         | `contributors` (the Cloudflare `coercion` option stays)                                                                                                                                                                                                                                                                                                                             |
+| `@pikku/cli`                                                            | `mergeDevPlatformServices` keeps its name and return value, but its third argument is now the `devContributorsFile` path (it was `devPlatformServicesFile`). `loadDevPlatformServices` (new) also returns the start and stop hooks                                                                                                                                                  |
+
+**New in `@pikku/core`:** the `@pikku/core/contributors` entry point (`defineContributors`, the `Contributor`, `ContributorPlatform`, `ContributorDb`, `ContributorBindingSource` and `ContributorVariants` types, `resolveContributors`, `orderContributors`, `selectContributors`) and `composeServerLifecycle` in `@pikku/core/lifecycle`. `wireAddon` accepts `contributors: string[]`.
+
+**New build errors and behaviour.**
+
+- `pikku all` (and so `pikku dev`) fails when the project declares a database (`createConfig` or `db/<dialect>`) but the pikku config has no `db`, once contributors are opted in. Set `db` or remove the declaration.
+- A provider adapter with no `contributorSupport` fails the build when a project opts in to a contributor with a `deploy` variant. `ContributorSupport.runsServerLifecycle` is a new **required** field for third-party providers; set it to `true` only if the entry calls the server lifecycle.
+- An opted-in contributor whose `requires` the target cannot supply (for example `requires: ['cloudflare']` in a standalone build) is a build error naming it. A contributor with no variant for the target is silently not part of it.
+- Two contributors providing one key after `when` and `requires` filtering is a build error naming both. A target's baseline services may still be replaced.
+- `onServerStart` on a unit that does not run the server lifecycle (a Cloudflare Worker) is a build error; `onServerStop` there is a warning.
+- Unknown or unreadable opt-ins and registrations are PKU360 to PKU363; a leftover `pikku.contributors` in an addon's `package.json` is PKU364.
+
+**Lifecycle hooks, by target.** `pikku serve` now loads the generated platform services and runs contributor hooks (both `pikku dev` and `pikku serve` skip the file when `NODE_ENV=production`). The generic server entry now supports contributors. The Cloudflare container entry now runs the app's own `serverLifecycle`, which it never did before: an app with a lifecycle that was deployed there will start running its hooks. Start hooks run before the app's `beforeStart`, stop hooks after its `afterStop`.
+
+**Cloudflare coercion** is now the named optional contributor `kysely-coercion` (`COERCION_CONTRIBUTOR_NAME`, `coercionContributor`). It applies only when some contributor provides `kysely` and the app has a coercion map. A deploy where `kysely` came from outside the contributors no longer gets the map from the adapter.
+
+**New peer dependencies.** `@pikku/core` is a peer of `@pikku/deploy`, `@pikku/deploy-standalone` and `@pikku/deploy-cloudflare`, and `@pikku/kysely` is a peer of `@pikku/deploy-cloudflare`. `pikku update --update-peers` writes them.
+
+Search: `rg -n "\"contributors\"|PlatformServiceContributor|devPlatformServicesFile|collectContributor|dedupeContributors|partitionContributors|assertContributorsSupported|contributorBindingSources"`, and check the hits in `pikku.config.json` and addon `package.json` files for `"contributors"` under `"dev"`, `"deploy"` and `"pikku"`.
 
 ## How to upgrade
 

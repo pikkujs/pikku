@@ -830,37 +830,6 @@ export async function runProjectChecks(
         )
       }
 
-      // .pikku leaf index .js wrapper — the sandbox runs `pikku dev` via
-      // bare Node.js (no tsx), which cannot load .ts files. Every .ts in
-      // .pikku/ needs a matching .js wrapper. The sandbox entrypoint creates
-      // these during provisioning but NOT on subsequent restarts after agent
-      // edits — so after any restart pikku dev crashes with
-      // "Cannot find module '#pikku/function'". Run `pikku cloud smoke`
-      // to test locally; the smoke command recreates the wrappers automatically.
-      {
-        const leafDir = join(fnDir, '.pikku', 'function')
-        const indexTs = join(leafDir, 'index.ts')
-        const indexJs = join(leafDir, 'index.js')
-        // A warning, not an error: the wrapper is gitignored and recreated by
-        // the sandbox entrypoint and `cloud smoke`, so a freshly cloned or
-        // freshly scaffolded project never has it. As an error, "validate must
-        // pass clean" was unachievable from a clean checkout.
-        if (existsSync(indexTs) && !existsSync(indexJs)) {
-          w(
-            'pikku-types-js-wrapper-missing',
-            'packages/functions/.pikku/function/index.js is missing — the sandbox runs pikku dev via bare Node.js, which cannot load .ts files; without the .js wrapper it crashes with "Cannot find module \'#pikku/function\'" on every restart',
-            indexTs,
-            lines(
-              'Create packages/functions/.pikku/function/index.js:',
-              "  import './index.ts';",
-              "  export * from './index.ts';",
-              'Or run `pikku cloud smoke` to test the full boot locally (it creates the wrappers).',
-              'This file is gitignored — it must be recreated after every `pikku all` run.'
-            )
-          )
-        }
-      }
-
       const fnAllDeps = {
         ...fnPkg.dependencies,
         ...fnPkg.devDependencies,

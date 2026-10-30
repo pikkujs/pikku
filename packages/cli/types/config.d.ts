@@ -17,12 +17,37 @@ import { PikkuWiringTypes } from '@pikku/core/types'
  * type carried once and some configs still do, and which would otherwise load
  * clean while configuring nothing. See `resolveScaffoldFeature`.
  */
-export type PikkuScaffoldFeature =
+export type PikkuScaffoldFeature<Options extends object = {}> =
   | boolean
-  | {
+  | ({
       /** Write the generated file here instead of deriving it from `pikkuDir`. */
       path?: string
-    }
+    } & Options)
+
+/**
+ * Options a scaffold feature takes beyond `path`. `true` means every default
+ * below, so a config that only ever set `true` is unchanged.
+ */
+export type PikkuAnalyticsScaffoldOptions = {
+  /**
+   * Generate an origin lock on `POST /analytics` (`analytics-origin.gen.ts`):
+   * a request whose `Origin` is not this app's own or listed in `CORS_ORIGINS`
+   * is refused with a 403, and a request with no `Origin` is refused too.
+   * Defaults to true. Set false for an app with native clients, which send no
+   * `Origin`. Implies the shared `allowedOrigins` helper and the `CORS_ORIGINS`
+   * variable (`cors/cors-origins.gen.ts`), generated even without `scaffold.cors`.
+   */
+  originLock?: boolean
+}
+
+export type PikkuCorsScaffoldOptions = {
+  /**
+   * The dev server port used for the localhost fallbacks when `CORS_ORIGINS`
+   * is unset. Defaults to the port of the primary frontend's `dev` block (else
+   * the first frontend with one), else 7104.
+   */
+  port?: number
+}
 
 export interface PikkuCLICoreOutputFiles {
   // Base directory
@@ -97,6 +122,14 @@ export interface PikkuCLICoreOutputFiles {
   // Product-analytics ingest (derived from scaffold.pikkuDir when scaffold.analytics is enabled).
   // Optional: left undefined when scaffold.analytics is not enabled, so consumers must guard.
   analyticsFile?: string
+  // The origin lock attached to `/analytics`, beside analyticsFile. Derived with
+  // it; whether it is written is scaffold.analytics.originLock (default on).
+  analyticsOriginFile?: string
+  // CORS middleware (derived from scaffold.pikkuDir when scaffold.cors is enabled).
+  corsFile?: string
+  // CORS_ORIGINS variable + allowedOrigins helper, beside corsFile. Generated
+  // when scaffold.cors or the analytics origin lock needs it.
+  corsOriginsFile?: string
   // The read wire a client asks for its own flags on (derived from
   // scaffold.pikkuDir when scaffold.featureFlags is enabled).
   // Optional: left undefined when the feature is off, so consumers must guard.
@@ -210,8 +243,12 @@ export interface PikkuCLICoreOutputFiles {
   // `pikku serve` injects them into createSingletonServices
   localServicesFile: string
 
-  // Platform services a host injects over the local ones in `pikku dev`
-  devPlatformServicesFile: string
+  // Contributors the project opted in to (`wireAddon({ contributors })`),
+  // resolved for `pikku dev`
+  devContributorsFile: string
+
+  // The contributors this package registers — present when it calls defineContributors
+  contributorsMetaJsonFile: string
 
   // Middleware
   middlewareFile: string
@@ -222,6 +259,11 @@ export interface PikkuCLICoreOutputFiles {
 
   // Config and service factories (the leaf `#pikku/setup` resolves to)
   setupTypesFile: string
+
+  // Contributor types (the leaf `#pikku/contributor` resolves to). Types only,
+  // with the runtime helper re-exported from core; an application gets it, an
+  // addon does not.
+  contributorTypesFile: string
 
   // Permissions, auth gates and credential definitions (part of `#pikku/auth`)
   authGuardsFile: string
@@ -298,7 +340,7 @@ export interface PikkuCLICoreOutputFiles {
   // Feature flags metadata JSON
   flagsMetaJsonFile: string
 
-  // Addon screens manifest metadata JSON — present when the package calls defineScreens
+  // Addon screens manifest metadata JSON — present when the package calls definePlugin
   screensMetaJsonFile: string
 
   // Addon screens (lazy imports of each screen) — what the host imports
@@ -503,6 +545,32 @@ export type PikkuCLIInput = {
     websocketFile?: string
     rpcWiringsFile?: string
     reactQueryFile?: string
+    /**
+     * Emit the frontend's record types here: `RPCInput<Name>`, `RPCOutput<Name>`,
+     * `FlattenedRPCMap`, and `AnalyticsEvent` when `scaffold.analytics` is on.
+     * Import paths are computed from this config, so a component never reaches
+     * into the functions package.
+     */
+    typesFile?: string
+    /**
+     * Emit `apiUrl()`, `basePath()` and `appHref()` here: the API base from
+     * `VITE_API_URL`, falling back to the page origin plus `/api`.
+     */
+    envFile?: string
+    /**
+     * Emit `rpc()` here, a PikkuRPC client for code outside React (route
+     * `beforeLoad` gates) that forwards the request's cookie during SSR.
+     * TanStack Start only. Requires `rpcWiringsFile` and `envFile`.
+     */
+    rpcFile?: string
+    /**
+     * Emit the Better Auth client glue here: sign-in/out/up, password reset, the
+     * session cookie refresh and the `requireAuthentication` /
+     * `redirectIfAuthenticated` route gates, built on `@pikku/better-auth/client`.
+     * TanStack Router only. Requires `rpcFile`, `envFile` and a `getSession`
+     * function; where people are sent is set by `clientAuth`.
+     */
+    authClientFile?: string
     realtimeFile?: string
     /**
      * Optional import for the EventHubTopics type so the realtime client is
@@ -551,6 +619,16 @@ export type PikkuCLIInput = {
     scopesFile?: string
   }
 
+  /** Where the generated Better Auth client (`clientFiles.authClientFile`) sends people. */
+  clientAuth?: {
+    /** Where a signed-out visitor is sent. Default `/auth/login`. */
+    loginPath?: string
+    /** Where a signed-in visitor lands. Default `/`. */
+    homePath?: string
+    /** Where the emailed password-reset link lands. Default `/auth/reset-password`. */
+    resetPasswordPath?: string
+  }
+
   /** Directory containing email templates, locales, partials, and theme.json. */
   emailTemplatesDir?: string
 
@@ -563,7 +641,7 @@ export type PikkuCLIInput = {
   /**
    * The registry `pikku all` and `pikku update` resolve versioned `wireRemoteAddon`
    * packages (`package: '@scope/name@^1.4.0'`) against. Defaults to
-   * `https://registry.pikkustudio.app`.
+   * `https://api.pikkustudio.app`.
    */
   registry?: string
 
@@ -621,28 +699,6 @@ export type PikkuCLIInput = {
   schema?: {
     additionalProperties?: boolean
     supportsImportAttributes?: boolean
-  }
-
-  /**
-   * Platform services a host injects into `pikku dev`, the way a deploy
-   * injects them into a bundle.
-   */
-  dev?: {
-    /**
-     * Modules exporting a `PlatformServiceContributor`. Codegen turns them,
-     * together with the contributors addons declare in their `package.json`
-     * (`pikku.contributors`), into `createPlatformServices(env, runtime)`;
-     * `pikku dev` merges what it returns over the local services. Contributors
-     * run in the order their `needs`/`provides` require, and `runtime` holds
-     * the local logger, variables, secrets, schema and (with `db`) kysely.
-     * Never read by `pikku serve`, and ignored when `NODE_ENV=production`.
-     */
-    contributors?: Array<{
-      /** Relative to the project root, or a package specifier. */
-      module: string
-      /** Defaults to `default`. */
-      export?: string
-    }>
   }
 
   db?: {
@@ -883,11 +939,19 @@ export type PikkuCLIInput = {
      * A typed `POST /analytics` ingest, validated against the events the app
      * declares with `defineAnalyticsEvents`. Generates the wire and its schemas
      * only — where events go is the `AnalyticsService` on singleton services,
-     * which defaults to logging them. No middleware is emitted: an origin lock
-     * suits a browser-only app and breaks a native one, so it stays the
-     * project's call.
+     * which defaults to logging them. An origin lock on the route is generated
+     * too (`originLock`, default true); pass `{ "originLock": false }` for an app
+     * with native clients, which send no `Origin`.
      */
-    analytics?: PikkuScaffoldFeature
+    analytics?: PikkuScaffoldFeature<PikkuAnalyticsScaffoldOptions>
+    /**
+     * CORS for the whole API: the `CORS_ORIGINS` variable (comma-separated
+     * origins, optional), an `allowedOrigins(variables)` helper that falls back
+     * to the localhost dev origins, and a `*` HTTP middleware built per request
+     * from it. Read through the `variables` service, never `process.env`, so it
+     * works on Workers.
+     */
+    cors?: PikkuScaffoldFeature<PikkuCorsScaffoldOptions>
     /**
      * A `GET /feature-flags` returning every declared flag resolved for the
      * caller, typed by this app's `FeatureFlagName`. Generated into the app
@@ -1053,17 +1117,6 @@ export type PikkuCLIInput = {
   deploy?: {
     providers: Record<string, string>
     defaultProvider?: string
-    /**
-     * Modules exporting a `PlatformServiceContributor`, passed to the deploy
-     * adapter by `pikku deploy plan` / `apply` along with the contributors
-     * addons declare in their `package.json` (`pikku.contributors`).
-     */
-    contributors?: Array<{
-      /** Relative to the project root, or a package specifier. */
-      module: string
-      /** Defaults to `default`. */
-      export?: string
-    }>
     serverlessIncompatible?: string[]
     /**
      * Default deploy target for functions that don't declare an explicit

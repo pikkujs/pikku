@@ -4,7 +4,7 @@
     "@pikkustudio/addon-registry": {
       "range": "^0.12.0",
       "version": "0.12.0",
-      "integrity": "sha512-+yhMz6wAycIk4URRiOCoupo0HsmDxjbv+5sF85zJ+tn+ecJPezFXmMVxLY4MopRUvwp2ny1D3T1/VEC/tMzoOg=="
+      "integrity": "sha512-UxPgvnl2S2qwTh/d6525xWrt2tdwIF9U+gPp6/dnildE3bSW47ujlDSyRqwlFSm5GG85BiekyTQAoaRIXysmzA=="
     }
   }
 }

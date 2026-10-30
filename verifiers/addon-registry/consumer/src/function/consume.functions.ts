@@ -33,3 +33,37 @@ wireHTTP({
   auth: false,
   func: consumeHello,
 })
+
+export type ConsumeDeployOutput = {
+  status: string
+  output: unknown
+  children: Array<{ workflow: string; status: string }>
+}
+
+/**
+ * Starts the addon's `deployWorkflow`, which starts the addon's own
+ * `waitForBuildHost` by its bare name, and reports both runs.
+ */
+export const consumeDeploy = pikkuSessionlessFunc<
+  { host: string },
+  ConsumeDeployOutput
+>({
+  func: async ({ workflowService }, data, { rpc }) => {
+    const { runId } = await rpc.startWorkflow('ext:deployWorkflow', data)
+    const run = await workflowService!.getRun(runId)
+    const children = []
+    for (const step of await workflowService!.getRunHistory(runId)) {
+      if (!step.childRunId) continue
+      const child = await workflowService!.getRun(step.childRunId)
+      children.push({ workflow: child!.workflow, status: child!.status })
+    }
+    return { status: run!.status, output: run!.output, children }
+  },
+})
+
+wireHTTP({
+  route: '/consume-deploy',
+  method: 'post',
+  auth: false,
+  func: consumeDeploy,
+})

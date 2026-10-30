@@ -66,10 +66,7 @@ import type {
   CreateConfig,
   CreateSingletonServices,
   CreateWireServices,
-  CoreConfig,
   CoreSingletonServices,
-  CoreServices,
-  CoreUserSession,
 } from './core.types.js'
 import type { FunctionsMeta } from '../function/function-meta.types.js'
 import type {
@@ -238,17 +235,11 @@ export interface PikkuPackageState {
     permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]>
   }
   package: {
+    /** Every package's own factories, each typed where it is defined. */
     factories: {
-      createConfig?: CreateConfig<CoreConfig>
-      createSingletonServices?: CreateSingletonServices<
-        CoreConfig,
-        CoreSingletonServices
-      >
-      createWireServices?: CreateWireServices<
-        CoreSingletonServices,
-        CoreServices,
-        CoreUserSession
-      >
+      createConfig?: CreateConfig<any>
+      createSingletonServices?: CreateSingletonServices<any, any>
+      createWireServices?: CreateWireServices<any, any, any>
     } | null
     singletonServices: CoreSingletonServices | null
     /** The pikkuBetterAuth factory, self-registered when auth.ts is evaluated.

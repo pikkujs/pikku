@@ -2,6 +2,7 @@ import { defineCLICommands, pikkuCLICommand } from '#pikku/addon/cli'
 import { CloudLogin } from './functions/login.function.js'
 import { CloudLogout } from './functions/logout.function.js'
 import { CloudAuthGit, renderAuthGit } from './functions/auth-git.function.js'
+import { CloudGit, renderGit } from './functions/git.function.js'
 import { CloudStatus, renderStatus } from './functions/status.function.js'
 import { CloudInit } from './functions/init.function.js'
 import { CloudLink } from './functions/link.function.js'
@@ -98,6 +99,27 @@ export const cloudCommands = defineCLICommands({
     description: 'Forget the saved cloud token and the git credential helper',
     options: {
       apiUrl: { description: 'Override the cloud API URL to log out of' },
+    },
+  }),
+  git: pikkuCLICommand({
+    func: CloudGit,
+    render: renderGit,
+    description:
+      'Show where the linked project’s repo lives, or move it between GitHub and cloud’s Gitea with --move-to',
+    options: {
+      moveTo: {
+        description:
+          'Where to move the repo: gitea, github (with --repo), or the URL of an existing repo',
+      },
+      repo: {
+        description:
+          'The GitHub repo to move to, as owner/name or a full URL (create it on github.com first)',
+      },
+      dryRun: {
+        description: 'Print what cloud would do and change nothing',
+        default: false,
+      },
+      apiUrl: { description: 'Override the cloud API URL for this call' },
     },
   }),
   auth: {

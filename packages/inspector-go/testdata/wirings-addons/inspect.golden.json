@@ -795,6 +795,11 @@
             "contentGrants": {
               "images": "read"
             },
+            "contributors": [
+              "inbox",
+              "cache",
+              "mailer"
+            ],
             "declaredUses": [
               "kysely",
               "email"
@@ -1382,15 +1387,20 @@
         }
       }
     },
-    "screensManifest": {
-      "title": "Admin",
-      "icon": "gear",
+    "studio": {
+      "title": "admin__title",
       "file": "<fixture>/src/screens.ts",
       "screens": [
         {
           "path": "/users",
-          "title": "Users",
-          "nav": true,
+          "title": "admin_users__title",
+          "scope": "team",
+          "nav": {
+            "area": "team",
+            "icon": "users",
+            "order": 10,
+            "badge": "nightly"
+          },
           "scopes": [
             "admin"
           ],
@@ -1398,28 +1408,67 @@
         },
         {
           "path": "/docs",
-          "title": "Docs",
+          "title": "admin_docs__title",
+          "scope": "project",
+          "replaces": true,
+          "needsApp": true,
           "app": "docs-app"
         },
         {
-          "path": "/scopes",
-          "title": "Scopes",
+          "path": "/welcome",
+          "title": "admin_welcome__title",
+          "scope": "studio",
+          "nav": {
+            "area": "rail",
+            "icon": "sparkles",
+            "order": -1
+          },
+          "layout": "bare",
+          "app": "welcome-app"
+        },
+        {
+          "path": "/inbox",
+          "title": "admin_inbox__title",
+          "scope": "project",
+          "nav": {
+            "area": "project",
+            "icon": "inbox",
+            "order": 20,
+            "badge": "noSuchFunction"
+          },
+          "app": "inbox-app"
+        },
+        {
+          "path": "/docs",
+          "title": "admin_docs__title",
+          "scope": "team",
+          "app": "again"
+        },
+        {
+          "path": "/missing-key",
+          "title": "admin_missing__title",
+          "scope": "team",
           "app": "y"
         }
       ]
     },
-    "addonScreens": {
+    "addonStudio": {
       "shop": {
-        "title": "Payments",
-        "icon": "card",
+        "title": "shop__title",
         "screens": [
           {
             "path": "/charges",
-            "title": "Charges",
-            "component": "./screens/charges.js",
+            "title": "shop_charges__title",
+            "scope": "project",
+            "nav": {
+              "area": "project",
+              "icon": "credit-card",
+              "order": 30
+            },
             "scopes": [
               "payments:read"
-            ]
+            ],
+            "component": "./screens/charges.js"
           }
         ],
         "scopes": [
@@ -1427,6 +1476,47 @@
           "payments:read",
           "zeta"
         ]
+      }
+    },
+    "contributorsManifest": {
+      "inbox": {
+        "dev": {
+          "module": "<fixture>/src/contributors/inbox.ts",
+          "export": "inboxDev"
+        },
+        "deploy": {
+          "module": "<fixture>/src/contributors/inbox.ts",
+          "export": "inboxDeploy"
+        }
+      },
+      "cache": {
+        "deploy": {
+          "module": "<fixture>/src/contributors.ts",
+          "export": "cacheDeploy"
+        }
+      }
+    },
+    "optedInContributors": {
+      "shop": {
+        "packageName": "@fixture/shop-addon",
+        "contributors": {
+          "inbox": {
+            "dev": {
+              "module": "src/contributors/inbox.ts",
+              "export": "inboxDev"
+            },
+            "deploy": {
+              "module": "src/contributors/inbox.ts",
+              "export": "inboxDeploy"
+            }
+          },
+          "cache": {
+            "deploy": {
+              "module": "src/contributors.ts",
+              "export": "cacheDeploy"
+            }
+          }
+        }
       }
     },
     "exportedContracts": {
@@ -1512,18 +1602,48 @@
   "diagnostics": [
     {
       "level": "critical",
+      "code": "PKU362",
+      "message": "wireAddon's contributors must be an array of string literals, got: someList"
+    },
+    {
+      "level": "critical",
       "code": "PKU344",
       "message": "wireAddon's expose must be true, false or an array of string literals, got: someList"
     },
     {
       "level": "critical",
-      "code": "PKU345",
-      "message": "A screen's component must be () => import('<literal>'), got: (() => null) as any"
+      "code": "PKU360",
+      "message": "Contributor 'decorator' dev 'hidden' is not exported by <fixture>/src/contributors.ts"
+    },
+    {
+      "level": "critical",
+      "code": "PKU360",
+      "message": "Contributor 'inline' dev must be a reference to an exported const so a host can import just that variant, got: { run() {} }"
+    },
+    {
+      "level": "critical",
+      "code": "PKU360",
+      "message": "Contributor 'neither' declares neither dev nor deploy"
+    },
+    {
+      "level": "critical",
+      "code": "PKU360",
+      "message": "Contributor 'stray' takes only dev and deploy, got: prod: cacheDeploy"
+    },
+    {
+      "level": "critical",
+      "code": "PKU361",
+      "message": "Contributor 'inbox' is defined twice. A contributor name belongs to one defineContributors entry."
+    },
+    {
+      "level": "critical",
+      "code": "PKU360",
+      "message": "defineContributors must be called with an object literal keyed by contributor name, got: dynamic"
     },
     {
       "level": "critical",
       "code": "PKU345",
-      "message": "A defineScreens screen needs a literal path and title, and either a lazy component or an app: { path: '/bad', title: 'Bad', component: (() => null) as any }"
+      "message": "A screen's component must be () => import('<literal>'), got: (() => null) as any"
     },
     {
       "level": "critical",
@@ -1538,17 +1658,47 @@
     {
       "level": "critical",
       "code": "PKU345",
-      "message": "A defineScreens screen must be an object literal, got: { title: 'No path', app: 'z' } as any"
+      "message": "A screen's scope must be one of 'studio', 'team', 'project', got: 'org' as any"
     },
     {
       "level": "critical",
       "code": "PKU345",
-      "message": "A defineScreens screen must be an object literal, got: 'not-an-object' as any"
+      "message": "A screen's layout must be 'bare', got: LAYOUT"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A screen's nav icon must be a literal, got: ICON"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A screen's nav area must be one of 'rail', 'team', 'project', 'account', got: 'side' as any"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A definePlugin screen must be an object literal, got: { title: 'No path', app: 'z' } as any"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A definePlugin screen must be an object literal, got: 'not-an-object' as any"
+    },
+    {
+      "level": "critical",
+      "code": "PKU357",
+      "message": "definePlugin declares two screens at '/docs'; each screen needs its own path"
     },
     {
       "level": "critical",
       "code": "PKU348",
       "message": "@fixture/shop-addon needs email, but wireAddon('shop') does not map it. Wire email and add uses: { 'email': '<name>' } to this wireAddon."
+    },
+    {
+      "level": "critical",
+      "code": "PKU363",
+      "message": "wireAddon('shop') opts in to contributor 'mailer', but @fixture/shop-addon registers no such contributor. It registers: inbox, cache."
     },
     {
       "level": "critical",
@@ -1563,7 +1713,7 @@
     {
       "level": "critical",
       "code": "PKU346",
-      "message": "wireAddon('bare') sets ui: true, but @fixture/bare-addon declares no screens. Add a defineScreens call to the package, or drop ui."
+      "message": "wireAddon('bare') sets ui: true, but @fixture/bare-addon declares no screens. Add a definePlugin call to the package, or drop ui."
     },
     {
       "level": "warn",
@@ -1633,6 +1783,24 @@
     {
       "level": "error",
       "message": "Trigger 'github:deleted' listens for 'deleted', which webhook source 'github' does not declare. Declared: push, release."
+    },
+    {
+      "level": "critical",
+      "code": "PKU358",
+      "message": "definePlugin uses the message key 'admin_missing__title', which is missing from the addon's messages/en.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_inbox__title', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_missing__title', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "critical",
+      "code": "PKU359",
+      "message": "Screen '/inbox' has the nav badge 'noSuchFunction', which names no function in this addon"
     },
     {
       "level": "warn",
@@ -1706,7 +1874,7 @@
     }
   ],
   "validationPass": {
-    "start": 26,
-    "end": 40
+    "start": 42,
+    "end": 56
   }
 }

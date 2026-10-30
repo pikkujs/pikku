@@ -13,6 +13,7 @@ const camel = (name: string) => {
 export const addonUiFiles = (name: string): Record<string, string> => {
   const title = pascal(name).replace(/([a-z0-9])([A-Z])/g, '$1 $2')
   const fn = camel(name)
+  const key = name.replace(/-/g, '_')
   return {
     'package.json': JSON.stringify(
       {
@@ -31,7 +32,7 @@ export const addonUiFiles = (name: string): Record<string, string> => {
           './.pikku/*': './dist/.pikku/addon/*',
           './screens/*': './dist/src/screens/*.js',
         },
-        files: ['dist'],
+        files: ['dist', 'messages'],
         scripts: {
           prebuild: 'pikku all',
           build: 'tsc && pikku dist',
@@ -88,21 +89,30 @@ export const addonUiFiles = (name: string): Record<string, string> => {
       null,
       2
     ),
-    'src/screens.ts': `import { defineScreens } from '@pikku/core/addon'
+    'src/screens.ts': `import { definePlugin } from '@pikku/core/addon'
 
-export default defineScreens({
-  title: '${title}',
+export default definePlugin({
+  title: '${key}__title',
   screens: [
     {
-      path: '/',
-      title: '${title}',
-      nav: true,
+      path: '/${name}',
+      title: '${key}_home__title',
+      scope: 'project',
+      nav: { area: 'project', icon: 'puzzle', order: 100 },
       scopes: ['${name}:read'],
       component: () => import('./screens/Home.js'),
     },
   ],
 })
 `,
+    'messages/en.json': JSON.stringify(
+      {
+        [`${key}__title`]: title,
+        [`${key}_home__title`]: title,
+      },
+      null,
+      2
+    ),
     'src/functions/hello.function.ts': `import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 export const ${fn}Hello = pikkuSessionlessFunc<void, { message: string }>({

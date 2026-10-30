@@ -1,0 +1,25 @@
+{
+  "name": "@pikku/verifiers-disabled-functions",
+  "type": "module",
+  "private": true,
+  "description": "Checks that a `disabled` function is left out of the build, that a reference to one fails it, and that `pikku verify` fails on an app function nothing uses",
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit",
+    "test": "rm -rf .pikku && node ../../packages/cli/dist/bin/pikku.js && tsc --noEmit && npx tsx test-disabled-functions.ts",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "zod": "^4"
+  }
+}

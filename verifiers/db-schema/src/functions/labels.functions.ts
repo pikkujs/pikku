@@ -11,7 +11,14 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { wireAddon } from '#pikku/addon'
 import { wireHTTP } from '#pikku/http'
 
-wireAddon({ name: 'labels', package: '@pikku/verifier-db-addon' })
+// The grant names the secret the app's better-auth scaffold declares in
+// auth-secrets.gen.ts — a file the first inspection of a clean checkout runs
+// before it exists, and must not report the grant as targeting nothing (PKU124).
+wireAddon({
+  name: 'labels',
+  package: '@pikku/verifier-db-addon',
+  secretGrants: ['BETTER_AUTH_SECRET'],
+})
 
 export const roundTripLabel = pikkuSessionlessFunc<
   { id: string; name: string },

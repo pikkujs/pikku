@@ -92,6 +92,7 @@ import {
   mocksCheck,
   renderMocksCheck,
 } from './functions/commands/mocks-check.js'
+import { mocksAdd, renderMocksAdd } from './functions/commands/mocks-add.js'
 import { mocksDiff, renderMocksDiff } from './functions/commands/mocks-diff.js'
 import { mocksSync, renderMocksSync } from './functions/commands/mocks-sync.js'
 import {
@@ -525,7 +526,7 @@ wireCLI({
           options: {
             against: {
               description:
-                'Baseline to compare against instead of surface.pikku.json: a .pikku directory, a snapshot file, or a snapshot URL',
+                'Baseline to compare against instead of pikku.surface.json: a .pikku directory, a snapshot file, or a snapshot URL',
             },
             out: {
               description:
@@ -553,10 +554,10 @@ wireCLI({
           func: pikkuReleaseInit,
           render: renderReleaseInit,
           description:
-            'Write surface.pikku.json and CHANGELOG.md, the baseline the first release is measured against',
+            'Write pikku.surface.json and CHANGELOG.md, the baseline the first release is measured against',
           options: {
             force: {
-              description: 'Overwrite an existing surface.pikku.json',
+              description: 'Overwrite an existing pikku.surface.json',
               default: false,
             },
           },
@@ -626,6 +627,15 @@ wireCLI({
         model: {
           description:
             'Repoint model aliases for this run, e.g. \'cheap:openai/gpt-5-nano,tool:anthropic/claude-haiku-4-5\'. Overrides the "models" table in pikku.config.json without editing it',
+        },
+        frontends: {
+          description:
+            'Run every frontend that sets "dev.command" beside the API; --no-frontends runs the API alone',
+          default: true,
+        },
+        frontend: {
+          description:
+            'Run only these frontends (comma separated names from "frontends" in pikku.config.json)',
         },
       },
     }),
@@ -1111,6 +1121,58 @@ wireCLI({
       description:
         'Mock data for RPCs, kept in .mocks/ and checked against the functions it stands in for',
       subcommands: {
+        add: pikkuCLICommand({
+          func: mocksAdd,
+          render: renderMocksAdd,
+          parameters: '<rpc>',
+          description:
+            'Add a mock for an RPC in one step. Checks the RPC is a function of the project, writes .mocks/<rpc with : as .>/<state>.json and <state>.meta.json (label, description, state, default, status), keeps exactly one default (the first mock is the default; --default moves it), checks the body against the function output, and with --flag declares the feature flag in the project flags file. Prints the stub hook to use. Never overwrites a mock without --force. The body is required unless the mock is an error mock, or an empty mock of a function that returns a list.',
+          options: {
+            state: {
+              description: 'healthy (default), empty, error or slow',
+              type: 'string',
+            },
+            name: {
+              description:
+                'Mock name, the file name without .json (default: the state); use it for a second mock of the same state',
+              type: 'string',
+            },
+            label: {
+              description: 'Label shown in the mock picker',
+              type: 'string',
+            },
+            description: {
+              description: 'What the mock stands for',
+              type: 'string',
+            },
+            default: {
+              description:
+                'Make this the mock the screen opens with, clearing the previous default',
+              default: false,
+            },
+            status: {
+              description: 'HTTP status of an error mock (default 500)',
+              type: 'number',
+            },
+            flag: {
+              description:
+                'Feature flag the stub hook publishes behind; added to the flags file when it is not declared yet',
+              type: 'string',
+            },
+            body: {
+              description: 'The response, as JSON text',
+              type: 'string',
+            },
+            from: {
+              description: 'Read the response from a JSON file',
+              type: 'string',
+            },
+            force: {
+              description: 'Overwrite a mock that already exists',
+              default: false,
+            },
+          },
+        }),
         diff: pikkuCLICommand({
           func: mocksDiff,
           render: renderMocksDiff,
@@ -1302,6 +1364,10 @@ wireCLI({
               description: 'Most state differences to list',
               default: '20',
             },
+            expectFailure: {
+              description:
+                'For a project whose codegen is meant to fail: the text both engines must fail with. They must still agree on state, files and diagnostics',
+            },
           },
         }),
       },
@@ -1484,8 +1550,20 @@ wireCLI({
                   description: 'Heading font, a Google Fonts family',
                 },
                 fontBody: { description: 'Body font, a Google Fonts family' },
-                page: { description: 'Light-mode page colour, as hex' },
-                ink: { description: 'Light-mode text colour, as hex' },
+                mode: {
+                  description:
+                    'light (default) or dark. With dark, --page and --ink are the dark ground and the text on it, and card, muted, border, input and every foreground are derived for that ground (written to :root and .dark, color-scheme: dark)',
+                  choices: ['light', 'dark'] as const,
+                  default: 'light' as const,
+                },
+                page: {
+                  description:
+                    'Page colour, as hex: the light-mode page, or the dark ground with --mode dark',
+                },
+                ink: {
+                  description:
+                    'Text colour, as hex: the light-mode text, or the text on the dark ground with --mode dark',
+                },
               },
             }),
           },

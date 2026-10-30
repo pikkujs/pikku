@@ -131,6 +131,20 @@ export interface InspectorFunctionState {
    * inspection pass — deliberately not part of the serialized function meta.
    */
   dynamicImportIds: Set<string>
+  /**
+   * Functions declared with `disabled`, keyed by pikkuFuncId. They are in no
+   * other part of the state: nothing is generated for them, and a reference
+   * to one is PKU562.
+   */
+  disabled: Record<string, DisabledFunctionMeta>
+}
+
+export interface DisabledFunctionMeta {
+  name: string
+  sourceFile: string
+  exportedName?: string
+  /** The string `disabled` was given, when it was not just `true`. */
+  reason?: string
 }
 
 export interface InspectorChannelState {
@@ -607,30 +621,68 @@ export interface InspectorFeature {
 export type CredentialOverrideMeta =
   string | { name?: string; mode?: 'singleton' | 'wire' }
 
-/** A screen of an addon as `defineScreens` declares it, read statically. */
-export type AddonScreenMeta = {
+/** A screen's nav entry as `definePlugin` declares it, read statically. */
+export type StudioNavMeta = {
+  area: 'rail' | 'team' | 'project' | 'account'
+  icon: string
+  order: number
+  badge?: string
+}
+
+/** A screen of an addon as `definePlugin` declares it, read statically. */
+export type StudioScreenMeta = {
   path: string
   title: string
-  nav?: boolean
+  scope: 'studio' | 'team' | 'project'
+  nav?: StudioNavMeta
+  replaces?: boolean
+  needsApp?: boolean
+  layout?: 'bare'
   scopes?: string[]
 } & (
   | { component: string; app?: undefined }
   | { app: string; component?: undefined }
 )
 
-export type ScreensManifestMeta = {
+export type StudioMeta = {
   title: string
-  icon?: string
-  /** The source file whose `defineScreens` call declared this manifest. */
+  /** The source file whose `definePlugin` call declared this manifest. */
   file: string
-  screens: AddonScreenMeta[]
+  screens: StudioScreenMeta[]
   /**
    * The addon's role: every scope its own functions require, derived by
-   * `pikku all` and never declared. Absent from the raw `defineScreens` read.
+   * `pikku all` and never declared. Absent from the raw `definePlugin` read.
    * On a wired instance it also carries the host's `wireAddon` scopes, which
    * the runner demands of every function in the package.
    */
   scopes?: string[]
+}
+
+/**
+ * Where a contributor variant lives, so a host can import only that variant.
+ * `module` is the source file that declares it (absolute while it is in
+ * inspector state, relative to the addon package in the published meta);
+ * `export` is the name that module exports it under.
+ */
+export type ContributorRef = {
+  module: string
+  export: string
+}
+
+/** One `defineContributors` entry: each variant optional, each its own import. */
+export type ContributorVariantsMeta = {
+  dev?: ContributorRef
+  deploy?: ContributorRef
+}
+
+/** The contributors an addon registers, keyed by name. */
+export type ContributorsManifestMeta = Record<string, ContributorVariantsMeta>
+
+/** The contributors a project opted in to for one wired addon. */
+export type OptedInContributorsMeta = {
+  packageName: string
+  /** Each opted-in name with the variants the addon recorded; `module` is relative to the addon package. */
+  contributors: ContributorsManifestMeta
 }
 
 export interface InspectorServiceTypes {
@@ -642,28 +694,15 @@ export interface InspectorServiceTypes {
   secretAliases: string[]
 }
 
-export interface AddonContributorRef {
-  module: string
-  export?: string
-}
-
-export interface AddonContributorsMeta {
-  packageName: string
-  packageDir: string
-  contributors: AddonContributorRef[]
-}
-
 export interface InspectorState {
-  /** Set when this package calls `defineScreens`: the screens it ships. */
-  screensManifest?: ScreensManifestMeta
-  /** The screens of the addons this project wires with `ui: true`, by namespace. */
-  addonScreens?: Record<string, ScreensManifestMeta>
-  /**
-   * Platform service contributors each wired, non-remote addon declares in its
-   * `package.json` under `pikku.contributors`, by namespace. `module` resolves
-   * from `packageDir`.
-   */
-  addonContributors?: Record<string, AddonContributorsMeta>
+  /** Set when this package calls `definePlugin`: the screens it ships. */
+  studio?: StudioMeta
+  /** The `definePlugin` metadata of the addons this project wires with `ui: true`, by namespace. */
+  addonStudio?: Record<string, StudioMeta>
+  /** Set when this package calls `defineContributors`: the contributors it registers, by name. */
+  contributorsManifest?: ContributorsManifestMeta
+  /** Per wired addon namespace, the contributors `wireAddon({ contributors })` opted in to. */
+  optedInContributors?: Record<string, OptedInContributorsMeta>
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
   wireServicesTypeImportMap: PathToNameAndType
@@ -848,6 +887,8 @@ export interface InspectorState {
          * `ContentService` instead of one scoped to its own folder.
          */
         globalContent?: string
+        /** The addon contributor names this project opted in to, as `wireAddon({ contributors })` listed them. */
+        contributors?: string[]
       }
     >
     wireAddonFiles: Set<string>

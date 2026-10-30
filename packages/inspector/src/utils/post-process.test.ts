@@ -390,6 +390,62 @@ describe('aggregateRequiredServices — per-function addon services', () => {
   })
 })
 
+describe('aggregateRequiredServices — incomingWebhookService an addon forwards', () => {
+  const adminAddon = (extra: Record<string, any> = {}) => ({
+    usedFunctions: [
+      'admin:listIncomingWebhookReceipts',
+      'admin:listScopes',
+      ...Object.keys(extra).map((id) => `admin:${id}`),
+    ],
+    addonFunctions: {
+      admin: {
+        listIncomingWebhookReceipts: {
+          services: { optimized: true, services: ['incomingWebhookService'] },
+        },
+        listScopes: {
+          services: { optimized: true, services: ['scopeService'] },
+        },
+        ...extra,
+      },
+    },
+    addonRequiredParentServices: ['scopeService', 'incomingWebhookService'],
+  })
+
+  test('is not required when the app wires no incoming webhook', () => {
+    const state = makeState(adminAddon())
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(!required.has('incomingWebhookService'))
+    assert.ok(required.has('scopeService'))
+  })
+
+  test('is not required through the parent blanket either', () => {
+    const state = makeState(
+      adminAddon({
+        ownStore: { services: { optimized: true, services: ['addonStore'] } },
+      })
+    )
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(!required.has('incomingWebhookService'))
+    assert.ok(required.has('scopeService'))
+  })
+
+  test('is required when the app wires a webhook source', () => {
+    const state = makeState({
+      ...adminAddon(),
+      functionsMeta: { 'http:post:/webhooks/stripe': {} },
+      webhookSourceMeta: {
+        stripe: { method: 'post', route: '/webhooks/stripe' },
+      },
+    })
+    aggregateRequiredServices(state)
+    assert.ok(
+      state.serviceAggregation.requiredServices.has('incomingWebhookService')
+    )
+  })
+})
+
 describe('aggregateRequiredServices — the auth factory’s own services', () => {
   test('an auth definition contributes its services before its handler exists', () => {
     // The state a clean checkout produces: the project declares
@@ -632,6 +688,38 @@ describe('override validation resolves the override target (value), not the logi
     assert.equal(criticals.length, 1)
     assert.match(criticals[0]!.message, /STIRPE_KEY/)
     assert.match(criticals[0]!.message, /STRIPE_KEY/)
+  })
+
+  test('validateSecretOverrides accepts a BETTER_AUTH_SECRET grant when the project has auth, before auth-secrets.gen.ts exists', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', [], {
+      secretGrants: ['BETTER_AUTH_SECRET'],
+    })
+    ;(state as any).auth = { definition: {} }
+    validateSecretOverrides(logger, state)
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateSecretOverrides accepts an override onto BETTER_AUTH_SECRET when the project has auth', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', [], {
+      secretGrants: ['AUTH_SECRET'],
+      secretOverrides: { AUTH_SECRET: 'BETTER_AUTH_SECRET' },
+    })
+    ;(state as any).auth = { definition: {} }
+    validateSecretOverrides(logger, state)
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateSecretOverrides still flags a BETTER_AUTH_SECRET grant when the project has no auth', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', [], {
+      secretGrants: ['BETTER_AUTH_SECRET'],
+    })
+    validateSecretOverrides(logger, state)
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.INVALID_VALUE)
+    assert.match(criticals[0]!.message, /Available secrets: none/)
   })
 
   test('validateSecretOverrides resolves a grant through its override before looking it up', () => {
