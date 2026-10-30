@@ -14,9 +14,17 @@ import { findInstallRoot } from './update.js'
 import { owningPackageDir, wireAddonFile } from './install-addon.js'
 import { newAddon, parseHeaderOptions } from './new-addon.js'
 import { confirmGrants, grantLines } from './addon-grants.js'
+import {
+  fetchOpenAPIRegistryEntry,
+  isRegistryOpenAPIName,
+  registryAuthMode,
+} from './openapi-registry.js'
+import { registryUrl } from '../../utils/remote-addon-sync.js'
 
 export type AddonSource =
-  { kind: 'spec'; spec: string } | { kind: 'package'; packageName: string }
+  | { kind: 'spec'; spec: string }
+  | { kind: 'registry'; name: string }
+  | { kind: 'package'; packageName: string }
 
 const SPEC_EXTENSIONS = ['.yaml', '.yml', '.json']
 
@@ -42,6 +50,7 @@ export function addonSource(
   ) {
     return { kind: 'spec', spec: arg }
   }
+  if (isRegistryOpenAPIName(arg)) return { kind: 'registry', name: arg }
   return { kind: 'package', packageName: addonPackageName(arg) }
 }
 
@@ -142,6 +151,7 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
     auth?: string
     name?: string
     openapiHeader?: string[]
+    registry?: string
     tags?: string[]
     include?: string[]
     exclude?: string[]
@@ -176,27 +186,56 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
       process.exit(1)
     }
 
-    if (source.kind === 'spec') {
-      if (!input.auth || !AUTH_MODES.includes(input.auth)) {
-        logger.error(
-          'Adding from a spec needs --auth user | shared | none: user if each user connects their own account, shared for one key behind every user, none for a public API'
-        )
-        process.exit(1)
+    if (input.auth && !AUTH_MODES.includes(input.auth)) {
+      logger.error(`--auth must be user, shared or none (got "${input.auth}")`)
+      process.exit(1)
+    }
+
+    if (source.kind === 'spec' || source.kind === 'registry') {
+      let spec: string
+      let name: string
+      let auth = input.auth
+      if (source.kind === 'registry') {
+        const registry = input.registry ?? registryUrl(config)
+        let entry
+        try {
+          entry = await fetchOpenAPIRegistryEntry(registry, source.name)
+        } catch (error) {
+          logger.error(error instanceof Error ? error.message : String(error))
+          process.exit(1)
+        }
+        logger.info(`${entry.name} (${entry.title}) → ${entry.swaggerUrl}`)
+        spec = entry.swaggerUrl
+        name = input.name ?? entry.name.replaceAll(':', '.')
+        if (!auth) {
+          auth = registryAuthMode(entry)
+          logger.info(
+            `--auth ${auth}, from the registry (${entry.authType ?? 'unknown'}${entry.perUser ? ', per user' : ''}); pass --auth to change it`
+          )
+        }
+      } else {
+        spec = source.spec
+        if (!auth) {
+          logger.error(
+            'Adding from a spec needs --auth user | shared | none: user if each user connects their own account, shared for one key behind every user, none for a public API'
+          )
+          process.exit(1)
+        }
+        name =
+          input.name ??
+          (
+            await parseOpenAPISpec(spec, {
+              headers: parseHeaderOptions(input.openapiHeader),
+            })
+          ).info.title
       }
-      const name =
-        input.name ??
-        (
-          await parseOpenAPISpec(source.spec, {
-            headers: parseHeaderOptions(input.openapiHeader),
-          })
-        ).info.title
       const addonDir = await newAddon(
         { logger, config },
         {
           name,
-          openapi: source.spec,
+          openapi: spec,
           openapiHeader: input.openapiHeader,
-          auth: input.auth,
+          auth,
           tags: input.tags,
           include: input.include,
           exclude: input.exclude,

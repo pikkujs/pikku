@@ -11,7 +11,8 @@
 - 6 — Check the spec against the real API
 - Then
 
-When you are handed an OpenAPI or Swagger spec — a file, or a URL to one — the
+When you are handed an OpenAPI or Swagger spec — a file, a URL to one, or the
+name of one in the registry's catalogue (`https://www.pikku.dev/openapis`) — the
 API it describes becomes an addon: one function per operation, each with its
 input and output schemas, behind one service that makes the HTTP calls. Say so
 before starting ("This is an OpenAPI spec — I'll turn it into an addon first"),
@@ -26,7 +27,23 @@ A JSON or YAML document with a top-level `openapi` key (3.x) or `swagger` key
 
 ## 1 — Look at the spec first
 
-`--openapi` takes a path or a URL. A spec published only to signed-in callers
+`--openapi` takes a path, a URL, or a catalogue name such as
+`amazonaws.com:applicationcostprofiler`. A name is anything that is neither a
+URL, a path, nor a `.json`/`.yaml` file; it is looked up in the registry
+(`--registry`, else `pikku.config.json`'s `registry`, else
+`https://api.pikkustudio.app`) and generated from the entry's spec URL. A name
+the registry does not know is refused before anything is written. On the
+website the page URL is a slug (`amazonaws-com-applicationcostprofiler`); the
+name to pass is the one the page's command shows, with its `.` and `:`.
+
+For a catalogue entry inside an app, the short form is
+`pikku addons add amazonaws.com:applicationcostprofiler`. It names the addon
+after the entry (`amazonaws-applicationcostprofiler`) and takes `--auth` from
+what the registry records: `none` for a public API, `user` for OAuth or a key
+each user brings, `shared` for a key the app holds, and `user` when the registry
+does not know. It prints the mode it picked; pass `--auth` to override it.
+
+A spec published only to signed-in callers
 takes the key the way the API reads it: `--openapi-header "NAME: value"`
 (repeatable), or in the URL's query string when the API reads it there
 (Dolibarr's explorer takes `?DOLAPIKEY=`). A 401 while fetching says which.
@@ -40,7 +57,7 @@ Keep a copy in `specs/` as the record of what the addon was generated from.
 ## 2 — Generate, from the app's root
 
 ```bash
-bunx --bun pikku new addon <name> --openapi <path-or-url>
+bunx --bun pikku new addon <name> --openapi <path-url-or-catalogue-name>
 ```
 
 One command. Inside an app it writes `packages/addon-<name>` as

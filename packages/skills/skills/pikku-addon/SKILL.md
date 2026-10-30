@@ -200,7 +200,10 @@ npx pikku new addon stripe --display-name Stripe --category Payments --dir addon
 ```
 
 **Handed an OpenAPI or Swagger spec?** Don't hand-write the functions —
-`pikku new addon <name> --openapi <spec>` generates one function per operation,
+`pikku new addon <name> --openapi <spec>` generates one function per operation
+(`<spec>` is a path, a URL, or a registry catalogue name such as
+`amazonaws.com:applicationcostprofiler`; inside an app,
+`pikku addons add <catalogue-name>` does the same and picks `--auth` for you),
 with its schemas, service and credential. Read `references/openapi.md`.
 
 This generates `package.json` (exports `.pikku/*` + `dist/`), `pikku.config.json` (`addon: true`), `tsconfig.json` (`#pikku` path mapping), `src/services.ts`, `src/functions/`, and `types/application-types.d.ts`. For the full file contents/exports you rarely hand-edit, read `references/addon-package-manifest.md`.

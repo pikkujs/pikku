@@ -1637,16 +1637,20 @@ wireCLI({
         add: pikkuCLICommand({
           func: pikkuAddonsAdd,
           description:
-            'Add an addon to this app: a published name (@pikku/addon-stripe, or just stripe) is installed and wired; an OpenAPI spec path or URL is generated into packages/, wired and built. With no argument it uses specs/api-spec.yaml|yml|json. Prints the secrets, variables and credentials to fill in',
+            'Add an addon to this app: a published name (@pikku/addon-stripe, or just stripe) is installed and wired; an OpenAPI spec path or URL, or the name of one in the registry catalogue (amazonaws.com:applicationcostprofiler), is generated into packages/, wired and built. With no argument it uses specs/api-spec.yaml|yml|json. Prints the secrets, variables and credentials to fill in',
           parameters: '[nameOrSpec]',
           options: {
             auth: {
               description:
-                'Required for a spec: user (each user connects their own account), shared (one key behind every user) or none (public API)',
+                'For a spec: user (each user connects their own account), shared (one key behind every user) or none (public API). Required for a path or URL; a registry name defaults to what its catalogue entry records',
             },
             name: {
               description:
-                'For a spec: the addon name (defaults to the spec title)',
+                'For a spec: the addon name (defaults to the registry name, else the spec title)',
+            },
+            registry: {
+              description:
+                'Registry to look a catalogue name up in (default: the registry in pikku.config.json, else https://api.pikkustudio.app)',
             },
             openapiHeader: {
               description:
@@ -2081,7 +2085,11 @@ wireCLI({
             },
             openapi: {
               description:
-                'Path or URL of an OpenAPI 3.x / Swagger 2.0 spec (YAML or JSON) to generate functions from',
+                'Path or URL of an OpenAPI 3.x / Swagger 2.0 spec (YAML or JSON) to generate functions from, or the name of one in the registry catalogue (e.g. amazonaws.com:applicationcostprofiler)',
+            },
+            registry: {
+              description:
+                'Registry to look an --openapi name up in (default: the registry in pikku.config.json, else https://api.pikkustudio.app)',
             },
             openapiHeader: {
               description:
