@@ -11,6 +11,12 @@
  *   inventory  apiKey in a header, fetched from a URL that needs a header
  *   calendar   oauth2 authorizationCode
  *   dolibarr   a real Swagger 2.0 export with delegated login (auth-config)
+ *   catalogue  named by its registry entry (`--openapi example.com:petstore`)
+ *              rather than a path or URL, resolved to the entry's swaggerUrl
+ *
+ * `pikku addons add example.com:petstore` is run inside a scratch app too: the
+ * registry name is generated, wired into the app, and its --auth taken from
+ * the catalogue entry when none is passed.
  *
  * Besides building, each addon is checked for what a consumer needs from it:
  * the `addon` block and icon the console lists it by, forceRequiredServices so
@@ -19,7 +25,14 @@
  * is missing or too vague to validate against.
  */
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { createServer } from 'node:http'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -62,7 +75,32 @@ function check(ok, message) {
 const read = (path) => readFileSync(path, 'utf8')
 
 const inventorySpec = read(join(here, 'fixtures/inventory.apikey.openapi.json'))
+const petstoreSpec = read(join(here, 'fixtures/petstore.openapi.json'))
 const server = createServer((req, res) => {
+  const origin = `http://127.0.0.1:${server.address().port}`
+  if (req.url === '/specs/petstore.json') {
+    res.setHeader('content-type', 'application/json')
+    return res.end(petstoreSpec)
+  }
+  if (req.url.startsWith('/registry/openapis/')) {
+    const name = decodeURIComponent(req.url.slice('/registry/openapis/'.length))
+    res.setHeader('content-type', 'application/json')
+    // The live registry answers an unknown name 200 with an empty body.
+    if (name !== 'example.com:petstore') return res.end('')
+    return res.end(
+      JSON.stringify({
+        name,
+        version: '1.0.0',
+        provider: 'example.com',
+        service: 'petstore',
+        title: 'Petstore',
+        description: 'The tutorial petstore',
+        swaggerUrl: `${origin}/specs/petstore.json`,
+        authType: 'api_key',
+        perUser: false,
+      })
+    )
+  }
   if (req.headers['x-spec-token'] !== 'let-me-in') {
     res.statusCode = 401
     return res.end('{"error":"unauthorized"}')
@@ -72,6 +110,7 @@ const server = createServer((req, res) => {
 })
 await new Promise((r) => server.listen(0, '127.0.0.1', r))
 const specUrl = `http://127.0.0.1:${server.address().port}/openapi.json`
+const registryUrl = `http://127.0.0.1:${server.address().port}`
 
 const corpus = [
   {
@@ -123,6 +162,19 @@ const corpus = [
     unknownOutputs: ['usersRetrieveInfo'],
     delegated: true,
   },
+  {
+    name: 'catalogue',
+    args: [
+      '--openapi',
+      'example.com:petstore',
+      '--registry',
+      registryUrl,
+      '--credential',
+      'bearer',
+    ],
+    baseUrl: 'https://petstore.example.com/api',
+    schemas: ['GetPetInput', 'CreatePetInput', 'ListPetsOutput'],
+  },
 ]
 
 rmSync(generatedDir, { recursive: true, force: true })
@@ -168,6 +220,107 @@ try {
     unauthorised.status !== 0 &&
       unauthorised.output.includes('--openapi-header'),
     `a spec URL answering 401 must suggest --openapi-header, got exit ${unauthorised.status}:\n${unauthorised.output}`
+  )
+
+  const uncatalogued = await runAsync(
+    'node',
+    [
+      PIKKU,
+      'new',
+      'addon',
+      'uncatalogued',
+      '--openapi',
+      'example.com:nothing-here',
+      '--registry',
+      registryUrl,
+      '--dir',
+      'generated',
+      '--no-build',
+    ],
+    here
+  )
+  check(
+    uncatalogued.status !== 0 &&
+      uncatalogued.output.includes('example.com:nothing-here') &&
+      uncatalogued.output.includes(registryUrl) &&
+      !existsSync(join(generatedDir, 'addon-uncatalogued')),
+    `a name the registry does not know must be refused naming it and the registry, with nothing written, got exit ${uncatalogued.status}:\n${uncatalogued.output}`
+  )
+
+  const appDir = join(generatedDir, 'app')
+  mkdirSync(join(appDir, 'src'), { recursive: true })
+  mkdirSync(join(appDir, 'packages'), { recursive: true })
+  writeFileSync(
+    join(appDir, 'package.json'),
+    JSON.stringify(
+      { name: 'registry-app', private: true, workspaces: ['packages/*'] },
+      null,
+      2
+    )
+  )
+  writeFileSync(
+    join(appDir, 'pikku.config.json'),
+    JSON.stringify(
+      {
+        srcDirectories: ['src'],
+        outDir: '.pikku',
+        tsconfig: './tsconfig.json',
+      },
+      null,
+      2
+    )
+  )
+  writeFileSync(join(appDir, 'tsconfig.json'), '{}')
+
+  const added = await runAsync(
+    'node',
+    [
+      PIKKU,
+      'addons',
+      'add',
+      'example.com:petstore',
+      '--registry',
+      registryUrl,
+      '--no-build',
+    ],
+    appDir
+  )
+  const addedDir = join(appDir, 'packages', 'addon-example-petstore')
+  check(
+    added.status === 0,
+    `addons add with a registry name must succeed without --auth, got exit ${added.status}:\n${added.output}`
+  )
+  check(
+    added.output.includes('--auth shared, from the registry'),
+    `addons add must say it took --auth shared from the registry entry:\n${added.output}`
+  )
+  check(
+    existsSync(join(addedDir, 'package.json')),
+    `addons add must generate the addon at ${addedDir}:\n${added.output}`
+  )
+  check(
+    existsSync(join(appDir, 'src', 'example-petstore.addon.ts')),
+    `addons add must wire the addon in src/example-petstore.addon.ts:\n${added.output}`
+  )
+
+  const addedUnknown = await runAsync(
+    'node',
+    [
+      PIKKU,
+      'addons',
+      'add',
+      'example.com:nothing-here',
+      '--registry',
+      registryUrl,
+      '--no-build',
+    ],
+    appDir
+  )
+  check(
+    addedUnknown.status !== 0 &&
+      addedUnknown.output.includes('example.com:nothing-here') &&
+      !existsSync(join(appDir, 'packages', 'addon-example-nothing-here')),
+    `addons add with a name the registry does not know must be refused with nothing written, got exit ${addedUnknown.status}:\n${addedUnknown.output}`
   )
 
   const only = process.env.CORPUS_ONLY?.split(',')

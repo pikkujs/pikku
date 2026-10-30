@@ -22,6 +22,11 @@ import {
 } from '@pikku/openapi-parser'
 import { scaffoldAddonUi } from './new-addon-ui.js'
 import { installAddonIntoApp, type AddonAuthMode } from './install-addon.js'
+import {
+  fetchOpenAPIRegistryEntry,
+  openAPIRegistryName,
+} from './openapi-registry.js'
+import { registryUrl } from '../../utils/remote-addon-sync.js'
 
 /**
  * Pick the protocol the generated test app uses to depend on its parent addon.
@@ -1232,6 +1237,7 @@ export type NewAddonInput = {
   test?: boolean
   openapi?: string
   openapiHeader?: string[]
+  registry?: string
   tags?: string[]
   include?: string[]
   exclude?: string[]
@@ -1259,6 +1265,7 @@ export async function newAddon(
     test = true,
     openapi,
     openapiHeader,
+    registry,
     tags,
     include,
     exclude,
@@ -1347,6 +1354,15 @@ export async function newAddon(
   let resolved: ResolvedAuth
   try {
     if (openapi) {
+      const registryName = openAPIRegistryName(openapi)
+      if (registryName) {
+        const entry = await fetchOpenAPIRegistryEntry(
+          registry ?? registryUrl(config),
+          registryName
+        )
+        logger.info(`${entry.name} (${entry.title}) → ${entry.swaggerUrl}`)
+        openapi = entry.swaggerUrl
+      }
       spec = await parseOpenAPISpec(openapi, {
         headers: parseHeaderOptions(openapiHeader),
       })
