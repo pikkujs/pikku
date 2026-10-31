@@ -1,3 +1,9 @@
+## 0.12.149
+
+### Patch Changes
+
+- 6108fac: Approving or resuming a suspended agent run now uses the caller's `AI_API_KEY` credential, the same as starting one. With no credential, or a runner without `withApiKey`, nothing changes.
+
 ## 0.12.148
 
 ### Patch Changes

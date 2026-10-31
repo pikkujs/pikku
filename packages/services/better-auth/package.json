@@ -1,6 +1,6 @@
 {
   "name": "@pikku/better-auth",
-  "version": "0.12.60",
+  "version": "0.12.61",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -33,7 +33,7 @@
     "@pikku/jose": "^0.12.10"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.145",
+    "@pikku/core": "^0.12.149",
     "better-auth": "^1.7.5",
     "zod": "^4",
     "vite": "^5 || ^6 || ^7"
