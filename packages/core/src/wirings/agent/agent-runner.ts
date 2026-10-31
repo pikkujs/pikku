@@ -32,6 +32,7 @@ import {
   assertResourcePrincipalOwner,
   assertRunBelongsToAgent,
   assertAgentAuthorized,
+  resolveAgentRunner,
   type RunAgentParams,
 } from './agent-prepare.js'
 import { checkForApprovals, appendStepMessages } from './agent-stream.js'
@@ -57,7 +58,6 @@ import {
 } from './agent-finalize.js'
 import { resolveModelConfig } from './agent-model-config.js'
 import { validateAgentOutput } from './agent-output.js'
-import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { deniedToolResult, randomUUID } from './agent-utils.js'
 
 function stripNulls(obj: unknown): unknown {
@@ -461,10 +461,7 @@ export async function resumeAgentSync(
 
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory
-  const agentRunner = singletonServices.agentRunner
-  if (!agentRunner) {
-    throw new AIProviderNotConfiguredError()
-  }
+  const agentRunner = await resolveAgentRunner(singletonServices, params)
 
   const approvedIds = new Set(
     approvals.filter((a) => a.approved).map((a) => a.toolCallId)

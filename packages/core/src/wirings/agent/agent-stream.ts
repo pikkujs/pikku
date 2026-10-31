@@ -13,7 +13,6 @@ import type {
 import { finalizeAgentRun, lastUserMessageText } from './agent-finalize.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { applyInputMiddleware, describeApprovals } from './agent-turn.js'
-import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { deniedToolResult, randomUUID } from './agent-utils.js'
 import { SPOKEN_TRANSCRIPT } from './voice-input.js'
 import {
@@ -45,6 +44,7 @@ import {
   assertResourceOwner,
   assertResourcePrincipalOwner,
   assertAgentAuthorized,
+  resolveAgentRunner,
   ToolApprovalRequired,
   ToolCredentialRequired,
   APPROVAL_REQUIRED,
@@ -1174,10 +1174,7 @@ export async function resumeAgent(
 
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory
-  const agentRunner = singletonServices.agentRunner
-  if (!agentRunner) {
-    throw new AIProviderNotConfiguredError()
-  }
+  const agentRunner = await resolveAgentRunner(singletonServices, params)
 
   if (!input.approved) {
     if (pending.type === 'agent-call') {

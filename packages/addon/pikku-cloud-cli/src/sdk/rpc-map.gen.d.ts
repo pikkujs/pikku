@@ -7083,7 +7083,8 @@ export type PlatformFleetScenarioOutput = {
   releases: number
 }
 export type PollCliAuthInput = {
-  code: string
+  deviceCode?: string | undefined
+  code?: string | undefined
 }
 export type PollCliAuthOutput = {
   status: 'pending' | 'confirmed' | 'consumed' | 'expired' | 'rejected'
@@ -8648,6 +8649,7 @@ export type ReportSandboxSessionUploadedOutput = {
 }
 export type RequestCliAuthOutput = {
   code: string
+  deviceCode: string
   expiresAt: string
 }
 export type RequestHarnessScreenshotUploadInput = {

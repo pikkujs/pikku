@@ -116,7 +116,7 @@ export const createAgentRPC = (
         await resumeAgentSync(
           runId,
           approvals,
-          { sessionService: options.sessionService },
+          params(),
           expectedAgentName === undefined
             ? undefined
             : mapAddonCall(wire.addonNamespace, expectedAgentName)
