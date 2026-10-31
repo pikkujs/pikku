@@ -1159,6 +1159,8 @@ export async function resumeAgent(
 
   await assertAgentAuthorized(agent, params, packageName)
 
+  const agentRunner = await resolveAgentRunner(singletonServices, params)
+
   // The read above is not a claim — concurrent resumes all see the same pending
   // approval. `resolveApproval` is the claim, and the loser must not go on to
   // run the tool a second time.
@@ -1174,7 +1176,6 @@ export async function resumeAgent(
 
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory
-  const agentRunner = await resolveAgentRunner(singletonServices, params)
 
   if (!input.approved) {
     if (pending.type === 'agent-call') {

@@ -1877,4 +1877,66 @@ describe('resumeAgent API key override', () => {
     assert.deepEqual(keysSeen, ['caller-key'])
     assert.equal(events.at(-1)?.type, 'done')
   })
+  test('leaves the approval unclaimed when the caller credential fails', async () => {
+    addTestAgent('keyed-fail-agent')
+    let claims = 0
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      agentRunner: {
+        stream: async () => makeStepResult({}),
+        withApiKey: () => ({ stream: async () => makeStepResult({}) }),
+      },
+      agentRunState: {
+        getRun: async () => ({
+          runId: 'run-fail',
+          agentName: 'keyed-fail-agent',
+          threadId: 'thread-fail',
+          resourceId: 'resource-fail',
+          status: 'suspended',
+          suspendReason: 'approval',
+          pendingApprovals: [
+            {
+              type: 'tool-call',
+              toolCallId: 'tool-fail',
+              toolName: 'deploy',
+              args: {},
+            },
+          ],
+          usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+        resolveApproval: async () => {
+          claims++
+          return true
+        },
+        updateRun: async () => {},
+      },
+    } as any)
+
+    await assert.rejects(() =>
+      resumeAgent(
+        { runId: 'run-fail', toolCallId: 'tool-fail', approved: true },
+        {
+          channelId: 'resume-channel',
+          openingData: undefined,
+          state: 'open',
+          send: () => {},
+          close: () => {},
+        },
+        {
+          ...asOwner('resource-fail'),
+          getCredential: async () => {
+            throw new Error('credential store down')
+          },
+        } as any
+      )
+    )
+    assert.equal(claims, 0)
+  })
 })

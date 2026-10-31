@@ -248,6 +248,14 @@ describe('applyOAuthProxy', () => {
         ),
       /oneTap plugin/
     )
+    await assert.rejects(
+      () =>
+        applyOAuthProxy(
+          makeAuth(undefined, [oneTap({ clientId: '' })]),
+          services
+        ),
+      /oneTap plugin/
+    )
     const auth = await applyOAuthProxy(
       makeAuth(undefined, [oneTap({ clientId: 'own-google-id' })]),
       services

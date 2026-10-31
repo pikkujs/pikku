@@ -192,7 +192,7 @@ export const applyOAuthProxy = async <I extends BetterAuthInstance>(
   if (
     google &&
     oneTap &&
-    [oneTap.options?.clientId ?? google.clientId]
+    [oneTap.options?.clientId || google.clientId]
       .flat()
       .includes(google.clientId)
   ) {
