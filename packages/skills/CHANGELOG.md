@@ -1,5 +1,11 @@
 # @pikku/skills
 
+## 0.12.65
+
+### Patch Changes
+
+- c169417: `pikku addons add amazonaws.com:applicationcostprofiler` installs an addon generated from an OpenAPI in the registry catalogue, naming it after the entry and taking `--auth` from what the registry records (OAuth is always per user). `pikku new addon <name> --openapi` takes a catalogue name too. `--registry` points either at another registry.
+
 ## 0.12.64
 
 ### Patch Changes

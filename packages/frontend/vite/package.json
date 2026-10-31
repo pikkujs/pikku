@@ -36,7 +36,7 @@
     "@babel/core": "^7.26.0"
   },
   "peerDependencies": {
-    "@pikku/better-auth": "^0.12.60",
+    "@pikku/better-auth": "^0.12.61",
     "vite": "^5 || ^6 || ^7"
   },
   "peerDependenciesMeta": {

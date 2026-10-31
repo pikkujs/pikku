@@ -1,5 +1,13 @@
 # @pikku/better-auth
 
+## 0.12.61
+
+### Patch Changes
+
+- 6108fac: Providers signed in through the OAuth proxy only accept redirect sign-in; ID-token sign-in is disabled for them, and a oneTap plugin that would check tokens against the proxy's client id is rejected at configuration time.
+- Updated dependencies [6108fac]
+  - @pikku/core@0.12.149
+
 ## 0.12.60
 
 ### Patch Changes

@@ -327,7 +327,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.199",
+      "version": "0.12.200",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -429,7 +429,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.148",
+      "version": "0.12.149",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -1034,7 +1034,7 @@
     },
     "packages/services/better-auth": {
       "name": "@pikku/better-auth",
-      "version": "0.12.60",
+      "version": "0.12.61",
       "dependencies": {
         "@pikku/jose": "^0.12.10",
       },
@@ -1277,7 +1277,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.64",
+      "version": "0.12.65",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",
