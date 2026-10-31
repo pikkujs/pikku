@@ -14,7 +14,10 @@ import type {
   PikkuAgentMiddlewareHooks,
   SessionScope,
 } from './agent.types.js'
-import type { AgentRunnerParams } from '../../services/agent-runner-service.js'
+import type {
+  AgentRunnerParams,
+  AgentRunnerService,
+} from '../../services/agent-runner-service.js'
 import { PikkuError } from '../../errors/error-handler.js'
 import {
   checkAuthPermissions,
@@ -977,6 +980,29 @@ export async function buildToolDefs(
   return { tools, missingRpcs }
 }
 
+/**
+ * The singleton `agentRunner`, keyed with the caller's `AI_API_KEY` credential when one is set.
+ * Every entry that calls the model (run, stream, approve, resume) goes through this.
+ */
+export async function resolveAgentRunner(
+  singletonServices: { agentRunner?: AgentRunnerService },
+  params: RunAgentParams
+): Promise<AgentRunnerService> {
+  const agentRunner = singletonServices.agentRunner
+  if (!agentRunner) {
+    throw new AIProviderNotConfiguredError()
+  }
+  if (params.getCredential && agentRunner.withApiKey) {
+    const aiCredential = await params.getCredential<{ apiKey: string }>(
+      'AI_API_KEY'
+    )
+    if (aiCredential?.apiKey?.trim()) {
+      return agentRunner.withApiKey(aiCredential.apiKey)
+    }
+  }
+  return agentRunner
+}
+
 export async function prepareAgentRun(
   agentName: string,
   input: AgentInput,
@@ -989,19 +1015,7 @@ export async function prepareAgentRun(
 
   await assertAgentAuthorized(agent, params, packageName)
 
-  let agentRunner = singletonServices.agentRunner
-  if (!agentRunner) {
-    throw new AIProviderNotConfiguredError()
-  }
-
-  if (params.getCredential && agentRunner.withApiKey) {
-    const aiCredential = await params.getCredential<{ apiKey: string }>(
-      'AI_API_KEY'
-    )
-    if (aiCredential?.apiKey?.trim()) {
-      agentRunner = agentRunner.withApiKey(aiCredential.apiKey)
-    }
-  }
+  const agentRunner = await resolveAgentRunner(singletonServices, params)
 
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory

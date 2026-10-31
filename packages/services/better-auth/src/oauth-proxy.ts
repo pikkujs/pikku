@@ -185,13 +185,37 @@ export const applyOAuthProxy = async <I extends BetterAuthInstance>(
     )
   }
 
+  const google = config.providers.google
+  const oneTap = (options.plugins ?? []).find(
+    (plugin: { id?: string }) => plugin.id === 'one-tap'
+  ) as { options?: { clientId?: string | string[] } } | undefined
+  if (
+    google &&
+    oneTap &&
+    [oneTap.options?.clientId ?? google.clientId]
+      .flat()
+      .includes(google.clientId)
+  ) {
+    throw new Error(
+      `OAuth proxy is on for google, and the oneTap plugin would accept Google ID tokens issued to the proxy's shared client. Give oneTap the app's own clientId, remove the oneTap plugin, or remove google from ${OAUTH_PROXY_PROVIDERS_VARIABLE}.`
+    )
+  }
+
   services.logger?.info(
     `pikku: OAuth sign-in for ${Object.keys(config.providers).join(', ')} goes through ${config.productionURL}.`
   )
 
   return betterAuth({
     ...options,
-    socialProviders: { ...options.socialProviders, ...config.providers },
+    socialProviders: {
+      ...options.socialProviders,
+      ...Object.fromEntries(
+        Object.entries(config.providers).map(([id, provider]) => [
+          id,
+          { ...provider, disableIdTokenSignIn: true },
+        ])
+      ),
+    },
     plugins: [
       ...(options.plugins ?? []),
       oAuthProxy({

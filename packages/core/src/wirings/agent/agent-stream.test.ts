@@ -1798,3 +1798,83 @@ describe('resumeAgent', () => {
     assert.equal(savedMessages.length, 2)
   })
 })
+
+describe('resumeAgent API key override', () => {
+  test('continues on the runner keyed with the caller credential', async () => {
+    addTestAgent('keyed-resume-agent')
+    const keysSeen: string[] = []
+    const events: AgentStreamEvent[] = []
+
+    const run: AgentRunState = {
+      runId: 'run-keyed',
+      agentName: 'keyed-resume-agent',
+      threadId: 'thread-keyed',
+      resourceId: 'resource-keyed',
+      status: 'suspended',
+      suspendReason: 'approval',
+      pendingApprovals: [
+        {
+          type: 'tool-call',
+          toolCallId: 'tool-keyed',
+          toolName: 'deploy',
+          args: {},
+        },
+      ],
+      usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    let getRunCalls = 0
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      agentRunner: {
+        stream: async () => {
+          throw new Error('singleton runner must not be used')
+        },
+        withApiKey: (key: string) => {
+          keysSeen.push(key)
+          return {
+            stream: async (): Promise<AgentStepResult> =>
+              makeStepResult({ text: 'keyed', finishReason: 'stop' }),
+          }
+        },
+      },
+      agentRunState: {
+        getRun: async () => {
+          getRunCalls++
+          return getRunCalls === 1 ? run : { ...run, pendingApprovals: [] }
+        },
+        resolveApproval: async () => true,
+        updateRun: async () => {},
+      },
+      agentStorage: {
+        saveMessages: async () => {},
+        getMessages: async () => [],
+      },
+    } as any)
+
+    await resumeAgent(
+      { runId: 'run-keyed', toolCallId: 'tool-keyed', approved: false },
+      {
+        channelId: 'resume-channel',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AgentStreamEvent) => events.push(event),
+        close: () => {},
+      },
+      {
+        ...asOwner('resource-keyed'),
+        getCredential: async () => ({ apiKey: 'caller-key' }),
+      } as any
+    )
+
+    assert.deepEqual(keysSeen, ['caller-key'])
+    assert.equal(events.at(-1)?.type, 'done')
+  })
+})

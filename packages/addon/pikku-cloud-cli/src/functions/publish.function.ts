@@ -97,14 +97,18 @@ export const CloudPublish = pikkuSessionlessFunc({
     }
 
     // 1. presigned upload URL (short-lived)
-    const { uploadUrl, artifactKey } = await post(
+    const { uploadUrl, uploadHeaders, artifactKey } = await post(
       '/registry/addons/publish-url',
-      { packageName: pkg.name, version: pkg.version }
+      { packageName: pkg.name, version: pkg.version, size: artifact.byteLength }
     )
 
-    // 2. PUT the artifact to the exact signed URL (no extra headers — the URL
-    //    is signed over host only; mismatched headers break the signature).
-    const put = await fetch(uploadUrl, { method: 'PUT', body: artifact })
+    // 2. PUT the artifact to the exact signed URL with only the headers it was
+    //    signed over; any other header breaks the signature.
+    const put = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: uploadHeaders,
+      body: artifact,
+    })
     if (!put.ok)
       throw new CloudPreconditionError(
         `upload failed → ${put.status}: ${await put.text()}`
