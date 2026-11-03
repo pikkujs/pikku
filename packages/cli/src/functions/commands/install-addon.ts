@@ -232,7 +232,14 @@ export function wireAuth(
   return { source: next, notes }
 }
 
+const LINE_BREAK_OR_CONTROL = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/
+
 function addEnvLine(envPath: string, name: string, value: string): boolean {
+  if (LINE_BREAK_OR_CONTROL.test(value)) {
+    throw new Error(
+      `refusing to write ${name} to .env: the value contains a line break or control character`
+    )
+  }
   const current = existsSync(envPath) ? readFileSync(envPath, 'utf8') : ''
   if (new RegExp(`^\\s*${name}\\s*=`, 'm').test(current)) return false
   const sep = current.length > 0 && !current.endsWith('\n') ? '\n' : ''
@@ -291,19 +298,21 @@ export function installAddonIntoApp(install: AddonInstall): InstallResult {
     )
   }
 
+  const envBaseUrl =
+    install.baseUrl && !LINE_BREAK_OR_CONTROL.test(install.baseUrl)
+      ? install.baseUrl
+      : ''
   const envPath = join(install.projectRoot, '.env')
-  if (
-    addEnvLine(
-      envPath,
-      `${install.screamingName}_BASE_URL`,
-      install.baseUrl ?? ''
-    )
-  ) {
+  if (addEnvLine(envPath, `${install.screamingName}_BASE_URL`, envBaseUrl)) {
     written.push(rel(envPath))
   }
   if (!install.baseUrl) {
     notes.push(
       `the spec names no absolute server — set ${install.screamingName}_BASE_URL in .env`
+    )
+  } else if (!envBaseUrl) {
+    notes.push(
+      `the spec's server URL contains a line break or control character, so it was not written — set ${install.screamingName}_BASE_URL in .env`
     )
   }
   return { written, notes }

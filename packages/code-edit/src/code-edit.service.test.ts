@@ -3,8 +3,12 @@ import assert from 'node:assert'
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import * as ts from 'typescript'
 import { CodeEditService } from './code-edit.service.js'
-import type { CodeEditOperation } from './code-edit.service.js'
+import type {
+  AgentConfigChanges,
+  CodeEditOperation,
+} from './code-edit.service.js'
 
 let tempDir: string
 let service: CodeEditService
@@ -17,6 +21,37 @@ async function createTempFile(name: string, content: string): Promise<string> {
 
 async function readTempFile(name: string): Promise<string> {
   return readFile(join(tempDir, name), 'utf-8')
+}
+
+function agentConfigOf(source: string): Map<string, ts.Expression> {
+  const file = ts.createSourceFile(
+    'agent.ts',
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  )
+  const config = new Map<string, ts.Expression>()
+  const visit = (node: ts.Node): void => {
+    if (
+      config.size === 0 &&
+      ts.isCallExpression(node) &&
+      node.expression.getText() === 'pikkuAgent'
+    ) {
+      const literal = node.arguments[0]
+      if (literal && ts.isObjectLiteralExpression(literal)) {
+        for (const prop of literal.properties) {
+          if (ts.isPropertyAssignment(prop)) {
+            config.set(prop.name.getText(), prop.initializer)
+          }
+        }
+      }
+      return
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(file)
+  return config
 }
 
 const FUNCTION_SOURCE = `import { pikkuSessionlessFunc } from '@pikku/core'
@@ -547,6 +582,107 @@ describe('CodeEditService', () => {
       assert.strictEqual(result.config.maxSteps, 20)
       // Unchanged properties
       assert.strictEqual(result.config.name, 'todo-assistant')
+    })
+
+    test('keeps a quote in a tool name inside its ref literal', async () => {
+      await createTempFile('agent.ts', AGENT_SOURCE)
+      const tool = "listTodos'), globalThis.pwned(), ref('createTodo"
+
+      await service.updateAgentConfig(
+        join(tempDir, 'agent.ts'),
+        'todoAssistant',
+        { tools: [tool] }
+      )
+
+      const tools = agentConfigOf(await readTempFile('agent.ts')).get('tools')
+      assert.ok(tools && ts.isArrayLiteralExpression(tools))
+      assert.strictEqual(tools.elements.length, 1)
+      const call = tools.elements[0]
+      assert.ok(call && ts.isCallExpression(call))
+      assert.strictEqual(call.expression.getText(), 'ref')
+      const arg = call.arguments[0]
+      assert.ok(arg && ts.isStringLiteral(arg))
+      assert.strictEqual(arg.text, tool)
+    })
+
+    test('keeps a backslash and quote inside a string literal', async () => {
+      await createTempFile('agent.ts', AGENT_SOURCE)
+      const goal = "done\\', injected: globalThis.pwned(), note: '"
+
+      await service.updateAgentConfig(
+        join(tempDir, 'agent.ts'),
+        'todoAssistant',
+        { goal }
+      )
+
+      const config = agentConfigOf(await readTempFile('agent.ts'))
+      assert.ok(!config.has('injected'))
+      const value = config.get('goal')
+      assert.ok(value && ts.isStringLiteral(value))
+      assert.strictEqual(value.text, goal)
+    })
+
+    test('keeps a backslash and backtick inside a multi-line literal', async () => {
+      await createTempFile('agent.ts', AGENT_SOURCE)
+      const instructions =
+        'first line\n\\`, injected: globalThis.pwned(), note: `'
+
+      await service.updateAgentConfig(
+        join(tempDir, 'agent.ts'),
+        'todoAssistant',
+        { instructions }
+      )
+
+      const config = agentConfigOf(await readTempFile('agent.ts'))
+      assert.ok(!config.has('injected'))
+      const value = config.get('instructions')
+      assert.ok(value && ts.isNoSubstitutionTemplateLiteral(value))
+      assert.strictEqual(value.text, instructions)
+    })
+
+    test('quotes a nested object key that is not an identifier', async () => {
+      await createTempFile('agent.ts', AGENT_SOURCE)
+      const key = 'x: globalThis.pwned(), y'
+
+      await service.updateAgentConfig(
+        join(tempDir, 'agent.ts'),
+        'todoAssistant',
+        { description: { [key]: 1 } } as unknown as AgentConfigChanges
+      )
+
+      const value = agentConfigOf(await readTempFile('agent.ts')).get(
+        'description'
+      )
+      assert.ok(value && ts.isObjectLiteralExpression(value))
+      assert.strictEqual(value.properties.length, 1)
+      const prop = value.properties[0]
+      assert.ok(prop && ts.isPropertyAssignment(prop))
+      assert.ok(ts.isStringLiteral(prop.name))
+      assert.strictEqual(prop.name.text, key)
+    })
+
+    test('refuses a change that is not an agent config property', async () => {
+      await createTempFile('agent.ts', AGENT_SOURCE)
+
+      await assert.rejects(
+        service.updateAgentConfig(join(tempDir, 'agent.ts'), 'todoAssistant', {
+          permissions: { owner: { name: 'isOwner', from: './permissions.js' } },
+        } as unknown as AgentConfigChanges),
+        /"permissions" is not an agent config property/
+      )
+      assert.strictEqual(await readTempFile('agent.ts'), AGENT_SOURCE)
+    })
+
+    test('refuses a tool that is not a string', async () => {
+      await createTempFile('agent.ts', AGENT_SOURCE)
+
+      await assert.rejects(
+        service.updateAgentConfig(join(tempDir, 'agent.ts'), 'todoAssistant', {
+          tools: [{ name: 'listTodos' }],
+        } as unknown as AgentConfigChanges),
+        /Agent tools must be strings/
+      )
+      assert.strictEqual(await readTempFile('agent.ts'), AGENT_SOURCE)
     })
   })
 

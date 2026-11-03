@@ -583,6 +583,14 @@ function topoSortSchemas(
   return { sorted, cyclicEdges }
 }
 
+/**
+ * Collapse every whitespace run — including the line terminators `\n`, `\r`,
+ * U+2028 and U+2029, all matched by `\s` — to a single space, so a value taken
+ * from the spec cannot end a `//` comment and start a line of code.
+ */
+const inLineComment = (value: unknown): string =>
+  String(value).replace(/\s+/g, ' ').trim()
+
 function generateTypesFile(
   spec: ParsedSpec,
   ctx: ZodCodegenContext,
@@ -591,7 +599,9 @@ function generateTypesFile(
   const lines: string[] = []
   lines.push("import { z } from 'zod'")
   lines.push('')
-  lines.push(`// Shared schemas from ${spec.info.title} v${spec.info.version}`)
+  lines.push(
+    `// Shared schemas from ${inLineComment(spec.info.title)} v${inLineComment(spec.info.version)}`
+  )
   lines.push('')
 
   const { sorted, cyclicEdges } = topoSortSchemas(
@@ -710,11 +720,12 @@ function generateFunctionFile(
     const tag = parsed.tags[0]
     const tagDesc = spec.tagDescriptions[tag]
     if (tagDesc) {
+      const cleanTag = String(tag).replace(/\s+/g, ' ').trim()
       const cleanDesc = tagDesc
         .replace(/\r?\n/g, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-      lines.push(`// ${tag} — ${cleanDesc}`)
+      lines.push(`// ${cleanTag} — ${cleanDesc}`)
       lines.push('')
     }
   }

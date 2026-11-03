@@ -510,6 +510,91 @@ describe('tag description sanitization', () => {
       )
     }
   })
+
+  test('collapses line terminators in the tag name so it cannot end the comment', () => {
+    const injected = 'globalThis.pwned = true'
+    for (const lineBreak of ['\n', '\r\n', '\r', '\u2028', '\u2029']) {
+      const tag = `Users${lineBreak}${injected}${lineBreak}//`
+      const spec = makeSpec({
+        operations: [
+          makeOp({ operationId: 'listUsers', tags: [tag], path: '/users' }),
+        ],
+        tagDescriptions: { [tag]: 'User management' },
+      })
+
+      const files = generateAddonFromOpenAPI(spec, makeVars(), {
+        oauth: false,
+        secret: false,
+      })
+      const funcFile = files['src/functions/listUsers.function.ts']
+      assert.ok(funcFile, 'function file should exist')
+
+      const header = funcFile
+        .split('\n')
+        .find((l: string) => l.startsWith('// Users'))
+      assert.equal(
+        header,
+        `// Users ${injected} // — User management`,
+        `tag header should be a single comment line for ${JSON.stringify(lineBreak)}`
+      )
+
+      const source = ts.createSourceFile(
+        'listUsers.function.ts',
+        funcFile,
+        ts.ScriptTarget.Latest
+      )
+      const statementsMentioningPayload = source.statements.filter((s) =>
+        s.getText(source).includes('pwned')
+      )
+      assert.deepEqual(
+        statementsMentioningPayload,
+        [],
+        `tag text must stay inside the comment for ${JSON.stringify(lineBreak)}`
+      )
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Spec info sanitization in the shared types file header comment
+// ---------------------------------------------------------------------------
+describe('spec info sanitization', () => {
+  test('line breaks in info.title and info.version cannot end the header comment', () => {
+    const shared = {
+      type: 'object' as const,
+      properties: { id: { type: 'string' as const } },
+    }
+    const spec = makeSpec({
+      info: {
+        title: 'Evil API\nglobalThis.pwnedTitle = 1\r\n',
+        version: '1.0.0\u2028globalThis.pwnedVersion = 1\u2029//',
+      },
+      componentSchemas: { Shared: shared },
+      operations: [
+        makeOp({ method: 'get', path: '/a', responseSchema: shared }),
+        makeOp({ method: 'post', path: '/a', responseSchema: shared }),
+      ],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+    })
+    const typesFile = files['src/test-api.types.ts']
+    assert.ok(typesFile, 'types file should exist')
+
+    const lines = typesFile.split(/\r\n|[\n\r\u2028\u2029]/)
+    const injected = lines.filter(
+      (l: string) => l.includes('pwned') && !l.trimStart().startsWith('//')
+    )
+    assert.deepEqual(injected, [], 'spec info must stay inside the comment')
+    assert.ok(
+      lines.includes(
+        '// Shared schemas from Evil API globalThis.pwnedTitle = 1 v1.0.0 globalThis.pwnedVersion = 1 //'
+      ),
+      'header comment should carry the collapsed title and version'
+    )
+  })
 })
 
 // ---------------------------------------------------------------------------
