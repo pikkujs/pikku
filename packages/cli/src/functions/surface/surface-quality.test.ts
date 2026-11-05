@@ -42,7 +42,12 @@ const typed = (symbol: SurfaceDocSymbol): string[] => [
 const read = () => {
   assert.ok(doc, 'no shipped surface.json — build the CLI first')
   const symbols = doc.entryPoints.flatMap((entryPoint) =>
-    entryPoint.leaves.flatMap((leaf) => leaf.symbols)
+    entryPoint.leaves
+      // Package doors (`@pikku/react`, the core exports) sit beside the barrels but
+      // are hand-written API with no snippets in the template yet: they would
+      // swamp these gates rather than move them.
+      .filter((leaf) => leaf.specifier.startsWith('#pikku'))
+      .flatMap((leaf) => leaf.symbols)
   )
   const resolvable = new Set([
     ...symbols.map((symbol) => symbol.name),

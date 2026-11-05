@@ -16,7 +16,8 @@ export const listItemRows = pikkuListFunc<
 
     if (search) query = query.where('item.name', 'like', `%${search}%`)
 
-    const rows = await query.limit(limit ?? 20).execute()
+    // `limit` comes from the caller, so cap it.
+    const rows = await query.limit(Math.min(limit ?? 20, 100)).execute()
 
     return { rows, nextCursor: null, totalCount: rows.length }
   },

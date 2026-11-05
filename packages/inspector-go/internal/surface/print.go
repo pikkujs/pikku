@@ -172,6 +172,18 @@ func (s *session) isProjectOwned(decl *ast.Node) bool {
 	return strings.HasPrefix(file, s.root) && !strings.Contains(file, "node_modules")
 }
 
+// isDocumentedCodegen mirrors the TypeScript collector: a generated file sits
+// under the project and most of its keys are the project's own, but keys codegen
+// writes for every project, such as TypedWorkflow.do, are the documented ones.
+func isDocumentedCodegen(decl *ast.Node, doc string) bool {
+	sf := ast.GetSourceFileOfNode(decl)
+	if sf == nil || doc == "" {
+		return false
+	}
+	file := sf.FileName()
+	return strings.HasSuffix(file, ".gen.ts") || strings.HasSuffix(file, ".gen.d.ts")
+}
+
 func (s *session) memberLine(property *ast.Symbol) *Member {
 	name := tsutil.SymbolName(property)
 	if strings.HasPrefix(name, "__") {
@@ -181,11 +193,12 @@ func (s *session) memberLine(property *ast.Symbol) *Member {
 	if decl == nil {
 		decl = firstDecl(property)
 	}
+	doc := sourcescan.JSTrim(collapseWhitespace(documentationComment(property, s.c, nil)))
 	if decl != nil {
 		if sf := ast.GetSourceFileOfNode(decl); sf != nil && s.prog.IsSourceFileDefaultLibrary(sf.Path()) {
 			return nil
 		}
-		if s.isProjectOwned(decl) {
+		if s.isProjectOwned(decl) && !isDocumentedCodegen(decl, doc) {
 			return nil
 		}
 	}
@@ -200,7 +213,6 @@ func (s *session) memberLine(property *ast.Symbol) *Member {
 	if optional {
 		mark = "?"
 	}
-	doc := sourcescan.JSTrim(collapseWhitespace(documentationComment(property, s.c, nil)))
 	return &Member{
 		Line: collapseRuns(name + mark + ": " + s.printResolved(t, decl, optional)),
 		Doc:  doc,
