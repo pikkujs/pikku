@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3372 observable things**: 1142 exported names, plus
-2230 members on the classes and interfaces among them, reachable
+**3387 observable things**: 1147 exported names, plus
+2240 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -17,7 +17,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services` | 170 | 144 | 438 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
-| `./workflow` | 92 | 41 | 153 |
+| `./workflow` | 97 | 45 | 157 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 86 |
 | `./types` | 24 | 21 | 82 |
@@ -50,7 +50,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./scope` | 15 | 15 | 0 |
 | `./rpc` | 8 | 8 | 6 |
-| `./workflow/types` | 47 | 1 | 11 |
+| `./workflow/types` | 48 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./trace` | 11 | 11 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
@@ -199,7 +199,7 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   secrets?: {
     requireAllowedHosts?: boolean
   }
-  workflow?: WorkflowServiceConfig
+  workflow?: Partial<WorkflowServiceConfig>
   webhook?: WebhookServiceConfig
   postgres?: PostgresConfig
 } & Config
@@ -496,7 +496,7 @@ export type MiddlewareMetadata =
     }
 export type MiddlewarePriority =
   'highest' | 'high' | 'medium' | 'low' | 'lowest'
-pikkuAgentMiddleware: <State extends Record<string, unknown> = Record<string, unknown>, SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(hooks: PikkuAgentMiddlewareHooks<State, SingletonServices>) => PikkuAgentMiddlewareHooks<State, SingletonServices>
+pikkuAgentMiddleware: <State extends Record<string, unknown> = Record<string, unknown>, SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(hooks: PikkuAgentMiddlewareHooks<State, SingletonServices>) => PikkuAgentMiddlewareHooks<State, SingletonServices>
 export interface PikkuAgentMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, SingletonServices extends CoreSingletonServices = CoreSingletonServices, > {
   modifyInput?: (services: SingletonServices, ctx: { messages: AgentMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AgentMessage[]; instructions: string }> | { messages: AgentMessage[]; instructions: string }
   modifyOutputStream?: (services: SingletonServices, ctx: { event: AgentStreamEvent; allEvents: readonly AgentStreamEvent[]; state: State; shared: Record<string, unknown>; emit: (event: AgentStreamEvent) => Promise<void>; signal?: AbortSignal }) => | Promise<AgentStreamEvent | AgentStreamEvent[] | null> | AgentStreamEvent | AgentStreamEvent[] | null
@@ -506,13 +506,13 @@ export interface PikkuAgentMiddlewareHooks< State extends Record<string, unknown
   afterStep?: (services: SingletonServices, ctx: { stepNumber: number; text: string; toolCalls: { toolCallId: string; toolName: string; args: unknown }[]; toolResults: { toolCallId: string; toolName: string; result: unknown; error?: string }[]; usage: { inputTokens: number; outputTokens: number }; finishReason: string }) => Promise<void> | void
   onError?: (services: SingletonServices, ctx: { error: Error; stepNumber: number; messages: AgentMessage[] }) => Promise<void> | void
 }
-pikkuChannelMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, Event = unknown>(middleware: CorePikkuChannelMiddleware<SingletonServices, Event>) => CorePikkuChannelMiddleware<SingletonServices, Event>
+pikkuChannelMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, Event = unknown>(middleware: CorePikkuChannelMiddleware<SingletonServices, Event>) => CorePikkuChannelMiddleware<SingletonServices, Event>
 pikkuChannelMiddlewareFactory: <In = any>(factory: CorePikkuChannelMiddlewareFactory<In>) => CorePikkuChannelMiddlewareFactory<In>
-pikkuMeshAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
-pikkuMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, UserSession extends CoreUserSession = CoreUserSession>(middleware: CorePikkuMiddleware<SingletonServices, UserSession> | CorePikkuMiddlewareConfig<SingletonServices, UserSession>) => CorePikkuMiddleware<SingletonServices, UserSession>
+pikkuMeshAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
+pikkuMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, UserSession extends CoreUserSession = CoreUserSession>(middleware: CorePikkuMiddleware<SingletonServices, UserSession> | CorePikkuMiddlewareConfig<SingletonServices, UserSession>) => CorePikkuMiddleware<SingletonServices, UserSession>
 pikkuMiddlewareFactory: <In = any>(factory: CorePikkuMiddlewareFactory<In>) => CorePikkuMiddlewareFactory<In>
-remoteJobsSecret: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
-requireOrigin: CorePikkuMiddlewareFactory<{ origins?: string[] | ((services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => string[] | Promise<string[]>) | undefined; }>
+remoteJobsSecret: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
+requireOrigin: CorePikkuMiddlewareFactory<{ origins?: string[] | ((services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => string[] | Promise<string[]>) | undefined; }>
 runMiddleware: <Middleware extends CorePikkuMiddleware<any, any>>(services: Parameters<Middleware>[0], wire: Parameters<Middleware>[1], middlewares: readonly Middleware[], main?: (() => Promise<unknown>) | undefined) => Promise<unknown>
 telemetryInner: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }>
 telemetryOuter: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }>
@@ -531,7 +531,7 @@ export interface AbortScope {
   onBeginChanges?: () => void
 }
 addFunction: (funcName: string, funcConfig: CorePikkuFunctionConfig<any, any, any, any, any>, packageName?: string | null) => void
-checkAuthPermissions: (funcPermissions: CorePermissionGroup, session: CoreUserSession, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, packageName?: string | null) => Promise<boolean>
+checkAuthPermissions: (funcPermissions: CorePermissionGroup, session: CoreUserSession, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, packageName?: string | null) => Promise<boolean>
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   Record<string, PikkuPermission | PikkuPermission[]> | undefined
 export type CorePikkuApprovalDescription<
@@ -776,14 +776,14 @@ export type PermissionMetadata = {
   inline?: boolean
 }
 pikkuApprovalDescription: <In = any, Services extends CoreSecretlessSingletonServices = CoreSecretlessSingletonServices>(fn: CorePikkuApprovalDescription<In, Services>) => CorePikkuApprovalDescription<In, Services>
-pikkuAuth: <Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Session extends CoreUserSession = CoreUserSession>(auth: CorePikkuAuth<Services, Session> | CorePikkuAuthConfig<Services, Session>) => CorePikkuPermission<any, Services, any>
-pikkuPermission: <In = any, Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Wire extends PickRequired<PikkuWire<In, never, false, any, PikkuRPC, never, never>, "session"> = PickRequired<PikkuWire<In, never, false, any, PikkuRPC, never, never>, "session">>(permission: CorePikkuPermission<In, Services, Wire> | CorePikkuPermissionConfig<In, Services, Wire>) => CorePikkuPermission<In, Services, Wire>
-pikkuPermissionFactory: <In = any>(factory: CorePikkuPermissionFactory<In, SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, PikkuWire<In, never, false, any, PikkuRPC, never, never>>) => CorePikkuPermissionFactory<In, SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, PikkuWire<In, never, false, any, PikkuRPC, never, never>>
+pikkuAuth: <Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Session extends CoreUserSession = CoreUserSession>(auth: CorePikkuAuth<Services, Session> | CorePikkuAuthConfig<Services, Session>) => CorePikkuPermission<any, Services, any>
+pikkuPermission: <In = any, Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Wire extends PickRequired<PikkuWire<In, never, false, any, PikkuRPC, never, never>, "session"> = PickRequired<PikkuWire<In, never, false, any, PikkuRPC, never, never>, "session">>(permission: CorePikkuPermission<In, Services, Wire> | CorePikkuPermissionConfig<In, Services, Wire>) => CorePikkuPermission<In, Services, Wire>
+pikkuPermissionFactory: <In = any>(factory: CorePikkuPermissionFactory<In, SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, PikkuWire<In, never, false, any, PikkuRPC, never, never>>) => CorePikkuPermissionFactory<In, SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, PikkuWire<In, never, false, any, PikkuRPC, never, never>>
 export abstract class PikkuRequest<In = any> {
   constructor(data: In)
   public async data(): Promise<In>
 }
-runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, funcName: string, { singletonServices, createWireServices, wireServices: providedWireServices, data, auth: wiringAuth, inheritedMiddleware, wireMiddleware, inheritedChannelMiddleware, wireChannelMiddleware, coerceDataFromSchema, wire, sessionService, credentialWireService, packageName, addonInstance, }: { singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; wireServices?: Record<string, unknown> | undefined; data: () => In | Promise<In>; auth?: boolean | undefined; inheritedMiddleware?: MiddlewareMetadata[] | undefined; wireMiddleware?: CorePikkuMiddleware[] | undefined; inheritedChannelMiddleware?: MiddlewareMetadata[] | undefined; wireChannelMiddleware?: CorePikkuChannelMiddleware[] | undefined; coerceDataFromSchema?: boolean | undefined; tags?: string[] | undefined; wire: PikkuRawWire; sessionService?: SessionService<CoreUserSession> | undefined; credentialWireService?: PikkuCredentialWireService | undefined; packageName?: string | null | undefined; addonInstance?: AddonInstance | undefined; }) => Promise<Out>
+runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, funcName: string, { singletonServices, createWireServices, wireServices: providedWireServices, data, auth: wiringAuth, inheritedMiddleware, wireMiddleware, inheritedChannelMiddleware, wireChannelMiddleware, coerceDataFromSchema, wire, sessionService, credentialWireService, packageName, addonInstance, }: { singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; wireServices?: Record<string, unknown> | undefined; data: () => In | Promise<In>; auth?: boolean | undefined; inheritedMiddleware?: MiddlewareMetadata[] | undefined; wireMiddleware?: CorePikkuMiddleware[] | undefined; inheritedChannelMiddleware?: MiddlewareMetadata[] | undefined; wireChannelMiddleware?: CorePikkuChannelMiddleware[] | undefined; coerceDataFromSchema?: boolean | undefined; tags?: string[] | undefined; wire: PikkuRawWire; sessionService?: SessionService<CoreUserSession> | undefined; credentialWireService?: PikkuCredentialWireService | undefined; packageName?: string | null | undefined; addonInstance?: AddonInstance | undefined; }) => Promise<Out>
 ```
 
 ## ./channel
@@ -1218,8 +1218,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async resumeWorkflow(runId: string, workflowName?: string): Promise<void>
   protected async findStalledRunIds(_before: Date, _limit: number): Promise<string[]>
   protected async findUndispatchedSteps(_before: Date, _limit: number): Promise<Array<{ runId: string; stepId: string }>>
-  public async recoverStalledRuns(options?: { stalledAfterMs?: number; limit?: number }): Promise<{ resumed: string[] }>
-  public async relayUndispatchedSteps(options?: { undispatchedAfterMs?: number; limit?: number }): Promise<{ redispatched: string[] }>
+  protected async findScheduledSteps(_limit: number, _offset: number): Promise<ScheduledStep[]>
+  public recoverWorkflows(options?: WorkflowRecoveryPass): Promise<void>
+  public startRecovery(options?: WorkflowRecoveryOptions | false): void
+  public stopRecovery(): void
+  public recoverStalledRuns(options?: StalledSweepOptions): Promise<{ resumed: string[]; }>
+  public relayUndispatchedSteps(options?: UndispatchedSweepOptions): Promise<{ redispatched: string[]; }>
   protected resolveStepJobOptions(stepOptions?: WorkflowStepOptions): JobOptions
   public async queueStepWorker(runId: string, stepName: string, rpcName: string, data: any, stepOptions?: WorkflowStepOptions, fromStepName?: string): Promise<void>
   public async executeWorkflowSleepCompleted(runId: string, stepId: string): Promise<void>
@@ -1299,6 +1303,17 @@ export interface RpcStepMeta {
 }
 export type RunTimeline = RunTimelineEvent[]
 runTraceWire: (traceparent: string | undefined) => { traceId?: string | undefined; trace?: TraceContext | undefined; }
+export type ScheduledStep = {
+  runId: string
+  stepId: string
+  stepName: string
+  rpcName: string | null
+  data: unknown
+  fromStepName?: string
+  retries?: number
+  retryDelay?: string | number
+  scheduledAt: Date
+}
 export interface SetStepMeta {
   type: 'set'
   variable: string
@@ -1311,6 +1326,7 @@ export interface SleepStepMeta {
   duration: string | number
   expression?: string
 }
+export type StalledSweepOptions = { stalledAfterMs?: number; limit?: number }
 export interface StepState {
   stepId: string
   status: StepStatus
@@ -1360,6 +1376,10 @@ export type TemplateString = {
     expressions: Array<{ $ref: string; path?: string }>
   }
 } & { __brand: 'TemplateString' }
+export type UndispatchedSweepOptions = {
+  undispatchedAfterMs?: number
+  limit?: number
+}
 uuidv5: (name: string, namespace?: string) => string
 export class WorkflowApprovalForbiddenError extends ForbiddenError {
   public payload: { reason: string; detail: string }
@@ -1391,6 +1411,14 @@ export interface WorkflowQueueOptions {
   queueStrategy?: 'per-workflow' | 'shared-groups'
   queueConcurrency?: number
   queueGroupConcurrency?: number | GroupConcurrencyConfig
+}
+export interface WorkflowRecoveryOptions {
+  intervalMs?: number
+  stalledAfterMs?: number
+  undispatchedAfterMs?: number
+}
+export type WorkflowRecoveryPass = WorkflowRecoveryOptions & {
+  startup?: boolean
 }
 export interface WorkflowRun {
   id: string
@@ -1475,6 +1503,8 @@ export interface WorkflowRunWire {
 }
 export interface WorkflowService {
   wireQueueWorkers?(): void
+  startRecovery?(options?: WorkflowRecoveryOptions | false): void
+  stopRecovery?(): void
   createRun(workflowName: string, input: any, inline: boolean, graphHash: string, wire: WorkflowRunWire, options?: { deterministic?: boolean; plannedSteps?: WorkflowPlannedStep[] }): Promise<string>
   getRun(id: string): Promise<WorkflowRun | null>
   getRunStatus(id: string): Promise<WorkflowRunStatus | null>
@@ -1510,6 +1540,7 @@ export interface WorkflowServiceConfig {
   orchestratorQueueName: string
   stepWorkerQueueName: string
   sleeperRPCName: string
+  recovery?: WorkflowRecoveryOptions | false
 }
 export interface WorkflowServiceOptions extends WorkflowQueueOptions {
   leaseService: LeaseService
@@ -2139,6 +2170,11 @@ export interface WorkflowQueueOptions {
   queueConcurrency?: number
   queueGroupConcurrency?: number | GroupConcurrencyConfig
 }
+export interface WorkflowRecoveryOptions {
+  intervalMs?: number
+  stalledAfterMs?: number
+  undispatchedAfterMs?: number
+}
 export interface WorkflowRun {
   id: string
   workflow: string
@@ -2214,6 +2250,8 @@ export interface WorkflowRunWire {
 }
 export interface WorkflowService {
   wireQueueWorkers?(): void
+  startRecovery?(options?: WorkflowRecoveryOptions | false): void
+  stopRecovery?(): void
   createRun(workflowName: string, input: any, inline: boolean, graphHash: string, wire: WorkflowRunWire, options?: { deterministic?: boolean; plannedSteps?: WorkflowPlannedStep[] }): Promise<string>
   getRun(id: string): Promise<WorkflowRun | null>
   getRunStatus(id: string): Promise<WorkflowRunStatus | null>
@@ -2249,6 +2287,7 @@ export interface WorkflowServiceConfig {
   orchestratorQueueName: string
   stepWorkerQueueName: string
   sleeperRPCName: string
+  recovery?: WorkflowRecoveryOptions | false
 }
 export interface WorkflowServiceOptions extends WorkflowQueueOptions {
   leaseService: LeaseService
@@ -3290,11 +3329,11 @@ export abstract class PikkuTriggerService implements TriggerService {
   protected async onTriggerFire(triggerName: string, targets: TriggerTarget[], data: unknown, options?: TriggerInvokeOptions): Promise<void>
 }
 receiveWebhookSourceRequest: (sourceName: string, wire: { http?: PikkuHTTP<unknown> | undefined; trace?: TraceContext | undefined; }) => Promise<void | { received: number; }>
-reconcileTriggerSources: ({ singletonServices, ...input }: LifecycleInput & { singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
-reconcileWebhookRegistrations: ({ registrations, singletonServices, ...input }: LifecycleInput & { registrations: WebhookRegistrations; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<{ registrations: WebhookRegistrations; outcomes: WebhookSourceOutcome[]; orphans: OrphanedWebhookRegistration[]; }>
-runWebhookSourceLifecycle: ({ action, previous, singletonServices, ...input }: LifecycleInput & { action: "check" | "setup" | "teardown"; previous?: Record<string, WebhookSourceState> | undefined; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
+reconcileTriggerSources: ({ singletonServices, ...input }: LifecycleInput & { singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
+reconcileWebhookRegistrations: ({ registrations, singletonServices, ...input }: LifecycleInput & { registrations: WebhookRegistrations; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<{ registrations: WebhookRegistrations; outcomes: WebhookSourceOutcome[]; orphans: OrphanedWebhookRegistration[]; }>
+runWebhookSourceLifecycle: ({ action, previous, singletonServices, ...input }: LifecycleInput & { action: "check" | "setup" | "teardown"; previous?: Record<string, WebhookSourceState> | undefined; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
 subscribedWebhookEvents: (source: string) => string[]
-teardownTriggerSources: ({ names, singletonServices, ...input }: LifecycleInput & { names: string[]; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
+teardownTriggerSources: ({ names, singletonServices, ...input }: LifecycleInput & { names: string[]; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
 export type TriggerEvent<Name extends string = string, Data = unknown> = {
   name: Name
   id?: string
@@ -3468,7 +3507,7 @@ export class RPCNotFoundError extends PikkuError {
   public readonly rpcName: string
   constructor(rpcName: string, message = `RPC function not found: ${rpcName}`)
 }
-rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, PikkuRPC>
+rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, PikkuRPC>
 ```
 
 ## ./addon
@@ -3502,7 +3541,7 @@ export class RemoteAddonAuthError extends PikkuError {
   public readonly namespace: string
   constructor(namespace: string, detail: string)
 }
-resolveRemoteAddonToken: (auth: RemoteAddonAuthBinding | undefined, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, wire: PikkuRawWire, namespace: string) => Promise<string | null>
+resolveRemoteAddonToken: (auth: RemoteAddonAuthBinding | undefined, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, wire: PikkuRawWire, namespace: string) => Promise<string | null>
 export type StudioAppScreen = StudioScreenBase & {
   app: string
 }
@@ -4098,8 +4137,8 @@ export class ToolCredentialRequired extends PikkuError {
 }
 unspeakableScripts: (text: string, speakable: SpeakableScripts) => string[]
 voiceForText: (text: string, speakable: SpeakableScripts, fallback?: string | undefined) => string | undefined
-voiceInput: (config?: { language?: string | undefined; model?: string | undefined; allowedAudioHosts?: string[] | undefined; } | undefined) => PikkuAgentMiddlewareHooks<Record<string, unknown>, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
-voiceOutput: (config?: { model?: string | undefined; format?: string | undefined; voice?: string | undefined; instructions?: string | undefined; speed?: number | undefined; language?: string | undefined; speakableScripts?: SpeakableScripts | undefined; always?: boolean | undefined; } | undefined) => PikkuAgentMiddlewareHooks<VoiceOutputState, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
+voiceInput: (config?: { language?: string | undefined; model?: string | undefined; allowedAudioHosts?: string[] | undefined; } | undefined) => PikkuAgentMiddlewareHooks<Record<string, unknown>, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
+voiceOutput: (config?: { model?: string | undefined; format?: string | undefined; voice?: string | undefined; instructions?: string | undefined; speed?: number | undefined; language?: string | undefined; speakableScripts?: SpeakableScripts | undefined; always?: boolean | undefined; } | undefined) => PikkuAgentMiddlewareHooks<VoiceOutputState, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
 export type VoiceOutputState = {
   textBuffer?: string
   tail?: Promise<void>
@@ -4294,7 +4333,7 @@ export type CoreGateway<
   tags?: string[]
   auth?: boolean
 }
-createListenerMessageHandler: (name: string, config: CoreGateway, singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => (rawData: unknown) => Promise<void>
+createListenerMessageHandler: (name: string, config: CoreGateway, singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => (rawData: unknown) => Promise<void>
 export interface GatewayAdapter {
   name: string
   parse(data: unknown): GatewayInboundMessage | null
@@ -4320,7 +4359,7 @@ export interface GatewayOutboundMessage {
 }
 export type GatewaysMeta = Record<string, GatewayMeta>
 export type GatewayTransportType = 'webhook' | 'websocket' | 'listener'
-resolveGatewayAdapter: (config: CoreGateway, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => Promise<GatewayAdapter>
+resolveGatewayAdapter: (config: CoreGateway, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => Promise<GatewayAdapter>
 export type WebhookVerificationResult =
   | {
       verified: true
@@ -4423,8 +4462,8 @@ executeCLI: ({ programName, args, createConfig, createSingletonServices, createW
 formatCLIError: (error: unknown, { verbose }?: { verbose?: boolean | undefined; }) => string
 generateCommandHelp: (programName: string, allMeta: CLIMeta, commandPath?: string[]) => string
 parseCLIArguments: (args: string[], programName: string, allMeta: CLIMeta) => ParsedCommand
-pikkuCLIRender: <Data, Services extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, Session extends CoreUserSession = CoreUserSession>(renderer: (services: Services, data: Data, session?: Session | undefined) => void | Promise<void>) => CorePikkuCLIRender<Data, Services, Session>
-runCLICommand: ({ program, commandPath, data, singletonServices, createWireServices, onOutput, session, transport, }: { program: string; commandPath: string[]; data: Record<string, any>; singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; session?: CoreUserSession | undefined; onOutput?: ((data: unknown) => void | Promise<void>) | undefined; transport?: PikkuChannel<unknown, any, any> | undefined; }) => Promise<any>
+pikkuCLIRender: <Data, Services extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, Session extends CoreUserSession = CoreUserSession>(renderer: (services: Services, data: Data, session?: Session | undefined) => void | Promise<void>) => CorePikkuCLIRender<Data, Services, Session>
+runCLICommand: ({ program, commandPath, data, singletonServices, createWireServices, onOutput, session, transport, }: { program: string; commandPath: string[]; data: Record<string, any>; singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; session?: CoreUserSession | undefined; onOutput?: ((data: unknown) => void | Promise<void>) | undefined; transport?: PikkuChannel<unknown, any, any> | undefined; }) => Promise<any>
 wantsStackTrace: (args: string[], env?: Record<string, string | undefined>) => boolean
 wireCLI: <Commands extends Record<string, CoreCLICommandConfig<any, any, any>>, GlobalOptions, PikkuMiddleware extends CorePikkuMiddleware, GlobalOutput>(cli: CoreCLI<Commands, GlobalOptions, PikkuMiddleware, GlobalOutput>) => void
 ```
@@ -4455,7 +4494,7 @@ export type CorePikkuCLIClientRender<Data> = (
 ) => void | Promise<void>
 executeCLIViaChannel: ({ programName, pikkuWS, args, renderers, defaultRenderer, }: { programName: string; pikkuWS: any; args?: string[] | undefined; renderers?: Record<string, CorePikkuCLIRender<any>> | undefined; defaultRenderer?: CorePikkuCLIRender<any> | undefined; }) => Promise<void>
 executeRawCLIViaChannel: ({ pikkuWS, args, renderers, defaultRenderer, capabilities, approve, }: { pikkuWS: any; args?: string[] | undefined; renderers?: Record<string, CorePikkuCLIClientRender<any>> | undefined; defaultRenderer?: CorePikkuCLIClientRender<any> | undefined; capabilities?: Capabilities | undefined; approve?: ApprovalRequester | undefined; }) => Promise<number>
-handleRawCLI: ({ programName, args, singletonServices, createWireServices, onOutput, session, transport, }: { programName: string; args: string[]; singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; session?: CoreUserSession | undefined; onOutput?: ((data: unknown, commandId: string) => void | Promise<void>) | undefined; transport?: PikkuChannel<unknown, any, any> | undefined; }) => Promise<RawCLIResult>
+handleRawCLI: ({ programName, args, singletonServices, createWireServices, onOutput, session, transport, }: { programName: string; args: string[]; singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; session?: CoreUserSession | undefined; onOutput?: ((data: unknown, commandId: string) => void | Promise<void>) | undefined; transport?: PikkuChannel<unknown, any, any> | undefined; }) => Promise<RawCLIResult>
 export type RawCLIFrame =
   | { action: 'cli-output'; commandId?: string; data: unknown }
   | { action: 'cli-result'; commandId?: string; result: unknown }
@@ -6485,7 +6524,7 @@ export type WebhookPayload = string | Uint8Array
 addPackageServiceFactories: (packageName: string, factories: { createConfig?: CreateConfig<any> | undefined; createSingletonServices?: CreateSingletonServices<any, any> | undefined; createWireServices?: CreateWireServices<any, any, any> | undefined; }) => void
 getAllPackageStates: () => Map<string, PikkuPackageState>
 getCreateWireServices: () => CreateWireServices | undefined
-getSingletonServices: () => CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>
+getSingletonServices: () => CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>
 initializePikkuState: (packageName: string) => void
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
@@ -6509,7 +6548,7 @@ export interface PikkuPackageState {
 }
 pikkuState: <Type extends keyof PikkuPackageState, Content extends keyof PikkuPackageState[Type]>(packageName: string | null, type: Type, content: Content, value?: PikkuPackageState[Type][Content] | undefined) => PikkuPackageState[Type][Content]
 resetPikkuState: () => void
-setSingletonServices: (services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => void
+setSingletonServices: (services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => void
 ```
 
 ## ./classification
@@ -6602,7 +6641,7 @@ parseJson: <T = any>(input: string | Uint8Array<ArrayBufferLike>) => T
 parseVersionedId: (id: string) => { baseName: string; version: number | null; }
 export type PickOptional<T, K extends keyof T> = Partial<T> & Pick<T, K>
 export type PickRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
-pikkuServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(lifecycle: ServerLifecycle<SS>) => ServerLifecycle<SS>
+pikkuServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(lifecycle: ServerLifecycle<SS>) => ServerLifecycle<SS>
 export interface RelativeTimeInput {
   value: number
   unit: TimeUnit
@@ -6664,13 +6703,13 @@ export interface SkippedContributor {
 ## ./lifecycle
 
 ```ts
-composeServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(app: ServerLifecycle<SS> | undefined, hooks: { start?: readonly ContributorServerHook[] | undefined; stop?: readonly ContributorServerHook[] | undefined; }) => ServerLifecycle<SS>
+composeServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(app: ServerLifecycle<SS> | undefined, hooks: { start?: readonly ContributorServerHook[] | undefined; stop?: readonly ContributorServerHook[] | undefined; }) => ServerLifecycle<SS>
 export interface ContributorServerHook {
   name: string
   run: (services: any) => void | Promise<void>
 }
 onShutdownSignals: (run: (signal: NodeJS.Signals) => void | Promise<void>, signals?: NodeJS.Signals[]) => () => void
-pikkuServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(lifecycle: ServerLifecycle<SS>) => ServerLifecycle<SS>
+pikkuServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(lifecycle: ServerLifecycle<SS>) => ServerLifecycle<SS>
 stopSingletonServices: () => Promise<void>
 ```
 

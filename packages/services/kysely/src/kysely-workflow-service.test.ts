@@ -343,6 +343,88 @@ describe('KyselyWorkflowService — attempt counting', () => {
   })
 })
 
+describe('KyselyWorkflowService — crash recovery queries', () => {
+  const longAgo = () => new Date(Date.now() + 60_000)
+
+  test('a step running with no lease and no child run does not hold its run out of the sweep', async () => {
+    const runId = await seedRun()
+    const { stepId } = await service.insertStepState(
+      runId,
+      'charge',
+      'charge:card',
+      {}
+    )
+    await service.setStepRunning(stepId)
+
+    assert.deepEqual(await (service as any).findStalledRunIds(longAgo(), 10), [
+      runId,
+    ])
+  })
+
+  test('a step parked on a child run does', async () => {
+    const runId = await seedRun()
+    const { stepId } = await service.insertStepState(
+      runId,
+      'child',
+      'childWorkflow',
+      {}
+    )
+    await service.setStepRunning(stepId)
+    await service.setStepChildRunId(stepId, 'child-run')
+
+    assert.deepEqual(
+      await (service as any).findStalledRunIds(longAgo(), 10),
+      []
+    )
+  })
+
+  test('scheduled steps come back from live runs only, oldest first, by the page', async () => {
+    const live = await seedRun()
+    const first = await service.insertStepState(live, 'Sleep', null, {
+      duration: 1000,
+    })
+    await service.setStepScheduled(first.stepId)
+    await db
+      .updateTable('workflowStep')
+      .set({ updatedAt: new Date(0) })
+      .where('workflowStepId', '=', first.stepId)
+      .execute()
+    const second = await service.insertStepState(
+      live,
+      'Work',
+      'work',
+      {
+        a: 1,
+      },
+      { retries: 3, retryDelay: '1s' }
+    )
+    await service.setStepScheduled(second.stepId)
+
+    const done = await seedRun('done')
+    const settled = await service.insertStepState(done, 'Sleep', null, {
+      duration: 1000,
+    })
+    await service.setStepScheduled(settled.stepId)
+    await service.updateRunStatus(done, 'completed')
+
+    const find = (limit: number, offset: number) =>
+      (service as any).findScheduledSteps(limit, offset)
+    const [oldest, newest] = await find(10, 0)
+    assert.equal(oldest.stepId, first.stepId)
+    assert.equal(oldest.rpcName, null)
+    assert.deepEqual(oldest.data, { duration: 1000 })
+    assert.equal(oldest.scheduledAt.getTime(), 0)
+    assert.equal(newest.stepId, second.stepId)
+    assert.equal(newest.retries, 3)
+    assert.equal(newest.retryDelay, '1s')
+    assert.deepEqual(
+      (await find(1, 1)).map((step: { stepId: string }) => step.stepId),
+      [second.stepId]
+    )
+    assert.equal((await find(10, 2)).length, 0)
+  })
+})
+
 describe('KyselyWorkflowService — run state writes', () => {
   test('concurrent updateRunState calls for different keys do not clobber each other', async () => {
     const runId = await seedRun('wf2')

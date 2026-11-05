@@ -9,6 +9,7 @@ import {
 import type {
   WorkflowPlannedStep,
   WorkflowServiceOptions,
+  ScheduledStep,
   WorkflowRun,
   WorkflowRunWire,
   StepState,
@@ -901,12 +902,13 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
                   eb('s.status', 'in', ['scheduled', 'suspended']),
                   // A `running` step counts as in flight only while someone
                   // still holds it. A lapsed lease is a dispatch that died, and
-                  // a null one a step nothing was expected to hand back.
+                  // a null one with no child run is a step worked inside a pass,
+                  // which the run's lease answers for, not this query.
                   eb.and([
                     eb('s.status', '=', 'running'),
                     eb.or([
-                      eb('s.leaseExpiresAt', 'is', null),
                       eb('s.leaseExpiresAt', '>', this.nowMs()),
+                      eb('s.childRunId', 'is not', null),
                     ]),
                   ]),
                 ])
@@ -933,6 +935,45 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .execute()
 
     return rows.map((row) => row.workflowRunId)
+  }
+
+  protected override async findScheduledSteps(
+    limit: number,
+    offset: number
+  ): Promise<ScheduledStep[]> {
+    const rows = await this.db
+      .selectFrom('workflowStep as s')
+      .innerJoin('workflowRuns as r', 'r.workflowRunId', 's.workflowRunId')
+      .select([
+        's.workflowRunId',
+        's.workflowStepId',
+        's.stepName',
+        's.rpcName',
+        's.data',
+        's.fromStepName',
+        's.retries',
+        's.retryDelay',
+        's.updatedAt',
+      ])
+      .where('s.status', '=', 'scheduled')
+      .where('r.status', '=', 'running')
+      .orderBy('s.updatedAt', 'asc')
+      .orderBy('s.workflowStepId', 'asc')
+      .limit(limit)
+      .offset(offset)
+      .execute()
+
+    return rows.map((row) => ({
+      runId: row.workflowRunId,
+      stepId: row.workflowStepId,
+      stepName: row.stepName,
+      rpcName: row.rpcName ?? null,
+      data: parseJson(row.data),
+      fromStepName: row.fromStepName ?? undefined,
+      retries: row.retries != null ? Number(row.retries) : undefined,
+      retryDelay: row.retryDelay ?? undefined,
+      scheduledAt: new Date(row.updatedAt),
+    }))
   }
 
   async getRunState(runId: string): Promise<Record<string, unknown>> {

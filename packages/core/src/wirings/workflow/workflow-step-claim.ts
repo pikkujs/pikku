@@ -30,6 +30,34 @@ export const leaseAttemptsExhausted = (stepState: StepState): boolean =>
   stepState.attemptCount >= (stepState.retries ?? DEFAULT_STEP_RETRIES) + 1
 
 /**
+ * A pass holds its run's lease for as long as it works a step inline, so one
+ * that meets its own step already `running` is looking at a pass that died
+ * mid-step. Running it again is a new attempt, counted as one so a step that
+ * takes its process down every time runs out instead of looping forever. The
+ * invocation id comes from the step's name, so the attempt keeps it.
+ */
+export const takeBackLostInlineStep = async (
+  store: Pick<StepClaimStore, 'setStepError' | 'createRetryAttempt'>,
+  runId: string,
+  stepName: string,
+  stepState: StepState
+): Promise<StepState> => {
+  if (stepState.status !== 'running') {
+    return stepState
+  }
+  if (leaseAttemptsExhausted(stepState)) {
+    const error = new WorkflowStepLeaseExpiredError(
+      runId,
+      stepName,
+      stepState.attemptCount
+    )
+    await store.setStepError(stepState.stepId, error, stepState.attemptCount)
+    throw error
+  }
+  return store.createRetryAttempt(stepState.stepId, 'pending')
+}
+
+/**
  * Decide whether this dispatch owns the step, by reading its state and then
  * writing it — which only excludes a concurrent dispatch when the caller holds
  * a lock that genuinely excludes one.

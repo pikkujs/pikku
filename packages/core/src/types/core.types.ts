@@ -129,7 +129,7 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
     requireAllowedHosts?: boolean
   }
 
-  workflow?: WorkflowServiceConfig
+  workflow?: Partial<WorkflowServiceConfig>
   webhook?: WebhookServiceConfig
   postgres?: PostgresConfig
 } & Config
