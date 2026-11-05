@@ -69,15 +69,31 @@ jobs:
         run: bash scripts/check-tsgo-pin.sh
       - name: go vet
         run: go vet ./...
+      - name: Disk usage after go vet
+        if: always()
+        run: |
+          df -h /
+          du -sh "$(go env GOCACHE)" "$(go env GOMODCACHE)" /tmp 2>/dev/null || true
       - name: go test
         run: go test ./...
+      - name: Disk usage after go test
+        if: always()
+        run: |
+          df -h /
+          du -sh "$(go env GOCACHE)" "$(go env GOMODCACHE)" /tmp 2>/dev/null || true
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - name: Cross-compile every target
-        run: node scripts/build-go.mjs --all
-      - name: Check every target has its binary
-        run: node scripts/check-platform-binary.mjs
+      # linux-x64 only: the other targets each recompile the standard library
+      # and typescript-go, and four at once ran the runner out of disk. Full
+      # Suite and Publish still build --all and check every binary.
+      - name: Build the linux-x64 binary
+        run: node scripts/build-go.mjs --target linux-x64
+      - name: Disk usage after the build
+        if: always()
+        run: |
+          df -h /
+          du -sh "$(go env GOCACHE)" "$(go env GOMODCACHE)" /tmp 2>/dev/null || true
       - name: Smoke-test the linux-x64 binary
         run: |
           out=$(printf '%s' '{"fileName":"a.ts","content":"export * from \"./b.js\""}' \
