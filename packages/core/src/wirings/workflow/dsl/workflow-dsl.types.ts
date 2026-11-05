@@ -177,7 +177,11 @@ export interface ApprovalDecider {
 }
 
 /**
- * Options for workflow.approval().
+ * Options for workflow.approval(). The run waits until
+ * `workflowService.approveStep(runId, reason, decision, session)` answers the
+ * gate; a no is a `decision` too, so there is no separate decline.
+ *
+ * @example snippet: workflowApprovalAnswer
  */
 export interface WorkflowApprovalOptions<
   TSchema extends StandardSchemaV1 = StandardSchemaV1,
@@ -202,6 +206,8 @@ export interface WorkflowApprovalOptions<
  * must handle the deadline case, and so "skip it and carry on" stays trivial.
  * `decided` means a human answered — whether that answer was yes or no is
  * carried in `data` and is the application's business, not the framework's.
+ *
+ * @example snippet: workflowApprovalGate
  */
 export type ApprovalOutcome<T> =
   | {

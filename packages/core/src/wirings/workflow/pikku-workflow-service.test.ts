@@ -747,6 +747,100 @@ describe('pikku-workflow-service approval', () => {
     cleanup()
   })
 
+  test('a no is a decision: the gate settles and the workflow takes its branch', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testApprovalDeclined'
+    const graphHash = 'approval-declined'
+
+    const cleanup = registerApprovalWorkflow(
+      workflowName,
+      graphHash,
+      async (_services, _data, { workflow }) => {
+        const decision = await workflow.approval('Approve invoice', {
+          schema: approvalDecisionSchema,
+        })
+        if (decision.status === 'decided' && !decision.data.approved) {
+          return { outcome: 'declined' }
+        }
+        return { outcome: 'paid' }
+      }
+    )
+
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+
+    await ws.approveStep(runId, 'Approve invoice', { approved: false })
+    await ws.runWorkflowJob(runId, {})
+
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'completed')
+    assert.deepEqual(run?.output, { outcome: 'declined' })
+    await assert.rejects(
+      ws.approveStep(runId, 'Approve invoice', { approved: true }),
+      (error: unknown) => error instanceof WorkflowApprovalResolvedError
+    )
+
+    cleanup()
+  })
+
+  test('a run waiting at a gate is found through the run service', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testApprovalWaiting'
+    const graphHash = 'approval-waiting'
+
+    const cleanup = registerApprovalWorkflow(
+      workflowName,
+      graphHash,
+      async (_services, _data, { workflow }) => {
+        await workflow.suspend('Waiting on the warehouse')
+        await workflow.approval('Approve invoice', {
+          schema: approvalDecisionSchema,
+        })
+        return {}
+      }
+    )
+
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
+    await assert.rejects(ws.runWorkflowJob(runId, {}))
+
+    const gatesOf = async (id: string) =>
+      (await ws.getRunSteps(id)).filter(
+        (step) =>
+          step.rpcName === 'pikkuWorkflowApproval' && step.status === 'running'
+      )
+
+    const [suspended] = await ws.listRuns({
+      workflowName,
+      status: 'suspended',
+    })
+    assert.equal(suspended?.id, runId)
+    assert.equal(
+      (await gatesOf(runId)).length,
+      0,
+      'a plain suspend is not waiting on an approval'
+    )
+
+    await ws.resumeWorkflow(runId)
+    await assert.rejects(ws.runWorkflowJob(runId, {}))
+
+    const [gate] = await gatesOf(runId)
+    assert.equal(gate?.data.reason, 'Approve invoice')
+    assert.equal((await ws.getRun(runId))?.status, 'suspended')
+
+    await ws.approveStep(runId, gate.data.reason, { approved: true })
+    await ws.runWorkflowJob(runId, {})
+    assert.deepEqual(await gatesOf(runId), [])
+
+    cleanup()
+  })
+
   test('approveStep rejects a payload that fails the schema', async () => {
     const ws = new InMemoryWorkflowService()
     const workflowName = 'testApprovalSchema'

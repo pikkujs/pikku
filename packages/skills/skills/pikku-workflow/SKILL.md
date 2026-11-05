@@ -29,6 +29,7 @@ What to reach for and why. For how to call it, run this once: `pikku doc workflo
 - Workflows go in `packages/functions/src/wirings/*.workflow.ts`, exported. Start, run and status routes come from `scaffold.workflow`.
 - On a schedule, the `wireScheduler` func is a `pikkuVoidFunc` that only starts the workflow, in the workflow's file: `func: async (_services, _input, { rpc }) => { await rpc.startWorkflow('weeklyReport', {}) }`, and `rpc.startWorkflow` is called the same way from a function. A cron has no session.
 - An approval takes a real `schema`, and the workflow branches on the result. A no is an answer (`approveStep` with `{ approve: false }`), never `updateRunStatus('cancelled')`, which skips compensation. Waiting approvals come from `WorkflowRunService`, not the `workflowRuns` table.
+- A workflow body is analysed statically: declare every `const`/`let` at the top level, and take the input as a plain `data` and read `data.x` rather than destructuring it. `pikku doc PKU641` lists the rest.
 - `approvers` defaults to `any`, which is not an authorization boundary: set `owner` or `not-initiator` when it matters who decides. `not-initiator` only excludes the starter: any other signed-in user passes, whatever their role. To limit the decision to a group, add `approverScope` or equivalent route permissions.
 
 ## A scheduled report, whole

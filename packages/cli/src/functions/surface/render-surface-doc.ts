@@ -1,6 +1,7 @@
 import type {
   SurfaceDoc,
   SurfaceDocSymbol,
+  SurfaceError,
   SurfaceEntryPointId,
   SurfaceLeaf,
 } from './surface-doc.types.js'
@@ -91,16 +92,30 @@ const renderIndex = (doc: SurfaceDoc, leaves: SurfaceLeaf[], ai: boolean) => {
   }
   const fn = leaves.find((leaf) => leaf.name === 'function')
   if (fn) {
-    lines.push('', `  ${fn.specifier} — every wiring eventually points at one of these`)
-    lines.push(...columns(fn.symbols.map((symbol) => symbol.name), 4, 26))
+    lines.push(
+      '',
+      `  ${fn.specifier} — every wiring eventually points at one of these`
+    )
+    lines.push(
+      ...columns(
+        fn.symbols.map((symbol) => symbol.name),
+        4,
+        26
+      )
+    )
   }
   if (ai) {
     const taught = leaves.filter((leaf) => leaf.skill)
     const bare = leaves.filter((leaf) => !leaf.skill).map((leaf) => leaf.name)
-    lines.push('', '  what is above is what exists; these skills say how to use it')
+    lines.push(
+      '',
+      '  what is above is what exists; these skills say how to use it'
+    )
     lines.push(
       ...columns(
-        taught.map((leaf) => `${leaf.name} → ${[leaf.skill].flat().join(' + ')}`),
+        taught.map(
+          (leaf) => `${leaf.name} → ${[leaf.skill].flat().join(' + ')}`
+        ),
         2,
         38
       )
@@ -119,10 +134,13 @@ const renderIndex = (doc: SurfaceDoc, leaves: SurfaceLeaf[], ai: boolean) => {
     '',
     '  pikku doc <door>      one door: what it exports and the keys you write',
     '  pikku doc <export>    one export: its signature, its keys, what it references',
+    '  pikku doc PKU641      one error code: what it means and the fix',
     '  pikku doc a b c       several at once, in one call'
   )
   if (!ai) {
-    lines.push('  pikku doc --ai        the same, plus the skill to load for each door')
+    lines.push(
+      '  pikku doc --ai        the same, plus the skill to load for each door'
+    )
   }
   return lines.join('\n')
 }
@@ -151,13 +169,22 @@ const renderSymbolRow = (symbol: SurfaceDocSymbol): string[] => {
 }
 
 const renderLeaf = (leaf: SurfaceLeaf, ai: boolean): string => {
-  const lines = [`${leaf.specifier} — ${leaf.step}`, '', wrap(leaf.summary, 78, '  '), '']
+  const lines = [
+    `${leaf.specifier} — ${leaf.step}`,
+    '',
+    wrap(leaf.summary, 78, '  '),
+    '',
+  ]
   const statuses = leaf.symbols.filter((symbol) => symbol.status !== undefined)
-  for (const symbol of leaf.symbols.filter((symbol) => symbol.status === undefined)) {
+  for (const symbol of leaf.symbols.filter(
+    (symbol) => symbol.status === undefined
+  )) {
     lines.push(...renderSymbolRow(symbol))
   }
   if (statuses.length > 0) {
-    lines.push(`  ${statuses.length} error classes, each thrown to produce its HTTP status:`)
+    lines.push(
+      `  ${statuses.length} error classes, each thrown to produce its HTTP status:`
+    )
     lines.push(
       ...columns(
         statuses.map((symbol) => `${symbol.name} ${symbol.status}`),
@@ -232,10 +259,22 @@ const renderSymbol = (
     )
   }
   if (ai && leaf.skill) {
-    lines.push('', `  Load the ${[leaf.skill].flat().join(' and ')} skill before writing this if you need how rather than what.`)
+    lines.push(
+      '',
+      `  Load the ${[leaf.skill].flat().join(' and ')} skill before writing this if you need how rather than what.`
+    )
   }
   return lines.join('\n').trimEnd()
 }
+
+const renderError = (error: SurfaceError): string =>
+  [
+    `${error.code} — ${error.name}`,
+    '',
+    ...(error.meaning ? [wrap(error.meaning, 78, '  '), ''] : []),
+    ...(error.fix ? ['  fix', wrap(error.fix, 76, '    '), ''] : []),
+    `  https://pikku.dev/docs/pikku-cli/errors/${error.code.toLowerCase()}`,
+  ].join('\n')
 
 /**
  * Words in an identifier, however it was spelled: `PikkuScenarioWire` and
@@ -287,9 +326,14 @@ export const renderSurfaceDoc = (
   if (!target) {
     return renderIndex(doc, leaves, ai)
   }
+  const error = doc.errors.find(
+    (candidate) => candidate.code === target.toUpperCase()
+  )
+  if (error) {
+    return renderError(error)
+  }
   const leaf = leaves.find(
-    (candidate) =>
-      candidate.name === target || candidate.specifier === target
+    (candidate) => candidate.name === target || candidate.specifier === target
   )
   if (leaf) {
     return renderLeaf(leaf, ai)
