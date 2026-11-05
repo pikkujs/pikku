@@ -61,6 +61,18 @@ Channels, agent tools, MCP, CLI, triggers, webhook sources, gateways and `runRpc
 
 To find affected code, search for `traceId` on a channel RPC frame, and for overrides of `accept` or `enqueue`.
 
+### Workflow runs are recovered after a restart
+
+`pikku dev` and `pikku serve` now sweep for work a dead process left behind, at startup and every 30s. A run that was left `running` by an earlier crash resumes on the next start.
+
+- A step caught in flight runs again, as a new attempt with the same `invocationId`. Make its side effects idempotent on `invocationId`.
+- A step that runs out of attempts this way fails with `WorkflowStepLeaseExpiredError`. That includes `retries: 0`, so such a step fails at the first restart that catches it in flight.
+- A sleep keeps its original deadline, and one that is overdue wakes at once.
+- Set `workflow.recovery: false` in your config to turn it off, or tune `intervalMs`, `stalledAfterMs` and `undispatchedAfterMs`.
+- Hosts that do not run `pikku serve` call `workflowService.startRecovery()` once the queue is consuming, or `recoverWorkflows()` from a scheduled task.
+- A custom `KyselyWorkflowService` subclass needs nothing. Any other store overrides `findScheduledSteps` to have its sleeps recovered.
+- `CoreConfig.workflow` is now `Partial<WorkflowServiceConfig>`. No schema change.
+
 ### `pikku verify` fails on an app function nothing uses
 
 An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked. Workflows are checked too: a workflow that is not wired, exposed or started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step) is reported.
