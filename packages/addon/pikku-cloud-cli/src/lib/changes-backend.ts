@@ -10,7 +10,7 @@ import {
 import { resolveApiContext } from './config.js'
 import { getCloudRPC } from './http.js'
 import { readConfigProjectId } from './project-id.js'
-import type { CreateChangeInput } from '../contract/cloud-api.gen.js'
+import type { CreateChangeInput } from '../contract/cloud-api-types.js'
 
 export async function linkedProjectId(
   override?: string

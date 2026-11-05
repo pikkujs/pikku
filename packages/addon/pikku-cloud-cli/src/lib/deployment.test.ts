@@ -13,7 +13,7 @@ import {
   waitForDeployment,
   type DeploymentStatus,
 } from './deployment.js'
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import type { CloudRPC as PikkuRPC } from './rpc-client.js'
 
 type StatusRow = {
   status: string

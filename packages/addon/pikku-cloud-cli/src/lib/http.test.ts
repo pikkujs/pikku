@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { getCloudRPC } from './http.js'
-import { CLOUD_CONTRACT_RPCS } from '../contract/cloud-api.meta.gen.js'
+import { CLOUD_CONTRACT_RPCS } from '../contract/cloud-api-meta.js'
 
 const realFetch = globalThis.fetch
 
@@ -88,7 +88,7 @@ describe('getCloudRPC rpc names', () => {
 
   test('the generated name list matches the generated rpc map', () => {
     const map = readFileSync(
-      join(import.meta.dir, '../contract/cloud-api.gen.ts'),
+      join(import.meta.dir, '../contract/cloud-api-types.ts'),
       'utf8'
     )
     const keys = [

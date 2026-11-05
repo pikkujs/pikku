@@ -1,10 +1,10 @@
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { CorePikkuFetch } from '@pikku/fetch'
-import type { FlattenedRPCMap } from '../contract/cloud-api.gen.js'
+import type { FlattenedRPCMap } from '../contract/cloud-api-types.js'
 import {
   CLOUD_CONTRACT_RPCS,
   CLOUD_NAMESPACE,
-} from '../contract/cloud-api.meta.gen.js'
+} from '../contract/cloud-api-meta.js'
 import {
   UNCONTRACTED_NAMESPACE,
   type UncontractedRPCMap,
