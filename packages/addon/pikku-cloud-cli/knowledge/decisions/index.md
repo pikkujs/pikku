@@ -10,6 +10,7 @@ A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
 - [The change-events stream sends the bearer token and stops retrying on 401 and 403](changes-stream-treats-auth-failures-as-permanent.md) — subscribeToChanges sends the Pikku Studio Cloud token on each connection and treats 401, 403, 404, 405 and 501 as permanent, falling back to polling
+- [The cloud: rpc prefix in lib/http.ts is a workaround for a stale snapshot SDK](cloud-rpc-prefix-is-a-workaround-for-a-stale-sdk.md) — cloudRpcName hard-codes which functions stay bare and which are machine:, and prefixes the rest with cloud:, because the snapshot SDK in src/sdk carries bare names
 - [Cloud deploy-unit reads refuse without a CLI login and a linked project](cloud-deploy-unit-reads-need-login-and-link.md) — The CloudDeployUnits function throws a precondition error when there is no token or no linked project before it lists workers for a branch
 - [pikku cloud init refuses to re-link a remote-linked project and replaces a local link only with force](cloud-init-refuses-to-relink-a-remote-project.md) — pikku cloud init throws when a remote-linked project already exists, and when a local link exists it throws unless force is passed
 - [pikku cloud link never creates a GitHub repository and asks before creating one on Pikku Studio Cloud](cloud-link-never-creates-a-github-repository.md) — With no origin, link refuses --github, and otherwise either requires --gitea or asks the user before creating a repository on Pikku Studio Cloud's git server
