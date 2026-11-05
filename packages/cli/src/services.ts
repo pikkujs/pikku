@@ -140,7 +140,7 @@ export const defaultCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
  * `skills install` writes agent skills into a repo that has no pikku.config.json
  * yet — that is the whole point of it — so it cannot require one to start, and
  * `doc` answers from the surface shipped inside the CLI rather than the project.
- * `cloud report` sends a report about pikku itself: a scaffold that never
+ * `report` files a report about pikku itself: a scaffold that never
  * produced a config, or a command run from the wrong directory, is exactly the
  * kind of thing worth reporting, so demanding a config would refuse the report
  * at the moment it is most worth having.
@@ -158,7 +158,7 @@ export const CONFIG_FREE_COMMANDS = new Set([
   'cloud.login',
   'cloud.logout',
   'cloud.auth.git',
-  'cloud.report',
+  'report',
   'changes',
   'changes.list',
   'changes.wait',

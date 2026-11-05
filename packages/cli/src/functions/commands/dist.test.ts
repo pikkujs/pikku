@@ -35,6 +35,16 @@ describe('planDistCopies', () => {
     )
   })
 
+  test('leaves held findings out of the published output', () => {
+    assert.deepEqual(
+      plan(
+        join(root, '.pikku', 'findings', 'runs.json'),
+        join(root, '.pikku', 'findings', 'run', 'finding.json')
+      ),
+      []
+    )
+  })
+
   test('carries a declaration file, wherever it sits', () => {
     assert.deepEqual(
       plan(
