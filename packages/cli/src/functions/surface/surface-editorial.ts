@@ -151,6 +151,48 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'Who may call a function, and what the call is made with: permissions that see the request, auth gates that run before it, and the credentials a function borrows rather than holds.',
   },
+  telemetry: {
+    step: 'enhance it',
+    skill: null,
+    summary:
+      'Middleware that times a call: `telemetryOuter` around all middleware, `telemetryInner` around the function alone.',
+  },
+  wire: {
+    step: 'create a function',
+    skill: null,
+    summary:
+      'The third argument of a function body: `rpc` and `getCredential` are always there; the rest depend on what wired the call, so `http`, `channel`, `queue` and the like are undefined elsewhere.',
+  },
+  plugin: {
+    step: 'wire it up',
+    skill: 'pikku-addon',
+    summary:
+      'An addon package ships its screens with `definePlugin`; a host mounts them with `wireAddon({ ui: true })`.',
+  },
+  webhook: {
+    step: 'wire it up',
+    skill: null,
+    summary:
+      'Declares an outgoing webhook and delivers it through `TypedWebhookService`.',
+  },
+  email: {
+    step: 'wire it up',
+    skill: null,
+    summary:
+      'Sends mail through the `emailService` service. Templates live in `emails/`; `pikku emails generate` builds them.',
+  },
+  eventhub: {
+    step: 'wire it up',
+    skill: null,
+    summary:
+      'Publish and subscribe across channels through the `eventHub` service.',
+  },
+  react: {
+    step: 'wire it up',
+    skill: 'pikku-build',
+    summary:
+      'Calls the backend from React screens: `createPikku` and `PikkuProvider` set it up, and these hooks reach the client. Typed data hooks are generated into the `reactQueryFile` set in pikku.config.json, not exported here: `usePikkuQuery`, `usePikkuMutation`, `usePikkuInfiniteQuery`, and `usePikkuQueryStub` and `usePikkuMutationStub` for a backend not written yet.',
+  },
   scopes: {
     step: 'guard it',
     skill: 'pikku-auth',
@@ -161,13 +203,13 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     step: 'orchestrate it',
     skill: 'pikku-workflow',
     summary:
-      'Composes functions into a durable workflow whose steps survive a restart and retry on their own.',
+      'Composes functions into a durable workflow whose steps survive a restart and retry on their own. A trigger starts one from a function with `rpc.startWorkflow(name, input)`, which returns `{ runId }` without waiting.',
   },
   agent: {
     step: 'orchestrate it',
     skill: 'pikku-agent',
     summary:
-      'Defines an AI agent, the tools it may call and the scorers that judge what it did.',
+      'Defines an AI agent, the tools it may call and the scorers that judge what it did. `model` is `provider/model` or an alias from the `models` table in pikku.config.json. Threads and messages live in the `agentStorage` service, in-flight run state in `agentRunState`, and `agentRunService` reads them back.',
   },
   scenarios: {
     step: 'test it',

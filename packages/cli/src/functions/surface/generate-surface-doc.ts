@@ -12,7 +12,7 @@ import { collectSnippets } from './collect-snippets.js'
  * `build.sh` generates the two projects it reads — one application, one addon —
  * and points this at them.
  */
-const usage = `Usage: generate-surface-doc --app <dir> --addon <dir> --snippets <dir> --out <file> [--snippets-out <file>] [--snippets-meta-out <file>]`
+const usage = `Usage: generate-surface-doc --app <dir> --addon <dir> [--frontend <dir>] [--core <dir>] --snippets <dir> --out <file> [--snippets-out <file>] [--snippets-meta-out <file>]`
 
 const parseArgs = (argv: string[]): Record<string, string> => {
   const parsed: Record<string, string> = {}
@@ -70,6 +70,8 @@ const main = async (argv: string[]): Promise<void> => {
     version: getCLIVersion(),
     app: { projectDir: app },
     addon: { projectDir: addon },
+    frontend: args.frontend,
+    core: args.core,
     snippets,
   })
 

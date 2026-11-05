@@ -296,4 +296,93 @@ describe('the editorial layer', () => {
 
     assert.deepStrictEqual(undocumented, [])
   })
+
+  test('surveys the frontend package as a door of the app', async () => {
+    const app = await makeProject('@fake/app', APP_LEAVES)
+    const addon = await makeProject('@fake/addon', ADDON_LEAVES)
+    const frontend = await mkdtemp(join(tmpdir(), 'pikku-surface-doc-'))
+    await write(
+      frontend,
+      'package.json',
+      JSON.stringify({
+        name: '@fake/react',
+        type: 'module',
+        exports: { '.': './index.ts', './other': './other.ts' },
+      })
+    )
+    await write(frontend, 'tsconfig.json', TSCONFIG)
+    await write(frontend, 'index.ts', 'export const usePikkuRPC = () => 1\n')
+    await write(frontend, 'other.ts', 'export const notThisOne = () => 1\n')
+    try {
+      const doc = await buildSurfaceDoc({
+        version: '0.0.0',
+        app: { projectDir: app },
+        addon: { projectDir: addon },
+        frontend,
+      })
+      const [appEntry] = doc.entryPoints
+      const leaf = appEntry?.leaves.find(({ name }) => name === 'react')
+      assert.equal(leaf?.specifier, '@fake/react')
+      assert.deepEqual(
+        leaf?.symbols.map(({ name }) => name),
+        ['usePikkuRPC']
+      )
+    } finally {
+      await rm(app, { recursive: true, force: true })
+      await rm(addon, { recursive: true, force: true })
+      await rm(frontend, { recursive: true, force: true })
+    }
+  })
+
+  test('lists only the named exports of a core door', async () => {
+    const app = await makeProject('@fake/app', APP_LEAVES)
+    const addon = await makeProject('@fake/addon', ADDON_LEAVES)
+    const core = await mkdtemp(join(tmpdir(), 'pikku-surface-doc-'))
+    const subpaths = [
+      'types',
+      'middleware',
+      'addon',
+      'webhook',
+      'services',
+      'channel',
+    ]
+    await write(
+      core,
+      'package.json',
+      JSON.stringify({
+        name: '@fake/core',
+        type: 'module',
+        exports: Object.fromEntries(
+          subpaths.map((name) => [`./${name}`, `./${name}.ts`])
+        ),
+      })
+    )
+    await write(core, 'tsconfig.json', TSCONFIG)
+    for (const name of subpaths) {
+      await write(
+        core,
+        `${name}.ts`,
+        'export const internal = () => 1\nexport const telemetryOuter = () => 1\n'
+      )
+    }
+    try {
+      const doc = await buildSurfaceDoc({
+        version: '0.0.0',
+        app: { projectDir: app },
+        addon: { projectDir: addon },
+        core,
+      })
+      const leaf = doc.entryPoints[0]?.leaves.find(
+        ({ name }) => name === 'telemetry'
+      )
+      assert.deepEqual(
+        leaf?.symbols.map(({ name }) => name),
+        ['telemetryOuter']
+      )
+    } finally {
+      await rm(app, { recursive: true, force: true })
+      await rm(addon, { recursive: true, force: true })
+      await rm(core, { recursive: true, force: true })
+    }
+  })
 })

@@ -38,7 +38,7 @@ export const leafEntries = [
   ['addon', ['addonTypesFile']],
   ['secrets', ['secretTypesFile', 'secretsFile']],
   ['credentials', ['credentialsFile']],
-  ['scopes', ['scopeTypesFile', 'flagsFile']],
+  ['scopes', ['scopeTypesFile', 'flagsFile', 'virtualUsersFile']],
   ['analytics', ['analyticsTypesFile']],
   ['utils', ['utilsTypesFile']],
   ['variables', ['variableTypesFile', 'variablesFile']],

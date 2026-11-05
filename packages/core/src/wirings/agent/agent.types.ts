@@ -421,7 +421,7 @@ export type CoreAgent<
   personality?: string
   /** What it is for — the only one of the three that is required. */
   goal: string
-  /** Which model to run on, as the provider names it. */
+  /** Which model to run on: `provider/model`, or an alias from the `models` table in pikku.config.json. */
   model: string
   /** How much the model is allowed to vary its answer. Lower is more repeatable, which is what a tool-driving agent usually wants. */
   temperature?: number
