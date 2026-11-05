@@ -8,6 +8,15 @@
  */
 import { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 
+/**
+ * WORKAROUND, not the real fix. The snapshot SDK in `../sdk/` is a stale
+ * hand-copied map that still uses bare names, and there is no generated map
+ * with `cloud:` keys to regenerate it from. So the prefix is applied here from
+ * a hand-kept list: anything not listed is assumed to be `cloud:`. If the
+ * controlplane moves another function, this goes stale and the CLI 404s again.
+ * Proper fix: regenerate the snapshot SDK from the controlplane's real map so
+ * names and types come from the server, then delete this list.
+ */
 const BARE_RPCS = new Set(['requestCliAuth', 'pollCliAuth', 'submitFinding'])
 const MACHINE_RPCS = new Set(['createSandboxChange'])
 
