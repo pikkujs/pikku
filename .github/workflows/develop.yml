@@ -84,11 +84,11 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      # linux-x64 only: the other targets each recompile the standard library
-      # and typescript-go, and four at once ran the runner out of disk. Full
-      # Suite and Publish still build --all and check every binary.
-      - name: Build the linux-x64 binary
-        run: node scripts/build-go.mjs --target linux-x64
+      # linux-x64 and darwin-arm64 only: every target recompiles the standard
+      # library and typescript-go, and four at once ran the runner out of disk.
+      # Full Suite and Publish still build --all and check every binary.
+      - name: Build the linux-x64 and darwin-arm64 binaries
+        run: node scripts/build-go.mjs --target linux-x64 --target darwin-arm64
       - name: Disk usage after the build
         if: always()
         run: |
