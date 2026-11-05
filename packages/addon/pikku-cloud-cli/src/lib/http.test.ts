@@ -92,7 +92,7 @@ describe('getCloudRPC rpc names', () => {
       'utf8'
     )
     const keys = [
-      ...map.matchAll(/^ {2}readonly '([^']+)': RPCHandler</gm),
+      ...map.matchAll(/^\s*readonly '?([A-Za-z0-9_]+)'?: RPCHandler</gm),
     ].map((m) => m[1]!)
     expect([...CLOUD_CONTRACT_RPCS].sort()).toEqual(keys.sort())
   })
