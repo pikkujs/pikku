@@ -185,26 +185,35 @@ export interface WorkflowRunStatus {
  * Read and delete access to stored workflow runs, for consoles and status
  * routes. It applies no ownership check of its own: callers that expose it to
  * users check with `assertWorkflowRunOwner` first.
+ *
+ * @example snippet: workflowApprovalsWaiting
  */
 export interface WorkflowRunService {
+  /** Runs newest first, filtered by workflow and status. */
   listRuns(options?: {
     workflowName?: string
     status?: string
     limit?: number
     offset?: number
   }): Promise<WorkflowRun[]>
+  /** One run, or `null` if it does not exist. */
   getRun(id: string): Promise<WorkflowRun | null>
+  /** A run's steps, each with the function that ran it and its input. */
   getRunSteps(
     runId: string
   ): Promise<
     Array<StepState & { stepName: string; rpcName?: string; data?: any }>
   >
+  /** Every attempt at every step of a run, retries included. */
   getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
+  /** The names of the workflows that have stored runs. */
   getDistinctWorkflowNames(): Promise<string[]>
+  /** The graph stored for one version of a workflow. */
   getWorkflowVersion(
     name: string,
     graphHash: string
   ): Promise<{ graph: any; source: string } | null>
+  /** Deletes a run, reporting whether there was one. */
   deleteRun(id: string): Promise<boolean>
 }
 

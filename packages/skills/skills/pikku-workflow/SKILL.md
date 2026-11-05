@@ -77,7 +77,7 @@ collides with.
 
 ### PKU641 — DSL static analysis error
 
-`pikkuWorkflowFunc` statically analyzes the body: **every `const`/`let` must be top-level, not inside any block (`if`, `for`, `while`, …).** Assignments inside blocks are fine — only declarations trigger it.
+`pikkuWorkflowFunc` statically analyzes the body: **every `const`/`let` must be top-level, not inside any block (`if`, `for`, `while`, …).** Assignments inside blocks are fine — only declarations trigger it. "Could not determine input parameter name" is the same code: take the input as a plain `data` and read `data.x`, rather than destructuring it. `pikku doc PKU641` lists the rest.
 
 ```typescript
 // ❌ PKU641 — declaration inside block
@@ -219,6 +219,21 @@ re-closed gate depending on timing. Both are audited.
 
 A gate declaring neither option accepts a decision from anyone the approve
 route lets through; gate the route with `auth`/`permissions` to narrow that.
+
+#### Answering and listing gates
+
+Yes and no take the same path. `workflowService.approveStep(runId, reason, decision, session)`
+records the answer, or the generated `POST /workflow/:workflowName/approve/:runId`
+when `scaffold.workflow` is set. Put the yes or no in `schema` and branch on
+`decision.data`: there is no separate decline, and `updateRunStatus(runId, 'cancelled')`
+is not one, because it skips compensation and the body never sees the answer.
+
+There is no query for waiting runs either. Use `workflowRunService.listRuns({ workflowName, status: 'suspended' })`,
+then `getRunSteps(run.id)` for the running step whose `rpcName` is
+`pikkuWorkflowApproval`; `step.data.reason` is the gate. The status alone also
+matches a plain `workflow.suspend`, and the service checks no ownership.
+
+`pikku doc WorkflowApprovalOptions` and `pikku doc WorkflowRunService` show both.
 
 #### What survives the run
 

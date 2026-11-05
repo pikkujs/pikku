@@ -1,6 +1,7 @@
 import assert from 'node:assert'
 import { describe, test } from 'node:test'
 
+import { ErrorCode } from '@pikku/inspector'
 import { renderSurfaceDoc } from './render-surface-doc.js'
 import { readShippedSurfaceDoc } from './shipped-surface-doc.js'
 import type { SurfaceDoc, SurfaceDocSymbol } from './surface-doc.types.js'
@@ -299,5 +300,30 @@ describe('a guessed name', () => {
       () => renderSurfaceDoc(doc, { target: 'qqqzzzwibble' }),
       /Run 'pikku doc' for the index/
     )
+  })
+
+  test('an error code answers pikku doc, in either case', () => {
+    assert.ok(doc)
+    const answer = renderSurfaceDoc(doc, { target: 'pku641' })
+    assert.equal(answer, renderSurfaceDoc(doc, { target: 'PKU641' }))
+    assert.match(answer, /INVALID_DSL_WORKFLOW/)
+    assert.match(answer, /input parameter name/)
+    assert.match(answer, /fix\n/)
+    for (const code of Object.values(ErrorCode)) {
+      assert.match(renderSurfaceDoc(doc, { target: code }), new RegExp(code))
+    }
+  })
+
+  test('the approval path is reachable from pikku doc', () => {
+    assert.ok(doc)
+    const read = (target: string) => renderSurfaceDoc(doc, { target })
+    assert.match(
+      read('WorkflowApprovalOptions'),
+      /workflowService\.approveStep\(/
+    )
+    assert.match(read('WorkflowRunService'), /pikkuWorkflowApproval/)
+    assert.match(read('ApprovalOutcome'), /decision\.data\.approve/)
+    assert.match(read('workflow'), /a no is an answer/)
+    assert.match(read('TypedWorkflow'), /FlattenedRPCMap/)
   })
 })

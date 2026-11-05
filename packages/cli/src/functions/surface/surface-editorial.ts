@@ -203,7 +203,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     step: 'orchestrate it',
     skill: 'pikku-workflow',
     summary:
-      'Composes functions into a durable workflow whose steps survive a restart and retry on their own. A trigger starts one from a function with `rpc.startWorkflow(name, input)`, which returns `{ runId }` without waiting.',
+      'Composes functions into a durable workflow whose steps survive a restart and retry on their own. A trigger starts one from a function with `rpc.startWorkflow(name, input)`, which returns `{ runId }` without waiting. `workflow.approval(reason, { schema })` holds a run for a human: `workflowService.approveStep(runId, reason, decision, session)` answers it, and a no is an answer in `decision`, not a cancellation. `pikku doc WorkflowApprovalOptions` shows that, and `pikku doc WorkflowRunService` how to find the runs waiting.',
   },
   agent: {
     step: 'orchestrate it',
