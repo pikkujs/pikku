@@ -7,7 +7,7 @@ installGroups: [core]
 
 # Pikku Workflow
 
-What to reach for and why. For how to call it, run this once: `pikku doc workflow pikkuWorkflowFunc TypedWorkflow WorkflowStepOptions WorkflowApprovalOptions wireScheduler`. Depth: `references/workflow-reference.md`.
+What to reach for and why. For how to call it, run this once: `pikku doc workflow pikkuWorkflowFunc TypedWorkflow WorkflowStepOptions WorkflowApprovalOptions WorkflowRunService wireScheduler`. Depth: `references/workflow-reference.md`.
 
 ## Is it a workflow?
 
@@ -27,4 +27,5 @@ What to reach for and why. For how to call it, run this once: `pikku doc workflo
 - A trigger never calls `rpc.invoke`, and never adds scheduler or workflow services: `pikku dev`, `pikku serve` and stages bring them.
 - Workflows go in `packages/functions/src/wirings/*.workflow.ts`, exported. Start, run and status routes come from `scaffold.workflow`.
 - On a schedule, the `wireScheduler` func is a `pikkuVoidFunc` that only starts the workflow. A cron has no session.
+- An approval takes a real `schema`, and the workflow branches on the result. A no is an answer (`approveStep` with `{ approve: false }`), never `updateRunStatus('cancelled')`, which skips compensation. Waiting approvals come from `WorkflowRunService`, not the `workflowRuns` table.
 - `approvers` defaults to `any`, which is not an authorization boundary: set `owner` or `not-initiator` when it matters who decides.
