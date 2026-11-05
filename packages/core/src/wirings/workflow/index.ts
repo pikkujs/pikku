@@ -30,6 +30,7 @@ export type {
   WorkflowRunExtension,
 } from './workflow-run-engine.types.js'
 export { deriveInvocationId, uuidv5 } from './workflow-invocation-id.js'
+export { runTraceWire } from './workflow-run-trace.js'
 
 export { isRef } from './graph/workflow-graph.types.js'
 export type { RefValue } from './graph/workflow-graph.types.js'

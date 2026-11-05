@@ -81,6 +81,20 @@ Options:
 }
 ```
 
+### Tracing
+
+A job continues the trace of the function that enqueued it. Inside a function,
+`queueService.add` stamps `JobOptions.traceparent` from the wire, and the worker
+gets the same trace id in a new span on `wire.trace`. Pass `traceparent` yourself
+only to override it.
+
+Nothing stamps a job added from a singleton service, or from a queue service
+captured at start-up. That job starts a new trace. Pass `traceparent:
+rpc.traceparent` when you need to carry it through one of those.
+
+A custom `QueueService` must carry `traceparent` and set it on `QueueJob`. A
+missing or invalid one starts a new trace; it is never an error.
+
 ## Usage Patterns
 
 ### Basic Queue Worker

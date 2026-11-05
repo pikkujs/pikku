@@ -38,6 +38,8 @@ export interface PikkuDoStepDispatch {
   data: unknown
   retries?: number
   retryDelay?: string | number
+  /** The run's W3C trace, for the step to continue. */
+  traceparent?: string
 }
 
 /**
@@ -510,6 +512,7 @@ export class PikkuWorkflowDoService<
       data,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay,
+      traceparent: await this.getRunTraceparent(runId),
     })
     return true
   }
@@ -596,7 +599,13 @@ export class PikkuWorkflowDoService<
         `No step worker binding for rpcName=${rpcName} (looked up env['${toStepBindingName(rpcName)}'])`
       )
     }
-    await stub.run({ runId, stepName, rpcName, data })
+    await stub.run({
+      runId,
+      stepName,
+      rpcName,
+      data,
+      traceparent: await this.getRunTraceparent(runId),
+    })
   }
 
   // ─── Internals ────────────────────────────────────────────────────

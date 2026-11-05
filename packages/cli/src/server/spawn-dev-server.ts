@@ -94,7 +94,7 @@ export const createReadyBarrier = (label: string): ReadyBarrier => {
 
 export interface SpawnedServer {
   /** Kills the whole process group, so the server's own children go with it. */
-  stop: () => void
+  stop: (signal?: NodeJS.Signals) => void
   /** Resolves on the ready marker; rejects if the server dies or never reports. */
   waitUntilReady: (options?: { timeoutMs?: number }) => Promise<void>
 }
@@ -159,12 +159,12 @@ export const spawnDevServer = async (
 
   return {
     waitUntilReady: barrier.wait,
-    stop: () => {
+    stop: (signal = 'SIGTERM') => {
       child.stdout?.destroy()
       child.stderr?.destroy()
       if (child.pid) {
         try {
-          process.kill(-child.pid, 'SIGTERM')
+          process.kill(-child.pid, signal)
         } catch {
           // Process group may already be gone
         }

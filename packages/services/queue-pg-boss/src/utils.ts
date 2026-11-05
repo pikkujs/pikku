@@ -1,3 +1,4 @@
+import { unwrapJobTrace } from '@pikku/core/queue'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 import type { PgBoss, JobWithMetadata } from 'pg-boss'
 
@@ -29,10 +30,12 @@ export const mapPgBossJobToQueueJob = <In, Out>(
   pgBossJob: JobWithMetadata<In>,
   pgBossInstance: PgBoss
 ): QueueJob<In, Out> => {
+  const { data, traceparent } = unwrapJobTrace(pgBossJob.data)
   return {
     queueName: pgBossJob.name,
     id: pgBossJob.id || '',
-    data: pgBossJob.data,
+    data,
+    traceparent,
     status: async () => {
       const jobWithState = await pgBossInstance.getJobById(
         pgBossJob.name,
@@ -80,7 +83,7 @@ export const mapPgBossJobToQueueJob = <In, Out>(
           pgBossJob.state === 'failed' && pgBossJob.completedOn
             ? new Date(pgBossJob.completedOn)
             : undefined,
-        error: (pgBossJob.data as any).error,
+        error: data?.error,
       }
     },
   }

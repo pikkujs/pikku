@@ -85,6 +85,14 @@ export class SQSQueueService implements QueueService {
       QueueUrl: queueUrl,
       MessageBody: JSON.stringify(data),
       DelaySeconds: delaySeconds,
+      MessageAttributes: options?.traceparent
+        ? {
+            traceparent: {
+              DataType: 'String',
+              StringValue: options.traceparent,
+            },
+          }
+        : undefined,
     })
 
     const response = await this.client.send(command)

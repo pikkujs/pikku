@@ -10,6 +10,7 @@ import {
 } from '../channel-middleware-runner.js'
 import { runPermissions, type PermissionWire } from '../permissions.js'
 import { withoutSecrets } from '../services/secretless.js'
+import { traceQueueService } from './trace-queue-service.js'
 import { getCreateWireServices, pikkuState } from '../pikku-state.js'
 import {
   applyDefaultsFromSchema,
@@ -573,6 +574,15 @@ export const runPikkuFunc = async <In = any, Out = any>(
           resolvedSingletonServices.logger
         )
         services = { ...services, auditLog: invocationAuditLog }
+      }
+      if (services.queueService && invocationWire.trace) {
+        services = {
+          ...services,
+          queueService: traceQueueService(
+            services.queueService,
+            invocationWire
+          ),
+        }
       }
       // Unconditional, unlike the audit — every function can record. Built on
       // first access, since most invocations record nothing.

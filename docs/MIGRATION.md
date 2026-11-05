@@ -35,6 +35,18 @@ Pikku now uses W3C trace context. An HTTP request's `wire.traceId` is 32 lowerca
 
 To find affected code, search for `x-request-id`, `generateRequestId`, `cf-ray` and custom `DeploymentService` implementations.
 
+### Jobs and workflow runs carry `traceparent`
+
+A job, a scheduled task and a workflow run now stay on the trace that started them. `wire.traceId` on those wires is 32 lowercase hex, not `q-<id>` or `cron-<id>`, and every wire has `wire.trace`.
+
+- `runQueueJob` no longer takes `traceId`; set `job.traceparent`. `runScheduledTask` takes `traceparent`.
+- `RemoteQueueJobData` and `RemoteScheduledJobData` take `traceparent` instead of `traceId`. A sender that used `traceId` as the job id must send `jobId` as well.
+- A custom `QueueService` must carry `JobOptions.traceparent` and set `QueueJob.traceparent`. A custom `SchedulerService` takes `traceparent` as the last argument of `scheduleRPC`.
+- BullMQ and pg-boss store a traced job as `{ __pikkuTraceparent, data }`. `job.data` is unchanged, and old jobs still parse. Code reading Redis or the pg-boss tables directly sees the wrapper.
+- `WorkflowRunWire` gains `traceparent`, and `createRun` sets it when the wire has none. No schema change: stores keep `wire` as it is.
+
+To find affected code, search for `traceId` passed to `runQueueJob`, `runScheduledTask`, or a remote job body, and for custom `QueueService` and `SchedulerService` implementations.
+
 ### `pikku verify` fails on an app function nothing uses
 
 An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked. Workflows are checked too: a workflow that is not wired, exposed or started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step) is reported.
@@ -115,7 +127,7 @@ types are `StudioManifest`, `StudioScreen`, `StudioComponentScreen`,
 
 | Before                          | After                                                                            |
 | ------------------------------- | -------------------------------------------------------------------------------- |
-| `defineScreens({ title, ... })` | `definePlugin({ title, screens })`                                                |
+| `defineScreens({ title, ... })` | `definePlugin({ title, screens })`                                               |
 | `title: 'Inbox'`                | `title: 'inbox__title'`, a key in `messages/{locale}.json`                       |
 | top-level `icon`                | removed; a screen's `nav.icon`                                                   |
 | `nav: true`                     | `nav: { area: 'rail' \| 'team' \| 'project' \| 'account', icon, order, badge? }` |

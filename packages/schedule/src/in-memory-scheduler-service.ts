@@ -4,16 +4,14 @@ import type {
   ScheduledTaskInfo,
   ScheduledTaskSummary,
 } from '@pikku/core/services'
-import type {
-  ScheduledTaskRun,
-  ScheduledTaskRuns,
-} from '@pikku/core/scheduler'
+import type { ScheduledTaskRun, ScheduledTaskRuns } from '@pikku/core/scheduler'
 import { SchedulerService } from '@pikku/core/services'
 import { parseDurationString } from '@pikku/core/utils'
 import { pikkuState, getSingletonServices } from '@pikku/core/state'
 import { runScheduledTask } from '@pikku/core/scheduler'
 import { getScheduledTasks } from '@pikku/core/scheduler'
 import { rpcService } from '@pikku/core/rpc'
+import { continueTrace } from '@pikku/core/trace'
 
 interface DelayedTask {
   taskId: string
@@ -49,7 +47,8 @@ export class InMemorySchedulerService extends SchedulerService {
     delay: number | string,
     rpcName: string,
     data?: any,
-    session?: CoreUserSession
+    session?: CoreUserSession,
+    traceparent?: string
   ): Promise<string> {
     const delayMs =
       typeof delay === 'string' ? parseDurationString(delay) : delay
@@ -74,9 +73,10 @@ export class InMemorySchedulerService extends SchedulerService {
         // This matches what the BullMQ and pg-boss schedulers already do:
         // enqueue `{ rpcName, data, session }` and invoke the RPC with it.
         const services = getSingletonServices()
+        const trace = continueTrace(traceparent)
         const rpc = rpcService.getContextRPCService(
           services as any,
-          {},
+          { traceId: trace.traceId, trace },
           false
         ) as { invoke: (name: string, data: unknown) => Promise<unknown> }
         await rpc.invoke(rpcName, data)

@@ -63,8 +63,6 @@ import {
   WorkflowAsyncException,
   WorkflowDispatchException,
   WorkflowNotFoundError,
-  WorkflowRunCancelledError,
-  WorkflowRunFailedError,
   WorkflowRunNotFoundError,
   WorkflowStepNameNotString,
   WorkflowStepSupersededError,
@@ -101,7 +99,8 @@ import {
   nullWhenStepHeld,
 } from './workflow-run-lease.js'
 import type { LeaseService } from '../../services/lease-service.js'
-import { summarizeRunStatus } from './workflow-run-status.js'
+import { runOutput, summarizeRunStatus } from './workflow-run-status.js'
+import { writeRunMirror } from './workflow-run-mirror.js'
 import {
   runningStepLease,
   startStepLeaseRefresh,
@@ -113,6 +112,7 @@ import {
   startQueuedChildStep,
 } from './workflow-child-step.js'
 import { runDslWorkflowPass } from './workflow-dsl-pass.js'
+import { runTraceWire, withRunTrace } from './workflow-run-trace.js'
 import {
   childRunFailure,
   failRunOrUnwind,
@@ -215,19 +215,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     mirror: (mirror: WorkflowRunMirror, written: T) => Promise<void>
   ): Promise<T> {
     const written = await write()
-    if (this.mirror) {
-      try {
-        await mirror(this.mirror, written)
-      } catch (err: any) {
-        try {
-          this.logger?.warn?.(
-            `[pikku] WorkflowRunMirror write failed: ${err?.message ?? err}`
-          )
-        } catch {
-          // knowledge: decisions/internals/workflow-run-mirror-is-never-a-source-of-truth.md
-        }
-      }
-    }
+    await writeRunMirror(
+      this.mirror,
+      () => this.logger,
+      (target) => mirror(target, written)
+    )
     return written
   }
 
@@ -282,6 +274,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       plannedSteps?: WorkflowPlannedStep[]
     }
   ): Promise<string> {
+    wire = withRunTrace(wire)
     await storeWorkflowVersion(this, workflowName, graphHash)
     return this.mirrored(
       () =>
@@ -659,15 +652,27 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     workflowName?: string,
     delay?: number
   ): Promise<void> {
+    await this.addOrchestratorJob(runId, workflowName, {
+      ...this.resolveStepJobOptions(),
+      ...(delay !== undefined ? { delay } : {}),
+    })
+  }
+
+  private async addOrchestratorJob(
+    runId: string,
+    workflowName: string | undefined,
+    options: JobOptions
+  ): Promise<void> {
     const queueService = requireQueueService()
-    workflowName ??= (await this.getRun(runId))?.workflow
+    const run = await this.getRunIdentity(runId)
+    workflowName ??= run?.workflow
     await queueService.add(
       this.getOrchestratorQueueName(workflowName),
       { runId },
       {
-        ...this.resolveStepJobOptions(),
-        ...(delay !== undefined ? { delay } : {}),
+        ...options,
         group: this.getJobGroup(workflowName),
+        traceparent: run?.wire?.traceparent,
       }
     )
   }
@@ -769,13 +774,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepOptions?: WorkflowStepOptions,
     fromStepName?: string
   ): Promise<void> {
-    const queueService = requireQueueService()
-    await queueService.add(
+    await requireQueueService().add(
       this.getStepWorkerQueueName(rpcName),
       { runId, stepName, rpcName, data, fromStepName },
       {
         ...this.resolveStepJobOptions(stepOptions),
         group: this.getJobGroup(rpcName),
+        traceparent: await this.getRunTraceparent(runId),
       }
     )
   }
@@ -793,20 +798,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     retryDelay?: number | string,
     workflowName?: string
   ): Promise<void> {
-    const queueService = requireQueueService()
-    if (!workflowName) {
-      const run = await this.getRun(runId)
-      workflowName = run?.workflow
-    }
-    await queueService.add(
-      this.getOrchestratorQueueName(workflowName),
-      { runId },
-      {
-        ...(retryDelay
-          ? { delay: getDurationInMilliseconds(retryDelay) }
-          : undefined),
-        group: this.getJobGroup(workflowName),
-      }
+    await this.addOrchestratorJob(
+      runId,
+      workflowName,
+      retryDelay ? { delay: getDurationInMilliseconds(retryDelay) } : {}
     )
   }
 
@@ -825,13 +820,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       return false
     }
     try {
-      await getSingletonServices()!.queueService!.add(
-        this.getStepWorkerQueueName(rpcName),
-        { runId, stepName, rpcName, data, fromStepName },
-        {
-          ...this.resolveStepJobOptions(stepOptions),
-          group: this.getJobGroup(rpcName),
-        }
+      await this.queueStepWorker(
+        runId,
+        stepName,
+        rpcName,
+        data,
+        stepOptions,
+        fromStepName
       )
     } catch (cause) {
       throw new WorkflowDispatchException(runId, stepName, { cause })
@@ -853,7 +848,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await getSingletonServices()!.schedulerService!.scheduleRPC(
       duration,
       this.getConfig().sleeperRPCName,
-      { runId, stepId }
+      { runId, stepId },
+      undefined,
+      await this.getRunTraceparent(runId)
     )
     return true
   }
@@ -866,6 +863,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       updateRunStatus: this.updateRunStatus.bind(this),
       onChildWorkflowFailed: this.onChildWorkflowFailed.bind(this),
       verifyStepName: this.verifyStepName.bind(this),
+      getRunTraceparent: this.getRunTraceparent.bind(this),
     }
     const extension = create(engine)
     this.runExtension = extension
@@ -888,6 +886,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       onRunCreated?: (runId: string) => void
     }
   ): Promise<{ runId: string }> {
+    wire = {
+      ...wire,
+      traceparent: wire?.traceparent ?? rpcService?.traceparent,
+    }
     const resolved = resolveWorkflowMeta(name)
     const workflowMeta = resolved?.meta
     const packageName = resolved?.packageName ?? null
@@ -1016,18 +1018,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       rpcService,
       { inline: true }
     )
-    const run = await this.awaitRunEnd(runId, options?.pollIntervalMs ?? 1000)
-    if (
-      run.status === 'failed' ||
-      run.status === 'compensated' ||
-      run.status === 'compensation_failed'
-    ) {
-      throw new WorkflowRunFailedError(run.error?.message)
-    }
-    if (run.status === 'cancelled') {
-      throw new WorkflowRunCancelledError()
-    }
-    return run.output
+    return runOutput(
+      await this.awaitRunEnd(runId, options?.pollIntervalMs ?? 1000)
+    )
   }
 
   protected async awaitRunEnd(
@@ -1116,6 +1109,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       replay.run = run
     }
     return run
+  }
+
+  /** The trace every hop of the run stays on. */
+  public async getRunTraceparent(runId: string): Promise<string | undefined> {
+    return (await this.getRunIdentity(runId))?.wire?.traceparent
   }
 
   private lastStepName(runId: string): string | undefined {
@@ -1389,7 +1387,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             rpcName,
             data,
             rpcService,
-            run.wire?.pikkuUserId
+            run.wire
           )
         } else {
           result = await this.invokeStepRpc(
@@ -1511,6 +1509,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ): Promise<any> {
     const run = knownRun ?? (await this.getRunIdentity(runId))
     return rpcService.rpcWithWire(rpcName, data, {
+      ...runTraceWire(run?.wire?.traceparent),
       ...(run?.wire?.pikkuUserId ? { pikkuUserId: run.wire.pikkuUserId } : {}),
       ...(compensatingFor
         ? {
@@ -1635,7 +1634,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             rpcName,
             data,
             rpcService,
-            (await this.getRunIdentity(runId))?.wire?.pikkuUserId
+            (await this.getRunIdentity(runId))?.wire
           )
         }
 

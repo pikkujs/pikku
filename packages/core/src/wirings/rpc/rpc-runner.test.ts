@@ -958,6 +958,28 @@ describe('ContextAwareRPCService.mesh', () => {
     )
   })
 
+  test('a step that resolves to the mesh sends the run trace, not the service wire', async () => {
+    const calls: unknown[][] = []
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            calls.push(args)
+            return { ok: true }
+          },
+        },
+      }),
+      {} as never,
+      {}
+    )
+
+    await service.rpcWithWire('missingRpc', {}, {
+      trace: REMOTE_TRACE,
+    } as never)
+
+    assert.deepEqual(calls, [['missingRpc', {}, undefined, REMOTE_TRACEPARENT]])
+  })
+
   test('uses deploymentService with session and traceparent', async () => {
     const calls: unknown[][] = []
     const service = new ContextAwareRPCService(

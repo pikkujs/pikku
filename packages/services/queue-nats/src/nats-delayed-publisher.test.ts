@@ -8,6 +8,7 @@ import {
   BACKOFF_TYPE_HEADER,
   NATS_MSG_ID_HEADER,
   PIKKU_USER_ID_HEADER,
+  TRACEPARENT_HEADER,
   SCHEDULE_HEADER,
   SCHEDULE_SUBJECT_SEGMENT,
   SCHEDULE_TARGET_HEADER,
@@ -141,6 +142,15 @@ describe('NatsDelayedPublisher — job options that survive the delay', () => {
       pikkuUserId: 'u1',
     })
     assert.equal(published[0]!.headers[PIKKU_USER_ID_HEADER], 'u1')
+  })
+
+  test('traceparent survives the delay', async () => {
+    const { js, published } = fakeJs()
+    const traceparent = `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`
+    await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1, {
+      traceparent,
+    })
+    assert.equal(published[0]!.headers[TRACEPARENT_HEADER], traceparent)
   })
 
   test('jobId is dropped rather than carried, in both of its meanings', async () => {

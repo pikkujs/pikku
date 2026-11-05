@@ -12,6 +12,8 @@ export type PikkuRPC<
 > = {
   depth: number
   global: boolean
+  /** The W3C trace of the invocation holding this `rpc`, if it is in one. */
+  traceparent?: string
   invoke: Invoke
   mesh: Mesh
   exposed: (name: string, data: any) => Promise<any>

@@ -65,6 +65,7 @@ export class InMemoryQueueService implements QueueService {
         status: () => 'active',
         metadata: () => ({ attemptsMade, maxAttempts, createdAt }),
         pikkuUserId: options?.pikkuUserId,
+        traceparent: options?.traceparent,
       }
       try {
         await runQueueJob({ job })

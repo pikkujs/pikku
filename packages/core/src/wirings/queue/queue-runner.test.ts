@@ -703,3 +703,60 @@ describe('runQueueJob with pikkuState services', () => {
     )
   })
 })
+
+describe('runQueueJob trace', () => {
+  const TRACE_ID = 'a'.repeat(32)
+  const PARENT = 'b'.repeat(16)
+
+  const run = async (job: QueueJob) => {
+    let seen: any
+    const worker: CoreQueueWorker = {
+      name: 'traced-queue',
+      func: {
+        func: async (_services: any, _data: any, wire: any) => {
+          seen = wire
+        },
+        auth: false,
+      },
+    }
+    pikkuState(null, 'queue', 'meta')['traced-queue'] = {
+      pikkuFuncId: 'queue_traced-queue',
+      name: 'traced-queue',
+    }
+    addTestQueueFunction('queue_traced-queue')
+    wireQueueWorker(worker)
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: createMockLogger(),
+    } as any)
+    await runQueueJob({ job })
+    return seen
+  }
+
+  test('continues the trace the job carries, in a new span', async () => {
+    const wire = await run({
+      ...createMockJob('traced-queue', 'job-1'),
+      traceparent: `00-${TRACE_ID}-${PARENT}-01`,
+    })
+    assert.equal(wire.traceId, TRACE_ID)
+    assert.equal(wire.trace.traceId, TRACE_ID)
+    assert.equal(wire.trace.parentSpanId, PARENT)
+    assert.notEqual(wire.trace.spanId, PARENT)
+    assert.ok(wire.queue, 'the job context stays on wire.queue')
+  })
+
+  test('a job with no traceparent gets a fresh valid trace', async () => {
+    const wire = await run(createMockJob('traced-queue', 'job-2'))
+    assert.match(wire.trace.traceId, /^[0-9a-f]{32}$/)
+    assert.equal(wire.trace.parentSpanId, undefined)
+    assert.ok(!wire.trace.traceId.includes('job-2'))
+  })
+
+  test('an invalid traceparent falls back to a fresh valid trace', async () => {
+    const wire = await run({
+      ...createMockJob('traced-queue', 'job-3'),
+      traceparent: 'q-not-a-trace',
+    })
+    assert.match(wire.trace.traceId, /^[0-9a-f]{32}$/)
+    assert.equal(wire.trace.parentSpanId, undefined)
+  })
+})

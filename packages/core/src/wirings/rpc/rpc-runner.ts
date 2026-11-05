@@ -359,6 +359,10 @@ export class ContextAwareRPCService {
     private packageName: string | null = null
   ) {}
 
+  public get traceparent(): string | undefined {
+    return outgoingTraceparent(this.wire)
+  }
+
   public async rpcExposed(funcName: string, data: any): Promise<any> {
     const addonCaller = addonCallerOf(this.wire)
     if (addonCaller && !addonMayReach(addonCaller, funcName)) {
@@ -581,7 +585,8 @@ export class ContextAwareRPCService {
         addonCall.namespace,
         addonCall.fnName,
         data,
-        addonCall.addonConfig
+        addonCall.addonConfig,
+        outgoingTraceparent(wire)
       )
     }
 
@@ -605,7 +610,8 @@ export class ContextAwareRPCService {
     namespace: string,
     fnName: string,
     data: In,
-    cfg: ResolvedFunction['addonConfig']
+    cfg: ResolvedFunction['addonConfig'],
+    traceparent: string | undefined
   ): Promise<Out> {
     const serverUrl =
       typeof cfg.serverUrl === 'function'
@@ -654,7 +660,6 @@ export class ContextAwareRPCService {
     if (token) {
       headers.authorization = `Bearer ${token}`
     }
-    const traceparent = outgoingTraceparent(this.wire)
     if (traceparent) {
       headers.traceparent = traceparent
     }
@@ -770,7 +775,12 @@ export class ContextAwareRPCService {
     input: In,
     options?: {
       startNode?: string
-      wire?: { type: string; id?: string; parentRunId?: string }
+      wire?: {
+        type: string
+        id?: string
+        parentRunId?: string
+        traceparent?: string
+      }
     }
   ): Promise<{ runId: string }> {
     if (!this.services.workflowService) {
@@ -780,11 +790,17 @@ export class ContextAwareRPCService {
       workflowName = this.mapUsedAddon(workflowName)
     }
     const parentRunId = this.wire.workflowStep?.runId ?? this.wire.graph?.runId
-    const wire = options?.wire ?? {
-      type: this.wire.wireType ?? 'unknown',
-      id: this.wire.wireId,
-      ...(parentRunId ? { parentRunId } : {}),
-      ...(this.wire.pikkuUserId ? { pikkuUserId: this.wire.pikkuUserId } : {}),
+    const traceparent = options?.wire?.traceparent ?? this.traceparent
+    const wire = {
+      ...(options?.wire ?? {
+        type: this.wire.wireType ?? 'unknown',
+        id: this.wire.wireId,
+        ...(parentRunId ? { parentRunId } : {}),
+        ...(this.wire.pikkuUserId
+          ? { pikkuUserId: this.wire.pikkuUserId }
+          : {}),
+      }),
+      ...(traceparent ? { traceparent } : {}),
     }
     return this.services.workflowService.startWorkflow(
       workflowName,
@@ -914,6 +930,10 @@ class ContextRPCView {
     this.exposed = serviceRPC.rpcExposed.bind(serviceRPC)
     this.startWorkflow = serviceRPC.startWorkflow.bind(serviceRPC)
     this.rpcWithWire = serviceRPC.rpcWithWire.bind(serviceRPC)
+  }
+
+  get traceparent() {
+    return this.serviceRPC.traceparent
   }
 
   get agent() {

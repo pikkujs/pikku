@@ -5,23 +5,23 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3350 observable things**: 1128 exported names, plus
-2222 members on the classes and interfaces among them, reachable
-through 63 entry points.
+**3368 observable things**: 1140 exported names, plus
+2228 members on the classes and interfaces among them, reachable
+through 64 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 170 | 144 | 436 |
+| `./services` | 170 | 144 | 437 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
-| `./workflow` | 91 | 40 | 151 |
+| `./workflow` | 92 | 41 | 153 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 24 | 21 | 82 |
-| `./queue` | 26 | 26 | 73 |
+| `./queue` | 28 | 28 | 75 |
 | `./http` | 27 | 27 | 58 |
 | `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
@@ -57,6 +57,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
+| `./trace` | 9 | 9 | 0 |
 | `./webhook` | 7 | 7 | 1 |
 | `./hmac` | 8 | 8 | 0 |
 | `./state` | 9 | 8 | 0 |
@@ -1228,6 +1229,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected async awaitRunEnd(runId: string, maxIntervalMs: number): Promise<WorkflowRun>
   protected async waitBeforeNextRead(ms: number): Promise<void>
   protected async listStepStates(_runId: string): Promise<Array<StepState & { stepName: string }> | null>
+  public async getRunTraceparent(runId: string): Promise<string | undefined>
   public async runWorkflowJob(runId: string, rpcService: PikkuRPC): Promise<void>
   public notifyChildWorkflowFailed(childRun: WorkflowRun, error: Error): Promise<void>
   protected async onChildWorkflowFailed(childRun: WorkflowRun, error: Error): Promise<void>
@@ -1292,6 +1294,7 @@ export interface RpcStepMeta {
   expectEventually?: boolean
 }
 export type RunTimeline = RunTimelineEvent[]
+runTraceWire: (traceparent: string | undefined) => { traceId?: string | undefined; trace?: TraceContext | undefined; }
 export interface SetStepMeta {
   type: 'set'
   variable: string
@@ -1405,6 +1408,7 @@ export interface WorkflowRunEngine {
   updateRunStatus(runId: string, status: WorkflowStatus, output?: any, error?: SerializedError): Promise<void>
   onChildWorkflowFailed(run: WorkflowRun, error: unknown): Promise<void>
   verifyStepName(stepName: unknown): void
+  getRunTraceparent(runId: string): Promise<string | undefined>
 }
 export interface WorkflowRunExtension {
   attachRunContext(runId: string, workflowMeta: any, options?: Record<string, any>): Promise<void>
@@ -1463,6 +1467,7 @@ export interface WorkflowRunWire {
   parentRunId?: string
   parentStepId?: string
   pikkuUserId?: string
+  traceparent?: string
 }
 export interface WorkflowService {
   wireQueueWorkers?(): void
@@ -2201,6 +2206,7 @@ export interface WorkflowRunWire {
   parentRunId?: string
   parentStepId?: string
   pikkuUserId?: string
+  traceparent?: string
 }
 export interface WorkflowService {
   wireQueueWorkers?(): void
@@ -3043,6 +3049,7 @@ export interface JobOptions {
   jobId?: string
   pikkuUserId?: string
   group?: JobGroup
+  traceparent?: string
 }
 export interface PikkuJobConfig {
   retryAttempts?: number
@@ -3063,7 +3070,7 @@ export interface PikkuQueue {
   fail: (reason?: string) => Promise<void>
   discard: (reason?: string) => Promise<void>
 }
-pikkuRemoteQueueJobFunc: ({ logger }: { logger: Logger; }, { queueName, data, jobId, traceId }: RemoteQueueJobData) => Promise<void>
+pikkuRemoteQueueJobFunc: ({ logger }: { logger: Logger; }, { queueName, data, jobId, traceparent }: RemoteQueueJobData) => Promise<void>
 export interface PikkuWorkerConfig {
   name?: string
   batchSize?: number
@@ -3101,6 +3108,7 @@ export interface QueueJob<T = any, R = any> {
   waitForCompletion?: (ttl?: number) => Promise<R>
   metadata?: () => Promise<QueueJobMetadata> | QueueJobMetadata
   pikkuUserId?: string
+  traceparent?: string
 }
 export type QueueJobCounts = Record<QueueJobStatus, number>
 export class QueueJobDiscardedError extends PikkuError {
@@ -3146,7 +3154,7 @@ export type QueueWorkersMeta = Record<
   }
 >
 registerQueueWorkers: <T = any>(configMappings: QueueConfigMapping, logger: Logger, registerCallback: QueueRegistrationCallback<T>) => Promise<Record<string, ConfigValidationResult[]>>
-runQueueJob: ({ job, updateProgress, traceId, }: { job: QueueJob<any, any>; updateProgress?: ((progress: string | number | object) => Promise<void>) | undefined; traceId?: string | undefined; }) => Promise<void>
+runQueueJob: ({ job, updateProgress, }: { job: QueueJob<any, any>; updateProgress?: ((progress: string | number | object) => Promise<void>) | undefined; }) => Promise<void>
 export class SignedQueueService implements QueueService {
   constructor(private readonly queueService: QueueService, private readonly secrets: SecretService, private readonly logger: Logger)
   get supportsResults(): boolean
@@ -3154,7 +3162,9 @@ export class SignedQueueService implements QueueService {
   public async getJob<T, R>(queueName: string, jobId: string): Promise<QueueJob<T, R> | null>
   public get inspect(): | ((queueName: string, opts?: { limit?: number }) => Promise<QueueInspection>) | undefined
 }
+unwrapJobTrace: (payload: any) => { data: any; traceparent?: string | undefined; }
 wireQueueWorker: <InputData = any, OutputData = any, PikkuFunctionConfig extends CorePikkuFunctionConfig<CorePikkuFunctionSessionless<InputData, OutputData>> = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<InputData, OutputData>>>(queueWorker: CoreQueueWorker<PikkuFunctionConfig>) => void
+wrapJobTrace: (data: unknown, traceparent?: string | undefined) => any
 ```
 
 ## ./scheduler
@@ -3174,8 +3184,8 @@ export type CoreScheduledTask<
 }
 getScheduledTasks: () => Map<string, CoreScheduledTask>
 logSchedulers: (logger: Logger) => void
-pikkuRemoteScheduledJobFunc: ({ logger }: { logger: Logger; }, { taskName }: RemoteScheduledJobData) => Promise<void>
-runScheduledTask: ({ name, session, traceId, }: RunScheduledTasksParams) => Promise<void>
+pikkuRemoteScheduledJobFunc: ({ logger }: { logger: Logger; }, { taskName, traceparent }: RemoteScheduledJobData) => Promise<void>
+runScheduledTask: ({ name, session, traceparent, }: RunScheduledTasksParams) => Promise<void>
 export class ScheduledTaskNotFoundError extends PikkuError {
   constructor(title: string)
 }
@@ -3404,6 +3414,7 @@ export type PikkuRPC<
 > = {
   depth: number
   global: boolean
+  traceparent?: string
   invoke: Invoke
   mesh: Mesh
   exposed: (name: string, data: any) => Promise<any>
@@ -5459,10 +5470,11 @@ export interface RemoteQueueJobData {
   queueName: string
   data?: unknown
   jobId?: string
-  traceId?: string
+  traceparent?: string
 }
 export interface RemoteScheduledJobData {
   taskName: string
+  traceparent?: string
 }
 export interface RenderedEmailResult {
   locale: string
@@ -5512,7 +5524,7 @@ export interface ScheduledTaskSummary {
 }
 export abstract class SchedulerService {
   abstract init(): Promise<void>
-  abstract scheduleRPC(delay: number | string, rpcName: string, data?: any, session?: CoreUserSession): Promise<string>
+  abstract scheduleRPC(delay: number | string, rpcName: string, data?: any, session?: CoreUserSession, traceparent?: string): Promise<string>
   abstract unschedule(taskId: string): Promise<boolean>
   abstract getTask(taskId: string): Promise<ScheduledTaskInfo | null>
   abstract getAllTasks(): Promise<ScheduledTaskSummary[]>
@@ -5832,6 +5844,25 @@ export interface WebhookServiceConfig {
 withoutSecrets: <T extends object>(services: T, context: string) => SecretlessServices<T>
 export interface WriteFileArgs< TBucket extends string = string, > extends BucketKeyArgs<TBucket> {
   stream: ReadableStream | NodeJS.ReadableStream
+}
+```
+
+## ./trace
+
+```ts
+adoptTraceparent: (wire: { traceId?: string | undefined; trace?: TraceContext | undefined; }, header: unknown) => void
+continueTrace: (traceparent: unknown) => TraceContext
+createTrace: (traceId?: string | undefined) => TraceContext
+formatTraceparent: (trace: Pick<TraceContext, "traceId" | "sampled" | "spanId">) => string
+isValidTraceId: (value: unknown) => value is string
+outgoingTraceparent: (wire: { trace?: TraceContext | undefined; }) => string | undefined
+parseTraceparent: (header: unknown) => (Pick<TraceContext, "traceId" | "sampled"> & { parentSpanId: string; }) | undefined
+resolveHTTPTrace: (readHeader: () => unknown, logger: Logger, { traceId, trustInboundTraceparent, }: { traceId?: string | undefined; trustInboundTraceparent?: boolean | undefined; }) => TraceContext
+export type TraceContext = {
+  traceId: string
+  spanId: string
+  parentSpanId?: string
+  sampled: boolean
 }
 ```
 

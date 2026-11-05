@@ -38,6 +38,14 @@ export class SQSQueueService implements QueueService {
       new SendMessageCommand({
         QueueUrl: queueUrl,
         MessageBody: JSON.stringify(message),
+        MessageAttributes: options?.traceparent
+          ? {
+              traceparent: {
+                DataType: 'String',
+                StringValue: options.traceparent,
+              },
+            }
+          : undefined,
         DelaySeconds: options?.delay
           ? Math.min(Math.ceil(options.delay / 1000), 900)
           : undefined,

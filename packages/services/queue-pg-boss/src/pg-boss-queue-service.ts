@@ -1,6 +1,6 @@
 import type { PgBoss, Request as PgBossRequest } from 'pg-boss'
 import type { QueueJob, QueueService } from '@pikku/core/queue'
-import type { JobOptions } from '@pikku/core/queue'
+import { wrapJobTrace, type JobOptions } from '@pikku/core/queue'
 import { mapPgBossJobToQueueJob } from './utils.js'
 
 export const mapPikkuJobToPgBoss = (
@@ -88,7 +88,7 @@ export class PgBossQueueService implements QueueService {
     await this.pgBoss.createQueue(queueName)
     const jobId = await this.pgBoss.send(
       queueName,
-      data as any,
+      wrapJobTrace(data, options?.traceparent),
       mapPikkuJobToPgBoss(options)
     )
     if (!jobId) {

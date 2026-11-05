@@ -1,4 +1,5 @@
 import { runPikkuFunc } from '../../function/function-runner.js'
+import { runTraceWire } from './workflow-run-trace.js'
 import {
   getCreateWireServices,
   getSingletonServices,
@@ -47,6 +48,7 @@ export const runDslWorkflowPass = async (
   const workflowWire = deps.workflowWire(addonNs)
   workflowWire.pikkuUserId = run.wire?.pikkuUserId
   const wire: PikkuRawWire = {
+    ...runTraceWire(run.wire?.traceparent),
     workflow: workflowWire,
     pikkuUserId: run.wire?.pikkuUserId,
   }

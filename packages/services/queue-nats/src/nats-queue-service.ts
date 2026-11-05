@@ -7,6 +7,7 @@ import {
   BACKOFF_TYPE_HEADER,
   NATS_MSG_ID_HEADER,
   PIKKU_USER_ID_HEADER,
+  TRACEPARENT_HEADER,
   attemptsHeaderValue,
   subjectForQueue,
 } from './utils.js'
@@ -67,6 +68,9 @@ export class NatsQueueService implements QueueService {
     const hdrs = headers()
     if (options?.pikkuUserId) {
       hdrs.set(PIKKU_USER_ID_HEADER, options.pikkuUserId)
+    }
+    if (options?.traceparent) {
+      hdrs.set(TRACEPARENT_HEADER, options.traceparent)
     }
     // JetStream dedupes on this header within the stream's duplicate window,
     // which is the closest equivalent to pg-boss's singleton `jobId`.

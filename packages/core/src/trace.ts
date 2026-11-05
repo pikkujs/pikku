@@ -100,6 +100,16 @@ export const resolveHTTPTrace = (
 }
 
 /**
+ * Starts this hop's span in the trace a job, scheduled task or workflow run
+ * carried, or a new trace when it carried nothing usable. A carried value needs
+ * no signature: it names a trace, never an identity.
+ */
+export const continueTrace = (traceparent: unknown): TraceContext => {
+  const carried = parseTraceparent(traceparent)
+  return carried ? { ...carried, spanId: randomHex(8) } : createTrace()
+}
+
+/**
  * Continues the caller's trace on an already-running invocation. Only for a
  * caller that has been authenticated, and in place because the HTTP runner
  * holds `wire.trace` for its error response.

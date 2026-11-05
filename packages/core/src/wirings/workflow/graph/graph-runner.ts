@@ -13,6 +13,7 @@ import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
 import type { WorkflowRuntimeMeta, WorkflowRunWire } from '../workflow.types.js'
 import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
+import { runTraceWire } from '../workflow-run-trace.js'
 
 export class ChildWorkflowStartedException extends Error {
   name = 'ChildWorkflowStartedException'
@@ -1015,6 +1016,7 @@ async function invokeGraphNodeRpc(
   }
 
   const result = await rpcService.rpcWithWire(rpcName, input, {
+    ...runTraceWire(await workflowService.getRunTraceparent(runId)),
     graph: graphWire,
     workflow: workflowService.createWorkflowWire(graphName, runId, rpcService),
   })
@@ -1049,6 +1051,7 @@ export async function executeGraphStep(
         id: rpcName,
         parentRunId: runId,
         parentStepId: stepId,
+        traceparent: await workflowService.getRunTraceparent(runId),
       }
       const shouldInline = !getSingletonServices()?.queueService
       const { runId: childRunId } = await workflowService.startWorkflow(
@@ -1155,6 +1158,7 @@ async function executeGraphNodeInline(
         id: rpcName,
         parentRunId: runId,
         parentStepId: stepState.stepId,
+        traceparent: await workflowService.getRunTraceparent(runId),
       }
       const { runId: childRunId } = await workflowService.startWorkflow(
         rpcName,

@@ -371,6 +371,15 @@ export const userOnboarding = pikkuWorkflowGraph({
 })
 ```
 
+### Tracing
+
+A run owns one trace, stored on `run.wire.traceparent`. It starts from the wire or
+the caller's `rpc`; a start with neither, such as a trigger, gets a new trace. Every
+step, retry, sleep wake-up, resume, child workflow, recovery and job a step
+enqueues stays on it. Each hop is a new span whose parent is the span that started
+the run. An agent's tool calls are the exception: they are not on the run's trace
+yet.
+
 ## File conventions
 
 - Place workflows in `packages/functions/src/wirings/*.workflow.ts`; export the variable so the inspector discovers it (no manual registration).

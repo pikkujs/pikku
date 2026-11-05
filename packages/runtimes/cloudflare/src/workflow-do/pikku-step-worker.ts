@@ -1,3 +1,4 @@
+import { runTraceWire } from '@pikku/core/workflow'
 import type { CoreSingletonServices } from '@pikku/core/types'
 import type { PikkuDoStepDispatch } from './pikku-workflow-do-service.js'
 import type { DurableObjectNamespace } from '@cloudflare/workers-types'
@@ -78,7 +79,14 @@ export class PikkuStepWorker<
     const services = (
       globalThis as unknown as {
         __PIKKU_SINGLETON_SERVICES__?: CoreSingletonServices & {
-          rpcService?: { rpc(name: string, data: unknown): Promise<unknown> }
+          rpcService?: {
+            rpc(name: string, data: unknown): Promise<unknown>
+            rpcWithWire?(
+              name: string,
+              data: unknown,
+              wire: ReturnType<typeof runTraceWire>
+            ): Promise<unknown>
+          }
         }
       }
     ).__PIKKU_SINGLETON_SERVICES__
@@ -88,6 +96,12 @@ export class PikkuStepWorker<
         'PikkuStepWorker: no pikku RPC service available; set up singleton services in the step worker before dispatching'
       )
     }
-    return rpc.rpc(dispatch.rpcName, dispatch.data)
+    return rpc.rpcWithWire
+      ? rpc.rpcWithWire(
+          dispatch.rpcName,
+          dispatch.data,
+          runTraceWire(dispatch.traceparent)
+        )
+      : rpc.rpc(dispatch.rpcName, dispatch.data)
   }
 }

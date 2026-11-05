@@ -13,6 +13,7 @@ import {
 } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { resolveQueueJobIdentity } from './queue-identity.js'
+import { continueTrace } from '../../trace.js'
 
 class QueueWorkerNotFoundError extends PikkuError {
   constructor(name: string) {
@@ -108,11 +109,11 @@ export async function removeQueueWorker(name: string): Promise<void> {
  * The job's `pikkuUserId` claim is verified before the function runs; an
  * unsigned or invalid claim is logged and the job runs without one. The function
  * runs with `auth: false`, the worker's middleware, and a `queue` wire carrying
- * `updateProgress`, `fail` and `discard`.
+ * `updateProgress`, `fail` and `discard`. It continues the job's `traceparent`,
+ * or starts a new trace when the job has no valid one.
  *
  * @param params.job - The job as the adapter received it.
  * @param params.updateProgress - Reports progress to the backend; defaults to logging it.
- * @param params.traceId - Defaults to `q-<jobId>`.
  * @returns What the worker's function returned.
  * @throws {PikkuMissingMetaError} When no metadata was generated for the queue.
  * @throws {QueueJobFailedError | QueueJobDiscardedError} When the worker called `fail` or `discard`.
@@ -121,18 +122,15 @@ export async function removeQueueWorker(name: string): Promise<void> {
 export async function runQueueJob({
   job,
   updateProgress,
-  traceId,
 }: {
   job: QueueJob
   updateProgress?: (progress: number | string | object) => Promise<void>
-  traceId?: string
 }): Promise<void> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
-  const resolvedTraceId = traceId ?? `q-${job.id}`
+  const trace = continueTrace(job.traceparent)
   const logger =
-    singletonServices.logger.scope?.(resolvedTraceId) ??
-    singletonServices.logger
+    singletonServices.logger.scope?.(trace.traceId) ?? singletonServices.logger
 
   const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[job.queueName]
@@ -177,7 +175,8 @@ export async function runQueueJob({
     logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
 
     const wire: PikkuRawWire = {
-      traceId: resolvedTraceId,
+      traceId: trace.traceId,
+      trace,
       queue,
     }
 

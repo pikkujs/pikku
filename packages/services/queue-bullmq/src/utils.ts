@@ -1,3 +1,4 @@
+import { unwrapJobTrace } from '@pikku/core/queue'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 import type { ConnectionOptions, Job } from 'bullmq'
 import { QueueEvents } from 'bullmq'
@@ -30,10 +31,12 @@ export const mapBullJobToQueueJob = async <In, Out>(
   redisConnection: ConnectionOptions | undefined,
   queueEventsMap: Map<string, QueueEvents>
 ): Promise<QueueJob<In, Out>> => {
+  const { data, traceparent } = unwrapJobTrace(bullJob.data)
   return {
     queueName: bullJob.name,
     id: bullJob.id || '',
-    data: bullJob.data,
+    data,
+    traceparent,
     result: bullJob.returnvalue as Out,
     status: async () => mapBullStateToStatus(await bullJob.getState()),
     waitForCompletion: async (ttl?: number): Promise<Out> => {

@@ -29,6 +29,7 @@ export function mapSQSRecordToQueueJob(
     queueName,
     data,
     id: record.messageId,
+    traceparent: record.messageAttributes?.traceparent?.stringValue,
     status: async () => 'active' as QueueJobStatus,
     metadata: () => ({
       processedAt: new Date(),

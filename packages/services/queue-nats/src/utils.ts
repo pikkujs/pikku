@@ -3,6 +3,7 @@ import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 
 /** Header carrying the producer's pikku user id through to the worker. */
 export const PIKKU_USER_ID_HEADER = 'Pikku-User-Id'
+export const TRACEPARENT_HEADER = 'traceparent'
 
 /** Header JetStream itself reads for publish-side dedupe within the stream's window. */
 export const NATS_MSG_ID_HEADER = 'Nats-Msg-Id'
@@ -195,4 +196,5 @@ export const mapJsMsgToQueueJob = <T, R>(
   data: msg.json<T>(),
   metadata: () => jsMsgMetadata(msg),
   pikkuUserId: msg.headers?.get(PIKKU_USER_ID_HEADER) || undefined,
+  traceparent: msg.headers?.get(TRACEPARENT_HEADER) || undefined,
 })

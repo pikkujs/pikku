@@ -47,6 +47,8 @@ export interface WorkflowRunWire {
   parentRunId?: string
   parentStepId?: string
   pikkuUserId?: string
+  /** The W3C trace every hop of the run stays on. Set when the run is created. */
+  traceparent?: string
 }
 
 /**
