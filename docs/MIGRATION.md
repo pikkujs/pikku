@@ -24,6 +24,17 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### A bound `workflow.approval` is read into the graph, and can now fail it
+
+`const decision = await workflow.approval(...)` used to be dropped from the workflow graph and `plannedSteps`. It is now a real step, so the rules a bare `await workflow.approval(...)` always followed apply to it too. Two forms that passed silently now fail `pikku all` with `PKU641`:
+
+- `const { status } = await workflow.approval(...)`. Assign the outcome to a variable and read its properties.
+- A `reason` the inspector cannot resolve, such as a variable computed from `data`. Write the reason as a literal or a template string.
+
+Rewrite those forms as above. `pikkuWorkflowFunc` remains the default.
+
+To find the affected code, run `pikku all` and look for `PKU641`.
+
 ### `x-request-id` is replaced by `traceparent`
 
 Pikku now uses W3C trace context. An HTTP request's `wire.traceId` is 32 lowercase hex, and `wire.trace` adds `spanId`, `parentSpanId` and `sampled`. `errorId` in error responses has the same format.
