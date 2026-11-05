@@ -1,7 +1,7 @@
 ---
 name: pikku-i18n
 description: >-
-  User-facing text in a Pikku frontend: Paraglide messages, translatable copy, adding a language, enum/status/role labels, RTL (Arabic, Hebrew, Farsi, Urdu). Not backend error messages or logs.
+  User-facing text in a Pikku frontend: Paraglide messages, writing or rewording a label, heading or button (including wording picked in the preview), translatable copy, adding a language, enum/status/role labels, RTL (Arabic, Hebrew, Farsi, Urdu). Not backend error messages or logs.
 installGroups: [client]
 ---
 
