@@ -60,6 +60,7 @@ export type {
   WorkflowService,
   WorkflowQueueOptions,
   WorkflowServiceOptions,
+  WorkflowRecoveryOptions,
   WorkflowServiceConfig,
   WorkflowPlannedStep,
   WorkflowRunWire,
@@ -115,3 +116,9 @@ export type {
   ItemFn,
   TemplateFn,
 } from './graph/workflow-graph.types.js'
+export type {
+  ScheduledStep,
+  StalledSweepOptions,
+  UndispatchedSweepOptions,
+  WorkflowRecoveryPass,
+} from './workflow-recovery.js'

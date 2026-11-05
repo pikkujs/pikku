@@ -21,6 +21,7 @@ import type {
   WorkflowStatus,
   WorkflowVersionStatus,
   WorkflowQueueOptions,
+  WorkflowRecoveryOptions,
   WorkflowServiceConfig,
   WorkflowStepOptions,
 } from './workflow.types.js'
@@ -92,7 +93,10 @@ import {
 } from './workflow-approval.js'
 import { auditApprovalDecision } from './workflow-approval-audit.js'
 import { recordSuspension, suspendStepNameFor } from './workflow-suspend.js'
-import { claimStepByReadThenWrite } from './workflow-step-claim.js'
+import {
+  claimStepByReadThenWrite,
+  takeBackLostInlineStep,
+} from './workflow-step-claim.js'
 import {
   holdWorkflowLease,
   isRunLeaseError,
@@ -128,9 +132,11 @@ import {
 import type { CompensatingFor } from './dsl/workflow-dsl.types.js'
 import { runVersionMismatchFallback } from './workflow-version-fallback.js'
 import {
-  RedispatchBackoff,
-  sweepStalledRuns,
-  sweepUndispatchedSteps,
+  WorkflowRecovery,
+  type ScheduledStep,
+  type StalledSweepOptions,
+  type UndispatchedSweepOptions,
+  type WorkflowRecoveryPass,
 } from './workflow-recovery.js'
 
 /** The workflow engine; subclasses supply storage. Leases serialise runs and step claims over a shared store. */
@@ -678,17 +684,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   /**
-   * Ids of runs that are stalled: still `running`, with no step in a state that
-   * something is expected to complete (`scheduled`, `suspended`, or `running`
-   * under a live lease), and no step activity since `before`.
+   * Ids of runs that are stalled: still `running`, with no step something is
+   * expected to complete (`scheduled`, `suspended`, `running` under a live
+   * lease, or parked on a child run), and no step activity since `before`.
    *
-   * A `running` step whose lease has lapsed is the opposite of in flight — the
-   * dispatch that claimed it is gone — so it does not hold its run out of the
-   * sweep.
+   * A lapsed lease is a dispatch that died, so it holds nothing out of the
+   * sweep. Nor does a `running` step with no lease and no child run: that is
+   * work inside an orchestration pass, whose owner is the run's lease, which the
+   * sweep checks before it touches the run.
    *
-   * Returns nothing by default so a store that cannot express the query keeps
-   * working unchanged; a store that overrides it gains crash recovery through
-   * `recoverStalledRuns`.
+   * Returns nothing by default, for a store that cannot express the query.
    */
   protected async findStalledRunIds(
     _before: Date,
@@ -698,18 +703,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   /**
-   * Runs holding a step that has sat `pending` since before `before`, paired
-   * with the step that flagged them.
-   *
-   * Returns nothing by default so a store that cannot express the query keeps
-   * working unchanged — and, because it does not opt in, gains no re-dispatches
-   * either. A store must have an atomic `claimStepForExecution` before
-   * overriding this, or no concurrency for one to exclude: the relay makes
-   * duplicate dispatch routine, and the claim is what keeps a duplicate from
-   * becoming a second execution. Every `@pikku/kysely` dialect qualifies on its
-   * status-guarded claim, `mongodb` on the same claim expressed as a
-   * single-document update, `in-memory` on being inline and single-process —
-   * none of them overrides this yet.
+   * Runs holding a step `pending` since before `before`. A store overriding it
+   * needs an atomic `claimStepForExecution` (see `sweepUndispatchedSteps`).
    */
   protected async findUndispatchedSteps(
     _before: Date,
@@ -718,46 +713,52 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return []
   }
 
-  private readonly redispatchBackoff = new RedispatchBackoff()
-
-  private get sweepDeps() {
-    return {
-      resume: (runId: string) => this.resumeWorkflow(runId),
-      logger: getSingletonServices()?.logger,
-    }
+  /**
+   * Steps parked on `scheduled` on a live run, oldest first, a page at a time.
+   * Returns nothing by default, for a store whose runs die with the process.
+   */
+  protected async findScheduledSteps(
+    _limit: number,
+    _offset: number
+  ): Promise<ScheduledStep[]> {
+    return []
   }
 
-  /**
-   * Re-drive runs whose next move was lost. Not self-starting — call it from a
-   * scheduled task at whatever interval suits the workload.
-   */
-  public async recoverStalledRuns(options?: {
-    stalledAfterMs?: number
-    limit?: number
-  }): Promise<{ resumed: string[] }> {
-    return sweepStalledRuns(
-      (before, limit) => this.findStalledRunIds(before, limit),
-      this.redispatchBackoff,
-      options,
-      this.sweepDeps
-    )
+  private readonly recovery = new WorkflowRecovery({
+    leases: () => this.leaseService,
+    listStepStates: (runId) => this.listStepStates(runId),
+    withRunLease: (runId, fn) => this.withRunLease(runId, fn),
+    findStalledRunIds: (before, limit) => this.findStalledRunIds(before, limit),
+    findUndispatchedSteps: this.findUndispatchedSteps.bind(this),
+    findScheduledSteps: this.findScheduledSteps.bind(this),
+    resumeWorkflow: (runId) => this.resumeWorkflow(runId),
+    wakeSleep: this.executeWorkflowSleepCompleted.bind(this),
+    rearmSleep: this.scheduleSleep.bind(this),
+    queueStepWorker: (...args) => this.queueStepWorker(...args),
+  })
+
+  /** One recovery pass, for a host driving it from a scheduled task. */
+  public recoverWorkflows(options?: WorkflowRecoveryPass): Promise<void> {
+    return this.recovery.recover(options)
   }
 
-  /**
-   * Re-drive steps whose dispatch was lost. Not self-starting — call it from a
-   * scheduled task; ~30s suits a queue whose `pending`→`running` latency is
-   * well under that.
-   */
-  public async relayUndispatchedSteps(options?: {
-    undispatchedAfterMs?: number
-    limit?: number
-  }): Promise<{ redispatched: string[] }> {
-    return sweepUndispatchedSteps(
-      (before, limit) => this.findUndispatchedSteps(before, limit),
-      this.redispatchBackoff,
-      options,
-      this.sweepDeps
-    )
+  /** Sweep now and on an interval, once the queue is consuming. */
+  public startRecovery(options?: WorkflowRecoveryOptions | false): void {
+    this.recovery.start(options)
+  }
+
+  public stopRecovery(): void {
+    this.recovery.stop()
+  }
+
+  /** Re-drive runs whose next move was lost. */
+  public recoverStalledRuns(options?: StalledSweepOptions) {
+    return this.recovery.recoverStalledRuns(options)
+  }
+
+  /** Re-drive steps whose dispatch was lost. Not self-starting. */
+  public relayUndispatchedSteps(options?: UndispatchedSweepOptions) {
+    return this.recovery.relayUndispatchedSteps(options)
   }
 
   protected resolveStepJobOptions(
@@ -1614,7 +1615,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
     return runInlineRetryLoop(
       this,
-      stepState,
+      await takeBackLostInlineStep(this, runId, stepName, stepState),
       retries,
       retryDelay,
       async (currentStepState) => {

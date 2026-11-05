@@ -380,6 +380,10 @@ enqueues stays on it. Each hop is a new span whose parent is the span that start
 the run. An agent's tool calls are the exception: they are not on the run's trace
 yet.
 
+### Restarts
+
+A run survives a crash or deploy. `pikku dev` and `pikku serve` recover it at startup and every 30s: a sleep keeps its deadline, and a step caught in flight runs again as a new attempt. A settled step never reruns. So a step can run more than once: make its side effects idempotent on `workflowStep.invocationId`, which stays the same across attempts. A step with `retries: 0` caught in flight fails instead. Any other host calls `workflowService.startRecovery()` once the queue is consuming. Set `workflow.recovery: false` to turn it off.
+
 ## File conventions
 
 - Place workflows in `packages/functions/src/wirings/*.workflow.ts`; export the variable so the inspector discovers it (no manual registration).

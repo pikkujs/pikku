@@ -14,7 +14,7 @@ export const chaosRestartWorkflow = pikkuWorkflowFunc<
   {
     tag: string
     sleepFor?: string
-    /** Widen phase two so a kill reliably lands while it is executing. */
+    /** Widen phase two's first attempt, so a kill reliably lands during it. */
     phaseTwoDelayMs?: number
   },
   { tag: string; phases: number[] }
@@ -30,6 +30,7 @@ export const chaosRestartWorkflow = pikkuWorkflowFunc<
     const two = await workflow.do('Phase two', 'chaosStep', {
       key: `phase2:${data.tag}`,
       delayMs: data.phaseTwoDelayMs,
+      delayAttemptsBelow: 2,
       echo: data.tag,
     })
 

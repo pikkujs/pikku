@@ -6,6 +6,7 @@ import type {
   WorkflowRunWire,
   WorkflowRunStatus,
   StepState,
+  WorkflowRecoveryOptions,
   WorkflowStatus,
   WorkflowVersionStatus,
 } from '../wirings/workflow/workflow.types.js'
@@ -22,6 +23,9 @@ import type {
  */
 export interface WorkflowService {
   wireQueueWorkers?(): void
+  /** Sweep for work a dead process left behind, now and on an interval. */
+  startRecovery?(options?: WorkflowRecoveryOptions | false): void
+  stopRecovery?(): void
   createRun(
     workflowName: string,
     input: any,

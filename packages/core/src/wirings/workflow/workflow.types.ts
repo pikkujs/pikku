@@ -60,6 +60,21 @@ export interface WorkflowServiceConfig {
   orchestratorQueueName: string
   stepWorkerQueueName: string
   sleeperRPCName: string
+  /**
+   * How `pikku dev` and `pikku serve` sweep for work a dead process left
+   * behind. They do by default; `false` turns it off.
+   */
+  recovery?: WorkflowRecoveryOptions | false
+}
+
+/** Tuning for `startRecovery`. */
+export interface WorkflowRecoveryOptions {
+  /** How often to sweep after the startup pass. Default 30s. */
+  intervalMs?: number
+  /** Idle time before a `running` run with nothing in flight is re-driven. Default 30s. */
+  stalledAfterMs?: number
+  /** Age at which a dispatched step's job is presumed lost. Default 30s. */
+  undispatchedAfterMs?: number
 }
 
 /**
