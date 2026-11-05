@@ -302,6 +302,13 @@ func (c *dslCtx) extractVariableDeclaration(stmt *ast.Node) *jsObj {
 				return step
 			}
 		}
+		if isWorkflowApprovalCall(call) {
+			if step := c.extractApprovalStep(call, varName); step != nil {
+				c.touchType(decl)
+				c.outputVars[varName] = true
+				return step
+			}
+		}
 		if isParallelFanout(call) || isParallelGroup(call) {
 			var step *jsObj
 			if isParallelFanout(call) {
@@ -365,7 +372,7 @@ func (c *dslCtx) extractDestructuredDeclaration(decl *ast.Node) *jsObj {
 		}
 	}
 	call := awaitedCall(init)
-	if call == nil || !(isWorkflowDoCall(call) || isScenarioStepCall(call) || isParallelGroup(call) || isParallelFanout(call)) {
+	if call == nil || !(isWorkflowDoCall(call) || isWorkflowApprovalCall(call) || isScenarioStepCall(call) || isParallelGroup(call) || isParallelFanout(call)) {
 		return nil
 	}
 	c.addError("Destructuring a step result is not supported in DSL workflows. Assign it to a variable first (e.g. `const result = await workflow.do(...)`) and read its properties.")
@@ -383,7 +390,7 @@ func (c *dslCtx) extractExpressionStatement(stmt *ast.Node) *jsObj {
 			hasOutput = true
 			if c.contextVars.Has(outputVar) {
 				rhsCall := awaitedCall(be.Right)
-				if rhsCall == nil || !isWorkflowDoCall(rhsCall) {
+				if rhsCall == nil || !(isWorkflowDoCall(rhsCall) || isWorkflowApprovalCall(rhsCall)) {
 					if lit, ok := extractLiteralValue(be.Right); ok {
 						return newObj("type", "set", "variable", outputVar, "value", lit)
 					}

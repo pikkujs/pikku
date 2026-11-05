@@ -128,6 +128,41 @@ export const complex = pikkuWorkflowComplexFunc(async ({}: any, data: any, { wor
 	}
 }
 
+func TestDSLWorkflowBoundApproval(t *testing.T) {
+	res := runWorkflowProject(t, `
+export const gated = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  const decision = await workflow.approval('Manager sign-off', { schema: data.schema, approvers: 'not-initiator', approverScope: 'tests:approve' })
+  if (decision.status === 'expired') {
+    return { outcome: 'expired' }
+  }
+  await workflow.do('record', 'recordDecision', { status: decision.status })
+})
+export const reassigned = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  let decision = null
+  decision = await workflow.approval('Second sign-off', { schema: data.schema })
+})
+export const destructured = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  const { status } = await workflow.approval('Third sign-off', { schema: data.schema })
+})
+`, false)
+	got := workflowMeta(t, res, "gated")
+	for _, want := range []string{
+		`{"type":"approval","reason":"Manager sign-off","outputVar":"decision","approvers":"not-initiator","approverScope":"tests:approve"}`,
+		`"type":"branch"`,
+		`{"from":"outputVar","name":"decision","path":"status"}`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %s in:\n%s", want, got)
+		}
+	}
+	if got := workflowMeta(t, res, "reassigned"); !strings.Contains(got, `"reason":"Second sign-off","outputVar":"decision"`) {
+		t.Errorf("reassigned gate lost: %s", got)
+	}
+	if text := diagnosticsText(res); !strings.Contains(text, "Destructuring a step result is not supported") {
+		t.Errorf("destructured gate was not refused:\n%s", text)
+	}
+}
+
 func TestComplexWorkflowFallsBack(t *testing.T) {
 	res := runWorkflowProject(t, `
 export const complex = pikkuWorkflowComplexFunc(async ({}: any, data: any, { workflow }: any) => {
