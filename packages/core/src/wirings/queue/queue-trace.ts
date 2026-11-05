@@ -1,14 +1,21 @@
 const ENVELOPE_KEY = '__pikkuTraceparent'
 
+const isEnvelope = (payload: any): boolean =>
+  typeof payload?.[ENVELOPE_KEY] === 'string' &&
+  Object.keys(payload).length === 2
+
 /**
  * Carries `traceparent` in the payload of a backend with no per-job metadata
  * that survives a retry. Applied by the adapter, below `SignedQueueService`, so
- * `data` keeps the bytes the identity signature binds.
+ * `data` keeps the bytes the identity signature binds. Data that happens to look
+ * like an envelope is wrapped even with no trace, or a worker would unwrap it.
  *
  * knowledge: decisions/internals/bullmq-and-pg-boss-carry-traceparent-in-a-payload-envelope.md
  */
 export const wrapJobTrace = (data: unknown, traceparent?: string): any =>
-  traceparent ? { [ENVELOPE_KEY]: traceparent, data } : data
+  traceparent || isEnvelope(data)
+    ? { [ENVELOPE_KEY]: traceparent ?? '', data }
+    : data
 
 /**
  * Undoes {@link wrapJobTrace}. A payload without the envelope, such as a job
@@ -17,8 +24,7 @@ export const wrapJobTrace = (data: unknown, traceparent?: string): any =>
 export const unwrapJobTrace = (
   payload: any
 ): { data: any; traceparent?: string } => {
-  const traceparent = payload?.[ENVELOPE_KEY]
-  return typeof traceparent === 'string' && Object.keys(payload).length === 2
-    ? { data: payload.data, traceparent }
-    : { data: payload }
+  if (!isEnvelope(payload)) return { data: payload }
+  const { [ENVELOPE_KEY]: traceparent, data } = payload
+  return traceparent ? { data, traceparent } : { data }
 }

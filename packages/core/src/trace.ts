@@ -127,6 +127,10 @@ export const adoptTraceparent = (
   )
 }
 
+/** `logger` scoped to a trace, so what it writes can be found by that id. */
+export const tracedLogger = (logger: Logger, traceId?: string): Logger =>
+  (traceId && logger.scope?.(traceId)) || logger
+
 /** The wire fields for a hop that continues `traceparent`, or starts a new trace. */
 export const traceWire = (
   traceparent?: unknown

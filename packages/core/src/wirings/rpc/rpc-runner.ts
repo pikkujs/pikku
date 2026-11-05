@@ -1,4 +1,8 @@
-import { outgoingTraceparent } from '../../trace.js'
+import {
+  childTraceWire,
+  outgoingTraceparent,
+  tracedLogger,
+} from '../../trace.js'
 import {
   AddonNotUsedError,
   addonCallerOf,
@@ -447,9 +451,10 @@ export class ContextAwareRPCService {
     funcName: string,
     data: In
   ): Promise<Out> {
-    const updatedWire: PikkuRawWire = {
-      ...this.wire,
-    }
+    // A local function is a span of its own. Across a boundary the callee's
+    // parent must be a span that exists, so that is the caller's.
+    const updatedWire: PikkuRawWire = { ...this.wire }
+    const localWire: PikkuRawWire = { ...updatedWire, ...this.callSpan() }
 
     if (funcName.includes(':')) {
       funcName = this.mapUsedAddon(funcName)
@@ -458,7 +463,7 @@ export class ContextAwareRPCService {
         return await this.executeAddonFunction<In, Out>(
           addonCall,
           data,
-          updatedWire
+          addonCall.kind === 'remote' ? updatedWire : localWire
         )
       }
     }
@@ -491,10 +496,20 @@ export class ContextAwareRPCService {
       auth: this.options.requiresAuth,
       singletonServices: this.services,
       data: () => data,
-      wire: updatedWire,
+      wire: localWire,
       packageName: resolved.packageName,
       addonInstance,
     })
+  }
+
+  /** A call runs as a span of its own under the caller's. */
+  private callSpan() {
+    return this.wire.trace ? childTraceWire(this.wire.trace) : {}
+  }
+
+  /** The services' logger, on the trace of the wire this service belongs to. */
+  private get logger() {
+    return tracedLogger(this.services.logger, this.wire.traceId)
   }
 
   private mapUsedAddon(funcName: string): string {
@@ -680,7 +695,7 @@ export class ContextAwareRPCService {
       if ((e as Error | undefined)?.name === 'TimeoutError') {
         throw new RemoteAddonTimeoutError(namespace, remoteFn, timeoutMs)
       }
-      this.services.logger.error(
+      this.logger.error(
         `Remote addon '${namespace}:${remoteFn}' could not be reached: ${e instanceof Error ? e.message : e}`
       )
       throw new RemoteAddonFailedError(namespace, remoteFn)
@@ -691,7 +706,7 @@ export class ContextAwareRPCService {
         res,
         namespace,
         remoteFn,
-        this.services.logger
+        this.logger
       )
     }
 
@@ -705,7 +720,7 @@ export class ContextAwareRPCService {
     try {
       return JSON.parse(text) as Out
     } catch {
-      this.services.logger.error(
+      this.logger.error(
         `Remote addon '${namespace}:${remoteFn}' answered ${res.status} with a body that is not JSON`
       )
       throw new RemoteAddonFailedError(namespace, remoteFn)

@@ -27,7 +27,7 @@ import {
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import type { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
-import { createTrace } from '../../../trace.js'
+import { createTrace, tracedLogger } from '../../../trace.js'
 
 /** Parameters for the serverless channel runners: the connection, the {@link ChannelStore} that persists it, and the factory that builds a handler able to send through the platform. */
 export interface RunServerlessChannelParams<
@@ -352,12 +352,13 @@ export const runChannelMessage = async (
     )
     response = await onMessage(data)
   } catch (e: any) {
-    singletonServices.logger.error(
+    tracedLogger(singletonServices.logger, channelHandler.trace.traceId).error(
       `Error processing message: ${e.message || e}`
     )
     return {
       error: e.message || 'Unknown error',
       errorName: e.constructor?.name,
+      errorId: channelHandler.trace.traceId,
     }
   } finally {
     if (wireServices) {

@@ -3,8 +3,10 @@ import {
   createTrace,
   formatTraceparent,
   parseTraceparent,
+  tracedLogger,
   type TraceContext,
 } from '../../trace.js'
+import type { Logger } from '../../services/logger.js'
 import type { WorkflowRunWire } from './workflow.types.js'
 
 /**
@@ -31,3 +33,7 @@ export const runTraceWire = (
   const trace = continueTrace(traceparent)
   return { traceId: trace.traceId, trace }
 }
+
+/** `logger` on the trace of the run stored with `wire`. */
+export const runLogger = (logger: Logger, wire: WorkflowRunWire): Logger =>
+  tracedLogger(logger, parseTraceparent(wire?.traceparent)?.traceId)

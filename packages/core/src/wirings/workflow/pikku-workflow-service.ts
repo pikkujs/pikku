@@ -112,7 +112,7 @@ import {
   startQueuedChildStep,
 } from './workflow-child-step.js'
 import { runDslWorkflowPass } from './workflow-dsl-pass.js'
-import { runTraceWire, withRunTrace } from './workflow-run-trace.js'
+import { runLogger, runTraceWire, withRunTrace } from './workflow-run-trace.js'
 import {
   childRunFailure,
   failRunOrUnwind,
@@ -975,7 +975,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             message: error.message,
             stack: error.stack,
           })
-          getSingletonServices()!.logger.error(
+          runLogger(getSingletonServices()!.logger, wire).error(
             `Workflow ${name} (run ${runId}) failed:`,
             isExpectedError(error) ? error.message : error
           )

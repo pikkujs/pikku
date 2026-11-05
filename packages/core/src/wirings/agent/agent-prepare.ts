@@ -45,7 +45,9 @@ import {
 import { resolveModelConfig } from './agent-model-config.js'
 import {
   childTraceWire,
+  createTrace,
   outgoingTraceparent,
+  tracedLogger,
   type TraceContext,
 } from '../../trace.js'
 
@@ -535,6 +537,8 @@ export async function buildToolDefs(
 ): Promise<{ tools: AgentToolDef[]; missingRpcs: string[] }> {
   const singletonServices = getSingletonServices()
   const tools: AgentToolDef[] = []
+  // Every tool of a run sits under one trace, whoever started the run.
+  const trace = params.trace ?? createTrace()
   const missingRpcs: string[] = []
   const approvalPolicy =
     streamContext?.options?.requiresToolApproval ?? 'explicit'
@@ -684,8 +688,10 @@ export async function buildToolDefs(
         approvalDescriptionFn,
         readonly: fnMeta?.readonly || undefined,
         execute: async (toolInput: unknown, options) => {
+          // The call below is the tool's span, under the run's.
           const wire: PikkuRawWire = {
-            ...childTraceWire(params.trace),
+            traceId: trace.traceId,
+            trace,
             ...(params.sessionService
               ? createMiddlewareSessionWireProps(params.sessionService)
               : {}),
@@ -889,7 +895,7 @@ export async function buildToolDefs(
             )
           }
           const wire: PikkuRawWire = {
-            ...childTraceWire(params.trace),
+            ...childTraceWire(trace),
             ...(params.sessionService
               ? createMiddlewareSessionWireProps(params.sessionService)
               : {}),
@@ -929,7 +935,7 @@ export async function buildToolDefs(
             ...err.payload,
           }
         }
-        singletonServices.logger.error(
+        tracedLogger(singletonServices.logger, trace.traceId).error(
           `AI agent tool '${tool.name}' threw during execute()`,
           err
         )

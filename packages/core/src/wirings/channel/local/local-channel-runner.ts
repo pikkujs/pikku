@@ -28,7 +28,7 @@ import {
   getCreateWireServices,
   pikkuState,
 } from '../../../pikku-state.js'
-import { childTraceWire, createTrace } from '../../../trace.js'
+import { childTraceWire, createTrace, tracedLogger } from '../../../trace.js'
 
 const runUpgradeMiddleware = async (
   singletonServices: ReturnType<typeof getSingletonServices>,
@@ -142,6 +142,8 @@ export const runLocalChannel = async ({
       )
       // knowledge: decisions/internals/a-channel-connection-is-one-trace.md
       channelHandler.trace = createTrace()
+      const { traceId } = channelHandler.trace
+      const logger = tracedLogger(singletonServices.logger, traceId)
       const channel = channelHandler.getChannel()
       const wire: PikkuRawWire = {
         channel,
@@ -183,12 +185,13 @@ export const runLocalChannel = async ({
               await channel.send(result)
             }
           } catch (e: any) {
-            singletonServices.logger.error(`Error handling onConnect: ${e}`)
+            logger.error(`Error handling onConnect: ${e}`)
             const errorResponse = getErrorResponse(e)
             await channel.send({
               error:
                 errorResponse?.message ??
                 (isProduction() ? 'Internal server error' : e.message),
+              errorId: traceId,
               ...(!isProduction() && { errorName: e.constructor?.name }),
             })
           }
@@ -211,12 +214,13 @@ export const runLocalChannel = async ({
               trace: channelHandler?.trace,
             })
           } catch (e: any) {
-            singletonServices.logger.error(`Error handling onDisconnect: ${e}`)
+            logger.error(`Error handling onDisconnect: ${e}`)
             const errorResponse = getErrorResponse(e)
             await channel.send({
               error:
                 errorResponse?.message ??
                 (isProduction() ? 'Internal server error' : e.message),
+              errorId: traceId,
               ...(!isProduction() && { errorName: e.constructor?.name }),
             })
           }
@@ -244,17 +248,18 @@ export const runLocalChannel = async ({
             await channel.send(result)
           }
         } catch (e: any) {
-          singletonServices.logger.error(e)
+          logger.error(e)
           const errorResponse = getErrorResponse(e)
           await channel.send({
             error:
               errorResponse?.message ??
               (isProduction() ? 'Internal server error' : e.message),
+            errorId: traceId,
             ...(!isProduction() && { errorName: e.constructor?.name }),
           })
           setTimeout(() => {
             Promise.resolve(channel.close()).catch((closeError) =>
-              singletonServices.logger.error(closeError)
+              logger.error(closeError)
             )
           }, 200)
         }
@@ -267,9 +272,7 @@ export const runLocalChannel = async ({
               await channel.sendBinary(result)
             }
           } catch (e) {
-            singletonServices.logger.error(
-              `Error handling binary message: ${e.message}`
-            )
+            logger.error(`Error handling binary message: ${e.message}`)
           }
         })
       }

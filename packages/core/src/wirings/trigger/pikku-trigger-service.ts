@@ -8,7 +8,7 @@ import {
   getCreateWireServices,
   pikkuState,
 } from '../../pikku-state.js'
-import { traceWire } from '../../trace.js'
+import { traceWire, tracedLogger } from '../../trace.js'
 
 export type TriggerTarget = {
   targetType: 'rpc' | 'workflow'
@@ -114,7 +114,7 @@ export abstract class PikkuTriggerService implements TriggerService {
           )
         }
       } catch (error) {
-        singletonServices.logger.error(
+        tracedLogger(singletonServices.logger, wire.traceId).error(
           `Error invoking ${target.targetType} '${target.targetName}' from trigger '${triggerName}': ${error}`
         )
       }

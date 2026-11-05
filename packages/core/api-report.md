@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3372 observable things**: 1142 exported names, plus
+**3373 observable things**: 1143 exported names, plus
 2230 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
@@ -52,7 +52,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./rpc` | 8 | 8 | 6 |
 | `./workflow/types` | 47 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
-| `./trace` | 11 | 11 | 0 |
+| `./trace` | 12 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./secret` | 10 | 10 | 0 |
 | `./safe-fetch` | 6 | 6 | 3 |
@@ -5871,6 +5871,7 @@ export type TraceContext = {
   parentSpanId?: string
   sampled: boolean
 }
+tracedLogger: (logger: Logger, traceId?: string | undefined) => Logger
 traceWire: (traceparent?: unknown) => { traceId: string; trace: TraceContext; }
 ```
 

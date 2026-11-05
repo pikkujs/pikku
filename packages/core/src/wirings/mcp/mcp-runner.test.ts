@@ -403,7 +403,7 @@ describe('runMCPTool', () => {
           assert.ok(error instanceof MCPError)
           assert.equal(error.error.code, -32603)
           assert.equal(error.error.message, 'Internal error')
-          assert.equal(error.error.data, undefined)
+          assert.deepEqual(Object.keys(error.error.data as object), ['errorId'])
           return true
         }
       )

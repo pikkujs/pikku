@@ -497,7 +497,8 @@
     "outgoingTraceparent",
     "parseTraceparent",
     "resolveHTTPTrace",
-    "traceWire"
+    "traceWire",
+    "tracedLogger"
   ],
   "./flag": [
     "CachedFlagSource",
