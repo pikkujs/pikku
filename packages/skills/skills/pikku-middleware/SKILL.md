@@ -7,7 +7,7 @@ installGroups: [core]
 
 # Pikku Middleware
 
-What to reach for and why. For how to call it, run this once: `pikku doc middleware pikkuMiddleware pikkuMiddlewareFactory addGlobalMiddleware addHTTPMiddleware addTagMiddleware`. Depth: `references/middleware-patterns.md` (the client-side `RPCInvoke` caller, setting a session from an API key, request logging and audit).
+What to reach for and why. For how to call it, run this once: `pikku doc middleware pikkuMiddleware pikkuMiddlewareFactory addGlobalMiddleware addHTTPMiddleware addTagMiddleware PikkuWire telemetry`. Depth: `references/middleware-patterns.md` (the client-side `RPCInvoke` caller, setting a session from an API key, request logging and audit).
 
 ## Which level?
 
@@ -75,8 +75,3 @@ Use this when the callee needs to know only THAT the caller is trusted, not WHIC
 - Auth lives in a tag middleware, NOT in the function body. Tag the function (`auth: false`, `expose: true` on a `pikkuSessionlessFunc`) and register a `pikkuMiddleware` for that tag which reads the `Authorization` header.
 - Compare with `timingSafeEqual` from `node:crypto`, after a length check, and throw `UnauthorizedError` on no expected token, no header, or a mismatch.
 - The caller uses the generated `RPCInvoke` type. Never hand-write a `fetch` wrapper's types.
-
-## Not in `pikku doc` yet
-
-- Members of the middleware's `wire` argument: `http` (inbound headers, URL, cookies), `setInitialSession(session)`, `setSession(session)`, `clearSession()`, `getSession()`, `session` (set so far, may be undefined), `scheduledTask`.
-- `telemetryOuter({ environmentId })` and `telemetryInner({ environmentId })` import from `@pikku/core/middleware`.

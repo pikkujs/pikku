@@ -7,7 +7,7 @@ installGroups: [core, client]
 
 # Pikku List Queries
 
-What to reach for and why. For how to call it, run this once: `pikku doc pikkuListFunc`.
+What to reach for and why. For how to call it, run this once: `pikku doc pikkuListFunc ListInput ListOutput Filter`.
 
 ## Agent Operating Procedure
 
@@ -19,26 +19,7 @@ What to reach for and why. For how to call it, run this once: `pikku doc pikkuLi
 
 ## The `pikkuListFunc` contract
 
-A list function is a normal `pikkuFunc`/`pikkuSessionlessFunc` whose input/output conform to two shapes from `@pikku/core`:
-
-```typescript
-interface ListInput<
-  F extends Record<string, unknown> = {},
-  S extends string = never,
-> {
-  cursor?: string // opaque — echo back whatever you returned as nextCursor
-  limit?: number // page size; server may cap it
-  sort?: Array<{ column: S; direction: 'asc' | 'desc' }>
-  filter?: Filter<F> // structured AND/OR tree, Prisma-style leaf operators
-  search?: string // free-text search across server-chosen fields
-}
-
-interface ListOutput<Row> {
-  rows: Row[]
-  nextCursor: string | null // null = no more pages
-  totalCount?: number // optional — skip when expensive to compute
-}
-```
+A list function is a normal `pikkuFunc`/`pikkuSessionlessFunc` whose input and output are `ListInput` and `ListOutput`. Echo `cursor` back opaquely.
 
 The react-query codegen detects any RPC whose output includes `nextCursor` and generates an infinite-query hook for it. No manual wiring, no opt-in flag.
 

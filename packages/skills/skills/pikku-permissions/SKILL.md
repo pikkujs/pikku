@@ -99,7 +99,3 @@ They are independent: a broad global (e.g. `isEmployee`) can never satisfy an ad
 ## After changes
 
 `pikku all --tsc` regenerates, then verifies the checker types. A wrong permission signature fails here, not at runtime.
-
-## Not in `pikku doc` yet
-
-- `pikku doc pikkuFunc` does not print `permissions`. It is the shape shown under OR and AND above, keyed by group name.

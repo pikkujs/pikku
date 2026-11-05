@@ -66,11 +66,6 @@ which is what decides whether a thrown error becomes a 409 or a 500.
 `pikku doc` needs `@pikku/cli` 0.12.115 or newer. On an older pin, fall back to the door's
 skill and `pikku meta --json`, and do not guess at names the doc would have given you.
 
-## Not in `pikku doc` yet
-
-- `pikku doc pikkuFunc` does not print `input`, `output`, `func`, `permissions` or `disabled`. They exist; `references/functions.md` has them.
-- The wire members a function or middleware receives. `PikkuWire` is not an export the doc knows; see the skill for that wiring.
-
 ## Core Mental Model
 
 ```text

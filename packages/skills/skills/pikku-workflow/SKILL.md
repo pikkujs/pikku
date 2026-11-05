@@ -7,7 +7,7 @@ installGroups: [core]
 
 # Pikku Workflow
 
-What to reach for and why. For how to call it, run this once: `pikku doc workflow pikkuWorkflowFunc TypedWorkflow`. Depth: `references/workflow-reference.md`.
+What to reach for and why. For how to call it, run this once: `pikku doc workflow pikkuWorkflowFunc TypedWorkflow WorkflowStepOptions WorkflowApprovalOptions wireScheduler`. Depth: `references/workflow-reference.md`.
 
 ## Is it a workflow?
 
@@ -26,11 +26,5 @@ What to reach for and why. For how to call it, run this once: `pikku doc workflo
 - A sub-workflow is for a real orchestration you also start on its own. A child that would be one step is a function.
 - A trigger never calls `rpc.invoke`, and never adds scheduler or workflow services: `pikku dev`, `pikku serve` and stages bring them.
 - Workflows go in `packages/functions/src/wirings/*.workflow.ts`, exported. Start, run and status routes come from `scaffold.workflow`.
-
-## Not in `pikku doc` yet
-
-- Import factories from `#pikku/workflow/pikku-workflow-types.gen.js`, not `#pikku/workflow`.
-- Steps: `workflow.do('Step name', 'rpcName', input, { retries, retryDelay })`; the second argument may name a workflow, or be an inline closure.
-- Start: `rpc.startWorkflow(name, input)` returns `{ runId }`. On a schedule, `wireScheduler({ name, schedule, func })` where `func` is a `pikkuVoidFunc` that only starts the workflow. A cron has no session.
-- Approval: `workflow.approval(reason, { schema, expiry, approvers, approverScope })`. `approvers` is `any` (default, not an authorization boundary), `owner` or `not-initiator`. `schema` is a runtime value because the payload is untrusted.
-- PKU641: every `const`/`let` must be top level in a `pikkuWorkflowFunc` body. Hoist the declaration and assign inside the block.
+- On a schedule, the `wireScheduler` func is a `pikkuVoidFunc` that only starts the workflow. A cron has no session.
+- `approvers` defaults to `any`, which is not an authorization boundary: set `owner` or `not-initiator` when it matters who decides.

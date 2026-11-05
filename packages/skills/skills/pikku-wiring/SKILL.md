@@ -53,15 +53,7 @@ exactly the typing that makes the wiring worth having, silently.
 naming the `#pikku` leaf to use instead. `@pikku/core/services` is the one
 subpath it exempts — the service implementations bootstrap picks.
 
-| Wiring                                                                                               | Import from        |
-| ---------------------------------------------------------------------------------------------------- | ------------------ |
-| `wireHTTP`, `defineHTTPRoutes`, `wireHTTPRoutes`                                                     | `#pikku/http`      |
-| `wireChannel`, `defineChannelRoutes`                                                                 | `#pikku/channel`   |
-| `wireQueueWorker`                                                                                    | `#pikku/queue`     |
-| `wireScheduler`                                                                                      | `#pikku/scheduler` |
-| `wireTrigger`, `wireTriggerSource`, `pikkuTriggerFunc`                                               | `#pikku/trigger`   |
-| `wireCLI`, `pikkuCLICommand`, `pikkuCLIRender`                                                       | `#pikku/cli`       |
-| `pikkuMCPToolFunc`, `pikkuMCPResourceFunc`, `pikkuMCPPromptFunc`, `wireMCPResource`, `wireMCPPrompt` | `#pikku/mcp`       |
+`pikku doc <export>` names each one's `#pikku` leaf on its first line.
 
 ## Pick a wiring
 
@@ -165,14 +157,7 @@ started by a literal name: `rpc.startWorkflow('name')`,
 `rpc.invoke('name')`, another workflow's step, or a client helper. A workflow
 started only through a computed name is flagged.
 
-To keep a function in the source but out of the build, mark it `disabled`:
-
-```typescript
-export const oldReport = pikkuSessionlessFunc({
-  disabled: 'replaced by liveReport', // or `true`
-  func: async () => 'old',
-})
-```
+To keep a function in the source but out of the build, set `disabled`.
 
 A disabled function is left out of everything: meta, RPC maps, clients, MCP,
 CLI, HTTP, addon SDKs. It cannot be registered at runtime either. Anything
@@ -196,7 +181,3 @@ The value must be `true` or a string literal; a computed value is refused.
 - Do not reach for a trigger when losing an event matters — use a queue.
 - Do not put `sse: true` on anything but a `get`, or `query` on anything but a
   `post`; the config union rejects both rather than failing at runtime.
-
-## Not in `pikku doc` yet
-
-- `disabled` on a function, shown above: `pikku doc pikkuFunc` does not print it.

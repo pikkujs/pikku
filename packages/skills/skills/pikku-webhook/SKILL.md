@@ -20,6 +20,8 @@ does not fit, subclass `WebhookService` — it is an abstract class precisely so
 an app can substitute its own transport (direct send, Svix) and keep the same
 call sites and delivery history.
 
+Typed events: `pikku doc defineOutgoingWebhook TypedWebhookService`. Declaring one types `data` and sends nothing.
+
 ## Agent Operating Procedure
 
 1. Turn the feature on: `"scaffold": { "webhook": true }` in `pikku.config.json`.

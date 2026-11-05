@@ -111,9 +111,7 @@ An addon declares the screens it adds to Pikku Studio with `definePlugin`, in `s
 ## Not in `pikku doc` yet
 
 - Scaffold: `npx pikku new addon <name> [--display-name Stripe --category Payments --dir addons]` writes `package.json` (exports `.pikku/*` + `dist/`), `pikku.config.json` (`addon: true`), `tsconfig.json` (`#pikku` path mapping), `src/services.ts`, `src/functions/`, `types/application-types.d.ts`.
-- `wireAddon` `expose`: `true` is every function the addon declared `expose: true`, a list is those of them named (typed; PKU343 on unknown or undeclared names), unset or `false` is none.
-- `wireAddon` `uses` is `{ alias: wiredName }`, for the aliases the addon declared.
+- `wireAddon` `expose` as a list: PKU343 on unknown or undeclared names.
 - `definePlugin` from `@pikku/core/addon`, default-exported: `{ title, screens: [...] }`. Each screen: `path`, `title` (message key, also the nav label), `scope` (`'studio'` → `/<path>`, `'team'` → `/<team>/<path>`, `'project'` → `/<team>/<project>[/<target>]/<path>`), `component: () => import('./screens/X.js')` or `app`, `nav: { area, icon, order, badge }`, `needsApp` (project screens only, default false), `scopes`, `layout: 'bare'` (renders without the shell), `replaces`, `agent`.
 - `nav.area` is `'rail'`, `'team'`, `'project'` or `'account'`. `badge` names one of the addon's functions that returns a count.
 - `agent: 'name'` makes that agent answer in Studio's chat panel (a second tab beside the general chat) while the screen is open. It resolves to `agents/<name>.md` at the addon's package root: the agent's instructions, naming the skills it follows (plain folders `skills/<name>/SKILL.md`). The file starts with frontmatter whose `title` and `description` are message keys in `messages/en.json`. The name matches `/^[a-z][a-z0-9-]*$/`. `agent: 'studio:<name>'` picks an agent Studio ships; `pikku all` only checks the format and looks up no file.
-- `approvalRequired: true` with an `approvalDescription` resolver on an addon function gates it for agent tools.

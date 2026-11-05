@@ -111,12 +111,12 @@ Synchronous. It throws on an unknown template name or unknown locale, the only t
 
 ## Sending through an EmailService
 
-`@pikku/core/services` defines `EmailService.send(input)` where `input` is `SendTextEmailInput`, `SendHTMLEmailInput` or `SendTemplateEmailInput`:
+`pikku doc email EmailAttachment` lists the types. `@pikku/core/services` defines `EmailService.send(input)` where `input` is `SendTextEmailInput`, `SendHTMLEmailInput` or `SendTemplateEmailInput`:
 
 ```ts
 import type { EmailService } from '@pikku/core/services'
 
-await email.send({
+await emailService.send({
   to: user.email,
   template: { name: 'verify-email', locale: user.locale, data: { verifyUrl } },
 })

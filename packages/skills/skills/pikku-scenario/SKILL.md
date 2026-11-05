@@ -7,7 +7,7 @@ installGroups: [core]
 
 # Pikku Scenarios
 
-What to reach for and why. For how to call it, run this once: `pikku doc scenarios pikkuScenario pikkuFeature pikkuScenarioStep pikkuAgentScorer pikkuAgentJudge`.
+What to reach for and why. For how to call it, run this once: `pikku doc scenarios pikkuScenario TypedScenario pikkuFeature pikkuScenarioStep pikkuAgentScorer pikkuAgentJudge`.
 
 ## Agent Operating Procedure
 
@@ -50,15 +50,7 @@ A scenario takes the same config fields as a workflow (`title`, `description`, `
 
 ### The scenario API
 
-| Call                                                                                       | Purpose                                                                                                                |
-| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `scenario.do(step, rpc, data, { virtualUser })`                                            | Run an RPC as that virtual user. The step name is what appears in the run output.                                      |
-| `scenario.expectEventually(step, rpc, data, predicate, { virtualUser, within, interval })` | Poll until `predicate(out)` passes or `within` elapses. For anything asynchronous — queues, workers, eventual state.   |
-| `scenario.expectError(step, rpc, data, { virtualUser, matches })`                          | Assert the call **fails**. For fault injection and negative paths.                                                     |
-| `scenario.expectService(step, 'service.method', { virtualUser, calledWith })`              | Assert a stubbed service was called. Requires the server to run with `--test`.                                         |
-| `scenario.expectScore(step, runId, scorer, { atLeast, atMost, reference })`                | Grade a finished agent run with a declared scorer and assert the score. See below.                                     |
-| `scenario.given(stepName, step, data, { virtualUser })`                                    | Run a declared `pikkuScenarioStep` as setup. `when` is the same call; `then` also makes the step's bindings witnesses. |
-| `scenario.runScheduledTask(name)`                                                          | Fire a wired scheduler on the target now, rather than waiting for its cron.                                            |
+`TypedScenario` prints the calls. `do`, `expectEventually`, `expectError`, `expectService`, `given`, `when` and `then` take `{ virtualUser }`. `expectService` needs the server run with `--test`. `then` also makes the step's bindings witnesses. `runScheduledTask(name)` fires a wired scheduler on the target now, rather than waiting for its cron.
 
 `expectEventually` is **scenario-only**. Calling it from a `pikkuWorkflowFunc` is a critical inspector error (`PKU675`) pointing you at `pikkuScenario`.
 
@@ -106,14 +98,7 @@ the default suite excludes it.
 
 A scenario config takes `before` and `after`. Both have the **same signature as `func`** — `(services, data, wire)` — with the return value discarded. A hook is usually a named function shared between scenarios, and reaches virtual users as `wire.virtualUsers`.
 
-| Rule                                                                                                     |
-| -------------------------------------------------------------------------------------------------------- |
-| `before` throwing skips the body and fails the run — but `after` still runs.                             |
-| `after` always runs, in a `finally`, whether the scenario passed or failed.                              |
-| `after` throwing fails a run that would otherwise have passed.                                           |
-| `after` throwing on an already-failed run attaches as the `cause` and never replaces the original error. |
-| Neither runs when the run is suspended or waiting — teardown only fires at a terminal outcome.           |
-| Hooks are **not** ladder rows. The runner records nothing for them; a failure is labelled by phase.      |
+Neither runs when the run is suspended or waiting: teardown only fires at a terminal outcome. Hooks are **not** ladder rows: the runner records nothing for them, and a failure is labelled by phase.
 
 A hook reaches the app the same way the body does: through `wire.virtualUsers`. If you want cleanup to be _visible_ on the ladder, make it an ordinary `scenario.then(...)` instead.
 
