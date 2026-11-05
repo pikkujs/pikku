@@ -8,6 +8,7 @@ import {
 import { runCoreImportChecks } from './core-import-checks.js'
 import { declaredBlockPackages, runBlockChecks } from './block-checks.js'
 import { isShadcnApp, runComponentChecks } from './component-checks.js'
+import { hasInlangProject, runI18nChecks } from './i18n-checks.js'
 import { runMocksChecks, usesMocks } from './mocks-checks.js'
 import {
   hasPlaceholderSurface,
@@ -222,6 +223,14 @@ export const CHECKS: ValidateCheck[] = [
     // application's are.
     applies: async ({ dir }) => existsSync(join(dir, 'pikku.config.json')),
     run: async ({ dir }) => runCoreImportChecks(dir),
+  },
+  {
+    id: 'i18n',
+    subject: 'translations for live languages',
+    // Any package with an inlang project. Only the locales it lists in
+    // settings.json (the ones the site serves) are held to full translation.
+    applies: async ({ dir }) => hasInlangProject(dir),
+    run: async ({ dir }) => runI18nChecks(dir),
   },
   {
     id: 'blocks',

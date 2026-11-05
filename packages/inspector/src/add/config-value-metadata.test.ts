@@ -1,19 +1,41 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
+import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { inspect } from '../inspector.js'
 import type { ErrorCode } from '../error-codes.js'
 import type { InspectorLogger } from '../types.js'
 
-// Fixtures must sit inside the package so `zod` resolves — the schema-vendor
-// check rejects a schema it cannot trace to a supported library, and the
-// definition is then never recorded at all.
-const fixtureRoot = join(
-  fileURLToPath(new URL('.', import.meta.url)),
-  '__fixtures'
-)
+/** The `node_modules` this package resolves `zod` from, found the way Node would. */
+const installedNodeModules = (() => {
+  for (
+    let dir = dirname(fileURLToPath(import.meta.url));
+    ;
+    dir = dirname(dir)
+  ) {
+    if (existsSync(join(dir, 'node_modules', 'zod'))) {
+      return join(dir, 'node_modules')
+    }
+    if (dirname(dir) === dir) throw new Error('zod is not installed')
+  }
+})()
+
+/**
+ * Fixtures need `zod` to resolve — the schema-vendor check rejects a schema it
+ * cannot trace to a supported library, and the definition is then never
+ * recorded at all. They used to sit in `src/` for that, where the repo-wide
+ * guards in other packages' suites, running in parallel, listed them and failed
+ * with ENOENT once they were removed. In the OS temp dir with a linked
+ * `node_modules`, they resolve the same way and nothing else walks over them.
+ */
+const fixtureDir = async (name: string) => {
+  const rootDir = await mkdtemp(join(tmpdir(), `pikku-config-value-${name}-`))
+  await symlink(installedNodeModules, join(rootDir, 'node_modules'), 'dir')
+  return rootDir
+}
 
 const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
   ({
@@ -37,7 +59,7 @@ const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
  */
 describe('config value metadata (docsUrl)', () => {
   test('carries docsUrl from defineSecret into the definition', async () => {
-    const rootDir = await mkdtemp(`${fixtureRoot}-secret-`)
+    const rootDir = await fixtureDir('secret')
     const file = join(rootDir, 'secret.ts')
 
     await writeFile(
@@ -70,7 +92,7 @@ describe('config value metadata (docsUrl)', () => {
   })
 
   test('leaves docsUrl undefined when not declared', async () => {
-    const rootDir = await mkdtemp(`${fixtureRoot}-bare-`)
+    const rootDir = await fixtureDir('bare')
     const file = join(rootDir, 'secret.ts')
 
     await writeFile(
@@ -102,7 +124,7 @@ describe('config value metadata (docsUrl)', () => {
   })
 
   test('carries docsUrl from defineVariable into the definition', async () => {
-    const rootDir = await mkdtemp(`${fixtureRoot}-variable-`)
+    const rootDir = await fixtureDir('variable')
     const file = join(rootDir, 'variable.ts')
 
     await writeFile(
@@ -135,7 +157,7 @@ describe('config value metadata (docsUrl)', () => {
   })
 
   test('carries docsUrl from defineCredential into the definition', async () => {
-    const rootDir = await mkdtemp(`${fixtureRoot}-credential-`)
+    const rootDir = await fixtureDir('credential')
     const file = join(rootDir, 'credential.ts')
 
     await writeFile(
@@ -176,7 +198,7 @@ describe('config value metadata (docsUrl)', () => {
  */
 describe('config value gating flags', () => {
   test('carries optional from defineSecret into the definition', async () => {
-    const rootDir = await mkdtemp(`${fixtureRoot}-secret-optional-`)
+    const rootDir = await fixtureDir('secret-optional')
     const file = join(rootDir, 'secret.ts')
 
     await writeFile(
@@ -219,7 +241,7 @@ describe('config value gating flags', () => {
   })
 
   test('carries optional from defineVariable into the definition', async () => {
-    const rootDir = await mkdtemp(`${fixtureRoot}-variable-optional-`)
+    const rootDir = await fixtureDir('variable-optional')
     const file = join(rootDir, 'variable.ts')
 
     await writeFile(

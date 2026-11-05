@@ -28,10 +28,19 @@ jobs:
   # succeeded, nothing less. A Version Packages commit skips every Full Suite
   # job (it only bumps versions), so its run reads green whatever the code is;
   # for that commit the result of the commit below it is what counts.
+  #
+  # `branches: [main]` is matched against the run's head branch, which for a
+  # fork pull request is whatever the fork named its branch, and the pull
+  # request can give its own copy of full.yml a `pull_request` trigger. So the
+  # run must also come from this repository and from a push or a dispatch, the
+  # two events only someone with write access can raise.
   gate:
     name: Gate
     runs-on: ubuntu-24.04
-    if: github.event.workflow_run.conclusion != 'cancelled'
+    if: >-
+      github.event.workflow_run.conclusion != 'cancelled' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
     timeout-minutes: 100
     permissions:
       actions: read
@@ -59,7 +68,9 @@ jobs:
             conclusion=missing
             for _ in $(seq 1 90); do
               conclusion=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/full.yml/runs?branch=main&per_page=50" \
-                --jq "[.workflow_runs[] | select(.display_title == \"Full Suite ${sha}\")][0] | if . == null then \"missing\" else (.conclusion // \"pending\") end")
+                --jq "[.workflow_runs[] | select(.display_title == \"Full Suite ${sha}\")
+                  | select(.head_repository.full_name == \"${GITHUB_REPOSITORY}\" and (.event == \"push\" or .event == \"workflow_dispatch\"))][0]
+                  | if . == null then \"missing\" else (.conclusion // \"pending\") end")
               case "$conclusion" in
                 missing|pending) sleep 60 ;;
                 *) break ;;
@@ -80,7 +91,10 @@ jobs:
     name: Publish
     runs-on: ubuntu-24.04
     needs: gate
-    if: needs.gate.outputs.ok == 'true'
+    if: >-
+      needs.gate.outputs.ok == 'true' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
     # Publishing is npm trusted publishing (OIDC), so the job needs to mint an
     # id-token. Naming any permission drops the repo-wide `write` default for
     # every one not listed, so the two this job already relied on are spelled
@@ -101,6 +115,16 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+      # Before anything in the checked-out tree runs, the commit has to be on main.
+      - name: Require the tested commit to be on main
+        shell: bash
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if ! git merge-base --is-ancestor "$HEAD_SHA" refs/remotes/origin/main; then
+            echo "::error::${HEAD_SHA} is not on main. Not publishing."
+            exit 1
+          fi
       # `download-build: false` because there is no `build-output` artifact to
       # download: it is uploaded by the `Build` job of the *Full Suite* run, and a
       # `workflow_run` job can only reach its own run's artifacts. `bun run release`

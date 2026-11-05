@@ -81,3 +81,11 @@ wireAddon({
   package: '@fixture/billing-addon',
   uses: { pay: 'cloudapi', mail: 'shop', extra: 'bare' },
 })
+
+wireRemoteAddon({
+  name: 'hosted',
+  package: '@fixture/registry',
+  serverUrl: 'https://h',
+  uses: { shop: 'shop' },
+  local: { package: '@fixture/shop-addon', ui: true },
+})

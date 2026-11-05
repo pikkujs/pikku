@@ -295,10 +295,28 @@ func (s *Context) LoadAddonFunctionsMeta() {
 			if decl.rng != "" {
 				s.loadRemoteAddonSdkMeta(ns, decl)
 			}
+			if decl.local != nil {
+				s.loadRemoteAddonLocal(ns, decl)
+			}
 			continue
 		}
 		if err := s.loadAddon(ns, decl); err != nil {
 			s.Log.Warn(fmt.Sprintf("Failed to load addon function metadata for '%s' (%s): %s", ns, decl.pkg, err.Error()))
+		}
+	}
+}
+
+// loadRemoteAddonLocal reads the screens and contributors a wireRemoteAddon
+// takes from its local package, under the remote addon's name.
+func (s *Context) loadRemoteAddonLocal(ns string, decl *addonDecl) {
+	local := &addonDecl{pkg: decl.local.pkg, file: decl.file, ui: decl.local.ui, contributors: decl.local.contributors}
+	req := addonResolver(addonResolutionDirs(s.RootDir, decl.file))
+	if len(local.contributors) > 0 {
+		s.recordOptedInContributors(ns, local, req)
+	}
+	if local.ui {
+		if err := s.loadAddonStudio(ns, local, req); err != nil {
+			s.Log.Warn(fmt.Sprintf("Failed to load addon function metadata for '%s' (%s): %s", ns, local.pkg, err.Error()))
 		}
 	}
 }

@@ -48,7 +48,14 @@ const collectSource = () => {
       ) {
         continue
       }
-      contents.push(readFileSync(join(entry.parentPath, name), 'utf8'))
+      // Suites running in parallel may write a fixture into their own `src/`
+      // and remove it between the listing and this read; a file that is gone
+      // emits nothing.
+      try {
+        contents.push(readFileSync(join(entry.parentPath, name), 'utf8'))
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+      }
     }
   }
   return contents.join('\n')

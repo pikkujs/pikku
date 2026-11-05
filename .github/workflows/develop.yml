@@ -42,6 +42,8 @@ jobs:
         run: node --test scripts/ai-e2e-gate.test.mjs
       - name: Test the native apps gate
         run: node --test scripts/native-gate.test.mjs
+      - name: Test the Go gate
+        run: node --test scripts/inspector-go-gate.test.mjs
       - name: Check peer dependency ranges agree across the monorepo
         run: node scripts/check-peer-dependency-consistency.mjs
       - name: Check every verifier runs in the full suite
@@ -51,9 +53,30 @@ jobs:
   # that inspect recipes/functions skip themselves without its node_modules.
   # The cross-compile is the release build, so a target that stops building
   # fails here rather than in Publish.
+  # Every target recompiles the standard library and typescript-go, so this runs
+  # only on the pull requests that can break it: `scripts/inspector-go-gate.mjs`
+  # says which those are. Full Suite runs it on every push to main.
+  inspector-go-gate:
+    name: Go gate
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: decide
+        run: node scripts/inspector-go-gate.mjs >> "$GITHUB_OUTPUT"
+        env:
+          AFTER_SHA: ${{ github.event.pull_request.head.sha }}
+          COMMIT_MESSAGE: ${{ github.event.pull_request.title }}
+
   inspector-go:
     name: Go (inspector-go)
-    if: ${{ !github.event.pull_request.draft }}
+    needs: inspector-go-gate
+    if: ${{ needs.inspector-go-gate.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     defaults:
@@ -69,13 +92,28 @@ jobs:
         run: bash scripts/check-tsgo-pin.sh
       - name: go vet
         run: go vet ./...
+      - name: Disk usage after go vet
+        if: always()
+        run: |
+          df -h /
+          du -sh "$(go env GOCACHE)" "$(go env GOMODCACHE)" /tmp 2>/dev/null || true
       - name: go test
         run: go test ./...
+      - name: Disk usage after go test
+        if: always()
+        run: |
+          df -h /
+          du -sh "$(go env GOCACHE)" "$(go env GOMODCACHE)" /tmp 2>/dev/null || true
       - uses: actions/setup-node@v6
         with:
           node-version: 24
       - name: Cross-compile every target
         run: node scripts/build-go.mjs --all
+      - name: Disk usage after the build
+        if: always()
+        run: |
+          df -h /
+          du -sh "$(go env GOCACHE)" "$(go env GOMODCACHE)" /tmp 2>/dev/null || true
       - name: Check every target has its binary
         run: node scripts/check-platform-binary.mjs
       - name: Smoke-test the linux-x64 binary

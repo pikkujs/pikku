@@ -61,6 +61,32 @@ export interface AgentConfigChanges {
   tags?: string[] | null
 }
 
+const AGENT_CONFIG_KEYS: ReadonlySet<string> = new Set(
+  Object.keys({
+    name: true,
+    description: true,
+    instructions: true,
+    role: true,
+    personality: true,
+    goal: true,
+    model: true,
+    maxSteps: true,
+    temperature: true,
+    toolChoice: true,
+    tools: true,
+    tags: true,
+  } satisfies Record<keyof AgentConfigChanges, true>)
+)
+
+const SINGLE_QUOTED_ESCAPES: Record<string, string> = {
+  '\\': '\\\\',
+  "'": "\\'",
+  '\n': '\\n',
+  '\r': '\\r',
+  '\u2028': '\\u2028',
+  '\u2029': '\\u2029',
+}
+
 interface PropertyLocation {
   name: string
   valueStart: number
@@ -232,6 +258,13 @@ export class CodeEditService {
     exportedName: string,
     changes: AgentConfigChanges
   ): string {
+    for (const key of Object.keys(changes)) {
+      if (!AGENT_CONFIG_KEYS.has(key)) {
+        throw new Error(
+          `${JSON.stringify(key)} is not an agent config property`
+        )
+      }
+    }
     const callInfo = this.findPikkuCall(content, exportedName)
     const result = this.applyPropertyChanges(
       content,
@@ -546,9 +579,14 @@ export class CodeEditService {
     return '  '
   }
 
-  private serializeToolsArray(tools: string[]): string {
+  private serializeToolsArray(tools: unknown[]): string {
     if (tools.length === 0) return '[]'
-    const items = tools.map((t) => `ref('${t}')`)
+    const items = tools.map((t) => {
+      if (typeof t !== 'string') {
+        throw new Error(`Agent tools must be strings, got ${typeof t}`)
+      }
+      return `ref(${this.serializeSingleQuoted(t)})`
+    })
     return `[${items.join(', ')}]`
   }
 
@@ -693,9 +731,9 @@ export class CodeEditService {
     if (typeof value === 'string') {
       // Use single quotes for simple strings, template literals for multi-line
       if (value.includes('\n')) {
-        return '`' + value.replace(/`/g, '\\`').replace(/\$/g, '\\$') + '`'
+        return '`' + value.replace(/[\\`$]/g, (c) => `\\${c}`) + '`'
       }
-      return `'${value.replace(/'/g, "\\'")}'`
+      return this.serializeSingleQuoted(value)
     }
     if (typeof value === 'number' || typeof value === 'boolean') {
       return String(value)
@@ -707,11 +745,25 @@ export class CodeEditService {
     }
     if (typeof value === 'object' && value !== null) {
       const entries = Object.entries(value)
-        .map(([k, v]) => `${k}: ${this.serializeValue(v)}`)
+        .map(([k, v]) => `${this.serializeKey(k)}: ${this.serializeValue(v)}`)
         .join(', ')
       return `{ ${entries} }`
     }
     return String(value)
+  }
+
+  private serializeSingleQuoted(value: string): string {
+    const escaped = value.replace(
+      /[\\'\n\r\u2028\u2029]/g,
+      (c) => SINGLE_QUOTED_ESCAPES[c]!
+    )
+    return `'${escaped}'`
+  }
+
+  private serializeKey(key: string): string {
+    return /^[A-Za-z_$][\w$]*$/.test(key)
+      ? key
+      : this.serializeSingleQuoted(key)
   }
 
   private parsePropertyValue(raw: string): unknown {

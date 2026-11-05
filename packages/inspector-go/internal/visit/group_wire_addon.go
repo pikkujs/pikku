@@ -29,9 +29,18 @@ type addonDecl struct {
 	uses        *state.Record[string]
 	// contributors are the addon contributor names the project opted in to.
 	contributors []string
+	// local is a wireRemoteAddon's local package: the screens and contributors
+	// shown under the remote name are read from it.
+	local *addonLocal
 	// secretOverrides / variableOverrides / credentialOverrides. A
 	// credential override is a string or an object { name?, mode? }.
 	overrides map[string]*state.Record[*ojson]
+}
+
+type addonLocal struct {
+	pkg          string
+	ui           bool
+	contributors []string
 }
 
 func init() {

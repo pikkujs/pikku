@@ -59,6 +59,8 @@ jobs:
         run: node --test scripts/ai-e2e-gate.test.mjs
       - name: Test the native apps gate
         run: node --test scripts/native-gate.test.mjs
+      - name: Test the Go gate
+        run: node --test scripts/inspector-go-gate.test.mjs
 
   # pikku-inspect, the Go inspector. Needs no bun install: the fixture tests
   # that inspect recipes/functions skip themselves without its node_modules.
