@@ -10,7 +10,7 @@ import {
 import { resolveApiContext } from './config.js'
 import { getCloudRPC } from './http.js'
 import { readConfigProjectId } from './project-id.js'
-import type { CreateChangeInput } from '../contract/cloud-api-types.js'
+import type { CloudInput } from './rpc-client.js'
 
 export async function linkedProjectId(
   override?: string
@@ -43,7 +43,7 @@ export async function cloudChangesBackend({
     try {
       if (name === 'createChange')
         return fromHosted(
-          await fileChange(cloud, projectId, data as CreateChangeInput)
+          await fileChange(cloud, projectId, data as CloudInput<'createChange'>)
         )
       return fromHosted(
         await cloud.invoke(name as any, toHostedInput(data) as any)
@@ -61,7 +61,7 @@ export async function cloudChangesBackend({
 async function fileChange(
   cloud: ReturnType<typeof getCloudRPC>,
   projectId: string,
-  data: CreateChangeInput
+  data: CloudInput<'createChange'>
 ) {
   if (data.stageId && data.stageId !== LOCAL_PROJECT_ID)
     return cloud.invoke('createChange', data)

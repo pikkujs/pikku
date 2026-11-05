@@ -95,15 +95,16 @@ export type UncontractedRPCMap = {
   }
 }
 
-/** The addon each uncontracted call is served under; `null` means bare. */
-export const UNCONTRACTED_NAMESPACE: {
-  readonly [Name in keyof UncontractedRPCMap]: string | null
-} = {
-  requestCliAuth: null,
-  pollCliAuth: null,
-  submitFinding: null,
-  createSandboxChange: 'machine',
-  ensureProjectAspirations: 'cloud',
-  getProjectAspirations: 'cloud',
-  reactToProjectAspiration: 'cloud',
-}
+/**
+ * The bare names callers use for these, and where each is served. Everything
+ * else the CLI calls is a function of the contract and is served `cloud:`.
+ */
+export const UNCONTRACTED_SERVED_AS = {
+  requestCliAuth: 'requestCliAuth',
+  pollCliAuth: 'pollCliAuth',
+  submitFinding: 'submitFinding',
+  createSandboxChange: 'machine:createSandboxChange',
+  ensureProjectAspirations: 'cloud:ensureProjectAspirations',
+  getProjectAspirations: 'cloud:getProjectAspirations',
+  reactToProjectAspiration: 'cloud:reactToProjectAspiration',
+} as const

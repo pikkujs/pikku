@@ -1,8 +1,9 @@
 import type { CloudRPC as PikkuRPC } from './rpc-client.js'
-import type { GetDeploymentStatusOutput } from '../contract/cloud-api-types.js'
+import type { CloudOutput } from './rpc-client.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 
-type MissingConfigEntry = GetDeploymentStatusOutput['missingSecrets'][number]
+type MissingConfigEntry =
+  CloudOutput<'getDeploymentStatus'>['missingSecrets'][number]
 
 const IN_FLIGHT = new Set(['queued', 'planning', 'building', 'deploying'])
 const SUCCEEDED = new Set(['active'])

@@ -1,17 +1,29 @@
-import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { CorePikkuFetch } from '@pikku/fetch'
-import type { FlattenedRPCMap } from '../contract/cloud-api-types.js'
+import type { FlattenedRPCMap } from '../../.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.js'
 import {
-  CLOUD_CONTRACT_RPCS,
-  CLOUD_NAMESPACE,
-} from '../contract/cloud-api-meta.js'
-import {
-  UNCONTRACTED_NAMESPACE,
+  UNCONTRACTED_SERVED_AS,
   type UncontractedRPCMap,
 } from '../contract/uncontracted.js'
 
+/**
+ * The cloud API contract, by bare function name. `pikku all` syncs
+ * `@pikkustudio/addon-cloud-api` (package.json `pikku.uses.cloud`, pinned in
+ * `pikku-addons.lock`) and merges it into the addon's RPC map as `cloud:<name>`;
+ * the generated map lives in the gitignored `.pikku/`, so run the package's
+ * build (`bun run pikku`) before `tsc` or the tests.
+ */
+type ContractRPCMap = {
+  [
+    K in keyof FlattenedRPCMap as K extends `cloud:${infer Name}` ? Name : never
+  ]: FlattenedRPCMap[K]
+}
+
 /** Every function the CLI can call, by bare name: the contract plus the few it cannot cover. */
-export type CloudRPCMap = FlattenedRPCMap & UncontractedRPCMap
+export type CloudRPCMap = ContractRPCMap & UncontractedRPCMap
+export type CloudInput<Name extends keyof CloudRPCMap> =
+  CloudRPCMap[Name]['input']
+export type CloudOutput<Name extends keyof CloudRPCMap> =
+  CloudRPCMap[Name]['output']
 
 type IsVoidish<T> = 0 extends 1 & T
   ? false
@@ -26,20 +38,16 @@ export type CloudInvoke = <Name extends keyof CloudRPCMap>(
 ) => Promise<CloudRPCMap[Name]['output']>
 
 /**
- * The name production serves a function under. Contract functions come from
- * the generated contract (`cloud:`), the rest from {@link UNCONTRACTED_NAMESPACE};
- * a name in neither is refused here rather than sent to 404.
+ * The name production serves a function under. The few calls the contract
+ * cannot carry say where they are served; every other name is a contract
+ * function, and `CloudInvoke` only lets one through that the synced contract
+ * has, so the type check is what catches a name the server does not know.
  */
 export function cloudRpcName(name: string): string {
   if (name.includes(':')) return name
-  if (Object.hasOwn(UNCONTRACTED_NAMESPACE, name)) {
-    const ns = UNCONTRACTED_NAMESPACE[name as keyof UncontractedRPCMap]
-    return ns ? `${ns}:${name}` : name
-  }
-  if (CLOUD_CONTRACT_RPCS.has(name)) return `${CLOUD_NAMESPACE}:${name}`
-  throw new CloudPreconditionError(
-    `'${name}' is not in the cloud API contract. Run \`bun run sync-contract\` if it is new, or add it to contract/uncontracted.ts if the contract cannot carry it.`
-  )
+  if (Object.hasOwn(UNCONTRACTED_SERVED_AS, name))
+    return UNCONTRACTED_SERVED_AS[name as keyof typeof UNCONTRACTED_SERVED_AS]
+  return `cloud:${name}`
 }
 
 /** A typed client for the cloud API: callers use bare names, the wire gets the served ones. */

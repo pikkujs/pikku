@@ -1,14 +1,36 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { getCloudRPC } from './http.js'
-import { CLOUD_CONTRACT_RPCS } from '../contract/cloud-api-meta.js'
 
 const realFetch = globalThis.fetch
 
 afterEach(() => {
   globalThis.fetch = realFetch
 })
+
+/**
+ * The contract's function names, from the SDK `pikku all` synced into the
+ * gitignored `.pikku/remote` (package.json `pikku.uses.cloud`).
+ */
+function contractNames(): Set<string> {
+  const root = join(import.meta.dir, '../../.pikku/remote/@pikkustudio')
+  const sdk = existsSync(root)
+    ? readdirSync(root).find((d) => d.startsWith('addon-cloud-api@'))
+    : undefined
+  if (!sdk)
+    throw new Error(
+      'The cloud API contract is not synced. Run `bun run pikku` (or the package build) in packages/addon/pikku-cloud-cli first; it fetches @pikkustudio/addon-cloud-api from the registry and pins it in pikku-addons.lock.'
+    )
+  const meta = JSON.parse(
+    readFileSync(
+      join(root, sdk, 'function/pikku-functions-meta.gen.json'),
+      'utf8'
+    )
+  ) as Record<string, { remote?: boolean }>
+  return new Set(Object.keys(meta).filter((n) => meta[n]!.remote))
+}
+const CONTRACT = contractNames()
 
 const BARE = ['requestCliAuth', 'pollCliAuth', 'submitFinding']
 // Called by pikku-console, served under cloud:, newer than the published contract.
@@ -76,35 +98,18 @@ describe('getCloudRPC rpc names', () => {
       else if (PENDING_PUBLISH.includes(name))
         expect(path).toBe(`/rpc/cloud:${name}`)
       else {
-        expect(CLOUD_CONTRACT_RPCS.has(name)).toBe(true)
+        expect(CONTRACT.has(name)).toBe(true)
         expect(path).toBe(`/rpc/cloud:${name}`)
       }
     }
   )
 
   test('the bare calls are not in the contract', () => {
-    for (const name of BARE) expect(CLOUD_CONTRACT_RPCS.has(name)).toBe(false)
-  })
-
-  test('the generated name list matches the generated rpc map', () => {
-    const map = readFileSync(
-      join(import.meta.dir, '../contract/cloud-api-types.ts'),
-      'utf8'
-    )
-    const keys = [
-      ...map.matchAll(/^\s*readonly '?([A-Za-z0-9_]+)'?: RPCHandler</gm),
-    ].map((m) => m[1]!)
-    expect([...CLOUD_CONTRACT_RPCS].sort()).toEqual(keys.sort())
+    for (const name of BARE) expect(CONTRACT.has(name)).toBe(false)
   })
 
   test('an already prefixed name is left alone', async () => {
     expect(await urlFor('cloud:listStages')).toBe('/rpc/cloud:listStages')
-  })
-
-  test('a name in neither the contract nor the uncontracted list is refused, not sent to 404', async () => {
-    await expect(urlFor('notAFunction')).rejects.toThrow(
-      /not in the cloud API contract/
-    )
   })
 
   test('without credentials the request carries no authorization header', async () => {
