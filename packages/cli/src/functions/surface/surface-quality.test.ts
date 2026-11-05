@@ -294,6 +294,13 @@ describe('a guessed name', () => {
     )
   })
 
+  test('a method that is no export is answered where it is described', () => {
+    if (!doc) return
+    const answer = renderSurfaceDoc(doc, { target: 'startWorkflow' })
+    assert.match(answer, /'startWorkflow' is not an export/)
+    assert.match(answer, /rpc\.startWorkflow\(name, input\)/)
+  })
+
   test('with nothing in common is sent to the index', () => {
     if (!doc) return
     assert.throws(
