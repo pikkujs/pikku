@@ -312,6 +312,10 @@ describe('validatePikkuStudio', () => {
       '---\ntitle: cloud_billing\ndescription: cloud_nope\n---\nHi\n'
     )
     writeFileSync(
+      join(root, 'agents', 'bad-title-key.md'),
+      '---\ntitle: cloud_nope\ndescription: cloud_agent_description\n---\nHi\n'
+    )
+    writeFileSync(
       join(root, 'messages', 'de.json'),
       JSON.stringify({ cloud_title: 'Cloud' })
     )
@@ -448,6 +452,21 @@ describe('validatePikkuStudio', () => {
     assert.deepEqual(criticals, [
       "PKU358: definePlugin uses the message key 'cloud_nope', which is missing from the addon's messages/en.json",
     ])
+    assert.equal(state.studio.screens[0].agentTitle, 'cloud_billing')
+    assert.equal(state.studio.screens[0].agentDescription, undefined)
+  })
+
+  test('still records the description when the title key is missing from en.json', () => {
+    agentScreen('bad-title-key')
+    validatePikkuStudio(logger, state)
+    assert.deepEqual(criticals, [
+      "PKU358: definePlugin uses the message key 'cloud_nope', which is missing from the addon's messages/en.json",
+    ])
+    assert.equal(state.studio.screens[0].agentTitle, undefined)
+    assert.equal(
+      state.studio.screens[0].agentDescription,
+      'cloud_agent_description'
+    )
   })
 
   test('fails on an empty agent', () => {
@@ -496,7 +515,7 @@ describe('validatePikkuStudio', () => {
       agentScreen('billing-helper')
       validatePikkuStudio(logger, state)
       assert.deepEqual(criticals, [
-        `PKU366: Screen '/billing' has the agent 'billing-helper', but package.json "files" does not include agents/, so the published addon would ship without it`,
+        `PKU366: Screen '/billing' has the agent 'billing-helper', but package.json "files" does not list agents/; add "agents" to it so the published addon ships the agent`,
       ])
     })
 
@@ -549,7 +568,7 @@ describe('validatePikkuStudio', () => {
       )
       validatePikkuStudio(logger, state)
       assert.deepEqual(criticals, [
-        `PKU366: The addon ships skills/ but package.json "files" does not include it, so the published addon would ship without its skills`,
+        `PKU366: The addon ships skills/ but package.json "files" does not list it; add "skills" to it so the published addon ships its skills`,
       ])
     })
 

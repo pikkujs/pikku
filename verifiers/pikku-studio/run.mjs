@@ -256,7 +256,7 @@ const expectPasses = (message) => {
 
 withPackageFiles(['dist', 'messages'], () =>
   expectFailure(
-    'does not include agents/',
+    'does not list agents/',
     'a "files" list without agents/ built with a screen agent'
   )
 )
@@ -265,7 +265,7 @@ console.log('✓ "files" without agents/ fails with PKU366 for a valid agent')
 withPackageFiles(['dist', 'messages', 'agents'], () =>
   withSkill(() =>
     expectFailure(
-      'does not include it, so the published addon would ship without its skills',
+      'does not list it; add "skills" to it so the published addon ships its skills',
       'a "files" list without skills/ built with skills/<x>/SKILL.md present'
     )
   )
@@ -300,6 +300,12 @@ try {
     ],
     { cwd: here, encoding: 'utf8', env: { ...process.env, FORCE_COLOR: '0' } }
   )
+  if (scaffold.status !== 0) {
+    fail(
+      `pikku new addon --ui exited with ${scaffold.status}`,
+      `${scaffold.stdout}${scaffold.stderr}`
+    )
+  }
   const scaffoldPkg = join(scaffoldRoot, 'addon-inbox-kit', 'package.json')
   if (!existsSync(scaffoldPkg)) {
     fail(

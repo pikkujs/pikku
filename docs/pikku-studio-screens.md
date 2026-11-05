@@ -129,10 +129,13 @@ include them. If `package.json` has a `files` list, it must name them:
 ```
 
 An entry counts when it is `agents`, `agents/`, or a pattern under `agents/`
-(`agents/**/*.md`); the same for `skills`. With no `files` field npm publishes
-everything, and there is nothing to check. The `agents/` check only applies to
-an agent that is otherwise valid: one that already fails with PKU365 gets that
-error alone.
+(`agents/**/*.md`); the same for `skills`. A root glob such as `**/*.md` does
+not count, even though npm would publish the folder through it, so list the
+folder as well. With no `files` field the check does not run: npm then leaves
+out what `.npmignore` excludes, or `.gitignore` when there is no `.npmignore`,
+so make sure neither excludes `agents/` or `skills/`. The `agents/` check only
+applies to an agent that is otherwise valid: one that already fails with PKU365
+gets that error alone.
 
 ### The `studio` block
 

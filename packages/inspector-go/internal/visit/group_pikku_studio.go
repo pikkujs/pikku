@@ -398,7 +398,8 @@ func readStudioCatalog(file string) (map[string]json.RawMessage, bool) {
 }
 
 // studioPackageFiles is the package's "files" list; ok is false when it has
-// none, as npm then publishes every file.
+// none: what npm then publishes depends on .npmignore or .gitignore, which are
+// not read here.
 func studioPackageFiles(root string) (files []string, ok bool) {
 	pkg, found := readStudioCatalog(filepath.Join(root, "package.json"))
 	if !found {
@@ -509,7 +510,7 @@ func (s *Context) ValidatePikkuStudio() {
 			}
 			if agentValid && !strings.HasPrefix(*screen.Agent, "studio:") && hasFiles && !studioFilesInclude(files, "agents") {
 				s.Log.Critical(diag.StudioPackageFilesMissing, fmt.Sprintf(
-					"Screen '%s' has the agent '%s', but package.json \"files\" does not include agents/, so the published addon would ship without it", screen.Path, *screen.Agent))
+					"Screen '%s' has the agent '%s', but package.json \"files\" does not list agents/; add \"agents\" to it so the published addon ships the agent", screen.Path, *screen.Agent))
 			}
 		}
 		if screen.Nav == nil || screen.Nav.Badge == nil {
@@ -522,7 +523,7 @@ func (s *Context) ValidatePikkuStudio() {
 	}
 	if root != "" && hasFiles && !studioFilesInclude(files, "skills") && studioHasSkills(root) {
 		s.Log.Critical(diag.StudioPackageFilesMissing,
-			"The addon ships skills/ but package.json \"files\" does not include it, so the published addon would ship without its skills")
+			"The addon ships skills/ but package.json \"files\" does not list it; add \"skills\" to it so the published addon ships its skills")
 	}
 	if messagesDir != "" {
 		if entries, err := os.ReadDir(messagesDir); err == nil {

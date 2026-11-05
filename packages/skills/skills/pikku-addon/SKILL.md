@@ -438,8 +438,10 @@ export default definePlugin({
   metadata when declared.
 - `agents/` and `skills/` ship in the published package. If `package.json` has a
   `files` list, it must include them (`"files": ["dist", "messages", "agents",
-  "skills"]`, which `pikku new addon <name> --ui` scaffolds); no `files` field publishes
-  everything.
+  "skills"]`, which `pikku new addon <name> --ui` scaffolds). A root glob such as
+  `**/*.md` does not count, so list the folder as well. With no `files` field
+  nothing is checked, so make sure `.npmignore`, or `.gitignore` when there is no
+  `.npmignore`, does not exclude them.
 - `package.json` carries a `studio` block, `{ "addon": "<name>", "ui": "./src",
   "messages": "./messages/{locale}.json" }`. Studio only links (and loads the
   agents and skills of) a package with `studio.addon`; it is the addon's short

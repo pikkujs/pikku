@@ -46,8 +46,10 @@ inspector only recognises a call to `definePlugin`.
   fixed, and a second error would only repeat the first. A PKU358 on its
   frontmatter keys does not suppress PKU366, since the file exists. An entry counts when it is the folder name, with or
   without a trailing slash, or any pattern starting with `<folder>/`; no
-  negation or `./` handling. No `files` field means npm publishes everything,
-  so there is nothing to check. `pikku new addon <name> --ui` scaffolds
+  negation or `./` handling, and a root glob such as `**/*.md` does not count,
+  so the message says to list the folder rather than claiming it would not
+  ship. With no `files` field nothing is checked: npm then follows `.npmignore`
+  or `.gitignore`, which the check does not read. `pikku new addon <name> --ui` scaffolds
   `files: ['dist', 'messages', 'agents', 'skills']` (see the CLI's
   `the-ui-addon-scaffold-writes-the-studio-block-and-ships-agents-and-skills`).
 - The diagnostic order is part of parity: PKU358 for screen and addon

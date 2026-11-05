@@ -340,8 +340,8 @@ const readFrontmatter = (text: string): Record<string, string> | undefined => {
 }
 
 /**
- * The package's `files` list, or undefined when it has none: npm then
- * publishes every file.
+ * The package's `files` list, or undefined when it has none: what npm then
+ * publishes depends on `.npmignore` or `.gitignore`, which are not read here.
  */
 const packageFiles = (root: string): string[] | undefined => {
   const files = readCatalog(join(root, 'package.json'))?.files
@@ -469,7 +469,7 @@ export function validatePikkuStudio(
       ) {
         logger.critical(
           ErrorCode.STUDIO_PACKAGE_FILES_MISSING,
-          `Screen '${screen.path}' has the agent '${agent}', but package.json "files" does not include agents/, so the published addon would ship without it`
+          `Screen '${screen.path}' has the agent '${agent}', but package.json "files" does not list agents/; add "agents" to it so the published addon ships the agent`
         )
       }
     }
@@ -485,7 +485,7 @@ export function validatePikkuStudio(
   if (root && files && !filesInclude(files, 'skills') && hasSkills(root)) {
     logger.critical(
       ErrorCode.STUDIO_PACKAGE_FILES_MISSING,
-      `The addon ships skills/ but package.json "files" does not include it, so the published addon would ship without its skills`
+      `The addon ships skills/ but package.json "files" does not list it; add "skills" to it so the published addon ships its skills`
     )
   }
 
