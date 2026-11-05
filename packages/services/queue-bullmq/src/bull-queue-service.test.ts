@@ -1,5 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { createServer } from 'node:net'
+import type { AddressInfo } from 'node:net'
 
 import {
   BullQueueService,
@@ -144,5 +146,37 @@ describe('traceparent on a BullMQ job', () => {
       new Map()
     )
     assert.equal(mapped.pikkuUserId, undefined)
+  })
+})
+
+describe('BullQueueService connection', () => {
+  test('the producer connects to the Redis it was given', async () => {
+    const server = createServer((socket) => socket.destroy())
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const connected = new Promise<void>((resolve) =>
+      server.once('connection', () => resolve())
+    )
+    const { port } = server.address() as AddressInfo
+    const errors = console.error
+    console.error = () => {}
+
+    const service = new BullQueueService({
+      host: '127.0.0.1',
+      port,
+      retryStrategy: () => null,
+    })
+    const added = service.add('connection-test', {}).catch(() => {})
+    try {
+      await Promise.race([
+        connected,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('never connected')), 2000)
+        ),
+      ])
+    } finally {
+      console.error = errors
+      server.close()
+    }
+    void added
   })
 })
