@@ -6,7 +6,7 @@ import {
   resolveStage,
   resolveStageId,
 } from './stage.js'
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import type { CloudRPC as PikkuRPC } from './rpc-client.js'
 
 const rpcWith = (branches: string[]) =>
   ({

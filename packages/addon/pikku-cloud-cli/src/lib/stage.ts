@@ -1,4 +1,4 @@
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import type { CloudRPC as PikkuRPC } from './rpc-client.js'
 
 type CloudRPC = Pick<PikkuRPC, 'invoke'>
 import { CloudPreconditionError } from '@pikku/cli/addon-support'

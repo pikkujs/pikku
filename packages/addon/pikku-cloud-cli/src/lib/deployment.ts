@@ -1,5 +1,5 @@
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
-import type { GetDeploymentStatusOutput } from '../sdk/rpc-map.gen.d.js'
+import type { CloudRPC as PikkuRPC } from './rpc-client.js'
+import type { GetDeploymentStatusOutput } from '../contract/cloud-api.gen.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 
 type MissingConfigEntry = GetDeploymentStatusOutput['missingSecrets'][number]

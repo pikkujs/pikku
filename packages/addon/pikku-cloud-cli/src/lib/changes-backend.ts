@@ -10,7 +10,7 @@ import {
 import { resolveApiContext } from './config.js'
 import { getCloudRPC } from './http.js'
 import { readConfigProjectId } from './project-id.js'
-import type { CreateChangeInput } from '../sdk/rpc-map.gen.d.js'
+import type { CreateChangeInput } from '../contract/cloud-api.gen.js'
 
 export async function linkedProjectId(
   override?: string
@@ -58,13 +58,6 @@ export async function cloudChangesBackend({
   return { rpc: { invoke: invoke as ChangesRPC['invoke'] }, projectId }
 }
 
-type SandboxFiling = {
-  invoke(
-    name: 'createSandboxChange',
-    data: { title: string; body?: string; route?: string }
-  ): Promise<{ change: { changeId: string; shortId: string; title: string } }>
-}
-
 async function fileChange(
   cloud: ReturnType<typeof getCloudRPC>,
   projectId: string,
@@ -78,7 +71,7 @@ async function fileChange(
   } catch (error) {
     if (httpStatus(error) !== 403) throw error
     const { title, body, route } = data
-    return (cloud as unknown as SandboxFiling).invoke('createSandboxChange', {
+    return cloud.invoke('createSandboxChange', {
       title,
       body,
       route,
