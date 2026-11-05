@@ -22,6 +22,7 @@ const manifest = {
       agent: 'invoice-helper',
       agentTitle: 'invoices_agent__title',
       agentDescription: 'invoices_agent__description',
+      defaultChat: false,
       component: './screens/overview',
     },
     {
@@ -57,7 +58,7 @@ describe('serializeScreens', () => {
     )
     assert.match(
       out,
-      /path: "\/invoices", title: "invoices_overview__title", scope: "project", nav: \{"area":"project","icon":"receipt","order":30,"badge":"unpaid"\}, needsApp: true, scopes: \["invoices:read"\], agent: "invoice-helper", agentTitle: "invoices_agent__title", agentDescription: "invoices_agent__description"/
+      /path: "\/invoices", title: "invoices_overview__title", scope: "project", nav: \{"area":"project","icon":"receipt","order":30,"badge":"unpaid"\}, needsApp: true, scopes: \["invoices:read"\], agent: "invoice-helper", agentTitle: "invoices_agent__title", agentDescription: "invoices_agent__description", defaultChat: false, component: /
     )
     assert.match(
       out,
@@ -120,6 +121,14 @@ describe('host emit', () => {
       serializeInstalledAddons(installed as any),
       /import\("@acme\/addon-invoices\/screens\/overview"\)/
     )
+  })
+
+  test('leaves defaultChat out when the screen did not declare it', () => {
+    const out = serializeScreens(
+      manifest as any,
+      '/pkg/.pikku/screens/pikku-screens.gen.ts'
+    )
+    assert.equal(out.match(/defaultChat/g)?.length, 1)
   })
 
   test('carries scope, nav, replaces, needsApp and layout to the host', () => {

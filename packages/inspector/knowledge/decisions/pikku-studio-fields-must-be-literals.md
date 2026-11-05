@@ -9,7 +9,11 @@ tags: [inspector, screens, studio, scopes]
 
 `addPikkuStudio` in `packages/inspector/src/add/add-pikku-studio.ts` reads the
 manifest `title` and every screen field (`path`, `title`, `scope`, `nav`,
-`replaces`, `needsApp`, `layout`, `scopes`, `component`, `app`) from the AST.
+`replaces`, `needsApp`, `defaultChat`, `layout`, `scopes`, `agent`, `component`,
+`app`) from the AST. The booleans (`replaces`, `needsApp`, `defaultChat`) must be
+`true` or `false` literals and are written to the metadata only when declared,
+so an absent `defaultChat` keeps its default (`true`) without the generated meta
+saying so.
 `fail` is `logger.critical(ErrorCode.ADDON_SCREENS_NOT_STATIC, message)`
 (line 234). A screen's `scopes` goes through `stringArray(value)` and fails
 with "A screen's scopes must be an array of string literals" when it returns
