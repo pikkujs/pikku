@@ -444,6 +444,10 @@ func (s *Context) addFunctions(node *ast.Node) {
 		}
 	}
 
+	if s.Options.ClassificationCheck {
+		s.checkClassification(name, handler, wrapper != "pikkuFunc")
+	}
+
 	m.Sessionless = tsutil.BoolPtr(wrapper != "pikkuFunc")
 	m.Services = services
 	if len(wires.Wires) > 0 || !wires.Optimized {

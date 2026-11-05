@@ -36,6 +36,8 @@ type Options struct {
 	// SchemaConfig is InspectorOptions.schemaConfig; schemas are generated
 	// only when it is present.
 	SchemaConfig *SchemaConfig `json:"schemaConfig,omitempty"`
+	// ClassificationCheck is InspectorOptions.classificationCheck.
+	ClassificationCheck bool `json:"classificationCheck,omitempty"`
 	// Allow is InspectorOptions.allow, the project's opt-ins.
 	Allow *Allow `json:"allow,omitempty"`
 

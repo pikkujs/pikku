@@ -57,6 +57,7 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 	ctx := visit.NewContext(prog.Checker, st, log, visit.Options{
 		SetupOnly:             req.Options.SetupOnly,
 		AllowComplexWorkflows: req.Options.Allow != nil && req.Options.Allow.ComplexWorkflows,
+		ClassificationCheck:   req.Options.ClassificationCheck,
 		IsAddon:               req.Options.IsAddon,
 	})
 
