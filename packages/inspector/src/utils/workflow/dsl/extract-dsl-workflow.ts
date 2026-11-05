@@ -498,6 +498,18 @@ function extractVariableDeclaration(
       }
     }
 
+    if (isWorkflowApprovalCall(call, context.checker)) {
+      const step = extractApprovalStep(call, context, varName)
+      if (step) {
+        const type = context.checker.getTypeAtLocation(decl)
+        context.outputVars.set(varName, { type, node: decl })
+        if (isArrayType(type, context.checker)) {
+          context.arrayVars.add(varName)
+        }
+        return step
+      }
+    }
+
     // Promise.all fanout/group captured into a variable
     // (const results = await Promise.all(array.map(...)))
     if (isParallelFanout(call) || isParallelGroup(call)) {
@@ -615,6 +627,7 @@ function extractDestructuredDeclaration(
   const destructuresAStep =
     stepCall !== null &&
     (isWorkflowDoCall(stepCall, context.checker) ||
+      isWorkflowApprovalCall(stepCall, context.checker) ||
       isScenarioStepCall(stepCall) ||
       isParallelGroup(stepCall) ||
       isParallelFanout(stepCall))
@@ -647,7 +660,7 @@ function extractExpressionStatement(
       outputVar = expr.left.text
 
       // Check if this is an assignment to a context variable (set step)
-      // But if the RHS is a workflow.do() call, fall through to RPC extraction —
+      // But if the RHS is a workflow step, fall through to step extraction —
       // reassigning a pre-declared variable with a workflow step is valid and common.
       if (context.contextVars.has(outputVar)) {
         const rhs = expr.right
@@ -656,7 +669,8 @@ function extractExpressionStatement(
             ? rhs.expression
             : null
         const isWorkflowCall = rhsCall
-          ? isWorkflowDoCall(rhsCall, context.checker)
+          ? isWorkflowDoCall(rhsCall, context.checker) ||
+            isWorkflowApprovalCall(rhsCall, context.checker)
           : false
 
         if (!isWorkflowCall) {

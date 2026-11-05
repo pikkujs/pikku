@@ -24,6 +24,17 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### A bound `workflow.approval` is read into the graph, and can now fail it
+
+`const decision = await workflow.approval(...)` used to be dropped from the workflow graph and `plannedSteps`, in both inspector engines. It is now a real step, so the rules a bare `await workflow.approval(...)` always followed apply to it too. Two forms that passed silently now fail `pikku all` with `PKU641`:
+
+- `const { status } = await workflow.approval(...)`. Assign the outcome to a variable and read its properties.
+- A `reason` the inspector cannot resolve, such as a variable computed from `data`. Write the reason as a literal or a template string.
+
+Rewrite those forms as above. `pikkuWorkflowFunc` remains the default.
+
+To find the affected code, run `pikku all` and look for `PKU641`.
+
 ### `pikku verify` fails on an app function nothing uses
 
 An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked. Workflows are checked too: a workflow that is not wired, exposed or started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step) is reported.
