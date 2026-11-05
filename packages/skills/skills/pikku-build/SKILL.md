@@ -2,7 +2,7 @@
 name: pikku-build
 description: >-
   App-level Pikku work: new app, conversion, feature or endpoint, post-clone cleanup. Load pikku-concepts first. Not one-off function edits, changeset plans (pikku-architect) or a changes queue (pikku-changes).
-allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku cloud report *), Bash(npx --no pikku cloud report *)
+allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku report *), Bash(npx --no pikku report *)
 argument-hint: '[feature description]'
 installGroups: [core]
 agent:
@@ -76,7 +76,7 @@ Neither is the app. When the conversion compiles, carry on in the mode the reque
 
 Whenever pikku or a skill costs you time (a command that failed on a fresh tree, a skill describing a flag the CLI does not have, generated code you had to fix by hand), file it then, as the `pikku-report` skill describes. Leave out secrets, tokens and customer data.
 
-Findings are held until hand-over. The last thing in the hand-over, after the app runs (and is deployed, if they chose to), is the `pikku-report` send step: if it lists findings and asks, ask the user (Yes, No, Always or Never) and run it again with `--consent <answer>`. If it says reporting is off, do not ask.
+Findings are held until hand-over. The last thing in the hand-over, after the app runs (and is deployed, if they chose to), is the `pikku-report` send step: if it lists findings and asks, ask the user (Yes, No, Always or Never), naming the account it names, and run it again with `--consent <answer>`. If it says reporting is off, or the findings are kept on this computer, do not ask.
 
 ## Who you are talking to
 
