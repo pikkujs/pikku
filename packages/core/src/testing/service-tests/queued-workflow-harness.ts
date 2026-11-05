@@ -37,6 +37,8 @@ export class QueuedWorkflowHarness {
   dropWhen?: (job: Job) => boolean
   /** Make `queue.add` throw for a job, simulating the broker being unreachable. */
   rejectAddWhen?: (queue: string, data: any) => boolean
+  /** Carries a job in an adapter's wire format, as it would reach a worker. */
+  transport?: (data: any, options?: any) => { data: any; traceparent?: string }
 
   constructor(service: PikkuWorkflowService) {
     resetPikkuState()
@@ -46,8 +48,16 @@ export class QueuedWorkflowHarness {
         if (this.rejectAddWhen?.(queue, data)) {
           throw new Error('broker unreachable')
         }
-        this.jobTraceparents.push(options?.traceparent)
-        this.queue.push({ queue, data, attempts: options?.attempts ?? 1 })
+        const carried = this.transport?.(data, options) ?? {
+          data,
+          traceparent: options?.traceparent,
+        }
+        this.jobTraceparents.push(carried.traceparent)
+        this.queue.push({
+          queue,
+          data: carried.data,
+          attempts: options?.attempts ?? 1,
+        })
       },
     }
     pikkuState(null, 'package', 'singletonServices', {

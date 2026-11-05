@@ -9,6 +9,8 @@
   "dependencies": {
     "@pikku/core": "workspace:*",
     "@pikku/jose": "workspace:*",
+    "@pikku/node-http-server": "workspace:*",
+    "@pikku/queue-bullmq": "workspace:*",
     "@pikku/schedule": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "zod": "^4"
@@ -22,6 +24,7 @@
   "scripts": {
     "tsc": "tsc --noEmit",
     "pikku": "pikku",
-    "test": "pikku && tsc --noEmit && node --import tsx --test src/tracing.assert.ts"
+    "test": "pikku && tsc --noEmit && node --import tsx --test src/tracing.assert.ts",
+    "test:distributed": "pikku && tsc --noEmit && node --import tsx --test src/distributed/distributed.assert.ts"
   }
 }

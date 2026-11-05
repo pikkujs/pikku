@@ -1215,7 +1215,7 @@
         "ioredis": "^6.0.0",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.146",
       },
     },
     "packages/services/queue-nats": {
@@ -2455,6 +2455,8 @@
       "dependencies": {
         "@pikku/core": "workspace:*",
         "@pikku/jose": "workspace:*",
+        "@pikku/node-http-server": "workspace:*",
+        "@pikku/queue-bullmq": "workspace:*",
         "@pikku/schedule": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "zod": "^4",

@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3373 observable things**: 1143 exported names, plus
+**3375 observable things**: 1145 exported names, plus
 2230 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
@@ -61,11 +61,11 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./webhook` | 7 | 7 | 1 |
 | `./hmac` | 8 | 8 | 0 |
 | `./state` | 9 | 8 | 0 |
+| `./testing` | 6 | 6 | 2 |
 | `./channel/serverless` | 4 | 4 | 3 |
 | `./cli/command-parser` | 3 | 1 | 6 |
 | `./variable` | 6 | 6 | 0 |
 | `./schema` | 6 | 6 | 0 |
-| `./testing` | 4 | 4 | 2 |
 | `./dev` | 4 | 4 | 2 |
 | `./services/in-memory-queue` | 1 | 1 | 4 |
 | `./services/istanbul-coverage` | 1 | 1 | 4 |
@@ -6690,7 +6690,16 @@ validateSchema: (logger: Logger, schemaService: SchemaService | undefined, schem
 
 ```ts
 clearPikkuRuntimeState: () => void
+defineQueueTraceConformance: (name: string, create: () => Promise<QueueTraceAdapter>, { settleMs }?: { settleMs?: number | undefined; }) => void
 defineServiceTests: (config: ServiceTestConfig) => void
+export type QueueTraceAdapter = {
+  service: QueueService
+  startWorkers: () => Promise<void>
+  stop: () => Promise<void>
+  publishRaw: (queueName: string, payload: unknown) => Promise<void>
+  envelope?: boolean
+  retriesDiscarded?: boolean
+}
 export interface ServiceTestConfig {
   name: string
   services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore>; leaseService?: () => Promise<LeaseService>; workflowFencing?: () => Promise<WorkflowFencingHarness>; workflowCompensationQueued?: () => Promise<PikkuWorkflowService>; workflowCompensationQueuedOptions?: QueuedCompensationOptions }

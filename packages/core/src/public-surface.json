@@ -634,6 +634,10 @@
     "getSchema",
     "validateSchema"
   ],
-  "./testing": ["clearPikkuRuntimeState", "defineServiceTests"],
+  "./testing": [
+    "clearPikkuRuntimeState",
+    "defineQueueTraceConformance",
+    "defineServiceTests"
+  ],
   "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
 }
