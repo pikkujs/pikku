@@ -1,5 +1,6 @@
 {
   "name": "wirings-addons-fixture",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "files": ["dist", "messages"]
 }

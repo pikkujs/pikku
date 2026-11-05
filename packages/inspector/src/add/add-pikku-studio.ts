@@ -138,6 +138,7 @@ const readScreen = (
   let component: string | undefined
   let app: string | undefined
   let agent: string | undefined
+  let defaultChat: boolean | undefined
   let ok = true
   for (const field of element.properties) {
     const key = propName(field)
@@ -159,6 +160,7 @@ const readScreen = (
       continue
     } else if (key === 'replaces') read = replaces = booleanLiteral(value)
     else if (key === 'needsApp') read = needsApp = booleanLiteral(value)
+    else if (key === 'defaultChat') read = defaultChat = booleanLiteral(value)
     else if (key === 'agent')
       read = agent = ts.isStringLiteral(value) ? value.text : undefined
     else if (key === 'layout') read = layout = oneOf(value, ['bare'] as const)
@@ -213,6 +215,7 @@ const readScreen = (
     ...(layout ? { layout } : {}),
     ...(scopes ? { scopes } : {}),
     ...(agent !== undefined ? { agent } : {}),
+    ...(defaultChat !== undefined ? { defaultChat } : {}),
     ...(component ? { component } : { app: app! }),
   } as StudioScreenMeta
 }
@@ -336,6 +339,36 @@ const readFrontmatter = (text: string): Record<string, string> | undefined => {
   return fields
 }
 
+/**
+ * The package's `files` list, or undefined when it has none: npm then
+ * publishes every file.
+ */
+const packageFiles = (root: string): string[] | undefined => {
+  const files = readCatalog(join(root, 'package.json'))?.files
+  return Array.isArray(files)
+    ? files.filter((entry): entry is string => typeof entry === 'string')
+    : undefined
+}
+
+const filesInclude = (files: string[], dir: string): boolean =>
+  files.some(
+    (entry) =>
+      entry === dir || entry === `${dir}/` || entry.startsWith(`${dir}/`)
+  )
+
+/** Whether the package has a `skills/<name>/SKILL.md`. */
+const hasSkills = (root: string): boolean => {
+  const dir = join(root, 'skills')
+  try {
+    return readdirSync(dir, { withFileTypes: true }).some(
+      (entry) =>
+        entry.isDirectory() && existsSync(join(dir, entry.name, 'SKILL.md'))
+    )
+  } catch {
+    return false
+  }
+}
+
 const readCatalog = (file: string): Record<string, unknown> | undefined => {
   try {
     return JSON.parse(readFileSync(file, 'utf-8'))
@@ -345,9 +378,11 @@ const readCatalog = (file: string): Record<string, unknown> | undefined => {
 }
 
 /**
- * The checks on `definePlugin` that need the whole package: every title is a
- * key in the addon's `messages/en.json` (a key missing from another locale is
- * a warning), and every nav badge names one of the addon's functions.
+ * The checks on `definePlugin` that need the whole package: every title, and
+ * every agent's frontmatter title and description, is a key in the addon's
+ * `messages/en.json` (a key missing from another locale is a warning), every
+ * nav badge names one of the addon's functions, and a `files` list in the
+ * package.json publishes the agents/ and skills/ the addon has.
  */
 export function validatePikkuStudio(
   logger: InspectorLogger,
@@ -356,11 +391,15 @@ export function validatePikkuStudio(
   const studio = state.studio
   if (!studio) return
 
-  const keys = [studio.title, ...studio.screens.map((screen) => screen.title)]
+  const keys = new Set([
+    studio.title,
+    ...studio.screens.map((screen) => screen.title),
+  ])
   const root = packageRoot(studio.file)
+  const files = root ? packageFiles(root) : undefined
   const messagesDir = root ? join(root, 'messages') : undefined
   const en = messagesDir ? readCatalog(join(messagesDir, 'en.json')) : undefined
-  for (const key of new Set(keys)) {
+  for (const key of keys) {
     if (!en || !Object.hasOwn(en, key)) {
       logger.critical(
         ErrorCode.STUDIO_MESSAGE_KEY_MISSING,
@@ -368,30 +407,18 @@ export function validatePikkuStudio(
       )
     }
   }
-  if (messagesDir && existsSync(messagesDir)) {
-    const locales = readdirSync(messagesDir)
-      .filter((name) => name.endsWith('.json') && name !== 'en.json')
-      .sort()
-    for (const name of locales) {
-      const catalog = readCatalog(join(messagesDir, name)) ?? {}
-      for (const key of new Set(keys)) {
-        if (!Object.hasOwn(catalog, key)) {
-          logger.warn(
-            `definePlugin uses the message key '${key}', which is missing from the addon's messages/${name}`
-          )
-        }
-      }
-    }
-  }
 
   for (const screen of studio.screens) {
     const agent = screen.agent
     if (agent !== undefined) {
-      const invalid = (reason: string) =>
+      let agentValid = true
+      const invalid = (reason: string) => {
+        agentValid = false
         logger.critical(
           ErrorCode.STUDIO_SCREEN_AGENT_INVALID,
           `Screen '${screen.path}' has the agent '${agent}', ${reason}`
         )
+      }
       if (agent.startsWith('studio:')) {
         // An agent Studio ships: pikku cannot see it, so only the format is checked.
         if (!STUDIO_AGENT.test(agent)) {
@@ -421,7 +448,10 @@ export function validatePikkuStudio(
               invalid(
                 `whose agents/${agent}.md frontmatter has no ${field}; it must be a message key`
               )
-            } else if (!en || !Object.hasOwn(en, key)) {
+              continue
+            }
+            keys.add(key)
+            if (!en || !Object.hasOwn(en, key)) {
               logger.critical(
                 ErrorCode.STUDIO_MESSAGE_KEY_MISSING,
                 `definePlugin uses the message key '${key}', which is missing from the addon's messages/en.json`
@@ -431,6 +461,17 @@ export function validatePikkuStudio(
           }
         }
       }
+      if (
+        agentValid &&
+        !agent.startsWith('studio:') &&
+        files &&
+        !filesInclude(files, 'agents')
+      ) {
+        logger.critical(
+          ErrorCode.STUDIO_PACKAGE_FILES_MISSING,
+          `Screen '${screen.path}' has the agent '${agent}', but package.json "files" does not include agents/, so the published addon would ship without it`
+        )
+      }
     }
     const badge = screen.nav?.badge
     if (badge !== undefined && !state.functions.meta[badge]) {
@@ -438,6 +479,29 @@ export function validatePikkuStudio(
         ErrorCode.STUDIO_BADGE_FUNCTION_NOT_FOUND,
         `Screen '${screen.path}' has the nav badge '${badge}', which names no function in this addon`
       )
+    }
+  }
+
+  if (root && files && !filesInclude(files, 'skills') && hasSkills(root)) {
+    logger.critical(
+      ErrorCode.STUDIO_PACKAGE_FILES_MISSING,
+      `The addon ships skills/ but package.json "files" does not include it, so the published addon would ship without its skills`
+    )
+  }
+
+  if (messagesDir && existsSync(messagesDir)) {
+    const locales = readdirSync(messagesDir)
+      .filter((name) => name.endsWith('.json') && name !== 'en.json')
+      .sort()
+    for (const name of locales) {
+      const catalog = readCatalog(join(messagesDir, name)) ?? {}
+      for (const key of keys) {
+        if (!Object.hasOwn(catalog, key)) {
+          logger.warn(
+            `definePlugin uses the message key '${key}', which is missing from the addon's messages/${name}`
+          )
+        }
+      }
     }
   }
 }

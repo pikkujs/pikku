@@ -1486,6 +1486,28 @@
           "scope": "team",
           "agent": "studio:Bad",
           "app": "y"
+        },
+        {
+          "path": "/assist-empty",
+          "title": "admin_docs__title",
+          "scope": "team",
+          "agent": "",
+          "app": "y"
+        },
+        {
+          "path": "/assist-no-default-chat",
+          "title": "admin_docs__title",
+          "scope": "team",
+          "agent": "studio:knowledge",
+          "defaultChat": false,
+          "app": "y"
+        },
+        {
+          "path": "/no-chat",
+          "title": "admin_docs__title",
+          "scope": "team",
+          "defaultChat": false,
+          "app": "y"
         }
       ]
     },
@@ -1715,6 +1737,11 @@
     {
       "level": "critical",
       "code": "PKU345",
+      "message": "A screen's defaultChat must be a literal, got: SHOW_CHAT"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
       "message": "A definePlugin screen must be an object literal, got: { title: 'No path', app: 'z' } as any"
     },
     {
@@ -1827,17 +1854,14 @@
       "message": "definePlugin uses the message key 'admin_missing__title', which is missing from the addon's messages/en.json"
     },
     {
-      "level": "warn",
-      "message": "definePlugin uses the message key 'admin_inbox__title', which is missing from the addon's messages/de.json"
-    },
-    {
-      "level": "warn",
-      "message": "definePlugin uses the message key 'admin_missing__title', which is missing from the addon's messages/de.json"
-    },
-    {
       "level": "critical",
       "code": "PKU359",
       "message": "Screen '/inbox' has the nav badge 'noSuchFunction', which names no function in this addon"
+    },
+    {
+      "level": "critical",
+      "code": "PKU366",
+      "message": "Screen '/assist' has the agent 'helper', but package.json \"files\" does not include agents/, so the published addon would ship without it"
     },
     {
       "level": "critical",
@@ -1853,6 +1877,28 @@
       "level": "critical",
       "code": "PKU365",
       "message": "Screen '/assist-studio-bad' has the agent 'studio:Bad', which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships"
+    },
+    {
+      "level": "critical",
+      "code": "PKU365",
+      "message": "Screen '/assist-empty' has the agent '', which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships"
+    },
+    {
+      "level": "critical",
+      "code": "PKU366",
+      "message": "The addon ships skills/ but package.json \"files\" does not include it, so the published addon would ship without its skills"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_inbox__title', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_missing__title', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_agent__description', which is missing from the addon's messages/de.json"
     },
     {
       "level": "warn",
@@ -1926,7 +1972,7 @@
     }
   ],
   "validationPass": {
-    "start": 45,
-    "end": 59
+    "start": 50,
+    "end": 64
   }
 }

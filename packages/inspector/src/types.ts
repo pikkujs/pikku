@@ -644,6 +644,7 @@ export type StudioScreenMeta = {
   agentTitle?: string
   /** Message key from the agent file's frontmatter, filled by validation. */
   agentDescription?: string
+  defaultChat?: boolean
 } & (
   | { component: string; app?: undefined }
   | { app: string; component?: undefined }

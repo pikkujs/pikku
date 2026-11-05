@@ -128,6 +128,35 @@ export const screens = definePlugin({
       agent: 'studio:Bad',
       app: 'y',
     },
+    {
+      path: '/assist-empty',
+      title: 'admin_docs__title',
+      scope: 'team',
+      agent: '',
+      app: 'y',
+    },
+    {
+      path: '/assist-no-default-chat',
+      title: 'admin_docs__title',
+      scope: 'team',
+      agent: 'studio:knowledge',
+      defaultChat: false,
+      app: 'y',
+    },
+    {
+      path: '/no-chat',
+      title: 'admin_docs__title',
+      scope: 'team',
+      defaultChat: false,
+      app: 'y',
+    },
+    {
+      path: '/default-chat-variable',
+      title: 'admin_docs__title',
+      scope: 'team',
+      defaultChat: SHOW_CHAT,
+      app: 'y',
+    },
     { title: 'No path', app: 'z' } as any,
     'not-an-object' as any,
   ],
@@ -135,3 +164,4 @@ export const screens = definePlugin({
 
 declare const LAYOUT: 'bare'
 declare const ICON: string
+declare const SHOW_CHAT: boolean

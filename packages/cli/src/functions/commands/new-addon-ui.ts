@@ -32,7 +32,12 @@ export const addonUiFiles = (name: string): Record<string, string> => {
           './.pikku/*': './dist/.pikku/addon/*',
           './screens/*': './dist/src/screens/*.js',
         },
-        files: ['dist', 'messages'],
+        files: ['dist', 'messages', 'agents', 'skills'],
+        studio: {
+          addon: name,
+          ui: './src',
+          messages: './messages/{locale}.json',
+        },
         scripts: {
           prebuild: 'pikku all',
           build: 'tsc && pikku dist',
