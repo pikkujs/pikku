@@ -9,26 +9,14 @@ afterEach(() => {
   globalThis.fetch = realFetch
 })
 
-/**
- * The contract's function names, from the SDK `pikku all` synced into the
- * gitignored `.pikku/remote` (package.json `pikku.uses.cloud`).
- */
+/** The contract's function names, from `.pikku/contract` (see scripts/sync-contract.ts). */
 function contractNames(): Set<string> {
-  const root = join(import.meta.dir, '../../.pikku/remote/@pikkustudio')
-  const sdk = existsSync(root)
-    ? readdirSync(root).find((d) => d.startsWith('addon-cloud-api@'))
-    : undefined
-  if (!sdk)
+  const file = join(import.meta.dir, '../../.pikku/contract/functions.json')
+  if (!existsSync(file))
     throw new Error(
-      'The cloud API contract is not synced. Run `bun run pikku` (or the package build) in packages/addon/pikku-cloud-cli first; it fetches @pikkustudio/addon-cloud-api from the registry and pins it in pikku-addons.lock.'
+      'The cloud API contract is not synced. Run `bun run sync-contract` (or the package build) in packages/addon/pikku-cloud-cli first; it fetches the version pinned in contract.lock.json from the registry.'
     )
-  const meta = JSON.parse(
-    readFileSync(
-      join(root, sdk, 'function/pikku-functions-meta.gen.json'),
-      'utf8'
-    )
-  ) as Record<string, { remote?: boolean }>
-  return new Set(Object.keys(meta).filter((n) => meta[n]!.remote))
+  return new Set(JSON.parse(readFileSync(file, 'utf8')) as string[])
 }
 const CONTRACT = contractNames()
 

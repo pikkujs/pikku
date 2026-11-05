@@ -1,22 +1,17 @@
 import { CorePikkuFetch } from '@pikku/fetch'
-import type { FlattenedRPCMap } from '../../.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.js'
+import type { FlattenedRPCMap } from '../../.pikku/contract/cloud-api.js'
 import {
   UNCONTRACTED_SERVED_AS,
   type UncontractedRPCMap,
 } from '../contract/uncontracted.js'
 
 /**
- * The cloud API contract, by bare function name. `pikku all` syncs
- * `@pikkustudio/addon-cloud-api` (package.json `pikku.uses.cloud`, pinned in
- * `pikku-addons.lock`) and merges it into the addon's RPC map as `cloud:<name>`;
- * the generated map lives in the gitignored `.pikku/`, so run the package's
- * build (`bun run pikku`) before `tsc` or the tests.
+ * The cloud API contract, by bare function name. `scripts/sync-contract.ts`
+ * (the package `prebuild`) fetches `@pikkustudio/addon-cloud-api`, pinned in
+ * `contract.lock.json`, into the gitignored `.pikku/contract/`. Run
+ * `bun run sync-contract` before `tsc` or the tests on a fresh checkout.
  */
-type ContractRPCMap = {
-  [
-    K in keyof FlattenedRPCMap as K extends `cloud:${infer Name}` ? Name : never
-  ]: FlattenedRPCMap[K]
-}
+type ContractRPCMap = FlattenedRPCMap
 
 /** Every function the CLI can call, by bare name: the contract plus the few it cannot cover. */
 export type CloudRPCMap = ContractRPCMap & UncontractedRPCMap
