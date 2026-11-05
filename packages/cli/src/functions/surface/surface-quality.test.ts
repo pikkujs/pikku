@@ -3,6 +3,7 @@ import { describe, test } from 'node:test'
 
 import { ErrorCode } from '@pikku/inspector'
 import { renderSurfaceDoc } from './render-surface-doc.js'
+import { renderTopics } from '../commands/doc.js'
 import { readShippedSurfaceDoc } from './shipped-surface-doc.js'
 import type { SurfaceDoc, SurfaceDocSymbol } from './surface-doc.types.js'
 
@@ -299,6 +300,15 @@ describe('a guessed name', () => {
     const answer = renderSurfaceDoc(doc, { target: 'startWorkflow' })
     assert.match(answer, /'startWorkflow' is not an export/)
     assert.match(answer, /rpc\.startWorkflow\(name, input\)/)
+  })
+
+  test('one unknown name keeps the answers to the others', () => {
+    if (!doc) return
+    const answer = renderTopics(doc, ['qqqzzzwibble', 'pikkuFunc'], {
+      entryPoint: 'app',
+    })
+    assert.match(answer, /No door or export called 'qqqzzzwibble'/)
+    assert.match(answer, /pikkuFunc — function/)
   })
 
   test('with nothing in common is sent to the index', () => {

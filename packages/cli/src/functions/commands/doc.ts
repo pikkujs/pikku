@@ -1,6 +1,29 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { readShippedSurfaceDoc } from '../surface/shipped-surface-doc.js'
-import { renderSurfaceDoc } from '../surface/render-surface-doc.js'
+import {
+  renderSurfaceDoc,
+  UnknownSurfaceTargetError,
+} from '../surface/render-surface-doc.js'
+import type { SurfaceDoc } from '../surface/surface-doc.types.js'
+
+/** One unknown name must not cost the agent the answers to the others in the same call. */
+export const renderTopics = (
+  surface: SurfaceDoc,
+  topics: (string | undefined)[],
+  options: { ai?: boolean; entryPoint: 'app' | 'addon' }
+): string =>
+  topics
+    .map((target) => {
+      try {
+        return renderSurfaceDoc(surface, { ...options, target })
+      } catch (error) {
+        if (topics.length > 1 && error instanceof UnknownSurfaceTargetError) {
+          return error.message
+        }
+        throw error
+      }
+    })
+    .join('\n\n')
 
 export const doc = pikkuSessionlessFunc<
   { topics?: string[]; ai?: boolean; addon?: boolean },
@@ -17,15 +40,10 @@ export const doc = pikkuSessionlessFunc<
     }
     const targets = topics?.length ? topics : [undefined]
     return {
-      text: targets
-        .map((target) =>
-          renderSurfaceDoc(surface, {
-            target,
-            ai,
-            entryPoint: addon ? 'addon' : 'app',
-          })
-        )
-        .join('\n\n'),
+      text: renderTopics(surface, targets, {
+        ai,
+        entryPoint: addon ? 'addon' : 'app',
+      }),
     }
   },
 })
