@@ -741,7 +741,8 @@
         "custom",
         "cloudapi",
         "unsynced",
-        "billing"
+        "billing",
+        "hosted"
       ],
       "wireAddonDeclarations": [
         [
@@ -904,6 +905,22 @@
               "pay",
               "mail"
             ]
+          }
+        ],
+        [
+          "hosted",
+          {
+            "package": "@fixture/registry",
+            "file": "<fixture>/src/addons.ts",
+            "remote": true,
+            "hasAuth": false,
+            "uses": {
+              "shop": "shop"
+            },
+            "local": {
+              "package": "@fixture/shop-addon",
+              "ui": true
+            }
           }
         ]
       ],
@@ -1513,6 +1530,29 @@
           "payments:read",
           "zeta"
         ]
+      },
+      "hosted": {
+        "title": "shop__title",
+        "screens": [
+          {
+            "path": "/charges",
+            "title": "shop_charges__title",
+            "scope": "project",
+            "nav": {
+              "area": "project",
+              "icon": "credit-card",
+              "order": 30
+            },
+            "scopes": [
+              "payments:read"
+            ],
+            "component": "./screens/charges.js"
+          }
+        ],
+        "scopes": [
+          "admin",
+          "payments:read"
+        ]
       }
     },
     "contributorsManifest": {
@@ -1877,7 +1917,7 @@
     {
       "level": "critical",
       "code": "PKU347",
-      "message": "Addon 'shop' uses 'kysely' as 'db', but no addon is wired under the name 'db'. Wired: shop, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing"
+      "message": "Addon 'shop' uses 'kysely' as 'db', but no addon is wired under the name 'db'. Wired: shop, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing, hosted"
     },
     {
       "level": "critical",
@@ -1891,8 +1931,13 @@
     },
     {
       "level": "critical",
+      "code": "PKU347",
+      "message": "Addon 'hosted' uses 'shop' as 'shop', but 'shop' is wired from '@fixture/shop-addon'."
+    },
+    {
+      "level": "critical",
       "code": "PKU349",
-      "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing"
+      "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing, hosted"
     },
     {
       "level": "critical",
@@ -1921,12 +1966,17 @@
     },
     {
       "level": "critical",
+      "code": "PKU338",
+      "message": "Remote addon 'hosted' ('@fixture/registry') is wired with wireRemoteAddon but is not in the \"devDependencies\" of <fixture>/package.json. Add '@fixture/registry' to \"devDependencies\" (types only)."
+    },
+    {
+      "level": "critical",
       "code": "PKU339",
       "message": "Remote addon 'registry' binds auth.credentialId 'registryToken', but no such credential is wired. Available credentials: [object Object], shopToken, githubWebhookSecret, customSecret"
     }
   ],
   "validationPass": {
     "start": 45,
-    "end": 59
+    "end": 61
   }
 }

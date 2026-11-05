@@ -24,11 +24,14 @@ export const pikkuScreens = pikkuSessionlessFunc<void, boolean>({
 
     const { studio, addonStudio, functions, rpc } = await getInspectorState()
     if (installedAddonsFile && addonRolesFile && addonStudio) {
-      const installed = Object.entries(addonStudio).map(([name, manifest]) => ({
-        name,
-        package: rpc.wireAddonDeclarations.get(name)!.package,
-        manifest,
-      }))
+      const installed = Object.entries(addonStudio).map(([name, manifest]) => {
+        const declaration = rpc.wireAddonDeclarations.get(name)!
+        return {
+          name,
+          package: declaration.local?.package ?? declaration.package,
+          manifest,
+        }
+      })
       await writeFileInDir(
         logger,
         installedAddonsFile,

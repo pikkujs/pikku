@@ -419,6 +419,39 @@ const recordDeclaredUses = (
   }
 }
 
+const recordAddonScreens = async (
+  logger: InspectorLogger,
+  state: InspectorState,
+  require: AddonResolver,
+  namespace: string,
+  packageName: string,
+  scopes: string[] | undefined
+): Promise<void> => {
+  let manifest: Awaited<ReturnType<typeof loadStudioMeta>> | undefined
+  try {
+    manifest = await loadStudioMeta(require, packageName)
+  } catch (e) {
+    logger.critical(
+      ErrorCode.ADDON_UI_HAS_NO_SCREENS,
+      `wireAddon('${namespace}') sets ui: true, but the screens manifest of ${packageName} could not be read: ${e instanceof Error ? e.message : e}`
+    )
+    return
+  }
+  if (!manifest || manifest.screens.length === 0) {
+    logger.critical(
+      ErrorCode.ADDON_UI_HAS_NO_SCREENS,
+      `wireAddon('${namespace}') sets ui: true, but ${packageName} declares no screens. Add a definePlugin call to the package, or drop ui.`
+    )
+    return
+  }
+  ;(state.addonStudio ??= {})[namespace] = {
+    ...manifest,
+    scopes: [
+      ...new Set([...(manifest.scopes ?? []), ...(scopes ?? [])]),
+    ].sort(),
+  }
+}
+
 export async function loadAddonFunctionsMeta(
   logger: InspectorLogger,
   state: InspectorState
@@ -433,6 +466,30 @@ export async function loadAddonFunctionsMeta(
     if (decl.remote) {
       if (decl.range) {
         await loadRemoteAddonSdkMeta(state, namespace, decl.package, decl.range)
+      }
+      if (decl.local) {
+        const dirs = addonResolutionDirs(state.rootDir, decl.file)
+        const require = createAddonResolver(dirs)
+        if (decl.local.contributors && decl.local.contributors.length > 0) {
+          await recordOptedInContributors(
+            logger,
+            state,
+            require,
+            namespace,
+            decl.local.package,
+            decl.local.contributors
+          )
+        }
+        if (decl.local.ui) {
+          await recordAddonScreens(
+            logger,
+            state,
+            require,
+            namespace,
+            decl.local.package,
+            undefined
+          )
+        }
       }
       continue
     }
@@ -457,32 +514,14 @@ export async function loadAddonFunctionsMeta(
         )
       }
       if (decl.ui) {
-        let manifest: Awaited<ReturnType<typeof loadStudioMeta>> | undefined
-        let unreadable = false
-        try {
-          manifest = await loadStudioMeta(require, decl.package)
-        } catch (e) {
-          logger.critical(
-            ErrorCode.ADDON_UI_HAS_NO_SCREENS,
-            `wireAddon('${namespace}') sets ui: true, but the screens manifest of ${decl.package} could not be read: ${e instanceof Error ? e.message : e}`
-          )
-          unreadable = true
-        }
-        if (unreadable) {
-          // reported above; the addon's functions and scopes still load
-        } else if (!manifest || manifest.screens.length === 0) {
-          logger.critical(
-            ErrorCode.ADDON_UI_HAS_NO_SCREENS,
-            `wireAddon('${namespace}') sets ui: true, but ${decl.package} declares no screens. Add a definePlugin call to the package, or drop ui.`
-          )
-        } else {
-          ;(state.addonStudio ??= {})[namespace] = {
-            ...manifest,
-            scopes: [
-              ...new Set([...(manifest.scopes ?? []), ...(decl.scopes ?? [])]),
-            ].sort(),
-          }
-        }
+        await recordAddonScreens(
+          logger,
+          state,
+          require,
+          namespace,
+          decl.package,
+          decl.scopes
+        )
       }
 
       // Verbose first. `description` is one of the fields stripped from the

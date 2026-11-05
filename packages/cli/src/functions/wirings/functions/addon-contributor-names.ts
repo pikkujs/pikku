@@ -15,18 +15,17 @@ export const addonContributorNames = (
 ): Record<string, string[]> => {
   const names: Record<string, string[]> = {}
   for (const [, decl] of state.rpc.wireAddonDeclarations) {
-    if (decl.remote || decl.package in names) {
+    const pkg = decl.remote ? decl.local?.package : decl.package
+    if (!pkg || pkg in names) {
       continue
     }
     try {
       const metaPath = createAddonResolver(
         addonResolutionDirs(state.rootDir, decl.file)
-      ).resolve(
-        `${decl.package}/.pikku/contributors/pikku-contributors-meta.gen.json`
-      )
+      ).resolve(`${pkg}/.pikku/contributors/pikku-contributors-meta.gen.json`)
       const meta = JSON.parse(readFileSync(metaPath, 'utf-8'))
       if (meta?.contributors && typeof meta.contributors === 'object') {
-        names[decl.package] = Object.keys(meta.contributors)
+        names[pkg] = Object.keys(meta.contributors)
       }
     } catch {
       continue
