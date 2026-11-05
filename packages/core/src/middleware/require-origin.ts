@@ -16,6 +16,49 @@ export const toOrigin = (value: string | null | undefined): string | null => {
   }
 }
 
+/** `localhost`, `127.0.0.1` or `[::1]`, with an optional port. Nothing else counts as loopback. */
+const LOOPBACK_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i
+
+/**
+ * The origin a request was addressed to, from its `Host` and `X-Forwarded-Proto`.
+ *
+ * With no proxy header the scheme is `http` only when the host is loopback, because a
+ * local dev server speaks plain http and no proxy sits in front of it. Every other host
+ * still defaults to `https`, so a missing header on a real host fails closed.
+ */
+export const hostOriginOf = (
+  host: string | null | undefined,
+  forwardedProto?: string | null
+): string | null => {
+  if (!host) return null
+  const proto = forwardedProto || (LOOPBACK_HOST.test(host) ? 'http' : 'https')
+  return toOrigin(`${proto}://${host}`)
+}
+
+/**
+ * The browser origins an app allows, read from the `variables` service (never
+ * `process.env`, which a Worker does not have): `CORS_ORIGINS` as a comma-separated
+ * list, else `FRONTEND_URL`. Unset means no extra origins, so only the request's own
+ * host is accepted.
+ */
+export const allowedOriginsFromVariables = async (services: {
+  variables?: {
+    get<T = string>(name: string): Promise<T | undefined> | T | undefined
+  }
+}): Promise<string[]> => {
+  const variables = services.variables
+  if (!variables) return []
+  const configured = await variables.get<string>('CORS_ORIGINS')
+  if (configured) {
+    return configured
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  }
+  const frontendUrl = await variables.get<string>('FRONTEND_URL')
+  return frontendUrl ? [frontendUrl] : []
+}
+
 /**
  * Whether a request origin may post to an origin-locked route.
  *
@@ -29,7 +72,9 @@ export const isAllowedOrigin = (
 ): boolean => {
   if (!requestOrigin) return false
   if (hostOrigin && requestOrigin === hostOrigin) return true
-  return configuredOrigins.some((allowed) => toOrigin(allowed) === requestOrigin)
+  return configuredOrigins.some(
+    (allowed) => toOrigin(allowed) === requestOrigin
+  )
 }
 
 /**
@@ -61,8 +106,7 @@ export const requireOrigin = pikkuMiddlewareFactory<{
         toOrigin(request.header('referer'))
 
       const host = request.header('host')
-      const proto = request.header('x-forwarded-proto') ?? 'https'
-      const hostOrigin = host ? toOrigin(`${proto}://${host}`) : null
+      const hostOrigin = hostOriginOf(host, request.header('x-forwarded-proto'))
 
       const configured =
         typeof origins === 'function'
