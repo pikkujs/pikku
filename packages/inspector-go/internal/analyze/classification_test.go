@@ -77,3 +77,35 @@ func TestClassificationScanIsOptIn(t *testing.T) {
 		}
 	}
 }
+
+func TestPermissionsInBodyNeedsOptIn(t *testing.T) {
+	const dir = "../../testdata/permissions-in-body"
+	raw, err := os.ReadFile(dir + "/diagnostics.golden.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want []classificationEntry
+	if err := json.Unmarshal(raw, &want); err != nil {
+		t.Fatal(err)
+	}
+	if len(want) != 1 {
+		t.Fatalf("golden holds %d entries, want 1", len(want))
+	}
+	refused := false
+	for _, d := range classificationDiagnostics(t, protocol.Options{}, dir) {
+		if d.Code == diag.PermissionsInBodyNotAllowed {
+			refused = true
+			if d.Message != want[0].Message {
+				t.Errorf("message differs:\n  go: %q\n  ts: %q", d.Message, want[0].Message)
+			}
+		}
+	}
+	if !refused {
+		t.Error("permissionsInBody without allow.permissionsInBody was not refused")
+	}
+	for _, d := range classificationDiagnostics(t, protocol.Options{Allow: &protocol.Allow{PermissionsInBody: true}}, dir) {
+		if d.Code == diag.PermissionsInBodyNotAllowed {
+			t.Errorf("refused despite the opt-in: %s", d.Message)
+		}
+	}
+}

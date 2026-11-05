@@ -128,6 +128,15 @@ func (s *Context) addFunctions(node *ast.Node) {
 			m.Auth = v.Bool
 		}
 		m.PermissionsInBody = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "permissionsInBody").Truthy())
+		if m.PermissionsInBody != nil && !s.Options.AllowPermissionsInBody {
+			s.Log.Critical(diag.PermissionsInBodyNotAllowed, fmt.Sprintf("'%s' declares `permissionsInBody: true`, which this project has not enabled. "+
+				"It silences the exposed-and-ungated audit without gating anything, so it is opt-in: "+
+				"set `allow: { permissionsInBody: true }` in pikku.config.json if the project accepts "+
+				"permission checks that only a reader can verify. Otherwise express the check as a "+
+				"`permissions` entry, or drop `expose: true` if the function was not meant to be "+
+				"callable from outside.", name))
+			return
+		}
 		if p := tsutil.FindPropertyAssignment(firstArg, "audit"); p != nil {
 			init := p.Initializer()
 			if init.Kind == ast.KindTrueKeyword {

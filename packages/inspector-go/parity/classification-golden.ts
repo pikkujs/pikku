@@ -12,10 +12,10 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { runTypeScript } from './run-ts.ts'
 
-const CODES = new Set(['PKU910', 'PKU953', 'PKU954'])
+const CODES = new Set(['PKU576', 'PKU910', 'PKU953', 'PKU954'])
 
 let stale = false
-for (const fixture of ['classification']) {
+for (const fixture of ['classification', 'permissions-in-body']) {
   const project = fileURLToPath(
     new URL(`../testdata/${fixture}`, import.meta.url)
   )
