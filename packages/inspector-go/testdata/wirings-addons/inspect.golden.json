@@ -914,9 +914,6 @@
             "file": "<fixture>/src/addons.ts",
             "remote": true,
             "hasAuth": false,
-            "uses": {
-              "shop": "shop"
-            },
             "local": {
               "package": "@fixture/shop-addon",
               "ui": true
@@ -1931,11 +1928,6 @@
     },
     {
       "level": "critical",
-      "code": "PKU347",
-      "message": "Addon 'hosted' uses 'shop' as 'shop', but 'shop' is wired from '@fixture/shop-addon'."
-    },
-    {
-      "level": "critical",
       "code": "PKU349",
       "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing, hosted"
     },
@@ -1977,6 +1969,6 @@
   ],
   "validationPass": {
     "start": 45,
-    "end": 61
+    "end": 60
   }
 }
