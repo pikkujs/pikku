@@ -318,6 +318,40 @@ const near = (target: string, candidates: string[]): string[] => {
     .map((entry) => entry.candidate)
 }
 
+const names = (text: string | undefined, target: string): boolean =>
+  text?.split(/[^\w$]+/).includes(target) ?? false
+
+const symbolMentions = (symbol: SurfaceDocSymbol, target: string): boolean =>
+  [
+    symbol.summary,
+    symbol.docs,
+    ...(symbol.members ?? []).map((member) => member.line),
+  ].some((text) => names(text, target))
+
+/** A method such as `rpc.startWorkflow` is no export, so it is found where it is described. */
+const renderMention = (
+  target: string,
+  leaves: SurfaceLeaf[],
+  home: Map<string, string>,
+  ai: boolean
+): string | null => {
+  if (!/^[a-z]/.test(target)) {
+    return null
+  }
+  for (const leaf of leaves) {
+    const symbol = leaf.symbols.find((candidate) =>
+      symbolMentions(candidate, target)
+    )
+    if (symbol) {
+      return `'${target}' is not an export. ${symbol.name} covers it:\n\n${renderSymbol(symbol, leaf, home, ai)}`
+    }
+  }
+  const leaf = leaves.find((candidate) => names(candidate.summary, target))
+  return leaf
+    ? `'${target}' is not an export. ${leaf.name} covers it:\n\n${renderLeaf(leaf, ai)}`
+    : null
+}
+
 export const renderSurfaceDoc = (
   doc: SurfaceDoc,
   { target, ai = false, entryPoint = 'app' }: RenderSurfaceDocOptions = {}
@@ -362,6 +396,10 @@ export const renderSurfaceDoc = (
   )
   if (elsewhere) {
     return renderSurfaceDoc(doc, { target, ai, entryPoint: elsewhere.id })
+  }
+  const mention = renderMention(target, leaves, home, ai)
+  if (mention) {
+    return mention
   }
   throw new UnknownSurfaceTargetError(
     target,
