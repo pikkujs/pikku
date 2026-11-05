@@ -93,6 +93,7 @@ export const I18nCheckOutput = z.object({
     z.object({
       app: z.string(),
       baseLocale: z.string(),
+      liveLocales: z.array(z.string()),
       duplicates: Duplicates,
       catalogs: z.array(
         z.object({
@@ -107,6 +108,9 @@ export const I18nCheckOutput = z.object({
             })
           ),
           stale: z.array(
+            z.object({ locale: z.string(), keys: z.array(z.string()) })
+          ),
+          missing: z.array(
             z.object({ locale: z.string(), keys: z.array(z.string()) })
           ),
           plural: z.array(

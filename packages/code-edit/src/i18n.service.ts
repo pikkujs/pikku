@@ -95,6 +95,8 @@ export type I18nCheckCatalog = {
   }[]
   /** Keys a locale holds that the base locale does not. */
   stale: { locale: string; keys: string[] }[]
+  /** Keys the base locale holds that a locale lacks entirely (not even a marked copy). */
+  missing: { locale: string; keys: string[] }[]
   /**
    * Plural-message problems per key and locale. `missing-other` and `unknown-category` are errors;
    * `missing-category` (a category the locale has but the message does not write, so `other` covers it) is a warning.
@@ -112,6 +114,8 @@ export type I18nCheckCatalog = {
 export type I18nCheckReport = {
   app: string
   baseLocale: string
+  /** The locales listed in `settings.json` — the ones the compiled app serves. */
+  liveLocales: string[]
   duplicates: I18nDuplicateKey[]
   catalogs: I18nCheckCatalog[]
   /** Problems that always fail the check. */
@@ -778,6 +782,7 @@ export class I18nService {
           placeholders: [],
           stale: [],
           plural: [],
+          missing: [],
         }
         for (const [locale, values] of Object.entries(locales)) {
           for (const key of Object.keys(values).sort())
@@ -797,6 +802,11 @@ export class I18nService {
             entry.stale.push({ locale, keys: stale.sort() })
             errors += stale.length
           }
+          const missing = Object.keys(base).filter((k) => !(k in values))
+          if (missing.length) {
+            entry.missing.push({ locale, keys: missing.sort() })
+            errors += missing.length
+          }
           for (const key of Object.keys(values).sort()) {
             if (!(key in base)) continue
             const want = messagePlaceholders(base[key]!)
@@ -812,6 +822,7 @@ export class I18nService {
       reports.push({
         app: relative(this.workspaceRoot, appDir),
         baseLocale,
+        liveLocales: settings.locales ?? [baseLocale],
         duplicates: await this.findDuplicates(all, settings),
         catalogs,
         errors,
