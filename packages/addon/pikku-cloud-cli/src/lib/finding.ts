@@ -116,11 +116,12 @@ export function buildFindingPayload(
 }
 
 /**
- * Anonymous, and every request gives up after `timeoutMs`: a finding is worth
- * having and never worth holding up a build for.
+ * Sent under the account that owns `token`, and every request gives up after
+ * `timeoutMs`: a finding is worth having and never worth holding up a build for.
  */
 export function findingRPC(
   apiUrl: string,
+  token: string,
   timeoutMs = 5000,
   send: typeof fetch = fetch
 ): PikkuRPC {
@@ -135,7 +136,29 @@ export function findingRPC(
         })) as typeof fetch,
     })
   )
+  rpc.setAuthorizationJWT(token)
   return rpc
+}
+
+/**
+ * Who a report goes out under, for the consent question. The token alone does
+ * not say, so cloud is asked; if it will not answer, the question still names
+ * the login the token came from.
+ */
+export async function accountLabel(
+  rpc: Pick<PikkuRPC, 'invoke'>,
+  apiUrl: string
+): Promise<string> {
+  try {
+    const { email } = await rpc.invoke('getSession', {})
+    if (email) return email
+  } catch {
+    // Named below by where the token came from instead.
+  }
+  const host = new URL(apiUrl).host
+  return process.env.PIKKUSTUDIO_API_KEY?.trim()
+    ? `the PIKKUSTUDIO_API_KEY account on ${host}`
+    : `your login on ${host}`
 }
 
 /**
@@ -165,7 +188,7 @@ export async function postFinding(opts: {
  * finding is sent now or held until the user answers.
  */
 export function renderReceipt(payload: FindingPayload): string {
-  const lines: string[] = [`[cloud] reporting: ${payload.title}`]
+  const lines: string[] = [`[pikku] reporting: ${payload.title}`]
   const field = (label: string, value?: string) => {
     if (value) lines.push(`  ${label}: ${value}`)
   }

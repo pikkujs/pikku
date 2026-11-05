@@ -24,7 +24,8 @@ export function consentFile(): string {
 /**
  * Consent belongs to the person, so it lives on their machine rather than in
  * a project config that is committed and shared. `PIKKU_REPORT` overrides it
- * for CI and sandboxes, where there is no one to ask.
+ * for CI and sandboxes, where there is no one to ask and the home directory
+ * may be read-only.
  */
 export async function readConsent(): Promise<ReportConsent | null> {
   const fromEnv = process.env.PIKKU_REPORT

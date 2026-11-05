@@ -1,10 +1,12 @@
+import { randomUUID } from 'node:crypto'
 import { createInterface } from 'node:readline/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/addon/function'
-import { resolveApiContext } from '../lib/config.js'
+import { resolveApiContext, type ResolvedApiContext } from '../lib/config.js'
 import { collectReportEnvironment } from '../lib/report-environment.js'
 import {
   FindingInput,
+  accountLabel,
   buildFindingPayload,
   parseFinding,
   parseFindingJson,
@@ -15,6 +17,7 @@ import {
 } from '../lib/finding.js'
 import {
   dropHeld,
+  heldDir,
   holdFinding,
   readHeld,
   runIdFor,
@@ -44,6 +47,10 @@ export const CloudReportOutput = z.object({
   held: z.number(),
   needsConsent: z.boolean(),
   reason: z.string().optional(),
+  /** The account the question is about; set when `needsConsent` is. */
+  account: z.string().optional(),
+  /** What could not be written. Filing never fails on these. */
+  warnings: z.array(z.string()).optional(),
 })
 
 const readStdin = async (): Promise<string> => {
@@ -57,11 +64,13 @@ const readStdin = async (): Promise<string> => {
   return Buffer.concat(chunks).toString('utf8')
 }
 
-const askOnTerminal = async (): Promise<ReportAnswer | null> => {
+const askOnTerminal = async (account: string): Promise<ReportAnswer | null> => {
   const rl = createInterface({ input: process.stdin, output: process.stdout })
   try {
     const answer = await Promise.race([
-      rl.question('Send them? [y]es / [n]o / [a]lways / ne[v]er: '),
+      rl.question(
+        `Send them to the Pikku team as ${account}? [y]es / [n]o / [a]lways / ne[v]er: `
+      ),
       new Promise<null>((done) => rl.once('close', () => done(null))),
     ])
     return answer === null ? null : parseAnswer(answer)
@@ -70,32 +79,65 @@ const askOnTerminal = async (): Promise<ReportAnswer | null> => {
   }
 }
 
+/** Local trouble is a warning, never a failure: a finding must not fail a build. */
+type Attempt = <T>(
+  what: string,
+  work: () => Promise<T>,
+  otherwise: T
+) => Promise<T>
+
 /** Oldest first, stopping at the first refusal; what is left stays held. */
-const sendHeld = async (held: HeldFinding[]) => {
-  const { apiUrl } = await resolveApiContext({ resolveProject: false })
-  const rpc = findingRPC(apiUrl)
+const sendHeld = async (
+  rpc: ReturnType<typeof findingRPC>,
+  held: HeldFinding[],
+  attempt: Attempt
+) => {
   let sent = 0
   for (const entry of held) {
     const result = await postFinding({ rpc, payload: entry.payload })
     if (!result.sent) {
       console.log(
-        `[cloud] could not send (${result.reason}) — ${held.length - sent} still held`
+        `[pikku] could not send (${result.reason}) — ${held.length - sent} still held`
       )
       return { sent, held: held.length - sent, reason: result.reason }
     }
-    await dropHeld([entry])
+    await attempt(
+      'could not clear a sent finding',
+      () => dropHeld([entry]),
+      undefined
+    )
     sent++
   }
-  console.log(`[cloud] sent ${sent} finding(s) — thank you`)
+  console.log(`[pikku] sent ${sent} finding(s) — thank you`)
   return { sent, held: 0 }
 }
 
 export const CloudReport = pikkuSessionlessFunc({
   description:
-    'Report a finding — something about pikku that cost time — to the Pikku team.',
+    'File a finding — something about pikku that cost time — and send what is held to the Pikku team once logged in and told yes.',
   input: CloudReportInput,
   output: CloudReportOutput,
   func: async (_services, { stdin, consent, ...flags }) => {
+    const warnings: string[] = []
+    const attempt: Attempt = async (what, work, otherwise) => {
+      try {
+        return await work()
+      } catch (error) {
+        const warning = `${what}: ${(error as Error).message}`
+        console.warn(`[pikku] ${warning}`)
+        warnings.push(warning)
+        return otherwise
+      }
+    }
+    const finish = <T extends object>(result: T) =>
+      warnings.length > 0 ? { ...result, warnings } : result
+    const remember = (answer: 'always' | 'never') =>
+      attempt(
+        `could not save "${answer}", so it applies to this run only (set PIKKU_REPORT=${answer} where the home directory is read-only)`,
+        () => saveConsent(answer),
+        undefined
+      )
+
     let answer: ReportAnswer | null = null
     if (consent !== undefined) {
       answer = parseAnswer(consent)
@@ -107,14 +149,18 @@ export const CloudReport = pikkuSessionlessFunc({
     }
     const saved = await readConsent()
     if (!answer && saved === 'never') {
-      console.log('[cloud] reporting is off')
+      console.log('[pikku] reporting is off')
       return { sent: 0, held: 0, needsConsent: false, reason: 'never' }
     }
     if ((answer === 'always' || answer === 'never') && answer !== saved) {
-      await saveConsent(answer)
+      await remember(answer)
     }
 
-    const runId = await runIdFor()
+    const runId = await attempt(
+      'could not record the run id',
+      () => runIdFor(),
+      randomUUID()
+    )
     const filing =
       stdin ||
       Object.values(flags).some(
@@ -138,53 +184,101 @@ export const CloudReport = pikkuSessionlessFunc({
         runId
       )
       console.log(renderReceipt(payload))
-      await holdFinding(payload)
+      await attempt(
+        'could not keep this finding',
+        () => holdFinding(payload),
+        undefined
+      )
     }
 
-    const held = await readHeld(runId)
+    const held = await attempt(
+      'could not read what is held',
+      () => readHeld(runId),
+      []
+    )
     const decided = answer ?? (saved === 'always' ? 'always' : null)
 
     if (decided === 'no' || decided === 'never') {
-      await dropHeld(held)
+      await attempt(
+        'could not clear what is held',
+        () => dropHeld(held),
+        undefined
+      )
       console.log(
         decided === 'never'
-          ? '[cloud] not sent, and reporting is now off'
-          : '[cloud] not sent'
+          ? '[pikku] not sent, and reporting is now off'
+          : '[pikku] not sent'
       )
-      return { sent: 0, held: 0, needsConsent: false, reason: decided }
+      return finish({ sent: 0, held: 0, needsConsent: false, reason: decided })
     }
+
+    const { apiUrl, token } = await attempt<
+      Pick<ResolvedApiContext, 'apiUrl' | 'token'>
+    >(
+      'could not read the login, so what is held stays here',
+      () => resolveApiContext({ resolveProject: false }),
+      { apiUrl: '', token: null }
+    )
+    if (!token) {
+      if (held.length === 0) {
+        console.log('[pikku] nothing held from this build')
+        return finish({ sent: 0, held: 0, needsConsent: false })
+      }
+      console.log(
+        `[pikku] ${held.length} finding(s) kept on this computer in ${heldDir()}`
+      )
+      return finish({
+        sent: 0,
+        held: held.length,
+        needsConsent: false,
+        reason: 'not-logged-in',
+      })
+    }
+
+    const rpc = findingRPC(apiUrl, token)
     if (decided) {
-      return { ...(await sendHeld(held)), needsConsent: false }
+      return finish({
+        ...(await sendHeld(rpc, held, attempt)),
+        needsConsent: false,
+      })
     }
 
     if (filing) {
       console.log(
-        `[cloud] held until hand-over (${held.length} held) — then run \`pikku cloud report\` and ask the user`
+        `[pikku] held until hand-over (${held.length} held) — then run \`pikku report\` and ask the user`
       )
-      return { sent: 0, held: held.length, needsConsent: false }
+      return finish({ sent: 0, held: held.length, needsConsent: false })
     }
 
     if (held.length === 0) {
-      console.log('[cloud] nothing held from this build')
-      return { sent: 0, held: 0, needsConsent: false }
+      console.log('[pikku] nothing held from this build')
+      return finish({ sent: 0, held: 0, needsConsent: false })
     }
-    console.log(`[cloud] ${held.length} finding(s) held from this build:`)
+    console.log(`[pikku] ${held.length} finding(s) held from this build:`)
     for (const { payload } of held) {
       console.log(`  - ${payload.title} (${payload.kind})`)
     }
-    const asked = process.stdin.isTTY ? await askOnTerminal() : null
+    const account = await accountLabel(rpc, apiUrl)
+    const asked = process.stdin.isTTY ? await askOnTerminal(account) : null
     if (asked) {
-      if (asked === 'always' || asked === 'never') await saveConsent(asked)
+      if (asked === 'always' || asked === 'never') await remember(asked)
       if (asked === 'yes' || asked === 'always') {
-        return { ...(await sendHeld(held)), needsConsent: false }
+        return finish({
+          ...(await sendHeld(rpc, held, attempt)),
+          needsConsent: false,
+        })
       }
-      await dropHeld(held)
-      console.log('[cloud] not sent')
-      return { sent: 0, held: 0, needsConsent: false, reason: asked }
+      await attempt(
+        'could not clear what is held',
+        () => dropHeld(held),
+        undefined
+      )
+      console.log('[pikku] not sent')
+      return finish({ sent: 0, held: 0, needsConsent: false, reason: asked })
     }
     console.log(
-      '[cloud] not sent. Ask the user whether to send these (yes / no / always / never), then run: pikku cloud report --consent <answer>'
+      `[pikku] not sent. Ask the user whether to send these to the Pikku team as ${account} (yes / no / always / never), then run: pikku report --consent <answer>`
     )
-    return { sent: 0, held: held.length, needsConsent: true }
+    return finish({ sent: 0, held: held.length, needsConsent: true, account })
   },
 })

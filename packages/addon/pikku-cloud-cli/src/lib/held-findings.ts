@@ -1,31 +1,40 @@
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, resolve, sep } from 'node:path'
 import { randomBytes, randomUUID } from 'node:crypto'
 import type { FindingPayload } from './finding.js'
 
 /**
- * Findings the user has not yet agreed to send. They are filed the moment
- * something goes wrong and asked about once, at hand-over. They live in
- * `~/.pikkustudio`, not the repo, so git never sees them.
+ * Findings that have not been sent. They are filed the moment something goes
+ * wrong, in `.pikku/findings` at the checkout root: the one place a sandboxed
+ * agent can always write, and one `pikku all` leaves alone and `.gitignore`
+ * already covers.
  */
-export function heldDir(): string {
+export function heldDir(root = checkoutRoot()): string {
   return (
-    process.env.PIKKUSTUDIO_FINDINGS_DIR ??
-    join(homedir(), '.pikkustudio', 'findings')
+    process.env.PIKKUSTUDIO_FINDINGS_DIR ?? join(root, '.pikku', 'findings')
   )
 }
 
-const runsFile = () => join(heldDir(), 'runs.json')
+const runsFile = (root: string) => join(heldDir(root), 'runs.json')
 
-/** The checkout a finding came from: the nearest pikku.config.json, else cwd. */
+/** A directory outside any project, lifted out of `.git` if it is inside one. */
+function outsideGit(dir: string): string {
+  const parts = dir.split(sep)
+  const gitAt = parts.indexOf('.git')
+  return gitAt === -1 ? dir : parts.slice(0, gitAt).join(sep) || sep
+}
+
+/**
+ * The checkout a finding came from: the nearest pikku.config.json, else cwd,
+ * and never a directory inside `.git`.
+ */
 export function checkoutRoot(startDir = process.cwd()): string {
   let dir = resolve(startDir)
   while (true) {
     if (existsSync(join(dir, 'pikku.config.json'))) return dir
     const parent = dirname(dir)
-    if (parent === dir) return resolve(startDir)
+    if (parent === dir) return outsideGit(resolve(startDir))
     dir = parent
   }
 }
@@ -34,24 +43,30 @@ export function checkoutRoot(startDir = process.cwd()): string {
  * One id per checkout, made the first time it reports. Every finding carries
  * it, so cloud sees one build's findings together without learning anything
  * about the project.
+ *
+ * A folder inside the checkout has one run, whatever path the checkout is seen
+ * at, because a sandbox mounts it somewhere else than the host does. Only a
+ * shared `PIKKUSTUDIO_FINDINGS_DIR` needs the checkout's path to tell runs apart.
  */
 export async function runIdFor(root = checkoutRoot()): Promise<string> {
+  const file = runsFile(root)
+  const key = process.env.PIKKUSTUDIO_FINDINGS_DIR ? root : 'checkout'
   let runs: Record<string, string> = {}
-  if (existsSync(runsFile())) {
+  if (existsSync(file)) {
     try {
-      runs = JSON.parse(await readFile(runsFile(), 'utf8'))
+      runs = JSON.parse(await readFile(file, 'utf8'))
     } catch {
       runs = {}
     }
   }
-  if (runs[root]) return runs[root]
-  runs[root] = randomUUID()
-  await mkdir(heldDir(), { recursive: true })
-  await writeFile(runsFile(), JSON.stringify(runs, null, 2) + '\n', {
+  if (runs[key]) return runs[key]
+  runs[key] = randomUUID()
+  await mkdir(heldDir(root), { recursive: true })
+  await writeFile(file, JSON.stringify(runs, null, 2) + '\n', {
     encoding: 'utf8',
     mode: 0o600,
   })
-  return runs[root]
+  return runs[key]
 }
 
 export interface HeldFinding {

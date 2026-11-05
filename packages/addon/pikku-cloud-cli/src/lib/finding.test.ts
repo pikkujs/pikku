@@ -285,7 +285,7 @@ describe('postFinding', () => {
 })
 
 describe('findingRPC', () => {
-  test('posts to the rpc route with no credentials', async () => {
+  test('posts to the rpc route with the account token', async () => {
     let seen: { url: string; init: RequestInit } | null = null
     const send = (async (url: string, init: RequestInit) => {
       seen = { url, init }
@@ -294,15 +294,15 @@ describe('findingRPC', () => {
       })
     }) as unknown as typeof fetch
 
-    await findingRPC('https://api.example', 5000, send).invoke(
+    await findingRPC('https://api.example', 'account-token', 5000, send).invoke(
       'submitFinding',
       { finding: payload() as any }
     )
 
     assert.equal(seen!.url, 'https://api.example/rpc/submitFinding')
     assert.equal(
-      (seen!.init.headers as Record<string, string>).Authorization,
-      undefined
+      new Headers(seen!.init.headers).get('authorization'),
+      'Bearer account-token'
     )
     assert.ok(seen!.init.signal)
   })
@@ -316,7 +316,7 @@ describe('findingRPC', () => {
       )) as unknown as typeof fetch
 
     const result = await postFinding({
-      rpc: findingRPC('https://api.example', 20, send),
+      rpc: findingRPC('https://api.example', 'account-token', 20, send),
       payload: payload(),
     })
 

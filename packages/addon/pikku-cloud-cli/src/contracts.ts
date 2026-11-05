@@ -76,6 +76,61 @@ import {
   renderAddonVerify,
 } from './functions/addon-verify.function.js'
 
+/**
+ * Its own contract so `pikku report` sits at the top level, beside the `cloud`
+ * group rather than in it: filing needs no account.
+ */
+export const reportCommands = defineCLICommands({
+  report: pikkuCLICommand({
+    parameters: '[title]',
+    func: CloudReport,
+    description:
+      'File a finding — something about pikku that cost time. It stays in .pikku/findings until you are logged in and say yes. With no finding, asks about the ones held from this build',
+    options: {
+      stdin: {
+        description:
+          'Read the whole finding as JSON on stdin instead of from flags (prose survives the shell intact)',
+        default: false,
+      },
+      kind: {
+        description:
+          'product (fix pikku) or harness (fix the skill that misled you)',
+      },
+      model: { description: 'The model that hit this' },
+      expected: { description: 'What you expected pikku to do' },
+      actual: { description: 'What it did instead' },
+      skill: {
+        description: 'For a harness finding, the skill that misled you',
+      },
+      passage: { description: 'The passage in that skill it contradicts' },
+      command: { description: 'The command you ran' },
+      error: { description: "The error's message line, verbatim" },
+      repro: { description: 'The shortest way to reach it again' },
+      workaround: { description: 'What you did instead, inside the app' },
+      proposal: {
+        description:
+          'What pikku should do — named file and function, mechanism, suggested change',
+      },
+      tried: {
+        description:
+          'For an unresolved finding, what you tried and how each attempt failed',
+      },
+      unresolved: {
+        description: 'No workaround was found — a blocker, not a tax',
+        default: false,
+      },
+      area: { description: 'The part of pikku this is about' },
+      surface: { description: 'Where it showed up: local, deployed or both' },
+      cost: { description: 'What it cost, measured or estimated' },
+      deployTarget: { description: 'The deploy target in use' },
+      consent: {
+        description:
+          'The user\'s answer to "send them under this account?": yes or no for what is held now, always or never to stop asking',
+      },
+    },
+  }),
+})
+
 export const cloudCommands = defineCLICommands({
   login: pikkuCLICommand({
     func: CloudLogin,
@@ -498,54 +553,6 @@ export const cloudCommands = defineCLICommands({
         default: false,
       },
       json: { description: 'Machine-readable output', default: false },
-    },
-  }),
-  report: pikkuCLICommand({
-    parameters: '[title]',
-    func: CloudReport,
-    description:
-      'Report a finding — something about pikku that cost time — to the Pikku team. With no finding, asks about the ones held from this build',
-    options: {
-      stdin: {
-        description:
-          'Read the whole finding as JSON on stdin instead of from flags (prose survives the shell intact)',
-        default: false,
-      },
-      kind: {
-        description:
-          'product (fix pikku) or harness (fix the skill that misled you)',
-      },
-      model: { description: 'The model that hit this' },
-      expected: { description: 'What you expected pikku to do' },
-      actual: { description: 'What it did instead' },
-      skill: {
-        description: 'For a harness finding, the skill that misled you',
-      },
-      passage: { description: 'The passage in that skill it contradicts' },
-      command: { description: 'The command you ran' },
-      error: { description: "The error's message line, verbatim" },
-      repro: { description: 'The shortest way to reach it again' },
-      workaround: { description: 'What you did instead, inside the app' },
-      proposal: {
-        description:
-          'What pikku should do — named file and function, mechanism, suggested change',
-      },
-      tried: {
-        description:
-          'For an unresolved finding, what you tried and how each attempt failed',
-      },
-      unresolved: {
-        description: 'No workaround was found — a blocker, not a tax',
-        default: false,
-      },
-      area: { description: 'The part of pikku this is about' },
-      surface: { description: 'Where it showed up: local, deployed or both' },
-      cost: { description: 'What it cost, measured or estimated' },
-      deployTarget: { description: 'The deploy target in use' },
-      consent: {
-        description:
-          'The user\'s answer to "send them?": yes or no for what is held now, always or never to stop asking',
-      },
     },
   }),
   metrics: pikkuCLICommand({
