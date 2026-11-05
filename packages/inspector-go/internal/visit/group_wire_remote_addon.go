@@ -2,6 +2,7 @@ package visit
 
 import (
 	"github.com/microsoft/typescript-go/shim/ast"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/remotesdk"
@@ -27,6 +28,10 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 	pkgIsLiteral := false
 	var authCredentialId, authSecretId *string
 	hasAuth := false
+	var uses *state.Record[string]
+	var local *addonLocal
+	var localContributors []string
+	haveLocalContributors := false
 	for _, p := range args[0].Properties() {
 		if !ast.IsPropertyAssignment(p) || !ast.IsIdentifier(p.Name()) {
 			continue
@@ -40,6 +45,43 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 			if ast.IsStringLiteralLike(init) {
 				pkg = init.Text()
 				pkgIsLiteral = true
+			}
+		case key == "uses":
+			if ast.IsObjectLiteralExpression(init) {
+				uses = parseStringRecord(init)
+			} else {
+				s.Log.Critical(diag.AddonExposeNotStatic, "wireRemoteAddon's uses must be an object literal, got: "+tsutil.NodeText(init))
+			}
+		case key == "local" && ast.IsObjectLiteralExpression(init):
+			l := &addonLocal{}
+			for _, lp := range init.Properties() {
+				if !ast.IsPropertyAssignment(lp) || !ast.IsIdentifier(lp.Name()) {
+					continue
+				}
+				li := lp.Initializer()
+				switch lp.Name().Text() {
+				case "package":
+					if ast.IsStringLiteral(li) {
+						l.pkg = li.Text()
+					}
+				case "ui":
+					if li.Kind == ast.KindTrueKeyword {
+						l.ui = true
+					}
+				case "contributors":
+					if names, ok := parseStringArray(li); ok {
+						l.contributors = names
+						localContributors = names
+						haveLocalContributors = true
+					} else {
+						s.Log.Critical(diag.AddonContributorsNotStatic, "wireRemoteAddon's local.contributors must be an array of string literals, got: "+tsutil.NodeText(li))
+					}
+				}
+			}
+			if l.pkg != "" {
+				local = l
+			} else {
+				s.Log.Critical(diag.RemoteAddonPackageNotStatic, "wireRemoteAddon's local.package must be a string literal, got: "+tsutil.NodeText(init))
 			}
 		case key == "auth" && ast.IsObjectLiteralExpression(init):
 			hasAuth = true
@@ -89,5 +131,17 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 	o.set("hasAuth", hasAuth)
 	o.set("authCredentialId", nilIfNil(authCredentialId))
 	o.set("authSecretId", nilIfNil(authSecretId))
-	s.declareAddon(name, &addonDecl{pkg: pkgName, rng: rng, file: file, remote: true}, o.raw())
+	o.set("uses", nilIfNil(uses))
+	if local != nil {
+		var lo jsObject
+		lo.set("package", local.pkg)
+		if local.ui {
+			lo.set("ui", true)
+		}
+		if haveLocalContributors {
+			lo.set("contributors", localContributors)
+		}
+		o.set("local", &lo.rec)
+	}
+	s.declareAddon(name, &addonDecl{pkg: pkgName, rng: rng, file: file, remote: true, uses: uses, local: local}, o.raw())
 }

@@ -141,3 +141,95 @@ describe('loadAddonFunctionsMeta — ui: true', () => {
     assert.deepEqual(criticals, [])
   })
 })
+
+describe('loadAddonFunctionsMeta — a remote addon with a local package', () => {
+  let rootDir: string
+  const manifest = {
+    title: 'cloud__title',
+    file: 'x.ts',
+    scopes: ['cloud:read'],
+    screens: [
+      {
+        path: '/cloud',
+        title: 'cloud_overview__title',
+        scope: 'project',
+        nav: { area: 'project', icon: 'cloud', order: 10 },
+        component: './screens/o',
+      },
+    ],
+  }
+  const contributors = {
+    contributors: { 'cloud-session': { dev: { module: 'a.ts', export: 'a' } } },
+  }
+
+  before(() => {
+    rootDir = mkdtempSync(join(tmpdir(), 'pikku-remote-local-'))
+    writeFileSync(join(rootDir, 'package.json'), '{"name":"consumer"}')
+    writePackage(rootDir, '@acme/addon-cloud', manifest)
+    const dir = join(rootDir, 'node_modules', '@acme/addon-cloud')
+    mkdirSync(join(dir, '.pikku', 'contributors'), { recursive: true })
+    writeFileSync(
+      join(dir, '.pikku', 'contributors', 'pikku-contributors-meta.gen.json'),
+      JSON.stringify(contributors)
+    )
+  })
+  after(() => rmSync(rootDir, { recursive: true, force: true }))
+
+  const remote = (local: object) =>
+    new Map([
+      [
+        'cloud',
+        {
+          package: '@acme/addon-cloud-api',
+          remote: true,
+          hasAuth: false,
+          local,
+        },
+      ],
+    ])
+
+  test('screens and contributors come from the local package under the one name', async () => {
+    criticals = []
+    const state = makeState(
+      rootDir,
+      remote({
+        package: '@acme/addon-cloud',
+        ui: true,
+        contributors: ['cloud-session'],
+      })
+    )
+    await loadAddonFunctionsMeta(logger, state)
+    assert.deepEqual(criticals, [])
+    assert.deepEqual(state.addonStudio?.cloud, manifest)
+    assert.equal(
+      state.optedInContributors?.cloud?.packageName,
+      '@acme/addon-cloud'
+    )
+    assert.deepEqual(
+      Object.keys(state.optedInContributors?.cloud?.contributors ?? {}),
+      ['cloud-session']
+    )
+  })
+
+  test('a contributor the local package does not register is PKU363', async () => {
+    criticals = []
+    const state = makeState(
+      rootDir,
+      remote({ package: '@acme/addon-cloud', contributors: ['nope'] })
+    )
+    await loadAddonFunctionsMeta(logger, state)
+    assert.equal(criticals.length, 1)
+    assert.ok(criticals[0]!.startsWith('PKU363'))
+  })
+
+  test('without local, nothing is loaded for a remote addon', async () => {
+    criticals = []
+    const state = makeState(
+      rootDir,
+      new Map([['cloud', { package: '@acme/addon-cloud-api', remote: true }]])
+    )
+    await loadAddonFunctionsMeta(logger, state)
+    assert.equal(state.addonStudio, undefined)
+    assert.equal(state.optedInContributors, undefined)
+  })
+})
