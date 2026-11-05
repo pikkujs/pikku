@@ -4,7 +4,7 @@ import { pikkuScenario, pikkuScenarioHook } from '#pikku/scenarios'
 // A scenario is a workflow whose steps run as real users ("virtualUsers") over the
 // real transport — sign-in, auth middleware, permissions and serialization are
 // all exercised end-to-end. The same flow doubles as an e2e test and a
-// staging/production health check. Virtual users are registered in pikku.config.json.
+// staging/production health check. Virtual users are declared with defineVirtualUsers.
 export const shopperBuysAnItem = pikkuScenario({
   title: 'Shopper buys an item',
   description: 'Browse the catalogue, fill a basket and pay for an order.',

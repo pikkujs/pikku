@@ -498,7 +498,9 @@ describe('collectSurface describes how to call an export', () => {
       'package.json',
       JSON.stringify({
         name: 'callable',
-        exports: { '.': { types: './dist/index.d.ts', import: './dist/index.js' } },
+        exports: {
+          '.': { types: './dist/index.d.ts', import: './dist/index.js' },
+        },
       })
     )
     await write(tmp, 'tsconfig.json', TSCONFIG)
@@ -560,13 +562,44 @@ describe('collectSurface describes how to call an export', () => {
     }
   })
 
+  test('keeps only the documented keys of a generated file', async () => {
+    const tmp = await setup(
+      `
+      import type { Wiring } from '@fake/lib'
+      export type { Generated } from './types.gen.js'
+      export const wireThing = (wiring: Wiring): void => { void wiring }
+    `,
+      `export type Wiring = { route: string }`
+    )
+    try {
+      await writeFile(
+        join(tmp, 'src/types.gen.ts'),
+        `export interface Generated {
+          /** Runs one step. */
+          do(step: string): void
+          projectOwn: string
+        }`
+      )
+      const generated = symbolNamed(await collectSurface(tmp), 'Generated')
+      assert.deepEqual(
+        generated?.members?.map((member) => member.line.split(':')[0]),
+        ['do']
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('a class is described by how it is constructed, not as `typeof`', async () => {
     const tmp = await setup(`
       export class Thing { constructor(public message: string, public code?: number) {} }
     `)
     try {
       const thing = symbolNamed(await collectSurface(tmp), 'Thing')
-      assert.equal(thing?.signature, 'new Thing(message: string, code?: number)')
+      assert.equal(
+        thing?.signature,
+        'new Thing(message: string, code?: number)'
+      )
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

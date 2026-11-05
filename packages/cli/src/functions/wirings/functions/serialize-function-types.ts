@@ -48,6 +48,7 @@ import type { TypedScenario, TypedVirtualUsers } from '../scenarios/pikku-scenar
 
 import type { PickRequired } from '@pikku/core/utils'
 import type { ListInput, ListOutput } from '@pikku/core/function'
+export type { ListInput, ListOutput, Filter } from '@pikku/core/function'
 import type { CorePermissionGroup } from '@pikku/core/function'
 import type { PikkuWire, SecretlessServices } from '@pikku/core/types'
 import type {
@@ -272,12 +273,16 @@ type PikkuFunctionConfigWithSchema<
   >,
   'func' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
 > & {
+  /** The function body: \`async (services, data, wire) => output\`. */
   func:
     | PikkuFunction<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
     | PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
+  /** Zod schema for the input. Validated at runtime; the type of \`data\` is inferred from it. */
   input?: InputSchema
+  /** Zod schema for the output. The function's return type is inferred from it. */
   output?: OutputSchema
   node?: NodeConfig
+  /** \`pikkuPermission\` guards checked before the body runs. Pass one, an array, or groups of alternatives. */
   permissions?: InputSchema extends StandardSchemaV1
     ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
     : undefined
@@ -305,6 +310,7 @@ export function pikkuFunc<
   config: PikkuFunctionConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>
 ): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
 export function pikkuFunc<In, Out = unknown>(
+  /** The function body: \`async (services, data, wire) => output\`. */
   func:
     | PikkuFunction<In, Out, 'session' | 'rpc'>
     | PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
@@ -353,15 +359,19 @@ type PikkuFunctionSessionlessConfigWithSchema<
   >,
   'func' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
 > & {
+  /** The function body: \`async (services, data, wire) => output\`. */
   func: PikkuFunctionSessionless<
     SchemaInferred<InputSchema>,
     SchemaInferred<OutputSchema>,
     RequiredWires,
     RequiredServices
   >
+  /** Zod schema for the input. Validated at runtime; the type of \`data\` is inferred from it. */
   input?: InputSchema
+  /** Zod schema for the output. The function's return type is inferred from it. */
   output?: OutputSchema
   node?: NodeConfig
+  /** \`pikkuPermission\` guards checked before the body runs. Pass one, an array, or groups of alternatives. */
   permissions?: InputSchema extends StandardSchemaV1
     ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
     : undefined
@@ -390,6 +400,7 @@ export function pikkuSessionlessFunc<
   config: PikkuFunctionSessionlessConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc', RequiredServices>
 ): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
 export function pikkuSessionlessFunc<In, Out = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices>(
+  /** The function body: \`async (services, data, wire) => output\`. */
   func:
     | PikkuFunctionSessionless<In, Out, 'session' | 'rpc', RequiredServices>
     | PikkuFunctionSessionlessConfig<In, Out, 'session' | 'rpc', PikkuFunctionSessionless<In, Out, 'session' | 'rpc', RequiredServices>>
@@ -408,6 +419,7 @@ export function pikkuSessionlessFunc(func: any) {
  * @example snippet: cleanupFunction
  */
 export const pikkuVoidFunc = (
+  /** The function body: \`async (services, data, wire) => output\`. */
   func:
     | PikkuFunctionSessionless<void, void, 'session' | 'rpc'>
     | PikkuFunctionSessionlessConfig<void, void, 'session' | 'rpc'>

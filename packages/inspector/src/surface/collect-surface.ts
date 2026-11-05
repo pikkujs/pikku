@@ -565,6 +565,14 @@ const isProjectOwned = (declaration: ts.Declaration, root: string): boolean => {
   return file.startsWith(root) && !file.includes('node_modules')
 }
 
+/**
+ * A generated file sits under the project, and most of its keys are the
+ * project's own (`CredentialsMap`). The exceptions are keys codegen writes for
+ * every project, such as `TypedWorkflow.do`, and those are the ones it documents.
+ */
+const isDocumentedCodegen = (declaration: ts.Declaration, doc: string) =>
+  doc !== '' && /\.gen(\.d)?\.ts$/.test(declaration.getSourceFile().fileName)
+
 const memberLine = (
   property: ts.Symbol,
   checker: ts.TypeChecker,
@@ -573,10 +581,15 @@ const memberLine = (
 ): SurfaceMember | undefined => {
   if (property.getName().startsWith('__')) return undefined
   const declaration = property.valueDeclaration ?? property.declarations?.[0]
+  const doc = ts
+    .displayPartsToString(property.getDocumentationComment(checker))
+    .replace(/\s+/g, ' ')
+    .trim()
   if (
     declaration &&
     (program.isSourceFileDefaultLibrary(declaration.getSourceFile()) ||
-      isProjectOwned(declaration, root))
+      (isProjectOwned(declaration, root) &&
+        !isDocumentedCodegen(declaration, doc)))
   ) {
     return undefined
   }
@@ -584,10 +597,6 @@ const memberLine = (
     ? checker.getTypeOfSymbolAtLocation(property, declaration)
     : checker.getTypeOfSymbol(property)
   const optional = property.flags & ts.SymbolFlags.Optional ? '?' : ''
-  const doc = ts
-    .displayPartsToString(property.getDocumentationComment(checker))
-    .replace(/\s+/g, ' ')
-    .trim()
   return {
     line: collapseRuns(
       `${property.getName()}${optional}: ${printResolved(type, declaration, checker, optional === '?')}`

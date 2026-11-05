@@ -207,6 +207,10 @@ export type BuildSurfaceDocOptions = {
   version: string
   app: SurfaceProject
   addon: SurfaceProject
+  /** The `@pikku/react` package: no `.pikku` barrel leads to it, so it is surveyed itself. */
+  frontend?: string
+  /** `@pikku/core`, for the exports no generated barrel re-exports. */
+  core?: string
   /** Named regions an `@example snippet: <name>` resolves against. */
   snippets?: Map<string, string>
 }
@@ -236,6 +240,55 @@ const projectEntryPoint = async (
 }
 
 /**
+ * Exports reached by package name rather than through a `.pikku` barrel. A
+ * barrel re-export would tie generated code to the core version it was built
+ * against, so they are read off the package instead and each lists exactly what
+ * belongs on the page.
+ */
+const CORE_DOORS: Array<{ name: string; subpath: string; only: string[] }> = [
+  { name: 'wire', subpath: './types', only: ['PikkuWire'] },
+  {
+    name: 'telemetry',
+    subpath: './middleware',
+    only: ['telemetryOuter', 'telemetryInner'],
+  },
+  { name: 'plugin', subpath: './addon', only: ['definePlugin'] },
+  {
+    name: 'webhook',
+    subpath: './webhook',
+    only: ['defineOutgoingWebhook', 'TypedWebhookService'],
+  },
+  {
+    name: 'email',
+    subpath: './services',
+    only: ['EmailService', 'SendEmailResult', 'EmailAttachment'],
+  },
+  { name: 'eventhub', subpath: './channel', only: ['EventHubService'] },
+]
+
+const packageLeaf = async (
+  packageDir: string,
+  name: string,
+  subpath: string,
+  only: string[] | undefined,
+  snippets: Map<string, string> | undefined
+): Promise<SurfaceLeaf> => {
+  const entrypoints = await collectSurface(resolve(packageDir), {
+    subpaths: [subpath],
+    snippets,
+  })
+  const [leaf] = toLeaves('app', entrypoints, () => LEAF_EDITORIAL[name], null)
+  if (!leaf) throw new MissingSurfaceEditorialError('app', [name])
+  return {
+    ...leaf,
+    name,
+    symbols: leaf.symbols.filter(
+      (symbol) => !only || only.includes(symbol.name)
+    ),
+  }
+}
+
+/**
  * An example names a snippet rather than restating it, and both entrypoints
  * resolve against the same map — the regions come from one running application
  * (`templates/online-shop`), not from whichever template happened to hold them.
@@ -244,12 +297,30 @@ export const buildSurfaceDoc = async ({
   version,
   app,
   addon,
+  frontend,
+  core,
   snippets,
 }: BuildSurfaceDocOptions): Promise<SurfaceDoc> => {
+  const appEntryPoint = await projectEntryPoint('app', app, snippets)
   return {
     version,
     entryPoints: [
-      await projectEntryPoint('app', app, snippets),
+      {
+        ...appEntryPoint,
+        leaves: [
+          ...appEntryPoint.leaves,
+          ...(frontend
+            ? [await packageLeaf(frontend, 'react', '.', undefined, snippets)]
+            : []),
+          ...(core
+            ? await Promise.all(
+                CORE_DOORS.map(({ name, subpath, only }) =>
+                  packageLeaf(core, name, subpath, only, snippets)
+                )
+              )
+            : []),
+        ].sort(byStepThenName),
+      },
       await projectEntryPoint('addon', addon, snippets),
     ],
   }

@@ -20,7 +20,9 @@ const SHARED_CONFIG_FIELDS = `  title?: string
   approvalRequired?: boolean
   approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
   middleware?: PikkuMiddleware[]
+  /** Zod schema for the input. Validated at runtime; the type of \`data\` is inferred from it. */
   input?: InputSchema
+  /** Zod schema for the output. The function's return type is inferred from it. */
   output?: OutputSchema
   node?: NodeConfig
   errors?: Array<typeof PikkuError>
@@ -120,6 +122,7 @@ type PikkuScenarioConfigWithSchema<
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = {
 ${SHARED_CONFIG_FIELDS}
+  /** The function body: \`async (services, data, wire) => output\`. */
   func: PikkuFunctionScenario<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown
@@ -190,6 +193,7 @@ export function pikkuScenario<
   config: PikkuScenarioConfigWithSchema<InputSchema, OutputSchema>
 ): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'scenario' | 'virtualUsers', PikkuFunctionScenario<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown>, InputSchema, OutputSchema>
 export function pikkuScenario<In, Out = unknown>(
+  /** The function body: \`async (services, data, wire) => output\`. */
   func:
     | PikkuFunctionScenario<In, Out>
     | PikkuFunctionConfig<In, Out, 'scenario' | 'virtualUsers', PikkuFunctionScenario<In, Out>>
@@ -334,7 +338,9 @@ type PikkuScenarioStepConfigWithSchema<
   template?: string
   title?: string
   tags?: string[]
+  /** Zod schema for the input. Validated at runtime; the type of \`data\` is inferred from it. */
   input?: InputSchema
+  /** Zod schema for the output. The function's return type is inferred from it. */
   output?: OutputSchema
   errors?: Array<typeof PikkuError>
   /**

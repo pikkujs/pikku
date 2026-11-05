@@ -45,7 +45,7 @@ export type WireAddonConfig = {
    * been.
    */
   mcpEndpoint?: boolean | string
-  /** Filters this addon in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
+  /** Filters this addon in and out of a build (see the `tags` option on `pikku all`), and at runtime is added to every one of its functions' tags, so tag-resolved middleware and permissions apply. */
   tags?: string[]
   /**
    * Mounts the screens the addon ships (see `definePlugin`) in the host, each at

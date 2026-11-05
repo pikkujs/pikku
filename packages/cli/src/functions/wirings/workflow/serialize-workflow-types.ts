@@ -21,16 +21,26 @@ import type {
 } from '@pikku/core/workflow'
 
 export { WorkflowCancelledException }
+export type {
+  ApprovalOutcome,
+  WorkflowApprovalOptions,
+  WorkflowStepOptions,
+} from '@pikku/core/workflow'
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { FlattenedWorkflowMap } from '${workflowMapImportPath}'
 import type { AgentMap as FlattenedAgentMap } from '${agentMapImportPath}'
 
 /**
- * The wire a workflow step is handed: \`step\` to run one durably, plus sleeping,
- * waiting for a signal and asking for approval.
+ * The wire a workflow body is handed: \`do\` to run one step durably, plus
+ * sleeping, waiting for a signal and asking for approval.
  */
 export interface TypedWorkflow extends PikkuWorkflowWire {
+  /**
+   * Runs one durable step: \`workflow.do('Step name', 'rpcName', input, { retries, retryDelay })\`.
+   * The second argument may name a workflow instead, which starts a child run,
+   * or be an inline closure: \`workflow.do('Step name', async () => value)\`.
+   */
   do<K extends keyof FlattenedRPCMap>(
     stepName: string,
     rpcName: K,
@@ -73,6 +83,7 @@ type PikkuWorkflowConfigWithSchema<
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = {
 ${sharedWorkflowConfigFields}
+  /** The function body: \`async (services, data, wire) => output\`. */
   func: PikkuFunctionWorkflow<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown
@@ -83,13 +94,16 @@ ${sharedWorkflowConfigFields}
    * (AND), and they are checked before \`permissions\`.
    */
   scopes?: ScopeId[]
+  /** \`pikkuPermission\` guards checked before the body runs. Pass one, an array, or groups of alternatives. */
   permissions?: InputSchema extends StandardSchemaV1 ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>> : undefined
 }
 
 /**
  * Declares a workflow: the DSL form, where each step is awaited in order and
  * the runner persists progress between them so a restart resumes rather than
- * replays. The default choice for a workflow.
+ * replays. The default choice for a workflow. Every \`const\` and \`let\` must
+ * sit at the top level of the body (PKU641): declare it there and assign inside
+ * the block. No try/catch around steps: declare \`compensate\` on the function.
  *
  * @example snippet: workflowSteps
  */
@@ -100,6 +114,7 @@ export function pikkuWorkflowFunc<
   config: PikkuWorkflowConfigWithSchema<InputSchema, OutputSchema>
 ): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'workflow', PikkuFunctionWorkflow<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown>, InputSchema, OutputSchema>
 export function pikkuWorkflowFunc<In, Out = unknown>(
+  /** The function body: \`async (services, data, wire) => output\`. */
   func:
     | PikkuFunctionWorkflow<In, Out>
     | PikkuFunctionConfig<In, Out, 'workflow', PikkuFunctionWorkflow<In, Out>>
@@ -122,6 +137,7 @@ export function pikkuWorkflowComplexFunc<
   config: PikkuWorkflowConfigWithSchema<InputSchema, OutputSchema>
 ): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'workflow', PikkuFunctionWorkflow<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown>, InputSchema, OutputSchema>
 export function pikkuWorkflowComplexFunc<In, Out = unknown>(
+  /** The function body: \`async (services, data, wire) => output\`. */
   func:
     | PikkuFunctionWorkflow<In, Out>
     | PikkuFunctionConfig<In, Out, 'workflow', PikkuFunctionWorkflow<In, Out>>
