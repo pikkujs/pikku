@@ -914,9 +914,6 @@
             "file": "<fixture>/src/addons.ts",
             "remote": true,
             "hasAuth": false,
-            "uses": {
-              "shop": "shop"
-            },
             "local": {
               "package": "@fixture/shop-addon",
               "ui": true
@@ -1974,11 +1971,6 @@
       "level": "critical",
       "code": "PKU355",
       "message": "Addon 'billing' maps 'extra' to 'bare', but @fixture/billing-addon does not declare 'extra' in the pikku.uses of its package.json. It declares: pay, mail. Remove 'extra' from uses, or have the addon declare it."
-    },
-    {
-      "level": "critical",
-      "code": "PKU347",
-      "message": "Addon 'hosted' uses 'shop' as 'shop', but 'shop' is wired from '@fixture/shop-addon'."
     },
     {
       "level": "critical",

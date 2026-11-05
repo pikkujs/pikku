@@ -3539,7 +3539,6 @@ export type WireRemoteAddonConfig = {
   remoteName?: (fn: string) => string
   tags?: string[]
   expose?: boolean | string[]
-  uses?: Record<string, string>
   local?: { package: string; ui?: boolean; contributors?: string[] }
   timeoutMs?: number
   headers?: (

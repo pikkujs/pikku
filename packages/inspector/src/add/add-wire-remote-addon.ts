@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import type { InspectorState, InspectorLogger } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
-import { parseStringArray, parseStringRecord } from './add-wire-addon.js'
+import { parseStringArray } from './add-wire-addon.js'
 import { parseRemoteAddonPackage } from '../utils/remote-addon-sdk.js'
 
 /**
@@ -35,7 +35,6 @@ export function addWireRemoteAddon(
   let hasAuth = false
   let authCredentialId: string | undefined
   let authSecretId: string | undefined
-  let uses: Record<string, string> | undefined
   let local:
     { package: string; ui?: boolean; contributors?: string[] } | undefined
 
@@ -48,15 +47,6 @@ export function addWireRemoteAddon(
       pkgNode = prop.initializer
       if (ts.isStringLiteralLike(prop.initializer)) {
         pkg = prop.initializer.text
-      }
-    } else if (key === 'uses') {
-      if (ts.isObjectLiteralExpression(prop.initializer)) {
-        uses = parseStringRecord(prop.initializer)
-      } else {
-        logger.critical(
-          ErrorCode.ADDON_EXPOSE_NOT_STATIC,
-          `wireRemoteAddon's uses must be an object literal, got: ${prop.initializer.getText()}`
-        )
       }
     } else if (
       key === 'local' &&
@@ -162,7 +152,6 @@ export function addWireRemoteAddon(
     hasAuth,
     authCredentialId,
     authSecretId,
-    ...(uses ? { uses } : {}),
     ...(local ? { local } : {}),
   })
   state.rpc.usedAddons.add(name)
