@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { cp, mkdir, readdir } from 'node:fs/promises'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { readTsconfigOutDir } from '../../inspector-helpers.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 
@@ -30,6 +30,10 @@ export type DistCopy = { from: string; to: string }
 const tscEmitsIt = (file: string) =>
   file.endsWith('.ts') && !file.endsWith('.d.ts')
 
+/** Findings wait in the output dir, unsent; a published package must not carry them. */
+const heldFindings = (rootDir: string, file: string) =>
+  relative(rootDir, file).startsWith(join('.pikku', 'findings') + sep)
+
 const walk = async (dir: string): Promise<string[]> => {
   if (!existsSync(dir)) {
     return []
@@ -50,7 +54,7 @@ export const planDistCopies = (
   files: string[]
 ): DistCopy[] => {
   return files
-    .filter((file) => !tscEmitsIt(file))
+    .filter((file) => !tscEmitsIt(file) && !heldFindings(rootDir, file))
     .map((from) => ({
       from,
       to: join(distDir, relative(rootDir, from)),

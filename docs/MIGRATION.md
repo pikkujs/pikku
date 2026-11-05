@@ -24,6 +24,15 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### `pikku cloud report` is now `pikku report`, and findings are no longer anonymous
+
+`pikku cloud report` is gone, with no alias. Use `pikku report`, with the same flags.
+
+- Findings are kept in `.pikku/findings/` at the checkout root instead of `~/.pikkustudio/findings`. `PIKKUSTUDIO_FINDINGS_DIR` still overrides it. Anything already held in the old folder is not carried over.
+- Logged out, findings stay on the computer and `--consent yes` sends nothing.
+- Logged in, a yes or always sends them with the account token. Findings are not anonymous, and the consent question names the account.
+- A failed write warns and exits 0. If `always` or `never` cannot be saved, it applies to that run only and the output carries a warning; set `PIKKU_REPORT` where the home directory is read-only.
+
 ### A bound `workflow.approval` is read into the graph, and can now fail it
 
 `const decision = await workflow.approval(...)` used to be dropped from the workflow graph and `plannedSteps`. It is now a real step, so the rules a bare `await workflow.approval(...)` always followed apply to it too. Two forms that passed silently now fail `pikku all` with `PKU641`:

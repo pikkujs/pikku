@@ -85,6 +85,10 @@ describe('CONFIG_FREE_COMMANDS', () => {
     assert.ok(CONFIG_FREE_COMMANDS.has('cloud.login'))
   })
 
+  test('report is filed from anywhere, a failed scaffold included', () => {
+    assert.ok(CONFIG_FREE_COMMANDS.has('report'))
+  })
+
   test('the git credential helper and logout run from any directory', () => {
     assert.ok(CONFIG_FREE_COMMANDS.has('cloud.auth.git'))
     assert.ok(CONFIG_FREE_COMMANDS.has('cloud.logout'))
