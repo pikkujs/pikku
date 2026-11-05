@@ -7,6 +7,8 @@ installGroups: [core]
 
 # Pikku Permissions
 
+What to reach for and why. For how to call it, run this once: `pikku doc auth scopes pikkuPermission pikkuAuth addGlobalPermission defineScope`. Depth: `references/scopes.md`.
+
 ## First: is the caller a machine with a token?
 
 Then this is NOT a permissions problem. Resolve the token in `addHTTPMiddleware('*')` middleware that calls `setInitialSession`, make the function a `pikkuFunc`, and gate it with `scopes` (pikku-auth, `../pikku-auth/references/machine-auth.md`). A `permissions` check that verifies a bearer token and returns `true` is authentication in disguise, and leaves the function sessionless. The only exception is a bootstrap endpoint whose caller has no identity yet (a shared-secret registration, a login): it is sessionless and declares its gate here.
@@ -53,27 +55,8 @@ A list that fetches everything and then filters in JS is a bug, not a permission
 
 Put them in `src/permissions/`, one file per entity, and reuse one checker across every function on that entity.
 
-```typescript
-// src/permissions/book.ts
-import { pikkuPermission, pikkuAuth } from '#pikku/auth'
-
-// Data-aware: gets the input, so it can load the row the caller named.
-export const isBookOwner = pikkuPermission(
-  async ({ kysely }, { bookId }, { session }) => {
-    const book = await kysely
-      .selectFrom('book')
-      .select('ownerId')
-      .where('bookId', '=', bookId)
-      .executeTakeFirst()
-    return book?.ownerId === session?.userId
-  }
-)
-
-// Session-only: no input needed. Use for role and flag gates.
-export const isAdmin = pikkuAuth(
-  async (_services, session) => session?.role === 'admin'
-)
-```
+- **`pikkuPermission`** is data-aware: it gets the input, so it can load the row the caller named and compare its owner to the session.
+- **`pikkuAuth`** is session-only: no input needed. Use it for role and flag gates.
 
 ## OR and AND
 
@@ -116,3 +99,7 @@ They are independent: a broad global (e.g. `isEmployee`) can never satisfy an ad
 ## After changes
 
 `pikku all --tsc` regenerates, then verifies the checker types. A wrong permission signature fails here, not at runtime.
+
+## Not in `pikku doc` yet
+
+- `pikku doc pikkuFunc` does not print `permissions`. It is the shape shown under OR and AND above, keyed by group name.

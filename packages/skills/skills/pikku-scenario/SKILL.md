@@ -7,6 +7,8 @@ installGroups: [core]
 
 # Pikku Scenarios
 
+What to reach for and why. For how to call it, run this once: `pikku doc scenarios pikkuScenario pikkuFeature pikkuScenarioStep pikkuAgentScorer pikkuAgentJudge`.
+
 ## Agent Operating Procedure
 
 1. Discover before editing: `pikku scenario list` for what exists, `pikku info functions --verbose` for what a scenario can call.
@@ -42,43 +44,7 @@ Scenarios live in `srcDirectories` like any other function — by convention `*.
 
 ## Writing one
 
-`pikkuScenario` comes from the **generated** workflow types, not `@pikku/core`:
-
-```typescript
-import { pikkuScenario } from '#pikku/scenarios'
-
-export const orderSupportScenario = pikkuScenario<
-  { value?: number },
-  { doubled: number; message: string }
->({
-  title: 'Order support (scenario)',
-  tags: ['scenario'],
-  func: async ({ logger }, data, { scenario, virtualUsers }) => {
-    if (!virtualUsers?.shopper || !virtualUsers?.support) {
-      throw new Error(
-        'orderSupportScenario needs run virtualUsers (shopper + support) — run via `pikku scenario run <environment>`'
-      )
-    }
-
-    const doubled = await scenario.do(
-      'shopper doubles their order',
-      'doubleValue',
-      { value: data?.value ?? 21 },
-      { virtualUser: virtualUsers.shopper }
-    )
-
-    const settled = await scenario.expectEventually(
-      'support sees the greeting settle',
-      'formatMessage',
-      { greeting: 'Hello', name: 'Support' },
-      (out: { message: string }) => out.message.length > 0,
-      { virtualUser: virtualUsers.support, within: '5s', interval: 50 }
-    )
-
-    return { doubled: doubled.result, message: settled.message }
-  },
-})
-```
+`pikkuScenario` comes from the **generated** types (`#pikku/scenarios`), not `@pikku/core`. Guard the virtual users it needs at the top of `func`, and throw an error that names `pikku scenario run <environment>`.
 
 A scenario takes the same config fields as a workflow (`title`, `description`, `tags`, `input`/`output`, `auth`, `permissions`, `middleware`, `version`, …). The third argument is the scenario context: `{ scenario, virtualUsers }`.
 
@@ -138,23 +104,7 @@ the default suite excludes it.
 
 ### Setup and teardown (`before` / `after`)
 
-A scenario config takes `before` and `after`. Both have the **same signature as `func`** — `(services, data, wire)` — with the return value discarded:
-
-```typescript
-const resetsCredentials = async (_services, _data, { virtualUsers }) => {
-  await virtualUsers!.admin!.invoke('resetCredentials', {})
-}
-
-export const credentialScenario = pikkuScenario({
-  title: 'A credential is loaded on first use',
-  tags: ['scenario', 'credential'],
-  before: resetsCredentials,
-  after: removesInstalledAddon,
-  func: async (services, data, { scenario, virtualUsers }) => {
-    /* … */
-  },
-})
-```
+A scenario config takes `before` and `after`. Both have the **same signature as `func`** — `(services, data, wire)` — with the return value discarded. A hook is usually a named function shared between scenarios, and reaches virtual users as `wire.virtualUsers`.
 
 | Rule                                                                                                     |
 | -------------------------------------------------------------------------------------------------------- |
@@ -171,30 +121,7 @@ Hooks are scenario-only. A `before`/`after` on a `pikkuWorkflowFunc` never runs 
 
 ### Grouping scenarios (`pikkuFeature`)
 
-`pikkuFeature` groups scenarios the way gherkin's `Feature:` groups `Scenario:`. Scenarios are referenced by **imported identifier**, so a renamed or deleted scenario is a compile error rather than a silent skip:
-
-```typescript
-import { pikkuFeature } from '#pikku/scenarios'
-import {
-  credentialLazyLoadScenario,
-  credentialRoundTripScenario,
-} from './credential.scenario.js'
-
-export const credentialFeature = pikkuFeature({
-  name: 'Credential API',
-  description: 'Credentials resolve lazily and are scoped per user',
-  tags: ['credential'],
-  before: startsMockOAuthServer,
-  after: stopsMockOAuthServer,
-  scenarios: [
-    credentialLazyLoadScenario,
-    ...['stripe', 'google', 'hmac-key'].map((name) => ({
-      scenario: credentialRoundTripScenario,
-      data: { name },
-    })),
-  ],
-})
-```
+`pikkuFeature` groups scenarios the way gherkin's `Feature:` groups `Scenario:`. Scenarios are referenced by **imported identifier**, so a renamed or deleted scenario is a compile error rather than a silent skip. `scenarios` holds bare identifiers or `{ scenario, data }` entries, and a `.map` over values works.
 
 | Rule                                                                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------------- |

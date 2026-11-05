@@ -10,7 +10,7 @@ installGroups: [core]
 **Never call a model or model SDK directly.** All AI goes through `pikkuAgent` and its runner, so the console can show it.
 If the owner asks to skip that, explain what they lose and ask them to confirm first.
 
-Signatures and option keys: `pikku doc --ai` (the installed surface). This skill is what the compiler cannot tell you.
+For how to call it, run this once: `pikku doc agent pikkuAgent`. This skill is what the compiler cannot tell you.
 
 ## Pick the reference
 

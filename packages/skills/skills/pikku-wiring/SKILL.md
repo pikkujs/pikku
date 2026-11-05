@@ -7,15 +7,9 @@ installGroups: [core]
 
 # Pikku Wiring
 
-## Agent Operating Procedure
+What to reach for and why. For how to call it, run this once, with the doors you need: `pikku doc http channel queue scheduler trigger mcp cli gateway wireHTTP`. Depth: the references named under Pick a wiring.
 
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+Discover first with `pikku meta ... --json`. Find the source that owns the behaviour; do not start from generated output, `.pikku`, `node_modules`, vendored packages or build artifacts. Make the smallest source change, never hand-edit SDKs, schema output or typegen, validate narrowly first, then `pikku all` when functions, wirings, schemas or clients may have changed. If validation fails, fix the source cause and rerun.
 
 ## Before you start
 
@@ -25,10 +19,9 @@ pikku info tags --verbose        # project organisation and naming conventions
 pikku info middleware --verbose  # what middleware is already applied
 ```
 
-Follow the patterns you find. Option tables and exact signatures come from
-`pikku doc` — run `pikku doc --ai` for the installed surface. This skill is what
-the compiler cannot tell you: which wiring to reach for, and what changes when
-you move a function from one to another.
+Follow the patterns you find. This skill is what the compiler cannot tell you:
+which wiring to reach for, and what changes when you move a function from one to
+another.
 
 ## What a wiring is
 
@@ -203,3 +196,7 @@ The value must be `true` or a string literal; a computed value is refused.
 - Do not reach for a trigger when losing an event matters — use a queue.
 - Do not put `sse: true` on anything but a `get`, or `query` on anything but a
   `post`; the config union rejects both rather than failing at runtime.
+
+## Not in `pikku doc` yet
+
+- `disabled` on a function, shown above: `pikku doc pikkuFunc` does not print it.

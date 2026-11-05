@@ -7,6 +7,8 @@ installGroups: [core, client]
 
 # Pikku List Queries
 
+What to reach for and why. For how to call it, run this once: `pikku doc pikkuListFunc`.
+
 ## Agent Operating Procedure
 
 1. Run `pikku all` BEFORE writing code; only NEW errors are yours to fix.
@@ -40,53 +42,13 @@ interface ListOutput<Row> {
 
 The react-query codegen detects any RPC whose output includes `nextCursor` and generates an infinite-query hook for it. No manual wiring, no opt-in flag.
 
-```typescript
-import { pikkuListFunc } from '#pikku/function'
+Rules for the function body:
 
-interface Item {
-  id: string
-  label: string
-}
-
-export const listItems = pikkuListFunc<{ status?: string }, Item>({
-  expose: true,
-  auth: true,
-  readonly: true,
-  description: 'List items for the signed-in user, paginated.',
-  // `input` is inferred as ListInput<{ status?: string }> — never re-annotate it inline.
-  func: async ({ kysely }, input, { session }) => {
-    // `limit` is caller-supplied on an exposed RPC, so it is CAPPED, not trusted.
-    const limit = Math.min(
-      Math.max(Math.trunc(input.limit ?? 20) || 20, 1),
-      100
-    )
-    const parsed = input.cursor ? Number(input.cursor) : 0
-    const offset = Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : 0
-
-    let query = kysely.selectFrom('item').where('userId', '=', session!.userId)
-    const status = leafEquals(input.filter, 'status')
-    if (status !== undefined) {
-      query = query.where('status', '=', status)
-    }
-
-    const rows = await query
-      .orderBy('createdAt', 'desc')
-      .offset(offset)
-      .limit(limit)
-      .execute()
-    const nextOffset = offset + rows.length
-    const totalCount = await query
-      .select((eb) => eb.fn.countAll<number>().as('count'))
-      .executeTakeFirstOrThrow()
-
-    return {
-      rows: rows.map((r) => ({ id: r.id, label: r.label })),
-      nextCursor: nextOffset < totalCount.count ? String(nextOffset) : null,
-      totalCount: totalCount.count,
-    }
-  },
-})
-```
+- `input` is inferred as `ListInput<F>` from the generics. Never re-annotate it inline.
+- **`limit` is caller-supplied on an exposed RPC, so it is CAPPED, not trusted:** `Math.min(Math.max(Math.trunc(input.limit ?? 20) || 20, 1), 100)`.
+- An offset cursor is untrusted too: accept it only if `Number.isSafeInteger(parsed) && parsed >= 0`, else start at 0.
+- Scope the query to the session with a `where`, and read filters with a helper like `leafEquals` below.
+- Set `nextCursor` to `null` once `offset + rows.length` reaches the total.
 
 A cursor can be any opaque string (a keyset value, an encoded timestamp) you can turn back into a query position.
 

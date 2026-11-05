@@ -7,8 +7,8 @@ installGroups: [core]
 
 # Pikku Services
 
-Signatures and option keys come from `pikku doc` — run `pikku doc --ai` for the
-installed surface. This skill is the part the compiler cannot tell you: where a
+For how to call it, run this once: `pikku doc setup secrets variables pikkuServices pikkuWireServices pikkuServerLifecycle defineSecret defineVariable defineCredential`.
+This skill is the part the compiler cannot tell you: where a
 value is allowed to be read, and what a service's lifetime commits you to.
 
 ## Two lifetimes, and that is the whole model

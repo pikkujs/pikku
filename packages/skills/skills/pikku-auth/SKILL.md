@@ -7,8 +7,8 @@ installGroups: [core]
 
 # Pikku Auth
 
-Signatures and option keys come from `pikku doc` — run `pikku doc --ai` for the
-installed surface. This skill is the part the compiler cannot tell you: which of
+For how to call it, run this once: `pikku doc auth scopes authBearer authCookie authAPIKey`.
+This skill is the part the compiler cannot tell you: which of
 the two problems you actually have, and what goes wrong in each.
 
 ## First: authentication or authorization?
