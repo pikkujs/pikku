@@ -13,6 +13,15 @@ describe('serializeRemoteJobs', () => {
     assert.ok(functions.includes("tags: ['pikku']"))
   })
 
+  test('the schemas keep what core reads, which zod would otherwise strip', () => {
+    const { schemas } = serializeRemoteJobs(leaf)
+    const [queue, scheduled] = schemas.split('RemoteScheduledJob')
+    assert.ok(queue?.includes('traceparent: z.string().optional()'))
+    assert.ok(queue?.includes('pikkuUserId: z.string().optional()'))
+    assert.ok(scheduled?.includes('traceparent: z.string().optional()'))
+    assert.ok(!schemas.includes('traceId'))
+  })
+
   test('spells the routes out so the inspector can read them', () => {
     const { functions } = serializeRemoteJobs(leaf)
     assert.ok(

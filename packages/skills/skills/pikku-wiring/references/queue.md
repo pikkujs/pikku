@@ -95,6 +95,20 @@ rpc.traceparent` when you need to carry it through one of those.
 A custom `QueueService` must carry `traceparent` and set it on `QueueJob`. A
 missing or invalid one starts a new trace; it is never an error.
 
+### Running a job as a user
+
+Pass `pikkuUserId` in the job options and wrap the queue service in
+`SignedQueueService`. The worker then runs with `wire.pikkuUserId` and the user's
+stored session, on every adapter. An unsigned or forged id is dropped and the job
+runs with neither.
+
+Never take the id from client input. If the session has gone by the time the job
+runs, `wire.pikkuUserId` is still set and `wire.session` is not.
+
+A custom `QueueService` must carry `pikkuUserId` next to the payload and set it on
+`QueueJob`, leaving `job.data` as it was. Check it with
+`defineQueueIdentityTransportTests` from `@pikku/core/testing`.
+
 ## Usage Patterns
 
 ### Basic Queue Worker

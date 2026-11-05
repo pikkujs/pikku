@@ -271,6 +271,7 @@ describe('PikkuWorkflowDoService — transport hooks', () => {
       retries: 2,
       retryDelay: undefined,
       traceparent: (await service.getRun(RUN_ID))?.wire?.traceparent,
+      pikkuUserId: undefined,
     })
   })
 
@@ -281,11 +282,13 @@ describe('PikkuWorkflowDoService — transport hooks', () => {
       type: 'do',
       id: RUN_ID,
       traceparent,
+      pikkuUserId: 'user-1',
     } as any)
 
     assert.equal((await traced.getRun(RUN_ID))?.wire?.traceparent, traceparent)
     await (traced as any).dispatchStep(RUN_ID, 'stepX', 'rpc.x', {})
     assert.equal(dispatched[0]?.traceparent, traceparent)
+    assert.equal(dispatched[0]?.pikkuUserId, 'user-1')
   })
 
   test('dispatchStep returns false for inline runs (does not call worker)', async () => {

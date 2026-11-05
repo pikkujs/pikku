@@ -1099,7 +1099,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return step
   }
 
-  private async getRunIdentity(runId: string): Promise<WorkflowRun | null> {
+  public async getRunIdentity(runId: string): Promise<WorkflowRun | null> {
     const replay = this.runContexts.get(runId)?.replay
     if (replay?.run) {
       return replay.run

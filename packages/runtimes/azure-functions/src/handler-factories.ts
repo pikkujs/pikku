@@ -138,6 +138,7 @@ export function createAzureHandler(
         data: data.data ?? data,
         id: context.invocationId,
         traceparent: data.traceparent as string | undefined,
+        pikkuUserId: data.pikkuUserId as string | undefined,
         status: async () => 'active' as QueueJobStatus,
         metadata: () => ({
           processedAt: new Date(),

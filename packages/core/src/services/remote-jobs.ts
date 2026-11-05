@@ -17,6 +17,8 @@ export interface RemoteQueueJobData {
   jobId?: string
   /** The W3C trace to continue. Invalid or absent starts a new trace. */
   traceparent?: string
+  /** The signed identity claim. {@link runQueueJob} verifies it or drops it. */
+  pikkuUserId?: string
 }
 
 /**

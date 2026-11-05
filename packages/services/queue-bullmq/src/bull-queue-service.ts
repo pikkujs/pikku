@@ -133,7 +133,7 @@ export class BullQueueService implements QueueService {
     const queue = await this.createQueue(queueName)
     const bullJob = await queue.add(
       queueName,
-      wrapJobTrace(data, options?.traceparent),
+      wrapJobTrace(data, options?.traceparent, options?.pikkuUserId),
       mapPikkuJobToBull(options)
     )
     if (!bullJob.id) {

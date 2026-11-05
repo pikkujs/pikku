@@ -191,6 +191,6 @@ caller is entitled to assume.
 - [A workflow step's recorded `rpcName` is provenance only — nothing dispatches off it](workflow-step-rpc-name-is-provenance-only.md) — It exists so a reader can join a runtime step row back to the declaration that produced it, especially when the durable name was built in a loop
 - [A suspend or approval `reason` is the step's durable identity, not just a message](workflow-suspend-and-approval-reasons-are-durable-step-identities.md) — The reason is namespaced and used raw as the step key, so it must be derived deterministically across replays
 - [A suspended workflow run keeps its in-process context; only terminal runs release it](workflow-suspended-runs-keep-their-in-process-context.md) — `suspended` is absent from the terminal set on purpose, and a context is dropped only when nothing is holding it open
-- [BullMQ and pg-boss carry traceparent in a payload envelope](bullmq-and-pg-boss-carry-traceparent-in-a-payload-envelope.md) — Neither queue has a per-job metadata slot that survives; a traced job's payload is wrapped by the adapter and unwrapped before job.data is read
+- [BullMQ and pg-boss carry traceparent in a payload envelope](bullmq-and-pg-boss-carry-traceparent-in-a-payload-envelope.md) — Neither queue has a per-job metadata slot that survives; a job with a trace or an identity claim has its payload wrapped by the adapter and unwrapped before job.data is read
 
 <!-- /pikku:knowledge-index -->

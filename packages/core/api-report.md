@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3372 observable things**: 1142 exported names, plus
-2230 members on the classes and interfaces among them, reachable
+**3378 observable things**: 1144 exported names, plus
+2234 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,10 +14,10 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 170 | 144 | 438 |
+| `./services` | 170 | 144 | 439 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
-| `./workflow` | 92 | 41 | 153 |
+| `./workflow` | 92 | 41 | 154 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 86 |
 | `./types` | 24 | 21 | 82 |
@@ -55,6 +55,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./trace` | 11 | 11 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./secret` | 10 | 10 | 0 |
+| `./testing` | 6 | 6 | 4 |
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
@@ -65,7 +66,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./cli/command-parser` | 3 | 1 | 6 |
 | `./variable` | 6 | 6 | 0 |
 | `./schema` | 6 | 6 | 0 |
-| `./testing` | 4 | 4 | 2 |
 | `./dev` | 4 | 4 | 2 |
 | `./services/in-memory-queue` | 1 | 1 | 4 |
 | `./services/istanbul-coverage` | 1 | 1 | 4 |
@@ -811,6 +811,7 @@ export type Channel<ChannelType = unknown, OpeningData = unknown> = {
   channelName: string
   channelObject?: ChannelType
   openingData?: OpeningData
+  traceparent?: string
 }
 export class ChannelDeploymentService implements DeploymentService {
   public readonly registry: ChannelRPCRegistry
@@ -1233,6 +1234,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected async awaitRunEnd(runId: string, maxIntervalMs: number): Promise<WorkflowRun>
   protected async waitBeforeNextRead(ms: number): Promise<void>
   protected async listStepStates(_runId: string): Promise<Array<StepState & { stepName: string }> | null>
+  public async getRunIdentity(runId: string): Promise<WorkflowRun | null>
   public async getRunTraceparent(runId: string): Promise<string | undefined>
   public async runWorkflowJob(runId: string, rpcService: PikkuRPC): Promise<void>
   public notifyChildWorkflowFailed(childRun: WorkflowRun, error: Error): Promise<void>
@@ -3074,7 +3076,7 @@ export interface PikkuQueue {
   fail: (reason?: string) => Promise<void>
   discard: (reason?: string) => Promise<void>
 }
-pikkuRemoteQueueJobFunc: ({ logger }: { logger: Logger; }, { queueName, data, jobId, traceparent }: RemoteQueueJobData) => Promise<void>
+pikkuRemoteQueueJobFunc: ({ logger }: { logger: Logger; }, { queueName, data, jobId, traceparent, pikkuUserId }: RemoteQueueJobData) => Promise<void>
 export interface PikkuWorkerConfig {
   name?: string
   batchSize?: number
@@ -3166,9 +3168,9 @@ export class SignedQueueService implements QueueService {
   public async getJob<T, R>(queueName: string, jobId: string): Promise<QueueJob<T, R> | null>
   public get inspect(): | ((queueName: string, opts?: { limit?: number }) => Promise<QueueInspection>) | undefined
 }
-unwrapJobTrace: (payload: any) => { data: any; traceparent?: string | undefined; }
+unwrapJobTrace: (payload: any) => { data: any; traceparent?: string | undefined; pikkuUserId?: string | undefined; }
 wireQueueWorker: <InputData = any, OutputData = any, PikkuFunctionConfig extends CorePikkuFunctionConfig<CorePikkuFunctionSessionless<InputData, OutputData>> = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<InputData, OutputData>>>(queueWorker: CoreQueueWorker<PikkuFunctionConfig>) => void
-wrapJobTrace: (data: unknown, traceparent?: string | undefined) => any
+wrapJobTrace: (data: unknown, traceparent?: string | undefined, pikkuUserId?: string | undefined) => any
 ```
 
 ## ./scheduler
@@ -5476,6 +5478,7 @@ export interface RemoteQueueJobData {
   data?: unknown
   jobId?: string
   traceparent?: string
+  pikkuUserId?: string
 }
 export interface RemoteScheduledJobData {
   taskName: string
@@ -6689,7 +6692,12 @@ validateSchema: (logger: Logger, schemaService: SchemaService | undefined, schem
 
 ```ts
 clearPikkuRuntimeState: () => void
+defineQueueIdentityTransportTests: (name: string, create: (services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => QueueIdentityTransport) => void
 defineServiceTests: (config: ServiceTestConfig) => void
+export interface QueueIdentityTransport {
+  queueService: QueueService
+  deliver: () => Promise<void>
+}
 export interface ServiceTestConfig {
   name: string
   services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore>; leaseService?: () => Promise<LeaseService>; workflowFencing?: () => Promise<WorkflowFencingHarness>; workflowCompensationQueued?: () => Promise<PikkuWorkflowService>; workflowCompensationQueuedOptions?: QueuedCompensationOptions }

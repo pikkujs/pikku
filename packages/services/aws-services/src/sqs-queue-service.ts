@@ -14,6 +14,19 @@ export interface SQSQueueServiceConfig {
   endpoint?: string
 }
 
+/** Trace and identity travel as attributes, so the body stays what was signed. */
+const messageAttributes = ({ traceparent, pikkuUserId }: JobOptions = {}) => {
+  const attributes = {
+    ...(traceparent
+      ? { traceparent: { DataType: 'String', StringValue: traceparent } }
+      : {}),
+    ...(pikkuUserId
+      ? { pikkuUserId: { DataType: 'String', StringValue: pikkuUserId } }
+      : {}),
+  }
+  return Object.keys(attributes).length > 0 ? attributes : undefined
+}
+
 /**
  * SQS Queue Service implementation
  * Provides fire-and-forget job publishing to AWS SQS queues
@@ -83,16 +96,9 @@ export class SQSQueueService implements QueueService {
 
     const command = new SendMessageCommand({
       QueueUrl: queueUrl,
-      MessageBody: JSON.stringify(data),
+      MessageBody: JSON.stringify(data ?? null),
       DelaySeconds: delaySeconds,
-      MessageAttributes: options?.traceparent
-        ? {
-            traceparent: {
-              DataType: 'String',
-              StringValue: options.traceparent,
-            },
-          }
-        : undefined,
+      MessageAttributes: messageAttributes(options),
     })
 
     const response = await this.client.send(command)

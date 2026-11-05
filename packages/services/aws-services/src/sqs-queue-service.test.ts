@@ -297,3 +297,44 @@ describe('SQSQueueService', () => {
     )
   })
 })
+
+describe('SQSQueueService identity', () => {
+  test('add() carries the identity claim as a message attribute, not in the body', async () => {
+    sendStub = sinon.stub(SQSClient.prototype, 'send').resolves({
+      MessageId: 'id',
+    })
+    const service = new SQSQueueService({
+      region: 'us-east-1',
+      queueUrlPrefix: 'https://sqs.us-east-1.amazonaws.com/123456789/',
+    })
+
+    await service.add(
+      'test-queue',
+      { hello: 'world' },
+      { pikkuUserId: 'claim' }
+    )
+
+    const command = sendStub.firstCall.args[0] as SendMessageCommand
+    assert.deepStrictEqual(command.input.MessageAttributes, {
+      pikkuUserId: { DataType: 'String', StringValue: 'claim' },
+    })
+    assert.deepStrictEqual(JSON.parse(command.input.MessageBody!), {
+      hello: 'world',
+    })
+  })
+
+  test('add() sends no attributes for a job with neither', async () => {
+    sendStub = sinon.stub(SQSClient.prototype, 'send').resolves({
+      MessageId: 'id',
+    })
+    const service = new SQSQueueService({
+      region: 'us-east-1',
+      queueUrlPrefix: 'https://sqs.us-east-1.amazonaws.com/123456789/',
+    })
+
+    await service.add('test-queue', { hello: 'world' })
+
+    const command = sendStub.firstCall.args[0] as SendMessageCommand
+    assert.strictEqual(command.input.MessageAttributes, undefined)
+  })
+})

@@ -11,6 +11,23 @@ import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs'
 import type { QueueService, QueueJob } from '@pikku/core/queue'
 import type { JobOptions } from '@pikku/core/queue'
 
+/**
+ * The body is the job's data and nothing else, because that is what the worker
+ * hands the function and what the identity signature covers. Trace and identity
+ * travel as attributes.
+ */
+const messageAttributes = ({ traceparent, pikkuUserId }: JobOptions = {}) => {
+  const attributes = {
+    ...(traceparent
+      ? { traceparent: { DataType: 'String', StringValue: traceparent } }
+      : {}),
+    ...(pikkuUserId
+      ? { pikkuUserId: { DataType: 'String', StringValue: pikkuUserId } }
+      : {}),
+  }
+  return Object.keys(attributes).length > 0 ? attributes : undefined
+}
+
 export class SQSQueueService implements QueueService {
   readonly supportsResults = false
   private client: SQSClient
@@ -27,25 +44,11 @@ export class SQSQueueService implements QueueService {
     const queueUrl = this.resolveQueueUrl(queueName)
     const messageId = crypto.randomUUID()
 
-    const message = {
-      id: messageId,
-      queueName,
-      data,
-      pikkuUserId: options?.pikkuUserId,
-    }
-
     const result = await this.client.send(
       new SendMessageCommand({
         QueueUrl: queueUrl,
-        MessageBody: JSON.stringify(message),
-        MessageAttributes: options?.traceparent
-          ? {
-              traceparent: {
-                DataType: 'String',
-                StringValue: options.traceparent,
-              },
-            }
-          : undefined,
+        MessageBody: JSON.stringify(data ?? null),
+        MessageAttributes: messageAttributes(options),
         DelaySeconds: options?.delay
           ? Math.min(Math.ceil(options.delay / 1000), 900)
           : undefined,

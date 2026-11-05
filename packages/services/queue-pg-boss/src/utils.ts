@@ -30,12 +30,13 @@ export const mapPgBossJobToQueueJob = <In, Out>(
   pgBossJob: JobWithMetadata<In>,
   pgBossInstance: PgBoss
 ): QueueJob<In, Out> => {
-  const { data, traceparent } = unwrapJobTrace(pgBossJob.data)
+  const { data, traceparent, pikkuUserId } = unwrapJobTrace(pgBossJob.data)
   return {
     queueName: pgBossJob.name,
     id: pgBossJob.id || '',
     data,
     traceparent,
+    pikkuUserId,
     status: async () => {
       const jobWithState = await pgBossInstance.getJobById(
         pgBossJob.name,
