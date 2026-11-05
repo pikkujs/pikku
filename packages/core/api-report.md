@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3396 observable things**: 1152 exported names, plus
+**3398 observable things**: 1154 exported names, plus
 2244 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
@@ -36,8 +36,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
+| `./middleware` | 31 | 29 | 0 |
 | `./virtual-user/conversation` | 6 | 6 | 22 |
-| `./middleware` | 29 | 27 | 0 |
 | `./scenario/coverage` | 7 | 7 | 19 |
 | `./gateway` | 11 | 11 | 14 |
 | `./crypto-utils` | 20 | 20 | 2 |
@@ -446,6 +446,7 @@ addGlobalPermission: (permissions: CorePermissionGroup | CorePikkuPermission[], 
 ADDON_HEADER: "x-pikku-addon"
 addonScopeCap: CorePikkuMiddlewareFactory<{ resolve: (name: string) => readonly string[] | Promise<readonly string[] | undefined> | undefined; }>
 addTagMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(tag: string, middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
+allowedOriginsFromVariables: (services: { variables?: { get<T = string>(name: string): T | Promise<T | undefined> | undefined; } | undefined; }) => Promise<string[]>
 authAPIKey: CorePikkuMiddlewareFactory<{ source: "header" | "query" | "all"; }>
 authBearer: CorePikkuMiddlewareFactory<{ token?: { value: string; userSession: CoreUserSession; } | { secretId: string; userSession: CoreUserSession; } | undefined; }>
 authCookie: CorePikkuMiddlewareFactory<{ name: string; options: SerializeOptions; expiresIn: RelativeTimeInput; }>
@@ -479,6 +480,7 @@ export type CorePikkuMiddlewareGroup<
   | CorePikkuMiddlewareFactory<any, SingletonServices, UserSession>
 >
 cors: CorePikkuMiddlewareFactory<{ origin?: string | true | string[] | undefined; methods?: string[] | undefined; headers?: string[] | undefined; exposeHeaders?: string[] | undefined; credentials?: boolean | undefined; maxAge?: number | undefined; }>
+hostOriginOf: (host: string | null | undefined, forwardedProto?: string | null | undefined) => string | null
 isAllowedOrigin: (requestOrigin: string | null, hostOrigin: string | null, configuredOrigins: string[]) => boolean
 export type MiddlewareMetadata =
   | {
@@ -3595,6 +3597,8 @@ export type WireRemoteAddonConfig = {
   remoteName?: (fn: string) => string
   tags?: string[]
   expose?: boolean | string[]
+  uses?: Record<string, string>
+  local?: { package: string; ui?: boolean; contributors?: string[] }
   timeoutMs?: number
   headers?: (
     services: CoreServices,
