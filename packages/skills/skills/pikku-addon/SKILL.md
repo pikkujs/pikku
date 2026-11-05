@@ -1,13 +1,7 @@
 ---
 name: pikku-addon
 description: >-
-  Creating or consuming reusable Pikku function packages (addons): wireAddon, ref(),
-  pikkuAddonServices/pikkuAddonWireServices, package structure, shipping DB tables (pikku db
-  export), generating an addon from an OpenAPI/Swagger spec. TRIGGER when: code uses those APIs, or
-  the user asks about addons or cross-project function sharing, or hands over an OpenAPI/Swagger
-  spec (file or URL) to build on. DO NOT TRIGGER for internal function composition (use
-  pikku-wiring), general function definitions (use pikku-concepts) or n8n imports (use
-  pikku-n8n-import).
+  Reusable Pikku function packages (addons): wireAddon, ref(), pikkuAddonServices, shipping DB tables, sharing functions across projects, generating an addon from an OpenAPI/Swagger spec.
 installGroups: [core]
 ---
 

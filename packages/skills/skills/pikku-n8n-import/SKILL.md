@@ -1,13 +1,7 @@
 ---
 name: pikku-n8n-import
 description: >-
-  Import an n8n workflow JSON export into a runnable Pikku workflow: run `pikku import n8n`, triage
-  unmapped nodes, fill each stub, report missing `@pikku/addon-*` integrations, verify it compiles
-  with no stubs left. TRIGGER when: asked to import/convert an n8n workflow, pointed at an n8n .json
-  export or directory, or continuing after the import left throwing stubs (`STUB — generated from
-  n8n …`, `— implement me`) or a `*.integrations.json` manifest. DO NOT TRIGGER for hand-written
-  addon wiring unrelated to n8n (use pikku-addon) or authoring workflows from scratch (use
-  pikku-workflow).
+  Import an n8n workflow JSON export into a Pikku workflow: `pikku import n8n`, filling generated stubs, `*.integrations.json`. Writing workflows by hand is pikku-workflow.
 installGroups: [core]
 metadata:
   version: 1.0.0

@@ -1,14 +1,7 @@
 ---
 name: pikku-scenario
 description: >-
-  Writing and running Pikku scenarios (pikkuScenario): virtual users drive the app over the real
-  transport, so a flow doubles as an e2e test and a stage/production health check. Covers
-  scenario.do/expectEventually/expectError/expectService/expectScore, pikkuScenarioStep (Playwright
-  browser steps), virtual users and environments in pikku.config.json, VIRTUAL_USER_SIGNING_KEY,
-  `pikku scenario`/`pikku virtual-user`, coverage via `pikku dev --coverage`. TRIGGER when: asked
-  about scenarios, testing a Pikku function, coverage, e2e or browser flows, health checks, virtual
-  users or adversarial stage runs. DO NOT TRIGGER for running an existing suite (use Bash) or CI
-  config.
+  Pikku scenarios (pikkuScenario): virtual users driving the real transport as e2e tests and health checks, Playwright steps, `pikku scenario`, `pikku virtual-user`, coverage, adversarial runs.
 installGroups: [core]
 ---
 

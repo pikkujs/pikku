@@ -1,15 +1,7 @@
 ---
 name: pikku-wiring
 description: >-
-  Exposing a Pikku function over a transport: HTTP and SSE, WebSocket channels, typed pub/sub, RPC,
-  queue workers, cron, event triggers, MCP tools/resources/prompts, CLI commands, Slack gateway;
-  choosing the wiring and what differs by function type, session source and throw-vs-return. TRIGGER
-  when: code uses wireHTTP, defineHTTPRoutes, wireChannel, wireQueueWorker, wireScheduler,
-  wireTrigger, wireTriggerSource, wireCLI, wireMCPResource, wireMCPPrompt, `mcp: true`, `sse: true`,
-  `expose: true`, rpc.invoke or SlackGatewayAdapter, or asked how to expose, route, schedule, queue,
-  stream or publish a function. DO NOT TRIGGER for function bodies (use pikku-concepts),
-  authorization (use pikku-permissions), runtimes (use pikku-deploy), live views (use
-  pikku-realtime) or outgoing webhooks (use pikku-webhook).
+  Expose a Pikku function: wireHTTP, SSE, channels, pub/sub, RPC, queue workers, cron, triggers, MCP, CLI, Slack gateway. Outgoing webhooks are pikku-webhook; live views are pikku-realtime.
 installGroups: [core]
 ---
 

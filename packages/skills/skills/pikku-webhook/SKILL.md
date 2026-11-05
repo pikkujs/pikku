@@ -1,15 +1,7 @@
 ---
 name: pikku-webhook
 description: >-
-  Sending OUTGOING webhooks from a Pikku app (notify a customer's endpoint, with signing, retries
-  and a delivery log): WebhookService, QueueWebhookService, the `pikku-outgoing-webhooks` queue
-  worker, `scaffold.webhook`, `config.webhook`, receiver signature verification,
-  KyselyWebhookService delivery history. TRIGGER when: code uses webhookService,
-  QueueWebhookService, KyselyWebhookService, pikkuWebhookWorkerFunc,
-  PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME, SendWebhookInput or X-Pikku-Signature; or asked to emit events
-  to a customer URL, build a webhook settings screen, add a signing secret or show delivery
-  attempts. DO NOT TRIGGER for RECEIVING third-party webhooks (an ordinary wireHTTP function; use
-  pikku-wiring).
+  Send outgoing webhooks to customer URLs: WebhookService, QueueWebhookService, signing, retries, delivery log, pikkuWebhookWorkerFunc, X-Pikku-Signature. Receiving webhooks is pikku-wiring.
 installGroups: [core]
 ---
 

@@ -1,13 +1,7 @@
 ---
 name: pikku-realtime
 description: >-
-  Making a view live in a Pikku app (board, shared list, dashboard, ticker, bidding room, live
-  count) or adding two-way chat/presence: the default event-hub SSE path (`eventHub.publish`,
-  `PikkuRealtime.subscribeToTopic`) and the WebSocket channel. TRIGGER when: asked for live updates,
-  realtime, "update without refresh", presence or chat, or data several signed-in users can change
-  should reflect to others. DO NOT TRIGGER when a one-shot refetch is enough, for background jobs
-  (use pikku-workflow, or pikku-wiring's queue/scheduler references), or for the full
-  channel/SSE/`/events` wiring reference (use pikku-wiring).
+  Live views ("update without refresh", boards) and chat or presence: eventHub.publish SSE by default, PikkuRealtime, WebSocket channels. Not when a refetch is enough. Background jobs are pikku-workflow.
 installGroups: [core, client]
 ---
 

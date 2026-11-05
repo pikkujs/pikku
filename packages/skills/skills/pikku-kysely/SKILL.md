@@ -1,14 +1,7 @@
 ---
 name: pikku-kysely
 description: >-
-  Writing Kysely queries (select, join, aggregate, insert, update, delete, transactions, sql
-  template, jsonArrayFrom) in Pikku function bodies, collapsing sequential awaits into fewer round
-  trips, and @pikku/kysely service setup (channel stores, workflow, secret, AI storage, deployment).
-  TRIGGER when: writing a non-trivial kysely query, a function body awaits several queries, the
-  injected `kysely` service or
-  PikkuKysely/KyselyChannelStore/KyselyWorkflowService/KyselySecretService is used, or asked about
-  SQL setup. DO NOT TRIGGER for MongoDB/Redis services (use pikku-service-backends) or the
-  pagination contract (use pikku-list-query).
+  Kysely queries in Pikku functions (joins, aggregates, transactions), collapsing sequential awaits, @pikku/kysely setup. MongoDB/Redis is pikku-service-backends; pagination is pikku-list-query.
 installGroups: [core]
 ---
 

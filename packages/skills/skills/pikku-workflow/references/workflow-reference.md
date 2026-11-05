@@ -80,3 +80,22 @@ export const approval = pikkuWorkflowFunc({
   },
 })
 ```
+
+## Approval gates: enforcement and record
+
+`approvers` and `approverScope` are enforced in two phases, because a decision can legitimately arrive before the run has reached the gate:
+
+- **At submission**, if the run has reached the gate. Reaching it publishes the policy into the run state, so the approve entrypoint judges the caller and refuses with a **403**.
+- **On replay**, for a decision that arrived before the gate: there was no policy yet, so it is accepted and judged when the workflow reaches the gate. Failing there discards the decision and leaves the gate closed, exactly as a decision that fails the schema does.
+
+So the same rejected decision surfaces as an HTTP error or a silently re-closed gate depending on timing. Both are audited.
+
+A settled decision carries `decidedBy` and `decidedAt`, so the answer keeps its provenance in the step result:
+
+```typescript
+if (signOff.status === 'decided') {
+  logger.info(`signed by ${signOff.decidedBy?.userId} at ${signOff.decidedAt}`)
+}
+```
+
+That record is deleted with the run (`deleteRun` cascades to steps and history), and a _refused_ attempt never reaches a step. So every answer is also written to the audit sink as `workflow.approval.decided`, with `outcome: 'success' | 'denied'`, the decider under `userIdentity`, and the run, reason and refusal in `metadata`. Wire an `audit` service to keep it; a project without one records nothing and is otherwise unaffected.

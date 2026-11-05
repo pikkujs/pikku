@@ -1,13 +1,7 @@
 ---
 name: pikku-meta
 description: >-
-  Inspect or evolve a project you did not just write: `pikku meta`/`pikku info` for functions,
-  schemas, wires, workflows, middleware, permissions; `pikku meta apply`; `pikku versions`/`pikku
-  release` for contract hashes, breaking changes and semver; `pikku audit`/`pikku update` for
-  advisories and upgrades. TRIGGER when: asked what functions or routes exist, a function's
-  input/output shape, retagging, API versioning, breaking changes, release semver, dependency
-  vulnerabilities or upgrading Pikku. DO NOT TRIGGER when writing a new function or wiring (use the
-  wiring skill) or on Pikku concepts (use pikku-concepts).
+  Inspect or evolve an existing project: `pikku meta`/`info` (functions, schemas, wires), `pikku versions`/`release` (breaking changes, semver), `pikku audit`/`update` (vulnerabilities, upgrades).
 installGroups: [core]
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku info *)
 argument-hint: '[context|functions|schemas|workflows|middleware|permissions|wires|apply|versions|release|audit|update]'

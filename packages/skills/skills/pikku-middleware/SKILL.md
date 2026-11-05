@@ -1,13 +1,7 @@
 ---
 name: pikku-middleware
 description: >-
-  Middleware in a Pikku app: global (addGlobalMiddleware), HTTP/prefix (addHTTPMiddleware),
-  tag-scoped (addTagMiddleware), per-wiring, session-setting; execution order and priority; the
-  pikkuMiddleware factory; resolving a token into a session (HTTP, cron); service-to-service bearer
-  gates. TRIGGER when: middleware on some or all routes, tag-scoped concerns, global interceptors,
-  priority/order questions, or middleware calling setInitialSession for a machine caller. DO NOT TRIGGER
-  for choosing an auth strategy (authBearer, authCookie, Better Auth, API keys, `pikku login`),
-  permissions or scopes (use pikku-permissions), or deployment.
+  Pikku middleware: global, HTTP/prefix, tag-scoped, per-wiring; order and priority; pikkuMiddleware; setInitialSession; bearer gates. Choosing auth is pikku-auth; scopes are pikku-permissions.
 installGroups: [core]
 ---
 

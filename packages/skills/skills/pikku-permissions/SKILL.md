@@ -1,13 +1,7 @@
 ---
 name: pikku-permissions
 description: >-
-  Deciding WHO may call a function: resource ownership, role gates, admin-only actions, "only their
-  own rows" rules; the `permissions` field, pikkuPermission, pikkuAuth, scopes/defineScope,
-  addGlobalPermission, permissionsInBody. TRIGGER when: writing or reviewing a function that touches
-  a user-owned row, gating on a role, building the permissions half of a contract in build PHASE 2,
-  about to write an `if` in a body deciding whether the caller is allowed, or hitting
-  MissingScopeError. DO NOT TRIGGER for how a caller proves identity: sign-in, sessions, tokens, API
-  keys, seeding a virtual user (use pikku-auth), or paginated lists (use pikku-list-query).
+  Who may call a function: ownership, roles, "only their own rows": `permissions`, pikkuPermission, pikkuAuth, scopes, MissingScopeError. Open before an `if` on the caller in a body. Sign-in is pikku-auth.
 installGroups: [core]
 ---
 
@@ -15,21 +9,13 @@ installGroups: [core]
 
 ## First: is the caller a machine with a token?
 
-Then this is NOT a permissions problem. Resolve the token in `addHTTPMiddleware('*')`
-middleware that calls `setInitialSession`, make the function a `pikkuFunc`, and gate it with
-`scopes` (pikku-auth, `../pikku-auth/references/machine-auth.md`). A `permissions` check that verifies a
-bearer token and returns `true` is authentication wearing an authorization hat, and it
-leaves the function sessionless. The only exception is a bootstrap endpoint whose caller
-has no identity yet (a shared-secret registration, a login): it is sessionless and
-declares its gate here.
+Then this is NOT a permissions problem. Resolve the token in `addHTTPMiddleware('*')` middleware that calls `setInitialSession`, make the function a `pikkuFunc`, and gate it with `scopes` (pikku-auth, `../pikku-auth/references/machine-auth.md`). A `permissions` check that verifies a bearer token and returns `true` is authentication in disguise, and leaves the function sessionless. The only exception is a bootstrap endpoint whose caller has no identity yet (a shared-secret registration, a login): it is sessionless and declares its gate here.
 
 ## The rule
 
 **Authorization goes in the `permissions` field. Never in the `func` body.**
 
-`permissions` runs before `func`, and it is DECLARED — `pikku meta` and the auditor can
-see it. An `if` in the body is the same check, invisible: nothing can tell you which
-functions are gated or how, and the next person to add a caller gets no warning.
+`permissions` runs before `func` and is DECLARED: `pikku meta` and the auditor can see it. An `if` in the body is the same check, invisible.
 
 ```typescript
 // RIGHT
@@ -50,34 +36,22 @@ export const deleteBook = pikkuFunc({
 })
 ```
 
-## `auth: true` IS NOT OWNERSHIP — this is the one people get wrong
+## `auth: true` IS NOT OWNERSHIP
 
-`auth: true` means "somebody is signed in". It does NOT mean "this row is theirs". A CRUD
-function set to `auth: true` and nothing else lets ANY signed-in user delete ANY other
-user's row by passing its id. Every function that takes a row id needs BOTH: `auth: true`
-for the session, and a `permissions` entry for the ownership.
+`auth: true` means "somebody is signed in", not "this row is theirs". With nothing else, ANY signed-in user can delete ANY other user's row by passing its id. Every function that takes a row id needs BOTH: `auth: true` for the session and a `permissions` entry for ownership.
 
-Equally: do NOT write an `isSignedIn` permission that returns `!!session`. That re-checks
-authentication, which `auth: true` already did. A permission answers _may this user do
-this_ — role, ownership, tier — never _is there a session_.
+Do NOT write an `isSignedIn` permission returning `!!session`; `auth: true` already did that. A permission answers _may this user do this_ (role, ownership, tier), never _is there a session_.
 
-## Single row vs list — where ownership actually goes
+## Single row vs list: where ownership goes
 
-This is the distinction to get right, and both halves are correct code:
-
-- **A function taking a row id** (`get`, `update`, `delete`) — ownership is a
-  PERMISSION. Load the row, compare the owner to the session. It is a yes/no question
-  about one row, which is exactly what a permission is.
-- **A function returning many rows** (`list`, `search`, any stats query) — ownership is
-  a `WHERE` clause in the query, because "only their rows" is a filter, not a yes/no.
-  There is no permission to write here; scoping the query IS the enforcement.
+- **A function taking a row id** (`get`, `update`, `delete`): ownership is a PERMISSION. Load the row, compare the owner to the session.
+- **A function returning many rows** (`list`, `search`, any stats query): ownership is a `WHERE` clause. There is no permission to write; scoping the query IS the enforcement.
 
 A list that fetches everything and then filters in JS is a bug, not a permission.
 
 ## Writing the checkers
 
-Put them in `src/permissions/`, one file per entity, and reuse one checker across every function on that
-entity rather than writing a near-copy per function.
+Put them in `src/permissions/`, one file per entity, and reuse one checker across every function on that entity.
 
 ```typescript
 // src/permissions/book.ts
@@ -115,49 +89,30 @@ Groups are OR'd; entries inside a group array are AND'd.
 
 ## Roles
 
-If the app has roles, the role lives on the session (see pikku-auth / `mapSession`) and
-every mutating or admin-only function names it in `permissions`. Gate the FUNCTION — hiding
-an admin button in the UI is UX, never enforcement, and a member who guesses the RPC name
-gets straight through if the function itself is open.
+If the app has roles, the role lives on the session (see pikku-auth / `mapSession`) and every mutating or admin-only function names it in `permissions`. Gate the FUNCTION: hiding an admin button is UX, never enforcement.
 
 ## Scopes
 
-`scopes: ['admin:invoices:void']` is an AND gate checked BEFORE permissions and before
-input validation. A function naming an undeclared scope fails codegen rather than gating on
-nothing. A grant satisfies a scope if it is that scope, an ancestor, or a wildcard. Most
-apps need roles, not scopes; reach for these only when the plan asked for granular grants.
-The `defineScope` tree, grant matching and the sessionless restriction are in
-[references/scopes.md](references/scopes.md).
+`scopes: ['admin:invoices:void']` is an AND gate checked BEFORE permissions and before input validation. Naming an undeclared scope fails codegen. A grant satisfies a scope if it is that scope, an ancestor, or a wildcard. Most apps need roles, not scopes; use these only when the plan asked for granular grants. The `defineScope` tree, grant matching and the sessionless restriction: [references/scopes.md](references/scopes.md).
 
 ## Global permissions
 
-`addGlobalPermission([isEmployee])` (from `#pikku/auth`) is an app-wide baseline every
-function must additionally pass. It is an independent AND gate: it can only narrow access,
-never grant what a function's own `permissions` would deny. Multiple calls accumulate and
-are AND'd.
+`addGlobalPermission([isEmployee])` (from `#pikku/auth`) is an app-wide baseline every function must additionally pass. It can only narrow access, never grant what a function's own `permissions` would deny. Multiple calls accumulate and are AND'd.
 
 ## The three gates
 
 All must pass, in this order:
 
-1. **Scopes** (`scopes`) — AND'd, checked before input validation, fails closed.
-2. **Global permissions** (`addGlobalPermission`) — AND'd together, a baseline that only narrows.
-3. **The function's own `permissions`** — OR'd groups of AND'd entries.
+1. **Scopes** (`scopes`): AND'd, checked before input validation, fails closed.
+2. **Global permissions** (`addGlobalPermission`): AND'd together, a baseline that only narrows.
+3. **The function's own `permissions`**: OR'd groups of AND'd entries.
 
-They are independent: a broad global (e.g. `isEmployee`) can never satisfy an admin-only
-function's own requirement. Wire-, tag- and HTTP-route-level permissions
-(`addHTTPPermission`, `addTagPermission`, a `permissions` field on a wiring) no longer
-exist; tags are organizational only. Use tag/HTTP middleware for cross-cutting request
-handling, not authorization.
+They are independent: a broad global (e.g. `isEmployee`) can never satisfy an admin-only function's own requirement. Wire-, tag- and HTTP-route-level permissions (`addHTTPPermission`, `addTagPermission`, a `permissions` field on a wiring) no longer exist; tags are organizational only. Use tag/HTTP middleware for cross-cutting request handling, not authorization.
 
 ## The one sanctioned exception
 
-`permissionsInBody: true` — for a check that genuinely cannot be a permission because the
-identity arrives in the payload and there is no session: a webhook signature, a signed
-token, an invite code. It is purely declarative and enforces nothing; its job is to tell
-the auditor the openness is deliberate. Anything expressible as a permission must be one.
+`permissionsInBody: true` is for a check that cannot be a permission because the identity arrives in the payload and there is no session: a webhook signature, a signed token, an invite code. It is purely declarative and enforces nothing; it tells the auditor the openness is deliberate. Anything expressible as a permission must be one.
 
 ## After changes
 
-`pikku all --tsc` — regenerates, then verifies the checker types. A permission whose
-signature is wrong fails here, not at runtime.
+`pikku all --tsc` regenerates, then verifies the checker types. A wrong permission signature fails here, not at runtime.

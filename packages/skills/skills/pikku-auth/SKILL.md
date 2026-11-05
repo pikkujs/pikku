@@ -1,12 +1,7 @@
 ---
 name: pikku-auth
 description: >-
-  Identity in a Pikku app: authenticating a caller via login, logout, sessions, cookies, bearer
-  tokens, API keys, JWT, OAuth/social, MFA, Better Auth, machine callers, `pikku login`. TRIGGER
-  when: the user asks about those, how a CLI/agent/sandbox authenticates, or hits
-  InvalidSessionError. DO NOT TRIGGER for who may call a function: ownership, roles, scopes,
-  MissingScopeError (use pikku-permissions); identity-free middleware mechanics (use
-  pikku-middleware); secrets and env vars (use pikku-services).
+  Identity: login, sessions, cookies, bearer tokens, API keys, JWT, OAuth, MFA, Better Auth, machine callers, `pikku login`, InvalidSessionError. Who may call a function is pikku-permissions.
 installGroups: [core]
 ---
 

@@ -1,12 +1,7 @@
 ---
 name: pikku-concepts
 description: >-
-  Use FIRST, and whenever you are about to write or change Pikku code: core mental model, function
-  types, project structure, code generation, testing, and reading `pikku doc` (the installed API surface, which also indexes which
-  skill teaches each area). TRIGGER when: starting any Pikku task, about to import from `#pikku/*`,
-  unsure an export or option exists, choosing which pikku skill to load, a build failed on an
-  unknown import or option, or migrating a backend to Pikku. DO NOT TRIGGER when: the task is not a
-  Pikku project.
+  Use FIRST on any Pikku task: core model, function types, structure, codegen, testing, `pikku doc` (installed API, which skill teaches what), unknown imports or options, migrating a backend to Pikku.
 installGroups: [core]
 ---
 
