@@ -24,6 +24,7 @@ export { WorkflowCancelledException }
 export type {
   ApprovalOutcome,
   WorkflowApprovalOptions,
+  WorkflowRunService,
   WorkflowStepOptions,
 } from '@pikku/core/workflow'
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
@@ -40,6 +41,15 @@ export interface TypedWorkflow extends PikkuWorkflowWire {
    * Runs one durable step: \`workflow.do('Step name', 'rpcName', input, { retries, retryDelay })\`.
    * The second argument may name a workflow instead, which starts a child run,
    * or be an inline closure: \`workflow.do('Step name', async () => value)\`.
+   *
+   * \`rpcName\` is a key of \`FlattenedRPCMap\`, generated from every exported
+   * function in the project (\`expose\` is not needed), with addon functions as
+   * \`namespace:name\`. \`data\` is that function's input, and \`null\` for one that
+   * takes none: the argument is still required. The map lives in \`.pikku\`, so a
+   * new function needs \`pikku all\` first. An unknown name or the wrong \`data\`
+   * matches no typed overload and lands on the closure one, which reports
+   * "Argument of type 'string' is not assignable to parameter of type
+   * '() => unknown'": read that as "check the name and input".
    */
   do<K extends keyof FlattenedRPCMap>(
     stepName: string,

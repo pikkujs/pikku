@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 
 import type { SurfaceEntrypoint } from '@pikku/inspector/surface'
 import { collectSurface } from '../../inspector-helpers.js'
+import { buildSurfaceErrors } from './surface-errors.js'
 import {
   ENTRY_POINT_EDITORIAL,
   LEAF_EDITORIAL,
@@ -304,6 +305,7 @@ export const buildSurfaceDoc = async ({
   const appEntryPoint = await projectEntryPoint('app', app, snippets)
   return {
     version,
+    errors: buildSurfaceErrors(),
     entryPoints: [
       {
         ...appEntryPoint,
