@@ -1,3 +1,4 @@
+import { outgoingTraceparent } from '../../trace.js'
 import {
   AddonNotUsedError,
   addonCallerOf,
@@ -127,7 +128,7 @@ addError(RemoteAddonTimeoutError, {
 /** Headers a wiring's `headers` hook cannot set: the call's auth, trace and contract. */
 const RESERVED_REMOTE_HEADERS = new Set([
   'authorization',
-  'x-request-id',
+  'traceparent',
   REMOTE_CONTRACT_HEADER,
   'content-type',
   'accept',
@@ -469,7 +470,7 @@ export class ContextAwareRPCService {
             funcName,
             data,
             session,
-            this.wire.traceId
+            outgoingTraceparent(this.wire)
           ) as Promise<Out>
         }
       }
@@ -653,8 +654,9 @@ export class ContextAwareRPCService {
     if (token) {
       headers.authorization = `Bearer ${token}`
     }
-    if (this.wire.traceId) {
-      headers['x-request-id'] = this.wire.traceId
+    const traceparent = outgoingTraceparent(this.wire)
+    if (traceparent) {
+      headers.traceparent = traceparent
     }
 
     const timeoutMs = cfg.remoteTimeoutMs ?? DEFAULT_REMOTE_ADDON_TIMEOUT_MS
@@ -741,7 +743,7 @@ export class ContextAwareRPCService {
           rpcName,
           data,
           session,
-          mergedWire.traceId
+          outgoingTraceparent(mergedWire)
         ) as Promise<Out>
       }
       throw e
@@ -830,7 +832,7 @@ export class ContextAwareRPCService {
       funcName,
       data,
       session,
-      this.wire.traceId
+      outgoingTraceparent(this.wire)
     ) as Promise<Out>
   }
 }

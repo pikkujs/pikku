@@ -1,14 +1,14 @@
 ---
 type: decision
 title: The HTTP runner logs through a trace-scoped logger, functions do not
-description: Only runner-internal logging is scoped to the request id; functions keep the singleton logger for compatibility
+description: Only runner-internal logging is scoped to the trace id; functions keep the singleton logger for compatibility
 tags: http
 ---
 
 # The HTTP runner logs through a trace-scoped logger, functions do not
 
 `fetchData` in `packages/core/src/wirings/http/http-runner.ts` derives
-`scopedLogger` from `singletonServices.logger.scope?.(requestId)` and uses it for
+`scopedLogger` from `singletonServices.logger.scope?.(trace.traceId)` and uses it for
 route-matching and error-handling output only. Functions and middleware continue
 to receive `singletonServices.logger` unscoped, via the services object.
 

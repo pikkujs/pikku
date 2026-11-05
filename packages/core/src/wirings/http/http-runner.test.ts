@@ -433,6 +433,36 @@ describe('http-runner helpers', () => {
     assert.deepEqual(execution, ['global'])
   })
 
+  test('fetchData ignores an inbound traceparent unless the deployment opts in', async () => {
+    const inbound = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01'
+    setRouteMeta('/traced')
+    let seen: any
+    const func = async (_services: any, _data: any, wire: any) => {
+      seen = { traceId: wire.traceId, trace: wire.trace }
+      return { ok: true }
+    }
+    addFunction('pikku_func_name', { func })
+    wireHTTP({ route: '/traced', method: 'get', auth: false, func: { func } })
+    httpRouter.initialize()
+    const request = () => {
+      const req = new TestRequest('/traced', 'get')
+      req.setHeaders({ traceparent: inbound })
+      return req
+    }
+
+    await fetchData(request(), new TestResponse())
+    assert.match(seen.traceId, /^[0-9a-f]{32}$/)
+    assert.notEqual(seen.traceId, '4bf92f3577b34da6a3ce929d0e0e4736')
+    assert.equal(seen.trace.traceId, seen.traceId)
+    assert.equal(seen.trace.parentSpanId, undefined)
+
+    await fetchData(request(), new TestResponse(), {
+      trustInboundTraceparent: true,
+    })
+    assert.equal(seen.traceId, '4bf92f3577b34da6a3ce929d0e0e4736')
+    assert.equal(seen.trace.parentSpanId, '00f067aa0ba902b7')
+  })
+
   test('fetchData keeps what a route wrote when it returns undefined', async () => {
     setRouteMeta('/handshake')
     addFunction('pikku_func_name', {

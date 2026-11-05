@@ -24,6 +24,17 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### `x-request-id` is replaced by `traceparent`
+
+Pikku now uses W3C trace context. An HTTP request's `wire.traceId` is 32 lowercase hex, and `wire.trace` adds `spanId`, `parentSpanId` and `sampled`. `errorId` in error responses has the same format.
+
+- `x-request-id` is no longer read or sent, and `CF-Ray` no longer sets the trace.
+- `generateRequestId` is removed from the `fetch` and `fetchData` options. The `traceId` option accepts only 32 lowercase hex; anything else logs a warning and is ignored.
+- `DeploymentService.invoke` and `buildMeshHeaders` take a `traceparent` string as their last argument instead of a trace id.
+- An inbound `traceparent` on public HTTP is ignored unless you pass `trustInboundTraceparent: true`. Mesh calls keep their trace through `pikkuMeshAuthMiddleware`. A remote addon host needs the option to continue its consumer's trace.
+
+To find affected code, search for `x-request-id`, `generateRequestId`, `cf-ray` and custom `DeploymentService` implementations.
+
 ### `pikku verify` fails on an app function nothing uses
 
 An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked. Workflows are checked too: a workflow that is not wired, exposed or started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step) is reported.

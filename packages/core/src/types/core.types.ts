@@ -1,4 +1,7 @@
 import type { AbortScope } from '../function/abort-scope.js'
+import type { TraceContext } from '../trace.js'
+
+export type { TraceContext }
 import type { IncomingWebhookService } from '../services/incoming-webhook-service.js'
 import type { TriggerSourceStore } from '../services/trigger-source-store.js'
 import type { LeaseService } from '../services/lease-service.js'
@@ -323,8 +326,10 @@ export type PikkuWire<
    * sets it; services that log fall back to the singleton logger.
    */
   logger: Logger
-  /** Trace ID for distributed tracing — propagated across mesh RPC calls via the x-request-id header */
+  /** Trace ID for distributed tracing — propagated across mesh RPC calls via the traceparent header */
   traceId: string
+  /** This invocation's place in the trace, when it has a W3C one. */
+  trace: TraceContext
   functionId: string
   addonNamespace: string
   http: PikkuHTTP<In>

@@ -127,6 +127,7 @@ export type PikkuWire<
   wireId: string
   logger: Logger
   traceId: string
+  trace: TraceContext
   functionId: string
   addonNamespace: string
   http: PikkuHTTP<In>
@@ -323,6 +324,7 @@ export type PikkuWire<
   wireId: string
   logger: Logger
   traceId: string
+  trace: TraceContext
   functionId: string
   addonNamespace: string
   http: PikkuHTTP<In>
@@ -2886,8 +2888,8 @@ export type CoreHTTPFunctionWiring<
   HTTPWiringMethod<In>
 DEFAULT_MAX_BODY_SIZE: number
 defineHTTPRoutes: { <T extends HTTPRouteMap>(routes: T): HTTPRouteContract<T>; <T extends HTTPRouteMap>(config: HTTPRoutesGroupConfig & { routes: T; }): HTTPRouteContract<T>; }
-fetch: <In, Out>(request: Request, params?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<Response>
-fetchData: <In, Out>(request: PikkuHTTPRequest<unknown> | Request, response: PikkuHTTPResponse<unknown>, { skipUserSession, respondWith404, logWarningsForStatusCodes, coerceDataFromSchema, bubbleErrors, exposeErrors, generateRequestId, traceId: externalTraceId, maxBodySize, }?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<void | Out>
+fetch: <In, Out>(request: Request, params?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; trustInboundTraceparent: boolean; traceId: string; maxBodySize: number; }>) => Promise<Response>
+fetchData: <In, Out>(request: PikkuHTTPRequest<unknown> | Request, response: PikkuHTTPResponse<unknown>, { skipUserSession, respondWith404, logWarningsForStatusCodes, coerceDataFromSchema, bubbleErrors, exposeErrors, traceId, trustInboundTraceparent, maxBodySize, }?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; trustInboundTraceparent: boolean; traceId: string; maxBodySize: number; }>) => Promise<void | Out>
 export type HTTPMethod =
   'post' | 'get' | 'delete' | 'patch' | 'head' | 'put' | 'options'
 export type HTTPRouteBaseConfig = {
@@ -2988,7 +2990,7 @@ export type RunHTTPWiringOptions = Partial<{
   coerceDataFromSchema: boolean
   bubbleErrors: boolean
   exposeErrors: boolean
-  generateRequestId: () => string
+  trustInboundTraceparent: boolean
   traceId: string
   maxBodySize: number
 }>
@@ -3000,7 +3002,7 @@ wireHTTPRoutes: (config: WireHTTPRoutesConfig) => void
 ## ./mesh
 
 ```ts
-buildMeshHeaders: (jwt: JWTService | undefined, secrets: SecretService | undefined, funcName: string, session?: unknown, traceId?: string | undefined) => Promise<Record<string, string>>
+buildMeshHeaders: (jwt: JWTService | undefined, secrets: SecretService | undefined, funcName: string, session?: unknown, traceparent?: string | undefined) => Promise<Record<string, string>>
 ```
 
 ## ./queue
@@ -5048,7 +5050,7 @@ export interface DeploymentService {
   init(): Promise<void>
   start(config: DeploymentConfig): Promise<void>
   stop(): Promise<void>
-  invoke(funcName: string, data: unknown, session?: unknown, traceId?: string): Promise<unknown>
+  invoke(funcName: string, data: unknown, session?: unknown, traceparent?: string): Promise<unknown>
 }
 export interface DeploymentServiceConfig {
   heartbeatInterval?: number

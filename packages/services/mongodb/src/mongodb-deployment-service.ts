@@ -90,14 +90,14 @@ export class MongoDBDeploymentService implements DeploymentService {
     funcName: string,
     data: unknown,
     session?: unknown,
-    traceId?: string
+    traceparent?: string
   ): Promise<unknown> {
     const headers = await buildMeshHeaders(
       this.jwt,
       this.secrets,
       funcName,
       session,
-      traceId
+      traceparent
     )
     const cutoff = new Date(Date.now() - this.heartbeatTtl)
     const result = await this.deployments.findOne(
