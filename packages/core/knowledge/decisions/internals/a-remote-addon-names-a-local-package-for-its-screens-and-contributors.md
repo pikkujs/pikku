@@ -1,22 +1,22 @@
 ---
 type: decision
-title: A remote addon carries uses, and names a local package for its screens and contributors
-description: wireRemoteAddon accepts uses (stored at runtime, so addonMayReach and mapAddonCall treat it like wireAddon) and local, a build-time pointer to an installed package that supplies the screens and contributors shown under the same name; the contract package and the local package stay separate
+title: A remote addon names a local package for its screens and contributors
+description: wireRemoteAddon accepts local (and no uses), a build-time pointer to an installed package that supplies the screens and contributors shown under the same name; the contract package and the local package stay separate
 tags: core, inspector, addons, remote, ui, contributors
 ---
 
-# A remote addon carries uses, and names a local package for its screens and contributors
+# A remote addon names a local package for its screens and contributors
 
 **Why.** An app that talks to a hosted service and also ships screens and
 contributors for it ended up with two registrations, one `wireRemoteAddon` for
 the contract and one `wireAddon` under another name for the local half. One name
 should address both.
 
-**`uses` is a runtime field.** `wireRemoteAddon({ uses })` stores it on the
-registry entry exactly as `wireAddon` does, so `addonMayReach` and `mapAddonCall`
-(`wirings/addon/addon-reach.ts`) need no change: they read `uses` off the caller's
-entry whatever its transport. A remote addon without `uses` still reaches only
-itself.
+**No `uses` on a remote addon, on purpose.** The remote server never calls
+another addon, so a mapping of what it may call means nothing. It was added so
+cloud-stamped local screens could call `studio:*`, which is not a remote addon's
+business. A remote addon reaches only itself (`addonMayReach` and `mapAddonCall`
+see no `uses` on its entry).
 
 **`local` is build-time only.** `local: { package, ui?, contributors? }` is read
 statically by the inspector into the same `wireAddonDeclarations` entry
