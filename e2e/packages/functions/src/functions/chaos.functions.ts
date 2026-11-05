@@ -31,6 +31,8 @@ export type ChaosInput = {
   key: string
   /** Block for this long before returning, to open a window for a kill. */
   delayMs?: number
+  /** Only delay while the durable attempt count is below this. */
+  delayAttemptsBelow?: number
   /** Fail while the durable attempt count is below this. */
   failAttemptsBelow?: number
   /** Fail on every attempt, forever. */
@@ -76,7 +78,7 @@ const performEffect = async (
     spanId: trace?.spanId,
   } satisfies ChaosLedgerEntry)
 
-  if (data.delayMs) {
+  if (data.delayMs && attempt < (data.delayAttemptsBelow ?? Infinity)) {
     await wait(data.delayMs)
   }
 
@@ -228,12 +230,12 @@ export const chaosTraceEnqueue = pikkuSessionlessFunc<{ tag: string }, void>({
 /** The trace a run has stored, read back from whichever process is alive. */
 export const chaosRunTrace = pikkuSessionlessFunc<
   { runId: string },
-  { traceparent?: string }
+  { traceparent?: string; status?: string }
 >({
-  description: 'Read the trace stored on a run',
+  description: 'Read the trace and status stored on a run',
   expose: true,
   func: async ({ workflowService }, { runId }) => {
     const run = await workflowService!.getRun(runId)
-    return { traceparent: run?.wire?.traceparent }
+    return { traceparent: run?.wire?.traceparent, status: run?.status }
   },
 })
