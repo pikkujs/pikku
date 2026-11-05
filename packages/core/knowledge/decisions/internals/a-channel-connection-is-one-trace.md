@@ -1,7 +1,7 @@
 ---
 type: decision
 title: A channel connection is one trace
-description: A local channel opens one trace per connection and each lifecycle hook, message and reverse RPC is a span in it. A serverless channel has no store for it, so each frame is its own trace.
+description: A channel opens one trace per connection and each lifecycle hook, message and reverse RPC is a span in it. A serverless channel keeps it in ChannelStore.
 tags: core, channel, observability
 ---
 
@@ -14,7 +14,9 @@ opens and each hook, message and reverse RPC continues it with a new span.
 The upgrade request's `traceparent` is not adopted: a socket upgrade is public
 HTTP, which [ignores an inbound trace](../security/index.md).
 
-Serverless channels keep their state in `ChannelStore`, which has no field for a
-trace, and adding one means a schema change in every store. Until it has one,
-each frame of a serverless channel gets a trace of its own. Frames of one
-connection share `channelId`, which is how to join them.
+A serverless channel has no process to hold it in, so connect writes the trace
+to `ChannelStore` as a `traceparent` and each frame and the disconnect restore it
+exactly, with the connection's own span and not a new one, because a frame is a
+child of that span the same way it is on a local channel. A channel stored
+without one, or with one that does not parse, gets a new trace per frame: losing
+the link must not fail a message.

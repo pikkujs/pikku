@@ -10,6 +10,8 @@ export interface ChannelsTable {
   channelName: string
   createdAt: Generated<Date>
   openingData: string
+  /** The connection's W3C trace. */
+  traceparent: string | null
   pikkuUserId: string | null
   /** JSON-serialized per-socket channel state, keyed by channelId. */
   state: string | null

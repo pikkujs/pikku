@@ -1237,7 +1237,7 @@
         "pg-boss": "^12.38.0",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.146",
       },
     },
     "packages/services/redis": {
@@ -2457,6 +2457,7 @@
         "@pikku/jose": "workspace:*",
         "@pikku/node-http-server": "workspace:*",
         "@pikku/queue-bullmq": "workspace:*",
+        "@pikku/queue-pg-boss": "workspace:*",
         "@pikku/schedule": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "zod": "^4",

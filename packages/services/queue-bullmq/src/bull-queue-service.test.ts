@@ -1,11 +1,16 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { createServer } from 'node:net'
+import type { AddressInfo } from 'node:net'
 
 import {
   BullQueueService,
   mapBullJobToRecord,
   mapPikkuJobToBull,
 } from './bull-queue-service.js'
+import { runQueueJob } from '@pikku/core/queue'
+import { defineQueueIdentityTransportTests } from '@pikku/core/testing'
+
 import { mapBullJobToQueueJob } from './utils.js'
 
 // Same contract as the pg-boss adapter: the workflow's resolved retry policy
@@ -133,7 +138,7 @@ describe('traceparent on a BullMQ job', () => {
     assert.equal(mapped.traceparent, undefined)
   })
 
-  test('pikkuUserId is not carried by this adapter', async () => {
+  test('pikkuUserId travels in the envelope and not in the job options', async () => {
     assert.equal(
       'pikkuUserId' in mapPikkuJobToBull({ pikkuUserId: 'u1' } as any),
       false
@@ -144,5 +149,64 @@ describe('traceparent on a BullMQ job', () => {
       new Map()
     )
     assert.equal(mapped.pikkuUserId, undefined)
+  })
+})
+
+const sent: unknown[] = []
+
+defineQueueIdentityTransportTests('bullmq', () => {
+  const queueService = new BullQueueService()
+  ;(queueService as any).createQueue = async () => ({
+    add: async (_name: string, data: unknown) => {
+      // Redis keeps JSON.
+      sent.push(JSON.parse(JSON.stringify(data)))
+      return { id: `job-${sent.length}` }
+    },
+  })
+  return {
+    queueService,
+    deliver: async () => {
+      for (const data of sent.splice(0)) {
+        await runQueueJob({
+          job: await mapBullJobToQueueJob(
+            { id: '1', name: 'identity-transport', data, opts: {} } as any,
+            undefined,
+            new Map()
+          ),
+        })
+      }
+    },
+  }
+})
+
+describe('BullQueueService connection', () => {
+  test('the producer connects to the Redis it was given', async () => {
+    const server = createServer((socket) => socket.destroy())
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const connected = new Promise<void>((resolve) =>
+      server.once('connection', () => resolve())
+    )
+    const { port } = server.address() as AddressInfo
+    const errors = console.error
+    console.error = () => {}
+
+    const service = new BullQueueService({
+      host: '127.0.0.1',
+      port,
+      retryStrategy: () => null,
+    })
+    const added = service.add('connection-test', {}).catch(() => {})
+    try {
+      await Promise.race([
+        connected,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('never connected')), 2000)
+        ),
+      ])
+    } finally {
+      console.error = errors
+      server.close()
+    }
+    void added
   })
 })

@@ -182,5 +182,41 @@ describe('the job envelope', () => {
   test('survives JSON, with an undefined payload too', () => {
     const stored = JSON.parse(JSON.stringify(wrapJobTrace({}, OTHER_TRACE)))
     assert.equal(unwrapJobTrace(stored).traceparent, OTHER_TRACE)
+    const empty = JSON.parse(
+      JSON.stringify(wrapJobTrace(undefined, OTHER_TRACE))
+    )
+    assert.deepEqual(unwrapJobTrace(empty), {
+      data: undefined,
+      traceparent: OTHER_TRACE,
+    })
+  })
+
+  test('carries an identity claim, with or without a trace', () => {
+    const data = { a: 1 }
+    assert.deepEqual(
+      unwrapJobTrace(
+        JSON.parse(JSON.stringify(wrapJobTrace(data, undefined, 'claim')))
+      ),
+      { data, pikkuUserId: 'claim' }
+    )
+    assert.deepEqual(
+      unwrapJobTrace(
+        JSON.parse(JSON.stringify(wrapJobTrace(data, OTHER_TRACE, 'claim')))
+      ),
+      { data, traceparent: OTHER_TRACE, pikkuUserId: 'claim' }
+    )
+  })
+
+  test('a payload that only resembles the envelope is the job data', () => {
+    for (const payload of [
+      { __pikkuTraceparent: 7, data: {} },
+      { __pikkuUserId: 7, data: {} },
+      { __pikkuTraceparent: OTHER_TRACE, __pikkuUserId: 7, data: {} },
+      { __pikkuUserId: 'claim', data: {}, extra: true },
+      { __pikkuTraceparent: OTHER_TRACE, data: {}, extra: true },
+      { data: {} },
+    ]) {
+      assert.deepEqual(unwrapJobTrace(payload), { data: payload })
+    }
   })
 })

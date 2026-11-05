@@ -97,11 +97,12 @@ export class PikkuStepWorker<
       )
     }
     return rpc.rpcWithWire
-      ? rpc.rpcWithWire(
-          dispatch.rpcName,
-          dispatch.data,
-          runTraceWire(dispatch.traceparent)
-        )
+      ? rpc.rpcWithWire(dispatch.rpcName, dispatch.data, {
+          ...runTraceWire(dispatch.traceparent),
+          ...(dispatch.pikkuUserId
+            ? { pikkuUserId: dispatch.pikkuUserId }
+            : {}),
+        })
       : rpc.rpc(dispatch.rpcName, dispatch.data)
   }
 }

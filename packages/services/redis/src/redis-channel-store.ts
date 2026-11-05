@@ -61,6 +61,7 @@ export class RedisChannelStore extends ChannelStore {
     channelId,
     channelName,
     openingData,
+    traceparent,
   }: Channel): Promise<void> {
     const key = this.channelKey(channelId)
 
@@ -73,7 +74,8 @@ export class RedisChannelStore extends ChannelStore {
       'openingData',
       JSON.stringify(openingData || {}),
       'createdAt',
-      Date.now().toString()
+      Date.now().toString(),
+      ...(traceparent ? ['traceparent', traceparent] : [])
     )
   }
 
@@ -121,6 +123,7 @@ export class RedisChannelStore extends ChannelStore {
       channelId: data.channelId!,
       channelName: data.channelName!,
       openingData: data.openingData ? JSON.parse(data.openingData) : {},
+      traceparent: data.traceparent || undefined,
       pikkuUserId: data.pikkuUserId || undefined,
     }
   }

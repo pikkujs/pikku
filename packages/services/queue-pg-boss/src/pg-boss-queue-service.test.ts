@@ -5,6 +5,9 @@ import {
   PgBossQueueService,
   mapPikkuJobToPgBoss,
 } from './pg-boss-queue-service.js'
+import { runQueueJob } from '@pikku/core/queue'
+import { defineQueueIdentityTransportTests } from '@pikku/core/testing'
+
 import { mapPgBossJobToQueueJob } from './utils.js'
 
 // These guard the contract the workflow engine relies on: a step's resolved
@@ -125,7 +128,7 @@ describe('traceparent on a pg-boss job', () => {
     assert.equal(mapped.traceparent, undefined)
   })
 
-  test('pikkuUserId is not carried by this adapter', () => {
+  test('pikkuUserId travels in the envelope and not in the job options', () => {
     assert.equal(
       'pikkuUserId' in mapPikkuJobToPgBoss({ pikkuUserId: 'u1' } as any),
       false
@@ -137,3 +140,26 @@ describe('traceparent on a pg-boss job', () => {
     assert.equal(mapped.pikkuUserId, undefined)
   })
 })
+
+const sent: unknown[] = []
+
+defineQueueIdentityTransportTests('pg-boss', () => ({
+  queueService: new PgBossQueueService({
+    createQueue: async () => {},
+    send: async (_queue: string, data: unknown) => {
+      // The job table keeps JSON.
+      sent.push(JSON.parse(JSON.stringify(data)))
+      return `job-${sent.length}`
+    },
+  } as any),
+  deliver: async () => {
+    for (const data of sent.splice(0)) {
+      await runQueueJob({
+        job: mapPgBossJobToQueueJob(
+          { id: '1', name: 'identity-transport', data, state: 'active' } as any,
+          {} as any
+        ),
+      })
+    }
+  },
+}))

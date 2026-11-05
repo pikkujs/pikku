@@ -33,7 +33,7 @@ caller is entitled to assume.
 - [A wall-clock threshold is a load test in disguise](a-wall-clock-threshold-is-a-load-test-in-disguise.md) — The KEK derivation test asserted a fixed 50ms budget for work that took 10ms, which went red about one run in five once the suite was large enough to compete for the machine
 - [A workflow's wire is built from the run record, not from the RPC service](a-workflow-wire-is-built-from-the-run-not-from-the-rpc-service.md) — The RPC service exposes no wire, so every rpcService.wire read was undefined; the run record is the only thing that carries the caller across a step boundary
 - [A local RPC is a span of its own](a-local-rpc-is-a-span-of-its-own.md) — A function called in-process gets a child span; a call leaving the process keeps the caller's.
-- [A channel connection is one trace](a-channel-connection-is-one-trace.md) — One trace per local connection; each serverless frame is its own, because the store has no field for one.
+- [A channel connection is one trace](a-channel-connection-is-one-trace.md) — One trace per connection, local or serverless; each lifecycle hook and message is a span in it.
 - [A wire with no trace is the root of one](a-wire-with-no-trace-is-the-root-of-one.md) — runPikkuFunc creates the trace, so an unlisted wire type is traced by default.
 - [A workflow run owns its trace](a-workflow-run-owns-its-trace.md) — The traceparent is stored on WorkflowRunWire and every hop continues it; workers restart, so nothing but the run record can hold it
 - [The package factory slots hold any package's factories, typed loosely](addon-factory-slots-hold-any-packages-factories.md) — PikkuPackageState's package.factories types createConfig, createSingletonServices and createWireServices with any, because one registry holds every addon's factories and each addon declares its own Config and services
@@ -192,6 +192,6 @@ caller is entitled to assume.
 - [A workflow step's recorded `rpcName` is provenance only — nothing dispatches off it](workflow-step-rpc-name-is-provenance-only.md) — It exists so a reader can join a runtime step row back to the declaration that produced it, especially when the durable name was built in a loop
 - [A suspend or approval `reason` is the step's durable identity, not just a message](workflow-suspend-and-approval-reasons-are-durable-step-identities.md) — The reason is namespaced and used raw as the step key, so it must be derived deterministically across replays
 - [A suspended workflow run keeps its in-process context; only terminal runs release it](workflow-suspended-runs-keep-their-in-process-context.md) — `suspended` is absent from the terminal set on purpose, and a context is dropped only when nothing is holding it open
-- [BullMQ and pg-boss carry traceparent in a payload envelope](bullmq-and-pg-boss-carry-traceparent-in-a-payload-envelope.md) — Neither queue has a per-job metadata slot that survives; a traced job's payload is wrapped by the adapter and unwrapped before job.data is read
+- [BullMQ and pg-boss carry traceparent in a payload envelope](bullmq-and-pg-boss-carry-traceparent-in-a-payload-envelope.md) — Neither queue has a per-job metadata slot that survives; a job with a trace or an identity claim has its payload wrapped by the adapter and unwrapped before job.data is read
 
 <!-- /pikku:knowledge-index -->

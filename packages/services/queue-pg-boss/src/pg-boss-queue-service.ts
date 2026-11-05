@@ -88,7 +88,7 @@ export class PgBossQueueService implements QueueService {
     await this.pgBoss.createQueue(queueName)
     const jobId = await this.pgBoss.send(
       queueName,
-      wrapJobTrace(data, options?.traceparent),
+      wrapJobTrace(data, options?.traceparent, options?.pikkuUserId),
       mapPikkuJobToPgBoss(options)
     )
     if (!jobId) {

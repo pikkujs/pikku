@@ -57,9 +57,25 @@ Channels, agent tools, MCP, CLI, triggers, webhook sources, gateways and `runRpc
 - `IncomingWebhookService.accept` takes `traceparent`, and `enqueue` takes it as a second argument. A subclass that overrides either must pass it on.
 - `dispatchWebhookSourceJob` takes the worker's wire as a second argument. Run `pikku` to regenerate the webhook source worker.
 - `runRpc` on Cloudflare workers takes `traceparent` as a third argument, and starts a new trace without one.
-- Each frame of a serverless channel is its own trace, because `ChannelStore` does not store one.
+- A serverless channel is one trace, like a local one. `Channel` gains `traceparent`: a custom `ChannelStore` must keep it in `addChannel` and return it from `getChannel`. The Kysely `channels` table gains a `traceparent` text column:
+
+  ```sql
+  ALTER TABLE channels ADD COLUMN traceparent TEXT;
+  ```
+
 
 To find affected code, search for `traceId` on a channel RPC frame, and for overrides of `accept` or `enqueue`.
+
+### A job's `pikkuUserId` reaches the worker on every adapter
+
+BullMQ, pg-boss and SQS dropped `JobOptions.pikkuUserId`, and the Azure and Cloudflare consumers ignored it. A job signed by `SignedQueueService` now runs as that user on all of them: the worker gets `wire.pikkuUserId` and the user's stored session where it had neither. Graph child runs and Cloudflare step workers keep the run's user the same way.
+
+Check a worker that relied on running with no session, and any `pikkuUserId` you pass today, since it now takes effect. A job that is unsigned, forged or signed for another queue or payload still runs as nobody.
+
+- BullMQ and pg-boss store the claim as `__pikkuUserId` in the payload envelope. Jobs already queued still parse.
+- `SQSQueueService` from `@pikku/lambda` now sends the job's data as the message body, where it sent `{ id, queueName, data, pikkuUserId }`. Workers used to receive that whole object as their data, so remove any code that unwraps it. Drain the queue before deploying.
+- `wrapJobTrace` takes `pikkuUserId` as a third argument, and `unwrapJobTrace` returns it.
+- `RemoteQueueJobData` gains `pikkuUserId`. Run `pikku` to regenerate the remote job schemas, which also stops `traceparent` being stripped from remote queue jobs and scheduled tasks.
 
 ### `pikku verify` fails on an app function nothing uses
 

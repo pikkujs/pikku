@@ -97,7 +97,10 @@ export class BullQueueService implements QueueService {
       return this.queues.get(queueName)!
     }
 
-    const queue = new Queue(queueName, config)
+    const queue = new Queue(
+      queueName,
+      config ?? { connection: this.redisConnectionOptions }
+    )
     queue.on('error', (error) => {
       console.error('Redis connection error:', error)
     })
@@ -130,7 +133,7 @@ export class BullQueueService implements QueueService {
     const queue = await this.createQueue(queueName)
     const bullJob = await queue.add(
       queueName,
-      wrapJobTrace(data, options?.traceparent),
+      wrapJobTrace(data, options?.traceparent, options?.pikkuUserId),
       mapPikkuJobToBull(options)
     )
     if (!bullJob.id) {

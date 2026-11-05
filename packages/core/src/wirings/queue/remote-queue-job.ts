@@ -12,13 +12,14 @@ import type { QueueJob, QueueJobStatus } from './queue.types.js'
  */
 export async function pikkuRemoteQueueJobFunc(
   { logger }: { logger: Logger },
-  { queueName, data, jobId, traceparent }: RemoteQueueJobData
+  { queueName, data, jobId, traceparent, pikkuUserId }: RemoteQueueJobData
 ): Promise<void> {
   const job: QueueJob = {
     queueName,
     data,
     id: jobId ?? `remote-${globalThis.crypto.randomUUID()}`,
     traceparent,
+    pikkuUserId,
     status: async (): Promise<QueueJobStatus> => 'active',
     metadata: () => ({
       processedAt: new Date(),

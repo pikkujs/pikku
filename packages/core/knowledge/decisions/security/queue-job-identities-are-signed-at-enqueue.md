@@ -37,7 +37,15 @@ the Cloudflare Workers build; the `node:crypto` helpers behind
 `WebhookService.sign` are not reachable from it.
 
 Verification lives in `runQueueJob`, the single funnel every adapter calls.
-`SignedQueueService` wraps any `QueueService` to sign on the way out.
+`SignedQueueService` wraps any `QueueService` to sign on the way out. Nothing
+installs the wrapper for you, and without it a `pikkuUserId` leaves as a bare
+string and is dropped at the worker.
+
+An adapter only moves the claim. It reaches `QueueJob.pikkuUserId` by the
+[same transport as `traceparent`](../internals/bullmq-and-pg-boss-carry-traceparent-in-a-payload-envelope.md),
+beside the payload and never inside it, so `job.data` stays the bytes that were
+signed. `defineQueueIdentityTransportTests` in `@pikku/core/testing` holds every
+adapter to that, forged and unsigned claims included.
 
 Failure directions are deliberately asymmetric:
 

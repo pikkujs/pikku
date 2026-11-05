@@ -31,12 +31,13 @@ export const mapBullJobToQueueJob = async <In, Out>(
   redisConnection: ConnectionOptions | undefined,
   queueEventsMap: Map<string, QueueEvents>
 ): Promise<QueueJob<In, Out>> => {
-  const { data, traceparent } = unwrapJobTrace(bullJob.data)
+  const { data, traceparent, pikkuUserId } = unwrapJobTrace(bullJob.data)
   return {
     queueName: bullJob.name,
     id: bullJob.id || '',
     data,
     traceparent,
+    pikkuUserId,
     result: bullJob.returnvalue as Out,
     status: async () => mapBullStateToStatus(await bullJob.getState()),
     waitForCompletion: async (ttl?: number): Promise<Out> => {

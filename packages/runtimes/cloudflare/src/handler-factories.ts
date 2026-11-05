@@ -120,6 +120,7 @@ async function processQueueBatch(batch: {
       data: body.data ?? body,
       id: message.id,
       traceparent: body.traceparent as string | undefined,
+      pikkuUserId: body.pikkuUserId as string | undefined,
       status: async () => 'active' as QueueJobStatus,
       metadata: () => ({
         processedAt: new Date(),
@@ -202,6 +203,7 @@ export function createCloudflareHandler(
             data: unknown
             jobId?: string
             traceparent?: string
+            pikkuUserId?: string
           }
           // Direct path — bypass processQueueBatch's `body.data ?? body`
           // heuristic which mis-unwraps payloads whose envelope already
@@ -218,6 +220,7 @@ export function createCloudflareHandler(
             data: body.data,
             id: msgId,
             traceparent: body.traceparent,
+            pikkuUserId: body.pikkuUserId,
             status: async () => 'active' as QueueJobStatus,
             metadata: () => ({
               processedAt: new Date(),

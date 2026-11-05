@@ -1051,6 +1051,8 @@ export async function executeGraphStep(
         id: rpcName,
         parentRunId: runId,
         parentStepId: stepId,
+        pikkuUserId: (await workflowService.getRunIdentity(runId))?.wire
+          ?.pikkuUserId,
         traceparent: await workflowService.getRunTraceparent(runId),
       }
       const shouldInline = !getSingletonServices()?.queueService
@@ -1158,6 +1160,8 @@ async function executeGraphNodeInline(
         id: rpcName,
         parentRunId: runId,
         parentStepId: stepState.stepId,
+        pikkuUserId: (await workflowService.getRunIdentity(runId))?.wire
+          ?.pikkuUserId,
         traceparent: await workflowService.getRunTraceparent(runId),
       }
       const { runId: childRunId } = await workflowService.startWorkflow(

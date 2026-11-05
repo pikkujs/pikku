@@ -180,6 +180,41 @@ describe('a cloudflare MCP unit serves the surface it was deployed with', () => 
     )
   })
 
+  test('runRpc continues the caller trace', async () => {
+    const traceIds: unknown[] = []
+    resetPikkuState()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: silentLogger,
+    } as never)
+    addFunction(
+      'tracedFunc',
+      {
+        func: async (_services: any, _data: any, wire: any) => {
+          traceIds.push(wire.traceId)
+        },
+      } as never,
+      null
+    )
+    pikkuState(null, 'function', 'meta').tracedFunc = {
+      name: 'tracedFunc',
+      sessionless: true,
+      permissions: [],
+    } as never
+    pikkuState(null, 'rpc', 'meta').tracedFunc = 'tracedFunc' as never
+
+    const Handler = createCloudflareMCPHandler(factories, {
+      mcpJson: TOOL_SURFACE,
+    })
+    const worker = new Handler({} as any, {} as any)
+    await worker.runRpc(
+      'tracedFunc',
+      {},
+      `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`
+    )
+
+    assert.deepEqual(traceIds, ['a'.repeat(32)])
+  })
+
   test('a custom mcpPath moves the endpoint', async () => {
     const received: unknown[] = []
     wireTool(received)
