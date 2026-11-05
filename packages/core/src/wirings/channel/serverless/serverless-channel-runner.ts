@@ -27,7 +27,12 @@ import {
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import type { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
-import { createTrace } from '../../../trace.js'
+import {
+  createTrace,
+  formatTraceparent,
+  parseTraceparent,
+  type TraceContext,
+} from '../../../trace.js'
 
 /** Parameters for the serverless channel runners: the connection, the {@link ChannelStore} that persists it, and the factory that builds a handler able to send through the platform. */
 export interface RunServerlessChannelParams<
@@ -70,6 +75,22 @@ const getVariablesForChannel = ({
     channel: channelHandler.getChannel(),
     meta,
   }
+}
+
+/**
+ * The connection's trace as connect stored it. A frame is a span in it, so this
+ * is the connection's own span and not a new one.
+ */
+// knowledge: decisions/internals/a-channel-connection-is-one-trace.md
+const storedTrace = (traceparent: string | undefined): TraceContext => {
+  const stored = parseTraceparent(traceparent)
+  return stored
+    ? {
+        traceId: stored.traceId,
+        spanId: stored.parentSpanId,
+        sampled: stored.sampled,
+      }
+    : createTrace()
 }
 
 /**
@@ -120,20 +141,22 @@ export const runChannelConnect = async ({
     userSession,
   })
 
+  const trace = createTrace()
+
   try {
     await channelStore.addChannel({
       channelId,
       channelName: channelConfig.name,
       openingData,
       channelObject,
+      traceparent: formatTraceparent(trace),
     })
     const { channel, channelHandler } = getVariablesForChannel({
       channelId,
       channelHandlerFactory,
       channelName: channelConfig.name,
     })
-    // The store keeps no trace, so each frame of a serverless channel is its own.
-    channelHandler.trace = createTrace()
+    channelHandler.trace = trace
     channel.setState = (state) => channelStore.setState(channelId, state)
     // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
     channel.getState = () => channelStore.getState(channelId) as never
@@ -218,7 +241,7 @@ export const runChannelDisconnect = async ({
     return
   }
 
-  const { openingData, channelName, pikkuUserId } = channelData
+  const { openingData, channelName, pikkuUserId, traceparent } = channelData
   const { channel, channelConfig, meta } = getVariablesForChannel({
     channelId,
     channelHandlerFactory,
@@ -267,6 +290,7 @@ export const runChannelDisconnect = async ({
         channelMiddlewareMeta: meta.channelMiddleware,
         userSession,
         wireServices,
+        trace: storedTrace(traceparent),
       })
     } catch (e: any) {
       singletonServices.logger.error(
@@ -301,7 +325,7 @@ export const runChannelMessage = async (
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
   let wireServices: WireServices | undefined
-  const { openingData, channelName, pikkuUserId } =
+  const { openingData, channelName, pikkuUserId, traceparent } =
     await channelStore.getChannel(channelId)
 
   const { channel, channelHandler, channelConfig } = getVariablesForChannel({
@@ -310,7 +334,7 @@ export const runChannelMessage = async (
     openingData,
     channelName,
   })
-  channelHandler.trace = createTrace()
+  channelHandler.trace = storedTrace(traceparent)
   channel.setState = (state) => channelStore.setState(channelId, state)
   // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
   channel.getState = () => channelStore.getState(channelId) as never

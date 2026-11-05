@@ -57,20 +57,6 @@ Channels, agent tools, MCP, CLI, triggers, webhook sources, gateways and `runRpc
 - `IncomingWebhookService.accept` takes `traceparent`, and `enqueue` takes it as a second argument. A subclass that overrides either must pass it on.
 - `dispatchWebhookSourceJob` takes the worker's wire as a second argument. Run `pikku` to regenerate the webhook source worker.
 - `runRpc` on Cloudflare workers takes `traceparent` as a third argument, and starts a new trace without one.
-- Each frame of a serverless channel is its own trace, because `ChannelStore` does not store one.
-
-To find affected code, search for `traceId` passed to `runQueueJob`, `runScheduledTask`, or a remote job body, and for custom `QueueService` and `SchedulerService` implementations.
-
-### Every wire is traced, and channel RPC carries `traceparent`
-
-Channels, agent tools, MCP, CLI, triggers, webhook sources, gateways and `runRpc` now have a W3C `wire.traceId` and `wire.trace`. A wire that reaches `runPikkuFunc` without one becomes the root of a new trace.
-
-- `ChannelRPCRequest.traceId` is now `traceparent`. `createChannelRPCResponder` ignores it unless you pass `trustInboundTraceparent: true`, and a capability then gets it as a second argument, `{ traceparent }`.
-- `channelHandler.trace` is new. A custom channel handler that does not extend `PikkuAbstractChannelHandler` should accept it.
-- `schedulerService.scheduleRPC` and `webhookService.send` called from a function are stamped with its trace. `SendWebhookInput` gains `traceparent`.
-- `IncomingWebhookService.accept` takes `traceparent`, and `enqueue` takes it as a second argument. A subclass that overrides either must pass it on.
-- `dispatchWebhookSourceJob` takes the worker's wire as a second argument. Run `pikku` to regenerate the webhook source worker.
-- `runRpc` on Cloudflare workers takes `traceparent` as a third argument, and starts a new trace without one.
 - A serverless channel is one trace, like a local one. `Channel` gains `traceparent`: a custom `ChannelStore` must keep it in `addChannel` and return it from `getChannel`. The Kysely `channels` table gains a `traceparent` text column:
 
   ```sql

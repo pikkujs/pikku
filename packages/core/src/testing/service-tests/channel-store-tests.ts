@@ -31,6 +31,22 @@ export const defineChannelStoreTests = (
       assert.equal(result.pikkuUserId, undefined)
     })
 
+    test('keeps the traceparent the channel was added with', async () => {
+      const traceparent = `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`
+      await store.addChannel({
+        channelId: 'ch-traced',
+        channelName: 'test-channel',
+        traceparent,
+      })
+
+      assert.equal(
+        (await store.getChannel('ch-traced')).traceparent,
+        traceparent
+      )
+      assert.equal((await store.getChannel('ch-1')).traceparent, undefined)
+      await store.removeChannels(['ch-traced'])
+    })
+
     test('setPikkuUserId', async () => {
       await store.setPikkuUserId('ch-1', 'user-1')
 
