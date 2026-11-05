@@ -51,19 +51,25 @@ export class IncomingWebhookService {
   public async accept({
     source,
     events,
+    traceparent,
   }: {
     source: string
     request: WebhookRequest
     events: TriggerEvent[]
+    /** The trace of the request that delivered the events. */
+    traceparent?: string
   }): Promise<number> {
     for (const event of events) {
-      await this.enqueue({ source, event })
+      await this.enqueue({ source, event }, traceparent)
     }
     return events.length
   }
 
   /** The job id is the provider's event id under its event name, which de-duplicates on queues that honour job ids. */
-  protected async enqueue(job: WebhookSourceJob): Promise<string> {
+  protected async enqueue(
+    job: WebhookSourceJob,
+    traceparent?: string
+  ): Promise<string> {
     const jobId =
       job.receiptId ??
       (job.event.id
@@ -74,6 +80,7 @@ export class IncomingWebhookService {
       attempts: this.retries + 1,
       ...(this.retries > 0 ? { backoff: 'exponential' as const } : {}),
       ...(jobId ? { jobId } : {}),
+      ...(traceparent ? { traceparent } : {}),
     })
   }
 

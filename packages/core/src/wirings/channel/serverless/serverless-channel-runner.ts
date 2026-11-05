@@ -27,6 +27,7 @@ import {
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import type { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
+import { createTrace } from '../../../trace.js'
 
 /** Parameters for the serverless channel runners: the connection, the {@link ChannelStore} that persists it, and the factory that builds a handler able to send through the platform. */
 export interface RunServerlessChannelParams<
@@ -126,11 +127,13 @@ export const runChannelConnect = async ({
       openingData,
       channelObject,
     })
-    const { channel } = getVariablesForChannel({
+    const { channel, channelHandler } = getVariablesForChannel({
       channelId,
       channelHandlerFactory,
       channelName: channelConfig.name,
     })
+    // The store keeps no trace, so each frame of a serverless channel is its own.
+    channelHandler.trace = createTrace()
     channel.setState = (state) => channelStore.setState(channelId, state)
     // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
     channel.getState = () => channelStore.getState(channelId) as never
@@ -162,6 +165,7 @@ export const runChannelConnect = async ({
         channelMiddlewareMeta: meta.channelMiddleware,
         userSession,
         wireServices,
+        trace: channelHandler.trace,
       })
     }
 
@@ -306,6 +310,7 @@ export const runChannelMessage = async (
     openingData,
     channelName,
   })
+  channelHandler.trace = createTrace()
   channel.setState = (state) => channelStore.setState(channelId, state)
   // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
   channel.getState = () => channelStore.getState(channelId) as never

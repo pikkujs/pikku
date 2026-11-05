@@ -489,13 +489,15 @@
   ],
   "./trace": [
     "adoptTraceparent",
+    "childTraceWire",
     "continueTrace",
     "createTrace",
     "formatTraceparent",
     "isValidTraceId",
     "outgoingTraceparent",
     "parseTraceparent",
-    "resolveHTTPTrace"
+    "resolveHTTPTrace",
+    "traceWire"
   ],
   "./flag": [
     "CachedFlagSource",

@@ -21,6 +21,7 @@ import {
   dispatchUnauthorizedResponse,
   isDispatchAuthorized,
 } from './dispatch-auth.js'
+import { traceWire } from '@pikku/core/trace'
 
 export { getCloudflareEnv, type CloudflareEnv }
 
@@ -360,11 +361,15 @@ export function createCloudflareHandler(
      * pikku RPC dispatcher directly so internal functions are reachable
      * across Worker boundaries. Errors propagate via structured clone.
      */
-    async runRpc(name: string, args: unknown): Promise<unknown> {
+    async runRpc(
+      name: string,
+      args: unknown,
+      traceparent?: string
+    ): Promise<unknown> {
       const services = await setupServices(this.env, factories)
       const rpc = rpcService.getContextRPCService(
         services as any,
-        {},
+        traceWire(traceparent),
         false
       ) as any
       return rpc.invoke(name, args)
@@ -385,11 +390,15 @@ export function createCloudflareWorkerHandler(factories: ServiceFactories) {
       return runFetch(request)
     }
 
-    async runRpc(name: string, args: unknown): Promise<unknown> {
+    async runRpc(
+      name: string,
+      args: unknown,
+      traceparent?: string
+    ): Promise<unknown> {
       const services = await setupServices(this.env, factories)
       const rpc = rpcService.getContextRPCService(
         services as any,
-        {},
+        traceWire(traceparent),
         false
       ) as any
       return rpc.invoke(name, args)
@@ -409,11 +418,15 @@ export function createCloudflareCronHandler(factories: ServiceFactories) {
       await setupServices(this.env, factories)
       await runScheduled(controller)
     }
-    async runRpc(name: string, args: unknown): Promise<unknown> {
+    async runRpc(
+      name: string,
+      args: unknown,
+      traceparent?: string
+    ): Promise<unknown> {
       const services = await setupServices(this.env, factories)
       const rpc = rpcService.getContextRPCService(
         services as any,
-        {},
+        traceWire(traceparent),
         false
       ) as any
       return rpc.invoke(name, args)
@@ -438,11 +451,15 @@ export function createCloudflareQueueHandler(factories: ServiceFactories) {
       await setupServices(this.env, factories)
       await processQueueBatch(batch)
     }
-    async runRpc(name: string, args: unknown): Promise<unknown> {
+    async runRpc(
+      name: string,
+      args: unknown,
+      traceparent?: string
+    ): Promise<unknown> {
       const services = await setupServices(this.env, factories)
       const rpc = rpcService.getContextRPCService(
         services as any,
-        {},
+        traceWire(traceparent),
         false
       ) as any
       return rpc.invoke(name, args)

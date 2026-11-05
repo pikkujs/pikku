@@ -71,7 +71,8 @@ wireQueueWorker({
   func: pikkuSessionlessFunc({
     tags: ['pikku'],
     input: WebhookSourceJob,
-    func: async (_services, data) => dispatchWebhookSourceJob(data),
+    func: async (_services, data, wire) =>
+      dispatchWebhookSourceJob(data, wire),
   }),
 })
 `

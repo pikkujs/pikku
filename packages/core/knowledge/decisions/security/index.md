@@ -139,3 +139,5 @@ A rule about who may do what, and which way it fails when it is unsure.
 - [Writing a virtual user schedule is gated by its own scope, separate from running one](writing-a-virtual-user-schedule-is-gated-by-its-own-scope.md) — setVirtualUserSchedule carries virtualUser:schedule, because a schedule write spends money on every future tick while a run spends it once with a caller watching
 
 <!-- /pikku:knowledge-index -->
+
+- [A channel peer's traceparent is a claim](a-channel-peers-traceparent-is-a-claim.md) — The responder ignores it unless `trustInboundTraceparent` is set.

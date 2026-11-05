@@ -39,6 +39,13 @@ export const traceJob = pikkuSessionlessFunc<{ at: string }, void>({
   },
 })
 
+export const traceSchedules = pikkuSessionlessFunc<void, Hop>({
+  func: async ({ schedulerService }, _data, { traceId }) => {
+    await schedulerService!.scheduleRPC(5, 'traceJob', { at: 'delayed' })
+    return { at: 'scheduler', traceId }
+  },
+})
+
 export const traceStartsRun = pikkuSessionlessFunc<void, Hop>({
   func: async (_services, _data, { rpc, traceId }) => {
     await rpc.startWorkflow('traceRun', {})
@@ -82,6 +89,12 @@ wireHTTP({
   method: 'post',
   auth: false,
   func: traceEnqueues,
+})
+wireHTTP({
+  route: '/trace/delayed',
+  method: 'post',
+  auth: false,
+  func: traceSchedules,
 })
 wireHTTP({
   route: '/trace/run',

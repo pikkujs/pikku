@@ -22,11 +22,18 @@ export const createChannelRPCResponder = ({
   capabilities,
   send,
   approve,
+  trustInboundTraceparent = false,
 }: {
   capabilities: Capabilities
   send: (data: unknown) => Promise<void> | void
   /** Omitted means there is nobody to ask, which refuses rather than runs. */
   approve?: ApprovalRequester
+  /**
+   * Hands a capability the peer's `traceparent`. Off by default, like public
+   * HTTP: the caller may turn it on only for a channel whose peer it has
+   * authenticated.
+   */
+  trustInboundTraceparent?: boolean
 }) => {
   return async (message: unknown): Promise<boolean> => {
     if (!isChannelRPCRequest(message)) {
@@ -104,7 +111,10 @@ export const createChannelRPCResponder = ({
         action: CHANNEL_RPC_RESPONSE,
         id: message.id,
         ok: true,
-        result: await execute(message.data),
+        result: await execute(
+          message.data,
+          trustInboundTraceparent ? { traceparent: message.traceparent } : {}
+        ),
       }
     } catch (e: unknown) {
       const error = e as Error

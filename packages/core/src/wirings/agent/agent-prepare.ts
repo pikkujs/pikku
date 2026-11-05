@@ -43,6 +43,11 @@ import {
   trimMessages,
 } from './agent-memory.js'
 import { resolveModelConfig } from './agent-model-config.js'
+import {
+  childTraceWire,
+  outgoingTraceparent,
+  type TraceContext,
+} from '../../trace.js'
 
 /**
  * Per-request context for running an agent: the caller's session, credential access and, for
@@ -54,6 +59,8 @@ export type RunAgentParams = {
   getCredential?: GetCredential
   /** Ephemeral owner identity minted for a sessionless request; never client-supplied, never reused across requests. */
   anonymousOwnerResourceId?: string
+  /** The caller's trace. Each tool call is a span in it. */
+  trace?: TraceContext
 }
 
 export function resolveSessionPrincipal(
@@ -677,9 +684,12 @@ export async function buildToolDefs(
         approvalDescriptionFn,
         readonly: fnMeta?.readonly || undefined,
         execute: async (toolInput: unknown, options) => {
-          const wire: PikkuRawWire = params.sessionService
-            ? { ...createMiddlewareSessionWireProps(params.sessionService) }
-            : {}
+          const wire: PikkuRawWire = {
+            ...childTraceWire(params.trace),
+            ...(params.sessionService
+              ? createMiddlewareSessionWireProps(params.sessionService)
+              : {}),
+          }
           if (options?.abortScope) wire.abortScope = options.abortScope
           const rpcService = new ContextAwareRPCService(
             singletonServices,
@@ -878,9 +888,12 @@ export async function buildToolDefs(
               `workflowService is not configured — cannot run workflow tool '${workflowName}'`
             )
           }
-          const wire: PikkuRawWire = params.sessionService
-            ? { ...createMiddlewareSessionWireProps(params.sessionService) }
-            : {}
+          const wire: PikkuRawWire = {
+            ...childTraceWire(params.trace),
+            ...(params.sessionService
+              ? createMiddlewareSessionWireProps(params.sessionService)
+              : {}),
+          }
           if (options?.abortScope) wire.abortScope = options.abortScope
           const rpcService = new ContextAwareRPCService(
             singletonServices,
@@ -891,7 +904,12 @@ export async function buildToolDefs(
             workflowName,
             toolInput,
             rpcService,
-            { wire: { type: 'internal' } }
+            {
+              wire: {
+                type: 'internal',
+                traceparent: outgoingTraceparent(wire),
+              },
+            }
           )
         },
       })

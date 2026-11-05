@@ -28,6 +28,7 @@ import {
   getCreateWireServices,
   pikkuState,
 } from '../../../pikku-state.js'
+import { childTraceWire, createTrace } from '../../../trace.js'
 
 const runUpgradeMiddleware = async (
   singletonServices: ReturnType<typeof getSingletonServices>,
@@ -139,9 +140,12 @@ export const runLocalChannel = async ({
         openingData,
         singletonServices.logger
       )
+      // knowledge: decisions/internals/a-channel-connection-is-one-trace.md
+      channelHandler.trace = createTrace()
       const channel = channelHandler.getChannel()
       const wire: PikkuRawWire = {
         channel,
+        ...childTraceWire(channelHandler.trace),
         ...createMiddlewareSessionWireProps(userSession),
       }
 
@@ -173,6 +177,7 @@ export const runLocalChannel = async ({
               channelMiddlewareMeta: meta.channelMiddleware,
               userSession,
               wireServices,
+              trace: channelHandler?.trace,
             })
             if (result !== undefined) {
               await channel.send(result)
@@ -203,6 +208,7 @@ export const runLocalChannel = async ({
               channelMiddlewareMeta: meta.channelMiddleware,
               userSession,
               wireServices,
+              trace: channelHandler?.trace,
             })
           } catch (e: any) {
             singletonServices.logger.error(`Error handling onDisconnect: ${e}`)

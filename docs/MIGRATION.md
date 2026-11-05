@@ -47,6 +47,20 @@ A job, a scheduled task and a workflow run now stay on the trace that started th
 
 To find affected code, search for `traceId` passed to `runQueueJob`, `runScheduledTask`, or a remote job body, and for custom `QueueService` and `SchedulerService` implementations.
 
+### Every wire is traced, and channel RPC carries `traceparent`
+
+Channels, agent tools, MCP, CLI, triggers, webhook sources, gateways and `runRpc` now have a W3C `wire.traceId` and `wire.trace`. A wire that reaches `runPikkuFunc` without one becomes the root of a new trace.
+
+- `ChannelRPCRequest.traceId` is now `traceparent`. `createChannelRPCResponder` ignores it unless you pass `trustInboundTraceparent: true`, and a capability then gets it as a second argument, `{ traceparent }`.
+- `channelHandler.trace` is new. A custom channel handler that does not extend `PikkuAbstractChannelHandler` should accept it.
+- `schedulerService.scheduleRPC` and `webhookService.send` called from a function are stamped with its trace. `SendWebhookInput` gains `traceparent`.
+- `IncomingWebhookService.accept` takes `traceparent`, and `enqueue` takes it as a second argument. A subclass that overrides either must pass it on.
+- `dispatchWebhookSourceJob` takes the worker's wire as a second argument. Run `pikku` to regenerate the webhook source worker.
+- `runRpc` on Cloudflare workers takes `traceparent` as a third argument, and starts a new trace without one.
+- Each frame of a serverless channel is its own trace, because `ChannelStore` does not store one.
+
+To find affected code, search for `traceId` on a channel RPC frame, and for overrides of `accept` or `enqueue`.
+
 ### `pikku verify` fails on an app function nothing uses
 
 An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked. Workflows are checked too: a workflow that is not wired, exposed or started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step) is reported.

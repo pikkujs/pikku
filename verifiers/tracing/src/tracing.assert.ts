@@ -116,6 +116,13 @@ describe('background work', () => {
     assert.equal(job!.traceId, request.traceId)
   })
 
+  test('a delayed RPC keeps the trace of the request that scheduled it', async () => {
+    const request = await post('/trace/delayed')
+    const [delayed] = await waitForHops('delayed')
+    assert.match(request.traceId, TRACE_ID)
+    assert.equal(delayed!.traceId, request.traceId)
+  })
+
   test('every workflow step keeps the trace of the request that started it', async () => {
     const request = await post('/trace/run')
     const [one, two] = await waitForHops('step-one', 'step-two')

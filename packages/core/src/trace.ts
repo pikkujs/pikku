@@ -127,6 +127,18 @@ export const adoptTraceparent = (
   )
 }
 
+/** The wire fields for a hop that continues `traceparent`, or starts a new trace. */
+export const traceWire = (
+  traceparent?: unknown
+): { traceId: string; trace: TraceContext } => {
+  const trace = continueTrace(traceparent)
+  return { traceId: trace.traceId, trace }
+}
+
+/** {@link traceWire} for a child of `parent`, when there is a parent. */
+export const childTraceWire = (parent: TraceContext | undefined) =>
+  traceWire(parent && formatTraceparent(parent))
+
 /** The `traceparent` for a call made from `wire`, if it is in a W3C trace. */
 export const outgoingTraceparent = (wire: {
   trace?: TraceContext

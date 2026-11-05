@@ -1,5 +1,12 @@
 import { outgoingTraceparent, type TraceContext } from '../trace.js'
+import type { SchedulerService } from '../services/scheduler-service.js'
+import type { WebhookService } from '../services/webhook-service.js'
 import type { JobOptions, QueueService } from '../wirings/queue/queue.types.js'
+
+const passThrough = (target: object, property: string | symbol) => {
+  const value = Reflect.get(target, property, target)
+  return typeof value === 'function' ? value.bind(target) : value
+}
 
 /**
  * Stamps every job a function enqueues with the function's trace, so neither
@@ -25,7 +32,54 @@ export const traceQueueService = <Service extends QueueService>(
           )
         }
       }
-      const value = Reflect.get(target, property, target)
-      return typeof value === 'function' ? value.bind(target) : value
+      return passThrough(target, property)
+    },
+  })
+
+/** {@link traceQueueService} for one-off delayed RPCs. */
+export const traceSchedulerService = <Service extends SchedulerService>(
+  schedulerService: Service,
+  wire: { trace?: TraceContext }
+): Service =>
+  new Proxy(schedulerService, {
+    get(target, property) {
+      if (property === 'scheduleRPC') {
+        return (
+          delay: number | string,
+          rpcName: string,
+          data?: unknown,
+          session?: Parameters<SchedulerService['scheduleRPC']>[3],
+          traceparent?: string
+        ) =>
+          target.scheduleRPC(
+            delay,
+            rpcName,
+            data,
+            session,
+            traceparent ?? outgoingTraceparent(wire)
+          )
+      }
+      return passThrough(target, property)
+    },
+  })
+
+/**
+ * {@link traceQueueService} for outgoing webhooks. The trace rides on the
+ * delivery job and stays out of the request: the receiver is a third party.
+ */
+export const traceWebhookService = <Service extends WebhookService>(
+  webhookService: Service,
+  wire: { trace?: TraceContext }
+): Service =>
+  new Proxy(webhookService, {
+    get(target, property) {
+      if (property === 'send') {
+        return (input: Parameters<WebhookService['send']>[0]) =>
+          target.send({
+            ...input,
+            traceparent: input.traceparent ?? outgoingTraceparent(wire),
+          })
+      }
+      return passThrough(target, property)
     },
   })

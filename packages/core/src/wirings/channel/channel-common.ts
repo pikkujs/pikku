@@ -19,6 +19,7 @@ import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
 } from '../../channel-middleware-runner.js'
+import { childTraceWire, type TraceContext } from '../../trace.js'
 
 export const runChannelLifecycleWithMiddleware = async ({
   channelConfig,
@@ -31,6 +32,7 @@ export const runChannelLifecycleWithMiddleware = async ({
   channelMiddlewareMeta,
   userSession,
   wireServices,
+  trace,
 }: {
   channelConfig: CoreChannel<unknown, any>
   meta: ChannelMessageMeta
@@ -40,6 +42,8 @@ export const runChannelLifecycleWithMiddleware = async ({
   channel: any
   data?: unknown
   channelMiddlewareMeta?: MiddlewareMetadata[]
+  /** The connection's trace; the lifecycle hook is a span in it. */
+  trace?: TraceContext
   /**
    * Established while the socket was upgrading, so `onConnect` can tell who
    * just connected.
@@ -75,6 +79,7 @@ export const runChannelLifecycleWithMiddleware = async ({
 
   let wire: PikkuRawWire = {
     channel,
+    ...childTraceWire(trace),
     ...(userSession ? createMiddlewareSessionWireProps(userSession) : {}),
   }
   if (allChannelMiddleware.length > 0) {

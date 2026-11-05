@@ -243,3 +243,9 @@ wireChannel({
   },
 })
 ```
+
+## Tracing
+
+A local channel has one trace per connection: `onConnect`, `onDisconnect`, each message and each `channel.remote` call are spans in it, read from `wire.trace`. A client's `traceparent` is ignored. On a serverless channel each frame has its own trace, so join a connection's frames by `channelId`.
+
+A reverse RPC carries `traceparent`, which `createChannelRPCResponder` ignores unless you pass `trustInboundTraceparent: true`. Only pass it for a peer you have authenticated.

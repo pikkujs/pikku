@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3368 observable things**: 1140 exported names, plus
-2228 members on the classes and interfaces among them, reachable
+**3372 observable things**: 1142 exported names, plus
+2230 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,12 +14,12 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 170 | 144 | 437 |
+| `./services` | 170 | 144 | 438 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
 | `./workflow` | 92 | 41 | 153 |
 | `./agent` | 52 | 50 | 81 |
-| `./channel` | 32 | 32 | 85 |
+| `./channel` | 32 | 32 | 86 |
 | `./types` | 24 | 21 | 82 |
 | `./queue` | 28 | 28 | 75 |
 | `./http` | 27 | 27 | 58 |
@@ -52,12 +52,12 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./rpc` | 8 | 8 | 6 |
 | `./workflow/types` | 47 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
+| `./trace` | 11 | 11 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./secret` | 10 | 10 | 0 |
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
-| `./trace` | 9 | 9 | 0 |
 | `./webhook` | 7 | 7 | 1 |
 | `./hmac` | 8 | 8 | 0 |
 | `./state` | 9 | 8 | 0 |
@@ -802,7 +802,10 @@ export type ApprovalRequester = (request: {
 export type BinaryData = ArrayBuffer | Uint8Array
 export type Capabilities = Record<string, Capability>
 export type Capability = CapabilityHandler | CapabilityDef
-export type CapabilityHandler = (data: any) => Promise<unknown> | unknown
+export type CapabilityHandler = (
+  data: any,
+  context?: { traceparent?: string }
+) => Promise<unknown> | unknown
 export type Channel<ChannelType = unknown, OpeningData = unknown> = {
   channelId: string
   channelName: string
@@ -816,7 +819,7 @@ export class ChannelDeploymentService implements DeploymentService {
   public async start(): Promise<void>
   public async stop(): Promise<void>
   public handleResponse(message: unknown): boolean
-  public async invoke(funcName: string, data: unknown, _session?: unknown, traceId?: string): Promise<unknown>
+  public async invoke(funcName: string, data: unknown, _session?: unknown, traceparent?: string): Promise<unknown>
 }
 export interface ChannelMessageMeta {
   pikkuFuncId: string
@@ -869,7 +872,7 @@ export interface ChannelRPCRequest {
   id: string
   funcName: string
   data: unknown
-  traceId?: string
+  traceparent?: string
 }
 export interface ChannelRPCResponse {
   action: typeof CHANNEL_RPC_RESPONSE
@@ -981,6 +984,7 @@ logChannels: (logger: Logger) => void
 export abstract class PikkuAbstractChannelHandler< OpeningData = unknown, Out = unknown, > implements PikkuChannelHandler<OpeningData, Out> {
   protected channel?: PikkuChannel<OpeningData, Out>
   constructor(public channelId: string, public channelName: string, protected openingData: OpeningData)
+  public trace?: TraceContext
   public abstract send(message: Out, isBinary?: boolean): Promise<void> | void
   public abstract sendBinary(data: BinaryData): Promise<void> | void
   public getChannel(): PikkuChannel<OpeningData, Out>
@@ -3265,7 +3269,7 @@ export type CoreTriggerWebhookSource<
 }
 declaredTriggerSources: (address?: LifecycleInput | undefined) => DeclaredTriggerSource[]
 disableTriggerSource: ({ singletonServices, ...input }: SwitchInput) => Promise<WebhookSourceOutcome>
-dispatchWebhookSourceJob: (job: WebhookSourceJob) => Promise<void>
+dispatchWebhookSourceJob: (job: WebhookSourceJob, wire?: { trace?: TraceContext | undefined; }) => Promise<void>
 enableTriggerSource: ({ singletonServices, ...input }: SwitchInput) => Promise<WebhookSourceOutcome>
 export type OrphanedWebhookRegistration = {
   source: string
@@ -3285,7 +3289,7 @@ export abstract class PikkuTriggerService implements TriggerService {
   protected async setupTriggerInstance(name: string, input: unknown, onTrigger: (data: unknown, options?: TriggerInvokeOptions) => Promise<void>): Promise<TriggerInstance>
   protected async onTriggerFire(triggerName: string, targets: TriggerTarget[], data: unknown, options?: TriggerInvokeOptions): Promise<void>
 }
-receiveWebhookSourceRequest: (sourceName: string, wire: { http?: PikkuHTTP<unknown> | undefined; }) => Promise<void | { received: number; }>
+receiveWebhookSourceRequest: (sourceName: string, wire: { http?: PikkuHTTP<unknown> | undefined; trace?: TraceContext | undefined; }) => Promise<void | { received: number; }>
 reconcileTriggerSources: ({ singletonServices, ...input }: LifecycleInput & { singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
 reconcileWebhookRegistrations: ({ registrations, singletonServices, ...input }: LifecycleInput & { registrations: WebhookRegistrations; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<{ registrations: WebhookRegistrations; outcomes: WebhookSourceOutcome[]; orphans: OrphanedWebhookRegistration[]; }>
 runWebhookSourceLifecycle: ({ action, previous, singletonServices, ...input }: LifecycleInput & { action: "check" | "setup" | "teardown"; previous?: Record<string, WebhookSourceState> | undefined; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
@@ -4061,6 +4065,7 @@ export type RunAgentParams = {
   sessionService?: SessionService<CoreUserSession>
   getCredential?: GetCredential
   anonymousOwnerResourceId?: string
+  trace?: TraceContext
 }
 signalRunInterrupt: (runId: string, interruption?: AgentInterruption) => boolean
 export type SpeakableScripts = string[] | Record<string, string>
@@ -5216,8 +5221,8 @@ export type IncomingWebhookReceiptRecord = {
 }
 export class IncomingWebhookService {
   constructor(protected queueService: QueueService, protected retries: number = DEFAULT_WEBHOOK_RETRIES)
-  public async accept({ source, events, }: { source: string; request: WebhookRequest; events: TriggerEvent[] }): Promise<number>
-  protected async enqueue(job: WebhookSourceJob): Promise<string>
+  public async accept({ source, events, traceparent, }: { source: string; request: WebhookRequest; events: TriggerEvent[]; traceparent?: string }): Promise<number>
+  protected async enqueue(job: WebhookSourceJob, traceparent?: string): Promise<string>
   public async recordAttempt(_receiptId: string, _attempt: IncomingWebhookAttempt): Promise<void>
   public async listReceipts(_opts?: { source?: string; limit?: number }): Promise<IncomingWebhookReceiptRecord[]>
   public async getReceipt(_receiptId: string): Promise<IncomingWebhookReceiptRecord | null>
@@ -5642,6 +5647,7 @@ export interface SendWebhookInput {
   retries?: number
   retryDelay?: string | number
   organizationId?: string
+  traceparent?: string
 }
 export interface SendWebhookResult {
   jobId: string
@@ -5851,6 +5857,7 @@ export interface WriteFileArgs< TBucket extends string = string, > extends Bucke
 
 ```ts
 adoptTraceparent: (wire: { traceId?: string | undefined; trace?: TraceContext | undefined; }, header: unknown) => void
+childTraceWire: (parent: TraceContext | undefined) => { traceId: string; trace: TraceContext; }
 continueTrace: (traceparent: unknown) => TraceContext
 createTrace: (traceId?: string | undefined) => TraceContext
 formatTraceparent: (trace: Pick<TraceContext, "traceId" | "sampled" | "spanId">) => string
@@ -5864,6 +5871,7 @@ export type TraceContext = {
   parentSpanId?: string
   sampled: boolean
 }
+traceWire: (traceparent?: unknown) => { traceId: string; trace: TraceContext; }
 ```
 
 ## ./flag

@@ -8,6 +8,7 @@ import {
   getCreateWireServices,
   pikkuState,
 } from '../../pikku-state.js'
+import { traceWire } from '../../trace.js'
 
 export type TriggerTarget = {
   targetType: 'rpc' | 'workflow'
@@ -88,9 +89,11 @@ export abstract class PikkuTriggerService implements TriggerService {
     // The user rides on the wire, where the function runner resolves the
     // target's session and credentials from it and a started workflow records
     // it on the run.
-    const wire: PikkuRawWire = options?.pikkuUserId
-      ? { pikkuUserId: options.pikkuUserId }
-      : {}
+    // One trace per event, shared by every target it fires.
+    const wire: PikkuRawWire = {
+      ...traceWire(),
+      ...(options?.pikkuUserId ? { pikkuUserId: options.pikkuUserId } : {}),
+    }
     const wireServices = await createWireServices?.(singletonServices, wire)
     const services = { ...singletonServices, ...wireServices }
     const rpc = rpcService.getContextRPCService(services, wire, false)
