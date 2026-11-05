@@ -17,7 +17,7 @@
 
 Use this skill as an execution checklist, not reference material.
 
-1. Every user-facing string in a frontend is a message. Never hardcode display text — add a key to `messages/en.json` and render `m.the__key()`. This holds even when the app ships only English; the messages are the seam a second language slots into later.
+1. Every user-facing string in a frontend is a message. Never hardcode display text — add the key with `pikku i18n key <key> en="…"` (add `--update` to reword an existing one; never hand-edit the JSON or run `tsc` just to apply wording) and render `m.the__key()`. This holds even when the app ships only English; the messages are the seam a second language slots into later.
 2. One `messages/<locale>.json` per language at the app root (NOT under `src/`), declared in `project.inlang/settings.json`. English (`en`) is `baseLocale` and the only locale until someone adds another. **`baseLocale` stays `en` whatever language the product speaks** — see [The product's language is not the code's language](#the-products-language-is-not-the-codes-language), which is the first thing to read if the brief says the app is not in English.
 3. Messages compile to typed ESM functions in `src/paraglide/` (generated, self-gitignored — never edit or commit it). The Vite plugin compiles during `dev`/`build` with HMR on message edits; run the CLI compile only when you need `tsc` before Vite has ever run.
 4. Validate with the app's own `tsc` then its `build`. The deploy pipeline compiles Paraglide and runs each frontend's `tsc` before building it — an i18n mistake blocks the deploy.

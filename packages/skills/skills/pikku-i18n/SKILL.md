@@ -11,6 +11,22 @@ installGroups: [client]
 
 Never hardcode display text: add a key to `messages/en.json` and render `m.the__key()`, even in an English-only app. The messages are the seam a second language slots into, and the deploy pipeline type-checks them, so an i18n mistake blocks the build rather than the release.
 
+## Change messages with the CLI, not by hand
+
+To add or reword a message, run `pikku i18n key`. It writes the catalogue files
+itself, so there is no JSON to edit and no `tsc` to run: the Vite plugin
+recompiles on message edits, and the running app picks the change up.
+
+```sh
+pikku i18n key overview__tests_heading en="Tests" --update   # reword; other locales are left as they were
+pikku i18n key account__title en="Your account" de="Dein Konto"   # add; locales you do not give are marked to translate
+```
+
+Name only the locales you mean to change. `--update` is required for a key that
+already exists, so a typo cannot silently create a new one. A wording the user
+picked in the preview arrives with its key (`… · key overview__tests_heading`);
+use that key rather than searching the source for the text.
+
 ## Pick the reference
 
 - Writing copy, wiring Paraglide, or adding a language: `references/messages.md`
