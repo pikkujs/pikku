@@ -102,6 +102,11 @@ describe('I18nService', () => {
     const root = await workspace()
     const i18n = new I18nService(root)
     await i18n.writeLocale('apps/app', 'fr', { hello: 'Bonjour', old: 'Vieux' })
+    const [check] = await i18n.check('apps/app')
+    assert.deepStrictEqual(check!.liveLocales, ['en', 'fr'])
+    assert.deepStrictEqual(check!.catalogs[0]!.missing, [
+      { locale: 'fr', keys: ['bye'] },
+    ])
     const [report] = await i18n.sync()
     assert.deepStrictEqual(report, {
       app: 'apps/app',
