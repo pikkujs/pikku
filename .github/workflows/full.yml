@@ -261,7 +261,9 @@ jobs:
     name: Verifiers (${{ matrix.verifier }})
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    needs: build
+    # dev-platform-contributors builds a scenario with both inspector engines,
+    # so every row downloads pikku-inspect (a few MB) from inspector-go-build.
+    needs: [build, inspector-go-build]
     strategy:
       fail-fast: false
       matrix:
@@ -310,6 +312,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+        with:
+          download-inspector-go: 'true'
       - run: cd verifiers/${{ matrix.verifier }} && bun run test
 
   # The only verifier that runs a browser, so it gets its own job rather than a
