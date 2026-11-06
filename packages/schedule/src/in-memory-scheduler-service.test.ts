@@ -194,4 +194,35 @@ describe('InMemorySchedulerService getTaskRuns', () => {
       await scheduler.close()
     }
   })
+
+  test('a delayed RPC scheduled with no trace is the root of a new one', async () => {
+    const logger = {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+    }
+    pikkuState(null, 'package', 'singletonServices', { logger } as any)
+    let seen: any
+    addFunction('untracedRpc', {
+      func: async (_services: any, _data: any, wire: any) => {
+        seen = wire
+      },
+      auth: false,
+    } as any)
+    pikkuState(null, 'function', 'meta')['untracedRpc'] = {
+      pikkuFuncId: 'untracedRpc',
+      sessionless: true,
+    } as any
+    pikkuState(null, 'rpc', 'meta')['untracedRpc'] = 'untracedRpc'
+
+    const scheduler = new InMemorySchedulerService()
+    try {
+      await scheduler.scheduleRPC(10, 'untracedRpc', {})
+      assert.ok(await waitFor(() => seen !== undefined))
+      assert.match(seen.trace.traceId, /^[0-9a-f]{32}$/)
+      assert.equal(seen.trace.parentSpanId, undefined)
+    } finally {
+      await scheduler.close()
+    }
+  })
 })

@@ -11,7 +11,7 @@ import { pikkuState, getSingletonServices } from '@pikku/core/state'
 import { runScheduledTask } from '@pikku/core/scheduler'
 import { getScheduledTasks } from '@pikku/core/scheduler'
 import { rpcService } from '@pikku/core/rpc'
-import { continueTrace } from '@pikku/core/trace'
+import { traceWire } from '@pikku/core/trace'
 
 interface DelayedTask {
   taskId: string
@@ -73,13 +73,22 @@ export class InMemorySchedulerService extends SchedulerService {
         // This matches what the BullMQ and pg-boss schedulers already do:
         // enqueue `{ rpcName, data, session }` and invoke the RPC with it.
         const services = getSingletonServices()
-        const trace = continueTrace(traceparent)
+        const wire = traceWire(traceparent)
         const rpc = rpcService.getContextRPCService(
           services as any,
-          { traceId: trace.traceId, trace },
+          wire,
           false
-        ) as { invoke: (name: string, data: unknown) => Promise<unknown> }
-        await rpc.invoke(rpcName, data)
+        ) as {
+          rpcWithWire: (
+            name: string,
+            data: unknown,
+            callWire: typeof wire
+          ) => Promise<unknown>
+        }
+        // The function runs on this hop's span. `invoke` would add a call span
+        // under it, and nothing runs on the hop, so the function's parent would
+        // be a span nobody saw instead of the one that scheduled it.
+        await rpc.rpcWithWire(rpcName, data, wire)
       } catch (err: unknown) {
         getLogger().error(`Failed to execute delayed RPC '${rpcName}': ${err}`)
       }
