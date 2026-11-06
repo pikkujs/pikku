@@ -9,7 +9,10 @@ the project is sound without running `pikku all` and `tsc` again.
 After a change it runs:
 
 1. `pikku all`, when a file in `srcDirectories` or the email templates changed.
-2. A type check of the backend and every frontend.
+2. Each frontend's message compile, when one of its `messages/*.json` files
+   changed and at startup. This is the frontend's own `paraglide` or
+   `i18n:compile` script, the step its `tsc` script runs first.
+3. A type check of the backend and every frontend.
 
 A frontend edit skips step 1. The projects are the ones `pikku verify` covers.
 
@@ -25,15 +28,15 @@ status always describes the latest files.
 
 Replaced atomically, so it is always a whole file.
 
-| Field | Meaning |
-| --- | --- |
-| `state` | `running`, `ok` or `failed` |
-| `stage` | While running: `queued`, `codegen` or `typecheck` |
-| `generation` | Counts runs since the watcher started |
-| `sourcesAt` | The result covers edits up to this time |
+| Field         | Meaning                                                                            |
+| ------------- | ---------------------------------------------------------------------------------- |
+| `state`       | `running`, `ok` or `failed`                                                        |
+| `stage`       | While running: `queued`, `codegen`, `messages` or `typecheck`                      |
+| `generation`  | Counts runs since the watcher started                                              |
+| `sourcesAt`   | The result covers edits up to this time                                            |
 | `diagnostics` | `severity`, `code`, `message`, and `project`, `file`, `line`, `column` where known |
-| `typecheck` | `durationMs` and `rssBytes` of the warm checker |
-| `pid` | The watcher, so a status left by a dead one is ignored |
+| `typecheck`   | `durationMs` and `rssBytes` of the warm checker                                    |
+| `pid`         | The watcher, so a status left by a dead one is ignored                             |
 
 ## `pikku check`
 
@@ -43,13 +46,15 @@ pikku check --json     # the full result as one JSON line
 pikku check --timeout 30
 ```
 
-| Situation | What it does |
-| --- | --- |
-| Watcher finished, nothing newer | Returns at once, doing no compile work |
-| Watcher running | Waits for it |
-| A file is newer than the result | Waits for the watcher to pick it up |
-| Still waiting after `--timeout` (120 seconds) | Exits 1 naming the stage: `queued`, `codegen`, `typecheck`, or `waiting` if the watcher never noticed the file |
-| No watcher running | One full `pikku all` plus `tsc`, under the same limit |
+| Situation                                     | What it does                                                                                                               |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Watcher finished, nothing newer               | Returns at once, doing no compile work                                                                                     |
+| Watcher running                               | Waits for it                                                                                                               |
+| A file is newer than the result               | Waits for the watcher to pick it up                                                                                        |
+| Still waiting after `--timeout` (120 seconds) | Exits 1 naming the stage: `queued`, `codegen`, `messages`, `typecheck`, or `waiting` if the watcher never noticed the file |
+| No watcher running                            | One full `pikku all`, message compile and `tsc`, under the same limit                                                      |
 
-Changes to `tsconfig.json` in the backend root and to `pikku.config.json` are not
-watched. A frontend's `tsconfig.json` is.
+Watched files are those in `srcDirectories`, the email templates and each
+frontend's directory. Anything else a project compiles, such as a shared workspace
+package, is not watched, and neither are the root `tsconfig.json` and
+`pikku.config.json`. A frontend's `tsconfig.json` is.

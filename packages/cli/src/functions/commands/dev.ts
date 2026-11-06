@@ -13,6 +13,7 @@ import chokidar, { type FSWatcher } from 'chokidar'
 import { createTypecheckClient } from '../../utils/warm-typecheck.js'
 import {
   checkProjects,
+  compileMessages,
   createWatchLoop,
   watchedDirs,
 } from '../../utils/watch-loop.js'
@@ -602,6 +603,7 @@ export const dev = pikkuSessionlessFunc<
           dirs,
           debounceMs: 10,
           codegen: () => collectCodegenPass(regenerate),
+          messages: () => compileMessages(dirs.typecheckDirs),
           typecheck: () => typechecker.check(checkProjects(config.rootDir)),
           onError: (message) => logger.error(message),
         })

@@ -1,9 +1,13 @@
 import assert from 'node:assert'
-import { mkdtempSync } from 'node:fs'
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
-import { createWatchLoop, type CodegenPass } from './watch-loop.js'
+import {
+  compileMessages,
+  createWatchLoop,
+  type CodegenPass,
+} from './watch-loop.js'
 import { readWatchStatus } from './watch-status.js'
 import type { TypecheckResult } from './warm-typecheck.js'
 
@@ -26,6 +30,10 @@ const loopWith = (
       calls.push('codegen')
       return passed
     },
+    messages: async () => {
+      calls.push('messages')
+      return []
+    },
     typecheck: async () => {
       calls.push('typecheck')
       return clean
@@ -40,7 +48,7 @@ describe('the watch loop', () => {
   test('publishes ok after codegen and type check', async () => {
     const { loop, calls, file } = loopWith({})
     await loop.start({ codegen: true })
-    assert.deepEqual(calls, ['codegen', 'typecheck'])
+    assert.deepEqual(calls, ['codegen', 'messages', 'typecheck'])
     const status = readWatchStatus(file)
     assert.equal(status?.state, 'ok')
     assert.equal(status?.pid, process.pid)
@@ -157,11 +165,90 @@ describe('the watch loop', () => {
     assert.equal(readWatchStatus(file)?.generation, 2)
   })
 
+  test('a message edit compiles before the type check, and the status clears', async () => {
+    let compiled = false
+    const { loop, calls, file } = loopWith({
+      messages: async () => {
+        calls.push('messages')
+        compiled = true
+        return []
+      },
+      typecheck: async () => {
+        calls.push('typecheck')
+        return compiled
+          ? clean
+          : {
+              ...clean,
+              diagnostics: [
+                { severity: 'error', code: 'TS2339', message: 'no such key' },
+              ],
+            }
+      },
+    })
+    loop.onChange('/p/apps/web/messages/en.json')
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    assert.deepEqual(calls, ['messages', 'typecheck'])
+    assert.equal(readWatchStatus(file)?.state, 'ok')
+  })
+
+  test('a compile that fails fails the run and is tried again', async () => {
+    let attempts = 0
+    const { loop, file } = loopWith({
+      messages: async () =>
+        ++attempts === 1
+          ? [{ severity: 'error', code: 'MESSAGES', message: 'bad json' }]
+          : [],
+    })
+    await loop.start({ codegen: false })
+    assert.equal(readWatchStatus(file)?.state, 'failed')
+    loop.onChange('/p/apps/web/a.tsx')
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    assert.equal(attempts, 2)
+    assert.equal(readWatchStatus(file)?.state, 'ok')
+  })
+
   test('ignored files start nothing', async () => {
     const { loop, calls } = loopWith({})
     loop.onChange('/p/apps/web/dist/a.ts')
     loop.onChange('/p/src/x.gen.ts')
     await new Promise((resolve) => setTimeout(resolve, 20))
     assert.deepEqual(calls, [])
+  })
+})
+
+describe('compiling messages', () => {
+  const frontend = (scripts: Record<string, string>) => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-messages-'))
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ scripts }))
+    return dir
+  }
+
+  test("runs the frontend's own script", async () => {
+    const dir = frontend({
+      paraglide: "node -e \"fs.writeFileSync('out','')\"",
+    })
+    assert.deepEqual(await compileMessages([dir]), [])
+    assert.equal(existsSync(join(dir, 'out')), true)
+  })
+
+  test('takes i18n:compile when that is the name', async () => {
+    const dir = frontend({
+      'i18n:compile': "node -e \"fs.writeFileSync('out','')\"",
+    })
+    await compileMessages([dir])
+    assert.equal(existsSync(join(dir, 'out')), true)
+  })
+
+  test('a frontend with neither has nothing to do', async () => {
+    assert.deepEqual(await compileMessages([frontend({})]), [])
+  })
+
+  test('a failing script is reported with its output', async () => {
+    const dir = frontend({
+      paraglide: 'node -e "console.error(\'bad key\');process.exit(3)"',
+    })
+    const [problem] = await compileMessages([dir])
+    assert.equal(problem?.code, 'MESSAGES')
+    assert.match(problem?.message ?? '', /bad key/)
   })
 })

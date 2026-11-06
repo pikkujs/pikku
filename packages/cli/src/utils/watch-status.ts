@@ -11,7 +11,7 @@ import {
 import { dirname, join, relative } from 'node:path'
 import type { CheckDiagnostic } from './warm-typecheck.js'
 
-export type WatchStage = 'queued' | 'codegen' | 'typecheck'
+export type WatchStage = 'queued' | 'codegen' | 'messages' | 'typecheck'
 
 /** `.pikku/status.json`: what the watcher last concluded about the project. */
 export type WatchStatus = {
@@ -56,9 +56,11 @@ export const readWatchStatus = (file: string): WatchStatus | null => {
   }
 }
 
-const SKIPPED_DIRS = new Set(['node_modules', 'dist', 'build', 'coverage'])
+const SKIPPED_DIRS = new Set(['node_modules', 'dist', 'coverage'])
 const GENERATED = /\.gen\.[^/]+$/
-const TYPECHECKED = /\.(tsx?|mts|cts|json)$/
+/** `.js` counts: with allowJs, compiled output such as paraglide's is part of the program. */
+const TYPECHECKED = /\.(tsx?|mts|cts|jsx?|mjs|cjs|json)$/
+const MESSAGES = /(^|\/)messages\/[^/]+\.json$/
 
 const insideRoot = (path: string, root: string): string | null => {
   const rel = relative(root, path)
@@ -67,20 +69,28 @@ const insideRoot = (path: string, root: string): string | null => {
     : null
 }
 
+const isSkippedDir = (part: string) =>
+  part.startsWith('.') || SKIPPED_DIRS.has(part)
+
 /**
  * Judged only below the watched root: a project may well live under a path such
- * as `~/.pikkustudio/local` or `/srv/build/app`.
+ * as `~/.pikkustudio/local`. Generated files are skipped where codegen writes
+ * them, or each pass would start the next. A frontend's are part of its program,
+ * and a type check writes nothing, so they count there.
  */
-const isSkippedBelow = (path: string, roots: string[]): boolean => {
-  for (const root of roots) {
+const isSkippedBelow = (
+  path: string,
+  { codegenDirs, typecheckDirs }: WatchedDirs
+): boolean => {
+  for (const root of codegenDirs) {
     const rel = insideRoot(path, root)
     if (rel === null) continue
-    return rel
-      .split('/')
-      .some(
-        (part) =>
-          part.startsWith('.') || SKIPPED_DIRS.has(part) || GENERATED.test(part)
-      )
+    const parts = rel.split('/')
+    return parts.some((part) => isSkippedDir(part) || GENERATED.test(part))
+  }
+  for (const root of typecheckDirs) {
+    const rel = insideRoot(path, root)
+    if (rel !== null) return rel.split('/').some(isSkippedDir)
   }
   return false
 }
@@ -90,18 +100,21 @@ export type WatchedDirs = Pick<WatchStatus, 'codegenDirs' | 'typecheckDirs'>
 /** The one rule for which files count, shared by the watcher and `pikku check`. */
 export const classifyChange = (
   path: string,
-  { codegenDirs, typecheckDirs }: WatchedDirs
-): 'codegen' | 'typecheck' | null => {
-  const roots = [...codegenDirs, ...typecheckDirs]
-  if (isSkippedBelow(path, roots)) return null
-  if (codegenDirs.some((root) => insideRoot(path, root) !== null)) {
+  dirs: WatchedDirs
+): 'codegen' | 'messages' | 'typecheck' | null => {
+  if (isSkippedBelow(path, dirs)) return null
+  if (dirs.codegenDirs.some((root) => insideRoot(path, root) !== null)) {
     return 'codegen'
   }
+  const inFrontend = dirs.typecheckDirs.some((root) =>
+    MESSAGES.test(insideRoot(path, root) ?? '')
+  )
+  if (inFrontend) return 'messages'
   return TYPECHECKED.test(path) ? 'typecheck' : null
 }
 
 export const isIgnoredByWatcher = (path: string, dirs: WatchedDirs): boolean =>
-  isSkippedBelow(path, [...dirs.codegenDirs, ...dirs.typecheckDirs])
+  isSkippedBelow(path, dirs)
 
 /** A file saved after `since`, if there is one. */
 export const findChangeSince = (
