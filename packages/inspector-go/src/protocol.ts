@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { PACKAGE_DIR } from './binary.js'
+import { packageDir } from './binary.js'
 import type {
   InspectorOptions,
   SerializableInspectorState,
@@ -42,11 +42,8 @@ export type InspectorGoAnalysisOptions = Pick<
 }
 
 /** The Node Zod converter this package ships, the binary's fallback. */
-export const VENDOR_SCHEMA_SCRIPT = join(
-  PACKAGE_DIR,
-  'scripts',
-  'vendor-schemas.mjs'
-)
+export const vendorSchemaScript = (): string =>
+  join(packageDir(), 'scripts', 'vendor-schemas.mjs')
 
 /** What `pikku-inspect --stdin` reads. */
 export interface InspectorGoInput {
@@ -123,7 +120,7 @@ export const toAnalysisOptions = (
     setupOnly: options.setupOnly,
     types: options.types,
     schemaConfig: options.schemaConfig && {
-      vendorScript: VENDOR_SCHEMA_SCRIPT,
+      vendorScript: vendorSchemaScript(),
       ...options.schemaConfig,
     },
     isAddon: options.isAddon,
