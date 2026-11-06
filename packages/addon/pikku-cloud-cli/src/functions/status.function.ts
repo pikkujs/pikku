@@ -30,7 +30,7 @@ export const CloudStatus = pikkuSessionlessFunc({
       )
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const status = await rpc.invoke('getProjectStatus', {
+    const status = await rpc.invoke('cloud:getProjectStatus', {
       projectId: ctx.projectId,
     })
     const hints = status.exists

@@ -30,7 +30,7 @@ function fakeRpc(script: StatusRow[]) {
   const rpc = {
     invoke: async (name: string, _data: unknown) => {
       calls.push(name)
-      if (name === 'getDeploymentStatus') {
+      if (name === 'cloud:getDeploymentStatus') {
         const row = script[Math.min(index++, script.length - 1)]!
         if (row.error) throw row.error
         return {
@@ -58,7 +58,7 @@ function fakeRpc(script: StatusRow[]) {
           })),
         }
       }
-      if (name === 'applyDeployment') {
+      if (name === 'cloud:applyDeployment') {
         return { deploymentId: 'dep-1', resumed: true }
       }
       throw new Error(`unexpected rpc ${name}`)
@@ -222,7 +222,7 @@ describe('waitForDeployment', () => {
     )
     assert.strictEqual(result.outcome, 'succeeded')
     assert.strictEqual(result.approved, true)
-    assert.ok(calls.includes('applyDeployment'))
+    assert.ok(calls.includes('cloud:applyDeployment'))
   })
 
   test('an approve whose 502 hid a success is not re-refused', async () => {
@@ -239,7 +239,7 @@ describe('waitForDeployment', () => {
       name: string,
       data: unknown
     ) => {
-      if (name === 'applyDeployment' && replies.length) {
+      if (name === 'cloud:applyDeployment' && replies.length) {
         calls.push(name)
         throw replies.shift()
       }
@@ -256,7 +256,10 @@ describe('waitForDeployment', () => {
       now,
     })
     assert.strictEqual(result.outcome, 'succeeded')
-    assert.strictEqual(calls.filter((c) => c === 'applyDeployment').length, 2)
+    assert.strictEqual(
+      calls.filter((c) => c === 'cloud:applyDeployment').length,
+      2
+    )
   })
 
   test('a 4xx is not retried', async () => {
@@ -306,7 +309,7 @@ describe('waitForDeployment', () => {
       ['STRIPE_KEY']
     )
     assert.ok(!asked, 'must not offer to approve a config-blocked plan')
-    assert.ok(!calls.includes('applyDeployment'))
+    assert.ok(!calls.includes('cloud:applyDeployment'))
   })
 
   test('a declined approval ends the wait rather than spinning', async () => {
@@ -316,7 +319,7 @@ describe('waitForDeployment', () => {
     )
     assert.strictEqual(result.outcome, 'blocked')
     assert.strictEqual(result.approved, false)
-    assert.ok(!calls.includes('applyDeployment'))
+    assert.ok(!calls.includes('cloud:applyDeployment'))
   })
 
   test('an accepted approval applies and then keeps polling to active', async () => {
@@ -331,7 +334,7 @@ describe('waitForDeployment', () => {
     assert.strictEqual(result.outcome, 'succeeded')
     assert.strictEqual(result.approved, true)
     assert.strictEqual(
-      calls.filter((c) => c === 'applyDeployment').length,
+      calls.filter((c) => c === 'cloud:applyDeployment').length,
       1,
       'approve exactly once'
     )
@@ -346,7 +349,10 @@ describe('waitForDeployment', () => {
     )
     assert.strictEqual(result.outcome, 'blocked')
     assert.strictEqual(result.approved, true)
-    assert.strictEqual(calls.filter((c) => c === 'applyDeployment').length, 1)
+    assert.strictEqual(
+      calls.filter((c) => c === 'cloud:applyDeployment').length,
+      1
+    )
   })
 
   test('a resume that takes a few polls to move is not called blocked', async () => {
@@ -363,7 +369,7 @@ describe('waitForDeployment', () => {
     assert.strictEqual(result.outcome, 'succeeded')
     assert.strictEqual(result.approved, true)
     assert.strictEqual(
-      calls.filter((c) => c === 'applyDeployment').length,
+      calls.filter((c) => c === 'cloud:applyDeployment').length,
       1,
       'approve exactly once, however many polls the resume takes'
     )
@@ -407,7 +413,7 @@ describe('describeDeployment', () => {
     let asked: any
     const rpc = {
       invoke: async (name: string, data: unknown) => {
-        assert.strictEqual(name, 'getProjectDeployments')
+        assert.strictEqual(name, 'cloud:getProjectDeployments')
         asked = data
         return {
           stages: [

@@ -11,7 +11,7 @@ import type { CloudRPC as PikkuRPC } from './rpc-client.js'
 const rpcWith = (branches: string[]) =>
   ({
     invoke: async (name: string) => {
-      assert.strictEqual(name, 'listStages')
+      assert.strictEqual(name, 'cloud:listStages')
       return {
         stages: branches.map((branch, i) => ({
           branch,
@@ -146,7 +146,7 @@ type HintStage = {
 const deploymentsRpc = (stages: HintStage[]) =>
   ({
     invoke: async (name: string) => {
-      assert.strictEqual(name, 'getProjectDeployments')
+      assert.strictEqual(name, 'cloud:getProjectDeployments')
       return { stages }
     },
   }) as unknown as PikkuRPC

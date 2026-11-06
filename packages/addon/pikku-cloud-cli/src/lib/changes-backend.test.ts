@@ -48,16 +48,19 @@ void mock.module('./http.js', () => ({
             if (cloudDown === 'refused') throw new Error('connect ECONNREFUSED')
             if (cloudDown === 'http')
               throw Object.assign(new Error('forbidden'), { status: 403 })
-            if (name === 'listStages') {
+            if (name === 'cloud:listStages') {
               if (stagesDenied)
                 throw Object.assign(new Error('denied'), { status: 403 })
               return { stages }
             }
-            if (name === 'createChange' || name === 'createSandboxChange')
+            if (
+              name === 'cloud:createChange' ||
+              name === 'machine:createSandboxChange'
+            )
               return {
                 change: { changeId: 'fab_1', shortId: '1', title: data.title },
               }
-            if (name === 'listChanges') return { changes: [], groups: [] }
+            if (name === 'cloud:listChanges') return { changes: [], groups: [] }
             return {}
           },
         },
@@ -179,9 +182,9 @@ describe('changes on a project backed by cloud', () => {
     const before = await countLocal()
     await file('Pikku Studio Cloud one')
     await list()
-    const created = cloudCalls.find((c) => c.name === 'createChange')!
+    const created = cloudCalls.find((c) => c.name === 'cloud:createChange')!
     assert.strictEqual(created.data.title, 'Pikku Studio Cloud one')
-    assert.ok(cloudCalls.some((c) => c.name === 'listChanges'))
+    assert.ok(cloudCalls.some((c) => c.name === 'cloud:listChanges'))
     assert.strictEqual(await countLocal(), before)
   })
 
@@ -193,7 +196,7 @@ describe('changes on a project backed by cloud', () => {
     )
     try {
       await list()
-      const call = cloudCalls.find((c) => c.name === 'listChanges')!
+      const call = cloudCalls.find((c) => c.name === 'cloud:listChanges')!
       assert.strictEqual(call.data.projectId, 'proj_cfg')
     } finally {
       await rm(join(repo, 'pikku.config.json'))
@@ -235,7 +238,7 @@ describe('changes on a project backed by cloud', () => {
       { config: { rootDir: repo } } as any,
       {} as any
     )
-    const call = cloudCalls.find((c) => c.name === 'listChanges')!
+    const call = cloudCalls.find((c) => c.name === 'cloud:listChanges')!
     assert.strictEqual(call.data.projectId, 'proj_1')
   })
 
@@ -245,7 +248,7 @@ describe('changes on a project backed by cloud', () => {
     await next.func({ config: { rootDir: repo } } as any, {} as any)
     assert.ok(
       cloudCalls.some(
-        (c) => c.name === 'listChanges' && c.data.projectId === 'proj_1'
+        (c) => c.name === 'cloud:listChanges' && c.data.projectId === 'proj_1'
       )
     )
   })
@@ -275,7 +278,7 @@ describe('changes on a project backed by cloud', () => {
       { stageId: 'stage_main', branch: 'main' },
     ]
     await file('Which stage')
-    const created = cloudCalls.find((c) => c.name === 'createChange')!
+    const created = cloudCalls.find((c) => c.name === 'cloud:createChange')!
     assert.strictEqual(created.data.stageId, 'stage_main')
   })
 
@@ -286,8 +289,8 @@ describe('changes on a project backed by cloud', () => {
       {} as any,
       { title: 'Explicit', stageId: 'stage_x' } as any
     )
-    assert.ok(!cloudCalls.some((c) => c.name === 'listStages'))
-    const created = cloudCalls.find((c) => c.name === 'createChange')!
+    assert.ok(!cloudCalls.some((c) => c.name === 'cloud:listStages'))
+    const created = cloudCalls.find((c) => c.name === 'cloud:createChange')!
     assert.strictEqual(created.data.stageId, 'stage_x')
   })
 
@@ -306,8 +309,10 @@ describe('changes on a project backed by cloud', () => {
     process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
     stagesDenied = true
     await file('From a sandbox')
-    assert.ok(!cloudCalls.some((c) => c.name === 'createChange'))
-    const created = cloudCalls.find((c) => c.name === 'createSandboxChange')!
+    assert.ok(!cloudCalls.some((c) => c.name === 'cloud:createChange'))
+    const created = cloudCalls.find(
+      (c) => c.name === 'machine:createSandboxChange'
+    )!
     assert.strictEqual(created.data.title, 'From a sandbox')
     assert.strictEqual(created.data.stageId, undefined)
   })

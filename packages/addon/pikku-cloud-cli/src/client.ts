@@ -17,4 +17,4 @@ export { readConfigProjectId, writeConfigProjectId } from './lib/project-id.js'
 export type { CloudRPC } from './lib/rpc-client.js'
 import type { CloudOutput } from './lib/rpc-client.js'
 export type { CloudInput, CloudOutput } from './lib/rpc-client.js'
-export type ListChangesOutput = CloudOutput<'listChanges'>
+export type ListChangesOutput = CloudOutput<'cloud:listChanges'>

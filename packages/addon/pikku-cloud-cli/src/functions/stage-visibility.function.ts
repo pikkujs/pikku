@@ -38,7 +38,7 @@ export const CloudStageVisibility = pikkuSessionlessFunc({
       ctx.projectId,
       requested
     )
-    const { isPublic, live } = await rpc.invoke('setStageVisibility', {
+    const { isPublic, live } = await rpc.invoke('cloud:setStageVisibility', {
       stageId,
       isPublic: visibility === 'public',
     })

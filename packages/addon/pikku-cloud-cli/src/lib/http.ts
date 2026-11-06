@@ -1,11 +1,9 @@
 /**
  * Type-safe RPC client for the cloud API. Names and types come from the
- * published contract in `../contract/` (refresh with `bun run sync-contract`);
- * see `rpc-client.ts` for how a bare name becomes `cloud:<name>`.
+ * published contract, synced by `pikku all` (package.json `pikku.uses.cloud`);
+ * see `rpc-client.ts`.
  */
 import { CloudRPC } from './rpc-client.js'
-
-export { cloudRpcName } from './rpc-client.js'
 
 export function getCloudRPC(opts: {
   apiUrl: string

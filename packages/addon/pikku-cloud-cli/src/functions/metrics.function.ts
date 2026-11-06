@@ -44,7 +44,7 @@ export const CloudMetrics = pikkuSessionlessFunc({
       )
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const res = await rpc.invoke('getProjectMetricsByStageKind', {
+    const res = await rpc.invoke('cloud:getProjectMetricsByStageKind', {
       projectId: ctx.projectId,
       branch,
       hours,

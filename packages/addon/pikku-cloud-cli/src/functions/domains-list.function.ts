@@ -31,7 +31,7 @@ export const CloudDomainsList = pikkuSessionlessFunc({
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
 
-    const stagesResult = await rpc.invoke('listStages', {
+    const stagesResult = await rpc.invoke('cloud:listStages', {
       projectId,
     })
     const production = stagesResult.stages.find((s) => s.type === 'production')
@@ -43,7 +43,7 @@ export const CloudDomainsList = pikkuSessionlessFunc({
       return { count: 0 }
     }
 
-    const result = await rpc.invoke('listStageCustomHostnames', {
+    const result = await rpc.invoke('cloud:listStageCustomHostnames', {
       stageId: production.stageId,
     })
 

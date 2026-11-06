@@ -47,7 +47,7 @@ export const CloudRollback = pikkuSessionlessFunc({
 
     // --list (or no target) → just show candidates.
     if (list || !target) {
-      const result = await rpc.invoke('rollbackDeployment', {
+      const result = await rpc.invoke('cloud:rollbackDeployment', {
         projectId: ctx.projectId,
       })
       if (result.candidates.length === 0) {
@@ -70,7 +70,7 @@ export const CloudRollback = pikkuSessionlessFunc({
       return { candidates: [] }
     }
 
-    const result = await rpc.invoke('rollbackDeployment', {
+    const result = await rpc.invoke('cloud:rollbackDeployment', {
       projectId: ctx.projectId,
       target,
     })

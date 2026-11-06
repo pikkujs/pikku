@@ -60,8 +60,8 @@ await mock.module('../lib/http.js', () => ({
   getCloudRPC: () => ({
     invoke: async (name: string) => {
       invoked.push(name)
-      if (name === 'deployByStageKind') throw new Error('reached-deploy')
-      if (name !== 'listStageMigrationLedger')
+      if (name === 'cloud:deployByStageKind') throw new Error('reached-deploy')
+      if (name !== 'cloud:listStageMigrationLedger')
         throw new Error(`unexpected ${name}`)
       if (ledger instanceof Error) throw ledger
       return { stages: ledger }
@@ -304,7 +304,7 @@ describe('deploy apply migration guard', () => {
             /Refusing to deploy.*migration-modified-after-base/s
           )
         })
-        assert.ok(!invoked.includes('deployByStageKind'))
+        assert.ok(!invoked.includes('cloud:deployByStageKind'))
 
         sh(root, 'checkout', '-q', 'HEAD~1', '--', 'db/sqlite/0001-init.sql')
         sh(root, 'commit', '-qm', 'restore it')
@@ -316,7 +316,7 @@ describe('deploy apply migration guard', () => {
             /reached-deploy/
           )
         })
-        assert.ok(invoked.includes('deployByStageKind'))
+        assert.ok(invoked.includes('cloud:deployByStageKind'))
       } finally {
         await rm(remote, { recursive: true, force: true })
       }

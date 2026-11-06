@@ -102,11 +102,11 @@ describe('cloud deploy list hints', () => {
     context = { token: 'user-token', projectId: 'proj_1' }
     invoked.length = 0
     responses = {
-      listStages: {
+      'cloud:listStages': {
         stages: [{ branch: 'main', stageId: 'stage_1' }],
       },
-      listDeployments: suspendedDeployments,
-      getProjectDeployments: projectDeployments,
+      'cloud:listDeployments': suspendedDeployments,
+      'cloud:getProjectDeployments': projectDeployments,
     }
   })
 
@@ -116,17 +116,20 @@ describe('cloud deploy list hints', () => {
       'waiting for approval — auto-deploy is off (pikku cloud deploy auto on -b main)',
     ])
     assert.deepStrictEqual(invoked, [
-      'listStages',
-      'listDeployments',
-      'getProjectDeployments',
+      'cloud:listStages',
+      'cloud:listDeployments',
+      'cloud:getProjectDeployments',
     ])
   })
 
   test('does not ask about auto-deploy when nothing is waiting', async () => {
-    responses.listDeployments = okDeployments
+    responses['cloud:listDeployments'] = okDeployments
     const result = await run({ branch: 'main' })
     assert.deepStrictEqual(result.hints, [])
-    assert.deepStrictEqual(invoked, ['listStages', 'listDeployments'])
+    assert.deepStrictEqual(invoked, [
+      'cloud:listStages',
+      'cloud:listDeployments',
+    ])
   })
 
   test('renders the hint under the table', () => {

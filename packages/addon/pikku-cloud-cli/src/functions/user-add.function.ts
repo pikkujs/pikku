@@ -80,9 +80,12 @@ export const CloudUserAdd = pikkuSessionlessFunc({
 
     // Operator token + the stage's own app URL. Short-lived; minted per call so
     // nothing durable holds a stage credential.
-    const { token, appUrl } = await rpc.invoke('createStageOperatorToken', {
-      stageId,
-    })
+    const { token, appUrl } = await rpc.invoke(
+      'cloud:createStageOperatorToken',
+      {
+        stageId,
+      }
+    )
 
     // POST the stage's own RPC with the operator token and a { rpcName, data }
     // body — the same shape `proxyStageConsoleRpc` uses server-side. A

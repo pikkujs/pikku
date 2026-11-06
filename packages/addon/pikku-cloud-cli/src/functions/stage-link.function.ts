@@ -44,14 +44,18 @@ export const CloudStageLink = pikkuSessionlessFunc({
 
     let needsDeploy = false
     if (kind === 'changes') {
-      const changes = await rpc.invoke('configureStageChanges', {
+      const changes = await rpc.invoke('cloud:configureStageChanges', {
         stageId,
         enabled: true,
       })
       needsDeploy = changes.needsDeploy
     }
 
-    const link = await rpc.invoke('createStageLink', { stageId, kind, route })
+    const link = await rpc.invoke('cloud:createStageLink', {
+      stageId,
+      kind,
+      route,
+    })
     const expiresAt = new Date(link.expiresAt).toISOString()
     return { branch, kind, url: link.url, expiresAt, needsDeploy }
   },

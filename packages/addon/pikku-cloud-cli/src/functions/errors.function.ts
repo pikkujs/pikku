@@ -36,7 +36,7 @@ export const CloudErrors = pikkuSessionlessFunc({
       )
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const { logs } = await rpc.invoke('getCloudLogsByStageKind', {
+    const { logs } = await rpc.invoke('cloud:getCloudLogsByStageKind', {
       projectId: ctx.projectId,
       branch,
       level: 'error',

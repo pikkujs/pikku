@@ -227,7 +227,11 @@ import {
 import { defaultCLIRenderer } from './services.js'
 
 wireAddon({ name: 'changes', package: '@pikku/addon-changes-cli' })
-wireAddon({ name: 'cloud', package: '@pikku/addon-cloud-cli' })
+wireAddon({
+  name: 'cloud',
+  package: '@pikku/addon-cloud-cli',
+  uses: { cloud: 'cloudApi' },
+})
 
 wireCLI({
   program: 'pikku',

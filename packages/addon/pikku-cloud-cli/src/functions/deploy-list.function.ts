@@ -33,7 +33,9 @@ export const CloudDeployList = pikkuSessionlessFunc({
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const stageId = await resolveStageId(rpc, ctx.projectId, branch)
-    const { deployments } = await rpc.invoke('listDeployments', { stageId })
+    const { deployments } = await rpc.invoke('cloud:listDeployments', {
+      stageId,
+    })
     const hints = deployments.some((d) => d.status === 'suspended')
       ? await autoDeployOffHints(rpc, ctx.projectId, branch)
       : []

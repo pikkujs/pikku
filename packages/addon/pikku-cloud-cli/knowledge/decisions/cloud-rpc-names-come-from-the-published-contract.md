@@ -1,7 +1,7 @@
 ---
 type: decision
 title: pikku cloud rpc names and types come from the published cloud API contract, synced by pikku all
-description: package.json pikku.uses.cloud makes pikku all fetch @pikkustudio/addon-cloud-api from the registry into the gitignored .pikku, pinned by pikku-addons.lock; nothing generated is committed
+description: the CLI wires @pikkustudio/addon-cloud-api as cloudApi, the addon declares it in pikku.uses.cloud, and pikku all syncs and pins it; every call names its served function, typed from the synced map
 tags: cli, cloud, rpc
 ---
 
@@ -10,35 +10,42 @@ tags: cli, cloud, rpc
 Production serves the cloud API functions as `cloud:<name>` (the controlplane's
 `cloud-api.wiring.ts` wires `@pikkustudio/addon-cloud-api` as `cloud`).
 
-The CLI cannot use `pikku.uses` for this: that route needs a host `wireAddon`
-that maps the dependency (PKU348 fails the @pikku/cli build), and the CLI is the
-caller, not a host. So `scripts/sync-contract.ts` (the package `prebuild`) does
-the equivalent: it resolves the package through the registry
-(`POST /rpc/registry:resolveSdk`, a public unauthenticated read), checks the
-download's sha512 and contractHash against the committed `contract.lock.json`,
-and writes `.pikku/contract/` (rpc map types and the name list). `.pikku` is
-gitignored; only `contract.lock.json` is committed. A mismatch fails; it never
-falls back to a stale copy.
+The contract reaches the build the way any addon dependency does, through the
+CLI's own sync, not a script:
 
-- `src/lib/rpc-client.ts` types `invoke` from that map, with the `cloud:` prefix
-  stripped, so callers keep bare names and a name the contract lacks is a
-  `tsc` error. At runtime a bare name gets `cloud:` unless
-  `contract/uncontracted.ts` says where it is served.
-- Four calls are not in the contract and are typed by hand in
-  `contract/uncontracted.ts`: `requestCliAuth`, `pollCliAuth`, `submitFinding`
-  (served bare, they live in the controlplane's api-functions package),
-  `createSandboxChange` (`machine:`, `@pikkustudio/addon-machine-api` publishes no
-  SDK), and three aspiration calls (`cloud:`) newer than the published 0.0.2,
-  called by pikku-console. Delete an entry once its source publishes a contract.
-- `dist/.pikku/contract` is copied by the build so the shipped `.d.ts` resolves.
+- `packages/cli/src/cloud-api.wiring.ts` wires `@pikkustudio/addon-cloud-api@^0.0.2`
+  with `wireRemoteAddon` as `cloudApi` (the name `cloud` is the addon's own
+  namespace), served under `cloud:`; `cli.wiring.ts` maps it with
+  `wireAddon({ name: 'cloud', package: '@pikku/addon-cloud-cli', uses: { cloud: 'cloudApi' } })`,
+  which is what PKU348 checks.
+- `packages/addon/pikku-cloud-cli/package.json` declares
+  `pikku.uses.cloud = "@pikkustudio/addon-cloud-api@^0.0.2"`.
+- `pikku all` (`runAddonSync`) resolves it through the registry
+  (`registry:resolveSdk`, a public read), checks the sha512 in the committed
+  `pikku-addons.lock` (one in the CLI, one in the addon), extracts it into the
+  gitignored `.pikku/remote`, and merges it into the addon's generated RPC map as
+  `cloud:<name>`. Nothing generated is committed. The alias `cloud` does not
+  collide with the addon's own functions: those are unprefixed in that map.
+- `src/lib/rpc-client.ts` types `invoke` from that map's `cloud:` keys plus
+  `contract/uncontracted.ts`; the name is sent as written. A name the contract
+  lacks is a `tsc` error. `build.sh` hides `cloud-api.wiring.ts` from the
+  bootstrap stage with `registry.wiring.ts`, because the pinned CLI predates
+  versioned packages.
+- `uncontracted.ts` hand-types what no contract carries: `requestCliAuth`,
+  `pollCliAuth`, `submitFinding` (bare, controlplane api-functions),
+  `machine:createSandboxChange` (`addon-machine-api` publishes no SDK), and three
+  `cloud:` aspiration calls newer than the published 0.0.2 (called by
+  pikku-console). Delete an entry once its source publishes a contract.
+
+The lock's integrity is the pin; there is no separate contractHash.
 
 **Build dependency:** the registry must be reachable the first time a checkout
-builds (or after the lock changes); when `.pikku/contract/.stamp` matches the
-lock the registry is not called. `tsc` and the tests need `.pikku/contract`; run
-`bun run sync-contract` first. `http.test.ts` says so when it is missing.
+builds or when a lock changes. Failure is a build error from `pikku all`, never a
+stale copy. `tsc` and the tests need the addon's generated `.pikku`; run
+`bun run pikku` in the package first.
 
-**Refresh:** `bun run sync-contract --update [version]` re-pins to the latest
-(or given) published version; commit the new `contract.lock.json`.
+**Refresh:** bump the range in `cloud-api.wiring.ts` and `pikku.uses.cloud`, run
+`pikku update`, commit both `pikku-addons.lock` files.
 
 **Gotcha:** the registry serves the published version, which can trail the
 controlplane's working tree; the CLI is typed against what is published.

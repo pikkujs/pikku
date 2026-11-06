@@ -205,7 +205,7 @@ export class CloudChangesStore implements ChangesStore {
   ) {}
 
   async list(status?: ChangeStatus[]) {
-    const { changes } = await this.rpc.invoke('listChanges', {
+    const { changes } = await this.rpc.invoke('cloud:listChanges', {
       projectId: this.projectId,
       status,
       includeDone: status?.includes('done'),
@@ -214,7 +214,7 @@ export class CloudChangesStore implements ChangesStore {
   }
 
   async get(changeId: string) {
-    const { change } = await this.rpc.invoke('getChange', {
+    const { change } = await this.rpc.invoke('cloud:getChange', {
       changeId,
       projectId: this.projectId,
     })
@@ -231,7 +231,7 @@ export class CloudChangesStore implements ChangesStore {
     changeId: string,
     status: 'open' | 'in_progress' | 'dismissed'
   ) {
-    const { change } = await this.rpc.invoke('setChangeStatus', {
+    const { change } = await this.rpc.invoke('cloud:setChangeStatus', {
       changeId,
       status,
     })
@@ -239,7 +239,7 @@ export class CloudChangesStore implements ChangesStore {
   }
 
   async complete(changeId: string, note?: string) {
-    const { change } = await this.rpc.invoke('completeChange', {
+    const { change } = await this.rpc.invoke('cloud:completeChange', {
       changeId,
       projectId: this.projectId,
       note,
@@ -248,7 +248,7 @@ export class CloudChangesStore implements ChangesStore {
   }
 
   async reply(changeId: string, body: string, authorName: string) {
-    await this.rpc.invoke('replyToChange', {
+    await this.rpc.invoke('cloud:replyToChange', {
       changeId,
       projectId: this.projectId,
       body,
@@ -380,16 +380,19 @@ export class CloudWishStore implements WishStore {
     const toWishes = (rows: StudioWish[]) =>
       rows.map(({ title, line, reaction }) => ({ title, line, reaction }))
     if (this.sourceDigest) {
-      const { aspirations } = await this.rpc.invoke('getProjectAspirations', {
-        projectId: this.projectId,
-        sourceDigest: this.sourceDigest,
-      })
+      const { aspirations } = await this.rpc.invoke(
+        'cloud:getProjectAspirations',
+        {
+          projectId: this.projectId,
+          sourceDigest: this.sourceDigest,
+        }
+      )
       if (aspirations.length)
         return { wishes: toWishes(aspirations), status: 'ready' }
       return { wishes: [], status: 'generating' }
     }
     const { aspirations, sourceDigest, status } = await this.rpc.invoke(
-      'ensureProjectAspirations',
+      'cloud:ensureProjectAspirations',
       { projectId: this.projectId }
     )
     this.sourceDigest = status === 'generating' ? sourceDigest : null
@@ -397,7 +400,7 @@ export class CloudWishStore implements WishStore {
   }
 
   async react(title: string, reaction: 'liked' | 'disliked' | null) {
-    await this.rpc.invoke('reactToProjectAspiration', {
+    await this.rpc.invoke('cloud:reactToProjectAspiration', {
       projectId: this.projectId,
       title,
       reaction,
@@ -429,7 +432,7 @@ const localModels = async (): Promise<ModelAccess | null> => {
 
 const cloudModels =
   (rpc: CloudRPC) => async (): Promise<ModelAccess | null> => ({
-    ...(await rpc.invoke('getDeveloperLiteLLMKey', {})),
+    ...(await rpc.invoke('cloud:getDeveloperLiteLLMKey', {})),
     model: process.env.PIKKU_STUDIO_MODEL ?? 'gemini-flash-lite-latest',
   })
 

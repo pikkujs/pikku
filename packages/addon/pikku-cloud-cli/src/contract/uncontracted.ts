@@ -12,7 +12,7 @@
  * - `getProjectAspirations`, `ensureProjectAspirations`, `reactToProjectAspiration`
  *   are cloud functions (served `cloud:`) added after the last published
  *   cloud-api (0.0.2), called by the pikku-console addon. TEMPORARY: publish a
- *   newer @pikkustudio/addon-cloud-api, run `bun run sync-contract`, delete them.
+ *   newer @pikkustudio/addon-cloud-api, bump `pikku.uses.cloud`, run `pikku update`, delete them.
  *
  * Keep this list to what the contract genuinely cannot cover. When either
  * source publishes an SDK, generate it like cloud-api and delete the entry.
@@ -28,7 +28,7 @@ type Aspiration = {
 }
 
 export type UncontractedRPCMap = {
-  ensureProjectAspirations: {
+  'cloud:ensureProjectAspirations': {
     input: { projectId: string; sandboxId?: string }
     output: {
       aspirations: Aspiration[]
@@ -36,11 +36,11 @@ export type UncontractedRPCMap = {
       status: 'ready' | 'generating'
     }
   }
-  getProjectAspirations: {
+  'cloud:getProjectAspirations': {
     input: { projectId: string; sourceDigest: string }
     output: { aspirations: Aspiration[] }
   }
-  reactToProjectAspiration: {
+  'cloud:reactToProjectAspiration': {
     input: {
       projectId: string
       title: string
@@ -87,24 +87,10 @@ export type UncontractedRPCMap = {
     }
     output: { findingId: string }
   }
-  createSandboxChange: {
+  'machine:createSandboxChange': {
     input: { title: string; body?: string; route?: string }
     output: {
       change: { changeId: string; shortId: string; title: string }
     }
   }
 }
-
-/**
- * The bare names callers use for these, and where each is served. Everything
- * else the CLI calls is a function of the contract and is served `cloud:`.
- */
-export const UNCONTRACTED_SERVED_AS = {
-  requestCliAuth: 'requestCliAuth',
-  pollCliAuth: 'pollCliAuth',
-  submitFinding: 'submitFinding',
-  createSandboxChange: 'machine:createSandboxChange',
-  ensureProjectAspirations: 'cloud:ensureProjectAspirations',
-  getProjectAspirations: 'cloud:getProjectAspirations',
-  reactToProjectAspiration: 'cloud:reactToProjectAspiration',
-} as const

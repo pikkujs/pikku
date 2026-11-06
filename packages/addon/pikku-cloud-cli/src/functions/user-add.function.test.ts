@@ -90,7 +90,7 @@ describe('cloud user add', () => {
     })
 
     assert.deepStrictEqual(invoked, [
-      { name: 'createStageOperatorToken', data: { stageId: 'stage_1' } },
+      { name: 'cloud:createStageOperatorToken', data: { stageId: 'stage_1' } },
     ])
     assert.strictEqual(requests.length, 1)
     const { url, init } = requests[0]!

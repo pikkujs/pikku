@@ -57,10 +57,10 @@ export const CloudSecretsSet = pikkuSessionlessFunc({
     // to the stage's worker at deploy time and was dropped there, so the value
     // sealed below can be opened by that worker and by nothing else — including
     // by the cloud process that stores it.
-    const key = await rpc.invoke('getStageSealingKey', { stageId })
+    const key = await rpc.invoke('cloud:getStageSealingKey', { stageId })
     const sealed = seal(key.publicKey, key.keyId, plaintext)
 
-    const result = await rpc.invoke('setStageSealedSecret', {
+    const result = await rpc.invoke('cloud:setStageSealedSecret', {
       stageId,
       name,
       sealedValue: serializeSealedValue(sealed),
