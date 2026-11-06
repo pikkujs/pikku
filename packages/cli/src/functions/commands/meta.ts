@@ -1,9 +1,18 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { getSchema } from '@pikku/core/schema'
+import { I18nService } from '@pikku/code-edit/i18n'
 import type { CodeEditOperation } from '@pikku/code-edit'
 import { existsSync, readdirSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { join, relative, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
+import { workspaceRoot } from '../../utils/workspace-root.js'
+import {
+  agentRunnerFacts,
+  formatProjectFacts,
+  frontendFacts,
+  readSources,
+  textFacts,
+} from './meta-facts.js'
 import {
   type DbTable,
   type MetaRow,
@@ -51,6 +60,50 @@ const frontendDirs = (config: any): string[] =>
 
 const readScreens = (config: any): MetaRow[] =>
   frontendDirs(config).flatMap((dir) => screenRows(dir, config.rootDir))
+
+/** The facts of `pikku meta context`, each part empty for a project without it. */
+const readProjectFacts = async (config: any, state: any): Promise<string[]> => {
+  const { rootDir } = config
+  const root = workspaceRoot(rootDir)
+  const apps = await new I18nService(root).listApps()
+  const dirs = [
+    ...new Set([
+      ...frontendDirs(config),
+      ...apps.map((app) => resolve(root, app.app)),
+    ]),
+  ]
+  const sources = new Map(dirs.map((dir) => [dir, readSources(dir)]))
+  const screens = readScreens(config)
+  const client = config.clientFiles ?? {}
+  const rpcFile = client.rpcWiringsFile
+  const reactQueryFile = client.reactQueryFile ?? rpcFile
+  const servicesFile = [...(state.singletonServicesFactories?.keys() ?? [])][0]
+  return formatProjectFacts({
+    agents: Object.keys(state.agents?.agentsMeta ?? {}),
+    models: config.models ?? {},
+    configFile: config.configFile
+      ? relative(rootDir, config.configFile)
+      : 'pikku.config.json',
+    runner: servicesFile ? agentRunnerFacts(servicesFile, rootDir) : null,
+    texts: apps.map((app) => {
+      const dir = resolve(root, app.app)
+      return textFacts(app, dir, root, sources.get(dir))
+    }),
+    frontends: dirs.flatMap((dir) => {
+      const facts = frontendFacts(
+        dir,
+        rootDir,
+        screens,
+        rpcFile,
+        sources.get(dir)
+      )
+      return facts ? [facts] : []
+    }),
+    generated: reactQueryFile
+      ? relative(rootDir, dirname(resolve(rootDir, reactQueryFile)))
+      : undefined,
+  })
+}
 
 const emailsDirOf = (config: any): string =>
   resolve(config.rootDir, config.emailTemplatesDir || 'emails')
@@ -529,6 +582,8 @@ export const pikkuMetaContext = pikkuSessionlessFunc<{ full?: boolean }, void>({
           emails: emailRows(emailsDirOf(config), config.rootDir).map(
             (row) => row.name
           ),
+          // Extras: a project they cannot be read from still gets its map.
+          facts: await readProjectFacts(config, state).catch(() => []),
         })
       )
       return
