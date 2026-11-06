@@ -14,8 +14,7 @@ import { declaredFeatureFlags } from '#pikku/scopes/pikku-flags-manifest.gen.js'
  * The cast is the point rather than a workaround: `setDeclared` is protected
  * because it is meant to be called by whoever knows the declarations, and here
  * that is the app rather than the store it was handed. A source that does not
- * take declarations — a provider like PostHog, whose own UI owns them — simply
- * does not have the method, and is left alone.
+ * take declarations simply does not have the method, and is left alone.
  */
 export function declareFlagsTo(source: FeatureFlagSource): void {
   const takesDeclarations = source as Partial<{

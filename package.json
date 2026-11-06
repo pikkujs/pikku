@@ -132,8 +132,11 @@
     "node": ">=24"
   },
   "lint-staged": {
-    "*.ts": [
+    "{!(recipes)/**/,recipes/!(starter-template)/**/,}*.ts": [
       "oxlint",
+      "prettier --write"
+    ],
+    "recipes/starter-template/**/*.ts": [
       "prettier --write"
     ],
     "packages/core/src/**/*.ts": [

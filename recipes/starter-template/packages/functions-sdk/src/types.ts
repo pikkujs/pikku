@@ -19,10 +19,12 @@ import type { FlattenedRPCMap } from '../../functions/.pikku/rpc/pikku-rpc-wirin
 export type { FlattenedRPCMap }
 
 /** The input type of an RPC — the shape a form must produce. */
-export type RPCInput<Name extends keyof FlattenedRPCMap> = FlattenedRPCMap[Name]['input']
+export type RPCInput<Name extends keyof FlattenedRPCMap> =
+  FlattenedRPCMap[Name]['input']
 
 /** The output type of an RPC — index into it for a row type. */
-export type RPCOutput<Name extends keyof FlattenedRPCMap> = FlattenedRPCMap[Name]['output']
+export type RPCOutput<Name extends keyof FlattenedRPCMap> =
+  FlattenedRPCMap[Name]['output']
 
 // The analytics registry, re-exported for the frontend. Same reach as the
 // `.pikku` import above, and type-only, so nothing backend ends up in the
@@ -30,3 +32,7 @@ export type RPCOutput<Name extends keyof FlattenedRPCMap> = FlattenedRPCMap[Name
 // the event name and its payload come from the one zod union the generated
 // ingest validates against, so a typo is a build error rather than a forked series.
 export type { AnalyticsEvent } from '../../functions/src/scaffold/analytics/analytics.gen.js'
+
+// The declared flags, for the same reason: a flag read in a screen by a misspelt
+// name is `false` forever, so it has to be a build error instead.
+export type { FeatureFlagName } from '../../functions/.pikku/scopes/pikku-flags.gen.js'

@@ -40,6 +40,7 @@
     "scenarios": true,
     "events": false,
     "analytics": { "originLock": false },
+    "featureFlags": true,
     "virtualUser": true
   },
   "scenarios": {
