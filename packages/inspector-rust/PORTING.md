@@ -250,14 +250,19 @@ byte-identical, key order included, 61/62 projects (the 62nd is online-shop, bel
 
 Known gaps:
 
-* **Zod conversion is Node only.** Go bundles the declaring modules with esbuild
-  and runs them in QuickJS (`schemas/zodjs`), falling back to Node. Rust has no
-  esbuild; `schemas::vendor::NodeConverter` runs `options.schemaConfig.vendorScript`
-  (`scripts/vendor-schemas.mjs`) like Go's fallback. It needs the project's
-  generated `.pikku/**/index.js` and installed `node_modules`: on a clean checkout
-  17 of the 35 projects with schemas fail with "Cannot find module .pikku/...".
-  Verified byte-identical on `verifiers/functions` (66/66 incl. 6 Zod) once `.pikku`
-  exists. Matching Go on a clean tree needs an esbuild (binary) + JS-engine port.
+* **Zod conversion runs the bundle under V8, not QuickJS.** Go bundles the declaring
+  modules with esbuild (stubbing every import that is not zod, not in the project and
+  not resolvable) and runs them in QuickJS, falling back to Node. Rust does the same
+  through Node: `schemas/zodjs.rs` spawns `schemas/zodjs-bundle.mjs`, which uses the
+  `esbuild` npm package (resolved from the project, then from the directory of
+  `schemaConfig.vendorScript`) with Go's plugin and runs the bundle in a bare
+  `vm` context (no `require`, no Node built-ins). The refusal rules (`findStub`,
+  coercion of a stub while loading) are Go's `runner.js`, included from the Go
+  package, and what it refuses goes to `NodeConverter` exactly as in Go. Without a
+  resolvable `esbuild` the whole request goes to the Node converter. Found by the
+  real-CLI parity run: a checkout whose workspace packages were not built
+  (`@pikku/better-auth/dist` missing) converted under Go and failed under Node alone.
+  Cost: Node must be on the PATH even when no schema needs the Node route.
 * **No on-disk schema cache** (`go-ts-schemas.json`): performance only.
 * **`TypeToTypeNode` has no Strada union reorder** (`tsjg/typenode.rs` uses tsrs's
   own order) until the tsutil typeorder/unionorder port lands; used for call

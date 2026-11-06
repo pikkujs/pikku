@@ -106,3 +106,31 @@ with invalid UTF-8, BOM and lone surrogates), every package for `collectSurface`
 `typeDiagnostics` with unsaved overlays. Use `--repo` with a checkout that has
 `node_modules` (type-checking resolves packages). Prints cases and differences
 per method; exits 1 on any difference.
+
+## Real-CLI parity (what `pikku all` actually sends)
+
+The synthetic request of `parity.ts` leaves out what the real CLI adds (scaffold
+files under `pikku/` and `.pikku/`, several passes with different options). Two
+scripts close that gap:
+
+```bash
+bun packages/inspector-rust/scripts/generate-parity.ts <goBin> <rsBin> --cli <pikku.js> \
+  [--corpus default|extra|tracked] [--projects ...] [--out dir]
+bun packages/inspector-rust/scripts/parity.ts <goBin> <rsBin> --captured <that out dir> [--corpus tracked]
+```
+
+`generate-parity.ts`, per project: `git clean` the project and its rootDir, run
+`pikku all` with the Go binary (cold), run it again over its output (warm), harvest every
+file the runs left behind, then the same for the Rust binary. `capture-wrapper.sh` is
+installed as `PIKKU_INSPECTOR_GO_BIN`/`_RS_BIN` and tees each request (`--stdin`, `serve`
+NDJSON, `helper <m>`) to `<out>/captured/<project>/<cold|warm>/<engine>/`. After each Go
+run, while the generated state exists, every captured request is replayed against both
+binaries and compared byte for byte (same normalisations as `parity.ts`). The trees
+are compared file by file; `.pikku/runs/` (timestamped run logs) is the only exclusion.
+`--corpus default` is templates/recipes/verifiers (64), `tracked` every
+`git ls-files '*pikku.config.json'`, `extra` the difference. The default outDir is
+used on purpose: the CLI's Zod step imports from `.pikku/` and `--outDir` elsewhere
+makes `pikku all` abort part-way, where file timing differs from run to run.
+
+`parity.ts --captured` replays stored requests against the checkout as it is now; it is
+only exact while the generated scaffold from the Go run still exists.
