@@ -1,7 +1,7 @@
 ---
 name: pikku-kysely
 description: >-
-  Kysely queries in Pikku functions (joins, aggregates, transactions), collapsing sequential awaits, @pikku/kysely setup. MongoDB/Redis is pikku-service-backends; pagination is pikku-list-query.
+  Kysely queries in Pikku functions (joins, aggregates, transactions), collapsing sequential awaits, @pikku/kysely setup. A non-SQL store is pikku-service-backends; pagination is pikku-list-query.
 installGroups: [core]
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: pikku-services
 description: >-
-  Pikku service layer: pikkuServices/pikkuWireServices DI, pikkuServerLifecycle, defineSecret, defineVariable, defineCredential, env vars, audit sink, logging. Redis, S3 etc. are pikku-service-backends.
+  Pikku service layer: pikkuServices/pikkuWireServices DI, pikkuServerLifecycle, defineSecret, defineVariable, defineCredential, env vars, audit sink, logging. are pikku-service-backends.
 installGroups: [core]
 ---
 
@@ -40,7 +40,7 @@ service's paths and size limit; omitting it does not disable it.
 | Reading config — secrets, env vars, or a per-user API credential             | `references/config.md`                                       |
 | Recording audit events, or choosing a sink                                   | `references/audit.md` and `references/audit-wire-service.md` |
 | Setting up structured logging                                                | `references/pino.md`                                         |
-| Reaching for Redis, S3, SQS, MongoDB or a schema backend                     | `pikku-service-backends`                                     |
+| Choosing what sits behind a core service                                     | `pikku-service-backends`                                     |
 | Sending outgoing webhooks to a customer's endpoint                           | `pikku-webhook`                                              |
 
 ## Where a value may be read
@@ -78,8 +78,7 @@ as`, `!`, `<X>`) hides the call from the inspector,
   identity; an `insertInto('audit_log')` of your own gets none of that, and a
   write inside a transaction that later rolls back records nothing.
 - **Do not reach for `node:os` (`tmpdir()`, `homedir()`) or hand-roll `mkdtemp`
-  to get a scratch file.** `node:os` is missing from the Cloudflare Workers
-  runtime, so one import fails the whole worker at upload, even if the code path
+  to get a scratch file.** `node:os` is missing from some runtimes, so one import fails the whole worker at upload, even if the code path
   never runs there. `TemporaryFileService` (`@pikku/core/services/temporary-file-service`)
   is a **wire service**, not a singleton: build it in `pikkuWireServices` with
   `new TemporaryFileService(singletonServices.logger, tempDir).createInstance()`

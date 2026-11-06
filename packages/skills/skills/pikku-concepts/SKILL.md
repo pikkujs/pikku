@@ -71,13 +71,13 @@ skill and `pikku meta --json`, and do not guess at names the doc would have give
 ```text
 pikkuFunc (pure business logic)
     │
-    ├── wireHTTP        → Express, Fastify, Next.js, Lambda, Cloudflare...
+    ├── wireHTTP        → HTTP routes
     ├── wireChannel     → WebSocket (real-time)
-    ├── wireQueueWorker → BullMQ, PgBoss (async jobs)
+    ├── wireQueueWorker → async jobs
     ├── wireScheduler   → Cron (scheduled tasks)
     ├── mcp: true       → Model Context Protocol (AI tools; an option on the function, no wire call)
     ├── wireCLI         → CLI commands
-    ├── wireTrigger     → Event-driven (Redis pub/sub, PG LISTEN/NOTIFY)
+    ├── wireTrigger     → event-driven
     ├── pikkuAgent    → AI agents / chatbots
     ├── pikkuWorkflow   → Multi-step durable workflows
     └── wire.rpc        → Internal function-to-function calls
@@ -160,7 +160,7 @@ Read `references/language.md` before touching any of the three.
 
 ## Available Packages
 
-Pikku ships runtime adapters (`@pikku/express`, `@pikku/fastify`, `@pikku/next`, `@pikku/lambda`, `@pikku/cloudflare`, `@pikku/uws`, `@pikku/modelcontextprotocol`, ...) and service packages (`@pikku/jose`, `@pikku/schema-ajv`, `@pikku/pino`, `@pikku/kysely`, `@pikku/redis`, `@pikku/queue-bullmq`, `@pikku/queue-pg-boss`, ...). For the full list with use cases, read `references/packages.md`.
+Pikku ships runtime adapters and service packages. For the full list with use cases, read `references/packages.md`.
 
 ## Where the rest lives
 
