@@ -26,6 +26,12 @@ lockfile's time.
 share one loop and report diagnostics the same way. In-process, the logger's
 diagnostics also never cleared between passes.
 
+What counts as a frontend source is what `tsc` reads, not what people edit:
+compiled `.js` under allowJs and `*.gen.ts`. Leaving those out made the status
+disagree with a cold `tsc` after `paraglide` recompiled, because neither the
+watcher nor `pikku check` noticed the file. `*.gen.*` stays skipped in the codegen
+directories only, where counting it would make each pass start the next.
+
 Whether a file counts is judged below the watched root only. A project under
 `~/.pikkustudio/local` has a dot directory above it, and a rule applied to the
 whole path ignores every file in it.

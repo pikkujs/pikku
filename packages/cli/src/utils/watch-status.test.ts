@@ -87,6 +87,23 @@ describe('which files count', () => {
     }
   })
 
+  test('compiled and generated frontend files count, as tsc reads them', () => {
+    for (const path of [
+      '/home/me/.studio/app/apps/web/src/paraglide/messages/_index.js',
+      '/home/me/.studio/app/apps/web/src/routeTree.gen.ts',
+      '/home/me/.studio/app/apps/web/build/plugin.ts',
+    ]) {
+      assert.equal(classifyChange(path, dirs), 'typecheck', path)
+    }
+  })
+
+  test('a message file is its own kind of change', () => {
+    assert.equal(
+      classifyChange('/home/me/.studio/app/apps/web/messages/en.json', dirs),
+      'messages'
+    )
+  })
+
   test('a frontend file tsc cannot see does not trigger a run', () => {
     assert.equal(
       classifyChange('/home/me/.studio/app/apps/web/logo.png', dirs),
