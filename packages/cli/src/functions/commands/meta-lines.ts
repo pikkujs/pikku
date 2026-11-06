@@ -256,7 +256,7 @@ export const dbColumnRows = (table: DbTable): MetaRow[] =>
 const SOURCE_EXTENSIONS = ['', '.tsx', '.ts', '/index.tsx', '/index.ts']
 
 /** A local import as a file on disk; a package import resolves to nothing. */
-const resolveLocalImport = (
+export const resolveLocalImport = (
   specifier: string,
   fromFile: string,
   appDir: string
@@ -274,26 +274,37 @@ const resolveLocalImport = (
   return null
 }
 
-const RPC_CALL =
-  /\b(?:usePikku\w*|invoke|startWorkflow|runWorkflow|\w*[rR]pc\w*)(?:<[^>()]*>)?\(\s*['"`]([\w:.-]+)['"`]/g
 const IMPORT_FROM = /(?:from\s+|import\()\s*['"]([^'"]+)['"]/g
 const MAX_FILES_PER_SCREEN = 60
 
-/** Every RPC a file reaches, following its local imports so a page's components count. */
-export const rpcsReachedFrom = (entry: string, appDir: string): string[] => {
-  const seen = new Set<string>()
-  const rpcs = new Set<string>()
+/** Every source a file reaches through its local imports, the file first. */
+export const sourcesReachedFrom = (
+  entry: string,
+  appDir: string
+): Map<string, string> => {
+  const seen = new Map<string, string>()
   const queue = [entry]
   while (queue.length > 0 && seen.size < MAX_FILES_PER_SCREEN) {
     const file = queue.shift()!
     if (seen.has(file)) continue
-    seen.add(file)
     const source = readFileSync(file, 'utf8')
-    for (const [, name] of source.matchAll(RPC_CALL)) rpcs.add(name!)
+    seen.set(file, source)
     for (const [, specifier] of source.matchAll(IMPORT_FROM)) {
       const next = resolveLocalImport(specifier!, file, appDir)
       if (next) queue.push(next)
     }
+  }
+  return seen
+}
+
+const RPC_CALL =
+  /\b(?:usePikku\w*|invoke|startWorkflow|runWorkflow|\w*[rR]pc\w*)(?:<[^>()]*>)?\(\s*['"`]([\w:.-]+)['"`]/g
+
+/** Every RPC a file reaches, following its local imports so a page's components count. */
+export const rpcsReachedFrom = (entry: string, appDir: string): string[] => {
+  const rpcs = new Set<string>()
+  for (const source of sourcesReachedFrom(entry, appDir).values()) {
+    for (const [, name] of source.matchAll(RPC_CALL)) rpcs.add(name!)
   }
   return [...rpcs].sort()
 }
@@ -447,6 +458,8 @@ export type CompactContext = {
   wires: Record<string, number>
   tables: string[]
   screens: MetaRow[]
+  /** Lines about this project that are not in its meta: see meta-facts. */
+  facts?: string[]
   emails: string[]
 }
 
@@ -470,6 +483,7 @@ export const formatCompactContext = (context: CompactContext): string => {
     ...namesLine('middleware', context.middleware),
     ...namesLine('emails', context.emails),
     ...(wires ? [`wires: ${wires}`] : []),
+    ...(context.facts ?? []),
     ...(context.screens.length > 0
       ? [
           'screens:',
