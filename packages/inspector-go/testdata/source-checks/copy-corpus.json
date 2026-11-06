@@ -1007,12 +1007,6 @@
     "a": true
   },
   {
-    "s": "Each persona now gets a row rather than a bigger budget. `virtualUserSchedule`",
-    "l": true,
-    "e": true,
-    "a": true
-  },
-  {
     "s": "Installing an addon from the console detected the package manager by looking",
     "l": true,
     "e": true,
@@ -1190,12 +1184,6 @@
     "a": true
   },
   {
-    "s": "actors/secret are passed in rather than read from env — how env is spelled is a",
-    "l": true,
-    "e": true,
-    "a": true
-  },
-  {
     "s": "`#pikku/credentials` that resolved but was missing `defineCredential`.",
     "l": true,
     "e": true,
@@ -1216,12 +1204,6 @@
   },
   {
     "s": "  build error (`PKU155`) rather than an agent that quietly grades nothing forever.",
-    "l": true,
-    "e": true,
-    "a": true
-  },
-  {
-    "s": "  `pikku persona run` could already turn a declared persona loose on a running",
     "l": true,
     "e": true,
     "a": true
@@ -1392,12 +1374,6 @@
   },
   {
     "s": "  The endpoint is not gated as a whole.",
-    "l": true,
-    "e": true,
-    "a": true
-  },
-  {
-    "s": "Fabric operator credentials, a persona signs in at `/auth/sign-in/fabric` and",
     "l": true,
     "e": true,
     "a": true
@@ -3172,12 +3148,6 @@
     "a": true
   },
   {
-    "s": "  `pikku persona run` built a dev agent runner and handed it to the virtual-user",
-    "l": true,
-    "e": false,
-    "a": true
-  },
-  {
     "s": "  their own `scopes`: session-required by construction, and the deciding function",
     "l": true,
     "e": false,
@@ -3211,12 +3181,6 @@
   { "s": "  - @pikku/core@0.12.80", "l": true, "e": false, "a": true },
   { "s": "- @pikku/skills@0.12.6", "l": true, "e": false, "a": true },
   { "s": "  - @pikku/inspector@0.12.52", "l": true, "e": false, "a": true },
-  {
-    "s": "rather than declared, so a persona finds the specialists its roles unlock and",
-    "l": true,
-    "e": false,
-    "a": true
-  },
   {
     "s": "  The MCP metas are keyed by wiring rather than by function, so a scenario wired as an MCP tool, resource or prompt was the one id that still reached the manifest after the function and workflow filters — as an endpoint on the gateway plus a gateway dependency on a unit that was never emitted.",
     "l": true,
@@ -5425,12 +5389,6 @@
   { "s": "      \"param\": {", "l": false, "e": false, "a": false },
   { "s": "unaffected.", "l": false, "e": false, "a": false },
   { "s": "  ```json", "l": false, "e": false, "a": false },
-  {
-    "s": "DROP INDEX idx_virtual_user_run_persona;",
-    "l": false,
-    "e": false,
-    "a": false
-  },
   {
     "s": "## The router: `pikku changes next`",
     "l": false,
