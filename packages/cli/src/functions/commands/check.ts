@@ -29,7 +29,8 @@ export type CheckResult = {
 }
 
 const DEFAULT_TIMEOUT_SECONDS = 120
-const MAX_DIAGNOSTICS_SHOWN = 30
+/** All of it fits a `tail -30`, and the causes print first. */
+const MAX_LINES = 30
 
 type CliConfig = {
   rootDir: string
@@ -184,11 +185,18 @@ export const renderCheck = (
     result.ok
       ? `${added('✓')} ok ${from}`
       : `${removed('✗')} ${blocking.length} problem${blocking.length === 1 ? '' : 's'} ${from}`,
-    ...blocking.slice(0, MAX_DIAGNOSTICS_SHOWN).map(describe),
   ]
-  if (blocking.length > MAX_DIAGNOSTICS_SHOWN) {
+  let shown = 0
+  for (const diagnostic of blocking) {
+    const text = describe(diagnostic).split('\n')
+    const room = MAX_LINES - 1 - lines.length
+    if (text.length > room && shown > 0) break
+    lines.push(...text.slice(0, room))
+    shown++
+  }
+  if (shown < blocking.length) {
     lines.push(
-      `  … and ${blocking.length - MAX_DIAGNOSTICS_SHOWN} more (--json lists them all)`
+      `  … and ${blocking.length - shown} more (--json lists them all)`
     )
   }
   process.stdout.write(`${lines.join('\n')}\n`)

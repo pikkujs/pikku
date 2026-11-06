@@ -9,6 +9,7 @@ import type {
   DiagnosticSeverity,
   CodedDiagnostic,
 } from '@pikku/inspector'
+import { LOGGED_ERROR_CODE } from '../utils/codegen-failure.js'
 
 // Compact one-line wordmark — the old multi-line ASCII art got cropped in
 // short/narrow AI-agent panes. Coloured directly (not via the blue `info`
@@ -36,6 +37,7 @@ export class CLILogger implements Logger {
   // from the rest so a superseded pass can be dropped without touching what a
   // generator or a command reported outside one.
   private validationDiagnostics: CodedDiagnostic[] = []
+  private loggedErrors: CodedDiagnostic[] = []
   private inValidationPass = false
   // Severities that should fail the build. Critical always blocks; error/warn
   // are opt-in via --fail-on-error / --fail-on-warn.
@@ -194,6 +196,7 @@ export class CLILogger implements Logger {
     ...__meta: { [K in keyof A]: Safe<A[K]> }
   ) {
     if (this.level > LogLevel.error) return
+    this.recordLoggedError(message)
     if (message instanceof Error) {
       // An expected failure (a deliberate PikkuError, e.g. a build gate
       // tripping) — its message says everything, so don't dump the stack.
@@ -297,7 +300,27 @@ export class CLILogger implements Logger {
   private persistDiagnostics() {
     const file = process.env.PIKKU_DIAGNOSTICS_FILE
     if (!file) return
-    writeFileSync(file, JSON.stringify(this.trackedDiagnostics()))
+    writeFileSync(
+      file,
+      JSON.stringify([...this.trackedDiagnostics(), ...this.loggedErrors])
+    )
+  }
+
+  /**
+   * A failed run has to say why, and most of its reasons are uncoded errors that
+   * nothing tells apart from a warning once they are on stderr.
+   */
+  private recordLoggedError(message: unknown) {
+    if (!process.env.PIKKU_DIAGNOSTICS_FILE) return
+    this.loggedErrors.push({
+      severity: 'error',
+      code: LOGGED_ERROR_CODE as ErrorCode,
+      message:
+        message instanceof Error
+          ? message.message
+          : this.normalizeMessage(message),
+    })
+    this.persistDiagnostics()
   }
 
   hasCriticalErrors(): boolean {
