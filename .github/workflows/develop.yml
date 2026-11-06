@@ -465,7 +465,7 @@ jobs:
     name: Native desktop (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
-    needs: [build, native-gate, native-web]
+    needs: [build, native-gate, native-web, inspector-go-build]
     if: ${{ needs.native-gate.outputs.run == 'true' }}
     continue-on-error: ${{ matrix.optional == true }}
     strategy:
@@ -508,8 +508,12 @@ jobs:
           path: e2e/packages/web/src-tauri/target/release/bundle
           if-no-files-found: error
           retention-days: 7
+      # The macOS row runs the e2e server there, so it needs the darwin-arm64 build, not the
+      # Linux one the build artifact carries.
       - if: ${{ matrix.smoke }}
         uses: ./.github/actions/setup
+        with:
+          download-inspector-go: 'true'
       - if: ${{ matrix.smoke }}
         uses: ./.github/actions/e2e-backend
       - name: Launch the app and wait for it to call home
@@ -597,7 +601,7 @@ jobs:
     name: Native iOS (simulator)
     runs-on: macos-latest
     timeout-minutes: 60
-    needs: [build, native-gate, native-web]
+    needs: [build, native-gate, native-web, inspector-go-build]
     if: ${{ needs.native-gate.outputs.run == 'true' }}
     steps:
       - uses: actions/checkout@v7
@@ -629,6 +633,8 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - uses: ./.github/actions/setup
+        with:
+          download-inspector-go: 'true'
       - uses: ./.github/actions/e2e-backend
       # The simulator shares the Mac's network, so localhost:4077 is the server.
       - name: Install, launch and wait for it to call home
