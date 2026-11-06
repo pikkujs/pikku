@@ -9,6 +9,16 @@ parity is proven. Read [PORTING.md](./PORTING.md) before porting anything.
 
 Package `pikku-inspect-rs`, binary `pikku-inspect-rs`, library `pikku_inspect`.
 
+## Using it
+
+Select the engine with `PIKKU_INSPECTOR=rs`, `pikku <command> --inspector rs` or
+`"inspector": "rs"` in `pikku.config.json`; `PIKKU_INSPECTOR_RS_BIN` points at a
+binary you built (`cargo build --release`, Rust 1.99.1). CI builds it for
+linux-x64, linux-arm64 and darwin-arm64, ships it in `@pikku/inspector-go`
+under `prebuilt/<platform>-<arch>/pikku-inspect-rs`, and compares it with Go on
+every project (`scripts/parity.ts`). Why it exists and what is not proven:
+[knowledge/decisions](knowledge/decisions/index.md).
+
 ## Status
 
 This is the foundation: protocol, state, JSON encoding, diagnostics, program
