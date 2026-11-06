@@ -91,11 +91,16 @@ const RUN_RECORDS_DIR = 'runs'
 // The remote addon sync writes SDKs into .pikku/remote before anything is
 // generated, so its presence says nothing about whether codegen has run.
 const REMOTE_SDK_DIR = 'remote'
+// Written by a watcher that may outlive the tree it describes.
+const WATCH_STATUS_FILE = 'status.json'
 
 const hasGeneratedOutput = (outDir: string): boolean =>
   existsSync(outDir) &&
   readdirSync(outDir).some(
-    (entry) => entry !== RUN_RECORDS_DIR && entry !== REMOTE_SDK_DIR
+    (entry) =>
+      entry !== RUN_RECORDS_DIR &&
+      entry !== REMOTE_SDK_DIR &&
+      entry !== WATCH_STATUS_FILE
   )
 
 export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
