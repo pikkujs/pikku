@@ -6,6 +6,7 @@
 //! governance, sortjs, types.
 
 pub mod typeorder;
+pub mod unionorder;
 
 use tsrs_ast::Node;
 use tsrs_core::P;

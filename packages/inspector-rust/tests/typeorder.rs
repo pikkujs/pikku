@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use pikku_inspect::program::{self, Options};
-use pikku_inspect::tsutil::{typeorder, walk};
+use pikku_inspect::tsutil::{typeorder, unionorder, walk};
 use tsrs_ast::Kind;
 use tsrs_checker::TypeFormatFlags;
 
@@ -75,7 +75,7 @@ fn type_to_string_order() {
     ];
     let mut failures = Vec::new();
     for (name, want, tsgo) in cases {
-        let got = typeorder::type_to_string(c, types[*name], flags);
+        let got = unionorder::type_to_string(c, types[*name], flags);
         if got != *want {
             failures.push(format!("{name}: got {got}\n      want {want}"));
         }
