@@ -1,5 +1,5 @@
 import { hasScopes } from '@pikku/core/scope'
-import { pikkuPermission } from '#pikku/auth'
+import { pikkuAuth, pikkuPermission } from '#pikku/auth'
 import { currentCompanyId } from './lib/tenant.js'
 
 /**
@@ -40,7 +40,6 @@ export const isAssignedTechnician = pikkuPermission(
  * to unstick the board. `hasScopes` applies the same parent-grant rules the
  * `scopes` field does, so the dispatcher's `jobs` grant satisfies it.
  */
-export const canDispatch = pikkuPermission(
-  async (_services, _data, { session }) =>
-    hasScopes(['jobs:assign'], session?.scopes)
+export const canDispatch = pikkuAuth(async (_services, session) =>
+  hasScopes(['jobs:assign'], session.scopes)
 )
