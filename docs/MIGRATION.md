@@ -110,6 +110,10 @@ To find the affected functions, run `pikku all` and look for `PKU563`.
 
 A string `disabled` on a wiring (`wireHTTP({ disabled: 'reason', ... })`) now disables it, the same way `disabled: true` already did.
 
+### `pikku meta context` prints a short map
+
+`pikku meta context` now prints a short plain-text map of the project, one line per function. Anything reading its output should add `--json` or `--full`, which still print the `meta-context.v1` document unchanged.
+
 ### A cast around a service factory fails the build
 
 A factory export wrapped in a cast (`as`, `<T>`) or a non-null assertion (`!`) now fails `pikku all` with `PKU564`. `satisfies` and parentheses are not casts: a factory inside them is read through and registered as before. That covers `pikkuServices`, `pikkuAddonServices`, `pikkuWireServices`, `pikkuAddonWireServices`, `pikkuConfig`, `pikkuAddonConfig` and `pikkuServerLifecycle`:
