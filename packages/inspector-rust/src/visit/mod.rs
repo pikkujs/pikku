@@ -15,8 +15,10 @@
 //! the explicit list in [`register_groups`]. Registry rules are Go's: two
 //! visitors with the same phase and order, or the same name, panic.
 
-use tsrs_ast::{Node, SourceFile};
-use tsrs_checker::Checker;
+use std::collections::HashMap;
+
+use tsrs_ast::{Node, SourceFile, Symbol};
+use tsrs_checker::{Checker, Type};
 use tsrs_core::P;
 
 use crate::diag::Logger;
@@ -24,6 +26,16 @@ use crate::state::State;
 use crate::typesmap::TypesMap;
 
 pub mod order;
+pub mod usage_sweeps;
+pub mod util_callee;
+pub mod util_channel_cli;
+pub mod util_middleware;
+pub mod util_names;
+pub mod util_props;
+pub mod util_schema;
+pub mod util_shared;
+pub mod util_types;
+pub mod util_wire_meta;
 
 /// Go `visit.Abort`: a TS `throw` inside a visitor. It ends the inspection with
 /// an error; [`abort`] raises it and `analyze::run` turns it into a
@@ -97,12 +109,35 @@ pub struct Context<'a> {
     pub root_dir: String,
     /// The file being swept; `None` outside a sweep.
     pub source_file: Option<P<SourceFile>>,
+
+    /// `typesLookup` (InspectorState.typesLookup): live checker types, read only
+    /// during analysis. What finalize needs from it is serialized as
+    /// `state.coreTypeProperties` instead.
+    pub types_lookup: HashMap<String, Vec<P<Type>>>,
+    /// The core interfaces a core-type visitor recorded (Go `coreTypes`).
+    pub core_types: Vec<CoreType>,
+}
+
+/// Go `coreType`: a core interface's name and its symbol.
+#[derive(Clone, Debug)]
+pub struct CoreType {
+    pub name: String,
+    pub sym: P<Symbol>,
 }
 
 impl<'a> Context<'a> {
     pub fn new(checker: &'a mut Checker, state: &'a mut State, log: &'a mut Logger, options: Options) -> Context<'a> {
         let root_dir = state.root_dir.clone();
-        Context { checker, state, log, options, root_dir, source_file: None }
+        Context {
+            checker,
+            state,
+            log,
+            options,
+            root_dir,
+            source_file: None,
+            types_lookup: HashMap::new(),
+            core_types: Vec::new(),
+        }
     }
 
     pub fn types_map(&mut self) -> &mut TypesMap {
@@ -180,9 +215,6 @@ impl Context<'_> {
         }
         self.source_file = None;
     }
-
-    /// Go `SweepUsage` (usage_sweeps.go). Not ported.
-    pub fn sweep_usage(&mut self, _files: &[P<SourceFile>]) {}
 
     /// Go `LoadAddonFunctionsMeta` (addon_load.go). Not ported.
     pub fn load_addon_functions_meta(&mut self) {}

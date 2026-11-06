@@ -110,3 +110,107 @@ mod tests {
 pub fn is_as_expression(n: P<Node>) -> bool {
     n.kind() == Kind::AsExpression
 }
+
+/// `path.Clean` for slash paths (Go `filepath.Clean` on Unix).
+pub fn clean_path(p: &str) -> String {
+    if p.is_empty() {
+        return ".".into();
+    }
+    let rooted = p.starts_with('/');
+    let mut out: Vec<&str> = Vec::new();
+    for part in p.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                if out.last().is_some_and(|l| *l != "..") {
+                    out.pop();
+                } else if !rooted {
+                    out.push("..");
+                }
+            }
+            _ => out.push(part),
+        }
+    }
+    let joined = out.join("/");
+    match (rooted, joined.is_empty()) {
+        (true, _) => format!("/{joined}"),
+        (false, true) => ".".into(),
+        (false, false) => joined,
+    }
+}
+
+/// `filepath.Rel(base, target)`; `None` where Go returns an error.
+pub fn rel_path(base: &str, target: &str) -> Option<String> {
+    let b = clean_path(base);
+    let t = clean_path(target);
+    if b == t {
+        return Some(".".into());
+    }
+    if b.starts_with('/') != t.starts_with('/') {
+        return None;
+    }
+    let bc: Vec<&str> = b.split('/').filter(|s| !s.is_empty() && *s != ".").collect();
+    let tc: Vec<&str> = t.split('/').filter(|s| !s.is_empty() && *s != ".").collect();
+    let mut i = 0;
+    while i < bc.len() && i < tc.len() && bc[i] == tc[i] {
+        i += 1;
+    }
+    if bc[i..].contains(&"..") {
+        return None;
+    }
+    let mut parts: Vec<&str> = vec![".."; bc.len() - i];
+    parts.extend_from_slice(&tc[i..]);
+    Some(parts.join("/"))
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+
+    #[test]
+    fn rel() {
+        assert_eq!(rel_path("/a/b", "/a/b/c/d.ts").unwrap(), "c/d.ts");
+        assert_eq!(rel_path("/a/b", "/a/x.ts").unwrap(), "../x.ts");
+        assert_eq!(rel_path("/a/b", "/a/b").unwrap(), ".");
+        assert_eq!(rel_path("/a/b/", "/a//b/c").unwrap(), "c");
+        assert!(rel_path("a", "/b").is_none());
+    }
+}
+
+/// Go `filepath.Dir` for slash paths.
+pub fn dir_path(p: &str) -> String {
+    match p.rfind('/') {
+        None => ".".into(),
+        Some(i) => {
+            let d = clean_path(&p[..=i]);
+            if d.is_empty() { ".".into() } else { d }
+        }
+    }
+}
+
+/// Go `filepath.Base` for slash paths.
+pub fn base_path(p: &str) -> String {
+    if p.is_empty() {
+        return ".".into();
+    }
+    let t = p.trim_end_matches('/');
+    if t.is_empty() {
+        return "/".into();
+    }
+    t.rsplit('/').next().unwrap().to_string()
+}
+
+#[cfg(test)]
+mod dir_tests {
+    use super::*;
+
+    #[test]
+    fn dir_and_base() {
+        assert_eq!(dir_path("/a/b/c.ts"), "/a/b");
+        assert_eq!(dir_path("/a"), "/");
+        assert_eq!(dir_path("a"), ".");
+        assert_eq!(base_path("/a/b/c.ts"), "c.ts");
+        assert_eq!(base_path("/a/b/"), "b");
+        assert_eq!(base_path("/"), "/");
+    }
+}
