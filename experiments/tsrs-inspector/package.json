@@ -1,0 +1,13 @@
+{
+  "name": "tsrs-inspector-experiment",
+  "private": true,
+  "type": "module",
+  "description": "Experiment: how much of pikku-inspect's function discovery can be rebuilt on tsrs (a Rust port of the TypeScript 7 compiler) through its Node API. Not published, not wired into the CLI.",
+  "scripts": {
+    "discover": "node --experimental-strip-types src/run.ts",
+    "score": "node --experimental-strip-types src/score.ts"
+  },
+  "dependencies": {
+    "tsrs": "0.22.0-ts7.1.0-beta"
+  }
+}
