@@ -26,7 +26,7 @@
     "tsc": "tsc --noEmit",
     "pikku": "pikku",
     "test": "pikku && tsc --noEmit && node --import tsx --test src/tracing.assert.ts",
-    "test:distributed": "pikku && tsc --noEmit && node --import tsx --test src/distributed/distributed.assert.ts",
+    "test:distributed": "pikku && tsc --noEmit && bash scripts/run-distributed.sh",
     "test:queue-identity": "npx tsx src/queue-identity.runner.ts"
   }
 }
