@@ -57,8 +57,13 @@ A list that fetches everything and then filters in JS is a bug, not a permission
 
 Put them in `src/permissions/`, one file per entity, and reuse one checker across every function on that entity.
 
-- **`pikkuPermission`** is data-aware: it gets the input, so it can load the row the caller named and compare its owner to the session.
-- **`pikkuAuth`** is session-only: no input needed. Use it for role and flag gates.
+- **`pikkuAuth`** when the answer depends only on who is calling: role, tier, flag. It gets the session, never the input.
+- **`pikkuPermission`** when it depends on what they asked for. It gets the input, loads the row named and compares its owner to the session. If it never reads the input, it should be a `pikkuAuth`.
+
+"Only their own X" is both, and a query filter alone never counts:
+
+- Every function that takes an id gets a `pikkuPermission`, even if the query also filters. A 404 thrown from the body is the same check hidden.
+- A list has no id to check: keep its `pikkuAuth` and filter the query on the session.
 
 ## OR and AND
 
