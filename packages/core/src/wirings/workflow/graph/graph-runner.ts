@@ -1207,13 +1207,11 @@ async function executeGraphNodeInline(
     )
   }
 
-  // The loop's budget is in attempts; a node's `retries` are on top of the first.
-  const attempts = (node.retries ?? 0) + 1
   try {
     await runInlineRetryLoop(
       workflowService,
       stepState,
-      attempts,
+      node.retries ?? 0,
       node.retryDelay,
       runNode,
       async (error) => {

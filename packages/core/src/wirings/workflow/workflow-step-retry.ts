@@ -17,6 +17,9 @@ export type StepRetryStore = {
  * to the orchestrator between attempts. For an inline run there is nothing to
  * hand it back to. Nothing ends the run between attempts either, so a forward
  * step passes `beforeAttempt` to stop once the run has been cancelled.
+ *
+ * `retries` counts what follows the first attempt, as it does on the queue, so
+ * a step gets `retries + 1` attempts.
  */
 export const runInlineRetryLoop = async (
   store: StepRetryStore,
@@ -39,7 +42,7 @@ export const runInlineRetryLoop = async (
 
       await store.setStepError(currentStepState.stepId, error)
 
-      if (currentStepState.attemptCount >= retries) {
+      if (currentStepState.attemptCount > retries) {
         throw error
       }
       currentStepState = await store.createRetryAttempt(

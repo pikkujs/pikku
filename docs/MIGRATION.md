@@ -89,6 +89,17 @@ Check a worker that relied on running with no session, and any `pikkuUserId` you
 - A custom `KyselyWorkflowService` subclass needs nothing. Any other store overrides `findScheduledSteps` to have its sleeps recovered.
 - `CoreConfig.workflow` is now `Partial<WorkflowServiceConfig>`. No schema change.
 
+### Inline workflow steps get one more attempt
+
+`retries: N` now means N+1 attempts everywhere, which is what a queued step always did. An inline step used to get N attempts, or one when `retries` was 0, so `retries: 1` never retried.
+
+- This covers steps in an inline run, compensation steps run inline, RPC steps that are not `workflowQueued`, and function steps (`workflow.do('Name', fn, options)`) in a queued run. Scenario steps with `retries` set are covered too.
+- `retries: 0` still means one attempt. Inline graph nodes already counted this way and do not change.
+- Defaults do not change, so a step that declares no retries gets one more attempt too: 6 instead of 5 with `DEFAULT_STEP_RETRIES`, or your `workflow.retries` config plus one for a function step.
+- A step that failed once on `retries: 1` may now succeed, and its side effects run one more time. Make them idempotent on `invocationId`, and lower `retries` by one wherever you counted on the old total.
+
+To find affected code, search for `retries:` in your workflows.
+
 ### `pikku verify` fails on an app function nothing uses
 
 An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked. Workflows are checked too: a workflow that is not wired, exposed or started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step) is reported.

@@ -1714,7 +1714,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       } catch (error: any) {
         await this.setStepError(currentStepState.stepId, error)
 
-        if (currentStepState.attemptCount < retries) {
+        if (currentStepState.attemptCount <= retries) {
           await this.createRetryAttempt(currentStepState.stepId, 'pending')
 
           await this.scheduleOrchestratorRetry(runId, retryDelay)
