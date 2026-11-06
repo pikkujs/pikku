@@ -30,6 +30,8 @@ export type WatchStatus = {
   typecheckDirs: string[]
   /** Frontend route directories and trees; older status files have none. */
   routePaths?: string[]
+  /** It reruns on SIGUSR2, which would end a watcher that doesn't handle it. */
+  wakes?: boolean
   diagnostics: CheckDiagnostic[]
   durationMs?: number
   typecheck?: { durationMs: number; rssBytes: number }
@@ -125,38 +127,45 @@ export const classifyChange = (
 export const isIgnoredByWatcher = (path: string, dirs: WatchedDirs): boolean =>
   isSkippedBelow(path, dirs)
 
-/** A file saved after `since`, if there is one. */
-export const findChangeSince = (
+export type FileChange = { path: string; mtimeMs: number }
+
+/** Every file saved after `since`. */
+export const findChangesSince = (
   dirs: WatchedDirs,
   since: number
-): string | null => {
-  const visit = (dir: string): string | null => {
+): FileChange[] => {
+  const changes: FileChange[] = []
+  const visit = (dir: string) => {
     let entries
     try {
       entries = readdirSync(dir, { withFileTypes: true })
     } catch {
-      return null
+      return
     }
     for (const entry of entries) {
       const path = join(dir, entry.name)
       if (isIgnoredByWatcher(path, dirs)) continue
       if (entry.isDirectory()) {
-        const found = visit(path)
-        if (found) return found
+        visit(path)
       } else if (classifyChange(path, dirs)) {
         try {
-          if (statSync(path).mtimeMs > since) return path
+          const { mtimeMs } = statSync(path)
+          if (mtimeMs > since) changes.push({ path, mtimeMs })
         } catch {}
       }
     }
-    return null
   }
   for (const dir of new Set([...dirs.codegenDirs, ...dirs.typecheckDirs])) {
-    const found = visit(dir)
-    if (found) return found
+    visit(dir)
   }
-  return null
+  return changes
 }
+
+/** A file saved after `since`, if there is one. */
+export const findChangeSince = (
+  dirs: WatchedDirs,
+  since: number
+): string | null => findChangesSince(dirs, since)[0]?.path ?? null
 
 const isRunning = (pid: number): boolean => {
   try {
@@ -179,8 +188,20 @@ type WaitOptions = {
   now?: () => number
   sleep?: (ms: number) => Promise<void>
   isAlive?: (pid: number) => boolean
+  wake?: (pid: number) => void
   changeSince?: (dirs: WatchedDirs, since: number) => string | null
 }
+
+export const WAKE_SIGNAL = 'SIGUSR2'
+
+const wakeWatcher = (pid: number) => {
+  try {
+    process.kill(pid, WAKE_SIGNAL)
+  } catch {}
+}
+
+/** A queued stage this fresh means an edit arrived just now. */
+const STILL_WRITING_SECONDS = 5
 
 const stuckMessage = (
   status: WatchStatus,
@@ -192,6 +213,15 @@ const stuckMessage = (
   if (status.state === 'running') {
     const stage = status.stage ?? 'queued'
     const inStage = Math.round((now - status.stageStartedAt) / 1000)
+    // The watcher waits for quiet before it runs, and it is healthy: restarting
+    // it would not help while something else is still writing.
+    if (stage === 'queued' && inStage < STILL_WRITING_SECONDS) {
+      return {
+        kind: 'stuck',
+        stage,
+        message: `Files kept changing for ${seconds}s, so the watcher could not start a run${newer ? `, most recently ${newer}` : ''} (pid ${status.pid}). Stop whatever is writing them and check again.`,
+      }
+    }
     return {
       kind: 'stuck',
       stage,
@@ -216,9 +246,11 @@ export const waitForWatcher = async ({
   now = Date.now,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   isAlive = isRunning,
+  wake = wakeWatcher,
   changeSince = findChangeSince,
 }: WaitOptions): Promise<WatcherWait> => {
   const deadline = now() + timeoutMs
+  let wokenFor: number | undefined
   while (true) {
     const status = readWatchStatus(statusFile)
     if (!status || !isAlive(status.pid)) return { kind: 'none' }
@@ -227,8 +259,16 @@ export const waitForWatcher = async ({
     if (status.state !== 'running' && !newer) {
       return { kind: 'settled', status }
     }
+    // An idle watcher with a newer file missed its event: a file it can't have
+    // heard about would otherwise hold every check until the deadline. Once per
+    // result, so a file that keeps changing can't turn this into a poll.
+    if (newer && status.wakes && wokenFor !== status.updatedAt) {
+      wokenFor = status.updatedAt
+      wake(status.pid)
+    }
     if (now() >= deadline) {
-      return stuckMessage(status, newer, timeoutMs, now())
+      const changing = newer ?? changeSince(status, status.sourcesAt)
+      return stuckMessage(status, changing, timeoutMs, now())
     }
     await sleep(pollMs)
   }

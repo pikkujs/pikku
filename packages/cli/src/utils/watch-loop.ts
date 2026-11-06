@@ -5,7 +5,9 @@ import { routeWatchPaths } from './route-tree.js'
 import { runScript } from './run-script.js'
 import {
   classifyChange,
+  findChangesSince,
   writeWatchStatus,
+  type FileChange,
   type WatchedDirs,
   type WatchStage,
   type WatchStatus,
@@ -92,7 +94,11 @@ type WatchLoopOptions = {
   typecheck: () => Promise<TypecheckResult>
   onError: (message: string) => void
   now?: () => number
+  changesSince?: (dirs: WatchedDirs, since: number) => FileChange[]
 }
+
+/** How many runs in a row a file written behind a run can ask for. */
+const MAX_CATCH_UPS = 5
 
 /**
  * The one watch loop, used by `pikku watch` and `pikku dev`: codegen, compiled
@@ -110,6 +116,7 @@ export const createWatchLoop = ({
   typecheck,
   onError,
   now = Date.now,
+  changesSince = findChangesSince,
 }: WatchLoopOptions) => {
   let generation = 0
   let active: Promise<void> | undefined
@@ -122,6 +129,9 @@ export const createWatchLoop = ({
   let routeProblems: CheckDiagnostic[] = []
   let debounce: ReturnType<typeof setTimeout> | undefined
   let startedAt = now()
+  let sourcesAt = startedAt
+  let catchUps = 0
+  let readByRun = new Map<string, number>()
 
   const publish = (
     fields: Pick<WatchStatus, 'state' | 'stage' | 'diagnostics'> &
@@ -134,7 +144,8 @@ export const createWatchLoop = ({
       generation,
       updatedAt: at,
       stageStartedAt: at,
-      sourcesAt: startedAt,
+      sourcesAt,
+      wakes: true,
       ...dirs,
       ...fields,
     }
@@ -148,6 +159,45 @@ export const createWatchLoop = ({
   const running = (stage: WatchStage) =>
     publish({ state: 'running', stage, diagnostics: [] })
 
+  const mark = (path: string) => {
+    const kind = classifyChange(path, dirs)
+    if (!kind) return
+    pending = true
+    codegenNeeded ||= kind === 'codegen'
+    messagesNeeded ||= kind === 'messages'
+    routesNeeded ||= kind === 'routes'
+  }
+
+  /**
+   * Whether a file got in behind this run. A file event can be lost or arrive
+   * after the run ends, and `pikku check` goes by mtime, so a run is only finished
+   * once nothing is newer than it, whoever wrote the file. Bounded, so that
+   * something writing forever gets a published result rather than a spin. A file
+   * still newer but already seen, say one dated in the future, was read by this
+   * run, so the result covers it and stays current.
+   */
+  const fellBehind = async (): Promise<boolean> => {
+    const changes = changesSince(dirs, startedAt)
+    const unread = changes.filter(
+      ({ path, mtimeMs }) => readByRun.get(path) !== mtimeMs
+    )
+    readByRun = new Map(changes.map((c) => [c.path, c.mtimeMs]))
+    if (unread.length === 0) {
+      sourcesAt = Math.max(startedAt, ...changes.map((c) => c.mtimeMs))
+      catchUps = 0
+      return false
+    }
+    sourcesAt = startedAt
+    if (catchUps >= MAX_CATCH_UPS) {
+      catchUps = 0
+      return false
+    }
+    catchUps++
+    await new Promise((resolve) => setTimeout(resolve, debounceMs))
+    for (const { path } of unread) mark(path)
+    return true
+  }
+
   const runOnce = async () => {
     pending = false
     const withCodegen = codegenNeeded || !codegenPass.ok
@@ -157,6 +207,7 @@ export const createWatchLoop = ({
     const withRoutes = routesNeeded || routeProblems.length > 0
     routesNeeded = false
     startedAt = now()
+    sourcesAt = startedAt
     generation++
 
     if (withCodegen) {
@@ -186,7 +237,7 @@ export const createWatchLoop = ({
         message: error instanceof Error ? error.message : String(error),
       }
     }
-    if (pending) return
+    if (pending || (await fellBehind()) || pending) return
 
     const diagnostics = [
       ...codegenPass.diagnostics,
@@ -235,14 +286,19 @@ export const createWatchLoop = ({
       routesNeeded = true
       return run()
     },
+    /** Runs if the files are ahead of the last result; a running loop checks itself. */
+    wake: (): void => {
+      if (active) return
+      const changes = changesSince(dirs, sourcesAt)
+      if (changes.length === 0) return
+      for (const { path } of changes) mark(path)
+      running('queued')
+      void run()
+    },
     /** Feed every file event here; it decides what, if anything, needs running. */
     onChange: (path: string): void => {
-      const kind = classifyChange(path, dirs)
-      if (!kind) return
-      pending = true
-      codegenNeeded ||= kind === 'codegen'
-      messagesNeeded ||= kind === 'messages'
-      routesNeeded ||= kind === 'routes'
+      if (!classifyChange(path, dirs)) return
+      mark(path)
       if (!active) running('queued')
       if (debounce) clearTimeout(debounce)
       debounce = setTimeout(() => void run(), debounceMs)

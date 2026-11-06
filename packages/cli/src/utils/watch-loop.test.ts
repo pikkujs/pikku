@@ -59,6 +59,72 @@ const loopWith = (
 }
 
 describe('the watch loop', () => {
+  test('a file written behind a run, with no event, gets a run of its own', async () => {
+    let writes = 1
+    const { loop, calls, file } = loopWith({
+      debounceMs: 0,
+      changesSince: () =>
+        writes-- > 0
+          ? [{ path: '/p/apps/web/src/routeTree.gen.ts', mtimeMs: Date.now() }]
+          : [],
+    })
+    await loop.start({ codegen: false })
+    assert.deepEqual(calls, [
+      'messages',
+      'routes',
+      'typecheck',
+      'routes',
+      'typecheck',
+    ])
+    assert.equal(readWatchStatus(file)?.state, 'ok')
+    assert.equal(readWatchStatus(file)?.stage, null)
+  })
+
+  test('something that never stops writing still gets a result', async () => {
+    let at = Date.now()
+    const { loop, calls, file } = loopWith({
+      debounceMs: 0,
+      changesSince: () => [
+        { path: '/p/apps/web/src/a.tsx', mtimeMs: (at += 1) },
+      ],
+    })
+    await loop.start({ codegen: false })
+    assert.equal(calls.filter((c) => c === 'typecheck').length, 6)
+    assert.equal(readWatchStatus(file)?.state, 'ok')
+    assert.equal(readWatchStatus(file)?.stage, null)
+  })
+
+  test('a file dated in the future does not hold the result behind it', async () => {
+    const future = Date.now() + 3_600_000
+    const { loop, calls, file } = loopWith({
+      debounceMs: 0,
+      changesSince: () => [{ path: '/p/apps/web/src/a.tsx', mtimeMs: future }],
+    })
+    await loop.start({ codegen: false })
+    assert.equal(calls.filter((c) => c === 'typecheck').length, 2)
+    assert.equal(readWatchStatus(file)?.sourcesAt, future)
+  })
+
+  test('wake runs an idle loop that is behind, and only then', async () => {
+    let changes: { path: string; mtimeMs: number }[] = []
+    const { loop, calls, file } = loopWith({
+      debounceMs: 0,
+      changesSince: () => changes,
+    })
+    await loop.start({ codegen: false })
+    assert.equal(readWatchStatus(file)?.wakes, true)
+    calls.length = 0
+    loop.wake()
+    assert.deepEqual(calls, [])
+    const path = '/p/apps/web/src/routes/a.tsx'
+    changes = [{ path, mtimeMs: Date.now() + 1 }]
+    loop.wake()
+    assert.equal(readWatchStatus(file)?.state, 'running')
+    changes = []
+    await waitFor(() => readWatchStatus(file)?.state === 'ok')
+    assert.deepEqual(calls, ['routes', 'typecheck'])
+  })
+
   test('a change under the routes regenerates them before the type check', async () => {
     const { loop, calls } = loopWith({})
     await loop.start({ codegen: false })

@@ -50,9 +50,11 @@ pikku check --timeout 30
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Watcher finished, nothing newer               | Returns at once, doing no compile work                                                                                     |
 | Watcher running                               | Waits for it                                                                                                               |
-| A file is newer than the result               | Waits for the watcher to pick it up                                                                                        |
+| A file is newer than the result               | Waits for the watcher, and wakes it with `SIGUSR2` if it sits idle behind the file                                         |
 | Still waiting after `--timeout` (120 seconds) | Exits 1 naming the stage: `queued`, `codegen`, `messages`, `typecheck`, or `waiting` if the watcher never noticed the file |
-| No watcher running                            | One full `pikku all`, message compile and `tsc`, under the same limit                                                      |
+
+The watcher does not trust file events alone. After each run it looks again for files newer than the run's start, and runs again if it finds any, so an idle watcher does not sit behind its own files. It does this at most five times in a row, each after the debounce, and then publishes the result it has, so a file that changes behind each run cannot keep it busy. While files keep changing faster than the debounce the watcher does no work and `pikku check` fails at `--timeout` with the file it saw last, then answers normally once the writing stops.
+| No watcher running | One full `pikku all`, message compile and `tsc`, under the same limit |
 
 Watched files are those in `srcDirectories`, the email templates and each
 frontend's directory. Anything else a project compiles, such as a shared workspace
