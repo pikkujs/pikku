@@ -1,11 +1,162 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { getSchema } from '@pikku/core/schema'
+import { I18nService } from '@pikku/code-edit/i18n'
 import type { CodeEditOperation } from '@pikku/code-edit'
+import { existsSync, readdirSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { relative, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
+import { workspaceRoot } from '../../utils/workspace-root.js'
+import {
+  agentRunnerFacts,
+  formatProjectFacts,
+  frontendFacts,
+  readSources,
+  textFacts,
+} from './meta-facts.js'
+import {
+  type DbTable,
+  type MetaRow,
+  dbColumnRows,
+  dbTableRows,
+  emailLocales,
+  emailRows,
+  formatCompactContext,
+  formatMetaMatches,
+  formatMetaRows,
+  interfaceRows,
+  matchMetaRows,
+  parseDbSchema,
+  parseMetaTerms,
+  screenRows,
+  translationRows,
+} from './meta-lines.js'
 
 function out(value: unknown): void {
   console.log(JSON.stringify(value))
+}
+
+type OutputLogger = { getOutputMode(): 'text' | 'json' }
+
+/** Short lines for an agent to read, or the same rows as JSON. */
+const printRows = (
+  rows: MetaRow[],
+  logger: OutputLogger,
+  options?: { withKind?: boolean }
+): void => {
+  if (logger.getOutputMode() === 'json') out({ rows })
+  else console.log(formatMetaRows(rows, options))
+}
+
+const readDbTables = async (config: any): Promise<DbTable[] | null> => {
+  const schemaFile = join(config.outDir, 'db', 'schema.gen.ts')
+  if (!existsSync(schemaFile)) return null
+  return parseDbSchema(await readFile(schemaFile, 'utf8'))
+}
+
+const frontendDirs = (config: any): string[] =>
+  Object.values((config.frontends ?? {}) as Record<string, { cwd?: string }>)
+    .filter((frontend) => frontend.cwd)
+    .map((frontend) => resolve(config.rootDir, frontend.cwd!))
+
+const readScreens = (config: any): MetaRow[] =>
+  frontendDirs(config).flatMap((dir) => screenRows(dir, config.rootDir))
+
+/** The facts of `pikku meta context`, each part empty for a project without it. */
+const readProjectFacts = async (config: any, state: any): Promise<string[]> => {
+  const { rootDir } = config
+  const root = workspaceRoot(rootDir)
+  const apps = await new I18nService(root).listApps()
+  const dirs = [
+    ...new Set([
+      ...frontendDirs(config),
+      ...apps.map((app) => resolve(root, app.app)),
+    ]),
+  ]
+  const sources = new Map(dirs.map((dir) => [dir, readSources(dir)]))
+  const screens = readScreens(config)
+  const client = config.clientFiles ?? {}
+  const rpcFile = client.rpcWiringsFile
+  const reactQueryFile = client.reactQueryFile ?? rpcFile
+  const servicesFile = [...(state.singletonServicesFactories?.keys() ?? [])][0]
+  return formatProjectFacts({
+    agents: Object.keys(state.agents?.agentsMeta ?? {}),
+    models: config.models ?? {},
+    configFile: config.configFile
+      ? relative(rootDir, config.configFile)
+      : 'pikku.config.json',
+    runner: servicesFile ? agentRunnerFacts(servicesFile, rootDir) : null,
+    texts: apps.map((app) => {
+      const dir = resolve(root, app.app)
+      return textFacts(app, dir, root, sources.get(dir))
+    }),
+    frontends: dirs.flatMap((dir) => {
+      const facts = frontendFacts(
+        dir,
+        rootDir,
+        screens,
+        rpcFile,
+        sources.get(dir)
+      )
+      return facts ? [facts] : []
+    }),
+    generated: reactQueryFile
+      ? relative(rootDir, dirname(resolve(rootDir, reactQueryFile)))
+      : undefined,
+  })
+}
+
+const emailsDirOf = (config: any): string =>
+  resolve(config.rootDir, config.emailTemplatesDir || 'emails')
+
+/** Translation folders: each frontend's `messages`, plus the emails' locales. */
+const messageDirs = (config: any): string[] => {
+  const appsDir = join(config.rootDir, 'apps')
+  const apps = existsSync(appsDir)
+    ? readdirSync(appsDir).map((app) => join(appsDir, app))
+    : []
+  return [
+    ...new Set([
+      ...[...frontendDirs(config), ...apps].map((dir) => join(dir, 'messages')),
+      join(emailsDirOf(config), 'locales'),
+    ]),
+  ]
+}
+
+const readServiceRows = (state: any, config: any): MetaRow[] => {
+  const fromFile = (
+    kind: string,
+    declared: { file: string; type: string } | undefined
+  ): MetaRow[] =>
+    declared
+      ? interfaceRows(
+          kind,
+          resolve(config.rootDir, declared.file),
+          declared.type
+        )
+      : []
+  const { userSessionType, singletonServicesType } = state.filesAndMethods
+  const auth = state.auth?.definition
+  return [
+    ...fromFile('session', userSessionType),
+    ...fromFile('service', singletonServicesType),
+    ...(auth
+      ? [
+          {
+            kind: 'auth',
+            name: auth.exportName,
+            detail: [
+              auth.basePath,
+              auth.hasCredentials ? 'email and password' : '',
+              ...(state.auth.providers ?? []),
+              ...(state.auth.plugins ?? []),
+            ]
+              .filter(Boolean)
+              .join(', '),
+            source: relative(config.rootDir, auth.sourceFile),
+          },
+        ]
+      : []),
+  ]
 }
 
 export const pikkuMetaFunctionsList = pikkuSessionlessFunc<{}, void>({
@@ -322,8 +473,8 @@ export const pikkuMetaWiresTrigger = pikkuSessionlessFunc<{}, void>({
  * Targeted `pikku meta * get` calls are still the right tool when the planner
  * wants schema details (input/output JSON schemas) for a specific entry.
  */
-export const pikkuMetaContext = pikkuSessionlessFunc<{}, void>({
-  func: async ({ getInspectorState, config }) => {
+export const pikkuMetaContext = pikkuSessionlessFunc<{ full?: boolean }, void>({
+  func: async ({ getInspectorState, config, logger }, data) => {
     const state = await getInspectorState()
 
     const functions = Object.entries(state.functions.meta ?? {}).map(
@@ -417,6 +568,27 @@ export const pikkuMetaContext = pikkuSessionlessFunc<{}, void>({
       },
     }
 
+    if (!data?.full && logger.getOutputMode() !== 'json') {
+      const tables = (await readDbTables(config)) ?? []
+      console.log(
+        formatCompactContext({
+          functions,
+          workflows: workflows.map((workflow) => workflow.name),
+          permissions: permissions.map((permission) => permission.name),
+          middleware: middleware.map((entry) => entry.name),
+          wires: summary.wires,
+          tables: tables.map(({ table }) => table),
+          screens: readScreens(config),
+          emails: emailRows(emailsDirOf(config), config.rootDir).map(
+            (row) => row.name
+          ),
+          // Extras: a project they cannot be read from still gets its map.
+          facts: await readProjectFacts(config, state).catch(() => []),
+        })
+      )
+      return
+    }
+
     out({
       schemaVersion: 'meta-context.v1',
       summary,
@@ -428,6 +600,152 @@ export const pikkuMetaContext = pikkuSessionlessFunc<{}, void>({
       workflows,
       wires,
     })
+  },
+})
+
+/** Tables and their columns, read from the generated schema with no database running. */
+export const pikkuMetaDb = pikkuSessionlessFunc<{ tables?: string[] }, void>({
+  func: async ({ config, logger }, data) => {
+    const tables = await readDbTables(config)
+    if (!tables) {
+      throw new Error(
+        'No generated database schema. Run `pikku db migrate` first.'
+      )
+    }
+    if (!data?.tables?.length) {
+      printRows(dbTableRows(tables), logger)
+      return
+    }
+    const rows = data.tables.flatMap((name) => {
+      const wanted = name.toLowerCase()
+      const table = tables.find(({ table }) => table.toLowerCase() === wanted)
+      if (!table) {
+        throw new Error(
+          `No table "${name}". Tables: ${tables.map(({ table }) => table).join(', ')}`
+        )
+      }
+      return dbColumnRows(table)
+    })
+    printRows(rows, logger)
+  },
+})
+
+/** Each route of each frontend: its page file and the RPCs that page reaches. */
+export const pikkuMetaScreens = pikkuSessionlessFunc<{}, void>({
+  func: async ({ config, logger }) => {
+    printRows(readScreens(config), logger)
+  },
+})
+
+/** What a function can be handed: session fields, project services, auth. */
+export const pikkuMetaServices = pikkuSessionlessFunc<{}, void>({
+  func: async ({ getInspectorState, config, logger }) => {
+    const state = await getInspectorState()
+    printRows(readServiceRows(state, config), logger, { withKind: true })
+  },
+})
+
+/** Email templates with the data each takes, and the locales they come in. */
+export const pikkuMetaEmails = pikkuSessionlessFunc<{}, void>({
+  func: async ({ config, logger }) => {
+    const emailsDir = emailsDirOf(config)
+    const rows = emailRows(emailsDir, config.rootDir)
+    const locales = emailLocales(emailsDir)
+    printRows(
+      [
+        ...rows,
+        ...(locales.length > 0
+          ? [{ kind: 'locales', name: 'locales', detail: locales.join(', ') }]
+          : []),
+      ],
+      logger
+    )
+  },
+})
+
+/** Everything `pikku meta grep` searches, as the rows every listing shares. */
+const readProjectRows = async (
+  getInspectorState: () => Promise<any>,
+  config: any
+): Promise<MetaRow[]> => {
+  const state = await getInspectorState()
+  const functions = (state.functions.meta ?? {}) as Record<string, any>
+  const inProject = (file: string | null | undefined): string | undefined =>
+    file ? relative(config.rootDir, resolve(config.rootDir, file)) : undefined
+  const definitions = (kind: string, entries: Record<string, any>): MetaRow[] =>
+    Object.entries(entries).map(([id, entry]) => ({
+      kind,
+      name: id,
+      detail: entry?.description ?? undefined,
+      source: inProject(entry?.sourceFile),
+    }))
+
+  const wires = await Promise.all(
+    ['http', 'scheduler', 'queue', 'channel', 'trigger'].map(async (type) =>
+      (await wiresByType(getInspectorState, type)).map((wire) => ({
+        kind: 'wire',
+        name: `${type} ${wire.id}`,
+        detail: (wire.functionId as string | null) ?? undefined,
+        source: inProject(functions[wire.functionId as string]?.sourceFile),
+      }))
+    )
+  )
+  const schemaFile = relative(
+    config.rootDir,
+    join(config.outDir, 'db', 'schema.gen.ts')
+  )
+  const tables = (await readDbTables(config)) ?? []
+  const emailsDir = emailsDirOf(config)
+
+  return [
+    ...definitions('function', functions),
+    ...Object.entries(state.workflows?.meta ?? {}).map(
+      ([id, workflow]: [string, any]) => ({
+        kind: 'workflow',
+        name: id,
+        detail: workflow?.description ?? undefined,
+        source: inProject(functions[workflow?.pikkuFuncId ?? id]?.sourceFile),
+      })
+    ),
+    ...wires.flat(),
+    ...definitions('permission', state.permissions?.definitions ?? {}),
+    ...definitions('middleware', state.middleware?.definitions ?? {}),
+    ...Object.entries(config.clientFiles ?? {}).map(([name, file]) => ({
+      kind: 'client',
+      name,
+      detail: typeof file === 'string' ? file : undefined,
+      source: 'pikku.config.json',
+    })),
+    ...tables.flatMap((table) => [
+      { kind: 'table', name: table.table, source: schemaFile },
+      ...dbColumnRows(table).map((row) => ({ ...row, source: schemaFile })),
+    ]),
+    ...readScreens(config),
+    ...readServiceRows(state, config),
+    ...emailRows(emailsDir, config.rootDir),
+    ...messageDirs(config).flatMap((dir) =>
+      translationRows(dir, config.rootDir)
+    ),
+    ...Object.entries(config.models ?? {}).map(([alias, model]) => ({
+      kind: 'model',
+      name: alias,
+      detail: typeof model === 'string' ? model : JSON.stringify(model),
+      source: 'pikku.config.json',
+    })),
+  ]
+}
+
+/** One search across the project, grouped by kind. */
+export const pikkuMetaGrep = pikkuSessionlessFunc<{ terms: string[] }, void>({
+  func: async ({ getInspectorState, config, logger }, data) => {
+    const terms = parseMetaTerms(data.terms)
+    if (terms.length === 0) throw new Error('Give at least one term to search.')
+    const matches = matchMetaRows(
+      await readProjectRows(getInspectorState as any, config),
+      terms
+    )
+    if (logger.getOutputMode() === 'json') out(matches)
+    else console.log(formatMetaMatches(matches, terms))
   },
 })
 

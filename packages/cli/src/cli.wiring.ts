@@ -221,6 +221,11 @@ import {
   pikkuMetaWorkflowsList,
   pikkuMetaContext,
   pikkuMetaClients,
+  pikkuMetaDb,
+  pikkuMetaEmails,
+  pikkuMetaGrep,
+  pikkuMetaScreens,
+  pikkuMetaServices,
   pikkuMetaApply,
 } from './functions/commands/meta.js'
 import { defaultCLIRenderer } from './services.js'
@@ -2215,7 +2220,41 @@ wireCLI({
         context: pikkuCLICommand({
           func: pikkuMetaContext,
           description:
-            'Bulk project context for planners (functions, wires, middleware, permissions, workflows, capabilities, layout) in one call',
+            'A short map of the project: tables, workflows, permissions, screens, emails, one line per function. --json or --full gives the whole planner document',
+          options: {
+            full: {
+              description: 'Print the full JSON document',
+              default: false,
+              short: 'f',
+            },
+          },
+        }),
+        grep: pikkuCLICommand({
+          func: pikkuMetaGrep,
+          description:
+            'Search the whole project: functions, workflows, wires, permissions, middleware, clients, tables and columns, screens, services, emails, translations, models. Terms are word-aware and any can match: `invit` finds `invitation`, `a|b` means either',
+          parameters: '<terms...>',
+        }),
+        db: pikkuCLICommand({
+          func: pikkuMetaDb,
+          description:
+            'Tables and column names from the generated schema; name tables to get their column types',
+          parameters: '[tables...]',
+        }),
+        screens: pikkuCLICommand({
+          func: pikkuMetaScreens,
+          description:
+            'Frontend routes: path, the RPCs the page reaches, and its page file',
+        }),
+        services: pikkuCLICommand({
+          func: pikkuMetaServices,
+          description:
+            "The project's session fields, declared services and auth setup",
+        }),
+        emails: pikkuCLICommand({
+          func: pikkuMetaEmails,
+          description:
+            'Email templates with the data each takes, and their locales',
         }),
         clients: pikkuCLICommand({
           func: pikkuMetaClients,
