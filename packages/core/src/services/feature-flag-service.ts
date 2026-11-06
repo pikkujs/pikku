@@ -123,7 +123,7 @@ export interface FeatureFlagStore extends FeatureFlagSource {
 
   clearOverride(key: string, subject: FlagSubject): Promise<void>
 
-  /** Flags in the store with no declaration left in code; powers `pikku flags audit`. */
+  /** Flags in the store with no declaration left in code; what `admin:flagPrune` would remove. */
   findStaleFlags(): Promise<string[]>
 
   /** Removes undeclared flags and their overrides. */

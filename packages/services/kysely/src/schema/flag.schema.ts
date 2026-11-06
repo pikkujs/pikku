@@ -39,7 +39,7 @@ export const flagSchema: PikkuSchema = {
         // story, 100 says a rollout reached everyone and could be wound back.
         .addColumn('rolloutPercent', 'integer')
         // False once the declaration has gone from code: still switchable, no
-        // longer offered, awaiting `pikku flags prune`. The same additive
+        // longer offered, awaiting `admin:flagPrune`. The same additive
         // contract as `pikkuScopes.declared`.
         .addColumn('declared', 'boolean', (col) =>
           col.defaultTo(true).notNull()

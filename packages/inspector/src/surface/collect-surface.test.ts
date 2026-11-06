@@ -379,6 +379,33 @@ describe('collectSurface on a package published straight from source', () => {
     }
   })
 
+  test('keeps the doc comment of a name re-exported from a .tsx file', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/hooks',
+          exports: { '.': './src/index.ts' },
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(tmp, 'src/index.ts', "export { useMark } from './mark.js'\n")
+      await write(
+        tmp,
+        'src/mark.tsx',
+        '/** Reads the mark. */\nexport const useMark = (): string => "mark"\n'
+      )
+
+      const [entry] = await collectSurface(tmp)
+      const symbol = entry!.symbols.find(({ name }) => name === 'useMark')
+      assert.strictEqual(symbol?.docs, 'Reads the mark.')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('ignores a subpath that publishes an asset rather than code', async () => {
     const tmp = await makeTmp()
     try {

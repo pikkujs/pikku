@@ -785,6 +785,9 @@ export const collectSurface = async (
       types: [],
       allowJs: false,
       checkJs: false,
+      // Without this, Node16 resolution will not map `./x.js` onto `./x.tsx`,
+      // and everything re-exported from a .tsx file loses its doc comment.
+      jsx: ts.JsxEmit.Preserve,
     }
   )
   const checker = program.getTypeChecker()
