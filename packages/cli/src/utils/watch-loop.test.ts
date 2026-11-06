@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
+import { setTimeout as sleep } from 'node:timers/promises'
 import {
   compileMessages,
   createWatchLoop,
@@ -11,11 +12,20 @@ import {
 import { readWatchStatus } from './watch-status.js'
 import type { TypecheckResult } from './warm-typecheck.js'
 
-const dirs = { codegenDirs: ['/p/src'], typecheckDirs: ['/p/apps/web'] }
+const dirs = {
+  codegenDirs: ['/p/src'],
+  typecheckDirs: ['/p/apps/web'],
+  routePaths: ['/p/apps/web/src/routes', '/p/apps/web/src/routeTree.gen.ts'],
+}
 const clean: TypecheckResult = { diagnostics: [], durationMs: 1, rssBytes: 1 }
 const passed: CodegenPass = { ok: true, diagnostics: [] }
 const statusFile = () =>
   join(mkdtempSync(join(tmpdir(), 'pikku-loop-')), 'status.json')
+
+const waitFor = async (condition: () => boolean) => {
+  for (let i = 0; i < 200 && !condition(); i++) await sleep(5)
+  assert.ok(condition())
+}
 
 const loopWith = (
   overrides: Partial<Parameters<typeof createWatchLoop>[0]>
@@ -29,6 +39,10 @@ const loopWith = (
     codegen: async () => {
       calls.push('codegen')
       return passed
+    },
+    routes: async () => {
+      calls.push('routes')
+      return []
     },
     messages: async () => {
       calls.push('messages')
@@ -45,10 +59,44 @@ const loopWith = (
 }
 
 describe('the watch loop', () => {
+  test('a change under the routes regenerates them before the type check', async () => {
+    const { loop, calls } = loopWith({})
+    await loop.start({ codegen: false })
+    calls.length = 0
+    loop.onChange('/p/apps/web/src/routes/app.tests.tsx')
+    await waitFor(() => calls.includes('typecheck'))
+    assert.deepEqual(calls, ['routes', 'typecheck'])
+  })
+
+  test('another frontend file does not', async () => {
+    const { loop, calls } = loopWith({})
+    await loop.start({ codegen: false })
+    calls.length = 0
+    loop.onChange('/p/apps/web/src/pages/a.tsx')
+    await waitFor(() => calls.includes('typecheck'))
+    assert.deepEqual(calls, ['typecheck'])
+  })
+
+  test('a failed generator fails the run and is retried', async () => {
+    let fail = true
+    const { loop, file } = loopWith({
+      routes: async () =>
+        fail
+          ? [{ severity: 'error', code: 'ROUTES', message: 'bad route' }]
+          : [],
+    })
+    await loop.start({ codegen: false })
+    assert.equal(readWatchStatus(file)?.state, 'failed')
+    assert.equal(readWatchStatus(file)?.diagnostics[0]?.code, 'ROUTES')
+    fail = false
+    loop.onChange('/p/apps/web/src/pages/a.tsx')
+    await waitFor(() => readWatchStatus(file)?.state === 'ok')
+  })
+
   test('publishes ok after codegen and type check', async () => {
     const { loop, calls, file } = loopWith({})
     await loop.start({ codegen: true })
-    assert.deepEqual(calls, ['codegen', 'messages', 'typecheck'])
+    assert.deepEqual(calls, ['codegen', 'messages', 'routes', 'typecheck'])
     const status = readWatchStatus(file)
     assert.equal(status?.state, 'ok')
     assert.equal(status?.pid, process.pid)
