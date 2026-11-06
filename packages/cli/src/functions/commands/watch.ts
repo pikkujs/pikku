@@ -6,6 +6,7 @@ import { pikkuDevReloader } from '@pikku/core/dev'
 import { createTypecheckClient } from '../../utils/warm-typecheck.js'
 import {
   checkProjects,
+  compileMessages,
   createWatchLoop,
   watchedDirs,
 } from '../../utils/watch-loop.js'
@@ -74,6 +75,7 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
             type: 'timing',
           })
         }),
+      messages: () => compileMessages(dirs.typecheckDirs),
       typecheck: () => typechecker.check(checkProjects(config.rootDir)),
       onError: (message) => logger.error(message),
     })

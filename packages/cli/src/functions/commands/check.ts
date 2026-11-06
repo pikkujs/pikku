@@ -4,7 +4,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import type { CLILogger } from '../../services/cli-logger.service.js'
 import { added, dim, removed } from '../../utils/output.js'
 import { runProjectTypecheck } from '../../utils/tsc-check.js'
-import { checkProjects } from '../../utils/watch-loop.js'
+import { checkProjects, compileMessages } from '../../utils/watch-loop.js'
 import {
   waitForWatcher,
   watchStatusFile,
@@ -70,7 +70,15 @@ const fullRun = async (
     }
   }
 
-  for (const project of checkProjects(config.rootDir)) {
+  const projects = checkProjects(config.rootDir)
+  diagnostics.push(
+    ...(await compileMessages(
+      projects.map(({ dir }) => dir).filter((dir) => dir !== config.rootDir),
+      Math.max(1, deadline - Date.now())
+    ))
+  )
+
+  for (const project of projects) {
     try {
       const result = runProjectTypecheck(
         project.tsconfig,
