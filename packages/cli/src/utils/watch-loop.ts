@@ -1,7 +1,8 @@
 import { readVerifyProject } from '@pikku/code-edit/verify'
-import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { join, resolve } from 'node:path'
+import { routeWatchPaths } from './route-tree.js'
+import { runScript } from './run-script.js'
 import {
   classifyChange,
   writeWatchStatus,
@@ -34,30 +35,18 @@ export const checkProjects = (rootDir: string): CheckProject[] => {
 export const watchedDirs = (
   rootDir: string,
   codegenDirs: string[]
-): WatchedDirs => ({
-  codegenDirs: codegenDirs.map((dir) => resolve(rootDir, dir)),
-  typecheckDirs: checkProjects(rootDir)
+): WatchedDirs => {
+  const typecheckDirs = checkProjects(rootDir)
     .map(({ dir }) => dir)
-    .filter((dir) => dir !== rootDir),
-})
-
-const MESSAGE_SCRIPTS = ['paraglide', 'i18n:compile']
-const LOCKFILE_TOOLS: Array<[string, string]> = [
-  ['bun.lock', 'bun'],
-  ['bun.lockb', 'bun'],
-  ['pnpm-lock.yaml', 'pnpm'],
-  ['yarn.lock', 'yarn'],
-]
-
-const packageTool = (dir: string): string => {
-  for (let at = dir; dirname(at) !== at; at = dirname(at)) {
-    for (const [file, tool] of LOCKFILE_TOOLS) {
-      if (existsSync(join(at, file))) return tool
-    }
+    .filter((dir) => dir !== rootDir)
+  return {
+    codegenDirs: codegenDirs.map((dir) => resolve(rootDir, dir)),
+    typecheckDirs,
+    routePaths: routeWatchPaths(typecheckDirs),
   }
-  return 'npm'
 }
 
+const MESSAGE_SCRIPTS = ['paraglide', 'i18n:compile']
 const messageScript = (dir: string): string | undefined => {
   try {
     const { scripts } = JSON.parse(
@@ -68,34 +57,6 @@ const messageScript = (dir: string): string | undefined => {
     return undefined
   }
 }
-
-const runScript = (
-  dir: string,
-  script: string,
-  timeoutMs?: number
-): Promise<string | null> =>
-  new Promise((resolve) => {
-    const child = spawn(packageTool(dir), ['run', script], {
-      cwd: dir,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
-    let output = ''
-    const keep = (chunk: Buffer) => {
-      output = (output + chunk).slice(-2000)
-    }
-    child.stdout.on('data', keep)
-    child.stderr.on('data', keep)
-    const timer = timeoutMs
-      ? setTimeout(() => child.kill('SIGKILL'), timeoutMs)
-      : undefined
-    child.once('error', (error) => resolve(error.message))
-    child.once('close', (code, signal) => {
-      clearTimeout(timer)
-      resolve(
-        code === 0 ? null : `${signal ?? `exit ${code}`}\n${output.trim()}`
-      )
-    })
-  })
 
 /**
  * Compiled messages are generated and gitignored, so each frontend's type check
@@ -127,6 +88,7 @@ type WatchLoopOptions = {
   debounceMs: number
   codegen: () => Promise<CodegenPass>
   messages: () => Promise<CheckDiagnostic[]>
+  routes: () => Promise<CheckDiagnostic[]>
   typecheck: () => Promise<TypecheckResult>
   onError: (message: string) => void
   now?: () => number
@@ -134,7 +96,7 @@ type WatchLoopOptions = {
 
 /**
  * The one watch loop, used by `pikku watch` and `pikku dev`: codegen, compiled
- * messages, then type check, publishing each step to the status file. A change during a run makes
+ * messages, route trees, then type check, publishing each step to the status file. A change during a run makes
  * that run's result worthless, so it is dropped unpublished and the loop goes
  * round again; a codegen pass holds a whole ts.Program, so runs never overlap.
  */
@@ -144,6 +106,7 @@ export const createWatchLoop = ({
   debounceMs,
   codegen,
   messages,
+  routes,
   typecheck,
   onError,
   now = Date.now,
@@ -155,6 +118,8 @@ export const createWatchLoop = ({
   let codegenPass: CodegenPass = { ok: true, diagnostics: [] }
   let messagesNeeded = false
   let messageProblems: CheckDiagnostic[] = []
+  let routesNeeded = false
+  let routeProblems: CheckDiagnostic[] = []
   let debounce: ReturnType<typeof setTimeout> | undefined
   let startedAt = now()
 
@@ -189,6 +154,8 @@ export const createWatchLoop = ({
     codegenNeeded = false
     const withMessages = messagesNeeded || messageProblems.length > 0
     messagesNeeded = false
+    const withRoutes = routesNeeded || routeProblems.length > 0
+    routesNeeded = false
     startedAt = now()
     generation++
 
@@ -200,6 +167,11 @@ export const createWatchLoop = ({
     if (withMessages) {
       running('messages')
       messageProblems = await messages()
+      if (pending) return
+    }
+    if (withRoutes) {
+      running('routes')
+      routeProblems = await routes()
       if (pending) return
     }
     running('typecheck')
@@ -219,6 +191,7 @@ export const createWatchLoop = ({
     const diagnostics = [
       ...codegenPass.diagnostics,
       ...messageProblems,
+      ...routeProblems,
       ...(checked?.diagnostics ?? []),
       ...(checkerError ? [checkerError] : []),
     ]
@@ -259,6 +232,7 @@ export const createWatchLoop = ({
     start: ({ codegen: withCodegen }: { codegen: boolean }): Promise<void> => {
       codegenNeeded = withCodegen
       messagesNeeded = true
+      routesNeeded = true
       return run()
     },
     /** Feed every file event here; it decides what, if anything, needs running. */
@@ -268,6 +242,7 @@ export const createWatchLoop = ({
       pending = true
       codegenNeeded ||= kind === 'codegen'
       messagesNeeded ||= kind === 'messages'
+      routesNeeded ||= kind === 'routes'
       if (!active) running('queued')
       if (debounce) clearTimeout(debounce)
       debounce = setTimeout(() => void run(), debounceMs)

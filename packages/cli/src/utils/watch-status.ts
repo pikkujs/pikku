@@ -11,7 +11,8 @@ import {
 import { dirname, join, relative } from 'node:path'
 import type { CheckDiagnostic } from './warm-typecheck.js'
 
-export type WatchStage = 'queued' | 'codegen' | 'messages' | 'typecheck'
+export type WatchStage =
+  'queued' | 'codegen' | 'messages' | 'routes' | 'typecheck'
 
 /** `.pikku/status.json`: what the watcher last concluded about the project. */
 export type WatchStatus = {
@@ -27,6 +28,8 @@ export type WatchStatus = {
   sourcesAt: number
   codegenDirs: string[]
   typecheckDirs: string[]
+  /** Frontend route directories and trees; older status files have none. */
+  routePaths?: string[]
   diagnostics: CheckDiagnostic[]
   durationMs?: number
   typecheck?: { durationMs: number; rssBytes: number }
@@ -95,14 +98,20 @@ const isSkippedBelow = (
   return false
 }
 
-export type WatchedDirs = Pick<WatchStatus, 'codegenDirs' | 'typecheckDirs'>
+export type WatchedDirs = Pick<
+  WatchStatus,
+  'codegenDirs' | 'typecheckDirs' | 'routePaths'
+>
 
 /** The one rule for which files count, shared by the watcher and `pikku check`. */
 export const classifyChange = (
   path: string,
   dirs: WatchedDirs
-): 'codegen' | 'messages' | 'typecheck' | null => {
+): 'codegen' | 'messages' | 'routes' | 'typecheck' | null => {
   if (isSkippedBelow(path, dirs)) return null
+  if (dirs.routePaths?.some((root) => insideRoot(path, root) !== null)) {
+    return 'routes'
+  }
   if (dirs.codegenDirs.some((root) => insideRoot(path, root) !== null)) {
     return 'codegen'
   }
