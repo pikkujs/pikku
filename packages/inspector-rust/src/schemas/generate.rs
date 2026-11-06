@@ -9,7 +9,6 @@ use super::program::{create_schema_program, virtual_file_path};
 use super::vendor::{ConvertError, VendorRef, VendorSchema, VendorSchemaConverter};
 use crate::diag::Logger;
 use crate::diag::codes::SCHEMA_GENERATION_ERROR;
-use crate::jsjson;
 use crate::program::Cache;
 use crate::state::State;
 use crate::state::ordered::Record;
@@ -186,17 +185,7 @@ fn generate_ts_schemas(
 
     for name in &uncovered {
         match gen_.create_schema(std::slice::from_ref(name)) {
-            Ok(def) => {
-                let v = to_value(&def);
-                match jsjson::marshal(&v, "") {
-                    Ok(b) => {
-                        let parsed: serde_json::Value = serde_json::from_slice(&b).expect("own output");
-                        schemas.set(name.clone(), Raw::of(parsed));
-                        continue;
-                    }
-                    Err(e) => log_error(log, name, &e.to_string(), tm.custom_type(name).map(|c| c.ty.as_str())),
-                }
-            }
+            Ok(def) => schemas.set(name.clone(), Raw::of(to_value(&def))),
             Err(GenError::Rootless(_)) => {
                 if let Some(ct) = tm.custom_type(name) {
                     if let Some(fallback) = primitive_type_to_schema(&ct.ty) {

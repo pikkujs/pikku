@@ -2,7 +2,6 @@
 //! several node parsers use.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use tsrs_ast::{Kind, Node, Symbol};
@@ -129,18 +128,17 @@ pub fn node_full_text(node: P<Node>) -> String {
 
 /// identifier -> symbol mappings produced by the node builder when types are
 /// converted back to synthesized type nodes; one registry is shared by all
-/// parsers of a chain.
-#[derive(Default)]
+/// parsers of a chain. The map is the node builder's own `idToSymbol` argument.
 pub struct SynthesizedSymbols {
-    pub m: RefCell<HashMap<usize, P<Symbol>>>,
+    pub m: P<RefCell<rustc_hash::FxHashMap<P<Node>, P<Symbol>>>>,
 }
 
 impl SynthesizedSymbols {
     pub fn new() -> Rc<SynthesizedSymbols> {
-        Rc::new(SynthesizedSymbols::default())
+        Rc::new(SynthesizedSymbols { m: P::new(RefCell::new(Default::default())) })
     }
     pub fn lookup(&self, id: P<Node>) -> Option<P<Symbol>> {
-        self.m.borrow().get(&node_id(&id)).copied()
+        self.m.borrow().get(&id).copied()
     }
 }
 

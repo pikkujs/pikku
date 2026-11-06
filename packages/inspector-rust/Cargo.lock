@@ -312,6 +312,7 @@ version = "0.0.0"
 dependencies = [
  "indexmap",
  "regex",
+ "rustc-hash",
  "serde",
  "serde_json",
  "sha2",
@@ -322,6 +323,7 @@ dependencies = [
  "tsrs_contentmapper",
  "tsrs_core",
  "tsrs_diagnostics",
+ "tsrs_printer",
  "tsrs_scanner",
  "tsrs_tsoptions",
  "tsrs_vfs",
