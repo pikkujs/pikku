@@ -13,6 +13,8 @@ export const StructuredAgentOutput = z.object({
 })
 
 export const structuredAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'structured-agent',
   description: 'Classifies a message and returns a structured verdict',
   goal: 'You classify the sentiment of the user message and return a structured result.',

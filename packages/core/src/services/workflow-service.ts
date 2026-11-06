@@ -59,7 +59,9 @@ export interface WorkflowService {
    * The payload is stored as given and validated on replay inside the workflow
    * body, so an invalid one re-closes the gate rather than failing the run.
    *
-   * The session must belong to the run's owner — see `assertWorkflowRunOwner`.
+   * The session is the decider, judged against the gate's `approvers` and
+   * `approverScope`. Application code may call this with no session; a generated
+   * route never does.
    */
   approveStep(
     runId: string,

@@ -472,8 +472,16 @@ export type CoreAgent<
    * from genuinely sessionless contexts (crons, queue workers). Set `true` to
    * require a session at the agent itself. `scopes` and `permissions` are
    * enforced either way.
+   *
+   * The generated HTTP routes always want a session. Only an explicit `false`,
+   * alongside `expose: true`, lets the anonymous routes reach this agent.
    */
   auth?: boolean
+  /**
+   * Reachable through the generated `/rpc/agent/:agentName` routes. Without it
+   * the agent answers those routes with a 404; `rpc.agent` is unaffected.
+   */
+  expose?: boolean
   /**
    * Scopes the session must hold to run this agent. All of them are required
    * (AND), and they are checked before `permissions` — unlike permissions,

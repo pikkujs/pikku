@@ -20,6 +20,8 @@ interface TestCase {
   wrapper: 'pikkuWorkflowFunc' | 'pikkuWorkflowComplexFunc'
   body: string
   shouldFail: boolean
+  /** The diagnostic that has to be the reason it failed. */
+  mentions?: string
 }
 
 const cases: TestCase[] = [
@@ -102,6 +104,21 @@ const cases: TestCase[] = [
       for (let i = 0; i < 3; i++) {
         await workflow.do('step', 'myRpc', { i })
       }`,
+    shouldFail: true,
+  },
+
+  // --- approval gates must say who answers them ---
+  {
+    name: 'dsl: rejects an approval with no approvers',
+    wrapper: 'pikkuWorkflowFunc',
+    body: `await workflow.approval('sign-off', { schema: data as any })`,
+    shouldFail: true,
+    mentions: 'PKU645',
+  },
+  {
+    name: 'complex: rejects an approval with no approvers',
+    wrapper: 'pikkuWorkflowComplexFunc',
+    body: `await workflow.approval('sign-off', { schema: data as any })`,
     shouldFail: true,
   },
 ]
@@ -189,6 +206,12 @@ describe('DSL validation verifier', () => {
             0,
             `Expected pikku to fail for "${testCase.name}" but it succeeded.\nOutput: ${output}`
           )
+          if (testCase.mentions) {
+            assert.ok(
+              output.includes(testCase.mentions),
+              `Expected "${testCase.name}" to fail with ${testCase.mentions}.\nOutput: ${output}`
+            )
+          }
         } else {
           assert.equal(
             exitCode,

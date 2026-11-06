@@ -349,6 +349,12 @@ export interface WorkflowRuntimeMeta {
   graphHash?: string
   deterministic?: boolean
   plannedSteps?: WorkflowPlannedStep[]
+  /** Reachable through the generated start and approve routes. Absent means it is not. */
+  expose?: boolean
+  /** `false` lets the generated anonymous start route reach this workflow, if it is also exposed. */
+  auth?: boolean
+  /** The declared input schema the generated start routes validate against. */
+  inputSchemaName?: string
 }
 
 /** Runtime workflow metadata, keyed by name. */

@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { test } from 'node:test'
 import * as assert from 'node:assert'
 import { readFile, writeFile } from 'node:fs/promises'
@@ -37,6 +38,15 @@ test('app code reaching past #pikku into @pikku/core is reported', async () => {
       'service implementations it picks in bootstrap. To keep the import ' +
       'meanwhile, set "lint": { "coreImport": "off" } in pikku.config.json',
   ])
+})
+
+test('pikku validate exits non-zero when it reports an error', () => {
+  const run = spawnSync(
+    'node',
+    [join(root, '../../packages/cli/dist/bin/pikku.js'), 'validate'],
+    { cwd: root, encoding: 'utf8' }
+  )
+  assert.strictEqual(run.status, 1, `${run.stdout}\n${run.stderr}`)
 })
 
 test('the service implementations bootstrap picks are not reported', async () => {

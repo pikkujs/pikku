@@ -245,7 +245,9 @@ export const checkoutWorkflow = pikkuWorkflowFunc<
 // @snippet start workflowHTTPWiring
 // Expose the checkout workflow via HTTP. rpc.startWorkflow() returns a runId
 // immediately — the workflow runs async in the background.
-// Pikku also auto-generates /workflow/:name/start and /workflow/:name/status/:id routes.
+// Pikku also generates /workflow/:name/start and /workflow/:name/status/:id for
+// workflows marked `expose: true`. Both want a session, and a run is readable only
+// by the user who started it.
 export const startCheckout = pikkuFunc({
   // Exposed like every other entry point. Without this the checkout is
   // reachable over HTTP and by nothing else — no scenario, no agent, no

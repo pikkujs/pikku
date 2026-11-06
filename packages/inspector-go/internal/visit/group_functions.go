@@ -32,6 +32,10 @@ func isFunctionHelper(name string) bool {
 	return pikkuFuncPattern.MatchString(name) || name == "pikkuScenario" || name == "pikkuWebhookReceive" || isScenarioStep
 }
 
+func isWorkflowWrapper(name string) bool {
+	return name == "pikkuWorkflowFunc" || name == "pikkuWorkflowComplexFunc"
+}
+
 var validVarName = regexp.MustCompile(`^[a-zA-Z_$][a-zA-Z0-9_$]*$`)
 var channelConnRe = regexp.MustCompile(`(?i)ChannelConnection`)
 
@@ -121,7 +125,10 @@ func (s *Context) addFunctions(node *ast.Node) {
 		if cm.hasErrors {
 			m.Errors = cm.errors
 		}
-		expose = tsutil.GetPropertyValue(firstArg, "expose").Truthy()
+		// A workflow's `expose` opens its generated start and approve routes. It
+		// must not also publish the body as an RPC: that bypasses the route gate,
+		// and the body cannot run outside a workflow anyway.
+		expose = tsutil.GetPropertyValue(firstArg, "expose").Truthy() && !isWorkflowWrapper(wrapper)
 		m.Remote = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "remote").Truthy())
 		mcp = tsutil.GetPropertyValue(firstArg, "mcp").Truthy()
 		if v := tsutil.GetPropertyValue(firstArg, "auth"); v.Bool != nil {

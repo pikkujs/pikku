@@ -24,6 +24,7 @@ export const chaosOrderSagaWorkflow = pikkuWorkflowFunc<
   },
   { orderId: string; reserved: number; charged: number; shipped: boolean }
 >({
+  expose: true,
   func: async ({}, data, { workflow }) => {
     const reserved = await workflow.do(
       'Reserve inventory',
