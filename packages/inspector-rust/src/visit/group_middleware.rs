@@ -543,3 +543,72 @@ impl Context<'_> {
         self.log.debug(format!("• Found AI middleware with services: {}", join_services(&services)));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::Strings;
+
+    #[test]
+    fn register_middleware_instances_allocates_unique_ids_and_is_idempotent() {
+        let mut inst: Record<MiddlewareInstance> = Record::new();
+        let entries = vec![
+            InstanceEntry { definition_id: "a".into(), is_factory_call: false },
+            InstanceEntry { definition_id: "b".into(), is_factory_call: true },
+        ];
+        let first = register_middleware_instances(&mut inst, "global", "middleware", &entries, "/one.ts", 10);
+        assert_eq!(first, ["global:middleware:0", "global:middleware:1"]);
+        // A second file against the same group must not overwrite the first's ids.
+        let second = register_middleware_instances(&mut inst, "global", "middleware", &entries[..1], "/two.ts", 5);
+        assert_eq!(second, ["global:middleware:2"]);
+        // Revisiting the same call site returns the ids it already has.
+        let again = register_middleware_instances(&mut inst, "global", "middleware", &entries, "/one.ts", 10);
+        assert!(again == first && inst.len() == 3);
+        let got = inst.get("global:middleware:1").unwrap();
+        assert!(got.is_factory_call && got.definition_id == "b");
+    }
+
+    #[test]
+    fn record_middleware_group_merges_registrations() {
+        let mut groups: Map<MiddlewareGroupMeta> = Map::new();
+        record_middleware_group(
+            &mut groups,
+            "*",
+            MiddlewareGroupMeta {
+                export_name: Some("corsMiddleware".into()),
+                source_file: "/a.ts".into(),
+                position: 1,
+                count: 1,
+                instance_ids: Strings::from(vec!["http:*:0".to_string()]),
+                is_factory: true,
+                services: ServicesMeta { optimized: false, services: vec!["logger".into()] },
+                additional_registrations: vec![],
+            },
+        );
+        let second = MiddlewareGroupMeta {
+            source_file: "/b.ts".into(),
+            position: 7,
+            count: 2,
+            instance_ids: vec!["http:*:1".to_string(), "http:*:2".to_string()],
+            services: ServicesMeta { optimized: false, services: vec!["logger".into(), "jwt".into()] },
+            ..Default::default()
+        };
+        record_middleware_group(&mut groups, "*", second.clone());
+        record_middleware_group(&mut groups, "*", second); // a revisit is not a new registration
+        let got = serde_json::to_string(groups.get("*").unwrap()).unwrap();
+        let want = r#"{"exportName":"corsMiddleware","sourceFile":"/a.ts","position":1,"services":{"optimized":false,"services":["logger","jwt"]},"count":3,"instanceIds":["http:*:0","http:*:1","http:*:2"],"isFactory":true,"additionalRegistrations":[{"exportName":null,"sourceFile":"/b.ts","position":7,"isFactory":false}]}"#;
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn rename_temp_definitions_names_after_the_group() {
+        let mut defs: Record<MiddlewareDefinition> = Record::new();
+        defs.set("__temp_a", MiddlewareDefinition { source_file: "/a.ts".into(), ..Default::default() });
+        let mut ids = vec!["named".to_string(), "__temp_a".to_string()];
+        rename_temp_definitions(&mut defs, &mut ids, "tag", "api");
+        assert!(ids[1] == "tag:api" && !defs.has("__temp_a") && defs.get("tag:api").is_some());
+        let mut ids = vec!["__temp_x".to_string(), "named".to_string(), "__temp_y".to_string()];
+        rename_temp_definitions(&mut defs, &mut ids, "http", "*");
+        assert_eq!(ids, ["http:*:0", "named", "http:*:2"]);
+    }
+}
