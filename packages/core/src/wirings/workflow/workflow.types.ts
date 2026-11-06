@@ -202,6 +202,7 @@ export interface WorkflowRunStatus {
  * Read and delete access to stored workflow runs, for consoles and status
  * routes. It applies no ownership check of its own: callers that expose it to
  * users check with `assertWorkflowRunOwner` first.
+ * Each step from `getRunSteps` has a `status`: `pending`, `running`, `scheduled`, `succeeded`, `failed`, `suspended`.
  */
 export interface WorkflowRunService {
   listRuns(options?: {
