@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import * as ts from 'typescript'
+import { findPikkuCall } from '@pikku/inspector-go'
 import { CodeEditService } from './code-edit.service.js'
 import type {
   AgentConfigChanges,
@@ -23,35 +23,31 @@ async function readTempFile(name: string): Promise<string> {
   return readFile(join(tempDir, name), 'utf-8')
 }
 
-function agentConfigOf(source: string): Map<string, ts.Expression> {
-  const file = ts.createSourceFile(
-    'agent.ts',
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS
-  )
-  const config = new Map<string, ts.Expression>()
-  const visit = (node: ts.Node): void => {
-    if (
-      config.size === 0 &&
-      ts.isCallExpression(node) &&
-      node.expression.getText() === 'pikkuAgent'
-    ) {
-      const literal = node.arguments[0]
-      if (literal && ts.isObjectLiteralExpression(literal)) {
-        for (const prop of literal.properties) {
-          if (ts.isPropertyAssignment(prop)) {
-            config.set(prop.name.getText(), prop.initializer)
-          }
-        }
-      }
-      return
-    }
-    ts.forEachChild(node, visit)
+type AgentConfig = {
+  has: (name: string) => boolean
+  /** The source text of a property's value. */
+  text: (name: string) => string
+  /** A property's value, evaluated; `ref('x')` becomes `{ ref: 'x' }`. */
+  value: (name: string) => unknown
+}
+
+function agentConfigOf(source: string): AgentConfig {
+  const call = findPikkuCall(source, 'todoAssistant')
+  assert.ok(call.found, 'the agent call is still there')
+  const prop = (name: string) => call.properties.find((p) => p.name === name)
+  const text = (name: string) => {
+    const found = prop(name)
+    assert.ok(found, `property ${name} exists`)
+    return source.slice(found.valueStart, found.valueEnd)
   }
-  visit(file)
-  return config
+  return {
+    has: (name) => prop(name) !== undefined,
+    text,
+    value: (name) =>
+      new Function('ref', `return (${text(name)})`)((id: string) => ({
+        ref: id,
+      })),
+  }
 }
 
 const FUNCTION_SOURCE = `import { pikkuSessionlessFunc } from '@pikku/core'
@@ -594,15 +590,9 @@ describe('CodeEditService', () => {
         { tools: [tool] }
       )
 
-      const tools = agentConfigOf(await readTempFile('agent.ts')).get('tools')
-      assert.ok(tools && ts.isArrayLiteralExpression(tools))
-      assert.strictEqual(tools.elements.length, 1)
-      const call = tools.elements[0]
-      assert.ok(call && ts.isCallExpression(call))
-      assert.strictEqual(call.expression.getText(), 'ref')
-      const arg = call.arguments[0]
-      assert.ok(arg && ts.isStringLiteral(arg))
-      assert.strictEqual(arg.text, tool)
+      const tools = agentConfigOf(await readTempFile('agent.ts'))
+      assert.deepStrictEqual(tools.value('tools'), [{ ref: tool }])
+      assert.match(tools.text('tools'), /^\[\s*ref\(['"]/)
     })
 
     test('keeps a backslash and quote inside a string literal', async () => {
@@ -617,9 +607,8 @@ describe('CodeEditService', () => {
 
       const config = agentConfigOf(await readTempFile('agent.ts'))
       assert.ok(!config.has('injected'))
-      const value = config.get('goal')
-      assert.ok(value && ts.isStringLiteral(value))
-      assert.strictEqual(value.text, goal)
+      assert.match(config.text('goal'), /^['"]/)
+      assert.strictEqual(config.value('goal'), goal)
     })
 
     test('keeps a backslash and backtick inside a multi-line literal', async () => {
@@ -635,9 +624,8 @@ describe('CodeEditService', () => {
 
       const config = agentConfigOf(await readTempFile('agent.ts'))
       assert.ok(!config.has('injected'))
-      const value = config.get('instructions')
-      assert.ok(value && ts.isNoSubstitutionTemplateLiteral(value))
-      assert.strictEqual(value.text, instructions)
+      assert.ok(config.text('instructions').startsWith('`'))
+      assert.strictEqual(config.value('instructions'), instructions)
     })
 
     test('quotes a nested object key that is not an identifier', async () => {
@@ -650,15 +638,9 @@ describe('CodeEditService', () => {
         { description: { [key]: 1 } } as unknown as AgentConfigChanges
       )
 
-      const value = agentConfigOf(await readTempFile('agent.ts')).get(
-        'description'
-      )
-      assert.ok(value && ts.isObjectLiteralExpression(value))
-      assert.strictEqual(value.properties.length, 1)
-      const prop = value.properties[0]
-      assert.ok(prop && ts.isPropertyAssignment(prop))
-      assert.ok(ts.isStringLiteral(prop.name))
-      assert.strictEqual(prop.name.text, key)
+      const config = agentConfigOf(await readTempFile('agent.ts'))
+      assert.match(config.text('description'), /^\{\s*['"]/)
+      assert.deepStrictEqual(config.value('description'), { [key]: 1 })
     })
 
     test('refuses a change that is not an agent config property', async () => {

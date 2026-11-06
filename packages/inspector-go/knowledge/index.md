@@ -6,7 +6,7 @@ description: Why the Go inspector engine is staged the way it is
 
 # Knowledge
 
-Why the Go inspector engine is built the way it is: what crosses the pipe, why both engines stay supported behind a switch until TypeScript 7, and what happens to `@pikku/inspector` when the TypeScript one is retired.
+Why the Go inspector engine is built the way it is: what crosses the pipe, why the TypeScript engine was retired and what `@pikku/inspector` kept.
 
 <!-- pikku:knowledge-index -->
 

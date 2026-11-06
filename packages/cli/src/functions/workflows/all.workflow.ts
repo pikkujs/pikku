@@ -5,7 +5,7 @@ import {
   ErrorCode,
   findUnusedFunctions,
   unresolvedSchemaReferences,
-} from '@pikku/inspector/lite'
+} from '@pikku/inspector'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
 import { checkAddonDependencyVersions } from '../../utils/addon-dependencies.js'

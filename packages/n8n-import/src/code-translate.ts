@@ -1,4 +1,4 @@
-import ts from 'typescript'
+import { readSyntaxErrors } from '@pikku/inspector-go'
 import type { ParsedNode } from './types.js'
 
 /**
@@ -67,11 +67,7 @@ const BAIL: Array<[RegExp, string]> = [
  */
 function hasTsSyntaxError(source: string): boolean {
   const wrapped = `async function __n8n(){\n${source}\n}`
-  const { diagnostics = [] } = ts.transpileModule(wrapped, {
-    reportDiagnostics: true,
-    compilerOptions: { target: ts.ScriptTarget.Latest },
-  })
-  return diagnostics.some((d) => d.category === ts.DiagnosticCategory.Error)
+  return readSyntaxErrors(wrapped).length > 0
 }
 
 /**

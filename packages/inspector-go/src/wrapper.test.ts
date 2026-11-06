@@ -176,7 +176,7 @@ describe('inspect', () => {
       // finalize always fills filesAndMethods; a finalized state is left as sent
       assert.deepEqual(state.filesAndMethods, {})
       assert.equal(state.stats?.projectFiles, 2)
-      assert.equal(state.typesLookup.size, 0)
+      assert.ok(!('typesLookup' in state) && !('program' in state))
     } finally {
       if (previous === undefined) delete process.env.PIKKU_INSPECTOR_GO_BIN
       else process.env.PIKKU_INSPECTOR_GO_BIN = previous

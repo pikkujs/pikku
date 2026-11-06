@@ -17,6 +17,7 @@ import {
   type BoardStatus,
 } from '../lib/changes-board.js'
 import { filterChanges } from '../lib/changes-filter.js'
+import { LIST_CHANGES_MAX } from '../lib/list-limit.js'
 import { SPECIALISTS } from '../lib/specialists.js'
 
 const STATUSES = [
@@ -27,8 +28,6 @@ const STATUSES = [
   'done',
   'dismissed',
 ] as const
-
-const FETCH_ALL = 5000
 
 export const ChangesListInput = z.object({
   apiUrl: z.string().optional(),
@@ -83,7 +82,7 @@ export const ChangesList = pikkuSessionlessFunc({
       groupId: input.groupId,
       pickupOnly: input.pickupOnly ?? false,
       includeDone: (input.includeDone ?? false) || closed,
-      limit: FETCH_ALL,
+      limit: LIST_CHANGES_MAX,
     })
     const { shown, totals } = filterChanges(listed.changes as BoardChange[], {
       status: input.status,
@@ -174,7 +173,9 @@ export const renderChangesList = (
     if (index) console.log('')
     console.log(
       `${COLUMN_LABELS[status]} (${total})${
-        total > cards.length ? dim(` — showing ${cards.length}, --all for the rest`) : ''
+        total > cards.length
+          ? dim(` — showing ${cards.length}, --all for the rest`)
+          : ''
       }`
     )
     cards.forEach(line(groups, now))

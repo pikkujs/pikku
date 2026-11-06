@@ -41,7 +41,7 @@ const makeOverrideState = (
   declaredNames: string[],
   overrides: Record<string, string>,
   overrideKey: 'secretOverrides' | 'credentialOverrides' | 'variableOverrides'
-): Omit<InspectorState, 'typesLookup'> =>
+): InspectorState =>
   ({
     rpc: {
       wireAddonDeclarations: new Map([
@@ -63,7 +63,7 @@ const makeOverrideState = (
       definitions:
         kind === 'variables' ? declaredNames.map((name) => ({ name })) : [],
     },
-  }) as unknown as Omit<InspectorState, 'typesLookup'>
+  }) as unknown as InspectorState
 
 const makeGrantState = (
   kind: 'secrets' | 'credentials',
@@ -74,7 +74,7 @@ const makeGrantState = (
     secretOverrides?: Record<string, string>
     credentialOverrides?: Record<string, CredentialOverrideMeta>
   }
-): Omit<InspectorState, 'typesLookup'> =>
+): InspectorState =>
   ({
     rpc: {
       wireAddonDeclarations: new Map([
@@ -90,7 +90,7 @@ const makeGrantState = (
         kind === 'credentials' ? declaredNames.map((name) => ({ name })) : [],
     },
     variables: { definitions: [] },
-  }) as unknown as Omit<InspectorState, 'typesLookup'>
+  }) as unknown as InspectorState
 
 function makeState(
   overrides: {
@@ -106,7 +106,7 @@ function makeState(
     credentialDefinitions?: any[]
     webhookSourceMeta?: Record<string, any>
   } = {}
-): Omit<InspectorState, 'typesLookup'> {
+): InspectorState {
   return {
     serviceAggregation: {
       requiredServices: new Set<string>(),
@@ -155,7 +155,7 @@ function makeState(
           },
         }
       : {},
-  } as unknown as Omit<InspectorState, 'typesLookup'>
+  } as unknown as InspectorState
 }
 
 const CONSOLE_PARENT_SERVICES = [
@@ -766,7 +766,7 @@ describe('validateCredentialOverrides — one credential holds one mode', () => 
   const makeTwoAddonState = (
     first: Record<string, CredentialOverrideMeta>,
     second: Record<string, CredentialOverrideMeta>
-  ): Omit<InspectorState, 'typesLookup'> =>
+  ): InspectorState =>
     ({
       rpc: {
         wireAddonDeclarations: new Map([
@@ -777,7 +777,7 @@ describe('validateCredentialOverrides — one credential holds one mode', () => 
       secrets: { definitions: [] },
       credentials: { definitions: [{ name: 'SHARED' }] },
       variables: { definitions: [] },
-    }) as unknown as Omit<InspectorState, 'typesLookup'>
+    }) as unknown as InspectorState
 
   test('flags two addons that wire one name to opposite modes', () => {
     const { logger, criticals } = makeCriticalLogger()
@@ -830,7 +830,7 @@ const makeRemoteState = (
     file?: string
   },
   declared: { credentials?: string[]; secrets?: string[] } = {}
-): Omit<InspectorState, 'typesLookup'> =>
+): InspectorState =>
   ({
     rootDir,
     rpc: {
@@ -842,7 +842,7 @@ const makeRemoteState = (
     secrets: {
       definitions: (declared.secrets ?? []).map((name) => ({ name })),
     },
-  }) as unknown as Omit<InspectorState, 'typesLookup'>
+  }) as unknown as InspectorState
 
 describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependency)', () => {
   const writePkg = (
@@ -1174,7 +1174,7 @@ const makeAgentState = (
     addons?: string[]
     internalMeta?: Record<string, string>
   } = {}
-): Omit<InspectorState, 'typesLookup'> =>
+): InspectorState =>
   ({
     agents: {
       agentsMeta: {
@@ -1189,7 +1189,7 @@ const makeAgentState = (
     },
     functions: { meta: functions },
     addonFunctions,
-  }) as unknown as Omit<InspectorState, 'typesLookup'>
+  }) as unknown as InspectorState
 
 describe('validateAgentToolReferences (ref() resolved at build time)', () => {
   test('a local tool that does not exist is an error', () => {
@@ -1293,9 +1293,7 @@ describe('validateAgentToolReferences (ref() resolved at build time)', () => {
   })
 })
 
-const makeModelState = (
-  models: Record<string, string>
-): Omit<InspectorState, 'typesLookup'> =>
+const makeModelState = (models: Record<string, string>): InspectorState =>
   ({
     agents: {
       agentsMeta: Object.fromEntries(
@@ -1305,7 +1303,7 @@ const makeModelState = (
         ])
       ),
     },
-  }) as unknown as Omit<InspectorState, 'typesLookup'>
+  }) as unknown as InspectorState
 
 describe('validateAgentModels (aliases resolve against pikku.config.json)', () => {
   test('a provider-qualified model needs no alias', () => {

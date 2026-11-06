@@ -18,7 +18,7 @@ export const getFileDiagnostics = pikkuFunc<
         'Only available in local development mode'
       )
     try {
-      return { diagnostics: typeScriptService.diagnostics(path, content) }
+      return { diagnostics: await typeScriptService.diagnostics(path, content) }
     } catch (error) {
       throw toWorkspaceError(error)
     }

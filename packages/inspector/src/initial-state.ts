@@ -24,7 +24,6 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     serverLifecycleFactories: new Map(),
     filesAndMethods: {},
     filesAndMethodsErrors: new Map(),
-    typesLookup: new Map(),
     schemaLookup: new Map(),
     schemas: {},
     functions: {
@@ -215,6 +214,5 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       addonCli: {},
       addonChannel: {},
     },
-    program: null,
   }
 }

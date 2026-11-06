@@ -28,14 +28,9 @@ echo "✓ a registered name typechecks, an unregistered one is a compile error"
 npx tsx src/check-contributors.ts
 
 echo "--- wireRemoteAddon: one name carries the contract and a local package's contributors ---"
-for engine in native typescript; do
-  rm -rf scenarios/remote-local/.pikku
-  (cd scenarios/remote-local && npx pikku all --inspector "$engine" >/dev/null)
-  rm -rf "scenarios/remote-local/.pikku-$engine"
-  mv scenarios/remote-local/.pikku "scenarios/remote-local/.pikku-$engine"
-done
+rm -rf scenarios/remote-local/.pikku
+(cd scenarios/remote-local && npx pikku all >/dev/null)
 npx tsx src/check-remote-local.ts
-rm -rf scenarios/remote-local/.pikku-native scenarios/remote-local/.pikku-typescript
 
 echo "--- #pikku/contributor: typed services for a project, erased at runtime ---"
 rm -rf scenarios/typed/.pikku

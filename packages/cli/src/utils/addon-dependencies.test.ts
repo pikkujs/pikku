@@ -10,7 +10,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { ErrorCode } from '@pikku/inspector/lite'
+import { ErrorCode } from '@pikku/inspector'
 import {
   addonDependencyDeclarations,
   addonDependencySdkSpecs,

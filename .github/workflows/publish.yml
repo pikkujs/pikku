@@ -106,7 +106,7 @@ jobs:
       id-token: write
     outputs:
       published: ${{ steps.changesets.outputs.published }}
-      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+      publishedPackages: ${{ steps.changesets.outputs.published-packages }}
     steps:
       # `workflow_run` starts from the default branch, so the commit that was
       # actually tested has to be named explicitly. Full history is what
@@ -154,19 +154,27 @@ jobs:
         run: node packages/inspector-go/scripts/check-platform-binary.mjs
       - name: Create Release Pull Request or Publish
         id: changesets
-        uses: changesets/action@v1
+        # v2 because @changesets/cli 3 stopped printing the `New tag:` lines v1
+        # scraped. v1 then reported `published: false` after a successful
+        # publish, so no tag, GitHub Release, binary upload, Homebrew update or
+        # template sync ran from #1302 on. v2 reads the file named by
+        # CHANGESETS_OUTPUT instead, which reaches `changeset publish` through
+        # `bun run release`.
+        uses: changesets/action@v2.1.2
         with:
-          version: node .github/changeset-version.cjs
-          publish: bun run release
-          createGithubReleases: true
+          version-script: node .github/changeset-version.cjs
+          publish-script: bun run release
+          create-github-releases: true
+          # Pushes the same way v1 did. v2's default is the GitHub API.
+          push-with-git-cli: true
         # No NPM_TOKEN, deliberately. npm now demands a 2FA OTP that a classic
         # token cannot answer, which is what had every release since 2026-09-02
         # failing on `child "otp" fails`. Trusted publishing is exempt — but in
         # bun run the OIDC branch sits *after* the token check, so a token left in
         # this env would short-circuit OIDC and put the failure straight back.
-        # changesets/action is likewise guarded on NPM_TOKEN being absent.
+        # changesets/action takes its GitHub token from the `github-token` input,
+        # which defaults to this job's token, and does not touch npm auth.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HUSKY: '0'
       - name: Upload CLI native binaries to GitHub Release
         if: steps.changesets.outputs.published == 'true'
@@ -175,7 +183,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          published='${{ steps.changesets.outputs.publishedPackages }}'
+          published='${{ steps.changesets.outputs.published-packages }}'
           cli_version=$(echo "$published" | node -e "
             const pkgs = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
             const cli = pkgs.find(p => p.name === '@pikku/cli');
@@ -199,7 +207,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          published='${{ steps.changesets.outputs.publishedPackages }}'
+          published='${{ steps.changesets.outputs.published-packages }}'
           version=$(echo "$published" | node -e "
             const pkgs = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
             const go = pkgs.find(p => p.name === '@pikku/inspector-go');

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { collectSurface } from '@pikku/inspector/surface'
+import { collectSurface } from '@pikku/inspector-go'
 
 const repoRoot = join(
   dirname(fileURLToPath(import.meta.url)),

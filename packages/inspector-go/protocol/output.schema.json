@@ -52,6 +52,11 @@
           "type": "integer",
           "minimum": 0
         },
+        "filesReused": {
+          "description": "Files served from the source-file cache without re-parsing; zero on a first pass.",
+          "type": "integer",
+          "minimum": 0
+        },
         "types": { "type": "integer", "minimum": 0 },
         "instantiations": { "type": "integer", "minimum": 0 },
         "symbols": { "type": "integer", "minimum": 0 },

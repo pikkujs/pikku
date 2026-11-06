@@ -25,6 +25,7 @@ import {
 } from '../lib/changeset-merge.js'
 import { currentBranch, git } from '@pikku/cli/addon-support'
 import { NextInput, NextOutput } from './next.schemas.js'
+import { LIST_CHANGES_MAX } from '../lib/list-limit.js'
 
 type Route = z.infer<typeof NextOutput>
 type Harness = 'pi' | 'claude'
@@ -113,7 +114,7 @@ export async function pick(
       status: statuses('ready', 'in_progress'),
       includeDone: false,
       pickupOnly: false,
-      limit: 200,
+      limit: LIST_CHANGES_MAX,
     })
   )
   const now = Date.now()
@@ -133,7 +134,7 @@ export async function pick(
           projectId,
           includeDone: true,
           pickupOnly: false,
-          limit: 500,
+          limit: LIST_CHANGES_MAX,
         })
       ).changes
     : []

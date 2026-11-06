@@ -30,8 +30,8 @@
   ],
   "dependencies": {
     "@pikku/openapi-to-zod-schema": "^0.12.8",
-    "to-json-schema": "^0.2.5",
-    "typescript": "^6.0.3"
+    "@pikku/inspector-go": "^0.12.8",
+    "to-json-schema": "^0.2.5"
   },
   "devDependencies": {
     "@types/to-json-schema": "^0.2.4"

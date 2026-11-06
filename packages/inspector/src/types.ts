@@ -1,8 +1,9 @@
-import type * as ts from 'typescript'
-import type { SecretUsage } from './utils/extract-secret-usage.js'
-import type { ServiceBypassUsage } from './utils/extract-service-bypass.js'
+import type {
+  SecretUsage,
+  ServiceBypassUsage,
+  SurfaceUsageCounts,
+} from './utils/usage-types.js'
 import type { AddonDependency } from './utils/addon-dependencies.js'
-import type { SurfaceUsageCounts } from './utils/extract-surface-usage.js'
 import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
 import type { GatewaysMeta } from '@pikku/core/gateway'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
@@ -59,6 +60,8 @@ export type PathToNameAndType = Map<
   string,
   { variable: string; type: string | null; typePath: string | null }[]
 >
+
+export type FilesAndMethodsErrors = Map<string, PathToNameAndType>
 
 export type MetaInputTypes = Map<
   string,
@@ -382,7 +385,6 @@ export type InspectorOptions = Partial<{
   strictMeta: boolean
   /** The `models` table from pikku.config.json, alias -> `provider/model`. */
   modelAliases: Record<string, string>
-  sourceFile: ts.SourceFile
   /**
    * The project's tsconfig, read for its path mappings only. The inspector's
    * program needs them to resolve imports the project reaches through `paths`;
@@ -412,7 +414,6 @@ export type InspectorOptions = Partial<{
   }
   tags: string[]
   manifest: VersionManifest
-  oldProgram: ts.Program | undefined
   /**
    * Run the data-classification leak scan (Private/Pii/Secret brands in function
    * return types). Off by default — it forces return-type inference on every
@@ -466,13 +467,6 @@ export interface InspectorLogger {
   endValidationPass?: () => void
 }
 
-export type AddWiring = (
-  logger: InspectorLogger,
-  node: ts.Node,
-  checker: ts.TypeChecker,
-  state: InspectorState,
-  options: InspectorOptions
-) => void
 export interface InspectorFilesAndMethods {
   userSessionType?: {
     file: string
@@ -747,7 +741,6 @@ export interface InspectorState {
   serverLifecycleFactories: PathToNameAndType
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>
-  typesLookup: Map<string, ts.Type[]> // Lookup for types by name (e.g., function input types, Config type)
   /**
    * What this pass cost, in counts rather than time where it can be counted:
    * counts don't move with the machine, so they are what a perf gate can
@@ -1038,5 +1031,4 @@ export interface InspectorState {
   /** The function metadata of each versioned `wireRemoteAddon`'s SDK, by namespace. Kept apart from `addonFunctions`: none of it runs here. */
   remoteAddonFunctions?: Record<string, RemoteAddonFunctionsMeta>
   exportedContracts: InspectorExportedContractsState
-  program: ts.Program | null // Retained for incremental re-inspection
 }

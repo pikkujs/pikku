@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { TypesMap } from '@pikku/inspector/lite'
+import { TypesMap } from '@pikku/inspector'
 import { serializeSdkSources } from './addon-sdk-sources.js'
 import {
   buildSdkFiles,

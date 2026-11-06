@@ -37,7 +37,15 @@ export interface FindInspectorBinaryOptions {
   exists?: (path: string) => boolean
 }
 
-const PREBUILT_DIR = fileURLToPath(new URL('../prebuilt', import.meta.url))
+/**
+ * This package's root, built at runtime. A literal `new URL('…', import.meta.url)`
+ * is read by webpack as an asset to bundle, which fails for a directory that
+ * exists only after a release build, and the console addon is bundled into
+ * Next.js apps.
+ */
+export const PACKAGE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+const PREBUILT_DIR = join(PACKAGE_DIR, 'prebuilt')
 
 /**
  * Package managers do not all keep a tarball's executable bit, so a prebuilt
@@ -74,10 +82,7 @@ const notFoundMessage = (platform: string, arch: string): string => {
       `PIKKU_INSPECTOR_GO_BIN at it.`
   return (
     `No pikku-inspect binary found for ${target}. ${hint} ` +
-    `Alternatively set PIKKU_INSPECTOR_GO_BIN to a pikku-inspect binary, or ` +
-    `use the TypeScript inspector instead: set "inspector": "typescript" in ` +
-    `pikku.config.json, pass --inspector typescript, or set ` +
-    `PIKKU_INSPECTOR=typescript.`
+    `Alternatively set PIKKU_INSPECTOR_GO_BIN to a pikku-inspect binary.`
   )
 }
 
@@ -115,9 +120,7 @@ export const findInspectorBinary = (
     return prebuilt
   }
 
-  const local =
-    options.localBinary ??
-    fileURLToPath(new URL(`../bin/${executable}`, import.meta.url))
+  const local = options.localBinary ?? join(PACKAGE_DIR, 'bin', executable)
   if (exists(local)) return local
 
   const execPath = options.execPath ?? process.execPath

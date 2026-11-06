@@ -14,7 +14,7 @@ import {
   remoteSdkDir,
   serializeAddonsLock,
   type AddonsLock,
-} from '@pikku/inspector/lite'
+} from '@pikku/inspector'
 import { findSourceFiles } from './find-source-files.js'
 import {
   addonDependencySdkSpecs,
@@ -162,8 +162,8 @@ export const collectRemoteAddonSdkSpecs = async (config: {
     if (text.includes('wireRemoteAddon')) candidates.push({ file, text })
   }
   if (candidates.length === 0) return []
-  // The scanner needs the compiler; load it only when a file mentions the wiring.
-  const { findWireRemoteAddonSpecs } = await import('@pikku/inspector')
+  // The scan runs in the pikku-inspect binary; only spawn it when a file mentions the wiring.
+  const { findWireRemoteAddonSpecs } = await import('@pikku/inspector-go')
   const byName = new Map<string, RemoteAddonSdkSpec>()
   for (const { file, text } of candidates.sort((a, b) =>
     a.file.localeCompare(b.file)
