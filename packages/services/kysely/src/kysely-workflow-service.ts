@@ -577,6 +577,11 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
           ),
           stepState.attemptCount
         )
+        await this.logStepAttemptsExhausted(
+          runId,
+          stepName,
+          stepState.attemptCount
+        )
         // `executeWorkflowStepInner` reads a null claim as "another dispatch
         // owns it" and returns without resuming, so the run would stay
         // `running` until a stalled sweep. Requeue the orchestrator here.
@@ -593,7 +598,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
 
     if (stepState.status === 'failed' || stepState.status === 'running') {
       const attempt = stepState.attemptCount + 1
-      return this.mirrored(
+      const reclaimed = await this.mirrored(
         () => this.reclaimStepAttempt(stepState, attempt, leaseMs),
         async (mirror, newStep) => {
           if (newStep) {
@@ -604,6 +609,11 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
           }
         }
       )
+      // A `failed` step threw, and this is its ordinary retry.
+      if (reclaimed && stepState.status === 'running') {
+        await this.logStepRerun(runId, stepName, reclaimed.attemptCount)
+      }
+      return reclaimed
     }
 
     if (stepState.status === 'pending' || stepState.status === 'scheduled') {

@@ -98,6 +98,8 @@ import { recordSuspension, suspendStepNameFor } from './workflow-suspend.js'
 import {
   claimStepByReadThenWrite,
   takeBackLostInlineStep,
+  warnStepAttemptsExhausted,
+  warnStepRerun,
 } from './workflow-step-claim.js'
 import {
   holdWorkflowLease,
@@ -186,6 +188,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   protected get logger() {
     return getSingletonServices()?.logger
+  }
+
+  private readonly lostStepLog = {
+    logger: () => this.logger,
+    traceparent: (runId: string) => this.getRunTraceparent(runId),
   }
 
   protected mirror?: WorkflowRunMirror
@@ -1119,6 +1126,20 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   /** The trace every hop of the run stays on. */
   public async getRunTraceparent(runId: string): Promise<string | undefined> {
     return (await this.getRunIdentity(runId))?.wire?.traceparent
+  }
+
+  /** Warn that a step lost its worker and is running again, as `attempt`. */
+  public logStepRerun(runId: string, stepName: string, attempt: number) {
+    return warnStepRerun(this.lostStepLog, runId, stepName, attempt)
+  }
+
+  /** Warn that a step lost its worker with no attempts left, and failed. */
+  public async logStepAttemptsExhausted(
+    runId: string,
+    stepName: string,
+    attempts: number
+  ): Promise<void> {
+    await warnStepAttemptsExhausted(this.lostStepLog, runId, stepName, attempts)
   }
 
   private lastStepName(runId: string): string | undefined {

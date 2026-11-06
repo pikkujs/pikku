@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3400 observable things**: 1154 exported names, plus
-2246 members on the classes and interfaces among them, reachable
+**3402 observable things**: 1154 exported names, plus
+2248 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 170 | 144 | 439 |
 | `./virtual-user` | 104 | 102 | 255 |
-| `./workflow` | 97 | 45 | 160 |
+| `./workflow` | 97 | 45 | 162 |
 | `./scenario` | 50 | 48 | 157 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 86 |
@@ -1242,6 +1242,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected async listStepStates(_runId: string): Promise<Array<StepState & { stepName: string }> | null>
   public async getRunIdentity(runId: string): Promise<WorkflowRun | null>
   public async getRunTraceparent(runId: string): Promise<string | undefined>
+  public logStepRerun(runId: string, stepName: string, attempt: number): Promise<void>
+  public async logStepAttemptsExhausted(runId: string, stepName: string, attempts: number): Promise<void>
   public async runWorkflowJob(runId: string, rpcService: PikkuRPC): Promise<void>
   public notifyChildWorkflowFailed(childRun: WorkflowRun, error: Error): Promise<void>
   protected async onChildWorkflowFailed(childRun: WorkflowRun, error: Error): Promise<void>

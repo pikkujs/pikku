@@ -3,7 +3,10 @@ import {
   WorkflowStepFunctionMismatchError,
   WorkflowStepLeaseExpiredError,
 } from './workflow-errors.js'
+import { deriveInvocationId } from './workflow-invocation-id.js'
 import type { StepState } from './workflow.types.js'
+import type { Logger } from '../../services/logger.js'
+import { parseTraceparent, tracedLogger } from '../../trace.js'
 
 /** What claiming a step needs from the workflow service. */
 export type StepClaimStore = {
@@ -20,7 +23,69 @@ export type StepClaimStore = {
    * for lease exhaustion leaves the run `running` until a sweep notices.
    */
   resumeWorkflow?(runId: string): Promise<void>
+  logStepRerun?(runId: string, stepName: string, attempt: number): Promise<void>
+  logStepAttemptsExhausted?(
+    runId: string,
+    stepName: string,
+    attempts: number
+  ): Promise<void>
 }
+
+/** Where the warnings about a lost step go, and the trace of its run. */
+export type LostStepLog = {
+  logger(): Logger | undefined
+  traceparent(runId: string): Promise<string | undefined>
+}
+
+const warnLostStep = async (
+  log: LostStepLog,
+  runId: string,
+  stepName: string,
+  attempt: number,
+  message: string
+): Promise<void> => {
+  // The step has already moved on, so no failure here may reach the claim.
+  try {
+    const logger = log.logger()
+    if (!logger) return
+    const traceparent = await log.traceparent(runId).catch(() => undefined)
+    tracedLogger(logger, parseTraceparent(traceparent)?.traceId).warn({
+      message,
+      runId,
+      stepName,
+      attempt,
+      invocationId: deriveInvocationId(runId, stepName),
+    })
+  } catch {}
+}
+
+export const warnStepRerun = (
+  log: LostStepLog,
+  runId: string,
+  stepName: string,
+  attempt: number
+): Promise<void> =>
+  warnLostStep(
+    log,
+    runId,
+    stepName,
+    attempt,
+    `Workflow step '${stepName}' (run ${runId}) lost its worker and is running again as attempt ${attempt}`
+  )
+
+export const warnStepAttemptsExhausted = (
+  log: LostStepLog,
+  runId: string,
+  stepName: string,
+  attempts: number
+): Promise<void> =>
+  warnLostStep(
+    log,
+    runId,
+    stepName,
+    attempts,
+    `Workflow step '${stepName}' (run ${runId}) lost its worker on attempt ${attempts} with no attempts left, so it failed`
+  )
 
 /**
  * Whether a step whose worker vanished may be handed to another one, or has
@@ -37,7 +102,13 @@ export const leaseAttemptsExhausted = (stepState: StepState): boolean =>
  * invocation id comes from the step's name, so the attempt keeps it.
  */
 export const takeBackLostInlineStep = async (
-  store: Pick<StepClaimStore, 'setStepError' | 'createRetryAttempt'>,
+  store: Pick<
+    StepClaimStore,
+    | 'setStepError'
+    | 'createRetryAttempt'
+    | 'logStepRerun'
+    | 'logStepAttemptsExhausted'
+  >,
   runId: string,
   stepName: string,
   stepState: StepState
@@ -52,9 +123,16 @@ export const takeBackLostInlineStep = async (
       stepState.attemptCount
     )
     await store.setStepError(stepState.stepId, error, stepState.attemptCount)
+    await store.logStepAttemptsExhausted?.(
+      runId,
+      stepName,
+      stepState.attemptCount
+    )
     throw error
   }
-  return store.createRetryAttempt(stepState.stepId, 'pending')
+  const attempt = await store.createRetryAttempt(stepState.stepId, 'pending')
+  await store.logStepRerun?.(runId, stepName, attempt.attemptCount)
+  return attempt
 }
 
 /**
@@ -97,6 +175,11 @@ export const claimStepByReadThenWrite = async (
         ),
         stepState.attemptCount
       )
+      await store.logStepAttemptsExhausted?.(
+        runId,
+        stepName,
+        stepState.attemptCount
+      )
       await store.resumeWorkflow?.(runId)
       return null
     }
@@ -109,6 +192,10 @@ export const claimStepByReadThenWrite = async (
   if (stepState.status === 'failed' || stepState.status === 'running') {
     const attempt = await store.createRetryAttempt(stepState.stepId, 'running')
     await store.refreshStepLease(attempt.stepId, leaseMs)
+    // A `failed` step threw, and this is its ordinary retry.
+    if (stepState.status === 'running') {
+      await store.logStepRerun?.(runId, stepName, attempt.attemptCount)
+    }
     return attempt
   }
   if (stepState.status === 'pending' || stepState.status === 'scheduled') {
