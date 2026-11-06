@@ -161,3 +161,34 @@ func TestGenerateAllLogsGeneratorErrors(t *testing.T) {
 		t.Errorf("diagnostics %+v", e)
 	}
 }
+
+// A heritage clause naming an import that does not resolve has no declaration
+// to read; the base type is unknown rather than a panic.
+func TestGenerateAllUnresolvedBaseType(t *testing.T) {
+	dir := writeProject(t, map[string]string{
+		"tsconfig.json": `{"compilerOptions":{"strict":true,"module":"nodenext","target":"esnext"}}`,
+		"types.ts": `import type { Missing } from '#does-not-resolve'
+
+export interface Run extends Missing {
+  id: string
+}
+`,
+	})
+	st := state.New(dir)
+	tm := st.Functions.TypesMap
+	tm.AddType("Run", filepath.Join(dir, "types.ts"))
+	tm.AddCustomType("RunOutput", "{ run: Run }", []string{"Run"})
+	st.Functions.Meta.Set("run", &state.FunctionMeta{Outputs: []string{"RunOutput"}})
+
+	log := &diag.Logger{}
+	got, err := GenerateAll(log, Config{Tsconfig: filepath.Join(dir, "tsconfig.json")}, st, program.NewCache())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := string(got.At("RunOutput")); !strings.Contains(s, `"id":{"type":"string"}`) {
+		t.Errorf("RunOutput: %s", s)
+	}
+	for _, e := range log.Entries() {
+		t.Errorf("unexpected diagnostic: %.300s", e.Message)
+	}
+}
