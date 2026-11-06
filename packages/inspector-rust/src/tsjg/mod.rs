@@ -7,6 +7,7 @@
 
 pub mod config;
 pub mod formatter;
+pub mod generator;
 pub mod parser;
 pub mod schema;
 pub mod tsutils;
