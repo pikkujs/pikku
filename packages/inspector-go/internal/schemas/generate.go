@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,6 +61,17 @@ func GenerateAll(log *diag.Logger, cfg Config, st *state.State, cache *program.C
 	return out, nil
 }
 
+// defaultVendorTimeout is how long the vendor converter gets to answer when
+// PIKKU_VENDOR_SCHEMA_TIMEOUT_MS does not say otherwise.
+const defaultVendorTimeout = 2 * time.Minute
+
+func vendorTimeout() time.Duration {
+	if ms, err := strconv.Atoi(os.Getenv("PIKKU_VENDOR_SCHEMA_TIMEOUT_MS")); err == nil && ms > 0 {
+		return time.Duration(ms) * time.Millisecond
+	}
+	return defaultVendorTimeout
+}
+
 // generateVendorSchemas is generateZodSchemas.
 func generateVendorSchemas(log *diag.Logger, conv VendorSchemaConverter, st *state.State) ([]VendorSchema, error) {
 	if st.SchemaLookup.Len() == 0 {
@@ -81,7 +94,14 @@ func generateVendorSchemas(log *diag.Logger, conv VendorSchemaConverter, st *sta
 	}
 	log.Debugf("[TIMING] Zod schemas: %d schemas from %d files", len(refs), len(files))
 	start := time.Now()
-	res, err := conv.Convert(context.Background(), refs)
+	timeout := vendorTimeout()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	res, err := conv.Convert(ctx, refs)
+	if errors.Is(err, context.DeadlineExceeded) {
+		return nil, fmt.Errorf("Zod schema conversion did not answer within %s. "+
+			"Set PIKKU_VENDOR_SCHEMA_TIMEOUT_MS to allow longer: %w", timeout, err)
+	}
 	if err != nil {
 		return nil, err
 	}
