@@ -1,5 +1,11 @@
 # @pikku/openapi-parser
 
+## 0.12.26
+
+### Patch Changes
+
+- b746b55: Security: stop OpenAPI spec titles, versions and tag names from breaking out of generated comments; restrict agent-config edits to known keys and escape their values; refuse addon server URLs containing line breaks before writing them to `.env`.
+
 ## 0.12.25
 
 ### Patch Changes

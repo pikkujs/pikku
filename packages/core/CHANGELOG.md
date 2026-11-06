@@ -1,3 +1,58 @@
+## 0.12.151
+
+### Patch Changes
+
+- 5d48c4a: A screen can also set `defaultChat: false` to hide Studio's general Chat tab beside its agent tab (with no `agent`, the screen has no chat). It defaults to `true`, must be a boolean literal (PKU345 otherwise), and is recorded only when declared.
+
+  The agent and its skills ship in the addon's package: `pikku new addon <name> --ui` now puts `agents` and `skills` in `package.json` `files`, and writes the `studio` block Studio links an addon by, `"studio": { "addon": "<name>", "ui": "./src", "messages": "./messages/{locale}.json" }`. `pikku all` fails with PKU366 when a `files` list leaves out `agents/` while a screen names a valid agent the addon ships (one that is already PKU365 gets that error alone), or leaves out `skills/` while the addon has a `skills/<name>/SKILL.md`. A package with no `files` field is not checked.
+
+- c8a477d: The CLI wires `@pikkustudio/addon-cloud-api` as `cloudApi` and maps it to the `pikku cloud` addon, so `pikku all` syncs the cloud API contract and pins it in `pikku-addons.lock`. `@pikku/addon-console` calls the cloud API as `cloud:<name>` and drops the wish deck: the `listStudioWishes` and `reactToStudioWish` functions, the `pikku:console:wishes` scopes, and the wish and model access parts of the studio host are removed (breaking, documented here per the patch-only rule). The `pikku cloud` addon is now mounted as `cloudCli` (the `pikku cloud` command is unchanged) because its dependency key `cloud` equalled its mount, and an addon's own namespace wins over `uses`, so `cloud:<fn>` could never reach `cloudApi`. `wireAddon` now throws when an addon's `uses` maps its own name to another addon.
+- 539c25d: Trace every wire
+
+  Channels, agent tools and tool workflows, MCP, CLI, triggers, webhook sources, gateways and Cloudflare `runRpc` now carry `traceparent`. A wire with no trace becomes the root of one, and `scheduleRPC` and `webhookService.send` called from a function are stamped with its trace.
+
+  Channel RPC frames take `traceparent` instead of `traceId`, and a responder ignores it unless `trustInboundTraceparent` is set. See `docs/MIGRATION.md`.
+
+- 593a855: Keep the trace when something fails
+
+  A local RPC now runs as a span of its own under its caller. Errors logged by MCP, channels, triggers, agent tools, remote addon calls and inline workflows now carry the trace, and MCP errors and channel error frames return `errorId`, as HTTP does. A job whose data looks like the trace envelope now reaches its worker unchanged.
+
+- 63648ee: `startWorkflow` calls `onRunCreated` for a graph workflow too, before its first node runs. Only DSL workflows reported their run id.
+- 1b265fa: `InMemoryQueueService` no longer retries a job its worker discarded, matching BullMQ, pg-boss and NATS. The job ends as completed rather than failed.
+- db5f42f: Cancelling an inline workflow run now holds. The run used to keep going and write `completed` over `cancelled`; it now rereads its status, stops before its next step or retry, leaves a status `cancelRun` set in place, and finishes any compensation that was waiting on the step it was in.
+- d5cc4f1: An inline graph node now honours its `retries` and `retryDelay`, as it does on the queue: `retries: 2` gives three attempts. A node that declares no retries still runs once inline.
+- bf979a0: An inline workflow step now gets `retries + 1` attempts, as a queued step does: `retries: 1` retries once, where it used to run once and stop. This covers inline runs, compensation steps run inline, and a function step (`workflow.do('Name', fn, options)`) in a queued run. `retries: 0` still means one attempt, and no default changes, so a step that declares no retries gets one more attempt than before. See `docs/MIGRATION.md`.
+- a275026: A job signed by `SignedQueueService` now runs as its user on every queue adapter, where BullMQ, pg-boss and SQS dropped the claim and the Azure and Cloudflare consumers ignored it. Graph child runs and Cloudflare step workers keep the run's user. An unsigned or forged claim is still dropped.
+
+  `SQSQueueService` from `@pikku/lambda` now sends the job's data as the body, so workers stop receiving the wrapper object. Generated remote job schemas keep `traceparent`, which they were stripping, and `pikkuUserId`. `defineQueueIdentityTransportTests` in `@pikku/core/testing` holds an adapter to all of this.
+
+  Breaking: see `docs/MIGRATION.md`.
+
+- 8bad71e: Keep one trace through jobs, scheduled tasks and workflow runs
+
+  A function's `queueService.add` stamps the caller's `traceparent` on the job, and a workflow run stores its trace on `run.wire.traceparent`, so every step, retry, sleep, resume, child workflow and recovery stays on it. Every queue adapter carries `traceparent`, and queue and scheduler wires always have `wire.trace`.
+
+  The `q-<id>` and `cron-<id>` trace ids are gone. `runQueueJob` no longer takes `traceId`, and remote job bodies take `traceparent`. Breaking: see docs/MIGRATION.md.
+
+- 4cf8e97: Add `defineQueueTraceConformance` to `@pikku/core/testing`: runs a queue adapter's failures, retries, delays and mixed job formats through a real broker and checks each keeps its trace.
+- 63e12c4: `wireRemoteAddon` no longer accepts `uses`. A remote server never calls another addon, so the field had no consumer; screens and contributors for a remote name come from `local`.
+- bec7301: `wireRemoteAddon` accepts `uses` (same meaning as `wireAddon`'s, so a remote addon may reach the addons it maps) and `local: { package, ui?, contributors? }`, naming an installed package whose screens and contributors are mounted under the same name as the remote contract. `pikku all` reads them from the local package, and the screens command imports from it.
+- 7ce879d: `requireOrigin` now treats a loopback `Host` (`localhost`, `127.0.0.1`, `[::1]`) with no `X-Forwarded-Proto` as `http`, so same-origin requests to a plain-http dev server are no longer rejected with a 403; every other host still defaults to `https`. `@pikku/core/middleware` also exports `hostOriginOf` and `allowedOriginsFromVariables` (reads `CORS_ORIGINS`, else `FRONTEND_URL`, through the `variables` service).
+- a3a67f3: A serverless channel is now one trace: `ChannelStore` keeps the connection's `traceparent`, and every frame and the disconnect continue it. The Kysely `channels` table gains a `traceparent` column.
+
+  Breaking: see `docs/MIGRATION.md`.
+
+- 54c11c3: Crash recovery now warns on the run's trace when it reruns a step, with the run id, step name, attempt and `invocationId`, and when a step fails with `WorkflowStepLeaseExpiredError` for running out of attempts that way, including at `retries: 0`. An ordinary retry after a thrown error logs neither. A store that overrides `claimStepForExecution` calls `logStepRerun` and `logStepAttemptsExhausted` itself.
+- ceedd4b: Trace with W3C `traceparent`, and remove `x-request-id`
+
+  `wire.traceId` on an HTTP request is now 32 lowercase hex and `wire.trace` adds its span id, parent span and sampled flag. Mesh and remote addon calls send `traceparent`; `x-request-id` is no longer read or sent, `CF-Ray` no longer sets the trace, and `generateRequestId` is gone.
+
+  Public HTTP ignores an inbound `traceparent` unless `trustInboundTraceparent` is set. `pikkuMeshAuthMiddleware` continues a caller's trace once its token has verified. Breaking: see docs/MIGRATION.md.
+
+- 4263e9d: Workflows survive a restart
+
+  `pikku dev` and `pikku serve` now recover runs after a crash or deploy. Sleeps are re-armed from when they were scheduled, in-flight steps retry as a counted attempt with the same `invocationId`, and a sweep skips any run another live instance holds the lease on. Other hosts call `workflowService.recoverWorkflows()` from a scheduled task, and `workflow.recovery: false` turns it off. See `docs/MIGRATION.md`.
+
 ## 0.12.150
 
 ### Patch Changes

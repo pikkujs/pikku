@@ -1,3 +1,34 @@
+## 0.12.66
+
+### Patch Changes
+
+- c8a477d: The CLI wires `@pikkustudio/addon-cloud-api` as `cloudApi` and maps it to the `pikku cloud` addon, so `pikku all` syncs the cloud API contract and pins it in `pikku-addons.lock`. `@pikku/addon-console` calls the cloud API as `cloud:<name>` and drops the wish deck: the `listStudioWishes` and `reactToStudioWish` functions, the `pikku:console:wishes` scopes, and the wish and model access parts of the studio host are removed (breaking, documented here per the patch-only rule). The `pikku cloud` addon is now mounted as `cloudCli` (the `pikku cloud` command is unchanged) because its dependency key `cloud` equalled its mount, and an addon's own namespace wins over `uses`, so `cloud:<fn>` could never reach `cloudApi`. `wireAddon` now throws when an addon's `uses` maps its own name to another addon.
+- Updated dependencies [5d48c4a]
+- Updated dependencies [c8a477d]
+- Updated dependencies [539c25d]
+- Updated dependencies [593a855]
+- Updated dependencies [63648ee]
+- Updated dependencies [1b265fa]
+- Updated dependencies [db5f42f]
+- Updated dependencies [d5cc4f1]
+- Updated dependencies [bf979a0]
+- Updated dependencies [a275026]
+- Updated dependencies [8bad71e]
+- Updated dependencies [4cf8e97]
+- Updated dependencies [63e12c4]
+- Updated dependencies [bec7301]
+- Updated dependencies [7ce879d]
+- Updated dependencies [b746b55]
+- Updated dependencies [a3a67f3]
+- Updated dependencies [c964ee9]
+- Updated dependencies [54c11c3]
+- Updated dependencies [ceedd4b]
+- Updated dependencies [1cc6cf7]
+- Updated dependencies [4263e9d]
+  - @pikku/core@0.12.151
+  - @pikku/cli@0.12.202
+  - @pikku/code-edit@0.12.10
+
 ## 0.12.65
 
 ### Patch Changes
