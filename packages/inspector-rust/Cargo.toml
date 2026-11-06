@@ -26,12 +26,14 @@ tsrs_contentmapper = { git = "https://github.com/oxc-project/tsrs", rev = "b135f
 tsrs_scanner = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
 tsrs_printer = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
 tsrs_parser = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_module = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+regex = "1"
+icu_collator = "2"
 serde = { version = "1", features = ["derive"] }
-serde_json = { version = "1", features = ["preserve_order"] }
+serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
 indexmap = { version = "2", features = ["serde"] }
 sha2 = "0.10"
 sha1 = "0.10"
-regex = "1"
 rustc-hash = "2"
 
 [workspace]

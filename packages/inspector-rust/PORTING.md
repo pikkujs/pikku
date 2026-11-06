@@ -121,13 +121,24 @@ swept sections, `validationPass`, and 4 diagnostics.
 
 ## Known gaps
 
-* **Visitor groups other than the core ones (see README), typesmap
-  `CanonicalTypeString`, schemas, source scans and every `helper` method are
-  not ported.** `finalize` is ported (below).
+* **Remaining visitor groups and typesmap `CanonicalTypeString` are not
+  ported** (see the README status table); everything else listed there is.
+  `schemas`, `finalize`, the `helper` methods and `typeDiagnostics` are ported.
 * **Legacy bench mode** (`pikku-inspect [-timing] <projectDir>`) is not ported;
   the CLI prints an error and exits 1.
-* **`typeDiagnostics`** in `serve` (Go's `typecheck.Service`) answers with an
-  error.
+* **Helpers: `internal/remotesdk`** is not reachable from `helpers` (only
+  `visit` and `finalize` import it), so it is left to whoever ports those.
+* **Helpers: leaked programs.** tsrs programs are `&'static` and never freed, so
+  every `typeDiagnostics` request leaks the program it builds (about 3 MB per
+  request on `packages/core`; Go's GC reclaims it). The parsed-file cache still
+  bounds re-parsing; only the program/checker graph leaks. 40 requests on
+  `packages/core`: Rust 205 MB peak RSS, Go 325 MB.
+* **Helpers: Unicode tables.** `\p{L}`/`\p{Lu}`/`\p{N}` come from the `regex`
+  crate's (newer) Unicode tables, Go's from its own; a character added to a
+  category between the two versions classifies differently. None found on the
+  repo corpus. `localeCompare` (member order in `collectSurface`) uses
+  `icu_collator` (root collation) where Go uses `x/text/collate` (English);
+  identical on all 335 collectSurface cases.
 * **`stats.heapUsedMb` is always 0** (Go: `runtime.MemStats.HeapAlloc`);
   `stats.cpuMs` is read from `/proc/self/stat` and is 0 off Linux. Stats are
   informational.
@@ -226,3 +237,42 @@ Known gaps:
   reproduced; `describe_node` reports a byte offset, not line:column.
 * `locale_sort` of the virtual file's declarations is an approximation of ICU
   collation (affects only declaration order, never a schema).
+## Helper methods (`helpers`, `sourcescan`, `surface`, `typecheck`)
+
+| Rust | Go | Notes |
+|---|---|---|
+| `helpers.rs` | `internal/helpers` | all 22 methods, batch forms included; result is a `RawValue` encoded by `jsjson` |
+| `sourcescan/` | `internal/sourcescan` | one file per Go file (`parse`, `files`, `syntax`, `modspec`, `remoteaddon`, `jsxtext`, `jsxprops`, `pikkucall`, `messageusage`, `copytext`, `copyskip`, `sourcechecks`, `stubscan`, `tsconfig`) |
+| `surface/` | `internal/surface` | `mod` (collect), `jsdoc`, `print`, `quotes`, `pkgjson` |
+| `typecheck.rs` | `internal/typecheck` | `Service` per root, kept in `serve` |
+
+Things that were not obvious:
+
+* **Overlay type-check on the tsrs public API.** `typecheck::OverlayHost`
+  wraps the caching `CompilerHost` and answers `get_source_file` for the overlay
+  file from memory. tsrs additionally checks `fs.file_exists(root)` before it
+  asks the host for a root file, so a *new* unsaved file (not on disk) was
+  silently dropped; the host's `fs()` is therefore a `vfs::wrapvfs` over the real
+  FS whose `file_exists` also answers true for the overlay file. Go does not need
+  this. Proven on 345 diagnostics cases (saved, unsaved with errors, truncated,
+  emoji, missing import, nonexistent root) across 20 projects: 0 differences.
+* **`regex` is not RE2.** Go's `\b`, `\w`, `\d`, `\s` are ASCII; the `regex`
+  crate's are Unicode. The patterns spell the classes out (`[0-9A-Za-z_]`,
+  `(?-u:\b)`, the explicit `JS_WHITESPACE` class) wherever Go relied on ASCII.
+* **Lone surrogates.** An escape such as `'\ud83d'` is kept by tsrs as WTF-8
+  bytes inside a `&str` (invalid UTF-8, exactly as in a Go string). `NodeLit::lit`
+  reads literal text through `fix_wtf8`, which turns each lone surrogate into a
+  marker char (U+10D800..) and any other invalid byte into U+FFFD; `JsText`
+  turns a marker back into the lone UTF-16 unit (Go's `utf16Units`), and
+  `helpers::json` writes the remaining markers as three U+FFFD (what Go's JSON
+  encoder does with the three bytes).
+* **JSDoc `comment` is never absent in tsrs** and Go's is non-nil even for a
+  tag-only comment (`/** @override */`), so `jsdoc::comment_list` reports it
+  present; that is what stops doc inheritance in `collectSurface` (kysely's
+  `Kysely.withSchema`).
+* **Internal symbol names** start with U+007F in tsrs, 0xFE in Go; `symbol_name`
+  and `is_reserved` use tsrs's prefix. Names sorted with the prefix could order
+  differently from Go; none occurs among exports.
+
+Verification: `scripts/helper-parity.ts` (196k+ cases) and
+`tests/helpers_golden.rs` (Go's own goldens). See `scripts/README.md`.

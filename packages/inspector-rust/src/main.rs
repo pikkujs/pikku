@@ -128,7 +128,7 @@ struct HelperRequest {
 struct HelperResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     id: Option<Value>,
-    result: Value,
+    result: Box<serde_json::value::RawValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<helpers::Error>,
 }
@@ -140,11 +140,53 @@ fn run_helper<R: Read, W: Write>(method: &str, mut r: R, mut w: W) -> Result<(),
     write_json(&mut w, &HelperResponse { id: None, result, error })
 }
 
+#[derive(serde::Deserialize, Default)]
+#[serde(default)]
+struct TypeDiagnosticsParams {
+    root: String,
+    path: String,
+    content: Option<String>,
+}
+
+/// `typeDiagnostics` in serve mode, keeping one type-check service per
+/// workspace root so its parsed files outlive a request.
+fn type_diagnostics(
+    id: Option<Value>,
+    params: Option<Value>,
+    services: &mut std::collections::HashMap<String, pikku_inspect::typecheck::Service>,
+) -> HelperResponse {
+    let null = || serde_json::value::RawValue::from_string("null".into()).unwrap();
+    let p: TypeDiagnosticsParams = match params {
+        None => TypeDiagnosticsParams::default(),
+        Some(v) => match serde_json::from_value(v) {
+            Ok(p) => p,
+            Err(e) => {
+                return HelperResponse {
+                    id,
+                    result: null(),
+                    error: Some(helpers::Error { name: String::new(), message: format!("bad params: {e}") }),
+                };
+            }
+        },
+    };
+    let svc = services
+        .entry(p.root.clone())
+        .or_insert_with(|| pikku_inspect::typecheck::Service::new(&p.root));
+    let diags = svc.diagnostics(&p.path, p.content.as_deref());
+    let raw = jsjson::marshal(&diags, "")
+        .ok()
+        .and_then(|b| String::from_utf8(b).ok())
+        .and_then(|s| serde_json::value::RawValue::from_string(s).ok())
+        .unwrap_or_else(null);
+    HelperResponse { id, result: raw, error: None }
+}
+
 /// Answers one NDJSON request per line until stdin closes. Requests are handled
 /// one at a time; the SourceFile cache carries parsed and bound files from one
 /// request to the next, and every request gets a new checker.
 fn run_serve<R: BufRead, W: Write>(r: R, w: W) -> Result<(), String> {
     let cache = Cache::new();
+    let mut typecheckers: std::collections::HashMap<String, pikku_inspect::typecheck::Service> = Default::default();
     let mut out = BufWriter::new(w);
     for line in r.lines() {
         let line = line.map_err(|e| e.to_string())?;
@@ -153,12 +195,8 @@ fn run_serve<R: BufRead, W: Write>(r: R, w: W) -> Result<(), String> {
         }
         if let Ok(head) = serde_json::from_str::<HelperRequest>(&line) {
             if head.method == "typeDiagnostics" {
-                // Go keeps a typecheck.Service per workspace root. Not ported.
-                let error = helpers::Error {
-                    name: String::new(),
-                    message: "typeDiagnostics: not implemented in pikku-inspect-rs".into(),
-                };
-                write_json(&mut out, &HelperResponse { id: head.id, result: Value::Null, error: Some(error) })?;
+                let resp = type_diagnostics(head.id, head.params, &mut typecheckers);
+                write_json(&mut out, &resp)?;
                 out.flush().map_err(|e| e.to_string())?;
                 continue;
             }

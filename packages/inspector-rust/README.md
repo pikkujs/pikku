@@ -29,11 +29,13 @@ visitor group is ported**, so an inspection returns a state with the program's
 | `tsutil` | `internal/tsutil` | `walk`, `text`, `props`, `route`, `governance`, `print`, `sortjs`, `types`; `typeorder.rs` / `unionorder.rs` are STUBS for their porter |
 | `schemas`, `tsjg` | `internal/schemas`, `internal/tsjg` | done except the Zod QuickJS route (Node only), the disk cache and the TypeToTypeNode union reorder; see PORTING.md |
 | `finalize` | `internal/finalize` | done; byte-identical to Go on all 64 projects (`scripts/finalize-parity.ts`) |
-| `helpers` | `internal/helpers` | method list ported; every method answers `not implemented` |
-| `main.rs` | `cmd/pikku-inspect` | `--stdin`, `inspect --stdin`, `finalize --stdin`, `serve` (inspect works), `helper <m>` (not implemented); legacy bench mode not ported |
+| `helpers` | `internal/helpers` | done: all 22 methods (see PORTING.md, "Helper methods"); `scripts/helper-parity.ts` reports 0 differences |
+| `sourcescan` | `internal/sourcescan` | done |
+| `surface` | `internal/surface` | done |
+| `typecheck` | `internal/typecheck` | done; `serve` answers `typeDiagnostics` |
+| `main.rs` | `cmd/pikku-inspect` | `--stdin`, `inspect --stdin`, `finalize --stdin`, `serve` (inspect, typeDiagnostics, helpers), `schemas --stdin`, `helper <m>`; legacy bench mode not ported |
 
-`serve` handles `inspect` end to end; `typeDiagnostics` and the helper methods
-answer with an error.
+`serve` handles `inspect` end to end, `typeDiagnostics` and the helper methods.
 
 ## Build, run, test
 
