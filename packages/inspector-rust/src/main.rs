@@ -127,7 +127,7 @@ struct HelperRequest {
 struct HelperResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     id: Option<Value>,
-    result: Value,
+    result: Box<serde_json::value::RawValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<helpers::Error>,
 }
@@ -157,7 +157,7 @@ fn run_serve<R: BufRead, W: Write>(r: R, w: W) -> Result<(), String> {
                     name: String::new(),
                     message: "typeDiagnostics: not implemented in pikku-inspect-rs".into(),
                 };
-                write_json(&mut out, &HelperResponse { id: head.id, result: Value::Null, error: Some(error) })?;
+                write_json(&mut out, &HelperResponse { id: head.id, result: serde_json::value::RawValue::from_string("null".into()).unwrap(), error: Some(error) })?;
                 out.flush().map_err(|e| e.to_string())?;
                 continue;
             }

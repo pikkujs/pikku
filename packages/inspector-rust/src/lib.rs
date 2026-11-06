@@ -27,6 +27,8 @@ pub mod jsjson;
 pub mod program;
 pub mod protocol;
 pub mod schemas;
+pub mod sourcescan;
+pub mod surface;
 pub mod state;
 pub mod tsutil;
 pub mod typesmap;
