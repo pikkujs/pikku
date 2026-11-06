@@ -876,14 +876,20 @@ export async function runSharedProjectChecks(
         const files = (await readdir(migrationsDir))
           .filter((f) => f.endsWith('.sql'))
           .sort()
-        const nums: number[] = []
+        // Duplicate numeric prefixes are legitimate (an applied migration
+        // cannot be renamed), so compare distinct IDs: only an ID with no file
+        // at all is a gap. Applied-name presence is checked separately.
+        const idSet = new Set<number>()
         for (const f of files) {
           const m = f.match(/^(\d+)/)
-          if (m) nums.push(parseInt(m[1]!, 10))
+          if (m) idSet.add(parseInt(m[1]!, 10))
         }
+        const nums = [...idSet].sort((a, b) => a - b)
         for (let idx = 1; idx < nums.length; idx++) {
           if (nums[idx] !== nums[idx - 1]! + 1) {
-            const missing = `${nums[idx - 1]! + 1}..${nums[idx]! - 1}`
+            const from = nums[idx - 1]! + 1
+            const to = nums[idx]! - 1
+            const missing = from === to ? `${from}` : `${from}..${to}`
             e(
               'migration-gap',
               `Migration numbering gap: IDs ${missing} are missing`,

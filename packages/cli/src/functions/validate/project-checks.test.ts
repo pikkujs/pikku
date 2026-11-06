@@ -1021,6 +1021,56 @@ describe('project checks', () => {
       }
     })
 
+    test('duplicate numeric prefixes (seminarhof layout) → no gap', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const migrDir = join(tmp, 'db', 'sqlite')
+        await mkdir(migrDir, { recursive: true })
+        const names = [
+          '0002-pikku-runtime',
+          '0003-drop-booking-session',
+          '0004-cook',
+          '0004-staff',
+          '0005-rota-catchup',
+          '0006-placeholder',
+          '0006-retire-shift',
+          '0006-rota-catchup',
+          '0007-drop-user-role',
+          '0008-retire-shift',
+          '0009-feature-flags',
+        ]
+        for (const n of names) {
+          await writeFile(join(migrDir, `${n}.sql`), 'SELECT 1;', 'utf8')
+        }
+        const result = await runValidate(tmp)
+        assert.deepStrictEqual(
+          result.findings.filter((f) => f.id === 'migration-gap'),
+          []
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('gap after duplicate prefixes → ascending range error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const migrDir = join(tmp, 'db', 'sqlite')
+        await mkdir(migrDir, { recursive: true })
+        for (const n of ['0002-a', '0002-b', '0003-c', '0006-d']) {
+          await writeFile(join(migrDir, `${n}.sql`), 'SELECT 1;', 'utf8')
+        }
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'migration-gap')
+        assert.ok(finding)
+        assert.ok(finding!.message.includes('4..5'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
     test('gap in migration numbering → error', async () => {
       const tmp = await makeTmp()
       try {
