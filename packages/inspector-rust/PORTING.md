@@ -278,8 +278,10 @@ Known gaps:
   `ExpressionWithTypeArgumentsNodeParser` does `aliasedSymbol.Declarations[0]` on
   a symbol with no declarations (index out of range). tsrs parses that heritage
   entry as a `TypeReference`, whose parser falls back to `any`, so Rust returns the
-  schema (without the base members) and no diagnostic. Fix in Go: guard the empty
-  declaration list like `TypeReferenceNodeParser` (`firstValidDeclaration`).
+  schema (without the base members) and no diagnostic. Fixed in Go
+  (commit "inspector-go: guard an unresolved base type in the extends parser"): the empty
+  declaration list returns `any`, so Rust and Go agree (online-shop identical with schemas on;
+  test `tests/schemas_unresolved_base.rs`). The oracle binary must include that commit.
 * Error text for internal Rust panics (Go: `internal error: ...` + stack) is not
   reproduced; `describe_node` reports a byte offset, not line:column.
 * `locale_sort` of the virtual file's declarations is an approximation of ICU

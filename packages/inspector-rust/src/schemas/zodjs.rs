@@ -183,6 +183,49 @@ fn run_in_thread(dir: &str, tsconfig: &str, refs: &[VendorRef], timeout: Duratio
     }
 }
 
+
+/// QuickJS has no TextEncoder/TextDecoder; Go's qjs does, and modules read
+/// them while they load.
+const TEXT_CODEC: &str = r#"
+if (typeof globalThis.TextEncoder === 'undefined') {
+  globalThis.TextEncoder = class TextEncoder {
+    get encoding() { return 'utf-8' }
+    encode(input = '') {
+      const s = String(input), out = []
+      for (let i = 0; i < s.length; i++) {
+        let c = s.codePointAt(i)
+        if (c > 0xffff) i++
+        if (c >= 0xd800 && c <= 0xdfff) c = 0xfffd
+        if (c < 0x80) out.push(c)
+        else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63))
+        else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63))
+        else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63))
+      }
+      return new Uint8Array(out)
+    }
+  }
+}
+if (typeof globalThis.TextDecoder === 'undefined') {
+  globalThis.TextDecoder = class TextDecoder {
+    constructor(label = 'utf-8') { this.encoding = String(label).toLowerCase() }
+    decode(input) {
+      if (input === undefined) return ''
+      const b = input instanceof Uint8Array ? input : new Uint8Array(input.buffer || input)
+      let s = ''
+      for (let i = 0; i < b.length;) {
+        const c = b[i++]
+        let cp = c
+        if (c >= 0xf0) { cp = ((c & 7) << 18) | ((b[i++] & 63) << 12) | ((b[i++] & 63) << 6) | (b[i++] & 63) }
+        else if (c >= 0xe0) { cp = ((c & 15) << 12) | ((b[i++] & 63) << 6) | (b[i++] & 63) }
+        else if (c >= 0xc0) { cp = ((c & 31) << 6) | (b[i++] & 63) }
+        s += String.fromCodePoint(cp)
+      }
+      return s
+    }
+  }
+}
+"#;
+
 /// Stands in for the parts of Node a module reads while it loads, and for the
 /// console QuickJS does not have (Go's qjs has one and discards its output).
 fn prelude(dir: &str) -> String {
@@ -201,6 +244,7 @@ fn prelude(dir: &str) -> String {
     };
     format!(
         "if (typeof globalThis.console === 'undefined') {{ const n = () => {{}}; globalThis.console = {{ log: n, info: n, warn: n, error: n, debug: n, trace: n, assert: n, dir: n, table: n, time: n, timeEnd: n, group: n, groupEnd: n }} }}\n\
+         {TEXT_CODEC}\n\
          globalThis.global = globalThis;\n\
          globalThis.process = {{ env: {}, argv: [], platform: {}, versions: {{}}, cwd: () => {} }};",
         Value::Object(map),
