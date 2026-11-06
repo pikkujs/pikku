@@ -29,6 +29,7 @@ pub mod protocol;
 pub mod remotesdk;
 pub mod schemas;
 pub mod state;
+pub mod tsjg;
 pub mod tsutil;
 pub mod typesmap;
 pub mod visit;

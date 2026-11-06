@@ -231,11 +231,41 @@ pub struct FunctionMeta {
     /// TS writes with only some of the keys. The keys finalize assigns
     /// afterwards (the contract hashes, singletonServicesOnly) are laid over it.
     pub verbatim: Raw,
+    /// Slices that were nil when the entry was decoded from JSON.
+    pub nil_slices: NilSlices,
+}
+
+/// Which of an entry's slices Go holds as nil (written `null`): decoded from a
+/// key that was absent or `null`. A `Vec` is never nil, so the flag stands in;
+/// it only takes effect while the `Vec` is still empty.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct NilSlices {
+    pub services: bool,
+    pub inputs: bool,
+    pub outputs: bool,
 }
 
 impl FunctionMeta {
     pub fn new(fields: FunctionMetaFields) -> FunctionMeta {
-        FunctionMeta { fields, inline: false, verbatim: Raw::default() }
+        FunctionMeta { fields, inline: false, verbatim: Raw::default(), nil_slices: NilSlices::default() }
+    }
+
+    /// `fields` as JSON with the nil slices written `null`.
+    fn fields_json(&self) -> Result<Value, serde_json::Error> {
+        let mut v = serde_json::to_value(&self.fields)?;
+        let n = self.nil_slices;
+        if n.services && self.fields.services.services.is_empty() {
+            if let Some(s) = v.get_mut("services") {
+                s["services"] = Value::Null;
+            }
+        }
+        if n.inputs && self.fields.inputs.is_empty() {
+            v["inputs"] = Value::Null;
+        }
+        if n.outputs && self.fields.outputs.is_empty() {
+            v["outputs"] = Value::Null;
+        }
+        Ok(v)
     }
 }
 
@@ -278,17 +308,26 @@ impl Serialize for FunctionMeta {
             }
             return overlay_object_keys(base.clone(), keys).serialize(s);
         }
+        let v = self.fields_json().map_err(serde::ser::Error::custom)?;
         if !self.inline {
-            return self.fields.serialize(s);
+            return v.serialize(s);
         }
-        let v = serde_json::to_value(&self.fields).map_err(serde::ser::Error::custom)?;
         reorder_object_keys(v, &INLINE_META_KEYS_FIRST, &INLINE_META_KEYS_LAST).serialize(s)
     }
 }
 
 impl<'de> Deserialize<'de> for FunctionMeta {
+    /// A key that is absent or `null` is a nil slice in Go (the partial entries
+    /// analysis creates); it re-encodes as `null`, which a `Vec` cannot hold, so
+    /// the entry remembers which slices were nil (see [`NilSlices`]).
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        FunctionMetaFields::deserialize(d).map(FunctionMeta::new)
+        let v = Value::deserialize(d)?;
+        let nil = |p: &[&str]| !p.iter().try_fold(&v, |x, k| x.get(*k)).is_some_and(|x| !x.is_null());
+        let nil_slices = NilSlices { services: nil(&["services", "services"]), inputs: nil(&["inputs"]), outputs: nil(&["outputs"]) };
+        let fields = FunctionMetaFields::deserialize(&v).map_err(serde::de::Error::custom)?;
+        let mut m = FunctionMeta::new(fields);
+        m.nil_slices = nil_slices;
+        Ok(m)
     }
 }
 

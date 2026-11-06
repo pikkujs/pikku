@@ -37,6 +37,16 @@ Outputs in `--out` (default `.../scratchpad/parity/`): `summary.md` (the scorebo
 `golden.ts [goBin] [--schemas] [--out dir]` stores Go's answer key under `<out>/golden/`: raw `<project>.json`,
 `.normalised.json`, `.request.json`, and `index.json` (exit code, error, wall ms, peak RSS).
 
+## Finalize-only parity
+
+```bash
+bun packages/inspector-rust/scripts/finalize-parity.ts <goBin> <rsBin> [--projects ...] [--schemas] [--out dir] [--jobs 4]
+```
+
+Takes Go's PRE-finalize state (`<goBin> --stdin --no-finalize`, so `goBin` must be a build with that flag),
+sends it to `finalize --stdin` of both binaries and compares the outputs byte for byte, with the same
+normalisations and the same per-key report as `parity.ts`. The Rust analysis does not take part.
+
 ## Normalisations (everything else is compared as raw text)
 
 Applied as text substitutions on stdout (key order and number formatting stay untouched), counts recorded per

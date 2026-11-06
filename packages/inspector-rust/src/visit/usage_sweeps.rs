@@ -194,6 +194,43 @@ mod tests {
         assert_eq!(leaf_specifier_of("#pikku/"), None);
     }
 
+    /// Go `TestSurfaceUsageArea`.
+    #[test]
+    fn surface_usage_area_cases() {
+        let root = std::env::temp_dir().join(format!("pikku-usage-area-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let write = |rel: &str, body: &str| {
+            let p = root.join(rel);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, body).unwrap();
+        };
+        write("package.json", r#"{"name":"root-pkg"}"#);
+        write("packages/a/package.json", r#"{"name":"@x/a"}"#);
+        write("packages/b/package.json", r#"{"name":""}"#);
+        write("packages/c/package.json", "{not json");
+        let root_s = root.to_string_lossy().to_string();
+        let mut cache = HashMap::new();
+        for (file, want) in [
+            ("packages/a/src/deep/f.ts", "@x/a".to_string()),
+            ("packages/b/src/f.ts", "packages".to_string()),
+            ("packages/c/f.ts", "packages".to_string()),
+            ("src/f.ts", "src".to_string()),
+            ("top.ts", base_path(&root_s)),
+        ] {
+            let got = surface_usage_area(&format!("{root_s}/{file}"), &root_s, &mut cache);
+            assert_eq!(got, want, "surface_usage_area({file})");
+        }
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// Go `TestJSSortOrder`: U+FF5E sorts after U+1F600 by code point, before it by UTF-16 unit.
+    #[test]
+    fn js_sort_order() {
+        let set: BTreeSet<String> =
+            ["\u{1F600}", "\u{ff5e}", "B", "a", "10:x", "9:x"].iter().map(|s| s.to_string()).collect();
+        assert_eq!(js_sorted(set), ["10:x", "9:x", "B", "a", "\u{1F600}", "\u{ff5e}"]);
+    }
+
     #[test]
     fn usage_area_falls_back_to_top_level_dir() {
         let mut cache = HashMap::new();

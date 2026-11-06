@@ -293,7 +293,7 @@ fn extract_override_and_version(obj: P<Node>, r: &mut ExtractedName) {
             }
             "version" => {
                 if ast::is_numeric_literal(init) && r.version == 0 {
-                    if let Ok(v) = init.text().trim().parse::<f64>() {
+                    if let Ok(v) = init.text().parse::<f64>() {
                         if v >= 1.0 && v == v.trunc() {
                             r.version = v as i64;
                         }

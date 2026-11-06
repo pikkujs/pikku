@@ -311,6 +311,8 @@ name = "pikku-inspect-rs"
 version = "0.0.0"
 dependencies = [
  "indexmap",
+ "regex",
+ "rustc-hash",
  "serde",
  "serde_json",
  "sha1",

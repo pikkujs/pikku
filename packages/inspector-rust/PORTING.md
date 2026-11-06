@@ -47,8 +47,9 @@ every rule there about TypeScript parity still holds.
 
 Build a request (routeFiles = the project's `src/**/*.ts`, `options.rootDir`,
 `options.tsconfig`), run both binaries, compare the parsed JSON key by key. The
-Go binary finalizes (`finalized: true`); until `finalize` is ported, compare the
-analysis sections. The parity harness lives in `scripts/`.
+Go binary finalizes (`finalized: true`). The parity harness lives in `scripts/`;
+`scripts/finalize-parity.ts` checks finalize alone, on Go's pre-finalize state
+(`pikku-inspect --stdin --no-finalize`), independent of the visitor ports.
 
 Measured on `recipes/functions` (foundation commit): 30 route files, 30 project
 files in both; `rootDir` and the 24 sections nothing writes to are equal as
@@ -91,12 +92,38 @@ swept sections, `validationPass`, and 4 diagnostics.
   PORTING.md, which lists the project-file count differences). tsrs follows
   typescript-go, so expect the same extra generated files in the sweep.
 
+## Shared helpers other porters call
+
+* `tsutil::{text, props, governance, route, print, types}`: node text/start (`node_text`, `node_start`, `start_utf16`),
+  `get_property_value` / `PropValue`, `find_property_assignment`, `literal_*` readers, `path_params`,
+  `route_matches_pattern`, `print_node` (the paren-cutting `PrintNode`), `js_number*`, `rel_path`.
+* `visit::util_names` (`extract_function_name`, `ref_id`, `temp_func_id`, `resolve_alias`, `symbol_at`,
+  `is_named_export`), `util_callee` (`resolve_callee_name`), `util_props` (`get_common_wire_meta_data`,
+  `extract_string_literal`, `extract_function_node`, `get_property_assignment_initializer`),
+  `util_types` (`type_to_string`, `unwrap_promise`, `get_names_and_types`, `resolve_type_name`),
+  `util_schema` (`resolve_schema_ref`), `util_wire_meta`, `util_middleware` (`resolve_middleware`,
+  `resolve_permissions`, `definition_id`, `find_call`), `util_channel_cli`, `util_shared` (`JsObject`,
+  `wiring_call`, `literal_named_property`, `definer_declaration`, `module_exported_name`, `node_position`).
+* `Context.types_lookup` (Go `typesLookup`) and `Context.core_types` are filled by the ported groups.
+* `boundary.rs` holds the few functions that live in Go files owned by another porter and are called from the core
+  groups. Faithful: `resolve_function_meta`, `validate_auth_sessionless`, `read_function_disabled`,
+  `record_disabled_function`, `add_mcp_tool`. STUBS (replace in the commit that ports the Go file):
+  `resolve_addon_name`, `addon_package`, `addon_zod_contract_violation`, `check_classification`, and
+  `resolve_versions::update_channel_and_cli_references`.
+
+## tsrs differences hit by the core visitors
+
+* tsrs parses an interface's `extends` elements as type references; Go gets `ExpressionWithTypeArguments`.
+  `ast::get_heritage_clause_element_name` returns the name expression of either.
+* Internal symbol names start with U+007F in tsrs (Go: byte 0xFE); `tsutil::symbol_name` maps them to `__`.
+* `Node::expression()` panics for kinds without one where Go's returns nil; every call site is guarded by a kind test.
+* `P<SourceFile>::file_name()` borrows the temporary; use `.get().file_name()` for a `'static` str.
+
 ## Known gaps
 
-* **Visitor groups, typesmap `CanonicalTypeString`, schemas, finalize, source
-  scans and every `helper` method are not ported.** `finalize::response` is a
-  no-op, so `inspect --stdin` returns `finalized: false` where Go returns `true`
-  (and no `validationPass`).
+* **Visitor groups other than the core ones (see README), typesmap
+  `CanonicalTypeString`, schemas, source scans and every `helper` method are
+  not ported.** `finalize` is ported (below).
 * **Legacy bench mode** (`pikku-inspect [-timing] <projectDir>`) is not ported;
   the CLI prints an error and exits 1.
 * **`typeDiagnostics`** in `serve` (Go's `typecheck.Service`) answers with an
@@ -112,4 +139,90 @@ swept sections, `validationPass`, and 4 diagnostics.
 * **Duplicate keys** in a `Record` section decoded from JSON keep the last
   value at the first position (JS and Go agree for objects; `Raw` objects go
   through `serde_json::Map`, which does the same).
+* **Go-only `Inputs/Outputs` nil `null`**: a `Vec` cannot be nil (see rule 6).
+  On the decode path (`finalize --stdin`) `FunctionMeta` remembers which of
+  `services.services` / `inputs` / `outputs` were absent or `null` (`NilSlices`)
+  and writes `null` for them while they stay empty, which is what Go's typed
+  re-encode does for the partial entries (gateway / channel connect handlers).
+  Visitor ports that create such entries in-process still use `verbatim`.
+
+## Finalize
+
+Ported file by file (`src/finalize/`, the module docs list the Go file of each).
+Go's steps that read a `state.Raw` section decode it into a JS-value model;
+here that is `finalize::jsval::V` (ordered objects with `undefined` members,
+array-index keys first, shared by reference), and a typed Rust section is read
+through `jv(&section)` (its JSON form) so a section that later gets a typed
+struct needs no change in the steps that read it. Sections finalize writes are
+written as `Raw::of(value.to_json())` or through the typed fields.
+
+* Scoreboard (`scripts/finalize-parity.ts`, 64 projects): byte-identical on all
+  64 without schemas (3983 of 3983 keys). With `--schemas` 62 of 62 projects
+  Go can analyze are identical (3858 of 3858); `verifiers/addon-dependencies/billing`
+  and `verifiers/pikku-studio` fail in Go's schema generation, before finalize.
+* `contractHash` / `inputHash` / `outputHash`, `manifest.*`, `requiredSchemas`,
+  `openAPISpec` and `workflows.graphMeta[*].graphHash/stepHash` are proven
+  against schemas Go generated (they are in the pre-finalize state). They stay
+  equal for a Rust analysis only once the Rust schema generator emits the same
+  schemas byte for byte.
+* **Error text from Go library errors differs.** A malformed `pikku-addons.lock`
+  or `package.json` reports serde's message where Go reports `encoding/json`'s,
+  and a malformed `options.types` / `openAPI.errors` shape reports a fixed Go
+  string. Valid inputs are unaffected.
+* **`validateAgentModels`** sorts alias names by byte order (Go `sort.Strings`
+  and `BTreeMap` agree); `jsRelative` is `filepath.Rel` for absolute paths.
+* `--stress` (finalize-parity) adds `options.openAPI` and a disagreeing
+  `options.manifest`: 62 projects generate an OpenAPI spec (146 paths) and 38
+  report manifest errors, all byte-identical. Workflow wires (http, schedule,
+  trigger, channel, mcp, cli) occur in no corpus project; a synthetic state with
+  one of each (graph `verifiers/workflows` + routes onto `workflowStart:`/
+  `graphStart:` ids) is byte-identical too, but is not checked in.
+* `Raw` sections are parsed values here and verbatim bytes in Go, so a state
+  written with `\uXXXX` escapes for non-ASCII (hand-made JSON; neither engine
+  emits that) re-encodes unescaped.
+* `proseOpensWithVirtualUser` is hand-written (no regex crate): case-insensitive
+  by simple folding, `\b` is ASCII, as Go's RE2.
+* Not ported from Go's test-suite: `TestGlobalPermissionServicesAreRequired`,
+  which analyzes real source (needs the visitor ports).
 * **Go-only `Inputs/Outputs` nil `null`** cannot be expressed (see rule 6).
+
+## Schemas (`schemas`, `tsjg`)
+
+Ported: `internal/schemas` (names, custom types, the schema program with an
+in-memory overlay FS, `generate_all`) and the whole vendored generator
+`internal/tsjg` (types, schema, config, formatters, parsers, generator, wiring in
+`tsjg/factory.rs`). `analyze::run` calls `schemas::generate_all` after the sweeps.
+`pikku-inspect-rs schemas --stdin` (Rust only) takes `{state, options.schemaConfig}`
+(any Go/Rust response works) and returns `{schemas, diagnostics, error?}`;
+`PIKKU_SCHEMAS_REPLAY_VENDOR=1` answers the Zod step from the input state, to
+measure the TypeScript side alone.
+
+Measured against Go's `state.schemas` (64 projects, 1125 schemas): all 1125 are
+byte-identical, key order included, 61/62 projects (the 62nd is online-shop, below).
+
+Known gaps:
+
+* **Zod conversion is Node only.** Go bundles the declaring modules with esbuild
+  and runs them in QuickJS (`schemas/zodjs`), falling back to Node. Rust has no
+  esbuild; `schemas::vendor::NodeConverter` runs `options.schemaConfig.vendorScript`
+  (`scripts/vendor-schemas.mjs`) like Go's fallback. It needs the project's
+  generated `.pikku/**/index.js` and installed `node_modules`: on a clean checkout
+  17 of the 35 projects with schemas fail with "Cannot find module .pikku/...".
+  Verified byte-identical on `verifiers/functions` (66/66 incl. 6 Zod) once `.pikku`
+  exists. Matching Go on a clean tree needs an esbuild (binary) + JS-engine port.
+* **No on-disk schema cache** (`go-ts-schemas.json`): performance only.
+* **`TypeToTypeNode` has no Strada union reorder** (`tsjg/typenode.rs` uses tsrs's
+  own order) until the tsutil typeorder/unionorder port lands; used for call
+  expressions, Promise and object-literal spreads.
+* **online-shop AwaitsCheckoutInput/CheckoutRun.** Go logs a PKU456 with a Go panic
+  stack: `interface CheckoutRun extends ScenarioHttpResponse` where the import
+  `#pikku/scenarios` is unresolved in the schema program; Go's
+  `ExpressionWithTypeArgumentsNodeParser` does `aliasedSymbol.Declarations[0]` on
+  a symbol with no declarations (index out of range). tsrs parses that heritage
+  entry as a `TypeReference`, whose parser falls back to `any`, so Rust returns the
+  schema (without the base members) and no diagnostic. Fix in Go: guard the empty
+  declaration list like `TypeReferenceNodeParser` (`firstValidDeclaration`).
+* Error text for internal Rust panics (Go: `internal error: ...` + stack) is not
+  reproduced; `describe_node` reports a byte offset, not line:column.
+* `locale_sort` of the virtual file's declarations is an approximation of ICU
+  collation (affects only declaration order, never a schema).
