@@ -130,7 +130,13 @@ fn run_inner(
         heap_used_mb: 0,
     };
 
-    // Schema generation (`req.options.schema_config`) is not ported: see schemas.rs.
+    if let Some(sc) = req.options.schema_config.as_ref().filter(|_| !setup_only) {
+        let cfg = crate::schemas::config_from_protocol(sc, &st.root_dir);
+        match crate::schemas::generate_all(log, &cfg, &mut st, cache) {
+            Ok(out) => st.schemas = out,
+            Err(message) => return Err(RunError::Failure(Failure { message, diagnostics: log.entries() })),
+        }
+    }
 
     Ok(Response {
         protocol: VERSION,

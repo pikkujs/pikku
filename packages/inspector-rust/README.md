@@ -27,7 +27,7 @@ visitor group is ported**, so an inspection returns a state with the program's
 | `visit` | `internal/visit` | `Context`, `Registry`, `Phase`, `Abort`, `order` keys, `Sweep`; shared helpers `util_*`, `usage_sweeps`; groups setup-core (`group_setup_core`), functions (+node), http (+contracts), rpc invocations, approval description, schedule, outgoing webhook; post-sweep `resolve_versions`, `service_types`, `finish_core_type_properties`. Boundary functions that live in other porters' Go files are in `boundary.rs` (stubs marked). Other post-sweep steps are still no-ops with their Go file named |
 | `typesmap` | `internal/typesmap` | data structure, serialisation, `get_type_meta`; `CanonicalTypeString` is the identity (TODO) |
 | `tsutil` | `internal/tsutil` | `walk`, `text`, `props`, `route`, `governance`, `print`, `sortjs`, `types`; `typeorder.rs` / `unionorder.rs` are STUBS for their porter |
-| `schemas` | `internal/schemas`, `tsjg` | not ported |
+| `schemas`, `tsjg` | `internal/schemas`, `internal/tsjg` | done except the Zod QuickJS route (Node only), the disk cache and the TypeToTypeNode union reorder; see PORTING.md |
 | `finalize` | `internal/finalize` | done; byte-identical to Go on all 64 projects (`scripts/finalize-parity.ts`) |
 | `helpers` | `internal/helpers` | method list ported; every method answers `not implemented` |
 | `main.rs` | `cmd/pikku-inspect` | `--stdin`, `inspect --stdin`, `finalize --stdin`, `serve` (inspect works), `helper <m>` (not implemented); legacy bench mode not ported |

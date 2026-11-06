@@ -44,6 +44,7 @@ fn main() -> ExitCode {
             }
         }
         Some("serve") => run_serve(stdin.lock(), stdout.lock()),
+        Some("schemas") if args.len() == 2 && a(1) == Some("--stdin") => pikku_inspect::schemas::cli::run(stdin.lock(), stdout.lock()),
         Some("helper") => match (args.len(), a(1)) {
             (2, Some(m)) if helpers::has(m) => run_helper(m, stdin.lock(), stdout.lock()),
             _ => Err(format!("usage: pikku-inspect helper <method>, method one of [{}]", helpers::METHODS.join(" "))),
