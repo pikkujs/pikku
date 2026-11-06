@@ -12,7 +12,7 @@ import { readMcpManifests } from './dev-mcp-manifests.js'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import chokidar, { type FSWatcher } from 'chokidar'
-import { createTypecheckClient } from '../../utils/warm-typecheck.js'
+import { typecheckProjects } from '../../utils/tsc-check.js'
 import {
   checkProjects,
   compileMessages,
@@ -600,7 +600,6 @@ export const dev = pikkuSessionlessFunc<
           }
         }
 
-        const typechecker = createTypecheckClient(config.rootDir)
         const loop = createWatchLoop({
           statusFile: watchStatusFile(pikkuDir),
           dirs,
@@ -608,7 +607,10 @@ export const dev = pikkuSessionlessFunc<
           codegen: () => collectCodegenPass(regenerate),
           messages: () => compileMessages(dirs.typecheckDirs),
           routes: () => generateRouteTrees(dirs.typecheckDirs),
-          typecheck: () => typechecker.check(checkProjects(config.rootDir)),
+          typecheck: (signal) =>
+            typecheckProjects(checkProjects(config.rootDir), config.rootDir, {
+              signal,
+            }),
           onError: (message) => logger.error(message),
         })
 
