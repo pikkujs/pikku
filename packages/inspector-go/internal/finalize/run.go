@@ -96,6 +96,7 @@ func Run(log *diag.Logger, st *state.State, opts Options) error {
 		validateAgentModels(log, st, opts.ModelAliases)
 		validateAgentToolReferences(log, st, opts)
 		validatePermissionDataUsed(log, st, opts)
+		validateSessionlessPermissions(log, st)
 		validateAgentScorerReferences(log, st)
 		validateSecretOverrides(log, st)
 		validateVariableOverrides(log, st)

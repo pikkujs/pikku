@@ -115,7 +115,7 @@ response.
 import { pikkuAuth, pikkuPermission } from '#pikku/auth'
 
 export const isVerified = pikkuAuth(
-  async (_services, session) => !!session?.emailVerified
+  async (_services, session) => !!session.emailVerified
 )
 
 // wirings/auth.wiring.ts

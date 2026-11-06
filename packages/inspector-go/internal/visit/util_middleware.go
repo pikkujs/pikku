@@ -156,7 +156,13 @@ func (s *Context) extractPermissionPikkuNames(node *ast.Node) []string {
 			if ast.IsPropertyAssignment(prop) {
 				extract(prop.Initializer())
 			} else if ast.IsShorthandPropertyAssignment(prop) {
-				extract(prop.Name())
+				// The name itself resolves to the property, so go through its value.
+				name := prop.Name()
+				if sym := s.resolveAlias(s.Checker.GetShorthandAssignmentValueSymbol(prop)); sym != nil &&
+					sym.ValueDeclaration != nil && ast.IsVariableDeclaration(sym.ValueDeclaration) && ast.IsIdentifier(sym.ValueDeclaration.Name()) {
+					name = sym.ValueDeclaration.Name()
+				}
+				extract(name)
 			}
 		}
 	}

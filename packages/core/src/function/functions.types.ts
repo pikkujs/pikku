@@ -83,12 +83,28 @@ export type CorePikkuPermissionConfig<
   func: CorePikkuPermission<In, Services, Wire>
   name?: string
   description?: string
+  /**
+   * With no session, skip this check and let it pass instead of refusing. The
+   * call goes through, so the function itself decides what an anonymous caller
+   * may see. Default false.
+   */
+  skipWithoutSession?: boolean
 }
+
+/**
+ * Marks a permission that already went through {@link pikkuPermission} or
+ * {@link pikkuAuth}, so {@link pikkuPermissionFactory} does not guard it twice.
+ */
+type SessionGuarded = { __pikkuSessionGuarded?: true }
 
 /**
  * Declares a permission: an async check that resolves `true` to allow a call
  * and `false` to refuse it with `ForbiddenError` (403). It receives the
  * services (without `secrets`), the validated input and the wire.
+ *
+ * With no session the check does not run: the call is refused, or, with
+ * `skipWithoutSession: true`, the check passes. So `session` is always there
+ * inside it.
  *
  * Attach it through a function's or wiring's `permissions`: within one group
  * the keys are alternatives, so the call passes when any key passes, and an
@@ -113,7 +129,15 @@ export const pikkuPermission = <
     | CorePikkuPermission<In, Services, Wire>
     | CorePikkuPermissionConfig<In, Services, Wire>
 ): CorePikkuPermission<In, Services, Wire> => {
-  return typeof permission === 'function' ? permission : permission.func
+  const { func, skipWithoutSession = false } =
+    typeof permission === 'function' ? { func: permission } : permission
+  const wrapper: CorePikkuPermission<In, Services, Wire> &
+    SessionGuarded = async (services, data, wire) => {
+    if (!wire.session) return skipWithoutSession
+    return func(services, data, wire)
+  }
+  wrapper.__pikkuSessionGuarded = true
+  return wrapper
 }
 
 /**
@@ -132,12 +156,21 @@ export type CorePikkuPermissionFactory<
  * Declares a permission that takes configuration, so one check serves many
  * call sites: `hasProfileRole({ role: 'support' })`.
  *
+ * The factory takes no options of its own: `skipWithoutSession` belongs on the
+ * `pikkuPermission` or `pikkuAuth` it returns. A plain function returned here
+ * gets the same guard as a `pikkuPermission` without the option.
+ *
  * @example snippet: permissionFactory
  */
 export const pikkuPermissionFactory = <In = any>(
   factory: CorePikkuPermissionFactory<In>
 ): CorePikkuPermissionFactory<In> => {
-  return factory
+  return (input) => {
+    const permission: CorePikkuPermission & SessionGuarded = factory(input)
+    return permission.__pikkuSessionGuarded
+      ? permission
+      : pikkuPermission<any, any, any>(permission)
+  }
 }
 
 /**
@@ -184,6 +217,12 @@ export type CorePikkuAuthConfig<
   func: CorePikkuAuth<Services, Session>
   name?: string
   description?: string
+  /**
+   * With no session, skip this check and let it pass instead of refusing. The
+   * call goes through, so the function itself decides what an anonymous caller
+   * may see. Default false.
+   */
+  skipWithoutSession?: boolean
 }
 
 /**
@@ -195,9 +234,9 @@ export type CorePikkuAuthConfig<
 export type AuthBranded = { __pikkuAuth?: true }
 
 /**
- * Declares a permission that depends only on the session, not the input. The
- * resulting permission refuses outright when there is no session, so the
- * check itself always sees one.
+ * Declares a permission that depends only on the session, not the input. With
+ * no session the check does not run: the call is refused, or, with
+ * `skipWithoutSession: true`, the check passes. So it always sees a session.
  *
  * Because it does not read the input, an agent can evaluate it ahead of time
  * to decide which tools a session may be offered (see `checkAuthPermissions`);
@@ -213,17 +252,17 @@ export const pikkuAuth = <
   auth:
     CorePikkuAuth<Services, Session> | CorePikkuAuthConfig<Services, Session>
 ): CorePikkuPermission<any, Services, any> => {
-  const fn = typeof auth === 'function' ? auth : auth.func
-  const wrapper: CorePikkuPermission<any, Services, any> & AuthBranded = async (
-    services: Services,
-    _data: any,
-    wire: any
-  ) => {
+  const { func, skipWithoutSession = false } =
+    typeof auth === 'function' ? { func: auth } : auth
+  const wrapper: CorePikkuPermission<any, Services, any> &
+    AuthBranded &
+    SessionGuarded = async (services: Services, _data: any, wire: any) => {
     const session = wire.session
-    if (!session) return false
-    return fn(services, session as Session)
+    if (!session) return skipWithoutSession
+    return func(services, session as Session)
   }
   wrapper.__pikkuAuth = true
+  wrapper.__pikkuSessionGuarded = true
   return wrapper
 }
 

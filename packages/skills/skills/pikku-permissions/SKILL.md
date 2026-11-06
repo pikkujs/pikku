@@ -16,6 +16,8 @@ Then this is NOT a permissions problem. Resolve the token in `addHTTPMiddleware(
 ## The rule
 
 **Authorization goes in the `permissions` field. Never in the `func` body.**
+The one exception is what an anonymous caller may see, after a `skipWithoutSession`
+check: see "Sessionless functions" below.
 
 `permissions` runs before `func` and is DECLARED: `pikku meta` and the auditor can see it. An `if` in the body is the same check, invisible.
 
@@ -72,9 +74,47 @@ Put them in `src/permissions/`, one file per entity, and reuse one checker acros
 - A list has no id to check: keep its `pikkuAuth` and filter the query on the session.
 
 If a `pikkuPermission` never reads its data, `pikku all` warns with PKU586 and
-`--strict-meta` or `pikku validate --strict --codegen` fails on it: use `pikkuAuth`. `pikkuAuth`
-refuses a caller with no session without running the check, so keep that in mind for
-a check that has to admit anonymous callers.
+`--strict-meta` or `pikku validate --strict --codegen` fails on it: use `pikkuAuth`. Switch
+to `pikkuAuth` only where the check may refuse a caller with no session: see
+"Sessionless functions" below.
+
+A check always has a session and returns `true` or `false`. With no session it is not
+run, and the call is refused. Both `pikkuPermission` and `pikkuAuth` do this.
+
+## Sessionless functions: `skipWithoutSession`
+
+A check without `skipWithoutSession` on a sessionless function fails the build with
+PKU587, whether it is on the function or global. Pick one:
+
+- The caller must be signed in: use `pikkuFunc` or `auth: true`.
+- Anonymous callers are welcome: add `skipWithoutSession: true`.
+
+```typescript
+export const isNotSuspended = pikkuAuth({
+  skipWithoutSession: true,
+  func: async ({ kysely }, session) => !(await isSuspended(kysely, session.userId)),
+})
+
+export const listBooks = pikkuSessionlessFunc({
+  auth: false,
+  permissions: { notSuspended: isNotSuspended },
+  func: async ({ kysely }, _data, { session }) => {
+    let query = kysely.selectFrom('book').selectAll()
+    if (!session) query = query.where('visibility', '=', 'public')
+    return { books: await query.execute() }
+  },
+})
+```
+
+**Skipped means the call goes through.** With no session the check is not called and
+counts as passing, in an OR key and in an AND array. So with no session the function
+decides what an anonymous caller may see, normally by limiting its query to public
+rows. This is the one exception to "authorization never goes in the function body".
+
+A check that must look at the data for anonymous callers cannot use a permission.
+
+In a `pikkuPermissionFactory` the option goes on the `pikkuPermission` or `pikkuAuth`
+it returns; the factory takes no options.
 
 ## OR and AND
 
@@ -98,7 +138,7 @@ If the app has roles, the role lives on the session (see pikku-auth / `mapSessio
 
 ## Global permissions
 
-`addGlobalPermission([isEmployee])` (from `#pikku/auth`) is an app-wide baseline every function must additionally pass. It can only narrow access, never grant what a function's own `permissions` would deny. Multiple calls accumulate and are AND'd. It applies to every function, sessionless ones too: a global `pikkuAuth` such as `isEmployee` refuses a sessionless login before any session exists, so an app with sessionless login puts the employee check on each function instead.
+`addGlobalPermission([isEmployee])` (from `#pikku/auth`) is an app-wide baseline every function must additionally pass. It can only narrow access, never grant what a function's own `permissions` would deny. Multiple calls accumulate and are AND'd. It applies to every function, sessionless ones too: a global reaches the workflow orchestrator and step workers too, so in an app that has sessionless functions it needs `skipWithoutSession: true`, or the employee check goes on each function instead.
 
 ## The three gates
 
@@ -110,7 +150,7 @@ All must pass, in this order:
 
 They are independent: a broad global (e.g. `isEmployee`) can never satisfy an admin-only function's own requirement. Wire-, tag- and HTTP-route-level permissions (`addHTTPPermission`, `addTagPermission`, a `permissions` field on a wiring) no longer exist; tags are organizational only. Use tag/HTTP middleware for cross-cutting request handling, not authorization.
 
-## The one sanctioned exception
+## Webhooks and signed payloads
 
 `permissionsInBody: true` is for a check that cannot be a permission because the identity arrives in the payload and there is no session: a webhook signature, a signed token, an invite code. It is purely declarative and enforces nothing; it tells the auditor the openness is deliberate. Anything expressible as a permission must be one.
 

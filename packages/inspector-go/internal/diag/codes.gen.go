@@ -74,6 +74,7 @@ const (
 	AuthNotExported                   Code = "PKU582"
 	DuplicateVirtualUsersDefinition   Code = "PKU585"
 	PermissionDataUnused              Code = "PKU586"
+	PermissionNeedsSkipWithoutSession Code = "PKU587"
 	RouteParamMismatch                Code = "PKU571"
 	RouteQueryMismatch                Code = "PKU572"
 	AuthDisabledRequiresSessionless   Code = "PKU573"

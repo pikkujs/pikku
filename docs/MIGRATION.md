@@ -96,6 +96,43 @@ Rewrite those forms as above. `pikkuWorkflowFunc` remains the default.
 
 To find the affected code, run `pikku all` and look for `PKU641`.
 
+### A `pikkuPermission` now refuses a call with no session
+
+`pikkuPermission` used to be a pass-through, so its check ran with `session` undefined. It now behaves like `pikkuAuth`: with no session the check does not run and the call is refused with a 403. Inside the check `session` is always defined, and the check returns `true` or `false`. This also applies to the permission a `pikkuPermissionFactory` returns, including a plain function.
+
+A check with no `skipWithoutSession` on a sessionless function is now the error `PKU587`, and `pikku all` fails on it. That covers `pikkuAuth` and `pikkuPermission`, directly on the function or through `addGlobalPermission`, which reaches every sessionless function, workflows included. Every function that can run with no session is sessionless, because a `pikkuFunc` already refuses that call before permissions run.
+
+To fix it, choose one:
+
+- The function really needs a session: use `pikkuFunc`, or `auth: true`.
+- Anonymous callers should reach it: add `skipWithoutSession: true`. With no session the check is not called and counts as passing, in an OR key and in an AND array.
+
+```ts
+// before
+addGlobalPermission([
+  pikkuPermission(
+    async (_services, _data, { session }) =>
+      session === undefined || Boolean(session.userId)
+  ),
+])
+
+// after
+addGlobalPermission([
+  pikkuAuth({
+    skipWithoutSession: true,
+    func: async (_services, session) => Boolean(session.userId),
+  }),
+])
+```
+
+Skipped means the call goes through. With no session the function itself decides what an anonymous caller may see, normally by limiting its query to public rows. A check that must look at the data of an anonymous caller cannot be a permission.
+
+A scheduled task, queue worker or sessionless workflow step that has a permission and runs with no session used to run the check, and now fails with a 403 unless the check has `skipWithoutSession`. A global permission applies to the workflow orchestrator and step workers too.
+
+`skipWithoutSession` goes on the `pikkuPermission` or `pikkuAuth` inside a `pikkuPermissionFactory`: the factory takes no options.
+
+To find the affected code, run `pikku all` and look for `PKU587`.
+
 ### A `pikkuPermission` that never uses its data is reported as PKU586
 
 A `pikkuPermission` written inline is now reported as `PKU586` when it has no data parameter, the parameter starts with `_`, or the parameter is never referenced. `pikku all` warns and still builds. Under `pikku all --strict-meta` it is a critical and the build fails.
@@ -116,7 +153,7 @@ export const isAdmin = pikkuAuth(
 )
 ```
 
-`pikkuAuth` refuses a caller with no session without running the check. Do not switch a permission that has to pass for anonymous callers, such as one on a route with `auth: false`, or a global permission on an app with public routes: those routes would start returning 403. `PKU586` stays a warning there, and `--strict-meta` fails on it.
+`pikkuAuth` refuses a caller with no session without running the check. If that call has to go through, such as on a route with `auth: false`, use `pikkuAuth({ skipWithoutSession: true, func: ... })`. See the section below.
 
 A permission that reads a wire other than `session`, such as `functionId`, is not reported, because `pikkuAuth` is not given the wire.
 

@@ -271,6 +271,9 @@ type GlobalPermissionRegistration struct {
 	Position      int     `json:"position"`
 	ExportName    *string `json:"exportName"`
 	DefinitionIds Strings `json:"definitionIds"`
+	// TargetsPackage marks a call registered for a named package, so which
+	// functions it reaches is not known here.
+	TargetsPackage bool `json:"targetsPackage,omitempty"`
 }
 
 type ServiceAggregation struct {

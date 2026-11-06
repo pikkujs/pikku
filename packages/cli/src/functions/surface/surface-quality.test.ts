@@ -351,6 +351,17 @@ describe('a guessed name', () => {
     assert.match(answer, /--strict-meta/)
   })
 
+  test('pikku doc says what a check on a sessionless function needs', () => {
+    assert.ok(doc)
+    const answer = renderSurfaceDoc(doc, { target: 'pku587' }).replace(
+      /\s+/g,
+      ' '
+    )
+    assert.match(answer, /PERMISSION_NEEDS_SKIP_WITHOUT_SESSION/)
+    assert.match(answer, /skipWithoutSession: true/)
+    assert.match(answer, /auth: true/)
+  })
+
   test('the approval path is reachable from pikku doc', () => {
     if (!doc) return
     const read = (target: string) => renderSurfaceDoc(doc, { target })

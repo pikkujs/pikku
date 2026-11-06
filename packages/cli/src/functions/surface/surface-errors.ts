@@ -24,10 +24,15 @@ const ERROR_EDITORIAL: Partial<
       'A function declared `disabled` is still used by a wiring, a call or a workflow step.',
     fix: 'Remove what uses it, or remove `disabled`.',
   },
+  [ErrorCode.PERMISSION_NEEDS_SKIP_WITHOUT_SESSION]: {
+    meaning:
+      'A `pikkuPermission` or `pikkuAuth` without `skipWithoutSession` sits on a sessionless function, directly or as a global permission. With no session such a check is not run and the call is refused, so the function cannot serve the anonymous caller it was written for. Always an error. A function with `auth: true` is not reported, nor is a check that cannot be resolved statically, such as one with a spread config or a factory whose body cannot be read.',
+    fix: 'If anonymous callers should reach the function, add `skipWithoutSession: true` to the check: with no session it is skipped and passes, so the function decides what that caller may see, normally by limiting its query to public rows. If they should not, require a session with `pikkuFunc` or `auth: true`. A check that must look at the data of an anonymous caller cannot be a permission.',
+  },
   [ErrorCode.PERMISSION_DATA_UNUSED]: {
     meaning:
       'A `pikkuPermission` never reads its data argument, so it answers from the session alone. A `pikkuPermission` is for a check on the input, such as loading the row the caller named. A `pikkuAuth` receives only the services and the session, and can be evaluated before the input exists, which is how an agent is offered only the tools its session may use. A warning, or a critical under `--strict-meta` and `pikku verify --strict`. A handler passed by reference, a rest or destructured argument, and a check that reads a wire other than `session` are not reported.',
-    fix: 'Replace `pikkuPermission(async (services, _data, { session }) => ...)` with `pikkuAuth(async (services, session) => ...)`. If the check does need the input, read it. Before switching a check that passes with no session, note that `pikkuAuth` refuses any caller with no session without running the check: as a global permission that would close every public route.',
+    fix: 'Replace `pikkuPermission(async (services, _data, { session }) => ...)` with `pikkuAuth(async (services, session) => ...)`. If the check does need the input, read it. If a call with no session must go through, use `pikkuAuth({ skipWithoutSession: true, func: async (services, session) => ... })`: the check is skipped and passes, so the function decides what that caller may see.',
   },
   [ErrorCode.UNUSED_FUNCTION]: {
     meaning: 'Nothing wires, exposes or calls this function.',

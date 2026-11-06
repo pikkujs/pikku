@@ -20,7 +20,7 @@ export const isOrderOwner = pikkuPermission(
       .select('userId')
       .where('orderId', '=', orderId)
       .executeTakeFirst()
-    return order?.userId === session?.userId
+    return order?.userId === session.userId
   }
 )
 // @snippet end permissionFunction
@@ -31,17 +31,17 @@ export const hasProfileRole = pikkuPermissionFactory<{
   role: 'customer' | 'support' | 'admin'
 }>(({ role }) =>
   pikkuPermission(
-    async (_services, _data, { session }) => session?.role === role
+    async (_services, _data, { session }) => session.role === role
   )
 )
 // @snippet end permissionFactory
 
 // @snippet start globalPermission
 addGlobalPermission([
-  pikkuPermission(
-    async (_services, _data, { session }) =>
-      session === undefined || Boolean(session.userId)
-  ),
+  pikkuAuth({
+    skipWithoutSession: true,
+    func: async (_services, session) => Boolean(session.userId),
+  }),
 ])
 // @snippet end globalPermission
 

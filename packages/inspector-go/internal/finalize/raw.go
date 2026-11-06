@@ -96,11 +96,12 @@ type wiresMeta struct {
 // definitionMeta is the part of an InspectorMiddlewareDefinition /
 // InspectorPermissionDefinition finalize reads.
 type definitionMeta struct {
-	Services   *servicesMeta `json:"services"`
-	Wires      *wiresMeta    `json:"wires"`
-	SourceFile string        `json:"sourceFile"`
-	Position   int           `json:"position"`
-	DataUnused bool          `json:"dataUnused"`
+	Services           *servicesMeta `json:"services"`
+	Wires              *wiresMeta    `json:"wires"`
+	SourceFile         string        `json:"sourceFile"`
+	Position           int           `json:"position"`
+	DataUnused         bool          `json:"dataUnused"`
+	SkipWithoutSession bool          `json:"skipWithoutSession"`
 }
 
 // groupMeta is the part of a MiddlewareGroupMeta finalize reads.

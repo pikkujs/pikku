@@ -7,7 +7,8 @@ import {
   checkAuthPermissions,
 } from './permissions.js'
 import { resetPikkuState } from './pikku-state.js'
-import { pikkuAuth } from './function/functions.types.js'
+import { pikkuAuth, pikkuPermission } from './function/functions.types.js'
+import { ForbiddenError } from './errors/errors.js'
 import type { CoreServices, CoreUserSession } from './types/core.types.js'
 import type { CorePermissionGroup } from './function/functions.types.js'
 
@@ -103,6 +104,70 @@ describe('runPermissions — function permissions (OR gate)', () => {
     assert.equal(received.services, mockServices)
     assert.equal(received.d, data)
     assert.equal(received.w, wire)
+  })
+})
+
+describe('runPermissions — no session', () => {
+  const noSession = { session: undefined }
+  const refused = () => pikkuAuth(async () => true)
+  const skipped = () =>
+    pikkuAuth({ skipWithoutSession: true, func: async () => false })
+  const skippedPermission = () =>
+    pikkuPermission({ skipWithoutSession: true, func: async () => false })
+
+  test('a check with no option refuses', async () => {
+    await assert.rejects(
+      run({ funcPermissions: { only: refused() }, wire: noSession }),
+      ForbiddenError
+    )
+  })
+
+  test('a skipped check counts as passing', async () => {
+    await run({ funcPermissions: { only: skipped() }, wire: noSession })
+    await run({
+      funcPermissions: { only: skippedPermission() },
+      wire: noSession,
+    })
+  })
+
+  test('a skipped check satisfies an OR key next to a refusing one', async () => {
+    await run({
+      funcPermissions: { signedIn: refused(), open: skipped() },
+      wire: noSession,
+    })
+  })
+
+  test('a skipped check counts as passing in an AND array', async () => {
+    await run({
+      funcPermissions: { all: [skipped(), skippedPermission()] },
+      wire: noSession,
+    })
+  })
+
+  test('a skipped check does not rescue a refusing one in an AND array', async () => {
+    await assert.rejects(
+      run({
+        funcPermissions: { all: [skipped(), refused()] },
+        wire: noSession,
+      }),
+      ForbiddenError
+    )
+  })
+
+  test('a skipped global passes and the function gate still applies', async () => {
+    addGlobalPermission([skipped()])
+    await run({ wire: noSession })
+    await assert.rejects(
+      run({ funcPermissions: { only: refused() }, wire: noSession }),
+      ForbiddenError
+    )
+  })
+
+  test('with a session the skipping check runs and can refuse', async () => {
+    await assert.rejects(
+      run({ funcPermissions: { only: skipped() } }),
+      ForbiddenError
+    )
   })
 })
 

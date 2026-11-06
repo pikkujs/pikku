@@ -1,6 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/addon/function'
 import { addonMiddleware } from '../middleware.js'
-import { addonPermission } from '../permission.js'
 
 export const hello = pikkuSessionlessFunc<
   { name: string; greeting?: string },
@@ -23,9 +22,6 @@ export const hello = pikkuSessionlessFunc<
     }
   },
   middleware: [addonMiddleware('hello')],
-  permissions: {
-    functionLevel: addonPermission,
-  },
   tags: ['addon'],
   node: {
     displayName: 'Say Hello',

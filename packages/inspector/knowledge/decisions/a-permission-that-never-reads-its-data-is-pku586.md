@@ -1,7 +1,7 @@
 ---
 type: decision
 title: A pikkuPermission that never reads its data is PKU586, and only certain cases are reported
-description: The visitor records dataUnused only when it is certain, finalize reports it as a warning or a critical under strictMeta, and a passing check for anonymous callers cannot move to pikkuAuth
+description: The visitor records dataUnused only when it is certain, finalize reports it as a warning or a critical under strictMeta, and an anonymous caller moves with skipWithoutSession
 tags: [inspector, permissions]
 ---
 
@@ -28,8 +28,8 @@ and the permission inside a `pikkuPermissionFactory`, which the visitor does not
 read. A check that reads a wire other than `session` is also left alone, because
 `pikkuAuth` has no wire to read.
 
-**What this does not solve:** `pikkuAuth` refuses a caller with no session without
-running the check. A session-only check that passes for anonymous callers, such
-as a global permission on an app with public routes, is still reported but cannot
-be switched without closing those routes. The online-shop global permission and
-the function-addon recipe's `addonPermission` are in this position.
+**Anonymous callers.** `pikkuAuth` refuses a caller with no session without
+running the check. A session-only check that must let those calls through moves
+to `pikkuAuth({ skipWithoutSession: true, func })`, which is what the online-shop
+global permission did. See
+[[a-check-on-a-sessionless-function-needs-skip-without-session]].

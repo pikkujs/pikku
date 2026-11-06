@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
@@ -118,12 +119,68 @@ func validatePermissionDataUsed(log *diag.Logger, st *state.State, opts Options)
 			return
 		}
 		message := "Permission '" + id + "' in " + jsRelative(st.RootDir, d.SourceFile) + " never uses its data argument, so it depends on the session alone. " +
-			"Use pikkuAuth: pikkuAuth(async (services, session) => ...). Run 'pikku doc PKU586' first if it must admit callers with no session."
+			"Use pikkuAuth: pikkuAuth(async (services, session) => ...), or pikkuAuth({ skipWithoutSession: true, func: async (services, session) => ... }) if a call with no session must go through."
 		if opts.StrictMeta {
 			log.Critical(diag.PermissionDataUnused, message)
 		} else {
 			log.Diagnostic(diag.Warn, diag.PermissionDataUnused, message)
 		}
+	})
+}
+
+// validateSessionlessPermissions is validateSessionlessPermissions: always a
+// critical for a check with no skipWithoutSession on a sessionless function,
+// directly or as a global permission.
+func validateSessionlessPermissions(log *diag.Logger, st *state.State) {
+	var sessionless []string
+	usedBy := map[string][]string{}
+	st.Functions.Meta.Each(func(funcID string, meta *state.FunctionMeta) {
+		if meta == nil || !isTruePtr(meta.Sessionless) || isTruePtr(meta.Auth) {
+			return
+		}
+		sessionless = append(sessionless, funcID)
+		for _, permission := range meta.Permissions {
+			if permission.Type == "wire" {
+				usedBy[permission.Name] = append(usedBy[permission.Name], funcID)
+			}
+		}
+	})
+	globals := map[string]bool{}
+	for _, g := range st.Permissions.Global {
+		if g.TargetsPackage {
+			continue
+		}
+		for _, id := range g.DefinitionIds {
+			globals[id] = true
+		}
+	}
+
+	definitions := rawRecord(st.Permissions.Definitions)
+	definitions.Each(func(id string, r state.Raw) {
+		d := decode[definitionMeta](r)
+		if d.SkipWithoutSession {
+			return
+		}
+		label, verb, reached := "Permission", "guards", usedBy[id]
+		if globals[id] {
+			label, verb, reached = "Global permission", "reaches", sessionless
+		}
+		if len(reached) == 0 {
+			return
+		}
+		names := slices.Clone(reached)
+		sort.Strings(names)
+		shown, more := names, ""
+		if len(names) > 10 {
+			shown = names[:10]
+			more = ", and " + strconv.Itoa(len(names)-10) + " more"
+		}
+		plural := "s"
+		if len(names) == 1 {
+			plural = ""
+		}
+		log.Critical(diag.PermissionNeedsSkipWithoutSession, label+" '"+id+"' in "+jsRelative(st.RootDir, d.SourceFile)+" has no skipWithoutSession but "+verb+" sessionless function"+plural+" "+strings.Join(shown, ", ")+more+", so a call with no session is refused there. "+
+			"Add skipWithoutSession: true to let that call through with the check skipped, or require a session with pikkuFunc or auth: true.")
 	})
 }
 

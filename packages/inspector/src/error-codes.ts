@@ -97,6 +97,9 @@ export enum ErrorCode {
 
   // A pikkuPermission that never reads its input is a session check.
   PERMISSION_DATA_UNUSED = 'PKU586',
+  // A check with no skipWithoutSession refuses every call without a session,
+  // so on a sessionless function it has to say what happens then.
+  PERMISSION_NEEDS_SKIP_WITHOUT_SESSION = 'PKU587',
 
   // HTTP Route errors
   ROUTE_PARAM_MISMATCH = 'PKU571',

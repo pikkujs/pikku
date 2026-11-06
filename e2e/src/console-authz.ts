@@ -23,7 +23,7 @@ import type { UserSession } from './application-types.js'
 const CONSOLE_SCOPE_ROOT = 'pikku:console'
 
 const isConsoleAdmin = pikkuAuth(async (_services, session) =>
-  hasScopes([CONSOLE_SCOPE_ROOT], (session as UserSession | undefined)?.scopes)
+  hasScopes([CONSOLE_SCOPE_ROOT], (session as UserSession).scopes)
 )
 
 addGlobalPermission([isConsoleAdmin], '@pikku/addon-console')

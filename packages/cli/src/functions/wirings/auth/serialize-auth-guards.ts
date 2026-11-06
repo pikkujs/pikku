@@ -27,7 +27,12 @@ import type {
   CorePikkuAuthConfig,
   CorePikkuPermission,
 } from '@pikku/core/function'
-import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
+import {
+  pikkuAuth as pikkuAuthCore,
+  pikkuPermission as pikkuPermissionCore,
+  pikkuPermissionFactory as pikkuPermissionFactoryCore,
+} from '@pikku/core/function'
+import type { PickRequired } from '@pikku/core/utils'
 import { addGlobalPermission as addGlobalPermissionCore } from '@pikku/core/middleware'
 import type {
   Services,
@@ -59,15 +64,27 @@ type WiredAuthServices = SecretlessServices<WiredSingletonServices>
 export type PikkuPermission<In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices> = CorePikkuPermission<In, RequiredServices, PikkuWire<In, never, false, Session>>
 
 /**
+ * The check inside a permission. It only runs with a session, so \`session\` is
+ * always there.
+ */
+type PikkuPermissionCheck<In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices> = CorePikkuPermission<In, RequiredServices, PickRequired<PikkuWire<In, never, false, Session>, 'session'>>
+
+/**
  * Configuration object for creating a permission with metadata
  */
 type PikkuPermissionConfig<In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices> = {
   /** The permission function */
-  func: PikkuPermission<In, RequiredServices>
+  func: PikkuPermissionCheck<In, RequiredServices>
   /** Optional human-readable name for the permission */
   name?: string
   /** Optional description of what the permission checks */
   description?: string
+  /**
+   * With no session, skip this check and let it pass instead of refusing. The
+   * call goes through, so the function itself decides what an anonymous caller
+   * may see, normally by limiting its query to public rows. Default false.
+   */
+  skipWithoutSession?: boolean
 }
 
 /**
@@ -77,9 +94,9 @@ type PikkuPermissionConfig<In = unknown, RequiredServices extends SecretlessServ
  * @example snippet: permissionFunction
  */
 export const pikkuPermission = <In>(
-  permission: PikkuPermission<In> | PikkuPermissionConfig<In>
+  permission: PikkuPermissionCheck<In> | PikkuPermissionConfig<In>
 ): PikkuPermission<In> => {
-  return typeof permission === 'function' ? permission : permission.func
+  return pikkuPermissionCore(permission as any) as any
 }
 
 /**
@@ -103,15 +120,17 @@ type PikkuAuthConfig<RequiredServices extends SecretlessServices<SingletonServic
  *
  * @example
  * \\\`\\\`\\\`typescript
- * const isVerified = pikkuAuth(async ({ logger }, session) => {
- *   return !!session?.emailVerified
+ * const isAdmin = pikkuAuth(async ({ logger }, session) => {
+ *   return session.role === 'admin'
  * })
  *
- * const isAdmin = pikkuAuth({
- *   name: 'Admin Auth',
- *   description: 'Checks if user is an admin',
+ * // Passes with no session: the function decides what an anonymous caller sees
+ * const isNotSuspended = pikkuAuth({
+ *   name: 'Not Suspended',
+ *   description: 'Refuses suspended users; anonymous callers pass',
+ *   skipWithoutSession: true,
  *   func: async ({ logger }, session) => {
- *     return session?.role === 'admin'
+ *     return !session.suspended
  *   }
  * })
  * \\\`\\\`\\\`
@@ -124,7 +143,8 @@ export const pikkuAuth = <RequiredServices extends SecretlessServices<SingletonS
 
 /**
  * Factory function for creating permission factories
- * Use this when your permission needs configuration/input parameters
+ * Use this when your permission needs configuration/input parameters.
+ * \`skipWithoutSession\` goes on the pikkuPermission or pikkuAuth it returns.
  *
  * @example
  * \`\`\`typescript
@@ -132,7 +152,7 @@ export const pikkuAuth = <RequiredServices extends SecretlessServices<SingletonS
  *   role
  * }) => {
  *   return pikkuPermission(async ({ logger }, data, { session }) => {
- *     if (!session || session.role !== role) {
+ *     if (session.role !== role) {
  *       logger.warn(\`Permission denied: required role '\${role}'\`)
  *       return false
  *     }
@@ -142,9 +162,9 @@ export const pikkuAuth = <RequiredServices extends SecretlessServices<SingletonS
  * \`\`\`
  */
 export const pikkuPermissionFactory = <In = any>(
-  factory: (input: In) => PikkuPermission<any>
+  factory: (input: In) => PikkuPermissionCheck<any>
 ): ((input: In) => PikkuPermission<any>) => {
-  return factory
+  return pikkuPermissionFactoryCore(factory as any) as any
 }
 
 /**
