@@ -40,14 +40,12 @@ export const ${name} = pikkuPermissionFactory(
 
       case 'simple':
       default:
-        content = `import { pikkuPermission } from '#pikku/auth'
+        content = `import { pikkuAuth } from '#pikku/auth'
 
-export const ${name} = pikkuPermission(
-  async ({ logger }, _data, { session }) => {
-    // TODO: implement permission check
-    return true
-  }
-)
+export const ${name} = pikkuAuth(async ({ logger }, session) => {
+  // TODO: implement permission check. To check the input, use pikkuPermission.
+  return true
+})
 `
         break
     }
