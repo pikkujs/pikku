@@ -29,6 +29,7 @@ pub mod boundary;
 pub mod group_agent;
 pub mod group_approval_description;
 pub mod group_channel;
+pub mod group_cli;
 pub mod group_functions;
 pub mod group_gateway;
 pub mod group_mcp;
@@ -132,6 +133,8 @@ pub struct Context<'a> {
     pub types_lookup: HashMap<String, Vec<P<Type>>>,
     /// The core interfaces a core-type visitor recorded (Go `coreTypes`).
     pub core_types: Vec<CoreType>,
+    /// Go `cliConfigTypeWarned`: the missing-Config warning is logged once.
+    pub cli_config_type_warned: bool,
 }
 
 /// Go `coreType`: a core interface's name and its symbol.
@@ -153,6 +156,7 @@ impl<'a> Context<'a> {
             source_file: None,
             types_lookup: HashMap::new(),
             core_types: Vec::new(),
+            cli_config_type_warned: false,
         }
     }
 
@@ -215,6 +219,7 @@ pub fn register_groups(r: &mut Registry) {
     group_gateway::register(r);
     group_mcp::register(r);
     group_agent::register(r);
+    group_cli::register(r);
 }
 
 /// The registry with every ported group registered.

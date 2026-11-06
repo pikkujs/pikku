@@ -108,8 +108,8 @@ swept sections, `validationPass`, and 4 diagnostics.
 * `boundary.rs` holds the few functions that live in Go files owned by another porter and are called from the core
   groups. Faithful: `resolve_function_meta`, `validate_auth_sessionless`, `read_function_disabled`,
   `record_disabled_function`, `add_mcp_tool`. STUBS (replace in the commit that ports the Go file):
-  `resolve_addon_name`, `addon_package`, `addon_zod_contract_violation`, `check_classification`, and
-  `resolve_versions::update_channel_and_cli_references`.
+  `resolve_addon_name`, `addon_package`, `addon_zod_contract_violation`, `check_classification`.
+  (`update_channel_and_cli_references` is now the real port, in `group_cli.rs`, re-exported by `resolve_versions`.)
 
 ## tsrs differences hit by the core visitors
 
@@ -226,3 +226,18 @@ Known gaps:
   reproduced; `describe_node` reports a byte offset, not line:column.
 * `locale_sort` of the virtual file's declarations is an approximation of ICU
   collation (affects only declaration order, never a schema).
+
+## Channel, CLI, gateway, MCP and agent groups
+
+Ported: `group_channel.rs`, `group_cli.rs` (addCLI, addCLIRenderers, `update_channel_and_cli_references`),
+`group_gateway.rs`, `group_mcp.rs` (resource and prompt; the tool branch is `boundary::add_mcp_tool`),
+`group_agent.rs` (addAgent, addAgentScorer). Tests: `tests/agents_mcp.rs` (Go's `agents_mcp_test.go` plus the
+fixture golden for channels, gateways, cli, agents, scorers, mcpEndpoints) and unit tests in `group_cli.rs`.
+
+* `Context.cli_config_type_warned` (Go `cliConfigTypeWarned`) was added to `visit::Context`.
+* These groups read `addon_package(ns)` (Go `s.addons[ns].pkg`): `None` means "no such addon namespace" for a CLI
+  `ref('ns:fn')`, so until the wireAddon group replaces the stub every addon-namespaced CLI `ref` reports
+  "Unknown addon namespace" (no corpus project has one).
+* Channel/CLI/MCP/agent middleware entries that differ on the scoreboard are all the middleware group's:
+  `state.channelMiddleware` / `agentMiddleware` definitions and tag middleware are written by group_middleware
+  (not ported yet), which also flips `inline` on wire refs.
