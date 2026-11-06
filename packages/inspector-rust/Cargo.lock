@@ -322,6 +322,7 @@ dependencies = [
  "tsrs_contentmapper",
  "tsrs_core",
  "tsrs_diagnostics",
+ "tsrs_parser",
  "tsrs_printer",
  "tsrs_scanner",
  "tsrs_tsoptions",

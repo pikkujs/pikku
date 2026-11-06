@@ -43,6 +43,14 @@ impl Context<'_> {
         String::new()
     }
 
+    /// Go `checkClassification` (check_classification.go): add-functions.ts's
+    /// classificationCheck block (PKU953 / PKU954 / PKU910), run under
+    /// `pikku all --security`.
+    ///
+    /// STUB: logs nothing until check_classification.go is ported (it needs the
+    /// checker-driven sink and PII scans).
+    pub fn check_classification(&mut self, _name: &str, _handler: P<Node>, _sessionless: bool) {}
+
     /// The package name an addon namespace was wired to (`s.addons[ns].pkg` in Go;
     /// filled by `wireAddon`, group_wire_addon.go).
     ///

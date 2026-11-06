@@ -144,7 +144,10 @@ impl Context<'_> {
         let file_name = file_name_of(node);
         let type_name = node.name().map(node_text).unwrap_or("");
         for t in ast::get_extends_heritage_clause_elements(node) {
-            let expr = t.expression().unwrap();
+            // tsrs parses interface heritage elements as type references where
+            // Strada/typescript-go use ExpressionWithTypeArguments; the helper
+            // returns the name expression of either.
+            let expr = ast::get_heritage_clause_element_name(*t);
             if node_text(expr) != expected {
                 continue;
             }
