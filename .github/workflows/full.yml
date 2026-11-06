@@ -309,10 +309,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # windows-latest excluded: its pre-installed global Yarn 1.22 shadows
-        # Corepack's Yarn 4 in the shared setup action, breaking `bun install`.
-        # The pikku-windows-x64.exe is still cross-compiled and published on each
-        # release (see packages/cli/build.sh).
+        # windows-latest is not run here. The pikku-windows-x64.exe is still
+        # cross-compiled and published on each release (see packages/cli/build.sh).
         os: [ubuntu-24.04, macos-latest]
     steps:
       - uses: actions/checkout@v7
@@ -332,14 +330,18 @@ jobs:
     name: Vector extensions (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
-    needs: build
+    needs: [build, inspector-go-build]
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-latest]
     steps:
       - uses: actions/checkout@v7
+      # The macOS row runs the CLI there, so it needs the darwin-arm64 build,
+      # not the Linux one the build artifact carries.
       - uses: ./.github/actions/setup
+        with:
+          download-inspector-go: 'true'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.3
@@ -615,36 +617,20 @@ jobs:
             mesh-rpc-pg,
             mesh-rpc-redis,
             # ai-postgres is disabled: it drives a live agent turn, and the
-            # OPENAI_API_KEY it runs against has no credits left, so both the
-            # yarn and bun jobs burn five minutes retrying and fail on `You have
+            # OPENAI_API_KEY it runs against has no credits left, so the job
+            # burns five minutes retrying and fails on `You have
             # no credits remaining.` on every push to every branch. Disabled in
             # `develop.yml` too, for the other dead key. Re-enable in both once
             # one of them is funded.
             # ai-postgres,
             bun,
           ]
-        package-manager: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["bun"]' || '["yarn","bun"]') }}
-        exclude:
-          - package-manager: bun
-            template: uws
-          - package-manager: bun
-            template: aws-lambda
-          - package-manager: bun
-            template: aws-lambda-websocket
-          - package-manager: bun
-            template: cloudflare-workers
-          - package-manager: bun
-            template: cloudflare-websocket
-          - package-manager: bun
-            template: nextjs
-          - package-manager: bun
-            template: nextjs-full
+        package-manager: [bun]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
-          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
       - name: Test template
         timeout-minutes: 5
         run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION" "$PACKAGE_MANAGER"
@@ -698,7 +684,6 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
-          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
       - name: Test template
         timeout-minutes: 5
         run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION" "$PACKAGE_MANAGER"
@@ -754,7 +739,6 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
-          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
       - name: Test functions template runtime target
         timeout-minutes: 5
         run: cd recipes/functions && bun run test:runtime ${{ matrix.target }}
