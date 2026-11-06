@@ -14,6 +14,12 @@ inputs:
       inspector-go's prebuilt/, for jobs that run the native inspector engine.
       Such a job must also need inspector-go-build.
     default: 'false'
+  download-inspector-rs:
+    description: >-
+      Download this runner's pikku-inspect-rs binary from the inspector-rs-build
+      job into inspector-go's prebuilt/ (the Rust inspector engine, selected
+      with PIKKU_INSPECTOR=rs). Such a job must also need inspector-rs-build.
+    default: 'false'
   enable-yarn:
     description: >-
       Enable Corepack's Yarn 4. The monorepo itself installs with bun, but the
@@ -43,6 +49,11 @@ runs:
       uses: ./.github/actions/download-tar
       with:
         name: pikku-inspect
+    - name: Download pikku-inspect-rs
+      if: ${{ inputs.download-inspector-rs == 'true' }}
+      uses: ./.github/actions/download-tar
+      with:
+        name: ${{ runner.os == 'macOS' && 'pikku-inspect-rs-darwin-arm64' || (runner.arch == 'ARM64' && 'pikku-inspect-rs-linux-arm64' || 'pikku-inspect-rs-linux-x64') }}
     # A dependency whose postinstall downloads a release binary (serverless,
     # workerd, esbuild) fails the whole install when that fetch blips, and the
     # job then reads as a broken pull request. Bun resumes from what it

@@ -25,7 +25,7 @@ import {
   type InspectorEngine,
 } from './binary.js'
 // @ts-ignore -- plain .mjs build script, no declarations
-import { PLATFORMS, targetName } from '../scripts/platforms.mjs'
+import { PLATFORMS, RS_PLATFORMS, targetName } from '../scripts/platforms.mjs'
 // @ts-ignore -- plain .mjs build script, no declarations
 import { binaryProblem } from '../scripts/check-platform-binary.mjs'
 
@@ -278,7 +278,10 @@ for (const engine of INSPECTOR_ENGINES) {
       const dir = mkdtempSync(join(tmpdir(), 'pikku-inspector-engine-'))
       for (const target of platforms) {
         mkdirSync(join(dir, target))
-        writeFileSync(join(dir, target, executableName(target.split('-')[0], engine)), '')
+        writeFileSync(
+          join(dir, target, executableName(target.split('-')[0], engine)),
+          ''
+        )
       }
       for (const target of platforms) {
         const [platform, arch] = target.split('-')
@@ -381,6 +384,13 @@ describe('package', () => {
     )
   })
 
+  test('binary.ts and scripts/platforms.mjs list the same rs targets', () => {
+    assert.deepEqual(
+      [...ENGINES.rs.platforms].sort(),
+      RS_PLATFORMS.map(targetName).sort()
+    )
+  })
+
   test('rs ships a subset of the platforms go does', () => {
     for (const target of ENGINES.rs.platforms) {
       assert.ok((SUPPORTED_PLATFORMS as readonly string[]).includes(target))
@@ -438,6 +448,17 @@ describe('binaryProblem', () => {
     assert.match(
       binaryProblem(elf(62, true), 'linux', 'x64'),
       /dynamically linked/
+    )
+  })
+
+  test('accepts a dynamically linked ELF only for the Rust binary', () => {
+    assert.equal(
+      binaryProblem(elf(62, true), 'linux', 'x64', { allowDynamic: true }),
+      undefined
+    )
+    assert.match(
+      binaryProblem(elf(183, true), 'linux', 'x64', { allowDynamic: true }),
+      /e_machine/
     )
   })
 

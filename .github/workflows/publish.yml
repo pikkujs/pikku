@@ -87,10 +87,53 @@ jobs:
             echo "Full Suite on \`${sha:0:9}\`: **$conclusion**. **Not publishing.**" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  # pikku-inspect-rs for every platform it ships on, built natively on a runner
+  # of each: @pikku/inspector-go publishes it beside pikku-inspect under
+  # prebuilt/. The Publish job below needs all three.
+  inspector-rs:
+    name: Rust build (pikku-inspect-rs, ${{ matrix.target }})
+    needs: gate
+    if: >-
+      needs.gate.outputs.ok == 'true' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: linux-x64
+            os: ubuntu-24.04
+          - target: linux-arm64
+            os: ubuntu-24.04-arm
+          - target: darwin-arm64
+            os: macos-14
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: ${{ matrix.target }}
+      - name: Build pikku-inspect-rs
+        run: cargo build --release --locked --manifest-path packages/inspector-rust/Cargo.toml
+      - name: Place the binary under its prebuilt/ target
+        run: |
+          mkdir -p packages/inspector-go/prebuilt/${{ matrix.target }}
+          cp packages/inspector-rust/target/release/pikku-inspect-rs packages/inspector-go/prebuilt/${{ matrix.target }}/
+      - name: Pack
+        run: tar cf pikku-inspect-rs-${{ matrix.target }}.tar packages/inspector-go/prebuilt/${{ matrix.target }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pikku-inspect-rs-${{ matrix.target }}
+          path: pikku-inspect-rs-${{ matrix.target }}.tar
+          retention-days: 1
+
   publish:
     name: Publish
     runs-on: ubuntu-24.04
-    needs: gate
+    needs: [gate, inspector-rs]
     if: >-
       needs.gate.outputs.ok == 'true' &&
       github.event.workflow_run.head_repository.full_name == github.repository &&
@@ -150,6 +193,13 @@ jobs:
           cache-dependency-path: packages/inspector-go/**/go.sum
       - name: Cross-compile pikku-inspect for every target
         run: node packages/inspector-go/scripts/build-go.mjs --all
+      - name: Download pikku-inspect-rs for every platform
+        uses: actions/download-artifact@v8
+        with:
+          pattern: pikku-inspect-rs-*
+          merge-multiple: true
+      - name: Unpack pikku-inspect-rs
+        run: for t in pikku-inspect-rs-*.tar; do tar xf "$t" && rm "$t"; done
       - name: Check every target has its binary
         run: node packages/inspector-go/scripts/check-platform-binary.mjs
       - name: Create Release Pull Request or Publish
@@ -224,6 +274,7 @@ jobs:
             ext=""
             [[ "$target" == win32-* ]] && ext=".exe"
             cp "${dir}pikku-inspect${ext}" "$assets/pikku-inspect-${target}${ext}"
+            [ -f "${dir}pikku-inspect-rs" ] && cp "${dir}pikku-inspect-rs" "$assets/pikku-inspect-rs-${target}"
           done
           (cd "$assets" && sha256sum pikku-inspect-* > SHA256SUMS)
           echo "Uploading pikku-inspect binaries for $tag"
