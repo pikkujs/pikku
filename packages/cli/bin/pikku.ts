@@ -154,6 +154,14 @@ if (runtime.action === 'reexec-bun') {
   await new Promise(() => {})
 }
 
+// The watcher's long-lived type checker. A hidden argument rather than a separate
+// script, because the `bun --compile` binaries only carry this entry point.
+if (process.argv[2] === '__typecheck-worker') {
+  const { runTypecheckWorker } = await import('../src/utils/warm-typecheck.js')
+  await runTypecheckWorker()
+  process.exit(0)
+}
+
 // Use the generated Pikku CLI
 const pikkuCliPath = join(__dirname, '../.pikku/cli/pikku-cli.gen.js')
 
