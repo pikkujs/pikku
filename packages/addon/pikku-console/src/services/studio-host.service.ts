@@ -2,7 +2,6 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { generateWishDeck } from './wish-deck.js'
 import {
   getCloudRPC,
   resolveApiContext,
@@ -34,12 +33,6 @@ export interface StudioChangeMessage {
   createdAt: string
 }
 
-export interface StudioWish {
-  title: string
-  line: string
-  reaction: 'liked' | 'disliked' | null
-}
-
 export interface ChangesStore {
   list(status?: ChangeStatus[]): Promise<StudioChange[]>
   get(changeId: string): Promise<StudioChange | null>
@@ -56,36 +49,10 @@ export interface ChangesStore {
   reply(changeId: string, body: string, authorName: string): Promise<void>
 }
 
-export interface WishList {
-  wishes: StudioWish[]
-  status: 'ready' | 'generating' | 'unavailable'
-  reason?: string
-}
-
-export interface WishStore {
-  list(): Promise<WishList>
-  react(title: string, reaction: 'liked' | 'disliked' | null): Promise<void>
-}
-
-export interface ModelAccess {
-  proxyUrl: string
-  apiKey: string
-  model: string
-}
-
-export interface StudioProject {
-  name: string | null
-  idea: string | null
-}
-
 export interface StudioHost {
   mode: StudioMode
   projectId: string | null
   changes: ChangesStore
-  wishes: WishStore
-  models(): Promise<ModelAccess | null>
-  project(): Promise<StudioProject>
-  updateProject(patch: Partial<StudioProject>): Promise<StudioProject>
 }
 
 const STUDIO_DIR = '.studio'
@@ -257,193 +224,9 @@ export class CloudChangesStore implements ChangesStore {
   }
 }
 
-export class LocalProjectFile {
-  private path: string
-
-  constructor(projectRoot: string) {
-    this.path = join(projectRoot, STUDIO_DIR, 'project.json')
-  }
-
-  read() {
-    return readJson<StudioProject>(this.path, { name: null, idea: null })
-  }
-
-  async update(patch: Partial<StudioProject>) {
-    const next = { ...(await this.read()), ...patch }
-    await writeJson(this.path, next)
-    return next
-  }
-}
-
-interface LocalWishFile {
-  wishes: StudioWish[]
-  error?: string
-}
-
-export class LocalWishStore implements WishStore {
-  private path: string
-  private generating: Promise<void> | null = null
-
-  constructor(
-    private projectRoot: string,
-    private models: () => Promise<ModelAccess | null> = async () => null,
-    private project = new LocalProjectFile(projectRoot)
-  ) {
-    this.path = join(projectRoot, STUDIO_DIR, 'wishes.json')
-  }
-
-  private read() {
-    return readJson<LocalWishFile>(this.path, { wishes: [] })
-  }
-
-  async save(wishes: StudioWish[]) {
-    await writeJson(this.path, { wishes })
-  }
-
-  private async source() {
-    const knowledgePath = join(this.projectRoot, 'knowledge', 'index.md')
-    if (existsSync(knowledgePath)) {
-      return { knowledge: await readFile(knowledgePath, 'utf8') }
-    }
-    const { idea, name } = await this.project.read()
-    return idea || name ? { idea: idea || name! } : null
-  }
-
-  async list(): Promise<WishList> {
-    const file = await this.read()
-    if (file.wishes.length) return { wishes: file.wishes, status: 'ready' }
-    if (this.generating) return { wishes: [], status: 'generating' }
-    const source = await this.source()
-    if (!source) {
-      return { wishes: [], status: 'unavailable', reason: 'no-idea' }
-    }
-    const access = await this.models()
-    if (!access) {
-      const reason =
-        process.env.PIKKU_STUDIO_AI === 'subscription'
-          ? 'subscription'
-          : 'no-model'
-      return { wishes: [], status: 'unavailable', reason }
-    }
-    if (file.error) {
-      return { wishes: [], status: 'unavailable', reason: file.error }
-    }
-    this.generating = this.generate(access, source).finally(() => {
-      this.generating = null
-    })
-    return { wishes: [], status: 'generating' }
-  }
-
-  private async generate(
-    access: ModelAccess,
-    source: { idea?: string; knowledge?: string }
-  ) {
-    try {
-      const deck = await generateWishDeck(access, source, [])
-      const project = await this.project.read()
-      if (!project.name && deck.name)
-        await this.project.update({ name: deck.name })
-      await this.save(
-        deck.aspirations.map(({ title, line }) => ({
-          title,
-          line,
-          reaction: null,
-        }))
-      )
-    } catch (e) {
-      await writeJson(this.path, { wishes: [], error: (e as Error).message })
-    }
-  }
-
-  async retry() {
-    await this.save([])
-  }
-
-  async react(title: string, reaction: 'liked' | 'disliked' | null) {
-    const { wishes } = await this.read()
-    const wish = wishes.find((w) => w.title === title)
-    if (!wish) throw new Error(`No wish "${title}"`)
-    wish.reaction = reaction
-    await this.save(wishes)
-  }
-}
-
-export class CloudWishStore implements WishStore {
-  private sourceDigest: string | null = null
-
-  constructor(
-    private rpc: CloudRPC,
-    private projectId: string
-  ) {}
-
-  async list(): Promise<WishList> {
-    const toWishes = (rows: StudioWish[]) =>
-      rows.map(({ title, line, reaction }) => ({ title, line, reaction }))
-    if (this.sourceDigest) {
-      const { aspirations } = await this.rpc.invoke(
-        'cloud:getProjectAspirations',
-        {
-          projectId: this.projectId,
-          sourceDigest: this.sourceDigest,
-        }
-      )
-      if (aspirations.length)
-        return { wishes: toWishes(aspirations), status: 'ready' }
-      return { wishes: [], status: 'generating' }
-    }
-    const { aspirations, sourceDigest, status } = await this.rpc.invoke(
-      'cloud:ensureProjectAspirations',
-      { projectId: this.projectId }
-    )
-    this.sourceDigest = status === 'generating' ? sourceDigest : null
-    return { wishes: toWishes(aspirations), status }
-  }
-
-  async react(title: string, reaction: 'liked' | 'disliked' | null) {
-    await this.rpc.invoke('cloud:reactToProjectAspiration', {
-      projectId: this.projectId,
-      title,
-      reaction,
-    })
-  }
-}
-
-const localModels = async (): Promise<ModelAccess | null> => {
-  if (
-    process.env.PIKKU_STUDIO_AI === 'key' &&
-    process.env.PIKKU_STUDIO_AI_KEY
-  ) {
-    return {
-      proxyUrl:
-        process.env.PIKKU_STUDIO_AI_BASE_URL ?? 'https://api.openai.com/v1',
-      apiKey: process.env.PIKKU_STUDIO_AI_KEY,
-      model: process.env.PIKKU_STUDIO_MODEL ?? 'gpt-4.1-mini',
-    }
-  }
-  if (process.env.PIKKU_STUDIO_AI) return null
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return null
-  return {
-    proxyUrl: process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
-    apiKey,
-    model: process.env.PIKKU_STUDIO_MODEL ?? 'gpt-4.1-mini',
-  }
-}
-
-const cloudModels =
-  (rpc: CloudRPC) => async (): Promise<ModelAccess | null> => ({
-    ...(await rpc.invoke('cloud:getDeveloperLiteLLMKey', {})),
-    model: process.env.PIKKU_STUDIO_MODEL ?? 'gemini-flash-lite-latest',
-  })
-
 export async function resolveStudioHost(
   projectRoot: string
 ): Promise<StudioHost> {
-  const project = new LocalProjectFile(projectRoot)
-  const projectApi = {
-    project: () => project.read(),
-    updateProject: (patch: Partial<StudioProject>) => project.update(patch),
-  }
   const ctx = await resolveApiContext({ startDir: projectRoot }).catch(
     () => null
   )
@@ -453,21 +236,11 @@ export async function resolveStudioHost(
       mode: 'cloud',
       projectId: ctx.projectId,
       changes: new CloudChangesStore(rpc, ctx.projectId),
-      wishes: new CloudWishStore(rpc, ctx.projectId),
-      models: cloudModels(rpc),
-      ...projectApi,
     }
   }
-  const models =
-    process.env.PIKKU_STUDIO_AI === 'cloud' && ctx?.token
-      ? cloudModels(getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token }))
-      : localModels
   return {
     mode: 'local',
     projectId: null,
     changes: new LocalChangesStore(projectRoot),
-    wishes: new LocalWishStore(projectRoot, models, project),
-    models,
-    ...projectApi,
   }
 }

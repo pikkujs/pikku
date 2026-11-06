@@ -9,45 +9,10 @@
  * - `createSandboxChange` is in `@pikkustudio/addon-machine-api`, wired as
  *   `machine`; that addon publishes no SDK yet.
  *
- * - `getProjectAspirations`, `ensureProjectAspirations`, `reactToProjectAspiration`
- *   are cloud functions (served `cloud:`) added after the last published
- *   cloud-api (0.0.2), called by the pikku-console addon. TEMPORARY: publish a
- *   newer @pikkustudio/addon-cloud-api, bump `pikku.uses.cloud`, run `pikku update`, delete them.
- *
  * Keep this list to what the contract genuinely cannot cover. When either
  * source publishes an SDK, generate it like cloud-api and delete the entry.
  */
-type Aspiration = {
-  title: string
-  line: string
-  reaction: ('liked' | 'disliked') | null
-  likes: number
-  dislikes: number
-  likedBy: string[]
-  dislikedBy: string[]
-}
-
 export type UncontractedRPCMap = {
-  'cloud:ensureProjectAspirations': {
-    input: { projectId: string; sandboxId?: string }
-    output: {
-      aspirations: Aspiration[]
-      sourceDigest: string
-      status: 'ready' | 'generating'
-    }
-  }
-  'cloud:getProjectAspirations': {
-    input: { projectId: string; sourceDigest: string }
-    output: { aspirations: Aspiration[] }
-  }
-  'cloud:reactToProjectAspiration': {
-    input: {
-      projectId: string
-      title: string
-      reaction: ('liked' | 'disliked') | null
-    }
-    output: { reaction: ('liked' | 'disliked') | null }
-  }
   requestCliAuth: {
     input: void
     output: { code: string; deviceCode: string; expiresAt: string }

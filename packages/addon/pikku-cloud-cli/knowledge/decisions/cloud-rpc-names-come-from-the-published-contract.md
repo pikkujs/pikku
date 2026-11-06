@@ -33,9 +33,7 @@ CLI's own sync, not a script:
   versioned packages.
 - `uncontracted.ts` hand-types what no contract carries: `requestCliAuth`,
   `pollCliAuth`, `submitFinding` (bare, controlplane api-functions),
-  `machine:createSandboxChange` (`addon-machine-api` publishes no SDK), and three
-  `cloud:` aspiration calls newer than the published 0.0.2 (called by
-  pikku-console). Delete an entry once its source publishes a contract.
+  `machine:createSandboxChange` (`addon-machine-api` publishes no SDK). Delete an entry once its source publishes a contract.
 
 The lock's integrity is the pin; there is no separate contractHash.
 
