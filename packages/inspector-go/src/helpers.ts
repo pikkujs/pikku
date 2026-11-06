@@ -285,6 +285,7 @@ export type CollectSurfaceOptions = {
   importsSubpath?: string
   subpaths?: string[]
   snippets?: Map<string, string>
+  ownMembers?: boolean
 }
 
 /**
@@ -293,13 +294,14 @@ export type CollectSurfaceOptions = {
  */
 export const collectSurface = (
   packageDir: string,
-  { importsSubpath, subpaths, snippets }: CollectSurfaceOptions = {}
+  { importsSubpath, subpaths, snippets, ownMembers }: CollectSurfaceOptions = {}
 ): Promise<SurfaceEntrypoint[]> =>
   call('collectSurface', {
     packageDir,
     importsSubpath,
     subpaths,
     snippets: snippets ? [...snippets] : undefined,
+    ownMembers,
   })
 
 export type StubProblemKind =

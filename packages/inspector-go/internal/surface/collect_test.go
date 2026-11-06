@@ -110,3 +110,28 @@ func TestDoubleQuoteLiterals(t *testing.T) {
 		}
 	}
 }
+
+// A package documented as itself lists the keys it declares; a project does not.
+func TestOwnMembers(t *testing.T) {
+	dir := writeFixture(t)
+	greet := func(options Options) int {
+		t.Helper()
+		entries, err := Collect(dir, options)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, symbol := range entries[0].Symbols {
+			if symbol.Name == "greet" {
+				return len(symbol.Members)
+			}
+		}
+		t.Fatal("greet not collected")
+		return 0
+	}
+	if got := greet(Options{}); got != 0 {
+		t.Fatalf("project listed %d members", got)
+	}
+	if got := greet(Options{OwnMembers: true}); got == 0 {
+		t.Fatal("package listed no members")
+	}
+}

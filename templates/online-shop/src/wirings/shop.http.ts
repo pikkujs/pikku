@@ -21,6 +21,10 @@ import { streamOrderPreparation } from '../functions/orders/stream-order-prepara
 import { getFeatures } from '../functions/get-features.function.js'
 import { requestItemPhotoUpload } from '../functions/media/request-item-photo-upload.function.js'
 import { getItemPhotoUrl } from '../functions/media/get-item-photo-url.function.js'
+import { requestDamagePhotoUpload } from '../functions/media/request-damage-photo-upload.function.js'
+import { saveDamagePhoto } from '../functions/media/save-damage-photo.function.js'
+import { getDamagePhotoUrl } from '../functions/media/get-damage-photo-url.function.js'
+import { describeDamagePhoto } from '../functions/media/describe-damage-photo.function.js'
 
 // @snippet start shopRoutes
 // @snippet start wireHttp
@@ -167,6 +171,33 @@ wireHTTP({
   route: '/items/:itemId/photo',
   func: getItemPhotoUrl,
   auth: false,
+})
+
+// A private file: the same loop, plus a call that saves the key once the bytes
+// have arrived, and a permission on the call that hands out the read URL.
+wireHTTP({
+  method: 'post',
+  route: '/orders/:orderId/damage-photo/upload',
+  func: requestDamagePhotoUpload,
+  auth: true,
+})
+wireHTTP({
+  method: 'post',
+  route: '/orders/:orderId/damage-photo',
+  func: saveDamagePhoto,
+  auth: true,
+})
+wireHTTP({
+  method: 'get',
+  route: '/orders/:orderId/damage-photo',
+  func: getDamagePhotoUrl,
+  auth: true,
+})
+wireHTTP({
+  method: 'post',
+  route: '/orders/:orderId/damage-photo/describe',
+  func: describeDamagePhoto,
+  auth: true,
 })
 // @snippet end httpUpload
 

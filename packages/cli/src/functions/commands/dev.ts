@@ -48,10 +48,7 @@ import {
   VaultSecretService,
   vaultConnectionFromEnv,
 } from '../../utils/vault-secret-service.js'
-import {
-  LocalContent,
-  type LocalContentConfig,
-} from '@pikku/core/services/local-content'
+import { LocalContent } from '@pikku/core/services/local-content'
 import { InMemorySchedulerService } from '@pikku/schedule'
 import {
   resolveDb,
@@ -79,6 +76,7 @@ import {
   writeDevAddress,
 } from './dev-address.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
+import { resolveLocalContentConfig } from '../../server/local-content-config.js'
 import {
   enableDevVirtualUserSignIn,
   setDevVirtualUserApiUrl,
@@ -287,15 +285,13 @@ export const dev = pikkuSessionlessFunc<
 
     const resolvedRuntimeDir =
       config.runtimeDir ?? join(config.rootDir, '.pikku-runtime')
-    const localContentConfig: LocalContentConfig = {
-      localFileUploadPath: userConfig.content?.contentPath
-        ? resolve(config.rootDir, userConfig.content.contentPath)
-        : join(resolvedRuntimeDir, 'content'),
-      uploadUrlPrefix: userConfig.content?.uploadUrlPrefix ?? '/upload',
-      assetUrlPrefix: userConfig.content?.assetUrlPrefix ?? '/assets',
+    const localContentConfig = resolveLocalContentConfig({
+      appContent: userConfig.content,
+      projectContent: config.content,
+      rootDir: config.rootDir,
+      runtimeDir: config.runtimeDir,
       server: `http://${hostname}:${resolvedPort}`,
-      sizeLimit: userConfig.content?.sizeLimit,
-    }
+    })
     const contentSigningJWT = createEphemeralContentSigningJWT()
     const localContent = new LocalContent(
       localContentConfig,

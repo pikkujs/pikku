@@ -256,6 +256,18 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
     )
   })
 
+  test('a service interface read off a package lists its methods', () => {
+    assert.ok(doc, 'no shipped surface.json — build the CLI first')
+    const page = renderSurfaceDoc(doc, { target: 'ContentService' })
+    for (const method of [
+      'getUploadURL',
+      'getDownloadURL',
+      'readFileAsBuffer',
+    ]) {
+      assert.match(page, new RegExp(`${method}: `))
+    }
+  })
+
   test('says what each key it lists is for', () => {
     const { symbols } = read()
     const keys = symbols.flatMap((symbol) => symbol.members ?? [])

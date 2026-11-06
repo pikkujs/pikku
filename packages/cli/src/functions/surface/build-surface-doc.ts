@@ -265,6 +265,22 @@ const CORE_DOORS: Array<{ name: string; subpath: string; only: string[] }> = [
     only: ['EmailService', 'SendEmailResult', 'EmailAttachment'],
   },
   { name: 'eventhub', subpath: './channel', only: ['EventHubService'] },
+  {
+    name: 'content',
+    subpath: './services',
+    only: [
+      'ContentService',
+      'ContentVisibility',
+      'GetUploadURLArgs',
+      'UploadURLResult',
+      'GetDownloadURLArgs',
+      'SignContentKeyArgs',
+      'SignURLArgs',
+      'BucketKeyArgs',
+      'WriteFileArgs',
+      'CopyFileArgs',
+    ],
+  },
 ]
 
 const packageLeaf = async (
@@ -277,6 +293,7 @@ const packageLeaf = async (
   const entrypoints = await collectSurface(resolve(packageDir), {
     subpaths: [subpath],
     snippets,
+    ownMembers: true,
   })
   const [leaf] = toLeaves('app', entrypoints, () => LEAF_EDITORIAL[name], null)
   if (!leaf) throw new MissingSurfaceEditorialError('app', [name])

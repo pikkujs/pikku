@@ -28,11 +28,11 @@ const parseArgs = (argv: string[]): Record<string, string> => {
 }
 
 /**
- * The one region a marker cannot reach: `pikku.config.json` is parsed as strict
- * JSON, so the scenario environments a doc has to show cannot be fenced in
- * place. Read straight off the project's own config instead of being retyped.
+ * The regions a marker cannot reach: `pikku.config.json` is parsed as strict
+ * JSON, so the blocks a doc has to show cannot be fenced in place. Read straight
+ * off the project's own config instead of being retyped.
  */
-const addScenarioConfig = async (
+const addConfigSnippets = async (
   projectDir: string,
   snippets: Map<string, string>,
   origins: Map<string, string>
@@ -41,12 +41,14 @@ const addScenarioConfig = async (
     const config = JSON.parse(
       await readFile(join(projectDir, 'pikku.config.json'), 'utf8')
     )
-    if (!config.scenarios) return
-    snippets.set(
-      'scenarioConfig',
-      JSON.stringify({ scenarios: config.scenarios }, null, 2)
-    )
-    origins.set('scenarioConfig', 'pikku.config.json')
+    for (const [name, key] of [
+      ['scenarioConfig', 'scenarios'],
+      ['contentConfig', 'content'],
+    ]) {
+      if (!config[key]) continue
+      snippets.set(name, JSON.stringify({ [key]: config[key] }, null, 2))
+      origins.set(name, 'pikku.config.json')
+    }
   } catch {
     return
   }
@@ -64,7 +66,7 @@ const main = async (argv: string[]): Promise<void> => {
     new Map(),
     origins
   )
-  await addScenarioConfig(resolve(snippetsDir), snippets, origins)
+  await addConfigSnippets(resolve(snippetsDir), snippets, origins)
 
   const doc = await buildSurfaceDoc({
     version: getCLIVersion(),
