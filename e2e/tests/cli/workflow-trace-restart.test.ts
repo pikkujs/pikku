@@ -25,7 +25,7 @@ process.env.WORKFLOW_RECOVERY_MS = '1000'
 let server: Awaited<ReturnType<typeof startBackend>> | undefined
 
 after(() => {
-  server?.stop('SIGKILL')
+  server?.kill('SIGKILL')
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -126,7 +126,7 @@ const restartsCleanly = async (signal: NodeJS.Signals, tag: string) => {
   // what makes a second run of it a duplicate rather than an at-least-once retry.
   await sleep(500)
 
-  server.stop(signal)
+  server.kill(signal)
   await sleep(500)
   assert.equal(
     effects().some(({ key }) => key === `phase2:sleep-${tag}`),
@@ -181,7 +181,7 @@ const restartsCleanly = async (signal: NodeJS.Signals, tag: string) => {
     }
   }
 
-  server.stop('SIGKILL')
+  server.kill('SIGKILL')
   server = undefined
   await sleep(500)
 }
