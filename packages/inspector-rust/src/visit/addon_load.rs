@@ -390,12 +390,24 @@ fn read_required_parent_services(path: &str) -> Option<Vec<String>> {
     }
 }
 
+/// Go decodes an entry with `json.Unmarshal(raw, m)` and ignores the error: a
+/// field of the wrong type (or `null` for a slice or string) is skipped and
+/// every other field is still filled. serde stops at the first bad field, so
+/// each key is tried alone and only the ones that decode are kept.
 fn function_meta_from(entry: &OJson) -> FunctionMeta {
     let raw = entry.raw();
-    let fields = raw
-        .value()
-        .and_then(|v| FunctionMetaFields::deserialize(v).ok())
-        .unwrap_or_default();
+    let mut fields = FunctionMetaFields::default();
+    if let Some(serde_json::Value::Object(o)) = raw.value() {
+        let mut kept = serde_json::Map::new();
+        for (k, v) in o {
+            let mut one = serde_json::Map::new();
+            one.insert(k.clone(), v.clone());
+            if FunctionMetaFields::deserialize(serde_json::Value::Object(one)).is_ok() {
+                kept.insert(k.clone(), v.clone());
+            }
+        }
+        fields = FunctionMetaFields::deserialize(serde_json::Value::Object(kept)).unwrap_or_default();
+    }
     let mut m = FunctionMeta::new(fields);
     m.verbatim = raw;
     m
