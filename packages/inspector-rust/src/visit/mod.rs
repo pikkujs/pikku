@@ -27,14 +27,21 @@ use crate::typesmap::TypesMap;
 
 pub mod boundary;
 pub mod group_approval_description;
+pub mod group_analytics;
+pub mod group_define_contributors;
+pub mod group_feature;
+pub mod group_feature_flag;
 pub mod group_functions;
 pub mod group_functions_node;
 pub mod group_http;
 pub mod group_http_contracts;
 pub mod group_outgoing_webhook;
+pub mod group_pikku_studio;
 pub mod group_rpc_invocations;
 pub mod group_schedule;
 pub mod group_setup_core;
+pub mod group_trigger;
+pub mod group_virtual_users;
 pub mod resolve_versions;
 pub mod service_types;
 pub mod order;
@@ -207,6 +214,13 @@ pub fn register_groups(r: &mut Registry) {
     group_functions::register(r);
     group_schedule::register(r);
     group_http::register(r);
+    group_trigger::register(r);
+    group_feature::register(r);
+    group_feature_flag::register(r);
+    group_virtual_users::register(r);
+    group_analytics::register(r);
+    group_define_contributors::register(r);
+    group_pikku_studio::register(r);
 }
 
 /// The registry with every ported group registered.
@@ -241,13 +255,6 @@ impl Context<'_> {
 
     /// Go `CheckDisabledWorkflowSteps` (check_disabled.go). Not ported.
     pub fn check_disabled_workflow_steps(&mut self) {}
-
-    /// Go `ValidateWebhookSourceTriggers` (validate.go). Not ported.
-    pub fn validate_webhook_source_triggers(&mut self) {}
-
-    /// Go `ValidatePikkuStudio` (group_pikku_studio.go). Not ported.
-    pub fn validate_pikku_studio(&mut self) {}
-
 }
 
 #[cfg(test)]
