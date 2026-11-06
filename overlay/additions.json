@@ -1,0 +1,23 @@
+{
+  "pikkuFunc": {
+    "docsAppend": "\n\nThe export name is the function's name in `rpc.invoke`, `ref()` and the\ngenerated clients. `expose: true` is enough for a client to call it; add a\nwiring only for an HTTP route of your own. A session is required, and\n`pikkuSessionlessFunc` is the one to use when it is not. `permissions` is\n`{ name: guard }`, and the caller is admitted when any name passes. Errors\ncome from `#pikku/error`, and `pikku doc rpc` covers the `rpc` on the wire.",
+    "examples": [
+      "import { z } from 'zod'\nimport { pikkuFunc } from '#pikku/function'\nimport { NotFoundError } from '#pikku/error'\nimport { hasProfileRole, isOrderOwner } from '../../wirings/shop.security.js'\n\nexport const RequestRefundInput = z.object({\n  orderId: z.string(),\n  reason: z.string(),\n})\nexport const RequestRefundOutput = z.object({ runId: z.string() })\n\n// The export name is the RPC name. `expose: true` is all a client needs: the\n// generated clients call `requestRefund` with no wireHTTP.\nexport const requestRefund = pikkuFunc({\n  expose: true,\n  description: 'Ask for a refund on an order.',\n  input: RequestRefundInput,\n  output: RequestRefundOutput,\n  // A map of guards, each from `pikkuPermission`. Any one key passing admits.\n  permissions: {\n    owner: isOrderOwner,\n    support: hasProfileRole({ role: 'support' }),\n  },\n  // Services, then input, then the wire: `session`, `rpc`, `http`, `channel`.\n  func: async ({ kysely, logger }, { orderId, reason }, { session, rpc }) => {\n    const order = await kysely\n      .selectFrom('order')\n      .select('orderId')\n      .where('orderId', '=', orderId)\n      .executeTakeFirst()\n    if (!order) throw new NotFoundError()\n\n    logger.info(`${session.userId} asked to refund ${orderId}`)\n    return rpc.startWorkflow('refundWorkflow', { orderId, reason })\n  },\n})"
+    ]
+  },
+  "pikkuListFunc": {
+    "docsAppend": "\n\nInput: `{ limit?, cursor?, search?, sort?: [{ column, direction }], filter? }`.\nOutput: `{ rows, nextCursor, totalCount? }`, where `nextCursor` is an opaque\nstring and `null` on the last page. The generics are the filterable fields,\nthe row and the sortable columns. `usePikkuInfiniteQuery` reads it a page at a\ntime (`pikku doc hooks`).",
+    "examples": [
+      "import { pikkuListFunc } from '#pikku/function'\n\nexport const listItemRows = pikkuListFunc<\n  { categorySlug: string; inStock: boolean },\n  { itemId: string; name: string; priceCents: number; stock: number }\n>({\n  expose: true,\n  description: 'Catalogue rows in the standard list shape (rows + cursor).',\n  func: async ({ kysely }, { limit, cursor, search }) => {\n    // `limit` comes from the caller, so cap it.\n    const pageSize = Math.min(limit ?? 20, 100)\n    // The cursor is whatever string the last page handed out; here, an offset.\n    const offset = Number(cursor ?? 0)\n\n    let query = kysely\n      .selectFrom('item')\n      .innerJoin('category', 'category.categoryId', 'item.categoryId')\n      .select(['item.itemId', 'item.name', 'item.priceCents', 'item.stock'])\n      .where('item.isActive', '=', 1)\n\n    if (search) query = query.where('item.name', 'like', `%${search}%`)\n\n    // One extra row says whether another page exists.\n    const rows = await query\n      .orderBy('item.itemId')\n      .limit(pageSize + 1)\n      .offset(offset)\n      .execute()\n\n    return {\n      rows: rows.slice(0, pageSize),\n      nextCursor: rows.length > pageSize ? String(offset + pageSize) : null,\n    }\n  },\n})"
+    ]
+  },
+  "ref": {
+    "docsAppend": "\n\nA local function's name is its plain export name, with no prefix. `ns:name`\nis for addons only, where `ns` is the addon's namespace. Names are\ntype-checked, so a wrong one fails the build."
+  },
+  "pikkuPermission": {
+    "docsAppend": "\n\nA function takes guards as a map, `permissions: { owner: isOrderOwner }`.\nAny one key passing admits the caller; an array under a key must pass in full.\nA guard gets the function's input, so name only the fields it reads."
+  },
+  "pikkuAgent": {
+    "docsAppend": "\n\nIts export name is what `rpc.agent.run` and `usePikkuAgent` take. `model` is\n`provider/model` or an alias (`pikku doc models`). `tools` takes the functions\nthemselves or `ref('name')`. A function with `approvalRequired: true` pauses\nthe run until it is approved. `memory.storage` names an agent storage service."
+  }
+}
