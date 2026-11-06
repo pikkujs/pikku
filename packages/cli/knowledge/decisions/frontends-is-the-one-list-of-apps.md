@@ -43,7 +43,7 @@ Now there is one list, in the OSS config:
   Pikku Studio Cloud and `pikku app new` already gave them.
 
 **What this rules out:** a `frontends` list in any Pikku Studio Cloud-only file.
-Pikku Studio Cloud's validate, smoke and build container read the app list from
+Pikku Studio Cloud's validate and build container read the app list from
 `pikku.config.json` like everything else. A second home would let two files
 claim the same app with different `cwd`s, which is exactly the drift one list
 exists to prevent.
