@@ -53,8 +53,8 @@ impl TypeFormatter for FunctionTypeFormatter {
 /// type (ConstructorType subclasses FunctionType in TypeScript).
 fn function_parts(t: &Ty) -> (String, Option<Ty>) {
     match &**t {
-        TypeKind::Function(ft) => (ft.comment.clone(), Some(ft.named_arguments.clone())),
-        TypeKind::Constructor(ft) => (ft.comment.clone(), Some(ft.named_arguments.clone())),
+        TypeKind::Function(ft) => (ft.comment.clone(), ft.named_arguments.clone()),
+        TypeKind::Constructor(ft) => (ft.comment.clone(), ft.named_arguments.clone()),
         _ => (String::new(), None),
     }
 }

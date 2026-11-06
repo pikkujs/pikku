@@ -5,6 +5,7 @@
 use std::rc::Rc;
 
 use super::config::Config;
+use super::parser::{Chk, NodeParser, SubNodeParser};
 use super::formatter::{
     ChainTypeFormatter, CircularReferenceTypeFormatter, TypeFormatter,
     alias_type_formatter::AliasTypeFormatter, annotated_type_formatter::AnnotatedTypeFormatter,
@@ -66,9 +67,120 @@ pub fn create_formatter(cfg: &Config) -> Rc<dyn TypeFormatter> {
 
 // ===== CreateParser (factory/parser.ts) =====
 
-/// TEMPORARY until the parser forks are merged.
-pub fn create_parser(_chk: super::parser::Chk, _cfg: &Config) -> Rc<dyn super::parser::NodeParser> {
-    super::fail("create_parser: parsers not wired yet")
+/// Assembles the node parser chain (factory/parser.ts). Registration order is
+/// load-bearing: the first parser whose `supports_node` matches wins.
+pub fn create_parser(chk: Chk, cfg: &Config) -> Rc<dyn NodeParser> {
+    use super::config::JsDocMode;
+    use super::parser::*;
+    let chain = ChainNodeParser::new(chk.clone());
+    let synth = shared::SynthesizedSymbols::new();
+    let np = || -> Rc<dyn NodeParser> { chain.clone() };
+    let sp = || -> Rc<dyn SubNodeParser> { chain.clone() };
+    let extra_tags: std::collections::HashSet<String> = cfg.extra_tags.iter().cloned().collect();
+
+    let with_expose = |p: Rc<dyn SubNodeParser>| -> Rc<dyn SubNodeParser> {
+        expose_node_parser::new(chk.clone(), p, cfg.expose, cfg.js_doc)
+    };
+    let with_js_doc = |p: Rc<dyn SubNodeParser>| -> Rc<dyn SubNodeParser> {
+        match cfg.js_doc {
+            JsDocMode::Extended => annotated_node_parser::new(
+                p,
+                extended_annotations_reader::new(chk.clone(), extra_tags.clone(), cfg.markdown_description, cfg.full_description),
+            ),
+            JsDocMode::Basic => annotated_node_parser::new(p, basic_annotations_reader::new(extra_tags.clone())),
+            JsDocMode::None => p,
+        }
+    };
+    let with_circular = |p: Rc<dyn SubNodeParser>| -> Rc<dyn SubNodeParser> { CircularReferenceNodeParser::new(p) };
+
+    chain
+        .add_node_parser(hidden_type_node_parser::new())
+        .add_node_parser(string_type_node_parser::new())
+        .add_node_parser(symbol_type_node_parser::new())
+        .add_node_parser(number_type_node_parser::new())
+        .add_node_parser(boolean_type_node_parser::new())
+        .add_node_parser(any_type_node_parser::new())
+        .add_node_parser(unknown_type_node_parser::new())
+        .add_node_parser(void_type_node_parser::new())
+        .add_node_parser(undefined_type_node_parser::new())
+        .add_node_parser(never_type_node_parser::new())
+        .add_node_parser(object_type_node_parser::new())
+        .add_node_parser(as_expression_node_parser::new(np()))
+        .add_node_parser(binary_expression_node_parser::new(np()))
+        .add_node_parser(satisfies_node_parser::new(np()))
+        .add_node_parser(with_js_doc(parameter_parser::new(np())))
+        .add_node_parser(string_literal_node_parser::new())
+        .add_node_parser(string_template_literal_node_parser::new(np()))
+        .add_node_parser(intrinsic_node_parser::new())
+        .add_node_parser(number_literal_node_parser::new())
+        .add_node_parser(boolean_literal_node_parser::new())
+        .add_node_parser(null_literal_node_parser::new())
+        .add_node_parser(object_literal_expression_node_parser::new(np(), chk.clone(), synth.clone()))
+        .add_node_parser(array_literal_expression_node_parser::new(np()))
+        .add_node_parser(prefix_unary_expression_node_parser::new(np()))
+        .add_node_parser(literal_node_parser::new(np()))
+        .add_node_parser(parenthesized_node_parser::new(np()))
+        .add_node_parser(promise_node_parser::new(chk.clone(), np(), synth.clone()))
+        .add_node_parser(type_reference_node_parser::new(chk.clone(), np(), synth.clone()))
+        .add_node_parser(import_type_node_parser::new(chk.clone(), np()))
+        .add_node_parser(expression_with_type_arguments_node_parser::new(chk.clone(), np()))
+        .add_node_parser(indexed_access_type_node_parser::new(chk.clone(), as_node_parser(with_js_doc(sp()))))
+        .add_node_parser(infer_type_node_parser::new())
+        .add_node_parser(typeof_node_parser::new(chk.clone(), np()))
+        .add_node_parser(mapped_type_node_parser::new(np(), cfg.additional_properties))
+        .add_node_parser(conditional_type_node_parser::new(chk.clone(), np()))
+        .add_node_parser(type_operator_node_parser::new(np()))
+        .add_node_parser(union_node_parser::new(np()))
+        .add_node_parser(intersection_node_parser::new(np()))
+        .add_node_parser(tuple_node_parser::new(np()))
+        .add_node_parser(named_tuple_member_node_parser::new(np()))
+        .add_node_parser(optional_type_node_parser::new(np()))
+        .add_node_parser(rest_type_node_parser::new(np()))
+        .add_node_parser(identifier_node_parser::new(np(), chk.clone()))
+        .add_node_parser(spread_element_node_parser::new(np()))
+        .add_node_parser(call_expression_parser::new(chk.clone(), np(), synth.clone()))
+        .add_node_parser(new_expression_parser::new(chk.clone(), np(), synth.clone()))
+        .add_node_parser(property_access_expression_parser::new(chk.clone(), np()))
+        .add_node_parser(with_circular(with_expose(with_js_doc(type_alias_node_parser::new(chk.clone(), np())))))
+        .add_node_parser(with_expose(with_js_doc(enum_node_parser::new(chk.clone()))))
+        .add_node_parser(with_circular(with_expose(with_js_doc(interface_and_class_node_parser::new(
+            chk.clone(),
+            as_node_parser(with_js_doc(sp())),
+            cfg.additional_properties,
+            synth.clone(),
+        )))))
+        .add_node_parser(with_circular(with_expose(with_js_doc(type_literal_node_parser::new(
+            chk.clone(),
+            as_node_parser(with_js_doc(sp())),
+            cfg.additional_properties,
+        )))))
+        .add_node_parser(array_node_parser::new(np()));
+
+    if cfg.functions != super::config::FunctionOptions::Fail {
+        chain
+            .add_node_parser(constructor_node_parser::new(np(), cfg.functions))
+            .add_node_parser(function_node_parser::new(np(), cfg.functions));
+    }
+
+    let full_name = if cfg.types.len() == 1 { cfg.types[0].clone() } else { String::new() };
+    TopRefNodeParser::new(np(), full_name, cfg.top_ref)
+}
+
+/// A SubNodeParser used where Go wants a NodeParser (`withJsDoc(chain)` is
+/// passed as a child): a missing node is the chain's UnknownNodeError.
+struct SubAsNode(Rc<dyn SubNodeParser>);
+
+impl NodeParser for SubAsNode {
+    fn create_type(&self, node: Option<tsrs_core::P<tsrs_ast::Node>>, ctx: &super::parser::Context, reference: Option<&super::types::Ty>) -> super::types::Ty {
+        match node {
+            Some(n) => self.0.create_type(n, ctx, reference),
+            None => super::parser::unknown_node_error(None),
+        }
+    }
+}
+
+fn as_node_parser(p: Rc<dyn SubNodeParser>) -> Rc<dyn NodeParser> {
+    Rc::new(SubAsNode(p))
 }
 
 #[cfg(test)]
