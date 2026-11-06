@@ -66,6 +66,9 @@ type Options struct {
 	Subpaths []string
 	// Snippets is nil when no map was given.
 	Snippets []Snippet
+	// OwnMembers says the directory is the package being documented rather than
+	// a project consuming one, so the keys it declares are listed.
+	OwnMembers bool
 }
 
 // UnknownSnippetError is collect-surface.ts's UnknownSnippetError.
@@ -376,7 +379,7 @@ func Collect(packageDir string, options Options) ([]Entrypoint, error) {
 	c, release := prog.GetTypeChecker(context.Background())
 	defer release()
 
-	s := &session{c: c, prog: prog, root: root, snippets: options.Snippets}
+	s := &session{c: c, prog: prog, root: root, snippets: options.Snippets, ownMembers: options.OwnMembers}
 	statuses := collectErrorStatuses(prog)
 
 	for i := range entries {
@@ -427,6 +430,8 @@ type session struct {
 	prog     *compiler.Program
 	root     string
 	snippets []Snippet
+	// ownMembers lists keys isProjectOwned would otherwise drop.
+	ownMembers bool
 }
 
 // orderedExports is checker.getExportsOfModule in Strada's order: a module's

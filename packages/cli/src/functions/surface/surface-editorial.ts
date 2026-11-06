@@ -169,6 +169,12 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'An addon package ships its screens with `definePlugin`; a host mounts them with `wireAddon({ ui: true })`.',
   },
+  content: {
+    step: 'enhance it',
+    skill: null,
+    summary:
+      "File storage, on services as `content`, not `contentService`: `async ({ content }) => ...`. It is optional on the core services type, so declare `content: ContentService` on your SingletonServices, and forward `existingServices` from `createSingletonServices` so the runtime's reaches your functions. A browser sends a file to the URL `content.getUploadURL` returns, never through a function; `pikku doc ContentService` shows the whole loop.",
+  },
   webhook: {
     step: 'wire it up',
     skill: null,

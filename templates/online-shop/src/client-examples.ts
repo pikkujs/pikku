@@ -92,3 +92,43 @@ export async function agentStreamExamples(signal?: AbortSignal) {
   return reply
 }
 // @snippet end aiAgentStreamClient
+
+// @snippet start contentBrowserUpload
+export async function uploadDamagePhoto(
+  orderId: string,
+  photo: File,
+  contentType: 'image/jpeg' | 'image/png' | 'image/webp'
+) {
+  const serverUrl = 'http://localhost:4000'
+  pikkuFetch.setServerUrl(serverUrl)
+  pikkuFetch.setAuthorizationJWT('user-jwt-token')
+
+  const { uploadUrl, uploadMethod, uploadHeaders, fileKey } =
+    await pikkuFetch.post('/orders/:orderId/damage-photo/upload', {
+      orderId,
+      fileName: photo.name,
+      contentType,
+    })
+
+  // The raw file is the body. No JSON, no form, no base64, no session token:
+  // the URL is the grant. `uploadUrl` may be relative to the server.
+  const upload = await fetch(new URL(uploadUrl, serverUrl), {
+    method: uploadMethod ?? 'PUT',
+    headers: { 'Content-Type': contentType, ...uploadHeaders },
+    body: photo,
+  })
+  if (!upload.ok) throw new Error(`Upload failed: ${upload.status}`)
+
+  await pikkuFetch.post('/orders/:orderId/damage-photo', {
+    orderId,
+    fileKey,
+    contentType,
+  })
+
+  // A fresh URL per view: it expires, the key does not. <img src={url} />
+  const { url } = await pikkuFetch.get('/orders/:orderId/damage-photo', {
+    orderId,
+  })
+  return url
+}
+// @snippet end contentBrowserUpload

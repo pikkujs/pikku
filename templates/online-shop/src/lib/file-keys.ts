@@ -1,11 +1,8 @@
 /**
  * Where uploaded files go, and what they are called.
  *
- * One bucket groups related files. The `content` service behind it is
- * `LocalContent` while developing (files on disk, served under the configured
- * upload and asset prefixes) and an S3 or R2 client in a deployed stage — the
- * code below is identical either way, which is the point of going through the
- * service rather than reaching for a storage SDK.
+ * A bucket is just a name that groups related files, and goes through the
+ * `content` service rather than a storage SDK.
  */
 export const BUCKET = 'shop'
 

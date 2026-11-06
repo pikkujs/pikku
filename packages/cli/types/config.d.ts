@@ -478,6 +478,17 @@ export type PikkuCLIInput = {
   rootDir: string
   /** Runtime artifacts directory (dev.db, content, tmp). Resolved relative to rootDir. Defaults to <rootDir>/.pikku-runtime. */
   runtimeDir?: string
+  /** How `pikku dev` and `pikku serve` store and serve files. */
+  content?: {
+    /** Where files are kept, relative to the project root. */
+    contentPath?: string
+    /** Route uploads arrive on. Defaults to `/upload`. */
+    uploadUrlPrefix?: string
+    /** Route files are read from. Defaults to `/assets`. */
+    assetUrlPrefix?: string
+    /** The most one upload may hold, such as `10mb`. Defaults to `1mb`. */
+    sizeLimit?: string
+  }
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
