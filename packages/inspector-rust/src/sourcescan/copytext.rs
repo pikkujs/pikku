@@ -154,7 +154,7 @@ pub fn looks_like_copy(value: &str, allowed: &[String]) -> bool {
 /// `readsAsEnglish` of `verify/source-checks.ts`.
 pub fn reads_as_english(text: &str) -> bool {
     let s = normalize_whitespace(text);
-    let n = s.encode_utf16().count();
+    let n = super::utf16_units(&s).len();
     if n < 5 || n > 200 || english_list_re().is_match(&s) || !copy_letter_re().is_match(&s) {
         return false;
     }

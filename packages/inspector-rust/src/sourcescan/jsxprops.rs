@@ -9,6 +9,7 @@ use tsrs_ast::{
 };
 use tsrs_core::{P, ScriptKind};
 
+use super::NodeLit;
 use super::{end, for_each_child, is_string_literal_like, js_trim, js_whitespace_run, parse, start};
 use crate::jsjson::format_number;
 use crate::tsutil::utf16_offset;
@@ -84,14 +85,14 @@ fn find_opening_element(sf: P<tsrs_ast::SourceFile>, line: i64, col: i64) -> Opt
 fn literal_value(attr: P<Node>) -> Option<Value> {
     let Some(init) = attr.as_jsx_attribute().initializer else { return Some(Value::Bool(true)) };
     if is_string_literal(init) {
-        return Some(Value::String(init.text().to_string()));
+        return Some(Value::String(init.lit().to_string()));
     }
     if !is_jsx_expression(init) || init.expression().is_none() {
         return None;
     }
     let expr = init.expression().unwrap();
     if is_string_literal(expr) || is_no_substitution_template_literal(expr) {
-        return Some(Value::String(expr.text().to_string()));
+        return Some(Value::String(expr.lit().to_string()));
     }
     if is_numeric_literal(expr) {
         return Some(num_value(js_number_from_string(expr.text())));

@@ -7,6 +7,7 @@ use tsrs_ast::{
 };
 use tsrs_core::{P, ScriptKind};
 
+use super::NodeLit;
 use super::{end, for_each_child, parse, start};
 use crate::tsutil::utf16_offset;
 
@@ -169,7 +170,7 @@ pub fn read_imports(content: &str) -> ImportsInfo {
             continue;
         }
         let mut entry = ImportClauseInfo {
-            module: decl.module_specifier.text().to_string(),
+            module: decl.module_specifier.lit().to_string(),
             names: vec![],
             insert_at: None,
             end: e,

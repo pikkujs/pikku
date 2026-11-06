@@ -12,6 +12,7 @@ use tsrs_ast::{
 };
 use tsrs_core::{P, ScriptKind};
 
+use super::NodeLit;
 use super::{JS_WHITESPACE, get_text, is_js_whitespace, is_string_literal_like, js_trim, line_of, parse, start, walk};
 
 #[derive(Serialize, Clone)]
@@ -140,13 +141,13 @@ pub fn read_jsx_literal_text(file_name: &str, content: &str) -> Vec<JsxLiteralTe
     walk(sf.as_node(), &mut |n| {
         let parent = n.parent();
         if n.kind() == Kind::JsxText {
-            add(n, n.as_jsx_text().text(), &mut found);
+            add(n, &super::fix_wtf8(n.as_jsx_text().text()), &mut found);
         } else if n.kind() == Kind::JsxExpression
             && n.expression().is_some()
             && parent.is_some_and(|p| is_jsx_element(p) || is_jsx_fragment(p))
         {
             for literal in rendered(n.expression().unwrap()) {
-                add(literal, literal.text(), &mut found);
+                add(literal, &literal.lit(), &mut found);
             }
         } else if n.kind() == Kind::JsxAttribute && n.initializer().is_some() {
             let name = get_text(n.name().unwrap(), sf);
@@ -158,19 +159,19 @@ pub fn read_jsx_literal_text(file_name: &str, content: &str) -> Vec<JsxLiteralTe
                 && (TEXT_ATTRIBUTES.contains(&name)
                     || (!NON_TEXT_ATTRIBUTES.contains(&name)
                         && !name.starts_with("data-")
-                        && is_sentence(value.unwrap().text())))
+                        && is_sentence(&value.unwrap().lit())))
             {
                 let v = value.unwrap();
-                add(v, v.text(), &mut found);
+                add(v, &v.lit(), &mut found);
             }
         } else if n.kind() == Kind::PropertyAssignment
             && is_text_property(get_text(n.name().unwrap(), sf))
             && is_string_literal_like(n.initializer())
         {
             let i = n.initializer().unwrap();
-            add(i, i.text(), &mut found);
+            add(i, &i.lit(), &mut found);
         }
-        if is_string_literal_like(Some(n)) && is_prose(n.text()) {
+        if is_string_literal_like(Some(n)) && is_prose(&n.lit()) {
             if let Some(p) = parent {
                 if !is_import_declaration(p)
                     && !is_export_declaration(p)
@@ -178,7 +179,7 @@ pub fn read_jsx_literal_text(file_name: &str, content: &str) -> Vec<JsxLiteralTe
                     && !(is_property_assignment(p) && p.name() == Some(n))
                     && !(is_jsx_attribute(p) && NON_TEXT_ATTRIBUTES.contains(&get_text(p.name().unwrap(), sf)))
                 {
-                    add(n, n.text(), &mut found);
+                    add(n, &n.lit(), &mut found);
                 }
             }
         }

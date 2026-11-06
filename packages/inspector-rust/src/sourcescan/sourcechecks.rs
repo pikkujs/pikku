@@ -18,6 +18,7 @@ use tsrs_core::{P, ScriptKind};
 use regex::Regex;
 use std::sync::OnceLock;
 
+use super::NodeLit;
 use super::copyskip::*;
 use super::kinds::{is_as_expression, is_type_assertion};
 use super::copytext::{JS_DOT, copy_letter_re, looks_like_copy, normalize_whitespace, reads_as_english};
@@ -197,7 +198,7 @@ pub fn find_as_i18n_stubs(dir: &str) -> Vec<AsI18nStubHit> {
             }
             let args = node.arguments();
             let copy = if let Some(a) = args.first() {
-                if is_string_literal_like(Some(*a)) { a.text().to_string() } else { get_text(*a, sf).to_string() }
+                if is_string_literal_like(Some(*a)) { a.lit().to_string() } else { get_text(*a, sf).to_string() }
             } else {
                 String::new()
             };
@@ -228,8 +229,8 @@ fn imported_helper_bindings(sf: P<SourceFile>, helper: &str, file: &str) -> (Has
         if !is_string_literal(decl.module_specifier) {
             continue;
         }
-        let spec = decl.module_specifier.text();
-        if !REACT_MODULE.is_match(spec) && !(in_react_source && react_relative_module().is_match(spec)) {
+        let spec = decl.module_specifier.lit();
+        if !REACT_MODULE.is_match(&spec) && !(in_react_source && react_relative_module().is_match(&spec)) {
             continue;
         }
         let Some(clause) = decl.import_clause else { continue };
@@ -282,8 +283,8 @@ pub fn find_sep_arguments(dir: &str) -> Vec<SepArgumentHit> {
             let reason = match inner {
                 None => "not a string literal",
                 Some(i) if !is_string_literal_like(Some(i)) => "not a string literal",
-                Some(i) if i.text().is_empty() => "empty",
-                Some(i) if LETTER_OR_DIGIT.is_match(i.text()) => "contains a letter or digit",
+                Some(i) if i.lit().is_empty() => "empty",
+                Some(i) if LETTER_OR_DIGIT.is_match(&i.lit()) => "contains a letter or digit",
                 _ => "",
             };
             if !reason.is_empty() {
@@ -341,13 +342,13 @@ pub fn find_jsx_literal_text(dir: &str, allowed: &[String], gated: bool) -> Vec<
         };
         walk(sf.as_node(), &mut |node| {
             if node.kind() == Kind::JsxText {
-                report(node, node.as_jsx_text().text(), &mut hits);
+                report(node, &super::fix_wtf8(node.as_jsx_text().text()), &mut hits);
             } else if is_jsx_expression(node)
                 && node.expression().is_some()
                 && is_element_or_fragment(node.parent())
                 && is_string_literal_like(node.expression())
             {
-                report(node, node.expression().unwrap().text(), &mut hits);
+                report(node, &node.expression().unwrap().lit(), &mut hits);
             }
         });
     }
@@ -360,7 +361,7 @@ fn literal_strings(expr: P<Node>) -> Vec<String> {
         return literal_strings(expr.expression().unwrap());
     }
     if is_string_literal_like(Some(expr)) {
-        return vec![expr.text().to_string()];
+        return vec![expr.lit().to_string()];
     }
     if is_template_expression(expr) {
         return vec![template_text(expr)];
@@ -390,10 +391,10 @@ fn literal_strings(expr: P<Node>) -> Vec<String> {
 fn template_text(template: P<Node>) -> String {
     let t = template.as_template_expression();
     let mut b = String::new();
-    b.push_str(t.head.text());
+    b.push_str(&super::fix_wtf8(t.head.text()));
     for span in t.template_spans.nodes() {
         b.push_str("{…}");
-        b.push_str(span.as_template_span().literal.text());
+        b.push_str(&super::fix_wtf8(span.as_template_span().literal.text()));
     }
     b
 }
@@ -731,7 +732,7 @@ pub fn find_string_literal_copy(dir: &str, copy_helpers: &[String]) -> Vec<Sourc
             let mut value = String::new();
             let mut is_literal = false;
             if is_string_literal_like(Some(node)) {
-                value = node.text().to_string();
+                value = node.lit().to_string();
                 is_literal = true;
             } else if is_template_expression(node) {
                 value = template_text(node);

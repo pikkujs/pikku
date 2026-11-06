@@ -13,6 +13,7 @@ use tsrs_ast::{
 };
 use tsrs_core::P;
 
+use super::NodeLit;
 use super::kinds::is_case_block;
 use super::files::{parse_source, source_files};
 use super::{Lazy, for_each_child, get_text, is_string_literal_like, js_whitespace_run, line_of, slice_utf16, start};
@@ -52,7 +53,7 @@ fn namespace_aliases(sf: P<tsrs_ast::SourceFile>) -> HashSet<String> {
         if !is_string_literal(decl.module_specifier) {
             continue;
         }
-        let from_messages = MESSAGES_MODULE.is_match(decl.module_specifier.text());
+        let from_messages = MESSAGES_MODULE.is_match(&decl.module_specifier.lit());
         let Some(clause) = decl.import_clause else { continue };
         let Some(bindings) = clause.as_import_clause().named_bindings else { continue };
         if is_namespace_import(bindings) {
@@ -233,11 +234,11 @@ pub fn scan_message_usage(root: &str) -> MessageUsage {
                     if is_property_access_expression(p) && p.expression() == Some(n) {
                         self.use_key(p.name().unwrap().text());
                     } else if is_qualified_name(p) && p.as_qualified_name().left == n {
-                        self.use_key(p.as_qualified_name().right.text());
+                        self.use_key(&p.as_qualified_name().right.lit());
                     } else if is_element_access_expression(p) && p.expression() == Some(n) {
                         let arg = p.as_element_access_expression().argument_expression;
                         if is_string_literal_like(Some(arg)) {
-                            self.use_key(arg.text());
+                            self.use_key(&arg.lit());
                         } else {
                             self.site(n, "computed access");
                         }
@@ -253,7 +254,7 @@ pub fn scan_message_usage(root: &str) -> MessageUsage {
                             {
                                 self.site(n, "destructured with rest or computed name");
                             } else {
-                                self.use_key(name.text());
+                                self.use_key(&name.lit());
                             }
                         }
                     } else if !self.is_definition {

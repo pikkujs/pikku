@@ -13,6 +13,7 @@ use tsrs_core::tspath;
 use tsrs_core::{CompilerOptions, ModuleKind, ModuleResolutionKind, P, ScriptKind, Tristate};
 use tsrs_module::{DefaultResolver, ResolverOptions, new_resolver};
 
+use super::NodeLit;
 use super::files::{abs, clean, join};
 use super::tsconfig::{SysHost, parse_config};
 use super::{Lazy, for_each_child, is_string_literal_like, line_of, parse, start};
@@ -63,11 +64,11 @@ pub struct FrontendScan {
 pub type ImportCheck<'a> = &'a mut dyn FnMut(&str, &str) -> bool;
 
 fn literal_text(n: Option<P<Node>>) -> Option<String> {
-    if is_string_literal_like(n) { Some(n.unwrap().text().to_string()) } else { None }
+    if is_string_literal_like(n) { Some(n.unwrap().lit().to_string()) } else { None }
 }
 
 fn property_name_text(name: P<Node>) -> Option<String> {
-    if is_identifier(name) || is_string_literal(name) { Some(name.text().to_string()) } else { None }
+    if is_identifier(name) || is_string_literal(name) { Some(name.lit().to_string()) } else { None }
 }
 
 fn read_flag(options: Option<P<Node>>) -> (String, String) {
@@ -115,7 +116,7 @@ fn import_bindings(sf: P<SourceFile>) -> HashMap<String, ImportBinding> {
         if !is_string_literal(decl.module_specifier) {
             continue;
         }
-        let specifier = decl.module_specifier.text().to_string();
+        let specifier = decl.module_specifier.lit().to_string();
         if let Some(name) = clause.name() {
             bindings.insert(
                 name.text().to_string(),
@@ -376,7 +377,7 @@ impl ClientImports {
             if original.is_empty() {
                 continue;
             }
-            match self.resolve_from(file, spec.text()) {
+            match self.resolve_from(file, &spec.lit()) {
                 None => {
                     found = true;
                     break;

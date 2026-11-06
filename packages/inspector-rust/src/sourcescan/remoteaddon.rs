@@ -4,6 +4,7 @@ use tsrs_ast::{
 };
 use tsrs_core::ScriptKind;
 
+use super::NodeLit;
 use super::{is_string_literal_like, line_of, parse, start, walk};
 
 /// One `wireRemoteAddon({ package: '<literal>' })` call.
@@ -41,7 +42,7 @@ pub fn find_wire_remote_addon_literals(file_name: &str, content: &str) -> Vec<Re
             }
             let init = prop.initializer();
             if name.text() == "name" && is_string_literal_like(init) {
-                namespace = Some(init.unwrap().text().to_string());
+                namespace = Some(init.unwrap().lit().to_string());
             } else if name.text() == "package" && is_string_literal_like(init) {
                 literal = init;
             }
@@ -49,7 +50,7 @@ pub fn find_wire_remote_addon_literals(file_name: &str, content: &str) -> Vec<Re
         if let Some(lit) = literal {
             found.push(RemoteAddonLiteral {
                 namespace,
-                spec: lit.text().to_string(),
+                spec: lit.lit().to_string(),
                 line: line_of(sf, start(lit, sf)),
             });
         }

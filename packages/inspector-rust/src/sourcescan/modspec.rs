@@ -1,6 +1,7 @@
 use tsrs_ast::{is_export_declaration, is_import_declaration, is_string_literal};
 use tsrs_core::ScriptKind;
 
+use super::NodeLit;
 use super::parse;
 
 /// `utils/read-module-specifiers.ts`: the module specifiers a file imports from
@@ -16,7 +17,7 @@ pub fn read_module_specifiers(file_name: &str, content: &str) -> Vec<String> {
         if !is_string_literal(spec) {
             continue;
         }
-        found.push(spec.text().to_string());
+        found.push(spec.lit().to_string());
     }
     found
 }

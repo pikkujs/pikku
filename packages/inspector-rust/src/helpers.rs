@@ -185,7 +185,7 @@ fn decode<T: for<'de> Deserialize<'de> + Default>(params: &[u8]) -> Result<T, Er
 /// `serde_json::Value` cannot hold (a lone surrogate from a UTF-16 cut) survives.
 fn json<T: Serialize>(v: T) -> Result<Box<RawValue>, Error> {
     let b = crate::jsjson::marshal(&v, "").map_err(|e| plain(e.to_string()))?;
-    RawValue::from_string(String::from_utf8(b).map_err(|e| plain(e.to_string()))?).map_err(|e| plain(e.to_string()))
+    RawValue::from_string(crate::sourcescan::unmark_surrogates(&String::from_utf8(b).map_err(|e| plain(e.to_string()))?).into_owned()).map_err(|e| plain(e.to_string()))
 }
 
 fn null() -> Box<RawValue> {

@@ -7,7 +7,7 @@ use std::sync::OnceLock;
 use regex::Regex;
 use serde::{Serialize, Serializer};
 use serde_json::value::RawValue;
-use tsrs_ast::{Node, SourceFile, SourceFileParseOptions, is_string_literal, is_no_substitution_template_literal};
+use tsrs_ast::{Node, SourceFile, SourceFileParseOptions, is_no_substitution_template_literal, is_string_literal};
 use tsrs_core::tspath::{self, Path};
 use tsrs_core::{P, ScriptKind};
 
@@ -137,7 +137,7 @@ pub fn js_whitespace_run() -> &'static Regex {
 /// `s.slice(0, n)` for n UTF-16 code units, as a `String` (a cut inside a
 /// surrogate pair becomes U+FFFD, as Go's `string(utf16.Decode(..))`).
 pub fn slice_utf16(s: &str, n: usize) -> String {
-    let units: Vec<u16> = s.encode_utf16().collect();
+    let units = utf16_units(s);
     if units.len() <= n {
         return s.to_string();
     }
@@ -151,7 +151,7 @@ pub struct JsText(pub Vec<u16>);
 
 /// `s.slice(0, n)`.
 pub fn slice_js(s: &str, n: usize) -> JsText {
-    let mut units: Vec<u16> = s.encode_utf16().collect();
+    let mut units = utf16_units(s);
     units.truncate(n);
     JsText(units)
 }
@@ -193,4 +193,93 @@ impl Serialize for JsText {
 /// Go's `strings.TrimPrefix`-free `contains` on string slices.
 pub fn contains(list: &[String], s: &str) -> bool {
     list.iter().any(|i| i == s)
+}
+
+/// Text of a string-like node as a Rust string. tsrs keeps a lone surrogate
+/// produced by an escape (`'\ud83d'`) as WTF-8 bytes inside a `&str`, as
+/// typescript-go does in a Go string. Go treats each byte of such a string as a
+/// `RuneError` when it matches a regexp or encodes JSON, and
+/// [`wtf8_units`](JsText) knows the three-byte form. Here a lone surrogate
+/// becomes a marker character (U+10D800..U+10DFFF, [`SURROGATE_MARKER_BASE`]),
+/// any other invalid byte U+FFFD, so the rest of the code works on valid UTF-8;
+/// [`JsText`] turns a marker back into the lone UTF-16 unit and
+/// [`unmark_surrogates`] writes the other outputs the way Go's encoder does
+/// (one U+FFFD per byte).
+pub trait NodeLit {
+    fn lit(self) -> std::borrow::Cow<'static, str>;
+}
+
+pub const SURROGATE_MARKER_BASE: u32 = 0x10D800;
+
+impl NodeLit for P<Node> {
+    fn lit(self) -> std::borrow::Cow<'static, str> {
+        fix_wtf8(self.text())
+    }
+}
+
+pub fn fix_wtf8(s: &'static str) -> std::borrow::Cow<'static, str> {
+    let bytes = s.as_bytes();
+    if std::str::from_utf8(bytes).is_ok() {
+        return std::borrow::Cow::Borrowed(s);
+    }
+    let mut out = String::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        match std::str::from_utf8(&bytes[i..]) {
+            Ok(rest) => {
+                out.push_str(rest);
+                break;
+            }
+            Err(e) => {
+                let valid = e.valid_up_to();
+                out.push_str(std::str::from_utf8(&bytes[i..i + valid]).unwrap());
+                i += valid;
+                let b = &bytes[i..];
+                if b.len() >= 3 && b[0] == 0xed && (0xa0..=0xbf).contains(&b[1]) && (0x80..=0xbf).contains(&b[2]) {
+                    let unit = 0xd000u32 | ((b[1] as u32 & 0x3f) << 6) | (b[2] as u32 & 0x3f);
+                    out.push(char::from_u32(SURROGATE_MARKER_BASE + (unit - 0xd800)).unwrap());
+                    i += 3;
+                } else {
+                    let n = e.error_len().unwrap_or(b.len());
+                    for _ in 0..n {
+                        out.push('\u{fffd}');
+                    }
+                    i += n;
+                }
+            }
+        }
+    }
+    std::borrow::Cow::Owned(out)
+}
+
+/// UTF-16 units of a string with markers (see [`NodeLit`]).
+pub fn utf16_units(s: &str) -> Vec<u16> {
+    let mut units = Vec::with_capacity(s.len());
+    for c in s.chars() {
+        let cp = c as u32;
+        if (SURROGATE_MARKER_BASE..SURROGATE_MARKER_BASE + 0x800).contains(&cp) {
+            units.push((0xd800 + (cp - SURROGATE_MARKER_BASE)) as u16);
+        } else {
+            let mut buf = [0u16; 2];
+            units.extend_from_slice(c.encode_utf16(&mut buf));
+        }
+    }
+    units
+}
+
+/// Writes a surrogate marker the way Go's JSON encoder writes the three
+/// invalid bytes it stands for: three U+FFFD.
+pub fn unmark_surrogates(json: &str) -> std::borrow::Cow<'_, str> {
+    if !json.chars().any(|c| (SURROGATE_MARKER_BASE..SURROGATE_MARKER_BASE + 0x800).contains(&(c as u32))) {
+        return std::borrow::Cow::Borrowed(json);
+    }
+    let mut out = String::with_capacity(json.len());
+    for c in json.chars() {
+        if (SURROGATE_MARKER_BASE..SURROGATE_MARKER_BASE + 0x800).contains(&(c as u32)) {
+            out.push_str("\u{fffd}\u{fffd}\u{fffd}");
+        } else {
+            out.push(c);
+        }
+    }
+    std::borrow::Cow::Owned(out)
 }
