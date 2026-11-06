@@ -33,7 +33,7 @@ visitor group is ported**, so an inspection returns a state with the program's
 | `sourcescan` | `internal/sourcescan` | done |
 | `surface` | `internal/surface` | done |
 | `typecheck` | `internal/typecheck` | done; `serve` answers `typeDiagnostics` |
-| `main.rs` | `cmd/pikku-inspect` | `--stdin`, `inspect --stdin`, `finalize --stdin` (decodes, finalize no-op), `serve` (inspect works), `helper <m>` (not implemented); legacy bench mode not ported |
+| `main.rs` | `cmd/pikku-inspect` | `--stdin`, `inspect --stdin`, `finalize --stdin` (decodes, finalize no-op), `serve` (inspect, typeDiagnostics, helpers), `helper <m>`; legacy bench mode not ported |
 
 `serve` handles `inspect` end to end, `typeDiagnostics` and the helper methods.
 
