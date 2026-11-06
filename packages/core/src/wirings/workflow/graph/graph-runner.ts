@@ -1365,7 +1365,8 @@ export async function runWorkflowGraph(
   inline?: boolean,
   startNode?: string,
   wire?: WorkflowRunWire,
-  overrideMeta?: WorkflowRuntimeMeta
+  overrideMeta?: WorkflowRuntimeMeta,
+  onRunCreated?: (runId: string) => void
 ): Promise<{ runId: string }> {
   const meta = overrideMeta ?? getWorkflowMeta(graphName)
   if (!meta?.nodes) {
@@ -1415,6 +1416,8 @@ export async function runWorkflowGraph(
       plannedSteps: meta.plannedSteps,
     }
   )
+
+  onRunCreated?.(runId)
 
   if (inline) {
     workflowService.registerInlineRun(runId)

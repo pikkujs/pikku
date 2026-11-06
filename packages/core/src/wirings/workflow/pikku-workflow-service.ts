@@ -929,7 +929,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         shouldInline,
         options?.startNode,
         wire,
-        workflowMeta
+        workflowMeta,
+        options?.onRunCreated
       )
     }
 
