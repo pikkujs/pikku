@@ -9,7 +9,7 @@ shipped in this package under `prebuilt/<platform>-<arch>/`:
   linux-x64, linux-arm64 and darwin-arm64.
 
 Select with `PIKKU_INSPECTOR=go|rs`, `pikku ... --inspector rs`, or
-`"inspector"` in `pikku.config.json`; the default is `DEFAULT_ENGINE` in
-`src/binary.ts`. Point `PIKKU_INSPECTOR_GO_BIN` / `PIKKU_INSPECTOR_RS_BIN` at a
+`"inspector"` in `pikku.config.json`; the default is `rs` (`DEFAULT_ENGINE` in
+`src/binary.ts`). Point `PIKKU_INSPECTOR_GO_BIN` / `PIKKU_INSPECTOR_RS_BIN` at a
 binary you built to override the packaged one. Lookup per engine: its variable,
 `prebuilt/<platform>-<arch>/`, `bin/`, then beside the running executable.
