@@ -27,7 +27,7 @@ visitor group is ported**, so an inspection returns a state with the program's
 | `visit` | `internal/visit` | `Context`, `Registry`, `Phase`, `Abort`, `order` keys, `Sweep`; no groups; the post-sweep steps (`sweep_usage`, `resolve_latest_versions`, ...) are no-ops with their Go file named |
 | `typesmap` | `internal/typesmap` | data structure, serialisation, `get_type_meta`; `CanonicalTypeString` is the identity (TODO) |
 | `tsutil` | `internal/tsutil` | `walk`, `walk_self`, `dedupe`, `sorted_keys`, `utf16_offset`; printing/typeorder not ported |
-| `schemas` | `internal/schemas`, `tsjg` | not ported |
+| `schemas`, `tsjg` | `internal/schemas`, `internal/tsjg` | done except the Zod QuickJS route (Node only), the disk cache and the TypeToTypeNode union reorder; see PORTING.md |
 | `finalize` | `internal/finalize` | not ported; `response()` is a no-op |
 | `helpers` | `internal/helpers` | method list ported; every method answers `not implemented` |
 | `main.rs` | `cmd/pikku-inspect` | `--stdin`, `inspect --stdin`, `finalize --stdin` (decodes, finalize no-op), `serve` (inspect works), `helper <m>` (not implemented); legacy bench mode not ported |
