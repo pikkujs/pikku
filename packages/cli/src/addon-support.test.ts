@@ -18,6 +18,6 @@ describe('addon-support', () => {
       'utf8'
     )
     assert.match(source, /runProjectChecks/)
-    assert.match(source, /findProjectRoot/)
+    assert.match(source, /migrationHistoryErrors/)
   })
 })

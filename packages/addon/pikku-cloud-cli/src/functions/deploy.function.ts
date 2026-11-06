@@ -763,9 +763,7 @@ export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
         'If that is empty too, the deploy failed before a build started — usually a cloud-side'
       )
     )
-    console.log(
-      dim('failure rather than a defect in this project (`pikku cloud smoke`).')
-    )
+    console.log(dim('failure rather than a defect in this project.'))
   }
   if (branch) console.log(dim(`Logs: \`pikku cloud logs --branch ${branch}\``))
 }
