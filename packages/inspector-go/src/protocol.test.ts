@@ -6,6 +6,7 @@ import Ajv from 'ajv'
 import { toAnalysisOptions, type InspectorGoInput } from './protocol.js'
 import { projectInput } from './test-project-input.js'
 import { findInspectorBinary } from './binary.js'
+import { availableEngines } from './test-engines.js'
 import { runInspectorBinary } from './run-binary.js'
 
 const schema = (name: string) =>
@@ -36,10 +37,15 @@ describe('protocol JSON Schemas', async () => {
     assert.ok(validateInput(input), ajv.errorsText(validateInput.errors))
   })
 
-  test('the native engine output matches output.schema.json', async () => {
-    const output = await runInspectorBinary(findInspectorBinary(), input)
-    assert.ok(validateOutput(output), ajv.errorsText(validateOutput.errors))
-  })
+  for (const engine of availableEngines()) {
+    test(`the ${engine} engine output matches output.schema.json`, async () => {
+      const output = await runInspectorBinary(
+        findInspectorBinary(process.env, { engine }),
+        input
+      )
+      assert.ok(validateOutput(output), ajv.errorsText(validateOutput.errors))
+    })
+  }
 
   test('a critical without a code is rejected', () => {
     const output = {

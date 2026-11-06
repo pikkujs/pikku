@@ -1,10 +1,21 @@
-import { describe, test } from 'node:test'
+import { after, before, describe, test } from 'node:test'
+import { availableEngines } from './test-engines.js'
 import assert from 'node:assert/strict'
 import { findWireRemoteAddonSpecs } from './helpers.js'
 
 const NAME = '@pikkustudio/addon-cloud-api'
 
-describe('findWireRemoteAddonSpecs', () => {
+for (const engine of availableEngines()) {
+describe(`findWireRemoteAddonSpecs (${engine})`, () => {
+  const previous = process.env.PIKKU_INSPECTOR
+  before(() => {
+    process.env.PIKKU_INSPECTOR = engine
+  })
+  after(() => {
+    if (previous === undefined) delete process.env.PIKKU_INSPECTOR
+    else process.env.PIKKU_INSPECTOR = previous
+  })
+
   test('finds each literal with its range and line', () => {
     const source = `import { wireRemoteAddon } from '@pikku/core/addon'
 wireRemoteAddon({
@@ -32,3 +43,4 @@ wireRemoteAddon({ name: 'dyn', package: PKG, serverUrl: '' })
     )
   })
 })
+}

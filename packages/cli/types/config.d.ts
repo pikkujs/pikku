@@ -1021,6 +1021,12 @@ export type PikkuCLIInput = {
   stateInput?: string
 
   /**
+   * Which inspector analyses the project: `go` (`pikku-inspect`) or `rs`
+   * (`pikku-inspect-rs`). `PIKKU_INSPECTOR` and `--inspector` override it.
+   */
+  inspector?: 'go' | 'rs'
+
+  /**
    * Run the data-classification security lint (scans function return types for
    * Private/Pii/Secret leaks). Off by default — it forces expensive return-type
    * inference on every function and is not part of codegen. Enable here to always

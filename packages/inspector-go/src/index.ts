@@ -4,8 +4,14 @@ export {
   executableName,
   SUPPORTED_PLATFORMS,
   InspectorBinaryNotFoundError,
+  DEFAULT_ENGINE,
+  INSPECTOR_ENGINES,
+  ENGINES,
+  isInspectorEngine,
+  resolveInspectorEngine,
+  configureInspectorEngine,
 } from './binary.js'
-export type { FindInspectorBinaryOptions } from './binary.js'
+export type { FindInspectorBinaryOptions, InspectorEngine } from './binary.js'
 export { runInspectorBinary, InspectorBinaryError } from './run-binary.js'
 export { replayDiagnostics, createRecordingLogger } from './diagnostics.js'
 export { INSPECTOR_PROTOCOL_VERSION, toAnalysisOptions } from './protocol.js'

@@ -19,10 +19,82 @@ export const SUPPORTED_PLATFORMS = [
   'win32-x64',
 ] as const
 
-export const executableName = (platform: string = process.platform): string =>
-  platform === 'win32' ? 'pikku-inspect.exe' : 'pikku-inspect'
+/** The inspectors that speak the protocol: `go` is `pikku-inspect`, `rs` is `pikku-inspect-rs`. */
+export type InspectorEngine = 'go' | 'rs'
+
+export const INSPECTOR_ENGINES: readonly InspectorEngine[] = ['go', 'rs']
+
+/** The engine used when neither `PIKKU_INSPECTOR`, `--inspector` nor the config key names one. */
+export const DEFAULT_ENGINE: InspectorEngine = 'go'
+
+type EngineInfo = {
+  executable: string
+  /** The environment variable that points at this engine's binary. */
+  binEnv: string
+  /** The `process.platform-process.arch` pairs it ships a prebuilt binary for. */
+  platforms: readonly string[]
+}
+
+export const ENGINES: Record<InspectorEngine, EngineInfo> = {
+  go: {
+    executable: 'pikku-inspect',
+    binEnv: 'PIKKU_INSPECTOR_GO_BIN',
+    platforms: SUPPORTED_PLATFORMS,
+  },
+  rs: {
+    executable: 'pikku-inspect-rs',
+    binEnv: 'PIKKU_INSPECTOR_RS_BIN',
+    platforms: ['darwin-arm64', 'linux-x64', 'linux-arm64'],
+  },
+}
+
+export const executableName = (
+  platform: string = process.platform,
+  engine: InspectorEngine = 'go'
+): string => {
+  const name = ENGINES[engine].executable
+  return platform === 'win32' ? `${name}.exe` : name
+}
+
+export const isInspectorEngine = (value: unknown): value is InspectorEngine =>
+  typeof value === 'string' && (INSPECTOR_ENGINES as readonly string[]).includes(value)
+
+const parseEngine = (value: string, source: string): InspectorEngine => {
+  if (!isInspectorEngine(value)) {
+    throw new InspectorBinaryNotFoundError(
+      `${source} is "${value}"; expected one of ${INSPECTOR_ENGINES.join(', ')}.`
+    )
+  }
+  return value
+}
+
+let configuredEngine: InspectorEngine | undefined
+
+/**
+ * Sets the engine the project asked for (the `inspector` key of
+ * pikku.config.json). `PIKKU_INSPECTOR` still wins over it.
+ */
+export const configureInspectorEngine = (
+  engine: string | undefined
+): void => {
+  configuredEngine =
+    engine === undefined || engine === ''
+      ? undefined
+      : parseEngine(engine, 'The inspector setting')
+}
+
+/** `PIKKU_INSPECTOR`, then the configured engine, then DEFAULT_ENGINE. */
+export const resolveInspectorEngine = (
+  env: NodeJS.ProcessEnv = process.env
+): InspectorEngine => {
+  const fromEnv = env.PIKKU_INSPECTOR
+  if (fromEnv) return parseEngine(fromEnv, 'PIKKU_INSPECTOR')
+  return configuredEngine ?? DEFAULT_ENGINE
+}
 
 export interface FindInspectorBinaryOptions {
+  /** Which inspector to find; see resolveInspectorEngine by default. */
+  engine?: InspectorEngine
   platform?: string
   arch?: string
   /** Holds `<platform>-<arch>/pikku-inspect`; this package's `prebuilt/` by default. */
@@ -71,23 +143,31 @@ export class InspectorBinaryNotFoundError extends Error {
   }
 }
 
-const notFoundMessage = (platform: string, arch: string): string => {
+const notFoundMessage = (
+  engine: InspectorEngine,
+  platform: string,
+  arch: string
+): string => {
+  const { executable, binEnv, platforms } = ENGINES[engine]
   const target = `${platform}-${arch}`
-  const supported = (SUPPORTED_PLATFORMS as readonly string[]).includes(target)
-  const hint = supported
+  const build =
+    engine === 'go'
+      ? `\`go build ./cmd/pikku-inspect\` in @pikku/inspector-go`
+      : `\`cargo build --release\` in packages/inspector-rust`
+  const hint = platforms.includes(target)
     ? `@pikku/inspector-go is missing prebuilt/${target}; reinstall it.`
     : `There is no prebuilt binary for ${target} (prebuilt: ` +
-      `${SUPPORTED_PLATFORMS.join(', ')}). Build one with \`go build ` +
-      `./cmd/pikku-inspect\` in @pikku/inspector-go and point ` +
-      `PIKKU_INSPECTOR_GO_BIN at it.`
+      `${platforms.join(', ')}). Build one with ${build} and point ` +
+      `${binEnv} at it.`
   return (
-    `No pikku-inspect binary found for ${target}. ${hint} ` +
-    `Alternatively set PIKKU_INSPECTOR_GO_BIN to a pikku-inspect binary.`
+    `No ${executable} binary found for ${target}. ${hint} ` +
+    `Alternatively set ${binEnv} to a ${executable} binary.`
   )
 }
 
 /**
- * Finds the `pikku-inspect` binary: `PIKKU_INSPECTOR_GO_BIN` first, then the
+ * Finds the selected engine's binary (`pikku-inspect` or `pikku-inspect-rs`):
+ * its `PIKKU_INSPECTOR_GO_BIN` / `PIKKU_INSPECTOR_RS_BIN` first, then the
  * prebuilt one for this platform, then a binary built in this package, then
  * one beside the running executable (the compiled CLI).
  */
@@ -98,13 +178,15 @@ export const findInspectorBinary = (
   const platform = options.platform ?? process.platform
   const arch = options.arch ?? process.arch
   const exists = options.exists ?? existsSync
-  const executable = executableName(platform)
+  const engine = options.engine ?? resolveInspectorEngine(env)
+  const executable = executableName(platform, engine)
+  const { binEnv } = ENGINES[engine]
 
-  const override = env.PIKKU_INSPECTOR_GO_BIN
+  const override = env[binEnv]
   if (override) {
     if (!exists(override)) {
       throw new InspectorBinaryNotFoundError(
-        `PIKKU_INSPECTOR_GO_BIN is set to ${override}, which does not exist.`
+        `${binEnv} is set to ${override}, which does not exist.`
       )
     }
     return override
@@ -135,5 +217,7 @@ export const findInspectorBinary = (
     if (exists(beside)) return beside
   }
 
-  throw new InspectorBinaryNotFoundError(notFoundMessage(platform, arch))
+  throw new InspectorBinaryNotFoundError(
+    notFoundMessage(engine, platform, arch)
+  )
 }
