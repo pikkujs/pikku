@@ -14,7 +14,7 @@ Package `pikku-inspect-rs`, binary `pikku-inspect-rs`, library `pikku_inspect`.
 This is the foundation: protocol, state, JSON encoding, diagnostics, program
 creation, the analysis phase order, the visitor registry and the CLI. **No
 visitor group is ported**, so an inspection returns a state with the program's
-`rootDir` and nothing else filled in, `finalized: false`.
+`rootDir` and nothing else filled in, finalized (`finalized: true`).
 
 | Rust module | Go package | Status |
 |---|---|---|
@@ -28,9 +28,9 @@ visitor group is ported**, so an inspection returns a state with the program's
 | `typesmap` | `internal/typesmap` | data structure, serialisation, `get_type_meta`; `CanonicalTypeString` is the identity (TODO) |
 | `tsutil` | `internal/tsutil` | `walk`, `walk_self`, `dedupe`, `sorted_keys`, `utf16_offset`; printing/typeorder not ported |
 | `schemas` | `internal/schemas`, `tsjg` | not ported |
-| `finalize` | `internal/finalize` | not ported; `response()` is a no-op |
+| `finalize` | `internal/finalize` | done; byte-identical to Go on all 64 projects (`scripts/finalize-parity.ts`) |
 | `helpers` | `internal/helpers` | method list ported; every method answers `not implemented` |
-| `main.rs` | `cmd/pikku-inspect` | `--stdin`, `inspect --stdin`, `finalize --stdin` (decodes, finalize no-op), `serve` (inspect works), `helper <m>` (not implemented); legacy bench mode not ported |
+| `main.rs` | `cmd/pikku-inspect` | `--stdin`, `inspect --stdin`, `finalize --stdin`, `serve` (inspect works), `helper <m>` (not implemented); legacy bench mode not ported |
 
 `serve` handles `inspect` end to end; `typeDiagnostics` and the helper methods
 answer with an error.

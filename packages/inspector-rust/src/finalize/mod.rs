@@ -43,6 +43,9 @@ pub mod utils;
 pub mod workflow_wires;
 pub mod workflows;
 
+#[cfg(test)]
+mod tests;
+
 use crate::diag::Logger;
 use crate::protocol::{Failure, Response};
 use crate::state::State;

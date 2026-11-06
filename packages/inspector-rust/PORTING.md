@@ -47,8 +47,9 @@ every rule there about TypeScript parity still holds.
 
 Build a request (routeFiles = the project's `src/**/*.ts`, `options.rootDir`,
 `options.tsconfig`), run both binaries, compare the parsed JSON key by key. The
-Go binary finalizes (`finalized: true`); until `finalize` is ported, compare the
-analysis sections. The parity harness lives in `scripts/`.
+Go binary finalizes (`finalized: true`). The parity harness lives in `scripts/`;
+`scripts/finalize-parity.ts` checks finalize alone, on Go's pre-finalize state
+(`pikku-inspect --stdin --no-finalize`), independent of the visitor ports.
 
 Measured on `recipes/functions` (foundation commit): 30 route files, 30 project
 files in both; `rootDir` and the 24 sections nothing writes to are equal as
@@ -93,10 +94,8 @@ swept sections, `validationPass`, and 4 diagnostics.
 
 ## Known gaps
 
-* **Visitor groups, typesmap `CanonicalTypeString`, schemas, finalize, source
-  scans and every `helper` method are not ported.** `finalize::response` is a
-  no-op, so `inspect --stdin` returns `finalized: false` where Go returns `true`
-  (and no `validationPass`).
+* **Visitor groups, typesmap `CanonicalTypeString`, schemas, source scans and
+  every `helper` method are not ported.** `finalize` is ported (below).
 * **Legacy bench mode** (`pikku-inspect [-timing] <projectDir>`) is not ported;
   the CLI prints an error and exits 1.
 * **`typeDiagnostics`** in `serve` (Go's `typecheck.Service`) answers with an
@@ -112,4 +111,39 @@ swept sections, `validationPass`, and 4 diagnostics.
 * **Duplicate keys** in a `Record` section decoded from JSON keep the last
   value at the first position (JS and Go agree for objects; `Raw` objects go
   through `serde_json::Map`, which does the same).
-* **Go-only `Inputs/Outputs` nil `null`** cannot be expressed (see rule 6).
+* **Go-only `Inputs/Outputs` nil `null`**: a `Vec` cannot be nil (see rule 6).
+  On the decode path (`finalize --stdin`) `FunctionMeta` remembers which of
+  `services.services` / `inputs` / `outputs` were absent or `null` (`NilSlices`)
+  and writes `null` for them while they stay empty, which is what Go's typed
+  re-encode does for the partial entries (gateway / channel connect handlers).
+  Visitor ports that create such entries in-process still use `verbatim`.
+
+## Finalize
+
+Ported file by file (`src/finalize/`, the module docs list the Go file of each).
+Go's steps that read a `state.Raw` section decode it into a JS-value model;
+here that is `finalize::jsval::V` (ordered objects with `undefined` members,
+array-index keys first, shared by reference), and a typed Rust section is read
+through `jv(&section)` (its JSON form) so a section that later gets a typed
+struct needs no change in the steps that read it. Sections finalize writes are
+written as `Raw::of(value.to_json())` or through the typed fields.
+
+* Scoreboard (`scripts/finalize-parity.ts`, 64 projects): byte-identical on all
+  64 without schemas (3983 of 3983 keys). With `--schemas` 62 of 62 projects
+  Go can analyze are identical (3858 of 3858); `verifiers/addon-dependencies/billing`
+  and `verifiers/pikku-studio` fail in Go's schema generation, before finalize.
+* `contractHash` / `inputHash` / `outputHash`, `manifest.*`, `requiredSchemas`,
+  `openAPISpec` and `workflows.graphMeta[*].graphHash/stepHash` are proven
+  against schemas Go generated (they are in the pre-finalize state). They stay
+  equal for a Rust analysis only once the Rust schema generator emits the same
+  schemas byte for byte.
+* **Error text from Go library errors differs.** A malformed `pikku-addons.lock`
+  or `package.json` reports serde's message where Go reports `encoding/json`'s,
+  and a malformed `options.types` / `openAPI.errors` shape reports a fixed Go
+  string. Valid inputs are unaffected.
+* **`validateAgentModels`** sorts alias names by byte order (Go `sort.Strings`
+  and `BTreeMap` agree); `jsRelative` is `filepath.Rel` for absolute paths.
+* `proseOpensWithVirtualUser` is hand-written (no regex crate): case-insensitive
+  by simple folding, `\b` is ASCII, as Go's RE2.
+* Not ported from Go's test-suite: `TestGlobalPermissionServicesAreRequired`,
+  which analyzes real source (needs the visitor ports).

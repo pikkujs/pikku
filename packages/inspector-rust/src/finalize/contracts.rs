@@ -26,7 +26,7 @@ pub struct Contracts {
 }
 
 impl Contracts {
-    fn set(&mut self, id: &str, e: ContractEntry) {
+    pub fn set(&mut self, id: &str, e: ContractEntry) {
         if !self.entries.contains_key(id) {
             self.ids.push(id.to_string());
         }

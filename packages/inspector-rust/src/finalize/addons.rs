@@ -409,7 +409,7 @@ fn self_references(dir: &str, pkg: &str) -> bool {
 
 /// What post-process.ts asks Node's CommonJS resolver: found unless every
 /// attempt is a module-not-found.
-fn is_package_resolvable(pkg: &str, dirs: &[String]) -> bool {
+pub fn is_package_resolvable(pkg: &str, dirs: &[String]) -> bool {
     for dir in dirs {
         if self_references(dir, pkg) {
             return true;
