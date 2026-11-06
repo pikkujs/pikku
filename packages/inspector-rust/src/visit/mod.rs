@@ -23,7 +23,13 @@ use crate::diag::Logger;
 use crate::state::State;
 use crate::typesmap::TypesMap;
 
+pub mod addon_dependencies;
+pub mod addon_json;
+pub mod addon_load;
+pub mod addon_resolve;
 pub mod order;
+pub mod scope_addon;
+pub mod validate_addon_zod;
 
 /// Go `visit.Abort`: a TS `throw` inside a visitor. It ends the inspection with
 /// an error; [`abort`] raises it and `analyze::run` turns it into a
@@ -183,9 +189,6 @@ impl Context<'_> {
 
     /// Go `SweepUsage` (usage_sweeps.go). Not ported.
     pub fn sweep_usage(&mut self, _files: &[P<SourceFile>]) {}
-
-    /// Go `LoadAddonFunctionsMeta` (addon_load.go). Not ported.
-    pub fn load_addon_functions_meta(&mut self) {}
 
     /// Go `CheckDisabledWorkflowSteps` (check_disabled.go). Not ported.
     pub fn check_disabled_workflow_steps(&mut self) {}
