@@ -77,3 +77,22 @@ project in `results.json`:
 - With `--schemas`, `verifiers/addon-dependencies/billing` and `verifiers/pikku-studio` fail ("Schema generation
   failed for 2 schemas": the Zod vendor script cannot import `.pikku/addon/function/index.js`, which exists only
   after a `pikku all`). They are tracked as expected failures.
+
+## Helper parity
+
+`helper-parity.ts` is the differential tester for the helper methods and
+`typeDiagnostics` (the `serve` protocol, Go vs Rust, byte for byte):
+
+```bash
+bun packages/inspector-rust/scripts/helper-parity.ts <goBin> <rsBin> \
+  [--methods a,b] [--repo dir] [--mutations N] [--dirs N] [--tc N] [--show N]
+```
+
+Inputs come from every tracked `.ts`/`.tsx` in the repo plus `--mutations`
+mutated variants of each (truncated, character dropped, emoji, CRLF/U+2028,
+missing paren/brace), JSX positions, directory trees (including a scratch tree
+with invalid UTF-8, BOM and lone surrogates), every package for `collectSurface`
+(and each `imports` key), every tsconfig, and real projects for
+`typeDiagnostics` with unsaved overlays. Use `--repo` with a checkout that has
+`node_modules` (type-checking resolves packages). Prints cases and differences
+per method; exits 1 on any difference.

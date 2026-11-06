@@ -10,7 +10,8 @@
  *                        [--mutations N] [--limit N] [--show N] [--seed N]
  */
 import { spawn } from 'node:child_process'
-import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, existsSync, statSync, readdirSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join, dirname, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
@@ -212,6 +213,38 @@ for (const d of [...dirs, ...extraDirs]) {
   add('scanStringLiteralCopy', { dir: d, copyHelpers: [] }, tag)
   add('scanStringLiteralCopy', { dir: d, copyHelpers: ['say', 'toast'] }, tag + '#helpers')
 }
+// a scratch tree of mutated sources: malformed, non-ASCII, invalid UTF-8, lone surrogates, BOM, CRLF
+const mutDir = mkdtempSync(join(tmpdir(), 'helper-parity-'))
+{
+  let n = 0
+  const sample = fileInputs.filter((x) => x.tag === x.f && /\.tsx?$/.test(x.f) && /asI18n|usePikku|\bsep\b|m\.|<[A-Za-z]|title|label/.test(x.text))
+  for (const x of sample.slice(0, 600)) {
+    for (const m of [{ name: 'orig', text: x.text }, ...mutate(x.text)]) {
+      const dir = join(mutDir, 'pkg' + (n % 7), 'src')
+      mkdirSync(dir, { recursive: true })
+      const name = `f${n++}.${x.f.endsWith('.tsx') ? 'tsx' : 'ts'}`
+      writeFileSync(join(dir, name), m.text)
+    }
+  }
+  const dir = join(mutDir, 'pkgbin', 'src')
+  mkdirSync(dir, { recursive: true })
+  const wrap = (s: string) => Buffer.from(s, 'latin1')
+  writeFileSync(join(dir, 'invalid.tsx'), Buffer.concat([Buffer.from("export const A = () => <p title=\"Hello "), Buffer.from([0xff, 0xfe, 0xe2, 0x82]), Buffer.from(" there friend\">Saved changes ok</p>\nasI18n('x')\n")]))
+  writeFileSync(join(dir, 'bom.tsx'), Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from("export const A = () => <p>Hello there friend</p>\n")]))
+  writeFileSync(join(dir, 'lone.tsx'), "export const A = () => <p title=\"Lone \\ud83d surrogate text\">{'Pair \\ud83d\\ude00 here ok'}</p>\nconst s = 'Plain English sentence here'\nasI18nStub('Stub \\ud83d text')\n")
+  writeFileSync(join(dir, 'crlf.tsx'), "export const A = () => (\r\n  <p>\r\n    Hello there friend\u2028 more\r\n  </p>\r\n)\r\nasI18n(`t`)\r\n")
+  for (const sub of readdirSync(mutDir)) {
+    const d = join(mutDir, sub)
+    add('scanMessageUsage', { root: d }, `mut/${sub}`)
+    add('scanAsI18nArguments', { dir: d }, `mut/${sub}`)
+    add('scanAsI18nStubs', { dir: d }, `mut/${sub}`)
+    add('scanSepArguments', { dir: d }, `mut/${sub}`)
+    add('scanJsxLiteralText', { dir: d, allowed: ['OK'], gated: false }, `mut/${sub}`)
+    add('scanJsxLiteralText', { dir: d, allowed: [], gated: true }, `mut/${sub}#gated`)
+    add('scanJsxLiteralProps', { dir: d, allowed: ['OK'], props: ['label', 'text'], helpers: ['say', 'toast'], gated: false }, `mut/${sub}`)
+    add('scanStringLiteralCopy', { dir: d, copyHelpers: ['say'] }, `mut/${sub}`)
+  }
+}
 add('scanMessageUsage', { root: '/nonexistent' }, 'missing-dir')
 add('scanAsI18nArguments', { dir: '/nonexistent' }, 'missing-dir')
 
@@ -241,6 +274,16 @@ for (const f of git(['ls-files', '*/package.json'])) {
 }
 add('collectSurface', { packageDir: join(repo, 'packages/core'), subpaths: ['.'], snippets: [] }, 'core#snippets')
 add('collectSurface', { packageDir: '/nonexistent' }, 'missing')
+for (const f of git(['ls-files', '*/package.json'])) {
+  if (f.includes('node_modules')) continue
+  let pkg: any
+  try {
+    pkg = JSON.parse(read(f))
+  } catch {
+    continue
+  }
+  for (const key of Object.keys(pkg.imports ?? {}).slice(0, 4)) add('collectSurface', { packageDir: dirname(join(repo, f)), importsSubpath: key }, `${f}#${key}`)
+}
 
 // typeDiagnostics: real projects, saved content and unsaved overlays with errors
 const tcRoots = git(['ls-files', 'templates/*/tsconfig.json', 'verifiers/*/tsconfig.json', 'packages/core/tsconfig.json', 'packages/inspector-go/tsconfig.json'])
@@ -322,6 +365,7 @@ for (const method of methods) {
   console.log(`${method.padEnd(30)} ${String(row.total).padStart(6)} cases  ${row.diffs} differences`)
   for (const s of row.samples) console.log(s)
 }
+rmSync(mutDir, { recursive: true, force: true })
 const total = rows.reduce((n, r) => n + r.total, 0)
 const diffs = rows.reduce((n, r) => n + r.diffs, 0)
 console.log(`\nhelper-parity: ${total} cases, ${diffs} differences across ${rows.length} methods`)

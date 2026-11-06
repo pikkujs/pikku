@@ -29,11 +29,13 @@ visitor group is ported**, so an inspection returns a state with the program's
 | `tsutil` | `internal/tsutil` | `walk`, `walk_self`, `dedupe`, `sorted_keys`, `utf16_offset`; printing/typeorder not ported |
 | `schemas` | `internal/schemas`, `tsjg` | not ported |
 | `finalize` | `internal/finalize` | not ported; `response()` is a no-op |
-| `helpers` | `internal/helpers` | method list ported; every method answers `not implemented` |
+| `helpers` | `internal/helpers` | done: all 22 methods (see PORTING.md, "Helper methods") |
+| `sourcescan` | `internal/sourcescan` | done |
+| `surface` | `internal/surface` | done |
+| `typecheck` | `internal/typecheck` | done; `serve` answers `typeDiagnostics` |
 | `main.rs` | `cmd/pikku-inspect` | `--stdin`, `inspect --stdin`, `finalize --stdin` (decodes, finalize no-op), `serve` (inspect works), `helper <m>` (not implemented); legacy bench mode not ported |
 
-`serve` handles `inspect` end to end; `typeDiagnostics` and the helper methods
-answer with an error.
+`serve` handles `inspect` end to end, `typeDiagnostics` and the helper methods.
 
 ## Build, run, test
 
