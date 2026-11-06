@@ -45,6 +45,7 @@ fn format_annotation(format: &str) -> Ty {
 impl SubNodeParser for TypeReferenceNodeParser {
     fn supports_node(&self, node: P<Node>) -> bool {
         node.kind() == Kind::TypeReference
+            && !super::expression_with_type_arguments_node_parser::is_heritage_type_reference(node)
     }
 
     fn create_type(&self, node: P<Node>, ctx: &Context, _reference: Option<&Ty>) -> Ty {

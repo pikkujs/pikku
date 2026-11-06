@@ -269,6 +269,17 @@ Known gaps:
   verifiers/pikku-studio on a clean tree) fails in Rust too with the same "Schema generation
   failed for 2 schemas", but the per-schema diagnostic text is Rust's, not Node's
   "Cannot find module" (harness: expected-failure-mismatch, by message only).
+* **Go's PKU456 stack-trace diagnostic is fixed in Go.** An interface extending a type that
+  resolves to nothing (`KnowledgeBundle` in `packages/addon/pikku-console`, `AwaitsWorkflowRunInput`
+  in `e2e`, `CheckoutRun` in online-shop) used to panic in Go (`index out of range [0]`) and embed
+  `goroutine 1 [running]` in the diagnostic, which no other implementation can reproduce. Go now
+  guards the empty declaration list (commit `1f8f4546f`), and Rust, whose tsrs parser treats that
+  heritage element as a type reference falling back to `any`, produces the same schemas and
+  diagnostics. Older Go binaries still print the stack.
+* **Go's on-disk TS schema cache** (`node_modules/.cache/pikku/go-ts-schemas.json`) can
+  answer with schemas, and without the schema-error diagnostics, of an earlier state of
+  the project. The parity scripts empty it before every run.
+* **No on-disk schema cache** (`go-ts-schemas.json`): performance only.
 * **`TypeToTypeNode` has no Strada union reorder** (`tsjg/typenode.rs` uses tsrs's
   own order) until the tsutil typeorder/unionorder port lands; used for call
   expressions, Promise and object-literal spreads.

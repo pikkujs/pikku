@@ -5,8 +5,15 @@
  *
  *   bun parity.ts <goBin> <rsBin> [--projects a,b*] [--out dir] [--schemas]
  *                 [--finalize] [--jobs N] [--timeout SECONDS] [--cap N] [--no-cache]
+ *                 [--captured <generate-parity out dir>]
+ *
+ * --captured replays the requests the real CLI sent (recorded by generate-parity.ts under
+ * <dir>/captured/<project>/<cold|warm>/go/) instead of the synthetic projectInput request.
+ * The requests name files of the project checkout, so replay them against the same
+ * checkout (generate-parity already does this after each Go run, while the generated
+ * scaffold files still exist; missing files make both engines fail alike).
  */
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import {
@@ -15,6 +22,7 @@ import {
   buildRequest,
   cachedRun,
   discoverProjects,
+  discoverTracked,
   filterProjects,
   firstByteDiff,
   normalise,
@@ -41,6 +49,8 @@ const { values, positionals } = parseArgs({
     timeout: { type: 'string', default: '300' },
     cap: { type: 'string', default: '5' },
     'no-cache': { type: 'boolean', default: false },
+    captured: { type: 'string' },
+    corpus: { type: 'string', default: 'default' },
   },
 })
 const [goBin, rsBin] = positionals
@@ -59,7 +69,7 @@ const cacheDir = values['no-cache'] ? undefined : join(out, 'go-cache')
 mkdirSync(join(out, 'diffs'), { recursive: true })
 mkdirSync(join(out, 'rust-output'), { recursive: true })
 
-const all = discoverProjects()
+const all = values.corpus === 'tracked' ? discoverTracked() : discoverProjects()
 const projects = filterProjects(all, values.projects)
 console.error(`projects discovered: ${all.length}, selected: ${projects.length}, mode: ${mode}, schemas: ${values.schemas}`)
 
@@ -92,11 +102,34 @@ const goFailure = (r: RunResult): string | undefined => {
   return undefined
 }
 
-const run = async (dir: string): Promise<ProjectResult> => {
+interface Case {
+  label: string
+  args: string[]
+  request: string
+}
+
+/** One synthetic request per project, or every request the real CLI sent for it. */
+const casesOf = async (dir: string): Promise<Case[]> => {
   const project = projectName(dir)
-  const request = await buildRequest(dir, values.schemas!)
-  writeFileSync(join(out, 'diffs', `${project.replace(/\//g, '__')}.request.json`), request)
-  let args = ['--stdin']
+  if (!values.captured)
+    return [{ label: project, args: ['--stdin'], request: await buildRequest(dir, values.schemas!) }]
+  const found: Case[] = []
+  for (const phase of ['cold', 'warm']) {
+    const capDir = join(values.captured, 'captured', project, phase, 'go')
+    if (!existsSync(capDir)) continue
+    for (const f of readdirSync(capDir).filter((f) => f.endsWith('.in')).sort())
+      found.push({
+        label: `${project}#${phase}-${f.replace(/\.in$/, '')}`,
+        args: readFileSync(join(capDir, f.replace(/\.in$/, '.args')), 'utf8').split('\n').filter(Boolean),
+        request: readFileSync(join(capDir, f), 'utf8'),
+      })
+  }
+  return found
+}
+
+const run = async ({ label: project, args: initialArgs, request }: Case): Promise<ProjectResult> => {
+  writeFileSync(join(out, 'diffs', `${project.replace(/[\/#]/g, '__')}.request.json`), request)
+  let args = initialArgs
   let stdin = request
   if (mode === 'finalize') {
     const base = await cachedRun({ bin: goBin, args, stdin: request, timeoutMs, cacheDir })
@@ -114,7 +147,7 @@ const run = async (dir: string): Promise<ProjectResult> => {
     cachedRun({ bin: goBin, args, stdin, timeoutMs, cacheDir }),
     runBinary(rsBin, args, stdin, timeoutMs),
   ])
-  writeFileSync(join(out, 'rust-output', `${project.replace(/\//g, '__')}.json`), rs.stdout)
+  writeFileSync(join(out, 'rust-output', `${project.replace(/[\/#]/g, '__')}.json`), rs.stdout)
   const goN = normalise(go.stdout)
   const rsN = normalise(rs.stdout)
   const base = {
@@ -160,10 +193,12 @@ const failResult = (project: string, r: RunResult, why: string): ProjectResult =
 })
 
 let done = 0
-const results = await pool(projects, jobs, async (dir) => {
-  const r = await run(dir)
-  console.error(`[${++done}/${projects.length}] ${r.project}: ${r.status}${r.status === 'different' ? ` (${Object.values(r.keys).filter((k) => k.status !== 'identical').length} keys differ)` : ''}`)
-  const file = join(out, 'diffs', `${r.project.replace(/\//g, '__')}.json`)
+const cases = (await Promise.all(projects.map(casesOf))).flat()
+console.error(`cases: ${cases.length}`)
+const results = await pool(cases, jobs, async (c) => {
+  const r = await run(c)
+  console.error(`[${++done}/${cases.length}] ${r.project}: ${r.status}${r.status === 'different' ? ` (${Object.values(r.keys).filter((k) => k.status !== 'identical').length} keys differ)` : ''}`)
+  const file = join(out, 'diffs', `${r.project.replace(/[\/#]/g, '__')}.json`)
   writeFileSync(file, JSON.stringify(r, null, 2))
   return r
 })

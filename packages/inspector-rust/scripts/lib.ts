@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import {
   existsSync,
@@ -52,6 +52,14 @@ export const discoverProjects = (): string[] => {
   }
   return [...new Set(found)].sort()
 }
+
+/** Every tracked pikku.config.json in the repo (the full corpus: packages, e2e, ... as well as the 64). */
+export const discoverTracked = (): string[] =>
+  spawnSync('git', ['-C', REPO_ROOT, 'ls-files', '*pikku.config.json'], { encoding: 'utf8' })
+    .stdout.split('\n')
+    .filter((f) => f && (f === 'pikku.config.json' || f.endsWith('/pikku.config.json')))
+    .map((f) => resolve(REPO_ROOT, dirname(f)))
+    .sort()
 
 export const projectName = (dir: string) => relative(REPO_ROOT, dir)
 

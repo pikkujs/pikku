@@ -13,6 +13,13 @@ use crate::tsjg::fail;
 use crate::tsjg::tsutils;
 use crate::tsjg::types::Ty;
 
+/// tsrs parses the `extends` elements of an interface as type references where
+/// typescript-go has ExpressionWithTypeArguments; both go through this parser,
+/// as in Go.
+pub fn is_heritage_type_reference(node: P<Node>) -> bool {
+    node.kind() == Kind::TypeReference && node.parent().is_some_and(|p| p.kind() == Kind::HeritageClause)
+}
+
 pub struct ExpressionWithTypeArgumentsNodeParser {
     type_checker: Chk,
     child_node_parser: Rc<dyn NodeParser>,
@@ -24,7 +31,7 @@ pub fn new(type_checker: Chk, child_node_parser: Rc<dyn NodeParser>) -> Rc<Expre
 
 impl SubNodeParser for ExpressionWithTypeArgumentsNodeParser {
     fn supports_node(&self, node: P<Node>) -> bool {
-        node.kind() == Kind::ExpressionWithTypeArguments
+        node.kind() == Kind::ExpressionWithTypeArguments || is_heritage_type_reference(node)
     }
 
     /// May return a nil type for a type parameter without an argument (unlike
@@ -33,7 +40,7 @@ impl SubNodeParser for ExpressionWithTypeArgumentsNodeParser {
     /// "unknown node" error the Go chain would raise for the nil result.
     fn create_type(&self, node: P<Node>, ctx: &Context, _reference: Option<&Ty>) -> Ty {
         let Some(type_symbol) =
-            tsutils::get_symbol_at_location(&self.type_checker, Some(node.as_expression_with_type_arguments().expression()))
+            tsutils::get_symbol_at_location(&self.type_checker, Some(tsrs_ast::get_heritage_clause_element_name(node)))
         else {
             fail("nil pointer dereference")
         };
