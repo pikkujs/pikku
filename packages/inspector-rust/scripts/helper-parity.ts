@@ -24,6 +24,7 @@ const { values, positionals } = parseArgs({
     show: { type: 'string', default: '3' },
     seed: { type: 'string', default: '1' },
     dirs: { type: 'string', default: '40' },
+    tc: { type: 'string', default: '6' },
   },
 })
 const [goBin, rsBin] = positionals
@@ -240,6 +241,28 @@ for (const f of git(['ls-files', '*/package.json'])) {
 }
 add('collectSurface', { packageDir: join(repo, 'packages/core'), subpaths: ['.'], snippets: [] }, 'core#snippets')
 add('collectSurface', { packageDir: '/nonexistent' }, 'missing')
+
+// typeDiagnostics: real projects, saved content and unsaved overlays with errors
+const tcRoots = git(['ls-files', 'templates/*/tsconfig.json', 'verifiers/*/tsconfig.json', 'packages/core/tsconfig.json', 'packages/inspector-go/tsconfig.json'])
+  .map((f) => dirname(f))
+  .slice(0, Number(values.tc))
+for (const rel of tcRoots) {
+  const root = join(repo, rel)
+  const files = tsFiles.filter((f) => f.startsWith(rel + '/') && !f.includes('.gen.') && !f.endsWith('.d.ts')).slice(0, 3)
+  for (const f of files) {
+    const abs = join(repo, f)
+    const text = read(f)
+    add('typeDiagnostics', { root, path: abs }, `${f}#disk`)
+    add('typeDiagnostics', { root, path: abs, content: text }, `${f}#same`)
+    add('typeDiagnostics', { root, path: abs, content: text + "\nexport const __bad: string = 1\n" }, `${f}#2322`)
+    add('typeDiagnostics', { root, path: abs, content: '/* 😀 é */ ' + text.replace(/import /, 'import 1 from "nope"\nimport ') }, `${f}#syntax-emoji`)
+    add('typeDiagnostics', { root, path: abs, content: text.slice(0, Math.floor(text.length / 2)) }, `${f}#truncated`)
+    add('typeDiagnostics', { root, path: abs, content: "import { nothere } from './nowhere.js'\nconst s = '😀'; const n: number = s; nothere\n" + text }, `${f}#2307`)
+    add('typeDiagnostics', { root, path: abs }, `${f}#disk-again`)
+  }
+}
+add('typeDiagnostics', { root: '/nonexistent', path: '/nonexistent/a.ts', content: 'let x: number = "a"' }, 'no-root')
+add('typeDiagnostics', { root: repo, path: join(repo, 'package.json') }, 'not-code')
 
 // method errors
 add('readSyntaxErrors', {}, 'empty-params')

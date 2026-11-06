@@ -31,5 +31,6 @@ pub mod sourcescan;
 pub mod surface;
 pub mod state;
 pub mod tsutil;
+pub mod typecheck;
 pub mod typesmap;
 pub mod visit;
