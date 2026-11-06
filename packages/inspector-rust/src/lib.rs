@@ -28,6 +28,7 @@ pub mod program;
 pub mod protocol;
 pub mod schemas;
 pub mod state;
+pub mod tsjg;
 pub mod tsutil;
 pub mod typesmap;
 pub mod visit;
