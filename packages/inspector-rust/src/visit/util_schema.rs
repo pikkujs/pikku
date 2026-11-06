@@ -89,7 +89,7 @@ impl Context<'_> {
         String::new()
     }
 
-    fn detect_schema_vendor_or_error(&mut self, ident: P<Node>, context: &str, source_file: &str) -> String {
+    pub(super) fn detect_schema_vendor_or_error(&mut self, ident: P<Node>, context: &str, source_file: &str) -> String {
         let v = self.detect_schema_vendor(ident);
         if !v.is_empty() {
             return v;

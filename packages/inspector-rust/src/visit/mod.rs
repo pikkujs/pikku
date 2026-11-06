@@ -33,7 +33,13 @@ pub mod group_feature;
 pub mod group_feature_flag;
 pub mod group_functions;
 pub mod group_functions_node;
+pub mod group_auth;
 pub mod group_http;
+pub mod group_keyed;
+pub mod group_middleware;
+pub mod group_permission;
+pub mod group_scope;
+pub mod group_system_role;
 pub mod group_http_contracts;
 pub mod group_outgoing_webhook;
 pub mod group_pikku_studio;
@@ -221,6 +227,12 @@ pub fn register_groups(r: &mut Registry) {
     group_analytics::register(r);
     group_define_contributors::register(r);
     group_pikku_studio::register(r);
+    group_middleware::register(r);
+    group_permission::register(r);
+    group_auth::register(r);
+    group_keyed::register(r);
+    group_scope::register(r);
+    group_system_role::register(r);
 }
 
 /// The registry with every ported group registered.
