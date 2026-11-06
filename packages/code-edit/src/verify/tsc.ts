@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 
@@ -30,19 +31,33 @@ const isProjectFile = (fileName: string, rootDir: string): boolean => {
   return !rel.startsWith('..') && !isAbsolute(rel)
 }
 
-/** The project's own `tsc` entry point, falling back to the one this package was installed with. */
-export const resolveTsc = (rootDir: string): string => {
-  try {
-    const fromProject = createRequire(join(rootDir, 'noop.cjs'))
-    return join(
-      dirname(fromProject.resolve('typescript/package.json')),
-      'bin',
-      'tsc'
-    )
-  } catch {
-    const own = createRequire(import.meta.url)
-    return join(dirname(own.resolve('typescript/package.json')), 'bin', 'tsc')
+/** The executable a `typescript` package ships: `tsc`, or `tsc6` for the TypeScript 6 compat package. */
+const compilerBin = (packageJson: string): string => {
+  const { bin } = JSON.parse(readFileSync(packageJson, 'utf8'))
+  const relative = typeof bin === 'string' ? bin : (bin?.tsc ?? bin?.tsc6)
+  if (!relative) throw new Error(`${packageJson} declares no tsc binary`)
+  return join(dirname(packageJson), relative)
+}
+
+/**
+ * The project's own `tsc` entry point, falling back to the `typescript` this package resolves.
+ * This package depends on none, so a project that has no compiler gets this error rather than a bad path.
+ */
+export const resolveTsc = (
+  rootDir: string,
+  fallback: NodeJS.Require = createRequire(import.meta.url)
+): string => {
+  const resolvers = [createRequire(join(rootDir, 'noop.cjs')), fallback]
+  for (const resolver of resolvers) {
+    try {
+      return compilerBin(resolver.resolve('typescript/package.json'))
+    } catch {
+      // try the next place
+    }
   }
+  throw new Error(
+    'No TypeScript compiler found: install `typescript` in the project to type-check it.'
+  )
 }
 
 /** Turns raw `tsc --pretty false` output into structured diagnostics, dropping node_modules and anything outside `rootDir`. */
@@ -167,9 +182,24 @@ export const runTypecheck = async (
   reportRoot: string,
   timeoutMs: number
 ): Promise<{ result: TscCheckResult; run: SpawnResult }> => {
+  let tsc: string
+  try {
+    tsc = resolveTsc(cwd)
+  } catch (error) {
+    return {
+      run: {
+        status: null,
+        stdout: '',
+        stderr: '',
+        timedOut: false,
+        error: error as Error,
+      },
+      result: parseTscOutput('', reportRoot),
+    }
+  }
   const run = await spawnBounded(
     process.execPath,
-    [resolveTsc(cwd), '-p', tsconfig, '--noEmit', '--pretty', 'false'],
+    [tsc, '-p', tsconfig, '--noEmit', '--pretty', 'false'],
     cwd,
     timeoutMs
   )
