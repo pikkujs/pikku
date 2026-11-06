@@ -206,6 +206,20 @@ describe('waiting for the watcher', () => {
       /typecheck stage for 5s/
     )
   })
+
+  test('a queue that keeps restarting blames the writer, not the watcher', async () => {
+    const file = join(scratch(), 'status.json')
+    writeWatchStatus(
+      file,
+      status({ state: 'running', stage: 'queued', stageStartedAt: 14_000 })
+    )
+    const result = await wait(file)
+    assert.equal(result.kind === 'stuck' && result.stage, 'queued')
+    assert.match(
+      result.kind === 'stuck' ? result.message : '',
+      /Files kept changing/
+    )
+  })
 })
 
 test('the routes and their tree are their own kind of change', () => {
@@ -220,4 +234,56 @@ test('the routes and their tree are their own kind of change', () => {
     'routes'
   )
   assert.equal(classifyChange('/p/apps/web/src/a.tsx', dirs), 'typecheck')
+})
+
+const idle = {
+  version: 1,
+  pid: 4242,
+  generation: 1,
+  updatedAt: 1,
+  stageStartedAt: 1,
+  sourcesAt: 1,
+  codegenDirs: [],
+  typecheckDirs: [],
+  state: 'ok',
+  stage: null,
+  diagnostics: [],
+} as const
+
+const fileWith = (status: object) => {
+  const file = join(mkdtempSync(join(tmpdir(), 'pikku-wake-')), 'status.json')
+  writeFileSync(file, JSON.stringify(status))
+  return file
+}
+
+test('an idle watcher behind its files is woken once per result', async () => {
+  const file = fileWith({ ...idle, wakes: true })
+  const woken: number[] = []
+  let polls = 0
+  const result = await waitForWatcher({
+    statusFile: file,
+    timeoutMs: 1000,
+    isAlive: () => true,
+    sleep: async () => {},
+    wake: (pid) => woken.push(pid),
+    changeSince: () => (polls++ < 3 ? '/p/a.ts' : null),
+  })
+  assert.equal(result.kind, 'settled')
+  assert.deepEqual(woken, [4242])
+})
+
+test('a watcher that cannot take the signal is not sent it', async () => {
+  let time = 0
+  const woken: number[] = []
+  const result = await waitForWatcher({
+    statusFile: fileWith(idle),
+    timeoutMs: 10,
+    now: () => (time += 5),
+    isAlive: () => true,
+    sleep: async () => {},
+    wake: (pid) => woken.push(pid),
+    changeSince: () => '/p/a.ts',
+  })
+  assert.equal(result.kind, 'stuck')
+  assert.deepEqual(woken, [])
 })
