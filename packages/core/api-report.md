@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3398 observable things**: 1154 exported names, plus
-2244 members on the classes and interfaces among them, reachable
+**3400 observable things**: 1154 exported names, plus
+2246 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,8 +16,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 170 | 144 | 439 |
 | `./virtual-user` | 104 | 102 | 255 |
+| `./workflow` | 97 | 45 | 160 |
 | `./scenario` | 50 | 48 | 157 |
-| `./workflow` | 97 | 45 | 158 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 86 |
 | `./types` | 24 | 21 | 82 |
@@ -1252,6 +1252,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async approveStep(runId: string, reason: string, decision: unknown, session?: CoreUserSession): Promise<void>
   public createWorkflowWire(name: string, runId: string, rpcService: PikkuRPC, addonNamespace?: string | null): PikkuWorkflowWire
   public async failOrUnwind(run: WorkflowRun, error: Error & { code?: string }, rpcService: PikkuRPC): Promise<'unwinding' | 'finished' | 'failed'>
+  public async throwIfRunStopped(runId: string): Promise<void>
+  public settleStoppedRun(runId: string, rpcService: PikkuRPC): Promise<WorkflowStatus | undefined>
   public async cancelRun(runId: string, rpcService: PikkuRPC, reason?: string): Promise<WorkflowStatus | undefined>
   protected async markFailedUnlessUnwound(runId: string, error: SerializedError): Promise<void>
   protected verifyStepName(stepName: string): void

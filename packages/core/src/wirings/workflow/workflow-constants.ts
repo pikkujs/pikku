@@ -60,6 +60,13 @@ export const isMilestoneStepName = (stepName: string): boolean =>
 export const isRunSettled = (status: string): boolean =>
   WORKFLOW_TERMINAL_STATES.has(status)
 
+/**
+ * True for a run its own pass must no longer write an outcome for. That is a
+ * settled run, or one unwinding, which `cancelRun` moves there on its own.
+ */
+export const isRunStopped = (status: string): boolean =>
+  isRunSettled(status) || status === 'compensating'
+
 export const WORKFLOW_POLL_MIN_MS = 10
 
 export const WORKFLOW_POLL_FACTOR = 1.6

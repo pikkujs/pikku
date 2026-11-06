@@ -9,7 +9,6 @@ import {
 } from '../../trace.js'
 import { QueuedWorkflowHarness } from '../service-tests/queued-workflow-harness.js'
 import { workflowMatrix, type Adapter, type Outcome } from './dimensions.js'
-import { expectedFailure } from './expected-failures.js'
 import { TRANSPORTS } from './transports.js'
 import { defineRun, ScheduledSleeps, type RunCase } from './workflow-cases.js'
 
@@ -103,8 +102,6 @@ const runCombo = async ({ adapter, workflow, step, outcome }: Combo) => {
 describe('adapter × workflow × step × outcome', () => {
   for (const combo of workflowMatrix().combos) {
     const label = Object.values(combo).join(' / ')
-    test(label, { todo: expectedFailure(label) }, () =>
-      runCombo(combo as unknown as Combo)
-    )
+    test(label, () => runCombo(combo as unknown as Combo))
   }
 })

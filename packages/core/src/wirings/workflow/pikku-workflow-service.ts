@@ -1,5 +1,6 @@
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
+import { buildWorkflowWire } from './workflow-wire.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
@@ -57,11 +58,12 @@ import {
   NO_COMPENSATE_STATE_PREFIX,
   forwardStepName,
   isCompensationStepName,
-  milestoneStepName,
   isRunSettled,
+  isRunStopped,
 } from './workflow-constants.js'
 import {
   WorkflowAsyncException,
+  WorkflowCancelledException,
   WorkflowDispatchException,
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
@@ -119,6 +121,7 @@ import { runDslWorkflowPass } from './workflow-dsl-pass.js'
 import { runLogger, runTraceWire, withRunTrace } from './workflow-run-trace.js'
 import {
   childRunFailure,
+  settleStoppedRun,
   failRunOrUnwind,
   isUnwound,
   compensatingForStep,
@@ -1213,6 +1216,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           extension: this.runExtension,
           updateRunStatus: (status, output, error) =>
             this.updateRunStatus(runId, status, output, error),
+          settleIfStopped: () => this.settleStoppedRun(runId, rpcService),
           onChildCompleted: (result) =>
             this.onChildWorkflowCompleted(run, result),
           onChildFailed: (error) => this.onChildWorkflowFailed(run, error),
@@ -1656,7 +1660,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           })
           throw error
         }
-      }
+      },
+      () => this.throwIfRunStopped(runId)
     )
   }
 
@@ -1689,8 +1694,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const retryDelay = stepOptions?.retryDelay ?? this.getConfig().retryDelay
 
     if (await this.isInline(runId)) {
-      return runInlineRetryLoop(this, stepState, retries, retryDelay, () =>
-        fn()
+      return runInlineRetryLoop(
+        this,
+        stepState,
+        retries,
+        retryDelay,
+        () => fn(),
+        undefined,
+        () => this.throwIfRunStopped(runId)
       )
     } else {
       let currentStepState = stepState
@@ -1844,67 +1855,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     rpcService: PikkuRPC,
     addonNamespace?: string | null
   ): PikkuWorkflowWire {
-    const workflowWire: PikkuWorkflowWire = {
-      name,
-      runId,
-      getRun: async () => (await this.getRun(runId)) as WorkflowRun,
-
-      do: async (
-        stepName: string,
-        rpcNameOrFn: any,
-        dataOrOptions?: any,
-        options?: any
-      ) => {
-        this.verifyStepName(stepName)
-        if (typeof rpcNameOrFn === 'string') {
-          const resolvedRpcName =
-            addonNamespace && !rpcNameOrFn.includes(':')
-              ? `${addonNamespace}:${rpcNameOrFn}`
-              : rpcNameOrFn
-          return await this.rpcStep(
-            runId,
-            stepName,
-            resolvedRpcName,
-            dataOrOptions,
-            rpcService,
-            options
-          )
-        } else {
-          return await this.inlineStep(
-            runId,
-            stepName,
-            rpcNameOrFn,
-            dataOrOptions
-          )
-        }
-      },
-
-      sleep: async (stepName: string, duration: string | number) => {
-        this.verifyStepName(stepName)
-        await this.sleepStep(
-          runId,
-          stepName,
-          getDurationInMilliseconds(duration)
-        )
-      },
-
-      suspend: async (reason: string) => {
-        this.verifyStepName(reason)
-        await this.suspendStep(runId, reason)
-      },
-
-      milestone: async (name: string) => {
-        this.verifyStepName(name)
-        await this.inlineStep(runId, milestoneStepName(name), async () => ({
-          name,
-        }))
-      },
-
-      approval: (async (reason: string, options: WorkflowApprovalOptions) => {
-        this.verifyStepName(reason)
-        return await this.approvalStep(runId, reason, options)
-      }) as PikkuWorkflowWire['approval'],
-    }
+    const workflowWire = buildWorkflowWire(name, runId, addonNamespace, {
+      getRun: () => this.getRun(runId),
+      verifyStepName: (stepName) => this.verifyStepName(stepName),
+      rpcStep: (stepName, rpcName, data, options) =>
+        this.rpcStep(runId, stepName, rpcName, data, rpcService, options),
+      inlineStep: (stepName, fn, options) =>
+        this.inlineStep(runId, stepName, fn, options),
+      sleepStep: (stepName, ms) => this.sleepStep(runId, stepName, ms),
+      suspendStep: (reason) => this.suspendStep(runId, reason),
+      approvalStep: (reason, options) =>
+        this.approvalStep(runId, reason, options),
+    })
     this.runExtension?.decorateWorkflowWire(workflowWire, {
       name,
       runId,
@@ -1956,6 +1918,20 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     )
   }
 
+  /** Ends a run's body at its next inline attempt once the run has been stopped. */
+  public async throwIfRunStopped(runId: string): Promise<void> {
+    if (isRunStopped((await this.getRun(runId))?.status ?? '')) {
+      throw new WorkflowCancelledException(runId)
+    }
+  }
+
+  public settleStoppedRun(
+    runId: string,
+    rpcService: PikkuRPC
+  ): Promise<WorkflowStatus | undefined> {
+    return settleStoppedRun(this.compensationApi(rpcService), runId)
+  }
+
   /** Stops an unfinished run, children first, and unwinds what it completed. */
   public async cancelRun(
     runId: string,
@@ -1970,7 +1946,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     error: SerializedError
   ): Promise<void> {
-    if (isUnwound((await this.getRun(runId))?.status)) return
+    const status = (await this.getRun(runId))?.status
+    if (status === 'cancelled' || isUnwound(status)) return
     await this.updateRunStatus(runId, 'failed', undefined, error)
   }
 

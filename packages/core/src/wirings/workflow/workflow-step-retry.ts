@@ -15,7 +15,8 @@ export type StepRetryStore = {
 /**
  * Spend a step's retry budget here and now, rather than by handing the run back
  * to the orchestrator between attempts. For an inline run there is nothing to
- * hand it back to.
+ * hand it back to. Nothing ends the run between attempts either, so a forward
+ * step passes `beforeAttempt` to stop once the run has been cancelled.
  */
 export const runInlineRetryLoop = async (
   store: StepRetryStore,
@@ -23,10 +24,12 @@ export const runInlineRetryLoop = async (
   retries: number,
   retryDelay: WorkflowStepOptions['retryDelay'],
   doWork: (currentStepState: StepState) => Promise<any>,
-  onError?: (error: any) => Promise<void>
+  onError?: (error: any) => Promise<void>,
+  beforeAttempt?: () => Promise<void>
 ): Promise<any> => {
   let currentStepState = stepState
   while (true) {
+    await beforeAttempt?.()
     let result: any
     try {
       await store.setStepRunning(currentStepState.stepId)

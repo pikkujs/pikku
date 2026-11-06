@@ -6,6 +6,7 @@ import {
 import {
   DEFAULT_STEP_RETRIES,
   NO_COMPENSATE_STATE_PREFIX,
+  isRunStopped,
 } from '../workflow-constants.js'
 import { childRunFailure } from '../workflow-compensation.js'
 import { runningStepLease } from '../workflow-step-lease.js'
@@ -780,6 +781,12 @@ async function failGraphRunWith(
   cause: Error,
   rpcService?: any
 ): Promise<void> {
+  if (
+    rpcService &&
+    (await workflowService.settleStoppedRun(runId, rpcService))
+  ) {
+    return
+  }
   const error = Object.assign(cause, { code: 'GRAPH_NODE_FAILED' })
   const run = await workflowService.getRun(runId)
   if (run && rpcService) {
@@ -899,7 +906,10 @@ export async function continueGraph(
   }
 
   const currentRun = await workflowService.getRun(runId)
-  if (currentRun?.status === 'suspended') {
+  if (
+    currentRun?.status === 'suspended' ||
+    (currentRun && isRunStopped(currentRun.status))
+  ) {
     return
   }
 
@@ -1244,7 +1254,10 @@ async function continueGraphInline(
     }
 
     const run = await workflowService.getRun(runId)
-    if (run?.status === 'suspended') {
+    if (
+      run?.status === 'suspended' ||
+      (await workflowService.settleStoppedRun(runId, rpcService))
+    ) {
       return
     }
 
