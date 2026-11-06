@@ -1,9 +1,12 @@
 import { rm } from 'node:fs/promises'
-import { relative, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import type { CLILogger } from '../../services/cli-logger.service.js'
 import { added, dim, removed } from '../../utils/output.js'
-import { runProjectTypecheck } from '../../utils/tsc-check.js'
+import {
+  typecheckProjects,
+  type CheckDiagnostic,
+} from '../../utils/tsc-check.js'
 import { generateRouteTrees } from '../../utils/route-tree.js'
 import { checkProjects, compileMessages } from '../../utils/watch-loop.js'
 import {
@@ -11,7 +14,6 @@ import {
   watchStatusFile,
   type WatcherWait,
 } from '../../utils/watch-status.js'
-import type { CheckDiagnostic } from '../../utils/warm-typecheck.js'
 import {
   codegenStateFile,
   collectCodegenPass,
@@ -81,31 +83,18 @@ const fullRun = async (
     ...(await generateRouteTrees(frontends, Math.max(1, deadline - Date.now())))
   )
 
-  for (const project of projects) {
-    try {
-      const result = runProjectTypecheck(
-        project.tsconfig,
-        project.dir,
-        Math.max(1, deadline - Date.now())
-      )
-      diagnostics.push(
-        ...result.diagnostics.map((d): CheckDiagnostic => ({
-          severity: d.category === 'error' ? 'error' : 'warn',
-          code: `TS${d.code}`,
-          message: d.message,
-          project: project.name,
-          file: relative(config.rootDir, resolve(project.dir, d.file)),
-          ...(d.line > 0 ? { line: d.line, column: d.column } : {}),
-        }))
-      )
-    } catch (error) {
-      return {
-        diagnostics,
-        stuck: {
-          stage: 'typecheck',
-          message: `Type-checking ${project.name} did not finish in ${Math.round(timeoutMs / 1000)}s: ${error instanceof Error ? error.message : error}`,
-        },
-      }
+  try {
+    const checked = await typecheckProjects(projects, config.rootDir, {
+      timeoutMs: Math.max(1, deadline - Date.now()),
+    })
+    diagnostics.push(...checked.diagnostics)
+  } catch (error) {
+    return {
+      diagnostics,
+      stuck: {
+        stage: 'typecheck',
+        message: error instanceof Error ? error.message : String(error),
+      },
     }
   }
   return { diagnostics }

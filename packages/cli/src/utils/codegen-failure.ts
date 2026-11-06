@@ -1,6 +1,6 @@
 import { relative } from 'node:path'
 import { stripVTControlCharacters } from 'node:util'
-import type { CheckDiagnostic } from './warm-typecheck.js'
+import type { CheckDiagnostic } from './tsc-check.js'
 
 /**
  * Marks an uncoded `logger.error` in the diagnostics file. They only mean

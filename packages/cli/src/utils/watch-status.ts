@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
-import type { CheckDiagnostic } from './warm-typecheck.js'
+import type { CheckDiagnostic } from './tsc-check.js'
 
 export type WatchStage =
   'queued' | 'codegen' | 'messages' | 'routes' | 'typecheck'
@@ -34,7 +34,7 @@ export type WatchStatus = {
   wakes?: boolean
   diagnostics: CheckDiagnostic[]
   durationMs?: number
-  typecheck?: { durationMs: number; rssBytes: number }
+  typecheck?: { durationMs: number }
 }
 
 export const watchStatusFile = (pikkuDir: string): string =>

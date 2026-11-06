@@ -16,7 +16,7 @@ import type {
   CheckDiagnostic,
   CheckProject,
   TypecheckResult,
-} from './warm-typecheck.js'
+} from './tsc-check.js'
 
 export type CodegenPass = { ok: boolean; diagnostics: CheckDiagnostic[] }
 
@@ -91,7 +91,8 @@ type WatchLoopOptions = {
   codegen: () => Promise<CodegenPass>
   messages: () => Promise<CheckDiagnostic[]>
   routes: () => Promise<CheckDiagnostic[]>
-  typecheck: () => Promise<TypecheckResult>
+  /** Aborted when a newer edit makes its answer worthless. */
+  typecheck: (signal: AbortSignal) => Promise<TypecheckResult>
   onError: (message: string) => void
   now?: () => number
   changesSince?: (dirs: WatchedDirs, since: number) => FileChange[]
@@ -132,6 +133,7 @@ export const createWatchLoop = ({
   let sourcesAt = startedAt
   let catchUps = 0
   let readByRun = new Map<string, number>()
+  let inFlightCheck: AbortController | undefined
 
   const publish = (
     fields: Pick<WatchStatus, 'state' | 'stage' | 'diagnostics'> &
@@ -163,6 +165,7 @@ export const createWatchLoop = ({
     const kind = classifyChange(path, dirs)
     if (!kind) return
     pending = true
+    inFlightCheck?.abort()
     codegenNeeded ||= kind === 'codegen'
     messagesNeeded ||= kind === 'messages'
     routesNeeded ||= kind === 'routes'
@@ -228,8 +231,9 @@ export const createWatchLoop = ({
     running('typecheck')
     let checked: TypecheckResult | undefined
     let checkerError: CheckDiagnostic | undefined
+    inFlightCheck = new AbortController()
     try {
-      checked = await typecheck()
+      checked = await typecheck(inFlightCheck.signal)
     } catch (error) {
       checkerError = {
         severity: 'error',
@@ -237,6 +241,7 @@ export const createWatchLoop = ({
         message: error instanceof Error ? error.message : String(error),
       }
     }
+    inFlightCheck = undefined
     if (pending || (await fellBehind()) || pending) return
 
     const diagnostics = [
@@ -256,10 +261,7 @@ export const createWatchLoop = ({
       durationMs: now() - startedAt,
       ...(checked
         ? {
-            typecheck: {
-              durationMs: checked.durationMs,
-              rssBytes: checked.rssBytes,
-            },
+            typecheck: { durationMs: checked.durationMs },
           }
         : {}),
     })

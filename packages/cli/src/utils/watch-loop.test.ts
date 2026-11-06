@@ -10,14 +10,14 @@ import {
   type CodegenPass,
 } from './watch-loop.js'
 import { readWatchStatus } from './watch-status.js'
-import type { TypecheckResult } from './warm-typecheck.js'
+import type { TypecheckResult } from './tsc-check.js'
 
 const dirs = {
   codegenDirs: ['/p/src'],
   typecheckDirs: ['/p/apps/web'],
   routePaths: ['/p/apps/web/src/routes', '/p/apps/web/src/routeTree.gen.ts'],
 }
-const clean: TypecheckResult = { diagnostics: [], durationMs: 1, rssBytes: 1 }
+const clean: TypecheckResult = { diagnostics: [], durationMs: 1 }
 const passed: CodegenPass = { ok: true, diagnostics: [] }
 const statusFile = () =>
   join(mkdtempSync(join(tmpdir(), 'pikku-loop-')), 'status.json')
@@ -166,7 +166,7 @@ describe('the watch loop', () => {
     const status = readWatchStatus(file)
     assert.equal(status?.state, 'ok')
     assert.equal(status?.pid, process.pid)
-    assert.equal(status?.typecheck?.rssBytes, 1)
+    assert.equal(status?.typecheck?.durationMs, 1)
   })
 
   test('shows running, with the stage, while it works', async () => {
@@ -277,6 +277,29 @@ describe('the watch loop', () => {
     assert.deepEqual(results, ['running', 'running'])
     assert.equal(readWatchStatus(file)?.state, 'ok')
     assert.equal(readWatchStatus(file)?.generation, 2)
+  })
+
+  test('a change mid-check aborts the check in flight', async () => {
+    let checks = 0
+    const aborted: boolean[] = []
+    const { loop, file } = loopWith({
+      typecheck: (signal) => {
+        checks++
+        if (checks > 1) return Promise.resolve(clean)
+        return new Promise((_resolve, reject) => {
+          signal.addEventListener('abort', () => {
+            aborted.push(signal.aborted)
+            reject(new Error('superseded'))
+          })
+          loop.onChange('/p/src/a.ts')
+        })
+      },
+    })
+    await loop.start({ codegen: false })
+    assert.deepEqual(aborted, [true])
+    assert.equal(checks, 2)
+    assert.equal(readWatchStatus(file)?.state, 'ok')
+    assert.deepEqual(readWatchStatus(file)?.diagnostics, [])
   })
 
   test('a message edit compiles before the type check, and the status clears', async () => {

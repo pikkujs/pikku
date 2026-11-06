@@ -16,13 +16,12 @@ After a change it runs:
 
 A frontend edit skips step 1. The projects are the ones `pikku verify` covers.
 
-The type checker runs in its own process and stays warm: it holds the program in
-memory and only checks what a change affected. It starts with the first run, uses
-the project's own `typescript`, and exits with the watcher. If it dies, the run is
-reported as failed and the next run starts a new one.
+Each run spawns the project's own `tsc` for every project, side by side, and they
+exit with it, so an idle watcher holds no type-checker memory. If one dies, the run
+is reported as failed and the next run starts again.
 
-A change during a run discards that run's result and starts another, so the
-status always describes the latest files.
+A change during a run discards that run's result, kills any `tsc` still going and
+starts another, so the status always describes the latest files.
 
 ## `.pikku/status.json`
 
@@ -35,7 +34,7 @@ Replaced atomically, so it is always a whole file.
 | `generation`  | Counts runs since the watcher started                                              |
 | `sourcesAt`   | The result covers edits up to this time                                            |
 | `diagnostics` | `severity`, `code`, `message`, and `project`, `file`, `line`, `column` where known |
-| `typecheck`   | `durationMs` and `rssBytes` of the warm checker                                    |
+| `typecheck`   | `durationMs` of the `tsc` runs                                                     |
 | `pid`         | The watcher, so a status left by a dead one is ignored                             |
 
 ## `pikku check`
