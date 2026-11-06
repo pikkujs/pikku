@@ -26,8 +26,12 @@ use crate::state::State;
 use crate::typesmap::TypesMap;
 
 pub mod boundary;
+pub mod group_agent;
 pub mod group_approval_description;
+pub mod group_channel;
 pub mod group_functions;
+pub mod group_gateway;
+pub mod group_mcp;
 pub mod group_functions_node;
 pub mod group_http;
 pub mod group_http_contracts;
@@ -207,6 +211,10 @@ pub fn register_groups(r: &mut Registry) {
     group_functions::register(r);
     group_schedule::register(r);
     group_http::register(r);
+    group_channel::register(r);
+    group_gateway::register(r);
+    group_mcp::register(r);
+    group_agent::register(r);
 }
 
 /// The registry with every ported group registered.
