@@ -74,6 +74,10 @@ type PikkuPermissionConfig<In = unknown, RequiredServices extends SecretlessServ
  * Factory function for creating permissions with tree-shaking support.
  * Supports both direct function and configuration object syntax.
  *
+ * A function takes guards as a map, \`permissions: { owner: isOrderOwner }\`.
+ * Any one key passing admits the caller; an array under a key must pass in full.
+ * A guard gets the function's input, so name only the fields it reads.
+ *
  * @example snippet: permissionFunction
  */
 export const pikkuPermission = <In>(

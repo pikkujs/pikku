@@ -4,6 +4,7 @@ import type {
   SurfaceEntryPointId,
   SurfaceLeaf,
 } from './surface-doc.types.js'
+import { SURFACE_GUIDES, type SurfaceGuide } from './surface-editorial.js'
 
 export type RenderSurfaceDocOptions = {
   target?: string
@@ -91,16 +92,30 @@ const renderIndex = (doc: SurfaceDoc, leaves: SurfaceLeaf[], ai: boolean) => {
   }
   const fn = leaves.find((leaf) => leaf.name === 'function')
   if (fn) {
-    lines.push('', `  ${fn.specifier} — every wiring eventually points at one of these`)
-    lines.push(...columns(fn.symbols.map((symbol) => symbol.name), 4, 26))
+    lines.push(
+      '',
+      `  ${fn.specifier} — every wiring eventually points at one of these`
+    )
+    lines.push(
+      ...columns(
+        fn.symbols.map((symbol) => symbol.name),
+        4,
+        26
+      )
+    )
   }
   if (ai) {
     const taught = leaves.filter((leaf) => leaf.skill)
     const bare = leaves.filter((leaf) => !leaf.skill).map((leaf) => leaf.name)
-    lines.push('', '  what is above is what exists; these skills say how to use it')
+    lines.push(
+      '',
+      '  what is above is what exists; these skills say how to use it'
+    )
     lines.push(
       ...columns(
-        taught.map((leaf) => `${leaf.name} → ${[leaf.skill].flat().join(' + ')}`),
+        taught.map(
+          (leaf) => `${leaf.name} → ${[leaf.skill].flat().join(' + ')}`
+        ),
         2,
         38
       )
@@ -118,14 +133,26 @@ const renderIndex = (doc: SurfaceDoc, leaves: SurfaceLeaf[], ai: boolean) => {
   lines.push(
     '',
     '  pikku doc <door>      one door: what it exports and the keys you write',
+    `  pikku doc <topic>     ${SURFACE_GUIDES.map((guide) => guide.names[0]).join(', ')}`,
     '  pikku doc <export>    one export: its signature, its keys, what it references',
     '  pikku doc a b c       several at once, in one call'
   )
   if (!ai) {
-    lines.push('  pikku doc --ai        the same, plus the skill to load for each door')
+    lines.push(
+      '  pikku doc --ai        the same, plus the skill to load for each door'
+    )
   }
   return lines.join('\n')
 }
+
+const renderGuide = (guide: SurfaceGuide): string =>
+  [
+    `${guide.names[0]} — ${guide.title}`,
+    '',
+    ...guide.points.flatMap((point) => [wrap(point, 78, '  '), '']),
+    '  example',
+    ...guide.example.split('\n').map((line) => `    ${line}`),
+  ].join('\n')
 
 const renderSymbolRow = (symbol: SurfaceDocSymbol): string[] => {
   const lines = [
@@ -151,13 +178,22 @@ const renderSymbolRow = (symbol: SurfaceDocSymbol): string[] => {
 }
 
 const renderLeaf = (leaf: SurfaceLeaf, ai: boolean): string => {
-  const lines = [`${leaf.specifier} — ${leaf.step}`, '', wrap(leaf.summary, 78, '  '), '']
+  const lines = [
+    `${leaf.specifier} — ${leaf.step}`,
+    '',
+    wrap(leaf.summary, 78, '  '),
+    '',
+  ]
   const statuses = leaf.symbols.filter((symbol) => symbol.status !== undefined)
-  for (const symbol of leaf.symbols.filter((symbol) => symbol.status === undefined)) {
+  for (const symbol of leaf.symbols.filter(
+    (symbol) => symbol.status === undefined
+  )) {
     lines.push(...renderSymbolRow(symbol))
   }
   if (statuses.length > 0) {
-    lines.push(`  ${statuses.length} error classes, each thrown to produce its HTTP status:`)
+    lines.push(
+      `  ${statuses.length} error classes, each thrown to produce its HTTP status:`
+    )
     lines.push(
       ...columns(
         statuses.map((symbol) => `${symbol.name} ${symbol.status}`),
@@ -232,7 +268,10 @@ const renderSymbol = (
     )
   }
   if (ai && leaf.skill) {
-    lines.push('', `  Load the ${[leaf.skill].flat().join(' and ')} skill before writing this if you need how rather than what.`)
+    lines.push(
+      '',
+      `  Load the ${[leaf.skill].flat().join(' and ')} skill before writing this if you need how rather than what.`
+    )
   }
   return lines.join('\n').trimEnd()
 }
@@ -288,11 +327,14 @@ export const renderSurfaceDoc = (
     return renderIndex(doc, leaves, ai)
   }
   const leaf = leaves.find(
-    (candidate) =>
-      candidate.name === target || candidate.specifier === target
+    (candidate) => candidate.name === target || candidate.specifier === target
   )
   if (leaf) {
     return renderLeaf(leaf, ai)
+  }
+  const guide = SURFACE_GUIDES.find(({ names }) => names.includes(target))
+  if (guide) {
+    return renderGuide(guide)
   }
   const home = new Map<string, string>()
   for (const candidate of leaves) {
