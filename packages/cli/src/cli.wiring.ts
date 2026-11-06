@@ -217,6 +217,10 @@ import {
   pikkuMetaContext,
   pikkuMetaClients,
   pikkuMetaDb,
+  pikkuMetaEmails,
+  pikkuMetaGrep,
+  pikkuMetaScreens,
+  pikkuMetaServices,
   pikkuMetaApply,
 } from './functions/commands/meta.js'
 import { defaultCLIRenderer } from './services.js'
@@ -2346,17 +2350,46 @@ wireCLI({
         context: pikkuCLICommand({
           func: pikkuMetaContext,
           description:
-            'Bulk project context for planners (functions, wires, middleware, permissions, workflows, capabilities, layout, database) in one call',
+            'A short map of the project: tables, workflows, permissions, screens, emails, one line per function. --json or --full gives the whole planner document',
+          options: {
+            full: {
+              description: 'Print the full JSON document',
+              default: false,
+              short: 'f',
+            },
+          },
+        }),
+        grep: pikkuCLICommand({
+          func: pikkuMetaGrep,
+          description:
+            'Search the whole project: functions, workflows, wires, permissions, middleware, clients, tables and columns, screens, services, emails, translations, models. Terms are word-aware and any can match: `invit` finds `invitation`, `a|b` means either',
+          parameters: '<terms...>',
+        }),
+        db: pikkuCLICommand({
+          func: pikkuMetaDb,
+          description:
+            'Where the project declares its tables and what they compile to; name tables to get their generated column types',
+          parameters: '[tables...]',
+        }),
+        screens: pikkuCLICommand({
+          func: pikkuMetaScreens,
+          description:
+            'Frontend routes: path, the RPCs the page reaches, and its page file',
+        }),
+        services: pikkuCLICommand({
+          func: pikkuMetaServices,
+          description:
+            "The project's session fields, declared services and auth setup",
+        }),
+        emails: pikkuCLICommand({
+          func: pikkuMetaEmails,
+          description:
+            'Email templates with the data each takes, and their locales',
         }),
         clients: pikkuCLICommand({
           func: pikkuMetaClients,
           description:
             'Frontend-targeted metadata: exposed RPCs, workflows, channels with their input/output type names and descriptions',
-        }),
-        db: pikkuCLICommand({
-          func: pikkuMetaDb,
-          description:
-            'Where the project declares its tables, what they compile to, and the commands that turn a declaration into SQL and types',
         }),
         apply: pikkuCLICommand({
           func: pikkuMetaApply,
