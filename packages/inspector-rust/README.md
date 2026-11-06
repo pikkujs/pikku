@@ -24,9 +24,9 @@ visitor group is ported**, so an inspection returns a state with the program's
 | `protocol` | `internal/protocol` | done |
 | `program` | `internal/program` | done: Go's compiler options, project-file filter, cross-request SourceFile `Cache` (works, see PORTING.md) |
 | `analyze` | `internal/analyze` | phase order done; sweeps are empty; schema generation skipped |
-| `visit` | `internal/visit` | `Context`, `Registry`, `Phase`, `Abort`, `order` keys, `Sweep`; no groups; the post-sweep steps (`sweep_usage`, `resolve_latest_versions`, ...) are no-ops with their Go file named |
+| `visit` | `internal/visit` | `Context`, `Registry`, `Phase`, `Abort`, `order` keys, `Sweep`; shared helpers `util_*`, `usage_sweeps`; groups setup-core (`group_setup_core`), functions (+node), http (+contracts), rpc invocations, approval description, schedule, outgoing webhook; post-sweep `resolve_versions`, `service_types`, `finish_core_type_properties`. Boundary functions that live in other porters' Go files are in `boundary.rs` (stubs marked). Other post-sweep steps are still no-ops with their Go file named |
 | `typesmap` | `internal/typesmap` | data structure, serialisation, `get_type_meta`; `CanonicalTypeString` is the identity (TODO) |
-| `tsutil` | `internal/tsutil` | `walk`, `walk_self`, `dedupe`, `sorted_keys`, `utf16_offset`; printing/typeorder not ported |
+| `tsutil` | `internal/tsutil` | `walk`, `text`, `props`, `route`, `governance`, `print`, `sortjs`, `types`; `typeorder.rs` / `unionorder.rs` are STUBS for their porter |
 | `schemas` | `internal/schemas`, `tsjg` | not ported |
 | `finalize` | `internal/finalize` | done; byte-identical to Go on all 64 projects (`scripts/finalize-parity.ts`) |
 | `helpers` | `internal/helpers` | method list ported; every method answers `not implemented` |

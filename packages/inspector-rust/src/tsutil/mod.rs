@@ -1,12 +1,35 @@
 //! Port of Go `internal/tsutil`: AST/text helpers with no Context.
 //!
-//! Status: `walk`, `walk_self`, `dedupe`, `sorted_keys` and `utf16_offset` are
-//! ported. NOT ported: printing (`print.go`, `typeorder.go`: the
-//! old-TypeScript union/property reorder, see PORTING.md), props, route,
-//! governance, sortjs, types.
+//! Layout mirrors Go's files: [`text`] (text.go), [`props`] (props.go),
+//! [`route`] (route.go), [`governance`] (governance.go: the literal-property
+//! readers and JS number formatting), [`print`] (print.go), [`sortjs`],
+//! [`types`] (types.go / ptr.go). `walk.go` lives in this file.
+//!
+//! STUBS owned by another porter (they replace the files on merge, keep the
+//! signatures): [`typeorder`] (`UnionTypesInIdOrder`, `ReorderTypeNode`) and
+//! [`unionorder`] (`TypeToString`, `TypeToStringAt`).
 
 use tsrs_ast::Node;
 use tsrs_core::P;
+
+pub mod governance;
+pub mod print;
+pub mod props;
+pub mod route;
+pub mod sortjs;
+pub mod text;
+#[cfg(test)]
+mod tests_ported;
+pub mod typeorder;
+pub mod types;
+pub mod unionorder;
+
+pub use governance::*;
+pub use props::*;
+pub use route::*;
+pub use sortjs::*;
+pub use text::*;
+pub use types::*;
 
 /// Visits `node`'s descendants in pre-order, the order recursive
 /// `ts.forEachChild` gives; `node` itself is not visited.
