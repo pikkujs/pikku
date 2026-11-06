@@ -262,7 +262,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     # dev-platform-contributors builds a scenario with both inspector engines,
-    # so every row downloads pikku-inspect (a few MB) from inspector-go-build.
+    # so it needs pikku-inspect. Only that row downloads it: with no binary the
+    # CLI falls back to the TypeScript engine, which is what the other rows
+    # verify (the native engine lacks PKU953/PKU954, so classification fails
+    # under it).
     needs: [build, inspector-go-build]
     strategy:
       fail-fast: false
@@ -313,7 +316,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
-          download-inspector-go: 'true'
+          download-inspector-go: ${{ matrix.verifier == 'dev-platform-contributors' }}
       - run: cd verifiers/${{ matrix.verifier }} && bun run test
 
   # The only verifier that runs a browser, so it gets its own job rather than a
