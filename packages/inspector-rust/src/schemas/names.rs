@@ -76,3 +76,41 @@ pub fn primitive_type_to_schema(typ: &str) -> Option<Raw> {
     };
     Some(Raw::of(serde_json::from_str(s).unwrap()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::meta::FunctionMeta;
+
+    #[test]
+    fn schema_names_order() {
+        let mut st = State::new("/root");
+        {
+            let tm = &mut st.functions.types_map;
+            tm.add_custom_type("ZodInput", "{ a: string }", vec![]);
+            tm.add_custom_type("Inline", "{ b: number }", vec![]);
+            tm.add_type("User", "/root/user.ts");
+        }
+        let item_a = st.functions.types_map.add_unique_type("Item", "/root/a.ts");
+        st.functions.types_map.add_unique_type("Item", "/root/b.ts");
+        let s = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let mk = |i: Vec<String>, o: Vec<String>| {
+            let mut m = FunctionMeta::default();
+            m.inputs = i;
+            m.outputs = o;
+            m
+        };
+        st.functions.meta.set("f2", mk(s(&["User", "string"]), vec![item_a.clone()]));
+        st.functions.meta.set("f1", mk(s(&["Inline", "NotInTypesMap"]), s(&["User"])));
+        st.functions.meta.set("10", mk(vec![], s(&["void"])));
+        let got = schema_names(&st, &s(&["Extra", "User"]));
+        // "10" is an array index, so Object.values visits it first.
+        assert_eq!(got, ["ZodInput", "Inline", "void", "User", "string", &item_a, "Extra"]);
+    }
+
+    #[test]
+    fn primitive_fallbacks() {
+        assert_eq!(primitive_type_to_schema(" true ").unwrap().value().unwrap().to_string(), r#"{"const":true}"#);
+        assert!(primitive_type_to_schema("Foo").is_none());
+    }
+}

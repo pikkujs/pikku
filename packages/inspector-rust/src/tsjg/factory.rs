@@ -64,7 +64,12 @@ pub fn create_formatter(cfg: &Config) -> Rc<dyn TypeFormatter> {
     circular
 }
 
-// ===== CreateParser (factory/parser.ts): added separately =====
+// ===== CreateParser (factory/parser.ts) =====
+
+/// TEMPORARY until the parser forks are merged.
+pub fn create_parser(_chk: super::parser::Chk, _cfg: &Config) -> Rc<dyn super::parser::NodeParser> {
+    super::fail("create_parser: parsers not wired yet")
+}
 
 #[cfg(test)]
 mod tests {

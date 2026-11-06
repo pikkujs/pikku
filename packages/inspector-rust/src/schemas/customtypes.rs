@@ -163,3 +163,69 @@ pub fn generate_custom_types(tm: &TypesMap) -> (String, Vec<String>) {
         .collect();
     (format!("{}\n\n{}", imports.join("\n"), decls.join("\n")), required.items)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The expected source is generateCustomTypes' output for the same typesMap,
+    /// from packages/inspector/dist/utils/custom-types-generator.js (Go's test).
+    #[test]
+    fn generate_custom_types_matches_ts() {
+        let mut tm = TypesMap::new();
+        tm.add_type("User", "/p/user.ts");
+        tm.add_type("Order", "/p/order.ts");
+        tm.add_type("Item", "/p/user.ts");
+        let s = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        tm.add_custom_type(
+            "b-input",
+            "{ user: User; secret: Secret<string>; o: Pii<Array<Order>>; f: (x: number) => Item }",
+            s(&["User", "__object", "__object_1", "Secret"]),
+        );
+        tm.add_custom_type("alpha", r#"Pick<User, "id">"#, vec![]);
+        // Go feeds `string | "Order"` and AddCustomType canonicalizes it; the Rust
+        // typesmap canonical_type_string is still the identity, so use its output.
+        tm.add_custom_type("Beta", r#""Order" | string"#, vec![]);
+        tm.add_custom_type("Same", "Same", s(&["Order"]));
+        tm.add_custom_type("GenericThing", "Record<Key, In[number]>", s(&["Item"]));
+        tm.add_custom_type("9lives", "Private<{ a: Unknown }>", vec![]);
+
+        let (got, required) = generate_custom_types(&tm);
+        let want = "import type { User, Item } from '/p/user.ts'\n\
+                    import type { Order } from '/p/order.ts'\n\
+                    \n\
+                    export type _9lives = { a: Unknown }\n\
+                    export type alpha = Pick<User, \"id\">\n\
+                    export type b_input = { user: User; secret: string; o: Array<Order>; f: (x: number) => Item }\n\
+                    export type Beta = \"Order\" | string";
+        assert_eq!(got, want);
+        assert_eq!(required, ["User", "Order", "Item"]);
+    }
+
+    #[test]
+    fn empty() {
+        assert_eq!(generate_custom_types(&TypesMap::new()).0, "\n\n");
+    }
+
+    #[test]
+    fn strips_classification_wrappers() {
+        for (i, w) in [
+            ("Secret<string>", "string"),
+            ("Private<Pii<{ a: Map<string, X> }>>", "{ a: Map<string, X> }"),
+            ("{ f: () => Secret<string> }", "{ f: () => string }"),
+            ("SecretThing<string>", "SecretThing<string>"),
+            ("Secret", "Secret"),
+            ("Pii<unclosed", "Pii<unclosed"),
+            ("{ é: Private<number>; $x: Secret<1> }", "{ é: number; $x: 1 }"),
+        ] {
+            assert_eq!(strip_classification_wrappers(i), w, "{i}");
+        }
+    }
+
+    #[test]
+    fn sanitizes_names() {
+        for (i, w) in [("a-b.c", "a_b_c"), ("1abc", "_1abc"), ("$ok_1", "$ok_1"), ("naïve", "na_ve"), ("😀", "__")] {
+            assert_eq!(sanitize_type_name(i), w);
+        }
+    }
+}
