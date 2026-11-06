@@ -4,9 +4,13 @@ import { readdirSync, statSync } from 'node:fs'
 import { readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { stripVTControlCharacters } from 'node:util'
 import type { CodedDiagnostic } from '@pikku/inspector'
 import type { CodegenPass } from '../../utils/watch-loop.js'
+import {
+  LOGGED_ERROR_CODE,
+  codegenFailureDiagnostics,
+  failureTail,
+} from '../../utils/codegen-failure.js'
 
 export type CodegenChildOptions = {
   command: string[]
@@ -44,22 +48,35 @@ export const collectCodegenPass = async (
     tmpdir(),
     `pikku-diagnostics-${randomBytes(8).toString('hex')}.json`
   )
+  const recorded = async () => {
+    const all = await readCodegenDiagnostics(diagnosticsFile)
+    const isLogged = ({ code }: CodedDiagnostic) =>
+      (code as string) === LOGGED_ERROR_CODE
+    return {
+      coded: all.filter((diagnostic) => !isLogged(diagnostic)),
+      logged: all.filter(isLogged).map(({ message }) => message),
+    }
+  }
   try {
     await pass(diagnosticsFile)
-    return {
-      ok: true,
-      diagnostics: await readCodegenDiagnostics(diagnosticsFile),
-    }
+    return { ok: true, diagnostics: (await recorded()).coded }
   } catch (error) {
+    const { coded, logged } = await recorded()
+    const message = error instanceof Error ? error.message : String(error)
+    const output = error instanceof CodegenChildError ? error.output : ''
+    const found = codegenFailureDiagnostics({ logged, output })
+    const fallback = {
+      severity: 'critical',
+      code: 'CODEGEN',
+      message: output ? `${message}\n${failureTail(output)}` : message,
+    } as const
+    const reasons = found.length > 0 ? found : [fallback]
     return {
       ok: false,
       diagnostics: [
-        ...(await readCodegenDiagnostics(diagnosticsFile)),
-        {
-          severity: 'critical',
-          code: 'CODEGEN',
-          message: error instanceof Error ? error.message : String(error),
-        },
+        ...coded.filter(({ severity }) => severity !== 'warn'),
+        ...reasons,
+        ...coded.filter(({ severity }) => severity === 'warn'),
       ],
     }
   } finally {
@@ -70,7 +87,18 @@ export const collectCodegenPass = async (
 export const codegenStateFile = (): string =>
   join(tmpdir(), `pikku-state-${randomBytes(8).toString('hex')}.json`)
 
-const MAX_FAILURE_OUTPUT = 2000
+/** Enough for the error lines, which print long before the stack at the end. */
+const MAX_FAILURE_OUTPUT = 256 * 1024
+
+/** A failed child, with what it printed. */
+export class CodegenChildError extends Error {
+  constructor(
+    message: string,
+    readonly output: string
+  ) {
+    super(message)
+  }
+}
 
 export const runCodegenChild = (
   stateFile: string,
@@ -99,8 +127,8 @@ export const runCodegenChild = (
           : {}),
       },
     })
-    // Passed through as ever, and the tail kept: most failures reach only stderr,
-    // and `pikku check` has to say what went wrong.
+    // Passed through as ever, and kept: most failures reach only stderr, and
+    // `pikku check` has to say what went wrong.
     let stderrTail = ''
     child.stderr!.on('data', (chunk: Buffer) => {
       if (options.inheritStdout) process.stderr.write(chunk)
@@ -115,8 +143,9 @@ export const runCodegenChild = (
       if (code === 0) resolve()
       else
         reject(
-          new Error(
-            `pikku ${options.command.join(' ')} failed (${signal ?? `exit ${code}`})\n${stripVTControlCharacters(stderrTail).trim()}`.trim()
+          new CodegenChildError(
+            `pikku ${options.command.join(' ')} failed (${signal ?? `exit ${code}`})`,
+            stderrTail
           )
         )
     })

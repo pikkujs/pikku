@@ -58,3 +58,15 @@ Watched files are those in `srcDirectories`, the email templates and each
 frontend's directory. Anything else a project compiles, such as a shared workspace
 package, is not watched, and neither are the root `tsconfig.json` and
 `pikku.config.json`. A frontend's `tsconfig.json` is.
+
+## When codegen fails
+
+`pikku check` reports each error of the failed run, causes first with their file where known, and what the run finally threw last. There are no stack frames, one bad import across many schemas is one entry, and the text output is at most 30 lines, so `pikku check 2>&1 | tail -30` shows the cause. `--json` has every diagnostic.
+
+## Undoing a change
+
+`pikku all` empties `pikku-variables.gen.ts` or `pikku-secrets.gen.ts` before it starts if either imports a name or file the project no longer has, then writes them in full in the same run. Without this, removing a variable fails every Zod schema, because reading a schema loads those files. Imports from packages rather than relative paths are not checked.
+
+## Two runs at once
+
+Only one `pikku all` runs per output directory: a second one waits up to five minutes for the first, and takes over at once if the first has died.
