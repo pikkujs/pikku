@@ -33,6 +33,18 @@ addError(AddonNotUsedError, {
   message: 'Addon called another addon it does not use.',
 })
 
+export class AddonUsesShadowedError extends PikkuError {
+  constructor(name: string, target: string) {
+    super(
+      `Addon '${name}' maps its own name in 'uses' to '${target}', but a call to '${name}:<function>' always reaches the addon itself, so the mapping can never be used. Mount the addon under another name.`
+    )
+  }
+}
+addError(AddonUsesShadowedError, {
+  status: 500,
+  message: 'Addon uses maps its own name.',
+})
+
 /**
  * The name an addon's call resolves to on this host, through its `uses`.
  *

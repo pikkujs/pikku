@@ -16,8 +16,12 @@ CLI's own sync, not a script:
 - `packages/cli/src/cloud-api.wiring.ts` wires `@pikkustudio/addon-cloud-api@^0.0.2`
   with `wireRemoteAddon` as `cloudApi` (the name `cloud` is the addon's own
   namespace), served under `cloud:`; `cli.wiring.ts` maps it with
-  `wireAddon({ name: 'cloud', package: '@pikku/addon-cloud-cli', uses: { cloud: 'cloudApi' } })`,
-  which is what PKU348 checks.
+  `wireAddon({ name: 'cloudCli', package: '@pikku/addon-cloud-cli', uses: { cloud: 'cloudApi' } })`,
+  which is what PKU348 checks. The addon is mounted as `cloudCli`, not `cloud`:
+  an addon's own namespace wins over its `uses`, so with the mount equal to the
+  alias, `cloud:<fn>` resolved to the addon itself and never reached `cloudApi`.
+  `wireAddon` now throws on that shape. The `pikku cloud` command is unaffected
+  (it is the literal key in `cli.wiring.ts`, which refs `cloudCli:cloudCommands`).
 - `packages/addon/pikku-cloud-cli/package.json` declares
   `pikku.uses.cloud = "@pikkustudio/addon-cloud-api@^0.0.2"`.
 - `pikku all` (`runAddonSync`) resolves it through the registry
@@ -25,7 +29,8 @@ CLI's own sync, not a script:
   `pikku-addons.lock` (one in the CLI, one in the addon), extracts it into the
   gitignored `.pikku/remote`, and merges it into the addon's generated RPC map as
   `cloud:<name>`. Nothing generated is committed. The alias `cloud` does not
-  collide with the addon's own functions: those are unprefixed in that map.
+  collide with the addon's own functions: those are unprefixed in that map, and
+  the mount is `cloudCli`.
 - `src/lib/rpc-client.ts` types `invoke` from that map's `cloud:` keys plus
   `contract/uncontracted.ts`; the name is sent as written. A name the contract
   lacks is a `tsc` error. `build.sh` hides `cloud-api.wiring.ts` from the

@@ -228,7 +228,7 @@ import { defaultCLIRenderer } from './services.js'
 
 wireAddon({ name: 'changes', package: '@pikku/addon-changes-cli' })
 wireAddon({
-  name: 'cloud',
+  name: 'cloudCli',
   package: '@pikku/addon-cloud-cli',
   uses: { cloud: 'cloudApi' },
 })
@@ -1788,7 +1788,7 @@ wireCLI({
     cloud: {
       description:
         'Pikku Studio Cloud commands (login, link, deploy, domains, secrets, logs, …)',
-      subcommands: { ...refCLI('cloud:cloudCommands') },
+      subcommands: { ...refCLI('cloudCli:cloudCommands') },
     },
     fetch: pikkuCLICommand({
       func: pikkuFetch,
