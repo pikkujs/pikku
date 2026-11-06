@@ -27,6 +27,9 @@ pub mod addon_dependencies;
 pub mod addon_json;
 pub mod addon_load;
 pub mod addon_resolve;
+pub mod group_addon_bans;
+pub mod group_wire_addon;
+pub mod group_wire_remote_addon;
 pub mod order;
 pub mod scope_addon;
 pub mod validate_addon_zod;
@@ -158,7 +161,11 @@ impl Registry {
 }
 
 /// Registers every ported visitor group. Empty: no group is ported yet.
-pub fn register_groups(_r: &mut Registry) {}
+pub fn register_groups(r: &mut Registry) {
+    group_addon_bans::register(r);
+    group_wire_addon::register(r);
+    group_wire_remote_addon::register(r);
+}
 
 /// The registry with every ported group registered.
 pub fn default_registry() -> Registry {
