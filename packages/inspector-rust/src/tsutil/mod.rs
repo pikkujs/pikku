@@ -5,10 +5,6 @@
 //! readers and JS number formatting), [`print`] (print.go), [`sortjs`],
 //! [`types`] (types.go / ptr.go). `walk.go` lives in this file.
 //!
-//! STUBS owned by another porter (they replace the files on merge, keep the
-//! signatures): [`typeorder`] (`UnionTypesInIdOrder`, `ReorderTypeNode`) and
-//! [`unionorder`] (`TypeToString`, `TypeToStringAt`).
-
 use tsrs_ast::Node;
 use tsrs_core::P;
 

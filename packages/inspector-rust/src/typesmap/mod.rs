@@ -4,10 +4,8 @@
 //! matches).
 //!
 //! Status: the data structure, its serialisation (`serializeTypesMap`'s
-//! `{ map, customTypes }`) and `get_type_meta` are ported. NOT ported yet:
-//! `CanonicalTypeString` (Go `typesmap/canonical.go`); [`canonical_type_string`]
-//! is the identity until it is, so `add_custom_type` stores the type text as
-//! given.
+//! `{ map, customTypes }`), `get_type_meta` and [`canonical_type_string`]
+//! (Go `typesmap/canonical.go`) are ported.
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -45,10 +43,8 @@ pub struct TypesMap {
     custom_types: Map<CustomType>,
 }
 
-/// TODO(port): `typesmap/canonical.go` `CanonicalTypeString`.
-pub fn canonical_type_string(ty: &str) -> String {
-    ty.to_string()
-}
+mod canonical;
+pub use canonical::canonical_type_string;
 
 const PRIMITIVES: [&str; 8] = ["string", "number", "boolean", "null", "undefined", "void", "unknown", "never"];
 

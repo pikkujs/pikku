@@ -57,7 +57,7 @@ pub fn is_pikku_func(name: &str) -> bool {
 impl Context<'_> {
     /// `isNamespaceReceiver` is true for `mw` in `mw.addTagMiddleware`, when
     /// `mw` is a namespace import or otherwise names a module.
-    fn is_namespace_receiver(&mut self, receiver: P<Node>) -> bool {
+    pub(crate) fn is_namespace_receiver(&mut self, receiver: P<Node>) -> bool {
         if !ast::is_identifier(receiver) {
             return false;
         }
@@ -145,7 +145,7 @@ impl Context<'_> {
     }
 }
 
-fn is_inside_declaration_of(node: P<Node>, is_known: &dyn Fn(&str) -> bool) -> bool {
+pub(crate) fn is_inside_declaration_of(node: P<Node>, is_known: &dyn Fn(&str) -> bool) -> bool {
     let mut cur = node.parent();
     while let Some(c) = cur {
         if (ast::is_variable_declaration(c) || ast::is_function_declaration(c))

@@ -25,8 +25,16 @@ use crate::diag::Logger;
 use crate::state::State;
 use crate::typesmap::TypesMap;
 
+pub mod addon_dependencies;
+pub mod addon_json;
+pub mod addon_load;
+pub mod addon_resolve;
 pub mod boundary;
 pub mod group_agent;
+pub mod check_classification;
+pub mod check_disabled;
+pub mod check_indirect;
+pub mod group_addon_bans;
 pub mod group_approval_description;
 pub mod group_analytics;
 pub mod group_define_contributors;
@@ -57,7 +65,10 @@ pub mod group_trigger;
 pub mod group_virtual_users;
 pub mod resolve_versions;
 pub mod service_types;
+pub mod group_wire_addon;
+pub mod group_wire_remote_addon;
 pub mod order;
+pub mod scope_addon;
 pub mod usage_sweeps;
 pub mod util_callee;
 pub mod util_channel_cli;
@@ -71,6 +82,8 @@ pub mod util_wire_meta;
 pub mod workflow_dsl;
 pub mod workflow_dsl_patterns;
 pub mod workflow_jsobj;
+pub mod validate;
+pub mod validate_addon_zod;
 
 /// Go `visit.Abort`: a TS `throw` inside a visitor. It ends the inspection with
 /// an error; [`abort`] raises it and `analyze::run` turns it into a
@@ -226,6 +239,11 @@ impl Registry {
 
 /// Registers every ported visitor group. Empty: no group is ported yet.
 pub fn register_groups(r: &mut Registry) {
+    check_disabled::register(r);
+    check_indirect::register(r);
+    group_addon_bans::register(r);
+    group_wire_addon::register(r);
+    group_wire_remote_addon::register(r);
     group_setup_core::register(r);
     group_approval_description::register(r);
     group_rpc_invocations::register(r);
@@ -282,11 +300,7 @@ impl Context<'_> {
         self.source_file = None;
     }
 
-    /// Go `LoadAddonFunctionsMeta` (addon_load.go). Not ported.
-    pub fn load_addon_functions_meta(&mut self) {}
 
-    /// Go `CheckDisabledWorkflowSteps` (check_disabled.go). Not ported.
-    pub fn check_disabled_workflow_steps(&mut self) {}
 }
 
 #[cfg(test)]

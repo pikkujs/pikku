@@ -26,6 +26,7 @@ pub mod helpers;
 pub mod jsjson;
 pub mod program;
 pub mod protocol;
+pub mod remotesdk;
 pub mod schemas;
 pub mod sourcescan;
 pub mod surface;
