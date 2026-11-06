@@ -28,7 +28,7 @@ Runs name the agent by its export (`shopAssistant`), not its `name` field (`shop
 
 `pikku dev` supplies `agentStorage` itself. Nothing to wire and no package to read. `run.result` is the agent's text, or its `output` shape when it has one. `ref()` takes the name from `pikku meta functions`.
 
-`model` is an alias from `models` in pikku.config.json, named for its job (`fast`, `vision`). `pikku doc models` has the shape. If none fits, add one there and stop looking: read `pikku.config.json` once, not services or `.env`. The runner is already wired. Never write a `provider/model` string in an agent, and tell the owner which model you chose.
+`model` is an alias from `models` in pikku.config.json, named for its job (`fast`, `vision`). `pikku doc models` has the shape. If none fits, add one there and stop looking: take them from the project map if you have one, otherwise read `pikku.config.json` once, never services or `.env`. The runner is already wired. Never write a `provider/model` string in an agent, and tell the owner which model you chose.
 
 "Remember what we talked about" means the app's helper keeps its conversations: `memory` on the agent and a stable `threadId` and `resourceId`. No helper yet means build one. Never a table or localStorage of your own.
 
