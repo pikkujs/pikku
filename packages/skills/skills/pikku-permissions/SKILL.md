@@ -40,6 +40,8 @@ export const deleteBook = pikkuFunc({
 
 A permission that returns false answers 403 with `ForbiddenError` from `#pikku/error`. Tests expect that.
 
+When even knowing the record exists would leak, as with a patient, the permission throws `NotFoundError` and the caller gets a 404. It is still the permission's job, never the body's.
+
 ## `auth: true` IS NOT OWNERSHIP
 
 `auth: true` means "somebody is signed in", not "this row is theirs". With nothing else, ANY signed-in user can delete ANY other user's row by passing its id. Every function that takes a row id needs BOTH: `auth: true` for the session and a `permissions` entry for ownership.
