@@ -12,6 +12,7 @@
  *      node_modules kept), so the CLI starts from the committed tree: scaffold files
  *      (`pikku/`, `.pikku/`, ...) from an earlier run would otherwise leak into the
  *      next engine's source list.
+ *      The Go schema cache under node_modules/.cache/pikku is removed too.
  *   2. Run `node <cli> all` in the project dir with PIKKU_INSPECTOR_GO_BIN (and _RS_BIN)
  *      pointing at capture-wrapper.sh, which tees every request to
  *      <out>/captured/<project>/<engine>/ and execs the real binary. The generated tree
@@ -93,6 +94,11 @@ const clean = (dirs: string[]) => {
     git(['checkout', '--', rel])
     git(['clean', '-fdXq', '--', rel])
     git(['clean', '-fdq', '-e', 'node_modules', '--', rel])
+    // Go keeps TS schemas in <project>/node_modules/.cache/pikku (the CLI passes it as
+    // schemaConfig.cacheDir). node_modules survives the clean, and a stale entry makes
+    // Go answer with schemas computed under another state of the project, which
+    // Rust (no cache) cannot match; start every engine from an empty cache.
+    rmSync(join(d, 'node_modules/.cache/pikku'), { recursive: true, force: true })
   }
 }
 
