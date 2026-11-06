@@ -4,7 +4,7 @@ import { rm } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import chokidar from 'chokidar'
 import { pikkuDevReloader } from '@pikku/core/dev'
-import { createTypecheckClient } from '../../utils/warm-typecheck.js'
+import { typecheckProjects } from '../../utils/tsc-check.js'
 import {
   checkProjects,
   compileMessages,
@@ -51,7 +51,6 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
       `• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`
     )
 
-    const typechecker = createTypecheckClient(config.rootDir)
     const loop = createWatchLoop({
       statusFile: watchStatusFile(resolve(config.rootDir, config.outDir)),
       dirs,
@@ -79,7 +78,10 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
         }),
       messages: () => compileMessages(dirs.typecheckDirs),
       routes: () => generateRouteTrees(dirs.typecheckDirs),
-      typecheck: () => typechecker.check(checkProjects(config.rootDir)),
+      typecheck: (signal) =>
+        typecheckProjects(checkProjects(config.rootDir), config.rootDir, {
+          signal,
+        }),
       onError: (message) => logger.error(message),
     })
 

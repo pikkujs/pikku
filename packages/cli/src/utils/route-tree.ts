@@ -2,7 +2,7 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { runScript } from './run-script.js'
-import type { CheckDiagnostic } from './warm-typecheck.js'
+import type { CheckDiagnostic } from './tsc-check.js'
 
 const ROUTE_SCRIPTS = ['routes', 'generate:routes']
 const FRAMEWORKS = ['react', 'solid', 'vue']
