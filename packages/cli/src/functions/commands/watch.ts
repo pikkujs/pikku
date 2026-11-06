@@ -1,3 +1,4 @@
+import { generateRouteTrees } from '../../utils/route-tree.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { rm } from 'node:fs/promises'
 import { resolve } from 'node:path'
@@ -76,6 +77,7 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
           })
         }),
       messages: () => compileMessages(dirs.typecheckDirs),
+      routes: () => generateRouteTrees(dirs.typecheckDirs),
       typecheck: () => typechecker.check(checkProjects(config.rootDir)),
       onError: (message) => logger.error(message),
     })

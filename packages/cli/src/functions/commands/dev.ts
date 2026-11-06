@@ -1,3 +1,4 @@
+import { generateRouteTrees } from '../../utils/route-tree.js'
 import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { rm } from 'node:fs/promises'
 import { join, resolve } from 'path'
@@ -605,6 +606,7 @@ export const dev = pikkuSessionlessFunc<
           debounceMs: 10,
           codegen: () => collectCodegenPass(regenerate),
           messages: () => compileMessages(dirs.typecheckDirs),
+          routes: () => generateRouteTrees(dirs.typecheckDirs),
           typecheck: () => typechecker.check(checkProjects(config.rootDir)),
           onError: (message) => logger.error(message),
         })

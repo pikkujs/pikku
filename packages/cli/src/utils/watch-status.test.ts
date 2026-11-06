@@ -207,3 +207,17 @@ describe('waiting for the watcher', () => {
     )
   })
 })
+
+test('the routes and their tree are their own kind of change', () => {
+  const dirs = {
+    codegenDirs: [],
+    typecheckDirs: ['/p/apps/web'],
+    routePaths: ['/p/apps/web/src/routes', '/p/apps/web/src/routeTree.gen.ts'],
+  }
+  assert.equal(classifyChange('/p/apps/web/src/routes/a.tsx', dirs), 'routes')
+  assert.equal(
+    classifyChange('/p/apps/web/src/routeTree.gen.ts', dirs),
+    'routes'
+  )
+  assert.equal(classifyChange('/p/apps/web/src/a.tsx', dirs), 'typecheck')
+})

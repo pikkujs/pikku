@@ -70,3 +70,7 @@ package, is not watched, and neither are the root `tsconfig.json` and
 ## Two runs at once
 
 Only one `pikku all` runs per output directory: a second one waits up to five minutes for the first, and takes over at once if the first has died.
+
+## Route trees
+
+`routeTree.gen.ts` is generated and gitignored, and normally only a running Vite writes it. So the watcher and the full run generate it before the type check, in a stage named `routes`, at startup and when anything under the routes directory changes. This applies to a frontend with a routes directory and TanStack Router tooling. A `routes` or `generate:routes` script wins; otherwise the project's own `@tanstack/router-generator` runs, honouring `tsr.config.json` and TanStack Start's footer. The output matches what the Vite plugin writes, and an unchanged tree is not rewritten, so a running `vite dev` sees nothing. Options passed to `tanstackStart({ router })` in `vite.config.ts` are not read: put them in `tsr.config.json`, or add a `routes` script.
