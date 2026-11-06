@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.202",
+  "version": "0.12.203",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -47,7 +47,7 @@
     "@pikku/deploy-standalone": "^0.12.29",
     "@pikku/fetch": "^0.12.13",
     "@pikku/inspector": "^0.12.114",
-    "@pikku/inspector-go": "^0.12.8",
+    "@pikku/inspector-go": "^0.12.9",
     "@pikku/knowledge": "^0.12.22",
     "@pikku/kysely": "^0.13.41",
     "@pikku/migrator-sql": "^0.12.10",
