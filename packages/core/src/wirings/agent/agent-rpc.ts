@@ -28,6 +28,7 @@ export const createAgentRPC = (
   const params = () => ({
     sessionService: options.sessionService,
     getCredential: wire.getCredential?.bind(wire),
+    trace: wire.trace,
   })
 
   const streamingChannel = (): AgentStreamChannel => {

@@ -1,5 +1,6 @@
 import { UnauthorizedError } from '../errors/errors.js'
 import { pikkuMiddleware } from './middleware-factories.js'
+import { adoptTraceparent } from '../trace.js'
 import {
   assertStrongKeyMaterial,
   decryptWithKeyMaterial,
@@ -23,7 +24,8 @@ const isMeshRpcPath = (path: string): boolean =>
  * mesh-RPC route. Once `PIKKU_MESH_SECRET` is set it requires a
  * `Bearer` JWT with audience `pikku-mesh`; a token bound to a function (`fn`)
  * is only accepted on that function's `/mesh/rpc/<fn>` path, and any session
- * it carries is decrypted with the secret and set on the wire.
+ * it carries is decrypted with the secret and set on the wire. A verified caller's
+ * `traceparent` is continued, so the trace survives the hop.
  *
  * Without the secret it lets non-mesh paths through and refuses
  * `/mesh/rpc/*`, so the mesh surface fails closed.
@@ -34,7 +36,8 @@ const isMeshRpcPath = (path: string): boolean =>
  * @throws {Error} When the secret is set but no JWT service is configured.
  */
 export const pikkuMeshAuthMiddleware = pikkuMiddleware(
-  async ({ secrets, jwt }, { http, setInitialSession }, next) => {
+  async ({ secrets, jwt }, wire, next) => {
+    const { http, setInitialSession } = wire
     if (!http?.request || !secrets) {
       return next()
     }
@@ -104,6 +107,9 @@ export const pikkuMeshAuthMiddleware = pikkuMiddleware(
         throw new UnauthorizedError()
       }
     }
+
+    // knowledge: decisions/security/inbound-traceparent-is-ignored-until-the-caller-is-authenticated.md
+    adoptTraceparent(wire, http.request.header('traceparent'))
 
     return next()
   }

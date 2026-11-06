@@ -24,6 +24,82 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### `x-request-id` is replaced by `traceparent`
+
+Pikku now uses W3C trace context. An HTTP request's `wire.traceId` is 32 lowercase hex, and `wire.trace` adds `spanId`, `parentSpanId` and `sampled`. `errorId` in error responses has the same format.
+
+- `x-request-id` is no longer read or sent, and `CF-Ray` no longer sets the trace.
+- `generateRequestId` is removed from the `fetch` and `fetchData` options. The `traceId` option accepts only 32 lowercase hex; anything else logs a warning and is ignored.
+- `DeploymentService.invoke` and `buildMeshHeaders` take a `traceparent` string as their last argument instead of a trace id.
+- An inbound `traceparent` on public HTTP is ignored unless you pass `trustInboundTraceparent: true`. Mesh calls keep their trace through `pikkuMeshAuthMiddleware`. A remote addon host needs the option to continue its consumer's trace.
+
+To find affected code, search for `x-request-id`, `generateRequestId`, `cf-ray` and custom `DeploymentService` implementations.
+
+### Jobs and workflow runs carry `traceparent`
+
+A job, a scheduled task and a workflow run now stay on the trace that started them. `wire.traceId` on those wires is 32 lowercase hex, not `q-<id>` or `cron-<id>`, and every wire has `wire.trace`.
+
+- `runQueueJob` no longer takes `traceId`; set `job.traceparent`. `runScheduledTask` takes `traceparent`.
+- `RemoteQueueJobData` and `RemoteScheduledJobData` take `traceparent` instead of `traceId`. A sender that used `traceId` as the job id must send `jobId` as well.
+- A custom `QueueService` must carry `JobOptions.traceparent` and set `QueueJob.traceparent`. A custom `SchedulerService` takes `traceparent` as the last argument of `scheduleRPC`.
+- BullMQ and pg-boss store a traced job as `{ __pikkuTraceparent, data }`. `job.data` is unchanged, and old jobs still parse. Code reading Redis or the pg-boss tables directly sees the wrapper.
+- `WorkflowRunWire` gains `traceparent`, and `createRun` sets it when the wire has none. No schema change: stores keep `wire` as it is.
+
+To find affected code, search for `traceId` passed to `runQueueJob`, `runScheduledTask`, or a remote job body, and for custom `QueueService` and `SchedulerService` implementations.
+
+### Every wire is traced, and channel RPC carries `traceparent`
+
+Channels, agent tools, MCP, CLI, triggers, webhook sources, gateways and `runRpc` now have a W3C `wire.traceId` and `wire.trace`. A wire that reaches `runPikkuFunc` without one becomes the root of a new trace.
+
+- `ChannelRPCRequest.traceId` is now `traceparent`. `createChannelRPCResponder` ignores it unless you pass `trustInboundTraceparent: true`, and a capability then gets it as a second argument, `{ traceparent }`.
+- `channelHandler.trace` is new. A custom channel handler that does not extend `PikkuAbstractChannelHandler` should accept it.
+- `schedulerService.scheduleRPC` and `webhookService.send` called from a function are stamped with its trace. `SendWebhookInput` gains `traceparent`.
+- `IncomingWebhookService.accept` takes `traceparent`, and `enqueue` takes it as a second argument. A subclass that overrides either must pass it on.
+- `dispatchWebhookSourceJob` takes the worker's wire as a second argument. Run `pikku` to regenerate the webhook source worker.
+- `runRpc` on Cloudflare workers takes `traceparent` as a third argument, and starts a new trace without one.
+- A serverless channel is one trace, like a local one. `Channel` gains `traceparent`: a custom `ChannelStore` must keep it in `addChannel` and return it from `getChannel`. The Kysely `channels` table gains a `traceparent` text column:
+
+  ```sql
+  ALTER TABLE channels ADD COLUMN traceparent TEXT;
+  ```
+
+
+To find affected code, search for `traceId` on a channel RPC frame, and for overrides of `accept` or `enqueue`.
+
+### A job's `pikkuUserId` reaches the worker on every adapter
+
+BullMQ, pg-boss and SQS dropped `JobOptions.pikkuUserId`, and the Azure and Cloudflare consumers ignored it. A job signed by `SignedQueueService` now runs as that user on all of them: the worker gets `wire.pikkuUserId` and the user's stored session where it had neither. Graph child runs and Cloudflare step workers keep the run's user the same way.
+
+Check a worker that relied on running with no session, and any `pikkuUserId` you pass today, since it now takes effect. A job that is unsigned, forged or signed for another queue or payload still runs as nobody.
+
+- BullMQ and pg-boss store the claim as `__pikkuUserId` in the payload envelope. Jobs already queued still parse.
+- `SQSQueueService` from `@pikku/lambda` now sends the job's data as the message body, where it sent `{ id, queueName, data, pikkuUserId }`. Workers used to receive that whole object as their data, so remove any code that unwraps it. Drain the queue before deploying.
+- `wrapJobTrace` takes `pikkuUserId` as a third argument, and `unwrapJobTrace` returns it.
+- `RemoteQueueJobData` gains `pikkuUserId`. Run `pikku` to regenerate the remote job schemas, which also stops `traceparent` being stripped from remote queue jobs and scheduled tasks.
+
+### Workflow runs are recovered after a restart
+
+`pikku dev` and `pikku serve` now sweep for work a dead process left behind, at startup and every 30s. A run that was left `running` by an earlier crash resumes on the next start.
+
+- A step caught in flight runs again, as a new attempt with the same `invocationId`. Make its side effects idempotent on `invocationId`.
+- A step that runs out of attempts this way fails with `WorkflowStepLeaseExpiredError`. That includes `retries: 0`, so such a step fails at the first restart that catches it in flight.
+- A sleep keeps its original deadline, and one that is overdue wakes at once.
+- Set `workflow.recovery: false` in your config to turn it off, or tune `intervalMs`, `stalledAfterMs` and `undispatchedAfterMs`.
+- Hosts that do not run `pikku serve` call `workflowService.startRecovery()` once the queue is consuming, or `recoverWorkflows()` from a scheduled task.
+- A custom `KyselyWorkflowService` subclass needs nothing. Any other store overrides `findScheduledSteps` to have its sleeps recovered.
+- `CoreConfig.workflow` is now `Partial<WorkflowServiceConfig>`. No schema change.
+
+### Inline workflow steps get one more attempt
+
+`retries: N` now means N+1 attempts everywhere, which is what a queued step always did. An inline step used to get N attempts, or one when `retries` was 0, so `retries: 1` never retried.
+
+- This covers steps in an inline run, compensation steps run inline, RPC steps that are not `workflowQueued`, and function steps (`workflow.do('Name', fn, options)`) in a queued run. Scenario steps with `retries` set are covered too.
+- `retries: 0` still means one attempt. Inline graph nodes already counted this way and do not change.
+- Defaults do not change, so a step that declares no retries gets one more attempt too: 6 instead of 5 with `DEFAULT_STEP_RETRIES`, or your `workflow.retries` config plus one for a function step.
+- A step that failed once on `retries: 1` may now succeed, and its side effects run one more time. Make them idempotent on `invocationId`, and lower `retries` by one wherever you counted on the old total.
+
+To find affected code, search for `retries:` in your workflows.
+
 ### `pikku verify` fails on an app function nothing uses
 
 An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked. Workflows are checked too: a workflow that is not wired, exposed or started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step) is reported.
@@ -104,7 +180,7 @@ types are `StudioManifest`, `StudioScreen`, `StudioComponentScreen`,
 
 | Before                          | After                                                                            |
 | ------------------------------- | -------------------------------------------------------------------------------- |
-| `defineScreens({ title, ... })` | `definePlugin({ title, screens })`                                                |
+| `defineScreens({ title, ... })` | `definePlugin({ title, screens })`                                               |
 | `title: 'Inbox'`                | `title: 'inbox__title'`, a key in `messages/{locale}.json`                       |
 | top-level `icon`                | removed; a screen's `nav.icon`                                                   |
 | `nav: true`                     | `nav: { area: 'rail' \| 'team' \| 'project' \| 'account', icon, order, badge? }` |

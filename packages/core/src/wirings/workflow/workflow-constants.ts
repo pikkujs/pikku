@@ -60,6 +60,13 @@ export const isMilestoneStepName = (stepName: string): boolean =>
 export const isRunSettled = (status: string): boolean =>
   WORKFLOW_TERMINAL_STATES.has(status)
 
+/**
+ * True for a run its own pass must no longer write an outcome for. That is a
+ * settled run, or one unwinding, which `cancelRun` moves there on its own.
+ */
+export const isRunStopped = (status: string): boolean =>
+  isRunSettled(status) || status === 'compensating'
+
 export const WORKFLOW_POLL_MIN_MS = 10
 
 export const WORKFLOW_POLL_FACTOR = 1.6
@@ -81,6 +88,18 @@ export const DEFAULT_UNDISPATCHED_STEP_MS = 30_000
 
 /** Steps re-driven per `relayUndispatchedSteps` call, so one tick is bounded. */
 export const DEFAULT_UNDISPATCHED_STEP_LIMIT = 100
+
+/** How far past its wake time a sleep sits before a sweep decides its timer is lost. */
+export const SLEEP_WAKE_GRACE_MS = 5_000
+
+/** `scheduled` steps read per query, so a sweep pages rather than loads them all. */
+export const SCHEDULED_STEP_PAGE_SIZE = 200
+
+/** How often a long-running host sweeps for lost work, after its startup pass. */
+export const DEFAULT_RECOVERY_INTERVAL_MS = 30_000
+
+/** Idle window `startRecovery` treats as stalled; the run's lease is what makes it safe. */
+export const DEFAULT_RECOVERY_STALLED_MS = 30_000
 
 /** First wait before a step already re-dispatched once is re-dispatched again. */
 export const REDISPATCH_BACKOFF_MS = 30_000

@@ -1,4 +1,9 @@
 import {
+  childTraceWire,
+  outgoingTraceparent,
+  tracedLogger,
+} from '../../trace.js'
+import {
   AddonNotUsedError,
   addonCallerOf,
   addonMayReach,
@@ -127,7 +132,7 @@ addError(RemoteAddonTimeoutError, {
 /** Headers a wiring's `headers` hook cannot set: the call's auth, trace and contract. */
 const RESERVED_REMOTE_HEADERS = new Set([
   'authorization',
-  'x-request-id',
+  'traceparent',
   REMOTE_CONTRACT_HEADER,
   'content-type',
   'accept',
@@ -358,6 +363,10 @@ export class ContextAwareRPCService {
     private packageName: string | null = null
   ) {}
 
+  public get traceparent(): string | undefined {
+    return outgoingTraceparent(this.wire)
+  }
+
   public async rpcExposed(funcName: string, data: any): Promise<any> {
     const addonCaller = addonCallerOf(this.wire)
     if (addonCaller && !addonMayReach(addonCaller, funcName)) {
@@ -442,9 +451,10 @@ export class ContextAwareRPCService {
     funcName: string,
     data: In
   ): Promise<Out> {
-    const updatedWire: PikkuRawWire = {
-      ...this.wire,
-    }
+    // A local function is a span of its own. Across a boundary the callee's
+    // parent must be a span that exists, so that is the caller's.
+    const updatedWire: PikkuRawWire = { ...this.wire }
+    const localWire: PikkuRawWire = { ...updatedWire, ...this.callSpan() }
 
     if (funcName.includes(':')) {
       funcName = this.mapUsedAddon(funcName)
@@ -453,7 +463,7 @@ export class ContextAwareRPCService {
         return await this.executeAddonFunction<In, Out>(
           addonCall,
           data,
-          updatedWire
+          addonCall.kind === 'remote' ? updatedWire : localWire
         )
       }
     }
@@ -469,7 +479,7 @@ export class ContextAwareRPCService {
             funcName,
             data,
             session,
-            this.wire.traceId
+            outgoingTraceparent(this.wire)
           ) as Promise<Out>
         }
       }
@@ -486,10 +496,20 @@ export class ContextAwareRPCService {
       auth: this.options.requiresAuth,
       singletonServices: this.services,
       data: () => data,
-      wire: updatedWire,
+      wire: localWire,
       packageName: resolved.packageName,
       addonInstance,
     })
+  }
+
+  /** A call runs as a span of its own under the caller's. */
+  private callSpan() {
+    return this.wire.trace ? childTraceWire(this.wire.trace) : {}
+  }
+
+  /** The services' logger, on the trace of the wire this service belongs to. */
+  private get logger() {
+    return tracedLogger(this.services.logger, this.wire.traceId)
   }
 
   private mapUsedAddon(funcName: string): string {
@@ -580,7 +600,8 @@ export class ContextAwareRPCService {
         addonCall.namespace,
         addonCall.fnName,
         data,
-        addonCall.addonConfig
+        addonCall.addonConfig,
+        outgoingTraceparent(wire)
       )
     }
 
@@ -604,7 +625,8 @@ export class ContextAwareRPCService {
     namespace: string,
     fnName: string,
     data: In,
-    cfg: ResolvedFunction['addonConfig']
+    cfg: ResolvedFunction['addonConfig'],
+    traceparent: string | undefined
   ): Promise<Out> {
     const serverUrl =
       typeof cfg.serverUrl === 'function'
@@ -653,8 +675,8 @@ export class ContextAwareRPCService {
     if (token) {
       headers.authorization = `Bearer ${token}`
     }
-    if (this.wire.traceId) {
-      headers['x-request-id'] = this.wire.traceId
+    if (traceparent) {
+      headers.traceparent = traceparent
     }
 
     const timeoutMs = cfg.remoteTimeoutMs ?? DEFAULT_REMOTE_ADDON_TIMEOUT_MS
@@ -673,7 +695,7 @@ export class ContextAwareRPCService {
       if ((e as Error | undefined)?.name === 'TimeoutError') {
         throw new RemoteAddonTimeoutError(namespace, remoteFn, timeoutMs)
       }
-      this.services.logger.error(
+      this.logger.error(
         `Remote addon '${namespace}:${remoteFn}' could not be reached: ${e instanceof Error ? e.message : e}`
       )
       throw new RemoteAddonFailedError(namespace, remoteFn)
@@ -684,7 +706,7 @@ export class ContextAwareRPCService {
         res,
         namespace,
         remoteFn,
-        this.services.logger
+        this.logger
       )
     }
 
@@ -698,7 +720,7 @@ export class ContextAwareRPCService {
     try {
       return JSON.parse(text) as Out
     } catch {
-      this.services.logger.error(
+      this.logger.error(
         `Remote addon '${namespace}:${remoteFn}' answered ${res.status} with a body that is not JSON`
       )
       throw new RemoteAddonFailedError(namespace, remoteFn)
@@ -741,7 +763,7 @@ export class ContextAwareRPCService {
           rpcName,
           data,
           session,
-          mergedWire.traceId
+          outgoingTraceparent(mergedWire)
         ) as Promise<Out>
       }
       throw e
@@ -768,7 +790,12 @@ export class ContextAwareRPCService {
     input: In,
     options?: {
       startNode?: string
-      wire?: { type: string; id?: string; parentRunId?: string }
+      wire?: {
+        type: string
+        id?: string
+        parentRunId?: string
+        traceparent?: string
+      }
     }
   ): Promise<{ runId: string }> {
     if (!this.services.workflowService) {
@@ -778,11 +805,17 @@ export class ContextAwareRPCService {
       workflowName = this.mapUsedAddon(workflowName)
     }
     const parentRunId = this.wire.workflowStep?.runId ?? this.wire.graph?.runId
-    const wire = options?.wire ?? {
-      type: this.wire.wireType ?? 'unknown',
-      id: this.wire.wireId,
-      ...(parentRunId ? { parentRunId } : {}),
-      ...(this.wire.pikkuUserId ? { pikkuUserId: this.wire.pikkuUserId } : {}),
+    const traceparent = options?.wire?.traceparent ?? this.traceparent
+    const wire = {
+      ...(options?.wire ?? {
+        type: this.wire.wireType ?? 'unknown',
+        id: this.wire.wireId,
+        ...(parentRunId ? { parentRunId } : {}),
+        ...(this.wire.pikkuUserId
+          ? { pikkuUserId: this.wire.pikkuUserId }
+          : {}),
+      }),
+      ...(traceparent ? { traceparent } : {}),
     }
     return this.services.workflowService.startWorkflow(
       workflowName,
@@ -830,7 +863,7 @@ export class ContextAwareRPCService {
       funcName,
       data,
       session,
-      this.wire.traceId
+      outgoingTraceparent(this.wire)
     ) as Promise<Out>
   }
 }
@@ -912,6 +945,10 @@ class ContextRPCView {
     this.exposed = serviceRPC.rpcExposed.bind(serviceRPC)
     this.startWorkflow = serviceRPC.startWorkflow.bind(serviceRPC)
     this.rpcWithWire = serviceRPC.rpcWithWire.bind(serviceRPC)
+  }
+
+  get traceparent() {
+    return this.serviceRPC.traceparent
   }
 
   get agent() {

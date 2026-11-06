@@ -36,17 +36,19 @@ export class KyselyIncomingWebhookService extends IncomingWebhookService {
   public async accept({
     source,
     events,
+    traceparent,
   }: {
     source: string
     request: WebhookRequest
     events: TriggerEvent[]
+    traceparent?: string
   }): Promise<number> {
     let accepted = 0
     for (const event of events) {
       const receiptId = await this.record(source, event)
       if (!receiptId) continue
       try {
-        await this.enqueue({ source, event, receiptId })
+        await this.enqueue({ source, event, receiptId }, traceparent)
       } catch (error) {
         // Without the receipt the provider's retry is accepted again rather
         // than dropped as a duplicate of an event that was never queued.

@@ -5,10 +5,10 @@
 program, runs the visit sweeps, resolves versions, generates schemas and runs
 finalize, returning the finalized state (`finalized: true`).
 
-The CLI uses it when the engine is `native`: `inspector: 'native'` in
-pikku.config.json, `--inspector native` or `PIKKU_INSPECTOR=native`. The
-TypeScript inspector stays the default until TypeScript 7 ships a compiler
-API. See
+The CLI uses it by default: `native` is `DEFAULT_INSPECTOR_ENGINE` and is
+overridden by `--inspector`, `PIKKU_INSPECTOR` or `inspector` in
+pikku.config.json, in that order. It falls back to `typescript` only when no
+binary exists for the platform. See
 `knowledge/decisions/both-engines-stay-behind-a-switch-until-typescript-7.md`.
 
 The TS wrapper and the `parity/` harness live outside the Go tree; the engine
@@ -90,6 +90,7 @@ and answers `{"id","result"|"error"}` per line.
 6. Run the parity commands below.
 
 Rules that bite:
+
 - Copy every log/diagnostic message from the TS source verbatim. The parity
   diff compares diagnostics as a multiset.
 - Registration calls must stay detectable statically: match on the callee
@@ -97,28 +98,29 @@ Rules that bite:
 
 ## Helper inventory
 
-| Go | TS |
-|---|---|
-| `tsutil.PrintNode` | `node.getText()` / printer, with Strada's `(x!).y` printing |
-| `tsutil.GetPropertyValue`, `GetArrayPropertyValue`, `FindPropertyAssignment`, `FoldStaticString` | `utils/get-property-value.ts`, `extract-node-value.ts` |
-| `tsutil.UnwrapAs`, `UnwrapNonNullParens`, `IsRpcExpr` | inline unwrapping in add-rpc-invocations / add-functions |
-| `tsutil.Walk`, `WalkSelf`, `CollectInvokedRpcNames`, `CollectStartedWorkflows` | `ts.forEachChild` recursion |
-| `tsutil.PathParams` | `pathToRegexp(route).keys` (path-to-regexp 8.4 parse + flatten, same error text) |
-| `tsutil.RouteMatchesPattern` | `utils/middleware.ts routeMatchesPattern` |
-| `tsutil.FuncIdToTypeName`, `FormatVersionedId`, `UTF16Offset` | `extract-function-name.ts`, `@pikku/core` versioning, JS string offsets |
-| `tsutil.NullifyType`, `IsPrimitive`, `IsVoidLikeType`, `IsLibFile`, `SymbolName` | type helpers in add-functions / resolve-function-types |
-| `Context.extractFunctionName`, `getCommonWireMetaData`, `getPropertyAssignmentInitializer`, `resolveFunctionDeclaration`, `extractFunctionNode` | `extract-function-name.ts`, `get-property-value.ts`, `extract-function-node.ts` |
-| `Context.resolveMiddleware`, `resolveHTTPMiddleware`, `resolveChannelMiddleware`, `resolveAgentMiddleware`, `resolvePermissions`, `refId` | `utils/middleware.ts`, `utils/permissions.ts`, `resolve-ref-contract.ts` |
-| `Context.typeToString`, `resolveTypeImports`, `getNamesAndTypes`, `unwrapPromise*`, `resolveTypeName` | `add-functions.ts` type resolution |
-| `Context.resolveSchemaRef`, `detectSchemaVendor*` | `detect-schema-vendor.ts` and the schemaLookup branch of add-functions |
-| `visit.ParseVersionedId`, `Context.ResolveLatestVersions` | `@pikku/core parseVersionedId`, `utils/resolve-versions.ts` |
-| `typesmap.TypesMap` | `types-map.ts` |
-| `jsjson.Marshal` | `JSON.stringify` |
+| Go                                                                                                                                              | TS                                                                               |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `tsutil.PrintNode`                                                                                                                              | `node.getText()` / printer, with Strada's `(x!).y` printing                      |
+| `tsutil.GetPropertyValue`, `GetArrayPropertyValue`, `FindPropertyAssignment`, `FoldStaticString`                                                | `utils/get-property-value.ts`, `extract-node-value.ts`                           |
+| `tsutil.UnwrapAs`, `UnwrapNonNullParens`, `IsRpcExpr`                                                                                           | inline unwrapping in add-rpc-invocations / add-functions                         |
+| `tsutil.Walk`, `WalkSelf`, `CollectInvokedRpcNames`, `CollectStartedWorkflows`                                                                  | `ts.forEachChild` recursion                                                      |
+| `tsutil.PathParams`                                                                                                                             | `pathToRegexp(route).keys` (path-to-regexp 8.4 parse + flatten, same error text) |
+| `tsutil.RouteMatchesPattern`                                                                                                                    | `utils/middleware.ts routeMatchesPattern`                                        |
+| `tsutil.FuncIdToTypeName`, `FormatVersionedId`, `UTF16Offset`                                                                                   | `extract-function-name.ts`, `@pikku/core` versioning, JS string offsets          |
+| `tsutil.NullifyType`, `IsPrimitive`, `IsVoidLikeType`, `IsLibFile`, `SymbolName`                                                                | type helpers in add-functions / resolve-function-types                           |
+| `Context.extractFunctionName`, `getCommonWireMetaData`, `getPropertyAssignmentInitializer`, `resolveFunctionDeclaration`, `extractFunctionNode` | `extract-function-name.ts`, `get-property-value.ts`, `extract-function-node.ts`  |
+| `Context.resolveMiddleware`, `resolveHTTPMiddleware`, `resolveChannelMiddleware`, `resolveAgentMiddleware`, `resolvePermissions`, `refId`       | `utils/middleware.ts`, `utils/permissions.ts`, `resolve-ref-contract.ts`         |
+| `Context.typeToString`, `resolveTypeImports`, `getNamesAndTypes`, `unwrapPromise*`, `resolveTypeName`                                           | `add-functions.ts` type resolution                                               |
+| `Context.resolveSchemaRef`, `detectSchemaVendor*`                                                                                               | `detect-schema-vendor.ts` and the schemaLookup branch of add-functions           |
+| `visit.ParseVersionedId`, `Context.ResolveLatestVersions`                                                                                       | `@pikku/core parseVersionedId`, `utils/resolve-versions.ts`                      |
+| `typesmap.TypesMap`                                                                                                                             | `types-map.ts`                                                                   |
+| `jsjson.Marshal`                                                                                                                                | `JSON.stringify`                                                                 |
 
 ## Parity
 
 The ported sections must match exactly on templates/online-shop and
 recipes/functions:
+
 - functions (meta, files, typesMap)
 - http
 - queueWorkers
@@ -140,6 +142,7 @@ bench/bench.sh ../../templates/online-shop $B/pikku-inspect 3 $B/bench [--schema
 ```
 
 Notes on the comparison:
+
 - `compare.py` reports an entry that differs only in token order as
   "order-only".
 - For a ported section, no difference is acceptable, order-only included:
@@ -150,15 +153,15 @@ Notes on the comparison:
 
 Current status (with schemas):
 
-| section | online-shop | recipes/functions |
-|---|---|---|
-| functions.meta / files | OK | OK |
-| functions.typesMap | OK | OK |
-| http.*, queueWorkers.* | OK | OK |
-| import maps, factories, wireServicesMeta, coreTypeProperties, secrets, variables | OK | OK |
-| schemaLookup | OK | OK |
-| agents, scorers, mcpEndpoints | OK | OK |
-| schemas | OK | OK |
+| section                                                                          | online-shop | recipes/functions |
+| -------------------------------------------------------------------------------- | ----------- | ----------------- |
+| functions.meta / files                                                           | OK          | OK                |
+| functions.typesMap                                                               | OK          | OK                |
+| http._, queueWorkers._                                                           | OK          | OK                |
+| import maps, factories, wireServicesMeta, coreTypeProperties, secrets, variables | OK          | OK                |
+| schemaLookup                                                                     | OK          | OK                |
+| agents, scorers, mcpEndpoints                                                    | OK          | OK                |
+| schemas                                                                          | OK          | OK                |
 
 ## typescript-go differences
 
@@ -176,7 +179,7 @@ Each of these was found by a parity diff. Each is handled where noted.
   `tsutil.UTF16Offset`.
 - **typeToString flags.** `checker.TypeToString` defaults differ from TS's
   `checker.typeToString(t)`. Go calls `tsutil.TypeToString(c, t,
-  TypeFormatFlagsNoTruncation)` (`Context.typeToString`). Change it there
+TypeFormatFlagsNoTruncation)` (`Context.typeToString`). Change it there
   only, never per call site.
 - **Lib paths.** Default lib files live at `bundled:///libs/lib.*.d.ts`, not
   `node_modules/typescript/lib`. `tsutil.IsLibFile` recognises both.
@@ -198,8 +201,8 @@ Each of these was found by a parity diff. Each is handled where noted.
   - Ids are creation order, so Go must make the checker calls TS makes, when
     TS makes them. The DSL workflow extractor asks for each step output's
     type for that reason alone (`dslCtx.touchType`).
-  Strada's order is itself only as stable as its check order: Node and Bun
-  runs of the TS reference can differ where readdir order changes it.
+    Strada's order is itself only as stable as its check order: Node and Bun
+    runs of the TS reference can differ where readdir order changes it.
 - **Inherited property order.** `GetPropertiesOfType` on an interface that
   extends another lists inherited members first; TS lists own members first.
   `coreTypeProperties` is therefore sorted on both sides. Its only consumer
@@ -212,6 +215,7 @@ Each of these was found by a parity diff. Each is handled where noted.
 
   So far this has added no state. Watch for it when porting a group that
   matches generated code.
+
 - **JSON.** Go's encoder escapes `<>&` and U+2028/9 and formats numbers
   differently from `JSON.stringify`. Integer-like keys of a JS object come
   first in ascending order. `internal/jsjson` and `state.Record` reproduce
@@ -231,6 +235,7 @@ read it.
 ## Schema generation
 
 `schemas.GenerateAll` ports `schema-generator.ts`:
+
 - **Program.** It builds a second program with the project's full tsconfig
   options, rooted at a virtual `__pikku_virtual_types__.ts` that is served from
   memory and imports every type to generate. That program shares the
@@ -242,6 +247,7 @@ read it.
   3. `schemasFromTypes`
 
   Primitives are skipped.
+
 - **Zod first.** Vendor (Zod) schemas from `schemaLookup` are converted first,
   through `VendorSchemaConverter`. The default is `zodjs.Converter`, which needs
   no Node: esbuild bundles the modules declaring the schemas with the project's
@@ -267,16 +273,17 @@ read it.
 
 Parity against TS: online-shop 235/235 keys (230 byte-equal), functions 96/96
 (95 byte-equal). The byte differences are:
+
 - `definitions` key order (vega sorts)
 - `additionalProperties` placement
 - some vega error wording
 
 Timing for the TS-type part:
 
-| project | TS | Go cold | Go warm |
-|---|---|---|---|
-| online-shop | 510 ms | 107 ms | 71 ms |
-| functions | 238 ms | 179 ms | 126 ms |
+| project     | TS     | Go cold | Go warm |
+| ----------- | ------ | ------- | ------- |
+| online-shop | 510 ms | 107 ms  | 71 ms   |
+| functions   | 238 ms | 179 ms  | 126 ms  |
 
 The Zod conversion in QuickJS takes about 100 ms on field-service (81 schemas,
 19 files) once wazero's compiled QuickJS is cached in `<cacheDir>/quickjs`,

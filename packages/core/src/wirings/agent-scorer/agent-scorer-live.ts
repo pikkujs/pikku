@@ -14,8 +14,15 @@ import { SCORER_LANE_QUEUES, type ScorerInput } from './agent-scorer.types.js'
 export const scoreFinishedRun = async (
   run: ScorerInput,
   services: Pick<CoreSingletonServices, 'logger'> & {
-    queueService?: { add: (queueName: string, data: unknown) => Promise<any> }
-  }
+    queueService?: {
+      add: (
+        queueName: string,
+        data: unknown,
+        options?: { traceparent?: string }
+      ) => Promise<any>
+    }
+  },
+  traceparent?: string
 ): Promise<void> => {
   const scorers = scorersForAgent(run.agentName, services.logger).filter(
     // A reference-based judge grades against an answer key, and live traffic
@@ -39,12 +46,16 @@ export const scoreFinishedRun = async (
   await Promise.all(
     sampled.map(async (scorer) => {
       try {
-        await services.queueService!.add(SCORER_LANE_QUEUES[scorer.lane], {
-          ...run,
-          scorerName: scorer.name,
-          // No reference: a live run has no answer key.
-          reference: undefined,
-        })
+        await services.queueService!.add(
+          SCORER_LANE_QUEUES[scorer.lane],
+          {
+            ...run,
+            scorerName: scorer.name,
+            // No reference: a live run has no answer key.
+            reference: undefined,
+          },
+          traceparent ? { traceparent } : undefined
+        )
       } catch (error) {
         services.logger?.error(
           `[pikku] Failed to enqueue the '${scorer.name}' grade of run ${run.runId}`,

@@ -34,8 +34,12 @@ type Options struct {
 	SetupOnly bool
 	// AllowComplexWorkflows is options.allow.complexWorkflows.
 	AllowComplexWorkflows bool
-	Types                 *Types
-	IsAddon               bool
+	// AllowPermissionsInBody is options.allow.permissionsInBody.
+	AllowPermissionsInBody bool
+	// ClassificationCheck is options.classificationCheck (`pikku all --security`).
+	ClassificationCheck bool
+	Types               *Types
+	IsAddon             bool
 }
 
 // Context is what every visitor receives: the TS visitors' (logger, checker,

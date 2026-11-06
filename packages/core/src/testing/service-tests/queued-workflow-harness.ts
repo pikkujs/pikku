@@ -28,11 +28,17 @@ export class QueuedWorkflowHarness {
   recovering: Array<{ rpc: string; from: any }> = []
   queue: Job[] = []
   jobsRun: Array<{ queue: string; step?: string }> = []
+  /** The `traceparent` of every job added, in order. */
+  jobTraceparents: Array<string | undefined> = []
+  /** The wire trace of every step and compensation invoked, in order. */
+  traces: Array<{ rpc: string; trace: any }> = []
   ws: PikkuWorkflowService
   /** Return true to drop the job instead of running it, simulating a worker that never ran. */
   dropWhen?: (job: Job) => boolean
   /** Make `queue.add` throw for a job, simulating the broker being unreachable. */
   rejectAddWhen?: (queue: string, data: any) => boolean
+  /** Carries a job in an adapter's wire format, as it would reach a worker. */
+  transport?: (data: any, options?: any) => { data: any; traceparent?: string }
 
   constructor(service: PikkuWorkflowService) {
     resetPikkuState()
@@ -42,7 +48,16 @@ export class QueuedWorkflowHarness {
         if (this.rejectAddWhen?.(queue, data)) {
           throw new Error('broker unreachable')
         }
-        this.queue.push({ queue, data, attempts: options?.attempts ?? 1 })
+        const carried = this.transport?.(data, options) ?? {
+          data,
+          traceparent: options?.traceparent,
+        }
+        this.jobTraceparents.push(carried.traceparent)
+        this.queue.push({
+          queue,
+          data: carried.data,
+          attempts: options?.attempts ?? 1,
+        })
       },
     }
     pikkuState(null, 'package', 'singletonServices', {
@@ -54,6 +69,7 @@ export class QueuedWorkflowHarness {
 
   readonly rpc = {
     rpcWithWire: async (rpcName: string, data: any, wire: any) => {
+      this.traces.push({ rpc: rpcName, trace: wire.trace })
       const isCompensation = rpcName.endsWith(':compensate')
       const base = isCompensation
         ? rpcName.slice(0, -':compensate'.length)
@@ -122,12 +138,18 @@ export class QueuedWorkflowHarness {
     } as never
   }
 
-  async start(name: string, input: any = {}): Promise<string> {
+  async start(
+    name: string,
+    input: any = {},
+    wire: { type: string; traceparent?: string } = { type: 'test' },
+    options?: { inline?: boolean }
+  ): Promise<string> {
     const { runId } = await this.ws.startWorkflow(
       name,
       input,
-      { type: 'test' },
-      this.rpc as never
+      wire,
+      this.rpc as never,
+      options
     )
     await this.pump()
     return runId

@@ -23,6 +23,7 @@ export class KyselyChannelStore extends ChannelStore {
     channelId,
     channelName,
     openingData,
+    traceparent,
   }: Channel): Promise<void> {
     await this.db
       .insertInto('channels')
@@ -30,6 +31,7 @@ export class KyselyChannelStore extends ChannelStore {
         channelId: channelId,
         channelName: channelName,
         openingData: JSON.stringify(openingData || {}),
+        traceparent: traceparent ?? null,
       })
       .execute()
   }
@@ -61,7 +63,13 @@ export class KyselyChannelStore extends ChannelStore {
   ): Promise<Channel & { pikkuUserId?: string }> {
     const row = await this.db
       .selectFrom('channels')
-      .select(['channelId', 'channelName', 'openingData', 'pikkuUserId'])
+      .select([
+        'channelId',
+        'channelName',
+        'openingData',
+        'traceparent',
+        'pikkuUserId',
+      ])
       .where('channelId', '=', channelId)
       .executeTakeFirst()
 
@@ -73,6 +81,7 @@ export class KyselyChannelStore extends ChannelStore {
       channelId: row.channelId,
       channelName: row.channelName,
       openingData: parseJson(row.openingData) ?? {},
+      traceparent: row.traceparent ?? undefined,
       pikkuUserId: row.pikkuUserId ?? undefined,
     }
   }

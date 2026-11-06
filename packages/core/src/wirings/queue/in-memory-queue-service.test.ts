@@ -2,7 +2,7 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { InMemoryQueueService } from './in-memory-queue-service.js'
-import { wireQueueWorker } from './queue-runner.js'
+import { QueueJobDiscardedError, wireQueueWorker } from './queue-runner.js'
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 
 beforeEach(() => {
@@ -158,6 +158,28 @@ describe('InMemoryQueueService retry', () => {
 
     await new Promise((r) => setTimeout(r, 150))
     assert.equal(calls.count, 1, 'a job without attempts runs exactly once')
+  })
+})
+
+describe('InMemoryQueueService discard', () => {
+  test('a job its worker discarded ends there, and not as a failure', async () => {
+    const calls = registerWorker('discarded', () => {
+      throw new QueueJobDiscardedError('job', 'not wanted')
+    })
+    const queue = new InMemoryQueueService()
+    await queue.add(
+      'discarded',
+      {},
+      { attempts: 3, backoff: { type: 'fixed', delay: 1 } }
+    )
+
+    assert.ok(await waitUntil(() => calls.count >= 1))
+    await new Promise((r) => setTimeout(r, 50))
+    assert.equal(calls.count, 1)
+    const { counts, recent } = await queue.inspect('discarded')
+    assert.equal(counts.completed, 1)
+    assert.equal(counts.failed, 0)
+    assert.equal(recent[0]!.error, null)
   })
 })
 

@@ -35,6 +35,11 @@ import type {
   WebhookVerify,
 } from './webhook-source.types.js'
 import { webhookSecretCredentialName } from './webhook-source.types.js'
+import {
+  childTraceWire,
+  outgoingTraceparent,
+  type TraceContext,
+} from '../../trace.js'
 
 const LIFECYCLE = ['receive', 'check', 'setup', 'teardown'] as const
 
@@ -250,7 +255,7 @@ const validateEvents = async (
  */
 export const receiveWebhookSourceRequest = async (
   sourceName: string,
-  wire: { http?: PikkuHTTP }
+  wire: { http?: PikkuHTTP; trace?: TraceContext }
 ): Promise<{ received: number } | void> => {
   const singletonServices = getSingletonServices()
   const meta = getSourceMeta(sourceName)
@@ -313,13 +318,20 @@ export const receiveWebhookSourceRequest = async (
     )
   }
   return {
-    received: await service.accept({ source: sourceName, request, events }),
+    received: await service.accept({
+      source: sourceName,
+      request,
+      events,
+      traceparent: outgoingTraceparent(wire),
+    }),
   }
 }
 
 /** The `pikku-incoming-webhooks` worker: runs the trigger an event was queued for. Throws so the queue retries. */
 export const dispatchWebhookSourceJob = async (
-  job: WebhookSourceJob
+  job: WebhookSourceJob,
+  /** The worker's wire, whose trace the trigger continues. */
+  wire: { trace?: TraceContext } = {}
 ): Promise<void> => {
   const singletonServices = getSingletonServices()
   const name = triggerName(job.source, job.event.name)
@@ -337,7 +349,7 @@ export const dispatchWebhookSourceJob = async (
       singletonServices,
       auth: false,
       data: () => job.event.data,
-      wire: {} as PikkuRawWire,
+      wire: childTraceWire(wire.trace) as PikkuRawWire,
     })
   } catch (e) {
     error = e instanceof Error ? e.message : String(e)

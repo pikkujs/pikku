@@ -17,6 +17,8 @@ export interface SendWebhookInput {
   retryDelay?: string | number
   /** Persisted only by store-backed implementations; the queue-only default ignores it. */
   organizationId?: string
+  /** The trace the delivery job runs in. A function's calls are stamped for it. */
+  traceparent?: string
 }
 
 /** The queue job that will deliver the webhook. */

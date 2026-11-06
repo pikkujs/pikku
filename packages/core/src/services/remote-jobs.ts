@@ -15,7 +15,10 @@ export interface RemoteQueueJobData {
   queueName: string
   data?: unknown
   jobId?: string
-  traceId?: string
+  /** The W3C trace to continue. Invalid or absent starts a new trace. */
+  traceparent?: string
+  /** The signed identity claim. {@link runQueueJob} verifies it or drops it. */
+  pikkuUserId?: string
 }
 
 /**
@@ -24,4 +27,6 @@ export interface RemoteQueueJobData {
  */
 export interface RemoteScheduledJobData {
   taskName: string
+  /** The W3C trace to continue. Invalid or absent starts a new trace. */
+  traceparent?: string
 }

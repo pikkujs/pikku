@@ -12,12 +12,14 @@ import type { QueueJob, QueueJobStatus } from './queue.types.js'
  */
 export async function pikkuRemoteQueueJobFunc(
   { logger }: { logger: Logger },
-  { queueName, data, jobId, traceId }: RemoteQueueJobData
+  { queueName, data, jobId, traceparent, pikkuUserId }: RemoteQueueJobData
 ): Promise<void> {
   const job: QueueJob = {
     queueName,
     data,
-    id: jobId ?? traceId ?? `remote-${Date.now()}`,
+    id: jobId ?? `remote-${globalThis.crypto.randomUUID()}`,
+    traceparent,
+    pikkuUserId,
     status: async (): Promise<QueueJobStatus> => 'active',
     metadata: () => ({
       processedAt: new Date(),
@@ -36,7 +38,7 @@ export async function pikkuRemoteQueueJobFunc(
   }
 
   try {
-    await runQueueJob({ job, traceId })
+    await runQueueJob({ job })
   } catch (error) {
     if (
       error instanceof PikkuMissingMetaError ||

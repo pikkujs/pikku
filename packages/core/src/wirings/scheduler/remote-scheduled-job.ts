@@ -14,10 +14,10 @@ import {
  */
 export async function pikkuRemoteScheduledJobFunc(
   { logger }: { logger: Logger },
-  { taskName }: RemoteScheduledJobData
+  { taskName, traceparent }: RemoteScheduledJobData
 ): Promise<void> {
   try {
-    await runScheduledTask({ name: taskName, traceId: `cron-${taskName}` })
+    await runScheduledTask({ name: taskName, traceparent })
   } catch (error) {
     if (error instanceof ScheduledTaskNotFoundError) {
       throw new BadRequestError(error.message)

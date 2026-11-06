@@ -10,6 +10,7 @@ import type {
   CoreAgent,
   AgentMemoryConfig,
 } from './agent.types.js'
+import { outgoingTraceparent } from '../../trace.js'
 import { finalizeAgentRun, lastUserMessageText } from './agent-finalize.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { applyInputMiddleware, describeApprovals } from './agent-turn.js'
@@ -281,9 +282,11 @@ async function postStreamCleanup(
     threadId: string
     resourceId?: string
     input: string
+    traceparent?: string
   }
 ): Promise<void> {
   await finalizeAgentRun(agentRunState, {
+    traceparent: run.traceparent,
     runId,
     agentName: run.agentName,
     threadId: run.threadId,
@@ -983,6 +986,7 @@ export async function streamAgent(
     }
 
     await postStreamCleanup(persistingChannel, agentRunState, runId, {
+      traceparent: outgoingTraceparent({ trace: params.trace }),
       agentName,
       threadId,
       resourceId: input.resourceId,
@@ -1604,6 +1608,7 @@ async function continueAfterToolResult(
     }
 
     await postStreamCleanup(persistingChannel, agentRunState, run.runId, {
+      traceparent: outgoingTraceparent({ trace: params.trace }),
       ...run,
       input: lastUserMessageText(runnerParams.messages),
     })

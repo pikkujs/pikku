@@ -4,16 +4,14 @@ import type {
   ScheduledTaskInfo,
   ScheduledTaskSummary,
 } from '@pikku/core/services'
-import type {
-  ScheduledTaskRun,
-  ScheduledTaskRuns,
-} from '@pikku/core/scheduler'
+import type { ScheduledTaskRun, ScheduledTaskRuns } from '@pikku/core/scheduler'
 import { SchedulerService } from '@pikku/core/services'
 import { parseDurationString } from '@pikku/core/utils'
 import { pikkuState, getSingletonServices } from '@pikku/core/state'
 import { runScheduledTask } from '@pikku/core/scheduler'
 import { getScheduledTasks } from '@pikku/core/scheduler'
 import { rpcService } from '@pikku/core/rpc'
+import { traceWire } from '@pikku/core/trace'
 
 interface DelayedTask {
   taskId: string
@@ -49,7 +47,8 @@ export class InMemorySchedulerService extends SchedulerService {
     delay: number | string,
     rpcName: string,
     data?: any,
-    session?: CoreUserSession
+    session?: CoreUserSession,
+    traceparent?: string
   ): Promise<string> {
     const delayMs =
       typeof delay === 'string' ? parseDurationString(delay) : delay
@@ -74,12 +73,22 @@ export class InMemorySchedulerService extends SchedulerService {
         // This matches what the BullMQ and pg-boss schedulers already do:
         // enqueue `{ rpcName, data, session }` and invoke the RPC with it.
         const services = getSingletonServices()
+        const wire = traceWire(traceparent)
         const rpc = rpcService.getContextRPCService(
           services as any,
-          {},
+          wire,
           false
-        ) as { invoke: (name: string, data: unknown) => Promise<unknown> }
-        await rpc.invoke(rpcName, data)
+        ) as {
+          rpcWithWire: (
+            name: string,
+            data: unknown,
+            callWire: typeof wire
+          ) => Promise<unknown>
+        }
+        // The function runs on this hop's span. `invoke` would add a call span
+        // under it, and nothing runs on the hop, so the function's parent would
+        // be a span nobody saw instead of the one that scheduled it.
+        await rpc.rpcWithWire(rpcName, data, wire)
       } catch (err: unknown) {
         getLogger().error(`Failed to execute delayed RPC '${rpcName}': ${err}`)
       }

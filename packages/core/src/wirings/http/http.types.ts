@@ -36,7 +36,7 @@ export type AssertHTTPWiringParams<In, HTTPWiring extends string> =
  * - `coerceDataFromSchema` – coerce query and path strings to the schema's types (default `true`).
  * - `bubbleErrors` – rethrow after writing the error response.
  * - `exposeErrors` – include messages and stacks of 5xx errors; ignored in production.
- * - `generateRequestId` – produce a trace ID when neither `traceId` nor `x-request-id` is present.
+ * - `trustInboundTraceparent` – continue the trace named by `traceparent` on every request. Off by default, because the header is caller-supplied.
  */
 export type RunHTTPWiringOptions = Partial<{
   skipUserSession: boolean
@@ -45,8 +45,8 @@ export type RunHTTPWiringOptions = Partial<{
   coerceDataFromSchema: boolean
   bubbleErrors: boolean
   exposeErrors: boolean
-  generateRequestId: () => string
-  /** Pre-resolved trace ID (e.g. CF-Ray). Falls back to x-request-id header or generated ID. */
+  trustInboundTraceparent: boolean
+  /** A trace ID the runtime already holds: 32 lowercase hex, anything else is ignored. */
   traceId: string
   /** Maximum request body size in bytes, applied when pikku wraps a fetch `Request`. */
   maxBodySize: number

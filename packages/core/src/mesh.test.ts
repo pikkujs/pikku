@@ -71,6 +71,75 @@ const roundTrip = async (secret: string, session: unknown) => {
 }
 
 describe('mesh RPC session round trip', () => {
+  test('sends the caller as traceparent and no legacy header', async () => {
+    const traceparent =
+      '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01'
+    const headers = await buildMeshHeaders(
+      createJWT() as any,
+      createSecrets(STRONG_SECRET) as any,
+      'myFunc',
+      undefined,
+      traceparent
+    )
+    assert.equal(headers.traceparent, traceparent)
+    assert.deepEqual(Object.keys(headers).sort(), [
+      'authorization',
+      'content-type',
+      'traceparent',
+    ])
+  })
+
+  test('a verified mesh caller continues its trace on the receiver', async () => {
+    const traceparent =
+      '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01'
+    const secrets = createSecrets(STRONG_SECRET)
+    const jwt = createJWT()
+    const headers = await buildMeshHeaders(
+      jwt as any,
+      secrets as any,
+      'myFunc',
+      undefined,
+      traceparent
+    )
+    const wire: any = {
+      traceId: 'a'.repeat(32),
+      trace: {
+        traceId: 'a'.repeat(32),
+        spanId: 'b'.repeat(16),
+        sampled: true,
+      },
+      http: { request: createRequest(headers) },
+    }
+    await pikkuMeshAuthMiddleware({ secrets, jwt } as any, wire, async () => {})
+    assert.equal(wire.traceId, '4bf92f3577b34da6a3ce929d0e0e4736')
+    assert.equal(wire.trace.parentSpanId, '00f067aa0ba902b7')
+    assert.equal(wire.trace.spanId, 'b'.repeat(16))
+  })
+
+  test('a caller that fails verification cannot set the trace', async () => {
+    const secrets = createSecrets(STRONG_SECRET)
+    const jwt = createJWT()
+    const wire: any = {
+      traceId: 'a'.repeat(32),
+      trace: {
+        traceId: 'a'.repeat(32),
+        spanId: 'b'.repeat(16),
+        sampled: true,
+      },
+      http: {
+        request: createRequest({
+          authorization: 'Bearer forged',
+          traceparent:
+            '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+        }),
+      },
+    }
+    await assert.rejects(
+      pikkuMeshAuthMiddleware({ secrets, jwt } as any, wire, async () => {})
+    )
+    assert.equal(wire.traceId, 'a'.repeat(32))
+  })
+
   test('round-trips the session through header build and middleware verify', async () => {
     const session = { userId: 'user-1', role: 'admin' }
     assert.deepStrictEqual(await roundTrip(STRONG_SECRET, session), session)

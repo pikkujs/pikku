@@ -1,3 +1,4 @@
+import { unwrapJobTrace, wrapJobTrace } from '@pikku/core/queue'
 import type { PgBoss } from 'pg-boss'
 import { runScheduledTask } from '@pikku/core/scheduler'
 import { SchedulerService } from '@pikku/core/services'
@@ -49,7 +50,8 @@ export class PgBossSchedulerService extends SchedulerService {
     delay: number | string,
     rpcName: string,
     data?: any,
-    session?: CoreUserSession
+    session?: CoreUserSession,
+    traceparent?: string
   ): Promise<string> {
     // Parse delay if it's a string
     const delayMs =
@@ -62,10 +64,14 @@ export class PgBossSchedulerService extends SchedulerService {
     }
 
     // Use send() with startAfter for one-off delayed execution
-    const taskId = await this.pgBoss.send('pikku-mesh-rpc', jobData, {
-      startAfter: new Date(Date.now() + delayMs),
-      singletonKey: `${rpcName}-${Date.now()}`, // Ensure uniqueness
-    })
+    const taskId = await this.pgBoss.send(
+      'pikku-mesh-rpc',
+      wrapJobTrace(jobData, traceparent),
+      {
+        startAfter: new Date(Date.now() + delayMs),
+        singletonKey: `${rpcName}-${Date.now()}`, // Ensure uniqueness
+      }
+    )
 
     if (!taskId) {
       throw new Error('Failed to schedule RPC')
@@ -92,7 +98,7 @@ export class PgBossSchedulerService extends SchedulerService {
       return null
     }
 
-    const jobData = job.data as ScheduledJobData
+    const jobData = unwrapJobTrace(job.data).data as ScheduledJobData
 
     return {
       taskId: job.id,

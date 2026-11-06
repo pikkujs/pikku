@@ -29,6 +29,7 @@ import type {
   CorePikkuFunctionSessionless,
   CorePikkuPermission,
 } from '../../function/functions.types.js'
+import type { TraceContext } from '../../trace.js'
 
 /** Options for running a channel connection. They mean the same as the matching {@link RunHTTPWiringOptions}. */
 export type RunChannelOptions = Partial<{
@@ -210,6 +211,8 @@ export interface PikkuChannel<
 
 /** The runtime side of one connection: how a channel's sends reach the actual socket. */
 export interface PikkuChannelHandler<OpeningData = unknown, Out = unknown> {
+  /** The connection's trace. Each message and reverse RPC is a span in it. */
+  trace?: TraceContext
   send(message: Out, isBinary?: boolean): Promise<void> | void
   sendBinary(data: BinaryData): Promise<void> | void
   getChannel(): PikkuChannel<OpeningData, Out>

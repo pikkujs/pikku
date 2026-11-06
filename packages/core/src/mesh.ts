@@ -31,7 +31,7 @@ const readMeshSecret = async (
 }
 
 /**
- * Authorization headers carrying a JWT-signed session and traceId for
+ * Authorization headers carrying a JWT-signed session and `traceparent` for
  * `pikkuMeshAuthMiddleware` on the receiving end. Used by every deployment
  * service regardless of transport (HTTP, Lambda Invoke, service bindings).
  */
@@ -40,11 +40,11 @@ export async function buildMeshHeaders(
   secrets: SecretService | undefined,
   funcName: string,
   session?: unknown,
-  traceId?: string
+  traceparent?: string
 ): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
     'content-type': 'application/json',
-    ...(traceId && { 'x-request-id': traceId }),
+    ...(traceparent && { traceparent }),
   }
 
   const secret = await readMeshSecret(secrets)

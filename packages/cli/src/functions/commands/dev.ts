@@ -426,6 +426,9 @@ export const dev = pikkuSessionlessFunc<
     await lifecycle.beforeStart?.(resolvedServices)
     await pikkuServer.start()
     await lifecycle.afterStart?.(resolvedServices)
+    resolvedServices.workflowService?.startRecovery?.(
+      userConfig.workflow?.recovery
+    )
 
     // Not `resolvedPort`: `--port 0` asks the OS for a free port, and every URL
     // announced from here has to name the one it actually handed out.
@@ -468,6 +471,7 @@ export const dev = pikkuSessionlessFunc<
     const shutdown = async (exitCode: number) => {
       runningFrontends?.stop()
       try {
+        resolvedServices.workflowService?.stopRecovery?.()
         await lifecycle.beforeStop?.(resolvedServices)
         await stopSingletonServices()
         await watcher?.close()

@@ -8,7 +8,7 @@ import type {
   QueueJobStatus,
   QueueService,
 } from '@pikku/core/queue'
-import type { JobOptions } from '@pikku/core/queue'
+import { wrapJobTrace, type JobOptions } from '@pikku/core/queue'
 import { mapBullJobToQueueJob } from './utils.js'
 
 export const mapPikkuJobToBull = (options?: JobOptions): JobsOptions => {
@@ -97,7 +97,10 @@ export class BullQueueService implements QueueService {
       return this.queues.get(queueName)!
     }
 
-    const queue = new Queue(queueName, config)
+    const queue = new Queue(
+      queueName,
+      config ?? { connection: this.redisConnectionOptions }
+    )
     queue.on('error', (error) => {
       console.error('Redis connection error:', error)
     })
@@ -128,7 +131,11 @@ export class BullQueueService implements QueueService {
     options?: JobOptions
   ): Promise<string> {
     const queue = await this.createQueue(queueName)
-    const bullJob = await queue.add(queueName, data, mapPikkuJobToBull(options))
+    const bullJob = await queue.add(
+      queueName,
+      wrapJobTrace(data, options?.traceparent, options?.pikkuUserId),
+      mapPikkuJobToBull(options)
+    )
     if (!bullJob.id) {
       throw new Error(`Failed to add job to queue '${queueName}'.`)
     }

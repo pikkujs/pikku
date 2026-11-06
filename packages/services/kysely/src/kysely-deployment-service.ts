@@ -94,14 +94,14 @@ export class KyselyDeploymentService implements DeploymentService {
     funcName: string,
     data: unknown,
     session?: unknown,
-    traceId?: string
+    traceparent?: string
   ): Promise<unknown> {
     const headers = await buildMeshHeaders(
       this.jwt,
       this.secrets,
       funcName,
       session,
-      traceId
+      traceparent
     )
     const ttlMs = this.heartbeatTtl
     const cutoff = new Date(Date.now() - ttlMs)

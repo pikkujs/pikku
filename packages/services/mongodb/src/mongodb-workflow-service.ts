@@ -539,6 +539,11 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
         ),
         stepState.attemptCount
       )
+      await this.logStepAttemptsExhausted(
+        runId,
+        stepName,
+        stepState.attemptCount
+      )
       // A null claim reads as "another dispatch owns it", so nothing else
       // would requeue the orchestrator to see this failure.
       await this.resumeWorkflow(runId)
@@ -552,7 +557,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     }
 
     if (stepState.status === 'failed' || stepState.status === 'running') {
-      return this.mirrored(
+      const reclaimed = await this.mirrored(
         () => this.reclaimStepAttempt(stepState, leaseMs),
         async (mirror, newStep) => {
           if (newStep) {
@@ -563,6 +568,11 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
           }
         }
       )
+      // A `failed` step threw, and this is its ordinary retry.
+      if (reclaimed && stepState.status === 'running') {
+        await this.logStepRerun(runId, stepName, reclaimed.attemptCount)
+      }
+      return reclaimed
     }
 
     if (stepState.status === 'pending' || stepState.status === 'scheduled') {

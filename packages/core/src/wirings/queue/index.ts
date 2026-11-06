@@ -26,6 +26,7 @@ export {
 export type { QueueIdentityBinding } from './queue-identity.js'
 
 export { SignedQueueService } from './signed-queue-service.js'
+export { unwrapJobTrace, wrapJobTrace } from './queue-trace.js'
 export type { QueueConfigMapping } from './validate-worker-config.js'
 
 export { registerQueueWorkers } from './register-queue-helper.js'

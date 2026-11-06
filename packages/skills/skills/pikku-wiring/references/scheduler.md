@@ -63,6 +63,12 @@ will catch a skip and report it as a failure. If your middleware distinguishes
 success from failure, let the skip pass through rather than logging it as an
 error.
 
+### Tracing
+
+Each cron firing starts a new trace, on `wire.trace`. A delayed call fires on the
+trace passed as the last argument of `scheduleRPC`: a workflow sleep passes the
+run's, and nothing passes it for you elsewhere, so use `wire.rpc.traceparent`.
+
 ### Cron Expression Reference
 
 ```

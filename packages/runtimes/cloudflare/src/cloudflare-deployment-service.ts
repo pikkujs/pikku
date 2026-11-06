@@ -40,7 +40,7 @@ export class CloudflareDeploymentService implements DeploymentService {
     funcName: string,
     data: unknown,
     session?: unknown,
-    traceId?: string
+    traceparent?: string
   ): Promise<unknown> {
     const bindingName = this.bindings.get(funcName)
     if (!bindingName) {
@@ -62,7 +62,7 @@ export class CloudflareDeploymentService implements DeploymentService {
       this.secrets,
       funcName,
       session,
-      traceId
+      traceparent
     )
 
     const request = new Request(

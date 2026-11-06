@@ -92,7 +92,7 @@ export const scheduled: ScheduledHandler = async (event) => {
 ```
 
 `runLambdaScheduled` runs **every** scheduled task registered in the bundle,
-each with its own `cron-<uuid>` traceId, and logs rather than rethrows a task
+each on its own new trace, and logs rather than rethrows a task
 failure — so one bad task cannot fail the invocation or stop the others. The
 event itself is ignored; which tasks run is decided by what the unit bundled,
 not by which EventBridge rule fired.

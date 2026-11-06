@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
+import { QueuedWorkflowHarness } from '../../testing/service-tests/queued-workflow-harness.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addWorkflow } from './dsl/workflow-runner.js'
 import {
@@ -971,4 +972,27 @@ describe('pikku-workflow-service run identity on failure', () => {
     assert.equal(run?.status, 'failed')
     assert.equal(run?.error?.message, 'the scenario blew up')
   })
+
+  for (const inline of [true, false]) {
+    test(`reports the run id of a graph run started ${inline ? 'inline' : 'on the queue'}`, async () => {
+      const h = new QueuedWorkflowHarness(new InMemoryWorkflowService())
+      h.register('only', { ...h.ok(), queued: !inline })
+      h.defineGraph('onRunCreatedGraph', 'only', { only: {} })
+      const seenAtStep: Array<string | undefined> = []
+      h.handlers.only!.forward = async () => void seenAtStep.push(created[0])
+
+      const created: string[] = []
+      const { runId } = await h.ws.startWorkflow(
+        'onRunCreatedGraph',
+        {},
+        { type: 'test' },
+        h.rpc as never,
+        { inline, onRunCreated: (id) => created.push(id) }
+      )
+      await h.pump()
+
+      assert.deepEqual(created, [runId])
+      assert.deepEqual(seenAtStep, [runId], 'known before the first step ran')
+    })
+  }
 })

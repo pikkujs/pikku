@@ -1,4 +1,4 @@
-import { describe, test, before, after, beforeEach } from 'node:test'
+import { describe, test, before, after, beforeEach, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { MongoClient, type Db } from 'mongodb'
 import { MongoMemoryServer } from 'mongodb-memory-server'
@@ -141,6 +141,60 @@ describe('claiming a step for execution', () => {
 
   const seedRun = () =>
     ws.createRun('flow', {}, false, 'hash', { type: 'test' } as any)
+
+  /** Claim on a lease already over, as a worker that died mid-step leaves it. */
+  const claimAndLose = (runId: string, stepName: string) =>
+    (ws as any).claimStepForExecution(runId, stepName, 'rpc.fn', -1_000)
+
+  const watchLogs = () => ({
+    rerun: mock.method(ws, 'logStepRerun', async () => {}),
+    exhausted: mock.method(ws, 'logStepAttemptsExhausted', async () => {}),
+  })
+
+  test('taking a step back from a dead worker reports the rerun once', async () => {
+    const runId = await seedRun()
+    await ws.insertStepState(runId, 's1', 'rpc.fn', {})
+    await claimAndLose(runId, 's1')
+    const logs = watchLogs()
+
+    const claims = await Promise.all([claim(runId, 's1'), claim(runId, 's1')])
+
+    assert.equal(claims.filter((c) => c !== null).length, 1)
+    assert.deepEqual(
+      logs.rerun.mock.calls.map((call) => call.arguments),
+      [[runId, 's1', 2]]
+    )
+    assert.equal(logs.exhausted.mock.callCount(), 0)
+  })
+
+  test('a step with no attempts left to lose reports that it failed', async () => {
+    const runId = await seedRun()
+    await ws.insertStepState(runId, 's1', 'rpc.fn', {}, { retries: 0 })
+    await claimAndLose(runId, 's1')
+    mock.method(ws, 'resumeWorkflow', async () => {})
+    const logs = watchLogs()
+
+    assert.equal(await claim(runId, 's1'), null)
+
+    assert.deepEqual(
+      logs.exhausted.mock.calls.map((call) => call.arguments),
+      [[runId, 's1', 1]]
+    )
+    assert.equal(logs.rerun.mock.callCount(), 0)
+  })
+
+  test('retrying a step that threw is not reported as a rerun', async () => {
+    const runId = await seedRun()
+    const step = await ws.insertStepState(runId, 's1', 'rpc.fn', {})
+    await ws.setStepRunning(step.stepId)
+    await ws.setStepError(step.stepId, new Error('boom'))
+    const logs = watchLogs()
+
+    assert.ok(await claim(runId, 's1'))
+
+    assert.equal(logs.rerun.mock.callCount(), 0)
+    assert.equal(logs.exhausted.mock.callCount(), 0)
+  })
 
   test('two dispatches racing for the same pending step: exactly one wins', async () => {
     const runId = await seedRun()
