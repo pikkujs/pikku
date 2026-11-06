@@ -109,6 +109,12 @@ impl<V> Record<V> {
     pub fn values(&self) -> impl Iterator<Item = &V> {
         self.iter().map(|(_, v)| v)
     }
+
+    /// Every value, mutably, in insertion order (for in-place rewrites that do
+    /// not depend on the order).
+    pub fn values_mut(&mut self) -> impl Iterator<Item = &mut V> {
+        self.inner.values_mut()
+    }
 }
 
 impl<V: Default> Record<V> {

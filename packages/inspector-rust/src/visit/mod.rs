@@ -15,8 +15,10 @@
 //! the explicit list in [`register_groups`]. Registry rules are Go's: two
 //! visitors with the same phase and order, or the same name, panic.
 
-use tsrs_ast::{Node, SourceFile};
-use tsrs_checker::Checker;
+use std::collections::HashMap;
+
+use tsrs_ast::{Node, SourceFile, Symbol};
+use tsrs_checker::{Checker, Type};
 use tsrs_core::P;
 
 use crate::diag::Logger;
@@ -27,11 +29,33 @@ pub mod addon_dependencies;
 pub mod addon_json;
 pub mod addon_load;
 pub mod addon_resolve;
+pub mod boundary;
 pub mod group_addon_bans;
+pub mod group_approval_description;
+pub mod group_functions;
+pub mod group_functions_node;
+pub mod group_http;
+pub mod group_http_contracts;
+pub mod group_outgoing_webhook;
+pub mod group_rpc_invocations;
+pub mod group_schedule;
+pub mod group_setup_core;
 pub mod group_wire_addon;
 pub mod group_wire_remote_addon;
 pub mod order;
+pub mod resolve_versions;
 pub mod scope_addon;
+pub mod service_types;
+pub mod usage_sweeps;
+pub mod util_callee;
+pub mod util_channel_cli;
+pub mod util_middleware;
+pub mod util_names;
+pub mod util_props;
+pub mod util_schema;
+pub mod util_shared;
+pub mod util_types;
+pub mod util_wire_meta;
 pub mod validate_addon_zod;
 
 /// Go `visit.Abort`: a TS `throw` inside a visitor. It ends the inspection with
@@ -106,12 +130,35 @@ pub struct Context<'a> {
     pub root_dir: String,
     /// The file being swept; `None` outside a sweep.
     pub source_file: Option<P<SourceFile>>,
+
+    /// `typesLookup` (InspectorState.typesLookup): live checker types, read only
+    /// during analysis. What finalize needs from it is serialized as
+    /// `state.coreTypeProperties` instead.
+    pub types_lookup: HashMap<String, Vec<P<Type>>>,
+    /// The core interfaces a core-type visitor recorded (Go `coreTypes`).
+    pub core_types: Vec<CoreType>,
+}
+
+/// Go `coreType`: a core interface's name and its symbol.
+#[derive(Clone, Debug)]
+pub struct CoreType {
+    pub name: String,
+    pub sym: P<Symbol>,
 }
 
 impl<'a> Context<'a> {
     pub fn new(checker: &'a mut Checker, state: &'a mut State, log: &'a mut Logger, options: Options) -> Context<'a> {
         let root_dir = state.root_dir.clone();
-        Context { checker, state, log, options, root_dir, source_file: None }
+        Context {
+            checker,
+            state,
+            log,
+            options,
+            root_dir,
+            source_file: None,
+            types_lookup: HashMap::new(),
+            core_types: Vec::new(),
+        }
     }
 
     pub fn types_map(&mut self) -> &mut TypesMap {
@@ -165,6 +212,13 @@ pub fn register_groups(r: &mut Registry) {
     group_addon_bans::register(r);
     group_wire_addon::register(r);
     group_wire_remote_addon::register(r);
+    group_setup_core::register(r);
+    group_approval_description::register(r);
+    group_rpc_invocations::register(r);
+    group_outgoing_webhook::register(r);
+    group_functions::register(r);
+    group_schedule::register(r);
+    group_http::register(r);
 }
 
 /// The registry with every ported group registered.
@@ -194,8 +248,6 @@ impl Context<'_> {
         self.source_file = None;
     }
 
-    /// Go `SweepUsage` (usage_sweeps.go). Not ported.
-    pub fn sweep_usage(&mut self, _files: &[P<SourceFile>]) {}
 
     /// Go `CheckDisabledWorkflowSteps` (check_disabled.go). Not ported.
     pub fn check_disabled_workflow_steps(&mut self) {}
@@ -206,14 +258,6 @@ impl Context<'_> {
     /// Go `ValidatePikkuStudio` (group_pikku_studio.go). Not ported.
     pub fn validate_pikku_studio(&mut self) {}
 
-    /// Go `ResolveLatestVersions` (resolve_versions.go). Not ported.
-    pub fn resolve_latest_versions(&mut self) {}
-
-    /// Go `FinishCoreTypeProperties` (group_setup_core.go). Not ported.
-    pub fn finish_core_type_properties(&mut self) {}
-
-    /// Go `FinishServiceTypes` (service_types.go). Not ported.
-    pub fn finish_service_types(&mut self) {}
 }
 
 #[cfg(test)]
