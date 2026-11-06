@@ -143,6 +143,15 @@ written as `Raw::of(value.to_json())` or through the typed fields.
   string. Valid inputs are unaffected.
 * **`validateAgentModels`** sorts alias names by byte order (Go `sort.Strings`
   and `BTreeMap` agree); `jsRelative` is `filepath.Rel` for absolute paths.
+* `--stress` (finalize-parity) adds `options.openAPI` and a disagreeing
+  `options.manifest`: 62 projects generate an OpenAPI spec (146 paths) and 38
+  report manifest errors, all byte-identical. Workflow wires (http, schedule,
+  trigger, channel, mcp, cli) occur in no corpus project; a synthetic state with
+  one of each (graph `verifiers/workflows` + routes onto `workflowStart:`/
+  `graphStart:` ids) is byte-identical too, but is not checked in.
+* `Raw` sections are parsed values here and verbatim bytes in Go, so a state
+  written with `\uXXXX` escapes for non-ASCII (hand-made JSON; neither engine
+  emits that) re-encodes unescaped.
 * `proseOpensWithVirtualUser` is hand-written (no regex crate): case-insensitive
   by simple folding, `\b` is ASCII, as Go's RE2.
 * Not ported from Go's test-suite: `TestGlobalPermissionServicesAreRequired`,

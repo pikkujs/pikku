@@ -6,7 +6,11 @@
  * that state is the oracle; the Rust analysis does not take part, so this runs
  * independently of the visitor ports.
  *
- *   bun finalize-parity.ts <goBin> <rsBin> [--projects a,b*] [--out dir] [--schemas]
+ * --stress also sends `options.openAPI` and a `options.manifest` that disagrees with
+ * the project's functions, so the OpenAPI generator and manifest validators run on
+ * every project (the corpus requests carry neither).
+ *
+ *   bun finalize-parity.ts <goBin> <rsBin> [--projects a,b*] [--out dir] [--schemas] [--stress]
  *                          [--jobs N] [--timeout SECONDS] [--cap N] [--no-cache]
  *
  * <goBin> must understand `--no-finalize` (packages/inspector-go, commit
@@ -41,6 +45,7 @@ const { values, positionals } = parseArgs({
     projects: { type: 'string' },
     out: { type: 'string', default: DEFAULT_FINALIZE_OUT },
     schemas: { type: 'boolean', default: false },
+    stress: { type: 'boolean', default: false },
     jobs: { type: 'string', default: '4' },
     timeout: { type: 'string', default: '300' },
     cap: { type: 'string', default: '5' },
@@ -85,7 +90,21 @@ const run = async (dir: string): Promise<ProjectResult> => {
   const j = parseJson(pre.stdout)
   if (!j?.state || j.error !== undefined)
     return { project, status: 'pre-finalize-failed', note: j?.error ? String(j.error).split('\n')[0] : `exit ${pre.exitCode}: ${pre.stderr.slice(0, 160)}`, goWallMs: pre.wallMs, rsWallMs: 0, byteDiff: null, keys: {} }
-  const stdin = JSON.stringify({ state: j.state, diagnostics: j.diagnostics, options: JSON.parse(request).options })
+  const options = JSON.parse(request).options
+  if (values.stress) {
+    options.openAPI = {
+      additionalInfo: { info: { title: 'stress', version: '1.0.0' }, servers: [{ url: 'http://localhost' }] },
+      errors: [{ name: 'NotFoundError', status: 404, message: 'Not found' }, { name: 'ForbiddenError', status: 403, message: 'Forbidden' }],
+    }
+    const ids = Object.keys(j.state.functions.meta)
+    const contracts: Record<string, unknown> = {}
+    ids.slice(0, 4).forEach((id, i) => {
+      const key = id.replace(/@v\d+$/, '')
+      contracts[key] = i % 2 ? { latest: 1, versions: { '1': 'stale' } } : { latest: 2, versions: { '1': { inputHash: 'x', outputHash: 'y' } } }
+    })
+    options.manifest = { manifestVersion: 1, contracts }
+  }
+  const stdin = JSON.stringify({ state: j.state, diagnostics: j.diagnostics, options })
   writeFileSync(join(out, 'diffs', `${safe(project)}.finalize-input.json`), stdin)
   const args = ['finalize', '--stdin']
   const [go, rs] = await Promise.all([
