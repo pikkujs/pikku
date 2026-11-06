@@ -10,13 +10,12 @@ export const GetItemPhotoUrlOutput = z.object({
 })
 
 /**
- * Mint a viewable URL for an item's photo.
+ * A viewable URL for an item's photo.
  *
- * Signing even a public file looks redundant and is not: the local content
- * service requires a signature for every read, so signing is the one path that
- * works in development and in a deployed stage alike. The difference is the
- * window — a shop-front photo gets a far-future expiry, which is effectively a
- * stable link, while anything private would get minutes.
+ * The photo was uploaded with `visibility: 'public'`, so it is read the same
+ * way: public and private are two separate stores, and a read that leaves
+ * `visibility` out looks in the private one. A public URL needs no signature
+ * and does not expire.
  */
 export const getItemPhotoUrl = pikkuSessionlessFunc({
   expose: true,
@@ -37,13 +36,12 @@ export const getItemPhotoUrl = pikkuSessionlessFunc({
     }
     if (!item?.photoKey) return { url: null, expiresAt: null }
 
-    const dateLessThan = new Date(Date.now() + 3650 * 24 * 3_600_000)
-    const url = await content.signContentKey({
+    const url = await content.getDownloadURL({
       bucket: BUCKET,
-      contentKey: item.photoKey,
-      dateLessThan,
+      key: item.photoKey,
+      visibility: 'public',
     })
 
-    return { url, expiresAt: dateLessThan.toISOString() }
+    return { url, expiresAt: null }
   },
 })

@@ -490,6 +490,37 @@ describe('collectSurface on a project that has not been built yet', () => {
   })
 })
 
+describe('collectSurface lists the keys of a package it documents', () => {
+  test('keeps them with ownMembers, drops them for a project', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/thing',
+          exports: { '.': './dist/index.js' },
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(
+        tmp,
+        'src/index.ts',
+        'export interface Store {\n  /** Reads one. */\n  read(key: string): string\n}\n'
+      )
+      const members = async (ownMembers: boolean) =>
+        (await collectSurface(tmp, { ownMembers }))[0]?.symbols[0]?.members
+
+      assert.strictEqual(await members(false), undefined)
+      assert.deepStrictEqual(await members(true), [
+        { line: 'read: (key: string) => string', doc: 'Reads one.' },
+      ])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
+
 describe('collectSurface describes how to call an export', () => {
   const setup = async (source: string, dependency?: string) => {
     const tmp = await makeTmp()

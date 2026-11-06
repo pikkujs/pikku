@@ -51,6 +51,11 @@ export type CollectSurfaceOptions = {
   subpaths?: string[]
   /** The snippet regions an `@example snippet: name` resolves against. */
   snippets?: Map<string, string>
+  /**
+   * The directory is the package being documented rather than a project that
+   * consumes one, so the keys it declares are the surface and are listed.
+   */
+  ownMembers?: boolean
 }
 
 type PackageJson = {
@@ -577,7 +582,7 @@ const memberLine = (
   property: ts.Symbol,
   checker: ts.TypeChecker,
   program: ts.Program,
-  root: string
+  root: string | undefined
 ): SurfaceMember | undefined => {
   if (property.getName().startsWith('__')) return undefined
   const declaration = property.valueDeclaration ?? property.declarations?.[0]
@@ -588,7 +593,8 @@ const memberLine = (
   if (
     declaration &&
     (program.isSourceFileDefaultLibrary(declaration.getSourceFile()) ||
-      (isProjectOwned(declaration, root) &&
+      (root !== undefined &&
+        isProjectOwned(declaration, root) &&
         !isDocumentedCodegen(declaration, doc)))
   ) {
     return undefined
@@ -637,7 +643,7 @@ const membersOf = (
   kind: SurfaceKind,
   checker: ts.TypeChecker,
   program: ts.Program,
-  root: string
+  root: string | undefined
 ): SurfaceMember[] => {
   const shape = shapeOf(type, kind, checker)
   if (!shape) return []
@@ -719,7 +725,7 @@ const collectErrorStatuses = (program: ts.Program): Map<string, number> => {
 
 export const collectSurface = async (
   packageDir: string,
-  { importsSubpath, subpaths, snippets }: CollectSurfaceOptions = {}
+  { importsSubpath, subpaths, snippets, ownMembers }: CollectSurfaceOptions = {}
 ): Promise<SurfaceEntrypoint[]> => {
   const root = resolve(packageDir)
   const packageJson = await readJson<PackageJson>(join(root, 'package.json'))
@@ -809,7 +815,9 @@ export const collectSurface = async (
       const type = typeOfSymbol(target, kind, checker)
       const location = target.declarations?.[0]
       const examples = examplesOf(tags, name, snippets)
-      const members = type ? membersOf(type, kind, checker, program, root) : []
+      const members = type
+        ? membersOf(type, kind, checker, program, ownMembers ? undefined : root)
+        : []
       symbols.push({
         name,
         kind,

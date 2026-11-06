@@ -164,6 +164,9 @@ func collapseRuns(line string) string {
 }
 
 func (s *session) isProjectOwned(decl *ast.Node) bool {
+	if s.ownMembers {
+		return false
+	}
 	sf := ast.GetSourceFileOfNode(decl)
 	if sf == nil {
 		return false

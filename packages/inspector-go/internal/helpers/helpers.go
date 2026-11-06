@@ -35,6 +35,7 @@ type collectSurfaceParams struct {
 	ImportsSubpath string      `json:"importsSubpath"`
 	Subpaths       []string    `json:"subpaths"`
 	Snippets       [][2]string `json:"snippets"`
+	OwnMembers     bool        `json:"ownMembers"`
 }
 
 type tsconfigParams struct {
@@ -109,7 +110,7 @@ func dispatch(method string, params json.RawMessage) (any, error) {
 		if err := decode(params, &p); err != nil {
 			return nil, err
 		}
-		opts := surface.Options{ImportsSubpath: p.ImportsSubpath, Subpaths: p.Subpaths}
+		opts := surface.Options{ImportsSubpath: p.ImportsSubpath, Subpaths: p.Subpaths, OwnMembers: p.OwnMembers}
 		if p.Snippets != nil {
 			opts.Snippets = make([]surface.Snippet, len(p.Snippets))
 			for i, s := range p.Snippets {

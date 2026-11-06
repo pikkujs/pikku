@@ -95,17 +95,15 @@ export const getFileViewUrl = pikkuFunc({
   input: GetFileViewUrlInput,
   output: GetFileViewUrlOutput,
   func: async ({ content }, input) => {
-    //~ signContentKey mints a signed, time-limited URL at the /content prefix. The
-    //~ sandbox's LocalContent requires a signed URL even for public reads, so BOTH
-    //~ paths sign — the difference is the window: public gets a far-future expiry
-    //~ (effectively a stable shareable link), private a short one. In a deployed R2
-    //~ stage a truly-public file can instead be served from a public bucket, but the
-    //~ signed-URL path works everywhere, so prefer it unless you need hot-linking.
+    //~ Pass `visibility` on the read too: public and private are separate stores, so
+    //~ a read that leaves it out looks in the private one and a public file answers 404.
+    //~ A public URL needs no signature; a private one is signed and expires.
     const ttlMs = input.visibility === 'public' ? 3650 * 24 * 3_600_000 : 3_600_000
     const dateLessThan = new Date(Date.now() + ttlMs)
     const url = await content.signContentKey({
       bucket: BUCKET,
       contentKey: input.fileKey,
+      visibility: input.visibility,
       dateLessThan,
     })
     return { url, expiresAt: dateLessThan.toISOString() }
