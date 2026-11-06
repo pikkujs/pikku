@@ -5,6 +5,8 @@
 //! old-TypeScript union/property reorder, see PORTING.md), props, route,
 //! governance, sortjs, types.
 
+pub mod typeorder;
+
 use tsrs_ast::Node;
 use tsrs_core::P;
 

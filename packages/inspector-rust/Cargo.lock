@@ -321,6 +321,7 @@ dependencies = [
  "tsrs_contentmapper",
  "tsrs_core",
  "tsrs_diagnostics",
+ "tsrs_printer",
  "tsrs_tsoptions",
  "tsrs_vfs",
 ]

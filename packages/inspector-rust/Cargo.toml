@@ -27,5 +27,6 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 indexmap = { version = "2", features = ["serde"] }
 sha2 = "0.10"
+tsrs_printer = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
 
 [workspace]
