@@ -1,3 +1,35 @@
+## 0.12.12
+
+### Patch Changes
+
+- bab9f0d: A delayed RPC in `InMemorySchedulerService` runs on the span its trace carried it to, so its parent is the span that scheduled it rather than one nothing reported.
+- 8bad71e: Keep one trace through jobs, scheduled tasks and workflow runs
+
+  A function's `queueService.add` stamps the caller's `traceparent` on the job, and a workflow run stores its trace on `run.wire.traceparent`, so every step, retry, sleep, resume, child workflow and recovery stays on it. Every queue adapter carries `traceparent`, and queue and scheduler wires always have `wire.trace`.
+
+  The `q-<id>` and `cron-<id>` trace ids are gone. `runQueueJob` no longer takes `traceId`, and remote job bodies take `traceparent`. Breaking: see docs/MIGRATION.md.
+
+- Updated dependencies [5d48c4a]
+- Updated dependencies [c8a477d]
+- Updated dependencies [539c25d]
+- Updated dependencies [593a855]
+- Updated dependencies [63648ee]
+- Updated dependencies [1b265fa]
+- Updated dependencies [db5f42f]
+- Updated dependencies [d5cc4f1]
+- Updated dependencies [bf979a0]
+- Updated dependencies [a275026]
+- Updated dependencies [8bad71e]
+- Updated dependencies [4cf8e97]
+- Updated dependencies [63e12c4]
+- Updated dependencies [bec7301]
+- Updated dependencies [7ce879d]
+- Updated dependencies [a3a67f3]
+- Updated dependencies [54c11c3]
+- Updated dependencies [ceedd4b]
+- Updated dependencies [4263e9d]
+  - @pikku/core@0.12.151
+
 ## 0.12.11
 
 ### Patch Changes

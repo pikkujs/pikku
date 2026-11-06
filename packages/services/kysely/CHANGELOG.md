@@ -1,3 +1,49 @@
+## 0.13.41
+
+### Patch Changes
+
+- 539c25d: Trace every wire
+
+  Channels, agent tools and tool workflows, MCP, CLI, triggers, webhook sources, gateways and Cloudflare `runRpc` now carry `traceparent`. A wire with no trace becomes the root of one, and `scheduleRPC` and `webhookService.send` called from a function are stamped with its trace.
+
+  Channel RPC frames take `traceparent` instead of `traceId`, and a responder ignores it unless `trustInboundTraceparent` is set. See `docs/MIGRATION.md`.
+
+- a3a67f3: A serverless channel is now one trace: `ChannelStore` keeps the connection's `traceparent`, and every frame and the disconnect continue it. The Kysely `channels` table gains a `traceparent` column.
+
+  Breaking: see `docs/MIGRATION.md`.
+
+- 54c11c3: Crash recovery now warns on the run's trace when it reruns a step, with the run id, step name, attempt and `invocationId`, and when a step fails with `WorkflowStepLeaseExpiredError` for running out of attempts that way, including at `retries: 0`. An ordinary retry after a thrown error logs neither. A store that overrides `claimStepForExecution` calls `logStepRerun` and `logStepAttemptsExhausted` itself.
+- ceedd4b: Trace with W3C `traceparent`, and remove `x-request-id`
+
+  `wire.traceId` on an HTTP request is now 32 lowercase hex and `wire.trace` adds its span id, parent span and sampled flag. Mesh and remote addon calls send `traceparent`; `x-request-id` is no longer read or sent, `CF-Ray` no longer sets the trace, and `generateRequestId` is gone.
+
+  Public HTTP ignores an inbound `traceparent` unless `trustInboundTraceparent` is set. `pikkuMeshAuthMiddleware` continues a caller's trace once its token has verified. Breaking: see docs/MIGRATION.md.
+
+- 4263e9d: Workflows survive a restart
+
+  `pikku dev` and `pikku serve` now recover runs after a crash or deploy. Sleeps are re-armed from when they were scheduled, in-flight steps retry as a counted attempt with the same `invocationId`, and a sweep skips any run another live instance holds the lease on. Other hosts call `workflowService.recoverWorkflows()` from a scheduled task, and `workflow.recovery: false` turns it off. See `docs/MIGRATION.md`.
+
+- Updated dependencies [5d48c4a]
+- Updated dependencies [c8a477d]
+- Updated dependencies [539c25d]
+- Updated dependencies [593a855]
+- Updated dependencies [63648ee]
+- Updated dependencies [1b265fa]
+- Updated dependencies [db5f42f]
+- Updated dependencies [d5cc4f1]
+- Updated dependencies [bf979a0]
+- Updated dependencies [a275026]
+- Updated dependencies [8bad71e]
+- Updated dependencies [4cf8e97]
+- Updated dependencies [63e12c4]
+- Updated dependencies [bec7301]
+- Updated dependencies [7ce879d]
+- Updated dependencies [a3a67f3]
+- Updated dependencies [54c11c3]
+- Updated dependencies [ceedd4b]
+- Updated dependencies [4263e9d]
+  - @pikku/core@0.12.151
+
 ## 0.13.40
 
 ### Patch Changes
