@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs'
 import chalk from 'chalk'
 import type { Logger } from '@pikku/core/services'
 import type { Safe } from '@pikku/core/classification'
@@ -228,22 +229,28 @@ export class CLILogger implements Logger {
     this.emit('debug', msg, type, undefined, data)
   }
 
-  diagnostic({ severity, code, message }: CodedDiagnostic) {
+  diagnostic(entry: CodedDiagnostic) {
+    const { severity, code, message } = entry
     const url = `${BASE_ERROR_URL}/${code.toLowerCase()}`
     const formattedMessage = `[${code}] ${message}\n  → ${url}`
     if (this.inValidationPass) {
-      this.validationDiagnostics.push({ severity, code, message })
+      this.validationDiagnostics.push(entry)
     } else {
-      this.diagnostics.push({ severity, code, message })
+      this.diagnostics.push(entry)
     }
+    this.persistDiagnostics()
     // critical → bold red, error → red, warn → yellow. Always printed so the
     // issue surfaces even when it doesn't fail the build.
     this.emit(severity, formattedMessage, undefined, code)
   }
 
   /** Sugar for `diagnostic({ severity: 'critical', code, message })`. */
-  critical(code: ErrorCode, message: string) {
-    this.diagnostic({ severity: 'critical', code, message })
+  critical(
+    code: ErrorCode,
+    message: string,
+    at?: Pick<CodedDiagnostic, 'file' | 'line' | 'column'>
+  ) {
+    this.diagnostic({ ...at, severity: 'critical', code, message })
   }
 
   /**
@@ -267,6 +274,7 @@ export class CLILogger implements Logger {
   beginValidationPass() {
     this.validationDiagnostics = []
     this.inValidationPass = true
+    this.persistDiagnostics()
   }
 
   /** Closes the pass opened by `beginValidationPass`. */
@@ -280,6 +288,16 @@ export class CLILogger implements Logger {
    */
   private trackedDiagnostics(): CodedDiagnostic[] {
     return [...this.diagnostics, ...this.validationDiagnostics]
+  }
+
+  /**
+   * Hands the diagnostics to the watcher that started this codegen child. The
+   * whole list each time, because a new validation pass replaces the last one.
+   */
+  private persistDiagnostics() {
+    const file = process.env.PIKKU_DIAGNOSTICS_FILE
+    if (!file) return
+    writeFileSync(file, JSON.stringify(this.trackedDiagnostics()))
   }
 
   hasCriticalErrors(): boolean {

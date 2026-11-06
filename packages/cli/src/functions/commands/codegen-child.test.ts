@@ -7,6 +7,7 @@ import { afterEach, test } from 'node:test'
 
 import {
   codegenStateFile,
+  collectCodegenPass,
   hasChangesSince,
   runCodegenChild,
 } from './codegen-child.js'
@@ -148,4 +149,29 @@ test('a child that cannot be spawned rejects', async () => {
       configurable: true,
     })
   }
+})
+
+const diagnostic = { severity: 'warn', code: 'PKU1', message: 'careful' }
+
+test('a pass keeps what the child recorded', async () => {
+  const pass = await collectCodegenPass(async (file) => {
+    writeFileSync(file, JSON.stringify([diagnostic]))
+  })
+  assert.deepEqual(pass, { ok: true, diagnostics: [diagnostic] })
+})
+
+test('a failed pass is an outcome carrying the reason', async () => {
+  const pass = await collectCodegenPass(async () => {
+    throw new Error('pikku all failed (exit 1)')
+  })
+  assert.equal(pass.ok, false)
+  assert.equal(pass.diagnostics[0]?.code, 'CODEGEN')
+  assert.match(pass.diagnostics[0]?.message ?? '', /exit 1/)
+})
+
+test('half a diagnostics file is treated as none', async () => {
+  const pass = await collectCodegenPass(async (file) => {
+    writeFileSync(file, '[{')
+  })
+  assert.deepEqual(pass, { ok: true, diagnostics: [] })
 })
