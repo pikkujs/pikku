@@ -111,6 +111,8 @@ Synchronous. It throws on an unknown template name or unknown locale, the only t
 
 ## Sending through an EmailService
 
+An email sent because something happened is a step in a `pikkuWorkflowFunc`, started with `rpc.startWorkflow`, even with one step, so a failed send shows and can retry. A function never sends one inline. An auth callback such as `sendMagicLink` only sends; the action that triggers it is still the workflow step.
+
 `pikku doc email EmailAttachment` lists the types. `@pikku/core/services` defines `EmailService.send(input)` where `input` is `SendTextEmailInput`, `SendHTMLEmailInput` or `SendTemplateEmailInput`:
 
 ```ts

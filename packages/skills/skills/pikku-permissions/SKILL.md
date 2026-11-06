@@ -32,11 +32,13 @@ export const deleteBook = pikkuFunc({
 export const deleteBook = pikkuFunc({
   func: async ({ kysely }, { bookId }, { session }) => {
     const book = await kysely.selectFrom('book')...executeTakeFirst()
-    if (book?.ownerId !== session.userId) throw new UnauthorizedError()
+    if (book?.ownerId !== session.userId) throw new ForbiddenError()
     await kysely.deleteFrom('book').where('bookId', '=', bookId).execute()
   },
 })
 ```
+
+A permission that returns false answers 403 with `ForbiddenError` from `#pikku/error`. Tests expect that.
 
 ## `auth: true` IS NOT OWNERSHIP
 

@@ -22,7 +22,13 @@ For how to call it, run this once: `pikku doc agent pikkuAgent`. This skill is w
 
 Tools, sub-agents and workflows are supplied as `ref('domain:funcName')` handles, not imported values. The inspector resolves each ref against the generated function map, so an agent can call into another package or a `graph:*` builtin without an import cycle, and the tool menu can be filtered per session before the model sees it.
 
-Invoke through `wire.rpc.agent` from inside a Pikku function; it carries the session, credentials and RPC depth.
+Invoke through `wire.rpc.agent` from inside a Pikku function; it carries the session, credentials and RPC depth. From a screen use `usePikkuAgent(name)` from `@pikku/react` (`run`, `stream`, `approve`), with no cast of your own.
+
+Runs name the agent by its export (`shopAssistant`), not its `name` field (`shop-assistant`). Nothing under `.pikku/agent` needs opening.
+
+`model` is an alias from `models` in pikku.config.json, named for its job (`fast`, `vision`). If none fits, add one there. Never write a `provider/model` string in an agent, and tell the owner which model you chose.
+
+"Remember what we talked about" means the app's helper keeps its conversations: `memory` on the agent and a stable `threadId` and `resourceId`. No helper yet means build one. Never a table or localStorage of your own.
 
 ## The knobs that do not mean what they look like
 
