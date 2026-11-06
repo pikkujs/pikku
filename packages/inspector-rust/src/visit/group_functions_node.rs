@@ -74,8 +74,10 @@ impl Context<'_> {
             o.set_str("description", d);
         }
         o.set("errorOutput", Some(Value::from(cfg.error_output == Some(true))));
-        o.set("inputSchemaName", m.input_schema_name.as_deref().map(Value::from));
-        o.set("outputSchemaName", m.output_schema_name.as_deref().map(Value::from));
+        // Go passes the *string through an `any`: a nil pointer is not an untyped
+        // nil, so it is written as null rather than dropped.
+        o.set("inputSchemaName", Some(m.input_schema_name.as_deref().map(Value::from).unwrap_or(Value::Null)));
+        o.set("outputSchemaName", Some(m.output_schema_name.as_deref().map(Value::from).unwrap_or(Value::Null)));
         if let Some(t) = &m.tags {
             o.set("tags", Some(strs_value(t)));
         }

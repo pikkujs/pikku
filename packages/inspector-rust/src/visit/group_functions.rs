@@ -175,6 +175,15 @@ impl Context<'_> {
                 m.auth = v.bool;
             }
             m.permissions_in_body = or_nil(tsutil::get_property_value(first_arg, "permissionsInBody").truthy());
+            if m.permissions_in_body.is_some() && !self.options.allow_permissions_in_body {
+                self.log.critical(
+                    codes::PERMISSIONS_IN_BODY_NOT_ALLOWED,
+                    format!(
+                        "'{name}' declares `permissionsInBody: true`, which this project has not enabled. It silences the exposed-and-ungated audit without gating anything, so it is opt-in: set `allow: {{ permissionsInBody: true }}` in pikku.config.json if the project accepts permission checks that only a reader can verify. Otherwise express the check as a `permissions` entry, or drop `expose: true` if the function was not meant to be callable from outside."
+                    ),
+                );
+                return;
+            }
             if let Some(p) = tsutil::find_property_assignment(first_arg, "audit") {
                 let init = p.initializer().unwrap();
                 if init.kind() == Kind::TrueKeyword {
