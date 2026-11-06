@@ -24,7 +24,7 @@ remember about its API may be from a different version than the one in this dire
 Everything below is the mental model; `pikku doc` is the API surface, computed when the
 installed CLI was built. It needs no config and works outside a project.
 
-**Do not write an import, an export name, or an option key you have not seen in `pikku doc`.**
+**Do not write an import, an export name, or an option key you have not seen in `pikku doc`.** Run `pikku doc pikkuFunc` before opening a sibling function: open one only for this app's helpers and domain rules, never to learn Pikku.
 A name that looks right and is not costs a full build cycle to discover. If the doc does not
 list it, it does not exist here — do not reach into `node_modules` or `.pikku` for something
 that will work anyway.
