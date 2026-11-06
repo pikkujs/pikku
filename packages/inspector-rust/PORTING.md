@@ -250,15 +250,25 @@ byte-identical, key order included, 61/62 projects (the 62nd is online-shop, bel
 
 Known gaps:
 
-* **Zod conversion is Node only.** Go bundles the declaring modules with esbuild
-  and runs them in QuickJS (`schemas/zodjs`), falling back to Node. Rust has no
-  esbuild; `schemas::vendor::NodeConverter` runs `options.schemaConfig.vendorScript`
-  (`scripts/vendor-schemas.mjs`) like Go's fallback. It needs the project's
-  generated `.pikku/**/index.js` and installed `node_modules`: on a clean checkout
-  17 of the 35 projects with schemas fail with "Cannot find module .pikku/...".
-  Verified byte-identical on `verifiers/functions` (66/66 incl. 6 Zod) once `.pikku`
-  exists. Matching Go on a clean tree needs an esbuild (binary) + JS-engine port.
-* **No on-disk schema cache** (`go-ts-schemas.json`): performance only.
+* **Zod conversion is native, with no esbuild, no Node and no fallback.** Go bundles the
+  declaring modules with esbuild and runs them in QuickJS (`schemas/zodjs`), falling back
+  to Node. Rust (`schemas/zodjs.rs`, `schemas/transpile.rs`) does the same job in-process:
+  tsrs's emitter (module ESNext, one file at a time, no checking) turns each TypeScript
+  module into an ES module; `oxc_resolver` resolves imports like esbuild (conditions
+  `import`/`default`, main fields `module`/`main`, the project tsconfig's paths); rquickjs
+  links them through its module loader and runs Go's own `runner.js`/`helpers.gen.js`
+  (embedded with `include_str!`, byte for byte). A bare import that is not `zod` and resolves
+  outside the project or into `node_modules` is a stub, as in Go; a stub's exports are the
+  names its importer asks for, read off the importer's source (named imports, `export {..}
+  from`, and `ns.member` for `import * as ns`). A schema that touches a stub, or a module
+  that does not load, is reported as an error ("Could not convert Zod schema 'X' without Node
+  ...", Go's no-Node text). Known differences: (1) CommonJS modules outside `node_modules`
+  (`require`, `module.exports`) do not load; (2) `import * as ns` of a stubbed package
+  exposes only the members the importer reads by name; (3) a project whose Go run fails only
+  because Go's Node fallback cannot find the generated `.pikku` (verifiers/addon-dependencies/billing,
+  verifiers/pikku-studio on a clean tree) fails in Rust too with the same "Schema generation
+  failed for 2 schemas", but the per-schema diagnostic text is Rust's, not Node's
+  "Cannot find module" (harness: expected-failure-mismatch, by message only).
 * **`TypeToTypeNode` has no Strada union reorder** (`tsjg/typenode.rs` uses tsrs's
   own order) until the tsutil typeorder/unionorder port lands; used for call
   expressions, Promise and object-literal spreads.
@@ -268,8 +278,10 @@ Known gaps:
   `ExpressionWithTypeArgumentsNodeParser` does `aliasedSymbol.Declarations[0]` on
   a symbol with no declarations (index out of range). tsrs parses that heritage
   entry as a `TypeReference`, whose parser falls back to `any`, so Rust returns the
-  schema (without the base members) and no diagnostic. Fix in Go: guard the empty
-  declaration list like `TypeReferenceNodeParser` (`firstValidDeclaration`).
+  schema (without the base members) and no diagnostic. Fixed in Go
+  (commit "inspector-go: guard an unresolved base type in the extends parser"): the empty
+  declaration list returns `any`, so Rust and Go agree (online-shop identical with schemas on;
+  test `tests/schemas_unresolved_base.rs`). The oracle binary must include that commit.
 * Error text for internal Rust panics (Go: `internal error: ...` + stack) is not
   reproduced; `describe_node` reports a byte offset, not line:column.
 * `locale_sort` of the virtual file's declarations is an approximation of ICU
