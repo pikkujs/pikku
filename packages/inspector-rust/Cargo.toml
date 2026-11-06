@@ -35,5 +35,6 @@ indexmap = { version = "2", features = ["serde"] }
 sha2 = "0.10"
 sha1 = "0.10"
 rustc-hash = "2"
+rquickjs = "0.14.0"
 
 [workspace]
