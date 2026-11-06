@@ -1,7 +1,7 @@
 ---
 name: pikku-report
 description: >-
-  Report Pikku itself when it cost you time or asked to file a bug, and at every build hand-over: `pikku report`. Not your app's bugs. Never patch pikku's source from an app.
+  Report Pikku itself when it cost you time or asked to file a bug, and at every build hand-over: `pikku cloud report`. Not your app's bugs. Never patch pikku's source from an app.
 installGroups: [core]
 ---
 
@@ -11,10 +11,9 @@ A finding is about **pikku**, not about the app you are building. It is how the
 framework learns what cost its users time — the bug, the misleading skill, the
 silence where a check should have complained.
 
-File each one the moment it happens. Filing always works, signed in or not: the
-finding goes to `.pikku/findings/` at the checkout root, which git ignores, and
-nothing leaves the machine until the user says so at hand-over. The command is
-`pikku report`.
+File each one the moment it happens. Nothing leaves the machine until the user
+says so at hand-over, and nothing is written to the repository. The command is
+spelled `pikku cloud report` — there is no top-level report command.
 
 ## Report at the moment it happens
 
@@ -68,7 +67,7 @@ follows it. Quote the heredoc delimiter (`<<'EOF'`, never `<<EOF`) so the shell
 leaves the body alone.
 
 ```bash
-pikku report --stdin <<'EOF'
+pikku cloud report --stdin <<'EOF'
 {
   "title": "<one-line title>",
   "kind": "product",
@@ -109,35 +108,30 @@ The last thing in the hand-over — after the app runs, and is deployed if they
 chose to — is:
 
 ```bash
-pikku report
+pikku cloud report
 ```
 
-With no finding, it lists what this build filed. Not logged in, the findings
-stay on the computer: nothing is sent, nothing is asked, and there is nothing to
-tell the user. Logged in, what happens next depends on what the user said
-before, which the CLI keeps on their machine:
+With no finding, it lists what this build filed. What happens next depends on
+what the user said before, which the CLI keeps on their machine:
 
 - **Always** — every finding was sent the moment you filed it. Tell the user in
   one line.
 - **Never** — nothing was kept. Do not ask and do not mention it.
-- **Nothing saved** — the output names the account. Show the user the titles and
-  ask once: _"Send these to the Pikku team as <account> so they can fix them?"_ —
-  **Yes**, **No**, **Always** or **Never**. Then run it again with their answer:
+- **Nothing saved** — show the user the titles and ask once: _"Send these to the
+  Pikku team so they can fix them?"_ — **Yes**, **No**, **Always** or
+  **Never**. Then run it again with their answer:
 
   ```bash
-  pikku report --consent yes|no|always|never
+  pikku cloud report --consent yes|no|always|never
   ```
 
   Yes sends and No discards what is held now; Always and Never are saved and the
-  question is not asked again. A sandbox may be unable to save them: that prints
-  a warning, the answer applies to this run only, and `PIKKU_REPORT` sets it for
-  good. If nobody answers, leave them held and say that `pikku report` sends them
-  later.
+  question is not asked again. If nobody answers, leave them held and say that
+  `pikku cloud report` sends them later.
 
-Findings go out under the user's account, so they are not anonymous. The receipt
-printed when you filed each one is exactly what leaves the machine. A send that
-fails keeps what was not sent; do not retry or file it twice. A failed write only
-warns: it never fails the build.
+Findings are anonymous: no account, no project. The receipt printed when you
+filed each one is exactly what leaves the machine. A send that fails keeps what
+was not sent; do not retry or file it twice.
 
 ## Never fix pikku itself
 
