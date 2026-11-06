@@ -22,6 +22,8 @@ and change it through the write path rather than by hand.
 
 ## Start with `pikku meta context`
 
+Bare, it prints the short project map. `pikku meta grep <terms>` searches everything at once, translations included, and comes before any shell grep. `pikku meta db [table]`, `screens`, `services` and `emails` answer the rest; `--json` gives the full document.
+
 It answers in one call what a planner needs — functions, wires, middleware,
 permissions, workflows, capabilities, layout. Reach for `pikku meta` when you
 are going to act on the output and `pikku info` when a person will read it;
