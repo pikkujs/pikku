@@ -5,6 +5,7 @@ import type {
   SurfaceEntryPointId,
   SurfaceLeaf,
 } from './surface-doc.types.js'
+import { SURFACE_GUIDES, type SurfaceGuide } from './surface-editorial.js'
 
 export type RenderSurfaceDocOptions = {
   target?: string
@@ -133,6 +134,7 @@ const renderIndex = (doc: SurfaceDoc, leaves: SurfaceLeaf[], ai: boolean) => {
   lines.push(
     '',
     '  pikku doc <door>      one door: what it exports and the keys you write',
+    `  pikku doc <topic>     ${SURFACE_GUIDES.map((guide) => guide.names[0]).join(', ')}`,
     '  pikku doc <export>    one export: its signature, its keys, what it references',
     '  pikku doc PKU641      one error code: what it means and the fix',
     '  pikku doc a b c       several at once, in one call'
@@ -144,6 +146,15 @@ const renderIndex = (doc: SurfaceDoc, leaves: SurfaceLeaf[], ai: boolean) => {
   }
   return lines.join('\n')
 }
+
+const renderGuide = (guide: SurfaceGuide): string =>
+  [
+    `${guide.names[0]} — ${guide.title}`,
+    '',
+    ...guide.points.flatMap((point) => [wrap(point, 78, '  '), '']),
+    '  example',
+    ...guide.example.split('\n').map((line) => `    ${line}`),
+  ].join('\n')
 
 const renderSymbolRow = (symbol: SurfaceDocSymbol): string[] => {
   const lines = [
@@ -371,6 +382,10 @@ export const renderSurfaceDoc = (
   )
   if (leaf) {
     return renderLeaf(leaf, ai)
+  }
+  const guide = SURFACE_GUIDES.find(({ names }) => names.includes(target))
+  if (guide) {
+    return renderGuide(guide)
   }
   const home = new Map<string, string>()
   for (const candidate of leaves) {
