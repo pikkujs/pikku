@@ -34,7 +34,7 @@
     "serverless-offline": "^14.8.3",
     "serverless-offline-sqs": "^9.0.1",
     "tsx": "^4.23.15",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "exports": {
     ".": "./dist/index.mjs"

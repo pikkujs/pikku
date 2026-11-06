@@ -1,0 +1,3669 @@
+[
+  {
+    "op": "read",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {
+        "id": "x"
+      }
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": null,
+    "want": {
+      "ok": "const a = <h1>Hi</h1>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <h1 id=\"new\">Hi</h1>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <h1 id=\"x\" hidden>Hi</h1>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <h1 id=\"x\" hidden={false}>Hi</h1>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <h1 id=\"x\" tabIndex={3}>Hi</h1>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <h1 id=\"x\" data-x=\"a\\\"b\\\\c\">Hi</h1>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <h1 id=\"x\" n={1.5}>Hi</h1>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <h1 id=\"x\" n={1e+21}>Hi</h1>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <h1 id=\"x\" n={0.000001}>Hi</h1>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <h1 id=\"x\" className=\"z\">Hi</h1>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <h1 id=\"x\" className=\"[font-size:30px]!\">Hi</h1>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <h1 id=\"x\" className=\"[font-size:1_2]! [color:red]!\">Hi</h1>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <h1 id=\"x\" className=\"[font-size:2px]!\">Hi</h1>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <h1 id=\"x\">Hi</h1>",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <h1 id=\"x\" className=\"[background-color:rgb(1,_2,_3)]!\">Hi</h1>"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "want": {
+      "ok": {
+        "id": "é",
+        "className": "a [font-size:10px]! b",
+        "hidden": true,
+        "title": "t"
+      }
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "name": "id",
+    "value": null,
+    "want": {
+      "ok": "const 😀 = <div className=\"a [font-size:10px]! b\" hidden title='t' />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const 😀 = <div  id=\"new\" className=\"a [font-size:10px]! b\" hidden title='t' />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden={false} title='t' />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' tabIndex={3} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' data-x=\"a\\\"b\\\\c\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' n={1.5} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' n={1e+21} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' n={0.000001} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"z\" hidden title='t' />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"a b [font-size:30px]!\" hidden title='t' />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "styles": [["fontSize", null]],
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"a b\" hidden title='t' />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"a b [font-size:1_2]! [color:red]!\" hidden title='t' />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"a b [font-size:2px]!\" hidden title='t' />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b\" hidden title='t' />",
+    "line": 1,
+    "col": 11,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const 😀 = <div  id=\"é\" className=\"a [font-size:10px]! b [background-color:rgb(1,_2,_3)]!\" hidden title='t' />"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {
+        "a": 1,
+        "b": 16,
+        "c": 1000,
+        "d": 1500,
+        "e": "tpl",
+        "f": true,
+        "g": false,
+        "i": true
+      }
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i id=\"new\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i hidden />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i hidden={false} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i tabIndex={3} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i data-x=\"a\\\"b\\\\c\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i n={1.5} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i n={1e+21} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i n={0.000001} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i className=\"z\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i className=\"[font-size:30px]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i className=\"[font-size:1_2]! [color:red]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i className=\"[font-size:2px]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i />",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <Foo<string> a={1} b={0x10} c={1_000} d={1.5e3} e={`tpl`} f={true} g={false} h={x} {...rest} i className=\"[background-color:rgb(1,_2,_3)]!\" />"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {
+        "id": "2",
+        "data-x": "q"
+      }
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": null,
+    "want": {
+      "ok": "const a = <A id=\"2\" data-x=\"q\" aria:b=\"c\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <A id=\"new\" id=\"2\" data-x=\"q\" aria:b=\"c\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" hidden />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" hidden={false} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" tabIndex={3} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"a\\\"b\\\\c\" aria:b=\"c\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" n={1.5} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" n={1e+21} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" n={0.000001} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" className=\"z\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" className=\"[font-size:30px]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" className=\"[font-size:1_2]! [color:red]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" className=\"[font-size:2px]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" />",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <A id=\"1\" id=\"2\" data-x=\"q\" aria:b=\"c\" className=\"[background-color:rgb(1,_2,_3)]!\" />"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[color:red]!\")} id=\"new\">x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[color:red]!\")} hidden>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[color:red]!\")} hidden={false}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[color:red]!\")} tabIndex={3}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[color:red]!\")} data-x=\"a\\\"b\\\\c\">x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[color:red]!\")} n={1.5}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[color:red]!\")} n={1e+21}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[color:red]!\")} n={0.000001}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div className=\"z\">x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[color:red]! [font-size:30px]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[font-size:1_2]! [color:red]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[font-size:2px]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"p-2\", \"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[color:red]! [background-color:rgb(1,_2,_3)]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\")} id=\"new\">x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\")} hidden>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\")} hidden={false}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\")} tabIndex={3}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\")} data-x=\"a\\\"b\\\\c\">x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\")} n={1.5}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\")} n={1e+21}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\")} n={0.000001}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div className=\"z\">x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[font-size:30px]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[font-size:1_2]! [color:red]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[font-size:2px]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"p-2\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <div className={cn(\"p-2\", \"[background-color:rgb(1,_2,_3)]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div className={cn(\"[color:red]!\")} id=\"new\">x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div className={cn(\"[color:red]!\")} hidden>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div className={cn(\"[color:red]!\")} hidden={false}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div className={cn(\"[color:red]!\")} tabIndex={3}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div className={cn(\"[color:red]!\")} data-x=\"a\\\"b\\\\c\">x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div className={cn(\"[color:red]!\")} n={1.5}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div className={cn(\"[color:red]!\")} n={1e+21}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div className={cn(\"[color:red]!\")} n={0.000001}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div className=\"z\">x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <div className={cn(\"[color:red]! [font-size:30px]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(\"[font-size:1_2]! [color:red]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(\"[font-size:2px]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"[color:red]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <div className={cn(\"[color:red]! [background-color:rgb(1,_2,_3)]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")} id=\"new\">x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")} hidden>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")} hidden={false}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")} tabIndex={3}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")} data-x=\"a\\\"b\\\\c\">x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")} n={1.5}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")} n={1e+21}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")} n={0.000001}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div className=\"z\">x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:30px]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", null]],
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[color:red]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[font-size:1_2]! [color:red]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[font-size:2px]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]!\")}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <div className={cn(\"a\", \"[color:red]! [font-size:1px]! [background-color:rgb(1,_2,_3)]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div className={cn()} id=\"new\">x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div className={cn()} hidden>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div className={cn()} hidden={false}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div className={cn()} tabIndex={3}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div className={cn()} data-x=\"a\\\"b\\\\c\">x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div className={cn()} n={1.5}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div className={cn()} n={1e+21}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div className={cn()} n={0.000001}>x</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div className=\"z\">x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <div className={cn(\"[font-size:30px]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(\"[font-size:1_2]! [color:red]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(\"[font-size:2px]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn()}>x</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <div className={cn(\"[background-color:rgb(1,_2,_3)]!\")}>x</div>"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div className={cn(a, b)} id=\"new\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div className={cn(a, b)} hidden />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div className={cn(a, b)} hidden={false} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div className={cn(a, b)} tabIndex={3} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div className={cn(a, b)} data-x=\"a\\\"b\\\\c\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div className={cn(a, b)} n={1.5} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div className={cn(a, b)} n={1e+21} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div className={cn(a, b)} n={0.000001} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div className=\"z\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <div className={cn(a, b, \"[font-size:30px]!\")} />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(a, b, \"[font-size:1_2]! [color:red]!\")} />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <div className={cn(a, b, \"[font-size:2px]!\")} />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={cn(a, b)} />",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <div className={cn(a, b, \"[background-color:rgb(1,_2,_3)]!\")} />"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div className={foo} id=\"new\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div className={foo} hidden />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div className={foo} hidden={false} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div className={foo} tabIndex={3} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div className={foo} data-x=\"a\\\"b\\\\c\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div className={foo} n={1.5} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div className={foo} n={1e+21} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div className={foo} n={0.000001} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div className=\"z\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", null]],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "styles": [],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={foo} />",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {
+        "className": "a b"
+      }
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div className={`a b`} id=\"new\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div className={`a b`} hidden />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div className={`a b`} hidden={false} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div className={`a b`} tabIndex={3} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div className={`a b`} data-x=\"a\\\"b\\\\c\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div className={`a b`} n={1.5} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div className={`a b`} n={1e+21} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div className={`a b`} n={0.000001} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div className=\"z\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <div className=\"a b [font-size:30px]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <div className=\"a b [font-size:1_2]! [color:red]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <div className=\"a b [font-size:2px]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className={`a b`} />",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <div className=\"a b [background-color:rgb(1,_2,_3)]!\" />"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {
+        "className": true
+      }
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div className id=\"new\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div className hidden />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div className hidden={false} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div className tabIndex={3} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div className data-x=\"a\\\"b\\\\c\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div className n={1.5} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div className n={1e+21} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div className n={0.000001} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div className=\"z\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", null]],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "styles": [],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className />",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "err": "This element builds its className in a way that cannot be edited safely"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {
+        "className": ""
+      }
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div className=\"\" id=\"new\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div className=\"\" hidden />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div className=\"\" hidden={false} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div className=\"\" tabIndex={3} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div className=\"\" data-x=\"a\\\"b\\\\c\" />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div className=\"\" n={1.5} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div className=\"\" n={1e+21} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div className=\"\" n={0.000001} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div className=\"z\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <div className=\"[font-size:30px]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <div className=\"[font-size:1_2]! [color:red]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <div className=\"[font-size:2px]!\" />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div className=\"\" />",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <div className=\"[background-color:rgb(1,_2,_3)]!\" />"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div id=\"new\">\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div hidden>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div hidden={false}>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div tabIndex={3}>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div data-x=\"a\\\"b\\\\c\">\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div n={1.5}>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div n={1e+21}>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div n={0.000001}>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div className=\"z\">\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <div className=\"[font-size:30px]!\">\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <div className=\"[font-size:1_2]! [color:red]!\">\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <div className=\"[font-size:2px]!\">\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <div className=\"[background-color:rgb(1,_2,_3)]!\">\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "want": {
+      "ok": {
+        "className": "x"
+      }
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x\" id=\"new\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x\" hidden\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x\" hidden={false}\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x\" tabIndex={3}\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x\" data-x=\"a\\\"b\\\\c\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x\" n={1.5}\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x\" n={1e+21}\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x\" n={0.000001}\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"z\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x [font-size:30px]!\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x [font-size:1_2]! [color:red]!\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x [font-size:2px]!\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div>\r\n  <span\r\n    className=\"x\"\r\n  />\r\n</div>",
+    "line": 2,
+    "col": 2,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <div>\r\n  <span\r\n    className=\"x [background-color:rgb(1,_2,_3)]!\"\r\n  />\r\n</div>"
+    }
+  },
+  {
+    "op": "read",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A id=\"new\"><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A hidden><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A hidden={false}><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A tabIndex={3}><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A data-x=\"a\\\"b\\\\c\"><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A n={1.5}><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A n={1e+21}><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A n={0.000001}><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A className=\"z\"><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A className=\"[font-size:30px]!\"><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A className=\"[font-size:1_2]! [color:red]!\"><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A className=\"[font-size:2px]!\"><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 2,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A className=\"[background-color:rgb(1,_2,_3)]!\"><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "read",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B id=\"new\"   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B hidden   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B hidden={false}   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B tabIndex={3}   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B data-x=\"a\\\"b\\\\c\"   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B n={1.5}   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B n={1e+21}   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B n={0.000001}   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B className=\"z\"   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B className=\"[font-size:30px]!\"   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B className=\"[font-size:1_2]! [color:red]!\"   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B className=\"[font-size:2px]!\"   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 2,
+    "col": 5,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B className=\"[background-color:rgb(1,_2,_3)]!\"   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "read",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "want": {
+      "ok": {
+        "x": "1"
+      }
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" id=\"new\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" hidden/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" hidden={false}/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" tabIndex={3}/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" data-x=\"a\\\"b\\\\c\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" n={1.5}/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" n={1e+21}/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" n={0.000001}/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" className=\"z\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" className=\"[font-size:30px]!\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" className=\"[font-size:1_2]! [color:red]!\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" className=\"[font-size:2px]!\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\" className=\"[background-color:rgb(1,_2,_3)]!\"/> : <D/>}\n</>) }"
+    }
+  },
+  {
+    "op": "read",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D id=\"new\"/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D hidden/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D hidden={false}/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D tabIndex={3}/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D data-x=\"a\\\"b\\\\c\"/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D n={1.5}/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D n={1e+21}/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D n={0.000001}/>}\n</>) }"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D className=\"z\"/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D className=\"[font-size:30px]!\"/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D className=\"[font-size:1_2]! [color:red]!\"/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D className=\"[font-size:2px]!\"/>}\n</>) }"
+    }
+  },
+  {
+    "op": "style",
+    "source": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D/>}\n</>) }",
+    "line": 3,
+    "col": 23,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "function F(){ return (<>\n  <A><B   /></A>\n  {cond ? <C x=\"1\"/> : <D className=\"[background-color:rgb(1,_2,_3)]!\"/>}\n</>) }"
+    }
+  },
+  {
+    "op": "read",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "want": {
+      "ok": {
+        "id": "a\\",
+        "b": true
+      }
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": null,
+    "want": {
+      "ok": "const a = <divb\" title={'single'} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "const a = <div id=\"new\"b\" title={'single'} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b hidden\" title={'single'} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b hidden={false}\" title={'single'} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b tabIndex={3}\" title={'single'} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b data-x=\"a\\\"b\\\\c\"\" title={'single'} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b n={1.5}\" title={'single'} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b n={1e+21}\" title={'single'} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b n={0.000001}\" title={'single'} />"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b className=\"z\"\" title={'single'} />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b className=\"[font-size:30px]!\"\" title={'single'} />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b className=\"[font-size:1_2]! [color:red]!\"\" title={'single'} />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b className=\"[font-size:2px]!\"\" title={'single'} />"
+    }
+  },
+  {
+    "op": "style",
+    "source": "const a = <div id=\"a\\\"b\" title={'single'} />",
+    "line": 1,
+    "col": 10,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "const a = <div id=\"a\\\"b className=\"[background-color:rgb(1,_2,_3)]!\"\" title={'single'} />"
+    }
+  },
+  {
+    "op": "read",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "export default () => <p id=\"new\">😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "export default () => <p hidden>😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "export default () => <p hidden={false}>😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "export default () => <p tabIndex={3}>😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "export default () => <p data-x=\"a\\\"b\\\\c\">😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "export default () => <p n={1.5}>😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "export default () => <p n={1e+21}>😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "export default () => <p n={0.000001}>😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "export default () => <p className=\"z\">😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "export default () => <p className=\"[font-size:30px]!\">😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "export default () => <p className=\"[font-size:1_2]! [color:red]!\">😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "export default () => <p className=\"[font-size:2px]!\">😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 21,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "export default () => <p className=\"[background-color:rgb(1,_2,_3)]!\">😀😀 <b>x</b></p>"
+    }
+  },
+  {
+    "op": "read",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "want": {
+      "ok": {}
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "name": "id",
+    "value": "new",
+    "want": {
+      "ok": "export default () => <p>😀😀 <b id=\"new\">x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "name": "hidden",
+    "value": true,
+    "want": {
+      "ok": "export default () => <p>😀😀 <b hidden>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "name": "hidden",
+    "value": false,
+    "want": {
+      "ok": "export default () => <p>😀😀 <b hidden={false}>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "name": "tabIndex",
+    "value": 3,
+    "want": {
+      "ok": "export default () => <p>😀😀 <b tabIndex={3}>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "name": "data-x",
+    "value": "a\"b\\c",
+    "want": {
+      "ok": "export default () => <p>😀😀 <b data-x=\"a\\\"b\\\\c\">x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "name": "n",
+    "value": 1.5,
+    "want": {
+      "ok": "export default () => <p>😀😀 <b n={1.5}>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "name": "n",
+    "value": 1e21,
+    "want": {
+      "ok": "export default () => <p>😀😀 <b n={1e+21}>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "name": "n",
+    "value": 0.000001,
+    "want": {
+      "ok": "export default () => <p>😀😀 <b n={0.000001}>x</b></p>"
+    }
+  },
+  {
+    "op": "prop",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "name": "className",
+    "value": "z",
+    "want": {
+      "ok": "export default () => <p>😀😀 <b className=\"z\">x</b></p>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "styles": [["fontSize", "30px"]],
+    "want": {
+      "ok": "export default () => <p>😀😀 <b className=\"[font-size:30px]!\">x</b></p>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "styles": [
+      ["fontSize", "1  2"],
+      ["color", " red "]
+    ],
+    "want": {
+      "ok": "export default () => <p>😀😀 <b className=\"[font-size:1_2]! [color:red]!\">x</b></p>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "styles": [
+      ["color", null],
+      ["fontSize", "2px"]
+    ],
+    "want": {
+      "ok": "export default () => <p>😀😀 <b className=\"[font-size:2px]!\">x</b></p>"
+    }
+  },
+  {
+    "op": "style",
+    "source": "export default () => <p>😀😀 <b>x</b></p>",
+    "line": 1,
+    "col": 29,
+    "styles": [["backgroundColor", "rgb(1, 2, 3)"]],
+    "want": {
+      "ok": "export default () => <p>😀😀 <b className=\"[background-color:rgb(1,_2,_3)]!\">x</b></p>"
+    }
+  }
+]

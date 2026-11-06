@@ -1,5 +1,5 @@
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import { sanitizeTypeName } from '@pikku/inspector/lite'
+import { sanitizeTypeName } from '@pikku/inspector'
 
 /**
  * Scenario workflow meta, merged onto whatever the app registered rather than

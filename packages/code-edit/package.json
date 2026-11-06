@@ -89,7 +89,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "typescript": "^6.0.3"
+    "@pikku/inspector-go": "^0.12.8"
   },
   "devDependencies": {
     "@types/node": "^26.6.5"

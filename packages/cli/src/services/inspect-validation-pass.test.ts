@@ -3,7 +3,7 @@ import { describe, test } from 'node:test'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { inspect } from '@pikku/inspector'
+import { inspect } from '@pikku/inspector-go'
 import { CLILogger } from './cli-logger.service.js'
 
 /**

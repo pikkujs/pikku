@@ -39,7 +39,7 @@
     "serverless-esbuild": "^1.57.2",
     "serverless-offline": "^14.8.3",
     "tsx": "^4.23.15",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "exports": {
     ".": "./dist/index.mjs"

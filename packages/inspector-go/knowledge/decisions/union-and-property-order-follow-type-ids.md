@@ -8,7 +8,7 @@ tags: [inspector-go, parity, schemas, typescript-go]
 # Mapped-type property order follows Strada's type ids, not source order
 
 > [!NOTE]
-> Unions no longer follow ids: both engines sort a printed union by text (see
+> Unions no longer follow ids: a printed union is sorted by text (see
 > `packages/inspector/knowledge/decisions/printed-unions-are-sorted-by-text.md`).
 > The id sort below still decides property order, and still runs on unions
 > before they are canonicalized.

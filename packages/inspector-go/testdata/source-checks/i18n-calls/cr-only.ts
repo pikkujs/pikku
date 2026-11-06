@@ -1,0 +1,1 @@
+import { asI18n } from '@pikku/react'const a = asI18n('cr only')const b = asI18n(`second`)

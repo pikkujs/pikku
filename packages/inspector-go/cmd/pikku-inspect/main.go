@@ -32,6 +32,7 @@ import (
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/program"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/protocol"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/typecheck"
 )
 
 func main() {
@@ -146,6 +147,7 @@ func runFinalize(r io.Reader, w io.Writer) error {
 // files from one request to the next, and every request gets a new checker.
 func runServe(r io.Reader, w io.Writer) error {
 	cache := program.NewCache()
+	typecheckers := map[string]*typecheck.Service{}
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 1<<20), 256<<20)
 	out := bufio.NewWriter(w)
@@ -155,6 +157,15 @@ func runServe(r io.Reader, w io.Writer) error {
 			continue
 		}
 		var head helperRequest
+		if json.Unmarshal(line, &head) == nil && head.Method == "typeDiagnostics" {
+			if err := writeJSON(out, typeDiagnostics(head, typecheckers), ""); err != nil {
+				return err
+			}
+			if err := out.Flush(); err != nil {
+				return err
+			}
+			continue
+		}
 		if json.Unmarshal(line, &head) == nil && helpers.Has(head.Method) {
 			result, herr := helpers.Dispatch(head.Method, head.Params)
 			if err := writeJSON(out, helperResponse{ID: head.ID, Result: result, Error: herr}, ""); err != nil {
@@ -191,6 +202,27 @@ func runServe(r io.Reader, w io.Writer) error {
 		}
 	}
 	return sc.Err()
+}
+
+type typeDiagnosticsParams struct {
+	Root    string  `json:"root"`
+	Path    string  `json:"path"`
+	Content *string `json:"content"`
+}
+
+// typeDiagnostics answers `typeDiagnostics` in serve mode, keeping one
+// type-check service per workspace root so its parsed files outlive a request.
+func typeDiagnostics(req helperRequest, services map[string]*typecheck.Service) helperResponse {
+	var p typeDiagnosticsParams
+	if err := json.Unmarshal(req.Params, &p); err != nil {
+		return helperResponse{ID: req.ID, Error: &helpers.Error{Message: "bad params: " + err.Error()}}
+	}
+	svc := services[p.Root]
+	if svc == nil {
+		svc = typecheck.New(p.Root)
+		services[p.Root] = svc
+	}
+	return helperResponse{ID: req.ID, Result: svc.Diagnostics(p.Path, p.Content)}
 }
 
 type helperRequest struct {

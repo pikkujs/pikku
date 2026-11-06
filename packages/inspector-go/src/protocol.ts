@@ -69,6 +69,8 @@ export interface InspectorGoStats {
   files: number
   /** Files under rootDir the inspector actually swept. */
   projectFiles: number
+  /** Files served from the source-file cache without re-parsing; zero on a first pass. */
+  filesReused?: number
   types: number
   /** Type instantiations; the Go checker does not count them, so 0. */
   instantiations: number

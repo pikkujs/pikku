@@ -20,3 +20,7 @@ packages/core/api-report.md
 # recipe is a fragment prettier cannot even parse. Formatting them also rewrites the exact
 # text `pikku examples add` writes into a user's project.
 packages/cli/examples/
+
+# Fixture inputs for the Go scanners: their exact bytes (CRLF, lone CR, BOM, U+2028,
+# invalid UTF-8, deliberately unformatted source) are what the goldens were built from.
+packages/inspector-go/testdata/

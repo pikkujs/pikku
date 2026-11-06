@@ -1,0 +1,100 @@
+{
+  "keys": [
+    "title",
+    "sub_key",
+    "greeting",
+    "three",
+    "four",
+    "typed_key",
+    "after_shadow_scope",
+    "ns_key",
+    "from_elsewhere",
+    "",
+    "ok_key",
+    "é"
+  ],
+  "usedIn": [
+    {
+      "key": "title",
+      "files": ["src/a.tsx"]
+    },
+    {
+      "key": "sub_key",
+      "files": ["src/a.tsx"]
+    },
+    {
+      "key": "greeting",
+      "files": ["src/a.tsx"]
+    },
+    {
+      "key": "three",
+      "files": ["src/a.tsx"]
+    },
+    {
+      "key": "four",
+      "files": ["src/a.tsx"]
+    },
+    {
+      "key": "typed_key",
+      "files": ["src/a.tsx"]
+    },
+    {
+      "key": "after_shadow_scope",
+      "files": ["src/a.tsx"]
+    },
+    {
+      "key": "ns_key",
+      "files": ["src/b.ts"]
+    },
+    {
+      "key": "from_elsewhere",
+      "files": ["src/b.ts"]
+    },
+    {
+      "key": "",
+      "files": ["src/b.ts"]
+    },
+    {
+      "key": "ok_key",
+      "files": ["src/broken.ts", "src/nested/deep/c.ts"]
+    },
+    {
+      "key": "é",
+      "files": ["src/nested/deep/c.ts"]
+    }
+  ],
+  "computed": [
+    {
+      "file": "src/a.tsx",
+      "line": 5,
+      "text": "computed access: m[key]"
+    },
+    {
+      "file": "src/a.tsx",
+      "line": 6,
+      "text": "namespace used as a value: (({ one, 'two': t, ...rest }) => 1)(m)"
+    },
+    {
+      "file": "src/a.tsx",
+      "line": 7,
+      "text": "destructured with rest or computed name: { three, four: renamed, ...others } = m"
+    },
+    {
+      "file": "src/a.tsx",
+      "line": 8,
+      "text": "destructured with rest or computed name: { [key]: computedName } = m"
+    },
+    {
+      "file": "src/a.tsx",
+      "line": 9,
+      "text": "namespace used as a value: [m]"
+    },
+    {
+      "file": "src/nested/deep/c.ts",
+      "line": 3,
+      "text": "computed access: m[`computed${1}`]"
+    }
+  ],
+  "unparsed": ["src/b.ts", "src/broken.ts"],
+  "files": 5
+}

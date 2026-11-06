@@ -74,10 +74,7 @@ const notFoundMessage = (platform: string, arch: string): string => {
       `PIKKU_INSPECTOR_GO_BIN at it.`
   return (
     `No pikku-inspect binary found for ${target}. ${hint} ` +
-    `Alternatively set PIKKU_INSPECTOR_GO_BIN to a pikku-inspect binary, or ` +
-    `use the TypeScript inspector instead: set "inspector": "typescript" in ` +
-    `pikku.config.json, pass --inspector typescript, or set ` +
-    `PIKKU_INSPECTOR=typescript.`
+    `Alternatively set PIKKU_INSPECTOR_GO_BIN to a pikku-inspect binary.`
   )
 }
 

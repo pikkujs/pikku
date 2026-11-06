@@ -224,7 +224,8 @@ describe('findInspectorBinary', () => {
         error.message.includes('for freebsd-x64') &&
         error.message.includes('no prebuilt binary') &&
         error.message.includes('darwin-arm64, linux-x64') &&
-        error.message.includes('"inspector": "typescript"')
+        error.message.includes('PIKKU_INSPECTOR_GO_BIN') &&
+        !error.message.includes('typescript')
     )
   })
 })

@@ -1,5 +1,5 @@
 import { dirname, relative, sep } from 'node:path'
-import { checkLockedSdk } from '@pikku/inspector/lite'
+import { checkLockedSdk } from '@pikku/inspector'
 
 const relativeImport = (fromFile: string, dir: string, leaf: string) => {
   const path = relative(dirname(fromFile), dir).split(sep).join('/')
