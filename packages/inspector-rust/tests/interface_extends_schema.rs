@@ -43,10 +43,16 @@ fn interface_extends_converts_to_a_schema() {
     .unwrap();
     assert_eq!(input.to_string(), want.to_string());
 
-    // An interface extending a type that resolves to nothing fails in Go (with a
-    // Go runtime error and stack, which cannot be reproduced) and gets no schema.
+    // An interface extending a type that resolves to nothing used to panic in Go
+    // (an index out of range, with a stack no other engine can reproduce). Go now
+    // treats the base as `any` (commit 1f8f4546f), so the schema is generated and
+    // there is no diagnostic.
     let names: Vec<&str> = state["schemas"].as_object().unwrap().keys().map(String::as_str).collect();
-    assert_eq!(names, ["ReadOutInput", "ReadOutOutput", "ReadOrphanOutput"]);
-    let diags = serde_json::to_value(&res.diagnostics).unwrap().to_string();
-    assert!(diags.contains("Error generating schema: ReadOrphanInput"), "{diags}");
+    assert_eq!(names, ["ReadOutInput", "ReadOutOutput", "ReadOrphanInput", "ReadOrphanOutput"]);
+    let orphan: Value = serde_json::from_str(
+        r##"{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"orphan":{"$ref":"#/definitions/Orphan"}},"required":["orphan"],"additionalProperties":false,"definitions":{"Orphan":{"type":"object","properties":{"c":{"type":"string"}},"required":["c"]}}}"##,
+    )
+    .unwrap();
+    assert_eq!(state["schemas"]["ReadOrphanInput"].to_string(), orphan.to_string());
+    assert!(res.diagnostics.is_empty(), "{:?}", res.diagnostics);
 }

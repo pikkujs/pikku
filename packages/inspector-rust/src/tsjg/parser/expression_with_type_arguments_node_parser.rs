@@ -11,7 +11,7 @@ use super::shared::new_type_argument_context;
 use super::{Chk, Context, NodeParser, SubNodeParser};
 use crate::tsjg::fail;
 use crate::tsjg::tsutils;
-use crate::tsjg::types::Ty;
+use crate::tsjg::types::{self, Ty, TypeKind};
 
 /// tsrs parses the `extends` elements of an interface as type references where
 /// typescript-go has ExpressionWithTypeArguments; both go through this parser,
@@ -46,6 +46,10 @@ impl SubNodeParser for ExpressionWithTypeArgumentsNodeParser {
         };
         if type_symbol.flags().intersects(SymbolFlags::Alias) {
             let aliased = self.type_checker.with(|c| c.get_aliased_symbol(type_symbol));
+            if aliased.declarations().is_empty() {
+                // An import that does not resolve has no declaration (Go guards this since 1f8f4546f).
+                return types::new(TypeKind::Any);
+            }
             return self.child_node_parser.create_type(
                 Some(first_declaration(&aliased)),
                 &new_type_argument_context(&self.child_node_parser, node, ctx),
@@ -56,6 +60,9 @@ impl SubNodeParser for ExpressionWithTypeArgumentsNodeParser {
                 Some(t) => return t,
                 None => super::unknown_node_error(Some(node)),
             }
+        }
+        if type_symbol.declarations().is_empty() {
+            return types::new(TypeKind::Any);
         }
         self.child_node_parser.create_type(
             Some(first_declaration(&type_symbol)),
