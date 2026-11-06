@@ -100,10 +100,12 @@ jobs:
           echo "$out"
           [ "$out" = '{"result":["./b.js"]}' ]
 
-  # pikku-inspect, built in parallel with Build for the jobs that run codegen
-  # from a downloaded build artifact (they fetch it through the setup action's
-  # download-inspector-go). The Build job builds its own host copy. Publish
-  # cross-compiles every platform itself (build-go.mjs --all).
+  # pikku-inspect cross-compiled in parallel with Build, for the jobs that ask
+  # for it through the setup action's download-inspector-go (it lands in
+  # prebuilt/, which the install smoke test needs). Every job that downloads the
+  # build artifact already has the host build, which travels in
+  # packages/inspector-go/bin. Publish cross-compiles every platform itself
+  # (build-go.mjs --all).
   inspector-go-build:
     name: Go build (pikku-inspect)
     if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
@@ -135,7 +137,7 @@ jobs:
           retention-days: 1
 
   # The Zod converter's tests and the install smoke test.
-  inspector-go:
+  inspector-go-zod-smoke:
     name: Inspector-go (Zod, install smoke)
     if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
     runs-on: ubuntu-24.04
@@ -226,7 +228,8 @@ jobs:
     name: Verifiers (${{ matrix.verifier }})
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    # Codegen runs in the pikku-inspect binary, so every row downloads it.
+    # Codegen runs in the pikku-inspect binary; the build artifact carries the
+    # host copy (packages/inspector-go/bin), so no row needs a separate download.
     needs: [build, inspector-go-build]
     strategy:
       fail-fast: false
