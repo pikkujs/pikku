@@ -42,4 +42,11 @@ fn interface_extends_converts_to_a_schema() {
     )
     .unwrap();
     assert_eq!(input.to_string(), want.to_string());
+
+    // An interface extending a type that resolves to nothing fails in Go (with a
+    // Go runtime error and stack, which cannot be reproduced) and gets no schema.
+    let names: Vec<&str> = state["schemas"].as_object().unwrap().keys().map(String::as_str).collect();
+    assert_eq!(names, ["ReadOutInput", "ReadOutOutput", "ReadOrphanOutput"]);
+    let diags = serde_json::to_value(&res.diagnostics).unwrap().to_string();
+    assert!(diags.contains("Error generating schema: ReadOrphanInput"), "{diags}");
 }
