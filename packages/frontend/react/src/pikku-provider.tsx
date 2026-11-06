@@ -82,6 +82,11 @@ type WorkflowRPC = {
   workflowStatus: (workflowName: string, runId: string) => Promise<any>
 }
 
+/**
+ * Runs an agent from a screen. `agentName` is the agent's export, not its
+ * `name` field. Returns `run`, `stream` and `approve`, already typed and already
+ * carrying the provider's client.
+ */
 export const usePikkuAgent = <
   RPC extends AgentRPC = AgentRPC,
   Name extends string = string,
