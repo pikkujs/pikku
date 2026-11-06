@@ -1,4 +1,5 @@
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
+import { PACKAGE_DIR } from './binary.js'
 import type {
   InspectorOptions,
   SerializableInspectorState,
@@ -41,8 +42,10 @@ export type InspectorGoAnalysisOptions = Pick<
 }
 
 /** The Node Zod converter this package ships, the binary's fallback. */
-export const VENDOR_SCHEMA_SCRIPT = fileURLToPath(
-  new URL('../scripts/vendor-schemas.mjs', import.meta.url)
+export const VENDOR_SCHEMA_SCRIPT = join(
+  PACKAGE_DIR,
+  'scripts',
+  'vendor-schemas.mjs'
 )
 
 /** What `pikku-inspect --stdin` reads. */
