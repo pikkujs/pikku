@@ -68,12 +68,12 @@ One commit changes `DEFAULT_ENGINE` to `'rs'` (and the docs/tests that name the
 default). Before keeping it: parity jobs green and made blocking, no open item
 above that affects generated output.
 
-### Decision: Go stays the default for now
+### Decision: Go stays the default until parity is proven
 
-The maintainer decided to keep Go as the default engine for now, even once
-parity holds. The default-flip commit exists on the `inspector-rs-wiring`
-branch and is deliberately not merged. Rust is opt-in (`PIKKU_INSPECTOR=rs`,
-`--inspector rs` or the `inspector` config key) until that is revisited. The
-exit criteria above still describe when revisiting is reasonable: generated
-output identical end to end, schemas natively on a clean checkout, and peak
-memory within Go's.
+The maintainer wants Go to remain the default for now, and Rust to become the
+default once parity is met. The default-flip commit exists on the
+`inspector-rs-wiring` branch and is deliberately not merged. Rust is opt-in
+(`PIKKU_INSPECTOR=rs`, `--inspector rs` or the `inspector` config key) until
+the exit criteria above hold: generated output identical end to end, schemas
+natively on a clean checkout, and peak memory within Go's. Then that one commit
+is merged.
