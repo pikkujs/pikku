@@ -51,7 +51,9 @@ export const approvalPolicyRefusal = (
 
   switch (policy.approvers ?? 'any') {
     case 'owner':
-      if (!owner) {
+      // A run with no owner has nobody who could qualify. A call with no decider
+      // at all is the application's own code answering the gate, not a user.
+      if (!owner && !decider) {
         return undefined
       }
       if (!decider?.userId || decider.userId !== owner) {

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/protocol"
 )
 
@@ -81,7 +82,7 @@ export const onboard = pikkuWorkflowFunc({
 		`{"type":"fanout","sourceVar":"data.ids","itemVar":"id","mode":"sequential","body":[{"type":"rpc","stepName":"per id","rpcName":"handleId","inputs":{"id":{"from":"item","path":"id"}}},{"type":"sleep","stepName":"gap","duration":500}],"timeBetween":"500ms"},` +
 		`{"type":"set","variable":"attempts","value":2},` +
 		`{"type":"return","outputs":{"user":{"from":"outputVar","name":"user"},"a":{"from":"outputVar","name":"a"}}}` +
-		`],"context":{"attempts":{"type":"number","default":0}},"dsl":true,"title":"Onboard","expose":null}`
+		`],"context":{"attempts":{"type":"number","default":0}},"dsl":true,"title":"Onboard","expose":null,"auth":null}`
 	if got != want {
 		t.Errorf("meta mismatch\n got: %s\nwant: %s", got, want)
 	}
@@ -128,38 +129,59 @@ export const complex = pikkuWorkflowComplexFunc(async ({}: any, data: any, { wor
 	}
 }
 
-func TestDSLWorkflowBoundApproval(t *testing.T) {
-	res := runWorkflowProject(t, `
-export const gated = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
-  const decision = await workflow.approval('Manager sign-off', { schema: data.schema, approvers: 'not-initiator', approverScope: 'tests:approve' })
-  if (decision.status === 'expired') {
-    return { outcome: 'expired' }
-  }
-  await workflow.do('record', 'recordDecision', { status: decision.status })
+func TestWorkflowApprovalMustDeclareApprovers(t *testing.T) {
+	cases := []struct {
+		name, options string
+		refused       bool
+	}{
+		{"no options", ``, true},
+		{"options without approvers", `, { schema: Decision }`, true},
+		{"options that cannot be read", `, gateOptions`, true},
+		{"a spread", `, { ...gateOptions }`, true},
+		{"explicit any", `, { approvers: 'any' }`, false},
+		{"owner", `, { approvers: 'owner' }`, false},
+		{"shorthand", `, { approvers }`, false},
+	}
+	for _, wrapper := range []string{"pikkuWorkflowFunc", "pikkuWorkflowComplexFunc"} {
+		for _, c := range cases {
+			t.Run(wrapper+" "+c.name, func(t *testing.T) {
+				res := runWorkflowProject(t, `
+declare const Decision: any, gateOptions: any, approvers: any
+export const gated = `+wrapper+`({
+  func: async (_s: any, data: any, { workflow }: any) => {
+    await workflow.approval('release'`+c.options+`)
+  },
 })
-export const reassigned = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
-  let decision = null
-  decision = await workflow.approval('Second sign-off', { schema: data.schema })
-})
-export const destructured = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
-  const { status } = await workflow.approval('Third sign-off', { schema: data.schema })
-})
-`, false)
-	got := workflowMeta(t, res, "gated")
-	for _, want := range []string{
-		`{"type":"approval","reason":"Manager sign-off","outputVar":"decision","approvers":"not-initiator","approverScope":"tests:approve"}`,
-		`"type":"branch"`,
-		`{"from":"outputVar","name":"decision","path":"status"}`,
-	} {
-		if !strings.Contains(got, want) {
-			t.Errorf("missing %s in:\n%s", want, got)
+`, true)
+				refused := false
+				for _, d := range res.Diagnostics {
+					refused = refused || d.Code == diag.WorkflowApprovalMissingApprovers
+				}
+				if refused != c.refused {
+					t.Errorf("refused = %v, want %v; diagnostics: %s", refused, c.refused, diagnosticsText(res))
+				}
+			})
 		}
 	}
-	if got := workflowMeta(t, res, "reassigned"); !strings.Contains(got, `"reason":"Second sign-off","outputVar":"decision"`) {
-		t.Errorf("reassigned gate lost: %s", got)
+}
+
+func TestWorkflowExposeOpensRoutesNotAnRPC(t *testing.T) {
+	res := runWorkflowProject(t, `
+export const opened = pikkuWorkflowFunc({
+  expose: true,
+  auth: false,
+  func: async (_s: any, data: any, { workflow }: any) => {
+    await workflow.do('a', 'stepA', data)
+    await workflow.do('b', 'stepB', data)
+  },
+})
+`, false)
+	meta := workflowMeta(t, res, "opened")
+	if !strings.Contains(meta, `"expose":true,"auth":false`) {
+		t.Errorf("workflow meta lost its opt-in: %s", meta)
 	}
-	if text := diagnosticsText(res); !strings.Contains(text, "Destructuring a step result is not supported") {
-		t.Errorf("destructured gate was not refused:\n%s", text)
+	if res.State.RPC.ExposedMeta.Has("opened") {
+		t.Error("expose on a workflow published its body as an RPC")
 	}
 }
 

@@ -43,7 +43,7 @@ describe('serializePublicAgent — agent HTTP surface', () => {
         `expected ${caller} to reference the shared schema`
       )
       assert.ok(
-        !body.includes('pikkuSessionlessFunc<'),
+        !/pikku(Sessionless)?Func</.test(body),
         'schemas and generics are mutually exclusive'
       )
     })
@@ -87,5 +87,46 @@ describe('serializePublicAgent — agent HTTP surface', () => {
     )
     assert.ok(!schemas.includes('@pikku/core'))
     assert.ok(functions.includes("from './agent.schemas.gen.js'"))
+  })
+
+  for (const caller of [
+    'agentCaller',
+    'agentStreamCaller',
+    'agentApproveCaller',
+    'agentResumeCaller',
+  ]) {
+    test(`${caller} needs a session and an exposed agent`, () => {
+      const body = callerBody(generate().functions, caller)
+      assert.ok(body.includes('= pikkuFunc({'))
+      assert.ok(body.includes('auth: true'))
+      assert.ok(
+        body.includes("assertAgentRouteAccess(data.agentName, 'session')") ||
+          body.includes("assertAgentRouteAccess(agentName, 'session')")
+      )
+    })
+  }
+
+  for (const caller of ['agentAnonymousCaller', 'agentAnonymousStreamCaller']) {
+    test(`${caller} refuses unless the agent opted in`, () => {
+      const body = callerBody(generate().functions, caller)
+      assert.ok(body.includes('auth: false'))
+      assert.ok(
+        body.includes("assertAgentRouteAccess(data.agentName, 'anonymous')")
+      )
+    })
+  }
+
+  test('resume is held to the agent named in the route', () => {
+    const body = callerBody(generate().functions, 'agentResumeCaller')
+    assert.ok(body.includes('expectedAgentName: data.agentName'))
+  })
+
+  test('the route group needs a session, and only the anonymous routes opt out', () => {
+    const { functions } = generate()
+    const routes = functions.slice(
+      functions.indexOf('export const agentRoutes')
+    )
+    assert.ok(/agentRoutes = defineHTTPRoutes\(\{\n  auth: true,/.test(routes))
+    assert.strictEqual(routes.match(/auth: false/g)?.length, 2)
   })
 })

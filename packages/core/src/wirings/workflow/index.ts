@@ -17,7 +17,10 @@ export {
 } from './workflow-constants.js'
 export { leaseAttemptsExhausted } from './workflow-step-claim.js'
 export {
+  assertWorkflowRunAnswerable,
   assertWorkflowRunOwner,
+  assertWorkflowRunReadable,
+  prepareWorkflowRouteStart,
   WorkflowRunForbiddenError,
 } from './workflow-run-ownership.js'
 export { WorkflowApprovalForbiddenError } from './workflow-approval-policy.js'

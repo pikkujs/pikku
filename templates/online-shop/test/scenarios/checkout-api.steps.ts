@@ -7,6 +7,9 @@
  * only `/workflow/:name/{start,status}` reports, so the step has to speak HTTP
  * itself. `requireScenarioEnv` is where it learns which server to speak to: the
  * same environment the virtual users were signed into, never a hardcoded localhost.
+ *
+ * Those routes want a session, and only the user who started a run may read it,
+ * so every step carries the session cookie of the shopper it speaks for.
  */
 import {
   createCookieJar,
@@ -21,6 +24,8 @@ import {
 /** What the workflow route answered, plus what it says about the run itself. */
 export interface CheckoutRun extends ScenarioHttpResponse {
   runId?: string
+  /** The signed-in shopper the run belongs to. */
+  cookie: string
   /** `completed`, `failed` or `cancelled` — the run's own status, not the HTTP one. */
   outcome?: string
 }
@@ -29,17 +34,22 @@ const TERMINAL = ['completed', 'failed', 'cancelled']
 
 // @snippet start scenarioHttpStep
 export const startsCheckout = pikkuScenarioStep<
-  { basketId: string; userId: string },
+  { basketId: string; userId: string; cookie: string },
   CheckoutRun
 >({
   name: 'startsCheckout',
   description: 'starts the checkout workflow over HTTP and reports the run',
   template: 'starts checkout for {basketId}',
-  default: async (_services, { basketId, userId }, { scenarioStep }) => {
+  default: async (
+    _services,
+    { basketId, userId, cookie },
+    { scenarioStep }
+  ) => {
     const { apiUrl } = requireScenarioEnv(scenarioStep)
     const response = await postScenarioJson<{ runId?: string } | undefined>(
       `${apiUrl}/workflow/checkoutWorkflow/start`,
       {
+        headers: { cookie },
         body: {
           data: {
             basketId,
@@ -54,7 +64,7 @@ export const startsCheckout = pikkuScenarioStep<
         },
       }
     )
-    return { ...response, runId: response.body?.runId }
+    return { ...response, cookie, runId: response.body?.runId }
   },
 })
 // @snippet end scenarioHttpStep
@@ -76,12 +86,17 @@ export const awaitsCheckout = pikkuScenarioStep<
         const response = await readScenarioHttpResponse<
           { status?: string } | undefined
         >(
-          await fetch(`${apiUrl}/workflow/checkoutWorkflow/status/${run.runId}`)
+          await fetch(
+            `${apiUrl}/workflow/checkoutWorkflow/status/${run.runId}`,
+            {
+              headers: { cookie: run.cookie },
+            }
+          )
         )
         last = response.serialized
         const outcome = response.body?.status
         return outcome && TERMINAL.includes(outcome)
-          ? { ...response, runId: run.runId, outcome }
+          ? { ...response, cookie: run.cookie, runId: run.runId, outcome }
           : undefined
       },
       { timeoutMs: timeoutMs ?? 30_000, intervalMs: 100 }

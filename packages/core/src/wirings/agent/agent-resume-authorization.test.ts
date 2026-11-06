@@ -9,7 +9,13 @@ import {
 import { resumeAgentSync } from './agent-runner.js'
 import { resumeAgent } from './agent-stream.js'
 import { clearPermissionsCache } from '../../permissions.js'
-import { ForbiddenError, MissingScopeError } from '../../errors/errors.js'
+import {
+  ForbiddenError,
+  MissingScopeError,
+  MissingSessionError,
+  NotFoundError,
+} from '../../errors/errors.js'
+import { assertAgentRouteAccess } from './agent-prepare.js'
 import type { CoreAgent } from './agent.types.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 
@@ -202,5 +208,84 @@ describe('resumeAgent (streaming) authorization', () => {
         ),
       MissingScopeError
     )
+  })
+})
+
+describe('the owner gate on approve and resume', () => {
+  const answer = { toolCallId: TOOL_CALL_ID, approved: true }
+  const channel = { send: async () => {}, close: async () => {} } as any
+  const paramsFor = (session?: CoreUserSession) =>
+    ({ sessionService: sessionService(session) }) as any
+
+  beforeEach(() => {
+    resetPikkuState()
+    clearPermissionsCache()
+    addAgent('owned')
+    setup('owned', 'owner')
+  })
+
+  for (const [label, session] of [
+    ['another user', { userId: 'someone-else' }],
+    ['no session', undefined],
+  ] as const) {
+    test(`resume refuses ${label}`, async () => {
+      await assert.rejects(
+        () =>
+          resumeAgent(
+            { runId: RUN_ID, ...answer },
+            channel,
+            paramsFor(session as CoreUserSession | undefined)
+          ),
+        ForbiddenError
+      )
+    })
+  }
+
+  test('resume refuses a run of a different agent than the route named', async () => {
+    await assert.rejects(
+      () =>
+        resumeAgent(
+          { runId: RUN_ID, ...answer, expectedAgentName: 'other' },
+          channel,
+          paramsFor({ userId: 'owner' })
+        ),
+      ForbiddenError
+    )
+  })
+})
+
+describe('assertAgentRouteAccess', () => {
+  beforeEach(() => {
+    resetPikkuState()
+    addAgent('hidden')
+    addAgent('hiddenPublic', { auth: false })
+    addAgent('signedIn', { expose: true })
+    addAgent('open', { expose: true, auth: false })
+  })
+
+  for (const name of ['hidden', 'hiddenPublic', 'nosuchagent']) {
+    test(`a signed-in caller cannot reach '${name}'`, () => {
+      assert.throws(
+        () => assertAgentRouteAccess(name, 'session'),
+        NotFoundError
+      )
+    })
+  }
+
+  for (const name of ['hidden', 'hiddenPublic', 'signedIn', 'nosuchagent']) {
+    test(`an anonymous caller cannot reach '${name}'`, () => {
+      assert.throws(
+        () => assertAgentRouteAccess(name, 'anonymous'),
+        MissingSessionError
+      )
+    })
+  }
+
+  test('an exposed agent is reachable with a session', () => {
+    assert.doesNotThrow(() => assertAgentRouteAccess('signedIn', 'session'))
+  })
+
+  test('expose: true with auth: false is reachable anonymously', () => {
+    assert.doesNotThrow(() => assertAgentRouteAccess('open', 'anonymous'))
   })
 })

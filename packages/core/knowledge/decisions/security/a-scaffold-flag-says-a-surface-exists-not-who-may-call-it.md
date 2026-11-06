@@ -26,9 +26,8 @@ that error, `MissingScopeError` and `ForbiddenError` is recorded in
 than that, and being coarser was the whole problem the earlier decision was
 trying to work around by defaulting it closed.
 
-So the generated dispatchers — public RPC, public agent, workflow routes and the
-events channel — emit a fixed `auth: false` on every function and wiring they
-write. That is not the scaffold declaring the surface public. It is the
+So the generated dispatchers — public RPC and the events channel — emit a fixed
+`auth: false` on every function and wiring they write. That is not the scaffold declaring the surface public. It is the
 dispatcher declining to gate, because it does not know what it is forwarding to:
 `rpcCaller` hands whatever name it was given to `rpc.exposed`, and the function
 that resolves there is the one that answers for itself. Omitting the field would
@@ -45,6 +44,12 @@ to use `pikkuSessionlessFunc` instead, and `auth: true` would only restate the
 type.
 
 `pikku enable <feature>` lost its `--noAuth` flag with the field it wrote.
+
+The workflow routes and the public agent are not dispatchers in that sense, and
+gate the call themselves — see
+[[workflow-and-agent-routes-require-a-session-and-an-opt-in]]. What they forward
+to does not answer for itself: a workflow or agent has no gate of its own that
+runs by default, and `rpc.startWorkflow` is deliberately open to application code.
 
 **What this rules out:** reading a scaffold flag as an authorization decision;
 gating a surface in the config instead of on the function that answers it; and

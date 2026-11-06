@@ -2,6 +2,8 @@ import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { ref } from '#pikku/function'
 
 export const ultimateAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'ultimate-agent',
   description:
     'Workflow architect — has access to all tools and is responsible for creating and executing workflows',

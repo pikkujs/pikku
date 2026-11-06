@@ -315,12 +315,23 @@ func ConvertDslToGraph(name string, meta *Object) *Object {
 		"title", meta.Get("title"),
 		"description", meta.Get("description"),
 		"tags", meta.Get("tags"),
+		"expose", declaredFlag(meta.Get("expose")),
+		"auth", declaredFlag(meta.Get("auth")),
 		"skip", meta.Get("skip"),
 		"virtualUsers", meta.Get("virtualUsers"),
 		"context", meta.Get("context"),
 		"nodes", record,
 		"entryNodeIds", entry,
 	)
+}
+
+// declaredFlag drops an option a workflow did not set: the meta records it as
+// null, and the route gates read a flag only when it was declared.
+func declaredFlag(v any) any {
+	if b, ok := v.(bool); ok {
+		return b
+	}
+	return Undefined
 }
 
 // ---- derive-workflow-plan.ts ----
