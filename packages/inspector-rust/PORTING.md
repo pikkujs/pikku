@@ -263,6 +263,16 @@ Known gaps:
   real-CLI parity run: a checkout whose workspace packages were not built
   (`@pikku/better-auth/dist` missing) converted under Go and failed under Node alone.
   Cost: Node must be on the PATH even when no schema needs the Node route.
+* **Go runtime errors inside schema generation carry a Go stack.** An interface that
+  extends a type resolving to nothing (e.g. `KnowledgeBundle extends KnowledgeGraph`
+  with `@pikku/knowledge` unbuilt in `packages/addon/pikku-console`; `AwaitsWorkflowRunInput`
+  in `e2e`) panics in Go with `index out of range [0] with length 0`; the PKU456
+  diagnostic embeds `goroutine 1 [running]` and Go toolchain paths. Rust produces the same
+  outcome (no schema, a PKU456 for the same name) with a message without the stack. Seen
+  in real-CLI parity as 4 of 490 captured requests; the generated trees are identical.
+* **Go's on-disk TS schema cache** (`node_modules/.cache/pikku/go-ts-schemas.json`) can
+  answer with schemas, and without the schema-error diagnostics, of an earlier state of
+  the project. The parity scripts empty it before every run.
 * **No on-disk schema cache** (`go-ts-schemas.json`): performance only.
 * **`TypeToTypeNode` has no Strada union reorder** (`tsjg/typenode.rs` uses tsrs's
   own order) until the tsutil typeorder/unionorder port lands; used for call

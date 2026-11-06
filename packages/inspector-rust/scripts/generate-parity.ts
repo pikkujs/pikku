@@ -214,12 +214,14 @@ interface Replay {
   different: { file: string; args: string; firstDiff: string }[]
 }
 
-const replay = async (captureDir: string): Promise<Replay> => {
+const replay = async (captureDir: string, dirs: string[]): Promise<Replay> => {
   const files = existsSync(captureDir) ? readdirSync(captureDir).filter((f) => f.endsWith('.in')).sort() : []
   const res: Replay = { requests: files.length, identical: 0, different: [] }
   for (const f of files) {
     const args = readFileSync(join(captureDir, f.replace(/\.in$/, '.args')), 'utf8').split('\n').filter(Boolean)
     const stdin = readFileSync(join(captureDir, f), 'utf8')
+    // A Go cache hit omits the schema errors a fresh run logs; compare fresh runs.
+    for (const d of dirs) rmSync(join(d, 'node_modules/.cache/pikku'), { recursive: true, force: true })
     const [go, rs] = await Promise.all([runBinary(goBin, args, stdin, timeoutMs), runBinary(rsBin, args, stdin, timeoutMs)])
     const a = normalise(go.stdout).text
     const b = normalise(rs.stdout).text
@@ -260,7 +262,7 @@ for (const dir of projects) {
       const requests = existsSync(capDir) ? readdirSync(capDir).filter((f) => f.endsWith('.in')).length : 0
       const ph = rec.phases[phase]
       ph[engine] = { exit: run.exit, completed: completed(run.log), signal: run.signal, ms: run.ms, requests, files: left.length }
-      if (engine === 'go') ph.replay = await replay(capDir)
+      if (engine === 'go') ph.replay = await replay(capDir, dirs)
       console.error(`   ${phase} ${engine}: exit ${run.exit}${completed(run.log) ? '' : ' (NOT completed)'}, ${requests} requests, ${left.length} files, ${(run.ms / 1000).toFixed(1)}s`)
     }
   }
