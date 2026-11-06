@@ -1,11 +1,11 @@
 import { resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
-import type {
-  InspectorLogger,
-  InspectorOptions,
-  InspectorState,
+import {
+  deserializeInspectorState,
+  type InspectorLogger,
+  type InspectorOptions,
+  type InspectorState,
 } from '@pikku/inspector'
-import { deserializeInspectorState } from '@pikku/inspector/finalize'
 import { findInspectorBinary } from './binary.js'
 import { runInspectorBinary } from './run-binary.js'
 import { replayDiagnostics } from './diagnostics.js'
@@ -14,8 +14,8 @@ import { withOpenAPIErrors } from './openapi-errors.js'
 
 /**
  * Inspects `routeFiles` with the `pikku-inspect` binary, which runs analysis
- * and finalize, and replays its diagnostics on `logger`. The state it returns has no `program` and an empty `typesLookup`:
- * the Go engine has no TypeScript objects to hand back.
+ * and finalize, and replays its diagnostics on `logger`. The state it returns
+ * is plain data: there are no compiler objects to hand back.
  */
 export const inspect = async (
   logger: InspectorLogger,
@@ -33,10 +33,7 @@ export const inspect = async (
     throw new Error(output.error ?? 'pikku-inspect returned no state')
   }
 
-  const state: InspectorState = {
-    ...deserializeInspectorState(output.state),
-    typesLookup: new Map(),
-  }
+  const state: InspectorState = deserializeInspectorState(output.state)
 
   state.stats = {
     files: output.stats.files,

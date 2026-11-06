@@ -38,11 +38,14 @@ runs:
         key: ts-build-v3-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'bun.lock') }}
         restore-keys: |
           ts-build-v3-
-    # pikku-inspect is built by its own job in parallel with this one
-    # (inspector-go-build); codegen here runs on the default TypeScript engine.
-    - name: Skip the Go build
-      shell: bash
-      run: echo "PIKKU_INSPECTOR_GO_SKIP_BUILD=1" >> "$GITHUB_ENV"
+    # Codegen runs in the pikku-inspect binary, so this job builds the host copy
+    # itself (inspector-go's build step). The cross-compiled copies other jobs
+    # download come from the inspector-go-build job.
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: packages/inspector-go/go.mod
+        cache-dependency-path: packages/inspector-go/**/go.sum
     - name: Build packages
       shell: bash
       run: |

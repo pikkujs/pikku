@@ -43,8 +43,8 @@ rules-out:
   - Reimplementing Zod's JSON Schema output by reading the schema's source in Go
   - Requiring Node for any project with a Zod schema
   - Embedding a copy of zod in the binary
-because: Only the project's own Zod gives the TypeScript engine's output
-  exactly, and a compiled CLI (Homebrew, the Studio sidecar) has neither Node
+because: Only the project's own Zod gives exactly the JSON Schema the project's
+  Zod version produces, and a compiled CLI (Homebrew, the Studio sidecar) has neither Node
   nor the vendor script on disk.
 ```
 

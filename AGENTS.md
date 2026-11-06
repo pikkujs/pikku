@@ -111,28 +111,34 @@ does not declare its own `typescript` inherits the root `tsc`, which is why
 the dependency was dropped from the ~100 workspaces that only ever needed a
 compiler binary.
 
-Three packages still declare a real `typescript: ^6.0.3`, because they call
-the compiler API at runtime: `inspector`, `code-edit` and `n8n-import`. Under
-bun's isolated layout that nests a real 6, whose `tsc` shadows the root's — so
-those three type-check on 6. Templates keep theirs too: their `package.json` is
-copied into a user's app, and an aliased dependency there would be a surprise.
+No workspace package depends on TypeScript 6 at runtime. The compiler API is
+reached only through the `pikku-inspect` binary (`@pikku/inspector-go`), which
+is built on typescript-go: the inspector's analysis, `code-edit`'s source scans
+and edits and type-checking, and `n8n-import`'s syntax check are all helpers
+of that binary, and `@pikku/inspector`, `@pikku/code-edit` and
+`@pikku/n8n-import` declare no `typescript` at all. Templates and recipes
+declare a plain `typescript: ^7.0.2`: their `package.json` is copied into a
+user's app, so it carries a real version rather than the root's alias.
 
-**The inspector owns the compiler API.** Anything that has to parse or
-type-check TypeScript belongs there, behind a named export, rather than in the
-package that wants the answer. `collectSurface` (`@pikku/inspector/surface`),
-`readModuleSpecifiers` and `readTsconfigOutDir` all moved out of the CLI for
-this reason. `code-edit` is the exception, and deliberately so — the console
-imports it lazily and degrades to a null service, because it is the one package
-a self-contained bundle can ship without.
+What still resolves `import ts from 'typescript'` is test code only — 25 test
+files in `cli`, 4 in `core` and 1 in `openapi-parser` compile generated source
+with the compiler API — and it gets the 6 compat package through the root
+alias. That is why the alias stays: 7 has no way to turn a string into a tree
+in-process. 7.0.2 does ship an AST surface at `typescript/unstable/ast` (409
+exports, all 347 `is*` predicates, `SyntaxKind`, a factory, a visitor, a
+scanner), but no `createSourceFile` and no `forEachChild`; the only route to a
+`SourceFile` is `API` → `Snapshot` → `Project` → `Program.getSourceFile()`,
+which needs a whole project loaded. Re-check this when 7.1 lands its stable
+API.
 
-**Why none of this can move to 7 yet.** 7.0.2 does ship an AST surface at
-`typescript/unstable/ast` — 409 exports, all 347 `is*` predicates,
-`SyntaxKind`, a factory, a visitor, a scanner — so the _walking_ code would
-port almost unchanged. What is missing is the entry point: there is no
-`createSourceFile` and no `forEachChild`, so nothing can turn a string into a
-tree. The only route to a `SourceFile` is `API` → `Snapshot` → `Project` →
-`Program.getSourceFile()`, which needs a whole project loaded. Re-check this
-when 7.1 lands its stable API.
+**The binary owns the compiler API.** Anything that has to parse or
+type-check TypeScript belongs in `packages/inspector-go` as a helper
+(`internal/helpers`, with a wrapper in `src/helpers.ts`), rather than in the
+package that wants the answer. There is no second engine and no TypeScript
+reference to diff against; see
+`packages/inspector-go/knowledge/decisions/the-typescript-inspector-engine-is-retired.md`.
+The console still imports `code-edit` lazily and degrades to a null service,
+because it is the one package a self-contained bundle can ship without.
 
 Compiling _with_ 7 is safe for every package, including the ones that import
 the 6 API — only module resolution of `typescript` has to stay on 6. Emit was

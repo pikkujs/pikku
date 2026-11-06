@@ -1,5 +1,5 @@
 import type { CredentialOverrideMeta } from '../types.js'
-import type { SecretUsage } from './extract-secret-usage.js'
+import type { SecretUsage } from './usage-types.js'
 import type { JSONValue } from '@pikku/core/utils'
 import type {
   InspectorDiagnostic,
@@ -324,7 +324,7 @@ export interface SerializableInspectorState {
  * Omits typesLookup (not needed for filtering/generation) and converts Maps/Sets to arrays
  */
 export function serializeInspectorState(
-  state: Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): SerializableInspectorState {
   // Helper to serialize TypesMap
   const serializeTypesMap = (
@@ -567,7 +567,7 @@ export function serializeInspectorState(
  */
 export function deserializeInspectorState(
   data: SerializableInspectorState
-): Omit<InspectorState, 'typesLookup' | 'schemaLookup'> & {
+): Omit<InspectorState, 'schemaLookup'> & {
   schemaLookup: Map<
     string,
     {
@@ -809,6 +809,5 @@ export function deserializeInspectorState(
       addonCli: {},
       addonChannel: {},
     },
-    program: null,
   }
 }

@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { glob } from 'tinyglobby'
 import semver from 'semver'
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { checkLockedSdk, readAddonsLock } from '@pikku/inspector/lite'
+import { checkLockedSdk, readAddonsLock } from '@pikku/inspector'
 import { findSourceFiles } from '../../utils/find-source-files.js'
 import type {
   RegistryInvoke,
@@ -371,7 +371,7 @@ const collectRemoteAddonEntries = async (
   for (const path of files.sort()) {
     const text = readFileSync(path, 'utf-8')
     if (!text.includes('wireRemoteAddon')) continue
-    const { findWireRemoteAddonSpecs } = await import('@pikku/inspector')
+    const { findWireRemoteAddonSpecs } = await import('@pikku/inspector-go')
     for (const spec of findWireRemoteAddonSpecs(path, text)) {
       if (!spec.range) continue
       found.push({

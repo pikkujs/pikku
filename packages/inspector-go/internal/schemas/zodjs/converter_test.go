@@ -208,6 +208,6 @@ func TestHelpersAreCurrent(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal([]byte(helpersJS), want) {
-		t.Fatal("helpers.gen.js is older than @pikku/inspector's zod-to-type-text.ts / find-zod-transform.ts: run `go generate ./internal/schemas/zodjs`")
+		t.Fatal("helpers.gen.js is older than src/vendor/zod-to-type-text.ts / find-zod-transform.ts: run `go generate ./internal/schemas/zodjs`")
 	}
 }
