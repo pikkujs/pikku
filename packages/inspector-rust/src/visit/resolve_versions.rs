@@ -217,10 +217,7 @@ fn update_wiring_references(st: &mut State, old_id: &str, new_id: &str) {
     update_channel_and_cli_references(st, old_id, new_id);
 }
 
-/// Go `updateChannelAndCLIReferences` (group_channel.go / group_cli.go).
-///
-/// STUB until the channel and CLI groups are ported (their porters own it).
-pub fn update_channel_and_cli_references(_st: &mut State, _old_id: &str, _new_id: &str) {}
+pub use super::group_cli::update_channel_and_cli_references;
 
 #[cfg(test)]
 mod tests {

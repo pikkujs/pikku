@@ -26,12 +26,17 @@ use crate::state::State;
 use crate::typesmap::TypesMap;
 
 pub mod boundary;
+pub mod group_agent;
 pub mod group_approval_description;
 pub mod group_analytics;
 pub mod group_define_contributors;
 pub mod group_feature;
 pub mod group_feature_flag;
+pub mod group_channel;
+pub mod group_cli;
 pub mod group_functions;
+pub mod group_gateway;
+pub mod group_mcp;
 pub mod group_functions_node;
 pub mod group_auth;
 pub mod group_http;
@@ -141,6 +146,8 @@ pub struct Context<'a> {
     pub types_lookup: HashMap<String, Vec<P<Type>>>,
     /// The core interfaces a core-type visitor recorded (Go `coreTypes`).
     pub core_types: Vec<CoreType>,
+    /// Go `cliConfigTypeWarned`: the missing-Config warning is logged once.
+    pub cli_config_type_warned: bool,
 }
 
 /// Go `coreType`: a core interface's name and its symbol.
@@ -162,6 +169,7 @@ impl<'a> Context<'a> {
             source_file: None,
             types_lookup: HashMap::new(),
             core_types: Vec::new(),
+            cli_config_type_warned: false,
         }
     }
 
@@ -233,6 +241,11 @@ pub fn register_groups(r: &mut Registry) {
     group_keyed::register(r);
     group_scope::register(r);
     group_system_role::register(r);
+    group_channel::register(r);
+    group_gateway::register(r);
+    group_mcp::register(r);
+    group_agent::register(r);
+    group_cli::register(r);
 }
 
 /// The registry with every ported group registered.
