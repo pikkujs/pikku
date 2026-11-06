@@ -33,7 +33,7 @@ Two engines speak the same protocol:
 
 Pick one with, in this order: `pikku all --inspector rs`, the `PIKKU_INSPECTOR`
 environment variable (`go` or `rs`), the `"inspector": "rs"` key of
-`pikku.config.json`, then the package default (`go`). The helpers other tools
+`pikku.config.json`, then the package default (`rs`). The helpers other tools
 call (code-edit, the console's type diagnostics) follow the same choice.
 
 Each binary ships for your platform inside `@pikku/inspector-go` under

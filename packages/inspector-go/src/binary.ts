@@ -25,7 +25,7 @@ export type InspectorEngine = 'go' | 'rs'
 export const INSPECTOR_ENGINES: readonly InspectorEngine[] = ['go', 'rs']
 
 /** The engine used when neither `PIKKU_INSPECTOR`, `--inspector` nor the config key names one. */
-export const DEFAULT_ENGINE: InspectorEngine = 'go'
+export const DEFAULT_ENGINE: InspectorEngine = 'rs'
 
 type EngineInfo = {
   executable: string
