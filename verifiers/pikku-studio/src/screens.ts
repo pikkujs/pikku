@@ -15,6 +15,8 @@ export default definePlugin({
       },
       needsApp: true,
       scopes: ['studio-verifier:read'],
+      agent: 'helper',
+      defaultChat: false,
       component: () => import('./screens/Inbox.js'),
     },
     {
