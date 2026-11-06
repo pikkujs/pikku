@@ -59,7 +59,7 @@ import definitions from './pikku-flags-meta.gen.json' with { type: 'json' }
  *
  * Additive on removal: a deleted declaration leaves the row marked
  * \`declared: false\` rather than switching a feature off on deploy. Use
- * \`pikku flags prune\` to remove them.
+ * \`admin:flagPrune\` to remove them.
  */
 export const declaredFeatureFlags: DeclaredFlag[] = flattenFeatureFlagDefinitions(
   Object.values(definitions as FeatureFlagDefinitionsMeta)

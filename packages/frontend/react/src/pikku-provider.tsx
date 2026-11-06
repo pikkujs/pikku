@@ -24,9 +24,17 @@ export type PikkuInstance<
   rpc: RPC
   /** Optional — present when createPikku is called with a PikkuRealtime class. */
   realtime?: Realtime
-  /** Optional — a `createAnalytics` client, so components reach it through the provider. */
+  /**
+   * Optional — a `createAnalytics` client. `createPikku` does not make one: add
+   * it to what `createPikku` returned before handing that to `PikkuProvider`, or
+   * `usePikkuAnalytics` throws.
+   */
   analytics?: AnalyticsClient<any>
-  /** Optional — a `createFeatureFlags` client, so components reach it through the provider. */
+  /**
+   * Optional — a `createFeatureFlags` client. `createPikku` does not make one:
+   * add it to what `createPikku` returned before handing that to
+   * `PikkuProvider`, or `useFeatureFlag` and `usePikkuFeatureFlags` throw.
+   */
   featureFlags?: FeatureFlagClient<any>
 }
 
@@ -52,6 +60,21 @@ export const usePikkuFetch = <
   return context.fetch as Fetch
 }
 
+/**
+ * The product-analytics client from the provider. `.event(name, props)` buffers
+ * one declared event for `POST /analytics`; nothing identifying goes in the
+ * props, since the ingest stamps who it was from the session. For an outcome the
+ * server already knows, record it in the function with `analytics.record` rather
+ * than from a screen: a beacon can be blocked, a function cannot.
+ *
+ * Throws unless the instance given to `PikkuProvider` has an `analytics` client,
+ * which `createPikku` does not make. Pass the app's `AnalyticsEvent` as the type
+ * argument so a misspelt event is a build error.
+ *
+ * @example
+ * const analytics = usePikkuAnalytics<AnalyticsEvent>()
+ * analytics.event('signed_up', {})
+ */
 export const usePikkuAnalytics = <
   TEvent extends { name: string },
 >(): AnalyticsClient<TEvent> => {
@@ -240,6 +263,15 @@ export const usePikkuRealtime = <Realtime = any,>(): Realtime => {
   return context.realtime as Realtime
 }
 
+/**
+ * The whole flag client from the provider, for `all()`, `ready` and `refresh()`.
+ * To read one flag use `useFeatureFlag`. The map is fetched once, so call
+ * `refresh()` when the session changes: a flag turned off reaches a page that
+ * is already open only then, or on its next load. The server gate is immediate.
+ *
+ * Throws unless the instance given to `PikkuProvider` has a `featureFlags`
+ * client, which `createPikku` does not make.
+ */
 export const usePikkuFeatureFlags = <
   Name extends string = string,
 >(): FeatureFlagClient<Name> => {
@@ -263,7 +295,13 @@ export const usePikkuFeatureFlags = <
  * the tree on the bootstrapped map and half on the fetched one.
  *
  * Advisory. It answers what to show, never what is allowed; the server
- * re-checks availability on the call itself.
+ * re-checks availability on the call itself, so put `featureFlag` on the
+ * function too. Throws unless the instance given to `PikkuProvider` has a
+ * `featureFlags` client, which `createPikku` does not make. Pass the app's
+ * `FeatureFlagName` as the type argument so a misspelt flag is a build error.
+ *
+ * @example
+ * const showExport = useFeatureFlag<FeatureFlagName>('orderExport')
  */
 export const useFeatureFlag = <Name extends string = string>(
   name: Name
