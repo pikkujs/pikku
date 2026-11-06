@@ -25,6 +25,18 @@ use crate::diag::Logger;
 use crate::state::State;
 use crate::typesmap::TypesMap;
 
+pub mod boundary;
+pub mod group_approval_description;
+pub mod group_functions;
+pub mod group_functions_node;
+pub mod group_http;
+pub mod group_http_contracts;
+pub mod group_outgoing_webhook;
+pub mod group_rpc_invocations;
+pub mod group_schedule;
+pub mod group_setup_core;
+pub mod resolve_versions;
+pub mod service_types;
 pub mod order;
 pub mod usage_sweeps;
 pub mod util_callee;
@@ -187,7 +199,15 @@ impl Registry {
 }
 
 /// Registers every ported visitor group. Empty: no group is ported yet.
-pub fn register_groups(_r: &mut Registry) {}
+pub fn register_groups(r: &mut Registry) {
+    group_setup_core::register(r);
+    group_approval_description::register(r);
+    group_rpc_invocations::register(r);
+    group_outgoing_webhook::register(r);
+    group_functions::register(r);
+    group_schedule::register(r);
+    group_http::register(r);
+}
 
 /// The registry with every ported group registered.
 pub fn default_registry() -> Registry {
@@ -228,14 +248,6 @@ impl Context<'_> {
     /// Go `ValidatePikkuStudio` (group_pikku_studio.go). Not ported.
     pub fn validate_pikku_studio(&mut self) {}
 
-    /// Go `ResolveLatestVersions` (resolve_versions.go). Not ported.
-    pub fn resolve_latest_versions(&mut self) {}
-
-    /// Go `FinishCoreTypeProperties` (group_setup_core.go). Not ported.
-    pub fn finish_core_type_properties(&mut self) {}
-
-    /// Go `FinishServiceTypes` (service_types.go). Not ported.
-    pub fn finish_service_types(&mut self) {}
 }
 
 #[cfg(test)]
