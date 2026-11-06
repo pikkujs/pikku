@@ -69,8 +69,8 @@ describe('cloud status hints', () => {
     context = { token: 'user-token', projectId: 'proj_1' }
     invoked.length = 0
     responses = {
-      getProjectStatus: { exists: true, projectName: 'Acme' },
-      getProjectDeployments: projectDeployments,
+      'cloud:getProjectStatus': { exists: true, projectName: 'Acme' },
+      'cloud:getProjectDeployments': projectDeployments,
     }
   })
 
@@ -80,16 +80,16 @@ describe('cloud status hints', () => {
       'waiting for approval — auto-deploy is off (pikku cloud deploy auto on -b main)',
     ])
     assert.deepStrictEqual(invoked, [
-      'getProjectStatus',
-      'getProjectDeployments',
+      'cloud:getProjectStatus',
+      'cloud:getProjectDeployments',
     ])
   })
 
   test('does not ask when the project does not exist', async () => {
-    responses.getProjectStatus = { exists: false }
+    responses['cloud:getProjectStatus'] = { exists: false }
     const result = await run({})
     assert.deepStrictEqual(result.hints, [])
-    assert.deepStrictEqual(invoked, ['getProjectStatus'])
+    assert.deepStrictEqual(invoked, ['cloud:getProjectStatus'])
   })
 
   test('renders the hint under the status rows', () => {

@@ -123,7 +123,7 @@ describe('cloud config', () => {
     invoked.length = 0
     failing = {}
     responses = {
-      getProjectSettings: {
+      'cloud:getProjectSettings': {
         settings: settings({
           showcase: {
             name: 'Watering Log',
@@ -133,7 +133,7 @@ describe('cloud config', () => {
           },
         }),
       },
-      setProjectSettings: {
+      'cloud:setProjectSettings': {
         settings: settings({ guide: { docs: 'docs', theme: {} } }),
       },
     }
@@ -142,7 +142,7 @@ describe('cloud config', () => {
   test('with no arguments, reads the settings and changes nothing', async () => {
     const result = await run({})
     assert.deepStrictEqual(invoked, [
-      { name: 'getProjectSettings', data: { projectId: 'proj_1' } },
+      { name: 'cloud:getProjectSettings', data: { projectId: 'proj_1' } },
     ])
     assert.deepStrictEqual(result.changed, [])
     const out = printed(result)
@@ -157,7 +157,7 @@ describe('cloud config', () => {
     })
     assert.deepStrictEqual(invoked, [
       {
-        name: 'setProjectSettings',
+        name: 'cloud:setProjectSettings',
         data: {
           projectId: 'proj_1',
           set: { 'guide.docs': 'docs', 'showcase.tint': null },
@@ -170,7 +170,7 @@ describe('cloud config', () => {
   })
 
   test('a refused setting surfaces the server message', async () => {
-    failing.setProjectSettings = new Error(
+    failing['cloud:setProjectSettings'] = new Error(
       'showcase.tint must be a #rrggbb hex colour — got "teal".'
     )
     await assert.rejects(
@@ -194,7 +194,7 @@ describe('cloud config', () => {
   })
 
   test('a failed read is shown rather than failing the command', async () => {
-    failing.getProjectSettings = new Error('Forbidden')
+    failing['cloud:getProjectSettings'] = new Error('Forbidden')
     const result = await run({})
     assert.strictEqual(result.settings, null)
     assert.strictEqual(result.settingsError, 'Forbidden')
@@ -209,7 +209,7 @@ describe('cloud config', () => {
   })
 
   test('empty settings point at the command that sets them', async () => {
-    responses.getProjectSettings = { settings: settings() }
+    responses['cloud:getProjectSettings'] = { settings: settings() }
     assert.match(
       printed(await run({})),
       /none — set them with `pikku cloud config key=value`/

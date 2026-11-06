@@ -22,7 +22,7 @@ export const validate = pikkuSessionlessFunc({
       skipDeployChecks,
       migrationsBase,
       projectChecks: guardProjectChecks((request) =>
-        (rpc.invoke as any)('cloud:CloudProjectChecks', request)
+        (rpc.invoke as any)('cloudCli:CloudProjectChecks', request)
       ),
     }),
 })

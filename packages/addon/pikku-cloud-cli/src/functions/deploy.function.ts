@@ -351,7 +351,7 @@ export async function applyDeploy(
     // refusal has to run here as well as on the input.
     if (input.reset) {
       assertResetAllowed({ branch })
-      const status = await rpc.invoke('getProjectStatus', { projectId })
+      const status = await rpc.invoke('cloud:getProjectStatus', { projectId })
       const app = status.projectName ?? projectId
       if (input.json) {
         emit({ event: 'reset', app, branch })
@@ -383,7 +383,7 @@ export async function applyDeploy(
       }
     }
 
-    const created = await rpc.invoke('deployByStageKind', {
+    const created = await rpc.invoke('cloud:deployByStageKind', {
       projectId,
       branch,
       ref: resolved,

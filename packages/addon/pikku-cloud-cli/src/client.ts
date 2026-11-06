@@ -14,5 +14,7 @@ export {
   matchRemoteProjects,
 } from './lib/project-link.js'
 export { readConfigProjectId, writeConfigProjectId } from './lib/project-id.js'
-export type { PikkuRPC as CloudRPC } from './sdk/pikku-rpc.gen.js'
-export type * from './sdk/rpc-map.gen.d.js'
+export type { CloudRPC } from './lib/rpc-client.js'
+import type { CloudOutput } from './lib/rpc-client.js'
+export type { CloudInput, CloudOutput } from './lib/rpc-client.js'
+export type ListChangesOutput = CloudOutput<'cloud:listChanges'>

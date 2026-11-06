@@ -1,8 +1,9 @@
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
-import type { GetDeploymentStatusOutput } from '../sdk/rpc-map.gen.d.js'
+import type { CloudRPC as PikkuRPC } from './rpc-client.js'
+import type { CloudOutput } from './rpc-client.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 
-type MissingConfigEntry = GetDeploymentStatusOutput['missingSecrets'][number]
+type MissingConfigEntry =
+  CloudOutput<'cloud:getDeploymentStatus'>['missingSecrets'][number]
 
 const IN_FLIGHT = new Set(['queued', 'planning', 'building', 'deploying'])
 const SUCCEEDED = new Set(['active'])
@@ -130,7 +131,7 @@ export async function readDeploymentStatus(
   rpc: PikkuRPC,
   deploymentId: string
 ): Promise<DeploymentStatus> {
-  const s = await rpc.invoke('getDeploymentStatus', { deploymentId })
+  const s = await rpc.invoke('cloud:getDeploymentStatus', { deploymentId })
   return {
     status: s.status,
     statusReason: s.statusReason,
@@ -148,7 +149,9 @@ export async function approveDeployment(
   rpc: PikkuRPC,
   deploymentId: string
 ): Promise<boolean> {
-  const { resumed } = await rpc.invoke('applyDeployment', { deploymentId })
+  const { resumed } = await rpc.invoke('cloud:applyDeployment', {
+    deploymentId,
+  })
   return resumed
 }
 
@@ -226,7 +229,7 @@ export async function describeDeployment(
   projectId: string,
   deploymentId: string
 ): Promise<DeploymentDescription | null> {
-  const { stages } = await rpc.invoke('getProjectDeployments', {
+  const { stages } = await rpc.invoke('cloud:getProjectDeployments', {
     projectId,
     includeDismissed: true,
   })
@@ -316,7 +319,9 @@ export async function readWorkers(
   rpc: PikkuRPC,
   stageId: string
 ): Promise<DeployedWorker[]> {
-  const { workers } = await rpc.invoke('listDeploymentWorkers', { stageId })
+  const { workers } = await rpc.invoke('cloud:listDeploymentWorkers', {
+    stageId,
+  })
   return workers.map(({ name, role, status }) => ({ name, role, status }))
 }
 

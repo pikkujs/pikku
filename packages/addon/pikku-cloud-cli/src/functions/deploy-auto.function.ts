@@ -37,7 +37,7 @@ export const CloudDeployAuto = pikkuSessionlessFunc({
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
 
     if (!state) {
-      const { stages } = await rpc.invoke('listStages', {
+      const { stages } = await rpc.invoke('cloud:listStages', {
         projectId: ctx.projectId,
       })
       const shown = branch ? stages.filter((s) => s.branch === branch) : stages
@@ -54,7 +54,7 @@ export const CloudDeployAuto = pikkuSessionlessFunc({
     }
 
     const stage = await resolveStage(rpc, ctx.projectId, branch)
-    const result = await rpc.invoke('setStageAutoDeploy', {
+    const result = await rpc.invoke('cloud:setStageAutoDeploy', {
       stageId: stage.stageId,
       autoDeployOnPush: state === 'on',
     })

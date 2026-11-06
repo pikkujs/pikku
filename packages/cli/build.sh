@@ -206,32 +206,38 @@ _Old=Pers; _Old="${_Old}ona"
 # The pinned CLI predates versioned remote addon packages: it reads
 # '@pikkustudio/addon-registry@^0.12.0' as an npm package missing from
 # devDependencies (PKU338, critical) and stops. It also ignores --config, so the
-# file cannot be skipped through ignoreFiles. src/registry.wiring.ts is moved
-# out of its sight for this stage and put back right after (or on any exit).
+# file cannot be skipped through ignoreFiles. src/registry.wiring.ts and src/cloud-api.wiring.ts are
+# moved out of its sight for this stage and put back right after (or on any exit).
 #
 # Codegen that ran without the wiring does not import it, so it is added to the
 # bootstrap by hand: the CLI built from this stage is the one whose `pikku all`
 # below syncs the registry SDK, and it needs the wiring to call the registry.
 # knowledge: the-cli-syncs-its-registry-sdk-like-any-consumer
-_registry_wiring=src/registry.wiring.ts
+_registry_wirings="registry cloud-api"
 _registry_hidden_dir=$(mktemp -d)
 _hide_registry_wiring() {
-  mv "$_registry_wiring" "$_registry_hidden_dir/registry.wiring.ts"
+  for w in $_registry_wirings; do
+    mv "src/$w.wiring.ts" "$_registry_hidden_dir/$w.wiring.ts"
+  done
   cp pikku-addons.lock "$_registry_hidden_dir/pikku-addons.lock"
 }
 _restore_registry_wiring() {
-  if [ -f "$_registry_hidden_dir/registry.wiring.ts" ]; then
-    mv "$_registry_hidden_dir/registry.wiring.ts" "$_registry_wiring"
-  fi
-  # A run that never saw the wiring rewrites the lock without its entry.
+  for w in $_registry_wirings; do
+    if [ -f "$_registry_hidden_dir/$w.wiring.ts" ]; then
+      mv "$_registry_hidden_dir/$w.wiring.ts" "src/$w.wiring.ts"
+    fi
+  done
+  # A run that never saw the wirings rewrites the lock without their entries.
   if [ -f "$_registry_hidden_dir/pikku-addons.lock" ]; then
     mv "$_registry_hidden_dir/pikku-addons.lock" pikku-addons.lock
   fi
 }
 _import_registry_wiring() {
-  if ! grep -qx "import '../src/registry.wiring.js'" .pikku/pikku-bootstrap.gen.ts; then
-    printf "\nimport '../src/registry.wiring.js'\n" >> .pikku/pikku-bootstrap.gen.ts
-  fi
+  for w in $_registry_wirings; do
+    if ! grep -qx "import '../src/$w.wiring.js'" .pikku/pikku-bootstrap.gen.ts; then
+      printf "\nimport '../src/$w.wiring.js'\n" >> .pikku/pikku-bootstrap.gen.ts
+    fi
+  done
 }
 trap 'rm -rf "$_bootstrap_dir"; _restore_registry_wiring; rm -rf "$_registry_hidden_dir"' EXIT
 _hide_registry_wiring

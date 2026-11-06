@@ -77,7 +77,7 @@ describe('cloud deploy auto', () => {
     context = { token: 'user-token', projectId: 'proj_1' }
     invoked.length = 0
     responses = {
-      listStages: {
+      'cloud:listStages': {
         stages: [
           { branch: 'main', autoDeployOnPush: true },
           { branch: 'preview', autoDeployOnPush: false },
@@ -116,7 +116,7 @@ describe('cloud deploy auto', () => {
   })
 
   test('an unknown branch with no stages does not list an empty "Existing"', async () => {
-    responses.listStages = { stages: [] }
+    responses['cloud:listStages'] = { stages: [] }
     await assert.rejects(
       () => run({ branch: 'nope' }),
       (error: Error) => {
@@ -128,7 +128,7 @@ describe('cloud deploy auto', () => {
   })
 
   test('turns it on through the resolved stage', async () => {
-    responses.setStageAutoDeploy = {
+    responses['cloud:setStageAutoDeploy'] = {
       autoDeployOnPush: true,
       protected: true,
     }
@@ -136,7 +136,7 @@ describe('cloud deploy auto', () => {
 
     assert.deepStrictEqual(invoked, [
       {
-        name: 'setStageAutoDeploy',
+        name: 'cloud:setStageAutoDeploy',
         data: { stageId: 'stage_1', autoDeployOnPush: true },
       },
     ])
@@ -147,7 +147,7 @@ describe('cloud deploy auto', () => {
   })
 
   test('a protected stage is reported rather than hidden', async () => {
-    responses.setStageAutoDeploy = {
+    responses['cloud:setStageAutoDeploy'] = {
       autoDeployOnPush: true,
       protected: true,
     }
@@ -156,14 +156,14 @@ describe('cloud deploy auto', () => {
   })
 
   test('turns it off and hands the stage the false', async () => {
-    responses.setStageAutoDeploy = {
+    responses['cloud:setStageAutoDeploy'] = {
       autoDeployOnPush: false,
       protected: false,
     }
     await run({ state: 'off', branch: 'main' })
     assert.deepStrictEqual(invoked, [
       {
-        name: 'setStageAutoDeploy',
+        name: 'cloud:setStageAutoDeploy',
         data: { stageId: 'stage_1', autoDeployOnPush: false },
       },
     ])

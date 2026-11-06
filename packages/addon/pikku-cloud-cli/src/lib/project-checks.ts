@@ -133,7 +133,7 @@ export async function checkMigrationDrift(
   let stages: StageLedger[]
   try {
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const res = await rpc.invoke('listStageMigrationLedger', {
+    const res = await rpc.invoke('cloud:listStageMigrationLedger', {
       projectId: ctx.projectId,
     })
     stages = deployTarget

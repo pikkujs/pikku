@@ -53,7 +53,7 @@ export const CloudInit = pikkuSessionlessFunc({
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const organizationId = await resolveOrganizationId(rpc, organization)
-    const result = await rpc.invoke('importProject', {
+    const result = await rpc.invoke('cloud:importProject', {
       repoUrl: repo,
       name,
       defaultBranch: branch,

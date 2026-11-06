@@ -46,7 +46,7 @@ export const CloudAuthGit = pikkuSessionlessFunc({
         operation,
         request,
         gitHost: cloudGitHost(ctx.apiUrl),
-        invoke: (input) => rpc.invoke('getGitCredential', input),
+        invoke: (input) => rpc.invoke('cloud:getGitCredential', input),
       })
       return { answer }
     } catch (err) {

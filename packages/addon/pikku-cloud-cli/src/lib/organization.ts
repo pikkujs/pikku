@@ -16,7 +16,7 @@ export async function resolveOrganizationId(
   if (!organization) return undefined
   if (UUID.test(organization)) return organization
 
-  const { organizations } = await rpc.invoke('listMyOrganizations', {})
+  const { organizations } = await rpc.invoke('cloud:listMyOrganizations', {})
   const wanted = organization.toLowerCase()
   const matches = organizations.filter(
     (org) =>
