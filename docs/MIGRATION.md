@@ -132,6 +132,32 @@ The cast was usually there because the generated `pikku-package.gen.ts` did not 
 
 To find the affected code, run `pikku all` and look for `PKU564`. The message names the export and its file and line. See [`service-factories.md`](./service-factories.md).
 
+### Direct `fs` and `process.env` use fails the build
+
+Two lint rules are on by default at `error`. A project that sets nothing is enforced.
+
+| Code | Key | Flags | Use instead |
+| --- | --- | --- | --- |
+| `PKU412` | `lint.enforceContentService` | importing `fs`, `node:fs`, `fs/promises` or `node:fs/promises` (static `import`, `require`, dynamic `import()`) | the `content` service: keyed, project-scoped, signed reads and writes |
+| `PKU413` | `lint.enforceVariablesService` | reading `process.env` (`process.env.X`, `process.env['X']`, destructuring, spreading, `const { env } = process`) | the `variables` service for non-secret values, the `secrets` service for secrets |
+
+Both rules are project-wide, with no path allowlist, and cover every source file the inspector reads. Generated code (`.pikku/`, `*.gen.ts`), declaration files and test files (`*.test.ts`, `*.spec.ts`) are exempt. Type-only imports are not flagged. The first version of `PKU412` detects `node:fs` only.
+
+To relax a rule, set it to `'warn'` (printed, does not fail the build) or `'off'`:
+
+```json
+{
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "warn"
+  }
+}
+```
+
+`pikkuConfig()` runs before any service exists, so a `process.env` read there is flagged too. Read the value through the `variables` argument instead: `pikkuConfig(async (variables) => ({ port: Number(variables?.get('API_PORT') ?? 4003) }))`. Every host passes one (Cloudflare, Lambda and Azure from their bindings, the CLI runner), and `pikku serve`, `pikku dev` and the `pikku db` commands now do too; before, they called `createConfig()` with no argument. Note `variables.get` parses JSON, so a port can arrive as a number: coerce it. Tools that read a developer's project files or environment (CLIs, addons that edit a checkout, test harnesses) should set the relevant key to `'off'`.
+
+To find the affected code, run `pikku all` and look for `PKU412` and `PKU413`. The message names each file and line.
+
 ### The mesh is named `mesh`, and remote addons use the public RPC route
 
 Cross-unit RPC inside one app (the deploymentService "mesh") no longer shares the word "remote" with `wireRemoteAddon`. See [`remote-rpc.md`](./remote-rpc.md).

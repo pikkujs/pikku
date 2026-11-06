@@ -43,7 +43,9 @@
     "agent": true,
     "workflow": true,
     "webhook": true,
-    "analytics": { "originLock": false },
+    "analytics": {
+      "originLock": false
+    },
     "featureFlags": true
   },
   "emailTemplatesDir": "emails",
@@ -78,5 +80,9 @@
         "plugins": []
       }
     }
+  },
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "off"
   }
 }

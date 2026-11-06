@@ -8,5 +8,8 @@
   },
   "scenarios": {
     "emailDomain": "virtualuser.invalid"
+  },
+  "lint": {
+    "enforceVariablesService": "off"
   }
 }

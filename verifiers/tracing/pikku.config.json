@@ -6,5 +6,9 @@
   "scaffold": {
     "meshRpc": true,
     "workflow": true
+  },
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "off"
   }
 }

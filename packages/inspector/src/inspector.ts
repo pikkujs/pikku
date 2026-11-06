@@ -17,6 +17,10 @@ import { validatePikkuStudio } from './add/add-pikku-studio.js'
 import { generateAllSchemas } from './utils/schema-generator.js'
 import { extractSecretUsage } from './utils/extract-secret-usage.js'
 import {
+  extractServiceBypass,
+  isServiceBypassExempt,
+} from './utils/extract-service-bypass.js'
+import {
   accumulateSurfaceUsage,
   surfaceUsageArea,
 } from './utils/extract-surface-usage.js'
@@ -155,6 +159,12 @@ export const analyzeProgram = async (
     const usage = extractSecretUsage(sourceFile)
     if (usage.keys.length > 0 || usage.dynamic.length > 0) {
       state.secrets.usage.set(sourceFile.fileName, usage)
+    }
+    if (!isServiceBypassExempt(sourceFile.fileName)) {
+      const bypass = extractServiceBypass(sourceFile)
+      if (bypass.content.length > 0 || bypass.variables.length > 0) {
+        state.serviceBypass[sourceFile.fileName] = bypass
+      }
     }
     // Counted in the sweep that already has this file open. The public surface
     // is documentation, and documentation may not cost a project a second pass

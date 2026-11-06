@@ -63,6 +63,8 @@ const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
   [ErrorCode.SERVICES_NOT_DESTRUCTURED]: 'servicesNotDestructured',
   [ErrorCode.WIRES_NOT_DESTRUCTURED]: 'wiresNotDestructured',
   [ErrorCode.FUNCTION_DYNAMIC_IMPORT]: 'functionDynamicImport',
+  [ErrorCode.DIRECT_CONTENT_ACCESS]: 'enforceContentService',
+  [ErrorCode.DIRECT_ENV_ACCESS]: 'enforceVariablesService',
 }
 
 // Default severity for each lint rule when not explicitly configured.
@@ -75,6 +77,10 @@ const LINT_DEFAULTS: NonNullable<PikkuCLIConfig['lint']> = {
   servicesNotDestructured: 'error',
   wiresNotDestructured: 'error',
   functionDynamicImport: 'warn',
+  // Policy rules: code that reaches around a service. Enforced by default;
+  // opting out is an explicit 'off'.
+  enforceContentService: 'error',
+  enforceVariablesService: 'error',
 }
 
 /**

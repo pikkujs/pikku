@@ -23,5 +23,9 @@
       "stateDiffService",
       "codeEditService"
     ]
+  },
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "off"
   }
 }

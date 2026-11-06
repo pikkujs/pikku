@@ -8,5 +8,9 @@
   },
   "schema": {
     "supportsImportAttributes": true
+  },
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "off"
   }
 }

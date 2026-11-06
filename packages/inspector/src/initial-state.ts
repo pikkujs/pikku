@@ -131,6 +131,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       usage: new Map(),
     },
     surfaceUsage: {},
+    serviceBypass: {},
     credentials: {
       definitions: [],
       files: new Set(),

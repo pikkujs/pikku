@@ -1,5 +1,6 @@
 import type * as ts from 'typescript'
 import type { SecretUsage } from './utils/extract-secret-usage.js'
+import type { ServiceBypassUsage } from './utils/extract-service-bypass.js'
 import type { AddonDependency } from './utils/addon-dependencies.js'
 import type { SurfaceUsageCounts } from './utils/extract-surface-usage.js'
 import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
@@ -960,6 +961,12 @@ export interface InspectorState {
   }
   /** How often each `#pikku/*` export is imported, and from where. */
   surfaceUsage: SurfaceUsageCounts
+  /**
+   * Direct storage / environment access per source file, keyed by absolute
+   * path. Evidence for `lint.enforceContentService` and
+   * `lint.enforceVariablesService`; consumed by computeDiagnostics.
+   */
+  serviceBypass: Record<string, ServiceBypassUsage>
   credentials: {
     definitions: CredentialDefinitions
     files: Set<string>

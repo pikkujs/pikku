@@ -4,7 +4,12 @@
   "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
   "scaffold": {
-    "analytics": { "originLock": false },
+    "analytics": {
+      "originLock": false
+    },
     "pikkuDir": "pikku"
+  },
+  "lint": {
+    "enforceContentService": "off"
   }
 }

@@ -3,5 +3,9 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
-  "addon": true
+  "addon": true,
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "off"
+  }
 }

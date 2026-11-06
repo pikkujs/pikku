@@ -5,5 +5,9 @@
   "tsconfig": "./tsconfig.json",
   "scaffold": {
     "webhook": true
+  },
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "off"
   }
 }
