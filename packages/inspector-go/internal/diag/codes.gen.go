@@ -73,6 +73,7 @@ const (
 	DuplicateAuthDefinition           Code = "PKU581"
 	AuthNotExported                   Code = "PKU582"
 	DuplicateVirtualUsersDefinition   Code = "PKU585"
+	PermissionDataUnused              Code = "PKU586"
 	RouteParamMismatch                Code = "PKU571"
 	RouteQueryMismatch                Code = "PKU572"
 	AuthDisabledRequiresSessionless   Code = "PKU573"

@@ -44,7 +44,8 @@ type Options struct {
 	// Read only by finalize (`inspect --finalize`, `finalize --stdin`).
 	// OpenAPI is InspectorOptions.openAPI ({ additionalInfo }); Manifest is
 	// the versions.pikku.json contents; ModelAliases is pikku.config.json's
-	// "models" table; StrictMeta turns on the agent tool description check.
+	// "models" table; StrictMeta turns on the agent tool description check
+	// and makes PKU586 a critical.
 	OpenAPI      json.RawMessage   `json:"openAPI,omitempty"`
 	Manifest     json.RawMessage   `json:"manifest,omitempty"`
 	ModelAliases map[string]string `json:"modelAliases,omitempty"`

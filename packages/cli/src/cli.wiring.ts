@@ -279,7 +279,7 @@ wireCLI({
     },
     strictMeta: {
       description:
-        "Fail the build when an AI agent's tool has no description. Without one the model is offered the tool under its own name, so this is a quality gate rather than a correctness one — hence off by default. A 'title' does not satisfy it.",
+        "Fail the build when an AI agent's tool has no description, or when a pikkuPermission never uses its data (PKU586, otherwise a warning). Without a description the model is offered the tool under its own name, so these are quality gates rather than correctness ones — hence off by default. A 'title' does not satisfy it.",
       default: false,
     },
     tsc: {
@@ -1396,7 +1396,7 @@ wireCLI({
         },
         strict: {
           description:
-            'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings',
+            'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings, and with --codegen, codegen runs with --strict-meta',
           default: false,
         },
         skipTypecheck: {

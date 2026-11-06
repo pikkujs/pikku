@@ -96,6 +96,35 @@ Rewrite those forms as above. `pikkuWorkflowFunc` remains the default.
 
 To find the affected code, run `pikku all` and look for `PKU641`.
 
+### A `pikkuPermission` that never uses its data is reported as PKU586
+
+A `pikkuPermission` written inline is now reported as `PKU586` when it has no data parameter, the parameter starts with `_`, or the parameter is never referenced. `pikku all` warns and still builds. Under `pikku all --strict-meta` it is a critical and the build fails.
+
+`pikku validate --strict --codegen` now runs codegen with `--strict-meta`, so it fails on `PKU586`, and also on an agent tool with no description, which it did not check before.
+
+Replace the permission with `pikkuAuth`, whose handler takes the services and the session:
+
+```ts
+// before
+export const isAdmin = pikkuPermission(
+  async (_services, _data, { session }) => session?.role === 'admin'
+)
+
+// after
+export const isAdmin = pikkuAuth(
+  async (_services, session) => session.role === 'admin'
+)
+```
+
+`pikkuAuth` refuses a caller with no session without running the check. Do not switch a permission that has to pass for anonymous callers, such as one on a route with `auth: false`, or a global permission on an app with public routes: those routes would start returning 403. `PKU586` stays a warning there, and `--strict-meta` fails on it.
+
+A permission that reads a wire other than `session`, such as `functionId`, is not reported, because `pikkuAuth` is not given the wire.
+
+`pikku new permission` now scaffolds a `pikkuAuth`.
+
+To find the affected code, run `pikku all` and look for `PKU586`.
+
+
 ### `x-request-id` is replaced by `traceparent`
 
 Pikku now uses W3C trace context. An HTTP request's `wire.traceId` is 32 lowercase hex, and `wire.trace` adds `spanId`, `parentSpanId` and `sampled`. `errorId` in error responses has the same format.

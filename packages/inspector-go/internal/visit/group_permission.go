@@ -2,6 +2,7 @@ package visit
 
 import (
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -25,6 +26,53 @@ func (s *Context) isInsidePermissionContainer(node *ast.Node) bool {
 		}
 	}
 	return false
+}
+
+// isPropertyKey is isPropertyKey: a name that is the key of a property, not a
+// reference to a variable.
+func isPropertyKey(id *ast.Node) bool {
+	p := id.Parent
+	return (ast.IsPropertyAccessExpression(p) && p.Name() == id) ||
+		(ast.IsPropertyAssignment(p) && p.Name() == id) ||
+		(ast.IsBindingElement(p) && p.PropertyName() == id)
+}
+
+// neverReadsData is neverReadsData: whether a permission handler certainly
+// ignores its data argument. Scoping is deliberately not worked out, and a rest
+// parameter, a destructured argument and `arguments` count as a use, because a
+// missed warning is better than a false one.
+func neverReadsData(handler *ast.Node) bool {
+	params := handler.Parameters()
+	for i, p := range params {
+		if i < 2 && p.AsParameterDeclaration().DotDotDotToken != nil {
+			return false
+		}
+	}
+	data := tsutil.ParamAt(handler, 1)
+	name := ""
+	if data != nil {
+		if !ast.IsIdentifier(data.Name()) {
+			return false
+		}
+		name = data.Name().Text()
+		if strings.HasPrefix(name, "_") {
+			return true
+		}
+	}
+
+	referenced := false
+	visit := func(n *ast.Node) {
+		if ast.IsIdentifier(n) && (n.Text() == name || n.Text() == "arguments") && !isPropertyKey(n) {
+			referenced = true
+		}
+	}
+	for _, p := range params {
+		if p != data {
+			tsutil.WalkSelf(p, visit)
+		}
+	}
+	tsutil.WalkSelf(handler.Body(), visit)
+	return !referenced
 }
 
 func (s *Context) addPermission(node *ast.Node) {
@@ -95,6 +143,14 @@ func (s *Context) addPermissionDefinition(node *ast.Node, isAuth bool) {
 	}
 	if !requiresData {
 		def.RequiresData = tsutil.BoolPtr(false)
+	}
+	// Only a function written here can be read, and `func` may have been
+	// resolved through a variable. pikkuAuth is handed the session and nothing
+	// else from the wire, so a check that reads any other wire cannot move.
+	if !isAuth && (handler == arg || handler.Parent.Parent == arg) && wires.Optimized &&
+		!slices.ContainsFunc(wires.Wires, func(wire string) bool { return wire != "session" }) &&
+		neverReadsData(handler) {
+		def.DataUnused = tsutil.BoolPtr(true)
 	}
 	s.State.Permissions.Definitions.Set(id, def)
 

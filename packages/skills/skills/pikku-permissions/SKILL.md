@@ -71,6 +71,11 @@ Put them in `src/permissions/`, one file per entity, and reuse one checker acros
 - Every function that takes an id gets a `pikkuPermission`, even if the query also filters. A 404 thrown from the body is the same check hidden. That check is ownership only for owner-only rows: for a shared resource it allows the owner and the collaborators or group that may use it, still behind the session.
 - A list has no id to check: keep its `pikkuAuth` and filter the query on the session.
 
+If a `pikkuPermission` never reads its data, `pikku all` warns with PKU586 and
+`--strict-meta` or `pikku validate --strict --codegen` fails on it: use `pikkuAuth`. `pikkuAuth`
+refuses a caller with no session without running the check, so keep that in mind for
+a check that has to admit anonymous callers.
+
 ## OR and AND
 
 ```typescript

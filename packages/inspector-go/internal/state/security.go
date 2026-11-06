@@ -6,7 +6,8 @@ package state
 // literals; see meta.go for the conventions.
 
 // MiddlewareDefinition is InspectorMiddlewareDefinition and
-// InspectorPermissionDefinition (the latter adds requiresData), and the shape
+// InspectorPermissionDefinition (the latter adds requiresData and dataUnused),
+// and the shape
 // of an approval description (which sets only the first five fields).
 type MiddlewareDefinition struct {
 	Services     ServicesMeta `json:"services"`
@@ -19,6 +20,7 @@ type MiddlewareDefinition struct {
 	Description  *string      `json:"description,omitempty"`
 	Package      *string      `json:"package,omitempty"`
 	RequiresData *bool        `json:"requiresData,omitempty"`
+	DataUnused   *bool        `json:"dataUnused,omitempty"`
 }
 
 // MiddlewareInstance is InspectorMiddlewareInstance.

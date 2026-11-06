@@ -32,7 +32,7 @@ export const ValidateInput = z.object({
     .boolean()
     .optional()
     .describe(
-      'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings'
+      'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings, and with `codegen`, codegen runs with `--strict-meta`'
     ),
   skipTypecheck: z
     .boolean()

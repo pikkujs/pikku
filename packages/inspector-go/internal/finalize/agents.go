@@ -108,6 +108,25 @@ func validateAgentToolReferences(log *diag.Logger, st *state.State, opts Options
 	})
 }
 
+// validatePermissionDataUsed is validatePermissionDataUsed: a warning, or a
+// critical under strictMeta, for a pikkuPermission that never reads its data.
+func validatePermissionDataUsed(log *diag.Logger, st *state.State, opts Options) {
+	definitions := rawRecord(st.Permissions.Definitions)
+	definitions.Each(func(id string, r state.Raw) {
+		d := decode[definitionMeta](r)
+		if !d.DataUnused {
+			return
+		}
+		message := "Permission '" + id + "' in " + jsRelative(st.RootDir, d.SourceFile) + " never uses its data argument, so it depends on the session alone. " +
+			"Use pikkuAuth: pikkuAuth(async (services, session) => ...). Run 'pikku doc PKU586' first if it must admit callers with no session."
+		if opts.StrictMeta {
+			log.Critical(diag.PermissionDataUnused, message)
+		} else {
+			log.Diagnostic(diag.Warn, diag.PermissionDataUnused, message)
+		}
+	})
+}
+
 func validateAgentScorerReferences(log *diag.Logger, st *state.State) {
 	known := st.Scorers.ScorersMeta.Keys()
 	agents := rawRecord(st.Agents.AgentsMeta)
