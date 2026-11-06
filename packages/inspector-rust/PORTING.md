@@ -291,3 +291,16 @@ fixture golden for channels, gateways, cli, agents, scorers, mcpEndpoints) and u
 * Channel/CLI/MCP/agent middleware entries that differ on the scoreboard are all the middleware group's:
   `state.channelMiddleware` / `agentMiddleware` definitions and tag middleware are written by group_middleware
   (not ported yet), which also flips `inline` on wire refs.
+
+## Workflow groups (`group_workflow`, `group_workflow_graph`, `workflow_*`)
+
+- `workflow_jsobj.rs` models the TS object literals the extractors build: `Js`
+  (with `Undef`, which keeps its key position and is skipped on encode, `null`
+  inside arrays) and `JsObj`; build them with the `jo!` macro.
+- The DSL analyser's per-fanout `{ ...context }` copy is a swapped `Scope`
+  (`Dsl::in_child`); errors and context variables are shared, as in Go.
+- Go recovers panics inside `extractDSLWorkflow` into a failure reason; Rust
+  has no equivalent and none of the Go panic sites is reachable on a parsed tree.
+- No known gaps. `tests/workflow_fixtures.rs` holds Go's own `workflow_test.go`
+  cases plus `tests/workflow_edge/` (a wide fixture whose `golden.json` is Go's
+  end-to-end output).

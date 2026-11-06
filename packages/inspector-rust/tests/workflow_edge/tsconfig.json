@@ -1,0 +1,1 @@
+{"compilerOptions":{"strict":true,"module":"nodenext","target":"esnext"},"include":["wf.ts"]}

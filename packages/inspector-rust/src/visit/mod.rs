@@ -50,6 +50,8 @@ pub mod group_outgoing_webhook;
 pub mod group_pikku_studio;
 pub mod group_rpc_invocations;
 pub mod group_schedule;
+pub mod group_workflow;
+pub mod group_workflow_graph;
 pub mod group_setup_core;
 pub mod group_trigger;
 pub mod group_virtual_users;
@@ -66,6 +68,9 @@ pub mod util_schema;
 pub mod util_shared;
 pub mod util_types;
 pub mod util_wire_meta;
+pub mod workflow_dsl;
+pub mod workflow_dsl_patterns;
+pub mod workflow_jsobj;
 
 /// Go `visit.Abort`: a TS `throw` inside a visitor. It ends the inspection with
 /// an error; [`abort`] raises it and `analyze::run` turns it into a
@@ -246,6 +251,8 @@ pub fn register_groups(r: &mut Registry) {
     group_mcp::register(r);
     group_agent::register(r);
     group_cli::register(r);
+    group_workflow::register(r);
+    group_workflow_graph::register(r);
 }
 
 /// The registry with every ported group registered.
