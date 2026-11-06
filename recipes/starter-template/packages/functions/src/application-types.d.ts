@@ -4,7 +4,11 @@ import type {
   CoreConfig,
   CoreUserSession,
 } from '@pikku/core/types'
-import type { AuditLog, EmailService } from '@pikku/core/services'
+import type {
+  AuditLog,
+  ContentService,
+  EmailService,
+} from '@pikku/core/services'
 import type { AnalyticsLog } from '#pikku/analytics'
 import type { Kysely } from 'kysely'
 import type { DB } from '#pikku/db/schema.gen.js'
@@ -35,6 +39,9 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   // optional in CoreSingletonServices, which otherwise makes every emailService
   // use read as possibly-undefined and forces needless `!`/guards in functions.
   emailService: EmailService
+  // File storage, supplied by the runtime. Optional in CoreSingletonServices, so
+  // it is declared here to spare every function that uses it a guard.
+  content: ContentService
   // Per-invocation audit log, ALWAYS returned from createWireServices (see
   // services.ts) so general activity logging is available in every function —
   // `await auditLog.write({ type, source: 'explicit', metadata })`. Declared

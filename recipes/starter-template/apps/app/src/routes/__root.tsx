@@ -5,6 +5,7 @@ import { PikkuProvider, createAnalytics, createFeatureFlags, createPikku } from 
 import { PikkuFetch } from '@project/functions-sdk/pikku/pikku-fetch.gen'
 import { PikkuRPC } from '@project/functions-sdk/pikku/pikku-rpc.gen'
 import type { AnalyticsEvent, FeatureFlagName } from '@project/functions-sdk/types'
+import { PageViews } from '@/lib/page-views'
 import { defaultLocale, localeDir, supportedLocales, setActiveLocale } from '@/i18n/config'
 import { appMeta } from '@/app-meta'
 import { apiUrl } from '@/lib/env'
@@ -106,7 +107,10 @@ function RootDocument({ children }: { children: ReactNode }) {
       <body>
         <PreferencesContext.Provider value={{ locale, themeId: 'default', setLocale, setThemeId: () => {} }}>
           <QueryClientProvider client={queryClient}>
-            <PikkuProvider pikku={pikku}>{children}</PikkuProvider>
+            <PikkuProvider pikku={pikku}>
+              <PageViews />
+              {children}
+            </PikkuProvider>
           </QueryClientProvider>
         </PreferencesContext.Provider>
         <Scripts />
