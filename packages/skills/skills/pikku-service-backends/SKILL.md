@@ -13,7 +13,8 @@ cannot tell you: which backend implements which interface, and what changes when
 you swap one for another.
 
 `pikku-services` covers how to build and wire a service. This covers what to put
-behind the interface.
+behind the interface. For uploading and reading files through `content`, use
+`pikku-content`.
 
 ## Pick a backend
 
