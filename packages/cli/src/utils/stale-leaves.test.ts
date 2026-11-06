@@ -1,5 +1,11 @@
 import assert from 'node:assert'
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -68,4 +74,81 @@ test('a healthy leaf is left alone', async () => {
   const file = project(`export const A = 1`, leaf('A'))
   await repairStaleLeaves(logger, { variablesFile: file, packageMappings: {} })
   assert.equal(readFileSync(file, 'utf8'), leaf('A'))
+})
+
+const events = (declaration: string) => {
+  const root = mkdtempSync(join(tmpdir(), 'pikku-stale-'))
+  mkdirSync(join(root, 'src/scaffold'), { recursive: true })
+  writeFileSync(join(root, 'src/analytics.ts'), declaration)
+  writeFileSync(
+    join(root, 'src/scaffold/analytics.schemas.gen.ts'),
+    `import { analyticsEvents as events0 } from '../analytics.js'
+export const a = events0['signed_up'].shape
+`
+  )
+  return {
+    root,
+    analyticsFile: join(root, 'src/scaffold/analytics.gen.ts'),
+    schemasFile: join(root, 'src/scaffold/analytics.schemas.gen.ts'),
+  }
+}
+
+const declares = (body: string) =>
+  `export const analyticsEvents = defineAnalyticsEvents({\n${body}\n})\n`
+
+test('an event still declared is not stale', () => {
+  const { schemasFile } = events(declares(`  signed_up: z.object({}),`))
+  assert.equal(hasStaleImport(schemasFile), false)
+})
+
+test('a shorthand or quoted event still counts as declared', () => {
+  const shorthand = events(declares(`  signed_up,`))
+  assert.equal(hasStaleImport(shorthand.schemasFile), false)
+  const quoted = events(declares(`  'signed_up': z.object({}),`))
+  assert.equal(hasStaleImport(quoted.schemasFile), false)
+})
+
+test('a removed event is stale', () => {
+  const { schemasFile } = events(declares(`  page_viewed: z.object({}),`))
+  assert.equal(hasStaleImport(schemasFile), true)
+})
+
+test('an event left only in a comment is stale', () => {
+  const { schemasFile } = events(
+    `/** signed_up: a placeholder, like \`signed_up\`, */\n// signed_up: old\n` +
+      declares(`  page_viewed: z.object({}),`)
+  )
+  assert.equal(hasStaleImport(schemasFile), true)
+})
+
+test('a stale analytics schemas module is removed, a current one kept', async () => {
+  const stale = events(declares(`  page_viewed: z.object({}),`))
+  await repairStaleLeaves(logger, {
+    analyticsFile: stale.analyticsFile,
+    packageMappings: {},
+  })
+  assert.equal(existsSync(stale.schemasFile), false)
+
+  const current = events(declares(`  signed_up: z.object({}),`))
+  await repairStaleLeaves(logger, {
+    analyticsFile: current.analyticsFile,
+    packageMappings: {},
+  })
+  assert.equal(existsSync(current.schemasFile), true)
+})
+
+test('custom types go with a stale analytics module and stay otherwise', async () => {
+  const run = async (body: string) => {
+    const { root, analyticsFile } = events(declares(body))
+    const customTypesDeclarationFile = join(root, 'custom-types.gen.d.ts')
+    writeFileSync(customTypesDeclarationFile, 'export type Old = 1\n')
+    await repairStaleLeaves(logger, {
+      analyticsFile,
+      customTypesDeclarationFile,
+      packageMappings: {},
+    })
+    return existsSync(customTypesDeclarationFile)
+  }
+  assert.equal(await run(`  page_viewed: z.object({}),`), false)
+  assert.equal(await run(`  signed_up: z.object({}),`), true)
 })
