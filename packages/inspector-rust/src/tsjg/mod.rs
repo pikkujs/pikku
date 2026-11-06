@@ -6,6 +6,8 @@
 //! boundary catches it with [`catch`] and returns the message.
 
 pub mod config;
+pub mod formatter;
+pub mod parser;
 pub mod schema;
 pub mod types;
 
