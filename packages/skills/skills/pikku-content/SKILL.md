@@ -21,7 +21,7 @@ Run this once: `pikku doc ContentService UploadURLResult`. It prints each step a
    `fetch(new URL(uploadUrl, serverUrl), { method: uploadMethod ?? 'PUT', headers: { 'Content-Type': file.type, ...uploadHeaders }, body: file })`
 
    `uploadUrl` may be relative, so always resolve it. Check `ok`. The URL is short-lived, so ask just before sending. The browser must send from the server's own origin: `fetch` from any other origin fails, so a page served elsewhere proxies the upload route.
-3. A second function saves the key. It came from the client, so check its owner prefix and that `content.listFilesByPrefix(bucket, fileKey)` includes it.
+3. A second function saves the key. It came from the client, so its `pikkuPermission` checks the owner prefix, and the function checks that `content.listFilesByPrefix(bucket, fileKey)` includes it. The same goes for a function that reads a key.
 
 ## Save the key
 
