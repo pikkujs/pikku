@@ -1,6 +1,7 @@
 //! Port of Go `internal/schemas` (+ `internal/tsjg`, `internal/schemas/zodjs`):
-//! `schema-generator.ts` `generateAllSchemas`, the vendored
-//! ts-json-schema-generator and the Zod vendor converter hook.
-//!
-//! Status: NOT PORTED. `analyze::run` skips schema generation and logs nothing;
-//! `state.schemas` stays empty (see PORTING.md, Known gaps).
+//! `schema-generator.ts` `generateAllSchemas`.
+
+pub mod customtypes;
+pub mod names;
+pub mod program;
+pub mod vendor;
