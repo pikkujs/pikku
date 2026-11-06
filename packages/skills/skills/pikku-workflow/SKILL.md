@@ -26,6 +26,6 @@ What to reach for and why. For how to call it, run this once: `pikku doc workflo
 - A sub-workflow is for a real orchestration you also start on its own. A child that would be one step is a function.
 - A trigger never calls `rpc.invoke`, and never adds scheduler or workflow services: `pikku dev`, `pikku serve` and stages bring them.
 - Workflows go in `packages/functions/src/wirings/*.workflow.ts`, exported. Start, run and status routes come from `scaffold.workflow`.
-- On a schedule, the `wireScheduler` func is a `pikkuVoidFunc` that only starts the workflow. A cron has no session.
+- On a schedule, the `wireScheduler` func is a `pikkuVoidFunc` that only starts the workflow, in the workflow's file: `func: async ({ rpc }) => { await rpc.startWorkflow('weeklyReport', {}) }`, and `rpc.startWorkflow` is called the same way from a function. A cron has no session.
 - An approval takes a real `schema`, and the workflow branches on the result. A no is an answer (`approveStep` with `{ approve: false }`), never `updateRunStatus('cancelled')`, which skips compensation. Waiting approvals come from `WorkflowRunService`, not the `workflowRuns` table.
 - `approvers` defaults to `any`, which is not an authorization boundary: set `owner` or `not-initiator` when it matters who decides.
