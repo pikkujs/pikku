@@ -33,6 +33,12 @@ type StudioScreenBase = {
    * Lowercase letters, digits and hyphens, starting with a letter. Leave it out and the chat is unchanged.
    */
   agent?: string
+  /**
+   * Whether Studio's general Chat tab shows on this screen, beside the
+   * screen's agent tab. Defaults to `true`. `false` hides it; with no `agent`
+   * the screen then has no chat at all.
+   */
+  defaultChat?: boolean
 } & (
   | {
       /** `'studio'` gives `/<path>`, `'team'` gives `/<team>/<path>`. */

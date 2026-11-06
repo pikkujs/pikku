@@ -2,5 +2,7 @@
   "studio_verifier__title": "Studio verifier",
   "studio_verifier_inbox__title": "Inbox",
   "studio_verifier_settings__title": "Settings",
-  "studio_verifier_console__title": "Console"
+  "studio_verifier_console__title": "Console",
+  "studio_verifier_agent__title": "Inbox assistant",
+  "studio_verifier_agent__description": "Answers about the inbox"
 }

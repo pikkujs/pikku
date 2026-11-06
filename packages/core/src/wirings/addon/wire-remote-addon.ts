@@ -60,11 +60,6 @@ export type WireRemoteAddonConfig = {
    */
   expose?: boolean | string[]
   /**
-   * The other addons this one may call, as `{ '<alias>': '<name>' }`, with the
-   * same meaning as `wireAddon`'s `uses`.
-   */
-  uses?: Record<string, string>
-  /**
    * A package installed in this project that carries the screens and
    * contributors shown under this name, when they live apart from the contract
    * package. Read at build time, never at runtime. `ui` mounts its screens;
@@ -89,7 +84,6 @@ export const wireRemoteAddon = (config: WireRemoteAddonConfig): void => {
     package: parseRemoteAddonPackage(config.package).name,
     tags: config.tags,
     remote: true,
-    ...(config.uses ? { uses: config.uses } : {}),
     serverUrl: config.serverUrl,
     ...(config.expose !== undefined ? { expose: config.expose } : {}),
     ...(config.auth ? { remoteAuth: config.auth } : {}),

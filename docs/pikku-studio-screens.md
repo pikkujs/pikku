@@ -2,7 +2,7 @@
 
 An addon can ship screens that Pikku Studio mounts. It declares them with
 `definePlugin` in its own source, usually `src/screens.ts`, and the app opts in
-by wiring the addon with `ui: true`. `pikku new addon-ui <name>` scaffolds an
+by wiring the addon with `ui: true`. `pikku new addon <name> --ui` scaffolds an
 addon that already has one.
 
 ```ts
@@ -22,6 +22,7 @@ export default definePlugin({
         badge: 'unpaidCount',
       },
       needsApp: true,
+      agent: 'invoices',
       scopes: ['invoices:read'],
       component: () => import('./screens/Invoices.js'),
     },
@@ -49,6 +50,7 @@ export default definePlugin({
 | `needsApp?`          | Project screens only. Defaults to `false`.                                                                                                                                                                                           |
 | `layout?`            | `'bare'` renders the screen without the shell.                                                                                                                                                                                       |
 | `agent?`             | The agent that answers in Studio's chat panel, in a second tab beside the general chat, while this screen is open. Either a name (`/^[a-z][a-z0-9-]*$/`) for an agent the addon ships, resolving to `agents/<name>.md` in its package, or `studio:<name>` for an agent Studio ships. See [Agents](#agents). |
+| `defaultChat?`       | Whether Studio's general Chat tab shows on this screen, beside the `agent` tab. Defaults to `true`; `false` hides it, and with no `agent` the screen has no chat at all. A boolean literal. See [Agents](#agents). |
 | `scopes?`            | Hides the screen and its nav from viewers without access. This is not access control: the addon's functions must enforce the same scopes.                                                                                            |
 
 The manifest `title` is a message key too: the addon's name in Studio.
@@ -62,7 +64,9 @@ next to its `package.json`. There is no field naming the catalog.
 {
   "invoices__title": "Invoices",
   "invoices_list__title": "All invoices",
-  "invoices_settings__title": "Invoice settings"
+  "invoices_settings__title": "Invoice settings",
+  "invoices_agent__title": "Invoices assistant",
+  "invoices_agent__description": "Answers questions about this project's invoices"
 }
 ```
 
@@ -73,7 +77,8 @@ package. The file is the agent's instructions and names the skills it follows;
 skills are plain folders, `skills/<name>/SKILL.md`, found by convention. It
 starts with frontmatter whose `title` and `description` are message keys in
 `messages/en.json`, like a screen title: `title` labels the chat tab and
-`description` is shown with it.
+`description` is shown with it. For the `/invoices` screen above,
+`agents/invoices.md`:
 
 ```md
 ---
@@ -94,6 +99,67 @@ For an agent the addon ships, `pikku all` records `agent`, `agentTitle` and `age
 so Studio reads them without opening the markdown. A screen without `agent`
 leaves the chat as it is.
 
+The agent's tab sits beside Studio's general Chat tab. `defaultChat: false`
+hides the general one, so the screen's agent is the only chat on it:
+
+```ts
+{
+  path: '/invoices/triage',
+  title: 'invoices_triage__title',
+  scope: 'project',
+  agent: 'invoices',
+  defaultChat: false,
+  component: () => import('./screens/Triage.js'),
+}
+```
+
+`defaultChat` defaults to `true` and is only written into the metadata when the
+screen declares it. `defaultChat: false` on a screen without `agent` is
+allowed: that screen has no chat at all.
+
+### Shipping agents and skills
+
+`agents/` and `skills/` are read from the published package, so npm has to
+include them. If `package.json` has a `files` list, it must name them:
+
+```json
+{
+  "files": ["dist", "messages", "agents", "skills"]
+}
+```
+
+An entry counts when it is `agents`, `agents/`, or a pattern under `agents/`
+(`agents/**/*.md`); the same for `skills`. A root glob such as `**/*.md` does
+not count, even though npm would publish the folder through it, so list the
+folder as well. With no `files` field the check does not run: npm then leaves
+out what `.npmignore` excludes, or `.gitignore` when there is no `.npmignore`,
+so make sure neither excludes `agents/` or `skills/`. The `agents/` check only
+applies to an agent that is otherwise valid: one that already fails with PKU365
+gets that error alone.
+
+### The `studio` block
+
+Studio links an addon by the `studio` block in its `package.json`. Without
+`studio.addon` it does not load the addon's agents or skills:
+
+```json
+{
+  "studio": {
+    "addon": "invoices",
+    "ui": "./src",
+    "messages": "./messages/{locale}.json"
+  }
+}
+```
+
+`addon` is the addon's short name, lowercase letters, digits and hyphens. It is
+the `<addon>` in the scope `agent:<addon>:<name>` Studio gives an agent the addon
+ships. `ui` is where the screens' source lives, and `messages` is the catalog
+pattern.
+
+`pikku new addon <name> --ui` scaffolds both the `files` list and the `studio`
+block, with `addon` set to `<name>`.
+
 ## What `pikku all` checks
 
 The inspector reads `definePlugin` statically and writes the screens into the
@@ -106,6 +172,7 @@ addon's `studio` metadata. It fails the build on:
 | PKU358 | a title key, or an agent's `title` / `description` key, is missing from `messages/en.json`                                                    |
 | PKU359 | a `nav.badge` names no function of the addon                                                                                                  |
 | PKU365 | an `agent` is neither a name `/^[a-z][a-z0-9-]*$/` nor `studio:<name>`; or a name has no non-empty `agents/<name>.md`, or that file lacks frontmatter with a `title` and `description` |
+| PKU366 | `package.json` has a `files` list that leaves out `agents/` while a screen names a valid agent the addon ships (not `studio:<name>`, and not already PKU365), or leaves out `skills/` while the addon has a `skills/<name>/SKILL.md` |
 
 A key missing from any other locale's catalog is a warning.
 

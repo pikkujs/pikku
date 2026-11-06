@@ -19,7 +19,7 @@ export function parseStringArray(node: ts.Expression): string[] | undefined {
   return values
 }
 
-export function parseStringRecord(
+function parseStringRecord(
   obj: ts.ObjectLiteralExpression
 ): Record<string, string> {
   const result: Record<string, string> = {}

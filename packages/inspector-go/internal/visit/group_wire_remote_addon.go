@@ -2,7 +2,6 @@ package visit
 
 import (
 	"github.com/microsoft/typescript-go/shim/ast"
-	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/remotesdk"
@@ -28,7 +27,6 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 	pkgIsLiteral := false
 	var authCredentialId, authSecretId *string
 	hasAuth := false
-	var uses *state.Record[string]
 	var local *addonLocal
 	var localContributors []string
 	haveLocalContributors := false
@@ -45,12 +43,6 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 			if ast.IsStringLiteralLike(init) {
 				pkg = init.Text()
 				pkgIsLiteral = true
-			}
-		case key == "uses":
-			if ast.IsObjectLiteralExpression(init) {
-				uses = parseStringRecord(init)
-			} else {
-				s.Log.Critical(diag.AddonExposeNotStatic, "wireRemoteAddon's uses must be an object literal, got: "+tsutil.NodeText(init))
 			}
 		case key == "local" && ast.IsObjectLiteralExpression(init):
 			l := &addonLocal{}
@@ -131,7 +123,6 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 	o.set("hasAuth", hasAuth)
 	o.set("authCredentialId", nilIfNil(authCredentialId))
 	o.set("authSecretId", nilIfNil(authSecretId))
-	o.set("uses", nilIfNil(uses))
 	if local != nil {
 		var lo jsObject
 		lo.set("package", local.pkg)
@@ -143,5 +134,5 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 		}
 		o.set("local", &lo.rec)
 	}
-	s.declareAddon(name, &addonDecl{pkg: pkgName, rng: rng, file: file, remote: true, uses: uses, local: local}, o.raw())
+	s.declareAddon(name, &addonDecl{pkg: pkgName, rng: rng, file: file, remote: true, local: local}, o.raw())
 }
