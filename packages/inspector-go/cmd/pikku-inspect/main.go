@@ -2,6 +2,9 @@
 //
 //	pikku-inspect --stdin                 one Request on stdin, one finalized Response on stdout
 //	pikku-inspect inspect --stdin         the same (a trailing --finalize is accepted and ignored)
+//	pikku-inspect --stdin --no-finalize   the same request, answered with analysis only
+//	                                      (finalized:false): the pre-finalize state that
+//	                                      `finalize --stdin` takes; `inspect --stdin --no-finalize` too
 //	pikku-inspect finalize --stdin        {state, diagnostics?, options} on stdin:
 //	                                      finalize a serialized pre-finalize state
 //	pikku-inspect serve                   NDJSON requests on stdin, responses on stdout,
@@ -41,6 +44,9 @@ func main() {
 	switch {
 	case len(args) == 1 && args[0] == "--stdin":
 		err = runInspect(os.Stdin, os.Stdout)
+	case len(args) == 2 && args[0] == "--stdin" && args[1] == "--no-finalize",
+		len(args) == 3 && args[0] == "inspect" && args[1] == "--stdin" && args[2] == "--no-finalize":
+		err = runAnalyzeOnly(os.Stdin, os.Stdout)
 	case len(args) >= 1 && args[0] == "inspect":
 		switch {
 		case len(args) == 2 && args[1] == "--stdin",
@@ -106,6 +112,24 @@ func runInspect(r io.Reader, w io.Writer) error {
 		return fmt.Errorf("reading request: %w", err)
 	}
 	res, err := inspect(req, nil)
+	if err != nil {
+		return err
+	}
+	return writeJSON(w, res, "")
+}
+
+// runAnalyzeOnly answers a Request with analysis alone: the Response analyze.Run
+// returns, finalized:false, which is what `finalize --stdin` finalizes.
+func runAnalyzeOnly(r io.Reader, w io.Writer) error {
+	var req protocol.Request
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		return fmt.Errorf("reading request: %w", err)
+	}
+	res, err := analyze.Run(req, nil)
+	var failure *protocol.Failure
+	if errors.As(err, &failure) {
+		res, err = protocol.FailureResponse(failure), nil
+	}
 	if err != nil {
 		return err
 	}
