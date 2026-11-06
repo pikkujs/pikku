@@ -103,8 +103,8 @@ type PikkuAuthConfig<RequiredServices extends SecretlessServices<SingletonServic
  *
  * @example
  * \\\`\\\`\\\`typescript
- * const isAuthenticated = pikkuAuth(async ({ logger }, session) => {
- *   return !!session
+ * const isVerified = pikkuAuth(async ({ logger }, session) => {
+ *   return !!session?.emailVerified
  * })
  *
  * const isAdmin = pikkuAuth({
