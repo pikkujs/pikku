@@ -20,6 +20,7 @@ import {
   watchedDirs,
 } from '../../utils/watch-loop.js'
 import {
+  WAKE_SIGNAL,
   isIgnoredByWatcher,
   watchStatusFile,
 } from '../../utils/watch-status.js'
@@ -618,6 +619,7 @@ export const dev = pikkuSessionlessFunc<
         watcher?.on('change', loop.onChange)
         watcher?.on('add', loop.onChange)
         watcher?.on('unlink', loop.onChange)
+        process.on(WAKE_SIGNAL, loop.wake)
       }
       // Fire-and-forget listener: errors are handled inside (handle() catches and
       // logs them), so a rejection cannot escape.
