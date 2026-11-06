@@ -4,11 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os/exec"
+	"time"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
 )
+
+// helperPipeGrace bounds how long Wait lingers on pipes a helper's own children
+// still hold open after the helper itself is gone.
+const helperPipeGrace = 2 * time.Second
 
 // VendorSchemaConverter turns schemaLookup entries (Zod values the analysis
 // found as function input/output schemas) into JSON Schema. The TS inspector
@@ -68,18 +75,51 @@ func (c NodeConverter) Convert(ctx context.Context, refs []VendorRef) (VendorRes
 	cmd := exec.CommandContext(ctx, node, c.Script)
 	cmd.Dir = c.Dir
 	cmd.Stdin = bytes.NewReader(in)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
+	cmd.WaitDelay = helperPipeGrace
+	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return VendorResult{}, fmt.Errorf("vendor schema conversion (%s %s) failed: %w\n%s", node, c.Script, err, stderr.Bytes())
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return VendorResult{}, err
+	}
+	failed := func(err error) error {
+		return fmt.Errorf("vendor schema conversion (%s %s) failed: %w\n%s", node, c.Script, err, stderr.Bytes())
+	}
+	if err := cmd.Start(); err != nil {
+		return VendorResult{}, failed(err)
 	}
 	var out struct {
 		Schemas [][2]json.RawMessage `json:"schemas"`
 		Errors  []string             `json:"errors"`
 	}
-	if err := json.Unmarshal(stdout.Bytes(), &out); err != nil {
-		return VendorResult{}, fmt.Errorf("vendor schema conversion returned invalid output: %w", err)
+	answer := make(chan error, 1)
+	go func() { answer <- json.NewDecoder(stdout).Decode(&out) }()
+	var decodeErr error
+	select {
+	case decodeErr = <-answer:
+	case <-ctx.Done():
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		return VendorResult{}, failed(ctx.Err())
+	}
+	switch {
+	case decodeErr == nil:
+		// The complete answer is in hand, so the helper's exit no longer matters.
+		// Waiting for it can hang forever: Node can deadlock inside process.exit,
+		// its main thread joining a V8 worker that is waiting on that thread for a
+		// GC. Any other runtime stalling on the way out would look the same.
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	case errors.Is(decodeErr, io.EOF), errors.Is(decodeErr, io.ErrUnexpectedEOF):
+		// Stdout closed short of an answer, so the exit status says why.
+		if err := cmd.Wait(); err != nil {
+			return VendorResult{}, failed(err)
+		}
+		return VendorResult{}, fmt.Errorf("vendor schema conversion returned invalid output: %w", decodeErr)
+	default:
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		return VendorResult{}, fmt.Errorf("vendor schema conversion returned invalid output: %w", decodeErr)
 	}
 	res := VendorResult{Errors: out.Errors}
 	for _, pair := range out.Schemas {

@@ -3,7 +3,7 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "ignoreFiles": [
-    "**/sdk/**",
+    "**/contract/**",
     "**/*.test.ts",
     "**/node_modules/**",
     "**/dist/**"

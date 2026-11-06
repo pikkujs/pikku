@@ -20,6 +20,7 @@ import {
   SCHEDULE_TARGET_HEADER,
   SCHEDULE_TIMEZONE_HEADER,
   SCHEDULE_SUBJECT_SEGMENT,
+  TRACEPARENT_HEADER,
   queueNameToToken,
   scheduleSubjectFor,
   subjectForQueue,
@@ -162,7 +163,8 @@ export class NatsSchedulerService extends SchedulerService {
     delay: number | string,
     rpcName: string,
     data?: any,
-    session?: CoreUserSession
+    session?: CoreUserSession,
+    traceparent?: string
   ): Promise<string> {
     const delayMs =
       typeof delay === 'string' ? parseDurationString(delay) : delay
@@ -178,6 +180,7 @@ export class NatsSchedulerService extends SchedulerService {
       SCHEDULE_TARGET_HEADER,
       subjectForQueue(this.subjectPrefix, MESH_RPC_QUEUE)
     )
+    if (traceparent) hdrs.set(TRACEPARENT_HEADER, traceparent)
     await this.js.publish(
       subject,
       JSON.stringify({ rpcName, data, session } satisfies ScheduledJobData),

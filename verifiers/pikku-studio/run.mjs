@@ -11,9 +11,26 @@
  *      from messages/en.json → PKU358
  *   6. a badge naming no
  *      function of the addon → PKU359
+ *   7. a screen agent        → recorded with its frontmatter keys, and
+ *                              defaultChat: false is carried into the meta
+ *   8. an invalid agent      → PKU365, and only PKU365
+ *   9. package.json "files"  → PKU366 when it leaves out agents/ (for a valid
+ *                              agent) or skills/ (when skills/<x>/SKILL.md
+ *                              exists); passes when it covers them, or when
+ *                              there is no "files" at all
+ *  10. pikku new addon --ui  → package.json carries the studio block and
+ *                              ships agents and skills
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -22,6 +39,7 @@ const repoRoot = resolve(here, '../..')
 const PIKKU = join(repoRoot, 'packages/cli/dist/bin/pikku.js')
 const screensPath = join(here, 'src', 'screens.ts')
 const enPath = join(here, 'messages', 'en.json')
+const packagePath = join(here, 'package.json')
 
 class CheckFailed extends Error {}
 
@@ -88,6 +106,10 @@ const expected = {
       nav: { area: 'project', icon: 'inbox', order: 10, badge: 'pendingCount' },
       needsApp: true,
       scopes: ['studio-verifier:read'],
+      agent: 'helper',
+      defaultChat: false,
+      agentTitle: 'studio_verifier_agent__title',
+      agentDescription: 'studio_verifier_agent__description',
       component: './screens/Inbox.js',
     },
     {
@@ -170,3 +192,146 @@ withFile(
   () => expectFailure('PKU359', 'a badge naming no function built')
 )
 console.log('✓ a badge naming no function fails with PKU359')
+
+const inbox = meta.screens.find((screen) => screen.path === '/studio-verifier')
+if (inbox?.defaultChat !== false) {
+  fail('defaultChat: false is not in the screens meta', JSON.stringify(inbox))
+}
+const quiet = meta.screens.filter(
+  (screen) => screen.path !== '/studio-verifier'
+)
+if (quiet.some((screen) => 'defaultChat' in screen)) {
+  fail('a screen that did not declare defaultChat has one in the meta')
+}
+console.log(
+  '✓ a screen agent is recorded, and defaultChat: false reaches the meta (an undeclared one does not)'
+)
+
+withFile(
+  screensPath,
+  (text) => text.replace("agent: 'helper',", "agent: 'Not_A_Name',"),
+  () =>
+    withPackageFiles(['dist', 'messages'], () => {
+      const result = pikkuAll()
+      if (result.status === 0 || !result.output.includes('PKU365')) {
+        fail('an invalid agent built', result.output)
+      }
+      if (result.output.includes('PKU366')) {
+        fail('an invalid agent also drew PKU366', result.output)
+      }
+    })
+)
+console.log('✓ an invalid agent fails with PKU365, and only PKU365')
+
+/** Sets package.json "files" for the length of the check. */
+function withPackageFiles(files, check) {
+  withFile(
+    packagePath,
+    (text) => {
+      const pkg = JSON.parse(text)
+      pkg.files = files
+      return `${JSON.stringify(pkg, null, 2)}\n`
+    },
+    check
+  )
+}
+
+const withSkill = (check) => {
+  const dir = join(here, 'skills', 'inbox-triage')
+  mkdirSync(dir, { recursive: true })
+  try {
+    writeFileSync(join(dir, 'SKILL.md'), '# Inbox triage\n')
+    check()
+  } finally {
+    rmSync(join(here, 'skills'), { recursive: true, force: true })
+  }
+}
+
+const expectPasses = (message) => {
+  const result = pikkuAll()
+  if (result.status !== 0 || result.output.includes('PKU366')) {
+    fail(message, result.output)
+  }
+}
+
+withPackageFiles(['dist', 'messages'], () =>
+  expectFailure(
+    'does not list agents/',
+    'a "files" list without agents/ built with a screen agent'
+  )
+)
+console.log('✓ "files" without agents/ fails with PKU366 for a valid agent')
+
+withPackageFiles(['dist', 'messages', 'agents'], () =>
+  withSkill(() =>
+    expectFailure(
+      'does not list it; add "skills" to it so the published addon ships its skills',
+      'a "files" list without skills/ built with skills/<x>/SKILL.md present'
+    )
+  )
+)
+console.log(
+  '✓ "files" without skills/ fails with PKU366 when the addon has skills'
+)
+
+withPackageFiles(['dist', 'messages', 'agents/', 'skills/**'], () =>
+  withSkill(() => expectPasses('"files" covering agents/ and skills/ failed'))
+)
+if ('files' in JSON.parse(readFileSync(packagePath, 'utf8'))) {
+  fail('the verifier package.json must have no "files" for this check')
+}
+withSkill(() => expectPasses('a package with no "files" failed'))
+console.log('✓ no PKU366 when "files" covers agents/ and skills/, or is absent')
+
+const scaffoldRoot = mkdtempSync(join(tmpdir(), 'pikku-studio-scaffold-'))
+try {
+  const scaffold = spawnSync(
+    'node',
+    [
+      PIKKU,
+      'new',
+      'addon',
+      'inbox-kit',
+      '--ui',
+      '--dir',
+      scaffoldRoot,
+      '--build',
+      'false',
+    ],
+    { cwd: here, encoding: 'utf8', env: { ...process.env, FORCE_COLOR: '0' } }
+  )
+  if (scaffold.status !== 0) {
+    fail(
+      `pikku new addon --ui exited with ${scaffold.status}`,
+      `${scaffold.stdout}${scaffold.stderr}`
+    )
+  }
+  const scaffoldPkg = join(scaffoldRoot, 'addon-inbox-kit', 'package.json')
+  if (!existsSync(scaffoldPkg)) {
+    fail(
+      'pikku new addon --ui wrote no package.json',
+      `${scaffold.stdout}${scaffold.stderr}`
+    )
+  }
+  const pkg = JSON.parse(readFileSync(scaffoldPkg, 'utf8'))
+  const studio = JSON.stringify(pkg.studio)
+  const want = JSON.stringify({
+    addon: 'inbox-kit',
+    ui: './src',
+    messages: './messages/{locale}.json',
+  })
+  if (studio !== want)
+    fail(`the scaffold's studio block is ${studio}, not ${want}`)
+  for (const dir of ['agents', 'skills']) {
+    if (!pkg.files?.includes(dir)) {
+      fail(
+        `the scaffold's "files" leaves out ${dir}: ${JSON.stringify(pkg.files)}`
+      )
+    }
+  }
+} finally {
+  rmSync(scaffoldRoot, { recursive: true, force: true })
+}
+console.log(
+  '✓ pikku new addon --ui writes the studio block and ships agents and skills'
+)

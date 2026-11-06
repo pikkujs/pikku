@@ -1,4 +1,4 @@
-import { describe, test, beforeEach, afterEach } from 'node:test'
+import { describe, test, beforeEach, afterEach, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { CamelCasePlugin, Kysely, SqliteDialect, sql } from 'kysely'
 import Database from 'better-sqlite3'
@@ -343,6 +343,88 @@ describe('KyselyWorkflowService — attempt counting', () => {
   })
 })
 
+describe('KyselyWorkflowService — crash recovery queries', () => {
+  const longAgo = () => new Date(Date.now() + 60_000)
+
+  test('a step running with no lease and no child run does not hold its run out of the sweep', async () => {
+    const runId = await seedRun()
+    const { stepId } = await service.insertStepState(
+      runId,
+      'charge',
+      'charge:card',
+      {}
+    )
+    await service.setStepRunning(stepId)
+
+    assert.deepEqual(await (service as any).findStalledRunIds(longAgo(), 10), [
+      runId,
+    ])
+  })
+
+  test('a step parked on a child run does', async () => {
+    const runId = await seedRun()
+    const { stepId } = await service.insertStepState(
+      runId,
+      'child',
+      'childWorkflow',
+      {}
+    )
+    await service.setStepRunning(stepId)
+    await service.setStepChildRunId(stepId, 'child-run')
+
+    assert.deepEqual(
+      await (service as any).findStalledRunIds(longAgo(), 10),
+      []
+    )
+  })
+
+  test('scheduled steps come back from live runs only, oldest first, by the page', async () => {
+    const live = await seedRun()
+    const first = await service.insertStepState(live, 'Sleep', null, {
+      duration: 1000,
+    })
+    await service.setStepScheduled(first.stepId)
+    await db
+      .updateTable('workflowStep')
+      .set({ updatedAt: new Date(0) })
+      .where('workflowStepId', '=', first.stepId)
+      .execute()
+    const second = await service.insertStepState(
+      live,
+      'Work',
+      'work',
+      {
+        a: 1,
+      },
+      { retries: 3, retryDelay: '1s' }
+    )
+    await service.setStepScheduled(second.stepId)
+
+    const done = await seedRun('done')
+    const settled = await service.insertStepState(done, 'Sleep', null, {
+      duration: 1000,
+    })
+    await service.setStepScheduled(settled.stepId)
+    await service.updateRunStatus(done, 'completed')
+
+    const find = (limit: number, offset: number) =>
+      (service as any).findScheduledSteps(limit, offset)
+    const [oldest, newest] = await find(10, 0)
+    assert.equal(oldest.stepId, first.stepId)
+    assert.equal(oldest.rpcName, null)
+    assert.deepEqual(oldest.data, { duration: 1000 })
+    assert.equal(oldest.scheduledAt.getTime(), 0)
+    assert.equal(newest.stepId, second.stepId)
+    assert.equal(newest.retries, 3)
+    assert.equal(newest.retryDelay, '1s')
+    assert.deepEqual(
+      (await find(1, 1)).map((step: { stepId: string }) => step.stepId),
+      [second.stepId]
+    )
+    assert.equal((await find(10, 2)).length, 0)
+  })
+})
+
 describe('KyselyWorkflowService — run state writes', () => {
   test('concurrent updateRunState calls for different keys do not clobber each other', async () => {
     const runId = await seedRun('wf2')
@@ -477,6 +559,60 @@ describe('KyselyWorkflowService — claiming a step for execution', () => {
       rpcName,
       60_000
     ) as Promise<StepState | null>
+
+  /** Claim on a lease already over, as a worker that died mid-step leaves it. */
+  const claimAndLose = (runId: string, stepName: string) =>
+    (service as any).claimStepForExecution(runId, stepName, 'rpc.fn', -1_000)
+
+  const watchLogs = () => ({
+    rerun: mock.method(service, 'logStepRerun', async () => {}),
+    exhausted: mock.method(service, 'logStepAttemptsExhausted', async () => {}),
+  })
+
+  test('taking a step back from a dead worker reports the rerun once', async () => {
+    const runId = await seedRun()
+    await service.insertStepState(runId, 's1', 'rpc.fn', {})
+    await claimAndLose(runId, 's1')
+    const logs = watchLogs()
+
+    const claims = await Promise.all([claim(runId, 's1'), claim(runId, 's1')])
+
+    assert.equal(claims.filter((c) => c !== null).length, 1)
+    assert.deepEqual(
+      logs.rerun.mock.calls.map((call) => call.arguments),
+      [[runId, 's1', 2]]
+    )
+    assert.equal(logs.exhausted.mock.callCount(), 0)
+  })
+
+  test('a step with no attempts left to lose reports that it failed', async () => {
+    const runId = await seedRun()
+    await service.insertStepState(runId, 's1', 'rpc.fn', {}, { retries: 0 })
+    await claimAndLose(runId, 's1')
+    mock.method(service, 'resumeWorkflow', async () => {})
+    const logs = watchLogs()
+
+    assert.equal(await claim(runId, 's1'), null)
+
+    assert.deepEqual(
+      logs.exhausted.mock.calls.map((call) => call.arguments),
+      [[runId, 's1', 1]]
+    )
+    assert.equal(logs.rerun.mock.callCount(), 0)
+  })
+
+  test('retrying a step that threw is not reported as a rerun', async () => {
+    const runId = await seedRun()
+    const step = await service.insertStepState(runId, 's1', 'rpc.fn', {})
+    await service.setStepRunning(step.stepId)
+    await service.setStepError(step.stepId, new Error('boom'))
+    const logs = watchLogs()
+
+    assert.ok(await claim(runId, 's1'))
+
+    assert.equal(logs.rerun.mock.callCount(), 0)
+    assert.equal(logs.exhausted.mock.callCount(), 0)
+  })
 
   test('two dispatches racing for the same pending step: exactly one wins', async () => {
     const runId = await seedRun()

@@ -1,0 +1,90 @@
+[
+  {
+    "code": "PKU910",
+    "message": "Function 'returnsSecret' exposes secret-classified field(s) in its return type: 'token'.\n  Secret fields must never appear in function output. Strip these fields before returning or change the column classification."
+  },
+  {
+    "code": "PKU910",
+    "message": "Function 'returnsBareSecret' exposes secret-classified field(s) in its return type: '<return value>'.\n  Secret fields must never appear in function output. Strip these fields before returning or change the column classification."
+  },
+  {
+    "code": "PKU910",
+    "message": "Sessionless function 'sessionlessPrivate' exposes private-classified field(s) in its return type: 'name'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+  },
+  {
+    "code": "PKU910",
+    "message": "Sessionless function 'sessionlessPii' exposes private-classified field(s) in its return type: 'email'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+  },
+  {
+    "code": "PKU910",
+    "message": "Function 'sessionlessBoth' exposes secret-classified field(s) in its return type: 'm[*]'.\n  Secret fields must never appear in function output. Strip these fields before returning or change the column classification."
+  },
+  {
+    "code": "PKU910",
+    "message": "Sessionless function 'sessionlessBoth' exposes private-classified field(s) in its return type: 'z.deep.deeper', 'a'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+  },
+  {
+    "code": "PKU910",
+    "message": "Sessionless function 'sessionlessInherited' exposes private-classified field(s) in its return type: 'own', 'inherited'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+  },
+  {
+    "code": "PKU910",
+    "message": "Sessionless function 'sessionlessSync' exposes private-classified field(s) in its return type: 'own', 'inherited'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+  },
+  {
+    "code": "PKU910",
+    "message": "Sessionless function 'sessionlessUnion' exposes private-classified field(s) in its return type: 'a'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+  },
+  {
+    "code": "PKU953",
+    "message": "Function 'secretInline' passes a revealed secret to 'logger.info' at line 15 (path 'token.reveal()').\n  A vault secret must not be written to a log, an audit, a queue, an email or a webhook. Pass the value only to the client that needs it, and reveal it there."
+  },
+  {
+    "code": "PKU953",
+    "message": "Function 'secretThroughLocal' passes a revealed secret to 'logger.error' at line 19 (path 'revealed').\n  A vault secret must not be written to a log, an audit, a queue, an email or a webhook. Pass the value only to the client that needs it, and reveal it there."
+  },
+  {
+    "code": "PKU953",
+    "message": "Function 'secretInObject' passes a revealed secret to 'queue.add' at line 22 (path 'token.reveal()').\n  A vault secret must not be written to a log, an audit, a queue, an email or a webhook. Pass the value only to the client that needs it, and reveal it there."
+  },
+  {
+    "code": "PKU953",
+    "message": "Function 'secretInEmail' passes a revealed secret to 'email.send' at line 25 (path 'token.reveal()').\n  A vault secret must not be written to a log, an audit, a queue, an email or a webhook. Pass the value only to the client that needs it, and reveal it there."
+  },
+  {
+    "code": "PKU953",
+    "message": "Function 'secretInAudit' passes a revealed secret to 'audit.audit' at line 29 (path 'token.reveal()').\n  A vault secret must not be written to a log, an audit, a queue, an email or a webhook. Pass the value only to the client that needs it, and reveal it there."
+  },
+  {
+    "code": "PKU953",
+    "message": "Function 'secretInAudit' passes a revealed secret to 'audit.write' at line 30 (path 'token.reveal()').\n  A vault secret must not be written to a log, an audit, a queue, an email or a webhook. Pass the value only to the client that needs it, and reveal it there."
+  },
+  {
+    "code": "PKU953",
+    "message": "Function 'secretInAudit' passes a revealed secret to 'auditLog.write' at line 31 (path 'token.reveal()').\n  A vault secret must not be written to a log, an audit, a queue, an email or a webhook. Pass the value only to the client that needs it, and reveal it there."
+  },
+  {
+    "code": "PKU953",
+    "message": "Function 'secretInWebhook' passes a revealed secret to 'webhook.send' at line 35 (path 'token.reveal()').\n  A vault secret must not be written to a log, an audit, a queue, an email or a webhook. Pass the value only to the client that needs it, and reveal it there."
+  },
+  {
+    "code": "PKU954",
+    "message": "Function 'piiInLogger' passes personal data to 'logger.info' at line 38 (path 'email').\n  A log, the console and a webhook all leave your control — they are shipped to third parties and retained long past the request. Log an id instead, or narrow the value to a non-identifying field. An email to the data subject, an audit in your own database and a queue on your own infrastructure are fine."
+  },
+  {
+    "code": "PKU954",
+    "message": "Function 'piiInConsole' passes personal data to 'console.log' at line 42 (path 'email').\n  A log, the console and a webhook all leave your control — they are shipped to third parties and retained long past the request. Log an id instead, or narrow the value to a non-identifying field. An email to the data subject, an audit in your own database and a queue on your own infrastructure are fine."
+  },
+  {
+    "code": "PKU954",
+    "message": "Function 'piiInWebhook' passes personal data to 'webhook.send' at line 45 (path 'email').\n  A log, the console and a webhook all leave your control — they are shipped to third parties and retained long past the request. Log an id instead, or narrow the value to a non-identifying field. An email to the data subject, an audit in your own database and a queue on your own infrastructure are fine."
+  },
+  {
+    "code": "PKU954",
+    "message": "Function 'piiThroughDerivedLogger' passes personal data to 'appLogger.audit' at line 48 (path 'email').\n  A log, the console and a webhook all leave your control — they are shipped to third parties and retained long past the request. Log an id instead, or narrow the value to a non-identifying field. An email to the data subject, an audit in your own database and a queue on your own infrastructure are fine."
+  },
+  {
+    "code": "PKU954",
+    "message": "Function 'piiThroughDerivedLogger' passes personal data to 'unionLogger.info' at line 49 (path 'email').\n  A log, the console and a webhook all leave your control — they are shipped to third parties and retained long past the request. Log an id instead, or narrow the value to a non-identifying field. An email to the data subject, an audit in your own database and a queue on your own infrastructure are fine."
+  }
+]

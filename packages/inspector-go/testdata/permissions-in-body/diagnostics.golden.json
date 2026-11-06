@@ -1,0 +1,6 @@
+[
+  {
+    "code": "PKU576",
+    "message": "'gatedInBody' declares `permissionsInBody: true`, which this project has not enabled. It silences the exposed-and-ungated audit without gating anything, so it is opt-in: set `allow: { permissionsInBody: true }` in pikku.config.json if the project accepts permission checks that only a reader can verify. Otherwise express the check as a `permissions` entry, or drop `expose: true` if the function was not meant to be callable from outside."
+  }
+]

@@ -1,0 +1,114 @@
+import { afterEach, describe, expect, test } from 'bun:test'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { getCloudRPC } from './http.js'
+
+const realFetch = globalThis.fetch
+
+afterEach(() => {
+  globalThis.fetch = realFetch
+})
+
+/**
+ * The contract's function names, from the SDK `pikku all` synced into the
+ * gitignored `.pikku/remote` (package.json `pikku.uses.cloud`).
+ */
+function contractNames(): Set<string> {
+  const root = join(import.meta.dir, '../../.pikku/remote/@pikkustudio')
+  const sdk = existsSync(root)
+    ? readdirSync(root).find((d) => d.startsWith('addon-cloud-api@'))
+    : undefined
+  if (!sdk)
+    throw new Error(
+      'The cloud API contract is not synced. Run `bun run pikku` (or the package build) in packages/addon/pikku-cloud-cli first; it fetches @pikkustudio/addon-cloud-api from the registry and pins it in pikku-addons.lock.'
+    )
+  const meta = JSON.parse(
+    readFileSync(
+      join(root, sdk, 'function/pikku-functions-meta.gen.json'),
+      'utf8'
+    )
+  ) as Record<string, { remote?: boolean }>
+  return new Set(Object.keys(meta).filter((n) => meta[n]!.remote))
+}
+const CONTRACT = contractNames()
+
+const BARE = ['requestCliAuth', 'pollCliAuth', 'submitFinding']
+
+/** Every name passed to `.invoke('name'` by the CLI's own source. */
+function invokedNames(): string[] {
+  const names = new Set<string>()
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name)
+      if (entry.isDirectory()) walk(path)
+      else if (
+        /\.ts$/.test(entry.name) &&
+        !/\.(test|gen)\.ts$/.test(entry.name)
+      ) {
+        for (const m of readFileSync(path, 'utf8').matchAll(
+          /\.invoke\(\s*'([A-Za-z:]+)'/g
+        ))
+          names.add(m[1]!)
+      }
+    }
+  }
+  walk(join(import.meta.dir, '..'))
+  // CloudAddonVerify is a function of this addon, run in-process, not a cloud call.
+  names.delete('CloudAddonVerify')
+  return [...names].sort()
+}
+
+async function urlFor(name: string): Promise<string> {
+  let url = ''
+  globalThis.fetch = (async (input: any) => {
+    url = String(input?.url ?? input)
+    return new Response('{}', {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })
+  }) as typeof fetch
+  const rpc = getCloudRPC({ apiUrl: 'https://api.example.test', token: 't' })
+  await (rpc.invoke as any)(name, {})
+  return new URL(url).pathname
+}
+
+describe('getCloudRPC rpc names', () => {
+  test('the scan finds the calls the CLI makes', () => {
+    const names = invokedNames()
+    expect(names.length).toBeGreaterThan(40)
+    expect(names).toContain('cloud:cloudCliProjects')
+    expect(names).toContain('cloud:listStages')
+    for (const name of BARE) expect(names).toContain(name)
+    expect(names).toContain('machine:createSandboxChange')
+  })
+
+  // Unknown names are tsc's to refuse (CloudInvoke is keyed by the synced
+  // contract); this checks each call names a contract function and that the
+  // name goes on the wire exactly as written.
+  test.each(invokedNames())('%s is sent as written', async (name) => {
+    expect(await urlFor(name)).toBe(`/rpc/${name}`)
+    if (name.startsWith('cloud:'))
+      expect(CONTRACT.has(name.slice(6))).toBe(true)
+    else
+      expect(
+        name === 'machine:createSandboxChange' || BARE.includes(name)
+      ).toBe(true)
+  })
+
+  test('the bare calls are not in the contract', () => {
+    for (const name of BARE) expect(CONTRACT.has(name)).toBe(false)
+  })
+
+  test('without credentials the request carries no authorization header', async () => {
+    let headers: Headers | undefined
+    globalThis.fetch = (async (input: any, init: any) => {
+      headers = new Headers(init?.headers ?? input?.headers)
+      return new Response('{}', { status: 401 })
+    }) as typeof fetch
+    const rpc = getCloudRPC({ apiUrl: 'https://api.example.test', token: null })
+    await expect(
+      (rpc.invoke as any)('cloud:listStages', { projectId: 'p' })
+    ).rejects.toBeDefined()
+    expect(headers?.get('authorization')).toBeNull()
+  })
+})

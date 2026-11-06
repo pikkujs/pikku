@@ -13,6 +13,7 @@ import { isChannelRPCPending, isChannelRPCResponse } from './channel-rpc.js'
 import { handleChannelRPCResponse } from './channel-host-rpc.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
+import { childTraceWire } from '../../trace.js'
 const getChannelMeta = (channelName: string) => {
   return pikkuState(null, 'channel', 'meta')[channelName]
 }
@@ -150,6 +151,7 @@ export const processMessageHandlers = (
       sessionService: userSession,
       wire: {
         channel: channelHandler.getChannel(),
+        ...childTraceWire(channelHandler.trace),
         ...(userSession && createMiddlewareSessionWireProps(userSession)),
       },
       packageName,

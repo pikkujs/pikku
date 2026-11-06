@@ -1,18 +1,26 @@
 import type { PikkuWorkflowService } from '../pikku-workflow-service.js'
 import {
   WorkflowAsyncException,
+  WorkflowCancelledException,
   WorkflowSuspendedException,
 } from '../workflow-errors.js'
+import { runInlineRetryLoop } from '../workflow-step-retry.js'
 import {
   DEFAULT_STEP_RETRIES,
   NO_COMPENSATE_STATE_PREFIX,
+  isRunStopped,
 } from '../workflow-constants.js'
 import { childRunFailure } from '../workflow-compensation.js'
 import { runningStepLease } from '../workflow-step-lease.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
-import type { WorkflowRuntimeMeta, WorkflowRunWire } from '../workflow.types.js'
+import type {
+  StepState,
+  WorkflowRuntimeMeta,
+  WorkflowRunWire,
+} from '../workflow.types.js'
 import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
+import { runTraceWire } from '../workflow-run-trace.js'
 
 export class ChildWorkflowStartedException extends Error {
   name = 'ChildWorkflowStartedException'
@@ -779,6 +787,12 @@ async function failGraphRunWith(
   cause: Error,
   rpcService?: any
 ): Promise<void> {
+  if (
+    rpcService &&
+    (await workflowService.settleStoppedRun(runId, rpcService))
+  ) {
+    return
+  }
   const error = Object.assign(cause, { code: 'GRAPH_NODE_FAILED' })
   const run = await workflowService.getRun(runId)
   if (run && rpcService) {
@@ -898,7 +912,10 @@ export async function continueGraph(
   }
 
   const currentRun = await workflowService.getRun(runId)
-  if (currentRun?.status === 'suspended') {
+  if (
+    currentRun?.status === 'suspended' ||
+    (currentRun && isRunStopped(currentRun.status))
+  ) {
     return
   }
 
@@ -1015,6 +1032,7 @@ async function invokeGraphNodeRpc(
   }
 
   const result = await rpcService.rpcWithWire(rpcName, input, {
+    ...runTraceWire(await workflowService.getRunTraceparent(runId)),
     graph: graphWire,
     workflow: workflowService.createWorkflowWire(graphName, runId, rpcService),
   })
@@ -1049,6 +1067,9 @@ export async function executeGraphStep(
         id: rpcName,
         parentRunId: runId,
         parentStepId: stepId,
+        pikkuUserId: (await workflowService.getRunIdentity(runId))?.wire
+          ?.pikkuUserId,
+        traceparent: await workflowService.getRunTraceparent(runId),
       }
       const shouldInline = !getSingletonServices()?.queueService
       const { runId: childRunId } = await workflowService.startWorkflow(
@@ -1140,11 +1161,9 @@ async function executeGraphNodeInline(
     fromStepName
   )
 
-  await workflowService.setStepRunning(stepState.stepId)
-
-  try {
-    let result: any
-
+  let attempt: StepState = stepState
+  const runNode = async (current: StepState) => {
+    attempt = current
     const subWorkflowMeta = getWorkflowMeta(rpcName)
     const agentMeta = subWorkflowMeta
       ? undefined
@@ -1154,7 +1173,10 @@ async function executeGraphNodeInline(
         type: 'workflow',
         id: rpcName,
         parentRunId: runId,
-        parentStepId: stepState.stepId,
+        parentStepId: attempt.stepId,
+        pikkuUserId: (await workflowService.getRunIdentity(runId))?.wire
+          ?.pikkuUserId,
+        traceparent: await workflowService.getRunTraceparent(runId),
       }
       const { runId: childRunId } = await workflowService.startWorkflow(
         rpcName,
@@ -1163,47 +1185,62 @@ async function executeGraphNodeInline(
         rpcService,
         { inline: true }
       )
-      await workflowService.setStepChildRunId(stepState.stepId, childRunId)
+      await workflowService.setStepChildRunId(attempt.stepId, childRunId)
       const childRun = await workflowService.getRun(childRunId)
       const failure = childRun && childRunFailure(childRun)
       if (failure) throw failure
-      result = childRun?.output
-    } else if (agentMeta) {
-      const agentRun = await rpcService.agent.run(rpcName, input)
-      result = agentRun.result
-    } else {
-      result = await invokeGraphNodeRpc(
-        workflowService,
-        rpcService,
-        runId,
-        stepState.stepId,
-        nodeId,
-        rpcName,
-        input,
-        graphName
-      )
+      return childRun?.output
     }
+    if (agentMeta) {
+      const agentRun = await rpcService.agent.run(rpcName, input)
+      return agentRun.result
+    }
+    return invokeGraphNodeRpc(
+      workflowService,
+      rpcService,
+      runId,
+      attempt.stepId,
+      nodeId,
+      rpcName,
+      input,
+      graphName
+    )
+  }
 
-    await workflowService.setStepResult(stepState.stepId, result)
+  try {
+    await runInlineRetryLoop(
+      workflowService,
+      stepState,
+      node.retries ?? 0,
+      node.retryDelay,
+      runNode,
+      async (error) => {
+        if (
+          error instanceof WorkflowAsyncException ||
+          error instanceof WorkflowSuspendedException
+        ) {
+          throw error
+        }
+        if (error instanceof RPCNotFoundError) {
+          await workflowService.setStepError(attempt.stepId, error)
+          await workflowService.updateRunStatus(runId, 'suspended', undefined, {
+            message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
+            code: 'RPC_NOT_FOUND',
+          })
+          throw new WorkflowSuspendedException(runId, 'RPC_NOT_FOUND')
+        }
+      },
+      () => workflowService.throwIfRunStopped(runId)
+    )
   } catch (error) {
     if (
       error instanceof WorkflowAsyncException ||
-      error instanceof WorkflowSuspendedException
+      error instanceof WorkflowSuspendedException ||
+      error instanceof WorkflowCancelledException ||
+      !recoversFailure(node)
     ) {
       throw error
     }
-    if (error instanceof RPCNotFoundError) {
-      await workflowService.setStepError(stepState.stepId, error as Error)
-      await workflowService.updateRunStatus(runId, 'suspended', undefined, {
-        message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
-        code: 'RPC_NOT_FOUND',
-      })
-      throw new WorkflowSuspendedException(runId, 'RPC_NOT_FOUND')
-    }
-    await workflowService.setStepError(stepState.stepId, error as Error)
-
-    if (recoversFailure(node)) return
-    throw error
   }
 }
 
@@ -1236,7 +1273,10 @@ async function continueGraphInline(
     }
 
     const run = await workflowService.getRun(runId)
-    if (run?.status === 'suspended') {
+    if (
+      run?.status === 'suspended' ||
+      (await workflowService.settleStoppedRun(runId, rpcService))
+    ) {
       return
     }
 
@@ -1344,7 +1384,8 @@ export async function runWorkflowGraph(
   inline?: boolean,
   startNode?: string,
   wire?: WorkflowRunWire,
-  overrideMeta?: WorkflowRuntimeMeta
+  overrideMeta?: WorkflowRuntimeMeta,
+  onRunCreated?: (runId: string) => void
 ): Promise<{ runId: string }> {
   const meta = overrideMeta ?? getWorkflowMeta(graphName)
   if (!meta?.nodes) {
@@ -1394,6 +1435,8 @@ export async function runWorkflowGraph(
       plannedSteps: meta.plannedSteps,
     }
   )
+
+  onRunCreated?.(runId)
 
   if (inline) {
     workflowService.registerInlineRun(runId)

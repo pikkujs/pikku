@@ -26,6 +26,8 @@ import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
 } from '../../services/user-session-service.js'
+import { traceWire, tracedLogger } from '../../trace.js'
+
 /**
  * A JSON-RPC error raised by `runMCPTool`, `runMCPResource` and `runMCPPrompt`; `error` is the
  * response body to send back to the MCP client.
@@ -267,6 +269,10 @@ async function runMCPPikkuFunc(
 ): Promise<JsonRpcResponse> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
+  // Here rather than left to the function runner: a call refused before it
+  // gets there still has to be found in the logs.
+  const trace = traceWire()
+  const logger = tracedLogger(singletonServices.logger, trace.traceId)
 
   try {
     if (request.jsonrpc !== '2.0') {
@@ -293,6 +299,7 @@ async function runMCPPikkuFunc(
       singletonServices.sessionStore
     )
     const wire: PikkuRawWire = {
+      ...trace,
       mcp: mcpWire,
       // Only when the transport supplied one. Setting `http: undefined`
       // explicitly would be the same to a reader and different to a spread.
@@ -345,32 +352,30 @@ async function runMCPPikkuFunc(
       result,
     }
   } catch (e: any) {
-    singletonServices.logger.error(
-      `Error running MCP ${type} '${name}':`,
-      e.constructor
-    )
+    logger.error(`Error running MCP ${type} '${name}':`, e.constructor)
     const errorResponse = getErrorResponse(e)
     if (errorResponse?.mcpCode) {
       throw new MCPError({
         id: request.id,
         code: errorResponse.mcpCode,
         message: errorResponse.message,
+        data: { errorId: trace.traceId },
       })
     } else {
       if (errorResponse) {
-        singletonServices.logger.warn(
-          `Got error without a mapping: ${errorResponse.message}`
-        )
+        logger.warn(`Got error without a mapping: ${errorResponse.message}`)
       }
       throw new MCPError({
         id: request.id,
         code: -32603,
         message: 'Internal error',
         // knowledge: decisions/security/mcp-internal-error-details-are-double-gated-on-production.md
-        data:
-          exposeErrors && !isProduction() && e instanceof Error
+        data: {
+          errorId: trace.traceId,
+          ...(exposeErrors && !isProduction() && e instanceof Error
             ? { message: e.message, stack: e.stack }
-            : undefined,
+            : {}),
+        },
       })
     }
   }

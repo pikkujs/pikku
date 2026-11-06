@@ -1,9 +1,4 @@
-export {
-  findProjectRoot,
-  readJsonSafe,
-  readTextSafe,
-  type Finding,
-} from './functions/validate/validate.js'
+export { readTextSafe, type Finding } from './functions/validate/validate.js'
 export {
   runProjectChecks,
   migrationHistoryErrors,

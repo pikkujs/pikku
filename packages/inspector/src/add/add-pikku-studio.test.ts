@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { describe, test, beforeEach, before, after } from 'node:test'
+import { describe, test, beforeEach, afterEach, before, after } from 'node:test'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -137,6 +137,7 @@ describe('addPikkuStudio', () => {
       needsApp: `{ path: '/a', title: 'a', scope: 'project', needsApp: NEEDS, component: () => import('./a') }`,
       layout: `{ path: '/a', title: 'a', scope: 'team', layout: LAYOUT, component: () => import('./a') }`,
       scopes: `{ path: '/a', title: 'a', scope: 'team', scopes: SCOPES, component: () => import('./a') }`,
+      defaultChat: `{ path: '/a', title: 'a', scope: 'team', defaultChat: SHOW_CHAT, component: () => import('./a') }`,
       spread: `{ ...base, path: '/a', title: 'a', scope: 'team', component: () => import('./a') }`,
     }
     for (const [field, screen] of Object.entries(cases)) {
@@ -220,6 +221,60 @@ describe('addPikkuStudio agent', () => {
   })
 })
 
+describe('addPikkuStudio defaultChat', () => {
+  test('records a declared defaultChat: true', () => {
+    inspect(
+      `definePlugin({ title: 't', screens: [{ path: '/a', title: 'a', scope: 'team', agent: 'helper', defaultChat: true, component: () => import('./a') }] })`
+    )
+    assert.deepEqual(criticals, [])
+    assert.equal(state.studio.screens[0].defaultChat, true)
+  })
+
+  test('records a declared defaultChat: false', () => {
+    inspect(
+      `definePlugin({ title: 't', screens: [{ path: '/a', title: 'a', scope: 'team', agent: 'helper', defaultChat: false, component: () => import('./a') }] })`
+    )
+    assert.deepEqual(criticals, [])
+    assert.equal(state.studio.screens[0].defaultChat, false)
+  })
+
+  test('leaves defaultChat out of the metadata when it is not declared', () => {
+    inspect(
+      `definePlugin({ title: 't', screens: [{ path: '/a', title: 'a', scope: 'team', agent: 'helper', component: () => import('./a') }] })`
+    )
+    assert.deepEqual(criticals, [])
+    assert.equal('defaultChat' in state.studio.screens[0], false)
+  })
+
+  test('defaultChat: false without an agent is allowed', () => {
+    inspect(
+      `definePlugin({ title: 't', screens: [{ path: '/a', title: 'a', scope: 'team', defaultChat: false, component: () => import('./a') }] })`
+    )
+    assert.deepEqual(criticals, [])
+    assert.equal(state.studio.screens[0].defaultChat, false)
+  })
+
+  test('a non-literal defaultChat fails with PKU345', () => {
+    inspect(
+      `definePlugin({ title: 't', screens: [{ path: '/a', title: 'a', scope: 'team', defaultChat: SHOW_CHAT, component: () => import('./a') }] })`
+    )
+    assert.deepEqual(criticals, [
+      "PKU345: A screen's defaultChat must be a literal, got: SHOW_CHAT",
+    ])
+    assert.deepEqual(state.studio.screens, [])
+  })
+
+  test('a string defaultChat fails with PKU345', () => {
+    inspect(
+      `definePlugin({ title: 't', screens: [{ path: '/a', title: 'a', scope: 'team', defaultChat: 'false', component: () => import('./a') }] })`
+    )
+    assert.match(
+      criticals[0]!,
+      /^PKU345: A screen's defaultChat must be a literal/
+    )
+  })
+})
+
 describe('validatePikkuStudio', () => {
   let root: string
   before(() => {
@@ -233,6 +288,8 @@ describe('validatePikkuStudio', () => {
         $schema: 'https://inlang.com/schema/inlang-message-format',
         cloud_title: 'Cloud',
         cloud_billing: 'Billing',
+        cloud_agent_title: 'Assistant',
+        cloud_agent_description: 'Answers about billing',
       })
     )
     mkdirSync(join(root, 'agents'), { recursive: true })
@@ -247,8 +304,16 @@ describe('validatePikkuStudio', () => {
       '---\ntitle: cloud_billing\n---\nHi\n'
     )
     writeFileSync(
+      join(root, 'agents', 'assistant.md'),
+      '---\ntitle: cloud_agent_title\ndescription: cloud_agent_description\n---\nHi\n'
+    )
+    writeFileSync(
       join(root, 'agents', 'bad-key.md'),
       '---\ntitle: cloud_billing\ndescription: cloud_nope\n---\nHi\n'
+    )
+    writeFileSync(
+      join(root, 'agents', 'bad-title-key.md'),
+      '---\ntitle: cloud_nope\ndescription: cloud_agent_description\n---\nHi\n'
     )
     writeFileSync(
       join(root, 'messages', 'de.json'),
@@ -387,6 +452,149 @@ describe('validatePikkuStudio', () => {
     assert.deepEqual(criticals, [
       "PKU358: definePlugin uses the message key 'cloud_nope', which is missing from the addon's messages/en.json",
     ])
+    assert.equal(state.studio.screens[0].agentTitle, 'cloud_billing')
+    assert.equal(state.studio.screens[0].agentDescription, undefined)
+  })
+
+  test('still records the description when the title key is missing from en.json', () => {
+    agentScreen('bad-title-key')
+    validatePikkuStudio(logger, state)
+    assert.deepEqual(criticals, [
+      "PKU358: definePlugin uses the message key 'cloud_nope', which is missing from the addon's messages/en.json",
+    ])
+    assert.equal(state.studio.screens[0].agentTitle, undefined)
+    assert.equal(
+      state.studio.screens[0].agentDescription,
+      'cloud_agent_description'
+    )
+  })
+
+  test('fails on an empty agent', () => {
+    agentScreen('')
+    validatePikkuStudio(logger, state)
+    assert.equal(state.studio.screens[0].agent, '')
+    assert.deepEqual(criticals, [
+      "PKU365: Screen '/billing' has the agent '', which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships",
+    ])
+  })
+
+  test("warns on an agent's title or description missing from another locale", () => {
+    agentScreen('assistant')
+    validatePikkuStudio(logger, state)
+    assert.deepEqual(criticals, [])
+    assert.deepEqual(warnings, [
+      "definePlugin uses the message key 'cloud_billing', which is missing from the addon's messages/de.json",
+      "definePlugin uses the message key 'cloud_agent_title', which is missing from the addon's messages/de.json",
+      "definePlugin uses the message key 'cloud_agent_description', which is missing from the addon's messages/de.json",
+    ])
+  })
+
+  describe('package.json "files" ships agents/ and skills/', () => {
+    const pkg = (files?: string[]) =>
+      writeFileSync(
+        join(root, 'package.json'),
+        JSON.stringify({
+          name: '@acme/addon-cloud',
+          ...(files ? { files } : {}),
+        })
+      )
+    const withSkill = () => {
+      mkdirSync(join(root, 'skills', 'billing-triage'), { recursive: true })
+      writeFileSync(
+        join(root, 'skills', 'billing-triage', 'SKILL.md'),
+        '# Billing triage\n'
+      )
+    }
+    afterEach(() => {
+      pkg()
+      rmSync(join(root, 'skills'), { recursive: true, force: true })
+    })
+
+    test('fails when a screen agent is not covered by "files"', () => {
+      pkg(['dist', 'messages'])
+      agentScreen('billing-helper')
+      validatePikkuStudio(logger, state)
+      assert.deepEqual(criticals, [
+        `PKU366: Screen '/billing' has the agent 'billing-helper', but package.json "files" does not list agents/; add "agents" to it so the published addon ships the agent`,
+      ])
+    })
+
+    for (const entry of ['agents', 'agents/', 'agents/**/*.md']) {
+      test(`passes when "files" has '${entry}'`, () => {
+        pkg(['dist', 'messages', entry])
+        agentScreen('billing-helper')
+        validatePikkuStudio(logger, state)
+        assert.deepEqual(criticals, [])
+      })
+    }
+
+    test('passes with no "files", since npm then publishes everything', () => {
+      agentScreen('billing-helper')
+      withSkill()
+      validatePikkuStudio(logger, state)
+      assert.deepEqual(criticals, [])
+    })
+
+    for (const [agent, reason] of [
+      ['', /not a valid agent/],
+      ['Bad_Name', /not a valid agent/],
+      ['ghost', /no non-empty agents\/ghost\.md/],
+      ['plain', /has no frontmatter/],
+      ['no-desc', /frontmatter has no description/],
+    ] as const) {
+      test(`an invalid agent '${agent}' gets PKU365 only, not PKU366`, () => {
+        pkg(['dist', 'messages'])
+        agentScreen(agent)
+        validatePikkuStudio(logger, state)
+        assert.equal(criticals.length, 1)
+        assert.match(criticals[0]!, /^PKU365: /)
+        assert.match(criticals[0]!, reason)
+      })
+    }
+
+    test('a studio agent needs nothing from the package', () => {
+      pkg(['dist', 'messages'])
+      agentScreen('studio:knowledge')
+      validatePikkuStudio(logger, state)
+      assert.deepEqual(criticals, [])
+    })
+
+    test('fails when the addon has skills that "files" does not cover', () => {
+      pkg(['dist', 'messages'])
+      withSkill()
+      studio(
+        'cloud_title',
+        `{ path: '/billing', title: 'cloud_billing', scope: 'team', component: () => import('./a') }`
+      )
+      validatePikkuStudio(logger, state)
+      assert.deepEqual(criticals, [
+        `PKU366: The addon ships skills/ but package.json "files" does not list it; add "skills" to it so the published addon ships its skills`,
+      ])
+    })
+
+    for (const entry of ['skills', 'skills/', 'skills/*/SKILL.md']) {
+      test(`passes when "files" has '${entry}' and the addon has skills`, () => {
+        pkg(['dist', 'messages', entry])
+        withSkill()
+        studio(
+          'cloud_title',
+          `{ path: '/billing', title: 'cloud_billing', scope: 'team', component: () => import('./a') }`
+        )
+        validatePikkuStudio(logger, state)
+        assert.deepEqual(criticals, [])
+      })
+    }
+
+    test('a skills folder with no SKILL.md is not a skill to ship', () => {
+      pkg(['dist', 'messages'])
+      mkdirSync(join(root, 'skills', 'draft'), { recursive: true })
+      studio(
+        'cloud_title',
+        `{ path: '/billing', title: 'cloud_billing', scope: 'team', component: () => import('./a') }`
+      )
+      validatePikkuStudio(logger, state)
+      assert.deepEqual(criticals, [])
+    })
   })
 
   test('a badge that names a function of the addon passes', () => {

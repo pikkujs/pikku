@@ -101,3 +101,49 @@ describe('addWireRemoteAddon', () => {
     )
   })
 })
+
+describe('addWireRemoteAddon local', () => {
+  test('records the local package that carries screens and contributors', () => {
+    const declarations = inspect(`
+      wireRemoteAddon({
+        name: 'cloud',
+        package: '@pikkustudio/addon-cloud-api@^0.0.2',
+        serverUrl: 'https://api.example.com',
+        local: {
+          package: '@pikkustudio/addon-cloud',
+          ui: true,
+          contributors: ['cloud-session', 'cloud-studio'],
+        },
+      })
+    `)
+    const decl = declarations.get('cloud')
+    assert.equal(decl.package, '@pikkustudio/addon-cloud-api')
+    assert.equal(decl.remote, true)
+    assert.equal('uses' in decl, false)
+    assert.deepEqual(decl.local, {
+      package: '@pikkustudio/addon-cloud',
+      ui: true,
+      contributors: ['cloud-session', 'cloud-studio'],
+    })
+    assert.deepEqual(criticals, [])
+  })
+
+  test('a declaration without local records neither local nor uses', () => {
+    const decl = inspect(`
+      wireRemoteAddon({ name: 'a', package: '@x/y', serverUrl: 'u' })
+    `).get('a')
+    assert.equal('uses' in decl, false)
+    assert.equal('local' in decl, false)
+  })
+
+  test('a non-literal local.contributors list is a critical, not silently none', () => {
+    inspect(`
+      wireRemoteAddon({
+        name: 'a', package: '@x/y', serverUrl: 'u',
+        local: { package: '@x/z', contributors: NAMES },
+      })
+    `)
+    assert.equal(criticals.length, 1)
+    assert.ok(criticals[0]!.startsWith(ErrorCode.ADDON_CONTRIBUTORS_NOT_STATIC))
+  })
+})

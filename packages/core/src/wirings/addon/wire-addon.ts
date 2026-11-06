@@ -3,6 +3,7 @@ import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import { getTagGroups } from '../../utils.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 import type { AddonInstance } from './addon-runner.js'
+import { AddonUsesShadowedError } from './addon-reach.js'
 /**
  * Options for `wireAddon`: the instance name, its package, and what the consuming app grants it
  * (auth, scopes, exposed functions, secret/credential/content access and overrides).
@@ -117,6 +118,10 @@ export type WireAddonConfig = {
  * @example snippet: addonWiring
  */
 export const wireAddon = (config: WireAddonConfig): void => {
+  const shadowed = config.uses?.[config.name]
+  if (shadowed !== undefined && shadowed !== config.name) {
+    throw new AddonUsesShadowedError(config.name, shadowed)
+  }
   pikkuState(null, 'addons', 'packages').set(config.name, {
     package: config.package,
     rpcEndpoint: config.rpcEndpoint,

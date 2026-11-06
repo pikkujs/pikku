@@ -10,7 +10,7 @@ import {
 import { resolveApiContext } from './config.js'
 import { getCloudRPC } from './http.js'
 import { readConfigProjectId } from './project-id.js'
-import type { CreateChangeInput } from '../sdk/rpc-map.gen.d.js'
+import type { CloudInput } from './rpc-client.js'
 
 export async function linkedProjectId(
   override?: string
@@ -43,10 +43,14 @@ export async function cloudChangesBackend({
     try {
       if (name === 'createChange')
         return fromHosted(
-          await fileChange(cloud, projectId, data as CreateChangeInput)
+          await fileChange(
+            cloud,
+            projectId,
+            data as CloudInput<'cloud:createChange'>
+          )
         )
       return fromHosted(
-        await cloud.invoke(name as any, toHostedInput(data) as any)
+        await cloud.invoke(`cloud:${name}` as any, toHostedInput(data) as any)
       )
     } catch (error) {
       if (httpStatus(error) !== undefined) throw error
@@ -58,27 +62,20 @@ export async function cloudChangesBackend({
   return { rpc: { invoke: invoke as ChangesRPC['invoke'] }, projectId }
 }
 
-type SandboxFiling = {
-  invoke(
-    name: 'createSandboxChange',
-    data: { title: string; body?: string; route?: string }
-  ): Promise<{ change: { changeId: string; shortId: string; title: string } }>
-}
-
 async function fileChange(
   cloud: ReturnType<typeof getCloudRPC>,
   projectId: string,
-  data: CreateChangeInput
+  data: CloudInput<'cloud:createChange'>
 ) {
   if (data.stageId && data.stageId !== LOCAL_PROJECT_ID)
-    return cloud.invoke('createChange', data)
+    return cloud.invoke('cloud:createChange', data)
   let stages: { stageId: string; branch: string }[]
   try {
-    stages = (await cloud.invoke('listStages', { projectId })).stages
+    stages = (await cloud.invoke('cloud:listStages', { projectId })).stages
   } catch (error) {
     if (httpStatus(error) !== 403) throw error
     const { title, body, route } = data
-    return (cloud as unknown as SandboxFiling).invoke('createSandboxChange', {
+    return cloud.invoke('machine:createSandboxChange', {
       title,
       body,
       route,
@@ -92,7 +89,7 @@ async function fileChange(
     throw new CloudPreconditionError(
       `No stage for ${branch ?? 'this checkout'} among ${stages.length} stages. Pass --stage-id.`
     )
-  return cloud.invoke('createChange', { ...data, stageId: stage.stageId })
+  return cloud.invoke('cloud:createChange', { ...data, stageId: stage.stageId })
 }
 
 registerChangesBackend(cloudChangesBackend)

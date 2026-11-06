@@ -11,6 +11,7 @@ import {
   BACKOFF_TYPE_HEADER,
   NATS_MSG_ID_HEADER,
   PIKKU_USER_ID_HEADER,
+  TRACEPARENT_HEADER,
 } from './utils.js'
 
 interface Published {
@@ -88,6 +89,13 @@ describe('NatsQueueService.add — headers', () => {
       { pikkuUserId: 'user-1' }
     )
     assert.equal(published[0]!.headers[PIKKU_USER_ID_HEADER], 'user-1')
+  })
+
+  test('traceparent travels as a header', async () => {
+    const { js, published } = fakeJs()
+    const traceparent = `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`
+    await new NatsQueueService(js, 'pikku').add('q', {}, { traceparent })
+    assert.equal(published[0]!.headers[TRACEPARENT_HEADER], traceparent)
   })
 
   test('attempts travels per-job, since max_deliver is only per-consumer', async () => {

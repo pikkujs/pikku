@@ -6,7 +6,7 @@ import type {
   CredentialOverrideMeta,
 } from '../types.js'
 
-function parseStringArray(node: ts.Expression): string[] | undefined {
+export function parseStringArray(node: ts.Expression): string[] | undefined {
   if (!ts.isArrayLiteralExpression(node)) return undefined
   const values: string[] = []
   for (const element of node.elements) {

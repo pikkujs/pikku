@@ -13,10 +13,10 @@
     "deploy": "npm run build && serverless deploy"
   },
   "dependencies": {
-    "@pikku/aws-services": "^0.12.17",
-    "@pikku/core": "^0.12.149",
+    "@pikku/aws-services": "^0.12.18",
+    "@pikku/core": "^0.12.151",
     "@pikku/jose": "^0.12.10",
-    "@pikku/lambda": "^0.12.13",
+    "@pikku/lambda": "^0.12.14",
     "@pikku/schema-cfworker": "^0.12.9",
     "tslib": "^2.8.1"
   },

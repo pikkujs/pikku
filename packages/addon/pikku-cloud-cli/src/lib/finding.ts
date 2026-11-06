@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { ReportEnvironment } from './report-environment.js'
-import { PikkuFetch } from '../sdk/pikku-fetch.gen.js'
-import { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import { CorePikkuFetch } from '@pikku/fetch'
+import { CloudRPC as PikkuRPC } from './rpc-client.js'
 
 export const FindingInput = z.object({
   title: z.string(),
@@ -126,7 +126,7 @@ export function findingRPC(
 ): PikkuRPC {
   const rpc = new PikkuRPC()
   rpc.setPikkuFetch(
-    new PikkuFetch({
+    new CorePikkuFetch({
       serverUrl: apiUrl,
       fetch: ((input, init) =>
         send(input, {

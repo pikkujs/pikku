@@ -1,6 +1,7 @@
 import * as ts from 'typescript'
 import type { InspectorState, InspectorLogger } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
+import { parseStringArray } from './add-wire-addon.js'
 import { parseRemoteAddonPackage } from '../utils/remote-addon-sdk.js'
 
 /**
@@ -34,6 +35,8 @@ export function addWireRemoteAddon(
   let hasAuth = false
   let authCredentialId: string | undefined
   let authSecretId: string | undefined
+  let local:
+    { package: string; ui?: boolean; contributors?: string[] } | undefined
 
   for (const prop of firstArg.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -44,6 +47,52 @@ export function addWireRemoteAddon(
       pkgNode = prop.initializer
       if (ts.isStringLiteralLike(prop.initializer)) {
         pkg = prop.initializer.text
+      }
+    } else if (
+      key === 'local' &&
+      ts.isObjectLiteralExpression(prop.initializer)
+    ) {
+      let localPackage: string | undefined
+      let ui: boolean | undefined
+      let contributors: string[] | undefined
+      for (const localProp of prop.initializer.properties) {
+        if (
+          !ts.isPropertyAssignment(localProp) ||
+          !ts.isIdentifier(localProp.name)
+        )
+          continue
+        const localKey = localProp.name.text
+        if (
+          localKey === 'package' &&
+          ts.isStringLiteral(localProp.initializer)
+        ) {
+          localPackage = localProp.initializer.text
+        } else if (
+          localKey === 'ui' &&
+          localProp.initializer.kind === ts.SyntaxKind.TrueKeyword
+        ) {
+          ui = true
+        } else if (localKey === 'contributors') {
+          contributors = parseStringArray(localProp.initializer)
+          if (contributors === undefined) {
+            logger.critical(
+              ErrorCode.ADDON_CONTRIBUTORS_NOT_STATIC,
+              `wireRemoteAddon's local.contributors must be an array of string literals, got: ${localProp.initializer.getText()}`
+            )
+          }
+        }
+      }
+      if (localPackage) {
+        local = {
+          package: localPackage,
+          ...(ui ? { ui } : {}),
+          ...(contributors ? { contributors } : {}),
+        }
+      } else {
+        logger.critical(
+          ErrorCode.REMOTE_ADDON_PACKAGE_NOT_STATIC,
+          `wireRemoteAddon's local.package must be a string literal, got: ${prop.initializer.getText()}`
+        )
       }
     } else if (
       key === 'auth' &&
@@ -103,6 +152,7 @@ export function addWireRemoteAddon(
     hasAuth,
     authCredentialId,
     authSecretId,
+    ...(local ? { local } : {}),
   })
   state.rpc.usedAddons.add(name)
   state.rpc.wireAddonFiles.add(node.getSourceFile().fileName)

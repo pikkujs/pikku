@@ -1,0 +1,14 @@
+{
+  "name": "@pikku/verifiers-dev-platform-contributors-remote-local",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "devDependencies": {
+    "@verifier/contrib-bad": "workspace:*",
+    "@verifier/contrib-notify": "workspace:*",
+    "@verifier/contrib-select": "workspace:*"
+  }
+}

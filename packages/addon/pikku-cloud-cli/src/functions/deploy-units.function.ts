@@ -32,7 +32,9 @@ export const CloudDeployUnits = pikkuSessionlessFunc({
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const stageId = await resolveStageId(rpc, ctx.projectId, branch)
-    const { workers } = await rpc.invoke('listDeploymentWorkers', { stageId })
+    const { workers } = await rpc.invoke('cloud:listDeploymentWorkers', {
+      stageId,
+    })
     return { branch, workers }
   },
 })

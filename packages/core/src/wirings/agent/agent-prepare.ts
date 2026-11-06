@@ -43,6 +43,13 @@ import {
   trimMessages,
 } from './agent-memory.js'
 import { resolveModelConfig } from './agent-model-config.js'
+import {
+  childTraceWire,
+  createTrace,
+  outgoingTraceparent,
+  tracedLogger,
+  type TraceContext,
+} from '../../trace.js'
 
 /**
  * Per-request context for running an agent: the caller's session, credential access and, for
@@ -54,6 +61,8 @@ export type RunAgentParams = {
   getCredential?: GetCredential
   /** Ephemeral owner identity minted for a sessionless request; never client-supplied, never reused across requests. */
   anonymousOwnerResourceId?: string
+  /** The caller's trace. Each tool call is a span in it. */
+  trace?: TraceContext
 }
 
 export function resolveSessionPrincipal(
@@ -528,6 +537,8 @@ export async function buildToolDefs(
 ): Promise<{ tools: AgentToolDef[]; missingRpcs: string[] }> {
   const singletonServices = getSingletonServices()
   const tools: AgentToolDef[] = []
+  // Every tool of a run sits under one trace, whoever started the run.
+  const trace = params.trace ?? createTrace()
   const missingRpcs: string[] = []
   const approvalPolicy =
     streamContext?.options?.requiresToolApproval ?? 'explicit'
@@ -677,9 +688,14 @@ export async function buildToolDefs(
         approvalDescriptionFn,
         readonly: fnMeta?.readonly || undefined,
         execute: async (toolInput: unknown, options) => {
-          const wire: PikkuRawWire = params.sessionService
-            ? { ...createMiddlewareSessionWireProps(params.sessionService) }
-            : {}
+          // The call below is the tool's span, under the run's.
+          const wire: PikkuRawWire = {
+            traceId: trace.traceId,
+            trace,
+            ...(params.sessionService
+              ? createMiddlewareSessionWireProps(params.sessionService)
+              : {}),
+          }
           if (options?.abortScope) wire.abortScope = options.abortScope
           const rpcService = new ContextAwareRPCService(
             singletonServices,
@@ -878,9 +894,12 @@ export async function buildToolDefs(
               `workflowService is not configured — cannot run workflow tool '${workflowName}'`
             )
           }
-          const wire: PikkuRawWire = params.sessionService
-            ? { ...createMiddlewareSessionWireProps(params.sessionService) }
-            : {}
+          const wire: PikkuRawWire = {
+            ...childTraceWire(trace),
+            ...(params.sessionService
+              ? createMiddlewareSessionWireProps(params.sessionService)
+              : {}),
+          }
           if (options?.abortScope) wire.abortScope = options.abortScope
           const rpcService = new ContextAwareRPCService(
             singletonServices,
@@ -891,7 +910,12 @@ export async function buildToolDefs(
             workflowName,
             toolInput,
             rpcService,
-            { wire: { type: 'internal' } }
+            {
+              wire: {
+                type: 'internal',
+                traceparent: outgoingTraceparent(wire),
+              },
+            }
           )
         },
       })
@@ -911,7 +935,7 @@ export async function buildToolDefs(
             ...err.payload,
           }
         }
-        singletonServices.logger.error(
+        tracedLogger(singletonServices.logger, trace.traceId).error(
           `AI agent tool '${tool.name}' threw during execute()`,
           err
         )

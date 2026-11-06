@@ -644,6 +644,7 @@ export type StudioScreenMeta = {
   agentTitle?: string
   /** Message key from the agent file's frontmatter, filled by validation. */
   agentDescription?: string
+  defaultChat?: boolean
 } & (
   | { component: string; app?: undefined }
   | { app: string; component?: undefined }
@@ -854,6 +855,12 @@ export interface InspectorState {
         auth?: boolean
         tags?: string[]
         scopes?: string[]
+        /**
+         * wireRemoteAddon: a package installed in this project that carries the
+         * screens and contributors for this name, when they live apart from the
+         * contract package. `ui` and `contributors` are read from it.
+         */
+        local?: { package: string; ui?: boolean; contributors?: string[] }
         /** True when declared via `wireRemoteAddon` — import the addon's `.remote.gen` map, not `.internal.gen` */
         remote?: boolean
         /**

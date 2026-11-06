@@ -32,7 +32,9 @@ export const CloudDbSchema = pikkuSessionlessFunc({
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const stageId = await resolveStageId(rpc, ctx.projectId, branch)
-    const { schema } = await rpc.invoke('getStageDatabaseSchema', { stageId })
+    const { schema } = await rpc.invoke('cloud:getStageDatabaseSchema', {
+      stageId,
+    })
     return { branch, schema }
   },
 })

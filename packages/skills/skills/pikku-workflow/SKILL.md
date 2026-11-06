@@ -19,7 +19,7 @@ What to reach for and why. For how to call it, run this once: `pikku doc workflo
 
 ## Rules
 
-- A retried step re-runs its side effects. Durability is at-least-once, so a charge or email can fire twice. Pass a stable idempotency key built from the workflow's own data (`order-${orderId}-charge`), never `randomUUID()` or `Date.now()`.
+- A retried step re-runs its side effects, and a run recovered after a crash re-runs the step caught in flight. Durability is at-least-once, so a charge or email can fire twice. Pass a stable idempotency key built from the workflow's own data (`order-${orderId}-charge`), never `randomUUID()` or `Date.now()`.
 - Every step is a pikku function. Input and output are Zod schemas, not generics.
 - `pikkuWorkflowFunc` is the default. `pikkuWorkflowGraph` and `pikkuWorkflowComplexFunc` only with the owner's approval, never to dodge an error.
 - No try/catch around steps. Declare `compensate` on the function itself; the engine runs it. Use a milestone to bound the unwind.

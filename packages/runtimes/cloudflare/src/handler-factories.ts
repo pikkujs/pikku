@@ -21,6 +21,7 @@ import {
   dispatchUnauthorizedResponse,
   isDispatchAuthorized,
 } from './dispatch-auth.js'
+import { traceWire } from '@pikku/core/trace'
 
 export { getCloudflareEnv, type CloudflareEnv }
 
@@ -118,6 +119,8 @@ async function processQueueBatch(batch: {
       queueName,
       data: body.data ?? body,
       id: message.id,
+      traceparent: body.traceparent as string | undefined,
+      pikkuUserId: body.pikkuUserId as string | undefined,
       status: async () => 'active' as QueueJobStatus,
       metadata: () => ({
         processedAt: new Date(),
@@ -179,7 +182,7 @@ export function createCloudflareHandler(
       // bypasses `includesFetch` so units with no public HTTP surface still
       // receive queue jobs from the per-stage dispatcher (which can't deliver
       // via real CF Queues — namespace scripts can't bind as queue consumers).
-      // Body: { queueName, data, jobId, traceId }. Status codes: 204 = ack,
+      // Body: { queueName, data, jobId, traceparent }. Status codes: 204 = ack,
       // 422 = ack-no-retry (PikkuMissingMetaError, QueueJobDiscardedError),
       // 503 = retry (other thrown errors), 401 = bad/missing dispatch secret.
       // The cloud dispatcher + pg-boss worker map these onto pg-boss
@@ -199,7 +202,8 @@ export function createCloudflareHandler(
             queueName: string
             data: unknown
             jobId?: string
-            traceId?: string
+            traceparent?: string
+            pikkuUserId?: string
           }
           // Direct path — bypass processQueueBatch's `body.data ?? body`
           // heuristic which mis-unwraps payloads whose envelope already
@@ -210,11 +214,13 @@ export function createCloudflareHandler(
             : (Object.keys(queueMeta)
                 .filter((k) => body.queueName.endsWith(k))
                 .sort((a, b) => b.length - a.length)[0] ?? body.queueName)
-          const msgId = body.jobId ?? body.traceId ?? crypto.randomUUID()
+          const msgId = body.jobId ?? crypto.randomUUID()
           const job: QueueJob = {
             queueName,
             data: body.data,
             id: msgId,
+            traceparent: body.traceparent,
+            pikkuUserId: body.pikkuUserId,
             status: async () => 'active' as QueueJobStatus,
             metadata: () => ({
               processedAt: new Date(),
@@ -251,7 +257,7 @@ export function createCloudflareHandler(
 
       // `/__pikku/scheduler-job` is the cloud WfP scheduler-delivery route.
       // Mirrors `/__pikku/queue-job` for schedule-triggered units that have no
-      // public HTTP surface. Body: { taskName }. Status codes: 204 = ok,
+      // public HTTP surface. Body: { taskName, traceparent }. Status codes: 204 = ok,
       // 422 = no-retry, 503 = retry (transient), 401 = bad/missing dispatch
       // secret. Gated on PIKKU_DISPATCH_SECRET exactly like `/__pikku/queue-job`.
       if (
@@ -263,9 +269,14 @@ export function createCloudflareHandler(
         }
         try {
           await setupServices(this.env, factories)
-          const body = (await request.json()) as { taskName: string }
-          const traceId = `cron-${crypto.randomUUID()}`
-          await runScheduledTask({ name: body.taskName, traceId })
+          const body = (await request.json()) as {
+            taskName: string
+            traceparent?: string
+          }
+          await runScheduledTask({
+            name: body.taskName,
+            traceparent: body.traceparent,
+          })
           return new Response(null, { status: 204 })
         } catch (e: unknown) {
           const errorName = (e as Error)?.name ?? 'Error'
@@ -353,11 +364,15 @@ export function createCloudflareHandler(
      * pikku RPC dispatcher directly so internal functions are reachable
      * across Worker boundaries. Errors propagate via structured clone.
      */
-    async runRpc(name: string, args: unknown): Promise<unknown> {
+    async runRpc(
+      name: string,
+      args: unknown,
+      traceparent?: string
+    ): Promise<unknown> {
       const services = await setupServices(this.env, factories)
       const rpc = rpcService.getContextRPCService(
         services as any,
-        {},
+        traceWire(traceparent),
         false
       ) as any
       return rpc.invoke(name, args)
@@ -378,11 +393,15 @@ export function createCloudflareWorkerHandler(factories: ServiceFactories) {
       return runFetch(request)
     }
 
-    async runRpc(name: string, args: unknown): Promise<unknown> {
+    async runRpc(
+      name: string,
+      args: unknown,
+      traceparent?: string
+    ): Promise<unknown> {
       const services = await setupServices(this.env, factories)
       const rpc = rpcService.getContextRPCService(
         services as any,
-        {},
+        traceWire(traceparent),
         false
       ) as any
       return rpc.invoke(name, args)
@@ -402,11 +421,15 @@ export function createCloudflareCronHandler(factories: ServiceFactories) {
       await setupServices(this.env, factories)
       await runScheduled(controller)
     }
-    async runRpc(name: string, args: unknown): Promise<unknown> {
+    async runRpc(
+      name: string,
+      args: unknown,
+      traceparent?: string
+    ): Promise<unknown> {
       const services = await setupServices(this.env, factories)
       const rpc = rpcService.getContextRPCService(
         services as any,
-        {},
+        traceWire(traceparent),
         false
       ) as any
       return rpc.invoke(name, args)
@@ -431,11 +454,15 @@ export function createCloudflareQueueHandler(factories: ServiceFactories) {
       await setupServices(this.env, factories)
       await processQueueBatch(batch)
     }
-    async runRpc(name: string, args: unknown): Promise<unknown> {
+    async runRpc(
+      name: string,
+      args: unknown,
+      traceparent?: string
+    ): Promise<unknown> {
       const services = await setupServices(this.env, factories)
       const rpc = rpcService.getContextRPCService(
         services as any,
-        {},
+        traceWire(traceparent),
         false
       ) as any
       return rpc.invoke(name, args)

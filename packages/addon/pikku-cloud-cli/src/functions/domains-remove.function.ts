@@ -32,14 +32,14 @@ export const CloudDomainsRemove = pikkuSessionlessFunc({
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
 
-    const stagesResult = await rpc.invoke('listStages', {
+    const stagesResult = await rpc.invoke('cloud:listStages', {
       projectId,
     })
     const production = stagesResult.stages.find((s) => s.type === 'production')
     if (!production)
       throw new CloudPreconditionError('No production stage found.')
 
-    const hostnamesResult = await rpc.invoke('listStageCustomHostnames', {
+    const hostnamesResult = await rpc.invoke('cloud:listStageCustomHostnames', {
       stageId: production.stageId,
     })
     const match = hostnamesResult.hostnames.find(
@@ -50,7 +50,7 @@ export const CloudDomainsRemove = pikkuSessionlessFunc({
         `Hostname "${hostname}" is not attached to this project.`
       )
 
-    await rpc.invoke('removeStageCustomHostname', {
+    await rpc.invoke('cloud:removeStageCustomHostname', {
       customHostnameId: match.customHostnameId,
     })
 

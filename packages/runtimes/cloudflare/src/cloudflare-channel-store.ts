@@ -5,6 +5,7 @@ import { ChannelStore } from '@pikku/core/channel'
 interface ChannelAttachment {
   channelName: string
   openingData?: unknown
+  traceparent?: string
   pikkuUserId?: string | null
   state?: unknown
 }
@@ -18,12 +19,17 @@ export class CloudflareWebsocketStore extends ChannelStore {
     channelName,
     channelObject,
     openingData,
+    traceparent,
   }: Channel<WebSocket>): Promise<void> {
     if (!channelObject) {
       throw new Error('Channel object is required for cloudflare')
     }
     // The channel id is added when we accept the websocket connection
-    channelObject?.serializeAttachment({ channelName, openingData })
+    channelObject?.serializeAttachment({
+      channelName,
+      openingData,
+      traceparent,
+    })
   }
 
   public async removeChannels(channelIds: string[]): Promise<void> {
@@ -41,12 +47,13 @@ export class CloudflareWebsocketStore extends ChannelStore {
 
   public async getChannel(channelId: string) {
     const websocket = this.getWebsocket(channelId)
-    const { channelName, openingData, pikkuUserId } =
+    const { channelName, openingData, traceparent, pikkuUserId } =
       this.readAttachment(websocket)
     return {
       channelId,
       channelName,
       openingData,
+      traceparent,
       pikkuUserId: pikkuUserId ?? undefined,
     }
   }

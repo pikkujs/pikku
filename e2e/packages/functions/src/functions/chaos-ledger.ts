@@ -26,6 +26,9 @@ export type ChaosLedgerEntry = {
   attempt: number
   at: number
   detail?: unknown
+  /** The trace this effect ran on, and its own span within it. */
+  traceId?: string
+  spanId?: string
 }
 
 const ledgerPath = (dir: string) => join(dir, 'chaos-ledger.jsonl')

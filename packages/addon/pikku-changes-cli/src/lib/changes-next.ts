@@ -11,6 +11,7 @@ import {
 } from './changes-board.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { httpStatus } from './http-status.js'
+import { LIST_CHANGES_MAX } from './list-limit.js'
 import type { ChangeEvents } from './change-events.js'
 
 type Change = BoardChange
@@ -172,7 +173,7 @@ export async function waitForNext(
           status: statuses('ready', 'in_progress'),
           pickupOnly: false,
           includeDone: false,
-          limit: 200,
+          limit: LIST_CHANGES_MAX,
         })
       )
       failures = 0

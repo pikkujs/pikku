@@ -10,7 +10,14 @@
  * A refusal or a failure is data here, never a throw: several scenarios assert
  * that a workflow failed or was cancelled.
  */
-import { pikkuScenarioStep, pollUntil, postScenarioJson, readScenarioHttpResponse, requireScenarioEnv, type ScenarioHttpResponse } from '#pikku/scenario'
+import {
+  pikkuScenarioStep,
+  pollUntil,
+  postScenarioJson,
+  readScenarioHttpResponse,
+  requireScenarioEnv,
+  type ScenarioHttpResponse,
+} from '#pikku/scenario'
 import { readSseEvents } from './support.js'
 
 /** What the workflow route answered, plus what it says about the run itself. */
@@ -33,7 +40,7 @@ const outcomeOf = (status: number, body: unknown): string => {
   return /cancelled/i.test(message) ? 'cancelled' : 'failed'
 }
 
-const TERMINAL = ['completed', 'failed', 'cancelled']
+const TERMINAL = ['completed', 'failed', 'cancelled', 'compensated']
 
 const postWorkflow = async (
   apiUrl: string,

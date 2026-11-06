@@ -7,6 +7,18 @@ export const createConfig = pikkuConfig(async () => ({
   port: Number(process.env.PORT ?? 4002),
   hostname: '0.0.0.0',
   logLevel: LogLevel.warn,
+  // The restart suite cannot wait out production's sweep: it shortens the tick
+  // and idle window so a killed run is picked up as soon as its lease lapses.
+  ...(process.env.WORKFLOW_RECOVERY_MS
+    ? {
+        workflow: {
+          recovery: {
+            intervalMs: Number(process.env.WORKFLOW_RECOVERY_MS),
+            stalledAfterMs: Number(process.env.WORKFLOW_RECOVERY_MS),
+          },
+        },
+      }
+    : {}),
   // The webhook roundtrip test points a delivery at this app's own sink route,
   // which the outbound SSRF guard blocks as a private host unless the host is
   // allowlisted. Allowing only loopback keeps the guard doing its job for
@@ -19,7 +31,9 @@ export const createConfig = pikkuConfig(async () => ({
   staticMounts: [
     {
       urlPrefix: '/app',
-      directory: fileURLToPath(new URL('../packages/web/dist', import.meta.url)),
+      directory: fileURLToPath(
+        new URL('../packages/web/dist', import.meta.url)
+      ),
       spaFallback: true,
     },
   ],

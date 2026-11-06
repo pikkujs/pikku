@@ -105,7 +105,7 @@ export const CloudGit = pikkuSessionlessFunc({
     }
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const details = await rpc.invoke('getProjectDetails', {
+    const details = await rpc.invoke('cloud:getProjectDetails', {
       projectId: ctx.projectId,
     })
     const origin = (await hasRemote('origin')) ? await getRemoteUrl() : null
@@ -128,7 +128,7 @@ export const CloudGit = pikkuSessionlessFunc({
       )
     }
 
-    const result = await rpc.invoke('setProjectRepo', {
+    const result = await rpc.invoke('cloud:setProjectRepo', {
       projectId: ctx.projectId,
       target,
       ...(repoUrl ? { repoUrl } : {}),

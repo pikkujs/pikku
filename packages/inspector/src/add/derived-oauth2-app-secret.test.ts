@@ -1,6 +1,8 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { inspect } from '../inspector.js'
@@ -24,10 +26,29 @@ const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
     hasCriticalErrors: () => criticals.length > 0,
   }) satisfies InspectorLogger
 
+/** The `node_modules` this package resolves `zod` from, found the way Node would. */
+const installedNodeModules = (() => {
+  for (
+    let dir = dirname(fileURLToPath(import.meta.url));
+    ;
+    dir = dirname(dir)
+  ) {
+    if (existsSync(join(dir, 'node_modules', 'zod'))) {
+      return join(dir, 'node_modules')
+    }
+    if (dirname(dir) === dir) throw new Error('zod is not installed')
+  }
+})()
+
+/**
+ * The fixture lives in the OS temp dir: under `src/` it was listed by the
+ * repo-wide guards in other packages' suites, which run in parallel with this
+ * one and failed with ENOENT once it was removed. A linked `node_modules` lets
+ * its `import 'zod'` resolve the way a project's would.
+ */
 const inspectSource = async (source: string) => {
-  const rootDir = await mkdtemp(
-    join(dirname(fileURLToPath(import.meta.url)), 'pikku-oauth-app-secret-')
-  )
+  const rootDir = await mkdtemp(join(tmpdir(), 'pikku-oauth-app-secret-'))
+  await symlink(installedNodeModules, join(rootDir, 'node_modules'), 'dir')
   const file = join(rootDir, 'credential.ts')
   await writeFile(file, source)
   try {
@@ -67,10 +88,7 @@ describe('an OAuth2 credential implies its app secret', () => {
 
   test('a credential keeps the scope separator it declares', async () => {
     const state = await inspectSource(
-      CREDENTIAL.replace(
-        "scopes: [",
-        "scopeSeparator: ',',\n    scopes: ["
-      )
+      CREDENTIAL.replace('scopes: [', "scopeSeparator: ',',\n    scopes: [")
     )
 
     const credential = state.credentials.definitions.find(

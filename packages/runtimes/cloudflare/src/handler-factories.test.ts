@@ -1,5 +1,7 @@
 import { test, describe, before } from 'node:test'
 import assert from 'node:assert/strict'
+import { defineQueueIdentityTransportTests } from '@pikku/core/testing'
+import { CloudflareQueueService } from './cloudflare-queue-service.js'
 import { constantTimeEqual } from './dispatch-auth.js'
 // Type-only, so it is erased before runtime and does not load the module ahead
 // of the `cloudflare:workers` stub registered below.
@@ -171,5 +173,84 @@ describe('cloudflare dispatch routes', () => {
         assert.equal(response.status, pastAuthStatus)
       })
     })
+  }
+})
+
+const { createCloudflareQueueHandler, createCloudflareHandler: createHandler } =
+  await import('./handler-factories.js')
+
+const QUEUE = 'identity-transport'
+
+defineQueueIdentityTransportTests('cloudflare queues', (services) => {
+  const sent: unknown[] = []
+  const env = {
+    IDENTITY_TRANSPORT: {
+      send: async (message: unknown) => {
+        sent.push(JSON.parse(JSON.stringify(message)))
+      },
+    },
+  }
+  const queueFactories = {
+    createConfig: async () => ({}),
+    createSingletonServices: async () => services,
+  }
+  const Consumer = createCloudflareQueueHandler(queueFactories)
+  return {
+    queueService: new CloudflareQueueService(env),
+    deliver: async () => {
+      for (const body of sent.splice(0)) {
+        await new Consumer({} as any, env as any).queue({
+          queue: QUEUE,
+          messages: [{ id: 'm1', body }],
+        })
+      }
+    },
+  }
+})
+
+// A dispatcher delivers over HTTP, so a claim arrives in the request body.
+defineQueueIdentityTransportTests('cloudflare dispatched jobs', (services) => {
+  const sent: any[] = []
+  const env = {
+    PIKKU_DISPATCH_SECRET: 'dispatch-secret',
+    IDENTITY_TRANSPORT: {
+      send: async (message: unknown) => {
+        sent.push(JSON.parse(JSON.stringify(message)))
+      },
+    },
+  }
+  const Handler = createHandler(
+    {
+      createConfig: async () => ({}),
+      createSingletonServices: async () => services,
+    },
+    ['queue', 'scheduled']
+  )
+  return {
+    queueService: new CloudflareQueueService(env),
+    deliver: async () => {
+      for (const { queueName, data, pikkuUserId, traceparent } of sent.splice(
+        0
+      )) {
+        const response = await new Handler({} as any, env as any).fetch(
+          new Request('https://unit.example.com/__pikku/queue-job', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-pikku-dispatch': 'dispatch-secret',
+            },
+            body: JSON.stringify({
+              queueName,
+              data,
+              pikkuUserId,
+              traceparent,
+            }),
+          })
+        )
+        if (response.status !== 204) {
+          throw new Error(`dispatch answered ${response.status}`)
+        }
+      }
+    },
   }
 })

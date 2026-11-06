@@ -7,6 +7,7 @@ import type {
   PikkuDoStepDispatch,
 } from './pikku-workflow-do-service.js'
 import type { DoPendingAlarm } from './do-storage-types.js'
+import { PikkuStepWorker } from './pikku-step-worker.js'
 
 // ─── Fake DurableObjectStorage ────────────────────────────────────────
 
@@ -269,7 +270,25 @@ describe('PikkuWorkflowDoService — transport hooks', () => {
       data: { foo: 'bar' },
       retries: 2,
       retryDelay: undefined,
+      traceparent: (await service.getRun(RUN_ID))?.wire?.traceparent,
+      pikkuUserId: undefined,
     })
+  })
+
+  test('a run keeps the wire it was started with, trace included', async () => {
+    const traceparent = `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`
+    const traced = new TestService(new FakeStorage() as any, env, RUN_ID)
+    await traced.createRun('wf', {}, false, 'h', {
+      type: 'do',
+      id: RUN_ID,
+      traceparent,
+      pikkuUserId: 'user-1',
+    } as any)
+
+    assert.equal((await traced.getRun(RUN_ID))?.wire?.traceparent, traceparent)
+    await (traced as any).dispatchStep(RUN_ID, 'stepX', 'rpc.x', {})
+    assert.equal(dispatched[0]?.traceparent, traceparent)
+    assert.equal(dispatched[0]?.pikkuUserId, 'user-1')
   })
 
   test('dispatchStep returns false for inline runs (does not call worker)', async () => {
@@ -427,5 +446,36 @@ describe('PikkuWorkflowDoService — mirror', () => {
     assert.equal(id, RUN_ID)
     const run = await svc.getRun(RUN_ID)
     assert.equal(run?.workflow, 'wf')
+  })
+})
+
+describe('PikkuStepWorker — trace', () => {
+  test('a step runs on the trace its dispatch carries', async () => {
+    const calls: any[] = []
+    const globals = globalThis as any
+    const previous = globals.__PIKKU_SINGLETON_SERVICES__
+    globals.__PIKKU_SINGLETON_SERVICES__ = {
+      rpcService: {
+        rpc: async () => {},
+        rpcWithWire: async (...args: unknown[]) => calls.push(args),
+      },
+    }
+    try {
+      const worker = new PikkuStepWorker({} as any) as any
+      await worker.executeStep({
+        runId: RUN_ID,
+        stepName: 'A',
+        rpcName: 'rpc.x',
+        data: { n: 1 },
+        traceparent: `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`,
+      })
+    } finally {
+      globals.__PIKKU_SINGLETON_SERVICES__ = previous
+    }
+    const [rpcName, data, wire] = calls[0]
+    assert.equal(rpcName, 'rpc.x')
+    assert.deepEqual(data, { n: 1 })
+    assert.equal(wire.trace.traceId, 'a'.repeat(32))
+    assert.equal(wire.trace.parentSpanId, 'b'.repeat(16))
   })
 })

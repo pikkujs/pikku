@@ -1,11 +1,25 @@
 import assert from 'node:assert'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
+import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { after, before, describe, test } from 'node:test'
 import { serializeEmailsModule } from './serialize-emails.js'
 
-const here = fileURLToPath(new URL('.', import.meta.url))
+/** The `node_modules` this package resolves `@pikku/core` from, found the way Node would. */
+const installedNodeModules = (() => {
+  for (
+    let dir = dirname(fileURLToPath(import.meta.url));
+    ;
+    dir = dirname(dir)
+  ) {
+    if (existsSync(join(dir, 'node_modules', '@pikku', 'core'))) {
+      return join(dir, 'node_modules')
+    }
+    if (dirname(dir) === dir) throw new Error('@pikku/core is not installed')
+  }
+})()
 
 const THEME = {
   appName: 'Pikku App',
@@ -104,7 +118,12 @@ let tempDir: string
 let renderEmailTemplate: RenderEmailTemplate
 
 before(async () => {
-  tempDir = await mkdtemp(join(here, 'tmp-emails-'))
+  // The generated module imports `@pikku/core/services`, so it once sat in
+  // `src/` to resolve it — where the repo-wide guards in other packages'
+  // suites, running in parallel, listed it and failed with ENOENT once it was
+  // removed. A linked `node_modules` resolves it from the OS temp dir instead.
+  tempDir = await mkdtemp(join(tmpdir(), 'pikku-emails-'))
+  await symlink(installedNodeModules, join(tempDir, 'node_modules'), 'dir')
   const modulePath = join(tempDir, 'pikku-emails.gen.ts')
   await writeFile(
     modulePath,

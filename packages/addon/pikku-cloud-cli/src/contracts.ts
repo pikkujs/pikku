@@ -59,7 +59,6 @@ import { CloudDomainsList } from './functions/domains-list.function.js'
 import { CloudDomainsAdd } from './functions/domains-add.function.js'
 import { CloudDomainsRemove } from './functions/domains-remove.function.js'
 import { CloudLLMKey, renderLLMKey } from './functions/llm-key.function.js'
-import { CloudSmoke, renderSmoke } from './functions/smoke.function.js'
 import { CloudPublish } from './functions/publish.function.js'
 import { CloudAdd } from './functions/add.function.js'
 import {
@@ -139,27 +138,6 @@ export const cloudCommands = defineCLICommands({
     func: CloudStatus,
     render: renderStatus,
     description: 'Show the linked project status (active + in-flight deploy)',
-  }),
-  smoke: pikkuCLICommand({
-    func: CloudSmoke,
-    render: renderSmoke,
-    description:
-      'Run a clean-room Pikku Studio Cloud smoke test: temp worktree, install, codegen, migrate, and verify pikku dev startup',
-    options: {
-      keepTemp: {
-        description: 'Keep the temp worktree even on success',
-        default: false,
-      },
-      timeoutSeconds: {
-        description: 'Per-step timeout for install/build/codegen commands',
-      },
-      startupTimeoutSeconds: {
-        description: 'Timeout for waiting on pikku dev /health-check',
-      },
-      port: {
-        description: 'Port to use for the temporary pikku dev startup check',
-      },
-    },
   }),
   init: pikkuCLICommand({
     parameters: '<repo>',

@@ -81,7 +81,7 @@ export const projectInput = async (
         wireServicesFactoryType: config.wireServicesFactoryType,
       },
       tags: config.tags,
-      classificationCheck: false,
+      classificationCheck: !!config.security,
       strictMeta: !!config.strictMeta,
       modelAliases: config.models ?? {},
       allow: config.allow ?? {},

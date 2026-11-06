@@ -49,7 +49,7 @@ export const CloudSecretsRotate = pikkuSessionlessFunc({
       )
     }
 
-    const result = await rpc.invoke('rotateStageSealingKey', { stageId })
+    const result = await rpc.invoke('cloud:rotateStageSealingKey', { stageId })
 
     console.log(
       `[cloud] retired sealing key ${result.retiredKeyId} on ${branch}`

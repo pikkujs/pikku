@@ -91,7 +91,7 @@ An addon may **ship** tables. It must never **create** them: it runs inside the 
 
 ## Studio screens
 
-An addon declares the screens it adds to Pikku Studio with `definePlugin`, in `src/screens.ts` (`pikku new addon-ui <name>` scaffolds one). It replaces `defineScreens`, which no longer exists.
+An addon declares the screens it adds to Pikku Studio with `definePlugin`, in `src/screens.ts` (`pikku new addon <name> --ui` scaffolds one). It replaces `defineScreens`, which no longer exists.
 
 - A screen is a lazy `component` or an `app`, never both. `nav` is optional: without it the screen is routed but not listed.
 - `scopes` only hide the screen; they are NOT access control. The addon's functions must enforce the same scopes.
@@ -99,6 +99,9 @@ An addon declares the screens it adds to Pikku Studio with `definePlugin`, in `s
 - Titles are message keys in the addon's `messages/{locale}.json`, found by convention next to its `package.json`; there is no field for them.
 - The inspector reads every field statically, so each must be a literal.
 - A key missing from another locale's catalog is a warning.
+- `defaultChat: false` hides Studio's general Chat tab on the screen, so the screen's `agent` is its only chat.
+- `agents/` and `skills/` ship in the package: a `files` list must name both folders; a root glob such as `**/*.md` does not count.
+- `package.json` carries a `studio` block, `{ "addon": "<name>", "ui": "./src", "messages": "./messages/{locale}.json" }`. Studio only links a package with `studio.addon`, the `<addon>` in an agent's scope `agent:<addon>:<name>`. `--ui` scaffolds it.
 
 | Code   | `pikku all` fails when                                                                                                                    |
 | ------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -107,6 +110,7 @@ An addon declares the screens it adds to Pikku Studio with `definePlugin`, in `s
 | PKU358 | a title or agent frontmatter key is missing from `messages/en.json`                                                                       |
 | PKU359 | `nav.badge` names no function of the addon                                                                                                |
 | PKU365 | `agent` is neither a name nor `studio:<name>`, or a name has no non-empty `agents/<name>.md`, or no frontmatter `title` and `description` |
+| PKU366 | `package.json` `files` leaves out `agents/` while a screen names a valid (no PKU365) non-`studio:` agent, or `skills/` while the addon has a `skills/<name>/SKILL.md` |
 
 ## Not in `pikku doc` yet
 

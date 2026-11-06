@@ -18,14 +18,10 @@ export const runLambdaScheduled = async (
   // Run all scheduled tasks registered in this unit.
   // Typically one task per unit, but iterate all to be safe.
   for (const [name] of scheduledTasks) {
-    const traceId = `cron-${crypto.randomUUID()}`
     try {
-      await runScheduledTask({ name, traceId })
+      await runScheduledTask({ name })
     } catch (err) {
-      console.error(
-        `Scheduled task '${name}' (traceId: ${traceId}) failed:`,
-        err
-      )
+      console.error(`Scheduled task '${name}' failed:`, err)
     }
   }
 }

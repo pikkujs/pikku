@@ -41,12 +41,13 @@ export const getChannelHostRPC = (
 export const channelRemote = async (
   channel: PikkuChannel<unknown, any, any>,
   funcName: string,
-  data?: unknown
+  data?: unknown,
+  traceparent?: string
 ): Promise<unknown> =>
   getChannelHostRPC(channel, {
     validateInput: createChannelRPCInputValidator(getSingletonServices()),
     validateResult: createChannelRPCResultValidator(getSingletonServices()),
-  }).invoke(funcName, data)
+  }).invoke(funcName, data, undefined, traceparent)
 
 /** False for an unknown connection or id, so a stray frame is dropped. */
 export const handleChannelRPCResponse = (

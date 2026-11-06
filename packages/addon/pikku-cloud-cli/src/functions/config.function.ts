@@ -153,7 +153,7 @@ export const CloudConfig = pikkuSessionlessFunc({
         )
       const rpc = getCloudRPC({ apiUrl: base.apiUrl, token: base.token })
       settings = (
-        await rpc.invoke('setProjectSettings', {
+        await rpc.invoke('cloud:setProjectSettings', {
           projectId: project.projectId,
           set,
         })
@@ -162,7 +162,7 @@ export const CloudConfig = pikkuSessionlessFunc({
       const rpc = getCloudRPC({ apiUrl: base.apiUrl, token: base.token })
       try {
         settings = (
-          await rpc.invoke('getProjectSettings', {
+          await rpc.invoke('cloud:getProjectSettings', {
             projectId: project.projectId,
           })
         ).settings

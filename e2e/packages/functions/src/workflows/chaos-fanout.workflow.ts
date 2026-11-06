@@ -17,6 +17,9 @@ export const chaosFanoutWorkflow = pikkuWorkflowFunc<
     /** Zero-based index of the shard rigged to fail; -1 for none. */
     poisonShard?: number
     shardDelayMs?: number
+    /** Shards whose first attempt stalls this long, so a kill finds them in flight. */
+    slowShards?: number[]
+    slowShardDelayMs?: number
     /** Retries granted to each shard, so a poisoned one burns attempts. */
     shardRetries?: number
   },
@@ -32,7 +35,9 @@ export const chaosFanoutWorkflow = pikkuWorkflowFunc<
           'chaosStep',
           {
             key: `shard:${data.batchId}:${index}`,
-            delayMs: data.shardDelayMs,
+            ...(data.slowShards?.includes(index)
+              ? { delayMs: data.slowShardDelayMs, delayAttemptsBelow: 2 }
+              : { delayMs: data.shardDelayMs }),
             failAlways: index === data.poisonShard,
             echo: `${data.batchId}/${index}`,
           },

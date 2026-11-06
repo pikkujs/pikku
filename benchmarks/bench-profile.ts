@@ -143,7 +143,7 @@ async function profileScenario(scenario: Scenario) {
   // Phase 11: Full header iteration (simulating adapter header copy)
   const sampleHeaders = new Headers({
     'content-type': 'application/json',
-    'x-request-id': '123',
+    traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
     'cache-control': 'no-cache',
   })
   results['11. Headers.forEach()'] = timeSync(

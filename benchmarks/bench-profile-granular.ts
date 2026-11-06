@@ -155,11 +155,11 @@ async function main() {
     obj.f.bind(obj)
   })
 
-  // request.header() with try/catch (our requestId fix)
+  // request.header() with try/catch (the traceparent read)
   results['15. try { request.header() } catch'] = timeSync(() => {
     const req = new UWSPikkuHTTPRequest(method, path, '', headers, undefined)
     try {
-      req.header('x-request-id')
+      req.header('traceparent')
     } catch {}
   })
 

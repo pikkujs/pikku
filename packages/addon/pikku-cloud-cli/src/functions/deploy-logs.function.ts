@@ -40,7 +40,9 @@ export const CloudDeployLogs = pikkuSessionlessFunc({
       )
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const { log } = await rpc.invoke('getDeploymentBuildLog', { deploymentId })
+    const { log } = await rpc.invoke('cloud:getDeploymentBuildLog', {
+      deploymentId,
+    })
     if (!log) return { deploymentId, log: null, totalLines: 0, shownLines: 0 }
 
     const lines = log.trimEnd().split('\n')

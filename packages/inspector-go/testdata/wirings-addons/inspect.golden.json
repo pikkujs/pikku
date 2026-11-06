@@ -741,7 +741,8 @@
         "custom",
         "cloudapi",
         "unsynced",
-        "billing"
+        "billing",
+        "hosted"
       ],
       "wireAddonDeclarations": [
         [
@@ -904,6 +905,19 @@
               "pay",
               "mail"
             ]
+          }
+        ],
+        [
+          "hosted",
+          {
+            "package": "@fixture/registry",
+            "file": "<fixture>/src/addons.ts",
+            "remote": true,
+            "hasAuth": false,
+            "local": {
+              "package": "@fixture/shop-addon",
+              "ui": true
+            }
           }
         ]
       ],
@@ -1486,6 +1500,28 @@
           "scope": "team",
           "agent": "studio:Bad",
           "app": "y"
+        },
+        {
+          "path": "/assist-empty",
+          "title": "admin_docs__title",
+          "scope": "team",
+          "agent": "",
+          "app": "y"
+        },
+        {
+          "path": "/assist-no-default-chat",
+          "title": "admin_docs__title",
+          "scope": "team",
+          "agent": "studio:knowledge",
+          "defaultChat": false,
+          "app": "y"
+        },
+        {
+          "path": "/no-chat",
+          "title": "admin_docs__title",
+          "scope": "team",
+          "defaultChat": false,
+          "app": "y"
         }
       ]
     },
@@ -1512,6 +1548,29 @@
           "admin",
           "payments:read",
           "zeta"
+        ]
+      },
+      "hosted": {
+        "title": "shop__title",
+        "screens": [
+          {
+            "path": "/charges",
+            "title": "shop_charges__title",
+            "scope": "project",
+            "nav": {
+              "area": "project",
+              "icon": "credit-card",
+              "order": 30
+            },
+            "scopes": [
+              "payments:read"
+            ],
+            "component": "./screens/charges.js"
+          }
+        ],
+        "scopes": [
+          "admin",
+          "payments:read"
         ]
       }
     },
@@ -1715,6 +1774,11 @@
     {
       "level": "critical",
       "code": "PKU345",
+      "message": "A screen's defaultChat must be a literal, got: SHOW_CHAT"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
       "message": "A definePlugin screen must be an object literal, got: { title: 'No path', app: 'z' } as any"
     },
     {
@@ -1827,17 +1891,14 @@
       "message": "definePlugin uses the message key 'admin_missing__title', which is missing from the addon's messages/en.json"
     },
     {
-      "level": "warn",
-      "message": "definePlugin uses the message key 'admin_inbox__title', which is missing from the addon's messages/de.json"
-    },
-    {
-      "level": "warn",
-      "message": "definePlugin uses the message key 'admin_missing__title', which is missing from the addon's messages/de.json"
-    },
-    {
       "level": "critical",
       "code": "PKU359",
       "message": "Screen '/inbox' has the nav badge 'noSuchFunction', which names no function in this addon"
+    },
+    {
+      "level": "critical",
+      "code": "PKU366",
+      "message": "Screen '/assist' has the agent 'helper', but package.json \"files\" does not list agents/; add \"agents\" to it so the published addon ships the agent"
     },
     {
       "level": "critical",
@@ -1853,6 +1914,28 @@
       "level": "critical",
       "code": "PKU365",
       "message": "Screen '/assist-studio-bad' has the agent 'studio:Bad', which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships"
+    },
+    {
+      "level": "critical",
+      "code": "PKU365",
+      "message": "Screen '/assist-empty' has the agent '', which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships"
+    },
+    {
+      "level": "critical",
+      "code": "PKU366",
+      "message": "The addon ships skills/ but package.json \"files\" does not list it; add \"skills\" to it so the published addon ships its skills"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_inbox__title', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_missing__title', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_agent__description', which is missing from the addon's messages/de.json"
     },
     {
       "level": "warn",
@@ -1877,7 +1960,7 @@
     {
       "level": "critical",
       "code": "PKU347",
-      "message": "Addon 'shop' uses 'kysely' as 'db', but no addon is wired under the name 'db'. Wired: shop, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing"
+      "message": "Addon 'shop' uses 'kysely' as 'db', but no addon is wired under the name 'db'. Wired: shop, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing, hosted"
     },
     {
       "level": "critical",
@@ -1892,7 +1975,7 @@
     {
       "level": "critical",
       "code": "PKU349",
-      "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing"
+      "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing, hosted"
     },
     {
       "level": "critical",
@@ -1921,12 +2004,17 @@
     },
     {
       "level": "critical",
+      "code": "PKU338",
+      "message": "Remote addon 'hosted' ('@fixture/registry') is wired with wireRemoteAddon but is not in the \"devDependencies\" of <fixture>/package.json. Add '@fixture/registry' to \"devDependencies\" (types only)."
+    },
+    {
+      "level": "critical",
       "code": "PKU339",
       "message": "Remote addon 'registry' binds auth.credentialId 'registryToken', but no such credential is wired. Available credentials: [object Object], shopToken, githubWebhookSecret, customSecret"
     }
   ],
   "validationPass": {
-    "start": 45,
-    "end": 59
+    "start": 50,
+    "end": 65
   }
 }

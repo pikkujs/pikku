@@ -33,6 +33,9 @@ const screenFields = (screen: StudioScreenMeta): string[] => [
   ...(screen.agentDescription !== undefined
     ? [`agentDescription: ${JSON.stringify(screen.agentDescription)}`]
     : []),
+  ...(screen.defaultChat !== undefined
+    ? [`defaultChat: ${screen.defaultChat}`]
+    : []),
 ]
 
 /**

@@ -36,6 +36,8 @@ type Options struct {
 	// SchemaConfig is InspectorOptions.schemaConfig; schemas are generated
 	// only when it is present.
 	SchemaConfig *SchemaConfig `json:"schemaConfig,omitempty"`
+	// ClassificationCheck is InspectorOptions.classificationCheck.
+	ClassificationCheck bool `json:"classificationCheck,omitempty"`
 	// Allow is InspectorOptions.allow, the project's opt-ins.
 	Allow *Allow `json:"allow,omitempty"`
 
@@ -51,7 +53,8 @@ type Options struct {
 
 // Allow mirrors the `allow` block of pikku.config.json.
 type Allow struct {
-	ComplexWorkflows bool `json:"complexWorkflows,omitempty"`
+	ComplexWorkflows  bool `json:"complexWorkflows,omitempty"`
+	PermissionsInBody bool `json:"permissionsInBody,omitempty"`
 }
 
 // SchemaConfig mirrors the object packages/cli/src/services.ts passes.

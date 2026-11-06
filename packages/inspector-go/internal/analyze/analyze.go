@@ -55,9 +55,11 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 
 	st := state.New(prog.RootDir)
 	ctx := visit.NewContext(prog.Checker, st, log, visit.Options{
-		SetupOnly:             req.Options.SetupOnly,
-		AllowComplexWorkflows: req.Options.Allow != nil && req.Options.Allow.ComplexWorkflows,
-		IsAddon:               req.Options.IsAddon,
+		SetupOnly:              req.Options.SetupOnly,
+		AllowComplexWorkflows:  req.Options.Allow != nil && req.Options.Allow.ComplexWorkflows,
+		AllowPermissionsInBody: req.Options.Allow != nil && req.Options.Allow.PermissionsInBody,
+		ClassificationCheck:    req.Options.ClassificationCheck,
+		IsAddon:                req.Options.IsAddon,
 	})
 
 	ctx.SweepUsage(prog.ProjectFiles)

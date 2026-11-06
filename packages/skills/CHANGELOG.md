@@ -1,5 +1,45 @@
 # @pikku/skills
 
+## 0.12.67
+
+### Patch Changes
+
+- 5d48c4a: A screen can also set `defaultChat: false` to hide Studio's general Chat tab beside its agent tab (with no `agent`, the screen has no chat). It defaults to `true`, must be a boolean literal (PKU345 otherwise), and is recorded only when declared.
+
+  The agent and its skills ship in the addon's package: `pikku new addon <name> --ui` now puts `agents` and `skills` in `package.json` `files`, and writes the `studio` block Studio links an addon by, `"studio": { "addon": "<name>", "ui": "./src", "messages": "./messages/{locale}.json" }`. `pikku all` fails with PKU366 when a `files` list leaves out `agents/` while a screen names a valid agent the addon ships (one that is already PKU365 gets that error alone), or leaves out `skills/` while the addon has a `skills/<name>/SKILL.md`. A package with no `files` field is not checked.
+
+- 539c25d: Trace every wire
+
+  Channels, agent tools and tool workflows, MCP, CLI, triggers, webhook sources, gateways and Cloudflare `runRpc` now carry `traceparent`. A wire with no trace becomes the root of one, and `scheduleRPC` and `webhookService.send` called from a function are stamped with its trace.
+
+  Channel RPC frames take `traceparent` instead of `traceId`, and a responder ignores it unless `trustInboundTraceparent` is set. See `docs/MIGRATION.md`.
+
+- 593a855: Keep the trace when something fails
+
+  A local RPC now runs as a span of its own under its caller. Errors logged by MCP, channels, triggers, agent tools, remote addon calls and inline workflows now carry the trace, and MCP errors and channel error frames return `errorId`, as HTTP does. A job whose data looks like the trace envelope now reaches its worker unchanged.
+
+- 8bad71e: Keep one trace through jobs, scheduled tasks and workflow runs
+
+  A function's `queueService.add` stamps the caller's `traceparent` on the job, and a workflow run stores its trace on `run.wire.traceparent`, so every step, retry, sleep, resume, child workflow and recovery stays on it. Every queue adapter carries `traceparent`, and queue and scheduler wires always have `wire.trace`.
+
+  The `q-<id>` and `cron-<id>` trace ids are gone. `runQueueJob` no longer takes `traceId`, and remote job bodies take `traceparent`. Breaking: see docs/MIGRATION.md.
+
+- ceedd4b: Trace with W3C `traceparent`, and remove `x-request-id`
+
+  `wire.traceId` on an HTTP request is now 32 lowercase hex and `wire.trace` adds its span id, parent span and sampled flag. Mesh and remote addon calls send `traceparent`; `x-request-id` is no longer read or sent, `CF-Ray` no longer sets the trace, and `generateRequestId` is gone.
+
+  Public HTTP ignores an inbound `traceparent` unless `trustInboundTraceparent` is set. `pikkuMeshAuthMiddleware` continues a caller's trace once its token has verified. Breaking: see docs/MIGRATION.md.
+
+- 4263e9d: Workflows survive a restart
+
+  `pikku dev` and `pikku serve` now recover runs after a crash or deploy. Sleeps are re-armed from when they were scheduled, in-flight steps retry as a counted attempt with the same `invocationId`, and a sweep skips any run another live instance holds the lease on. Other hosts call `workflowService.recoverWorkflows()` from a scheduled task, and `workflow.recovery: false` turns it off. See `docs/MIGRATION.md`.
+
+## 0.12.66
+
+### Patch Changes
+
+- 3d06dfa: An addon's Studio screen can name an `agent` in `definePlugin`: the agent that answers in Studio's chat panel, in a second tab beside the general chat, while that screen is open. It resolves to `agents/<name>.md` in the addon package, which holds the agent's instructions and names the skills it follows (plain `skills/<name>/SKILL.md` folders, found by convention). `agent: 'studio:<name>'` instead picks an agent Studio ships; `pikku all` only checks the format, looks up no file and records no title or description. The file starts with frontmatter whose `title` and `description` are message keys in the addon's `messages/en.json`. `pikku all` reads `agent` as a string literal and records it, with `agentTitle` and `agentDescription`, on the screen in the generated addon metadata. It fails with PKU365 when the value is neither a name `/^[a-z][a-z0-9-]*$/` nor `studio:<name>`, or a name, the file is missing or empty, or the frontmatter lacks a `title` or `description`; a key missing from `messages/en.json` is PKU358, as for screen titles.
+
 ## 0.12.65
 
 ### Patch Changes

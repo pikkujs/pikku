@@ -41,7 +41,7 @@ export const CloudLLMKey = pikkuSessionlessFunc({
     }
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const result = await rpc.invoke('getDeveloperLiteLLMKey', {})
+    const result = await rpc.invoke('cloud:getDeveloperLiteLLMKey', {})
     const format: 'text' | 'env' | 'shell' | 'json' = shell
       ? 'shell'
       : env

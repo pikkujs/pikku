@@ -1,5 +1,12 @@
 # @pikku/code-edit
 
+## 0.12.10
+
+### Patch Changes
+
+- b746b55: Security: stop OpenAPI spec titles, versions and tag names from breaking out of generated comments; restrict agent-config edits to known keys and escape their values; refuse addon server URLs containing line breaks before writing them to `.env`.
+- 1cc6cf7: `pikku validate` now fails when a language the app serves (listed in `project.inlang/settings.json` `locales`) is missing translations: absent keys, values still marked `%i18n-missing%`, mismatched placeholders, invalid plurals or stale keys. Locales with a messages file that are not listed are drafts and are skipped. `pikku i18n check` also reports keys missing from a locale as errors and `I18nCheckReport` gains `liveLocales` and per-catalog `missing`.
+
 ## 0.12.9
 
 ### Patch Changes

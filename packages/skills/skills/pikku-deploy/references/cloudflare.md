@@ -71,8 +71,8 @@ CF `1101`. It also stashes the env via `setCloudflareEnv`, which
 - A `GET` with `Upgrade: websocket` is routed to the hibernation server. Without
   one passed in it answers **426**, so a channel worker that forgets the second
   argument fails every upgrade while plain HTTP keeps working.
-- `CF-Ray` becomes the traceId when present, so a Cloudflare trace and a Pikku
-  trace line up without extra wiring.
+- `CF-Ray` does not set the traceId: it is not a W3C trace id. Core starts a new
+  trace, or continues a verified mesh caller's.
 - `options.exposeErrors` defaults to **`false`** — error detail is withheld from
   responses unless you opt in.
 

@@ -1,3 +1,81 @@
+## 0.12.202
+
+### Patch Changes
+
+- 5d48c4a: A screen can also set `defaultChat: false` to hide Studio's general Chat tab beside its agent tab (with no `agent`, the screen has no chat). It defaults to `true`, must be a boolean literal (PKU345 otherwise), and is recorded only when declared.
+
+  The agent and its skills ship in the addon's package: `pikku new addon <name> --ui` now puts `agents` and `skills` in `package.json` `files`, and writes the `studio` block Studio links an addon by, `"studio": { "addon": "<name>", "ui": "./src", "messages": "./messages/{locale}.json" }`. `pikku all` fails with PKU366 when a `files` list leaves out `agents/` while a screen names a valid agent the addon ships (one that is already PKU365 gets that error alone), or leaves out `skills/` while the addon has a `skills/<name>/SKILL.md`. A package with no `files` field is not checked.
+
+- c8a477d: The CLI wires `@pikkustudio/addon-cloud-api` as `cloudApi` and maps it to the `pikku cloud` addon, so `pikku all` syncs the cloud API contract and pins it in `pikku-addons.lock`. `@pikku/addon-console` calls the cloud API as `cloud:<name>` and drops the wish deck: the `listStudioWishes` and `reactToStudioWish` functions, the `pikku:console:wishes` scopes, and the wish and model access parts of the studio host are removed (breaking, documented here per the patch-only rule). The `pikku cloud` addon is now mounted as `cloudCli` (the `pikku cloud` command is unchanged) because its dependency key `cloud` equalled its mount, and an addon's own namespace wins over `uses`, so `cloud:<fn>` could never reach `cloudApi`. `wireAddon` now throws when an addon's `uses` maps its own name to another addon.
+- 539c25d: Trace every wire
+
+  Channels, agent tools and tool workflows, MCP, CLI, triggers, webhook sources, gateways and Cloudflare `runRpc` now carry `traceparent`. A wire with no trace becomes the root of one, and `scheduleRPC` and `webhookService.send` called from a function are stamped with its trace.
+
+  Channel RPC frames take `traceparent` instead of `traceId`, and a responder ignores it unless `trustInboundTraceparent` is set. See `docs/MIGRATION.md`.
+
+- a275026: A job signed by `SignedQueueService` now runs as its user on every queue adapter, where BullMQ, pg-boss and SQS dropped the claim and the Azure and Cloudflare consumers ignored it. Graph child runs and Cloudflare step workers keep the run's user. An unsigned or forged claim is still dropped.
+
+  `SQSQueueService` from `@pikku/lambda` now sends the job's data as the body, so workers stop receiving the wrapper object. Generated remote job schemas keep `traceparent`, which they were stripping, and `pikkuUserId`. `defineQueueIdentityTransportTests` in `@pikku/core/testing` holds an adapter to all of this.
+
+  Breaking: see `docs/MIGRATION.md`.
+
+- 8bad71e: Keep one trace through jobs, scheduled tasks and workflow runs
+
+  A function's `queueService.add` stamps the caller's `traceparent` on the job, and a workflow run stores its trace on `run.wire.traceparent`, so every step, retry, sleep, resume, child workflow and recovery stays on it. Every queue adapter carries `traceparent`, and queue and scheduler wires always have `wire.trace`.
+
+  The `q-<id>` and `cron-<id>` trace ids are gone. `runQueueJob` no longer takes `traceId`, and remote job bodies take `traceparent`. Breaking: see docs/MIGRATION.md.
+
+- bec7301: `wireRemoteAddon` accepts `uses` (same meaning as `wireAddon`'s, so a remote addon may reach the addons it maps) and `local: { package, ui?, contributors? }`, naming an installed package whose screens and contributors are mounted under the same name as the remote contract. `pikku all` reads them from the local package, and the screens command imports from it.
+- b746b55: Security: stop OpenAPI spec titles, versions and tag names from breaking out of generated comments; restrict agent-config edits to known keys and escape their values; refuse addon server URLs containing line breaks before writing them to `.env`.
+- c964ee9: `pikku scenario run --spawn` stops its server when a run passes. `SpawnedServer.stop` takes no arguments again, because as an exit listener it was handed the exit code and treated 0 as the signal, which sends nothing. `SpawnedServer.kill(signal)` sends a chosen signal.
+- 1cc6cf7: `pikku validate` now fails when a language the app serves (listed in `project.inlang/settings.json` `locales`) is missing translations: absent keys, values still marked `%i18n-missing%`, mismatched placeholders, invalid plurals or stale keys. Locales with a messages file that are not listed are drafts and are skipped. `pikku i18n check` also reports keys missing from a locale as errors and `I18nCheckReport` gains `liveLocales` and per-catalog `missing`.
+- 4263e9d: Workflows survive a restart
+
+  `pikku dev` and `pikku serve` now recover runs after a crash or deploy. Sleeps are re-armed from when they were scheduled, in-flight steps retry as a counted attempt with the same `invocationId`, and a sweep skips any run another live instance holds the lease on. Other hosts call `workflowService.recoverWorkflows()` from a scheduled task, and `workflow.recovery: false` turns it off. See `docs/MIGRATION.md`.
+
+- Updated dependencies [5d48c4a]
+- Updated dependencies [c8a477d]
+- Updated dependencies [bab9f0d]
+- Updated dependencies [539c25d]
+- Updated dependencies [593a855]
+- Updated dependencies [63648ee]
+- Updated dependencies [1b265fa]
+- Updated dependencies [db5f42f]
+- Updated dependencies [d5cc4f1]
+- Updated dependencies [bf979a0]
+- Updated dependencies [a275026]
+- Updated dependencies [8bad71e]
+- Updated dependencies [dfc98a4]
+- Updated dependencies [8a61814]
+- Updated dependencies [4cf8e97]
+- Updated dependencies [63e12c4]
+- Updated dependencies [bec7301]
+- Updated dependencies [7ce879d]
+- Updated dependencies [b746b55]
+- Updated dependencies [a3a67f3]
+- Updated dependencies [54c11c3]
+- Updated dependencies [ceedd4b]
+- Updated dependencies [1cc6cf7]
+- Updated dependencies [4263e9d]
+  - @pikku/core@0.12.151
+  - @pikku/inspector@0.12.114
+  - @pikku/inspector-go@0.12.8
+  - @pikku/skills@0.12.67
+  - @pikku/schedule@0.12.12
+  - @pikku/kysely@0.13.41
+  - @pikku/openapi-parser@0.12.26
+  - @pikku/code-edit@0.12.10
+
+## 0.12.201
+
+### Patch Changes
+
+- 3d06dfa: An addon's Studio screen can name an `agent` in `definePlugin`: the agent that answers in Studio's chat panel, in a second tab beside the general chat, while that screen is open. It resolves to `agents/<name>.md` in the addon package, which holds the agent's instructions and names the skills it follows (plain `skills/<name>/SKILL.md` folders, found by convention). `agent: 'studio:<name>'` instead picks an agent Studio ships; `pikku all` only checks the format, looks up no file and records no title or description. The file starts with frontmatter whose `title` and `description` are message keys in the addon's `messages/en.json`. `pikku all` reads `agent` as a string literal and records it, with `agentTitle` and `agentDescription`, on the screen in the generated addon metadata. It fails with PKU365 when the value is neither a name `/^[a-z][a-z0-9-]*$/` nor `studio:<name>`, or a name, the file is missing or empty, or the frontmatter lacks a `title` or `description`; a key missing from `messages/en.json` is PKU358, as for screen titles.
+- Updated dependencies [3d06dfa]
+  - @pikku/core@0.12.150
+  - @pikku/inspector@0.12.113
+  - @pikku/skills@0.12.66
+
 ## 0.12.200
 
 ### Patch Changes

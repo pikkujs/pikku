@@ -36,7 +36,7 @@ export class LambdaDeploymentService implements DeploymentService {
     funcName: string,
     data: unknown,
     session?: unknown,
-    traceId?: string
+    traceparent?: string
   ): Promise<unknown> {
     const lambdaFunctionName = this.bindings.get(funcName)
     if (!lambdaFunctionName) {
@@ -51,7 +51,7 @@ export class LambdaDeploymentService implements DeploymentService {
       this.secrets,
       funcName,
       session,
-      traceId
+      traceparent
     )
 
     // Build an API Gateway v2 event for the target Lambda

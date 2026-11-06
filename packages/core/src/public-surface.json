@@ -7,10 +7,12 @@
     "addGlobalPermission",
     "addTagMiddleware",
     "addonScopeCap",
+    "allowedOriginsFromVariables",
     "authAPIKey",
     "authBearer",
     "authCookie",
     "cors",
+    "hostOriginOf",
     "isAllowedOrigin",
     "pikkuAgentMiddleware",
     "pikkuChannelMiddleware",
@@ -77,6 +79,7 @@
     "pikkuWorkflowGraph",
     "reconstructFinalState",
     "reconstructStateAt",
+    "runTraceWire",
     "streamWorkflowRunStatus",
     "template",
     "uuidv5"
@@ -203,7 +206,9 @@
     "pikkuRemoteQueueJobFunc",
     "registerQueueWorkers",
     "runQueueJob",
-    "wireQueueWorker"
+    "unwrapJobTrace",
+    "wireQueueWorker",
+    "wrapJobTrace"
   ],
   "./scheduler": [
     "ScheduledTaskNotFoundError",
@@ -484,6 +489,19 @@
     "stub",
     "withoutSecrets"
   ],
+  "./trace": [
+    "adoptTraceparent",
+    "childTraceWire",
+    "continueTrace",
+    "createTrace",
+    "formatTraceparent",
+    "isValidTraceId",
+    "outgoingTraceparent",
+    "parseTraceparent",
+    "resolveHTTPTrace",
+    "traceWire",
+    "tracedLogger"
+  ],
   "./flag": [
     "CachedFlagSource",
     "assertFeatureAvailable",
@@ -618,6 +636,11 @@
     "getSchema",
     "validateSchema"
   ],
-  "./testing": ["clearPikkuRuntimeState", "defineServiceTests"],
+  "./testing": [
+    "clearPikkuRuntimeState",
+    "defineQueueIdentityTransportTests",
+    "defineQueueTraceConformance",
+    "defineServiceTests"
+  ],
   "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
 }

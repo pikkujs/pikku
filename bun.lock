@@ -226,7 +226,7 @@
       "name": "@pikku/addon-changes-cli",
       "version": "0.12.2",
       "dependencies": {
-        "@pikku/knowledge": "^0.12.21",
+        "@pikku/knowledge": "^0.12.22",
       },
       "devDependencies": {
         "@pikku/cli": "workspace:*",
@@ -235,8 +235,8 @@
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/cli": "^0.12.196",
-        "@pikku/core": "^0.12.146",
+        "@pikku/cli": "^0.12.201",
+        "@pikku/core": "^0.12.150",
         "zod": "^4",
       },
     },
@@ -255,14 +255,14 @@
       },
       "peerDependencies": {
         "@pikku/addon-changes-cli": "^0.12.2",
-        "@pikku/cli": "^0.12.196",
-        "@pikku/core": "^0.12.146",
+        "@pikku/cli": "^0.12.201",
+        "@pikku/core": "^0.12.150",
         "zod": "^4",
       },
     },
     "packages/addon/pikku-console": {
       "name": "@pikku/addon-console",
-      "version": "0.12.65",
+      "version": "0.12.66",
       "dependencies": {
         "@pikku/code-edit": "^0.12.8",
         "@pikku/knowledge": "^0.12.21",
@@ -327,7 +327,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.200",
+      "version": "0.12.202",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -338,24 +338,24 @@
         "@electric-sql/pglite-pgvector": "0.0.11",
         "@jridgewell/trace-mapping": "^0.3.31",
         "@pikku/ai-vercel": "^0.12.16",
-        "@pikku/better-auth": "^0.12.59",
+        "@pikku/better-auth": "^0.12.61",
         "@pikku/bun-server": "^0.12.15",
-        "@pikku/code-edit": "^0.12.8",
-        "@pikku/core": "^0.12.146",
-        "@pikku/deploy": "^0.12.17",
-        "@pikku/deploy-cloudflare": "^0.12.23",
-        "@pikku/deploy-standalone": "^0.12.28",
+        "@pikku/code-edit": "^0.12.9",
+        "@pikku/core": "^0.12.150",
+        "@pikku/deploy": "^0.12.18",
+        "@pikku/deploy-cloudflare": "^0.12.24",
+        "@pikku/deploy-standalone": "^0.12.29",
         "@pikku/fetch": "^0.12.13",
-        "@pikku/inspector": "^0.12.110",
-        "@pikku/inspector-go": "^0.12.5",
-        "@pikku/knowledge": "^0.12.21",
+        "@pikku/inspector": "^0.12.113",
+        "@pikku/inspector-go": "^0.12.7",
+        "@pikku/knowledge": "^0.12.22",
         "@pikku/kysely": "^0.13.40",
-        "@pikku/migrator-sql": "^0.12.9",
+        "@pikku/migrator-sql": "^0.12.10",
         "@pikku/n8n-import": "^0.0.9",
         "@pikku/node-http-server": "^0.12.21",
         "@pikku/openapi-parser": "^0.12.25",
         "@pikku/schedule": "^0.12.11",
-        "@pikku/skills": "^0.12.61",
+        "@pikku/skills": "^0.12.66",
         "@pikku/websocket": "^0.12.6",
         "@types/cookie": "^1.0.0",
         "@types/json-schema": "^7.0.15",
@@ -419,7 +419,7 @@
     },
     "packages/code-edit": {
       "name": "@pikku/code-edit",
-      "version": "0.12.9",
+      "version": "0.12.10",
       "dependencies": {
         "typescript": "^6.0.3",
       },
@@ -429,7 +429,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.149",
+      "version": "0.12.151",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -478,13 +478,13 @@
       "name": "@pikku/deploy-cloudflare",
       "version": "0.12.24",
       "dependencies": {
-        "@pikku/deploy": "^0.12.17",
+        "@pikku/deploy": "^0.12.18",
       },
       "devDependencies": {
         "@pikku/kysely": "^0.13.39",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.144",
+        "@pikku/core": "^0.12.148",
         "@pikku/kysely": "^0.13.39",
       },
     },
@@ -513,11 +513,11 @@
       "name": "@pikku/deploy-standalone",
       "version": "0.12.29",
       "dependencies": {
-        "@pikku/deploy": "^0.12.17",
+        "@pikku/deploy": "^0.12.18",
         "@pikku/migrator-sql": "^0.12.9",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.144",
+        "@pikku/core": "^0.12.148",
       },
     },
     "packages/frontend/react": {
@@ -590,7 +590,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.112",
+      "version": "0.12.114",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
         "openapi-types": "^12.1.3",
@@ -601,27 +601,27 @@
         "zod": "^4.6.7",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.146",
+        "@pikku/core": "^0.12.150",
         "@types/node": "^26.6.5",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.146",
+        "@pikku/core": "^0.12.150",
       },
     },
     "packages/inspector-go": {
       "name": "@pikku/inspector-go",
-      "version": "0.12.7",
+      "version": "0.12.8",
       "dependencies": {
-        "@pikku/inspector": "^0.12.110",
+        "@pikku/inspector": "^0.12.112",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.146",
+        "@pikku/core": "^0.12.148",
         "@types/node": "^24.13.3",
         "ajv": "^8.20.0",
         "tinyglobby": "^0.2.17",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.146",
+        "@pikku/core": "^0.12.148",
       },
     },
     "packages/knowledge": {
@@ -657,7 +657,7 @@
     },
     "packages/openapi-parser": {
       "name": "@pikku/openapi-parser",
-      "version": "0.12.25",
+      "version": "0.12.26",
       "dependencies": {
         "yaml": "^2.9.1",
         "zod": "^4",
@@ -706,7 +706,7 @@
     },
     "packages/runtimes/aws-lambda": {
       "name": "@pikku/lambda",
-      "version": "0.12.13",
+      "version": "0.12.14",
       "devDependencies": {
         "@aws-sdk/client-apigatewaymanagementapi": "^3.1152.0",
         "@aws-sdk/client-lambda": "^3.1152.0",
@@ -723,7 +723,7 @@
     },
     "packages/runtimes/azure-functions": {
       "name": "@pikku/azure-functions",
-      "version": "0.12.11",
+      "version": "0.12.12",
       "dependencies": {
         "@azure/functions": "4.16.5",
         "@azure/storage-queue": "^12.32.0",
@@ -750,7 +750,7 @@
     },
     "packages/runtimes/cloudflare": {
       "name": "@pikku/cloudflare",
-      "version": "0.12.31",
+      "version": "0.12.32",
       "dependencies": {
         "kysely-d1": "^0.4.0",
       },
@@ -962,7 +962,7 @@
     },
     "packages/schedule": {
       "name": "@pikku/schedule",
-      "version": "0.12.11",
+      "version": "0.12.12",
       "dependencies": {
         "cron": "^4.4.0",
         "cron-schedule": "^6.0.0",
@@ -1006,7 +1006,7 @@
     },
     "packages/services/aws-services": {
       "name": "@pikku/aws-services",
-      "version": "0.12.17",
+      "version": "0.12.18",
       "devDependencies": {
         "@aws-sdk/client-s3": "^3.1152.0",
         "@aws-sdk/client-secrets-manager": "^3.1152.0",
@@ -1051,7 +1051,7 @@
         "vite": "^7.0.0",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.145",
+        "@pikku/core": "^0.12.149",
         "better-auth": "^1.7.5",
         "vite": "^5 || ^6 || ^7",
         "zod": "^4",
@@ -1085,7 +1085,7 @@
     },
     "packages/services/kysely": {
       "name": "@pikku/kysely",
-      "version": "0.13.40",
+      "version": "0.13.41",
       "bin": {
         "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js",
       },
@@ -1184,7 +1184,7 @@
     },
     "packages/services/mongodb": {
       "name": "@pikku/mongodb",
-      "version": "0.12.26",
+      "version": "0.12.27",
       "dependencies": {
         "mongodb": "^7.7.0",
       },
@@ -1209,18 +1209,18 @@
     },
     "packages/services/queue-bullmq": {
       "name": "@pikku/queue-bullmq",
-      "version": "0.12.11",
+      "version": "0.12.12",
       "dependencies": {
         "bullmq": "^6.3.16",
         "ioredis": "^6.0.0",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.146",
       },
     },
     "packages/services/queue-nats": {
       "name": "@pikku/queue-nats",
-      "version": "0.12.4",
+      "version": "0.12.5",
       "dependencies": {
         "@nats-io/jetstream": "^3.4.0",
         "@nats-io/nats-core": "^3.4.0",
@@ -1232,17 +1232,17 @@
     },
     "packages/services/queue-pg-boss": {
       "name": "@pikku/queue-pg-boss",
-      "version": "0.12.13",
+      "version": "0.12.14",
       "dependencies": {
         "pg-boss": "^12.38.0",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.146",
       },
     },
     "packages/services/redis": {
       "name": "@pikku/redis",
-      "version": "0.12.25",
+      "version": "0.12.26",
       "dependencies": {
         "ioredis": "^6.0.0",
       },
@@ -1277,7 +1277,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.65",
+      "version": "0.12.67",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",
@@ -2450,6 +2450,25 @@
         "vite": "^8.3.4",
       },
     },
+    "verifiers/tracing": {
+      "name": "@pikku/verifiers-tracing",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/jose": "workspace:*",
+        "@pikku/node-http-server": "workspace:*",
+        "@pikku/queue-bullmq": "workspace:*",
+        "@pikku/queue-pg-boss": "workspace:*",
+        "@pikku/schedule": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+        "zod": "^4",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "tsx": "^4.23.15",
+      },
+    },
     "verifiers/treeshaking": {
       "name": "@pikku/verifiers-treeshaking",
       "dependencies": {
@@ -3597,6 +3616,8 @@
     "@pikku/verifiers-secrets": ["@pikku/verifiers-secrets@workspace:verifiers/secrets"],
 
     "@pikku/verifiers-tanstack-start-better-auth": ["@pikku/verifiers-tanstack-start-better-auth@workspace:verifiers/tanstack-start-better-auth"],
+
+    "@pikku/verifiers-tracing": ["@pikku/verifiers-tracing@workspace:verifiers/tracing"],
 
     "@pikku/verifiers-treeshaking": ["@pikku/verifiers-treeshaking@workspace:verifiers/treeshaking"],
 

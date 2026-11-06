@@ -38,7 +38,6 @@ entry is cited by line.
 - `get-workflow-runs.function.ts:18` — `pikku:console:workflows:read`
 - `list-studio-changes.function.ts:17` — `pikku:console:changes:read`
 - `push-git-changes.function.ts:11` — `pikku:console:git:sync`
-- `react-to-studio-wish.function.ts:11` — `pikku:console:wishes:write`
 - `reply-to-studio-change.function.ts:11` — `pikku:console:changes:write`
 - `stream-meta-changes.function.ts:9` — `pikku:console:wirings:read`
 - `update-function-config.function.ts:17` — `pikku:console:code:write`

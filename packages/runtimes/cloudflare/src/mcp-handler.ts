@@ -2,6 +2,7 @@ import type { CoreSingletonServices } from '@pikku/core/types'
 import { PikkuMCPFetchServer } from '@pikku/modelcontextprotocol/fetch'
 import { WorkerEntrypoint } from 'cloudflare:workers'
 import { rpcService } from '@pikku/core/rpc'
+import { traceWire } from '@pikku/core/trace'
 
 import {
   type CloudflareEnv,
@@ -102,11 +103,15 @@ export function createCloudflareMCPHandler(
       return runFetch(request)
     }
 
-    async runRpc(name: string, args: unknown): Promise<unknown> {
+    async runRpc(
+      name: string,
+      args: unknown,
+      traceparent?: string
+    ): Promise<unknown> {
       const services = await setupServices(this.env, factories)
       const rpc = rpcService.getContextRPCService(
         services as any,
-        {},
+        traceWire(traceparent),
         false
       ) as any
       return rpc.invoke(name, args)

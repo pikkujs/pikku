@@ -32,9 +32,9 @@ await mock.module('../lib/http.js', () => ({
       ? {
           invoke: async (name: string, data: any) => {
             invoked.push({ name, data })
-            if (name === 'getProjectDetails')
+            if (name === 'cloud:getProjectDetails')
               return { gitRepoUrl: 'https://github.com/acme/shop' }
-            if (name === 'setProjectRepo')
+            if (name === 'cloud:setProjectRepo')
               return {
                 projectId: data.projectId,
                 dryRun: data.dryRun,
@@ -141,7 +141,7 @@ describe('cloud git', () => {
     const result = await run()
     assert.deepStrictEqual(
       invoked.map((i) => i.name),
-      ['getProjectDetails']
+      ['cloud:getProjectDetails']
     )
     assert.strictEqual(result.current.provider, 'github')
     assert.strictEqual(result.current.origin, 'https://github.com/acme/shop')
@@ -150,28 +150,22 @@ describe('cloud git', () => {
 
   test('a dry run asks cloud and changes no remote', async () => {
     const result = await run({ moveTo: 'gitea', dryRun: true })
-    const call = invoked.find((i) => i.name === 'setProjectRepo')
+    const call = invoked.find((i) => i.name === 'cloud:setProjectRepo')
     assert.deepStrictEqual(call?.data, {
       projectId: 'proj_1',
       target: 'gitea',
       dryRun: true,
     })
     assert.deepStrictEqual(gitCalls, [])
-    assert.strictEqual(
-      remotes.origin,
-      'https://github.com/acme/shop.git'
-    )
+    assert.strictEqual(remotes.origin, 'https://github.com/acme/shop.git')
     assert.strictEqual(result.moved?.dryRun, true)
   })
 
   test('refuses to move with uncommitted changes', async () => {
     clean = false
-    await assert.rejects(
-      () => run({ moveTo: 'gitea' }),
-      /uncommitted changes/
-    )
+    await assert.rejects(() => run({ moveTo: 'gitea' }), /uncommitted changes/)
     assert.strictEqual(
-      invoked.some((i) => i.name === 'setProjectRepo'),
+      invoked.some((i) => i.name === 'cloud:setProjectRepo'),
       false
     )
   })

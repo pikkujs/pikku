@@ -73,6 +73,14 @@ beforeEach(() => {
   pikkuState(null, 'package', 'singletonServices', createServices())
 })
 
+const REMOTE_TRACE = {
+  traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+  spanId: '00f067aa0ba902b7',
+  sampled: true,
+}
+const REMOTE_TRACEPARENT =
+  '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01'
+
 describe('resolveNamespace', () => {
   test('returns null for non-namespaced functions', () => {
     assert.equal(resolveNamespace('plainFunction'), null)
@@ -287,6 +295,7 @@ describe('ContextAwareRPCService.rpc', () => {
       }),
       {
         traceId: 'trace-2',
+        trace: REMOTE_TRACE,
         getSession: async () => ({ userId: 'user-1' }),
       } as never,
       {}
@@ -296,7 +305,7 @@ describe('ContextAwareRPCService.rpc', () => {
 
     assert.deepEqual(result, { remote: true })
     assert.deepEqual(calls, [
-      ['missingRpc', { value: 1 }, { userId: 'user-1' }, 'trace-2'],
+      ['missingRpc', { value: 1 }, { userId: 'user-1' }, REMOTE_TRACEPARENT],
     ])
   })
 
@@ -461,7 +470,7 @@ describe('RPCNotFoundError raised from inside a resolved function', () => {
           },
         },
       }),
-      { traceId: 'trace-addon' } as never,
+      { traceId: 'trace-addon', trace: REMOTE_TRACE } as never,
       {}
     )
 
@@ -469,7 +478,7 @@ describe('RPCNotFoundError raised from inside a resolved function', () => {
 
     assert.deepEqual(result, { remote: true })
     assert.deepEqual(remoteCalls, [
-      ['stripe:missingFunc', { value: 3 }, undefined, 'trace-addon'],
+      ['stripe:missingFunc', { value: 3 }, undefined, REMOTE_TRACEPARENT],
     ])
   })
 
@@ -484,7 +493,7 @@ describe('RPCNotFoundError raised from inside a resolved function', () => {
           },
         },
       }),
-      { traceId: 'trace-ns' } as never,
+      { traceId: 'trace-ns', trace: REMOTE_TRACE } as never,
       {}
     )
 
@@ -492,7 +501,7 @@ describe('RPCNotFoundError raised from inside a resolved function', () => {
 
     assert.deepEqual(result, { remote: true })
     assert.deepEqual(remoteCalls, [
-      ['unknownNs:someFunc', { value: 1 }, undefined, 'trace-ns'],
+      ['unknownNs:someFunc', { value: 1 }, undefined, REMOTE_TRACEPARENT],
     ])
   })
 })
@@ -764,7 +773,11 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
           },
         },
       }),
-      { traceId: 'trace-3', session: { userId: 'user-2' } } as never,
+      {
+        traceId: 'trace-3',
+        trace: REMOTE_TRACE,
+        session: { userId: 'user-2' },
+      } as never,
       {}
     )
 
@@ -774,7 +787,7 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
 
     assert.deepEqual(result, { remote: true })
     assert.deepEqual(calls, [
-      ['missingRpc', { value: 2 }, { userId: 'user-2' }, 'trace-3'],
+      ['missingRpc', { value: 2 }, { userId: 'user-2' }, REMOTE_TRACEPARENT],
     ])
   })
 
@@ -793,7 +806,7 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
           },
         },
       }),
-      { traceId: 'trace-addon-wire' } as never,
+      { traceId: 'trace-addon-wire', trace: REMOTE_TRACE } as never,
       {}
     )
 
@@ -805,7 +818,7 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
 
     assert.deepEqual(result, { remote: true })
     assert.deepEqual(remoteCalls, [
-      ['stripe:missingFunc', { value: 3 }, undefined, 'trace-addon-wire'],
+      ['stripe:missingFunc', { value: 3 }, undefined, REMOTE_TRACEPARENT],
     ])
   })
 
@@ -820,7 +833,7 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
           },
         },
       }),
-      { traceId: 'trace-ns-wire' } as never,
+      { traceId: 'trace-ns-wire', trace: REMOTE_TRACE } as never,
       {}
     )
 
@@ -832,7 +845,7 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
 
     assert.deepEqual(result, { remote: true })
     assert.deepEqual(remoteCalls, [
-      ['unknownNs:someFunc', { value: 1 }, undefined, 'trace-ns-wire'],
+      ['unknownNs:someFunc', { value: 1 }, undefined, REMOTE_TRACEPARENT],
     ])
   })
 
@@ -849,6 +862,7 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
       }),
       {
         traceId: 'ambient-trace',
+        trace: { ...REMOTE_TRACE, spanId: 'ffffffffffffffff' },
         session: { userId: 'ambient-user' },
       } as never,
       {}
@@ -859,6 +873,7 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
       { value: 1 },
       {
         traceId: 'caller-trace',
+        trace: REMOTE_TRACE,
         session: { userId: 'caller-user' },
       } as never
     )
@@ -871,7 +886,7 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
           'unknownNs:someFunc',
           { value: 1 },
           { userId: 'caller-user' },
-          'caller-trace',
+          REMOTE_TRACEPARENT,
         ],
       ],
       'the remote hop ran under the ambient wire, so an explicit wire is honoured locally but dropped across the deployment boundary'
@@ -943,7 +958,29 @@ describe('ContextAwareRPCService.mesh', () => {
     )
   })
 
-  test('uses deploymentService with session and trace id', async () => {
+  test('a step that resolves to the mesh sends the run trace, not the service wire', async () => {
+    const calls: unknown[][] = []
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            calls.push(args)
+            return { ok: true }
+          },
+        },
+      }),
+      {} as never,
+      {}
+    )
+
+    await service.rpcWithWire('missingRpc', {}, {
+      trace: REMOTE_TRACE,
+    } as never)
+
+    assert.deepEqual(calls, [['missingRpc', {}, undefined, REMOTE_TRACEPARENT]])
+  })
+
+  test('uses deploymentService with session and traceparent', async () => {
     const calls: unknown[][] = []
     const service = new ContextAwareRPCService(
       createServices({
@@ -956,6 +993,7 @@ describe('ContextAwareRPCService.mesh', () => {
       }),
       {
         traceId: 'trace-4',
+        trace: REMOTE_TRACE,
         getSession: async () => ({ userId: 'user-4' }),
       } as never,
       {}
@@ -965,7 +1003,7 @@ describe('ContextAwareRPCService.mesh', () => {
 
     assert.deepEqual(result, { ok: true })
     assert.deepEqual(calls, [
-      ['remoteFunc', { hi: true }, { userId: 'user-4' }, 'trace-4'],
+      ['remoteFunc', { hi: true }, { userId: 'user-4' }, REMOTE_TRACEPARENT],
     ])
   })
 })
@@ -1167,7 +1205,10 @@ describe('wireRemoteAddon dispatch', () => {
 
       const service = new ContextAwareRPCService(
         createServices({ secrets: secretService() }),
-        { traceId: 'trace-r' } as never,
+        {
+          traceId: REMOTE_TRACE.traceId,
+          trace: REMOTE_TRACE,
+        } as never,
         {}
       )
 
@@ -1188,10 +1229,10 @@ describe('wireRemoteAddon dispatch', () => {
         'Bearer secret-value-for-REGISTRY_TOKEN'
       )
       assert.equal(
-        calls[0]!.init.headers['x-request-id'],
-        'trace-r',
-        'a remote RPC must send the trace id under the header the receiving ' +
-          'runner reads, or the trace chain breaks at the hop'
+        calls[0]!.init.headers.traceparent,
+        REMOTE_TRACEPARENT,
+        'a remote RPC must send the caller as the parent of the next hop, or ' +
+          'the trace chain breaks there'
       )
       assert.equal(
         calls[0]!.init.headers[REMOTE_CONTRACT_HEADER],
@@ -1419,12 +1460,12 @@ describe('wireRemoteAddon dispatch', () => {
           'x-tenant': wire.traceId,
           Authorization: 'Bearer forged',
           'X-Pikku-Remote-Contract': '0',
-          'X-Request-Id': 'forged',
+          Traceparent: 'forged',
         }),
       })
       const service = new ContextAwareRPCService(
         createServices({ secrets: secretService() }),
-        { traceId: 'trace-h' } as never,
+        { traceId: 'trace-h', trace: REMOTE_TRACE } as never,
         {}
       )
 
@@ -1438,9 +1479,9 @@ describe('wireRemoteAddon dispatch', () => {
       )
       assert.equal(headers.Authorization, undefined)
       assert.equal(headers['X-Pikku-Remote-Contract'], undefined)
-      assert.equal(headers['X-Request-Id'], undefined)
+      assert.equal(headers.Traceparent, undefined)
       assert.equal(headers[REMOTE_CONTRACT_HEADER], '1')
-      assert.equal(headers['x-request-id'], 'trace-h')
+      assert.equal(headers.traceparent, REMOTE_TRACEPARENT)
     } finally {
       restoreFetch()
     }

@@ -82,7 +82,13 @@ export class QueueWebhookService extends WebhookService {
       headers,
     }
 
-    return { jobData, options: this.resolveJobOptions(input) }
+    return {
+      jobData,
+      options: {
+        ...this.resolveJobOptions(input),
+        ...(input.traceparent ? { traceparent: input.traceparent } : {}),
+      },
+    }
   }
 
   // knowledge: decisions/internals/queue-jobs-always-carry-an-explicit-attempts-count.md

@@ -1,4 +1,4 @@
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import type { CloudRPC as PikkuRPC } from './rpc-client.js'
 
 type CloudRPC = Pick<PikkuRPC, 'invoke'>
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
@@ -29,7 +29,7 @@ export async function resolveStage(
   projectId: string,
   branch: string | undefined
 ): Promise<ResolvedStage> {
-  const { stages } = await rpc.invoke('listStages', { projectId })
+  const { stages } = await rpc.invoke('cloud:listStages', { projectId })
   const known = stages.map((s) => s.branch)
 
   if (!branch) {
@@ -80,7 +80,7 @@ export async function matchStage(
   projectId: string,
   ref: string
 ): Promise<ResolvedStage> {
-  const { stages } = await rpc.invoke('listStages', { projectId })
+  const { stages } = await rpc.invoke('cloud:listStages', { projectId })
   const wanted = ref.trim()
   const host = hostOf(wanted).toLowerCase()
   const stage = stages.find(
@@ -107,7 +107,9 @@ export async function autoDeployOffHints(
   projectId: string,
   branch?: string
 ): Promise<string[]> {
-  const { stages } = await rpc.invoke('getProjectDeployments', { projectId })
+  const { stages } = await rpc.invoke('cloud:getProjectDeployments', {
+    projectId,
+  })
   return stages
     .filter(
       (s) =>

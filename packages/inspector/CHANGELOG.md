@@ -1,3 +1,42 @@
+## 0.12.114
+
+### Patch Changes
+
+- 5d48c4a: A screen can also set `defaultChat: false` to hide Studio's general Chat tab beside its agent tab (with no `agent`, the screen has no chat). It defaults to `true`, must be a boolean literal (PKU345 otherwise), and is recorded only when declared.
+
+  The agent and its skills ship in the addon's package: `pikku new addon <name> --ui` now puts `agents` and `skills` in `package.json` `files`, and writes the `studio` block Studio links an addon by, `"studio": { "addon": "<name>", "ui": "./src", "messages": "./messages/{locale}.json" }`. `pikku all` fails with PKU366 when a `files` list leaves out `agents/` while a screen names a valid agent the addon ships (one that is already PKU365 gets that error alone), or leaves out `skills/` while the addon has a `skills/<name>/SKILL.md`. A package with no `files` field is not checked.
+
+- 63e12c4: `wireRemoteAddon` no longer accepts `uses`. A remote server never calls another addon, so the field had no consumer; screens and contributors for a remote name come from `local`.
+- bec7301: `wireRemoteAddon` accepts `uses` (same meaning as `wireAddon`'s, so a remote addon may reach the addons it maps) and `local: { package, ui?, contributors? }`, naming an installed package whose screens and contributors are mounted under the same name as the remote contract. `pikku all` reads them from the local package, and the screens command imports from it.
+- Updated dependencies [5d48c4a]
+- Updated dependencies [c8a477d]
+- Updated dependencies [539c25d]
+- Updated dependencies [593a855]
+- Updated dependencies [63648ee]
+- Updated dependencies [1b265fa]
+- Updated dependencies [db5f42f]
+- Updated dependencies [d5cc4f1]
+- Updated dependencies [bf979a0]
+- Updated dependencies [a275026]
+- Updated dependencies [8bad71e]
+- Updated dependencies [4cf8e97]
+- Updated dependencies [63e12c4]
+- Updated dependencies [bec7301]
+- Updated dependencies [7ce879d]
+- Updated dependencies [a3a67f3]
+- Updated dependencies [54c11c3]
+- Updated dependencies [ceedd4b]
+- Updated dependencies [4263e9d]
+  - @pikku/core@0.12.151
+
+## 0.12.113
+
+### Patch Changes
+
+- 3d06dfa: An addon's Studio screen can name an `agent` in `definePlugin`: the agent that answers in Studio's chat panel, in a second tab beside the general chat, while that screen is open. It resolves to `agents/<name>.md` in the addon package, which holds the agent's instructions and names the skills it follows (plain `skills/<name>/SKILL.md` folders, found by convention). `agent: 'studio:<name>'` instead picks an agent Studio ships; `pikku all` only checks the format, looks up no file and records no title or description. The file starts with frontmatter whose `title` and `description` are message keys in the addon's `messages/en.json`. `pikku all` reads `agent` as a string literal and records it, with `agentTitle` and `agentDescription`, on the screen in the generated addon metadata. It fails with PKU365 when the value is neither a name `/^[a-z][a-z0-9-]*$/` nor `studio:<name>`, or a name, the file is missing or empty, or the frontmatter lacks a `title` or `description`; a key missing from `messages/en.json` is PKU358, as for screen titles.
+- Updated dependencies [3d06dfa]
+  - @pikku/core@0.12.150
+
 ## 0.12.112
 
 ### Patch Changes

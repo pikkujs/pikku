@@ -7,7 +7,7 @@ import { AddonNotUsedError, ContextAwareRPCService } from '../rpc/rpc-runner.js'
 import { createAgentRPC } from '../agent/agent-rpc.js'
 import { wireAddon } from './wire-addon.js'
 import { wireRemoteAddon } from './wire-remote-addon.js'
-import { mapAddonCall } from './addon-reach.js'
+import { AddonUsesShadowedError, mapAddonCall } from './addon-reach.js'
 
 /**
  * An addon calls another by the alias its package.json declares
@@ -181,5 +181,52 @@ describe('an addon calls another by the alias it declared', () => {
     assert.equal(mapAddonCall('billing', 'billing:own'), 'billing:own')
     assert.equal(mapAddonCall(undefined, 'stripe:support'), 'stripe:support')
     assert.throws(() => mapAddonCall('billing', 'vault:x'), AddonNotUsedError)
+  })
+
+  describe("an alias that is also the addon's own mount", () => {
+    // The addon's own namespace wins in mapAddonCall, so `uses: { cloud: 'cloudApi' }`
+    // on an addon mounted as `cloud` could never reach cloudApi: 'cloud:fn' is itself.
+    test("the addon's own namespace wins, so the mapping is dead", () => {
+      pikkuState(null, 'addons', 'packages').set('cloud', {
+        package: '@acme/addon-cloud-cli',
+        uses: { cloud: 'cloudApi' },
+      } as never)
+      assert.equal(
+        mapAddonCall('cloud', 'cloud:getProjectStatus'),
+        'cloud:getProjectStatus'
+      )
+    })
+
+    test('mounted under another name, the same alias reaches the dependency', () => {
+      wireAddon({
+        name: 'cloudCli',
+        package: '@acme/addon-cloud-cli',
+        uses: { cloud: 'cloudApi' },
+      })
+      assert.equal(
+        mapAddonCall('cloudCli', 'cloud:getProjectStatus'),
+        'cloudApi:getProjectStatus'
+      )
+      assert.equal(mapAddonCall('cloudCli', 'cloudCli:own'), 'cloudCli:own')
+    })
+
+    test('wireAddon refuses the collision instead of leaving it dead', () => {
+      assert.throws(
+        () =>
+          wireAddon({
+            name: 'cloud',
+            package: '@acme/addon-cloud-cli',
+            uses: { cloud: 'cloudApi' },
+          }),
+        AddonUsesShadowedError
+      )
+      assert.doesNotThrow(() =>
+        wireAddon({
+          name: 'cloud',
+          package: '@acme/addon-cloud-cli',
+          uses: { cloud: 'cloud' },
+        })
+      )
+    })
   })
 })

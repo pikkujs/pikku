@@ -1,7 +1,14 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { mapPikkuJobToPgBoss } from './pg-boss-queue-service.js'
+import {
+  PgBossQueueService,
+  mapPikkuJobToPgBoss,
+} from './pg-boss-queue-service.js'
+import { runQueueJob } from '@pikku/core/queue'
+import { defineQueueIdentityTransportTests } from '@pikku/core/testing'
+
+import { mapPgBossJobToQueueJob } from './utils.js'
 
 // These guard the contract the workflow engine relies on: a step's resolved
 // retry policy (attempts + backoff) must survive translation into pg-boss
@@ -81,3 +88,78 @@ describe('mapPikkuJobToPgBoss — group mapping', () => {
     assert.equal(mapPikkuJobToPgBoss({ attempts: 2 }).group, undefined)
   })
 })
+
+describe('traceparent on a pg-boss job', () => {
+  const traceparent = `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`
+  const row = (data: unknown) =>
+    ({ id: '1', name: 'q', data, state: 'active' }) as any
+
+  const capture = () => {
+    const sent: unknown[] = []
+    const service = new PgBossQueueService({
+      createQueue: async () => {},
+      send: async (_queue: string, data: unknown) => {
+        sent.push(data)
+        return 'job-1'
+      },
+    } as any)
+    return { service, sent }
+  }
+
+  test('add wraps the payload and the worker unwraps it', async () => {
+    const { service, sent } = capture()
+    await service.add('q', { n: 1 }, { traceparent })
+
+    assert.notDeepEqual(sent[0], { n: 1 })
+    const mapped = mapPgBossJobToQueueJob(row(sent[0]), {} as any)
+    assert.deepEqual(mapped.data, { n: 1 })
+    assert.equal(mapped.traceparent, traceparent)
+  })
+
+  test('a job with no trace stays raw', async () => {
+    const { service, sent } = capture()
+    await service.add('q', { n: 1 })
+    assert.deepEqual(sent[0], { n: 1 })
+  })
+
+  test('a job enqueued before the envelope still parses', () => {
+    const mapped = mapPgBossJobToQueueJob(row({ n: 1 }), {} as any)
+    assert.deepEqual(mapped.data, { n: 1 })
+    assert.equal(mapped.traceparent, undefined)
+  })
+
+  test('pikkuUserId travels in the envelope and not in the job options', () => {
+    assert.equal(
+      'pikkuUserId' in mapPikkuJobToPgBoss({ pikkuUserId: 'u1' } as any),
+      false
+    )
+    const mapped = mapPgBossJobToQueueJob(
+      { ...row({ n: 1 }), pikkuUserId: 'u1' },
+      {} as any
+    )
+    assert.equal(mapped.pikkuUserId, undefined)
+  })
+})
+
+const sent: unknown[] = []
+
+defineQueueIdentityTransportTests('pg-boss', () => ({
+  queueService: new PgBossQueueService({
+    createQueue: async () => {},
+    send: async (_queue: string, data: unknown) => {
+      // The job table keeps JSON.
+      sent.push(JSON.parse(JSON.stringify(data)))
+      return `job-${sent.length}`
+    },
+  } as any),
+  deliver: async () => {
+    for (const data of sent.splice(0)) {
+      await runQueueJob({
+        job: mapPgBossJobToQueueJob(
+          { id: '1', name: 'identity-transport', data, state: 'active' } as any,
+          {} as any
+        ),
+      })
+    }
+  },
+}))

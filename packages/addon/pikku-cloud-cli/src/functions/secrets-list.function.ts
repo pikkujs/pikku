@@ -36,7 +36,7 @@ export const CloudSecretsList = pikkuSessionlessFunc({
       ctx.projectId,
       requested
     )
-    const result = await rpc.invoke('listStageSecretNames', { stageId })
+    const result = await rpc.invoke('cloud:listStageSecretNames', { stageId })
 
     if (json) {
       console.log(JSON.stringify({ branch, secrets: result.secrets }, null, 2))

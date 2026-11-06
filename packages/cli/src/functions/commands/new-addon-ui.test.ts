@@ -20,6 +20,13 @@ test('every title is a key in the en catalog, which pikku all insists on', () =>
   assert.ok(JSON.parse(files['package.json']).files.includes('messages'))
 })
 
+test("the package ships the addon's agents and skills, which Studio reads from it", () => {
+  const files = addonUiFiles('invoice-tracker')
+  const published = JSON.parse(files['package.json']).files
+  assert.ok(published.includes('agents'))
+  assert.ok(published.includes('skills'))
+})
+
 test('the screen scope is one the shipped function enforces', () => {
   const files = addonUiFiles('invoice-tracker')
   assert.match(
@@ -53,4 +60,13 @@ test('the scaffold declares the services types and factory pikku all requires', 
     files['src/functions/hello.function.ts'],
     /#pikku\/addon\/function/
   )
+})
+
+test('package.json carries the studio block Studio links the addon by', () => {
+  const pkg = JSON.parse(addonUiFiles('invoice-tracker')['package.json'])
+  assert.deepEqual(pkg.studio, {
+    addon: 'invoice-tracker',
+    ui: './src',
+    messages: './messages/{locale}.json',
+  })
 })

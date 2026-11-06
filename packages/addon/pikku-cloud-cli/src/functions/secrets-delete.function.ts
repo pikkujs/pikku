@@ -60,7 +60,10 @@ export const CloudSecretsDelete = pikkuSessionlessFunc({
       }
     }
 
-    const result = await rpc.invoke('deleteStageSecret', { stageId, name })
+    const result = await rpc.invoke('cloud:deleteStageSecret', {
+      stageId,
+      name,
+    })
 
     console.log(`[cloud] deleted ${result.name} from ${branch}`)
     if (result.runId) {
