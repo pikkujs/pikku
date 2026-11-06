@@ -270,7 +270,7 @@ impl Context<'_> {
                 if let Some(n) = v.num {
                     f = n;
                 } else if let Some(s) = &v.str {
-                    match s.trim().parse::<f64>() {
+                    match s.parse::<f64>() {
                         Ok(x) => f = x,
                         Err(_) => ok = false,
                     }

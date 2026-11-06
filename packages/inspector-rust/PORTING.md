@@ -91,9 +91,36 @@ swept sections, `validationPass`, and 4 diagnostics.
   PORTING.md, which lists the project-file count differences). tsrs follows
   typescript-go, so expect the same extra generated files in the sweep.
 
+## Shared helpers other porters call
+
+* `tsutil::{text, props, governance, route, print, types}`: node text/start (`node_text`, `node_start`, `start_utf16`),
+  `get_property_value` / `PropValue`, `find_property_assignment`, `literal_*` readers, `path_params`,
+  `route_matches_pattern`, `print_node` (the paren-cutting `PrintNode`), `js_number*`, `rel_path`.
+* `visit::util_names` (`extract_function_name`, `ref_id`, `temp_func_id`, `resolve_alias`, `symbol_at`,
+  `is_named_export`), `util_callee` (`resolve_callee_name`), `util_props` (`get_common_wire_meta_data`,
+  `extract_string_literal`, `extract_function_node`, `get_property_assignment_initializer`),
+  `util_types` (`type_to_string`, `unwrap_promise`, `get_names_and_types`, `resolve_type_name`),
+  `util_schema` (`resolve_schema_ref`), `util_wire_meta`, `util_middleware` (`resolve_middleware`,
+  `resolve_permissions`, `definition_id`, `find_call`), `util_channel_cli`, `util_shared` (`JsObject`,
+  `wiring_call`, `literal_named_property`, `definer_declaration`, `module_exported_name`, `node_position`).
+* `Context.types_lookup` (Go `typesLookup`) and `Context.core_types` are filled by the ported groups.
+* `boundary.rs` holds the few functions that live in Go files owned by another porter and are called from the core
+  groups. Faithful: `resolve_function_meta`, `validate_auth_sessionless`, `read_function_disabled`,
+  `record_disabled_function`, `add_mcp_tool`. STUBS (replace in the commit that ports the Go file):
+  `resolve_addon_name`, `addon_package`, `addon_zod_contract_violation`, `check_classification`, and
+  `resolve_versions::update_channel_and_cli_references`.
+
+## tsrs differences hit by the core visitors
+
+* tsrs parses an interface's `extends` elements as type references; Go gets `ExpressionWithTypeArguments`.
+  `ast::get_heritage_clause_element_name` returns the name expression of either.
+* Internal symbol names start with U+007F in tsrs (Go: byte 0xFE); `tsutil::symbol_name` maps them to `__`.
+* `Node::expression()` panics for kinds without one where Go's returns nil; every call site is guarded by a kind test.
+* `P<SourceFile>::file_name()` borrows the temporary; use `.get().file_name()` for a `'static` str.
+
 ## Known gaps
 
-* **Visitor groups, typesmap `CanonicalTypeString`, schemas, finalize, source
+* **Visitor groups other than the core ones (see README), typesmap `CanonicalTypeString`, schemas, finalize, source
   scans and every `helper` method are not ported.** `finalize::response` is a
   no-op, so `inspect --stdin` returns `finalized: false` where Go returns `true`
   (and no `validationPass`).

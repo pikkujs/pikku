@@ -87,9 +87,8 @@ pub fn get_property_value(obj: P<Node>, name: &str) -> PropValue {
         if name == "name" || name == "schedule" {
             return PropValue { present: true, str: Some(init.text().to_string()), ..Default::default() };
         }
-        let f = super::js_number(init.text());
-        // Go: strconv.ParseFloat error is ignored, giving 0 for NaN text.
-        let f = if f.is_nan() { 0.0 } else { f };
+        // Go: `f, _ := strconv.ParseFloat(text, 64)`; an error leaves 0.
+        let f = init.text().parse::<f64>().unwrap_or(0.0);
         return PropValue { present: true, num: Some(f), ..Default::default() };
     }
     if let Some(s) = fold_static_string(init) {
