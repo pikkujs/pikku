@@ -71,13 +71,15 @@ pub fn type_to_type_node(c: &mut Checker, t: P<Type>, enclosing: Option<P<Node>>
 pub(super) fn sort_nodes_by_key<K: Ord>(nodes: &'static [P<Node>], key: impl Fn(P<Node>) -> K) {
     let mut sorted: Vec<P<Node>> = nodes.to_vec();
     sorted.sort_by_key(|n| key(*n));
-    // SAFETY: the list was allocated by the node builder for this printing and
-    // is not shared with another thread or read while we write.
-    unsafe {
-        let dst = nodes.as_ptr() as *mut P<Node>;
-        for (i, n) in sorted.into_iter().enumerate() {
-            dst.add(i).write(n);
-        }
+    // The list is arena memory private to the node tree the node builder just
+    // built for this call, written in place as Go's `slices.SortStableFunc`
+    // does. The address goes through an integer and the stores are volatile so
+    // the compiler cannot treat the `&[T]` the list was read through as
+    // read-only memory and drop them (they were dropped in release builds).
+    let addr = nodes.as_ptr() as usize;
+    for (i, n) in sorted.into_iter().enumerate() {
+        // SAFETY: `i` is in bounds of the list; nothing else reads it while we write.
+        unsafe { std::ptr::write_volatile((addr as *mut P<Node>).add(i), n) };
     }
 }
 

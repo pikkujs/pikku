@@ -26,6 +26,13 @@ export function charge(ok: boolean) {
 export const charged = charge(true)
 
 export declare const promised: Promise<void> | Promise<any>
+
+declare function prettify<T>(value: T): { [K in keyof T]: T[K] }
+type Optionals = { description?: string; dueDate?: string }
+type Requireds = { id: string; title: string }
+export const flattened = prettify(null as unknown as Requireds & Optionals)
+export declare const flattenedInline: { [K in keyof (Requireds & Optionals)]: (Requireds & Optionals)[K] }
+export const wrapped = { rows: [prettify(null as unknown as Requireds & Optionals)] }
 "#;
 
 #[test]
@@ -72,6 +79,24 @@ fn type_to_string_order() {
             "",
         ),
         ("promised", "Promise<void> | Promise<any>", "Promise<any> | Promise<void>"),
+        (
+            // A homomorphic mapped type over an intersection lists the
+            // intersection's members' properties in turn; tsrs sorts them by
+            // declaration position.
+            "flattened",
+            "{ id: string; title: string; description?: string | undefined; dueDate?: string | undefined; }",
+            "{ description?: string | undefined; dueDate?: string | undefined; id: string; title: string; }",
+        ),
+        (
+            "flattenedInline",
+            "{ id: string; title: string; description?: string | undefined; dueDate?: string | undefined; }",
+            "",
+        ),
+        (
+            "wrapped",
+            "{ rows: { id: string; title: string; description?: string | undefined; dueDate?: string | undefined; }[]; }",
+            "",
+        ),
     ];
     let mut failures = Vec::new();
     for (name, want, tsgo) in cases {

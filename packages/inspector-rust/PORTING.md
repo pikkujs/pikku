@@ -59,16 +59,42 @@ swept sections, `validationPass`, and 4 diagnostics.
 
 ## Where tsrs differs from typescript-go
 
-* **Object-type property order.** tsrs prints object-type properties in
+* **Object-type property order (ported: `tsutil::typeorder` / `unionorder`).**
+  tsrs prints object-type properties in
   typescript-go's native order. The Go inspector then reorders them back to
   old-TypeScript (Strada) order: union members by type id and mapped-type
   properties by key-literal id (`internal/tsutil/typeorder.go`,
   `ReorderTypeNode`; the reasoning is in
   `packages/inspector-go/knowledge/decisions/union-and-property-order-follow-type-ids.md`).
   A Rust port must reproduce that reorder, including making the checker calls TS
-  makes so ids are created in the same order (`dslCtx.touchType`). tsrs has a
-  `stable_type_ordering` compiler option (`tsrs_core::CompilerOptions`); it has
-  not been evaluated against Strada's order, do not assume it is the answer.
+  makes so ids are created in the same order (`dslCtx.touchType`).
+  `stable_type_ordering` (`tsrs_core::CompilerOptions`) was evaluated and is
+  **not** the answer: it is parsed and declared, but nothing in the checker or
+  the pinned typescript-go reads it (grep `StableTypeOrdering`: only
+  `compileroptions.go` and the option tables), so it changes no order.
+  Measured with `scripts/typesmap-diff.py`: 1120 of the 1130 `customTypes`
+  entries Go writes over the 64 projects are byte-equal in Rust (the other ten
+  are entries of unported groups: agents' `TodoAssistantOutput`, gateway
+  outputs), and all 37 `map` entries.
+  What tsrs does not expose, and the workaround
+  (`tsutil/typeorder.rs`, `unionorder.rs`): `get_string_literal_type` and
+  `get_number_literal_type` are `pub(crate)`. A string literal type is
+  obtained by resolving a synthesized `LiteralTypeNode` (parented to an empty
+  statement, because the checker walks up to a statement). A number literal
+  cannot be (the grammar check reads the node's source text), so number
+  literal types are collected while walking the printed type and looked up
+  by value; a union of number literals whose members were never met on the
+  way down is left unsorted. `format_union_types` is re-implemented from public
+  pieces. `get_modifiers_type_from_mapped_type`, `MappedType::declaration` and
+  `Type::mapper` are `pub(crate)`: the modifiers type of a homomorphic mapped
+  type (`Prettify<A & B>`, zod's `util.Flatten`) is read off the mapped type's
+  template (`T[K]` -> `T`) after `MappedType::resolve_components`; a mapped
+  type whose template does not index `T` by `K` and whose `keyof` operand
+  mentions a type variable keeps tsrs's own order (example: none seen in the
+  64 projects). The node lists are sorted in place through `write_volatile`
+  on an address passed as an integer: `NodeList::nodes()` is a shared slice,
+  and a plain write through it was dropped by the optimiser in release builds
+  (every test passed in debug). The release build is what the scoreboard runs.
 * **`typeToString` flags.** Always pass `TypeFormatFlags::NoTruncation` through
   one wrapper (`type_to_string_ex_exported`); never per call site. Several
   checker methods are `pub(crate)` in tsrs and are reached through `_exported`

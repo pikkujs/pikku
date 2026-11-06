@@ -24,7 +24,7 @@
 //! rather than being sorted by its modifiers type's order.
 
 use tsrs_ast::{Kind, Node, NodeFlags, SymbolFlags};
-use tsrs_checker::{Checker, ObjectFlags, Type, TypeFlags};
+use tsrs_checker::{Checker, MappedType, ObjectFlags, Type, TypeFlags};
 use tsrs_core::P;
 
 use super::unionorder::{
@@ -296,23 +296,74 @@ fn is_mapped(t: P<Type>) -> bool {
     t.flags().intersects(TypeFlags::Object) && t.object_flags().intersects(ObjectFlags::Mapped)
 }
 
-/// `isMappedTypeWithKeyofConstraintDeclaration`, from the mapped type node: the
-/// type's symbol's first declaration is its MappedType node.
-fn is_mapped_type_with_keyof_constraint_declaration(t: P<Type>) -> bool {
-    let Some(decl) = t.symbol().and_then(|s| s.declarations().first().copied()) else { return false };
+/// The keyof operand of a mapped type with a `keyof` constraint declaration
+/// (`isMappedTypeWithKeyofConstraintDeclaration`, from the mapped type node: the
+/// type's symbol's first declaration is its MappedType node).
+fn keyof_operand(t: P<Type>) -> Option<P<Node>> {
+    let decl = t.symbol().and_then(|s| s.declarations().first().copied())?;
     if decl.kind() != Kind::MappedType {
-        return false;
+        return None;
     }
-    let Some(constraint) = decl.as_mapped_type_node().type_parameter().as_type_parameter_declaration().constraint() else {
-        return false;
+    let constraint = decl.as_mapped_type_node().type_parameter().as_type_parameter_declaration().constraint()?;
+    if constraint.kind() == Kind::TypeOperator && constraint.as_type_operator_node().operator == Kind::KeyOfKeyword {
+        return constraint.type_node();
+    }
+    None
+}
+
+/// The `T` of a homomorphic mapped type, read off its template type: the
+/// object type of the innermost indexed access whose index is the mapped
+/// type's own type parameter (`T[K]`, `T[K]["a"]`, ...). The template is
+/// instantiated with the mapper, so for `Prettify<A & B>` this is `A & B`.
+fn template_object_type(c: &mut Checker, t: P<Type>) -> Option<P<Type>> {
+    // The same components resolveMappedTypeMembers computes; they are cached
+    // on the type but only read through accessors.
+    MappedType::resolve_components(c, t);
+    let m = t.as_mapped_type();
+    let k = m.type_parameter()?;
+    let mut cur = m.template_type()?;
+    let mut found = None;
+    for _ in 0..MAX_REORDER_DEPTH {
+        if !cur.flags().intersects(TypeFlags::IndexedAccess) {
+            break;
+        }
+        let ia = cur.as_indexed_access_type();
+        let (obj, idx) = (ia.object_type()?, ia.index_type()?);
+        if idx == k {
+            found = Some(obj);
+        }
+        cur = obj;
+    }
+    found
+}
+
+/// `getModifiersTypeFromMappedType` for a mapped type with a keyof constraint:
+/// the type `T` of `keyof T`, instantiated. tsrs keeps
+/// `Checker::get_modifiers_type_from_mapped_type`, the mapped type's
+/// declaration and `Type::mapper` `pub(crate)`, so `T` is taken from the
+/// template type (see [`template_object_type`]); when the template does not
+/// index `T` by the iteration parameter and the `keyof` operand does not
+/// mention a type variable, the operand's own type is used. `None` otherwise:
+/// the type keeps its own order. See PORTING.md.
+fn modifiers_type(c: &mut Checker, t: P<Type>) -> Option<P<Type>> {
+    let resolved = match template_object_type(c, t) {
+        Some(o) => o,
+        None => {
+            let base = c.get_type_from_type_node_exported(keyof_operand(t)?);
+            if base.flags().intersects(TypeFlags::TypeParameter)
+                || base.object_flags().intersects(ObjectFlags::CouldContainTypeVariables)
+            {
+                return None;
+            }
+            base
+        }
     };
-    constraint.kind() == Kind::TypeOperator && constraint.as_type_operator_node().operator == Kind::KeyOfKeyword
+    Some(c.get_apparent_type_exported(resolved))
 }
 
 /// The order Strada lays out t's properties in.
 ///   - A homomorphic mapped type (`{ [K in keyof T]: X }`) iterates T's
-///     properties, so it keeps T's order. (tsrs: the modifiers type is not
-///     reachable, so the type's own order stands; see PORTING.md.)
+///     properties, so it keeps T's order ([`modifiers_type`] recovers T).
 ///   - Any other mapped type iterates its key union, which Strada keeps in id
 ///     order and typescript-go in value order; the keys are string literals,
 ///     interned, so their ids give back Strada's order.
@@ -327,8 +378,11 @@ fn property_order(c: &mut Checker, t: P<Type>, depth: usize) -> Vec<String> {
     if depth > MAX_REORDER_DEPTH {
         return names;
     }
-    if is_mapped(t) && is_mapped_type_with_keyof_constraint_declaration(t) {
-        return names;
+    if is_mapped(t) && keyof_operand(t).is_some() {
+        return match modifiers_type(c, t) {
+            Some(m) => order_by(names, &property_order(c, m, depth + 1)),
+            None => names,
+        };
     }
     if is_mapped(t) {
         let mut keys: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
