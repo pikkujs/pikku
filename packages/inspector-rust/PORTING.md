@@ -147,9 +147,17 @@ swept sections, `validationPass`, and 4 diagnostics.
 
 ## Known gaps
 
-* **Visitor groups other than the core ones (see README), typesmap
-  `CanonicalTypeString`, schemas, source scans and every `helper` method are
-  not ported.** `finalize` is ported (below).
+* **ValidatePikkuStudio** (`group_pikku_studio.go`) is not ported: its
+  helpers (`studioView`, `validateStudioAgent`, the catalog readers) live in
+  the 633-line group, which is not ported either.
+* **Addons: `FunctionMeta` decoding** of an addon's published entry is per key
+  (a field of the wrong type, or `null` for a string or slice, is skipped and
+  the rest filled, like Go's ignored `json.Unmarshal` error); inside a nested
+  struct (`services`) serde is all-or-nothing where Go fills what it can.
+  `Context.addons` is rebuilt from `state.rpc.wireAddonDeclarations` (same
+  values, same first-set order) instead of being kept beside the state.
+* **Visitor groups other than the core ones (see README) and the addon/check
+  ones, schemas, source scans and every `helper` method are not ported.** `finalize` is ported (below).
 * **Legacy bench mode** (`pikku-inspect [-timing] <projectDir>`) is not ported;
   the CLI prints an error and exits 1.
 * **`typeDiagnostics`** in `serve` (Go's `typecheck.Service`) answers with an
