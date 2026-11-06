@@ -46,5 +46,7 @@ rebuilds the program from a parsed-file cache; TypeScript 6 kept live language
 service projects (an LRU of four). The answer is the same; the cost on a large
 project has not been measured.
 
+**The verify type-check needs the project's own TypeScript.** `runVerify` runs `tsc` over the project it checks, and `@pikku/code-edit` no longer depends on `typescript` to fall back on. `resolveTsc` finds the project's compiler first, then whatever this package resolves (the TypeScript 6 compat package in this monorepo ships `tsc6`, not `tsc`, and is read from its `package.json` `bin`). With none it fails with "No TypeScript compiler found: install `typescript` in the project", which `runVerify` reports as a finding, not a silent pass.
+
 **What is not matched:** syntax-error recovery beyond a few hand-written broken
 files, and a lone surrogate inside an `allowed` string passed from JavaScript.
