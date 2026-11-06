@@ -17,6 +17,71 @@
 //!   chain panic with an UnknownNodeError; `SubNodeParser::create_type` always
 //!   has a node.
 
+pub mod shared;
+
+pub mod annotated_node_parser;
+pub mod annotations_reader;
+pub mod any_type_node_parser;
+pub mod array_literal_expression_node_parser;
+pub mod array_node_parser;
+pub mod as_expression_node_parser;
+pub mod basic_annotations_reader;
+pub mod binary_expression_node_parser;
+pub mod boolean_literal_node_parser;
+pub mod boolean_type_node_parser;
+pub mod call_expression_parser;
+pub mod conditional_type_node_parser;
+pub mod constructor_node_parser;
+pub mod enum_node_parser;
+pub mod expose_node_parser;
+pub mod expression_with_type_arguments_node_parser;
+pub mod extended_annotations_reader;
+pub mod full_description;
+pub mod function_node_parser;
+pub mod hidden_type_node_parser;
+pub mod identifier_node_parser;
+pub mod import_type_node_parser;
+pub mod indexed_access_type_node_parser;
+pub mod infer_type_node_parser;
+pub mod interface_and_class_node_parser;
+pub mod intersection_node_parser;
+pub mod intrinsic_node_parser;
+pub mod is_assignable_to;
+pub mod json5;
+pub mod literal_node_parser;
+pub mod mapped_type_node_parser;
+pub mod named_tuple_member_node_parser;
+pub mod narrow_type;
+pub mod never_type_node_parser;
+pub mod new_expression_parser;
+pub mod null_literal_node_parser;
+pub mod number_literal_node_parser;
+pub mod number_type_node_parser;
+pub mod object_literal_expression_node_parser;
+pub mod object_type_node_parser;
+pub mod optional_type_node_parser;
+pub mod parameter_parser;
+pub mod parenthesized_node_parser;
+pub mod prefix_unary_expression_node_parser;
+pub mod promise_node_parser;
+pub mod property_access_expression_parser;
+pub mod rest_type_node_parser;
+pub mod satisfies_node_parser;
+pub mod spread_element_node_parser;
+pub mod string_literal_node_parser;
+pub mod string_template_literal_node_parser;
+pub mod string_type_node_parser;
+pub mod symbol_type_node_parser;
+pub mod tuple_node_parser;
+pub mod type_alias_node_parser;
+pub mod type_literal_node_parser;
+pub mod typeof_node_parser;
+pub mod type_operator_node_parser;
+pub mod type_reference_node_parser;
+pub mod undefined_type_node_parser;
+pub mod union_node_parser;
+pub mod unknown_type_node_parser;
+pub mod void_type_node_parser;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -43,6 +108,11 @@ impl Chk {
         let mut h = self.0.borrow_mut();
         f(&mut h)
     }
+}
+
+/// A position as Go's int: synthesized positions are -1.
+pub fn text_pos(p: tsrs_core::TextPos) -> i64 {
+    p.source_offset().map(|v| v as i64).unwrap_or(-1)
 }
 
 /// Identity of a node, for Go's `map[*ast.Node]...`.
@@ -178,8 +248,8 @@ pub fn get_node_key(node: P<Node>, ctx: &Context) -> String {
                     file_hash = types::hash_str(&node_key_file_name(source.file_name()));
                 }
                 ids.push(file_hash.clone());
-                ids.push(n.pos().to_string());
-                ids.push(n.end().to_string());
+                ids.push(text_pos(n.pos()).to_string());
+                ids.push(text_pos(n.end()).to_string());
             }
         }
         cur = n.parent();
@@ -201,7 +271,7 @@ pub fn describe_node(node: Option<P<Node>>) -> String {
     let mut pos = String::new();
     if let Some(source) = tsrs_ast::get_source_file_of_node(node) {
         // line/character need the line map; the position suffices for a message.
-        pos = format!(" ({}:{})", source.file_name(), node.pos());
+        pos = format!(" ({}:{})", source.file_name(), text_pos(node.pos()));
     }
     format!("kind={:?}{pos}", node.kind())
 }

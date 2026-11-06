@@ -4,6 +4,37 @@
 //!
 //! Failures are `super::fail(msg)` (Go `panic(err)`).
 
+pub mod alias_type_formatter;
+pub mod all_of_definition;
+pub mod annotated_type_formatter;
+pub mod any_type_formatter;
+pub mod array_type_formatter;
+pub mod boolean_type_formatter;
+pub mod constructor_type_formatter;
+pub mod definition_type_formatter;
+pub mod enum_type_formatter;
+pub mod function_type_formatter;
+pub mod hidden_type_formatter;
+pub mod intersection_type_formatter;
+pub mod literal_type_formatter;
+pub mod literal_union_type_formatter;
+pub mod make_nullable;
+pub mod never_type_formatter;
+pub mod null_type_formatter;
+pub mod number_type_formatter;
+pub mod object_type_formatter;
+pub mod optional_type_formatter;
+pub mod primitive_union_type_formatter;
+pub mod reference_type_formatter;
+pub mod rest_type_formatter;
+pub mod string_type_formatter;
+pub mod symbol_type_formatter;
+pub mod tuple_type_formatter;
+pub mod type_name;
+pub mod undefined_type_formatter;
+pub mod union_type_formatter;
+pub mod unknown_type_formatter;
+pub mod void_type_formatter;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;

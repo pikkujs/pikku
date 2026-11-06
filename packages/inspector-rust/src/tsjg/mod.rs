@@ -9,6 +9,8 @@ pub mod config;
 pub mod formatter;
 pub mod parser;
 pub mod schema;
+pub mod tsutils;
+pub mod typenode;
 pub mod types;
 
 /// The panic payload for a generator error (Go: `panic(err)`).
