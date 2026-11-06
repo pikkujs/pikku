@@ -31,7 +31,7 @@ Store `fileKey` on the row. Not a URL, which expires. Not the file. Not `assetKe
 
 Private unless you pass `visibility: 'public'`. Read through `content.getDownloadURL({ bucket, key, expiresInSeconds })`: a signed URL, minted per view, for an `<img>` or a link.
 
-Anyone holding it can read the file, so the function handing it out decides who may: **put a `permissions` entry on it.**
+Anyone holding it can read the file, so the function handing it out decides who may. **The functions that sign an upload, save a key or sign a read each take an id, so each gets a `pikkuPermission` that loads that row.** A check in the body, or a signed-in check alone, does not count.
 
 Public and private are separate stores: pass the same `visibility` on every call, or a public file answers 404.
 
