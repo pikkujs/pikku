@@ -85,7 +85,7 @@ impl InterfaceAndClassNodeParser {
             return None;
         }
         let expr = clause_types[0];
-        let symbol = tsutils::get_symbol_at_location(&self.type_checker, Some(expr.as_expression_with_type_arguments().expression()));
+        let symbol = tsutils::get_symbol_at_location(&self.type_checker, Some(tsrs_ast::get_heritage_clause_element_name(expr)));
         match symbol {
             Some(s) if s.name() == "Array" || s.name() == "ReadonlyArray" => {}
             _ => return None,
