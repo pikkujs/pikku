@@ -10,10 +10,11 @@ import type {
   FlagSubject,
 } from '@pikku/core/flag'
 import { CachedFlagSource, subjectIdOf } from '@pikku/core/flag'
+import { NotFoundError } from '@pikku/core/errors'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { requirePikkuSchema } from './schema/index.js'
-import { INSERTED, isMysql, upsert } from './kysely-upsert.js'
+import { INSERTED, insertOrIgnore, isMysql, upsert } from './kysely-upsert.js'
 import { flagSchema } from './schema/flag.schema.js'
 
 export type KyselyFeatureFlagStoreOptions = CachedFlagSourceOptions
@@ -176,12 +177,49 @@ export class KyselyFeatureFlagStore
     }))
   }
 
+  /**
+   * Gives an operator's write a row to land on.
+   *
+   * A declared flag has no row until `syncFlags` runs, and an UPDATE on nothing
+   * succeeds: without this, turning a flag off before the first sync would
+   * report success and leave the feature on. The row starts enabled because
+   * that is what an absent row already means, so a rollout or an override set
+   * here narrows what is live rather than also darkening it.
+   *
+   * A name that is neither stored nor declared is refused, for the same reason:
+   * a misspelt kill switch has to be an error, not a success that did nothing.
+   */
+  private async ensureRow(key: string): Promise<void> {
+    const declared = this.declaredFlags().find((flag) => flag.name === key)
+    if (declared) {
+      await insertOrIgnore(
+        this.db,
+        this.db.insertInto('pikkuFeatureFlags').values({
+          name: declared.name,
+          description: declared.description ?? null,
+          anyOf: declared.anyOf ? JSON.stringify(declared.anyOf) : null,
+          enabled: true,
+          declared: true,
+        }),
+        ['name']
+      ).execute()
+      return
+    }
+    const row = await this.db
+      .selectFrom('pikkuFeatureFlags')
+      .select('name')
+      .where('name', '=', key)
+      .executeTakeFirst()
+    if (!row) throw new NotFoundError(`Unknown feature flag: ${key}`)
+  }
+
   async setEnabled(
     key: string,
     enabled: boolean,
     virtualUser?: string,
     note?: string
   ): Promise<void> {
+    await this.ensureRow(key)
     await this.db
       .updateTable('pikkuFeatureFlags')
       .set({
@@ -205,6 +243,7 @@ export class KyselyFeatureFlagStore
         `Feature flag '${key}': rollout must be between 0 and 100, got ${percent}.`
       )
     }
+    await this.ensureRow(key)
     await this.db
       .updateTable('pikkuFeatureFlags')
       .set({
@@ -229,6 +268,7 @@ export class KyselyFeatureFlagStore
         `Feature flag '${key}': an override needs an organization or a user to be about.`
       )
     }
+    await this.ensureRow(key)
     // `grantedAt` is rewritten too: the column defaults on insert only, and the
     // panel reads it as when the pin was last granted — not when the subject
     // was first pinned to something else.
