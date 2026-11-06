@@ -6751,7 +6751,6 @@ export type QueueTraceAdapter = {
   stop: () => Promise<void>
   publishRaw: (queueName: string, payload: unknown) => Promise<void>
   envelope?: boolean
-  retriesDiscarded?: boolean
 }
 export interface ServiceTestConfig {
   name: string

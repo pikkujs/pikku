@@ -20,8 +20,6 @@ export type QueueTraceAdapter = {
   publishRaw: (queueName: string, payload: unknown) => Promise<void>
   /** The trace travels in the payload, so a worker unwraps what it is given. */
   envelope?: boolean
-  /** A known gap: this adapter retries a job its worker discarded. */
-  retriesDiscarded?: boolean
 }
 
 const OUTCOMES = [
@@ -66,14 +64,10 @@ const inboundFor = (inbound: Inbound) => {
   }
 }
 
-const expectedAttempts = (
-  outcome: Outcome,
-  timing: Timing,
-  retriesDiscarded?: boolean
-) => {
+const expectedAttempts = (outcome: Outcome, timing: Timing) => {
   if (timing === 'duplicate') return 2
   if (timing !== 'retried') return 1
-  return outcome === 'job-discarded' && !retriesDiscarded ? 1 : 2
+  return outcome === 'job-discarded' ? 1 : 2
 }
 
 const SEEDED_SECRETS = {
@@ -187,11 +181,7 @@ export const defineQueueTraceConformance = (
                 label,
                 traceparent,
                 inbound,
-                expected: expectedAttempts(
-                  outcome,
-                  timing,
-                  adapter.retriesDiscarded
-                ),
+                expected: expectedAttempts(outcome, timing),
               })
               const options = {
                 traceparent,

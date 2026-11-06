@@ -6,7 +6,7 @@ import type {
   QueueJobRecord,
   QueueJobStatus,
 } from './queue.types.js'
-import { runQueueJob } from './queue-runner.js'
+import { QueueJobDiscardedError, runQueueJob } from './queue-runner.js'
 
 const FINISHED_JOBS_KEPT = 100
 
@@ -16,7 +16,7 @@ const FINISHED_JOBS_KEPT = 100
  *
  * Jobs run after a short delay, payloads are JSON round-tripped as a real
  * backend would, and failed jobs are retried up to `attempts` with the given
- * backoff. Nothing is persisted, `getJob` always returns `null`, and jobs still
+ * backoff. A job its worker discarded is not retried. Nothing is persisted, `getJob` always returns `null`, and jobs still
  * pending when the process exits are lost.
  */
 export class InMemoryQueueService implements QueueService {
@@ -71,6 +71,11 @@ export class InMemoryQueueService implements QueueService {
         await runQueueJob({ job })
         this.finish(queueName, record, 'completed', null)
       } catch (e: any) {
+        // As on a real backend, a discard ends the job and is not a failure.
+        if (e instanceof QueueJobDiscardedError) {
+          this.finish(queueName, record, 'completed', null)
+          return
+        }
         record.error = e?.message ?? String(e)
         if (attemptsMade < maxAttempts) {
           record.status = 'delayed'
