@@ -184,3 +184,48 @@ export const review = pikkuWorkflowGraph({
     assert_eq!(st.workflows.graph_files.get("review").unwrap().exported_name, "review");
     assert!(st.rpc.invoked_functions.has("writeAudit"), "graph nodes are invoked functions");
 }
+
+/// A wide DSL / complex / scenario / graph fixture whose expected output is
+/// the Go inspector's own end-to-end output (`tests/workflow_edge/golden.json`,
+/// key order included; analysis then finalize, as `--stdin` runs).
+#[test]
+fn workflow_edge_fixture_matches_go() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/workflow_edge").canonicalize().unwrap();
+    let root = dir.to_string_lossy().to_string();
+    let req = Request {
+        route_files: vec![dir.join("wf.ts").to_string_lossy().to_string()],
+        options: Options {
+            tsconfig: dir.join("tsconfig.json").to_string_lossy().to_string(),
+            root_dir: root.clone(),
+            allow: Some(Allow { complex_workflows: true, ..Default::default() }),
+            ..Default::default()
+        },
+        changed_files: vec![],
+    };
+    let mut res = analyze::run(&req, None).unwrap();
+    pikku_inspect::finalize::response(&mut res, &req.options).unwrap();
+    let st = res.state.as_ref().unwrap();
+    let enc = |v: &dyn erased::Ser| v.to_json().replace(&root, "<root>");
+    let golden: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(dir.join("golden.json")).unwrap()).unwrap();
+    let text = |v: &serde_json::Value| pikku_inspect::jsjson::to_string(v).unwrap();
+    assert_eq!(enc(&st.workflows), text(&golden["workflows"]), "state.workflows");
+    assert_eq!(enc(&st.rpc.invoked_functions), text(&golden["invokedFunctions"]), "rpc.invokedFunctions");
+    let diags: Vec<_> = res
+        .diagnostics
+        .iter()
+        .filter(|d| matches!(d.code.as_deref(), Some("PKU641" | "PKU643" | "PKU675" | "PKU679")))
+        .collect();
+    assert_eq!(enc(&diags), text(&golden["diagnostics"]), "diagnostics");
+}
+
+mod erased {
+    pub trait Ser {
+        fn to_json(&self) -> String;
+    }
+    impl<T: serde::Serialize> Ser for T {
+        fn to_json(&self) -> String {
+            pikku_inspect::jsjson::to_string(self).unwrap()
+        }
+    }
+}
