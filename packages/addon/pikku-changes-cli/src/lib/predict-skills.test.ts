@@ -19,6 +19,16 @@ test('a planned schema changeset brings the architect and the database skill', (
   )
 })
 
+test('owner words for measuring and switching bring their skills', () => {
+  assert.deepEqual(predictSkills(['How many people finish checkout']), [
+    'pikku-analytics',
+  ])
+  assert.deepEqual(predictSkills(['Turn off the assistant for now']), [
+    'pikku-agent',
+    'pikku-flags',
+  ])
+})
+
 test('copy work predicts nothing', () => {
   assert.deepEqual(predictSkills(['Reword the welcome text']), [])
 })

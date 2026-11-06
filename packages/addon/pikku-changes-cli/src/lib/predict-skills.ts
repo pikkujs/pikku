@@ -19,6 +19,11 @@ const KIND_SKILLS: Array<[RegExp, string]> = [
   [/\b(translat\w*|languages?|i18n|locales?)\b/i, 'pikku-i18n'],
   [/\b(themes?|colou?rs?|fonts?|dark mode)\b/i, 'pikku-theme'],
   [/\b(search|filters?|sort\w*|paginat\w*)\b/i, 'pikku-list-query'],
+  [/\b(track\w*|measur\w*|how many|funnels?|analytics)\b/i, 'pikku-analytics'],
+  [
+    /\b(feature flags?|flags?|toggles?|rollouts?|beta|turn(ed|ing)? (on|off))\b/i,
+    'pikku-flags',
+  ],
   [/\b(screens?|pages?|buttons?|forms?|layout|menu)\b/i, 'pikku-react'],
 ]
 
