@@ -36,7 +36,7 @@ Runs name the agent by its export (`shopAssistant`), not its `name` field (`shop
 
 - **`goal` is the prompt field, and it is required.** There is no `instructions` key. `role`, `personality` and `goal` are concatenated in that order and nothing validates which text lands where; the split buys legibility only.
 - **`output` is honoured only when the agent has no tools.** On a tool-calling agent the schema is silently inert. It pairs with reading an image or document into typed data: one tool-free agent, an `output` schema, the picture passed as an `attachments` entry.
-- **A file from a screen follows the pikku-content skill first.** The browser uploads it, then a function reads it with `content.readFileAsBuffer` into `attachments`. It never reaches a function as base64.
+- **A file from a screen follows the pikku-content skill first.** The browser uploads it, then a function reads it with `content.readFileAsBuffer` into `attachments`. That function's `pikkuPermission` checks the key's owner prefix, never its body. It never reaches a function as base64.
 - **A returned `output` is validated.** The run fails with `AgentOutputValidationError` (502, `issues` lists mismatches) instead of returning a malformed object; there is no retry. A `null` for an optional field comes back absent, so `.optional()` holds.
 - **`auth` defaults to `false`**, because agents are normally invoked from an already-authenticated `pikkuFunc`. `scopes` and `permissions` are enforced either way (see `pikku-permissions`).
 - **`approvalRequired` sits on the tool function, not the agent.** The run resolves `status: 'suspended'` with `pendingApprovals`; answer with `rpc.agent.approve(runId, approvals)`.
