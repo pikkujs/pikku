@@ -25,7 +25,11 @@ import {
   type PermissionWire,
 } from '../../permissions.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
-import { ForbiddenError, MissingSessionError } from '../../errors/errors.js'
+import {
+  ForbiddenError,
+  MissingSessionError,
+  NotFoundError,
+} from '../../errors/errors.js'
 import { verifyScopes } from '../../scopes.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
@@ -386,6 +390,36 @@ export const resolveAgent = (
   }
 
   throw new Error(`AI agent not found: ${agentName}`)
+}
+
+/**
+ * The gate of the generated agent routes, called by those routes and never by
+ * `rpc.agent`, which stays open to the application's own code.
+ *
+ * A signed-in caller reaches `expose: true` agents; everything else is a 404 so
+ * hidden agent names cannot be probed. An anonymous caller reaches only those
+ * that also say `auth: false`, and gets the same 401 for every other name.
+ */
+export const assertAgentRouteAccess = (
+  agentName: string,
+  access: 'session' | 'anonymous'
+): void => {
+  const agent = findAgent(agentName)
+  if (access === 'anonymous') {
+    if (agent?.expose !== true || agent.auth !== false) {
+      throw new MissingSessionError()
+    }
+  } else if (agent?.expose !== true) {
+    throw new NotFoundError(`AI agent not found: ${agentName}`)
+  }
+}
+
+const findAgent = (agentName: string): CoreAgent | undefined => {
+  try {
+    return resolveAgent(agentName).agent
+  } catch {
+    return undefined
+  }
 }
 
 export async function assertAgentAuthorized(

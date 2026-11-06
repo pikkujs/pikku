@@ -59,13 +59,9 @@ export interface WorkflowService {
    * The payload is stored as given and validated on replay inside the workflow
    * body, so an invalid one re-closes the gate rather than failing the run.
    *
-   * A no is a decision like a yes: the workflow reads it from `decision.data`
-   * and branches, so there is no separate decline call. `reason` is the exact
-   * string given to `workflow.approval`. The session is judged against the
-   * gate's `approvers` and `approverScope`. The `owner` and `not-initiator`
-   * policies compare it with the recorded run owner; there is no other owner
-   * check outside the gate's policy.
-   *
+   * The session is the decider, judged against the gate's `approvers` and
+   * `approverScope`. Application code may call this with no session; a generated
+   * route never does.
    */
   approveStep(
     runId: string,

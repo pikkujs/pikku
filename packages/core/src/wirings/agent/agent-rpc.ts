@@ -91,11 +91,27 @@ export const createAgentRPC = (
 
     resume: async (
       runId: string,
-      input: { toolCallId: string; approved: boolean },
+      input: {
+        toolCallId: string
+        approved: boolean
+        expectedAgentName?: string
+      },
       streamOptions?: StreamAgentOptions
     ) => {
+      const { expectedAgentName, ...answer } = input
       await resumeAgent(
-        { runId, ...input },
+        {
+          runId,
+          ...answer,
+          ...(expectedAgentName === undefined
+            ? {}
+            : {
+                expectedAgentName: mapAddonCall(
+                  wire.addonNamespace,
+                  expectedAgentName
+                ),
+              }),
+        },
         wrapChannelWithAGUI(streamingChannel(), { runId }),
         params(),
         streamOptions

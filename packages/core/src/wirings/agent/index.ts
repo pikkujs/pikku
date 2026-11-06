@@ -42,6 +42,7 @@ export {
   ToolApprovalRequired,
   ToolCredentialRequired,
   agentCallOptions,
+  assertAgentRouteAccess,
   canAccessThread,
   isOwnedByPrincipal,
   threadOwnerConstraint,

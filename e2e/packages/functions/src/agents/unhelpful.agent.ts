@@ -16,6 +16,8 @@ import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
  * status is already asserted elsewhere without paying for a model.
  */
 export const unhelpfulAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'unhelpful-agent',
   description: 'Answers fluently without ever answering the question',
   goal: [

@@ -25,6 +25,10 @@ already run, because an agent is reachable from entry points that never pass
 through the function runner; re-evaluating an AND gate of side-effect-free
 predicates is idempotent.
 
+That default covers the agent, not the HTTP routes generated for it. Those want a
+session unless the agent says `expose: true` and an explicit `auth: false` — see
+[[workflow-and-agent-routes-require-a-session-and-an-opt-in]].
+
 **What this rules out:** making `auth: true` the default; checking permissions
 before scopes; skipping globals on the assumption a caller already ran them; and
 moving the gate into the individual run/stream/resume entry points, where a new

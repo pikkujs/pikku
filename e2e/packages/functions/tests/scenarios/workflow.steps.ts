@@ -24,6 +24,8 @@ import { readSseEvents } from './support.js'
 export interface WorkflowRunResult extends ScenarioHttpResponse {
   workflowName: string
   runId?: string
+  /** Who started the run, and so the only caller who may read it. */
+  userId?: string
   /** `completed`, `failed` or `cancelled`, as the caller would see it. */
   outcome: string
 }
@@ -42,23 +44,30 @@ const outcomeOf = (status: number, body: unknown): string => {
 
 const TERMINAL = ['completed', 'failed', 'cancelled', 'compensated']
 
+/**
+ * The generated routes refuse a caller without a session, and a run is readable
+ * only by whoever started it, so every step here speaks as somebody.
+ */
+const WORKFLOW_USER = 'workflow-scenario-user'
+
 const postWorkflow = async (
   apiUrl: string,
   workflowName: string,
   action: string,
   input: unknown,
-  userId?: string
+  userId: string = WORKFLOW_USER
 ): Promise<WorkflowRunResult> => {
   const response = await postScenarioJson<{ runId?: string } | undefined>(
     `${apiUrl}/workflow/${workflowName}/${action}`,
     {
       body: { data: input ?? {} },
-      headers: userId ? { 'x-user-id': userId } : {},
+      headers: { 'x-user-id': userId },
     }
   )
   return {
     ...response,
     workflowName,
+    userId,
     runId: response.body?.runId,
     outcome: outcomeOf(response.status, response.body),
   }
@@ -102,6 +111,51 @@ export const startsWorkflow = pikkuScenarioStep<
 })
 
 /**
+ * Calls a workflow route as written, sending a session only when told to, so a
+ * scenario can see what a refused caller sees.
+ */
+export const callsWorkflowRoute = pikkuScenarioStep<
+  { path: string; method?: 'GET' | 'POST'; userId?: string; body?: unknown },
+  ScenarioHttpResponse
+>({
+  name: 'callsWorkflowRoute',
+  description: 'calls a workflow route and reports what it answered',
+  template: 'calls {path}',
+  default: async (
+    _services,
+    { path, method = 'POST', userId, body },
+    { scenarioStep }
+  ) =>
+    readScenarioHttpResponse(
+      await fetch(`${requireScenarioEnv(scenarioStep).apiUrl}${path}`, {
+        method,
+        headers: {
+          'content-type': 'application/json',
+          ...(userId ? { 'x-user-id': userId } : {}),
+        },
+        body: method === 'POST' ? JSON.stringify(body ?? {}) : undefined,
+      })
+    ),
+})
+
+export const expectsRouteStatus = pikkuScenarioStep<
+  { call: ScenarioHttpResponse; status: number },
+  { status: number }
+>({
+  name: 'expectsRouteStatus',
+  description: 'expects a route to answer with an exact status',
+  template: 'expects {status}',
+  default: async (_services, { call, status }) => {
+    if (call.status !== status) {
+      throw new Error(
+        `Expected ${status}, got ${call.status} ${call.serialized}`
+      )
+    }
+    return { status }
+  },
+})
+
+/**
  * Waits for a started run to reach a terminal status.
  *
  * `/run` answers with the workflow's output and no run id, so a scenario that
@@ -128,7 +182,8 @@ export const awaitsWorkflowRun = pikkuScenarioStep<
           { status?: string } | undefined
         >(
           await fetch(
-            `${apiUrl}/workflow/${run.workflowName}/status/${run.runId}`
+            `${apiUrl}/workflow/${run.workflowName}/status/${run.runId}`,
+            { headers: { 'x-user-id': run.userId ?? WORKFLOW_USER } }
           )
         )
         last = response.serialized
@@ -137,6 +192,7 @@ export const awaitsWorkflowRun = pikkuScenarioStep<
           ? {
               ...response,
               workflowName: run.workflowName,
+              userId: run.userId,
               runId: run.runId,
               outcome: reported,
             }
@@ -220,7 +276,12 @@ export const drainsWorkflowStatusStream = pikkuScenarioStep<
     }
     const response = await fetch(
       `${requireScenarioEnv(scenarioStep).apiUrl}/workflow/${run.workflowName}/status/${run.runId}/stream`,
-      { headers: { accept: 'text/event-stream' } }
+      {
+        headers: {
+          accept: 'text/event-stream',
+          'x-user-id': run.userId ?? WORKFLOW_USER,
+        },
+      }
     )
     if (!response.ok) {
       throw new Error(`The status stream refused with ${response.status}`)

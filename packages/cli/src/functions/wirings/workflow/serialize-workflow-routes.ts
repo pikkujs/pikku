@@ -41,11 +41,13 @@ export const Acknowledged = z.object({ ok: z.literal(true) })
  * Workflow HTTP catch-all routes
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuSessionlessFunc } from '${leaf('function')}'
+import { pikkuFunc, pikkuSessionlessFunc } from '${leaf('function')}'
 import { wireHTTPRoutes } from '${leaf('http')}'
 import { MissingServiceError } from '@pikku/core/errors'
 import {
-  assertWorkflowRunOwner,
+  assertWorkflowRunAnswerable,
+  assertWorkflowRunReadable,
+  prepareWorkflowRouteStart,
   streamWorkflowRunStatus,
 } from '@pikku/core/workflow'
 import {
@@ -64,39 +66,74 @@ function assertWorkflowRunService(workflowRunService: unknown): asserts workflow
   if (!workflowRunService) throw new MissingServiceError('workflowRunService is required')
 }
 
-export const workflowStarter = pikkuSessionlessFunc({
+export const workflowStarter = pikkuFunc({
   tags: ['pikku'],
-  auth: false,
+  auth: true,
   input: WorkflowStart,
   output: WorkflowRunId,
   // workflowService is destructured (even though we delegate via rpc) so the
   // analyzer assigns workflow-state capability to this unit — without it,
   // rpc.startWorkflow() runs against a container missing workflowService.
-  func: async ({ workflowService }, { workflowName, data }, { rpc }) => {
+  func: async ({ workflowService, logger, schema }, { workflowName, data }, { rpc }) => {
     assertWorkflowService(workflowService)
-    return await rpc.startWorkflow(workflowName as any, (data ?? {}) as any)
+    const input = await prepareWorkflowRouteStart(
+      { logger, schema },
+      workflowName,
+      data ?? {},
+      'session'
+    )
+    return await rpc.startWorkflow(workflowName as any, input as any)
   },
 })
 
-export const workflowRunner = pikkuSessionlessFunc({
+/**
+ * The one way in without a session. It reaches only a workflow that declares
+ * both \`expose: true\` and \`auth: false\`, and answers 401 for every other name.
+ * The run has no owner, so nobody can read its status afterwards.
+ */
+export const workflowAnonymousStarter = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: false,
   input: WorkflowStart,
-  func: async ({ workflowService }, { workflowName, data }, { rpc }) => {
+  output: WorkflowRunId,
+  func: async ({ workflowService, logger, schema }, { workflowName, data }, { rpc }) => {
     assertWorkflowService(workflowService)
-    return await workflowService.runToCompletion(workflowName, data ?? {}, rpc)
+    const input = await prepareWorkflowRouteStart(
+      { logger, schema },
+      workflowName,
+      data ?? {},
+      'anonymous'
+    )
+    return await rpc.startWorkflow(workflowName as any, input as any)
   },
 })
 
-export const workflowStatusChecker = pikkuSessionlessFunc({
+export const workflowRunner = pikkuFunc({
   tags: ['pikku'],
-  auth: false,
+  auth: true,
+  input: WorkflowStart,
+  func: async ({ workflowService, logger, schema }, { workflowName, data }, { rpc, session }) => {
+    assertWorkflowService(workflowService)
+    const input = await prepareWorkflowRouteStart(
+      { logger, schema },
+      workflowName,
+      data ?? {},
+      'session'
+    )
+    return await workflowService.runToCompletion(workflowName, input, rpc, {
+      wire: { type: 'http', pikkuUserId: session?.userId },
+    })
+  },
+})
+
+export const workflowStatusChecker = pikkuFunc({
+  tags: ['pikku'],
+  auth: true,
   input: WorkflowRunRef,
-  func: async ({ workflowService }, { runId }, { session }) => {
+  func: async ({ workflowService }, { workflowName, runId }, { session }) => {
     assertWorkflowService(workflowService)
     const run = await workflowService.getRun(runId)
-    if (!run) throw new Error(\`Run not found: \${runId}\`)
-    assertWorkflowRunOwner(run.wire, session)
+    assertWorkflowRunReadable(run, workflowName, session)
     const status = await workflowService.getRunStatus(runId)
     if (!status) throw new Error(\`Run not found: \${runId}\`)
     return status
@@ -107,30 +144,31 @@ export const workflowStatusChecker = pikkuSessionlessFunc({
  * Minimal workflow status stream — sends step names and statuses only.
  * Use this for user-facing frontends where internal details should not be exposed.
  */
-export const workflowStatusStream = pikkuSessionlessFunc({
+export const workflowStatusStream = pikkuFunc({
   tags: ['pikku'],
-  auth: false,
+  auth: true,
   input: WorkflowRunRef,
-  func: async ({ workflowRunService }, { runId }, { channel, session }) => {
+  func: async ({ workflowRunService }, { workflowName, runId }, { channel, session }) => {
     assertWorkflowRunService(workflowRunService)
     if (!channel) return
-    await streamWorkflowRunStatus({ workflowRunService, runId, channel, session })
+    await streamWorkflowRunStatus({ workflowRunService, workflowName, runId, channel, session })
   },
 })
 
 /**
  * Full workflow status stream — includes output, error, and child run IDs.
- * Use this for admin consoles and internal tooling.
+ * Only the run's owner may read it.
  */
-export const workflowStatusStreamFull = pikkuSessionlessFunc({
+export const workflowStatusStreamFull = pikkuFunc({
   tags: ['pikku'],
-  auth: false,
+  auth: true,
   input: WorkflowRunRef,
-  func: async ({ workflowRunService }, { runId }, { channel, session }) => {
+  func: async ({ workflowRunService }, { workflowName, runId }, { channel, session }) => {
     assertWorkflowRunService(workflowRunService)
     if (!channel) return
     await streamWorkflowRunStatus({
       workflowRunService,
+      workflowName,
       runId,
       channel,
       session,
@@ -141,6 +179,8 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc({
 
 /**
  * Record a human decision against a workflow.approval() gate and wake the run.
+ *
+ * Only an \`expose: true\` workflow can be answered here, and only for its own runs.
  *
  * The decision is validated on replay inside the workflow body — the only place
  * the approval's schema value is in scope — so this route deliberately accepts
@@ -154,19 +194,17 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc({
  * before the gate has no policy to judge against yet, so it is accepted here and
  * judged on replay instead, where failing discards the decision and leaves the
  * gate closed. A caller sees either outcome depending on that timing.
- *
- * A gate that declares neither accepts a decision from anyone this route lets
- * through — gate the route with your own auth/permissions to narrow that.
  */
-export const workflowApprover = pikkuSessionlessFunc({
+export const workflowApprover = pikkuFunc({
   tags: ['pikku'],
-  auth: false,
+  auth: true,
   input: WorkflowApproval,
   output: Acknowledged,
   // See workflowStarter — destructure workflowService so the analyzer
   // assigns workflow-state capability to this unit.
-  func: async ({ workflowService }, { runId, reason, decision }, { session }) => {
+  func: async ({ workflowService }, { workflowName, runId, reason, decision }, { session }) => {
     assertWorkflowService(workflowService)
+    assertWorkflowRunAnswerable(await workflowService.getRun(runId), workflowName)
     await workflowService.approveStep(runId, reason, decision, session)
     return { ok: true as const }
   },
@@ -174,12 +212,18 @@ export const workflowApprover = pikkuSessionlessFunc({
 
 wireHTTPRoutes({
   tags: ['pikku'],
-  auth: false,
+  auth: true,
   routes: {
     workflowStart: {
       route: '/workflow/:workflowName/start',
       method: 'post',
       func: workflowStarter,
+    },
+    workflowStartAnonymous: {
+      route: '/workflow/:workflowName/start/anonymous',
+      method: 'post',
+      auth: false,
+      func: workflowAnonymousStarter,
     },
     workflowApprove: {
       route: '/workflow/:workflowName/approve/:runId',

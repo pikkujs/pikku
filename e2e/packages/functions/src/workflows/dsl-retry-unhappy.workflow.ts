@@ -4,6 +4,7 @@ export const dslRetryUnhappyWorkflow = pikkuWorkflowFunc<
   { value: number },
   { result: number }
 >({
+  expose: true,
   func: async ({}, data, { workflow }) => {
     const result = await workflow.do('Always fails', 'alwaysFails', data, {
       retries: 2,

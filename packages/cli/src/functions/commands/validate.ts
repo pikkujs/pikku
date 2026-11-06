@@ -1,4 +1,4 @@
-import { findPikkuRoot } from '@pikku/code-edit/verify'
+import { setValidateExitCode } from '../validate/validate-exit-code.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   ValidateInput,
@@ -25,23 +25,16 @@ export const validate = pikkuSessionlessFunc({
     },
     { rpc }
   ) => {
-    const report = await runProjectValidate(process.cwd(), {
+    const result = await runProjectValidate(process.cwd(), {
       skipTypecheck,
       skipDeployChecks,
       migrationsBase,
       projectChecks: guardProjectChecks((request) =>
         (rpc.invoke as any)('cloudCli:CloudProjectChecks', request)
       ),
-      verify: {
-        codegen,
-        strict,
-        skipFrontends,
-        pikkuCli: process.argv[1],
-        rootDir: findPikkuRoot(process.cwd()) ?? undefined,
-      },
     })
-    if (!report.ok) process.exitCode = 1
-    return report
+    setValidateExitCode(result)
+    return result
   },
 })
 
