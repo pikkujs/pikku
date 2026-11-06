@@ -78,12 +78,25 @@ export const renderTscFull = (result: TscCheckResult): string => {
  */
 export const runProjectTypecheck = (
   tsconfigPath: string,
-  rootDir: string
+  rootDir: string,
+  timeoutMs?: number
 ): TscCheckResult => {
   const run = spawnSync(
     process.execPath,
     [resolveTsc(rootDir), '-p', tsconfigPath, '--noEmit', '--pretty', 'false'],
-    { cwd: rootDir, encoding: 'utf8', maxBuffer: MAX_OUTPUT_BYTES }
+    {
+      cwd: rootDir,
+      encoding: 'utf8',
+      maxBuffer: MAX_OUTPUT_BYTES,
+      timeout: timeoutMs,
+      killSignal: 'SIGKILL',
+    }
   )
+  // A killed tsc printed nothing, which would otherwise parse as a clean pass.
+  if (run.status === null) {
+    throw new PikkuTypecheckFailedError(
+      `tsc did not finish for ${tsconfigPath} (${run.signal ?? run.error?.message})`
+    )
+  }
   return parseTscOutput(`${run.stdout ?? ''}\n${run.stderr ?? ''}`, rootDir)
 }

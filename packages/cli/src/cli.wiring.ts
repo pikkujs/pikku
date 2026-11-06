@@ -51,6 +51,7 @@ import {
   renderReleasePrepare,
 } from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
+import { check, renderCheck } from './functions/commands/check.js'
 import { pikkuVerify, renderPikkuVerify } from './functions/commands/verify.js'
 import {
   examplesAdd,
@@ -574,11 +575,25 @@ wireCLI({
     },
     watch: pikkuCLICommand({
       func: watch,
-      description: 'Watch for file changes and regenerate automatically',
+      description:
+        'Watch for file changes, regenerate, type-check, and keep .pikku/status.json current for `pikku check`',
       options: {
         hmr: {
           description: 'Enable hot module reload for registered functions',
           default: false,
+        },
+      },
+    }),
+    check: pikkuCLICommand({
+      func: check,
+      render: renderCheck,
+      description:
+        "Report whether the project builds and type-checks: asks the running watcher, or does a full run if there isn't one",
+      options: {
+        timeout: {
+          description:
+            'Seconds to wait before failing and naming the stuck stage',
+          default: '120',
         },
       },
     }),

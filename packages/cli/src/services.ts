@@ -36,7 +36,7 @@ import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
 import type { ForwardedLogMessage } from './services/cli-logger-forwarder.service.js'
 import { CLILoggerForwarder } from './services/cli-logger-forwarder.service.js'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import { loadManifest } from './utils/contract-versions.js'
 import { getTsWriteGeneration } from './utils/file-writer.js'
@@ -68,6 +68,29 @@ const LINT_DEFAULTS: NonNullable<PikkuCLIConfig['lint']> = {
   functionDynamicImport: 'warn',
 }
 
+/** Line and column are 1-based, the way an editor and `tsc` count them. */
+export const diagnosticPosition = ({
+  sourceFile,
+  position,
+}: Pick<InspectorDiagnostic, 'sourceFile' | 'position'>): {
+  file?: string
+  line?: number
+  column?: number
+} => {
+  if (!sourceFile) return {}
+  try {
+    const before = readFileSync(sourceFile, 'utf8').slice(0, position)
+    const lines = before.split('\n')
+    return {
+      file: sourceFile,
+      line: lines.length,
+      column: lines[lines.length - 1]!.length + 1,
+    }
+  } catch {
+    return { file: sourceFile }
+  }
+}
+
 export function processDiagnostics(
   diagnostics: InspectorDiagnostic[],
   lint?: PikkuCLIConfig['lint'],
@@ -79,7 +102,11 @@ export function processDiagnostics(
       ? (lint?.[lintKey] ?? LINT_DEFAULTS[lintKey] ?? 'off')
       : 'off'
     if (severity === 'error') {
-      log.critical(diagnostic.code as ErrorCode, diagnostic.message)
+      log.critical(
+        diagnostic.code as ErrorCode,
+        diagnostic.message,
+        diagnosticPosition(diagnostic)
+      )
     } else if (severity === 'warn') {
       log.warn(`[${diagnostic.code}] ${diagnostic.message}`)
     }

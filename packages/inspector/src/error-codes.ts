@@ -180,4 +180,8 @@ export interface CodedDiagnostic {
   severity: DiagnosticSeverity
   code: ErrorCode
   message: string
+  /** Where the problem is, when the reporter knows. */
+  file?: string
+  line?: number
+  column?: number
 }
