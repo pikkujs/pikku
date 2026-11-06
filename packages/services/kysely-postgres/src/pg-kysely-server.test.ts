@@ -12,6 +12,7 @@ import { applyPikkuSchemas, workflowSchema } from '@pikku/kysely'
 import { defineServiceTests } from '@pikku/core/testing'
 import { InMemoryLeaseService } from '@pikku/core/services'
 import type { WorkflowServiceOptions } from '@pikku/core/workflow'
+import { PgKyselyWorkflowRunService } from './pg-kysely-workflow-run-service.js'
 import { PgKyselyWorkflowService } from './pg-kysely-workflow-service.js'
 import { pgNowMs } from './pg-now-ms.js'
 
@@ -39,6 +40,15 @@ if (!url) {
     await service.init()
     return service
   }
+
+  // On their own: the run service suite reads the runs the one before it left.
+  defineServiceTests({
+    name: 'Postgres server',
+    services: {
+      workflowService: fresh,
+      workflowRunService: async () => new PgKyselyWorkflowRunService(db),
+    },
+  })
 
   defineServiceTests({
     name: 'Postgres server',

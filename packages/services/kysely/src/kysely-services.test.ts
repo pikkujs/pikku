@@ -65,6 +65,7 @@ function createPostgresDb(): Kysely<KyselyPikkuDB> | null {
 
 async function dropAllTables(db: Kysely<KyselyPikkuDB>): Promise<void> {
   const tables = [
+    'pikku_user_sessions',
     'pikku_deployment_functions',
     'pikku_deployments',
     'agent_tool_call',
@@ -91,9 +92,52 @@ async function dropAllTables(db: Kysely<KyselyPikkuDB>): Promise<void> {
   }
 }
 
+/**
+ * `KyselyWorkflowService` is the SQLite flavour: a dialect overrides what its SQL
+ * cannot express, `json_set` above all. Postgres runs these same suites against
+ * `PgKyselyWorkflowService`, in `@pikku/kysely-postgres`, which this package
+ * cannot import.
+ */
+const sqliteWorkflowServices = (getDb: () => Kysely<KyselyPikkuDB>) => ({
+  workflowRunService: async () => new KyselyWorkflowRunService(getDb()),
+  workflowService: async () => {
+    const s = new KyselyWorkflowService(getDb(), {
+      leaseService: new InMemoryLeaseService(),
+    })
+    await s.init()
+    return s
+  },
+  workflowCompensationQueued: async () => {
+    const s = new KyselyWorkflowService(getDb(), {
+      wireQueues: false,
+      leaseService: new InMemoryLeaseService(),
+    })
+    await s.init()
+    return s
+  },
+  workflowFencing: async () => {
+    const service = new KyselyWorkflowService(getDb(), {
+      leaseService: new InMemoryLeaseService(),
+    })
+    await service.init()
+    return {
+      service,
+      lapseLease: async (runId, stepName) => {
+        await getDb()
+          .updateTable('workflowStep')
+          .set({ leaseExpiresAt: 1 })
+          .where('workflowRunId', '=', runId)
+          .where('stepName', '=', stepName)
+          .execute()
+      },
+    }
+  },
+})
+
 function registerTests(
   dialectName: string,
-  getDb: () => Kysely<KyselyPikkuDB>
+  getDb: () => Kysely<KyselyPikkuDB>,
+  workflowServices: Partial<ReturnType<typeof sqliteWorkflowServices>> = {}
 ) {
   defineServiceTests({
     name: dialectName,
@@ -108,39 +152,7 @@ function registerTests(
         await s.init()
         return s
       },
-      workflowService: async () => {
-        const s = new KyselyWorkflowService(getDb(), {
-          leaseService: new InMemoryLeaseService(),
-        })
-        await s.init()
-        return s
-      },
-      workflowCompensationQueued: async () => {
-        const s = new KyselyWorkflowService(getDb(), {
-          wireQueues: false,
-          leaseService: new InMemoryLeaseService(),
-        })
-        await s.init()
-        return s
-      },
-      workflowFencing: async () => {
-        const service = new KyselyWorkflowService(getDb(), {
-          leaseService: new InMemoryLeaseService(),
-        })
-        await service.init()
-        return {
-          service,
-          lapseLease: async (runId, stepName) => {
-            await getDb()
-              .updateTable('workflowStep')
-              .set({ leaseExpiresAt: 1 })
-              .where('workflowRunId', '=', runId)
-              .where('stepName', '=', stepName)
-              .execute()
-          },
-        }
-      },
-      workflowRunService: async () => new KyselyWorkflowRunService(getDb()),
+      ...workflowServices,
       deploymentService: async () => {
         const s = new KyselyDeploymentService(
           { heartbeatInterval: 60000, heartbeatTtl: 120000 },
@@ -404,7 +416,11 @@ describe('Kysely Services - SQLite', () => {
     await db.destroy()
   })
 
-  registerTests('SQLite', () => db)
+  registerTests(
+    'SQLite',
+    () => db,
+    sqliteWorkflowServices(() => db)
+  )
 })
 
 describe(
