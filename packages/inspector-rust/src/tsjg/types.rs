@@ -325,15 +325,16 @@ pub fn new_reference_type() -> Rc<TypeKind> {
 #[derive(Debug)]
 pub struct FunctionType {
     pub comment: String,
-    /// An Object type, or an Infer type.
-    pub named_arguments: Ty,
-    pub return_type: Ty,
+    /// An Object type, or an Infer type; None (Go nil) for parameterless signatures.
+    pub named_arguments: Option<Ty>,
+    /// None (Go nil) when the signature has no return type annotation.
+    pub return_type: Option<Ty>,
 }
 
 #[derive(Debug)]
 pub struct ConstructorType {
     pub comment: String,
-    pub named_arguments: Ty,
+    pub named_arguments: Option<Ty>,
 }
 
 pub fn new(k: TypeKind) -> Ty {
