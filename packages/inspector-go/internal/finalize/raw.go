@@ -100,6 +100,7 @@ type definitionMeta struct {
 	Wires      *wiresMeta    `json:"wires"`
 	SourceFile string        `json:"sourceFile"`
 	Position   int           `json:"position"`
+	DataUnused bool          `json:"dataUnused"`
 }
 
 // groupMeta is the part of a MiddlewareGroupMeta finalize reads.

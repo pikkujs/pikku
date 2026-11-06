@@ -40,7 +40,8 @@ export type RunVerifyOptions = {
   /** Helper calls whose string arguments are user-facing copy (default: say, toast, notify). */
   copyHelpers?: string[]
   /**
-   * Release mode. Every `asI18nStub` call is a warning while prototyping and an error here.
+   * Release mode. Every `asI18nStub` call is a warning while prototyping and an error here,
+   * and codegen runs with `--strict-meta`.
    */
   strict?: boolean
   record?: boolean
@@ -237,7 +238,7 @@ export async function runVerify(
       const { value: run, durationMs } = await timed(() =>
         spawnBounded(
           process.execPath,
-          [cli, 'all', '--json'],
+          [cli, 'all', '--json', ...(options.strict ? ['--strict-meta'] : [])],
           project.rootDir,
           options.codegenTimeoutMs ?? 180_000
         )

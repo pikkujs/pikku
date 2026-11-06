@@ -343,6 +343,14 @@ describe('a guessed name', () => {
     }
   })
 
+  test('pikku doc says when a pikkuPermission should be a pikkuAuth', () => {
+    assert.ok(doc)
+    const answer = renderSurfaceDoc(doc, { target: 'pku586' })
+    assert.match(answer, /PERMISSION_DATA_UNUSED/)
+    assert.match(answer, /pikkuAuth\(async \(services, session\)/)
+    assert.match(answer, /--strict-meta/)
+  })
+
   test('the approval path is reachable from pikku doc', () => {
     if (!doc) return
     const read = (target: string) => renderSurfaceDoc(doc, { target })

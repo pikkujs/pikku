@@ -218,7 +218,8 @@ bunx --bun pikku scenario run local --spawn --coverage
 bunx --bun pikku scenario run local --spawn --run browser
 ```
 
-- `--strict-meta` fails an agent tool with no description.
+- `--strict-meta` fails an agent tool with no description, and a `pikkuPermission`
+  that never uses its data (PKU586).
 - `--security` runs the data-classification lint over function return types,
   catching a `Pii`/`Secret` field leaking through an exposed function. Expensive;
   worth it here.

@@ -277,6 +277,12 @@ export interface InspectorPermissionDefinition {
   description?: string
   package?: string
   requiresData?: boolean
+  /**
+   * Set on a `pikkuPermission` written inline that provably never reads its
+   * data argument and needs nothing from the wire but the session, so it could
+   * have been a `pikkuAuth`. Absent whenever that cannot be told (PKU586).
+   */
+  dataUnused?: boolean
 }
 
 export interface InspectorPermissionInstance {
@@ -374,9 +380,10 @@ export type InspectorOptions = Partial<{
   rootDir: string
   isAddon: boolean
   /**
-   * Fail the build on metadata that only an agent needs — currently an agent
-   * tool with no description. Off by default: the runtime falls back to the
-   * tool's own name, so this is a quality gate rather than a correctness one.
+   * Fail the build on quality gates the runtime can live without: an agent tool
+   * with no description (the runtime falls back to the tool's own name), and a
+   * `pikkuPermission` that never reads its data, which is otherwise a warning
+   * (PKU586). Off by default.
    */
   strictMeta: boolean
   /** The `models` table from pikku.config.json, alias -> `provider/model`. */

@@ -48,7 +48,7 @@
           "additionalProperties": { "type": "string" }
         },
         "strictMeta": {
-          "description": "Read by the Go finalize only: report agent tools without a description.",
+          "description": "Read by the Go finalize only: report agent tools without a description, and make PKU586 a critical.",
           "type": "boolean"
         },
         "types": {

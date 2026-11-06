@@ -95,6 +95,9 @@ export enum ErrorCode {
   // declares. Do not reuse those two numbers for anything else.
   DUPLICATE_VIRTUAL_USERS_DEFINITION = 'PKU585',
 
+  // A pikkuPermission that never reads its input is a session check.
+  PERMISSION_DATA_UNUSED = 'PKU586',
+
   // HTTP Route errors
   ROUTE_PARAM_MISMATCH = 'PKU571',
   ROUTE_QUERY_MISMATCH = 'PKU572',

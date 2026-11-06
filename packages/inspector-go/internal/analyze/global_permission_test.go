@@ -43,7 +43,7 @@ func TestGlobalPermissionTopLevelRegistration(t *testing.T) {
 	res := inspectFiles(t, map[string][]string{"security.ts": {
 		"import { addGlobalPermission, pikkuPermission } from '#pikku/auth'",
 		"addGlobalPermission([",
-		"  pikkuPermission(async ({ kysely }, _data, { session }) => !!session && !!kysely),",
+		"  pikkuPermission(async ({ kysely }, data, { session }) => !!session && !!kysely && !!data),",
 		"])",
 	}}, false)
 	global := res.State.Permissions.Global

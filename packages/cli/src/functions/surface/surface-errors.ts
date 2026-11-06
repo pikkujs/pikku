@@ -24,6 +24,11 @@ const ERROR_EDITORIAL: Partial<
       'A function declared `disabled` is still used by a wiring, a call or a workflow step.',
     fix: 'Remove what uses it, or remove `disabled`.',
   },
+  [ErrorCode.PERMISSION_DATA_UNUSED]: {
+    meaning:
+      'A `pikkuPermission` never reads its data argument, so it answers from the session alone. A `pikkuPermission` is for a check on the input, such as loading the row the caller named. A `pikkuAuth` receives only the services and the session, and can be evaluated before the input exists, which is how an agent is offered only the tools its session may use. A warning, or a critical under `--strict-meta` and `pikku verify --strict`. A handler passed by reference, a rest or destructured argument, and a check that reads a wire other than `session` are not reported.',
+    fix: 'Replace `pikkuPermission(async (services, _data, { session }) => ...)` with `pikkuAuth(async (services, session) => ...)`. If the check does need the input, read it. Before switching a check that passes with no session, note that `pikkuAuth` refuses any caller with no session without running the check: as a global permission that would close every public route.',
+  },
   [ErrorCode.UNUSED_FUNCTION]: {
     meaning: 'Nothing wires, exposes or calls this function.',
     fix: 'Use it, or mark it `disabled`. Disabling it can leave what it called unused in turn, so run the build again.',
