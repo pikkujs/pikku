@@ -240,3 +240,126 @@ export const ENTRY_POINT_EDITORIAL: Record<
       'An addon declares functions and contracts; the host application decides how the world reaches them. The same barrels are generated under #pikku/addon/*, minus every wiring — an addon that called wireHTTP would be registering a route in a registry it does not own.',
   },
 }
+
+/**
+ * A page for something an agent asks `pikku doc` for that is no export: a
+ * config table, the generated hooks, the `rpc` on the wire. Its example is
+ * written here rather than resolved from a snippet because the template that
+ * proves the snippets has neither a React client nor a `models` table.
+ */
+export type SurfaceGuide = {
+  /** The first is the page's name; every name opens it. */
+  names: string[]
+  title: string
+  points: string[]
+  example: string
+}
+
+export const SURFACE_GUIDES: SurfaceGuide[] = [
+  {
+    names: ['imports', 'import', '#pikku', '#pikku/*'],
+    title: 'where an import comes from',
+    points: [
+      '`#pikku/<door>` is a package.json `imports` entry, not a tsconfig path. It resolves to code generated into `.pikku`, so run `pikku all` when one is missing. Import from the door, never from a `.gen` file or `@pikku/core`. The header of `pikku doc <export>` names the door.',
+    ],
+    example: `import { pikkuFunc, ref } from '#pikku/function'
+import { NotFoundError } from '#pikku/error'
+import { pikkuPermission } from '#pikku/auth'
+import { pikkuAgent } from '#pikku/agent'`,
+  },
+  {
+    names: [
+      'rpc',
+      'RPCService',
+      'rpc.invoke',
+      'rpc.startWorkflow',
+      'rpc.agent',
+    ],
+    title: 'calling functions, workflows and agents from a function',
+    points: [
+      '`rpc` is on the third argument of `func`, beside `session`. Names are export names and are type-checked. A function does not need `expose` to be called this way.',
+      "`rpc.agent.run` also takes `attachments`, `model`, `temperature` and `context`. It answers `status: 'suspended'` with `pendingApprovals` when a tool needs approval; `rpc.agent.approve` carries on and answers the same shape.",
+    ],
+    example: `func: async (_services, { itemId }, { session, rpc }) => {
+  const item = await rpc.invoke('getItem', { itemId })
+  const { runId } = await rpc.startWorkflow('refundWorkflow', input)
+  const reply = await rpc.agent.run('shopAssistant', {
+    message: 'Find a USB hub',
+    threadId,
+    resourceId: session.userId,
+  })
+  // reply: { runId, result, usage, status?, pendingApprovals? }
+  await rpc.agent.approve(reply.runId, [{ toolCallId, approved: true }], 'shopAssistant')
+}`,
+  },
+  {
+    names: ['models', 'model', 'PIKKU_MODEL_ALIASES'],
+    title: 'what `model` accepts on an agent',
+    points: [
+      'A name with a `/` is used as written. A bare name is an alias from the `models` table in pikku.config.json, and one missing from the table fails codegen, so an empty table means every agent spells out `provider/model`.',
+      '`PIKKU_MODEL_ALIASES=fast:openai/gpt-5-mini` overrides the table at runtime.',
+    ],
+    example: `// pikku.config.json
+{ "models": { "fast": "openai/gpt-5-mini" } }
+
+// the agent
+model: 'fast'`,
+  },
+  {
+    names: [
+      'hooks',
+      'react-query',
+      'usePikkuQuery',
+      'usePikkuMutation',
+      'usePikkuInfiniteQuery',
+      'useStartWorkflow',
+      'useRunWorkflow',
+      'useWorkflowStatus',
+      'useSession',
+      'usePikkuAgent',
+      'PikkuProvider',
+      'createPikku',
+    ],
+    title: 'calling functions from React',
+    points: [
+      '`usePikkuQuery`, `usePikkuMutation`, `usePikkuInfiniteQuery`, `useStartWorkflow`, `useRunWorkflow`, `useWorkflowStatus` and `useSession` are generated: import them from the file `clientFiles.reactQueryFile` in pikku.config.json names, not from `@pikku/react`. Names are the export names of exposed functions, and inputs and outputs are typed.',
+      'Query keys are `[name, data]`, so `invalidateQueries({ queryKey: [name] })` refreshes every call of a function. `usePikkuInfiniteQuery` takes a function whose output has `nextCursor` and supplies `cursor` itself.',
+      '`usePikkuAgent(name)`, `PikkuProvider` and `createPikku` come from `@pikku/react`. Every hook needs the provider at the root.',
+    ],
+    example: `// PikkuFetch and PikkuRPC are the classes clientFiles generates
+const pikku = createPikku(PikkuFetch, PikkuRPC, { serverUrl: '/api' })
+<PikkuProvider pikku={pikku}>...</PikkuProvider>
+
+const item = usePikkuQuery('getItem', { itemId })
+const pages = usePikkuInfiniteQuery('listItemRows', { limit: 20 })
+const rows = pages.data?.pages.flatMap((page) => page.rows)
+const add = usePikkuMutation('addToBasket', {
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ['getBasket'] }),
+})
+add.mutate({ itemId, quantity: 1 })
+
+const agent = usePikkuAgent('shopAssistant')
+const reply = await agent.run({ message, threadId, resourceId })
+await agent.approve({ runId, approvals: [{ toolCallId, approved: true }] })`,
+  },
+  {
+    names: [
+      'threads',
+      'getAgentThreads',
+      'getAgentThreadMessages',
+      'getAgentThreadRuns',
+      'deleteAgentThread',
+      'listThreads',
+      'AgentThread',
+    ],
+    title: "reading an agent's conversations",
+    points: [
+      '`scaffold.agent` in pikku.config.json generates these as exposed functions, so a client calls them like any other. It also generates the routes `/rpc/agent/:agentName`, with `/stream`, `/approve` and `/resume`.',
+      'A thread is `{ id, resourceId, title?, metadata?, createdAt, updatedAt }`, and `resourceId` is its owner. The three that take a `threadId` check the owner against the session.',
+    ],
+    example: `getAgentThreads({ agentName?, resourceId?, limit?, offset? })
+getAgentThreadMessages({ threadId })
+getAgentThreadRuns({ threadId })
+deleteAgentThread({ threadId })  // { deleted }`,
+  },
+]
