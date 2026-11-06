@@ -33,7 +33,7 @@ impl Context<'_> {
     /// order TypeScript gives: an interface's own members first, then each
     /// base's (recursively) that it does not redeclare. typescript-go lists
     /// inherited members first, so the order is rebuilt from the base types.
-    fn ts_property_names(&mut self, t: P<Type>) -> Vec<String> {
+    pub(crate) fn ts_property_names(&mut self, t: P<Type>) -> Vec<String> {
         let props = self.checker.get_properties_of_type_exported(t);
         let mut names: Vec<String> = Vec::new();
         if let Some(sym) = t.symbol() {

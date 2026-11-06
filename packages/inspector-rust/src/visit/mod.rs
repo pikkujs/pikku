@@ -30,6 +30,9 @@ pub mod addon_json;
 pub mod addon_load;
 pub mod addon_resolve;
 pub mod boundary;
+pub mod check_classification;
+pub mod check_disabled;
+pub mod check_indirect;
 pub mod group_addon_bans;
 pub mod group_approval_description;
 pub mod group_functions;
@@ -56,6 +59,7 @@ pub mod util_schema;
 pub mod util_shared;
 pub mod util_types;
 pub mod util_wire_meta;
+pub mod validate;
 pub mod validate_addon_zod;
 
 /// Go `visit.Abort`: a TS `throw` inside a visitor. It ends the inspection with
@@ -209,6 +213,8 @@ impl Registry {
 
 /// Registers every ported visitor group. Empty: no group is ported yet.
 pub fn register_groups(r: &mut Registry) {
+    check_disabled::register(r);
+    check_indirect::register(r);
     group_addon_bans::register(r);
     group_wire_addon::register(r);
     group_wire_remote_addon::register(r);
@@ -249,11 +255,7 @@ impl Context<'_> {
     }
 
 
-    /// Go `CheckDisabledWorkflowSteps` (check_disabled.go). Not ported.
-    pub fn check_disabled_workflow_steps(&mut self) {}
 
-    /// Go `ValidateWebhookSourceTriggers` (validate.go). Not ported.
-    pub fn validate_webhook_source_triggers(&mut self) {}
 
     /// Go `ValidatePikkuStudio` (group_pikku_studio.go). Not ported.
     pub fn validate_pikku_studio(&mut self) {}

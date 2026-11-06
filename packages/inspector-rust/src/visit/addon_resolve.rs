@@ -320,3 +320,57 @@ mod tests {
         assert_eq!(split_package_specifier("@s/p"), ("@s/p".into(), String::new()));
     }
 }
+
+use super::Context;
+use tsrs_ast::{self as ast, Kind, Node};
+use tsrs_core::P;
+
+impl Context<'_> {
+    /// `resolveFunctionMeta` is utils/resolve-function-meta.ts.
+    pub fn resolve_function_meta(&self, id: &str) -> Option<FunctionMeta> {
+        resolve_function_meta(self.state, id).cloned()
+    }
+
+    /// The package name an addon namespace was wired to (`s.addons[ns].pkg` in
+    /// Go; filled by `wireAddon`).
+    pub fn addon_package(&self, namespace: &str) -> Option<String> {
+        let raw = self.state.rpc.wire_addon_declarations.get(namespace)?;
+        super::addon_load::AddonDecl::from_declaration(raw).map(|d| d.pkg)
+    }
+
+    /// `resolveAddonName` is utils/resolve-addon-package.ts: the package a
+    /// function identifier was imported from, when it is a wired addon's.
+    pub fn resolve_addon_name(&mut self, ident: P<Node>) -> String {
+        let addons = super::addon_load::declared_addons(self.state);
+        if addons.is_empty() {
+            return String::new();
+        }
+        let Some(decl) = self.symbol_at(ident).and_then(|s| s.declarations().first().copied()) else {
+            return String::new();
+        };
+        if decl.kind() == Kind::ImportSpecifier
+            && let Some(imp) = decl.parent().and_then(|p| p.parent()).and_then(|p| p.parent())
+            && imp.kind() == Kind::ImportDeclaration
+            && let Some(spec) = imp.module_specifier()
+            && ast::is_string_literal(spec)
+            && !spec.text().starts_with('.')
+        {
+            let c = spec.text();
+            for (_, a) in &addons {
+                let p = &a.pkg;
+                if p == c || c.starts_with(&format!("{p}/")) {
+                    return p.clone();
+                }
+            }
+        }
+        let name = find_package_name_for_file(crate::tsutil::file_name_of(decl));
+        if !name.is_empty() {
+            for (_, a) in &addons {
+                if a.pkg == name {
+                    return name;
+                }
+            }
+        }
+        String::new()
+    }
+}

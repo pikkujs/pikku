@@ -538,6 +538,10 @@ impl Context<'_> {
             }
         }
 
+        if self.options.classification_check {
+            self.check_classification(&name, handler, wrapper != "pikkuFunc");
+        }
+
         m.sessionless = Some(wrapper != "pikkuFunc");
         m.services = services;
         if !wires.wires.is_empty() || !wires.optimized {
