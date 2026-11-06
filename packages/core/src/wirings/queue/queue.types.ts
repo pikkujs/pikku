@@ -98,6 +98,8 @@ export interface QueueJob<T = any, R = any> {
   waitForCompletion?: (ttl?: number) => Promise<R>
   metadata?: () => Promise<QueueJobMetadata> | QueueJobMetadata
   pikkuUserId?: string
+  /** The W3C trace the producer was in, when the adapter carried one. */
+  traceparent?: string
 }
 
 /**
@@ -120,6 +122,11 @@ export interface JobOptions {
   pikkuUserId?: string
   /** Counts against the worker's {@link PikkuWorkerConfig.groupConcurrency}. */
   group?: JobGroup
+  /**
+   * The W3C trace the job continues. Stamped from the calling function's wire
+   * when left unset, so set it only to move the job onto another trace.
+   */
+  traceparent?: string
 }
 
 export type QueueJobCounts = Record<QueueJobStatus, number>

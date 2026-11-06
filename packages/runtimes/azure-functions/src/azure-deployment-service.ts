@@ -33,7 +33,7 @@ export class AzureDeploymentService implements DeploymentService {
     funcName: string,
     data: unknown,
     session?: unknown,
-    traceId?: string
+    traceparent?: string
   ): Promise<unknown> {
     const functionUrl = this.bindings.get(funcName)
     if (!functionUrl) {
@@ -48,7 +48,7 @@ export class AzureDeploymentService implements DeploymentService {
       this.secrets,
       funcName,
       session,
-      traceId
+      traceparent
     )
 
     const url = `${functionUrl}/mesh/rpc/${encodeURIComponent(funcName)}`

@@ -17,6 +17,7 @@ export const channelSchema: PikkuSchema = {
         .addColumn('openingData', ctx.text, (col) =>
           col.notNull().defaultTo(ctx.defaultText('{}'))
         )
+        .addColumn('traceparent', ctx.text)
         .addColumn('pikkuUserId', ctx.text)
         .addColumn('state', ctx.text)
         .addColumn('lastWire', 'timestamp', (col) =>

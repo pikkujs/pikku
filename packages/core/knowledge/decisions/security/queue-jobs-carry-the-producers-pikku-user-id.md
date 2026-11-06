@@ -8,8 +8,8 @@ tags: queue
 # Queue jobs carry the producer's pikku user id
 
 `JobOptions.pikkuUserId` (`packages/core/src/wirings/queue/queue.types.ts`) is
-set by whoever enqueues the job. The adapter surfaces it as
-`QueueJob.pikkuUserId`, `runQueueJob` in
+set by whoever enqueues the job: nothing stamps it from the wire. Every adapter
+carries it next to `traceparent` and surfaces it as `QueueJob.pikkuUserId`, `runQueueJob` in
 `packages/core/src/wirings/queue/queue-runner.ts` copies it onto the wire as
 `PikkuQueue.pikkuUserId`, and `resolveSession` in
 `packages/core/src/function/function-runner.ts` then resolves it through
@@ -21,6 +21,12 @@ The claim is now HMAC-signed at enqueue and verified in `runQueueJob` — see
 producer may name any user" reading below. Everything here still holds for the
 _authorization_ question: signing proves the producer held the deployment
 secret, not that it was entitled to name that user.
+
+The id on the wire survives a session that has gone: `wire.pikkuUserId` is set
+from the verified claim whether or not the store still holds the session, and
+`wire.session` is simply absent. A retry or a delayed job runs that way, because
+a claim has no expiry. A worker that must not act for a signed-out user checks
+`wire.session`.
 
 There is no re-authentication at the worker boundary — the queue payload _is_ the
 credential. Workers run with `auth: false`, so nothing downstream re-checks that

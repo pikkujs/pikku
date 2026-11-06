@@ -27,11 +27,13 @@ export const RemoteQueueJob = z.object({
   queueName: z.string(),
   data: z.unknown().optional(),
   jobId: z.string().optional(),
-  traceId: z.string().optional(),
+  traceparent: z.string().optional(),
+  pikkuUserId: z.string().optional(),
 })
 
 export const RemoteScheduledJob = z.object({
   taskName: z.string(),
+  traceparent: z.string().optional(),
 })
 `
 

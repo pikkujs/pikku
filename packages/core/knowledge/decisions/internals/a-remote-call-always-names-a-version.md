@@ -8,7 +8,7 @@ tags: rpc, addon, versioning
 # A remote call always names a version, and an unknown version is refused
 
 A `wireRemoteAddon` consumer is built against one SDK. The host behind
-`serverUrl` deploys on its own schedule, and `fn` on the host means *its*
+`serverUrl` deploys on its own schedule, and `fn` on the host means _its_
 latest, which can be a contract the consumer has never seen.
 
 **The consumer names the version.** `invokeRemoteAddonFunction`

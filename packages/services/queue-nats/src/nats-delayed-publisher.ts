@@ -7,6 +7,7 @@ import {
   BACKOFF_DELAY_HEADER,
   BACKOFF_TYPE_HEADER,
   PIKKU_USER_ID_HEADER,
+  TRACEPARENT_HEADER,
   SCHEDULE_HEADER,
   SCHEDULE_TARGET_HEADER,
   attemptsHeaderValue,
@@ -104,6 +105,9 @@ const applyJobHeaders = (
 ): void => {
   if (options.pikkuUserId) {
     hdrs.set(PIKKU_USER_ID_HEADER, options.pikkuUserId)
+  }
+  if (options.traceparent) {
+    hdrs.set(TRACEPARENT_HEADER, options.traceparent)
   }
   if (options.attempts !== undefined) {
     hdrs.set(ATTEMPTS_HEADER, attemptsHeaderValue(options.attempts, queueName))

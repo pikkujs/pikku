@@ -1,4 +1,5 @@
 import { runPikkuFunc } from '../../function/function-runner.js'
+import { runTraceWire } from './workflow-run-trace.js'
 import {
   getSingletonServices,
   getCreateWireServices,
@@ -996,6 +997,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
         const runOnSurface = async (surface: ScenarioSurface) => {
           // No `rpc` yet — runPikkuFunc attaches it lazily for the invocation.
           const wire: PikkuRawWire = {
+            ...runTraceWire(await this.engine.getRunTraceparent(runId)),
             workflow: workflowWire,
             scenario: workflowWire,
             pikkuUserId: workflowWire.pikkuUserId,

@@ -5,8 +5,8 @@ multi-step workflows built only from `pikkuWorkflowFunc` (never
 `pikkuWorkflowComplexFunc`), with every step a stub whose delay and failure mode
 are driven from the workflow input, plus `kill -9` and restart mid-run.
 
-Eight findings. Six are fixed and verified; two are reported with a
-recommendation but deliberately not applied, for reasons given below.
+Eight findings. Seven are fixed and verified; one is reported with a
+recommendation but deliberately not applied, for the reason given below.
 
 **Regression gate after all changes:** core 1938 pass / 0 fail · inspector 655/655
 · schedule 2/2 · e2e unit 13/13 · **e2e scenarios 141/141**.
@@ -36,7 +36,7 @@ succeed for a reason the workflow did not already know.
 | ---------------------------------------------------------------------- | ----------------------- |
 | Saga: happy path, flaky-then-recovers, fatal-then-compensates          | **9/9**                 |
 | Combinations: fan-out ×2, approval approved/rejected, explicit suspend | **13/13**               |
-| Crash + restart                                                        | **4/9** — see finding 6 |
+| Crash + restart                                                        | **6/6** — see finding 6 |
 
 Confirmed working: retries with a stable `invocationId` across attempts;
 compensation firing exactly once rather than per attempt; healthy siblings of a
@@ -169,42 +169,62 @@ standard suite is unaffected. Recorded in
 
 ---
 
-## 6. An interrupted run is never resumed — REPORTED, NOT FIXED
+## 6. An interrupted run is never resumed — FIXED
 
-**This is not a crash-safety edge case. A graceful restart behaves identically,
-so an ordinary deploy permanently strands every workflow that is mid-sleep.**
+**A graceful restart behaved exactly like a crash, so an ordinary deploy
+permanently stranded every workflow that was mid-sleep or mid-step.** `kill -9`
+and `SIGTERM` both left the run `running` forever. Nothing was double-executed:
+the step records were correct, they were simply never acted on again.
 
-With durability in place and the sleeper fixed, the remaining behaviour is:
+Reproducing against `539c25d34`, which already had `recoverStalledRuns` and
+`relayUndispatchedSteps`, showed the original cause was only half the story:
 
-- `kill -9` mid-sleep → after restart the run is still there, still `running`, and
-  **stays that way forever**. Phases two and three never execute. No timeout, no
-  failure, no resumption.
-- `kill -9` mid-step → same. The step that was executing is left `running`.
-- **`SIGTERM` then restart → same.** An orderly shutdown neither drains the
-  in-flight sleep nor persists it for the next process, so there is no
-  "restart cleanly and it will be fine" path. Any rolling deploy over a
-  workflow that is sleeping, suspended on a timer, or mid-step abandons it.
-- **Good news:** nothing is double-executed. Phase one was never re-run, so
-  there is no duplicate-side-effect bug hiding underneath — the durable step
-  records are correct, they are simply never acted on again.
+1. **Nothing ran the sweeps.** They were "not self-starting", and neither
+   `pikku dev` nor `pikku serve` started them.
+2. **A sleeping run was invisible to them.** A sleep whose timer died is
+   `scheduled`, which `findStalledRunIds` reads as in flight and replay reads as
+   "something is coming". That is why six `resumeWorkflow` calls did nothing: a
+   replay stops at a `scheduled` step whoever asks. A queued step whose job died
+   with an in-memory queue parks the same way.
+3. **A step killed mid-pass read as owned forever.** An ordinary RPC step runs
+   inside the orchestrator's pass, not through the step queue, so it has no step
+   lease. `running` with a null lease is what the sweep and the claim both take
+   for "parked on a child run", which is why re-enqueuing the step job by hand
+   did nothing even after the lease had lapsed: there was no step lease to lapse,
+   and the claim refuses a null one.
 
-Cause: sleep wake-ups live in a `setTimeout` inside `InMemorySchedulerService`
-and die with the process, and there is **no startup recovery anywhere** — no
-sweep re-arms scheduled sleeps or re-dispatches runs left `running`. Searching
-`packages/core/src/wirings/workflow` and the `serve` command for
-recover/resume/orphan/sweep logic finds nothing.
+**Fix:** `workflowService.startRecovery()`, started by `pikku dev` and `pikku
+serve` once they are serving. It sweeps at startup and every 30s.
 
-**Recommendation:** on workflow-service init, scan for runs with status
-`running` and re-dispatch `orchestrateWorkflow(runId)`, re-arming scheduled
-sleeps from the recorded `scheduledAt` and remaining duration.
+| Caught in    | What recovery does                                                             |
+| ------------ | ------------------------------------------------------------------------------ |
+| Sleep        | Re-armed for what remains from when it was scheduled; woken at once if overdue |
+| Step (pass)  | Retried at least once, as a counted attempt with the same `invocationId`       |
+| Step (queue) | Sent again once its job looks lost; the claim keeps a duplicate from running   |
+| Fan-out      | Settled shards stay memoized, shards in flight retry, each as above            |
 
-**Why not applied:** this is a durability feature, not a bug fix, and the design
-choices belong to the maintainer — whether an in-flight step is retried
-(at-least-once) or failed (at-most-once), and how a sweep avoids double-running
-a run that another live instance still owns. Landing a half-designed recovery
-sweep is worse than the honest gap. Note that with BullMQ or pg-boss the delayed
-job is persisted externally, so this gap is specific to the single-process
-in-memory scheduler — which is what `pikku serve` uses by default.
+Ownership is the run lease, not process state. A sweep takes `workflow-run:<id>`
+before it touches a run, so a run in a live instance's pass is skipped, and a dead
+instance's lease frees itself within its 30s TTL. That TTL is why a run killed
+mid-step takes up to 30s to move, while a sleeping run moves at startup. Timers
+re-armed by two instances both fire, which is harmless: a wake-up only sets a
+sleep's result to the same `null`, and resuming is idempotent. Runs keep their
+original trace, since every hop already reads it from the run record.
+
+**Crash + restart suite: 6/6**, in `e2e/tests/cli/workflow-trace-restart.test.ts`:
+each of `kill -9` and `SIGTERM` taken mid-sleep, mid-step and across a fan-out
+with one shard settled. This replaces the earlier 4/9, whose nine cases were never
+checked in. The ledger shows settled work ran exactly once and in-flight work ran
+again as the same `invocationId` at attempt 2, and every effect, before and after
+the kill, is on the run's own trace.
+
+**Limits:** an `inline` step body (`workflow.do` with a function) replays without
+counting an attempt. A step with `retries: 0` that is caught in flight fails with
+`WorkflowStepLeaseExpiredError` rather than retrying, because it spent its one
+attempt. Hosts with no long-lived process call `recoverWorkflows()` from a
+scheduled task. Graph workflows use the same sweeps but are not in the crash
+suite. See
+`packages/core/knowledge/decisions/internals/a-run-belongs-to-its-lease-not-its-process.md`.
 
 ## 7. `onError` compensation cannot identify what to compensate — REPORTED, NOT FIXED
 

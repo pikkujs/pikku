@@ -1,0 +1,1561 @@
+{
+  "state": {
+    "rootDir": "<fixture>",
+    "singletonServicesTypeImportMap": [],
+    "wireServicesTypeImportMap": [],
+    "userSessionTypeImportMap": [],
+    "configTypeImportMap": [],
+    "singletonServicesFactories": [],
+    "wireServicesFactories": [],
+    "wireServicesMeta": [],
+    "addonRequiredParentServices": [],
+    "addonCreatedServices": [],
+    "addonServicesFactorySeen": false,
+    "addonServerlessIncompatible": [],
+    "configFactories": [],
+    "serverLifecycleFactories": [],
+    "filesAndMethods": {},
+    "filesAndMethodsErrors": [
+      [
+        "No CoreUserSession found",
+        []
+      ],
+      [
+        "No CoreSingletonServices found",
+        []
+      ],
+      [
+        "No CoreServices found",
+        []
+      ],
+      [
+        "No CoreConfig found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {\n  return {}\n})\n\nPossible issues:\n- srcDirectories in pikku.config.json doesn't include the file with the createConfig method",
+        []
+      ],
+      [
+        "No CreateSingletonServices found",
+        []
+      ],
+      [
+        "No CreateWireServices found",
+        []
+      ]
+    ],
+    "schemaLookup": [],
+    "schemas": {
+      "ReturnsSecretOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "ReturnsBareSecretOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "string",
+        "definitions": {}
+      },
+      "SessionedPrivateOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "name"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "SessionlessPrivateOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "SessionlessPiiOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "SessionlessBothOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "z": {
+            "type": "object",
+            "properties": {
+              "deep": {
+                "type": "object",
+                "properties": {
+                  "deeper": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "deeper"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "deep"
+            ],
+            "additionalProperties": false
+          },
+          "a": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "m": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "z",
+          "a",
+          "m"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "SessionlessSyncOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "array",
+        "items": {},
+        "definitions": {}
+      },
+      "SessionlessUnionOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "a": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "a"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "CleanOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "__hidden": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "__hidden"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      }
+    },
+    "functions": {
+      "typesMap": {
+        "map": [
+          [
+            "__object_<pathhash>",
+            {
+              "originalName": "__object",
+              "path": "<fixture>/src/outputs.ts"
+            }
+          ],
+          [
+            "Secret_<pathhash>",
+            {
+              "originalName": "Secret",
+              "path": "<fixture>/src/core.ts"
+            }
+          ],
+          [
+            "Row",
+            {
+              "originalName": "Row",
+              "path": "<fixture>/src/outputs.ts"
+            }
+          ]
+        ],
+        "customTypes": [
+          [
+            "ReturnsSecretOutput",
+            {
+              "type": "{ token: Secret<string>; }",
+              "references": [
+                "__object_<pathhash>"
+              ]
+            }
+          ],
+          [
+            "ReturnsBareSecretOutput",
+            {
+              "type": "Secret<string>",
+              "references": [
+                "Secret_<pathhash>"
+              ]
+            }
+          ],
+          [
+            "SessionedPrivateOutput",
+            {
+              "type": "{ email: Pii<string>; name: Private<string>; }",
+              "references": [
+                "__object_<pathhash>"
+              ]
+            }
+          ],
+          [
+            "SessionlessPrivateOutput",
+            {
+              "type": "{ name: Private<string>; }",
+              "references": [
+                "__object_<pathhash>"
+              ]
+            }
+          ],
+          [
+            "SessionlessPiiOutput",
+            {
+              "type": "{ email: Pii<string>; }",
+              "references": [
+                "__object_<pathhash>"
+              ]
+            }
+          ],
+          [
+            "SessionlessBothOutput",
+            {
+              "type": "{ z: { deep: { deeper: Pii<string>; }; }; a: Private<string>[]; m: Record<string, Secret<string>>; }",
+              "references": [
+                "__object_<pathhash>"
+              ]
+            }
+          ],
+          [
+            "SessionlessSyncOutput",
+            {
+              "type": "Row[]",
+              "references": [
+                "Row",
+                "Row"
+              ]
+            }
+          ],
+          [
+            "SessionlessUnionOutput",
+            {
+              "type": "{ a: Pii<string>; }",
+              "references": [
+                "__object_<pathhash>"
+              ]
+            }
+          ],
+          [
+            "CleanOutput",
+            {
+              "type": "{ ok: boolean; __hidden: Pii<string>; }",
+              "references": [
+                "__object_<pathhash>"
+              ]
+            }
+          ]
+        ]
+      },
+      "meta": {
+        "returnsSecret": {
+          "pikkuFuncId": "returnsSecret",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "returnsSecret",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "ReturnsSecretOutput",
+          "inputs": [],
+          "outputs": [
+            "ReturnsSecretOutput"
+          ],
+          "implementationHash": "ed83d45569984afd",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/outputs.ts",
+          "exportedName": "returnsSecret",
+          "bodyStart": 18,
+          "bodyEnd": 18,
+          "contractHash": "556c6c211db9817e",
+          "inputHash": "1a1f725a",
+          "outputHash": "d375f332"
+        },
+        "returnsBareSecret": {
+          "pikkuFuncId": "returnsBareSecret",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "returnsBareSecret",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "ReturnsBareSecretOutput",
+          "inputs": [],
+          "outputs": [
+            "ReturnsBareSecretOutput"
+          ],
+          "implementationHash": "26930c1a040ae263",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/outputs.ts",
+          "exportedName": "returnsBareSecret",
+          "bodyStart": 19,
+          "bodyEnd": 19,
+          "contractHash": "1ccddfd50de6ab66",
+          "inputHash": "6d8513d3",
+          "outputHash": "b39c5d90"
+        },
+        "sessionedPrivate": {
+          "pikkuFuncId": "sessionedPrivate",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "sessionedPrivate",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "SessionedPrivateOutput",
+          "inputs": [],
+          "outputs": [
+            "SessionedPrivateOutput"
+          ],
+          "implementationHash": "dd07176a57751763",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/outputs.ts",
+          "exportedName": "sessionedPrivate",
+          "bodyStart": 20,
+          "bodyEnd": 23,
+          "contractHash": "ea890ae217ae07b1",
+          "inputHash": "9d5a51cb",
+          "outputHash": "07d3641f"
+        },
+        "sessionlessPrivate": {
+          "pikkuFuncId": "sessionlessPrivate",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "sessionlessPrivate",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "SessionlessPrivateOutput",
+          "inputs": [],
+          "outputs": [
+            "SessionlessPrivateOutput"
+          ],
+          "implementationHash": "7fbf231516cb0dce",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/outputs.ts",
+          "exportedName": "sessionlessPrivate",
+          "bodyStart": 24,
+          "bodyEnd": 26,
+          "contractHash": "f88da7722bd1eb30",
+          "inputHash": "b57462b0",
+          "outputHash": "3acc1dd0"
+        },
+        "sessionlessPii": {
+          "pikkuFuncId": "sessionlessPii",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "sessionlessPii",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "SessionlessPiiOutput",
+          "inputs": [],
+          "outputs": [
+            "SessionlessPiiOutput"
+          ],
+          "implementationHash": "33bda04aba475d70",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/outputs.ts",
+          "exportedName": "sessionlessPii",
+          "bodyStart": 27,
+          "bodyEnd": 27,
+          "contractHash": "63fbb46c94767201",
+          "inputHash": "65cb6d89",
+          "outputHash": "6ebdb6ec"
+        },
+        "sessionlessBoth": {
+          "pikkuFuncId": "sessionlessBoth",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "sessionlessBoth",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "SessionlessBothOutput",
+          "inputs": [],
+          "outputs": [
+            "SessionlessBothOutput"
+          ],
+          "implementationHash": "5497908c193de60d",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/outputs.ts",
+          "exportedName": "sessionlessBoth",
+          "bodyStart": 28,
+          "bodyEnd": 32,
+          "contractHash": "59068fbb621ed3c7",
+          "inputHash": "9d2cb92e",
+          "outputHash": "ccb0c017"
+        },
+        "sessionlessInherited": {
+          "pikkuFuncId": "sessionlessInherited",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "sessionlessInherited",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "Row",
+          "inputs": [],
+          "outputs": [
+            "Row"
+          ],
+          "implementationHash": "0cafa51663f649a4",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/outputs.ts",
+          "exportedName": "sessionlessInherited",
+          "bodyStart": 33,
+          "bodyEnd": 33,
+          "contractHash": "759aab6c1b0896fe",
+          "inputHash": "dce897fc",
+          "outputHash": "336978cd"
+        },
+        "sessionlessSync": {
+          "pikkuFuncId": "sessionlessSync",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "sessionlessSync",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "SessionlessSyncOutput",
+          "inputs": [],
+          "outputs": [
+            "SessionlessSyncOutput"
+          ],
+          "implementationHash": "304c7c0c66a6e3fd",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/outputs.ts",
+          "exportedName": "sessionlessSync",
+          "bodyStart": 34,
+          "bodyEnd": 34,
+          "contractHash": "d6ea25290c17f3a0",
+          "inputHash": "3a902cd9",
+          "outputHash": "25a82110"
+        },
+        "sessionlessUnion": {
+          "pikkuFuncId": "sessionlessUnion",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "sessionlessUnion",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "SessionlessUnionOutput",
+          "inputs": [],
+          "outputs": [
+            "SessionlessUnionOutput"
+          ],
+          "implementationHash": "06699d53802e74a6",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/outputs.ts",
+          "exportedName": "sessionlessUnion",
+          "bodyStart": 36,
+          "bodyEnd": 36,
+          "contractHash": "18ffab36d594dd26",
+          "inputHash": "4818a1ba",
+          "outputHash": "ab8747af"
+        },
+        "clean": {
+          "pikkuFuncId": "clean",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "clean",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "CleanOutput",
+          "inputs": [],
+          "outputs": [
+            "CleanOutput"
+          ],
+          "implementationHash": "ef3983694ab7a9a5",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/outputs.ts",
+          "exportedName": "clean",
+          "bodyStart": 38,
+          "bodyEnd": 41,
+          "contractHash": "fab11b8141a7330e",
+          "inputHash": "8e7a41eb",
+          "outputHash": "8e9ca45c"
+        },
+        "secretInline": {
+          "pikkuFuncId": "secretInline",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "secretInline",
+          "services": {
+            "optimized": true,
+            "services": [
+              "logger"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "275733440969fc13",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "secretInline",
+          "bodyStart": 15,
+          "bodyEnd": 15,
+          "contractHash": "a4e008c43d4d725c",
+          "inputHash": "f27cbc34",
+          "outputHash": "499e7a5a"
+        },
+        "secretThroughLocal": {
+          "pikkuFuncId": "secretThroughLocal",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "secretThroughLocal",
+          "services": {
+            "optimized": true,
+            "services": [
+              "logger"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "711c2ec436cb29cc",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "secretThroughLocal",
+          "bodyStart": 18,
+          "bodyEnd": 19,
+          "contractHash": "53bfbbc4b8aacb6e",
+          "inputHash": "6437ff0a",
+          "outputHash": "ef29b5b2"
+        },
+        "secretInObject": {
+          "pikkuFuncId": "secretInObject",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "secretInObject",
+          "services": {
+            "optimized": true,
+            "services": [
+              "queue"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "887e92db3aba5896",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "secretInObject",
+          "bodyStart": 22,
+          "bodyEnd": 22,
+          "contractHash": "5946816a33ba25f9",
+          "inputHash": "85531103",
+          "outputHash": "29242869"
+        },
+        "secretInEmail": {
+          "pikkuFuncId": "secretInEmail",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "secretInEmail",
+          "services": {
+            "optimized": true,
+            "services": [
+              "email"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "4321b16d76b8feea",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "secretInEmail",
+          "bodyStart": 25,
+          "bodyEnd": 25,
+          "contractHash": "835bdf7288627d25",
+          "inputHash": "d49d0438",
+          "outputHash": "5c2dc3ff"
+        },
+        "secretInAudit": {
+          "pikkuFuncId": "secretInAudit",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "secretInAudit",
+          "services": {
+            "optimized": true,
+            "services": [
+              "audit",
+              "auditLog"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "633bbead62ea639a",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "secretInAudit",
+          "bodyStart": 29,
+          "bodyEnd": 31,
+          "contractHash": "ce29dd198f2fa70e",
+          "inputHash": "4d3457f0",
+          "outputHash": "abf32cb5"
+        },
+        "secretInWebhook": {
+          "pikkuFuncId": "secretInWebhook",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "secretInWebhook",
+          "services": {
+            "optimized": true,
+            "services": [
+              "webhook"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "34bcb2dc7564aeaa",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "secretInWebhook",
+          "bodyStart": 35,
+          "bodyEnd": 35,
+          "contractHash": "22b69fd67c48ba8b",
+          "inputHash": "f3fa915c",
+          "outputHash": "c6f3055b"
+        },
+        "piiInLogger": {
+          "pikkuFuncId": "piiInLogger",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "piiInLogger",
+          "services": {
+            "optimized": true,
+            "services": [
+              "logger"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "997420cd0441912c",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "piiInLogger",
+          "bodyStart": 38,
+          "bodyEnd": 38,
+          "contractHash": "23b2cec5d4ef504e",
+          "inputHash": "f0290291",
+          "outputHash": "1eb58fc9"
+        },
+        "piiInConsole": {
+          "pikkuFuncId": "piiInConsole",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "piiInConsole",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "7737aef1f8770074",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "piiInConsole",
+          "bodyStart": 41,
+          "bodyEnd": 42,
+          "contractHash": "47562d05349ce661",
+          "inputHash": "1172057f",
+          "outputHash": "8133c234"
+        },
+        "piiInWebhook": {
+          "pikkuFuncId": "piiInWebhook",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "piiInWebhook",
+          "services": {
+            "optimized": true,
+            "services": [
+              "webhook"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "b762ab12fb925628",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "piiInWebhook",
+          "bodyStart": 45,
+          "bodyEnd": 45,
+          "contractHash": "934507c4a75e799b",
+          "inputHash": "2638ca5d",
+          "outputHash": "54a89ba5"
+        },
+        "piiThroughDerivedLogger": {
+          "pikkuFuncId": "piiThroughDerivedLogger",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "piiThroughDerivedLogger",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "87845eee7b5bd1bc",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "piiThroughDerivedLogger",
+          "bodyStart": 48,
+          "bodyEnd": 49,
+          "contractHash": "8c1950e0bcd74805",
+          "inputHash": "61030399",
+          "outputHash": "3ca41ec6"
+        },
+        "piiAllowed": {
+          "pikkuFuncId": "piiAllowed",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "piiAllowed",
+          "services": {
+            "optimized": true,
+            "services": [
+              "email",
+              "audit",
+              "queue",
+              "webhook",
+              "logger"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "fabd595b8173d10a",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "piiAllowed",
+          "bodyStart": 55,
+          "bodyEnd": 60,
+          "contractHash": "7b0ed094735474df",
+          "inputHash": "3880f7a5",
+          "outputHash": "438f5cd2"
+        },
+        "unnamedPropertyValue": {
+          "pikkuFuncId": "unnamedPropertyValue",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "unnamedPropertyValue",
+          "services": {
+            "optimized": true,
+            "services": [
+              "logger"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "9c6369cb29d91934",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/sinks.ts",
+          "exportedName": "unnamedPropertyValue",
+          "bodyStart": 64,
+          "bodyEnd": 65,
+          "contractHash": "6d6c302b8c9a8765",
+          "inputHash": "a5dabe33",
+          "outputHash": "80878923"
+        }
+      },
+      "files": [
+        [
+          "returnsSecret",
+          {
+            "path": "<fixture>/src/outputs.ts",
+            "exportedName": "returnsSecret"
+          }
+        ],
+        [
+          "returnsBareSecret",
+          {
+            "path": "<fixture>/src/outputs.ts",
+            "exportedName": "returnsBareSecret"
+          }
+        ],
+        [
+          "sessionedPrivate",
+          {
+            "path": "<fixture>/src/outputs.ts",
+            "exportedName": "sessionedPrivate"
+          }
+        ],
+        [
+          "sessionlessPrivate",
+          {
+            "path": "<fixture>/src/outputs.ts",
+            "exportedName": "sessionlessPrivate"
+          }
+        ],
+        [
+          "sessionlessPii",
+          {
+            "path": "<fixture>/src/outputs.ts",
+            "exportedName": "sessionlessPii"
+          }
+        ],
+        [
+          "sessionlessBoth",
+          {
+            "path": "<fixture>/src/outputs.ts",
+            "exportedName": "sessionlessBoth"
+          }
+        ],
+        [
+          "sessionlessInherited",
+          {
+            "path": "<fixture>/src/outputs.ts",
+            "exportedName": "sessionlessInherited"
+          }
+        ],
+        [
+          "sessionlessSync",
+          {
+            "path": "<fixture>/src/outputs.ts",
+            "exportedName": "sessionlessSync"
+          }
+        ],
+        [
+          "sessionlessUnion",
+          {
+            "path": "<fixture>/src/outputs.ts",
+            "exportedName": "sessionlessUnion"
+          }
+        ],
+        [
+          "clean",
+          {
+            "path": "<fixture>/src/outputs.ts",
+            "exportedName": "clean"
+          }
+        ],
+        [
+          "secretInline",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "secretInline"
+          }
+        ],
+        [
+          "secretThroughLocal",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "secretThroughLocal"
+          }
+        ],
+        [
+          "secretInObject",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "secretInObject"
+          }
+        ],
+        [
+          "secretInEmail",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "secretInEmail"
+          }
+        ],
+        [
+          "secretInAudit",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "secretInAudit"
+          }
+        ],
+        [
+          "secretInWebhook",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "secretInWebhook"
+          }
+        ],
+        [
+          "piiInLogger",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "piiInLogger"
+          }
+        ],
+        [
+          "piiInConsole",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "piiInConsole"
+          }
+        ],
+        [
+          "piiInWebhook",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "piiInWebhook"
+          }
+        ],
+        [
+          "piiThroughDerivedLogger",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "piiThroughDerivedLogger"
+          }
+        ],
+        [
+          "piiAllowed",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "piiAllowed"
+          }
+        ],
+        [
+          "unnamedPropertyValue",
+          {
+            "path": "<fixture>/src/sinks.ts",
+            "exportedName": "unnamedPropertyValue"
+          }
+        ]
+      ],
+      "approvalDescriptions": {},
+      "dynamicImportIds": []
+    },
+    "http": {
+      "metaInputTypes": [],
+      "meta": {
+        "get": {},
+        "post": {},
+        "put": {},
+        "delete": {},
+        "head": {},
+        "patch": {},
+        "options": {}
+      },
+      "files": [],
+      "routeMiddleware": []
+    },
+    "channels": {
+      "files": [],
+      "meta": {}
+    },
+    "gateways": {
+      "meta": {},
+      "files": []
+    },
+    "triggers": {
+      "meta": {},
+      "sourceMeta": {},
+      "webhookSourceMeta": {},
+      "files": []
+    },
+    "scheduledTasks": {
+      "meta": {},
+      "files": []
+    },
+    "queueWorkers": {
+      "meta": {},
+      "files": []
+    },
+    "workflows": {
+      "meta": {},
+      "files": [],
+      "graphMeta": {},
+      "graphFiles": [],
+      "featureFiles": [],
+      "invokedWorkflows": []
+    },
+    "rpc": {
+      "internalMeta": {
+        "returnsSecret": "returnsSecret",
+        "returnsBareSecret": "returnsBareSecret",
+        "sessionedPrivate": "sessionedPrivate",
+        "sessionlessPrivate": "sessionlessPrivate",
+        "sessionlessPii": "sessionlessPii",
+        "sessionlessBoth": "sessionlessBoth",
+        "sessionlessInherited": "sessionlessInherited",
+        "sessionlessSync": "sessionlessSync",
+        "sessionlessUnion": "sessionlessUnion",
+        "clean": "clean",
+        "secretInline": "secretInline",
+        "secretThroughLocal": "secretThroughLocal",
+        "secretInObject": "secretInObject",
+        "secretInEmail": "secretInEmail",
+        "secretInAudit": "secretInAudit",
+        "secretInWebhook": "secretInWebhook",
+        "piiInLogger": "piiInLogger",
+        "piiInConsole": "piiInConsole",
+        "piiInWebhook": "piiInWebhook",
+        "piiThroughDerivedLogger": "piiThroughDerivedLogger",
+        "piiAllowed": "piiAllowed",
+        "unnamedPropertyValue": "unnamedPropertyValue"
+      },
+      "internalFiles": [],
+      "exposedMeta": {},
+      "exposedFiles": [],
+      "remoteMeta": {},
+      "remoteFiles": [],
+      "invokedFunctions": [],
+      "invokedFunctionsByFile": [],
+      "usedAddons": [],
+      "wireAddonDeclarations": [],
+      "wireAddonFiles": []
+    },
+    "mcpEndpoints": {
+      "resourcesMeta": {},
+      "toolsMeta": {},
+      "promptsMeta": {},
+      "files": [],
+      "surfaces": {}
+    },
+    "agents": {
+      "agentsMeta": {},
+      "files": [],
+      "invokedAgentsByFile": []
+    },
+    "scorers": {
+      "scorersMeta": {},
+      "files": []
+    },
+    "cli": {
+      "meta": {
+        "programs": {},
+        "renderers": {}
+      },
+      "files": []
+    },
+    "nodes": {
+      "meta": {},
+      "files": []
+    },
+    "auth": {
+      "providers": [],
+      "plugins": [],
+      "files": [],
+      "definition": null
+    },
+    "secrets": {
+      "definitions": [],
+      "files": [],
+      "usage": {}
+    },
+    "surfaceUsage": {},
+    "credentials": {
+      "definitions": [],
+      "files": []
+    },
+    "scopes": {
+      "definitions": [],
+      "files": []
+    },
+    "systemRoles": {
+      "definitions": [],
+      "files": []
+    },
+    "featureFlags": {
+      "definitions": [],
+      "files": []
+    },
+    "virtualUsers": {
+      "definitions": [],
+      "files": []
+    },
+    "variables": {
+      "definitions": [],
+      "files": []
+    },
+    "manifest": {
+      "initial": null,
+      "current": {
+        "manifestVersion": 1,
+        "contracts": {
+          "returnsSecret": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "1a1f725a",
+                "outputHash": "d375f332"
+              }
+            }
+          },
+          "returnsBareSecret": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "6d8513d3",
+                "outputHash": "b39c5d90"
+              }
+            }
+          },
+          "sessionedPrivate": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "9d5a51cb",
+                "outputHash": "07d3641f"
+              }
+            }
+          },
+          "sessionlessPrivate": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "b57462b0",
+                "outputHash": "3acc1dd0"
+              }
+            }
+          },
+          "sessionlessPii": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "65cb6d89",
+                "outputHash": "6ebdb6ec"
+              }
+            }
+          },
+          "sessionlessBoth": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "9d2cb92e",
+                "outputHash": "ccb0c017"
+              }
+            }
+          },
+          "sessionlessInherited": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "dce897fc",
+                "outputHash": "336978cd"
+              }
+            }
+          },
+          "sessionlessSync": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "3a902cd9",
+                "outputHash": "25a82110"
+              }
+            }
+          },
+          "sessionlessUnion": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "4818a1ba",
+                "outputHash": "ab8747af"
+              }
+            }
+          },
+          "clean": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "8e7a41eb",
+                "outputHash": "8e9ca45c"
+              }
+            }
+          },
+          "secretInline": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "f27cbc34",
+                "outputHash": "499e7a5a"
+              }
+            }
+          },
+          "secretThroughLocal": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "6437ff0a",
+                "outputHash": "ef29b5b2"
+              }
+            }
+          },
+          "secretInObject": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "85531103",
+                "outputHash": "29242869"
+              }
+            }
+          },
+          "secretInEmail": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "d49d0438",
+                "outputHash": "5c2dc3ff"
+              }
+            }
+          },
+          "secretInAudit": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "4d3457f0",
+                "outputHash": "abf32cb5"
+              }
+            }
+          },
+          "secretInWebhook": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "f3fa915c",
+                "outputHash": "c6f3055b"
+              }
+            }
+          },
+          "piiInLogger": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "f0290291",
+                "outputHash": "1eb58fc9"
+              }
+            }
+          },
+          "piiInConsole": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "1172057f",
+                "outputHash": "8133c234"
+              }
+            }
+          },
+          "piiInWebhook": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "2638ca5d",
+                "outputHash": "54a89ba5"
+              }
+            }
+          },
+          "piiThroughDerivedLogger": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "61030399",
+                "outputHash": "3ca41ec6"
+              }
+            }
+          },
+          "piiAllowed": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "3880f7a5",
+                "outputHash": "438f5cd2"
+              }
+            }
+          },
+          "unnamedPropertyValue": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "a5dabe33",
+                "outputHash": "80878923"
+              }
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    "middleware": {
+      "definitions": {},
+      "instances": {},
+      "globalFiles": [],
+      "tagMiddleware": []
+    },
+    "channelMiddleware": {
+      "definitions": {},
+      "instances": {},
+      "tagMiddleware": []
+    },
+    "agentMiddleware": {
+      "definitions": {}
+    },
+    "permissions": {
+      "definitions": {},
+      "instances": {},
+      "global": []
+    },
+    "serviceAggregation": {
+      "requiredServices": [],
+      "usedFunctions": [],
+      "usedMiddleware": [],
+      "usedPermissions": [],
+      "allSingletonServices": [],
+      "allWireServices": []
+    },
+    "serviceTypes": {
+      "singletonServices": null,
+      "services": null,
+      "secretAliases": []
+    },
+    "resolvedIOTypes": {
+      "returnsSecret": {
+        "inputType": "null",
+        "outputType": "ReturnsSecretOutput"
+      },
+      "returnsBareSecret": {
+        "inputType": "null",
+        "outputType": "ReturnsBareSecretOutput"
+      },
+      "sessionedPrivate": {
+        "inputType": "null",
+        "outputType": "SessionedPrivateOutput"
+      },
+      "sessionlessPrivate": {
+        "inputType": "null",
+        "outputType": "SessionlessPrivateOutput"
+      },
+      "sessionlessPii": {
+        "inputType": "null",
+        "outputType": "SessionlessPiiOutput"
+      },
+      "sessionlessBoth": {
+        "inputType": "null",
+        "outputType": "SessionlessBothOutput"
+      },
+      "sessionlessInherited": {
+        "inputType": "null",
+        "outputType": "Row"
+      },
+      "sessionlessSync": {
+        "inputType": "null",
+        "outputType": "SessionlessSyncOutput"
+      },
+      "sessionlessUnion": {
+        "inputType": "null",
+        "outputType": "SessionlessUnionOutput"
+      },
+      "clean": {
+        "inputType": "null",
+        "outputType": "CleanOutput"
+      },
+      "secretInline": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "secretThroughLocal": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "secretInObject": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "secretInEmail": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "secretInAudit": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "secretInWebhook": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "piiInLogger": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "piiInConsole": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "piiInWebhook": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "piiThroughDerivedLogger": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "piiAllowed": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "unnamedPropertyValue": {
+        "inputType": "null",
+        "outputType": "null"
+      }
+    },
+    "middlewareGroupsMeta": {
+      "definitions": {},
+      "instances": {},
+      "httpGroups": {},
+      "tagGroups": {},
+      "channelMiddleware": {
+        "definitions": {},
+        "instances": {},
+        "tagGroups": {}
+      }
+    },
+    "permissionsGroupsMeta": {
+      "definitions": {}
+    },
+    "requiredSchemas": [
+      "ReturnsSecretOutput",
+      "ReturnsBareSecretOutput",
+      "SessionedPrivateOutput",
+      "SessionlessPrivateOutput",
+      "SessionlessPiiOutput",
+      "SessionlessBothOutput",
+      "Row",
+      "SessionlessSyncOutput",
+      "SessionlessUnionOutput",
+      "CleanOutput"
+    ],
+    "openAPISpec": null,
+    "diagnostics": [],
+    "addonFunctions": {},
+    "exportedContracts": {
+      "http": {},
+      "cli": {},
+      "channel": {},
+      "addonHttp": {},
+      "addonCli": {},
+      "addonChannel": {}
+    }
+  },
+  "diagnostics": [
+    {
+      "level": "error",
+      "code": "PKU463",
+      "message": "1 function contract names a schema that was never generated, so calling it fails at runtime with MissingSchemaError: sessionlessInherited.output → 'Row'. The usual cause is a named type used as the function's input/output that is declared but not exported — export it, or inline the type at the call site."
+    }
+  ],
+  "validationPass": {
+    "start": 1,
+    "end": 1
+  }
+}

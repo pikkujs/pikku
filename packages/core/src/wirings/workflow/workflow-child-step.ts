@@ -24,12 +24,18 @@ export const runInlineChildStep = async (
   workflowName: string,
   data: unknown,
   rpcService: PikkuRPC,
-  pikkuUserId: string | undefined
+  parentWire: WorkflowRunWire | undefined
 ): Promise<unknown> => {
   const { runId: childRunId } = await api.startWorkflow(
     workflowName,
     data,
-    { type: 'workflow', id: workflowName, parentRunId: runId, pikkuUserId },
+    {
+      type: 'workflow',
+      id: workflowName,
+      parentRunId: runId,
+      pikkuUserId: parentWire?.pikkuUserId,
+      traceparent: parentWire?.traceparent,
+    },
     rpcService,
     { inline: true }
   )
@@ -47,7 +53,7 @@ export const startQueuedChildStep = async (
   workflowName: string,
   data: unknown,
   rpcService: PikkuRPC,
-  pikkuUserId: string | undefined
+  parentWire: WorkflowRunWire | undefined
 ): Promise<unknown> => {
   const shouldInline = !getSingletonServices()?.queueService
   const { runId: childRunId } = await api.startWorkflow(
@@ -58,7 +64,8 @@ export const startQueuedChildStep = async (
       id: workflowName,
       parentRunId: runId,
       parentStepId: stepId,
-      pikkuUserId,
+      pikkuUserId: parentWire?.pikkuUserId,
+      traceparent: parentWire?.traceparent,
     },
     rpcService,
     { inline: shouldInline }

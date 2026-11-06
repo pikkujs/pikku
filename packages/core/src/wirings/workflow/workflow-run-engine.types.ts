@@ -39,6 +39,7 @@ export interface WorkflowRunEngine {
   ): Promise<void>
   onChildWorkflowFailed(run: WorkflowRun, error: unknown): Promise<void>
   verifyStepName(stepName: unknown): void
+  getRunTraceparent(runId: string): Promise<string | undefined>
 }
 
 /**

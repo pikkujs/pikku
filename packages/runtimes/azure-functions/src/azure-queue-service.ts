@@ -40,6 +40,7 @@ export class AzureQueueService implements QueueService {
       queueName,
       data,
       pikkuUserId: options?.pikkuUserId,
+      traceparent: options?.traceparent,
     }
 
     // Azure Storage Queue messages must be base64-encoded strings

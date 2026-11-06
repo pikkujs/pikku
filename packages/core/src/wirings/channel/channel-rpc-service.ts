@@ -62,7 +62,7 @@ export class ChannelDeploymentService implements DeploymentService {
     funcName: string,
     data: unknown,
     _session?: unknown,
-    traceId?: string
+    traceparent?: string
   ): Promise<unknown> {
     // Not a security control — the peer must check what it is handed, and a
     // hostile caller would send arguments that pass. It catches version drift
@@ -90,7 +90,7 @@ export class ChannelDeploymentService implements DeploymentService {
       id,
       funcName,
       data,
-      traceId,
+      traceparent,
     }
 
     try {

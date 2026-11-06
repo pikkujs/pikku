@@ -95,6 +95,8 @@ export const createReadyBarrier = (label: string): ReadyBarrier => {
 export interface SpawnedServer {
   /** Kills the whole process group, so the server's own children go with it. */
   stop: () => void
+  /** The same, with the signal to send. */
+  kill: (signal: NodeJS.Signals) => void
   /** Resolves on the ready marker; rejects if the server dies or never reports. */
   waitUntilReady: (options?: { timeoutMs?: number }) => Promise<void>
 }
@@ -157,18 +159,22 @@ export const spawnDevServer = async (
   child.stderr?.on('data', forward)
   child.on('exit', (code) => barrier.markExited(code))
 
+  const kill = (signal: NodeJS.Signals) => {
+    child.stdout?.destroy()
+    child.stderr?.destroy()
+    if (child.pid) {
+      try {
+        process.kill(-child.pid, signal)
+      } catch {
+        // Process group may already be gone
+      }
+    }
+  }
+
   return {
     waitUntilReady: barrier.wait,
-    stop: () => {
-      child.stdout?.destroy()
-      child.stderr?.destroy()
-      if (child.pid) {
-        try {
-          process.kill(-child.pid, 'SIGTERM')
-        } catch {
-          // Process group may already be gone
-        }
-      }
-    },
+    kill,
+    // Takes nothing, so it stays safe to hand to `process.once('exit', ...)`.
+    stop: () => kill('SIGTERM'),
   }
 }

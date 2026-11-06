@@ -150,7 +150,11 @@ describe('scenario virtual user steps (workflow.do with `virtualUser`)', () => {
       wire.do('step', 'createTodo', {}, { virtualUser: broken, retries: 2 }),
       /returned 403/
     )
-    assert.equal(broken.calls.length, 2, 'retries bounds total attempts')
+    assert.equal(
+      broken.calls.length,
+      3,
+      'retries are on top of the first attempt'
+    )
   })
 })
 

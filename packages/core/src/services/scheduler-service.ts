@@ -34,7 +34,9 @@ export abstract class SchedulerService {
     delay: number | string,
     rpcName: string,
     data?: any,
-    session?: CoreUserSession
+    session?: CoreUserSession,
+    /** The W3C trace the RPC continues when it fires. */
+    traceparent?: string
   ): Promise<string>
 
   abstract unschedule(taskId: string): Promise<boolean>

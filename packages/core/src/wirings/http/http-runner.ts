@@ -24,6 +24,7 @@ import type {
 } from '../../middleware/middleware.types.js'
 import { NotFoundError } from '../../errors/errors.js'
 import { createWeakUID, isSerializable } from '../../utils.js'
+import { resolveHTTPTrace, type TraceContext } from '../../trace.js'
 import {
   getSingletonServices,
   getCreateWireServices,
@@ -205,7 +206,7 @@ const executeRoute = async (
     singletonServices: any
     createWireServices?: any
     skipUserSession: boolean
-    requestId: string
+    trace: TraceContext
   },
   matchedRoute: {
     matchedPath: any
@@ -219,7 +220,7 @@ const executeRoute = async (
   }
 ) => {
   const { params, route, meta } = matchedRoute
-  const { singletonServices, createWireServices, skipUserSession, requestId } =
+  const { singletonServices, createWireServices, skipUserSession, trace } =
     services
   const userSession = new PikkuSessionService<CoreUserSession>(
     singletonServices.sessionStore
@@ -324,7 +325,8 @@ const executeRoute = async (
   }
 
   const wire: PikkuRawWire = {
-    traceId: requestId,
+    traceId: trace.traceId,
+    trace,
     http,
     channel,
     ...createMiddlewareSessionWireProps(userSession),
@@ -428,9 +430,9 @@ export const pikkuFetch = async <In, Out>(
  *
  * The lower-level form of {@link fetch} for adapters that bring their own
  * request and response objects (Express, Fastify, uWS). A web `Request` is
- * wrapped with the `maxBodySize` limit. The trace ID is taken from `traceId`,
- * then the `x-request-id` header, then `generateRequestId`, and is returned to
- * the client as `errorId` on failures.
+ * wrapped with the `maxBodySize` limit. The trace comes from a valid `traceId`,
+ * then `traceparent` when `trustInboundTraceparent` is set, and is otherwise new.
+ * Its id is returned to the client as `errorId` on failures.
  *
  * Errors are written to `response`: a 4xx keeps its message and payload, while a
  * 5xx or an unknown error hides its message unless `exposeErrors` is set outside
@@ -454,8 +456,8 @@ export const fetchData = async <In, Out>(
     coerceDataFromSchema = true,
     bubbleErrors = false,
     exposeErrors = !isProduction(),
-    generateRequestId,
-    traceId: externalTraceId,
+    traceId,
+    trustInboundTraceparent,
     maxBodySize,
   }: RunHTTPWiringOptions = {}
 ): Promise<Out | void> => {
@@ -468,16 +470,14 @@ export const fetchData = async <In, Out>(
       ? new PikkuFetchHTTPRequest(request, { maxBodySize })
       : request
 
-  let requestId: string | null = externalTraceId ?? null
-  if (!requestId) {
-    try {
-      requestId = pikkuRequest.header('x-request-id')
-    } catch {}
-  }
-  requestId = requestId || generateRequestId?.() || createWeakUID()
-
-  const scopedLogger =
-    singletonServices.logger.scope?.(requestId) ?? singletonServices.logger
+  const trace = resolveHTTPTrace(
+    () => pikkuRequest.header('traceparent'),
+    singletonServices.logger,
+    { traceId, trustInboundTraceparent }
+  )
+  // Read at the point of logging: mesh auth can continue the caller's trace.
+  const scopedLogger = () =>
+    singletonServices.logger.scope?.(trace.traceId) ?? singletonServices.logger
   const http = createHTTPWire(pikkuRequest, response)
   const apiType = http!.request!.method()
   const apiRoute = http!.request!.path()
@@ -500,7 +500,7 @@ export const fetchData = async <In, Out>(
         response.status(204).json(undefined as never)
         return
       }
-      scopedLogger.info({
+      scopedLogger().info({
         message: 'Route not found',
         apiRoute,
         apiType,
@@ -513,7 +513,7 @@ export const fetchData = async <In, Out>(
         singletonServices,
         createWireServices,
         skipUserSession,
-        requestId,
+        trace,
       },
       matchedRoute,
       http!,
@@ -525,8 +525,8 @@ export const fetchData = async <In, Out>(
     handleHTTPError(
       e,
       http,
-      requestId,
-      scopedLogger,
+      trace.traceId,
+      scopedLogger(),
       logWarningsForStatusCodes,
       respondWith404,
       bubbleErrors,

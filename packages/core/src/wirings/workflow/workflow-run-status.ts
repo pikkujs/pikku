@@ -1,4 +1,8 @@
 import { WORKFLOW_TERMINAL_STATES } from './workflow-constants.js'
+import {
+  WorkflowRunCancelledError,
+  WorkflowRunFailedError,
+} from './workflow-errors.js'
 import type { HistoryEntry } from './run-timeline.js'
 import type {
   StepStatus,
@@ -73,4 +77,19 @@ function compensationOutcome(
     return { stuckSteps: output.stuckSteps }
   }
   return {}
+}
+
+/** What a finished run returned, or the error for a run that did not succeed. */
+export function runOutput(run: WorkflowRun): unknown {
+  if (
+    run.status === 'failed' ||
+    run.status === 'compensated' ||
+    run.status === 'compensation_failed'
+  ) {
+    throw new WorkflowRunFailedError(run.error?.message)
+  }
+  if (run.status === 'cancelled') {
+    throw new WorkflowRunCancelledError()
+  }
+  return run.output
 }

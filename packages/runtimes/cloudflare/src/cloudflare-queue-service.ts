@@ -44,6 +44,7 @@ export class CloudflareQueueService implements QueueService {
       queueName,
       data,
       pikkuUserId: options?.pikkuUserId,
+      traceparent: options?.traceparent,
     }
 
     await queue.send(message, {

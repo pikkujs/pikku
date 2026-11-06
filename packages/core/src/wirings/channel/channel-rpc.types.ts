@@ -13,7 +13,8 @@ export interface ChannelRPCRequest {
   id: string
   funcName: string
   data: unknown
-  traceId?: string
+  /** A claim by the peer. See `trustInboundTraceparent` on the responder. */
+  traceparent?: string
 }
 
 /** The answer to a {@link ChannelRPCRequest} with the same `id`: a result when `ok`, an error name and message otherwise. */
@@ -54,7 +55,7 @@ export const isChannelRPCRequest = (
   message.id.length > 0 &&
   typeof message.funcName === 'string' &&
   message.funcName.length > 0 &&
-  (message.traceId === undefined || typeof message.traceId === 'string')
+  (message.traceparent === undefined || typeof message.traceparent === 'string')
 
 export const isChannelRPCResponse = (
   message: unknown
@@ -101,7 +102,10 @@ export interface ApprovalPolicy {
 }
 
 /** A function one end of a channel offers for the peer to call through `channel.remote`. */
-export type CapabilityHandler = (data: any) => Promise<unknown> | unknown
+export type CapabilityHandler = (
+  data: any,
+  context?: { traceparent?: string }
+) => Promise<unknown> | unknown
 
 /**
  * `needsApproval` is required here on purpose. On `AgentToolDef` the same

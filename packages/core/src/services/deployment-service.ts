@@ -41,6 +41,6 @@ export interface DeploymentService {
     funcName: string,
     data: unknown,
     session?: unknown,
-    traceId?: string
+    traceparent?: string
   ): Promise<unknown>
 }

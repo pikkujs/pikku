@@ -1,3 +1,4 @@
+import { outgoingTraceparent } from '../../trace.js'
 import type {
   AgentInput,
   AgentOutput,
@@ -363,6 +364,7 @@ export async function runAgent(
     )
 
     await finalizeAgentRun(agentRunState, {
+      traceparent: outgoingTraceparent({ trace: params.trace }),
       runId,
       agentName,
       threadId,
@@ -844,6 +846,7 @@ async function continueAfterToolResultSync(
     )
 
     await finalizeAgentRun(agentRunState, {
+      traceparent: outgoingTraceparent({ trace: params.trace }),
       runId: run.runId,
       agentName: resolvedName,
       threadId: run.threadId,

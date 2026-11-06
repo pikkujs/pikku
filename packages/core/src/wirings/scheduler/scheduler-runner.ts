@@ -7,6 +7,7 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import { continueTrace } from '../../trace.js'
 import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
@@ -16,11 +17,11 @@ import type {
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
 
-/** Parameters for {@link runScheduledTask}: the task's name, an optional session to run it with, and an optional trace ID. */
+/** Parameters for {@link runScheduledTask}: the task's name, an optional session to run it with, and an optional W3C trace to continue. */
 export type RunScheduledTasksParams = {
   name: string
   session?: CoreUserSession
-  traceId?: string
+  traceparent?: string
 }
 
 /**
@@ -91,21 +92,20 @@ class ScheduledTaskSkippedError extends PikkuError {
  * When `session` is given it is placed on the wire, so the function and its
  * middleware see that user; otherwise the task runs without one.
  *
- * @param params - See {@link RunScheduledTasksParams}. `traceId` defaults to `cron-<name>-<timestamp>`.
+ * @param params - See {@link RunScheduledTasksParams}. A missing or invalid `traceparent` starts a new trace.
  * @throws {ScheduledTaskNotFoundError} When the task or its metadata is missing.
  * @throws The error the function threw, including the one `scheduledTask.skip()` raises, so the caller can tell a skip from a failure.
  */
 export async function runScheduledTask({
   name,
   session,
-  traceId,
+  traceparent,
 }: RunScheduledTasksParams): Promise<void> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
-  const resolvedTraceId = traceId ?? `cron-${name}-${Date.now()}`
+  const trace = continueTrace(traceparent)
   const scopedLogger =
-    singletonServices.logger.scope?.(resolvedTraceId) ??
-    singletonServices.logger
+    singletonServices.logger.scope?.(trace.traceId) ?? singletonServices.logger
   const task = pikkuState(null, 'scheduler', 'tasks').get(name)
   const meta = pikkuState(null, 'scheduler', 'meta')[name]
 
@@ -124,7 +124,8 @@ export async function runScheduledTask({
   }
 
   const wire: PikkuRawWire = {
-    traceId: resolvedTraceId,
+    traceId: trace.traceId,
+    trace,
     scheduledTask: {
       name,
       schedule: task.schedule,

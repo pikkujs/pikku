@@ -10,6 +10,12 @@ import {
 } from '../channel-middleware-runner.js'
 import { runPermissions, type PermissionWire } from '../permissions.js'
 import { withoutSecrets } from '../services/secretless.js'
+import {
+  traceQueueService,
+  traceSchedulerService,
+  traceWebhookService,
+} from './trace-queue-service.js'
+import { createTrace } from '../trace.js'
 import { getCreateWireServices, pikkuState } from '../pikku-state.js'
 import {
   applyDefaultsFromSchema,
@@ -391,6 +397,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   const resolvedAuditConfig = resolveAuditConfig(funcConfig.audit)
   const invocationWire = resolvedWire as PikkuWire
+  // A wire no runner gave a trace is the root of one.
+  const rootTrace = !invocationWire.trace
+  if (rootTrace) {
+    invocationWire.trace = createTrace(invocationWire.traceId)
+    invocationWire.traceId = invocationWire.trace.traceId
+  }
   const previousFunctionId = invocationWire.functionId
   const previousAudit = invocationWire.audit
   const previousAddonNamespace = invocationWire.addonNamespace
@@ -573,6 +585,31 @@ export const runPikkuFunc = async <In = any, Out = any>(
           resolvedSingletonServices.logger
         )
         services = { ...services, auditLog: invocationAuditLog }
+      }
+      services = {
+        ...services,
+        ...(rootTrace && {
+          logger:
+            services.logger.scope?.(invocationWire.traceId!) ?? services.logger,
+        }),
+        ...(services.queueService && {
+          queueService: traceQueueService(
+            services.queueService,
+            invocationWire
+          ),
+        }),
+        ...(services.schedulerService && {
+          schedulerService: traceSchedulerService(
+            services.schedulerService,
+            invocationWire
+          ),
+        }),
+        ...(services.webhookService && {
+          webhookService: traceWebhookService(
+            services.webhookService,
+            invocationWire
+          ),
+        }),
       }
       // Unconditional, unlike the audit — every function can record. Built on
       // first access, since most invocations record nothing.

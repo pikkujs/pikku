@@ -4,6 +4,7 @@ import {
   DEFAULT_STEP_RETRIES,
   NO_COMPENSATE_STATE_PREFIX,
   WORKFLOW_TERMINAL_STATES,
+  isRunStopped,
   compensationStepName,
 } from './workflow-constants.js'
 import { pikkuState } from '../../pikku-state.js'
@@ -456,6 +457,23 @@ export const isUnwound = (status: string | undefined): boolean =>
   status === 'compensating' ||
   status === 'compensated' ||
   status === 'compensation_failed'
+
+/**
+ * The status of a run that can no longer take an outcome from a pass of its
+ * own. An unwind that stopped to wait on the steps in flight is finished here:
+ * those steps were this pass's, and nothing else will wake an inline run.
+ */
+export const settleStoppedRun = async (
+  api: CompensationApi,
+  runId: string
+): Promise<WorkflowStatus | undefined> => {
+  const status = (await api.getRun(runId))?.status
+  if (!status || !isRunStopped(status)) return undefined
+  if (status === 'compensating') {
+    await driveUnwind(createUnwindHost(api), runId)
+  }
+  return status
+}
 
 export const failRunOrUnwind = async (
   api: CompensationApi,

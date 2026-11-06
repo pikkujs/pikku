@@ -89,6 +89,7 @@ import type {
   CoreSingletonServices,
 } from '../../types/core.types.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
+import { traceWire } from '../../trace.js'
 /**
  * Wires a messaging gateway (Slack, WhatsApp, a web chat, ...) so each inbound message runs `func`
  * with the adapter-normalised message.
@@ -397,7 +398,8 @@ export const createListenerMessageHandler = (
     const parsed = adapter.parse(rawData)
     if (!parsed) return
 
-    const wire: PikkuRawWire = {}
+    // Here rather than left to the function runner: middleware runs first.
+    const wire: PikkuRawWire = traceWire()
     const gateway: PikkuGateway = {
       gatewayName: name,
       senderId: parsed.senderId,

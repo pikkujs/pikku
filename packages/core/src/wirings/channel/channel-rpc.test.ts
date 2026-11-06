@@ -260,7 +260,7 @@ describe('ChannelDeploymentService', () => {
     assert.ok(isChannelRPCRequest(request))
     assert.equal(request.funcName, 'gitHead')
     assert.deepEqual(request.data, { cwd: '.' })
-    assert.equal(request.traceId, 'trace-1', 'traceId propagates')
+    assert.equal(request.traceparent, 'trace-1', 'traceId propagates')
     // The peer runs the capability as itself, on its own machine, under its
     // own identity. Sending the caller's session would hand it credentials it
     // has no use for and that authorise nothing on its side.
@@ -564,7 +564,7 @@ describe('envelope validation', () => {
       { ...valid, funcName: {} },
       { ...valid, funcName: '' },
       { ...valid, funcName: undefined },
-      { ...valid, traceId: 42 },
+      { ...valid, traceparent: 42 },
       { action: CHANNEL_RPC_REQUEST },
     ]) {
       assert.equal(
