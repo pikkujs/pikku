@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuFunc, pikkuSessionlessFunc } from '#pikku/function'
 import { pikkuAuth, pikkuPermission } from '#pikku/auth'
 
 /**
@@ -9,7 +9,7 @@ import { pikkuAuth, pikkuPermission } from '#pikku/auth'
  * list before the model is ever told the tool exists.
  */
 export const isPermittedUser = pikkuAuth(
-  async (_services, session) => session?.userId === 'permitted-user'
+  async (_services, session) => session.userId === 'permitted-user'
 )
 
 /**
@@ -21,7 +21,7 @@ export const isPermittedUser = pikkuAuth(
  * menu, permissions guard the call.
  */
 export const isRecordOwner = pikkuPermission<{ ownerId: string }>(
-  async (_services, data, { session }) => data?.ownerId === session?.userId
+  async (_services, data, { session }) => data?.ownerId === session.userId
 )
 
 /**
@@ -29,7 +29,7 @@ export const isRecordOwner = pikkuPermission<{ ownerId: string }>(
  * value is in never reaching the model: the assertion is that the name is
  * absent from the tool list, not that invoking it fails.
  */
-export const gatedTool = pikkuSessionlessFunc<void, { ran: true }>({
+export const gatedTool = pikkuFunc<void, { ran: true }>({
   description: 'Run the permission-gated action available to permitted users',
   expose: true,
   permissions: { permitted: isPermittedUser },
@@ -40,10 +40,7 @@ export const gatedTool = pikkuSessionlessFunc<void, { ran: true }>({
  * Gated by a data-dependent permission, so it IS offered to every caller and is
  * refused only when invoked with someone else's `ownerId`.
  */
-export const dataGatedTool = pikkuSessionlessFunc<
-  { ownerId: string },
-  { ran: true }
->({
+export const dataGatedTool = pikkuFunc<{ ownerId: string }, { ran: true }>({
   description: 'Run the owner-scoped action against a record you own',
   expose: true,
   permissions: { owner: isRecordOwner },

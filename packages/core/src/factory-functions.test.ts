@@ -10,11 +10,51 @@ import {
   pikkuMiddlewareFactory,
 } from './middleware/middleware-factories.js'
 
-test('pikkuPermission returns the same function', async () => {
-  const originalFn = async () => true
-  const wrappedFn = pikkuPermission(originalFn)
-  assert.strictEqual(wrappedFn, originalFn)
+test('pikkuPermission runs the check with a session and hands it the wire', async () => {
+  const wire = { session: { userId: 'u1' } }
+  const seen: unknown[] = []
+  const permission = pikkuPermission(async (_services, data, received) => {
+    seen.push(data, received)
+    return data === 'yes'
+  })
+  assert.strictEqual(await permission({} as any, 'yes', wire as any), true)
+  assert.strictEqual(await permission({} as any, 'no', wire as any), false)
+  assert.deepStrictEqual(seen, ['yes', wire, 'no', wire])
 })
+
+for (const [name, wrap] of [
+  ['pikkuPermission', pikkuPermission],
+  ['pikkuAuth', pikkuAuth],
+] as const) {
+  test(`${name} refuses with no session and does not run the check`, async () => {
+    let called = false
+    const check = wrap(async () => {
+      called = true
+      return true
+    })
+    assert.strictEqual(await check({} as any, {}, {} as any), false)
+    assert.strictEqual(called, false)
+  })
+
+  test(`${name} with skipWithoutSession passes with no session and does not run the check`, async () => {
+    let called = false
+    const check = wrap({
+      skipWithoutSession: true,
+      func: async () => {
+        called = true
+        return false
+      },
+    })
+    assert.strictEqual(await check({} as any, {}, {} as any), true)
+    assert.strictEqual(called, false)
+  })
+
+  test(`${name} with skipWithoutSession still runs the check with a session`, async () => {
+    const check = wrap({ skipWithoutSession: true, func: async () => false })
+    const wire = { session: { userId: 'u1' } }
+    assert.strictEqual(await check({} as any, {}, wire as any), false)
+  })
+}
 
 test('pikkuMiddleware returns the same function', async () => {
   const originalFn = async ({ logger }, wires, next) => next
@@ -55,10 +95,24 @@ test('pikkuMiddlewareFactory creates a factory function', async () => {
   assert.strictEqual(middleware.length, 3) // services, wires, next
 })
 
-test('pikkuPermissionFactory returns the same factory', async () => {
-  const originalFactory = () => pikkuPermission(async () => true)
-  const wrappedFactory = pikkuPermissionFactory(originalFactory as any)
-  assert.strictEqual(wrappedFactory, originalFactory)
+test('pikkuPermissionFactory returns what the factory built when it is already guarded', async () => {
+  const permission = pikkuAuth({
+    skipWithoutSession: true,
+    func: async () => false,
+  })
+  const factory = pikkuPermissionFactory(() => permission)
+  assert.strictEqual(factory(undefined), permission)
+  assert.strictEqual(await permission({} as any, {}, {} as any), true)
+})
+
+test('pikkuPermissionFactory guards a plain function it is given', async () => {
+  let called = false
+  const factory = pikkuPermissionFactory(() => async () => {
+    called = true
+    return true
+  })
+  assert.strictEqual(await factory(undefined)({} as any, {}, {} as any), false)
+  assert.strictEqual(called, false)
 })
 
 test('pikkuMiddlewareFactory returns the same factory', async () => {

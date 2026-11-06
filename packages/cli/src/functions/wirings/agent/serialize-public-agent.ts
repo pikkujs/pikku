@@ -163,7 +163,7 @@ export const getAgentThreadMessages = pikkuSessionlessFunc({
   description:
     'Returns all messages for a given AI agent thread, ordered by creation time.',
   expose: true,
-  auth: false,
+  auth: true,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
     return await agentRunService.getThreadMessages(input.threadId)
@@ -177,7 +177,7 @@ export const getAgentThreadRuns = pikkuSessionlessFunc({
   description:
     'Returns the run history for a given AI agent thread, ordered by creation time.',
   expose: true,
-  auth: false,
+  auth: true,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
     return await agentRunService.getThreadRuns(input.threadId)
@@ -192,7 +192,7 @@ export const deleteAgentThread = pikkuSessionlessFunc({
   description:
     'Deletes an AI agent thread and all of its persisted state.',
   expose: true,
-  auth: false,
+  auth: true,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
     const deleted = await agentRunService.deleteThread(input.threadId)

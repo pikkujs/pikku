@@ -6,21 +6,22 @@ package state
 // literals; see meta.go for the conventions.
 
 // MiddlewareDefinition is InspectorMiddlewareDefinition and
-// InspectorPermissionDefinition (the latter adds requiresData and dataUnused),
+// InspectorPermissionDefinition (the latter adds requiresData, dataUnused and skipWithoutSession),
 // and the shape
 // of an approval description (which sets only the first five fields).
 type MiddlewareDefinition struct {
-	Services     ServicesMeta `json:"services"`
-	Wires        *WiresMeta   `json:"wires,omitempty"`
-	SourceFile   string       `json:"sourceFile"`
-	Position     int          `json:"position"`
-	ExportedName *string      `json:"exportedName"`
-	Factory      *bool        `json:"factory,omitempty"`
-	Name         *string      `json:"name,omitempty"`
-	Description  *string      `json:"description,omitempty"`
-	Package      *string      `json:"package,omitempty"`
-	RequiresData *bool        `json:"requiresData,omitempty"`
-	DataUnused   *bool        `json:"dataUnused,omitempty"`
+	Services           ServicesMeta `json:"services"`
+	Wires              *WiresMeta   `json:"wires,omitempty"`
+	SourceFile         string       `json:"sourceFile"`
+	Position           int          `json:"position"`
+	ExportedName       *string      `json:"exportedName"`
+	Factory            *bool        `json:"factory,omitempty"`
+	Name               *string      `json:"name,omitempty"`
+	Description        *string      `json:"description,omitempty"`
+	Package            *string      `json:"package,omitempty"`
+	RequiresData       *bool        `json:"requiresData,omitempty"`
+	DataUnused         *bool        `json:"dataUnused,omitempty"`
+	SkipWithoutSession *bool        `json:"skipWithoutSession,omitempty"`
 }
 
 // MiddlewareInstance is InspectorMiddlewareInstance.

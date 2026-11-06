@@ -283,6 +283,12 @@ export interface InspectorPermissionDefinition {
    * have been a `pikkuAuth`. Absent whenever that cannot be told (PKU586).
    */
   dataUnused?: boolean
+  /**
+   * Set when the config turns `skipWithoutSession` on, and also when that
+   * cannot be told statically (a spread, a value that is not a literal, a
+   * factory whose body cannot be read), because PKU587 must not flag those.
+   */
+  skipWithoutSession?: boolean
 }
 
 export interface InspectorPermissionInstance {
@@ -302,6 +308,8 @@ export interface InspectorGlobalPermissionRegistration {
   position: number
   exportName: string | null
   definitionIds: string[]
+  /** Registered for a named package, so which functions it reaches is not known here. */
+  targetsPackage?: boolean
 }
 
 export interface InspectorPermissionState {

@@ -5,5 +5,4 @@ export const globallyDenied = pikkuVoidFunc({
   func: async ({ logger }) => {
     logger.info({ type: 'function', name: 'globallyDenied', phase: 'execute' })
   },
-  auth: false,
 })

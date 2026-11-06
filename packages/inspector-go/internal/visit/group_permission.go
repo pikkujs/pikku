@@ -75,6 +75,47 @@ func neverReadsData(handler *ast.Node) bool {
 	return !referenced
 }
 
+// skipsWithoutSession is skipsWithoutSession: whether a permission's argument
+// turns skipWithoutSession on, or might, since PKU587 must not flag what it
+// cannot resolve.
+func skipsWithoutSession(arg *ast.Node) bool {
+	if !ast.IsObjectLiteralExpression(arg) {
+		return false
+	}
+	for _, p := range arg.Properties() {
+		if ast.IsSpreadAssignment(p) {
+			return true
+		}
+		name := p.Name()
+		if name == nil || (!ast.IsIdentifier(name) && !ast.IsStringLiteral(name)) || name.Text() != "skipWithoutSession" {
+			continue
+		}
+		if !ast.IsPropertyAssignment(p) || unwrapExpression(p.Initializer()).Kind != ast.KindFalseKeyword {
+			return true
+		}
+	}
+	return false
+}
+
+// permissionCalls collects every pikkuPermission and pikkuAuth call under node.
+func (s *Context) permissionCalls(node *ast.Node) []*ast.Node {
+	var calls []*ast.Node
+	var walk func(n *ast.Node)
+	walk = func(n *ast.Node) {
+		if ast.IsCallExpression(n) {
+			if callee := s.resolveCalleeName(n, permissionHelpers); callee == "pikkuPermission" || callee == "pikkuAuth" {
+				calls = append(calls, n)
+			}
+		}
+		n.ForEachChild(func(c *ast.Node) bool {
+			walk(c)
+			return false
+		})
+	}
+	walk(node)
+	return calls
+}
+
 func (s *Context) addPermission(node *ast.Node) {
 	switch s.resolveCalleeName(node, permissionHelpers) {
 	case "pikkuPermission":
@@ -152,6 +193,9 @@ func (s *Context) addPermissionDefinition(node *ast.Node, isAuth bool) {
 		neverReadsData(handler) {
 		def.DataUnused = tsutil.BoolPtr(true)
 	}
+	if skipsWithoutSession(arg) {
+		def.SkipWithoutSession = tsutil.BoolPtr(true)
+	}
 	s.State.Permissions.Definitions.Set(id, def)
 
 	if isAuth {
@@ -177,23 +221,44 @@ func (s *Context) addPermissionFactory(node *ast.Node) {
 	}
 	services := state.ServicesMeta{Optimized: false, Services: []string{}}
 	wires := WiresMeta{Optimized: true, Wires: []string{}}
-	if call := s.findCall(factory, permissionHelpers, "pikkuPermission"); call != nil && len(call.Arguments()) > 0 {
-		if h := call.Arguments()[0]; tsutil.IsFunctionLike(h) {
-			services = servicesOf(h)
-			wires = extractUsedWires(h, 2)
+	calls := s.permissionCalls(factory)
+	body := factory.Body()
+	if len(calls) > 0 && len(calls[0].Arguments()) > 0 {
+		h := calls[0].Arguments()[0]
+		if ast.IsObjectLiteralExpression(h) {
+			h = s.getPropertyAssignmentInitializer(h, "func", true)
 		}
-	} else if body := factory.Body(); tsutil.IsFunctionLike(body) {
+		if tsutil.IsFunctionLike(h) {
+			services = servicesOf(h)
+			// pikkuAuth's second parameter is the session, not a wires bag.
+			if s.resolveCalleeName(calls[0], permissionHelpers) != "pikkuAuth" {
+				wires = extractUsedWires(h, 2)
+			}
+		}
+	} else if len(calls) == 0 && tsutil.IsFunctionLike(body) {
 		services = servicesOf(body)
 		wires = extractUsedWires(body, 2)
+	}
+	// A plain function returned directly gets the guard from the factory, so
+	// it has no option. Any other body cannot be read.
+	skip := !tsutil.IsFunctionLike(body)
+	if len(calls) > 0 {
+		skip = slices.ContainsFunc(calls, func(call *ast.Node) bool {
+			return len(call.Arguments()) == 0 || skipsWithoutSession(call.Arguments()[0])
+		})
 	}
 	id, exportedName, ok := s.definitionId(node, "pikkuPermissionFactory", "myPermission")
 	if !ok {
 		return
 	}
-	s.State.Permissions.Definitions.Set(id, &state.MiddlewareDefinition{
+	def := &state.MiddlewareDefinition{
 		Services: services, Wires: wiresOrNil(wires), SourceFile: fileOf(node), Position: startOf(node),
 		ExportedName: nullableString(exportedName), Factory: tsutil.BoolPtr(true),
-	})
+	}
+	if skip {
+		def.SkipWithoutSession = tsutil.BoolPtr(true)
+	}
+	s.State.Permissions.Definitions.Set(id, def)
 	s.Log.Debugf("• Found permission factory with services: %s", joinServices(services))
 }
 
@@ -386,6 +451,7 @@ func (s *Context) addGlobalPermission(node *ast.Node) {
 	if !known {
 		s.State.Permissions.Global = append(s.State.Permissions.Global, &state.GlobalPermissionRegistration{
 			SourceFile: sourceFile, Position: position, ExportName: nullableString(exportName), DefinitionIds: definitionIds,
+			TargetsPackage: len(node.Arguments()) > 1,
 		})
 	}
 	s.Log.Debugf("• Found global permissions in %s: [%s]", sourceFile, strings.Join(definitionIds, ", "))
