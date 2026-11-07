@@ -73,8 +73,9 @@ export const streamWorkflowRunStatus = async ({
       await channel.close()
       return false
     }
-    // Checked on every poll, not just the first: a stream that outlives the
-    // caller's session or a permission should stop rather than keep reporting.
+    // Checked on every poll, not just the first, so a change to the run's owner
+    // or the workflow's access rules stops the stream. It runs against the wire
+    // captured at open, so session expiry or revocation is not re-validated.
     await checkWorkflowRunAccess(workflowName, run, wire, 'read')
 
     const steps = await workflowRunService.getRunSteps(runId)
