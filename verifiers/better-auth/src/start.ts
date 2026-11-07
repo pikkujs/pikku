@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createConfig, createSingletonServices } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
@@ -11,6 +10,11 @@ import {
   STATELESS_COOKIE_CACHE_MAX_AGE,
 } from '@pikku/better-auth'
 import { VERIFIER_OAUTH_PROVIDERS } from './providers.js'
+import { createScriptContent, ingestText } from './script-content.js'
+
+const scriptContent = createScriptContent(
+  join(process.cwd(), '.pikku-runtime', 'script-content')
+)
 
 const BASE = 'http://localhost'
 const AUTH = `${BASE}/api/auth`
@@ -287,7 +291,7 @@ async function main(): Promise<void> {
         'auth',
         'pikku-auth-meta.gen.json'
       )
-      const meta = JSON.parse(await readFile(metaPath, 'utf-8')) as {
+      const meta = JSON.parse(await ingestText(scriptContent, metaPath)) as {
         hasCredentials: boolean
         providers: Array<{ id: string; displayName: string; secretId: string }>
         plugins: Array<{ id: string; displayName: string }>

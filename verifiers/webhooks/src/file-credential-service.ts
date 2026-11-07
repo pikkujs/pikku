@@ -1,26 +1,37 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import type { CredentialService } from '@pikku/core/services'
+import {
+  createScriptContent,
+  getText,
+  hasKey,
+  putText,
+} from './script-content.js'
 
 /**
  * Credentials kept in a file, so what a `pikku webhooks setup` run stores in
  * its own process is what this one's `receive` reads on the next delivery.
  */
 export class FileCredentialService implements CredentialService {
-  constructor(private readonly path: string | undefined) {}
+  constructor(private readonly dir: string | undefined) {}
 
-  private file(): string {
-    if (!this.path) throw new Error('CREDENTIALS_FILE is not set')
-    return this.path
+  private content() {
+    if (!this.dir) throw new Error('WEBHOOK_SCRATCH_DIR is not set')
+    return createScriptContent(this.dir)
   }
 
-  private read(): Record<string, unknown> {
-    return existsSync(this.file())
-      ? JSON.parse(readFileSync(this.file(), 'utf-8'))
+  private async read(): Promise<Record<string, unknown>> {
+    const content = this.content()
+    return (await hasKey(content, 'credentials', 'credentials.json'))
+      ? JSON.parse(await getText(content, 'credentials', 'credentials.json'))
       : {}
   }
 
-  private write(store: Record<string, unknown>): void {
-    writeFileSync(this.file(), JSON.stringify(store, null, 2))
+  private async write(store: Record<string, unknown>): Promise<void> {
+    await putText(
+      this.content(),
+      'credentials',
+      'credentials.json',
+      JSON.stringify(store, null, 2)
+    )
   }
 
   private key(name: string, userId?: string): string {
@@ -28,26 +39,29 @@ export class FileCredentialService implements CredentialService {
   }
 
   async get<T = unknown>(name: string, userId?: string): Promise<T | null> {
-    return (this.read()[this.key(name, userId)] as T) ?? null
+    return ((await this.read())[this.key(name, userId)] as T) ?? null
   }
 
   async set(name: string, value: unknown, userId?: string): Promise<void> {
-    this.write({ ...this.read(), [this.key(name, userId)]: value })
+    await this.write({
+      ...(await this.read()),
+      [this.key(name, userId)]: value,
+    })
   }
 
   async delete(name: string, userId?: string): Promise<void> {
-    const { [this.key(name, userId)]: _removed, ...rest } = this.read()
-    this.write(rest)
+    const { [this.key(name, userId)]: _removed, ...rest } = await this.read()
+    await this.write(rest)
   }
 
   async has(name: string, userId?: string): Promise<boolean> {
-    return this.key(name, userId) in this.read()
+    return this.key(name, userId) in (await this.read())
   }
 
   async getAll(userId: string): Promise<Record<string, unknown>> {
     const prefix = `${userId}:`
     return Object.fromEntries(
-      Object.entries(this.read())
+      Object.entries(await this.read())
         .filter(([key]) => key.startsWith(prefix))
         .map(([key, value]) => [key.slice(prefix.length), value])
     )
@@ -55,7 +69,7 @@ export class FileCredentialService implements CredentialService {
 
   async getUsersWithCredential(name: string): Promise<string[]> {
     const suffix = `:${name}`
-    return Object.keys(this.read())
+    return Object.keys(await this.read())
       .filter((key) => key.endsWith(suffix))
       .map((key) => key.slice(0, -suffix.length))
   }
@@ -63,7 +77,7 @@ export class FileCredentialService implements CredentialService {
   async getAllUsers(): Promise<string[]> {
     return [
       ...new Set(
-        Object.keys(this.read())
+        Object.keys(await this.read())
           .filter((key) => key.includes(':'))
           .map((key) => key.slice(0, key.indexOf(':')))
       ),

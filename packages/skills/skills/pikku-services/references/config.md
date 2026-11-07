@@ -222,10 +222,14 @@ const apiKey = services.variables.get('API_KEY')
     "servicesNotDestructured": "error",
     "wiresNotDestructured": "error",
     "functionDynamicImport": "warn",
+    "enforceContentService": "error",
+    "enforceVariablesService": "error",
     "customServerBootstrap": "warn"
   }
 }
 ```
+
+`enforceContentService` and `enforceVariablesService` are enforced by the app's own oxlint, which `pikku validate` requires and runs. `enforceContentService` requires `no-restricted-imports` on `fs` / `node:fs` / `fs/promises` / `node:fs/promises` plus `typescript/no-require-imports`: use the `content` service, which is keyed, project-scoped, and signs reads and writes. `enforceVariablesService` requires `node/no-process-env` (and the `node` plugin): use the `variables` service for non-secret values and the `secrets` service for secrets. Both default to `"error"`; `pikku enable oxlint` writes the rules with test files exempted. Exempt a single file (bootstrap, a script) with an oxlint `overrides` entry, or set a key to `"warn"` or `"off"` for the whole project, for example in a CLI tool that legitimately reads the developer's project files.
 
 `customServerBootstrap` is the one evaluated by `pikku validate` rather than codegen: it warns when the root `start`/`dev` script boots a server without `pikku dev` / `pikku serve` and no runtime adapter is installed. Set it to `"off"` to keep a hand-rolled entrypoint, or `"error"` to enforce the hooks.
 

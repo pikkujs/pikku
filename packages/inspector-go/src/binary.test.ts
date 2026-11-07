@@ -12,15 +12,27 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  ENGINES,
+  INSPECTOR_ENGINES,
   InspectorBinaryNotFoundError,
   SUPPORTED_PLATFORMS,
+  setInspectorEngine,
+  getInspectorEngine,
   executableName,
-  findInspectorBinary,
+  findInspectorBinary as findAnyInspectorBinary,
+  type FindInspectorBinaryOptions,
+  type InspectorEngine,
 } from './binary.js'
 // @ts-ignore -- plain .mjs build script, no declarations
-import { PLATFORMS, targetName } from '../scripts/platforms.mjs'
+import { PLATFORMS, RS_PLATFORMS, targetName } from '../scripts/platforms.mjs'
 // @ts-ignore -- plain .mjs build script, no declarations
 import { binaryProblem } from '../scripts/check-platform-binary.mjs'
+
+/** The Go engine: these tests are about its lookup. */
+const findInspectorBinary = (
+  env: NodeJS.ProcessEnv,
+  options: FindInspectorBinaryOptions = {}
+) => findAnyInspectorBinary(env, { engine: 'go', ...options })
 
 const PKG_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
 const readJson = (path: string) => JSON.parse(readFileSync(path, 'utf8'))
@@ -230,6 +242,135 @@ describe('findInspectorBinary', () => {
   })
 })
 
+for (const engine of INSPECTOR_ENGINES) {
+  const { executable, binEnv, platforms } = ENGINES[engine]
+  const find = (env: NodeJS.ProcessEnv, options: FindInspectorBinaryOptions) =>
+    findAnyInspectorBinary(env, { engine, localBinary: nowhere, ...options })
+
+  describe(`findInspectorBinary (${engine})`, () => {
+    test(`${binEnv} wins over a prebuilt binary`, () => {
+      const dir = mkdtempSync(join(tmpdir(), 'pikku-inspector-engine-'))
+      const override = join(dir, 'override')
+      writeFileSync(override, '')
+      mkdirSync(join(dir, 'linux-x64'))
+      writeFileSync(join(dir, 'linux-x64', executable), '')
+      assert.equal(
+        find(
+          { [binEnv]: override },
+          { platform: 'linux', arch: 'x64', prebuiltDir: dir }
+        ),
+        override
+      )
+    })
+
+    test(`a ${binEnv} that does not exist names the variable`, () => {
+      assert.throws(
+        () => find({ [binEnv]: '/opt/nope/bin' }, {}),
+        (error: Error) =>
+          error instanceof InspectorBinaryNotFoundError &&
+          error.message.includes(binEnv) &&
+          error.message.includes('/opt/nope/bin')
+      )
+    })
+
+    test('picks the prebuilt binary for each platform it ships', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'pikku-inspector-engine-'))
+      for (const target of platforms) {
+        mkdirSync(join(dir, target))
+        writeFileSync(
+          join(dir, target, executableName(target.split('-')[0], engine)),
+          ''
+        )
+      }
+      for (const target of platforms) {
+        const [platform, arch] = target.split('-')
+        assert.equal(
+          find({}, { platform, arch, prebuiltDir: dir }),
+          join(dir, target, executableName(platform, engine))
+        )
+      }
+    })
+
+    test('does not take the other engine’s binary', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'pikku-inspector-engine-'))
+      const other = INSPECTOR_ENGINES.find((e) => e !== engine)!
+      mkdirSync(join(dir, 'linux-x64'))
+      writeFileSync(join(dir, 'linux-x64', executableName('linux', other)), '')
+      assert.throws(
+        () => find({}, { platform: 'linux', arch: 'x64', prebuiltDir: dir }),
+        InspectorBinaryNotFoundError
+      )
+    })
+
+    test('names this engine’s variable and binary when nothing matches', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'pikku-inspector-engine-'))
+      assert.throws(
+        () => find({}, { platform: 'darwin', arch: 'arm64', prebuiltDir: dir }),
+        (error: Error) =>
+          error.message.includes(`No ${executable} binary`) &&
+          error.message.includes(binEnv) &&
+          error.message.includes('missing prebuilt/darwin-arm64')
+      )
+    })
+
+    test('names this engine’s variable on an unsupported platform', () => {
+      assert.throws(
+        () => find({}, { platform: 'freebsd', arch: 'x64' }),
+        (error: Error) =>
+          error.message.includes('no prebuilt binary') &&
+          error.message.includes(platforms.join(', ')) &&
+          error.message.includes(binEnv)
+      )
+    })
+  })
+}
+
+describe('engine selection', () => {
+  test('rs ships no Windows binary', () => {
+    assert.equal(ENGINES.rs.platforms.includes('win32-x64'), false)
+    assert.equal(executableName('linux', 'rs'), 'pikku-inspect-rs')
+    assert.equal(executableName('win32', 'rs'), 'pikku-inspect-rs.exe')
+  })
+
+  test('findInspectorBinary follows the engine set by setInspectorEngine, Go until then', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-inspector-engine-'))
+    const go = join(dir, 'go')
+    const rs = join(dir, 'rs')
+    writeFileSync(go, '')
+    writeFileSync(rs, '')
+    const env = { PIKKU_INSPECTOR_GO_BIN: go, PIKKU_INSPECTOR_RS_BIN: rs }
+    try {
+      assert.equal(getInspectorEngine(), 'go')
+      assert.equal(findAnyInspectorBinary(env), go)
+      setInspectorEngine('rs')
+      assert.equal(findAnyInspectorBinary(env), rs)
+      assert.equal(findAnyInspectorBinary(env, { engine: 'go' }), go)
+    } finally {
+      setInspectorEngine('go')
+    }
+  })
+
+  test('PIKKU_INSPECTOR is not read here: choosing is the CLI\'s job', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-inspector-engine-'))
+    const go = join(dir, 'go')
+    writeFileSync(go, '')
+    assert.equal(
+      findAnyInspectorBinary({
+        PIKKU_INSPECTOR: 'rs',
+        PIKKU_INSPECTOR_GO_BIN: go,
+      }),
+      go
+    )
+  })
+
+  test('an unknown engine is refused', () => {
+    assert.throws(
+      () => setInspectorEngine('ts' as InspectorEngine),
+      /The inspector engine is "ts"; expected one of go, rs/
+    )
+  })
+})
+
 describe('package', () => {
   const pkg = readJson(join(PKG_DIR, 'package.json'))
 
@@ -238,6 +379,19 @@ describe('package', () => {
       [...SUPPORTED_PLATFORMS].sort(),
       PLATFORMS.map(targetName).sort()
     )
+  })
+
+  test('binary.ts and scripts/platforms.mjs list the same rs targets', () => {
+    assert.deepEqual(
+      [...ENGINES.rs.platforms].sort(),
+      RS_PLATFORMS.map(targetName).sort()
+    )
+  })
+
+  test('rs ships a subset of the platforms go does', () => {
+    for (const target of ENGINES.rs.platforms) {
+      assert.ok((SUPPORTED_PLATFORMS as readonly string[]).includes(target))
+    }
   })
 
   test('ships prebuilt/ and refuses to publish without every binary', () => {
@@ -291,6 +445,17 @@ describe('binaryProblem', () => {
     assert.match(
       binaryProblem(elf(62, true), 'linux', 'x64'),
       /dynamically linked/
+    )
+  })
+
+  test('accepts a dynamically linked ELF only for the Rust binary', () => {
+    assert.equal(
+      binaryProblem(elf(62, true), 'linux', 'x64', { allowDynamic: true }),
+      undefined
+    )
+    assert.match(
+      binaryProblem(elf(183, true), 'linux', 'x64', { allowDynamic: true }),
+      /e_machine/
     )
   })
 

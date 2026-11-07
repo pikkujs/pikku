@@ -9,10 +9,8 @@
  */
 import assert from 'node:assert/strict'
 import { spawn, type ChildProcess } from 'node:child_process'
-import { randomBytes } from 'node:crypto'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { createServer } from 'node:net'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, describe, test } from 'node:test'
 
@@ -21,8 +19,10 @@ import { LocalSecretService, LocalVariablesService } from '@pikku/core/services'
 import { ConsoleLogger } from '@pikku/core/services'
 import { JoseJWTService } from '@pikku/jose'
 import type { DistRecord } from './recorder.js'
+import { createScriptContent, getText } from '../script-content.js'
 
-const REDIS = process.env.REDIS_TEST_URL
+const variables = new LocalVariablesService()
+const REDIS = variables.get<string>('REDIS_TEST_URL')
 assert.ok(REDIS, 'the distributed trace suite needs REDIS_TEST_URL')
 const MESH_SECRET = 'distributed-trace-suite-mesh-secret-of-enough-length'
 
@@ -34,8 +34,12 @@ const freePort = () =>
     })
   })
 
-const dir = mkdtempSync(join(tmpdir(), 'pikku-distributed-'))
-const file = join(dir, 'records.jsonl')
+const dir = join(
+  import.meta.dirname,
+  '../../.pikku-runtime',
+  `distributed-${randomUUID()}`
+)
+const content = createScriptContent(dir)
 const peers: Record<string, string> = {}
 const ports: Record<string, number> = {}
 const processes = new Map<string, ChildProcess>()
@@ -47,11 +51,11 @@ const start = (role: string) =>
       ['--import', 'tsx', 'src/distributed/service.ts'],
       {
         env: {
-          ...process.env,
+          ...variables.getAll(),
           DIST_ROLE: role,
           DIST_PORT: String(ports[role]),
           DIST_PEERS: JSON.stringify(peers),
-          DIST_RECORD_FILE: file,
+          DIST_RECORD_DIR: dir,
           DIST_TRUST: String(role === 'e'),
           PIKKU_MESH_SECRET: MESH_SECRET,
         },
@@ -72,15 +76,22 @@ const stop = (child: ChildProcess) =>
     child.kill('SIGTERM')
   })
 
-const records = (): DistRecord[] =>
-  readFileSync(file, 'utf8')
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => JSON.parse(line))
+let snapshot: DistRecord[] = []
+
+/** Re-reads every record the processes have written so far. */
+const refresh = async () => {
+  const keys = await content.listFilesByPrefix('records', '')
+  snapshot = await Promise.all(
+    keys.map(async (key) => JSON.parse(await getText(content, 'records', key)))
+  )
+}
+
+const records = (): DistRecord[] => snapshot
 
 const wait = async <T>(what: string, find: () => T | undefined | false) => {
   const deadline = Date.now() + 15_000
   while (Date.now() < deadline) {
+    await refresh()
     const found = find()
     if (found) return found
     await new Promise((resolve) => setTimeout(resolve, 20))
@@ -156,7 +167,6 @@ const errorRoles = (traceId: string) =>
 
 describe('one trace across processes', () => {
   before(async () => {
-    writeFileSync(file, '')
     for (const role of ['a', 'b', 'c', 'c2', 'd', 'e', 'f']) {
       ports[role] = await freePort()
       peers[role] = `http://127.0.0.1:${ports[role]}`
@@ -166,7 +176,7 @@ describe('one trace across processes', () => {
 
   after(async () => {
     await Promise.all([...processes.values()].map(stop))
-    rmSync(dir, { recursive: true, force: true })
+    await content.deleteByPrefix('records', '')
   })
 
   test('A > mesh B > job on Redis > worker C > workflow > mesh D and addon', async () => {
@@ -188,9 +198,11 @@ describe('one trace across processes', () => {
     assert.equal(job.role, 'c')
     assert.equal(d.role, 'd')
     assert.equal(addon.role, 'e')
+    await refresh()
     for (const hop of hops(run)) {
       assert.equal(hop.traceId, entry.traceId, `${hop.at} left the trace`)
     }
+    await refresh()
     const spans = hops(run).map(({ spanId }) => spanId)
     assert.equal(new Set(spans).size, spans.length, 'a span repeats')
 
@@ -244,6 +256,7 @@ describe('one trace across processes', () => {
     )
     const traces = new Set<string>()
     for (const run of runs) {
+      await refresh()
       const seen = hops(run)
       assert.equal(seen.length, 3)
       const [traceId, ...others] = new Set(seen.map((hop) => hop.traceId))
@@ -264,6 +277,7 @@ describe('one trace across processes', () => {
     assert.equal(relay.traceId, entry.traceId)
     assert.equal(leaf.traceId, entry.traceId)
     assert.equal(body.errorId, entry.traceId)
+    await refresh()
     assert.deepEqual([...errorRoles(entry.traceId!)].sort(), ['a', 'b', 'd'])
   })
 
@@ -325,7 +339,7 @@ describe('one trace across processes', () => {
 
     const secrets = () => {
       const service = new LocalSecretService(new LocalVariablesService())
-      process.env.PIKKU_MESH_SECRET = randomBytes(32).toString('hex')
+      variables.set('PIKKU_MESH_SECRET', randomBytes(32).toString('hex'))
       return service
     }
 
@@ -347,7 +361,9 @@ describe('one trace across processes', () => {
       )
       assert.equal(status, 401)
       assert.notEqual(body.errorId, trace)
+      await refresh()
       assert.deepEqual(hops(run), [])
+      await refresh()
       assert.ok(!records().some(({ traceId }) => traceId === trace))
     })
 
@@ -373,7 +389,9 @@ describe('one trace across processes', () => {
       )
       assert.equal(status, 401)
       assert.notEqual(body.errorId, trace)
+      await refresh()
       assert.deepEqual(hops(run), [])
+      await refresh()
       assert.ok(!records().some(({ traceId }) => traceId === trace))
     })
 
@@ -388,6 +406,7 @@ describe('one trace across processes', () => {
       assert.equal(leaf.role, 'e')
       assert.equal(leaf.traceId, entry.traceId)
       assert.equal(body.at, entry.traceId)
+      await refresh()
       assert.equal(path(leaf).at(-2)!.parentSpanId, entry.spanId)
     })
 
@@ -398,6 +417,7 @@ describe('one trace across processes', () => {
       const leaf = await hopAt(run, 'addon')
       assert.equal(leaf.role, 'f')
       assert.notEqual(leaf.traceId, entry.traceId)
+      await refresh()
       assert.equal(path(leaf)[0].parentSpanId, undefined)
     })
   })
@@ -409,6 +429,7 @@ describe('one trace across processes', () => {
     assert.equal(await stop(processes.get('c')!), 0, 'not a graceful stop')
     processes.delete('c')
     await new Promise((resolve) => setTimeout(resolve, 1800))
+    await refresh()
     assert.deepEqual(hopsAt(run, 'job'), [], 'no worker should be left')
 
     await start('c2')

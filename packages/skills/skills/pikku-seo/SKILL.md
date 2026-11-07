@@ -1,12 +1,7 @@
 ---
 name: pikku-seo
 description: >-
-  On-page SEO for the app's PUBLIC pages: per-route head() titles and meta descriptions, Open Graph,
-  crawlable links/URLs, landing-page JSON-LD, noindex for the logged-in area. TRIGGER when: building
-  or reworking a public page (landing, pricing, about, blog), writing page titles or meta tags, or
-  asked about SEO, Google, discoverability or social share previews. DO NOT TRIGGER for
-  accessibility incl. heading order, landmarks, alt text (use pikku-a11y), logged-in /app screens
-  (noindexed; only the one robots rule applies), backend, database or deployment.
+  On-page SEO for public pages: head() titles, meta tags, Open Graph, social previews, crawlable links, JSON-LD, noindex for the logged-in area. Heading order and alt text are pikku-a11y.
 installGroups: [client]
 ---
 

@@ -29,10 +29,21 @@ describe('definition types', () => {
 
   test('the scopes leaf carries defineScope and defineSystemRole', () => {
     const scopes = serializeScopeDefinitionTypes()
-    assert.match(scopes, /export \{ defineScope \} from '@pikku\/core\/scope'/)
+    assert.match(
+      scopes,
+      /export \{ defineScope, declareScopes, hasScopes \} from '@pikku\/core\/scope'/
+    )
     assert.match(
       scopes,
       /export \{ defineSystemRole \} from '@pikku\/core\/role'/
+    )
+  })
+
+  test('the scopes leaf carries hasScopes and declareScopes', () => {
+    const scopes = serializeScopeDefinitionTypes()
+    assert.match(
+      scopes,
+      /export \{ defineScope, declareScopes, hasScopes \} from '@pikku\/core\/scope'/
     )
   })
 

@@ -31,6 +31,7 @@ import {
   ErrorCode,
 } from '@pikku/inspector'
 import { inspect as inspectWithGo } from '@pikku/inspector-go'
+import { selectInspectorEngine } from './inspector-engine.js'
 import { findSourceFiles } from './utils/find-source-files.js'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
@@ -210,6 +211,11 @@ export const createConfig: CreateConfig<
     ? ((await tryGetPikkuCLIConfig(logger, data.config, [], data.outDir)) ??
       ({} as PikkuCLIConfig))
     : await getPikkuCLIConfig(logger, data.config, [], true, data.outDir)
+
+  selectInspectorEngine({
+    flag: (data as any).inspector,
+    config: (cliConfig as any).inspector,
+  })
 
   // Load inspector state from file if stateInput is provided
   let preloadedInspectorState: InspectorState | undefined = undefined

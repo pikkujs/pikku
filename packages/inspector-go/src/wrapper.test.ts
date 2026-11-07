@@ -161,12 +161,15 @@ describe('runInspectorBinary', () => {
 describe('inspect', () => {
   test('replays diagnostics and skips finalize when the binary finalized', async () => {
     const previous = process.env.PIKKU_INSPECTOR_GO_BIN
-    process.env.PIKKU_INSPECTOR_GO_BIN = fakeBinary(
-      'finalized',
-      output({
-        diagnostics: [{ level: 'warn', code: 'PKU001', message: 'careful' }],
-      })
-    )
+    const previousRs = process.env.PIKKU_INSPECTOR_RS_BIN
+    // either engine may be the default; the fake answers for both
+    process.env.PIKKU_INSPECTOR_GO_BIN = process.env.PIKKU_INSPECTOR_RS_BIN =
+      fakeBinary(
+        'finalized',
+        output({
+          diagnostics: [{ level: 'warn', code: 'PKU001', message: 'careful' }],
+        })
+      )
     try {
       const logger = createRecordingLogger()
       const state = await inspect(logger, ['a.ts'], { rootDir: '/project' })
@@ -180,6 +183,8 @@ describe('inspect', () => {
     } finally {
       if (previous === undefined) delete process.env.PIKKU_INSPECTOR_GO_BIN
       else process.env.PIKKU_INSPECTOR_GO_BIN = previous
+      if (previousRs === undefined) delete process.env.PIKKU_INSPECTOR_RS_BIN
+      else process.env.PIKKU_INSPECTOR_RS_BIN = previousRs
     }
   })
 })

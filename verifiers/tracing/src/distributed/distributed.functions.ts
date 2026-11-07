@@ -30,7 +30,7 @@ export const distEdge = pikkuMiddleware(async (_services, { trace }, next) => {
   try {
     await next()
   } finally {
-    record({
+    await record({
       kind: 'edge',
       traceId: trace?.traceId,
       spanId: trace?.spanId,
@@ -47,7 +47,7 @@ const firstTime = (key: string) => !seen.has(key) && !!seen.add(key)
 export const distLeaf = pikkuSessionlessFunc<Dist, Hop>({
   remote: true,
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop(data.at ?? role, data.run, { traceId, trace })
+    await hop(data.at ?? role, data.run, { traceId, trace })
     if (data.fail || (data.failOnce && firstTime(data.run))) {
       throw new Error(`${role} refuses`)
     }
@@ -58,7 +58,7 @@ export const distLeaf = pikkuSessionlessFunc<Dist, Hop>({
 export const distRelay = pikkuSessionlessFunc<Dist, Hop>({
   remote: true,
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop('relay', data.run, { traceId, trace })
+    await hop('relay', data.run, { traceId, trace })
     return await rpc!.mesh('distLeaf', { ...data, to: 'd' })
   },
 })
@@ -66,7 +66,7 @@ export const distRelay = pikkuSessionlessFunc<Dist, Hop>({
 export const distEnqueue = pikkuSessionlessFunc<Dist, Hop>({
   remote: true,
   func: async ({ queueService }, data, { rpc, traceId, trace }) => {
-    hop('enqueue', data.run, { traceId, trace })
+    await hop('enqueue', data.run, { traceId, trace })
     await queueService!.add('dist-job', data, {
       attempts: data.jobFailsOnce ? 2 : 1,
       backoff: { type: 'fixed', delay: 50 },
@@ -78,7 +78,7 @@ export const distEnqueue = pikkuSessionlessFunc<Dist, Hop>({
 
 export const distJob = pikkuSessionlessFunc<Dist, void>({
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop('job', data.run, { traceId, trace })
+    await hop('job', data.run, { traceId, trace })
     if (data.jobFails || (data.jobFailsOnce && firstTime(data.run))) {
       throw new Error('the job refuses')
     }
@@ -89,14 +89,14 @@ wireQueueWorker({ name: 'dist-job', func: distJob })
 
 export const distStepMesh = pikkuSessionlessFunc<Dist, Hop>({
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop('step-mesh', data.run, { traceId, trace })
+    await hop('step-mesh', data.run, { traceId, trace })
     return await rpc!.mesh('distLeaf', { ...data, to: 'd', at: 'd' })
   },
 })
 
 export const distStepAddon = pikkuSessionlessFunc<Dist, Hop>({
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop('step-addon', data.run, { traceId, trace })
+    await hop('step-addon', data.run, { traceId, trace })
     return await (rpc!.invoke as any)('trusted:distLeaf', {
       ...data,
       at: 'addon',
@@ -114,7 +114,7 @@ export const distRun = pikkuWorkflowFunc<Dist, void>({
 
 export const distChain = pikkuSessionlessFunc<Dist, Hop>({
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop('entry', data.run, { traceId, trace })
+    await hop('entry', data.run, { traceId, trace })
     await rpc!.mesh('distEnqueue', { ...data, to: 'b' })
     return { traceId: traceId }
   },
@@ -122,7 +122,7 @@ export const distChain = pikkuSessionlessFunc<Dist, Hop>({
 
 export const distFanOut = pikkuSessionlessFunc<Dist, Hop>({
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop('entry', data.run, { traceId, trace })
+    await hop('entry', data.run, { traceId, trace })
     await Promise.all(
       data.targets!.map((to) =>
         rpc!.mesh('distLeaf', { run: data.run, to, at: to })
@@ -134,7 +134,7 @@ export const distFanOut = pikkuSessionlessFunc<Dist, Hop>({
 
 export const distFails = pikkuSessionlessFunc<Dist, Hop>({
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop('entry', data.run, { traceId, trace })
+    await hop('entry', data.run, { traceId, trace })
     return await rpc!.mesh('distRelay', { ...data, to: 'b', fail: true })
   },
 })
@@ -142,7 +142,7 @@ export const distFails = pikkuSessionlessFunc<Dist, Hop>({
 /** The application's own retry: the same call again, from the same span. */
 export const distRetries = pikkuSessionlessFunc<Dist, Hop>({
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop('entry', data.run, { traceId, trace })
+    await hop('entry', data.run, { traceId, trace })
     const call = { ...data, to: 'd', at: 'flaky', failOnce: true }
     return await rpc!
       .mesh('distLeaf', call)
@@ -152,7 +152,7 @@ export const distRetries = pikkuSessionlessFunc<Dist, Hop>({
 
 export const distCallsAddon = pikkuSessionlessFunc<Dist, Hop>({
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop('entry', data.run, { traceId, trace })
+    await hop('entry', data.run, { traceId, trace })
     const reply = await (rpc!.invoke as any)(`${data.namespace}:distLeaf`, {
       ...data,
       at: 'addon',
@@ -165,16 +165,16 @@ export const distCallsAddon = pikkuSessionlessFunc<Dist, Hop>({
 export const distSlow = pikkuSessionlessFunc<Dist, Hop>({
   remote: true,
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop('slow', data.run, { traceId, trace })
+    await hop('slow', data.run, { traceId, trace })
     await new Promise((resolve) => setTimeout(resolve, 800))
-    hop('slow-after-the-caller-left', data.run, { traceId, trace })
+    await hop('slow-after-the-caller-left', data.run, { traceId, trace })
     return await rpc!.invoke('distLeaf', { ...data, at: 'late-work' })
   },
 })
 
 export const distTimesOut = pikkuSessionlessFunc<Dist, Hop>({
   func: async (_services, data, { rpc, traceId, trace }) => {
-    hop('entry', data.run, { traceId, trace })
+    await hop('entry', data.run, { traceId, trace })
     return await (rpc!.invoke as any)('impatient:distSlow', data)
   },
 })

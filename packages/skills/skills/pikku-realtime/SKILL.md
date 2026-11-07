@@ -1,17 +1,13 @@
 ---
 name: pikku-realtime
 description: >-
-  Making a view live in a Pikku app (board, shared list, dashboard, ticker, bidding room, live
-  count) or adding two-way chat/presence: the default event-hub SSE path (`eventHub.publish`,
-  `PikkuRealtime.subscribeToTopic`) and the WebSocket channel. TRIGGER when: asked for live updates,
-  realtime, "update without refresh", presence or chat, or data several signed-in users can change
-  should reflect to others. DO NOT TRIGGER when a one-shot refetch is enough, for background jobs
-  (use pikku-workflow, or pikku-wiring's queue/scheduler references), or for the full
-  channel/SSE/`/events` wiring reference (use pikku-wiring).
+  Live views ("update without refresh", boards) and chat or presence: eventHub.publish SSE by default, PikkuRealtime, WebSocket channels. Not when a refetch is enough. Background jobs are pikku-workflow.
 installGroups: [core, client]
 ---
 
 # Pikku Realtime (SSE + WebSocket channels)
+
+For the server half, run this once: `pikku doc eventhub EventHubService wireChannel pikkuChannelFunc`. The client half is below.
 
 There is NOTHING to hand-roll and NOTHING to "find". `pikku enable events` wires
 the event-hub SSE transport and generates the typed client, and the two patterns
@@ -106,28 +102,7 @@ stream. Never hand-roll an `EventSource`.
 ## Level 2 — two-way channel
 
 Only when the client pushes up the socket. The backend channel lives in its own
-`*.channel.ts` with `onConnect`/`onMessage` handlers:
-
-```ts
-import { pikkuChannelFunc, wireChannel } from '#pikku/channel'
-
-export const onMessage = pikkuChannelFunc<{ text: string }>({
-  func: async ({ eventHub }, input, { channel, session }) => {
-    const message = {
-      id: crypto.randomUUID(),
-      text: input.text,
-      userId: session!.userId,
-    }
-    await eventHub.publish('room', channel.channelId, {
-      topic: 'room',
-      data: message,
-    })
-    return message
-  },
-})
-
-wireChannel({ name: 'room', route: '/room', auth: true, onMessage })
-```
+`*.channel.ts`: `pikkuChannelFunc` handlers on `wireChannel`, with `auth: true`.
 
 The frontend opens it with `PikkuRealtime.connectToChannel(path)`, which returns
 a socket you both `.send(...)` on and read via `onmessage`:

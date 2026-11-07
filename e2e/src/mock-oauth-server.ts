@@ -1,6 +1,9 @@
 import { createServer, type Server } from 'http'
+import { LocalVariablesService } from '@pikku/core/services'
 
-const MOCK_PORT = Number(process.env.MOCK_OAUTH_PORT ?? 4098)
+const MOCK_PORT = Number(
+  new LocalVariablesService().get('MOCK_OAUTH_PORT') ?? 4098
+)
 
 let server: Server | undefined
 let lastAuthRequest: { state: string; redirectUri: string } | undefined

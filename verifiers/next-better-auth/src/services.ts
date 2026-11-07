@@ -1,5 +1,9 @@
 import { pikkuConfig, pikkuServices } from '#pikku/setup'
-import { ConsoleLogger, LocalSecretService } from '@pikku/core/services'
+import {
+  ConsoleLogger,
+  LocalSecretService,
+  LocalVariablesService,
+} from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import Database from 'better-sqlite3'
 import { Kysely, SqliteDialect } from 'kysely'
@@ -8,7 +12,7 @@ import path from 'node:path'
 import { auth } from './auth.js'
 
 const databaseFile =
-  process.env.BETTER_AUTH_DB_FILE ??
+  new LocalVariablesService().get<string>('BETTER_AUTH_DB_FILE') ??
   path.join(process.cwd(), '.better-auth.sqlite')
 const database = new Database(databaseFile)
 const kysely = new Kysely<KyselyPikkuDB>({

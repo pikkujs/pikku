@@ -18,3 +18,15 @@ export const targetName = ({ platform, arch }) => `${platform}-${arch}`
 
 export const executableName = (platform) =>
   platform === 'win32' ? 'pikku-inspect.exe' : 'pikku-inspect'
+
+// pikku-inspect-rs (the Rust inspector) ships beside pikku-inspect in the same
+// prebuilt/<platform>-<arch>/ directories, for these targets only. It is built
+// natively on a runner of each (the inspector-rs-build CI job), not
+// cross-compiled, and links glibc dynamically, unlike the static Go binaries.
+// src/binary.ts keeps its own copy (ENGINES.rs.platforms); binary.test.ts fails
+// if the two drift apart.
+export const RS_PLATFORMS = PLATFORMS.filter((p) =>
+  ['darwin-arm64', 'linux-x64', 'linux-arm64'].includes(targetName(p))
+)
+
+export const rsExecutableName = () => 'pikku-inspect-rs'

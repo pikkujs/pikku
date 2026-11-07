@@ -142,6 +142,9 @@ export enum ErrorCode {
   WIRES_NOT_DESTRUCTURED = 'PKU411',
   FUNCTION_DYNAMIC_IMPORT = 'PKU498',
 
+  // PKU412 (direct fs) and PKU413 (direct process.env) are retired, not free:
+  // they moved to oxlint rules that `pikku validate` requires. Do not reuse them.
+
   // Dependency integrity errors
   DUPLICATE_CORE_VERSION = 'PKU717',
   CORE_VERSION_SKEW = 'PKU718',

@@ -3,9 +3,14 @@
 // standalone and Cloudflare adapters what their runtime supports, resolves,
 // writes the file their entries import, and the entries are generated here.
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import {
+  createScriptContent,
+  hasKey,
+  ingestText,
+  putText,
+} from './script-content.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const verifier = resolve(here, '..')
@@ -27,12 +32,15 @@ const generated = (scenario: string) =>
     scenario,
     '.pikku/contributors/pikku-dev-contributors.gen.ts'
   )
-const read = (file: string) => readFileSync(file, 'utf8')
+const store = createScriptContent(
+  resolve(verifier, '.pikku-runtime/script-content')
+)
+const read = (file: string) => ingestText(store, file)
 
 // --- every addon wrote its manifest, relative to its package, posix --------
 for (const addon of ['contrib-notify', 'contrib-select', 'contrib-bad']) {
   const meta = JSON.parse(
-    read(
+    await read(
       join(
         verifier,
         addon,
@@ -51,7 +59,7 @@ for (const addon of ['contrib-notify', 'contrib-select', 'contrib-bad']) {
   }
 }
 const notifyMeta = JSON.parse(
-  read(
+  await read(
     join(
       verifier,
       'contrib-notify/.pikku/addon/contributors/pikku-contributors-meta.gen.json'
@@ -66,7 +74,7 @@ assert.deepEqual(Object.keys(notifyMeta.contributors.unused), ['dev'])
 
 // --- dev: several addons, opt-in, ordering, selection ----------------------
 const devFile = generated('multi')
-const dev = read(devFile)
+const dev = await read(devFile)
 const imported = [
   ...dev.matchAll(/^import \{ (\w+) as contributor\d+ \} from "([^"]+)"/gm),
 ].map((m) => m[1])
@@ -159,7 +167,7 @@ for (const [scenario, engine, imp] of [
   ['pg', 'postgres', 'storePostgresDev'],
   ['sqlite', 'sqlite', 'storeSqliteDev'],
 ] as const) {
-  const source = read(generated(scenario))
+  const source = await read(generated(scenario))
   assert.match(
     source,
     new RegExp(`\\b${imp} as`),
@@ -177,9 +185,9 @@ for (const [scenario, engine, imp] of [
 
 // --- deploy: the real adapters, the shared per-unit writer ----------------
 const scenarioDir = join(verifier, 'scenarios/multi')
-const optedIn = (addon: string, names: string[]) => {
-  const meta = JSON.parse(
-    read(
+const metaOf = async (addon: string) =>
+  JSON.parse(
+    await read(
       join(
         verifier,
         addon,
@@ -187,8 +195,12 @@ const optedIn = (addon: string, names: string[]) => {
       )
     )
   )
-  return Object.fromEntries(names.map((n) => [n, meta.contributors[n]]))
+const metas: Record<string, any> = {
+  'contrib-notify': await metaOf('contrib-notify'),
+  'contrib-select': await metaOf('contrib-select'),
 }
+const optedIn = (addon: string, names: string[]) =>
+  Object.fromEntries(names.map((n) => [n, metas[addon].contributors[n]]))
 const stateOf = (notify: string[], select: string[]) => ({
   optedInContributors: {
     notify: {
@@ -221,16 +233,21 @@ const platform = {
   ...basePlatform,
   db: { engine: 'postgres' as const, coercionMap: { users: { id: 'int' } } },
 }
-const deployRoot = join(scenarioDir, '.pikku/deploy-check')
-rmSync(deployRoot, { recursive: true, force: true })
-const unitCtx = (
+// The deploy writer creates files by path and needs the directory to exist, so
+// the output lives under the content store (`<root>/private/deploy`).
+const deployRoot = resolve(
+  verifier,
+  '.pikku-runtime/script-content/private/deploy'
+)
+await store.deleteByPrefix('deploy', '')
+const unitCtx = async (
   provider: string,
   name: string,
   target: string,
   extra = {}
 ) => {
   const unitDir = join(deployRoot, provider, name)
-  mkdirSync(unitDir, { recursive: true })
+  await putText(store, 'deploy', `${provider}/${name}/.keep`, '')
   return {
     unit: {
       name,
@@ -266,11 +283,11 @@ const generate = (provider: any, ctx: any, st: any) =>
   })
 
 const standalone = new StandaloneProviderAdapter({})
-const standaloneCtx = unitCtx('standalone', 'api', 'server')
+const standaloneCtx = await unitCtx('standalone', 'api', 'server')
 const written = await generate(standalone, standaloneCtx, state)
 assert.equal(written?.importPath, './platform-services.gen.js')
 const standaloneFile = join(standaloneCtx.unitDir, 'platform-services.gen.ts')
-const deploySource = read(standaloneFile)
+const deploySource = await read(standaloneFile)
 assert.deepEqual(
   [...deploySource.matchAll(/^import \{ (\w+) as contributor\d+ \}/gm)]
     .map((m) => m[1])
@@ -321,7 +338,7 @@ assert.match(standaloneEntry, /\.\.\.platformServices,/)
 const tagState = stateOf(['unit-tag'], [])
 const tagged = await generate(
   standalone,
-  unitCtx('standalone', 'tagged', 'server'),
+  await unitCtx('standalone', 'tagged', 'server'),
   tagState
 )
 assert.ok(tagged, 'unit-tag is selected on a deploy, where the unit exists')
@@ -343,7 +360,7 @@ assert.equal(
 await assert.rejects(
   generate(
     standalone,
-    unitCtx('standalone', 'edge', 'server'),
+    await unitCtx('standalone', 'edge', 'server'),
     stateOf([], ['edge-queue'])
   ),
   (error: Error) =>
@@ -355,7 +372,7 @@ await assert.rejects(
 // ... while one with no deploy variant at all is just not part of the target.
 const devOnly = await generate(
   standalone,
-  unitCtx('standalone', 'devonly', 'server'),
+  await unitCtx('standalone', 'devonly', 'server'),
   stateOf(['unused'], [])
 )
 assert.equal(devOnly, undefined)
@@ -363,11 +380,13 @@ assert.equal(devOnly, undefined)
 // Cloudflare: a Worker supplies cloudflare bindings, and the adapter itself
 // selects column coercion beside what the project opted in to.
 const cloudflare = new CloudflareProviderAdapter({})
-const workerCtx = unitCtx('cloudflare', 'edge', 'serverless', { db: undefined })
+const workerCtx = await unitCtx('cloudflare', 'edge', 'serverless', {
+  db: undefined,
+})
 const workerState = stateOf(['unit-tag'], ['edge-queue', 'kysely-fake'])
 const worker = await generate(cloudflare, workerCtx, workerState)
 const workerFile = join(workerCtx.unitDir, 'platform-services.gen.ts')
-const workerSource = read(workerFile)
+const workerSource = await read(workerFile)
 assert.match(workerSource, /edgeQueueDeploy/)
 assert.match(
   workerSource,
@@ -394,7 +413,7 @@ assert.match(workerEntry, /__pikkuContributorServices\(env, services\)/)
 await assert.rejects(
   generate(
     cloudflare,
-    unitCtx('cloudflare', 'box', 'server'),
+    await unitCtx('cloudflare', 'box', 'server'),
     stateOf([], ['edge-queue'])
   ),
   /The cloudflare deploy cannot supply what a contributor.*'edge-queue'.*requires cloudflare/s
@@ -407,14 +426,14 @@ await assert.rejects(
 await assert.rejects(
   generate(
     cloudflare,
-    unitCtx('cloudflare', 'edge-hooks', 'serverless', { db: undefined }),
+    await unitCtx('cloudflare', 'edge-hooks', 'serverless', { db: undefined }),
     stateOf(['blob'], [])
   ),
   (error: Error) =>
     /contributor 'blob' in unit 'edge-hooks'/.test(error.message) &&
     /onServerStart would never be called/.test(error.message)
 )
-const containerCtx = unitCtx('cloudflare', 'box-hooks', 'server')
+const containerCtx = await unitCtx('cloudflare', 'box-hooks', 'server')
 const container = await generate(
   cloudflare,
   containerCtx,
@@ -429,7 +448,7 @@ const containerEntry = cloudflare.generateServerEntrySource({
 assert.match(containerEntry, /composeServerLifecycle\(__pikkuLifecycle,/)
 assert.match(containerEntry, /__pikkuServerLifecycle\?\.beforeStart/)
 const stopWarnings: string[] = []
-const stopOnlyCtx = unitCtx('cloudflare', 'edge-stop', 'serverless', {
+const stopOnlyCtx = await unitCtx('cloudflare', 'edge-stop', 'serverless', {
   db: undefined,
 })
 const stopOnly = await writeUnitPlatformServices({
@@ -457,11 +476,11 @@ assert.deepEqual(stopWarnings, [])
 // its entry composes them around the app's.
 const hooked = await generate(
   standalone,
-  unitCtx('standalone', 'hooked', 'server'),
+  await unitCtx('standalone', 'hooked', 'server'),
   stateOf(['hook-c', 'hook-b', 'hook-a'], [])
 )
 assert.ok(hooked)
-const hookedSource = read(
+const hookedSource = await read(
   join(deployRoot, 'standalone/hooked/platform-services.gen.ts')
 )
 assert.deepEqual(
@@ -503,6 +522,9 @@ assert.ok(
 // Opting in to nothing writes no file and clears a stale one.
 const none = await generate(standalone, standaloneCtx, stateOf([], []))
 assert.equal(none, undefined)
-assert.equal(existsSync(standaloneFile), false)
+assert.equal(
+  await hasKey(store, 'deploy', 'standalone/api/platform-services.gen.ts'),
+  false
+)
 
 console.log('contributors: all checks passed')

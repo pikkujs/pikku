@@ -1,13 +1,7 @@
 ---
 name: pikku-theme
 description: >-
-  Giving a Pikku Tailwind + shadcn/ui app its look: `pikku ui theme list|apply`, brand
-  colours/fonts/page/ink over a preset, matching an existing look, cva component variants, replacing
-  template names (`pikku validate` flags them), emails/theme.json, plus light/dark and WCAG contrast
-  rules. TRIGGER when: asked to theme, restyle, rebrand or recolour; the project has packages/theme
-  (themes/*.json, active.json); a screen needs a colour, font, radius or shadow; or template names
-  still show. DO NOT TRIGGER for data rendering or RTL layout (use pikku-tailwind), email templates
-  (use pikku-emails) or accessibility beyond colour (use pikku-a11y).
+  Give a Pikku app its look: theme, rebrand, `pikku ui theme list|apply`, colours, fonts, radius, cva variants, template names, light/dark, contrast. Data rendering and RTL are pikku-tailwind.
 installGroups: [client]
 ---
 

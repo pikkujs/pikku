@@ -1,0 +1,525 @@
+{
+ "state": {
+  "triggers": {
+   "meta": {
+    "billing:order.created": {
+     "pikkuFuncId": "trigger:billing:order.created",
+     "name": "billing:order.created",
+     "tags": [
+      "a"
+     ]
+    },
+    "billing:order.refunded": {
+     "pikkuFuncId": "trigger:billing:order.refunded",
+     "name": "billing:order.refunded"
+    }
+   },
+   "sourceMeta": {
+    "ticker": {
+     "name": "ticker",
+     "pikkuFuncId": "onTick"
+    }
+   },
+   "webhookSourceMeta": {
+    "billing": {
+     "name": "billing",
+     "method": [
+      "post",
+      "put"
+     ],
+     "route": "/webhooks/billing",
+     "events": [],
+     "receive": "trigger-webhook:billing:receive",
+     "setup": "stripe:setup"
+    },
+    "git-hub_events": {
+     "name": "git-hub_events",
+     "method": "post",
+     "route": "/hooks/gh",
+     "events": [],
+     "receive": "trigger-webhook:git-hub_events:receive"
+    }
+   },
+   "files": [
+    "<fixture>/src/triggers.ts"
+   ]
+  },
+  "workflows.featureFiles": [
+   [
+    "checkout",
+    {
+     "path": "<fixture>/src/feature.ts",
+     "exportedName": "checkout",
+     "entries": [
+      {
+       "scenario": "alpha"
+      },
+      {
+       "scenario": "beta",
+       "data": {
+        "n": 0,
+        "list": [
+         1,
+         2.5,
+         "x",
+         null,
+         true
+        ],
+        "nested": {
+         "k": false
+        }
+       }
+      }
+     ],
+     "unresolvedEntries": 2,
+     "mentions": [
+      "alpha",
+      "beta",
+      "alpha"
+     ],
+     "unnamedEntries": 1,
+     "hasBefore": true,
+     "hasAfter": false,
+     "document": true,
+     "name": "Checkout",
+     "description": "Buying things",
+     "tags": [
+      "shop",
+      "core"
+     ]
+    }
+   ],
+   [
+    "bare",
+    {
+     "path": "<fixture>/src/feature.ts",
+     "exportedName": "bare",
+     "entries": [],
+     "unresolvedEntries": 0,
+     "mentions": [],
+     "unnamedEntries": 0,
+     "hasBefore": false,
+     "hasAfter": false
+    }
+   ]
+  ],
+  "featureFlags": {
+   "definitions": [
+    {
+     "name": "newCheckout",
+     "description": "The new checkout",
+     "sourceFile": "<fixture>/src/flags.ts"
+    },
+    {
+     "name": "beta",
+     "description": "Beta",
+     "anyOf": [
+      "a:read",
+      "b:write"
+     ],
+     "sourceFile": "<fixture>/src/flags.ts"
+    },
+    {
+     "name": "nonArr",
+     "sourceFile": "<fixture>/src/flags.ts"
+    },
+    {
+     "name": "mixed",
+     "anyOf": [
+      "ok"
+     ],
+     "sourceFile": "<fixture>/src/flags.ts"
+    }
+   ],
+   "files": [
+    "<fixture>/src/flags.ts"
+   ]
+  },
+  "virtualUsers": {
+   "definitions": [
+    {
+     "id": "ada",
+     "name": "Ada",
+     "roles": [
+      "admin"
+     ],
+     "goals": [
+      "ship"
+     ],
+     "tags": [],
+     "runnable": false,
+     "sourceFile": "<fixture>/src/flags.ts",
+     "jobTitle": "Engineer",
+     "disposition": "careless",
+     "tuning": {
+      "moves": {
+       "continue": 3,
+       "abandon": 0.5
+      },
+      "temperature": 1.5,
+      "repeatRate": 0.2,
+      "emptyMemory": true,
+      "instructions": "be brief"
+     },
+     "fixtures": [
+      "f1"
+     ],
+     "environments": [
+      "dev"
+     ],
+     "account": {
+      "provider": "google"
+     },
+     "linkedAccounts": {
+      "github": {},
+      "google": {
+       "provider": "google"
+      }
+     }
+    },
+    {
+     "id": "bob",
+     "name": "Bob",
+     "roles": [],
+     "goals": [],
+     "tags": [],
+     "runnable": false,
+     "sourceFile": "<fixture>/src/flags.ts"
+    }
+   ],
+   "files": [
+    "<fixture>/src/flags.ts"
+   ]
+  },
+  "analytics": [
+   {
+    "file": "<fixture>/src/flags.ts",
+    "variable": "events",
+    "events": [
+     "signup",
+     "login",
+     "page-view"
+    ],
+    "props": {
+     "signup": {
+      "plan": "z.string()",
+      "seats": "z.number().optional()"
+     },
+     "page-view": {
+      "path": "z.string()"
+     }
+    }
+   }
+  ],
+  "contributorsManifest": {
+   "logger": {
+    "dev": {
+     "module": "<fixture>/src/contrib.ts",
+     "export": "devContrib"
+    },
+    "deploy": {
+     "module": "<fixture>/src/contrib.ts",
+     "export": "devContrib"
+    }
+   },
+   "alone": {
+    "dev": {
+     "module": "<fixture>/src/contrib.ts",
+     "export": "devContrib"
+    }
+   },
+   "dupe": {
+    "dev": {
+     "module": "<fixture>/src/contrib.ts",
+     "export": "devContrib"
+    }
+   }
+  },
+  "studio": {
+   "title": "plugin_title",
+   "file": "<fixture>/src/studio.ts",
+   "screens": [
+    {
+     "path": "/home",
+     "title": "screen_title",
+     "scope": "team",
+     "nav": {
+      "area": "rail",
+      "icon": "home",
+      "order": -2,
+      "badge": "missingFn"
+     },
+     "replaces": true,
+     "scopes": [
+      "a"
+     ],
+     "agent": "helper",
+     "component": "./Home.js",
+     "agentTitle": "agent_title"
+    },
+    {
+     "path": "/home",
+     "title": "other_key",
+     "scope": "project",
+     "layout": "bare",
+     "agent": "studio:chat",
+     "defaultChat": false,
+     "app": "web"
+    },
+    {
+     "path": "/agent",
+     "title": "screen_title",
+     "scope": "studio",
+     "agent": "Bad_Name",
+     "app": "web"
+    },
+    {
+     "path": "/noagent",
+     "title": "screen_title",
+     "scope": "studio",
+     "agent": "ghost",
+     "app": "web"
+    }
+   ]
+  },
+  "credentials": {
+   "definitions": [
+    {
+     "name": "billingWebhookSecret",
+     "displayName": "billing webhook secret",
+     "description": "signing secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    },
+    {
+     "name": "custom",
+     "displayName": "git-hub_events webhook secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    }
+   ],
+   "files": [
+    "<fixture>/src/triggers.ts"
+   ]
+  }
+ },
+ "diagnostics": [
+  {
+   "level": "error",
+   "message": "defineAnalyticsEvents in <fixture>/src/flags.ts is assigned to 'hidden', which the module does not export. The generated ingest imports every declaration by name, so export it."
+  },
+  {
+   "level": "error",
+   "message": "Analytics event 'signup' is declared twice: <fixture>/src/flags.ts and <fixture>/src/flags.ts. An event name belongs to one declaration."
+  },
+  {
+   "level": "error",
+   "message": "defineAnalyticsEvents in <fixture>/src/flags.ts declares no events. Remove it or add one."
+  },
+  {
+   "level": "error",
+   "message": "defineAnalyticsEvents in <fixture>/src/flags.ts must be called with an object literal keyed by event name, so the generated ingest knows what to union."
+  },
+  {
+   "level": "critical",
+   "code": "PKU360",
+   "message": "Contributor 'bad' dev 'notExported' does not resolve to a const declaration"
+  },
+  {
+   "level": "critical",
+   "code": "PKU360",
+   "message": "Contributor 'inline' dev must be a reference to an exported const so a host can import just that variant, got: () => 1"
+  },
+  {
+   "level": "critical",
+   "code": "PKU360",
+   "message": "Contributor 'neither' declares neither dev nor deploy"
+  },
+  {
+   "level": "critical",
+   "code": "PKU360",
+   "message": "Contributor 'extra' takes only dev and deploy, got: staging: devContrib"
+  },
+  {
+   "level": "critical",
+   "code": "PKU361",
+   "message": "Contributor 'logger' is defined twice. A contributor name belongs to one defineContributors entry."
+  },
+  {
+   "level": "critical",
+   "code": "PKU360",
+   "message": "defineContributors takes { name: { dev?, deploy? } } entries, got: ['c' + 1]: { dev: devContrib }"
+  },
+  {
+   "level": "critical",
+   "code": "PKU345",
+   "message": "A screen's scope must be one of 'studio', 'team', 'project', got: 'nowhere'"
+  },
+  {
+   "level": "critical",
+   "code": "PKU345",
+   "message": "Screen '/both' sets both component and app; a screen is one or the other"
+  },
+  {
+   "level": "critical",
+   "code": "PKU345",
+   "message": "A definePlugin screen must be an object literal, got: notAnObject"
+  },
+  {
+   "level": "critical",
+   "code": "PKU357",
+   "message": "definePlugin declares two screens at '/home'; each screen needs its own path"
+  },
+  {
+   "level": "critical",
+   "code": "PKU111",
+   "message": "A pikkuFeature() must be assigned to an export \u2014 the export identifier is the feature's id."
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "Feature flag 'dead' declares 'anyOf: []'. An empty list satisfies nobody: omit 'anyOf' for a pure switch, or name the scopes that reveal it."
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "Feature flag 'nonArr' must declare 'anyOf' as an array literal."
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "Feature flag 'mixed' lists a scope that is not a string literal. Scopes are extracted by AST, so a computed value cannot be checked against the declared set."
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "Feature flag 'bad:name' contains the ':' separator. ':' delimits scope ids; a flag named like a scope reads as one."
+  },
+  {
+   "level": "critical",
+   "code": "PKU118",
+   "message": "A feature flag is declared with a key that is not a literal."
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "Feature flag 'oops' must be an object literal, or a variable holding one. 'anyOf' is extracted by AST, so a value this file cannot see would declare the flag with no capability constraint."
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "A feature flag is declared with an empty name."
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "VirtualUser 'ada' linked account 'bad' must be an object literal."
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "VirtualUser 'cy' has an unknown disposition 'nope'. One of: realistic, careless, newcomer, stale, auditor, adversarial, accountable"
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "VirtualUser 'di' needs a literal 'name' \u2014 a virtual user is a person, and the console has nothing to show without one."
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "VirtualUser 'ed': tuning.moves.suspend must not be negative (got -1)."
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "VirtualUser 'ed': tuning.temperature must be between 0 and 2 (got 9)."
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "VirtualUser 'fay' must be an object literal."
+  },
+  {
+   "level": "critical",
+   "code": "PKU585",
+   "message": "Only one defineVirtualUsers(...) is allowed per codebase, so there is one place to read the declarations from and one place to add to. Found a second call in <fixture>/src/flags.ts. Declare them all in one call."
+  },
+  {
+   "level": "critical",
+   "code": "PKU236",
+   "message": "No valid 'func' property for trigger 'noFunc'."
+  },
+  {
+   "level": "critical",
+   "code": "PKU236",
+   "message": "No valid 'func' property for trigger source 'broken'."
+  },
+  {
+   "level": "warn",
+   "message": "Webhook source 'billing': addon function metadata for 'stripe:setup' is not available yet."
+  },
+  {
+   "level": "critical",
+   "code": "PKU111",
+   "message": "wireTriggerWebhookSource in <fixture>/src/triggers.ts needs 'name' as a string literal."
+  },
+  {
+   "level": "critical",
+   "code": "PKU358",
+   "message": "definePlugin uses the message key 'other_key', which is missing from the addon's messages/en.json"
+  },
+  {
+   "level": "critical",
+   "code": "PKU358",
+   "message": "definePlugin uses the message key 'agent_missing', which is missing from the addon's messages/en.json"
+  },
+  {
+   "level": "critical",
+   "code": "PKU366",
+   "message": "Screen '/home' has the agent 'helper', but package.json \"files\" does not list agents/; add \"agents\" to it so the published addon ships the agent"
+  },
+  {
+   "level": "critical",
+   "code": "PKU359",
+   "message": "Screen '/home' has the nav badge 'missingFn', which names no function in this addon"
+  },
+  {
+   "level": "critical",
+   "code": "PKU365",
+   "message": "Screen '/agent' has the agent 'Bad_Name', which is not a valid agent: use a name for an agent the addon ships (lowercase letters, digits and hyphens, starting with a letter) or 'studio:<name>' for one Studio ships"
+  },
+  {
+   "level": "critical",
+   "code": "PKU365",
+   "message": "Screen '/noagent' has the agent 'ghost', but the addon has no non-empty agents/ghost.md"
+  },
+  {
+   "level": "warn",
+   "message": "definePlugin uses the message key 'screen_title', which is missing from the addon's messages/fr.json"
+  },
+  {
+   "level": "warn",
+   "message": "definePlugin uses the message key 'other_key', which is missing from the addon's messages/fr.json"
+  },
+  {
+   "level": "warn",
+   "message": "definePlugin uses the message key 'agent_title', which is missing from the addon's messages/fr.json"
+  },
+  {
+   "level": "warn",
+   "message": "definePlugin uses the message key 'agent_missing', which is missing from the addon's messages/fr.json"
+  },
+  {
+   "level": "critical",
+   "code": "PKU124",
+   "message": "VirtualUser 'ada' holds role 'admin', which is not declared with defineSystemRole. A virtual user may only name a system role \u2014 a role composed in the console can be deleted, and the virtual user would go on claiming to test it. Declared roles: none"
+  }
+ ]
+}

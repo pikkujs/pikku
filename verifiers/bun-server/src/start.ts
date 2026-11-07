@@ -1,10 +1,11 @@
 import WebSocket from 'ws'
 
 import { PikkuBunServer } from '@pikku/bun-server'
+import { LocalVariablesService } from '@pikku/core/services'
 import { createConfig, createSingletonServices } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
 
-const PORT = Number(process.env.PORT ?? 7979)
+const PORT = Number(new LocalVariablesService().get('PORT') ?? 7979)
 
 interface TestResult {
   name: string

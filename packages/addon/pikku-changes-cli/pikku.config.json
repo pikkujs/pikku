@@ -9,5 +9,9 @@
     "description": "The pikku changes command group",
     "categories": ["Utility"],
     "icon": "./package.svg"
+  },
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "off"
   }
 }

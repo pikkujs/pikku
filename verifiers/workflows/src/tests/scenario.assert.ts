@@ -1,6 +1,6 @@
-import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { createScriptContent, ingestText } from '../script-content.js'
 import assert from 'node:assert/strict'
 import { test, describe } from 'node:test'
 
@@ -29,17 +29,23 @@ const META_DIRS = [
   join(__dirname, '../../.pikku/workflow/meta'),
 ]
 
+const content = createScriptContent(
+  join(__dirname, '../../.pikku-runtime/script-content')
+)
+
 async function loadMeta(name: string) {
   const files = META_DIRS.flatMap((dir) => [
     join(dir, `${name}-verbose.gen.json`),
     join(dir, `${name}.gen.json`),
   ])
   for (const f of files) {
+    let text: string
     try {
-      return JSON.parse(await readFile(f, 'utf-8'))
-    } catch (err: any) {
-      if (err?.code !== 'ENOENT') throw err
+      text = await ingestText(content, f)
+    } catch {
+      continue // not generated: try the next candidate
     }
+    return JSON.parse(text)
   }
   throw new Error(`Meta not found for workflow: ${name}`)
 }
@@ -127,9 +133,9 @@ describe('pikkuScenario verification', () => {
 
   test('codegen: declaring virtual users does not declare a sign-in secret', async () => {
     const meta = JSON.parse(
-      await readFile(
-        join(__dirname, '../../.pikku/secrets/pikku-secrets-meta.gen.json'),
-        'utf-8'
+      await ingestText(
+        content,
+        join(__dirname, '../../.pikku/secrets/pikku-secrets-meta.gen.json')
       )
     )
     assert.equal(meta['virtualUserVerifyKey'], undefined)
@@ -246,12 +252,12 @@ const runScenario = async (
 describe('pikkuScenarioStep surface bindings', () => {
   test('meta: the surfaces a step declares are recorded for the coverage report', async () => {
     const meta = JSON.parse(
-      await readFile(
+      await ingestText(
+        content,
         join(
           __dirname,
           '../../.pikku/scenarios/pikku-scenario-functions-meta.gen.json'
-        ),
-        'utf-8'
+        )
       )
     )
     assert.deepEqual(meta['submitsTheOrder']?.scenarioStepSurfaces, [

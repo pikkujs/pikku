@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { spawn } from 'node:child_process'
-import type { MetaService } from '@pikku/core/services'
+import { LocalVariablesService, type MetaService } from '@pikku/core/services'
 import type { SecurityAuditReport } from '@pikku/core/types'
 
 // Walk up from `searchFrom` for a `node_modules/.bin/<name>` executable,
@@ -50,7 +50,7 @@ export function spawnProcess(
   return new Promise((resolve, reject) => {
     const proc = spawn(command, args, {
       cwd,
-      env: { ...process.env },
+      env: { ...new LocalVariablesService().getAll() },
       stdio: ['ignore', 'ignore', 'pipe'],
     })
     let stderr = ''

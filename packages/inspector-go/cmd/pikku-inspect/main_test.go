@@ -125,3 +125,44 @@ func TestFailureResponseHasErrorAndNoState(t *testing.T) {
 		t.Fatalf("failure response: %s", got)
 	}
 }
+
+func TestAnalyzeOnlyThenFinalizeEqualsInspect(t *testing.T) {
+	req := fixtureRequest(t, false)
+	in, _ := json.Marshal(req)
+
+	var whole bytes.Buffer
+	if err := runInspect(bytes.NewReader(in), &whole); err != nil {
+		t.Fatal(err)
+	}
+
+	var pre bytes.Buffer
+	if err := runAnalyzeOnly(bytes.NewReader(in), &pre); err != nil {
+		t.Fatal(err)
+	}
+	analysed := decodeResponse(t, pre.Bytes())
+	if analysed.Finalized || analysed.Error != "" {
+		t.Fatalf("analysis-only response: finalized=%v error=%q", analysed.Finalized, analysed.Error)
+	}
+
+	var preRaw struct {
+		State       json.RawMessage `json:"state"`
+		Diagnostics json.RawMessage `json:"diagnostics"`
+	}
+	if err := json.Unmarshal(pre.Bytes(), &preRaw); err != nil {
+		t.Fatal(err)
+	}
+	fin, _ := json.Marshal(map[string]any{"state": preRaw.State, "diagnostics": preRaw.Diagnostics, "options": req.Options})
+	var out bytes.Buffer
+	if err := runFinalize(bytes.NewReader(fin), &out); err != nil {
+		t.Fatal(err)
+	}
+	finalized, direct := decodeResponse(t, out.Bytes()), decodeResponse(t, whole.Bytes())
+	if !finalized.Finalized {
+		t.Fatal("finalize --stdin did not finalize")
+	}
+	a, _ := json.Marshal(finalized.State)
+	b, _ := json.Marshal(direct.State)
+	if !bytes.Equal(a, b) {
+		t.Fatal("analysis-only + finalize differs from inspect")
+	}
+}

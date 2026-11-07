@@ -26,6 +26,8 @@ import type { AgentMap } from '${agentMapImportPath}'
 import type { ScopeId } from '${scopesImportPath}'
 import type { ScorerName } from '${scorerNamesImportPath}'
 
+export type { AgentInput, AgentStreamEvent } from '@pikku/core/agent'
+
 type AgentConfig<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined

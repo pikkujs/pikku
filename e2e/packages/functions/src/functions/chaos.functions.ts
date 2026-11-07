@@ -67,7 +67,7 @@ const performEffect = async (
   attempt: number,
   trace?: { traceId: string; spanId: string }
 ): Promise<ChaosOutput> => {
-  recordEffect(dir, {
+  await recordEffect(dir, {
     key: data.key,
     runId,
     invocationId,
@@ -85,7 +85,7 @@ const performEffect = async (
   if (data.failAlways) {
     throw new Error(`chaos:${data.key} is configured to always fail`)
   }
-  if (data.dependency && isDependencyDown(dir, data.dependency)) {
+  if (data.dependency && (await isDependencyDown(dir, data.dependency))) {
     throw new Error(
       `chaos:${data.key} dependency '${data.dependency}' is down (attempt ${attempt})`
     )
@@ -96,7 +96,9 @@ const performEffect = async (
     )
   }
 
-  const totalEffects = readEffects(dir).filter((e) => e.key === data.key).length
+  const totalEffects = (await readEffects(dir)).filter(
+    (e) => e.key === data.key
+  ).length
   return { key: data.key, attempt, echo: data.echo, totalEffects }
 }
 
@@ -122,7 +124,7 @@ export const chaosStep = pikkuSessionlessFunc<ChaosInput, ChaosOutput>({
       trace
     ),
   compensate: async ({ variables }, data, { workflowStep, trace }) => {
-    recordEffect(await ledgerDir(variables), {
+    await recordEffect(await ledgerDir(variables), {
       key: `undo:${data.key}`,
       runId: workflowStep?.runId ?? 'no-run',
       attempt: 0,
@@ -153,7 +155,7 @@ export const chaosCompensate = pikkuSessionlessFunc<
   func: async ({ variables }, data, { workflowStep, trace }) => {
     const runId = workflowStep?.runId ?? 'no-run'
     const compensated = data.key ?? `run:${runId}`
-    recordEffect(await ledgerDir(variables), {
+    await recordEffect(await ledgerDir(variables), {
       key: `compensate:${compensated}`,
       runId,
       invocationId: workflowStep?.invocationId,
@@ -175,7 +177,7 @@ export const chaosReadLedger = pikkuSessionlessFunc<
   description: 'Read recorded chaos side effects',
   expose: true,
   func: async ({ variables }, { key, keyContains, runId }) => {
-    const entries = readEffects(await ledgerDir(variables)).filter(
+    const entries = (await readEffects(await ledgerDir(variables))).filter(
       (e) =>
         (!key || e.key === key) &&
         (!keyContains || e.key.includes(keyContains)) &&
@@ -205,7 +207,7 @@ export const chaosTraceJob = pikkuSessionlessFunc<
 >({
   description: 'Record the job, then start the workflow unless a step sent it',
   func: async ({ variables }, { tag, fromStep }, { rpc, trace }) => {
-    recordEffect(await ledgerDir(variables), {
+    await recordEffect(await ledgerDir(variables), {
       key: `${fromStep ? 'step-job' : 'job'}:${tag}`,
       runId: 'no-run',
       attempt: 0,

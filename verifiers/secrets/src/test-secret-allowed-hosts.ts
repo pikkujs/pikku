@@ -8,9 +8,9 @@
  * the real generated artifact instead.
  */
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createScriptContent, ingestText } from './script-content.js'
 import { assertSecretAllowedForHost } from '@pikku/core/services'
 import type { SecretDefinitionsMeta } from '@pikku/core/secret'
 
@@ -19,8 +19,12 @@ const metaPath = join(
   'pikku-secrets-meta.gen.json'
 )
 
+const content = createScriptContent(
+  join(import.meta.dirname, '../.pikku-runtime/script-content')
+)
+
 const meta = JSON.parse(
-  readFileSync(metaPath, 'utf-8')
+  await ingestText(content, metaPath)
 ) as SecretDefinitionsMeta
 
 const exampleApi = meta['example-api']

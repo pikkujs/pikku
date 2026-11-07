@@ -18,7 +18,7 @@ export const crashProneStep = pikkuSessionlessFunc<
   workflowQueued: true,
   func: async ({ variables }, data, { workflowStep, graph }) => {
     const runId = workflowStep?.runId ?? graph!.runId
-    const attempt = recordStepStart(
+    const attempt = await recordStepStart(
       (await variables.get('CRASH_MARKER_DIR'))!,
       runId,
       process.pid

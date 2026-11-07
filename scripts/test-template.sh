@@ -313,7 +313,8 @@ case "$TEMPLATE_NAME" in
                 exit 1
             fi
         else
-            if ! "$PACKAGE_MANAGER" run pikku all --target serverless; then
+            # The scaffolded `pikku` script is already `pikku all`, and extra arguments are appended to it.
+            if ! "$PACKAGE_MANAGER" run pikku --target serverless; then
                 log_error "pikku all --target serverless failed"
                 exit 1
             fi
