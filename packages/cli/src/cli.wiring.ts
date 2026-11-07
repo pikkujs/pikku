@@ -655,8 +655,8 @@ wireCLI({
       },
       options: {
         port: {
-          description: 'Port for the dev server',
-          default: '3000',
+          description:
+            "Port for the dev server. Defaults to the port in the local environment's apiUrl, else 3000",
           short: 'p',
         },
         watch: {

@@ -195,3 +195,41 @@ export const resolveDevEnvironmentName = (
   const preferred = candidates.find(([name]) => name === 'local')
   return (preferred ?? candidates[0])?.[0]
 }
+
+/** The port `pikku dev` binds when neither `--port` nor a local environment names one. */
+export const DEFAULT_DEV_PORT = 3000
+
+/**
+ * The port an `apiUrl` is served on: its explicit port, else its scheme's
+ * default (80 for http, 443 for https).
+ */
+export const apiUrlPort = (apiUrl: string): number => {
+  const url = new URL(apiUrl)
+  if (url.port) return Number(url.port)
+  return url.protocol === 'https:' ? 443 : 80
+}
+
+/**
+ * The port `pikku dev` binds.
+ *
+ * An explicit `--port` wins. Otherwise the local environment's `apiUrl` says it:
+ * that URL is what scenarios, virtual users and the frontend's proxy call, so a
+ * server on any other port is one they cannot reach. A project with no local
+ * environment gets {@link DEFAULT_DEV_PORT}.
+ */
+export const resolveDevPort = (
+  explicitPort: string | undefined,
+  environments: Record<string, PikkuEnvironment>
+): number => {
+  if (explicitPort !== undefined && explicitPort !== '') {
+    const port = Number(explicitPort)
+    if (!Number.isInteger(port) || port < 0 || port > 65535) {
+      throw new Error(
+        `--port ${explicitPort} is not a port number (0-65535; 0 picks a free one)`
+      )
+    }
+    return port
+  }
+  const name = resolveDevEnvironmentName(environments)
+  return name ? apiUrlPort(environments[name]!.apiUrl) : DEFAULT_DEV_PORT
+}

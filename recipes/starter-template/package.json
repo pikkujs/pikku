@@ -11,7 +11,7 @@
   "scripts": {
     "prebuild": "cd packages/functions && bunx --bun pikku all",
     "build": "bun run --filter '*' --if-present build",
-    "dev": "bun scripts/dev.mjs",
+    "dev": "pikku dev",
     "tsc": "bun run --filter '*' tsc",
     "lint": "oxlint apps packages",
     "format": "oxfmt apps packages",
