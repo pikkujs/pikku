@@ -126,7 +126,7 @@ this wrong and sign-in fails on one app only, which is a miserable thing to debu
 To serve one frontend from the pikku server's own origin instead — one binary,
 one hostname, first-party cookies — give its `frontends` entry `"serve": {}`
 (`urlPrefix` defaults to `/`, `spaFallback` to true). `pikku serve`, `pikku dev`
-and a standalone deploy then mount its built `dist`. Pikku never builds it, so
+and a standalone deploy then mount its built `dist`. `pikku app build` makes it, so
 build the frontend first. Only one entry may set `serve`.
 
 To ship an app as a desktop or Android app, read the native-app reference (see SKILL.md).
