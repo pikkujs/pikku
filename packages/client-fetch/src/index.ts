@@ -10,3 +10,18 @@
 export { CorePikkuFetch } from './core-pikku-fetch.js'
 export type { CorePikkuFetchOptions, HTTPMethod } from './core-pikku-fetch.js'
 export { PikkuFetchError } from './pikku-fetch-error.js'
+export { readServerEvents } from './server-events.js'
+export type { MalformedFrame } from './server-events.js'
+export { PikkuAgentStreamError } from './agent-events.js'
+export type {
+  PikkuAgentEvent,
+  PikkuAgentCustomEvent,
+  PikkuAgentApprovalRequest,
+  PikkuAgentCredentialRequest,
+  PikkuAgentUsage,
+  PikkuAgentStreamOptions,
+  PikkuAgentInput,
+  PikkuAgentPendingApproval,
+  PikkuAgentApproveInput,
+  PikkuAgentRunResult,
+} from './agent-events.js'

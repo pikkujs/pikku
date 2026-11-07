@@ -4,8 +4,22 @@ export const serializeRPCWrapper = (
 ) => {
   return `
 import { PikkuFetch } from "./pikku-fetch.gen.js"
-import type { RPCInvoke, TypedAgentRun, TypedStartWorkflow, TypedRunWorkflow, TypedWorkflowStatus } from '${rpcMapPath}'
+import type { RPCInvoke, AgentName, TypedAgentRun, TypedAgentApprove, TypedStartWorkflow, TypedRunWorkflow, TypedWorkflowStatus } from '${rpcMapPath}'
 import type { WorkflowRunStatus } from '@pikku/core/workflow'
+import type { AgentInput } from '@pikku/core/agent'
+import type { PikkuAgentEvent, PikkuAgentStreamOptions } from '@pikku/fetch'
+
+/**
+ * Streams one agent turn. Iterate it with \`for await\`: \`TEXT_MESSAGE_CONTENT\` events carry
+ * the reply as \`delta\`s, a \`CUSTOM\` event named \`pikku:approval-request\` asks for an
+ * approval, and \`RUN_FINISHED\` is the last event. A \`RUN_ERROR\` from the server throws a
+ * \`PikkuAgentStreamError\`; leaving the loop early or aborting \`options.signal\` ends the request.
+ */
+export type TypedAgentClientStream = <Name extends AgentName>(
+    name: Name,
+    input: AgentInput,
+    options?: PikkuAgentStreamOptions
+) => AsyncGenerator<PikkuAgentEvent, void, undefined>
 
 /**
  * PikkuRPC provides a type-safe client for making Remote Procedure Calls (RPC)
@@ -114,27 +128,30 @@ export class PikkuRPC {
          * @param input - The agent input (message, threadId, resourceId)
          * @returns A promise with runId, result, and token usage
          */
-        run: (async (agentName, input) => {
-            return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/agent/\${String(agentName)}\` as never, input) as any
+        run: ((agentName: string, input: AgentInput) => {
+            return this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/agent/\${String(agentName)}\` as never, input as never)
         }) as TypedAgentRun,
         /**
-         * Streams agent responses via SSE. Used for real-time chat interfaces.
+         * Streams an agent turn as AG-UI events over SSE. Used for real-time chat interfaces.
          *
          * @param agentName - The registered agent name
          * @param input - The agent input (message, threadId, resourceId)
+         * @param options - Pass \`signal\` to abort the stream
+         * @returns An async iterable of the run's events, ending with \`RUN_FINISHED\`
          */
-        stream: async (agentName: string, input: Record<string, unknown>) => {
-            return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/agent/\${String(agentName)}/stream\` as never, input) as any
-        },
+        stream: ((agentName: string, input: AgentInput, options?: PikkuAgentStreamOptions) => {
+            return this.pikkuFetch.agentStream(\`${globalHTTPPrefix}/rpc/agent/\${String(agentName)}/stream\`, input, options)
+        }) as TypedAgentClientStream,
         /**
-         * Approves or denies pending tool calls for an agent run.
+         * Approves or denies the pending tool calls of a suspended run, and resumes it
+         * to completion. Resolves to the same shape as \`run\`.
          *
          * @param agentName - The registered agent name
          * @param input - The approval payload (runId, approvals array)
          */
-        approve: async (agentName: string, input: Record<string, unknown>) => {
-            return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/agent/\${String(agentName)}/approve\` as never, input) as any
-        },
+        approve: ((agentName: string, input: { runId: string; approvals: { toolCallId: string; approved: boolean }[] }) => {
+            return this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/agent/\${String(agentName)}/approve\` as never, input as never)
+        }) as TypedAgentApprove,
     }
 
     subscribeToSSE<T = unknown>(
