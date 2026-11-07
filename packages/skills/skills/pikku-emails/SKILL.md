@@ -30,6 +30,11 @@ With `emailTemplatesDir` unset the command is a no-op: it logs `Skipping emails 
 
 `pikku emails init` scaffolds the directory (starter locales, theme, partials, a hello-world template) **and** writes `emailTemplatesDir` into `pikku.config.json`. `--force` overwrites an existing scaffold.
 
+## Keep to the request
+
+- Another language: add `locales/<locale>.json` and pass the recipient's own language as `locale` on the send. Never hard-code a locale, which replaces the language the email had. If the app records no language for that person, say so in the reply.
+- `theme.json` and other templates stay as they are unless the owner asked to change them.
+
 ## Directory layout
 
 ```text

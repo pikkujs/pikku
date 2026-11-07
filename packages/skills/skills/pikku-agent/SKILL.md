@@ -10,7 +10,7 @@ installGroups: [core]
 **Never call a model or model SDK directly.** All AI goes through `pikkuAgent` and its runner, so the console can show it.
 If the owner asks to skip that, explain what they lose and ask them to confirm first.
 
-For how to call it, run this once: `pikku doc agent pikkuAgent`. This skill is what the compiler cannot tell you.
+For how to call it, run this once: `pikku doc agent pikkuAgent`. That page and this skill are enough to write an agent, so write it next; open a reference below only for something they don't cover. This skill is what the compiler cannot tell you.
 
 ## Pick the reference
 
@@ -31,6 +31,42 @@ Runs name the agent by its export (`shopAssistant`), not its `name` field (`shop
 `model` is an alias from `models` in pikku.config.json, named for its job (`fast`, `vision`). `pikku doc models` has the shape. If none fits, add one there and stop looking: take them from the project map if you have one, otherwise read `pikku.config.json` once, never services or `.env`. The runner is already wired. Never write a `provider/model` string in an agent, and tell the owner which model you chose.
 
 "Remember what we talked about" means the app's helper keeps its conversations: `memory` on the agent and a stable `threadId` and `resourceId`. No helper yet means build one. Never a table or localStorage of your own.
+
+## A helper that answers questions, whole
+
+The whole shape, so write it rather than look for one to copy. Work in this order: the tools, the agent, then the screen. A tool is any function the agent lists with `ref()`; it needs no `expose`. Add one only for what no function in the project map returns, and give it its `pikkuPermission`. Leave `expose` off a tool unless a screen also calls it, and never set it on one with `approvalRequired`: `expose` lets anyone call it directly at `POST /rpc/<name>`, which skips the approval.
+
+```ts
+// packages/functions/src/agents/orders-helper.agent.ts
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { ref } from '#pikku/function'
+
+export const ordersHelper = pikkuAgent({
+  name: 'orders-helper',
+  description: "Answers questions about this team's orders from its own records.",
+  role: 'You answer questions about orders.',
+  goal: 'Call a tool first. State only what a tool returned, and say so when none has it.',
+  model: 'fast',
+  tools: [ref('listOrders'), ref('getOrder')],
+  memory: { storage: 'agentStorage', lastMessages: 20 },
+  maxSteps: 8,
+  auth: true,
+  permissions: { member: isMember },
+})
+```
+
+```tsx
+// The screen: one thread per visit, and the transcript is state. Use the project's own components.
+const agent = usePikkuAgent('ordersHelper')
+const [threadId] = useState(() => crypto.randomUUID())
+const [turns, setTurns] = useState<{ role: 'user' | 'assistant'; text: string }[]>([])
+
+const ask = async (message: string) => {
+  setTurns((t) => [...t, { role: 'user', text: message }])
+  const { text } = await agent.run({ message, threadId })
+  setTurns((t) => [...t, { role: 'assistant', text: text ?? '' }])
+}
+```
 
 ## The knobs that do not mean what they look like
 
