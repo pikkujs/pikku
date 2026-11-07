@@ -6,6 +6,7 @@ import {
   rmSync,
   writeFileSync,
   readFileSync,
+  existsSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -33,9 +34,11 @@ export const createAdapter = () => ({
   generateEntrySource: () => 'export default {}',
   generateUnitConfigs: () => new Map(),
   generateInfraManifest: () => null,
+  supportedRuntimes: ['bun'],
   deploy: async () => {
     globalThis.__pikkuFakeProviderDeployed.push('deploy')
-    return { success: true, workersDeployed: [], resourcesCreated: [], errors: [] }
+    if (globalThis.__pikkuFakeProviderThrows) throw new Error('upload refused')
+    return globalThis.__pikkuFakeProviderResult ?? { success: true, workersDeployed: [], resourcesCreated: [], errors: [] }
   },
 })
 `
@@ -165,7 +168,11 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(root, { recursive: true, force: true })
-  delete (globalThis as Record<string, unknown>).__pikkuFakeProviderDeployed
+  const globals = globalThis as Record<string, unknown>
+  delete globals.__pikkuFakeProviderDeployed
+  delete globals.__pikkuFakeProviderResult
+  delete globals.__pikkuFakeProviderThrows
+  process.exitCode = 0
 })
 
 describe('deploy plan bundle failures', () => {
@@ -254,5 +261,92 @@ describe('deploy apply bundle failures', () => {
   test('deploys when every unit bundled', async () => {
     await run(deployApply, [])
     assert.deepEqual(deployed, ['deploy'])
+  })
+})
+
+describe('deploy apply outcome', () => {
+  const failed = {
+    success: false,
+    errors: [{ step: 'upload', error: 'worker rejected' }],
+  }
+
+  test('a deploy that reports failure exits non-zero', async () => {
+    ;(globalThis as Record<string, unknown>).__pikkuFakeProviderResult = failed
+    await run(deployApply, [])
+    assert.deepEqual(deployed, ['deploy'])
+    assert.equal(process.exitCode, 1)
+  })
+
+  test('a deploy that throws exits non-zero', async () => {
+    ;(globalThis as Record<string, unknown>).__pikkuFakeProviderThrows = true
+    await run(deployApply, [])
+    assert.equal(process.exitCode, 1)
+  })
+
+  test('a deploy that succeeds leaves the exit code alone', async () => {
+    await run(deployApply, [])
+    assert.deepEqual(deployed, ['deploy'])
+    assert.ok(!process.exitCode)
+  })
+
+  test('the failure is in the result file too', async () => {
+    ;(globalThis as Record<string, unknown>).__pikkuFakeProviderResult = failed
+    const resultFile = join(root, 'result.json')
+    await run(deployApply, [], { resultFile })
+    const result = JSON.parse(readFileSync(resultFile, 'utf-8'))
+    assert.equal(result.success, false)
+    assert.equal(process.exitCode, 1)
+  })
+})
+
+describe('deploy apply --fromPlan', () => {
+  test('applies a single-unit plan, which writes no infra.json', async () => {
+    await run(deployPlan, [])
+    assert.ok(
+      existsSync(join(root, '.deploy', 'fake', 'deployment-manifest.json'))
+    )
+    assert.ok(!existsSync(join(root, '.deploy', 'fake', 'infra.json')))
+
+    await run(deployApply, [], { fromPlan: true })
+    assert.deepEqual(deployed, ['deploy'])
+  })
+})
+
+describe('deploy plan keeps what apply would build', () => {
+  test('plan stages deploy.embed, so a --fromPlan apply ships it', async () => {
+    writeFileSync(join(root, 'seed.txt'), 'seed', 'utf-8')
+    await deployPlan.func(
+      {
+        logger,
+        config: {
+          ...config(),
+          deploy: { ...config().deploy, embed: { seed: 'seed.txt' } },
+        },
+        getInspectorState: async () => inspectorState(),
+        bundler: bundlerWith([]),
+      } as never,
+      {} as never,
+      {} as never
+    )
+    assert.ok(
+      logs.some((line) => line.startsWith('Embedded:')),
+      logs.join('\n')
+    )
+  })
+})
+
+describe('deploy apply --runtime', () => {
+  test('a runtime the provider has is accepted', async () => {
+    await run(deployApply, [], { runtime: 'bun' })
+    assert.deepEqual(deployed, ['deploy'])
+  })
+
+  test('any other runtime is refused before anything is built', async () => {
+    await assert.rejects(
+      () => run(deployApply, [], { runtime: 'node' }),
+      /provider 'fake' does not run on 'node'.*bun/
+    )
+    assert.deepEqual(deployed, [])
+    assert.ok(!existsSync(join(root, '.deploy')))
   })
 })
