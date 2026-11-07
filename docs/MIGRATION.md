@@ -70,7 +70,7 @@ Related changes:
 - **`approvers: 'owner'` on a run with no owner** now refuses every user. Previously it accepted anyone.
 - **The approve route** needs a session, also on an `auth: false` workflow, and honours the workflow name in its URL.
 - **`assertWorkflowRunOwner` refuses a run with no owner.** If you call it yourself for internal readers, gate those with their own scope instead. `streamWorkflowRunStatus` now takes `workflowName` and `wire` in place of `session`.
-- **`/workflow-run/:runId/stream` in the console addon** now needs a session and the `pikku:console:workflows:read` scope. It was anonymous and sent full step data.
+- **`/workflow-run/:runId/stream` in the console addon** now needs a session and the `pikku:console:workflows:read` scope. It was anonymous and sent full step data. That scope is console access, not run ownership: a console user holding it can read the status and steps of any run, ownerless ones included, so grant it only to people who may see every run.
 - **`pikku validate` exits with code 1** when it reports errors. CI that ignored these will start failing.
 - **`rpc.agent.resume`** takes an optional `expectedAgentName`. The generated resume route passes it, so a run cannot be resumed through another agent's route.
 - **A published addon** keeps its old meta until it is rebuilt, so its workflows stay open until then.

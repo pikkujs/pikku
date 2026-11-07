@@ -394,7 +394,7 @@ func approvalDeclaresApprovers(call *ast.Node) bool {
 	}
 	for _, p := range args[1].Properties() {
 		if (ast.IsPropertyAssignment(p) || ast.IsShorthandPropertyAssignment(p)) &&
-			ast.IsIdentifier(p.Name()) && p.Name().Text() == "approvers" {
+			(ast.IsIdentifier(p.Name()) || ast.IsStringLiteral(p.Name())) && p.Name().Text() == "approvers" {
 			return true
 		}
 	}
