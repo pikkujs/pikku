@@ -1,184 +1,45 @@
 ---
 name: pikku-middleware
 description: >-
-  Middleware in a Pikku app: global (addGlobalMiddleware), HTTP/prefix (addHTTPMiddleware),
-  tag-scoped (addTagMiddleware), per-wiring, session-setting; execution order and priority; the
-  pikkuMiddleware factory; resolving a token into a session (HTTP, cron); service-to-service bearer
-  gates. TRIGGER when: middleware on some or all routes, tag-scoped concerns, global interceptors,
-  priority/order questions, or middleware calling setInitialSession for a machine caller. DO NOT TRIGGER
-  for choosing an auth strategy (authBearer, authCookie, Better Auth, API keys, `pikku login`),
-  permissions or scopes (use pikku-permissions), or deployment.
+  Pikku middleware: global, HTTP/prefix, tag-scoped, per-wiring; order and priority; pikkuMiddleware; setInitialSession; bearer gates. Choosing auth is pikku-auth; scopes are pikku-permissions.
 installGroups: [core]
 ---
 
 # Pikku Middleware
 
-Register middleware at module load time in a `wirings/*.ts` file, never inside a function body. After a change, run `pikku all --tsc`.
+What to reach for and why. For how to call it, run this once: `pikku doc middleware pikkuMiddleware pikkuMiddlewareFactory addGlobalMiddleware addHTTPMiddleware addTagMiddleware PikkuWire telemetry`. Depth: `references/middleware-patterns.md` (the client-side `RPCInvoke` caller, setting a session from an API key, request logging and audit).
 
-## The `pikkuMiddleware` Factory
+## Which level?
 
-```typescript
-import { pikkuMiddleware } from '#pikku/middleware'
+Broadest to narrowest. Pick the narrowest that covers the job.
 
-// Simple: just a function
-const myMiddleware = pikkuMiddleware(async (services, wire, next) => {
-  // runs before the function
-  await next()
-  // runs after the function (optional)
-})
+- **`addGlobalMiddleware`**: every wire type (HTTP, Queue, Channel, Trigger, Scheduler, Workflow, Agent, CLI, MCP). For concerns that must wrap every invocation whatever the transport, such as telemetry.
+- **`addHTTPMiddleware('*', …)`**: every HTTP route, including `/rpc`. Anything that sets a session for an HTTP caller goes here. It does not run for a queue job, scheduled task or webhook trigger: those set identity in their own middleware (see the cron section).
+- **`addHTTPMiddleware('/admin/*', …)`**: one URL prefix.
+- **`addTagMiddleware`**: any wiring carrying that tag, on the function or the wire object; the two tag sets merge and middleware from both runs. For a group of routes, rate limiting a group, or a yes/no gate.
+- **`middleware` on a wiring or function**: one route or task.
 
-// With metadata (name + priority)
-const telemetryMiddleware = pikkuMiddleware({
-  name: 'my-telemetry',
-  priority: 'highest',
-  func: async (services, wire, next) => {
-    const start = performance.now()
-    try {
-      await next()
-    } finally {
-      services.logger.info({ duration: Math.round(performance.now() - start) })
-    }
-  },
-})
-```
+## Rules
 
-The `wire` object gives you:
+- Register at module load time in a `wirings/*.ts` file, never inside a function body. Tag middleware usually sits in the same file as the `wireHTTP` calls that use the tag.
+- Abort by throwing a typed error from `#pikku/error` (`UnauthorizedError`, `ForbiddenError`).
+- `wire.setInitialSession` says who the caller is for this request: nothing is persisted and no cookie is re-issued. It is what auth middleware calls. `wire.setSession` and `wire.clearSession` sign the caller in or out: they mark the session changed (so `authCookie` re-issues the cookie) and write the session store. Await them.
+- Authorization belongs in `permissions` (`pikku-permissions`), never in `func`.
+- After a change run `pikku all` to pick up new tags, or `pikku all --tsc` to regenerate and type-check.
 
-- `wire.http` — inbound HTTP context (headers, URL, cookies)
-- `wire.setInitialSession(session)` — establish who the caller is for this request; nothing is persisted and no cookie is re-issued. What auth middleware calls.
-- `wire.setSession(session)` / `wire.clearSession()` — sign the caller in or out: marks the session changed (so `authCookie` re-issues the cookie) and writes the session store. Same meaning as in a function body; await it.
-- `wire.getSession()` — read the current session
-- `wire.session` — the session set so far (may be undefined)
+## Order: collect, then sort by priority
 
-Throw a typed error to abort: `UnauthorizedError`, `ForbiddenError`, etc. from `#pikku/error`.
-
-## Scoping: Five Levels
-
-From broadest to narrowest:
-
-```typescript
-// 1. Wire-agnostic global: all wire types (HTTP, Queue, Channel, Trigger, Workflow, ...)
-addGlobalMiddleware([telemetryOuter()])
-
-// 2. HTTP global: all HTTP routes
-addHTTPMiddleware('*', [cors(), authBearer()])
-
-// 3. Prefix-based: URL pattern
-addHTTPMiddleware('/admin/*', [auditLog])
-
-// 4. Tag-based: any wiring with matching tag
-addTagMiddleware('machine-agent', [bearerAuth]) // tag on function or wire
-
-// 5. Inline: per-wiring
-wireHTTP({
-  route: '/books/:id',
-  func: getBook,
-  middleware: [cacheControl],
-})
-```
-
-## Global Middleware (`addGlobalMiddleware`)
-
-Runs before everything else, across every wire type: HTTP, Queue, Channel, Trigger, Scheduler, Workflow, Agent, CLI, MCP. Use it for cross-cutting concerns (e.g. telemetry) that must wrap every invocation regardless of transport.
-
-```typescript
-import { addGlobalMiddleware } from '#pikku/middleware'
-import { telemetryOuter, telemetryInner } from '@pikku/core/middleware'
-
-addGlobalMiddleware([telemetryOuter({ environmentId: env.STAGE_ID })]) // wraps the full call
-addGlobalMiddleware([telemetryInner({ environmentId: env.STAGE_ID })]) // closest to the function body
-```
-
-`telemetryOuter` ships with `priority: 'highest'`, `telemetryInner` with `priority: 'lowest'` — so priority sorting places outer first regardless of array/call order.
-
-## HTTP & Prefix Middleware (`addHTTPMiddleware`)
-
-```typescript
-import { addHTTPMiddleware } from '@pikku/core/http'
-import { cors, authBearer } from '#pikku/middleware'
-
-// All routes
-addHTTPMiddleware('*', [
-  cors({ origin: 'https://app.example.com', credentials: true }),
-])
-
-// Scoped to /api/* prefix
-addHTTPMiddleware('/api/*', [rateLimit({ maxRequests: 100, windowMs: 60_000 })])
-```
-
-## Tag Middleware (`addTagMiddleware`)
-
-Tag middleware fires for any wiring (function or wire object) that carries a matching tag. This is the canonical approach for service-to-service bearer auth, rate limiting a group, or any cross-cutting concern scoped to a subset of routes.
-
-### Setting Tags
-
-```typescript
-// On the function definition
-export const myFunc = pikkuSessionlessFunc({
-  auth: false,
-  tags: ['machine-agent'],
-  func: async (services, input) => { ... },
-})
-
-// On the wire object
-wireHTTP({
-  route: '/internal/action',
-  method: 'post',
-  auth: false,
-  tags: ['internal'],
-  func: myFunc,
-})
-```
-
-Tags from the function definition and the wire object are merged — middleware from both tag sets runs.
-
-### Registering Tag Middleware
-
-```typescript
-import { addTagMiddleware } from '#pikku/middleware'
-
-addTagMiddleware('machine-agent', [machineAgentBearerAuth])
-```
-
-Call at module load time — typically in the same `wirings/*.ts` file as the `wireHTTP` calls that use the tag.
-
-## Middleware Execution Order
-
-Resolution happens in two steps, and the order matters more than it looks.
-
-**Step 1 — collect, broadest → narrowest:**
+Step 1 collects broadest to narrowest:
 
 ```text
 global → httpGroup/* → httpGroup/prefix → wiringTags → wiringMiddleware → funcTags → funcMiddleware → function body
 ```
 
-**Step 2 — sort that whole flat list by priority:**
+Step 2 sorts that whole flat list: `highest → high → medium (default) → low → lowest`.
 
-```text
-highest → high → medium (default) → low → lowest
-```
+**Priority is the primary key across every scope, not within one.** The list is flattened first and sorted once, so a `priority: 'lowest'` global runs _after_ an inline per-route middleware of default priority: the narrower scope does not win. Scope order survives only as the tiebreaker between equal priorities, because the sort is stable. Set priority with the config-object form of `pikkuMiddleware`, when a middleware must run before or after others wherever it was registered (telemetry wrapping everything, session extraction before auth checks).
 
-**Priority is the primary key across every scope, not within one.** The collected
-list is flattened first and sorted once, so a `priority: 'lowest'` global
-middleware runs _after_ an inline per-route middleware of default priority — the
-narrower scope does not win. Scope order survives only as the tiebreaker between
-middleware of equal priority, because the sort is stable.
-
-This is what makes `telemetryOuter`/`telemetryInner` work: they pin themselves to
-`highest`/`lowest` so they bracket every other middleware no matter where those
-were registered.
-
-Set priority using the config-object form of `pikkuMiddleware`:
-
-```typescript
-const earlyMiddleware = pikkuMiddleware({
-  name: 'early',
-  priority: 'highest',   // 'highest' | 'high' | 'medium' | 'low' | 'lowest'
-  func: async (services, wire, next) => { ... },
-})
-```
-
-Within the same priority level, the collection order above is preserved. Use priority when a middleware must run before/after others regardless of where it was registered (e.g. telemetry wrapping everything, session extraction before auth checks).
+`telemetryOuter` ships with `priority: 'highest'` and `telemetryInner` with `'lowest'`, so they bracket every other middleware. Equal priorities keep collection order, so register `telemetryOuter` first among the `highest` entries and `telemetryInner` last among the `lowest`.
 
 ## ⛔ MACHINE AUTH: THE TOKEN BECOMES A SESSION. ⛔
 
@@ -186,141 +47,31 @@ Within the same priority level, the collection order above is preserved. Use pri
 
 Either a function is sessionless (genuinely public) or it has a session. Anything in between — a token verified inside `func`, a token verified in a `permissions` check that returns `true`, an identity passed in the input schema, the same resolver memoised per request so N functions can each call it — is the anti-pattern this section exists to kill.
 
-```typescript
-// middleware.ts — resolve the bearer ONCE, for every route
-const sandboxBearerAuth = pikkuMiddleware<SingletonServices>(
-  async ({ kysely, auth }, { http, getSession, setInitialSession }, next) => {
-    if (await getSession?.()) return next()
-    const header = http?.request?.header?.('authorization')
-    if (!header?.startsWith('Bearer ')) return next()
-    const sandbox = await resolveSandboxSession(kysely, auth, header.slice(7).trim())
-    if (sandbox) {
-      setInitialSession?.({ userId: sandbox.createdByUserId ?? sandbox.sandboxInstanceId,
-        orgId: sandbox.organizationId, scopes: ['machine:sandbox'], sandbox } as UserSession)
-    }
-    return next()
-  },
-)
+The middleware leaves an existing session alone, reads the bearer, resolves it, calls `setInitialSession` with the identity and its scopes, and always calls `next()`. The function declares `scopes: ['machine:sandbox']` (enforced by the runner, seen by the inspector) and only narrows `session`, with no verification.
 
-addHTTPMiddleware('*', [cors(...), betterAuthSession(), apiBearerAuth, sandboxBearerAuth as any])
-```
-
-```typescript
-// functions/report-something.function.ts
-export const reportSomething = pikkuFunc({
-  expose: true,
-  scopes: ['machine:sandbox'],          // ← the gate. Enforced by the runner, seen by the inspector.
-  input: ReportSomethingInput,
-  output: ReportSomethingOutput,
-  func: async ({ kysely }, input, { session }) => {
-    const sandbox = sandboxOf(session)   // ← narrowing only, no verification
-    ...
-  },
-})
-```
-
-An unresolved token leaves the session unset and the function throws `MissingSessionError` — 401, for free. Declare the scope tree once with `defineScope` (see `pikku-permissions`).
+An unresolved token leaves the session unset and the function throws `MissingSessionError`: 401, for free. Declare the scope tree once with `defineScope` (see `pikku-permissions`).
 
 ### It MUST be `addHTTPMiddleware`, never `addTagMiddleware`
 
-**A session set in tag middleware is invisible to the function when the call arrives over `POST /rpc/:rpcName`.** Tag middleware runs inside `runPikkuFunc`, and the RPC dispatch calls it without a `sessionService`, so `invocationWire.session` is never re-read after your `setInitialSession` — the function sees the session the OUTER wire had, which is none. `addHTTPMiddleware('*')` runs on the `/rpc` route itself, before its handler, and that session is the one the dispatched function inherits. Tag middleware is still right for a gate that only says yes/no.
+**A session set in tag middleware is invisible to the function when the call arrives over `POST /rpc/:rpcName`.** Tag middleware runs inside `runPikkuFunc`, and the RPC dispatch calls it without a `sessionService`, so `invocationWire.session` is never re-read after your `setInitialSession`: the function sees the session the OUTER wire had, which is none. `addHTTPMiddleware('*')` runs on the `/rpc` route itself, before its handler, and that session is the one the dispatched function inherits. Tag middleware is still right for a gate that only says yes/no.
 
 ### A cron is a machine identity too — set it in the task's own middleware
 
-A scheduled task has no caller and no header, but it is still a machine principal, and without a session it cannot invoke a gated RPC or be attributed in anything it writes. Give it one the same way, in the task's own `middleware`:
+A scheduled task has no caller and no header, but it is still a machine principal, and without a session it cannot invoke a gated RPC or be attributed in anything it writes. Give it one the same way, in the `middleware` of its `wireScheduler`: a `pikkuMiddleware` that calls ``setInitialSession({ userId: `cron:${scheduledTask?.name}`, scopes: ['machine:cron'] })`` and returns `next()`.
 
-```typescript
-const cronSession = pikkuMiddleware(
-  async (_services, { scheduledTask, setInitialSession }, next) => {
-    setInitialSession?.({
-      userId: `cron:${scheduledTask?.name}`,
-      scopes: ['machine:cron'],
-    } as UserSession)
-    return next()
-  }
-)
-
-wireScheduler({
-  name: 'tickVirtualUserSchedules',
-  schedule: '*/15 * * * *',
-  middleware: [cronSession],
-  func: tickVirtualUserSchedules,
-})
-```
-
-One `const`, not a `machineSession(name)` factory: the inspector rejects a bare `pikkuMiddleware()` that is not assigned to a variable or object property, and the task name is on the wire anyway. Parameterised middleware goes through `pikkuMiddlewareFactory`.
-
-The task can then be a thin `rpc.invoke('someGatedRpc')` against the same entry point a person calls, instead of factoring the logic into a `lib/` helper purely to route around the missing identity.
-
-Unlike tag middleware over `/rpc`, this works: `runScheduledTask` builds its wire with a `sessionService`, so the session set here is the one the function is frozen with. And unlike a person, a cron is **not** a user row — inventing a seeded account for it buys a phantom member in every list, seat count and bill, and a per-org membership that a cross-org sweep has to ignore anyway. Platform-wide authority is a scope, not a membership.
+- One `const`, not a `machineSession(name)` factory: the inspector rejects a bare `pikkuMiddleware()` that is not assigned to a variable or object property, and the task name is on the wire anyway. Parameterised middleware goes through `pikkuMiddlewareFactory`.
+- The task can then be a thin `rpc.invoke('someGatedRpc')` against the same entry point a person calls, instead of factoring the logic into a `lib/` helper purely to route around the missing identity.
+- Unlike tag middleware over `/rpc`, this works: `runScheduledTask` builds its wire with a `sessionService`, so the session set here is the one the function is frozen with.
+- A cron is **not** a user row. A seeded account buys a phantom member in every list, seat count and bill, and a per-org membership that a cross-org sweep has to ignore anyway. Platform-wide authority is a scope, not a membership.
 
 ### The one sessionless exception: bootstrap
 
 An endpoint that runs BEFORE the caller has an identity — registering a new host with a shared bootstrap key, a login, a device-code request — has no session to set. That one stays `pikkuSessionlessFunc` and declares its gate in `permissions` (see `pikku-permissions`).
 
-## Service-to-Service Bearer Auth (gate-only pattern)
+## Service-to-service bearer gate
 
 Use this when the callee needs to know only THAT the caller is trusted, not WHICH caller it is. If it needs to know which, use the session pattern above.
 
-A server that exposes RPCs only to a trusted caller (e.g. an API calling a machine-agent). Auth lives in a tag middleware — NOT in the function body. Authorization/permission checks belong in the `permissions` field (see `pikku-permissions`), never inside `func`.
-
-**On the server (the service being called):** tag the function, register a `pikkuMiddleware` that reads the `Authorization` header on that tag.
-
-```typescript
-// lib/host-token.ts
-let _token: string | null = null
-export const setToken = (t: string) => {
-  _token = t
-}
-export const getToken = () => _token
-```
-
-```typescript
-// wirings/http.wiring.ts
-import { timingSafeEqual } from 'node:crypto'
-import { addTagMiddleware, pikkuMiddleware } from '#pikku/middleware'
-import { UnauthorizedError } from '#pikku/error'
-import { getToken } from '../lib/host-token.js'
-
-const bearerAuth = pikkuMiddleware(async (_services, { http }, next) => {
-  const authHeader =
-    http?.request?.header?.('authorization') ||
-    http?.request?.header?.('Authorization')
-  const token = getToken()
-  const expected = token ? `Bearer ${token}` : null
-  if (
-    !expected ||
-    !authHeader ||
-    authHeader.length !== expected.length ||
-    !timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected))
-  ) {
-    throw new UnauthorizedError()
-  }
-  return next()
-})
-
-addTagMiddleware('machine-agent', [bearerAuth])
-```
-
-```typescript
-// functions/my.function.ts
-export const myFunc = pikkuSessionlessFunc({
-  expose: true,
-  auth: false,
-  tags: ['machine-agent'],
-  func: async (services, input) => { ... },
-})
-```
-
-**On the client (the caller):** use the generated `RPCInvoke` type — never hand-write a `fetch` wrapper's types. See `references/middleware-patterns.md`.
-
-## More patterns
-
-`references/middleware-patterns.md` covers the client-side `RPCInvoke` caller, session-setting middleware (set a session from an API key), and request logging / audit middleware.
-
-## After Changes
-
-```bash
-pikku all              # regenerate metadata so new tags are picked up
-pikku all --tsc        # regenerate, then type-check (fails on type errors)
-```
+- Auth lives in a tag middleware, NOT in the function body. Tag the function (`auth: false`, `expose: true` on a `pikkuSessionlessFunc`) and register a `pikkuMiddleware` for that tag which reads the `Authorization` header.
+- Compare with `timingSafeEqual` from `node:crypto`, after a length check, and throw `UnauthorizedError` on no expected token, no header, or a mismatch.
+- The caller uses the generated `RPCInvoke` type. Never hand-write a `fetch` wrapper's types.

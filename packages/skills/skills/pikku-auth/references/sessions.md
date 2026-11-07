@@ -114,9 +114,6 @@ response.
 // permissions.ts
 import { pikkuAuth, pikkuPermission } from '#pikku/auth'
 
-export const isAuthenticated = pikkuAuth(
-  async (_services, session) => !!session
-)
 export const isVerified = pikkuAuth(
   async (_services, session) => !!session?.emailVerified
 )

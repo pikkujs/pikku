@@ -1,13 +1,7 @@
 ---
 name: pikku-report
 description: >-
-  Reporting Pikku itself when it cost you time (wrong generated types, a check that passes when it
-  should not, quietly wrong output, a misleading skill) or when asked to file a framework bug:
-  `pikku cloud report`, product-vs-harness kinds, the workaround-first ladder, asking the user at
-  hand-over whether to send findings. TRIGGER when: the framework fought you, codegen is broken, a
-  skill told you to run something that does not exist, the user says "report this to pikku" / "file
-  a finding", or you are handing over a build. DO NOT TRIGGER for bugs in the app you are building,
-  debugging a deployed stage, or patching pikku's source (never from an app).
+  Report Pikku itself when it cost you time or asked to file a bug, and at every build hand-over: `pikku cloud report`. Not your app's bugs. Never patch pikku's source from an app.
 installGroups: [core]
 ---
 
@@ -17,8 +11,9 @@ A finding is about **pikku**, not about the app you are building. It is how the
 framework learns what cost its users time — the bug, the misleading skill, the
 silence where a check should have complained.
 
-File each one the moment it happens. Nothing leaves the machine until the user
-says so at hand-over, and nothing is written to the repository. The command is
+File each one the moment it happens. Unless the user saved Always, nothing leaves
+the machine until they say so at hand-over, and nothing is written to the
+repository. The command is
 spelled `pikku cloud report` — there is no top-level report command.
 
 ## Report at the moment it happens
@@ -136,8 +131,10 @@ what the user said before, which the CLI keeps on their machine:
   `pikku cloud report` sends them later.
 
 Findings are anonymous: no account, no project. The receipt printed when you
-filed each one is exactly what leaves the machine. A send that fails keeps what
-was not sent; do not retry or file it twice.
+filed each one shows what leaves the machine; the environment flags it omits
+(version skew, linked framework) are sent too. A send that fails keeps what was
+not sent: run `pikku cloud report --consent yes` later to resend it, and never
+file it twice.
 
 ## Never fix pikku itself
 

@@ -1,14 +1,7 @@
 ---
 name: pikku-service-backends
 description: >-
-  Picking or wiring a backend for Pikku's core service interfaces: ContentService (S3, B2),
-  QueueService (SQS), SecretService (AWS Secrets Manager, Redis, MongoDB), SchemaService (AJV,
-  cfworker), ChannelStore, EventHubStore, WorkflowService, SessionStore, AgentRunService (Redis,
-  MongoDB). Covers which to choose, silent differences, swallowed failures. TRIGGER when: code uses
-  S3Content, B2Content, SQSQueueService, AWSSecrets, Redis*/MongoDB* stores, PikkuMongoDB,
-  AjvSchemaService or CFWorkerSchemaService, or asked how to store files, secrets, channel state or
-  sessions. DO NOT TRIGGER for defining service factories (use pikku-services), Kysely SQL (use
-  pikku-kysely) or the Lambda/Cloudflare runtimes (use pikku-deploy).
+  Pick or wire backends for Pikku services: S3/B2 files, SQS, AWS/Redis/MongoDB secrets and stores, AJV/cfworker schemas, sessions. Service factories are pikku-services; SQL is pikku-kysely.
 installGroups: [core]
 ---
 
@@ -20,7 +13,8 @@ cannot tell you: which backend implements which interface, and what changes when
 you swap one for another.
 
 `pikku-services` covers how to build and wire a service. This covers what to put
-behind the interface.
+behind the interface. For uploading and reading files through `content`, use
+`pikku-content`.
 
 ## Pick a backend
 
