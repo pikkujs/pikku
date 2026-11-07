@@ -2172,6 +2172,10 @@ wireCLI({
                 'Deployment provider (defaults to deploy.defaultProvider, then cloudflare)',
               short: 'p',
             },
+            runtime: {
+              description:
+                'The runtime the deploy must target. Refused unless the provider supports it (standalone: bun)',
+            },
             fromPlan: {
               description:
                 'Skip build pipeline, deploy from existing plan output',

@@ -426,10 +426,30 @@ async function runDeploy(
   }
 }
 
+/**
+ * `--runtime` names what the build must run on. Scripts pass it to pin that, so
+ * a value the provider cannot honour stops the deploy rather than shipping
+ * something other than what was asked for.
+ */
+export function assertRuntime(
+  provider: ProviderAdapter,
+  runtime: string | undefined
+): void {
+  if (runtime === undefined) return
+  const supported = provider.supportedRuntimes ?? []
+  if (supported.includes(runtime)) return
+  throw new PikkuDeployBuildFailedError(
+    supported.length > 0
+      ? `Deploy provider '${provider.name}' does not run on '${runtime}'. It runs on: ${supported.join(', ')}.`
+      : `Deploy provider '${provider.name}' does not run on '${runtime}': it has no selectable runtime, so drop --runtime.`
+  )
+}
+
 export const deployApply = pikkuSessionlessFunc<
   {
     fromPlan?: boolean
     provider?: string
+    runtime?: string
     resultFile?: string
     debugArtifacts?: boolean
   },
@@ -438,11 +458,12 @@ export const deployApply = pikkuSessionlessFunc<
   func: async ({ logger, config, getInspectorState, bundler }, data) => {
     const projectDir = config.rootDir
     const fromPlan = data?.fromPlan ?? false
-    const inspectorState = fromPlan ? undefined : await getInspectorState(true)
     const provider = await resolveProvider(config, data?.provider, {
       projectDir,
       nativeSidecars: nativeSidecars(config.frontends),
     })
+    assertRuntime(provider, data?.runtime)
+    const inspectorState = fromPlan ? undefined : await getInspectorState(true)
     const resultFile = data?.resultFile
 
     if (fromPlan) {
