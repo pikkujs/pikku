@@ -6,7 +6,7 @@
  */
 
 import { join, relative } from 'node:path'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { cp, mkdir, writeFile, copyFile } from 'node:fs/promises'
 import type { InspectorState } from '@pikku/inspector'
 import { PikkuError } from '@pikku/core/errors'
@@ -77,6 +77,34 @@ export interface BuildPipelineResult {
  * without a stack trace.
  */
 export class PikkuDeployBuildFailedError extends PikkuError {}
+
+/**
+ * Ship every engine's SQL migrations and dev seed beside the plan, whichever
+ * provider built it, so whatever applies them can pick by the target database.
+ */
+export async function stageMigrations(
+  projectDir: string,
+  providerDir: string
+): Promise<void> {
+  const dbDir = join(projectDir, 'db')
+  for (const engine of ['sqlite', 'postgres', 'mysql']) {
+    const source = join(dbDir, engine)
+    if (existsSync(source)) {
+      const target = join(providerDir, 'db', engine)
+      await mkdir(target, { recursive: true })
+      for (const file of readdirSync(source)) {
+        if (file.endsWith('.sql')) {
+          await cp(join(source, file), join(target, file))
+        }
+      }
+    }
+    const seed = join(dbDir, `${engine}-dev-seed.sql`)
+    if (existsSync(seed)) {
+      await mkdir(join(providerDir, 'db'), { recursive: true })
+      await cp(seed, join(providerDir, 'db', `${engine}-dev-seed.sql`))
+    }
+  }
+}
 
 /**
  * The message for a build that produced an incomplete artifact, or `null`
@@ -837,6 +865,8 @@ export async function runBuildPipeline(options: {
     'utf-8'
   )
   logger.info('Generated deployment manifest')
+
+  await stageMigrations(projectDir, providerDir)
 
   const infraContent = provider.generateInfraManifest(manifest)
   if (infraContent) {
