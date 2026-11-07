@@ -159,10 +159,13 @@ export const spawnBounded = (
       timedOut = true
       child.kill('SIGKILL')
     }, timeoutMs)
-    child.stdout.on('data', (chunk) => {
+    // StringDecoder-backed streams keep a character split across chunks whole.
+    child.stdout.setEncoding('utf8')
+    child.stderr.setEncoding('utf8')
+    child.stdout.on('data', (chunk: string) => {
       if (stdout.length < MAX_OUTPUT_BYTES) stdout += chunk
     })
-    child.stderr.on('data', (chunk) => {
+    child.stderr.on('data', (chunk: string) => {
       if (stderr.length < MAX_OUTPUT_BYTES) stderr += chunk
     })
     child.on('error', (error) => {

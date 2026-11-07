@@ -51,7 +51,6 @@ import {
   renderReleasePrepare,
 } from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
-import { pikkuVerify, renderPikkuVerify } from './functions/commands/verify.js'
 import {
   examplesAdd,
   examplesList,
@@ -1303,41 +1302,10 @@ wireCLI({
       func: validate,
       render: renderValidate,
       description:
-        'Run every check that applies to this project — app structure, deploy readiness, and the published file set of any addon it contains',
+        'Run every check that applies to this project — app structure, deploy readiness, type-checks, correctness checks, and the published file set of any addon it contains. Exits non-zero on any error',
       options: {
-        skipTypecheck: {
-          description:
-            'Skip the frontend type-check stage (structural checks only)',
-          default: false,
-        },
-        skipDeployChecks: {
-          description:
-            'Skip the deploy-readiness checks (hosting conventions: bun-only package manager, themes, migrations layout, frontends)',
-          default: false,
-        },
-        migrationsBase: {
-          description:
-            'Git ref whose migrations are frozen: a migration file on it may not be modified, deleted or renamed (default origin/main, or $PIKKU_MIGRATIONS_BASE)',
-        },
-      },
-    }),
-    verify: pikkuCLICommand({
-      func: pikkuVerify,
-      render: renderPikkuVerify,
-      description:
-        'Run codegen, type-check the backend and every frontend, and the correctness checks codegen and tsc cannot see; findings are located and explained',
-      options: {
-        skipCodegen: {
-          description:
-            'Check the tree as it stands, without running codegen first',
-          default: false,
-        },
-        skipTypecheck: {
-          description: 'Skip the backend type-check',
-          default: false,
-        },
-        skipFrontends: {
-          description: 'Skip the frontend type-checks',
+        codegen: {
+          description: 'Run codegen first and report what it finds',
           default: false,
         },
         strict: {
@@ -1345,6 +1313,24 @@ wireCLI({
             'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings',
           default: false,
         },
+        skipTypecheck: {
+          description:
+            'Skip every type-check and the type-aware lint (structural checks only)',
+          default: false,
+        },
+        skipFrontends: {
+          description: 'Skip the frontend type-checks',
+          default: false,
+        },
+        skipDeployChecks: {
+          description:
+            'Skip the deploy-readiness checks (hosting conventions: bun-only package manager, themes, migrations layout, frontends)',
+          default: false,
+        },
+      },
+      migrationsBase: {
+        description:
+          'Git ref whose migrations are frozen: a migration file on it may not be modified, deleted or renamed (default origin/main, or $PIKKU_MIGRATIONS_BASE)',
       },
     }),
     scenario: {

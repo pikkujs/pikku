@@ -3,7 +3,6 @@ import { readFile, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
-import { typeCheckFrontends } from './frontend-typecheck.js'
 import {
   readJsonSafe,
   readTextSafe,
@@ -2019,46 +2018,6 @@ export async function runProjectChecks(
         `See ${designDocUrl}`
       )
     )
-  }
-
-  // ── frontend type-check (what the build container actually runs) ───────
-  // Every check above is a heuristic standing in for this compile. The build
-  // container type-checks each deployable frontend and aborts the deploy on a
-  // non-zero exit, so running the same compile here is the difference between
-  // a 20-second local failure and a burned deploy out of the daily 10.
-  if (!opts.skipTypecheck) {
-    const frontends = declaredFrontends
-      .filter((fe) => fe.deploy)
-      .map((fe) => ({ name: fe.slug, dir: fe.dir }))
-
-    for (const result of await typeCheckFrontends(root, frontends)) {
-      if (result.skipped) {
-        w(
-          `frontend-typecheck-skipped-${result.name}`,
-          `could not type-check frontend "${result.name}" — ${result.skipped}`,
-          result.dir,
-          lines(
-            'The build container type-checks every deployable frontend and aborts the deploy if it fails.',
-            'Give the app a tsconfig.json and a "tsc" script so the same check runs locally.'
-          )
-        )
-        continue
-      }
-      if (result.errors.length === 0) continue
-      const shown = result.errors.slice(0, 20)
-      const extra = result.errors.length - shown.length
-      e(
-        `frontend-typecheck-${result.name}`,
-        `frontend "${result.name}" does not type-check — the build container aborts the deploy on this`,
-        result.dir,
-        lines(
-          ...shown,
-          ...(extra > 0 ? [`… and ${extra} more`] : []),
-          '',
-          `Reproduce with: cd ${result.dir.slice(root.length + 1)} && ${result.command}`
-        )
-      )
-    }
   }
 
   // ── oxlint (last: it is the slow one) ──────────────────────────────────
