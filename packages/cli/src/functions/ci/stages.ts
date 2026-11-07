@@ -15,7 +15,7 @@ export type CiCommand = {
   dropDatabaseUrl?: boolean
 }
 
-export const ciStageCommand = (stage: CiStage, run: CiRun): CiCommand => {
+const stageCommand = (stage: CiStage, run: CiRun): CiCommand => {
   const provider = run.provider ? ['-p', run.provider] : []
   switch (stage) {
     case 'install':
@@ -79,6 +79,14 @@ export const ciStageCommand = (stage: CiStage, run: CiRun): CiCommand => {
         ],
       }
   }
+}
+
+/** Every child pikku reads the same config as the run, not one it finds itself. */
+export const ciStageCommand = (stage: CiStage, run: CiRun): CiCommand => {
+  const step = stageCommand(stage, run)
+  return step.command
+    ? step
+    : { ...step, args: [...step.args, `--config=${run.configFile}`] }
 }
 
 export const ciEnv = ({ dropDatabaseUrl }: CiCommand): NodeJS.ProcessEnv => {
