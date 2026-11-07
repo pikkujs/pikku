@@ -1,4 +1,5 @@
 import { generateRouteTrees } from '../../utils/route-tree.js'
+import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { rm } from 'node:fs/promises'
 import { join, resolve } from 'path'
 import {
@@ -255,7 +256,10 @@ export const dev = pikkuSessionlessFunc<
     const userCreateSingletonServices =
       servicesModule[singletonServicesFactory.variable]
 
-    const userConfig = await userCreateConfig()
+    const userConfig = await callUserCreateConfig(
+      userCreateConfig,
+      variables
+    )
 
     const envDatabaseUrl = await variables.get('DATABASE_URL')
     const effectiveDbConfig = envDatabaseUrl

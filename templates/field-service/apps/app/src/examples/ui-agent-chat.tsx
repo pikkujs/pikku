@@ -15,7 +15,7 @@ import { useState } from 'react'
 import { usePikkuAgent } from '@pikku/react'
 
 export const DispatchChat = ({ threadId }: { threadId: string }) => {
-  const agent = usePikkuAgent('dispatch-assistant')
+  const agent = usePikkuAgent('dispatchAssistant')
   const [message, setMessage] = useState('')
   const [reply, setReply] = useState<string | null>(null)
   const [pending, setPending] = useState(false)

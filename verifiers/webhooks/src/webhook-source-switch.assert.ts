@@ -1,14 +1,20 @@
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { randomUUID } from 'node:crypto'
+import { LocalVariablesService } from '@pikku/core/services'
+import { createScriptContent, putText } from './script-content.js'
 import { after, before, beforeEach, describe, test } from 'node:test'
 
-const scratch = mkdtempSync(join(tmpdir(), 'pikku-webhook-switch-'))
-process.env.FAKE_PROVIDER_FILE = join(scratch, 'provider.json')
-process.env.CREDENTIALS_FILE = join(scratch, 'credentials.json')
-writeFileSync(process.env.CREDENTIALS_FILE, '{}')
+const variables = new LocalVariablesService()
+const scratch = join(
+  import.meta.dirname,
+  '../.pikku-runtime',
+  `webhook-switch-${randomUUID()}`
+)
+const content = createScriptContent(scratch)
+variables.set('WEBHOOK_SCRATCH_DIR', scratch)
+await putText(content, 'credentials', 'credentials.json', '{}')
 
 import '../.pikku/pikku-bootstrap.gen.js'
 import { fetch } from '@pikku/core/http'
@@ -60,10 +66,11 @@ before(async () => {
     triggerSourceStore: new InMemoryTriggerSourceStore(),
   }
   pikkuState(null, 'package', 'singletonServices', singletonServices)
-  writeEndpoints([])
+  await writeEndpoints([])
 })
 
-after(() => rmSync(scratch, { recursive: true, force: true }))
+after(() => content.deleteByPrefix('credentials', ''))
+after(() => content.deleteByPrefix('provider', ''))
 
 beforeEach(() => {
   firedOrders.length = 0
@@ -87,7 +94,7 @@ describe('webhook source: off until turned on', () => {
         reason: 'disabled',
       },
     ])
-    assert.deepEqual(readEndpoints(), [])
+    assert.deepEqual(await readEndpoints(), [])
   })
 
   test('turning it on registers it at the address reconcile recorded', async () => {
@@ -95,7 +102,7 @@ describe('webhook source: off until turned on', () => {
 
     assert.equal(outcome.status, 'created')
     assert.deepEqual(
-      readEndpoints().map(({ url, label }) => ({ url, label })),
+      (await readEndpoints()).map(({ url, label }) => ({ url, label })),
       [{ url: 'https://shop.test/api/webhooks/shop', label: 'shop:main:shop' }]
     )
   })
@@ -111,14 +118,14 @@ describe('webhook source: off until turned on', () => {
     const [outcome] = await reconcileTriggerSources(address)
 
     assert.equal(outcome!.status, 'unchanged')
-    assert.equal(readEndpoints().length, 1)
+    assert.equal((await readEndpoints()).length, 1)
   })
 
   test('turning it off tears the endpoint down and answers 404 again', async () => {
     const outcome = await disableTriggerSource({ name: 'shop' })
 
     assert.equal(outcome.status, 'deleted')
-    assert.deepEqual(readEndpoints(), [])
+    assert.deepEqual(await readEndpoints(), [])
     assert.equal((await post()).status, 404)
   })
 })

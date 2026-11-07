@@ -25,3 +25,20 @@ test('no source file builds a path with new URL(…, import.meta.url)', () => {
     )
   assert.deepEqual(offenders, [])
 })
+
+/**
+ * A Cloudflare Workers bundle has no `import.meta.url`, and the console addon
+ * reaches this package through @pikku/code-edit. Reading it while the module
+ * loads crashes the worker at startup, so every use sits inside a function.
+ */
+test('import.meta.url is read inside a function, never at module load', () => {
+  const atModuleLoad = /^(export )?const \w+ = .*import\.meta\.url/
+  const offenders = readdirSync(here)
+    .filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts'))
+    .filter((name) =>
+      withoutComments(readFileSync(join(here, name), 'utf8'))
+        .split('\n')
+        .some((line) => atModuleLoad.test(line) && !line.includes('=>'))
+    )
+  assert.deepEqual(offenders, [])
+})

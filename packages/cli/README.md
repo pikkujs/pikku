@@ -23,13 +23,25 @@ client files to emit.
 
 ## Inspector
 
-The CLI reads your source with the `pikku-inspect` binary from
-`@pikku/inspector-go`, built on typescript-go (TypeScript 7). It is installed
-for your platform through an optional dependency.
+The CLI reads your source with an inspector binary from `@pikku/inspector-go`.
+Two engines speak the same protocol:
 
-If there is no binary for your platform, `pikku` stops at inspection and says
-so. Build one from `packages/inspector-go` (`go build ./cmd/pikku-inspect`) and
-point `PIKKU_INSPECTOR_GO_BIN` at it.
+| engine | binary | built on | binary override |
+| --- | --- | --- | --- |
+| `go` | `pikku-inspect` | typescript-go (the reference) | `PIKKU_INSPECTOR_GO_BIN` |
+| `rs` | `pikku-inspect-rs` | tsrs, a Rust port of typescript-go | `PIKKU_INSPECTOR_RS_BIN` |
+
+Pick one with, in this order: `pikku all --inspector rs`, the `PIKKU_INSPECTOR`
+environment variable (`go` or `rs`), the `"inspector": "rs"` key of
+`pikku.config.json`, then the package default (`rs`). The helpers other tools
+call (code-edit, the console's type diagnostics) follow the same choice.
+
+Each binary ships for your platform inside `@pikku/inspector-go` under
+`prebuilt/`. If the selected engine has none, `pikku` stops at inspection and
+names the variable to set: build `pikku-inspect` with
+`go build ./cmd/pikku-inspect` in `packages/inspector-go`, or `pikku-inspect-rs`
+with `cargo build --release` in `packages/inspector-rust`, and point
+`PIKKU_INSPECTOR_GO_BIN` / `PIKKU_INSPECTOR_RS_BIN` at it.
 
 ## Docs
 

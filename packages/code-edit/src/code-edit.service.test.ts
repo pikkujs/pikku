@@ -1,4 +1,5 @@
-import { describe, test, beforeEach, afterEach } from 'node:test'
+import { describe, test, before, after, beforeEach, afterEach } from 'node:test'
+import { availableEngines, engineEnv } from './test-engines.js'
 import assert from 'node:assert'
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -104,7 +105,12 @@ export const funcB = pikkuSessionlessFunc({
 })
 `
 
-describe('CodeEditService', () => {
+for (const engine of availableEngines())
+describe(`CodeEditService (${engine})`, () => {
+  const env = engineEnv(engine)
+  before(env.select)
+  after(env.restore)
+
   beforeEach(async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pikku-code-edit-'))
     service = new CodeEditService(tempDir)

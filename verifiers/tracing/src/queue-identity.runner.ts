@@ -7,6 +7,7 @@
 import assert from 'node:assert/strict'
 
 import { createSecretValue } from '@pikku/core/classification'
+import { LocalVariablesService } from '@pikku/core/services'
 import { SignedQueueService, wireQueueWorker } from '@pikku/core/queue'
 import type { QueueService } from '@pikku/core/queue'
 import { pikkuState } from '@pikku/core/state'
@@ -138,7 +139,9 @@ const verify = async (
 }
 
 const main = async () => {
-  const { REDIS_PORT, DATABASE_URL } = process.env
+  const variables = new LocalVariablesService()
+  const REDIS_PORT = variables.get<string | number>('REDIS_PORT')
+  const DATABASE_URL = variables.get<string>('DATABASE_URL')
   assert.ok(REDIS_PORT || DATABASE_URL, 'set REDIS_PORT or DATABASE_URL')
 
   pikkuState(null, 'package', 'singletonServices', {

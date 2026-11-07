@@ -19,7 +19,7 @@ import { blankScenarioMeta } from './blank-scenario-meta.js'
 
 const FindingSchema = z.object({
   id: z.string(),
-  severity: z.enum(['error', 'warn', 'info']),
+  severity: z.enum(['critical', 'error', 'warn', 'info']),
   message: z.string(),
   path: z.string(),
   fixHint: z.string(),
@@ -2068,6 +2068,8 @@ export async function runProjectChecks(
     findings.push(...(await runOxlintRun(root)))
   }
 
-  const ok = !findings.some((f) => f.severity === 'error')
+  const ok = !findings.some(
+    (f) => f.severity === 'error' || f.severity === 'critical'
+  )
   return { ok, root, findings, migrationsDir: reportedMigrationsDir }
 }

@@ -1,6 +1,12 @@
 import { transformDates } from './transform-date.js'
 import { corePikkuFetch } from './pikku-fetch.js'
 import { PikkuFetchError } from './pikku-fetch-error.js'
+import { readServerEvents } from './server-events.js'
+import {
+  PikkuAgentStreamError,
+  type PikkuAgentEvent,
+  type PikkuAgentStreamOptions,
+} from './agent-events.js'
 
 type AuthHeaders = {
   jwt?: string
@@ -244,33 +250,9 @@ export class CorePikkuFetch {
         if (!response.ok || !response.body) {
           throw new Error(`SSE request failed: ${response.status}`)
         }
-        const reader = response.body
-          .pipeThrough(new TextDecoderStream())
-          .getReader()
-        let buffer = ''
-        while (!closed) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buffer += value
-          let sep: number
-          while ((sep = buffer.indexOf('\n\n')) !== -1) {
-            const raw = buffer.slice(0, sep)
-            buffer = buffer.slice(sep + 2)
-            const data = raw
-              .split('\n')
-              .filter((l) => l.startsWith('data:'))
-              .map((l) => l.slice(5).trimStart())
-              .join('\n')
-            if (!data) continue
-            let parsed: T
-            try {
-              parsed = JSON.parse(data) as T
-            } catch {
-              /* ignore malformed event */
-              continue
-            }
-            handler(parsed)
-          }
+        for await (const event of readServerEvents<T>(response.body, 'skip')) {
+          if (closed) break
+          handler(event)
         }
         // Clean EOF before caller called close() = unexpected stream termination.
         if (!closed) throw new Error('SSE stream closed unexpectedly')
@@ -287,6 +269,60 @@ export class CorePikkuFetch {
         controller.abort()
       },
     }
+  }
+
+  /**
+   * POSTs `data` and reads the reply as a server-event stream, yielding the JSON in each
+   * `data:` frame. A status of 400 or above throws a `PikkuFetchError` before anything is
+   * yielded, and a frame that is not JSON throws rather than being skipped.
+   *
+   * @param uri - The endpoint URI for the request.
+   * @param data - The JSON body.
+   * @param options - Request options; pass `signal` to abort the stream.
+   */
+  public async *postStream<T = unknown>(
+    uri: string,
+    data: unknown,
+    options?: RequestInit
+  ): AsyncGenerator<T, void, undefined> {
+    const response = await this.fetch(uri, 'POST', data, {
+      ...options,
+      headers: { ...options?.headers, Accept: 'text/event-stream' },
+    })
+    if (response.status >= 400) {
+      throw await PikkuFetchError.fromResponse(response)
+    }
+    if (!response.body) {
+      throw new Error(`Stream request to ${uri} returned no body`)
+    }
+    yield* readServerEvents<T>(response.body)
+  }
+
+  /**
+   * Runs an agent over `POST /rpc/agent/:agentName/stream` and yields its AG-UI events,
+   * ending with `RUN_FINISHED`. A `RUN_ERROR` frame throws a `PikkuAgentStreamError`
+   * carrying the server's message, and so does a stream that ends before `RUN_FINISHED`.
+   *
+   * @param uri - The stream route, with the agent name already in it.
+   * @param input - The agent input (`message`, `threadId`, `resourceId`, ...).
+   * @param options - Pass `signal` to abort the run's stream.
+   */
+  public async *agentStream(
+    uri: string,
+    input: unknown,
+    options?: PikkuAgentStreamOptions
+  ): AsyncGenerator<PikkuAgentEvent, void, undefined> {
+    const events = this.postStream<
+      PikkuAgentEvent | { type: 'RUN_ERROR'; message: string; code?: string }
+    >(uri, input, { signal: options?.signal })
+    for await (const event of events) {
+      if (event.type === 'RUN_ERROR') {
+        throw new PikkuAgentStreamError(event.message, event.code)
+      }
+      yield event
+      if (event.type === 'RUN_FINISHED') return
+    }
+    throw new PikkuAgentStreamError('Agent stream ended before RUN_FINISHED')
   }
 
   /**

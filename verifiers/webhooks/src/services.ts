@@ -36,7 +36,7 @@ export const createSingletonServices = pikkuServices(
     const queueService =
       existingServices?.queueService || new InMemoryQueueService()
     const credentialService = new FileCredentialService(
-      await variables.get('CREDENTIALS_FILE')
+      await variables.get('WEBHOOK_SCRATCH_DIR')
     )
 
     return {

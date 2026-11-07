@@ -19,6 +19,7 @@ import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
 import { createPool } from 'mysql2'
 import { Redis } from 'ioredis'
+import { LocalVariablesService } from '@pikku/core/services'
 import { defineServiceTests } from '@pikku/core/testing'
 import type { WorkflowFencingHarness } from '@pikku/core/testing'
 import type { KyselyWorkflowService } from '@pikku/kysely'
@@ -28,12 +29,14 @@ import { PgKyselyWorkflowService } from '@pikku/kysely-postgres'
 import { MySQLKyselyWorkflowService } from '@pikku/kysely-mysql'
 import { RedisWorkflowService } from '@pikku/redis'
 
+const env = new LocalVariablesService()
 const pgUrl =
-  process.env.DATABASE_URL ??
+  env.get<string>('DATABASE_URL') ??
   'postgres://postgres:password@localhost:5432/pikku_queue'
 const mysqlUrl =
-  process.env.MYSQL_URL ?? 'mysql://root:password@localhost:3306/pikku_leases'
-const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379'
+  env.get<string>('MYSQL_URL') ??
+  'mysql://root:password@localhost:3306/pikku_leases'
+const redisUrl = env.get<string>('REDIS_URL') ?? 'redis://localhost:6379'
 
 const PG_SCHEMA = 'pikku_fencing'
 

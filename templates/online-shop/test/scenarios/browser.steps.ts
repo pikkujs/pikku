@@ -1,4 +1,3 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
@@ -9,6 +8,7 @@ import {
   type VirtualUserSession,
 } from '@pikku/playwright'
 import { pikkuScenarioStep } from '#pikku/scenarios'
+import { createScriptContent, putText } from './script-content.js'
 
 /**
  * The generic browser vocabulary. Keep
@@ -265,9 +265,9 @@ export const capturesPage = pikkuScenarioStep({
     const bytes = await virtualUser.screenshot()
 
     const dir = resolve(outDir)
-    mkdirSync(dir, { recursive: true })
-    const file = join(dir, `${name}.png`)
-    writeFileSync(file, bytes)
+    await putText(createScriptContent(dir), 'screenshots', `${name}.png`, bytes)
+    // The content store keeps files under `<dir>/private/<bucket>/<key>`.
+    const file = join(dir, 'private', 'screenshots', `${name}.png`)
 
     let pathname = path
     try {

@@ -133,12 +133,18 @@ wireAddon({
 )
 writeFileSync(
   LIFECYCLE_FILE,
-  `import { appendFileSync } from 'node:fs'
+  `import { appendFileSync, mkdirSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import { pikkuServerLifecycle } from '#pikku/setup'
 
 const log = (line: string) => {
-  const file = process.env.PIKKU_HOOK_LOG
-  if (file) appendFileSync(file, line + '\\n')
+  const base = process.env.PIKKU_HOOK_LOG
+  if (!base) return
+  // The contributor hooks write through the content service, which keeps the
+  // log at <dir>/private/hooks/<name>; append to that same file.
+  const dir = join(dirname(base), 'private', 'hooks')
+  mkdirSync(dir, { recursive: true })
+  appendFileSync(join(dir, basename(base)), line + '\\n')
 }
 
 export const lifecycle = pikkuServerLifecycle({
@@ -327,13 +333,15 @@ const binaryPath = join(DEPLOY_DIR, unitName, 'server')
 let serverProc: ReturnType<typeof spawn> | null = null
 
 const HOOK_LOG = join(DEPLOY_DIR, 'hook-order.log')
+// The hooks write through the content service: <dir>/private/hooks/<name>.
+const HOOK_LOG_FILE = join(DEPLOY_DIR, 'private', 'hooks', 'hook-order.log')
 const readHookLog = (): string[] =>
-  existsSync(HOOK_LOG)
-    ? readFileSync(HOOK_LOG, 'utf-8').trim().split('\n').filter(Boolean)
+  existsSync(HOOK_LOG_FILE)
+    ? readFileSync(HOOK_LOG_FILE, 'utf-8').trim().split('\n').filter(Boolean)
     : []
 
 async function startBinary(): Promise<void> {
-  rmSync(HOOK_LOG, { force: true })
+  rmSync(HOOK_LOG_FILE, { force: true })
   const proc = spawn(binaryPath, [], {
     env: {
       ...process.env,
@@ -411,7 +419,7 @@ async function runToExit(
   env: Record<string, string>,
   options: { stopWithSigterm?: boolean } = {}
 ): Promise<{ code: number | null; output: string }> {
-  rmSync(HOOK_LOG, { force: true })
+  rmSync(HOOK_LOG_FILE, { force: true })
   const ownPort = await getFreePort()
   const proc = spawn(binaryPath, [], {
     env: {

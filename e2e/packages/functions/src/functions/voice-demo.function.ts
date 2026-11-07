@@ -27,12 +27,20 @@
  * things that actually provoke Whisper are breath, lip-smack and keyboards. So
  * the comparison runs on real recordings instead of on an argument.
  */
-import { readFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { unspeakableScripts, voiceForText } from '@pikku/core/agent'
+import { createScriptContent, ingestBytes } from '../script-content.js'
+
+let assetStore: ReturnType<typeof createScriptContent> | undefined
+const getAssetStore = () =>
+  (assetStore ??= createScriptContent(
+    fileURLToPath(
+      new URL('../../.pikku-runtime/script-content', import.meta.url)
+    )
+  ))
 
 /**
  * The published build directory of an installed package.
@@ -119,8 +127,11 @@ export const voiceDemoModule = pikkuSessionlessFunc({
     }
     // Read as bytes rather than text: the same route now serves an ONNX model
     // and a WASM binary, and decoding either as UTF-8 corrupts it silently.
-    const bytes = await readFile(resolve(join(distOf(from), file)))
-    return new Response(bytes, {
+    const bytes = await ingestBytes(
+      getAssetStore(),
+      resolve(join(distOf(from), file))
+    )
+    return new Response(new Uint8Array(bytes), {
       headers: {
         'content-type': contentTypeFor(file),
         'cache-control': NO_STORE,

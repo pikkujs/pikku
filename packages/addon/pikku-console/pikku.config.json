@@ -23,5 +23,8 @@
       "stateDiffService",
       "codeEditService"
     ]
+  },
+  "lint": {
+    "enforceContentService": "off"
   }
 }

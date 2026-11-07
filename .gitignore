@@ -196,3 +196,6 @@ e2e/packages/web/src-tauri/
 packages/inspector-go/bin/
 # cross-compiled pikku-inspect binaries, built in CI by `build-go.mjs --all`
 packages/inspector-go/prebuilt/
+
+# pikku-inspect-rs built by cargo
+packages/inspector-rust/target/
