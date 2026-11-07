@@ -59,6 +59,7 @@ describe('the editorial covers every leaf', () => {
 describe('the guides', () => {
   const doc: SurfaceDoc = {
     version: '0.0.0',
+    errors: [],
     entryPoints: [
       {
         id: 'app',
@@ -98,6 +99,26 @@ describe('the guides', () => {
     for (const guide of SURFACE_GUIDES) {
       assert.ok(index.includes(guide.names[0]!), guide.names[0])
     }
+  })
+
+  test('prints the snippets a guide names, in order', () => {
+    const guide = SURFACE_GUIDES.find(({ snippets }) => snippets)!
+    const guideSnippets = Object.fromEntries(
+      guide.snippets!.map(({ name }) => [name, `code of ${name}`])
+    )
+    const page = renderSurfaceDoc(
+      { ...doc, guideSnippets },
+      { target: guide.names[0]! }
+    )
+    const positions = guide.snippets!.map(({ step, name }) => {
+      const at = page.indexOf(`  ${step}\n    code of ${name}`)
+      assert.ok(at >= 0, name)
+      return at
+    })
+    assert.deepEqual(
+      positions,
+      [...positions].sort((a, b) => a - b)
+    )
   })
 
   test('a door keeps its name over a guide', () => {

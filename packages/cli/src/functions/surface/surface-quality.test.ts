@@ -268,6 +268,24 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
     }
   })
 
+  test('`pikku doc content` prints the whole upload, frontend included', () => {
+    assert.ok(doc, 'no shipped surface.json — build the CLI first')
+    const page = renderSurfaceDoc(doc, { target: 'content' })
+    for (const step of [
+      'buildFileKey = ',
+      'fileKeyIsUnderOrder = pikkuPermission',
+      'content.listFilesByPrefix(BUCKET, fileKey)',
+      'content.getUploadURL(',
+      'photo: [isOrderOwner, fileKeyIsUnderOrder, fileKeyIsStored]',
+      'content.getDownloadURL(',
+      "route: '/orders/:orderId/damage-photo/upload'",
+      'pikkuFetch.uploadFile(upload, photo, contentType)',
+    ]) {
+      assert.ok(page.includes(step), step)
+    }
+    assert.doesNotMatch(page, /base64|FormData/)
+  })
+
   test('says what each key it lists is for', () => {
     const { symbols } = read()
     const keys = symbols.flatMap((symbol) => symbol.members ?? [])

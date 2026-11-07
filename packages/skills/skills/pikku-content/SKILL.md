@@ -7,7 +7,7 @@ installGroups: [core]
 
 # Pikku Content
 
-Run this once: `pikku doc ContentService UploadURLResult`. It prints each step as real code. The service is `content` on `services`, never `contentService`.
+Run this once: `pikku doc content ContentService UploadURLResult`. `content` prints one whole upload as real code: the key, the permissions, the functions, the routes and the browser. The service is `content` on `services`, never `contentService`.
 
 ## The rule
 
@@ -18,7 +18,7 @@ Run this once: `pikku doc ContentService UploadURLResult`. It prints each step a
 The `content` service needs a backend. In `pikku dev` the built-in local store is wired for you. Anywhere else, supply a `content` singleton service (for the built-in store, `LocalContent` also needs the matching upload and asset routes), or `content.getUploadURL` has nothing to call.
 
 1. A function calls `content.getUploadURL({ bucket, fileKey, contentType })` and returns `uploadUrl`, `uploadMethod`, `uploadHeaders` and `fileKey`. A bucket is any name you pick. Build `fileKey` on the server: owner prefix, uuid, sanitised file name.
-2. The browser sends the file itself, as the raw body, with no `FormData` and no session token, because the URL is the grant:
+2. The browser sends the file itself, as the raw body, with no `FormData` and no session token, because the URL is the grant. On the generated fetch client, `pikkuFetch.uploadFile(upload, file, contentType)` does this, resolves a relative `uploadUrl` and throws on failure. Without it:
 
    `fetch(new URL(uploadUrl, serverUrl), { method: uploadMethod ?? 'PUT', headers: { 'Content-Type': file.type, ...uploadHeaders }, body: file })`
 
