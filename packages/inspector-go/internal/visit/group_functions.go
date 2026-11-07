@@ -125,10 +125,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 		if cm.hasErrors {
 			m.Errors = cm.errors
 		}
-		// A workflow's `expose` opens its generated start and approve routes. It
-		// must not also publish the body as an RPC: that bypasses the route gate,
-		// and the body cannot run outside a workflow anyway.
-		expose = tsutil.GetPropertyValue(firstArg, "expose").Truthy() && !isWorkflowWrapper(wrapper)
+		expose = tsutil.GetPropertyValue(firstArg, "expose").Truthy()
 		m.Remote = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "remote").Truthy())
 		mcp = tsutil.GetPropertyValue(firstArg, "mcp").Truthy()
 		if v := tsutil.GetPropertyValue(firstArg, "auth"); v.Bool != nil {
@@ -464,7 +461,13 @@ func (s *Context) addFunctions(node *ast.Node) {
 		s.checkClassification(name, handler, wrapper != "pikkuFunc")
 	}
 
-	m.Sessionless = tsutil.BoolPtr(wrapper != "pikkuFunc")
+	sessionless := wrapper != "pikkuFunc"
+	if isWorkflowWrapper(wrapper) {
+		// A workflow is a function, so unset auth wants a session. Only an explicit
+		// `auth: false` opens it.
+		sessionless = m.Auth != nil && !*m.Auth
+	}
+	m.Sessionless = tsutil.BoolPtr(sessionless)
 	m.Services = services
 	if len(wires.Wires) > 0 || !wires.Optimized {
 		m.Wires = &wires

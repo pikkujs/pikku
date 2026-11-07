@@ -18,10 +18,12 @@ session at all and rejected only an already-resolved gate.
 **read** paths share: the generated status routes assert it against the run they
 were already reading.
 
-**A run with no recorded owner is refused.** Triggers, schedulers and anonymous
-routes start runs with no `pikkuUserId`, and nobody can prove such a run is theirs.
-An earlier version let them through, which made every ownerless run readable by
-anyone holding its id. Consoles do not use this check; they gate on their own
+**A run with no recorded owner is refused** by `assertWorkflowRunOwner`. Triggers,
+schedulers and anonymous starts make runs with no `pikkuUserId`, and nobody can prove
+such a run is theirs. An earlier version let them through, which made every ownerless
+run readable by anyone holding its id. The routes go through
+`checkWorkflowRunAccess`, where the workflow's declaration can open one: `auth: false`
+for anyone, or its permissions, judged on the run's stored input. Consoles do not use this check; they gate on their own
 scopes (`pikku:console:workflows:read`).
 
 This is ownership, not an approver model. It answers "is this your run", not "are
@@ -46,7 +48,7 @@ validation, and discarded if it fails.
 `approvers` has no default. The inspector refuses a `workflow.approval()` without
 it (PKU645), because a gate that says nothing about who answers it was open to
 anyone. An explicit `'any'` means any signed-in user: the generated approve route
-requires a session, and only reaches `expose: true` workflows. `approveStep` itself
+requires a session, even on an `auth: false` workflow, and only reaches `expose: true` workflows. `approveStep` itself
 still accepts no session, because application code answering a gate is not a user.
 `'owner'` on an ownerless run refuses every user, for the same reason a read does.
 

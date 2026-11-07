@@ -33,6 +33,7 @@ export const chaosOnboardingWorkflow = pikkuWorkflowFunc<
     reviewer?: string
   }
 >({
+  auth: false,
   expose: true,
   func: async ({}, data, { workflow }) => {
     await workflow.do('Create account', 'chaosStep', {

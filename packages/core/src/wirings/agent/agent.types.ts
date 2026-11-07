@@ -467,14 +467,10 @@ export type CoreAgent<
   /** Hooks around each step and each tool call — the place to inspect, rewrite or veto what the model is about to do. */
   agentMiddleware?: PikkuAgentMiddlewareHooks<any, any>[]
   /**
-   * Whether a session is required to run this agent. Defaults to `false`, since
-   * agents are commonly invoked from an already-authenticated `pikkuFunc` or
-   * from genuinely sessionless contexts (crons, queue workers). Set `true` to
-   * require a session at the agent itself. `scopes` and `permissions` are
-   * enforced either way.
-   *
-   * The generated HTTP routes always want a session. Only an explicit `false`,
-   * alongside `expose: true`, lets the anonymous routes reach this agent.
+   * Whether a session is required to run this agent. As for any function, unset
+   * means it is. Only an explicit `false` lets an agent run with none: an
+   * anonymous caller of the generated routes, a cron, a queue worker. `scopes`
+   * and `permissions` are enforced either way.
    */
   auth?: boolean
   /**

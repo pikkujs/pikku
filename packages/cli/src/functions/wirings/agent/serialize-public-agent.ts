@@ -68,7 +68,7 @@ export const ThreadDeleted = z.object({ deleted: z.boolean() })
   canAccessThread,
   threadOwnerConstraint,
 } from '@pikku/core/agent'
-import { pikkuFunc, pikkuSessionlessFunc } from '${leaf('function')}'
+import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { pikkuPermission } from '${leaf('auth')}'
 import { defineHTTPRoutes, wireHTTPRoutes } from '${leaf('http')}'
 import {
@@ -95,71 +95,43 @@ export const isThreadOwner = pikkuPermission<{ threadId: string }>(
   }
 )
 
-export const agentCaller = pikkuFunc({
+export const agentCaller = pikkuSessionlessFunc({
   description: 'Run a named AI agent with a message and return its reply',
   tags: ['pikku'],
-  auth: true,
+  auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
-    assertAgentRouteAccess(data.agentName, 'session')
+    assertAgentRouteAccess(data.agentName)
     return await rpc.agent.run(data.agentName as any, agentCallOptions(data))
   },
 })
 
-export const agentStreamCaller = pikkuFunc({
-  tags: ['pikku'],
-  auth: true,
-  input: AgentCall,
-  func: async (_services, data, { rpc }) => {
-    assertAgentRouteAccess(data.agentName, 'session')
-    await rpc.agent.stream(data.agentName as any, agentCallOptions(data))
-  },
-})
-
-/**
- * The anonymous routes reach only an agent that declares both \`expose: true\`
- * and \`auth: false\`, and answer 401 for every other name. A run started here
- * belongs to nobody, so its tool approvals can never be answered.
- */
-export const agentAnonymousCaller = pikkuSessionlessFunc({
-  description: 'Run a public AI agent with a message and return its reply',
+export const agentStreamCaller = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
-    assertAgentRouteAccess(data.agentName, 'anonymous')
-    return await rpc.agent.run(data.agentName as any, agentCallOptions(data))
-  },
-})
-
-export const agentAnonymousStreamCaller = pikkuSessionlessFunc({
-  tags: ['pikku'],
-  auth: false,
-  input: AgentCall,
-  func: async (_services, data, { rpc }) => {
-    assertAgentRouteAccess(data.agentName, 'anonymous')
+    assertAgentRouteAccess(data.agentName)
     await rpc.agent.stream(data.agentName as any, agentCallOptions(data))
   },
 })
 
-/** Only the run's owner gets past \`rpc.agent\`, and only for this agent's run. */
-export const agentApproveCaller = pikkuFunc({
+export const agentApproveCaller = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: true,
+  auth: false,
   input: AgentApproval,
   func: async (_services, { runId, approvals, agentName }, { rpc }) => {
-    assertAgentRouteAccess(agentName, 'session')
+    assertAgentRouteAccess(agentName)
     return await rpc.agent.approve(runId, approvals, agentName)
   },
 })
 
-/** Only the run's owner gets past \`rpc.agent\`, and only for this agent's run. */
-export const agentResumeCaller = pikkuFunc({
+export const agentResumeCaller = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: true,
+  auth: false,
   input: AgentResume,
   func: async (_services, data, { rpc }) => {
-    assertAgentRouteAccess(data.agentName, 'session')
+    assertAgentRouteAccess(data.agentName)
     await rpc.agent.resume(data.runId, {
       toolCallId: data.toolCallId,
       approved: data.approved,
@@ -234,7 +206,7 @@ export const deleteAgentThread = pikkuSessionlessFunc({
 })
 
 export const agentRoutes = defineHTTPRoutes({
-  auth: true,
+  auth: false,
   tags: ['pikku:public'],
   routes: {
     agentRun: {
@@ -248,20 +220,6 @@ export const agentRoutes = defineHTTPRoutes({
       sse: true,
       streamProtocol: 'agui',
       func: agentStreamCaller,
-    },
-    agentRunAnonymous: {
-      route: '${globalHTTPPrefix}/rpc/agent/:agentName/anonymous',
-      method: 'post',
-      auth: false,
-      func: agentAnonymousCaller,
-    },
-    agentStreamAnonymous: {
-      route: '${globalHTTPPrefix}/rpc/agent/:agentName/anonymous/stream',
-      method: 'post',
-      auth: false,
-      sse: true,
-      streamProtocol: 'agui',
-      func: agentAnonymousStreamCaller,
     },
     agentApprove: {
       route: '${globalHTTPPrefix}/rpc/agent/:agentName/approve',

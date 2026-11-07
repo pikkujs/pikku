@@ -4,6 +4,7 @@ export const complexInlineWorkflow = pikkuWorkflowComplexFunc<
   { items: number[] },
   { processed: number[]; count: number }
 >({
+  auth: false,
   expose: true,
   func: async ({}, data, { workflow }) => {
     const results = await Promise.all(

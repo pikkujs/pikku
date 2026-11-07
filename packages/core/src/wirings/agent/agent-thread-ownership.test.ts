@@ -19,6 +19,7 @@ const sessionService = (session?: Record<string, unknown>) =>
 
 const addTestAgent = (agentName: string) => {
   const agent: CoreAgent = {
+    auth: false,
     name: agentName,
     description: 'test agent',
     instructions: 'be helpful',

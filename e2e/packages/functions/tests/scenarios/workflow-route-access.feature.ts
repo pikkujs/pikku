@@ -1,6 +1,6 @@
 /**
- * Who the generated workflow routes turn away. Each scenario is a real request,
- * because the gates live in the routes and not in anything below them.
+ * Who the generated workflow routes turn away. Each scenario is a real request.
+ * The routes themselves are open: what refuses is the workflow's own declaration.
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
@@ -53,15 +53,22 @@ export const anonymousRunRefused = pikkuScenario<void, { refused: true }>({
 })
 
 export const anonymousStatusRefused = pikkuScenario<void, { refused: true }>({
-  title: 'An anonymous caller cannot read a status',
+  title:
+    'An anonymous caller cannot read a run of a workflow that wants a session',
   description: 'Answers 401',
   tags: ['scenario', 'workflow'],
   func: async (_services, _data, { scenario }) => {
+    const started = await scenario.when('starts', 'callsWorkflowRoute', {
+      path: `/workflow/${EXPOSED}/start`,
+      userId: OWNER,
+      body: input,
+    })
+    const { runId } = JSON.parse(started.serialized)
     const answer = await scenario.when(
       'calls the route',
       'callsWorkflowRoute',
       {
-        path: `/workflow/${EXPOSED}/status/any-run`,
+        path: `/workflow/${EXPOSED}/status/${runId}`,
         method: 'GET',
       }
     )
@@ -74,15 +81,20 @@ export const anonymousStatusRefused = pikkuScenario<void, { refused: true }>({
 })
 
 export const anonymousApproveRefused = pikkuScenario<void, { refused: true }>({
-  title: 'An anonymous caller cannot answer a gate',
+  title: 'An anonymous caller cannot answer a gate, even on an open workflow',
   description: 'Answers 401',
   tags: ['scenario', 'workflow'],
   func: async (_services, _data, { scenario }) => {
+    const started = await scenario.when('starts', 'callsWorkflowRoute', {
+      path: `/workflow/${PUBLIC}/start`,
+      body: input,
+    })
+    const { runId } = JSON.parse(started.serialized)
     const answer = await scenario.when(
       'calls the route',
       'callsWorkflowRoute',
       {
-        path: `/workflow/${EXPOSED}/approve/any-run`,
+        path: `/workflow/${PUBLIC}/approve/${runId}`,
         body: { reason: 'gate', decision: {} },
       }
     )
@@ -94,43 +106,22 @@ export const anonymousApproveRefused = pikkuScenario<void, { refused: true }>({
   },
 })
 
-export const anonymousRouteNeedsOptIn = pikkuScenario<void, { refused: true }>({
-  title: 'The anonymous route refuses a workflow without auth: false',
-  description: 'Answers 401',
+export const unknownNameHidden = pikkuScenario<void, { refused: true }>({
+  title: 'An unknown workflow answers the same as a hidden one',
+  description: 'Answers 404',
   tags: ['scenario', 'workflow'],
   func: async (_services, _data, { scenario }) => {
     const answer = await scenario.when(
       'calls the route',
       'callsWorkflowRoute',
       {
-        path: `/workflow/${EXPOSED}/start/anonymous`,
+        path: '/workflow/noSuchWorkflow/start',
         body: input,
       }
     )
     await scenario.then('expects the status', 'expectsRouteStatus', {
       call: answer,
-      status: 401,
-    })
-    return { refused: true }
-  },
-})
-
-export const anonymousRouteHidesNames = pikkuScenario<void, { refused: true }>({
-  title: 'The anonymous route answers the same for an unknown name',
-  description: 'Answers 401',
-  tags: ['scenario', 'workflow'],
-  func: async (_services, _data, { scenario }) => {
-    const answer = await scenario.when(
-      'calls the route',
-      'callsWorkflowRoute',
-      {
-        path: '/workflow/noSuchWorkflow/start/anonymous',
-        body: input,
-      }
-    )
-    await scenario.then('expects the status', 'expectsRouteStatus', {
-      call: answer,
-      status: 401,
+      status: 404,
     })
     return { refused: true }
   },
@@ -240,13 +231,32 @@ export const ownerAloneReadsARun = pikkuScenario<void, { read: true }>({
   },
 })
 
-export const anonymousRunHasNoReader = pikkuScenario<void, { refused: true }>({
-  title: 'An opted-in workflow starts anonymously, and nobody can read the run',
-  description: 'A run with no owner is refused to every signed-in user',
+export const signedInRunFinishes = pikkuScenario<void, { finished: true }>({
+  title: 'A signed-in caller runs a workflow that wants a session to the end',
+  description: 'The body and its steps run as the caller',
+  tags: ['scenario', 'workflow'],
+  func: async (_services, _data, { scenario }) => {
+    const answer = await scenario.when('runs', 'callsWorkflowRoute', {
+      path: `/workflow/${EXPOSED}/run`,
+      userId: OWNER,
+      body: input,
+    })
+    await scenario.then('expects an answer', 'expectsRouteStatus', {
+      call: answer,
+      status: 200,
+    })
+    return { finished: true }
+  },
+})
+
+export const openWorkflowIsOpen = pikkuScenario<void, { read: true }>({
+  title:
+    'An auth: false workflow starts and reads anonymously on the same routes',
+  description: 'One route per action: the declaration decides',
   tags: ['scenario', 'workflow'],
   func: async (_services, _data, { scenario }) => {
     const started = await scenario.when('starts', 'callsWorkflowRoute', {
-      path: `/workflow/${PUBLIC}/start/anonymous`,
+      path: `/workflow/${PUBLIC}/start`,
       body: input,
     })
     await scenario.then('expects it to start', 'expectsRouteStatus', {
@@ -257,13 +267,12 @@ export const anonymousRunHasNoReader = pikkuScenario<void, { refused: true }>({
     const read = await scenario.when('someone reads', 'callsWorkflowRoute', {
       path: `/workflow/${PUBLIC}/status/${runId}`,
       method: 'GET',
-      userId: OWNER,
     })
-    await scenario.then('expects a refusal', 'expectsRouteStatus', {
+    await scenario.then('expects an answer', 'expectsRouteStatus', {
       call: read,
-      status: 403,
+      status: 200,
     })
-    return { refused: true }
+    return { read: true }
   },
 })
 
@@ -294,13 +303,13 @@ export const workflowRouteAccessFeature = pikkuFeature({
     anonymousRunRefused,
     anonymousStatusRefused,
     anonymousApproveRefused,
-    anonymousRouteNeedsOptIn,
-    anonymousRouteHidesNames,
+    unknownNameHidden,
     hiddenStartRefused,
     hiddenRunRefused,
     approveRefusesUnknownRun,
     ownerAloneReadsARun,
-    anonymousRunHasNoReader,
+    signedInRunFinishes,
+    openWorkflowIsOpen,
     startValidatesInput,
   ],
 })

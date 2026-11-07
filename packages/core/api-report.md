@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3412 observable things**: 1158 exported names, plus
+**3413 observable things**: 1159 exported names, plus
 2254 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
@@ -48,7 +48,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./addon` | 15 | 15 | 2 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
-| `./workflow/types` | 48 | 1 | 14 |
+| `./workflow/types` | 49 | 2 | 13 |
 | `./scope` | 15 | 15 | 0 |
 | `./rpc` | 8 | 8 | 6 |
 | `./cli/channel` | 7 | 7 | 5 |
@@ -785,7 +785,7 @@ export abstract class PikkuRequest<In = any> {
   constructor(data: In)
   public async data(): Promise<In>
 }
-runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, funcName: string, { singletonServices, createWireServices, wireServices: providedWireServices, data, auth: wiringAuth, inheritedMiddleware, wireMiddleware, inheritedChannelMiddleware, wireChannelMiddleware, coerceDataFromSchema, wire, sessionService, credentialWireService, packageName, addonInstance, }: { singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; wireServices?: Record<string, unknown> | undefined; data: () => In | Promise<In>; auth?: boolean | undefined; inheritedMiddleware?: MiddlewareMetadata[] | undefined; wireMiddleware?: CorePikkuMiddleware[] | undefined; inheritedChannelMiddleware?: MiddlewareMetadata[] | undefined; wireChannelMiddleware?: CorePikkuChannelMiddleware[] | undefined; coerceDataFromSchema?: boolean | undefined; tags?: string[] | undefined; wire: PikkuRawWire; sessionService?: SessionService<CoreUserSession> | undefined; credentialWireService?: PikkuCredentialWireService | undefined; packageName?: string | null | undefined; addonInstance?: AddonInstance | undefined; }) => Promise<Out>
+runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, funcName: string, { singletonServices, createWireServices, wireServices: providedWireServices, data, auth: wiringAuth, inheritedMiddleware, wireMiddleware, inheritedChannelMiddleware, wireChannelMiddleware, coerceDataFromSchema, wire, sessionService, credentialWireService, packageName, addonInstance, gate, gatesPassedAtStart, }: { singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; wireServices?: Record<string, unknown> | undefined; data: () => In | Promise<In>; auth?: boolean | undefined; inheritedMiddleware?: MiddlewareMetadata[] | undefined; wireMiddleware?: CorePikkuMiddleware[] | undefined; inheritedChannelMiddleware?: MiddlewareMetadata[] | undefined; wireChannelMiddleware?: CorePikkuChannelMiddleware[] | undefined; coerceDataFromSchema?: boolean | undefined; tags?: string[] | undefined; wire: PikkuRawWire; sessionService?: SessionService<CoreUserSession> | undefined; credentialWireService?: PikkuCredentialWireService | undefined; packageName?: string | null | undefined; addonInstance?: AddonInstance | undefined; gate?: "start" | "run" | undefined; gatesPassedAtStart?: boolean | undefined; }) => Promise<Out>
 ```
 
 ## ./channel
@@ -1043,9 +1043,7 @@ export interface ArrayPredicateStepMeta {
   condition: Condition
   outputVar?: string
 }
-assertWorkflowRunAnswerable: (run: Pick<WorkflowRun, "workflow"> | null | undefined, workflowName: string) => void
 assertWorkflowRunOwner: (wire: WorkflowRunWire | undefined, session: CoreUserSession | undefined) => void
-assertWorkflowRunReadable: (run: Pick<WorkflowRun, "workflow" | "wire"> | null | undefined, workflowName: string, session: CoreUserSession | undefined) => void
 export interface BranchStepMeta {
   type: 'branch'
   branches: BranchCase[]
@@ -1056,6 +1054,8 @@ export interface CancelStepMeta {
   type: 'cancel'
   reason?: string
 }
+checkWorkflowRunAccess: (workflowName: string, run: WorkflowRun | null | undefined, wire: WorkflowCallerWire, action: "read" | "approve") => Promise<void>
+checkWorkflowStart: (workflowName: string, input: unknown, wire: WorkflowCallerWire) => Promise<{ input: any; wire: WorkflowRunWire; }>
 export type Condition =
   | SimpleCondition
   | { type: 'and'; conditions: Condition[] }
@@ -1283,7 +1283,6 @@ export interface PikkuWorkflowWire {
   milestone: WorkflowWireMilestone
   approval: WorkflowWireApproval
 }
-prepareWorkflowRouteStart: ({ logger, schema }: { logger: Logger; schema?: SchemaService | undefined; }, workflowName: string, input: unknown, access: "session" | "anonymous") => Promise<unknown>
 export interface ReconstructedRunState {
   seq: number
   at?: Date
@@ -1362,7 +1361,7 @@ export interface StepState {
 }
 export type StepStatus =
   'pending' | 'running' | 'scheduled' | 'succeeded' | 'failed' | 'suspended'
-streamWorkflowRunStatus: ({ workflowRunService, workflowName, runId, channel, session, detailed, pollIntervalMs, }: WorkflowStatusStreamParams) => Promise<void>
+streamWorkflowRunStatus: ({ workflowRunService, workflowName, runId, channel, wire, detailed, pollIntervalMs, }: WorkflowStatusStreamParams) => Promise<void>
 export interface SuspendStepMeta {
   type: 'suspend'
   reason: string
@@ -1406,6 +1405,10 @@ export class WorkflowApprovalResolvedError extends PikkuError {
   public payload: { reason: string; outcome: ApprovalOutcome<unknown>['status'] }
   constructor(reason: string, outcome: ApprovalOutcome<unknown>['status'])
 }
+export type WorkflowCallerWire = Pick<
+  Partial<PikkuRawWire>,
+  'session' | 'getSession' | 'pikkuUserId' | 'wireType' | 'wireId'
+>
 export class WorkflowCancelledException extends Error {
   constructor(public readonly runId: string, public readonly reason?: string)
 }
@@ -1513,6 +1516,7 @@ export interface WorkflowRunWire {
   parentStepId?: string
   pikkuUserId?: string
   traceparent?: string
+  verified?: WorkflowRunProof
 }
 export interface WorkflowService {
   wireQueueWorkers?(): void
@@ -1587,7 +1591,7 @@ export interface WorkflowStatusStreamParams {
   workflowName: string
   runId: string
   channel: Pick<PikkuChannel<unknown, any>, 'send' | 'close'>
-  session: CoreUserSession | undefined
+  wire: WorkflowCallerWire
   detailed?: boolean
   pollIntervalMs?: number
 }
@@ -2219,6 +2223,7 @@ export interface WorkflowRunMirror {
   upsertWorkflowVersion(name: string, graphHash: string, graph: any, source: string, status?: WorkflowVersionStatus): Promise<void>
   updateWorkflowVersionStatus(name: string, graphHash: string, status: WorkflowVersionStatus): Promise<void>
 }
+export type WorkflowRunProof = 'start' | 'parent'
 export interface WorkflowRunService {
   listRuns(options?: { workflowName?: string; status?: string; limit?: number; offset?: number }): Promise<WorkflowRun[]>
   getRun(id: string): Promise<WorkflowRun | null>
@@ -2255,7 +2260,6 @@ export interface WorkflowRuntimeMeta {
   plannedSteps?: WorkflowPlannedStep[]
   expose?: boolean
   auth?: boolean
-  inputSchemaName?: string
 }
 export interface WorkflowRunWire {
   type: string
@@ -2264,6 +2268,7 @@ export interface WorkflowRunWire {
   parentStepId?: string
   pikkuUserId?: string
   traceparent?: string
+  verified?: WorkflowRunProof
 }
 export interface WorkflowService {
   wireQueueWorkers?(): void
@@ -4028,7 +4033,7 @@ export interface AgentThread {
   createdAt: Date
   updatedAt: Date
 }
-assertAgentRouteAccess: (agentName: string, access: "session" | "anonymous") => void
+assertAgentRouteAccess: (agentName: string) => void
 canAccessThread: (storedResourceId: string, session: { userId?: string | undefined; orgId?: string | undefined; } | undefined) => boolean
 export type CoreAgent<
   PikkuPermission = CorePikkuPermission<any, any>,

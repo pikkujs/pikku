@@ -17,6 +17,7 @@ export const complexConditionalBranchingWorkflow = pikkuWorkflowFunc<
   },
   { discount: number; freeShipping: boolean; priorityProcessing: boolean }
 >({
+  auth: false,
   title: 'Complex Conditional Branching',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

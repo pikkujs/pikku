@@ -8,6 +8,7 @@ export const multiSourceAggregationWorkflow = pikkuWorkflowFunc<
   { projectId: string },
   { taskCount: number; memberCount: number; commentCount: number }
 >({
+  auth: false,
   title: 'Multi Source Aggregation',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

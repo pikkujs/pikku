@@ -12,6 +12,7 @@ export const filterAndProcessWorkflow = pikkuWorkflowFunc<
   { items: Array<{ id: string; status: string; priority: number }> },
   { processedCount: number; skippedCount: number }
 >({
+  auth: false,
   title: 'Filter And Process',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

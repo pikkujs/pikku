@@ -10,6 +10,7 @@ const meta: WorkflowRuntimeMeta = {
   name: 'parentGraph',
   pikkuFuncId: 'parentGraph',
   source: 'graph',
+  auth: false,
   entryNodeIds: ['a'],
   graphHash: 'hash',
   nodes: { a: { nodeId: 'a', rpcName: 'childFlow' } },

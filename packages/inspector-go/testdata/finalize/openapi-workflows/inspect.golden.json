@@ -1045,7 +1045,7 @@
           "pikkuFuncId": "restockWorkflow",
           "functionType": "user",
           "funcWrapper": "pikkuWorkflowFunc",
-          "sessionless": true,
+          "sessionless": false,
           "name": "restockWorkflow",
           "services": {
             "optimized": true,
@@ -1065,6 +1065,7 @@
           "outputs": [
             "RestockWorkflowOutput"
           ],
+          "expose": true,
           "implementationHash": "0ad85d46305da298",
           "description": "Restock an item",
           "isDirectFunction": false,
@@ -1903,7 +1904,6 @@
             "Check price"
           ],
           "graphHash": "086ed0963c72",
-          "inputSchemaName": "RestockWorkflowInput",
           "deterministic": false,
           "wires": {
             "http": [

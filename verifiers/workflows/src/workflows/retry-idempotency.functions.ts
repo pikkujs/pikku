@@ -74,6 +74,7 @@ export const idempotentDedupeWorkflow = pikkuWorkflowFunc<
   { trackerKey: string; failTimes: number },
   { ok: boolean }
 >({
+  auth: false,
   func: async (_services, data, { workflow }) => {
     await workflow.do('idempotent step', 'idempotentStep', data, {
       retries: 5,
@@ -89,6 +90,7 @@ export const noRetryWorkflow = pikkuWorkflowFunc<
   { trackerKey: string },
   { ok: boolean }
 >({
+  auth: false,
   func: async (_services, data, { workflow }) => {
     await workflow.do(
       'no retry step',
@@ -106,6 +108,7 @@ export const defaultRetryExhaustWorkflow = pikkuWorkflowFunc<
   { trackerKey: string },
   { ok: boolean }
 >({
+  auth: false,
   func: async (_services, data, { workflow }) => {
     await workflow.do(
       'default exhaust step',
@@ -125,6 +128,7 @@ export const defaultRetryRecoverWorkflow = pikkuWorkflowFunc<
   { trackerKey: string; failTimes: number },
   { ok: boolean }
 >({
+  auth: false,
   func: async (_services, data, { workflow }) => {
     await workflow.do('default recover step', 'flakyStep', data, {
       retryDelay: 0,

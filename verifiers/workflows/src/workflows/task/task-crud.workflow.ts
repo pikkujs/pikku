@@ -12,6 +12,7 @@ export const taskCrudWorkflow = pikkuWorkflowFunc<
   { title: string; description?: string },
   { taskId: string; finalStatus: string; deleted: boolean }
 >({
+  auth: false,
   title: 'Task CRUD',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

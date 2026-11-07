@@ -8,6 +8,7 @@ export const someEveryPredicatesWorkflow = pikkuWorkflowFunc<
   { userIds: string[]; requiredRole: string },
   { hasAdmin: boolean; allVerified: boolean; canProceed: boolean }
 >({
+  auth: false,
   title: 'Some Every Predicates',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

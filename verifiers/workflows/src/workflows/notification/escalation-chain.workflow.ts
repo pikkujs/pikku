@@ -17,6 +17,7 @@ export const escalationChainWorkflow = pikkuWorkflowComplexFunc<
   },
   { escalatedTo: string | null; finalLevel: number }
 >({
+  auth: false,
   title: 'Escalation Chain',
   tags: ['notification'],
   func: async (_services, data, { workflow }) => {

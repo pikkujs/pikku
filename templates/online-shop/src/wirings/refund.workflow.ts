@@ -40,6 +40,8 @@ export const refundOrderWorkflow = pikkuWorkflowComplexFunc<
  * can draw.
  */
 export const nightlyHousekeeping = pikkuWorkflowGraph({
+  // A schedule starts this with no user, so it says so.
+  auth: false,
   description: 'Sweep abandoned baskets, then report the day',
   tags: ['reports'],
   nodes: {

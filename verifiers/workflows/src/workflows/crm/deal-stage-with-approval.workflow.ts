@@ -8,6 +8,7 @@ export const dealStageWithApprovalWorkflow = pikkuWorkflowFunc<
   { dealId: string; targetStage: string; approvalRequired: boolean },
   { moved: boolean; approved: boolean }
 >({
+  auth: false,
   title: 'Deal Stage With Approval',
   tags: ['crm'],
   func: async (_services, data, { workflow }) => {

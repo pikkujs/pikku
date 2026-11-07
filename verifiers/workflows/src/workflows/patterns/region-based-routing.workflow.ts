@@ -8,6 +8,7 @@ export const regionBasedRoutingWorkflow = pikkuWorkflowFunc<
   { region: 'us' | 'eu' | 'apac' | 'latam'; userId: string },
   { datacenter: string; supportTeam: string; timezone: string }
 >({
+  auth: false,
   title: 'Region Based Routing',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

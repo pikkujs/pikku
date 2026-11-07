@@ -8,6 +8,7 @@ export const documentVersionHistoryWorkflow = pikkuWorkflowFunc<
   { documentId: string },
   { documentId: string; versionCount: number; latestVersion: number }
 >({
+  auth: false,
   title: 'Document Version History',
   tags: ['document'],
   func: async (_services, data, { workflow }) => {

@@ -8,6 +8,7 @@ export const documentArchiveBatchWorkflow = pikkuWorkflowFunc<
   { authorId: string; status: string; olderThanDays: number },
   { archivedCount: number; reportGenerated: boolean }
 >({
+  auth: false,
   title: 'Document Archive Batch',
   tags: ['document'],
   func: async (_services, data, { workflow }) => {

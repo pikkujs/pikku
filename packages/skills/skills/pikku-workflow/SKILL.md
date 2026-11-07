@@ -218,8 +218,8 @@ arrive before the run has reached the gate:
 So the same rejected decision surfaces as an HTTP error or as a silently
 re-closed gate depending on timing. Both are audited.
 
-The generated approve route requires a session and only reaches `expose: true`
-workflows, for that workflow's own runs. A function calling `approveStep` with no
+The generated approve route requires a session, even on an `auth: false` workflow,
+and only reaches `expose: true` workflows, for that workflow's own runs. A function calling `approveStep` with no
 session is the application answering, and is not judged against the policy.
 
 #### What survives the run
@@ -389,9 +389,10 @@ A run survives a crash or deploy. `pikku dev` and `pikku serve` recover it at st
 ## File conventions
 
 - Place workflows in `packages/functions/src/wirings/*.workflow.ts`; export the variable so the inspector discovers it (no manual registration).
-- HTTP start/run/status/approve routes are auto-scaffolded via `scaffold.workflow` in `pikku.config.json`. They require a session and reach only workflows marked `expose: true`; anything else answers 404. Start input is validated against the declared schema, and a run is readable only by the user who started it.
-- For anonymous starts, add `auth: false` alongside `expose: true` and call `POST /workflow/:name/start/anonymous`. Such a run has no owner, so nobody can read its status.
-- `rpc.startWorkflow` needs neither flag. Prefer it behind your own wired function when the workflow is not a public surface.
+- HTTP start/run/status/approve routes are auto-scaffolded via `scaffold.workflow` in `pikku.config.json`. They reach only workflows marked `expose: true` (anything else answers 404) and apply the workflow's own `auth`, `scopes`, `permissions` and input schema. A refused start leaves no run.
+- A workflow is a function: `auth` unset wants a session, and only `auth: false` is anonymous. A schedule or trigger that starts a workflow with no user needs `auth: false`.
+- A run with an owner is only for that owner. Without a `sessionStore`, a run started through these routes or `checkWorkflowStart` gets `session` as `{ userId }` only.
+- `rpc.startWorkflow` does not check `expose`. Without a `sessionStore`, a workflow it starts needs `auth: false`, or a `checkWorkflowStart` first. Prefer it behind your own wired function when the workflow is not a public surface.
 
 ## Step dispatch & HTTP wiring
 

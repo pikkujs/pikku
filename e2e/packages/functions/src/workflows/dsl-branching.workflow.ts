@@ -4,6 +4,7 @@ export const dslBranchingWorkflow = pikkuWorkflowFunc<
   { score: number; name: string },
   { path: string; message: string }
 >({
+  auth: false,
   expose: true,
   func: async ({}, data, { workflow }) => {
     let path = 'standard'
