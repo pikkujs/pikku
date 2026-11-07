@@ -13,7 +13,9 @@ use crate::tsjg::types::{self, Ty, TypeKind};
 
 /// Handles the `intrinsic` keyword used by Uppercase/Lowercase/Capitalize/
 /// Uncapitalize in lib.es5.d.ts, keyed off the name of the enclosing type
-/// alias (src/NodeParser/IntrinsicNodeParser.ts).
+/// alias (src/NodeParser/IntrinsicNodeParser.ts). `NoInfer` is the one intrinsic
+/// that is not string manipulation: it only blocks inference, so it is its
+/// argument.
 pub struct IntrinsicNodeParser;
 
 pub fn new() -> Rc<IntrinsicNodeParser> {
@@ -37,6 +39,9 @@ impl SubNodeParser for IntrinsicNodeParser {
 
     fn create_type(&self, node: P<Node>, ctx: &Context, _reference: Option<&Ty>) -> Ty {
         let method_name = get_intrinsic_parent_name(node);
+        if method_name == "NoInfer" {
+            return ctx.arguments().into_iter().next().flatten().unwrap_or_else(|| types::new(TypeKind::Any));
+        }
         let Some(method) = intrinsic_method(&method_name) else {
             fail(&format!("unknown intrinsic method: {method_name}"))
         };

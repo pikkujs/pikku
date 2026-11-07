@@ -192,3 +192,36 @@ export interface Run extends Missing {
 		t.Errorf("unexpected diagnostic: %.300s", e.Message)
 	}
 }
+
+// NoInfer<T> only blocks inference, so for a schema it is T. core's
+// GetCredential is a conditional type whose first branch is a generic function
+// returning NoInfer<T> | null; reaching it used to log PKU456 "unknown
+// intrinsic method: NoInfer" and fail the schema.
+func TestGenerateAllNoInferIsItsArgument(t *testing.T) {
+	dir := writeProject(t, map[string]string{
+		"tsconfig.json": `{"compilerOptions":{"strict":true,"module":"nodenext","target":"esnext"}}`,
+		"types.ts": "export type GetCredential<TCredentials = Record<string, unknown>> =\n  string extends keyof TCredentials\n    ? <T = unknown>(name: string) => NoInfer<T> | null | Promise<NoInfer<T> | null>\n    : {\n        <K extends keyof TCredentials & string>(name: K): TCredentials[K] | null\n      }\n\nexport interface Wire {\n  id: string\n  getCredential: GetCredential\n  label: NoInfer<string>\n}\n",
+	})
+	st := state.New(dir)
+	tm := st.Functions.TypesMap
+	tm.AddType("Wire", filepath.Join(dir, "types.ts"))
+	tm.AddCustomType("WireOutput", "{ wire: Wire }", []string{"Wire"})
+	st.Functions.Meta.Set("wire", &state.FunctionMeta{Outputs: []string{"WireOutput"}})
+
+	log := &diag.Logger{}
+	got, err := GenerateAll(log, Config{Tsconfig: filepath.Join(dir, "tsconfig.json")}, st, program.NewCache())
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(got.At("WireOutput"))
+	if !strings.Contains(s, `"id":{"type":"string"}`) {
+		t.Errorf("WireOutput: %s", s)
+	}
+	if !strings.Contains(s, `"label":{"type":"string"}`) {
+		t.Errorf("NoInfer<string> should be string: %s", s)
+	}
+	for _, e := range log.Entries() {
+		t.Errorf("unexpected diagnostic: %.300s", e.Message)
+	}
+}
+
