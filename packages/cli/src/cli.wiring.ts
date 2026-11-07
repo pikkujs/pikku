@@ -2153,8 +2153,8 @@ wireCLI({
             'Show deployment plan (what will be created, updated, deleted)',
           options: {
             provider: {
-              description: 'Deployment provider (cloudflare, aws)',
-              default: 'cloudflare',
+              description:
+                'Deployment provider (defaults to deploy.defaultProvider, then cloudflare)',
               short: 'p',
             },
             resultFile: {
@@ -2168,8 +2168,8 @@ wireCLI({
           description: 'Execute the deployment plan',
           options: {
             provider: {
-              description: 'Deployment provider (cloudflare, aws)',
-              default: 'cloudflare',
+              description:
+                'Deployment provider (defaults to deploy.defaultProvider, then cloudflare)',
               short: 'p',
             },
             fromPlan: {
