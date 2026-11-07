@@ -65,12 +65,16 @@ export function git(
       env: { ...envWithoutInheritedRepo(), ...extraEnv },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
-    let stdout = ''
-    let stderr = ''
-    child.stdout.on('data', (b) => (stdout += b.toString()))
-    child.stderr.on('data', (b) => (stderr += b.toString()))
+    // Collect raw bytes and decode once: a multi-byte character can straddle a
+    // chunk boundary, and decoding each chunk alone turns it into U+FFFD.
+    const stdoutChunks: Buffer[] = []
+    const stderrChunks: Buffer[] = []
+    child.stdout.on('data', (b: Buffer) => stdoutChunks.push(b))
+    child.stderr.on('data', (b: Buffer) => stderrChunks.push(b))
     child.on('error', reject)
     child.on('close', (code) => {
+      const stdout = Buffer.concat(stdoutChunks).toString('utf8')
+      const stderr = Buffer.concat(stderrChunks).toString('utf8')
       if (code === 0) resolve(stdout.trim())
       else reject(new GitError(args.join(' '), code ?? -1, stderr))
     })
