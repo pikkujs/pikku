@@ -1,5 +1,10 @@
+import { CLIError } from '@pikku/core/cli'
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { resolveDb, computeSchemaDrift } from '../db/local-db.js'
+import {
+  resolveDb,
+  computeDeclaredTablesDrift,
+  computeSchemaDrift,
+} from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
 /**
@@ -76,6 +81,16 @@ export const dbCheck = pikkuSessionlessFunc<{}, void>({
           `  Note: the runtime's '${schema}' tables could not be recognised — it needs '${requires}', which this project does not create. ${owner} owns it.`
         )
       }
+    }
+
+    const declared = await computeDeclaredTablesDrift(resolved)
+    if (declared.pending || declared.refusals.length > 0) {
+      logger.error('db check: the migrations do not cover db/tables.ts:')
+      for (const refusal of declared.refusals) logger.error(`  ${refusal}`)
+      if (declared.pending) {
+        logger.error('  Run `pikku db generate`, then `pikku db migrate`.')
+      }
+      throw new CLIError('db/tables.ts is ahead of the migrations')
     }
 
     if (drift.inSync) {

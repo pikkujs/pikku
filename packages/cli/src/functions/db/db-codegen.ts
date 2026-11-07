@@ -497,7 +497,10 @@ function emitManifest(
  * present in the current schema appears as a required key — TypeScript will
  * flag added or removed columns.
  */
-function emitClassificationMap(tables: TableSchema[]): string {
+function emitClassificationMap(
+  tables: TableSchema[],
+  declaredTables: ReadonlySet<string> = new Set()
+): string {
   const colEntry = [
     `  /** Privacy level — can the value leave the process? Defaults to 'private'.`,
     `   *  'encrypted' is the legacy spelling of \`security: 'secret', form: 'wrapped'\`. */`,
@@ -551,22 +554,29 @@ function emitClassificationMap(tables: TableSchema[]): string {
     `export type DbClassificationMap = {`,
   ]
 
+  // A table declared in `db/tables.ts` carries its annotations there, so
+  // leaving it out of `db/annotations.ts` must not be a type error.
+  const key = (table: string) =>
+    `${JSON.stringify(table)}${declaredTables.has(table) ? '?' : ''}`
+  const colKey = (table: string, col: string) =>
+    `${JSON.stringify(col)}${declaredTables.has(table) ? '?' : ''}`
+
   for (const [schema, tables] of schemaMap) {
     if (schema) {
       lines.push(`  ${JSON.stringify(schema)}: {`)
       for (const [table, cols] of tables) {
-        lines.push(`    ${JSON.stringify(table)}: {`)
+        lines.push(`    ${key(table)}: {`)
         for (const col of cols) {
-          lines.push(`      ${JSON.stringify(col)}: ColumnEntry`)
+          lines.push(`      ${colKey(table, col)}: ColumnEntry`)
         }
         lines.push(`    }`)
       }
       lines.push(`  }`)
     } else {
       for (const [table, cols] of tables) {
-        lines.push(`  ${JSON.stringify(table)}: {`)
+        lines.push(`  ${key(table)}: {`)
         for (const col of cols) {
-          lines.push(`    ${JSON.stringify(col)}: ColumnEntry`)
+          lines.push(`    ${colKey(table, col)}: ColumnEntry`)
         }
         lines.push(`  }`)
       }
@@ -636,6 +646,8 @@ export interface CodegenOptions {
    * as app-owned, which is what a project with no generated migrations is.
    */
   migrationsDir?: string
+  /** Tables declared in `db/tables.ts`, which `db/annotations.ts` may omit. */
+  declaredTables?: ReadonlySet<string>
 }
 
 export interface CodegenResult {
@@ -913,7 +925,7 @@ export async function generateSchemaTypes(
 
   // ── classification-map.gen.d.ts ──────────────────────────────────────────────
   const classificationMapBody = options.classificationMapFile
-    ? emitClassificationMap(tables)
+    ? emitClassificationMap(tables, options.declaredTables)
     : null
 
   // ── pikku-db-schema.gen.json ─────────────────────────────────────────────────

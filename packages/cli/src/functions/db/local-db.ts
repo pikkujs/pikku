@@ -1,18 +1,21 @@
 import {
+  cpSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   rmSync,
   writeFileSync,
   readFileSync,
   readdirSync,
 } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { transformSync } from 'esbuild'
 import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
-import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'
+import { CamelCasePlugin, Kysely, PostgresDialect, sql } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
 import {
   migrate,
@@ -35,7 +38,24 @@ import {
 import { loadAuthOptions, getAuthMigrations } from './better-auth-schema.js'
 import { generateSchemaTypes, type CodegenResult } from './db-codegen.js'
 import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
-import { tableCreationSql, tablesInSourceOrder } from '@pikku/migrator-sql'
+import {
+  splitStatements,
+  statementShape,
+  tableCreationSql,
+  tableDefinitions,
+  tablesInSourceOrder,
+} from '@pikku/migrator-sql'
+import { APP_TABLES_SOURCE } from './migration-provenance.js'
+import {
+  declaredTablesMarker,
+  loadTableDeclaration,
+  mergeAnnotations,
+  recordedDeclaredTables,
+  refuseTableChanges,
+  strayAnnotations,
+  TABLES_FILE,
+  type TableDeclaration,
+} from './table-declaration.js'
 import { SqliteMigrationExecutor } from '@pikku/migrator-sql/sqlite'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'
 import { createSqliteKysely } from './sqlite/sqlite-kysely.js'
@@ -72,6 +92,8 @@ interface ResolvedDbBase {
   schemaJsonFile: string
   classificationsFile: string
   classificationsGenJsonFile: string
+  /** Where the project declares its own tables, whether or not it does. */
+  tablesFile: string
   enumsFile: string
   zodFile: string
   camelCase: boolean
@@ -221,6 +243,7 @@ export function resolveDb(
     // pikku-console addon (db/annotations.gen.json). Writing it into outDir
     // (.pikku) would leave both readers looking at a file that never appears.
     classificationsGenJsonFile: join(rootDir, 'db', 'annotations.gen.json'),
+    tablesFile: join(rootDir, TABLES_FILE),
     zodFile: join(outDir, 'db', 'zod.gen.ts'),
     camelCase: true,
     defaultSchema,
@@ -677,12 +700,21 @@ export async function migrateAndCodegen(
   let migrateResult!: MigrateResult
   let codegenResult!: CodegenResult
 
+  const declaration = await loadTableDeclaration(resolved.rootDir)
+
   // Compile any authored db/annotations.ts → sidecar BEFORE codegen so edits
   // reflect in a single `db migrate` (codegen reads the sidecar).
   compileClassifications(
     resolved.classificationsFile,
-    resolved.classificationsGenJsonFile
+    resolved.classificationsGenJsonFile,
+    declaration
   )
+  // Tables with no annotations are declared too, and only the migrations can
+  // say so without materializing the declaration.
+  const declaredTables = new Set([
+    ...recordedDeclaredTables(resolved.migrationsDir),
+    ...Object.keys(declaration?.annotations ?? {}),
+  ])
 
   if (resolved.dialect === 'sqlite') {
     if (!options.scratch) {
@@ -711,6 +743,7 @@ export async function migrateAndCodegen(
         defaultSchema: resolved.defaultSchema,
         rootDir: resolved.rootDir,
         dialect: 'sqlite',
+        declaredTables,
         migrationsDir: resolved.migrationsDir,
       })
     } finally {
@@ -737,6 +770,7 @@ export async function migrateAndCodegen(
         defaultSchema: resolved.defaultSchema,
         rootDir: resolved.rootDir,
         dialect: 'mysql',
+        declaredTables,
         migrationsDir: resolved.migrationsDir,
       })
     })
@@ -764,6 +798,7 @@ export async function migrateAndCodegen(
           defaultSchema: resolved.defaultSchema,
           rootDir: resolved.rootDir,
           dialect: 'postgres',
+          declaredTables,
           migrationsDir: resolved.migrationsDir,
         })
       } finally {
@@ -787,7 +822,8 @@ export async function migrateAndCodegen(
   )
   const jsonWritten = compileClassifications(
     resolved.classificationsFile,
-    resolved.classificationsGenJsonFile
+    resolved.classificationsGenJsonFile,
+    declaration
   )
 
   return {
@@ -996,12 +1032,29 @@ function scaffoldClassificationsFile(
  */
 function compileClassifications(
   classificationsFile: string,
-  genJsonFile: string
+  genJsonFile: string,
+  declaration: TableDeclaration | null = null
 ): boolean {
-  if (!existsSync(classificationsFile)) return false
-  const value = loadClassifications(classificationsFile)
-  if (value === undefined) return false
-  const next = JSON.stringify(value, null, 2) + '\n'
+  const hasAuthored = existsSync(classificationsFile)
+  if (!hasAuthored && !declaration) return false
+  const value = hasAuthored ? loadClassifications(classificationsFile) : {}
+  if (value === undefined) {
+    // Without a declaration a stale sidecar is what this has always left. With
+    // one, it would also drop the classifications the declaration just added.
+    if (declaration) {
+      throw new Error(
+        `${classificationsFile} could not be compiled, so the annotations in ${TABLES_FILE} cannot be applied.`
+      )
+    }
+    return false
+  }
+  const merged = declaration
+    ? mergeAnnotations(
+        value as Record<string, Record<string, unknown>>,
+        declaration.annotations
+      )
+    : value
+  const next = JSON.stringify(merged, null, 2) + '\n'
   const existing = existsSync(genJsonFile)
     ? readFileSync(genJsonFile, 'utf8')
     : null
@@ -1527,19 +1580,41 @@ export async function desiredRuntimeSchema(
     return { tables: after, schemas, types }
   }
 
+  return withThrowawayKysely(resolved, async (kysely, introspect) => {
+    const { tables, schemas, types } = await collect(kysely, introspect)
+    return {
+      tables,
+      sql: compilePikkuSchemas(
+        kysely,
+        schemas,
+        types,
+        resolved.dialect === 'postgres' ? resolved.schema : undefined
+      ),
+      skipped,
+    }
+  })
+}
+
+/**
+ * Run `work` against an empty database of the project's dialect, thrown away
+ * afterwards.
+ *
+ * What lets one declaration answer for every engine: the sources that declare
+ * rather than ship SQL apply themselves here and read back what they created.
+ * SQLite and Postgres are embedded, so nothing is touched; MySQL has nothing
+ * embedded and creates a scratch database on the configured server.
+ */
+async function withThrowawayKysely<T>(
+  resolved: ResolvedDb,
+  work: (db: Kysely<any>, introspect: () => Promise<SchemaMap>) => Promise<T>
+): Promise<T> {
   if (resolved.dialect === 'sqlite') {
     const runtime = await loadSqliteRuntime()
     const db = runtime.open(':memory:')
     try {
-      const kysely = createSqliteKysely({ db, camelCase: true })
-      const { tables, schemas, types } = await collect(kysely, () =>
+      return await work(createSqliteKysely({ db, camelCase: true }), () =>
         introspectorToMap(new SqliteIntrospector(db))
       )
-      return {
-        tables,
-        sql: compilePikkuSchemas(kysely, schemas, types),
-        skipped,
-      }
     } finally {
       db.close()
     }
@@ -1549,14 +1624,9 @@ export async function desiredRuntimeSchema(
     return withScratchMysqlDatabase(resolved, async (db) => {
       const kysely = await createMysqlKysely<any>({ url: db.url })
       try {
-        const { tables, schemas, types } = await collect(kysely, () =>
+        return await work(kysely, () =>
           introspectorToMap(new MysqlIntrospector(db))
         )
-        return {
-          tables,
-          sql: compilePikkuSchemas(kysely, schemas, types),
-          skipped,
-        }
       } finally {
         await kysely.destroy()
       }
@@ -1569,14 +1639,7 @@ export async function desiredRuntimeSchema(
       camelCase: true,
     })
     try {
-      const { tables, schemas, types } = await collect(kysely, () =>
-        postgresDatabaseToMap(db)
-      )
-      return {
-        tables,
-        sql: compilePikkuSchemas(kysely, schemas, types, resolved.schema),
-        skipped,
-      }
+      return await work(kysely, () => postgresDatabaseToMap(db))
     } finally {
       await kysely.destroy()
     }
@@ -1929,6 +1992,370 @@ export interface SchemaSource {
    * a table in a schema their `CREATE TABLE` never put it in.
    */
   schema?: string
+}
+
+// ─── The project's own declared tables ───────────────────────────────────────
+
+/** Every index the migrations define, by name. */
+async function coveredIndexes(resolved: ResolvedDb): Promise<Set<string>> {
+  const names = (rows: unknown[], key: string) =>
+    new Set(
+      (rows as Record<string, string>[]).map((row) => row[key]!.toLowerCase())
+    )
+  switch (resolved.dialect) {
+    case 'sqlite': {
+      const db = await openSqlite(resolved, ':memory:')
+      try {
+        await migrate(new SqliteMigrationExecutor(db), resolved.migrationsDir)
+        return names(
+          db
+            .prepare(`select name from sqlite_master where type = 'index'`)
+            .all(),
+          'name'
+        )
+      } finally {
+        db.close()
+      }
+    }
+    case 'mysql':
+      return withScratchMysqlDatabase(resolved, async (client) => {
+        await migrate(
+          new MysqlMigrationExecutor(client),
+          resolved.migrationsDir
+        )
+        const { rows } = await client.query(
+          `select distinct index_name as name from information_schema.statistics
+           where table_schema = database()`
+        )
+        return names(rows, 'name')
+      })
+    case 'postgres':
+      return withScratchPostgresDatabase(resolved, async (client) => {
+        await migrate(
+          new PostgresMigrationExecutor(client),
+          resolved.migrationsDir
+        )
+        const { rows } = await client.query(
+          `select indexname as name from pg_indexes
+           where schemaname not in ('pg_catalog', 'information_schema')`
+        )
+        return names(rows, 'name')
+      })
+  }
+}
+
+/** The columns of `table` in `schema`, matched the way `diffSchemas` matches. */
+const coveredTable = (
+  covered: SchemaMap,
+  table: string,
+  schema?: string
+): Map<string, ColumnInfo> | undefined =>
+  schema
+    ? covered.get(qualifiedTableKey(schema, table))
+    : (covered.get(table) ?? schemaQualifiedMatch(covered, table))
+
+/**
+ * Apply a declaration to an empty database and read back what it creates.
+ *
+ * A declaration may point a foreign key at a table outside itself: one a
+ * hand-written migration made, or Better Auth's `user`. Those have to exist for
+ * the engine to accept the DDL, so each one named in `requires` is created here
+ * first, with the type the migrations gave it, and left out of the result.
+ *
+ * A stand-in instead of the real tables, because the real ones can't be here:
+ * the migrations may already create the very tables being declared.
+ */
+async function materializeDeclaration(
+  resolved: ResolvedDb,
+  { schema }: TableDeclaration,
+  covered: SchemaMap,
+  schemaName: string | undefined
+): Promise<{ desired?: DesiredSchema; refusals: string[] }> {
+  const refusals: string[] = []
+  const standIns = new Map<string, ColumnInfo[]>()
+
+  for (const { table, column, owner } of schema.requires ?? []) {
+    const info = coveredTable(covered, table, schemaName)?.get(column)
+    if (!info) {
+      refusals.push(
+        `${TABLES_FILE} requires ${table}.${column}, which no migration creates yet. ${owner} owns it.`
+      )
+      continue
+    }
+    standIns.set(table, [...(standIns.get(table) ?? []), info])
+  }
+  if (refusals.length > 0) return { refusals }
+
+  return withThrowawayKysely(resolved, async (db, introspect) => {
+    const physical = db.withoutPlugins()
+    for (const [table, columns] of standIns) {
+      await columns
+        .reduce(
+          (builder, { name, type }, index) =>
+            builder.addColumn(name, sql.raw(type), (col) =>
+              index === 0 ? col.primaryKey() : col.unique()
+            ),
+          physical.schema.createTable(table)
+        )
+        .execute()
+    }
+    const before = await introspect()
+
+    let types: RequiredTypes
+    try {
+      await applyPikkuSchemas(db, [schema])
+      types = (await resolveRequirements(db, [schema])).types
+    } catch (error: any) {
+      return {
+        refusals: [
+          `${TABLES_FILE} does not apply on ${resolved.dialect}: ${error.message}. ` +
+            'A foreign key onto a table outside the declaration has to be listed in `requires`.',
+        ],
+      }
+    }
+
+    const tables = await introspect()
+    for (const table of before.keys()) tables.delete(table)
+    return {
+      desired: {
+        tables,
+        sql: compilePikkuSchemas(db, [schema], types, schemaName),
+      },
+      refusals,
+    }
+  })
+}
+
+/** What `db generate` would write for a declaration, or why it won't. */
+export interface DeclaredTablesPlan {
+  /** Tables the declaration names. */
+  tables: string[]
+  /** The migration body, empty when the migrations already cover the declaration. */
+  body: string
+  /** Why nothing can be written. When present, `body` is empty. */
+  refusals: string[]
+}
+
+/**
+ * Bring the declaration and the migrations into line, by adding only.
+ *
+ * The same delta `generateMigrations` writes for every other source, with one
+ * difference that matters: those sources are a package's published schema, and
+ * a column they stopped writing is relaxed or dropped on their behalf. This one
+ * is the project's data, and a column that left the declaration may be a slip
+ * of the keyboard. So everything but an addition is refused here, with the
+ * reason, and nothing is written.
+ *
+ * Whatever passes is rehearsed before it is handed back: applied on top of the
+ * real migrations in a throwaway database and diffed again. That is the check
+ * that catches what no comparison can see, such as sqlite refusing a
+ * `CURRENT_TIMESTAMP` default on `ADD COLUMN`.
+ */
+export async function planDeclaredTables(
+  resolved: ResolvedDb,
+  otherSources: SchemaSource[] = []
+): Promise<DeclaredTablesPlan | null> {
+  const recorded = recordedDeclaredTables(resolved.migrationsDir)
+  const declaration = await loadTableDeclaration(resolved.rootDir)
+  if (!declaration) {
+    if (recorded.size === 0) return null
+    return {
+      tables: [],
+      body: '',
+      refusals: [
+        `The migrations record declared tables (${[...recorded].join(', ')}), but ${TABLES_FILE} is ` +
+          'gone, and their classifications went with it. Restore it.',
+      ],
+    }
+  }
+
+  const schemaName =
+    resolved.dialect === 'postgres' ? resolved.schema : undefined
+  const covered = await coveredSchema(resolved)
+  const { desired, refusals } = await materializeDeclaration(
+    resolved,
+    declaration,
+    covered,
+    schemaName
+  )
+  if (!desired) return { tables: [], body: '', refusals }
+
+  const tables = [...desired.tables.keys()]
+  const shapes = splitStatements(desired.sql).map((statement) => ({
+    statement,
+    shape: statementShape(statement),
+  }))
+  for (const { statement, shape } of shapes) {
+    if (shape.kind === 'other') {
+      refusals.push(
+        `${TABLES_FILE} may only create tables and indexes, because nothing else can be compared ` +
+          `with what the migrations hold. Found: ${statement.split('\n')[0]}`
+      )
+    }
+  }
+  refusals.push(...strayAnnotations(declaration.annotations, desired.tables))
+
+  for (const source of otherSources) {
+    for (const table of tables.filter((t) => source.desired.tables.has(t))) {
+      refusals.push(
+        `${TABLES_FILE} declares ${table}, which belongs to ${source.origin}. Pick another name.`
+      )
+    }
+  }
+
+  const comparable = (against: SchemaMap): string[] =>
+    tables.flatMap((table) => {
+      const actual = coveredTable(against, table, schemaName)
+      return actual
+        ? refuseTableChanges(
+            table,
+            desired.tables.get(table)!,
+            actual,
+            resolved.migrationsDir,
+            resolved.rootDir
+          )
+        : []
+    })
+
+  refusals.push(...comparable(covered))
+  for (const table of recorded) {
+    if (
+      !desired.tables.has(table) &&
+      coveredTable(covered, table, schemaName)
+    ) {
+      refusals.push(
+        `${table} was declared and no longer is. generate never drops or renames a table. Put it back ` +
+          `in ${TABLES_FILE}, or, if the data really is to go or move, a person writes that migration in ` +
+          `${relative(resolved.rootDir, resolved.migrationsDir)} and generate will then agree with it.`
+      )
+    }
+  }
+  if (refusals.length > 0) return { tables, body: '', refusals }
+
+  const { missingTables, missingColumns } = diffSchemas(
+    desired.tables,
+    covered,
+    schemaName
+  )
+  const statements = tablesInSourceOrder(desired.sql, missingTables).map(
+    (table) => tableCreationSql(desired.sql, table).join('\n\n')
+  )
+
+  const quote =
+    resolved.dialect === 'mysql' ? quoteMysqlIdentifier : quoteIdentifier
+  const qualify = (table: string) =>
+    schemaName ? `${quote(schemaName)}.${quote(table)}` : quote(table)
+
+  for (const { table, columns } of missingColumns) {
+    const { columns: definitions, constraints } = tableDefinitions(
+      desired.sql,
+      table
+    )
+    for (const column of columns) {
+      statements.push(
+        `ALTER TABLE ${qualify(table)} ADD COLUMN ${definitions.get(column)};`
+      )
+      for (const constraint of constraints.filter((c) =>
+        c.includes(quote(column))
+      )) {
+        if (resolved.dialect === 'sqlite') {
+          refusals.push(
+            `${table}.${column} is new and part of a table-level constraint, which sqlite cannot add ` +
+              `to a table that exists: ${constraint}. Declare the constraint on the column, or ` +
+              `a person writes that migration in ${relative(resolved.rootDir, resolved.migrationsDir)}.`
+          )
+        } else {
+          statements.push(`ALTER TABLE ${qualify(table)} ADD ${constraint};`)
+        }
+      }
+    }
+  }
+
+  // An index on a new table came with its `CREATE TABLE` above.
+  const newIndexes = shapes.filter(
+    ({ shape }) =>
+      shape.kind === 'index' && !missingTables.includes(shape.table)
+  )
+  if (newIndexes.length > 0) {
+    const existing = await coveredIndexes(resolved)
+    for (const { statement, shape } of newIndexes) {
+      if (shape.kind === 'index' && !existing.has(shape.name)) {
+        statements.push(statement)
+      }
+    }
+  }
+  if (refusals.length > 0) return { tables, body: '', refusals }
+  if (statements.length === 0) return { tables, body: '', refusals }
+
+  const body = statements.join('\n\n')
+  const rehearsal = await rehearseMigration(resolved, body, (after) => {
+    const left = diffSchemas(desired.tables, after, schemaName)
+    return [
+      ...comparable(after),
+      ...left.missingTables.map((t) => `${t} is still missing`),
+      ...left.missingColumns.map((c) => `${c.table} still lacks ${c.columns}`),
+    ]
+  })
+  return { tables, body: rehearsal.length ? '' : body, refusals: rehearsal }
+}
+
+/**
+ * Apply a migration that has not been written to a copy of the real ones.
+ *
+ * Copied rather than written in place and removed, so a crash halfway leaves the
+ * project's migrations as they were.
+ */
+async function rehearseMigration(
+  resolved: ResolvedDb,
+  body: string,
+  check: (after: SchemaMap) => string[]
+): Promise<string[]> {
+  const dir = mkdtempSync(join(tmpdir(), 'pikku-rehearsal-'))
+  try {
+    if (existsSync(resolved.migrationsDir)) {
+      cpSync(resolved.migrationsDir, dir, { recursive: true })
+    }
+    writeFileSync(
+      nextMigrationFile(dir, APP_TABLES_SOURCE),
+      `${body}\n`,
+      'utf8'
+    )
+    let after: SchemaMap
+    try {
+      after = await coveredSchema({
+        ...resolved,
+        migrationsDir: dir,
+      } as ResolvedDb)
+    } catch (error: any) {
+      return [
+        `The migration for ${TABLES_FILE} does not apply on top of the existing ones: ${error.message}. ` +
+          `Change the declaration so it can be added to what exists, or a person writes that step in ` +
+          `${relative(resolved.rootDir, resolved.migrationsDir)}.`,
+      ]
+    }
+    return check(after).map(
+      (problem) =>
+        `The migration for ${TABLES_FILE} does not bring the schema into line: ${problem}.`
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+/** Whether the migrations cover `db/tables.ts`, for commands that do not write them. */
+export interface DeclaredTablesDrift {
+  pending: boolean
+  refusals: string[]
+}
+
+export async function computeDeclaredTablesDrift(
+  resolved: ResolvedDb
+): Promise<DeclaredTablesDrift> {
+  const plan = await planDeclaredTables(resolved)
+  return {
+    pending: Boolean(plan?.body),
+    refusals: plan?.refusals ?? [],
+  }
 }
 
 // ─── The addon schema channel ────────────────────────────────────────────────
@@ -2391,6 +2818,12 @@ export interface GenerateResult {
   /** Sources whose tables the migrations already cover. */
   upToDate: string[]
   written: GeneratedMigration[]
+  /**
+   * Why `db/tables.ts` could not be written down. Reported instead of thrown,
+   * because the other sources' migrations have been written by then and a
+   * caller still has to say so.
+   */
+  refusals: string[]
 }
 
 /**
@@ -2430,7 +2863,7 @@ export async function generateMigrations(
     addons,
     services
   )
-  const result: GenerateResult = { upToDate: [], written: [] }
+  const result: GenerateResult = { upToDate: [], written: [], refusals: [] }
 
   for (const source of sources) {
     // Re-read after each write: a migration just written for an earlier source
@@ -2550,6 +2983,29 @@ export async function generateMigrations(
       '-- Re-run the command after changing that source.\n\n'
     writeFileSync(file, header + body + '\n', 'utf8')
     result.written.push({ source: source.name, file, needsBackfill, orphaned })
+  }
+
+  // Last, and only now: a declared table may reference any of the above, and
+  // what those sources just wrote is part of what it is compared against.
+  const plan = await planDeclaredTables(resolved, sources)
+  if (plan) {
+    result.refusals.push(...plan.refusals)
+    if (plan.body) {
+      const file = nextMigrationFile(resolved.migrationsDir, APP_TABLES_SOURCE)
+      const header =
+        `-- Generated by \`pikku db generate\` from ${TABLES_FILE}.\n` +
+        '-- Change that file and re-run the command; do not edit this one.\n' +
+        `${declaredTablesMarker(plan.tables)}\n\n`
+      writeFileSync(file, header + plan.body + '\n', 'utf8')
+      result.written.push({
+        source: APP_TABLES_SOURCE,
+        file,
+        needsBackfill: [],
+        orphaned: [],
+      })
+    } else if (plan.refusals.length === 0) {
+      result.upToDate.push(APP_TABLES_SOURCE)
+    }
   }
 
   return result

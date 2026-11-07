@@ -86,7 +86,7 @@ interface RawEntry {
   description?: string
 }
 
-type RawTable = Record<string, RawEntry | null>
+export type RawTable = Record<string, RawEntry | null>
 
 /**
  * A column entry's own values are all primitives; a table's are objects. That
@@ -97,6 +97,36 @@ type RawTable = Record<string, RawEntry | null>
 function isColumnEntry(value: unknown): boolean {
   if (typeof value !== 'object' || value === null) return false
   return Object.values(value).every((v) => typeof v !== 'object' || v === null)
+}
+
+/**
+ * A classification map's tables, with any schema nesting taken off.
+ *
+ * `DbClassificationMap` nests under the schema name when the project has one
+ * (`{ app: { user: { … } } }`) and is bare otherwise, so a reader that treats
+ * the two alike sees a column for every table.
+ */
+export function flattenAnnotationTables(
+  raw: Record<string, Record<string, unknown>>
+): Array<[string, RawTable]> {
+  const tables: Array<[string, RawTable]> = []
+  for (const [key, value] of Object.entries(raw)) {
+    if (!value || typeof value !== 'object') continue
+    const isTable = Object.values(value).every(
+      (v) => v === null || isColumnEntry(v)
+    )
+    if (isTable) {
+      tables.push([key, value as RawTable])
+      continue
+    }
+    // `key` is a schema; its values are the tables.
+    for (const [table, cols] of Object.entries(value)) {
+      if (cols && typeof cols === 'object') {
+        tables.push([table, cols as RawTable])
+      }
+    }
+  }
+  return tables
 }
 
 /**
@@ -122,31 +152,10 @@ export function loadAnnotations(rootDir: string): AnnotationMap {
   const jsonPath = join(rootDir, 'db', 'annotations.gen.json')
   if (!existsSync(jsonPath)) return {}
   try {
-    const raw = JSON.parse(readFileSync(jsonPath, 'utf8')) as Record<
-      string,
-      Record<string, unknown>
-    >
-
-    const tables: Array<[string, RawTable]> = []
-    for (const [key, value] of Object.entries(raw)) {
-      if (!value || typeof value !== 'object') continue
-      const isTable = Object.values(value).every(
-        (v) => v === null || isColumnEntry(v)
-      )
-      if (isTable) {
-        tables.push([key, value as RawTable])
-        continue
-      }
-      // `key` is a schema; its values are the tables.
-      for (const [table, cols] of Object.entries(value)) {
-        if (cols && typeof cols === 'object') {
-          tables.push([table, cols as RawTable])
-        }
-      }
-    }
+    const raw = JSON.parse(readFileSync(jsonPath, 'utf8'))
 
     const result: AnnotationMap = {}
-    for (const [table, cols] of tables) {
+    for (const [table, cols] of flattenAnnotationTables(raw)) {
       result[table] = {}
       for (const [col, ann] of Object.entries(cols)) {
         if (!ann) continue
