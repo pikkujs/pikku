@@ -20,6 +20,8 @@ export const ShoppingListWorkingMemory = z.object({
 })
 
 export const shoppingListAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'shopping-list-agent',
   description: 'Keeps a shopping list in working memory',
   goal: [

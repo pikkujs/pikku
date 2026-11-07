@@ -21,6 +21,8 @@ import { voiceInput, voiceOutput } from '@pikku/core/agent'
  * verbatim.
  */
 export const voiceAssistantAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'voice-assistant-agent',
   description: 'Holds a spoken conversation about a todo list',
   goal: [

@@ -238,7 +238,7 @@ func (s *Context) addWorkflow(node *ast.Node) {
 
 	funcNode, resolvedFunc, _ := s.extractFunctionNode(firstArg)
 
-	var tags, errorsList, title, summary, description, expose, skip any = jsUndefined, jsUndefined, jsUndefined, jsUndefined, jsUndefined, jsUndefined, jsUndefined
+	var tags, errorsList, title, summary, description, expose, auth, skip any = jsUndefined, jsUndefined, jsUndefined, jsUndefined, jsUndefined, jsUndefined, jsUndefined, jsUndefined
 	if ast.IsObjectLiteralExpression(firstArg) {
 		m := s.getCommonWireMetaData(firstArg)
 		if m.disabled {
@@ -252,6 +252,7 @@ func (s *Context) addWorkflow(node *ast.Node) {
 		}
 		title, summary, description = strPtrOrUndef(m.title), strPtrOrUndef(m.summary), strPtrOrUndef(m.description)
 		expose = propValueToJS(tsutil.GetPropertyValue(firstArg, "expose"))
+		auth = propValueToJS(tsutil.GetPropertyValue(firstArg, "auth"))
 		if v := propValueToJS(tsutil.GetPropertyValue(firstArg, "skip")); v != nil {
 			skip = v
 		}
@@ -276,6 +277,10 @@ func (s *Context) addWorkflow(node *ast.Node) {
 		s.State.Workflows.Files.Set(fn.pikkuFuncId, state.FileExport{
 			Path: ast.GetSourceFileOfNode(node).FileName(), ExportedName: fn.exportedName,
 		})
+	}
+
+	if wrapper != "scenario" {
+		s.checkApprovalsDeclareApprovers(resolvedFunc, workflowName)
 	}
 
 	steps := []*jsObj{}
@@ -354,12 +359,46 @@ func (s *Context) addWorkflow(node *ast.Node) {
 		"errors", errorsList,
 		"tags", tags,
 		"expose", expose,
+		"auth", auth,
 		"skip", skip,
 		"scenario", orUndef(true, wrapper == "scenario"),
 		"asserts", asserts,
 		"virtualUsers", orUndef(virtualUsers, len(virtualUsers) > 0),
 	)
 	s.State.Workflows.Meta.Set(workflowName, meta.raw())
+}
+
+// checkApprovalsDeclareApprovers refuses a workflow.approval() that does not say
+// who answers it. Walked over the source rather than the extracted steps, so a
+// complex workflow the DSL cannot model is held to the same rule. A spread or a
+// variable as the options cannot be read, and is refused rather than assumed.
+func (s *Context) checkApprovalsDeclareApprovers(fn *ast.Node, workflowName string) {
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if ast.IsCallExpression(n) && isWorkflowApprovalCall(n) && !approvalDeclaresApprovers(n) {
+			s.Log.Critical(diag.WorkflowApprovalMissingApprovers, fmt.Sprintf(
+				"Workflow '%s' has a workflow.approval() with no 'approvers', so nothing says who may answer it. "+
+					"Add approvers: 'owner', 'not-initiator', or 'any' (any signed-in user) to its options.",
+				workflowName))
+		}
+		n.ForEachChild(visit)
+		return false
+	}
+	fn.ForEachChild(visit)
+}
+
+func approvalDeclaresApprovers(call *ast.Node) bool {
+	args := call.Arguments()
+	if len(args) < 2 || !ast.IsObjectLiteralExpression(args[1]) {
+		return false
+	}
+	for _, p := range args[1].Properties() {
+		if (ast.IsPropertyAssignment(p) || ast.IsShorthandPropertyAssignment(p)) &&
+			(ast.IsIdentifier(p.Name()) || ast.IsStringLiteral(p.Name())) && p.Name().Text() == "approvers" {
+			return true
+		}
+	}
+	return false
 }
 
 // propValueToJS is getPropertyValue's result as a JS value: nil for null.

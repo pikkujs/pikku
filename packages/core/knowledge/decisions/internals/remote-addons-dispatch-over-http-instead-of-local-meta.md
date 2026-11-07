@@ -11,7 +11,7 @@ tags: rpc
 dependency and its handlers run inside the consumer. `wireRemoteAddon`
 (`packages/core/src/wirings/addon/wire-remote-addon.ts`) does the opposite — the
 package is installed as a **devDependency**, contributing types only, and the
-handlers run on the host at `serverUrl`. `pikku verify` enforces the
+handlers run on the host at `serverUrl`. `pikku validate` enforces the
 devDependency placement.
 
 `ContextAwareRPCService.resolveAddonFunction` in `rpc-runner.ts` therefore checks

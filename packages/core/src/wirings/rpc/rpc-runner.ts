@@ -837,13 +837,56 @@ export class ContextAwareRPCService {
    * the tree behind it.
    */
   public get agent(): PikkuRPC['agent'] {
+    return this.agentRPC(false)
+  }
+
+  /**
+   * `rpc.agent` for a request from outside: every call is a 404 unless the agent
+   * is `expose: true`. What `rpc.exposed` is to `rpc.invoke`.
+   */
+  public get exposedAgent(): PikkuRPC['exposedAgent'] {
+    return this.agentRPC(true)
+  }
+
+  private agentRPC(exposed: boolean): PikkuRPC['agent'] {
     const createAgentRPC = pikkuState(null, 'agent', 'rpcFactory')
     if (!createAgentRPC) {
       throw new Error(
         'Agent runtime not available: import @pikku/core/agent in this deployment unit to use rpc.agent'
       )
     }
-    return createAgentRPC(this.wire, this.options)
+    return createAgentRPC(this.wire, this.options, exposed)
+  }
+
+  /**
+   * The workflow calls behind the generated `/workflow/*` routes: a 404 unless
+   * the workflow is `expose: true`, then the workflow's own declaration. What
+   * `rpc.exposed` is to `rpc.invoke`, for `rpc.startWorkflow`.
+   *
+   * Loaded on call, so a unit that never serves these routes does not bundle the
+   * run-access and status-stream code through this file.
+   */
+  public get exposedWorkflow(): PikkuRPC['exposedWorkflow'] {
+    const call =
+      <K extends keyof PikkuRPC['exposedWorkflow']>(name: K) =>
+      async (...args: any[]) => {
+        const { createExposedWorkflowRPC } =
+          await import('../workflow/exposed-workflow-rpc.js')
+        const entry = createExposedWorkflowRPC(
+          this.services,
+          this.wire,
+          this as unknown as PikkuRPC
+        )
+        return (entry[name] as (...a: any[]) => any)(...args)
+      }
+    return {
+      start: call('start'),
+      run: call('run'),
+      status: call('status'),
+      approve: call('approve'),
+      streamStatus: call('streamStatus'),
+      streamStatusFull: call('streamStatusFull'),
+    }
   }
 
   public async mesh<In = any, Out = any>(
@@ -953,6 +996,14 @@ class ContextRPCView {
 
   get agent() {
     return this.serviceRPC.agent
+  }
+
+  get exposedAgent() {
+    return this.serviceRPC.exposedAgent
+  }
+
+  get exposedWorkflow() {
+    return this.serviceRPC.exposedWorkflow
   }
 }
 

@@ -26,10 +26,10 @@ What to reach for and why. For how to call it, run this once: `pikku doc workflo
 - A sub-workflow is for a real orchestration you also start on its own. A child that would be one step is a function.
 - A schedule or other trigger has no signed-in user, so the run has no session: its steps are `pikkuSessionlessFunc`. A `pikkuFunc` step fails at run time, and `pikku validate` won't say so.
 - A trigger never calls `rpc.invoke`, and never adds scheduler or workflow services: `pikku dev`, `pikku serve` and stages bring them. A custom host provides `workflowService` in its singleton services before a trigger calls `rpc.startWorkflow`, and a scheduled trigger also needs a scheduler or platform cron.
-- Workflows go in `packages/functions/src/wirings/*.workflow.ts`, exported. Start, run and status routes come from `scaffold.workflow`.
+- Workflows go in `packages/functions/src/wirings/*.workflow.ts`, exported. Start, run, status and approve routes come from `scaffold.workflow`, and reach only workflows marked `expose: true` (anything else answers 404).
 - On a schedule, the `wireScheduler` func is a `pikkuVoidFunc` that only starts the workflow, in the workflow's file: `func: async (_services, _input, { rpc }) => { await rpc.startWorkflow('weeklyReport', {}) }`, and `rpc.startWorkflow` is called the same way from a function. A cron has no session.
 - An approval takes a real `schema`, and the workflow branches on the result. A no is an answer (`approveStep` with `{ approve: false }`), never `updateRunStatus('cancelled')`, which skips compensation. Waiting approvals come from `WorkflowRunService`, not the `workflowRuns` table.
-- `approvers` defaults to `any`, which is not an authorization boundary: set `owner` or `not-initiator` when it matters who decides. `not-initiator` only excludes the starter: any other signed-in user passes, whatever their role. To limit the decision to a group, add `approverScope` or equivalent route permissions.
+- `approvers` is required: leaving it out is compile error PKU645. `any` is not an authorization boundary, so choose `owner` or `not-initiator` when it matters who decides. `not-initiator` only excludes the starter: any other signed-in user passes, whatever their role. To limit the decision to a group, add `approverScope` or equivalent route permissions. The approve route needs a session, even on an `auth: false` workflow; a function calling `approveStep` with no session is the application answering and is not judged against the policy.
 
 ## A scheduled report, whole
 

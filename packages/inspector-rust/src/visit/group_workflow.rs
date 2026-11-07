@@ -4,7 +4,7 @@ use tsrs_ast::{self as ast, Kind, Node};
 use tsrs_core::P;
 
 use super::workflow_dsl::DslResult;
-use super::workflow_dsl_patterns::{extract_virtual_user_from_options, get_source_text};
+use super::workflow_dsl_patterns::{extract_virtual_user_from_options, get_source_text, is_workflow_approval_call};
 use super::workflow_jsobj::{Js, JsObj, jo, js_number};
 use super::{Context, Phase, Registry, Visitor, order};
 use crate::diag::codes;
@@ -105,7 +105,7 @@ fn collect_invoked_rpcs(steps: &[&JsObj], rpcs: &mut Set) {
 }
 
 /// getPropertyValue's result as a JS value: null for none.
-fn prop_value_to_js(v: &PropValue) -> Js {
+pub(super) fn prop_value_to_js(v: &PropValue) -> Js {
     if !v.present {
         return Js::Null;
     }
@@ -266,8 +266,8 @@ impl Context<'_> {
 
         let (func_node, resolved_func, _) = self.extract_function_node(first_arg);
 
-        let (mut tags, mut errors_list, mut title, mut summary, mut description, mut expose, mut skip) =
-            (Js::Undef, Js::Undef, Js::Undef, Js::Undef, Js::Undef, Js::Undef, Js::Undef);
+        let (mut tags, mut errors_list, mut title, mut summary, mut description, mut expose, mut auth, mut skip) =
+            (Js::Undef, Js::Undef, Js::Undef, Js::Undef, Js::Undef, Js::Undef, Js::Undef, Js::Undef);
         if ast::is_object_literal_expression(first_arg) {
             let m = self.get_common_wire_meta_data(first_arg);
             if m.disabled {
@@ -283,6 +283,7 @@ impl Context<'_> {
             summary = Js::from(m.summary.clone());
             description = Js::from(m.description.clone());
             expose = prop_value_to_js(&tsutil::get_property_value(first_arg, "expose"));
+            auth = prop_value_to_js(&tsutil::get_property_value(first_arg, "auth"));
             let s = prop_value_to_js(&tsutil::get_property_value(first_arg, "skip"));
             if s != Js::Null {
                 skip = s;
@@ -312,6 +313,10 @@ impl Context<'_> {
                 fn_name.pikku_func_id.clone(),
                 FileExport { path: file_name_of(node).to_string(), exported_name: fn_name.exported_name.clone() },
             );
+        }
+
+        if wrapper != "scenario" {
+            self.check_approvals_declare_approvers(resolved_func, &workflow_name);
         }
 
         let mut steps: Vec<JsObj> = vec![];
@@ -401,6 +406,7 @@ impl Context<'_> {
             "errors" => errors_list,
             "tags" => tags,
             "expose" => expose,
+            "auth" => auth,
             "skip" => skip,
             "scenario" => if wrapper == "scenario" { Js::Bool(true) } else { Js::Undef },
             "asserts" => asserts,
@@ -408,4 +414,36 @@ impl Context<'_> {
         );
         self.state.workflows.meta.set(workflow_name, meta.raw());
     }
+
+    /// Refuses a `workflow.approval()` that does not say who answers it. Walked
+    /// over the source rather than the extracted steps, so a complex workflow the
+    /// DSL cannot model is held to the same rule. A spread or a variable as the
+    /// options cannot be read, and is refused rather than assumed.
+    fn check_approvals_declare_approvers(&mut self, func: P<Node>, workflow_name: &str) {
+        let mut missing = 0usize;
+        tsutil::walk(func, &mut |n| {
+            if ast::is_call_expression(n) && is_workflow_approval_call(n) && !approval_declares_approvers(n) {
+                missing += 1;
+            }
+        });
+        for _ in 0..missing {
+            self.log.critical(
+                codes::WORKFLOW_APPROVAL_MISSING_APPROVERS,
+                format!(
+                    "Workflow '{workflow_name}' has a workflow.approval() with no 'approvers', so nothing says who may answer it. Add approvers: 'owner', 'not-initiator', or 'any' (any signed-in user) to its options."
+                ),
+            );
+        }
+    }
+}
+
+fn approval_declares_approvers(call: P<Node>) -> bool {
+    let args = call.arguments();
+    if args.len() < 2 || !ast::is_object_literal_expression(args[1]) {
+        return false;
+    }
+    args[1].properties().iter().any(|p| {
+        (ast::is_property_assignment(*p) || ast::is_shorthand_property_assignment(*p))
+            && p.name().is_some_and(|name| (ast::is_identifier(name) || ast::is_string_literal(name)) && name.text() == "approvers")
+    })
 }

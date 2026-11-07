@@ -12,6 +12,7 @@ export const autoRestockWorkflow = pikkuWorkflowFunc<
   { productId: string; minStock: number; restockQuantity: number },
   { restocked: boolean; newQuantity: number }
 >({
+  auth: false,
   title: 'Auto Restock',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {

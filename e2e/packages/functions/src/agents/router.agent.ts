@@ -3,6 +3,8 @@ import { todoAgent } from './todo.agent.js'
 import { emailAgent } from './email.agent.js'
 
 export const routerAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'router-agent',
   description:
     'Main entry point — routes requests to the appropriate domain agent',

@@ -15,6 +15,7 @@ export const orderFulfillmentWorkflow = pikkuWorkflowComplexFunc<
   { orderId: string; carrier: string },
   { shipmentId: string; trackingNumber: string; status: string }
 >({
+  auth: false,
   title: 'Order Fulfillment',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {

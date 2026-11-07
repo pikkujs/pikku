@@ -8,6 +8,7 @@ import (
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsutil"
 )
 
 // Port of add/add-workflow-graph.ts.
@@ -299,7 +300,7 @@ func (s *Context) addWorkflowGraph(node *ast.Node) {
 	}
 
 	var name, exportedName string
-	var description, tags, notes any = jsUndefined, jsUndefined, jsUndefined
+	var description, tags, notes, expose, auth any = jsUndefined, jsUndefined, jsUndefined, jsUndefined, jsUndefined
 	var disabled bool
 	var nodesNode, configNode *ast.Node
 	for _, p := range firstArg.Properties() {
@@ -318,6 +319,10 @@ func (s *Context) addWorkflowGraph(node *ast.Node) {
 			if init.Kind == ast.KindTrueKeyword {
 				disabled = true
 			}
+		case "expose":
+			expose = propValueToJS(tsutil.GetPropertyValue(firstArg, "expose"))
+		case "auth":
+			auth = propValueToJS(tsutil.GetPropertyValue(firstArg, "auth"))
 		case "tags":
 			if ast.IsArrayLiteralExpression(init) {
 				tags = stringLiterals(init)
@@ -359,6 +364,8 @@ func (s *Context) addWorkflowGraph(node *ast.Node) {
 		"source", "graph",
 		"description", description,
 		"tags", tags,
+		"expose", expose,
+		"auth", auth,
 		"notes", notes,
 		"nodes", nodes,
 		"entryNodeIds", computeEntryNodeIds(nodes),

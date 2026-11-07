@@ -18,6 +18,10 @@ import type {
 
 export type AuditInput = {
   outdated?: boolean
+  /** Fail on an advisory at this severity or worse. */
+  failOn?: string
+  /** A previous audit.json: only advisories it does not list can fail. */
+  baseline?: string
 }
 
 const SCHEMA_VERSION = 1
@@ -81,14 +85,32 @@ function normaliseSeverity(sev: unknown): Severity {
     : 'info'
 }
 
+const assertAdvisory = (pkg: string, advisory: any) => {
+  const severity = String(advisory?.severity ?? '').toLowerCase()
+  if (!(SEVERITY_ORDER as readonly string[]).includes(severity)) {
+    throw new Error(`unreadable bun audit output: ${pkg} has no known severity`)
+  }
+}
+
 // bun audit --json → { "<pkg>": [ { id, url, title, severity, vulnerable_versions, cwe[], cvss:{score} } ] }
-export function parseBunAudit(raw: string): SecurityAuditIssue[] {
+// `strict` is for a gate, where output that cannot be read must not pass for
+// "no advisories": a clean run prints `{}`, so anything else throws.
+export function parseBunAudit(
+  raw: string,
+  { strict = false }: { strict?: boolean } = {}
+): SecurityAuditIssue[] {
   const issues: SecurityAuditIssue[] = []
   let obj: Record<string, any>
   try {
     const start = raw.indexOf('{')
+    if (strict && start < 0) throw new Error('no JSON in its output')
     obj = start >= 0 ? JSON.parse(raw.slice(start)) : {}
-  } catch {
+  } catch (error) {
+    if (strict) {
+      throw new Error(
+        `unreadable bun audit output: ${error instanceof Error ? error.message : String(error)}`
+      )
+    }
     return issues
   }
   const map =
@@ -99,6 +121,7 @@ export function parseBunAudit(raw: string): SecurityAuditIssue[] {
   for (const [pkg, list] of Object.entries(map)) {
     const advisories = Array.isArray(list) ? list : [list]
     for (const a of advisories as any[]) {
+      if (strict) assertAdvisory(pkg, a)
       if (!a || typeof a !== 'object') continue
       issues.push({
         package: a.module_name || a.name || pkg,
@@ -275,15 +298,70 @@ export function summarise(
   }
 }
 
+const advisoryKey = (issue: { package: string; advisoryId: string }) =>
+  `${issue.package}@${issue.advisoryId}`
+
+/**
+ * The advisories in `report` that block: at or above `failOn` and, when there
+ * is a baseline, not already in it. One with no id cannot be matched to a
+ * baseline entry, so it always counts as new.
+ */
+export function blockingAdvisories(
+  report: SecurityAuditReport,
+  failOn: Severity,
+  baseline?: Set<string>
+): SecurityAuditIssue[] {
+  const threshold = SEVERITY_ORDER.indexOf(failOn)
+  return report.issues.filter(
+    (issue) =>
+      SEVERITY_ORDER.indexOf(issue.severity) <= threshold &&
+      !(issue.advisoryId && baseline?.has(advisoryKey(issue)))
+  )
+}
+
+export function readAuditBaseline(file: string): Set<string> {
+  let report: Partial<SecurityAuditReport>
+  try {
+    report = JSON.parse(readFileSync(file, 'utf8'))
+  } catch (error) {
+    throw new Error(
+      `Audit baseline ${file} could not be read: ${error instanceof Error ? error.message : String(error)}`
+    )
+  }
+  if (!Array.isArray(report?.issues)) {
+    throw new Error(`Audit baseline ${file} is not an audit.json report`)
+  }
+  return new Set(report.issues.map(advisoryKey))
+}
+
+const assertSeverity = (severity: string): Severity => {
+  if (!(SEVERITY_ORDER as readonly string[]).includes(severity)) {
+    throw new Error(
+      `--fail-on must be one of ${SEVERITY_ORDER.join(', ')}, got "${severity}"`
+    )
+  }
+  return severity as Severity
+}
+
 export const pikkuAudit = pikkuSessionlessFunc<AuditInput, void>({
   func: async ({ logger, config }, input) => {
     const includeOutdated = input?.outdated === true
+    const failOn = input?.failOn ? assertSeverity(input.failOn) : undefined
+    if (input?.baseline && !failOn) {
+      throw new Error('--baseline only means something with --fail-on')
+    }
+    // Read first: the baseline may be the very file this run replaces.
+    const baseline = input?.baseline
+      ? readAuditBaseline(input.baseline)
+      : undefined
     const { root, pm } = findProjectRoot(config.rootDir)
 
     let report: SecurityAuditReport
     if (pm === 'bun') {
       try {
-        const issues = parseBunAudit(runBun(['audit', '--json'], root))
+        const issues = parseBunAudit(runBun(['audit', '--json'], root), {
+          strict: !!failOn,
+        })
         const updates = includeOutdated
           ? parseBunOutdated(runBun(['outdated', '--filter', '*'], root))
           : []
@@ -314,7 +392,14 @@ export const pikkuAudit = pikkuSessionlessFunc<AuditInput, void>({
       )
     }
 
-    const outFile = join(config.outDir, 'audit.json')
+    const blocking = failOn ? blockingAdvisories(report, failOn, baseline) : []
+    const failed = !!failOn && (!!report.note || blocking.length > 0)
+
+    // A failed gate leaves audit.json alone: it is the baseline for the next run.
+    const outFile = join(
+      config.outDir,
+      failed ? 'audit.failed.json' : 'audit.json'
+    )
     mkdirSync(dirname(outFile), { recursive: true })
     writeFileSync(outFile, JSON.stringify(report, null, 2))
 
@@ -335,5 +420,18 @@ export const pikkuAudit = pikkuSessionlessFunc<AuditInput, void>({
       )
     }
     logger.info(`  → ${outFile}`)
+
+    if (!failed) return
+    process.exitCode = 1
+    if (report.note) {
+      logger.error(`pikku audit failed: no report to judge. ${report.note}`)
+      return
+    }
+    logger.error(
+      `pikku audit failed: ${blocking.length} advisory(ies) at ${failOn} or above${baseline ? ' not in the baseline' : ''}`
+    )
+    for (const issue of blocking) {
+      logger.error(`  ${issue.severity} ${advisoryKey(issue)}: ${issue.title}`)
+    }
   },
 })

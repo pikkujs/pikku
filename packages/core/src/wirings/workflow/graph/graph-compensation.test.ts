@@ -57,6 +57,7 @@ const defineGraph = (
     name,
     pikkuFuncId: name,
     source: 'graph',
+    auth: false,
     entryNodeIds: [entry],
     graphHash: `${name}-hash`,
     nodes: Object.fromEntries(

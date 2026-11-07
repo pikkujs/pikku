@@ -32,6 +32,10 @@ func isFunctionHelper(name string) bool {
 	return pikkuFuncPattern.MatchString(name) || name == "pikkuScenario" || name == "pikkuWebhookReceive" || isScenarioStep
 }
 
+func isWorkflowWrapper(name string) bool {
+	return name == "pikkuWorkflowFunc" || name == "pikkuWorkflowComplexFunc"
+}
+
 var validVarName = regexp.MustCompile(`^[a-zA-Z_$][a-zA-Z0-9_$]*$`)
 var channelConnRe = regexp.MustCompile(`(?i)ChannelConnection`)
 
@@ -457,7 +461,13 @@ func (s *Context) addFunctions(node *ast.Node) {
 		s.checkClassification(name, handler, wrapper != "pikkuFunc")
 	}
 
-	m.Sessionless = tsutil.BoolPtr(wrapper != "pikkuFunc")
+	sessionless := wrapper != "pikkuFunc"
+	if isWorkflowWrapper(wrapper) {
+		// A workflow is a function, so unset auth wants a session. Only an explicit
+		// `auth: false` opens it.
+		sessionless = m.Auth != nil && !*m.Auth
+	}
+	m.Sessionless = tsutil.BoolPtr(sessionless)
 	m.Services = services
 	if len(wires.Wires) > 0 || !wires.Optimized {
 		m.Wires = &wires

@@ -104,11 +104,18 @@ describe('approval policy', () => {
     )
   })
 
-  test('a run with no initiator has no owner to compare against', () => {
-    assert.equal(
+  test('a run with no initiator has no owner, so no user qualifies', () => {
+    assert.match(
       approvalPolicyRefusal({ approvers: 'owner' }, undefined, {
         userId: 'anyone',
-      }),
+      })!,
+      /Only the user who started this run/
+    )
+  })
+
+  test('application code with no decider answers an ownerless run', () => {
+    assert.equal(
+      approvalPolicyRefusal({ approvers: 'owner' }, undefined, undefined),
       undefined
     )
   })

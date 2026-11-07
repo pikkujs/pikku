@@ -8,6 +8,7 @@ export const userSignupWithOnboardingWorkflow = pikkuWorkflowFunc<
   { email: string; name: string; onboardingSteps: string[] },
   { userId: string; completedSteps: string[] }
 >({
+  auth: false,
   title: 'User Signup with Onboarding',
   tags: ['onboarding'],
   func: async (_services, data, { workflow }) => {

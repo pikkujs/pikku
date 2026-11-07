@@ -1,3 +1,10 @@
+## 0.12.152
+
+### Patch Changes
+
+- a679e5d: `pikku verify` is merged into `pikku validate`, which now runs the type-check and correctness checks, skips codegen unless `--codegen` is passed, and exits non-zero on any error. The `pikku verify` command is gone; `runVerify`, `VerifyService` and the recorded results stay. See MIGRATION.md.
+- 307fb8d: `InMemoryWorkflowService` accepts a `mirror` option, so a caller can observe runs and steps as they happen.
+
 ## 0.12.151
 
 ### Patch Changes

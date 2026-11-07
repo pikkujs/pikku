@@ -108,6 +108,7 @@ describe("a pikkuAgent's declared output", () => {
 
   const addReviewer = () => {
     const agent = {
+      auth: false,
       name: 'reviewer',
       description: 'reviews',
       instructions: 'review',

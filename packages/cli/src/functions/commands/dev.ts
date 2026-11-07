@@ -55,7 +55,7 @@ import { loadDevPlatformServices } from './dev-platform-services.js'
 import { reconcileDevWebhooks } from './dev-webhook-registrations.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
-import { resolveDevEnvironmentName } from './environment.js'
+import { resolveDevEnvironmentName, resolveDevPort } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { registerStudioSession } from '../wirings/studio/register-studio-session.js'
 import { serverReadyLine } from '../../server/server-ready.js'
@@ -145,7 +145,7 @@ export const dev = pikkuSessionlessFunc<
     const coverageService = coverage
       ? await startCoverageService(logger, config.rootDir)
       : undefined
-    const resolvedPort = parseInt(port || '3000', 10)
+    const resolvedPort = resolveDevPort(port, config.environments ?? {})
     const hostname = 'localhost'
     // Bind on IPv4 loopback explicitly. Under Bun, hostname 'localhost' resolves
     // to IPv6 [::1] only, so a 127.0.0.1 proxy (e.g. the sandbox Caddy) can't
@@ -241,10 +241,7 @@ export const dev = pikkuSessionlessFunc<
     const userCreateSingletonServices =
       servicesModule[singletonServicesFactory.variable]
 
-    const userConfig = await callUserCreateConfig(
-      userCreateConfig,
-      variables
-    )
+    const userConfig = await callUserCreateConfig(userCreateConfig, variables)
 
     const envDatabaseUrl = await variables.get('DATABASE_URL')
     const effectiveDbConfig = envDatabaseUrl

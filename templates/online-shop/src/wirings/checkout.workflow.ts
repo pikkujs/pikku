@@ -1,3 +1,4 @@
+import { checkWorkflowStart } from '@pikku/core/workflow'
 import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { pikkuFunc, pikkuSessionlessFunc } from '#pikku/function'
 import { wireHTTP } from '#pikku/http'
@@ -245,7 +246,11 @@ export const checkoutWorkflow = pikkuWorkflowFunc<
 // @snippet start workflowHTTPWiring
 // Expose the checkout workflow via HTTP. rpc.startWorkflow() returns a runId
 // immediately — the workflow runs async in the background.
-// Pikku also auto-generates /workflow/:name/start and /workflow/:name/status/:id routes.
+// Pikku also generates /workflow/:name/start and /workflow/:name/status/:id for
+// workflows marked `expose: true`. The workflow's own `auth` decides who gets in,
+// and a run with an owner is readable only by that owner. `checkWorkflowStart` is
+// the same check those routes make: it refuses at the request, and records that
+// this run was checked, so the run needs no session store to keep working.
 export const startCheckout = pikkuFunc({
   // Exposed like every other entry point. Without this the checkout is
   // reachable over HTTP and by nothing else — no scenario, no agent, no
@@ -264,13 +269,15 @@ export const startCheckout = pikkuFunc({
       shippingAddress: ShippingAddress
       cardToken?: string
     },
-    { rpc }
+    { rpc, session }
   ) => {
-    return rpc.startWorkflow('checkoutWorkflow', {
-      basketId,
-      userId,
-      shippingAddress,
-      cardToken,
+    const start = await checkWorkflowStart(
+      'checkoutWorkflow',
+      { basketId, userId, shippingAddress, cardToken },
+      { session }
+    )
+    return rpc.startWorkflow('checkoutWorkflow', start.input, {
+      wire: start.wire,
     })
   },
 })
@@ -338,6 +345,8 @@ export const refundWorkflow = pikkuWorkflowFunc<
   { orderId: string; reason: string },
   { orderId: string; refunded: boolean; message: string }
 >({
+  // Not exposed, so `startRefund` is the only way in, and it checks the caller.
+  auth: false,
   func: async (_services, data, { workflow }) => {
     // @snippet start workflowBranching
     const check = await workflow.do('Check order', 'checkOrderRefundable', {

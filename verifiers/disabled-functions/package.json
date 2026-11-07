@@ -2,7 +2,7 @@
   "name": "@pikku/verifiers-disabled-functions",
   "type": "module",
   "private": true,
-  "description": "Checks that a `disabled` function is left out of the build, that a reference to one fails it, and that `pikku verify` fails on an app function nothing uses",
+  "description": "Checks that a `disabled` function is left out of the build, that a reference to one fails it, and that `pikku validate --codegen` fails on an app function nothing uses",
   "imports": {
     "#pikku/*.js": "./.pikku/*.ts",
     "#pikku/*": "./.pikku/*/index.ts"

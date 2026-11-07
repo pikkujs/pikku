@@ -100,7 +100,7 @@ export const agentCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
-    return await rpc.agent.run(data.agentName as any, agentCallOptions(data))
+    return await rpc.exposedAgent.run(data.agentName, agentCallOptions(data))
   },
 })
 
@@ -109,7 +109,7 @@ export const agentStreamCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
-    await rpc.agent.stream(data.agentName as any, agentCallOptions(data))
+    await rpc.exposedAgent.stream(data.agentName, agentCallOptions(data))
   },
 })
 
@@ -118,7 +118,7 @@ export const agentApproveCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentApproval,
   func: async (_services, { runId, approvals, agentName }, { rpc }) => {
-    return await rpc.agent.approve(runId, approvals, agentName)
+    return await rpc.exposedAgent.approve(runId, approvals, agentName)
   },
 })
 
@@ -127,9 +127,10 @@ export const agentResumeCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentResume,
   func: async (_services, data, { rpc }) => {
-    await rpc.agent.resume(data.runId, {
+    await rpc.exposedAgent.resume(data.runId, {
       toolCallId: data.toolCallId,
       approved: data.approved,
+      expectedAgentName: data.agentName,
     })
   },
 })

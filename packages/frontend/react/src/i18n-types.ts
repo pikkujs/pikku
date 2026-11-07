@@ -82,7 +82,7 @@ export const asI18nStub = (s: string): I18nString => s as unknown as I18nString
  * language. No letters, no digits. Space, no-break space (U+00A0), narrow no-break space (U+202F),
  * thin space (U+2009), then `. , : ; ! ?  · • – — - / \ | ( ) [ ] { } < > « » “ ” ‘ ’ " ' & + = * # @ % ~ ^ _`,
  * the arrows `→ ← ↑ ↓`, `…`, `✓ ✕ ×` and the currency signs `€ $ £`.
- * `pikku verify` is looser on purpose: it only rejects letters and digits.
+ * `pikku validate` is looser on purpose: it only rejects letters and digits.
  */
 export type SepChar =
   | ' '
@@ -164,7 +164,7 @@ export type OnlyPunct<S extends string> =
  * `→ ← ↑ ↓ … ✓ ✕ × € $ £` (the `SepChar` type). Letters and digits are rejected, and so are the empty
  * string, a variable of type `string`, and a template literal with a substitution:
  * `sep('and')`, `sep('v2')`, `sep('1.')`, `sep('')`, `sep(name)`, `sep(`${x} / `)` all fail,
- * in the type and in `pikku verify` (`sep-argument`).
+ * in the type and in `pikku validate` (`sep-argument`).
  *
  * It is NOT for anything that depends on the language. A comma-joined list, the word "and", an
  * "or" between options, the space French puts before a colon, quote marks that differ per locale:

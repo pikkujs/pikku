@@ -3,6 +3,8 @@ import { ref } from '#pikku/function'
 
 /** Used purely as a sub-agent tool of {@link toolKindsAgent}. */
 export const toolKindsHelperAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'toolkindshelper',
   description: 'A sub-agent offered as a tool',
   goal: 'You are a helper sub-agent.',
@@ -17,6 +19,8 @@ export const toolKindsHelperAgent = pikkuAgent({
  * builtin, and another agent as a sub-agent tool.
  */
 export const toolKindsAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'tool-kinds-agent',
   description: 'Offers an RPC tool, a graph builtin, and a sub-agent tool',
   goal: 'You have several kinds of tools at your disposal.',

@@ -12,6 +12,7 @@ export const partialCancellationWorkflow = pikkuWorkflowFunc<
   { orderId: string; itemsToCancel: string[]; reason: string },
   { refundAmount: number; itemsCancelled: string[] }
 >({
+  auth: false,
   title: 'Partial Cancellation',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {

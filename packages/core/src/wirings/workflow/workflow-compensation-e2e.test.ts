@@ -136,6 +136,7 @@ describe('compensation end to end — declared on the function, run by the engin
       name: 'fulfil',
       pikkuFuncId: 'fulfil',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['reserve'],
       graphHash: 'fulfil-hash',
       nodes: {

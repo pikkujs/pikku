@@ -93,7 +93,7 @@ export const onboard = pikkuWorkflowFunc({
         r#"{"type":"fanout","sourceVar":"data.ids","itemVar":"id","mode":"sequential","body":[{"type":"rpc","stepName":"per id","rpcName":"handleId","inputs":{"id":{"from":"item","path":"id"}}},{"type":"sleep","stepName":"gap","duration":500}],"timeBetween":"500ms"},"#,
         r#"{"type":"set","variable":"attempts","value":2},"#,
         r#"{"type":"return","outputs":{"user":{"from":"outputVar","name":"user"},"a":{"from":"outputVar","name":"a"}}}"#,
-        r#"],"context":{"attempts":{"type":"number","default":0}},"dsl":true,"title":"Onboard","expose":null}"#,
+        r#"],"context":{"attempts":{"type":"number","default":0}},"dsl":true,"title":"Onboard","expose":null,"auth":null}"#,
     );
     assert_eq!(meta_json(&res, "onboard"), want);
     let st = res.state.as_ref().unwrap();
@@ -228,4 +228,69 @@ mod erased {
             pikku_inspect::jsjson::to_string(self).unwrap()
         }
     }
+}
+
+/// Go `TestWorkflowApprovalMustDeclareApprovers`.
+#[test]
+fn workflow_approval_must_declare_approvers() {
+    let cases: [(&str, &str, bool); 7] = [
+        ("no options", "", true),
+        ("options without approvers", ", { schema: Decision }", true),
+        ("options that cannot be read", ", gateOptions", true),
+        ("a spread", ", { ...gateOptions }", true),
+        ("explicit any", ", { approvers: 'any' }", false),
+        ("owner", ", { approvers: 'owner' }", false),
+        ("shorthand", ", { approvers }", false),
+    ];
+    for wrapper in ["pikkuWorkflowFunc", "pikkuWorkflowComplexFunc"] {
+        for (i, (name, options, refused_want)) in cases.iter().enumerate() {
+            let src = format!(
+                "
+declare const Decision: any, gateOptions: any, approvers: any
+export const gated = {wrapper}({{
+  func: async (_s: any, data: any, {{ workflow }}: any) => {{
+    await workflow.approval('release'{options})
+  }},
+}})
+"
+            );
+            let res = run_project(&format!("approval-{wrapper}-{i}"), &src, true);
+            let refused = res.diagnostics.iter().any(|d| d.code.as_deref() == Some("PKU645"));
+            assert_eq!(refused, *refused_want, "{wrapper} {name}; diagnostics: {}", diagnostics_text(&res));
+        }
+    }
+}
+
+/// Go `TestWorkflowDeclarationDecidesAuth`.
+#[test]
+fn workflow_declaration_decides_auth() {
+    let res = run_project(
+        "decides-auth",
+        "
+export const opened = pikkuWorkflowFunc({
+  expose: true,
+  auth: false,
+  func: async (_s: any, data: any, { workflow }: any) => {
+    await workflow.do('a', 'stepA', data)
+    await workflow.do('b', 'stepB', data)
+  },
+})
+export const signedIn = pikkuWorkflowFunc({
+  expose: true,
+  func: async (_s: any, data: any, { workflow }: any) => {
+    await workflow.do('a', 'stepA', data)
+    await workflow.do('b', 'stepB', data)
+  },
+})
+",
+        false,
+    );
+    let meta = meta_json(&res, "opened");
+    assert!(meta.contains(r#""expose":true,"auth":false"#), "workflow meta lost its declaration: {meta}");
+    let state = res.state.as_ref().unwrap();
+    let opened = state.functions.meta.get("opened").expect("opened function meta");
+    assert_eq!(opened.expose, Some(true), "expose on a workflow should reach its function meta, as on any function");
+    assert_eq!(opened.sessionless, Some(true), "auth: false on a workflow should be sessionless");
+    let signed_in = state.functions.meta.get("signedIn").expect("signedIn function meta");
+    assert_ne!(signed_in.sessionless, Some(true), "auth unset on a workflow must need a session, as on any function");
 }

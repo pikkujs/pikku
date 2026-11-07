@@ -8,6 +8,7 @@ export const findFirstMatchWorkflow = pikkuWorkflowFunc<
   { candidates: Array<{ id: string; score: number; available: boolean }> },
   { selectedId: string | null; selectionReason: string }
 >({
+  auth: false,
   title: 'Find First Match',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

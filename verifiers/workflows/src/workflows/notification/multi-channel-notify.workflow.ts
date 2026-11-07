@@ -14,6 +14,7 @@ export const multiChannelNotifyWorkflow = pikkuWorkflowFunc<
   },
   { sentChannels: string[]; failedChannels: string[] }
 >({
+  auth: false,
   title: 'Multi Channel Notify',
   tags: ['notification'],
   func: async (_services, data, { workflow }) => {

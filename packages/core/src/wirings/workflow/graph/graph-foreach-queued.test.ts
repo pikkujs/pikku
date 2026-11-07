@@ -93,6 +93,7 @@ function seedMeta(name: string, nodes: Record<string, any>, entry: string[]) {
     name,
     pikkuFuncId: name,
     source: 'graph',
+    auth: false,
     entryNodeIds: entry,
     graphHash: `${name}-hash`,
     nodes,

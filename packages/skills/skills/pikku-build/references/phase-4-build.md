@@ -138,20 +138,22 @@ Then run it:
 bun run prebuild && bun run dev
 ```
 
-That starts the API on :3000 and every frontend in `frontends`. A
-frontend running against a dead API looks exactly like an app bug, so if every
-request fails, check that both halves came up.
+`bun run dev` is `pikku dev`: it starts the API on the port in
+`environments.local.apiUrl` (3000 in the starter) and every frontend in
+`frontends`, each with `VITE_API_PROXY` pointed at that API. A frontend running
+against a dead API looks exactly like an app bug, so if every request fails,
+check that both halves came up.
 
-**Start the stack through `bun run dev`, not by launching `vite` or `pikku dev`
-yourself.** The frontend needs to reach _your_ API. If you start the
-frontend on its own (say :3000 is taken by another project), point
-`VITE_API_PROXY` at your API: the dev proxy defaults to `http://localhost:3000`,
-so beside another project's server every request goes to the wrong API.
+**Start the stack through `bun run dev`, not by launching `vite` yourself.**
+To move the API off a port another project holds, change the port in
+`environments.local.apiUrl` rather than passing `--port`: scenarios and virtual
+users call that URL, so a server anywhere else is one they cannot reach. Never
+add a `scripts/dev.mjs` around it — `pikku dev` already loads `.env`,
+generates the local secrets and supervises the frontends.
 
-The `--bun` in `bunx --bun pikku …` is load-bearing — keep it. Without it the
-CLI's `#!/usr/bin/env node` shebang hands the process to whatever Node is on
-PATH, which fails below Node 24 with `ERR_UNKNOWN_BUILTIN_MODULE: No such
-built-in module: node:sqlite`.
+The CLI needs `node:sqlite`, which Node has only from 24. On an older Node it
+re-runs itself on bun, so `pikku …` and `bunx --bun pikku …` both work; without
+bun installed it stops and says so.
 
 Open it, sign up, and click through what you built. **HTTP 200 is not evidence.**
 The pages are client-rendered: the server returns 200 with an empty shell, so a

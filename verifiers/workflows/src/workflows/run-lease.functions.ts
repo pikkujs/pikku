@@ -25,6 +25,7 @@ export const runLeaseWorkflow = pikkuWorkflowFunc<
   { holdMs: number },
   { ok: boolean }
 >({
+  auth: false,
   func: async (_services, data, { workflow }) => {
     await workflow.do('hold the run lease', 'holdRunLeaseStep', data, {
       retries: 0,

@@ -150,6 +150,36 @@ export function parseDatabaseUrl(
   return { sqliteDb: url }
 }
 
+const LOOPBACK_HOST = /^(localhost|127(\.\d{1,3}){3}|\[?::1\]?)$/i
+
+/**
+ * Refuse a database that is not on this machine. Anything that cannot be read
+ * as a single loopback host is refused too: `host=` in the query overrides the
+ * URL's host in libpq, and a comma list is several hosts. The message names the
+ * host alone, because the URL carries the password.
+ */
+export function assertLocalDatabase(resolved: ResolvedDb): void {
+  const connectionString =
+    'connectionString' in resolved ? resolved.connectionString : undefined
+  if (!connectionString) return
+  let url: URL | undefined
+  try {
+    url = new URL(connectionString)
+  } catch {
+    url = undefined
+  }
+  const local =
+    url &&
+    LOOPBACK_HOST.test(url.hostname) &&
+    !url.searchParams.has('host') &&
+    !url.searchParams.has('hostaddr')
+  if (!local) {
+    throw new Error(
+      `Refusing to migrate a database that is not local (host: ${url?.hostname || 'unreadable'}).`
+    )
+  }
+}
+
 /**
  * Resolve a UserConfigShape into an absolute-path descriptor.
  * Returns null when none of sqliteDb, postgresUrl or mysqlUrl is configured.

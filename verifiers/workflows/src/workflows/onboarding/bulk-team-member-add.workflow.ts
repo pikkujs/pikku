@@ -8,6 +8,7 @@ export const bulkTeamMemberAddWorkflow = pikkuWorkflowFunc<
   { teamId: string; userIds: string[]; defaultRole: string },
   { addedCount: number; notifiedCount: number }
 >({
+  auth: false,
   title: 'Bulk Team Member Add',
   tags: ['onboarding'],
   func: async (_services, data, { workflow }) => {

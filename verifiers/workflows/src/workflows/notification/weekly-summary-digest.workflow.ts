@@ -8,6 +8,7 @@ export const weeklySummaryDigestWorkflow = pikkuWorkflowFunc<
   { userId: string },
   { tasksSummary: number; projectsSummary: number }
 >({
+  auth: false,
   title: 'Weekly Summary Digest',
   tags: ['notification'],
   func: async (_services, data, { workflow }) => {

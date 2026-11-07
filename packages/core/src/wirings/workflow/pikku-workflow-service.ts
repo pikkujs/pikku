@@ -2,6 +2,7 @@ import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import { buildWorkflowWire } from './workflow-wire.js'
 import type { CoreUserSession } from '../../types/core.types.js'
+import { runIdentityWire, settleRunWire } from './workflow-run-proof.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
   GroupConcurrencyConfig,
@@ -290,7 +291,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       plannedSteps?: WorkflowPlannedStep[]
     }
   ): Promise<string> {
-    wire = withRunTrace(wire)
+    wire = withRunTrace(settleRunWire(workflowName, wire))
     await storeWorkflowVersion(this, workflowName, graphHash)
     return this.mirrored(
       () =>
@@ -1537,7 +1538,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const run = knownRun ?? (await this.getRunIdentity(runId))
     return rpcService.rpcWithWire(rpcName, data, {
       ...runTraceWire(run?.wire?.traceparent),
-      ...(run?.wire?.pikkuUserId ? { pikkuUserId: run.wire.pikkuUserId } : {}),
+      ...runIdentityWire(run?.wire),
       ...(compensatingFor
         ? {
             workflow: {

@@ -25,7 +25,11 @@ import {
   type PermissionWire,
 } from '../../permissions.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
-import { ForbiddenError, MissingSessionError } from '../../errors/errors.js'
+import {
+  ForbiddenError,
+  MissingSessionError,
+  NotFoundError,
+} from '../../errors/errors.js'
 import { verifyScopes } from '../../scopes.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
@@ -388,6 +392,27 @@ export const resolveAgent = (
   throw new Error(`AI agent not found: ${agentName}`)
 }
 
+/**
+ * The expose gate of `rpc.exposedAgent`, the entry a generated route calls.
+ * `rpc.agent` never comes through here, so application code reaches any agent.
+ * Only an `expose: true` agent is reachable from outside, and anything else is a
+ * 404 so hidden names cannot be probed. Who may then call it is the agent's own
+ * `auth`, scopes and permissions.
+ */
+export const assertAgentExposed = (agentName: string): void => {
+  if (findAgent(agentName)?.expose !== true) {
+    throw new NotFoundError(`AI agent not found: ${agentName}`)
+  }
+}
+
+const findAgent = (agentName: string): CoreAgent | undefined => {
+  try {
+    return resolveAgent(agentName).agent
+  } catch {
+    return undefined
+  }
+}
+
 export async function assertAgentAuthorized(
   agent: CoreAgent,
   params: RunAgentParams,
@@ -397,7 +422,7 @@ export async function assertAgentAuthorized(
     ? await params.sessionService.get()
     : undefined
 
-  if (agent.auth === true && !session) {
+  if (agent.auth !== false && !session) {
     throw new MissingSessionError('Authentication required')
   }
 

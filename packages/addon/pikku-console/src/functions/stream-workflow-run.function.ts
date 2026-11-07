@@ -1,10 +1,10 @@
-import { pikkuSessionlessFunc } from '#pikku/addon/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
-export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
+export const streamWorkflowRun = pikkuFunc<{ runId: string }, any>({
   title: 'Stream Workflow Run',
   description: 'SSE stream of workflow run status and step state changes.',
   expose: false,
-  auth: false,
+  scopes: ['pikku:console:workflows:read'],
   func: async ({ workflowRunService }, { runId }, { channel }) => {
     if (!channel) return
 

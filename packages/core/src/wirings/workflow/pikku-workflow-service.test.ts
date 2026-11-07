@@ -396,6 +396,7 @@ describe('pikku-workflow-service version mismatch fallback', () => {
       name: workflowName,
       pikkuFuncId: workflowName,
       source: 'graph',
+      auth: false,
       graphHash: newHash,
       nodes: {
         changedNode: { nodeId: 'changedNode', rpcName: 'changedRpc' },
@@ -410,6 +411,7 @@ describe('pikku-workflow-service version mismatch fallback', () => {
         name: workflowName,
         pikkuFuncId: workflowName,
         source: 'graph',
+        auth: false,
         graphHash: oldHash,
         nodes: {},
         entryNodeIds: [],

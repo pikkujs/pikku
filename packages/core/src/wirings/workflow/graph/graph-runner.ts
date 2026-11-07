@@ -21,6 +21,11 @@ import type {
 } from '../workflow.types.js'
 import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
 import { runTraceWire } from '../workflow-run-trace.js'
+import {
+  assertGraphSession,
+  childRunWire,
+  runIdentityWire,
+} from '../workflow-run-proof.js'
 
 export class ChildWorkflowStartedException extends Error {
   name = 'ChildWorkflowStartedException'
@@ -1033,6 +1038,7 @@ async function invokeGraphNodeRpc(
 
   const result = await rpcService.rpcWithWire(rpcName, input, {
     ...runTraceWire(await workflowService.getRunTraceparent(runId)),
+    ...runIdentityWire((await workflowService.getRunIdentity(runId))?.wire),
     graph: graphWire,
     workflow: workflowService.createWorkflowWire(graphName, runId, rpcService),
   })
@@ -1062,15 +1068,19 @@ export async function executeGraphStep(
       ? undefined
       : pikkuState(null, 'agent', 'agentsMeta')[rpcName]
     if (subWorkflowMeta) {
-      const childWire: WorkflowRunWire = {
-        type: 'workflow',
-        id: rpcName,
-        parentRunId: runId,
-        parentStepId: stepId,
-        pikkuUserId: (await workflowService.getRunIdentity(runId))?.wire
-          ?.pikkuUserId,
-        traceparent: await workflowService.getRunTraceparent(runId),
-      }
+      const parentWire = (await workflowService.getRunIdentity(runId))?.wire
+      const childWire = childRunWire(
+        parentWire,
+        {
+          type: 'workflow',
+          id: rpcName,
+          parentRunId: runId,
+          parentStepId: stepId,
+          pikkuUserId: parentWire?.pikkuUserId,
+          traceparent: await workflowService.getRunTraceparent(runId),
+        },
+        rpcName
+      )
       const shouldInline = !getSingletonServices()?.queueService
       const { runId: childRunId } = await workflowService.startWorkflow(
         rpcName,
@@ -1169,15 +1179,19 @@ async function executeGraphNodeInline(
       ? undefined
       : pikkuState(null, 'agent', 'agentsMeta')[rpcName]
     if (subWorkflowMeta) {
-      const childWire: WorkflowRunWire = {
-        type: 'workflow',
-        id: rpcName,
-        parentRunId: runId,
-        parentStepId: attempt.stepId,
-        pikkuUserId: (await workflowService.getRunIdentity(runId))?.wire
-          ?.pikkuUserId,
-        traceparent: await workflowService.getRunTraceparent(runId),
-      }
+      const parentWire = (await workflowService.getRunIdentity(runId))?.wire
+      const childWire = childRunWire(
+        parentWire,
+        {
+          type: 'workflow',
+          id: rpcName,
+          parentRunId: runId,
+          parentStepId: attempt.stepId,
+          pikkuUserId: parentWire?.pikkuUserId,
+          traceparent: await workflowService.getRunTraceparent(runId),
+        },
+        rpcName
+      )
       const { runId: childRunId } = await workflowService.startWorkflow(
         rpcName,
         input,
@@ -1391,6 +1405,7 @@ export async function runWorkflowGraph(
   if (!meta?.nodes) {
     throw new Error(`Workflow graph '${graphName}' not found`)
   }
+  await assertGraphSession(graphName, meta, wire ?? { type: 'unknown' })
 
   const nodes = meta.nodes
   const declaredEntryNodes = meta.entryNodeIds ?? []

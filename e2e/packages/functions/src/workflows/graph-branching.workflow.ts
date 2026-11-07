@@ -1,6 +1,8 @@
 import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 export const graphBranchingWorkflow = pikkuWorkflowGraph({
+  auth: false,
+  expose: true,
   description: 'Branching graph: categorize then pass or fail notification',
   tags: ['graph', 'branching'],
   nodes: {

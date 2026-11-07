@@ -37,6 +37,7 @@ export const happyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
   { result: number; finalAttempt: number; message: string }
 >({
+  auth: false,
   func: async ({}, data, { workflow }) => {
     const result = await workflow.do(
       'Step that fails once then succeeds',
