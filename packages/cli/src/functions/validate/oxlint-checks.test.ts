@@ -72,6 +72,7 @@ const resolvedConfig = (over: Record<string, unknown> = {}) => ({
   rules: {
     'typescript/no-misused-promises': 'deny',
     'typescript/no-floating-promises': 'deny',
+    'no-empty': 'deny',
   },
   options: { typeAware: true },
   overrides: [],
@@ -279,6 +280,82 @@ describe('oxlint setup checks', () => {
     }
   })
 
+  test('options nested the way --print-config prints them are still read', async () => {
+    const root = await makeApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply(
+          resolvedConfig({
+            rules: {
+              'typescript/no-misused-promises': [
+                'deny',
+                [{ checksConditionals: false }],
+              ],
+              'typescript/no-floating-promises': 'deny',
+              'no-empty': 'deny',
+            },
+          })
+        )
+      )
+      const findings = await runOxlintSetupChecks(root, exec)
+      assert.deepEqual(ids(findings), ['oxlint-rule-missing'])
+      assert.match(findings[0]!.message, /checksConditionals/)
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('allowEmptyCatch: true defeats no-empty', async () => {
+    const root = await makeApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply(
+          resolvedConfig({
+            rules: {
+              'typescript/no-misused-promises': 'deny',
+              'typescript/no-floating-promises': 'deny',
+              'no-empty': ['deny', [{ allowEmptyCatch: true }]],
+            },
+          })
+        )
+      )
+      const findings = await runOxlintSetupChecks(root, exec)
+      assert.deepEqual(ids(findings), ['oxlint-rule-missing'])
+      assert.match(
+        findings[0]!.message,
+        /no-empty: "allowEmptyCatch" is true, so an empty `catch \{\}` is not reported/
+      )
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('no-empty off is reported without blaming the typescript plugin', async () => {
+    const root = await makeApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply(
+          resolvedConfig({
+            plugins: ['react'],
+            rules: {
+              'typescript/no-misused-promises': 'deny',
+              'typescript/no-floating-promises': 'deny',
+            },
+          })
+        )
+      )
+      const findings = await runOxlintSetupChecks(root, exec)
+      assert.deepEqual(ids(findings), ['oxlint-rule-missing'])
+      assert.match(findings[0]!.message, /no-empty: not enabled/)
+      assert.doesNotMatch(
+        findings[0]!.message,
+        /no-empty: the "typescript" plugin/
+      )
+    } finally {
+      await cleanup(root)
+    }
+  })
+
   test('not type-aware is reported unless the lint script passes --type-aware', async () => {
     const withoutOption = resolvedConfig({ options: null })
     const off = await makeApp({ scripts: { lint: 'oxlint apps packages' } })
@@ -470,6 +547,52 @@ describe('oxlint run', () => {
       assert.match(misused.fixHint, /await/)
       // `void` silences the rule and leaves the bug; the finding says so.
       assert.match(findings[1]!.fixHint, /Do NOT .*void/)
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('an empty catch is a required finding, ranked ahead of other errors', async () => {
+    const root = await makeApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply({
+          number_of_files: 2,
+          diagnostics: [
+            diagnostic(
+              'eslint(no-unused-vars)',
+              'packages/functions/src/b.ts',
+              9,
+              'warning',
+              'Variable is unused.'
+            ),
+            diagnostic(
+              'eslint(no-debugger)',
+              'packages/functions/src/b.ts',
+              3,
+              'error',
+              '`debugger` statement is not allowed'
+            ),
+            diagnostic(
+              'eslint(no-empty)',
+              'packages/functions/src/c.ts',
+              5,
+              'error',
+              'Unexpected empty block statements'
+            ),
+          ],
+        })
+      )
+      const findings = await runOxlintRun(root, exec)
+      assert.deepEqual(
+        findings.map((f) => [f.id, f.severity]),
+        [
+          ['oxlint-eslint-no-empty', 'error'],
+          ['oxlint-eslint-no-debugger', 'error'],
+          ['oxlint-eslint-no-unused-vars', 'warn'],
+        ]
+      )
+      assert.match(findings[0]!.fixHint, /Rethrow it, log it with context/)
     } finally {
       await cleanup(root)
     }

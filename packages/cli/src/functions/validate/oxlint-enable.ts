@@ -4,6 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { z } from 'zod'
 import {
+  DEFEATING_OPTIONS,
   OXLINT_CONFIG_FILES,
   OXLINT_REQUIRED_RULES,
   detectPackageManager,
@@ -152,10 +153,11 @@ export const mergeOxlintConfig = (text: string): MergeResult => {
       changed = true
     }
     const value = rules[rule]
-    if (Array.isArray(value)) {
-      for (const o of value.slice(1)) {
-        if (isObject(o) && o.checksConditionals === false) {
-          delete o.checksConditionals
+    const defeat = DEFEATING_OPTIONS[rule]
+    if (defeat && Array.isArray(value)) {
+      for (const o of value.slice(1).flat()) {
+        if (isObject(o) && o[defeat.option] === defeat.value) {
+          delete o[defeat.option]
           changed = true
         }
       }
