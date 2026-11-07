@@ -12,7 +12,10 @@ import {
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { diffMigrationSets } from './migration-base.js'
+import {
+  compareMigrationsWithBase,
+  diffMigrationSets,
+} from './migration-base.js'
 import { envWithoutInheritedRepo } from '../../utils/git.js'
 import { runProjectChecks } from './project-checks.js'
 
@@ -318,5 +321,30 @@ describe('where the base comes from', () => {
     } finally {
       await rm(root, { recursive: true, force: true })
     }
+  })
+})
+
+describe('large non-ASCII migrations', () => {
+  test('an unchanged big Arabic migration is not reported as modified', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pikku-mig-utf8-'))
+    const dir = join(root, 'db')
+    await mkdir(dir, { recursive: true })
+    await writeFile(
+      join(dir, '0008-archive.sql'),
+      "insert into t values ('" + 'سيرة ذاتية عربية '.repeat(400_000) + "');\n",
+      'utf8'
+    )
+    const run = (...args: string[]) =>
+      execFileSync('git', args, {
+        cwd: root,
+        stdio: 'ignore',
+        env: envWithoutInheritedRepo(),
+      })
+    run('init', '-q', '-b', 'main')
+    run('add', '.')
+    run('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'x')
+    const res = await compareMigrationsWithBase(root, dir)
+    assert.equal(res.ok, true)
+    if (res.ok) assert.deepEqual(res.result.changes, [])
   })
 })
