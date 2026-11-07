@@ -39,6 +39,33 @@ Cloudflare Worker a contributor with `onServerStart` is a build error. See
 Always run `plan` before `apply`, and read it. It names what will be created,
 updated and deleted — the deletions are the reason to look.
 
+### `pikku ci` — the whole gate as one command
+
+```sh
+bunx --bun pikku ci                          # in place: codegen, validate, audit, test, app build
+bunx --bun pikku ci -p standalone            # the same in a clean worktree, plus deploy plan
+bunx --bun pikku ci -p standalone --deploy   # and apply that plan, without rebuilding
+```
+
+It runs bootstrap, `db migrate` (local databases only), `db codegen`,
+`emails generate`, `all --failOnError`, `validate`, `audit --failOn high`, the
+root `test` script, then the app builds, and stops at the first failed step
+with a non-zero exit. It never prompts.
+
+- With `-p` it builds the commit, not your tree: it refuses uncommitted work,
+  checks the commit out into a throwaway git worktree, runs
+  `bun install --frozen-lockfile`, removes the console scaffold, plans, and
+  copies `.deploy/` (including `audit.json`) back. The worktree is removed even
+  on failure; `--keepWorktree` keeps it to inspect.
+- `--deploy` needs `-p`: there is no default target. On Cloudflare it refuses
+  unset required secrets, and any shipped migration until you apply it and pass
+  `--migrationsApplied`.
+- No `test` script fails the run; `--skipTests` is the explicit opt-out.
+- The audit fails on any high or critical advisory, except those already in the
+  previous `.deploy/audit.json` (or `--auditBaseline <file>`).
+- `--json` streams `workflow.step.*` events, so a driver can show which step
+  failed.
+
 ### How many workers you get
 
 By default a unit holds every function that builds the same set of singleton
