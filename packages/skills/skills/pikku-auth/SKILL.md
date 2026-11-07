@@ -49,6 +49,7 @@ becomes a Pikku session, not a replacement for it.
 Inviting someone: `createAuthUser` with no password, then `sendAuthUserSignInLink`, from `@pikku/better-auth`. The link is the invitation: no throwaway password, no hashing, no invitations table, and no reading better-auth's source.
 
 - Trim the email once (`email.trim()`) and pass the same value to both: `createAuthUser` lowercases but keeps whitespace, while the link trims, so they can disagree.
+- better-auth needs a `baseURL` in its config (or `BETTER_AUTH_URL`) to build the link. Without one, `sendAuthUserSignInLink` fails with `Invalid URL` after the user already exists.
 - It needs `magicLink({ sendMagicLink, disableSignUp: true })` wired in better-auth, with `sendMagicLink` mailing the link. `disableSignUp: true` keeps it invitation-only.
 - `createAuthUser` refuses an existing email, so for an existing account, or to retry a failed send, call `sendAuthUserSignInLink` alone.
 - The link signs the person in. It does not add them to an organization: use better-auth's organization invitation for that.

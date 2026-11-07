@@ -32,7 +32,7 @@ With `emailTemplatesDir` unset the command is a no-op: it logs `Skipping emails 
 
 ## Keep to the request
 
-- Another language: add `locales/<locale>.json` and pass the recipient's own language as `locale` on the send. Never hard-code a locale, which replaces the language the email had. If the app records no language for that person, say so in the reply.
+- Another language: add `locales/<locale>.json` and pass the recipient's own language as `locale` on the send. Never hard-code a locale, which replaces the language the email had. If the app records no language for that person, say so in the reply. A language with no `locales/<locale>.json` makes the renderer throw rather than send, so map the recipient's language to a locale that exists using the project's fallback policy (usually `en`), and say which translation is missing.
 - `theme.json` and other templates stay as they are unless the owner asked to change them.
 
 ## Directory layout
