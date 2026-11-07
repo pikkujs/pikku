@@ -25,7 +25,11 @@ import {
   type CiWorktree,
 } from '../ci/worktree.js'
 import { findConfigFileOrNull } from '../../utils/pikku-cli-config.js'
-import { runLabelled } from '../../utils/run-labelled.js'
+import {
+  runLabelled,
+  stopLabelledRuns,
+  type LabelledRun,
+} from '../../utils/run-labelled.js'
 import { currentCliInvocation } from '../../utils/cli-invocation.js'
 
 const readJson = (file: string) => {
@@ -35,6 +39,9 @@ const readJson = (file: string) => {
     return undefined
   }
 }
+
+const describeFailure = (stage: string, { failure, tail }: LabelledRun) =>
+  [`${stage}: ${failure}`, ...tail.map((line) => `  ${line}`)].join('\n')
 
 const planSucceeded = (run: CiRun) =>
   readJson(planResultFile(run))?.success === true
@@ -51,9 +58,9 @@ export const pikkuCiStep = pikkuSessionlessFunc({
           { logger, label: stage },
           step.command ?? self.command,
           step.command ? step.args : [...self.args, ...step.args],
-          { cwd: run.dir, env: ciEnv(step) }
+          { cwd: run.dir, env: ciEnv(step), group: true }
         )
-        if (!result.ok) return `${stage}: ${result.failure}`
+        if (!result.ok) return describeFailure(stage, result)
         if (stage === 'plan' && !planSucceeded(run)) {
           return 'plan: no successful plan result'
         }
@@ -61,7 +68,7 @@ export const pikkuCiStep = pikkuSessionlessFunc({
     )
     const failed = failures.filter((failure) => failure !== undefined)
     if (failed.length) {
-      throw new PikkuCiFailedError(`pikku ci failed at ${failed.join(', ')}`)
+      throw new PikkuCiFailedError(`pikku ci failed at ${failed.join('\n\n')}`)
     }
   },
 })
@@ -149,87 +156,116 @@ export const pikkuCi = pikkuSessionlessFunc({
         ? defaultBaseline
         : undefined
 
-    const cleanUp = async () => {
-      removeState()
-      if (!worktree) return
-      if (data.keepWorktree) {
-        logger.info(`Kept the worktree at ${worktree.path}`)
-        return
+    let cleaned: Promise<void> | undefined
+    const cleanUp = () =>
+      (cleaned ??= (async () => {
+        removeState()
+        if (!worktree) return
+        if (data.keepWorktree) {
+          logger.info(`Kept the worktree at ${worktree.path}`)
+          return
+        }
+        await removeWorktree(rootDir, worktree.path)
+      })())
+
+    const runCi = async () => {
+      let run: CiRun | undefined
+      let error: unknown
+      try {
+        if (data.provider) {
+          await assertWorktreeReady(rootDir)
+          worktree = await createWorktree(rootDir, data.worktreeDir)
+        }
+        const dir = worktree?.project ?? rootDir
+        const moved = (path: string) => join(dir, relative(rootDir, path))
+        const runConfigFile = moved(configFile)
+        if (!existsSync(runConfigFile)) {
+          throw new PikkuCiFailedError(
+            `${configFile} is not committed in this repository, so the worktree has no copy of it.`
+          )
+        }
+
+        run = {
+          dir,
+          inWorktree: !!worktree,
+          provider: data.provider,
+          deploy: !!data.deploy,
+          runTests: !data.skipTests,
+          hasDb: DB_DIRS.some((engine) =>
+            existsSync(join(rootDir, 'db', engine))
+          ),
+          hasEmails:
+            !!config.emailTemplatesDir && existsSync(config.emailTemplatesDir),
+          hasConsole: !!config.scaffold?.console,
+          auditBaseline,
+          migrationsApplied: !!data.migrationsApplied,
+          secretsSet: !!data.secretsSet,
+          skipDeployChecks: !!data.skipDeployChecks,
+          stateDir,
+          configFile: runConfigFile,
+          outDir: moved(outDir),
+          scaffoldDir: moved(
+            config.resolvedScaffoldDir ?? join(rootDir, 'scaffold')
+          ),
+          consoleFiles: [config.consoleFunctionsFile, config.consoleSchemasFile]
+            .filter((file): file is string => !!file)
+            .map(moved),
+          srcDirectories: config.srcDirectories.map((src) =>
+            moved(resolve(rootDir, src))
+          ),
+        }
+
+        await workflowService.startWorkflow(
+          'ciWorkflow',
+          run,
+          { type: 'internal' },
+          rpc,
+          {
+            inline: true,
+          }
+        )
+      } catch (caught) {
+        error = caught
       }
-      await removeWorktree(rootDir, worktree.path)
+
+      const report = (what: string, caught: unknown) => {
+        const message =
+          caught instanceof Error ? caught.message : String(caught)
+        logger.error(`pikku ci could not ${what}: ${message}`)
+        error ??= new PikkuCiFailedError(
+          `pikku ci could not ${what}: ${message}`
+        )
+      }
+      try {
+        if (run?.inWorktree) copyOutputs(run, rootDir, error === undefined)
+      } catch (caught) {
+        report('copy .deploy back', caught)
+      }
+      try {
+        await cleanUp()
+      } catch (caught) {
+        report('clean up', caught)
+      }
+      if (error !== undefined) throw error
+      logger.info('pikku ci passed')
     }
 
-    const interrupted = () => {
-      void cleanUp().finally(() => process.exit(1))
+    const running = runCi()
+    const interrupted = (signal: NodeJS.Signals) => {
+      logger.error(`pikku ci interrupted by ${signal}, cleaning up`)
+      stopLabelledRuns(signal)
+      void running.then(
+        () => process.exit(1),
+        () => process.exit(1)
+      )
     }
     process.once('SIGINT', interrupted)
     process.once('SIGTERM', interrupted)
-
-    let run: CiRun | undefined
-    let passed = false
     try {
-      if (data.provider) {
-        await assertWorktreeReady(rootDir)
-        worktree = await createWorktree(rootDir, data.worktreeDir)
-      }
-      const dir = worktree?.project ?? rootDir
-      const moved = (path: string) => join(dir, relative(rootDir, path))
-      const runConfigFile = moved(configFile)
-      if (!existsSync(runConfigFile)) {
-        throw new PikkuCiFailedError(
-          `${configFile} is not committed in this repository, so the worktree has no copy of it.`
-        )
-      }
-
-      run = {
-        dir,
-        inWorktree: !!worktree,
-        provider: data.provider,
-        deploy: !!data.deploy,
-        runTests: !data.skipTests,
-        hasDb: DB_DIRS.some((engine) =>
-          existsSync(join(rootDir, 'db', engine))
-        ),
-        hasEmails:
-          !!config.emailTemplatesDir && existsSync(config.emailTemplatesDir),
-        hasConsole: !!config.scaffold?.console,
-        auditBaseline,
-        migrationsApplied: !!data.migrationsApplied,
-        secretsSet: !!data.secretsSet,
-        skipDeployChecks: !!data.skipDeployChecks,
-        stateDir,
-        configFile: runConfigFile,
-        outDir: moved(outDir),
-        scaffoldDir: moved(
-          config.resolvedScaffoldDir ?? join(rootDir, 'scaffold')
-        ),
-        consoleFiles: [config.consoleFunctionsFile, config.consoleSchemasFile]
-          .filter((file): file is string => !!file)
-          .map(moved),
-        srcDirectories: config.srcDirectories.map((src) =>
-          moved(resolve(rootDir, src))
-        ),
-      }
-
-      await workflowService.startWorkflow(
-        'ciWorkflow',
-        run,
-        { type: 'internal' },
-        rpc,
-        {
-          inline: true,
-        }
-      )
-      passed = true
-      logger.info('pikku ci passed')
+      await running
     } finally {
       process.off('SIGINT', interrupted)
       process.off('SIGTERM', interrupted)
-      try {
-        if (run?.inWorktree) copyOutputs(run, rootDir, passed)
-      } finally {
-        await cleanUp()
-      }
     }
   },
 })
