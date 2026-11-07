@@ -38,6 +38,8 @@ export const CiRun = z.object({
   configFile: z.string(),
   outDir: z.string(),
   scaffoldDir: z.string(),
+  /** The console scaffold, wherever `scaffold.console.path` put it. */
+  consoleFiles: z.array(z.string()),
   srcDirectories: z.array(z.string()),
 })
 export type CiRun = z.infer<typeof CiRun>

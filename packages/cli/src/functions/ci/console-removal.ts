@@ -25,13 +25,14 @@ const tsFiles = (dir: string, skip = SKIPPED_DIRS): string[] => {
   })
 }
 
-const appSource = ({ srcDirectories, scaffoldDir }: CiRun) =>
+const appSource = ({ srcDirectories, scaffoldDir, consoleFiles }: CiRun) =>
   srcDirectories
     .flatMap((dir) => tsFiles(dir))
     .filter(
       (file) =>
         !file.includes(`${sep}scaffold${sep}`) &&
-        relative(scaffoldDir, file).startsWith('..')
+        relative(scaffoldDir, file).startsWith('..') &&
+        !consoleFiles.includes(file)
     )
     .map((file) => readFileSync(file, 'utf-8'))
 
@@ -58,12 +59,21 @@ export const removeConsoleScaffold = (run: CiRun) => {
   config.scaffold = { ...config.scaffold, console: false }
   writeFileSync(run.configFile, `${JSON.stringify(config, null, 2)}\n`)
   rmSync(join(run.scaffoldDir, 'console'), { recursive: true, force: true })
+  for (const file of run.consoleFiles) rmSync(file, { force: true })
 }
 
-export const assertConsoleRemoved = ({ scaffoldDir, outDir, dir }: CiRun) => {
+export const assertConsoleRemoved = ({
+  scaffoldDir,
+  outDir,
+  dir,
+  consoleFiles,
+}: CiRun) => {
   const leftovers = [
-    ...tsFiles(scaffoldDir),
-    ...tsFiles(outDir, new Set()),
+    ...new Set([
+      ...tsFiles(scaffoldDir),
+      ...tsFiles(outDir, new Set()),
+      ...consoleFiles.filter((file) => existsSync(file)),
+    ]),
   ].filter((file) => readFileSync(file, 'utf-8').includes(CONSOLE_ADDON))
   if (leftovers.length === 0) return
   throw new PikkuCiFailedError(

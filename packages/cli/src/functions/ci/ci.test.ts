@@ -48,6 +48,7 @@ const ciRun = (overrides: Partial<CiRun> = {}): CiRun => ({
   configFile: join(dir, 'pikku.config.json'),
   outDir: join(dir, '.pikku'),
   scaffoldDir: join(dir, 'src', 'scaffold'),
+  consoleFiles: [],
   srcDirectories: [join(dir, 'src')],
   ...overrides,
 })
@@ -243,6 +244,26 @@ describe('console removal', () => {
       "declareScopes(['pikku:console'])\nexport const roles = { admin: ['pikku:console'] }"
     )
     removeConsoleScaffold(ciRun())
+  })
+
+  test('removes and checks a console scaffold at a custom path, which declares nothing', () => {
+    project("export const roles = { admin: ['pikku:console'] }")
+    const consoleFile = join(dir, 'src', 'admin', 'console.gen.ts')
+    write(
+      consoleFile,
+      "import '@pikku/addon-console'\ndeclareScopes(['pikku:console'])"
+    )
+    const run = ciRun({ consoleFiles: [consoleFile] })
+    assert.throws(() => removeConsoleScaffold(run), /declareScopes/)
+    assert.throws(
+      () => assertConsoleRemoved(run),
+      /src\/admin\/console\.gen\.ts/
+    )
+
+    write(join(dir, 'src', 'scopes.ts'), "declareScopes(['pikku:console'])")
+    removeConsoleScaffold(run)
+    assert.equal(existsSync(consoleFile), false)
+    assertConsoleRemoved(run)
   })
 
   test('fails when console wiring is left behind', () => {
