@@ -7,7 +7,7 @@ installGroups: [core]
 
 # Pikku Workflow
 
-What to reach for and why. For how to call it, run this once: `pikku doc workflow pikkuWorkflowFunc TypedWorkflow WorkflowStepOptions WorkflowApprovalOptions WorkflowRunService wireScheduler`. Depth: `references/workflow-reference.md`.
+What to reach for and why. For how to call it, run this once: `pikku doc workflow pikkuWorkflowFunc TypedWorkflow wireScheduler`. Depth: `references/workflow-reference.md`.
 
 ## Is it a workflow?
 
@@ -22,14 +22,14 @@ What to reach for and why. For how to call it, run this once: `pikku doc workflo
 - A retried step re-runs its side effects, and a run recovered after a crash re-runs the step caught in flight. Durability is at-least-once, so a charge or email can fire twice. Pass a stable idempotency key built from the workflow's own data (`order-${orderId}-charge`), never `randomUUID()` or `Date.now()`.
 - Every step is a pikku function. Input and output are Zod schemas, not generics.
 - `pikkuWorkflowFunc` is the default. `pikkuWorkflowGraph` and `pikkuWorkflowComplexFunc` only with the owner's approval, never to dodge an error.
-- No try/catch around steps. Declare `compensate` on the function itself; the engine runs it. Use a milestone to bound the unwind.
+- No try/catch around steps. Declare `compensate` on the function itself; the engine runs it. Use a milestone to bound the unwind. An expected failure (a quote provider with no price) is not that: return a structured outcome from the step and let the workflow branch to a fallback. Compensation is for failures that should unwind the run.
 - A sub-workflow is for a real orchestration you also start on its own. A child that would be one step is a function.
 - A schedule or other trigger has no signed-in user, so the run has no session: its steps are `pikkuSessionlessFunc`. A `pikkuFunc` step fails at run time, and `pikku check` won't say so.
-- A trigger never calls `rpc.invoke`, and never adds scheduler or workflow services: `pikku dev`, `pikku serve` and stages bring them.
+- A trigger never calls `rpc.invoke`, and never adds scheduler or workflow services: `pikku dev`, `pikku serve` and stages bring them. A custom host provides `workflowService` in its singleton services before a trigger calls `rpc.startWorkflow`, and a scheduled trigger also needs a scheduler or platform cron.
 - Workflows go in `packages/functions/src/wirings/*.workflow.ts`, exported. Start, run and status routes come from `scaffold.workflow`.
 - On a schedule, the `wireScheduler` func is a `pikkuVoidFunc` that only starts the workflow, in the workflow's file: `func: async (_services, _input, { rpc }) => { await rpc.startWorkflow('weeklyReport', {}) }`, and `rpc.startWorkflow` is called the same way from a function. A cron has no session.
 - An approval takes a real `schema`, and the workflow branches on the result. A no is an answer (`approveStep` with `{ approve: false }`), never `updateRunStatus('cancelled')`, which skips compensation. Waiting approvals come from `WorkflowRunService`, not the `workflowRuns` table.
-- `approvers` defaults to `any`, which is not an authorization boundary: set `owner` or `not-initiator` when it matters who decides.
+- `approvers` defaults to `any`, which is not an authorization boundary: set `owner` or `not-initiator` when it matters who decides. `not-initiator` only excludes the starter: any other signed-in user passes, whatever their role. To limit the decision to a group, add `approverScope` or equivalent route permissions.
 
 ## A scheduled report, whole
 
