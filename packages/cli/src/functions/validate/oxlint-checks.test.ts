@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { describe, test } from 'node:test'
+import { newOxlintConfig } from './oxlint-enable.js'
 import {
   OXLINT_MAX_FINDINGS,
   oxlintRunArgs,
@@ -67,17 +68,46 @@ const makeApp = async (opts: AppOptions = {}) => {
   return root
 }
 
-const resolvedConfig = (over: Record<string, unknown> = {}) => ({
-  plugins: ['unicorn', 'typescript', 'oxc'],
-  rules: {
-    'typescript/no-misused-promises': 'deny',
-    'typescript/no-floating-promises': 'deny',
-    'no-empty': 'deny',
-  },
-  options: { typeAware: true },
-  overrides: [],
-  ...over,
-})
+const RESOLVED_POLICY_RULES = {
+  'no-restricted-imports': [
+    'deny',
+    [
+      {
+        paths: ['fs', 'node:fs', 'fs/promises', 'node:fs/promises'].map(
+          (name) => ({ name, allowTypeImports: true })
+        ),
+      },
+    ],
+  ],
+  'typescript/no-require-imports': 'deny',
+  'node/no-process-env': 'deny',
+}
+
+/**
+ * The `--print-config` of a compliant app. `rules` and `plugins` given in
+ * `over` replace the required ones while the policy rules and the `node`
+ * plugin stay, so a test about one rule set is not also failing the other.
+ */
+const resolvedConfig = (over: Record<string, unknown> = {}) => {
+  const { rules, plugins, ...rest } = over as {
+    rules?: Record<string, unknown>
+    plugins?: string[]
+  }
+  return {
+    plugins: [...(plugins ?? ['unicorn', 'typescript', 'oxc']), 'node'],
+    rules: {
+      ...RESOLVED_POLICY_RULES,
+      ...(rules ?? {
+        'typescript/no-misused-promises': 'deny',
+        'typescript/no-floating-promises': 'deny',
+        'no-empty': 'deny',
+      }),
+    },
+    options: { typeAware: true },
+    overrides: [],
+    ...rest,
+  }
+}
 
 const reply = (
   stdout: unknown,
@@ -351,6 +381,112 @@ describe('oxlint setup checks', () => {
         findings[0]!.message,
         /no-empty: the "typescript" plugin/
       )
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('lint keys decide whether the content and variables rules are required', async () => {
+    const without = (...drop: string[]) => {
+      const rules: Record<string, unknown> = { ...RESOLVED_POLICY_RULES }
+      for (const r of drop) delete rules[r]
+      return {
+        plugins: ['unicorn', 'typescript', 'oxc'],
+        rules: {
+          'typescript/no-misused-promises': 'deny',
+          'typescript/no-floating-promises': 'deny',
+          'no-empty': 'deny',
+          ...rules,
+        },
+        options: { typeAware: true },
+        overrides: [],
+      }
+    }
+    const bare = without(
+      'no-restricted-imports',
+      'typescript/no-require-imports',
+      'node/no-process-env'
+    )
+    const enforced = await makeApp()
+    const warned = await makeApp({
+      pikkuConfig: {
+        lint: { enforceContentService: 'warn', enforceVariablesService: 'off' },
+      },
+    })
+    try {
+      const findings = await runOxlintSetupChecks(
+        enforced,
+        fakeExec(() => reply(bare)).exec
+      )
+      assert.deepEqual(
+        findings.map((f) => [f.id, f.severity]),
+        [
+          ['oxlint-enforce-content-service', 'error'],
+          ['oxlint-enforce-variables-service', 'error'],
+        ]
+      )
+      assert.match(
+        findings[1]!.message,
+        /the "node" plugin is not in "plugins"/
+      )
+      assert.match(findings[0]!.fixHint, /"enforceContentService": "off"/)
+
+      const relaxed = await runOxlintSetupChecks(
+        warned,
+        fakeExec(() => reply(bare)).exec
+      )
+      assert.deepEqual(
+        relaxed.map((f) => [f.id, f.severity]),
+        [['oxlint-enforce-content-service', 'warn']]
+      )
+    } finally {
+      await cleanup(enforced)
+      await cleanup(warned)
+    }
+  })
+
+  test('no-restricted-imports must name every fs module', async () => {
+    const root = await makeApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply(
+          resolvedConfig({
+            rules: {
+              'typescript/no-misused-promises': 'deny',
+              'typescript/no-floating-promises': 'deny',
+              'no-empty': 'deny',
+              'no-restricted-imports': ['deny', [{ paths: ['fs'] }]],
+            },
+          })
+        )
+      )
+      const findings = await runOxlintSetupChecks(root, exec)
+      assert.deepEqual(ids(findings), ['oxlint-enforce-content-service'])
+      assert.match(
+        findings[0]!.message,
+        /does not restrict node:fs, fs\/promises, node:fs\/promises/
+      )
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('an override exempting files from a policy rule is accepted', async () => {
+    const root = await makeApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply(
+          resolvedConfig({
+            overrides: [
+              {
+                files: ['src/bootstrap.ts'],
+                rules: { 'node/no-process-env': 'allow' },
+              },
+            ],
+          })
+        )
+      )
+      assert.deepEqual(await runOxlintSetupChecks(root, exec), [])
     } finally {
       await cleanup(root)
     }
@@ -908,18 +1044,7 @@ describe('oxlint run against the real oxlint', { skip: !realInstall }, () => {
       'pikku.config.json',
       JSON.stringify({ srcDirectories: ['src'] })
     )
-    await write(
-      root,
-      '.oxlintrc.json',
-      JSON.stringify({
-        options: { typeAware: true },
-        rules: {
-          'typescript/no-misused-promises': 'error',
-          'typescript/no-floating-promises': 'error',
-          'no-empty': 'error',
-        },
-      })
-    )
+    await write(root, '.oxlintrc.json', JSON.stringify(newOxlintConfig()))
     await write(
       root,
       'src/webhook.ts',
@@ -957,6 +1082,32 @@ describe('oxlint run against the real oxlint', { skip: !realInstall }, () => {
       assert.equal(misused.severity, 'error')
       assert.match(misused.message, /^src\/webhook\.ts:3:/)
       assert.ok(findings.every((f) => !f.path.includes('.gen.')))
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('fs and process.env are findings outside tests and allowed inside them', async () => {
+    const root = await buildApp()
+    try {
+      const source = [
+        "import type { Stats } from 'node:fs'",
+        "import { readFile } from 'node:fs/promises'",
+        'export type S = Stats',
+        'export const port = process.env.PORT',
+        "export const read = () => readFile('x')",
+        '',
+      ].join('\n')
+      await write(root, 'src/reads.ts', source)
+      await write(root, 'src/reads.test.ts', source)
+      assert.deepEqual(await runOxlintSetupChecks(root), [])
+      const findings = (await runOxlintRun(root)).filter((f) =>
+        f.path.includes('reads')
+      )
+      assert.deepEqual(findings.map((f) => f.message.split(' ')[0]).sort(), [
+        'src/reads.ts:2:1',
+        'src/reads.ts:4:21',
+      ])
     } finally {
       await cleanup(root)
     }

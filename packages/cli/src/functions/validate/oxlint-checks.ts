@@ -41,6 +41,101 @@ export const DEFEATING_OPTIONS: Partial<
   },
 }
 
+const FS_MODULES = ['fs', 'node:fs', 'fs/promises', 'node:fs/promises']
+
+export type PolicyKey = 'enforceContentService' | 'enforceVariablesService'
+export type PolicyLevel = 'off' | 'warn' | 'error'
+export type PolicyLevels = Record<PolicyKey, PolicyLevel>
+
+/**
+ * Rules a `pikku.config.json` `lint` key requires while it is not `'off'`.
+ * Unlike OXLINT_REQUIRED_RULES these may be relaxed per file through
+ * `overrides`: tests, bootstrap and tooling legitimately read the disk and the
+ * environment.
+ */
+export const OXLINT_POLICY_RULES: Record<
+  PolicyKey,
+  { plugin?: string; use: string; rules: Record<string, unknown> }
+> = {
+  enforceContentService: {
+    use: 'the `content` service, which is keyed, project-scoped, and signs reads and writes',
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: FS_MODULES.map((name) => ({
+            name,
+            allowTypeImports: true,
+            message:
+              'Use the `content` service: keyed, project-scoped, with signed reads and writes.',
+          })),
+        },
+      ],
+      'typescript/no-require-imports': 'error',
+    },
+  },
+  enforceVariablesService: {
+    plugin: 'node',
+    use: 'the `variables` service for values and the `secrets` service for secrets',
+    rules: { 'node/no-process-env': 'error' },
+  },
+}
+
+export const OXLINT_TEST_FILES = [
+  '**/*.test.ts',
+  '**/*.test.tsx',
+  '**/*.spec.ts',
+  '**/*.spec.tsx',
+]
+
+export const policyLevels = (lint: unknown): PolicyLevels => {
+  const levelOfKey = (key: PolicyKey): PolicyLevel => {
+    const v = (lint as Record<string, unknown> | undefined)?.[key]
+    return v === 'off' || v === 'warn' ? v : 'error'
+  }
+  return {
+    enforceContentService: levelOfKey('enforceContentService'),
+    enforceVariablesService: levelOfKey('enforceVariablesService'),
+  }
+}
+
+/** The rules the active policies add, at the level their key sets. */
+export const activePolicyRules = (
+  levels: PolicyLevels
+): Record<string, unknown> =>
+  Object.fromEntries(
+    (Object.keys(OXLINT_POLICY_RULES) as PolicyKey[])
+      .filter((key) => levels[key] !== 'off')
+      .flatMap((key) =>
+        Object.entries(OXLINT_POLICY_RULES[key].rules).map(([rule, value]) => [
+          rule,
+          Array.isArray(value) ? [levels[key], ...value.slice(1)] : levels[key],
+        ])
+      )
+  )
+
+/** Module names a `no-restricted-imports` value restricts, flat or nested as `--print-config` prints it. */
+export const restrictedModules = (value: unknown): Set<string> => {
+  const names = new Set<string>()
+  if (!Array.isArray(value)) return names
+  for (const o of value.slice(1).flat()) {
+    if (typeof o === 'string') names.add(o)
+    const paths = (o as { paths?: unknown } | null)?.paths
+    if (!Array.isArray(paths)) continue
+    for (const p of paths) {
+      if (typeof p === 'string') names.add(p)
+      else if (typeof (p as { name?: unknown })?.name === 'string')
+        names.add((p as { name: string }).name)
+    }
+  }
+  return names
+}
+
+export const missingFsModules = (value: unknown): string[] => {
+  const restricted = restrictedModules(value)
+  return FS_MODULES.filter((m) => !restricted.has(m))
+}
+
 /** `no-empty` -> `oxlint-eslint-no-empty`, the id a diagnostic of that rule is reported under. */
 const findingIdOf = (rule: string) =>
   `oxlint-${(rule.includes('/') ? rule : `eslint/${rule}`).replace(/[^a-zA-Z0-9]+/g, '-')}`
@@ -126,6 +221,7 @@ type OxlintConfigShape = {
   srcDirectories?: unknown
   outDir?: unknown
   scaffold?: Record<string, unknown>
+  lint?: Record<string, unknown>
   validate?: {
     rules?: Record<string, unknown>
     oxlint?: { timeoutSeconds?: unknown }
@@ -565,6 +661,14 @@ export const runOxlintSetupChecks = async (
         ].join('\n'),
       })
     }
+    findings.push(
+      ...policyFindings(
+        root,
+        config.file,
+        resolved,
+        policyLevels(project.config.lint)
+      )
+    )
   } else if (config && located.bin && resolveError !== undefined) {
     findings.push({
       id: 'oxlint-rule-missing',
@@ -580,6 +684,68 @@ export const runOxlintSetupChecks = async (
   }
 
   return applyRuleSeverity(findings, project.config.validate?.rules)
+}
+
+const atLeast = (value: unknown, level: PolicyLevel): boolean => {
+  const actual = levelOf(value)
+  if (level === 'warn') return actual === 'warn' || isError(value)
+  return isError(value)
+}
+
+/**
+ * One finding per `lint` key whose oxlint rules are not on at the key's level:
+ * `oxlint-enforce-content-service` and `oxlint-enforce-variables-service`, at
+ * that level. `overrides` are not inspected, so a per-file exemption stands.
+ */
+const policyFindings = (
+  root: string,
+  configFile: string,
+  resolved: ResolvedConfig,
+  levels: PolicyLevels
+): ValidateFinding[] => {
+  const findings: ValidateFinding[] = []
+  for (const key of Object.keys(OXLINT_POLICY_RULES) as PolicyKey[]) {
+    const level = levels[key]
+    if (level === 'off') continue
+    const policy = OXLINT_POLICY_RULES[key]
+    const reasons: string[] = []
+    if (policy.plugin && !(resolved.plugins ?? []).includes(policy.plugin)) {
+      reasons.push(`the "${policy.plugin}" plugin is not in "plugins"`)
+    }
+    for (const rule of Object.keys(policy.rules)) {
+      const value = resolved.rules?.[rule]
+      if (!atLeast(value, level)) {
+        reasons.push(
+          `${rule}: ${levelOf(value) ? `set to "${levelOf(value)}"` : 'not enabled'}, it must be at least "${level}"`
+        )
+      } else if (rule === 'no-restricted-imports') {
+        const missing = missingFsModules(value)
+        if (missing.length > 0)
+          reasons.push(`${rule}: does not restrict ${missing.join(', ')}`)
+      }
+    }
+    if (reasons.length === 0) continue
+    findings.push({
+      id: `oxlint-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`,
+      severity: level,
+      message: `lint.${key} is "${level}" but ${rel(root, configFile)} does not enforce it — ${reasons.join('; ')}. Code that should go through ${policy.use} is not caught`,
+      path: configFile,
+      fixHint: [
+        `In ${rel(root, configFile)} make sure these are set (an "overrides" entry may switch them off for specific files):`,
+        JSON.stringify(
+          {
+            ...(policy.plugin ? { plugins: [policy.plugin] } : {}),
+            rules: policy.rules,
+          },
+          null,
+          2
+        ),
+        `Or set "lint": { "${key}": "off" } in pikku.config.json.`,
+        ENABLE_HINT,
+      ].join('\n'),
+    })
+  }
+  return findings
 }
 
 type OxlintDiagnostic = {
@@ -747,6 +913,19 @@ export const runOxlintRun = async (
       )
     }
     if (rule === 'eslint/no-empty') hints.push(NO_EMPTY_CATCH)
+    if (
+      rule === 'eslint/no-restricted-imports' ||
+      rule === 'typescript/no-require-imports'
+    ) {
+      hints.push(
+        `Read and write files through ${OXLINT_POLICY_RULES.enforceContentService.use}. For a file that genuinely needs the disk, switch the rule off for it in an "overrides" entry, or set "lint": { "enforceContentService": "off" } in pikku.config.json.`
+      )
+    }
+    if (rule === 'node/no-process-env') {
+      hints.push(
+        `Read configuration through ${OXLINT_POLICY_RULES.enforceVariablesService.use}. For bootstrap code that genuinely needs the environment, switch the rule off for it in an "overrides" entry, or set "lint": { "enforceVariablesService": "off" } in pikku.config.json.`
+      )
+    }
     return {
       id,
       severity:
