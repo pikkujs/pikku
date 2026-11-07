@@ -24,32 +24,35 @@ export type PikkuRPC<
     wire: PikkuRawWire
   ) => Promise<Out>
   startWorkflow: startWorkflow
-  agent: {
-    run: AgentRun
-    stream: AgentStream
-    resume: (
-      runId: string,
-      input: {
-        toolCallId: string
-        approved: boolean
-        expectedAgentName?: string
-      },
-      options?: any
-    ) => Promise<void>
+  agent: PikkuAgentRPC<AgentRun, AgentStream>
+  /**
+   * The same calls as `agent`, for a request from outside (the generated agent
+   * routes). Each answers a 404 unless the named agent is `expose: true`; who may
+   * then call it is the agent's own `auth`, scopes and permissions. Mirrors
+   * `exposed`; `agent` itself stays unchecked for application code.
+   */
+  exposedAgent: PikkuAgentRPC
+  /**
+   * The calls behind the generated `/workflow/*` routes. Each answers a 404
+   * unless the named workflow is `expose: true`, then applies the workflow's own
+   * `auth`, scopes, permissions and run ownership. Mirrors `exposed`;
+   * `startWorkflow` itself stays unchecked for application code.
+   */
+  exposedWorkflow: {
+    start: (workflowName: string, data?: unknown) => Promise<{ runId: string }>
+    /** Starts the run and waits for it to finish. */
+    run: (workflowName: string, data?: unknown) => Promise<any>
+    status: (workflowName: string, runId: string) => Promise<any>
     approve: (
+      workflowName: string,
       runId: string,
-      approvals: { toolCallId: string; approved: boolean }[],
-      expectedAgentName?: string
-    ) => Promise<any>
-    /** Stop an in-flight run. Needs no channel — it ends a stream rather than
-     *  continuing one — so it is reachable over a plain RPC while the stream
-     *  itself is held open elsewhere. Resolves `stopped: false` when there was
-     *  nothing left to stop, and names any tools still executing — their side
-     *  effects have already happened and are not undone by interrupting. */
-    interrupt: (
-      runId: string,
-      reason?: 'speech' | 'user' | 'timeout'
-    ) => Promise<AgentInterruptResult>
+      reason: string,
+      decision: unknown
+    ) => Promise<{ ok: true }>
+    /** Step names and statuses, over the wire's channel. */
+    streamStatus: (workflowName: string, runId: string) => Promise<void>
+    /** As `streamStatus`, plus output, error and child run ids. */
+    streamStatusFull: (workflowName: string, runId: string) => Promise<void>
   }
 }
 
@@ -112,4 +115,36 @@ export interface ResolvedFunction {
       wire: any
     ) => Record<string, string> | Promise<Record<string, string>>
   }
+}
+
+/** The calls of `rpc.agent`, and of `rpc.exposedAgent`, which has the same shape. */
+export type PikkuAgentRPC<
+  AgentRun extends (...args: any[]) => any = (...args: any[]) => any,
+  AgentStream extends (...args: any[]) => any = (...args: any[]) => any,
+> = {
+  run: AgentRun
+  stream: AgentStream
+  resume: (
+    runId: string,
+    input: {
+      toolCallId: string
+      approved: boolean
+      expectedAgentName?: string
+    },
+    options?: any
+  ) => Promise<void>
+  approve: (
+    runId: string,
+    approvals: { toolCallId: string; approved: boolean }[],
+    expectedAgentName?: string
+  ) => Promise<any>
+  /** Stop an in-flight run. Needs no channel — it ends a stream rather than
+   *  continuing one — so it is reachable over a plain RPC while the stream
+   *  itself is held open elsewhere. Resolves `stopped: false` when there was
+   *  nothing left to stop, and names any tools still executing — their side
+   *  effects have already happened and are not undone by interrupting. */
+  interrupt: (
+    runId: string,
+    reason?: 'speech' | 'user' | 'timeout'
+  ) => Promise<AgentInterruptResult>
 }

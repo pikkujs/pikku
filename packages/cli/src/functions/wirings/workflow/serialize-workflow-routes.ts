@@ -45,11 +45,6 @@ import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { wireHTTPRoutes } from '${leaf('http')}'
 import { MissingServiceError } from '@pikku/core/errors'
 import {
-  checkWorkflowRunAccess,
-  checkWorkflowStart,
-  streamWorkflowRunStatus,
-} from '@pikku/core/workflow'
-import {
   WorkflowStart,
   WorkflowRunRef,
   WorkflowRunId,
@@ -67,7 +62,8 @@ function assertWorkflowRunService(workflowRunService: unknown): asserts workflow
 
 /**
  * The routes stay dumb: a workflow is a function, and its own declaration says
- * who may call it. Session optional here; the check is the workflow's.
+ * who may call it. Session optional here; \`rpc.exposedWorkflow\` applies the
+ * workflow's \`expose\` and its own checks, and these routes hold none.
  */
 export const workflowStarter = pikkuSessionlessFunc({
   tags: ['pikku'],
@@ -79,10 +75,7 @@ export const workflowStarter = pikkuSessionlessFunc({
   // rpc.startWorkflow() runs against a container missing workflowService.
   func: async ({ workflowService }, { workflowName, data }, wire) => {
     assertWorkflowService(workflowService)
-    const start = await checkWorkflowStart(workflowName, data ?? {}, wire)
-    return await wire.rpc.startWorkflow(workflowName as any, start.input as any, {
-      wire: start.wire,
-    })
+    return await wire.rpc.exposedWorkflow.start(workflowName, data)
   },
 })
 
@@ -92,10 +85,7 @@ export const workflowRunner = pikkuSessionlessFunc({
   input: WorkflowStart,
   func: async ({ workflowService }, { workflowName, data }, wire) => {
     assertWorkflowService(workflowService)
-    const start = await checkWorkflowStart(workflowName, data ?? {}, wire)
-    return await workflowService.runToCompletion(workflowName, start.input, wire.rpc, {
-      wire: start.wire,
-    })
+    return await wire.rpc.exposedWorkflow.run(workflowName, data)
   },
 })
 
@@ -105,11 +95,7 @@ export const workflowStatusChecker = pikkuSessionlessFunc({
   input: WorkflowRunRef,
   func: async ({ workflowService }, { workflowName, runId }, wire) => {
     assertWorkflowService(workflowService)
-    const run = await workflowService.getRun(runId)
-    await checkWorkflowRunAccess(workflowName, run, wire, 'read')
-    const status = await workflowService.getRunStatus(runId)
-    if (!status) throw new Error(\`Run not found: \${runId}\`)
-    return status
+    return await wire.rpc.exposedWorkflow.status(workflowName, runId)
   },
 })
 
@@ -123,14 +109,7 @@ export const workflowStatusStream = pikkuSessionlessFunc({
   input: WorkflowRunRef,
   func: async ({ workflowRunService }, { workflowName, runId }, wire) => {
     assertWorkflowRunService(workflowRunService)
-    if (!wire.channel) return
-    await streamWorkflowRunStatus({
-      workflowRunService,
-      workflowName,
-      runId,
-      channel: wire.channel,
-      wire,
-    })
+    await wire.rpc.exposedWorkflow.streamStatus(workflowName, runId)
   },
 })
 
@@ -144,23 +123,15 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc({
   input: WorkflowRunRef,
   func: async ({ workflowRunService }, { workflowName, runId }, wire) => {
     assertWorkflowRunService(workflowRunService)
-    if (!wire.channel) return
-    await streamWorkflowRunStatus({
-      workflowRunService,
-      workflowName,
-      runId,
-      channel: wire.channel,
-      wire,
-      detailed: true,
-    })
+    await wire.rpc.exposedWorkflow.streamStatusFull(workflowName, runId)
   },
 })
 
 /**
  * Record a human decision against a workflow.approval() gate and wake the run.
  *
- * Only an \`expose: true\` workflow can be answered here, only for its own runs,
- * and only by a signed-in caller its \`auth\` and permissions accept.
+ * \`rpc.exposedWorkflow\` answers only an \`expose: true\` workflow, only for its
+ * own runs, and only for a signed-in caller its \`auth\` and permissions accept.
  *
  * The decision is validated on replay inside the workflow body — the only place
  * the approval's schema value is in scope — so this route deliberately accepts
@@ -184,10 +155,7 @@ export const workflowApprover = pikkuSessionlessFunc({
   // assigns workflow-state capability to this unit.
   func: async ({ workflowService }, { workflowName, runId, reason, decision }, wire) => {
     assertWorkflowService(workflowService)
-    const run = await workflowService.getRun(runId)
-    await checkWorkflowRunAccess(workflowName, run, wire, 'approve')
-    await workflowService.approveStep(runId, reason, decision, wire.session)
-    return { ok: true as const }
+    return await wire.rpc.exposedWorkflow.approve(workflowName, runId, reason, decision)
   },
 })
 

@@ -5,7 +5,8 @@ import type {
   AgentRPCOptions,
   AgentStreamChannel,
 } from './agent.types.js'
-import type { StreamAgentOptions } from './agent-prepare.js'
+import { assertAgentExposed, type StreamAgentOptions } from './agent-prepare.js'
+import { NotFoundError } from '../../errors/errors.js'
 import { pikkuState } from '../../pikku-state.js'
 import { mapAddonCall } from '../addon/addon-reach.js'
 import { runAgent, resumeAgentSync } from './agent-runner.js'
@@ -22,6 +23,47 @@ export type { AgentRPCOptions }
  * primitive.
  */
 export const createAgentRPC = (
+  wire: PikkuRawWire,
+  options: AgentRPCOptions,
+  exposed = false
+): PikkuRPC['agent'] => {
+  const agent = createAgent(wire, options)
+  if (!exposed) return agent
+  // The external entry: the same calls, each refused as a 404 unless the named
+  // agent is `expose: true`. Checked on the name as given, before addon mapping.
+  const requireExposed = (agentName: string | undefined) => {
+    // A resume or approve names the agent it expects the run to belong to. With
+    // none there is nothing to check the gate against, so it is refused.
+    if (agentName === undefined) {
+      throw new NotFoundError('AI agent not found')
+    }
+    assertAgentExposed(agentName)
+  }
+  return {
+    run: async (agentName, input) => {
+      assertAgentExposed(agentName)
+      return agent.run(agentName, input)
+    },
+    stream: async (agentName, input, streamOptions) => {
+      assertAgentExposed(agentName)
+      return agent.stream(agentName, input, streamOptions)
+    },
+    resume: async (runId, input, streamOptions) => {
+      requireExposed(input.expectedAgentName)
+      return agent.resume(runId, input, streamOptions)
+    },
+    approve: async (runId, approvals, expectedAgentName) => {
+      requireExposed(expectedAgentName)
+      return agent.approve(runId, approvals, expectedAgentName)
+    },
+    // Stopping a run is not something a route offers.
+    interrupt: async () => {
+      throw new NotFoundError('AI agent not found')
+    },
+  }
+}
+
+const createAgent = (
   wire: PikkuRawWire,
   options: AgentRPCOptions
 ): PikkuRPC['agent'] => {

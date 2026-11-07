@@ -393,12 +393,13 @@ export const resolveAgent = (
 }
 
 /**
- * Called by the generated agent routes and never by `rpc.agent`, which would
- * otherwise make an outside call look internal. Only an `expose: true` agent is
- * reachable, and anything else is a 404 so hidden names cannot be probed. Who may
- * then call it is the agent's own `auth`, scopes and permissions.
+ * The expose gate of `rpc.exposedAgent`, the entry a generated route calls.
+ * `rpc.agent` never comes through here, so application code reaches any agent.
+ * Only an `expose: true` agent is reachable from outside, and anything else is a
+ * 404 so hidden names cannot be probed. Who may then call it is the agent's own
+ * `auth`, scopes and permissions.
  */
-export const assertAgentRouteAccess = (agentName: string): void => {
+export const assertAgentExposed = (agentName: string): void => {
   if (findAgent(agentName)?.expose !== true) {
     throw new NotFoundError(`AI agent not found: ${agentName}`)
   }

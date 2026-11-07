@@ -22,12 +22,21 @@ const callerSession = async (
 ): Promise<CoreUserSession | undefined> =>
   typeof wire.getSession === 'function' ? await wire.getSession() : wire.session
 
-/** Only `expose: true` opens a workflow to a route; anything else is a 404, so names cannot be probed. */
-const exposedWorkflow = (workflowName: string) => {
-  const resolved = resolveWorkflowMeta(workflowName)
-  if (resolved?.meta.expose !== true) {
+/**
+ * The expose gate of `rpc.exposedWorkflow`, the entry a generated route calls.
+ * Only `expose: true` opens a workflow to a route; anything else is a 404, so
+ * names cannot be probed. `rpc.startWorkflow` never comes through here.
+ */
+export const assertWorkflowExposed = (workflowName: string): void => {
+  if (resolveWorkflowMeta(workflowName)?.meta.expose !== true) {
     throw new WorkflowNotFoundError(workflowName)
   }
+}
+
+/** The workflow's meta and function, or a 404 when there is no such workflow. */
+const declaredWorkflow = (workflowName: string) => {
+  const resolved = resolveWorkflowMeta(workflowName)
+  if (!resolved) throw new WorkflowNotFoundError(workflowName)
   const { meta, packageName } = resolved
   const funcId = meta.pikkuFuncId
   const funcConfig = funcId
@@ -36,7 +45,7 @@ const exposedWorkflow = (workflowName: string) => {
   return { meta, packageName, funcId, funcConfig }
 }
 
-type ExposedWorkflow = ReturnType<typeof exposedWorkflow>
+type DeclaredWorkflow = ReturnType<typeof declaredWorkflow>
 
 /**
  * Runs the workflow's own declaration through the function pipeline, without
@@ -45,7 +54,7 @@ type ExposedWorkflow = ReturnType<typeof exposedWorkflow>
  * can be judged here, the run does the rest, and `complete` stays false.
  */
 const checkDeclaration = async <Data>(
-  workflow: ExposedWorkflow,
+  workflow: DeclaredWorkflow,
   workflowName: string,
   wire: WorkflowCallerWire,
   data: Data,
@@ -75,11 +84,10 @@ const checkDeclaration = async <Data>(
 }
 
 /**
- * The check a generated route makes before it starts a run, so a refused call
- * leaves no run behind. `expose` first, because the route starts the run through
- * `rpc.startWorkflow`, which would otherwise make an outside call look internal.
- * Then the workflow's `auth`, scopes, input schema and permissions, against the
- * caller's real session.
+ * The check made before a route starts a run, so a refused call leaves no run
+ * behind: the workflow's `auth`, scopes, input schema and permissions, against
+ * the caller's real session. `expose` is not judged here; `rpc.exposedWorkflow`
+ * does that before it calls this.
  *
  * Returns the input with its schema defaults applied, and the wire to start the
  * run with. `rpc.startWorkflow` itself never comes through here.
@@ -89,7 +97,7 @@ export const checkWorkflowStart = async (
   input: unknown,
   wire: WorkflowCallerWire
 ): Promise<{ input: any; wire: WorkflowRunWire }> => {
-  const workflow = exposedWorkflow(workflowName)
+  const workflow = declaredWorkflow(workflowName)
   const { data, complete } = await checkDeclaration(
     workflow,
     workflowName,
@@ -112,8 +120,7 @@ export const checkWorkflowStart = async (
 
 /**
  * The check on a route that reads or answers a run, which never calls the
- * workflow's function. The workflow must be exposed and the run must be its own;
- * then the workflow's `auth`, scopes and permissions are run with the run's
+ * workflow's function. The run must be the named workflow's own; then the workflow's `auth`, scopes and permissions are run with the run's
  * stored input, so one `pikkuPermission` covers the start and the read.
  *
  * To read: a run with an owner is only for that owner. An ownerless run is
@@ -129,7 +136,7 @@ export const checkWorkflowRunAccess = async (
   wire: WorkflowCallerWire,
   action: 'read' | 'approve'
 ): Promise<void> => {
-  const workflow = exposedWorkflow(workflowName)
+  const workflow = declaredWorkflow(workflowName)
   if (!run || run.workflow !== workflowName) {
     throw new WorkflowNotFoundError(workflowName)
   }

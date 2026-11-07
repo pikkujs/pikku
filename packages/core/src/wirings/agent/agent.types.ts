@@ -33,7 +33,9 @@ export type AgentRPCOptions = {
  */
 export type AgentRPCFactory = (
   wire: PikkuRawWire,
-  options: AgentRPCOptions
+  options: AgentRPCOptions,
+  /** Build `rpc.exposedAgent`: every call first requires the agent to be `expose: true`. */
+  exposed?: boolean
 ) => PikkuRPC['agent']
 
 /**

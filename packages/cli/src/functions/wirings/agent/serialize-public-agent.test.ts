@@ -64,6 +64,23 @@ describe('serializePublicAgent — agent HTTP surface', () => {
     })
   }
 
+  test('each caller goes through rpc.exposedAgent and holds no expose check', () => {
+    const { functions } = generate()
+    const calls: Record<string, string> = {
+      agentCaller: 'rpc.exposedAgent.run(',
+      agentStreamCaller: 'rpc.exposedAgent.stream(',
+      agentApproveCaller: 'rpc.exposedAgent.approve(',
+      agentResumeCaller: 'rpc.exposedAgent.resume(',
+    }
+    for (const [name, call] of Object.entries(calls)) {
+      const body = callerBody(functions, name)
+      assert.ok(body.includes(call), `${name} should call ${call}`)
+      assert.ok(!body.includes('rpc.agent.'), `${name} must not call rpc.agent`)
+    }
+    assert.ok(!functions.includes('assertAgentRouteAccess'))
+    assert.ok(!functions.includes('assertAgentExposed'))
+  })
+
   test('attachments are typed rather than accepted as opaque data', () => {
     const { schemas } = generate()
     assert.ok(

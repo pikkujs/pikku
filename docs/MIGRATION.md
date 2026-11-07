@@ -45,7 +45,7 @@ What to do:
 - **Clients of the generated routes:** add `expose: true` to each workflow or agent they call. Send a session unless it is `auth: false`.
 - **A run with an owner** is only for that owner, even on an `auth: false` workflow.
 - **Permissions on status:** a workflow's permissions also run on status and stream reads, on every poll, and receive the run's stored input. A permission that reads a field a start supplies keeps working. One with side effects will run more often.
-- `rpc.startWorkflow` and `rpc.agent` do not check `expose`, and do not need it.
+- `rpc.startWorkflow` and `rpc.agent` do not check `expose`, and do not need it. The generated routes call `rpc.exposedWorkflow` and `rpc.exposedAgent`, which do; `checkWorkflowStart` and `checkWorkflowRunAccess` no longer check `expose` themselves.
 
 **With no `sessionStore`:**
 
@@ -55,7 +55,7 @@ A run started through a generated route, or through `checkWorkflowStart`, is che
 - The workflow's own `auth`, `scopes` and `permissions` are not run again in the body: the start judged them.
 - Steps and child workflows get the same `{ userId }`, and do run their own checks against it, so a step needing a scope or a session field is refused. Add a `sessionStore`.
 
-`rpc.startWorkflow` from your own function sets no marker. Without a `sessionStore`, a workflow it starts with `auth` unset is refused in the body, even if your function has a session. Either go through the check, which needs `expose: true`, or use `auth: false` on a workflow that is not exposed:
+`rpc.startWorkflow` from your own function sets no marker. Without a `sessionStore`, a workflow it starts with `auth` unset is refused in the body, even if your function has a session. Either go through the check (which judges `auth`, scopes and permissions, not `expose`), or use `auth: false` on a workflow that is not exposed:
 
 ```ts
 const start = await checkWorkflowStart('checkout', input, { session })
