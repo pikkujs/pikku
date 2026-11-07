@@ -18,6 +18,10 @@ import {
   projectWiresChannels,
   runWebsocketDepsChecks,
 } from './websocket-deps-checks.js'
+import {
+  dbConfigMismatch,
+  detectDatabaseDialect,
+} from '../../contributors/contributor-platform.js'
 import { blankComments } from '../../utils/blank-comments.js'
 import { resolveFromProject } from '../../utils/resolve-from-project.js'
 import { SERVICE_MODULE_MAP } from '../../deploy/bundler/service-module-map.js'
@@ -659,6 +663,35 @@ export async function runSharedProjectChecks(
     }
   }
   const dbEngine = pikkuConfig?.db?.engine ?? 'sqlite'
+
+  // A database on disk (or in createConfig) with no `db` in the pikku config
+  // builds no kysely, and the deploy build's platform contributors then fail.
+  // Reuses the detection every host uses, so the rules are not restated here.
+  if (pikkuConfig && !pikkuConfig.db) {
+    const srcDirectories = Array.isArray(pikkuConfig.srcDirectories)
+      ? pikkuConfig.srcDirectories.filter(
+          (d): d is string => typeof d === 'string'
+        )
+      : []
+    const declared = await detectDatabaseDialect(
+      root,
+      srcDirectories,
+      { debug: () => {} },
+      'validate'
+    ).catch(() => undefined)
+    if (declared) {
+      e(
+        'pikku-config-no-db',
+        `${dbConfigMismatch(declared)}, so the deploy build fails when it adds the platform contributors`,
+        pikkuConfigPath,
+        lines(
+          'Declare the engine in pikku.config.json:',
+          `"db": { "engine": "${declared}" }`,
+          'or remove the database declaration (createConfig / db folder).'
+        )
+      )
+    }
+  }
 
   // ── root package.json ──────────────────────────────────────────────────
   type RootPkg = {
