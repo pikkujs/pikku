@@ -28,6 +28,7 @@ import {
   setAuthUserBanned,
   setAuthUserPassword,
   type AuthGetter,
+  type BetterAuthInstance,
   type CredentialOAuth2Configs,
   type PikkuBetterAuthFactory,
 } from '@pikku/better-auth'
@@ -134,6 +135,33 @@ export const userAdminRecipe = async (services: CoreSingletonServices) => {
   await revokeAuthUserSessions(auth, userId)
   await deleteAuthUser(auth, userId)
   // @snippet end betterAuthUserAdmin
+}
+
+export const inviteRecipe = async (
+  { auth }: { auth: () => Promise<BetterAuthInstance> },
+  { email, name }: { email: string; name?: string }
+) => {
+  // @snippet start betterAuthInvite
+  // The body of a pikkuFunc declared with `scopes: ['admin:users:create']` (or
+  // a scope of your own): the scope is the "only admins may invite" check, and
+  // it has already passed by the time this runs. `auth` is `services.auth`;
+  // createAuthUser and sendAuthUserSignInLink come from '@pikku/better-auth'.
+  const normalized = email.toLowerCase().trim()
+  const { internalAdapter } = await (await auth()).$context
+  const existing = await internalAdapter.findUserByEmail(normalized)
+  // No password: the link is how they get in. Grant roles or team membership
+  // against this id (e.g. scopeService.addUserToRole) before sending it.
+  const userId =
+    existing?.user.id ??
+    (await createAuthUser(auth, { email: normalized, name }))
+  // Runs the magicLink() plugin's own `sendMagicLink`, so the mail is the
+  // app's template. A path, or an origin listed in `trustedOrigins`.
+  await sendAuthUserSignInLink(auth, {
+    email: normalized,
+    callbackURL: '/welcome',
+  })
+  return { userId, alreadyMember: !!existing }
+  // @snippet end betterAuthInvite
 }
 
 export const scopeGateRecipe = async (services: CoreSingletonServices) => {

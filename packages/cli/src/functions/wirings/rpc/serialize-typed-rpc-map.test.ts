@@ -45,6 +45,31 @@ describe('serializeTypedRPCMap', () => {
     )
   })
 
+  test('agent run and approve resolve to a result carrying status and pendingApprovals', () => {
+    const result = serializeTypedRPCMap(
+      logger,
+      '/tmp/pikku-rpc-map.gen.d.ts',
+      {},
+      emptyTypesMap,
+      {},
+      {},
+      '/tmp/pikku-custom-types.gen.d.ts'
+    )
+
+    assert.match(
+      result,
+      /\| \{ status\?: undefined; pendingApprovals\?: undefined \}\n  \| \{ status: 'suspended'; pendingApprovals: AgentPendingApproval\[\] \}/
+    )
+    assert.match(
+      result,
+      /export type TypedAgentRun = <Name extends AgentName>\([\s\S]*?\) => Promise<AgentRunResult<AgentOutputOf<Name>>>/
+    )
+    assert.match(
+      result,
+      /export type TypedAgentApprove = <Name extends AgentName>\(\n  name: Name,\n  input: AgentApproveInput\n\) => Promise<AgentRunResult<AgentOutputOf<Name>>>/
+    )
+  })
+
   test('a wireRemoteAddon namespace imports the addon .remote.gen map, not .internal.gen', () => {
     const result = serializeTypedRPCMap(
       logger,

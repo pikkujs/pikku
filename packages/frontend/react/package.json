@@ -46,7 +46,7 @@
   "scripts": {
     "tsc": "tsc",
     "tsc:tests": "tsc -p tsconfig.test.json",
-    "test": "node --test src/*.test.ts",
+    "test": "bun test src",
     "build:esm": "tsc -p tsconfig.test.json && tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
     "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
     "build": "bun run clean && bun run build:esm && bun run build:cjs",

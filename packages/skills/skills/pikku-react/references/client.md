@@ -183,8 +183,16 @@ The first three live in your generated `api.gen.ts` (see the
 call methods with it already applied:
 
 ```tsx
-const agent = usePikkuAgent('todo-agent')
-const { text } = await agent.run({ message, threadId })
+const agent = usePikkuAgent('todoAgent') // the agent's export name
+const { result, status, pendingApprovals } = await agent.run({
+  message,
+  threadId,
+  resourceId,
+})
+for await (const event of agent.stream({ message, threadId, resourceId })) {
+  if (event.type === 'TEXT_MESSAGE_CONTENT')
+    setReply((text) => text + event.delta)
+}
 
 const workflow = usePikkuWorkflow('onboardUser')
 const { runId } = await workflow.start({ email })
