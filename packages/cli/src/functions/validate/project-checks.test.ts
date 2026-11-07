@@ -2887,6 +2887,90 @@ describe('the generated coercion map', () => {
     }
   })
 
+  test('is silent when the app takes the platform kysely', async () => {
+    // pikku dev, standalone and Cloudflare apply the map to
+    // existingServices.kysely themselves; attaching it again double-parses.
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `export const createSingletonServices = async (c: any, existingServices?: any) => {\n` +
+          `  if (!existingServices?.kysely) throw new Error('no kysely')\n` +
+          `  const kysely = existingServices.kysely\n` +
+          `  return { kysely }\n` +
+          `}\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected no finding when the platform hands over kysely'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent when kysely is destructured from existingServices', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `export const f = (existingServices: any) => {\n` +
+          `  const { kysely } = existingServices\n` +
+          `  return kysely\n` +
+          `}\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(!result.findings.some((f) => f.id === 'coercion-map-not-wired'))
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent when the factory destructures kysely in its parameters', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `export const createSingletonServices = async (c: any, { kysely }: any) => {\n` +
+          `  return { kysely }\n` +
+          `}\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(!result.findings.some((f) => f.id === 'coercion-map-not-wired'))
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is still an error when existingServices.kysely only appears in a comment', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `// TODO: use existingServices.kysely one day\n` +
+          `/* const { kysely } = existingServices */\n` +
+          `export const x = 1\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(result.findings.some((f) => f.id === 'coercion-map-not-wired'))
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('is an error when the only declared kind is bool', async () => {
     const tmp = await makeTmp()
     try {
