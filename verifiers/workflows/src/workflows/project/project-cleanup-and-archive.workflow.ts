@@ -17,6 +17,7 @@ export const projectCleanupAndArchiveWorkflow = pikkuWorkflowComplexFunc<
   { projectId: string; completePendingTasks: boolean },
   { archivedAt: string; tasksCompleted: number }
 >({
+  auth: false,
   title: 'Project Cleanup And Archive',
   tags: ['project'],
   func: async (_services, data, { workflow }) => {

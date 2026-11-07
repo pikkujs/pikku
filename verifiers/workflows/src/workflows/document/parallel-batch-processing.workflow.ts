@@ -8,6 +8,7 @@ export const parallelBatchProcessingWorkflow = pikkuWorkflowFunc<
   { documentIds: string[]; operation: string },
   { processedCount: number }
 >({
+  auth: false,
   title: 'Parallel Batch Processing',
   tags: ['document'],
   func: async (_services, data, { workflow }) => {

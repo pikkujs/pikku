@@ -47,6 +47,7 @@ export const createAndNotifyWorkflow = pikkuWorkflowFunc<
   { userId: string; title: string; priority: Priority; dueDate?: string },
   { todo: Todo; notificationSent: boolean; reminderScheduled: boolean }
 >({
+  auth: false,
   expose: true,
   func: async ({}, data, { workflow }) => {
     let notificationSent = false

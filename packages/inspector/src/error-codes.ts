@@ -33,6 +33,7 @@ export enum ErrorCode {
   WORKFLOW_GRAPH_ADDON_NOT_WIRED = 'PKU642',
   COMPLEX_WORKFLOW_NOT_ALLOWED = 'PKU643',
   SINGLE_STEP_WORKFLOW = 'PKU644',
+  WORKFLOW_APPROVAL_MISSING_APPROVERS = 'PKU645',
 
   // Remote addon (wireRemoteAddon) validation
   REMOTE_ADDON_NOT_DEV_DEPENDENCY = 'PKU338',
@@ -141,9 +142,8 @@ export enum ErrorCode {
   WIRES_NOT_DESTRUCTURED = 'PKU411',
   FUNCTION_DYNAMIC_IMPORT = 'PKU498',
 
-  // Service policy diagnostics: code that reaches around a Pikku service
-  DIRECT_CONTENT_ACCESS = 'PKU412',
-  DIRECT_ENV_ACCESS = 'PKU413',
+  // PKU412 (direct fs) and PKU413 (direct process.env) are retired, not free:
+  // they moved to oxlint rules that `pikku validate` requires. Do not reuse them.
 
   // Dependency integrity errors
   DUPLICATE_CORE_VERSION = 'PKU717',

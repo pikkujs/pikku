@@ -12,6 +12,7 @@ export const distributedTransactionSagaWorkflow = pikkuWorkflowFunc<
   },
   { transferId: string; status: string }
 >({
+  auth: false,
   title: 'Distributed Transaction Saga',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

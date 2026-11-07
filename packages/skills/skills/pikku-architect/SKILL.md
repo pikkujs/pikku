@@ -1,13 +1,7 @@
 ---
 name: pikku-architect
 description: >-
-  Turn one claimed changeset into its technical plan (tables, functions, wires, roles, scopes,
-  screens, scenarios, split into passes) via `pikku knowledge plan set`. The plan is the denominator
-  `pikku knowledge plan progress` divides by, so write it BEFORE any code and never edit it to match
-  the build. TRIGGER when: `pikku changes claim` says a plan is needed, `changes done` or `pikku
-  changes next` refuses for lack of one, or the user asks to plan/architect a changeset. DO NOT
-  TRIGGER while knowledge notes are still being written (use pikku-knowledge), when the plan exists
-  and the job is building it (use pikku-changes), or when no plan was needed.
+  Write a claimed changeset's technical plan with `pikku knowledge plan set`, before any code; never edit it to match the build. For when `pikku changes claim` or `next` needs a plan.
 installGroups: [core]
 agent:
   tools: read, write, edit, bash, grep

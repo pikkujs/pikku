@@ -17,6 +17,7 @@ export const documentVersioningWorkflow = pikkuWorkflowFunc<
   },
   { documentId: string; newVersion: number; watchersNotified: number }
 >({
+  auth: false,
   title: 'Document Versioning',
   tags: ['document'],
   func: async (_services, data, { workflow }) => {

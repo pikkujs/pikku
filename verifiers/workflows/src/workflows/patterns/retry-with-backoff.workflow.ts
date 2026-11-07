@@ -12,6 +12,7 @@ export const retryWithBackoffWorkflow = pikkuWorkflowFunc<
   { userId: string; message: string },
   { success: boolean; attempts: number }
 >({
+  auth: false,
   title: 'Retry With Backoff',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

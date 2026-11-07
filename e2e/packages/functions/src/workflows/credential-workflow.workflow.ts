@@ -7,14 +7,18 @@ import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 export const credentialWorkflow = pikkuWorkflowFunc<
   {},
   { authenticated: boolean; token: string }
->(async ({}, _data, { workflow }) => {
-  const profile = await workflow.do(
-    'Get OAuth profile',
-    'oauth-api:getProfile',
-    {}
-  )
-  return {
-    authenticated: profile.authenticated,
-    token: profile.token,
-  }
+>({
+  auth: false,
+  expose: true,
+  func: async ({}, _data, { workflow }) => {
+    const profile = await workflow.do(
+      'Get OAuth profile',
+      'oauth-api:getProfile',
+      {}
+    )
+    return {
+      authenticated: profile.authenticated,
+      token: profile.token,
+    }
+  },
 })

@@ -8,6 +8,7 @@ import {
   runProjectValidate,
   type Finding,
 } from '../validate/validate.js'
+import { setValidateExitCode } from '../validate/validate-exit-code.js'
 
 async function makeTmp() {
   return mkdtemp(join(tmpdir(), 'pikku-workspace-validate-'))
@@ -784,5 +785,26 @@ describe('custom-server-bootstrap', () => {
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }
+  })
+})
+
+describe('the pikku validate exit code', () => {
+  const exitCodeAfter = (result: { ok: boolean }) => {
+    const previous = process.exitCode
+    process.exitCode = 0
+    try {
+      setValidateExitCode(result)
+      return process.exitCode
+    } finally {
+      process.exitCode = previous ?? 0
+    }
+  }
+
+  test('a result with errors exits non-zero', () => {
+    assert.strictEqual(exitCodeAfter({ ok: false }), 1)
+  })
+
+  test('a clean result leaves the exit code alone', () => {
+    assert.strictEqual(exitCodeAfter({ ok: true }), 0)
   })
 })

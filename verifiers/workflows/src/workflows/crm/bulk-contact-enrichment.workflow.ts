@@ -8,6 +8,7 @@ export const bulkContactEnrichmentWorkflow = pikkuWorkflowComplexFunc<
   { contactIds: string[] },
   { enrichedCount: number; failedCount: number }
 >({
+  auth: false,
   title: 'Bulk Contact Enrichment',
   tags: ['crm'],
   func: async (_services, data, { workflow }) => {

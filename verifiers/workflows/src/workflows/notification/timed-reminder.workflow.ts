@@ -13,6 +13,7 @@ export const timedReminderWorkflow = pikkuWorkflowFunc<
   },
   { remindersSent: number }
 >({
+  auth: false,
   title: 'Timed Reminder',
   tags: ['notification'],
   func: async (_services, data, { workflow }) => {

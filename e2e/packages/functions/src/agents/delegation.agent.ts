@@ -7,6 +7,8 @@ import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
  * configured model (not the caller's per-request override).
  */
 export const deterministicSubAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'deterministic-sub-agent',
   description: 'A deterministic sub-agent used to prove delegation executes',
   goal: 'You are a helper sub-agent that answers in one line.',
@@ -19,6 +21,8 @@ export const deterministicSubAgent = pikkuAgent({
  * client.
  */
 export const delegateParentAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'delegate-parent-agent',
   description: 'Delegates to a sub-agent and lets its output reach the client',
   goal: 'You route the request to your sub-agent.',
@@ -32,6 +36,8 @@ export const delegateParentAgent = pikkuAgent({
  * reply reaches the client while the sub-agent's text is suppressed.
  */
 export const superviseParentAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'supervise-parent-agent',
   description: 'Supervises a sub-agent and summarises its result',
   goal: 'You supervise the sub-agent and prefix your reply with "SUPERVISOR:".',
@@ -52,6 +58,8 @@ export const DelegateWorkingMemory = z.object({
  * off, which is what separates this agent from `delegateParentAgent`.
  */
 export const workingMemoryDelegateParentAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'working-memory-delegate-parent-agent',
   description:
     'Delegates to a sub-agent while keeping a working-memory notepad',

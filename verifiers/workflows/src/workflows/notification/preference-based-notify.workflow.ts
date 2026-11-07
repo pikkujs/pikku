@@ -8,6 +8,7 @@ export const preferenceBasedNotifyWorkflow = pikkuWorkflowFunc<
   { userId: string; title: string; message: string },
   { sentVia: string[] }
 >({
+  auth: false,
   title: 'Preference Based Notify',
   tags: ['notification'],
   func: async (_services, data, { workflow }) => {

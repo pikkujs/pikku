@@ -8,6 +8,7 @@ export const nestedLoopParallelInnerWorkflow = pikkuWorkflowFunc<
   { departments: Array<{ name: string; memberIds: string[] }> },
   { totalNotified: number }
 >({
+  auth: false,
   title: 'Nested Loop Parallel Inner',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

@@ -15,6 +15,7 @@ export const cartCheckoutWorkflow = pikkuWorkflowFunc<
   { customerId: string; shippingAddress: string; paymentMethodId: string },
   { orderId: string; paymentStatus: string; total: number }
 >({
+  auth: false,
   title: 'Cart Checkout',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {

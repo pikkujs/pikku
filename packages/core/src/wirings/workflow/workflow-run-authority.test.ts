@@ -23,6 +23,7 @@ describe('a graph run starts at an entry node the graph declared', () => {
     name: 'payout',
     pikkuFuncId: 'payout',
     source: 'graph' as const,
+    auth: false,
     entryNodeIds: ['validate'],
     graphHash: 'payout-hash',
     nodes: {
@@ -154,9 +155,18 @@ describe('workflow run ownership', () => {
     )
   })
 
-  test('a run with no recorded owner has no ownership to enforce', () => {
-    assert.doesNotThrow(() =>
-      assertWorkflowRunOwner({ type: 'trigger' }, { userId: 'user-b' })
+  test('a run with no recorded owner is refused, signed in or not', () => {
+    assert.throws(
+      () => assertWorkflowRunOwner({ type: 'trigger' }, { userId: 'user-b' }),
+      ForbiddenError
+    )
+    assert.throws(
+      () => assertWorkflowRunOwner({ type: 'trigger' }, undefined),
+      ForbiddenError
+    )
+    assert.throws(
+      () => assertWorkflowRunOwner(undefined, { userId: 'user-b' }),
+      ForbiddenError
     )
   })
 

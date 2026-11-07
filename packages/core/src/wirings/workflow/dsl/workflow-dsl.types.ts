@@ -154,7 +154,8 @@ export type WorkflowApprovalApprovers = 'any' | 'owner' | 'not-initiator'
  */
 export interface WorkflowApprovalPolicy {
   /**
-   * Defaults to `any`. See {@link WorkflowApprovalApprovers}.
+   * Required by the compiler: a gate has to say who answers it. `any` means any
+   * signed-in user. See {@link WorkflowApprovalApprovers}.
    */
   approvers?: WorkflowApprovalApprovers
   /**

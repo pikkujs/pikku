@@ -12,6 +12,7 @@ export const parallelSubtasksWorkflow = pikkuWorkflowFunc<
   { parentTaskId: string; subtaskTitles: string[] },
   { createdCount: number }
 >({
+  auth: false,
   title: 'Parallel Subtasks',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

@@ -29,6 +29,7 @@ beforeEach(() => {
 
 const addTestAgent = (agentName: string) => {
   const agent: CoreAgent = {
+    auth: false,
     name: agentName,
     description: 'test agent',
     instructions: 'be helpful',
@@ -171,6 +172,7 @@ describe('streamAgent', () => {
   test('completes on the non-delegate path when the agent has no metadata entry', async () => {
     const agentName = 'meta-less-agent'
     pikkuState(null, 'agent', 'agents').set(agentName, {
+      auth: false,
       name: agentName,
       description: 'test agent',
       instructions: 'be helpful',

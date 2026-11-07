@@ -19,6 +19,8 @@ export const chaosRestartWorkflow = pikkuWorkflowFunc<
   },
   { tag: string; phases: number[] }
 >({
+  auth: false,
+  expose: true,
   func: async ({}, data, { workflow }) => {
     const one = await workflow.do('Phase one', 'chaosStep', {
       key: `phase1:${data.tag}`,

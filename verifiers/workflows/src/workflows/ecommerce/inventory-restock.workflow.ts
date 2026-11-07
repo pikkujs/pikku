@@ -12,6 +12,7 @@ export const inventoryRestockWorkflow = pikkuWorkflowFunc<
   { threshold: number; supplierId: string },
   { lowStockCount: number; purchaseOrderId: string; notified: boolean }
 >({
+  auth: false,
   title: 'Inventory Restock',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {

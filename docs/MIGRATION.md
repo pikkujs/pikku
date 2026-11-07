@@ -24,6 +24,59 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### A workflow or agent with no `auth` wants a session
+
+A workflow is a function, so it now takes the same `auth` default as one: unset means a session is required, and only an explicit `auth: false` is anonymous. The same goes for an agent. Both used to be open when `auth` was unset.
+
+| Before                                                        | Now                                                                       |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| A workflow or agent with no `auth` ran for anyone             | It needs a session. `auth: false` keeps the old behaviour                 |
+| `/workflow/:name/*` and `/rpc/agent/:name/*` reached any name | Only `expose: true` ones. Anything else answers 404                       |
+| A refused start left a failed run behind                      | A refused start refuses at the request, with no run and no `runId`        |
+| A graph applied no checks of its own                          | A graph's `auth` applies the same way                                     |
+| A run with no owner could be read by anyone with its id       | Refused, unless the workflow is `auth: false` or its permissions allow it |
+| Any run could be read through any workflow's URL              | The run must belong to the workflow in the URL                            |
+
+The routes stay one per action. They take an optional session and leave the decision to the workflow's own `expose`, `auth`, `scopes`, `permissions` and input schema. `POST /rpc/<workflow>` is unchanged and runs the same declaration.
+
+What to do:
+
+- **Schedules, triggers and queue jobs:** a workflow or agent started with no user now fails with `Authentication required`. Add `auth: false`. A workflow written as `pikkuWorkflowFunc(async ...)` must use the `{ auth: false, func }` form, and `pikkuWorkflowGraph` takes `auth` too.
+- **Clients of the generated routes:** add `expose: true` to each workflow or agent they call. Send a session unless it is `auth: false`.
+- **A run with an owner** is only for that owner, even on an `auth: false` workflow.
+- **Permissions on status:** a workflow's permissions also run on status and stream reads, on every poll, and receive the run's stored input. A permission that reads a field a start supplies keeps working. One with side effects will run more often.
+- `rpc.startWorkflow` and `rpc.agent` do not check `expose`, and do not need it.
+
+**With no `sessionStore`:**
+
+A run started through a generated route, or through `checkWorkflowStart`, is checked with the caller's real session and records that it was. The run row holds a marker and the user id, never the session. A queued `auth: true` workflow then works with no `sessionStore`, and:
+
+- The body gets `session` as `{ userId }` and nothing else. If it reads another session field, add a `sessionStore`.
+- The workflow's own `auth`, `scopes` and `permissions` are not run again in the body: the start judged them.
+- Steps and child workflows get the same `{ userId }`, and do run their own checks against it, so a step needing a scope or a session field is refused. Add a `sessionStore`.
+
+`rpc.startWorkflow` from your own function sets no marker. Without a `sessionStore`, a workflow it starts with `auth` unset is refused in the body, even if your function has a session. Either go through the check, which needs `expose: true`, or use `auth: false` on a workflow that is not exposed:
+
+```ts
+const start = await checkWorkflowStart('checkout', input, { session })
+return rpc.startWorkflow('checkout', start.input, { wire: start.wire })
+```
+
+If a `sessionStore` is configured, the marker does nothing: the session comes from the store on every run, and one that has gone from the store is refused.
+
+Related changes:
+
+- **`workflow.approval()` must declare `approvers`.** A missing `approvers` is now compile error PKU645. It used to default to `any`, which accepted an answer from anyone. Write `approvers: 'any'` to keep that gate open to any signed-in user.
+- **`approvers: 'owner'` on a run with no owner** now refuses every user. Previously it accepted anyone.
+- **The approve route** needs a session, also on an `auth: false` workflow, and honours the workflow name in its URL.
+- **`assertWorkflowRunOwner` refuses a run with no owner.** If you call it yourself for internal readers, gate those with their own scope instead. `streamWorkflowRunStatus` now takes `workflowName` and `wire` in place of `session`.
+- **`/workflow-run/:runId/stream` in the console addon** now needs a session and the `pikku:console:workflows:read` scope. It was anonymous and sent full step data.
+- **`pikku validate` exits with code 1** when it reports errors. CI that ignored these will start failing.
+- **`rpc.agent.resume`** takes an optional `expectedAgentName`. The generated resume route passes it, so a run cannot be resumed through another agent's route.
+- **A published addon** keeps its old meta until it is rebuilt, so its workflows stay open until then.
+
+To find affected code, search for `pikkuWorkflowFunc`, `pikkuWorkflowGraph`, `pikkuAgent(`, `rpc.startWorkflow`, `workflow.approval(` and `assertWorkflowRunOwner`, and run `pikku validate`.
+
 ### `x-request-id` is replaced by `traceparent`
 
 Pikku now uses W3C trace context. An HTTP request's `wire.traceId` is 32 lowercase hex, and `wire.trace` adds `spanId`, `parentSpanId` and `sampled`. `errorId` in error responses has the same format.
@@ -62,7 +115,6 @@ Channels, agent tools, MCP, CLI, triggers, webhook sources, gateways and `runRpc
   ```sql
   ALTER TABLE channels ADD COLUMN traceparent TEXT;
   ```
-
 
 To find affected code, search for `traceId` on a channel RPC frame, and for overrides of `accept` or `enqueue`.
 
@@ -132,18 +184,18 @@ The cast was usually there because the generated `pikku-package.gen.ts` did not 
 
 To find the affected code, run `pikku all` and look for `PKU564`. The message names the export and its file and line. See [`service-factories.md`](./service-factories.md).
 
-### Direct `fs` and `process.env` use fails the build
+### Direct `fs` and `process.env` use fails validate
 
-Two lint rules are on by default at `error`. A project that sets nothing is enforced.
+Two lint keys are on by default at `error`. A project that sets nothing is enforced. Both are enforced by the app's own oxlint, which `pikku validate` already requires and runs; `pikku enable oxlint` writes the rules.
 
-| Code | Key | Flags | Use instead |
-| --- | --- | --- | --- |
-| `PKU412` | `lint.enforceContentService` | importing `fs`, `node:fs`, `fs/promises` or `node:fs/promises` (static `import`, `require`, dynamic `import()`) | the `content` service: keyed, project-scoped, signed reads and writes |
-| `PKU413` | `lint.enforceVariablesService` | reading `process.env` (`process.env.X`, `process.env['X']`, destructuring, spreading, `const { env } = process`) | the `variables` service for non-secret values, the `secrets` service for secrets |
+| Key | oxlint rules required | Use instead |
+| --- | --- | --- |
+| `lint.enforceContentService` | `no-restricted-imports` on `fs`, `node:fs`, `fs/promises` and `node:fs/promises` (type-only imports allowed), and `typescript/no-require-imports` | the `content` service: keyed, project-scoped, signed reads and writes |
+| `lint.enforceVariablesService` | `node/no-process-env`, with the `node` plugin | the `variables` service for non-secret values, the `secrets` service for secrets |
 
-Both rules are project-wide, with no path allowlist, and cover every source file the inspector reads. Generated code (`.pikku/`, `*.gen.ts`), declaration files and test files (`*.test.ts`, `*.spec.ts`) are exempt. Type-only imports are not flagged. The first version of `PKU412` detects `node:fs` only.
+When a rule is missing or below the key's level, validate reports `oxlint-enforce-content-service` or `oxlint-enforce-variables-service`; each use in the source is reported as the oxlint finding (`oxlint-eslint-no-restricted-imports`, `oxlint-node-no-process-env`, ...). `pikku enable oxlint` exempts `*.test.*` and `*.spec.*` files through an `overrides` entry; exempt another file (bootstrap, a script) the same way. `const { env } = process` and `globalThis.process.env` are not caught.
 
-To relax a rule, set it to `'warn'` (printed, does not fail the build) or `'off'`:
+To relax a key for the whole project, set it to `'warn'` or `'off'`:
 
 ```json
 {
@@ -156,7 +208,7 @@ To relax a rule, set it to `'warn'` (printed, does not fail the build) or `'off'
 
 `pikkuConfig()` runs before any service exists, so a `process.env` read there is flagged too. Read the value through the `variables` argument instead: `pikkuConfig(async (variables) => ({ port: Number(variables?.get('API_PORT') ?? 4003) }))`. Every host passes one (Cloudflare, Lambda and Azure from their bindings, the CLI runner), and `pikku serve`, `pikku dev` and the `pikku db` commands now do too; before, they called `createConfig()` with no argument. Note `variables.get` parses JSON, so a port can arrive as a number: coerce it. Tools that read a developer's project files or environment (CLIs, addons that edit a checkout, test harnesses) should set the relevant key to `'off'`.
 
-To find the affected code, run `pikku all` and look for `PKU412` and `PKU413`. The message names each file and line.
+To find the affected code, run `pikku validate`. Each finding names the file and line.
 
 ### The mesh is named `mesh`, and remote addons use the public RPC route
 

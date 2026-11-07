@@ -1,13 +1,7 @@
 ---
 name: pikku-deploy
 description: >-
-  Deploying a Pikku app to a runtime: Express, Fastify, uWebSockets.js, `ws`, Next.js, AWS Lambda,
-  Cloudflare Workers, Azure Functions. Covers the shared bootstrap, choosing a runtime, which accept
-  RunHTTPWiringOptions, scheduled tasks per runtime, CORS and health checks. TRIGGER when: writing
-  or debugging `start.ts`, a worker entry or Lambda handler, importing
-  @pikku/express|fastify|uws|ws|next|lambda|cloudflare|azure-functions, or asked how to serve, host
-  or deploy a Pikku app. DO NOT TRIGGER when: defining functions or wirings with no runtime-specific
-  code.
+  Run a Pikku app on a runtime: Express, Fastify, uWebSockets.js, ws, Next.js, Lambda, Cloudflare Workers, Azure Functions. `start.ts`, worker entries, schedules per runtime, CORS, health checks.
 installGroups: [core]
 ---
 

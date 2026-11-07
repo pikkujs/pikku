@@ -64,6 +64,7 @@ export const ThreadDeleted = z.object({ deleted: z.boolean() })
 
   const functions = `import {
   agentCallOptions,
+  assertAgentRouteAccess,
   canAccessThread,
   threadOwnerConstraint,
 } from '@pikku/core/agent'
@@ -100,6 +101,7 @@ export const agentCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
+    assertAgentRouteAccess(data.agentName)
     return await rpc.agent.run(data.agentName as any, agentCallOptions(data))
   },
 })
@@ -109,6 +111,7 @@ export const agentStreamCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
+    assertAgentRouteAccess(data.agentName)
     await rpc.agent.stream(data.agentName as any, agentCallOptions(data))
   },
 })
@@ -118,6 +121,7 @@ export const agentApproveCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentApproval,
   func: async (_services, { runId, approvals, agentName }, { rpc }) => {
+    assertAgentRouteAccess(agentName)
     return await rpc.agent.approve(runId, approvals, agentName)
   },
 })
@@ -127,9 +131,11 @@ export const agentResumeCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentResume,
   func: async (_services, data, { rpc }) => {
+    assertAgentRouteAccess(data.agentName)
     await rpc.agent.resume(data.runId, {
       toolCallId: data.toolCallId,
       approved: data.approved,
+      expectedAgentName: data.agentName,
     })
   },
 })

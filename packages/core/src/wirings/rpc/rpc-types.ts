@@ -29,7 +29,11 @@ export type PikkuRPC<
     stream: AgentStream
     resume: (
       runId: string,
-      input: { toolCallId: string; approved: boolean },
+      input: {
+        toolCallId: string
+        approved: boolean
+        expectedAgentName?: string
+      },
       options?: any
     ) => Promise<void>
     approve: (
