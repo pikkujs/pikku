@@ -31,9 +31,17 @@ type Finding = z.infer<typeof FindingSchema>
  * platform has already applied the coercion map to (pikku dev, standalone,
  * Cloudflare). Attaching the plugin to it again would parse json twice.
  */
-const takesPlatformKysely = (text: string): boolean =>
-  /existingServices\??\.kysely\b/.test(text) ||
-  /\{[^{}]*\bkysely\b[^{}]*\}\s*=\s*existingServices\b/.test(text)
+const takesPlatformKysely = (source: string): boolean => {
+  // Comments are blanked first: a mention of `existingServices.kysely` in a
+  // comment does not take the platform's instance.
+  const text = blankComments(source)
+  return (
+    /existingServices\??\.kysely\b/.test(text) ||
+    /\{[^{}]*\bkysely\b[^{}]*\}\s*=\s*existingServices\b/.test(text) ||
+    // The factory's second parameter, destructured: `(config, { kysely })`.
+    /\(\s*\w+\s*(?::[^,)]+)?,\s*\{[^{}]*\bkysely\b[^{}]*\}/.test(text)
+  )
+}
 
 export const ProjectChecksInput = z.object({
   skipTypecheck: z
