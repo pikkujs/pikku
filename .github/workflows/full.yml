@@ -399,6 +399,7 @@ jobs:
             release,
             deploy-azure,
             deploy-standalone,
+            ci,
             app-native,
             better-auth,
             next-better-auth,
