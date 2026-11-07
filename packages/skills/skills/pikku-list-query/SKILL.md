@@ -13,7 +13,7 @@ What to reach for and why. For how to call it, run this once: `pikku doc pikkuLi
 
 1. Write the backend with `pikkuListFunc`, never a bespoke `{items: [...]}` shape once the list can page. With no filters write `pikkuListFunc<Record<string, unknown>, Row>`: `Record<string, never>` makes the hook's `limit` a type error.
 2. Wire the frontend with `usePikkuInfiniteQuery`, not a hand-rolled `useState` page counter or a raw `useInfiniteQuery`. The generated hook resolves cursor plumbing from your function's types.
-3. Validate with `pikku check`, which also regenerates the hook.
+3. Validate with `pikku all`, which also regenerates the hook.
 
 ## The `pikkuListFunc` contract
 
