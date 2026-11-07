@@ -38,7 +38,7 @@ pikkuAgent({
   personality?: string,          // How it sounds: tone, verbosity
   goal: string,                  // REQUIRED — what it is for
 
-  model: string,                 // e.g. 'openai/gpt-5-mini'
+  model: string,                 // an alias from pikku.config.json, e.g. 'fast'
   temperature?: number,
   providerOptions?: {            // passed through untouched, keyed by provider
     openai?: { reasoningEffort?: 'minimal' | ... },
@@ -178,7 +178,7 @@ export const todoAgent = pikkuAgent({
   name: 'todo-agent',
   description: 'Manages a todo list',
   goal: 'You help users manage their todos. You can list, add, complete and delete them.',
-  model: 'openai/gpt-5-mini',
+  model: 'fast',
   tools: [
     ref('todos:listTodos'),
     ref('todos:addTodo'),
@@ -212,7 +212,7 @@ export const structuredAgent = pikkuAgent({
   name: 'structured-agent',
   description: 'Classifies a message and returns a structured verdict',
   goal: 'You classify the sentiment of the user message.',
-  model: 'openai/gpt-5-mini',
+  model: 'fast',
   output: z.object({ sentiment: z.string(), score: z.number() }),
 })
 ```
@@ -315,7 +315,7 @@ export const todoAssistant = pikkuAgent({
   goal: `Keep the user's todos accurate.
     - When creating todos, infer priority if not specified
     - When listing todos, summarize the results`,
-  model: 'openai/gpt-5-mini',
+  model: 'fast',
   tools: [
     ref('todos:listTodos'),
     ref('todos:createTodo'),

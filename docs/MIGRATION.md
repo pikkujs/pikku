@@ -24,6 +24,59 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### A workflow or agent with no `auth` wants a session
+
+A workflow is a function, so it now takes the same `auth` default as one: unset means a session is required, and only an explicit `auth: false` is anonymous. The same goes for an agent. Both used to be open when `auth` was unset.
+
+| Before                                                        | Now                                                                       |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| A workflow or agent with no `auth` ran for anyone             | It needs a session. `auth: false` keeps the old behaviour                 |
+| `/workflow/:name/*` and `/rpc/agent/:name/*` reached any name | Only `expose: true` ones. Anything else answers 404                       |
+| A refused start left a failed run behind                      | A refused start refuses at the request, with no run and no `runId`        |
+| A graph applied no checks of its own                          | A graph's `auth` applies the same way                                     |
+| A run with no owner could be read by anyone with its id       | Refused, unless the workflow is `auth: false` or its permissions allow it |
+| Any run could be read through any workflow's URL              | The run must belong to the workflow in the URL                            |
+
+The routes stay one per action. They take an optional session and leave the decision to the workflow's own `expose`, `auth`, `scopes`, `permissions` and input schema. `POST /rpc/<workflow>` is unchanged and runs the same declaration.
+
+What to do:
+
+- **Schedules, triggers and queue jobs:** a workflow or agent started with no user now fails with `Authentication required`. Add `auth: false`. A workflow written as `pikkuWorkflowFunc(async ...)` must use the `{ auth: false, func }` form, and `pikkuWorkflowGraph` takes `auth` too.
+- **Clients of the generated routes:** add `expose: true` to each workflow or agent they call. Send a session unless it is `auth: false`.
+- **A run with an owner** is only for that owner, even on an `auth: false` workflow.
+- **Permissions on status:** a workflow's permissions also run on status and stream reads, on every poll, and receive the run's stored input. A permission that reads a field a start supplies keeps working. One with side effects will run more often.
+- `rpc.startWorkflow` and `rpc.agent` do not check `expose`, and do not need it.
+
+**With no `sessionStore`:**
+
+A run started through a generated route, or through `checkWorkflowStart`, is checked with the caller's real session and records that it was. The run row holds a marker and the user id, never the session. A queued `auth: true` workflow then works with no `sessionStore`, and:
+
+- The body gets `session` as `{ userId }` and nothing else. If it reads another session field, add a `sessionStore`.
+- The workflow's own `auth`, `scopes` and `permissions` are not run again in the body: the start judged them.
+- Steps and child workflows get the same `{ userId }`, and do run their own checks against it, so a step needing a scope or a session field is refused. Add a `sessionStore`.
+
+`rpc.startWorkflow` from your own function sets no marker. Without a `sessionStore`, a workflow it starts with `auth` unset is refused in the body, even if your function has a session. Either go through the check, which needs `expose: true`, or use `auth: false` on a workflow that is not exposed:
+
+```ts
+const start = await checkWorkflowStart('checkout', input, { session })
+return rpc.startWorkflow('checkout', start.input, { wire: start.wire })
+```
+
+If a `sessionStore` is configured, the marker does nothing: the session comes from the store on every run, and one that has gone from the store is refused.
+
+Related changes:
+
+- **`workflow.approval()` must declare `approvers`.** A missing `approvers` is now compile error PKU645. It used to default to `any`, which accepted an answer from anyone. Write `approvers: 'any'` to keep that gate open to any signed-in user.
+- **`approvers: 'owner'` on a run with no owner** now refuses every user. Previously it accepted anyone.
+- **The approve route** needs a session, also on an `auth: false` workflow, and honours the workflow name in its URL.
+- **`assertWorkflowRunOwner` refuses a run with no owner.** If you call it yourself for internal readers, gate those with their own scope instead. `streamWorkflowRunStatus` now takes `workflowName` and `wire` in place of `session`.
+- **`/workflow-run/:runId/stream` in the console addon** now needs a session and the `pikku:console:workflows:read` scope. It was anonymous and sent full step data.
+- **`pikku validate` exits with code 1** when it reports errors. CI that ignored these will start failing.
+- **`rpc.agent.resume`** takes an optional `expectedAgentName`. The generated resume route passes it, so a run cannot be resumed through another agent's route.
+- **A published addon** keeps its old meta until it is rebuilt, so its workflows stay open until then.
+
+To find affected code, search for `pikkuWorkflowFunc`, `pikkuWorkflowGraph`, `pikkuAgent(`, `rpc.startWorkflow`, `workflow.approval(` and `assertWorkflowRunOwner`, and run `pikku validate`.
+
 ### `x-request-id` is replaced by `traceparent`
 
 Pikku now uses W3C trace context. An HTTP request's `wire.traceId` is 32 lowercase hex, and `wire.trace` adds `spanId`, `parentSpanId` and `sampled`. `errorId` in error responses has the same format.
@@ -62,7 +115,6 @@ Channels, agent tools, MCP, CLI, triggers, webhook sources, gateways and `runRpc
   ```sql
   ALTER TABLE channels ADD COLUMN traceparent TEXT;
   ```
-
 
 To find affected code, search for `traceId` on a channel RPC frame, and for overrides of `accept` or `enqueue`.
 

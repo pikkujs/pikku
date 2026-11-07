@@ -41,30 +41,84 @@ describe('serializeWorkflowRoutes', () => {
     assert.match(result, /func: workflowApprover/)
     assert.match(
       result,
-      /await workflowService\.approveStep\(runId, reason, decision, session\)/
+      /await workflowService\.approveStep\(runId, reason, decision, wire\.session\)/
     )
   })
 
-  test('every run entrypoint is gated on run ownership', () => {
-    const { functions: result } = serializeWorkflowRoutes(leaf)
+  const body = (output: string, name: string) => {
+    const start = output.indexOf(`export const ${name} =`)
+    assert.notEqual(start, -1, `expected ${name} to be generated`)
+    const end = output.indexOf('\nexport const ', start + 1)
+    return output.slice(start, end === -1 ? undefined : end)
+  }
+
+  const routeFunctions = [
+    'workflowStarter',
+    'workflowRunner',
+    'workflowStatusChecker',
+    'workflowStatusStream',
+    'workflowStatusStreamFull',
+    'workflowApprover',
+  ]
+
+  for (const name of routeFunctions) {
+    test(`${name} leaves the session optional: the workflow decides`, () => {
+      const { functions } = serializeWorkflowRoutes(leaf)
+      const declaration = body(functions, name)
+      assert.match(declaration, /= pikkuSessionlessFunc\(\{/)
+      assert.match(declaration, /\n  auth: false,/)
+    })
+  }
+
+  test('one route per action: there is no separate anonymous route', () => {
+    const { functions } = serializeWorkflowRoutes(leaf)
+
+    assert.ok(!functions.includes('/anonymous'))
+    assert.equal(
+      functions.match(/route: '\/workflow\/:workflowName\/start'/g)?.length,
+      1
+    )
+  })
+
+  test('a start is checked before anything is created, and uses what the check returns', () => {
+    const { functions } = serializeWorkflowRoutes(leaf)
 
     assert.match(
-      result,
-      /assertWorkflowRunOwner,?\n?[^}]*\} from '@pikku\/core\/workflow'/
+      body(functions, 'workflowStarter'),
+      /checkWorkflowStart\(workflowName, data \?\? \{\}, wire\)[\s\S]*startWorkflow\(workflowName as any, start\.input as any, \{\s+wire: start\.wire,/
     )
-    const ownershipChecks =
-      result.match(/assertWorkflowRunOwner\(run\.wire, session\)/g) ?? []
-    assert.equal(
-      ownershipChecks.length,
-      1,
-      'the status checker owns the run itself; both streams hand session to streamWorkflowRunStatus, which owns it there'
+    assert.match(
+      body(functions, 'workflowRunner'),
+      /checkWorkflowStart\(workflowName, data \?\? \{\}, wire\)[\s\S]*runToCompletion\(workflowName, start\.input, wire\.rpc, \{\s+wire: start\.wire,/
     )
-    const sessionsPassed =
-      result.match(/streamWorkflowRunStatus\(\{[^}]*session/g) ?? []
-    assert.equal(
-      sessionsPassed.length,
-      2,
-      'a stream that forgot to pass session would poll an unowned run'
+  })
+
+  test('status routes read a run only through the run check, naming the workflow', () => {
+    const { functions } = serializeWorkflowRoutes(leaf)
+
+    assert.match(
+      body(functions, 'workflowStatusChecker'),
+      /checkWorkflowRunAccess\(workflowName, run, wire, 'read'\)/
+    )
+    for (const name of ['workflowStatusStream', 'workflowStatusStreamFull']) {
+      const stream = body(functions, name)
+      assert.match(stream, /workflowName/)
+      assert.match(stream, /\n\s+wire,/)
+    }
+  })
+
+  test('the approver checks the workflow and the run before answering', () => {
+    const { functions } = serializeWorkflowRoutes(leaf)
+    const approver = body(functions, 'workflowApprover')
+
+    assert.match(
+      approver,
+      /checkWorkflowRunAccess\(workflowName, run, wire, 'approve'\)/
+    )
+    assert.ok(
+      approver.indexOf('checkWorkflowRunAccess(') <
+        approver.indexOf('approveStep('),
+      'the check has to run before the decision is recorded'
     )
   })
 
@@ -87,7 +141,7 @@ describe('serializeWorkflowRoutes', () => {
     // route's access rather than failing the build.
     assert.match(
       result,
-      /func: async \(\{ workflowService \}, \{ runId, reason, decision \}, \{ session \}\)/
+      /func: async \(\{ workflowService \}, \{ workflowName, runId, reason, decision \}, wire\)/
     )
   })
 
@@ -99,7 +153,7 @@ describe('serializeWorkflowRoutes', () => {
     assert.match(functions, /from '\.\/workflow-routes\.schemas\.gen\.js'/)
     assert.match(functions, /input: WorkflowStart/)
     assert.ok(
-      !functions.includes('pikkuSessionlessFunc<'),
+      !/pikku(Sessionless)?Func</.test(functions),
       'schemas and generics are mutually exclusive'
     )
   })

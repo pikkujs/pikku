@@ -1,18 +1,13 @@
 ---
 name: pikku-scenario
 description: >-
-  Writing and running Pikku scenarios (pikkuScenario): virtual users drive the app over the real
-  transport, so a flow doubles as an e2e test and a stage/production health check. Covers
-  scenario.do/expectEventually/expectError/expectService/expectScore, pikkuScenarioStep (Playwright
-  browser steps), virtual users and environments in pikku.config.json, VIRTUAL_USER_SIGNING_KEY,
-  `pikku scenario`/`pikku virtual-user`, coverage via `pikku dev --coverage`. TRIGGER when: asked
-  about scenarios, testing a Pikku function, coverage, e2e or browser flows, health checks, virtual
-  users or adversarial stage runs. DO NOT TRIGGER for running an existing suite (use Bash) or CI
-  config.
+  Pikku scenarios (pikkuScenario): virtual users driving the real transport as e2e tests and health checks, Playwright steps, `pikku scenario`, `pikku virtual-user`, coverage, adversarial runs.
 installGroups: [core]
 ---
 
 # Pikku Scenarios
+
+What to reach for and why. For how to call it, run this once: `pikku doc scenarios pikkuScenario TypedScenario pikkuFeature pikkuScenarioStep pikkuAgentScorer pikkuAgentJudge`.
 
 ## Agent Operating Procedure
 
@@ -49,57 +44,13 @@ Scenarios live in `srcDirectories` like any other function — by convention `*.
 
 ## Writing one
 
-`pikkuScenario` comes from the **generated** workflow types, not `@pikku/core`:
-
-```typescript
-import { pikkuScenario } from '#pikku/scenarios'
-
-export const orderSupportScenario = pikkuScenario<
-  { value?: number },
-  { doubled: number; message: string }
->({
-  title: 'Order support (scenario)',
-  tags: ['scenario'],
-  func: async ({ logger }, data, { scenario, virtualUsers }) => {
-    if (!virtualUsers?.shopper || !virtualUsers?.support) {
-      throw new Error(
-        'orderSupportScenario needs run virtualUsers (shopper + support) — run via `pikku scenario run <environment>`'
-      )
-    }
-
-    const doubled = await scenario.do(
-      'shopper doubles their order',
-      'doubleValue',
-      { value: data?.value ?? 21 },
-      { virtualUser: virtualUsers.shopper }
-    )
-
-    const settled = await scenario.expectEventually(
-      'support sees the greeting settle',
-      'formatMessage',
-      { greeting: 'Hello', name: 'Support' },
-      (out: { message: string }) => out.message.length > 0,
-      { virtualUser: virtualUsers.support, within: '5s', interval: 50 }
-    )
-
-    return { doubled: doubled.result, message: settled.message }
-  },
-})
-```
+`pikkuScenario` comes from the **generated** types (`#pikku/scenarios`), not `@pikku/core`. Guard the virtual users it needs at the top of `func`, and throw an error that names `pikku scenario run <environment>`.
 
 A scenario takes the same config fields as a workflow (`title`, `description`, `tags`, `input`/`output`, `auth`, `permissions`, `middleware`, `version`, …). The third argument is the scenario context: `{ scenario, virtualUsers }`.
 
 ### The scenario API
 
-| Call                                                                                       | Purpose                                                                                                                |
-| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `scenario.do(step, rpc, data, { virtualUser })`                                            | Run an RPC as that virtual user. The step name is what appears in the run output.                                      |
-| `scenario.expectEventually(step, rpc, data, predicate, { virtualUser, within, interval })` | Poll until `predicate(out)` passes or `within` elapses. For anything asynchronous — queues, workers, eventual state.   |
-| `scenario.expectError(step, rpc, data, { virtualUser, matches })`                          | Assert the call **fails**. For fault injection and negative paths.                                                     |
-| `scenario.expectService(step, 'service.method', { virtualUser, calledWith })`              | Assert a stubbed service was called. Requires the server to run with `--test`.                                         |
-| `scenario.expectScore(step, runId, scorer, { atLeast, atMost, reference })`                | Grade a finished agent run with a declared scorer and assert the score. See below.                                     |
-| `scenario.given(stepName, step, data, { virtualUser })`                                    | Run a declared `pikkuScenarioStep` as setup. `when` is the same call; `then` also makes the step's bindings witnesses. |
-| `scenario.runScheduledTask(name)`                                                          | Fire a wired scheduler on the target now, rather than waiting for its cron.                                            |
+`TypedScenario` prints the calls. `do`, `expectEventually`, `expectError`, `expectService`, `given`, `when` and `then` take `{ virtualUser }`. `expectService` needs the server run with `--test`. `then` also makes the step's bindings witnesses. `runScheduledTask(name)` fires a wired scheduler on the target now, rather than waiting for its cron.
 
 `expectEventually` is **scenario-only**. Calling it from a `pikkuWorkflowFunc` is a critical inspector error (`PKU675`) pointing you at `pikkuScenario`.
 
@@ -145,32 +96,9 @@ the default suite excludes it.
 
 ### Setup and teardown (`before` / `after`)
 
-A scenario config takes `before` and `after`. Both have the **same signature as `func`** — `(services, data, wire)` — with the return value discarded:
+A scenario config takes `before` and `after`. Both have the **same signature as `func`** — `(services, data, wire)` — with the return value discarded. A hook is usually a named function shared between scenarios, and reaches virtual users as `wire.virtualUsers`.
 
-```typescript
-const resetsCredentials = async (_services, _data, { virtualUsers }) => {
-  await virtualUsers!.admin!.invoke('resetCredentials', {})
-}
-
-export const credentialScenario = pikkuScenario({
-  title: 'A credential is loaded on first use',
-  tags: ['scenario', 'credential'],
-  before: resetsCredentials,
-  after: removesInstalledAddon,
-  func: async (services, data, { scenario, virtualUsers }) => {
-    /* … */
-  },
-})
-```
-
-| Rule                                                                                                     |
-| -------------------------------------------------------------------------------------------------------- |
-| `before` throwing skips the body and fails the run — but `after` still runs.                             |
-| `after` always runs, in a `finally`, whether the scenario passed or failed.                              |
-| `after` throwing fails a run that would otherwise have passed.                                           |
-| `after` throwing on an already-failed run attaches as the `cause` and never replaces the original error. |
-| Neither runs when the run is suspended or waiting — teardown only fires at a terminal outcome.           |
-| Hooks are **not** ladder rows. The runner records nothing for them; a failure is labelled by phase.      |
+Neither runs when the run is suspended or waiting: teardown only fires at a terminal outcome. Hooks are **not** ladder rows: the runner records nothing for them, and a failure is labelled by phase.
 
 A hook reaches the app the same way the body does: through `wire.virtualUsers`. If you want cleanup to be _visible_ on the ladder, make it an ordinary `scenario.then(...)` instead.
 
@@ -178,30 +106,7 @@ Hooks are scenario-only. A `before`/`after` on a `pikkuWorkflowFunc` never runs 
 
 ### Grouping scenarios (`pikkuFeature`)
 
-`pikkuFeature` groups scenarios the way gherkin's `Feature:` groups `Scenario:`. Scenarios are referenced by **imported identifier**, so a renamed or deleted scenario is a compile error rather than a silent skip:
-
-```typescript
-import { pikkuFeature } from '#pikku/scenarios'
-import {
-  credentialLazyLoadScenario,
-  credentialRoundTripScenario,
-} from './credential.scenario.js'
-
-export const credentialFeature = pikkuFeature({
-  name: 'Credential API',
-  description: 'Credentials resolve lazily and are scoped per user',
-  tags: ['credential'],
-  before: startsMockOAuthServer,
-  after: stopsMockOAuthServer,
-  scenarios: [
-    credentialLazyLoadScenario,
-    ...['stripe', 'google', 'hmac-key'].map((name) => ({
-      scenario: credentialRoundTripScenario,
-      data: { name },
-    })),
-  ],
-})
-```
+`pikkuFeature` groups scenarios the way gherkin's `Feature:` groups `Scenario:`. Scenarios are referenced by **imported identifier**, so a renamed or deleted scenario is a compile error rather than a silent skip. `scenarios` holds bare identifiers or `{ scenario, data }` entries, and a `.map` over values works.
 
 | Rule                                                                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------------- |

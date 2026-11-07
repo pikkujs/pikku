@@ -12,6 +12,7 @@ export const taskWithTagsWorkflow = pikkuWorkflowFunc<
   { title: string; tags: string[]; tagsToRemove: string[] },
   { taskId: string; addedTags: string[]; removedTags: string[] }
 >({
+  auth: false,
   title: 'Task with Tags',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

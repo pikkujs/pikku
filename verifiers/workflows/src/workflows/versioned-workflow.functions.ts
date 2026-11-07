@@ -4,6 +4,7 @@ export const versionedItemWorkflow = pikkuWorkflowFunc<
   { itemId: string },
   { result: string; version: number }
 >({
+  auth: false,
   title: 'Versioned Item Workflow',
   func: async (_services, data, { workflow }) => {
     const item = await workflow.do('Process item', 'processItem', {

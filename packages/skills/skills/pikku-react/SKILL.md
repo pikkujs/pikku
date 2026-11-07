@@ -1,13 +1,7 @@
 ---
 name: pikku-react
 description: >-
-  React frontend talking to a Pikku backend: PikkuProvider/createPikku, generated React Query hooks
-  (usePikkuQuery, usePikkuMutation, usePikkuInfiniteQuery), usePikkuRPC/usePikkuFetch, realtime
-  subscriptions, agent and workflow hooks. TRIGGER when: writing a React component that fetches or
-  mutates backend data, wiring PikkuProvider, paginating, or running/tracking a workflow from the
-  client. DO NOT TRIGGER for backend work (use pikku-wiring), defining the workflow (use
-  pikku-workflow), rendering fetched values such as dates (use pikku-tailwind) or user-facing copy
-  (use pikku-i18n).
+  React frontend on a Pikku backend: PikkuProvider, usePikkuQuery, usePikkuMutation, usePikkuRPC, agent and workflow hooks. Rendering fetched values is pikku-tailwind; copy is pikku-i18n.
 installGroups: [client]
 ---
 

@@ -12,6 +12,7 @@ export const parallelCommentsWorkflow = pikkuWorkflowFunc<
   { taskId: string; comments: Array<{ content: string; authorId: string }> },
   { addedCount: number }
 >({
+  auth: false,
   title: 'Parallel Comments',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

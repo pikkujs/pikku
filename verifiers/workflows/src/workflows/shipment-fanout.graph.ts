@@ -4,6 +4,7 @@ import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 // shipment, binding each element through `$item`, and its own result is the
 // ordered array of per-item results that `manifest` folds back up.
 export const graphShipmentFanout = pikkuWorkflowGraph({
+  auth: false,
   description: 'Graph fan-out: one label per shipment, then one manifest',
   tags: ['fanout', 'graph'],
   nodes: {
@@ -32,6 +33,7 @@ export const graphShipmentFanout = pikkuWorkflowGraph({
 
 // The same fan-out, one item at a time.
 export const graphShipmentFanoutSequential = pikkuWorkflowGraph({
+  auth: false,
   description: 'Graph fan-out: labels one shipment at a time',
   tags: ['fanout', 'graph'],
   nodes: {

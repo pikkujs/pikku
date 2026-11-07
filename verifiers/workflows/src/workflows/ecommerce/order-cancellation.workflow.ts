@@ -12,6 +12,7 @@ export const orderCancellationWorkflow = pikkuWorkflowFunc<
   { orderId: string; reason: string },
   { refundId: string; inventoryReleased: boolean; status: string }
 >({
+  auth: false,
   title: 'Order Cancellation',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {

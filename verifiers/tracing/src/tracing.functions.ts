@@ -54,6 +54,7 @@ export const traceStartsRun = pikkuSessionlessFunc<void, Hop>({
 })
 
 export const traceRun = pikkuWorkflowFunc<{}, void>({
+  auth: false,
   func: async ({}, _data, { workflow }) => {
     await workflow.do('Step one', 'traceJob', { at: 'step-one' })
     await workflow.do('Step two', 'traceJob', { at: 'step-two' })

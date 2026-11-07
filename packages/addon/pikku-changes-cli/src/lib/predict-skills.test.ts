@@ -22,3 +22,13 @@ test('a planned schema changeset brings the architect and the database skill', (
 test('copy work predicts nothing', () => {
   assert.deepEqual(predictSkills(['Reword the welcome text']), [])
 })
+
+test('work with files brings the content skill', () => {
+  for (const text of [
+    'Let customers upload a photo',
+    'Attach a PDF to each invoice',
+    'Keep the signed document',
+  ]) {
+    assert.deepEqual(predictSkills([text]), ['pikku-content'])
+  }
+})

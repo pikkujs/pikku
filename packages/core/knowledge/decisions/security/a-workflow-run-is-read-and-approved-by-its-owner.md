@@ -1,7 +1,7 @@
 ---
 type: decision
 title: A workflow run is read by its owner, and answered by whoever its gate declares
-description: A run started through a session records that user and only that user may read it; who may answer an approval gate is the gate's own declaration, and a run with no recorded owner has no ownership to enforce
+description: A run started through a session records that user and only that user may read it; who may answer an approval gate is the gate's own declaration, and a run with no recorded owner cannot be read through a route
 tags: workflow
 ---
 
@@ -18,10 +18,13 @@ session at all and rejected only an already-resolved gate.
 **read** paths share: the generated status routes assert it against the run they
 were already reading.
 
-**A run with no recorded owner is not gated.** Triggers, schedulers and routes
-wired without auth start runs with no `pikkuUserId`; there is nobody to compare a
-caller against, and inventing one would reject the framework's own callers rather
-than secure anything. Gate those at the entrypoint with `auth` or `permissions`.
+**A run with no recorded owner is refused** by `assertWorkflowRunOwner`. Triggers,
+schedulers and anonymous starts make runs with no `pikkuUserId`, and nobody can prove
+such a run is theirs. An earlier version let them through, which made every ownerless
+run readable by anyone holding its id. The routes go through
+`checkWorkflowRunAccess`, where the workflow's declaration can open one: `auth: false`
+for anyone, or its permissions, judged on the run's stored input. Consoles do not use this check; they gate on their own
+scopes (`pikku:console:workflows:read`).
 
 This is ownership, not an approver model. It answers "is this your run", not "are
 you entitled to approve this particular gate".
@@ -42,8 +45,12 @@ recorded before the run has reached the gate, and that one has no policy to be
 judged against yet — it is judged on replay instead, alongside payload
 validation, and discarded if it fails.
 
-The default is therefore `any`: a gate is a pause for a decision, not an
-authorization boundary, and a route that needs one has `auth`/`permissions`.
+`approvers` has no default. The inspector refuses a `workflow.approval()` without
+it (PKU645), because a gate that says nothing about who answers it was open to
+anyone. An explicit `'any'` means any signed-in user: the generated approve route
+requires a session, even on an `auth: false` workflow, and only reaches `expose: true` workflows. `approveStep` itself
+still accepts no session, because application code answering a gate is not a user.
+`'owner'` on an ownerless run refuses every user, for the same reason a read does.
 
 **What this rules out:** treating a run id as a capability, adding a new run read
 path that does not take a session, and re-deriving who may approve from who

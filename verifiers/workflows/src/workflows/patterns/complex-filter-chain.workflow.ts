@@ -18,6 +18,7 @@ export const complexFilterChainWorkflow = pikkuWorkflowFunc<
   },
   { matchingOrders: string[]; totalValue: number }
 >({
+  auth: false,
   title: 'Complex Filter Chain',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

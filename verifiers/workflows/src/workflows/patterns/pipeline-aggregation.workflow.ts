@@ -13,6 +13,7 @@ export const pipelineAggregationWorkflow = pikkuWorkflowComplexFunc<
     totalValue: number
   }
 >({
+  auth: false,
   title: 'Pipeline Aggregation',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

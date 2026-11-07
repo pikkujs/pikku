@@ -211,6 +211,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
     credentialWireService,
     packageName = null,
     addonInstance,
+    gate,
+    gatesPassedAtStart = false,
   }: {
     singletonServices: CoreSingletonServices
     createWireServices?: CreateWireServices
@@ -232,6 +234,19 @@ export const runPikkuFunc = async <In = any, Out = any>(
     credentialWireService?: PikkuCredentialWireService
     packageName?: string | null
     addonInstance?: AddonInstance
+    /**
+     * Run the function's checks and stop before its body, returning the data as
+     * the schema left it. `start` is a call about to happen. `run` is a look at
+     * one that already did: it reads, so `readonly` does not apply, and its data
+     * was validated when it started.
+     */
+    gate?: 'start' | 'run'
+    /**
+     * For a workflow run proven by a checked start, on an app with no session
+     * store. There is no session to judge again, so what was judged is not.
+     * Only the workflow engine sets this, from the run row.
+     */
+    gatesPassedAtStart?: boolean
   }
 ): Promise<Out> => {
   wire.wireType ??= wireType
@@ -456,7 +471,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
     const session = invocationWire.session
 
-    if (funcMeta.sessionless) {
+    if (gatesPassedAtStart) {
+      // Judged at the start, against the real session.
+    } else if (funcMeta.sessionless) {
       if (
         wiringAuth === true ||
         funcConfig.auth === true ||
@@ -477,7 +494,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       }
     }
 
-    if (session?.readonly && !funcMeta.readonly) {
+    if (session?.readonly && !funcMeta.readonly && gate !== 'run') {
       throw new ReadonlySessionError()
     }
 
@@ -497,15 +514,17 @@ export const runPikkuFunc = async <In = any, Out = any>(
       addonInstance?.namespace
     )
     const functionScopes = funcConfig.scopes ?? funcMeta.scopes
-    verifyScopes(
-      addonScopes.length > 0
-        ? [...addonScopes, ...(functionScopes ?? [])]
-        : functionScopes,
-      session
-    )
+    if (!gatesPassedAtStart) {
+      verifyScopes(
+        addonScopes.length > 0
+          ? [...addonScopes, ...(functionScopes ?? [])]
+          : functionScopes,
+        session
+      )
+    }
 
     const featureFlag = funcConfig.featureFlag ?? funcMeta.featureFlag
-    if (featureFlag) {
+    if (featureFlag && !gatesPassedAtStart) {
       // The host's source, not the package's: a `featureFlag:` on an addon
       // function names a flag the consuming application declared and its
       // operators switch. A package factory builds its own services and has no
@@ -522,7 +541,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     let actualData = await data()
 
     const inputSchemaName = funcMeta.inputSchemaName
-    if (inputSchemaName) {
+    if (inputSchemaName && gate !== 'run') {
       actualData = applyDefaultsFromSchema(
         inputSchemaName,
         actualData,
@@ -544,17 +563,21 @@ export const runPikkuFunc = async <In = any, Out = any>(
       )
     }
 
-    await runPermissions({
-      funcPermissions: funcConfig.permissions,
-      services: withoutSecrets(
-        resolvedSingletonServices,
-        'a permission'
-      ) as CoreSingletonServices,
-      // knowledge: decisions/security/a-permission-gets-a-wire-it-cannot-reply-on.md
-      wire: invocationWire as PermissionWire,
-      data: actualData,
-      packageName: funcPackageName,
-    })
+    if (!gatesPassedAtStart) {
+      await runPermissions({
+        funcPermissions: funcConfig.permissions,
+        services: withoutSecrets(
+          resolvedSingletonServices,
+          'a permission'
+        ) as CoreSingletonServices,
+        // knowledge: decisions/security/a-permission-gets-a-wire-it-cannot-reply-on.md
+        wire: invocationWire as PermissionWire,
+        data: actualData,
+        packageName: funcPackageName,
+      })
+    }
+
+    if (gate) return actualData
 
     let wireServices: Record<string, unknown> | undefined
     let invocationAuditLog: AuditLog | undefined

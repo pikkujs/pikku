@@ -123,6 +123,7 @@ export const approvesWorkflowGate = pikkuScenarioStep<
         const response = await postScenarioJson(
           `${apiUrl}/workflow/${run.workflowName}/approve/${run.runId}`,
           {
+            headers: { 'x-user-id': 'workflow-approver' },
             body: {
               reason,
               decision: { approved: true, reviewer: 'manager' },

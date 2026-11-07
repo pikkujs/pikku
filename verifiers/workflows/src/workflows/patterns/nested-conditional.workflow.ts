@@ -8,6 +8,7 @@ export const nestedConditionalWorkflow = pikkuWorkflowFunc<
   { leadId: string; score: number; hasCompany: boolean; budget: number },
   { route: string; assignedTo: string }
 >({
+  auth: false,
   title: 'Nested Conditional',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

@@ -12,6 +12,7 @@ export const documentBatchProcessingWorkflow = pikkuWorkflowFunc<
   { documentIds: string[]; operation: string },
   { processedCount: number; failedCount: number; reportId: string }
 >({
+  auth: false,
   title: 'Document Batch Processing',
   tags: ['document'],
   func: async (_services, data, { workflow }) => {

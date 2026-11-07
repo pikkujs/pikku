@@ -12,6 +12,7 @@ export const projectArchiveWorkflow = pikkuWorkflowFunc<
   { projectId: string; notifyMembers: boolean },
   { archivedAt: string; taskCount: number; membersNotified: number }
 >({
+  auth: false,
   title: 'Project Archive',
   tags: ['project'],
   func: async (_services, data, { workflow }) => {

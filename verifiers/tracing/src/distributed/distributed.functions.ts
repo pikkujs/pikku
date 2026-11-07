@@ -105,6 +105,7 @@ export const distStepAddon = pikkuSessionlessFunc<Dist, Hop>({
 })
 
 export const distRun = pikkuWorkflowFunc<Dist, void>({
+  auth: false,
   func: async ({}, data, { workflow }) => {
     await workflow.do('Mesh to D', 'distStepMesh', data)
     await workflow.do('Call the addon', 'distStepAddon', data)

@@ -1045,7 +1045,7 @@
           "pikkuFuncId": "restockWorkflow",
           "functionType": "user",
           "funcWrapper": "pikkuWorkflowFunc",
-          "sessionless": true,
+          "sessionless": false,
           "name": "restockWorkflow",
           "services": {
             "optimized": true,
@@ -1665,7 +1665,8 @@
           ],
           "dsl": true,
           "description": "Restock an item",
-          "expose": true
+          "expose": true,
+          "auth": null
         }
       },
       "files": [
@@ -1734,6 +1735,7 @@
           "pikkuFuncId": "restockWorkflow",
           "source": "dsl",
           "description": "Restock an item",
+          "expose": true,
           "nodes": {
             "Check price": {
               "nodeId": "Check price",
@@ -3422,15 +3424,9 @@
       "addonChannel": {}
     }
   },
-  "diagnostics": [
-    {
-      "level": "warn",
-      "code": "PKU574",
-      "message": "1 exposed sessionless function carries no permission and no addon gate, so it is reachable by anyone through POST /rpc/:rpcName: restockWorkflow. Add permissions to the function, set `auth: true` if a session is required after all, gate the whole addon with wireAddon({ auth: true }), drop `expose: true` if it was not meant to be callable from outside, or set `auth: false` to declare it public on purpose."
-    }
-  ],
+  "diagnostics": [],
   "validationPass": {
     "start": 0,
-    "end": 1
+    "end": 0
   }
 }

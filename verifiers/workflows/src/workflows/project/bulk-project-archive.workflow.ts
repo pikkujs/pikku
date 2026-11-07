@@ -12,6 +12,7 @@ export const bulkProjectArchiveWorkflow = pikkuWorkflowComplexFunc<
   { projectIds: string[] },
   { archivedProjects: Array<{ projectId: string; archivedAt: string }> }
 >({
+  auth: false,
   title: 'Bulk Project Archive',
   tags: ['project'],
   func: async (_services, data, { workflow }) => {

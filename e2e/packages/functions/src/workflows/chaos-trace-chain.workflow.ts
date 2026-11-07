@@ -8,6 +8,8 @@ export const chaosTraceChainWorkflow = pikkuWorkflowFunc<
   { tag: string },
   { tag: string }
 >({
+  auth: false,
+  expose: true,
   func: async ({}, data, { workflow }) => {
     await workflow.do('First step', 'chaosStep', { key: `first:${data.tag}` })
     await workflow.do(
@@ -30,6 +32,8 @@ export const chaosTraceChildWorkflow = pikkuWorkflowFunc<
   { tag: string },
   { tag: string }
 >({
+  auth: false,
+  expose: true,
   func: async ({}, data, { workflow }) => {
     await workflow.do('Child step', 'chaosStep', { key: `child:${data.tag}` })
     await workflow.do('Child second step', 'chaosStep', {

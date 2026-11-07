@@ -4,6 +4,7 @@ import { appendModified, logAgentIO } from '../middleware.js'
 import { listTodos, createTodo } from './todos.functions.js'
 
 export const todoAssistant = pikkuAgent({
+  expose: true,
   name: 'todo-assistant',
   description: 'A helpful assistant that manages todos',
   goal: 'You help users manage their todo lists. Always respond with a message and optionally include the todos array if relevant.',
@@ -18,6 +19,7 @@ export const todoAssistant = pikkuAgent({
 })
 
 export const dailyPlanner = pikkuAgent({
+  expose: true,
   name: 'daily-planner',
   description: 'Plans your day and suggests tasks based on your schedule',
   goal: 'You help users plan their day. Given a list of todos or context, suggest a prioritized schedule and recommend additional tasks if needed.',
@@ -26,6 +28,7 @@ export const dailyPlanner = pikkuAgent({
 })
 
 export const mainRouter = pikkuAgent({
+  expose: true,
   name: 'main-router',
   description: 'Routes requests to specialized agents',
   goal: "You coordinate between agents. First fetch the user's todos, then pass them to the daily planner for scheduling advice.",

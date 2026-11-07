@@ -20,6 +20,7 @@ export const orderWithInventoryCheckWorkflow = pikkuWorkflowComplexFunc<
   },
   { orderId: string; allItemsAvailable: boolean; unavailableItems: string[] }
 >({
+  auth: false,
   title: 'Order with Inventory Check',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {

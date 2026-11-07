@@ -12,6 +12,7 @@ export const multipleRetryableStepsWorkflow = pikkuWorkflowFunc<
     notificationSent: boolean
   }
 >({
+  auth: false,
   title: 'Multiple Retryable Steps',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

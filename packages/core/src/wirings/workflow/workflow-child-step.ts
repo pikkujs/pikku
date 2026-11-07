@@ -2,6 +2,7 @@ import { getSingletonServices } from '../../pikku-state.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
 import { ChildWorkflowStartedException } from './graph/graph-runner.js'
 import { childRunFailure } from './workflow-compensation.js'
+import { childRunWire } from './workflow-run-proof.js'
 import type { WorkflowRun, WorkflowRunWire } from './workflow.types.js'
 
 interface ChildStepApi {
@@ -29,13 +30,17 @@ export const runInlineChildStep = async (
   const { runId: childRunId } = await api.startWorkflow(
     workflowName,
     data,
-    {
-      type: 'workflow',
-      id: workflowName,
-      parentRunId: runId,
-      pikkuUserId: parentWire?.pikkuUserId,
-      traceparent: parentWire?.traceparent,
-    },
+    childRunWire(
+      parentWire,
+      {
+        type: 'workflow',
+        id: workflowName,
+        parentRunId: runId,
+        pikkuUserId: parentWire?.pikkuUserId,
+        traceparent: parentWire?.traceparent,
+      },
+      workflowName
+    ),
     rpcService,
     { inline: true }
   )
@@ -59,14 +64,18 @@ export const startQueuedChildStep = async (
   const { runId: childRunId } = await api.startWorkflow(
     workflowName,
     data,
-    {
-      type: 'workflow',
-      id: workflowName,
-      parentRunId: runId,
-      parentStepId: stepId,
-      pikkuUserId: parentWire?.pikkuUserId,
-      traceparent: parentWire?.traceparent,
-    },
+    childRunWire(
+      parentWire,
+      {
+        type: 'workflow',
+        id: workflowName,
+        parentRunId: runId,
+        parentStepId: stepId,
+        pikkuUserId: parentWire?.pikkuUserId,
+        traceparent: parentWire?.traceparent,
+      },
+      workflowName
+    ),
     rpcService,
     { inline: shouldInline }
   )

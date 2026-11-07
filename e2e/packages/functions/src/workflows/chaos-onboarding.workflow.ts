@@ -33,6 +33,8 @@ export const chaosOnboardingWorkflow = pikkuWorkflowFunc<
     reviewer?: string
   }
 >({
+  auth: false,
+  expose: true,
   func: async ({}, data, { workflow }) => {
     await workflow.do('Create account', 'chaosStep', {
       key: `account:${data.employeeId}`,
@@ -53,7 +55,11 @@ export const chaosOnboardingWorkflow = pikkuWorkflowFunc<
 
     const decision = await workflow.approval(
       `Manager sign-off for ${data.employeeId}`,
-      { schema: managerDecision, expiry: data.approvalExpiry }
+      {
+        schema: managerDecision,
+        approvers: 'any',
+        expiry: data.approvalExpiry,
+      }
     )
 
     if (decision.status === 'expired') {
