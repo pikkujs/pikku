@@ -62,7 +62,7 @@ function ItemList() {
 }
 ```
 
-For scroll-triggered loading, put an `IntersectionObserver` sentinel at the end of the list that calls `fetchNextPage()` when it enters the viewport and `hasNextPage` is true. Don't poll on a scroll event handler.
+For scroll-triggered loading, put an `IntersectionObserver` sentinel at the end of the list that calls `fetchNextPage({ cancelRefetch: false })` when it enters the viewport while `hasNextPage && !isFetchingNextPage`, so re-entry never restarts a request in flight. Don't poll on a scroll event handler.
 
 ## Common mistakes
 
@@ -86,9 +86,12 @@ function leafEquals<
   F extends Record<string, unknown>,
   K extends keyof F & string,
 >(filter: Filter<F> | undefined, field: K): F[K] | undefined {
-  if (!filter || Array.isArray(filter)) return undefined
+  if (!filter) return undefined
   const keys = Object.keys(filter)
-  if (keys.length !== 1 || keys[0] !== field) return undefined
+  if (Array.isArray(filter) || keys.length !== 1) {
+    throw new Error('filter takes one single-key leaf, not an array or a multi-key object')
+  }
+  if (keys[0] !== field) return undefined
   const value = (filter as Record<string, unknown>)[field]
   if (value !== null && typeof value === 'object') {
     throw new Error(`filter.${field} takes a value, not an operator object`)
