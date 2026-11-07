@@ -5,7 +5,11 @@
  */
 import '../../.pikku/pikku-bootstrap.gen.js'
 import { buildMeshHeaders } from '@pikku/core/mesh'
-import type { DeploymentService, Logger } from '@pikku/core/services'
+import {
+  LocalVariablesService,
+  type DeploymentService,
+  type Logger,
+} from '@pikku/core/services'
 import { pikkuState } from '@pikku/core/state'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
 import { JoseJWTService } from '@pikku/jose'
@@ -18,9 +22,10 @@ import {
 } from '../services.js'
 import { record, role } from './recorder.js'
 
-const port = Number(process.env.DIST_PORT)
-const peers: Record<string, string> = JSON.parse(process.env.DIST_PEERS!)
-const redis = new URL(process.env.REDIS_TEST_URL!)
+const variables = new LocalVariablesService()
+const port = Number(variables.get('DIST_PORT'))
+const peers = variables.get<Record<string, string>>('DIST_PEERS')!
+const redis = new URL(String(variables.get('REDIS_TEST_URL')))
 const connection = {
   host: redis.hostname,
   port: Number(redis.port),
@@ -109,7 +114,7 @@ addon('impatient', 'e', 200)
 const server = new PikkuNodeHTTPServer(
   { port, hostname: '127.0.0.1' } as never,
   log,
-  { trustInboundTraceparent: process.env.DIST_TRUST === 'true' }
+  { trustInboundTraceparent: variables.get<boolean>('DIST_TRUST') === true }
 )
 await server.init()
 await server.start()

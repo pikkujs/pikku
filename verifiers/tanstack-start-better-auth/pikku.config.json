@@ -1,6 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "srcDirectories": ["./src", "./types"],
+  "ignoreFiles": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/start.ts"
+  ],
   "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
   "clientFiles": {
@@ -10,9 +17,5 @@
   },
   "schema": {
     "supportsImportAttributes": true
-  },
-  "lint": {
-    "enforceContentService": "off",
-    "enforceVariablesService": "off"
   }
 }

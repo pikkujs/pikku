@@ -1,8 +1,9 @@
 import { appendFileSync } from 'node:fs'
+import { LocalVariablesService } from '@pikku/core/services'
 import { pikkuServerLifecycle } from '#pikku/setup'
 
 const log = (line: string) => {
-  const file = process.env.PIKKU_HOOK_LOG
+  const file = new LocalVariablesService().get<string>('PIKKU_HOOK_LOG')
   if (file) appendFileSync(file, `${line}\n`)
 }
 

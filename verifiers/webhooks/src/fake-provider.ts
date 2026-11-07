@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { LocalVariablesService } from '@pikku/core/services'
 
 /**
  * A provider's webhook endpoints, kept in a file so a `pikku webhooks` run in
@@ -13,7 +14,7 @@ export type FakeEndpoint = {
 }
 
 const file = () => {
-  const path = process.env.FAKE_PROVIDER_FILE
+  const path = new LocalVariablesService().get<string>('FAKE_PROVIDER_FILE')
   if (!path) throw new Error('FAKE_PROVIDER_FILE is not set')
   return path
 }

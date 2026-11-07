@@ -1,4 +1,7 @@
 import { appendFileSync } from 'node:fs'
+import { LocalVariablesService } from '@pikku/core/services'
+
+const variables = new LocalVariablesService()
 
 /**
  * What each process saw, one JSON line per event in a file they share, so the
@@ -16,10 +19,10 @@ export type DistRecord = {
   level?: string
 }
 
-export const role = process.env.DIST_ROLE ?? 'none'
+export const role = String(variables.get('DIST_ROLE') ?? 'none')
 
 export const record = (entry: Omit<DistRecord, 'role'>) => {
-  const file = process.env.DIST_RECORD_FILE
+  const file = variables.get<string>('DIST_RECORD_FILE')
   if (file) {
     appendFileSync(file, `${JSON.stringify({ ...entry, role })}\n`)
   }

@@ -33,6 +33,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { LocalVariablesService } from '@pikku/core/services'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
 
 import { createSingletonServices } from '../services.js'
@@ -48,10 +49,14 @@ const STEP_TIMEOUT_MS = 30_000
 const RUN_TIMEOUT_MS = 30_000
 const POLL_INTERVAL_MS = 100
 
+const variables = new LocalVariablesService()
 const markerDir = mkdtempSync(
-  join(process.env.CRASH_MARKER_BASE ?? tmpdir(), 'pikku-crash-reclaim-')
+  join(
+    variables.get<string>('CRASH_MARKER_BASE') ?? tmpdir(),
+    'pikku-crash-reclaim-'
+  )
 )
-process.env.CRASH_MARKER_DIR = markerDir
+variables.set('CRASH_MARKER_DIR', markerDir)
 
 const workerPath = fileURLToPath(
   new URL('./crash-reclaim-worker.ts', import.meta.url)
@@ -88,7 +93,7 @@ const workers: ChildProcess[] = []
 const spawnWorker = async (label: string): Promise<Worker> => {
   const child = spawn(process.execPath, [...process.execArgv, workerPath], {
     env: {
-      ...process.env,
+      ...variables.getAll(),
       DATABASE_URL: connectionString,
       CRASH_STEP_LEASE_MS: String(STEP_LEASE_MS),
     },
@@ -111,7 +116,7 @@ const spawnWorker = async (label: string): Promise<Worker> => {
       )
     )
   })
-  if (process.env.CRASH_VERBOSE) {
+  if (variables.get('CRASH_VERBOSE')) {
     child.stdout!.on('data', (c) => process.stdout.write(`[${label}] ${c}`))
     child.stderr!.on('data', (c) => process.stderr.write(`[${label}] ${c}`))
   }

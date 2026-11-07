@@ -72,10 +72,10 @@
       "signInPath": "/api/auth/sign-in/virtual-user"
     }
   },
-  "lint": {
-    "enforceContentService": "off"
-  },
   "allow": {
     "complexWorkflows": true
+  },
+  "lint": {
+    "enforceContentService": "off"
   }
 }

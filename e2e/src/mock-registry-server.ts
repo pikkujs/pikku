@@ -17,8 +17,11 @@
  */
 import { createServer, type Server } from 'http'
 import { readFileSync } from 'fs'
+import { LocalVariablesService } from '@pikku/core/services'
 
-const REGISTRY_PORT = Number(process.env.MOCK_REGISTRY_PORT ?? 4096)
+const REGISTRY_PORT = Number(
+  new LocalVariablesService().get('MOCK_REGISTRY_PORT') ?? 4096
+)
 
 export const mockRegistryUrl = `http://localhost:${REGISTRY_PORT}`
 

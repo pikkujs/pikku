@@ -25,7 +25,6 @@
     ]
   },
   "lint": {
-    "enforceContentService": "off",
-    "enforceVariablesService": "off"
+    "enforceContentService": "off"
   }
 }
