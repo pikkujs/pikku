@@ -2259,6 +2259,15 @@
     "verifiers/dev-platform-contributors/contrib-select": {
       "name": "@verifier/contrib-select",
     },
+    "verifiers/dev-port": {
+      "name": "@pikku/verifiers-dev-port",
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@types/node": "^26",
+        "tsx": "^4",
+      },
+    },
     "verifiers/disabled-functions": {
       "name": "@pikku/verifiers-disabled-functions",
       "dependencies": {
@@ -3625,6 +3634,8 @@
     "@pikku/verifiers-dev-bun": ["@pikku/verifiers-dev-bun@workspace:verifiers/dev-bun"],
 
     "@pikku/verifiers-dev-platform-contributors": ["@pikku/verifiers-dev-platform-contributors@workspace:verifiers/dev-platform-contributors"],
+
+    "@pikku/verifiers-dev-port": ["@pikku/verifiers-dev-port@workspace:verifiers/dev-port"],
 
     "@pikku/verifiers-disabled-functions": ["@pikku/verifiers-disabled-functions@workspace:verifiers/disabled-functions"],
 
