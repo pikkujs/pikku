@@ -74,7 +74,7 @@ describe('B2Content integration', async () => {
       contentType: 'text/plain',
     })
     assert.ok(info.uploadUrl, 'Should have uploadUrl')
-    assert.equal(info.assetKey, `${bucket}/test.txt`)
+    assert.equal(info.fileKey, 'test.txt')
     assert.equal(info.uploadMethod, 'POST')
     assert.ok(info.uploadHeaders?.Authorization, 'Should have auth header')
     assert.ok(

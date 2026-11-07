@@ -31,7 +31,7 @@ interface. None of them are positional:
 
 - `signURL({ url, dateLessThan, dateGreaterThan? }): Promise<string>` — CloudFront-sign an absolute URL
 - `signContentKey({ bucket, contentKey, dateLessThan, dateGreaterThan? }): Promise<string>`
-- `getUploadURL({ bucket, fileKey, contentType, visibility? }): Promise<{ uploadUrl, assetKey }>` — `visibility` is ignored
+- `getUploadURL({ bucket, fileKey, contentType, visibility? }): Promise<{ uploadUrl, fileKey }>` — `visibility` is ignored
 - `readFile({ bucket, key }): Promise<ReadableStream | NodeJS.ReadableStream>`
 - `readFileAsBuffer({ bucket, key }): Promise<Buffer>`
 - `writeFile({ bucket, key, stream }): Promise<boolean>`

@@ -157,26 +157,28 @@ export class CorePikkuFetch {
 
   /**
    * Uploads a file to a URL obtained from `getUploadURL`.
-   * Handles both presigned URLs (e.g. S3) and header-based auth (e.g. B2).
+   * Handles both presigned URLs (e.g. S3) and header-based auth (e.g. B2). The
+   * session is not sent: the URL is the grant.
    *
    * @param {Object} uploadInfo - The result from the backend's `getUploadURL` call.
-   * @param {string} uploadInfo.uploadUrl - The URL to upload to.
-   * @param {string} uploadInfo.assetKey - The finalized asset key.
+   * @param {string} uploadInfo.uploadUrl - The URL to upload to. A relative one resolves against the server URL.
+   * @param {string} uploadInfo.fileKey - The key to save on the row.
    * @param {Record<string, string>} [uploadInfo.uploadHeaders] - Optional headers required by the storage backend.
    * @param {Blob | File | Buffer | ReadableStream} body - The file content to upload.
    * @param {string} [contentType] - The MIME type (used as fallback if not in uploadHeaders).
-   * @returns {Promise<{ assetKey: string; response: Response }>} - The asset key and raw response.
+   * @returns {Promise<{ fileKey: string; response: Response }>} - The file key and raw response.
+   * @throws {PikkuFetchError} - Throws a decoded error if the status code is >= 400.
    */
   public async uploadFile(
     uploadInfo: {
       uploadUrl: string
-      assetKey: string
+      fileKey: string
       uploadHeaders?: Record<string, string>
       uploadMethod?: 'PUT' | 'POST'
     },
     body: Blob | File | BufferSource | ReadableStream,
     contentType?: string
-  ): Promise<{ assetKey: string; response: Response }> {
+  ): Promise<{ fileKey: string; response: Response }> {
     const headers: Record<string, string> = {
       ...uploadInfo.uploadHeaders,
     }
@@ -184,7 +186,11 @@ export class CorePikkuFetch {
       headers['Content-Type'] = contentType
     }
 
-    const response = await fetch(uploadInfo.uploadUrl, {
+    const send = this.options.fetch ?? globalThis.fetch
+    const url = /^([a-z][a-z\d+.-]*:|\/\/)/i.test(uploadInfo.uploadUrl)
+      ? uploadInfo.uploadUrl
+      : this.resolveServerUrl(uploadInfo.uploadUrl)
+    const response = await send(url, {
       method: uploadInfo.uploadMethod ?? 'PUT',
       headers,
       body: body as any,
@@ -194,7 +200,7 @@ export class CorePikkuFetch {
       throw await PikkuFetchError.fromResponse(response)
     }
 
-    return { assetKey: uploadInfo.assetKey, response }
+    return { fileKey: uploadInfo.fileKey, response }
   }
 
   /**
@@ -239,10 +245,7 @@ export class CorePikkuFetch {
     handler: (event: T) => void,
     onError?: (err: unknown) => void
   ): { close: () => void } {
-    this.verifyServerUrlSet()
-    const url = path.startsWith('/')
-      ? `${this.options.serverUrl}${path}`
-      : `${this.options.serverUrl}/${path}`
+    const url = this.resolveServerUrl(path)
 
     const controller = new AbortController()
     let closed = false
@@ -360,15 +363,8 @@ export class CorePikkuFetch {
     data: any,
     options?: RequestInit
   ) {
-    this.verifyServerUrlSet()
-    if (uri.startsWith('/')) {
-      uri = `${this.options.serverUrl}${uri}`
-    } else {
-      uri = `${this.options.serverUrl}/${uri}`
-    }
-
     return await corePikkuFetch(
-      uri,
+      this.resolveServerUrl(uri),
       data,
       {
         ...options,
@@ -379,6 +375,19 @@ export class CorePikkuFetch {
       },
       this.options.fetch
     )
+  }
+
+  /**
+   * Joins a server-relative path onto the server URL. Joined rather than parsed
+   * with `new URL`, which would drop a path on the server URL such as `/api`.
+   *
+   * @throws {Error} - Throws an error if the server URL is not set.
+   */
+  private resolveServerUrl(path: string): string {
+    this.verifyServerUrlSet()
+    return path.startsWith('/')
+      ? `${this.options.serverUrl}${path}`
+      : `${this.options.serverUrl}/${path}`
   }
 
   /**

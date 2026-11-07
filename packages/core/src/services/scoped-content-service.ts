@@ -129,7 +129,12 @@ export class ScopedContentService implements ContentService {
 
   async getUploadURL(args: GetUploadURLArgs): Promise<UploadURLResult> {
     const { bucket, key } = this.resolve(args.bucket, args.fileKey, 'write')
-    return this.content.getUploadURL({ ...args, bucket, fileKey: key })
+    const upload = await this.content.getUploadURL({
+      ...args,
+      bucket,
+      fileKey: key,
+    })
+    return { ...upload, fileKey: args.fileKey }
   }
 
   async deleteFile(args: BucketKeyArgs): Promise<boolean> {

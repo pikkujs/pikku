@@ -29,6 +29,6 @@ await content.writeFile('path/to/file.txt', stream)
 const buffer = await content.readFileAsBuffer('path/to/file.txt')
 
 // Get upload URL with headers for direct client upload
-const { uploadUrl, assetKey, uploadHeaders, uploadMethod } =
+const { uploadUrl, fileKey, uploadHeaders, uploadMethod } =
   await content.getUploadURL('file.txt', 'text/plain')
 ```

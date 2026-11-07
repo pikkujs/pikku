@@ -49,10 +49,10 @@ export interface GetUploadURLArgs<TBucket extends string = string> {
  * origin; `fetch` does not.
  */
 export interface UploadURLResult {
-  /** May be relative to the server: resolve it with `new URL(uploadUrl, serverUrl)`. */
+  /** May be relative to the server. `uploadFile` on the fetch client resolves it; otherwise use `new URL(uploadUrl, serverUrl)`. */
   uploadUrl: string
-  /** `<bucket>/<fileKey>`, for logging. Save your own `fileKey`, which is what reads take. */
-  assetKey: string
+  /** The `fileKey` passed in, relative to the bucket. This is what reads take. */
+  fileKey: string
   /** Send every one of these with the upload when present. */
   uploadHeaders?: Record<string, string>
   /** `PUT` when absent. */

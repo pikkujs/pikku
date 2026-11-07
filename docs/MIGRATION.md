@@ -466,6 +466,16 @@ for await (const event of pikkuRPC.agent.stream('helpAgent', input)) {
 
 Search: `rg -n "agent\.stream\(|usePikkuAgent<"`.
 
+### `getUploadURL` and `uploadFile` use `fileKey`, not `assetKey`
+
+`UploadURLResult.assetKey` was `<bucket>/<fileKey>`, which no read accepts. It is replaced by `fileKey`, the key you passed in, relative to the bucket.
+
+- `content.getUploadURL` returns `fileKey` instead of `assetKey`. A custom `ContentService` must do the same.
+- `CorePikkuFetch.uploadFile` takes `fileKey` instead of `assetKey` in its first argument, and returns `{ fileKey, response }`. A function that hands the upload to the browser returns `fileKey` in its output.
+- `uploadFile` now resolves a relative `uploadUrl` against the server URL, and throws `Server url is not set` if there is none. It sends through the `fetch` option when one is set.
+
+To find affected code, search for `assetKey` and `uploadFile`.
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.
