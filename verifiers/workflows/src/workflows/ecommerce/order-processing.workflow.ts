@@ -16,6 +16,7 @@ export const orderProcessingWorkflow = pikkuWorkflowFunc<
   },
   { orderId: string; paymentId: string; status: string }
 >({
+  auth: false,
   title: 'Order Processing',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {

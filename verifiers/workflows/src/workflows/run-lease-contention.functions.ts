@@ -44,6 +44,7 @@ export const runLeaseContentionWorkflow = pikkuWorkflowFunc<
   { indexes: number[]; releaseAt: number },
   { squares: number[] }
 >({
+  auth: false,
   func: async (_services, data, { workflow }) => {
     const results = await Promise.all(
       data.indexes.map(

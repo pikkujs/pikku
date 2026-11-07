@@ -33,6 +33,7 @@ export const unhappyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
   { result: number }
 >({
+  auth: false,
   func: async ({}, data, { workflow }) => {
     // If value is negative, cancel the workflow immediately
     if (data.value < 0) {

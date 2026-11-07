@@ -8,6 +8,7 @@ export const matrixIterationWorkflow = pikkuWorkflowFunc<
   { rows: string[]; columns: string[] },
   { cellsProcessed: number }
 >({
+  auth: false,
   title: 'Matrix Iteration',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

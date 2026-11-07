@@ -23,6 +23,7 @@ const registerAgent = (
   metaOverrides: Record<string, unknown> = {}
 ) => {
   const agent: CoreAgent = {
+    auth: false,
     name,
     description: `${name} agent`,
     instructions: name,

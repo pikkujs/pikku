@@ -10,6 +10,7 @@ const v1 = {
   name: 'flow',
   pikkuFuncId: 'flow',
   source: 'graph',
+  auth: false,
   graphHash: 'hash-1',
   entryNodeIds: ['a'],
   nodes: { a: { nodeId: 'a', rpcName: 'doA' } },

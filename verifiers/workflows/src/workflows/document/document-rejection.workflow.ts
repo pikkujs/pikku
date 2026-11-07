@@ -8,6 +8,7 @@ export const documentRejectionWorkflow = pikkuWorkflowFunc<
   { documentId: string; reviewerId: string; reason: string },
   { documentId: string; status: string; authorNotified: boolean }
 >({
+  auth: false,
   title: 'Document Rejection',
   tags: ['document'],
   func: async (_services, data, { workflow }) => {

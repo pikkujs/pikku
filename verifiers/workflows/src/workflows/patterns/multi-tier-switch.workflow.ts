@@ -8,6 +8,7 @@ export const multiTierSwitchWorkflow = pikkuWorkflowFunc<
   { tier: 'free' | 'basic' | 'pro' | 'enterprise'; action: string },
   { allowed: boolean; features: string[] }
 >({
+  auth: false,
   title: 'Multi Tier Switch',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

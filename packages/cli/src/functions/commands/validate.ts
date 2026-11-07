@@ -1,3 +1,4 @@
+import { setValidateExitCode } from '../validate/validate-exit-code.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   ValidateInput,
@@ -16,15 +17,18 @@ export const validate = pikkuSessionlessFunc({
     _services,
     { skipTypecheck, skipDeployChecks, migrationsBase },
     { rpc }
-  ) =>
-    runProjectValidate(process.cwd(), {
+  ) => {
+    const result = await runProjectValidate(process.cwd(), {
       skipTypecheck,
       skipDeployChecks,
       migrationsBase,
       projectChecks: guardProjectChecks((request) =>
         (rpc.invoke as any)('cloudCli:CloudProjectChecks', request)
       ),
-    }),
+    })
+    setValidateExitCode(result)
+    return result
+  },
 })
 
 export { renderValidate }

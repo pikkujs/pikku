@@ -2,6 +2,8 @@ import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { todoAgent } from './todo.agent.js'
 
 export const supervisorAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'supervisor-agent',
   description:
     'Supervises todo operations — sub-agent results are returned to this agent, not streamed to the user',

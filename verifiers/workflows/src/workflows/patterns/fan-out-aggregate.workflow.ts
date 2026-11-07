@@ -12,6 +12,7 @@ export const fanOutAggregateWorkflow = pikkuWorkflowFunc<
   { userIds: string[] },
   { totalUsers: number; activeCount: number; inactiveCount: number }
 >({
+  auth: false,
   title: 'Fan Out Aggregate',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

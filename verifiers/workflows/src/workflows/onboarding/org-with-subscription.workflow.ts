@@ -12,6 +12,7 @@ export const orgWithSubscriptionWorkflow = pikkuWorkflowFunc<
   },
   { orgId: string; planLimits: { users: number; projects: number } }
 >({
+  auth: false,
   title: 'Organization with Subscription',
   tags: ['onboarding'],
   func: async (_services, data, { workflow }) => {

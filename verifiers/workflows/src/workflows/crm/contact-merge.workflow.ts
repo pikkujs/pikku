@@ -8,6 +8,7 @@ export const contactMergeWorkflow = pikkuWorkflowFunc<
   { primaryContactId: string; duplicateContactIds: string[] },
   { mergedCount: number }
 >({
+  auth: false,
   title: 'Contact Merge',
   tags: ['crm'],
   func: async (_services, data, { workflow }) => {

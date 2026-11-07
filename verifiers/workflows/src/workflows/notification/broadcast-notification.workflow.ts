@@ -8,6 +8,7 @@ export const broadcastNotificationWorkflow = pikkuWorkflowFunc<
   { userIds: string[]; title: string; message: string; channel: string },
   { deliveredCount: number }
 >({
+  auth: false,
   title: 'Broadcast Notification',
   tags: ['notification'],
   func: async (_services, data, { workflow }) => {

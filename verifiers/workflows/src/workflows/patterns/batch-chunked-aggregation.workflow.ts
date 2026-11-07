@@ -12,6 +12,7 @@ export const batchChunkedAggregationWorkflow = pikkuWorkflowComplexFunc<
   { documentChunks: string[][] },
   { totalProcessed: number; chunks: number }
 >({
+  auth: false,
   title: 'Batch Chunked Aggregation',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

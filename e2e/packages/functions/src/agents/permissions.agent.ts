@@ -8,6 +8,8 @@ import { isPermittedUser } from '../functions/adversarial.functions.js'
  * not depend on a name lookup.
  */
 export const restrictedAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'restricted-agent',
   description: 'Refuses to run at all for a caller who fails its permission',
   goal: 'You only answer permitted callers.',
@@ -19,6 +21,8 @@ export const restrictedAgent = pikkuAgent({
 })
 
 export const permissionsAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'permissions-agent',
   description: 'Exercises permission filtering of an agent’s tool list',
   goal: 'You demonstrate which tools survive permission filtering.',
@@ -29,6 +33,8 @@ export const permissionsAgent = pikkuAgent({
 })
 
 export const gatedOnlyAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'gated-only-agent',
   description: 'Every tool is gated, so an unpermitted caller is offered none',
   goal: 'You demonstrate an agent whose entire tool list can be filtered away.',

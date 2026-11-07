@@ -28,6 +28,7 @@ const (
 	WorkflowGraphAddonNotWired        Code = "PKU642"
 	ComplexWorkflowNotAllowed         Code = "PKU643"
 	SingleStepWorkflow                Code = "PKU644"
+	WorkflowApprovalMissingApprovers  Code = "PKU645"
 	RemoteAddonNotDevDependency       Code = "PKU338"
 	RemoteAddonAuthUnresolved         Code = "PKU339"
 	AddonNotInstalled                 Code = "PKU340"

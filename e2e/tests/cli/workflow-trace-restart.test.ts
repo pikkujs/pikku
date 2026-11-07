@@ -69,7 +69,10 @@ const waitFor = async (
 const post = async (apiUrl: string, path: string, body: unknown) => {
   const response = await fetch(`${apiUrl}${path}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'x-user-id': 'workflow-restart-user',
+    },
     body: JSON.stringify(body),
   })
   const text = await response.text()

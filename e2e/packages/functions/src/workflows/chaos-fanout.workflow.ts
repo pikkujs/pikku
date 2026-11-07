@@ -25,6 +25,8 @@ export const chaosFanoutWorkflow = pikkuWorkflowFunc<
   },
   { batchId: string; completed: number; attempts: number[] }
 >({
+  auth: false,
+  expose: true,
   func: async ({}, data, { workflow }) => {
     const indexes = Array.from({ length: data.shards }, (_, i) => i)
 

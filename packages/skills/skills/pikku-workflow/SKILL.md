@@ -183,7 +183,8 @@ current run if a step needs to reference it.
 
 `workflow.approval(reason, options)` takes a `schema` (a runtime value — the
 payload arrives from an untrusted caller, so a type generic would validate
-nothing), an optional `expiry`, and an optional policy for **who** may answer:
+nothing), an optional `expiry`, and a required policy for **who** may answer
+(leaving out `approvers` is compile error PKU645):
 
 ```typescript
 const signOff = await workflow.approval('Manager sign-off', {
@@ -197,11 +198,11 @@ if (signOff.status === 'expired') { ... }
 
 `approvers` is one of:
 
-| value             | who may answer                                                                                           |
-| ----------------- | -------------------------------------------------------------------------------------------------------- |
-| `any` _(default)_ | anyone the approve entrypoint admits — the gate is a pause for a decision, not an authorization boundary |
-| `owner`           | only the user who started the run                                                                        |
-| `not-initiator`   | anyone **except** the user who started the run                                                           |
+| value           | who may answer                                                                                                  |
+| --------------- | --------------------------------------------------------------------------------------------------------------- |
+| `any`           | any signed-in user the approve route admits — the gate is a pause for a decision, not an authorization boundary |
+| `owner`         | only the user who started the run                                                                               |
+| `not-initiator` | anyone **except** the user who started the run                                                                  |
 
 Both options are enforced in two phases, because a decision can legitimately
 arrive before the run has reached the gate:
@@ -217,8 +218,9 @@ arrive before the run has reached the gate:
 So the same rejected decision surfaces as an HTTP error or as a silently
 re-closed gate depending on timing. Both are audited.
 
-A gate declaring neither option accepts a decision from anyone the approve
-route lets through; gate the route with `auth`/`permissions` to narrow that.
+The generated approve route requires a session, even on an `auth: false` workflow,
+and only reaches `expose: true` workflows, for that workflow's own runs. A function calling `approveStep` with no
+session is the application answering, and is not judged against the policy.
 
 #### What survives the run
 
@@ -387,7 +389,10 @@ A run survives a crash or deploy. `pikku dev` and `pikku serve` recover it at st
 ## File conventions
 
 - Place workflows in `packages/functions/src/wirings/*.workflow.ts`; export the variable so the inspector discovers it (no manual registration).
-- HTTP start/run/status routes are auto-scaffolded via `scaffold.workflow` in `pikku.config.json`.
+- HTTP start/run/status/approve routes are auto-scaffolded via `scaffold.workflow` in `pikku.config.json`. They reach only workflows marked `expose: true` (anything else answers 404) and apply the workflow's own `auth`, `scopes`, `permissions` and input schema. A refused start leaves no run.
+- A workflow is a function: `auth` unset wants a session, and only `auth: false` is anonymous. A schedule or trigger that starts a workflow with no user needs `auth: false`.
+- A run with an owner is only for that owner. Without a `sessionStore`, a run started through these routes or `checkWorkflowStart` gets `session` as `{ userId }` only.
+- `rpc.startWorkflow` does not check `expose`. Without a `sessionStore`, a workflow it starts needs `auth: false`, or a `checkWorkflowStart` first. Prefer it behind your own wired function when the workflow is not a public surface.
 
 ## Step dispatch & HTTP wiring
 

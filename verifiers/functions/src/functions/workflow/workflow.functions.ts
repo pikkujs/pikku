@@ -45,6 +45,7 @@ export const onboardingWorkflow = pikkuWorkflowComplexFunc<
   { email: string; userId: string },
   { userId: string; email: string }
 >({
+  auth: false,
   func: async ({}, data, { workflow }) => {
     // Step 1: Create user profile (RPC call - generates queue worker)
     const user = await workflow.do(
@@ -141,6 +142,7 @@ export const onboardingDSLWorkflow = pikkuWorkflowFunc<
   { email: string; userId: string; sendWelcome: boolean },
   { userId: string; welcomeSent: boolean }
 >({
+  auth: false,
   disabled: 'no callers found, 2026-10-20',
   func: async ({}, data, { workflow }) => {
     // Step 1: Create user profile

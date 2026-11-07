@@ -1,6 +1,8 @@
 import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 export const graphParallelWorkflow = pikkuWorkflowGraph({
+  auth: false,
+  expose: true,
   description: 'Parallel graph: double then email and sms in parallel',
   tags: ['graph', 'parallel'],
   nodes: {

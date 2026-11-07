@@ -17,6 +17,7 @@ export const memberRoleUpdateWorkflow = pikkuWorkflowFunc<
   },
   { updated: boolean; notified: boolean }
 >({
+  auth: false,
   title: 'Member Role Update',
   tags: ['project'],
   func: async (_services, data, { workflow }) => {

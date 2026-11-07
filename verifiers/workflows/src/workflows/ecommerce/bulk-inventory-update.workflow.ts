@@ -21,6 +21,7 @@ export const bulkInventoryUpdateWorkflow = pikkuWorkflowFunc<
     results: Array<{ productId: string; newQuantity: number }>
   }
 >({
+  auth: false,
   title: 'Bulk Inventory Update',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {
