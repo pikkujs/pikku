@@ -65,6 +65,13 @@ runs:
         start=$SECONDS
         bun run build:packages
         echo "::notice::⏱ Build packages: $((SECONDS - start))s"
+    - name: Show the generated types the CLI build rejects
+      if: failure()
+      shell: bash
+      run: |
+        f=packages/cli/.pikku/function/pikku-function-types.gen.ts
+        echo "lines: $(wc -l < $f)"
+        sed -n 458,462p $f | fold -w 220 | head -120
     # bun only links a workspace package's bin when the file it points at exists
     # at install time, and never backfills it. The Build job installs before
     # anything is built, so `pikku` is missing from node_modules/.bin until the
