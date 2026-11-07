@@ -33,4 +33,8 @@ export {
   bareTableName,
   tableCreationSql,
   tablesInSourceOrder,
+  statementShape,
+  tableDefinitions,
+  type StatementShape,
+  type TableDefinitions,
 } from './schema-sql.js'

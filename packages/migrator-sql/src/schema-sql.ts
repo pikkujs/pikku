@@ -174,6 +174,112 @@ export function tablesInSourceOrder(sql: string, tables: string[]): string[] {
       if (!position.has(name)) position.set(name, index++)
     }
   }
-  const rank = (table: string) => position.get(bareTableName(table)) ?? Number.MAX_SAFE_INTEGER
+  const rank = (table: string) =>
+    position.get(bareTableName(table)) ?? Number.MAX_SAFE_INTEGER
   return [...tables].sort((a, b) => rank(a) - rank(b))
+}
+
+/** One statement of a declaration, as far as the generator needs to tell them apart. */
+export type StatementShape =
+  | { kind: 'table'; table: string }
+  | { kind: 'index'; table: string; name: string }
+  | { kind: 'other' }
+
+const INDEX_NAME =
+  /^CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?(\S+)\s+ON\s/i
+
+/**
+ * What a single statement creates.
+ *
+ * A declared schema is limited to tables and their indexes, because those are
+ * the two things a later delta can tell apart from what the migrations already
+ * hold. Anything else cannot be diffed, so the caller refuses it rather than
+ * re-running it or quietly leaving it out.
+ */
+export function statementShape(statement: string): StatementShape {
+  const create = CREATE_TABLE.exec(statement)
+  if (create) return { kind: 'table', table: bareTableName(create[1]!) }
+  const index = CREATE_INDEX.exec(statement)
+  if (index) {
+    return {
+      kind: 'index',
+      table: bareTableName(index[1]!),
+      name: bareTableName(INDEX_NAME.exec(statement)![1]!),
+    }
+  }
+  return { kind: 'other' }
+}
+
+/** Split `body` on commas that sit outside quotes and parentheses. */
+function splitTopLevel(body: string): string[] {
+  const parts: string[] = []
+  let depth = 0
+  let start = 0
+  let i = 0
+  while (i < body.length) {
+    const ch = body[i]!
+    if (ch === "'" || ch === '"' || ch === '`') {
+      i++
+      while (i < body.length) {
+        if (body[i] === ch) {
+          if (body[i + 1] !== ch) break
+          i++
+        }
+        i++
+      }
+    } else if (ch === '(') {
+      depth++
+    } else if (ch === ')') {
+      depth--
+    } else if (ch === ',' && depth === 0) {
+      parts.push(body.slice(start, i).trim())
+      start = i + 1
+    }
+    i++
+  }
+  const tail = body.slice(start).trim()
+  if (tail.length > 0) parts.push(tail)
+  return parts
+}
+
+/** The body of a `CREATE TABLE`: what sits between its outermost parentheses. */
+function createTableBody(statement: string): string {
+  const open = statement.indexOf('(')
+  const close = statement.lastIndexOf(')')
+  return open >= 0 && close > open ? statement.slice(open + 1, close) : ''
+}
+
+export interface TableDefinitions {
+  /** Each column's whole definition, as written, keyed by its unquoted name. */
+  columns: Map<string, string>
+  /** Table-level constraints, as written. */
+  constraints: string[]
+}
+
+/**
+ * Take a table's `CREATE TABLE` apart into its columns and constraints.
+ *
+ * What makes an added column honest. Rendering it from the introspected column
+ * map would lose everything that map cannot hold — a foreign key, `unique`, a
+ * check — so the definition is lifted from the SQL that creates the column in a
+ * new table, and an `ADD COLUMN` then says what a `CREATE TABLE` would have.
+ *
+ * Compiled DDL quotes every column, so a part that opens with a quoted name is a
+ * column and anything else opens with a keyword and is a constraint. Hand-written
+ * SQL does not hold to that, which is why this is only for declared schemas.
+ */
+export function tableDefinitions(sql: string, table: string): TableDefinitions {
+  const wanted = bareTableName(table)
+  const columns = new Map<string, string>()
+  const constraints: string[] = []
+  for (const statement of splitStatements(sql)) {
+    const create = CREATE_TABLE.exec(statement)
+    if (!create || bareTableName(create[1]!) !== wanted) continue
+    for (const part of splitTopLevel(createTableBody(statement))) {
+      const name = /^["`]([^"`]+)["`]/.exec(part)
+      if (name) columns.set(name[1]!, part)
+      else constraints.push(part)
+    }
+  }
+  return { columns, constraints }
 }

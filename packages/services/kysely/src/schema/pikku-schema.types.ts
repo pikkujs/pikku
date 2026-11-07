@@ -214,6 +214,52 @@ export interface PikkuSchema {
 }
 
 /**
+ * What a project says about one column of a table it declares.
+ *
+ * The same entry `db/annotations.ts` takes, moved onto the declaration so one
+ * file gives a table's shape, its types and its classification.
+ */
+export interface ColumnAnnotation {
+  /** Privacy level: can the value leave the process? Defaults to `private`. */
+  security?: 'public' | 'private' | 'pii' | 'secret'
+  /** How the value is held at rest, independent of `security`. Defaults to `plain`. */
+  form?: 'plain' | 'hashed' | 'wrapped' | 'sealed'
+  /** Which key protects a `wrapped` or `sealed` column. */
+  keyId?: string
+  /** Anonymize strategy. */
+  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
+  /** Column kind, for coercion and typing. */
+  kind?: 'date' | 'bool' | 'json' | 'uuid'
+  /** TypeScript type override, e.g. `string[]`. Wins over `kind`. */
+  tsType?: string
+  /** Zod string format, e.g. `email`. Keeps the TypeScript type as `string`. */
+  format?: string
+  /** What the column holds, for people and agents reading the schema. */
+  description?: string
+}
+
+/** Annotations keyed by table, then column, spelled the way the statements spell them. */
+export type TableAnnotations = Record<string, Record<string, ColumnAnnotation>>
+
+/**
+ * A project's own tables, declared in `db/tables.ts`.
+ *
+ * A `PikkuSchema` without the parts that only mean something for the runtime,
+ * plus the annotations. `pikku db generate` writes the migrations for it, so a
+ * project that declares a table never spells its SQL.
+ */
+export interface AppTables {
+  /** `db.schema.createTable(...)` and `createIndex(...)`, and nothing else. */
+  statements: SchemaStatementFactory[]
+  /** Columns outside this declaration that a foreign key here points at. */
+  requires?: SchemaRequirement[]
+  annotations?: TableAnnotations
+}
+
+/** Declare a project's tables. The export has to be named `tables`. */
+export const defineTables = (tables: AppTables): AppTables => tables
+
+/**
  * A column another source owns, which one of these schemas depends on.
  *
  * Named down to the column, not just the table, because that is the granularity
