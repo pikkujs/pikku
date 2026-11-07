@@ -1,0 +1,17 @@
+{
+  "name": "ci-fixture",
+  "type": "module",
+  "private": true,
+  "packageManager": "bun@1.4.3",
+  "workspaces": [
+    "apps/*",
+    "packages/functions",
+    "vendor/*"
+  ],
+  "scripts": {
+    "test": "touch test-ran.marker"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*"
+  }
+}
