@@ -3,7 +3,10 @@ import type { InspectorState } from '@pikku/inspector'
 import { removeFileInDir, writeFileInDir } from '../../../utils/file-writer.js'
 import type { Config } from '../../../../types/application-types.js'
 import type { CLILogger } from '../../../services/cli-logger.service.js'
-import { buildContributorPlatform } from '../../../contributors/contributor-platform.js'
+import {
+  buildContributorPlatform,
+  dbConfigMismatch,
+} from '../../../contributors/contributor-platform.js'
 import { resolveTargetContributors } from '../../../contributors/resolve-contributors.js'
 import { serializeContributors } from '../../../contributors/serialize-contributors.js'
 import { devRuntimeServices, localSpecifier } from './dev-specifier.js'
@@ -21,7 +24,7 @@ export const reconcileDevKysely = (
 ): ContributorPlatform => {
   if (platform.db && !configHasDb) {
     throw new Error(
-      `pikku dev: the project has a ${platform.db.engine} database (createConfig or db/${platform.db.engine}) but the pikku config has no \`db\`, so dev builds no kysely for the contributors to use. Set \`db\` in the pikku config or remove the database declaration.`
+      `pikku dev: ${dbConfigMismatch(platform.db.engine)}, so dev builds no kysely for the contributors to use. Set \`db\` in the pikku config or remove the database declaration.`
     )
   }
   return {
