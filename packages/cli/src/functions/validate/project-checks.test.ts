@@ -2822,7 +2822,7 @@ describe('a database without a config db', () => {
       const result = await runValidate(tmp)
       const finding = dbFinding(result)
       assert.ok(finding, 'expected pikku-config-no-db')
-      assert.equal(finding.severity, 'error')
+      assert.equal(finding.severity, 'critical')
       assert.match(
         finding.message,
         /has a sqlite database \(createConfig or db\/sqlite\) but the pikku config has no `db`/

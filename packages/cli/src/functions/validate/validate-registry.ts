@@ -319,7 +319,9 @@ export async function runValidate(
   }
 
   return {
-    ok: !findings.some((f) => f.severity === 'error'),
+    ok: !findings.some(
+      (f) => f.severity === 'error' || f.severity === 'critical'
+    ),
     root,
     ran,
     findings,

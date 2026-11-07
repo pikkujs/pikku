@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-export type ValidateSeverity = 'error' | 'warn' | 'info'
+export type ValidateSeverity = 'critical' | 'error' | 'warn' | 'info'
 
 export type ValidateFinding = {
   id: string

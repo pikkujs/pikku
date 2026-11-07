@@ -680,16 +680,17 @@ export async function runSharedProjectChecks(
       'validate'
     ).catch(() => undefined)
     if (declared) {
-      e(
-        'pikku-config-no-db',
-        `${dbConfigMismatch(declared)}, so the deploy build fails when it adds the platform contributors`,
-        pikkuConfigPath,
-        lines(
+      findings.push({
+        id: 'pikku-config-no-db',
+        severity: 'critical',
+        message: `${dbConfigMismatch(declared)}, so the deploy build fails when it adds the platform contributors`,
+        path: pikkuConfigPath,
+        fixHint: lines(
           'Declare the engine in pikku.config.json:',
           `"db": { "engine": "${declared}" }`,
           'or remove the database declaration (createConfig / db folder).'
-        )
-      )
+        ),
+      })
     }
   }
 
