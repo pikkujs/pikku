@@ -9,7 +9,7 @@ export const getWebhookDelivery = pikkuFunc<
   description:
     'Returns a single webhook delivery with its full attempt history, or null when the app wires no webhook service.',
   expose: true,
-  scopes: ['pikku:console:wirings:read'],
+  scopes: ['admin:webhooks:deliveries'],
   func: async ({ webhookService }, { deliveryId }) => {
     if (!webhookService) {
       return null

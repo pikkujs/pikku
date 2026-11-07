@@ -15,7 +15,7 @@ export const getWorkflowRuns = pikkuFunc<
   description:
     "Returns a list of workflow runs from the Postgres workflow database. Accepts optional filters: workflowName, status, limit, and offset for pagination. With `addon`, only runs of that add-on's workflows are returned. Returns an empty array if workflowRunService is not configured.",
   expose: true,
-  scopes: ['pikku:console:workflows:read'],
+  scopes: ['admin:workflows:read'],
   func: async ({ workflowRunService }, input) => {
     if (!input?.addon) {
       return await workflowRunService.listRuns({

@@ -8,7 +8,9 @@ test('serializeConsoleFunctions includes console HTTP route wiring', () => {
   const { functions } = serializeConsoleFunctions(leaf, '#agents', '/api')
 
   assert.match(functions, /wireHTTPRoutes\(\{/)
-  assert.match(functions, /route: '\/workflow-run\/:runId\/stream'/)
+  // The workflow-run stream lives in @pikku/addon-admin: a stage has runs to
+  // watch and no console, so the app wires that route with ref('admin:...').
+  assert.doesNotMatch(functions, /workflow-run/)
   assert.match(functions, /wireAddon\(\{/)
 })
 
