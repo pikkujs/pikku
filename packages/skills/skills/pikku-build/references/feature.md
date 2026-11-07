@@ -75,7 +75,7 @@ project, and what the app says to its users is the message catalogue. See
 Before touching any files, give the user one paragraph stating exactly what
 you'll do. This is the lightweight "plan" — it is chat, not JSON.
 
-> I'll add a `todos` table via a new migration in `sql/`, and two
+> I'll declare a `todos` table in `db/tables.ts`, and two
 > `pikkuSessionlessFunc`s (`createTodo`, `listTodos` with
 > `readonly: true`) in `packages/functions/src/functions/`. Both
 > `expose: true`, so they'll be reachable via the auto-generated RPC
@@ -151,8 +151,9 @@ in-app features don't.
   Use the `permissions` field with a `pikkuPermission` factory.
 - **Throw typed errors** from `#pikku/error` — `NotFoundError`,
   `ConflictError`, `BadRequestError`. Never bare `Error`.
-- **Migrations are inline SQL files** in the project's migrations dir
-  (typically `sql/`). Use a numbered prefix matching existing files.
+- **Tables are declared in `db/tables.ts`,** annotations with them, and
+  `pikku db generate` writes the SQL. Don't write migrations by hand. See the
+  **pikku-kysely** skill.
 - **Secrets and env-vars: NEVER `process.env`.** Declare them with
   `defineSecret` (sensitive) or `defineVariable` (non-sensitive) — both with a
   zod schema for type-safe access. Read variables with

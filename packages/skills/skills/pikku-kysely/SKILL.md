@@ -251,6 +251,81 @@ scalar functions, so `createBunSqliteKysely` throws if you pass `functions`.
 
 All implement standard Pikku interfaces from `@pikku/core`.
 
+## Declaring tables
+
+Declare the app's tables in `db/tables.ts`, and put their annotations beside
+them. One declaration gives the SQL, the types and the classification.
+`pikku meta db` says where the file is and what it already declares. You never
+need to know where migrations live.
+
+```typescript
+// db/tables.ts
+import { defineTables } from '@pikku/kysely'
+
+export const tables = defineTables({
+  statements: [
+    (db, _types, ctx) =>
+      db.schema
+        .createTable('invoice')
+        .addColumn('invoiceId', ctx.key, (col) => col.primaryKey())
+        .addColumn('customerEmail', ctx.text, (col) => col.notNull())
+        .addColumn('paidAt', 'timestamp'),
+    (db) =>
+      db.schema
+        .createIndex('invoice_customer_email_idx')
+        .on('invoice')
+        .column('customerEmail'),
+  ],
+  annotations: {
+    invoice: {
+      customerEmail: { security: 'pii', format: 'email' },
+      paidAt: { kind: 'date' },
+    },
+  },
+})
+```
+
+Then:
+
+```bash
+pikku db generate   # writes the SQL
+pikku db migrate    # applies it and regenerates the types
+```
+
+- **`statements` are `db.schema` calls**, tables and indexes only, written in
+  camelCase. `ctx.key` and `ctx.text` are the dialect's key and text types.
+- **Change a table by editing its statement** in place and running `generate`
+  again. It writes only the difference: new tables, new columns, new indexes.
+- **`generate` adds and nothing else.** A dropped column or table, a rename, a
+  changed type, and a new `NOT NULL` column with no default are refused with the
+  reason, and nothing is written. Declare a new column nullable or with a
+  default. Taking data away is a person's decision, so stop and ask.
+- **A foreign key onto a table outside this file** (Better Auth's `user`, a
+  hand-written table) has to be named in `requires`, and `requiredType` gives
+  the column its type:
+
+  ```typescript
+  import { defineTables, requiredType } from '@pikku/kysely'
+
+  export const tables = defineTables({
+    requires: [{ table: 'user', column: 'id', owner: 'Better Auth' }],
+    statements: [
+      (db, types, ctx) =>
+        db.schema
+          .createTable('note')
+          .addColumn('noteId', ctx.key, (col) => col.primaryKey())
+          .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
+            col.notNull().references('user.id').onDelete('cascade')
+          ),
+    ],
+  })
+  ```
+
+- **An annotation typo is an error**, as is annotating a column the declaration
+  doesn't have. `security` is `public`, `private`, `pii` or `secret`.
+- **`db check` and `db migrate` stop** when `db/tables.ts` is ahead of the
+  migrations, and tell you to run `generate`.
+
 ## Installation
 
 ```bash
@@ -320,14 +395,14 @@ functions query.
 ### MySQL and `pikku db`
 
 `mysqlUrl` in `createConfig` makes MySQL the third dialect the `pikku db`
-commands drive, with migrations in `db/mysql/` and the seed in
-`db/mysql-dev-seed.sql`. It behaves like the other two with four differences:
+commands drive, with the seed in `db/mysql-dev-seed.sql`. It behaves like the
+other two with four differences:
 
 - **No embedded engine.** Commands that need a throwaway database create and drop
   a `pikku_scratch_<hex>` one on your server, so the account needs `CREATE` and
   `DROP`.
 - **DDL is not transactional.** A migration that fails halfway is replayed from
-  the top, so write migrations that are safe to run twice.
+  the top, so a migration has to be safe to run twice.
 - **Inline `REFERENCES` is discarded** — declare foreign keys as
   `FOREIGN KEY (...) REFERENCES ...` or none exists.
 - **A key column cannot be `TEXT`**, nor can a `TEXT` column have a literal

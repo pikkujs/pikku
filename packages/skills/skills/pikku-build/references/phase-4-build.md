@@ -10,16 +10,17 @@ mark the last one done until §6a passes, §7 is green for it _and §7a shows it
 functions covered_; `changes done` refuses a planned changeset's last change
 while the plan is short.
 
-1. **Migration.** SQL in `db/sqlite/` at the project root (`db/postgres/` or
-   `db/mysql/` when `createConfig` sets `postgresUrl` or `mysqlUrl`), numbered on from the
-   ones already there. Apply with `bunx --bun pikku db migrate`, which also
+1. **Tables.** Declare them, with their annotations, in `db/tables.ts` (the
+   **pikku-kysely** skill has the shape). `bunx --bun pikku db generate` writes
+   the SQL, so don't write a migration by hand, and it refuses anything but an
+   addition, with the reason. Apply with `bunx --bun pikku db migrate`, which also
    regenerates the Kysely types your functions import. **Neither `pikku all` nor
    restarting `pikku dev` applies a migration** — so a new column reads as
    `TS2353 … does not exist in type 'InsertExpression<DB, "…">'` on the function
    that writes it. An unapplied migration is the usual cause and the cheapest to
    rule out, so run `db migrate` first — but the same error is what a misspelt
    column or a stale generated type looks like, so if it survives the migration,
-   go and read the SQL.
+   go and read the declaration.
 2. **Seed.** Demo rows in `db/sqlite-dev-seed.sql`. **There is no seed command** —
    `bunx --bun pikku db reset` is the only thing that applies the file, and it
    wipes, migrates and seeds in one go (`--no-seed` stops after the migration,

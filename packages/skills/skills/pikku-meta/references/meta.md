@@ -17,7 +17,7 @@ going to act on the output; prefer `info` when a person is going to read it.
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `pikku meta context`            | A short map of the project; add `--json` for the full planner view                       |
 | `pikku meta grep <terms>`       | Search functions, workflows, wires, permissions, screens, translations; quote `'a\|b'` for either |
-| `pikku meta db [tables]`        | Tables and columns from the generated schema                                             |
+| `pikku meta db [tables]`        | Where tables are declared, which ones, their generated types, and the commands that make the SQL |
 | `pikku meta screens`            | Frontend routes, the RPCs each page reaches, and its file                                |
 | `pikku meta services`           | Session fields, declared services and auth setup                                         |
 | `pikku meta emails`             | Email templates, the data each takes, and their locales                                  |
