@@ -31,17 +31,22 @@ because: tsrs is a drop-in for the TypeScript 7 compiler, so the engine is a
 
 On the 85 workspaces whose `tsc` resolves to the alias, `tsc --noEmit -p <package>`
 under each engine on the same tree gave identical diagnostics: 1,018 errors each,
-none missing and none added. The other 24 workspaces with a `tsc` script are not
-covered (see below). `tsc -b` of `@pikku/core` and `@pikku/schedule` emitted
+none missing and none added. The 24 recipes and templates that carry their own
+`typescript` were run through `scripts/tsc-all.mjs` under each engine: 539
+diagnostics, identical. `tsc -b` of `@pikku/core` and `@pikku/schedule` emitted
 774 files, identical under both.
 
 ## Gotchas
 
-- **Workspaces with their own `typescript` are not aliased.** A package's own
-  `node_modules/.bin` comes before the root's, so the 24 `recipes/*` and
+- **Workspaces with their own `typescript` shadow the alias.** A package's own
+  `node_modules/.bin` comes before the root's, so inside the 24 `recipes/*` and
   `templates/*` that declare `typescript: ^7.0.2` (their `package.json` is copied
-  into a user's app) run TypeScript 7 whatever `PIKKU_TSC` says. A comparison
-  that includes them is comparing TypeScript 7 with itself.
+  into a user's app, so it cannot change) a bare `tsc` is TypeScript 7 whatever
+  `PIKKU_TSC` says. The root `bun run tsc` leaves them out of its filtered run and
+  runs their `tsc` script through the dispatcher in `scripts/tsc-all.mjs`; a
+  comparison that runs `tsc` inside them compares TypeScript 7 with itself.
+- **`build` is not covered.** The recipes' `build` scripts (`tsc -b`) still run
+  the local TypeScript 7.
 - **Compare on the same tree.** A plain `tsc` run emits, so running one engine
   after the other type-checks against the first one's output and the second
   appears to pass where the first failed. Use `--noEmit`, or reset `dist`.
