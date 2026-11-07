@@ -2,8 +2,11 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  apiUrlPort,
+  DEFAULT_DEV_PORT,
   isLocalUrl,
   resolveDevEnvironmentName,
+  resolveDevPort,
   resolveEnvironment,
 } from './environment.js'
 
@@ -237,5 +240,68 @@ describe('isLocalUrl', () => {
   test('something that is not a URL is not this machine either', () => {
     assert.equal(isLocalUrl('/api'), false)
     assert.equal(isLocalUrl(''), false)
+  })
+})
+
+describe('resolveDevPort', () => {
+  test('an explicit --port wins over the local apiUrl', () => {
+    assert.equal(resolveDevPort('4100', environments), 4100)
+  })
+
+  test('--port 0 is kept, so the OS can pick a free port', () => {
+    assert.equal(resolveDevPort('0', environments), 0)
+  })
+
+  test("without --port the local environment's apiUrl port is used", () => {
+    assert.equal(resolveDevPort(undefined, environments), 4077)
+  })
+
+  test('local is preferred over another loopback environment', () => {
+    assert.equal(
+      resolveDevPort(undefined, {
+        e2e: { apiUrl: 'http://localhost:5555' },
+        local: { apiUrl: 'http://127.0.0.1:4200' },
+      }),
+      4200
+    )
+  })
+
+  test('a production or remote environment never sets the dev port', () => {
+    assert.equal(
+      resolveDevPort(undefined, {
+        prod: { apiUrl: 'http://localhost:8080', production: true },
+        stage: { apiUrl: 'https://stage.example.com:8443' },
+      }),
+      DEFAULT_DEV_PORT
+    )
+  })
+
+  test('no configured environments falls back to 3000', () => {
+    assert.equal(resolveDevPort(undefined, {}), 3000)
+  })
+
+  test('an apiUrl without a port means its scheme default, as callers will use it', () => {
+    assert.equal(
+      resolveDevPort(undefined, { local: { apiUrl: 'http://localhost' } }),
+      80
+    )
+  })
+
+  test('a --port that is not a port number is refused', () => {
+    for (const bad of ['abc', '-1', '70000', '3.5']) {
+      assert.throws(
+        () => resolveDevPort(bad, environments),
+        /is not a port number/,
+        bad
+      )
+    }
+  })
+})
+
+describe('apiUrlPort', () => {
+  test('explicit port, then the scheme default', () => {
+    assert.equal(apiUrlPort('http://localhost:4100/api'), 4100)
+    assert.equal(apiUrlPort('http://localhost'), 80)
+    assert.equal(apiUrlPort('https://localhost'), 443)
   })
 })
