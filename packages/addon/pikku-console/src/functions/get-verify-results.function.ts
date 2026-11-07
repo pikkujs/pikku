@@ -8,7 +8,7 @@ export const getVerifyResults = pikkuFunc<
 >({
   title: 'Get Verify Results',
   description:
-    'The latest verify run, from the console or `pikku verify`, and whether one is in progress.',
+    'The latest verify run, from the console or `pikku validate`, and whether one is in progress.',
   expose: true,
   scopes: ['pikku:console:verify:read'],
   func: async ({ verifyService }) => {

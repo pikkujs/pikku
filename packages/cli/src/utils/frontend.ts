@@ -16,7 +16,7 @@ export async function assertFrontendBuilt(dir: string): Promise<void> {
     await stat(join(dir, 'index.html'))
   } catch {
     throw new Error(
-      `No frontend build found at ${dir} — pikku serves your frontend's output and never builds it, so run the frontend's build first (or drop "serve" from that frontend in pikku.config.json).`
+      `No frontend build found at ${dir} — serving and deploying read your frontend's output and do not build it, so run \`pikku app build\` first (or drop "serve" from that frontend in pikku.config.json).`
     )
   }
 }

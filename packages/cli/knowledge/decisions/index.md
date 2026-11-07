@@ -10,6 +10,7 @@ A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
 - [The CLI's native binaries are compiled only when asked for](native-binaries-are-compiled-only-when-asked-for.md) — a normal build compiles none; PIKKU_CLI_BINARIES=host or all opts in, and release sets all on both builds it runs
+- [pikku ci -p builds the commit in a throwaway worktree, and --deploy never picks a target](pikku-ci-builds-the-commit-and-never-picks-a-target.md) — With -p, pikku ci refuses a dirty tree, runs in a detached git worktree it always removes, copies only .deploy back, and --deploy without -p is an error; db migrate under ci refuses any non-loopback database
 - [The frontend client files are generated from clientFiles, not copied into each app](frontend-client-files-are-generated-from-config.md) — typesFile, envFile, rpcFile and authClientFile in clientFiles make the CLI emit RPCInput/RPCOutput types, apiUrl(), an isomorphic rpc() client and the Better Auth client glue, with import paths computed from the config
 - [pikku dev runs every frontend with a dev command and owns the dev .env](pikku-dev-runs-every-frontend-and-owns-the-dev-env.md) — pikku dev starts each frontend that sets dev.command beside the API, parses the root .env once for all of them, generates the secrets the app declares, and stops everything when any process dies
 

@@ -6,6 +6,8 @@ export type ValidateSeverity = 'critical' | 'error' | 'warn' | 'info'
 
 export type ValidateFinding = {
   id: string
+  /** The compiler or inspector code behind the finding, such as PKU563. */
+  code?: string
   severity: ValidateSeverity
   message: string
   path: string

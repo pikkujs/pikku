@@ -169,7 +169,7 @@ Enabling the RPC endpoint says the endpoint exists, not who may call it — each
 
 ## A function nothing uses: wire it or disable it
 
-`pikku verify` fails on an app function that is not wired, exposed, or called
+`pikku validate --codegen` fails on an app function that is not wired, exposed, or called
 by name (`rpc.invoke`, a workflow step, an agent tool) — `[PKU563]`, naming the
 function and its file. `pikku all` still builds; only verify fails. Addon
 functions are never flagged, in the addon or in an app that uses it.

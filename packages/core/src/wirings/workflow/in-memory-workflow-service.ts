@@ -6,6 +6,7 @@ import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
   WorkflowPlannedStep,
   WorkflowQueueOptions,
+  WorkflowRunMirror,
   WorkflowRun,
   WorkflowRunService,
   WorkflowRunWire,
@@ -32,7 +33,9 @@ export class InMemoryWorkflowService
   extends PikkuWorkflowService
   implements WorkflowRunService
 {
-  constructor(options: WorkflowQueueOptions = {}) {
+  constructor(
+    options: WorkflowQueueOptions & { mirror?: WorkflowRunMirror } = {}
+  ) {
     super({ ...options, wireQueues: false })
   }
 

@@ -96,7 +96,7 @@ its own check:
 }
 ```
 
-Run it with `tsc --noEmit -p tsconfig.i18n.json`. `pikku verify` does this for you:
+Run it with `tsc --noEmit -p tsconfig.i18n.json`. `pikku validate` does this for you:
 every directory under `apps/` and `packages/` (up to three levels down, so block libraries and
 `packages/addons/*` too) that has a `tsconfig.i18n.json` at its root gets its own gate run, and
 every error becomes an `i18n-gate` finding. An error two programs report (a library compiled on
@@ -147,7 +147,7 @@ import { sep } from '@pikku/react'
 `sep` takes a literal made only of whitespace, punctuation and symbols (space, no-break and
 thin spaces, `. , : ; ! ? · • – — - / \ | ( ) [ ] { } < > « » “ ” ‘ ’ " ' & + = * # @ % ~ ^ _`,
 `→ ← ↑ ↓ … ✓ ✕ × € $ £`); words, digits, the empty string, a `string` variable and a template with a
-substitution are compile errors, and `pikku verify` reports them as `sep-argument` for code that
+substitution are compile errors, and `pikku validate` reports them as `sep-argument` for code that
 bypasses the types. It is not for anything that changes by language: a comma-joined list, "and", a
 French space before a colon. Those are a catalogue message, or `Intl.ListFormat` for lists.
 
@@ -158,7 +158,7 @@ directory has a `tsconfig.i18n.json` they skip plain DOM elements, which the gat
 keep reporting fragments, components and helper calls such as `say()` and `toast()`.
 
 English written outside JSX is `string-literal-copy` (a warning; an error under
-`pikku verify --strict`, like `i18n-stub`). It reads `.ts` and `.tsx` string and template
+`pikku validate --strict`, like `i18n-stub`). It reads `.ts` and `.tsx` string and template
 literals of two or more words that sit where copy lives (object property values, array
 elements, return and arrow values, defaults, `?:` / `||` / `??` branches, call arguments and
 variable initialisers), and leaves out class names, ids, paths, URLs, code, SQL, `console.*`,

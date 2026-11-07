@@ -755,7 +755,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     })
 
     // Disabled functions are left out of everything above; say which, once.
-    // An app function nothing uses fails `pikku verify` (error, not critical,
+    // An app function nothing uses fails `pikku validate --codegen` (error, not critical,
     // so the build itself still goes through). Addon functions are never judged.
     await workflow.do('Disabled and unused functions', async () => {
       const state = await getInspectorState()

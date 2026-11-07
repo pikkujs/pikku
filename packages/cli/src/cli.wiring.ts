@@ -38,6 +38,7 @@ import { scopesPrune } from './functions/commands/scopes-prune.js'
 import { rolesAudit } from './functions/commands/roles-audit.js'
 import { rolesPrune } from './functions/commands/roles-prune.js'
 import { pikkuAudit } from './functions/commands/audit.js'
+import { pikkuCi } from './functions/commands/ci.js'
 import { pikkuSemver } from './functions/commands/semver.js'
 import { renderSemver } from './functions/commands/semver-render.js'
 import {
@@ -52,7 +53,6 @@ import {
 } from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
 import { check, renderCheck } from './functions/commands/check.js'
-import { pikkuVerify, renderPikkuVerify } from './functions/commands/verify.js'
 import {
   examplesAdd,
   examplesList,
@@ -152,6 +152,7 @@ import { pikkuNewAddon } from './functions/commands/new-addon.js'
 import { pikkuAddonsAdd } from './functions/commands/addons.js'
 import { pikkuAppNew, renderAppNew } from './functions/commands/app-new.js'
 import {
+  appBuild,
   appList,
   appNativeAdd,
   appNativeCheck,
@@ -445,6 +446,54 @@ wireCLI({
         },
       },
     }),
+    ci: pikkuCLICommand({
+      func: pikkuCi,
+      description:
+        'Run the whole path from a commit to a deployable build, non-interactively: codegen, validate, audit, tests and app builds. With -p, in a throwaway worktree, removing the console and producing a deploy plan.',
+      options: {
+        provider: {
+          description:
+            'Build for this deploy provider, in a throwaway git worktree. No default: without it, pikku ci runs in place and plans nothing',
+          short: 'p',
+        },
+        deploy: {
+          description: 'Apply the output of this run. Needs -p',
+          default: false,
+        },
+        skipTests: {
+          description:
+            'Run without a "test" script, which is otherwise an error',
+          default: false,
+        },
+        keepWorktree: {
+          description: 'Leave the worktree in place after the run',
+          default: false,
+        },
+        worktreeDir: {
+          description:
+            'Create the worktree under this directory instead of the system temp directory',
+        },
+        auditBaseline: {
+          description:
+            'A previous audit.json to compare against. Defaults to .deploy/audit.json, which a passing pikku ci -p writes',
+        },
+        migrationsApplied: {
+          description:
+            'With --deploy on Cloudflare, confirm the migrations in this build are already applied',
+          default: false,
+        },
+        secretsSet: {
+          description:
+            'With --deploy on Cloudflare, confirm the secrets this build needs are set in Cloudflare',
+          default: false,
+        },
+        skipDeployChecks: {
+          description:
+            'Skip the Pikku Studio hosting conventions in the validate stage',
+          default: false,
+        },
+      },
+    }),
     audit: pikkuCLICommand({
       func: pikkuAudit,
       description:
@@ -453,6 +502,14 @@ wireCLI({
         outdated: {
           description: 'Also report available dependency updates',
           default: false,
+        },
+        failOn: {
+          description:
+            'Exit non-zero on an advisory at this severity or worse (critical, high, moderate, low, info), or when no report could be made',
+        },
+        baseline: {
+          description:
+            'A previous audit.json: advisories it lists do not fail --fail-on',
         },
       },
     }),
@@ -822,6 +879,12 @@ wireCLI({
           func: dbMigrate,
           description:
             'Apply pending SQL migrations and regenerate db/schema.gen.ts',
+          options: {
+            localOnly: {
+              description: 'Refuse any database that is not on this machine',
+              default: false,
+            },
+          },
         }),
         generate: pikkuCLICommand({
           func: dbGenerate,
@@ -1318,11 +1381,24 @@ wireCLI({
       func: validate,
       render: renderValidate,
       description:
-        'Run every check that applies to this project — app structure, deploy readiness, and the published file set of any addon it contains',
+        'Run every check that applies to this project — app structure, deploy readiness, type-checks, correctness checks, and the published file set of any addon it contains. Exits non-zero on any error',
       options: {
+        codegen: {
+          description: 'Run codegen first and report what it finds',
+          default: false,
+        },
+        strict: {
+          description:
+            'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings',
+          default: false,
+        },
         skipTypecheck: {
           description:
-            'Skip the frontend type-check stage (structural checks only)',
+            'Skip every type-check and the type-aware lint (structural checks only)',
+          default: false,
+        },
+        skipFrontends: {
+          description: 'Skip the frontend type-checks',
           default: false,
         },
         skipDeployChecks: {
@@ -1333,32 +1409,6 @@ wireCLI({
         migrationsBase: {
           description:
             'Git ref whose migrations are frozen: a migration file on it may not be modified, deleted or renamed (default origin/main, or $PIKKU_MIGRATIONS_BASE)',
-        },
-      },
-    }),
-    verify: pikkuCLICommand({
-      func: pikkuVerify,
-      render: renderPikkuVerify,
-      description:
-        'Run codegen, type-check the backend and every frontend, and the correctness checks codegen and tsc cannot see; findings are located and explained',
-      options: {
-        skipCodegen: {
-          description:
-            'Check the tree as it stands, without running codegen first',
-          default: false,
-        },
-        skipTypecheck: {
-          description: 'Skip the backend type-check',
-          default: false,
-        },
-        skipFrontends: {
-          description: 'Skip the frontend type-checks',
-          default: false,
-        },
-        strict: {
-          description:
-            'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings',
-          default: false,
         },
       },
     }),
@@ -1886,6 +1936,22 @@ wireCLI({
             },
           },
         }),
+        build: pikkuCLICommand({
+          func: appBuild,
+          description:
+            "Run each frontend's own build script in its directory, side by side, skipping deploy: false",
+          options: {
+            onlyServed: {
+              description:
+                'Build only the frontend with "serve", which deploy plan embeds',
+              default: false,
+            },
+            skipServed: {
+              description: 'Build every frontend except the one with "serve"',
+              default: false,
+            },
+          },
+        }),
         list: pikkuCLICommand({
           func: appList,
           render: renderAppList,
@@ -2168,8 +2234,8 @@ wireCLI({
             'Show deployment plan (what will be created, updated, deleted)',
           options: {
             provider: {
-              description: 'Deployment provider (cloudflare, aws)',
-              default: 'cloudflare',
+              description:
+                'Deployment provider (defaults to deploy.defaultProvider, then cloudflare)',
               short: 'p',
             },
             resultFile: {
@@ -2183,9 +2249,13 @@ wireCLI({
           description: 'Execute the deployment plan',
           options: {
             provider: {
-              description: 'Deployment provider (cloudflare, aws)',
-              default: 'cloudflare',
+              description:
+                'Deployment provider (defaults to deploy.defaultProvider, then cloudflare)',
               short: 'p',
+            },
+            runtime: {
+              description:
+                'The runtime the deploy must target. Refused unless the provider supports it (standalone: bun)',
             },
             fromPlan: {
               description:

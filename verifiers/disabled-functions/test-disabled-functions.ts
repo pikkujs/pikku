@@ -3,8 +3,7 @@ import * as assert from 'node:assert'
 import { spawnSync } from 'node:child_process'
 import { readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { closeSync, openSync, readFileSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { runValidate } from '@pikku/cli/validate'
 
 const root = process.cwd()
 const CLI = join(root, '../../packages/cli/dist/bin/pikku.js')
@@ -14,29 +13,18 @@ const pikku = (...args: string[]) =>
 
 type Finding = { code?: string; severity: string; message: string }
 
-/** `pikku verify --json`. Other checks (repo-wide lint, typecheck) may fail it too, so tests look at the codes. */
-const verifyResult = (): { ok: boolean; findings: Finding[] } => {
-  // The JSON result can pass 64KB, more than a pipe delivers before the CLI
-  // exits, so it goes to a file.
-  const out = join(tmpdir(), `pikku-verify-${process.pid}.json`)
-  const fd = openSync(out, 'w')
-  try {
-    spawnSync('node', [CLI, 'verify', '--json'], {
-      cwd: root,
-      stdio: ['ignore', fd, 'ignore'],
-    })
-  } finally {
-    closeSync(fd)
-  }
-  try {
-    const line = readFileSync(out, 'utf8')
-      .split('\n')
-      .find((l) => l.startsWith('{"ok"'))
-    assert.ok(line, 'pikku verify --json printed no result')
-    return JSON.parse(line)
-  } finally {
-    rmSync(out, { force: true })
-  }
+/**
+ * What `pikku validate --codegen` reports. Called directly so it covers this
+ * project alone: the command walks up to the workspace root, which here is the
+ * whole Pikku repo. Other checks may fail too, so tests look at the codes.
+ */
+const verifyResult = async () => {
+  const { ok, findings } = await runValidate(root, {
+    skipTypecheck: true,
+    skipDeployChecks: true,
+    verify: { codegen: true, pikkuCli: CLI, rootDir: root },
+  })
+  return { ok, findings: findings as Finding[] }
 }
 
 /** Every coded log line `pikku all --json` printed. */
@@ -131,7 +119,7 @@ test('a wiring that references a disabled function fails the build', async () =>
   assert.equal(pikku('all').status, 0)
 })
 
-test('pikku verify fails on an app function nothing uses', async () => {
+test('pikku validate --codegen fails on an app function nothing uses', async () => {
   await withFile(
     'forgotten.functions.ts',
     [
@@ -140,7 +128,7 @@ test('pikku verify fails on an app function nothing uses', async () => {
       "  func: async () => 'nobody calls me',",
       '})',
     ],
-    () => {
+    async () => {
       const build = pikku('all', '--json')
       assert.equal(
         build.status,
@@ -155,7 +143,7 @@ test('pikku verify fails on an app function nothing uses', async () => {
         unused[0]!.message!,
         /'forgotten' in src\/functions\/forgotten\.functions\.ts is not wired, exposed or called by anything/
       )
-      const verify = verifyResult()
+      const verify = await verifyResult()
       assert.equal(verify.ok, false)
       assert.ok(
         verify.findings.some(
@@ -168,8 +156,8 @@ test('pikku verify fails on an app function nothing uses', async () => {
   assert.equal(pikku('all').status, 0)
 })
 
-test('pikku verify reports nothing unused when every app function is used or disabled', () => {
-  const verify = verifyResult()
+test('pikku validate --codegen reports nothing unused when every app function is used or disabled', async () => {
+  const verify = await verifyResult()
   assert.deepEqual(
     verify.findings.filter((f) => f.code === 'PKU563' || f.code === 'PKU562'),
     []

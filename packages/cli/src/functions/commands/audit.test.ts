@@ -2,6 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -13,6 +14,7 @@ import type { SecurityAuditReport } from '@pikku/core/types'
 import {
   findProjectRoot,
   parseBunAudit,
+  blockingAdvisories,
   parseBunOutdated,
   pikkuAudit,
   prodPackages,
@@ -615,5 +617,142 @@ describe('pikku audit', () => {
     const outDir = join(root, 'nested', 'deeper', '.pikku')
     const report = await run(root, outDir, bin)
     assert.equal(report.schemaVersion, 1)
+  })
+
+  describe('--fail-on', () => {
+    const cleanBun = `#!/bin/sh\necho '{}'\n`
+    const dirtyBun = `#!/bin/sh\ncat <<'JSON'\n{"lodash":[{"id":1,"title":"t","severity":"high"}],"minimist":[{"id":2,"title":"t","severity":"low"}]}\nJSON\nexit 1\n`
+
+    const gate = async (
+      bunScript: string,
+      input: { failOn?: string; baseline?: string }
+    ) => {
+      const { root, bin, outDir } = projectWith(bunScript)
+      const path = process.env.PATH
+      process.env.PATH = `${bin}:${path}`
+      process.exitCode = 0
+      try {
+        await pikkuAudit.func(
+          { logger, config: { rootDir: root, outDir } } as never,
+          input as never,
+          {} as never
+        )
+        return { code: process.exitCode, outDir }
+      } finally {
+        process.env.PATH = path
+        process.exitCode = 0
+      }
+    }
+
+    const baselineFile = (issues: unknown[]) => {
+      const file = join(scratch(), 'audit.json')
+      writeFileSync(file, JSON.stringify({ issues }))
+      return file
+    }
+
+    test('passes a clean audit', async () => {
+      const { code, outDir } = await gate(cleanBun, { failOn: 'high' })
+      assert.equal(code, 0)
+      assert.ok(existsSync(join(outDir, 'audit.json')))
+    })
+
+    test('with no baseline, any advisory at the threshold fails', async () => {
+      const { code, outDir } = await gate(dirtyBun, { failOn: 'high' })
+      assert.equal(code, 1)
+      assert.ok(!existsSync(join(outDir, 'audit.json')))
+      assert.ok(existsSync(join(outDir, 'audit.failed.json')))
+    })
+
+    test('an advisory below the threshold passes', async () => {
+      const { code } = await gate(dirtyBun, { failOn: 'critical' })
+      assert.equal(code, 0)
+    })
+
+    test('an advisory in the baseline does not block', async () => {
+      const baseline = baselineFile([{ package: 'lodash', advisoryId: '1' }])
+      const { code } = await gate(dirtyBun, { failOn: 'high', baseline })
+      assert.equal(code, 0)
+    })
+
+    test('the same id on another package is a new advisory', async () => {
+      const baseline = baselineFile([{ package: 'other', advisoryId: '1' }])
+      const { code } = await gate(dirtyBun, { failOn: 'high', baseline })
+      assert.equal(code, 1)
+    })
+
+    test('an advisory with no id is never in the baseline', () => {
+      const report = summarise(
+        'bun',
+        [{ package: 'a', severity: 'high', advisoryId: '' } as never],
+        []
+      )
+      assert.equal(
+        blockingAdvisories(report, 'high', new Set(['a@'])).length,
+        1
+      )
+    })
+
+    test('a missing baseline fails rather than judging nothing', async () => {
+      await assert.rejects(
+        gate(cleanBun, { failOn: 'high', baseline: '/nonexistent/audit.json' }),
+        /could not be read/
+      )
+    })
+
+    test('a baseline that is not a report fails', async () => {
+      const file = join(scratch(), 'audit.json')
+      writeFileSync(file, '{}')
+      await assert.rejects(
+        gate(cleanBun, { failOn: 'high', baseline: file }),
+        /not an audit.json report/
+      )
+    })
+
+    test('--baseline needs --fail-on', async () => {
+      await assert.rejects(
+        gate(cleanBun, { baseline: baselineFile([]) }),
+        /--fail-on/
+      )
+    })
+
+    test('an unknown severity is refused', async () => {
+      await assert.rejects(gate(cleanBun, { failOn: 'severe' }), /--fail-on/)
+    })
+
+    for (const [name, script] of [
+      ['bun cannot run', '#!/bin/sh\nexit 1\n'],
+      ['bun prints no JSON', '#!/bin/sh\necho nothing to see\n'],
+      ['bun prints broken JSON', `#!/bin/sh\necho '{ truncated'\n`],
+      ['an advisory has no severity', `#!/bin/sh\necho '{"a":[{"id":1}]}'\n`],
+      ['bun reports an error object', `#!/bin/sh\necho '{"error":"nope"}'\n`],
+    ] as const) {
+      test(`no report is a failure: ${name}`, async () => {
+        const { code, outDir } = await gate(script, { failOn: 'high' })
+        assert.equal(code, 1)
+        assert.ok(!existsSync(join(outDir, 'audit.json')))
+      })
+    }
+
+    test('an unsupported package manager is a failure', async () => {
+      const root = scratch()
+      writeFileSync(join(root, 'package-lock.json'), '{}')
+      process.exitCode = 0
+      await pikkuAudit.func(
+        {
+          logger,
+          config: { rootDir: root, outDir: join(root, '.pikku') },
+        } as never,
+        { failOn: 'high' } as never,
+        {} as never
+      )
+      assert.equal(process.exitCode, 1)
+      process.exitCode = 0
+    })
+
+    test('without --fail-on nothing fails', async () => {
+      const { code, outDir } = await gate(dirtyBun, {})
+      assert.equal(code, 0)
+      assert.ok(existsSync(join(outDir, 'audit.json')))
+    })
   })
 })

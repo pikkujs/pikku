@@ -35,7 +35,7 @@ export type WireRemoteAddonConfig = {
    * The contract package, as a string literal. `@scope/name@^1.4.0` pins a
    * range: `pikku all` downloads the addon's SDK from the registry and
    * records it in `pikku-addons.lock`. A bare `@scope/name` must be installed
-   * as a devDependency instead — `pikku verify` enforces both.
+   * as a devDependency instead — `pikku validate` enforces both.
    */
   package: string
   /** Where the addon is deployed, e.g. `https://registry.example.com`. A function when it varies per environment. */
