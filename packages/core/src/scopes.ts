@@ -1,5 +1,6 @@
 import type { CoreUserSession } from './types/core.types.js'
 import { MissingScopeError } from './errors/errors.js'
+import type { ScopeService } from './services/scope-service.js'
 
 const SEPARATOR = ':'
 const WILDCARD = '*'
@@ -112,4 +113,29 @@ export const intersectScopes = (
     }
   }
   return [...result]
+}
+
+/**
+ * The session with its scopes re-read from the {@link ScopeService}, for a
+ * function that requires a live scope. Only a resolved snapshot (one stamped
+ * with `scopesResolvedAt`) is replaced: scopes a `mapSession`/`mapKey` set
+ * deliberately carry no stamp and stay authoritative. Without a service or a
+ * `userId` there is nothing to re-read, so the session is returned unchanged.
+ */
+export const withLiveScopes = async (
+  session: CoreUserSession | undefined,
+  scopeService: Pick<ScopeService, 'resolveScopes'> | undefined
+): Promise<CoreUserSession | undefined> => {
+  if (
+    !session?.userId ||
+    session.scopesResolvedAt === undefined ||
+    !scopeService
+  ) {
+    return session
+  }
+  return {
+    ...session,
+    scopes: await scopeService.resolveScopes(session.userId),
+    scopesResolvedAt: Date.now(),
+  }
 }

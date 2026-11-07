@@ -37,7 +37,9 @@ describe('withResolvedScopes', () => {
       userId: 'u1',
       memberRoles: ['admin'],
       scopes: ['billing:read'],
+      scopesResolvedAt: resolved.scopesResolvedAt,
     })
+    assert.equal(typeof resolved.scopesResolvedAt, 'number')
   })
 
   test('resolves an empty set for a user with no grants', async () => {
@@ -117,5 +119,108 @@ describe('withResolvedScopes', () => {
         ),
       /db down/
     )
+  })
+})
+
+describe('withResolvedScopes with a scope cache', () => {
+  const memoryCache = (ttlSeconds: number, held: any = null) => {
+    const written: any[] = []
+    return {
+      written,
+      cache: {
+        ttlSeconds,
+        read: async () => held,
+        write: async (snapshot: any) => {
+          written.push(snapshot)
+        },
+      },
+    }
+  }
+
+  test('a TTL of zero reads the store on every request', async () => {
+    let reads = 0
+    const services = servicesWith(scopeService({ u1: ['a'] }, () => reads++))
+    const { cache } = memoryCache(0, {
+      userId: 'u1',
+      scopes: ['a'],
+      at: Date.now(),
+    })
+    await withResolvedScopes(
+      { userId: 'u1' } as CoreUserSession,
+      services,
+      cache
+    )
+    await withResolvedScopes(
+      { userId: 'u1' } as CoreUserSession,
+      services,
+      cache
+    )
+    assert.equal(reads, 2)
+  })
+
+  test('a fresh snapshot skips the read', async () => {
+    let reads = 0
+    const at = Date.now() - 1000
+    const { cache, written } = memoryCache(60, {
+      userId: 'u1',
+      scopes: ['cached'],
+      at,
+    })
+    const resolved = await withResolvedScopes(
+      { userId: 'u1' } as CoreUserSession,
+      servicesWith(scopeService({ u1: ['fresh'] }, () => reads++)),
+      cache
+    )
+    assert.equal(reads, 0)
+    assert.deepEqual(resolved.scopes, ['cached'])
+    assert.equal(resolved.scopesResolvedAt, at)
+    assert.equal(written.length, 0)
+  })
+
+  test('a stale snapshot re-reads and re-stamps', async () => {
+    const { cache, written } = memoryCache(60, {
+      userId: 'u1',
+      scopes: ['old'],
+      at: Date.now() - 61_000,
+    })
+    const resolved = await withResolvedScopes(
+      { userId: 'u1' } as CoreUserSession,
+      servicesWith(scopeService({ u1: ['new'] })),
+      cache
+    )
+    assert.deepEqual(resolved.scopes, ['new'])
+    assert.equal(written.length, 1)
+    assert.equal(written[0].at, resolved.scopesResolvedAt)
+  })
+
+  test("another user's snapshot is never trusted", async () => {
+    const { cache } = memoryCache(60, {
+      userId: 'u2',
+      scopes: ['theirs'],
+      at: Date.now(),
+    })
+    const resolved = await withResolvedScopes(
+      { userId: 'u1' } as CoreUserSession,
+      servicesWith(scopeService({ u1: ['mine'] })),
+      cache
+    )
+    assert.deepEqual(resolved.scopes, ['mine'])
+  })
+
+  test('mapSession scopes stay untouched even with a stale-looking cache', async () => {
+    let reads = 0
+    const { cache, written } = memoryCache(60, {
+      userId: 'u1',
+      scopes: ['x'],
+      at: 0,
+    })
+    const resolved = await withResolvedScopes(
+      { userId: 'u1', scopes: [] } as CoreUserSession,
+      servicesWith(scopeService({ u1: ['admin'] }, () => reads++)),
+      cache
+    )
+    assert.deepEqual(resolved.scopes, [])
+    assert.equal(reads, 0)
+    assert.equal(written.length, 0)
   })
 })

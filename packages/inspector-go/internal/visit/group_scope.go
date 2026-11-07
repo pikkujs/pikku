@@ -29,6 +29,21 @@ func literalKeyName(name *ast.Node) (string, bool) {
 	return "", false
 }
 
+// literalBoolProperty is the literal `name: true|false` on obj, if present.
+func literalBoolProperty(obj *ast.Node, name string) (value bool, ok bool) {
+	p := tsutil.FindPropertyAssignment(obj, name)
+	if p == nil {
+		return false, false
+	}
+	switch p.Initializer().Kind {
+	case ast.KindTrueKeyword:
+		return true, true
+	case ast.KindFalseKeyword:
+		return false, true
+	}
+	return false, false
+}
+
 // scopesObject is the object-literal initializer of an identifier-named
 // `scopes` property assignment.
 func scopesObject(obj *ast.Node) *ast.Node {
@@ -78,6 +93,9 @@ func (s *Context) extractScopeNodes(obj *ast.Node, scopeName string) *state.Reco
 		var node jsObject
 		node.set("displayName", orUndefined(tsutil.GetPropertyValue(init, "displayName")))
 		node.set("description", orUndefined(tsutil.GetPropertyValue(init, "description")))
+		if live, ok := literalBoolProperty(init, "live"); ok {
+			node.set("live", live)
+		}
 		if nested := scopesObject(init); nested != nil {
 			if n := s.extractScopeNodes(nested, scopeName); n != nil {
 				node.set("scopes", n)
@@ -188,6 +206,9 @@ func (s *Context) addScope(node *ast.Node) {
 		o.set("name", name)
 		o.set("displayName", orUndefined(displayName))
 		o.set("description", orUndefined(description))
+		if live, ok := literalBoolProperty(root, "live"); ok {
+			o.set("live", live)
+		}
 		if scopes != nil {
 			o.set("scopes", scopes)
 		}

@@ -98,6 +98,7 @@ export function validateAndBuildScopeDefinitionsMeta(
       name: def.name,
       displayName: def.displayName,
       description: def.description,
+      live: def.live,
       scopes: def.scopes,
       sourceFile: def.sourceFile,
       origin: def.origin,
@@ -106,3 +107,43 @@ export function validateAndBuildScopeDefinitionsMeta(
 
   return meta
 }
+
+const collectLive = (
+  nodes: Record<string, ScopeNodeMeta> | undefined,
+  prefix: string,
+  inherited: boolean,
+  out: Set<string>
+): void => {
+  for (const [segment, node] of Object.entries(nodes ?? {})) {
+    const id = `${prefix}${SEPARATOR}${segment}`
+    const live = node.live ?? inherited
+    if (live) {
+      out.add(id)
+    }
+    collectLive(node.scopes, id, live, out)
+  }
+}
+
+/** Every scope id that is live, directly or by an ancestor. */
+export const liveScopeIds = (definitions: ScopeDefinitions): Set<string> => {
+  const out = new Set<string>()
+  for (const def of definitions) {
+    const live = def.live ?? false
+    if (live) {
+      out.add(def.name)
+    }
+    collectLive(def.scopes, def.name, live, out)
+  }
+  return out
+}
+
+/** True when any required scope (`admin:*` counts as `admin`) is in `live`. */
+export const requiresLiveScope = (
+  required: readonly string[] | undefined,
+  live: ReadonlySet<string>
+): boolean =>
+  (required ?? []).some((scope) =>
+    live.has(
+      scope.endsWith(`${SEPARATOR}${WILDCARD}`) ? scope.slice(0, -2) : scope
+    )
+  )

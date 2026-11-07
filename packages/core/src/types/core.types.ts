@@ -152,6 +152,13 @@ export interface CoreUserSession {
    */
   scopes?: string[]
   /**
+   * Epoch milliseconds at which `scopes` was last resolved from the
+   * `ScopeService`. Its presence marks the scopes as a resolved snapshot rather
+   * than an authoritative set from `mapSession`/`mapKey`, so a function that
+   * requires a live scope may replace them with a fresh read.
+   */
+  scopesResolvedAt?: number
+  /**
    * Restricts the session to functions declared `readonly`. The function runner
    * throws `ReadonlySessionError` for anything else.
    */

@@ -7,7 +7,12 @@ import type {
 import type { ImpersonationOptions } from './auth-session-impersonation.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { mergeRelayedCookies } from './cross-site-cookies.js'
-import { hasLiveSession, resolveAndSetSession } from './resolve-session.js'
+import {
+  hasLiveSession,
+  readSessionSecret,
+  resolveAndSetSession,
+} from './resolve-session.js'
+import { scopesCookieCache } from './scopes-cookie.js'
 
 /** The `{ user, session }` better-auth's `getSession` resolves. */
 export type BetterAuthSessionResult = { user: any; session: any }
@@ -35,6 +40,15 @@ export type BetterAuthSessionOptions = {
   ) => CoreUserSession | Promise<CoreUserSession>
   /** Honour the impersonation header for callers allowed to; off when omitted. */
   impersonation?: ImpersonationOptions
+  /**
+   * Seconds a resolved scope snapshot, kept in a signed `pikku_scopes` cookie,
+   * is trusted before the `ScopeService` is read again. Defaults to 0: read on
+   * every request. Scopes that a `live` scope gates are always read fresh, and
+   * scopes from `mapSession` are never replaced. Needs `secretId` to be set.
+   */
+  scopesTtlSeconds?: number
+  /** Secret the scope snapshot cookie is signed with. Defaults to `BETTER_AUTH_SECRET`. */
+  secretId?: string
   /**
    * Where this sits in the middleware order. The CLI generates its default-map
    * registration at `lowest` so an app's own registration (default `medium`)
@@ -88,7 +102,14 @@ export type BetterAuthSessionOptions = {
 export const betterAuthSession = (
   options: BetterAuthSessionOptions = {}
 ): CorePikkuMiddleware => {
-  const { mapSession, apiKey, impersonation, priority } = options
+  const {
+    mapSession,
+    apiKey,
+    impersonation,
+    priority,
+    scopesTtlSeconds = 0,
+    secretId = 'BETTER_AUTH_SECRET',
+  } = options
   const apiKeyHeader = apiKey?.header ?? 'x-api-key'
 
   return pikkuMiddleware({
@@ -167,6 +188,21 @@ export const betterAuthSession = (
       }
 
       if (result?.user) {
+        const scopesCache =
+          scopesTtlSeconds > 0
+            ? scopesCookieCache({
+                ttlSeconds: scopesTtlSeconds,
+                secret: await readSessionSecret(
+                  services,
+                  secretId,
+                  'betterAuthSession'
+                ),
+                cookieHeader: mergeRelayedCookies(
+                  new Headers(request.headers())
+                ).get('cookie'),
+                response: http.response,
+              })
+            : undefined
         await resolveAndSetSession({
           result,
           services,
@@ -174,6 +210,7 @@ export const betterAuthSession = (
           setInitialSession,
           mapSession,
           impersonation,
+          scopesCache,
         })
       }
 

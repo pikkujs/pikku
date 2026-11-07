@@ -43,7 +43,7 @@ import {
   createFunctionSessionWireProps,
 } from '../services/user-session-service.js'
 import { MissingSessionError, ReadonlySessionError } from '../errors/errors.js'
-import { verifyScopes } from '../scopes.js'
+import { verifyScopes, withLiveScopes } from '../scopes.js'
 import { assertFeatureAvailable } from '../wirings/flag/assert-feature-available.js'
 import {
   PikkuCredentialWireService,
@@ -501,7 +501,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
       addonScopes.length > 0
         ? [...addonScopes, ...(functionScopes ?? [])]
         : functionScopes,
-      session
+      funcMeta.liveScopes
+        ? await withLiveScopes(session, resolvedSingletonServices.scopeService)
+        : session
     )
 
     const featureFlag = funcConfig.featureFlag ?? funcMeta.featureFlag
