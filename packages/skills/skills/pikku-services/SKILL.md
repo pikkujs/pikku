@@ -1,7 +1,7 @@
 ---
 name: pikku-services
 description: >-
-  Pikku service layer: pikkuServices/pikkuWireServices DI, pikkuServerLifecycle, defineSecret, defineVariable, defineCredential, env vars, audit sink, logging. are pikku-service-backends.
+  Pikku service layer: pikkuServices/pikkuWireServices DI, pikkuServerLifecycle, defineSecret, defineVariable, defineCredential, env vars, audit sink, logging. Choosing a service backend is pikku-service-backends.
 installGroups: [core]
 ---
 

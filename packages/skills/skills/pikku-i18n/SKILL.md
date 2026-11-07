@@ -29,7 +29,7 @@ Never hardcode display text: add a key to `messages/en.json` and render `m.the__
 
 ## Direction is one setting, not per-component work
 
-Set `dir` once at the document root from the active locale and the browser mirrors everything, provided every custom style is flow-relative (`margin-inline-start`, `text-align: start`, Tailwind `ms-*`/`me-*`), not physical (`margin-left`, `text-align: left`, `ml-*`/`mr-*`). Write logical properties from the start, even in an English-only app.
+Set `dir` once at the document root from the active locale and the browser mirrors everything, provided every custom style is flow-relative (`margin-inline-start`, `text-align: start`, Tailwind `ms-*`/`me-*`), not physical (`margin-left`, `text-align: left`, `ml-*`/`mr-*`). Write logical properties from the start, even in an English-only app. Root `dir` does not flip icon artwork: chevrons and back/forward arrows need their own treatment (`references/rtl.md`).
 
 ## What NOT to do
 
