@@ -57,7 +57,7 @@ An unresolved token leaves the session unset and the function throws `MissingSes
 
 ### A cron is a machine identity too — set it in the task's own middleware
 
-A scheduled task has no caller and no header, but it is still a machine principal, and without a session it cannot invoke a gated RPC or be attributed in anything it writes. Give it one the same way, in the `middleware` of its `wireScheduler`: a `pikkuMiddleware` that calls `setInitialSession({ userId: `cron:${scheduledTask?.name}`, scopes: ['machine:cron'] })` and returns `next()`.
+A scheduled task has no caller and no header, but it is still a machine principal, and without a session it cannot invoke a gated RPC or be attributed in anything it writes. Give it one the same way, in the `middleware` of its `wireScheduler`: a `pikkuMiddleware` that calls ``setInitialSession({ userId: `cron:${scheduledTask?.name}`, scopes: ['machine:cron'] })`` and returns `next()`.
 
 - One `const`, not a `machineSession(name)` factory: the inspector rejects a bare `pikkuMiddleware()` that is not assigned to a variable or object property, and the task name is on the wire anyway. Parameterised middleware goes through `pikkuMiddlewareFactory`.
 - The task can then be a thin `rpc.invoke('someGatedRpc')` against the same entry point a person calls, instead of factoring the logic into a `lib/` helper purely to route around the missing identity.

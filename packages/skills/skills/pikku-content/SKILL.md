@@ -15,7 +15,7 @@ Run this once: `pikku doc ContentService UploadURLResult`. It prints each step a
 
 ## Upload, in order
 
-The `content` service is always there: add nothing to services or config for it.
+The `content` service needs a backend. In `pikku dev` the built-in local store is wired for you. Anywhere else, supply a `content` singleton service (for the built-in store, `LocalContent` also needs the matching upload and asset routes), or `content.getUploadURL` has nothing to call.
 
 1. A function calls `content.getUploadURL({ bucket, fileKey, contentType })` and returns `uploadUrl`, `uploadMethod`, `uploadHeaders` and `fileKey`. A bucket is any name you pick. Build `fileKey` on the server: owner prefix, uuid, sanitised file name.
 2. The browser sends the file itself, as the raw body, with no `FormData` and no session token, because the URL is the grant:
@@ -31,7 +31,7 @@ Store `fileKey` on the row. Not a URL, which expires. Not the file. Not `assetKe
 
 ## Reading
 
-Private unless you pass `visibility: 'public'`. Read through `content.getDownloadURL({ bucket, key, expiresInSeconds })`: a signed URL, minted per view, for an `<img>` or a link.
+Private unless you pass `visibility: 'public'`. Read through `content.getDownloadURL({ bucket, key, expiresInSeconds })`: a signed, expiring URL for a private file, minted per view, for an `<img>` or a link. A `public` file gets a plain, persistent URL: `expiresInSeconds` does not expire it, so never rely on expiry to restrict a public file.
 
 Anyone holding it can read the file, so the function handing it out decides who may. **The functions that sign an upload, save a key or sign a read each take an id, so each gets a `pikkuPermission` that loads that row.** A check in the body, or a signed-in check alone, does not count.
 

@@ -62,7 +62,7 @@ function ItemList() {
 }
 ```
 
-For scroll-triggered loading, put an `IntersectionObserver` sentinel at the end of the list that calls `fetchNextPage({ cancelRefetch: false })` when it enters the viewport while `hasNextPage && !isFetchingNextPage`, so re-entry never restarts a request in flight. Don't poll on a scroll event handler.
+For scroll-triggered loading, put an `IntersectionObserver` sentinel at the end of the list that calls `fetchNextPage({ cancelRefetch: false })` when it enters the viewport while `hasNextPage && !isFetching`, so re-entry never restarts a request in flight. `isFetchingNextPage` is false during a background refetch, and `cancelRefetch: false` would then reuse that refetch instead of loading the next page, so gate on `isFetching` and re-check a still-visible sentinel when the fetch settles (an effect on `isFetching`), or pagination stalls. Don't poll on a scroll event handler.
 
 ## Common mistakes
 

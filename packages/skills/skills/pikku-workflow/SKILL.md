@@ -100,7 +100,8 @@ export const expenseApproval = pikkuWorkflowFunc({
 // Start: a pikkuFunc the screen calls. `rpc.startWorkflow` returns { runId }.
 const { runId } = await rpc.startWorkflow('expenseApproval', { expenseId, teamId })
 
-// List: a run at a gate is `suspended`. Keep only the caller's own, by the run's input.
+// List: a run at a gate is `suspended`. `limit` applies before your team filter, so page through
+// every suspended run (or use a team-filtered query) rather than reading only the first 50.
 const runs = await workflowRunService.listRuns({ workflowName: 'expenseApproval', status: 'suspended', limit: 50 })
 const waiting = runs.filter((run) => (run.input as { teamId?: string }).teamId === teamId)
 
@@ -109,4 +110,4 @@ const waiting = runs.filter((run) => (run.input as { teamId?: string }).teamId =
 await workflowService.approveStep(runId, EXPENSE_APPROVAL, { approve }, session)
 ```
 
-`workflowRunService` and `workflowService` are optional services: check them and throw `MissingServiceError` when absent. The generated `/workflow/<name>/approve/:runId` route only knows `approvers` and `approverScope`; a rule the project already writes as a permission belongs in the answering function.
+`workflowRunService` and `workflowService` are optional services: check them and throw `MissingServiceError` when absent. The generated `/workflow/<name>/approve/:runId` route only knows `approvers` and `approverScope`; a rule the project already writes as a permission belongs in the answering function. The scaffolded route does not run that function's permission or ownership check, so any signed-in user can approve through it: protect or disable the scaffolded approve route, and use `approverScope` only when it enforces the same policy, including any run-ownership check.
