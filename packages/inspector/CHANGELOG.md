@@ -1,3 +1,12 @@
+## 0.12.116
+
+### Patch Changes
+
+- a679e5d: `pikku verify` is merged into `pikku validate`, which now runs the type-check and correctness checks, skips codegen unless `--codegen` is passed, and exits non-zero on any error. The `pikku verify` command is gone; `runVerify`, `VerifyService` and the recorded results stay. See MIGRATION.md.
+- Updated dependencies [a679e5d]
+- Updated dependencies [307fb8d]
+  - @pikku/core@0.12.152
+
 ## 0.12.115
 
 ### Patch Changes

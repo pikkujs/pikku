@@ -1,5 +1,11 @@
 # @pikku/react
 
+## 0.12.20
+
+### Patch Changes
+
+- a679e5d: `pikku verify` is merged into `pikku validate`, which now runs the type-check and correctness checks, skips codegen unless `--codegen` is passed, and exits non-zero on any error. The `pikku verify` command is gone; `runVerify`, `VerifyService` and the recorded results stay. See MIGRATION.md.
+
 ## 0.12.19
 
 ### Patch Changes
