@@ -134,3 +134,15 @@ makes `pikku all` abort part-way, where file timing differs from run to run.
 
 `parity.ts --captured` replays stored requests against the checkout as it is now; it is
 only exact while the generated scaffold from the Go run still exists.
+
+## Golden check
+
+```bash
+bun inspector-parity/scripts/golden-check.ts <goBin> [--update] [--only addon-load,trigger_feature,workflow_edge]
+```
+
+Three Rust tests compare against a committed slice of Go's output
+(`addon-load/go.golden.json`, `trigger_feature/expected.go.json`, `workflow_edge/golden.json`).
+This runs Go on each fixture and fails (exit 1) when the committed file is stale; `--update` rewrites it.
+Use the branch's own `pikku-inspect`, not a released prebuilt. Exit 2 means Go could not run.
+See `packages/inspector-rust/knowledge/decisions/committed-go-goldens-are-checked-against-go.md`.
