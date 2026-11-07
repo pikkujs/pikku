@@ -7,7 +7,8 @@
   },
   "rules": {
     "typescript/no-misused-promises": "error",
-    "typescript/no-floating-promises": "error"
+    "typescript/no-floating-promises": "error",
+    "no-empty": "error"
   },
   "ignorePatterns": [
     "**/*.gen.ts",

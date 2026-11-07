@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import * as assert from 'node:assert'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runValidate } from '@pikku/cli/validate'
 
@@ -64,6 +64,72 @@ test('the lint key lowers the severity', async () => {
       assert.ok(findings.every((finding) => finding.startsWith('warn ')))
     }
   )
+})
+
+const oxlintConfigPath = join(root, '.oxlintrc.json')
+const swallowingPath = join(root, 'src', 'functions', 'swallows-a-failure.ts')
+
+/**
+ * Written for the test and removed after it: committed, the empty catch would
+ * fail the repository's own `bun run lint`, which lints `verifiers/`.
+ */
+const withEmptyCatch = async (
+  noEmpty: unknown,
+  body: () => Promise<void>
+) => {
+  await writeFile(
+    oxlintConfigPath,
+    JSON.stringify({
+      options: { typeAware: true },
+      rules: {
+        'typescript/no-misused-promises': 'error',
+        'typescript/no-floating-promises': 'error',
+        'no-empty': noEmpty,
+      },
+    })
+  )
+  await writeFile(
+    swallowingPath,
+    'export const parse = (raw: string): unknown => {\n' +
+      '  try {\n' +
+      '    return JSON.parse(raw)\n' +
+      '  } catch {}\n' +
+      '  return null\n' +
+      '}\n'
+  )
+  try {
+    await body()
+  } finally {
+    await rm(oxlintConfigPath, { force: true })
+    await rm(swallowingPath, { force: true })
+  }
+}
+
+test('an empty catch fails validate through the app oxlint', async () => {
+  await withEmptyCatch('error', async () => {
+    const { findings } = await runValidate(root)
+    assert.deepStrictEqual(
+      findings
+        .filter((finding) => finding.id === 'oxlint-eslint-no-empty')
+        .map((finding) => [finding.severity, finding.path]),
+      [['error', swallowingPath]]
+    )
+  })
+})
+
+test('allowEmptyCatch is refused as a way to keep no-empty on', async () => {
+  await withEmptyCatch(['error', { allowEmptyCatch: true }], async () => {
+    const { findings } = await runValidate(root)
+    const missing = findings.filter(
+      (finding) => finding.id === 'oxlint-rule-missing'
+    )
+    assert.equal(missing.length, 1)
+    assert.match(missing[0]!.message, /"allowEmptyCatch" is true/)
+    assert.deepStrictEqual(
+      findings.filter((finding) => finding.id === 'oxlint-eslint-no-empty'),
+      []
+    )
+  })
 })
 
 test('the lint key switches the rule off', async () => {

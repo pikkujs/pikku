@@ -151,6 +151,17 @@ describe('mergeOxlintConfig', () => {
     )
   })
 
+  test('raises no-empty to error and drops allowEmptyCatch:true', () => {
+    const merged = mergeOxlintConfig(
+      JSON.stringify({
+        rules: { 'no-empty': ['warn', { allowEmptyCatch: true }] },
+      })
+    )
+    assert.equal(merged.kind, 'merged')
+    if (merged.kind !== 'merged') return
+    assert.deepEqual(JSON.parse(merged.text).rules['no-empty'], ['error', {}])
+  })
+
   test('a second run changes nothing, byte for byte', () => {
     const first = mergeOxlintConfig('{"rules":{"no-console":"warn"}}')
     assert.equal(first.kind, 'merged')

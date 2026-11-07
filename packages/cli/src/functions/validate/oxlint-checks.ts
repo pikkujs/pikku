@@ -13,11 +13,37 @@ import { applyRuleSeverity } from './rule-severity.js'
  * `tsc` does not flag the `!` form. These two rules (type-aware, so they need
  * `oxlint-tsgolint`) flag every shape of it: a negated or `&&`-ed promise, a
  * promise stored then branched on, and a bare un-awaited call.
+ *
+ * `no-empty` reports an empty `catch {}`, which turns a real failure into
+ * "nothing happened". A comment inside the block is how a deliberate one says so.
  */
 export const OXLINT_REQUIRED_RULES = [
   'typescript/no-misused-promises',
   'typescript/no-floating-promises',
+  'no-empty',
 ] as const
+
+type RequiredRule = (typeof OXLINT_REQUIRED_RULES)[number]
+
+/** A rule option that keeps the rule on while switching off the case it is required for. */
+export const DEFEATING_OPTIONS: Partial<
+  Record<RequiredRule, { option: string; value: boolean; consequence: string }>
+> = {
+  'typescript/no-misused-promises': {
+    option: 'checksConditionals',
+    value: false,
+    consequence: '`if (!verify(sig))` is not reported',
+  },
+  'no-empty': {
+    option: 'allowEmptyCatch',
+    value: true,
+    consequence: 'an empty `catch {}` is not reported',
+  },
+}
+
+/** `no-empty` -> `oxlint-eslint-no-empty`, the id a diagnostic of that rule is reported under. */
+const findingIdOf = (rule: string) =>
+  `oxlint-${(rule.includes('/') ? rule : `eslint/${rule}`).replace(/[^a-zA-Z0-9]+/g, '-')}`
 
 const OXLINT_PACKAGES = ['oxlint', 'oxlint-tsgolint'] as const
 
@@ -334,6 +360,11 @@ const NO_VOID = [
   'Await the call, or await it and check the result: `if (!(await verify(sig))) reject()`.',
 ].join('\n')
 
+const NO_EMPTY_CATCH = [
+  'Do NOT "fix" an empty catch by adding a comment and nothing else unless the failure is genuinely safe to ignore.',
+  'Rethrow it, log it with context, or return something the caller can act on.',
+].join('\n')
+
 /** The typed shape of `oxlint --print-config` that these checks read. */
 type ResolvedConfig = {
   plugins?: string[] | null
@@ -357,23 +388,22 @@ export const isError = (value: unknown) => {
 }
 
 /**
- * `no-misused-promises` stops looking at `if (!p)` when `checksConditionals`
- * is switched off, which is the one shape this exists for.
+ * `--print-config` nests the options one level down (`["deny", [{...}]]`)
+ * while a config file holds them flat (`["error", {...}]`); both are read.
  */
 const optionsDisableCoverage = (
-  rule: string,
+  rule: RequiredRule,
   value: unknown
 ): string | null => {
-  if (!Array.isArray(value)) return null
-  const options = value.slice(1)
-  for (const o of options) {
+  const defeat = DEFEATING_OPTIONS[rule]
+  if (!defeat || !Array.isArray(value)) return null
+  for (const o of value.slice(1).flat()) {
     if (
-      rule === 'typescript/no-misused-promises' &&
       o &&
       typeof o === 'object' &&
-      (o as { checksConditionals?: unknown }).checksConditionals === false
+      (o as Record<string, unknown>)[defeat.option] === defeat.value
     ) {
-      return '"checksConditionals" is false, so `if (!verify(sig))` is not reported'
+      return `"${defeat.option}" is ${defeat.value}, so ${defeat.consequence}`
     }
   }
   return null
@@ -471,7 +501,7 @@ export const runOxlintSetupChecks = async (
       !resolved.plugins || resolved.plugins.includes('typescript')
     for (const rule of OXLINT_REQUIRED_RULES) {
       const value = resolved.rules?.[rule]
-      if (!hasTypescriptPlugin) {
+      if (rule.startsWith('typescript/') && !hasTypescriptPlugin) {
         missing.push(rule)
         reasons.push(
           `${rule}: the "typescript" plugin is not in "plugins" (${(resolved.plugins ?? []).join(', ')})`
@@ -502,12 +532,12 @@ export const runOxlintSetupChecks = async (
       findings.push({
         id: 'oxlint-rule-missing',
         severity: 'error',
-        message: `${rel(root, config.file)} does not enforce ${[...new Set(missing)].join(' and ')} at "error" — ${reasons.join('; ')}. Without them a forgotten \`await\` on an async helper (\`if (!verify(sig))\`) is not caught`,
+        message: `${rel(root, config.file)} does not enforce ${[...new Set(missing)].join(' and ')} at "error" — ${reasons.join('; ')}. Without them a forgotten \`await\` on an async helper (\`if (!verify(sig))\`) or an empty \`catch {}\` is not caught`,
         path: config.file,
         fixHint: [
           `In ${rel(root, config.file)} (and anything it extends) make sure these are set:`,
           CONFIG_SNIPPET,
-          'Remove any "overrides" entry that sets these rules to "off" or "warn", keep "typescript" in "plugins" if "plugins" is set, and do not pass { "checksConditionals": false } to typescript/no-misused-promises.',
+          'Remove any "overrides" entry that sets these rules to "off" or "warn", keep "typescript" in "plugins" if "plugins" is set, and do not pass { "checksConditionals": false } to typescript/no-misused-promises or { "allowEmptyCatch": true } to no-empty.',
           ENABLE_HINT,
         ].join('\n'),
       })
@@ -699,9 +729,7 @@ export const runOxlintRun = async (
     )
   }
 
-  const required = new Set(
-    OXLINT_REQUIRED_RULES.map((r) => `oxlint-${r.replace('/', '-')}`)
-  )
+  const required = new Set(OXLINT_REQUIRED_RULES.map(findingIdOf))
   const diagnostics = parsed.diagnostics ?? []
   const all: ValidateFinding[] = diagnostics.map((d) => {
     const rule = ruleOf(d.code)
@@ -710,9 +738,7 @@ export const runOxlintRun = async (
     const where = span
       ? `${rel(root, file)}:${span.line}:${span.column}`
       : rel(root, file)
-    const id = rule
-      ? `oxlint-${rule.replace(/[^a-zA-Z0-9]+/g, '-')}`
-      : 'oxlint-diagnostic'
+    const id = rule ? findingIdOf(rule) : 'oxlint-diagnostic'
     const hints = [d.help, d.url].filter(Boolean) as string[]
     if (rule === 'typescript/no-floating-promises') hints.push(NO_VOID)
     if (rule === 'typescript/no-misused-promises') {
@@ -720,6 +746,7 @@ export const runOxlintRun = async (
         'A Promise is truthy: await it before branching on it, e.g. `if (!(await verify(sig)))`.'
       )
     }
+    if (rule === 'eslint/no-empty') hints.push(NO_EMPTY_CATCH)
     return {
       id,
       severity:
