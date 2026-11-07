@@ -2,6 +2,8 @@ export { defineScope, declareScopes } from './define-scope.js'
 export {
   flattenScopeDefinitions,
   validateAndBuildScopeDefinitionsMeta,
+  liveScopeIds,
+  requiresLiveScope,
 } from './validate-scope-definitions.js'
 export type {
   CoreScopes,

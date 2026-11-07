@@ -1538,6 +1538,80 @@ describe('runPikkuFunc - scopes', () => {
     )
   })
 
+  describe('live scopes', () => {
+    const runLive = (
+      session: Record<string, unknown>,
+      resolve: (userId: string) => Promise<string[]>
+    ) =>
+      runPikkuFunc('rpc', Math.random().toString(), 'liveFn', {
+        singletonServices: {
+          ...mockSingletonServices,
+          scopeService: { resolveScopes: resolve } as any,
+        },
+        data: () => ({}),
+        auth: false,
+        wire: { session: { userId: 'u1', ...session } as any },
+      })
+
+    const liveFunction = (live: boolean) => {
+      addTestFunction('liveFn', { func: async () => 'ok', scopes: ['admin'] })
+      if (live) {
+        pikkuState(null, 'function', 'meta').liveFn.liveScopes = true
+      }
+    }
+
+    test('re-reads a resolved snapshot and refuses a revoked grant', async () => {
+      liveFunction(true)
+      await assert.rejects(
+        () =>
+          runLive(
+            { scopes: ['admin'], scopesResolvedAt: Date.now() },
+            async () => []
+          ),
+        MissingScopeError
+      )
+    })
+
+    test('re-reads even when the snapshot is fresh and accepts a new grant', async () => {
+      liveFunction(true)
+      let reads = 0
+      const result = await runLive(
+        { scopes: [], scopesResolvedAt: Date.now() },
+        async () => {
+          reads++
+          return ['admin']
+        }
+      )
+      assert.equal(result, 'ok')
+      assert.equal(reads, 1)
+    })
+
+    test('a non-live function trusts the session snapshot', async () => {
+      liveFunction(false)
+      let reads = 0
+      const result = await runLive(
+        { scopes: ['admin'], scopesResolvedAt: Date.now() },
+        async () => {
+          reads++
+          return []
+        }
+      )
+      assert.equal(result, 'ok')
+      assert.equal(reads, 0)
+    })
+
+    test('scopes a mapSession set (no stamp) stay authoritative', async () => {
+      liveFunction(true)
+      let reads = 0
+      const result = await runLive({ scopes: ['admin'] }, async () => {
+        reads++
+        return []
+      })
+      assert.equal(result, 'ok')
+      assert.equal(reads, 0)
+    })
+  })
+
   // The load-bearing test. Scopes are an AND gate separate from permissions, so
   // a passing global (or function) permission must never satisfy a scope.
   test('a passing global permission does not satisfy a scope', async () => {

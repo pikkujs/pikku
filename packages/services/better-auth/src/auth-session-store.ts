@@ -7,6 +7,7 @@ import type {
 import { getSessionCookie } from 'better-auth/cookies'
 import type { ImpersonationOptions } from './auth-session-impersonation.js'
 import { mergeRelayedCookies } from './cross-site-cookies.js'
+import { scopesCookieCache } from './scopes-cookie.js'
 import { verifySessionCredential } from './session-credential.js'
 import type { AuthSessionStorage } from './session-store.js'
 import {
@@ -46,6 +47,13 @@ export type BetterAuthStoreSessionOptions = {
   ) => CoreUserSession | Promise<CoreUserSession>
   /** Honour the impersonation header for callers allowed to; off when omitted. */
   impersonation?: ImpersonationOptions
+  /**
+   * Seconds a resolved scope snapshot, kept in a signed `pikku_scopes` cookie,
+   * is trusted before the `ScopeService` is read again. Defaults to 0: read on
+   * every request. Scopes that a `live` scope gates are always read fresh, and
+   * scopes from `mapSession` are never replaced. Needs `secretId` to be set.
+   */
+  scopesTtlSeconds?: number
   /**
    * Where this sits in the middleware order. The CLI generates its default-map
    * registration at `lowest` so an app's own registration (default `medium`)
@@ -130,6 +138,7 @@ export const betterAuthStoreSession = (
     secretId = 'BETTER_AUTH_SECRET',
     cookiePrefix,
     priority,
+    scopesTtlSeconds = 0,
   } = options
 
   const headerEnabled = transports.includes('header')
@@ -192,6 +201,12 @@ export const betterAuthStoreSession = (
         setInitialSession,
         mapSession,
         impersonation,
+        scopesCache: scopesCookieCache({
+          ttlSeconds: scopesTtlSeconds,
+          secret,
+          cookieHeader: headers.get('cookie'),
+          response: http.response,
+        }),
       })
 
       return next()

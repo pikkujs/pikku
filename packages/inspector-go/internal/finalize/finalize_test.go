@@ -148,3 +148,35 @@ func TestValidationPassBracket(t *testing.T) {
 		t.Errorf("unended pass = %+v, want {1 2}", p)
 	}
 }
+
+func TestMarkLiveScopeFunctions(t *testing.T) {
+	st := &state.State{}
+	st.Scopes.Definitions = state.List[state.Raw]{
+		state.Raw(`{"name":"admin","scopes":{"users":{"live":true,"scopes":{"ban":{},"view":{"live":false}}}}}`),
+		state.Raw(`{"name":"root","live":true,"scopes":{"child":{}}}`),
+		state.Raw(`{"name":"plain","scopes":{"read":{}}}`),
+	}
+	st.Functions.Meta = *state.NewRecord[*state.FunctionMeta]()
+	for id, scopes := range map[string][]string{
+		"direct":    {"admin:users"},
+		"inherited": {"admin:users:ban"},
+		"wildcard":  {"admin:users:*"},
+		"rootLive":  {"root:child"},
+		"parent":    {"admin"},
+		"optedOut":  {"admin:users:view"},
+		"plain":     {"plain:read"},
+		"none":      nil,
+	} {
+		st.Functions.Meta.Set(id, &state.FunctionMeta{Scopes: scopes})
+	}
+
+	markLiveScopeFunctions(st)
+
+	want := map[string]bool{"direct": true, "inherited": true, "wildcard": true, "rootLive": true}
+	for id := range map[string]bool{"direct": true, "inherited": true, "wildcard": true, "rootLive": true, "parent": true, "optedOut": true, "plain": true, "none": true} {
+		meta, _ := st.Functions.Meta.Get(id)
+		if got := meta.LiveScopes != nil && *meta.LiveScopes; got != want[id] {
+			t.Errorf("%s: liveScopes = %v, want %v", id, got, want[id])
+		}
+	}
+}

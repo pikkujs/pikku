@@ -12,6 +12,7 @@ import {
   readSessionSecret,
   resolveAndSetSession,
 } from './resolve-session.js'
+import { scopesCookieCache } from './scopes-cookie.js'
 import { markStatelessSessionInUse } from './stateless-cookie-default.js'
 
 type CachedSession = { session: any; user: any }
@@ -62,6 +63,13 @@ export type BetterAuthStatelessSessionOptions = {
    * `canImpersonate`, the session resolves as the target (via `loadUser`).
    */
   impersonation?: ImpersonationOptions
+  /**
+   * Seconds a resolved scope snapshot, kept in a signed `pikku_scopes` cookie,
+   * is trusted before the `ScopeService` is read again. Defaults to 0: read on
+   * every request. Scopes that a `live` scope gates are always read fresh, and
+   * scopes from `mapSession` are never replaced. Needs `secretId` to be set.
+   */
+  scopesTtlSeconds?: number
   /**
    * Where this sits in the middleware order. The CLI generates its default-map
    * registration at `lowest` so an app's own registration (default `medium`)
@@ -139,8 +147,10 @@ const strategyOf = (value: string): CookieCacheStrategy => {
  *
  * The one exception to "no DB": if a `ScopeService` is registered, scopes are
  * resolved per request (see {@link withResolvedScopes}), which costs a query.
- * That is the price of grants that take effect immediately; leave the service
- * unregistered, or have `mapSession` set `scopes` itself, to stay query-free.
+ * That is the price of grants that take effect immediately; set
+ * `scopesTtlSeconds` to trust a signed snapshot for that long instead, leave
+ * the service unregistered, or have `mapSession` set `scopes` itself, to stay
+ * query-free.
  *
  * @example snippet: betterAuthStatelessSession
  */
@@ -154,6 +164,7 @@ export const betterAuthStatelessSession = (
     secretId = 'BETTER_AUTH_SECRET',
     cookiePrefix = DEFAULT_COOKIE_PREFIX,
     cookieCache = {},
+    scopesTtlSeconds = 0,
   } = options
 
   /*
@@ -224,6 +235,12 @@ export const betterAuthStatelessSession = (
           setInitialSession,
           mapSession,
           impersonation,
+          scopesCache: scopesCookieCache({
+            ttlSeconds: scopesTtlSeconds,
+            secret,
+            cookieHeader: headers.get('cookie'),
+            response: http.response,
+          }),
         })
       }
 

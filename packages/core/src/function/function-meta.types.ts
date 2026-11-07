@@ -45,6 +45,11 @@ export type FunctionRuntimeMeta = {
   outputSchemaName: string | null
   /** Scopes the session must hold to run this function. All are required (AND). */
   scopes?: string[]
+  /**
+   * Set by codegen when a required scope is declared `live`. The runner then
+   * re-resolves the session's scopes from the `ScopeService` before checking.
+   */
+  liveScopes?: boolean
   /** The feature this function belongs to. Checked for availability only. */
   featureFlag?: string
   expose?: boolean

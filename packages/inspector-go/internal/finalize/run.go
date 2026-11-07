@@ -104,6 +104,7 @@ func Run(log *diag.Logger, st *state.State, opts Options) error {
 		validateRemoteAddonDependencies(log, st)
 		validateRemoteAddonAuth(log, st)
 		applyDeclaredScopes(st)
+		markLiveScopeFunctions(st)
 		validateScopeReferences(log, st)
 		validateSystemRoleScopes(log, st)
 		validateVirtualUserRoles(log, st)

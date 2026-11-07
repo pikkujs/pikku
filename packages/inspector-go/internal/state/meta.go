@@ -87,6 +87,7 @@ type FunctionMeta struct {
 	ScenarioStepAddon               string       `json:"scenarioStepAddon,omitempty"`
 	ScenarioStepTemplate            string       `json:"scenarioStepTemplate,omitempty"`
 	Scopes                          []string     `json:"scopes,omitempty"`
+	LiveScopes                      *bool        `json:"liveScopes,omitempty"`
 	ImplementationHash              string       `json:"implementationHash,omitempty"`
 	Version                         *int         `json:"version,omitempty"`
 	Title                           *string      `json:"title,omitempty"`

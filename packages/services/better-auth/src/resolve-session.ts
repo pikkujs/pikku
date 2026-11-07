@@ -13,6 +13,7 @@ import {
   type SessionLike,
 } from './auth-session-impersonation.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
+import type { ScopesCache } from './scopes-cookie.js'
 import { isSecretForbidden, isSecretNotFound } from './secret-not-found.js'
 
 /**
@@ -73,6 +74,7 @@ export const resolveAndSetSession = async <R extends SessionLike>({
   setInitialSession,
   mapSession,
   impersonation,
+  scopesCache,
 }: {
   result: R
   services: CoreServices
@@ -83,6 +85,8 @@ export const resolveAndSetSession = async <R extends SessionLike>({
     services: CoreServices
   ) => CoreUserSession | Promise<CoreUserSession>
   impersonation?: ImpersonationOptions
+  /** Trusts a recent scope snapshot for the caller's own session; never used while impersonating. */
+  scopesCache?: ScopesCache
 }): Promise<void> => {
   if (impersonation) {
     const impersonated = await resolveImpersonatedSession(
@@ -108,7 +112,8 @@ export const resolveAndSetSession = async <R extends SessionLike>({
   await setInitialSession(
     await withResolvedScopes(
       stampVirtualUserFlag(mapped, result.user),
-      services
+      services,
+      scopesCache
     )
   )
 }
