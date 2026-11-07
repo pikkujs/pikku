@@ -4,7 +4,7 @@ export const streamWorkflowRun = pikkuFunc<{ runId: string }, any>({
   title: 'Stream Workflow Run',
   description: 'SSE stream of workflow run status and step state changes.',
   expose: false,
-  scopes: ['pikku:console:workflows:read'],
+  scopes: ['admin:workflows:read'],
   func: async ({ workflowRunService }, { runId }, { channel }) => {
     if (!channel) return
 

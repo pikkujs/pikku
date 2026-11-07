@@ -19,7 +19,7 @@ export const listWebhookDeliveries = pikkuFunc<
   description:
     'Lists outgoing webhook deliveries (most recent first), optionally scoped to an organization. Empty when the app wires no webhook service.',
   expose: true,
-  scopes: ['pikku:console:wirings:read'],
+  scopes: ['admin:webhooks:deliveries'],
   func: async ({ webhookService }, input) => {
     if (!webhookService) {
       return []

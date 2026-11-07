@@ -73,13 +73,6 @@ export const consoleRoutes = defineHTTPRoutes({
   auth: false,
   tags: ['pikku'],
   routes: {
-    workflowRunStream: {
-      route: '/workflow-run/:runId/stream',
-      method: 'get',
-      sse: true,
-      auth: true,
-      func: ref('console:streamWorkflowRun'),
-    },
     // A route rather than an RPC because a <video> and an <img> take a URL.
     // Authenticated even though the group is not. \`path\` arrives as a query
     // parameter because an artifact key contains slashes.

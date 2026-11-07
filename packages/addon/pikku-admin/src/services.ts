@@ -22,6 +22,12 @@ export const createSingletonServices = pikkuAddonServices(
       schedulerService,
       queueService,
       incomingWebhookService,
+      workflowRunService,
+      agentRunService,
+      agentRunState,
+      webhookService,
+      virtualUserRunStore,
+      virtualUserScheduleStore,
     }
   ) => ({
     scopeService,
@@ -33,5 +39,11 @@ export const createSingletonServices = pikkuAddonServices(
     schedulerService,
     queueService,
     incomingWebhookService,
+    workflowRunService,
+    agentRunService,
+    agentRunState,
+    webhookService,
+    virtualUserRunStore,
+    virtualUserScheduleStore,
   })
 )

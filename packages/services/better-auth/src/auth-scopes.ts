@@ -132,6 +132,62 @@ export const ADMIN_SCOPE_TREE = {
           },
         },
       },
+      schedules: {
+        description: 'Scheduled tasks',
+        scopes: {
+          read: {
+            description:
+              'See when each scheduled task last ran, how it went, and when it runs next',
+          },
+        },
+      },
+      queues: {
+        description: 'Background job queues',
+        scopes: {
+          read: {
+            description:
+              'See how many jobs are waiting, running and failed, and the recent ones',
+          },
+        },
+      },
+      webhooks: {
+        description: 'Webhooks received from other services',
+        scopes: {
+          read: {
+            description: 'See each received webhook and what became of it',
+          },
+          deliveries: {
+            description: 'See each outgoing webhook delivery and its result',
+          },
+        },
+      },
+      workflows: {
+        description: 'Workflow runs',
+        scopes: {
+          read: {
+            description:
+              "See workflow runs, their steps and history, and watch a run's progress",
+          },
+          manage: { description: 'Delete workflow runs' },
+        },
+      },
+      agents: {
+        description: 'AI agent conversations',
+        scopes: {
+          read: {
+            description: 'See agent threads, their messages, runs and scores',
+          },
+          manage: { description: 'Delete agent threads' },
+        },
+      },
+      virtualUsers: {
+        description: 'Virtual users',
+        scopes: {
+          read: {
+            description: 'See virtual-user runs, their steps and schedules',
+          },
+        },
+      },
       audit: {
         description: 'The audit trail',
         scopes: {
