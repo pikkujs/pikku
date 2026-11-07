@@ -1,3 +1,4 @@
+import { LocalVariablesService } from '@pikku/core/services'
 import { PikkuUWSServer } from '@pikku/uws'
 import { createConfig, createSingletonServices } from './services.js'
 
@@ -5,7 +6,7 @@ import '../.pikku/pikku-bootstrap.gen.js'
 import './rpc.wiring.js'
 
 async function main(): Promise<void> {
-  const config = await createConfig()
+  const config = await createConfig(new LocalVariablesService())
   const singletonServices = await createSingletonServices(config)
   const appServer = new PikkuUWSServer(config, singletonServices.logger)
 
