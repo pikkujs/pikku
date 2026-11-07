@@ -435,6 +435,13 @@ export const scenarioRun = pikkuSessionlessFunc<
           `'${environment}' (${env.apiUrl}), not local services.`
       )
     }
+    const refuseAgentCalls = {
+      run: async (name: string) => refuseInternal(name),
+      stream: async (name: string) => refuseInternal(name),
+      resume: async (runId: string) => refuseInternal(runId),
+      approve: async (runId: string) => refuseInternal(runId),
+      interrupt: async (runId: string) => refuseInternal(runId),
+    }
     // `rpcWithWire` is named alongside `PikkuRPC` rather than left to it: the
     // workflow runner reaches for that member through an internally untyped
     // path, so it is the one the guard actually has to answer, and the type
@@ -449,12 +456,15 @@ export const scenarioRun = pikkuSessionlessFunc<
       exposed: async (rpcName: string) => refuseInternal(rpcName),
       rpcWithWire: async (rpcName: string) => refuseInternal(rpcName),
       startWorkflow: async (name: string) => refuseInternal(name),
-      agent: {
+      agent: refuseAgentCalls,
+      exposedAgent: refuseAgentCalls,
+      exposedWorkflow: {
+        start: async (name: string) => refuseInternal(name),
         run: async (name: string) => refuseInternal(name),
-        stream: async (name: string) => refuseInternal(name),
-        resume: async (runId: string) => refuseInternal(runId),
-        approve: async (runId: string) => refuseInternal(runId),
-        interrupt: async (runId: string) => refuseInternal(runId),
+        status: async (name: string) => refuseInternal(name),
+        approve: async (name: string) => refuseInternal(name),
+        streamStatus: async (name: string) => refuseInternal(name),
+        streamStatusFull: async (name: string) => refuseInternal(name),
       },
     }
 
