@@ -30,7 +30,7 @@ A disabled function's body is still type-checked against the generated RPC maps.
 
 ## Unused functions
 
-`pikku verify` fails on an app function that nothing uses: not wired to any transport, not exposed (`expose`, `remote`, `mcp`), and not called by name (`rpc.invoke`, workflow steps, agent tools). `pikku all` reports each one as `PKU563` at `error` severity but still builds.
+`pikku validate --codegen` fails on an app function that nothing uses: not wired to any transport, not exposed (`expose`, `remote`, `mcp`), and not called by name (`rpc.invoke`, workflow steps, agent tools). `pikku all` reports each one as `PKU563` at `error` severity but still builds.
 
 A workflow is checked like any other function. It counts as used when it is wired or exposed, or started by a literal name: `rpc.startWorkflow('name')`, `workflowService.startWorkflow('name')` or `runToCompletion('name')`, `rpc.invoke('name')`, another workflow's step, or the client helpers (`workflowStart('name')` and the rest). A workflow started only by a computed name is reported.
 
