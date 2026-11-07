@@ -11,8 +11,9 @@ inputs:
   download-inspector-go:
     description: >-
       Download the pikku-inspect binaries from the inspector-go-build job into
-      inspector-go's prebuilt/, for jobs that run the native inspector engine.
-      Such a job must also need inspector-go-build.
+      inspector-go's prebuilt/. The build artifact carries only the Linux host
+      build, so a job on another OS (macOS) needs this, and must also need
+      inspector-go-build.
     default: 'false'
   download-inspector-rs:
     description: >-
@@ -20,19 +21,10 @@ inputs:
       job into inspector-go's prebuilt/ (the Rust inspector engine, selected
       with PIKKU_INSPECTOR=rs). Such a job must also need inspector-rs-build.
     default: 'false'
-  enable-yarn:
-    description: >-
-      Enable Corepack's Yarn 4. The monorepo itself installs with bun, but the
-      template jobs scaffold user-facing apps with whichever package manager
-      their matrix row names, and the yarn rows need a yarn on PATH.
-    default: 'false'
 
 runs:
   using: composite
   steps:
-    - if: ${{ inputs.enable-yarn == 'true' }}
-      run: corepack enable
-      shell: bash
     - uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}

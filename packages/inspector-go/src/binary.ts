@@ -95,11 +95,12 @@ export interface FindInspectorBinaryOptions {
  * This package's root, built at runtime. A literal `new URL('…', import.meta.url)`
  * is read by webpack as an asset to bundle, which fails for a directory that
  * exists only after a release build, and the console addon is bundled into
- * Next.js apps.
+ * Next.js apps. It is a function because a Cloudflare Workers bundle has no
+ * `import.meta.url`: evaluating it when the module loads would crash the worker
+ * at startup, though no worker ever runs the binary.
  */
-export const PACKAGE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
-
-const PREBUILT_DIR = join(PACKAGE_DIR, 'prebuilt')
+export const packageDir = (): string =>
+  join(dirname(fileURLToPath(import.meta.url)), '..')
 
 /**
  * Package managers do not all keep a tarball's executable bit, so a prebuilt
@@ -175,7 +176,7 @@ export const findInspectorBinary = (
   }
 
   const prebuilt = join(
-    options.prebuiltDir ?? PREBUILT_DIR,
+    options.prebuiltDir ?? join(packageDir(), 'prebuilt'),
     `${platform}-${arch}`,
     executable
   )
@@ -184,7 +185,7 @@ export const findInspectorBinary = (
     return prebuilt
   }
 
-  const local = options.localBinary ?? join(PACKAGE_DIR, 'bin', executable)
+  const local = options.localBinary ?? join(packageDir(), 'bin', executable)
   if (exists(local)) return local
 
   const execPath = options.execPath ?? process.execPath

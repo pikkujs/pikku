@@ -13,7 +13,7 @@ export { readJsonSafe, readTextSafe } from './shared-checks.js'
 
 export const FindingSchema = z.object({
   id: z.string(),
-  severity: z.enum(['error', 'warn', 'info']),
+  severity: z.enum(['critical', 'error', 'warn', 'info']),
   message: z.string(),
   path: z.string(),
   fixHint: z.string(),
@@ -156,13 +156,14 @@ export const renderValidate = (
       ? p.slice(root.length + 1)
       : p
 
+  const criticals = findings.filter((f) => f.severity === 'critical')
   const errors = findings.filter((f) => f.severity === 'error')
   const warns = findings.filter((f) => f.severity === 'warn')
   const infos = findings.filter((f) => f.severity === 'info')
 
-  for (const f of [...errors, ...warns, ...infos]) {
+  for (const f of [...criticals, ...errors, ...warns, ...infos]) {
     const icon =
-      f.severity === 'error'
+      f.severity === 'critical' || f.severity === 'error'
         ? removed('✗')
         : f.severity === 'warn'
           ? changed('⚠')
@@ -174,6 +175,9 @@ export const renderValidate = (
   }
 
   const counts: string[] = []
+  if (criticals.length) {
+    counts.push(removed(`${criticals.length} critical`))
+  }
   if (errors.length) {
     counts.push(
       removed(`${errors.length} error${errors.length !== 1 ? 's' : ''}`)
@@ -194,4 +198,7 @@ export const renderValidate = (
     console.log()
     console.log(added('✓') + '  ' + dim('no errors'))
   }
+  // A critical finding fails the command by default, like a critical
+  // diagnostic does for `pikku all`; errors only inform.
+  if (criticals.length) process.exitCode = 1
 }
