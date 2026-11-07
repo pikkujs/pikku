@@ -1,6 +1,6 @@
 //! Port of the Go analyze tests for the classification scan and the addon
 //! bans (`internal/analyze/classification_test.go`, the addon-bans golden),
-//! plus a differential fixture for the addon loader: `tests/fixtures/addon-load`
+//! plus a differential fixture for the addon loader: `inspector-parity/fixtures/addon-load`
 //! is run through the Go inspector and the keys the loader owns are stored in
 //! `go.golden.json` (with the fixture root as `<ROOT>`).
 
@@ -119,7 +119,7 @@ fn materialise_addon_fixture() -> PathBuf {
     }
     let dst = std::env::temp_dir().join(format!("pikku-rs-addon-load-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dst);
-    copy(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/addon-load"), &dst);
+    copy(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../inspector-parity/fixtures/addon-load"), &dst);
     dst.canonicalize().unwrap()
 }
 
@@ -131,7 +131,7 @@ fn addon_loader_matches_go_on_the_fixture() {
     let text = pikku_inspect::jsjson::to_string(res.state.as_ref().unwrap().as_ref()).unwrap();
     let state: Value = serde_json::from_str(&text.replace(&root_s, "<ROOT>")).unwrap();
     let golden: Value = serde_json::from_slice(
-        &std::fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/addon-load/go.golden.json")).unwrap(),
+        &std::fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../inspector-parity/fixtures/addon-load/go.golden.json")).unwrap(),
     )
     .unwrap();
     for (key, want) in golden.as_object().unwrap() {

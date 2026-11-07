@@ -19,7 +19,7 @@ const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     methods: { type: 'string' },
-    repo: { type: 'string', default: resolve(dirname(import.meta.path), '../../..') },
+    repo: { type: 'string', default: resolve(dirname(import.meta.path), '../..') },
     mutations: { type: 'string', default: '3' },
     limit: { type: 'string', default: '0' },
     show: { type: 'string', default: '3' },

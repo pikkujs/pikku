@@ -48,7 +48,7 @@ every rule there about TypeScript parity still holds.
 Build a request (routeFiles = the project's `src/**/*.ts`, `options.rootDir`,
 `options.tsconfig`), run both binaries, compare the parsed JSON key by key. The
 Go binary finalizes (`finalized: true`). The parity harness lives in `scripts/`;
-`scripts/finalize-parity.ts` checks finalize alone, on Go's pre-finalize state
+`inspector-parity/scripts/finalize-parity.ts` checks finalize alone, on Go's pre-finalize state
 (`pikku-inspect --stdin --no-finalize`), independent of the visitor ports.
 
 Measured on `recipes/functions` (foundation commit): 30 route files, 30 project
@@ -72,7 +72,7 @@ swept sections, `validationPass`, and 4 diagnostics.
   **not** the answer: it is parsed and declared, but nothing in the checker or
   the pinned typescript-go reads it (grep `StableTypeOrdering`: only
   `compileroptions.go` and the option tables), so it changes no order.
-  Measured with `scripts/typesmap-diff.py`: 1120 of the 1130 `customTypes`
+  Measured with `inspector-parity/scripts/typesmap-diff.py`: 1120 of the 1130 `customTypes`
   entries Go writes over the 64 projects are byte-equal in Rust (the other ten
   are entries of unported groups: agents' `TodoAssistantOutput`, gateway
   outputs), and all 37 `map` entries.
@@ -204,7 +204,7 @@ through `jv(&section)` (its JSON form) so a section that later gets a typed
 struct needs no change in the steps that read it. Sections finalize writes are
 written as `Raw::of(value.to_json())` or through the typed fields.
 
-* Scoreboard (`scripts/finalize-parity.ts`, 64 projects): byte-identical on all
+* Scoreboard (`inspector-parity/scripts/finalize-parity.ts`, 64 projects): byte-identical on all
   64 without schemas (3983 of 3983 keys). With `--schemas` 62 of 62 projects
   Go can analyze are identical (3858 of 3858); `verifiers/addon-dependencies/billing`
   and `verifiers/pikku-studio` fail in Go's schema generation, before finalize.
@@ -334,7 +334,7 @@ Things that were not obvious:
   and `is_reserved` use tsrs's prefix. Names sorted with the prefix could order
   differently from Go; none occurs among exports.
 
-Verification: `scripts/helper-parity.ts` (196k+ cases) and
+Verification: `inspector-parity/scripts/helper-parity.ts` (196k+ cases) and
 `tests/helpers_golden.rs` (Go's own goldens). See `scripts/README.md`.
 
 ## Channel, CLI, gateway, MCP and agent groups
@@ -362,5 +362,5 @@ fixture golden for channels, gateways, cli, agents, scorers, mcpEndpoints) and u
 - Go recovers panics inside `extractDSLWorkflow` into a failure reason; Rust
   has no equivalent and none of the Go panic sites is reachable on a parsed tree.
 - No known gaps. `tests/workflow_fixtures.rs` holds Go's own `workflow_test.go`
-  cases plus `tests/workflow_edge/` (a wide fixture whose `golden.json` is Go's
+  cases plus `inspector-parity/fixtures/workflow_edge/` (a wide fixture whose `golden.json` is Go's
   end-to-end output).

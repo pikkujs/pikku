@@ -1,4 +1,4 @@
-//! Runs `tests/fixtures/trigger_feature` through the Rust analysis and compares
+//! Runs `inspector-parity/fixtures/trigger_feature` through the Rust analysis and compares
 //! the state and diagnostics of the trigger / feature / feature-flag /
 //! virtual-user / analytics / defineContributors / definePlugin groups against
 //! `expected.go.json`, which the Go inspector produced for the same files
@@ -12,7 +12,7 @@ use pikku_inspect::protocol::{Options, Request};
 use serde_json::Value;
 
 fn fixture() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/trigger_feature").canonicalize().unwrap()
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../inspector-parity/fixtures/trigger_feature").canonicalize().unwrap()
 }
 
 #[test]

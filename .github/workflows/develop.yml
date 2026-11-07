@@ -236,7 +236,7 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Compare pikku-inspect and pikku-inspect-rs on every project
         run: |
-          bun packages/inspector-rust/scripts/parity.ts \
+          bun inspector-parity/scripts/parity.ts \
             "$PWD/packages/inspector-go/bin/pikku-inspect" \
             "$PWD/packages/inspector-go/bin/pikku-inspect-rs" \
             --out "$RUNNER_TEMP/parity"
@@ -263,7 +263,7 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Compare pikku-inspect and pikku-inspect-rs with schemas
         run: |
-          bun packages/inspector-rust/scripts/parity.ts \
+          bun inspector-parity/scripts/parity.ts \
             "$PWD/packages/inspector-go/bin/pikku-inspect" \
             "$PWD/packages/inspector-go/bin/pikku-inspect-rs" \
             --schemas --out "$RUNNER_TEMP/parity-schemas"

@@ -20,7 +20,7 @@ chosen: Build `pikku-inspect-rs` (packages/inspector-rust) on the tsrs compiler
 rules-out:
   - Changing Go to match Rust, or "improving" behaviour in the port
   - Flipping the default on a feeling; the exit criterion is
-    `packages/inspector-rust/scripts/parity.ts` reporting every project
+    `inspector-parity/scripts/parity.ts` reporting every project
     byte-identical, with schemas, in CI
   - Falling back from one engine to the other at runtime
   - A Node/esbuild/tsx dependency in the Rust engine: it is meant to be entirely

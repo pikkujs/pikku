@@ -186,11 +186,11 @@ export const review = pikkuWorkflowGraph({
 }
 
 /// A wide DSL / complex / scenario / graph fixture whose expected output is
-/// the Go inspector's own end-to-end output (`tests/workflow_edge/golden.json`,
+/// the Go inspector's own end-to-end output (`inspector-parity/fixtures/workflow_edge/golden.json`,
 /// key order included; analysis then finalize, as `--stdin` runs).
 #[test]
 fn workflow_edge_fixture_matches_go() {
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/workflow_edge").canonicalize().unwrap();
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../inspector-parity/fixtures/workflow_edge").canonicalize().unwrap();
     let root = dir.to_string_lossy().to_string();
     let req = Request {
         route_files: vec![dir.join("wf.ts").to_string_lossy().to_string()],

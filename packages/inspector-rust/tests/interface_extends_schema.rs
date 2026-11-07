@@ -12,7 +12,7 @@ use pikku_inspect::protocol::{Options, Request, SchemaConfig};
 use serde_json::Value;
 
 fn fixture() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/interface_extends").canonicalize().unwrap()
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../inspector-parity/fixtures/interface_extends").canonicalize().unwrap()
 }
 
 #[test]

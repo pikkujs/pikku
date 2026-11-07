@@ -16,7 +16,7 @@ Select the engine with `PIKKU_INSPECTOR=rs`, `pikku <command> --inspector rs` or
 binary you built (`cargo build --release`, Rust 1.99.1). CI builds it for
 linux-x64, linux-arm64 and darwin-arm64, ships it in `@pikku/inspector-go`
 under `prebuilt/<platform>-<arch>/pikku-inspect-rs`, and compares it with Go on
-every project (`scripts/parity.ts`). Why it exists and what is not proven:
+every project (`inspector-parity/scripts/parity.ts`). Why it exists and what is not proven:
 [knowledge/decisions](knowledge/decisions/index.md).
 
 ## Status
@@ -38,8 +38,8 @@ visitor group is ported**, so an inspection returns a state with the program's
 | `typesmap` | `internal/typesmap` | data structure, serialisation, `get_type_meta`; `CanonicalTypeString` is the identity (TODO) |
 | `tsutil` | `internal/tsutil` | `walk`, `text`, `props`, `route`, `governance`, `print`, `sortjs`, `types`; `typeorder.rs` / `unionorder.rs` are STUBS for their porter |
 | `schemas`, `tsjg` | `internal/schemas`, `internal/tsjg` | done except the Zod QuickJS route (Node only), the disk cache and the TypeToTypeNode union reorder; see PORTING.md |
-| `finalize` | `internal/finalize` | done; byte-identical to Go on all 64 projects (`scripts/finalize-parity.ts`) |
-| `helpers` | `internal/helpers` | done: all 22 methods (see PORTING.md, "Helper methods"); `scripts/helper-parity.ts` reports 0 differences |
+| `finalize` | `internal/finalize` | done; byte-identical to Go on all 64 projects (`inspector-parity/scripts/finalize-parity.ts`) |
+| `helpers` | `internal/helpers` | done: all 22 methods (see PORTING.md, "Helper methods"); `inspector-parity/scripts/helper-parity.ts` reports 0 differences |
 | `sourcescan` | `internal/sourcescan` | done |
 | `surface` | `internal/surface` | done |
 | `typecheck` | `internal/typecheck` | done; `serve` answers `typeDiagnostics` |

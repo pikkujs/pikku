@@ -14,7 +14,7 @@ bun install --ignore-scripts
 ## Scoreboard
 
 ```bash
-bun packages/inspector-rust/scripts/parity.ts <goBin> <rsBin> \
+bun inspector-parity/scripts/parity.ts <goBin> <rsBin> \
   [--projects online-shop,verifiers/f*] [--schemas] [--finalize] \
   [--out dir] [--jobs 4] [--timeout 300] [--cap 5] [--no-cache]
 ```
@@ -40,7 +40,7 @@ Outputs in `--out` (default `.../scratchpad/parity/`): `summary.md` (the scorebo
 ## Finalize-only parity
 
 ```bash
-bun packages/inspector-rust/scripts/finalize-parity.ts <goBin> <rsBin> [--projects ...] [--schemas] [--out dir] [--jobs 4]
+bun inspector-parity/scripts/finalize-parity.ts <goBin> <rsBin> [--projects ...] [--schemas] [--out dir] [--jobs 4]
 ```
 
 Takes Go's PRE-finalize state (`<goBin> --stdin --no-finalize`, so `goBin` must be a build with that flag),
@@ -94,7 +94,7 @@ project in `results.json`:
 `typeDiagnostics` (the `serve` protocol, Go vs Rust, byte for byte):
 
 ```bash
-bun packages/inspector-rust/scripts/helper-parity.ts <goBin> <rsBin> \
+bun inspector-parity/scripts/helper-parity.ts <goBin> <rsBin> \
   [--methods a,b] [--repo dir] [--mutations N] [--dirs N] [--tc N] [--show N]
 ```
 
@@ -114,9 +114,9 @@ files under `pikku/` and `.pikku/`, several passes with different options). Two
 scripts close that gap:
 
 ```bash
-bun packages/inspector-rust/scripts/generate-parity.ts <goBin> <rsBin> --cli <pikku.js> \
+bun inspector-parity/scripts/generate-parity.ts <goBin> <rsBin> --cli <pikku.js> \
   [--corpus default|extra|tracked] [--projects ...] [--out dir]
-bun packages/inspector-rust/scripts/parity.ts <goBin> <rsBin> --captured <that out dir> [--corpus tracked]
+bun inspector-parity/scripts/parity.ts <goBin> <rsBin> --captured <that out dir> [--corpus tracked]
 ```
 
 `generate-parity.ts`, per project: `git clean` the project and its rootDir, run

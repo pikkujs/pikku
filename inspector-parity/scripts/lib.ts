@@ -12,18 +12,16 @@ import {
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { projectInput } from '../../inspector-go/src/test-project-input.ts'
-import { toAnalysisOptions } from '../../inspector-go/src/protocol.ts'
-import { withOpenAPIErrors } from '../../inspector-go/src/openapi-errors.ts'
+import { projectInput } from '../../packages/inspector-go/src/test-project-input.ts'
+import { toAnalysisOptions } from '../../packages/inspector-go/src/protocol.ts'
+import { withOpenAPIErrors } from '../../packages/inspector-go/src/openapi-errors.ts'
 
 export const REPO_ROOT = resolve(
   dirname(fileURLToPath(import.meta.url)),
-  '../../..'
+  '../..'
 )
-export const DEFAULT_OUT =
-  '/tmp/claude-1000/-home-dev-pikku-pikku/477e9738-67aa-4b05-8fa0-8275aa107d70/scratchpad/parity'
-export const DEFAULT_GO =
-  '/home/dev/pikku/ts7-migration/packages/inspector-go/bin/pikku-inspect'
+export const DEFAULT_OUT = join(tmpdir(), 'inspector-parity')
+export const DEFAULT_GO = join(REPO_ROOT, 'packages/inspector-go/bin/pikku-inspect')
 export const ROOTS = ['templates', 'recipes', 'verifiers']
 
 export type Mode = 'inspect' | 'finalize'

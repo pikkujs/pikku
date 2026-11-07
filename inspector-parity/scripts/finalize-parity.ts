@@ -16,6 +16,7 @@
  * <goBin> must understand `--no-finalize` (packages/inspector-go, commit
  * "--no-finalize returns analysis-only (pre-finalize) state").
  */
+import { tmpdir } from 'node:os'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -37,7 +38,7 @@ import {
 } from './lib.ts'
 
 const DEFAULT_FINALIZE_OUT =
-  '/tmp/claude-1000/-home-dev-pikku-pikku/477e9738-67aa-4b05-8fa0-8275aa107d70/scratchpad/finalize-parity'
+  join(tmpdir(), 'inspector-parity-finalize')
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,

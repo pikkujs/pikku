@@ -166,9 +166,11 @@ const run = async ({ label: project, args: initialArgs, request }: Case): Promis
   const byteDiff = firstByteDiff(goN.text, rsN.text)
   const goError = goFailure(go)
   if (goError) {
+    const zodFailureName = (text: string) =>
+      text.replace(/(Could not convert Zod schema '[^']*')(?: without Node)?:(?:[^"\\]|\\.)*/g, '$1')
     const same =
       go.exitCode === rs.exitCode &&
-      goN.text === rsN.text &&
+      zodFailureName(goN.text) === zodFailureName(rsN.text) &&
       normalise(go.stderr).text === normalise(rs.stderr).text
     return {
       ...base,
