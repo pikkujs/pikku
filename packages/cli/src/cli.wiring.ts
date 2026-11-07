@@ -453,6 +453,14 @@ wireCLI({
           description: 'Also report available dependency updates',
           default: false,
         },
+        failOn: {
+          description:
+            'Exit non-zero on an advisory at this severity or worse (critical, high, moderate, low, info), or when no report could be made',
+        },
+        baseline: {
+          description:
+            'A previous audit.json: advisories it lists do not fail --fail-on',
+        },
       },
     }),
     update: pikkuCLICommand({
