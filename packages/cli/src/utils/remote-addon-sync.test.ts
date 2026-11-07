@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 import { wireRemoteAddon } from '@pikku/core/addon'
 import { rpcService } from '@pikku/core/rpc'
 import { pikkuState, resetPikkuState } from '@pikku/core/state'
-import { ErrorCode } from '@pikku/inspector/lite'
+import { ErrorCode } from '@pikku/inspector'
 import {
   DEFAULT_ADDON_REGISTRY,
   RemoteAddonSyncError,

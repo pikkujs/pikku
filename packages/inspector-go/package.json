@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/inspector-go"
   },
-  "description": "Native inspector engine for Pikku, the CLI's default — runs analysis and finalize in the pikku-inspect binary, built on typescript-go",
+  "description": "Native inspector engine for Pikku, the CLI's default \u2014 runs analysis and finalize in the pikku-inspect binary, built on typescript-go",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "type": "module",
@@ -41,7 +41,9 @@
     "prepublishOnly": "bun run build && node scripts/check-platform-binary.mjs"
   },
   "dependencies": {
-    "@pikku/inspector": "^0.12.114"
+    "@pikku/inspector": "^0.12.114",
+    "tsx": "^4.23.15",
+    "zod": "^4.6.7"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.151"

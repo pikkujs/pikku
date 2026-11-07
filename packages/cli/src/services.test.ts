@@ -95,7 +95,7 @@ describe('loadInspectorStateFile', () => {
   test('a state file written by a codegen child becomes the inspector state', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-state-'))
     created.push(dir)
-    const { inspect } = await import('@pikku/inspector')
+    const { inspect } = await import('@pikku/inspector-go')
     const state = await inspect(console as any, [], { rootDir: dir } as any)
     const file = join(dir, 'state.json')
     await writeFile(

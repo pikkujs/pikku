@@ -45,9 +45,7 @@ import {
  * onto the handler meta. Re-derived every inspect and ordered BEFORE
  * `aggregateRequiredServices` so it flows into `requiredServices`.
  */
-export function stampAuthHandlerServices(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
-): void {
+export function stampAuthHandlerServices(state: InspectorState): void {
   const definition = state.auth.definition
   if (!definition) return
   const handlerMeta = state.functions.meta[AUTH_HANDLER_FUNC_ID]
@@ -81,7 +79,7 @@ export function extractWireNames(
  */
 function expandAndAddGroupServices(
   list: MiddlewareMetadata[] | undefined,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  state: InspectorState,
   addServices: (services: FunctionServicesMeta | undefined) => void
 ): void {
   if (!list) return
@@ -107,9 +105,7 @@ function expandAndAddGroupServices(
  * complete list of available services for code generation.
  * Skipped when analysis did not resolve them (e.g. an older serialized state).
  */
-function extractAllServices(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
-): void {
+function extractAllServices(state: InspectorState): void {
   const resolved = state.serviceTypes
   if (!resolved) {
     return
@@ -141,7 +137,7 @@ function extractAllServices(
  * mark every function.
  */
 function markSingletonServicesOnly(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  state: InspectorState,
   wireServices: Set<string>
 ): void {
   for (const meta of Object.values(state.functions.meta)) {
@@ -163,9 +159,7 @@ function markSingletonServicesOnly(
  * Note: usedFunctions, usedMiddleware, and usedPermissions are tracked directly
  * in the add-* methods during AST traversal for efficiency.
  */
-export function aggregateRequiredServices(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
-): void {
+export function aggregateRequiredServices(state: InspectorState): void {
   // First, extract all available services from types
   extractAllServices(state)
 
@@ -506,7 +500,7 @@ export function aggregateRequiredServices(
 
 export function validateSecretOverrides(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -553,7 +547,7 @@ export function validateSecretOverrides(
 
 export function validateAddonUses(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -589,7 +583,7 @@ export function validateAddonUses(
 
 export function validateAddonContentGrants(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -621,7 +615,7 @@ export function validateAddonContentGrants(
 
 export function validateCredentialOverrides(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -701,7 +695,7 @@ export function validateCredentialOverrides(
 
 export function validateVariableOverrides(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -790,7 +784,7 @@ type PackageManifest = {
  */
 export function validateRemoteAddonDependencies(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -894,7 +888,7 @@ export function validateRemoteAddonDependencies(
  */
 export function validateRemoteAddonAuth(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -1131,7 +1125,7 @@ export function validateSchemaReferences(
  */
 export function validateAgentModels(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  state: InspectorState,
   modelAliases: Record<string, string> = {}
 ): void {
   for (const [, meta] of Object.entries(state.agents.agentsMeta)) {
@@ -1172,7 +1166,7 @@ export function validateAgentModels(
  */
 export function validateScenarioServices(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
     if (!meta.scenario) continue
@@ -1294,7 +1288,7 @@ const capitaliseFirst = (value: string): string =>
  */
 export function validateScenarioSteps(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const phasesSeen = new Set<string>()
 
@@ -1389,7 +1383,7 @@ export function validateScenarioSteps(
  */
 export function validateScenarioFeatures(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const features = state.workflows.featureFiles
   if (!features) {
@@ -1552,7 +1546,7 @@ export function validateSchemaWiringSeparation(
  */
 export function validateNoSecretAliasServices(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const aliases = state.serviceTypes?.secretAliases ?? []
   if (aliases.length === 0) {
@@ -1591,9 +1585,7 @@ export function validateNoSecretAliasServices(
  * deployment is asked for the client id and secret every connect flow needs
  * without an author restating a shape the runtime already fixes.
  */
-export function registerDerivedOAuth2AppSecrets(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
-): void {
+export function registerDerivedOAuth2AppSecrets(state: InspectorState): void {
   const derived = deriveOAuth2AppSecrets(
     state.credentials?.definitions ?? [],
     state.secrets.definitions
@@ -1603,7 +1595,7 @@ export function registerDerivedOAuth2AppSecrets(
 
 export function validateSecretUsage(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const declared = new Set(state.secrets.definitions.map((d) => d.secretId))
   for (const definition of state.secrets.definitions) {
@@ -1728,7 +1720,7 @@ export function computeDiagnostics(state: InspectorState): void {
  */
 export function validateScopeReferences(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const declared = new Set(
     flattenScopeDefinitions(state.scopes.definitions).map((s) => s.id)
@@ -1778,7 +1770,7 @@ export function validateScopeReferences(
  */
 export function validateAgentToolReferences(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  state: InspectorState,
   options: InspectorOptions = {}
 ): void {
   const agents = Object.entries(state.agents.agentsMeta)
@@ -1856,7 +1848,7 @@ export function validateAgentToolReferences(
  */
 export function validateAgentScorerReferences(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const known = Object.keys(state.scorers.scorersMeta)
 
@@ -1887,7 +1879,7 @@ export function validateAgentScorerReferences(
  */
 export function validateSystemRoleScopes(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   if (!state.systemRoles.definitions.length) {
     return
@@ -1932,7 +1924,7 @@ export function validateSystemRoleScopes(
  */
 export function validateVirtualUserRoles(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   if (!state.virtualUsers.definitions.length) {
     return

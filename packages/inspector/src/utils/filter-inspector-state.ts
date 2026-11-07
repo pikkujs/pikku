@@ -347,7 +347,7 @@ function extractWireNames(obj: Record<string, any> | undefined): string[] {
  * This is applied post-inspection to support the inspect-once, filter-many pattern
  */
 export function filterInspectorState(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  state: InspectorState,
   filters: InspectorFilters,
   logger: InspectorLogger
 ): typeof state {

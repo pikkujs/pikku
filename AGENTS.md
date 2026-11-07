@@ -92,47 +92,74 @@ Individual packages carry their own runner: `./run-tests.sh` from inside the pac
 
 ### TypeScript 6 and 7 side by side
 
-Type checking runs on **TypeScript 7**, which is roughly three times faster
-(`bun run tsc` across the monorepo: 192s → 65s). TypeScript 6 stays installed
-because 7 ships no compiler API — its `.` export is only a version stub, and
-the replacement lives behind `./unstable/*` pending the 7.1 API.
+Type checking runs on a native compiler, which is roughly three times faster
+than TypeScript 6 (`bun run tsc` across the monorepo: 192s → 65s on TypeScript
+7). TypeScript 6 stays installed because 7 ships no compiler API — its `.`
+export is only a version stub, and the replacement lives behind `./unstable/*`
+pending the 7.1 API.
 
-The root installs both, following the arrangement TypeScript ships for exactly
-this case:
+Two engines can be that native compiler, and `tsc` is an alias for whichever is
+chosen: **tsrs** (the Rust port, `npm:tsrs`) by default, or **TypeScript 7**.
+Choose with `PIKKU_TSC=tsrs|ts7`; the default is the `DEFAULT_TSC` constant in
+`packages/tsc/bin/tsc.mjs`, the one place to change it.
+
+```bash
+PIKKU_TSC=ts7 bun run tsc      # one run on TypeScript 7
+```
+
+The alias is the private workspace package `@pikku/tsc`: it owns the `tsc` bin,
+depends on both engines, and forwards its arguments and exit code, so the ~250
+`tsc`, `tsc -b` and `tsc --noEmit` scripts across the repo are unchanged. The
+recipes and templates declare their own `typescript` (their `package.json` is
+copied into a user's app), and a package's own `.bin` comes before the root's,
+so a bare `tsc` run inside one is always TypeScript 7. The root `bun run tsc`
+therefore runs them through the dispatcher itself (`scripts/tsc-all.mjs`), so
+`PIKKU_TSC` applies to them too; running `tsc` by hand inside a recipe or
+template is TypeScript 7. The buildinfo records the compiler version, so
+switching engines makes `tsc -b` projects rebuild once. With `--noEmit` a type
+error exits 1 under TypeScript 7 and 2 under tsrs; both are non-zero.
+
+The root installs the alias and TypeScript 6:
 
 ```json
-"@typescript/native": "npm:typescript@^7.0.2",
+"@pikku/tsc": "workspace:*",
 "typescript": "npm:@typescript/typescript6@^6.0.2"
 ```
 
-So `tsc` at the root is 7, `tsc6` is 6, and `import ts from 'typescript'`
+So `tsc` at the root is the alias, `tsc6` is 6, and `import ts from 'typescript'`
 resolves to the 6 compat package with the full 6 API. Every workspace that
 does not declare its own `typescript` inherits the root `tsc`, which is why
 the dependency was dropped from the ~100 workspaces that only ever needed a
 compiler binary.
 
-Three packages still declare a real `typescript: ^6.0.3`, because they call
-the compiler API at runtime: `inspector`, `code-edit` and `n8n-import`. Under
-bun's isolated layout that nests a real 6, whose `tsc` shadows the root's — so
-those three type-check on 6. Templates keep theirs too: their `package.json` is
-copied into a user's app, and an aliased dependency there would be a surprise.
+No workspace package depends on TypeScript 6 at runtime. The compiler API is
+reached only through the `pikku-inspect` binary (`@pikku/inspector-go`), which
+is built on typescript-go: the inspector's analysis, `code-edit`'s source scans
+and edits and type-checking, and `n8n-import`'s syntax check are all helpers
+of that binary, and `@pikku/inspector`, `@pikku/code-edit` and
+`@pikku/n8n-import` declare no `typescript` at all. Templates and recipes
+declare a plain `typescript: ^7.0.2`: their `package.json` is copied into a
+user's app, so it carries a real version rather than the root's alias.
 
-**The inspector owns the compiler API.** Anything that has to parse or
-type-check TypeScript belongs there, behind a named export, rather than in the
-package that wants the answer. `collectSurface` (`@pikku/inspector/surface`),
-`readModuleSpecifiers` and `readTsconfigOutDir` all moved out of the CLI for
-this reason. `code-edit` is the exception, and deliberately so — the console
-imports it lazily and degrades to a null service, because it is the one package
-a self-contained bundle can ship without.
+What still resolves `import ts from 'typescript'` is test code only — 25 test
+files in `cli`, 4 in `core` and 1 in `openapi-parser` compile generated source
+with the compiler API — and it gets the 6 compat package through the root
+alias. That is why the alias stays: 7 has no way to turn a string into a tree
+in-process. 7.0.2 does ship an AST surface at `typescript/unstable/ast` (409
+exports, all 347 `is*` predicates, `SyntaxKind`, a factory, a visitor, a
+scanner), but no `createSourceFile` and no `forEachChild`; the only route to a
+`SourceFile` is `API` → `Snapshot` → `Project` → `Program.getSourceFile()`,
+which needs a whole project loaded. Re-check this when 7.1 lands its stable
+API.
 
-**Why none of this can move to 7 yet.** 7.0.2 does ship an AST surface at
-`typescript/unstable/ast` — 409 exports, all 347 `is*` predicates,
-`SyntaxKind`, a factory, a visitor, a scanner — so the _walking_ code would
-port almost unchanged. What is missing is the entry point: there is no
-`createSourceFile` and no `forEachChild`, so nothing can turn a string into a
-tree. The only route to a `SourceFile` is `API` → `Snapshot` → `Project` →
-`Program.getSourceFile()`, which needs a whole project loaded. Re-check this
-when 7.1 lands its stable API.
+**The binary owns the compiler API.** Anything that has to parse or
+type-check TypeScript belongs in `packages/inspector-go` as a helper
+(`internal/helpers`, with a wrapper in `src/helpers.ts`), rather than in the
+package that wants the answer. There is no second engine and no TypeScript
+reference to diff against; see
+`packages/inspector-go/knowledge/decisions/the-typescript-inspector-engine-is-retired.md`.
+The console still imports `code-edit` lazily and degrades to a null service,
+because it is the one package a self-contained bundle can ship without.
 
 Compiling _with_ 7 is safe for every package, including the ones that import
 the 6 API — only module resolution of `typescript` has to stay on 6. Emit was

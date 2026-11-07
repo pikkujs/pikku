@@ -5,32 +5,25 @@ import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const scenario = resolve(here, '../scenarios/remote-local')
-const read = (engine: string) =>
-  readFileSync(
-    join(
-      scenario,
-      `.pikku-${engine}/contributors/pikku-dev-contributors.gen.ts`
-    ),
-    'utf8'
-  )
+const generated = readFileSync(
+  join(scenario, '.pikku/contributors/pikku-dev-contributors.gen.ts'),
+  'utf8'
+)
 
-const native = read('native')
-const typescript = read('typescript')
-assert.equal(native, typescript, 'both inspector engines agree')
-assert.ok(native.includes('@verifier/contrib-notify/src/notifier.js'))
-assert.ok(native.includes('@verifier/contrib-notify/src/logger-prefix.js'))
+assert.ok(generated.includes('@verifier/contrib-notify/src/notifier.js'))
+assert.ok(generated.includes('@verifier/contrib-notify/src/logger-prefix.js'))
 assert.ok(
-  !native.includes('@verifier/contrib-bad'),
+  !generated.includes('@verifier/contrib-bad'),
   'nothing is taken from the remote contract package'
 )
 assert.ok(
-  !native.includes('blob'),
+  !generated.includes('blob'),
   'only the contributors listed under local are opted in'
 )
 
 const addons = JSON.parse(
   readFileSync(
-    join(scenario, '.pikku-native/addon/pikku-addons-meta.gen.json'),
+    join(scenario, '.pikku/addon/pikku-addons-meta.gen.json'),
     'utf8'
   )
 )

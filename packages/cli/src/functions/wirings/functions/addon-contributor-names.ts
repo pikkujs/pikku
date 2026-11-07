@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs'
 import type { InspectorState } from '@pikku/inspector'
-import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector/lite'
+import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
 
 /**
  * The contributors each installed addon registers, by package, read from the
