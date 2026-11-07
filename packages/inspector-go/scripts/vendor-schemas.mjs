@@ -8,30 +8,33 @@
 //          "errors": ["<message>", ...]}
 //
 // The conversion is generateZodSchemas / processZodSchema from
-// packages/inspector/src/utils/schema-generator.ts, line for line, minus the
-// typesMap and logger: the Go side adds each typeText as a custom type and logs
-// the errors itself. It resolves tsx, zod and the helpers from the installed
-// @pikku/inspector package.
+// packages/inspector/src/utils/schema-generator.ts (since removed), line for
+// line, minus the typesMap and logger: the Go side adds each typeText as a
+// custom type and logs the errors itself. It resolves tsx, zod and the helpers
+// from this package.
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const INSPECTOR = path.dirname(
-  path.dirname(createRequire(import.meta.url).resolve('@pikku/inspector'))
-)
-const requireFromInspector = createRequire(INSPECTOR + '/package.json')
-const importFromInspector = (spec) => import(pathToFileURL(requireFromInspector.resolve(spec)).href)
+const PACKAGE = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
+const requireFromPackage = createRequire(PACKAGE + '/package.json')
+const importFromPackage = (spec) =>
+  import(pathToFileURL(requireFromPackage.resolve(spec)).href)
 
 // Bun imports TypeScript itself, and tsx's unregister() never settles under
 // it — which is the runtime behind `node` in Pikku Studio. tsx is only for Node.
 const register =
   typeof Bun === 'undefined'
-    ? (await importFromInspector('tsx/esm/api')).register
+    ? (await importFromPackage('tsx/esm/api')).register
     : () => () => {}
-const z = await importFromInspector('zod')
-const { zodToTypeText } = await import(pathToFileURL(INSPECTOR + '/dist/utils/zod-to-type-text.js').href)
-const { findZodTransform } = await import(pathToFileURL(INSPECTOR + '/dist/utils/find-zod-transform.js').href)
+const z = await importFromPackage('zod')
+const { zodToTypeText } = await import(
+  pathToFileURL(PACKAGE + '/dist/vendor/zod-to-type-text.js').href
+)
+const { findZodTransform } = await import(
+  pathToFileURL(PACKAGE + '/dist/vendor/find-zod-transform.js').href
+)
 const SCHEMA_TRANSFORM_NOT_SUPPORTED = 'PKU491'
 
 const schemaRuntimeFile = (sourceFile) => {
@@ -77,11 +80,17 @@ const schemaLookup = new Map(JSON.parse(readFileSync(0, 'utf8')))
 const schemas = []
 const errors = []
 
-const uniqueSourceFiles = [...new Set([...schemaLookup.values()].map((ref) => schemaRuntimeFile(ref.sourceFile)))]
+const uniqueSourceFiles = [
+  ...new Set(
+    [...schemaLookup.values()].map((ref) => schemaRuntimeFile(ref.sourceFile))
+  ),
+]
 const modules = new Map()
 {
   const unregister = register()
-  await Promise.allSettled(uniqueSourceFiles.map(async (file) => modules.set(file, await import(file))))
+  await Promise.allSettled(
+    uniqueSourceFiles.map(async (file) => modules.set(file, await import(file)))
+  )
   await Promise.resolve(unregister()).catch(() => {})
 }
 
@@ -95,13 +104,17 @@ for (const [schemaName, ref] of schemaLookup) {
   }
   const zodSchema = mod[ref.variableName]
   if (!zodSchema) {
-    errors.push(`Could not find exported schema '${ref.variableName}' in ${runtimeFile} for ${schemaName}. Available exports: ${Object.keys(mod).join(', ')}`)
+    errors.push(
+      `Could not find exported schema '${ref.variableName}' in ${runtimeFile} for ${schemaName}. Available exports: ${Object.keys(mod).join(', ')}`
+    )
     continue
   }
   try {
     processZodSchema(schemaName, zodSchema, schemas)
   } catch (e) {
-    errors.push(`Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`)
+    errors.push(
+      `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`
+    )
   }
 }
 
@@ -112,12 +125,16 @@ for (const [schemaName, ref] of fallback) {
     const mod = await import(runtimeFile)
     const zodSchema = mod[ref.variableName]
     if (!zodSchema) {
-      errors.push(`Could not find exported schema '${ref.variableName}' in ${runtimeFile} for ${schemaName}. Available exports: ${Object.keys(mod).join(', ')}`)
+      errors.push(
+        `Could not find exported schema '${ref.variableName}' in ${runtimeFile} for ${schemaName}. Available exports: ${Object.keys(mod).join(', ')}`
+      )
       continue
     }
     processZodSchema(schemaName, zodSchema, schemas)
   } catch (e) {
-    errors.push(`Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`)
+    errors.push(
+      `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`
+    )
   } finally {
     await Promise.resolve(unregister()).catch(() => {})
   }

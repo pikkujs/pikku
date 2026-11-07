@@ -1,136 +1,72 @@
 import { strict as assert } from 'node:assert'
-import { describe, test } from 'node:test'
-import { isStandaloneCli, resolveInspectorEngine } from './inspector-engine.js'
+import { afterEach, describe, test } from 'node:test'
+import { getInspectorEngine } from '@pikku/inspector-go'
+import {
+  DEFAULT_ENGINE,
+  resolveInspectorEngine,
+  selectInspectorEngine,
+} from './inspector-engine.js'
 
-describe('resolveInspectorEngine', () => {
-  test('defaults to native', () => {
-    assert.equal(resolveInspectorEngine(), 'native')
-    assert.equal(resolveInspectorEngine({}), 'native')
-    assert.equal(
-      resolveInspectorEngine({ nativeAvailable: () => true }),
-      'native'
-    )
+describe('inspector engine selection', () => {
+  const saved = process.env.PIKKU_INSPECTOR
+  afterEach(() => {
+    if (saved === undefined) delete process.env.PIKKU_INSPECTOR
+    else process.env.PIKKU_INSPECTOR = saved
   })
 
-  test('the default falls back to typescript without a binary', () => {
-    let warned = false
-    assert.equal(
-      resolveInspectorEngine({
-        nativeAvailable: () => false,
-        onFallback: () => (warned = true),
-      }),
-      'typescript'
-    )
-    assert.equal(warned, true)
+  test('falls back to the CLI default, Rust', () => {
+    assert.equal(DEFAULT_ENGINE, 'rs')
+    assert.equal(resolveInspectorEngine({ env: {} }), 'rs')
   })
 
-  test('a standalone pikku without a binary fails rather than fall back', () => {
-    let warned = false
-    assert.throws(
-      () =>
+  for (const engine of ['go', 'rs'] as const) {
+    const other = engine === 'go' ? 'rs' : 'go'
+    test(`the config key selects ${engine}`, () => {
+      assert.equal(resolveInspectorEngine({ config: engine, env: {} }), engine)
+    })
+    test(`--inspector ${engine} beats PIKKU_INSPECTOR and the config key`, () => {
+      assert.equal(
         resolveInspectorEngine({
-          nativeAvailable: () => false,
-          onFallback: () => (warned = true),
-          standalone: true,
-          execPath: '/opt/homebrew/bin/pikku',
+          flag: engine,
+          config: other,
+          env: { PIKKU_INSPECTOR: other },
         }),
-      /No pikku-inspect binary beside \/opt\/homebrew\/bin\/pikku/
-    )
-    assert.equal(warned, false)
-    assert.equal(
-      resolveInspectorEngine({ nativeAvailable: () => true, standalone: true }),
-      'native'
-    )
+        engine
+      )
+    })
+    test(`PIKKU_INSPECTOR=${engine} beats the config key`, () => {
+      assert.equal(
+        resolveInspectorEngine({
+          config: other,
+          env: { PIKKU_INSPECTOR: engine },
+        }),
+        engine
+      )
+    })
+  }
+
+  test('selecting tells the inspector package, and --inspector reaches children', () => {
+    delete process.env.PIKKU_INSPECTOR
+    selectInspectorEngine({ flag: 'go' })
+    assert.equal(getInspectorEngine(), 'go')
+    assert.equal(process.env.PIKKU_INSPECTOR, 'go')
+    delete process.env.PIKKU_INSPECTOR
+    selectInspectorEngine({})
+    assert.equal(getInspectorEngine(), 'rs')
   })
 
-  test('an explicit native never falls back', () => {
-    const nativeAvailable = () => false
-    assert.equal(
-      resolveInspectorEngine({ config: 'native', nativeAvailable }),
-      'native'
-    )
-    assert.equal(
-      resolveInspectorEngine({ env: 'native', nativeAvailable }),
-      'native'
-    )
-    assert.equal(
-      resolveInspectorEngine({ flag: 'native', nativeAvailable }),
-      'native'
-    )
-  })
-
-  test('config opts into typescript', () => {
-    assert.equal(resolveInspectorEngine({ config: 'typescript' }), 'typescript')
-  })
-
-  test('env beats config', () => {
-    assert.equal(
-      resolveInspectorEngine({ env: 'typescript', config: 'native' }),
-      'typescript'
-    )
-    assert.equal(
-      resolveInspectorEngine({ env: 'native', config: 'typescript' }),
-      'native'
-    )
-  })
-
-  test('flag beats env and config', () => {
-    assert.equal(
-      resolveInspectorEngine({
-        flag: 'native',
-        env: 'typescript',
-        config: 'typescript',
-      }),
-      'native'
-    )
-    assert.equal(
-      resolveInspectorEngine({
-        flag: 'typescript',
-        env: 'native',
-        config: 'native',
-      }),
-      'typescript'
-    )
-  })
-
-  test('an empty value falls through to the next source', () => {
-    assert.equal(
-      resolveInspectorEngine({ flag: '', env: '', config: 'typescript' }),
-      'typescript'
-    )
-  })
-
-  test('rejects an unknown engine and names where it came from', () => {
+  test('refuses an unknown engine, naming where it came from', () => {
     assert.throws(
-      () => resolveInspectorEngine({ flag: 'tsc' }),
-      /--inspector must be one of 'native', 'typescript', not 'tsc'/
+      () => resolveInspectorEngine({ flag: 'ts' }),
+      /--inspector is "ts"; expected one of go, rs/
     )
     assert.throws(
-      () => resolveInspectorEngine({ env: 'go' }),
-      /PIKKU_INSPECTOR must be/
+      () => resolveInspectorEngine({ config: 'tsgo', env: {} }),
+      /"inspector" in pikku.config.json is "tsgo"/
     )
     assert.throws(
-      () => resolveInspectorEngine({ config: 'rust' }),
-      /pikku\.config\.json's `inspector` must be/
-    )
-  })
-
-  test('an invalid higher-precedence value is an error, not skipped', () => {
-    assert.throws(() =>
-      resolveInspectorEngine({ flag: 'nope', config: 'typescript' })
-    )
-  })
-})
-
-describe('isStandaloneCli', () => {
-  test('recognises a bun --compile module url', () => {
-    assert.equal(isStandaloneCli('file:///$bunfs/root/pikku'), true)
-    assert.equal(isStandaloneCli('file:///B:/~BUN/root/pikku.exe'), true)
-    assert.equal(
-      isStandaloneCli(
-        'file:///usr/lib/node_modules/@pikku/cli/dist/src/inspector-engine.js'
-      ),
-      false
+      () => resolveInspectorEngine({ env: { PIKKU_INSPECTOR: 'ts' } }),
+      /PIKKU_INSPECTOR is "ts"/
     )
   })
 })

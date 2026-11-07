@@ -1,131 +1,57 @@
-import { findInspectorBinary } from '@pikku/inspector-go'
-import { z } from 'zod'
+import {
+  INSPECTOR_ENGINES,
+  isInspectorEngine,
+  setInspectorEngine,
+  type InspectorEngine,
+} from '@pikku/inspector-go'
 
-/**
- * Which inspector analyses the project:
- *
- * - `native` — the `pikku-inspect` binary from `@pikku/inspector-go`, built on
- *   typescript-go (TypeScript 7). The default.
- * - `typescript` — `@pikku/inspector`, on the TypeScript 6 compiler API.
- *
- * Both produce byte-identical output.
- */
-export const InspectorEngineSchema = z.enum(['native', 'typescript'])
+/** The engine used when neither `--inspector`, `PIKKU_INSPECTOR` nor the config key names one. */
+export const DEFAULT_ENGINE: InspectorEngine = 'rs'
 
-export type InspectorEngine = z.infer<typeof InspectorEngineSchema>
+export type InspectorEngineSelection = {
+  /** `--inspector`, which beats `PIKKU_INSPECTOR`. */
+  flag?: unknown
+  /** The `inspector` key of pikku.config.json, which `PIKKU_INSPECTOR` beats. */
+  config?: unknown
+  env?: NodeJS.ProcessEnv
+}
 
-export const DEFAULT_INSPECTOR_ENGINE: InspectorEngine = 'native'
+const named = (value: unknown): value is string =>
+  value !== undefined && value !== ''
 
-export interface InspectorEngineSources {
-  /** `--inspector` */
-  flag?: string
-  /** `PIKKU_INSPECTOR` */
-  env?: string
-  /** `inspector` in pikku.config.json */
-  config?: string
-  /**
-   * Whether a `pikku-inspect` binary exists for this platform. Consulted only
-   * when no source is set: the default falls back to `typescript` without
-   * one, while an explicit `native` fails at inspection with an error that
-   * names the TypeScript engine.
-   */
-  nativeAvailable?: () => boolean
-  /** Told when the default falls back to `typescript`. */
-  onFallback?: () => void
-  /**
-   * Whether this is a `bun build --compile` pikku. The TypeScript inspector
-   * does not run inside one (the compiler's lib files and the project's
-   * modules are not where it looks), so with no binary the default fails
-   * instead of falling back.
-   */
-  standalone?: boolean
-  /** The running executable, named in that failure. */
-  execPath?: string
+const parse = (source: string, value: unknown): InspectorEngine => {
+  if (!isInspectorEngine(value)) {
+    throw new Error(
+      `${source} is ${JSON.stringify(value)}; expected one of ${INSPECTOR_ENGINES.join(', ')}.`
+    )
+  }
+  return value
 }
 
 /**
- * Resolves the engine with precedence flag > env > config > default
- * (`native`, or `typescript` when no binary exists for the platform). The first source that is set is validated against
- * `InspectorEngineSchema`; an invalid value is an error rather than being
- * skipped in favour of the next source.
+ * Picks the inspector engine: `--inspector`, then `PIKKU_INSPECTOR`, then the
+ * `inspector` key of pikku.config.json, then DEFAULT_ENGINE.
  */
 export const resolveInspectorEngine = ({
   flag,
-  env,
   config,
-  nativeAvailable,
-  onFallback,
-  standalone,
-  execPath,
-}: InspectorEngineSources = {}): InspectorEngine => {
-  const [source, value] = flag
-    ? ['--inspector', flag]
-    : env
-      ? ['PIKKU_INSPECTOR', env]
-      : config
-        ? ["pikku.config.json's `inspector`", config]
-        : [undefined, undefined]
-  if (value === undefined) {
-    if (
-      DEFAULT_INSPECTOR_ENGINE === 'native' &&
-      nativeAvailable?.() === false
-    ) {
-      if (standalone) {
-        throw new Error(
-          `No pikku-inspect binary beside ${execPath ?? 'this pikku'}. A standalone pikku inspects projects with it alone: reinstall pikku (brew reinstall pikku), put the pikku-inspect from the same release next to it, or set PIKKU_INSPECTOR_GO_BIN to its path.`
-        )
-      }
-      onFallback?.()
-      return 'typescript'
-    }
-    return DEFAULT_INSPECTOR_ENGINE
+  env = process.env,
+}: InspectorEngineSelection = {}): InspectorEngine => {
+  if (named(flag)) return parse('--inspector', flag)
+  if (named(env.PIKKU_INSPECTOR)) {
+    return parse('PIKKU_INSPECTOR', env.PIKKU_INSPECTOR)
   }
-  const result = InspectorEngineSchema.safeParse(value)
-  if (!result.success) {
-    throw new Error(
-      `${source} must be one of ${InspectorEngineSchema.options.map((o) => `'${o}'`).join(', ')}, not '${value}'`
-    )
-  }
-  return result.data
+  if (named(config)) return parse('"inspector" in pikku.config.json', config)
+  return DEFAULT_ENGINE
 }
 
-let selected: InspectorEngine | undefined
-
-/**
- * Records the engine this CLI process resolved from its flags and config, so
- * the source helpers outside an inspection (`inspector-helpers.ts`) and any
- * codegen child process use the same one.
- */
-export const setInspectorEngine = (engine: InspectorEngine): void => {
-  selected = engine
+/** Resolves the engine and tells the inspector package to use it. */
+export const selectInspectorEngine = (
+  selection: InspectorEngineSelection
+): InspectorEngine => {
+  const engine = resolveInspectorEngine(selection)
+  // Exported so codegen child processes resolve the same engine.
+  if (named(selection.flag)) process.env.PIKKU_INSPECTOR = engine
+  setInspectorEngine(engine)
+  return engine
 }
-
-/**
- * Whether this CLI is a `bun build --compile` binary, which embeds its modules
- * under a virtual `$bunfs` (`B:/~BUN` on Windows) root.
- */
-export const isStandaloneCli = (moduleUrl: string = import.meta.url): boolean =>
-  moduleUrl.includes('$bunfs') || moduleUrl.includes('~BUN')
-
-/** Whether a `pikku-inspect` binary exists for this platform. */
-export const nativeInspectorAvailable = (): boolean => {
-  try {
-    findInspectorBinary()
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
- * The engine this process uses. Before the CLI has resolved its config (a
- * build script calling a helper directly), it resolves from the environment
- * alone, falling back to `typescript` like the CLI does when no binary exists.
- */
-export const getInspectorEngine = (): InspectorEngine =>
-  (selected ??= resolveInspectorEngine({
-    env: process.env.PIKKU_INSPECTOR,
-    nativeAvailable: nativeInspectorAvailable,
-    standalone: isStandaloneCli(),
-    execPath: process.execPath,
-  }))

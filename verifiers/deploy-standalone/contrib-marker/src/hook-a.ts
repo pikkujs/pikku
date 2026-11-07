@@ -6,12 +6,12 @@ export const hookA: Contributor = {
   run: (services) => {
     services.hookA = 'a'
   },
-  onServerStart: () => {
-    logHook('start:hook-a')
+  onServerStart: async () => {
+    await logHook('start:hook-a')
     maybeFail('start', 'hook-a')
   },
-  onServerStop: () => {
-    logHook('stop:hook-a')
+  onServerStop: async () => {
+    await logHook('stop:hook-a')
     maybeFail('stop', 'hook-a')
   },
 }

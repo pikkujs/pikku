@@ -53,6 +53,7 @@ async function makeValidProject(root: string) {
       reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
     },
     environments: { local: { apiUrl: 'http://localhost:4002' } },
+    db: { engine: 'sqlite' },
     validate: NO_OXLINT,
   })
   await writeJson(join(root, 'package.json'), {
@@ -398,6 +399,7 @@ describe('project checks', () => {
             workflow: true,
             events: true,
           },
+          db: { engine: 'sqlite' },
           validate: NO_OXLINT,
         })
         const result = await runValidate(tmp)
@@ -2798,6 +2800,77 @@ describe('an app whose baseLocale is not English (live project checks)', () => {
         await rm(tmp, { recursive: true, force: true })
       }
     })
+  })
+})
+
+describe('a database without a config db', () => {
+  const dbFinding = (r: Awaited<ReturnType<typeof runValidate>>) =>
+    r.findings.find((f) => f.id === 'pikku-config-no-db')
+  const setDb = async (root: string, db: unknown) => {
+    const path = join(root, 'pikku.config.json')
+    const config = JSON.parse(await readFile(path, 'utf8'))
+    if (db === undefined) delete config.db
+    else config.db = db
+    await writeJson(path, config)
+  }
+
+  test('db/sqlite and no config db is an error naming the fix', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await setDb(tmp, undefined)
+      const result = await runValidate(tmp)
+      const finding = dbFinding(result)
+      assert.ok(finding, 'expected pikku-config-no-db')
+      assert.equal(finding.severity, 'critical')
+      assert.match(
+        finding.message,
+        /has a sqlite database \(createConfig or db\/sqlite\) but the pikku config has no `db`/
+      )
+      assert.match(finding.path, /pikku\.config\.json$/)
+      assert.match(finding.fixHint, /"db": \{ "engine": "sqlite" \}/)
+      assert.equal(result.ok, false)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a config db clears it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      assert.equal(dbFinding(await runValidate(tmp)), undefined)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('no database at all is not an error', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await setDb(tmp, undefined)
+      await rm(join(tmp, 'db'), { recursive: true, force: true })
+      assert.equal(dbFinding(await runValidate(tmp)), undefined)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('db/postgres and no config db names postgres', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await setDb(tmp, undefined)
+      await rm(join(tmp, 'db'), { recursive: true, force: true })
+      await mkdir(join(tmp, 'db', 'postgres'), { recursive: true })
+      const finding = dbFinding(await runValidate(tmp))
+      assert.ok(finding)
+      assert.match(finding.message, /postgres database/)
+      assert.match(finding.fixHint, /"engine": "postgres"/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
   })
 })
 

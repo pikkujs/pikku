@@ -5,14 +5,20 @@
 program, runs the visit sweeps, resolves versions, generates schemas and runs
 finalize, returning the finalized state (`finalized: true`).
 
-The CLI uses it by default: `native` is `DEFAULT_INSPECTOR_ENGINE` and is
-overridden by `--inspector`, `PIKKU_INSPECTOR` or `inspector` in
-pikku.config.json, in that order. It falls back to `typescript` only when no
-binary exists for the platform. See
-`knowledge/decisions/both-engines-stay-behind-a-switch-until-typescript-7.md`.
+It is the only inspector: the TypeScript engine it was ported from has been
+removed (`knowledge/decisions/the-typescript-inspector-engine-is-retired.md`),
+and `@pikku/inspector` keeps only the state types and data helpers. A CLI with
+no binary for its platform fails at inspection and says how to supply one
+(`PIKKU_INSPECTOR_GO_BIN`).
 
-The TS wrapper and the `parity/` harness live outside the Go tree; the engine
-switch is `packages/cli/src/inspector-engine.ts`.
+> [!NOTE]
+> Much of this document was written while porting from the TypeScript source and
+> still names its files (`visit.ts`, `add-*.ts`, `schema-generator.ts`), the
+> parity commands and `bench/`. Those no longer exist in the tree; they are in
+> git history at the commit before the engine was retired. The rules for how Go
+> must behave (UTF-16 offsets, ordering, JavaScript regex semantics) still hold.
+
+The TS wrapper is `src/` in this package.
 
 ## Layout
 
@@ -32,7 +38,6 @@ internal/jsjson/     JSON.stringify-compatible encoding (key order, escaping, nu
 internal/tsutil/     AST/text helpers with no Context: printing, props, walking, routes, UTF-16 offsets
 shim/                generated re-exports of typescript-go internals (tools/gen_shims)
 npm/                 one prebuilt-binary npm package per platform (see Distribution)
-bench/               TS reference scripts, section compare, timing/RSS bench
 ```
 
 ### Protocol
@@ -60,6 +65,12 @@ and answers `{"id","result"|"error"}` per line.
   did not touch.
 - The cache is a read-through optimisation. A cold process gives the same
   answer, so the stateless/serverless rule holds.
+- `typeDiagnostics` is the one method that is not stateless-equivalent in
+  cost: `serve` keeps a `typecheck.Service` per workspace root, which finds the
+  tsconfig that owns a file, checks it against unsaved text, and reuses parsed
+  files between calls. The TypeScript side is `InspectorSession`
+  (`src/session.ts`), which starts `serve` on first use and restarts it if it
+  dies.
 - Measured on templates/online-shop (123 functions):
   - cold: 224 ms, 0 files reused
   - warm: 140 ms, 1933 reused
@@ -85,14 +96,13 @@ and answers `{"id","result"|"error"}` per line.
    `TestStateRoundTripsTSOutput` passing.
 4. Rewrite references in `ResolveLatestVersions.updateWiringReferences` if the
    group stores `pikkuFuncId`s.
-5. Add the group's name to `TestRegisteredGroups`. Add its section to
-   `bench/compare.py` if it is not there.
-6. Run the parity commands below.
+5. Add the group's name to `TestRegisteredGroups`.
+6. Add a verifier or a golden that fails without the group.
 
 Rules that bite:
 
-- Copy every log/diagnostic message from the TS source verbatim. The parity
-  diff compares diagnostics as a multiset.
+- Keep every log/diagnostic message as it was: tests and users match on the
+  text.
 - Registration calls must stay detectable statically: match on the callee
   identifier exactly as TS does.
 
@@ -116,56 +126,17 @@ Rules that bite:
 | `typesmap.TypesMap`                                                                                                                             | `types-map.ts`                                                                   |
 | `jsjson.Marshal`                                                                                                                                | `JSON.stringify`                                                                 |
 
-## Parity
+## Checking a change
 
-The ported sections must match exactly on templates/online-shop and
-recipes/functions:
-
-- functions (meta, files, typesMap)
-- http
-- queueWorkers
-- schemas
-
-```sh
-B=$(mktemp -d)
-go build -o $B/pikku-inspect ./cmd/pikku-inspect
-# TS reference: the analyze steps through packages/inspector/dist (build it first)
-node bench/ref-analyze.mjs ../../templates/online-shop $B/ts.json --schemas
-$B/pikku-inspect -schemas ../../templates/online-shop > $B/go.json
-python3 bench/compare.py $B/ts.json $B/go.json            # per-section summary + diagnostics multiset
-python3 bench/compare.py $B/ts.json $B/go.json -v --only=functions.typesMap
-# schemas only, against the pre-schema TS state
-node bench/ref-schemas.mjs ../../templates/online-shop $B/ref.json
-PIKKU_SCHEMA_PARITY_REF=$B/ref.json go test ./internal/schemas -run Parity -v
-# timing + RSS
-bench/bench.sh ../../templates/online-shop $B/pikku-inspect 3 $B/bench [--schemas]
-```
-
-Notes on the comparison:
-
-- `compare.py` reports an entry that differs only in token order as
-  "order-only".
-- For a ported section, no difference is acceptable, order-only included:
-  union and property order reach schema `enum`/`required` arrays and with them
-  the contract hashes (see "Union and property order" below).
-- Sections owned by unported groups show gaps until those groups land: rpc,
-  usedFunctions, credentials and some diagnostics.
-
-Current status (with schemas):
-
-| section                                                                          | online-shop | recipes/functions |
-| -------------------------------------------------------------------------------- | ----------- | ----------------- |
-| functions.meta / files                                                           | OK          | OK                |
-| functions.typesMap                                                               | OK          | OK                |
-| http._, queueWorkers._                                                           | OK          | OK                |
-| import maps, factories, wireServicesMeta, coreTypeProperties, secrets, variables | OK          | OK                |
-| schemaLookup                                                                     | OK          | OK                |
-| agents, scorers, mcpEndpoints                                                    | OK          | OK                |
-| schemas                                                                          | OK          | OK                |
+The Go goldens in `testdata/*/inspect.golden.json` pin the analysis of the
+fixtures, `go test ./...` runs them, and the verifiers and template builds run
+the whole pipeline. Zod schemas convert in QuickJS first, so
+`PIKKU_INSPECTOR_ZOD=quickjs` (which never falls back to Node) is how a test
+proves the binary alone converts a schema.
 
 ## typescript-go differences
 
-Each of these was found by a parity diff. Each is handled where noted.
+Each of these was found while the Go engine was diffed against the TypeScript one. Each is handled where noted.
 
 - **`(x!).y` printing.** Strada keeps the parentheses around a non-null
   assertion that the source had; tsgo's printer drops them. This affects
@@ -224,13 +195,10 @@ TypeFormatFlagsNoTruncation)` (`Context.typeToString`). Change it there
 ## typesLookup → serviceTypes
 
 TS state carries `typesLookup: Map<string, ts.Type[]>`, which cannot be
-serialized. Nothing outside the TypeScript engine reads it any more: finalize's
-`extractAllServices` and the CLI's workflow codegen read the serialized
-`serviceTypes` (`singletonServices`, `services`), which both engines emit.
-The CLI only clears `typesLookup` after a TypeScript-engine inspection to
-release memory. Go's state still has a `coreTypeProperties` field (the core
-types' property names, sorted), used by `bench/`; finalize and the CLI do not
-read it.
+serialized. It no longer exists: finalize's `extractAllServices` and the CLI's
+workflow codegen read the serialized `serviceTypes` (`singletonServices`,
+`services`). Go's state still has a `coreTypeProperties` field (the core
+types' property names, sorted); finalize and the CLI do not read it.
 
 ## Schema generation
 
@@ -258,7 +226,7 @@ read it.
   (scripts/vendor-schemas.mjs) through tsx. With no `node` on the PATH, or the
   script not on disk (a compiled CLI), those schemas are errors instead.
   `PIKKU_INSPECTOR_ZOD=node` sends everything to Node; `=quickjs` never falls
-  back, so a refused schema is an error (CI's parity run). See
+  back, so a refused schema is an error. See
   [knowledge/decisions/zod-schemas-convert-in-quickjs.md](knowledge/decisions/zod-schemas-convert-in-quickjs.md).
 - **Missing converter.** No converter with a non-empty `schemaLookup` is an
   error, not a silent skip.
@@ -295,10 +263,14 @@ Everything is ported: every visitor group, the secret- and surface-usage
 sweeps, `validateWebhookSourceTriggers`, schema generation, finalize
 (post-process, contract hashes, manifest, workflow finalize, OpenAPI) and the
 standalone helpers (`collectSurface`, `readJsxLiteralText`,
-`readModuleSpecifiers`, `readTsconfigOutDir`, `scanFrontend`, `scanHooks`).
-Both engines produce byte-identical `pikku all` output on every template and
-example, and the parity harness passes `--strict` on them. The Go goldens in
-`testdata/*/inspect.golden.json` pin the fixtures.
+`readModuleSpecifiers`, `readTsconfigOutDir`, `scanFrontend`, `scanHooks`) and
+the source helpers `@pikku/code-edit` and `@pikku/n8n-import` call instead of
+the TypeScript compiler API (`readSyntaxErrors`, `scanMessageUsage`,
+`readJsxProps`, `writeJsxProp`, `writeJsxStyle`, `findPikkuCall`,
+`readImports`, `typeDiagnostics`, `scanAsI18nArguments`, `scanAsI18nStubs`,
+`scanSepArguments`, `scanJsxLiteralText`, `scanJsxLiteralProps`,
+`scanStringLiteralCopy`).
+The Go goldens in `testdata/*/inspect.golden.json` pin the fixtures.
 
 ### Known differences
 
@@ -348,10 +320,9 @@ Bump procedure (one PR, nothing else in it):
    `packages/inspector-go`. Add any newly needed unexported members to the
    package's `extra-shim.json`.
 3. `go mod tidy && go build ./... && go vet ./... && go test ./...`.
-4. Run the full parity commands on both projects. The summary must be
+4. Run the verifiers and rebuild the templates; the generated output must be
    unchanged.
-5. Re-run `bench/bench.sh` and note the timing in the PR.
-6. Update the pin in this file and `PINNED` in `scripts/check-tsgo-pin.sh`.
+5. Update the pin in this file and `PINNED` in `scripts/check-tsgo-pin.sh`.
 
 `scripts/check-tsgo-pin.sh` (the `Go (inspector-go)` CI job) enforces this: it
 fails when `go.mod` resolves another typescript-go, when a `shim/*/go.mod`

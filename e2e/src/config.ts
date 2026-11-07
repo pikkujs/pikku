@@ -3,18 +3,18 @@ import { LogLevel } from '@pikku/core/services'
 
 import { pikkuConfig } from '#pikku/setup'
 
-export const createConfig = pikkuConfig(async () => ({
-  port: Number(process.env.PORT ?? 4002),
+export const createConfig = pikkuConfig(async (variables) => ({
+  port: Number(variables?.get('PORT') ?? 4002),
   hostname: '0.0.0.0',
   logLevel: LogLevel.warn,
   // The restart suite cannot wait out production's sweep: it shortens the tick
   // and idle window so a killed run is picked up as soon as its lease lapses.
-  ...(process.env.WORKFLOW_RECOVERY_MS
+  ...(variables?.get('WORKFLOW_RECOVERY_MS')
     ? {
         workflow: {
           recovery: {
-            intervalMs: Number(process.env.WORKFLOW_RECOVERY_MS),
-            stalledAfterMs: Number(process.env.WORKFLOW_RECOVERY_MS),
+            intervalMs: Number(variables.get('WORKFLOW_RECOVERY_MS')),
+            stalledAfterMs: Number(variables.get('WORKFLOW_RECOVERY_MS')),
           },
         },
       }

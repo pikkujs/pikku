@@ -17,6 +17,7 @@ import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
 import { createPool } from 'mysql2'
 import type { LeaseService } from '@pikku/core/services'
+import { LocalVariablesService } from '@pikku/core/services'
 import { defineServiceTests } from '@pikku/core/testing'
 import {
   PgKyselyLeaseService,
@@ -26,10 +27,12 @@ import { MySQLKyselyLeaseService } from '@pikku/kysely-mysql'
 import { RedisLeaseService } from '@pikku/redis'
 import { connectionString } from '../config.js'
 
+const env = new LocalVariablesService()
 const mysqlUrl =
-  process.env.MYSQL_URL ?? 'mysql://root:password@localhost:3306/pikku_leases'
+  env.get<string>('MYSQL_URL') ??
+  'mysql://root:password@localhost:3306/pikku_leases'
 
-const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379'
+const redisUrl = env.get<string>('REDIS_URL') ?? 'redis://localhost:6379'
 
 const HOUR = 60 * 60 * 1000
 

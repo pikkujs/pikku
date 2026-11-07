@@ -1021,14 +1021,10 @@ export type PikkuCLIInput = {
   stateInput?: string
 
   /**
-   * Which inspector analyses the project. `native` (the default) runs the
-   * prebuilt `pikku-inspect` binary from `@pikku/inspector-go`, built on
-   * typescript-go (TypeScript 7). `typescript` runs `@pikku/inspector` on the
-   * TypeScript 6 compiler API — use it on a platform with no prebuilt binary.
-   * Both generate identical output. Overridden per invocation by
-   * `--inspector` and by the `PIKKU_INSPECTOR` environment variable.
+   * Which inspector analyses the project: `go` (`pikku-inspect`) or `rs`
+   * (`pikku-inspect-rs`). `PIKKU_INSPECTOR` and `--inspector` override it.
    */
-  inspector?: 'native' | 'typescript'
+  inspector?: 'go' | 'rs'
 
   /**
    * Run the data-classification security lint (scans function return types for
@@ -1062,6 +1058,23 @@ export type PikkuCLIInput = {
     servicesNotDestructured?: 'off' | 'warn' | 'error'
     wiresNotDestructured?: 'off' | 'warn' | 'error'
     functionDynamicImport?: 'off' | 'warn' | 'error'
+    /**
+     * Whether `pikku validate` requires the app's oxlint to forbid `fs` /
+     * `node:fs` / `fs/promises` imports (`no-restricted-imports`) and `require`
+     * (`typescript/no-require-imports`) at this level. Content belongs behind
+     * the `content` service: keyed, project-scoped, with signed reads and
+     * writes. A file that needs the disk is exempted in an oxlint `overrides`
+     * entry. Defaults to 'error'; set 'off' to opt out.
+     */
+    enforceContentService?: 'off' | 'warn' | 'error'
+    /**
+     * Whether `pikku validate` requires the app's oxlint to forbid
+     * `process.env` reads (`node/no-process-env`) at this level. Use the
+     * `variables` service for non-secret values and the `secrets` service for
+     * secrets. Bootstrap code that needs the environment is exempted in an
+     * oxlint `overrides` entry. Defaults to 'error'; set 'off' to opt out.
+     */
+    enforceVariablesService?: 'off' | 'warn' | 'error'
     /**
      * Flag a root `start`/`dev` script that boots a server without `pikku dev`
      * or `pikku serve`, since a hand-rolled entrypoint constructs its own

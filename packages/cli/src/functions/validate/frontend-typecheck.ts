@@ -133,11 +133,14 @@ function run(
       shell: process.platform === 'win32',
       env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
     })
-    child.stdout?.on('data', (chunk) => {
-      output += chunk.toString()
+    // StringDecoder-backed streams keep a character split across chunks whole.
+    child.stdout?.setEncoding('utf8')
+    child.stderr?.setEncoding('utf8')
+    child.stdout?.on('data', (chunk: string) => {
+      output += chunk
     })
-    child.stderr?.on('data', (chunk) => {
-      output += chunk.toString()
+    child.stderr?.on('data', (chunk: string) => {
+      output += chunk
     })
     child.on('error', (error: NodeJS.ErrnoException) => {
       resolve({

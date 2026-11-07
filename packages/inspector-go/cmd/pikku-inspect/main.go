@@ -2,6 +2,9 @@
 //
 //	pikku-inspect --stdin                 one Request on stdin, one finalized Response on stdout
 //	pikku-inspect inspect --stdin         the same (a trailing --finalize is accepted and ignored)
+//	pikku-inspect --stdin --no-finalize   the same request, answered with analysis only
+//	                                      (finalized:false): the pre-finalize state that
+//	                                      `finalize --stdin` takes; `inspect --stdin --no-finalize` too
 //	pikku-inspect finalize --stdin        {state, diagnostics?, options} on stdin:
 //	                                      finalize a serialized pre-finalize state
 //	pikku-inspect serve                   NDJSON requests on stdin, responses on stdout,
@@ -32,6 +35,7 @@ import (
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/program"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/protocol"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/typecheck"
 )
 
 func main() {
@@ -40,6 +44,9 @@ func main() {
 	switch {
 	case len(args) == 1 && args[0] == "--stdin":
 		err = runInspect(os.Stdin, os.Stdout)
+	case len(args) == 2 && args[0] == "--stdin" && args[1] == "--no-finalize",
+		len(args) == 3 && args[0] == "inspect" && args[1] == "--stdin" && args[2] == "--no-finalize":
+		err = runAnalyzeOnly(os.Stdin, os.Stdout)
 	case len(args) >= 1 && args[0] == "inspect":
 		switch {
 		case len(args) == 2 && args[1] == "--stdin",
@@ -111,6 +118,24 @@ func runInspect(r io.Reader, w io.Writer) error {
 	return writeJSON(w, res, "")
 }
 
+// runAnalyzeOnly answers a Request with analysis alone: the Response analyze.Run
+// returns, finalized:false, which is what `finalize --stdin` finalizes.
+func runAnalyzeOnly(r io.Reader, w io.Writer) error {
+	var req protocol.Request
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		return fmt.Errorf("reading request: %w", err)
+	}
+	res, err := analyze.Run(req, nil)
+	var failure *protocol.Failure
+	if errors.As(err, &failure) {
+		res, err = protocol.FailureResponse(failure), nil
+	}
+	if err != nil {
+		return err
+	}
+	return writeJSON(w, res, "")
+}
+
 // finalizeRequest is the `finalize --stdin` input: a serialized pre-finalize
 // state (the TS reference's or the binary's own) and the options.
 type finalizeRequest struct {
@@ -146,6 +171,7 @@ func runFinalize(r io.Reader, w io.Writer) error {
 // files from one request to the next, and every request gets a new checker.
 func runServe(r io.Reader, w io.Writer) error {
 	cache := program.NewCache()
+	typecheckers := map[string]*typecheck.Service{}
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 1<<20), 256<<20)
 	out := bufio.NewWriter(w)
@@ -155,6 +181,15 @@ func runServe(r io.Reader, w io.Writer) error {
 			continue
 		}
 		var head helperRequest
+		if json.Unmarshal(line, &head) == nil && head.Method == "typeDiagnostics" {
+			if err := writeJSON(out, typeDiagnostics(head, typecheckers), ""); err != nil {
+				return err
+			}
+			if err := out.Flush(); err != nil {
+				return err
+			}
+			continue
+		}
 		if json.Unmarshal(line, &head) == nil && helpers.Has(head.Method) {
 			result, herr := helpers.Dispatch(head.Method, head.Params)
 			if err := writeJSON(out, helperResponse{ID: head.ID, Result: result, Error: herr}, ""); err != nil {
@@ -191,6 +226,27 @@ func runServe(r io.Reader, w io.Writer) error {
 		}
 	}
 	return sc.Err()
+}
+
+type typeDiagnosticsParams struct {
+	Root    string  `json:"root"`
+	Path    string  `json:"path"`
+	Content *string `json:"content"`
+}
+
+// typeDiagnostics answers `typeDiagnostics` in serve mode, keeping one
+// type-check service per workspace root so its parsed files outlive a request.
+func typeDiagnostics(req helperRequest, services map[string]*typecheck.Service) helperResponse {
+	var p typeDiagnosticsParams
+	if err := json.Unmarshal(req.Params, &p); err != nil {
+		return helperResponse{ID: req.ID, Error: &helpers.Error{Message: "bad params: " + err.Error()}}
+	}
+	svc := services[p.Root]
+	if svc == nil {
+		svc = typecheck.New(p.Root)
+		services[p.Root] = svc
+	}
+	return helperResponse{ID: req.ID, Result: svc.Diagnostics(p.Path, p.Content)}
 }
 
 type helperRequest struct {

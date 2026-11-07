@@ -4,7 +4,7 @@ import { projectChecks } from '../lib/project-checks.js'
 
 export const CloudProjectChecksFinding = z.object({
   id: z.string(),
-  severity: z.enum(['error', 'warn', 'info']),
+  severity: z.enum(['critical', 'error', 'warn', 'info']),
   message: z.string(),
   path: z.string(),
   fixHint: z.string(),

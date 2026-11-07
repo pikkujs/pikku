@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { LocalVariablesService } from '@pikku/core/services'
 import { pikkuFunc } from '#pikku/addon/function'
 import { findBin } from '../lib/audit-exec.js'
 import { findProjectRoot } from '../lib/find-project-root.js'
@@ -50,7 +51,7 @@ export const runScenarios = pikkuFunc<
     ]
     const child = spawn(process.execPath, args, {
       cwd: projectRoot,
-      env: { ...process.env },
+      env: { ...new LocalVariablesService().getAll() },
       detached: true,
       stdio: 'ignore',
     })

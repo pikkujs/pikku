@@ -1,0 +1,1 @@
+export const a = {  title: 'Hello cr title',  other: 'Hello cr other',}

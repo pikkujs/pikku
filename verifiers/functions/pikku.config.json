@@ -16,5 +16,8 @@
   },
   "allow": {
     "complexWorkflows": true
+  },
+  "lint": {
+    "enforceContentService": "off"
   }
 }

@@ -3,6 +3,7 @@ import { before, beforeEach, describe, test } from 'node:test'
 
 import '../.pikku/pikku-bootstrap.gen.js'
 import { fetch } from '@pikku/core/http'
+import { LocalVariablesService } from '@pikku/core/services'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
 import { createConfig, createSingletonServices } from './services.js'
 import { hops, type Hop } from './tracing.functions.js'
@@ -38,8 +39,10 @@ const waitForHops = async (...names: string[]): Promise<Hop[]> => {
 }
 
 before(async () => {
-  process.env.PIKKU_MESH_SECRET =
+  new LocalVariablesService().set(
+    'PIKKU_MESH_SECRET',
     'tracing-verifier-mesh-secret-of-enough-length'
+  )
   const services = await createSingletonServices(await createConfig())
   ;(services.workflowService as PikkuWorkflowService).wireQueueWorkers()
 })

@@ -31,7 +31,11 @@
 import { fork, type ChildProcess } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import type { LeaseService } from '@pikku/core/services'
-import { InMemoryLeaseService, LogLevel } from '@pikku/core/services'
+import {
+  InMemoryLeaseService,
+  LocalVariablesService,
+  LogLevel,
+} from '@pikku/core/services'
 import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
 import { pikkuState } from '@pikku/core/state'
@@ -75,12 +79,14 @@ const argValue = (name: string) => {
 const backend = (argValue('--backend') ?? 'pgboss') as Backend
 const isWorker = process.argv.includes('--worker')
 
+const env = new LocalVariablesService()
 const redisConnection = () => {
-  const url = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379')
+  const url = new URL(env.get<string>('REDIS_URL') ?? 'redis://localhost:6379')
   return { host: url.hostname, port: Number(url.port || 6379) }
 }
 const mysqlUrl =
-  process.env.MYSQL_URL ?? 'mysql://root:password@localhost:3306/pikku_leases'
+  env.get<string>('MYSQL_URL') ??
+  'mysql://root:password@localhost:3306/pikku_leases'
 
 const MYSQL_TABLES = [
   `create table if not exists workflow_runs (workflow_run_id varchar(64) primary key, workflow varchar(255) not null, status varchar(32) not null, input longtext not null, output longtext, error longtext, state longtext, inline boolean default false, graph_hash varchar(255), \`deterministic\` boolean default false, planned_steps longtext, wire longtext, created_at timestamp(3) default current_timestamp(3) not null, updated_at timestamp(3) default current_timestamp(3) not null)`,

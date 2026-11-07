@@ -4,7 +4,14 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { z } from 'zod'
 import {
+  DEFEATING_OPTIONS,
   OXLINT_CONFIG_FILES,
+  OXLINT_POLICY_RULES,
+  OXLINT_TEST_FILES,
+  activePolicyRules,
+  missingFsModules,
+  policyLevels,
+  type PolicyLevels,
   OXLINT_REQUIRED_RULES,
   detectPackageManager,
   findOxlintConfig,
@@ -67,20 +74,46 @@ const REQUIRED_CONFIG = {
   rules: Object.fromEntries(OXLINT_REQUIRED_RULES.map((r) => [r, 'error'])),
 }
 
-/** A config file as it should be written when none exists. */
-export const newOxlintConfig = (): Record<string, unknown> => ({
-  $schema: './node_modules/oxlint/configuration_schema.json',
-  plugins: ['typescript', 'unicorn', 'oxc'],
-  options: { ...REQUIRED_CONFIG.options },
-  rules: { ...REQUIRED_CONFIG.rules },
-})
+const DEFAULT_PLUGINS = ['typescript', 'unicorn', 'oxc']
 
-export const snippetFor = (): string =>
+const ALL_POLICIES: PolicyLevels = policyLevels(undefined)
+
+const policyPlugins = (levels: PolicyLevels): string[] =>
+  (Object.keys(OXLINT_POLICY_RULES) as Array<keyof PolicyLevels>)
+    .filter((key) => levels[key] !== 'off')
+    .flatMap((key) => OXLINT_POLICY_RULES[key].plugin ?? [])
+
+/** Tests read fixtures and set the environment; the policy rules do not apply there. */
+const testOverride = (levels: PolicyLevels) => {
+  const rules = Object.keys(activePolicyRules(levels))
+  return rules.length === 0
+    ? undefined
+    : {
+        files: OXLINT_TEST_FILES,
+        rules: Object.fromEntries(rules.map((r) => [r, 'off'])),
+      }
+}
+
+/** A config file as it should be written when none exists. */
+export const newOxlintConfig = (
+  levels: PolicyLevels = ALL_POLICIES
+): Record<string, unknown> => {
+  const override = testOverride(levels)
+  return {
+    $schema: './node_modules/oxlint/configuration_schema.json',
+    plugins: [...DEFAULT_PLUGINS, ...policyPlugins(levels)],
+    options: { ...REQUIRED_CONFIG.options },
+    rules: { ...REQUIRED_CONFIG.rules, ...activePolicyRules(levels) },
+    ...(override ? { overrides: [override] } : {}),
+  }
+}
+
+export const snippetFor = (levels: PolicyLevels = ALL_POLICIES): string =>
   JSON.stringify(
     {
-      plugins: ['typescript'],
+      plugins: ['typescript', ...policyPlugins(levels)],
       options: REQUIRED_CONFIG.options,
-      rules: REQUIRED_CONFIG.rules,
+      rules: { ...REQUIRED_CONFIG.rules, ...activePolicyRules(levels) },
     },
     null,
     2
@@ -99,7 +132,10 @@ export type MergeResult =
  * untouched when nothing needs to change (so a second run is a no-op).
  * Anything that is not plain JSON is `unsafe`: it is never rewritten.
  */
-export const mergeOxlintConfig = (text: string): MergeResult => {
+export const mergeOxlintConfig = (
+  text: string,
+  levels: PolicyLevels = ALL_POLICIES
+): MergeResult => {
   let parsed: unknown
   try {
     parsed = JSON.parse(text)
@@ -127,6 +163,19 @@ export const mergeOxlintConfig = (text: string): MergeResult => {
       changed = true
     }
   }
+  const neededPlugins = policyPlugins(levels)
+  if (neededPlugins.length > 0) {
+    const plugins = (config.plugins as string[] | undefined) ?? [
+      ...DEFAULT_PLUGINS,
+    ]
+    for (const plugin of neededPlugins) {
+      if (!plugins.includes(plugin)) {
+        plugins.push(plugin)
+        changed = true
+      }
+    }
+    config.plugins = plugins
+  }
 
   if (config.options !== undefined && !isObject(config.options)) {
     return { kind: 'unsafe', reason: '"options" is not an object' }
@@ -152,16 +201,55 @@ export const mergeOxlintConfig = (text: string): MergeResult => {
       changed = true
     }
     const value = rules[rule]
-    if (Array.isArray(value)) {
-      for (const o of value.slice(1)) {
-        if (isObject(o) && o.checksConditionals === false) {
-          delete o.checksConditionals
+    const defeat = DEFEATING_OPTIONS[rule]
+    if (defeat && Array.isArray(value)) {
+      for (const o of value.slice(1).flat()) {
+        if (isObject(o) && o[defeat.option] === defeat.value) {
+          delete o[defeat.option]
           changed = true
         }
       }
     }
   }
+  let addedPolicyRule = false
+  for (const [rule, wanted] of Object.entries(activePolicyRules(levels))) {
+    const current = rules[rule]
+    const level = Array.isArray(wanted) ? wanted[0] : wanted
+    const levelOk =
+      current !== undefined &&
+      (isError(current) || (level === 'warn' && !!current && current !== 'off'))
+    if (!levelOk) {
+      rules[rule] =
+        Array.isArray(current) && current.length > 1
+          ? [level, ...current.slice(1)]
+          : wanted
+      if (current === undefined) addedPolicyRule = true
+      changed = true
+    }
+    if (rule === 'no-restricted-imports' && Array.isArray(rules[rule])) {
+      const value = rules[rule] as unknown[]
+      const missing = missingFsModules(value)
+      if (missing.length > 0) {
+        const wantedPaths = (
+          (wanted as unknown[])[1] as { paths: Array<{ name: string }> }
+        ).paths
+        const options = isObject(value[1]) ? value[1] : {}
+        const paths = Array.isArray(options.paths) ? options.paths : []
+        paths.push(...wantedPaths.filter((p) => missing.includes(p.name)))
+        options.paths = paths
+        rules[rule] = [value[0], options, ...value.slice(2)]
+        changed = true
+      }
+    }
+  }
   config.rules = rules
+
+  const override = testOverride(levels)
+  if (addedPolicyRule && override) {
+    const overrides = Array.isArray(config.overrides) ? config.overrides : []
+    overrides.push(override)
+    config.overrides = overrides
+  }
 
   if (Array.isArray(config.overrides)) {
     for (const override of config.overrides) {
@@ -292,22 +380,23 @@ export const runEnableOxlint = async (
   }
 
   // 2. config
+  const levels = policyLevels(project.config.lint)
   const existing = findOxlintConfig(project)
   let configSetsTypeAware = false
   const writes: Array<{ file: string; before: string; after: string }> = []
   if (!existing) {
     const file = join(project.installDir, OXLINT_CONFIG_FILES[0])
-    const after = JSON.stringify(newOxlintConfig(), null, 2) + '\n'
+    const after = JSON.stringify(newOxlintConfig(levels), null, 2) + '\n'
     writes.push({ file, before: '', after })
     configSetsTypeAware = true
     out.actions.push(`config: create ${rel(file)}`)
   } else if (existing.file.endsWith('.oxlintrc.json')) {
     const before = await readFile(existing.file, 'utf8')
-    const merged = mergeOxlintConfig(before)
+    const merged = mergeOxlintConfig(before, levels)
     if (merged.kind === 'unsafe') {
       out.ok = false
       out.manual.push(
-        `cannot edit ${rel(existing.file)} safely: ${merged.reason}. Merge this into it by hand:\n${snippetFor()}`
+        `cannot edit ${rel(existing.file)} safely: ${merged.reason}. Merge this into it by hand:\n${snippetFor(levels)}`
       )
     } else {
       configSetsTypeAware = true
@@ -322,7 +411,7 @@ export const runEnableOxlint = async (
   } else {
     out.ok = false
     out.manual.push(
-      `cannot edit ${rel(existing.file)} safely: only .oxlintrc.json is rewritten. Add this to it by hand (plugins, options.typeAware, rules):\n${snippetFor()}`
+      `cannot edit ${rel(existing.file)} safely: only .oxlintrc.json is rewritten. Add this to it by hand (plugins, options.typeAware, rules):\n${snippetFor(levels)}`
     )
   }
 

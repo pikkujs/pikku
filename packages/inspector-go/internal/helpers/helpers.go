@@ -1,6 +1,9 @@
 // Package helpers dispatches the inspector's compiler-backed helpers that sit
 // outside inspect(): collectSurface, readJsxLiteralText, readModuleSpecifiers,
-// readTsconfigOutDir and the `pikku mocks` stub scan. Each method takes JSON
+// readTsconfigOutDir, the `pikku mocks` stub scan, and the source scans and
+// edits @pikku/code-edit and @pikku/n8n-import run (readSyntaxErrors,
+// scanMessageUsage, readJsxProps, writeJsxProp, writeJsxStyle, findPikkuCall,
+// readImports). Each method takes JSON
 // params and returns a JSON-encodable result, so the same table backs the
 // one-shot subcommands and `serve`.
 package helpers
@@ -47,6 +50,62 @@ type scanFrontendParams struct {
 	Client  string   `json:"client"`
 }
 
+type jsxPosition struct {
+	Source string `json:"source"`
+	Line   int    `json:"line"`
+	Col    int    `json:"col"`
+}
+
+type writeJsxPropParams struct {
+	jsxPosition
+	Name  string `json:"name"`
+	Value any    `json:"value"`
+}
+
+type writeJsxStyleParams struct {
+	jsxPosition
+	Styles []sourcescan.StyleEntry `json:"styles"`
+}
+
+type findPikkuCallParams struct {
+	Content      string `json:"content"`
+	ExportedName string `json:"exportedName"`
+}
+
+type rootParams struct {
+	Root string `json:"root"`
+}
+
+type syntaxErrorsParams struct {
+	FileName string `json:"fileName"`
+	Content  string `json:"content"`
+}
+
+type contentParams struct {
+	Content string `json:"content"`
+}
+
+type dirParams struct {
+	Dir string `json:"dir"`
+}
+
+type jsxLiteralTextParams struct {
+	Dir     string   `json:"dir"`
+	Allowed []string `json:"allowed"`
+	Gated   bool     `json:"gated"`
+}
+
+type jsxLiteralPropsParams struct {
+	jsxLiteralTextParams
+	Props   []string `json:"props"`
+	Helpers []string `json:"helpers"`
+}
+
+type stringLiteralCopyParams struct {
+	Dir         string   `json:"dir"`
+	CopyHelpers []string `json:"copyHelpers"`
+}
+
 type scanHooksParams struct {
 	File string `json:"file"`
 	Text string `json:"text"`
@@ -59,6 +118,11 @@ var Methods = []string{
 	"readModuleSpecifiers", "readModuleSpecifiersBatch",
 	"readTsconfigOutDir",
 	"scanFrontend", "scanHooks",
+	"readSyntaxErrors", "scanMessageUsage",
+	"readJsxProps", "writeJsxProp", "writeJsxStyle",
+	"findPikkuCall", "readImports", "findWireRemoteAddonLiterals",
+	"scanAsI18nArguments", "scanAsI18nStubs", "scanSepArguments",
+	"scanJsxLiteralText", "scanJsxLiteralProps", "scanStringLiteralCopy",
 }
 
 // Has reports whether method is one of Methods.
@@ -94,6 +158,10 @@ func Dispatch(method string, params json.RawMessage) (any, *Error) {
 	res, err := dispatch(method, params)
 	if err == nil {
 		return res, nil
+	}
+	var jsxStyle *sourcescan.JsxStyleError
+	if errors.As(err, &jsxStyle) {
+		return nil, &Error{Name: "JsxStyleError", Message: jsxStyle.Message}
 	}
 	var snippet *surface.UnknownSnippetError
 	if errors.As(err, &snippet) {
@@ -167,6 +235,90 @@ func dispatch(method string, params json.RawMessage) (any, error) {
 			return nil, err
 		}
 		return nonNil(sourcescan.ScanHooks(p.File, p.Text, nil)), nil
+	case "readJsxProps":
+		var p jsxPosition
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.ReadJsxProps(p.Source, p.Line, p.Col), nil
+	case "writeJsxProp":
+		var p writeJsxPropParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.WriteJsxProp(p.Source, p.Line, p.Col, p.Name, p.Value), nil
+	case "writeJsxStyle":
+		var p writeJsxStyleParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.WriteJsxStyle(p.Source, p.Line, p.Col, p.Styles)
+	case "findWireRemoteAddonLiterals":
+		var p sourceFile
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.FindWireRemoteAddonLiterals(p.FileName, p.Content), nil
+	case "findPikkuCall":
+		var p findPikkuCallParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.FindPikkuCall(p.Content, p.ExportedName), nil
+	case "readImports":
+		var p contentParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.ReadImports(p.Content), nil
+	case "scanMessageUsage":
+		var p rootParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.ScanMessageUsage(p.Root), nil
+	case "scanAsI18nArguments":
+		var p dirParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.FindAsI18nArguments(p.Dir), nil
+	case "scanAsI18nStubs":
+		var p dirParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.FindAsI18nStubs(p.Dir), nil
+	case "scanSepArguments":
+		var p dirParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.FindSepArguments(p.Dir), nil
+	case "scanJsxLiteralText":
+		var p jsxLiteralTextParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.FindJsxLiteralText(p.Dir, p.Allowed, p.Gated), nil
+	case "scanJsxLiteralProps":
+		var p jsxLiteralPropsParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.FindJsxLiteralProps(p.Dir, p.Allowed, p.Props, p.Helpers, p.Gated), nil
+	case "scanStringLiteralCopy":
+		var p stringLiteralCopyParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.FindStringLiteralCopy(p.Dir, p.CopyHelpers), nil
+	case "readSyntaxErrors":
+		var p syntaxErrorsParams
+		if err := decode(params, &p); err != nil {
+			return nil, err
+		}
+		return sourcescan.ReadSyntaxErrors(p.FileName, p.Content), nil
 	}
 	return nil, fmt.Errorf("unknown method %s", method)
 }

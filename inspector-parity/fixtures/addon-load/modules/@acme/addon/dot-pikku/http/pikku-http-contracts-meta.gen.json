@@ -1,0 +1,1 @@
+{"c":{"routes":{"basePath":"/p","routes":{"a":{"method":"get","route":"/a","func":{"pikkuFuncId":"a"}}}}}}

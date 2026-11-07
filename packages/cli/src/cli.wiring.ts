@@ -53,14 +53,6 @@ import {
 import { validate, renderValidate } from './functions/commands/validate.js'
 import { pikkuVerify, renderPikkuVerify } from './functions/commands/verify.js'
 import {
-  experimentNativeComparison,
-  renderExperimentNativeComparison,
-} from './functions/commands/experiment-native-comparison.js'
-import {
-  inspectorParity,
-  renderInspectorParity,
-} from './functions/commands/inspector-parity.js'
-import {
   examplesAdd,
   examplesList,
   examplesShow,
@@ -305,7 +297,7 @@ wireCLI({
     },
     inspector: {
       description:
-        "Inspector engine: 'native' (the pikku-inspect binary, default) or 'typescript' (the TypeScript compiler API). Overrides PIKKU_INSPECTOR and the `inspector` key in pikku.config.json.",
+        'Which inspector analyses the project: go (pikku-inspect, the reference) or rs (pikku-inspect-rs). Overrides PIKKU_INSPECTOR and the "inspector" key of pikku.config.json.',
     },
     stateOutput: {
       description: 'Save inspector state to JSON file for reuse',
@@ -1355,45 +1347,6 @@ wireCLI({
         },
       },
     }),
-    inspector: {
-      description: 'Check the inspectors that analyse this project',
-      subcommands: {
-        parity: pikkuCLICommand({
-          func: inspectorParity,
-          render: renderInspectorParity,
-          description:
-            "Run this project's codegen with the TypeScript inspector and then the native one, from the same .pikku state, and fail unless both save the same inspector state, generate the same files and log the same diagnostics",
-          options: {
-            details: {
-              description: 'Most state differences to list',
-              default: '20',
-            },
-            expectFailure: {
-              description:
-                'For a project whose codegen is meant to fail: the text both engines must fail with. They must still agree on state, files and diagnostics',
-            },
-          },
-        }),
-      },
-    },
-    experiment: {
-      description: 'Experiments that measure or compare how the CLI behaves',
-      subcommands: {
-        'native-comparison': pikkuCLICommand({
-          func: experimentNativeComparison,
-          render: renderExperimentNativeComparison,
-          description:
-            "Run this project's codegen with the TypeScript inspector and then the native one, from the same .pikku state, and compare wall time, CPU time, peak memory and the generated output",
-          options: {
-            runs: {
-              description:
-                'Runs per engine; with more than one, the median is reported',
-              default: '1',
-            },
-          },
-        }),
-      },
-    },
     scenario: {
       description: 'Run and inspect scenarios (pikkuScenario)',
       subcommands: {

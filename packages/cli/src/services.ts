@@ -29,17 +29,9 @@ import {
   filterInspectorState,
   getInitialInspectorState,
   ErrorCode,
-} from '@pikku/inspector/lite'
+} from '@pikku/inspector'
 import { inspect as inspectWithGo } from '@pikku/inspector-go'
-import { loadTypeScriptHelpers } from './inspector-helpers.js'
-import {
-  getInspectorEngine,
-  isStandaloneCli,
-  nativeInspectorAvailable,
-  resolveInspectorEngine,
-  setInspectorEngine,
-  type InspectorEngine,
-} from './inspector-engine.js'
+import { selectInspectorEngine } from './inspector-engine.js'
 import { findSourceFiles } from './utils/find-source-files.js'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
@@ -76,19 +68,6 @@ const LINT_DEFAULTS: NonNullable<PikkuCLIConfig['lint']> = {
   wiresNotDestructured: 'error',
   functionDynamicImport: 'warn',
 }
-
-/**
- * The inspect function for an engine. The native engine ignores `oldProgram`:
- * the binary keeps no program between runs.
- */
-// The TypeScript engine is imported on first use, so a native run never loads
-// the compiler.
-const inspectorFor = async (
-  engine: InspectorEngine
-): Promise<typeof inspectWithGo> =>
-  engine === 'native'
-    ? inspectWithGo
-    : (await import('@pikku/inspector')).inspect
 
 export function processDiagnostics(
   diagnostics: InspectorDiagnostic[],
@@ -233,9 +212,13 @@ export const createConfig: CreateConfig<
       ({} as PikkuCLIConfig))
     : await getPikkuCLIConfig(logger, data.config, [], true, data.outDir)
 
+  selectInspectorEngine({
+    flag: (data as any).inspector,
+    config: (cliConfig as any).inspector,
+  })
+
   // Load inspector state from file if stateInput is provided
-  let preloadedInspectorState: Omit<InspectorState, 'typesLookup'> | undefined =
-    undefined
+  let preloadedInspectorState: InspectorState | undefined = undefined
 
   if (data.stateInput) {
     try {
@@ -256,27 +239,12 @@ export const createConfig: CreateConfig<
   // preserved (getPikkuCLIConfig already resolves relative --outDir to
   // an absolute path and recomputes all derived *File/*Dir paths).
   const { outDir: _rawOutDir, ...dataWithoutOutDir } = data
-  const inspector = resolveInspectorEngine({
-    flag: (data as { inspector?: string }).inspector,
-    env: process.env.PIKKU_INSPECTOR,
-    config: cliConfig.inspector,
-    nativeAvailable: nativeInspectorAvailable,
-    standalone: isStandaloneCli(),
-    execPath: process.execPath,
-    onFallback: () =>
-      logger.warn(
-        'No pikku-inspect binary for this platform; using the TypeScript inspector. Reinstall @pikku/cli, or set "inspector": "typescript" in pikku.config.json to silence this.'
-      ),
-  })
-  setInspectorEngine(inspector)
-  if (inspector === 'typescript') await loadTypeScriptHelpers()
   return {
     ...cliConfig,
     ...dataWithoutOutDir,
     // `pikku dev --frontends` is a flag, and the spread above would replace the
     // project's `frontends` table with its boolean.
     frontends: cliConfig.frontends,
-    inspector,
     tags: cliConfig.tags,
     filters: parseCLIFilters(data, cliConfig),
     preloadedInspectorState,
@@ -296,17 +264,12 @@ export const createSingletonServices: CreateSingletonServices<
   const variables = new LocalVariablesService()
 
   // Store unfiltered state
-  let unfilteredState:
-    InspectorState | Omit<InspectorState, 'typesLookup'> | undefined =
-    preloadedInspectorState
+  let unfilteredState: InspectorState | undefined = preloadedInspectorState
   let unfilteredStateIsSetupOnly = false
   let inspectedTsGeneration: number | undefined
   let inspectorInvalidated = false
 
   let inspectPass = 0
-  const releaseProgram = (state: { program?: unknown } | undefined) => {
-    if (state) state.program = undefined
-  }
 
   /**
    * `unfiltered` is for commands that RUN the project rather than generate from
@@ -425,28 +388,13 @@ export const createSingletonServices: CreateSingletonServices<
         ? ((await loadManifest(join(config.rootDir, 'versions.pikku.json'))) ??
           undefined)
         : undefined
-      // The outgoing state's `typesLookup` holds live `ts.Type`s. A type reaches
-      // its checker and the checker reaches the whole program, so that one map
-      // pins a parsed program and an exercised checker for as long as the state
-      // exists — `releaseProgram` alone frees nothing. Every reader of the old
-      // state is done once a re-inspection is asked for, so drop the types here
-      // and the old program is collectable while the new one is built, instead
-      // of both being live at once.
-      if (unfilteredState && 'typesLookup' in unfilteredState) {
-        unfilteredState.typesLookup.clear()
-      }
-      const oldProgram = unfilteredState?.program ?? undefined
       const inspectStart = Date.now()
       unfilteredStateIsSetupOnly = setupOnly
       const tsGenerationAtInspect = getTsWriteGeneration()
-      const inspect = await inspectorFor(
-        config.inspector ?? getInspectorEngine()
-      )
-      unfilteredState = await inspect(logger, wiringFiles, {
+      unfilteredState = await inspectWithGo(logger, wiringFiles, {
         setupOnly,
         rootDir,
         isAddon: !!config.addon,
-        oldProgram,
         tsconfig: config.tsconfig,
         types: {
           configFileType: config.configFile,
@@ -496,8 +444,6 @@ export const createSingletonServices: CreateSingletonServices<
       }
       inspectedTsGeneration = tsGenerationAtInspect
       inspectorInvalidated = false
-
-      releaseProgram(unfilteredState)
 
       if (
         'diagnostics' in unfilteredState &&

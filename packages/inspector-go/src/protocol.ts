@@ -1,4 +1,5 @@
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
+import { packageDir } from './binary.js'
 import type {
   InspectorOptions,
   SerializableInspectorState,
@@ -41,9 +42,8 @@ export type InspectorGoAnalysisOptions = Pick<
 }
 
 /** The Node Zod converter this package ships, the binary's fallback. */
-export const VENDOR_SCHEMA_SCRIPT = fileURLToPath(
-  new URL('../scripts/vendor-schemas.mjs', import.meta.url)
-)
+export const vendorSchemaScript = (): string =>
+  join(packageDir(), 'scripts', 'vendor-schemas.mjs')
 
 /** What `pikku-inspect --stdin` reads. */
 export interface InspectorGoInput {
@@ -69,6 +69,8 @@ export interface InspectorGoStats {
   files: number
   /** Files under rootDir the inspector actually swept. */
   projectFiles: number
+  /** Files served from the source-file cache without re-parsing; zero on a first pass. */
+  filesReused?: number
   types: number
   /** Type instantiations; the Go checker does not count them, so 0. */
   instantiations: number
@@ -118,7 +120,7 @@ export const toAnalysisOptions = (
     setupOnly: options.setupOnly,
     types: options.types,
     schemaConfig: options.schemaConfig && {
-      vendorScript: VENDOR_SCHEMA_SCRIPT,
+      vendorScript: vendorSchemaScript(),
       ...options.schemaConfig,
     },
     isAddon: options.isAddon,

@@ -1,11 +1,11 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { execFileSync } from 'node:child_process'
-import { mkdtemp } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { isGitRepo, isTracked } from './git.js'
+import { git, isGitRepo, isTracked } from './git.js'
 
 const makeTmp = () => mkdtemp(join(tmpdir(), 'pikku-git-probe-'))
 
@@ -49,5 +49,28 @@ describe.skip('git probes ignore an inherited GIT_DIR', () => {
   test('a real repository is still detected', async () => {
     assert.strictEqual(await isGitRepo(process.cwd()), true)
     assert.strictEqual(await isTracked('package.json', process.cwd()), true)
+  })
+})
+
+/**
+ * Output arrives in chunks (64 KiB pipes), and a multi-byte character can
+ * straddle a chunk boundary. Decoding each chunk on its own turns the halves
+ * into U+FFFD.
+ */
+describe('git() decodes multi-byte output across chunk boundaries', () => {
+  test('a large Arabic blob read with `git show` is identical to the file', async () => {
+    const dir = await makeTmp()
+    const run = (...args: string[]) =>
+      execFileSync('git', args, { cwd: dir, stdio: 'ignore' })
+    run('init', '-q')
+    run('config', 'user.email', 't@t')
+    // 2-byte characters, ~6 MB; odd line length so boundaries land mid-char.
+    const text = 'مرحبا بالعالم، هذه سيرة ذاتية طويلة.\n'.repeat(100_000)
+    await writeFile(join(dir, 'big.sql'), text, 'utf8')
+    run('add', 'big.sql')
+    run('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'x')
+    const out = await git(['show', 'HEAD:big.sql'], dir)
+    assert.equal(out.includes('\uFFFD'), false)
+    assert.equal(out, (await readFile(join(dir, 'big.sql'), 'utf8')).trim())
   })
 })

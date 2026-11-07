@@ -1,0 +1,381 @@
+[
+  {
+    "content": "import { a } from 'x'\nexport const 😀 = pikkuFunc({ title: 'é😀', func: async () => 1, name: \"n\" })\n",
+    "name": "fn",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "import { a } from 'x'\nexport const 😀 = pikkuFunc({ title: 'é😀', func: async () => 1, name: \"n\" })\n",
+    "name": "😀",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "import { a } from 'x'\nexport const 😀 = pikkuFunc({ title: 'é😀', func: async () => 1, name: \"n\" })\n",
+    "name": "dup",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "import { a } from 'x'\nexport const 😀 = pikkuFunc({ title: 'é😀', func: async () => 1, name: \"n\" })\n",
+    "name": "dup2",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "import { a } from 'x'\nexport const 😀 = pikkuFunc({ title: 'é😀', func: async () => 1, name: \"n\" })\n",
+    "name": "other",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "import { a } from 'x'\nexport const 😀 = pikkuFunc({ title: 'é😀', func: async () => 1, name: \"n\" })\n",
+    "name": "missing",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "\r\nimport { a, b } from '@pikku/core'\r\nexport const fn = pikkuSessionlessFunc({\r\n  description: 'd',\r\n  func: async (s, d) => { return '😀' },\r\n})\r\n",
+    "name": "fn",
+    "want": {
+      "found": true,
+      "wrapperName": "pikkuSessionlessFunc",
+      "objectEnd": 144,
+      "properties": [
+        {
+          "name": "description",
+          "valueStart": 95,
+          "valueEnd": 98,
+          "propStart": 82,
+          "propEnd": 98
+        },
+        {
+          "name": "func",
+          "valueStart": 109,
+          "valueEnd": 140,
+          "propStart": 103,
+          "propEnd": 140
+        }
+      ],
+      "funcProperty": {
+        "valueStart": 109,
+        "valueEnd": 140
+      }
+    }
+  },
+  {
+    "content": "\r\nimport { a, b } from '@pikku/core'\r\nexport const fn = pikkuSessionlessFunc({\r\n  description: 'd',\r\n  func: async (s, d) => { return '😀' },\r\n})\r\n",
+    "name": "😀",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "\r\nimport { a, b } from '@pikku/core'\r\nexport const fn = pikkuSessionlessFunc({\r\n  description: 'd',\r\n  func: async (s, d) => { return '😀' },\r\n})\r\n",
+    "name": "dup",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "\r\nimport { a, b } from '@pikku/core'\r\nexport const fn = pikkuSessionlessFunc({\r\n  description: 'd',\r\n  func: async (s, d) => { return '😀' },\r\n})\r\n",
+    "name": "dup2",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "\r\nimport { a, b } from '@pikku/core'\r\nexport const fn = pikkuSessionlessFunc({\r\n  description: 'd',\r\n  func: async (s, d) => { return '😀' },\r\n})\r\n",
+    "name": "other",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "\r\nimport { a, b } from '@pikku/core'\r\nexport const fn = pikkuSessionlessFunc({\r\n  description: 'd',\r\n  func: async (s, d) => { return '😀' },\r\n})\r\n",
+    "name": "missing",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const fn = pikkuFunc({})\nexport const other = notPikku({ a: 1 })\n",
+    "name": "fn",
+    "want": {
+      "found": true,
+      "wrapperName": "pikkuFunc",
+      "objectEnd": 30,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const fn = pikkuFunc({})\nexport const other = notPikku({ a: 1 })\n",
+    "name": "😀",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const fn = pikkuFunc({})\nexport const other = notPikku({ a: 1 })\n",
+    "name": "dup",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const fn = pikkuFunc({})\nexport const other = notPikku({ a: 1 })\n",
+    "name": "dup2",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const fn = pikkuFunc({})\nexport const other = notPikku({ a: 1 })\n",
+    "name": "other",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const fn = pikkuFunc({})\nexport const other = notPikku({ a: 1 })\n",
+    "name": "missing",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "function f(){ const inner = pikkuFunc({ x: 1, 'quoted': 2, [c]: 3, ...spread, func: () => 1 }) }\n",
+    "name": "fn",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "function f(){ const inner = pikkuFunc({ x: 1, 'quoted': 2, [c]: 3, ...spread, func: () => 1 }) }\n",
+    "name": "😀",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "function f(){ const inner = pikkuFunc({ x: 1, 'quoted': 2, [c]: 3, ...spread, func: () => 1 }) }\n",
+    "name": "dup",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "function f(){ const inner = pikkuFunc({ x: 1, 'quoted': 2, [c]: 3, ...spread, func: () => 1 }) }\n",
+    "name": "dup2",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "function f(){ const inner = pikkuFunc({ x: 1, 'quoted': 2, [c]: 3, ...spread, func: () => 1 }) }\n",
+    "name": "other",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "function f(){ const inner = pikkuFunc({ x: 1, 'quoted': 2, [c]: 3, ...spread, func: () => 1 }) }\n",
+    "name": "missing",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "import {} from 'empty'\nimport def from 'd'\nimport * as ns from 'n'\nimport 'side'\nimport type { T } from 't'\nimport { x as y, z } from 'multi'\nconst fn = pikkuFunc({ func: 1 })\n",
+    "name": "fn",
+    "want": {
+      "found": true,
+      "wrapperName": "pikkuFunc",
+      "objectEnd": 174,
+      "properties": [
+        {
+          "name": "func",
+          "valueStart": 171,
+          "valueEnd": 172,
+          "propStart": 165,
+          "propEnd": 172
+        }
+      ],
+      "funcProperty": {
+        "valueStart": 171,
+        "valueEnd": 172
+      }
+    }
+  },
+  {
+    "content": "import {} from 'empty'\nimport def from 'd'\nimport * as ns from 'n'\nimport 'side'\nimport type { T } from 't'\nimport { x as y, z } from 'multi'\nconst fn = pikkuFunc({ func: 1 })\n",
+    "name": "😀",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "import {} from 'empty'\nimport def from 'd'\nimport * as ns from 'n'\nimport 'side'\nimport type { T } from 't'\nimport { x as y, z } from 'multi'\nconst fn = pikkuFunc({ func: 1 })\n",
+    "name": "dup",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "import {} from 'empty'\nimport def from 'd'\nimport * as ns from 'n'\nimport 'side'\nimport type { T } from 't'\nimport { x as y, z } from 'multi'\nconst fn = pikkuFunc({ func: 1 })\n",
+    "name": "dup2",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "import {} from 'empty'\nimport def from 'd'\nimport * as ns from 'n'\nimport 'side'\nimport type { T } from 't'\nimport { x as y, z } from 'multi'\nconst fn = pikkuFunc({ func: 1 })\n",
+    "name": "other",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "import {} from 'empty'\nimport def from 'd'\nimport * as ns from 'n'\nimport 'side'\nimport type { T } from 't'\nimport { x as y, z } from 'multi'\nconst fn = pikkuFunc({ func: 1 })\n",
+    "name": "missing",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const dup = notpikku(1)\nconst dup2 = pikkuFunc({ a: 1 })\n{ const dup = pikkuFunc({ b: 2 }) }\n",
+    "name": "fn",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const dup = notpikku(1)\nconst dup2 = pikkuFunc({ a: 1 })\n{ const dup = pikkuFunc({ b: 2 }) }\n",
+    "name": "😀",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const dup = notpikku(1)\nconst dup2 = pikkuFunc({ a: 1 })\n{ const dup = pikkuFunc({ b: 2 }) }\n",
+    "name": "dup",
+    "want": {
+      "found": true,
+      "wrapperName": "pikkuFunc",
+      "objectEnd": 96,
+      "properties": [
+        {
+          "name": "b",
+          "valueStart": 93,
+          "valueEnd": 94,
+          "propStart": 90,
+          "propEnd": 94
+        }
+      ],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const dup = notpikku(1)\nconst dup2 = pikkuFunc({ a: 1 })\n{ const dup = pikkuFunc({ b: 2 }) }\n",
+    "name": "dup2",
+    "want": {
+      "found": true,
+      "wrapperName": "pikkuFunc",
+      "objectEnd": 62,
+      "properties": [
+        {
+          "name": "a",
+          "valueStart": 59,
+          "valueEnd": 60,
+          "propStart": 56,
+          "propEnd": 60
+        }
+      ],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const dup = notpikku(1)\nconst dup2 = pikkuFunc({ a: 1 })\n{ const dup = pikkuFunc({ b: 2 }) }\n",
+    "name": "other",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  },
+  {
+    "content": "export const dup = notpikku(1)\nconst dup2 = pikkuFunc({ a: 1 })\n{ const dup = pikkuFunc({ b: 2 }) }\n",
+    "name": "missing",
+    "want": {
+      "found": false,
+      "properties": [],
+      "funcProperty": null
+    }
+  }
+]

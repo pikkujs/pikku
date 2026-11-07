@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import Ajv from 'ajv'
 import { toAnalysisOptions, type InspectorGoInput } from './protocol.js'
-import { projectInput } from '../parity/project-input.js'
+import { projectInput } from './test-project-input.js'
+import { findInspectorBinary } from './binary.js'
+import { availableEngines } from './test-engines.js'
 import { runInspectorBinary } from './run-binary.js'
 
 const schema = (name: string) =>
@@ -35,16 +37,15 @@ describe('protocol JSON Schemas', async () => {
     assert.ok(validateInput(input), ajv.errorsText(validateInput.errors))
   })
 
-  test('the TypeScript engine output matches output.schema.json', async () => {
-    // Through the stand-in binary rather than in this process: an in-process
-    // analysis leaves bun's resolver unable to find addon metadata for any
-    // test file that runs after it in the same process.
-    const output = await runInspectorBinary(
-      fileURLToPath(new URL('../parity/ts-reference-bin.ts', import.meta.url)),
-      input
-    )
-    assert.ok(validateOutput(output), ajv.errorsText(validateOutput.errors))
-  })
+  for (const engine of availableEngines()) {
+    test(`the ${engine} engine output matches output.schema.json`, async () => {
+      const output = await runInspectorBinary(
+        findInspectorBinary(process.env, { engine }),
+        input
+      )
+      assert.ok(validateOutput(output), ajv.errorsText(validateOutput.errors))
+    })
+  }
 
   test('a critical without a code is rejected', () => {
     const output = {

@@ -11,7 +11,7 @@ import {
   readSdkManifest,
   type AddonDependency,
   type AddonsLock,
-} from '@pikku/inspector/lite'
+} from '@pikku/inspector'
 import type { RemoteAddonSdkSpec } from './remote-addon-sync.js'
 
 /**

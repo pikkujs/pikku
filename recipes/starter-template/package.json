@@ -45,7 +45,7 @@
     "@types/node": "^26",
     "oxfmt": "^0.73.0",
     "oxlint": "^1.88.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "overrides": {
     "@pikku/cli": "0.12.202",
@@ -55,7 +55,7 @@
     "@pikku/knowledge": "0.12.22",
     "@pikku/kysely": "0.13.41",
     "@pikku/ws": "0.12.11",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "packageManager": "bun@1.4.3"
 }

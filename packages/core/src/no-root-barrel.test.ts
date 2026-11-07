@@ -64,7 +64,17 @@ const walk = (dir: string, out: string[] = []): string[] => {
  * tests, against the template rather than its output.
  */
 const isGenerated = (path: string) =>
-  path.includes('.gen.') || path.endsWith('.d.ts') || path.includes('/.pikku/')
+  path.includes('.gen.') ||
+  path.endsWith('.d.ts') ||
+  path.includes('/.pikku/') ||
+  isInspectorFixture(path)
+
+/**
+ * `inspector-parity/fixtures` are user projects the Go and Rust inspectors are
+ * run on, so they import the root the way a user's app does.
+ */
+const isInspectorFixture = (path: string) =>
+  path.includes('/inspector-parity/fixtures/')
 
 describe('no root barrel', () => {
   /**

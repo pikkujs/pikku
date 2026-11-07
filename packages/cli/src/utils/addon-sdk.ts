@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, posix, resolve } from 'node:path'
-import { computeContractHash, TypesMap } from '@pikku/inspector/lite'
+import { computeContractHash, TypesMap } from '@pikku/inspector'
 import { parseVersionedId } from '@pikku/core/utils'
 
 /**

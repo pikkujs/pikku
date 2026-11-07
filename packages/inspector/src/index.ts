@@ -1,11 +1,10 @@
-export { inspect, analyzeProgram } from './inspector.js'
 export { getInitialInspectorState } from './initial-state.js'
-export { finalizeInspectorState } from './finalize.js'
-export type { TypesMap } from './types-map.js'
+export { TypesMap } from './types-map.js'
 export type {
   AddonConfig,
   AuthDefinition,
   CredentialOverrideMeta,
+  FilesAndMethodsErrors,
   StudioMeta,
   StudioScreenMeta,
   StudioNavMeta,
@@ -27,7 +26,6 @@ export type {
   MiddlewareRegistration,
   SchemaRef,
 } from './types.js'
-export type { FilesAndMethodsErrors } from './utils/get-files-and-methods.js'
 export { ErrorCode } from './error-codes.js'
 export type { DiagnosticSeverity, CodedDiagnostic } from './error-codes.js'
 export { AUTH_HANDLER_FUNC_ID } from './utils/inspector-constants.js'
@@ -57,8 +55,9 @@ export {
   findUnusedFunctions,
   type UnusedFunction,
 } from './utils/find-unused-functions.js'
-export type { SurfaceUsageCounts } from './utils/extract-surface-usage.js'
+export type { SecretUsage, SurfaceUsageCounts } from './utils/usage-types.js'
 export {
+  computeContractHash,
   createEmptyManifest,
   serializeManifest,
 } from './utils/contract-hashes.js'
@@ -77,15 +76,11 @@ export {
   deserializeGraphWorkflow,
   deserializeAllDslWorkflows,
 } from './utils/workflow/dsl/deserialize-dsl-workflow.js'
-export { getFilesAndMethods } from './utils/get-files-and-methods.js'
 export { resolveFunctionMeta } from './utils/resolve-function-meta.js'
 export type {
   SerializedWorkflowGraph,
   SerializedWorkflowGraphs,
 } from './utils/workflow/graph/index.js'
-export { readModuleSpecifiers } from './utils/read-module-specifiers.js'
-export { readJsxLiteralText } from './utils/read-jsx-literal-text.js'
-export { readTsconfigOutDir } from './utils/read-tsconfig-out-dir.js'
 export {
   addonResolutionDirs,
   createAddonResolver,
@@ -102,7 +97,6 @@ export {
   readSdkManifest,
   checkLockedSdk,
 } from './utils/remote-addon-sdk.js'
-export { findWireRemoteAddonSpecs } from './utils/find-wire-remote-addon-specs.js'
 export type {
   AddonsLock,
   AddonsLockEntry,
@@ -111,3 +105,13 @@ export type {
   LockedSdk,
 } from './utils/remote-addon-sdk.js'
 export type { WireRemoteAddonSpec } from './utils/find-wire-remote-addon-specs.js'
+export {
+  declaredAddonNames,
+  findInstalledPackageDir,
+  parseAddonDependencies,
+  readAddonDependencies,
+} from './utils/addon-dependencies.js'
+export type {
+  AddonDependency,
+  AddonDependencies,
+} from './utils/addon-dependencies.js'

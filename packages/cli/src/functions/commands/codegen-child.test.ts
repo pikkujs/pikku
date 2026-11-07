@@ -10,7 +10,6 @@ import {
   hasChangesSince,
   runCodegenChild,
 } from './codegen-child.js'
-import { setInspectorEngine } from '../../inspector-engine.js'
 
 const project = (): string => mkdtempSync(join(tmpdir(), 'pikku-codegen-'))
 
@@ -64,7 +63,6 @@ test('the child receives the command, state file and every set option', async ()
     `import { writeFileSync } from 'node:fs'
 writeFileSync(${JSON.stringify(out)}, JSON.stringify({ args: process.argv.slice(2), logo: process.env.PIKKU_NO_LOGO }))`
   )
-  setInspectorEngine('typescript')
   await runCodegenChild('/tmp/state.json', {
     command: ['all'],
     config: 'c.json',
@@ -78,7 +76,6 @@ writeFileSync(${JSON.stringify(out)}, JSON.stringify({ args: process.argv.slice(
   assert.deepEqual(seen.args, [
     'all',
     '--stateOutput=/tmp/state.json',
-    '--inspector=typescript',
     '--config=c.json',
     '--outDir=o',
     '--logLevel=debug',
@@ -112,19 +109,17 @@ writeFileSync(${JSON.stringify(out)}, JSON.stringify(process.execArgv))`
   ])
 })
 
-test('unset options are not passed to the child, but the engine always is', async () => {
+test('unset options are not passed to the child', async () => {
   const out = join(project(), 'args.json')
   script(
     `import { writeFileSync } from 'node:fs'
 writeFileSync(${JSON.stringify(out)}, JSON.stringify(process.argv.slice(2)))`
   )
-  setInspectorEngine('native')
   await runCodegenChild('s.json', { command: ['a', 'b'], inheritStdout: true })
   assert.deepEqual(JSON.parse(readFileSync(out, 'utf-8')), [
     'a',
     'b',
     '--stateOutput=s.json',
-    '--inspector=native',
   ])
 })
 

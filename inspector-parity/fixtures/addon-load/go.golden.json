@@ -1,0 +1,451 @@
+{
+ "addonFunctions": {
+  "ext": {
+   "hello": {
+    "pikkuFuncId": "hello",
+    "functionType": "user",
+    "name": "hello",
+    "services": {
+     "optimized": true,
+     "services": []
+    },
+    "inputSchemaName": "HelloInput",
+    "outputSchemaName": null,
+    "inputs": [
+     "HelloInput"
+    ],
+    "outputs": null,
+    "expose": true,
+    "mcp": true,
+    "description": "Say hi",
+    "tags": [
+     "a"
+    ]
+   },
+   "bye": {
+    "1": "y",
+    "2": "x",
+    "pikkuFuncId": "bye",
+    "functionType": "user",
+    "name": "bye",
+    "services": {
+     "optimized": true,
+     "services": []
+    },
+    "inputSchemaName": "ByeInput",
+    "outputSchemaName": "ByeOutput",
+    "inputs": [
+     "ByeInput"
+    ],
+    "outputs": [
+     "ByeOutput"
+    ],
+    "title": "Bye now",
+    "mcp": true
+   }
+  }
+ },
+ "addonStudio": {
+  "ext": {
+   "screens": [
+    {
+     "id": "s1"
+    }
+   ],
+   "scopes": [
+    "a",
+    "m",
+    "z"
+   ]
+  },
+  "rem": {
+   "screens": [
+    {
+     "id": "s1"
+    }
+   ],
+   "scopes": [
+    "a",
+    "m"
+   ]
+  }
+ },
+ "optedInContributors": {
+  "ext": {
+   "packageName": "@acme/addon",
+   "contributors": {
+    "c1": {
+     "kind": "x"
+    }
+   }
+  },
+  "rem": {
+   "packageName": "@acme/addon",
+   "contributors": {
+    "c1": {
+     "kind": "x"
+    }
+   }
+  }
+ },
+ "secrets": {
+  "definitions": [
+   {
+    "name": "apiKey",
+    "displayName": "Key",
+    "secretId": "myKey"
+   },
+   {
+    "displayName": "Other",
+    "secretId": "other"
+   }
+  ],
+  "files": [],
+  "usage": {}
+ },
+ "variables": {
+  "definitions": [
+   {
+    "displayName": "Region",
+    "variableId": "myRegion"
+   },
+   {
+    "variableId": "modeVar",
+    "displayName": "Mode"
+   }
+  ],
+  "files": []
+ },
+ "credentials": {
+  "definitions": [
+   {
+    "name": {
+     "name": "myOauth",
+     "mode": "wire"
+    },
+    "type": "wire"
+   },
+   {
+    "name": "plainName"
+   },
+   {
+    "name": "third"
+   }
+  ],
+  "files": []
+ },
+ "scopes": {
+  "definitions": [
+   {
+    "name": "acme",
+    "origin": {
+     "kind": "addon",
+     "package": "@acme/addon",
+     "displayName": "Acme"
+    },
+    "scopes": {
+     "read": {}
+    }
+   },
+   {
+    "name": "plain",
+    "origin": {
+     "kind": "addon",
+     "package": "@acme/addon"
+    }
+   }
+  ],
+  "files": []
+ },
+ "mcpEndpoints": {
+  "resourcesMeta": {},
+  "toolsMeta": {
+   "ext:hello": {
+    "pikkuFuncId": "ext:hello",
+    "name": "ext:hello",
+    "description": "Say hi",
+    "inputSchema": "HelloInput",
+    "outputSchema": null,
+    "tags": [
+     "a"
+    ],
+    "surface": "ext"
+   },
+   "ext:bye": {
+    "pikkuFuncId": "ext:bye",
+    "name": "ext:bye",
+    "description": "Bye now",
+    "inputSchema": "ByeInput",
+    "outputSchema": "ByeOutput",
+    "surface": "ext"
+   }
+  },
+  "promptsMeta": {},
+  "files": [],
+  "surfaces": {
+   "ext": "/mcp/ext"
+  }
+ },
+ "exportedContracts": {
+  "http": {},
+  "cli": {},
+  "channel": {},
+  "addonHttp": {
+   "ext": {
+    "c": {
+     "routes": {
+      "basePath": "/p",
+      "routes": {
+       "a": {
+        "method": "get",
+        "route": "/a",
+        "func": {
+         "pikkuFuncId": "ext:a",
+         "packageName": "@acme/addon"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "addonCli": {
+   "ext": {
+    "tool": {
+     "run": {
+      "pikkuFuncId": "ext:run",
+      "packageName": "@acme/addon"
+     }
+    }
+   }
+  },
+  "addonChannel": {
+   "ext": {
+    "chat": {
+     "send": {
+      "pikkuFuncId": "ext:send",
+      "packageName": "@acme/addon"
+     }
+    }
+   }
+  }
+ },
+ "remoteAddonFunctions": {
+  "rem": {
+   "ping": {
+    "pikkuFuncId": "ping",
+    "functionType": "user",
+    "name": "ping",
+    "services": {
+     "optimized": true,
+     "services": []
+    },
+    "inputSchemaName": null,
+    "outputSchemaName": null,
+    "inputs": null,
+    "outputs": null,
+    "expose": true
+   }
+  }
+ },
+ "addonServerlessIncompatible": [
+  [
+   "ext",
+   [
+    "fs"
+   ]
+  ]
+ ],
+ "addonRequiredParentServices": [
+  "logger",
+  "db"
+ ],
+ "triggers.webhookSourceMeta": {
+  "ext-s1": {
+   "name": "ext-s1",
+   "receive": "ext:recv",
+   "check": "ext:chk",
+   "events": [
+    "a"
+   ],
+   "route": "/webhooks/ext-s1"
+  },
+  "ext-s2": {
+   "name": "ext-s2",
+   "setup": "ext:su",
+   "route": "/webhooks/ext-s2"
+  }
+ },
+ "rpc.wireAddonDeclarations": [
+  [
+   "ext",
+   {
+    "package": "@acme/addon",
+    "ui": true,
+    "file": "<ROOT>/src/app.ts",
+    "rpcEndpoint": "/rpc/ext",
+    "mcp": true,
+    "mcpEndpoint": true,
+    "expose": [
+     "hello",
+     "nope",
+     "bye"
+    ],
+    "auth": false,
+    "tags": [
+     "t"
+    ],
+    "scopes": [
+     "z",
+     "a"
+    ],
+    "uses": {
+     "mail": "mailer"
+    },
+    "secretOverrides": {
+     "apiKey": "myKey"
+    },
+    "variableOverrides": {
+     "region": "myRegion"
+    },
+    "credentialOverrides": {
+     "oauth": {
+      "name": "myOauth",
+      "mode": "wire"
+     },
+     "plain": "plainName"
+    },
+    "globalSecrets": "GS",
+    "contentBucket": "b",
+    "contentGrants": {
+     "x": "rw"
+    },
+    "contributors": [
+     "c1",
+     "missing"
+    ],
+    "dependencies": [
+     {
+      "alias": "mail",
+      "package": "@acme/mail",
+      "range": "^1.0.0"
+     }
+    ],
+    "declaredUses": [
+     "mail"
+    ]
+   }
+  ],
+  [
+   "two",
+   {
+    "package": "@acme/addon2",
+    "file": "<ROOT>/src/app.ts",
+    "mcp": [
+     "x"
+    ]
+   }
+  ],
+  [
+   "three",
+   {
+    "package": "@acme/missing",
+    "file": "<ROOT>/src/app.ts",
+    "mcp": [
+     "x"
+    ],
+    "expose": [
+     "q"
+    ]
+   }
+  ],
+  [
+   "rem",
+   {
+    "package": "@acme/remote",
+    "range": "^1.2.0",
+    "file": "<ROOT>/src/app.ts",
+    "remote": true,
+    "hasAuth": true,
+    "authCredentialId": "x",
+    "local": {
+     "package": "@acme/addon",
+     "ui": true,
+     "contributors": [
+      "c1"
+     ]
+    }
+   }
+  ]
+ ],
+ "rpc.usedAddons": [
+  "ext",
+  "two",
+  "three",
+  "rem"
+ ],
+ "rpc.wireAddonFiles": [
+  "<ROOT>/src/app.ts"
+ ],
+ "functions.typesMap": {
+  "map": [
+   [
+    "HelloInput",
+    {
+     "originalName": "HelloInput",
+     "path": "<ROOT>/node_modules/@acme/addon/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+    }
+   ],
+   [
+    "ByeInput",
+    {
+     "originalName": "ByeInput",
+     "path": "<ROOT>/node_modules/@acme/addon/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+    }
+   ],
+   [
+    "ByeOutput",
+    {
+     "originalName": "ByeOutput",
+     "path": "<ROOT>/node_modules/@acme/addon/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+    }
+   ]
+  ],
+  "customTypes": []
+ },
+ "diagnostics": [
+  {
+   "level": "critical",
+   "code": "PKU356",
+   "message": "@acme/addon (wired as 'ext'): pikku.uses.db is '@acme/db', which has no version range. Write '@acme/db@^1.0.0': the app that wires this addon is checked against it."
+  },
+  {
+   "level": "critical",
+   "code": "PKU363",
+   "message": "wireAddon('ext') opts in to contributor 'missing', but @acme/addon registers no such contributor. It registers: c1, c2."
+  },
+  {
+   "level": "critical",
+   "code": "PKU343",
+   "message": "wireAddon('ext') lists 'nope' under expose, but @acme/addon publishes no such function."
+  },
+  {
+   "level": "critical",
+   "code": "PKU343",
+   "message": "wireAddon('ext') lists 'bye' under expose, but @acme/addon does not declare it expose: true, so it stays unexposed."
+  },
+  {
+   "level": "critical",
+   "code": "PKU364",
+   "message": "@acme/addon2 still declares \"pikku.contributors\" in its package.json, which is no longer read. Remove it, register the contributors with defineContributors in the addon's source, and opt in with wireAddon('two', { contributors: [...] }). See docs/contributors.md."
+  },
+  {
+   "level": "warn",
+   "message": "wireAddon('two') (declared in src/app.ts): @acme/addon2 is installed at <ROOT>/node_modules/@acme/addon2 but has not been built \u2014 its dist/.pikku/addon/function/pikku-functions-meta.gen.json does not exist. Run the addon's build (pikku all && tsc && pikku dist) in <ROOT>/node_modules/@acme/addon2."
+  },
+  {
+   "level": "warn",
+   "message": "wireAddon('three') (declared in src/app.ts) names @acme/missing, which is not installed where it can be resolved \u2014 tried <ROOT>. Add \"@acme/missing\": \"workspace:*\" (or a version) to the dependencies of <ROOT>/package.json and run install."
+  }
+ ]
+}

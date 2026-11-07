@@ -4,8 +4,13 @@ export {
   executableName,
   SUPPORTED_PLATFORMS,
   InspectorBinaryNotFoundError,
+  INSPECTOR_ENGINES,
+  ENGINES,
+  isInspectorEngine,
+  setInspectorEngine,
+  getInspectorEngine,
 } from './binary.js'
-export type { FindInspectorBinaryOptions } from './binary.js'
+export type { FindInspectorBinaryOptions, InspectorEngine } from './binary.js'
 export { runInspectorBinary, InspectorBinaryError } from './run-binary.js'
 export { replayDiagnostics, createRecordingLogger } from './diagnostics.js'
 export { INSPECTOR_PROTOCOL_VERSION, toAnalysisOptions } from './protocol.js'
@@ -22,6 +27,20 @@ export {
   readJsxLiteralTextBatch,
   readModuleSpecifiers,
   readModuleSpecifiersBatch,
+  readSyntaxErrors,
+  scanMessageUsage,
+  readJsxProps,
+  findPikkuCall,
+  readImports,
+  findWireRemoteAddonSpecs,
+  writeJsxProp,
+  writeJsxStyle,
+  scanAsI18nArguments,
+  scanAsI18nStubs,
+  scanSepArguments,
+  scanJsxLiteralText,
+  scanJsxLiteralProps,
+  scanStringLiteralCopy,
   readTsconfigOutDir,
   collectSurface,
   scanFrontend,
@@ -29,6 +48,18 @@ export {
   InspectorHelperError,
 } from './helpers.js'
 export type {
+  AsI18nArgumentHit,
+  AsI18nStubHit,
+  JsxLiteralPropHit,
+  SepArgumentHit,
+  SourceHit,
+  ImportInfo,
+  PikkuCall,
+  PikkuCallProperty,
+  JsxPropValue,
+  MessageSite,
+  MessageUsage,
+  SyntaxError,
   JsxLiteralText,
   SourceFileInput,
   CollectSurfaceOptions,
@@ -38,3 +69,5 @@ export type {
   FrontendScan,
   HookCall,
 } from './helpers.js'
+export { InspectorSession } from './session.js'
+export type { TypeDiagnostic } from './session.js'

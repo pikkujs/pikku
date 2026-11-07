@@ -9,7 +9,13 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PLATFORMS, executableName, targetName } from './platforms.mjs'
+import {
+  PLATFORMS,
+  RS_PLATFORMS,
+  executableName,
+  rsExecutableName,
+  targetName,
+} from './platforms.mjs'
 
 const PKG_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
 const MIN_BYTES = 1024 * 1024
@@ -19,7 +25,12 @@ const ELF_MACHINE = { arm64: 183, x64: 62 }
 const PE_MACHINE = { arm64: 0xaa64, x64: 0x8664 }
 
 /** Returns why `buf` is not an executable for platform/arch, or undefined. */
-export const binaryProblem = (buf, platform, arch) => {
+export const binaryProblem = (
+  buf,
+  platform,
+  arch,
+  { allowDynamic = false } = {}
+) => {
   if (buf.length < MIN_BYTES) {
     return `only ${buf.length} bytes, expected a real binary (>= ${MIN_BYTES})`
   }
@@ -43,7 +54,10 @@ export const binaryProblem = (buf, platform, arch) => {
     const phnum = buf.readUInt16LE(56)
     for (let i = 0; i < phnum; i++) {
       const PT_INTERP = 3
-      if (buf.readUInt32LE(phoff + i * phentsize) === PT_INTERP) {
+      if (
+        !allowDynamic &&
+        buf.readUInt32LE(phoff + i * phentsize) === PT_INTERP
+      ) {
         return 'dynamically linked (has PT_INTERP); build with CGO_ENABLED=0'
       }
     }
@@ -64,12 +78,12 @@ export const binaryProblem = (buf, platform, arch) => {
   return `unsupported platform ${platform}`
 }
 
-const checkTarget = ({ platform, arch }) => {
+const checkTarget = ({ platform, arch }, rs = false) => {
   const binary = join(
     PKG_DIR,
     'prebuilt',
     targetName({ platform, arch }),
-    executableName(platform)
+    rs ? rsExecutableName() : executableName(platform)
   )
   const where = relative(process.cwd(), binary) || binary
   let buf
@@ -77,12 +91,15 @@ const checkTarget = ({ platform, arch }) => {
     if (!statSync(binary).isFile()) throw new Error('not a file')
     buf = readFileSync(binary)
   } catch {
+    if (rs) {
+      return `${where} is missing. Build it with \`cargo build --release\` in packages/inspector-rust on a ${targetName({ platform, arch })} machine (CI: inspector-rs-build).`
+    }
     return `${where} is missing. Run \`node scripts/build-go.mjs --all\` in packages/inspector-go first.`
   }
   if (platform !== 'win32' && (statSync(binary).mode & 0o111) === 0) {
     return `${where} is not executable`
   }
-  const problem = binaryProblem(buf, platform, arch)
+  const problem = binaryProblem(buf, platform, arch, { allowDynamic: rs })
   if (problem) return `${where} ${problem}`
   console.log(`✓ ${where} (${(buf.length / 1024 / 1024).toFixed(1)} MB)`)
   return undefined
@@ -105,7 +122,10 @@ if (isMain) {
       `prebuilt/ holds ${unknown.join(', ')}, which scripts/platforms.mjs does not list`
     )
   }
-  problems.push(...PLATFORMS.map(checkTarget).filter(Boolean))
+  problems.push(...PLATFORMS.map((p) => checkTarget(p)).filter(Boolean))
+  problems.push(
+    ...RS_PLATFORMS.map((p) => checkTarget(p, true)).filter(Boolean)
+  )
   if (problems.length > 0) {
     console.error(problems.join('\n'))
     process.exit(1)

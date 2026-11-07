@@ -21,29 +21,27 @@ npx pikku deploy
 Configuration lives in `pikku.config.json` — `srcDirectories`, `outDir` and the
 client files to emit.
 
-## Inspector engine
+## Inspector
 
-The CLI reads your source with one of two engines, which generate identical
-output:
+The CLI reads your source with an inspector binary from `@pikku/inspector-go`.
+Two engines speak the same protocol:
 
-- `native` (default) — the `pikku-inspect` binary from `@pikku/inspector-go`,
-  built on typescript-go (TypeScript 7). Several times faster. Installed for
-  your platform through an optional dependency.
-- `typescript` — `@pikku/inspector`, on the TypeScript 6 compiler API.
+| engine | binary | built on | binary override |
+| --- | --- | --- | --- |
+| `go` | `pikku-inspect` | typescript-go (the reference) | `PIKKU_INSPECTOR_GO_BIN` |
+| `rs` | `pikku-inspect-rs` | tsrs, a Rust port of typescript-go | `PIKKU_INSPECTOR_RS_BIN` |
 
-Choose with, in order of precedence, the `--inspector` flag, the
-`PIKKU_INSPECTOR` environment variable, or the `inspector` key in
-`pikku.config.json`:
+Pick one with, in this order: `pikku all --inspector rs`, the `PIKKU_INSPECTOR`
+environment variable (`go` or `rs`), the `"inspector": "rs"` key of
+`pikku.config.json`, then the package default (`rs`). The helpers other tools
+call (code-edit, the console's type diagnostics) follow the same choice.
 
-```json
-{
-  "inspector": "typescript"
-}
-```
-
-With no engine chosen and no `pikku-inspect` binary for your platform, the CLI
-warns and uses `typescript`. If `native` is chosen explicitly, a missing binary
-is an error instead.
+Each binary ships for your platform inside `@pikku/inspector-go` under
+`prebuilt/`. If the selected engine has none, `pikku` stops at inspection and
+names the variable to set: build `pikku-inspect` with
+`go build ./cmd/pikku-inspect` in `packages/inspector-go`, or `pikku-inspect-rs`
+with `cargo build --release` in `packages/inspector-rust`, and point
+`PIKKU_INSPECTOR_GO_BIN` / `PIKKU_INSPECTOR_RS_BIN` at it.
 
 ## Docs
 

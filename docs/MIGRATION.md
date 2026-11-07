@@ -132,6 +132,32 @@ The cast was usually there because the generated `pikku-package.gen.ts` did not 
 
 To find the affected code, run `pikku all` and look for `PKU564`. The message names the export and its file and line. See [`service-factories.md`](./service-factories.md).
 
+### Direct `fs` and `process.env` use fails validate
+
+Two lint keys are on by default at `error`. A project that sets nothing is enforced. Both are enforced by the app's own oxlint, which `pikku validate` already requires and runs; `pikku enable oxlint` writes the rules.
+
+| Key | oxlint rules required | Use instead |
+| --- | --- | --- |
+| `lint.enforceContentService` | `no-restricted-imports` on `fs`, `node:fs`, `fs/promises` and `node:fs/promises` (type-only imports allowed), and `typescript/no-require-imports` | the `content` service: keyed, project-scoped, signed reads and writes |
+| `lint.enforceVariablesService` | `node/no-process-env`, with the `node` plugin | the `variables` service for non-secret values, the `secrets` service for secrets |
+
+When a rule is missing or below the key's level, validate reports `oxlint-enforce-content-service` or `oxlint-enforce-variables-service`; each use in the source is reported as the oxlint finding (`oxlint-eslint-no-restricted-imports`, `oxlint-node-no-process-env`, ...). `pikku enable oxlint` exempts `*.test.*` and `*.spec.*` files through an `overrides` entry; exempt another file (bootstrap, a script) the same way. `const { env } = process` and `globalThis.process.env` are not caught.
+
+To relax a key for the whole project, set it to `'warn'` or `'off'`:
+
+```json
+{
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "warn"
+  }
+}
+```
+
+`pikkuConfig()` runs before any service exists, so a `process.env` read there is flagged too. Read the value through the `variables` argument instead: `pikkuConfig(async (variables) => ({ port: Number(variables?.get('API_PORT') ?? 4003) }))`. Every host passes one (Cloudflare, Lambda and Azure from their bindings, the CLI runner), and `pikku serve`, `pikku dev` and the `pikku db` commands now do too; before, they called `createConfig()` with no argument. Note `variables.get` parses JSON, so a port can arrive as a number: coerce it. Tools that read a developer's project files or environment (CLIs, addons that edit a checkout, test harnesses) should set the relevant key to `'off'`.
+
+To find the affected code, run `pikku validate`. Each finding names the file and line.
+
 ### The mesh is named `mesh`, and remote addons use the public RPC route
 
 Cross-unit RPC inside one app (the deploymentService "mesh") no longer shares the word "remote" with `wireRemoteAddon`. See [`remote-rpc.md`](./remote-rpc.md).
