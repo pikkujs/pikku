@@ -543,8 +543,12 @@ export const pikkuMetaContext = pikkuSessionlessFunc<{ full?: boolean }, void>({
       channel: wires.channel.length > 0,
       trigger: wires.trigger.length > 0,
       workflow: workflows.length > 0,
-      mcp: Object.keys((state as any).mcp?.meta ?? {}).length > 0,
-      agent: Object.keys((state as any).agents?.meta ?? {}).length > 0,
+      mcp: [
+        state.mcpEndpoints.toolsMeta,
+        state.mcpEndpoints.resourcesMeta,
+        state.mcpEndpoints.promptsMeta,
+      ].some((meta) => Object.keys(meta).length > 0),
+      agent: Object.keys(state.agents.agentsMeta).length > 0,
     }
 
     const cfg = config as any
