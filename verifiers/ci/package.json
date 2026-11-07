@@ -1,0 +1,33 @@
+{
+  "name": "@pikku/verifiers-ci",
+  "type": "module",
+  "private": true,
+  "description": "Runs `pikku ci` on a throwaway git repository, in place, with -p and with --deploy, and checks that a failed or kept run leaves the repository clean",
+  "scripts": {
+    "test": "npx tsx test-ci.ts",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
+  },
+  "dependencies": {
+    "@pikku/addon-admin": "workspace:*",
+    "@pikku/addon-console": "workspace:*",
+    "@pikku/better-auth": "workspace:*",
+    "@pikku/bun-server": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*",
+    "@pikku/kysely-bun-sqlite": "workspace:*",
+    "@pikku/schedule": "workspace:*",
+    "@pikku/ws": "workspace:*",
+    "better-auth": "^1.7.10",
+    "kysely": "^0.29.6",
+    "ws": "^8"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/deploy-standalone": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "typescript": "^5",
+    "zod": "^4"
+  }
+}

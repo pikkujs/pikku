@@ -442,6 +442,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly name = 'standalone'
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
+  readonly supportedRuntimes = ['bun'] as const
   readonly bundlesSqliteLibrary = true
   private readonly port: number
   readonly nativeSidecars: ReadonlyArray<{ name: string; dir: string }>

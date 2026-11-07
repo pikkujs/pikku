@@ -1,5 +1,20 @@
 # @pikku/react
 
+## 0.12.20
+
+### Patch Changes
+
+- a679e5d: `pikku verify` is merged into `pikku validate`, which now runs the type-check and correctness checks, skips codegen unless `--codegen` is passed, and exits non-zero on any error. The `pikku verify` command is gone; `runVerify`, `VerifyService` and the recorded results stay. See MIGRATION.md.
+
+## 0.12.19
+
+### Patch Changes
+
+- d7b030d: Fix the generated client's `agent.stream`, which parsed the event stream as JSON and resolved `undefined` once the run ended. It is now an async iterable of the run's AG-UI events, read by `CorePikkuFetch.agentStream`, and a `RUN_ERROR` throws a `PikkuAgentStreamError` instead of vanishing. `subscribeToSSE` shares the same frame reader (`readServerEvents`). `agent.run` and `agent.approve` are typed per agent and resolve to `status: 'suspended'` with `pendingApprovals` when a tool needs approval. `usePikkuAgent` passes all three through, typed; the generated React Query file registers the app's agents, so an unknown agent name is a type error. Breaking: `usePikkuAgent` no longer takes an `RPC` type argument — see docs/MIGRATION.md.
+- 2bdcc77: Document what a screen needs from `usePikkuAgent`: how to read `stream` as it arrives, what `run` and `approve` answer, how `threadId` keeps a conversation going, and how to load earlier messages with `getAgentThreadMessages`.
+- Updated dependencies [d7b030d]
+  - @pikku/fetch@0.12.14
+
 ## 0.12.18
 
 ### Patch Changes

@@ -1,0 +1,7 @@
+{
+  "name": "web",
+  "private": true,
+  "scripts": {
+    "build": "mkdir -p dist && echo built > dist/index.html"
+  }
+}

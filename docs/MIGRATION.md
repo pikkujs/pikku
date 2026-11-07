@@ -152,9 +152,39 @@ Check a worker that relied on running with no session, and any `pikkuUserId` you
 
 To find affected code, search for `retries:` in your workflows.
 
-### `pikku verify` fails on an app function nothing uses
+### `pikku verify` is now `pikku validate`
 
-An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku verify` fails. Addon functions are never checked. Workflows are checked too: a workflow that is not wired, exposed or started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step) is reported.
+The `pikku verify` command is gone. `pikku validate` runs what it ran, and runs the type-checks by default.
+
+| Before | After |
+| --- | --- |
+| `pikku verify` | `pikku validate --codegen` |
+| `pikku verify --skipCodegen` | `pikku validate` |
+| `pikku verify --skipTypecheck` | `pikku validate --skipTypecheck --codegen` |
+| `pikku verify --skipFrontends` | `pikku validate --skipFrontends --codegen` |
+| `pikku verify --strict` | `pikku validate --strict --codegen` |
+
+Three things change for anyone who already ran `pikku validate`:
+
+- It exits non-zero on any error. It used to print the errors and exit 0, so a script that relied on that now stops.
+- It type-checks the backend as well as the frontends, and runs the correctness checks `verify` had, so a project that passed may now report errors. `--skipTypecheck` now skips every type-check, not only the frontend one.
+- `--json` prints the report as one line on stdout.
+
+Codegen is opt-in: `validate` checks the tree as it stands unless you pass `--codegen`. `PKU563` comes from codegen, so it needs that flag.
+
+The `@pikku/code-edit/verify` library, `console:runVerify` and the recorded last-run file are unchanged.
+
+### `pikku deploy` respects `deploy.defaultProvider`, and a failed apply fails
+
+`deploy plan` and `deploy apply` without `-p` now use `deploy.defaultProvider`. They always used cloudflare before, whatever the config said, so a project that sets the key and relied on that needs `-p cloudflare`.
+
+`deploy apply` exits non-zero when the deploy fails. It used to log the errors and exit 0.
+
+`deploy apply --runtime <name>` is a real option, and is refused unless the provider supports that runtime. It used to be ignored as an unknown option. `-p standalone --runtime bun` works as it did, and `--runtime node` now stops the deploy.
+
+### `pikku validate --codegen` fails on an app function nothing uses
+
+An app function that is not wired, exposed or called by name is now reported as `PKU563` at `error` severity. `pikku all` still builds, but `pikku validate --codegen` fails. Addon functions are never checked. Workflows are checked too: a workflow that is not wired, exposed or started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step) is reported.
 
 To fix it, use the function or mark it `disabled: true | 'reason'`, which leaves it out of the build. A reference to a disabled function fails the build with `PKU562`. See [`disabled-functions.md`](./disabled-functions.md).
 
