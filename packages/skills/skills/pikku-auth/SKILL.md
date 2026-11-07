@@ -1,19 +1,14 @@
 ---
 name: pikku-auth
 description: >-
-  Identity in a Pikku app: authenticating a caller via login, logout, sessions, cookies, bearer
-  tokens, API keys, JWT, OAuth/social, MFA, Better Auth, machine callers, `pikku login`. TRIGGER
-  when: the user asks about those, how a CLI/agent/sandbox authenticates, or hits
-  InvalidSessionError. DO NOT TRIGGER for who may call a function: ownership, roles, scopes,
-  MissingScopeError (use pikku-permissions); identity-free middleware mechanics (use
-  pikku-middleware); secrets and env vars (use pikku-services).
+  Identity: login, sessions, cookies, bearer tokens, API keys, JWT, OAuth, MFA, Better Auth, machine callers, `pikku login`, InvalidSessionError. Who may call a function is pikku-permissions.
 installGroups: [core]
 ---
 
 # Pikku Auth
 
-Signatures and option keys come from `pikku doc` — run `pikku doc --ai` for the
-installed surface. This skill is the part the compiler cannot tell you: which of
+For how to call it, run this once: `pikku doc auth scopes authBearer authCookie authAPIKey`.
+This skill is the part the compiler cannot tell you: which of
 the two problems you actually have, and what goes wrong in each.
 
 ## First: authentication or authorization?
@@ -50,6 +45,14 @@ hash, a custom OAuth dance — all of them are the wrong answer, and nothing els
 in Pikku will work against them. `references/better-auth.md` has the setup; the
 built-in strategies in `references/sessions.md` are how a resolved credential
 becomes a Pikku session, not a replacement for it.
+
+Inviting someone: `createAuthUser` with no password, then `sendAuthUserSignInLink`, from `@pikku/better-auth`. The link is the invitation: no throwaway password, no hashing, no invitations table, and no reading better-auth's source.
+
+- Trim the email once (`email.trim()`) and pass the same value to both: `createAuthUser` lowercases but keeps whitespace, while the link trims, so they can disagree.
+- better-auth needs a `baseURL` in its config (or `BETTER_AUTH_URL`) to build the link. Without one, `sendAuthUserSignInLink` fails with `Invalid URL` after the user already exists.
+- It needs `magicLink({ sendMagicLink, disableSignUp: true })` wired in better-auth, with `sendMagicLink` mailing the link. `disableSignUp: true` keeps it invitation-only.
+- `createAuthUser` refuses an existing email, so for an existing account, or to retry a failed send, call `sendAuthUserSignInLink` alone.
+- The link signs the person in. It does not add them to an organization: use better-auth's organization invitation for that.
 
 ## What NOT to do
 

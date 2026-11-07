@@ -1,12 +1,7 @@
 ---
 name: pikku-changes
 description: >-
-  Work a project's changes queue, the todo list filed by circling things in the running app: `pikku
-  changes wait|claim|show|ask|reply|shot|done`, asking instead of guessing, saying why an item is
-  undone, options as images, one commit per item. TRIGGER when: the user says to run/work/watch/pick
-  up the changes (e.g. against a stage), names a change by #number, or you are idle in a checkout
-  with open changes (`pikku changes list`). DO NOT TRIGGER for git changes, diffs or changelogs, or
-  for deploying or debugging a stage.
+  Work a changes queue the builder hands over (circled items from the running app): `pikku changes`, #number. Only for that queue, never for a request typed in chat. Not git diffs or changelogs.
 ---
 
 # Working a changes queue

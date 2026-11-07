@@ -1,29 +1,15 @@
 ---
 name: pikku-wiring
 description: >-
-  Exposing a Pikku function over a transport: HTTP and SSE, WebSocket channels, typed pub/sub, RPC,
-  queue workers, cron, event triggers, MCP tools/resources/prompts, CLI commands, Slack gateway;
-  choosing the wiring and what differs by function type, session source and throw-vs-return. TRIGGER
-  when: code uses wireHTTP, defineHTTPRoutes, wireChannel, wireQueueWorker, wireScheduler,
-  wireTrigger, wireTriggerSource, wireCLI, wireMCPResource, wireMCPPrompt, `mcp: true`, `sse: true`,
-  `expose: true`, rpc.invoke or SlackGatewayAdapter, or asked how to expose, route, schedule, queue,
-  stream or publish a function. DO NOT TRIGGER for function bodies (use pikku-concepts),
-  authorization (use pikku-permissions), runtimes (use pikku-deploy), live views (use
-  pikku-realtime) or outgoing webhooks (use pikku-webhook).
+  Expose a Pikku function: wireHTTP, SSE, channels, pub/sub, RPC, queue workers, cron, triggers, MCP, CLI, Slack gateway. Outgoing webhooks are pikku-webhook; live views are pikku-realtime.
 installGroups: [core]
 ---
 
 # Pikku Wiring
 
-## Agent Operating Procedure
+What to reach for and why. For how to call it, run this once, with the doors you need: `pikku doc http channel queue scheduler trigger mcp cli gateway wireHTTP`. Depth: the references named under Pick a wiring.
 
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+Discover first with `pikku meta ... --json`. Find the source that owns the behaviour; do not start from generated output, `.pikku`, `node_modules`, vendored packages or build artifacts. Make the smallest source change, never hand-edit SDKs, schema output or typegen, validate narrowly first, then `pikku all` when functions, wirings, schemas or clients may have changed. If validation fails, fix the source cause and rerun.
 
 ## Before you start
 
@@ -33,10 +19,9 @@ pikku info tags --verbose        # project organisation and naming conventions
 pikku info middleware --verbose  # what middleware is already applied
 ```
 
-Follow the patterns you find. Option tables and exact signatures come from
-`pikku doc` — run `pikku doc --ai` for the installed surface. This skill is what
-the compiler cannot tell you: which wiring to reach for, and what changes when
-you move a function from one to another.
+Follow the patterns you find. This skill is what the compiler cannot tell you:
+which wiring to reach for, and what changes when you move a function from one to
+another.
 
 ## What a wiring is
 
@@ -68,15 +53,7 @@ exactly the typing that makes the wiring worth having, silently.
 naming the `#pikku` leaf to use instead. `@pikku/core/services` is the one
 subpath it exempts — the service implementations bootstrap picks.
 
-| Wiring                                                                                               | Import from        |
-| ---------------------------------------------------------------------------------------------------- | ------------------ |
-| `wireHTTP`, `defineHTTPRoutes`, `wireHTTPRoutes`                                                     | `#pikku/http`      |
-| `wireChannel`, `defineChannelRoutes`                                                                 | `#pikku/channel`   |
-| `wireQueueWorker`                                                                                    | `#pikku/queue`     |
-| `wireScheduler`                                                                                      | `#pikku/scheduler` |
-| `wireTrigger`, `wireTriggerSource`, `pikkuTriggerFunc`                                               | `#pikku/trigger`   |
-| `wireCLI`, `pikkuCLICommand`, `pikkuCLIRender`                                                       | `#pikku/cli`       |
-| `pikkuMCPToolFunc`, `pikkuMCPResourceFunc`, `pikkuMCPPromptFunc`, `wireMCPResource`, `wireMCPPrompt` | `#pikku/mcp`       |
+`pikku doc <export>` names each one's `#pikku` leaf on its first line.
 
 ## Pick a wiring
 
@@ -88,7 +65,7 @@ subpath it exempts — the service implementations bootstrap picks.
 | **RPC**       | One function calling another, or dispatching a name from outside                                                                                 | `references/rpc.md`                                                                 |
 | **Queue**     | Reliable background work that must survive a crash and retry                                                                                     | `references/queue.md`                                                               |
 | **Scheduler** | Recurring work on a cron expression                                                                                                              | `references/scheduler.md`                                                           |
-| **Trigger**   | Reacting in-process to an external event source (Redis pub/sub, PG LISTEN)                                                                       | `references/trigger.md`                                                             |
+| **Trigger**   | Reacting in-process to an external event source                                                                       | `references/trigger.md`                                                             |
 | **MCP**       | Exposing functions to an AI assistant as tools, resources or prompts                                                                             | `references/mcp.md`                                                                 |
 | **CLI**       | A terminal program with commands, subcommands and options                                                                                        | `references/cli.md`; end-to-end walkthrough in `references/cli-complete-example.md` |
 | **Gateway**   | An inbound integration from a third-party product — Slack is the shipped adapter                                                                 | `references/gateway-slack.md`                                                       |
@@ -180,14 +157,7 @@ started by a literal name: `rpc.startWorkflow('name')`,
 `rpc.invoke('name')`, another workflow's step, or a client helper. A workflow
 started only through a computed name is flagged.
 
-To keep a function in the source but out of the build, mark it `disabled`:
-
-```typescript
-export const oldReport = pikkuSessionlessFunc({
-  disabled: 'replaced by liveReport', // or `true`
-  func: async () => 'old',
-})
-```
+To keep a function in the source but out of the build, set `disabled`.
 
 A disabled function is left out of everything: meta, RPC maps, clients, MCP,
 CLI, HTTP, addon SDKs. It cannot be registered at runtime either. Anything

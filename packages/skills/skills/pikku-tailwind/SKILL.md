@@ -1,12 +1,7 @@
 ---
 name: pikku-tailwind
 description: >-
-  Tailwind + shadcn/ui on a Pikku backend: rendering dates from a generated client, flow-relative
-  layout that survives RTL, colour-scheme branching without hardcoded shades, choosing components.
-  TRIGGER when: putting a usePikkuQuery/RPC value on screen, writing margin/padding/alignment
-  classes, picking a date input or shadcn component, handling light/dark, or fixing a `@shadcn/lint`
-  error. DO NOT TRIGGER when the data does not come from a Pikku client, or for user-facing copy
-  (use pikku-i18n).
+  Tailwind + shadcn/ui on a Pikku backend: rendering dates and query values, RTL-safe flow-relative classes, light/dark, picking components, `@shadcn/lint` errors. User-facing copy is pikku-i18n.
 installGroups: [client]
 ---
 

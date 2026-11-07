@@ -1,14 +1,7 @@
 ---
 name: pikku-knowledge
 description: >-
-  Write, read, reorganise or validate a project's knowledge/ directory: Open Knowledge Format notes
-  (path-as-identity markdown, only `type` required), sections (entities, decisions, questions,
-  wishlist), notes becoming changes (`pikku knowledge gaps`), the `resource:` URI scheme, `pikku
-  knowledge validate|index|gaps`. TRIGGER when: asked to record a decision, requirement, entity or
-  open question, what the app does or is, a knowledge note/diagram/callout, or a product brief. DO
-  NOT TRIGGER for what functions/routes/tables exist (`pikku meta`/`pikku info`), scenarios (use
-  pikku-scenario), changeset plans (use pikku-architect) or legacy blueprint extraction (use
-  pikku-software-archaeology).
+  A project's knowledge/ notes (Open Knowledge Format): decisions, requirements, entities, open questions, briefs, `pikku knowledge validate|index|gaps`. Changeset plans are pikku-architect.
 installGroups: [core]
 agent:
   tools: read, write, edit, bash, grep

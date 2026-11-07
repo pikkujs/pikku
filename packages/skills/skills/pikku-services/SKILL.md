@@ -1,21 +1,14 @@
 ---
 name: pikku-services
 description: >-
-  The Pikku service layer: dependency injection with pikkuServices/pikkuWireServices,
-  startup/shutdown via pikkuServerLifecycle, config through the secrets, variables and credentials
-  services, audit sink and buffer, structured logging. TRIGGER when: code uses
-  pikkuServices/pikkuWireServices/pikkuServerLifecycle/defineSecret/defineVariable/defineCredential,
-  or asked about services.ts, lifecycle.ts, DI, env vars, secrets, API credentials, audit logging,
-  PinoLogger or a built-in service. DO NOT TRIGGER for middleware (use pikku-middleware),
-  authentication or permissions (use pikku-auth), or third-party backends such as Redis, S3, MongoDB
-  (use pikku-service-backends).
+  Pikku service layer: pikkuServices/pikkuWireServices DI, pikkuServerLifecycle, defineSecret, defineVariable, defineCredential, env vars, audit sink, logging. Choosing a service backend is pikku-service-backends.
 installGroups: [core]
 ---
 
 # Pikku Services
 
-Signatures and option keys come from `pikku doc` — run `pikku doc --ai` for the
-installed surface. This skill is the part the compiler cannot tell you: where a
+For how to call it, run this once: `pikku doc setup secrets variables pikkuServices pikkuWireServices pikkuServerLifecycle defineSecret defineVariable defineCredential`.
+This skill is the part the compiler cannot tell you: where a
 value is allowed to be read, and what a service's lifetime commits you to.
 
 ## Two lifetimes, and that is the whole model
@@ -47,7 +40,7 @@ service's paths and size limit; omitting it does not disable it.
 | Reading config — secrets, env vars, or a per-user API credential             | `references/config.md`                                       |
 | Recording audit events, or choosing a sink                                   | `references/audit.md` and `references/audit-wire-service.md` |
 | Setting up structured logging                                                | `references/pino.md`                                         |
-| Reaching for Redis, S3, SQS, MongoDB or a schema backend                     | `pikku-service-backends`                                     |
+| Choosing what sits behind a core service                                     | `pikku-service-backends`                                     |
 | Sending outgoing webhooks to a customer's endpoint                           | `pikku-webhook`                                              |
 
 ## Where a value may be read
@@ -85,8 +78,7 @@ as`, `!`, `<X>`) hides the call from the inspector,
   identity; an `insertInto('audit_log')` of your own gets none of that, and a
   write inside a transaction that later rolls back records nothing.
 - **Do not reach for `node:os` (`tmpdir()`, `homedir()`) or hand-roll `mkdtemp`
-  to get a scratch file.** `node:os` is missing from the Cloudflare Workers
-  runtime, so one import fails the whole worker at upload, even if the code path
+  to get a scratch file.** `node:os` is missing from some runtimes, so one import fails the whole worker at upload, even if the code path
   never runs there. `TemporaryFileService` (`@pikku/core/services/temporary-file-service`)
   is a **wire service**, not a singleton: build it in `pikkuWireServices` with
   `new TemporaryFileService(singletonServices.logger, tempDir).createInstance()`

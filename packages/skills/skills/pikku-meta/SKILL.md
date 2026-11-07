@@ -1,13 +1,7 @@
 ---
 name: pikku-meta
 description: >-
-  Inspect or evolve a project you did not just write: `pikku meta`/`pikku info` for functions,
-  schemas, wires, workflows, middleware, permissions; `pikku meta apply`; `pikku versions`/`pikku
-  release` for contract hashes, breaking changes and semver; `pikku audit`/`pikku update` for
-  advisories and upgrades. TRIGGER when: asked what functions or routes exist, a function's
-  input/output shape, retagging, API versioning, breaking changes, release semver, dependency
-  vulnerabilities or upgrading Pikku. DO NOT TRIGGER when writing a new function or wiring (use the
-  wiring skill) or on Pikku concepts (use pikku-concepts).
+  Inspect or evolve an existing project: `pikku meta`/`info` (functions, schemas, wires), `pikku versions`/`release` (breaking changes, semver), `pikku audit`/`update` (vulnerabilities, upgrades).
 installGroups: [core]
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku info *)
 argument-hint: '[context|functions|schemas|workflows|middleware|permissions|wires|apply|versions|release|audit|update]'
@@ -27,6 +21,8 @@ and change it through the write path rather than by hand.
 | Chasing a dependency advisory, or upgrading Pikku           | `references/audit.md`      |
 
 ## Start with `pikku meta context`
+
+Bare, it prints the short project map. `pikku meta grep <terms>` searches everything at once, translations included, and comes before any shell grep. `pikku meta db [table]`, `screens`, `services` and `emails` answer the rest; `--json` gives the full document. An older CLI may not have `grep`, `db`, `screens`, `services` or `emails`: when `pikku meta <name>` is unknown, fall back to `pikku meta context --json` and `pikku info`.
 
 It answers in one call what a planner needs — functions, wires, middleware,
 permissions, workflows, capabilities, layout. Reach for `pikku meta` when you

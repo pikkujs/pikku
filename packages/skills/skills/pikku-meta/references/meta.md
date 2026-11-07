@@ -15,7 +15,12 @@ going to act on the output; prefer `info` when a person is going to read it.
 
 | Command                         | What it answers                                                                                                                  |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `pikku meta context`            | Everything a planner needs in one call — functions, wires, middleware, permissions, workflows, capabilities, layout. Start here. |
+| `pikku meta context`            | A short map of the project; add `--json` for the full planner view                       |
+| `pikku meta grep <terms>`       | Search functions, workflows, wires, permissions, screens, translations; quote `'a\|b'` for either |
+| `pikku meta db [tables]`        | Tables and columns from the generated schema                                             |
+| `pikku meta screens`            | Frontend routes, the RPCs each page reaches, and its file                                |
+| `pikku meta services`           | Session fields, declared services and auth setup                                         |
+| `pikku meta emails`             | Email templates, the data each takes, and their locales                                  |
 | `pikku meta functions get <id>` | One function's input/output schema names, source file, tags, expose/readonly                                                     |
 | `pikku meta schemas get <name>` | One generated JSON schema                                                                                                        |
 | `pikku meta workflows get <id>` | One workflow's steps                                                                                                             |

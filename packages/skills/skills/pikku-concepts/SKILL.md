@@ -1,12 +1,7 @@
 ---
 name: pikku-concepts
 description: >-
-  Use FIRST, and whenever you are about to write or change Pikku code: core mental model, function
-  types, project structure, code generation, testing, and reading `pikku doc` (the installed API surface, which also indexes which
-  skill teaches each area). TRIGGER when: starting any Pikku task, about to import from `#pikku/*`,
-  unsure an export or option exists, choosing which pikku skill to load, a build failed on an
-  unknown import or option, or migrating a backend to Pikku. DO NOT TRIGGER when: the task is not a
-  Pikku project.
+  Use FIRST on any Pikku task: core model, function types, structure, codegen, testing, `pikku doc` (installed API, which skill teaches what), unknown imports or options, migrating a backend to Pikku.
 installGroups: [core]
 ---
 
@@ -29,7 +24,7 @@ remember about its API may be from a different version than the one in this dire
 Everything below is the mental model; `pikku doc` is the API surface, computed when the
 installed CLI was built. It needs no config and works outside a project.
 
-**Do not write an import, an export name, or an option key you have not seen in `pikku doc`.**
+**Do not write an import, an export name, or an option key you have not seen in `pikku doc`.** Run `pikku doc pikkuFunc` before opening a sibling function: open one only for this app's helpers and domain rules, never to learn Pikku.
 A name that looks right and is not costs a full build cycle to discover. If the doc does not
 list it, it does not exist here — do not reach into `node_modules` or `.pikku` for something
 that will work anyway.
@@ -76,13 +71,13 @@ skill and `pikku meta --json`, and do not guess at names the doc would have give
 ```text
 pikkuFunc (pure business logic)
     │
-    ├── wireHTTP        → Express, Fastify, Next.js, Lambda, Cloudflare...
+    ├── wireHTTP        → HTTP routes
     ├── wireChannel     → WebSocket (real-time)
-    ├── wireQueueWorker → BullMQ, PgBoss (async jobs)
+    ├── wireQueueWorker → async jobs
     ├── wireScheduler   → Cron (scheduled tasks)
     ├── mcp: true       → Model Context Protocol (AI tools; an option on the function, no wire call)
     ├── wireCLI         → CLI commands
-    ├── wireTrigger     → Event-driven (Redis pub/sub, PG LISTEN/NOTIFY)
+    ├── wireTrigger     → event-driven
     ├── pikkuAgent    → AI agents / chatbots
     ├── pikkuWorkflow   → Multi-step durable workflows
     └── wire.rpc        → Internal function-to-function calls
@@ -165,7 +160,7 @@ Read `references/language.md` before touching any of the three.
 
 ## Available Packages
 
-Pikku ships runtime adapters (`@pikku/express`, `@pikku/fastify`, `@pikku/next`, `@pikku/lambda`, `@pikku/cloudflare`, `@pikku/uws`, `@pikku/modelcontextprotocol`, ...) and service packages (`@pikku/jose`, `@pikku/schema-ajv`, `@pikku/pino`, `@pikku/kysely`, `@pikku/redis`, `@pikku/queue-bullmq`, `@pikku/queue-pg-boss`, ...). For the full list with use cases, read `references/packages.md`.
+Pikku ships runtime adapters and service packages. For the full list with use cases, read `references/packages.md`.
 
 ## Where the rest lives
 
