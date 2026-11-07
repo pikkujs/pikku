@@ -85,6 +85,7 @@ export const pikkuCiCheckDeploy = pikkuSessionlessFunc({
     if (run.provider !== 'cloudflare') return
     assertCloudflareDeployReady(readJson(planResultFile(run))?.providerDir, {
       migrationsApplied: run.migrationsApplied,
+      secretsSet: run.secretsSet,
     })
   },
 })
@@ -194,6 +195,7 @@ export const pikkuCi = pikkuSessionlessFunc({
         hasConsole: !!config.scaffold?.console,
         auditBaseline,
         migrationsApplied: !!data.migrationsApplied,
+        secretsSet: !!data.secretsSet,
         skipDeployChecks: !!data.skipDeployChecks,
         stateDir,
         configFile: runConfigFile,

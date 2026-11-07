@@ -481,6 +481,11 @@ wireCLI({
             'With --deploy on Cloudflare, confirm the migrations in this build are already applied',
           default: false,
         },
+        secretsSet: {
+          description:
+            'With --deploy on Cloudflare, confirm the secrets this build needs are set in Cloudflare',
+          default: false,
+        },
         skipDeployChecks: {
           description:
             'Skip the Pikku Studio hosting conventions in the validate stage',

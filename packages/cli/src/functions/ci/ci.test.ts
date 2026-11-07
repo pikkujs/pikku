@@ -42,6 +42,7 @@ const ciRun = (overrides: Partial<CiRun> = {}): CiRun => ({
   hasEmails: false,
   hasConsole: true,
   migrationsApplied: false,
+  secretsSet: false,
   skipDeployChecks: false,
   stateDir: join(dir, 'state'),
   configFile: join(dir, 'pikku.config.json'),
@@ -150,18 +151,30 @@ describe('assertCloudflareDeployReady', () => {
       JSON.stringify({ secrets: secrets.map((id) => ({ id })) })
     )
 
-  test('passes with every secret set and no migrations', () => {
+  test('passes with the secrets confirmed and no migrations', () => {
     infra(['API_KEY'])
-    assertCloudflareDeployReady(dir, { env: { API_KEY: 'x' } })
+    assertCloudflareDeployReady(dir, { secretsSet: true })
   })
 
-  test('refuses unset secrets, naming them', () => {
+  test('passes with no secrets to confirm', () => {
+    infra([])
+    assertCloudflareDeployReady(dir)
+  })
+
+  test('refuses unconfirmed secrets, naming every one, whatever the local env holds', () => {
     infra(['API_KEY', 'OTHER'])
-    assert.throws(
-      () => assertCloudflareDeployReady(dir, { env: { API_KEY: 'x' } }),
-      (error: Error) =>
-        error instanceof PikkuCiFailedError && /OTHER/.test(error.message)
-    )
+    process.env.API_KEY = 'x'
+    try {
+      assert.throws(
+        () => assertCloudflareDeployReady(dir),
+        (error: Error) =>
+          error instanceof PikkuCiFailedError &&
+          /API_KEY, OTHER/.test(error.message) &&
+          /--secretsSet/.test(error.message)
+      )
+    } finally {
+      delete process.env.API_KEY
+    }
   })
 
   test('treats shipped migrations as pending until confirmed', () => {
@@ -171,10 +184,10 @@ describe('assertCloudflareDeployReady', () => {
       'create table t (id int);'
     )
     assert.throws(
-      () => assertCloudflareDeployReady(dir, { env: {} }),
+      () => assertCloudflareDeployReady(dir),
       /sqlite\/0001-init\.sql/
     )
-    assertCloudflareDeployReady(dir, { env: {}, migrationsApplied: true })
+    assertCloudflareDeployReady(dir, { migrationsApplied: true })
   })
 
   test('refuses when there is no infra.json to check', () => {

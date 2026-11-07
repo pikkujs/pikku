@@ -13,6 +13,7 @@ export const CiInput = z.object({
   worktreeDir: z.string().optional(),
   auditBaseline: z.string().optional(),
   migrationsApplied: z.boolean().optional(),
+  secretsSet: z.boolean().optional(),
   skipDeployChecks: z.boolean().optional(),
 })
 export type CiInput = z.infer<typeof CiInput>
@@ -29,6 +30,7 @@ export const CiRun = z.object({
   hasConsole: z.boolean(),
   auditBaseline: z.string().optional(),
   migrationsApplied: z.boolean(),
+  secretsSet: z.boolean(),
   skipDeployChecks: z.boolean(),
   /** Holds the result files. Outside `dir`, so it survives a removed worktree. */
   stateDir: z.string(),
