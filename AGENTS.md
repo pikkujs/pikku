@@ -92,20 +92,36 @@ Individual packages carry their own runner: `./run-tests.sh` from inside the pac
 
 ### TypeScript 6 and 7 side by side
 
-Type checking runs on **TypeScript 7**, which is roughly three times faster
-(`bun run tsc` across the monorepo: 192s → 65s). TypeScript 6 stays installed
-because 7 ships no compiler API — its `.` export is only a version stub, and
-the replacement lives behind `./unstable/*` pending the 7.1 API.
+Type checking runs on a native compiler, which is roughly three times faster
+than TypeScript 6 (`bun run tsc` across the monorepo: 192s → 65s on TypeScript
+7). TypeScript 6 stays installed because 7 ships no compiler API — its `.`
+export is only a version stub, and the replacement lives behind `./unstable/*`
+pending the 7.1 API.
 
-The root installs both, following the arrangement TypeScript ships for exactly
-this case:
+Two engines can be that native compiler, and `tsc` is an alias for whichever is
+chosen: **tsrs** (the Rust port, `npm:tsrs`) by default, or **TypeScript 7**.
+Choose with `PIKKU_TSC=tsrs|ts7`; the default is the `DEFAULT_TSC` constant in
+`packages/tsc/bin/tsc.mjs`, the one place to change it.
+
+```bash
+PIKKU_TSC=ts7 bun run tsc      # one run on TypeScript 7
+```
+
+The alias is the private workspace package `@pikku/tsc`: it owns the `tsc` bin,
+depends on both engines, and forwards its arguments and exit code, so the ~250
+`tsc`, `tsc -b` and `tsc --noEmit` scripts across the repo are unchanged. The
+buildinfo records the compiler version, so switching engines makes `tsc -b`
+projects rebuild once. With `--noEmit` a type error
+exits 1 under TypeScript 7 and 2 under tsrs; both are non-zero.
+
+The root installs the alias and TypeScript 6:
 
 ```json
-"@typescript/native": "npm:typescript@^7.0.2",
+"@pikku/tsc": "workspace:*",
 "typescript": "npm:@typescript/typescript6@^6.0.2"
 ```
 
-So `tsc` at the root is 7, `tsc6` is 6, and `import ts from 'typescript'`
+So `tsc` at the root is the alias, `tsc6` is 6, and `import ts from 'typescript'`
 resolves to the 6 compat package with the full 6 API. Every workspace that
 does not declare its own `typescript` inherits the root `tsc`, which is why
 the dependency was dropped from the ~100 workspaces that only ever needed a
