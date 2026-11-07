@@ -50,6 +50,10 @@ pub fn is_function_helper(name: &str) -> bool {
         || scenario_step_kind(name).is_some()
 }
 
+fn is_workflow_wrapper(name: &str) -> bool {
+    name == "pikkuWorkflowFunc" || name == "pikkuWorkflowComplexFunc"
+}
+
 /// Go `channelConnRe`: `(?i)ChannelConnection`.
 fn is_channel_connection(wrapper: &str) -> bool {
     wrapper.to_ascii_lowercase().contains("channelconnection")
@@ -551,7 +555,13 @@ impl Context<'_> {
             self.check_classification(&name, handler, wrapper != "pikkuFunc");
         }
 
-        m.sessionless = Some(wrapper != "pikkuFunc");
+        let mut sessionless = wrapper != "pikkuFunc";
+        if is_workflow_wrapper(&wrapper) {
+            // A workflow is a function, so unset auth wants a session. Only an
+            // explicit `auth: false` opens it.
+            sessionless = m.auth == Some(false);
+        }
+        m.sessionless = Some(sessionless);
         m.services = services;
         if !wires.wires.is_empty() || !wires.optimized {
             m.wires = Some(wires);
