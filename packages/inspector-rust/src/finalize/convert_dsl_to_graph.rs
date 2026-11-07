@@ -293,6 +293,15 @@ fn convert_steps_to_nodes(steps: &[V], prefix: &str) -> Vec<V> {
 }
 
 /// `convertDslToGraph`.
+/// Drops an option a workflow did not set: the meta records it as null, and the
+/// route gates read a flag only when it was declared.
+fn declared_flag(v: V) -> V {
+    match v {
+        V::Bool(b) => V::Bool(b),
+        _ => V::Undef,
+    }
+}
+
 pub fn convert_dsl_to_graph(name: &str, meta: &V) -> V {
     let nodes = convert_steps_to_nodes(&steps_of(&meta.get("steps")), "step");
     let record = V::obj();
@@ -319,6 +328,8 @@ pub fn convert_dsl_to_graph(name: &str, meta: &V) -> V {
         ("title", meta.get("title")),
         ("description", meta.get("description")),
         ("tags", meta.get("tags")),
+        ("expose", declared_flag(meta.get("expose"))),
+        ("auth", declared_flag(meta.get("auth"))),
         ("skip", meta.get("skip")),
         ("virtualUsers", meta.get("virtualUsers")),
         ("context", meta.get("context")),

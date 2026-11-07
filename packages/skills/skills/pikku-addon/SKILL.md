@@ -13,11 +13,11 @@ An addon is a reusable function package shared across projects: functions, servi
 
 ## Is it an addon?
 
-- **Functions another project should reuse → addon.** `pikku new addon <name>`.
-- **Handed an OpenAPI or Swagger spec → generate, never hand-write.** `pikku new addon <name> --openapi <spec>` makes one function per operation with its schemas, service and credential. `<spec>` is a path, a URL or a registry catalogue name such as `amazonaws.com:applicationcostprofiler`; inside an app, `pikku addons add <catalogue-name>` does the same and picks `--auth`. Read `references/openapi.md`.
+- **Functions another project should reuse → addon.** `npx @pikku/cli new addon <name>`.
+- **Handed an OpenAPI or Swagger spec → generate, never hand-write.** `npx @pikku/cli new addon <name> --openapi <spec>` makes one function per operation with its schemas, service and credential. `<spec>` is a path, a URL or a registry catalogue name such as `amazonaws.com:applicationcostprofiler`; inside an app, `pikku addons add <catalogue-name>` does the same and picks `--auth`. Read `references/openapi.md`.
 - **A screen shows the addon's data as the addon returns it → call the addon function itself.** Name it in `wireAddon({ expose: [...], auth: true })` and the frontend calls `rpc.invoke('todos:listTodos', …)` (over HTTP, `POST /rpc/todos:listTodos` with `{ "data": … }`), still behind the session. Use `ref('todos:listTodos')` on an HTTP or MCP wiring only when the addon needs a route of its own.
 - **The app needs the data narrowed, typed or combined, or adds a permission of its own → write an app function that calls it.** A flag the upstream sends as `"0"`, a total summed from several calls, one field out of fifty. Name it for what the screen means (`getMyProfile`), not the upstream operation (`usersRetrieveInfo`), and give it an `output:` schema of only what the app uses. OpenAPI-generated outputs mirror the upstream's loose, oversized payloads, and the wrapper is where they become the app's own shape.
-- **Never write an app function that calls `rpc.invoke` and returns the result unchanged.** It is a second name and a second schema for the same thing, and it drifts.
+- **Never write an app function that calls `rpc.invoke` and only copies the addon's schema.** It is a second name and a second schema for the same thing, and it drifts. A wrapper that enforces ownership or another permission may return the result unchanged; that is how a protected addon function is exposed to a screen without exposing it directly.
 - **An agent tool → just another `ref()` in `tools`.** See `pikku-agent`.
 
 ## Working on one
@@ -48,7 +48,7 @@ Discover first (`pikku meta … --json`, `pikku info functions --verbose`, `pikk
 
 ## Building
 
-- Use `yarn pikku`, not `npx pikku`: a scaffolded addon carries `@pikku/cli` as a devDependency, and building against a different CLI than it declares is how generated output ends up disagreeing with the packaged one. `npx pikku new addon` is the exception: it runs before the addon and its CLI exist.
+- Use `yarn pikku`, not `npx pikku`: a scaffolded addon carries `@pikku/cli` as a devDependency, and building against a different CLI than it declares is how generated output ends up disagreeing with the packaged one. `npx @pikku/cli new addon` is the exception: it runs before the addon and its CLI exist.
 - `yarn build` is prebuild (`pikku all`) then `tsc && pikku dist`. `yarn pikku validate` checks that the published file set holds together. Leave `pikku dist` out and the addon installs fine and fails to typecheck in every app that depends on it, because it copies what `tsc` cannot emit: the generated `*.gen.json` meta and the hand-written `types/*.d.ts`.
 - **A `remote: true` function's input and output must be exported zod schemas.** Apps using `wireRemoteAddon` build against the SDK, not the source. Generics (`pikkuSessionlessFunc<In, Out>`) or a return type declared in `src/` fail codegen with PKU922. Non-remote functions can keep generics.
 - In an addon, `pikku all` packs the SDK on every run, at the package.json version, into `.pikku/sdk/` and `<scope>-<name>-<version>.sdk.tgz`. It carries only the remote RPCs, the `expose: true` workflows and the types they reach. Changing a published `remote: true` contract needs a new `version` on the function; `yarn pikku versions check` enforces that.
@@ -91,7 +91,7 @@ An addon may **ship** tables. It must never **create** them: it runs inside the 
 
 ## Studio screens
 
-An addon declares the screens it adds to Pikku Studio with `definePlugin`, in `src/screens.ts` (`pikku new addon <name> --ui` scaffolds one). It replaces `defineScreens`, which no longer exists.
+An addon declares the screens it adds to Pikku Studio with `definePlugin`, in `src/screens.ts` (`npx @pikku/cli new addon <name> --ui` scaffolds one). It replaces `defineScreens`, which no longer exists.
 
 - A screen is a lazy `component` or an `app`, never both. `nav` is optional: without it the screen is routed but not listed.
 - `scopes` only hide the screen; they are NOT access control. The addon's functions must enforce the same scopes.
@@ -114,7 +114,7 @@ An addon declares the screens it adds to Pikku Studio with `definePlugin`, in `s
 
 ## Not in `pikku doc` yet
 
-- Scaffold: `npx pikku new addon <name> [--display-name Stripe --category Payments --dir addons]` writes `package.json` (exports `.pikku/*` + `dist/`), `pikku.config.json` (`addon: true`), `tsconfig.json` (`#pikku` path mapping), `src/services.ts`, `src/functions/`, `types/application-types.d.ts`.
+- Scaffold: `npx @pikku/cli new addon <name> [--display-name Stripe --category Payments --dir addons]` writes `package.json` (exports `.pikku/*` + `dist/`), `pikku.config.json` (`addon: true`), `tsconfig.json` (`#pikku` path mapping), `src/services.ts`, `src/functions/`, `types/application-types.d.ts`.
 - `wireAddon` `expose` as a list: PKU343 on unknown or undeclared names.
 - `definePlugin` from `@pikku/core/addon`, default-exported: `{ title, screens: [...] }`. Each screen: `path`, `title` (message key, also the nav label), `scope` (`'studio'` → `/<path>`, `'team'` → `/<team>/<path>`, `'project'` → `/<team>/<project>[/<target>]/<path>`), `component: () => import('./screens/X.js')` or `app`, `nav: { area, icon, order, badge }`, `needsApp` (project screens only, default false), `scopes`, `layout: 'bare'` (renders without the shell), `replaces`, `agent`.
 - `nav.area` is `'rail'`, `'team'`, `'project'` or `'account'`. `badge` names one of the addon's functions that returns a count.

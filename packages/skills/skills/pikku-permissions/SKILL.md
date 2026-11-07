@@ -23,8 +23,12 @@ Then this is NOT a permissions problem. Resolve the token in `addHTTPMiddleware(
 // RIGHT
 export const deleteBook = pikkuFunc({
   permissions: { owner: isBookOwner },
-  func: async ({ kysely }, { bookId }) => {
-    await kysely.deleteFrom('book').where('bookId', '=', bookId).execute()
+  func: async ({ kysely }, { bookId }, { session }) => {
+    await kysely
+      .deleteFrom('book')
+      .where('bookId', '=', bookId)
+      .where('ownerId', '=', session.userId) // the write is scoped too, not only the earlier check
+      .execute()
   },
 })
 
@@ -40,7 +44,7 @@ export const deleteBook = pikkuFunc({
 
 A permission that returns false answers 403 with `ForbiddenError` from `#pikku/error`. Tests expect that.
 
-When even knowing the record exists would leak, as with a patient, the permission throws `NotFoundError` and the caller gets a 404. It is still the permission's job, never the body's.
+When even knowing the record exists would leak, as with a patient, the permission throws `NotFoundError` and the caller gets a 404. It is still the permission's job, never the body's. Groups run in order and a throw ends the check, so a `NotFoundError` from an owner check stops an admin group that follows it: for owner-or-admin write one permission that checks both and throws only when neither grants access.
 
 ## `auth: true` IS NOT OWNERSHIP
 
@@ -51,7 +55,7 @@ Do NOT write an `isSignedIn` permission returning `!!session`; `auth: true` alre
 ## Single row vs list: where ownership goes
 
 - **A function taking a row id** (`get`, `update`, `delete`): ownership is a PERMISSION. Load the row, compare the owner to the session.
-- **A function returning many rows** (`list`, `search`, any stats query): ownership is a `WHERE` clause. There is no permission to write; scoping the query IS the enforcement.
+- **A function returning many rows** (`list`, `search`, any stats query): ownership is a `WHERE` clause. There is no ownership permission to write; scoping the query IS the enforcement. A role the caller must hold is still a `pikkuAuth` in `permissions`: filtering rows never replaces a role check.
 
 A list that fetches everything and then filters in JS is a bug, not a permission.
 
@@ -64,7 +68,7 @@ Put them in `src/permissions/`, one file per entity, and reuse one checker acros
 
 "Only their own X" is both, and a query filter alone never counts:
 
-- Every function that takes an id gets a `pikkuPermission`, even if the query also filters. A 404 thrown from the body is the same check hidden.
+- Every function that takes an id gets a `pikkuPermission`, even if the query also filters. A 404 thrown from the body is the same check hidden. That check is ownership only for owner-only rows: for a shared resource it allows the owner and the collaborators or group that may use it, still behind the session.
 - A list has no id to check: keep its `pikkuAuth` and filter the query on the session.
 
 ## OR and AND
@@ -89,7 +93,7 @@ If the app has roles, the role lives on the session (see pikku-auth / `mapSessio
 
 ## Global permissions
 
-`addGlobalPermission([isEmployee])` (from `#pikku/auth`) is an app-wide baseline every function must additionally pass. It can only narrow access, never grant what a function's own `permissions` would deny. Multiple calls accumulate and are AND'd.
+`addGlobalPermission([isEmployee])` (from `#pikku/auth`) is an app-wide baseline every function must additionally pass. It can only narrow access, never grant what a function's own `permissions` would deny. Multiple calls accumulate and are AND'd. It applies to every function, sessionless ones too: a global `pikkuAuth` such as `isEmployee` refuses a sessionless login before any session exists, so an app with sessionless login puts the employee check on each function instead.
 
 ## The three gates
 

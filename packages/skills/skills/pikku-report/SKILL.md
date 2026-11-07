@@ -11,8 +11,9 @@ A finding is about **pikku**, not about the app you are building. It is how the
 framework learns what cost its users time — the bug, the misleading skill, the
 silence where a check should have complained.
 
-File each one the moment it happens. Nothing leaves the machine until the user
-says so at hand-over, and nothing is written to the repository. The command is
+File each one the moment it happens. Unless the user saved Always, nothing leaves
+the machine until they say so at hand-over, and nothing is written to the
+repository. The command is
 spelled `pikku cloud report` — there is no top-level report command.
 
 ## Report at the moment it happens
@@ -130,8 +131,10 @@ what the user said before, which the CLI keeps on their machine:
   `pikku cloud report` sends them later.
 
 Findings are anonymous: no account, no project. The receipt printed when you
-filed each one is exactly what leaves the machine. A send that fails keeps what
-was not sent; do not retry or file it twice.
+filed each one shows what leaves the machine; the environment flags it omits
+(version skew, linked framework) are sent too. A send that fails keeps what was
+not sent: run `pikku cloud report --consent yes` later to resend it, and never
+file it twice.
 
 ## Never fix pikku itself
 

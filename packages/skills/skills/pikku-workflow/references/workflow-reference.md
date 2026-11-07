@@ -83,6 +83,8 @@ export const approval = pikkuWorkflowFunc({
 
 ## Approval gates: enforcement and record
 
+`workflow.approval` options are `schema` (a value, not a generic), `expiry`, `approvers` (`'any' | 'owner' | 'not-initiator'`) and `approverScope`. `WorkflowStepOptions` on `workflow.do` are the ones listed at the top of this file. Neither type, nor `WorkflowRunService`, is printed by `pikku doc`.
+
 `approvers` and `approverScope` are enforced in two phases, because a decision can legitimately arrive before the run has reached the gate:
 
 - **At submission**, if the run has reached the gate. Reaching it publishes the policy into the run state, so the approve entrypoint judges the caller and refuses with a **403**.
@@ -111,4 +113,4 @@ yet.
 
 ## Restarts
 
-A run survives a crash or deploy. `pikku dev` and `pikku serve` recover it at startup and every 30s: a sleep keeps its deadline, and a step caught in flight runs again as a new attempt. A settled step never reruns. So a step can run more than once: make its side effects idempotent on `workflowStep.invocationId`, which stays the same across attempts. A step with `retries: 0` caught in flight fails instead. Any other host calls `workflowService.startRecovery()` once the queue is consuming. Set `workflow.recovery: false` to turn it off.
+A run survives a crash or deploy. `pikku dev` and `pikku serve` recover it at startup and every 30s: a sleep keeps its deadline, and a step caught in flight runs again as a new attempt. A settled step never reruns. So a step can run more than once: make its side effects idempotent on `workflowStep.invocationId`, which stays the same across attempts within one run. Separate runs for the same operation (duplicate deliveries that each start a run) get different ids, so an effect that must be unique across runs, such as a charge, takes a stable key for the business operation (`order-${orderId}-charge`) instead. A step with `retries: 0` caught in flight fails instead. Any other host calls `workflowService.startRecovery()` once the queue is consuming. Set `workflow.recovery: false` to turn it off.

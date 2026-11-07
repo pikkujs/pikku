@@ -28,7 +28,14 @@ test('work with files brings the content skill', () => {
     'Let customers upload a photo',
     'Attach a PDF to each invoice',
     'Keep the signed document',
+    'Show each customer an avatar',
+    'Keep every receipt',
+    'Send a download link',
   ]) {
     assert.deepEqual(predictSkills([text]), ['pikku-content'])
   }
+})
+
+test('the verb document alone does not bring the content skill', () => {
+  assert.deepEqual(predictSkills(['Document how the API works']), [])
 })

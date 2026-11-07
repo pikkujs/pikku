@@ -15,7 +15,7 @@ An event exists once it is declared in the exported `defineAnalyticsEvents` cons
 
 **Measure outcomes, not clicks.** `order_placed` answers a question; `button_clicked` does not. A funnel is one declared event per step.
 
-**Record where the result is known.** That is usually the function that made it happen, after the work succeeded: `analytics.record({ name: 'order_placed', amount })`. It cannot be blocked. Use a screen only for what only the browser knows, such as a page view: `useAnalytics().event('page_viewed', { path })` from `@/lib/product`. Never record one outcome in both places: it counts twice.
+**Record where the result is known.** That is usually the function that made it happen, after the work succeeded: `analytics.record({ name: 'order_placed', amount })`. A browser or ad blocker cannot drop it. Use a screen only for what only the browser knows, such as a page view: `useAnalytics().event('page_viewed', { path })` from `@/lib/product`. Never record one outcome in both places: it counts twice.
 
 **Props stay low-cardinality.** A prop is something to group by: a plan, a currency, a step, an amount. No ids, no free text, no URLs carrying ids.
 
