@@ -33,6 +33,7 @@ export const CiRun = z.object({
   /** Holds the result files. Outside `dir`, so it survives a removed worktree. */
   stateDir: z.string(),
   /** Project paths as `dir` sees them. */
+  configFile: z.string(),
   outDir: z.string(),
   scaffoldDir: z.string(),
   srcDirectories: z.array(z.string()),

@@ -54,10 +54,9 @@ const assertConsoleScopeDeclared = (run: CiRun) => {
  */
 export const removeConsoleScaffold = (run: CiRun) => {
   assertConsoleScopeDeclared(run)
-  const configFile = join(run.dir, 'pikku.config.json')
-  const config = JSON.parse(readFileSync(configFile, 'utf-8'))
+  const config = JSON.parse(readFileSync(run.configFile, 'utf-8'))
   config.scaffold = { ...config.scaffold, console: false }
-  writeFileSync(configFile, `${JSON.stringify(config, null, 2)}\n`)
+  writeFileSync(run.configFile, `${JSON.stringify(config, null, 2)}\n`)
   rmSync(join(run.scaffoldDir, 'console'), { recursive: true, force: true })
 }
 

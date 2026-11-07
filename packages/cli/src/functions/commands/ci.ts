@@ -24,6 +24,7 @@ import {
   removeWorktree,
   type CiWorktree,
 } from '../ci/worktree.js'
+import { findConfigFileOrNull } from '../../utils/pikku-cli-config.js'
 import { runLabelled } from '../../utils/run-labelled.js'
 import { currentCliInvocation } from '../../utils/cli-invocation.js'
 
@@ -129,6 +130,13 @@ export const pikkuCi = pikkuSessionlessFunc({
       )
     }
 
+    const configFile = config.config
+      ? resolve(config.config)
+      : await findConfigFileOrNull()
+    if (!configFile) {
+      throw new PikkuCiFailedError('pikku ci could not find pikku.config.json.')
+    }
+
     const stateDir = mkdtempSync(join(tmpdir(), 'pikku-ci-state-'))
     let worktree: CiWorktree | undefined
     const removeState = () => rmSync(stateDir, { recursive: true, force: true })
@@ -165,6 +173,12 @@ export const pikkuCi = pikkuSessionlessFunc({
       }
       const dir = worktree?.project ?? rootDir
       const moved = (path: string) => join(dir, relative(rootDir, path))
+      const runConfigFile = moved(configFile)
+      if (!existsSync(runConfigFile)) {
+        throw new PikkuCiFailedError(
+          `${configFile} is not committed in this repository, so the worktree has no copy of it.`
+        )
+      }
 
       run = {
         dir,
@@ -182,6 +196,7 @@ export const pikkuCi = pikkuSessionlessFunc({
         migrationsApplied: !!data.migrationsApplied,
         skipDeployChecks: !!data.skipDeployChecks,
         stateDir,
+        configFile: runConfigFile,
         outDir: moved(outDir),
         scaffoldDir: moved(
           config.resolvedScaffoldDir ?? join(rootDir, 'scaffold')

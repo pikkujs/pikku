@@ -13,6 +13,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ciEnv, ciStageCommand, CI_AUDIT_THRESHOLD } from './stages.js'
+import { CiStage } from './schemas.js'
 import { assertCloudflareDeployReady } from './deploy-guard.js'
 import {
   assertConsoleRemoved,
@@ -43,6 +44,7 @@ const ciRun = (overrides: Partial<CiRun> = {}): CiRun => ({
   migrationsApplied: false,
   skipDeployChecks: false,
   stateDir: join(dir, 'state'),
+  configFile: join(dir, 'pikku.config.json'),
   outDir: join(dir, '.pikku'),
   scaffoldDir: join(dir, 'src', 'scaffold'),
   srcDirectories: [join(dir, 'src')],
@@ -55,28 +57,43 @@ const write = (file: string, content: string) => {
 }
 
 describe('ciStageCommand', () => {
+  test('every pikku child reads the run config, and only pikku children', () => {
+    const run = ciRun({ configFile: '/elsewhere/pikku.config.json' })
+    for (const stage of CiStage.options) {
+      const step = ciStageCommand(stage, run)
+      assert.equal(
+        step.args.includes('--config=/elsewhere/pikku.config.json'),
+        !step.command,
+        stage
+      )
+    }
+  })
+
   test('db migrate is told it may only touch a local database', () => {
     const migrate = ciStageCommand('dbMigrate', ciRun())
-    assert.deepEqual(migrate.args, ['db', 'migrate', '--localOnly'])
+    assert.deepEqual(migrate.args.slice(0, 3), ['db', 'migrate', '--localOnly'])
     assert.equal(migrate.dropDatabaseUrl, true)
     assert.equal(ciStageCommand('dbCodegen', ciRun()).dropDatabaseUrl, true)
   })
 
   test('the audit gates at high and passes a baseline only when there is one', () => {
     assert.equal(CI_AUDIT_THRESHOLD, 'high')
-    assert.deepEqual(ciStageCommand('audit', ciRun()).args, [
+    assert.deepEqual(ciStageCommand('audit', ciRun()).args.slice(0, -1), [
       'audit',
       '--failOn',
       'high',
     ])
     assert.deepEqual(
-      ciStageCommand('audit', ciRun({ auditBaseline: '/b/audit.json' })).args,
+      ciStageCommand(
+        'audit',
+        ciRun({ auditBaseline: '/b/audit.json' })
+      ).args.slice(0, -1),
       ['audit', '--failOn', 'high', '--baseline', '/b/audit.json']
     )
   })
 
   test('codegen fails on errors, installs are frozen, tests run the script', () => {
-    assert.deepEqual(ciStageCommand('all', ciRun()).args, [
+    assert.deepEqual(ciStageCommand('all', ciRun()).args.slice(0, -1), [
       'all',
       '--failOnError',
     ])
@@ -102,8 +119,8 @@ describe('ciStageCommand', () => {
       'cloudflare',
       '--fromPlan',
     ])
-    assert.ok(plan.at(-1)!.startsWith(run.stateDir))
-    assert.ok(apply.at(-1)!.startsWith(run.stateDir))
+    assert.ok(plan.at(-2)!.startsWith(run.stateDir))
+    assert.ok(apply.at(-2)!.startsWith(run.stateDir))
   })
 
   test('the child environment is non-interactive and loses DATABASE_URL when asked', () => {
@@ -185,6 +202,21 @@ describe('console removal', () => {
     assert.deepEqual(config.scaffold, { console: false, rpc: true })
     assert.equal(existsSync(join(dir, 'src', 'scaffold', 'console')), false)
     assert.ok(existsSync(join(dir, 'src', 'scaffold', 'auth-secrets.gen.ts')))
+  })
+
+  test('edits the config the run was given, wherever it lives', () => {
+    project('export const roles = {}')
+    const configFile = join(dir, 'config', 'pikku.json')
+    write(configFile, JSON.stringify({ scaffold: { console: true } }))
+    removeConsoleScaffold(ciRun({ configFile }))
+    assert.deepEqual(JSON.parse(readFileSync(configFile, 'utf-8')).scaffold, {
+      console: false,
+    })
+    assert.deepEqual(
+      JSON.parse(readFileSync(join(dir, 'pikku.config.json'), 'utf-8'))
+        .scaffold,
+      { console: true, rpc: true }
+    )
   })
 
   test('refuses a pikku:console grant nothing declares, before changing anything', () => {

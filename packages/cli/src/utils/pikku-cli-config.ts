@@ -79,7 +79,7 @@ export const tryGetPikkuCLIConfig = async (
   )
 }
 
-async function findConfigFileOrNull(): Promise<string | null> {
+export async function findConfigFileOrNull(): Promise<string | null> {
   let dir = process.cwd()
   const { root } = parsePath(dir)
   while (true) {
