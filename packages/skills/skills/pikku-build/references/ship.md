@@ -47,7 +47,7 @@ bunx --bun pikku ci -p standalone            # the same in a clean worktree, plu
 bunx --bun pikku ci -p standalone --deploy   # and apply that plan, without rebuilding
 ```
 
-It runs bootstrap, `db migrate` (local databases only), `db codegen`,
+It runs bootstrap, `db migrate` (local databases only, regenerating the db types),
 `emails generate`, `all --failOnError`, `validate`, `audit --failOn high`, the
 root `test` script, then the app builds, and stops at the first failed step
 with a non-zero exit. It never prompts.

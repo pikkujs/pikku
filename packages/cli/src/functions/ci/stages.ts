@@ -27,8 +27,6 @@ const stageCommand = (stage: CiStage, run: CiRun): CiCommand => {
         args: ['db', 'migrate', '--localOnly'],
         dropDatabaseUrl: true,
       }
-    case 'dbCodegen':
-      return { args: ['db', 'codegen'], dropDatabaseUrl: true }
     case 'emails':
       return { args: ['emails', 'generate'] }
     case 'all':
