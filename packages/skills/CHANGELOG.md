@@ -1,5 +1,20 @@
 # @pikku/skills
 
+## 0.12.70
+
+### Patch Changes
+
+- da0e253: Adds `pikku-analytics` and `pikku-flags`, for what `pikku doc` cannot say: measure outcomes where the result is known, keep identity out of props, put the real flag check on the server, and what "turn X off for now" means.
+- da1267e: Skill descriptions are now one or two plain lines, because a harness puts every description in every system prompt: 34 skills went from 20,594 to about 6,460 characters. The `pikku-agent`, `pikku-workflow`, `pikku-emails`, `pikku-list-query`, `pikku-permissions`, `pikku-build` and `pikku-i18n` bodies are shorter with their rules kept; approval-gate enforcement detail for `pikku-workflow` moved to `references/workflow-reference.md`. `pikku-agent` gains a rule: never call a model or model SDK directly, all AI goes through `pikkuAgent` and its runner so the console can show it, and an owner who asks to skip that hears what they lose and confirms first.
+
+  Skills now read as design guidelines: what to reach for, the rules, one `pikku doc a b c` line for how to call it, and a short "Not in `pikku doc` yet" list for what the doc does not print. `pikku-workflow`, `pikku-addon`, `pikku-middleware`, `pikku-scenario` and `pikku-list-query` lost the code samples and option lists `pikku doc` already prints, with every rule, failure mode and security point kept. `pikku-permissions`, `pikku-wiring`, `pikku-concepts`, `pikku-auth`, `pikku-agent` and `pikku-services` gain exact `pikku doc` lines.
+
+- 9fa3c58: Adds the `pikku-content` skill: how a file reaches storage and comes back, with what the browser sends, why the key is saved rather than the URL, and why the function handing out a read URL carries the permission. Work that mentions uploads, files, photos, documents, attachments or PDFs now predicts it.
+- 3739928: `pikku dev` without `--port` now listens on the port in the local environment's `apiUrl` (the non-production loopback environment, `local` preferred), falling back to 3000; an explicit `--port` still wins and a non-numeric one is refused. The `pikku` bin re-runs itself on bun when Node is older than 24 (which has no `node:sqlite`), and exits with a message naming both fixes when bun is not installed, so `bunx --bun` is no longer needed. The starter's `scripts/dev.mjs` is gone: its `dev` script is plain `pikku dev`, which already loads `.env`, generates the local secrets and starts every frontend. Behaviour change for a project whose local `apiUrl` names a port other than 3000 and that ran `pikku dev` without `--port`: it now binds the apiUrl's port.
+- df5ed76: Add pikku-review: a per-function adversarial review with gold, fix or bug verdicts, a question list per kind of bug, and a way to test a reviewer.
+- 09e3943: Skills drop syntax `pikku doc` now prints and point at the exact one-call `pikku doc` line, keeping the rules and failure modes. `pikku-emails` now sends through `emailService`, the real service name.
+- a0534a8: The `pikku-workflow` skill now says anything started by a trigger (a schedule, an event, a webhook, a form submit that kicks off background work) is a workflow, even with a single step. The trigger starts it and the work is its steps. On-screen request/response functions stay plain functions, and a workflow is never moved to a queue worker without the owner deciding. This replaces the old "one durable step is a queue worker" rule.
+
 ## 0.12.69
 
 ### Patch Changes
