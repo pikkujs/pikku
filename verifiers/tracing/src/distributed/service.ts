@@ -45,7 +45,7 @@ class ConnectedBullQueueService extends BullQueueService {
 
 const logger = (scope?: string): Logger => {
   const write = (level: string) => (message: unknown) => {
-    record({ kind: 'log', level, traceId: scope, at: String(message) })
+    void record({ kind: 'log', level, traceId: scope, at: String(message) })
     if (level === 'error') console.error(`[${role}] ${scope}`, message)
   }
   return {
