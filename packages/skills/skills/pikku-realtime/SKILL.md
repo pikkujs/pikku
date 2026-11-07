@@ -102,7 +102,7 @@ stream. Never hand-roll an `EventSource`.
 ## Level 2 — two-way channel
 
 Only when the client pushes up the socket. The backend channel lives in its own
-`*.channel.ts`: `pikkuChannelFunc` handlers on `wireChannel`, with `auth: true`.
+`*.channel.ts`: `pikkuChannelFunc` handlers on `wireChannel`, with `auth: true`. `auth: true` only proves someone is signed in: a handler for a private room checks the sender's membership of that room on every message, and private payloads stay off public event-hub topics.
 
 The frontend opens it with `PikkuRealtime.connectToChannel(path)`, which returns
 a socket you both `.send(...)` on and read via `onmessage`:

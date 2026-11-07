@@ -13,7 +13,7 @@ installGroups: [core]
 
 1. Edit source files under `emailTemplatesDir` only, never `.pikku/email/*`. If the directory does not exist, run `pikku emails init` rather than creating it by hand.
 2. After any change run `pikku emails generate` (also part of `prebuild`, usually `pikku bootstrap; pikku all; pikku emails generate`).
-3. Validate by importing `renderEmailTemplate` and rendering with sample data, or run the project's typecheck; the generated `data` type flags missing/wrong variables.
+3. Validate by importing `renderEmailTemplate`, rendering with sample data and reading the output. Typechecking is not a substitute: every variable is optional, so an omitted `verifyUrl` still compiles.
 4. Fix the source cause; do not patch generated files or update hashes by hand.
 
 ## Config
@@ -29,6 +29,11 @@ installGroups: [core]
 With `emailTemplatesDir` unset the command is a no-op: it logs `Skipping emails (set emailTemplatesDir in pikku.config.json to enable).` and exits cleanly, so a silent generate is a config problem, not a template problem.
 
 `pikku emails init` scaffolds the directory (starter locales, theme, partials, a hello-world template) **and** writes `emailTemplatesDir` into `pikku.config.json`. `--force` overwrites an existing scaffold.
+
+## Keep to the request
+
+- Another language: add `locales/<locale>.json` and pass the recipient's own language as `locale` on the send. Never hard-code a locale, which replaces the language the email had. If the app records no language for that person, say so in the reply.
+- `theme.json` and other templates stay as they are unless the owner asked to change them.
 
 ## Directory layout
 
@@ -90,7 +95,7 @@ import {
 //   { appName?: ...; inviteUrl?: ...; inviterName?: ...; organizationName?: ... }
 ```
 
-Every extracted variable is **optional** and typed `EmailTemplateValue` (`string | number | boolean | null | undefined | object | array`). The type says which variables a template can consume, not which it needs: none can be marked required, and a template referencing none types as `Record<string, never>`. Referencing a variable in the template body (not only in a locale string) is what gets it into the type.
+Every extracted variable is **optional** and typed `EmailTemplateValue` (`string | number | boolean | null | undefined | object | array`). The type says which variables a template can consume, not which it needs: none can be marked required, and a template referencing none types as `Record<string, never>`. A variable gets into the type when the template's html, subject, text, a partial it includes, the layout or a locale string it uses references it.
 
 A placeholder with nothing behind it renders as the **empty string**: no error, no leftover `{{…}}`. A typo, a missing `data` key and a value that isn't a string or number all go silently blank, so render with sample data and read the result rather than trusting that it compiled.
 
@@ -107,13 +112,15 @@ const rendered = renderEmailTemplate({
 
 Synchronous. It throws on an unknown template name or unknown locale, the only two failure modes; everything else degrades to blank output.
 
-`hash` is a stable content hash (usable as an idempotency / dedupe key). The meta file carries per-locale `htmlHash` / `subjectHash` / `textHash` to tell which part changed.
+`hash` identifies the template content for that locale, not one send: do not use it alone as a dedupe key, or a different recipient or different data is suppressed. Use an identifier for each intended send, reused only for its retries. The meta file carries per-locale `htmlHash` / `subjectHash` / `textHash` to tell which part changed.
 
 ## Sending through an EmailService
 
-An email sent because something happened is a step in a `pikkuWorkflowFunc`, started with `rpc.startWorkflow`, even with one step, so a failed send shows and can retry. A function never sends one inline. An auth callback such as `sendMagicLink` only sends; the action that triggers it is still the workflow step.
+An email sent because something happened is a step in a `pikkuWorkflowFunc`, started with `rpc.startWorkflow`, even with one step, so a failed send shows and can retry. A function never sends one inline. An auth callback such as `sendMagicLink` runs inside the auth request: keep that endpoint synchronous and hand only the send to a workflow from the callback; never turn the auth action itself into a workflow.
 
-`pikku doc email EmailAttachment` lists the types. `@pikku/core/services` defines `EmailService.send(input)` where `input` is `SendTextEmailInput`, `SendHTMLEmailInput` or `SendTemplateEmailInput`:
+`EmailService.send` takes no idempotency key. A workflow retries a step, so where a retry must not resend an accepted message, have the project-owned service pass a stable key for that send to a provider that supports one.
+
+`pikku doc email EmailAttachment` lists the types. An attachment needs `filename` and `content` (`Uint8Array`, or a base64 string: a plain string is never read as text); `contentType`, `contentId` and `disposition` (`'attachment' | 'inline'`) are optional. `@pikku/core/services` defines `EmailService.send(input)` where `input` is `SendTextEmailInput`, `SendHTMLEmailInput` or `SendTemplateEmailInput`:
 
 ```ts
 import type { EmailService } from '@pikku/core/services'
@@ -132,6 +139,7 @@ async send(input: SendEmailInput) {
   const r = renderEmailTemplate(input.template as RenderEmailInput<EmailTemplateName>)
   return this.delegate.send({
     to: input.to, from: input.from, subject: r.subject, html: r.html,
+    cc: input.cc, bcc: input.bcc, replyTo: input.replyTo, headers: input.headers,
     attachments: input.attachments,
     ...(r.text ? { text: r.text } : {}),
   })
