@@ -99,25 +99,19 @@ export async function uploadDamagePhoto(
   photo: File,
   contentType: 'image/jpeg' | 'image/png' | 'image/webp'
 ) {
-  const serverUrl = 'http://localhost:4000'
-  pikkuFetch.setServerUrl(serverUrl)
+  pikkuFetch.setServerUrl('http://localhost:4000')
   pikkuFetch.setAuthorizationJWT('user-jwt-token')
 
-  const { uploadUrl, uploadMethod, uploadHeaders, fileKey } =
-    await pikkuFetch.post('/orders/:orderId/damage-photo/upload', {
-      orderId,
-      fileName: photo.name,
-      contentType,
-    })
-
-  // The raw file is the body. No JSON, no form, no base64, no session token:
-  // the URL is the grant. `uploadUrl` may be relative to the server.
-  const upload = await fetch(new URL(uploadUrl, serverUrl), {
-    method: uploadMethod ?? 'PUT',
-    headers: { 'Content-Type': contentType, ...uploadHeaders },
-    body: photo,
+  const upload = await pikkuFetch.post('/orders/:orderId/damage-photo/upload', {
+    orderId,
+    fileName: photo.name,
+    contentType,
   })
-  if (!upload.ok) throw new Error(`Upload failed: ${upload.status}`)
+
+  // The file itself is the body, sent without the session: the URL is the
+  // grant. `uploadFile` resolves a relative URL against the server URL, and
+  // throws if the upload fails, so the key is only saved once the bytes landed.
+  const { fileKey } = await pikkuFetch.uploadFile(upload, photo, contentType)
 
   await pikkuFetch.post('/orders/:orderId/damage-photo', {
     orderId,

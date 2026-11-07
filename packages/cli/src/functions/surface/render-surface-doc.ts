@@ -147,14 +147,24 @@ const renderIndex = (doc: SurfaceDoc, leaves: SurfaceLeaf[], ai: boolean) => {
   return lines.join('\n')
 }
 
-const renderGuide = (guide: SurfaceGuide): string =>
+const renderBlock = (heading: string, code: string): string[] => [
+  `  ${heading}`,
+  ...code.split('\n').map((line) => (line ? `    ${line}` : '')),
+  '',
+]
+
+const renderGuide = (guide: SurfaceGuide, doc: SurfaceDoc): string =>
   [
     `${guide.names[0]} — ${guide.title}`,
     '',
     ...guide.points.flatMap((point) => [wrap(point, 78, '  '), '']),
-    '  example',
-    ...guide.example.split('\n').map((line) => `    ${line}`),
-  ].join('\n')
+    ...(guide.example ? renderBlock('example', guide.example) : []),
+    ...(guide.snippets ?? []).flatMap(({ step, name }) =>
+      renderBlock(step, doc.guideSnippets?.[name] ?? '')
+    ),
+  ]
+    .join('\n')
+    .trimEnd()
 
 const renderSymbolRow = (symbol: SurfaceDocSymbol): string[] => {
   const lines = [
@@ -385,7 +395,7 @@ export const renderSurfaceDoc = (
   }
   const guide = SURFACE_GUIDES.find(({ names }) => names.includes(target))
   if (guide) {
-    return renderGuide(guide)
+    return renderGuide(guide, doc)
   }
   const home = new Map<string, string>()
   for (const candidate of leaves) {

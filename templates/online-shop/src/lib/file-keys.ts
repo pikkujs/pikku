@@ -6,6 +6,7 @@
  */
 export const BUCKET = 'shop'
 
+// @snippet start contentFileKey
 /**
  * Build a safe, namespaced storage key.
  *
@@ -26,3 +27,4 @@ export const buildFileKey = (
   // Worker, where the node module does not resolve.
   return `${prefix}/${crypto.randomUUID()}-${safeName}`
 }
+// @snippet end contentFileKey

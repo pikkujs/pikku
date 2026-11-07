@@ -83,6 +83,8 @@ export type SurfaceDoc = {
   version: string
   entryPoints: SurfaceEntryPoint[]
   errors: SurfaceError[]
+  /** The code of each region a guide names, keyed by region. */
+  guideSnippets?: Record<string, string>
 }
 
 export type SurfaceSymbolUsage = {

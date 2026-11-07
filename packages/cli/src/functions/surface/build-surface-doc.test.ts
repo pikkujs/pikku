@@ -8,6 +8,7 @@ import { leafEntries } from '../wirings/functions/pikku-command-leaf-indexes.js'
 import {
   buildSurfaceDoc,
   MissingSurfaceEditorialError,
+  UnknownGuideSnippetError,
 } from './build-surface-doc.js'
 import { LEAF_EDITORIAL } from './surface-editorial.js'
 import type { SurfaceEntryPoint, SurfaceLeaf } from './surface-doc.types.js'
@@ -75,7 +76,8 @@ const leafOf = (
 
 const buildFor = async (
   app: Record<string, string>,
-  addon: Record<string, string>
+  addon: Record<string, string>,
+  snippets?: Map<string, string>
 ) => {
   const appDir = await makeProject('@fixture/app', app)
   const addonDir = await makeProject('@fixture/addon', addon)
@@ -85,6 +87,7 @@ const buildFor = async (
         version: '1.2.3',
         app: { projectDir: appDir },
         addon: { projectDir: addonDir },
+        snippets,
       }),
       cleanup: async () => {
         await rm(appDir, { recursive: true, force: true })
@@ -158,6 +161,17 @@ describe('buildSurfaceDoc', () => {
         assert.ok(error instanceof MissingSurfaceEditorialError)
         assert.match(error.message, /telepathy/)
         assert.match(error.message, /LEAF_EDITORIAL/)
+        return true
+      }
+    )
+  })
+
+  test('a guide naming a region no template declares fails the build', async () => {
+    await assert.rejects(
+      buildFor(APP_LEAVES, ADDON_LEAVES, new Map()),
+      (error: unknown) => {
+        assert.ok(error instanceof UnknownGuideSnippetError)
+        assert.match(error.message, /contentUploadUrl/)
         return true
       }
     )

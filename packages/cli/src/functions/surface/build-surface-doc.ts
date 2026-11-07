@@ -7,6 +7,7 @@ import { buildSurfaceErrors } from './surface-errors.js'
 import {
   ENTRY_POINT_EDITORIAL,
   LEAF_EDITORIAL,
+  SURFACE_GUIDES,
   type LeafEditorial,
 } from './surface-editorial.js'
 import type {
@@ -43,6 +44,15 @@ export class MissingSurfaceEditorialError extends Error {
       } to LEAF_EDITORIAL in src/functions/surface/surface-editorial.ts.`
     )
     this.name = 'MissingSurfaceEditorialError'
+  }
+}
+
+export class UnknownGuideSnippetError extends Error {
+  constructor(names: string[]) {
+    super(
+      `A guide names snippets no template declares: ${names.join(', ')}. Wrap the code in "// @snippet start <name>" / "// @snippet end <name>".`
+    )
+    this.name = 'UnknownGuideSnippetError'
   }
 }
 
@@ -240,6 +250,17 @@ const projectEntryPoint = async (
   }
 }
 
+const resolveGuideSnippets = (
+  snippets: Map<string, string>
+): Record<string, string> => {
+  const names = SURFACE_GUIDES.flatMap((guide) =>
+    (guide.snippets ?? []).map(({ name }) => name)
+  )
+  const unknown = names.filter((name) => !snippets.has(name))
+  if (unknown.length > 0) throw new UnknownGuideSnippetError(unknown)
+  return Object.fromEntries(names.map((name) => [name, snippets.get(name)!]))
+}
+
 /**
  * Exports reached by package name rather than through a `.pikku` barrel. A
  * barrel re-export would tie generated code to the core version it was built
@@ -342,5 +363,6 @@ export const buildSurfaceDoc = async ({
       },
       await projectEntryPoint('addon', addon, snippets),
     ],
+    ...(snippets ? { guideSnippets: resolveGuideSnippets(snippets) } : {}),
   }
 }

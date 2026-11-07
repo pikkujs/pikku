@@ -244,15 +244,18 @@ export const ENTRY_POINT_EDITORIAL: Record<
 /**
  * A page for something an agent asks `pikku doc` for that is no export: a
  * config table, the generated hooks, the `rpc` on the wire. Its example is
- * written here rather than resolved from a snippet because the template that
- * proves the snippets has neither a React client nor a `models` table.
+ * written here where the template that proves the snippets has nothing to show,
+ * as it has neither a React client nor a `models` table. Anything it does have
+ * is named under `snippets` instead, which the doc build resolves or refuses.
  */
 export type SurfaceGuide = {
   /** The first is the page's name; every name opens it. */
   names: string[]
   title: string
   points: string[]
-  example: string
+  example?: string
+  /** Regions printed in order, each opened by its step. */
+  snippets?: Array<{ step: string; name: string }>
 }
 
 export const SURFACE_GUIDES: SurfaceGuide[] = [
@@ -341,6 +344,29 @@ add.mutate({ itemId, quantity: 1 })
 const agent = usePikkuAgent('shopAssistant')
 const reply = await agent.run({ message, threadId, resourceId })
 await agent.approve({ runId, approvals: [{ toolCallId, approved: true }] })`,
+  },
+  {
+    names: [
+      'content',
+      'upload',
+      'uploadFile',
+      'getUploadURL',
+      'getDownloadURL',
+      'listFilesByPrefix',
+    ],
+    title: 'files: one whole upload, worked through',
+    points: [
+      'The service is `content` on `services`. Adapt the steps below: a function signs the upload, the browser sends the file, a function saves the key, and a function signs each read. `getUploadURL` answers `{ uploadUrl, fileKey, uploadHeaders?, uploadMethod? }`, and `getDownloadURL` takes `{ bucket, key, visibility?, expiresInSeconds? }`.',
+    ],
+    snippets: [
+      { step: 'the key, built on the server', name: 'contentFileKey' },
+      { step: 'the permissions', name: 'contentPermissions' },
+      { step: 'sign the upload', name: 'contentUploadUrl' },
+      { step: 'save the key', name: 'contentSaveKey' },
+      { step: 'sign a read', name: 'contentDownloadUrl' },
+      { step: 'the routes', name: 'httpUpload' },
+      { step: 'the browser', name: 'contentBrowserUpload' },
+    ],
   },
   {
     names: [
