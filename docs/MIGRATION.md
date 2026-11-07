@@ -63,7 +63,6 @@ Channels, agent tools, MCP, CLI, triggers, webhook sources, gateways and `runRpc
   ALTER TABLE channels ADD COLUMN traceparent TEXT;
   ```
 
-
 To find affected code, search for `traceId` on a channel RPC frame, and for overrides of `accept` or `enqueue`.
 
 ### A job's `pikkuUserId` reaches the worker on every adapter
@@ -828,3 +827,16 @@ Created by `pikku db generate`:
 - the removal of `user.role` and `session.impersonatedBy` once `admin()` is dropped, and the `banned`, `banReason` and `banExpires` columns that `pikkuBan()` adds.
 
 `templates/online-shop/db/sqlite/` and `recipes/starter-template/db/sqlite/` contain the rename migrations as they were applied to those projects.
+
+### Declaring tables in `db/tables.ts`
+
+An app can now declare its tables in `db/tables.ts`, with `defineTables` from `@pikku/kysely`, and `pikku db generate` writes the SQL. See [Declaring tables](./db-tables.md). It is opt-in: an app with no `db/tables.ts` and hand-written migrations behaves as before.
+
+One thing changes for an app that already has a file at that path. `pikku db generate`, `migrate` and `check` now load `db/tables.ts` and stop if it does not export `tables`, so rename a file you keep there for another purpose.
+
+To move an app over:
+
+1. Create `db/tables.ts` and declare the existing tables as they stand, one at a time if you like. A table you leave out stays hand-written.
+2. Run `pikku db generate`. A table that matches its migrations is adopted and not created again, and the command reports it as covered. If it differs, generate refuses and names the column and the difference. Fix the declaration, not the migration.
+3. Move the table's entries from `db/annotations.ts` into `annotations` on the declaration, and run `pikku db migrate`. Declared tables are optional in `db/annotations.ts`, and a value the two files disagree on is an error.
+4. From here on, change the declaration and run `pikku db generate`. Existing migration files stay as they are.

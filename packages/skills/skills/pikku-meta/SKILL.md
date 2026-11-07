@@ -29,6 +29,13 @@ permissions, workflows, capabilities, layout. Reach for `pikku meta` when you
 are going to act on the output and `pikku info` when a person will read it;
 they are the same ground in two shapes.
 
+## Tables: `pikku meta db`
+
+`pikku meta db` (also the `db` block of `pikku meta context`) says where the
+project declares its tables, which ones it declares, where their generated types
+are, and the commands that make the SQL. There is no migrations path in it,
+because you don't need one: change the declaration and run `pikku db generate`.
+
 ## Direction decides whether a change is breaking
 
 An input is contravariant (the caller writes it) and an output is covariant (the

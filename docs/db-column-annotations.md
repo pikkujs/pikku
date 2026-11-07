@@ -6,6 +6,9 @@ schema can't tell us: privacy classification, anonymize strategy, and type/zod
 refinements. This document explains the pipeline and gives a recipe for each way
 you might want to extend it.
 
+A table declared in `db/tables.ts` carries its annotations on the declaration
+instead, and those merge into the same sidecar. See [Declaring tables](./db-tables.md).
+
 ## The pipeline
 
 ```
