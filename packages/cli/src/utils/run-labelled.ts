@@ -71,12 +71,12 @@ export const runLabelled = (
       const decoder = new StringDecoder('utf8')
       let pending = ''
       return {
-        push(chunk: Buffer) {
+        push: (chunk: Buffer) => {
           const lines = (pending + decoder.write(chunk)).split('\n')
           pending = lines.pop() ?? ''
           for (const line of lines) onLine(line.trimEnd())
         },
-        end() {
+        end: () => {
           pending += decoder.end()
           if (pending) onLine(pending.trimEnd())
           pending = ''
