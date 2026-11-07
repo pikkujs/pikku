@@ -20,6 +20,12 @@ impl Context<'_> {
             if !u.keys.is_empty() || !u.dynamic.is_empty() {
                 self.state.secrets.usage.set(sf.file_name(), u);
             }
+            if !super::service_bypass::is_service_bypass_exempt(&self.root_dir, sf.file_name()) {
+                let b = super::service_bypass::extract_service_bypass(*sf);
+                if !b.content.is_empty() || !b.variables.is_empty() {
+                    self.state.service_bypass.set(sf.file_name(), b);
+                }
+            }
             let rel = rel_path(&self.root_dir, sf.file_name()).unwrap_or_default();
             let area = surface_usage_area(sf.file_name(), &self.root_dir, &mut area_cache);
             accumulate_surface_usage(*sf, &area, &rel, &mut self.state.surface_usage);

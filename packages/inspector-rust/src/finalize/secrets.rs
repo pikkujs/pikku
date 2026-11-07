@@ -188,5 +188,48 @@ pub fn compute_diagnostics(st: &mut State) {
     defs("Middleware", &st.middleware.definitions, &mut add);
     defs("Permission", &st.permissions.definitions, &mut add);
 
+    for (file, usage) in st.service_bypass.iter() {
+        let relative_file = js_relative(&st.root_dir, file);
+        if !usage.content.is_empty() {
+            add(
+                codes::DIRECT_CONTENT_ACCESS,
+                format!(
+                    "{relative_file} uses the filesystem directly ({}). Use the `content` service instead: it is keyed, project-scoped, and issues signed reads and writes. Set lint.enforceContentService to 'warn' or 'off' in pikku.config.json to relax this.",
+                    describe_bypass(&usage.content)
+                ),
+                file,
+                0,
+            );
+        }
+        if !usage.variables.is_empty() {
+            add(
+                codes::DIRECT_ENV_ACCESS,
+                format!(
+                    "{relative_file} reads process.env directly ({}). Use the `variables` service for non-secret values and the `secrets` service for secrets. Set lint.enforceVariablesService to 'warn' or 'off' in pikku.config.json to relax this.",
+                    describe_bypass(&usage.variables)
+                ),
+                file,
+                0,
+            );
+        }
+    }
+
     st.diagnostics = out;
+}
+
+/// Renders `line:snippet` entries as `line N snippet`, capped so one file stays
+/// one line.
+fn describe_bypass(entries: &[String]) -> String {
+    let mut shown: Vec<String> = entries
+        .iter()
+        .take(5)
+        .map(|e| {
+            let (line, snippet) = e.split_once(':').unwrap_or((e, ""));
+            format!("line {line} {snippet}")
+        })
+        .collect();
+    if entries.len() > shown.len() {
+        shown.push(format!("and {} more", entries.len() - shown.len()));
+    }
+    shown.join(", ")
 }

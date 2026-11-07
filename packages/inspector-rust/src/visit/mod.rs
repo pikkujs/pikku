@@ -64,6 +64,7 @@ pub mod group_setup_core;
 pub mod group_trigger;
 pub mod group_virtual_users;
 pub mod resolve_versions;
+pub mod service_bypass;
 pub mod service_types;
 pub mod group_wire_addon;
 pub mod group_wire_remote_addon;

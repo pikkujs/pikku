@@ -70,6 +70,7 @@ pub struct State {
     pub auth: Auth,
     pub secrets: Secrets,
     pub surface_usage: Record<Record<SurfaceUsage>>,
+    pub service_bypass: Record<ServiceBypass>,
     pub credentials: Definitions,
     pub scopes: Scopes,
     pub system_roles: Definitions,

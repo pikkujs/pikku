@@ -525,6 +525,15 @@ pub struct SecretUsage {
     pub dynamic: Strings,
 }
 
+/// extract-service-bypass.ts's per-file result: `line:snippet` entries, in
+/// source order.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ServiceBypass {
+    pub content: Strings,
+    pub variables: Strings,
+}
+
 /// One symbol's counters in surfaceUsage.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
