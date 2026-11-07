@@ -17,12 +17,7 @@ import {
   removeConsoleScaffold,
 } from '../ci/console-removal.js'
 import { assertCloudflareDeployReady } from '../ci/deploy-guard.js'
-import {
-  ciEnv,
-  ciStageCommand,
-  planResultFile,
-  selfInvocation,
-} from '../ci/stages.js'
+import { ciEnv, ciStageCommand, planResultFile } from '../ci/stages.js'
 import {
   assertWorktreeReady,
   createWorktree,
@@ -30,6 +25,7 @@ import {
   type CiWorktree,
 } from '../ci/worktree.js'
 import { runLabelled } from '../../utils/run-labelled.js'
+import { currentCliInvocation } from '../../utils/cli-invocation.js'
 
 const readJson = (file: string) => {
   try {
@@ -49,7 +45,7 @@ export const pikkuCiStep = pikkuSessionlessFunc({
     const failures = await Promise.all(
       stages.map(async (stage): Promise<string | undefined> => {
         const step = ciStageCommand(stage, run)
-        const self = selfInvocation()
+        const self = currentCliInvocation()
         const result = await runLabelled(
           { logger, label: stage },
           step.command ?? self.command,
