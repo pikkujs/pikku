@@ -236,6 +236,10 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # One compile keeps a CLI that no longer bundles out of main; the Full Suite
+    # covers the other targets.
+    env:
+      PIKKU_CLI_BINARIES: host
     steps:
       - uses: actions/checkout@v7
       - name: Check every changeset is a patch
