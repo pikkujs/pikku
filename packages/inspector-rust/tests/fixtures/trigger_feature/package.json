@@ -1,1 +1,7 @@
-{ "name": "trigger-feature-fixture", "files": ["messages"] }
+{
+  "name": "trigger-feature-fixture",
+  "private": true,
+  "files": [
+    "messages"
+  ]
+}
