@@ -418,8 +418,8 @@ export type PikkuFrontendInput = {
   /** The frontend's project directory, relative to the config file. */
   cwd: string
   /**
-   * Its build output, relative to `cwd`. Defaults to `dist`. Pikku reads it
-   * and never builds it.
+   * Its build output, relative to `cwd`. Defaults to `dist`. `pikku app build`
+   * produces it; serving and deploying only read it.
    */
   dist?: string
   primary?: boolean

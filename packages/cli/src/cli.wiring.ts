@@ -150,6 +150,7 @@ import { pikkuNewAddon } from './functions/commands/new-addon.js'
 import { pikkuAddonsAdd } from './functions/commands/addons.js'
 import { pikkuAppNew, renderAppNew } from './functions/commands/app-new.js'
 import {
+  appBuild,
   appList,
   appNativeAdd,
   appNativeCheck,
@@ -1327,10 +1328,10 @@ wireCLI({
             'Skip the deploy-readiness checks (hosting conventions: bun-only package manager, themes, migrations layout, frontends)',
           default: false,
         },
-      },
-      migrationsBase: {
-        description:
-          'Git ref whose migrations are frozen: a migration file on it may not be modified, deleted or renamed (default origin/main, or $PIKKU_MIGRATIONS_BASE)',
+        migrationsBase: {
+          description:
+            'Git ref whose migrations are frozen: a migration file on it may not be modified, deleted or renamed (default origin/main, or $PIKKU_MIGRATIONS_BASE)',
+        },
       },
     }),
     scenario: {
@@ -1854,6 +1855,22 @@ wireCLI({
             install: {
               description: 'Run `bun install` afterwards',
               default: true,
+            },
+          },
+        }),
+        build: pikkuCLICommand({
+          func: appBuild,
+          description:
+            "Run each frontend's own build script in its directory, side by side, skipping deploy: false",
+          options: {
+            onlyServed: {
+              description:
+                'Build only the frontend with "serve", which deploy plan embeds',
+              default: false,
+            },
+            skipServed: {
+              description: 'Build every frontend except the one with "serve"',
+              default: false,
             },
           },
         }),

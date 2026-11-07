@@ -30,6 +30,23 @@ export const AppListOutput = z.object({
 })
 export type AppListOutput = z.infer<typeof AppListOutput>
 
+export const AppBuildInput = z.object({
+  onlyServed: z.boolean().optional(),
+  skipServed: z.boolean().optional(),
+})
+export type AppBuildInput = z.infer<typeof AppBuildInput>
+
+export const AppBuildOutput = z.object({
+  apps: z.array(
+    z.object({
+      name: z.string(),
+      ok: z.boolean(),
+      failure: z.string().optional(),
+    })
+  ),
+})
+export type AppBuildOutput = z.infer<typeof AppBuildOutput>
+
 export const AppNativeInitInput = z.object({
   name: z.string(),
   desktop: z.boolean().optional(),
