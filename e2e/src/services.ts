@@ -8,8 +8,9 @@ import {
 } from '@pikku/core/services'
 import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'
 import type { EmailService } from '@pikku/core/services'
-import { existsSync } from 'node:fs'
 import { openSqliteDatabase } from './sqlite-database.js'
+import { dirname, join } from 'node:path'
+import { createScriptContent } from './script-content.js'
 import { pikkuServices } from '#pikku/setup'
 import { pikkuState } from '@pikku/core/state'
 import { BetterAuthCredentialService } from '@pikku/better-auth'
@@ -41,6 +42,13 @@ import {
 import { RecordingAnalyticsService } from './recording-analytics-service.js'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { PikkuMetaService } from '#pikku/services/pikku-meta-service.gen.js'
+
+// The content service has no exists/stat, and cannot address an arbitrary
+// absolute path. Copying the file in succeeds only when it exists.
+const sqliteFileExists = (path: string): Promise<boolean> =>
+  createScriptContent(
+    join(dirname(path), '.pikku-runtime', 'script-content')
+  ).copyFile({ bucket: 'sqlite', key: 'probe.sqlite', fromAbsolutePath: path })
 
 export const createSingletonServices = pikkuServices(
   async (config, { variables, secrets, metaService, emailService }) => {
@@ -119,7 +127,8 @@ export const createSingletonServices = pikkuServices(
       // database outright — writes it before the services that require it boot.
       // Only on a database that does not exist yet: SQLITE_PATH pointing at a
       // file the last run left behind already has these tables.
-      const freshDb = sqlitePath === ':memory:' || !existsSync(sqlitePath)
+      const freshDb =
+        sqlitePath === ':memory:' || !(await sqliteFileExists(sqlitePath))
       const db = new Kysely<KyselyPikkuDB>({
         dialect: new SqliteDialect({
           database: await openSqliteDatabase(sqlitePath),

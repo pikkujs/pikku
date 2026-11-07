@@ -1,10 +1,20 @@
 import { spawn, type ChildProcess } from 'node:child_process'
-import { rmSync } from 'node:fs'
 import path from 'node:path'
+import { LocalVariablesService } from '@pikku/core/services'
+import { createScriptContent } from './script-content.js'
 
 const BASE = 'http://127.0.0.1:3110'
 const AUTH = `${BASE}/api/auth`
-const DB_FILE = path.join(process.cwd(), '.better-auth.sqlite')
+// The sqlite file lives inside the content store so the script can clear it
+// (and its -wal/-shm siblings) through the content service.
+const CONTENT_ROOT = path.join(
+  process.cwd(),
+  '.pikku-runtime',
+  'script-content'
+)
+const content = createScriptContent(CONTENT_ROOT)
+const DB_FILE = path.join(CONTENT_ROOT, 'private', 'auth', 'better-auth.sqlite')
+const clearDb = () => content.deleteByPrefix('auth', 'better-auth.sqlite')
 
 function assertTruthy(value: unknown, label: string): asserts value {
   if (!value) throw new Error(`${label}: expected truthy, got ${value}`)
@@ -75,7 +85,7 @@ function signalTree(child: ChildProcess, name: NodeJS.Signals): void {
 }
 
 async function main(): Promise<void> {
-  rmSync(DB_FILE, { force: true })
+  await clearDb()
 
   const child = spawn(
     'npx',
@@ -84,7 +94,10 @@ async function main(): Promise<void> {
       cwd: process.cwd(),
       stdio: 'pipe',
       detached: true,
-      env: { ...process.env, BETTER_AUTH_DB_FILE: DB_FILE },
+      env: {
+        ...(new LocalVariablesService().getAll() as NodeJS.ProcessEnv),
+        BETTER_AUTH_DB_FILE: DB_FILE,
+      },
     }
   )
 

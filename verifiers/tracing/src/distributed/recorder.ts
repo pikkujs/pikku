@@ -1,5 +1,5 @@
-import { appendFileSync } from 'node:fs'
 import { LocalVariablesService } from '@pikku/core/services'
+import { createScriptContent, putText } from '../script-content.js'
 
 const variables = new LocalVariablesService()
 
@@ -21,19 +21,40 @@ export type DistRecord = {
 
 export const role = String(variables.get('DIST_ROLE') ?? 'none')
 
-export const record = (entry: Omit<DistRecord, 'role'>) => {
-  const file = variables.get<string>('DIST_RECORD_FILE')
-  if (file) {
-    appendFileSync(file, `${JSON.stringify({ ...entry, role })}\n`)
-  }
+/**
+ * The content service has no atomic append across processes, so each event is
+ * its own key under `DIST_RECORD_DIR`, named by a monotonic timestamp so the
+ * suite can read them back in order.
+ */
+const pending = new Set<Promise<void>>()
+let counter = 0
+
+export const record = (entry: Omit<DistRecord, 'role'>): Promise<void> => {
+  const dir = variables.get<string>('DIST_RECORD_DIR')
+  if (!dir) return Promise.resolve()
+  const key = `${process.hrtime.bigint().toString().padStart(24, '0')}-${process.pid}-${counter++}.json`
+  const write = putText(
+    createScriptContent(dir),
+    'records',
+    key,
+    JSON.stringify({ ...entry, role })
+  ).finally(() => pending.delete(write))
+  pending.add(write)
+  return write
 }
+
+export const flushRecords = () => Promise.all([...pending])
 
 type Traced = {
   traceId?: string
   trace?: { traceId: string; spanId: string; parentSpanId?: string }
 }
 
-export const hop = (at: string, run: string | undefined, wire: Traced) =>
+export const hop = (
+  at: string,
+  run: string | undefined,
+  wire: Traced
+): Promise<void> =>
   record({
     kind: 'hop',
     at,

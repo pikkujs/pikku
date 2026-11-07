@@ -1,17 +1,25 @@
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { randomUUID } from 'node:crypto'
+import { LocalVariablesService } from '@pikku/core/services'
+import { createScriptContent, getText, putText } from './script-content.js'
 import { after, before, beforeEach, describe, test } from 'node:test'
 
-const scratch = mkdtempSync(join(tmpdir(), 'pikku-webhook-source-'))
-process.env.FAKE_PROVIDER_FILE = join(scratch, 'provider.json')
-process.env.CREDENTIALS_FILE = join(scratch, 'credentials.json')
-writeFileSync(
-  process.env.CREDENTIALS_FILE,
+const variables = new LocalVariablesService()
+const scratch = join(
+  import.meta.dirname,
+  '../.pikku-runtime',
+  `webhook-source-${randomUUID()}`
+)
+const content = createScriptContent(scratch)
+variables.set('WEBHOOK_SCRATCH_DIR', scratch)
+await putText(
+  content,
+  'credentials',
+  'credentials.json',
   JSON.stringify({ shopWebhookSecret: 'shop-signing-secret' })
 )
 
@@ -33,8 +41,8 @@ const pikkuBin = join(
   'pikku.js'
 )
 
-const storedCredentials = (): Record<string, unknown> =>
-  JSON.parse(readFileSync(process.env.CREDENTIALS_FILE!, 'utf-8'))
+const storedCredentials = async (): Promise<Record<string, unknown>> =>
+  JSON.parse(await getText(content, 'credentials', 'credentials.json'))
 
 const sign = (body: string, secret = 'shop-signing-secret') =>
   createHmac('sha256', secret).update(body).digest('hex')
@@ -74,7 +82,7 @@ const webhooksCli = (action: string, ...extra: string[]) =>
       'shop:main',
       ...extra,
     ],
-    { cwd: root, env: process.env, encoding: 'utf-8' }
+    { cwd: root, env: variables.getAll(), encoding: 'utf-8' }
   )
     .split('\n')
     .filter((line) => line.startsWith('{'))
@@ -86,7 +94,11 @@ before(async () => {
   pikkuState(null, 'package', 'singletonServices', singletonServices)
 })
 
-after(() => rmSync(scratch, { recursive: true, force: true }))
+after(async () => {
+  await content.deleteByPrefix('credentials', '')
+  await content.deleteByPrefix('provider', '')
+  await content.deleteByPrefix('previous', '')
+})
 
 beforeEach(() => {
   firedOrders.length = 0
@@ -159,8 +171,8 @@ describe('webhook source: route → queue → trigger', () => {
 })
 
 describe('pikku webhooks: provider lifecycle', () => {
-  test('status reports missing before setup', () => {
-    writeEndpoints([])
+  test('status reports missing before setup', async () => {
+    await writeEndpoints([])
     assert.deepEqual(webhooksCli('status'), [
       {
         source: 'shop',
@@ -170,7 +182,7 @@ describe('pikku webhooks: provider lifecycle', () => {
     ])
   })
 
-  test('setup registers the route and stores the secret, never printing it', () => {
+  test('setup registers the route and stores the secret, never printing it', async () => {
     const [outcome] = webhooksCli('setup')
 
     assert.deepEqual(outcome, {
@@ -179,8 +191,11 @@ describe('pikku webhooks: provider lifecycle', () => {
       status: 'created',
       state: { id: 'we_1' },
     })
-    assert.equal(storedCredentials().shopWebhookSecret, 'whsec_shop:main:shop')
-    assert.deepEqual(readEndpoints(), [
+    assert.equal(
+      (await storedCredentials()).shopWebhookSecret,
+      'whsec_shop:main:shop'
+    )
+    assert.deepEqual(await readEndpoints(), [
       {
         id: 'we_1',
         url: 'https://shop.test/api/webhooks/shop',
@@ -206,42 +221,52 @@ describe('pikku webhooks: provider lifecycle', () => {
     await waitFor(() => firedOrders.length === 1)
   })
 
-  test('a second setup is a no-op', () => {
+  test('a second setup is a no-op', async () => {
     assert.equal(webhooksCli('setup')[0].status, 'unchanged')
-    assert.equal(readEndpoints().length, 1)
+    assert.equal((await readEndpoints()).length, 1)
   })
 
-  test('setup repairs drift', () => {
-    const [endpoint] = readEndpoints()
-    writeEndpoints([{ ...endpoint!, url: 'https://old.test/webhooks/shop' }])
+  test('setup repairs drift', async () => {
+    const [endpoint] = await readEndpoints()
+    await writeEndpoints([
+      { ...endpoint!, url: 'https://old.test/webhooks/shop' },
+    ])
 
     assert.equal(webhooksCli('status')[0].status, 'drifted')
     assert.equal(webhooksCli('setup')[0].status, 'updated')
-    assert.equal(readEndpoints()[0]!.url, 'https://shop.test/api/webhooks/shop')
+    assert.equal(
+      (await readEndpoints())[0]!.url,
+      'https://shop.test/api/webhooks/shop'
+    )
   })
 
-  test('teardown removes the endpoint, then finds nothing', () => {
-    const previous = join(scratch, 'previous.json')
-    writeFileSync(previous, JSON.stringify({ shop: { id: 'we_1' } }))
+  test('teardown removes the endpoint, then finds nothing', async () => {
+    const previous = join(scratch, 'private/previous/previous.json')
+    await putText(
+      content,
+      'previous',
+      'previous.json',
+      JSON.stringify({ shop: { id: 'we_1' } })
+    )
 
     assert.equal(
       webhooksCli('teardown', '--previous', previous)[0].status,
       'deleted'
     )
-    assert.deepEqual(readEndpoints(), [])
-    assert.equal(storedCredentials().shopWebhookSecret, undefined)
+    assert.deepEqual(await readEndpoints(), [])
+    assert.equal((await storedCredentials()).shopWebhookSecret, undefined)
     assert.equal(webhooksCli('teardown')[0].status, 'absent')
   })
 
-  test('a missing --labelPrefix is refused before any provider call', () => {
-    writeEndpoints([])
+  test('a missing --labelPrefix is refused before any provider call', async () => {
+    await writeEndpoints([])
     assert.throws(() =>
       execFileSync(
         process.execPath,
         [pikkuBin, 'webhooks', 'setup', '--url', 'https://shop.test/api'],
-        { cwd: root, env: process.env, stdio: 'pipe' }
+        { cwd: root, env: variables.getAll(), stdio: 'pipe' }
       )
     )
-    assert.deepEqual(readEndpoints(), [])
+    assert.deepEqual(await readEndpoints(), [])
   })
 })

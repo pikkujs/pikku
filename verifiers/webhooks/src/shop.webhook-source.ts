@@ -32,7 +32,7 @@ wireTriggerWebhookSource({
   },
   check: {
     func: async (_services, { url, label, events }) => {
-      const endpoint = readEndpoints().find((e) => e.label === label)
+      const endpoint = (await readEndpoints()).find((e) => e.label === label)
       if (!endpoint) return { status: 'missing' }
       if (endpoint.url !== url || endpoint.events.join() !== events.join()) {
         return { status: 'drifted', reason: 'url or events changed' }
@@ -42,11 +42,11 @@ wireTriggerWebhookSource({
   },
   setup: {
     func: async ({ credentialService }, { url, label, events }) => {
-      const endpoints = readEndpoints()
+      const endpoints = await readEndpoints()
       const existing = endpoints.find((e) => e.label === label)
       if (existing) {
         Object.assign(existing, { url, events })
-        writeEndpoints(endpoints)
+        await writeEndpoints(endpoints)
         return { status: 'updated', state: { id: existing.id } }
       }
       const endpoint = {
@@ -56,16 +56,16 @@ wireTriggerWebhookSource({
         events,
         secret: `whsec_${label}`,
       }
-      writeEndpoints([...endpoints, endpoint])
+      await writeEndpoints([...endpoints, endpoint])
       await credentialService.set('shopWebhookSecret', endpoint.secret)
       return { status: 'created', state: { id: endpoint.id } }
     },
   },
   teardown: {
     func: async ({ credentialService }, { label }) => {
-      const endpoints = readEndpoints()
+      const endpoints = await readEndpoints()
       const kept = endpoints.filter((e) => e.label !== label)
-      writeEndpoints(kept)
+      await writeEndpoints(kept)
       await credentialService.delete('shopWebhookSecret')
       return { status: kept.length === endpoints.length ? 'absent' : 'deleted' }
     },

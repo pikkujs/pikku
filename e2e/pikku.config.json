@@ -7,15 +7,6 @@
     "packages/functions/src",
     "packages/functions/tests"
   ],
-  "ignoreFiles": [
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "**/node_modules/**",
-    "**/dist/**",
-    "**/functions/chaos-ledger.ts",
-    "**/mock-oauth-server.ts",
-    "**/mock-registry-server.ts"
-  ],
   "outDir": ".pikku",
   "rpcMapDeclarationFile": ".pikku/rpc-map.gen.d.ts",
   "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts",
@@ -87,8 +78,5 @@
         "plugins": []
       }
     }
-  },
-  "lint": {
-    "enforceContentService": "off"
   }
 }

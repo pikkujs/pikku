@@ -16,8 +16,9 @@
  * rather than 90% braces.
  */
 import { createServer, type Server } from 'http'
-import { readFileSync } from 'fs'
 import { LocalVariablesService } from '@pikku/core/services'
+import { fileURLToPath } from 'url'
+import { createScriptContent, ingestText } from './script-content.js'
 
 const REGISTRY_PORT = Number(
   new LocalVariablesService().get('MOCK_REGISTRY_PORT') ?? 4096
@@ -43,9 +44,14 @@ interface RegistryFixtureEntry {
 }
 
 const fixture: RegistryFixtureEntry[] = JSON.parse(
-  readFileSync(new URL('./fixtures/registry-packages.json', import.meta.url), {
-    encoding: 'utf-8',
-  })
+  await ingestText(
+    createScriptContent(
+      fileURLToPath(
+        new URL('../.pikku-runtime/script-content', import.meta.url)
+      )
+    ),
+    fileURLToPath(new URL('./fixtures/registry-packages.json', import.meta.url))
+  )
 )
 
 /**

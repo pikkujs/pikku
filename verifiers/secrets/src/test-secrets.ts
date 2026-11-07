@@ -7,8 +7,7 @@
  * - TypedSecretService provides compile-time validated access
  */
 
-import type { VariablesService } from '@pikku/core/services'
-import { LocalSecretService } from '@pikku/core/services'
+import { LocalSecretService, LocalVariablesService } from '@pikku/core/services'
 import type { CredentialsMap } from '../.pikku/secrets/pikku-secrets.gen.js'
 import { TypedSecretService } from '../.pikku/secrets/pikku-secrets.gen.js'
 
@@ -28,54 +27,17 @@ void ({
   apiSecret: 'secret',
 } satisfies ApiCredentialsType)
 
-// Inline VariablesService that reads from process.env
-class EnvVariablesService implements VariablesService {
-  get<T = string>(key: string): T | undefined {
-    const raw = process.env[key]
-    if (raw === undefined) return undefined
-    try {
-      return JSON.parse(raw) as T
-    } catch {
-      return raw as unknown as T
-    }
-  }
-  getVariables<T extends Record<string, unknown> = Record<string, unknown>>(
-    names: (keyof T & string)[]
-  ): Partial<T> {
-    const out: Record<string, unknown> = {}
-    for (const key of names) {
-      const value = this.get(key)
-      if (value !== undefined) out[key] = value
-    }
-    return out as Partial<T>
-  }
-  getAll(): Record<string, string> {
-    return process.env as Record<string, string>
-  }
-  set(name: string, value: unknown): void {
-    process.env[name] =
-      typeof value === 'string' ? value : JSON.stringify(value)
-  }
-  has(name: string): boolean {
-    return process.env[name] !== undefined
-  }
-  delete(name: string): void {
-    delete process.env[name]
-  }
-}
-
 // Runtime test
 async function testTypedSecretService() {
   console.log('Testing TypedSecretService type inference...\n')
 
-  // Set secrets via process.env
-  process.env.EXAMPLE_API_CREDENTIALS = JSON.stringify({
+  // Set secrets via the variables service
+  const variablesService = new LocalVariablesService()
+  variablesService.set('EXAMPLE_API_CREDENTIALS', {
     apiKey: 'test-key',
     apiSecret: 'test-secret',
     baseUrl: 'https://api.example.com',
   })
-
-  const variablesService = new EnvVariablesService()
   const secretService = new LocalSecretService(variablesService)
   const secrets = new TypedSecretService(secretService)
 
@@ -133,10 +95,10 @@ async function testTypedSecretService() {
 
   // Test 5: Test with missing secrets
   console.log('\nTest 5: Test with missing secrets')
-  delete process.env.EXAMPLE_API_CREDENTIALS
+  variablesService.delete('EXAMPLE_API_CREDENTIALS')
 
   const emptySecrets = new TypedSecretService(
-    new LocalSecretService(new EnvVariablesService())
+    new LocalSecretService(new LocalVariablesService())
   )
   const missingCreds = await emptySecrets.getMissing()
   console.log(`  Missing when empty: ${missingCreds.length}`)
