@@ -206,6 +206,10 @@ jobs:
     if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # Publish only runs on a green Full Suite, so a release target that stops
+    # compiling fails here rather than in the publish job.
+    env:
+      PIKKU_CLI_BINARIES: all
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
