@@ -73,10 +73,7 @@ const swallowingPath = join(root, 'src', 'functions', 'swallows-a-failure.ts')
  * Written for the test and removed after it: committed, the empty catch would
  * fail the repository's own `bun run lint`, which lints `verifiers/`.
  */
-const withEmptyCatch = async (
-  noEmpty: unknown,
-  body: () => Promise<void>
-) => {
+const withEmptyCatch = async (noEmpty: unknown, body: () => Promise<void>) => {
   await writeFile(
     oxlintConfigPath,
     JSON.stringify({

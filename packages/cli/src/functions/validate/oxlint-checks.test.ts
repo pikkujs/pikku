@@ -916,6 +916,7 @@ describe('oxlint run against the real oxlint', { skip: !realInstall }, () => {
         rules: {
           'typescript/no-misused-promises': 'error',
           'typescript/no-floating-promises': 'error',
+          'no-empty': 'error',
         },
       })
     )
