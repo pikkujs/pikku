@@ -40,7 +40,7 @@
     "prepack": "pinst --disable",
     "postpack": "pinst --enable",
     "pre-commit": "bun run test && bun run prettier && bun run lint",
-    "tsc": "bun run --filter '*' tsc",
+    "tsc": "node scripts/tsc-all.mjs",
     "build:packages": "bun run --filter '@pikku/core' build && bun run --filter './packages/**' --filter '!@pikku/core' --filter '!@pikku/addon-*' build",
     "build:addons": "bun run --filter './packages/addon/**' build",
     "build:recipes": "bun run --filter './recipes/**' --filter '!@project/root' build",

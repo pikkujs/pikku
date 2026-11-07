@@ -110,11 +110,14 @@ PIKKU_TSC=ts7 bun run tsc      # one run on TypeScript 7
 The alias is the private workspace package `@pikku/tsc`: it owns the `tsc` bin,
 depends on both engines, and forwards its arguments and exit code, so the ~250
 `tsc`, `tsc -b` and `tsc --noEmit` scripts across the repo are unchanged. The
-24 recipes and templates that declare their own `typescript` keep it: a
-package's own `.bin` comes before the root's, so they run TypeScript 7 whatever
-`PIKKU_TSC` says. The buildinfo records the compiler version, so switching engines makes `tsc -b`
-projects rebuild once. With `--noEmit` a type error
-exits 1 under TypeScript 7 and 2 under tsrs; both are non-zero.
+recipes and templates declare their own `typescript` (their `package.json` is
+copied into a user's app), and a package's own `.bin` comes before the root's,
+so a bare `tsc` run inside one is always TypeScript 7. The root `bun run tsc`
+therefore runs them through the dispatcher itself (`scripts/tsc-all.mjs`), so
+`PIKKU_TSC` applies to them too; running `tsc` by hand inside a recipe or
+template is TypeScript 7. The buildinfo records the compiler version, so
+switching engines makes `tsc -b` projects rebuild once. With `--noEmit` a type
+error exits 1 under TypeScript 7 and 2 under tsrs; both are non-zero.
 
 The root installs the alias and TypeScript 6:
 
