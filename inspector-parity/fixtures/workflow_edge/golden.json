@@ -400,6 +400,7 @@
      "t1"
     ],
     "expose": true,
+    "auth": null,
     "skip": "no",
     "virtualUsers": [
      "bob"
@@ -514,6 +515,7 @@
     ],
     "dsl": false,
     "expose": null,
+    "auth": null,
     "scenario": true,
     "asserts": true,
     "virtualUsers": [
@@ -711,6 +713,7 @@
     "tags": [
      "t1"
     ],
+    "expose": true,
     "skip": "no",
     "virtualUsers": [
      "bob"
