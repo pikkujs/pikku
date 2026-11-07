@@ -87,7 +87,7 @@ const run = async (
     }
     child.stdout.on('data', collect)
     child.stderr.on('data', collect)
-    child.on('exit', async (code) => {
+    child.on('exit', (code) => {
       clearTimeout(timer)
       if (!options.expectStartFailure && !interrupted) {
         reject(
@@ -97,16 +97,18 @@ const run = async (
         )
         return
       }
-      resolvePromise({
-        lines: (await hasKey(logStore, 'hooks', logKey))
-          ? (await getText(logStore, 'hooks', logKey))
-              .trim()
-              .split('\n')
-              .filter(Boolean)
-          : [],
-        output,
-        code,
-      })
+      void (async () => {
+        resolvePromise({
+          lines: (await hasKey(logStore, 'hooks', logKey))
+            ? (await getText(logStore, 'hooks', logKey))
+                .trim()
+                .split('\n')
+                .filter(Boolean)
+            : [],
+          output,
+          code,
+        })
+      })()
     })
   })
 }
