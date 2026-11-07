@@ -38,6 +38,7 @@ import { scopesPrune } from './functions/commands/scopes-prune.js'
 import { rolesAudit } from './functions/commands/roles-audit.js'
 import { rolesPrune } from './functions/commands/roles-prune.js'
 import { pikkuAudit } from './functions/commands/audit.js'
+import { pikkuCi } from './functions/commands/ci.js'
 import { pikkuSemver } from './functions/commands/semver.js'
 import { renderSemver } from './functions/commands/semver-render.js'
 import {
@@ -441,6 +442,49 @@ wireCLI({
           description:
             "Where to copy to. Defaults to the tsconfig's compilerOptions.outDir",
           type: 'string',
+        },
+      },
+    }),
+    ci: pikkuCLICommand({
+      func: pikkuCi,
+      description:
+        'Run the whole path from a commit to a deployable build, non-interactively: codegen, validate, audit, tests and app builds. With -p, in a throwaway worktree, removing the console and producing a deploy plan.',
+      options: {
+        provider: {
+          description:
+            'Build for this deploy provider, in a throwaway git worktree. No default: without it, pikku ci runs in place and plans nothing',
+          short: 'p',
+        },
+        deploy: {
+          description: 'Apply the output of this run. Needs -p',
+          default: false,
+        },
+        skipTests: {
+          description:
+            'Run without a "test" script, which is otherwise an error',
+          default: false,
+        },
+        keepWorktree: {
+          description: 'Leave the worktree in place after the run',
+          default: false,
+        },
+        worktreeDir: {
+          description:
+            'Create the worktree under this directory instead of the system temp directory',
+        },
+        auditBaseline: {
+          description:
+            'A previous audit.json to compare against. Defaults to .deploy/audit.json, which a passing pikku ci -p writes',
+        },
+        migrationsApplied: {
+          description:
+            'With --deploy on Cloudflare, confirm the migrations in this build are already applied',
+          default: false,
+        },
+        skipDeployChecks: {
+          description:
+            'Skip the Pikku Studio hosting conventions in the validate stage',
+          default: false,
         },
       },
     }),

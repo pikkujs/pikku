@@ -18,6 +18,7 @@ import {
 } from '@pikku/core/services'
 import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { CLILogger } from './services/cli-logger.service.js'
+import { CLIWorkflowMirror } from './services/ci-workflow-mirror.js'
 import {
   getPikkuCLIConfig,
   tryGetPikkuCLIConfig,
@@ -492,7 +493,9 @@ export const createSingletonServices: CreateSingletonServices<
     unfilteredStateIsSetupOnly = false
   }
 
-  const workflowService = new InMemoryWorkflowService()
+  const workflowService = new InMemoryWorkflowService({
+    mirror: new CLIWorkflowMirror(logger),
+  })
 
   // Resolve the runtime ONCE here, then inject runtime-specific implementations.
   // Keeping the check in this single place avoids `typeof Bun` branches leaking
