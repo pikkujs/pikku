@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs'
 import chalk from 'chalk'
 import type { Logger } from '@pikku/core/services'
 import type { Safe } from '@pikku/core/classification'
@@ -8,6 +9,7 @@ import type {
   DiagnosticSeverity,
   CodedDiagnostic,
 } from '@pikku/inspector'
+import { LOGGED_ERROR_CODE } from '../utils/codegen-failure.js'
 
 // Compact one-line wordmark — the old multi-line ASCII art got cropped in
 // short/narrow AI-agent panes. Coloured directly (not via the blue `info`
@@ -35,6 +37,7 @@ export class CLILogger implements Logger {
   // from the rest so a superseded pass can be dropped without touching what a
   // generator or a command reported outside one.
   private validationDiagnostics: CodedDiagnostic[] = []
+  private loggedErrors: CodedDiagnostic[] = []
   private inValidationPass = false
   // Severities that should fail the build. Critical always blocks; error/warn
   // are opt-in via --fail-on-error / --fail-on-warn.
@@ -193,6 +196,7 @@ export class CLILogger implements Logger {
     ...__meta: { [K in keyof A]: Safe<A[K]> }
   ) {
     if (this.level > LogLevel.error) return
+    this.recordLoggedError(message)
     if (message instanceof Error) {
       // An expected failure (a deliberate PikkuError, e.g. a build gate
       // tripping) — its message says everything, so don't dump the stack.
@@ -228,22 +232,28 @@ export class CLILogger implements Logger {
     this.emit('debug', msg, type, undefined, data)
   }
 
-  diagnostic({ severity, code, message }: CodedDiagnostic) {
+  diagnostic(entry: CodedDiagnostic) {
+    const { severity, code, message } = entry
     const url = `${BASE_ERROR_URL}/${code.toLowerCase()}`
     const formattedMessage = `[${code}] ${message}\n  → ${url}`
     if (this.inValidationPass) {
-      this.validationDiagnostics.push({ severity, code, message })
+      this.validationDiagnostics.push(entry)
     } else {
-      this.diagnostics.push({ severity, code, message })
+      this.diagnostics.push(entry)
     }
+    this.persistDiagnostics()
     // critical → bold red, error → red, warn → yellow. Always printed so the
     // issue surfaces even when it doesn't fail the build.
     this.emit(severity, formattedMessage, undefined, code)
   }
 
   /** Sugar for `diagnostic({ severity: 'critical', code, message })`. */
-  critical(code: ErrorCode, message: string) {
-    this.diagnostic({ severity: 'critical', code, message })
+  critical(
+    code: ErrorCode,
+    message: string,
+    at?: Pick<CodedDiagnostic, 'file' | 'line' | 'column'>
+  ) {
+    this.diagnostic({ ...at, severity: 'critical', code, message })
   }
 
   /**
@@ -267,6 +277,7 @@ export class CLILogger implements Logger {
   beginValidationPass() {
     this.validationDiagnostics = []
     this.inValidationPass = true
+    this.persistDiagnostics()
   }
 
   /** Closes the pass opened by `beginValidationPass`. */
@@ -280,6 +291,36 @@ export class CLILogger implements Logger {
    */
   private trackedDiagnostics(): CodedDiagnostic[] {
     return [...this.diagnostics, ...this.validationDiagnostics]
+  }
+
+  /**
+   * Hands the diagnostics to the watcher that started this codegen child. The
+   * whole list each time, because a new validation pass replaces the last one.
+   */
+  private persistDiagnostics() {
+    const file = process.env.PIKKU_DIAGNOSTICS_FILE
+    if (!file) return
+    writeFileSync(
+      file,
+      JSON.stringify([...this.trackedDiagnostics(), ...this.loggedErrors])
+    )
+  }
+
+  /**
+   * A failed run has to say why, and most of its reasons are uncoded errors that
+   * nothing tells apart from a warning once they are on stderr.
+   */
+  private recordLoggedError(message: unknown) {
+    if (!process.env.PIKKU_DIAGNOSTICS_FILE) return
+    this.loggedErrors.push({
+      severity: 'error',
+      code: LOGGED_ERROR_CODE as ErrorCode,
+      message:
+        message instanceof Error
+          ? message.message
+          : this.normalizeMessage(message),
+    })
+    this.persistDiagnostics()
   }
 
   hasCriticalErrors(): boolean {

@@ -6,7 +6,9 @@ import { readFileSync } from 'node:fs'
 import { afterEach, test } from 'node:test'
 
 import {
+  CodegenChildError,
   codegenStateFile,
+  collectCodegenPass,
   hasChangesSince,
   runCodegenChild,
 } from './codegen-child.js'
@@ -148,4 +150,67 @@ test('a child that cannot be spawned rejects', async () => {
       configurable: true,
     })
   }
+})
+
+const diagnostic = { severity: 'warn', code: 'PKU1', message: 'careful' }
+
+test('a pass keeps what the child recorded', async () => {
+  const pass = await collectCodegenPass(async (file) => {
+    writeFileSync(file, JSON.stringify([diagnostic]))
+  })
+  assert.deepEqual(pass, { ok: true, diagnostics: [diagnostic] })
+})
+
+test('a failed pass is an outcome carrying the reason', async () => {
+  const pass = await collectCodegenPass(async () => {
+    throw new Error('pikku all failed (exit 1)')
+  })
+  assert.equal(pass.ok, false)
+  assert.equal(pass.diagnostics[0]?.code, 'CODEGEN')
+  assert.match(pass.diagnostics[0]?.message ?? '', /exit 1/)
+})
+
+test('half a diagnostics file is treated as none', async () => {
+  const pass = await collectCodegenPass(async (file) => {
+    writeFileSync(file, '[{')
+  })
+  assert.deepEqual(pass, { ok: true, diagnostics: [] })
+})
+
+test('a failed child reports its errors, not its exit code', async () => {
+  const pass = await collectCodegenPass(async (file) => {
+    writeFileSync(
+      file,
+      JSON.stringify([
+        diagnostic,
+        { severity: 'error', code: 'LOG', message: 'a real cause' },
+      ])
+    )
+    throw new CodegenChildError(
+      'pikku all failed (exit 1)',
+      'Workflow allWorkflow (run 1) failed:\nError: [PKU724] no services\n    at x\n'
+    )
+  })
+  assert.deepEqual(
+    pass.diagnostics.map(({ code }) => code),
+    ['CODEGEN', 'PKU724', 'PKU1']
+  )
+  assert.equal(pass.diagnostics[0]?.message, 'a real cause')
+})
+
+test('a logged error does not fail a pass that passed', async () => {
+  const pass = await collectCodegenPass(async (file) => {
+    writeFileSync(
+      file,
+      JSON.stringify([{ severity: 'error', code: 'LOG', message: 'noise' }])
+    )
+  })
+  assert.deepEqual(pass, { ok: true, diagnostics: [] })
+})
+
+test('a failure nothing can read keeps its tail', async () => {
+  const pass = await collectCodegenPass(async () => {
+    throw new CodegenChildError('pikku all failed (exit 1)', 'boom\n    at x\n')
+  })
+  assert.equal(pass.diagnostics[0]?.message, 'pikku all failed (exit 1)\nboom')
 })

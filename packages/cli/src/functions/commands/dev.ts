@@ -1,8 +1,10 @@
+import { generateRouteTrees } from '../../utils/route-tree.js'
 import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { rm } from 'node:fs/promises'
 import { join, resolve } from 'path'
 import {
   codegenStateFile,
+  collectCodegenPass,
   hasChangesSince,
   runCodegenChild,
 } from './codegen-child.js'
@@ -10,6 +12,18 @@ import { readMcpManifests } from './dev-mcp-manifests.js'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import chokidar, { type FSWatcher } from 'chokidar'
+import { typecheckProjects } from '../../utils/tsc-check.js'
+import {
+  checkProjects,
+  compileMessages,
+  createWatchLoop,
+  watchedDirs,
+} from '../../utils/watch-loop.js'
+import {
+  WAKE_SIGNAL,
+  isIgnoredByWatcher,
+  watchStatusFile,
+} from '../../utils/watch-status.js'
 import {
   pikkuDevReloader,
   reloadGeneratedMeta,
@@ -162,7 +176,7 @@ export const dev = pikkuSessionlessFunc<
     ] as string[]
     const workflowService = new InMemoryWorkflowService()
     const pikkuDir = resolve(config.rootDir, config.outDir)
-    const runCodegen = async () => {
+    const runCodegen = async (diagnosticsFile?: string) => {
       const stateFile = codegenStateFile()
       try {
         await runCodegenChild(stateFile, {
@@ -173,6 +187,7 @@ export const dev = pikkuSessionlessFunc<
           output: (config as { output?: string }).output,
           security: (config as { security?: boolean }).security,
           inheritStdout: true,
+          diagnosticsFile,
         })
         await loadInspectorStateFile(stateFile)
       } finally {
@@ -534,21 +549,20 @@ export const dev = pikkuSessionlessFunc<
       : undefined
 
     if (enableWatch) {
-      const genIgnore = /\.gen\.tsx?$/
-
       logger.info(
         `• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`
       )
-      watcher = chokidar.watch(watchDirectories, {
+      const dirs = watchedDirs(config.rootDir, watchDirectories)
+      watcher = chokidar.watch([...dirs.codegenDirs, ...dirs.typecheckDirs], {
         ignoreInitial: true,
-        ignored: genIgnore,
+        ignored: (path) => isIgnoredByWatcher(path, dirs),
       })
 
       const onReady = async () => {
-        const handle = async () => {
+        const regenerate = async (diagnosticsFile: string) => {
           try {
             const start = Date.now()
-            await runCodegen()
+            await runCodegen(diagnosticsFile)
             workflowService.wireQueueWorkers()
             wireAgentScorerQueueWorkers()
             // Pull the regenerated meta + JSON schemas into the running
@@ -585,47 +599,32 @@ export const dev = pikkuSessionlessFunc<
               ok: false,
               error: err instanceof Error ? err.message : String(err),
             })
+            throw err
           }
         }
 
-        // A codegen pass holds a whole ts.Program, so two overlapping passes
-        // double the peak RSS — enough to OOM a sandbox. Coalesce instead:
-        // changes arriving mid-pass schedule exactly one more run after it.
-        let inFlight: Promise<void> | undefined
-        let queued = false
+        const loop = createWatchLoop({
+          statusFile: watchStatusFile(pikkuDir),
+          dirs,
+          debounceMs: 10,
+          codegen: () => collectCodegenPass(regenerate),
+          messages: () => compileMessages(dirs.typecheckDirs),
+          routes: () => generateRouteTrees(dirs.typecheckDirs),
+          typecheck: (signal) =>
+            typecheckProjects(checkProjects(config.rootDir), config.rootDir, {
+              signal,
+            }),
+          onError: (message) => logger.error(message),
+        })
 
-        const runHandle = async (): Promise<void> => {
-          if (inFlight) {
-            queued = true
-            return
-          }
-          do {
-            queued = false
-            inFlight = handle()
-            try {
-              await inFlight
-            } finally {
-              inFlight = undefined
-            }
-          } while (queued)
-        }
+        void loop.start({
+          codegen: hasChangesSince(watchDirectories, startupCodegenStartedAt),
+        })
 
-        if (hasChangesSince(watchDirectories, startupCodegenStartedAt)) {
-          await runHandle()
-        }
-
-        let timeout: ReturnType<typeof setTimeout> | undefined
-
-        const deduped = (_file: string) => {
-          if (timeout) {
-            clearTimeout(timeout)
-          }
-          timeout = setTimeout(() => void runHandle(), 10)
-        }
-
-        watcher?.on('change', deduped)
-        watcher?.on('add', deduped)
-        watcher?.on('unlink', deduped)
+        watcher?.on('change', loop.onChange)
+        watcher?.on('add', loop.onChange)
+        watcher?.on('unlink', loop.onChange)
+        process.on(WAKE_SIGNAL, loop.wake)
       }
       // Fire-and-forget listener: errors are handled inside (handle() catches and
       // logs them), so a rejection cannot escape.

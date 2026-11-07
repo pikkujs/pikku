@@ -1,6 +1,21 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { parseTscOutput, renderTscSummary, renderTscFull } from './tsc-check.js'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { setTimeout as sleep } from 'node:timers/promises'
+import {
+  parseTscOutput,
+  renderTscFull,
+  renderTscSummary,
+  typecheckProjects,
+} from './tsc-check.js'
 
 const ROOT = '/project'
 
@@ -142,5 +157,128 @@ describe('renderTscFull', () => {
       ROOT
     )
     assert.equal(renderTscFull(result).split('\n').length, 5)
+  })
+})
+
+describe('typecheckProjects', () => {
+  /** A project whose `typescript` is the given script. */
+  const fakeProject = (name: string, script: string) => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-tsc-'))
+    const compiler = join(dir, 'node_modules', 'typescript')
+    mkdirSync(compiler, { recursive: true })
+    writeFileSync(
+      join(compiler, 'package.json'),
+      JSON.stringify({ bin: { tsc: './tsc.cjs' } })
+    )
+    writeFileSync(join(compiler, 'tsc.cjs'), script)
+    writeFileSync(join(dir, 'tsconfig.json'), '{}')
+    return { name, dir, tsconfig: join(dir, 'tsconfig.json') }
+  }
+  const printing = (line: string, code = 2) =>
+    `console.log(${JSON.stringify(line)}); process.exitCode = ${code}`
+  const alive = (pid: number) => {
+    try {
+      process.kill(pid, 0)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  test('runs each project and reports files from the project root', async () => {
+    const web = fakeProject(
+      'web',
+      printing("src/a.ts(3,5): error TS2322: Type 'string' is wrong.")
+    )
+    const api = fakeProject('api', printing('', 0))
+    const { diagnostics } = await typecheckProjects([web, api], tmpdir())
+    assert.equal(diagnostics.length, 1)
+    assert.deepEqual(
+      { ...diagnostics[0], file: diagnostics[0]!.file?.split('/').slice(-2) },
+      {
+        severity: 'error',
+        code: 'TS2322',
+        message: "Type 'string' is wrong.",
+        project: 'web',
+        file: ['src', 'a.ts'],
+        line: 3,
+        column: 5,
+      }
+    )
+  })
+
+  test('a diagnostic with no place carries no file', async () => {
+    const project = fakeProject('web', printing('error TS5083: Cannot read.'))
+    const { diagnostics } = await typecheckProjects([project], tmpdir())
+    assert.deepEqual(diagnostics, [
+      {
+        severity: 'error',
+        code: 'TS5083',
+        message: 'Cannot read.',
+        project: 'web',
+      },
+    ])
+  })
+
+  test('runs side by side', async () => {
+    const script = `setTimeout(() => {}, 400)`
+    const started = Date.now()
+    await typecheckProjects(
+      [fakeProject('a', script), fakeProject('b', script)],
+      tmpdir()
+    )
+    assert.ok(Date.now() - started < 750)
+  })
+
+  test('a compiler that dies silently is a failure, not a pass', async () => {
+    const project = fakeProject('web', 'process.exit(1)')
+    await assert.rejects(
+      typecheckProjects([project], tmpdir()),
+      /tsc did not finish/
+    )
+  })
+
+  test('a timeout is a failure, not a pass', async () => {
+    const project = fakeProject('web', 'setTimeout(() => {}, 30000)')
+    await assert.rejects(
+      typecheckProjects([project], tmpdir(), { timeoutMs: 100 }),
+      /no result in 100ms/
+    )
+  })
+
+  test('aborting kills the compiler and the child it started', async () => {
+    const project = fakeProject(
+      'web',
+      `const { spawn } = require('node:child_process')
+       const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], { stdio: 'ignore' })
+       require('node:fs').writeFileSync('child.pid', String(child.pid))
+       setTimeout(() => {}, 30000)`
+    )
+    const stop = new AbortController()
+    const check = typecheckProjects([project], tmpdir(), {
+      signal: stop.signal,
+    })
+    const pidFile = join(project.dir, 'child.pid')
+    for (let i = 0; i < 400 && !existsSync(pidFile); i++) await sleep(5)
+    const pid = Number(readFileSync(pidFile, 'utf8'))
+    assert.ok(alive(pid))
+    stop.abort()
+    await assert.rejects(check, /superseded/)
+    for (let i = 0; i < 200 && alive(pid); i++) await sleep(5)
+    assert.equal(alive(pid), false)
+  })
+
+  test('one project failing stops the others', async () => {
+    const started = Date.now()
+    await assert.rejects(
+      typecheckProjects(
+        [
+          fakeProject('dies', 'process.exit(1)'),
+          fakeProject('slow', 'setTimeout(() => {}, 30000)'),
+        ],
+        tmpdir()
+      )
+    )
+    assert.ok(Date.now() - started < 5000)
   })
 })

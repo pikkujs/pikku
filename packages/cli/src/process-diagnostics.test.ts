@@ -1,6 +1,9 @@
 import { test, describe } from 'node:test'
 import { strict as assert } from 'node:assert'
-import { processDiagnostics } from './services.js'
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { diagnosticPosition, processDiagnostics } from './services.js'
 import { ErrorCode } from '@pikku/inspector'
 import type { InspectorDiagnostic } from '@pikku/inspector'
 
@@ -57,5 +60,24 @@ describe('processDiagnostics — functionDynamicImport (PKU498)', () => {
     assert.equal(warnings.length, 0)
     assert.equal(criticals.length, 1)
     assert.equal(criticals[0][0], ErrorCode.FUNCTION_DYNAMIC_IMPORT)
+  })
+})
+
+describe('diagnosticPosition', () => {
+  test('turns an offset into the line and column an editor shows', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'pikku-pos-')), 'a.ts')
+    writeFileSync(file, 'one\ntwo\nthree\n')
+    assert.deepEqual(diagnosticPosition({ sourceFile: file, position: 10 }), {
+      file,
+      line: 3,
+      column: 3,
+    })
+  })
+
+  test('keeps the file when it can no longer be read', () => {
+    assert.deepEqual(
+      diagnosticPosition({ sourceFile: '/no/such/file.ts', position: 1 }),
+      { file: '/no/such/file.ts' }
+    )
   })
 })

@@ -1,14 +1,30 @@
+import { generateRouteTrees } from '../../utils/route-tree.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
+import { rm } from 'node:fs/promises'
+import { resolve } from 'node:path'
 import chokidar from 'chokidar'
 import { pikkuDevReloader } from '@pikku/core/dev'
+import { typecheckProjects } from '../../utils/tsc-check.js'
+import {
+  checkProjects,
+  compileMessages,
+  createWatchLoop,
+  watchedDirs,
+} from '../../utils/watch-loop.js'
+import {
+  WAKE_SIGNAL,
+  isIgnoredByWatcher,
+  watchStatusFile,
+} from '../../utils/watch-status.js'
+import {
+  codegenStateFile,
+  collectCodegenPass,
+  runCodegenChild,
+} from './codegen-child.js'
 
 export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
   remote: true,
-  func: async (
-    { logger, config, invalidateInspectorState },
-    { hmr },
-    { rpc }
-  ) => {
+  func: async ({ logger, config }, { hmr }) => {
     const watchDirectories = [
       ...new Set(
         [config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)
@@ -22,76 +38,61 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
       })
     }
 
-    const watcher = chokidar.watch(watchDirectories, {
-      ignoreInitial: true,
-      ignored: /.*\.gen\.tsx?/,
-    })
+    const dirs = watchedDirs(config.rootDir, watchDirectories)
+    const watcher = chokidar.watch(
+      [...dirs.codegenDirs, ...dirs.typecheckDirs],
+      {
+        ignoreInitial: true,
+        ignored: (path) => isIgnoredByWatcher(path, dirs),
+      }
+    )
 
     logger.info(
       `• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`
     )
 
-    const onReady = async () => {
-      const handle = async () => {
-        try {
+    const loop = createWatchLoop({
+      statusFile: watchStatusFile(resolve(config.rootDir, config.outDir)),
+      dirs,
+      debounceMs: 1000,
+      codegen: () =>
+        collectCodegenPass(async (diagnosticsFile) => {
           const start = Date.now()
-          invalidateInspectorState()
-          await rpc.invoke('all')
+          const stateFile = codegenStateFile()
+          try {
+            await runCodegenChild(stateFile, {
+              command: ['all'],
+              config: config.config,
+              outDir: config.outDir,
+              logLevel: (config as { logLevel?: string }).logLevel,
+              inheritStdout: true,
+              diagnosticsFile,
+            })
+          } finally {
+            await rm(stateFile, { force: true })
+          }
           logger.info({
             message: `✓ Generated in ${Date.now() - start}ms`,
             type: 'timing',
           })
-        } catch (err) {
-          // Through the logger, so it obeys --log-level and the dev server's
-          // formatting. `console.error(err)` printed a bare stack over the top
-          // of the watch output no matter what verbosity was asked for.
-          logger.error(
-            `Error running watch: ${err instanceof Error ? err.message : String(err)}`
-          )
-          logger.debug(err instanceof Error ? (err.stack ?? '') : String(err))
-        }
-      }
+        }),
+      messages: () => compileMessages(dirs.typecheckDirs),
+      routes: () => generateRouteTrees(dirs.typecheckDirs),
+      typecheck: (signal) =>
+        typecheckProjects(checkProjects(config.rootDir), config.rootDir, {
+          signal,
+        }),
+      onError: (message) => logger.error(message),
+    })
 
-      // A codegen pass holds a whole ts.Program, so two overlapping passes double
-      // the peak RSS. Coalesce instead: changes arriving mid-pass schedule exactly
-      // one more run after it.
-      let inFlight: Promise<void> | undefined
-      let queued = false
-
-      const runHandle = async (): Promise<void> => {
-        if (inFlight) {
-          queued = true
-          return
-        }
-        do {
-          queued = false
-          inFlight = handle()
-          try {
-            await inFlight
-          } finally {
-            inFlight = undefined
-          }
-        } while (queued)
-      }
-
-      await runHandle()
-
-      let timeout: ReturnType<typeof setTimeout> | undefined
-
-      const deduped = (_file: string) => {
-        if (timeout) {
-          clearTimeout(timeout)
-        }
-        timeout = setTimeout(() => void runHandle(), 1000)
-      }
-
-      watcher.on('change', deduped)
-      watcher.on('add', deduped)
-      watcher.on('unlink', deduped)
-    }
-    // Fire-and-forget listener: errors are handled inside (handle() catches and
-    // logs them), so a rejection cannot escape.
-    watcher.on('ready', () => void onReady())
+    // Fire-and-forget listener: the loop turns every failure into a status.
+    watcher.on('ready', () => {
+      void loop.start({ codegen: true })
+      watcher.on('change', loop.onChange)
+      watcher.on('add', loop.onChange)
+      watcher.on('unlink', loop.onChange)
+      process.on(WAKE_SIGNAL, loop.wake)
+    })
 
     const onSigint = async () => {
       try {
