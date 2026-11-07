@@ -10,7 +10,7 @@ const KIND_SKILLS: Array<[RegExp, string]> = [
   ],
   [/\b(emails?|newsletters?)\b/i, 'pikku-emails'],
   [
-    /\b(uploads?|files?|photos?|images?|documents?|attachments?|pdfs?)\b/i,
+    /\b(uploads?|files?|photos?|images?|avatars?|receipts?|download links?|documents|(signed|uploaded|scanned) documents?|attachments?|pdfs?)\b/i,
     'pikku-content',
   ],
   [
