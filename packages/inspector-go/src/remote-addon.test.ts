@@ -1,5 +1,6 @@
 import { after, before, describe, test } from 'node:test'
 import { availableEngines } from './test-engines.js'
+import { setInspectorEngine } from './binary.js'
 import assert from 'node:assert/strict'
 import { findWireRemoteAddonSpecs } from './helpers.js'
 
@@ -7,13 +8,11 @@ const NAME = '@pikkustudio/addon-cloud-api'
 
 for (const engine of availableEngines()) {
 describe(`findWireRemoteAddonSpecs (${engine})`, () => {
-  const previous = process.env.PIKKU_INSPECTOR
   before(() => {
-    process.env.PIKKU_INSPECTOR = engine
+    setInspectorEngine(engine)
   })
   after(() => {
-    if (previous === undefined) delete process.env.PIKKU_INSPECTOR
-    else process.env.PIKKU_INSPECTOR = previous
+    setInspectorEngine('go')
   })
 
   test('finds each literal with its range and line', () => {

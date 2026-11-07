@@ -1,6 +1,7 @@
 import {
   INSPECTOR_ENGINES,
   findInspectorBinary,
+  setInspectorEngine,
   type InspectorEngine,
 } from './binary.js'
 
@@ -19,17 +20,15 @@ export const availableEngines = (): InspectorEngine[] =>
     }
   })
 
-/** Runs `body` under `PIKKU_INSPECTOR=<engine>` and restores the variable. */
+/** Runs `body` with `engine` selected, then goes back to Go. */
 export const withEngine = async <T>(
   engine: InspectorEngine,
   body: () => Promise<T> | T
 ): Promise<T> => {
-  const previous = process.env.PIKKU_INSPECTOR
-  process.env.PIKKU_INSPECTOR = engine
+  setInspectorEngine(engine)
   try {
     return await body()
   } finally {
-    if (previous === undefined) delete process.env.PIKKU_INSPECTOR
-    else process.env.PIKKU_INSPECTOR = previous
+    setInspectorEngine('go')
   }
 }

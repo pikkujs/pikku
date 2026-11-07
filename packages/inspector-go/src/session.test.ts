@@ -1,5 +1,6 @@
 import { after, before, describe, test } from 'node:test'
 import { availableEngines } from './test-engines.js'
+import { setInspectorEngine } from './binary.js'
 import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -28,13 +29,11 @@ const project = (): string => {
 
 for (const engine of availableEngines()) {
 describe(`InspectorSession (${engine})`, () => {
-  const previous = process.env.PIKKU_INSPECTOR
   before(() => {
-    process.env.PIKKU_INSPECTOR = engine
+    setInspectorEngine(engine)
   })
   after(() => {
-    if (previous === undefined) delete process.env.PIKKU_INSPECTOR
-    else process.env.PIKKU_INSPECTOR = previous
+    setInspectorEngine('go')
   })
 
   test('checks unsaved content, then the saved file, over one process', async () => {

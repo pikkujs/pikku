@@ -12,15 +12,14 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  DEFAULT_ENGINE,
   ENGINES,
   INSPECTOR_ENGINES,
   InspectorBinaryNotFoundError,
   SUPPORTED_PLATFORMS,
-  configureInspectorEngine,
+  setInspectorEngine,
+  getInspectorEngine,
   executableName,
   findInspectorBinary as findAnyInspectorBinary,
-  resolveInspectorEngine,
   type FindInspectorBinaryOptions,
   type InspectorEngine,
 } from './binary.js'
@@ -29,7 +28,7 @@ import { PLATFORMS, RS_PLATFORMS, targetName } from '../scripts/platforms.mjs'
 // @ts-ignore -- plain .mjs build script, no declarations
 import { binaryProblem } from '../scripts/check-platform-binary.mjs'
 
-/** The Go engine, whatever DEFAULT_ENGINE is: these tests are about its lookup. */
+/** The Go engine: these tests are about its lookup. */
 const findInspectorBinary = (
   env: NodeJS.ProcessEnv,
   options: FindInspectorBinaryOptions = {}
@@ -333,44 +332,42 @@ describe('engine selection', () => {
     assert.equal(executableName('win32', 'rs'), 'pikku-inspect-rs.exe')
   })
 
-  test('PIKKU_INSPECTOR picks the engine; the rest is DEFAULT_ENGINE', () => {
-    configureInspectorEngine(undefined)
-    assert.equal(resolveInspectorEngine({}), DEFAULT_ENGINE)
-    assert.equal(resolveInspectorEngine({ PIKKU_INSPECTOR: 'go' }), 'go')
-    assert.equal(resolveInspectorEngine({ PIKKU_INSPECTOR: 'rs' }), 'rs')
-  })
-
-  test('the configured engine beats the default and loses to PIKKU_INSPECTOR', () => {
-    try {
-      for (const configured of INSPECTOR_ENGINES) {
-        configureInspectorEngine(configured)
-        assert.equal(resolveInspectorEngine({}), configured)
-        const other: InspectorEngine = configured === 'go' ? 'rs' : 'go'
-        assert.equal(resolveInspectorEngine({ PIKKU_INSPECTOR: other }), other)
-      }
-    } finally {
-      configureInspectorEngine(undefined)
-    }
-  })
-
-  test('findInspectorBinary follows the selected engine', () => {
+  test('findInspectorBinary follows the engine set by setInspectorEngine, Go until then', () => {
     const dir = mkdtempSync(join(tmpdir(), 'pikku-inspector-engine-'))
     const go = join(dir, 'go')
     const rs = join(dir, 'rs')
     writeFileSync(go, '')
     writeFileSync(rs, '')
     const env = { PIKKU_INSPECTOR_GO_BIN: go, PIKKU_INSPECTOR_RS_BIN: rs }
-    assert.equal(findAnyInspectorBinary({ ...env, PIKKU_INSPECTOR: 'go' }), go)
-    assert.equal(findAnyInspectorBinary({ ...env, PIKKU_INSPECTOR: 'rs' }), rs)
-    assert.equal(findAnyInspectorBinary(env), DEFAULT_ENGINE === 'go' ? go : rs)
+    try {
+      assert.equal(getInspectorEngine(), 'go')
+      assert.equal(findAnyInspectorBinary(env), go)
+      setInspectorEngine('rs')
+      assert.equal(findAnyInspectorBinary(env), rs)
+      assert.equal(findAnyInspectorBinary(env, { engine: 'go' }), go)
+    } finally {
+      setInspectorEngine('go')
+    }
   })
 
-  test('an unknown engine is refused, naming where it came from', () => {
-    assert.throws(
-      () => resolveInspectorEngine({ PIKKU_INSPECTOR: 'ts' }),
-      /PIKKU_INSPECTOR is "ts"; expected one of go, rs/
+  test('PIKKU_INSPECTOR is not read here: choosing is the CLI\'s job', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-inspector-engine-'))
+    const go = join(dir, 'go')
+    writeFileSync(go, '')
+    assert.equal(
+      findAnyInspectorBinary({
+        PIKKU_INSPECTOR: 'rs',
+        PIKKU_INSPECTOR_GO_BIN: go,
+      }),
+      go
     )
-    assert.throws(() => configureInspectorEngine('ts'), /inspector setting/)
+  })
+
+  test('an unknown engine is refused', () => {
+    assert.throws(
+      () => setInspectorEngine('ts' as InspectorEngine),
+      /The inspector engine is "ts"; expected one of go, rs/
+    )
   })
 })
 

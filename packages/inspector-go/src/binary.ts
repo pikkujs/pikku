@@ -24,9 +24,6 @@ export type InspectorEngine = 'go' | 'rs'
 
 export const INSPECTOR_ENGINES: readonly InspectorEngine[] = ['go', 'rs']
 
-/** The engine used when neither `PIKKU_INSPECTOR`, `--inspector` nor the config key names one. */
-export const DEFAULT_ENGINE: InspectorEngine = 'rs'
-
 type EngineInfo = {
   executable: string
   /** The environment variable that points at this engine's binary. */
@@ -59,41 +56,26 @@ export const executableName = (
 export const isInspectorEngine = (value: unknown): value is InspectorEngine =>
   typeof value === 'string' && (INSPECTOR_ENGINES as readonly string[]).includes(value)
 
-const parseEngine = (value: string, source: string): InspectorEngine => {
-  if (!isInspectorEngine(value)) {
-    throw new InspectorBinaryNotFoundError(
-      `${source} is "${value}"; expected one of ${INSPECTOR_ENGINES.join(', ')}.`
-    )
-  }
-  return value
-}
-
-let configuredEngine: InspectorEngine | undefined
+let selectedEngine: InspectorEngine = 'go'
 
 /**
- * Sets the engine the project asked for (the `inspector` key of
- * pikku.config.json). `PIKKU_INSPECTOR` still wins over it.
+ * The engine `findInspectorBinary` looks for when a call does not name one.
+ * Choosing it (flag, environment, config, default) is the CLI's job; a program
+ * that never calls this runs the Go reference.
  */
-export const configureInspectorEngine = (
-  engine: string | undefined
-): void => {
-  configuredEngine =
-    engine === undefined || engine === ''
-      ? undefined
-      : parseEngine(engine, 'The inspector setting')
+export const setInspectorEngine = (engine: InspectorEngine): void => {
+  if (!isInspectorEngine(engine)) {
+    throw new InspectorBinaryNotFoundError(
+      `The inspector engine is "${engine}"; expected one of ${INSPECTOR_ENGINES.join(', ')}.`
+    )
+  }
+  selectedEngine = engine
 }
 
-/** `PIKKU_INSPECTOR`, then the configured engine, then DEFAULT_ENGINE. */
-export const resolveInspectorEngine = (
-  env: NodeJS.ProcessEnv = process.env
-): InspectorEngine => {
-  const fromEnv = env.PIKKU_INSPECTOR
-  if (fromEnv) return parseEngine(fromEnv, 'PIKKU_INSPECTOR')
-  return configuredEngine ?? DEFAULT_ENGINE
-}
+export const getInspectorEngine = (): InspectorEngine => selectedEngine
 
 export interface FindInspectorBinaryOptions {
-  /** Which inspector to find; see resolveInspectorEngine by default. */
+  /** Which inspector to find; the one set by setInspectorEngine by default. */
   engine?: InspectorEngine
   platform?: string
   arch?: string
@@ -178,7 +160,7 @@ export const findInspectorBinary = (
   const platform = options.platform ?? process.platform
   const arch = options.arch ?? process.arch
   const exists = options.exists ?? existsSync
-  const engine = options.engine ?? resolveInspectorEngine(env)
+  const engine = options.engine ?? selectedEngine
   const executable = executableName(platform, engine)
   const { binEnv } = ENGINES[engine]
 

@@ -4,12 +4,11 @@ export {
   executableName,
   SUPPORTED_PLATFORMS,
   InspectorBinaryNotFoundError,
-  DEFAULT_ENGINE,
   INSPECTOR_ENGINES,
   ENGINES,
   isInspectorEngine,
-  resolveInspectorEngine,
-  configureInspectorEngine,
+  setInspectorEngine,
+  getInspectorEngine,
 } from './binary.js'
 export type { FindInspectorBinaryOptions, InspectorEngine } from './binary.js'
 export { runInspectorBinary, InspectorBinaryError } from './run-binary.js'

@@ -4,8 +4,8 @@ A Rust port of the Go inspector (`packages/inspector-go`, `pikku-inspect`) on th
 [tsrs](https://github.com/oxc-project/tsrs) compiler crates (a Rust port of
 typescript-go). It lives **beside** the Go inspector and speaks the same JSON
 protocol; the goal is byte-identical output on every project under `templates/`,
-`recipes/` and `verifiers/`. Go is the reference; Rust is the default (DEFAULT_ENGINE) once
-parity is proven. Read [PORTING.md](./PORTING.md) before porting anything.
+`recipes/` and `verifiers/`. Go is the reference; Rust is the CLI's default engine
+(`DEFAULT_ENGINE` in `packages/cli/src/inspector-engine.ts`) now that parity is proven. Read [PORTING.md](./PORTING.md) before porting anything.
 
 Package `pikku-inspect-rs`, binary `pikku-inspect-rs`, library `pikku_inspect`.
 

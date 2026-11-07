@@ -1,6 +1,7 @@
 import {
   INSPECTOR_ENGINES,
   findInspectorBinary,
+  setInspectorEngine,
   type InspectorEngine,
 } from '@pikku/inspector-go'
 
@@ -18,16 +19,8 @@ export const availableEngines = (): InspectorEngine[] =>
     }
   })
 
-/** `before`/`after` bodies that select `engine` through PIKKU_INSPECTOR. */
-export const engineEnv = (engine: InspectorEngine) => {
-  const previous = process.env.PIKKU_INSPECTOR
-  return {
-    select: () => {
-      process.env.PIKKU_INSPECTOR = engine
-    },
-    restore: () => {
-      if (previous === undefined) delete process.env.PIKKU_INSPECTOR
-      else process.env.PIKKU_INSPECTOR = previous
-    },
-  }
-}
+/** `before`/`after` bodies that select `engine` for the inspector package. */
+export const engineEnv = (engine: InspectorEngine) => ({
+  select: () => setInspectorEngine(engine),
+  restore: () => setInspectorEngine('go'),
+})

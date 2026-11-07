@@ -14,7 +14,8 @@ chosen: Build `pikku-inspect-rs` (packages/inspector-rust) on the tsrs compiler
   crates, speaking the same JSON protocol as `pikku-inspect`. Ship both in
   @pikku/inspector-go (prebuilt/<platform>-<arch>/), select with
   PIKKU_INSPECTOR / --inspector / the `inspector` config key, and keep the
-  default in one constant (DEFAULT_ENGINE in packages/inspector-go/src/binary.ts)
+  default in one constant owned by the CLI (DEFAULT_ENGINE in packages/cli/src/inspector-engine.ts;
+  @pikku/inspector-go only finds the engine it is told to use)
   until the parity harness passes. Go stays the reference: when they differ,
   Rust is wrong.
 rules-out:
@@ -64,7 +65,7 @@ because: The Go engine needs the typescript-go source vendored with generated
 
 ## Flipping the default
 
-One commit changes `DEFAULT_ENGINE` to `'rs'` (and the docs/tests that name the
+One commit changes the CLI's `DEFAULT_ENGINE` to `'rs'` (and the docs/tests that name the
 default). Before keeping it: parity jobs green and made blocking, no open item
 above that affects generated output.
 
