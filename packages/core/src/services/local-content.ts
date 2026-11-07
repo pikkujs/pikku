@@ -421,7 +421,7 @@ export class LocalContent implements ContentService {
     })
     return {
       uploadUrl,
-      assetKey: fullKey,
+      fileKey: args.fileKey,
       uploadMethod: 'PUT',
     }
   }

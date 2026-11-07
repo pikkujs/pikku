@@ -36,7 +36,7 @@ export const RequestFileUploadOutput = z.object({
   //~ The client PUTs the raw file bytes to this presigned URL (use uploadMethod).
   uploadUrl: z.string(),
   //~ Persist THIS on your row — it's how you read the file back. It's bucket-less on
-  //~ purpose (getFileViewUrl re-adds the bucket), so never store `assetKey` instead.
+  //~ purpose (getFileViewUrl re-adds the bucket).
   fileKey: z.string(),
   uploadMethod: z.enum(['PUT', 'POST']).optional(),
   uploadHeaders: z.record(z.string(), z.string()).optional(),

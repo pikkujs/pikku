@@ -204,7 +204,6 @@ export interface WorkflowRunStatus {
  * users check with `assertWorkflowRunOwner` first.
  * Each step from `getRunSteps` has a `status`: `pending`, `running`, `scheduled`, `succeeded`, `failed`, `suspended`.
  *
- *
  * @example snippet: workflowApprovalsWaiting
  */
 export interface WorkflowRunService {
