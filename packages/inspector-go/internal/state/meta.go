@@ -263,13 +263,6 @@ type SecretUsage struct {
 	Dynamic Strings `json:"dynamic"`
 }
 
-// ServiceBypass is extract-service-bypass.ts's per-file result: `line:snippet`
-// entries, in source order.
-type ServiceBypass struct {
-	Content   Strings `json:"content"`
-	Variables Strings `json:"variables"`
-}
-
 // SurfaceUsage is one symbol's counters in surfaceUsage.
 type SurfaceUsage struct {
 	Imports int     `json:"imports"`

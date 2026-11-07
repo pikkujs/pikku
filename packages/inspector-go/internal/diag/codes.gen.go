@@ -99,8 +99,6 @@ const (
 	ServicesNotDestructured           Code = "PKU410"
 	WiresNotDestructured              Code = "PKU411"
 	FunctionDynamicImport             Code = "PKU498"
-	DirectContentAccess               Code = "PKU412"
-	DirectEnvAccess                   Code = "PKU413"
 	DuplicateCoreVersion              Code = "PKU717"
 	CoreVersionSkew                   Code = "PKU718"
 	SplitTypeIdentity                 Code = "PKU719"
