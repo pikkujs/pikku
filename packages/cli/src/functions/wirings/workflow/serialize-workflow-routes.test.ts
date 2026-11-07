@@ -8,14 +8,14 @@ describe('serializeWorkflowRoutes', () => {
   test('both stream variants are the same core poller, told how much to say', () => {
     const { functions: result } = serializeWorkflowRoutes(leaf)
 
-    const delegations = result.match(/await streamWorkflowRunStatus\(/g) ?? []
-    assert.equal(delegations.length, 2)
-    const detailed = result.match(/detailed: true/g) ?? []
+    // The poller lives in core behind rpc.exposedWorkflow, so a route only
+    // names which variant it wants.
+    assert.equal(result.match(/exposedWorkflow\.streamStatus\(/g)?.length, 1)
     assert.equal(
-      detailed.length,
-      1,
-      'only the full stream asks for output, error and child run ids'
+      result.match(/exposedWorkflow\.streamStatusFull\(/g)?.length,
+      1
     )
+    assert.ok(!result.includes('streamWorkflowRunStatus'))
   })
 
   // The frames themselves are core's, tested by running the poller in
@@ -34,14 +34,14 @@ describe('serializeWorkflowRoutes', () => {
     assert.ok(!result.includes('plannedSteps'))
   })
 
-  test('emits an approve route wired to approveStep', () => {
+  test('emits an approve route wired to rpc.exposedWorkflow.approve', () => {
     const { functions: result } = serializeWorkflowRoutes(leaf)
 
     assert.match(result, /route: '\/workflow\/:workflowName\/approve\/:runId'/)
     assert.match(result, /func: workflowApprover/)
     assert.match(
       result,
-      /await workflowService\.approveStep\(runId, reason, decision, wire\.session\)/
+      /await wire\.rpc\.exposedWorkflow\.approve\(workflowName, runId, reason, decision\)/
     )
   })
 
@@ -80,46 +80,41 @@ describe('serializeWorkflowRoutes', () => {
     )
   })
 
-  test('a start is checked before anything is created, and uses what the check returns', () => {
+  test('every route goes through rpc.exposedWorkflow and holds no access logic', () => {
     const { functions } = serializeWorkflowRoutes(leaf)
 
-    assert.match(
-      body(functions, 'workflowStarter'),
-      /checkWorkflowStart\(workflowName, data \?\? \{\}, wire\)[\s\S]*startWorkflow\(workflowName as any, start\.input as any, \{\s+wire: start\.wire,/
-    )
-    assert.match(
-      body(functions, 'workflowRunner'),
-      /checkWorkflowStart\(workflowName, data \?\? \{\}, wire\)[\s\S]*runToCompletion\(workflowName, start\.input, wire\.rpc, \{\s+wire: start\.wire,/
-    )
-  })
-
-  test('status routes read a run only through the run check, naming the workflow', () => {
-    const { functions } = serializeWorkflowRoutes(leaf)
-
-    assert.match(
-      body(functions, 'workflowStatusChecker'),
-      /checkWorkflowRunAccess\(workflowName, run, wire, 'read'\)/
-    )
-    for (const name of ['workflowStatusStream', 'workflowStatusStreamFull']) {
-      const stream = body(functions, name)
-      assert.match(stream, /workflowName/)
-      assert.match(stream, /\n\s+wire,/)
+    const calls: Record<string, string> = {
+      workflowStarter: 'exposedWorkflow.start(workflowName, data)',
+      workflowRunner: 'exposedWorkflow.run(workflowName, data)',
+      workflowStatusChecker: 'exposedWorkflow.status(workflowName, runId)',
+      workflowStatusStream: 'exposedWorkflow.streamStatus(workflowName, runId)',
+      workflowStatusStreamFull:
+        'exposedWorkflow.streamStatusFull(workflowName, runId)',
+      workflowApprover:
+        'exposedWorkflow.approve(workflowName, runId, reason, decision)',
     }
-  })
-
-  test('the approver checks the workflow and the run before answering', () => {
-    const { functions } = serializeWorkflowRoutes(leaf)
-    const approver = body(functions, 'workflowApprover')
-
-    assert.match(
-      approver,
-      /checkWorkflowRunAccess\(workflowName, run, wire, 'approve'\)/
-    )
-    assert.ok(
-      approver.indexOf('checkWorkflowRunAccess(') <
-        approver.indexOf('approveStep('),
-      'the check has to run before the decision is recorded'
-    )
+    for (const [name, call] of Object.entries(calls)) {
+      assert.ok(
+        body(functions, name).includes(`wire.rpc.${call}`),
+        `${name} should call wire.rpc.${call}`
+      )
+    }
+    // The expose gate and the declaration checks are the callee's, so none of
+    // them can appear in generated code, and the start is not made internally.
+    for (const logic of [
+      /checkWorkflowStart/,
+      /checkWorkflowRunAccess/,
+      /streamWorkflowRunStatus/,
+      /startWorkflow\(/,
+      /runToCompletion/,
+      /approveStep/,
+      /\bexpose\b/,
+    ]) {
+      const code = functions
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '')
+      assert.ok(!logic.test(code), `generated routes must not contain ${logic}`)
+    }
   })
 
   test('no route lets a caller pick the graph entry node', () => {

@@ -5,6 +5,7 @@ import {
   resetPikkuState,
   pikkuState,
   setSingletonServices,
+  getSingletonServices,
 } from '../../pikku-state.js'
 import { resumeAgentSync } from './agent-runner.js'
 import { resumeAgent } from './agent-stream.js'
@@ -15,7 +16,8 @@ import {
   MissingSessionError,
   NotFoundError,
 } from '../../errors/errors.js'
-import { assertAgentRouteAccess } from './agent-prepare.js'
+import { rpcService } from '../rpc/rpc-runner.js'
+import { createAgentRPC } from './agent-rpc.js'
 import type { CoreAgent } from './agent.types.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 
@@ -254,21 +256,102 @@ describe('the owner gate on approve and resume', () => {
   })
 })
 
-describe('assertAgentRouteAccess', () => {
-  beforeEach(() => {
-    resetPikkuState()
-    addAgent('hidden')
-    addAgent('hiddenPublic', { auth: false })
-    addAgent('exposed', { expose: true })
-  })
+describe('rpc.exposedAgent is the external entry for an agent', () => {
+  const exposedAgent = (services: any, wire: any = {}) =>
+    rpcService.getContextRPCService(
+      services,
+      { channel: { send() {}, close() {} }, ...wire } as any,
+      { sessionService: sessionService({ userId: 'u1' }) } as any,
+      0
+    ).exposedAgent
+  const internalAgent = (services: any) =>
+    rpcService.getContextRPCService(
+      services,
+      { channel: { send() {}, close() {} } } as any,
+      { sessionService: sessionService({ userId: 'u1' }) } as any,
+      0
+    ).agent
 
-  for (const name of ['hidden', 'hiddenPublic', 'nosuchagent']) {
-    test(`a route cannot reach '${name}'`, () => {
-      assert.throws(() => assertAgentRouteAccess(name), NotFoundError)
-    })
+  const input = { message: 'hi', threadId: 't', resourceId: 'u1' }
+  const answer = { toolCallId: TOOL_CALL_ID, approved: true }
+
+  const calls: Record<string, (name: string, services: any) => Promise<any>> = {
+    run: (name, services) => exposedAgent(services).run(name, input),
+    stream: (name, services) => exposedAgent(services).stream(name, input),
+    approve: (name, services) =>
+      exposedAgent(services).approve(RUN_ID, [answer], name),
+    resume: (name, services) =>
+      exposedAgent(services).resume(RUN_ID, {
+        ...answer,
+        expectedAgentName: name,
+      }),
   }
 
-  test('an exposed agent is reachable, and its own auth decides the rest', () => {
-    assert.doesNotThrow(() => assertAgentRouteAccess('exposed'))
+  beforeEach(() => {
+    resetPikkuState()
+    clearPermissionsCache()
+    // `resetPikkuState` clears what importing agent-rpc registered.
+    pikkuState(null, 'agent', 'rpcFactory', createAgentRPC)
+  })
+
+  for (const [call, run] of Object.entries(calls)) {
+    for (const name of ['hidden', 'hiddenPublic', 'nosuchagent']) {
+      test(`${call} answers 404 for '${name}' and touches nothing`, async () => {
+        const resolved = setup(name)
+        addAgent('hidden')
+        addAgent('hiddenPublic', { auth: false })
+        await assert.rejects(
+          () => run(name, getSingletonServices()),
+          NotFoundError
+        )
+        assert.deepEqual(resolved, [])
+      })
+    }
+  }
+
+  test('approve and resume with no agent named are a 404, not a bypass', async () => {
+    setup('exposed')
+    addAgent('exposed', { expose: true })
+    const rpc = exposedAgent(getSingletonServices())
+    await assert.rejects(() => rpc.approve(RUN_ID, [answer]), NotFoundError)
+    await assert.rejects(() => rpc.resume(RUN_ID, answer), NotFoundError)
+  })
+
+  test('an exposed agent is reached, and its own checks still decide', async () => {
+    // Past the gate, the agent's own ownership check is what refuses.
+    setup('exposed', 'someone-else')
+    addAgent('exposed', { expose: true })
+    await assert.rejects(
+      () => calls.approve!('exposed', getSingletonServices()),
+      ForbiddenError
+    )
+    await assert.rejects(
+      () => calls.resume!('exposed', getSingletonServices()),
+      ForbiddenError
+    )
+  })
+
+  test('interrupt is not offered to a route', async () => {
+    setup('exposed')
+    addAgent('exposed', { expose: true })
+    await assert.rejects(
+      () => exposedAgent(getSingletonServices()).interrupt(RUN_ID),
+      NotFoundError
+    )
+  })
+
+  test('rpc.agent still reaches an agent that is not exposed', async () => {
+    // The same run, refused by ownership rather than by the expose gate.
+    setup('hidden', 'someone-else')
+    addAgent('hidden')
+    await assert.rejects(
+      () =>
+        internalAgent(getSingletonServices()).approve(
+          RUN_ID,
+          [answer],
+          'hidden'
+        ),
+      ForbiddenError
+    )
   })
 })
