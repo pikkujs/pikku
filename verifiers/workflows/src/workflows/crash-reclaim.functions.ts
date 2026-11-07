@@ -34,6 +34,7 @@ export const crashReclaimWorkflow = pikkuWorkflowFunc<
   { crashes: number },
   { attempt: number; pid: number }
 >({
+  auth: false,
   func: async (_services, data, { workflow }) => {
     return await workflow.do('crash-prone step', 'crashProneStep', data, {
       retries: 1,

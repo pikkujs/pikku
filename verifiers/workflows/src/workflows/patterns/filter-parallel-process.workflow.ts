@@ -8,6 +8,7 @@ export const filterParallelProcessWorkflow = pikkuWorkflowFunc<
   { emails: string[] },
   { validCount: number; invalidCount: number }
 >({
+  auth: false,
   title: 'Filter Parallel Process',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

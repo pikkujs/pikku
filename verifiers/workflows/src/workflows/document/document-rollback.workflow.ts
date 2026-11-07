@@ -8,6 +8,7 @@ export const documentRollbackWorkflow = pikkuWorkflowFunc<
   { documentId: string; targetVersion: number; reason: string },
   { documentId: string; rolledBackTo: number; newVersion: number }
 >({
+  auth: false,
   title: 'Document Rollback',
   tags: ['document'],
   func: async (_services, data, { workflow }) => {

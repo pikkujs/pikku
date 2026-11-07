@@ -393,23 +393,13 @@ export const resolveAgent = (
 }
 
 /**
- * The gate of the generated agent routes, called by those routes and never by
- * `rpc.agent`, which stays open to the application's own code.
- *
- * A signed-in caller reaches `expose: true` agents; everything else is a 404 so
- * hidden agent names cannot be probed. An anonymous caller reaches only those
- * that also say `auth: false`, and gets the same 401 for every other name.
+ * Called by the generated agent routes and never by `rpc.agent`, which would
+ * otherwise make an outside call look internal. Only an `expose: true` agent is
+ * reachable, and anything else is a 404 so hidden names cannot be probed. Who may
+ * then call it is the agent's own `auth`, scopes and permissions.
  */
-export const assertAgentRouteAccess = (
-  agentName: string,
-  access: 'session' | 'anonymous'
-): void => {
-  const agent = findAgent(agentName)
-  if (access === 'anonymous') {
-    if (agent?.expose !== true || agent.auth !== false) {
-      throw new MissingSessionError()
-    }
-  } else if (agent?.expose !== true) {
+export const assertAgentRouteAccess = (agentName: string): void => {
+  if (findAgent(agentName)?.expose !== true) {
     throw new NotFoundError(`AI agent not found: ${agentName}`)
   }
 }
@@ -431,7 +421,7 @@ export async function assertAgentAuthorized(
     ? await params.sessionService.get()
     : undefined
 
-  if (agent.auth === true && !session) {
+  if (agent.auth !== false && !session) {
     throw new MissingSessionError('Authentication required')
   }
 

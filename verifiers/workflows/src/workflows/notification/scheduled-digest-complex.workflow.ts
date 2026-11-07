@@ -8,6 +8,7 @@ export const scheduledDigestComplexWorkflow = pikkuWorkflowComplexFunc<
   { userIds: string[]; since: string },
   { sentCount: number; skippedCount: number }
 >({
+  auth: false,
   title: 'Scheduled Digest Complex',
   tags: ['notification'],
   func: async (_services, data, { workflow }) => {

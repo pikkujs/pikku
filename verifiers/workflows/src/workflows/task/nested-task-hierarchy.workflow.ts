@@ -12,6 +12,7 @@ export const nestedTaskHierarchyWorkflow = pikkuWorkflowFunc<
   { rootTitle: string; level1Titles: string[]; level2Titles: string[] },
   { rootTaskId: string; totalTasksCreated: number }
 >({
+  auth: false,
   title: 'Nested Task Hierarchy',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

@@ -32,6 +32,7 @@ beforeEach(() => {
 
 const addTestAgent = (agentName: string) => {
   const agent: CoreAgent = {
+    auth: false,
     name: agentName,
     description: 'test agent',
     goal: 'be helpful',

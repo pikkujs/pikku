@@ -12,6 +12,7 @@ export const taskWithCommentsWorkflow = pikkuWorkflowFunc<
   { title: string; comments: Array<{ content: string; authorId: string }> },
   { taskId: string; commentIds: string[]; finalCommentCount: number }
 >({
+  auth: false,
   title: 'Task with Comments',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

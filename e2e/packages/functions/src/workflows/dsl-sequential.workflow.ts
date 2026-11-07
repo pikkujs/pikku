@@ -4,6 +4,7 @@ export const dslSequentialWorkflow = pikkuWorkflowFunc<
   { value: number; name: string },
   { doubled: number; message: string; notified: boolean }
 >({
+  auth: false,
   expose: true,
   func: async ({}, data, { workflow }) => {
     const doubled = await workflow.do('Double value', 'doubleValue', {

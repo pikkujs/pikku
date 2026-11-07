@@ -22,6 +22,7 @@ export const documentApprovalWorkflow = pikkuWorkflowFunc<
     rejectedBy?: string
   }
 >({
+  auth: false,
   title: 'Document Approval',
   tags: ['document'],
   func: async (_services, data, { workflow }) => {

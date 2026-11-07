@@ -1,7 +1,17 @@
-import { test, describe } from 'node:test'
+import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
+import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { streamWorkflowRunStatus } from './workflow-status-stream.js'
+import { MissingSessionError } from '../../errors/errors.js'
+import { WorkflowNotFoundError } from './workflow-errors.js'
 import type { WorkflowRunService } from './workflow.types.js'
+
+beforeEach(() => {
+  resetPikkuState()
+  pikkuState(null, 'workflows', 'meta', {
+    checkout: { name: 'checkout', source: 'graph', expose: true },
+  } as any)
+})
 
 const run = (over: Record<string, unknown> = {}) =>
   ({
@@ -57,7 +67,7 @@ const harness = (
             closed = true
           },
         },
-        session,
+        wire: { session },
         detailed,
         pollIntervalMs: 1,
       }),
@@ -74,9 +84,16 @@ describe('streamWorkflowRunStatus refuses anyone but the owner of this workflow'
   test('a run with no owner', () =>
     refused(run({ wire: { type: 'trigger' } }), { userId: 'user-a' }))
   test('another user', () => refused(run(), { userId: 'user-b' }))
-  test('no session', () => refused(run(), null))
   test('a run of a different workflow', () =>
-    refused(run({ workflow: 'other' }), { userId: 'user-a' }))
+    assert.rejects(
+      harness([{ run: run({ workflow: 'other' }), steps: [] }]).stream(),
+      WorkflowNotFoundError
+    ))
+  test('no session', () =>
+    assert.rejects(
+      harness([{ run: run(), steps: [] }], { session: null }).stream(),
+      MissingSessionError
+    ))
 })
 
 describe('streamWorkflowRunStatus', () => {
@@ -305,7 +322,7 @@ describe('streamWorkflowRunStatus', () => {
         workflowName: 'checkout',
         runId: 'run-1',
         channel: { send: async () => {}, close: async () => {} },
-        session: { userId: 'user-a' },
+        wire: { session: { userId: 'user-a' } },
         pollIntervalMs: 1,
       }),
       /the database went away/
@@ -346,7 +363,7 @@ describe('streamWorkflowRunStatus closes the channel when a poll throws', () => 
               closed = true
             },
           },
-          session: { userId: 'user-a' },
+          wire: { session: { userId: 'user-a' } },
           pollIntervalMs: 1,
         }),
     }
@@ -403,7 +420,7 @@ describe('streamWorkflowRunStatus never runs two polls at once', () => {
         },
         close: async () => {},
       },
-      session: { userId: 'user-a' },
+      wire: { session: { userId: 'user-a' } },
       pollIntervalMs: 1,
     })
 

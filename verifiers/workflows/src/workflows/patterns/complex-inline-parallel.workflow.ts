@@ -9,6 +9,7 @@ export const complexInlineParallelWorkflow = pikkuWorkflowComplexFunc<
   { emails: string[] },
   { count: number }
 >({
+  auth: false,
   title: 'Complex Inline Parallel',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

@@ -23,6 +23,7 @@ describe('a graph run starts at an entry node the graph declared', () => {
     name: 'payout',
     pikkuFuncId: 'payout',
     source: 'graph' as const,
+    auth: false,
     entryNodeIds: ['validate'],
     graphHash: 'payout-hash',
     nodes: {

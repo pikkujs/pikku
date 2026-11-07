@@ -8,6 +8,7 @@ export const sagaWithCompensationLogicWorkflow = pikkuWorkflowFunc<
   { orderId: string; shouldFail: boolean },
   { finalState: string }
 >({
+  auth: false,
   title: 'Saga With Compensation Logic',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

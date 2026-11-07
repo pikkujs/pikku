@@ -25,6 +25,8 @@ const forwardedAuthFields = (output: string) =>
 describe('the scaffold dispatchers decline to gate', () => {
   const dispatchers: Array<[string, string]> = [
     ['public rpc', serializePublicRPC(leaf).functions],
+    ['public agent', serializePublicAgent(leaf).functions],
+    ['workflow routes', serializeWorkflowRoutes(leaf).functions],
     ['events channel', serializeEventsScaffold(leaf).functions],
   ]
 
@@ -41,26 +43,6 @@ describe('the scaffold dispatchers decline to gate', () => {
         ['auth: false,'],
         `${name} gates the call itself instead of leaving it to the function it forwards to`
       )
-    })
-  }
-})
-
-describe('the workflow and agent routes gate the call themselves', () => {
-  const surfaces: Array<[string, string]> = [
-    ['public agent', serializePublicAgent(leaf).functions],
-    ['workflow routes', serializeWorkflowRoutes(leaf).functions],
-  ]
-
-  for (const [name, output] of surfaces) {
-    test(name, () => {
-      for (const declaration of declarations(output)) {
-        if (!/= pikkuSessionlessFunc\(/.test(declaration)) continue
-        assert.match(
-          declaration,
-          /'anonymous'|^\s*(auth: true|permissions: )/m,
-          `${declaration.match(/export const (\w+)/)?.[1]} is sessionless without the anonymous gate`
-        )
-      }
     })
   }
 })

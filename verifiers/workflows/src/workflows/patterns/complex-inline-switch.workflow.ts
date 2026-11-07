@@ -9,6 +9,7 @@ export const complexInlineSwitchWorkflow = pikkuWorkflowComplexFunc<
   { action: string; email: string },
   { status: string }
 >({
+  auth: false,
   title: 'Complex Inline Switch',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

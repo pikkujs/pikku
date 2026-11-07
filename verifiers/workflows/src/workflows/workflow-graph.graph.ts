@@ -1,6 +1,7 @@
 import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 export const graphOnboarding = pikkuWorkflowGraph({
+  auth: false,
   description: 'User onboarding workflow',
   tags: ['onboarding', 'graph'],
   nodes: {

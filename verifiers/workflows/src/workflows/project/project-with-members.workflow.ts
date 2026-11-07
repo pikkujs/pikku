@@ -16,6 +16,7 @@ export const projectWithMembersWorkflow = pikkuWorkflowFunc<
   },
   { projectId: string; invitedMembers: string[]; totalMembers: number }
 >({
+  auth: false,
   title: 'Project With Members',
   tags: ['project'],
   func: async (_services, data, { workflow }) => {

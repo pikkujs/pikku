@@ -20,6 +20,7 @@ describe('graph-runner bugs', () => {
       name: 'testPrematureCompletion',
       pikkuFuncId: 'testPrematureCompletion',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a'],
       graphHash: 'test-hash',
       nodes: {
@@ -61,6 +62,7 @@ describe('graph-runner bugs', () => {
       name: 'testStartNodeGate',
       pikkuFuncId: 'testStartNodeGate',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['gate'],
       graphHash: 'startnode-hash',
       nodes: {
@@ -100,6 +102,7 @@ describe('graph-runner bugs', () => {
       name: 'testStartNodeAllowed',
       pikkuFuncId: 'testStartNodeAllowed',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a', 'b'],
       graphHash: 'startnode-ok-hash',
       nodes: {
@@ -134,6 +137,7 @@ describe('graph-runner bugs', () => {
       name: 'testOrphanedRun',
       pikkuFuncId: 'testOrphanedRun',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a'],
       graphHash: 'orphan-hash',
       nodes: {
@@ -167,6 +171,7 @@ describe('graph-runner bugs', () => {
       name: 'testUnknownNextTarget',
       pikkuFuncId: 'testUnknownNextTarget',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a'],
       graphHash: 'unknown-next-hash',
       nodes: {
@@ -198,6 +203,7 @@ describe('graph-runner bugs', () => {
       name: 'testAmbiguousTemplateStepRemap',
       pikkuFuncId: 'testAmbiguousTemplateStepRemap',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['start'],
       graphHash: 'ambiguous-step-remap-hash',
       nodes: {
@@ -234,6 +240,7 @@ describe('graph-runner bugs', () => {
       name: 'testAmbiguousTemplateBranchRemap',
       pikkuFuncId: 'testAmbiguousTemplateBranchRemap',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['start'],
       graphHash: 'ambiguous-branch-remap-hash',
       nodes: {
@@ -283,6 +290,7 @@ describe('graph-runner bugs', () => {
       name: 'testConvergingNextNode',
       pikkuFuncId: 'testConvergingNextNode',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a', 'b'],
       graphHash: 'converging-hash',
       nodes: {
@@ -334,6 +342,7 @@ describe('graph-runner bugs', () => {
       name: 'testCyclicGraph',
       pikkuFuncId: 'testCyclicGraph',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['start'],
       graphHash: 'cyclic-hash',
       nodes: {
@@ -413,6 +422,7 @@ describe('graph-runner bugs', () => {
       name: 'testInlineConvergingSingleExecution',
       pikkuFuncId: 'testInlineConvergingSingleExecution',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a', 'b'],
       graphHash: 'inline-converging-hash',
       nodes: {
@@ -451,6 +461,7 @@ describe('graph-runner bugs', () => {
       name: 'testInlineFailure',
       pikkuFuncId: 'testInlineFailure',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a'],
       graphHash: 'inline-fail-hash',
       nodes: {
@@ -511,6 +522,7 @@ describe('graph-runner bugs', () => {
       name: 'testInlineCyclic',
       pikkuFuncId: 'testInlineCyclic',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['begin'],
       graphHash: 'inline-cyclic-hash',
       nodes: {
@@ -570,6 +582,7 @@ describe('graph-runner bugs', () => {
       name: 'testQueuedRpcMissing',
       pikkuFuncId: 'testQueuedRpcMissing',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a'],
       graphHash: 'queued-rpc-missing-hash',
       nodes: {
@@ -613,6 +626,7 @@ describe('graph-runner bugs', () => {
       name: 'testInlineRpcMissing',
       pikkuFuncId: 'testInlineRpcMissing',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a'],
       graphHash: 'inline-rpc-missing-hash',
       nodes: {
@@ -673,6 +687,7 @@ describe('graph-runner bugs', () => {
       name: 'testInlineMetaGraph',
       pikkuFuncId: 'testInlineMetaGraph',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a'],
       graphHash: 'inline-meta-graph-hash',
       nodes: {
@@ -704,6 +719,7 @@ describe('graph-runner bugs', () => {
       name: 'testAgentNode',
       pikkuFuncId: 'testAgentNode',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a'],
       graphHash: 'agent-node-hash',
       nodes: {
@@ -790,6 +806,7 @@ describe('graph-runner bugs', () => {
       name: 'testInlineAgentNode',
       pikkuFuncId: 'testInlineAgentNode',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['agentNode'],
       graphHash: 'inline-agent-hash',
       nodes: {
@@ -838,6 +855,7 @@ describe('graph-runner bugs', () => {
       name: 'testRetries',
       pikkuFuncId: 'testRetries',
       source: 'graph',
+      auth: false,
       // All three are dependency-free, so all three are entry nodes — a
       // `startNode` may only name one the graph declared.
       entryNodeIds: ['a', 'b', 'c'],
@@ -946,6 +964,7 @@ describe('graph-runner bugs', () => {
       name: 'testItemPassthrough',
       pikkuFuncId: 'testItemPassthrough',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['map'],
       graphHash: 'inline-item-passthrough-hash',
       nodes: {
