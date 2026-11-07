@@ -65,6 +65,7 @@ export const createFixture = async (): Promise<Fixture> => {
   mkdirSync(worktrees)
   cpSync(join(here, 'template'), repo, { recursive: true })
   renameSync(join(repo, 'gitignore'), join(repo, '.gitignore'))
+  renameSync(join(repo, 'oxlintrc.json'), join(repo, '.oxlintrc.json'))
   for (const pkg of VENDORED) vendor(repo, pkg)
   await exec('bun', ['install'], { cwd: repo })
   await git(repo, 'init', '-q', '-b', 'main')

@@ -2,6 +2,7 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["packages/functions/src"],
   "outDir": "packages/functions/.pikku",
+  "db": { "engine": "sqlite" },
   "scaffold": {
     "pikkuDir": "packages/functions/src/scaffold",
     "rpc": true,
