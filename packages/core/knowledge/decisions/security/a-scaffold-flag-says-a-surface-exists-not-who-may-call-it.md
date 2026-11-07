@@ -45,11 +45,10 @@ type.
 
 `pikku enable <feature>` lost its `--noAuth` flag with the field it wrote.
 
-The workflow routes and the public agent are not dispatchers in that sense, and
-gate the call themselves — see
-[[workflow-and-agent-routes-require-a-session-and-an-opt-in]]. What they forward
-to does not answer for itself: a workflow or agent has no gate of its own that
-runs by default, and `rpc.startWorkflow` is deliberately open to application code.
+The workflow routes and the public agent are dispatchers too, with one check of
+their own: `expose: true`, because they call `rpc.startWorkflow` and `rpc.agent`,
+which treat the caller as the application. Everything else is the target's own
+declaration — see [[a-workflow-or-agent-is-a-function-and-its-declaration-decides]].
 
 **What this rules out:** reading a scaffold flag as an authorization decision;
 gating a surface in the config instead of on the function that answers it; and

@@ -12,6 +12,7 @@ export const bulkTaskAssignmentWorkflow = pikkuWorkflowFunc<
   { tasks: Array<{ title: string; assigneeId: string }> },
   { assignedTasks: Array<{ taskId: string; assigneeId: string }> }
 >({
+  auth: false,
   title: 'Bulk Task Assignment',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

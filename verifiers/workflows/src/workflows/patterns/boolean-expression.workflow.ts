@@ -13,6 +13,7 @@ export const booleanExpressionWorkflow = pikkuWorkflowFunc<
   },
   { processType: string; notificationsSent: number }
 >({
+  auth: false,
   title: 'Boolean Expression',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

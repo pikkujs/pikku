@@ -19,8 +19,7 @@ export type { MockLlmCall }
 
 /**
  * The principal a call runs as. Absent fields mean the header is not sent,
- * which is how a genuinely sessionless call is expressed. Such a call uses the
- * anonymous routes, the only ones a caller without a session can reach.
+ * which is how a genuinely sessionless call is expressed.
  */
 export type Identity = { userId?: string; orgId?: string }
 
@@ -30,11 +29,6 @@ export const identityHeaders = (
   ...(identity.userId ? { 'x-user-id': identity.userId } : {}),
   ...(identity.orgId ? { 'x-org-id': identity.orgId } : {}),
 })
-
-const agentRoute = (agent: string, identity: Identity) =>
-  identity.userId || identity.orgId
-    ? `/rpc/agent/${agent}`
-    : `/rpc/agent/${agent}/anonymous`
 
 /**
  * The agent stream speaks AG-UI, so these are the wire names — not the
@@ -69,7 +63,7 @@ export const postAgent = async (
   identity: Identity,
   body: Record<string, unknown>
 ): Promise<ScenarioHttpResponse> =>
-  postScenarioJson(`${apiUrl}${agentRoute(agent, identity)}`, {
+  postScenarioJson(`${apiUrl}/rpc/agent/${agent}`, {
     body,
     headers: identityHeaders(identity),
   })
@@ -116,7 +110,7 @@ export const postAgentStream = async (
   identity: Identity,
   body: Record<string, unknown>
 ): Promise<{ status: number; events: StreamEvent[] }> => {
-  const res = await fetch(`${apiUrl}${agentRoute(agent, identity)}/stream`, {
+  const res = await fetch(`${apiUrl}/rpc/agent/${agent}/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -77,6 +77,7 @@ export const orgOnboardingSimpleWorkflow = pikkuWorkflowFunc<
   { email: string; name: string; plan: string; memberEmails: string[] },
   { orgId: string; ownerId?: string }
 >({
+  auth: false,
   disabled: 'no callers found, 2026-10-20',
   func: async ({}, data, { workflow }) => {
     // Step 1: Create organization
@@ -178,25 +179,28 @@ export const orgOnboardingSimpleWorkflow = pikkuWorkflowFunc<
 export const sequentialInviteSimpleWorkflow = pikkuWorkflowFunc<
   { orgId: string; memberEmails: string[]; delayMs: number },
   { invitedCount: number }
->(async ({}, data, { workflow }) => {
-  // Process members sequentially with optional delay
-  for (const email of data.memberEmails) {
-    await workflow.do(`Invite member ${email}`, 'inviteMember', {
-      orgId: data.orgId,
-      email,
-    })
+>({
+  auth: false,
+  func: async ({}, data, { workflow }) => {
+    // Process members sequentially with optional delay
+    for (const email of data.memberEmails) {
+      await workflow.do(`Invite member ${email}`, 'inviteMember', {
+        orgId: data.orgId,
+        email,
+      })
 
-    if (data.delayMs > 0) {
-      await workflow.sleep(
-        `Wait after invitation for member ${email}`,
-        `${data.delayMs}ms`
-      )
+      if (data.delayMs > 0) {
+        await workflow.sleep(
+          `Wait after invitation for member ${email}`,
+          `${data.delayMs}ms`
+        )
+      }
     }
-  }
 
-  return {
-    invitedCount: data.memberEmails.length,
-  }
+    return {
+      invitedCount: data.memberEmails.length,
+    }
+  },
 })
 
 // RPC function to trigger organization onboarding simple workflow

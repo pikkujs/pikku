@@ -98,8 +98,6 @@ export interface AnalyzerOptions {
 const GATEWAY_EXPANDED_CALLERS = new Set([
   'agentCaller',
   'agentStreamCaller',
-  'agentAnonymousCaller',
-  'agentAnonymousStreamCaller',
   'agentApproveCaller',
   'agentResumeCaller',
 ])
@@ -608,16 +606,6 @@ export function analyzeDeployment(
       },
       {
         method: 'post',
-        route: prefixed(`/rpc/agent/${agentName}/anonymous`),
-        pikkuFuncId: `agentRun:${agentName}`,
-      },
-      {
-        method: 'post',
-        route: prefixed(`/rpc/agent/${agentName}/anonymous/stream`),
-        pikkuFuncId: `agentStream:${agentName}`,
-      },
-      {
-        method: 'post',
         route: prefixed(`/rpc/agent/${agentName}/approve`),
         pikkuFuncId: `agentApprove:${agentName}`,
       },
@@ -1025,7 +1013,6 @@ export function analyzeDeployment(
   // queue meta is bundled and the runtime can resolve per-step queues.
   const SCAFFOLD_WORKFLOW_FUNCS = new Set([
     'workflowStarter',
-    'workflowAnonymousStarter',
     'workflowRunner',
     'workflowStatusChecker',
     'workflowStatusStream',

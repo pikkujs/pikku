@@ -20,6 +20,7 @@ export const expressCheckoutWorkflow = pikkuWorkflowFunc<
   },
   { orderId: string; success: boolean }
 >({
+  auth: false,
   title: 'Express Checkout',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {

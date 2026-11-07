@@ -18,6 +18,7 @@ export const tagCategorizationWorkflow = pikkuWorkflowComplexFunc<
   },
   { categorizedTasks: Array<{ taskId: string; tags: string[] }> }
 >({
+  auth: false,
   title: 'Tag Categorization',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

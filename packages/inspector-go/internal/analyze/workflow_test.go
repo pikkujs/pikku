@@ -165,7 +165,7 @@ export const gated = `+wrapper+`({
 	}
 }
 
-func TestWorkflowExposeOpensRoutesNotAnRPC(t *testing.T) {
+func TestWorkflowDeclarationDecidesAuth(t *testing.T) {
 	res := runWorkflowProject(t, `
 export const opened = pikkuWorkflowFunc({
   expose: true,
@@ -175,13 +175,26 @@ export const opened = pikkuWorkflowFunc({
     await workflow.do('b', 'stepB', data)
   },
 })
+export const signedIn = pikkuWorkflowFunc({
+  expose: true,
+  func: async (_s: any, data: any, { workflow }: any) => {
+    await workflow.do('a', 'stepA', data)
+    await workflow.do('b', 'stepB', data)
+  },
+})
 `, false)
 	meta := workflowMeta(t, res, "opened")
 	if !strings.Contains(meta, `"expose":true,"auth":false`) {
-		t.Errorf("workflow meta lost its opt-in: %s", meta)
+		t.Errorf("workflow meta lost its declaration: %s", meta)
 	}
-	if res.State.RPC.ExposedMeta.Has("opened") {
-		t.Error("expose on a workflow published its body as an RPC")
+	if e := res.State.Functions.Meta.At("opened").Expose; e == nil || !*e {
+		t.Error("expose on a workflow should reach its function meta, as on any function")
+	}
+	if s := res.State.Functions.Meta.At("opened").Sessionless; s == nil || !*s {
+		t.Error("auth: false on a workflow should be sessionless")
+	}
+	if s := res.State.Functions.Meta.At("signedIn").Sessionless; s != nil && *s {
+		t.Error("auth unset on a workflow must need a session, as on any function")
 	}
 }
 

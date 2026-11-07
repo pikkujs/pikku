@@ -8,6 +8,7 @@ export const bulkLeadQualificationWorkflow = pikkuWorkflowComplexFunc<
   { leadIds: string[]; minimumScore: number },
   { qualified: string[]; rejected: string[] }
 >({
+  auth: false,
   title: 'Bulk Lead Qualification',
   tags: ['crm'],
   func: async (_services, data, { workflow }) => {

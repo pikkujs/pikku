@@ -35,7 +35,7 @@ export const routeExposedWorkflow = pikkuWorkflowFunc<
   },
 })
 
-/** The only one the anonymous start route reaches. */
+/** `auth: false`: the same routes take an anonymous caller. */
 export const routePublicWorkflow = pikkuWorkflowFunc<
   { value: number },
   { doubled: number }

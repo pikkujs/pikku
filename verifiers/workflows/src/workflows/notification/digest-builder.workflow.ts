@@ -9,6 +9,7 @@ export const digestBuilderWorkflow = pikkuWorkflowFunc<
   { userId: string; since: string; format: 'html' | 'text' },
   { itemCount: number; sent: boolean }
 >({
+  auth: false,
   title: 'Digest Builder',
   tags: ['notification'],
   func: async (_services, data, { workflow }) => {

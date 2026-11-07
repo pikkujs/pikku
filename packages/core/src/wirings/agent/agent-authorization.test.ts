@@ -63,8 +63,21 @@ describe('assertAgentAuthorized', () => {
     )
   })
 
-  test('does not require a session unless auth is explicitly true', async () => {
-    const agent = addAgent('sessionless')
+  test('auth unset requires a session, like any function', async () => {
+    const agent = addAgent('default')
+    await assert.rejects(
+      () =>
+        assertAgentAuthorized(
+          agent,
+          { sessionService: sessionService(undefined) },
+          null
+        ),
+      MissingSessionError
+    )
+  })
+
+  test('auth: false needs no session', async () => {
+    const agent = addAgent('sessionless', { auth: false })
     await assertAgentAuthorized(
       agent,
       { sessionService: sessionService(undefined) },
@@ -72,8 +85,8 @@ describe('assertAgentAuthorized', () => {
     )
   })
 
-  test('resolves with no sessionService at all (cron / queue invocation)', async () => {
-    const agent = addAgent('no-session-service')
+  test('auth: false resolves with no sessionService at all (cron / queue invocation)', async () => {
+    const agent = addAgent('no-session-service', { auth: false })
     await assertAgentAuthorized(agent, {}, null)
   })
 
@@ -91,7 +104,10 @@ describe('assertAgentAuthorized', () => {
   })
 
   test('enforces scopes even when auth is not required', async () => {
-    const agent = addAgent('scoped-sessionless', { scopes: ['reports:read'] })
+    const agent = addAgent('scoped-sessionless', {
+      auth: false,
+      scopes: ['reports:read'],
+    })
     await assert.rejects(
       () => assertAgentAuthorized(agent, {}, null),
       MissingScopeError

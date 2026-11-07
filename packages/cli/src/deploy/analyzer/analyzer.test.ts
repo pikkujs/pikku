@@ -633,8 +633,6 @@ describe('analyzeDeployment - globalHTTPPrefix', () => {
     assert.deepEqual(routesOf(manifest, 'agent-helper'), [
       '/api/rpc/agent/helper',
       '/api/rpc/agent/helper/stream',
-      '/api/rpc/agent/helper/anonymous',
-      '/api/rpc/agent/helper/anonymous/stream',
       '/api/rpc/agent/helper/approve',
       '/api/rpc/agent/helper/resume',
     ])

@@ -7,6 +7,7 @@ export const dslCancellationWorkflow = pikkuWorkflowFunc<
   { shouldCancel: boolean; value: number },
   { result: number }
 >({
+  auth: false,
   expose: true,
   func: async ({}, data, { workflow }) => {
     if (data.shouldCancel) {

@@ -8,6 +8,7 @@ export const urgentAlertWorkflow = pikkuWorkflowFunc<
   { alertTitle: string; alertMessage: string; oncallUserIds: string[] },
   { notifiedCount: number }
 >({
+  auth: false,
   title: 'Urgent Alert',
   tags: ['notification'],
   func: async (_services, data, { workflow }) => {

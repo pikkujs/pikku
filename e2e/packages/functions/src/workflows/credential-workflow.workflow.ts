@@ -8,6 +8,7 @@ export const credentialWorkflow = pikkuWorkflowFunc<
   {},
   { authenticated: boolean; token: string }
 >({
+  auth: false,
   expose: true,
   func: async ({}, _data, { workflow }) => {
     const profile = await workflow.do(

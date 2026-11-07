@@ -105,6 +105,7 @@ const hasGeneratedOutput = (outDir: string): boolean =>
 
 export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
   title: 'Pikku All',
+  auth: false,
   func: async (
     { logger, config, getInspectorState },
     _data,

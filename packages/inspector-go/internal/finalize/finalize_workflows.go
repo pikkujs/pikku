@@ -31,11 +31,6 @@ func FinalizeWorkflows(st *state.State) error {
 		stampVersionsOnGraph(graph, st)
 		computeStepHashes(graph, st)
 		graph.Set("graphHash", ComputeGraphHash(graph))
-		if id, ok := meta.Get("pikkuFuncId").(string); ok {
-			if fn := st.Functions.Meta.At(id); fn != nil && fn.InputSchemaName != nil {
-				graph.Set("inputSchemaName", *fn.InputSchemaName)
-			}
-		}
 		if graph.Get("source") == "dsl" {
 			deterministic, planned := DeriveWorkflowPlan(stepsOf(meta.Get("steps")))
 			graph.Set("deterministic", deterministic)

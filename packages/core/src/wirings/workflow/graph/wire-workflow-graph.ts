@@ -11,9 +11,9 @@ export interface PikkuWorkflowGraphConfig<
   description?: string
   /** Filters this graph in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
-  /** Reachable through the generated start and approve routes. Without it those routes answer 404. */
+  /** Reachable through the generated workflow routes. Without it those routes answer 404. */
   expose?: boolean
-  /** `false`, alongside `expose: true`, lets the generated anonymous start route reach this graph. */
+  /** `false` means no session is needed to start it. Absent means one is, as for any function. */
   auth?: boolean
   /** The graph's steps, keyed by node id, each naming a function. `pikku meta` lists the names available here. */
   nodes: FuncMap

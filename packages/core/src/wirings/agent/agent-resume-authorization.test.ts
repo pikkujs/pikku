@@ -259,33 +259,16 @@ describe('assertAgentRouteAccess', () => {
     resetPikkuState()
     addAgent('hidden')
     addAgent('hiddenPublic', { auth: false })
-    addAgent('signedIn', { expose: true })
-    addAgent('open', { expose: true, auth: false })
+    addAgent('exposed', { expose: true })
   })
 
   for (const name of ['hidden', 'hiddenPublic', 'nosuchagent']) {
-    test(`a signed-in caller cannot reach '${name}'`, () => {
-      assert.throws(
-        () => assertAgentRouteAccess(name, 'session'),
-        NotFoundError
-      )
+    test(`a route cannot reach '${name}'`, () => {
+      assert.throws(() => assertAgentRouteAccess(name), NotFoundError)
     })
   }
 
-  for (const name of ['hidden', 'hiddenPublic', 'signedIn', 'nosuchagent']) {
-    test(`an anonymous caller cannot reach '${name}'`, () => {
-      assert.throws(
-        () => assertAgentRouteAccess(name, 'anonymous'),
-        MissingSessionError
-      )
-    })
-  }
-
-  test('an exposed agent is reachable with a session', () => {
-    assert.doesNotThrow(() => assertAgentRouteAccess('signedIn', 'session'))
-  })
-
-  test('expose: true with auth: false is reachable anonymously', () => {
-    assert.doesNotThrow(() => assertAgentRouteAccess('open', 'anonymous'))
+  test('an exposed agent is reachable, and its own auth decides the rest', () => {
+    assert.doesNotThrow(() => assertAgentRouteAccess('exposed'))
   })
 })

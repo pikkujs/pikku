@@ -4,6 +4,7 @@ export const dslParallelWorkflow = pikkuWorkflowFunc<
   { values: number[] },
   { results: number[]; total: number }
 >({
+  auth: false,
   expose: true,
   func: async ({}, data, { workflow }) => {
     const results = await Promise.all(

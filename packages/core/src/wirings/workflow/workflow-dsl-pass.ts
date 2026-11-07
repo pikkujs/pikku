@@ -1,4 +1,5 @@
 import { runPikkuFunc } from '../../function/function-runner.js'
+import { provenRunSession } from './workflow-run-proof.js'
 import { runTraceWire } from './workflow-run-trace.js'
 import {
   getCreateWireServices,
@@ -49,10 +50,12 @@ export const runDslWorkflowPass = async (
     : null
   const workflowWire = deps.workflowWire(addonNs)
   workflowWire.pikkuUserId = run.wire?.pikkuUserId
+  const provenSession = provenRunSession(run.wire)
   const wire: PikkuRawWire = {
     ...runTraceWire(run.wire?.traceparent),
     workflow: workflowWire,
     pikkuUserId: run.wire?.pikkuUserId,
+    ...(provenSession ? { session: provenSession } : {}),
   }
   deps.extension?.decorateRunWire(wire, {
     runId,
@@ -84,6 +87,8 @@ export const runDslWorkflowPass = async (
         createWireServices: getCreateWireServices(),
         data: () => run.input,
         packageName: pkgName ?? undefined,
+        gatesPassedAtStart:
+          provenSession !== undefined && run.wire?.verified === 'start',
       }
     )
 

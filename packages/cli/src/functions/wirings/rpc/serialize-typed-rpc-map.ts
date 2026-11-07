@@ -107,11 +107,12 @@ ${generateMergedAgentMap(wireAddonDeclarations)}
 
 import type { PikkuRPC } from '@pikku/core/rpc'
 import type { AgentInput } from '@pikku/core/agent'
+import type { WorkflowRunWire } from '@pikku/core/workflow'
 
 export type TypedStartWorkflow = <Name extends keyof FlattenedWorkflowMap>(
   name: Name,
   input: FlattenedWorkflowMap[Name]['input'],
-  options?: { startNode?: string }
+  options?: { startNode?: string; wire?: WorkflowRunWire }
 ) => Promise<{ runId: string }>
 
 export type TypedRunWorkflow = <Name extends keyof FlattenedWorkflowMap>(
