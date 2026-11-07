@@ -18,7 +18,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./virtual-user` | 104 | 102 | 255 |
 | `./workflow` | 100 | 48 | 165 |
 | `./scenario` | 50 | 48 | 157 |
-| `./agent` | 53 | 51 | 81 |
+| `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 86 |
 | `./types` | 24 | 21 | 82 |
 | `./queue` | 28 | 28 | 75 |
@@ -49,8 +49,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./workflow/types` | 49 | 2 | 13 |
+| `./rpc` | 9 | 9 | 6 |
 | `./scope` | 15 | 15 | 0 |
-| `./rpc` | 8 | 8 | 6 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./trace` | 12 | 12 | 0 |
 | `./testing` | 8 | 8 | 4 |
@@ -3470,6 +3470,31 @@ wireTriggerWebhookSource: <Events extends Record<string, StandardSchemaV1>>(sour
 ## ./rpc
 
 ```ts
+export type PikkuAgentRPC<
+  AgentRun extends (...args: any[]) => any = (...args: any[]) => any,
+  AgentStream extends (...args: any[]) => any = (...args: any[]) => any,
+> = {
+  run: AgentRun
+  stream: AgentStream
+  resume: (
+    runId: string,
+    input: {
+      toolCallId: string
+      approved: boolean
+      expectedAgentName?: string
+    },
+    options?: any
+  ) => Promise<void>
+  approve: (
+    runId: string,
+    approvals: { toolCallId: string; approved: boolean }[],
+    expectedAgentName?: string
+  ) => Promise<any>
+  interrupt: (
+    runId: string,
+    reason?: 'speech' | 'user' | 'timeout'
+  ) => Promise<AgentInterruptResult>
+}
 export type PikkuRPC<
   Invoke extends (...args: any[]) => any = (...args: any[]) => any,
   Mesh extends (...args: any[]) => any = (...args: any[]) => any,
@@ -3489,27 +3514,20 @@ export type PikkuRPC<
     wire: PikkuRawWire
   ) => Promise<Out>
   startWorkflow: startWorkflow
-  agent: {
-    run: AgentRun
-    stream: AgentStream
-    resume: (
-      runId: string,
-      input: {
-        toolCallId: string
-        approved: boolean
-        expectedAgentName?: string
-      },
-      options?: any
-    ) => Promise<void>
+  agent: PikkuAgentRPC<AgentRun, AgentStream>
+  exposedAgent: PikkuAgentRPC
+  exposedWorkflow: {
+    start: (workflowName: string, data?: unknown) => Promise<{ runId: string }>
+    run: (workflowName: string, data?: unknown) => Promise<any>
+    status: (workflowName: string, runId: string) => Promise<any>
     approve: (
+      workflowName: string,
       runId: string,
-      approvals: { toolCallId: string; approved: boolean }[],
-      expectedAgentName?: string
-    ) => Promise<any>
-    interrupt: (
-      runId: string,
-      reason?: 'speech' | 'user' | 'timeout'
-    ) => Promise<AgentInterruptResult>
+      reason: string,
+      decision: unknown
+    ) => Promise<{ ok: true }>
+    streamStatus: (workflowName: string, runId: string) => Promise<void>
+    streamStatusFull: (workflowName: string, runId: string) => Promise<void>
   }
 }
 export class PikkuRPCService< Services extends CoreServices, TypedRPC = PikkuRPC, > {
@@ -3844,7 +3862,8 @@ export interface AgentMessage {
 agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
 export type AgentRPCFactory = (
   wire: PikkuRawWire,
-  options: AgentRPCOptions
+  options: AgentRPCOptions,
+  exposed?: boolean
 ) => PikkuRPC['agent']
 export type AgentRPCOptions = {
   sessionService?: SessionService<CoreUserSession>
@@ -4033,7 +4052,6 @@ export interface AgentThread {
   createdAt: Date
   updatedAt: Date
 }
-assertAgentRouteAccess: (agentName: string) => void
 canAccessThread: (storedResourceId: string, session: { userId?: string | undefined; orgId?: string | undefined; } | undefined) => boolean
 export type CoreAgent<
   PikkuPermission = CorePikkuPermission<any, any>,

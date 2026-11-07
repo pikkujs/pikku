@@ -122,11 +122,11 @@ beforeEach(() => {
 })
 
 describe('a route refuses a start at the request, leaving no run', () => {
-  test('a workflow that is not exposed, or does not exist, is a 404', async () => {
-    declare('hidden', { expose: false, auth: false })
-    for (const name of ['hidden', 'nosuchworkflow']) {
-      await assert.rejects(() => start(name, {}, alice), WorkflowNotFoundError)
-    }
+  test('a workflow that does not exist is a 404', async () => {
+    await assert.rejects(
+      () => start('nosuchworkflow', {}, alice),
+      WorkflowNotFoundError
+    )
     await noRuns()
   })
 
@@ -517,11 +517,10 @@ describe('reading a run', () => {
     checkWorkflowRunAccess(name, target, wire, 'read')
   const bob = { session: { userId: 'bob' } } as any
 
-  test('a hidden workflow, a missing run and a foreign run are all a 404', async () => {
+  test('an unknown workflow, a missing run and a foreign run are all a 404', async () => {
     declare('flow')
-    declare('hidden', { expose: false })
     await assert.rejects(
-      () => read(run(), alice, 'hidden'),
+      () => read(run(), alice, 'nosuchworkflow'),
       WorkflowNotFoundError
     )
     await assert.rejects(() => read(null, alice), WorkflowNotFoundError)
@@ -609,11 +608,6 @@ describe('answering a run', () => {
     )
   })
 
-  test('a hidden workflow is a 404', async () => {
-    declare('flow', { expose: false })
-    await assert.rejects(() => approve(run, alice), WorkflowNotFoundError)
-  })
-
   test('a session is required even on an auth: false workflow', async () => {
     declare('flow', { auth: false })
     await assert.rejects(() => approve(run, anonymous), MissingSessionError)
@@ -629,5 +623,118 @@ describe('answering a run', () => {
   test('the workflow permissions apply', async () => {
     declare('flow', { permissions: { no: async () => false } })
     await assert.rejects(() => approve(run, alice), ForbiddenError)
+  })
+})
+
+describe('rpc.exposedWorkflow is the external entry for a workflow', () => {
+  const entry = (wire: any, channel?: any) =>
+    rpcService.getContextRPCService(
+      services as any,
+      { ...wire, ...(channel ? { channel } : {}) },
+      {} as any,
+      0
+    ).exposedWorkflow
+  const internal = () =>
+    rpcService.getContextRPCService(services as any, {} as any, {} as any, 0)
+  const channel = () => {
+    const sent: unknown[] = []
+    return {
+      sent,
+      send: async (message: unknown) => void sent.push(message),
+      close: async () => {},
+    }
+  }
+  const run = {
+    workflow: 'hidden',
+    input: {},
+    wire: { type: 'http', pikkuUserId: 'alice' },
+  }
+
+  test('a workflow that is not exposed is a 404 on every call, leaving no run', async () => {
+    declare('hidden', { expose: false, auth: false })
+    const sink = channel()
+    const rpc = entry(alice, sink)
+    const calls = {
+      start: () => rpc.start('hidden', {}),
+      run: () => rpc.run('hidden', {}),
+      status: () => rpc.status('hidden', 'r1'),
+      approve: () => rpc.approve('hidden', 'r1', 'gate', { ok: true }),
+      streamStatus: () => rpc.streamStatus('hidden', 'r1'),
+      streamStatusFull: () => rpc.streamStatusFull('hidden', 'r1'),
+    }
+    for (const [name, call] of Object.entries(calls)) {
+      await assert.rejects(call, WorkflowNotFoundError, name)
+    }
+    assert.deepEqual(sink.sent, [])
+    await noRuns()
+  })
+
+  test('an unexposed workflow answers like one that does not exist', async () => {
+    declare('hidden', { expose: false, auth: false })
+    const message = async (name: string) => {
+      try {
+        await entry(alice).start(name, {})
+      } catch (error) {
+        return (error as Error).message.replace(name, '<name>')
+      }
+    }
+    assert.equal(await message('hidden'), await message('nosuchworkflow'))
+  })
+
+  test('a hidden workflow with a real run is not readable or answerable', async () => {
+    declare('hidden', { expose: false, auth: false })
+    const runId = await ws.createRun('hidden', {}, false, 'hash', run.wire)
+    await assert.rejects(
+      () => entry(alice).status('hidden', runId),
+      WorkflowNotFoundError
+    )
+    await assert.rejects(
+      () => entry(alice).approve('hidden', runId, 'gate', {}),
+      WorkflowNotFoundError
+    )
+  })
+
+  test('an exposed workflow starts, and its own declaration still decides', async () => {
+    declare('flow', { auth: true })
+    await assert.rejects(
+      () => entry(anonymous).start('flow', {}),
+      MissingSessionError
+    )
+    await noRuns()
+    const { runId } = await entry(alice).start('flow', {})
+    assert.equal((await ws.getRun(runId))?.wire?.pikkuUserId, 'alice')
+  })
+
+  test('an exposed workflow runs to completion', async () => {
+    declare('flow', { auth: true })
+    assert.equal(await entry(alice).run('flow', {}), 'done')
+  })
+
+  test('an exposed workflow reports the status of its own run', async () => {
+    declare('flow', { auth: true })
+    const { runId } = await entry(alice).start('flow', {})
+    const status = await entry(alice).status('flow', runId)
+    assert.equal(status.status, 'completed')
+    await assert.rejects(
+      () => entry({ session: { userId: 'bob' } }).status('flow', runId),
+      WorkflowRunForbiddenError
+    )
+  })
+
+  test('an exposed workflow streams its own run', async () => {
+    declare('flow', { auth: true })
+    useServices({ workflowRunService: ws })
+    const { runId } = await entry(alice).start('flow', {})
+    const sink = channel()
+    await entry(alice, sink).streamStatus('flow', runId)
+    assert.ok(sink.sent.length > 0)
+  })
+
+  test('rpc.startWorkflow still reaches a workflow that is not exposed', async () => {
+    declare('hidden', { expose: false, auth: false })
+    const { runId } = await internal().startWorkflow('hidden', {}, {
+      inline: true,
+    } as any)
+    assert.equal((await ws.getRun(runId))?.status, 'completed')
   })
 })
