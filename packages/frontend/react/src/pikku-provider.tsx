@@ -82,6 +82,77 @@ type WorkflowRPC = {
   workflowStatus: (workflowName: string, runId: string) => Promise<any>
 }
 
+/**
+ * Runs an agent from a screen. `agentName` is the agent's export, not its
+ * `name` field. `run({ message, threadId, resourceId })` answers `{ runId,
+ * result, usage }`; when a tool with `approvalRequired` is reached it also
+ * carries `status: 'suspended'` and `pendingApprovals` (`toolCallId`,
+ * `toolName`, `args`, `runId`), and `approve({ runId, approvals: [{ toolCallId,
+ * approved }] })` carries on and answers the same shape. Results are untyped
+ * (`any`). Memory: send the same `threadId` every turn and the agent reads that
+ * thread's last 20 stored messages (`memory.lastMessages`), so make one id per
+ * conversation and keep it (state, URL or localStorage) to continue it on a
+ * later visit. This needs the `agentStorage` service and a signed-in user:
+ * signed out, each call gets a new owner and the second turn is refused.
+ * `resourceId` is any stable label; the server files it under the session's
+ * user. To show earlier messages, `usePikkuQuery('getAgentThreadMessages', {
+ * threadId })` returns the stored `AgentMessage[]` in order: render `role`
+ * `'user'` and `'assistant'` and their `content`, a string or `{ type: 'text',
+ * text }` parts. It refuses a thread with no turns yet, so enable it after the
+ * first reply. `getAgentThreads` lists the user's threads and
+ * `deleteAgentThread` removes one; all three come with `scaffold.agent` in
+ * pikku.config.json. `stream` hands back nothing: it resolves once the run
+ * ends. To show the reply as it arrives, POST with
+ * `usePikkuFetch().fetch('/rpc/agent/:agentName/stream', 'POST', { agentName,
+ * message, threadId, resourceId })` and read the response body's `data: <json>`
+ * lines, which are AG-UI events: `TEXT_MESSAGE_CONTENT` carries a `delta` of
+ * text, a `CUSTOM` named `pikku:approval-request` carries a pending approval
+ * (answer it with `approve`), and `RUN_FINISHED` or `RUN_ERROR` ends it.
+ *
+ * @example
+ * const agent = usePikkuAgent('helpAgent')
+ * const pikkuFetch = usePikkuFetch()
+ * // the conversation's id, kept once it has a turn so a later visit continues it
+ * const [threadId, setThreadId] = useState(() => localStorage.getItem('helpThread'))
+ * const history = usePikkuQuery('getAgentThreadMessages', { threadId: threadId! }, { enabled: !!threadId })
+ * // history.data: [{ id, role: 'user' | 'assistant' | 'tool' | 'system', content, createdAt }]
+ * const [live, setLive] = useState('')
+ *
+ * const send = async (message: string) => {
+ *   const id = threadId ?? crypto.randomUUID()
+ *   const response = await pikkuFetch.fetch('/rpc/agent/:agentName/stream', 'POST', {
+ *     agentName: 'helpAgent', message, threadId: id, resourceId: 'help',
+ *   })
+ *   const reader = response.body!.pipeThrough(new TextDecoderStream()).getReader()
+ *   let buffer = ''
+ *   for (;;) {
+ *     const { done, value } = await reader.read()
+ *     if (done) break
+ *     buffer += value
+ *     const frames = buffer.split('\n\n')
+ *     buffer = frames.pop()!
+ *     for (const frame of frames) {
+ *       const event = JSON.parse(frame.replace(/^data: /, ''))
+ *       if (event.type === 'TEXT_MESSAGE_CONTENT') setLive((text) => text + event.delta)
+ *       if (event.type === 'CUSTOM' && event.name === 'pikku:approval-request') {
+ *         const { runId, toolCallId } = event.value
+ *         await agent.approve({ runId, approvals: [{ toolCallId, approved: true }] })
+ *       }
+ *     }
+ *   }
+ *   localStorage.setItem('helpThread', id)
+ *   setThreadId(id)
+ *   setLive('')
+ *   await history.refetch()
+ * }
+ *
+ * // or, without streaming
+ * const reply = await agent.run({ message, threadId: id, resourceId: 'help' })
+ * if (reply.status === 'suspended') {
+ *   const { runId, toolCallId } = reply.pendingApprovals[0]
+ *   await agent.approve({ runId, approvals: [{ toolCallId, approved: true }] })
+ * }
+ */
 export const usePikkuAgent = <
   RPC extends AgentRPC = AgentRPC,
   Name extends string = string,
