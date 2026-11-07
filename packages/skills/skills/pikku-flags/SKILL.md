@@ -20,6 +20,7 @@ Flags are declared in `packages/functions/src/flags.ts`. The one already there i
 ## What the compiler cannot tell you
 
 - A declared flag with no stored row is ON for everyone, in a function and in a client.
+- Every instance that runs a flagged function needs a `featureFlags` source in its singleton services. Without one the gate fails open and the function runs for everyone. `PikkuProvider` configures the client only.
 - The first sync stores it OFF, and publishing syncs. A new flag on a live feature goes dark at its first publish until someone turns it on. Tell the owner.
 - A sync never touches a value someone set, so a killed flag stays killed.
 - A rollout buckets by organization, then user. A signed-out caller has no bucket and gets the feature. For a beta, prefer an override per person or organization.

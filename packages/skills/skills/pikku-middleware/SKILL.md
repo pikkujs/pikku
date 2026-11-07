@@ -14,7 +14,7 @@ What to reach for and why. For how to call it, run this once: `pikku doc middlew
 Broadest to narrowest. Pick the narrowest that covers the job.
 
 - **`addGlobalMiddleware`**: every wire type (HTTP, Queue, Channel, Trigger, Scheduler, Workflow, Agent, CLI, MCP). For concerns that must wrap every invocation whatever the transport, such as telemetry.
-- **`addHTTPMiddleware('*', …)`**: every HTTP route, including `/rpc`. Anything that sets a session goes here.
+- **`addHTTPMiddleware('*', …)`**: every HTTP route, including `/rpc`. Anything that sets a session for an HTTP caller goes here. It does not run for a queue job, scheduled task or webhook trigger: those set identity in their own middleware (see the cron section).
 - **`addHTTPMiddleware('/admin/*', …)`**: one URL prefix.
 - **`addTagMiddleware`**: any wiring carrying that tag, on the function or the wire object; the two tag sets merge and middleware from both runs. For a group of routes, rate limiting a group, or a yes/no gate.
 - **`middleware` on a wiring or function**: one route or task.
@@ -39,7 +39,7 @@ Step 2 sorts that whole flat list: `highest → high → medium (default) → lo
 
 **Priority is the primary key across every scope, not within one.** The list is flattened first and sorted once, so a `priority: 'lowest'` global runs _after_ an inline per-route middleware of default priority: the narrower scope does not win. Scope order survives only as the tiebreaker between equal priorities, because the sort is stable. Set priority with the config-object form of `pikkuMiddleware`, when a middleware must run before or after others wherever it was registered (telemetry wrapping everything, session extraction before auth checks).
 
-`telemetryOuter` ships with `priority: 'highest'` and `telemetryInner` with `'lowest'`, so they bracket every other middleware regardless of array or call order.
+`telemetryOuter` ships with `priority: 'highest'` and `telemetryInner` with `'lowest'`, so they bracket every other middleware. Equal priorities keep collection order, so register `telemetryOuter` first among the `highest` entries and `telemetryInner` last among the `lowest`.
 
 ## ⛔ MACHINE AUTH: THE TOKEN BECOMES A SESSION. ⛔
 
