@@ -25,14 +25,18 @@ import { virtualUserSchema } from './virtual-user.schema.js'
 import { virtualUserScheduleSchema } from './virtual-user-schedule.schema.js'
 
 export type {
+  AppTables,
+  ColumnAnnotation,
   PikkuSchema,
   RequiredTypes,
   SchemaContext,
   SchemaRequirement,
   SchemaStatement,
   SchemaStatementFactory,
+  TableAnnotations,
 } from './pikku-schema.types.js'
 export {
+  defineTables,
   rawStatement,
   requiredType,
   schemaContext,

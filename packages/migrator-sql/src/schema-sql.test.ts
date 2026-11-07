@@ -1,9 +1,11 @@
-import test from 'node:test'
+import test, { describe } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
   splitStatements,
+  statementShape,
   tableCreationSql,
+  tableDefinitions,
   tablesInSourceOrder,
 } from './schema-sql.js'
 
@@ -89,4 +91,60 @@ test('source order survives a schema qualifier on either side', () => {
 create table "a" ("id" text);`
 
   assert.deepEqual(tablesInSourceOrder(sql, ['a', 'app.b']), ['app.b', 'a'])
+})
+
+describe('statementShape', () => {
+  test('reads a table, qualified or not', () => {
+    assert.deepEqual(statementShape('create table "item" ("id" text);'), {
+      kind: 'table',
+      table: 'item',
+    })
+    assert.deepEqual(
+      statementShape('CREATE TABLE IF NOT EXISTS "app"."item" ("id" text);'),
+      { kind: 'table', table: 'item' }
+    )
+  })
+
+  test('reads an index and the table it sits on', () => {
+    assert.deepEqual(
+      statementShape('create unique index "i" on "app"."item" ("id");'),
+      { kind: 'index', name: 'i', table: 'item' }
+    )
+  })
+
+  test('calls anything else other, not a table', () => {
+    assert.equal(statementShape('create view "v" as select 1;').kind, 'other')
+    assert.equal(
+      statementShape('create type "t" as enum (\'a\');').kind,
+      'other'
+    )
+    assert.equal(statementShape('drop table "item";').kind, 'other')
+  })
+})
+
+describe('tableDefinitions', () => {
+  const sql = `create table "item" ("id" text primary key, "price" numeric(10, 2) default 0, "owner" text references "owner" ("id") on delete cascade, "note" text default 'a, b', constraint "item_owner_unique" unique ("owner", "note"));
+create table "other" ("id" text);`
+
+  test('keeps each column whole, across nested commas', () => {
+    const { columns } = tableDefinitions(sql, 'item')
+    assert.equal(columns.get('price'), `"price" numeric(10, 2) default 0`)
+    assert.equal(
+      columns.get('owner'),
+      `"owner" text references "owner" ("id") on delete cascade`
+    )
+    assert.equal(columns.get('note'), `"note" text default 'a, b'`)
+  })
+
+  test('separates table-level constraints from columns', () => {
+    const { columns, constraints } = tableDefinitions(sql, 'item')
+    assert.equal(columns.size, 4)
+    assert.deepEqual(constraints, [
+      `constraint "item_owner_unique" unique ("owner", "note")`,
+    ])
+  })
+
+  test('finds nothing for a table the SQL does not create', () => {
+    assert.equal(tableDefinitions(sql, 'absent').columns.size, 0)
+  })
 })
