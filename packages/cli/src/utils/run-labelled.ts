@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { StringDecoder } from 'node:string_decoder'
 import type { Logger } from '@pikku/core/services'
 
 export type LabelledRun = {
@@ -29,14 +30,16 @@ export const runLabelled = (
       if (tail.length > TAIL_LINES) tail.shift()
     }
     const lineReader = () => {
+      const decoder = new StringDecoder('utf8')
       let pending = ''
       return {
         push(chunk: Buffer) {
-          const lines = (pending + chunk.toString('utf8')).split('\n')
+          const lines = (pending + decoder.write(chunk)).split('\n')
           pending = lines.pop() ?? ''
           for (const line of lines) onLine(line.trimEnd())
         },
         end() {
+          pending += decoder.end()
           if (pending) onLine(pending.trimEnd())
           pending = ''
         },
