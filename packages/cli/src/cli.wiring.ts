@@ -815,6 +815,12 @@ wireCLI({
           func: dbMigrate,
           description:
             'Apply pending SQL migrations and regenerate db/schema.gen.ts',
+          options: {
+            localOnly: {
+              description: 'Refuse any database that is not on this machine',
+              default: false,
+            },
+          },
         }),
         generate: pikkuCLICommand({
           func: dbGenerate,

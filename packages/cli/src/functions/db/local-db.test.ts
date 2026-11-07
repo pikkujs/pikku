@@ -14,6 +14,7 @@ import { dirname, join } from 'node:path'
 import { sql } from 'kysely'
 
 import {
+  assertLocalDatabase,
   resolveDb,
   desiredRuntimeSchema,
   type ResolvedSqliteDb,
@@ -2005,4 +2006,43 @@ test('db generate quotes the table and column of a postgres ALTER, so a reserved
     /ALTER TABLE "user" ADD COLUMN "virtualUser" boolean DEFAULT false;/
   )
   assert.doesNotMatch(body, /ALTER TABLE user /)
+})
+
+describe('assertLocalDatabase', () => {
+  const db = (connectionString?: string) =>
+    ({ dialect: 'postgres', connectionString }) as unknown as Parameters<
+      typeof assertLocalDatabase
+    >[0]
+
+  test('accepts loopback hosts and file databases', () => {
+    for (const url of [
+      'postgres://u:p@localhost:5432/app',
+      'postgres://u:p@127.0.0.1/app',
+      'mysql://u:p@[::1]:3306/app',
+    ]) {
+      assertLocalDatabase(db(url))
+    }
+    assertLocalDatabase(db(undefined))
+  })
+
+  test('refuses a remote host without echoing the password', () => {
+    assert.throws(
+      () => assertLocalDatabase(db('postgres://u:hunter2@db.example.com/app')),
+      (error: Error) =>
+        /db\.example\.com/.test(error.message) &&
+        !error.message.includes('hunter2')
+    )
+  })
+
+  test('refuses a host override in the query string and unreadable urls', () => {
+    assert.throws(() =>
+      assertLocalDatabase(
+        db('postgres://u:p@localhost/app?host=db.example.com')
+      )
+    )
+    assert.throws(() =>
+      assertLocalDatabase(db('postgres://u:p@localhost/app?hostaddr=10.0.0.1'))
+    )
+    assert.throws(() => assertLocalDatabase(db('not a url')), /unreadable/)
+  })
 })
