@@ -119,7 +119,14 @@ export const useSession = <Session = unknown>(
 
   return `import { useQuery, useInfiniteQuery, useMutation, type UseQueryOptions, type UseInfiniteQueryOptions, type UseMutationOptions, type InfiniteData } from '@tanstack/react-query'
 import { usePikkuRPC${sessionImport} } from '@pikku/react'
-import type { FlattenedRPCMap } from '${rpcMapPath}'${workflowImport}
+import type { FlattenedRPCMap, AgentName, AgentOutputOf } from '${rpcMapPath}'${workflowImport}
+
+// Tells \`usePikkuAgent\` from @pikku/react which agents exist and what each returns.
+declare module '@pikku/react' {
+  interface PikkuAgentRegistry {
+    agents: { [Name in AgentName]: AgentOutputOf<Name> }
+  }
+}
 
 type RPCInvoke = <Name extends keyof FlattenedRPCMap>(name: Name, data: FlattenedRPCMap[Name]['input']) => Promise<FlattenedRPCMap[Name]['output']>
 

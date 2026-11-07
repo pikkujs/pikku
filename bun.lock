@@ -136,6 +136,7 @@
       "devDependencies": {
         "@pikku/core": "*",
         "@pikku/e2e": "workspace:*",
+        "@pikku/fetch": "workspace:*",
         "@types/node": "^26",
       },
       "peerDependencies": {
