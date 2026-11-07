@@ -25,7 +25,7 @@ func (s *Context) SweepUsage(files []*ast.SourceFile) {
 		if u := ExtractSecretUsage(sf); len(u.Keys) > 0 || len(u.Dynamic) > 0 {
 			s.State.Secrets.Usage.Set(sf.FileName(), u)
 		}
-		if !IsServiceBypassExempt(sf.FileName()) {
+		if !IsServiceBypassExempt(s.RootDir, sf.FileName()) {
 			if b := ExtractServiceBypass(sf); len(b.Content) > 0 || len(b.Variables) > 0 {
 				s.State.ServiceBypass.Set(sf.FileName(), b)
 			}

@@ -1,6 +1,7 @@
 package visit
 
 import (
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,22 +24,45 @@ var testFileRe = regexp.MustCompile(`\.(test|spec)\.[cm]?[jt]sx?$`)
 
 // IsServiceBypassExempt is extract-service-bypass.ts isServiceBypassExempt:
 // generated code, declaration files and tests are outside both policies.
-func IsServiceBypassExempt(fileName string) bool {
+// The `.pikku` output directory is matched against the path relative to the
+// project's rootDir, so a project that merely sits under a parent directory
+// named `.pikku` is still inspected. Files outside rootDir (workspace
+// packages) have no relative path, so their full path is checked.
+func IsServiceBypassExempt(rootDir, fileName string) bool {
 	n := strings.ReplaceAll(fileName, "\\", "/")
-	return strings.HasSuffix(n, ".gen.ts") || strings.HasSuffix(n, ".d.ts") ||
-		testFileRe.MatchString(n) || strings.Contains(n, "/.pikku/")
+	if strings.HasSuffix(n, ".gen.ts") || strings.HasSuffix(n, ".d.ts") || testFileRe.MatchString(n) {
+		return true
+	}
+	rel := n
+	if rootDir != "" {
+		if r, err := filepath.Rel(rootDir, fileName); err == nil && r != ".." && !strings.HasPrefix(r, ".."+string(filepath.Separator)) {
+			rel = "/" + strings.ReplaceAll(r, "\\", "/")
+		}
+	}
+	return strings.Contains(rel, "/.pikku/")
 }
 
 func isBypassStringLike(n *ast.Node) bool {
 	return n != nil && (ast.IsStringLiteral(n) || ast.IsNoSubstitutionTemplateLiteral(n))
 }
 
+// isProcessRef matches `process`, `globalThis.process` and `global.process`.
+func isProcessRef(n *ast.Node) bool {
+	if n == nil {
+		return false
+	}
+	if ast.IsIdentifier(n) {
+		return n.Text() == "process"
+	}
+	return ast.IsPropertyAccessExpression(n) && n.Name().Text() == "process" &&
+		ast.IsIdentifier(n.Expression()) && (n.Expression().Text() == "globalThis" || n.Expression().Text() == "global")
+}
+
 func isProcessEnv(n *ast.Node) bool {
 	if ast.IsPropertyAccessExpression(n) {
-		return ast.IsIdentifier(n.Expression()) && n.Expression().Text() == "process" && n.Name().Text() == "env"
+		return isProcessRef(n.Expression()) && n.Name().Text() == "env"
 	}
-	return ast.IsElementAccessExpression(n) && ast.IsIdentifier(n.Expression()) &&
-		n.Expression().Text() == "process" && isBypassStringLike(n.AsElementAccessExpression().ArgumentExpression) &&
+	return ast.IsElementAccessExpression(n) && isProcessRef(n.Expression()) && isBypassStringLike(n.AsElementAccessExpression().ArgumentExpression) &&
 		n.AsElementAccessExpression().ArgumentExpression.Text() == "env"
 }
 
@@ -106,7 +130,7 @@ func ExtractServiceBypass(sf *ast.SourceFile) *state.ServiceBypass {
 			}
 			add(&variables, seenVariables, n, snippet)
 		case ast.IsVariableDeclaration(n) && ast.IsObjectBindingPattern(n.Name()) && n.Initializer() != nil &&
-			ast.IsIdentifier(n.Initializer()) && n.Initializer().Text() == "process":
+			isProcessRef(n.Initializer()):
 			for _, el := range n.Name().Elements() {
 				key := el.PropertyName()
 				if key == nil {
