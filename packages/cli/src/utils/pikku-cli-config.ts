@@ -555,7 +555,10 @@ const _getPikkuCLIConfig = async (
     // variables service: that service JSON-parses, so `'1'` arrives as the
     // number 1 and every `=== '1'` check against it silently never matched.
     setScaffoldWriteGuard(
-      process.env.PIKKU_DEPLOY_CODEGEN === '1' ? resolvedScaffoldDir : undefined
+      process.env.PIKKU_DEPLOY_CODEGEN === '1'
+        ? resolvedScaffoldDir
+        : undefined,
+      result.outDir
     )
 
     // Read every scaffold feature once, here, so a malformed value fails at
