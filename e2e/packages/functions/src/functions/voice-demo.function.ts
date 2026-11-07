@@ -34,9 +34,13 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { unspeakableScripts, voiceForText } from '@pikku/core/agent'
 import { createScriptContent, ingestBytes } from '../script-content.js'
 
-const assetStore = createScriptContent(
-  fileURLToPath(new URL('../../.pikku-runtime/script-content', import.meta.url))
-)
+let assetStore: ReturnType<typeof createScriptContent> | undefined
+const getAssetStore = () =>
+  (assetStore ??= createScriptContent(
+    fileURLToPath(
+      new URL('../../.pikku-runtime/script-content', import.meta.url)
+    )
+  ))
 
 /**
  * The published build directory of an installed package.
@@ -124,7 +128,7 @@ export const voiceDemoModule = pikkuSessionlessFunc({
     // Read as bytes rather than text: the same route now serves an ONNX model
     // and a WASM binary, and decoding either as UTF-8 corrupts it silently.
     const bytes = await ingestBytes(
-      assetStore,
+      getAssetStore(),
       resolve(join(distOf(from), file))
     )
     return new Response(new Uint8Array(bytes), {
