@@ -22,15 +22,15 @@ For how to call it, run this once: `pikku doc agent pikkuAgent`. That page and t
 
 Tools, sub-agents and workflows are supplied as `ref('domain:funcName')` handles, not imported values. The inspector resolves each ref against the generated function map, so an agent can call into another package or a `graph:*` builtin without an import cycle, and the tool menu can be filtered per session before the model sees it.
 
-Invoke through `wire.rpc.agent` from inside a Pikku function; it carries the session, credentials and RPC depth. From a screen use `usePikkuAgent(name)` from `@pikku/react` (`run`, `stream`, `approve`), with no cast of your own.
+Invoke through `wire.rpc.agent` from inside a Pikku function; it carries the session, credentials and RPC depth. From a screen use `usePikkuAgent(name)` from `@pikku/react` (`run`, `stream`, `approve`), with no cast of your own. A screen for signed-in users needs `auth: true` on the agent.
 
 Runs name the agent by its export (`shopAssistant`), not its `name` field (`shop-assistant`). Nothing under `.pikku/agent` needs opening.
 
-`pikku dev` supplies `agentStorage` itself. Nothing to wire and no package to read. `run.result` is the agent's text, or its `output` shape when it has one. `ref()` takes the name from `pikku meta functions`.
+`pikku dev` supplies `agentStorage` itself. A runtime that does not (Next.js, a deployed app) registers `agentStorage: new KyselyAgentStorageService(kysely)` from `@pikku/kysely` in `createSingletonServices`, or runs save and load no history. `run.result` is the agent's text, or its `output` shape when it has one. `ref()` takes the name from `pikku meta functions`.
 
 `model` is an alias from `models` in pikku.config.json, named for its job (`fast`, `vision`). `pikku doc models` has the shape. If none fits, add one there and stop looking: take them from the project map if you have one, otherwise read `pikku.config.json` once, never services or `.env`. The runner is already wired. Never write a `provider/model` string in an agent, and tell the owner which model you chose.
 
-"Remember what we talked about" means the app's helper keeps its conversations: `memory` on the agent and a stable `threadId` and `resourceId`. No helper yet means build one. Never a table or localStorage of your own.
+"Remember what we talked about" means the app's helper keeps its conversations: `memory` on the agent and a stable `threadId` and `resourceId`, and a signed-in session: a sessionless `rpc.agent` call gets a fresh owner every time and cannot reopen the thread. No helper yet means build one. Never a table or localStorage of your own.
 
 ## A helper that answers questions, whole
 
