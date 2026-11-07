@@ -15,17 +15,3 @@ export type SurfaceUsageCounts = Record<
   string,
   Record<string, { imports: number; seenIn: string[]; files: string[] }>
 >
-
-/**
- * Where a source file reaches around a Pikku service. Each entry is
- * `line:snippet`, in source order and without repeats.
- *
- * The two lists are the evidence for two lint policies (not for two
- * detections): `lint.enforceContentService` and `lint.enforceVariablesService`.
- */
-export type ServiceBypassUsage = {
-  /** Direct file storage access, bypassing the `content` service. */
-  content: string[]
-  /** Direct `process.env` reads, bypassing `variables` / `secrets`. */
-  variables: string[]
-}
