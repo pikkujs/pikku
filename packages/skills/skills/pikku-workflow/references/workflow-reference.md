@@ -100,7 +100,7 @@ if (signOff.status === 'decided') {
 }
 ```
 
-That record is deleted with the run (`deleteRun` cascades to steps and history), and a _refused_ attempt never reaches a step. So every answer is also written to the audit sink as `workflow.approval.decided`, with `outcome: 'success' | 'denied'`, the decider under `userIdentity`, and the run, reason and refusal in `metadata`. Wire an `audit` service to keep it; a project without one records nothing and is otherwise unaffected.
+That record is deleted with the run (`deleteRun` cascades to steps and history), and a _refused_ attempt never reaches a step. So every answer is also written to the audit sink as `workflow.approval.decided`, with `outcome: 'success' | 'denied'`, the decider under `userIdentity`, and the run, reason and refusal in `metadata`. Wire an `audit` service to keep it; a project without one records nothing and is otherwise unaffected. Two limits: the event carries who answered and when, not the decision payload, so it cannot show afterwards whether the expense was approved or declined; and `success` is recorded before the answer is schema-validated, so an invalid answer can be logged as `success` while the gate stays open. When an audit trail needs the settled decision, write it yourself (in the answering function) to a record that outlives the run.
 
 ## Tracing
 

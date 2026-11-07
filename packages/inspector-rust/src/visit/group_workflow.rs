@@ -444,6 +444,6 @@ fn approval_declares_approvers(call: P<Node>) -> bool {
     }
     args[1].properties().iter().any(|p| {
         (ast::is_property_assignment(*p) || ast::is_shorthand_property_assignment(*p))
-            && p.name().is_some_and(|name| ast::is_identifier(name) && name.text() == "approvers")
+            && p.name().is_some_and(|name| (ast::is_identifier(name) || ast::is_string_literal(name)) && name.text() == "approvers")
     })
 }

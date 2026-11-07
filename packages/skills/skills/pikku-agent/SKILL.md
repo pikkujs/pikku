@@ -22,11 +22,11 @@ For how to call it, run this once: `pikku doc agent pikkuAgent`. That page and t
 
 Tools, sub-agents and workflows are supplied as `ref('domain:funcName')` handles, not imported values. The inspector resolves each ref against the generated function map, so an agent can call into another package or a `graph:*` builtin without an import cycle, and the tool menu can be filtered per session before the model sees it.
 
-Invoke through `wire.rpc.agent` from inside a Pikku function; it carries the session, credentials and RPC depth. From a screen use `usePikkuAgent(name)` from `@pikku/react` (`run`, `stream`, `approve`), with no cast of your own. A screen for signed-in users needs `auth: true` on the agent.
+Invoke through `wire.rpc.agent` from inside a Pikku function; it carries the session, credentials and RPC depth. From a screen use `usePikkuAgent(name)` from `@pikku/react` (`run`, `stream`, `approve`), with no cast of your own. The hook needs the generated agent endpoints: if `scaffold.agent` is off there are none, so run `pikku enable agent` and regenerate first. A screen for signed-in users needs `auth: true` on the agent.
 
 Runs name the agent by its export (`shopAssistant`), not its `name` field (`shop-assistant`). Nothing under `.pikku/agent` needs opening.
 
-`pikku dev` supplies `agentStorage` itself. A runtime that does not (Next.js, a deployed app) registers `agentStorage: new KyselyAgentStorageService(kysely)` from `@pikku/kysely` in `createSingletonServices`, or runs save and load no history. `run.result` is the agent's text, or its `output` shape when it has one. `ref()` takes the name from `pikku meta functions`.
+`pikku dev` supplies `agentStorage` itself. A runtime that does not (Next.js, a deployed app) registers `agentStorage: new KyselyAgentStorageService(kysely)` from `@pikku/kysely` in `createSingletonServices`, or runs save and load no history. The hook's `run` resolves to `{ result, runId, usage }`, and `result` is the agent's text, or its `output` shape when it has one. Server-side, `wire.rpc.agent.run` returns `text` and `object` instead, so read the field that belongs to the caller you are in. `ref()` takes the name from `pikku meta functions`.
 
 `model` is an alias from `models` in pikku.config.json, named for its job (`fast`, `vision`). `pikku doc models` has the shape. If none fits, add one there and stop looking: take them from the project map if you have one, otherwise read `pikku.config.json` once, never services or `.env`. The runner is already wired. Never write a `provider/model` string in an agent, and tell the owner which model you chose.
 
@@ -57,14 +57,16 @@ export const ordersHelper = pikkuAgent({
 
 ```tsx
 // The screen: one thread per visit, and the transcript is state. Use the project's own components.
+// A remount makes a new threadId and empties `turns`. If the conversation has to survive navigation
+// or a refresh, keep the threadId somewhere stable and load its messages through the generated thread APIs.
 const agent = usePikkuAgent('ordersHelper')
 const [threadId] = useState(() => crypto.randomUUID())
 const [turns, setTurns] = useState<{ role: 'user' | 'assistant'; text: string }[]>([])
 
 const ask = async (message: string) => {
   setTurns((t) => [...t, { role: 'user', text: message }])
-  const { text } = await agent.run({ message, threadId })
-  setTurns((t) => [...t, { role: 'assistant', text: text ?? '' }])
+  const { result } = await agent.run({ message, threadId, resourceId: 'orders-help' })
+  setTurns((t) => [...t, { role: 'assistant', text: String(result ?? '') }])
 }
 ```
 

@@ -7,7 +7,7 @@ installGroups: [core]
 
 # Pikku Addons
 
-What to reach for and why. For how to call it, run this once: `pikku doc addon wireAddon wireRemoteAddon ref refHTTP refChannel refCLI pikkuAddonServices pikkuAddonWireServices pikkuAddonConfig defineHTTPRoutes wireHTTPRoutes`. Depth: `references/openapi.md`, `references/addon-package-manifest.md`.
+What to reach for and why. For how to call it, run this once, from the addon with `yarn pikku` (there is usually no global `pikku`): `yarn pikku doc addon wireAddon wireRemoteAddon ref refHTTP refChannel refCLI pikkuAddonServices pikkuAddonWireServices pikkuAddonConfig defineHTTPRoutes wireHTTPRoutes`. Depth: `references/openapi.md`, `references/addon-package-manifest.md`.
 
 An addon is a reusable function package shared across projects: functions, services, secrets and variables in one self-contained NPM package. See `pikku-concepts` for the core mental model.
 
