@@ -101,6 +101,11 @@ const cleanup = (root: string) => rm(root, { recursive: true, force: true })
 const json = async (root: string, rel: string) =>
   JSON.parse(await readFile(join(root, rel), 'utf8'))
 
+const NO_POLICIES = {
+  enforceContentService: 'off',
+  enforceVariablesService: 'off',
+} as const
+
 describe('mergeOxlintConfig', () => {
   test('keeps the user rules, plugins and overrides', () => {
     const before = JSON.stringify({
@@ -109,7 +114,7 @@ describe('mergeOxlintConfig', () => {
       overrides: [{ files: ['*.test.ts'], rules: { 'no-console': 'off' } }],
       ignorePatterns: ['dist'],
     })
-    const merged = mergeOxlintConfig(before)
+    const merged = mergeOxlintConfig(before, NO_POLICIES)
     assert.equal(merged.kind, 'merged')
     if (merged.kind !== 'merged') return
     const out = JSON.parse(merged.text)
@@ -125,11 +130,57 @@ describe('mergeOxlintConfig', () => {
   })
 
   test('does not invent a plugins list when the defaults apply', () => {
-    const merged = mergeOxlintConfig('{}')
+    const merged = mergeOxlintConfig('{}', NO_POLICIES)
     assert.equal(merged.kind, 'merged')
     if (merged.kind === 'merged') {
       assert.equal('plugins' in JSON.parse(merged.text), false)
     }
+  })
+
+  test('adds the policy rules, the node plugin and a test-file exemption', () => {
+    const merged = mergeOxlintConfig('{}')
+    assert.equal(merged.kind, 'merged')
+    if (merged.kind !== 'merged') return
+    const out = JSON.parse(merged.text)
+    assert.deepEqual(out.plugins, ['typescript', 'unicorn', 'oxc', 'node'])
+    assert.equal(out.rules['node/no-process-env'], 'error')
+    assert.equal(out.rules['typescript/no-require-imports'], 'error')
+    assert.deepEqual(
+      out.rules['no-restricted-imports'][1].paths.map(
+        (p: { name: string }) => p.name
+      ),
+      ['fs', 'node:fs', 'fs/promises', 'node:fs/promises']
+    )
+    assert.deepEqual(out.overrides[0].rules, {
+      'no-restricted-imports': 'off',
+      'typescript/no-require-imports': 'off',
+      'node/no-process-env': 'off',
+    })
+    const again = mergeOxlintConfig(merged.text)
+    assert.equal(again.kind === 'merged' && again.changed, false)
+  })
+
+  test('fills in the fs modules an existing no-restricted-imports leaves out', () => {
+    const merged = mergeOxlintConfig(
+      JSON.stringify({
+        rules: {
+          'no-restricted-imports': [
+            'error',
+            { paths: ['lodash', { name: 'fs', message: 'mine' }] },
+          ],
+        },
+      }),
+      { enforceContentService: 'error', enforceVariablesService: 'off' }
+    )
+    assert.equal(merged.kind, 'merged')
+    if (merged.kind !== 'merged') return
+    const paths = JSON.parse(merged.text).rules['no-restricted-imports'][1]
+      .paths as Array<string | { name: string; message?: string }>
+    assert.deepEqual(
+      paths.map((p) => (typeof p === 'string' ? p : p.name)),
+      ['lodash', 'fs', 'node:fs', 'fs/promises', 'node:fs/promises']
+    )
+    assert.equal((paths[1] as { message: string }).message, 'mine')
   })
 
   test('keeps rule options but raises the level and drops checksConditionals:false', () => {
