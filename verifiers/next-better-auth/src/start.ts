@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import path from 'node:path'
 import { LocalVariablesService } from '@pikku/core/services'
-import { createScriptContent } from './script-content.js'
+import { createScriptContent, putText } from './script-content.js'
 
 const BASE = 'http://127.0.0.1:3110'
 const AUTH = `${BASE}/api/auth`
@@ -86,6 +86,9 @@ function signalTree(child: ChildProcess, name: NodeJS.Signals): void {
 
 async function main(): Promise<void> {
   await clearDb()
+  // better-sqlite3 will not create the directory the file lives in; writing a
+  // placeholder through the content service does.
+  await putText(content, 'auth', '.keep', '')
 
   const child = spawn(
     'npx',

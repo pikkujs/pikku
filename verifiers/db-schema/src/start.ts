@@ -15,6 +15,7 @@
  */
 import type { Kysely } from 'kysely'
 import { runPikkuFunc } from '@pikku/core/function'
+import { LocalVariablesService } from '@pikku/core/services'
 import { requirePikkuSchema, pikkuSchemas } from '@pikku/kysely'
 import { createConfig } from './config.js'
 import { createSingletonServices, createWireServices } from './services.js'
@@ -49,7 +50,7 @@ const tableNames = async (): Promise<string[]> =>
   (await db.introspection.getTables()).map((table) => table.name).sort()
 
 async function main(): Promise<void> {
-  const config = await createConfig()
+  const config = await createConfig(new LocalVariablesService())
   const singletonServices = await createSingletonServices(config)
   db = singletonServices.kysely
 
