@@ -6,12 +6,13 @@ use regex::Regex;
 use tsrs_ast::{self as ast, Kind, Node};
 use tsrs_core::P;
 
+use super::group_workflow::prop_value_to_js;
 use super::workflow_dsl::literal_scalar;
 use super::workflow_jsobj::{Js, JsObj, jo, js_number};
 use super::{Context, Phase, Registry, Visitor, order};
 use crate::diag::codes;
 use crate::state::FileExport;
-use crate::tsutil::file_name_of;
+use crate::tsutil::{file_name_of, get_property_value};
 
 pub fn register(r: &mut Registry) {
     r.register(Visitor {
@@ -283,7 +284,7 @@ impl Context<'_> {
 
         let mut name = String::new();
         let mut exported_name = String::new();
-        let (mut description, mut tags, mut notes) = (Js::Undef, Js::Undef, Js::Undef);
+        let (mut description, mut tags, mut notes, mut expose, mut auth) = (Js::Undef, Js::Undef, Js::Undef, Js::Undef, Js::Undef);
         let mut disabled = false;
         let (mut nodes_node, mut config_node): (Option<P<Node>>, Option<P<Node>>) = (None, None);
         for p in first_arg.properties() {
@@ -303,6 +304,8 @@ impl Context<'_> {
                         disabled = true;
                     }
                 }
+                "expose" => expose = prop_value_to_js(&get_property_value(first_arg, "expose")),
+                "auth" => auth = prop_value_to_js(&get_property_value(first_arg, "auth")),
                 "tags" => {
                     if ast::is_array_literal_expression(init) {
                         tags = Js::from(string_literals(init));
@@ -352,6 +355,8 @@ impl Context<'_> {
             "source" => "graph",
             "description" => description,
             "tags" => tags,
+            "expose" => expose,
+            "auth" => auth,
             "notes" => notes,
             "nodes" => nodes,
             "entryNodeIds" => entry,
