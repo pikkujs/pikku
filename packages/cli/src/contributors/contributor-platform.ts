@@ -92,6 +92,13 @@ export async function detectDatabaseDialect(
   return configured[0]?.[0] ?? present[0]
 }
 
+/**
+ * The sentence both `pikku validate` and `pikku dev` use when the project has
+ * a database but the pikku config declares no `db`.
+ */
+export const dbConfigMismatch = (engine: DatabaseDialect): string =>
+  `the project has a ${engine} database (createConfig or db/${engine}) but the pikku config has no \`db\``
+
 export interface ContributorPlatformFacts {
   projectDir: string
   /** Where `db/coercion.gen.ts` lives (`<pikkuDir>/db/coercion.gen.ts`). */

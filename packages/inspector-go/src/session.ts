@@ -14,6 +14,7 @@ export type TypeDiagnostic = {
 }
 
 type Pending = {
+  child: ChildProcess
   resolve: (result: any) => void
   reject: (error: Error) => void
 }
@@ -22,6 +23,8 @@ type Response = {
   id: number
   result?: unknown
   error?: { name?: string; message: string }
+  /** The Rust engine leaks per request; it asks to be retired once its budget is spent. */
+  recycle?: boolean
 }
 
 /**
@@ -69,7 +72,8 @@ export class InspectorSession {
       const waiting = this.pending.get(response.id)
       if (!waiting) return
       this.pending.delete(response.id)
-      if (this.pending.size === 0) this.hold(child, false)
+      if (response.recycle) this.retire(child)
+      if (!this.waitingOn(child)) this.hold(child, false)
       if (response.error)
         waiting.reject(
           new InspectorHelperError(
@@ -82,6 +86,7 @@ export class InspectorSession {
     const fail = (message: string) => {
       if (this.child === child) this.child = undefined
       for (const [id, waiting] of this.pending) {
+        if (waiting.child !== child) continue
         this.pending.delete(id)
         waiting.reject(new InspectorHelperError(message))
       }
@@ -97,6 +102,22 @@ export class InspectorSession {
     return child
   }
 
+  private waitingOn(child: ChildProcess): boolean {
+    for (const waiting of this.pending.values()) {
+      if (waiting.child === child) return true
+    }
+    return false
+  }
+
+  /**
+   * Stops sending to `child`; it answers what it already has and exits at EOF,
+   * and the next call starts a new process.
+   */
+  private retire(child: ChildProcess): void {
+    if (this.child === child) this.child = undefined
+    child.stdin?.end()
+  }
+
   /** Keeps the process alive only while a request is waiting on it. */
   private hold(child: ChildProcess, held: boolean): void {
     const handles = [child, child.stdin, child.stdout] as {
@@ -110,7 +131,7 @@ export class InspectorSession {
     return new Promise<T>((resolve, reject) => {
       const child = this.start()
       const id = this.nextId++
-      this.pending.set(id, { resolve, reject })
+      this.pending.set(id, { child, resolve, reject })
       this.hold(child, true)
       child.stdin!.write(JSON.stringify({ id, method, params }) + '\n')
     })

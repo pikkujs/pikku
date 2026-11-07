@@ -1,25 +1,26 @@
 ---
 type: decision
-title: The TypeScript inspector engine is retired; pikku-inspect is the only engine
-description: The Go binary does all analysis and finalize, @pikku/inspector keeps only its TypeScript-free parts and depends on no typescript package, and there is no engine switch or parity harness
+title: The TypeScript inspector engine is retired; Go is the reference, Rust is selectable
+description: A native binary does all analysis and finalize - Go (pikku-inspect) is the reference and Rust (pikku-inspect-rs) is selectable - and @pikku/inspector keeps only its TypeScript-free parts and depends on no typescript package
 tags: [inspector, inspector-go, cli, typescript]
 ---
 
-# The TypeScript inspector engine is retired; pikku-inspect is the only engine
+# The TypeScript inspector engine is retired; Go is the reference, Rust is selectable
 
-Decided 2026-11-06. `pikku-inspect` (built on typescript-go) does all analysis
+Decided 2026-11-06, amended when the Rust engine landed (see the note below).
+`pikku-inspect` (built on typescript-go) does all analysis
 and finalize. `@pikku/inspector` is the shape of the state it produces and the
 data helpers that read it, with no `typescript`, `ts-json-schema-generator`, `zod`
 or `tsx` dependency.
 
 ```decision
-chosen: One engine. The `--inspector` flag, the PIKKU_INSPECTOR variable, the
-  `inspector` key in pikku.config.json, `pikku inspector parity` and
-  `pikku experiment native-comparison` are gone. A CLI with no pikku-inspect
-  binary for its platform fails at inspection, naming the binary and
-  PIKKU_INSPECTOR_GO_BIN; it does not fall back.
+chosen: No TypeScript engine. The old TypeScript-vs-Go switch, `pikku inspector
+  parity` and `pikku experiment native-comparison` are gone. A CLI with no
+  binary for the selected engine on its platform fails at inspection, naming
+  the binary and its variable (PIKKU_INSPECTOR_GO_BIN or
+  PIKKU_INSPECTOR_RS_BIN); it does not fall back to the other engine.
 rules-out:
-  - An engine switch, or a second engine kept as a reference for a diff
+  - A TypeScript engine, or any JavaScript compiler kept as a reference for a diff
   - typescript as a dependency of @pikku/inspector, @pikku/code-edit or
     @pikku/n8n-import
   - Compiler objects in the state: InspectorState has no typesLookup, program
@@ -31,6 +32,18 @@ because: The Go engine is several times faster and uses far less memory, passes
   inspector change landed twice and a TypeScript 6 compiler stayed in the
   install of every consumer.
 ```
+
+## Amendment: Go is no longer the only native engine
+
+Go is not "the only engine" any more. `pikku-inspect-rs`
+(`packages/inspector-rust`, on tsrs) speaks the same protocol and is selectable
+with `PIKKU_INSPECTOR=go|rs`, `--inspector` or the `inspector` key of
+`pikku.config.json`; one constant, `DEFAULT_ENGINE` in `src/binary.ts`, decides
+the default. Go stays the reference and the oracle: when the two differ, Rust
+is wrong, and the parity harness (`packages/inspector-rust/scripts/parity.ts`)
+is how that is measured. The reasons are in
+`packages/inspector-rust/knowledge/decisions/`. What stays true from the
+decision above: no TypeScript engine, and no silent fallback between engines.
 
 ## What moved
 

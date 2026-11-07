@@ -46,6 +46,19 @@ runs:
       with:
         go-version-file: packages/inspector-go/go.mod
         cache-dependency-path: packages/inspector-go/**/go.sum
+    # The Rust inspector (PIKKU_INSPECTOR=rs, or the default once it is). Built
+    # for the host beside the Go one, into the same bin/ the build artifact
+    # carries; the cross-platform copies come from inspector-rs-build.
+    - name: Set up Rust
+      uses: ./.github/actions/setup-rust
+    - name: Build pikku-inspect-rs
+      shell: bash
+      run: |
+        start=$SECONDS
+        cargo build --release --locked --manifest-path packages/inspector-rust/Cargo.toml
+        mkdir -p packages/inspector-go/bin
+        cp packages/inspector-rust/target/release/pikku-inspect-rs packages/inspector-go/bin/
+        echo "::notice::⏱ Build pikku-inspect-rs: $((SECONDS - start))s"
     - name: Build packages
       shell: bash
       run: |

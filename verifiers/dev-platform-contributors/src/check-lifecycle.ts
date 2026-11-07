@@ -3,15 +3,21 @@
 // serverLifecycle ran. Every hook appends a line to PIKKU_HOOK_LOG.
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { LocalVariablesService } from '@pikku/core/services'
+import { createScriptContent, getText, hasKey } from './script-content.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const scenario = resolve(here, '../scenarios/lifecycle')
 const pikku = resolve(here, '../../../packages/cli/dist/bin/pikku.js')
 const logFile = join(tmpdir(), `pikku-hook-log-${process.pid}.log`)
+// The hooks write through the content service, into
+// `<tmpdir>/private/hooks/<basename>`; read it back the same way.
+const logStore = createScriptContent(dirname(logFile))
+const logKey = basename(logFile)
+const clearLog = () => logStore.deleteFile({ bucket: 'hooks', key: logKey })
 
 interface Run {
   lines: string[]
@@ -24,16 +30,16 @@ interface Run {
  * a user would. With `expectStartFailure` the process must instead exit by
  * itself before ever becoming ready.
  */
-const run = (
+const run = async (
   command: 'dev' | 'serve',
   options: {
     env?: Record<string, string>
     config?: string
     expectStartFailure?: boolean
   } = {}
-): Promise<Run> =>
-  new Promise((resolvePromise, reject) => {
-    rmSync(logFile, { force: true })
+): Promise<Run> => {
+  await clearLog()
+  return new Promise((resolvePromise, reject) => {
     const child = spawn(
       'node',
       [
@@ -46,7 +52,7 @@ const run = (
       {
         cwd: scenario,
         env: {
-          ...process.env,
+          ...new LocalVariablesService().getAll(),
           PIKKU_HOOK_LOG: logFile,
           PIKKU_HOOK_FAIL: '',
           ...options.env,
@@ -91,15 +97,21 @@ const run = (
         )
         return
       }
-      resolvePromise({
-        lines: existsSync(logFile)
-          ? readFileSync(logFile, 'utf8').trim().split('\n').filter(Boolean)
-          : [],
-        output,
-        code,
-      })
+      void (async () => {
+        resolvePromise({
+          lines: (await hasKey(logStore, 'hooks', logKey))
+            ? (await getText(logStore, 'hooks', logKey))
+                .trim()
+                .split('\n')
+                .filter(Boolean)
+            : [],
+          output,
+          code,
+        })
+      })()
     })
   })
+}
 
 const contributors = ['hook-a', 'hook-b', 'hook-c']
 const started = contributors.map((n) => `start:${n}`)
@@ -187,5 +199,5 @@ for (const command of ['dev', 'serve'] as const) {
   ])
 }
 
-rmSync(logFile, { force: true })
+await clearLog()
 console.log('lifecycle: all checks passed')

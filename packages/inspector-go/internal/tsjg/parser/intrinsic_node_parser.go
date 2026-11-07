@@ -27,6 +27,8 @@ var intrinsicMethods = map[string]func(string) string{
 // IntrinsicNodeParser handles the `intrinsic` keyword used by
 // Uppercase/Lowercase/Capitalize/Uncapitalize in lib.es5.d.ts, keyed off the
 // name of the enclosing type alias (src/NodeParser/IntrinsicNodeParser.ts).
+// NoInfer is the one intrinsic that is not string manipulation: it only blocks
+// inference, so it is its argument.
 type IntrinsicNodeParser struct{}
 
 func NewIntrinsicNodeParser() *IntrinsicNodeParser {
@@ -39,6 +41,12 @@ func (p *IntrinsicNodeParser) SupportsNode(node *ast.Node) bool {
 
 func (p *IntrinsicNodeParser) CreateType(node *ast.Node, ctx *Context, _ *types.ReferenceType) types.Type {
 	methodName := getIntrinsicParentName(node)
+	if methodName == "NoInfer" {
+		if args := ctx.Arguments(); len(args) > 0 && args[0] != nil {
+			return args[0]
+		}
+		return &types.AnyType{}
+	}
 	method, ok := intrinsicMethods[methodName]
 	if !ok {
 		panic(fmt.Errorf("unknown intrinsic method: %s", methodName))

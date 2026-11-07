@@ -39,5 +39,9 @@
         }
       ]
     }
+  },
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "off"
   }
 }

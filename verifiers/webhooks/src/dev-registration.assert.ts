@@ -1,18 +1,23 @@
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
+// The registrations file is owned by `pikku dev` at a fixed project path, so
+// the content service cannot reach it (it only addresses <root>/<visibility>/
+// <bucket>/<key>): these direct fs calls stay, and are why webhooks keeps
+// lint.enforceContentService off.
 import {
   existsSync,
-  mkdtempSync,
   readFileSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { after, before, describe, test } from 'node:test'
+import { LocalVariablesService } from '@pikku/core/services'
 import { readEndpoints, writeEndpoints } from './fake-provider.js'
+import { createScriptContent, getText, putText } from './script-content.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const pikkuBin = join(
@@ -25,19 +30,20 @@ const pikkuBin = join(
   'pikku.js'
 )
 const registrationsFile = join(root, '.webhook-registrations.gen.json')
-const scratch = mkdtempSync(join(tmpdir(), 'pikku-webhook-dev-'))
-const credentialsFile = join(scratch, 'credentials.json')
+const variables = new LocalVariablesService()
+const scratch = join(root, '.pikku-runtime', `webhook-dev-${randomUUID()}`)
+const content = createScriptContent(scratch)
 const env = {
-  ...process.env,
-  FAKE_PROVIDER_FILE: join(scratch, 'provider.json'),
-  CREDENTIALS_FILE: credentialsFile,
+  ...variables.getAll(),
+  WEBHOOK_SCRATCH_DIR: scratch,
   PIKKU_DEV_WEBHOOK_URL: 'https://dev.test',
   PIKKU_DEV_WEBHOOK_LABEL_PREFIX: 'dev-verifier',
 }
-process.env.FAKE_PROVIDER_FILE = env.FAKE_PROVIDER_FILE
+variables.set('WEBHOOK_SCRATCH_DIR', scratch)
 
 const registrations = () => JSON.parse(readFileSync(registrationsFile, 'utf-8'))
-const credentials = () => JSON.parse(readFileSync(credentialsFile, 'utf-8'))
+const credentials = async () =>
+  JSON.parse(await getText(content, 'credentials', 'credentials.json'))
 const writtenAt = () =>
   existsSync(registrationsFile) ? statSync(registrationsFile).mtimeMs : 0
 
@@ -70,22 +76,24 @@ const devRun = async () => {
   }
 }
 
-before(() => {
+before(async () => {
   rmSync(registrationsFile, { force: true })
-  writeFileSync(credentialsFile, '{}')
-  writeEndpoints([])
+  await putText(content, 'credentials', 'credentials.json', '{}')
+  await writeEndpoints([])
 })
 
-after(() => {
+after(async () => {
   rmSync(registrationsFile, { force: true })
-  rmSync(scratch, { recursive: true, force: true })
+  await content.deleteByPrefix('credentials', '')
+  await content.deleteByPrefix('provider', '')
+  await content.deleteByPrefix('ingest', '')
 })
 
 describe('pikku dev: webhook source registration', () => {
   test('the first run registers the source and remembers it privately', async () => {
     await devRun()
 
-    assert.deepEqual(readEndpoints(), [
+    assert.deepEqual(await readEndpoints(), [
       {
         id: 'we_1',
         url: 'https://dev.test/webhooks/shop',
@@ -111,7 +119,7 @@ describe('pikku dev: webhook source registration', () => {
   })
 
   test('the next run calls no provider, restores lost credentials and names what is orphaned', async () => {
-    writeFileSync(credentialsFile, '{}')
+    await putText(content, 'credentials', 'credentials.json', '{}')
     const file = registrations()
     file['dev-verifier'].gone = {
       url: 'https://dev.test/webhooks/gone',
@@ -122,8 +130,11 @@ describe('pikku dev: webhook source registration', () => {
 
     const output = await devRun()
 
-    assert.equal(readEndpoints().length, 1)
-    assert.equal(credentials().shopWebhookSecret, 'whsec_dev-verifier:shop')
+    assert.equal((await readEndpoints()).length, 1)
+    assert.equal(
+      (await credentials()).shopWebhookSecret,
+      'whsec_dev-verifier:shop'
+    )
     assert.match(
       output,
       /'gone' is no longer declared but is still registered at https:\/\/dev\.test\/webhooks\/gone \(label dev-verifier:gone\)/

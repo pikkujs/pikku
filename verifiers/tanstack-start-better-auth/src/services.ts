@@ -12,17 +12,17 @@ import path from 'node:path'
 import { auth } from './auth.js'
 
 const databaseFile =
-  process.env.BETTER_AUTH_DB_FILE ??
+  new LocalVariablesService().get<string>('BETTER_AUTH_DB_FILE') ??
   path.join(process.cwd(), '.better-auth.sqlite')
 const database = new Database(databaseFile)
 const kysely = new Kysely<KyselyPikkuDB>({
   dialect: new SqliteDialect({ database }),
 })
 
-export const createConfig = pikkuConfig(async () => {
-  const port = Number(process.env.PORT ?? '3121')
+export const createConfig = pikkuConfig(async (variables) => {
+  const port = Number(variables?.get('PORT') ?? '3121')
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
-    throw new Error(`Invalid PORT: ${process.env.PORT}`)
+    throw new Error(`Invalid PORT: ${variables?.get('PORT')}`)
   }
 
   return {

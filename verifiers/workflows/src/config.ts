@@ -1,3 +1,4 @@
+import { LocalVariablesService } from '@pikku/core/services'
 import { pikkuConfig } from '#pikku/setup'
 
 /**
@@ -8,7 +9,7 @@ import { pikkuConfig } from '#pikku/setup'
  * schema, so a runner that finds them missing stops rather than making them.
  */
 export const connectionString =
-  process.env.DATABASE_URL ??
+  new LocalVariablesService().get<string>('DATABASE_URL') ??
   'postgres://postgres:password@localhost:5432/pikku_queue'
 
 export const createConfig = pikkuConfig(async () => {

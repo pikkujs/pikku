@@ -8,6 +8,7 @@
  * a minute's wait. Prints `worker ready` once its queues are registered.
  */
 
+import { LocalVariablesService } from '@pikku/core/services'
 import { pikkuState } from '@pikku/core/state'
 
 import { createSingletonServices } from '../services.js'
@@ -18,7 +19,7 @@ import '../../.pikku/pikku-bootstrap.gen.js'
 const SHARED_STEP_QUEUE = 'pikku-workflow-step-worker'
 
 async function main(): Promise<void> {
-  const leaseMs = Number(process.env.CRASH_STEP_LEASE_MS)
+  const leaseMs = Number(new LocalVariablesService().get('CRASH_STEP_LEASE_MS'))
   if (!(leaseMs > 0)) {
     throw new Error('CRASH_STEP_LEASE_MS must be a positive number')
   }

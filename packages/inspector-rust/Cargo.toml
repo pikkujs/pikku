@@ -1,0 +1,41 @@
+[package]
+name = "pikku-inspect-rs"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Rust port of pikku-inspect (the Go inspector), built on tsrs"
+
+[lib]
+name = "pikku_inspect"
+path = "src/lib.rs"
+
+[[bin]]
+name = "pikku-inspect-rs"
+path = "src/main.rs"
+
+[dependencies]
+tsrs_compiler = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_checker = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_core = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_tsoptions = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_vfs = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_astnav = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_ast = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_diagnostics = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_contentmapper = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_scanner = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_printer = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_parser = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+tsrs_module = { git = "https://github.com/oxc-project/tsrs", rev = "b135f86e4d13f5f5719aa0630001e3c860dc0d51" }
+regex = "1"
+icu_collator = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
+indexmap = { version = "2", features = ["serde"] }
+sha2 = "0.10"
+sha1 = "0.10"
+rustc-hash = "2"
+rquickjs = { version = "0.14.0", features = ["loader"] }
+oxc_resolver = "11.24.3"
+
+[workspace]
