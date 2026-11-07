@@ -248,6 +248,9 @@ jobs:
             "$PWD/packages/inspector-go/bin/pikku-inspect" \
             "$PWD/packages/inspector-go/bin/pikku-inspect-rs" \
             --out "$RUNNER_TEMP/parity"
+      - name: Check the committed Go goldens against Go
+        if: ${{ !cancelled() }}
+        run: bun inspector-parity/scripts/golden-check.ts "$PWD/packages/inspector-go/bin/pikku-inspect"
       - name: Upload the scoreboard
         if: always()
         uses: actions/upload-artifact@v7
