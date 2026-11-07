@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { spawn, type ChildProcess } from 'node:child_process'
 import { StringDecoder } from 'node:string_decoder'
 import type { Logger } from '@pikku/core/services'
 
@@ -12,6 +12,34 @@ export type LabelledRun = {
 
 const TAIL_LINES = 30
 
+const running = new Map<ChildProcess, boolean>()
+let stopped = false
+
+const killTree = (
+  child: ChildProcess,
+  signal: NodeJS.Signals,
+  group: boolean
+) => {
+  try {
+    if (group && child.pid) process.kill(-child.pid, signal)
+    else child.kill(signal)
+  } catch {
+    child.kill(signal)
+  }
+}
+
+/**
+ * Kill every running labelled command and refuse new ones, for a caller that
+ * was interrupted. Returns a function that allows them again.
+ */
+export const stopLabelledRuns = (signal: NodeJS.Signals = 'SIGTERM') => {
+  stopped = true
+  for (const [child, group] of running) killTree(child, signal, group)
+  return () => {
+    stopped = false
+  }
+}
+
 /**
  * Run a command with no shell and no stdin, printing each line under `label`,
  * so commands running side by side stay readable and none can stop for input.
@@ -20,10 +48,20 @@ export const runLabelled = (
   { logger, label }: { logger: Pick<Logger, 'info'>; label: string },
   command: string,
   args: string[],
-  options: { cwd: string; env?: NodeJS.ProcessEnv }
+  options: {
+    cwd: string
+    env?: NodeJS.ProcessEnv
+    /**
+     * Lead a process group, so stopping it also kills a grandchild holding the
+     * pipe. The terminal's Ctrl-C then no longer reaches it: only a caller that
+     * calls `stopLabelledRuns` on a signal should ask for this.
+     */
+    group?: boolean
+  }
 ): Promise<LabelledRun> =>
   new Promise((resolve) => {
     const tail: string[] = []
+    if (stopped) return resolve({ ok: false, failure: 'interrupted', tail })
     const onLine = (line: string) => {
       logger.info(`[${label}] ${line}`)
       tail.push(line)
@@ -46,19 +84,24 @@ export const runLabelled = (
       }
     }
 
+    const group = !!options.group && process.platform !== 'win32'
     const child = spawn(command, args, {
       cwd: options.cwd,
       env: options.env ?? process.env,
       stdio: ['ignore', 'pipe', 'pipe'],
+      detached: group,
     })
+    running.set(child, group)
     const stdout = lineReader()
     const stderr = lineReader()
     child.stdout.on('data', stdout.push)
     child.stderr.on('data', stderr.push)
-    child.on('error', (error) =>
+    child.on('error', (error) => {
+      running.delete(child)
       resolve({ ok: false, failure: error.message, tail })
-    )
+    })
     child.on('close', (code, signal) => {
+      running.delete(child)
       stdout.end()
       stderr.end()
       if (code === 0) return resolve({ ok: true, tail })

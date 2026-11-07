@@ -15,6 +15,14 @@ import {
 type Run = { code: number | null; output: string }
 
 const ci = (f: Fixture, ...args: string[]): Promise<Run> =>
+  ciUntil(f, undefined, ...args)
+
+/** Sends SIGTERM once the output contains `interruptAt`. */
+const ciUntil = (
+  f: Fixture,
+  interruptAt: string | undefined,
+  ...args: string[]
+): Promise<Run> =>
   new Promise((resolve) => {
     const child = spawn(
       'node',
@@ -29,8 +37,16 @@ const ci = (f: Fixture, ...args: string[]): Promise<Run> =>
       { cwd: f.repo, stdio: ['ignore', 'pipe', 'pipe'] }
     )
     let output = ''
-    child.stdout.on('data', (chunk) => (output += chunk))
-    child.stderr.on('data', (chunk) => (output += chunk))
+    let interrupted = false
+    const collect = (chunk: Buffer) => {
+      output += chunk
+      if (interruptAt && !interrupted && output.includes(interruptAt)) {
+        interrupted = true
+        child.kill('SIGTERM')
+      }
+    }
+    child.stdout.on('data', collect)
+    child.stderr.on('data', collect)
     child.on('close', (code) => resolve({ code, output }))
   })
 
@@ -127,9 +143,19 @@ describe('pikku ci', () => {
   })
 
   test('a failed step stops the run, exits non-zero and cleans up', async () => {
-    await setTestScript(f, 'exit 3')
+    await setTestScript(f, 'echo tail-marker && exit 3')
     const run = await ci(f, '-p', 'standalone')
-    expectFailed(run, /pikku ci failed at test/)
+    expectFailed(run, /pikku ci failed at test: exit 3\n\s+.*tail-marker/)
+    assert.doesNotMatch(run.output, /\[plan\]/)
+    await expectClean(f)
+  })
+
+  test('SIGTERM stops the running step and cleans up before exiting', async () => {
+    await setTestScript(f, 'echo interrupt-marker && sleep 60')
+    const started = Date.now()
+    const run = await ciUntil(f, 'interrupt-marker', '-p', 'standalone')
+    expectFailed(run, /interrupted by SIGTERM/)
+    assert.ok(Date.now() - started < 50_000, 'the test step was killed')
     assert.doesNotMatch(run.output, /\[plan\]/)
     await expectClean(f)
   })

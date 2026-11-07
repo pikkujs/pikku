@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { tmpdir } from 'node:os'
-import { runLabelled } from './run-labelled.js'
+import { runLabelled, stopLabelledRuns } from './run-labelled.js'
 
 test('a character split across two chunks prints whole', async () => {
   const lines: string[] = []
@@ -16,4 +16,28 @@ test('a character split across two chunks prints whole', async () => {
   )
   assert.equal(result.ok, true)
   assert.deepEqual(lines, ['[x] café'])
+})
+
+test('stopping kills the running commands and refuses new ones', async () => {
+  const logger = { info: () => {} }
+  const run = runLabelled(
+    { logger, label: 'x' },
+    'sh',
+    ['-c', 'sleep 60; true'],
+    { cwd: tmpdir(), group: true }
+  )
+  await new Promise((resolve) => setTimeout(resolve, 200))
+  const resume = stopLabelledRuns()
+  try {
+    assert.equal((await run).failure, 'killed by SIGTERM')
+    const next = await runLabelled(
+      { logger, label: 'y' },
+      process.execPath,
+      ['-e', ''],
+      { cwd: tmpdir() }
+    )
+    assert.equal(next.failure, 'interrupted')
+  } finally {
+    resume()
+  }
 })
