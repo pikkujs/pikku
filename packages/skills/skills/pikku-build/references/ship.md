@@ -58,8 +58,9 @@ with a non-zero exit. It never prompts.
   copies `.deploy/` (including `audit.json`) back. The worktree is removed even
   on failure; `--keepWorktree` keeps it to inspect.
 - `--deploy` needs `-p`: there is no default target. On Cloudflare it refuses
-  unset required secrets, and any shipped migration until you apply it and pass
-  `--migrationsApplied`.
+  until you confirm the required secrets are set there (`--secretsSet`; the
+  refusal names them) and that any shipped migration is applied
+  (`--migrationsApplied`).
 - No `test` script fails the run; `--skipTests` is the explicit opt-out.
 - The audit fails on any high or critical advisory, except those already in the
   previous `.deploy/audit.json` (or `--auditBaseline <file>`).

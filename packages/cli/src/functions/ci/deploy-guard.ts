@@ -5,15 +5,15 @@ import { PikkuCiFailedError } from './console-removal.js'
 /**
  * Cloudflare's adapter neither applies migrations nor uploads secrets, so
  * shipping would run the new code against an old schema or missing values.
- * Nothing here can ask Cloudflare what has been applied, so a migration in the
- * output counts as pending until the caller says otherwise.
+ * Nothing here can ask Cloudflare what is set or applied, so both count as
+ * missing until the caller confirms them.
  */
 export const assertCloudflareDeployReady = (
   providerDir: string,
   {
-    env = process.env,
+    secretsSet = false,
     migrationsApplied = false,
-  }: { env?: NodeJS.ProcessEnv; migrationsApplied?: boolean } = {}
+  }: { secretsSet?: boolean; migrationsApplied?: boolean } = {}
 ) => {
   const infraFile = join(providerDir, 'infra.json')
   if (!existsSync(infraFile)) {
@@ -24,7 +24,7 @@ export const assertCloudflareDeployReady = (
   const { secrets = [] } = JSON.parse(readFileSync(infraFile, 'utf-8')) as {
     secrets?: Array<{ id: string }>
   }
-  const unset = secrets.map(({ id }) => id).filter((id) => !env[id])
+  const unconfirmed = secretsSet ? [] : secrets.map(({ id }) => id)
 
   const dbDir = join(providerDir, 'db')
   const migrations =
@@ -39,8 +39,10 @@ export const assertCloudflareDeployReady = (
           )
 
   const problems = [
-    ...(unset.length
-      ? [`Required secrets are not set: ${unset.join(', ')}.`]
+    ...(unconfirmed.length
+      ? [
+          `This deploy needs these secrets set in Cloudflare: ${unconfirmed.join(', ')}. Set them, then pass --secretsSet.`,
+        ]
       : []),
     ...(migrations.length
       ? [
