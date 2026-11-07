@@ -29,7 +29,7 @@
     "typescript": "^7.0.2"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.202",
+    "@pikku/cli": "^0.12.203",
     "@standard-schema/spec": "^1.1.0",
     "@types/node": "^26"
   },

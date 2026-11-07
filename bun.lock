@@ -263,7 +263,7 @@
     },
     "packages/addon/pikku-console": {
       "name": "@pikku/addon-console",
-      "version": "0.12.66",
+      "version": "0.12.67",
       "dependencies": {
         "@pikku/code-edit": "^0.12.10",
         "@pikku/knowledge": "^0.12.21",
@@ -328,7 +328,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.202",
+      "version": "0.12.203",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -409,7 +409,7 @@
     },
     "packages/client-fetch": {
       "name": "@pikku/fetch",
-      "version": "0.12.13",
+      "version": "0.12.14",
     },
     "packages/client-websocket": {
       "name": "@pikku/websocket",
@@ -420,7 +420,7 @@
     },
     "packages/code-edit": {
       "name": "@pikku/code-edit",
-      "version": "0.12.10",
+      "version": "0.12.11",
       "dependencies": {
         "@pikku/inspector-go": "^0.12.8",
       },
@@ -523,7 +523,7 @@
     },
     "packages/frontend/react": {
       "name": "@pikku/react",
-      "version": "0.12.18",
+      "version": "0.12.19",
       "dependencies": {
         "@pikku/fetch": "^0.12.13",
       },
@@ -591,7 +591,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.114",
+      "version": "0.12.115",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
       },
@@ -605,7 +605,7 @@
     },
     "packages/inspector-go": {
       "name": "@pikku/inspector-go",
-      "version": "0.12.8",
+      "version": "0.12.9",
       "dependencies": {
         "@pikku/inspector": "^0.12.114",
         "tsx": "^4.23.15",
@@ -642,7 +642,7 @@
     },
     "packages/n8n-import": {
       "name": "@pikku/n8n-import",
-      "version": "0.0.9",
+      "version": "0.0.10",
       "dependencies": {
         "@pikku/inspector-go": "^0.12.8",
         "@pikku/openapi-to-zod-schema": "^0.12.8",
@@ -1031,7 +1031,7 @@
     },
     "packages/services/better-auth": {
       "name": "@pikku/better-auth",
-      "version": "0.12.61",
+      "version": "0.12.62",
       "dependencies": {
         "@pikku/jose": "^0.12.10",
       },
@@ -1274,7 +1274,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.67",
+      "version": "0.12.68",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",
