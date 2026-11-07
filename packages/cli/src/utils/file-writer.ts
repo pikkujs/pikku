@@ -10,7 +10,8 @@ export const DO_NOT_MODIFY_COMMENT = `/**
 `
 
 /**
- * While set, writes and removals under this directory are skipped.
+ * While set, writes and removals under the scaffold directory, or anywhere
+ * outside the unit's outDir, are skipped.
  *
  * Deploy plan runs a full `pikku all` per unit with `--outDir` redirected to
  * that unit's `.pikku`. Scaffold files are project *source* — generated once,
@@ -24,16 +25,29 @@ export const DO_NOT_MODIFY_COMMENT = `/**
  * added regularly, several write both scaffold source and `.pikku` artifacts in
  * one pass (so an all-or-nothing early return would skip too much), and a new
  * one that forgets the check is silently correct here.
+ *
+ * The RPC map, HTTP map and client files a project keeps outside `outDir` are
+ * the same case: a unit's filtered output written over them breaks a frontend
+ * that builds from them while plan runs, and no unit reads them at runtime.
  */
 let scaffoldWriteGuardDir: string | undefined
+let unitOutDir: string | undefined
 
-export const setScaffoldWriteGuard = (dir: string | undefined) => {
+export const setScaffoldWriteGuard = (
+  dir: string | undefined,
+  outDir?: string
+) => {
   scaffoldWriteGuardDir = dir ? resolve(dir) : undefined
+  unitOutDir = dir && outDir ? resolve(outDir) : undefined
 }
+
+const isUnder = (dir: string, path: string) =>
+  !relative(dir, resolve(path)).startsWith('..')
 
 export const isScaffoldWriteGuarded = (path: string) =>
   scaffoldWriteGuardDir !== undefined &&
-  !relative(scaffoldWriteGuardDir, resolve(path)).startsWith('..')
+  (isUnder(scaffoldWriteGuardDir, path) ||
+    (unitOutDir !== undefined && !isUnder(unitOutDir, path)))
 
 let tsWriteGeneration = 0
 const TS_FILE_REGEX = /\.[mc]?tsx?$/
@@ -51,7 +65,7 @@ export const writeFileInDir = async (
 ) => {
   if (isScaffoldWriteGuarded(path)) {
     logger.debug({
-      message: `↷ Skipped scaffold write to ${path} (per-unit deploy codegen)`,
+      message: `↷ Skipped write to ${path} (per-unit deploy codegen)`,
       type: 'info',
     })
     return
