@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { CiRun, CiStage } from './schemas.js'
 
@@ -80,17 +79,6 @@ export const ciStageCommand = (stage: CiStage, run: CiRun): CiCommand => {
         ],
       }
   }
-}
-
-/**
- * How to run this CLI again. `process.argv[1]` is the script under node or bun;
- * a compiled binary has no script on disk, so the binary alone is enough.
- */
-export const selfInvocation = (): { command: string; args: string[] } => {
-  const script = process.argv[1]
-  return script && existsSync(script)
-    ? { command: process.execPath, args: [script] }
-    : { command: process.execPath, args: [] }
 }
 
 export const ciEnv = ({ dropDatabaseUrl }: CiCommand): NodeJS.ProcessEnv => {
