@@ -263,7 +263,7 @@
     },
     "packages/addon/pikku-console": {
       "name": "@pikku/addon-console",
-      "version": "0.12.67",
+      "version": "0.12.68",
       "dependencies": {
         "@pikku/code-edit": "^0.12.10",
         "@pikku/knowledge": "^0.12.21",
@@ -328,7 +328,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.203",
+      "version": "0.12.204",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -430,7 +430,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.151",
+      "version": "0.12.152",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -454,7 +454,7 @@
     },
     "packages/create": {
       "name": "create-pikku",
-      "version": "0.12.14",
+      "version": "0.12.15",
       "bin": "dist/index.js",
       "dependencies": {
         "@inquirer/prompts": "^8.7.3",
@@ -491,7 +491,7 @@
     },
     "packages/deploy/deploy-core": {
       "name": "@pikku/deploy",
-      "version": "0.12.18",
+      "version": "0.12.19",
       "dependencies": {
         "semver": "^7.8.5",
       },
@@ -512,7 +512,7 @@
     },
     "packages/deploy/deploy-standalone": {
       "name": "@pikku/deploy-standalone",
-      "version": "0.12.29",
+      "version": "0.12.30",
       "dependencies": {
         "@pikku/deploy": "^0.12.18",
         "@pikku/migrator-sql": "^0.12.9",
@@ -523,7 +523,7 @@
     },
     "packages/frontend/react": {
       "name": "@pikku/react",
-      "version": "0.12.19",
+      "version": "0.12.20",
       "dependencies": {
         "@pikku/fetch": "^0.12.13",
       },
@@ -591,7 +591,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.115",
+      "version": "0.12.116",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
       },
@@ -1274,7 +1274,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.68",
+      "version": "0.12.69",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",

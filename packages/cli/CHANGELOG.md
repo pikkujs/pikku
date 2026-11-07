@@ -1,3 +1,29 @@
+## 0.12.204
+
+### Patch Changes
+
+- dc39996: Add `pikku app build`, which runs each deployed frontend's own `build` script in its directory, side by side, and exits non-zero if any app fails.
+- 23de209: `pikku audit` gains `--fail-on <severity>` and `--baseline <audit.json>`. With `--fail-on`, an advisory at or above that severity that the baseline does not list fails the run, and so does an audit that could not produce a report.
+- 4e96e0e: `pikku db migrate --localOnly` refuses any database whose host is not loopback, including a `host=` or `hostaddr=` override in the connection string.
+- c7db9e2: `pikku deploy apply` now exits non-zero when the deploy fails, and `--fromPlan` works for providers that write no `infra.json`, such as standalone. `deploy plan` stages `deploy.embed`, so a plan applied later carries the same files. `deploy.defaultProvider` now takes effect when `-p` is not given. `deploy apply --runtime` is a real option, refused unless the provider supports that runtime.
+- 15111a3: Per-unit deploy codegen no longer writes outside the unit's `outDir`, so `deploy plan` stops overwriting an RPC map or client file kept in a shared SDK, and frontends can build while it runs.
+- b3e29cf: `pikku deploy plan` stages each engine's SQL migrations under `<providerDir>/db/<engine>`, for every provider, replacing what an earlier build staged there. Dev seeds are not shipped.
+- 67c83ff: Add `pikku ci`: bootstrap, local `db migrate`, `emails generate`, `all`, `validate` beside `audit --failOn high`, tests and app builds as one non-interactive workflow that stops at the first failed step. `-p <provider>` runs it in a throwaway git worktree of the commit, removes the console scaffold and produces a deploy plan; `--deploy` applies that plan; on Cloudflare it first needs `--secretsSet` and `--migrationsApplied` to confirm what the adapter cannot do itself. With `--json`, CLI workflows stream `workflow.step.*` events.
+- c9850cc: `pikku dev` without `--port` now listens on the port in the local environment's `apiUrl` (the non-production loopback environment, `local` preferred), falling back to 3000; an explicit `--port` still wins and a non-numeric one is refused. The `pikku` bin re-runs itself on bun when Node is older than 24 (which has no `node:sqlite`), and exits with a message naming both fixes when bun is not installed, so `bunx --bun` is no longer needed. The starter's `scripts/dev.mjs` is gone: its `dev` script is plain `pikku dev`, which already loads `.env`, generates the local secrets and starts every frontend. Behaviour change for a project whose local `apiUrl` names a port other than 3000 and that ran `pikku dev` without `--port`: it now binds the apiUrl's port.
+- a679e5d: `pikku verify` is merged into `pikku validate`, which now runs the type-check and correctness checks, skips codegen unless `--codegen` is passed, and exits non-zero on any error. The `pikku verify` command is gone; `runVerify`, `VerifyService` and the recorded results stay. See MIGRATION.md.
+- Updated dependencies [dc39996]
+- Updated dependencies [23de209]
+- Updated dependencies [c7db9e2]
+- Updated dependencies [67c83ff]
+- Updated dependencies [c9850cc]
+- Updated dependencies [a679e5d]
+- Updated dependencies [307fb8d]
+  - @pikku/skills@0.12.69
+  - @pikku/deploy@0.12.19
+  - @pikku/deploy-standalone@0.12.30
+  - @pikku/core@0.12.152
+  - @pikku/inspector@0.12.116
+
 ## 0.12.203
 
 ### Patch Changes
