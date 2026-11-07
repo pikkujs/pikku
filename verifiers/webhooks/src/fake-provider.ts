@@ -1,4 +1,10 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { LocalVariablesService } from '@pikku/core/services'
+import {
+  createScriptContent,
+  getText,
+  hasKey,
+  putText,
+} from './script-content.js'
 
 /**
  * A provider's webhook endpoints, kept in a file so a `pikku webhooks` run in
@@ -12,14 +18,23 @@ export type FakeEndpoint = {
   secret: string
 }
 
-const file = () => {
-  const path = process.env.FAKE_PROVIDER_FILE
-  if (!path) throw new Error('FAKE_PROVIDER_FILE is not set')
-  return path
+const store = () => {
+  const dir = new LocalVariablesService().get<string>('WEBHOOK_SCRATCH_DIR')
+  if (!dir) throw new Error('WEBHOOK_SCRATCH_DIR is not set')
+  return createScriptContent(dir)
 }
 
-export const readEndpoints = (): FakeEndpoint[] =>
-  existsSync(file()) ? JSON.parse(readFileSync(file(), 'utf-8')) : []
+export const readEndpoints = async (): Promise<FakeEndpoint[]> => {
+  const content = store()
+  return (await hasKey(content, 'provider', 'endpoints.json'))
+    ? JSON.parse(await getText(content, 'provider', 'endpoints.json'))
+    : []
+}
 
 export const writeEndpoints = (endpoints: FakeEndpoint[]) =>
-  writeFileSync(file(), JSON.stringify(endpoints, null, 2))
+  putText(
+    store(),
+    'provider',
+    'endpoints.json',
+    JSON.stringify(endpoints, null, 2)
+  )

@@ -5,12 +5,16 @@
  * without credentials failing to start on a module that does not exist.
  */
 
-import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { createScriptContent, ingestText } from './script-content.js'
 
-const bootstrap = readFileSync(
-  join(import.meta.dirname, '../.pikku/pikku-bootstrap.gen.ts'),
-  'utf-8'
+const content = createScriptContent(
+  join(import.meta.dirname, '../.pikku-runtime/script-content')
+)
+
+const bootstrap = await ingestText(
+  content,
+  join(import.meta.dirname, '../.pikku/pikku-bootstrap.gen.ts')
 )
 
 console.log('Testing a project without credentials imports none...\n')

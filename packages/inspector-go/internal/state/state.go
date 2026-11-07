@@ -56,6 +56,7 @@ type State struct {
 	Auth                  Auth                           `json:"auth"`
 	Secrets               Secrets                        `json:"secrets"`
 	SurfaceUsage          Record[*Record[*SurfaceUsage]] `json:"surfaceUsage"`
+	ServiceBypass         Record[*ServiceBypass]         `json:"serviceBypass"`
 	Credentials           Definitions                    `json:"credentials"`
 	Scopes                Scopes                         `json:"scopes"`
 	SystemRoles           Definitions                    `json:"systemRoles"`

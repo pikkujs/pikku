@@ -230,6 +230,7 @@ export interface SerializableInspectorState {
     usage: Record<string, SecretUsage>
   }
   surfaceUsage: InspectorState['surfaceUsage']
+  serviceBypass: InspectorState['serviceBypass']
   credentials: {
     definitions: InspectorState['credentials']['definitions']
     files: string[]
@@ -487,6 +488,7 @@ export function serializeInspectorState(
       usage: Object.fromEntries(state.secrets.usage),
     },
     surfaceUsage: state.surfaceUsage,
+    serviceBypass: state.serviceBypass,
     credentials: {
       definitions: state.credentials.definitions,
       files: Array.from(state.credentials.files),
@@ -723,6 +725,7 @@ export function deserializeInspectorState(
       usage: new Map(Object.entries(data.secrets?.usage || {})),
     },
     surfaceUsage: data.surfaceUsage || {},
+    serviceBypass: data.serviceBypass || {},
     credentials: {
       definitions: data.credentials?.definitions || [],
       files: new Set(data.credentials?.files || []),

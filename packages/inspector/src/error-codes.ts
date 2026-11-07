@@ -141,6 +141,10 @@ export enum ErrorCode {
   WIRES_NOT_DESTRUCTURED = 'PKU411',
   FUNCTION_DYNAMIC_IMPORT = 'PKU498',
 
+  // Service policy diagnostics: code that reaches around a Pikku service
+  DIRECT_CONTENT_ACCESS = 'PKU412',
+  DIRECT_ENV_ACCESS = 'PKU413',
+
   // Dependency integrity errors
   DUPLICATE_CORE_VERSION = 'PKU717',
   CORE_VERSION_SKEW = 'PKU718',

@@ -39,7 +39,10 @@ type Effect = {
 
 const effects = (): Effect[] => {
   try {
-    return readFileSync(join(dir, 'chaos-ledger.jsonl'), 'utf8')
+    return readFileSync(
+      join(dir, 'private', 'chaos', 'chaos-ledger.jsonl'),
+      'utf8'
+    )
       .trim()
       .split('\n')
       .map((line) => JSON.parse(line))

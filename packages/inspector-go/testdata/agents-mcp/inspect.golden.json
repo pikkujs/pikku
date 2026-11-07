@@ -858,6 +858,7 @@
       "usage": {}
     },
     "surfaceUsage": {},
+    "serviceBypass": {},
     "credentials": {
       "definitions": [],
       "files": []

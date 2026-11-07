@@ -2,6 +2,8 @@ import { spawn } from 'node:child_process'
 import { rmSync } from 'node:fs'
 import net from 'node:net'
 import path from 'node:path'
+import { LocalVariablesService } from '@pikku/core/services'
+import { createScriptContent } from './script-content.js'
 
 const BIN_DIR = path.join(process.cwd(), 'node_modules/.bin')
 
@@ -81,10 +83,15 @@ async function main(): Promise<void> {
   const FRONTEND = `http://127.0.0.1:${frontendPort}`
   const BACKEND = `http://127.0.0.1:${backendPort}`
   const AUTH = `${FRONTEND}/api/auth`
-  const DB_FILE = path.join(
+  const CONTENT_ROOT = path.join(
     process.cwd(),
-    `.better-auth-${process.pid}-${Date.now()}.sqlite`
+    '.pikku-runtime',
+    'script-content'
   )
+  const content = createScriptContent(CONTENT_ROOT)
+  const DB_KEY = `better-auth-${process.pid}-${Date.now()}.sqlite`
+  const DB_FILE = path.join(CONTENT_ROOT, 'private', 'auth', DB_KEY)
+  const processEnv = new LocalVariablesService().getAll()
 
   rmSync(path.join(process.cwd(), 'src/routes/index.js'), { force: true })
   rmSync(path.join(process.cwd(), 'src/routes/__root.js'), { force: true })
@@ -95,7 +102,7 @@ async function main(): Promise<void> {
     cwd: process.cwd(),
     stdio: 'pipe',
     env: {
-      ...process.env,
+      ...processEnv,
       PORT: String(backendPort),
       BETTER_AUTH_DB_FILE: DB_FILE,
       FRONTEND_URL: FRONTEND,
@@ -122,7 +129,7 @@ async function main(): Promise<void> {
       cwd: process.cwd(),
       stdio: 'pipe',
       env: {
-        ...process.env,
+        ...processEnv,
         VITE_API_URL: BACKEND,
         BETTER_AUTH_DB_FILE: DB_FILE,
         FRONTEND_URL: FRONTEND,
@@ -175,7 +182,7 @@ async function main(): Promise<void> {
     frontend.kill('SIGTERM')
     backend.kill('SIGTERM')
     await Promise.all([waitForExit(frontend), waitForExit(backend)])
-    rmSync(DB_FILE, { force: true })
+    await content.deleteByPrefix('auth', DB_KEY)
   }
 }
 

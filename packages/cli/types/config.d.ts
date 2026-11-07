@@ -1059,6 +1059,22 @@ export type PikkuCLIInput = {
     wiresNotDestructured?: 'off' | 'warn' | 'error'
     functionDynamicImport?: 'off' | 'warn' | 'error'
     /**
+     * Flag direct use of `fs` / `node:fs` / `fs/promises` (static import,
+     * `require`, dynamic `import()`) in project source. Content belongs behind
+     * the `content` service: keyed, project-scoped, with signed reads and
+     * writes. Project-wide; generated code (`.pikku/`, `*.gen.ts`) and test
+     * files are exempt. Defaults to 'error'; set 'off' to opt out.
+     */
+    enforceContentService?: 'off' | 'warn' | 'error'
+    /**
+     * Flag direct `process.env` reads (`process.env.X`, `process.env['X']`,
+     * destructuring, spreading, `const { env } = process`). Use the
+     * `variables` service for non-secret values and the `secrets` service for
+     * secrets. Project-wide; generated code and test files are exempt.
+     * Defaults to 'error'; set 'off' to opt out.
+     */
+    enforceVariablesService?: 'off' | 'warn' | 'error'
+    /**
      * Flag a root `start`/`dev` script that boots a server without `pikku dev`
      * or `pikku serve`, since a hand-rolled entrypoint constructs its own
      * services and never runs the `pikkuServerLifecycle` hooks. Defaults to

@@ -8,12 +8,12 @@ export const hookB: Contributor = {
   run: (services) => {
     services.hookB = `${services.hookA}>b`
   },
-  onServerStart: () => {
-    logHook('start:hook-b')
+  onServerStart: async () => {
+    await logHook('start:hook-b')
     maybeFail('start', 'hook-b')
   },
-  onServerStop: () => {
-    logHook('stop:hook-b')
+  onServerStop: async () => {
+    await logHook('stop:hook-b')
     maybeFail('stop', 'hook-b')
   },
 }

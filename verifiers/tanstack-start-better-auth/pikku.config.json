@@ -10,5 +10,8 @@
   },
   "schema": {
     "supportsImportAttributes": true
+  },
+  "lint": {
+    "enforceContentService": "off"
   }
 }

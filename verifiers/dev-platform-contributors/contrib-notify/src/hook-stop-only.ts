@@ -7,5 +7,5 @@ export const hookStopOnly: Contributor = {
   run: (services) => {
     services.hookStopOnly = true
   },
-  onServerStop: () => logHook('stop:hook-stop-only'),
+  onServerStop: async () => logHook('stop:hook-stop-only'),
 }

@@ -1708,7 +1708,39 @@ export function computeDiagnostics(state: InspectorState): void {
     }
   }
 
+  for (const [file, usage] of Object.entries(state.serviceBypass ?? {})) {
+    const relativeFile = state.rootDir ? relative(state.rootDir, file) : file
+    if (usage.content.length > 0) {
+      diagnostics.push({
+        code: ErrorCode.DIRECT_CONTENT_ACCESS,
+        message: `${relativeFile} uses the filesystem directly (${describeBypass(usage.content)}). Use the \`content\` service instead: it is keyed, project-scoped, and issues signed reads and writes. Set lint.enforceContentService to 'warn' or 'off' in pikku.config.json to relax this.`,
+        sourceFile: file,
+        position: 0,
+      })
+    }
+    if (usage.variables.length > 0) {
+      diagnostics.push({
+        code: ErrorCode.DIRECT_ENV_ACCESS,
+        message: `${relativeFile} reads process.env directly (${describeBypass(usage.variables)}). Use the \`variables\` service for non-secret values and the \`secrets\` service for secrets. Set lint.enforceVariablesService to 'warn' or 'off' in pikku.config.json to relax this.`,
+        sourceFile: file,
+        position: 0,
+      })
+    }
+  }
+
   state.diagnostics = diagnostics
+}
+
+/** `line:snippet` entries as `line N snippet`, capped so one file stays one line. */
+function describeBypass(entries: string[]): string {
+  const shown = entries.slice(0, 5).map((entry) => {
+    const split = entry.indexOf(':')
+    return `line ${entry.slice(0, split)} ${entry.slice(split + 1)}`
+  })
+  if (entries.length > shown.length) {
+    shown.push(`and ${entries.length - shown.length} more`)
+  }
+  return shown.join(', ')
 }
 
 /**

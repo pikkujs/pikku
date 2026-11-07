@@ -3,18 +3,26 @@
 // it must not pull the project's function types, services or any other
 // `#pikku/*` module into a Worker or standalone bundle.
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  createScriptContent,
+  existsOnDisk,
+  ingestText,
+} from './script-content.js'
 
 const verifier = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const { build } = await import('esbuild')
+const store = createScriptContent(
+  resolve(verifier, '.pikku-runtime/script-content')
+)
+const exists = (file: string) => existsOnDisk(store, file)
 
 const typed = join(verifier, 'scenarios/typed')
 const leaf = join(typed, '.pikku/contributor/pikku-contributor-types.gen.ts')
-assert.ok(existsSync(leaf), 'the project got a #pikku/contributor leaf')
+assert.ok(await exists(leaf), 'the project got a #pikku/contributor leaf')
 assert.ok(
-  existsSync(join(typed, '.pikku/contributor/index.ts')),
+  await exists(join(typed, '.pikku/contributor/index.ts')),
   '#pikku/contributor resolves to an index'
 )
 
@@ -22,7 +30,7 @@ assert.ok(
 for (const addon of ['contrib-notify', 'contrib-select', 'contrib-bad']) {
   for (const file of ['index.ts', 'pikku-contributor-types.gen.ts']) {
     assert.equal(
-      existsSync(join(verifier, addon, '.pikku/addon/contributor', file)),
+      await exists(join(verifier, addon, '.pikku/addon/contributor', file)),
       false,
       `${addon} must not get a #pikku/contributor leaf (${file})`
     )
@@ -30,7 +38,7 @@ for (const addon of ['contrib-notify', 'contrib-select', 'contrib-bad']) {
 }
 
 // The generated module's only runtime import is core.
-const generated = readFileSync(leaf, 'utf8')
+const generated = await ingestText(store, leaf)
 const runtimeImports = [...generated.matchAll(/^import (?!type)[^\n]*$/gm)].map(
   (m) => m[0]
 )

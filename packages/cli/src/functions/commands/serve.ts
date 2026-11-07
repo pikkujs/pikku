@@ -1,3 +1,4 @@
+import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { rm } from 'node:fs/promises'
 import { join, resolve } from 'path'
 import { codegenStateFile, runCodegenChild } from './codegen-child.js'
@@ -114,7 +115,10 @@ export const serve = pikkuSessionlessFunc<
     const userCreateSingletonServices =
       servicesModule[singletonServicesFactory.variable]
 
-    const userConfig = await userCreateConfig()
+    const userConfig = await callUserCreateConfig(
+      userCreateConfig,
+      variables
+    )
 
     const envDatabaseUrl = await variables.get('DATABASE_URL')
     const effectiveDbConfig = envDatabaseUrl
