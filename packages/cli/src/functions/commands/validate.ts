@@ -1,3 +1,4 @@
+import { findPikkuRoot } from '@pikku/code-edit/verify'
 import { setValidateExitCode } from '../validate/validate-exit-code.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
@@ -10,24 +11,38 @@ import {
 
 export const validate = pikkuSessionlessFunc({
   description:
-    'Check this project against every Pikku check that applies to it — app structure, deploy readiness, and the published file set of any addon it contains. Prints what was checked, with fix hints for anything wrong.',
+    'Check this project against every Pikku check that applies to it — app structure, deploy readiness, type-checks, correctness checks, and the published file set of any addon it contains. Prints what was checked, with fix hints for anything wrong, and exits non-zero on any error.',
   input: ValidateInput,
   output: ValidateOutput,
   func: async (
     _services,
-    { skipTypecheck, skipDeployChecks, migrationsBase },
+    {
+      codegen,
+      strict,
+      skipTypecheck,
+      skipFrontends,
+      skipDeployChecks,
+      migrationsBase,
+    },
     { rpc }
   ) => {
-    const result = await runProjectValidate(process.cwd(), {
+    const report = await runProjectValidate(process.cwd(), {
       skipTypecheck,
       skipDeployChecks,
       migrationsBase,
       projectChecks: guardProjectChecks((request) =>
         (rpc.invoke as any)('cloudCli:CloudProjectChecks', request)
       ),
+      verify: {
+        codegen,
+        strict,
+        skipFrontends,
+        pikkuCli: process.argv[1],
+        rootDir: findPikkuRoot(process.cwd()) ?? undefined,
+      },
     })
-    setValidateExitCode(result)
-    return result
+    setValidateExitCode(report)
+    return report
   },
 })
 

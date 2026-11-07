@@ -1,14 +1,15 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
+  assertLocalDatabase,
   resolveDb,
   migrateAndCodegen,
   computeAuthDrift,
 } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
-export const dbMigrate = pikkuSessionlessFunc<{}, void>({
+export const dbMigrate = pikkuSessionlessFunc<{ localOnly?: boolean }, void>({
   remote: true,
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config }, data) => {
     const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
@@ -25,6 +26,8 @@ export const dbMigrate = pikkuSessionlessFunc<{}, void>({
       )
       throw new Error('no database configured')
     }
+
+    if (data?.localOnly) assertLocalDatabase(resolved)
 
     const { migrate, codegen, zod } = await migrateAndCodegen(resolved)
 

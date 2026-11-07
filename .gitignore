@@ -199,3 +199,6 @@ packages/inspector-go/prebuilt/
 
 # pikku-inspect-rs built by cargo
 packages/inspector-rust/target/
+
+# pikku ci verifier fixtures, removed by the suite
+verifiers/ci/.fixture-*

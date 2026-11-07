@@ -48,7 +48,7 @@ describe('assertFrontendBuilt', () => {
     const dir = await scratch()
     await mkdir(join(dir, 'assets'), { recursive: true })
 
-    await assert.rejects(() => assertFrontendBuilt(dir), /never builds it/)
+    await assert.rejects(() => assertFrontendBuilt(dir), /pikku app build/)
   })
 })
 

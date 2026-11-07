@@ -1,0 +1,8 @@
+node_modules
+.pikku
+.pikku-runtime
+.deploy
+apps/*/dist
+*.marker
+packages/functions/src/scaffold
+db/annotations.gen.json

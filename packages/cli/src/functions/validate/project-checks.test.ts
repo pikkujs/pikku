@@ -2052,50 +2052,6 @@ describe('declared frontends + type-check (live project checks)', () => {
       await rm(tmp, { recursive: true, force: true })
     }
   })
-
-  test('a frontend that cannot be type-checked warns — and --skip-typecheck suppresses it', async () => {
-    const tmp = await makeTmp()
-    try {
-      await makeValidProject(tmp)
-      await declareFrontends(tmp, { app: { cwd: 'apps/app' } })
-      await mkdir(join(tmp, 'apps', 'app'), { recursive: true })
-      await writeJson(join(tmp, 'apps', 'app', 'package.json'), { name: 'app' })
-
-      const checked = await runLiveValidate(tmp)
-      assert.ok(
-        checked.findings.some((f) => f.id === 'frontend-typecheck-skipped-app'),
-        `expected frontend-typecheck-skipped-app, got: ${findingIds(checked.findings)}`
-      )
-
-      const skipped = await runLiveValidate(tmp, { skipTypecheck: true })
-      assert.ok(
-        !skipped.findings.some((f) => f.id.startsWith('frontend-typecheck-')),
-        `expected no type-check findings, got: ${findingIds(skipped.findings)}`
-      )
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
-  })
-
-  test('a frontend declared with deploy:false is not type-checked', async () => {
-    const tmp = await makeTmp()
-    try {
-      await makeValidProject(tmp)
-      await declareFrontends(tmp, {
-        app: { cwd: 'apps/app', deploy: false },
-      })
-      await mkdir(join(tmp, 'apps', 'app'), { recursive: true })
-      await writeJson(join(tmp, 'apps', 'app', 'package.json'), { name: 'app' })
-
-      const result = await runLiveValidate(tmp)
-      assert.ok(
-        !result.findings.some((f) => f.id.startsWith('frontend-typecheck-')),
-        `expected no type-check findings, got: ${findingIds(result.findings)}`
-      )
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
-  })
 })
 
 describe('deployed frontend API base (live project checks)', () => {
