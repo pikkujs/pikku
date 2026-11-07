@@ -60,15 +60,35 @@ export async function agentExamples() {
 // @snippet end aiAgentInvokeClient
 
 // @snippet start aiAgentStreamClient
-export async function agentStreamExamples() {
+export async function agentStreamExamples(signal?: AbortSignal) {
   pikkuRPC.setServerUrl('http://localhost:4000')
   pikkuRPC.setAuthorizationJWT('user-jwt-token')
 
-  const stream = await pikkuRPC.agent.stream('shopAssistant', {
-    message: 'Add the cheapest USB hub to my basket',
-    threadId: 'thread-123',
-    resourceId: 'user-456',
-  })
-  return stream
+  let reply = ''
+  // A RUN_ERROR from the server throws here; aborting `signal` ends the request.
+  for await (const event of pikkuRPC.agent.stream(
+    'shopAssistant',
+    {
+      message: 'Add the cheapest USB hub to my basket',
+      threadId: 'thread-123',
+      resourceId: 'user-456',
+    },
+    { signal }
+  )) {
+    if (event.type === 'TEXT_MESSAGE_CONTENT') {
+      reply += event.delta
+    }
+    if (event.type === 'CUSTOM' && event.name === 'pikku:approval-request') {
+      const { runId, toolCallId } = event.value
+      await pikkuRPC.agent.approve('shopAssistant', {
+        runId,
+        approvals: [{ toolCallId, approved: true }],
+      })
+    }
+    if (event.type === 'RUN_FINISHED') {
+      console.log(event.usage)
+    }
+  }
+  return reply
 }
 // @snippet end aiAgentStreamClient

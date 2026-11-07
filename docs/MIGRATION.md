@@ -277,6 +277,24 @@ A contributor is no longer `{ name, needs, provides, imports, emit }`. It is `{ 
 
 Search: `rg -n "\"contributors\"|PlatformServiceContributor|devPlatformServicesFile|collectContributor|dedupeContributors|partitionContributors|assertContributorsSupported|contributorBindingSources"`, and check the hits in `pikku.config.json` and addon `package.json` files for `"contributors"` under `"dev"`, `"deploy"` and `"pikku"`.
 
+### `agent.stream` is an async iterable, and `usePikkuAgent` is typed
+
+The generated client's `pikkuRPC.agent.stream` used to parse the event stream as JSON and resolve `undefined` once the run ended, so it never delivered a reply. It now returns an async iterable of the run's AG-UI events (`PikkuAgentEvent` from `@pikku/fetch`) and throws a `PikkuAgentStreamError` on `RUN_ERROR` (fetch, cli). `run` and `approve` resolve to `status: 'suspended'` with `pendingApprovals` when a tool needs approval, and `approve` takes the agent name like `run`.
+
+`usePikkuAgent` (react) no longer takes an `RPC` type argument. It reads the app's agent names and outputs from the generated React Query file, so `usePikkuAgent('notAnAgent')` is a type error there, and `run`, `stream` and `approve` are typed.
+
+```ts
+// before: resolved undefined
+await pikkuRPC.agent.stream('helpAgent', input)
+
+// after
+for await (const event of pikkuRPC.agent.stream('helpAgent', input)) {
+  if (event.type === 'TEXT_MESSAGE_CONTENT') reply += event.delta
+}
+```
+
+Search: `rg -n "agent\.stream\(|usePikkuAgent<"`.
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.

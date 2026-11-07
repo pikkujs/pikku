@@ -27,6 +27,19 @@ describe('serializeReactQueryHooks', () => {
     assert.match(output, /retry: retryUnlessClientError,\n    \.\.\.options,/)
   })
 
+  test('registers the app agents with usePikkuAgent from @pikku/react', () => {
+    const output = serializeReactQueryHooks(RPC_MAP)
+    assert.ok(
+      output.includes(
+        "import type { FlattenedRPCMap, AgentName, AgentOutputOf } from './pikku-rpc-map.gen.js'"
+      )
+    )
+    assert.match(
+      output,
+      /declare module '@pikku\/react' \{\n  interface PikkuAgentRegistry \{\n    agents: \{ \[Name in AgentName\]: AgentOutputOf<Name> \}\n  \}\n\}/
+    )
+  })
+
   test('an app with no auth gets no useSession, and no import for it', () => {
     const output = serializeReactQueryHooks(RPC_MAP)
     assert.ok(!output.includes('useSession'))
@@ -294,7 +307,9 @@ describe('serializeReactQueryHooks', () => {
         writeFileSync(join(dir, name), body)
       write(
         'pikku-rpc-map.gen.d.ts',
-        `export type FlattenedRPCMap = { 'bookings:list': { input: { page: number }; output: { id: number }[] }; 'reminders:list': { input: {}; output: { id: string }[] } }`
+        `export type FlattenedRPCMap = { 'bookings:list': { input: { page: number }; output: { id: number }[] }; 'reminders:list': { input: {}; output: { id: string }[] } }
+export type AgentName = string
+export type AgentOutputOf<Name> = unknown`
       )
       write(
         'shims.d.ts',

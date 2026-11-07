@@ -124,20 +124,54 @@ export type TypedWorkflowStatus = (
   runId: string
 ) => Promise<{ id: string; status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled' | 'compensating' | 'compensated' | 'compensation_failed'; output?: unknown; error?: { message?: string } }>
 
-type TypedAgentRun = [keyof FlattenedAgentMap] extends [never]
-  ? (name: string, input: AgentInput) => Promise<any>
-  : <Name extends keyof FlattenedAgentMap>(
-      name: Name,
-      input: AgentInput
-    ) => Promise<{ runId: string; result: FlattenedAgentMap[Name]['output']; usage: { inputTokens: number; outputTokens: number } }>
+/** A tool call waiting for the user's approval, as \`run\` and \`approve\` return it. */
+export type AgentPendingApproval = {
+  toolCallId: string
+  toolName: string
+  args: unknown
+  reason?: string
+  runId: string
+}
 
-type TypedAgentStream = [keyof FlattenedAgentMap] extends [never]
-  ? (name: string, input: AgentInput, options?: { requiresToolApproval?: 'all' | 'explicit' | false }) => Promise<void>
-  : <Name extends keyof FlattenedAgentMap>(
-      name: Name,
-      input: AgentInput,
-      options?: { requiresToolApproval?: 'all' | 'explicit' | false }
-    ) => Promise<void>
+/**
+ * What \`agent.run\` and \`agent.approve\` resolve to. A run that stopped for approval has
+ * \`status: 'suspended'\` and the calls waiting in \`pendingApprovals\`; answer them with
+ * \`approve\` and the same \`runId\`.
+ */
+export type AgentRunResult<Output = unknown> = {
+  runId: string
+  result: Output
+  usage: { inputTokens: number; outputTokens: number }
+} & (
+  | { status?: undefined; pendingApprovals?: undefined }
+  | { status: 'suspended'; pendingApprovals: AgentPendingApproval[] }
+)
+
+/** The body \`agent.approve\` sends: one decision per pending tool call of the run. */
+export type AgentApproveInput = {
+  runId: string
+  approvals: { toolCallId: string; approved: boolean }[]
+}
+
+export type AgentName = [keyof FlattenedAgentMap] extends [never] ? string : keyof FlattenedAgentMap & string
+
+export type AgentOutputOf<Name> = Name extends keyof FlattenedAgentMap ? FlattenedAgentMap[Name]['output'] : unknown
+
+export type TypedAgentRun = <Name extends AgentName>(
+  name: Name,
+  input: AgentInput
+) => Promise<AgentRunResult<AgentOutputOf<Name>>>
+
+export type TypedAgentApprove = <Name extends AgentName>(
+  name: Name,
+  input: AgentApproveInput
+) => Promise<AgentRunResult<AgentOutputOf<Name>>>
+
+type TypedAgentStream = <Name extends AgentName>(
+  name: Name,
+  input: AgentInput,
+  options?: { requiresToolApproval?: 'all' | 'explicit' | false }
+) => Promise<void>
 
 export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCMesh, TypedStartWorkflow, TypedAgentRun, TypedAgentStream>
   `
