@@ -36,7 +36,12 @@ export type PikkuBetterAuthFactory<
  * and gives a stateless app's unset `session.cookieCache.maxAge` a usable
  * default. Export exactly one per project.
  *
+ * To invite someone from a function, see `createAuthUser` and
+ * `sendAuthUserSignInLink`: create or find the user, then mail them a
+ * link through the `magicLink()` plugin's own `sendMagicLink`.
+ *
  * @example snippet: betterAuthConfig
+ * @example snippet: betterAuthInvite
  */
 export const pikkuBetterAuth = <
   I extends BetterAuthInstance,
