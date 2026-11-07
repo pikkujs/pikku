@@ -29,13 +29,19 @@ because: tsrs is a drop-in for the TypeScript 7 compiler, so the engine is a
 
 ## What was checked
 
-On 109 packages with a `tsc` script, `tsc --noEmit -p <package>` under each
-engine on the same tree gave identical diagnostics: 1,556 errors each, none
-missing and none added. `tsc -b` of `@pikku/core` and `@pikku/schedule` emitted
+On the 85 workspaces whose `tsc` resolves to the alias, `tsc --noEmit -p <package>`
+under each engine on the same tree gave identical diagnostics: 1,018 errors each,
+none missing and none added. The other 24 workspaces with a `tsc` script are not
+covered (see below). `tsc -b` of `@pikku/core` and `@pikku/schedule` emitted
 774 files, identical under both.
 
 ## Gotchas
 
+- **Workspaces with their own `typescript` are not aliased.** A package's own
+  `node_modules/.bin` comes before the root's, so the 24 `recipes/*` and
+  `templates/*` that declare `typescript: ^7.0.2` (their `package.json` is copied
+  into a user's app) run TypeScript 7 whatever `PIKKU_TSC` says. A comparison
+  that includes them is comparing TypeScript 7 with itself.
 - **Compare on the same tree.** A plain `tsc` run emits, so running one engine
   after the other type-checks against the first one's output and the second
   appears to pass where the first failed. Use `--noEmit`, or reset `dist`.
