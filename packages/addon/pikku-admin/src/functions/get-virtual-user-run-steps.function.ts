@@ -20,7 +20,7 @@ export const getVirtualUserRunSteps = pikkuFunc<
   description:
     'Returns every turn one virtual user run took: what it called, what came back, and what that cost.',
   expose: true,
-  scopes: ['pikku:console:virtualUsers:read'],
+  scopes: ['admin:virtualUsers:read'],
   func: async ({ virtualUserRunStore }, input) => {
     if (!virtualUserRunStore) {
       return []

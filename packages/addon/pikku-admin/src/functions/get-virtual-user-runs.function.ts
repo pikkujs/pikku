@@ -22,7 +22,7 @@ export const getVirtualUserRuns = pikkuFunc<
   description:
     'Returns recorded virtual user runs, newest first. Accepts optional virtualUserId, limit and offset.',
   expose: true,
-  scopes: ['pikku:console:virtualUsers:read'],
+  scopes: ['admin:virtualUsers:read'],
   func: async ({ virtualUserRunStore }, input) => {
     if (!virtualUserRunStore) {
       return []

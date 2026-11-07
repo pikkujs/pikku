@@ -6,7 +6,7 @@ export const getAgentThreadMessages = pikkuFunc<{ threadId: string }, any[]>({
   description:
     'Returns all messages for a given AI agent thread, ordered by creation time. A caller without the admin scope may only read a thread its own session owns.',
   expose: true,
-  scopes: ['pikku:console:agents:read'],
+  scopes: ['admin:agents:read'],
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
     return await agentRunService.getThreadMessages(input.threadId)

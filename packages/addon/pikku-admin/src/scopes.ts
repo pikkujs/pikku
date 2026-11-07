@@ -101,6 +101,36 @@ defineScope({
           read: {
             description: 'See each received webhook and what became of it',
           },
+          deliveries: {
+            description: 'See each outgoing webhook delivery and its result',
+          },
+        },
+      },
+      workflows: {
+        description: 'Workflow runs',
+        scopes: {
+          read: {
+            description:
+              "See workflow runs, their steps and history, and watch a run's progress",
+          },
+          manage: { description: 'Delete workflow runs' },
+        },
+      },
+      agents: {
+        description: 'AI agent conversations',
+        scopes: {
+          read: {
+            description: 'See agent threads, their messages, runs and scores',
+          },
+          manage: { description: 'Delete agent threads' },
+        },
+      },
+      virtualUsers: {
+        description: 'Virtual users',
+        scopes: {
+          read: {
+            description: 'See virtual-user runs, their steps and schedules',
+          },
         },
       },
       audit: {
