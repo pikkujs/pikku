@@ -3,7 +3,7 @@ import { rmSync } from 'node:fs'
 import net from 'node:net'
 import path from 'node:path'
 import { LocalVariablesService } from '@pikku/core/services'
-import { createScriptContent } from './script-content.js'
+import { createScriptContent, putText } from './script-content.js'
 
 const BIN_DIR = path.join(process.cwd(), 'node_modules/.bin')
 
@@ -92,6 +92,9 @@ async function main(): Promise<void> {
   const DB_KEY = `better-auth-${process.pid}-${Date.now()}.sqlite`
   const DB_FILE = path.join(CONTENT_ROOT, 'private', 'auth', DB_KEY)
   const processEnv = new LocalVariablesService().getAll()
+  // better-sqlite3 will not create the directory the file lives in; writing a
+  // placeholder through the content service does.
+  await putText(content, 'auth', '.keep', '')
 
   rmSync(path.join(process.cwd(), 'src/routes/index.js'), { force: true })
   rmSync(path.join(process.cwd(), 'src/routes/__root.js'), { force: true })

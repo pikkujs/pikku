@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
@@ -233,35 +232,5 @@ func computeDiagnostics(st *state.State) {
 	definitions("Middleware", rawRecord(st.Middleware.Definitions))
 	definitions("Permission", rawRecord(st.Permissions.Definitions))
 
-	st.ServiceBypass.Each(func(file string, usage *state.ServiceBypass) {
-		if usage == nil {
-			return
-		}
-		relativeFile := jsRelative(st.RootDir, file)
-		if len(usage.Content) > 0 {
-			add(diag.DirectContentAccess, relativeFile+" uses the filesystem directly ("+describeBypass(usage.Content)+"). Use the `content` service instead: it is keyed, project-scoped, and issues signed reads and writes. Set lint.enforceContentService to 'warn' or 'off' in pikku.config.json to relax this.", file, 0)
-		}
-		if len(usage.Variables) > 0 {
-			add(diag.DirectEnvAccess, relativeFile+" reads process.env directly ("+describeBypass(usage.Variables)+"). Use the `variables` service for non-secret values and the `secrets` service for secrets. Set lint.enforceVariablesService to 'warn' or 'off' in pikku.config.json to relax this.", file, 0)
-		}
-	})
-
 	st.Diagnostics = out
-}
-
-// describeBypass renders `line:snippet` entries as `line N snippet`, capped so
-// one file stays one line.
-func describeBypass(entries state.Strings) string {
-	shown := []string{}
-	for i, e := range entries {
-		if i == 5 {
-			break
-		}
-		line, snippet, _ := strings.Cut(e, ":")
-		shown = append(shown, "line "+line+" "+snippet)
-	}
-	if len(entries) > len(shown) {
-		shown = append(shown, "and "+strconv.Itoa(len(entries)-len(shown))+" more")
-	}
-	return strings.Join(shown, ", ")
 }
