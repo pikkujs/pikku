@@ -245,6 +245,14 @@ jobs:
           fi
           echo "cli_version=${cli_version}" >> "$GITHUB_OUTPUT"
           tag="@pikku/cli@${cli_version}"
+          # A missing binary is a release a user cannot install, so it fails here
+          # instead of uploading whatever happens to be in the directory.
+          for name in pikku-linux-x64 pikku-linux-arm64 pikku-darwin-arm64 pikku-windows-x64.exe; do
+            if [ ! -f "packages/cli/release/binaries/$name" ]; then
+              echo "::error::$name was not built; bun run release sets PIKKU_CLI_BINARIES=all"
+              exit 1
+            fi
+          done
           echo "Uploading binaries for $tag"
           for f in packages/cli/release/binaries/*; do
             [ -f "$f" ] || continue

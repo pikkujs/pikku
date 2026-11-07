@@ -472,9 +472,45 @@ for _addon in changes cloud; do
   cp -R "$_src/dist" "$_dest/dist"
 done
 
-# Build native CLI binaries for all platforms using bun --compile
-if command -v bun >/dev/null 2>&1; then
-  echo "Building native CLI binaries..."
+# Native CLI binaries, compiled with bun --compile. Nothing in a checkout runs
+# them: they exist to be attached to a GitHub Release and fed to the Homebrew
+# cask, and the four of them come to about 400 MB per worktree. So a normal build compiles
+# none, and PIKKU_CLI_BINARIES asks for them:
+#
+#   none  the default
+#   host  this machine's target; PR CI uses it to prove the CLI still bundles
+#   all   every released target; `bun run release` and the Full Suite use it
+#
+# `all` has to reach `changeset publish` as well as `build:packages`: the CLI's
+# prepublishOnly runs this script again, and that second run is the one whose
+# output the publish workflow uploads.
+PIKKU_CLI_BINARIES="${PIKKU_CLI_BINARIES:-none}"
+case "$PIKKU_CLI_BINARIES" in
+  none)
+    binary_targets=""
+    ;;
+  host)
+    binary_targets=$(node -p "'bun-' + (process.platform === 'win32' ? 'windows' : process.platform) + '-' + process.arch")
+    ;;
+  all)
+    binary_targets="bun-linux-x64 bun-linux-arm64 bun-darwin-arm64 bun-windows-x64"
+    ;;
+  *)
+    echo "PIKKU_CLI_BINARIES must be none, host or all, not '$PIKKU_CLI_BINARIES'" >&2
+    exit 1
+    ;;
+esac
+
+# Cleared on every build, so a host build cannot leave an older build's binaries
+# here to be uploaded, and a checkout built before the default changed gets its
+# disk back.
+rm -rf -- release/binaries
+
+if [ -n "$binary_targets" ]; then
+  # Skipping would look like success and publish a release without its binaries.
+  command -v bun >/dev/null 2>&1 || { echo "bun is required to compile the CLI binaries" >&2; exit 1; }
+
+  echo "Building native CLI binaries ($PIKKU_CLI_BINARIES)..."
   mkdir -p release/binaries
 
   CLI_VERSION=$(node -p "require('./package.json').version")
@@ -509,7 +545,7 @@ await updateCheck
 process.exit(process.exitCode ?? 0)
 ENTRY
 
-  for target in bun-linux-x64 bun-linux-arm64 bun-darwin-arm64 bun-windows-x64; do
+  for target in $binary_targets; do
     suffix="${target#bun-}"
     echo "  → $target"
     # istanbul-lib-instrument (babel) uses dynamic requires bun can't bundle;
@@ -518,8 +554,6 @@ ENTRY
   done
 
   echo "Native binaries written to release/binaries/"
-else
-  echo "Bun not found — skipping native binary build"
 fi
 
 echo "Build complete! ✓"
