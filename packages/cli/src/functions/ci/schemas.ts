@@ -48,7 +48,6 @@ export const CiStage = z.enum([
   'install',
   'bootstrap',
   'dbMigrate',
-  'dbCodegen',
   'emails',
   'all',
   'validate',

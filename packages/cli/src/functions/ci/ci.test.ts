@@ -75,7 +75,6 @@ describe('ciStageCommand', () => {
     const migrate = ciStageCommand('dbMigrate', ciRun())
     assert.deepEqual(migrate.args.slice(0, 3), ['db', 'migrate', '--localOnly'])
     assert.equal(migrate.dropDatabaseUrl, true)
-    assert.equal(ciStageCommand('dbCodegen', ciRun()).dropDatabaseUrl, true)
   })
 
   test('the audit gates at high and passes a baseline only when there is one', () => {

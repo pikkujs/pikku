@@ -23,21 +23,13 @@ export const ciWorkflow = pikkuWorkflowFunc<CiRun, void>({
       },
       { retries: 0 }
     )
+    // db migrate regenerates the database types itself.
     if (data.hasDb) {
       await workflow.do(
         'DB migrate',
         'pikkuCiStep',
         {
           stages: ['dbMigrate'],
-          run: data,
-        },
-        { retries: 0 }
-      )
-      await workflow.do(
-        'DB codegen',
-        'pikkuCiStep',
-        {
-          stages: ['dbCodegen'],
           run: data,
         },
         { retries: 0 }
@@ -61,18 +53,9 @@ export const ciWorkflow = pikkuWorkflowFunc<CiRun, void>({
       { retries: 0 }
     )
     await workflow.do(
-      'Validate',
+      'Validate and audit',
       'pikkuCiStep',
-      {
-        stages: ['validate'],
-        run: data,
-      },
-      { retries: 0 }
-    )
-    await workflow.do(
-      'Audit',
-      'pikkuCiStep',
-      { stages: ['audit'], run: data },
+      { stages: ['validate', 'audit'], run: data },
       { retries: 0 }
     )
     if (data.runTests) {

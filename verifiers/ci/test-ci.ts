@@ -174,7 +174,7 @@ describe('pikku ci', () => {
       events
         .filter((line) => line.message === event)
         .map((line) => line.data.stepName)
-    assert.ok(steps('workflow.step.succeeded').includes('Validate'))
+    assert.ok(steps('workflow.step.succeeded').includes('Validate and audit'))
     assert.ok(!steps('workflow.step.running').includes('Test'))
     assert.ok(
       events.some(
