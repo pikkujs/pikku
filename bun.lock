@@ -328,7 +328,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.204",
+      "version": "0.12.205",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -454,7 +454,7 @@
     },
     "packages/create": {
       "name": "create-pikku",
-      "version": "0.12.15",
+      "version": "0.12.16",
       "bin": "dist/index.js",
       "dependencies": {
         "@inquirer/prompts": "^8.7.3",
@@ -1274,7 +1274,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.69",
+      "version": "0.12.70",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",
