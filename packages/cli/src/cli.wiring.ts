@@ -215,6 +215,7 @@ import {
   pikkuMetaWorkflowsList,
   pikkuMetaContext,
   pikkuMetaClients,
+  pikkuMetaDb,
   pikkuMetaApply,
 } from './functions/commands/meta.js'
 import { defaultCLIRenderer } from './services.js'
@@ -873,7 +874,8 @@ wireCLI({
         }),
         generate: pikkuCLICommand({
           func: dbGenerate,
-          description: 'Generate SQL migrations from detected schema changes',
+          description:
+            'Write the SQL migrations for everything that declares tables: db/tables.ts, Better Auth, the Pikku runtime and addons. Refuses a drop, a rename or a changed column',
         }),
         check: pikkuCLICommand({
           func: dbCheck,
@@ -2328,12 +2330,17 @@ wireCLI({
         context: pikkuCLICommand({
           func: pikkuMetaContext,
           description:
-            'Bulk project context for planners (functions, wires, middleware, permissions, workflows, capabilities, layout) in one call',
+            'Bulk project context for planners (functions, wires, middleware, permissions, workflows, capabilities, layout, database) in one call',
         }),
         clients: pikkuCLICommand({
           func: pikkuMetaClients,
           description:
             'Frontend-targeted metadata: exposed RPCs, workflows, channels with their input/output type names and descriptions',
+        }),
+        db: pikkuCLICommand({
+          func: pikkuMetaDb,
+          description:
+            'Where the project declares its tables, what they compile to, and the commands that turn a declaration into SQL and types',
         }),
         apply: pikkuCLICommand({
           func: pikkuMetaApply,

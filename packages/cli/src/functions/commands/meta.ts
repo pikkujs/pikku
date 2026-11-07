@@ -3,6 +3,7 @@ import { getSchema } from '@pikku/core/schema'
 import type { CodeEditOperation } from '@pikku/code-edit'
 import { readFile } from 'node:fs/promises'
 import { relative, resolve } from 'node:path'
+import { databaseContext } from '../db/db-context.js'
 
 function out(value: unknown): void {
   console.log(JSON.stringify(value))
@@ -422,11 +423,27 @@ export const pikkuMetaContext = pikkuSessionlessFunc<{}, void>({
       summary,
       capabilities,
       layout,
+      db: await databaseContext(config as any),
       functions,
       middleware,
       permissions,
       workflows,
       wires,
+    })
+  },
+})
+
+/**
+ * Where a project's tables are declared and what turns them into SQL.
+ *
+ * Migration paths are left out on purpose. An agent that is told where they live
+ * will edit them; declaring a table and running two commands is the whole job.
+ */
+export const pikkuMetaDb = pikkuSessionlessFunc<{}, void>({
+  func: async ({ config }) => {
+    out({
+      schemaVersion: 'meta-db.v1',
+      ...(await databaseContext(config as any)),
     })
   },
 })

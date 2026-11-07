@@ -1,3 +1,4 @@
+import { CLIError } from '@pikku/core/cli'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { resolveDb, generateMigrations } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
@@ -33,7 +34,7 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
       })
     )
 
-    const { upToDate, written } = await generateMigrations(
+    const { upToDate, written, refusals } = await generateMigrations(
       resolved,
       config.rootDir,
       config.srcDirectories,
@@ -48,12 +49,8 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
       )
     }
 
-    if (written.length === 0) {
-      if (upToDate.length === 0) {
-        logger.info(
-          'db generate: nothing declares tables — nothing to generate'
-        )
-      }
+    if (written.length === 0 && upToDate.length === 0 && !refusals.length) {
+      logger.info('db generate: nothing declares tables — nothing to generate')
       return
     }
 
@@ -70,6 +67,16 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
         )
       }
     }
-    logger.info('  Review them, then run `pikku db migrate` to apply.')
+    if (written.length > 0) {
+      logger.info('  Review them, then run `pikku db migrate` to apply.')
+    }
+
+    if (refusals.length > 0) {
+      logger.error(
+        'db generate: refused to write the migration for db/tables.ts:'
+      )
+      for (const refusal of refusals) logger.error(`  ${refusal}`)
+      throw new CLIError('db generate refused')
+    }
   },
 })

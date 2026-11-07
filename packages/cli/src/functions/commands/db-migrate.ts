@@ -1,9 +1,11 @@
+import { CLIError } from '@pikku/core/cli'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   assertLocalDatabase,
   resolveDb,
   migrateAndCodegen,
   computeAuthDrift,
+  computeDeclaredTablesDrift,
 } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
@@ -75,6 +77,16 @@ export const dbMigrate = pikkuSessionlessFunc<{ localOnly?: boolean }, void>({
         '  Run `pikku db generate` to create the missing migration, then re-run.'
       )
       throw new Error('Better Auth schema drift — run `pikku db generate`')
+    }
+
+    const declared = await computeDeclaredTablesDrift(resolved)
+    if (declared.pending || declared.refusals.length > 0) {
+      logger.error('db migrate: the migrations do not cover db/tables.ts:')
+      for (const refusal of declared.refusals) logger.error(`  ${refusal}`)
+      if (declared.pending) {
+        logger.error('  Run `pikku db generate` to write them, then re-run.')
+      }
+      throw new CLIError('db/tables.ts is ahead of the migrations')
     }
   },
 })
