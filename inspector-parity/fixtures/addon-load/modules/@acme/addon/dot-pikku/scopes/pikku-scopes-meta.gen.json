@@ -1,0 +1,1 @@
+{"acme":{"name":"acme","origin":{"kind":"addon","package":"@x/raw","displayName":"Acme"},"scopes":{"read":{}}},"plain":{"name":"plain","origin":{"kind":"app"}}}

@@ -295,6 +295,10 @@ wireCLI({
     wireServicesFactoryType: {
       description: 'Specify which wire services factory to use',
     },
+    inspector: {
+      description:
+        'Which inspector analyses the project: go (pikku-inspect, the reference) or rs (pikku-inspect-rs). Overrides PIKKU_INSPECTOR and the "inspector" key of pikku.config.json.',
+    },
     stateOutput: {
       description: 'Save inspector state to JSON file for reuse',
     },

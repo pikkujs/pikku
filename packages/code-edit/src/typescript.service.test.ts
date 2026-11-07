@@ -2,7 +2,8 @@ import assert from 'node:assert'
 import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, test } from 'node:test'
+import { after, before, describe, test } from 'node:test'
+import { availableEngines, engineEnv } from './test-engines.js'
 import { TypeScriptService } from './typescript.service.js'
 
 const project = async (): Promise<string> => {
@@ -41,7 +42,12 @@ const project = async (): Promise<string> => {
   return root
 }
 
-describe('TypeScriptService', () => {
+for (const engine of availableEngines())
+describe(`TypeScriptService (${engine})`, () => {
+  const env = engineEnv(engine)
+  before(env.select)
+  after(env.restore)
+
   test('resolves package.json imports through the project tsconfig', async () => {
     const ts = new TypeScriptService(await project())
     try {

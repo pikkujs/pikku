@@ -1,0 +1,24 @@
+name: Setup Rust
+description: >-
+  Install the Rust toolchain pinned for packages/inspector-rust and cache its
+  cargo build. The one place the version is written down.
+
+inputs:
+  cache-key:
+    description: Extra cache key part, for a matrix that builds on several runners.
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    # tsrs, the compiler crates inspector-rust is built on, pins its own
+    # toolchain (rust-toolchain.toml, rust-version = "1.99") and uses edition
+    # 2024 features that need it. Bump this with the tsrs rev in
+    # packages/inspector-rust/Cargo.toml, never ahead of it.
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: 1.99.1
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: packages/inspector-rust
+        key: ${{ inputs.cache-key }}

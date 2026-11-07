@@ -1,0 +1,14 @@
+{
+  "name": "@acme/addon",
+  "private": true,
+  "version": "1.0.0",
+  "pikku": {
+    "uses": {
+      "mail": "@acme/mail@^1.0.0",
+      "db": "@acme/db"
+    }
+  },
+  "exports": {
+    "./.pikku/*": "./.pikku/*"
+  }
+}
