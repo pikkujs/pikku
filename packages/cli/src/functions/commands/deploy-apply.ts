@@ -422,6 +422,7 @@ async function runDeploy(
     for (const e of deployResult.errors) {
       logger.error(`  ${e.step}: ${e.error}`)
     }
+    process.exitCode = 1
   }
 }
 
@@ -450,9 +451,10 @@ export const deployApply = pikkuSessionlessFunc<
       const { existsSync } = await import('node:fs')
 
       const providerDir = join(projectDir, '.deploy', provider.deployDirName)
-      const infraPath = join(providerDir, 'infra.json')
 
-      if (!existsSync(infraPath)) {
+      // Every plan writes this; infra.json only exists for providers with
+      // infrastructure to describe, which a single-unit provider does not have.
+      if (!existsSync(join(providerDir, 'deployment-manifest.json'))) {
         logger.error(
           `No plan found at ${providerDir}. Run 'pikku deploy plan' first.`
         )
