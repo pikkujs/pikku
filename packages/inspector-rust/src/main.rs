@@ -131,13 +131,15 @@ struct HelperResponse {
     result: Box<serde_json::value::RawValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<helpers::Error>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    recycle: Option<bool>,
 }
 
 fn run_helper<R: Read, W: Write>(method: &str, mut r: R, mut w: W) -> Result<(), String> {
     let mut params = Vec::new();
     r.read_to_end(&mut params).map_err(|e| format!("reading params: {e}"))?;
     let (result, error) = helpers::dispatch(method, &params);
-    write_json(&mut w, &HelperResponse { id: None, result, error })
+    write_json(&mut w, &HelperResponse { id: None, result, error, recycle: None })
 }
 
 #[derive(serde::Deserialize, Default)]
@@ -165,6 +167,7 @@ fn type_diagnostics(
                     id,
                     result: null(),
                     error: Some(helpers::Error { name: String::new(), message: format!("bad params: {e}") }),
+                    recycle: None,
                 };
             }
         },
@@ -178,7 +181,32 @@ fn type_diagnostics(
         .and_then(|b| String::from_utf8(b).ok())
         .and_then(|s| serde_json::value::RawValue::from_string(s).ok())
         .unwrap_or_else(null);
-    HelperResponse { id, result: raw, error: None }
+    HelperResponse { id, result: raw, error: None, recycle: None }
+}
+
+/// tsrs programs are `'static` and never freed, so a long-lived `serve` grows
+/// with every request (about 19 MB per `inspect` on online-shop, 3 MB per
+/// `typeDiagnostics` on packages/core). Once either count passes its limit the
+/// responses carry `recycle: true` and the caller retires the process.
+struct LeakBudget {
+    inspects: u32,
+    diagnostics: u32,
+    max_inspects: u32,
+    max_diagnostics: u32,
+}
+
+impl LeakBudget {
+    fn from_env() -> Self {
+        let max_inspects = std::env::var("PIKKU_INSPECT_RS_SERVE_BUDGET")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(8);
+        LeakBudget { inspects: 0, diagnostics: 0, max_inspects, max_diagnostics: 100 }
+    }
+
+    fn spent(&self) -> bool {
+        self.inspects >= self.max_inspects || self.diagnostics >= self.max_diagnostics
+    }
 }
 
 /// Answers one NDJSON request per line until stdin closes. Requests are handled
@@ -188,6 +216,7 @@ fn run_serve<R: BufRead, W: Write>(r: R, w: W) -> Result<(), String> {
     let cache = Cache::new();
     let mut typecheckers: std::collections::HashMap<String, pikku_inspect::typecheck::Service> = Default::default();
     let mut out = BufWriter::new(w);
+    let mut budget = LeakBudget::from_env();
     for line in r.lines() {
         let line = line.map_err(|e| e.to_string())?;
         if line.is_empty() {
@@ -195,7 +224,9 @@ fn run_serve<R: BufRead, W: Write>(r: R, w: W) -> Result<(), String> {
         }
         if let Ok(head) = serde_json::from_str::<HelperRequest>(&line) {
             if head.method == "typeDiagnostics" {
-                let resp = type_diagnostics(head.id, head.params, &mut typecheckers);
+                let mut resp = type_diagnostics(head.id, head.params, &mut typecheckers);
+                budget.diagnostics += 1;
+                resp.recycle = budget.spent().then_some(true);
                 write_json(&mut out, &resp)?;
                 out.flush().map_err(|e| e.to_string())?;
                 continue;
@@ -203,7 +234,7 @@ fn run_serve<R: BufRead, W: Write>(r: R, w: W) -> Result<(), String> {
             if helpers::has(&head.method) {
                 let params = head.params.map(|p| p.to_string()).unwrap_or_default();
                 let (result, error) = helpers::dispatch(&head.method, params.as_bytes());
-                write_json(&mut out, &HelperResponse { id: head.id, result, error })?;
+                write_json(&mut out, &HelperResponse { id: head.id, result, error, recycle: None })?;
                 out.flush().map_err(|e| e.to_string())?;
                 continue;
             }
@@ -214,10 +245,14 @@ fn run_serve<R: BufRead, W: Write>(r: R, w: W) -> Result<(), String> {
             Ok(req) => {
                 resp.id = req.id;
                 match req.method.as_str() {
-                    "inspect" => match inspect(&req.params, Some(&cache)) {
-                        Ok(res) => resp.result = Some(res),
-                        Err(e) => resp.error = Some(ServeError { message: e }),
-                    },
+                    "inspect" => {
+                        match inspect(&req.params, Some(&cache)) {
+                            Ok(res) => resp.result = Some(res),
+                            Err(e) => resp.error = Some(ServeError { message: e }),
+                        }
+                        budget.inspects += 1;
+                        resp.recycle = budget.spent().then_some(true);
+                    }
                     other => resp.error = Some(ServeError { message: format!("unknown method {other}") }),
                 }
             }

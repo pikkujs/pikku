@@ -171,6 +171,10 @@ pub struct ServeResponse {
     pub result: Option<Response>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<ServeError>,
+    /// Rust-only: set once the process has spent its leak budget, so the
+    /// caller retires it after this response.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub recycle: Option<bool>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

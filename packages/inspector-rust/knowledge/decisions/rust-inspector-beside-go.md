@@ -78,3 +78,15 @@ default once parity is met. The default-flip commit exists on the
 the exit criteria above hold: generated output identical end to end, schemas
 natively on a clean checkout, and peak memory within Go's. Then that one commit
 is merged.
+
+## Gotcha: `serve` leaks, so it asks to be recycled
+
+tsrs programs are `'static` and never freed. A long-lived `serve` measured
+19 MB per `inspect` request on online-shop (88 MB at request 1, 1,993 MB at
+request 100, where Go stays flat at about 177 MB) and about 3 MB per
+`typeDiagnostics` on packages/core. The response that spends the budget (8
+inspects or 100 diagnostics; `PIKKU_INSPECT_RS_SERVE_BUDGET` overrides the
+first) carries `"recycle": true`; `InspectorSession` then stops sending to that
+process, lets it answer what it already has, and starts a new one on the next
+call. Peak over 100 requests: 232 MB. Fixing the leak in tsrs would make this
+unnecessary.
