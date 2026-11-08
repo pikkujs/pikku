@@ -1,5 +1,6 @@
 ---
 '@pikku/cli': patch
+'@pikku/code-edit': patch
 '@pikku/inspector': patch
 ---
 
