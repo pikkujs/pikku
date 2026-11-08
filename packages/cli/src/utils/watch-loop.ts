@@ -6,6 +6,7 @@ import { runScript } from './run-script.js'
 import {
   classifyChange,
   findChangesSince,
+  isMessageFile,
   writeWatchStatus,
   type FileChange,
   type WatchedDirs,
@@ -21,8 +22,11 @@ import type {
 export type CodegenPass = { ok: boolean; diagnostics: CheckDiagnostic[] }
 
 /** The backend and every frontend, the projects `pikku verify` covers. */
-export const checkProjects = (rootDir: string): CheckProject[] => {
-  const project = readVerifyProject(rootDir)
+export const checkProjects = (
+  rootDir: string,
+  configFile?: string
+): CheckProject[] => {
+  const project = readVerifyProject(rootDir, configFile)
   return [
     { name: 'functions', tsconfig: project.tsconfig, dir: rootDir },
     ...project.frontends.map(({ name, dir }) => ({
@@ -36,9 +40,10 @@ export const checkProjects = (rootDir: string): CheckProject[] => {
 /** What a watcher looks at: the codegen sources, plus each frontend to type-check. */
 export const watchedDirs = (
   rootDir: string,
-  codegenDirs: string[]
+  codegenDirs: string[],
+  configFile?: string
 ): WatchedDirs => {
-  const typecheckDirs = checkProjects(rootDir)
+  const typecheckDirs = checkProjects(rootDir, configFile)
     .map(({ dir }) => dir)
     .filter((dir) => dir !== rootDir)
   return {
@@ -63,16 +68,22 @@ const messageScript = (dir: string): string | undefined => {
 /**
  * Compiled messages are generated and gitignored, so each frontend's type check
  * depends on them. Runs its own compile script, the step its `tsc` script runs.
+ * `timeoutMs` bounds all the scripts together, not each one.
  */
 export const compileMessages = async (
   dirs: string[],
   timeoutMs?: number
 ): Promise<CheckDiagnostic[]> => {
   const problems: CheckDiagnostic[] = []
+  const deadline = timeoutMs === undefined ? undefined : Date.now() + timeoutMs
   for (const dir of dirs) {
     const script = messageScript(dir)
     if (!script) continue
-    const failure = await runScript(dir, script, timeoutMs)
+    const failure = await runScript(
+      dir,
+      script,
+      deadline === undefined ? undefined : Math.max(1, deadline - Date.now())
+    )
     if (failure) {
       problems.push({
         severity: 'error',
@@ -88,6 +99,10 @@ type WatchLoopOptions = {
   statusFile: string
   dirs: WatchedDirs
   debounceMs: number
+  /** Where the routes and trees are now, asked again before each routes stage. */
+  routePaths?: () => string[]
+  /** Whether codegen runs the security lint, recorded so `pikku check --security` can tell. */
+  security?: boolean
   codegen: () => Promise<CodegenPass>
   messages: () => Promise<CheckDiagnostic[]>
   routes: () => Promise<CheckDiagnostic[]>
@@ -109,8 +124,10 @@ const MAX_CATCH_UPS = 5
  */
 export const createWatchLoop = ({
   statusFile,
-  dirs,
+  dirs: initial,
+  routePaths,
   debounceMs,
+  security,
   codegen,
   messages,
   routes,
@@ -119,6 +136,7 @@ export const createWatchLoop = ({
   now = Date.now,
   changesSince = findChangesSince,
 }: WatchLoopOptions) => {
+  const watched: WatchedDirs = { ...initial }
   let generation = 0
   let active: Promise<void> | undefined
   let pending = false
@@ -148,7 +166,8 @@ export const createWatchLoop = ({
       stageStartedAt: at,
       sourcesAt,
       wakes: true,
-      ...dirs,
+      ...(security ? { security } : {}),
+      ...watched,
       ...fields,
     }
     try {
@@ -158,16 +177,38 @@ export const createWatchLoop = ({
     }
   }
 
+  const describe = (error: unknown) =>
+    error instanceof Error ? error.message : String(error)
+
+  /** A stage that throws is a failed run, never an unhandled rejection that ends the watcher. */
+  const attempt = async <T>(
+    stage: () => Promise<T>,
+    failed: (error: unknown) => T
+  ): Promise<T> => {
+    try {
+      return await stage()
+    } catch (error) {
+      return failed(error)
+    }
+  }
+
+  const stageFailure =
+    (code: string) =>
+    (error: unknown): CheckDiagnostic[] => [
+      { severity: 'error', code, message: describe(error) },
+    ]
+
   const running = (stage: WatchStage) =>
     publish({ state: 'running', stage, diagnostics: [] })
 
   const mark = (path: string) => {
-    const kind = classifyChange(path, dirs)
+    const kind = classifyChange(path, watched)
     if (!kind) return
     pending = true
     inFlightCheck?.abort()
     codegenNeeded ||= kind === 'codegen'
-    messagesNeeded ||= kind === 'messages'
+    // A frontend inside a codegen directory is read by both steps.
+    messagesNeeded ||= kind === 'messages' || isMessageFile(path, watched)
     routesNeeded ||= kind === 'routes'
   }
 
@@ -180,7 +221,7 @@ export const createWatchLoop = ({
    * run, so the result covers it and stays current.
    */
   const fellBehind = async (): Promise<boolean> => {
-    const changes = changesSince(dirs, startedAt)
+    const changes = changesSince(watched, startedAt)
     const unread = changes.filter(
       ({ path, mtimeMs }) => readByRun.get(path) !== mtimeMs
     )
@@ -203,29 +244,35 @@ export const createWatchLoop = ({
 
   const runOnce = async () => {
     pending = false
-    const withCodegen = codegenNeeded || !codegenPass.ok
-    codegenNeeded = false
-    const withMessages = messagesNeeded || messageProblems.length > 0
-    messagesNeeded = false
-    const withRoutes = routesNeeded || routeProblems.length > 0
-    routesNeeded = false
     startedAt = now()
     sourcesAt = startedAt
     generation++
 
-    if (withCodegen) {
+    // Each request is cleared as its stage starts, not up front: a run dropped
+    // for a newer edit before a stage got going must leave that stage requested.
+    if (codegenNeeded || !codegenPass.ok) {
+      codegenNeeded = false
       running('codegen')
-      codegenPass = await codegen()
+      codegenPass = await attempt(codegen, (error) => ({
+        ok: false,
+        diagnostics: [
+          { severity: 'critical', code: 'CODEGEN', message: describe(error) },
+        ],
+      }))
       if (pending) return
     }
-    if (withMessages) {
+    if (messagesNeeded || messageProblems.length > 0) {
+      messagesNeeded = false
       running('messages')
-      messageProblems = await messages()
+      messageProblems = await attempt(messages, stageFailure('MESSAGES'))
       if (pending) return
     }
-    if (withRoutes) {
+    if (routesNeeded || routeProblems.length > 0) {
+      routesNeeded = false
       running('routes')
-      routeProblems = await routes()
+      // tsr.config.json may have moved the routes directory or the tree.
+      if (routePaths) watched.routePaths = routePaths()
+      routeProblems = await attempt(routes, stageFailure('ROUTES'))
       if (pending) return
     }
     running('typecheck')
@@ -238,7 +285,7 @@ export const createWatchLoop = ({
       checkerError = {
         severity: 'error',
         code: 'TYPECHECK',
-        message: error instanceof Error ? error.message : String(error),
+        message: describe(error),
       }
     }
     inFlightCheck = undefined
@@ -282,8 +329,16 @@ export const createWatchLoop = ({
 
   return {
     /** Runs the first pass. `codegen: false` when the caller has just done one. */
-    start: ({ codegen: withCodegen }: { codegen: boolean }): Promise<void> => {
+    start: ({
+      codegen: withCodegen,
+      startup,
+    }: {
+      codegen: boolean
+      /** What the caller's own codegen reported, kept when `codegen` is false. */
+      startup?: CodegenPass
+    }): Promise<void> => {
       codegenNeeded = withCodegen
+      if (startup) codegenPass = startup
       messagesNeeded = true
       routesNeeded = true
       return run()
@@ -291,7 +346,7 @@ export const createWatchLoop = ({
     /** Runs if the files are ahead of the last result; a running loop checks itself. */
     wake: (): void => {
       if (active) return
-      const changes = changesSince(dirs, sourcesAt)
+      const changes = changesSince(watched, sourcesAt)
       if (changes.length === 0) return
       for (const { path } of changes) mark(path)
       running('queued')
@@ -299,11 +354,14 @@ export const createWatchLoop = ({
     },
     /** Feed every file event here; it decides what, if anything, needs running. */
     onChange: (path: string): void => {
-      if (!classifyChange(path, dirs)) return
+      if (!classifyChange(path, watched)) return
       mark(path)
       if (!active) running('queued')
       if (debounce) clearTimeout(debounce)
-      debounce = setTimeout(() => void run(), debounceMs)
+      debounce = setTimeout(() => {
+        // A run that began meanwhile may already have taken this edit.
+        if (pending) void run()
+      }, debounceMs)
     },
   }
 }

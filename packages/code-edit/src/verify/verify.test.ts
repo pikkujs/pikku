@@ -864,6 +864,25 @@ describe('codegen output', () => {
   })
 })
 
+describe('readVerifyProject', () => {
+  test('reads the file --config named, not pikku.config.json beside it', () => {
+    const root = project({
+      'pikku.config.json': JSON.stringify({ frontends: {} }),
+      'pikku.staging.json': JSON.stringify({
+        frontends: { admin: { cwd: 'apps/admin' } },
+      }),
+      'apps/admin/tsconfig.json': '{}',
+    })
+    assert.deepEqual(readVerifyProject(root).frontends, [])
+    assert.deepEqual(
+      readVerifyProject(root, join(root, 'pikku.staging.json')).frontends.map(
+        (f) => f.name
+      ),
+      ['admin']
+    )
+  })
+})
+
 describe('runVerify', () => {
   test('runs the static checks over discovered apps and records the result', async () => {
     const root = project({

@@ -34,8 +34,11 @@ export function findPikkuRoot(startDir: string): string | null {
   }
 }
 
-const readConfig = (rootDir: string): PikkuConfigFile => {
-  const raw = readFileSync(join(rootDir, 'pikku.config.json'), 'utf8')
+const readConfig = (rootDir: string, configFile?: string): PikkuConfigFile => {
+  const raw = readFileSync(
+    configFile ? resolve(configFile) : join(rootDir, 'pikku.config.json'),
+    'utf8'
+  )
   try {
     return JSON.parse(raw) as PikkuConfigFile
   } catch (error) {
@@ -58,9 +61,12 @@ const discoveredApps = (workspaceRoot: string): VerifyFrontend[] => {
     .map((e) => ({ name: e.name, dir: join(appsDir, e.name) }))
 }
 
-/** Reads the project layout a verify run needs from pikku.config.json, discovering `apps/*` when no frontends are declared. */
-export function readVerifyProject(rootDir: string): VerifyProject {
-  const config = readConfig(rootDir)
+/** Reads the project layout a verify run needs from pikku.config.json (or the file `--config` named), discovering `apps/*` when no frontends are declared. */
+export function readVerifyProject(
+  rootDir: string,
+  configFile?: string
+): VerifyProject {
+  const config = readConfig(rootDir, configFile)
   const workspaceRoot = findWorkspaceRoot(rootDir)
   const declared = config.frontends
   const frontends = declared
