@@ -61,6 +61,7 @@ export function claimable(
   return changes.filter(
     (change) =>
       !change.held &&
+      !change.awaitingApproval &&
       pickableStatus(change.status) &&
       !liveLease(change.groupId ? byId.get(change.groupId) : undefined, now)
   )
