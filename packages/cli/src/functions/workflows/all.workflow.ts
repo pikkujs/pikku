@@ -36,6 +36,7 @@ type ScaffoldGenerator =
   | 'pikkuAnalytics'
   | 'pikkuCors'
   | 'pikkuFeatureFlagsScaffold'
+  | 'pikkuAdminFunctions'
   | 'pikkuConsoleFunctions'
   | 'pikkuVirtualUserFunctions'
   | 'pikkuPublicAgent'
@@ -63,6 +64,11 @@ const scaffoldFiles = (
     files.push({
       file: config.featureFlagsFile,
       generator: 'pikkuFeatureFlagsScaffold',
+    })
+  if (config.scaffold?.admin && config.adminFunctionsFile)
+    files.push({
+      file: config.adminFunctionsFile,
+      generator: 'pikkuAdminFunctions',
     })
   if (config.scaffold?.console && config.consoleFunctionsFile)
     files.push({
@@ -391,6 +397,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('CORS scaffold', 'pikkuCors', null),
       workflow.do('Analytics ingest', 'pikkuAnalytics', null),
       workflow.do('Feature flag wire', 'pikkuFeatureFlagsScaffold', null),
+      workflow.do('Admin functions', 'pikkuAdminFunctions', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
       workflow.do('Virtual user functions', 'pikkuVirtualUserFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
