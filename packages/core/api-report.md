@@ -6293,7 +6293,7 @@ export class InMemoryTriggerService extends PikkuTriggerService {
 
 ```ts
 export class InMemoryWorkflowService extends PikkuWorkflowService implements WorkflowRunService {
-  constructor(options: WorkflowQueueOptions = {})
+  constructor(options: WorkflowQueueOptions & { mirror?: WorkflowRunMirror } = {})
   protected async createRunImpl(workflowName: string, input: any, inline: boolean, graphHash: string, wire: WorkflowRunWire, options?: { deterministic?: boolean; plannedSteps?: WorkflowPlannedStep[] }): Promise<string>
   protected override async scheduleSleep(runId: string, stepId: string, duration: number): Promise<boolean>
   async getRun(id: string): Promise<WorkflowRun | null>
@@ -6482,7 +6482,7 @@ export type LocalContentRequestHandlerOptions = {
 }
 export type SignedContentVerification =
   { ok: true } | { ok: false; status: number; body: string }
-verifySignedContentRequest: (requestUrl: URL, jwt: JWTService | undefined, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
+verifySignedContentRequest: (requestUrl: URL, jwt: any, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
 ```
 
 ## ./services/temporary-file-service
