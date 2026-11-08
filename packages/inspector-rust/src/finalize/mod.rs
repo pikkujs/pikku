@@ -112,6 +112,8 @@ pub fn run(log: &mut Logger, st: &mut State, opts: &Options) -> Result<(), Strin
 
         agents::validate_agent_models(log, st, &opts.model_aliases);
         agents::validate_agent_tool_references(log, st, opts);
+        agents::validate_permission_data_used(log, st, opts);
+        agents::validate_sessionless_permissions(log, st);
         agents::validate_agent_scorer_references(log, st);
         addons::validate_secret_overrides(log, st);
         addons::validate_variable_overrides(log, st);

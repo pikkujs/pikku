@@ -347,6 +347,10 @@ pub struct GlobalPermissionRegistration {
     pub position: i64,
     pub export_name: Option<String>,
     pub definition_ids: Strings,
+    /// A call registered for a named package, so which functions it reaches is
+    /// not known here.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub targets_package: bool,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

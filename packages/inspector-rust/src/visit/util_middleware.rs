@@ -127,7 +127,15 @@ impl Context<'_> {
                 if ast::is_property_assignment(*prop) {
                     self.extract_permission_name(prop.initializer().unwrap(), &mut names);
                 } else if ast::is_shorthand_property_assignment(*prop) {
-                    self.extract_permission_name(prop.name().unwrap(), &mut names);
+                    // The name itself resolves to the property, so go through its value.
+                    let mut name = prop.name().unwrap();
+                    let value = self.checker.get_shorthand_assignment_value_symbol(Some(*prop));
+                    if let Some(decl) = self.resolve_alias(value).and_then(|sym| sym.value_declaration()) {
+                        if ast::is_variable_declaration(decl) && decl.name().is_some_and(ast::is_identifier) {
+                            name = decl.name().unwrap();
+                        }
+                    }
+                    self.extract_permission_name(name, &mut names);
                 }
             }
         }

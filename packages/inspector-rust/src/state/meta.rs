@@ -566,7 +566,8 @@ pub struct Stats {
 
 /// InspectorMiddlewareDefinition and InspectorPermissionDefinition (the latter
 /// adds `requiresData`), and the shape of an approval description (which sets
-/// only the first five fields).
+/// only the first five fields). A permission also carries `dataUnused` and
+/// `skipWithoutSession`.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 #[serde(rename_all = "camelCase")]
@@ -587,6 +588,10 @@ pub struct MiddlewareDefinition {
     pub package: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub requires_data: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data_unused: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skip_without_session: Option<bool>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
