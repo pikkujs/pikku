@@ -31,7 +31,7 @@ const ERROR_EDITORIAL: Partial<
   },
   [ErrorCode.PERMISSION_DATA_UNUSED]: {
     meaning:
-      'A `pikkuPermission` never reads its data argument, so it answers from the session alone. A `pikkuPermission` is for a check on the input, such as loading the row the caller named. A `pikkuAuth` receives only the services and the session, and can be evaluated before the input exists, which is how an agent is offered only the tools its session may use. A warning, or a critical under `--strict-meta` and `pikku verify --strict`. A handler passed by reference, a rest or destructured argument, and a check that reads a wire other than `session` are not reported.',
+      'A `pikkuPermission` never reads its data argument, so it answers from the session alone. A `pikkuPermission` is for a check on the input, such as loading the row the caller named. A `pikkuAuth` receives only the services and the session, and can be evaluated before the input exists, which is how an agent is offered only the tools its session may use. A warning, or a critical under `--strict-meta` and `pikku validate --strict --codegen`. A handler passed by reference, a rest or destructured argument, and a check that reads a wire other than `session` are not reported.',
     fix: 'Replace `pikkuPermission(async (services, _data, { session }) => ...)` with `pikkuAuth(async (services, session) => ...)`. If the check does need the input, read it. If a call with no session must go through, use `pikkuAuth({ skipWithoutSession: true, func: async (services, session) => ... })`: the check is skipped and passes, so the function decides what that caller may see.',
   },
   [ErrorCode.UNUSED_FUNCTION]: {
