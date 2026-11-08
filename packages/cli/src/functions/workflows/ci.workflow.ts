@@ -52,6 +52,16 @@ export const ciWorkflow = pikkuWorkflowFunc<CiRun, void>({
       { stages: ['all'], run: data },
       { retries: 0 }
     )
+    // validate type-checks the project, and the frontends' own generated files
+    // (a router tree, compiled messages) only exist once they have built. A
+    // clean checkout has none, so the first app build comes before it. With a
+    // provider the deployed builds below run again, after console removal.
+    await workflow.do(
+      'App build',
+      'pikkuCiStep',
+      { stages: ['appBuild'], run: data },
+      { retries: 0 }
+    )
     await workflow.do(
       'Validate and audit',
       'pikkuCiStep',
@@ -106,16 +116,6 @@ export const ciWorkflow = pikkuWorkflowFunc<CiRun, void>({
         'pikkuCiStep',
         {
           stages: ['appBuildRest', 'plan'],
-          run: data,
-        },
-        { retries: 0 }
-      )
-    } else {
-      await workflow.do(
-        'App build',
-        'pikkuCiStep',
-        {
-          stages: ['appBuild'],
           run: data,
         },
         { retries: 0 }

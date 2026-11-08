@@ -175,6 +175,12 @@ describe('pikku ci', () => {
         .filter((line) => line.message === event)
         .map((line) => line.data.stepName)
     assert.ok(steps('workflow.step.succeeded').includes('Validate and audit'))
+    const order = steps('workflow.step.running')
+    assert.ok(
+      order.includes('App build') &&
+        order.indexOf('App build') < order.indexOf('Validate and audit'),
+      'the app builds before validate, so its generated files exist when validate type-checks'
+    )
     assert.ok(!steps('workflow.step.running').includes('Test'))
     assert.ok(
       events.some(
