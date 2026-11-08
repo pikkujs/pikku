@@ -10,8 +10,9 @@
 //! loaded (a Node built-in, a package that does not resolve) is a stub, as in
 //! Go. There is no Node fallback: a schema that touches a stub is an error.
 //!
-//! A package under `node_modules` is loaded for real first, because a schema
-//! can be built from one (`defineAnalyticsEvents` from `@pikku/core/analytics`)
+//! A pure package under `node_modules` (an ES module that imports nothing
+//! needing Node, transitively) is loaded for real first, because a schema can
+//! be built from one (`defineAnalyticsEvents` from `@pikku/core/analytics`)
 //! and Go only converts such a schema by handing it to Node. The schemas that
 //! then fail to load, or touch a stub, run again with every package under
 //! `node_modules` stubbed, which is all this converter did before.
@@ -279,8 +280,11 @@ struct Shared {
     /// Where the entry's `zod` is looked for after the project root: the
     /// directories of the modules that declare the schemas.
     declaring_dirs: Vec<PathBuf>,
-    /// Load a package under `node_modules` instead of stubbing it.
+    /// Load a package under `node_modules` when it is pure, instead of stubbing it.
     load_packages: bool,
+    /// Whether a file under `node_modules` and everything it imports can run
+    /// without Node, by path.
+    pure: HashMap<PathBuf, bool>,
 }
 
 struct StubInfo {
@@ -319,6 +323,7 @@ impl Shared {
             stubs: HashMap::new(),
             declaring_dirs,
             load_packages,
+            pure: HashMap::new(),
         }
     }
 
@@ -375,13 +380,60 @@ impl Shared {
     }
 
     /// A resolved bare import is loaded when it is in the project, or when it
-    /// is an ES module under `node_modules` and packages are being loaded.
-    fn loadable(&self, path: &Path) -> bool {
-        let text = path.to_string_lossy();
-        if !in_node_modules(&text) {
+    /// is under `node_modules`, packages are being loaded and it is pure.
+    fn loadable(&mut self, path: &Path) -> bool {
+        if !in_node_modules(&path.to_string_lossy()) {
             return true;
         }
-        self.load_packages && matches!(path.extension().and_then(|e| e.to_str()), Some("js" | "mjs" | "json"))
+        self.load_packages && self.is_pure(path)
+    }
+
+    /// A file under `node_modules` is pure when it is an ES module whose every
+    /// import, transitively, is pure too: no Node built-in, no CommonJS, no
+    /// package that does not resolve. QuickJS has none of Node, so anything
+    /// else stays a stub.
+    fn is_pure(&mut self, path: &Path) -> bool {
+        if let Some(known) = self.pure.get(path) {
+            return *known;
+        }
+        // A cycle is pure as long as the rest of it is.
+        self.pure.insert(path.to_path_buf(), true);
+        let pure = self.scan_pure(path);
+        self.pure.insert(path.to_path_buf(), pure);
+        pure
+    }
+
+    fn scan_pure(&mut self, path: &Path) -> bool {
+        match path.extension().and_then(|e| e.to_str()) {
+            Some("json") => return true,
+            Some("js" | "mjs") => {}
+            _ => return false,
+        }
+        let Ok(text) = std::fs::read_to_string(path) else { return false };
+        if CJS_MARKER.is_match(&text) {
+            return false;
+        }
+        let dynamic = DYNAMIC_IMPORT.find_iter(&text).count();
+        let dynamic_literal = DYNAMIC_IMPORT_LITERAL.captures_iter(&text).count();
+        if dynamic != dynamic_literal {
+            return false;
+        }
+        let from = path.parent().map(Path::to_path_buf).unwrap_or_default();
+        let specs: Vec<String> = STATIC_IMPORT
+            .captures_iter(&text)
+            .chain(DYNAMIC_IMPORT_LITERAL.captures_iter(&text))
+            .map(|c| c[1].to_string())
+            .collect();
+        for spec in specs {
+            if is_zod(&spec) {
+                continue;
+            }
+            let Ok(resolved) = self.resolver.resolve(&from, &spec) else { return false };
+            if !self.is_pure(&resolved.full_path()) {
+                return false;
+            }
+        }
+        true
     }
 
     /// The names `base` imports from `spec`, read off its source.
@@ -510,6 +562,14 @@ fn is_identifier(n: &str) -> bool {
         && chars.all(|c| c.is_alphanumeric() || c == '_' || c == '$')
         && !RESERVED.contains(&n)
 }
+
+static STATIC_IMPORT: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r#"(?s)\b(?:import|export)\s*(?:[^'"();]*?\bfrom\s*)?["']([^"']+)["']"#).unwrap());
+static DYNAMIC_IMPORT: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"\bimport\s*\(").unwrap());
+static DYNAMIC_IMPORT_LITERAL: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r#"\bimport\s*\(\s*["']([^"']+)["']\s*\)"#).unwrap());
+static CJS_MARKER: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\brequire\s*\(|\bmodule\.exports\b|\bexports\.[A-Za-z_$]|\bcreateRequire\b").unwrap());
 
 fn declaring_dirs(refs: &[VendorRef]) -> Vec<PathBuf> {
     let mut dirs: Vec<PathBuf> = Vec::new();
