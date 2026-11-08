@@ -315,7 +315,7 @@ wireCLI({
     },
   },
   commands: {
-    ...refCLI('cloud:reportCommands'),
+    ...refCLI('cloudCli:reportCommands'),
     doc: pikkuCLICommand({
       func: doc,
       render: renderDoc,
