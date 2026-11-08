@@ -133,6 +133,40 @@ test('a child that exits non-zero rejects with its exit code', async () => {
   )
 })
 
+test('a failed child reports the last thing it wrote to stderr', async () => {
+  script(
+    `process.stderr.write('x'.repeat(2_000_000) + '\\nthe final cause')
+process.exitCode = 1`
+  )
+  const error = await runCodegenChild('s.json', {
+    command: ['all'],
+    inheritStdout: false,
+  }).then(
+    () => assert.fail('expected a rejection'),
+    (caught: unknown) => caught as CodegenChildError
+  )
+  assert.match(error.output, /the final cause$/)
+})
+
+test('a child that outlives timeoutMs is killed and rejects', async () => {
+  const pidFile = join(project(), 'pid')
+  script(
+    `import { writeFileSync } from 'node:fs'
+writeFileSync(${JSON.stringify(pidFile)}, String(process.pid))
+setInterval(() => {}, 1000)`
+  )
+  await assert.rejects(
+    runCodegenChild('s.json', {
+      command: ['all'],
+      inheritStdout: false,
+      timeoutMs: 300,
+    }),
+    /pikku all failed \(SIGKILL\)/
+  )
+  const pid = Number(readFileSync(pidFile, 'utf-8'))
+  assert.throws(() => process.kill(pid, 0), /ESRCH/)
+})
+
 test('a child that cannot be spawned rejects', async () => {
   script('')
   const exec = process.execPath

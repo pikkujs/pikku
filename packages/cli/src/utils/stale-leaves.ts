@@ -17,7 +17,8 @@ const resolveSource = (from: string, specifier: string): string | undefined => {
   ].find(existsSync)
 }
 
-const escape = (name: string): string => name.replace(/\$/g, '\\$')
+const escape = (name: string): string =>
+  name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /**
  * Whether `source` may still export `name`. Text rather than a parse, because

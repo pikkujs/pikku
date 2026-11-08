@@ -152,3 +152,17 @@ test('custom types go with a stale analytics module and stay otherwise', async (
   assert.equal(await run(`  page_viewed: z.object({}),`), false)
   assert.equal(await run(`  signed_up: z.object({}),`), true)
 })
+
+test('event names with regex characters are matched as text', () => {
+  const read = (key: string) => `${leaf('A')}export const k = A['${key}']\n`
+  assert.equal(
+    hasStaleImport(project(`export const A = { 'user(': 1 }`, read('user('))),
+    false
+  )
+  assert.equal(
+    hasStaleImport(
+      project(`export const A = { userXcreated: 1 }`, read('user.created'))
+    ),
+    true
+  )
+})
