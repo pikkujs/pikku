@@ -1,0 +1,4 @@
+[submodule "recipes/starter-template"]
+	path = recipes/starter-template
+	url = https://github.com/pikkujs/starter-template.git
+	branch = develop
