@@ -364,6 +364,8 @@
     "flattenScopeDefinitions",
     "hasScopes",
     "intersectScopes",
+    "liveScopeIds",
+    "requiresLiveScope",
     "validateAndBuildScopeDefinitionsMeta",
     "verifyScopes"
   ],
