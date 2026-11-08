@@ -1,3 +1,12 @@
+## 0.12.206
+
+### Patch Changes
+
+- ab6765e: `pikku ci` builds the app before `validate`, so a clean checkout has the frontends' generated files (router tree, compiled messages) when `validate` type-checks. The default inspector is Go again: the Rust engine has no Node fallback and failed on Zod schemas built from a package import, such as the analytics scaffold's.
+- 220fce0: `pikku validate` no longer raises `coercion-map-not-wired` for an app that builds on `existingServices.kysely`. pikku dev, standalone deploys and Cloudflare deploys already apply the coercion map to that instance, and attaching `createCoercionPlugin` again double-parses json columns. The error now fires only when the app builds its own kysely (always the case on AWS Lambda and Azure, which hand over none), and its hint says so.
+- Updated dependencies [f585fc5]
+  - @pikku/inspector-go@0.12.10
+
 ## 0.12.205
 
 ### Patch Changes

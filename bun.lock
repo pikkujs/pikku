@@ -328,7 +328,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.205",
+      "version": "0.12.206",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -605,7 +605,7 @@
     },
     "packages/inspector-go": {
       "name": "@pikku/inspector-go",
-      "version": "0.12.9",
+      "version": "0.12.10",
       "dependencies": {
         "@pikku/inspector": "^0.12.115",
         "tsx": "^4.23.15",
