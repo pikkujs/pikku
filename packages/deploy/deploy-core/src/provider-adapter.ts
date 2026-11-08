@@ -168,6 +168,9 @@ export interface ProviderAdapter {
   /** Subdirectory name under .deploy/ (e.g. 'cloudflare') */
   readonly deployDirName: string
 
+  /** The values `pikku deploy apply --runtime` accepts. Absent means none. */
+  readonly supportedRuntimes?: readonly string[]
+
   /**
    * When true, skips per-unit decomposition and bundles everything
    * into a single unit using the project's full .pikku/ directory.

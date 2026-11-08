@@ -1,0 +1,7 @@
+{
+  "name": "off",
+  "private": true,
+  "scripts": {
+    "build": "exit 1"
+  }
+}

@@ -21,14 +21,20 @@
    The CLI writes it, the addon reads it, the UI renders it — never redeclare
    the type at a call site.
 3. Validate with `pikku all --tsc` after changes — it type-checks and **fails on
-   type errors**, like any real build gate. Separately, `pikku audit` never fails
-   a build: advisories are informational, and a missing/failed audit yields an
-   empty-but-valid report.
+   type errors**, like any real build gate. Separately, `pikku audit` alone never
+   fails a build: advisories are informational, and a missing/failed audit yields
+   an empty-but-valid report. `--fail-on` turns it into a gate.
 
 ## The `pikku audit` command
 
 - `pikku audit` — reports **security advisories** only.
 - `pikku audit --outdated` — also reports **available dependency updates**.
+- `pikku audit --fail-on high` — exits non-zero on an advisory at that severity or
+  worse, and when no report could be made. A failed run writes
+  `audit.failed.json` and leaves `audit.json` alone.
+- `pikku audit --fail-on high --baseline <audit.json>` — only advisories absent
+  from that report block, matched on `package@advisoryId`. An unreadable baseline
+  fails.
 - Package-manager detection is by **lockfile**, walking up to 12 levels to the
   workspace root, checking in this order: `bun.lock`/`bun.lockb`,
   `pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`. A project with several

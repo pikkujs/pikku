@@ -1,5 +1,7 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
+  AppBuildInput,
+  AppBuildOutput,
   AppListInput,
   AppListOutput,
   AppNativeAddInput,
@@ -16,6 +18,16 @@ import {
   runAppNativeInit,
   runAppNativeUpgrade,
 } from '../app/run.js'
+import { runAppBuild } from '../app/build.js'
+
+export const appBuild = pikkuSessionlessFunc({
+  description:
+    'Build every deployed frontend with its own build script, side by side.',
+  input: AppBuildInput,
+  output: AppBuildOutput,
+  func: async ({ logger, config }, input) =>
+    runAppBuild({ logger, frontends: config.frontends }, input),
+})
 
 export const appList = pikkuSessionlessFunc({
   description: 'List the apps in `frontends`, and what each ships as.',

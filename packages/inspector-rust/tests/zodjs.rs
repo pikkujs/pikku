@@ -128,3 +128,125 @@ fn a_module_that_does_not_load_costs_only_its_own_schemas() {
     assert!(res.errors[0].contains("broken.ts"), "{}", res.errors[0]);
     let _ = std::fs::remove_dir_all(&tmp);
 }
+
+/// The zod the repo installed, or the one `PIKKU_TEST_ZOD` names.
+fn zod() -> Option<PathBuf> {
+    if let Some(dir) = std::env::var_os("PIKKU_TEST_ZOD") {
+        return PathBuf::from(dir).canonicalize().ok();
+    }
+    let mut d: &Path = Path::new(env!("CARGO_MANIFEST_DIR"));
+    loop {
+        let candidate = d.join("node_modules/zod");
+        if candidate.join("package.json").exists() {
+            return candidate.canonicalize().ok();
+        }
+        d = d.parent()?;
+    }
+}
+
+/// A project outside any repo: `zod` is linked where the test says, and every
+/// other file is written as given.
+struct Scratch(PathBuf);
+
+impl Scratch {
+    fn new(name: &str) -> Scratch {
+        let dir = std::env::temp_dir().join(format!("zodjs-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("tsconfig.json"), "{}").unwrap();
+        Scratch(dir)
+    }
+
+    fn write(&self, rel: &str, text: &str) {
+        let path = self.0.join(rel);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, text).unwrap();
+    }
+
+    fn link_zod(&self, zod: &Path, at: &str) {
+        let link = self.0.join(at).join("node_modules/zod");
+        std::fs::create_dir_all(link.parent().unwrap()).unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(zod, link).unwrap();
+    }
+}
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+#[test]
+fn finds_zod_installed_beside_the_schema_and_not_at_the_project_root() {
+    let Some(zod) = zod() else { return };
+    let project = Scratch::new("nested-zod");
+    project.link_zod(&zod, "packages/functions");
+    project.write("packages/functions/schema.ts", "import { z } from 'zod'\nexport const Name = z.object({ name: z.string() })\n");
+    let res = convert(&project.0, &[reference(&project.0, "NameInput", "packages/functions/schema.ts", "Name")]);
+    assert!(res.errors.is_empty(), "{:?}", res.errors);
+    assert_eq!(names(&res), vec!["NameInput"]);
+}
+
+#[test]
+fn builds_a_schema_from_a_package_under_node_modules() {
+    let Some(zod) = zod() else { return };
+    let project = Scratch::new("package-schema");
+    project.link_zod(&zod, ".");
+    project.write(
+        "node_modules/define-events/package.json",
+        r#"{ "name": "define-events", "type": "module", "exports": { ".": "./dist/index.js" } }"#,
+    );
+    project.write("node_modules/define-events/dist/index.js", "export const defineEvents = (events) => events\n");
+    project.write(
+        "events.ts",
+        "import { z } from 'zod'\nimport { defineEvents } from 'define-events'\n\
+         export const events = defineEvents({ viewed: z.object({ page: z.string() }) })\n\
+         export const Viewed = z.object(events.viewed.shape)\n",
+    );
+    let res = convert(&project.0, &[reference(&project.0, "ViewedInput", "events.ts", "Viewed")]);
+    assert!(res.errors.is_empty(), "{:?}", res.errors);
+    assert_eq!(names(&res), vec!["ViewedInput"]);
+    let schema = res.schemas[0].schema.value().unwrap();
+    assert_eq!(schema["properties"]["page"]["type"], "string");
+}
+
+#[test]
+fn stubs_a_package_that_cannot_load_so_the_rest_of_the_module_still_converts() {
+    let Some(zod) = zod() else { return };
+    let project = Scratch::new("package-throws");
+    project.link_zod(&zod, ".");
+    project.write(
+        "node_modules/needs-node/package.json",
+        r#"{ "name": "needs-node", "type": "module", "exports": { ".": "./index.js" } }"#,
+    );
+    project.write("node_modules/needs-node/index.js", "throw new Error('needs Node')\nexport const client = 1\n");
+    project.write(
+        "mixed.ts",
+        "import { z } from 'zod'\nimport { client } from 'needs-node'\n\
+         export const Uses = z.object({ n: z.number().max(client) })\n\
+         export const Note = z.string()\n",
+    );
+    let refs = [reference(&project.0, "Uses", "mixed.ts", "Uses"), reference(&project.0, "Note", "mixed.ts", "Note")];
+    let res = convert(&project.0, &refs);
+    assert_eq!(names(&res), vec!["Note"]);
+    assert_eq!(res.errors.len(), 1, "{:?}", res.errors);
+    assert!(res.errors[0].contains("'needs-node'"), "{}", res.errors[0]);
+}
+
+#[test]
+fn keeps_a_package_that_imports_node_as_a_stub() {
+    let Some(zod) = zod() else { return };
+    let project = Scratch::new("package-imports-node");
+    project.link_zod(&zod, ".");
+    project.write(
+        "node_modules/uses-fs/package.json",
+        r#"{ "name": "uses-fs", "type": "module", "exports": { ".": "./index.js" } }"#,
+    );
+    project.write("node_modules/uses-fs/index.js", "import { readFileSync } from 'node:fs'\nexport const limit = readFileSync ? 5 : 1\n");
+    project.write("limited.ts", "import { z } from 'zod'\nimport { limit } from 'uses-fs'\nexport const Limited = z.string().max(limit)\n");
+    let res = convert(&project.0, &[reference(&project.0, "Limited", "limited.ts", "Limited")]);
+    assert!(res.schemas.is_empty());
+    assert_eq!(res.errors.len(), 1, "{:?}", res.errors);
+    assert!(res.errors[0].contains("'uses-fs'"), "{}", res.errors[0]);
+}

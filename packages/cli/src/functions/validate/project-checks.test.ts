@@ -2052,50 +2052,6 @@ describe('declared frontends + type-check (live project checks)', () => {
       await rm(tmp, { recursive: true, force: true })
     }
   })
-
-  test('a frontend that cannot be type-checked warns — and --skip-typecheck suppresses it', async () => {
-    const tmp = await makeTmp()
-    try {
-      await makeValidProject(tmp)
-      await declareFrontends(tmp, { app: { cwd: 'apps/app' } })
-      await mkdir(join(tmp, 'apps', 'app'), { recursive: true })
-      await writeJson(join(tmp, 'apps', 'app', 'package.json'), { name: 'app' })
-
-      const checked = await runLiveValidate(tmp)
-      assert.ok(
-        checked.findings.some((f) => f.id === 'frontend-typecheck-skipped-app'),
-        `expected frontend-typecheck-skipped-app, got: ${findingIds(checked.findings)}`
-      )
-
-      const skipped = await runLiveValidate(tmp, { skipTypecheck: true })
-      assert.ok(
-        !skipped.findings.some((f) => f.id.startsWith('frontend-typecheck-')),
-        `expected no type-check findings, got: ${findingIds(skipped.findings)}`
-      )
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
-  })
-
-  test('a frontend declared with deploy:false is not type-checked', async () => {
-    const tmp = await makeTmp()
-    try {
-      await makeValidProject(tmp)
-      await declareFrontends(tmp, {
-        app: { cwd: 'apps/app', deploy: false },
-      })
-      await mkdir(join(tmp, 'apps', 'app'), { recursive: true })
-      await writeJson(join(tmp, 'apps', 'app', 'package.json'), { name: 'app' })
-
-      const result = await runLiveValidate(tmp)
-      assert.ok(
-        !result.findings.some((f) => f.id.startsWith('frontend-typecheck-')),
-        `expected no type-check findings, got: ${findingIds(result.findings)}`
-      )
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
-  })
 })
 
 describe('deployed frontend API base (live project checks)', () => {
@@ -2926,6 +2882,90 @@ describe('the generated coercion map', () => {
         !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
         'expected no finding once the plugin is wired'
       )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent when the app takes the platform kysely', async () => {
+    // pikku dev, standalone and Cloudflare apply the map to
+    // existingServices.kysely themselves; attaching it again double-parses.
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `export const createSingletonServices = async (c: any, existingServices?: any) => {\n` +
+          `  if (!existingServices?.kysely) throw new Error('no kysely')\n` +
+          `  const kysely = existingServices.kysely\n` +
+          `  return { kysely }\n` +
+          `}\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected no finding when the platform hands over kysely'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent when kysely is destructured from existingServices', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `export const f = (existingServices: any) => {\n` +
+          `  const { kysely } = existingServices\n` +
+          `  return kysely\n` +
+          `}\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(!result.findings.some((f) => f.id === 'coercion-map-not-wired'))
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent when the factory destructures kysely in its parameters', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `export const createSingletonServices = async (c: any, { kysely }: any) => {\n` +
+          `  return { kysely }\n` +
+          `}\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(!result.findings.some((f) => f.id === 'coercion-map-not-wired'))
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is still an error when existingServices.kysely only appears in a comment', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `// TODO: use existingServices.kysely one day\n` +
+          `/* const { kysely } = existingServices */\n` +
+          `export const x = 1\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(result.findings.some((f) => f.id === 'coercion-map-not-wired'))
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

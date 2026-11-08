@@ -49,9 +49,9 @@
     "test": "bun test --parallel src"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.151",
+    "@pikku/core": "^0.12.152",
     "zod": "^4",
-    "@pikku/cli": "^0.12.202"
+    "@pikku/cli": "^0.12.205"
   },
   "dependencies": {
     "@pikku/knowledge": "^0.12.22"

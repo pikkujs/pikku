@@ -1,5 +1,14 @@
 # @pikku/deploy
 
+## 0.12.19
+
+### Patch Changes
+
+- c7db9e2: `pikku deploy apply` now exits non-zero when the deploy fails, and `--fromPlan` works for providers that write no `infra.json`, such as standalone. `deploy plan` stages `deploy.embed`, so a plan applied later carries the same files. `deploy.defaultProvider` now takes effect when `-p` is not given. `deploy apply --runtime` is a real option, refused unless the provider supports that runtime.
+- Updated dependencies [a679e5d]
+- Updated dependencies [307fb8d]
+  - @pikku/core@0.12.152
+
 ## 0.12.18
 
 ### Patch Changes

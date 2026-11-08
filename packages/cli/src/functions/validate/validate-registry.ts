@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { join, relative } from 'node:path'
+import { runVerify } from '@pikku/code-edit/verify'
 import {
   isAddonPackage,
   runAddonPackageChecks,
@@ -50,7 +51,10 @@ export type ValidateCheck = {
    * findings are out of the way (running a linter over the app).
    */
   phase?: 'last'
-  applies: (target: ValidateTarget) => Promise<boolean>
+  applies: (
+    target: ValidateTarget,
+    options: ValidateOptions
+  ) => Promise<boolean>
   run: (target: ValidateTarget, options: ValidateOptions) => Promise<Finding[]>
 }
 
@@ -66,6 +70,15 @@ export type ValidateOptions = {
   migrationsBase?: string
   deployTarget?: string
   projectChecks?: ProjectChecksHook
+  /** Runs the type-checks and correctness checks. Left out, they do not run. */
+  verify?: {
+    codegen?: boolean
+    strict?: boolean
+    skipFrontends?: boolean
+    pikkuCli?: string
+    /** Check this project alone. Unset, every project under the root is checked. */
+    rootDir?: string
+  }
 }
 
 /** A hand-written `types/application-types.d.ts` beside package.json. */
@@ -120,6 +133,43 @@ export async function discoverTargets(
   return targets
 }
 
+/**
+ * The type-checks and the correctness checks. A failed step is an error even
+ * when it left no finding, because a compiler that died proved nothing.
+ */
+const runVerifyCheck = async (
+  dir: string,
+  options: ValidateOptions
+): Promise<Finding[]> => {
+  const result = await runVerify({
+    rootDir: dir,
+    codegen: options.verify?.codegen ?? false,
+    typecheck: !options.skipTypecheck,
+    frontends: !options.skipTypecheck && !options.verify?.skipFrontends,
+    strict: options.verify?.strict ?? false,
+    pikkuCli: options.verify?.pikkuCli,
+  })
+  const findings: Finding[] = result.findings.map((f) => ({
+    id: f.id,
+    ...(f.code ? { code: f.code } : {}),
+    severity: f.severity,
+    message: f.message,
+    path: f.file ? join(dir, f.file) + (f.line ? `:${f.line}` : '') : dir,
+    fixHint: f.hint ?? '',
+  }))
+  if (!result.ok && !findings.some((f) => f.severity === 'error')) {
+    const failed = result.steps.filter((s) => !s.ok).map((s) => s.id)
+    findings.push({
+      id: 'verify-step-failed',
+      severity: 'error',
+      message: `${failed.join(', ')} failed without reporting a finding`,
+      path: dir,
+      fixHint: 'Run the failed step by hand to see its output.',
+    })
+  }
+  return findings
+}
+
 export const CHECKS: ValidateCheck[] = [
   {
     id: 'app-project',
@@ -156,6 +206,15 @@ export const CHECKS: ValidateCheck[] = [
         })),
       ]
     },
+  },
+  {
+    id: 'verify',
+    subject: 'type-check and correctness check',
+    applies: async ({ dir }, options) =>
+      !!options.verify &&
+      (!options.verify.rootDir || options.verify.rootDir === dir) &&
+      existsSync(join(dir, 'pikku.config.json')),
+    run: async ({ dir }, options) => runVerifyCheck(dir, options),
   },
   {
     id: 'scaffold-duplicates',
@@ -279,11 +338,14 @@ export type ValidationPlan = Array<{
   target: ValidateTarget
 }>
 
-export async function planValidation(root: string): Promise<ValidationPlan> {
+export async function planValidation(
+  root: string,
+  options: ValidateOptions = {}
+): Promise<ValidationPlan> {
   const plan: ValidationPlan = []
   for (const target of await discoverTargets(root)) {
     for (const check of CHECKS) {
-      if (await check.applies(target)) plan.push({ check, target })
+      if (await check.applies(target, options)) plan.push({ check, target })
     }
   }
   // Stable: `'last'` checks go after everything else, in discovery order.
@@ -305,7 +367,7 @@ export async function runValidate(
   root: string,
   options: ValidateOptions = {}
 ): Promise<ValidateReport> {
-  const plan = await planValidation(root)
+  const plan = await planValidation(root, options)
   const findings: Finding[] = []
   const ran: ValidateReport['ran'] = []
 

@@ -422,8 +422,8 @@ export type PikkuFrontendInput = {
   /** The frontend's project directory, relative to the config file. */
   cwd: string
   /**
-   * Its build output, relative to `cwd`. Defaults to `dist`. Pikku reads it
-   * and never builds it.
+   * Its build output, relative to `cwd`. Defaults to `dist`. `pikku app build`
+   * produces it; serving and deploying only read it.
    */
   dist?: string
   primary?: boolean
@@ -636,7 +636,7 @@ export type PikkuCLIInput = {
   /** Directory containing email templates, locales, partials, and theme.json. */
   emailTemplatesDir?: string
 
-  /** Settings for the i18n checks `pikku verify` runs. */
+  /** Settings for the i18n checks `pikku validate` runs. */
   i18n?: {
     /** Workspace-relative path prefixes the jsx-literal-text and jsx-literal-prop checks skip, e.g. a developer tool that is not shipped to people. */
     ignore?: string[]

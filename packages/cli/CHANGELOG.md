@@ -1,3 +1,82 @@
+## 0.12.205
+
+### Patch Changes
+
+- 3739928: `pikku dev` without `--port` now listens on the port in the local environment's `apiUrl` (the non-production loopback environment, `local` preferred), falling back to 3000; an explicit `--port` still wins and a non-numeric one is refused. The `pikku` bin re-runs itself on bun when Node is older than 24 (which has no `node:sqlite`), and exits with a message naming both fixes when bun is not installed, so `bunx --bun` is no longer needed. The starter's `scripts/dev.mjs` is gone: its `dev` script is plain `pikku dev`, which already loads `.env`, generates the local secrets and starts every frontend. Behaviour change for a project whose local `apiUrl` names a port other than 3000 and that ran `pikku dev` without `--port`: it now binds the apiUrl's port.
+- Updated dependencies [da0e253]
+- Updated dependencies [da1267e]
+- Updated dependencies [9fa3c58]
+- Updated dependencies [3739928]
+- Updated dependencies [df5ed76]
+- Updated dependencies [09e3943]
+- Updated dependencies [a0534a8]
+  - @pikku/skills@0.12.70
+
+## 0.12.204
+
+### Patch Changes
+
+- dc39996: Add `pikku app build`, which runs each deployed frontend's own `build` script in its directory, side by side, and exits non-zero if any app fails.
+- 23de209: `pikku audit` gains `--fail-on <severity>` and `--baseline <audit.json>`. With `--fail-on`, an advisory at or above that severity that the baseline does not list fails the run, and so does an audit that could not produce a report.
+- 4e96e0e: `pikku db migrate --localOnly` refuses any database whose host is not loopback, including a `host=` or `hostaddr=` override in the connection string.
+- c7db9e2: `pikku deploy apply` now exits non-zero when the deploy fails, and `--fromPlan` works for providers that write no `infra.json`, such as standalone. `deploy plan` stages `deploy.embed`, so a plan applied later carries the same files. `deploy.defaultProvider` now takes effect when `-p` is not given. `deploy apply --runtime` is a real option, refused unless the provider supports that runtime.
+- 15111a3: Per-unit deploy codegen no longer writes outside the unit's `outDir`, so `deploy plan` stops overwriting an RPC map or client file kept in a shared SDK, and frontends can build while it runs.
+- b3e29cf: `pikku deploy plan` stages each engine's SQL migrations under `<providerDir>/db/<engine>`, for every provider, replacing what an earlier build staged there. Dev seeds are not shipped.
+- 67c83ff: Add `pikku ci`: bootstrap, local `db migrate`, `emails generate`, `all`, `validate` beside `audit --failOn high`, tests and app builds as one non-interactive workflow that stops at the first failed step. `-p <provider>` runs it in a throwaway git worktree of the commit, removes the console scaffold and produces a deploy plan; `--deploy` applies that plan; on Cloudflare it first needs `--secretsSet` and `--migrationsApplied` to confirm what the adapter cannot do itself. With `--json`, CLI workflows stream `workflow.step.*` events.
+- c9850cc: `pikku dev` without `--port` now listens on the port in the local environment's `apiUrl` (the non-production loopback environment, `local` preferred), falling back to 3000; an explicit `--port` still wins and a non-numeric one is refused. The `pikku` bin re-runs itself on bun when Node is older than 24 (which has no `node:sqlite`), and exits with a message naming both fixes when bun is not installed, so `bunx --bun` is no longer needed. The starter's `scripts/dev.mjs` is gone: its `dev` script is plain `pikku dev`, which already loads `.env`, generates the local secrets and starts every frontend. Behaviour change for a project whose local `apiUrl` names a port other than 3000 and that ran `pikku dev` without `--port`: it now binds the apiUrl's port.
+- a679e5d: `pikku verify` is merged into `pikku validate`, which now runs the type-check and correctness checks, skips codegen unless `--codegen` is passed, and exits non-zero on any error. The `pikku verify` command is gone; `runVerify`, `VerifyService` and the recorded results stay. See MIGRATION.md.
+- Updated dependencies [dc39996]
+- Updated dependencies [23de209]
+- Updated dependencies [c7db9e2]
+- Updated dependencies [67c83ff]
+- Updated dependencies [c9850cc]
+- Updated dependencies [a679e5d]
+- Updated dependencies [307fb8d]
+  - @pikku/skills@0.12.69
+  - @pikku/deploy@0.12.19
+  - @pikku/deploy-standalone@0.12.30
+  - @pikku/core@0.12.152
+  - @pikku/inspector@0.12.116
+
+## 0.12.203
+
+### Patch Changes
+
+- d7b030d: Fix the generated client's `agent.stream`, which parsed the event stream as JSON and resolved `undefined` once the run ended. It is now an async iterable of the run's AG-UI events, read by `CorePikkuFetch.agentStream`, and a `RUN_ERROR` throws a `PikkuAgentStreamError` instead of vanishing. `subscribeToSSE` shares the same frame reader (`readServerEvents`). `agent.run` and `agent.approve` are typed per agent and resolve to `status: 'suspended'` with `pendingApprovals` when a tool needs approval. `usePikkuAgent` passes all three through, typed; the generated React Query file registers the app's agents, so an unknown agent name is a type error. Breaking: `usePikkuAgent` no longer takes an `RPC` type argument — see docs/MIGRATION.md.
+- 2c56c0f: `#pikku/agent` now exports `AgentInput` and `AgentStreamEvent`, and `#pikku/scopes` exports `hasScopes` and `declareScopes`. `pikku validate` already told apps to import these through the alias instead of `@pikku/core/agent` and `@pikku/core/scope`, but the generated modules did not carry them, so following the hint failed to compile.
+- 1a5b741: Document how a function invites a user. `pikku doc pikkuBetterAuth` now says functions reach the instance as `services.auth`, explains inviting with `createAuthUser` then `sendAuthUserSignInLink` (mailed through the app's own `sendMagicLink`), and shows a second example, `betterAuthInvite`. The TSDoc on `sendAuthUserSignInLink` is corrected: the magic-link plugin does not refuse an unknown address when sending, only when the link is clicked. The docs also name the pitfalls: a call from a function needs `baseURL` configured, `callbackURL` must be a path or a trusted origin, and the five-minute default expiry is too short for an invite.
+- 417ccb7: A normal CLI build no longer compiles the native binaries, which came to about 400 MB in every checkout. Set `PIKKU_CLI_BINARIES=host` for this machine's binary or `PIKKU_CLI_BINARIES=all` for every released target; `bun run release` and the Full Suite set `all`, so releases still ship all four.
+- e4b0cd1: Removed `pikku cloud smoke`. It was a local clean-room project check (temp worktree, install, codegen, frontend checks, `pikku dev` startup) with no cloud involvement, and nothing else used it. Breaking for anyone who ran it: the command is gone with no replacement inside `pikku cloud`; run `pikku all` and `pikku dev` in your project instead. The `@pikku/cli/addon-support/validate` entry also stops re-exporting `findProjectRoot` and `readJsonSafe`.
+- 1d6c722: Git output is now decoded as UTF-8 once, after all chunks arrive, instead of per chunk. A multi-byte character split across a chunk boundary used to become U+FFFD, so `pikku validate` falsely reported a large non-ASCII migration (for example 26 MB of Arabic text) as modified against `origin/main`, and the deploy guard refused the deploy.
+- 91e7fc8: The Rust inspector (`pikku-inspect-rs`) can now be selected beside the Go one with `PIKKU_INSPECTOR=go|rs`, `--inspector` or the `inspector` key of `pikku.config.json`, with `PIKKU_INSPECTOR_RS_BIN` to point at a binary; `@pikku/inspector-go` ships it for linux-x64, linux-arm64 and darwin-arm64. The default engine is now Rust; set `PIKKU_INSPECTOR=go` for the Go reference.
+- 93f8669: Two lint keys, on by default at `error`: `lint.enforceContentService` makes `pikku validate` require the app's oxlint to forbid `fs` / `node:fs` / `fs/promises` imports (`no-restricted-imports`) and `require` (`typescript/no-require-imports`), and `lint.enforceVariablesService` makes it require `node/no-process-env`. A missing rule is reported as `oxlint-enforce-content-service` or `oxlint-enforce-variables-service`, each use as its oxlint finding, and `pikku enable oxlint` writes the rules with `*.test.*` and `*.spec.*` files exempted. Breaking for any project that reads files or the environment directly: use the `content`, `variables` and `secrets` services, exempt a file in an oxlint `overrides` entry, or set the key to `'warn'` or `'off'` in `pikku.config.json`. See `docs/MIGRATION.md`.
+
+  `pikku serve`, `pikku dev` and the `pikku db` commands now pass the `variables` service to the project's `createConfig`, as every deploy host already does, so a config can read its values without `process.env`. The starter template, `field-service` and `online-shop` do so; `online-shop` sets `enforceContentService` to `'off'` because its scenario steps write screenshots with `node:fs`.
+
+- c254266: The TypeScript inspector engine is retired: `pikku-inspect` (the Go binary built on typescript-go) is the only inspector. No Pikku package depends on TypeScript 6 any more.
+
+  - `@pikku/cli`: the `--inspector` flag, the `PIKKU_INSPECTOR` variable, the `inspector` key in `pikku.config.json`, `pikku inspector parity` and `pikku experiment native-comparison` are removed. A CLI with no `pikku-inspect` binary for its platform fails at inspection and names `PIKKU_INSPECTOR_GO_BIN`; it no longer falls back.
+  - `@pikku/inspector` keeps only its types, `ErrorCode`, serializers and data helpers, and drops its `typescript`, `ts-json-schema-generator`, `zod`, `tsx`, `path-to-regexp` and `openapi-types` dependencies. `inspect`, `analyzeProgram`, `finalizeInspectorState`, `collectSurface`, `readModuleSpecifiers`, `readJsxLiteralText`, `readTsconfigOutDir`, `findWireRemoteAddonSpecs` and the `./lite`, `./finalize` and `./schema-generator` entry points are gone; `InspectorState` has no `typesLookup` or `program`, and `InspectorOptions` has no `oldProgram` or `sourceFile`. `./surface` exports the surface types only.
+  - `@pikku/inspector-go` gains the helpers that replace the compiler API (`readSyntaxErrors`, `scanMessageUsage`, `readJsxProps`, `writeJsxProp`, `writeJsxStyle`, `findPikkuCall`, `readImports`, `findWireRemoteAddonSpecs`, the `scan*` source checks), an `InspectorSession` for the type-checking `serve` process, and the Zod helpers the Node schema fallback uses. `output.schema.json` lists `stats.filesReused`.
+  - `@pikku/code-edit` and `@pikku/n8n-import` no longer depend on `typescript`. `TypeScriptService.diagnostics()` is now async and the service has a `dispose()` method; the console's `get-file-diagnostics` awaits it.
+
+- b0c2c49: `pikku validate` now reports a critical finding, and exits non-zero, when the project has a database (a `db/<engine>` folder or a database in `createConfig`) but the pikku config has no top-level `db`. Before, validate and `pikku all` passed and the deploy build failed later, when it added the platform contributors. Set `"db": { "engine": "sqlite" }` (or `postgres`, `mysql`) in `pikku.config.json`. Validate findings gain a `critical` severity that fails the command by default; errors still only report.
+- 9dd9d9a: `pikku validate` now requires oxlint's `no-empty` rule at `error`, so an empty `catch {}` fails validate. A config that turns the rule off, lowers it, or sets `allowEmptyCatch: true` is reported as `oxlint-rule-missing`, and `pikku enable oxlint` adds the rule and removes `allowEmptyCatch: true`. Each empty block is reported as `oxlint-eslint-no-empty`; a comment inside the block marks a deliberate one. `checksConditionals: false` on `typescript/no-misused-promises` is now detected in the nested shape `oxlint --print-config` prints; before, a resolved config with it switched off passed.
+- Updated dependencies [d7b030d]
+- Updated dependencies [1a5b741]
+- Updated dependencies [90e6a50]
+- Updated dependencies [91e7fc8]
+- Updated dependencies [7aedf4e]
+- Updated dependencies [8d4195c]
+- Updated dependencies [c254266]
+  - @pikku/fetch@0.12.14
+  - @pikku/skills@0.12.68
+  - @pikku/better-auth@0.12.62
+  - @pikku/inspector-go@0.12.9
+  - @pikku/code-edit@0.12.11
+  - @pikku/inspector@0.12.115
+  - @pikku/n8n-import@0.0.10
+
 ## 0.12.202
 
 ### Patch Changes

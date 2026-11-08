@@ -3,7 +3,6 @@ import { readFile, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
-import { typeCheckFrontends } from './frontend-typecheck.js'
 import {
   readJsonSafe,
   readTextSafe,
@@ -25,6 +24,23 @@ const FindingSchema = z.object({
   fixHint: z.string(),
 })
 type Finding = z.infer<typeof FindingSchema>
+
+/**
+ * True when source reads `kysely` off `existingServices`, the instance the
+ * platform has already applied the coercion map to (pikku dev, standalone,
+ * Cloudflare). Attaching the plugin to it again would parse json twice.
+ */
+const takesPlatformKysely = (source: string): boolean => {
+  // Comments are blanked first: a mention of `existingServices.kysely` in a
+  // comment does not take the platform's instance.
+  const text = blankComments(source)
+  return (
+    /existingServices\??\.kysely\b/.test(text) ||
+    /\{[^{}]*\bkysely\b[^{}]*\}\s*=\s*existingServices\b/.test(text) ||
+    // The factory's second parameter, destructured: `(config, { kysely })`.
+    /\(\s*\w+\s*(?::[^,)]+)?,\s*\{[^{}]*\bkysely\b[^{}]*\}/.test(text)
+  )
+}
 
 export const ProjectChecksInput = z.object({
   skipTypecheck: z
@@ -1156,26 +1172,42 @@ export async function runProjectChecks(
         await Promise.all(
           (await walkSourceFiles(root)).map((f) => readTextSafe(f))
         )
-      ).some((text) => text?.includes('createCoercionPlugin'))
+      ).some(
+        (text) =>
+          text !== undefined &&
+          text !== null &&
+          (text.includes('createCoercionPlugin') || takesPlatformKysely(text))
+      )
       if (!wired) {
         e(
           'coercion-map-not-wired',
           `${join(outDirRel, 'db', 'coercion.gen.ts')} declares coercions that no Kysely instance applies`,
           coercionPath,
           lines(
-            'Attach the plugin where the kysely singleton is created, in',
-            'createSingletonServices:',
+            'Nothing here takes the kysely the platform hands over, so the',
+            'platform cannot reach this instance. Either build the app on',
+            'existingServices.kysely (pikku dev, standalone and Cloudflare',
+            'already apply the map to it; do not attach the plugin again, it',
+            'is not idempotent), or attach the plugin to the instance',
+            'createSingletonServices builds itself, never to',
+            'existingServices.kysely:',
             '',
             "  import { createCoercionPlugin } from '@pikku/kysely'",
             "  import { coercionMap } from '#pikku/db/coercion.gen.js'",
             '',
-            '  kysely: existingServices.kysely.withPlugin(',
-            '    createCoercionPlugin({ map: coercionMap }),',
-            '  )',
+            '  kysely: existingServices?.kysely ??',
+            '    createMyKysely(config).withPlugin(',
+            '      createCoercionPlugin({ map: coercionMap })',
+            '    ),',
+            '',
+            'Replace createMyKysely with whatever builds your Kysely instance.',
+            'Keep the fallback built and plugged this way, so an adapter that',
+            'hands over no kysely still gets the map.',
             '',
             'Without it a deployed stage returns raw strings and integers where',
             'the generated schema promises Date and boolean. The dev driver',
-            'hydrates them for you, so this cannot fail locally.'
+            'hydrates them for you, so this cannot fail locally. AWS Lambda and',
+            'Azure deploys hand over no kysely, so they always need the plugin.'
           )
         )
       }
@@ -2019,46 +2051,6 @@ export async function runProjectChecks(
         `See ${designDocUrl}`
       )
     )
-  }
-
-  // ── frontend type-check (what the build container actually runs) ───────
-  // Every check above is a heuristic standing in for this compile. The build
-  // container type-checks each deployable frontend and aborts the deploy on a
-  // non-zero exit, so running the same compile here is the difference between
-  // a 20-second local failure and a burned deploy out of the daily 10.
-  if (!opts.skipTypecheck) {
-    const frontends = declaredFrontends
-      .filter((fe) => fe.deploy)
-      .map((fe) => ({ name: fe.slug, dir: fe.dir }))
-
-    for (const result of await typeCheckFrontends(root, frontends)) {
-      if (result.skipped) {
-        w(
-          `frontend-typecheck-skipped-${result.name}`,
-          `could not type-check frontend "${result.name}" — ${result.skipped}`,
-          result.dir,
-          lines(
-            'The build container type-checks every deployable frontend and aborts the deploy if it fails.',
-            'Give the app a tsconfig.json and a "tsc" script so the same check runs locally.'
-          )
-        )
-        continue
-      }
-      if (result.errors.length === 0) continue
-      const shown = result.errors.slice(0, 20)
-      const extra = result.errors.length - shown.length
-      e(
-        `frontend-typecheck-${result.name}`,
-        `frontend "${result.name}" does not type-check — the build container aborts the deploy on this`,
-        result.dir,
-        lines(
-          ...shown,
-          ...(extra > 0 ? [`… and ${extra} more`] : []),
-          '',
-          `Reproduce with: cd ${result.dir.slice(root.length + 1)} && ${result.command}`
-        )
-      )
-    }
   }
 
   // ── oxlint (last: it is the slow one) ──────────────────────────────────
