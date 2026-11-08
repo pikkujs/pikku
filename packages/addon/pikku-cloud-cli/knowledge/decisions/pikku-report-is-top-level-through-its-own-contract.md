@@ -9,7 +9,7 @@ tags: cli, report, addon
 
 `contracts.ts` exports `reportCommands` as a second `defineCLICommands`, and
 `packages/cli/src/cli.wiring.ts` spreads it into `commands` with
-`...refCLI('cloud:reportCommands')`. The inspector already reads that spread at the top level, so
+`...refCLI('cloudCli:reportCommands')`. The inspector already reads that spread at the top level, so
 this needed no framework change. Its key in `CONFIG_FREE_COMMANDS` is `report`.
 
 Moving the function into `@pikku/cli` would have had to pull the login, the SDK and the consent code

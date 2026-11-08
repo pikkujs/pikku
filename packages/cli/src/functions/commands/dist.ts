@@ -31,8 +31,12 @@ const tscEmitsIt = (file: string) =>
   file.endsWith('.ts') && !file.endsWith('.d.ts')
 
 /** Findings wait in the output dir, unsent; a published package must not carry them. */
-const heldFindings = (rootDir: string, file: string) =>
-  relative(rootDir, file).startsWith(join('.pikku', 'findings') + sep)
+const heldFindings = (rootDir: string, file: string) => {
+  const configured = process.env.PIKKUSTUDIO_FINDINGS_DIR
+  const dirs = [join(rootDir, '.pikku', 'findings')]
+  if (configured) dirs.push(resolve(configured))
+  return dirs.some((dir) => resolve(file).startsWith(dir + sep))
+}
 
 const walk = async (dir: string): Promise<string[]> => {
   if (!existsSync(dir)) {

@@ -129,6 +129,7 @@ export async function uploadDamagePhoto(
   const { url } = await pikkuFetch.get('/orders/:orderId/damage-photo', {
     orderId,
   })
-  return url
+  // `url` may be relative to the API server; absolute URLs pass through.
+  return new URL(url, serverUrl).toString()
 }
 // @snippet end contentBrowserUpload

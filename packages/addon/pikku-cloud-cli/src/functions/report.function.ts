@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { createInterface } from 'node:readline/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/addon/function'
@@ -22,6 +21,7 @@ import {
   readHeld,
   runIdFor,
   type HeldFinding,
+  fallbackRunId,
 } from '../lib/held-findings.js'
 import {
   REPORT_ANSWERS,
@@ -159,7 +159,7 @@ export const CloudReport = pikkuSessionlessFunc({
     const runId = await attempt(
       'could not record the run id',
       () => runIdFor(),
-      randomUUID()
+      fallbackRunId()
     )
     const filing =
       stdin ||
@@ -191,6 +191,22 @@ export const CloudReport = pikkuSessionlessFunc({
       )
     }
 
+    // A declined finding that could not be deleted is still on disk, so the
+    // count reports what is really left rather than claiming zero.
+    const discard = async (entries: HeldFinding[]) => {
+      await attempt(
+        'could not clear what is held',
+        () => dropHeld(entries),
+        undefined
+      )
+      const left = await attempt(
+        'could not re-read what is held',
+        () => readHeld(runId),
+        entries
+      )
+      return left.length
+    }
+
     const held = await attempt(
       'could not read what is held',
       () => readHeld(runId),
@@ -199,17 +215,18 @@ export const CloudReport = pikkuSessionlessFunc({
     const decided = answer ?? (saved === 'always' ? 'always' : null)
 
     if (decided === 'no' || decided === 'never') {
-      await attempt(
-        'could not clear what is held',
-        () => dropHeld(held),
-        undefined
-      )
+      const left = await discard(held)
       console.log(
         decided === 'never'
           ? '[pikku] not sent, and reporting is now off'
           : '[pikku] not sent'
       )
-      return finish({ sent: 0, held: 0, needsConsent: false, reason: decided })
+      return finish({
+        sent: 0,
+        held: left,
+        needsConsent: false,
+        reason: decided,
+      })
     }
 
     const { apiUrl, token } = await attempt<
@@ -268,13 +285,14 @@ export const CloudReport = pikkuSessionlessFunc({
           needsConsent: false,
         })
       }
-      await attempt(
-        'could not clear what is held',
-        () => dropHeld(held),
-        undefined
-      )
+      const left = await discard(held)
       console.log('[pikku] not sent')
-      return finish({ sent: 0, held: 0, needsConsent: false, reason: asked })
+      return finish({
+        sent: 0,
+        held: left,
+        needsConsent: false,
+        reason: asked,
+      })
     }
     console.log(
       `[pikku] not sent. Ask the user whether to send these to the Pikku team as ${account} (yes / no / always / never), then run: pikku report --consent <answer>`
