@@ -3,7 +3,7 @@
  * contract does not carry, typed by hand because no contract exists to
  * generate them from.
  *
- * - `getSession`, `requestCliAuth`, `pollCliAuth`, `submitFinding` live in the controlplane's
+ * - `requestCliAuth`, `pollCliAuth`, `submitFinding` live in the controlplane's
  *   `api-functions` package itself and are served bare, before anyone has a
  *   session. They belong to no addon, so no SDK describes them.
  * - `createSandboxChange` is in `@pikkustudio/addon-machine-api`, wired as
@@ -13,10 +13,6 @@
  * source publishes an SDK, generate it like cloud-api and delete the entry.
  */
 export type UncontractedRPCMap = {
-  getSession: {
-    input: Record<string, never>
-    output: { email?: string }
-  }
   requestCliAuth: {
     input: void
     output: { code: string; deviceCode: string; expiresAt: string }

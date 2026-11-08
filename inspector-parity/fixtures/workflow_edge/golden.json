@@ -236,6 +236,14 @@
       ]
      },
      {
+      "type": "approval",
+      "reason": "ok?",
+      "outputVar": "approval",
+      "expiry": "1d",
+      "approvers": "admin",
+      "approverScope": "ops"
+     },
+     {
       "type": "fanout",
       "sourceVar": "data.items",
       "itemVar": "it",
@@ -970,12 +978,20 @@
      },
      "step_7": {
       "nodeId": "step_7",
+      "flow": "approval",
+      "reason": "ok?",
+      "outputVar": "approval",
+      "expiry": "1d",
+      "next": "step_8"
+     },
+     "step_8": {
+      "nodeId": "step_8",
       "flow": "fanout",
       "sourceVar": "data.items",
       "itemVar": "it",
       "mode": "parallel",
       "childEntry": "each",
-      "next": "step_8"
+      "next": "step_9"
      },
      "each": {
       "nodeId": "each",
@@ -1001,15 +1017,15 @@
       "stepName": "pause",
       "duration": 10
      },
-     "step_8": {
-      "nodeId": "step_8",
+     "step_9": {
+      "nodeId": "step_9",
       "flow": "fanout",
       "sourceVar": "data.users",
       "itemVar": "u",
       "mode": "sequential",
       "childEntry": "seq",
       "timeBetween": "7ms",
-      "next": "step_9"
+      "next": "step_10"
      },
      "seq": {
       "nodeId": "seq",
@@ -1023,29 +1039,29 @@
       },
       "stepHash": "532ee976ed0a"
      },
-     "step_9": {
-      "nodeId": "step_9",
-      "flow": "set",
-      "variable": "name",
-      "value": "y",
-      "next": "step_10"
-     },
      "step_10": {
       "nodeId": "step_10",
       "flow": "set",
-      "variable": "flag",
-      "expression": "data.f",
+      "variable": "name",
+      "value": "y",
       "next": "step_11"
      },
      "step_11": {
       "nodeId": "step_11",
       "flow": "set",
-      "variable": "count",
-      "expression": "data.cnt",
+      "variable": "flag",
+      "expression": "data.f",
       "next": "step_12"
      },
      "step_12": {
       "nodeId": "step_12",
+      "flow": "set",
+      "variable": "count",
+      "expression": "data.cnt",
+      "next": "step_13"
+     },
+     "step_13": {
+      "nodeId": "step_13",
       "flow": "branch",
       "branches": [
        {
@@ -1053,18 +1069,18 @@
          "type": "simple",
          "expression": "data.cancel"
         },
-        "entry": "step_12_branch0_0"
+        "entry": "step_13_branch0_0"
        }
       ],
-      "next": "step_13"
+      "next": "step_14"
      },
-     "step_12_branch0_0": {
-      "nodeId": "step_12_branch0_0",
+     "step_13_branch0_0": {
+      "nodeId": "step_13_branch0_0",
       "flow": "cancel",
       "reason": "stop"
      },
-     "step_13": {
-      "nodeId": "step_13",
+     "step_14": {
+      "nodeId": "step_14",
       "flow": "return",
       "outputs": {
        "r1": {
@@ -1109,7 +1125,7 @@
     "entryNodeIds": [
      "s1"
     ],
-    "graphHash": "2fbd5e5d0932",
+    "graphHash": "e62591c7d4cd",
     "deterministic": false
    },
    "wfB": {
@@ -1312,7 +1328,7 @@
   {
    "level": "critical",
    "code": "PKU641",
-   "message": "Workflow 'wfC' does not conform to DSL workflow rules:\n- The for-of loop 'for (const i of [1,2,3]) { await workflow.do('x', 'y', {}) }' can't be expressed in a DSL workflow \u2014 its iterable must be a data array (an identifier or field like 'data.items'), not a computed/inline iterable such as '[...Array(n).keys()]'. Use pikkuWorkflowComplexFunc for a control-flow/counting loop, or iterate over a real input array.\n- Destructuring a step result is not supported in DSL workflows. Assign it to a variable first (e.g. `const result = await workflow.do(...)`) and read its properties.\n- Variable declaration 'inner' inside block is not supported in DSL workflows. Move all let/const declarations to the top level.\n- A single declaration statement may only declare one variable in DSL workflows. Split 'let a1 = 1, b1 = 2' into separate statements."
+   "message": "Workflow 'wfC' does not conform to DSL workflow rules:\n- The for-of loop 'for (const i of [1,2,3]) { await workflow.do('x', 'y', {}) }' can't be expressed in a DSL workflow — its iterable must be a data array (an identifier or field like 'data.items'), not a computed/inline iterable such as '[...Array(n).keys()]'. Use pikkuWorkflowComplexFunc for a control-flow/counting loop, or iterate over a real input array.\n- Destructuring a step result is not supported in DSL workflows. Assign it to a variable first (e.g. `const result = await workflow.do(...)`) and read its properties.\n- Variable declaration 'inner' inside block is not supported in DSL workflows. Move all let/const declarations to the top level.\n- A single declaration statement may only declare one variable in DSL workflows. Split 'let a1 = 1, b1 = 2' into separate statements."
   },
   {
    "level": "critical",
