@@ -233,3 +233,20 @@ fn stubs_a_package_that_cannot_load_so_the_rest_of_the_module_still_converts() {
     assert_eq!(res.errors.len(), 1, "{:?}", res.errors);
     assert!(res.errors[0].contains("'needs-node'"), "{}", res.errors[0]);
 }
+
+#[test]
+fn keeps_a_package_that_imports_node_as_a_stub() {
+    let Some(zod) = zod() else { return };
+    let project = Scratch::new("package-imports-node");
+    project.link_zod(&zod, ".");
+    project.write(
+        "node_modules/uses-fs/package.json",
+        r#"{ "name": "uses-fs", "type": "module", "exports": { ".": "./index.js" } }"#,
+    );
+    project.write("node_modules/uses-fs/index.js", "import { readFileSync } from 'node:fs'\nexport const limit = readFileSync ? 5 : 1\n");
+    project.write("limited.ts", "import { z } from 'zod'\nimport { limit } from 'uses-fs'\nexport const Limited = z.string().max(limit)\n");
+    let res = convert(&project.0, &[reference(&project.0, "Limited", "limited.ts", "Limited")]);
+    assert!(res.schemas.is_empty());
+    assert_eq!(res.errors.len(), 1, "{:?}", res.errors);
+    assert!(res.errors[0].contains("'uses-fs'"), "{}", res.errors[0]);
+}

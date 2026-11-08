@@ -259,7 +259,7 @@ Known gaps:
   links them through its module loader and runs Go's own `runner.js`/`helpers.gen.js`
   (embedded with `include_str!`, byte for byte). `zod` for the entry resolves from the project
   root, then from the directories of the declaring modules (bun and pnpm install it beside the
-  package that depends on it). An ES module package under `node_modules` is loaded for real; the
+  package that depends on it). A pure ES module package under `node_modules` (no Node built-in, CommonJS or unresolvable import, transitively) is loaded for real; the
   schemas that then fail to load or touch a stub run again with every `node_modules` package
   stubbed. A bare import that is not `zod` and cannot be loaded (a Node built-in, an unresolvable
   or CommonJS package) is a stub, as in Go; a stub's exports are the
