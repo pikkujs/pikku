@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import {
+  MAX_COOKIE_VALUE_LENGTH,
   SCOPES_COOKIE,
   scopesCookieCache,
   signScopeSnapshot,
@@ -65,5 +66,54 @@ describe('scope snapshot cookie', () => {
       response: { cookie: () => undefined },
     })!
     assert.deepEqual(await reader.read(), snapshot)
+  })
+
+  test('rejects correctly signed snapshots whose fields are invalid', async () => {
+    for (const bad of [
+      { ...snapshot, userId: 7 },
+      { ...snapshot, at: 'now' },
+      { ...snapshot, scopes: ['a:b', 3] },
+      { ...snapshot, scopes: 'a:b' },
+      { userId: 'u1', at: 1000 },
+    ]) {
+      const value = await signScopeSnapshot(bad as any, 's3cret')
+      assert.equal(await verifyScopeSnapshot(value, 's3cret'), null)
+    }
+  })
+
+  test('does not read the secret until the cache is used', async () => {
+    let reads = 0
+    const cache = scopesCookieCache({
+      ttlSeconds: 30,
+      secret: async () => {
+        reads++
+        return 's'
+      },
+      cookieHeader: null,
+      response: { cookie: () => undefined },
+    })!
+    assert.equal(reads, 0)
+    await cache.read()
+    await cache.write(snapshot)
+    assert.equal(reads, 1)
+  })
+
+  test('skips the cookie when the snapshot would not fit in one', async () => {
+    const sets: any[] = []
+    const cache = scopesCookieCache({
+      ttlSeconds: 30,
+      secret: 's',
+      cookieHeader: null,
+      response: { cookie: (...args) => sets.push(args) },
+    })!
+    const big = {
+      ...snapshot,
+      scopes: Array.from({ length: 400 }, (_, i) => `area:resource-${i}:read`),
+    }
+    assert.ok(
+      (await signScopeSnapshot(big, 's')).length > MAX_COOKIE_VALUE_LENGTH
+    )
+    await cache.write(big)
+    assert.equal(sets.length, 0)
   })
 })

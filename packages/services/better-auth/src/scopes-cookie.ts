@@ -7,6 +7,12 @@ export const SCOPES_COOKIE = 'pikku_scopes'
 /** The scopes resolved for `userId` at `at` (epoch ms). */
 export type ScopeSnapshot = { userId: string; scopes: string[]; at: number }
 
+/**
+ * Longest cookie value written. Browsers cap a whole cookie at about 4096
+ * bytes, name and attributes included, so this leaves them room.
+ */
+export const MAX_COOKIE_VALUE_LENGTH = 3500
+
 const encoder = new TextEncoder()
 
 const toBase64Url = (bytes: Uint8Array): string =>
@@ -113,27 +119,52 @@ export const scopesCookieCache = ({
   response,
 }: {
   ttlSeconds: number
-  secret: string | undefined
+  /**
+   * The signing secret, or a function resolving it. A function is awaited at
+   * most once and only when a snapshot is read or written, so a request that
+   * never touches the cache does not depend on the secret store.
+   */
+  secret: string | undefined | (() => Promise<string | undefined>)
   cookieHeader: string | null | undefined
   response: CookieWriter | undefined
 }): ScopesCache | undefined => {
   if (!(ttlSeconds > 0) || !secret || !response) {
     return undefined
   }
+  let resolved: Promise<string | undefined> | undefined
+  const getSecret = (): Promise<string | undefined> =>
+    (resolved ??=
+      typeof secret === 'function' ? secret() : Promise.resolve(secret))
   const crossSite = crossSiteCookies()
   const insecureAllowed =
     process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
   return {
     ttlSeconds,
-    read: () =>
-      verifyScopeSnapshot(
-        parseCookies(cookieHeader ?? '').get(SCOPES_COOKIE),
-        secret
-      ),
+    read: async () => {
+      const key = await getSecret()
+      return key
+        ? verifyScopeSnapshot(
+            parseCookies(cookieHeader ?? '').get(SCOPES_COOKIE),
+            key
+          )
+        : null
+    },
     write: async (snapshot) => {
+      const key = await getSecret()
+      if (!key) {
+        return
+      }
+      const value = await signScopeSnapshot(snapshot, key)
+      // A cookie over the browser's per-cookie limit is discarded outright, and
+      // a proxy may reject the whole response over it. Better to skip the cache
+      // for this user: every request then reads the scope store, which is the
+      // behaviour with caching off.
+      if (value.length > MAX_COOKIE_VALUE_LENGTH) {
+        return
+      }
       response.cookie(
         SCOPES_COOKIE,
-        await signScopeSnapshot(snapshot, secret),
+        value,
         {
           httpOnly: true,
           path: '/',
