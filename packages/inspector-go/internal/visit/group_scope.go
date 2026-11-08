@@ -30,8 +30,10 @@ func literalKeyName(name *ast.Node) (string, bool) {
 }
 
 // literalBoolProperty is the literal `name: true|false` on obj, if present.
+// The key may be an identifier or a string literal, so `'live': true` is read
+// the same as `live: true`.
 func literalBoolProperty(obj *ast.Node, name string) (value bool, ok bool) {
-	p := tsutil.FindPropertyAssignment(obj, name)
+	p := findLiteralKeyProperty(obj, name)
 	if p == nil {
 		return false, false
 	}
@@ -40,6 +42,33 @@ func literalBoolProperty(obj *ast.Node, name string) (value bool, ok bool) {
 		return true, true
 	case ast.KindFalseKeyword:
 		return false, true
+	}
+	return false, false
+}
+
+// findLiteralKeyProperty is the property assignment on obj keyed `name`,
+// whether written as an identifier or a string literal.
+func findLiteralKeyProperty(obj *ast.Node, name string) *ast.Node {
+	for _, p := range obj.Properties() {
+		if !ast.IsPropertyAssignment(p) {
+			continue
+		}
+		if key, ok := literalKeyName(p.Name()); ok && key == name {
+			return p
+		}
+	}
+	return nil
+}
+
+// liveFlag reads a scope's `live`. A `live` that is present but not a literal
+// boolean cannot be resolved statically, and silently dropping it would leave
+// the functions requiring the scope on a cached snapshot, so it is reported.
+func (s *Context) liveFlag(obj *ast.Node, scopeName string) (value bool, ok bool) {
+	if live, ok := literalBoolProperty(obj, "live"); ok {
+		return live, true
+	}
+	if findLiteralKeyProperty(obj, "live") != nil {
+		s.Log.Critical(diag.InvalidValue, "Scope '"+scopeName+"' sets `live` to something other than a literal true or false, so it cannot be resolved statically.")
 	}
 	return false, false
 }
@@ -93,7 +122,7 @@ func (s *Context) extractScopeNodes(obj *ast.Node, scopeName string) *state.Reco
 		var node jsObject
 		node.set("displayName", orUndefined(tsutil.GetPropertyValue(init, "displayName")))
 		node.set("description", orUndefined(tsutil.GetPropertyValue(init, "description")))
-		if live, ok := literalBoolProperty(init, "live"); ok {
+		if live, ok := s.liveFlag(init, scopeName+":"+segment); ok {
 			node.set("live", live)
 		}
 		if nested := scopesObject(init); nested != nil {
@@ -206,7 +235,7 @@ func (s *Context) addScope(node *ast.Node) {
 		o.set("name", name)
 		o.set("displayName", orUndefined(displayName))
 		o.set("description", orUndefined(description))
-		if live, ok := literalBoolProperty(root, "live"); ok {
+		if live, ok := s.liveFlag(root, name); ok {
 			o.set("live", live)
 		}
 		if scopes != nil {

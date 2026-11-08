@@ -188,15 +188,15 @@ export const betterAuthSession = (
       }
 
       if (result?.user) {
+        // The secret is read inside the cache, only once a snapshot is
+        // actually read or written, so a request that never needs the cache
+        // (mapped scopes, no scope service) does not depend on the secret store.
         const scopesCache =
           scopesTtlSeconds > 0
             ? scopesCookieCache({
                 ttlSeconds: scopesTtlSeconds,
-                secret: await readSessionSecret(
-                  services,
-                  secretId,
-                  'betterAuthSession'
-                ),
+                secret: () =>
+                  readSessionSecret(services, secretId, 'betterAuthSession'),
                 cookieHeader: mergeRelayedCookies(
                   new Headers(request.headers())
                 ).get('cookie'),

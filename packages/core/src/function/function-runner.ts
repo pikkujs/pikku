@@ -497,13 +497,21 @@ export const runPikkuFunc = async <In = any, Out = any>(
       addonInstance?.namespace
     )
     const functionScopes = funcConfig.scopes ?? funcMeta.scopes
+    // A live function runs on freshly resolved scopes end to end: the check
+    // below, its permissions, its body and any nested call all see the same
+    // grants, so a permission cannot allow what the check just refused.
+    const effectiveSession = funcMeta.liveScopes
+      ? await withLiveScopes(session, resolvedSingletonServices.scopeService)
+      : session
+    if (effectiveSession !== session) {
+      sessionService?.setInitial(effectiveSession!)
+      invocationWire.session = effectiveSession
+    }
     verifyScopes(
       addonScopes.length > 0
         ? [...addonScopes, ...(functionScopes ?? [])]
         : functionScopes,
-      funcMeta.liveScopes
-        ? await withLiveScopes(session, resolvedSingletonServices.scopeService)
-        : session
+      effectiveSession
     )
 
     const featureFlag = funcConfig.featureFlag ?? funcMeta.featureFlag
