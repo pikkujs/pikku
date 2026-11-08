@@ -230,6 +230,21 @@ describe('typecheckProjects', () => {
     assert.ok(Date.now() - started < 750)
   })
 
+  test('errors tsc reports only outside the project still fail the check', async () => {
+    const project = fakeProject(
+      'web',
+      printing(
+        "/elsewhere/node_modules/x/index.d.ts(1,1): error TS2304: Cannot find name 'y'."
+      )
+    )
+    const { diagnostics } = await typecheckProjects([project], project.dir)
+    assert.equal(diagnostics.length, 1)
+    assert.equal(diagnostics[0]?.severity, 'error')
+    assert.equal(diagnostics[0]?.code, 'TSC')
+    assert.equal(diagnostics[0]?.project, 'web')
+    assert.match(diagnostics[0]?.message ?? '', /exited 2/)
+  })
+
   test('a compiler that dies silently is a failure, not a pass', async () => {
     const project = fakeProject('web', 'process.exit(1)')
     await assert.rejects(

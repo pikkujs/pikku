@@ -107,7 +107,7 @@ const spawnTsc = (
   args: string[],
   cwd: string,
   { signal, timeoutMs }: TscRun
-): Promise<string> =>
+): Promise<{ output: string; code: number }> =>
   new Promise((done, fail) => {
     if (signal?.aborted) {
       fail(new PikkuTypecheckFailedError('The type check was superseded.'))
@@ -169,7 +169,7 @@ const spawnTsc = (
         )
         return
       }
-      done(output)
+      done({ output, code })
     })
   })
 
@@ -182,16 +182,19 @@ export const runProjectTypecheck = async (
   tsconfigPath: string,
   rootDir: string,
   { cwd = rootDir, ...run }: TscRun & { cwd?: string } = {}
-): Promise<TscCheckResult> => {
-  const output = await spawnTsc(
+): Promise<TscCheckResult & { exitCode: number }> => {
+  const { output, code } = await spawnTsc(
     [resolveTsc(cwd), '-p', tsconfigPath, '--noEmit', '--pretty', 'false'],
     cwd,
     run
   )
-  return parseTscOutput(output, rootDir, {
-    maxMessageLength: Number.POSITIVE_INFINITY,
-    cwd,
-  })
+  return {
+    ...parseTscOutput(output, rootDir, {
+      maxMessageLength: Number.POSITIVE_INFINITY,
+      cwd,
+    }),
+    exitCode: code,
+  }
 }
 
 /** One `tsc` per project, side by side. The first to fail stops the others. */
@@ -205,7 +208,7 @@ export const typecheckProjects = async (
   const stop = signal ? AbortSignal.any([signal, failed.signal]) : failed.signal
   const checks = await Promise.all(
     projects.map(async (project) => {
-      const { diagnostics } = await runProjectTypecheck(
+      const { diagnostics, exitCode } = await runProjectTypecheck(
         project.tsconfig,
         rootDir,
         { cwd: project.dir, signal: stop, timeoutMs }
@@ -213,13 +216,24 @@ export const typecheckProjects = async (
         failed.abort()
         throw error
       })
-      return diagnostics.map((d): CheckDiagnostic => ({
+      const reported = diagnostics.map((d): CheckDiagnostic => ({
         severity: d.category === 'error' ? 'error' : 'warn',
         code: `TS${d.code}`,
         message: d.message,
         project: project.name,
         ...(d.line > 0 ? { file: d.file, line: d.line, column: d.column } : {}),
       }))
+      // The parser drops errors in node_modules and outside the root, but tsc
+      // still exits non-zero for them, and so would the project's own build.
+      if (exitCode !== 0 && !reported.some((d) => d.severity === 'error')) {
+        reported.push({
+          severity: 'error',
+          code: 'TSC',
+          message: `tsc exited ${exitCode} with errors only in files outside this project (node_modules, or beyond its root); run tsc -p ${project.tsconfig} to see them`,
+          project: project.name,
+        })
+      }
+      return reported
     })
   )
   return { diagnostics: checks.flat(), durationMs: Date.now() - started }

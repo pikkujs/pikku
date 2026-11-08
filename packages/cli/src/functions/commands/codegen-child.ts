@@ -90,6 +90,9 @@ export const codegenStateFile = (): string =>
 /** Enough for the error lines, which print long before the stack at the end. */
 const MAX_FAILURE_OUTPUT = 256 * 1024
 
+/** How long a failed child's stderr gets to finish after it exits. */
+const STDERR_GRACE_MS = 2000
+
 /** A failed child, with what it printed. */
 export class CodegenChildError extends Error {
   constructor(
@@ -140,14 +143,29 @@ export const runCodegenChild = (
     child.once('error', reject)
     child.once('exit', (code, signal) => {
       clearTimeout(timer)
-      if (code === 0) resolve()
-      else
+      if (code === 0) {
+        resolve()
+        return
+      }
+      // `exit` can come before the last of stderr has been read, and the last of
+      // it is the failure. A grandchild holding the pipe open must not hold this
+      // up for good, so the wait is bounded.
+      const drained = new Promise<void>((done) => {
+        const grace = setTimeout(done, STDERR_GRACE_MS)
+        child.stderr!.once('close', () => {
+          clearTimeout(grace)
+          done()
+        })
+        if (child.stderr!.destroyed) done()
+      })
+      void drained.then(() =>
         reject(
           new CodegenChildError(
             `pikku ${options.command.join(' ')} failed (${signal ?? `exit ${code}`})`,
             stderrTail
           )
         )
+      )
     })
   })
 }
