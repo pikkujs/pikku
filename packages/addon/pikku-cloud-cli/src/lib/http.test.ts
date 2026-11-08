@@ -32,7 +32,7 @@ function contractNames(): Set<string> {
 }
 const CONTRACT = contractNames()
 
-const BARE = ['requestCliAuth', 'pollCliAuth', 'submitFinding']
+const BARE = ['getSession', 'requestCliAuth', 'pollCliAuth', 'submitFinding']
 
 /** Every name passed to `.invoke('name'` by the CLI's own source. */
 function invokedNames(): string[] {
