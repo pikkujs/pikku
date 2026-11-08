@@ -2,10 +2,10 @@
 //! utils/post-process.ts.
 
 use super::jsval::V;
-use super::utils::or_none;
+use super::utils::{js_relative, or_none};
 use super::jv;
 use super::Options;
-use crate::diag::{codes, Logger};
+use crate::diag::{codes, Level, Logger};
 use crate::state::State;
 
 fn where_(agent: &V) -> String {
@@ -110,6 +110,83 @@ pub fn validate_agent_tool_references(log: &mut Logger, st: &State, opts: &Optio
                 );
             }
         }
+    }
+}
+
+/// `validatePermissionDataUsed`: a warning, or a critical under strictMeta, for
+/// a pikkuPermission that never reads its data.
+pub fn validate_permission_data_used(log: &mut Logger, st: &State, opts: &Options) {
+    for (id, d) in st.permissions.definitions.iter() {
+        if d.data_unused != Some(true) {
+            continue;
+        }
+        let message = format!(
+            "Permission '{id}' in {} never uses its data argument, so it depends on the session alone. Use pikkuAuth: pikkuAuth(async (services, session) => ...), or pikkuAuth({{ skipWithoutSession: true, func: async (services, session) => ... }}) if a call with no session must go through.",
+            js_relative(&st.root_dir, &d.source_file)
+        );
+        if opts.strict_meta {
+            log.critical(codes::PERMISSION_DATA_UNUSED, message);
+        } else {
+            log.diagnostic(Level::Warn, codes::PERMISSION_DATA_UNUSED, message);
+        }
+    }
+}
+
+/// `validateSessionlessPermissions`: always a critical for a check with no
+/// skipWithoutSession on a sessionless function, directly or as a global
+/// permission.
+pub fn validate_sessionless_permissions(log: &mut Logger, st: &State) {
+    let mut sessionless: Vec<String> = Vec::new();
+    let mut used_by: std::collections::BTreeMap<String, Vec<String>> = std::collections::BTreeMap::new();
+    for (func_id, meta) in st.functions.meta.iter() {
+        if meta.sessionless != Some(true) || meta.auth == Some(true) {
+            continue;
+        }
+        sessionless.push(func_id.to_string());
+        for permission in &meta.permissions {
+            if permission.ty == "wire" {
+                used_by.entry(permission.name.clone()).or_default().push(func_id.to_string());
+            }
+        }
+    }
+    let mut globals: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for g in &st.permissions.global {
+        if g.targets_package {
+            continue;
+        }
+        for id in g.definition_ids.iter() {
+            globals.insert(id.to_string());
+        }
+    }
+
+    for (id, d) in st.permissions.definitions.iter() {
+        if d.skip_without_session == Some(true) {
+            continue;
+        }
+        let (label, verb, reached): (&str, &str, Vec<String>) = if globals.contains(id) {
+            ("Global permission", "reaches", sessionless.clone())
+        } else {
+            ("Permission", "guards", used_by.get(id).cloned().unwrap_or_default())
+        };
+        if reached.is_empty() {
+            continue;
+        }
+        let mut names = reached;
+        names.sort();
+        let (shown, more) = if names.len() > 10 {
+            (names[..10].to_vec(), format!(", and {} more", names.len() - 10))
+        } else {
+            (names.clone(), String::new())
+        };
+        let plural = if names.len() == 1 { "" } else { "s" };
+        log.critical(
+            codes::PERMISSION_NEEDS_SKIP_WITHOUT_SESSION,
+            format!(
+                "{label} '{id}' in {} has no skipWithoutSession but {verb} sessionless function{plural} {}{more}, so a call with no session is refused there. Add skipWithoutSession: true to let that call through with the check skipped, or require a session with pikkuFunc or auth: true.",
+                js_relative(&st.root_dir, &d.source_file),
+                shown.join(", ")
+            ),
+        );
     }
 }
 

@@ -2,7 +2,7 @@
 //! pikkuPermission, pikkuAuth and pikkuPermissionFactory definitions, and
 //! addGlobalPermission registrations.
 
-use tsrs_ast::{self as ast, ModifierFlags, Node, SymbolFlags};
+use tsrs_ast::{self as ast, Kind, ModifierFlags, Node, SymbolFlags};
 use tsrs_core::P;
 
 use super::group_middleware::{describe, name_and_description};
@@ -31,6 +31,75 @@ fn is_immediately_invoked(f: P<Node>) -> bool {
     cur.parent().is_some_and(|p| ast::is_call_expression(p) && p.expression() == Some(cur))
 }
 
+/// `isPropertyKey`: a name that is the key of a property, not a reference to a
+/// variable.
+fn is_property_key(id: P<Node>) -> bool {
+    let Some(p) = id.parent() else { return false };
+    (ast::is_property_access_expression(p) && p.name() == Some(id))
+        || (ast::is_property_assignment(p) && p.name() == Some(id))
+        || (ast::is_binding_element(p) && p.property_name() == Some(id))
+}
+
+/// `neverReadsData`: whether a permission handler certainly ignores its data
+/// argument. Scoping is deliberately not worked out, and a rest parameter, a
+/// destructured argument and `arguments` count as a use, because a missed
+/// warning is better than a false one.
+fn never_reads_data(handler: P<Node>) -> bool {
+    let params = handler.parameters();
+    for (i, p) in params.iter().enumerate() {
+        if i < 2 && p.as_parameter_declaration().dot_dot_dot_token().is_some() {
+            return false;
+        }
+    }
+    let data = tsutil::param_at(handler, 1);
+    let mut name = String::new();
+    if let Some(d) = data {
+        let Some(n) = d.name().filter(|n| ast::is_identifier(*n)) else { return false };
+        name = n.text().to_string();
+        if name.starts_with('_') {
+            return true;
+        }
+    }
+
+    let mut referenced = false;
+    let mut visit = |n: P<Node>| {
+        if ast::is_identifier(n) && (n.text() == name || n.text() == "arguments") && !is_property_key(n) {
+            referenced = true;
+        }
+    };
+    for p in params {
+        if Some(*p) != data {
+            tsutil::walk_self(*p, &mut visit);
+        }
+    }
+    if let Some(body) = handler.body() {
+        tsutil::walk_self(body, &mut visit);
+    }
+    !referenced
+}
+
+/// `skipsWithoutSession`: whether a permission's argument turns
+/// skipWithoutSession on, or might, since PKU587 must not flag what it cannot
+/// resolve.
+fn skips_without_session(arg: P<Node>) -> bool {
+    if !ast::is_object_literal_expression(arg) {
+        return false;
+    }
+    for p in arg.properties() {
+        if ast::is_spread_assignment(*p) {
+            return true;
+        }
+        let Some(name) = p.name() else { continue };
+        if (!ast::is_identifier(name) && !ast::is_string_literal(name)) || name.text() != "skipWithoutSession" {
+            continue;
+        }
+        if !ast::is_property_assignment(*p) || unwrap_expression(p.initializer().unwrap()).kind() != Kind::FalseKeyword {
+            return true;
+        }
+    }
+    false
+}
+
 impl Context<'_> {
     fn is_inside_permission_container(&mut self, node: P<Node>) -> bool {
         let mut cur = node.parent();
@@ -41,6 +110,26 @@ impl Context<'_> {
             cur = c.parent();
         }
         false
+    }
+
+    /// Every pikkuPermission and pikkuAuth call under `node`.
+    fn permission_calls(&mut self, node: P<Node>) -> Vec<P<Node>> {
+        let mut calls = Vec::new();
+        self.collect_permission_calls(node, &mut calls);
+        calls
+    }
+
+    fn collect_permission_calls(&mut self, n: P<Node>, calls: &mut Vec<P<Node>>) {
+        if ast::is_call_expression(n) {
+            let callee = self.resolve_callee_name(n, &is_permission_helper);
+            if callee == "pikkuPermission" || callee == "pikkuAuth" {
+                calls.push(n);
+            }
+        }
+        n.for_each_child(&mut |c| {
+            self.collect_permission_calls(c, calls);
+            false
+        });
     }
 
     pub fn add_permission(&mut self, node: P<Node>) {
@@ -86,6 +175,7 @@ impl Context<'_> {
 
         let services = services_of(handler);
         let wires = if is_auth { WiresMeta { optimized: true, wires: vec![] } } else { extract_used_wires(handler, 2) };
+        let wires_session_only = wires.optimized && !wires.wires.iter().any(|w| w != "session");
         let Some((id, exported_name)) = self.permission_definition_id(node, wrapper, example) else { return };
 
         let mut requires_data = true;
@@ -96,7 +186,7 @@ impl Context<'_> {
                 requires_data = false;
             }
         }
-        let def = MiddlewareDefinition {
+        let mut def = MiddlewareDefinition {
             services: services.clone(),
             wires: wires_or_nil(wires),
             source_file: file_name_of(node).to_string(),
@@ -107,6 +197,21 @@ impl Context<'_> {
             requires_data: if requires_data { None } else { Some(false) },
             ..Default::default()
         };
+        // Only a function written here can be read, and `func` may have been
+        // resolved through a variable. pikkuAuth is handed the session and
+        // nothing else from the wire, so a check that reads any other wire
+        // cannot move.
+        let written_here = handler == arg || handler.parent().and_then(|p| p.parent()) == Some(arg);
+        if !is_auth
+            && written_here
+            && wires_session_only
+            && never_reads_data(handler)
+        {
+            def.data_unused = Some(true);
+        }
+        if skips_without_session(arg) {
+            def.skip_without_session = Some(true);
+        }
         self.state.permissions.definitions.set(id, def);
 
         if is_auth {
@@ -134,16 +239,33 @@ impl Context<'_> {
         }
         let mut services = ServicesMeta { optimized: false, services: vec![] };
         let mut wires = WiresMeta { optimized: true, wires: vec![] };
-        let call = self.find_call(factory, &is_permission_helper, "pikkuPermission").filter(|c| !c.arguments().is_empty());
-        if let Some(call) = call {
-            let h = call.arguments()[0];
+        let calls = self.permission_calls(factory);
+        let body = factory.body();
+        if !calls.is_empty() && !calls[0].arguments().is_empty() {
+            let mut h = calls[0].arguments()[0];
+            if ast::is_object_literal_expression(h) {
+                if let Some(f) = self.get_property_assignment_initializer(h, "func", true) {
+                    h = f;
+                }
+            }
             if tsutil::is_function_like(h) {
                 services = services_of(h);
-                wires = extract_used_wires(h, 2);
+                // pikkuAuth's second parameter is the session, not a wires bag.
+                if self.resolve_callee_name(calls[0], &is_permission_helper) != "pikkuAuth" {
+                    wires = extract_used_wires(h, 2);
+                }
             }
-        } else if let Some(body) = factory.body().filter(|b| tsutil::is_function_like(*b)) {
-            services = services_of(body);
-            wires = extract_used_wires(body, 2);
+        } else if calls.is_empty() {
+            if let Some(body) = body.filter(|b| tsutil::is_function_like(*b)) {
+                services = services_of(body);
+                wires = extract_used_wires(body, 2);
+            }
+        }
+        // A plain function returned directly gets the guard from the factory, so
+        // it has no option. Any other body cannot be read.
+        let mut skip = !body.is_some_and(tsutil::is_function_like);
+        if !calls.is_empty() {
+            skip = calls.iter().any(|call| call.arguments().is_empty() || skips_without_session(call.arguments()[0]));
         }
         let Some((id, exported_name)) = self.definition_id(node, "pikkuPermissionFactory", "myPermission") else { return };
         self.state.permissions.definitions.set(
@@ -155,6 +277,7 @@ impl Context<'_> {
                 position: start_utf16(node) as i64,
                 exported_name: nullable_string(&exported_name),
                 factory: Some(true),
+                skip_without_session: if skip { Some(true) } else { None },
                 ..Default::default()
             },
         );
@@ -350,6 +473,7 @@ impl Context<'_> {
                 position,
                 export_name: nullable_string(&export_name),
                 definition_ids: definition_ids.clone(),
+                targets_package: args.len() > 1,
             });
         }
         self.log.debug(format!("• Found global permissions in {source_file}: [{}]", definition_ids.join(", ")));
