@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve, sep } from 'node:path'
-import { randomBytes, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import type { FindingPayload } from './finding.js'
 
 /**
@@ -14,6 +14,30 @@ export function heldDir(root = checkoutRoot()): string {
   return (
     process.env.PIKKUSTUDIO_FINDINGS_DIR ?? join(root, '.pikku', 'findings')
   )
+}
+
+/**
+ * Make the findings directory and keep git away from it, before anything is
+ * written, so `git add -A` can never stage a finding that has not been agreed.
+ */
+async function ensureHeldDir(base: string, dir = base): Promise<void> {
+  await mkdir(dir, { recursive: true })
+  const ignore = join(base, '.gitignore')
+  if (!existsSync(ignore)) {
+    await writeFile(ignore, '*\n', { encoding: 'utf8', mode: 0o600 })
+  }
+}
+
+/**
+ * A run id that is the same every time for one checkout, for when `runs.json`
+ * cannot be written: a later hand-over computes the same id and finds the file.
+ */
+export function fallbackRunId(root = checkoutRoot()): string {
+  const key = process.env.PIKKUSTUDIO_FINDINGS_DIR ? root : 'checkout'
+  const hex = createHash('sha256')
+    .update(`${heldDir(root)}\0${key}`)
+    .digest('hex')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`
 }
 
 const runsFile = (root: string) => join(heldDir(root), 'runs.json')
@@ -61,7 +85,7 @@ export async function runIdFor(root = checkoutRoot()): Promise<string> {
   }
   if (runs[key]) return runs[key]
   runs[key] = randomUUID()
-  await mkdir(heldDir(root), { recursive: true })
+  await ensureHeldDir(heldDir(root))
   await writeFile(file, JSON.stringify(runs, null, 2) + '\n', {
     encoding: 'utf8',
     mode: 0o600,
@@ -76,7 +100,7 @@ export interface HeldFinding {
 
 export async function holdFinding(payload: FindingPayload): Promise<void> {
   const dir = join(heldDir(), payload.runId)
-  await mkdir(dir, { recursive: true })
+  await ensureHeldDir(heldDir(), dir)
   const stamp = payload.reportedAt.replace(/[:.]/g, '-')
   // `reportedAt` is only millisecond-precise, and two findings filed in the
   // same millisecond tie on it. The monotonic clock breaks that tie in the

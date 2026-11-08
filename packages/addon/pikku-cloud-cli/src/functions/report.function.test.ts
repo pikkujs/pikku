@@ -301,6 +301,19 @@ describe('pikku report, always', () => {
     assert.equal(invoked.length, 2)
     assert.equal(await readConsent(), 'always')
   })
+
+  test('an always saved before findings carried an account is asked again', async () => {
+    await writeFile(
+      process.env.PIKKUSTUDIO_REPORT_CONSENT_FILE!,
+      JSON.stringify({ consent: 'always' })
+    )
+    assert.equal(await readConsent(), null)
+    await writeFile(
+      process.env.PIKKUSTUDIO_REPORT_CONSENT_FILE!,
+      JSON.stringify({ consent: 'never' })
+    )
+    assert.equal(await readConsent(), 'never')
+  })
 })
 
 describe('pikku report, never', () => {

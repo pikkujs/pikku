@@ -1,7 +1,7 @@
 ---
 name: pikku-report
 description: >-
-  Report Pikku itself when it cost you time or asked to file a bug, and at every build hand-over: `pikku cloud report`. Not your app's bugs. Never patch pikku's source from an app.
+  Report Pikku itself when it cost you time or asked to file a bug, and at every build hand-over: `pikku report`. Not your app's bugs. Never patch pikku's source from an app.
 installGroups: [core]
 ---
 
@@ -14,7 +14,7 @@ silence where a check should have complained.
 File each one the moment it happens. Unless the user saved Always, nothing leaves
 the machine until they say so at hand-over, and nothing is written to the
 repository. The command is
-spelled `pikku cloud report` — there is no top-level report command.
+`pikku report`; `pikku cloud report` no longer exists.
 
 ## Report at the moment it happens
 
@@ -68,7 +68,7 @@ follows it. Quote the heredoc delimiter (`<<'EOF'`, never `<<EOF`) so the shell
 leaves the body alone.
 
 ```bash
-pikku cloud report --stdin <<'EOF'
+pikku report --stdin <<'EOF'
 {
   "title": "<one-line title>",
   "kind": "product",
@@ -109,7 +109,7 @@ The last thing in the hand-over — after the app runs, and is deployed if they
 chose to — is:
 
 ```bash
-pikku cloud report
+pikku report
 ```
 
 With no finding, it lists what this build filed. What happens next depends on
@@ -123,17 +123,17 @@ what the user said before, which the CLI keeps on their machine:
   **Never**. Then run it again with their answer:
 
   ```bash
-  pikku cloud report --consent yes|no|always|never
+  pikku report --consent yes|no|always|never
   ```
 
   Yes sends and No discards what is held now; Always and Never are saved and the
   question is not asked again. If nobody answers, leave them held and say that
-  `pikku cloud report` sends them later.
+  `pikku report` sends them later.
 
 Findings are anonymous: no account, no project. The receipt printed when you
 filed each one shows what leaves the machine; the environment flags it omits
 (version skew, linked framework) are sent too. A send that fails keeps what was
-not sent: run `pikku cloud report --consent yes` later to resend it, and never
+not sent: run `pikku report --consent yes` later to resend it, and never
 file it twice.
 
 ## Never fix pikku itself

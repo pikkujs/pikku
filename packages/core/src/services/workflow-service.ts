@@ -62,7 +62,9 @@ export interface WorkflowService {
    * A no is a decision like a yes: the workflow reads it from `decision.data`
    * and branches, so there is no separate decline call. `reason` is the exact
    * string given to `workflow.approval`. The session is judged against the
-   * gate's `approvers` and `approverScope`, not against the run's owner.
+   * gate's `approvers` and `approverScope`. The `owner` and `not-initiator`
+   * policies compare it with the recorded run owner; there is no other owner
+   * check outside the gate's policy.
    *
    */
   approveStep(

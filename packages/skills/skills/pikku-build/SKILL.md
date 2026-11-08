@@ -2,7 +2,7 @@
 name: pikku-build
 description: >-
   App-level Pikku work: new app, conversion, feature or endpoint, post-clone cleanup. Load pikku-concepts first. Not one-off function edits, changeset plans (pikku-architect) or a changes queue (pikku-changes).
-allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku cloud report *), Bash(npx --no pikku cloud report *)
+allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku report *), Bash(npx --no pikku report *)
 argument-hint: '[feature description]'
 installGroups: [core]
 agent:

@@ -24,11 +24,20 @@ export const resolveLocalContentConfig = ({
   runtimeDir: string | undefined
   server: string
 }): LocalContentConfig => {
-  const settings = { ...projectContent, ...appContent }
+  // An app key left undefined must not wipe out the project's value.
+  const settings: ContentSettings = { ...projectContent }
+  for (const [key, value] of Object.entries(appContent ?? {})) {
+    if (value !== undefined) (settings as Record<string, unknown>)[key] = value
+  }
   return {
     localFileUploadPath: settings.contentPath
       ? resolve(rootDir, settings.contentPath)
-      : join(runtimeDir ?? join(rootDir, '.pikku-runtime'), 'content'),
+      : join(
+          runtimeDir
+            ? resolve(rootDir, runtimeDir)
+            : join(rootDir, '.pikku-runtime'),
+          'content'
+        ),
     uploadUrlPrefix: settings.uploadUrlPrefix ?? '/upload',
     assetUrlPrefix: settings.assetUrlPrefix ?? '/assets',
     server,

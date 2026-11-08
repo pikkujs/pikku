@@ -360,7 +360,7 @@ export const renderSurfaceDoc = (
   if (!target) {
     return renderIndex(doc, leaves, ai)
   }
-  const error = doc.errors.find(
+  const error = (doc.errors ?? []).find(
     (candidate) => candidate.code === target.toUpperCase()
   )
   if (error) {
