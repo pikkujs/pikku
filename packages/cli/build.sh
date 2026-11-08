@@ -20,198 +20,60 @@ node scripts/embed-examples.mjs
 
 # Bootstrap using the published CLI - generates all .pikku files.
 #
-# Pin the CLI *and* the inspector together. They share the inspector state
-# shape, and only the CLI was pinned before: when 0.12.43 dropped
-# `state.http.routePermissions` (the authz simplification), the floating
-# inspector paired with the pinned 0.12.35 CLI, which still read
-# `routePermissions.size`, and every bootstrap build broke at once — including
-# on main, which had been green minutes earlier.
+# The newest published @pikku/cli is installed with nothing pinned and no
+# `overrides`. A published manifest is a consistent set by construction: every
+# range the CLI declares was resolvable when it shipped, and the packages it
+# names are published before it. Pinning part of the set is what broke this
+# build seven times (inspector, core, node-http-server, kysely, schedule, ws,
+# knowledge, code-edit): each pin froze one package while the rest of the graph
+# floated to a later release wave. Peers are resolved by npm rather than named
+# one by one, so `better-auth` and `ws` arrive on their own.
 #
-# The whole set moves together or none of it does. The 2026-08-03 wave went out
-# inside 62 seconds — inspector 00:16:45, core 00:16:47, better-auth 00:16:54,
-# cli 00:17:47 — so these four are members of one release.
+# PIKKU_CLI_VERSION selects another release, as one choice, for a rollback or
+# for testing a candidate. Nothing else here names a version.
 #
-# The previous pin (cli 0.12.83 / core 0.12.64) had to move: the workspace now
-# calls `signedContentPath` from @pikku/node-http-server, and core 0.12.64
-# predates that export, so the bootstrap CLI died loading the tree it was meant
-# to inspect. A pin is only as good as the exports that tree depends on.
-#
-# Historical note, still relevant when choosing a version: 0.12.36 shipped a
-# `@pikku/better-auth: workspace:*` dependency that leaked verbatim to npm and
-# is uninstallable, so bootstrapping off `latest` can self-deadlock.
-#
-# Moved to the 2026-09-13 wave (cli 0.12.145 / core 0.12.107 / inspector 0.12.75)
-# because the 0.12.96 pin had drifted past what core still exports and took the
-# release path down with it: Publish failed at `error TS` on `@pikku/core/ai-agent`
-# (a subpath core never had), `CoreAIAgent` / `PikkuAIMiddlewareHooks` (renamed to
-# `CoreAgent` / `PikkuAgentMiddlewareHooks`), `WireAddonConfig` from `/rpc`,
-# `HttpVirtualUsersConfig` from `/services`, and `PikkuScenarioWire` from `/workflow` —
-# then died at exit 127 because dist/bin/pikku.js was never written. 0.12.145
-# emits `@pikku/core/agent`, `/addon`, `/virtual-user` and `/scenario` directly, so the
-# whole class goes away rather than growing another patch-loop rule. The rest of
-# the set moves with it, to exactly what cli 0.12.145 declares.
+# The check after the install fails the build at once, naming the resolved set,
+# when the install did not produce a CLI that loads.
 echo "Bootstrapping with published @pikku/cli..."
-: "${PIKKU_CLI_VERSION:=0.12.145}"
-: "${PIKKU_INSPECTOR_VERSION:=0.12.75}"
-: "${PIKKU_BETTER_AUTH_VERSION:=0.12.39}"
-# core is a *peer* of both the CLI and the inspector, which is why it has to be
-# named here to exist at all once peer resolution is off.
-: "${PIKKU_CORE_VERSION:=0.12.107}"
-# @pikku/knowledge arrives the same way, through the CLI's own range, so it floated to
-# whatever was newest. 0.12.18 (2026-10-06) dropped `KnowledgeReconcileInput`, which the
-# bootstrap CLI imports, and every bootstrap died on the missing export, the release's
-# own Publish run included. 0.12.17 is the last release that still exports it.
-: "${PIKKU_KNOWLEDGE_VERSION:=0.12.17}"
-# @pikku/node-http-server is the third member of this family to need naming, and
-# it arrives the same way @pikku/kysely did: transitively, through the CLI's
-# `^0.12.7`, so it floats to the newest release while `overrides` holds core
-# still. The 2026-08-06 09:08 wave published node-http-server 0.12.8 — which
-# imports `@pikku/core/node-host-resolver` — one second before core 0.12.79, the
-# first core to export that subpath. The pin held core at 0.12.77, so the new
-# server landed on the old core and every bootstrap died on a missing export, in
-# a package the pin never mentioned. main went red without a commit to blame:
-# its last green run had started twenty-one minutes before the wave.
-: "${PIKKU_NODE_HTTP_SERVER_VERSION:=0.12.14}"
-# @pikku/kysely is an ordinary *dependency* of the CLI, so unlike the peers above
-# it installs whether or not it is named — and left unnamed it floats on the
-# CLI's `^0.13.7`, which means the newest release wave, not the wave this pin
-# describes. That is not a hypothetical: publishing @pikku/kysely@0.13.10 (the
-# first version to import `createSecretValue`) alongside core 0.12.77 broke every
-# build within the hour, because the floating kysely landed next to the pinned
-# core 0.12.74 that predates the symbol. Every build since had failed with an
-# error naming a package the change never touched.
-#
-# So it is pinned like the rest: 0.13.10 peers on core ^0.12.77, which is why
-# core moved up with it. The whole set moves together or none of it does.
-: "${PIKKU_KYSELY_VERSION:=0.13.24}"
-# @pikku/schedule is the fourth to arrive this way, and it is worth naming what
-# these four have in common: a package the CLI reaches transitively, on a range,
-# that is free to land on a *later* release wave than the one this pin describes.
-# Unpinned it floats on the CLI's `^0.12.4`. Then 0.12.5 moved the adapter names
-# it imports onto a subpath that #1308 has since deleted, so no core this
-# bootstrap can resolve defines it. Landing beside the pinned core it does not
-# fail on a missing *symbol* but on a missing *subpath*, which node reports
-# before any of this file's patch passes get to run:
-#
-#   Package subpath '...' is not defined by "exports" in
-#   @pikku/core/package.json imported from @pikku/schedule/dist/...
-#
-# Held at 0.12.4, which predates the move. The pin lifts when a published
-# schedule imports the subpath that replaced it, `@pikku/core/state`.
-: "${PIKKU_SCHEDULE_VERSION:=0.12.7}"
-# @pikku/ws is the fifth, and it failed the same way one wave later: 0.12.6 made
-# the same move, so an unpinned ws reproduces the missing-subpath error verbatim,
-# this time through pikku-ws-server.js. 0.12.5 predates the move and peers on
-# core ^0.12.73.
-: "${PIKKU_WS_VERSION:=0.12.9}"
-# The other peer that has to be named: @pikku/better-auth peers on the upstream
-# `better-auth` library and imports it at module load, so without it the
-# bootstrap CLI dies on "Cannot find package 'better-auth'".
-: "${BETTER_AUTH_LIB_VERSION:=1.6.25}"
-# @pikku/knowledge is the sixth transitive member: the CLI declares `^0.12.12`, so
-# it floats. 0.12.18 (2026-10-06) dropped the reconcile exports when changes
-# replaced milestones, while the published 0.12.145 CLI still imports
-# `KnowledgeReconcileInput` from it, so every bootstrap died on a missing export.
-# 0.12.17 is the last release that still has it.
-: "${PIKKU_KNOWLEDGE_VERSION:=0.12.17}"
+: "${PIKKU_CLI_VERSION:=latest}"
 _bootstrap_dir=$(mktemp -d)
 trap 'rm -rf "$_bootstrap_dir"' EXIT
-# The published bootstrap CLI's own auth codegen imports the auth package at
-# module load, so it must be installed alongside it. 0.12.83 imports
-# @pikku/better-auth, so that is what goes in.
-#
-# The inspector is listed explicitly, not left to float: it and the CLI share
-# the inspector state shape, so resolving it by range lets a later release pair
-# a new state with an older reader. Both move together or neither does.
-#
-# Declaring the bootstrap deps in a package.json is what lets `overrides` apply
-# during resolution — npm ignores `overrides` for packages passed as install
-# args. It is kept as a guard against an unconverted `workspace:*` specifier
-# leaking into a published manifest, as @pikku/cli@0.12.36 did.
 cat > "$_bootstrap_dir/package.json" <<JSON
 {
   "name": "pikku-bootstrap",
   "private": true,
   "dependencies": {
-    "@pikku/cli": "${PIKKU_CLI_VERSION}",
-    "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}",
-    "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
-    "@pikku/core": "${PIKKU_CORE_VERSION}",
-    "@pikku/knowledge": "${PIKKU_KNOWLEDGE_VERSION}",
-    "@pikku/node-http-server": "${PIKKU_NODE_HTTP_SERVER_VERSION}",
-    "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
-    "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",
-    "@pikku/ws": "${PIKKU_WS_VERSION}",
-    "@pikku/knowledge": "${PIKKU_KNOWLEDGE_VERSION}",
-    "better-auth": "${BETTER_AUTH_LIB_VERSION}"
-  },
-  "overrides": {
-    "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
-    "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}",
-    "@pikku/core": "${PIKKU_CORE_VERSION}",
-    "@pikku/knowledge": "${PIKKU_KNOWLEDGE_VERSION}",
-    "@pikku/node-http-server": "${PIKKU_NODE_HTTP_SERVER_VERSION}",
-    "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
-    "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",
-    "@pikku/ws": "${PIKKU_WS_VERSION}",
-    "@pikku/knowledge": "${PIKKU_KNOWLEDGE_VERSION}",
-    "better-auth": "${BETTER_AUTH_LIB_VERSION}"
+    "@pikku/cli": "${PIKKU_CLI_VERSION}"
   }
 }
 JSON
-# --legacy-peer-deps, because this tree is a throwaway runner for one codegen
-# pass and every package it needs is now pinned above. Left on, peer resolution
-# reaches across the whole floating transitive graph — @pikku/cli@0.12.83 depends
-# on `@pikku/kysely: ^0.13.1`, so every release wave drags in a kysely whose peer
-# on @pikku/core has moved ahead of what the registry is serving for this tree.
-# That is not hypothetical: publishing @pikku/kysely@0.13.6 (peer core ^0.12.71)
-# seconds before @pikku/cli@0.12.92 sent npm backtracking for thirty minutes over
-# ~100k ERESOLVE warnings until it aborted, and the CLI was the one package in
-# that release that did not publish. Peers here buy nothing — nothing consumes
-# this tree — and cost the release.
-(cd "$_bootstrap_dir" && npm install --no-save --no-package-lock --legacy-peer-deps)
-# Split into `bootstrap` (setup phase: type files only) and then the default
-# `all`, with a rename pass in between, because `all`'s zod schema generation
-# *imports* the tree the setup phase has just written.
-#
-# The pinned CLI emits `export { wireSecret } from '@pikku/core/secret'`, and the
-# local @pikku/core no longer exports that name — the declaration helpers are
-# `defineSecret` / `defineVariable` / `defineScope` / `defineCredential` now. Run
-# as one `all`, the import throws and takes the whole bootstrap with it, long
-# before the patch loop further down could rewrite anything. Renaming between the
-# two phases puts the fix ahead of the first thing that loads the files.
-#
-# `all` regenerates those same files with the old names again on its way out;
-# the patch loop below is what leaves the tree consistent for tsc.
-#
-# The pinned CLI also emits the names core used before it became
-# `@pikku/core/virtual-user`, `VirtualUser*` and `virtualUser`. The sed rules and
-# `_old_names` rewrite them; the old words are assembled from pieces so that the
-# repo no longer spells them out.
-#
-# Collapse this back into a single `pikku` call once PIKKU_CLI_VERSION moves past
-# the rename.
-_old_names() {
-  perl -pe '
-    BEGIN { $w = "act" . "or"; $W = "Act" . "or"; $U = "ACT" . "OR" }
-    s/${W}s(?![a-z])/VirtualUsers/g;
-    s/${W}(?![a-z])/VirtualUser/g;
-    s/(?<![A-Za-z])${w}s(?![a-z])/virtualUsers/g;
-    s/(?<![A-Za-z])${w}(?![a-z])/virtualUser/g;
-    s/(?<![A-Z])${U}S?(?![A-Z])/VIRTUAL_USER/g;
-  '
-}
-_old=pers; _old="${_old}ona"
-_Old=Pers; _Old="${_Old}ona"
-# The pinned CLI predates versioned remote addon packages: it reads
-# '@pikkustudio/addon-registry@^0.12.0' as an npm package missing from
-# devDependencies (PKU338, critical) and stops. It also ignores --config, so the
-# file cannot be skipped through ignoreFiles. src/registry.wiring.ts and src/cloud-api.wiring.ts are
-# moved out of its sight for this stage and put back right after (or on any exit).
-#
-# Codegen that ran without the wiring does not import it, so it is added to the
-# bootstrap by hand: the CLI built from this stage is the one whose `pikku all`
-# below syncs the registry SDK, and it needs the wiring to call the registry.
+(cd "$_bootstrap_dir" && npm install --no-save --no-package-lock)
+# Fail early, with the resolved versions on screen, when the bootstrap CLI does
+# not load. The import is the module `dist/bin/pikku.js` loads to run the CLI, so
+# a package that floated onto a release its neighbours do not match dies here,
+# on the first import, instead of halfway through the codegen below.
+_bootstrap_versions=$(cd "$_bootstrap_dir" && node -e '
+  const fs = require("fs"), path = require("path")
+  const dir = path.join("node_modules", "@pikku")
+  for (const name of fs.readdirSync(dir).sort()) {
+    const { version } = JSON.parse(fs.readFileSync(path.join(dir, name, "package.json"), "utf8"))
+    console.log("  @pikku/" + name + " " + version)
+  }
+')
+echo "Bootstrap tree resolved:"
+echo "$_bootstrap_versions"
+if ! _bootstrap_load=$(cd "$_bootstrap_dir" && node --input-type=module -e \
+  "await import('./node_modules/@pikku/cli/dist/.pikku/cli/pikku-cli.gen.js')" 2>&1); then
+  echo "ERROR: the published @pikku/cli (${PIKKU_CLI_VERSION}) does not load:" >&2
+  echo "$_bootstrap_load" | tail -n 8 >&2
+  echo "Resolved set:" >&2
+  echo "$_bootstrap_versions" >&2
+  echo "Set PIKKU_CLI_VERSION to a release that loads, or fix the package named above." >&2
+  exit 1
+fi
+# Hiding the registry wirings from codegen is for the one build that cannot reach
+# the registry (PIKKU_CLI_WITHOUT_REGISTRY_SDK=1, below): the CLI then still calls
+# the registry at runtime, through the wiring imported by hand.
 # knowledge: the-cli-syncs-its-registry-sdk-like-any-consumer
 _registry_wirings="registry cloud-api"
 _registry_hidden_dir=$(mktemp -d)
@@ -240,94 +102,22 @@ _import_registry_wiring() {
   done
 }
 trap 'rm -rf "$_bootstrap_dir"; _restore_registry_wiring; rm -rf "$_registry_hidden_dir"' EXIT
-_hide_registry_wiring
+# The published CLI checks every wireAddon() against the addon's built metadata
+# and refuses to continue when it is missing (critical: "has not been built").
+# The addons are built from this CLI, further down, so an empty placeholder
+# stands in until then and is overwritten by that build.
+for _addon in ../addon/pikku-changes-cli ../addon/pikku-cloud-cli; do
+  _meta="$_addon/dist/.pikku/addon/function/pikku-functions-meta.gen.json"
+  if [ ! -f "$_meta" ]; then
+    mkdir -p "$(dirname "$_meta")"
+    echo "{}" > "$_meta"
+  fi
+done
+# `bootstrap` writes the type files first, because `all`'s zod schema generation
+# imports the tree that phase leaves behind.
 "$_bootstrap_dir/node_modules/.bin/pikku" bootstrap
-while IFS= read -r -d '' f; do
-  tmp=$(mktemp)
-  sed -e 's|wireScope|defineScope|g' \
-      -e 's|wireSecret|defineSecret|g' \
-      -e 's|wireVariable|defineVariable|g' \
-      -e 's|wireCredential|defineCredential|g' \
-      -e "s|export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'|export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'|g" \
-      -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'|import { pikkuState as __pikkuState } from '@pikku/core/state'\nimport type { CreateWireServices } from '@pikku/core/types'|g" \
-      -e "s|@pikku/core/internal|@pikku/core/state|g" \
-      -e "s|@pikku/core/${_old}|@pikku/core/virtual-user|g" \
-      -e "s|${_old}s: ${_old}Configs|virtualUsers: ${_old}Configs|g" \
-      -e "s|${_old}List|virtualUserList|g" \
-      -e "s|${_Old}s|VirtualUsers|g" \
-      -e "s|${_Old}|VirtualUser|g" \
-      "$f" | _old_names > "$tmp" && mv "$tmp" "$f"
-done < <(find .pikku -path .pikku/remote -prune -o \( -name '*.ts' -o -name '*.json' \) -print0)
-# Write the leaf subpath entries the pinned CLI predates. `#pikku/<leaf>`
-# resolves to `.pikku/<leaf>/index.ts`, and this source tree imports through
-# those specifiers — so without them neither the pinned CLI's own schema pass
-# (which runtime-imports this source tree) nor the first tsc below can resolve a
-# single command file, and the local CLI that would generate them properly never
-# gets built. Drop this once PIKKU_CLI_VERSION emits leaf indexes itself.
-write_leaf_indexes() {
-  for leaf_dir in .pikku/*/; do
-    entry=$(find "$leaf_dir" -maxdepth 1 \( -name '*-types.gen.ts' -o -name 'pikku-credentials.gen.ts' -o -name 'auth.types.ts' \) | head -1)
-    [ -n "$entry" ] || continue
-    printf 'export * from %s\n' "'./$(basename "${entry%.ts}").js'" > "$leaf_dir/index.ts"
-  done
-}
-
-write_leaf_indexes
 "$_bootstrap_dir/node_modules/.bin/pikku"
-_restore_registry_wiring
-_import_registry_wiring
 rm -rf "$_bootstrap_dir"
-
-# Patch stale forge references from published CLI (renamed to node/)
-rm -rf .pikku/forge
-if [ -f .pikku/pikku-types.gen.ts ]; then
-  tmp=$(mktemp)
-  sed "s|./forge/pikku-forge-types.gen.js|./node/pikku-node-types.gen.js|g" .pikku/pikku-types.gen.ts > "$tmp" && mv "$tmp" .pikku/pikku-types.gen.ts
-fi
-mkdir -p .pikku/node && echo "export {}" > .pikku/node/pikku-node-types.gen.ts
-
-write_leaf_indexes
-
-# Patch legacy field names and stale imports in bootstrapped files.
-#
-# The wire*→define* substitutions below cover the declaration helpers
-# (`defineScope`/`defineSecret`/`defineVariable`/`defineCredential`). The pinned
-# bootstrap CLI still emits the old `wire*` re-exports into .pikku, and the local
-# @pikku/core no longer exports those names, so the bootstrapped tree fails to
-# load before the local CLI ever gets to regenerate it. Drop these once
-# PIKKU_CLI_VERSION moves past the rename.
-while IFS= read -r -d '' f; do
-  tmp=$(mktemp)
-  sed -e 's/pikkuFuncName/pikkuFuncId/g' \
-      -e 's/queueName:/name:/g' \
-      -e "s|import { pikkuState, FunctionsMeta } from '@pikku/core'|import { pikkuState } from '@pikku/core/state'\nimport type { FunctionsMeta } from '@pikku/core/types'|g" \
-      -e "s|import { pikkuState } from '@pikku/core'|import { pikkuState } from '@pikku/core/state'|g" \
-      -e "s|import { pikkuState as __pikkuState } from '@pikku/core'|import { pikkuState as __pikkuState } from '@pikku/core/state'|g" \
-      -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core'|import { pikkuState as __pikkuState } from '@pikku/core/state'\nimport type { CreateWireServices } from '@pikku/core/types'|g" \
-      -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'|import { pikkuState as __pikkuState } from '@pikku/core/state'\nimport type { CreateWireServices } from '@pikku/core/types'|g" \
-      -e "s|import { addPackageServiceFactories } from '@pikku/core'|import { pikkuState } from '@pikku/core/state'|g" \
-      -e "s|@pikku/core/internal|@pikku/core/state|g" \
-      -e "s|addPackageServiceFactories('\([^']*\)', {|pikkuState('\1', 'package', 'factories', {|g" \
-      -e 's|addMiddleware as addMiddlewareCore|addTagMiddleware as addTagMiddlewareCore|g' \
-      -e 's|addMiddlewareCore(|addTagMiddlewareCore(|g' \
-      -e 's|^export const addMiddleware |export const addTagMiddleware |' \
-      -e 's|wireScope|defineScope|g' \
-      -e 's|wireSecret|defineSecret|g' \
-      -e 's|wireVariable|defineVariable|g' \
-      -e 's|wireCredential|defineCredential|g' \
-      -e "s|export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'|export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'|g" \
-      -e "/metaDir/d" \
-      -e "/^try {$/d" \
-      -e "/^} catch.*{.*}$/d" \
-      -e "/fileURLToPath.*__fileURLToPath/d" \
-      -e "/dirname.*__dirname/d" \
-      -e "s|@pikku/core/${_old}|@pikku/core/virtual-user|g" \
-      -e "s|${_old}s: ${_old}Configs|virtualUsers: ${_old}Configs|g" \
-      -e "s|${_old}List|virtualUserList|g" \
-      -e "s|${_Old}s|VirtualUsers|g" \
-      -e "s|${_Old}|VirtualUser|g" \
-      "$f" | _old_names > "$tmp" && mv "$tmp" "$f"
-done < <(find .pikku -path .pikku/remote -prune -o \( -name '*.ts' -o -name '*.json' \) -print0)
 
 # Build TypeScript (may fail if published CLI generates stale types)
 echo "Building TypeScript to dist..."
@@ -357,14 +147,6 @@ for _addon in ../addon/pikku-changes-cli ../addon/pikku-cloud-cli; do
   (cd "$_addon" && PATH="$_shim_dir:$PATH" bun run build)
 done
 
-# Patch stale wireMCPTool import in compiled output (removed in current version)
-if [ -f dist/.pikku/mcp/pikku-mcp-types.gen.js ]; then
-  tmp=$(mktemp)
-  sed -e 's/wireMCPTool as wireMCPToolCore, //g' \
-      -e 's/wireMCPToolCore(mcpTool);//g' \
-      dist/.pikku/mcp/pikku-mcp-types.gen.js > "$tmp" && mv "$tmp" dist/.pikku/mcp/pikku-mcp-types.gen.js
-fi
-
 # Rebuild Pikku using the local CLI and recompile. `node`, not `npx pikku`: the
 # chmod that makes `dist/bin/pikku.js` executable only happens further down, so
 # execing it directly here exits 126 — and an `npx` that cannot find a runnable
@@ -385,13 +167,6 @@ if [ "${PIKKU_CLI_WITHOUT_REGISTRY_SDK:-}" = "1" ]; then
 else
   node dist/bin/pikku.js
 fi
-
-# Patch stale startWorkflow calls in generated scaffold (data arg needs cast with new TypedStartWorkflow)
-for f in src/scaffold/workflow-routes.gen.ts; do
-  [ -f "$f" ] || continue
-  tmp=$(mktemp)
-  sed 's/data ?? {}/\(data ?? {}) as any/g' "$f" > "$tmp" && mv "$tmp" "$f"
-done
 
 # `npx`, not `bun run tsc -b`: the package's `tsc` script chains a second pass over
 # tsconfig.type-tests.json, and a package-manager run appends `-b` to the end of the whole chain,

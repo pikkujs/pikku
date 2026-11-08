@@ -25,6 +25,23 @@ const FindingSchema = z.object({
 })
 type Finding = z.infer<typeof FindingSchema>
 
+/**
+ * True when source reads `kysely` off `existingServices`, the instance the
+ * platform has already applied the coercion map to (pikku dev, standalone,
+ * Cloudflare). Attaching the plugin to it again would parse json twice.
+ */
+const takesPlatformKysely = (source: string): boolean => {
+  // Comments are blanked first: a mention of `existingServices.kysely` in a
+  // comment does not take the platform's instance.
+  const text = blankComments(source)
+  return (
+    /existingServices\??\.kysely\b/.test(text) ||
+    /\{[^{}]*\bkysely\b[^{}]*\}\s*=\s*existingServices\b/.test(text) ||
+    // The factory's second parameter, destructured: `(config, { kysely })`.
+    /\(\s*\w+\s*(?::[^,)]+)?,\s*\{[^{}]*\bkysely\b[^{}]*\}/.test(text)
+  )
+}
+
 export const ProjectChecksInput = z.object({
   skipTypecheck: z
     .boolean()
@@ -1155,26 +1172,42 @@ export async function runProjectChecks(
         await Promise.all(
           (await walkSourceFiles(root)).map((f) => readTextSafe(f))
         )
-      ).some((text) => text?.includes('createCoercionPlugin'))
+      ).some(
+        (text) =>
+          text !== undefined &&
+          text !== null &&
+          (text.includes('createCoercionPlugin') || takesPlatformKysely(text))
+      )
       if (!wired) {
         e(
           'coercion-map-not-wired',
           `${join(outDirRel, 'db', 'coercion.gen.ts')} declares coercions that no Kysely instance applies`,
           coercionPath,
           lines(
-            'Attach the plugin where the kysely singleton is created, in',
-            'createSingletonServices:',
+            'Nothing here takes the kysely the platform hands over, so the',
+            'platform cannot reach this instance. Either build the app on',
+            'existingServices.kysely (pikku dev, standalone and Cloudflare',
+            'already apply the map to it; do not attach the plugin again, it',
+            'is not idempotent), or attach the plugin to the instance',
+            'createSingletonServices builds itself, never to',
+            'existingServices.kysely:',
             '',
             "  import { createCoercionPlugin } from '@pikku/kysely'",
             "  import { coercionMap } from '#pikku/db/coercion.gen.js'",
             '',
-            '  kysely: existingServices.kysely.withPlugin(',
-            '    createCoercionPlugin({ map: coercionMap }),',
-            '  )',
+            '  kysely: existingServices?.kysely ??',
+            '    createMyKysely(config).withPlugin(',
+            '      createCoercionPlugin({ map: coercionMap })',
+            '    ),',
+            '',
+            'Replace createMyKysely with whatever builds your Kysely instance.',
+            'Keep the fallback built and plugged this way, so an adapter that',
+            'hands over no kysely still gets the map.',
             '',
             'Without it a deployed stage returns raw strings and integers where',
             'the generated schema promises Date and boolean. The dev driver',
-            'hydrates them for you, so this cannot fail locally.'
+            'hydrates them for you, so this cannot fail locally. AWS Lambda and',
+            'Azure deploys hand over no kysely, so they always need the plugin.'
           )
         )
       }

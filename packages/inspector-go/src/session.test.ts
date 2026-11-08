@@ -77,8 +77,10 @@ describe(`InspectorSession (${engine})`, () => {
     try {
       const file = join(root, 'src/index.ts')
       assert.deepEqual(await session.typeDiagnostics(root, file), [])
-      ;(session as any).child.kill('SIGKILL')
-      await new Promise((r) => setTimeout(r, 100))
+      const child = (session as any).child
+      const exited = new Promise((resolve) => child.once('close', resolve))
+      child.kill('SIGKILL')
+      await exited
       assert.deepEqual(await session.typeDiagnostics(root, file), [])
     } finally {
       session.close()
