@@ -114,6 +114,17 @@ echo "Bootstrapping with published @pikku/cli..."
 # `KnowledgeReconcileInput` from it, so every bootstrap died on a missing export.
 # 0.12.17 is the last release that still has it.
 : "${PIKKU_KNOWLEDGE_VERSION:=0.12.17}"
+# @pikku/code-edit is the seventh transitive member, and the first whose newest release
+# changed what it *depends on* rather than what it exports. The CLI declares
+# `^0.12.1`, so it floats. 0.12.11 (2026-11-08 06:25Z) replaced its `typescript`
+# dependency with `@pikku/inspector-go ^0.12.9`, and every inspector-go release
+# imports from an inspector far newer than this pin: 0.12.9 imports
+# `parseRemoteAddonPackage` (inspector 0.12.75 does not export it), 0.12.6-0.12.8
+# import the `@pikku/inspector/finalize` subpath (0.12.75 does not define it). No
+# inspector-go resolves against this tree, so the package that pulls it in is held
+# instead: 0.12.10 is the last code-edit without it. Every bootstrap died at
+# `import '@pikku/inspector-go'` on main, with no commit to blame.
+: "${PIKKU_CODE_EDIT_VERSION:=0.12.10}"
 _bootstrap_dir=$(mktemp -d)
 trap 'rm -rf "$_bootstrap_dir"' EXIT
 # The published bootstrap CLI's own auth codegen imports the auth package at
@@ -143,6 +154,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",
     "@pikku/ws": "${PIKKU_WS_VERSION}",
     "@pikku/knowledge": "${PIKKU_KNOWLEDGE_VERSION}",
+    "@pikku/code-edit": "${PIKKU_CODE_EDIT_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   },
   "overrides": {
@@ -155,6 +167,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",
     "@pikku/ws": "${PIKKU_WS_VERSION}",
     "@pikku/knowledge": "${PIKKU_KNOWLEDGE_VERSION}",
+    "@pikku/code-edit": "${PIKKU_CODE_EDIT_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   }
 }
