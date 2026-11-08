@@ -6,9 +6,15 @@
 //! esbuild does (conditions `import`/`default`, main fields `module`/`main`,
 //! the project's tsconfig paths), and the modules are linked by QuickJS's own
 //! module loader (rquickjs). `runner.js` and `helpers.gen.js` are Go's files,
-//! embedded byte for byte. Every bare import that is not `zod` and resolves
-//! outside the project, or into `node_modules`, is a stub, exactly as in Go.
-//! There is no Node fallback: a schema that touches a stub is an error.
+//! embedded byte for byte. A bare import that is not `zod` and cannot be
+//! loaded (a Node built-in, a package that does not resolve) is a stub, as in
+//! Go. There is no Node fallback: a schema that touches a stub is an error.
+//!
+//! A package under `node_modules` is loaded for real first, because a schema
+//! can be built from one (`defineAnalyticsEvents` from `@pikku/core/analytics`)
+//! and Go only converts such a schema by handing it to Node. The schemas that
+//! then fail to load, or touch a stub, run again with every package under
+//! `node_modules` stubbed, which is all this converter did before.
 
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap};
@@ -50,13 +56,19 @@ struct RunResult {
 
 impl VendorSchemaConverter for ZodjsConverter {
     fn convert(&self, refs: &[VendorRef], timeout: Duration) -> Result<VendorResult, ConvertError> {
-        let out = match self.run(refs, timeout) {
-            Ok(o) => o,
-            Err(ConvertError::Failed(m)) => {
-                return Err(ConvertError::Failed(format!("converting Zod schemas without Node: {m}")));
-            }
-            Err(e) => return Err(e),
+        let wrap = |e: ConvertError| match e {
+            ConvertError::Failed(m) => ConvertError::Failed(format!("converting Zod schemas without Node: {m}")),
+            e => e,
         };
+        let mut out = self.run(refs, timeout, true).map_err(wrap)?;
+        if !out.fallback.is_empty() {
+            let pending: Vec<VendorRef> =
+                refs.iter().filter(|r| out.fallback.iter().any(|(n, _)| n == &r.name)).cloned().collect();
+            let stubbed = self.run(&pending, timeout, false).map_err(wrap)?;
+            out.fallback = stubbed.fallback;
+            out.schemas.extend(stubbed.schemas);
+            out.errors.extend(stubbed.errors);
+        }
         let mut converted: HashMap<String, VendorSchema> = HashMap::new();
         for (name, body) in out.schemas {
             let schema = body.get("schema").cloned().unwrap_or(Value::Null);
@@ -81,13 +93,13 @@ impl VendorSchemaConverter for ZodjsConverter {
 }
 
 impl ZodjsConverter {
-    fn run(&self, refs: &[VendorRef], timeout: Duration) -> Result<RunResult, ConvertError> {
+    fn run(&self, refs: &[VendorRef], timeout: Duration, load_packages: bool) -> Result<RunResult, ConvertError> {
         let (dir, tsconfig) = (self.dir.clone(), self.tsconfig.clone());
         let refs = refs.to_vec();
         // QuickJS and the TypeScript emitter recurse on the native stack.
         let handle = std::thread::Builder::new()
             .stack_size(64 << 20)
-            .spawn(move || run_in_thread(&dir, &tsconfig, &refs, timeout))
+            .spawn(move || run_in_thread(&dir, &tsconfig, &refs, timeout, load_packages))
             .map_err(|e| ConvertError::Failed(format!("starting QuickJS: {e}")))?;
         let text = handle.join().unwrap_or_else(|_| Err(ConvertError::Failed("QuickJS panicked".into())))?;
         let v: Value = serde_json::from_str(&text)
@@ -150,10 +162,10 @@ fn entry_source(refs: &[VendorRef]) -> Result<String, ConvertError> {
     ))
 }
 
-fn run_in_thread(dir: &str, tsconfig: &str, refs: &[VendorRef], timeout: Duration) -> Result<String, ConvertError> {
+fn run_in_thread(dir: &str, tsconfig: &str, refs: &[VendorRef], timeout: Duration, load_packages: bool) -> Result<String, ConvertError> {
     let failed = |m: String| ConvertError::Failed(m);
     let entry = entry_source(refs)?;
-    let shared = Rc::new(RefCell::new(Shared::new(dir, tsconfig)));
+    let shared = Rc::new(RefCell::new(Shared::new(dir, tsconfig, declaring_dirs(refs), load_packages)));
 
     let rt = Runtime::new().map_err(|e| failed(format!("starting QuickJS: {e}")))?;
     rt.set_max_stack_size(32 << 20);
@@ -264,6 +276,11 @@ struct Shared {
     /// are the names its importer asks for.
     sources: HashMap<String, String>,
     stubs: HashMap<String, StubInfo>,
+    /// Where the entry's `zod` is looked for after the project root: the
+    /// directories of the modules that declare the schemas.
+    declaring_dirs: Vec<PathBuf>,
+    /// Load a package under `node_modules` instead of stubbing it.
+    load_packages: bool,
 }
 
 struct StubInfo {
@@ -272,7 +289,7 @@ struct StubInfo {
 }
 
 impl Shared {
-    fn new(dir: &str, tsconfig: &str) -> Shared {
+    fn new(dir: &str, tsconfig: &str, declaring_dirs: Vec<PathBuf>, load_packages: bool) -> Shared {
         let tsconfig_opt = (!tsconfig.is_empty() && Path::new(tsconfig).exists()).then(|| {
             oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
                 config_file: PathBuf::from(tsconfig),
@@ -300,6 +317,8 @@ impl Shared {
             transpiler: Transpiler::new(tsconfig),
             sources: HashMap::new(),
             stubs: HashMap::new(),
+            declaring_dirs,
+            load_packages,
         }
     }
 
@@ -317,10 +336,13 @@ impl Shared {
             return Ok(name.to_string());
         }
         let from = self.importer_dir(base);
+        if base == ENTRY_MODULE && is_zod(name) {
+            return self.resolve_entry_zod(&from, name);
+        }
         let bare = !name.starts_with('.') && !name.starts_with('/') && !Path::new(name).is_absolute();
         if bare && !is_zod(name) {
             return match self.resolver.resolve(&from, name) {
-                Ok(r) if !in_node_modules(&r.full_path().to_string_lossy()) => Ok(path_string(&r.full_path())),
+                Ok(r) if self.loadable(&r.full_path()) => Ok(path_string(&r.full_path())),
                 _ => {
                     let stub = format!("{STUB_PREFIX}{name}@{base}");
                     if !self.stubs.contains_key(&stub) {
@@ -338,6 +360,28 @@ impl Shared {
             .resolve(&from, name)
             .map(|r| path_string(&r.full_path()))
             .map_err(|e| format!("Could not resolve \"{name}\" from {}: {e}", from.display()))
+    }
+
+    /// Zod is imported by the entry, whose directory is the project root. In a
+    /// workspace the root often has none (bun and pnpm install it beside the
+    /// package that depends on it), so it is then the one the schemas' own
+    /// modules would get.
+    fn resolve_entry_zod(&self, root: &Path, name: &str) -> Result<String, String> {
+        let first = self.resolver.resolve(root, name);
+        let found = first.clone().ok().or_else(|| self.declaring_dirs.iter().find_map(|d| self.resolver.resolve(d, name).ok()));
+        found
+            .map(|r| path_string(&r.full_path()))
+            .ok_or_else(|| format!("Could not resolve \"{name}\" from {}: {}", root.display(), first.err().map(|e| e.to_string()).unwrap_or_default()))
+    }
+
+    /// A resolved bare import is loaded when it is in the project, or when it
+    /// is an ES module under `node_modules` and packages are being loaded.
+    fn loadable(&self, path: &Path) -> bool {
+        let text = path.to_string_lossy();
+        if !in_node_modules(&text) {
+            return true;
+        }
+        self.load_packages && matches!(path.extension().and_then(|e| e.to_str()), Some("js" | "mjs" | "json"))
     }
 
     /// The names `base` imports from `spec`, read off its source.
@@ -465,6 +509,18 @@ fn is_identifier(n: &str) -> bool {
     matches!(chars.next(), Some(c) if c.is_alphabetic() || c == '_' || c == '$')
         && chars.all(|c| c.is_alphanumeric() || c == '_' || c == '$')
         && !RESERVED.contains(&n)
+}
+
+fn declaring_dirs(refs: &[VendorRef]) -> Vec<PathBuf> {
+    let mut dirs: Vec<PathBuf> = Vec::new();
+    for r in refs {
+        if let Some(d) = Path::new(&runtime_file(&r.schema_ref.source_file)).parent() {
+            if !dirs.iter().any(|x| x == d) {
+                dirs.push(d.to_path_buf());
+            }
+        }
+    }
+    dirs
 }
 
 fn path_string(p: &Path) -> String {

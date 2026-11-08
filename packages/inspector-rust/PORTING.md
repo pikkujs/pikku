@@ -257,8 +257,12 @@ Known gaps:
   module into an ES module; `oxc_resolver` resolves imports like esbuild (conditions
   `import`/`default`, main fields `module`/`main`, the project tsconfig's paths); rquickjs
   links them through its module loader and runs Go's own `runner.js`/`helpers.gen.js`
-  (embedded with `include_str!`, byte for byte). A bare import that is not `zod` and resolves
-  outside the project or into `node_modules` is a stub, as in Go; a stub's exports are the
+  (embedded with `include_str!`, byte for byte). `zod` for the entry resolves from the project
+  root, then from the directories of the declaring modules (bun and pnpm install it beside the
+  package that depends on it). An ES module package under `node_modules` is loaded for real; the
+  schemas that then fail to load or touch a stub run again with every `node_modules` package
+  stubbed. A bare import that is not `zod` and cannot be loaded (a Node built-in, an unresolvable
+  or CommonJS package) is a stub, as in Go; a stub's exports are the
   names its importer asks for, read off the importer's source (named imports, `export {..}
   from`, and `ns.member` for `import * as ns`). A schema that touches a stub, or a module
   that does not load, is reported as an error ("Could not convert Zod schema 'X' without Node
