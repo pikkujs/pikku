@@ -23,7 +23,7 @@ await mock.module('../lib/finding.js', () => ({
   findingRPC: (_apiUrl: string, token: string) => ({
     invoke: async (name: string, data: unknown) => {
       tokenUsed = token
-      if (name === 'getSession') {
+      if (name === 'cloud:getSession') {
         if (status >= 300) throw new Error('no session')
         return { email: 'owner@example.com' }
       }

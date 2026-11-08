@@ -150,7 +150,7 @@ export async function accountLabel(
   apiUrl: string
 ): Promise<string> {
   try {
-    const { email } = await rpc.invoke('getSession', {})
+    const { email } = await rpc.invoke('cloud:getSession', {})
     if (email) return email
   } catch {
     // Named below by where the token came from instead.
