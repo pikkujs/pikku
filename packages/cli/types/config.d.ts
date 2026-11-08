@@ -136,6 +136,10 @@ export interface PikkuCLICoreOutputFiles {
   featureFlagsFile?: string
   publicAgentFile: string
   publicAgentSchemasFile?: string
+  // The admin addon wiring and the workflow-run stream route (derived from
+  // scaffold.pikkuDir when scaffold.admin is enabled).
+  // Optional: left undefined when scaffold.admin is not enabled, so consumers must guard.
+  adminFunctionsFile?: string
   consoleFunctionsFile: string
   consoleSchemasFile?: string
   scenariosFunctionsFile: string
@@ -962,6 +966,12 @@ export type PikkuCLIInput = {
      * the `FeatureFlagStore` behind the admin addon.
      */
     featureFlags?: PikkuScaffoldFeature
+    /**
+     * Wire `@pikku/addon-admin` and the `/workflow-run/:runId/stream` route onto
+     * `admin:streamWorkflowRun`. The addon's functions are ordinary scoped RPCs,
+     * so this is safe in a deployed stage.
+     */
+    admin?: PikkuScaffoldFeature
     console?: PikkuScaffoldFeature
     scenarios?: PikkuScaffoldFeature
     /**
