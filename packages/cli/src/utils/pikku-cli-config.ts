@@ -574,6 +574,7 @@ const _getPikkuCLIConfig = async (
       cors: 'corsFile',
       featureFlags: 'featureFlagsFile',
       agent: 'publicAgentFile',
+      admin: 'adminFunctionsFile',
       console: 'consoleFunctionsFile',
       scenarios: 'scenariosFunctionsFile',
       virtualUser: 'virtualUserFunctionsFile',
@@ -719,6 +720,13 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'agent',
         'agent.schemas.gen.ts'
+      )
+    }
+    if (result.scaffold?.admin && !result.adminFunctionsFile) {
+      result.adminFunctionsFile = join(
+        resolvedScaffoldDir,
+        'admin',
+        'admin.gen.ts'
       )
     }
     if (result.scaffold?.console && !result.consoleFunctionsFile) {

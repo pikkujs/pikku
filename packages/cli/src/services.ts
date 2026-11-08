@@ -371,6 +371,7 @@ export const createSingletonServices: CreateSingletonServices<
       )
 
       const scaffoldFiles = [
+        config.adminFunctionsFile,
         config.consoleFunctionsFile,
         config.meshRpcWorkersFile,
         config.webhookWorkersFile,
