@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3402 observable things**: 1154 exported names, plus
-2248 members on the classes and interfaces among them, reachable
+**3405 observable things**: 1156 exported names, plus
+2249 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -20,7 +20,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scenario` | 50 | 48 | 157 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 86 |
-| `./types` | 24 | 21 | 82 |
+| `./types` | 24 | 21 | 83 |
 | `./queue` | 28 | 28 | 75 |
 | `./http` | 27 | 27 | 58 |
 | `./errors` | 52 | 52 | 25 |
@@ -46,9 +46,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./scheduler` | 10 | 10 | 8 |
 | `./addon` | 15 | 15 | 2 |
+| `./scope` | 17 | 17 | 0 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
-| `./scope` | 15 | 15 | 0 |
 | `./rpc` | 8 | 8 | 6 |
 | `./workflow/types` | 48 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
@@ -249,6 +249,7 @@ export interface CoreUserSession {
   orgId?: string
   virtualUser?: boolean
   scopes?: string[]
+  scopesResolvedAt?: number
   readonly?: boolean
 }
 export type CreateConfig<
@@ -716,6 +717,7 @@ export type FunctionRuntimeMeta = {
   inputSchemaName: string | null
   outputSchemaName: string | null
   scopes?: string[]
+  liveScopes?: boolean
   featureFlag?: string
   expose?: boolean
   auth?: boolean
@@ -4567,6 +4569,7 @@ validateAndBuildCredentialDefinitionsMeta: (definitions: CredentialDefinitions, 
 export type CoreScopeNode = {
   displayName?: string
   description?: string
+  live?: boolean
   scopes?: Record<string, CoreScopeNode>
 }
 export type CoreScopes = Record<string, CoreScopeNode>
@@ -4579,10 +4582,13 @@ export type FlatScope = {
 flattenScopeDefinitions: (definitions: ScopeDefinitions) => FlatScope[]
 hasScopes: (required: readonly string[] | undefined, held: Iterable<string> | undefined) => boolean
 intersectScopes: (held: Iterable<string> | undefined, cap: Iterable<string> | undefined) => string[]
+liveScopeIds: (definitions: ScopeDefinitions) => Set<string>
+requiresLiveScope: (required: readonly string[] | undefined, live: ReadonlySet<string>) => boolean
 export type ScopeDefinitionMeta = {
   name: string
   displayName?: string
   description?: string
+  live?: boolean
   scopes?: Record<string, ScopeNodeMeta>
   sourceFile?: string
   origin?: ScopeOrigin
@@ -4592,6 +4598,7 @@ export type ScopeDefinitionsMeta = Record<string, ScopeDefinitionMeta>
 export type ScopeNodeMeta = {
   displayName?: string
   description?: string
+  live?: boolean
   scopes?: Record<string, ScopeNodeMeta>
 }
 export type ScopeOrigin =
