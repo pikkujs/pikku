@@ -498,6 +498,14 @@ impl Dsl<'_, '_> {
                     return step;
                 }
             }
+            if is_workflow_approval_call(call) {
+                let step = self.extract_approval_step(call, var_name.as_str());
+                if step.is_some() {
+                    self.touch_type(decl);
+                    self.scope.output_vars.insert(var_name);
+                    return step;
+                }
+            }
             if is_parallel_fanout(call) || is_parallel_group(call) {
                 let step = if is_parallel_fanout(call) {
                     self.extract_parallel_fanout(call)
@@ -569,7 +577,7 @@ impl Dsl<'_, '_> {
             }
         }
         let call = awaited_call(init)?;
-        if !(is_workflow_do_call(call) || is_scenario_step_call(call) || is_parallel_group(call) || is_parallel_fanout(call)) {
+        if !(is_workflow_do_call(call) || is_workflow_approval_call(call) || is_scenario_step_call(call) || is_parallel_group(call) || is_parallel_fanout(call)) {
             return None;
         }
         self.add_error("Destructuring a step result is not supported in DSL workflows. Assign it to a variable first (e.g. `const result = await workflow.do(...)`) and read its properties.");
@@ -587,7 +595,7 @@ impl Dsl<'_, '_> {
                 has_output = true;
                 if self.context_vars.has(&output_var) {
                     let rhs_call = awaited_call(Some(be.right()));
-                    if rhs_call.is_none_or(|c| !is_workflow_do_call(c)) {
+                    if rhs_call.is_none_or(|c| !(is_workflow_do_call(c) || is_workflow_approval_call(c))) {
                         if let Some(lit) = extract_literal_value(be.right()) {
                             return Some(jo!("type" => "set", "variable" => output_var, "value" => lit));
                         }
