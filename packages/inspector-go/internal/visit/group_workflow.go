@@ -375,6 +375,11 @@ func (s *Context) addWorkflow(node *ast.Node) {
 func (s *Context) checkApprovalsDeclareApprovers(fn *ast.Node, workflowName string) {
 	var visit func(n *ast.Node) bool
 	visit = func(n *ast.Node) bool {
+		// A nested function with its own `workflow` parameter shadows the wire:
+		// its workflow.approval() is the application's, not the DSL's.
+		if tsutil.IsFunctionLike(n) && shadowsWorkflowWire(n) {
+			return false
+		}
 		if ast.IsCallExpression(n) && isWorkflowApprovalCall(n) && !approvalDeclaresApprovers(n) {
 			s.Log.Critical(diag.WorkflowApprovalMissingApprovers, fmt.Sprintf(
 				"Workflow '%s' has a workflow.approval() with no 'approvers', so nothing says who may answer it. "+
@@ -387,18 +392,43 @@ func (s *Context) checkApprovalsDeclareApprovers(fn *ast.Node, workflowName stri
 	fn.ForEachChild(visit)
 }
 
+// shadowsWorkflowWire: the function takes a plain parameter named `workflow`.
+func shadowsWorkflowWire(fn *ast.Node) bool {
+	for _, p := range fn.Parameters() {
+		if ast.IsIdentifier(p.Name()) && p.Name().Text() == "workflow" {
+			return true
+		}
+	}
+	return false
+}
+
+// approvalDeclaresApprovers is true only for an effective policy: `approvers`
+// present, not literally undefined or null, and not overridden by a later
+// spread, whose value cannot be read.
 func approvalDeclaresApprovers(call *ast.Node) bool {
 	args := call.Arguments()
 	if len(args) < 2 || !ast.IsObjectLiteralExpression(args[1]) {
 		return false
 	}
+	declared := false
 	for _, p := range args[1].Properties() {
-		if (ast.IsPropertyAssignment(p) || ast.IsShorthandPropertyAssignment(p)) &&
-			(ast.IsIdentifier(p.Name()) || ast.IsStringLiteral(p.Name())) && p.Name().Text() == "approvers" {
-			return true
+		if ast.IsSpreadAssignment(p) {
+			declared = false
+			continue
+		}
+		if !(ast.IsPropertyAssignment(p) || ast.IsShorthandPropertyAssignment(p)) ||
+			!(ast.IsIdentifier(p.Name()) || ast.IsStringLiteral(p.Name())) || p.Name().Text() != "approvers" {
+			continue
+		}
+		declared = true
+		if ast.IsPropertyAssignment(p) {
+			init := p.Initializer()
+			if init.Kind == ast.KindNullKeyword || (ast.IsIdentifier(init) && init.Text() == "undefined") {
+				declared = false
+			}
 		}
 	}
-	return false
+	return declared
 }
 
 // propValueToJS is getPropertyValue's result as a JS value: nil for null.

@@ -141,6 +141,11 @@ func TestWorkflowApprovalMustDeclareApprovers(t *testing.T) {
 		{"explicit any", `, { approvers: 'any' }`, false},
 		{"owner", `, { approvers: 'owner' }`, false},
 		{"shorthand", `, { approvers }`, false},
+		{"approvers undefined", `, { approvers: undefined }`, true},
+		{"approvers null", `, { approvers: null }`, true},
+		{"later spread overrides", `, { approvers: 'owner', ...gateOptions }`, true},
+		{"earlier spread", `, { ...gateOptions, approvers: 'owner' }`, false},
+		{"quoted key", `, { 'approvers': 'owner' }`, false},
 	}
 	for _, wrapper := range []string{"pikkuWorkflowFunc", "pikkuWorkflowComplexFunc"} {
 		for _, c := range cases {
@@ -161,6 +166,25 @@ export const gated = `+wrapper+`({
 					t.Errorf("refused = %v, want %v; diagnostics: %s", refused, c.refused, diagnosticsText(res))
 				}
 			})
+		}
+	}
+}
+
+func TestWorkflowApprovalIgnoresShadowedWire(t *testing.T) {
+	res := runWorkflowProject(t, `
+declare const app: any
+export const gated = pikkuWorkflowComplexFunc({
+  func: async (_s: any, data: any, { workflow }: any) => {
+    await workflow.approval('release', { approvers: 'owner' })
+    await app.run(async (workflow: any) => {
+      await workflow.approval('not-the-dsl')
+    })
+  },
+})
+`, true)
+	for _, d := range res.Diagnostics {
+		if d.Code == diag.WorkflowApprovalMissingApprovers {
+			t.Errorf("a shadowed workflow parameter is not the DSL wire: %s", diagnosticsText(res))
 		}
 	}
 }

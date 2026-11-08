@@ -421,11 +421,7 @@ impl Context<'_> {
     /// options cannot be read, and is refused rather than assumed.
     fn check_approvals_declare_approvers(&mut self, func: P<Node>, workflow_name: &str) {
         let mut missing = 0usize;
-        tsutil::walk(func, &mut |n| {
-            if ast::is_call_expression(n) && is_workflow_approval_call(n) && !approval_declares_approvers(n) {
-                missing += 1;
-            }
-        });
+        count_undeclared_approvals(func, &mut missing);
         for _ in 0..missing {
             self.log.critical(
                 codes::WORKFLOW_APPROVAL_MISSING_APPROVERS,
@@ -437,13 +433,50 @@ impl Context<'_> {
     }
 }
 
+/// Counts approvals without approvers under `n`, skipping a nested function
+/// with its own `workflow` parameter (it shadows the wire).
+fn count_undeclared_approvals(n: P<Node>, missing: &mut usize) {
+    n.for_each_child(&mut |child| {
+        if tsutil::is_function_like(child) && shadows_workflow_wire(child) {
+            return false;
+        }
+        if ast::is_call_expression(child) && is_workflow_approval_call(child) && !approval_declares_approvers(child) {
+            *missing += 1;
+        }
+        count_undeclared_approvals(child, missing);
+        false
+    });
+}
+
+fn shadows_workflow_wire(f: P<Node>) -> bool {
+    f.parameters().iter().any(|p| p.name().is_some_and(|n| ast::is_identifier(n) && n.text() == "workflow"))
+}
+
+/// True only for an effective policy: `approvers` present, not literally
+/// undefined or null, and not overridden by a later spread.
 fn approval_declares_approvers(call: P<Node>) -> bool {
     let args = call.arguments();
     if args.len() < 2 || !ast::is_object_literal_expression(args[1]) {
         return false;
     }
-    args[1].properties().iter().any(|p| {
-        (ast::is_property_assignment(*p) || ast::is_shorthand_property_assignment(*p))
-            && p.name().is_some_and(|name| (ast::is_identifier(name) || ast::is_string_literal(name)) && name.text() == "approvers")
-    })
+    let mut declared = false;
+    for p in args[1].properties() {
+        if ast::is_spread_assignment(*p) {
+            declared = false;
+            continue;
+        }
+        let named = (ast::is_property_assignment(*p) || ast::is_shorthand_property_assignment(*p))
+            && p.name().is_some_and(|name| (ast::is_identifier(name) || ast::is_string_literal(name)) && name.text() == "approvers");
+        if !named {
+            continue;
+        }
+        declared = true;
+        if ast::is_property_assignment(*p) {
+            let init = p.initializer().unwrap();
+            if init.kind() == Kind::NullKeyword || (ast::is_identifier(init) && init.text() == "undefined") {
+                declared = false;
+            }
+        }
+    }
+    declared
 }
