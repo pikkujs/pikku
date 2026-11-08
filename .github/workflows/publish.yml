@@ -130,10 +130,60 @@ jobs:
           path: pikku-inspect-rs-${{ matrix.target }}.tar
           retention-days: 1
 
+  # pikku-inspect (Go) for every target, one runner each. They are static
+  # cross-compiles (CGO_ENABLED=0), so every one builds on ubuntu; a matrix
+  # rather than `--all` on the Publish runner turns one ~6 minute serial wait
+  # into the slowest single target. Publish needs all four.
+  inspector-go:
+    name: Go build (pikku-inspect, ${{ matrix.target }})
+    needs: gate
+    if: >-
+      needs.gate.outputs.ok == 'true' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      matrix:
+        target: [darwin-arm64, linux-x64, linux-arm64, win32-x64]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      # The module cache is keyed on go.sum, the build cache is not: a key that
+      # never changes is never saved again, so the build cache is keyed on the
+      # run and restored from the newest run before it (restore-keys), which
+      # refreshes it every time.
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: packages/inspector-go/go.mod
+          cache-dependency-path: packages/inspector-go/**/go.sum
+      - name: Restore the Go build cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/go-build
+          key: go-build-${{ matrix.target }}-${{ hashFiles('packages/inspector-go/go.mod', 'packages/inspector-go/**/go.sum') }}-${{ github.run_id }}
+          restore-keys: |
+            go-build-${{ matrix.target }}-${{ hashFiles('packages/inspector-go/go.mod', 'packages/inspector-go/**/go.sum') }}-
+            go-build-${{ matrix.target }}-
+      - name: Build pikku-inspect
+        run: node packages/inspector-go/scripts/build-go.mjs --target ${{ matrix.target }}
+      - name: Pack
+        run: tar cf pikku-inspect-${{ matrix.target }}.tar packages/inspector-go/prebuilt/${{ matrix.target }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pikku-inspect-${{ matrix.target }}
+          path: pikku-inspect-${{ matrix.target }}.tar
+          retention-days: 1
+
   publish:
     name: Publish
     runs-on: ubuntu-24.04
-    needs: [gate, inspector-rs]
+    needs: [gate, inspector-rs, inspector-go]
     if: >-
       needs.gate.outputs.ok == 'true' &&
       github.event.workflow_run.head_repository.full_name == github.repository &&
@@ -183,23 +233,18 @@ jobs:
         with:
           bun-version: 1.4.3
       # @pikku/inspector-go ships a pikku-inspect binary for every target under
-      # prebuilt/, which is gitignored, so they are built here before
-      # `bun run release` publishes it. They are checked up front too: its
-      # prepublishOnly checks them, but only as npm reaches it, by which time
-      # packages before it in the run are already on npm.
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: packages/inspector-go/go.mod
-          cache-dependency-path: packages/inspector-go/**/go.sum
-      - name: Cross-compile pikku-inspect for every target
-        run: node packages/inspector-go/scripts/build-go.mjs --all
-      - name: Download pikku-inspect-rs for every platform
+      # prebuilt/, which is gitignored: the `inspector-go` jobs build them and
+      # they are unpacked here before `bun run release` publishes it. They are
+      # checked up front too: its prepublishOnly checks them, but only as npm
+      # reaches it, by which time packages before it in the run are already on
+      # npm.
+      - name: Download pikku-inspect for every target
         uses: actions/download-artifact@v8
         with:
-          pattern: pikku-inspect-rs-*
+          pattern: pikku-inspect-*
           merge-multiple: true
-      - name: Unpack pikku-inspect-rs
-        run: for t in pikku-inspect-rs-*.tar; do tar xf "$t" && rm "$t"; done
+      - name: Unpack pikku-inspect and pikku-inspect-rs
+        run: for t in pikku-inspect-*.tar; do tar xf "$t" && rm "$t"; done
       - name: Check every target has its binary
         run: node packages/inspector-go/scripts/check-platform-binary.mjs
       - name: Create Release Pull Request or Publish
