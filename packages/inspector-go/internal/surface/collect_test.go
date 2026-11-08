@@ -135,3 +135,33 @@ func TestOwnMembers(t *testing.T) {
 		t.Fatal("package listed no members")
 	}
 }
+
+// A generated file sits under the project, so its keys are the project's own
+// and are dropped. Keys codegen writes for every project carry a doc comment,
+// and those are kept.
+func TestKeepsDocumentedKeysOfGeneratedFile(t *testing.T) {
+	dir := writeFixture(t)
+	files := map[string]string{
+		"src/index.ts":     "export type { Generated } from './types.gen.js'\nexport const x = 1\n",
+		"src/types.gen.ts": "export interface Generated {\n  /** Runs one step. */\n  do(step: string): void\n  projectOwn: string\n}\n",
+	}
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := Collect(dir, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, symbol := range entries[0].Symbols {
+		if symbol.Name != "Generated" {
+			continue
+		}
+		if len(symbol.Members) != 1 || !strings.HasPrefix(symbol.Members[0].Line, "do") {
+			t.Fatalf("want only the documented key do, got %+v", symbol.Members)
+		}
+		return
+	}
+	t.Fatal("Generated not collected")
+}
