@@ -12,6 +12,8 @@ import { describe, test } from 'node:test'
 import {
   classifyChange,
   findChangeSince,
+  findChangesSince,
+  isMessageFile,
   isIgnoredByWatcher,
   readWatchStatus,
   waitForWatcher,
@@ -104,6 +106,30 @@ describe('which files count', () => {
     )
   })
 
+  test('editing tsr.config.json is a routes change, whatever else counts', () => {
+    assert.equal(
+      classifyChange('/home/me/.studio/app/apps/web/tsr.config.json', dirs),
+      'routes'
+    )
+    assert.equal(
+      classifyChange('/home/me/.studio/app/apps/other/tsr.config.json', dirs),
+      'typecheck'
+    )
+  })
+
+  test('a message file inside a codegen directory is still a message file', () => {
+    const overlapping = { codegenDirs: ['/p'], typecheckDirs: ['/p/apps/web'] }
+    assert.equal(
+      classifyChange('/p/apps/web/messages/en.json', overlapping),
+      'codegen'
+    )
+    assert.equal(
+      isMessageFile('/p/apps/web/messages/en.json', overlapping),
+      true
+    )
+    assert.equal(isMessageFile('/p/src/messages/en.json', overlapping), false)
+  })
+
   test('a frontend file tsc cannot see does not trigger a run', () => {
     assert.equal(
       classifyChange('/home/me/.studio/app/apps/web/logo.png', dirs),
@@ -120,6 +146,49 @@ describe('which files count', () => {
     const watched = { codegenDirs: [join(root, 'src')], typecheckDirs: [] }
     assert.equal(findChangeSince(watched, 200_000), null)
     assert.equal(findChangeSince(watched, 50_000), file)
+  })
+})
+
+describe('route paths outside the watched roots', () => {
+  test('are scanned, the directory and the tree file alike', () => {
+    const root = scratch()
+    mkdirSync(join(root, 'app'))
+    mkdirSync(join(root, 'shared', 'routes'), { recursive: true })
+    const route = join(root, 'shared', 'routes', 'a.tsx')
+    const tree = join(root, 'shared', 'routeTree.gen.ts')
+    writeFileSync(route, '')
+    writeFileSync(tree, '')
+    utimesSync(route, 100, 100)
+    utimesSync(tree, 100, 100)
+    const watched = {
+      codegenDirs: [],
+      typecheckDirs: [join(root, 'app')],
+      routePaths: [join(root, 'shared', 'routes'), tree],
+    }
+    assert.deepEqual(findChangesSince(watched, 200_000), [])
+    assert.deepEqual(
+      findChangesSince(watched, 50_000)
+        .map(({ path }) => path)
+        .sort(),
+      [route, tree].sort()
+    )
+  })
+
+  test('are reported once when they also lie under a root', () => {
+    const root = scratch()
+    mkdirSync(join(root, 'src', 'routes'), { recursive: true })
+    const route = join(root, 'src', 'routes', 'a.tsx')
+    writeFileSync(route, '')
+    utimesSync(route, 100, 100)
+    const watched = {
+      codegenDirs: [],
+      typecheckDirs: [root],
+      routePaths: [join(root, 'src', 'routes')],
+    }
+    assert.deepEqual(
+      findChangesSince(watched, 50_000).map(({ path }) => path),
+      [route]
+    )
   })
 })
 
@@ -149,6 +218,15 @@ describe('waiting for the watcher', () => {
     assert.deepEqual(await wait(file, { isAlive: () => false }), {
       kind: 'none',
     })
+  })
+
+  test('a watcher that skips the security lint cannot answer a security check', async () => {
+    const file = join(scratch(), 'status.json')
+    writeWatchStatus(file, status())
+    assert.deepEqual(await wait(file, { security: true }), { kind: 'none' })
+    writeWatchStatus(file, status({ security: true }))
+    assert.equal((await wait(file, { security: true })).kind, 'settled')
+    assert.equal((await wait(file)).kind, 'settled')
   })
 
   test('a current result returns straight away', async () => {

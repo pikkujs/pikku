@@ -1,4 +1,4 @@
-import { generateRouteTrees } from '../../utils/route-tree.js'
+import { generateRouteTrees, routeWatchPaths } from '../../utils/route-tree.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { rm } from 'node:fs/promises'
 import { resolve } from 'node:path'
@@ -38,9 +38,16 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
       })
     }
 
-    const dirs = watchedDirs(config.rootDir, watchDirectories)
+    const security = (config as { security?: boolean }).security
+    const dirs = watchedDirs(config.rootDir, watchDirectories, config.config)
     const watcher = chokidar.watch(
-      [...dirs.codegenDirs, ...dirs.typecheckDirs],
+      [
+        ...new Set([
+          ...dirs.codegenDirs,
+          ...dirs.typecheckDirs,
+          ...(dirs.routePaths ?? []),
+        ]),
+      ],
       {
         ignoreInitial: true,
         ignored: (path) => isIgnoredByWatcher(path, dirs),
@@ -55,6 +62,8 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
       statusFile: watchStatusFile(resolve(config.rootDir, config.outDir)),
       dirs,
       debounceMs: 1000,
+      security,
+      routePaths: () => routeWatchPaths(dirs.typecheckDirs),
       codegen: () =>
         collectCodegenPass(async (diagnosticsFile) => {
           const start = Date.now()
@@ -65,6 +74,7 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
               config: config.config,
               outDir: config.outDir,
               logLevel: (config as { logLevel?: string }).logLevel,
+              security,
               inheritStdout: true,
               diagnosticsFile,
             })
@@ -79,9 +89,11 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
       messages: () => compileMessages(dirs.typecheckDirs),
       routes: () => generateRouteTrees(dirs.typecheckDirs),
       typecheck: (signal) =>
-        typecheckProjects(checkProjects(config.rootDir), config.rootDir, {
-          signal,
-        }),
+        typecheckProjects(
+          checkProjects(config.rootDir, config.config),
+          config.rootDir,
+          { signal }
+        ),
       onError: (message) => logger.error(message),
     })
 

@@ -8,7 +8,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs'
-import { dirname, join, relative } from 'node:path'
+import { basename, dirname, join, relative, sep } from 'node:path'
 import type { CheckDiagnostic } from './tsc-check.js'
 
 export type WatchStage =
@@ -32,6 +32,8 @@ export type WatchStatus = {
   routePaths?: string[]
   /** It reruns on SIGUSR2, which would end a watcher that doesn't handle it. */
   wakes?: boolean
+  /** Whether codegen runs the data-classification lint; a result without it cannot answer `check --security`. */
+  security?: boolean
   diagnostics: CheckDiagnostic[]
   durationMs?: number
   typecheck?: { durationMs: number }
@@ -67,8 +69,9 @@ const GENERATED = /\.gen\.[^/]+$/
 const TYPECHECKED = /\.(tsx?|mts|cts|jsx?|mjs|cjs|json)$/
 const MESSAGES = /(^|\/)messages\/[^/]+\.json$/
 
+/** `path` below `root` with `/` separators, or null when it is not below it. */
 const insideRoot = (path: string, root: string): string | null => {
-  const rel = relative(root, path)
+  const rel = relative(root, path).split(sep).join('/')
   return rel === '' || (!rel.startsWith('..') && !rel.startsWith('/'))
     ? rel
     : null
@@ -105,6 +108,15 @@ export type WatchedDirs = Pick<
   'codegenDirs' | 'typecheckDirs' | 'routePaths'
 >
 
+/** `tsr.config.json` names the routes directory and tree, so editing it moves them. */
+const isRouterConfig = (path: string, dirs: WatchedDirs): boolean =>
+  basename(path) === 'tsr.config.json' &&
+  dirs.typecheckDirs.includes(dirname(path))
+
+/** A frontend's `messages/<locale>.json`, which its compile script reads. */
+export const isMessageFile = (path: string, dirs: WatchedDirs): boolean =>
+  dirs.typecheckDirs.some((root) => MESSAGES.test(insideRoot(path, root) ?? ''))
+
 /** The one rule for which files count, shared by the watcher and `pikku check`. */
 export const classifyChange = (
   path: string,
@@ -114,13 +126,11 @@ export const classifyChange = (
   if (dirs.routePaths?.some((root) => insideRoot(path, root) !== null)) {
     return 'routes'
   }
+  if (isRouterConfig(path, dirs)) return 'routes'
   if (dirs.codegenDirs.some((root) => insideRoot(path, root) !== null)) {
     return 'codegen'
   }
-  const inFrontend = dirs.typecheckDirs.some((root) =>
-    MESSAGES.test(insideRoot(path, root) ?? '')
-  )
-  if (inFrontend) return 'messages'
+  if (isMessageFile(path, dirs)) return 'messages'
   return TYPECHECKED.test(path) ? 'typecheck' : null
 }
 
@@ -129,12 +139,29 @@ export const isIgnoredByWatcher = (path: string, dirs: WatchedDirs): boolean =>
 
 export type FileChange = { path: string; mtimeMs: number }
 
+const statIsFile = (path: string): boolean => {
+  try {
+    return statSync(path).isFile()
+  } catch {
+    return false
+  }
+}
+
 /** Every file saved after `since`. */
 export const findChangesSince = (
   dirs: WatchedDirs,
   since: number
 ): FileChange[] => {
   const changes: FileChange[] = []
+  const seen = new Set<string>()
+  const record = (path: string) => {
+    if (seen.has(path)) return
+    seen.add(path)
+    try {
+      const { mtimeMs } = statSync(path)
+      if (mtimeMs > since) changes.push({ path, mtimeMs })
+    } catch {}
+  }
   const visit = (dir: string) => {
     let entries
     try {
@@ -148,15 +175,22 @@ export const findChangesSince = (
       if (entry.isDirectory()) {
         visit(path)
       } else if (classifyChange(path, dirs)) {
-        try {
-          const { mtimeMs } = statSync(path)
-          if (mtimeMs > since) changes.push({ path, mtimeMs })
-        } catch {}
+        record(path)
       }
     }
   }
-  for (const dir of new Set([...dirs.codegenDirs, ...dirs.typecheckDirs])) {
-    visit(dir)
+  const roots = new Set([
+    ...dirs.codegenDirs,
+    ...dirs.typecheckDirs,
+    ...(dirs.routePaths ?? []),
+  ])
+  for (const root of roots) {
+    // A route path is a directory or the tree file, and may lie outside every root.
+    if (statIsFile(root)) {
+      if (classifyChange(root, dirs)) record(root)
+    } else {
+      visit(root)
+    }
   }
   return changes
 }
@@ -190,6 +224,8 @@ type WaitOptions = {
   isAlive?: (pid: number) => boolean
   wake?: (pid: number) => void
   changeSince?: (dirs: WatchedDirs, since: number) => string | null
+  /** The caller needs the security lint's verdict: a watcher that skips it cannot answer. */
+  security?: boolean
 }
 
 export const WAKE_SIGNAL = 'SIGUSR2'
@@ -248,12 +284,14 @@ export const waitForWatcher = async ({
   isAlive = isRunning,
   wake = wakeWatcher,
   changeSince = findChangeSince,
+  security = false,
 }: WaitOptions): Promise<WatcherWait> => {
   const deadline = now() + timeoutMs
   let wokenFor: number | undefined
   while (true) {
     const status = readWatchStatus(statusFile)
     if (!status || !isAlive(status.pid)) return { kind: 'none' }
+    if (security && !status.security) return { kind: 'none' }
     const newer =
       status.state === 'running' ? null : changeSince(status, status.sourcesAt)
     if (status.state !== 'running' && !newer) {

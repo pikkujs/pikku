@@ -1,4 +1,4 @@
-import { generateRouteTrees } from '../../utils/route-tree.js'
+import { generateRouteTrees, routeWatchPaths } from '../../utils/route-tree.js'
 import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { rm } from 'node:fs/promises'
 import { join, resolve } from 'path'
@@ -196,7 +196,18 @@ export const dev = pikkuSessionlessFunc<
     }
 
     const startupCodegenStartedAt = Date.now()
-    await runCodegen()
+    // Collected so the watch loop starts from what this pass reported: a
+    // nonfatal error must not read as ok because nothing changed since.
+    let startupFailure: { error: unknown } | undefined
+    const startupPass = await collectCodegenPass(async (diagnosticsFile) => {
+      try {
+        await runCodegen(diagnosticsFile)
+      } catch (error) {
+        startupFailure = { error }
+        throw error
+      }
+    })
+    if (startupFailure) throw startupFailure.error
 
     const inspectorState = await getInspectorState()
 
@@ -549,11 +560,20 @@ export const dev = pikkuSessionlessFunc<
       logger.info(
         `• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`
       )
-      const dirs = watchedDirs(config.rootDir, watchDirectories)
-      watcher = chokidar.watch([...dirs.codegenDirs, ...dirs.typecheckDirs], {
-        ignoreInitial: true,
-        ignored: (path) => isIgnoredByWatcher(path, dirs),
-      })
+      const dirs = watchedDirs(config.rootDir, watchDirectories, config.config)
+      watcher = chokidar.watch(
+        [
+          ...new Set([
+            ...dirs.codegenDirs,
+            ...dirs.typecheckDirs,
+            ...(dirs.routePaths ?? []),
+          ]),
+        ],
+        {
+          ignoreInitial: true,
+          ignored: (path) => isIgnoredByWatcher(path, dirs),
+        }
+      )
 
       const onReady = async () => {
         const regenerate = async (diagnosticsFile: string) => {
@@ -604,18 +624,23 @@ export const dev = pikkuSessionlessFunc<
           statusFile: watchStatusFile(pikkuDir),
           dirs,
           debounceMs: 10,
+          security: (config as { security?: boolean }).security,
+          routePaths: () => routeWatchPaths(dirs.typecheckDirs),
           codegen: () => collectCodegenPass(regenerate),
           messages: () => compileMessages(dirs.typecheckDirs),
           routes: () => generateRouteTrees(dirs.typecheckDirs),
           typecheck: (signal) =>
-            typecheckProjects(checkProjects(config.rootDir), config.rootDir, {
-              signal,
-            }),
+            typecheckProjects(
+              checkProjects(config.rootDir, config.config),
+              config.rootDir,
+              { signal }
+            ),
           onError: (message) => logger.error(message),
         })
 
         void loop.start({
           codegen: hasChangesSince(watchDirectories, startupCodegenStartedAt),
+          startup: startupPass,
         })
 
         watcher?.on('change', loop.onChange)

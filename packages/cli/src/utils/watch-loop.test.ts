@@ -344,6 +344,98 @@ describe('the watch loop', () => {
     assert.equal(readWatchStatus(file)?.state, 'ok')
   })
 
+  test('a run dropped during codegen still compiles messages and routes', async () => {
+    const { loop, calls } = loopWith({
+      codegen: async () => {
+        calls.push('codegen')
+        if (calls.length === 1) loop.onChange('/p/apps/web/src/pages/a.tsx')
+        return passed
+      },
+    })
+    await loop.start({ codegen: true })
+    assert.deepEqual(calls, ['codegen', 'messages', 'routes', 'typecheck'])
+  })
+
+  test('an edit already taken by a run does not start another', async () => {
+    let checks = 0
+    const { loop } = loopWith({
+      debounceMs: 40,
+      typecheck: async () => {
+        if (++checks === 1) loop.onChange('/p/src/a.ts')
+        return clean
+      },
+    })
+    await loop.start({ codegen: false })
+    await sleep(120)
+    assert.equal(checks, 2)
+  })
+
+  test('a stage that throws fails the run and is retried, not unhandled', async () => {
+    let fail = true
+    const { loop, file } = loopWith({
+      routes: async () => {
+        if (fail) throw new Error('routesDirectory is not a string')
+        return []
+      },
+    })
+    await loop.start({ codegen: false })
+    const failed = readWatchStatus(file)
+    assert.equal(failed?.state, 'failed')
+    assert.equal(failed?.diagnostics[0]?.code, 'ROUTES')
+    assert.match(failed?.diagnostics[0]?.message ?? '', /routesDirectory/)
+    fail = false
+    loop.onChange('/p/apps/web/src/pages/a.tsx')
+    await waitFor(() => readWatchStatus(file)?.state === 'ok')
+  })
+
+  test('a messages edit under a codegen directory compiles messages too', async () => {
+    const { loop, calls } = loopWith({
+      dirs: { ...dirs, codegenDirs: ['/p'] },
+    })
+    await loop.start({ codegen: false })
+    calls.length = 0
+    loop.onChange('/p/apps/web/messages/en.json')
+    await waitFor(() => calls.includes('typecheck'))
+    assert.deepEqual(calls, ['codegen', 'messages', 'typecheck'])
+  })
+
+  test('what startup codegen reported is not forgotten when nothing changed', async () => {
+    const problem = { severity: 'error', code: 'PKU1', message: 'bad wiring' }
+    const { loop, calls, file } = loopWith({})
+    await loop.start({
+      codegen: false,
+      startup: { ok: true, diagnostics: [problem as never] },
+    })
+    assert.equal(calls.includes('codegen'), false)
+    assert.equal(readWatchStatus(file)?.state, 'failed')
+    assert.equal(readWatchStatus(file)?.diagnostics[0]?.code, 'PKU1')
+  })
+
+  test('editing tsr.config.json moves the watched route paths', async () => {
+    let paths = dirs.routePaths
+    const { loop, calls, file } = loopWith({ routePaths: () => paths })
+    await loop.start({ codegen: false })
+    paths = ['/p/apps/web/app/routes', '/p/apps/web/app/routeTree.gen.ts']
+    calls.length = 0
+    loop.onChange('/p/apps/web/tsr.config.json')
+    await waitFor(() => calls.includes('typecheck'))
+    assert.deepEqual(calls, ['routes', 'typecheck'])
+    assert.deepEqual(readWatchStatus(file)?.routePaths, paths)
+    calls.length = 0
+    loop.onChange('/p/apps/web/app/routes/a.tsx')
+    await waitFor(() => calls.includes('typecheck'))
+    assert.deepEqual(calls, ['routes', 'typecheck'])
+  })
+
+  test('the status says whether codegen ran the security lint', async () => {
+    const plain = loopWith({})
+    await plain.loop.start({ codegen: false })
+    assert.equal(readWatchStatus(plain.file)?.security, undefined)
+    const linted = loopWith({ security: true })
+    await linted.loop.start({ codegen: false })
+    assert.equal(readWatchStatus(linted.file)?.security, true)
+  })
+
   test('ignored files start nothing', async () => {
     const { loop, calls } = loopWith({})
     loop.onChange('/p/apps/web/dist/a.ts')
@@ -378,6 +470,19 @@ describe('compiling messages', () => {
 
   test('a frontend with neither has nothing to do', async () => {
     assert.deepEqual(await compileMessages([frontend({})]), [])
+  })
+
+  test('the timeout is shared by every frontend, not given to each', async () => {
+    const slow = {
+      paraglide: 'node -e "setTimeout(() => {}, 1500)"',
+    }
+    const started = Date.now()
+    const problems = await compileMessages(
+      [frontend(slow), frontend(slow)],
+      2000
+    )
+    assert.equal(problems.length, 1)
+    assert.ok(Date.now() - started < 2800)
   })
 
   test('a failing script is reported with its output', async () => {

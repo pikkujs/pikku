@@ -40,6 +40,7 @@ type CliConfig = {
   config?: string
   outDir: string
   logLevel?: string
+  security?: boolean
 }
 
 const fullRun = async (
@@ -55,6 +56,7 @@ const fullRun = async (
         config: config.config,
         outDir: config.outDir,
         logLevel: config.logLevel,
+        security: config.security,
         inheritStdout: false,
         diagnosticsFile,
         timeoutMs,
@@ -74,7 +76,7 @@ const fullRun = async (
     }
   }
 
-  const projects = checkProjects(config.rootDir)
+  const projects = checkProjects(config.rootDir, config.config)
   const frontends = projects
     .map(({ dir }) => dir)
     .filter((dir) => dir !== config.rootDir)
@@ -109,9 +111,11 @@ export const check = pikkuSessionlessFunc<{ timeout?: string }, CheckResult>({
       Number(timeout) > 0 ? Number(timeout) : DEFAULT_TIMEOUT_SECONDS
     const timeoutMs = seconds * 1000
     const pikkuDir = resolve(config.rootDir, config.outDir)
+    const security = (config as CliConfig).security
     const waited: WatcherWait = await waitForWatcher({
       statusFile: watchStatusFile(pikkuDir),
       timeoutMs,
+      security,
     })
 
     let result: CheckResult
@@ -131,10 +135,22 @@ export const check = pikkuSessionlessFunc<{ timeout?: string }, CheckResult>({
         generation: waited.status.generation,
         durationMs: Date.now() - started,
       }
+    } else if (started + timeoutMs - Date.now() <= 0) {
+      // The watcher took the whole budget before it turned out to be gone.
+      result = {
+        ok: false,
+        source: 'full-run',
+        diagnostics: [],
+        stuck: {
+          stage: 'waiting',
+          message: `The watcher was gone after ${seconds}s, so there was no time left for a full run.`,
+        },
+        durationMs: Date.now() - started,
+      }
     } else {
       const { diagnostics, stuck } = await fullRun(
         config as CliConfig,
-        timeoutMs
+        started + timeoutMs - Date.now()
       )
       result = {
         ok: !stuck && !diagnostics.some(isBlocking),
@@ -165,17 +181,13 @@ export const renderCheck = (
     return
   }
   const from = dim(`(${result.source}, ${result.durationMs}ms)`)
-  if (result.stuck) {
-    process.stdout.write(
-      `${removed('✗')} check stuck in ${result.stuck.stage}: ${result.stuck.message}\n`
-    )
-    return
-  }
   const blocking = result.diagnostics.filter(isBlocking)
   const lines = [
-    result.ok
-      ? `${added('✓')} ok ${from}`
-      : `${removed('✗')} ${blocking.length} problem${blocking.length === 1 ? '' : 's'} ${from}`,
+    result.stuck
+      ? `${removed('✗')} check stuck in ${result.stuck.stage}: ${result.stuck.message}`
+      : result.ok
+        ? `${added('✓')} ok ${from}`
+        : `${removed('✗')} ${blocking.length} problem${blocking.length === 1 ? '' : 's'} ${from}`,
   ]
   let shown = 0
   for (const diagnostic of blocking) {

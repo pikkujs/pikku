@@ -201,16 +201,20 @@ export const generateRouteTrees = async (
   timeoutMs?: number
 ): Promise<CheckDiagnostic[]> => {
   const problems: CheckDiagnostic[] = []
+  const deadline = timeoutMs === undefined ? undefined : Date.now() + timeoutMs
+  // One budget for every frontend, not one each.
+  const remaining = () =>
+    deadline === undefined ? undefined : Math.max(1, deadline - Date.now())
   for (const dir of dirs.filter(usesFileRoutes)) {
     const { scripts } = readJson<PackageJson>(join(dir, 'package.json')) ?? {}
     const script = ROUTE_SCRIPTS.find((name) => scripts?.[name])
     if (script) {
-      const failed = await runScript(dir, script, timeoutMs)
+      const failed = await runScript(dir, script, remaining())
       if (failed) problems.push(failure(dir, `${script} script: ${failed}`))
       continue
     }
     try {
-      await withTimeout(generate(dir), timeoutMs)
+      await withTimeout(generate(dir), remaining())
     } catch (error) {
       problems.push(
         failure(dir, error instanceof Error ? error.message : String(error))
