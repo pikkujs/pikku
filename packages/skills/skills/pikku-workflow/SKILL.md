@@ -5,305 +5,42 @@ description: >-
 installGroups: [core]
 ---
 
-# Pikku Workflow Wiring
-
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Capture baseline. Run `pikku all` BEFORE writing code; note existing errors — only NEW errors are yours to fix.
-2. Discover before editing. Prefer `pikku meta` / `pikku info functions --verbose` and `pikku info tags --verbose` to see functions usable as steps and project organization; inspect only the focused output you need.
-3. Identify the source files that own the behavior. Do not start from generated output, `.pikku`, `node_modules`, vendored packages, or build artifacts.
-4. Make the smallest source change. Keep generated files generated — never hand-edit SDKs, schema output, or typegen to paper over errors; fix the source cause.
-5. Validate with the narrowest relevant command, then re-run `pikku all`. If only files you did not touch still error, those are pre-existing — leave them unless asked.
-6. Only claim success when `pikku all` and `tsc` both pass (codegen AND type check green) — never after a partial pass.
-
-See `pikku-concepts` for the core mental model.
-
-Build durable, multi-step workflows with automatic retry, sleep, suspend/resume, and parallel execution. Steps are cached for replay safety.
-
-## Decide FIRST: should this even BE a workflow?
-
-The deciding question is: **does any part of this cross an external boundary that can fail and MUST NOT be lost or double-run** — a payment authorised/captured through a provider, a third-party API call, an email/webhook, a wait for approval? If yes → workflow (durability, retries, restart-survival, and a visible run). If it's **a single algorithm done in one shot, purely local, and not reused elsewhere** → a plain `pikkuFunc` is correct; do NOT wrap it in a workflow.
-
-- **Checkout WITH payment → workflow.** Get cart → compute total → **(atomic: create order + order items, deduct stock, clear cart)** → **charge payment through the provider** → send confirmation email. It's a workflow because the payment leg (and the email) are external and must be **retried, not lost, and not charged twice** across a restart — and the user benefits from seeing where the run is.
-- **Checkout with NO external payment** — e.g. it just records the order and decrements stock in one transaction, nothing leaves the process — is a **single-shot algorithm**: a plain `pikkuFunc` wrapping one `kysely.transaction`. Not a workflow. A workflow here would add durability machinery for a thing that already commits atomically in one shot.
-- **One durable step is NOT a workflow — it's a queue worker.** A lone side-effect that must be retried / not lost (send one email, fire one webhook, one external charge) → a **queue worker** (see `pikku-wiring`'s queue reference), enqueued fire-and-forget. A workflow adds a step graph for a thing that has no steps to orchestrate. (A single non-durable step is just a direct RPC call.)
-- Also workflows: onboarding sequences, settlements/payouts, digests and batch sends, anything that waits (`sleep`/`suspend`) or fans out with retries — the common thread is **multiple** steps or a durable wait, never a single step.
-
-**HARD RULE — never a single-RPC (one-step) workflow.** A workflow whose body is one `workflow.do('x', 'someRpc', …)` is a mislabeled durable function, not orchestration. Route by durability, NOT into a workflow:
-
-- **Not durable** — the caller wants the result now / it can just run in-request → **call the RPC directly** (this is also the synchronous path). No workflow, no queue.
-- **Durable** — must be **retried / not lost / survive a restart** (one email, one webhook, one external charge) → a **queue worker** (`wireQueueWorker` + `queueService.add(...)`). Fire-and-forget, retried by the queue.
-
-There is no "one-step workflow is justified for the durability" exception — durability for a single step is a QUEUE. A workflow earns its name only with genuine multi-step orchestration (a `sleep`/`suspend` wait, fan-out, or a saga).
-
-**Atomicity is a TRANSACTION, not a workflow.** All-or-nothing multi-write units (create order + items + deduct stock + clear cart) belong inside ONE `kysely.transaction(async (trx) => { … })` — a single step or a single plain `pikkuFunc` — **never split across workflow steps.** A step is a unit of RETRY and REPLAY, not a unit of atomicity: pikku opens no transaction around `workflow.do`, so a step that does three writes and throws on the third leaves the first two committed, and the retry runs them again. Spreading one logical transaction over several steps is the same failure one level up. Your writes are atomic only where YOU opened a transaction, so open one inside the step (reach for compensating/saga steps only when you truly need cross-service rollback). So a payment checkout is a workflow whose _atomic DB writes are ONE step that opens ONE transaction_, with the payment charge and email as the other durable steps around it.
-
-**A retried step re-runs its side effects.** Replay caching only covers steps that already
-returned; a step that failed — or that timed out after the provider accepted it — runs again
-from the top, so a charge, an email or a webhook can fire twice. Durability is at-least-once,
-not exactly-once. Pass a stable idempotency key the provider deduplicates on, derived from the
-workflow's own data rather than generated inside the step:
-
-```typescript
-await workflow.do('Charge', 'chargePayment', {
-  orderId: data.orderId,
-  amount: data.amount,
-  idempotencyKey: `order-${data.orderId}-charge`,
-})
-```
-
-`randomUUID()` or `Date.now()` inside the step is a different key on every attempt, which is
-the double-charge. Where the provider has no such header, make the step itself idempotent —
-check for the effect before performing it, or record a unique row that the second attempt
-collides with.
-
-## Choosing the right factory
-
-| Factory                    | When to use                                                                                                                                                                                                | Step-graph view?              |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| `pikkuWorkflowFunc`        | **Default for all new workflows.** Sequential + conditional logic; DSL mode (serialisable, replay-safe). ALL `const`/`let` declarations must be at the top level of the function body (not inside blocks). | ✅ Yes                        |
-| `pikkuWorkflowGraph`       | DAG / fan-out with nodes and typed refs between them.                                                                                                                                                      | ✅ Yes                        |
-| `pikkuWorkflowComplexFunc` | Escape hatch only — arbitrary TypeScript, no top-level restriction (e.g. dynamic inline functions the DSL extractor cannot handle).                                                                        | ❌ No (loses step-graph view) |
-
-**Default to `pikkuWorkflowFunc`.** Use `pikkuWorkflowGraph` ONLY with explicit user approval AND only for a genuine cyclic dependency or Node.js-only import DSL cannot express. Use `pikkuWorkflowComplexFunc` ONLY with explicit user approval — a last-resort escape hatch. Never switch to either just to dodge a PKU641 error; restructure the code instead.
-
-### PKU641 — DSL static analysis error
-
-`pikkuWorkflowFunc` statically analyzes the body: **every `const`/`let` must be top-level, not inside any block (`if`, `for`, `while`, …).** Assignments inside blocks are fine — only declarations trigger it.
-
-```typescript
-// ❌ PKU641 — declaration inside block
-if (priority === 'high') {
-  const bugCard = await workflow.do(...)
-}
-
-// ✅ hoist the declaration, assign inside the block
-let bugCard: Awaited<ReturnType<typeof workflow.do>>
-if (priority === 'high') {
-  bugCard = await workflow.do(...)
-}
-```
-
-## Import path
-
-```typescript
-// CORRECT — workflow factories come from the generated types file
-import {
-  pikkuWorkflowFunc,
-  pikkuWorkflowGraph,
-  pikkuWorkflowComplexFunc,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
-
-// WRONG — the function leaf does not re-export them (TS2305)
-import { pikkuWorkflowFunc } from '#pikku/workflow'
-```
-
-## Defining a workflow
-
-Declare input/output as Zod schemas (like any function) — never TypeScript generic params (no `pikkuWorkflowFunc<In, Out>(...)`; that skips runtime validation). `data` is typed from the input schema.
-
-```typescript
-import { z } from 'zod'
-import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
-
-const ProcessOrderInput = z.object({ orderId: z.string(), amount: z.number() })
-const ProcessOrderOutput = z.object({
-  status: z.string(),
-  discount: z.number().optional(),
-})
-
-export const processOrder = pikkuWorkflowFunc({
-  description: 'Process an order through payment and fulfillment',
-  tags: ['orders'],
-  input: ProcessOrderInput,
-  output: ProcessOrderOutput,
-  func: async (services, data, { workflow }) => {
-    // Declare ALL variables at top level — even those only assigned in branches (PKU641)
-    let discount: number | undefined
-    let status: string
-
-    if (data.amount > 1000) {
-      const d = await workflow.do('Apply bulk discount', 'calcDiscount', {
-        amount: data.amount,
-      })
-      discount = d.discountPercent
-    }
-
-    const payment = await workflow.do('Charge', 'chargePayment', {
-      orderId: data.orderId,
-      amount: discount ? data.amount * (1 - discount / 100) : data.amount,
-    })
-
-    if (payment.success) {
-      await workflow.do('Fulfill', 'fulfillOrder', { orderId: data.orderId })
-      status = 'fulfilled'
-    } else {
-      status = 'payment-failed'
-    }
-
-    return { status, discount }
-  },
-})
-```
-
-### Workflow step types
-
-```typescript
-// RPC step — run a registered Pikku function as a step (opts: retries, retryDelay, description)
-const result = await workflow.do('Step name', 'rpcFunctionName', { ...data }, { retries: 3, retryDelay: '1s' })
-
-// Sub-workflow step — name another workflow instead of an RPC (see "Sub-workflows")
-const onboarded = await workflow.do('Onboard', 'onboardUserWorkflow', { userId })
-
-// Inline closure step — immediate execution, cached for replay
-const msg = await workflow.do('Generate', async () => `Welcome, ${data.email}!`)
-
-// Sleep — durable pause (duration: '30s', '5min', '1h', '1d')
-await workflow.sleep('Wait 5 minutes', '5min')
-
-// Suspend — pause until externally resumed (e.g. awaiting approval), then continue
-await workflow.suspend('Awaiting approval')
-
-// Approval — suspend for a human decision and resume with the answer
-await workflow.approval('Manager sign-off', { ... })
-```
-
-`workflow.name`, `workflow.runId` and `await workflow.getRun()` identify the
-current run if a step needs to reference it.
-
-### Approval gates: who may answer
-
-`workflow.approval(reason, options)` takes a `schema` (a runtime value — the
-payload arrives from an untrusted caller, so a type generic would validate
-nothing), an optional `expiry`, and a required policy for **who** may answer
-(leaving out `approvers` is compile error PKU645):
-
-```typescript
-const signOff = await workflow.approval('Manager sign-off', {
-  schema: SignOffSchema,
-  expiry: '3d',
-  approvers: 'not-initiator',      // four-eyes: anyone but whoever started the run
-  approverScope: 'payments:approve', // and they must hold this scope
-})
-if (signOff.status === 'expired') { ... }
-```
-
-`approvers` is one of:
-
-| value           | who may answer                                                                                                  |
-| --------------- | --------------------------------------------------------------------------------------------------------------- |
-| `any`           | any signed-in user the approve route admits — the gate is a pause for a decision, not an authorization boundary |
-| `owner`         | only the user who started the run                                                                               |
-| `not-initiator` | anyone **except** the user who started the run                                                                  |
-
-Both options are enforced in two phases, because a decision can legitimately
-arrive before the run has reached the gate:
-
-- **At submission**, if the run has already reached the gate. Reaching it
-  publishes the policy into the run state, so the approve entrypoint can judge
-  the caller against it and refuse with a **403**.
-- **On replay**, for a decision that arrived before the gate — there was no
-  policy to judge it against yet, so it is accepted and judged when the workflow
-  reaches the gate. Failing there discards the decision and leaves the gate
-  closed, exactly as a decision that fails the schema does.
-
-So the same rejected decision surfaces as an HTTP error or as a silently
-re-closed gate depending on timing. Both are audited.
-
-The generated approve route requires a session, even on an `auth: false` workflow,
-and only reaches `expose: true` workflows, for that workflow's own runs. A function calling `approveStep` with no
-session is the application answering, and is not judged against the policy.
-
-#### What survives the run
-
-A settled decision carries `decidedBy` and `decidedAt`, so the answer keeps its
-provenance in the step result:
-
-```typescript
-if (signOff.status === 'decided') {
-  logger.info(`signed by ${signOff.decidedBy?.userId} at ${signOff.decidedAt}`)
-}
-```
-
-That record is deleted with the run, though — `deleteRun` cascades to steps and
-history — and an attempt that was _refused_ never reaches a step at all. So
-every answer is also written to the audit sink as `workflow.approval.decided`,
-with `outcome: 'success' | 'denied'`, the decider under `userIdentity`, and the
-run, reason and refusal in `metadata`. Wire an `audit` service to keep it; a
-project without one records nothing and is otherwise unaffected.
-
-### Failure: `compensate`, never try/catch
-
-**Do not wrap steps in try/catch.** The DSL extractor serialises the body into a
-step graph, and a `catch` block is control flow it cannot represent — so the
-graph would no longer describe what actually runs. This is a settled design
-decision, not a temporary limitation.
-
-Declare how a function is undone **on the function itself**. When a later step
-fails (after its retries), the engine runs the `compensate` of every earlier
-step that completed, newest first, then the failed step's own:
-
-```typescript
-export const chargePayment = pikkuFunc({
-  func: async ({ payments }, { orderId }) => payments.charge(orderId),
-  compensate: async ({ payments }, { orderId }, { workflow }) => {
-    const { ok, output } = workflow!.compensatingFor!
-    // ok: false → the charge itself failed; output is null, `error` is set
-    if (ok) await payments.refund(output.chargeId)
-  },
-})
-```
-
-- `compensate` gets the **same input** as the forward call. `wire.workflow.compensatingFor`
-  is `{ ok: true, output, stepName }` or `{ ok: false, output: null, error, stepName }`.
-- It is never callable over HTTP, MCP or RPC — only the engine runs it, as the
-  durable step `<step>:compensate` with the same retry defaults as forward steps.
-- Opt a call site out with `{ compensate: false }` (graph nodes likewise).
-- A run ends `compensated` (everything undone), `compensation_failed` (a
-  compensation ran out of retries; `stuckSteps` names them — steps that ran
-  before a stuck one are not undone, parallel siblings still are) or `failed`
-  (nothing needed undoing).
-- `await workflow.milestone('paid')` bounds the unwind: steps finished before the
-  last milestone are kept, and the run ends `compensated` with `restedAt: 'paid'`.
-- A failing child workflow unwinds itself first; a stuck child makes the parent
-  `compensation_failed`. Cancelling a run (`cancelRun`) unwinds it the same way,
-  children first.
-
-To **recover** instead of undo, use a graph node's `recover`:
-`recover: 'nodeId' | ['a','b'] | 'ignore'`. The failure is routed to those nodes
-(`'ignore'` continues to `next` with a null output) and the failing step is not
-compensated. The error arrives as `wire.graph.recoveringFrom`
-(`{ nodeId, stepName, error }`). The DSL has no recovery — branch on a result
-object (`{ success: false, reason }`) instead.
-
-Full step options: `description`, `retries`, `retryDelay`, `compensate: false`
-(plus `virtualUser`, which is scenario-only — see `pikku-scenario`).
-
-### Parallel fan-out
-
-```typescript
-const users = await Promise.all(
-  data.userIds.map((userId) =>
-    workflow.do(`Fetch user ${userId}`, 'getUser', { userId })
-  )
-)
-```
-
-### Sub-workflows
-
-A step whose second argument names a **workflow** rather than an RPC starts that
-workflow as a child run and resolves to its output. There is no separate API —
-it is the same `workflow.do`, and the generated `TypedWorkflow` has an overload
-keyed on `FlattenedWorkflowMap`, so the child's input and output are type-checked
-exactly like an RPC step's.
-
-```typescript
-export const signupWorkflow = pikkuWorkflowFunc<
-  { email: string },
-  { userId: string }
->({
+# Pikku Workflow
+
+What to reach for and why. For how to call it, run this once: `pikku doc workflow pikkuWorkflowFunc TypedWorkflow wireScheduler`. Depth: `references/workflow-reference.md`.
+
+## Is it a workflow?
+
+- **A trigger starts it → workflow, even with one step.** A schedule, event, webhook or form submit that kicks off background work. Owners see "trigger, then steps", and Studio shows which step failed; a queue job hides that. Do not move a workflow to a queue worker on your own.
+- **It crosses a boundary that can fail and must not be lost or run twice** (payment, third-party call, email, a wait for a person) → workflow.
+- **Someone must approve → `workflow.approval`,** never a status column of your own.
+- **On-screen request/response, or one local algorithm → plain function.** Do not wrap it.
+- **All-or-nothing writes → one `kysely.transaction`,** in one step or a plain function, never split across steps. A step is a unit of retry, not atomicity: nothing opens a transaction around it.
+
+## Rules
+
+- A retried step re-runs its side effects, and a run recovered after a crash re-runs the step caught in flight. Durability is at-least-once, so a charge or email can fire twice. Pass a stable idempotency key built from the workflow's own data (`order-${orderId}-charge`), never `randomUUID()` or `Date.now()`.
+- Every step is a pikku function. Input and output are Zod schemas, not generics.
+- `pikkuWorkflowFunc` is the default. `pikkuWorkflowGraph` and `pikkuWorkflowComplexFunc` only with the owner's approval, never to dodge an error.
+- No try/catch around steps. Declare `compensate` on the function itself; the engine runs it. Use a milestone to bound the unwind. An expected failure (a quote provider with no price) is not that: return a structured outcome from the step and let the workflow branch to a fallback. Compensation is for failures that should unwind the run.
+- A sub-workflow is for a real orchestration you also start on its own. A child that would be one step is a function.
+- A schedule or other trigger has no signed-in user, so the run has no session: its steps are `pikkuSessionlessFunc`. A `pikkuFunc` step fails at run time, and `pikku validate` won't say so.
+- A trigger never calls `rpc.invoke`, and never adds scheduler or workflow services: `pikku dev`, `pikku serve` and stages bring them. A custom host provides `workflowService` in its singleton services before a trigger calls `rpc.startWorkflow`, and a scheduled trigger also needs a scheduler or platform cron.
+- Workflows go in `packages/functions/src/wirings/*.workflow.ts`, exported. Start, run, status and approve routes come from `scaffold.workflow`, and reach only workflows marked `expose: true` (anything else answers 404).
+- On a schedule, the `wireScheduler` func is a `pikkuVoidFunc` that only starts the workflow, in the workflow's file: `func: async (_services, _input, { rpc }) => { await rpc.startWorkflow('weeklyReport', {}) }`, and `rpc.startWorkflow` is called the same way from a function. A cron has no session.
+- An approval takes a real `schema`, and the workflow branches on the result. A no is an answer (`approveStep` with `{ approve: false }`), never `updateRunStatus('cancelled')`, which skips compensation. Waiting approvals come from `WorkflowRunService`, not the `workflowRuns` table.
+- A workflow body is analysed statically: declare every `const`/`let` at the top level, and take the input as a plain `data` and read `data.x` rather than destructuring it. `pikku doc PKU641` lists the rest.
+- `approvers` is required: leaving it out is compile error PKU645. `any` is not an authorization boundary, so choose `owner` or `not-initiator` when it matters who decides. `not-initiator` only excludes the starter: any other signed-in user passes, whatever their role. To limit the decision to a group, add `approverScope` or equivalent route permissions. The approve route needs a session, even on an `auth: false` workflow; a function calling `approveStep` with no session is the application answering and is not judged against the policy.
+
+## A scheduled report, whole
+
+The whole shape, so write it rather than look for one to copy. Steps go in `packages/functions/src/functions/<area>/*.function.ts`, one file each, with the columns from `pikku meta db <table>` and the email from the pikku-emails skill.
+
+```ts
+// packages/functions/src/wirings/weekly-report.workflow.ts
+export const weeklyReport = pikkuWorkflowFunc({
+  input: z.object({ teamId: z.string() }),
+  output: z.object({ sent: z.number() }),
   func: async (_services, data, { workflow }) => {
     const report = await workflow.do('Count the week', 'countWeek', data)
     return await workflow.do('Email the figures', 'sendWeeklyReport', report)
@@ -374,23 +111,4 @@ const waiting = runs.filter((run) => (run.input as { teamId?: string }).teamId =
 await workflowService.approveStep(runId, EXPENSE_APPROVAL, { approve }, session)
 ```
 
-A run survives a crash or deploy. `pikku dev` and `pikku serve` recover it at startup and every 30s: a sleep keeps its deadline, and a step caught in flight runs again as a new attempt. A settled step never reruns. So a step can run more than once: make its side effects idempotent on `workflowStep.invocationId`, which stays the same across attempts. A step with `retries: 0` caught in flight fails instead. Any other host calls `workflowService.startRecovery()` once the queue is consuming. Set `workflow.recovery: false` to turn it off.
-
-## File conventions
-
-- Place workflows in `packages/functions/src/wirings/*.workflow.ts`; export the variable so the inspector discovers it (no manual registration).
-- HTTP start/run/status/approve routes are auto-scaffolded via `scaffold.workflow` in `pikku.config.json`. They reach only workflows marked `expose: true` (anything else answers 404) and apply the workflow's own `auth`, `scopes`, `permissions` and input schema. A refused start leaves no run.
-- A workflow is a function: `auth` unset wants a session, and only `auth: false` is anonymous. A schedule or trigger that starts a workflow with no user needs `auth: false`.
-- A run with an owner is only for that owner. Without a `sessionStore`, a run started through these routes or `checkWorkflowStart` gets `session` as `{ userId }` only.
-- `rpc.startWorkflow` does not check `expose`. Without a `sessionStore`, a workflow it starts needs `auth: false`, or a `checkWorkflowStart` first. Prefer it behind your own wired function when the workflow is not a public surface.
-
-## Step dispatch & HTTP wiring
-
-For per-step inline-vs-queue dispatch (`workflowQueued: true` and the `dispatchStep` rules) and a suspend/resume example, read `references/workflow-reference.md`.
-
-## After writing
-
-1. `pikku all`, then `tsc --noEmit` (codegen + type check).
-2. PKU641 → a `const`/`let` is inside a block; hoist it to the top of the function body.
-3. Import errors → use `#pikku/workflow/pikku-workflow-types.gen.js`, not `#pikku`.
-4. Type errors only in files you did not touch → pre-existing template errors; safe to ignore.
+`workflowRunService` and `workflowService` are optional services: check them and throw `MissingServiceError` when absent. The generated `/workflow/<name>/approve/:runId` route only knows `approvers` and `approverScope`; a rule the project already writes as a permission belongs in the answering function. The scaffolded route does not run that function's permission or ownership check, so any signed-in user can approve through it: protect or disable the scaffolded approve route, and use `approverScope` only when it enforces the same policy, including any run-ownership check.
