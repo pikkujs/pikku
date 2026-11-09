@@ -1,5 +1,11 @@
 # @pikku/react
 
+## 0.12.21
+
+### Patch Changes
+
+- 0e75982: Document how analytics and feature flags are wired, for `pikku doc`, and stop pointing at a `pikku flags prune` command that does not exist.
+
 ## 0.12.20
 
 ### Patch Changes
