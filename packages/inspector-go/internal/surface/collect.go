@@ -363,6 +363,7 @@ func Collect(packageDir string, options Options) ([]Entrypoint, error) {
 		Types:               []string{},
 		AllowJs:             core.TSFalse,
 		CheckJs:             core.TSFalse,
+		Jsx:                 core.JsxEmitPreserve,
 	}
 	if tsOpts != nil {
 		compilerOpts.BaseUrl = tsOpts.BaseUrl
