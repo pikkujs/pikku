@@ -321,6 +321,16 @@ fn collect_fixture() {
 }
 
 #[test]
+fn name_reexported_from_tsx_keeps_its_doc_comment() {
+    let dir = write_fixture("tsx");
+    std::fs::write(dir.join("src/index.ts"), "export { useMark } from './mark.js'\n").unwrap();
+    std::fs::write(dir.join("src/mark.tsx"), "/** Reads the mark. */\nexport const useMark = (): string => 'mark'\n").unwrap();
+    let got = call("collectSurface", json!({"packageDir": dir.to_str().unwrap()}));
+    let symbol = got[0]["symbols"].as_array().unwrap().iter().find(|s| s["name"] == "useMark").expect("useMark collected");
+    assert_eq!(symbol["docs"], "Reads the mark.");
+}
+
+#[test]
 fn unknown_snippet_is_a_named_error() {
     let dir = write_fixture("snippet");
     std::fs::write(dir.join("src/index.ts"), "/** @example snippet: nope */\nexport const x = 1\n").unwrap();

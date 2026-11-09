@@ -15,7 +15,7 @@ use tsrs_checker::{Checker, SignatureKind, Type};
 use tsrs_compiler::{CheckerHandle, CompilerHost, Program, ProgramOptions, new_compiler_host, new_program};
 use tsrs_core::tspath::{self, ComparePathsOptions};
 use tsrs_core::{
-    CompilerOptions, Context, ModuleKind, ModuleResolutionKind, P, ScriptKind, ScriptTarget, Tristate,
+    CompilerOptions, Context, JsxEmit, ModuleKind, ModuleResolutionKind, P, ScriptKind, ScriptTarget, Tristate,
 };
 use tsrs_tsoptions as tsoptions;
 use tsrs_vfs::{FS, bundled, osvfs};
@@ -641,6 +641,7 @@ pub fn collect(package_dir: &str, options: Options) -> Result<Vec<Entrypoint>, C
         types: Some(vec![]),
         allow_js: Tristate::False,
         check_js: Tristate::False,
+        jsx: JsxEmit::PRESERVE,
         ..CompilerOptions::default()
     };
     if let Some(o) = ts_opts {
