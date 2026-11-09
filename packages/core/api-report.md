@@ -555,6 +555,7 @@ export type CorePikkuAuthConfig<
   func: CorePikkuAuth<Services, Session>
   name?: string
   description?: string
+  skipWithoutSession?: boolean
 }
 export type CorePikkuFunction<
   In,
@@ -657,6 +658,7 @@ export type CorePikkuPermissionConfig<
   func: CorePikkuPermission<In, Services, Wire>
   name?: string
   description?: string
+  skipWithoutSession?: boolean
 }
 export type CorePikkuPermissionFactory<
   In = any,
