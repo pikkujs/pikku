@@ -10,11 +10,6 @@
   "schema": {
     "supportsImportAttributes": true
   },
-  "content": {
-    "uploadUrlPrefix": "/upload",
-    "assetUrlPrefix": "/content",
-    "sizeLimit": "10mb"
-  },
   "scaffold": {
     "pikkuDir": "src/scaffold",
     "console": true,
@@ -68,6 +63,11 @@
       "filter": {},
       "dev": {
         "port": 4011
+      },
+      "content": {
+        "uploadUrlPrefix": "/upload",
+        "assetUrlPrefix": "/content",
+        "sizeLimit": "10mb"
       }
     }
   }

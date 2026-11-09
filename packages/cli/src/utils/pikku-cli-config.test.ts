@@ -232,6 +232,19 @@ describe('getPikkuCLIConfig', () => {
       await rejects({ dev: { db: true } }, /dev .* backends\.<name>\.dev/)
     })
 
+    test('content moved to backends.<name>.content', async () => {
+      await rejects(
+        { content: { sizeLimit: '2mb' } },
+        /content .* backends\.<name>\.content/
+      )
+      const config = await load(
+        await writeConfig({
+          backends: { api: { content: { sizeLimit: '2mb' } } },
+        })
+      )
+      assert.equal(config.backends.api?.content?.sizeLimit, '2mb')
+    })
+
     test('a generated path is not configurable', async () => {
       await rejects(
         { scenarioSchemaDirectory: 'x' },

@@ -61,12 +61,6 @@ const SHAPE: Shape = obj({
   $schema: 'any',
   rootDir: 'any',
   runtimeDir: 'any',
-  content: obj({
-    contentPath: 'any',
-    uploadUrlPrefix: 'any',
-    assetUrlPrefix: 'any',
-    sizeLimit: 'any',
-  }),
   srcDirectories: 'any',
   ignoreFiles: 'any',
   packageMappings: 'any',
@@ -185,6 +179,12 @@ const SHAPE: Shape = obj({
       filter: FILTER,
       deploy: 'any',
       dev: obj({ port: 'any' }),
+      content: obj({
+        contentPath: 'any',
+        uploadUrlPrefix: 'any',
+        assetUrlPrefix: 'any',
+        sizeLimit: 'any',
+      }),
       publish: 'any',
     })
   ),
@@ -212,6 +212,8 @@ const MOVED_TOP_LEVEL: Record<
     }
     return 'has moved to backends.<name>.dev, which takes `port` only (`dev.db` and `dev.contributors` are gone). Delete it and set backends.<name>.dev.port'
   },
+  content:
+    'has moved to backends.<name>.content: each backend runs as its own process with its own files, so the content settings are per backend. Move the block there',
   addons:
     'is not a config key yet: wire an addon in code with wireAddon. Delete it',
   supportsImportAttributes: 'is now schema.supportsImportAttributes',

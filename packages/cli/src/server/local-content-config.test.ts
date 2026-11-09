@@ -1,10 +1,13 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveLocalContentConfig } from './local-content-config.js'
+import {
+  backendForContent,
+  resolveLocalContentConfig,
+} from './local-content-config.js'
 
 const base = {
   appContent: undefined,
-  projectContent: undefined,
+  backendContent: undefined,
   rootDir: '/app',
   runtimeDir: undefined,
   server: 'http://localhost:4000',
@@ -24,7 +27,7 @@ describe('resolveLocalContentConfig', () => {
   test('the pikku.config.json block is honoured', () => {
     const resolved = resolveLocalContentConfig({
       ...base,
-      projectContent: {
+      backendContent: {
         contentPath: 'files',
         assetUrlPrefix: '/content',
         sizeLimit: '10mb',
@@ -39,9 +42,40 @@ describe('resolveLocalContentConfig', () => {
     const resolved = resolveLocalContentConfig({
       ...base,
       appContent: { sizeLimit: '50mb' },
-      projectContent: { sizeLimit: '10mb', assetUrlPrefix: '/content' },
+      backendContent: { sizeLimit: '10mb', assetUrlPrefix: '/content' },
     })
     assert.equal(resolved.sizeLimit, '50mb')
     assert.equal(resolved.assetUrlPrefix, '/content')
+  })
+})
+
+describe('backendForContent', () => {
+  const backends = {
+    web: { content: { sizeLimit: '2mb' } },
+    admin: {},
+  }
+  test('takes the named backend', () => {
+    assert.deepEqual(backendForContent(backends, 'web', 'pikku serve'), {
+      name: 'web',
+      content: { sizeLimit: '2mb' },
+    })
+  })
+  test('takes the only backend when none is named', () => {
+    assert.deepEqual(
+      backendForContent({ web: backends.web }, undefined, 'pikku serve'),
+      { name: 'web', content: { sizeLimit: '2mb' } }
+    )
+  })
+  test('refuses to guess between several backends', () => {
+    assert.throws(
+      () => backendForContent(backends, undefined, 'pikku serve'),
+      /name one with --backend/
+    )
+  })
+  test('names the declared backends for an unknown one', () => {
+    assert.throws(
+      () => backendForContent(backends, 'nope', 'pikku serve'),
+      /Declared backends: web, admin/
+    )
   })
 })

@@ -664,6 +664,11 @@ wireCLI({
           default: '3000',
           short: 'p',
         },
+        backend: {
+          description:
+            'Which backend (a key of "backends" in pikku.config.json) this server is. Sets the content settings it uses; optional when one backend is declared',
+          type: 'string',
+        },
         model: {
           description:
             'Repoint model aliases for this run, e.g. \'cheap:openai/gpt-5-nano,tool:anthropic/claude-haiku-4-5\'. Overrides the "models" table in pikku.config.json without editing it',

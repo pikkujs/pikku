@@ -475,17 +475,6 @@ export type PikkuCLIInput = {
   rootDir: string
   /** Runtime artifacts directory (dev.db, content, tmp). Resolved relative to rootDir. Defaults to <rootDir>/.pikku-runtime. */
   runtimeDir?: string
-  /** How `pikku dev` and `pikku serve` store and serve files. */
-  content?: {
-    /** Where files are kept, relative to the project root. */
-    contentPath?: string
-    /** Route uploads arrive on. Defaults to `/upload`. */
-    uploadUrlPrefix?: string
-    /** Route files are read from. Defaults to `/assets`. */
-    assetUrlPrefix?: string
-    /** The most one upload may hold, such as `10mb`. Defaults to `1mb`. */
-    sizeLimit?: string
-  }
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
@@ -1179,6 +1168,21 @@ export type PikkuBackendInput = {
      * running app as `PIKKU_EMBEDDED_<NAME>` (upper-cased, `-` as `_`).
      */
     embed?: Record<string, string>
+  }
+  /**
+   * How `pikku dev` and `pikku serve` store and serve this backend's files.
+   * Per backend because each runs as its own process on its own port, and two
+   * backends must not share one upload directory or url prefix.
+   */
+  content?: {
+    /** Where files are kept, relative to the project root. */
+    contentPath?: string
+    /** Route uploads arrive on. Defaults to `/upload`. */
+    uploadUrlPrefix?: string
+    /** Route files are read from. Defaults to `/assets`. */
+    assetUrlPrefix?: string
+    /** The most one upload may hold, such as `10mb`. Defaults to `1mb`. */
+    sizeLimit?: string
   }
   dev?: {
     /** Required when the project declares two or more backends. */

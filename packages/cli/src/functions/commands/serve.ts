@@ -37,14 +37,17 @@ import { resolveFrontendMount } from './serve-frontend.js'
 import { servedFrontend } from '../../utils/frontend.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
-import { resolveLocalContentConfig } from '../../server/local-content-config.js'
+import {
+  backendForContent,
+  resolveLocalContentConfig,
+} from '../../server/local-content-config.js'
 import { disableDevVirtualUserSignIn } from '../../server/virtual-user-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 import { addGlobalMiddleware } from '@pikku/core/middleware'
 import { startRunTelemetry } from '../../utils/run-telemetry.js'
 
 export const serve = pikkuSessionlessFunc<
-  { port?: string; model?: string },
+  { port?: string; model?: string; backend?: string },
   void
 >({
   remote: true,
@@ -57,7 +60,7 @@ export const serve = pikkuSessionlessFunc<
       variables,
       devServerRunner,
     },
-    { port, model }
+    { port, model, backend }
   ) => {
     disableDevVirtualUserSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
@@ -113,10 +116,7 @@ export const serve = pikkuSessionlessFunc<
     const userCreateSingletonServices =
       servicesModule[singletonServicesFactory.variable]
 
-    const userConfig = await callUserCreateConfig(
-      userCreateConfig,
-      variables
-    )
+    const userConfig = await callUserCreateConfig(userCreateConfig, variables)
 
     const envDatabaseUrl = await variables.get('DATABASE_URL')
     const effectiveDbConfig = envDatabaseUrl
@@ -136,7 +136,8 @@ export const serve = pikkuSessionlessFunc<
 
     const localContentConfig = resolveLocalContentConfig({
       appContent: userConfig.content,
-      projectContent: config.content,
+      backendContent: backendForContent(config.backends, backend, 'pikku serve')
+        .content,
       rootDir: config.rootDir,
       runtimeDir: config.runtimeDir,
       server: `http://${hostname}:${resolvedPort}`,

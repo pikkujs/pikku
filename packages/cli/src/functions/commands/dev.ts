@@ -76,7 +76,10 @@ import {
   writeDevAddress,
 } from './dev-address.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
-import { resolveLocalContentConfig } from '../../server/local-content-config.js'
+import {
+  backendForContent,
+  resolveLocalContentConfig,
+} from '../../server/local-content-config.js'
 import {
   enableDevVirtualUserSignIn,
   setDevVirtualUserApiUrl,
@@ -287,7 +290,11 @@ export const dev = pikkuSessionlessFunc<
       config.runtimeDir ?? join(config.rootDir, '.pikku-runtime')
     const localContentConfig = resolveLocalContentConfig({
       appContent: userConfig.content,
-      projectContent: config.content,
+      backendContent: backendForContent(
+        config.backends,
+        config.backend,
+        'pikku dev'
+      ).content,
       rootDir: config.rootDir,
       runtimeDir: config.runtimeDir,
       server: `http://${hostname}:${resolvedPort}`,

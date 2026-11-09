@@ -18,8 +18,10 @@ type and to that shape together.
 - `outDir` is not a config key. The loader fixes it at `.pikku/` beside the
   config; `--outDir` stays an internal flag for per-unit codegen.
 - `entrypoint`, `showcase`, `fabric` and `node` were read by nothing and are
-  refused. `content` is kept: `pikku dev` and `pikku serve` read it for the local
-  content service (`resolveLocalContentConfig`).
+  refused. `content` is per backend (`backends.<name>.content`): `pikku dev` and
+  `pikku serve` read the served backend's block for the local content service
+  (`resolveLocalContentConfig`, `backendForContent`). The top-level key is refused
+  naming the new place.
 - `addons` is not a top-level collection yet; `addon` and `registry` stay.
 
 ## environments
