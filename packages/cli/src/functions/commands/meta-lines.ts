@@ -325,10 +325,33 @@ const pageOfRoute = (
   )
 }
 
+/**
+ * Where a frontend's file routes live: the `routesDirectory` its vite config
+ * names, else `src/routes`, else `src/pages`.
+ */
+export const routesDirOf = (appDir: string): string | null => {
+  const viteConfig = readdirSync(appDir).find((file) =>
+    /^vite\.config\.[cm]?[jt]s$/.test(file)
+  )
+  const configured = viteConfig
+    ? /routesDirectory:\s*['"`]([^'"`]+)['"`]/.exec(
+        readFileSync(join(appDir, viteConfig), 'utf8')
+      )?.[1]
+    : undefined
+  return (
+    [
+      ...(configured ? [resolve(appDir, configured)] : []),
+      join(appDir, 'src', 'routes'),
+      join(appDir, 'src', 'pages'),
+    ].find((dir) => existsSync(dir)) ?? null
+  )
+}
+
 /** Screens of one frontend, from the routes its router declares. */
 export const screenRows = (appDir: string, rootDir: string): MetaRow[] => {
-  const routesDir = join(appDir, 'src', 'routes')
-  if (!existsSync(routesDir)) return []
+  if (!existsSync(appDir)) return []
+  const routesDir = routesDirOf(appDir)
+  if (!routesDir) return []
   const rows: MetaRow[] = []
   for (const entry of readdirSync(routesDir, { recursive: true })) {
     const file = join(routesDir, String(entry))

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { messageTexts, type I18nApp } from '@pikku/code-edit/i18n'
-import { type MetaRow, sourcesReachedFrom } from './meta-lines.js'
+import { type MetaRow, routesDirOf, sourcesReachedFrom } from './meta-lines.js'
 
 /**
  * Project facts for the compact map: what an agent otherwise reads files to
@@ -276,14 +276,14 @@ export const frontendFacts = (
 ): FrontendFacts | null => {
   if (sources.length === 0) return null
   const imports = importsOf(sources)
-  const routesDir = join(appDir, 'src', 'routes')
+  const routesDir = routesDirOf(appDir)
   const pageFiles = screens.flatMap((row) => {
     const file = row.source ? resolve(rootDir, row.source) : null
     return file?.startsWith(`${appDir}${sep}`) ? [file] : []
   })
   const pages = mostCommon(
     pageFiles
-      .filter((file) => !file.startsWith(`${routesDir}${sep}`))
+      .filter((file) => !routesDir || !file.startsWith(`${routesDir}${sep}`))
       .map(dirname)
   )
   const shells = [...new Set(pageFiles)]
@@ -313,7 +313,7 @@ export const frontendFacts = (
   const relativeTo = (file: string) => relative(rootDir, file)
   return {
     app: relativeTo(appDir),
-    routes: existsSync(routesDir) ? relativeTo(routesDir) : undefined,
+    routes: routesDir ? relativeTo(routesDir) : undefined,
     pages: pages ? relativeTo(pages) : undefined,
     shells: shells.map(relativeTo),
     nav: nav ? relativeTo(nav) : undefined,

@@ -16,6 +16,7 @@ import {
   metaWords,
   parseDbSchema,
   parseMetaTerms,
+  routesDirOf,
   rpcsReachedFrom,
   screenRows,
   translationRows,
@@ -75,6 +76,30 @@ describe('parseDbSchema', () => {
     assert.equal(dbTableRows([table!])[0]!.detail, 'id, email, role, meta')
     assert.equal(dbColumnRows(table!)[1]!.detail, 'string pii')
     assert.equal(dbColumnRows(table!)[0]!.detail, 'string generated')
+  })
+})
+
+describe('routesDirOf', () => {
+  const route = `export const Route = createFileRoute('/admin')({ component: () => usePikkuQuery('listAdmin', {}) })`
+
+  test('follows the routesDirectory the vite config names', () => {
+    const root = project({
+      'vite.config.ts': `tanstackStart({ router: { routesDirectory: 'src/views' } })`,
+      'src/views/admin.tsx': route,
+      'src/routes/ignored.tsx': route,
+    })
+    assert.equal(routesDirOf(root), join(root, 'src/views'))
+    assert.equal(screenRows(root, root)[0]?.name, '/admin')
+  })
+
+  test('falls back to src/pages when src/routes is absent', () => {
+    const root = project({ 'src/pages/admin.tsx': route })
+    assert.equal(routesDirOf(root), join(root, 'src/pages'))
+    assert.equal(screenRows(root, root)[0]?.detail, 'listAdmin')
+  })
+
+  test('is null for a frontend with no routes', () => {
+    assert.equal(routesDirOf(project({ 'src/main.tsx': '' })), null)
   })
 })
 
