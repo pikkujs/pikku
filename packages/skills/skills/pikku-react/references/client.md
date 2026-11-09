@@ -64,8 +64,8 @@ For local dev, set `VITE_API_URL`, or proxy `/api` → your backend in
 
 ```tsx
 import { createPikku, PikkuProvider } from '@pikku/react'
-import { PikkuFetch } from './pikku/pikku-fetch.gen'
-import { PikkuRPC } from './pikku/pikku-rpc.gen'
+import { PikkuFetch } from '@sdk/api/pikku-fetch.gen'
+import { PikkuRPC } from '@sdk/api/pikku-rpc.gen'
 import { apiUrl } from './lib/env'
 
 const pikku = createPikku(PikkuFetch, PikkuRPC, {
@@ -93,16 +93,17 @@ const pikku = createPikku(PikkuFetch, PikkuRPC, PikkuRealtime, {
 // (server URL + auth configured once).
 ```
 
-The generated classes come from your `pikku.config.json`:
+The generated classes are written per backend to `.pikku/sdk/<backend>/exposed/`;
+their paths are not configurable. Import them through the `@sdk/<backend>` alias
+(tsconfig `paths`: `"@sdk/api/*": [".pikku/sdk/api/exposed/*"]`):
 
-| config field                 | generated file                                        |
-| ---------------------------- | ----------------------------------------------------- |
-| `clientFiles.fetchFile`      | typed HTTP client (`PikkuFetch` class)                |
-| `clientFiles.rpcWiringsFile` | RPC client (`PikkuRPC` class) calling all exposed fns |
-| `clientFiles.realtimeFile`   | `PikkuRealtime` (websocket events + SSE + channels)   |
+| generated file          | class                                                 |
+| ----------------------- | ----------------------------------------------------- |
+| `pikku-fetch.gen.ts`    | typed HTTP client (`PikkuFetch` class)                |
+| `pikku-rpc.gen.ts`      | RPC client (`PikkuRPC` class) calling all exposed fns |
+| `pikku-realtime.gen.ts` | `PikkuRealtime` (websocket events + SSE + channels)   |
 
-If a file isn't being generated, that field is missing from the config —
-add it and re-run `pikku all`.
+If a file is missing, the backend has no function of that kind exposed; re-run `pikku all`.
 
 `createPikku(...)` accepts the same `CorePikkuFetchOptions` as `PikkuFetch`
 plus `serverUrl`. Auth headers, request interceptors, etc. are configured

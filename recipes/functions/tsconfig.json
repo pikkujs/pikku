@@ -8,6 +8,7 @@
     "skipLibCheck": true,
     "types": ["node"],
     "paths": {
+      "@sdk/app/*": ["./.pikku/sdk/app/exposed/*"],
       "#pikku/*.js": ["./.pikku/*.ts"],
       "#pikku/*": ["./.pikku/*"]
     }

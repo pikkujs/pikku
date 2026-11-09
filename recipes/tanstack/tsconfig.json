@@ -17,6 +17,7 @@
     "verbatimModuleSyntax": false,
     "forceConsistentCasingInFileNames": true,
     "paths": {
+      "@sdk/app/*": ["./.pikku/sdk/app/exposed/*"],
       "#pikku/*.js": ["../functions/.pikku/*.ts"],
       "#pikku/*": ["../functions/.pikku/*/index.ts", "../functions/.pikku/*"]
     }

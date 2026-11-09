@@ -8,8 +8,8 @@ import {
   useFeatureFlag,
   usePikkuAnalytics,
 } from '@pikku/react'
-import { PikkuFetch } from '#pikku/pikku-fetch.gen.js'
-import { PikkuRPC } from '#pikku/pikku-rpc.gen.js'
+import { PikkuFetch } from '@sdk/api/pikku-fetch.gen'
+import { PikkuRPC } from '@sdk/api/pikku-rpc.gen'
 import type { FeatureFlagName } from '#pikku/scopes/pikku-flags.gen.js'
 
 /**

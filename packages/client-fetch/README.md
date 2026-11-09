@@ -12,7 +12,7 @@ npm install @pikku/fetch
 ## Usage
 
 ```typescript
-import { pikkuFetch } from './.pikku/pikku-fetch.gen.js'
+import { pikkuFetch } from '@sdk/api/pikku-fetch.gen.js'
 
 pikkuFetch.setServerUrl('https://api.example.com')
 

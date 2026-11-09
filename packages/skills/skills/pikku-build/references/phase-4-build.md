@@ -140,14 +140,14 @@ bun run prebuild && bun run dev
 ```
 
 `bun run dev` is `pikku dev`: it starts the API on the port in
-`environments.local.apiUrl` (3000 in the starter) and every frontend in
+`backends.api.dev.port` (3000 in the starter) and every frontend in
 `frontends`, each with `VITE_API_PROXY` pointed at that API. A frontend running
 against a dead API looks exactly like an app bug, so if every request fails,
 check that both halves came up.
 
 **Start the stack through `bun run dev`, not by launching `vite` yourself.**
-To move the API off a port another project holds, change the port in
-`environments.local.apiUrl` rather than passing `--port`: scenarios and virtual
+To move the API off a port another project holds, change
+`backends.api.dev.port` rather than passing `--port`: scenarios and virtual
 users call that URL, so a server anywhere else is one they cannot reach. Never
 add a `scripts/dev.mjs` around it — `pikku dev` already loads `.env`,
 generates the local secrets and supervises the frontends.

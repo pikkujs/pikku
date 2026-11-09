@@ -10,6 +10,7 @@
     "resolveJsonModule": true,
     "strict": true,
     "paths": {
+      "@sdk/api/*": ["./.pikku/sdk/api/exposed/*"],
       "@pikku/e2e-functions": ["./packages/functions"]
     }
   },

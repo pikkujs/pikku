@@ -15,7 +15,7 @@
 // ===== FILE: src/components/quote-form.tsx =====
 import { useState } from 'react'
 import type { DraftQuoteInput } from '#pikku/rpc/pikku-rpc-wirings-map.gen.d.js'
-import { usePikkuMutation } from '../pikku/api.gen'
+import { usePikkuMutation } from '@sdk/api/pikku-react-query.gen'
 
 export const QuoteForm = ({ jobId }: { jobId: string }) => {
   //~ One piece of state for the whole payload, typed by the wire contract. A

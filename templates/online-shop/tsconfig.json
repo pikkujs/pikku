@@ -9,6 +9,7 @@
     "allowImportingTsExtensions": true,
     "types": ["node", "@pikku/playwright"],
     "paths": {
+      "@sdk/api/*": ["./.pikku/sdk/api/exposed/*"],
       "#pikku/*.js": ["./.pikku/*.ts"],
       "#pikku/*": ["./.pikku/*"]
     }

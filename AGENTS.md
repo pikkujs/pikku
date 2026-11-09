@@ -179,7 +179,7 @@ type check stay on 7.
 `pikku.config.json` is the main configuration file:
 
 - `srcDirectories` — where your function definitions live
-- `outDir` — where generated output goes
+- `backends` — each deployable server, with a `filter` and `dev.port`; clients are generated per backend at `.pikku/sdk/<backend>/exposed/`
 - `packageMappings` — map local packages to published names
 - `openAPI` — OpenAPI generation settings
 
@@ -187,11 +187,7 @@ type check stay on 7.
 {
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src"],
-  "outDir": ".pikku",
-  "clientFiles": {
-    "fetchFile": ".pikku/pikku-fetch.gen.ts",
-    "websocketFile": ".pikku/pikku-websocket.gen.ts"
-  }
+  "backends": { "api": { "filter": {}, "dev": { "port": 4000 } } }
 }
 ```
 

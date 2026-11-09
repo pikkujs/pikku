@@ -18,6 +18,9 @@ const generated = fileURLToPath(
   new URL('../functions/.pikku/', import.meta.url)
 )
 
+/** The exposed SDK of the `app` backend, imported as `@sdk/app/<file>`. */
+const sdk = fileURLToPath(new URL('.pikku/sdk/app/exposed/', import.meta.url))
+
 export default defineConfig({
   /**
    * `#pikku/*` is the specifier every scaffolded app inherits, and it is the
@@ -27,7 +30,10 @@ export default defineConfig({
    * subpath-imports target outside its own package.
    */
   resolve: {
-    alias: [{ find: /^#pikku\/(.*)\.js$/, replacement: `${generated}$1.ts` }],
+    alias: [
+      { find: /^#pikku\/(.*)\.js$/, replacement: `${generated}$1.ts` },
+      { find: /^@sdk\/app\/(.*)$/, replacement: `${sdk}$1.ts` },
+    ],
   },
   server: {
     port: 4003,

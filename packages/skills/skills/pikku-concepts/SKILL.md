@@ -104,8 +104,9 @@ Run `npx pikku all` to generate:
 - one directory per wiring (`function/`, `http/`, `workflow/`, …), each with an
   `index.ts` reached as `#pikku/<name>` — typed function factories and wiring
   functions, split so an app pulls in only the wirings it uses
-- `pikku-fetch.gen.ts` — Type-safe HTTP client
-- `pikku-websocket.gen.ts` — Type-safe WebSocket client
+- `sdk/<backend>/exposed/` — one directory of typed clients per backend
+  (`pikku-fetch.gen.ts`, `pikku-rpc.gen.ts`, `pikku-websocket.gen.ts`, …), and
+  `sdk/<backend>/remote/` when the backend has remote functions
 - `pikku-bootstrap.gen.ts` — Runtime initialization (auto-imports all wirings)
 - `pikku-services.gen.ts` — Service factory types
 
@@ -115,16 +116,18 @@ Config lives in `pikku.config.json`:
 {
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src"],
-  "outDir": ".pikku"
+  "backends": { "api": { "filter": {}, "dev": { "port": 4000 } } }
 }
 ```
 
-A config can `extends` another (`"extends": "./pikku.config.json"`) and state only
-what differs. The child merges into the parent: objects merge key by key,
-`srcDirectories` is the parent's list plus the child's new entries, every other
-array and value the child sets replaces the parent's, and `null` removes a
-parent value. Each file's paths are relative to that file, and `rootDir` is
-inherited unless the child sets its own.
+Generated files always land in `.pikku/` beside the config. `backends` names each
+deployable server; `filter` selects which functions it carries (`names`, `tags`,
+`wires`, `directories`, `httpRoutes`, `excludeTags`, …). The loader accepts only
+the documented keys and refuses the rest, naming where a moved key now lives.
+
+There is no `extends`: a config states everything it needs. `outDir`, the
+`clientFiles` paths of the HTTP and WebSocket clients, and top-level `dev` are
+gone; see `docs/MIGRATION.md`.
 
 ## Project Structure Convention
 
@@ -147,7 +150,7 @@ src/
 └── .pikku/              # Generated (gitignored)
     ├── function/        # #pikku/function
     ├── http/            # #pikku/http
-    ├── pikku-fetch.gen.ts
+    ├── sdk/api/exposed/ # @sdk/api/pikku-fetch.gen, pikku-rpc.gen, …
     └── pikku-bootstrap.gen.ts
 ```
 

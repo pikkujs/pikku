@@ -33,7 +33,7 @@ A cursor can be any opaque string (a keyset value, an encoded timestamp) you can
 
 ## Frontend: `usePikkuInfiniteQuery`
 
-Generated alongside `usePikkuQuery`/`usePikkuMutation` once `reactQueryFile` is configured (see the react-query wiring docs); no separate setup.
+Generated alongside `usePikkuQuery`/`usePikkuMutation` in `pikku-react-query.gen.ts` of the backend's SDK (see the react-query wiring docs); no separate setup.
 
 ```tsx
 import { usePikkuInfiniteQuery } from '.pikku/pikku-react-query.gen'
@@ -89,7 +89,9 @@ function leafEquals<
   if (!filter) return undefined
   const keys = Object.keys(filter)
   if (Array.isArray(filter) || keys.length !== 1) {
-    throw new Error('filter takes one single-key leaf, not an array or a multi-key object')
+    throw new Error(
+      'filter takes one single-key leaf, not an array or a multi-key object'
+    )
   }
   if (keys[0] !== field) return undefined
   const value = (filter as Record<string, unknown>)[field]

@@ -46,8 +46,9 @@ describe('an addon authors against a tree an application cannot shadow', () => {
       JSON.stringify({
         tsconfig: './tsconfig.json',
         srcDirectories: ['src'],
-        outDir: '.pikku',
-        ...(addon ? { addon: { displayName: 'X' } } : {}),
+        ...(addon
+          ? { addon: { displayName: 'X' } }
+          : { backends: { api: { filter: {} } } }),
       })
     )
     try {

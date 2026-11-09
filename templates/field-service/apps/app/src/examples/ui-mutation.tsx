@@ -14,7 +14,7 @@
 // ===== FILE: src/components/raise-job-form.tsx =====
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { usePikkuMutation, usePikkuQuery } from '../pikku/api.gen'
+import { usePikkuMutation, usePikkuQuery } from '@sdk/api/pikku-react-query.gen'
 
 export const RaiseJobForm = () => {
   const queryClient = useQueryClient()

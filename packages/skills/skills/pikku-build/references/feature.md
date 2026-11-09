@@ -114,8 +114,8 @@ and `.../wirings/` for style).
 ### RPC is the default transport
 
 **Just write the function with `expose: true`** — that's enough to make it
-callable. Pikku auto-generates an RPC client (and React Query hooks if the
-project's `clientFiles.reactQueryFile` is set) from every exposed function.
+callable. Pikku auto-generates an RPC client (and React Query hooks in
+`.pikku/sdk/<backend>/exposed/pikku-react-query.gen.ts`) from every exposed function.
 You do **not** need an HTTP wiring for callers to reach the function.
 
 Default flow for a feature:

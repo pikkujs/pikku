@@ -14,6 +14,7 @@
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
+      "@sdk/api/*": ["../../.pikku/sdk/api/exposed/*"],
       "#pikku/*.js": ["../../.pikku/*.ts"],
       "#pikku/*": ["../../.pikku/*/index.ts", "../../.pikku/*"]
     }

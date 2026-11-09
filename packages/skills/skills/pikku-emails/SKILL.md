@@ -22,7 +22,7 @@ installGroups: [core]
 // pikku.config.json
 {
   "emailTemplatesDir": "emails", // relative to rootDir; omit to disable emails
-  "outDir": ".pikku", // gen lands in <outDir>/email/
+  // gen lands in .pikku/email/
 }
 ```
 

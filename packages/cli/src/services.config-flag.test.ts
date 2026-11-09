@@ -27,7 +27,6 @@ describe('createConfig --config', () => {
         rootDir: '.',
         srcDirectories: ['src'],
         packageMappings: {},
-        outDir: '.pikku',
         tsconfig: 'tsconfig.json',
         backends: { api: { filter: {} } },
         ...extra,

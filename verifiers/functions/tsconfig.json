@@ -5,6 +5,23 @@
     "resolveJsonModule": true,
     "module": "node18",
     "jsx": "react-jsx",
+    "paths": {
+      "@sdk/api/*": ["./.pikku/sdk/api/exposed/*"],
+      "@pikku/cli": ["../../packages/cli"],
+      "@pikku/cli/*": ["../../packages/cli/*"],
+      "@pikku/core": ["../../packages/core"],
+      "@pikku/core/*": ["../../packages/core/*"],
+      "@pikku/inspector": ["../../packages/inspector"],
+      "@pikku/inspector/*": ["../../packages/inspector/*"],
+      "@pikku/queue-bullmq": ["../../packages/services/queue-bullmq"],
+      "@pikku/queue-bullmq/*": ["../../packages/services/queue-bullmq/*"],
+      "@pikku/queue-nats": ["../../packages/services/queue-nats"],
+      "@pikku/queue-nats/*": ["../../packages/services/queue-nats/*"],
+      "@pikku/queue-pg-boss": ["../../packages/services/queue-pg-boss"],
+      "@pikku/queue-pg-boss/*": ["../../packages/services/queue-pg-boss/*"],
+      "@pikku/skills": ["../../packages/skills"],
+      "@pikku/skills/*": ["../../packages/skills/*"]
+    },
     "types": ["node"]
   },
   "include": ["src/", ".pikku/*", "types/eventhub-topics.d.ts"],

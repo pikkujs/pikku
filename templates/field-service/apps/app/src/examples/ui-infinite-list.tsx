@@ -11,7 +11,7 @@
 //~ cursor of the last row, and accept a `cursor` input. Nothing on the frontend can
 //~ conjure the hook into existence.
 // ===== FILE: src/components/job-history.tsx =====
-import { usePikkuInfiniteQuery } from '../pikku/api.gen'
+import { usePikkuInfiniteQuery } from '@sdk/api/pikku-react-query.gen'
 
 export const JobHistory = () => {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } =
