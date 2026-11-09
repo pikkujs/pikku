@@ -13,6 +13,7 @@
       "#pikku/*": ["./.pikku/*"]
     }
   },
-  "include": ["src/", "test/", ".pikku/*"],
+  "include": ["src/", "test/", "snippets/", ".pikku/*"],
+  "exclude": ["snippets/addon"],
   "files": []
 }

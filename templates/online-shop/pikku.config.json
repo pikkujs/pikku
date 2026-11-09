@@ -11,7 +11,8 @@
     "fetchFile": ".pikku/pikku-fetch.gen.ts",
     "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts",
     "websocketFile": ".pikku/pikku-websocket.gen.ts",
-    "realtimeFile": ".pikku/realtime.gen.ts"
+    "realtimeFile": ".pikku/realtime.gen.ts",
+    "scopesFile": ".pikku/scopes/pikku-scope-client.gen.ts"
   },
   "packageMappings": {
     ".": "@pikku/example-online-shop"

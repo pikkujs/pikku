@@ -78,6 +78,8 @@ export type WireRemoteAddonConfig = {
 /**
  * Installs an addon that runs as its own deployed service: the contract is
  * local, the calls go over the wire to the addon's own host.
+ *
+ * @example snippet: wireRemoteAddon
  */
 export const wireRemoteAddon = (config: WireRemoteAddonConfig): void => {
   pikkuState(null, 'addons', 'packages').set(config.name, {
