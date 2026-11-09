@@ -165,3 +165,31 @@ func TestKeepsDocumentedKeysOfGeneratedFile(t *testing.T) {
 	}
 	t.Fatal("Generated not collected")
 }
+
+// A name re-exported from a .tsx file keeps its doc comment, which is how every
+// @pikku/react hook reaches `pikku doc`.
+func TestKeepsDocOfNameReexportedFromTsx(t *testing.T) {
+	dir := writeFixture(t)
+	files := map[string]string{
+		"src/index.ts": "export { useMark } from './mark.js'\n",
+		"src/mark.tsx": "/** Reads the mark. */\nexport const useMark = (): string => 'mark'\n",
+	}
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := Collect(dir, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, symbol := range entries[0].Symbols {
+		if symbol.Name == "useMark" {
+			if symbol.Docs != "Reads the mark." {
+				t.Fatalf("useMark docs = %q", symbol.Docs)
+			}
+			return
+		}
+	}
+	t.Fatal("useMark not collected")
+}
