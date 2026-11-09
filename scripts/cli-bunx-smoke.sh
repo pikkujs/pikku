@@ -30,6 +30,12 @@ echo "Clean bunx cache"
 mkdir "$work/tmp-clean"
 (cd "$app" && TMPDIR="$work/tmp-clean/" bunx --bun -p "@pikku/cli@file:$cli_tgz" pikku update)
 
+floor=${core_range##[\^~>=]}
+if [ -z "$(npm view "@pikku/core@$floor" version 2>/dev/null)" ]; then
+  echo "Skipping the stale-cache check: @pikku/core@$floor is not on npm yet, so there is nothing for the cache to move to"
+  exit 0
+fi
+
 echo "Stale bunx cache holding @pikku/core@$stale_core (CLI wants $core_range)"
 cache="$work/cache"
 mkdir "$cache"
