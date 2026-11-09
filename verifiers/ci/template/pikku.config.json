@@ -1,8 +1,9 @@
 {
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["packages/functions/src"],
-  "outDir": "packages/functions/.pikku",
-  "db": { "engine": "sqlite" },
+  "db": {
+    "engine": "sqlite"
+  },
   "scaffold": {
     "pikkuDir": "packages/functions/src/scaffold",
     "rpc": true,
@@ -12,7 +13,17 @@
     "console": true
   },
   "frontends": {
-    "web": { "cwd": "apps/web" },
-    "off": { "cwd": "apps/off", "deploy": false }
+    "web": {
+      "cwd": "apps/web"
+    },
+    "off": {
+      "cwd": "apps/off",
+      "deploy": false
+    }
+  },
+  "backends": {
+    "api": {
+      "filter": {}
+    }
   }
 }

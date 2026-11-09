@@ -7,7 +7,6 @@
     "packages/functions/src",
     "packages/functions/tests"
   ],
-  "outDir": ".pikku",
   "packageMappings": {
     ".": "@pikku/e2e",
     "packages/functions": "@pikku/e2e-functions"
@@ -45,9 +44,14 @@
   "emailTemplatesDir": "emails",
   "environments": {
     "local": {
-      "apiUrl": "http://localhost:4077",
-      "appUrl": "http://localhost:4077",
-      "signInPath": "/api/auth/sign-in/virtual-user"
+      "backends": {
+        "api": {
+          "signInPath": "/api/auth/sign-in/virtual-user"
+        }
+      },
+      "frontends": {
+        "web": "http://localhost:4077"
+      }
     }
   },
   "models": {
@@ -72,6 +76,14 @@
         "productName": "Pikku E2E",
         "platforms": ["desktop", "android", "ios"],
         "plugins": []
+      }
+    }
+  },
+  "backends": {
+    "api": {
+      "filter": {},
+      "dev": {
+        "port": 4077
       }
     }
   }

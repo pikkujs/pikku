@@ -3,20 +3,12 @@
   "rootDir": ".",
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["./src", "./test"],
-  "outDir": "./.pikku",
   "emailTemplatesDir": "./emails",
-  "clientFiles": {
-    "rpcMapDeclarationFile": ".pikku/rpc-map.gen.d.ts",
-    "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts"
-  },
   "packageMappings": {
     ".": "@pikku/example-online-shop"
   },
   "schema": {
     "supportsImportAttributes": true
-  },
-  "dev": {
-    "db": true
   },
   "content": {
     "uploadUrlPrefix": "/upload",
@@ -38,39 +30,45 @@
     }
   },
   "scenarios": {
-    "emailDomain": "virtualuser.local",
-    "environments": {
-      "local": {
-        "apiUrl": "http://localhost:4011",
-        "appUrl": "http://localhost:7211",
-        "signInPath": "/api/auth/sign-in/virtual-user"
-      },
-      "sandbox": {
-        "apiUrl": "http://localhost:4000",
-        "signInPath": "/api/auth/sign-in/virtual-user"
-      },
-      "coverage": {
-        "apiUrl": "http://localhost:4010",
-        "signInPath": "/api/auth/sign-in/virtual-user"
-      }
-    }
+    "emailDomain": "virtualuser.local"
   },
   "environments": {
     "local": {
-      "apiUrl": "http://localhost:4011",
-      "appUrl": "http://localhost:7211",
-      "signInPath": "/api/auth/sign-in/virtual-user"
+      "backends": {
+        "api": {
+          "signInPath": "/api/auth/sign-in/virtual-user"
+        }
+      },
+      "frontends": {
+        "web": "http://localhost:7211"
+      }
     },
     "sandbox": {
-      "apiUrl": "http://localhost:4000",
-      "signInPath": "/api/auth/sign-in/virtual-user"
+      "backends": {
+        "api": {
+          "url": "http://localhost:4000",
+          "signInPath": "/api/auth/sign-in/virtual-user"
+        }
+      }
     },
     "coverage": {
-      "apiUrl": "http://localhost:4010",
-      "signInPath": "/api/auth/sign-in/virtual-user"
+      "backends": {
+        "api": {
+          "url": "http://localhost:4010",
+          "signInPath": "/api/auth/sign-in/virtual-user"
+        }
+      }
     }
   },
   "allow": {
     "complexWorkflows": true
+  },
+  "backends": {
+    "api": {
+      "filter": {},
+      "dev": {
+        "port": 4011
+      }
+    }
   }
 }

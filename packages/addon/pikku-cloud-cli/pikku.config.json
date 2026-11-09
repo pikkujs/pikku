@@ -8,7 +8,6 @@
     "**/node_modules/**",
     "**/dist/**"
   ],
-  "outDir": "./.pikku",
   "addon": {
     "displayName": "Pikku Studio Cloud CLI",
     "description": "The pikku cloud command group",

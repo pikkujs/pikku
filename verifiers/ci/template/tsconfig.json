@@ -9,5 +9,5 @@
     "esModuleInterop": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["packages/functions/src/", "packages/functions/.pikku/*"]
+  "include": ["packages/functions/src/", ".pikku/*"]
 }

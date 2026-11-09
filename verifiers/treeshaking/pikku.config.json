@@ -1,17 +1,30 @@
 {
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src"],
-  "outDir": ".pikku",
-  "entrypoint": "src/index.ts",
   "backends": {
-    "all": { "filter": {}, "dev": { "port": 4000 } },
+    "all": {
+      "filter": {},
+      "dev": {
+        "port": 4000
+      }
+    },
     "notifications_no_sms": {
-      "filter": { "tags": ["notifications"], "excludeTags": ["sms"] },
-      "dev": { "port": 4001 }
+      "filter": {
+        "tags": ["notifications"],
+        "excludeTags": ["sms"]
+      },
+      "dev": {
+        "port": 4001
+      }
     },
     "payments_only": {
-      "filter": { "tags": ["payments"], "excludeNames": ["*Email*"] },
-      "dev": { "port": 4002 }
+      "filter": {
+        "tags": ["payments"],
+        "excludeNames": ["*Email*"]
+      },
+      "dev": {
+        "port": 4002
+      }
     }
   }
 }

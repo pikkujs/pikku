@@ -3,20 +3,12 @@
   "rootDir": ".",
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["./src", "./test"],
-  "outDir": "./.pikku",
   "emailTemplatesDir": "./emails",
-  "clientFiles": {
-    "rpcMapDeclarationFile": ".pikku/rpc-map.gen.d.ts",
-    "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts"
-  },
   "packageMappings": {
     ".": "@pikku/example-field-service"
   },
   "schema": {
     "supportsImportAttributes": true
-  },
-  "dev": {
-    "db": true
   },
   "scaffold": {
     "pikkuDir": "src/scaffold",
@@ -27,20 +19,26 @@
     "events": true
   },
   "scenarios": {
-    "emailDomain": "virtualuser.local",
-    "environments": {
-      "local": {
-        "apiUrl": "http://localhost:4013",
-        "appUrl": "http://localhost:7213",
-        "signInPath": "/api/auth/sign-in/virtual-user"
-      }
-    }
+    "emailDomain": "virtualuser.local"
   },
   "environments": {
     "local": {
-      "apiUrl": "http://localhost:4013",
-      "appUrl": "http://localhost:7213",
-      "signInPath": "/api/auth/sign-in/virtual-user"
+      "backends": {
+        "api": {
+          "signInPath": "/api/auth/sign-in/virtual-user"
+        }
+      },
+      "frontends": {
+        "web": "http://localhost:7213"
+      }
+    }
+  },
+  "backends": {
+    "api": {
+      "filter": {},
+      "dev": {
+        "port": 4013
+      }
     }
   }
 }
