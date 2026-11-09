@@ -22,7 +22,9 @@ and change it through the write path rather than by hand.
 
 ## Start with `pikku meta context`
 
-Bare, it prints the short project map. `pikku meta grep <terms>` searches everything at once, translations included, and comes before any shell grep. `pikku meta db [table]`, `screens`, `services` and `emails` answer the rest; `--json` gives the full document. An older CLI may not have `grep`, `db`, `screens`, `services` or `emails`: when `pikku meta <name>` is unknown, fall back to `pikku meta context --json` and `pikku info`.
+Never run bare `pikku meta`: it regenerates the project, then prints only usage. `pikku meta context` is the first call, and it prints the whole document (functions, wires, middleware, permissions, workflows, `capabilities`, `layout`; tens of KB) as one line of JSON, so `head` cuts it mid-object. Add `--json` and filter it with `jq` (`pikku meta context --json | jq '.functions[] | select(.id | test("cancel"; "i")) | {id, description, sourceFile}'`), or save it once and query the file. `pikku meta functions list` is the lighter list of ids and descriptions, and `pikku meta functions get <id>` has the schemas.
+
+`pikku meta db [table]` answers the table question. `grep`, `screens`, `services` and `emails` exist only on a CLI whose `pikku meta` usage lists them; the current release does not, so call a name only after you have seen it listed, and fall back to `context --json` and `pikku info`.
 
 It answers in one call what a planner needs — functions, wires, middleware,
 permissions, workflows, capabilities, layout. Reach for `pikku meta` when you
