@@ -5862,7 +5862,7 @@ export class TypedVariablesService< TMap = Record<string, unknown>, > implements
 }
 export interface UploadURLResult {
   uploadUrl: string
-  assetKey: string
+  fileKey: string
   uploadHeaders?: Record<string, string>
   uploadMethod?: 'PUT' | 'POST'
 }
