@@ -15,7 +15,7 @@ Pin `@main` to a commit SHA or branch of your choice. The caller repository can 
 
 ## Jobs
 
-`prepare` installs, runs your pre-step, then the same stages as `pikku ci` in the same order: `bootstrap`, `db migrate --localOnly` (when `db/sqlite`, `db/postgres` or `db/mysql` exists, never against a `DATABASE_URL`), `emails generate` (when the config's `emailTemplatesDir` exists), `all --failOnError` and `app build`. It uploads everything git ignores (except `node_modules`) as one tarball. `validate`, `audit`, `test` and `tsc` then run side by side, each with a cached install and that tarball.
+`prepare` installs, runs your pre-step, then the same stages as `pikku ci` in the same order: `bootstrap`, `db migrate --localOnly` (when `db/sqlite`, `db/postgres` or `db/mysql` exists, never against a `DATABASE_URL`), `emails generate` (when the config's `emailTemplatesDir` exists), `all --failOnError`, your `post-codegen` command when given, and `app build`. It uploads everything git ignores (except `node_modules`) as one tarball. `validate`, `audit`, `test` and `tsc` then run side by side, each with a cached install and that tarball.
 
 Only the check stages are here. Deploying (`pikku ci -p <provider> --deploy`) is not generic and stays in your own workflow.
 
@@ -31,6 +31,9 @@ Only the check stages are here. Deploying (`pikku ci -p <provider> --deploy`) is
 | `skip-deploy-checks` | `false` | `pikku ci --skip-deploy-checks` |
 | `validate-blocking` | `true` | `false` makes findings annotate without failing |
 | `audit-blocking` | `true` | same, for audit (the threshold is `high`, as in `pikku ci`) |
+| `fail-on-error` | `true` | `false` drops `--failOnError` from `pikku all`: codegen diagnostics are reported but do not fail prepare |
+| `post-codegen` | empty | a shell command run after `pikku all` and before `pikku app build`, for steps that read `.pikku` output |
+| `test-command` | `bun run --bun test` | the command the test job runs (e.g. `bun run test` when `--bun` breaks node:test suites) |
 | `tsc` | `true` | runs `bun run --bun tsc` when the project has it |
 | `runs-on` | `ubuntu-24.04` | |
 
