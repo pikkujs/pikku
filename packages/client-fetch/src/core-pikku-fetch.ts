@@ -285,9 +285,11 @@ export class CorePikkuFetch {
     data: unknown,
     options?: RequestInit
   ): AsyncGenerator<T, void, undefined> {
+    // Headers, [name, value] tuples and plain objects all spread differently.
+    const headers = Object.fromEntries(new Headers(options?.headers).entries())
     const response = await this.fetch(uri, 'POST', data, {
       ...options,
-      headers: { ...options?.headers, Accept: 'text/event-stream' },
+      headers: { ...headers, accept: 'text/event-stream' },
     })
     if (response.status >= 400) {
       throw await PikkuFetchError.fromResponse(response)
@@ -295,7 +297,11 @@ export class CorePikkuFetch {
     if (!response.body) {
       throw new Error(`Stream request to ${uri} returned no body`)
     }
-    yield* readServerEvents<T>(response.body)
+    for await (const event of readServerEvents<T>(response.body)) {
+      // A chunk can hold several frames: stop at the abort, not after the chunk.
+      options?.signal?.throwIfAborted()
+      yield event
+    }
   }
 
   /**
