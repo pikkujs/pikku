@@ -509,7 +509,6 @@ export type PikkuCLIInput = {
           hash: string
         }
       }
-  addonName?: string
 
   /**
    * Service names `createSingletonServices` is allowed to return even though
@@ -552,7 +551,6 @@ export type PikkuCLIInput = {
    */
   metaLocale?: string
 
-  configDir: string
   tsconfig: string
 
   clientFiles?: {
@@ -1038,43 +1036,6 @@ export type PikkuCLIInput = {
 
   schemasFromTypes?: string[]
 
-  stateOutput?: string
-  stateInput?: string
-
-  /**
-   * Which inspector analyses the project: `go` (`pikku-inspect`) or `rs`
-   * (`pikku-inspect-rs`). `PIKKU_INSPECTOR` and `--inspector` override it.
-   */
-  inspector?: 'go' | 'rs'
-
-  /**
-   * Run the data-classification security lint (scans function return types for
-   * Private/Pii/Secret leaks). Off by default — it forces expensive return-type
-   * inference on every function and is not part of codegen. Enable here to always
-   * run it, or per-invocation via `pikku all --security`. Pair with
-   * `failOnError` to gate a build/CI on leaks.
-   */
-  security?: boolean
-
-  /**
-   * After codegen, run a real `tsc --noEmit` over the project's tsconfig and
-   * fail on type errors. `tsc` prints full diagnostics with code frames;
-   * `tscSummary` prints a compact one-line-per-error render (no code frames,
-   * capped) that's cheap for AI agents / CI logs. Off by default; enable per
-   * invocation via `pikku all --tsc` / `--tsc-summary`.
-   */
-  tsc?: boolean
-  tscSummary?: boolean
-
-  /**
-   * After a successful codegen run, emit a structural diff of the generated
-   * `.pikku` meta (functions/wirings/workflows/emails added/removed/changed vs
-   * the state before this run) as a `PIKKU_DIFF <json>` line on stdout. Only
-   * emitted on exit 0. Off by default; enable per invocation via
-   * `pikku all --diff`. Consumed by the sandbox "what changed" build card.
-   */
-  diff?: boolean
-
   lint?: {
     servicesNotDestructured?: 'off' | 'warn' | 'error'
     wiresNotDestructured?: 'off' | 'warn' | 'error'
@@ -1213,22 +1174,40 @@ export type PikkuCLIInput = {
 
   /** Named filter presets keyed by name, used via CLI --filter <name>. */
   namedFilters?: Record<string, InspectorFilters>
-
   filters: InspectorFilters
-} & PikkuCLICoreOutputFiles
-
-export type PikkuCLIConfig = PikkuCLIInput & {
-  configFile?: string
-  /** Path to pikku.config.json, from the global `--config` / `-c` flag. */
-  config?: string
-  tags?: string[]
-  wires?: string[]
-  excludeWires?: string[]
-
-  /** Paths made absolute and defaults filled in by `getPikkuCLIConfig`. */
-  frontends?: Record<string, PikkuFrontend>
-
-  userSessionType?: string
-  singletonServicesFactoryType?: string
-  wireServicesFactoryType?: string
 }
+
+/**
+ * Everything the loader resolves on top of `PikkuCLIInput`: generated-file
+ * paths, CLI flags that leak into the config object, and derived values.
+ */
+export type PikkuCLIConfig = PikkuCLIInput &
+  PikkuCLICoreOutputFiles & {
+    filters: InspectorFilters
+    configDir: string
+    addonName?: string
+    stateOutput?: string
+    stateInput?: string
+    /** Which inspector analyses the project. `native` (default) or `typescript`; overridden by `--inspector` / `PIKKU_INSPECTOR`. */
+    inspector?: 'go' | 'rs'
+    /** Run the data-classification security lint (`pikku all --security`). */
+    security?: boolean
+    /** Run `tsc --noEmit` after codegen (`--tsc`); `tscSummary` prints a compact render (`--tsc-summary`). */
+    tsc?: boolean
+    tscSummary?: boolean
+    /** Emit a structural diff of generated meta as `PIKKU_DIFF <json>` (`--diff`). */
+    diff?: boolean
+    configFile?: string
+    /** Path to pikku.config.json, from the global `--config` / `-c` flag. */
+    config?: string
+    tags?: string[]
+    wires?: string[]
+    excludeWires?: string[]
+
+    /** Paths made absolute and defaults filled in by `getPikkuCLIConfig`. */
+    frontends?: Record<string, PikkuFrontend>
+
+    userSessionType?: string
+    singletonServicesFactoryType?: string
+    wireServicesFactoryType?: string
+  }

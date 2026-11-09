@@ -22,7 +22,7 @@
   "scripts": {
     "embed": "node scripts/embed-examples.mjs",
     "tsc": "bun run embed && tsc && tsc -p tsconfig.type-tests.json",
-    "schema": "ts-json-schema-generator -o cli.schema.json --path 'src/utils/pikku-cli-config.ts' --type 'PikkuCLIConfig'",
+    "schema": "ts-json-schema-generator -o cli.schema.json --path 'src/utils/pikku-cli-config.ts' --type 'PikkuCLIInput'",
     "build": "bash ./build.sh",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
     "release": "bun run build && npm test",
