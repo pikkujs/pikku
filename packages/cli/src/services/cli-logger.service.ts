@@ -344,6 +344,6 @@ export class CLILogger implements Logger {
   logLogo() {
     if (this.silent || this.outputMode === 'json') return
     if (process.env.PIKKU_NO_LOGO) return
-    console.log(`\n${logo}\n`)
+    console.error(`\n${logo}\n`)
   }
 }
