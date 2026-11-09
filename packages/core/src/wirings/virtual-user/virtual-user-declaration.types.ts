@@ -119,6 +119,12 @@ export type CoreVirtualUser = {
    * Omitted is the normal case: one app, one url, nothing to say.
    */
   app?: string
+  /**
+   * The backend this person signs into, when the project declares more than
+   * one (`backends` in pikku.config.json). Sign-in and RPCs go to that
+   * backend's url in the run environment. Omitted is the normal case.
+   */
+  backend?: string
 }
 
 /** Virtual users to declare, keyed by id. */
@@ -151,6 +157,8 @@ export type VirtualUserMeta = {
   runnable: boolean
   /** The app this person signs into; picks their base url on a browser run. */
   app?: string
+  /** The backend this person signs into; picks the api url on a run. */
+  backend?: string
   sourceFile?: string
 }
 

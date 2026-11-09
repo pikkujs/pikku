@@ -6,6 +6,7 @@ import { glob } from 'tinyglobby'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { FileScenarioRunStore } from '@pikku/core/services/file-scenario-run-store'
+import { groupVirtualUsersByBackend } from './scenario-backend-users.js'
 import {
   createHttpVirtualUsers,
   statementSignIn,
@@ -337,19 +338,48 @@ export const scenarioRun = pikkuSessionlessFunc<
       state.virtualUsers?.definitions ?? [],
       config.scenarios?.emailDomain
     )
-    const virtualUsers = createHttpVirtualUsers({
-      apiUrl: env.apiUrl,
-      signIn: statementSignIn({
-        apiUrl: env.apiUrl,
-        signInPath: env.signInPath,
-        mint,
-      }),
-      virtualUsers: scenarioVirtualUsers,
-      signInPath: env.signInPath,
-      sessionPath: env.sessionPath,
-      rpcPath: env.rpcPath,
-      model: config.scenarios?.model,
-    })
+    // One HttpVirtualUsers per backend a virtual user signs into; each reaches its
+    // own backend's url. A user naming no backend uses the run's resolved one.
+    const virtualUsers: ReturnType<typeof createHttpVirtualUsers> = {}
+    for (const [backendName, users] of groupVirtualUsersByBackend(
+      scenarioVirtualUsers,
+      env.backend
+    )) {
+      const target =
+        backendName === env.backend
+          ? env
+          : resolveEnvironment({
+              environment,
+              environments: config.environments ?? {},
+              backend: backendName,
+              primaryFrontend: primaryFrontendName(config.frontends),
+              spawn,
+            })
+      const targetMint =
+        target === env
+          ? mint
+          : await resolveStatementMint(variables, {
+              apiUrl: target.apiUrl,
+              runtimeDir: runtimeDirOf(config),
+              what: 'scenario virtual users',
+            })
+      Object.assign(
+        virtualUsers,
+        createHttpVirtualUsers({
+          apiUrl: target.apiUrl,
+          signIn: statementSignIn({
+            apiUrl: target.apiUrl,
+            signInPath: target.signInPath,
+            mint: targetMint,
+          }),
+          virtualUsers: users,
+          signInPath: target.signInPath,
+          sessionPath: target.sessionPath,
+          rpcPath: target.rpcPath,
+          model: config.scenarios?.model,
+        })
+      )
+    }
 
     const functionsMeta = state.functions?.meta ?? {}
     const scenarioNames = new Set(

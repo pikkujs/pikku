@@ -2460,6 +2460,7 @@ export type CoreVirtualUser = {
   environments?: string[]
   runnable?: boolean
   app?: string
+  backend?: string
 }
 export type CoreVirtualUsers = Record<string, CoreVirtualUser>
 createCookieJar: (apiUrl: string) => ScenarioCookieJar
@@ -2725,6 +2726,7 @@ export type VirtualUserMeta = {
   environments?: string[]
   runnable: boolean
   app?: string
+  backend?: string
   sourceFile?: string
 }
 export interface VirtualUserPreparation {

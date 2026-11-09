@@ -229,7 +229,7 @@ impl Context<'_> {
             vu.insert("tags".into(), strs_value(&literal_strings_or(config, "tags")));
             vu.insert("runnable".into(), Value::Bool(runnable));
             vu.insert("sourceFile".into(), Value::from(source_file.as_str()));
-            for field in ["jobTitle", "description", "avatarUrl", "personality", "app"] {
+            for field in ["jobTitle", "description", "avatarUrl", "personality", "app", "backend"] {
                 if let Some(v) = tsutil::literal_string(config, field) {
                     vu.insert(field.into(), Value::from(v));
                 }

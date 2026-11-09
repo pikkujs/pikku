@@ -225,7 +225,7 @@ func (s *Context) addVirtualUsers(node *ast.Node) {
 		vu.set("tags", literalStringsOr(config, "tags", state.Strings{}))
 		vu.set("runnable", runnable)
 		vu.set("sourceFile", sourceFile)
-		for _, field := range []string{"jobTitle", "description", "avatarUrl", "personality", "app"} {
+		for _, field := range []string{"jobTitle", "description", "avatarUrl", "personality", "app", "backend"} {
 			if v, ok := tsutil.LiteralString(config, field); ok {
 				vu.set(field, v)
 			}
