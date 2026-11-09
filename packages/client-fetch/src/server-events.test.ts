@@ -81,6 +81,16 @@ describe('readServerEvents', () => {
     assert.deepEqual(events, [RUN_FINISHED])
   })
 
+  test('reads CRLF separators, including a CRLF split across chunks', async () => {
+    const crlf = (e: unknown) => `data: ${JSON.stringify(e)}\r\n\r\n`
+    const events = await collect(
+      readServerEvents(
+        bodyOf([crlf(delta('a')) + crlf(delta('b')).slice(0, -1), '\n'])
+      )
+    )
+    assert.deepEqual(events, [delta('a'), delta('b')])
+  })
+
   test('throws on a malformed frame by default, skips it when asked', async () => {
     await assert.rejects(
       collect(readServerEvents(bodyOf(['data: {not json\n\n']))),
@@ -93,6 +103,36 @@ describe('readServerEvents', () => {
       )
     )
     assert.deepEqual(skipped, [delta('ok')])
+  })
+})
+
+describe('CorePikkuFetch.postStream', () => {
+  test('keeps caller headers given as a Headers object or tuples', async () => {
+    for (const headers of [
+      new Headers({ Authorization: 'Bearer t' }),
+      [['Authorization', 'Bearer t']] as [string, string][],
+    ]) {
+      const { client, seen } = clientReplying([frame(RUN_FINISHED)])
+      await collect(client.postStream('/s', {}, { headers }))
+      const sent = new Headers(seen.init?.headers as HeadersInit)
+      assert.equal(sent.get('authorization'), 'Bearer t')
+      assert.equal(sent.get('accept'), 'text/event-stream')
+    }
+  })
+
+  test('stops at an abort even when the chunk holds more frames', async () => {
+    const { client } = clientReplying([frame(RUN_STARTED) + frame(RUN_FINISHED)])
+    const controller = new AbortController()
+    const seen: unknown[] = []
+    await assert.rejects(async () => {
+      for await (const event of client.postStream('/s', {}, {
+        signal: controller.signal,
+      })) {
+        seen.push(event)
+        controller.abort()
+      }
+    })
+    assert.deepEqual(seen, [RUN_STARTED])
   })
 })
 
@@ -112,7 +152,7 @@ describe('CorePikkuFetch.agentStream', () => {
     assert.equal(seen.url, 'https://api.test/rpc/agent/helper/stream')
     assert.equal(seen.init?.method, 'POST')
     const headers = seen.init?.headers as Record<string, string>
-    assert.equal(headers.Accept, 'text/event-stream')
+    assert.equal(headers.accept, 'text/event-stream')
     assert.deepEqual(JSON.parse(String(seen.init?.body)), {
       message: 'hi',
       threadId: 't1',

@@ -185,6 +185,7 @@ type WorkflowRPC = {
  * const [live, setLive] = useState('')
  *
  * const send = async (message: string) => {
+ *   const firstTurn = !threadId
  *   const id = threadId ?? crypto.randomUUID()
  *   for await (const event of agent.stream({ message, threadId: id, resourceId: 'help' })) {
  *     if (event.type === 'TEXT_MESSAGE_CONTENT') setLive((text) => text + event.delta)
@@ -198,7 +199,8 @@ type WorkflowRPC = {
  *   localStorage.setItem('helpThread', id)
  *   setThreadId(id)
  *   setLive('')
- *   await history.refetch()
+ *   // the first turn enables the query, which loads the new thread by itself
+ *   if (!firstTurn) await history.refetch()
  * }
  *
  * // or, without streaming

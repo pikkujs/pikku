@@ -51,6 +51,11 @@ export async function* readServerEvents<T = unknown>(
       const { done, value } = await reader.read()
       if (done) break
       buffer += decoder.decode(value, { stream: true })
+      // SSE allows \n, \r\n and \r line endings. A trailing \r may be the first
+      // half of a \r\n, so it waits for the next chunk before being read.
+      const held = buffer.endsWith('\r') ? '\r' : ''
+      buffer = buffer.slice(0, buffer.length - held.length)
+      buffer = buffer.replace(/\r\n?/g, '\n') + held
       let sep: number
       while ((sep = buffer.indexOf('\n\n')) !== -1) {
         const frame = parseFrame<T>(buffer.slice(0, sep), malformed)
@@ -58,7 +63,7 @@ export async function* readServerEvents<T = unknown>(
         if (frame) yield frame.event
       }
     }
-    buffer += decoder.decode()
+    buffer = (buffer + decoder.decode()).replace(/\r\n?/g, '\n')
     const last = parseFrame<T>(buffer, malformed)
     if (last) yield last.event
   } finally {

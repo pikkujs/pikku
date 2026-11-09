@@ -151,11 +151,20 @@ export const inviteRecipe = async (
   const existing = await internalAdapter.findUserByEmail(normalized)
   // No password: the link is how they get in. Grant roles or team membership
   // against this id (e.g. scopeService.addUserToRole) before sending it.
+  // A concurrent invite can create the account first: reuse it.
   const userId =
     existing?.user.id ??
-    (await createAuthUser(auth, { email: normalized, name }))
-  // Runs the magicLink() plugin's own `sendMagicLink`, so the mail is the
-  // app's template. A path, or an origin listed in `trustedOrigins`.
+    (await createAuthUser(auth, { email: normalized, name }).catch(
+      async (error) => {
+        const raced = await internalAdapter.findUserByEmail(normalized)
+        if (!raced) throw error
+        return raced.user.id
+      }
+    ))
+  // Needs `magicLink({ sendMagicLink })` in the betterAuth plugins and an
+  // effective base URL (`baseURL` or BETTER_AUTH_URL): a function has no
+  // request to derive one from. It runs your `sendMagicLink`, so the mail is
+  // the app's template. `callbackURL` is a path, or an origin in `trustedOrigins`.
   await sendAuthUserSignInLink(auth, {
     email: normalized,
     callbackURL: '/welcome',
