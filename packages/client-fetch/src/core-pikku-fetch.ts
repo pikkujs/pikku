@@ -53,6 +53,20 @@ export class CorePikkuFetch {
   }
 
   /**
+   * The default headers with the caller's laid over them. Names match without regard to
+   * case, so a caller's `authorization` replaces the default `Authorization` instead of
+   * being sent beside it.
+   */
+  private mergeHeaders(init?: HeadersInit): Record<string, string> {
+    const headers = this.getHeaders()
+    const overrides = Object.fromEntries(new Headers(init).entries())
+    for (const name of Object.keys(headers)) {
+      if (name.toLowerCase() in overrides) delete headers[name]
+    }
+    return { ...headers, ...overrides }
+  }
+
+  /**
    * Generates the headers for the request, including authorization headers if set.
    *
    * @returns {Record<string, string>} - The headers for the request.
@@ -361,7 +375,7 @@ export class CorePikkuFetch {
         method,
         mode: this.options.mode,
         credentials: this.options.credentials,
-        headers: { ...this.getHeaders(), ...options?.headers },
+        headers: this.mergeHeaders(options?.headers),
       },
       this.options.fetch
     )
