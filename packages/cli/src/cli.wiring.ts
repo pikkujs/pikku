@@ -223,6 +223,7 @@ import {
   pikkuMetaServices,
   pikkuMetaApply,
 } from './functions/commands/meta.js'
+import { pikkuGraph } from './functions/commands/graph.js'
 import { defaultCLIRenderer } from './services.js'
 
 wireAddon({ name: 'changes', package: '@pikku/addon-changes-cli' })
@@ -2344,6 +2345,12 @@ wireCLI({
         }),
       },
     },
+    graph: pikkuCLICommand({
+      func: pikkuGraph,
+      description:
+        'Show one function joined to the rest of the meta: what calls it (routes, channels, schedulers, queues, triggers, MCP, CLI, workflow steps, agent tools, other functions), what it calls, and the permissions and middleware that gate it. Add --json for the full record.',
+      parameters: '<functionId>',
+    }),
     meta: {
       description: 'Inspect project metadata in machine-readable form',
       subcommands: {

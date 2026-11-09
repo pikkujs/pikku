@@ -284,8 +284,62 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       (s) => !existsSync(s.file)
     )
     if (missingScaffolds.length > 0) {
+      // One literal call per generator: the inspector reads the rpc name of
+      // every step (PKU943), so it cannot be a loop variable.
       for (const { generator } of missingScaffolds) {
-        await workflow.do(`Scaffold ${generator}`, generator, null)
+        switch (generator) {
+          case 'pikkuGraphWirings':
+            await workflow.do(
+              'Scaffold pikkuGraphWirings',
+              'pikkuGraphWirings',
+              null
+            )
+            break
+          case 'pikkuPublicRPC':
+            await workflow.do('Scaffold pikkuPublicRPC', 'pikkuPublicRPC', null)
+            break
+          case 'pikkuAnalytics':
+            await workflow.do('Scaffold pikkuAnalytics', 'pikkuAnalytics', null)
+            break
+          case 'pikkuCors':
+            await workflow.do('Scaffold pikkuCors', 'pikkuCors', null)
+            break
+          case 'pikkuFeatureFlagsScaffold':
+            await workflow.do(
+              'Scaffold pikkuFeatureFlagsScaffold',
+              'pikkuFeatureFlagsScaffold',
+              null
+            )
+            break
+          case 'pikkuConsoleFunctions':
+            await workflow.do(
+              'Scaffold pikkuConsoleFunctions',
+              'pikkuConsoleFunctions',
+              null
+            )
+            break
+          case 'pikkuVirtualUserFunctions':
+            await workflow.do(
+              'Scaffold pikkuVirtualUserFunctions',
+              'pikkuVirtualUserFunctions',
+              null
+            )
+            break
+          case 'pikkuPublicAgent':
+            await workflow.do(
+              'Scaffold pikkuPublicAgent',
+              'pikkuPublicAgent',
+              null
+            )
+            break
+          case 'pikkuEventsScaffold':
+            await workflow.do(
+              'Scaffold pikkuEventsScaffold',
+              'pikkuEventsScaffold',
+              null
+            )
+            break
+        }
       }
     }
 

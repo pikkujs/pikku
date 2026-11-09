@@ -11,6 +11,8 @@ What to reach for and why. For how to call it, run this once, with the doors you
 
 Discover first with `pikku meta ... --json`. Find the source that owns the behaviour; do not start from generated output, `.pikku`, `node_modules`, vendored packages or build artifacts. Make the smallest source change, never hand-edit SDKs, schema output or typegen, validate narrowly first, then `pikku all` when functions, wirings, schemas or clients may have changed. If validation fails, fix the source cause and rerun.
 
+Before changing a function, run `pikku graph <functionId> --json`: it joins the function to its routes, channels, schedulers, queues, MCP and CLI wirings, workflow steps, agent tools and callers, its callees, and the permissions and middleware that gate it. The build refuses what would hide a caller or callee: computed rpc and workflow names (PKU941, PKU943), a wire passed to any other function (PKU942), and an `invokes` or `startsWorkflows` name that does not exist (PKU944). Callers outside the project (other deployments, clients) are the one thing the meta cannot hold.
+
 ## Before you start
 
 ```bash

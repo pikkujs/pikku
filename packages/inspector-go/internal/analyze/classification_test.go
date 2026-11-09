@@ -109,3 +109,51 @@ func TestPermissionsInBodyNeedsOptIn(t *testing.T) {
 		}
 	}
 }
+
+// wire-rules: a computed rpc name (PKU941), a wire handed to any callee (PKU942)
+// and a template workflow step name (PKU943) are critical; literal and const names, services, data and method
+// calls are not. The Rust inspector asserts the same list in
+// tests/visit_core_fixtures.rs.
+func TestWireRules(t *testing.T) {
+	var got []string
+	for _, d := range classificationDiagnostics(t, protocol.Options{}, "../../testdata/wire-rules") {
+		if d.Code == diag.RpcNameNotLiteral || d.Code == diag.WirePassedToHelper || d.Code == diag.WorkflowStepNameNotLiteral {
+			if d.Level != "critical" {
+				t.Errorf("%s is %s, want critical", d.Code, d.Level)
+			}
+			got = append(got, string(d.Code)+" "+d.Message)
+		}
+	}
+	for _, w := range wireRulesWant {
+		if !slices.Contains(got, w) {
+			t.Errorf("missing %q\ngot:\n%s", w, strings.Join(got, "\n"))
+		}
+	}
+	if len(got) != len(wireRulesWant) {
+		t.Errorf("got %d diagnostics, want %d:\n%s", len(got), len(wireRulesWant), strings.Join(got, "\n"))
+	}
+}
+
+const wireLeakTail = " — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+
+var wireRulesWant = []string{
+	"PKU941 • computedNames calls rpc.invoke(name) with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with \"No service binding\" if the two are deployed apart. Use a literal RPC name.",
+	"PKU941 • computedNames calls rpc.mesh(`x:${name}`) with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with \"No service binding\" if the two are deployed apart. Use a literal RPC name.",
+	"PKU941 • computedNames calls rpc.startWorkflow(name) with a computed name — the deploy planner cannot bundle that workflow's meta into computedNames's unit, so the deployed call fails with \"Workflow not found\" unless the unit has it for another reason. Use a literal workflow name.",
+	"PKU942 • leaksWires passes the wire to helper()" + wireLeakTail,
+	"PKU942 • leaksWires passes wire.rpc to helper()" + wireLeakTail,
+	"PKU942 • leaksWires passes wire.channel to helper()" + wireLeakTail,
+	"PKU942 • leaksWires passes wire.http to helper()" + wireLeakTail,
+	"PKU942 • leaksWires passes wire.workflow to helper()" + wireLeakTail,
+	"PKU942 • leaksWires passes wire.rpc to util.run()" + wireLeakTail,
+	"PKU942 • leaksWires passes wire.rpc to new Keeper()" + wireLeakTail,
+	"PKU942 • leaksDestructured passes wire.rpc to helper()" + wireLeakTail,
+	"PKU942 • closures passes wire.rpc to helper()" + wireLeakTail,
+	"PKU942 • localForwards passes wire.rpc to helper()" + wireLeakTail,
+	"PKU942 • callsModuleHelper passes wire.rpc to moduleHelper()" + wireLeakTail,
+	"PKU942 • callsUserHelper passes wire.rpc to helper()" + wireLeakTail,
+	"PKU942 • callsUnresolved passes wire.rpc to untyped.run()" + wireLeakTail,
+	"PKU942 • callsUnresolved passes wire.rpc to untyped['run']()" + wireLeakTail,
+	"PKU942 • callsWrapper passes wire.rpc to wrapper()" + wireLeakTail,
+	"PKU943 • Workflow 'templateStep' calls workflow.do(`prefix:${data.name}`) with an rpc name the inspector cannot read. The step would be missing from the workflow graph, so it cannot be replayed, migrated or found by `pikku graph`. Use a string literal or a const of one.",
+}

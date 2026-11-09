@@ -9,6 +9,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative, resolve } from 'node:path'
+import type { WorkflowService } from '@pikku/core/workflow'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { CiInput, CiRunInput, CiStepInput, type CiRun } from '../ci/schemas.js'
 import {
@@ -215,7 +216,9 @@ export const pikkuCi = pikkuSessionlessFunc({
           ),
         }
 
-        await workflowService.startWorkflow(
+        // Typed from @pikku/core so the callee is the framework's (PKU942).
+        const workflows: WorkflowService = workflowService
+        await workflows.startWorkflow(
           'ciWorkflow',
           run,
           { type: 'internal' },

@@ -323,6 +323,11 @@ impl Context<'_> {
         let (mut context, mut dsl, mut asserts) = (Js::Undef, Js::Undef, Js::Undef);
 
         let result: DslResult = self.extract_dsl_workflow(node, wrapper != "dsl");
+        // A DSL workflow that failed to extract is already refused (PKU641) for
+        // the same reason; every other wrapper would drop the step without a word.
+        if wrapper != "dsl" || result.ok {
+            self.check_step_rpc_names(resolved_func, &workflow_name);
+        }
         let reason = if result.reason.is_empty() { "Unknown error".to_string() } else { result.reason.clone() };
         if result.ok {
             steps = result.steps;
@@ -479,4 +484,58 @@ fn approval_declares_approvers(call: P<Node>) -> bool {
         }
     }
     declared
+}
+
+impl Context<'_> {
+    /// Refuses a workflow.do / workflow.expectEventually step whose rpc name is
+    /// not a string literal or a const of one: the step would be absent from
+    /// the workflow graph, so it could not be replayed, migrated or found by
+    /// `pikku graph`.
+    fn check_step_rpc_names(&mut self, f: P<Node>, workflow_name: &str) {
+        let mut calls: Vec<(P<Node>, P<Node>)> = vec![];
+        tsutil::walk_self(f, &mut |n| {
+            if !ast::is_call_expression(n) || !ast::is_property_access_expression(n.expression().unwrap()) {
+                return;
+            }
+            let pa = n.expression().unwrap();
+            let method = pa.name().unwrap().text();
+            let args = n.arguments();
+            if (method != "do" || args.len() < 2) && (method != "expectEventually" || args.len() < 4) {
+                return;
+            }
+            let recv = tsutil::unwrap_non_null_parens(pa.expression().unwrap());
+            let is_workflow = (ast::is_identifier(recv) && recv.text() == "workflow")
+                || (ast::is_property_access_expression(recv) && recv.name().unwrap().text() == "workflow");
+            if is_workflow {
+                calls.push((n, args[1]));
+            }
+        });
+        for (call, arg) in calls {
+            let mut inner = arg;
+            while tsutil::is_as_expression(inner) || inner.kind() == Kind::TypeAssertionExpression {
+                inner = inner.expression().unwrap();
+            }
+            if ast::is_arrow_function(inner) || ast::is_function_expression(inner) || ast::is_function_declaration(inner) {
+                continue;
+            }
+            if ast::is_identifier(inner) || ast::is_property_access_expression(inner) {
+                let t = self.checker.get_type_at_location(inner);
+                if !self.checker.get_signatures_of_type_exported(t, tsrs_checker::SignatureKind::Call).is_empty() {
+                    continue; // a step function passed by reference
+                }
+            }
+            if let Some(v) = self.extract_string_literal(inner)
+                && !v.contains("${")
+            {
+                continue;
+            }
+            if self.const_string_name(inner).is_some_and(|v| !v.is_empty()) {
+                continue;
+            }
+            self.log.critical(codes::WORKFLOW_STEP_NAME_NOT_LITERAL, format!(
+                "• Workflow '{workflow_name}' calls {}({}) with an rpc name the inspector cannot read. The step would be missing from the workflow graph, so it cannot be replayed, migrated or found by `pikku graph`. Use a string literal or a const of one.",
+                tsutil::node_text(call.expression().unwrap()), tsutil::node_text(arg)
+            ));
+        }
+    }
 }

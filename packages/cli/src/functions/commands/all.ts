@@ -1,3 +1,4 @@
+import type { WorkflowService } from '@pikku/core/workflow'
 import { pikkuVoidFunc } from '#pikku/function'
 import { withCodegenLock } from '../../utils/codegen-lock.js'
 import { computeMetaDiff, readMetaSnapshot } from '../../utils/meta-diff.js'
@@ -20,7 +21,10 @@ export const all = pikkuVoidFunc({
       // can read back the per-step durations already recorded on each step's
       // state. startWorkflow runs the job to completion before returning in inline
       // mode and re-throws on failure, matching runToCompletion's behaviour.
-      const { runId } = await workflowService.startWorkflow(
+      // Typed from @pikku/core directly: the callee is then the framework's own
+      // method, which may take the wire (PKU942), whatever `#pikku` resolves to.
+      const workflows: WorkflowService = workflowService
+      const { runId } = await workflows.startWorkflow(
         'allWorkflow',
         {},
         { type: 'internal' },
