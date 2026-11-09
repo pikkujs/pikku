@@ -54,10 +54,21 @@ const readDbTables = async (config: any): Promise<DbTable[] | null> => {
   return parseDbSchema(await readFile(schemaFile, 'utf8'))
 }
 
-const frontendDirs = (config: any): string[] =>
-  Object.values((config.frontends ?? {}) as Record<string, { cwd?: string }>)
+/** The frontends the config names; a project that names none has them under `apps/`. */
+const frontendDirs = (config: any): string[] => {
+  const named = Object.values(
+    (config.frontends ?? {}) as Record<string, { cwd?: string }>
+  )
     .filter((frontend) => frontend.cwd)
     .map((frontend) => resolve(config.rootDir, frontend.cwd!))
+  if (named.length > 0) return named
+  const appsDir = join(config.rootDir, 'apps')
+  return existsSync(appsDir)
+    ? readdirSync(appsDir)
+        .map((app) => join(appsDir, app))
+        .filter((dir) => existsSync(join(dir, 'src')))
+    : []
+}
 
 const readScreens = (config: any): MetaRow[] =>
   frontendDirs(config).flatMap((dir) => screenRows(dir, config.rootDir))
@@ -584,7 +595,10 @@ export const pikkuMetaContext = pikkuSessionlessFunc<{ full?: boolean }, void>({
             (row) => row.name
           ),
           // Extras: a project they cannot be read from still gets its map.
-          facts: await readProjectFacts(config, state).catch(() => []),
+          facts: await readProjectFacts(config, state).catch((error) => {
+            logger.warn(`Project facts left out: ${error.message}`)
+            return []
+          }),
         })
       )
       return
