@@ -68,12 +68,13 @@ beforeEach(() => {
       tsconfig: 'tsconfig.json',
       outDir: '.pikku',
       srcDirectories: ['src'],
+      backends: { api: { filter: {} } },
       deploy: {
         providers: {
           first: '@vendor/deploy-first',
           second: '@vendor/deploy-second',
         },
-        defaultProvider: 'first',
+        provider: 'first',
       },
     })
   )
@@ -86,7 +87,7 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true })
 })
 
-describe('deploy.defaultProvider', () => {
+describe('deploy.provider', () => {
   test('is used when no -p is given', async (t) => {
     if (!existsSync(cliBin)) return t.skip('dist not built')
     const { status, output } = await runCli('deploy', 'apply', '--fromPlan')

@@ -5,13 +5,17 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { generatePlan } from '../../deploy/plan/index.js'
 import { formatPlan } from '../../deploy/plan/formatter.js'
 import {
-  runBuildPipeline,
   describeBuildFailure,
   PikkuDeployBuildFailedError,
 } from '../../deploy/build-pipeline.js'
 import type { DeployProvider } from '../../deploy/plan/provider.js'
 import { resolveProvider, getEntryContext } from './deploy-apply.js'
-import { servedFrontend } from '../../utils/frontend.js'
+import {
+  backendState,
+  buildBackend,
+  planBackendDeploys,
+  resultFileFor,
+} from './deploy-backends.js'
 
 function sanitizeProjectId(raw: string): string {
   return (
@@ -60,100 +64,109 @@ export const deployPlan = pikkuSessionlessFunc<
   {
     resultFile?: string
     provider?: string
+    backend?: string
     debugArtifacts?: boolean
   },
   void
 >({
   func: async ({ logger, config, getInspectorState, bundler }, data) => {
     const projectDir = config.rootDir
-    const inspectorState = await getInspectorState(true)
+    const backends = planBackendDeploys(config, {
+      backend: data?.backend,
+      provider: data?.provider,
+    })
+    const unfilteredState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
-    const provider = await resolveProvider(config, data?.provider, {
-      projectDir,
-    })
+    const failures: string[] = []
 
-    const result = await runBuildPipeline({
-      projectDir,
-      projectId,
-      provider,
-      inspectorState,
-      serverlessIncompatible: config.deploy?.serverlessIncompatible,
-      defaultTarget: config.deploy?.defaultTarget,
-      grouping: config.deploy?.grouping,
-      mangleIdentifiers: config.deploy?.mangleIdentifiers,
-      globalHTTPPrefix: config.globalHTTPPrefix,
-      getEntryContext,
-      frontend: servedFrontend(config.frontends),
-      outDir: config.outDir,
-      srcDirectories: config.srcDirectories,
-      sqliteExtensions: config.db?.sqliteExtensions,
-      embed: config.deploy?.embed,
-      debugArtifacts: data?.debugArtifacts ?? false,
-      logger,
-      bundler,
-    })
+    for (const backend of backends) {
+      if (backend.many) logger.info(`Backend ${backend.name}`)
+      const provider = await resolveProvider(config, backend.providerName, {
+        projectDir,
+      })
 
-    // Show plan
-    const deployProvider = createEmptyProvider()
-    const currentState = await deployProvider.getCurrentState(
-      result.manifest.projectId
-    )
-    const plan = await generatePlan(
-      result.manifest,
-      currentState,
-      deployProvider
-    )
+      const result = await buildBackend({
+        config,
+        backend,
+        provider,
+        projectId,
+        inspectorState: backendState(config, unfilteredState, backend, logger),
+        getEntryContext,
+        debugArtifacts: data?.debugArtifacts ?? false,
+        logger,
+        bundler,
+      })
 
-    console.log('')
-    console.log(formatPlan(plan))
-    console.log('')
-
-    // Summary
-    let totalSize = 0
-    for (const b of result.bundled) totalSize += b.bundleSizeBytes
-    const formatBytes = (bytes: number) =>
-      bytes < 1024
-        ? `${bytes}B`
-        : bytes < 1024 * 1024
-          ? `${(bytes / 1024).toFixed(1)}KB`
-          : `${(bytes / (1024 * 1024)).toFixed(1)}MB`
-
-    logger.info(
-      `${result.bundled.length} workers bundled (${formatBytes(totalSize)} total)`
-    )
-    logger.info(`Output: ${result.providerDir}`)
-
-    // Write result file if --result-file is set (used by Pikku Studio Cloud build pipeline)
-    const resultFile = data?.resultFile
-    if (resultFile) {
-      const { writeFile } = await import('node:fs/promises')
-      await writeFile(
-        resultFile,
-        JSON.stringify(
-          {
-            success: result.bundleErrors.length === 0,
-            providerDir: result.providerDir,
-            unitCount: result.bundled.length,
-            totalSizeBytes: totalSize,
-            errors: result.bundleErrors,
-            codegenErrors: result.codegenErrors,
-            summary: plan.summary,
-            changeCount: plan.changes.length,
-            artifacts: {
-              deploymentManifestPath: result.deploymentManifestPath,
-              infraPath: result.infraPath,
-            },
-          },
-          null,
-          2
-        ),
-        'utf-8'
+      // Show plan
+      const deployProvider = createEmptyProvider()
+      const currentState = await deployProvider.getCurrentState(
+        result.manifest.projectId
       )
+      const plan = await generatePlan(
+        result.manifest,
+        currentState,
+        deployProvider
+      )
+
+      console.log('')
+      console.log(formatPlan(plan))
+      console.log('')
+
+      // Summary
+      let totalSize = 0
+      for (const b of result.bundled) totalSize += b.bundleSizeBytes
+      const formatBytes = (bytes: number) =>
+        bytes < 1024
+          ? `${bytes}B`
+          : bytes < 1024 * 1024
+            ? `${(bytes / 1024).toFixed(1)}KB`
+            : `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+
+      logger.info(
+        `${result.bundled.length} workers bundled (${formatBytes(totalSize)} total)`
+      )
+      logger.info(`Output: ${result.providerDir}`)
+
+      // Write result file if --result-file is set (used by Pikku Studio Cloud build pipeline)
+      const resultFile = resultFileFor(data?.resultFile, backend)
+      if (resultFile) {
+        const { writeFile } = await import('node:fs/promises')
+        await writeFile(
+          resultFile,
+          JSON.stringify(
+            {
+              success: result.bundleErrors.length === 0,
+              backend: backend.name,
+              provider: provider.name,
+              providerDir: result.providerDir,
+              unitCount: result.bundled.length,
+              totalSizeBytes: totalSize,
+              errors: result.bundleErrors,
+              codegenErrors: result.codegenErrors,
+              summary: plan.summary,
+              changeCount: plan.changes.length,
+              artifacts: {
+                deploymentManifestPath: result.deploymentManifestPath,
+                infraPath: result.infraPath,
+              },
+            },
+            null,
+            2
+          ),
+          'utf-8'
+        )
+      }
+
+      const buildFailure = describeBuildFailure(result)
+      if (buildFailure) {
+        failures.push(
+          backend.many ? `${backend.name}: ${buildFailure}` : buildFailure
+        )
+      }
     }
 
-    const buildFailure = describeBuildFailure(result)
-    if (buildFailure) {
-      throw new PikkuDeployBuildFailedError(buildFailure)
+    if (failures.length > 0) {
+      throw new PikkuDeployBuildFailedError(failures.join('\n'))
     }
   },
 })

@@ -352,7 +352,13 @@ export async function runBuildPipeline(options: {
     spaFallback: boolean
   }
   deployDir?: string
+  /** The shared `.pikku`: db assets and contributors are project-wide. */
   outDir?: string
+  /**
+   * The backend's own filtered tree (`.pikku/backends/<name>`). A single-unit
+   * bundle imports its bootstrap from here, so it carries only that backend.
+   */
+  backendDir?: string
   /**
    * The project's source roots, for finding the `createConfig` that declares
    * which database a standalone artifact has to open.
@@ -438,6 +444,7 @@ export async function runBuildPipeline(options: {
 
     const unitDir = join(providerDir, unitName)
     const pikkuDir = options.outDir ?? join(projectDir, '.pikku')
+    const bootstrapDir = options.backendDir ?? pikkuDir
     await mkdir(unitDir, { recursive: true })
 
     let frontendMount: { urlPrefix: string; spaFallback: boolean } | undefined
@@ -461,7 +468,7 @@ export async function runBuildPipeline(options: {
     const ctx: EntryGenerationContext = {
       ...(getEntryContext(
         unitDir,
-        pikkuDir,
+        bootstrapDir,
         singleUnit,
         inspectorState
       ) as EntryGenerationContext),

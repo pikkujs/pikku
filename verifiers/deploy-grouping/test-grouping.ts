@@ -1,5 +1,5 @@
 /**
- * Offline verifier for `deploy.grouping`.
+ * Offline verifier for `backends.<name>.deploy.grouping`.
  *
  * Runs a real `pikku` + `deploy plan` against recipes/functions three times —
  * ungrouped, grouped by tag, and with a grouping that spans deploy targets —
@@ -67,9 +67,12 @@ const originalConfig = readFileSync(CONFIG_FILE, 'utf-8')
 function withGrouping(grouping: unknown | undefined): void {
   const config = JSON.parse(originalConfig)
   if (grouping === undefined) {
-    delete config.deploy.grouping
+    delete config.backends.app.deploy?.grouping
   } else {
-    config.deploy.grouping = grouping
+    config.backends.app.deploy = {
+      ...config.backends.app.deploy,
+      grouping,
+    }
   }
   writeFileSync(CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`)
 }

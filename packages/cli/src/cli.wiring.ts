@@ -2183,8 +2183,12 @@ wireCLI({
           options: {
             provider: {
               description:
-                'Deployment provider (defaults to deploy.defaultProvider, then cloudflare)',
+                "Deployment provider. Overrides deploy.provider and any backend's deploy.provider; with neither set the deploy is refused",
               short: 'p',
+            },
+            backend: {
+              description:
+                'Deploy only this backend (a key of "backends" in pikku.config.json). Default: every declared backend',
             },
             resultFile: {
               description:
@@ -2198,8 +2202,12 @@ wireCLI({
           options: {
             provider: {
               description:
-                'Deployment provider (defaults to deploy.defaultProvider, then cloudflare)',
+                "Deployment provider. Overrides deploy.provider and any backend's deploy.provider; with neither set the deploy is refused",
               short: 'p',
+            },
+            backend: {
+              description:
+                'Deploy only this backend (a key of "backends" in pikku.config.json). Default: every declared backend',
             },
             runtime: {
               description:
@@ -2223,7 +2231,6 @@ wireCLI({
           options: {
             provider: {
               description: 'Deployment provider (cloudflare, aws)',
-              default: 'cloudflare',
               short: 'p',
             },
           },

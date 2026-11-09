@@ -1,4 +1,5 @@
 import type { InspectorFilters } from '@pikku/inspector'
+import { resolveDeploy } from '../deploy/resolve-deploy.js'
 
 export type CLIFilters = InspectorFilters & {
   excludeNames?: string[]
@@ -21,10 +22,16 @@ export function parseCLIFilters(
   cliConfig?: {
     deploy?: {
       serverlessIncompatible?: string[]
-      defaultTarget?: 'serverless' | 'server'
+      target?: 'serverless' | 'server'
     }
     addon?: boolean | { serverlessIncompatible?: string[] }
-    backends?: Record<string, { filter?: CLIFilters }>
+    backends?: Record<
+      string,
+      {
+        filter?: CLIFilters
+        deploy?: { target?: 'serverless' | 'server' }
+      }
+    >
   },
   backend?: string
 ): CLIFilters {
@@ -101,7 +108,12 @@ export function parseCLIFilters(
       ...addonIncompatible,
     ]
     filters.serverlessIncompatible = merged.length > 0 ? merged : undefined
-    filters.defaultTarget = cliConfig?.deploy?.defaultTarget
+    // A function with no explicit target counts as the target its backend
+    // deploys as, so a filter on `target` and the deploy agree on it.
+    filters.defaultTarget = resolveDeploy(
+      cliConfig ?? {},
+      backend ? { backend } : undefined
+    ).target
   }
 
   return filters

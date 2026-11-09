@@ -296,6 +296,123 @@ const assertNoRemovedClientFiles = (
   }
 }
 
+const DEPLOY_TARGETS = ['serverless', 'server']
+const PROJECT_DEPLOY_KEYS = [
+  'providers',
+  'provider',
+  'target',
+  'serverlessIncompatible',
+  'mangleIdentifiers',
+  'bundler',
+]
+const BACKEND_DEPLOY_KEYS = ['provider', 'target', 'grouping', 'embed']
+const FRONTEND_DEPLOY_KEYS = ['provider', 'target']
+
+const assertDeployOverride = (
+  at: string,
+  value: Record<string, unknown>,
+  allowed: string[],
+  file: string
+) => {
+  for (const key of Object.keys(value)) {
+    if (!allowed.includes(key)) {
+      throw new PikkuCLIConfigError(
+        `${at}.${key} in ${file} is not a deploy key here. Allowed: ${allowed.join(', ')}.`
+      )
+    }
+  }
+  if (value.provider !== undefined && typeof value.provider !== 'string') {
+    throw new PikkuCLIConfigError(
+      `${at}.provider in ${file} must be a provider name — got ${JSON.stringify(value.provider)}`
+    )
+  }
+  if (
+    value.target !== undefined &&
+    !DEPLOY_TARGETS.includes(value.target as string)
+  ) {
+    throw new PikkuCLIConfigError(
+      `${at}.target in ${file} must be 'serverless' or 'server' — got ${JSON.stringify(value.target)}`
+    )
+  }
+}
+
+/**
+ * `deploy` is the project's default for every backend and frontend; each
+ * backend and frontend overrides `provider` and `target` in its own `deploy`.
+ * Keys that used to live at the project level and now belong to a backend are
+ * refused, naming the new home.
+ */
+const assertDeployShape = (config: Record<string, unknown>, file: string) => {
+  const deploy = config.deploy
+  if (deploy !== undefined) {
+    if (!deploy || typeof deploy !== 'object' || Array.isArray(deploy)) {
+      throw new PikkuCLIConfigError(`deploy in ${file} must be an object.`)
+    }
+    const project = deploy as Record<string, unknown>
+    if ('defaultProvider' in project) {
+      throw new PikkuCLIConfigError(
+        `deploy.defaultProvider in ${file} is now deploy.provider; a backend or frontend overrides it in its own deploy.provider.`
+      )
+    }
+    if ('defaultTarget' in project) {
+      throw new PikkuCLIConfigError(
+        `deploy.defaultTarget in ${file} is now deploy.target; a backend or frontend overrides it in its own deploy.target.`
+      )
+    }
+    if ('contributors' in project) {
+      throw new PikkuCLIConfigError(
+        `deploy.contributors is no longer read — remove it from ${file}. Register the contributors with defineContributors in an addon and opt in with wireAddon({ contributors: [...] }); see docs/contributors.md`
+      )
+    }
+    for (const key of ['grouping', 'embed']) {
+      if (key in project) {
+        throw new PikkuCLIConfigError(
+          `deploy.${key} in ${file} has moved to backends.<name>.deploy.${key}; ${key} is per backend.`
+        )
+      }
+    }
+    assertDeployOverride('deploy', project, PROJECT_DEPLOY_KEYS, file)
+  }
+
+  const backends = config.backends
+  if (backends && typeof backends === 'object') {
+    for (const [name, entry] of Object.entries(backends)) {
+      const own = (entry as Record<string, unknown> | undefined)?.deploy
+      if (own === undefined) continue
+      if (!own || typeof own !== 'object' || Array.isArray(own)) {
+        throw new PikkuCLIConfigError(
+          `backends.${name}.deploy in ${file} must be an object.`
+        )
+      }
+      assertDeployOverride(
+        `backends.${name}.deploy`,
+        own as Record<string, unknown>,
+        BACKEND_DEPLOY_KEYS,
+        file
+      )
+    }
+  }
+
+  const frontends = config.frontends
+  if (frontends && typeof frontends === 'object') {
+    for (const [name, entry] of Object.entries(frontends)) {
+      const own = (entry as Record<string, unknown> | undefined)?.deploy
+      if (own === undefined || typeof own === 'boolean') continue
+      if (!own || typeof own !== 'object' || Array.isArray(own)) {
+        throw new PikkuCLIConfigError(
+          `frontends.${name}.deploy in ${file} must be false or an object with provider and target.`
+        )
+      }
+      assertDeployOverride(
+        `frontends.${name}.deploy`,
+        own as Record<string, unknown>,
+        FRONTEND_DEPLOY_KEYS,
+        file
+      )
+    }
+  }
+}
+
 /**
  * Backends are the one place a project says what it builds.
  *
@@ -315,6 +432,7 @@ const assertBackendsDeclared = (
     )
   }
   assertNoRemovedClientFiles(config, file)
+  assertDeployShape(config, file)
   if ('namedFilters' in config) {
     throw new PikkuCLIConfigError(
       `namedFilters in ${file} has moved to backends. Declare each preset as a backend: "backends": { "<name>": { "filter": { ... } } }, and select one with \`pikku all --backend <name>\`.`

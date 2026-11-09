@@ -427,8 +427,11 @@ export type PikkuFrontendInput = {
    */
   dist?: string
   primary?: boolean
-  /** Whether Pikku Studio Cloud deploys it. */
-  deploy?: boolean
+  /**
+   * `false` keeps it out of the deploy. An object overrides the project's
+   * `deploy.provider` and `deploy.target` for this frontend.
+   */
+  deploy?: boolean | { provider?: string; target?: 'serverless' | 'server' }
   kind?: 'spa' | 'ssr' | 'static'
   dev?: { command: string[]; port: number; healthPath: string }
   /** Who the app is for, in their own word. */
@@ -1079,16 +1082,22 @@ export type PikkuCLIInput = {
     targets?: string[]
   }
 
+  /**
+   * Deploy defaults for every backend and frontend. A backend or frontend
+   * overrides `provider` and `target` in its own `deploy`.
+   */
   deploy?: {
-    providers: Record<string, string>
-    defaultProvider?: string
-    serverlessIncompatible?: string[]
+    /** Provider name to package, for providers beyond the built-in four. */
+    providers?: Record<string, string>
+    /** Where every backend and frontend deploys unless it says otherwise. */
+    provider?: string
     /**
-     * Default deploy target for functions that don't declare an explicit
-     * `deploy` flag and don't use a serverless-incompatible service.
-     * Defaults to 'serverless'.
+     * How a unit is deployed, and the target a function with no explicit
+     * `deploy` flag counts as. Defaults to 'serverless'. Not the same as
+     * `backends.<name>.filter.target`, which selects functions.
      */
-    defaultTarget?: 'serverless' | 'server'
+    target?: 'serverless' | 'server'
+    serverlessIncompatible?: string[]
     /**
      * Rename identifiers when minifying worker bundles. Defaults to true.
      * Set it to false to make a deployed worker's runtime errors name
@@ -1101,37 +1110,6 @@ export type PikkuCLIInput = {
      * Bun.build output misbehaves at runtime.
      */
     bundler?: 'auto' | 'bun' | 'esbuild'
-    /**
-     * Files a standalone binary carries, by name. Each path, relative to the
-     * project root, is embedded by `bun build --compile` and handed to the
-     * running app as `PIKKU_EMBEDDED_<NAME>` (upper-cased, `-` as `_`).
-     */
-    embed?: Record<string, string>
-    /**
-     * How many deployment units the app's functions collapse into.
-     *
-     * `strategy` decides what happens to a function no rule matches:
-     * 'function' (the default) gives it its own unit, 'single' puts it in
-     * one shared unit. `rules` are evaluated in order, first match wins —
-     * under 'function' a rule merges functions together, under 'single' it
-     * carves them out.
-     *
-     * A rule's predicates are ANDed; `tags` is ORed across its own list.
-     * Functions whose deploy target differs cannot share a unit.
-     */
-    grouping?: {
-      strategy?: 'function' | 'single'
-      rules?: Array<{
-        /** Deployment unit name. Must be unique across rules. */
-        unit: string
-        /** Matches a function carrying any one of these tags. */
-        tags?: string[]
-        /** Matches an addon namespace, placing all its exposed functions here. */
-        addon?: string
-        /** Glob patterns matched against a function's wired HTTP routes. */
-        routes?: string[]
-      }>
-    }
   }
 
   /** Branches `pikku release` moves; defaults staging → main via release/next on origin. */
@@ -1151,13 +1129,44 @@ export type PikkuCLIInput = {
   backends: Record<string, PikkuBackendInput>
 }
 
+export type PikkuDeployGrouping = {
+  strategy?: 'function' | 'single'
+  rules?: Array<{
+    /** Deployment unit name. Must be unique across rules. */
+    unit: string
+    /** Matches a function carrying any one of these tags. */
+    tags?: string[]
+    /** Matches an addon namespace, placing all its exposed functions here. */
+    addon?: string
+    /** Glob patterns matched against a function's wired HTTP routes. */
+    routes?: string[]
+  }>
+}
+
 export type PikkuBackendInput = {
   /** Which functions and wirings this backend carries; empty carries all. */
   filter?: InspectorFilters
   deploy?: {
     target?: 'serverless' | 'server'
     provider?: string
-    grouping?: NonNullable<NonNullable<PikkuCLIInput['deploy']>['grouping']>
+    /**
+     * How many deployment units this backend's functions collapse into.
+     *
+     * `strategy` decides what happens to a function no rule matches:
+     * 'function' (the default) gives it its own unit, 'single' puts it in
+     * one shared unit. `rules` are evaluated in order, first match wins —
+     * under 'function' a rule merges functions together, under 'single' it
+     * carves them out.
+     *
+     * A rule's predicates are ANDed; `tags` is ORed across its own list.
+     * Functions whose deploy target differs cannot share a unit.
+     */
+    grouping?: PikkuDeployGrouping
+    /**
+     * Files a standalone binary carries, by name. Each path, relative to the
+     * project root, is embedded by `bun build --compile` and handed to the
+     * running app as `PIKKU_EMBEDDED_<NAME>` (upper-cased, `-` as `_`).
+     */
     embed?: Record<string, string>
   }
   dev?: {

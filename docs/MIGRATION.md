@@ -42,6 +42,15 @@ Every config (addons excepted) must declare the servers it builds: `"backends": 
 - Imports: replace `#pikku/pikku-fetch.gen.js` and the other client imports with the SDK. Add a tsconfig path alias, for example `"@sdk/api/*": [".pikku/sdk/api/exposed/*"]`, then `import { PikkuFetch } from '@sdk/api/pikku-fetch.gen'`. In general `@sdk/<backend>` maps to `.pikku/sdk/<backend>/exposed/`.
 - `backends.<name>.publish: true` packs the `remote/` SDK as `<package>-<backend>-<version>.sdk.tgz` beside package.json, the way an addon SDK is. It is off by default and refuses a backend with no remote functions, a non-semver package version, or a package that declares no `@pikku/core` range.
 
+### `deploy` is a project default with per-backend overrides, and there is no fallback provider
+
+`deploy` at the top of `pikku.config.json` is the default for every backend and frontend: `provider`, `target` (`serverless` or `server`), `bundler`, `mangleIdentifiers`, `serverlessIncompatible`, and the `providers` name-to-package map. A backend overrides `provider` and `target` in `backends.<name>.deploy`, and a frontend in `frontends.<name>.deploy` (`deploy: false` still keeps a frontend out of the deploy). `grouping` and `embed` are per backend only. `target` in a backend `filter` is unchanged: it selects which functions the backend carries, and `deploy.target` says how the backend is deployed.
+
+- `deploy.defaultProvider` is now `deploy.provider`. `deploy.defaultTarget` is now `deploy.target`. `deploy.grouping` and `deploy.embed` moved to `backends.<name>.deploy.grouping` and `.embed`. The loader refuses the old keys and names the new home. `deploy.contributors` stays refused (register contributors in an addon).
+- A deploy with no provider is an error naming `deploy.provider` (or the backend's override). It used to fall back to cloudflare. Pass `-p` or set `deploy.provider`.
+- `pikku deploy plan` and `apply` run once per declared backend, each on its own filtered state and `.pikku/backends/<name>/`; `--backend <name>` narrows. A project with one backend still builds into `.deploy/<provider>/`; with several, each builds into `.deploy/<backend>/<provider>/` and `--result-file` gains a `.<backend>` suffix.
+- A `serve` frontend ships inside a single-unit bundle, so a project with several backends cannot use `serve` with a single-unit provider (standalone).
+
 ### A workflow or agent with no `auth` wants a session
 
 A workflow is a function, so it now takes the same `auth` default as one: unset means a session is required, and only an explicit `auth: false` is anonymous. The same goes for an agent. Both used to be open when `auth` was unset.

@@ -65,8 +65,9 @@ const config = () => ({
   outDir: join(root, '.pikku'),
   deploy: {
     providers: { fake: providerUrl },
-    defaultProvider: 'fake',
+    provider: 'fake',
   },
+  backends: { api: { filter: {} } },
 })
 
 const inspectorState = (): InspectorState =>
@@ -157,7 +158,7 @@ beforeEach(() => {
   ;(globalThis as Record<string, unknown>).__pikkuFakeProviderDeployed =
     deployed
   mkdirSync(join(root, 'src'), { recursive: true })
-  mkdirSync(join(root, '.pikku'), { recursive: true })
+  mkdirSync(join(root, '.pikku', 'backends', 'api'), { recursive: true })
   writeFileSync(
     join(root, 'package.json'),
     JSON.stringify({ name: 'todo-app' }),
@@ -173,6 +174,45 @@ afterEach(() => {
   delete globals.__pikkuFakeProviderResult
   delete globals.__pikkuFakeProviderThrows
   process.exitCode = 0
+})
+
+describe('deploy plan provider resolution', () => {
+  test('refuses a project that names no deploy provider', async () => {
+    await assert.rejects(
+      () =>
+        deployPlan.func(
+          {
+            logger,
+            config: {
+              ...config(),
+              deploy: { providers: { fake: providerUrl } },
+            },
+            getInspectorState: async () => inspectorState(),
+            bundler: bundlerWith([]),
+          } as never,
+          {} as never,
+          {} as never
+        ),
+      /No deploy provider for backend 'api'.*"provider"/
+    )
+  })
+
+  test('takes the provider from the backend that sets one', async () => {
+    await deployPlan.func(
+      {
+        logger,
+        config: {
+          ...config(),
+          deploy: { providers: { fake: providerUrl } },
+          backends: { api: { filter: {}, deploy: { provider: 'fake' } } },
+        },
+        getInspectorState: async () => inspectorState(),
+        bundler: bundlerWith([]),
+      } as never,
+      {} as never,
+      {} as never
+    )
+  })
 })
 
 describe('deploy plan bundle failures', () => {
@@ -313,14 +353,16 @@ describe('deploy apply --fromPlan', () => {
 })
 
 describe('deploy plan keeps what apply would build', () => {
-  test('plan stages deploy.embed, so a --fromPlan apply ships it', async () => {
+  test('plan stages a backend deploy.embed, so a --fromPlan apply ships it', async () => {
     writeFileSync(join(root, 'seed.txt'), 'seed', 'utf-8')
     await deployPlan.func(
       {
         logger,
         config: {
           ...config(),
-          deploy: { ...config().deploy, embed: { seed: 'seed.txt' } },
+          backends: {
+            api: { filter: {}, deploy: { embed: { seed: 'seed.txt' } } },
+          },
         },
         getInspectorState: async () => inspectorState(),
         bundler: bundlerWith([]),

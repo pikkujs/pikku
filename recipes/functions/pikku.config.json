@@ -7,7 +7,9 @@
     "supportsImportAttributes": true
   },
   "forceRequiredServices": ["todoStore"],
+  "backends": { "app": { "filter": {} } },
   "deploy": {
+    "provider": "cloudflare",
     "serverlessIncompatible": [
       "metaService",
       "stateDiffService",

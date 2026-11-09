@@ -484,6 +484,90 @@ describe('getPikkuCLIConfig', () => {
 
     await rejectsWith(root, /web and admin both set "serve"/)
   })
+
+  describe('deploy keys', () => {
+    const load = async (extra: Record<string, unknown>) => {
+      const root = await writeConfig(extra)
+      return getPikkuCLIConfig(
+        silentLogger,
+        join(root, 'pikku.config.json'),
+        []
+      )
+    }
+
+    test('accepts a project default with per-backend and per-frontend overrides', async () => {
+      const config = await load({
+        deploy: { provider: 'cloudflare', target: 'serverless' },
+        backends: {
+          api: {
+            filter: {},
+            dev: { port: 4001 },
+            deploy: {
+              provider: 'standalone',
+              target: 'server',
+              grouping: { strategy: 'single' },
+            },
+          },
+          jobs: { filter: {}, dev: { port: 4002 } },
+        },
+        frontends: {
+          web: { cwd: 'apps/web', deploy: { provider: 'bunny' } },
+          off: { cwd: 'apps/off', deploy: false },
+        },
+      })
+      assert.equal(config.deploy?.provider, 'cloudflare')
+    })
+
+    for (const [key, home] of [
+      ['defaultProvider', 'deploy.provider'],
+      ['defaultTarget', 'deploy.target'],
+      ['grouping', 'backends.<name>.deploy.grouping'],
+      ['embed', 'backends.<name>.deploy.embed'],
+    ] as const) {
+      test(`refuses deploy.${key}, naming ${home}`, async () => {
+        await assert.rejects(
+          () =>
+            load({ deploy: { [key]: key === 'defaultProvider' ? 'x' : {} } }),
+          (error: Error) => {
+            assert.ok(error instanceof PikkuCLIConfigError)
+            assert.ok(error.message.includes(`deploy.${key}`))
+            assert.ok(error.message.includes(home))
+            return true
+          }
+        )
+      })
+    }
+
+    test('refuses a backend deploy key it does not know', async () => {
+      await assert.rejects(
+        () =>
+          load({
+            backends: { api: { filter: {}, deploy: { bundler: 'bun' } } },
+          }),
+        /backends\.api\.deploy\.bundler .* not a deploy key here/
+      )
+    })
+
+    test('refuses a backend target that is not a target', async () => {
+      await assert.rejects(
+        () =>
+          load({
+            backends: { api: { filter: {}, deploy: { target: 'edge' } } },
+          }),
+        /backends\.api\.deploy\.target .* 'serverless' or 'server'/
+      )
+    })
+
+    test('refuses a frontend deploy that is neither false nor an object', async () => {
+      await assert.rejects(
+        () =>
+          load({
+            frontends: { web: { cwd: 'apps/web', deploy: 'cloudflare' } },
+          }),
+        /frontends\.web\.deploy .* false or an object/
+      )
+    })
+  })
 })
 
 describe('assertSchemaDirectoriesAreDistinct', () => {
