@@ -169,7 +169,9 @@ if (existsSync(pikkuCliPath)) {
     const updateCheck = checkForUpdate()
     await PikkuCLI(process.argv.slice(2))
     await updateCheck
-    process.exit(process.exitCode ?? 0)
+    const { exitWhenFlushed } =
+      await import('../src/utils/exit-when-flushed.js')
+    exitWhenFlushed(process.exitCode ?? 0)
   } catch (error: any) {
     reportFatal(error)
   }
