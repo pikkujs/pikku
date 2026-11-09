@@ -34,6 +34,8 @@ jobs:
         run: node scripts/check-no-publish-time-cli-rebuild.mjs
       - name: Check every publishable package declares its repository
         run: node scripts/check-repository-field.mjs
+      - name: Test the published-changesets check
+        run: node --test scripts/check-changesets-published.test.mjs
       - name: Test the semver range helpers
         run: node --test scripts/semver-ranges.test.mjs
       - name: Test the merged-worktree reporter
@@ -373,6 +375,8 @@ jobs:
       - uses: actions/checkout@v7
       - name: Check every changeset is a patch
         run: node scripts/check-changesets-are-patch.mjs
+      - name: Check every changeset names only published packages
+        run: node scripts/check-changesets-published.mjs
       - name: Check the old virtual user names are gone
         run: node scripts/check-no-legacy-names.mjs
       - uses: ./.github/actions/setup
