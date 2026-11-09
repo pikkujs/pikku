@@ -4,7 +4,6 @@ import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import type { CoreUserSession, PikkuRawWire } from '../../types/core.types.js'
 import { WorkflowNotFoundError } from './workflow-errors.js'
 import { resolveWorkflowMeta } from './workflow-meta-resolver.js'
-import { withRunProof } from './workflow-run-proof.js'
 import {
   assertWorkflowRunOwner,
   WorkflowRunForbiddenError,
@@ -51,7 +50,7 @@ type DeclaredWorkflow = ReturnType<typeof declaredWorkflow>
  * Runs the workflow's own declaration through the function pipeline, without
  * its body. A graph has no function, so `auth` is its whole declaration. A
  * queued workflow's function may live in another deploy unit: then only `auth`
- * can be judged here, the run does the rest, and `complete` stays false.
+ * can be judged here, and the run does the rest.
  */
 const checkDeclaration = async <Data>(
   workflow: DeclaredWorkflow,
@@ -59,14 +58,14 @@ const checkDeclaration = async <Data>(
   wire: WorkflowCallerWire,
   data: Data,
   gate: 'start' | 'run'
-): Promise<{ data: Data; complete: boolean }> => {
+): Promise<Data> => {
   const session = await callerSession(wire)
   const { meta, funcId, funcConfig, packageName } = workflow
   if (!funcId || !funcConfig) {
     if (meta.auth !== false && !session) {
       throw new MissingSessionError('Authentication required')
     }
-    return { data, complete: meta.source === 'graph' }
+    return data
   }
   const checked = await runPikkuFunc<Data, Data>(
     'workflow',
@@ -80,7 +79,7 @@ const checkDeclaration = async <Data>(
       gate,
     }
   )
-  return { data: checked, complete: true }
+  return checked
 }
 
 /**
@@ -98,7 +97,7 @@ export const checkWorkflowStart = async (
   wire: WorkflowCallerWire
 ): Promise<{ input: any; wire: WorkflowRunWire }> => {
   const workflow = declaredWorkflow(workflowName)
-  const { data, complete } = await checkDeclaration(
+  const data = await checkDeclaration(
     workflow,
     workflowName,
     wire,
@@ -112,10 +111,7 @@ export const checkWorkflowStart = async (
     id: wire.wireId,
     ...(pikkuUserId ? { pikkuUserId } : {}),
   }
-  return {
-    input: data,
-    wire: complete ? withRunProof(runWire, 'start', workflowName) : runWire,
-  }
+  return { input: data, wire: runWire }
 }
 
 /**

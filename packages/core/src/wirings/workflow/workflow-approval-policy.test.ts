@@ -1,4 +1,5 @@
 import { describe, test } from 'node:test'
+import { InMemorySessionStore } from '../../services/in-memory-session-store.js'
 import assert from 'node:assert/strict'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
@@ -31,6 +32,7 @@ const registerApprovalWorkflow = (
   audit?: { audit: (event: unknown) => Promise<void> }
 ) => {
   pikkuState(null, 'package', 'singletonServices', {
+    sessionStore: new InMemorySessionStore(),
     logger: { error() {}, info() {}, warn() {}, debug() {} },
     queueService: { add: async () => {} },
     audit,

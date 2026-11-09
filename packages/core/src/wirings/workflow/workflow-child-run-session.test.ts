@@ -1,4 +1,5 @@
 import { describe, test } from 'node:test'
+import { InMemorySessionStore } from '../../services/in-memory-session-store.js'
 import assert from 'node:assert/strict'
 
 import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
@@ -36,6 +37,7 @@ describe('a child workflow inherits the parent run wire pikkuUserId', () => {
   const startParentWithChildStep = async (pikkuUserId?: string) => {
     resetPikkuState()
     pikkuState(null, 'package', 'singletonServices', {
+      sessionStore: new InMemorySessionStore(),
       logger: silentLogger,
     } as any)
     registerChildWorkflow('childFlow')
@@ -99,6 +101,7 @@ describe('a queued child workflow hands its output back to the parent step', () 
   const setup = async () => {
     resetPikkuState()
     pikkuState(null, 'package', 'singletonServices', {
+      sessionStore: new InMemorySessionStore(),
       logger: silentLogger,
       queueService: { add: async () => {} },
     } as any)

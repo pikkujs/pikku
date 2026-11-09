@@ -47,22 +47,16 @@ What to do:
 - **Permissions on status:** a workflow's permissions also run on status and stream reads, on every poll, and receive the run's stored input. A permission that reads a field a start supplies keeps working. One with side effects will run more often.
 - `rpc.startWorkflow` and `rpc.agent` do not check `expose`, and do not need it. The generated routes call `rpc.exposedWorkflow` and `rpc.exposedAgent`, which do; `checkWorkflowStart` and `checkWorkflowRunAccess` no longer check `expose` themselves.
 
-**With no `sessionStore`:**
+**A run loads its owner's session every time it executes.** The run row holds the user id and nothing else. Each execution (the workflow body, each step, each child run, each resume) loads the session from `sessionStore` and runs the workflow's `auth`, scopes, feature flag and permissions against it, so a permission revoked while the run is in flight stops its next execution.
 
-A run started through a generated route, or through `checkWorkflowStart`, is checked with the caller's real session and records that it was. The run row holds a marker and the user id, never the session. A queued `auth: true` workflow then works with no `sessionStore`, and:
+A run with an owner needs a `sessionStore`; without one it stops with `workflows that need a session require a sessionStore`. Use a store, for example `@pikku/better-auth`. A run with no owner, such as an `auth: false` workflow started by a schedule, needs none.
 
-- The body gets `session` as `{ userId }` and nothing else. If it reads another session field, add a `sessionStore`.
-- The workflow's own `auth`, `scopes` and `permissions` are not run again in the body: the start judged them.
-- Steps and child workflows get the same `{ userId }`, and do run their own checks against it, so a step needing a scope or a session field is refused. Add a `sessionStore`.
-
-`rpc.startWorkflow` from your own function sets no marker. Without a `sessionStore`, a workflow it starts with `auth` unset is refused in the body, even if your function has a session. Either go through the check (which judges `auth`, scopes and permissions, not `expose`), or use `auth: false` on a workflow that is not exposed:
+`rpc.startWorkflow` from your own function records the user id from the wire it is given. To refuse a bad call before any run row exists, go through the check (which judges `auth`, scopes and permissions, not `expose`):
 
 ```ts
 const start = await checkWorkflowStart('checkout', input, { session })
 return rpc.startWorkflow('checkout', start.input, { wire: start.wire })
 ```
-
-If a `sessionStore` is configured, the marker does nothing: the session comes from the store on every run, and one that has gone from the store is refused.
 
 Related changes:
 
