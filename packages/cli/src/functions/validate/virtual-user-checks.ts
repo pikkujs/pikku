@@ -215,7 +215,7 @@ export const runVirtualUserChecks = async (
       lines(
         'Add the targets a run may point at:',
         '  "environments": {',
-        '    "local": { "apiUrl": "http://localhost:4002", "appUrl": "http://localhost:3000" }',
+        '    "local": { "backends": { "api": "http://localhost:4002" }, "frontends": { "web": "http://localhost:3000" } }',
         '  }'
       )
     )

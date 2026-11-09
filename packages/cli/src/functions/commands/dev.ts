@@ -484,7 +484,9 @@ export const dev = pikkuSessionlessFunc<
     writeDevAddress(resolvedRuntimeDir, `http://${hostname}:${boundPort}`)
     setDevVirtualUserApiUrl(
       `http://${hostname}:${boundPort}`,
-      config.environments?.[process.env.PIKKU_ENV ?? '']?.apiUrl
+      Object.values(
+        config.environments?.[process.env.PIKKU_ENV ?? '']?.backends ?? {}
+      )[0]?.url
     )
     process.once('exit', () => clearDevAddress(resolvedRuntimeDir))
 

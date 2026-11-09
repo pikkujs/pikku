@@ -823,31 +823,7 @@ export type PikkuCLIInput = {
    *
    * The virtual user signing key comes from VIRTUAL_USER_SIGNING_KEY or `pikku dev`, never from here.
    */
-  environments?: Record<
-    string,
-    {
-      apiUrl: string
-      /** Virtual user sign-in path under apiUrl. Default: /auth/sign-in/virtual-user */
-      signInPath?: string
-      /**
-       * Where the session and its roles are read back. Default: `get-session`
-       * under the same mount as `signInPath`.
-       */
-      sessionPath?: string
-      /** Exposed-RPC prefix under apiUrl. Default: /rpc */
-      rpcPath?: string
-      /** Frontend base URL browser steps navigate against. Required for steps with a `browser` binding. */
-      appUrl?: string
-      /**
-       * This environment carries real consequences, so only an `accountable`
-       * virtual user may run against it.
-       *
-       * A flag rather than a reserved name: projects call it `prod`, `live` or
-       * `eu-prod`, and more than one environment can be production.
-       */
-      production?: boolean
-    }
-  >
+  environments?: Record<string, PikkuEnvironmentInput>
 
   scenarios?: {
     /**
@@ -1129,6 +1105,41 @@ export type PikkuCLIInput = {
   backends: Record<string, PikkuBackendInput>
 }
 
+/**
+ * One backend as an environment reaches it. `url` may be omitted for a backend
+ * with `backends.<name>.dev.port`: the loader derives http://localhost:<port>.
+ * The auth paths belong here because they are the backend's, not the stage's.
+ */
+export type PikkuEnvironmentBackendInput = {
+  url?: string
+  signInPath?: string
+  sessionPath?: string
+  rpcPath?: string
+}
+
+/** An `environments.<name>` entry as written in pikku.config.json. */
+export type PikkuEnvironmentInput = {
+  backends: Record<string, string | PikkuEnvironmentBackendInput>
+  frontends?: Record<string, string>
+  /** Real consequences: only an `accountable` virtual user may run against it. */
+  production?: boolean
+}
+
+/** An `environments.<name>` entry after the loader has resolved every URL. */
+export type PikkuEnvironment = {
+  backends: Record<
+    string,
+    {
+      url: string
+      signInPath?: string
+      sessionPath?: string
+      rpcPath?: string
+    }
+  >
+  frontends: Record<string, string>
+  production?: boolean
+}
+
 export type PikkuDeployGrouping = {
   strategy?: 'function' | 'single'
   rules?: Array<{
@@ -1199,8 +1210,9 @@ export type PikkuClientSdkFiles = {
  * Everything the loader resolves on top of `PikkuCLIInput`: generated-file
  * paths, CLI flags that leak into the config object, and derived values.
  */
-export type PikkuCLIConfig = PikkuCLIInput &
+export type PikkuCLIConfig = Omit<PikkuCLIInput, 'environments'> &
   PikkuCLICoreOutputFiles & {
+    environments?: Record<string, PikkuEnvironment>
     clientFiles?: PikkuClientSdkFiles
     filters: InspectorFilters
     configDir: string

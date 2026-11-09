@@ -51,6 +51,37 @@ Every config (addons excepted) must declare the servers it builds: `"backends": 
 - `pikku deploy plan` and `apply` run once per declared backend, each on its own filtered state and `.pikku/backends/<name>/`; `--backend <name>` narrows. A project with one backend still builds into `.deploy/<provider>/`; with several, each builds into `.deploy/<backend>/<provider>/` and `--result-file` gains a `.<backend>` suffix.
 - A `serve` frontend ships inside a single-unit bundle, so a project with several backends cannot use `serve` with a single-unit provider (standalone).
 
+### The loader refuses unknown keys, `outDir` is fixed, and `environments` names backends and frontends
+
+Every key in `pikku.config.json` must be a key of the CLI input type (`packages/cli/types/config.d.ts`); the loader refuses the first one that is not, naming its new home when it moved.
+
+- `outDir`: removed. Generated files always go to `.pikku/` beside `pikku.config.json`.
+- `dev`: removed at the top level. `dev.port` is `backends.<name>.dev.port`; `dev.db` and `dev.contributors` are gone.
+- `entrypoint`, `showcase`, `fabric`, `node`, `rpc`, `frontend`, `verboseMeta`: nothing read them; delete.
+- `supportsImportAttributes` at the top level is `schema.supportsImportAttributes`. `nextHTTPFile` and `nextBackendFile` at the top level are `clientFiles.*`.
+- `security`, `tsc`, `diff`, `tags`, `wires` and the other flags that leaked into configs: delete (a filter is `backends.<name>.filter`).
+- Any `*File`, `*Dir` or `*Directory` generated path (`scenarioSchemaDirectory`, `workflowRoutesFile`): generated, not configurable. `authFile`, `authTypesFile` and `authMetaJsonFile` stay real keys.
+- `addons`: not a top-level collection yet; wire addons in code with `wireAddon`.
+- `scenarios.environments`: the top-level `environments`.
+
+`environments.<name>` is now `{ backends, frontends, production }`:
+
+```json
+"environments": {
+  "local": {
+    "backends": { "api": {} },
+    "frontends": { "web": "http://localhost:5173" }
+  },
+  "prod": {
+    "backends": { "api": { "url": "https://api.example.com", "signInPath": "/api/auth/sign-in/virtual-user" } },
+    "frontends": { "web": "https://example.com" },
+    "production": true
+  }
+}
+```
+
+A backend is a URL or `{ url, signInPath, sessionPath, rpcPath }`; with no `url` it is `http://localhost:<backends.<name>.dev.port>`. `apiUrl`, `appUrl`, `appUrls`, `signInPath`, `sessionPath` and `rpcPath` directly under an environment are refused, naming where each went. A frontend entry replaces `appUrls` (the key is the `app` a virtual user declares); with one frontend, or one marked `primary`, it is also the fallback for a virtual user that names no app. `pikku scenario run`, `pikku virtual-user run` and `rpc`, and `pikku pages screenshot` take `--backend <name>`; it defaults to the environment's only backend and is an error when there are several.
+
 ### A workflow or agent with no `auth` wants a session
 
 A workflow is a function, so it now takes the same `auth` default as one: unset means a session is required, and only an explicit `auth: false` is anonymous. The same goes for an agent. Both used to be open when `auth` was unset.

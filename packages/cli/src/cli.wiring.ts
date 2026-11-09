@@ -1426,13 +1426,18 @@ wireCLI({
               choices: ['off', 'failed', 'all'],
               default: 'failed',
             },
+            backend: {
+              description:
+                "Which of the environment's backends to sign in to and call. Optional when it has only one",
+              type: 'string',
+            },
             apiUrl: {
               description:
-                "Override the environment's apiUrl for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
+                "Override the selected backend's url for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
             },
             appUrl: {
               description:
-                "Override the environment's appUrl for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose virtual users sign into different apps — comma-separated, and a bare url is the fallback",
+                "Override the environment's frontend url for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose virtual users sign into different apps — comma-separated, and a bare url is the fallback",
             },
             runId: {
               description:
@@ -1587,7 +1592,12 @@ wireCLI({
                 },
                 environment: {
                   description:
-                    'Environment in pikku.config.json whose apiUrl --as signs in against. Defaults to local',
+                    'Environment in pikku.config.json whose backend --as signs in against. Defaults to local',
+                  type: 'string',
+                },
+                backend: {
+                  description:
+                    "Which of the environment's backends --as signs in to. Optional when it has only one",
                   type: 'string',
                 },
                 viewport: {
@@ -1703,9 +1713,14 @@ wireCLI({
               description:
                 'Start without verifying the declared roles against the stage. For a target whose auth reports roles somewhere pikku cannot read — findings from an unverified run may be seed drift rather than product bugs',
             },
+            backend: {
+              description:
+                "Which of the environment's backends to sign in to and call. Optional when it has only one",
+              type: 'string',
+            },
             apiUrl: {
               description:
-                "Override the environment's apiUrl for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
+                "Override the selected backend's url for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
             },
             out: {
               description:
@@ -1741,6 +1756,11 @@ wireCLI({
             environment: {
               description:
                 'Environment in pikku.config.json to call. Defaults to local',
+              type: 'string',
+            },
+            backend: {
+              description:
+                "Which of the environment's backends to sign in to and call. Optional when it has only one",
               type: 'string',
             },
             apiUrl: {

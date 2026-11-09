@@ -17,6 +17,7 @@ export const PagesScreenshotInput = z.object({
   params: z.string().optional(),
   as: z.string().optional(),
   environment: z.string().optional(),
+  backend: z.string().optional(),
   viewport: z.boolean().optional(),
 })
 export const PagesScreenshotOutput = z.object({

@@ -58,7 +58,12 @@ import type { GuideFeature, GuideLock, GuidePage } from './scenario-guide.js'
 import { buildScenarioPlan, identifyScenarioResult } from './scenario-plan.js'
 import { resolveScenarioRunVersion } from './scenario-version.js'
 import type { ScenarioPlanGroup, ScenarioRunIdentity } from './scenario-plan.js'
-import { apiUrlPort, resolveEnvironment, isLocalUrl } from './environment.js'
+import {
+  apiUrlPort,
+  primaryFrontendName,
+  resolveEnvironment,
+  isLocalUrl,
+} from './environment.js'
 import { readDevAddress } from './dev-address.js'
 import type { ScenarioBaseline } from '../db/scenario-baseline.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
@@ -172,6 +177,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     video?: 'off' | 'failed' | 'all'
     apiUrl?: string
     appUrl?: string
+    backend?: string
     runId?: string
   },
   void
@@ -194,6 +200,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       video = 'failed',
       apiUrl,
       appUrl,
+      backend,
       runId,
     }
   ) => {
@@ -215,6 +222,8 @@ export const scenarioRun = pikkuSessionlessFunc<
     const env = resolveEnvironment({
       environment,
       environments: config.environments ?? {},
+      backend,
+      primaryFrontend: primaryFrontendName(config.frontends),
       apiUrl,
       appUrl,
       spawn,

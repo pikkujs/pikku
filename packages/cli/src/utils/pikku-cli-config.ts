@@ -12,6 +12,8 @@ import {
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
+import { assertKnownConfigKeys } from './config-keys.js'
+import { normalizeEnvironments } from './normalize-environments.js'
 import { DEFAULT_ADDON_REGISTRY } from './remote-addon-sync.js'
 
 // Frontend glue a person still places in the frontend's own source. The
@@ -444,6 +446,9 @@ const assertBackendsDeclared = (
     )
   }
 
+  assertMetaLocaleNotSpelledLocale(config)
+  assertKnownConfigKeys(config, file)
+
   // An addon is a package other projects wire, not a server; it builds no backend.
   if (config.addon) {
     return
@@ -506,13 +511,18 @@ const _getPikkuCLIConfig = async (
   try {
     const file = await readFile(configFile, 'utf-8')
     const configDir = dirname(configFile)
-    const config: PikkuCLIConfig = JSON.parse(file)
+    const config: PikkuCLIInput = JSON.parse(file)
     assertBackendsDeclared(
       config as unknown as Record<string, unknown>,
       configDir
     )
     const result: PikkuCLIConfig = {
-      ...config,
+      ...(config as unknown as PikkuCLIConfig),
+      environments: normalizeEnvironments(
+        config,
+        `${configDir}/pikku.config.json`
+      ),
+      outDir: join(configDir, '.pikku'),
       configDir,
       packageMappings: config.packageMappings || {},
       rootDir: config.rootDir ? resolve(configDir, config.rootDir) : configDir,
@@ -528,10 +538,6 @@ const _getPikkuCLIConfig = async (
         supportsImportAttributes: true,
         ...config.schema,
       },
-    }
-
-    if (result.outDir && !isAbsolute(result.outDir)) {
-      result.outDir = resolve(configDir, result.outDir)
     }
 
     // Override outDir if provided via CLI flag (must happen before derived paths)

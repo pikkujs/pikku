@@ -35,7 +35,6 @@ describe('getPikkuCLIConfig', () => {
         rootDir: '.',
         srcDirectories: ['src'],
         packageMappings: {},
-        outDir: '.pikku',
         tsconfig: 'tsconfig.json',
         backends: { api: { filter: {} } },
         ...extra,
@@ -79,7 +78,7 @@ describe('getPikkuCLIConfig', () => {
     await assert.rejects(
       () =>
         getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
-      /startServerFnsFile is now clientFiles\.tanstackStartFile/
+      /startServerFnsFile .* is now clientFiles\.tanstackStartFile/
     )
   })
 
@@ -201,6 +200,138 @@ describe('getPikkuCLIConfig', () => {
     })
   })
 
+  describe('strict keys', () => {
+    const rejects = async (extra: Record<string, unknown>, message: RegExp) =>
+      assert.rejects(load(await writeConfig(extra)), message)
+
+    test('an unknown top-level key is named', async () => {
+      await rejects(
+        { bogus: 1 },
+        /bogus in .* is not a pikku\.config\.json key/
+      )
+    })
+
+    test('an unknown nested key is named with its section', async () => {
+      await rejects(
+        { scaffold: { nope: true } },
+        /scaffold\.nope in .* is not a pikku\.config\.json key/
+      )
+      await rejects(
+        { backends: { api: { filter: {}, typo: 1 } } },
+        /backends\.api\.typo/
+      )
+    })
+
+    test('outDir is fixed beside the config', async () => {
+      await rejects({ outDir: '.pikku' }, /outDir .* no longer a config key/)
+      const config = await load(await writeConfig())
+      assert.equal(config.outDir, join(config.configDir, '.pikku'))
+    })
+
+    test('dev moved to backends.<name>.dev', async () => {
+      await rejects({ dev: { db: true } }, /dev .* backends\.<name>\.dev/)
+    })
+
+    test('a generated path is not configurable', async () => {
+      await rejects(
+        { scenarioSchemaDirectory: 'x' },
+        /scenarioSchemaDirectory .* generated path/
+      )
+    })
+
+    test('keys nobody reads are refused', async () => {
+      for (const key of ['entrypoint', 'showcase', 'fabric', 'node']) {
+        await rejects({ [key]: 'x' }, new RegExp(`${key} in .* not read`))
+      }
+    })
+
+    test('a stray top-level supportsImportAttributes points at schema', async () => {
+      await rejects(
+        { supportsImportAttributes: true },
+        /is now schema\.supportsImportAttributes/
+      )
+    })
+
+    test('a CLI flag leaked into the config is named as one', async () => {
+      await rejects({ security: true }, /`--security` flag/)
+    })
+
+    test('addons is not a collection yet', async () => {
+      await rejects({ addons: {} }, /addons .* wireAddon/)
+    })
+
+    test('an addon is held to the same keys', async () => {
+      await rejects({ addon: true, backends: undefined, outDir: 'x' }, /outDir/)
+    })
+  })
+
+  describe('environments', () => {
+    test('expands a url and derives a local one from dev.port', async () => {
+      const root = await writeConfig({
+        backends: { api: { dev: { port: 4021 } } },
+        environments: {
+          local: {
+            backends: { api: {} },
+            frontends: { web: 'http://localhost:5000' },
+          },
+          prod: {
+            backends: {
+              api: { url: 'https://api.test', signInPath: '/auth/sign-in/x' },
+            },
+            production: true,
+          },
+        },
+      })
+      const { environments } = await load(root)
+      assert.deepEqual(environments?.local, {
+        backends: { api: { url: 'http://localhost:4021' } },
+        frontends: { web: 'http://localhost:5000' },
+      })
+      assert.deepEqual(environments?.prod?.backends.api, {
+        url: 'https://api.test',
+        signInPath: '/auth/sign-in/x',
+      })
+      assert.equal(environments?.prod?.production, true)
+    })
+
+    test('the string shorthand is a url', async () => {
+      const root = await writeConfig({
+        environments: { stage: { backends: { api: 'https://s.test' } } },
+      })
+      assert.equal(
+        (await load(root)).environments?.stage?.backends.api?.url,
+        'https://s.test'
+      )
+    })
+
+    test('the old flat keys are refused with their new home', async () => {
+      for (const [key, home] of [
+        ['apiUrl', 'backends'],
+        ['appUrl', 'frontends'],
+        ['signInPath', 'backends'],
+      ] as const) {
+        const root = await writeConfig({
+          environments: { local: { [key]: 'x' } },
+        })
+        await assert.rejects(load(root), new RegExp(`${key} .* ${home}`))
+      }
+    })
+
+    test('a backend with neither url nor dev.port is refused', async () => {
+      const root = await writeConfig({
+        environments: { local: { backends: { api: {} } } },
+      })
+      await assert.rejects(load(root), /no url, and backends\.api\.dev\.port/)
+    })
+
+    test('an undeclared backend is refused', async () => {
+      const root = await writeConfig({
+        environments: { local: { backends: { ghost: 'http://x.test' } } },
+      })
+      await assert.rejects(load(root), /does not declare/)
+    })
+  })
+
   test('rejects a console scaffold still carrying the removed auth key', async () => {
     const root = await writeConfig({
       scaffold: { console: { auth: false } },
@@ -242,7 +373,6 @@ describe('getPikkuCLIConfig', () => {
           rootDir: '.',
           srcDirectories: ['src'],
           packageMappings: {},
-          outDir: '.pikku',
           tsconfig: 'tsconfig.json',
           db: {
             engine: 'postgres',
@@ -289,24 +419,6 @@ describe('getPikkuCLIConfig', () => {
     assert.equal(
       config.scenarioSchemaDirectory,
       join(root, '.pikku', 'scenarios', 'schemas')
-    )
-  })
-
-  test('a custom scenarioSchemaDirectory is honoured', async () => {
-    const root = await writeConfig({
-      scenarioSchemaDirectory: 'generated/scenario-schemas',
-    })
-
-    const config = await getPikkuCLIConfig(
-      silentLogger,
-      join(root, 'pikku.config.json'),
-      [],
-      false
-    )
-
-    assert.equal(
-      config.scenarioSchemaDirectory,
-      join(root, 'generated', 'scenario-schemas')
     )
   })
 
@@ -378,27 +490,18 @@ describe('getPikkuCLIConfig', () => {
     )
   })
 
-  test('a scenario schema directory equal to the app one is rejected', async () => {
+  test('a scenario schema directory equal to the app one is rejected', () => {
     // The scenario write owns its directory: it emits register.gen.ts and prunes
     // every schema file its own required-set does not name. Sharing the app's
     // directory would replace the application register with the scenario-only
     // one, which nothing downstream can detect.
-    const root = await writeConfig({
-      scenarioSchemaDirectory: '.pikku/schemas',
-    })
-
-    await assert.rejects(
-      getPikkuCLIConfig(
-        silentLogger,
-        join(root, 'pikku.config.json'),
-        [],
-        false
-      ),
-      (e: unknown) =>
-        e instanceof PikkuCLIConfigError &&
-        /scenarioSchemaDirectory must not be the same directory/.test(
-          (e as Error).message
-        )
+    assert.throws(
+      () =>
+        assertSchemaDirectoriesAreDistinct({
+          schemaDirectory: '/p/.pikku/schemas',
+          scenarioSchemaDirectory: '/p/.pikku/schemas',
+        }),
+      /scenarioSchemaDirectory must not be the same directory/
     )
   })
 
@@ -661,7 +764,6 @@ describe('tryGetPikkuCLIConfig', () => {
         rootDir: '.',
         srcDirectories: ['src'],
         packageMappings: {},
-        outDir: '.pikku',
         tsconfig: 'tsconfig.json',
         backends: { api: { filter: {} } },
       })

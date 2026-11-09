@@ -116,5 +116,6 @@ A rule that was chosen, and what it rules out.
 - [An app declares its tables in db/tables.ts and generate only ever adds](an-app-declares-its-tables-and-generate-only-adds.md) — db/tables.ts is a PikkuSchema with annotations, materialised on a throwaway database and diffed against the migrations; only additions are written, everything else is refused, and the -- pikku:tables marker tells a removal from a table never declared
 - [A backend generates an exposed and a remote SDK](a-backend-generates-an-exposed-and-a-remote-sdk.md) — each backend gets .pikku/sdk/<backend>/exposed/ and, with remote functions, remote/; the pass writes inside its outDir and the parent relocates; publish is opt-in and fail closed
 - [Deploy is a project default with per-backend overrides](deploy-is-a-project-default-with-per-backend-overrides.md) — deploy sets provider and target for every unit, a backend or frontend overrides them, grouping and embed are per backend, and no provider is an error
+- [The loader accepts only the keys of the CLI input type](the-loader-accepts-only-the-keys-of-the-cli-input-type.md) — unknown or moved keys are refused naming their home; environments name backends and frontends
 
 <!-- /pikku:knowledge-index -->
