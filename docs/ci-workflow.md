@@ -31,7 +31,7 @@ Only the check stages are here. Deploying (`pikku ci -p <provider> --deploy`) is
 | `skip-deploy-checks` | `false` | `pikku ci --skip-deploy-checks` |
 | `validate-blocking` | `true` | `false` makes findings annotate without failing |
 | `audit-blocking` | `true` | same, for audit (the threshold is `high`, as in `pikku ci`) |
-| `tsc` | `true` | runs `bun run tsc` when the project has it |
+| `tsc` | `true` | runs `bun run --bun tsc` when the project has it |
 | `runs-on` | `ubuntu-24.04` | |
 
 `--provider`, `--deploy`, `--keep-worktree`, `--worktree-dir`, `--migrations-applied` and `--secrets-set` only apply to the deploy path and have no input.
