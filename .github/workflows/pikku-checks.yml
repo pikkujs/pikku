@@ -4,12 +4,12 @@ name: Pikku checks
 # same order, but as parallel jobs:
 #
 #   prepare    install, project pre-step, `pikku bootstrap`, `pikku db migrate --localOnly` (when db/<engine> exists),
-#              `pikku emails generate` (when the config names an emailTemplatesDir that exists), `pikku all --failOnError`
-#              and `pikku app build`. Everything git ignores except node_modules (.pikku, *.gen.*, dist, frontend build
+#              `pikku emails generate` (when the config names an emailTemplatesDir that exists), `pikku all --failOnError`,
+#              the post-codegen command when given, and `pikku app build`. Everything git ignores except node_modules (.pikku, *.gen.*, dist, frontend build
 #              output) is uploaded as one tarball: upload-artifact drops file modes and skips hidden folders such as .pikku.
 #   validate   `pikku validate`
 #   audit      `pikku audit --failOn high`, with --baseline when one is given or .deploy/audit.json exists
-#   test       `bun run --bun test`
+#   test       `bun run --bun test` (or test-command)
 #   tsc        `bun run --bun tsc`, when the project has that script (`pikku ci` has no such stage: `pikku validate` type-checks)
 #
 # Usage, from the project's own workflow:
@@ -55,6 +55,18 @@ on:
         description: When false, audit findings are shown but do not fail the run
         type: boolean
         default: true
+      fail-on-error:
+        description: When false, `pikku all` codegen diagnostics are reported but do not fail prepare (drops --failOnError)
+        type: boolean
+        default: true
+      post-codegen:
+        description: A shell command to run in working-directory after `pikku all` and before `pikku app build`, for steps that read the .pikku output
+        type: string
+        default: ''
+      test-command:
+        description: The command the test job runs in working-directory
+        type: string
+        default: bun run --bun test
       tsc:
         description: Run the tsc job (`bun run --bun tsc`, skipped with a notice when the project has no such script)
         type: boolean
@@ -125,7 +137,14 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         env:
           CI: '1'
-        run: bunx --bun pikku all --failOnError
+          FAIL_ON_ERROR: ${{ inputs.fail-on-error && '1' || '' }}
+        run: bunx --bun pikku all ${FAIL_ON_ERROR:+--failOnError}
+      - name: Post-codegen
+        if: inputs.post-codegen != ''
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          POST_CODEGEN: ${{ inputs.post-codegen }}
+        run: eval "$POST_CODEGEN"
       - name: App build
         working-directory: ${{ inputs.working-directory }}
         env:
@@ -236,12 +255,13 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         env:
           CI: '1'
+          TEST_COMMAND: ${{ inputs.test-command }}
         run: |
           if [ "$(jq -r '.scripts.test // empty' package.json)" = "" ]; then
             echo '::error::This project has no "test" script in package.json. Add one, or pass skip-tests: true.'
             exit 1
           fi
-          bun run --bun test
+          eval "$TEST_COMMAND"
 
   tsc:
     needs: prepare
