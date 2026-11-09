@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3414 observable things**: 1160 exported names, plus
+**3413 observable things**: 1159 exported names, plus
 2254 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 170 | 144 | 439 |
 | `./virtual-user` | 104 | 102 | 255 |
-| `./workflow` | 100 | 48 | 165 |
+| `./workflow` | 99 | 47 | 165 |
 | `./scenario` | 50 | 48 | 157 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 86 |
@@ -787,7 +787,7 @@ export abstract class PikkuRequest<In = any> {
   constructor(data: In)
   public async data(): Promise<In>
 }
-runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, funcName: string, { singletonServices, createWireServices, wireServices: providedWireServices, data, auth: wiringAuth, inheritedMiddleware, wireMiddleware, inheritedChannelMiddleware, wireChannelMiddleware, coerceDataFromSchema, wire, sessionService, credentialWireService, packageName, addonInstance, gate, }: { singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; wireServices?: Record<string, unknown> | undefined; data: () => In | Promise<In>; auth?: boolean | undefined; inheritedMiddleware?: MiddlewareMetadata[] | undefined; wireMiddleware?: CorePikkuMiddleware[] | undefined; inheritedChannelMiddleware?: MiddlewareMetadata[] | undefined; wireChannelMiddleware?: CorePikkuChannelMiddleware[] | undefined; coerceDataFromSchema?: boolean | undefined; tags?: string[] | undefined; wire: PikkuRawWire; sessionService?: SessionService<CoreUserSession> | undefined; credentialWireService?: PikkuCredentialWireService | undefined; packageName?: string | null | undefined; addonInstance?: AddonInstance | undefined; gate?: "start" | "run" | undefined; }) => Promise<Out>
+runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, funcName: string, { singletonServices, createWireServices, wireServices: providedWireServices, data, auth: wiringAuth, inheritedMiddleware, wireMiddleware, inheritedChannelMiddleware, wireChannelMiddleware, coerceDataFromSchema, wire, sessionService, credentialWireService, packageName, addonInstance, }: { singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; wireServices?: Record<string, unknown> | undefined; data: () => In | Promise<In>; auth?: boolean | undefined; inheritedMiddleware?: MiddlewareMetadata[] | undefined; wireMiddleware?: CorePikkuMiddleware[] | undefined; inheritedChannelMiddleware?: MiddlewareMetadata[] | undefined; wireChannelMiddleware?: CorePikkuChannelMiddleware[] | undefined; coerceDataFromSchema?: boolean | undefined; tags?: string[] | undefined; wire: PikkuRawWire; sessionService?: SessionService<CoreUserSession> | undefined; credentialWireService?: PikkuCredentialWireService | undefined; packageName?: string | null | undefined; addonInstance?: AddonInstance | undefined; }) => Promise<Out>
 ```
 
 ## ./channel
@@ -1057,7 +1057,6 @@ export interface CancelStepMeta {
   reason?: string
 }
 checkWorkflowRunAccess: (workflowName: string, run: WorkflowRun | null | undefined, wire: WorkflowCallerWire, action: "read" | "approve") => Promise<void>
-checkWorkflowStart: (workflowName: string, input: unknown, wire: WorkflowCallerWire) => Promise<{ input: any; wire: WorkflowRunWire; }>
 export type Condition =
   | SimpleCondition
   | { type: 'and'; conditions: Condition[] }

@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { checkWorkflowStart } from '@pikku/core/workflow'
 import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { pikkuFunc } from '#pikku/function'
 import { wireHTTP } from '#pikku/http'
@@ -103,15 +102,8 @@ export const startQuoteApproval = pikkuFunc({
   expose: true,
   description: 'Send a drafted quote to a dispatcher for sign-off.',
   scopes: ['quotes:create'],
-  func: async ({}, { quoteId }: { quoteId: string }, { rpc, session }) => {
-    const start = await checkWorkflowStart(
-      'quoteApprovalWorkflow',
-      { quoteId },
-      { session }
-    )
-    return rpc.startWorkflow('quoteApprovalWorkflow', start.input, {
-      wire: start.wire,
-    })
+  func: async ({}, { quoteId }: { quoteId: string }, { rpc }) => {
+    return rpc.startWorkflow('quoteApprovalWorkflow', { quoteId })
   },
 })
 

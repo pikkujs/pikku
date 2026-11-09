@@ -22,8 +22,8 @@ were already reading.
 schedulers and anonymous starts make runs with no `pikkuUserId`, and nobody can prove
 such a run is theirs. An earlier version let them through, which made every ownerless
 run readable by anyone holding its id. The routes go through
-`checkWorkflowRunAccess`, where the workflow's declaration can open one: `auth: false`
-for anyone, or its permissions, judged on the run's stored input. Consoles do not use this check; they gate on their own
+`checkWorkflowRunAccess`, where only the workflow's `auth: false` opens one, for
+anyone. The workflow's permissions are not run on a read. Consoles do not use this check; they gate on their own
 scopes (`pikku:console:workflows:read`).
 
 This is ownership, not an approver model. It answers "is this your run", not "are

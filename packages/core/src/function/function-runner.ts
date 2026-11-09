@@ -211,7 +211,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
     credentialWireService,
     packageName = null,
     addonInstance,
-    gate,
   }: {
     singletonServices: CoreSingletonServices
     createWireServices?: CreateWireServices
@@ -233,13 +232,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
     credentialWireService?: PikkuCredentialWireService
     packageName?: string | null
     addonInstance?: AddonInstance
-    /**
-     * Run the function's checks and stop before its body, returning the data as
-     * the schema left it. `start` is a call about to happen. `run` is a look at
-     * one that already did: it reads, so `readonly` does not apply, and its data
-     * was validated when it started.
-     */
-    gate?: 'start' | 'run'
   }
 ): Promise<Out> => {
   wire.wireType ??= wireType
@@ -485,7 +477,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       }
     }
 
-    if (session?.readonly && !funcMeta.readonly && gate !== 'run') {
+    if (session?.readonly && !funcMeta.readonly) {
       throw new ReadonlySessionError()
     }
 
@@ -532,7 +524,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     let actualData = await data()
 
     const inputSchemaName = funcMeta.inputSchemaName
-    if (inputSchemaName && gate !== 'run') {
+    if (inputSchemaName) {
       actualData = applyDefaultsFromSchema(
         inputSchemaName,
         actualData,
@@ -565,8 +557,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
       data: actualData,
       packageName: funcPackageName,
     })
-
-    if (gate) return actualData
 
     let wireServices: Record<string, unknown> | undefined
     let invocationAuditLog: AuditLog | undefined

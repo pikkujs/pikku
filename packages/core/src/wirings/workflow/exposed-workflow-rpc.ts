@@ -3,9 +3,10 @@ import type { CoreServices, PikkuRawWire } from '../../types/core.types.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
 import {
   assertWorkflowExposed,
+  callerSession,
   checkWorkflowRunAccess,
-  checkWorkflowStart,
 } from './workflow-run-access.js'
+import type { WorkflowRunWire } from './workflow.types.js'
 import { streamWorkflowRunStatus } from './workflow-status-stream.js'
 
 /**
@@ -14,9 +15,11 @@ import { streamWorkflowRunStatus } from './workflow-status-stream.js'
  * `rpc.startWorkflow`.
  *
  * Every call first requires the workflow to be `expose: true` and answers 404
- * otherwise, then runs the workflow's own declaration (`auth`, scopes, input
- * schema, permissions, run ownership). The routes that call it hold no access
- * logic. `rpc.startWorkflow` stays unchecked for `expose`: it is application code.
+ * otherwise. That is the generated surface's access policy and nothing more: a
+ * start records who started the run and hands over, and the workflow judges its
+ * own `auth`, scopes, permissions and input when its function runs. Reading and
+ * answering a run check the run's owner and the gate's approvers.
+ * `rpc.startWorkflow` stays unchecked for `expose`: it is application code.
  */
 export const createExposedWorkflowRPC = (
   services: CoreServices,
@@ -34,6 +37,16 @@ export const createExposedWorkflowRPC = (
       throw new MissingServiceError('workflowRunService is required')
     }
     return services.workflowRunService
+  }
+
+  /** Who started the run. The workflow's own checks run when its function does. */
+  const runWire = async (): Promise<WorkflowRunWire> => {
+    const pikkuUserId = wire.pikkuUserId ?? (await callerSession(wire))?.userId
+    return {
+      type: wire.wireType ?? 'unknown',
+      id: wire.wireId,
+      ...(pikkuUserId ? { pikkuUserId } : {}),
+    }
   }
 
   const streamStatus = async (
@@ -58,17 +71,15 @@ export const createExposedWorkflowRPC = (
     start: async (workflowName, data) => {
       assertWorkflowExposed(workflowName)
       workflowService()
-      const start = await checkWorkflowStart(workflowName, data ?? {}, wire)
-      return await rpc.startWorkflow(workflowName, start.input, {
-        wire: start.wire,
+      return await rpc.startWorkflow(workflowName, data ?? {}, {
+        wire: await runWire(),
       })
     },
     run: async (workflowName, data) => {
       assertWorkflowExposed(workflowName)
       const service = workflowService()
-      const start = await checkWorkflowStart(workflowName, data ?? {}, wire)
-      return await service.runToCompletion(workflowName, start.input, rpc, {
-        wire: start.wire,
+      return await service.runToCompletion(workflowName, data ?? {}, rpc, {
+        wire: await runWire(),
       })
     },
     status: async (workflowName, runId) => {

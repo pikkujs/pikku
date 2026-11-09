@@ -71,7 +71,6 @@
     "addWorkflow",
     "checkWorkflowRunAccess",
     "assertWorkflowRunOwner",
-    "checkWorkflowStart",
     "buildRunTimeline",
     "createGraph",
     "deriveInvocationId",

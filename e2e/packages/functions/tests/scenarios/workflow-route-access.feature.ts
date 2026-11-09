@@ -1,6 +1,7 @@
 /**
  * Who the generated workflow routes turn away. Each scenario is a real request.
- * The routes themselves are open: what refuses is the workflow's own declaration.
+ * The routes themselves are open and check nothing for the workflow: it judges
+ * its own declaration when it runs, and a run is read by its owner.
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
@@ -9,48 +10,6 @@ const EXPOSED = 'routeExposedWorkflow'
 const PUBLIC = 'routePublicWorkflow'
 const OWNER = 'route-owner'
 const input = { data: { value: 2 } }
-
-export const anonymousStartRefused = pikkuScenario<void, { refused: true }>({
-  title: 'An anonymous caller cannot use the session start route',
-  description: 'Answers 401',
-  tags: ['scenario', 'workflow'],
-  func: async (_services, _data, { scenario }) => {
-    const answer = await scenario.when(
-      'calls the route',
-      'callsWorkflowRoute',
-      {
-        path: `/workflow/${EXPOSED}/start`,
-        body: input,
-      }
-    )
-    await scenario.then('expects the status', 'expectsRouteStatus', {
-      call: answer,
-      status: 401,
-    })
-    return { refused: true }
-  },
-})
-
-export const anonymousRunRefused = pikkuScenario<void, { refused: true }>({
-  title: 'An anonymous caller cannot run a workflow',
-  description: 'Answers 401',
-  tags: ['scenario', 'workflow'],
-  func: async (_services, _data, { scenario }) => {
-    const answer = await scenario.when(
-      'calls the route',
-      'callsWorkflowRoute',
-      {
-        path: `/workflow/${EXPOSED}/run`,
-        body: input,
-      }
-    )
-    await scenario.then('expects the status', 'expectsRouteStatus', {
-      call: answer,
-      status: 401,
-    })
-    return { refused: true }
-  },
-})
 
 export const anonymousStatusRefused = pikkuScenario<void, { refused: true }>({
   title:
@@ -276,31 +235,11 @@ export const openWorkflowIsOpen = pikkuScenario<void, { read: true }>({
   },
 })
 
-export const startValidatesInput = pikkuScenario<void, { refused: true }>({
-  title: 'The start route validates input against the declared schema',
-  description: 'A value of the wrong type never starts a run',
-  tags: ['scenario', 'workflow'],
-  func: async (_services, _data, { scenario }) => {
-    const answer = await scenario.when('starts', 'callsWorkflowRoute', {
-      path: `/workflow/${EXPOSED}/start`,
-      userId: OWNER,
-      body: { data: { value: 'not a number' } },
-    })
-    await scenario.then('expects a refusal', 'expectsRouteStatus', {
-      call: answer,
-      status: 422,
-    })
-    return { refused: true }
-  },
-})
-
 export const workflowRouteAccessFeature = pikkuFeature({
   name: 'Workflow route access',
   description: 'Who the generated workflow routes refuse',
   tags: ['workflow'],
   scenarios: [
-    anonymousStartRefused,
-    anonymousRunRefused,
     anonymousStatusRefused,
     anonymousApproveRefused,
     unknownNameHidden,
@@ -310,6 +249,5 @@ export const workflowRouteAccessFeature = pikkuFeature({
     ownerAloneReadsARun,
     signedInRunFinishes,
     openWorkflowIsOpen,
-    startValidatesInput,
   ],
 })

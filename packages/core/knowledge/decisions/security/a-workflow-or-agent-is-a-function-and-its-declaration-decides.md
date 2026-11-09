@@ -21,13 +21,19 @@ being dumb, and the decision sits on the declaration:
   answer 404 for anything else. The routes do not check it. They call external entry
   points on `rpc`, `rpc.exposedAgent` and `rpc.exposedWorkflow`, which own the gate the
   way `rpc.exposed` owns it for a function. A generated route holds no access logic.
-- `checkWorkflowStart`, called by `rpc.exposedWorkflow.start`, runs the pipeline up to the body with the caller's session,
-  through the `gate` option of `runPikkuFunc`, so a refused start leaves no run. A
-  graph has no function, so its `auth` is its whole declaration, and each node still
-  runs its own function's checks.
-- `checkWorkflowRunAccess` covers status, streams and approve, which never call the
-  function. It looks the workflow up by name, confirms the run belongs to it and
-  applies the same declaration, passing the run's stored input to permissions.
+- Nothing checks a workflow on its behalf. `rpc.exposedWorkflow.start` records who is
+  calling and starts the run; the workflow's function runs through `runPikkuFunc`,
+  which judges `auth`, scopes, permissions and input with the owner's session loaded
+  fresh ([[a-run-loads-its-owners-session-every-time-it-executes]]). A refused start
+  therefore leaves a failed run and the caller sees the refusal when the run executes,
+  or when it reads the run. A graph has no function, so its `auth` is its whole
+  declaration and is applied when the run starts; each node runs its own function's
+  checks.
+- `checkWorkflowRunAccess` is the read and approve routes' own check on the run: the
+  run must be the named workflow's, a reader needs a session unless the workflow is
+  `auth: false`, a run with an owner is for that owner, an ownerless run is readable
+  only on an `auth: false` workflow, and an answer needs a session. It does not run
+  the workflow's scopes or permissions.
 
 `/rpc/<workflow>` needed no separate handling: `rpc.exposed` calls `runPikkuFunc`, so
 it runs the workflow's declaration. It looked like a bypass only because an unset
@@ -37,8 +43,8 @@ the body has no `workflow`.
 `rpc.startWorkflow` and `rpc.agent` stay unchecked for `expose`. They are the
 application's own code, and the internal counterparts of the external entries. Each
 entry checks `expose` first, before it reads a run or opens a stream, so a hidden name
-answers the same 404 as one that does not exist. `checkWorkflowStart` and
-`checkWorkflowRunAccess` no longer judge `expose`; the entries do, once per request.
+answers the same 404 as one that does not exist. `checkWorkflowRunAccess` does not
+judge `expose`; the entries do, once per request.
 
 **What this rules out:** workflow-specific auth logic where the pipeline already does
 it; a second route for anonymous callers; a global switch for anonymous access;

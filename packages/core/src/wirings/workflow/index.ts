@@ -22,7 +22,6 @@ export {
 } from './workflow-run-ownership.js'
 export {
   checkWorkflowRunAccess,
-  checkWorkflowStart,
   type WorkflowCallerWire,
 } from './workflow-run-access.js'
 export { WorkflowApprovalForbiddenError } from './workflow-approval-policy.js'
