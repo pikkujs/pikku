@@ -2,72 +2,74 @@ import { test } from 'node:test'
 import * as assert from 'node:assert'
 import { parseCLIFilters as parse } from '../utils/parse-cli-filters.js'
 
-test('parseCLIFilters merges named filter and CLI includes/excludes', () => {
+test('parseCLIFilters takes the selected backend filter from config', () => {
   const filters = parse(
+    {},
     {
-      filter: ['api'],
-      tags: ['shared'],
-      excludeTags: ['internal'],
-      excludeNames: ['*deprecated*'],
-    },
-    {
-      namedFilters: {
+      backends: {
         api: {
-          tags: ['api'],
-          names: ['send*'],
-          excludeWires: ['queue'],
+          filter: {
+            tags: ['api'],
+            names: ['send*'],
+            excludeWires: ['queue'],
+            excludeTags: ['internal'],
+          },
         },
+        jobs: { filter: { tags: ['jobs'] } },
       },
-    }
+    },
+    'api'
   )
 
-  assert.deepStrictEqual(filters.tags, ['api', 'shared'])
+  assert.deepStrictEqual(filters.tags, ['api'])
   assert.deepStrictEqual(filters.names, ['send*'])
   assert.deepStrictEqual(filters.excludeWires, ['queue'])
   assert.deepStrictEqual(filters.excludeTags, ['internal'])
-  assert.deepStrictEqual(filters.excludeNames, ['*deprecated*'])
 })
 
-test('parseCLIFilters leaves splitting to the parser and re-splits nothing', () => {
-  const filters = parse({ tags: ['a,b'], names: ['send*'] }, {})
-
-  assert.deepStrictEqual(filters.tags, ['a,b'])
-  assert.deepStrictEqual(filters.names, ['send*'])
+test('parseCLIFilters applies no filter when no backend is selected', () => {
+  const filters = parse(
+    {},
+    { backends: { api: { filter: { tags: ['api'] } } } }
+  )
+  assert.deepStrictEqual(filters.tags, undefined)
 })
 
-test('parseCLIFilters throws on unknown named filter', () => {
+test('parseCLIFilters adds the internal per-unit names to the backend filter', () => {
+  const filters = parse(
+    { names: ['a', 'b'], workflowMeta: ['wf'] },
+    { backends: { api: { filter: { names: ['send*'] } } } },
+    'api'
+  )
+  assert.deepStrictEqual(filters.names, ['send*', 'a', 'b'])
+  assert.deepStrictEqual(filters.workflowMeta, ['wf'])
+})
+
+test('parseCLIFilters throws on an undeclared backend', () => {
   assert.throws(
-    () =>
-      parse(
-        { filter: ['missing'] },
-        {
-          namedFilters: {
-            api: { tags: ['api'] },
-          },
-        }
-      ),
-    /Unknown --filter 'missing'/
+    () => parse({}, { backends: { api: { filter: {} } } }, 'missing'),
+    /Unknown backend 'missing'. Declared backends: api/
   )
 })
+
+const via = (
+  filter: Record<string, unknown>,
+  config: Record<string, unknown> = {}
+) => parse({}, { ...config, backends: { b: { filter: filter as never } } }, 'b')
 
 test('parseCLIFilters validates target and excludeTarget values', () => {
   assert.throws(
-    () => parse({ target: ['edge'] }, {}),
-    /Invalid --target value\(s\): \[edge\]/
+    () => via({ target: ['edge'] }),
+    /Invalid filter.target value\(s\): \[edge\]/
   )
   assert.throws(
-    () => parse({ excludeTarget: ['edge'] }, {}),
-    /Invalid --exclude-target value\(s\): \[edge\]/
+    () => via({ excludeTarget: ['edge'] }),
+    /Invalid filter.excludeTarget value\(s\): \[edge\]/
   )
 
-  const filters = parse(
-    {
-      target: ['serverless'],
-      excludeTarget: ['server'],
-    },
-    {
-      deploy: { serverlessIncompatible: ['db'] },
-    }
+  const filters = via(
+    { target: ['serverless'], excludeTarget: ['server'] },
+    { deploy: { serverlessIncompatible: ['db'] } }
   )
 
   assert.deepStrictEqual(filters.target, ['serverless'])
@@ -76,7 +78,7 @@ test('parseCLIFilters validates target and excludeTarget values', () => {
 })
 
 test('parseCLIFilters threads deploy.defaultTarget when a target filter is set', () => {
-  const filters = parse(
+  const filters = via(
     { target: ['server'] },
     { deploy: { providers: {}, defaultTarget: 'server' } }
   )
@@ -85,7 +87,7 @@ test('parseCLIFilters threads deploy.defaultTarget when a target filter is set',
 })
 
 test('parseCLIFilters omits defaultTarget when no target filter is set', () => {
-  const filters = parse(
+  const filters = via(
     { tags: ['api'] },
     { deploy: { providers: {}, defaultTarget: 'server' } }
   )
@@ -93,7 +95,7 @@ test('parseCLIFilters omits defaultTarget when no target filter is set', () => {
 })
 
 test('parseCLIFilters merges addon.serverlessIncompatible with deploy.serverlessIncompatible', () => {
-  const filters = parse(
+  const filters = via(
     { target: ['serverless'] },
     {
       deploy: { serverlessIncompatible: ['DbService'] },
@@ -107,7 +109,7 @@ test('parseCLIFilters merges addon.serverlessIncompatible with deploy.serverless
 })
 
 test('parseCLIFilters uses addon.serverlessIncompatible alone when no deploy config', () => {
-  const filters = parse(
+  const filters = via(
     { target: ['server'] },
     { addon: { serverlessIncompatible: ['HumanDesignService'] } }
   )
@@ -115,13 +117,12 @@ test('parseCLIFilters uses addon.serverlessIncompatible alone when no deploy con
 })
 
 test('parseCLIFilters ignores addon.serverlessIncompatible when addon is boolean true', () => {
-  const filters = parse({ target: ['serverless'] }, { addon: true })
+  const filters = via({ target: ['serverless'] }, { addon: true })
   assert.strictEqual(filters.serverlessIncompatible, undefined)
 })
 
 test('parseCLIFilters does not set serverlessIncompatible when no target filter is active', () => {
-  // serverlessIncompatible should only appear when --target / --exclude-target is set
-  const filters = parse(
+  const filters = via(
     { tags: ['api'] },
     {
       deploy: { serverlessIncompatible: ['DbService'] },

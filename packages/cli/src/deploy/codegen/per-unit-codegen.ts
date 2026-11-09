@@ -83,6 +83,99 @@ function resolvePikkuBin(): string {
 }
 
 /**
+ * Re-executes `pikku all` as a child that writes a filtered tree elsewhere.
+ * PIKKU_DEPLOY_CODEGEN keeps the child from rewriting the developer's
+ * scaffold sources or looping into further child runs.
+ */
+async function runPikkuAllChild(
+  pikkuBin: string,
+  projectDir: string,
+  args: string[]
+): Promise<void> {
+  await execFileAsync(process.execPath, [pikkuBin, 'all', ...args], {
+    cwd: projectDir,
+    timeout: 60_000,
+    env: {
+      ...process.env,
+      // Prevent recursive deploy or watch behavior
+      PIKKU_DEPLOY_CODEGEN: '1',
+    },
+  })
+}
+
+export interface BackendCodegenOptions {
+  /** Directory holding pikku.config.json. */
+  projectDir: string
+  /** Backends to build, by their key in `backends`. */
+  backends: string[]
+  /** The full (unfiltered) inspector state. */
+  inspectorState: InspectorState
+  /** Defaults to `<projectDir>/.pikku/backends`. */
+  outRoot?: string
+  pikkuBin?: string
+  onProgress?: (
+    backend: string,
+    status: 'start' | 'done' | 'error',
+    error?: string
+  ) => void
+}
+
+/**
+ * One filtered pass per backend, each to `<outRoot>/<name>/`.
+ *
+ * Each child loads the backend's `filter` from config (`--backend <name>`) and
+ * the shared unfiltered state once (`--stateInput`), so nothing is re-inspected.
+ */
+export async function generateBackendCodegen(
+  options: BackendCodegenOptions
+): Promise<{
+  backendDirs: Map<string, string>
+  errors: Array<{ backend: string; error: string }>
+}> {
+  const { projectDir, backends, inspectorState, onProgress } = options
+  const outRoot = options.outRoot ?? join(projectDir, '.pikku', 'backends')
+  const pikkuBin = options.pikkuBin ?? resolvePikkuBin()
+  const backendDirs = new Map<string, string>()
+  const errors: Array<{ backend: string; error: string }> = []
+  if (backends.length === 0) return { backendDirs, errors }
+
+  const stateFilePath = join(
+    tmpdir(),
+    `pikku-state-${randomBytes(8).toString('hex')}.json`
+  )
+  try {
+    await writeFile(
+      stateFilePath,
+      JSON.stringify(serializeInspectorState(inspectorState)),
+      'utf-8'
+    )
+    for (const name of backends) {
+      onProgress?.(name, 'start')
+      const dir = join(outRoot, name)
+      try {
+        await mkdir(dir, { recursive: true })
+        await runPikkuAllChild(pikkuBin, projectDir, [
+          `--backend=${name}`,
+          `--stateInput=${stateFilePath}`,
+          `--outDir=${dir}`,
+          '--force-relative-imports',
+          '--silent',
+        ])
+        backendDirs.set(name, dir)
+        onProgress?.(name, 'done')
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        errors.push({ backend: name, error: message })
+        onProgress?.(name, 'error', message)
+      }
+    }
+  } finally {
+    await rm(stateFilePath, { force: true }).catch(() => {})
+  }
+  return { backendDirs, errors }
+}
+
+/**
  * Collect the full set of filter names for a deployment unit.
  *
  * The --names filter matches against different identifier types depending
@@ -363,31 +456,17 @@ export async function generatePerUnitCodegen(
       const workflowMetaNames = collectWorkflowMetaNames(unit, workflowQueues)
 
       try {
-        await execFileAsync(
-          process.execPath, // node binary
-          [
-            pikkuBin,
-            'all',
-            `--stateInput=${stateFilePath}`,
-            `--names=${namesArg}`,
-            ...(workflowMetaNames.length > 0
-              ? [`--workflowMeta=${workflowMetaNames.join(',')}`]
-              : []),
-            `--outDir=${unitPikkuDir}`,
-            '--force-relative-imports',
-            ...(options.lazyAddons ? ['--lazy-addons'] : []),
-            '--silent',
-          ],
-          {
-            cwd: projectDir,
-            timeout: 60_000,
-            env: {
-              ...process.env,
-              // Prevent recursive deploy or watch behavior
-              PIKKU_DEPLOY_CODEGEN: '1',
-            },
-          }
-        )
+        await runPikkuAllChild(pikkuBin, projectDir, [
+          `--stateInput=${stateFilePath}`,
+          `--names=${namesArg}`,
+          ...(workflowMetaNames.length > 0
+            ? [`--workflowMeta=${workflowMetaNames.join(',')}`]
+            : []),
+          `--outDir=${unitPikkuDir}`,
+          '--force-relative-imports',
+          ...(options.lazyAddons ? ['--lazy-addons'] : []),
+          '--silent',
+        ])
 
         unitPikkuDirs.set(unit.name, unitPikkuDir)
         onProgress?.(unit.name, 'done')

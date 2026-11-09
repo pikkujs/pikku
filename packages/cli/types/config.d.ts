@@ -469,16 +469,6 @@ export type PikkuFrontend = Omit<PikkuFrontendInput, 'serve'> & {
 export type PikkuCLIInput = {
   $schema?: string
 
-  /**
-   * Another config file, relative to this one, to start from. This file merges
-   * into it: objects merge key by key, `srcDirectories` appends this file's
-   * entries to the parent's (duplicates dropped), any other array or value set
-   * here replaces the parent's, and `null` removes it. Paths are resolved
-   * relative to the file that declares them; `rootDir` is inherited unless set
-   * here.
-   */
-  extends?: string
-
   rootDir: string
   /** Runtime artifacts directory (dev.db, content, tmp). Resolved relative to rootDir. Defaults to <rootDir>/.pikku-runtime. */
   runtimeDir?: string
@@ -1009,18 +999,6 @@ export type PikkuCLIInput = {
   }
 
   /**
-   * Community-registry addons installed via `pikku cloud addon add`. The
-   * source is copied into the project shadcn-style; each lands in
-   * `<addonDir>/<name>/` and the dir is registered as a yarn workspace so
-   * `wireAddon({ package })` resolves it by name. `addonDir` defaults to
-   * `addons` (top-level, outside the app's TS scan). Install provenance is
-   * tracked in pikku-addons.json.
-   */
-  addons?: {
-    addonDir?: string
-  }
-
-  /**
    * Model aliases, e.g. `{ "cheap": "openai/gpt-5-mini" }`, so a declaration
    * can name a model by what it is for and one edit repoints every use.
    * Optional — a model containing `/` is used as written. A bare name that is
@@ -1172,9 +1150,28 @@ export type PikkuCLIInput = {
     remote?: string
   }
 
-  /** Named filter presets keyed by name, used via CLI --filter <name>. */
-  namedFilters?: Record<string, InspectorFilters>
-  filters: InspectorFilters
+  /**
+   * The servers this project builds, by name. Each is a filtered, tree-shaken
+   * build of the one functions package: its `filter` decides which functions
+   * it carries, so two backends may carry the same function. Always declared,
+   * even for a single server; a config without any is refused.
+   */
+  backends: Record<string, PikkuBackendInput>
+}
+
+export type PikkuBackendInput = {
+  /** Which functions and wirings this backend carries; empty carries all. */
+  filter?: InspectorFilters
+  deploy?: {
+    target?: 'serverless' | 'server'
+    provider?: string
+    grouping?: NonNullable<NonNullable<PikkuCLIInput['deploy']>['grouping']>
+    embed?: Record<string, string>
+  }
+  dev?: {
+    /** Required when the project declares two or more backends. */
+    port?: number
+  }
 }
 
 /**
@@ -1200,9 +1197,8 @@ export type PikkuCLIConfig = PikkuCLIInput &
     configFile?: string
     /** Path to pikku.config.json, from the global `--config` / `-c` flag. */
     config?: string
-    tags?: string[]
-    wires?: string[]
-    excludeWires?: string[]
+    /** The backend named by `--backend`; narrows `pikku all` to that one. */
+    backend?: string
 
     /** Paths made absolute and defaults filled in by `getPikkuCLIConfig`. */
     frontends?: Record<string, PikkuFrontend>

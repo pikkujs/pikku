@@ -12,7 +12,6 @@ import {
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
-import { loadExtendedConfigInput } from './pikku-cli-config-extends.js'
 import { DEFAULT_ADDON_REGISTRY } from './remote-addon-sync.js'
 
 const CLIENT_FILE_KEYS = [
@@ -254,6 +253,78 @@ const assertMetaLocaleNotSpelledLocale = (result: Record<string, unknown>) => {
   )
 }
 
+/**
+ * Backends are the one place a project says what it builds.
+ *
+ * `namedFilters`, a config-file `filters` and `extends` each answered a piece of
+ * that question before `backends` existed. They are refused, naming the new
+ * home, rather than read: a config that still sets one believes it does
+ * something, and silently ignoring it would teach the opposite.
+ */
+const assertBackendsDeclared = (
+  config: Record<string, unknown>,
+  configDir: string
+) => {
+  const file = `${configDir}/pikku.config.json`
+  if ('extends' in config) {
+    throw new PikkuCLIConfigError(
+      `extends in ${file} is no longer supported. One root config declares every backend: copy what the parent config set into this file and delete "extends".`
+    )
+  }
+  if ('namedFilters' in config) {
+    throw new PikkuCLIConfigError(
+      `namedFilters in ${file} has moved to backends. Declare each preset as a backend: "backends": { "<name>": { "filter": { ... } } }, and select one with \`pikku all --backend <name>\`.`
+    )
+  }
+  if ('filters' in config) {
+    throw new PikkuCLIConfigError(
+      `filters in ${file} has moved to backends.<name>.filter. Declare the build it describes as a backend: "backends": { "<name>": { "filter": { ... } } }.`
+    )
+  }
+
+  // An addon is a package other projects wire, not a server; it builds no backend.
+  if (config.addon) {
+    return
+  }
+
+  const backends = config.backends
+  const names =
+    backends && typeof backends === 'object' && !Array.isArray(backends)
+      ? Object.keys(backends)
+      : []
+  if (names.length === 0) {
+    throw new PikkuCLIConfigError(
+      `${file} declares no backends. Declare every server this project builds, even a single one: "backends": { "api": { "filter": {} } }. An empty filter carries every function.`
+    )
+  }
+
+  const ports = new Map<number, string>()
+  for (const name of names) {
+    const entry = (backends as Record<string, any>)[name] ?? {}
+    const port = entry.dev?.port
+    if (port === undefined) {
+      if (names.length > 1) {
+        throw new PikkuCLIConfigError(
+          `backends.${name}.dev.port is required in ${file}: ${names.length} backends are declared and each runs as its own process on its own port.`
+        )
+      }
+      continue
+    }
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new PikkuCLIConfigError(
+        `backends.${name}.dev.port in ${file} must be an integer between 1 and 65535 — got ${JSON.stringify(port)}`
+      )
+    }
+    const other = ports.get(port)
+    if (other) {
+      throw new PikkuCLIConfigError(
+        `backends.${other} and backends.${name} both set dev.port ${port} in ${file}; each backend needs its own port.`
+      )
+    }
+    ports.set(port, name)
+  }
+}
+
 const _getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
@@ -268,10 +339,11 @@ const _getPikkuCLIConfig = async (
   try {
     const file = await readFile(configFile, 'utf-8')
     const configDir = dirname(configFile)
-    const parsed: PikkuCLIConfig = JSON.parse(file)
-    const config: PikkuCLIConfig = parsed.extends
-      ? ((await loadExtendedConfigInput(configFile)) as PikkuCLIConfig)
-      : parsed
+    const config: PikkuCLIConfig = JSON.parse(file)
+    assertBackendsDeclared(
+      config as unknown as Record<string, unknown>,
+      configDir
+    )
     const result: PikkuCLIConfig = {
       ...config,
       configDir,

@@ -24,6 +24,15 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### `pikku.config.json` declares `backends`; `extends`, `namedFilters` and the filter flags are gone
+
+Every config (addons excepted) must declare the servers it builds: `"backends": { "api": { "filter": {} } }`, even for one. A backend is a named, filtered build of your functions package; its `filter` takes every field `namedFilters` did (`tags`, `names`, `wires`, `target`, `excludeTarget`, ...). `pikku all` writes the full tree to `.pikku/`, then one filtered tree per backend to `.pikku/backends/<name>/`; `pikku all --backend <name>` builds only that one. Two or more backends each need `dev.port`.
+
+- `namedFilters` and a config-file `filters`: declare each as a backend. The loader names the new home.
+- `extends`: removed. Copy what the parent set into the one root config.
+- `--filter`, `--tags`, `--wires`, `--excludeWires`, `--target`, `--excludeTarget` and the other `--exclude*`/`--names`/`--directories`/`--httpRoutes`/`--httpMethods` flags on `pikku all`: removed. A custom filter is another backend.
+- `addons.addonDir`: removed; `pikku cloud addon add --dir` or the `addons/` default decides.
+
 ### A workflow or agent with no `auth` wants a session
 
 A workflow is a function, so it now takes the same `auth` default as one: unset means a session is required, and only an explicit `auth: false` is anonymous. The same goes for an agent. Both used to be open when `auth` was unset.

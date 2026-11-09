@@ -37,7 +37,7 @@ describe('getPikkuCLIConfig', () => {
         packageMappings: {},
         outDir: '.pikku',
         tsconfig: 'tsconfig.json',
-        filters: {},
+        backends: { api: { filter: {} } },
         ...extra,
       })
     )
@@ -103,6 +103,75 @@ describe('getPikkuCLIConfig', () => {
     })
   }
 
+  const load = (root: string) =>
+    getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), [])
+
+  describe('backends', () => {
+    test('loads the declared backends', async () => {
+      const root = await writeConfig({
+        backends: {
+          api: { filter: { tags: ['api'] }, dev: { port: 4000 } },
+          jobs: { filter: { tags: ['jobs'] }, dev: { port: 4001 } },
+        },
+      })
+      const config = await load(root)
+      assert.deepEqual(Object.keys(config.backends), ['api', 'jobs'])
+      assert.deepEqual(config.backends.api.filter, { tags: ['api'] })
+    })
+
+    test('refuses a config with no backends', async () => {
+      const root = await writeConfig({ backends: undefined })
+      await assert.rejects(load(root), /declares no backends/)
+    })
+
+    test('refuses an empty backends table', async () => {
+      const root = await writeConfig({ backends: {} })
+      await assert.rejects(load(root), /declares no backends/)
+    })
+
+    test('an addon declares no backends', async () => {
+      const root = await writeConfig({ backends: undefined, addon: true })
+      await writeFile(join(root, 'package.json'), '{"name":"my-addon"}')
+      assert.equal((await load(root)).addon, true)
+    })
+
+    test('names backends.<name>.filter as the home of namedFilters', async () => {
+      const root = await writeConfig({
+        namedFilters: { api: { tags: ['api'] } },
+      })
+      await assert.rejects(load(root), /namedFilters .* moved to backends/)
+    })
+
+    test('names backends.<name>.filter as the home of a config-file filters', async () => {
+      const root = await writeConfig({ filters: {} })
+      await assert.rejects(load(root), /filters .* backends\.<name>\.filter/)
+    })
+
+    test('rejects extends', async () => {
+      const root = await writeConfig({ extends: './base.json' })
+      await assert.rejects(load(root), /extends .* no longer supported/)
+    })
+
+    test('requires dev.port once two backends are declared', async () => {
+      const root = await writeConfig({
+        backends: { a: { dev: { port: 4000 } }, b: {} },
+      })
+      await assert.rejects(load(root), /backends\.b\.dev\.port is required/)
+    })
+
+    test('lets a single backend leave the port to be picked', async () => {
+      const root = await writeConfig({ backends: { only: {} } })
+      assert.deepEqual(Object.keys((await load(root)).backends), ['only'])
+    })
+
+    test('refuses two backends on one port', async () => {
+      const root = await writeConfig({
+        backends: { a: { dev: { port: 4000 } }, b: { dev: { port: 4000 } } },
+      })
+      await assert.rejects(load(root), /both set dev\.port 4000/)
+    })
+  })
+
   test('rejects a console scaffold still carrying the removed auth key', async () => {
     const root = await writeConfig({
       scaffold: { console: { auth: false } },
@@ -150,7 +219,7 @@ describe('getPikkuCLIConfig', () => {
             engine: 'postgres',
             pgVersion: 18,
           },
-          filters: {},
+          backends: { api: { filter: {} } },
         },
         null,
         2
@@ -481,7 +550,7 @@ describe('tryGetPikkuCLIConfig', () => {
         packageMappings: {},
         outDir: '.pikku',
         tsconfig: 'tsconfig.json',
-        filters: {},
+        backends: { api: { filter: {} } },
       })
     )
 

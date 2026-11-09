@@ -16,6 +16,8 @@ import {
   removeDisabledOriginScaffolds,
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
+import { generateBackendCodegen } from '../../deploy/codegen/per-unit-codegen.js'
+import { selectBackends } from '../../utils/select-backends.js'
 import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
 import {
   RemoteAddonSyncError,
@@ -99,6 +101,8 @@ const RUN_RECORDS_DIR = 'runs'
 const REMOTE_SDK_DIR = 'remote'
 // Written by a watcher that may outlive the tree it describes.
 const WATCH_STATUS_FILE = 'status.json'
+// Filtered per-backend trees live beside the shared output.
+const BACKENDS_DIR = 'backends'
 
 const hasGeneratedOutput = (outDir: string): boolean =>
   existsSync(outDir) &&
@@ -106,7 +110,8 @@ const hasGeneratedOutput = (outDir: string): boolean =>
     (entry) =>
       entry !== RUN_RECORDS_DIR &&
       entry !== REMOTE_SDK_DIR &&
-      entry !== WATCH_STATUS_FILE
+      entry !== WATCH_STATUS_FILE &&
+      entry !== BACKENDS_DIR
   )
 
 export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
@@ -869,6 +874,38 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       if (errorCount > 0) {
         throw new PikkuTypecheckFailedError(
           `Type check failed: ${errorCount} error${errorCount === 1 ? '' : 's'}`
+        )
+      }
+    }
+
+    // The shared pass above wrote the full, unfiltered tree. Each backend is a
+    // filtered build of it, written to .pikku/backends/<name>/. Re-executed
+    // children (per-unit deploy codegen, and these backend passes themselves)
+    // run a single pass.
+    const backendNames = Object.keys(config.backends ?? {})
+    if (
+      process.env.PIKKU_DEPLOY_CODEGEN !== '1' &&
+      !config.addon &&
+      backendNames.length > 0
+    ) {
+      const selected = selectBackends(config.backends, config.backend)
+      const { errors } = await workflow.do('Backends', async () => {
+        const state = await getInspectorState(false, false, false, true)
+        const result = await generateBackendCodegen({
+          projectDir: config.configDir,
+          backends: selected,
+          inspectorState: state,
+          onProgress: (name, status) => {
+            if (status === 'done') logger.debug(`• backend ${name} generated`)
+          },
+        })
+        return { errors: result.errors }
+      })
+      if (errors.length > 0) {
+        throw new Error(
+          errors
+            .map((e) => `Backend '${e.backend}' failed: ${e.error}`)
+            .join('\n')
         )
       }
     }

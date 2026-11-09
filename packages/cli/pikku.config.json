@@ -12,6 +12,9 @@
     "**/dist/**"
   ],
   "outDir": ".pikku",
+  "backends": {
+    "cli": { "filter": {} }
+  },
   "packageMappings": {
     "../inspector/src": "@pikku/inspector"
   },

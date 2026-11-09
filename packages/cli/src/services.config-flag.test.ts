@@ -29,7 +29,7 @@ describe('createConfig --config', () => {
         packageMappings: {},
         outDir: '.pikku',
         tsconfig: 'tsconfig.json',
-        filters: {},
+        backends: { api: { filter: {} } },
         ...extra,
       })
     )

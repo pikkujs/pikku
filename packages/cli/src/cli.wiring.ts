@@ -350,79 +350,19 @@ wireCLI({
             'On success, emit a structural diff of the generated .pikku meta (what this run added/removed/changed) as a PIKKU_DIFF <json> line on stdout. Only emitted on exit 0.',
           default: false,
         },
-        filter: {
+        backend: {
           description:
-            'Named filter(s) from pikku.config.json filters map (comma-separated)',
-          type: 'string[]',
-        },
-        tags: {
-          description: 'Include functions by tags (comma-separated)',
-          short: 't',
-          type: 'string[]',
-        },
-        wires: {
-          description: 'Filter direct wirings by category (comma-separated)',
-          type: 'string[]',
-        },
-        excludeWires: {
-          description: 'Exclude direct wirings by category (comma-separated)',
-          type: 'string[]',
-        },
-        excludeTags: {
-          description: 'Exclude functions by tags (comma-separated)',
-          type: 'string[]',
-        },
-        directories: {
-          description: 'Include functions by directories (comma-separated)',
-          short: 'd',
-          type: 'string[]',
-        },
-        excludeDirectories: {
-          description: 'Exclude functions by directories (comma-separated)',
-          type: 'string[]',
-        },
-        httpMethods: {
-          description: 'Include HTTP routes by methods (comma-separated)',
-          type: 'string[]',
-        },
-        excludeHttpMethods: {
-          description: 'Exclude HTTP routes by methods (comma-separated)',
-          type: 'string[]',
-        },
-        httpRoutes: {
-          description:
-            'Include HTTP routes by route patterns (comma-separated)',
-          type: 'string[]',
-        },
-        excludeHttpRoutes: {
-          description:
-            'Exclude HTTP routes by route patterns (comma-separated)',
-          type: 'string[]',
+            'Build only this backend (a key of "backends" in pikku.config.json) after the shared pass. Default: every declared backend',
+          type: 'string',
         },
         names: {
           description:
-            'Include functions by name patterns (supports wildcards)',
-          short: 'n',
-          type: 'string[]',
-        },
-        excludeNames: {
-          description:
-            'Exclude functions by name patterns (supports wildcards)',
-          type: 'string[]',
-        },
-        target: {
-          description:
-            'Include functions by deploy target (comma-separated: serverless, server)',
-          type: 'string[]',
-        },
-        excludeTarget: {
-          description:
-            'Exclude functions by deploy target (comma-separated: serverless, server)',
+            'Internal: function names a per-unit deploy codegen run keeps. Filtering is declared in backends.<name>.filter',
           type: 'string[]',
         },
         workflowMeta: {
           description:
-            "Keep these workflows' meta without their registration, for a deploy unit that only starts them (comma-separated)",
+            "Internal: keep these workflows' meta without their registration, for a deploy unit that only starts them (comma-separated)",
           type: 'string[]',
         },
         forceRelativeImports: {

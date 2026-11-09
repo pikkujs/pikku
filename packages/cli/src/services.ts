@@ -277,6 +277,13 @@ export const createConfig: CreateConfig<
   // preserved (getPikkuCLIConfig already resolves relative --outDir to
   // an absolute path and recomputes all derived *File/*Dir paths).
   const { outDir: _rawOutDir, ...dataWithoutOutDir } = data
+  const backend = (data as { backend?: string }).backend
+  if (backend && !cliConfig.backends?.[backend]) {
+    const declared = Object.keys(cliConfig.backends ?? {})
+    throw new Error(
+      `Unknown --backend '${backend}'. Declared backends: ${declared.join(', ') || '(none)'}`
+    )
+  }
   return {
     ...cliConfig,
     ...dataWithoutOutDir,
@@ -284,7 +291,14 @@ export const createConfig: CreateConfig<
     // project's `frontends` table with its boolean.
     frontends: cliConfig.frontends,
     tags: cliConfig.tags,
-    filters: parseCLIFilters(data, cliConfig),
+    filters: parseCLIFilters(
+      data as { names?: string[]; workflowMeta?: string[] },
+      cliConfig,
+      // `--backend` narrows which passes the parent runs; only the per-backend
+      // child (spawned with PIKKU_DEPLOY_CODEGEN) applies that backend's filter.
+      process.env.PIKKU_DEPLOY_CODEGEN === '1' ? backend : undefined
+    ),
+    backend,
     preloadedInspectorState,
   }
 }
@@ -441,7 +455,6 @@ export const createSingletonServices: CreateSingletonServices<
           singletonServicesFactoryType: config.singletonServicesFactoryType,
           wireServicesFactoryType: config.wireServicesFactoryType,
         },
-        tags: config.tags,
         // Opt-in security lint (`--security`): scans function return types for
         // data-classification leaks. Off by default — it's the dominant codegen
         // cost. Never runs during a plain `pikku all`.
