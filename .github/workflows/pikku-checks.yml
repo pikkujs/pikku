@@ -59,10 +59,6 @@ on:
         description: Run the tsc job (`bun run tsc`, skipped with a notice when the project has no such script)
         type: boolean
         default: true
-      node-version:
-        description: Node.js version. Pikku needs Node next to Bun for some codegen (zod schema conversion)
-        type: string
-        default: '24'
       runs-on:
         description: Runner label for every job
         type: string
@@ -80,9 +76,10 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node-version }}
+      - name: Make node fail
+        run: |
+          mkdir -p "$RUNNER_TEMP/noshim" && printf '#!/bin/sh\necho "NODE WAS USED: $*" >&2; exit 97\n' > "$RUNNER_TEMP/noshim/node" && chmod +x "$RUNNER_TEMP/noshim/node"
+          echo "$RUNNER_TEMP/noshim" >> "$GITHUB_PATH"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.bun-version }}
@@ -158,9 +155,10 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node-version }}
+      - name: Make node fail
+        run: |
+          mkdir -p "$RUNNER_TEMP/noshim" && printf '#!/bin/sh\necho "NODE WAS USED: $*" >&2; exit 97\n' > "$RUNNER_TEMP/noshim/node" && chmod +x "$RUNNER_TEMP/noshim/node"
+          echo "$RUNNER_TEMP/noshim" >> "$GITHUB_PATH"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.bun-version }}
@@ -191,9 +189,10 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node-version }}
+      - name: Make node fail
+        run: |
+          mkdir -p "$RUNNER_TEMP/noshim" && printf '#!/bin/sh\necho "NODE WAS USED: $*" >&2; exit 97\n' > "$RUNNER_TEMP/noshim/node" && chmod +x "$RUNNER_TEMP/noshim/node"
+          echo "$RUNNER_TEMP/noshim" >> "$GITHUB_PATH"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.bun-version }}
@@ -228,9 +227,10 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node-version }}
+      - name: Make node fail
+        run: |
+          mkdir -p "$RUNNER_TEMP/noshim" && printf '#!/bin/sh\necho "NODE WAS USED: $*" >&2; exit 97\n' > "$RUNNER_TEMP/noshim/node" && chmod +x "$RUNNER_TEMP/noshim/node"
+          echo "$RUNNER_TEMP/noshim" >> "$GITHUB_PATH"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.bun-version }}
@@ -265,9 +265,10 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node-version }}
+      - name: Make node fail
+        run: |
+          mkdir -p "$RUNNER_TEMP/noshim" && printf '#!/bin/sh\necho "NODE WAS USED: $*" >&2; exit 97\n' > "$RUNNER_TEMP/noshim/node" && chmod +x "$RUNNER_TEMP/noshim/node"
+          echo "$RUNNER_TEMP/noshim" >> "$GITHUB_PATH"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.bun-version }}
