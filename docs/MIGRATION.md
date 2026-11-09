@@ -33,18 +33,27 @@ Every config (addons excepted) must declare the servers it builds: `"backends": 
 - `--filter`, `--tags`, `--wires`, `--excludeWires`, `--target`, `--excludeTarget` and the other `--exclude*`/`--names`/`--directories`/`--httpRoutes`/`--httpMethods` flags on `pikku all`: removed. A custom filter is another backend.
 - `addons.addonDir`: removed; `pikku cloud addon add --dir` or the `addons/` default decides.
 
+### Generated clients live in `.pikku/sdk/<backend>/`; the config paths for them are gone
+
+`pikku all` writes, for each declared backend, `.pikku/sdk/<backend>/exposed/` (fetch, rpc, websocket, react-query, realtime, queue and scope clients, with their typed maps under `contract/`, cut from that backend's `expose: true` functions) and, only when it has `remote: true` functions, `.pikku/sdk/<backend>/remote/` (a types-only contract in the shape of an addon SDK). Server code stays under `.pikku/backends/<name>/`. Tiers: `expose: true` is exposed, `remote: true` is remote, anything else is internal.
+
+- Removed from `clientFiles`: `fetchFile`, `websocketFile`, `rpcWiringsFile`, `reactQueryFile`, `realtimeFile`, `queueWiringsFile`, `scopesFile`, `mcpJsonFile`. Removed top level: `httpMapDeclarationFile`, `rpcMapDeclarationFile`, `channelsMapDeclarationFile`, `rpcRemoteMapDeclarationFile`, `mcpJsonFile`. The loader refuses each and names the new home. The MCP manifest is `.pikku/backends/<name>/mcp/mcp.gen.json`.
+- Still in `clientFiles` (frontend glue, until frontends choose a backend): `typesFile`, `envFile`, `rpcFile`, `authClientFile`, `nextBackendFile`, `nextHTTPFile`, `tanstackStartFile`. Glue imports one backend's SDK, so a project that sets it declares exactly one backend.
+- Imports: replace `#pikku/pikku-fetch.gen.js` and the other client imports with the SDK. Add a tsconfig path alias, for example `"@sdk/api/*": [".pikku/sdk/api/exposed/*"]`, then `import { PikkuFetch } from '@sdk/api/pikku-fetch.gen'`. In general `@sdk/<backend>` maps to `.pikku/sdk/<backend>/exposed/`.
+- `backends.<name>.publish: true` packs the `remote/` SDK as `<package>-<backend>-<version>.sdk.tgz` beside package.json, the way an addon SDK is. It is off by default and refuses a backend with no remote functions, a non-semver package version, or a package that declares no `@pikku/core` range.
+
 ### A workflow or agent with no `auth` wants a session
 
 A workflow is a function, so it now takes the same `auth` default as one: unset means a session is required, and only an explicit `auth: false` is anonymous. The same goes for an agent. Both used to be open when `auth` was unset.
 
-| Before                                                        | Now                                                                       |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| A workflow or agent with no `auth` ran for anyone             | It needs a session. `auth: false` keeps the old behaviour                 |
-| `/workflow/:name/*` and `/rpc/agent/:name/*` reached any name | Only `expose: true` ones. Anything else answers 404                       |
+| Before                                                        | Now                                                                     |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| A workflow or agent with no `auth` ran for anyone             | It needs a session. `auth: false` keeps the old behaviour               |
+| `/workflow/:name/*` and `/rpc/agent/:name/*` reached any name | Only `expose: true` ones. Anything else answers 404                     |
 | A refused start left a failed run behind                      | Unchanged: the workflow refuses when it runs, and the run ends `failed` |
-| A graph applied no checks of its own                          | A graph's `auth` applies the same way                                     |
-| A run with no owner could be read by anyone with its id       | Refused, unless the workflow is `auth: false`                             |
-| Any run could be read through any workflow's URL              | The run must belong to the workflow in the URL                            |
+| A graph applied no checks of its own                          | A graph's `auth` applies the same way                                   |
+| A run with no owner could be read by anyone with its id       | Refused, unless the workflow is `auth: false`                           |
+| Any run could be read through any workflow's URL              | The run must belong to the workflow in the URL                          |
 
 The routes stay one per action. They take an optional session and leave the decision to the workflow's own `expose`, `auth`, `scopes`, `permissions` and input schema. `POST /rpc/<workflow>` is unchanged and runs the same declaration.
 
@@ -170,7 +179,6 @@ A permission that reads a wire other than `session`, such as `functionId`, is no
 
 To find the affected code, run `pikku all` and look for `PKU586`.
 
-
 ### `x-request-id` is replaced by `traceparent`
 
 Pikku now uses W3C trace context. An HTTP request's `wire.traceId` is 32 lowercase hex, and `wire.trace` adds `spanId`, `parentSpanId` and `sampled`. `errorId` in error responses has the same format.
@@ -250,13 +258,13 @@ To find affected code, search for `retries:` in your workflows.
 
 The `pikku verify` command is gone. `pikku validate` runs what it ran, and runs the type-checks by default.
 
-| Before | After |
-| --- | --- |
-| `pikku verify` | `pikku validate --codegen` |
-| `pikku verify --skipCodegen` | `pikku validate` |
+| Before                         | After                                      |
+| ------------------------------ | ------------------------------------------ |
+| `pikku verify`                 | `pikku validate --codegen`                 |
+| `pikku verify --skipCodegen`   | `pikku validate`                           |
 | `pikku verify --skipTypecheck` | `pikku validate --skipTypecheck --codegen` |
 | `pikku verify --skipFrontends` | `pikku validate --skipFrontends --codegen` |
-| `pikku verify --strict` | `pikku validate --strict --codegen` |
+| `pikku verify --strict`        | `pikku validate --strict --codegen`        |
 
 Three things change for anyone who already ran `pikku validate`:
 
@@ -362,10 +370,10 @@ Fix the name, or wire the addon that provides it. There is no opt-out.
 
 Two lint keys are on by default at `error`. A project that sets nothing is enforced. Both are enforced by the app's own oxlint, which `pikku validate` already requires and runs; `pikku enable oxlint` writes the rules.
 
-| Key | oxlint rules required | Use instead |
-| --- | --- | --- |
-| `lint.enforceContentService` | `no-restricted-imports` on `fs`, `node:fs`, `fs/promises` and `node:fs/promises` (type-only imports allowed), and `typescript/no-require-imports` | the `content` service: keyed, project-scoped, signed reads and writes |
-| `lint.enforceVariablesService` | `node/no-process-env`, with the `node` plugin | the `variables` service for non-secret values, the `secrets` service for secrets |
+| Key                            | oxlint rules required                                                                                                                             | Use instead                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `lint.enforceContentService`   | `no-restricted-imports` on `fs`, `node:fs`, `fs/promises` and `node:fs/promises` (type-only imports allowed), and `typescript/no-require-imports` | the `content` service: keyed, project-scoped, signed reads and writes            |
+| `lint.enforceVariablesService` | `node/no-process-env`, with the `node` plugin                                                                                                     | the `variables` service for non-secret values, the `secrets` service for secrets |
 
 When a rule is missing or below the key's level, validate reports `oxlint-enforce-content-service` or `oxlint-enforce-variables-service`; each use in the source is reported as the oxlint finding (`oxlint-eslint-no-restricted-imports`, `oxlint-node-no-process-env`, ...). `pikku enable oxlint` exempts `*.test.*` and `*.spec.*` files through an `overrides` entry; exempt another file (bootstrap, a script) the same way. `const { env } = process` and `globalThis.process.env` are not caught.
 

@@ -186,29 +186,6 @@ export function cleanPikkuConfig(
     }
   }
 
-  // Remove config options for unsupported features
-  if (pikkuConfig.clientFiles) {
-    if (
-      !supportedFeatures.includes('http') &&
-      !supportedFeatures.includes('workflows')
-    ) {
-      delete pikkuConfig.clientFiles.fetchFile
-      delete pikkuConfig.clientFiles.rpcWiringsFile
-    }
-
-    if (!supportedFeatures.includes('channel')) {
-      delete pikkuConfig.clientFiles.websocketFile
-    }
-
-    if (!supportedFeatures.includes('queue')) {
-      delete pikkuConfig.clientFiles.queueWiringsFile
-    }
-
-    if (!supportedFeatures.includes('mcp')) {
-      delete pikkuConfig.clientFiles.mcpJsonFile
-    }
-  }
-
   // We remove addons as we can't yet test them
   delete pikkuConfig.addons
 

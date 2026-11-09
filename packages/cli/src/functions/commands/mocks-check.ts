@@ -1,3 +1,4 @@
+import { reactQueryClientFile } from '../../utils/backend-sdk.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { added, changed, dim, removed } from '../../utils/output.js'
 import { PROBLEM_REASON, runMocksCheck } from '../mocks/run-check.js'
@@ -14,7 +15,7 @@ export const mocksCheck = pikkuSessionlessFunc<
       rootDir: config.rootDir,
       outDir: config.outDir,
       src: input?.src,
-      client: config.clientFiles?.reactQueryFile,
+      client: reactQueryClientFile(config.rootDir, config.backends),
       strict: input?.strict,
     }),
 })

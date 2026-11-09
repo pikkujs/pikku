@@ -13,15 +13,14 @@
   ],
   "outDir": ".pikku",
   "backends": {
-    "cli": { "filter": {} }
+    "cli": {
+      "filter": {}
+    }
   },
   "packageMappings": {
     "../inspector/src": "@pikku/inspector"
   },
   "schemasFromTypes": ["PikkuCLIConfig"],
-  "clientFiles": {
-    "websocketFile": ".pikku/pikku-websocket.gen.ts"
-  },
   "supportsImportAttributes": true,
   "allow": {
     "complexWorkflows": true

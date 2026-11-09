@@ -4,8 +4,6 @@
   "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
   "clientFiles": {
-    "fetchFile": "./src/lib/pikku-fetch.gen.ts",
-    "rpcWiringsFile": "./src/lib/pikku-rpc.gen.ts",
     "tanstackStartFile": "./src/lib/pikku-start.gen.ts"
   },
   "schema": {

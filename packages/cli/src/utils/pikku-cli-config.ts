@@ -14,22 +14,16 @@ import { setScaffoldWriteGuard } from './file-writer.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
 import { DEFAULT_ADDON_REGISTRY } from './remote-addon-sync.js'
 
+// Frontend glue a person still places in the frontend's own source. The
+// clients themselves are SDK outputs and not config keys (REMOVED_CLIENT_FILES).
 const CLIENT_FILE_KEYS = [
-  'fetchFile',
-  'websocketFile',
-  'realtimeFile',
-  'rpcWiringsFile',
-  'reactQueryFile',
   'typesFile',
   'envFile',
   'rpcFile',
   'authClientFile',
-  'queueWiringsFile',
-  'mcpJsonFile',
   'nextBackendFile',
   'nextHTTPFile',
   'tanstackStartFile',
-  'scopesFile',
 ] as const
 
 export const getPikkuCLIConfig = async (
@@ -254,6 +248,55 @@ const assertMetaLocaleNotSpelledLocale = (result: Record<string, unknown>) => {
 }
 
 /**
+ * Where a removed generated-file key now lives. A client, or the map it is
+ * typed by, is an output of the backend that serves it, written to a fixed
+ * place by `pikku all`; a config that still names a path believes it can move
+ * one, so the loader refuses and says where the file went.
+ */
+const SDK_HOME = '.pikku/sdk/<backend>/exposed/'
+const REMOVED_CLIENT_FILES: Record<string, string> = {
+  fetchFile: `${SDK_HOME}pikku-fetch.gen.ts`,
+  websocketFile: `${SDK_HOME}pikku-websocket.gen.ts`,
+  rpcWiringsFile: `${SDK_HOME}pikku-rpc.gen.ts`,
+  reactQueryFile: `${SDK_HOME}pikku-react-query.gen.ts`,
+  realtimeFile: `${SDK_HOME}pikku-realtime.gen.ts`,
+  queueWiringsFile: `${SDK_HOME}pikku-queue.gen.ts`,
+  scopesFile: `${SDK_HOME}pikku-scope-client.gen.ts`,
+  mcpJsonFile: '.pikku/backends/<backend>/mcp/mcp.gen.json',
+}
+const REMOVED_TOP_LEVEL_FILES: Record<string, string> = {
+  httpMapDeclarationFile: `${SDK_HOME}contract/ (the backend's HTTP map)`,
+  rpcMapDeclarationFile: `${SDK_HOME}contract/ (the backend's RPC map)`,
+  channelsMapDeclarationFile: `${SDK_HOME}contract/ (the backend's channel map)`,
+  rpcRemoteMapDeclarationFile:
+    '.pikku/sdk/<backend>/remote/ (only for a backend with remote functions)',
+  mcpJsonFile: '.pikku/backends/<backend>/mcp/mcp.gen.json',
+}
+
+const assertNoRemovedClientFiles = (
+  config: Record<string, unknown>,
+  file: string
+) => {
+  for (const [key, home] of Object.entries(REMOVED_TOP_LEVEL_FILES)) {
+    if (key in config) {
+      throw new PikkuCLIConfigError(
+        `${key} in ${file} is no longer a config key. It is generated for each backend at ${home}; delete it.`
+      )
+    }
+  }
+  const clientFiles = config.clientFiles
+  if (clientFiles && typeof clientFiles === 'object') {
+    for (const [key, home] of Object.entries(REMOVED_CLIENT_FILES)) {
+      if (key in clientFiles) {
+        throw new PikkuCLIConfigError(
+          `clientFiles.${key} in ${file} is no longer a config key. \`pikku all\` generates it for each backend at ${home}; delete it and import it from there (see docs/MIGRATION.md).`
+        )
+      }
+    }
+  }
+}
+
+/**
  * Backends are the one place a project says what it builds.
  *
  * `namedFilters`, a config-file `filters` and `extends` each answered a piece of
@@ -271,6 +314,7 @@ const assertBackendsDeclared = (
       `extends in ${file} is no longer supported. One root config declares every backend: copy what the parent config set into this file and delete "extends".`
     )
   }
+  assertNoRemovedClientFiles(config, file)
   if ('namedFilters' in config) {
     throw new PikkuCLIConfigError(
       `namedFilters in ${file} has moved to backends. Declare each preset as a backend: "backends": { "<name>": { "filter": { ... } } }, and select one with \`pikku all --backend <name>\`.`
@@ -301,6 +345,11 @@ const assertBackendsDeclared = (
   const ports = new Map<number, string>()
   for (const name of names) {
     const entry = (backends as Record<string, any>)[name] ?? {}
+    if (entry.publish !== undefined && typeof entry.publish !== 'boolean') {
+      throw new PikkuCLIConfigError(
+        `backends.${name}.publish in ${file} must be true or false — got ${JSON.stringify(entry.publish)}`
+      )
+    }
     const port = entry.dev?.port
     if (port === undefined) {
       if (names.length > 1) {
@@ -868,16 +917,6 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'realtime',
         'events.schemas.gen.ts'
-      )
-    }
-    if (
-      result.scaffold?.events &&
-      result.clientFiles?.fetchFile &&
-      !result.clientFiles.realtimeFile
-    ) {
-      result.clientFiles.realtimeFile = join(
-        dirname(result.clientFiles.fetchFile),
-        'realtime.gen.ts'
       )
     }
     const triggerDir = join(result.outDir, 'trigger')

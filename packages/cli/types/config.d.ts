@@ -543,11 +543,13 @@ export type PikkuCLIInput = {
 
   tsconfig: string
 
+  /**
+   * Frontend glue written into the frontend's own source. The clients
+   * themselves (fetch, websocket, rpc, react-query, realtime, queue, scopes)
+   * are not configured: `pikku all` generates them for every backend into
+   * `.pikku/sdk/<backend>/exposed/`.
+   */
   clientFiles?: {
-    fetchFile?: string
-    websocketFile?: string
-    rpcWiringsFile?: string
-    reactQueryFile?: string
     /**
      * Emit the frontend's record types here: `RPCInput<Name>`, `RPCOutput<Name>`,
      * `FlattenedRPCMap`, and `AnalyticsEvent` when `scaffold.analytics` is on.
@@ -574,16 +576,13 @@ export type PikkuCLIInput = {
      * function; where people are sent is set by `clientAuth`.
      */
     authClientFile?: string
-    realtimeFile?: string
     /**
      * Optional import for the EventHubTopics type so the realtime client is
      * fully typed. Format: `<path>#<TypeName>` resolved relative to
-     * `realtimeFile`. Example: `../types/eventhub-topics.js#EventHubTopics`.
+     * the realtime client. Example: `../types/eventhub-topics.js#EventHubTopics`.
      * If unset, the generated client treats topics as `Record<string, unknown>`.
      */
     realtimeEventHubTopicsImport?: string
-    queueWiringsFile?: string
-    mcpJsonFile?: string
     nextBackendFile?: string
     nextHTTPFile?: string
     /**
@@ -613,13 +612,6 @@ export type PikkuCLIInput = {
      * `rpcWiringsFile` (where the `PikkuRPC` class is generated).
      */
     tanstackStartFile?: string
-    /**
-     * Emit the browser-side scope client into this file: the project's
-     * `ScopeId` union and a `hasScopes(required, held)` for deciding what a UI
-     * renders. It has no imports, so a frontend never has to reach into
-     * `@pikku/core` — a server package — to check a permission.
-     */
-    scopesFile?: string
   }
 
   /** Where the generated Better Auth client (`clientFiles.authClientFile`) sends people. */
@@ -1172,6 +1164,26 @@ export type PikkuBackendInput = {
     /** Required when the project declares two or more backends. */
     port?: number
   }
+  /**
+   * Pack this backend's `remote/` SDK as `<package>-<backend>-<version>.sdk.tgz`
+   * beside package.json, the artifact the registry takes. Opt-in; refused when
+   * the backend has no `remote: true` functions. Default false.
+   */
+  publish?: boolean
+}
+
+/**
+ * The client files `pikku all` writes for a backend into
+ * `.pikku/sdk/<backend>/exposed/`. Set by the loader, never by a person.
+ */
+export type PikkuClientSdkFiles = {
+  fetchFile?: string
+  websocketFile?: string
+  rpcWiringsFile?: string
+  reactQueryFile?: string
+  realtimeFile?: string
+  queueWiringsFile?: string
+  scopesFile?: string
 }
 
 /**
@@ -1180,6 +1192,7 @@ export type PikkuBackendInput = {
  */
 export type PikkuCLIConfig = PikkuCLIInput &
   PikkuCLICoreOutputFiles & {
+    clientFiles?: PikkuClientSdkFiles
     filters: InspectorFilters
     configDir: string
     addonName?: string

@@ -119,6 +119,35 @@ describe('getPikkuCLIConfig', () => {
       assert.deepEqual(config.backends.api.filter, { tags: ['api'] })
     })
 
+    test('refuses a generated-client path and names .pikku/sdk', async () => {
+      const root = await writeConfig({
+        clientFiles: { fetchFile: '.pikku/pikku-fetch.gen.ts' },
+      })
+      await assert.rejects(load(root), /\.pikku\/sdk\/<backend>\//)
+    })
+
+    test('refuses a map declaration path', async () => {
+      const root = await writeConfig({
+        rpcRemoteMapDeclarationFile: '.pikku/remote.d.ts',
+      })
+      await assert.rejects(load(root), /rpcRemoteMapDeclarationFile/)
+    })
+
+    test('keeps frontend glue paths', async () => {
+      const root = await writeConfig({
+        clientFiles: { tanstackStartFile: 'src/pikku.ts' },
+      })
+      assert.equal(
+        (await load(root)).clientFiles?.tanstackStartFile,
+        join(root, 'src/pikku.ts')
+      )
+    })
+
+    test('refuses a non-boolean publish', async () => {
+      const root = await writeConfig({ backends: { api: { publish: 'yes' } } })
+      await assert.rejects(load(root), /publish/)
+    })
+
     test('refuses a config with no backends', async () => {
       const root = await writeConfig({ backends: undefined })
       await assert.rejects(load(root), /declares no backends/)

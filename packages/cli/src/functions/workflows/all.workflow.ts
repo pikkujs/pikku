@@ -17,6 +17,10 @@ import {
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
 import { generateBackendCodegen } from '../../deploy/codegen/per-unit-codegen.js'
+import {
+  assembleBackendSdk,
+  writeBackendPassSdk,
+} from '../../utils/backend-sdk.js'
 import { selectBackends } from '../../utils/select-backends.js'
 import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
 import {
@@ -809,6 +813,19 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do('Addon SDK', 'pikkuAddonSdk', null)
     }
 
+    // A backend pass cuts its remote SDK; the parent moves both SDKs into
+    // .pikku/sdk/<backend>/ once every pass is done.
+    if (config.backend && process.env.PIKKU_DEPLOY_CODEGEN === '1') {
+      await workflow.do('Backend SDK', async () => {
+        writeBackendPassSdk(
+          logger,
+          await getInspectorState(),
+          config,
+          config.backend!
+        )
+      })
+    }
+
     // Last, because a leaf index only exists for an entry file that was
     // actually generated — that absence is what makes `#pikku/http` fail to
     // resolve in an addon rather than resolve to a module missing the export.
@@ -889,18 +906,33 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       backendNames.length > 0
     ) {
       const selected = selectBackends(config.backends, config.backend)
-      const { errors } = await workflow.do('Backends', async () => {
-        const state = await getInspectorState(false, false, false, true)
-        const result = await generateBackendCodegen({
-          projectDir: config.configDir,
-          backends: selected,
-          inspectorState: state,
-          onProgress: (name, status) => {
-            if (status === 'done') logger.debug(`• backend ${name} generated`)
-          },
-        })
-        return { errors: result.errors }
-      })
+      const { errors, backendDirs } = await workflow.do(
+        'Backends',
+        async () => {
+          const state = await getInspectorState(false, false, false, true)
+          const result = await generateBackendCodegen({
+            projectDir: config.configDir,
+            backends: selected,
+            inspectorState: state,
+            onProgress: (name, status) => {
+              if (status === 'done') logger.debug(`• backend ${name} generated`)
+            },
+          })
+          return { errors: result.errors, backendDirs: [...result.backendDirs] }
+        }
+      )
+      if (errors.length === 0) {
+        for (const [name, backendOutDir] of backendDirs) {
+          const sdk = assembleBackendSdk({
+            projectDir: config.configDir,
+            rootDir: config.rootDir,
+            backend: name,
+            backendOutDir,
+            publish: config.backends[name]?.publish === true,
+          })
+          logger.debug(`• backend ${name} SDK at ${sdk.dir}`)
+        }
+      }
       if (errors.length > 0) {
         throw new Error(
           errors

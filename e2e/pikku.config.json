@@ -8,15 +8,9 @@
     "packages/functions/tests"
   ],
   "outDir": ".pikku",
-  "rpcMapDeclarationFile": ".pikku/rpc-map.gen.d.ts",
-  "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts",
   "packageMappings": {
     ".": "@pikku/e2e",
     "packages/functions": "@pikku/e2e-functions"
-  },
-  "clientFiles": {
-    "fetchFile": ".pikku/pikku-fetch.gen.ts",
-    "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts"
   },
   "schema": {
     "supportsImportAttributes": true
@@ -43,7 +37,9 @@
     "agent": true,
     "workflow": true,
     "webhook": true,
-    "analytics": { "originLock": false },
+    "analytics": {
+      "originLock": false
+    },
     "featureFlags": true
   },
   "emailTemplatesDir": "emails",

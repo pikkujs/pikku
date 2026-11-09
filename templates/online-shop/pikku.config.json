@@ -7,12 +7,7 @@
   "emailTemplatesDir": "./emails",
   "clientFiles": {
     "rpcMapDeclarationFile": ".pikku/rpc-map.gen.d.ts",
-    "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts",
-    "fetchFile": ".pikku/pikku-fetch.gen.ts",
-    "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts",
-    "websocketFile": ".pikku/pikku-websocket.gen.ts",
-    "realtimeFile": ".pikku/realtime.gen.ts",
-    "scopesFile": ".pikku/scopes/pikku-scope-client.gen.ts"
+    "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts"
   },
   "packageMappings": {
     ".": "@pikku/example-online-shop"
@@ -38,7 +33,9 @@
     "virtualUser": true,
     "events": true,
     "webhook": true,
-    "analytics": { "originLock": false }
+    "analytics": {
+      "originLock": false
+    }
   },
   "scenarios": {
     "emailDomain": "virtualuser.local",
