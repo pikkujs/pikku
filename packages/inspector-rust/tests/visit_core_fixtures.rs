@@ -163,3 +163,64 @@ fn permissions_in_body_fixture() {
 fn classification_fixture() {
     check_fixture("classification", &[]);
 }
+
+#[test]
+fn wire_rules_fixture() {
+    // queueWorkers is derived from workflows in finalize, which this harness skips.
+    check_fixture("wire-rules", &["queueWorkers"]);
+}
+
+/// The diagnostics of `wire-rules` must match Go's byte for byte
+/// (inspector-go/internal/analyze/classification_test.go `wireRulesWant`).
+#[test]
+fn wire_rules_diagnostics() {
+    let root = testdata().join("wire-rules").canonicalize().unwrap();
+    let req = Request {
+        route_files: source_files(&root, &["src".to_string()]),
+        options: Options {
+            root_dir: root.to_string_lossy().to_string(),
+            tsconfig: root.join("tsconfig.json").to_string_lossy().to_string(),
+            ..Default::default()
+        },
+        changed_files: vec![],
+    };
+    let res = analyze::run(&req, None).unwrap();
+    let mut got: Vec<String> = res
+        .diagnostics
+        .iter()
+        .filter(|d| matches!(d.code.as_deref(), Some("PKU941" | "PKU942" | "PKU943")))
+        .map(|d| {
+            assert_eq!(format!("{:?}", d.level), "Critical", "{:?} must be critical", d.code);
+            format!("{} {}", d.code.as_deref().unwrap(), d.message)
+        })
+        .collect();
+    got.sort();
+    let tail = " \u{2014} a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data.";
+    let mut want = vec![
+        "PKU941 \u{2022} computedNames calls rpc.invoke(name) with a computed name \u{2014} the deploy planner cannot bind its unit to the callee's, so the call fails with \"No service binding\" if the two are deployed apart. Use a literal RPC name.".to_string(),
+        "PKU941 \u{2022} computedNames calls rpc.mesh(`x:${name}`) with a computed name \u{2014} the deploy planner cannot bind its unit to the callee's, so the call fails with \"No service binding\" if the two are deployed apart. Use a literal RPC name.".to_string(),
+        "PKU941 \u{2022} computedNames calls rpc.startWorkflow(name) with a computed name \u{2014} the deploy planner cannot bundle that workflow's meta into computedNames's unit, so the deployed call fails with \"Workflow not found\" unless the unit has it for another reason. Use a literal workflow name.".to_string(),
+    ];
+    for (f, w, c) in [
+        ("leaksWires", "the wire", "helper"),
+        ("leaksWires", "wire.rpc", "helper"),
+        ("leaksWires", "wire.channel", "helper"),
+        ("leaksWires", "wire.http", "helper"),
+        ("leaksWires", "wire.workflow", "helper"),
+        ("leaksWires", "wire.rpc", "util.run"),
+        ("leaksWires", "wire.rpc", "new Keeper"),
+        ("leaksDestructured", "wire.rpc", "helper"),
+        ("closures", "wire.rpc", "helper"),
+        ("localForwards", "wire.rpc", "helper"),
+        ("callsModuleHelper", "wire.rpc", "moduleHelper"),
+        ("callsUserHelper", "wire.rpc", "helper"),
+        ("callsUnresolved", "wire.rpc", "untyped.run"),
+        ("callsUnresolved", "wire.rpc", "untyped['run']"),
+        ("callsWrapper", "wire.rpc", "wrapper"),
+    ] {
+        want.push(format!("PKU942 \u{2022} {f} passes {w} to {c}(){tail}"));
+    }
+    want.push("PKU943 \u{2022} Workflow 'templateStep' calls workflow.do(`prefix:${data.name}`) with an rpc name the inspector cannot read. The step would be missing from the workflow graph, so it cannot be replayed, migrated or found by `pikku graph`. Use a string literal or a const of one.".to_string());
+    want.sort();
+    assert_eq!(got, want);
+}

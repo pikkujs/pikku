@@ -1,0 +1,1464 @@
+{
+  "state": {
+    "rootDir": "<fixture>",
+    "singletonServicesTypeImportMap": [],
+    "wireServicesTypeImportMap": [],
+    "userSessionTypeImportMap": [],
+    "configTypeImportMap": [],
+    "singletonServicesFactories": [],
+    "wireServicesFactories": [],
+    "wireServicesMeta": [],
+    "addonRequiredParentServices": [],
+    "addonCreatedServices": [],
+    "addonServicesFactorySeen": false,
+    "addonServerlessIncompatible": [],
+    "configFactories": [],
+    "serverLifecycleFactories": [],
+    "filesAndMethods": {},
+    "filesAndMethodsErrors": [
+      [
+        "No CoreUserSession found",
+        []
+      ],
+      [
+        "No CoreSingletonServices found",
+        []
+      ],
+      [
+        "No CoreServices found",
+        []
+      ],
+      [
+        "No CoreConfig found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {\n  return {}\n})\n\nPossible issues:\n- srcDirectories in pikku.config.json doesn't include the file with the createConfig method",
+        []
+      ],
+      [
+        "No CreateSingletonServices found",
+        []
+      ],
+      [
+        "No CreateWireServices found",
+        []
+      ]
+    ],
+    "schemaLookup": [],
+    "schemas": {
+      "StaysBoundOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "StepNamesInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "TemplateStepInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      }
+    },
+    "functions": {
+      "typesMap": {
+        "map": [],
+        "customTypes": [
+          [
+            "StaysBoundOutput",
+            {
+              "type": "{ userId: string; }",
+              "references": []
+            }
+          ],
+          [
+            "StepNamesInput",
+            {
+              "type": "{ name: string; }",
+              "references": []
+            }
+          ],
+          [
+            "TemplateStepInput",
+            {
+              "type": "{ name: string; }",
+              "references": []
+            }
+          ]
+        ]
+      },
+      "meta": {
+        "callsFramework": {
+          "pikkuFuncId": "callsFramework",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "callsFramework",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": false,
+            "wires": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "0f3a5bf7a0f3ea99",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/framework.ts",
+          "exportedName": "callsFramework",
+          "bodyStart": 17,
+          "bodyEnd": 17,
+          "contractHash": "d64a4fb83019d9ab",
+          "inputHash": "f92f7d81",
+          "outputHash": "f87b43d1"
+        },
+        "callsPublishedFramework": {
+          "pikkuFuncId": "callsPublishedFramework",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "callsPublishedFramework",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": false,
+            "wires": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "e117e4780921fb6b",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/framework.ts",
+          "exportedName": "callsPublishedFramework",
+          "bodyStart": 25,
+          "bodyEnd": 25,
+          "contractHash": "b1a7bbb32e4b3007",
+          "inputHash": "20049c94",
+          "outputHash": "124c5a94"
+        },
+        "callsUserHelper": {
+          "pikkuFuncId": "callsUserHelper",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "callsUserHelper",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": false,
+            "wires": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "ee5faf7a38aa995e",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/framework.ts",
+          "exportedName": "callsUserHelper",
+          "bodyStart": 31,
+          "bodyEnd": 31,
+          "contractHash": "084117bf28327ad0",
+          "inputHash": "79ec09fe",
+          "outputHash": "fe7e97f5"
+        },
+        "callsUnresolved": {
+          "pikkuFuncId": "callsUnresolved",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "callsUnresolved",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": false,
+            "wires": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "f9bdbc47086e3431",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/framework.ts",
+          "exportedName": "callsUnresolved",
+          "bodyStart": 37,
+          "bodyEnd": 39,
+          "contractHash": "969ebeec5cdbfaa6",
+          "inputHash": "f87ad9e0",
+          "outputHash": "a0ae73d8"
+        },
+        "callsModuleHelper": {
+          "pikkuFuncId": "callsModuleHelper",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "callsModuleHelper",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": true,
+            "wires": [
+              "rpc"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "eaa8c371326cd5ed",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/framework.ts",
+          "exportedName": "callsModuleHelper",
+          "bodyStart": 47,
+          "bodyEnd": 47,
+          "contractHash": "100a55f84b2a7d12",
+          "inputHash": "7088546d",
+          "outputHash": "5748479a"
+        },
+        "callsWrapper": {
+          "pikkuFuncId": "callsWrapper",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "callsWrapper",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": false,
+            "wires": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "8c9ce137bd8ebfe1",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/framework.ts",
+          "exportedName": "callsWrapper",
+          "bodyStart": 53,
+          "bodyEnd": 53,
+          "contractHash": "13b6911b8c5fde3f",
+          "inputHash": "4f0789ac",
+          "outputHash": "a7a782ad"
+        },
+        "goodNames": {
+          "pikkuFuncId": "goodNames",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "goodNames",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": true,
+            "wires": [
+              "rpc"
+            ]
+          },
+          "invokes": [
+            "billing:charge",
+            "literal"
+          ],
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "e403b3fe0d139312",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/funcs.ts",
+          "exportedName": "goodNames",
+          "bodyStart": 12,
+          "bodyEnd": 14,
+          "startsWorkflows": [
+            "one"
+          ],
+          "contractHash": "5dae10a54158c6b8",
+          "inputHash": "8af2bb5c",
+          "outputHash": "b653678e"
+        },
+        "computedNames": {
+          "pikkuFuncId": "computedNames",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "computedNames",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": true,
+            "wires": [
+              "rpc"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "4d1c54c7cb085529",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/funcs.ts",
+          "exportedName": "computedNames",
+          "bodyStart": 21,
+          "bodyEnd": 24,
+          "contractHash": "5c112e4b53b2c732",
+          "inputHash": "bab97491",
+          "outputHash": "36c1a9aa"
+        },
+        "leaksWires": {
+          "pikkuFuncId": "leaksWires",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "leaksWires",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": false,
+            "wires": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "1af817a949f85ab2",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/funcs.ts",
+          "exportedName": "leaksWires",
+          "bodyStart": 32,
+          "bodyEnd": 40,
+          "contractHash": "7f9aa27c5533fd21",
+          "inputHash": "cf51590a",
+          "outputHash": "113a5467"
+        },
+        "leaksDestructured": {
+          "pikkuFuncId": "leaksDestructured",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "leaksDestructured",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": true,
+            "wires": [
+              "rpc",
+              "session"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "ef19a65a1d571dee",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/funcs.ts",
+          "exportedName": "leaksDestructured",
+          "bodyStart": 46,
+          "bodyEnd": 49,
+          "contractHash": "91d287227a4bb0ab",
+          "inputHash": "9119d58d",
+          "outputHash": "7953d91b"
+        },
+        "closures": {
+          "pikkuFuncId": "closures",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "closures",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": false,
+            "wires": []
+          },
+          "invokes": [
+            "a",
+            "b"
+          ],
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "31e9bb85f73e4c09",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/funcs.ts",
+          "exportedName": "closures",
+          "bodyStart": 57,
+          "bodyEnd": 61,
+          "contractHash": "9e7c04b749eaf248",
+          "inputHash": "5dd9540e",
+          "outputHash": "e6f927ab"
+        },
+        "localHelpers": {
+          "pikkuFuncId": "localHelpers",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "localHelpers",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": true,
+            "wires": [
+              "rpc"
+            ]
+          },
+          "invokes": [
+            "x"
+          ],
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "2ed336f57e858b75",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/funcs.ts",
+          "exportedName": "localHelpers",
+          "bodyStart": 68,
+          "bodyEnd": 78,
+          "contractHash": "ced1ccea29a46083",
+          "inputHash": "894b7987",
+          "outputHash": "34a0f244"
+        },
+        "localForwards": {
+          "pikkuFuncId": "localForwards",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "localForwards",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": true,
+            "wires": [
+              "rpc"
+            ]
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "f112438c058d33cc",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/funcs.ts",
+          "exportedName": "localForwards",
+          "bodyStart": 86,
+          "bodyEnd": 89,
+          "contractHash": "01eac944b8f5487b",
+          "inputHash": "38ce8f00",
+          "outputHash": "d854147a"
+        },
+        "shadowed": {
+          "pikkuFuncId": "shadowed",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "shadowed",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": true,
+            "wires": [
+              "rpc"
+            ]
+          },
+          "invokes": [
+            "literal"
+          ],
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "4cbf95e8fbb7a20b",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/funcs.ts",
+          "exportedName": "shadowed",
+          "bodyStart": 96,
+          "bodyEnd": 100,
+          "contractHash": "3243db05265c485c",
+          "inputHash": "13f9256d",
+          "outputHash": "88636d29"
+        },
+        "staysBound": {
+          "pikkuFuncId": "staysBound",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "staysBound",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "wires": {
+            "optimized": false,
+            "wires": []
+          },
+          "invokes": [
+            "literal"
+          ],
+          "inputSchemaName": null,
+          "outputSchemaName": "StaysBoundOutput",
+          "inputs": [],
+          "outputs": [
+            "StaysBoundOutput"
+          ],
+          "implementationHash": "1a1484f5aae8175c",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/funcs.ts",
+          "exportedName": "staysBound",
+          "bodyStart": 108,
+          "bodyEnd": 122,
+          "contractHash": "19adb509a22ac5d1",
+          "inputHash": "aa229bba",
+          "outputHash": "19cb7cc7"
+        },
+        "stepNames": {
+          "pikkuFuncId": "stepNames",
+          "functionType": "user",
+          "funcWrapper": "pikkuWorkflowFunc",
+          "sessionless": true,
+          "name": "stepNames",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": true,
+            "wires": [
+              "workflow"
+            ]
+          },
+          "inputSchemaName": "StepNamesInput",
+          "outputSchemaName": null,
+          "inputs": [
+            "StepNamesInput"
+          ],
+          "outputs": [],
+          "implementationHash": "4fe0be80cb09739b",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/workflows.ts",
+          "exportedName": "stepNames",
+          "bodyStart": 8,
+          "bodyEnd": 10,
+          "contractHash": "17aa463024ca86b2",
+          "inputHash": "3ca63334",
+          "outputHash": "b9fe52aa"
+        },
+        "templateStep": {
+          "pikkuFuncId": "templateStep",
+          "functionType": "user",
+          "funcWrapper": "pikkuWorkflowFunc",
+          "sessionless": true,
+          "name": "templateStep",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": true,
+            "wires": [
+              "workflow"
+            ]
+          },
+          "inputSchemaName": "TemplateStepInput",
+          "outputSchemaName": null,
+          "inputs": [
+            "TemplateStepInput"
+          ],
+          "outputs": [],
+          "implementationHash": "932ffc0cb04fde08",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/workflows.ts",
+          "exportedName": "templateStep",
+          "bodyStart": 17,
+          "bodyEnd": 17,
+          "contractHash": "bf42a73e4e27e13a",
+          "inputHash": "fc27e62b",
+          "outputHash": "32c06580"
+        }
+      },
+      "files": [
+        [
+          "callsFramework",
+          {
+            "path": "<fixture>/src/framework.ts",
+            "exportedName": "callsFramework"
+          }
+        ],
+        [
+          "callsPublishedFramework",
+          {
+            "path": "<fixture>/src/framework.ts",
+            "exportedName": "callsPublishedFramework"
+          }
+        ],
+        [
+          "callsUserHelper",
+          {
+            "path": "<fixture>/src/framework.ts",
+            "exportedName": "callsUserHelper"
+          }
+        ],
+        [
+          "callsUnresolved",
+          {
+            "path": "<fixture>/src/framework.ts",
+            "exportedName": "callsUnresolved"
+          }
+        ],
+        [
+          "callsModuleHelper",
+          {
+            "path": "<fixture>/src/framework.ts",
+            "exportedName": "callsModuleHelper"
+          }
+        ],
+        [
+          "callsWrapper",
+          {
+            "path": "<fixture>/src/framework.ts",
+            "exportedName": "callsWrapper"
+          }
+        ],
+        [
+          "goodNames",
+          {
+            "path": "<fixture>/src/funcs.ts",
+            "exportedName": "goodNames"
+          }
+        ],
+        [
+          "computedNames",
+          {
+            "path": "<fixture>/src/funcs.ts",
+            "exportedName": "computedNames"
+          }
+        ],
+        [
+          "leaksWires",
+          {
+            "path": "<fixture>/src/funcs.ts",
+            "exportedName": "leaksWires"
+          }
+        ],
+        [
+          "leaksDestructured",
+          {
+            "path": "<fixture>/src/funcs.ts",
+            "exportedName": "leaksDestructured"
+          }
+        ],
+        [
+          "closures",
+          {
+            "path": "<fixture>/src/funcs.ts",
+            "exportedName": "closures"
+          }
+        ],
+        [
+          "localHelpers",
+          {
+            "path": "<fixture>/src/funcs.ts",
+            "exportedName": "localHelpers"
+          }
+        ],
+        [
+          "localForwards",
+          {
+            "path": "<fixture>/src/funcs.ts",
+            "exportedName": "localForwards"
+          }
+        ],
+        [
+          "shadowed",
+          {
+            "path": "<fixture>/src/funcs.ts",
+            "exportedName": "shadowed"
+          }
+        ],
+        [
+          "staysBound",
+          {
+            "path": "<fixture>/src/funcs.ts",
+            "exportedName": "staysBound"
+          }
+        ]
+      ],
+      "approvalDescriptions": {},
+      "dynamicImportIds": []
+    },
+    "http": {
+      "metaInputTypes": [],
+      "meta": {
+        "get": {},
+        "post": {},
+        "put": {},
+        "delete": {},
+        "head": {},
+        "patch": {},
+        "options": {}
+      },
+      "files": [],
+      "routeMiddleware": []
+    },
+    "channels": {
+      "files": [],
+      "meta": {}
+    },
+    "gateways": {
+      "meta": {},
+      "files": []
+    },
+    "triggers": {
+      "meta": {},
+      "sourceMeta": {},
+      "webhookSourceMeta": {},
+      "files": []
+    },
+    "scheduledTasks": {
+      "meta": {},
+      "files": []
+    },
+    "queueWorkers": {
+      "meta": {
+        "wf-orchestrator-template-step": {
+          "name": "wf-orchestrator-template-step",
+          "pikkuFuncId": "pikkuWorkflowOrchestrator:templateStep"
+        }
+      },
+      "files": []
+    },
+    "workflows": {
+      "meta": {
+        "templateStep": {
+          "pikkuFuncId": "templateStep",
+          "name": "templateStep",
+          "steps": [
+            {
+              "type": "rpc",
+              "stepName": "Template",
+              "rpcName": "prefix:${data.name}"
+            }
+          ],
+          "dsl": true,
+          "expose": null
+        }
+      },
+      "files": [
+        [
+          "stepNames",
+          {
+            "path": "<fixture>/src/workflows.ts",
+            "exportedName": "stepNames"
+          }
+        ],
+        [
+          "templateStep",
+          {
+            "path": "<fixture>/src/workflows.ts",
+            "exportedName": "templateStep"
+          }
+        ]
+      ],
+      "graphMeta": {
+        "templateStep": {
+          "name": "templateStep",
+          "pikkuFuncId": "templateStep",
+          "source": "dsl",
+          "nodes": {
+            "Template": {
+              "nodeId": "Template",
+              "rpcName": "prefix:${data.name}",
+              "stepName": "Template",
+              "stepHash": "3c8938774eb8"
+            }
+          },
+          "entryNodeIds": [
+            "Template"
+          ],
+          "graphHash": "e5d7aede42df",
+          "deterministic": true,
+          "plannedSteps": [
+            {
+              "stepName": "Template"
+            }
+          ]
+        }
+      },
+      "graphFiles": [],
+      "featureFiles": [],
+      "invokedWorkflows": [
+        "a"
+      ]
+    },
+    "rpc": {
+      "internalMeta": {
+        "callsFramework": "callsFramework",
+        "callsPublishedFramework": "callsPublishedFramework",
+        "callsUserHelper": "callsUserHelper",
+        "callsUnresolved": "callsUnresolved",
+        "callsModuleHelper": "callsModuleHelper",
+        "callsWrapper": "callsWrapper",
+        "goodNames": "goodNames",
+        "computedNames": "computedNames",
+        "leaksWires": "leaksWires",
+        "leaksDestructured": "leaksDestructured",
+        "closures": "closures",
+        "localHelpers": "localHelpers",
+        "localForwards": "localForwards",
+        "shadowed": "shadowed",
+        "staysBound": "staysBound"
+      },
+      "internalFiles": [],
+      "exposedMeta": {},
+      "exposedFiles": [],
+      "remoteMeta": {},
+      "remoteFiles": [],
+      "invokedFunctions": [
+        "literal",
+        "x",
+        "literalRpc",
+        "prefix:${data.name}"
+      ],
+      "invokedFunctionsByFile": [
+        [
+          "<fixture>/src/funcs.ts",
+          [
+            "literal",
+            "x"
+          ]
+        ]
+      ],
+      "usedAddons": [],
+      "wireAddonDeclarations": [],
+      "wireAddonFiles": []
+    },
+    "mcpEndpoints": {
+      "resourcesMeta": {},
+      "toolsMeta": {},
+      "promptsMeta": {},
+      "files": [],
+      "surfaces": {}
+    },
+    "agents": {
+      "agentsMeta": {},
+      "files": [],
+      "invokedAgentsByFile": []
+    },
+    "scorers": {
+      "scorersMeta": {},
+      "files": []
+    },
+    "cli": {
+      "meta": {
+        "programs": {},
+        "renderers": {}
+      },
+      "files": []
+    },
+    "nodes": {
+      "meta": {},
+      "files": []
+    },
+    "auth": {
+      "providers": [],
+      "plugins": [],
+      "files": [],
+      "definition": null
+    },
+    "secrets": {
+      "definitions": [],
+      "files": [],
+      "usage": {}
+    },
+    "surfaceUsage": {},
+    "credentials": {
+      "definitions": [],
+      "files": []
+    },
+    "scopes": {
+      "definitions": [],
+      "files": []
+    },
+    "systemRoles": {
+      "definitions": [],
+      "files": []
+    },
+    "featureFlags": {
+      "definitions": [],
+      "files": []
+    },
+    "virtualUsers": {
+      "definitions": [],
+      "files": []
+    },
+    "variables": {
+      "definitions": [],
+      "files": []
+    },
+    "manifest": {
+      "initial": null,
+      "current": {
+        "manifestVersion": 1,
+        "contracts": {
+          "callsFramework": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "f92f7d81",
+                "outputHash": "f87b43d1"
+              }
+            }
+          },
+          "callsPublishedFramework": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "20049c94",
+                "outputHash": "124c5a94"
+              }
+            }
+          },
+          "callsUserHelper": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "79ec09fe",
+                "outputHash": "fe7e97f5"
+              }
+            }
+          },
+          "callsUnresolved": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "f87ad9e0",
+                "outputHash": "a0ae73d8"
+              }
+            }
+          },
+          "callsModuleHelper": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "7088546d",
+                "outputHash": "5748479a"
+              }
+            }
+          },
+          "callsWrapper": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "4f0789ac",
+                "outputHash": "a7a782ad"
+              }
+            }
+          },
+          "goodNames": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "8af2bb5c",
+                "outputHash": "b653678e"
+              }
+            }
+          },
+          "computedNames": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "bab97491",
+                "outputHash": "36c1a9aa"
+              }
+            }
+          },
+          "leaksWires": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "cf51590a",
+                "outputHash": "113a5467"
+              }
+            }
+          },
+          "leaksDestructured": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "9119d58d",
+                "outputHash": "7953d91b"
+              }
+            }
+          },
+          "closures": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "5dd9540e",
+                "outputHash": "e6f927ab"
+              }
+            }
+          },
+          "localHelpers": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "894b7987",
+                "outputHash": "34a0f244"
+              }
+            }
+          },
+          "localForwards": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "38ce8f00",
+                "outputHash": "d854147a"
+              }
+            }
+          },
+          "shadowed": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "13f9256d",
+                "outputHash": "88636d29"
+              }
+            }
+          },
+          "staysBound": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "aa229bba",
+                "outputHash": "19cb7cc7"
+              }
+            }
+          },
+          "stepNames": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "3ca63334",
+                "outputHash": "b9fe52aa"
+              }
+            }
+          },
+          "templateStep": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "fc27e62b",
+                "outputHash": "32c06580"
+              }
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    "middleware": {
+      "definitions": {},
+      "instances": {},
+      "globalFiles": [],
+      "tagMiddleware": []
+    },
+    "channelMiddleware": {
+      "definitions": {},
+      "instances": {},
+      "tagMiddleware": []
+    },
+    "agentMiddleware": {
+      "definitions": {}
+    },
+    "permissions": {
+      "definitions": {},
+      "instances": {},
+      "global": []
+    },
+    "serviceAggregation": {
+      "requiredServices": [
+        "workflowService",
+        "workflowRunService",
+        "schedulerService",
+        "queueService"
+      ],
+      "usedFunctions": [],
+      "usedMiddleware": [],
+      "usedPermissions": [],
+      "allSingletonServices": [],
+      "allWireServices": []
+    },
+    "serviceTypes": {
+      "singletonServices": null,
+      "services": null,
+      "secretAliases": []
+    },
+    "resolvedIOTypes": {
+      "callsFramework": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "callsPublishedFramework": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "callsUserHelper": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "callsUnresolved": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "callsModuleHelper": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "callsWrapper": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "goodNames": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "computedNames": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "leaksWires": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "leaksDestructured": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "closures": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "localHelpers": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "localForwards": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "shadowed": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "staysBound": {
+        "inputType": "null",
+        "outputType": "StaysBoundOutput"
+      },
+      "stepNames": {
+        "inputType": "StepNamesInput",
+        "outputType": "null"
+      },
+      "templateStep": {
+        "inputType": "TemplateStepInput",
+        "outputType": "null"
+      }
+    },
+    "middlewareGroupsMeta": {
+      "definitions": {},
+      "instances": {},
+      "httpGroups": {},
+      "tagGroups": {},
+      "channelMiddleware": {
+        "definitions": {},
+        "instances": {},
+        "tagGroups": {}
+      }
+    },
+    "permissionsGroupsMeta": {
+      "definitions": {}
+    },
+    "requiredSchemas": [
+      "StaysBoundOutput",
+      "StepNamesInput",
+      "TemplateStepInput"
+    ],
+    "openAPISpec": null,
+    "diagnostics": [
+      {
+        "code": "PKU411",
+        "message": "Function 'callsFramework' does not destructure its wires parameter, preventing tree-shaking optimization.",
+        "sourceFile": "callsFramework",
+        "position": 0
+      },
+      {
+        "code": "PKU411",
+        "message": "Function 'callsPublishedFramework' does not destructure its wires parameter, preventing tree-shaking optimization.",
+        "sourceFile": "callsPublishedFramework",
+        "position": 0
+      },
+      {
+        "code": "PKU411",
+        "message": "Function 'callsUserHelper' does not destructure its wires parameter, preventing tree-shaking optimization.",
+        "sourceFile": "callsUserHelper",
+        "position": 0
+      },
+      {
+        "code": "PKU411",
+        "message": "Function 'callsUnresolved' does not destructure its wires parameter, preventing tree-shaking optimization.",
+        "sourceFile": "callsUnresolved",
+        "position": 0
+      },
+      {
+        "code": "PKU411",
+        "message": "Function 'callsWrapper' does not destructure its wires parameter, preventing tree-shaking optimization.",
+        "sourceFile": "callsWrapper",
+        "position": 0
+      },
+      {
+        "code": "PKU411",
+        "message": "Function 'leaksWires' does not destructure its wires parameter, preventing tree-shaking optimization.",
+        "sourceFile": "leaksWires",
+        "position": 0
+      },
+      {
+        "code": "PKU411",
+        "message": "Function 'closures' does not destructure its wires parameter, preventing tree-shaking optimization.",
+        "sourceFile": "closures",
+        "position": 0
+      },
+      {
+        "code": "PKU410",
+        "message": "Function 'staysBound' does not destructure its services parameter, preventing tree-shaking optimization.",
+        "sourceFile": "staysBound",
+        "position": 0
+      },
+      {
+        "code": "PKU411",
+        "message": "Function 'staysBound' does not destructure its wires parameter, preventing tree-shaking optimization.",
+        "sourceFile": "staysBound",
+        "position": 0
+      }
+    ],
+    "addonFunctions": {},
+    "exportedContracts": {
+      "http": {},
+      "cli": {},
+      "channel": {},
+      "addonHttp": {},
+      "addonCli": {},
+      "addonChannel": {}
+    }
+  },
+  "diagnostics": [
+    {
+      "level": "critical",
+      "code": "PKU641",
+      "message": "Workflow 'stepNames' does not conform to DSL workflow rules:\n- Failed to extract RPC step: Unable to extract string literal from node"
+    },
+    {
+      "level": "critical",
+      "code": "PKU943",
+      "message": "• Workflow 'templateStep' calls workflow.do(`prefix:${data.name}`) with an rpc name the inspector cannot read. The step would be missing from the workflow graph, so it cannot be replayed, migrated or found by `pikku graph`. Use a string literal or a const of one."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• callsUserHelper passes wire.rpc to helper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• callsUnresolved passes wire.rpc to untyped.run() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• callsUnresolved passes wire.rpc to untyped['run']() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• callsModuleHelper passes wire.rpc to moduleHelper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• callsWrapper passes wire.rpc to wrapper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU941",
+      "message": "• computedNames calls rpc.invoke(name) with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with \"No service binding\" if the two are deployed apart. Use a literal RPC name."
+    },
+    {
+      "level": "critical",
+      "code": "PKU941",
+      "message": "• computedNames calls rpc.mesh(`x:${name}`) with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with \"No service binding\" if the two are deployed apart. Use a literal RPC name."
+    },
+    {
+      "level": "critical",
+      "code": "PKU941",
+      "message": "• computedNames calls rpc.startWorkflow(name) with a computed name — the deploy planner cannot bundle that workflow's meta into computedNames's unit, so the deployed call fails with \"Workflow not found\" unless the unit has it for another reason. Use a literal workflow name."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• leaksWires passes wire.channel to helper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• leaksWires passes wire.http to helper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• leaksWires passes wire.rpc to helper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• leaksWires passes the wire to helper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• leaksWires passes wire.workflow to helper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• leaksWires passes wire.rpc to new Keeper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• leaksWires passes wire.rpc to util.run() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• leaksDestructured passes wire.rpc to helper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• closures passes wire.rpc to helper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "critical",
+      "code": "PKU942",
+      "message": "• localForwards passes wire.rpc to helper() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data."
+    },
+    {
+      "level": "warn",
+      "code": "PKU644",
+      "message": "Workflow 'templateStep' (<fixture>/src/workflows.ts) runs a single RPC step and never sleeps, suspends or fans out, so it buys nothing a workflow is for. Call the function directly, or enqueue it on a queue worker if it must survive a restart."
+    },
+    {
+      "level": "critical",
+      "code": "PKU944",
+      "message": "• goodNames invokes 'billing:charge', but no function, workflow or wired addon function has that name. The call would fail at run time. Fix the name, or wire the addon that provides it."
+    },
+    {
+      "level": "critical",
+      "code": "PKU944",
+      "message": "• goodNames invokes 'literal', but no function, workflow or wired addon function has that name. The call would fail at run time. Fix the name, or wire the addon that provides it."
+    },
+    {
+      "level": "critical",
+      "code": "PKU944",
+      "message": "• goodNames starts workflow 'one', but no workflow has that name. The call would fail at run time. Fix the name, or wire the addon that provides it."
+    },
+    {
+      "level": "critical",
+      "code": "PKU944",
+      "message": "• closures invokes 'a', but no function, workflow or wired addon function has that name. The call would fail at run time. Fix the name, or wire the addon that provides it."
+    },
+    {
+      "level": "critical",
+      "code": "PKU944",
+      "message": "• closures invokes 'b', but no function, workflow or wired addon function has that name. The call would fail at run time. Fix the name, or wire the addon that provides it."
+    },
+    {
+      "level": "critical",
+      "code": "PKU944",
+      "message": "• localHelpers invokes 'x', but no function, workflow or wired addon function has that name. The call would fail at run time. Fix the name, or wire the addon that provides it."
+    },
+    {
+      "level": "critical",
+      "code": "PKU944",
+      "message": "• shadowed invokes 'literal', but no function, workflow or wired addon function has that name. The call would fail at run time. Fix the name, or wire the addon that provides it."
+    },
+    {
+      "level": "critical",
+      "code": "PKU944",
+      "message": "• staysBound invokes 'literal', but no function, workflow or wired addon function has that name. The call would fail at run time. Fix the name, or wire the addon that provides it."
+    }
+  ],
+  "validationPass": {
+    "start": 20,
+    "end": 29
+  }
+}

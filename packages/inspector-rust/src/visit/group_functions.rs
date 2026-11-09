@@ -1,5 +1,7 @@
 //! Port of Go `visit/group_functions.go`: add/add-functions.ts (addFunctions).
 
+use std::collections::BTreeSet;
+
 use sha2::{Digest, Sha256};
 use tsrs_ast::{self as ast, Kind, Node, SymbolFlags};
 use tsrs_checker::Type;
@@ -404,10 +406,18 @@ impl Context<'_> {
         if !invoked.names.is_empty() {
             m.invokes = invoked.names.clone();
         }
-        for call in &invoked.dynamic {
-            self.log.warn(format!(
+        let mut resolved: BTreeSet<String> = invoked.names.iter().cloned().collect();
+        for (call, arg) in invoked.dynamic.iter().zip(&invoked.dynamic_args) {
+            if let Some(v) = self.const_string_name(*arg) {
+                resolved.insert(v);
+                continue;
+            }
+            self.log.critical(codes::RPC_NAME_NOT_LITERAL, format!(
                 "• {pikku_func_id} calls {call} with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with \"No service binding\" if the two are deployed apart. Use a literal RPC name."
             ));
+        }
+        if resolved.len() > invoked.names.len() {
+            m.invokes = resolved.into_iter().collect();
         }
 
         // --- Generics → types, unwrapped from Promise ---
@@ -621,15 +631,29 @@ impl Context<'_> {
         // Generated scaffolds (the workflow start/run routes) take the name from the
         // request by design, and are served by units that have every workflow.
         if !is_generated_file(file_name_of(handler)) {
-            for call in &started.dynamic {
-                self.log.warn(format!(
+            let mut started_names: BTreeSet<String> = started.names.iter().cloned().collect();
+            for (call, arg) in started.dynamic.iter().zip(&started.dynamic_args) {
+                if let Some(v) = self.const_string_name(*arg) {
+                    started_names.insert(v);
+                    continue;
+                }
+                self.log.critical(codes::RPC_NAME_NOT_LITERAL, format!(
                     "• {pikku_func_id} calls {call} with a computed name — the deploy planner cannot bundle that workflow's meta into {pikku_func_id}'s unit, so the deployed call fails with \"Workflow not found\" unless the unit has it for another reason. Use a literal workflow name."
                 ));
             }
-            if !started.rpc_handoffs.is_empty() {
-                self.log.warn(format!(
-                    "• {pikku_func_id} passes rpc to {} — rpc.startWorkflow / rpc.invoke calls made there are invisible to the deploy planner, so their targets are not bundled into or bound to {pikku_func_id}'s unit. Make those calls in the handler itself.",
-                    started.rpc_handoffs.join(", ")
+            if started_names.len() > started.names.len() {
+                m.starts_workflows = started_names.into_iter().collect();
+            }
+            let mut resolver = HandlerResolver { cx: &mut *self, handler };
+            let args = tsutil::collect_wire_args(handler, &mut resolver);
+            for c in args {
+                if self.is_framework_callee(c.expr) {
+                    continue;
+                }
+                self.log.critical(codes::WIRE_PASSED_TO_HELPER, format!(
+                    "• {pikku_func_id} passes {} to {}() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data.",
+                    wire_label(&c.wire),
+                    c.callee
                 ));
             }
         }
@@ -853,5 +877,108 @@ mod tests {
     fn scenario_kinds() {
         assert_eq!(scenario_step_kind("pikkuPlatformScenarioStep"), Some("platform"));
         assert!(is_scenario_instrumentation("pikkuScenarioGradeRun@v2"));
+    }
+}
+
+impl Context<'_> {
+    /// The name a computed rpc/workflow argument stands for when the checker
+    /// resolves it to one string literal type (a `const NAME = 'x'`).
+    pub(super) fn const_string_name(&mut self, arg: P<Node>) -> Option<String> {
+        let inner = tsutil::unwrap_non_null_parens(arg);
+        if !ast::is_identifier(inner) && !ast::is_property_access_expression(inner) {
+            return None;
+        }
+        let t = self.checker.get_type_at_location(inner);
+        if t.flags().intersects(tsrs_checker::TypeFlags::StringLiteral)
+            && let Some(tsrs_checker::LiteralValue::String(v)) = t.as_literal_type().value()
+        {
+            return Some(v.to_string());
+        }
+        None
+    }
+}
+
+fn wire_label(w: &str) -> String {
+    if w == "wire" { "the wire".to_string() } else { format!("wire.{w}") }
+}
+
+/// Answers the checker questions `collect_wire_args` asks for one handler.
+struct HandlerResolver<'a, 'b> {
+    cx: &'a mut Context<'b>,
+    handler: P<Node>,
+}
+
+impl tsutil::WireResolver for HandlerResolver<'_, '_> {
+    fn decls_of(&mut self, n: P<Node>) -> Vec<P<Node>> {
+        let sym = match n.parent() {
+            Some(p) if ast::is_shorthand_property_assignment(p) && p.name() == Some(n) => {
+                self.cx.checker.get_shorthand_assignment_value_symbol(Some(p))
+            }
+            _ => self.cx.symbol_at(n),
+        };
+        match self.cx.resolve_alias(sym) {
+            Some(s) => s.declarations().to_vec(),
+            None => Vec::new(),
+        }
+    }
+
+    fn local_fn_of(&mut self, callee: P<Node>) -> Option<Option<P<Node>>> {
+        let expr = tsutil::unwrap_non_null_parens(callee);
+        if ast::is_arrow_function(expr) || ast::is_function_expression(expr) {
+            return Some(Some(expr));
+        }
+        let target = if ast::is_property_access_expression(expr) { expr.name().unwrap() } else { expr };
+        if !ast::is_identifier(target) {
+            return None;
+        }
+        let sym = self.cx.symbol_at(target);
+        let sym = self.cx.resolve_alias(sym)?;
+        let body = self.handler.body()?;
+        let decls = sym.declarations();
+        if decls.len() != 1 {
+            return None;
+        }
+        let d = decls[0];
+        if file_name_of(d) != file_name_of(self.handler) || d.pos() < body.pos() || d.end() > body.end() {
+            return None;
+        }
+        let as_fn = |n: Option<P<Node>>| {
+            let f = tsutil::unwrap_non_null_parens(n?);
+            (ast::is_arrow_function(f) || ast::is_function_expression(f)).then_some(Some(f))
+        };
+        if ast::is_function_declaration(d) || ast::is_method_declaration(d) {
+            Some(Some(d))
+        } else if ast::is_class_declaration(d) {
+            Some(None)
+        } else if ast::is_variable_declaration(d) || ast::is_property_assignment(d) {
+            as_fn(d.initializer())
+        } else {
+            None
+        }
+    }
+}
+
+impl Context<'_> {
+    /// Whether the callee is declared by the Pikku framework: a package named
+    /// `@pikku/*` other than the project being inspected. It goes by where the
+    /// callee is declared, not by its type. A callee the checker cannot resolve
+    /// is not the framework's, so the call is refused.
+    fn is_framework_callee(&mut self, expr: P<Node>) -> bool {
+        let target = if ast::is_property_access_expression(expr) { expr.name().unwrap() } else { expr };
+        let sym = self.symbol_at(target);
+        let Some(sym) = self.resolve_alias(sym) else { return false };
+        let decls: Vec<P<Node>> = sym.declarations().to_vec();
+        if decls.is_empty() {
+            return false;
+        }
+        let own = super::addon_resolve::nearest_package_dir(&format!("{}/x", self.root_dir));
+        decls.iter().all(|d| {
+            let file = file_name_of(*d);
+            if !super::addon_resolve::find_package_name_for_file(&file).starts_with("@pikku/") {
+                return false;
+            }
+            let dir = super::addon_resolve::nearest_package_dir(&file);
+            !dir.is_empty() && dir != own
+        })
     }
 }

@@ -3,8 +3,10 @@ package visit
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/microsoft/typescript-go/shim/ast"
+	"github.com/microsoft/typescript-go/shim/checker"
 	"github.com/microsoft/typescript-go/shim/scanner"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
@@ -287,6 +289,11 @@ func (s *Context) addWorkflow(node *ast.Node) {
 	var context, dsl, asserts any = jsUndefined, jsUndefined, jsUndefined
 
 	result := s.extractDSLWorkflow(node, wrapper != "dsl")
+	// A DSL workflow that failed to extract is already refused (PKU641) for the
+	// same reason; every other wrapper would drop the step without a word.
+	if wrapper != "dsl" || result.ok {
+		s.checkStepRpcNames(resolvedFunc, workflowName)
+	}
 	reason := result.reason
 	if reason == "" {
 		reason = "Unknown error"
@@ -446,4 +453,51 @@ func propValueToJS(v tsutil.PropValue) any {
 		return *v.Str
 	}
 	return nil
+}
+
+// checkStepRpcNames refuses a workflow.do / workflow.expectEventually step
+// whose rpc name is not a string literal or a const of one: the step would be
+// absent from the workflow graph, so it could not be replayed, migrated or
+// found by `pikku graph`.
+func (s *Context) checkStepRpcNames(fn *ast.Node, workflowName string) {
+	if fn == nil {
+		return
+	}
+	tsutil.WalkSelf(fn, func(n *ast.Node) {
+		if !ast.IsCallExpression(n) || !ast.IsPropertyAccessExpression(n.Expression()) {
+			return
+		}
+		pa := n.Expression()
+		method := pa.Name().Text()
+		args := n.Arguments()
+		if (method != "do" || len(args) < 2) && (method != "expectEventually" || len(args) < 4) {
+			return
+		}
+		recv := tsutil.UnwrapNonNullParens(pa.Expression())
+		if !(ast.IsIdentifier(recv) && recv.Text() == "workflow") && !(ast.IsPropertyAccessExpression(recv) && recv.Name().Text() == "workflow") {
+			return
+		}
+		arg := args[1]
+		inner := arg
+		for ast.IsAsExpression(inner) || inner.Kind == ast.KindTypeAssertionExpression {
+			inner = inner.Expression()
+		}
+		if ast.IsArrowFunction(inner) || ast.IsFunctionExpression(inner) || ast.IsFunctionDeclaration(inner) {
+			return
+		}
+		if ast.IsIdentifier(inner) || ast.IsPropertyAccessExpression(inner) {
+			if t := s.Checker.GetTypeAtLocation(inner); t != nil && len(s.Checker.GetSignaturesOfType(t, checker.SignatureKindCall)) > 0 {
+				return // a step function passed by reference
+			}
+		}
+		if v, err := s.extractStringLiteral(inner); err == nil && !strings.Contains(v, "${") {
+			return
+		}
+		if v, ok := s.constStringName(inner); ok && v != "" {
+			return
+		}
+		s.Log.Critical(diag.WorkflowStepNameNotLiteral, fmt.Sprintf(
+			"• Workflow '%s' calls %s(%s) with an rpc name the inspector cannot read. The step would be missing from the workflow graph, so it cannot be replayed, migrated or found by `pikku graph`. Use a string literal or a const of one.",
+			workflowName, tsutil.NodeText(pa), tsutil.NodeText(arg)))
+	})
 }

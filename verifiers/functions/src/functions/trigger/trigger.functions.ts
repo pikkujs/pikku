@@ -14,7 +14,9 @@ export const testEventTrigger = pikkuTriggerFunc<
   { eventName: string },
   { payload: string }
 >(async (_services, { eventName }, { trigger }) => {
-  invokers.set(eventName, trigger.invoke)
+  // A closure that calls the wire keeps it bound; the bare method would hand
+  // the wire's own function to the map.
+  invokers.set(eventName, (data, options) => trigger.invoke(data, options))
   return () => {
     invokers.delete(eventName)
   }

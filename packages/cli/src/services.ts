@@ -183,6 +183,12 @@ export const CONFIG_FREE_COMMANDS = new Set([
  */
 export const SILENT_COMMANDS = new Set(['cloud.auth.git'])
 
+/**
+ * Commands whose stdout is the answer, read by a person's pipe or an agent:
+ * the logo would sit in front of it. Their diagnostics still print.
+ */
+export const NO_LOGO_COMMANDS = new Set(['graph'])
+
 export const createConfig: CreateConfig<
   Config,
   [PikkuCLIConfig, string[]?]
@@ -228,7 +234,11 @@ export const createConfig: CreateConfig<
   logger.setFailOn(extraFailOn)
 
   // Display logo unless in silent mode
-  if (!isSilent && outputMode !== 'json') {
+  if (
+    !isSilent &&
+    outputMode !== 'json' &&
+    !NO_LOGO_COMMANDS.has(commandPath.join('.'))
+  ) {
     logger.logLogo()
   }
 

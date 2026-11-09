@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -351,8 +352,19 @@ func (s *Context) addFunctions(node *ast.Node) {
 	if len(invoked.Names) > 0 {
 		m.Invokes = invoked.Names
 	}
-	for _, call := range invoked.Dynamic {
-		s.Log.Warn(fmt.Sprintf(`• %s calls %s with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with "No service binding" if the two are deployed apart. Use a literal RPC name.`, pikkuFuncId, call))
+	resolved := map[string]bool{}
+	for _, n := range invoked.Names {
+		resolved[n] = true
+	}
+	for i, call := range invoked.Dynamic {
+		if v, ok := s.constStringName(invoked.DynamicArgs[i]); ok {
+			resolved[v] = true
+			continue
+		}
+		s.Log.Critical(diag.RpcNameNotLiteral, fmt.Sprintf(`• %s calls %s with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with "No service binding" if the two are deployed apart. Use a literal RPC name.`, pikkuFuncId, call))
+	}
+	if len(resolved) > len(invoked.Names) {
+		m.Invokes = tsutil.SortedKeys(resolved)
 	}
 
 	// --- Generics → types, unwrapped from Promise ---
@@ -526,14 +538,27 @@ func (s *Context) addFunctions(node *ast.Node) {
 	// Generated scaffolds (the workflow start/run routes) take the name from the
 	// request by design, and are served by units that have every workflow.
 	if !generatedFileRe.MatchString(ast.GetSourceFileOfNode(handler).FileName()) {
-		for _, call := range started.Dynamic {
-			s.Log.Warn(fmt.Sprintf(`• %s calls %s with a computed name — the deploy planner cannot bundle that workflow's meta into %s's unit, so the deployed call fails with "Workflow not found" unless the unit has it for another reason. Use a literal workflow name.`, pikkuFuncId, call, pikkuFuncId))
+		startedNames := map[string]bool{}
+		for _, n := range started.Names {
+			startedNames[n] = true
 		}
-		if len(started.RpcHandoffs) > 0 {
-			s.Log.Warn(fmt.Sprintf(`• %s passes rpc to %s — rpc.startWorkflow / rpc.invoke calls made there are invisible to the deploy planner, so their targets are not bundled into or bound to %s's unit. Make those calls in the handler itself.`, pikkuFuncId, strings.Join(started.RpcHandoffs, ", "), pikkuFuncId))
+		for i, call := range started.Dynamic {
+			if v, ok := s.constStringName(started.DynamicArgs[i]); ok {
+				startedNames[v] = true
+				continue
+			}
+			s.Log.Critical(diag.RpcNameNotLiteral, fmt.Sprintf(`• %s calls %s with a computed name — the deploy planner cannot bundle that workflow's meta into %s's unit, so the deployed call fails with "Workflow not found" unless the unit has it for another reason. Use a literal workflow name.`, pikkuFuncId, call, pikkuFuncId))
+		}
+		if len(startedNames) > len(started.Names) {
+			m.StartsWorkflows = tsutil.SortedKeys(startedNames)
+		}
+		for _, c := range tsutil.CollectWireArgs(handler, s.declsOf, func(callee *ast.Node) (*ast.Node, bool) { return s.localFnOf(callee, handler) }) {
+			if s.isFrameworkCallee(c.Expr) {
+				continue
+			}
+			s.Log.Critical(diag.WirePassedToHelper, fmt.Sprintf(`• %s passes %s to %s() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data.`, pikkuFuncId, wireLabel(c.Wire), c.Callee))
 		}
 	}
-
 	s.State.Functions.Meta.Set(pikkuFuncId, m)
 	if nodeCfg != nil {
 		s.addNodeMeta(nodeCfg, ast.GetSourceFileOfNode(node).FileName(), pikkuFuncId, m)
@@ -690,4 +715,118 @@ func jsonValue(v any) []byte {
 	enc.SetEscapeHTML(false)
 	_ = enc.Encode(v)
 	return bytes.TrimRight(b.Bytes(), "\n")
+}
+
+func wireLabel(w string) string {
+	if w == "wire" {
+		return "the wire"
+	}
+	return "wire." + w
+}
+
+// constStringName is the name a computed rpc/workflow argument stands for when
+// the checker resolves it to one string literal type (a `const NAME = 'x'`).
+func (s *Context) constStringName(arg *ast.Node) (string, bool) {
+	inner := tsutil.UnwrapNonNullParens(arg)
+	if !ast.IsIdentifier(inner) && !ast.IsPropertyAccessExpression(inner) {
+		return "", false
+	}
+	t := s.Checker.GetTypeAtLocation(inner)
+	if t != nil && t.Flags()&checker.TypeFlagsStringLiteral != 0 {
+		v, ok := t.AsLiteralType().Value().(string)
+		return v, ok
+	}
+	return "", false
+}
+
+// isFrameworkCallee is whether the callee is declared by the Pikku framework:
+// a package named @pikku/* other than the project being inspected. It goes by
+// where the callee is declared, not by its type, so a project function that
+// merely takes or returns a framework type gets nothing. A callee the checker
+// cannot resolve (an untyped value, a call result, an element access) is not
+// the framework's, so the call is refused.
+func (s *Context) isFrameworkCallee(expr *ast.Node) bool {
+	target := expr
+	if ast.IsPropertyAccessExpression(expr) {
+		target = expr.Name()
+	}
+	sym := s.resolveAlias(s.Checker.GetSymbolAtLocation(target))
+	if sym == nil || len(sym.Declarations) == 0 {
+		return false
+	}
+	own := nearestPackageDir(filepath.Join(s.RootDir, "x"))
+	for _, d := range sym.Declarations {
+		file := ast.GetSourceFileOfNode(d).FileName()
+		if !strings.HasPrefix(findPackageNameForFile(file), "@pikku/") {
+			return false
+		}
+		if dir := nearestPackageDir(file); dir == "" || dir == own {
+			return false
+		}
+	}
+	return true
+}
+
+// declsOf is the declarations of the symbol an identifier refers to, aliases
+// followed. A shorthand property (`{ rpc }`) refers to the variable, not the
+// property.
+func (s *Context) declsOf(n *ast.Node) []*ast.Node {
+	var sym *ast.Symbol
+	if n.Parent != nil && ast.IsShorthandPropertyAssignment(n.Parent) && n.Parent.Name() == n {
+		sym = s.Checker.GetShorthandAssignmentValueSymbol(n.Parent)
+	} else {
+		sym = s.Checker.GetSymbolAtLocation(n)
+	}
+	sym = s.resolveAlias(sym)
+	if sym == nil {
+		return nil
+	}
+	return sym.Declarations
+}
+
+// localFnOf is the function (or class, as nil) a callee refers to when it is
+// declared inside the handler body: a nested function, a const holding an
+// arrow, a method of a local object, an inline function called in place. The
+// wire stays bound to the handler there; what that function does with it is
+// judged at its own calls.
+func (s *Context) localFnOf(expr, handler *ast.Node) (*ast.Node, bool) {
+	expr = tsutil.UnwrapNonNullParens(expr)
+	if isFunctionExprNode(expr) {
+		return expr, !ast.IsClassExpression(expr)
+	}
+	target := expr
+	if ast.IsPropertyAccessExpression(expr) {
+		target = expr.Name()
+	}
+	if !ast.IsIdentifier(target) {
+		return nil, false
+	}
+	sym := s.resolveAlias(s.Checker.GetSymbolAtLocation(target))
+	body := handler.Body()
+	if sym == nil || len(sym.Declarations) != 1 || body == nil {
+		return nil, false
+	}
+	d := sym.Declarations[0]
+	if ast.GetSourceFileOfNode(d) != ast.GetSourceFileOfNode(handler) || d.Pos() < body.Pos() || d.End() > body.End() {
+		return nil, false
+	}
+	switch {
+	case ast.IsFunctionDeclaration(d), ast.IsMethodDeclaration(d):
+		return d, true
+	case ast.IsClassDeclaration(d):
+		return nil, true
+	case ast.IsVariableDeclaration(d) && d.Initializer() != nil:
+		if f := tsutil.UnwrapNonNullParens(d.Initializer()); isFunctionExprNode(f) {
+			return f, !ast.IsClassExpression(f)
+		}
+	case ast.IsPropertyAssignment(d):
+		if f := tsutil.UnwrapNonNullParens(d.Initializer()); isFunctionExprNode(f) {
+			return f, !ast.IsClassExpression(f)
+		}
+	}
+	return nil, false
+}
+
+func isFunctionExprNode(n *ast.Node) bool {
+	return ast.IsArrowFunction(n) || ast.IsFunctionExpression(n) || ast.IsClassExpression(n)
 }

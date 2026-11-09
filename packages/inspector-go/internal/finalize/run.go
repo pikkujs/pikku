@@ -102,6 +102,7 @@ func Run(log *diag.Logger, st *state.State, opts Options) error {
 		validateVariableOverrides(log, st)
 		validateCredentialOverrides(log, st)
 		validateAddonUses(log, st)
+		validateRpcTargets(log, st, opts)
 		validateAddonContentGrants(log, st)
 		validateRemoteAddonDependencies(log, st)
 		validateRemoteAddonAuth(log, st)

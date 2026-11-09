@@ -303,6 +303,52 @@ The cast was usually there because the generated `pikku-package.gen.ts` did not 
 
 To find the affected code, run `pikku all` and look for `PKU564`. The message names the export and its file and line. See [`service-factories.md`](./service-factories.md).
 
+### A computed rpc name fails the build
+
+`rpc.invoke`, `rpc.mesh` and `rpc.startWorkflow` with a name the inspector cannot read as a string literal now stop the build with `[PKU941]`. It used to be a warning. The deploy planner binds units and bundles workflows from the literal names, so a computed name fails at runtime with "No service binding" or "Workflow not found". A `const` whose type is one string literal (`const NAME = 'billing:charge'`) is accepted and recorded like a literal. Generated `.gen.ts` files are exempt for `startWorkflow`, as before.
+
+- Write the literal name, or a `const` holding it. To pick between several targets, branch and call each with its own literal.
+- There is no opt-out.
+
+To find affected code, search for `rpc.invoke(`, `rpc.mesh(` and `rpc.startWorkflow(` with a variable or template as the first argument, or run `pikku all` and read `PKU941`.
+
+### A wire passed to another function fails the build
+
+A Pikku function that hands the wire itself to a function declared outside it now stops the build with `[PKU942]`. The wire is the `wire` object, or one of its capability members: `rpc`, `channel`, `http`, `queue`, `scheduledTask`, `workflow`, `graph`, `mcp`, `cli`, `trigger`, `gateway`, and the session and credential accessors (`setSession`, `getCredential` and the rest), including a destructured or `const`-aliased copy. It is refused as an argument to a call or `new`, directly or carried inside an object, array, spread, ternary, `??`/`||` or template that is itself the argument. The wire stays bound to the function: what an outside callee does with it is invisible to the inspector, so no gate, deploy plan or `pikku graph` edge accounts for it. This replaces the old warning that only covered `rpc`.
+
+A wire is matched by symbol, not by name: a local variable or parameter that happens to be called `rpc` or `wire` is not one.
+
+Not refused:
+
+- A closure that only calls the wire: `Promise.all(items.map((i) => rpc.invoke('a', i)))`, `setInterval(() => rpc.invoke('b'))`. The wire is the callee there. If the closure hands the wire to another call, that inner call is judged by the same rule.
+- A method of the wire itself, `rpc.invoke(...)` and `wire.http.response.json(...)`.
+- A callee declared inside the function body: a nested function, a `const` holding an arrow, a method of a local object, an inline function called in place (`const run = (r) => r.invoke('x'); run(rpc)`). The wire stays bound to the function. The local function's parameter is then the wire, so a forward to an outside helper is refused at that inner call.
+- Data read from a wire, which includes the session (`wire.session.userId`), `workflowStep`, `logger` and `traceId`, and the data fields of a capability: `http.request` and `authInfo`, `channel.channelId`, `openingData` and `state`, `rpc.depth`.
+- Services and plain data passed as arguments.
+- A callee declared in a `@pikku/*` package other than your own project, for example the workflow service's `runToCompletion(name, data, rpc)`. The test is where the callee is declared, found with the type checker, not its type: a project function that takes `Rpc` or returns a framework type gets no exemption. A callee that cannot be resolved (an `any` value, a call result, `obj['run'](rpc)`) is refused. A project wrapper around a framework method is refused at its call site, because the wrapper takes the wire as an argument.
+- Generated `.gen.ts` files.
+
+Data is told from capability by name, not by type: a member chain after a capability key is data only when its first member is one of the fields listed above. Any other member (`wire.http.response`, `rpc.invoke` as a value) is still the capability. So `helper(wire.http.response)` is refused, and a new data field on a capability object is refused until added to that list.
+
+There is no escape analysis. Returning a wire, storing it in module or global state, capturing it in a class, returning a closure that captures it, passing it into a callback parameter, or carrying it through an alias that is not a direct `const` copy is not detected.
+
+Migrating:
+
+- Make the `rpc` and `session` calls in the handler, or in a function declared inside it, and pass the result (plain data) to the outside callee.
+- There is no opt-out.
+
+To find affected code, run `pikku all` and read `PKU942`.
+
+### A computed workflow step name fails the build
+
+In a workflow, `workflow.do(name, rpcName, ...)` and `workflow.expectEventually(...)` with an rpc name that is not a string literal, or a `const` of one, now stop the build with `[PKU943]`. A template string such as `` `step:${id}` `` counts as computed. The step would be missing from the workflow graph, so it cannot be replayed, migrated or found by `pikku graph`. A workflow that the DSL extractor already refuses (`PKU641`) is not reported twice. Pass a literal, or branch and call each step with its own literal. There is no opt-out.
+
+### An `invokes` or `startsWorkflows` name that does not exist fails the build
+
+After the whole project is inspected, every literal name a function passes to `rpc.invoke`, `rpc.mesh` or `rpc.startWorkflow` must exist, or the build stops with `[PKU944]`. A plain name must be a function, an rpc name (internal, exposed or remote), a workflow or a graph workflow. A name `ns:fn` must be exposed by the addon wired as `ns`. If `ns` is wired but its metadata is not available (the addon is not installed or built), the name cannot be checked and is skipped; if `ns` is not wired, it is refused. An addon package is not checked at all: what it invokes may be provided by the app that wires it. The check does not run in the setup-only pass.
+
+Fix the name, or wire the addon that provides it. There is no opt-out.
+
 ### Direct `fs` and `process.env` use fails validate
 
 Two lint keys are on by default at `error`. A project that sets nothing is enforced. Both are enforced by the app's own oxlint, which `pikku validate` already requires and runs; `pikku enable oxlint` writes the rules.
