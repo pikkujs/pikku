@@ -69,6 +69,7 @@ export const ThreadDeleted = z.object({ deleted: z.boolean() })
 } from '@pikku/core/agent'
 import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { pikkuPermission } from '${leaf('auth')}'
+import { MissingServiceError } from '@pikku/core/errors'
 import { defineHTTPRoutes, wireHTTPRoutes } from '${leaf('http')}'
 import {
   AgentCall,
@@ -79,9 +80,6 @@ import {
   ThreadDeleted,
 } from './agent.schemas.gen.js'
 
-const NO_RUN_SERVICE =
-  'agentRunService is not configured — provide it in the singleton services to use agent threads'
-
 /**
  * Thread reads are keyed by a caller-supplied \`threadId\`, so ownership cannot
  * come from the request — it is derived from the session and checked against
@@ -89,7 +87,7 @@ const NO_RUN_SERVICE =
  */
 export const isThreadOwner = pikkuPermission<{ threadId: string }>(
   async ({ agentRunService }, { threadId }, { session }) => {
-    if (!agentRunService) throw new Error(NO_RUN_SERVICE)
+    if (!agentRunService) throw new MissingServiceError('agentRunService is required')
     const thread = await agentRunService.getThread(threadId)
     // A missing thread is denied rather than 404'd so it is indistinguishable
     // from one owned by someone else — no existence oracle.
@@ -148,7 +146,7 @@ export const getAgentThreads = pikkuSessionlessFunc({
   expose: true,
   auth: true,
   func: async ({ agentRunService }, input, { session }) => {
-    if (!agentRunService) throw new Error(NO_RUN_SERVICE)
+    if (!agentRunService) throw new MissingServiceError('agentRunService is required')
 
     // \`owners\` is an authorization constraint derived from the session, never
     // from input — \`resourceId\` remains a caller-supplied filter within it.
@@ -172,7 +170,7 @@ export const getAgentThreadMessages = pikkuSessionlessFunc({
   auth: true,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
-    if (!agentRunService) throw new Error(NO_RUN_SERVICE)
+    if (!agentRunService) throw new MissingServiceError('agentRunService is required')
     return await agentRunService.getThreadMessages(input.threadId)
   },
 })
@@ -187,7 +185,7 @@ export const getAgentThreadRuns = pikkuSessionlessFunc({
   auth: true,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
-    if (!agentRunService) throw new Error(NO_RUN_SERVICE)
+    if (!agentRunService) throw new MissingServiceError('agentRunService is required')
     return await agentRunService.getThreadRuns(input.threadId)
   },
 })
@@ -203,7 +201,7 @@ export const deleteAgentThread = pikkuSessionlessFunc({
   auth: true,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
-    if (!agentRunService) throw new Error(NO_RUN_SERVICE)
+    if (!agentRunService) throw new MissingServiceError('agentRunService is required')
     const deleted = await agentRunService.deleteThread(input.threadId)
     return { deleted }
   },
