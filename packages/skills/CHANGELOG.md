@@ -1,5 +1,14 @@
 # @pikku/skills
 
+## 0.12.71
+
+### Patch Changes
+
+- 8b261d4: An app can declare its tables and their annotations in `db/tables.ts` with `defineTables`, and `pikku db generate` writes the SQL. It adds new tables, columns and indexes, adopts tables the migrations already create, and refuses a drop, a rename or a changed column with the reason, writing nothing. `pikku db migrate` and `pikku db check` stop when the declaration is ahead of the migrations. New `pikku meta db`, and a `db` block in `pikku meta context`, say where tables are declared. Opt-in by the presence of the file; an app with hand-written migrations is unchanged. See docs/db-tables.md and docs/MIGRATION.md.
+- 2a90c35: `pikku doc` answers error codes (`pikku doc PKU641`), and documents answering and listing workflow approvals and how `workflow.do` is typed. `#pikku/workflow` re-exports `WorkflowService` and `WorkflowRunService`.
+- d961a19: Skills cut calls the build agent wastes: `pikku-meta` says never to run bare `pikku meta` and how to read `pikku meta context --json` with `jq`, names which `meta` subcommands exist in the current release, `pikku-build` says to write early, run `pikku validate` once and filter it to the files touched, and `pikku-agent` says `usePikkuAgent` needs no proof from `node_modules`.
+- b7aecf3: `pikku-meta` and `pikku-build` start from `pikku meta context` (a short map) and `pikku meta grep`, and name `screens`, `services`, `emails` and `db <table>` now that the CLI has them; bare `pikku meta` only lists the subcommands. `pikku-i18n` points at `pikku i18n key` and triggers when rewording a label.
+
 ## 0.12.70
 
 ### Patch Changes

@@ -1,5 +1,29 @@
 # @pikku/inspector-go
 
+## 0.12.11
+
+### Patch Changes
+
+- e5a83ec: A `workflow.approval` whose outcome is bound to a variable now appears in the workflow graph and `plannedSteps`, so branching on the decision works and PKU644 no longer fires on a gated workflow. Both inspector engines only read the gate as a bare `await workflow.approval(...)` or an assignment, never as `const decision = await workflow.approval(...)`. Destructuring the outcome now fails with PKU641 instead of losing the gate, and a gate assigned to a variable declared with a literal stays a gate. See docs/MIGRATION.md.
+- daca7c7: `pikku doc ContentService` now prints the service's methods, its real name on `services` (`content`), and the whole upload, save, read and agent attachment loop from `templates/online-shop`. Every interface read straight off a package had been printing no keys at all, which `collectSurface`'s new `ownMembers` option fixes for `email`, `eventhub`, `webhook` and the rest too.
+
+  `pikku dev` and `pikku serve` now honour the `content` block in `pikku.config.json`. It was never read, so `sizeLimit: '10mb'` in the starter and the online shop did nothing and uploads over 1mb were refused. A key set in `createConfig` still wins.
+
+  The content docs no longer claim bucket policies that nothing enforces. The `file-upload` example now passes `visibility` on the read, which closes a hole where a caller could claim `public` to skip the owner check and receive a signed URL to another user's private file.
+
+- 0e75982: `pikku doc` now shows the doc comments of everything exported from a `.tsx` file, which is every `@pikku/react` hook.
+- 2121973: `pikku doc` now answers more from one call. `TypedWorkflow.do` and the `func`, `input`, `output` and `permissions` keys of function factories are listed, because the surface keeps documented keys of generated files. `WorkflowApprovalOptions`, `ApprovalOutcome`, `WorkflowStepOptions`, `ListInput`, `ListOutput`, `Filter` and `defineVirtualUsers` are reachable from their barrels. New doors cover `@pikku/react` and core exports with no barrel: `PikkuWire`, `telemetryOuter`/`telemetryInner`, `definePlugin`, outgoing webhooks, `EmailService` and `EventHubService`. Corrected the `wireAddon` `tags` doc, which is added to function tags at runtime, and the online-shop `limit` cap.
+- Updated dependencies [e5a83ec]
+- Updated dependencies [daca7c7]
+- Updated dependencies [0e75982]
+- Updated dependencies [2a90c35]
+- Updated dependencies [2121973]
+- Updated dependencies [942c8ba]
+- Updated dependencies [fa8c796]
+- Updated dependencies [54def56]
+  - @pikku/inspector@0.12.117
+  - @pikku/core@0.12.153
+
 ## 0.12.10
 
 ### Patch Changes

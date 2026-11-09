@@ -328,7 +328,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.206",
+      "version": "0.12.207",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -420,7 +420,7 @@
     },
     "packages/code-edit": {
       "name": "@pikku/code-edit",
-      "version": "0.12.11",
+      "version": "0.12.12",
       "dependencies": {
         "@pikku/inspector-go": "^0.12.9",
       },
@@ -430,7 +430,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.152",
+      "version": "0.12.153",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -523,7 +523,7 @@
     },
     "packages/frontend/react": {
       "name": "@pikku/react",
-      "version": "0.12.20",
+      "version": "0.12.21",
       "dependencies": {
         "@pikku/fetch": "^0.12.13",
       },
@@ -591,7 +591,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.116",
+      "version": "0.12.117",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
       },
@@ -605,7 +605,7 @@
     },
     "packages/inspector-go": {
       "name": "@pikku/inspector-go",
-      "version": "0.12.10",
+      "version": "0.12.11",
       "dependencies": {
         "@pikku/inspector": "^0.12.115",
         "tsx": "^4.23.15",
@@ -633,7 +633,7 @@
     },
     "packages/migrator-sql": {
       "name": "@pikku/migrator-sql",
-      "version": "0.12.10",
+      "version": "0.12.11",
       "devDependencies": {
         "@types/bun": "^1.4.3",
         "@types/node": "^26",
@@ -1031,7 +1031,7 @@
     },
     "packages/services/better-auth": {
       "name": "@pikku/better-auth",
-      "version": "0.12.62",
+      "version": "0.12.63",
       "dependencies": {
         "@pikku/jose": "^0.12.10",
       },
@@ -1082,7 +1082,7 @@
     },
     "packages/services/kysely": {
       "name": "@pikku/kysely",
-      "version": "0.13.41",
+      "version": "0.13.42",
       "bin": {
         "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js",
       },
@@ -1274,7 +1274,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.70",
+      "version": "0.12.71",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",

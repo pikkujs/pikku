@@ -1,3 +1,57 @@
+## 0.12.207
+
+### Patch Changes
+
+- 71a527d: `pikku all` no longer stops on its own output after an analytics event is removed. The generated analytics schemas read each event off the declaration, so a removed event threw while they loaded, schema conversion failed, and the run ended before it could rewrite them.
+- 8b261d4: An app can declare its tables and their annotations in `db/tables.ts` with `defineTables`, and `pikku db generate` writes the SQL. It adds new tables, columns and indexes, adopts tables the migrations already create, and refuses a drop, a rename or a changed column with the reason, writing nothing. `pikku db migrate` and `pikku db check` stop when the declaration is ahead of the migrations. New `pikku meta db`, and a `db` block in `pikku meta context`, say where tables are declared. Opt-in by the presence of the file; an app with hand-written migrations is unchanged. See docs/db-tables.md and docs/MIGRATION.md.
+- daca7c7: `pikku doc ContentService` now prints the service's methods, its real name on `services` (`content`), and the whole upload, save, read and agent attachment loop from `templates/online-shop`. Every interface read straight off a package had been printing no keys at all, which `collectSurface`'s new `ownMembers` option fixes for `email`, `eventhub`, `webhook` and the rest too.
+
+  `pikku dev` and `pikku serve` now honour the `content` block in `pikku.config.json`. It was never read, so `sizeLimit: '10mb'` in the starter and the online shop did nothing and uploads over 1mb were refused. A key set in `createConfig` still wins.
+
+  The content docs no longer claim bucket policies that nothing enforces. The `file-upload` example now passes `visibility` on the read, which closes a hole where a caller could claim `public` to skip the owner check and receive a signed URL to another user's private file.
+
+- 0e75982: Document how analytics and feature flags are wired, for `pikku doc`, and stop pointing at a `pikku flags prune` command that does not exist.
+- a2c7110: `pikku doc a b c` keeps the answers for the names it knows when one is unknown.
+- 5e3cb5e: `pikku doc` answers a name that is no export, such as `startWorkflow`, with the page that describes it.
+- 2a90c35: `pikku doc` answers error codes (`pikku doc PKU641`), and documents answering and listing workflow approvals and how `workflow.do` is typed. `#pikku/workflow` re-exports `WorkflowService` and `WorkflowRunService`.
+- 2121973: `pikku doc` now answers more from one call. `TypedWorkflow.do` and the `func`, `input`, `output` and `permissions` keys of function factories are listed, because the surface keeps documented keys of generated files. `WorkflowApprovalOptions`, `ApprovalOutcome`, `WorkflowStepOptions`, `ListInput`, `ListOutput`, `Filter` and `defineVirtualUsers` are reachable from their barrels. New doors cover `@pikku/react` and core exports with no barrel: `PikkuWire`, `telemetryOuter`/`telemetryInner`, `definePlugin`, outgoing webhooks, `EmailService` and `EventHubService`. Corrected the `wireAddon` `tags` doc, which is added to function tags at runtime, and the online-shop `limit` cap.
+- 942c8ba: Scopes can be declared `live` on any node of a `defineScope` tree (inherited by descendants, `live: false` opts a child out). The compiler flags every function that requires a live scope (a wildcard counts as its node) with `liveScopes` in its generated meta, and the runner re-reads that session's scopes from the `ScopeService` before checking them. The better-auth session middlewares take `scopesTtlSeconds` (default 0, unchanged: read on every request); above 0 a resolved scope snapshot is kept in a signed `pikku_scopes` cookie and trusted until it ages out. Scopes set by `mapSession`/`mapKey` are never replaced.
+- c9ca746: `pikku meta context --json` now reports `agent: true` for apps with agents and `mcp: true` for apps with MCP tools, resources or prompts; both were always `false`.
+- 5682d6f: `pikku meta` answers what an agent used to read files for. New commands: `db [tables...]`, `screens`, `services`, `emails`, and `grep <terms...>`, which searches the whole project, translations included, and groups the matches by kind. Terms are word-aware and any can match. `pikku meta context` now prints a short map; `--json` or `--full` print the `meta-context.v1` document. It also carries what an agent otherwise read files to learn, all read from the project and silent for what it lacks: agents, model aliases and where to add one, the agent runner with its providers and env names, translation locales, source, import and key shape, the generated client's import, and where routes, pages, the shell, nav and UI components are.
+
+  Output piped from `pikku` is no longer cut at 64 KB (`pikku meta context --json | jq` received 65536 bytes of a 77 KB document), the logo goes to stderr so stdout is only command data, and `meta screens` finds a project's routes under `apps/*` and in `src/pages` (or the `routesDirectory` of its vite config).
+
+- f3c13cc: The `pikkuAuth` example no longer teaches a signed-in check, which `auth: true` already does.
+- 3fad916: `pikku cloud report` is now `pikku report`. Findings are kept in `.pikku/findings` at the checkout root, so filing works from a sandbox, and a failed write warns and exits 0. Logged out, they stay on the computer. Logged in, a yes or always sends them under the account token, so findings are no longer anonymous, and the consent question names the account. See docs/MIGRATION.md.
+- fa8c796: `pikku doc` now shows `hasScopes`, `pikkuAddonConfig`, `refHTTP`, `refChannel`, `refCLI` and `wireRemoteAddon` being used: each carries an `@example snippet:` pointing at a region in `templates/online-shop`. No callable in the shipped surface is left without an example.
+- 54def56: Add `pikku check`, which answers whether the project builds and type-checks without doing the work again. `pikku watch` and `pikku dev` now type-check the backend and every frontend with the project's own `tsc`, one process per project in parallel, killing any a newer edit supersedes, and publish the result to `.pikku/status.json`. `pikku check` reads that, waits only if the watcher is working on the latest files, never reports a result older than the newest edit, and fails naming the stage if the watcher is stuck (`--timeout`, default 120 seconds). Each frontend's `paraglide` or `i18n:compile` script runs before the type check when its messages change. With no watcher running it does one full `pikku all`, message compile and `tsc`. `--json` is available. `CodedDiagnostic` gains optional `file`, `line` and `column`. When codegen fails, `pikku check` now lists the run's real errors, causes first and without stack frames. `pikku all` recovers on its own from a generated variables or secrets file that imports something the project removed, and a second `pikku all` on the same output directory waits instead of corrupting it. Both also generate a TanStack Router route tree before the type check, so `pikku check` no longer depends on a running Vite.
+
+  An idle watcher now catches up on files written behind a run even when no file event arrives, and `pikku check` wakes it instead of timing out.
+
+  `pikku watch` and `pikku dev` pass `--security` on to codegen and record it, and `pikku check --security` ignores a watcher that skipped the lint. `--config` now selects the frontends too, one `--timeout` bounds a whole check including its fallback full run, and `tsc` failing only in files outside the project is reported rather than passing. A run interrupted before its message or route stage keeps that stage requested, a stage that throws becomes a failed result, and editing `tsr.config.json` moves the watched route paths.
+
+- Updated dependencies [8b261d4]
+- Updated dependencies [e5a83ec]
+- Updated dependencies [daca7c7]
+- Updated dependencies [0e75982]
+- Updated dependencies [0e75982]
+- Updated dependencies [2a90c35]
+- Updated dependencies [2121973]
+- Updated dependencies [8865153]
+- Updated dependencies [942c8ba]
+- Updated dependencies [d961a19]
+- Updated dependencies [b7aecf3]
+- Updated dependencies [fa8c796]
+- Updated dependencies [54def56]
+  - @pikku/kysely@0.13.42
+  - @pikku/migrator-sql@0.12.11
+  - @pikku/skills@0.12.71
+  - @pikku/inspector@0.12.117
+  - @pikku/inspector-go@0.12.11
+  - @pikku/core@0.12.153
+  - @pikku/better-auth@0.12.63
+  - @pikku/code-edit@0.12.12
+
 ## 0.12.206
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/code-edit",
-  "version": "0.12.11",
+  "version": "0.12.12",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -89,7 +89,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@pikku/inspector-go": "^0.12.9"
+    "@pikku/inspector-go": "^0.12.11"
   },
   "devDependencies": {
     "@types/node": "^26.6.5"
