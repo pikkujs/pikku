@@ -16,10 +16,7 @@ import { InMemorySessionStore } from '../../services/in-memory-session-store.js'
 import { rpcService } from '../rpc/rpc-runner.js'
 import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { WorkflowNotFoundError } from './workflow-errors.js'
-import {
-  checkWorkflowRunAccess,
-  checkWorkflowStart,
-} from './workflow-run-access.js'
+import { checkWorkflowRunAccess } from './workflow-run-access.js'
 import { WorkflowRunForbiddenError } from './workflow-run-ownership.js'
 
 const logger = { info() {}, warn() {}, error() {}, debug() {} } as any
@@ -104,12 +101,16 @@ const useServices = (extra: Record<string, unknown> = {}) => {
   setSingletonServices(services as any)
 }
 
-const start = async (name: string, input: unknown, wire: any) => {
-  const checked = await checkWorkflowStart(name, input, wire)
-  return await ws.startWorkflow(name, checked.input, checked.wire, {} as any, {
+/** What a route does: record who started the run and start it. Nothing is checked here. */
+const runWireOf = (wire: any) => {
+  const pikkuUserId = wire.pikkuUserId ?? wire.session?.userId
+  return { type: 'unknown', ...(pikkuUserId ? { pikkuUserId } : {}) }
+}
+
+const start = async (name: string, input: unknown, wire: any) =>
+  await ws.startWorkflow(name, input, runWireOf(wire), {} as any, {
     inline: true,
   })
-}
 
 const noRuns = async () => assert.equal((await ws.listRuns()).length, 0)
 
@@ -125,13 +126,13 @@ beforeEach(() => {
   addSchema('FlowInput', { type: 'object' })
 })
 
-describe('a route refuses a start at the request, leaving no run', () => {
+describe('a workflow refuses a caller when its own function runs', () => {
   test('a workflow that does not exist is a 404', async () => {
     await assert.rejects(
       () => start('nosuchworkflow', {}, alice),
       WorkflowNotFoundError
     )
-    await noRuns()
+    assert.equal(bodyRuns, 0)
   })
 
   test('auth unset refuses an anonymous caller, like any function', async () => {
@@ -140,7 +141,7 @@ describe('a route refuses a start at the request, leaving no run', () => {
       () => start('flow', {}, anonymous),
       MissingSessionError
     )
-    await noRuns()
+    assert.equal(bodyRuns, 0)
   })
 
   test('auth: true refuses an anonymous caller', async () => {
@@ -149,13 +150,13 @@ describe('a route refuses a start at the request, leaving no run', () => {
       () => start('flow', {}, anonymous),
       MissingSessionError
     )
-    await noRuns()
+    assert.equal(bodyRuns, 0)
   })
 
   test('a missing scope refuses the caller', async () => {
     declare('flow', { scopes: ['orders:write'] })
     await assert.rejects(() => start('flow', {}, alice), MissingScopeError)
-    await noRuns()
+    assert.equal(bodyRuns, 0)
   })
 
   test('a permission refuses the caller, and sees the input', async () => {
@@ -173,7 +174,7 @@ describe('a route refuses a start at the request, leaving no run', () => {
       ForbiddenError
     )
     assert.deepEqual(seen, { quantity: 2 })
-    await noRuns()
+    assert.equal(bodyRuns, 0)
   })
 
   test('input that breaks the declared schema is refused', async () => {
@@ -182,7 +183,7 @@ describe('a route refuses a start at the request, leaving no run', () => {
       () => start('flow', { quantity: 'two' }, anonymous),
       /quantity must be a number/
     )
-    await noRuns()
+    assert.equal(bodyRuns, 0)
   })
 
   test('a graph applies the same auth default', async () => {
@@ -191,12 +192,6 @@ describe('a route refuses a start at the request, leaving no run', () => {
       () => start('graph', {}, anonymous),
       MissingSessionError
     )
-    await noRuns()
-  })
-
-  test('a start passes the checks without running the body', async () => {
-    declare('flow')
-    await checkWorkflowStart('flow', {}, alice)
     assert.equal(bodyRuns, 0)
   })
 })
@@ -281,14 +276,13 @@ describe('a run loads its owner session every time it executes', () => {
         },
       },
     })
-    const checked = await checkWorkflowStart('flow', {}, alice)
-    assert.equal(checks, 1, 'judged at the start')
+    const checked = { wire: runWireOf(alice) }
     const first = await ws.createRun('flow', {}, true, 'hash', checked.wire)
     const second = await ws.createRun('flow', {}, true, 'hash', checked.wire)
 
     ws.registerInlineRun(first)
     await ws.runWorkflowJob(first, {} as any)
-    assert.equal(checks, 2, 'judged again when the run executed')
+    assert.equal(checks, 1, 'judged when the run executed')
     assert.equal(bodyRuns, 1)
 
     allowed = false
@@ -306,9 +300,7 @@ describe('a run loads its owner session every time it executes', () => {
     }
     sessionsFor(held)
     declare('flow', { auth: true, scopes: ['orders:write'] })
-    const checked = await checkWorkflowStart('flow', {}, {
-      session: held.alice,
-    } as any)
+    const checked = { wire: runWireOf({ session: held.alice }) }
     const runId = await ws.createRun('flow', {}, true, 'hash', checked.wire)
     held.alice = { userId: 'alice', scopes: [] }
     ws.registerInlineRun(runId)
@@ -321,7 +313,7 @@ describe('a run loads its owner session every time it executes', () => {
   test('a pikkuFunc step carries the user id and loads the session itself', async () => {
     sessionsFor({ alice: { userId: 'alice' } })
     declare('flow', { auth: true })
-    const checked = await checkWorkflowStart('flow', {}, alice)
+    const checked = { wire: runWireOf(alice) }
     const runId = await ws.createRun('flow', {}, false, 'hash', checked.wire)
     await ws.insertStepState(runId, 'step', 'stepOne', {})
     const stepState = await ws.getStepState(runId, 'step')
@@ -537,26 +529,6 @@ describe('reading a run', () => {
     await assert.doesNotReject(() => read(ownerless, anonymous))
   })
 
-  test('permissions can open an ownerless run, judged on its stored input', async () => {
-    const seen: unknown[] = []
-    declare('flow', {
-      permissions: {
-        sameOrder: async (_s, data, wire) => {
-          seen.push(data)
-          return wire.session?.userId === 'alice'
-        },
-      },
-    })
-    await assert.doesNotReject(() => read(ownerless, alice))
-    assert.deepEqual(seen, [{ orderId: 'o1' }])
-    await assert.rejects(() => read(ownerless, bob), ForbiddenError)
-  })
-
-  test('permissions refuse the owner too', async () => {
-    declare('flow', { permissions: { no: async () => false } })
-    await assert.rejects(() => read(run(), alice), ForbiddenError)
-  })
-
   test('a read does not need a schema-valid input or a writable session', async () => {
     declare('flow', { inputSchemaName: 'FlowInput' })
     await assert.doesNotReject(() =>
@@ -593,11 +565,6 @@ describe('answering a run', () => {
     await assert.doesNotReject(() =>
       approve(run, { session: { userId: 'bob' } })
     )
-  })
-
-  test('the workflow permissions apply', async () => {
-    declare('flow', { permissions: { no: async () => false } })
-    await assert.rejects(() => approve(run, alice), ForbiddenError)
   })
 })
 
@@ -669,13 +636,8 @@ describe('rpc.exposedWorkflow is the external entry for a workflow', () => {
     )
   })
 
-  test('an exposed workflow starts, and its own declaration still decides', async () => {
+  test('an exposed workflow starts and records who started it', async () => {
     declare('flow', { auth: true })
-    await assert.rejects(
-      () => entry(anonymous).start('flow', {}),
-      MissingSessionError
-    )
-    await noRuns()
     const { runId } = await entry(alice).start('flow', {})
     assert.equal((await ws.getRun(runId))?.wire?.pikkuUserId, 'alice')
   })

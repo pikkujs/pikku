@@ -32,9 +32,9 @@ A workflow is a function, so it now takes the same `auth` default as one: unset 
 | ------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | A workflow or agent with no `auth` ran for anyone             | It needs a session. `auth: false` keeps the old behaviour                 |
 | `/workflow/:name/*` and `/rpc/agent/:name/*` reached any name | Only `expose: true` ones. Anything else answers 404                       |
-| A refused start left a failed run behind                      | A refused start refuses at the request, with no run and no `runId`        |
+| A refused start left a failed run behind                      | Unchanged: the workflow refuses when it runs, and the run ends `failed` |
 | A graph applied no checks of its own                          | A graph's `auth` applies the same way                                     |
-| A run with no owner could be read by anyone with its id       | Refused, unless the workflow is `auth: false` or its permissions allow it |
+| A run with no owner could be read by anyone with its id       | Refused, unless the workflow is `auth: false`                             |
 | Any run could be read through any workflow's URL              | The run must belong to the workflow in the URL                            |
 
 The routes stay one per action. They take an optional session and leave the decision to the workflow's own `expose`, `auth`, `scopes`, `permissions` and input schema. `POST /rpc/<workflow>` is unchanged and runs the same declaration.
@@ -44,18 +44,22 @@ What to do:
 - **Schedules, triggers and queue jobs:** a workflow or agent started with no user now fails with `Authentication required`. Add `auth: false`. A workflow written as `pikkuWorkflowFunc(async ...)` must use the `{ auth: false, func }` form, and `pikkuWorkflowGraph` takes `auth` too.
 - **Clients of the generated routes:** add `expose: true` to each workflow or agent they call. Send a session unless it is `auth: false`.
 - **A run with an owner** is only for that owner, even on an `auth: false` workflow.
-- **Permissions on status:** a workflow's permissions also run on status and stream reads, on every poll, and receive the run's stored input. A permission that reads a field a start supplies keeps working. One with side effects will run more often.
-- `rpc.startWorkflow` and `rpc.agent` do not check `expose`, and do not need it. The generated routes call `rpc.exposedWorkflow` and `rpc.exposedAgent`, which do; `checkWorkflowStart` and `checkWorkflowRunAccess` no longer check `expose` themselves.
+- **Permissions on status:** a workflow's permissions are not run on status, stream or approve. A run is read by its owner, and answered by the gate's `approvers`.
+- `rpc.startWorkflow` and `rpc.agent` do not check `expose`, and do not need it. The generated routes call `rpc.exposedWorkflow` and `rpc.exposedAgent`, which do; `checkWorkflowRunAccess` no longer checks `expose` itself.
 
 **A run loads its owner's session every time it executes.** The run row holds the user id and nothing else. Each execution (the workflow body, each step, each child run, each resume) loads the session from `sessionStore` and runs the workflow's `auth`, scopes, feature flag and permissions against it, so a permission revoked while the run is in flight stops its next execution.
 
 A run with an owner needs a `sessionStore`; without one it stops with `workflows that need a session require a sessionStore`. Use a store, for example `@pikku/better-auth`. A run with no owner, such as an `auth: false` workflow started by a schedule, needs none.
 
-`rpc.startWorkflow` from your own function records the user id from the wire it is given. To refuse a bad call before any run row exists, go through the check (which judges `auth`, scopes and permissions, not `expose`):
+**Nothing checks a workflow on its behalf.** `checkWorkflowStart` is removed, and so is the `gate` option of `runPikkuFunc`. A start from a generated route or from `rpc.startWorkflow` records who started the run and hands over; the workflow judges its own `auth`, scopes, permissions and input when its function runs. Observable changes:
+
+- A start the workflow refuses now answers 200 with a run id (or starts inline), and the run ends `failed` with the refusal. It used to answer 401, 403 or 422 and leave no run. `/run` surfaces the failure as an error.
+- Reading a run answers 401 for a caller with no session on a workflow that wants one, 403 for another user's run, and 403 for an ownerless run unless the workflow is `auth: false`. The workflow's permissions are not run on reads and approvals; an approval is judged by the gate's `approvers`.
+
+If you called `checkWorkflowStart` yourself, delete the call:
 
 ```ts
-const start = await checkWorkflowStart('checkout', input, { session })
-return rpc.startWorkflow('checkout', start.input, { wire: start.wire })
+return rpc.startWorkflow('checkout', input)
 ```
 
 Related changes:

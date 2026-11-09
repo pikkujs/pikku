@@ -102,7 +102,6 @@ describe('serializeWorkflowRoutes', () => {
     // The expose gate and the declaration checks are the callee's, so none of
     // them can appear in generated code, and the start is not made internally.
     for (const logic of [
-      /checkWorkflowStart/,
       /checkWorkflowRunAccess/,
       /streamWorkflowRunStatus/,
       /startWorkflow\(/,
