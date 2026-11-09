@@ -9,7 +9,11 @@ type Capabilities = { mcp: boolean; agent: boolean }
 const capabilitiesOf = async (state: InspectorState): Promise<Capabilities> => {
   const log = mock.method(console, 'log', () => {})
   await pikkuMetaContext.func(
-    { getInspectorState: async () => state, config: {} } as any,
+    {
+      getInspectorState: async () => state,
+      config: { rootDir: '/project', outDir: '/project/.pikku' },
+      logger: { getOutputMode: () => 'json' },
+    } as any,
     {} as any
   )
   const printed = log.mock.calls[0]?.arguments[0] as string
