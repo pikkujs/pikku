@@ -22,7 +22,7 @@ For how to call it, run this once: `pikku doc agent pikkuAgent`. That page and t
 
 Tools, sub-agents and workflows are supplied as `ref('domain:funcName')` handles, not imported values. The inspector resolves each ref against the generated function map, so an agent can call into another package or a `graph:*` builtin without an import cycle, and the tool menu can be filtered per session before the model sees it.
 
-Invoke through `wire.rpc.agent` from inside a Pikku function; it carries the session, credentials and RPC depth. From a screen use `usePikkuAgent(name)` from `@pikku/react` (`run`, `stream`, `approve`), with no cast of your own. The hook needs the generated agent endpoints: if `scaffold.agent` is off there are none, so run `pikku enable agent` and regenerate first. A screen for signed-in users needs `auth: true` on the agent.
+Invoke through `wire.rpc.agent` from inside a Pikku function; it carries the session, credentials and RPC depth. From a screen use `usePikkuAgent(name)` from `@pikku/react` (`run`, `stream`, `approve`), with no cast of your own. `pikku doc` does not cover `@pikku/react` and `usePikkuAgent` is exported from it, so import it as the screen below does rather than hunting for proof in `node_modules`. The hook needs the generated agent endpoints: if `scaffold.agent` is off there are none, so run `pikku enable agent` and regenerate first. A screen for signed-in users needs `auth: true` on the agent.
 
 Runs name the agent by its export (`shopAssistant`), not its `name` field (`shop-assistant`). Nothing under `.pikku/agent` needs opening.
 
