@@ -330,8 +330,12 @@ export const createConfig: CreateConfig<
       data as { names?: string[]; workflowMeta?: string[] },
       cliConfig,
       // `--backend` narrows which passes the parent runs; only the per-backend
-      // child (spawned with PIKKU_DEPLOY_CODEGEN) applies that backend's filter.
-      process.env.PIKKU_DEPLOY_CODEGEN === '1' ? backend : undefined
+      // child (spawned with PIKKU_DEPLOY_CODEGEN) and a `pikku dev --backend`
+      // server apply that backend's filter.
+      process.env.PIKKU_DEPLOY_CODEGEN === '1' ||
+        commandPath.join('.') === 'dev'
+        ? backend
+        : undefined
     ),
     backend,
     preloadedInspectorState,

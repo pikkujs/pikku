@@ -258,6 +258,12 @@ export const scenarioRun = pikkuSessionlessFunc<
         port: resolvedPort,
         hostname,
         coverage,
+        // One declared backend is the whole project; several need the one this
+        // run drives, or the spawned dev would start them all.
+        backend:
+          Object.keys(config.backends ?? {}).length > 1
+            ? env.backend
+            : undefined,
         env: { API_URL: env.apiUrl },
         onOutput: (text) => process.stdout.write(text),
       })

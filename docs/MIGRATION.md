@@ -923,6 +923,7 @@ The administration functions (users, roles and scopes, credentials, audit) moved
 - **`models`, `agentDefaults` and `agentOverrides` are gone** (see [Agents](#agents-ai--agent)).
 - **`node` → `addon`**, and `external` → `addon` everywhere (cli 0.12.3 `6e8777b`, core 0.12.1 `62a8725`). Addons are declared in code with `wireAddon({ name, package })`, not with an `addons` field in the config.
 - **`verboseMeta` is removed** (cli 0.12.93).
+- **`pikku dev` runs each backend as its own process** when the project declares two or more. The parent runs codegen once and watches; each backend serves `.pikku/backends/<name>` on its `dev.port`. `--backend <name>` runs one; `--port` is refused with several. A single declared backend runs as it did.
 - **`content` → `backends.<name>.content`.** The `content` block (`contentPath`, `uploadUrlPrefix`, `assetUrlPrefix`, `sizeLimit`) is per backend, because each backend runs as its own process with its own files. The loader refuses the top-level key and names the new place. `pikku serve` takes `--backend <name>` to pick the block when several backends are declared.
 
 **Find:** `rg -n "\"(locale|startServerFnsFile|frontend|actors|personas|models|agentDefaults|agentOverrides|node|external|addons|verboseMeta|auth)\"\s*:" pikku.config.json`

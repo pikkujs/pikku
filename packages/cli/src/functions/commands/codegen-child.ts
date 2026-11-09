@@ -16,6 +16,8 @@ export type CodegenChildOptions = {
   command: string[]
   config?: string
   outDir?: string
+  /** Narrows `pikku all` to the shared pass and this one backend. */
+  backend?: string
   logLevel?: string
   output?: string
   security?: boolean
@@ -115,6 +117,7 @@ export const runCodegenChild = (
   ]
   if (options.config) args.push(`--config=${options.config}`)
   if (options.outDir) args.push(`--outDir=${options.outDir}`)
+  if (options.backend) args.push(`--backend=${options.backend}`)
   if (options.logLevel) args.push(`--logLevel=${options.logLevel}`)
   if (options.output) args.push(`--output=${options.output}`)
   if (options.security) args.push('--security')

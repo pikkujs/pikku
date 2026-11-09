@@ -652,6 +652,16 @@ wireCLI({
           description:
             'Run only these frontends (comma separated names from "frontends" in pikku.config.json)',
         },
+        backend: {
+          description:
+            'Run only this backend (a key of "backends" in pikku.config.json), serving its filtered tree on its dev.port. Default: every declared backend, each as its own process',
+          type: 'string',
+        },
+        serveOnly: {
+          description:
+            'Internal: serve the named backend without running codegen or watching; the parent pikku dev does both and signals reloads',
+          default: false,
+        },
       },
     }),
     serve: pikkuCLICommand({
