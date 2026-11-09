@@ -46,16 +46,22 @@ export async function* readServerEvents<T = unknown>(
   // `stream: true` keeps a multi-byte character split across chunks intact.
   const decoder = new TextDecoder()
   let buffer = ''
+  let skipLF = false
+  // SSE allows \n, \r\n and \r line endings. A \r ends its line at once; if the
+  // next chunk opens with the \n of a \r\n split across chunks, that \n is dropped.
+  const lines = (text: string): string => {
+    if (skipLF && text) {
+      if (text.startsWith('\n')) text = text.slice(1)
+      skipLF = false
+    }
+    if (text) skipLF = text.endsWith('\r')
+    return text.replace(/\r\n?/g, '\n')
+  }
   try {
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      // SSE allows \n, \r\n and \r line endings. A trailing \r may be the first
-      // half of a \r\n, so it waits for the next chunk before being read.
-      const held = buffer.endsWith('\r') ? '\r' : ''
-      buffer = buffer.slice(0, buffer.length - held.length)
-      buffer = buffer.replace(/\r\n?/g, '\n') + held
+      buffer += lines(decoder.decode(value, { stream: true }))
       let sep: number
       while ((sep = buffer.indexOf('\n\n')) !== -1) {
         const frame = parseFrame<T>(buffer.slice(0, sep), malformed)
@@ -63,7 +69,7 @@ export async function* readServerEvents<T = unknown>(
         if (frame) yield frame.event
       }
     }
-    buffer = (buffer + decoder.decode()).replace(/\r\n?/g, '\n')
+    buffer += lines(decoder.decode())
     const last = parseFrame<T>(buffer, malformed)
     if (last) yield last.event
   } finally {

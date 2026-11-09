@@ -91,6 +91,36 @@ describe('readServerEvents', () => {
     assert.deepEqual(events, [delta('a'), delta('b')])
   })
 
+  test('dispatches a frame that ends in a bare CR without waiting for more', async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify(delta('a'))}\r\r`)
+        )
+      },
+    })
+    const iterator = readServerEvents(body)[Symbol.asyncIterator]()
+    const first = await Promise.race([
+      iterator.next(),
+      new Promise<'waiting'>((resolve) => setTimeout(resolve, 500, 'waiting')),
+    ])
+    await iterator.return?.()
+    assert.notEqual(first, 'waiting')
+    assert.deepEqual((first as IteratorResult<unknown>).value, delta('a'))
+  })
+
+  test('reads a CR frame end followed by the LF of the next chunk as one line ending', async () => {
+    const events = await collect(
+      readServerEvents(
+        bodyOf([
+          `data: ${JSON.stringify(delta('a'))}\r\r`,
+          `\ndata: ${JSON.stringify(delta('b'))}\r\n\r\n`,
+        ])
+      )
+    )
+    assert.deepEqual(events, [delta('a'), delta('b')])
+  })
+
   test('throws on a malformed frame by default, skips it when asked', async () => {
     await assert.rejects(
       collect(readServerEvents(bodyOf(['data: {not json\n\n']))),
@@ -120,14 +150,34 @@ describe('CorePikkuFetch.postStream', () => {
     }
   })
 
+  test('lets a caller header replace the default whatever its case', async () => {
+    const { client, seen } = clientReplying([frame(RUN_FINISHED)])
+    client.setAuthorizationJWT('default-jwt')
+    await collect(
+      client.postStream(
+        '/s',
+        {},
+        { headers: { authorization: 'Bearer caller' } }
+      )
+    )
+    const sent = new Headers(seen.init?.headers as HeadersInit)
+    assert.equal(sent.get('authorization'), 'Bearer caller')
+  })
+
   test('stops at an abort even when the chunk holds more frames', async () => {
-    const { client } = clientReplying([frame(RUN_STARTED) + frame(RUN_FINISHED)])
+    const { client } = clientReplying([
+      frame(RUN_STARTED) + frame(RUN_FINISHED),
+    ])
     const controller = new AbortController()
     const seen: unknown[] = []
     await assert.rejects(async () => {
-      for await (const event of client.postStream('/s', {}, {
-        signal: controller.signal,
-      })) {
+      for await (const event of client.postStream(
+        '/s',
+        {},
+        {
+          signal: controller.signal,
+        }
+      )) {
         seen.push(event)
         controller.abort()
       }
