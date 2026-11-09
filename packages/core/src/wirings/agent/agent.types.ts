@@ -36,7 +36,7 @@ export type AgentRPCFactory = (
   options: AgentRPCOptions,
   /** Build `rpc.exposedAgent`: every call first requires the agent to be `expose: true`. */
   exposed?: boolean
-) => PikkuRPC['agent']
+) => PikkuRPC['exposedAgent']
 
 /**
  * A conversation thread. `resourceId` is its owner partition: the session principal, or a

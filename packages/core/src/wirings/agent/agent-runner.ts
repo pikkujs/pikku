@@ -31,7 +31,6 @@ import {
   resolveOwnerResourceId,
   agentSessionScope,
   assertResourcePrincipalOwner,
-  assertRunBelongsToAgent,
   assertAgentAuthorized,
   resolveAgentRunner,
   type RunAgentParams,
@@ -427,16 +426,14 @@ export async function runAgent(
  * @param runId - The suspended run.
  * @param approvals - The decision for each pending tool call.
  * @param params - The caller's session.
- * @param expectedAgentName - When given, the run must belong to this agent.
  * @returns The run's final output, or `status: 'suspended'` again if more approvals are needed.
  * @throws ForbiddenError when the caller does not own the run; Error when the run is missing, not
- * suspended, belongs to another agent, or every approval was already claimed.
+ * suspended, or every approval was already claimed.
  */
 export async function resumeAgentSync(
   runId: string,
   approvals: { toolCallId: string; approved: boolean }[],
-  params: RunAgentParams,
-  expectedAgentName?: string
+  params: RunAgentParams
 ): Promise<AgentOutput> {
   const singletonServices = getSingletonServices()
   const { agentRunState } = singletonServices
@@ -452,7 +449,6 @@ export async function resumeAgentSync(
     run.resourceId,
     'run'
   )
-  assertRunBelongsToAgent(run, expectedAgentName)
   if (run.status !== 'suspended') {
     throw new Error(`Run ${runId} is not suspended (status: ${run.status})`)
   }

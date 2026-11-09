@@ -5,7 +5,6 @@ import {
   agentSessionScope,
   assertAgentAuthorized,
   assertResourcePrincipalOwner,
-  assertRunBelongsToAgent,
   resolveAgent,
   type RunAgentParams,
 } from './agent-prepare.js'
@@ -42,7 +41,6 @@ export async function approveAgent(
   agentRunState: AgentRunStateService,
   runId: string,
   approvals: { toolCallId: string; approved: boolean }[],
-  expectedAgentName?: string,
   params: RunAgentParams = {}
 ): Promise<{
   status: 'resumed' | 'suspended'
@@ -61,7 +59,6 @@ export async function approveAgent(
     run.resourceId,
     'run'
   )
-  assertRunBelongsToAgent(run, expectedAgentName)
   if (run.status !== 'suspended')
     throw new Error('Run is not suspended: ' + run.status)
 

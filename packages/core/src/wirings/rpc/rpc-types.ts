@@ -31,7 +31,7 @@ export type PikkuRPC<
    * then call it is the agent's own `auth`, scopes and permissions. Mirrors
    * `exposed`; `agent` itself stays unchecked for application code.
    */
-  exposedAgent: PikkuAgentRPC
+  exposedAgent: PikkuExposedAgentRPC
   /**
    * The calls behind the generated `/workflow/*` routes. Each answers a 404
    * unless the named workflow is `expose: true`, then applies the workflow's own
@@ -117,13 +117,39 @@ export interface ResolvedFunction {
   }
 }
 
-/** The calls of `rpc.agent`, and of `rpc.exposedAgent`, which has the same shape. */
+/** The calls of `rpc.agent`. */
 export type PikkuAgentRPC<
   AgentRun extends (...args: any[]) => any = (...args: any[]) => any,
   AgentStream extends (...args: any[]) => any = (...args: any[]) => any,
 > = {
   run: AgentRun
   stream: AgentStream
+  resume: (
+    runId: string,
+    input: { toolCallId: string; approved: boolean },
+    options?: any
+  ) => Promise<void>
+  approve: (
+    runId: string,
+    approvals: { toolCallId: string; approved: boolean }[]
+  ) => Promise<any>
+  /** Stop an in-flight run. Needs no channel — it ends a stream rather than
+   *  continuing one — so it is reachable over a plain RPC while the stream
+   *  itself is held open elsewhere. Resolves `stopped: false` when there was
+   *  nothing left to stop, and names any tools still executing — their side
+   *  effects have already happened and are not undone by interrupting. */
+  interrupt: (
+    runId: string,
+    reason?: 'speech' | 'user' | 'timeout'
+  ) => Promise<AgentInterruptResult>
+}
+
+/**
+ * `rpc.exposedAgent`: the calls of `rpc.agent` for a request from outside. A
+ * resume or approve names the agent its route was built for, and a run that
+ * belongs to another agent is refused there, not in the callee.
+ */
+export type PikkuExposedAgentRPC = Omit<PikkuAgentRPC, 'resume' | 'approve'> & {
   resume: (
     runId: string,
     input: {
@@ -138,13 +164,4 @@ export type PikkuAgentRPC<
     approvals: { toolCallId: string; approved: boolean }[],
     expectedAgentName?: string
   ) => Promise<any>
-  /** Stop an in-flight run. Needs no channel — it ends a stream rather than
-   *  continuing one — so it is reachable over a plain RPC while the stream
-   *  itself is held open elsewhere. Resolves `stopped: false` when there was
-   *  nothing left to stop, and names any tools still executing — their side
-   *  effects have already happened and are not undone by interrupting. */
-  interrupt: (
-    runId: string,
-    reason?: 'speech' | 'user' | 'timeout'
-  ) => Promise<AgentInterruptResult>
 }

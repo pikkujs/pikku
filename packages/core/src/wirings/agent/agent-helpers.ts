@@ -117,7 +117,7 @@ export function agentInterrupt(): {
 
 /**
  * Builds a function config that answers a batch of pending tool approvals and runs the suspended
- * agent to completion without streaming, through `rpc.agent.approve`.
+ * agent to completion without streaming, through `rpc.exposedAgent.approve`, so the agent must be `expose: true`.
  *
  * Ownership, re-authorization and the once-only claim behave as for `agentResume`. The route is
  * scoped to `agentName`: a run that belongs to any other agent is refused with a `ForbiddenError`
@@ -150,7 +150,7 @@ export function agentApprove<TAgentMap extends Record<string, { output: any }>>(
       },
       { rpc }: any
     ) => {
-      return rpc.agent.approve(data.runId, data.approvals, agentName)
+      return rpc.exposedAgent.approve(data.runId, data.approvals, agentName)
     },
   }
 }

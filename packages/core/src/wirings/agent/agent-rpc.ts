@@ -5,9 +5,14 @@ import type {
   AgentRPCOptions,
   AgentStreamChannel,
 } from './agent.types.js'
-import { assertAgentExposed, type StreamAgentOptions } from './agent-prepare.js'
-import { NotFoundError } from '../../errors/errors.js'
-import { pikkuState } from '../../pikku-state.js'
+import {
+  agentSessionScope,
+  assertAgentExposed,
+  assertResourcePrincipalOwner,
+  type StreamAgentOptions,
+} from './agent-prepare.js'
+import { ForbiddenError, NotFoundError } from '../../errors/errors.js'
+import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { mapAddonCall } from '../addon/addon-reach.js'
 import { runAgent, resumeAgentSync } from './agent-runner.js'
 import { streamAgent, resumeAgent, interruptAgent } from './agent-stream.js'
@@ -26,9 +31,10 @@ export const createAgentRPC = (
   wire: PikkuRawWire,
   options: AgentRPCOptions,
   exposed = false
-): PikkuRPC['agent'] => {
+): PikkuRPC['exposedAgent'] => {
   const agent = createAgent(wire, options)
   if (!exposed) return agent
+  const params = () => agentParams(wire, options)
   // The external entry: the same calls, each refused as a 404 unless the named
   // agent is `expose: true`. Checked on the name as given, before addon mapping.
   const requireExposed = (agentName: string | undefined) => {
@@ -38,6 +44,25 @@ export const createAgentRPC = (
       throw new NotFoundError('AI agent not found')
     }
     assertAgentExposed(agentName)
+  }
+  // A route built for agent A must not resume agent B's run. The run's owner
+  // is checked first, so only the owner learns which agent a run belongs to.
+  // The callee keeps only its own checks: run ownership and the agent's auth.
+  const requireRunOf = async (runId: string, expectedAgentName: string) => {
+    const { agentRunState } = getSingletonServices()
+    const run = await agentRunState?.getRun(runId)
+    if (!run) return
+    assertResourcePrincipalOwner(
+      params(),
+      agentSessionScope(run.agentName),
+      run.resourceId,
+      'run'
+    )
+    if (
+      run.agentName !== mapAddonCall(wire.addonNamespace, expectedAgentName)
+    ) {
+      throw new ForbiddenError('This run does not belong to this agent')
+    }
   }
   return {
     run: async (agentName, input) => {
@@ -49,12 +74,15 @@ export const createAgentRPC = (
       return agent.stream(agentName, input, streamOptions)
     },
     resume: async (runId, input, streamOptions) => {
-      requireExposed(input.expectedAgentName)
-      return agent.resume(runId, input, streamOptions)
+      const { expectedAgentName, ...answer } = input
+      requireExposed(expectedAgentName)
+      await requireRunOf(runId, expectedAgentName!)
+      return agent.resume(runId, answer, streamOptions)
     },
     approve: async (runId, approvals, expectedAgentName) => {
       requireExposed(expectedAgentName)
-      return agent.approve(runId, approvals, expectedAgentName)
+      await requireRunOf(runId, expectedAgentName!)
+      return agent.approve(runId, approvals)
     },
     // Stopping a run is not something a route offers.
     interrupt: async () => {
@@ -63,15 +91,17 @@ export const createAgentRPC = (
   }
 }
 
+const agentParams = (wire: PikkuRawWire, options: AgentRPCOptions) => ({
+  sessionService: options.sessionService,
+  getCredential: wire.getCredential?.bind(wire),
+  trace: wire.trace,
+})
+
 const createAgent = (
   wire: PikkuRawWire,
   options: AgentRPCOptions
 ): PikkuRPC['agent'] => {
-  const params = () => ({
-    sessionService: options.sessionService,
-    getCredential: wire.getCredential?.bind(wire),
-    trace: wire.trace,
-  })
+  const params = () => agentParams(wire, options)
 
   const streamingChannel = (): AgentStreamChannel => {
     const channel = wire.channel as unknown as AgentStreamChannel | undefined
@@ -133,27 +163,11 @@ const createAgent = (
 
     resume: async (
       runId: string,
-      input: {
-        toolCallId: string
-        approved: boolean
-        expectedAgentName?: string
-      },
+      input: { toolCallId: string; approved: boolean },
       streamOptions?: StreamAgentOptions
     ) => {
-      const { expectedAgentName, ...answer } = input
       await resumeAgent(
-        {
-          runId,
-          ...answer,
-          ...(expectedAgentName === undefined
-            ? {}
-            : {
-                expectedAgentName: mapAddonCall(
-                  wire.addonNamespace,
-                  expectedAgentName
-                ),
-              }),
-        },
+        { runId, ...input },
         wrapChannelWithAGUI(streamingChannel(), { runId }),
         params(),
         streamOptions
@@ -168,19 +182,8 @@ const createAgent = (
 
     approve: async (
       runId: string,
-      approvals: { toolCallId: string; approved: boolean }[],
-      expectedAgentName?: string
-    ) =>
-      asRunResult(
-        await resumeAgentSync(
-          runId,
-          approvals,
-          params(),
-          expectedAgentName === undefined
-            ? undefined
-            : mapAddonCall(wire.addonNamespace, expectedAgentName)
-        )
-      ),
+      approvals: { toolCallId: string; approved: boolean }[]
+    ) => asRunResult(await resumeAgentSync(runId, approvals, params())),
   }
 }
 

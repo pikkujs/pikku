@@ -130,7 +130,6 @@ describe('approveAgent', () => {
           } as any,
           'run-1',
           [],
-          undefined,
           ownerParams
         ),
       {
@@ -160,44 +159,10 @@ describe('approveAgent', () => {
           } as any,
           'run-1',
           [],
-          undefined,
           ownerParams
         ),
       {
         message: 'Run is not suspended: completed',
-      }
-    )
-  })
-
-  test('rejects approval when run agent does not match expected agent', async () => {
-    registerAgent('internal-agent')
-    const agentRunState = {
-      getRun: async () => ({
-        runId: 'run-1',
-        agentName: 'internal-agent',
-        threadId: 'thread-1',
-        resourceId: 'resource-1',
-        status: 'suspended',
-        pendingApprovals: [],
-        usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-      updateRun: async () => {},
-    } as any
-
-    await assert.rejects(
-      () =>
-        approveAgent(
-          agentRunState,
-          'run-1',
-          [{ toolCallId: 'call-1', approved: true }],
-          'public-agent',
-          ownerParams
-        ),
-      {
-        message:
-          "Run run-1 belongs to agent 'internal-agent', not 'public-agent'",
       }
     )
   })
@@ -240,7 +205,6 @@ describe('approveAgent', () => {
         { toolCallId: 'call-1', approved: true },
         { toolCallId: 'call-3', approved: false },
       ],
-      undefined,
       ownerParams
     )
 
@@ -290,7 +254,6 @@ describe('approveAgent', () => {
       } as any,
       'run-3',
       [{ toolCallId: 'call-1', approved: false }],
-      undefined,
       ownerParams
     )
 
@@ -351,7 +314,6 @@ describe('approveAgent authorization', () => {
           agentRunState,
           'run-auth',
           [{ toolCallId: 'call-1', approved: true }],
-          undefined,
           { sessionService: sessionService({ userId: 'user-b' }) } as any
         ),
       ForbiddenError
@@ -371,7 +333,6 @@ describe('approveAgent authorization', () => {
           agentRunState,
           'run-auth',
           [{ toolCallId: 'call-1', approved: true }],
-          undefined,
           { sessionService: sessionService({ userId: 'u1' }) } as any
         ),
       ForbiddenError
@@ -389,7 +350,6 @@ describe('approveAgent authorization', () => {
           agentRunState,
           'run-auth',
           [{ toolCallId: 'call-1', approved: true }],
-          undefined,
           {
             sessionService: sessionService({
               userId: 'u1',
@@ -427,7 +387,6 @@ describe('approveAgent authorization', () => {
       agentRunState,
       'run-auth',
       [{ toolCallId: 'call-1', approved: true }],
-      undefined,
       {
         sessionService: sessionService({
           userId: 'user-a',
