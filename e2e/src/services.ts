@@ -3,6 +3,7 @@ import {
   LocalSecretService,
   LocalVariablesService,
   LocalCredentialService,
+  InMemorySessionStore,
   isTestRun,
   stub,
 } from '@pikku/core/services'
@@ -373,6 +374,7 @@ export const createSingletonServices = pikkuServices(
       kysely,
       scopeDb,
       scopeService,
+      sessionStore: new InMemorySessionStore(),
       featureFlags,
       analyticsService,
       analyticsIdentity,
