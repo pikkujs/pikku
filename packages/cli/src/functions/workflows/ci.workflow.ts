@@ -2,6 +2,7 @@ import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import type { CiRun } from '../ci/schemas.js'
 
 export const ciWorkflow = pikkuWorkflowFunc<CiRun, void>({
+  auth: false,
   func: async ({}, data, { workflow }) => {
     if (data.inWorktree) {
       await workflow.do(

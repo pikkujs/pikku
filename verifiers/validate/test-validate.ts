@@ -44,7 +44,7 @@ test('pikku validate exits non-zero when it reports an error', () => {
   const run = spawnSync(
     'node',
     [join(root, '../../packages/cli/dist/bin/pikku.js'), 'validate'],
-    { cwd: root, encoding: 'utf8' }
+    { cwd: root, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }
   )
   assert.strictEqual(run.status, 1, `${run.stdout}\n${run.stderr}`)
 })
