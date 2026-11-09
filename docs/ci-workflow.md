@@ -25,7 +25,6 @@ Only the check stages are here. Deploying (`pikku ci -p <provider> --deploy`) is
 | --- | --- | --- |
 | `working-directory` | `.` | where `pikku.config.json` lives |
 | `bun-version` | empty: `packageManager` in `package.json`, else latest | |
-| `node-version` | `24` | Node installed next to Bun, which codegen needs for some schemas |
 | `pre-step` | empty | a shell command run after install, before codegen |
 | `skip-tests` | `false` | `pikku ci --skip-tests` |
 | `audit-baseline` | empty (uses `.deploy/audit.json` if present) | `pikku ci --audit-baseline` |
