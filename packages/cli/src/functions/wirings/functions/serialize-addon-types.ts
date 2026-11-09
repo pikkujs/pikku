@@ -169,6 +169,8 @@ export type AddonBaseServices = {
  * Creates a Pikku config factory for addon packages.
  * Unlike pikkuConfig, this receives AddonBaseServices (logger, variables, secrets)
  * from the parent application, so addon packages can read variables/secrets during config creation.
+ *
+ * @example snippet: pikkuAddonConfig
  */
 export const pikkuAddonConfig = <ExistingServices extends Omit<Partial<SingletonServices>, 'variables' | 'secrets'> & AddonBaseServices>(
   func: (services: ExistingServices) => Promise<Config>

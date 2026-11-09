@@ -199,6 +199,8 @@ const __addonCli = ${cliMap} as const
 /**
  * Names an HTTP route an installed addon wires, so you can link or redirect to
  * it without hardcoding a path the addon may move.
+ *
+ * @example snippet: refHTTP
  */
 export const refHTTP = <Name extends keyof typeof __addonHttp>(
   name: Name,
@@ -215,6 +217,8 @@ export const refHTTP = <Name extends keyof typeof __addonHttp>(
 /**
  * Names a channel an installed addon wires, for connecting to it without
  * hardcoding its name.
+ *
+ * @example snippet: refChannel
  */
 export const refChannel = <Name extends keyof typeof __addonChannel>(
   name: Name
@@ -223,6 +227,8 @@ export const refChannel = <Name extends keyof typeof __addonChannel>(
 /**
  * Names a CLI command an installed addon wires, for invoking it without
  * hardcoding its name.
+ *
+ * @example snippet: refCLI
  */
 export const refCLI = <Name extends keyof typeof __addonCli>(
   name: Name

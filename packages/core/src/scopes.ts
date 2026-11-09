@@ -46,6 +46,8 @@ const firstUnsatisfied = (
 /**
  * The non-throwing counterpart to {@link verifyScopes}, for deciding rather
  * than enforcing. Fails closed; an empty `required` is satisfied by anything.
+ *
+ * @example snippet: hasScopes
  */
 export const hasScopes = (
   required: readonly string[] | undefined,
