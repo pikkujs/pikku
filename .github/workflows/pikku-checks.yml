@@ -9,8 +9,8 @@ name: Pikku checks
 #              output) is uploaded as one tarball: upload-artifact drops file modes and skips hidden folders such as .pikku.
 #   validate   `pikku validate`
 #   audit      `pikku audit --failOn high`, with --baseline when one is given or .deploy/audit.json exists
-#   test       `bun run test`
-#   tsc        `bun run tsc`, when the project has that script (`pikku ci` has no such stage: `pikku validate` type-checks)
+#   test       `bun run --bun test`
+#   tsc        `bun run --bun tsc`, when the project has that script (`pikku ci` has no such stage: `pikku validate` type-checks)
 #
 # Usage, from the project's own workflow:
 #
@@ -56,7 +56,7 @@ on:
         type: boolean
         default: true
       tsc:
-        description: Run the tsc job (`bun run tsc`, skipped with a notice when the project has no such script)
+        description: Run the tsc job (`bun run --bun tsc`, skipped with a notice when the project has no such script)
         type: boolean
         default: true
       runs-on:
@@ -257,7 +257,7 @@ jobs:
             echo '::error::This project has no "test" script in package.json. Add one, or pass skip-tests: true.'
             exit 1
           fi
-          bun run test
+          bun run --bun test
 
   tsc:
     needs: prepare
@@ -293,4 +293,4 @@ jobs:
             echo "::notice::No \"tsc\" script in package.json, skipping"
             exit 0
           fi
-          bun run tsc
+          bun run --bun tsc
