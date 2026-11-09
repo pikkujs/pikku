@@ -896,7 +896,7 @@ describe('resumeAgentSync', () => {
     assert.equal(executions, 1, 'the loser did not run it a second time')
   })
 
-  test('records denied approvals and rejects agent mismatches', async () => {
+  test('records denied approvals', async () => {
     addTestAgent('resume-agent')
 
     const baseRun: AgentRunState = {
@@ -966,20 +966,6 @@ describe('resumeAgentSync', () => {
       /explicitly declined/
     )
     assert.equal(denied.text, 'Declined')
-
-    await assert.rejects(
-      () =>
-        resumeAgentSync(
-          'run-deny',
-          [{ toolCallId: 'tc-2', approved: false }],
-          asOwner('resource-deny'),
-          'other-agent'
-        ),
-      {
-        message:
-          "Run run-deny belongs to agent 'resume-agent', not 'other-agent'",
-      }
-    )
   })
 
   test('captures tool execution errors during resume and persists them as tool results', async () => {

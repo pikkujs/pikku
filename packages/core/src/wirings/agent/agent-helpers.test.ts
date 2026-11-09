@@ -133,11 +133,11 @@ describe('agent helpers', () => {
       assert.strictEqual(typeof a.func, 'function')
     })
 
-    test('func should call rpc.agent.approve', async () => {
+    test('func should call rpc.exposedAgent.approve', async () => {
       const a = agentApprove('myAgent')
       let calledWith: any
       const rpc = {
-        agent: {
+        exposedAgent: {
           approve: async (...args: any[]) => {
             calledWith = args
             return { approved: true }
@@ -167,6 +167,7 @@ describe('agentApprove is scoped to the agent its route was built for', () => {
   const registerAgent = (name: string) => {
     const agent: CoreAgent = {
       name,
+      expose: true,
       description: 'test agent',
       instructions: 'be helpful',
       model: 'test/test-model',
@@ -207,9 +208,11 @@ describe('agentApprove is scoped to the agent its route was built for', () => {
     toolCallId: string
   ) => {
     const rpc = {
-      agent: createAgentRPC({} as any, {
-        sessionService: { get: () => ({ userId: owner }) } as any,
-      }),
+      exposedAgent: createAgentRPC(
+        {} as any,
+        { sessionService: { get: () => ({ userId: owner }) } as any },
+        true
+      ),
     }
     return agentApprove(routeAgent).func(
       {},
@@ -274,7 +277,7 @@ describe('agentApprove is scoped to the agent its route was built for', () => {
         assert.ok(error instanceof ForbiddenError)
         assert.strictEqual(
           (error as Error).message,
-          `Run ${runId} belongs to agent 'agentB', not 'agentA'`
+          'This run does not belong to this agent'
         )
         return true
       }

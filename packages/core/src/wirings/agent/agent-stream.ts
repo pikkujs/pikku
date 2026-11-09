@@ -44,7 +44,6 @@ import {
   agentSessionScope,
   assertResourceOwner,
   assertResourcePrincipalOwner,
-  assertRunBelongsToAgent,
   assertAgentAuthorized,
   resolveAgentRunner,
   ToolApprovalRequired,
@@ -1129,7 +1128,6 @@ export async function resumeAgent(
     runId: string
     toolCallId: string
     approved: boolean
-    expectedAgentName?: string
   },
   channel: AgentStreamChannel,
   params: RunAgentParams,
@@ -1151,7 +1149,6 @@ export async function resumeAgent(
     run.resourceId,
     'run'
   )
-  assertRunBelongsToAgent(run, input.expectedAgentName)
 
   const pending = run.pendingApprovals?.find(
     (p) => p.toolCallId === input.toolCallId

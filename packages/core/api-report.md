@@ -1056,7 +1056,7 @@ export interface CancelStepMeta {
   type: 'cancel'
   reason?: string
 }
-checkWorkflowRunAccess: (workflowName: string, run: WorkflowRun | null | undefined, wire: WorkflowCallerWire, action: "read" | "approve") => Promise<void>
+checkWorkflowRunAccess: (workflowName: string, run: WorkflowRun | null | undefined, wire: WorkflowCallerWire, action: "approve" | "read") => Promise<void>
 export type Condition =
   | SimpleCondition
   | { type: 'and'; conditions: Condition[] }
@@ -3476,17 +3476,12 @@ export type PikkuAgentRPC<
   stream: AgentStream
   resume: (
     runId: string,
-    input: {
-      toolCallId: string
-      approved: boolean
-      expectedAgentName?: string
-    },
+    input: { toolCallId: string; approved: boolean },
     options?: any
   ) => Promise<void>
   approve: (
     runId: string,
-    approvals: { toolCallId: string; approved: boolean }[],
-    expectedAgentName?: string
+    approvals: { toolCallId: string; approved: boolean }[]
   ) => Promise<any>
   interrupt: (
     runId: string,
@@ -3513,7 +3508,7 @@ export type PikkuRPC<
   ) => Promise<Out>
   startWorkflow: startWorkflow
   agent: PikkuAgentRPC<AgentRun, AgentStream>
-  exposedAgent: PikkuAgentRPC
+  exposedAgent: PikkuExposedAgentRPC
   exposedWorkflow: {
     start: (workflowName: string, data?: unknown) => Promise<{ runId: string }>
     run: (workflowName: string, data?: unknown) => Promise<any>
@@ -3862,7 +3857,7 @@ export type AgentRPCFactory = (
   wire: PikkuRawWire,
   options: AgentRPCOptions,
   exposed?: boolean
-) => PikkuRPC['agent']
+) => PikkuRPC['exposedAgent']
 export type AgentRPCOptions = {
   sessionService?: SessionService<CoreUserSession>
 }
@@ -4142,8 +4137,8 @@ export interface PikkuAgentMiddlewareHooks< State extends Record<string, unknown
   onError?: (services: SingletonServices, ctx: { error: Error; stepNumber: number; messages: AgentMessage[] }) => Promise<void> | void
 }
 resolveModelAlias: (model: string) => string
-resumeAgent: (input: { runId: string; toolCallId: string; approved: boolean; expectedAgentName?: string | undefined; }, channel: AgentStreamChannel, params: RunAgentParams, options?: StreamAgentOptions | undefined) => Promise<void>
-resumeAgentSync: (runId: string, approvals: { toolCallId: string; approved: boolean; }[], params: RunAgentParams, expectedAgentName?: string | undefined) => Promise<AgentOutput>
+resumeAgent: (input: { runId: string; toolCallId: string; approved: boolean; }, channel: AgentStreamChannel, params: RunAgentParams, options?: StreamAgentOptions | undefined) => Promise<void>
+resumeAgentSync: (runId: string, approvals: { toolCallId: string; approved: boolean; }[], params: RunAgentParams) => Promise<AgentOutput>
 runAgent: (agentName: string, input: AgentInput, params: RunAgentParams, agentSessionMap?: Map<string, string> | undefined) => Promise<AgentOutput>
 export type RunAgentParams = {
   sessionService?: SessionService<CoreUserSession>

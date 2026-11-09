@@ -104,7 +104,7 @@ const result = await rpc.agent.run('todoAgent', {
 })
 
 await rpc.agent.stream('todoAgent', input)              // writes to the wire's channel
-await rpc.agent.approve(runId, [{ toolCallId, approved }], expectedAgentName?)
+await rpc.agent.approve(runId, [{ toolCallId, approved }])
 await rpc.agent.resume(runId, { toolCallId, approved })
 await rpc.agent.interrupt(runId, 'user' | 'speech' | 'timeout')
 ```

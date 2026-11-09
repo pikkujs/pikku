@@ -243,16 +243,33 @@ describe('the owner gate on approve and resume', () => {
     })
   }
 
-  test('resume refuses a run of a different agent than the route named', async () => {
-    await assert.rejects(
-      () =>
-        resumeAgent(
-          { runId: RUN_ID, ...answer, expectedAgentName: 'other' },
-          channel,
-          paramsFor({ userId: 'owner' })
-        ),
-      ForbiddenError
-    )
+  describe('through the exposed entry, a route for another agent', () => {
+    const exposed = (userId: string) =>
+      createAgentRPC(
+        { channel } as any,
+        { sessionService: sessionService({ userId }) } as any,
+        true
+      )
+
+    beforeEach(() => addAgent('other', { expose: true }))
+
+    test('refuses the owner, who is told it is the wrong agent', async () => {
+      await assert.rejects(
+        () =>
+          exposed('owner').resume(RUN_ID, {
+            ...answer,
+            expectedAgentName: 'other',
+          }),
+        { name: 'ForbiddenError', message: /does not belong to this agent/ }
+      )
+    })
+
+    test('refuses a stranger with the ownership message, not the agent mismatch', async () => {
+      await assert.rejects(
+        () => exposed('stranger').approve(RUN_ID, [answer], 'other'),
+        { name: 'ForbiddenError', message: 'Not authorized to access this run' }
+      )
+    })
   })
 })
 

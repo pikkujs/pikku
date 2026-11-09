@@ -35,6 +35,12 @@ being dumb, and the decision sits on the declaration:
   only on an `auth: false` workflow, and an answer needs a session. It does not run
   the workflow's scopes or permissions.
 
+A route built for agent A must not resume agent B's run. That check lives in
+`rpc.exposedAgent` (`resume` and `approve` take the route's `expectedAgentName`), not in
+`resumeAgent` or `resumeAgentSync`, which check only the run's owner and the run's own
+agent's auth. It runs after the owner check, so only the owner learns a run belongs to
+another agent; anyone else gets the ownership refusal.
+
 `/rpc/<workflow>` needed no separate handling: `rpc.exposed` calls `runPikkuFunc`, so
 it runs the workflow's declaration. It looked like a bypass only because an unset
 `auth` was open, and it went round the old route gates. The call is not a run, and
