@@ -49,12 +49,13 @@ sees real, compiled, working code. Apply = merge. Reject = `git branch -D`.
 Run **once** at the start of every feature request:
 
 ```bash
-yarn pikku meta context --json
+yarn pikku meta context
 ```
 
-This single call returns functions, wires, middleware, permissions, workflows,
-`capabilities` (which wire types are in use), and `layout` (where new files
-should land).
+This single call prints the project's map: tables, workflows, permissions,
+wires, screens, project facts and one line per function. `--json` gives the
+full document, including `capabilities` (which wire types are in use) and
+`layout` (where new files should land); filter it with `jq`.
 
 Only fall back to targeted commands when you need full input/output JSON
 schemas (`yarn pikku meta functions get <id>`) or workflow steps
@@ -214,7 +215,7 @@ Notes on running `tsc`:
 **Trust the exit code, not the stderr noise.** `yarn pikku all` may print
 warnings, `[PKUxxx]` messages, even `level: critical` log lines, while
 still exiting `0` — those are pre-existing project state, not your
-problem. Same for `meta context --json`: it streams logs to stderr that
+problem. Same for `meta context`: it streams logs to stderr that
 look scary on a clean baseline. The exit code is the source of truth.
 
 If a command exits non-zero, that's a real failure — fix or stop.

@@ -22,18 +22,19 @@ and change it through the write path rather than by hand.
 
 ## Start with `pikku meta context`
 
-Never run bare `pikku meta`: it regenerates the project, then prints only usage. `pikku meta context` is the first call, and it prints the whole document (functions, wires, middleware, permissions, workflows, `capabilities`, `layout`; tens of KB) as one line of JSON, so `head` cuts it mid-object. Add `--json` and filter it with `jq` (`pikku meta context --json | jq '.functions[] | select(.id | test("cancel"; "i")) | {id, description, sourceFile}'`), or save it once and query the file. `pikku meta functions list` is the lighter list of ids and descriptions, and `pikku meta functions get <id>` has the schemas.
+`pikku meta context` is the first call. It prints a short map and no JSON: tables, workflows, permissions, middleware, emails, wire counts, screens, what the project says about itself (agent runner and model aliases, locales and how to add a key, the generated client's import, where routes, shell, nav and UI components are), then one line per function (id, `x` exposed, `r` readonly, a few words). Read it whole; it is about 12 KB for 165 functions. `pikku meta` alone only lists the subcommands and exits 1, so skip it.
 
-`pikku meta db [table]` answers the table question. `grep`, `screens`, `services` and `emails` exist only on a CLI whose `pikku meta` usage lists them; the current release does not, so call a name only after you have seen it listed, and fall back to `context --json` and `pikku info`.
+Then ask the narrower question instead of opening files:
 
-It answers in one call what a planner needs — functions, wires, middleware,
-permissions, workflows, capabilities, layout. Reach for `pikku meta` when you
-are going to act on the output and `pikku info` when a person will read it;
-they are the same ground in two shapes.
+- `pikku meta grep <terms>`: everything the project knows, grouped by kind (functions, workflows, wires, tables and columns, screens, services, emails, translations in every locale, model aliases). Word-aware and any term may match: `invit` finds `invitation`, `'a|b'` means either.
+- `pikku meta db <table>`: column types. `pikku meta screens`, `services`, `emails`: routes with the RPCs each page reaches, session fields and services, email templates with their data.
+- `pikku meta context --json` is the full planner document (about 75 KB for the same app). Filter it with `jq` (`pikku meta context --json | jq '.functions[] | select(.id | test("cancel"; "i")) | {id, description, sourceFile}'`), never `head`. `pikku meta functions get <id>` has one function's schemas.
+
+Reach for `pikku meta` when you are going to act on the output and `pikku info` when a person will read it; they are the same ground in two shapes.
 
 ## Tables: `pikku meta db`
 
-`pikku meta db` (also the `db` block of `pikku meta context`) says where the
+`pikku meta db` (also the `db` block of `pikku meta context --json`) says where the
 project declares its tables, which ones it declares, where their generated types
 are, and the commands that make the SQL. There is no migrations path in it,
 because you don't need one: change the declaration and run `pikku db generate`.
