@@ -171,7 +171,7 @@ if (existsSync(pikkuCliPath)) {
     await updateCheck
     const { exitWhenFlushed } =
       await import('../src/utils/exit-when-flushed.js')
-    exitWhenFlushed(process.exitCode ?? 0)
+    exitWhenFlushed(Number(process.exitCode ?? 0))
   } catch (error: any) {
     reportFatal(error)
   }
