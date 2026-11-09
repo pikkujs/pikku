@@ -1,0 +1,276 @@
+name: Pikku checks
+
+# A reusable workflow any Pikku project can call. It runs the stages of `pikku ci` (packages/cli/src/functions/ci), in the
+# same order, but as parallel jobs:
+#
+#   prepare    install, project pre-step, `pikku bootstrap`, `pikku db migrate --localOnly` (when db/<engine> exists),
+#              `pikku emails generate` (when the config names an emailTemplatesDir that exists), `pikku all --failOnError`
+#              and `pikku app build`. Everything git ignores except node_modules (.pikku, *.gen.*, dist, frontend build
+#              output) is uploaded as one tarball: upload-artifact drops file modes and skips hidden folders such as .pikku.
+#   validate   `pikku validate`
+#   audit      `pikku audit --failOn high`, with --baseline when one is given or .deploy/audit.json exists
+#   test       `bun run test`
+#   tsc        `bun run tsc`, when the project has that script (`pikku ci` has no such stage: `pikku validate` type-checks)
+#
+# Usage, from the project's own workflow:
+#
+#   jobs:
+#     checks:
+#       uses: pikkujs/pikku/.github/workflows/pikku-checks.yml@main
+#
+# Pass `with:` to change inputs. The deploy half of `pikku ci` (-p, --deploy) is not here: it is not generic.
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory holding pikku.config.json and the project's package.json, relative to the repository root
+        type: string
+        default: .
+      bun-version:
+        description: Bun version. Empty reads packageManager from package.json in working-directory, else the latest
+        type: string
+        default: ''
+      pre-step:
+        description: A shell command to run in working-directory after install and before codegen, for what the project builds first
+        type: string
+        default: ''
+      skip-tests:
+        description: Mirror of `pikku ci --skip-tests`. Without it, a project with no "test" script fails the test job
+        type: boolean
+        default: false
+      audit-baseline:
+        description: Mirror of `pikku ci --audit-baseline`, a previous audit.json (path relative to working-directory) whose advisories do not fail the audit
+        type: string
+        default: ''
+      skip-deploy-checks:
+        description: Mirror of `pikku ci --skip-deploy-checks`, skips the Pikku Studio hosting conventions in validate
+        type: boolean
+        default: false
+      validate-blocking:
+        description: When false, validate findings are shown but do not fail the run
+        type: boolean
+        default: true
+      audit-blocking:
+        description: When false, audit findings are shown but do not fail the run
+        type: boolean
+        default: true
+      tsc:
+        description: Run the tsc job (`bun run tsc`, skipped with a notice when the project has no such script)
+        type: boolean
+        default: true
+      runs-on:
+        description: Runner label for every job
+        type: string
+        default: ubuntu-24.04
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prepare:
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+          bun-version-file: ${{ inputs.bun-version == '' && format('{0}/package.json', inputs.working-directory) || '' }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+      - name: Install
+        working-directory: ${{ inputs.working-directory }}
+        run: bun install --frozen-lockfile
+      - name: Pre-step
+        if: inputs.pre-step != ''
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          PRE_STEP: ${{ inputs.pre-step }}
+        run: eval "$PRE_STEP"
+      - name: Bootstrap
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CI: '1'
+        run: bunx --bun pikku bootstrap
+      - name: DB migrate
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CI: '1'
+        run: |
+          # Same rule as pikku ci: only when db/<engine> exists, and never against a DATABASE_URL.
+          if [ -d db/sqlite ] || [ -d db/postgres ] || [ -d db/mysql ]; then
+            env -u DATABASE_URL bunx --bun pikku db migrate --localOnly
+          else
+            echo "No db/sqlite, db/postgres or db/mysql: skipping"
+          fi
+      - name: Emails generate
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CI: '1'
+        run: |
+          dir=$(jq -r '.emailTemplatesDir // empty' pikku.config.json 2>/dev/null || true)
+          if [ -n "$dir" ] && [ -d "$dir" ]; then
+            bunx --bun pikku emails generate
+          else
+            echo "No emailTemplatesDir: skipping"
+          fi
+      - name: All
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CI: '1'
+        run: bunx --bun pikku all --failOnError
+      - name: App build
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CI: '1'
+        run: bunx --bun pikku app build
+      - name: Pack what git does not track
+        run: |
+          git ls-files --others --ignored --exclude-standard | grep -v '^node_modules/\|/node_modules/' > "$RUNNER_TEMP/prepared.list" || true
+          wc -l "$RUNNER_TEMP/prepared.list"
+          tar -czf "$RUNNER_TEMP/prepared.tar.gz" -T "$RUNNER_TEMP/prepared.list"
+          ls -lh "$RUNNER_TEMP/prepared.tar.gz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pikku-prepared
+          path: ${{ runner.temp }}/prepared.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  validate:
+    needs: prepare
+    continue-on-error: ${{ !inputs.validate-blocking }}
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+          bun-version-file: ${{ inputs.bun-version == '' && format('{0}/package.json', inputs.working-directory) || '' }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+      - uses: actions/download-artifact@v4
+        with:
+          name: pikku-prepared
+          path: ${{ runner.temp }}
+      - run: tar -xzf "$RUNNER_TEMP/prepared.tar.gz"
+      - name: Install
+        working-directory: ${{ inputs.working-directory }}
+        run: bun install --frozen-lockfile
+      - name: Validate
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CI: '1'
+          SKIP_DEPLOY_CHECKS: ${{ inputs.skip-deploy-checks && '1' || '' }}
+        run: bunx --bun pikku validate ${SKIP_DEPLOY_CHECKS:+--skipDeployChecks}
+
+  audit:
+    needs: prepare
+    continue-on-error: ${{ !inputs.audit-blocking }}
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+          bun-version-file: ${{ inputs.bun-version == '' && format('{0}/package.json', inputs.working-directory) || '' }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+      - uses: actions/download-artifact@v4
+        with:
+          name: pikku-prepared
+          path: ${{ runner.temp }}
+      - run: tar -xzf "$RUNNER_TEMP/prepared.tar.gz"
+      - name: Install
+        working-directory: ${{ inputs.working-directory }}
+        run: bun install --frozen-lockfile
+      - name: Audit
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CI: '1'
+          AUDIT_BASELINE: ${{ inputs.audit-baseline }}
+        run: |
+          # Same default as pikku ci: .deploy/audit.json when no baseline is given.
+          baseline="$AUDIT_BASELINE"
+          if [ -z "$baseline" ] && [ -f .deploy/audit.json ]; then baseline=.deploy/audit.json; fi
+          bunx --bun pikku audit --failOn high ${baseline:+--baseline "$baseline"}
+
+  test:
+    needs: prepare
+    if: ${{ !inputs.skip-tests }}
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+          bun-version-file: ${{ inputs.bun-version == '' && format('{0}/package.json', inputs.working-directory) || '' }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+      - uses: actions/download-artifact@v4
+        with:
+          name: pikku-prepared
+          path: ${{ runner.temp }}
+      - run: tar -xzf "$RUNNER_TEMP/prepared.tar.gz"
+      - name: Install
+        working-directory: ${{ inputs.working-directory }}
+        run: bun install --frozen-lockfile
+      - name: Test
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CI: '1'
+        run: |
+          if [ "$(jq -r '.scripts.test // empty' package.json)" = "" ]; then
+            echo '::error::This project has no "test" script in package.json. Add one, or pass skip-tests: true.'
+            exit 1
+          fi
+          bun run test
+
+  tsc:
+    needs: prepare
+    if: ${{ inputs.tsc }}
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+          bun-version-file: ${{ inputs.bun-version == '' && format('{0}/package.json', inputs.working-directory) || '' }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+      - uses: actions/download-artifact@v4
+        with:
+          name: pikku-prepared
+          path: ${{ runner.temp }}
+      - run: tar -xzf "$RUNNER_TEMP/prepared.tar.gz"
+      - name: Install
+        working-directory: ${{ inputs.working-directory }}
+        run: bun install --frozen-lockfile
+      - name: Typecheck
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          if [ "$(jq -r '.scripts.tsc // empty' package.json)" = "" ]; then
+            echo "::notice::No \"tsc\" script in package.json, skipping"
+            exit 0
+          fi
+          bun run tsc
