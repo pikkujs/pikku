@@ -212,7 +212,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
     packageName = null,
     addonInstance,
     gate,
-    gatesPassedAtStart = false,
   }: {
     singletonServices: CoreSingletonServices
     createWireServices?: CreateWireServices
@@ -241,12 +240,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
      * was validated when it started.
      */
     gate?: 'start' | 'run'
-    /**
-     * For a workflow run proven by a checked start, on an app with no session
-     * store. There is no session to judge again, so what was judged is not.
-     * Only the workflow engine sets this, from the run row.
-     */
-    gatesPassedAtStart?: boolean
   }
 ): Promise<Out> => {
   wire.wireType ??= wireType
@@ -471,9 +464,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
     const session = invocationWire.session
 
-    if (gatesPassedAtStart) {
-      // Judged at the start, against the real session.
-    } else if (funcMeta.sessionless) {
+    if (funcMeta.sessionless) {
       if (
         wiringAuth === true ||
         funcConfig.auth === true ||
@@ -514,17 +505,17 @@ export const runPikkuFunc = async <In = any, Out = any>(
       addonInstance?.namespace
     )
     const functionScopes = funcConfig.scopes ?? funcMeta.scopes
-    if (!gatesPassedAtStart) {
-      verifyScopes(
-        addonScopes.length > 0
-          ? [...addonScopes, ...(functionScopes ?? [])]
-          : functionScopes,
-        session
-      )
-    }
+    verifyScopes(
+      addonScopes.length > 0
+        ? [...addonScopes, ...(functionScopes ?? [])]
+        : functionScopes,
+      funcMeta.liveScopes
+        ? await withLiveScopes(session, resolvedSingletonServices.scopeService)
+        : session
+    )
 
     const featureFlag = funcConfig.featureFlag ?? funcMeta.featureFlag
-    if (featureFlag && !gatesPassedAtStart) {
+    if (featureFlag) {
       // The host's source, not the package's: a `featureFlag:` on an addon
       // function names a flag the consuming application declared and its
       // operators switch. A package factory builds its own services and has no
@@ -563,19 +554,17 @@ export const runPikkuFunc = async <In = any, Out = any>(
       )
     }
 
-    if (!gatesPassedAtStart) {
-      await runPermissions({
-        funcPermissions: funcConfig.permissions,
-        services: withoutSecrets(
-          resolvedSingletonServices,
-          'a permission'
-        ) as CoreSingletonServices,
-        // knowledge: decisions/security/a-permission-gets-a-wire-it-cannot-reply-on.md
-        wire: invocationWire as PermissionWire,
-        data: actualData,
-        packageName: funcPackageName,
-      })
-    }
+    await runPermissions({
+      funcPermissions: funcConfig.permissions,
+      services: withoutSecrets(
+        resolvedSingletonServices,
+        'a permission'
+      ) as CoreSingletonServices,
+      // knowledge: decisions/security/a-permission-gets-a-wire-it-cannot-reply-on.md
+      wire: invocationWire as PermissionWire,
+      data: actualData,
+      packageName: funcPackageName,
+    })
 
     if (gate) return actualData
 

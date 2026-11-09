@@ -12,6 +12,7 @@ import {
   setSingletonServices,
 } from '../../pikku-state.js'
 import { addSchema } from '../../schema.js'
+import { InMemorySessionStore } from '../../services/in-memory-session-store.js'
 import { rpcService } from '../rpc/rpc-runner.js'
 import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { WorkflowNotFoundError } from './workflow-errors.js'
@@ -39,6 +40,7 @@ let ws: InMemoryWorkflowService
 let seenSession: unknown
 let bodyRuns: number
 let services: Record<string, unknown>
+let sessionStore: InMemorySessionStore
 
 type Declaration = {
   expose?: boolean
@@ -98,7 +100,7 @@ const declareGraph = (name: string, over: Record<string, unknown> = {}) => {
 }
 
 const useServices = (extra: Record<string, unknown> = {}) => {
-  services = { logger, schema, workflowService: ws, ...extra }
+  services = { logger, schema, workflowService: ws, sessionStore, ...extra }
   setSingletonServices(services as any)
 }
 
@@ -117,6 +119,8 @@ beforeEach(() => {
   ws = new InMemoryWorkflowService()
   seenSession = undefined
   bodyRuns = 0
+  sessionStore = new InMemorySessionStore()
+  void sessionStore.set('alice', { userId: 'alice' })
   useServices()
   addSchema('FlowInput', { type: 'object' })
 })
@@ -211,37 +215,24 @@ describe('a route lets through what the workflow declares', () => {
     const { runId } = await start('flow', {}, anonymous)
     const run = await ws.getRun(runId)
     assert.equal(run?.wire?.pikkuUserId, undefined)
-    assert.equal(run?.wire?.verified, undefined)
     assert.equal(run?.status, 'completed')
   })
 })
 
-describe('a signed-in run with no session store', () => {
-  test('passes on the proof of its checked start', async () => {
-    let permissionChecks = 0
-    declare('flow', {
-      auth: true,
-      scopes: ['orders:write'],
-      permissions: {
-        allowed: async () => {
-          permissionChecks += 1
-          return true
-        },
-      },
-    })
-    const session = { userId: 'alice', scopes: ['orders:write'], org: 'acme' }
-    const { runId } = await start('flow', {}, { session })
-    assert.equal((await ws.getRun(runId))?.status, 'completed')
-    assert.equal(permissionChecks, 1, 'judged at the start, not again')
-  })
+const sessionsFor = (held: Record<string, unknown>) =>
+  useServices({ sessionStore: { get: async (id: string) => held[id] } })
 
-  test('the body reads the user id, and only that', async () => {
+describe('a run loads its owner session every time it executes', () => {
+  test('the body sees the stored session, not the caller one', async () => {
+    const stored = { userId: 'alice', org: 'acme' }
+    sessionsFor({ alice: stored })
     declare('flow', { auth: true })
-    await start('flow', {}, { session: { userId: 'alice', org: 'acme' } })
-    assert.deepEqual(seenSession, { userId: 'alice' })
+    await start('flow', {}, alice)
+    assert.deepEqual(seenSession, stored)
   })
 
-  test('the run row holds no session data', async () => {
+  test('the run row holds the user id and no session data', async () => {
+    sessionsFor({ alice: { userId: 'alice', org: 'acme' } })
     declare('flow', { auth: true })
     const { runId } = await start(
       'flow',
@@ -250,9 +241,85 @@ describe('a signed-in run with no session store', () => {
     )
     const stored = JSON.stringify((await ws.getRun(runId))?.wire)
     assert.ok(!stored.includes('acme'), stored)
+    assert.equal((await ws.getRun(runId))?.wire?.pikkuUserId, 'alice')
   })
 
-  test('a pikkuFunc step gets the same identity', async () => {
+  test('with no session store a run that needs a session is refused', async () => {
+    useServices({ sessionStore: undefined })
+    declare('flow', { auth: true })
+    await assert.rejects(
+      () => start('flow', {}, alice),
+      /require a sessionStore/
+    )
+    assert.equal(bodyRuns, 0)
+  })
+
+  test('with no session store an auth: false run still runs', async () => {
+    useServices({ sessionStore: undefined })
+    declare('flow', { auth: false })
+    const { runId } = await start('flow', {}, anonymous)
+    assert.equal((await ws.getRun(runId))?.status, 'completed')
+  })
+
+  test('a store that no longer holds the session refuses', async () => {
+    sessionsFor({})
+    declare('flow', { auth: true })
+    await assert.rejects(() => start('flow', {}, alice), MissingSessionError)
+    assert.equal(bodyRuns, 0)
+  })
+
+  test('a permission revoked after the start refuses the run next execution', async () => {
+    let allowed = true
+    let checks = 0
+    sessionsFor({ alice: { userId: 'alice' } })
+    declare('flow', {
+      auth: true,
+      permissions: {
+        allowed: async () => {
+          checks += 1
+          return allowed
+        },
+      },
+    })
+    const checked = await checkWorkflowStart('flow', {}, alice)
+    assert.equal(checks, 1, 'judged at the start')
+    const first = await ws.createRun('flow', {}, true, 'hash', checked.wire)
+    const second = await ws.createRun('flow', {}, true, 'hash', checked.wire)
+
+    ws.registerInlineRun(first)
+    await ws.runWorkflowJob(first, {} as any)
+    assert.equal(checks, 2, 'judged again when the run executed')
+    assert.equal(bodyRuns, 1)
+
+    allowed = false
+    ws.registerInlineRun(second)
+    await assert.rejects(
+      () => ws.runWorkflowJob(second, {} as any),
+      ForbiddenError
+    )
+    assert.equal(bodyRuns, 1, 'the revoked run never reached its body')
+  })
+
+  test('scopes revoked from the stored session refuse the next execution', async () => {
+    const held: Record<string, unknown> = {
+      alice: { userId: 'alice', scopes: ['orders:write'] },
+    }
+    sessionsFor(held)
+    declare('flow', { auth: true, scopes: ['orders:write'] })
+    const checked = await checkWorkflowStart('flow', {}, {
+      session: held.alice,
+    } as any)
+    const runId = await ws.createRun('flow', {}, true, 'hash', checked.wire)
+    held.alice = { userId: 'alice', scopes: [] }
+    ws.registerInlineRun(runId)
+    await assert.rejects(
+      () => ws.runWorkflowJob(runId, {} as any),
+      MissingScopeError
+    )
+  })
+
+  test('a pikkuFunc step carries the user id and loads the session itself', async () => {
+    sessionsFor({ alice: { userId: 'alice' } })
     declare('flow', { auth: true })
     const checked = await checkWorkflowStart('flow', {}, alice)
     const runId = await ws.createRun('flow', {}, false, 'hash', checked.wire)
@@ -271,114 +338,22 @@ describe('a signed-in run with no session store', () => {
         },
       }
     )
-    assert.deepEqual(wire.session, { userId: 'alice' })
+    assert.equal(wire.pikkuUserId, 'alice')
+    assert.equal(wire.session, undefined)
   })
 
-  test('a child of a proven run is proven, and its own gates still run', async () => {
-    const { childRunWire, withRunProof, settleRunWire } =
-      await import('./workflow-run-proof.js')
-    const parent = settleRunWire(
-      'parent',
-      withRunProof({ type: 'http', pikkuUserId: 'alice' }, 'start', 'parent')
-    )
-    const child = settleRunWire(
-      'child',
-      childRunWire(parent, { type: 'workflow', pikkuUserId: 'alice' }, 'child')
-    )
-    assert.equal(child.verified, 'parent')
-
+  test('a child run is judged against its own gates', async () => {
+    sessionsFor({ alice: { userId: 'alice' } })
     declare('child', { scopes: ['orders:write'] })
-    const runId = await ws.createRun(
-      'child',
-      {},
-      true,
-      'hash',
-      childRunWire(parent, { type: 'workflow', pikkuUserId: 'alice' }, 'child')
-    )
+    const runId = await ws.createRun('child', {}, true, 'hash', {
+      type: 'workflow',
+      pikkuUserId: 'alice',
+    })
     ws.registerInlineRun(runId)
     await assert.rejects(
       () => ws.runWorkflowJob(runId, {} as any),
       MissingScopeError
     )
-  })
-
-  test('a store that no longer holds the session still refuses', async () => {
-    useServices({ sessionStore: { get: async () => undefined } })
-    declare('flow', { auth: true })
-    await assert.rejects(() => start('flow', {}, alice), MissingSessionError)
-    assert.equal(bodyRuns, 0)
-  })
-
-  test('a store that holds it supplies the real session', async () => {
-    const stored = { userId: 'alice', org: 'acme' }
-    useServices({ sessionStore: { get: async () => stored } })
-    declare('flow', { auth: true })
-    await start('flow', {}, alice)
-    assert.deepEqual(seenSession, stored)
-  })
-
-  test('a function in another unit cannot be judged, so proves nothing', async () => {
-    declare('flow', { auth: true, inThisUnit: false })
-    const checked = await checkWorkflowStart('flow', {}, alice)
-    const runId = await ws.createRun('flow', {}, false, 'hash', checked.wire)
-    assert.equal((await ws.getRun(runId))?.wire?.verified, undefined)
-  })
-})
-
-describe('the proof cannot be spoofed', () => {
-  const internal = (wire: any = {}) =>
-    rpcService.getContextRPCService(services as any, wire, {} as any, 0)
-
-  test('rpc.startWorkflow cannot pass verified on its wire', async () => {
-    declare('flow', { auth: true })
-    await assert.rejects(
-      () =>
-        internal().startWorkflow('flow', {}, {
-          wire: { type: 'http', pikkuUserId: 'alice', verified: 'start' },
-          inline: true,
-        } as any),
-      MissingSessionError
-    )
-    assert.equal(bodyRuns, 0)
-    const [run] = await ws.listRuns()
-    assert.equal(run?.wire?.verified, undefined)
-  })
-
-  test('createRun drops a verified it was handed', async () => {
-    const runId = await ws.createRun('flow', {}, false, 'hash', {
-      type: 'http',
-      pikkuUserId: 'alice',
-      verified: 'start',
-    })
-    assert.equal((await ws.getRun(runId))?.wire?.verified, undefined)
-  })
-
-  test('a wire that went through JSON has lost its proof', async () => {
-    declare('flow')
-    const checked = await checkWorkflowStart('flow', {}, alice)
-    const runId = await ws.createRun(
-      'flow',
-      {},
-      false,
-      'hash',
-      JSON.parse(JSON.stringify(checked.wire))
-    )
-    assert.equal((await ws.getRun(runId))?.wire?.verified, undefined)
-  })
-
-  test('a checked start for one workflow proves nothing for another', async () => {
-    declare('flow')
-    declare('other')
-    const checked = await checkWorkflowStart('flow', {}, alice)
-    const runId = await ws.createRun('other', {}, false, 'hash', checked.wire)
-    assert.equal((await ws.getRun(runId))?.wire?.verified, undefined)
-  })
-
-  test('a checked start with no owner proves nothing', async () => {
-    declare('flow', { auth: false })
-    const checked = await checkWorkflowStart('flow', {}, anonymous)
-    const runId = await ws.createRun('flow', {}, false, 'hash', checked.wire)
-    assert.equal((await ws.getRun(runId))?.wire?.verified, undefined)
   })
 })
 
@@ -428,7 +403,7 @@ describe('internal starts are unchanged', () => {
         ws.startWorkflow(
           'graph',
           {},
-          { type: 'http', pikkuUserId: 'alice' },
+          { type: 'http', pikkuUserId: 'bob' },
           {} as any
         ),
       MissingSessionError

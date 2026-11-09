@@ -49,18 +49,7 @@ export interface WorkflowRunWire {
   pikkuUserId?: string
   /** The W3C trace every hop of the run stays on. Set when the run is created. */
   traceparent?: string
-  /**
-   * Set by core when the run is created, never by a caller; a value passed in
-   * is dropped. Says how the owner in `pikkuUserId` was proven.
-   */
-  verified?: WorkflowRunProof
 }
-
-/**
- * How a run's owner was proven: `start` when the run passed the workflow's
- * checks with that user's session, `parent` when a run so proven started it.
- */
-export type WorkflowRunProof = 'start' | 'parent'
 
 /**
  * The resolved `workflow` section of the app config: default retries and the queue names the engine uses.
