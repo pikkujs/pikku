@@ -57,7 +57,7 @@ service's paths and size limit; omitting it does not disable it.
   | Instead of                                                                             | Use                                                                    | `lint` key                |
   | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------- |
   | `fs`, `node:fs`, `fs/promises`, `fs-extra`                                             | the `content` service (keyed, project-scoped, signed reads and writes) | `enforceContentService`   |
-  | `process.env` (also `{ ...process.env }`, `const { env } = process`)                   | `variables` for values, `secrets` for secrets                          | `enforceVariablesService` |
+  | `process.env` (also `{ ...process.env }`, `const { env } = process`, `globalThis.process`) | `variables` for values, `secrets` for secrets                          | `enforceVariablesService` |
   | `child_process`, `execa`, `cross-spawn`, `shelljs`, `Bun.spawn`, `Bun.$`               | the Supervisor, which owns the process and its output                  | `enforceSupervisor`       |
   | `process.argv`, `Bun.argv`, `Deno.args`, `commander`, `yargs`, `minimist`, `parseArgs` | a `pikku` CLI command, which receives typed input                      | `enforceCliCommands`      |
 

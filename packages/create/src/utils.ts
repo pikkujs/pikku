@@ -628,6 +628,11 @@ const oxlintPolicyRules = () => {
         'Use the `variables` service for values and the `secrets` service for secrets.'
       ),
       property(
+        'globalThis',
+        'process',
+        'Use the `variables` service for values and the `secrets` service for secrets.'
+      ),
+      property(
         'Bun',
         'spawn',
         'Run processes through the Supervisor, not Bun.spawn.'
@@ -643,6 +648,11 @@ const oxlintPolicyRules = () => {
         'Run processes through the Supervisor, not Bun.spawn.'
       ),
       property(
+        'globalThis',
+        'Bun',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
         'process',
         'argv',
         'Expose a `pikku` CLI command rather than reading argv.'
@@ -655,6 +665,11 @@ const oxlintPolicyRules = () => {
       property(
         'Deno',
         'args',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+      property(
+        'globalThis',
+        'Deno',
         'Expose a `pikku` CLI command rather than reading argv.'
       ),
     ],

@@ -371,7 +371,9 @@ When a rule is missing or below the key's level, validate reports `oxlint-enforc
 const port = process.env.PORT
 ```
 
-Not caught: `globalThis.process.env` (and `globalThis.process.argv`), access through an alias (`const b = Bun; b.argv`), and the `Bun.file` / `Deno.readFile` file APIs. Caught: `process['env']`, `process?.argv`, `(process as any).argv`, `const { env } = process`, `export { x } from 'node:child_process'` and `import x = require('child_process')`. A `require()` of a listed module is reported by `typescript/no-require-imports`, not by `no-restricted-imports`.
+Not caught: access through an alias (`const b = Bun; b.argv`), `global.process` and `self.process`, and the `Bun.file` / `Deno.readFile` file APIs. Caught: `globalThis.process.env`, `globalThis.process.argv`, `globalThis.Bun.argv`, `globalThis.Bun.spawn` (and `spawnSync`, `$`), `globalThis.Deno.args`, `process['env']`, `process?.argv`, `(process as any).argv`, `const { env } = process`, `export { x } from 'node:child_process'` and `import x = require('child_process')`. A `require()` of a listed module is reported by `typescript/no-require-imports`, not by `no-restricted-imports`.
+
+oxlint 1.88.0 cannot match a dotted object such as `globalThis.process`. The `globalThis` forms are therefore restricted as whole properties: `globalThis.process`, `globalThis.Bun` and `globalThis.Deno` (`globalThis.process.cwd()` and `typeof globalThis.Bun` are reported too, and `process.cwd()` is not). A config written before this change reports `oxlint-enforce-variables-service`, `oxlint-enforce-supervisor` and `oxlint-enforce-cli-commands` until `pikku enable oxlint` adds the entries.
 
 To relax a key for the whole project, set it to `'warn'` or `'off'`:
 

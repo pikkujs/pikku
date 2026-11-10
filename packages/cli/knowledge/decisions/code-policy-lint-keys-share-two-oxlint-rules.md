@@ -13,7 +13,9 @@ tags: cli, validate, lint, oxlint
 
 **Verified on 1.88.0, and kept:** static `import`, `await import()`, `export ... from`, `import x = require()` and (through `typescript/no-require-imports`, not `no-restricted-imports`) `require()`; `allowTypeImports`; `importNames` for `parseArgs` from `node:util`; `Bun.spawn`, `Bun.spawnSync`, `Bun.$`, `Bun.argv`, `Deno.args`, `process.argv`; `// oxlint-disable-next-line <rule> -- reason` for both rules, in `.ts` and `.tsx`.
 
-**Not caught:** `globalThis.process.env`, an aliased object (`const b = Bun; b.argv`), `Bun.file` and other runtime file APIs. A rule that needs them is a JS plugin, not an inspector walk.
+**`globalThis` forms:** oxlint 1.88.0 does not match a dotted `object` (`globalThis.process` never fires), but `{ object: 'globalThis', property: 'process' }` does, as do `Bun` and `Deno`. The rules therefore restrict `globalThis.process`, `globalThis.Bun` and `globalThis.Deno` as whole properties, which also reports `globalThis.process.cwd()` and `typeof globalThis.Bun`. That is the price of catching `globalThis.process.env`; one line is exempted with the plain disable comment.
+
+**Not caught:** an aliased object (`const b = Bun; b.argv`), `global.process`, `self.process`, `Bun.file` and other runtime file APIs. A rule that needs them is a JS plugin, not an inspector walk.
 
 **Exemptions are plain oxlint disable comments, plus one bootstrap override.** `pikku enable oxlint` and `create-pikku` write an `overrides` entry turning the policy rules off for `**/start.ts`, `**/server.ts`, `**/bin/**`, `**/scripts/**` and `*.test.*` / `*.spec.*`. There is no exemption for a services directory or the services factory: the factory reads `variables` like everything else. There are no exemption finding ids, no listing of exemptions, no refusal of an override and no required reason; those were considered and left out to keep the change small.
 

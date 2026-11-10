@@ -13,6 +13,6 @@ A rule that needs only one file's syntax (an import, a `process.env` read, an em
 
 Unlike `OXLINT_REQUIRED_RULES`, a policy rule may be switched off per file in an oxlint `overrides` entry: tests, bootstrap code and scripts legitimately read the disk and the environment. `pikku enable oxlint` writes the rules with tests and bootstrap files (`start.ts`, `server.ts`, `bin/`, `scripts/`) exempted.
 
-**What this costs:** oxlint cannot see `globalThis.process.env` or an aliased object, which the inspector walk caught (`const { env } = process` is caught by `no-restricted-properties`). A rule that needs them, or anything else built-ins cannot express, is a JS plugin, not a new inspector walk.
+**What this costs:** oxlint cannot see an aliased object, which the inspector walk caught (`const { env } = process` and `globalThis.process.env` are caught by `no-restricted-properties`; see the code-policy decision). A rule that needs them, or anything else built-ins cannot express, is a JS plugin, not a new inspector walk.
 
 **What this rules out:** adding a syntax-only `PKU` diagnostic. If it can be said in an oxlint config, it goes there.
