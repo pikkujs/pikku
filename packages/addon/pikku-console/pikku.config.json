@@ -25,6 +25,8 @@
     ]
   },
   "lint": {
-    "enforceContentService": "off"
+    "enforceContentService": "off",
+    "enforceSupervisor": "off",
+    "enforceCliCommands": "off"
   }
 }
