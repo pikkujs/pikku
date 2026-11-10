@@ -1,3 +1,12 @@
+## 0.12.154
+
+### Patch Changes
+
+- be90d6c: `pikku doc content` prints one whole upload from a compiled app, and a new `pikku-content` skill holds the rules around it. `content.getUploadURL` now returns `fileKey`, relative to the bucket, instead of `assetKey`. `uploadFile` on the fetch client takes and returns `fileKey`, resolves a relative `uploadUrl` against the server URL and uses the configured `fetch`. See `docs/MIGRATION.md`.
+- 2e4e7ab: A function requiring a live scope now runs its permissions, body and nested calls on the freshly resolved scopes, not only its scope check. better-auth reads the session secret only when the scopes cache is used, and skips the cache cookie when a snapshot would not fit in one.
+- 54173f6: `pikkuPermission` now refuses a call with no session without running the check, like `pikkuAuth`, so `session` is always defined inside a check. `skipWithoutSession: true` on either makes the check pass with no session instead, and the function decides what that caller may see. A check without it on a sessionless function, directly or as a global permission, is now the error PKU587. `pikku doc PKU587` explains it. See docs/MIGRATION.md.
+- 1be4b68: A workflow or agent with `auth` unset now requires a session, like any function, and only an explicit `auth: false` is anonymous. The generated routes take an optional session and leave the decision to the declaration: they reach only `expose: true` names, through `rpc.exposedAgent` and `rpc.exposedWorkflow`, which hold the `expose` gate the way `rpc.exposed` does, so generated code holds no access logic, and a start records who started the run; the workflow judges its own auth, scopes, permissions and input when it runs, so a refused start leaves a failed run. Status, streams and approve look the workflow up by name, confirm the run belongs to it and check its owner. A run with an owner is only for that owner. A run stores only its owner's user id and loads the session from `sessionStore` every time it executes, running the full checks each time, so a permission revoked mid-run stops it; a run with an owner and no `sessionStore` stops with an error. Schedules and triggers with no user need `auth: false`; see `docs/MIGRATION.md`.
+
 ## 0.12.153
 
 ### Patch Changes
