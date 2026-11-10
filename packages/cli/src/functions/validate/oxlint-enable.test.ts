@@ -8,10 +8,15 @@ import {
   installArgs,
   lineDiff,
   mergeOxlintConfig,
+  newOxlintConfig,
   runEnableOxlint,
   type InstallFn,
 } from './oxlint-enable.js'
-import type { OxlintExec } from './oxlint-checks.js'
+import {
+  OXLINT_STRICT_RULES,
+  strictOverrides,
+  type OxlintExec,
+} from './oxlint-checks.js'
 
 const write = async (root: string, rel: string, contents: string) => {
   const path = join(root, rel)
@@ -588,6 +593,146 @@ describe('runEnableOxlint', () => {
       })
       assert.equal(out.ok, false)
       assert.match(out.manual[0]!, /install failed/)
+    } finally {
+      await cleanup(root)
+    }
+  })
+})
+
+describe('strict preset', () => {
+  test('a new config carries every preset rule, the import plugin and both overrides', () => {
+    const c = newOxlintConfig(undefined, true) as {
+      plugins: string[]
+      rules: Record<string, string>
+      overrides: Array<{ files: string[]; rules: Record<string, string> }>
+    }
+    assert.deepEqual(c.plugins, ['typescript', 'unicorn', 'oxc', 'import'])
+    for (const [rule, level] of Object.entries(OXLINT_STRICT_RULES)) {
+      assert.equal(c.rules[rule], level, rule)
+    }
+    assert.equal(c.overrides.length, 1 + strictOverrides().length)
+    assert.ok(
+      c.overrides.some(
+        (o) =>
+          o.files.includes('**/*.workflow.ts') &&
+          o.rules['no-await-in-loop'] === 'off'
+      )
+    )
+    assert.ok(
+      c.overrides.some(
+        (o) =>
+          o.files.includes('**/*.assert.ts') &&
+          o.rules['typescript/no-floating-promises'] === 'off'
+      )
+    )
+  })
+
+  test('a config without --strict is unchanged by the preset', () => {
+    const c = newOxlintConfig() as {
+      plugins: string[]
+      rules: Record<string, string>
+    }
+    assert.ok(!c.plugins.includes('import'))
+    assert.equal(c.rules['no-await-in-loop'], undefined)
+  })
+
+  test('merge keeps stricter and user-tuned entries, raises weaker ones, adds the rest', () => {
+    const before = JSON.stringify({
+      rules: {
+        'no-console': 'error',
+        'no-await-in-loop': 'off',
+        'typescript/no-explicit-any': ['warn', { ignoreRestArgs: true }],
+        'no-shadow': 'off',
+        'require-await': 'error',
+      },
+    })
+    const merged = mergeOxlintConfig(before, NO_POLICIES, true)
+    assert.equal(merged.kind, 'merged')
+    if (merged.kind !== 'merged') return
+    const out = JSON.parse(merged.text)
+    assert.equal(out.rules['no-console'], 'error')
+    assert.equal(out.rules['no-await-in-loop'], 'warn')
+    assert.deepEqual(out.rules['typescript/no-explicit-any'], [
+      'warn',
+      { ignoreRestArgs: true },
+    ])
+    assert.equal(out.rules['no-shadow'], 'warn')
+    assert.equal(out.rules['eqeqeq'], 'error')
+    assert.equal(
+      out.rules['require-await'],
+      'error',
+      'an off entry never replaces the user rule'
+    )
+    assert.equal(out.rules['import/no-default-export'], 'off')
+    assert.deepEqual(out.plugins, ['typescript', 'unicorn', 'oxc', 'import'])
+    assert.equal(out.overrides.length, 2)
+  })
+
+  test('merging twice is a no-op, and an existing plugins list gains only what is missing', () => {
+    const first = mergeOxlintConfig(
+      JSON.stringify({ plugins: ['react'] }),
+      NO_POLICIES,
+      true
+    )
+    assert.equal(first.kind, 'merged')
+    if (first.kind !== 'merged') return
+    assert.deepEqual(JSON.parse(first.text).plugins, [
+      'react',
+      'typescript',
+      'unicorn',
+      'import',
+    ])
+    const second = mergeOxlintConfig(first.text, NO_POLICIES, true)
+    assert.equal(second.kind === 'merged' && second.changed, false)
+  })
+
+  test('without the flag the preset is not merged', () => {
+    const merged = mergeOxlintConfig('{}', NO_POLICIES)
+    assert.equal(
+      merged.kind === 'merged' && !merged.text.includes('no-await-in-loop'),
+      true
+    )
+  })
+
+  test('the test-file override does not draw a warning about a lowered required rule', () => {
+    const merged = mergeOxlintConfig('{}', NO_POLICIES, true)
+    assert.equal(merged.kind === 'merged' && merged.warnings.length, 0)
+  })
+
+  test('runEnableOxlint --strict writes the preset and lint.strict, and validate is then clean', async () => {
+    const root = await makeApp({ config: ['.oxlintrc.json', '{}'] })
+    try {
+      const { install } = fakeInstall(root)
+      const out = await runEnableOxlint(root, {
+        strict: true,
+        install,
+        exec: execFromFile(root),
+      })
+      assert.deepEqual(out.remaining, [])
+      assert.equal(out.ok, true)
+      assert.deepEqual((await json(root, 'pikku.config.json')).lint, {
+        strict: true,
+      })
+      assert.equal(
+        (await json(root, '.oxlintrc.json')).rules['import/no-cycle'],
+        'error'
+      )
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('--dry-run --strict shows the pikku.config.json diff and writes nothing', async () => {
+    const root = await makeApp({ config: ['.oxlintrc.json', '{}'] })
+    try {
+      const out = await runEnableOxlint(root, { strict: true, dryRun: true })
+      assert.ok(
+        out.diffs.some(
+          (d) =>
+            d.file === 'pikku.config.json' && d.diff.includes('"strict": true')
+        )
+      )
+      assert.equal((await json(root, 'pikku.config.json')).lint, undefined)
     } finally {
       await cleanup(root)
     }

@@ -314,3 +314,64 @@ test('turning a key off stops requiring and reporting its rules', async () => {
     }
   )
 })
+
+const LOOP = [
+  'declare function send(n: number): Promise<void>',
+  'export const run = async (xs: number[]) => {',
+  '  for (const x of xs) await send(x)',
+  '}',
+  '',
+].join('\n')
+const loopPath = join(root, 'src', 'services', 'fanout.ts')
+const workflowLoopPath = join(root, 'src', 'services', 'fanout.workflow.ts')
+
+const withStrictApp = async (oxlint: unknown, body: () => Promise<void>) => {
+  await withConfig(
+    {
+      tsconfig: './tsconfig.json',
+      srcDirectories: ['src'],
+      outDir: '.pikku',
+      lint: { strict: true },
+    },
+    async () => {
+      await mkdir(join(root, 'src', 'services'), { recursive: true })
+      await writeFile(oxlintConfigPath, JSON.stringify(oxlint))
+      await writeFile(loopPath, LOOP)
+      await writeFile(workflowLoopPath, LOOP)
+      try {
+        await body()
+      } finally {
+        await rm(oxlintConfigPath, { force: true })
+        await rm(join(root, 'src', 'services'), {
+          recursive: true,
+          force: true,
+        })
+      }
+    }
+  )
+}
+
+test('lint.strict: the written preset passes setup, an await in a loop warns outside workflow files only', async () => {
+  await withStrictApp(newOxlintConfig(undefined, true), async () => {
+    const { findings } = await runValidate(root)
+    assert.deepStrictEqual(
+      findings.filter((finding) => finding.id === 'oxlint-strict'),
+      []
+    )
+    assert.deepStrictEqual(
+      findings
+        .filter((finding) => finding.id === 'oxlint-eslint-no-await-in-loop')
+        .map((finding) => `${finding.severity} ${finding.path}`),
+      [`warn ${loopPath}`]
+    )
+  })
+})
+
+test('lint.strict: a config without the preset is refused with oxlint-strict', async () => {
+  await withStrictApp(newOxlintConfig(), async () => {
+    const { findings } = await runValidate(root)
+    const strict = findings.filter((finding) => finding.id === 'oxlint-strict')
+    assert.equal(strict.length, 1)
+    assert.match(strict[0]!.message, /import\/no-cycle/)
+  })
+})

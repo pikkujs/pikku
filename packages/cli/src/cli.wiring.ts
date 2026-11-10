@@ -1897,6 +1897,11 @@ wireCLI({
                 'Print the plan and diffs; write and install nothing',
               default: false,
             },
+            strict: {
+              description:
+                'Also merge the strict preset (type-aware promise and throw rules, no-cycle, no-console and more) and set lint.strict in pikku.config.json',
+              default: false,
+            },
           },
         }),
         webhook: pikkuCLICommand({

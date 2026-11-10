@@ -225,6 +225,7 @@ const apiKey = services.variables.get('API_KEY')
     "enforceVariablesService": "error",
     "enforceSupervisor": "error",
     "enforceCliCommands": "error",
+    "strict": false,
     "customServerBootstrap": "warn"
   }
 }
@@ -238,6 +239,14 @@ The four `enforce*` keys are enforced by the app's own oxlint, which `pikku vali
 - `enforceCliCommands`: `no-restricted-properties` on `process.argv`, `Bun.argv`, `Deno.args` and `process`, `Bun` and `Deno` of `globalThis`, `global` and `self`, and `no-restricted-imports` on `commander`, `yargs`, `minimist` and `parseArgs` from `node:util`. Expose a `pikku` CLI command.
 
 These rules apply to apps and addons, not to library packages; a library or tool package sets a key it cannot meet to `"off"`. They share `no-restricted-imports` and `no-restricted-properties`, so the config holds one value of each with every entry. The `overrides` entry `pikku enable oxlint` writes turns the rules off for `**/start.ts`, `**/server.ts`, `**/bin/**`, `**/scripts/**` and `*.test.*` / `*.spec.*`. Exempt one line with `// oxlint-disable-next-line <rule> -- reason`, which works in `.ts` and `.tsx`, or set a key to `"warn"` or `"off"` for the whole project, for example in a CLI tool that legitimately reads the developer's project files or starts processes.
+
+`strict` (default `false`) opts in to the strict oxlint preset. `pikku enable oxlint --strict` merges it into `.oxlintrc.json` and sets `"lint": { "strict": true }`; while that is set, `pikku validate` reports `oxlint-strict` when the resolved config lacks a preset rule at its level or the `typescript`, `unicorn` or `import` plugin. Built-in oxlint 1.88 rules only:
+
+- `error`: `typescript/no-floating-promises`, `typescript/no-misused-promises`, `typescript/await-thenable`, `typescript/only-throw-error`, `eqeqeq`, `no-new-func`, `no-throw-literal`, `prefer-promise-reject-errors`, `typescript/ban-ts-comment`, `typescript/consistent-type-imports`, `import/no-cycle`, `unicorn/no-process-exit`.
+- `warn`: `no-await-in-loop`, `typescript/no-unsafe-type-assertion`, `typescript/no-explicit-any`, `typescript/no-non-null-assertion`, `no-console` (use the `logger` service), `typescript/switch-exhaustiveness-check`, `no-shadow`.
+- `off`, because they conflict with Pikku: `require-await` (a Pikku function is `async` by contract), `import/no-default-export`, `oxc/no-barrel-file`, `no-param-reassign`, `import/no-unassigned-import` (generated side-effect imports). Pedantic style rules are not enabled.
+
+Two `overrides` entries ship with it: `no-await-in-loop` is off in `**/*.workflow.ts`, because `for...of` with `workflow.do` is the workflow DSL's durable sequential fanout; and `typescript/no-floating-promises` is off in `**/*.assert.ts`, `**/*.verify.ts`, `*.test.*` and `*.spec.*`, where `describe` / `test` / `it` return promises nobody awaits (the one override of a required rule that validate accepts, and only with `strict`). Elsewhere `no-await-in-loop` stays a warning: run independent work with `mapConcurrent(items, fn, { concurrency })` from `@pikku/core/utils`, or keep the sequence and say why with `// oxlint-disable-next-line no-await-in-loop -- reason`. A `pikkuWorkflowFunc` in a `*.functions.ts` file is not covered by the glob and takes the inline comment. Never use `mapConcurrent` inside a `pikkuWorkflowFunc` body: steps must go through `workflow.do`, so use `for...of` or `Promise.all(items.map(...))` with `workflow.do` there.
 
 `customServerBootstrap` is the one evaluated by `pikku validate` rather than codegen: it warns when the root `start`/`dev` script boots a server without `pikku dev` / `pikku serve` and no runtime adapter is installed. Set it to `"off"` to keep a hand-rolled entrypoint, or `"error"` to enforce the hooks.
 

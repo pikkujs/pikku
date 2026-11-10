@@ -6,6 +6,9 @@ import { dirname, join, resolve } from 'node:path'
 import { describe, test } from 'node:test'
 import { newOxlintConfig } from './oxlint-enable.js'
 import {
+  OXLINT_STRICT_RULES,
+  OXLINT_STRICT_TEST_FILES,
+  strictOverrides,
   OXLINT_MAX_FINDINGS,
   activePolicyRules,
   missingPolicyEntries,
@@ -1221,6 +1224,172 @@ describe('oxlint run', () => {
   })
 })
 
+const STRICT_RESOLVED_RULES: Record<string, unknown> = Object.fromEntries(
+  Object.entries(OXLINT_STRICT_RULES)
+    .filter(([, level]) => level !== 'off')
+    .map(([rule, level]) => [rule, level === 'error' ? 'deny' : 'warn'])
+)
+const strictResolved = (over: Record<string, unknown> = {}) => {
+  const base = resolvedConfig({
+    plugins: ['unicorn', 'typescript', 'oxc', 'import'],
+  })
+  return {
+    ...base,
+    rules: { ...base.rules, ...STRICT_RESOLVED_RULES },
+    overrides: strictOverrides(),
+    ...over,
+  }
+}
+const strictApp = () => makeApp({ pikkuConfig: { lint: { strict: true } } })
+
+describe('lint.strict', () => {
+  test('is not checked while it is unset', async () => {
+    const root = await makeApp()
+    try {
+      const { exec } = fakeExec(() => reply(resolvedConfig()))
+      assert.deepEqual(await runOxlintSetupChecks(root, exec), [])
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('a config holding the preset, with its overrides, is clean', async () => {
+    const root = await strictApp()
+    try {
+      const { exec } = fakeExec(() => reply(strictResolved()))
+      assert.deepEqual(await runOxlintSetupChecks(root, exec), [])
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('a missing error rule, a warn rule turned off and a missing plugin are reported', async () => {
+    const root = await strictApp()
+    try {
+      const resolved = strictResolved()
+      delete (resolved.rules as Record<string, unknown>)['eqeqeq']
+      ;(resolved.rules as Record<string, unknown>)['no-console'] = 'allow'
+      ;(resolved.rules as Record<string, unknown>)[
+        'typescript/await-thenable'
+      ] = 'warn'
+      const { exec } = fakeExec(() =>
+        reply({ ...resolved, plugins: ['typescript', 'unicorn'] })
+      )
+      const findings = await runOxlintSetupChecks(root, exec)
+      const f = findings.find((x) => x.id === 'oxlint-strict')!
+      assert.equal(f.severity, 'error')
+      assert.match(f.message, /eqeqeq: not enabled/)
+      assert.match(f.message, /no-console: set to "allow"/)
+      assert.match(
+        f.message,
+        /await-thenable: set to "warn", it must be at least "error"/
+      )
+      assert.match(
+        f.message,
+        /import\/no-cycle: the "import" plugin is not in "plugins"/
+      )
+      assert.match(f.fixHint, /pikku enable oxlint --strict/)
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('a warn-level rule at error satisfies the preset', async () => {
+    const root = await strictApp()
+    try {
+      const resolved = strictResolved()
+      ;(resolved.rules as Record<string, unknown>)['no-console'] = 'deny'
+      const { exec } = fakeExec(() => reply(resolved))
+      assert.deepEqual(await runOxlintSetupChecks(root, exec), [])
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('the test-file override of no-floating-promises is accepted only when strict', async () => {
+    const withOverride = {
+      overrides: [
+        {
+          files: OXLINT_STRICT_TEST_FILES,
+          rules: { 'typescript/no-floating-promises': 'allow' },
+        },
+      ],
+    }
+    const strict = await strictApp()
+    const plain = await makeApp()
+    try {
+      const a = await runOxlintSetupChecks(
+        strict,
+        fakeExec(() => reply(strictResolved(withOverride))).exec
+      )
+      assert.deepEqual(a, [])
+      const b = await runOxlintSetupChecks(
+        plain,
+        fakeExec(() => reply(resolvedConfig(withOverride))).exec
+      )
+      assert.ok(ids(b).includes('oxlint-rule-missing'))
+    } finally {
+      await cleanup(strict)
+      await cleanup(plain)
+    }
+  })
+
+  test('an override that turns no-floating-promises off for source files is still reported', async () => {
+    const root = await strictApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply(
+          strictResolved({
+            overrides: [
+              {
+                files: ['src/**'],
+                rules: { 'typescript/no-floating-promises': 'allow' },
+              },
+            ],
+          })
+        )
+      )
+      assert.ok(
+        ids(await runOxlintSetupChecks(root, exec)).includes(
+          'oxlint-rule-missing'
+        )
+      )
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('no-await-in-loop findings point at mapConcurrent and the inline disable', async () => {
+    const root = await strictApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply({
+          number_of_files: 1,
+          diagnostics: [
+            {
+              message: 'Unexpected await inside a loop.',
+              code: 'eslint(no-await-in-loop)',
+              severity: 'warning',
+              filename: 'packages/functions/src/index.ts',
+              labels: [{ span: { line: 3, column: 5 } }],
+            },
+          ],
+        })
+      )
+      const findings = await runOxlintRun(root, exec)
+      const f = findings.find((x) => x.id === 'oxlint-eslint-no-await-in-loop')!
+      assert.equal(f.severity, 'warn')
+      assert.match(f.fixHint, /mapConcurrent/)
+      assert.match(
+        f.fixHint,
+        /oxlint-disable-next-line no-await-in-loop -- reason/
+      )
+    } finally {
+      await cleanup(root)
+    }
+  })
+})
+
 /**
  * The real thing: needs an install with oxlint and oxlint-tsgolint, which this
  * repo does not carry. Point PIKKU_TEST_OXLINT_DIR at a directory whose
@@ -1350,6 +1519,46 @@ describe('oxlint run against the real oxlint', { skip: !realInstall }, () => {
       const findings = await runOxlintSetupChecks(root)
       assert.ok(findings.some((f) => f.id === 'oxlint-rule-missing'))
       assert.ok(findings.some((f) => f.id === 'oxlint-type-aware-off'))
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('the strict preset: loops warn outside workflows, test files may float promises', async () => {
+    const root = await buildApp()
+    try {
+      await write(
+        root,
+        '.oxlintrc.json',
+        JSON.stringify(newOxlintConfig(undefined, true))
+      )
+      await write(
+        root,
+        'pikku.config.json',
+        JSON.stringify({ srcDirectories: ['src'], lint: { strict: true } })
+      )
+      const loop = [
+        'declare function f(n: number): Promise<number>',
+        'export async function g(xs: number[]) {',
+        '  for (const x of xs) await f(x)',
+        '}',
+        '',
+      ].join('\n')
+      const floating =
+        'declare function f(): Promise<number>\nexport function t() { f() }\n'
+      await write(root, 'src/webhook.ts', 'export {}\n')
+      await write(root, 'src/loop.ts', loop)
+      await write(root, 'src/loop.workflow.ts', loop)
+      await write(root, 'src/float.assert.ts', floating)
+      await write(root, 'src/float.ts', floating)
+      assert.deepEqual(await runOxlintSetupChecks(root), [])
+      const findings = (await runOxlintRun(root)).map(
+        (f) => `${f.id} ${f.message.split(' ')[0]!.split(':')[0]}`
+      )
+      assert.deepEqual(findings.sort(), [
+        'oxlint-eslint-no-await-in-loop src/loop.ts',
+        'oxlint-typescript-no-floating-promises src/float.ts',
+      ])
     } finally {
       await cleanup(root)
     }
