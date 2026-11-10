@@ -120,7 +120,7 @@ done
 # but the published CLI predates that and crashes without one. The flag works on
 # both loaders, so it is what lets one config build with either.
 "$_bootstrap_dir/node_modules/.bin/pikku" bootstrap --outDir .pikku
-"$_bootstrap_dir/node_modules/.bin/pikku" --outDir .pikku
+"$_bootstrap_dir/node_modules/.bin/pikku" all --outDir .pikku
 rm -rf "$_bootstrap_dir"
 
 # Build TypeScript (may fail if published CLI generates stale types)
