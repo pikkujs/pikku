@@ -351,6 +351,8 @@ The body of a `pikkuWorkflowFunc` is analysed into a graph, but it runs again on
 - A ternary (`a ? b : c`) anywhere in the body. Use `if`/`else`, which becomes a branch step, or compute the value inside a step function.
 - A `Promise.all(x.map(...))` that does not match the parallel fanout shape. The array must be a data array (`data.items`, not `data.items.filter(...)`), the callback an inline arrow with a plain item parameter, and its body a flat list of `workflow.do` steps. The message says which part did not match. A nested `Promise.all` or a `switch` per item belongs in `pikkuWorkflowComplexFunc`.
 
+The same check rejects what replay would repeat: `Date.now()`, `new Date()` with no arguments, `Math.random()`, `crypto.randomUUID()` (and a bare `randomUUID()`), and `await` of any call that is not a workflow call, such as `await rpc.invoke(...)` or `await someHelper()`. Move the work into a step function and call it with `workflow.do`; `await rpc.invoke('x', input)` becomes `await workflow.do('Step name', 'x', input)`. An id built from `Date.now()` should come from the workflow's own data.
+
 `pikkuWorkflowComplexFunc` and scenarios run the body as written and are not checked. To find affected workflows, run `pikku all` and read `PKU641`. There is no opt-out.
 
 ### An `invokes` or `startsWorkflows` name that does not exist fails the build

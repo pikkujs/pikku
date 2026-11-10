@@ -280,6 +280,17 @@ func validateStrictConstructs(root *ast.Node) []dslValidationError {
 			if msg := strictCallMessage(n); msg != "" {
 				errs = append(errs, dslValidationError{message: msg})
 			}
+			if msg := nondeterministicMessage(n); msg != "" {
+				errs = append(errs, dslValidationError{message: msg})
+			}
+		case ast.IsNewExpression(n):
+			if msg := nondeterministicMessage(n); msg != "" {
+				errs = append(errs, dslValidationError{message: msg})
+			}
+		case ast.IsAwaitExpression(n):
+			if msg := awaitedNonWorkflowMessage(n); msg != "" {
+				errs = append(errs, dslValidationError{message: msg})
+			}
 		}
 		n.ForEachChild(func(c *ast.Node) bool { visit(c); return false })
 	}
@@ -318,6 +329,50 @@ func strictCallMessage(call *ast.Node) string {
 	}
 	return "The " + name + " call " + text + " is not allowed in DSL workflows: it is not part of the workflow graph. " +
 		"Compute the value inside a step function, or use a for..of loop."
+}
+
+const replayHint = " The body runs again on every replay, so the value would differ each time. Do it inside a step function and pass the result on."
+
+// nondeterministicMessage flags Date.now(), new Date(), Math.random() and
+// crypto.randomUUID() (also a bare randomUUID()), which return a different
+// value each time the workflow body replays.
+func nondeterministicMessage(n *ast.Node) string {
+	what := ""
+	switch {
+	case ast.IsNewExpression(n):
+		if e := n.Expression(); ast.IsIdentifier(e) && e.Text() == "Date" && len(n.Arguments()) == 0 {
+			what = "new Date()"
+		}
+	case ast.IsCallExpression(n):
+		callee := n.Expression()
+		switch {
+		case ast.IsIdentifier(callee) && callee.Text() == "randomUUID":
+			what = "randomUUID()"
+		case ast.IsPropertyAccessExpression(callee) && ast.IsIdentifier(callee.Expression()):
+			obj, name := callee.Expression().Text(), callee.Name().Text()
+			if (obj == "Date" && name == "now") || (obj == "Math" && name == "random") || (obj == "crypto" && name == "randomUUID") {
+				what = obj + "." + name + "()"
+			}
+		}
+	}
+	if what == "" {
+		return ""
+	}
+	return what + " is not allowed in the body of a DSL workflow." + replayHint
+}
+
+// awaitedNonWorkflowMessage flags `await f()` where f is not a workflow call
+// or Promise.all: the call is not a step, so it is not in the graph but still
+// runs on every replay.
+func awaitedNonWorkflowMessage(n *ast.Node) string {
+	e := n.Expression()
+	for e != nil && ast.IsParenthesizedExpression(e) {
+		e = e.Expression()
+	}
+	if e == nil || !ast.IsCallExpression(e) || wireMethod(e) != "" || isPromiseAll(e) || strictCallMessage(e) != "" {
+		return ""
+	}
+	return "The awaited call '" + utf16Prefix(tsutil.NodeText(e), 60) + "' is not a workflow step, so it is not part of the graph." + replayHint
 }
 
 // isStatementExpression: the call (through await and parentheses) is the whole

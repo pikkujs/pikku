@@ -178,6 +178,54 @@ export const okWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: a
 	}
 }
 
+func TestDSLWorkflowReplayUnsafeCalls(t *testing.T) {
+	res := runWorkflowProject(t, `
+declare const crypto: { randomUUID(): string }
+declare function helper(): Promise<number>
+export const nowWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  await workflow.do('a', 'stepA', { id: `+"`x-${Date.now()}`"+` })
+})
+export const newDateWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  await workflow.do('a', 'stepA', { at: new Date().toISOString() })
+})
+export const randomWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  await workflow.do('a', 'stepA', { r: Math.random(), u: crypto.randomUUID() })
+})
+export const awaitWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  await helper()
+  await workflow.do('a', 'stepA', data)
+})
+export const okWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  const r = await workflow.do('a', 'stepA', data)
+  await workflow.sleep('nap', '1h')
+  await Promise.all([workflow.do('b', 'stepB', r), workflow.do('c', 'stepC', r)])
+  const fixed = new Date(0)
+})
+export const complexWf = pikkuWorkflowComplexFunc(async ({}: any, data: any, { workflow }: any) => {
+  await helper()
+  await workflow.do('a', 'stepA', { at: Date.now() })
+})
+`, true)
+	got := diagnosticsText(res)
+	for _, want := range []string{
+		"Workflow 'nowWf' does not conform to DSL workflow rules:\n- Date.now() is not allowed",
+		"Workflow 'newDateWf' does not conform to DSL workflow rules:\n- new Date() is not allowed",
+		"Math.random() is not allowed",
+		"crypto.randomUUID() is not allowed",
+		"Workflow 'awaitWf' does not conform to DSL workflow rules:\n- The awaited call 'helper()' is not a workflow step",
+		"runs again on every replay",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing diagnostic %q in:\n%s", want, got)
+		}
+	}
+	for _, name := range []string{"okWf", "complexWf"} {
+		if strings.Contains(got, "Workflow '"+name+"'") {
+			t.Errorf("%s must stay valid:\n%s", name, got)
+		}
+	}
+}
+
 func TestWorkflowApprovalMustDeclareApprovers(t *testing.T) {
 	cases := []struct {
 		name, options string
