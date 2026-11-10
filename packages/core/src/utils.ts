@@ -156,3 +156,6 @@ export {
   isVersionedId,
   parseVersionedId,
 } from './version.js'
+
+export { mapConcurrent } from './utils/map-concurrent.js'
+export type { MapConcurrentOptions } from './utils/map-concurrent.js'

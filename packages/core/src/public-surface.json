@@ -611,6 +611,7 @@
     "getTagGroups",
     "isSerializable",
     "isVersionedId",
+    "mapConcurrent",
     "parseDurationString",
     "parseJson",
     "parseVersionedId",
