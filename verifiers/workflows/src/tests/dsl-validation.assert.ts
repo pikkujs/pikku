@@ -108,6 +108,35 @@ const cases: TestCase[] = [
     shouldFail: true,
   },
 
+  // --- constructs the graph cannot show must fail, not vanish ---
+  {
+    name: 'dsl: rejects forEach around a workflow call',
+    wrapper: 'pikkuWorkflowFunc',
+    body: `
+      ;(data as any).items.forEach(async (i: any) => {
+        await workflow.do('step', 'myRpc', { i })
+      })`,
+    shouldFail: true,
+    mentions: 'PKU641',
+  },
+  {
+    name: 'dsl: rejects a ternary in the body',
+    wrapper: 'pikkuWorkflowFunc',
+    body: `await workflow.do('step', 'myRpc', { to: data.value ? 'a' : 'b' })`,
+    shouldFail: true,
+    mentions: 'PKU641',
+  },
+  {
+    name: 'dsl: rejects a Promise.all(map) that is not over a data array',
+    wrapper: 'pikkuWorkflowFunc',
+    body: `
+      await Promise.all(
+        [data.value].filter(Boolean).map((v) => workflow.do('step', 'myRpc', { v }))
+      )`,
+    shouldFail: true,
+    mentions: 'PKU641',
+  },
+
   // --- approval gates must say who answers them ---
   {
     name: 'dsl: rejects an approval with no approvers',

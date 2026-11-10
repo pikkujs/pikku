@@ -3,9 +3,9 @@
  * Demonstrates parallel notifications across channels
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
-export const multiChannelNotifyWorkflow = pikkuWorkflowFunc<
+export const multiChannelNotifyWorkflow = pikkuWorkflowComplexFunc<
   {
     userId: string
     title: string

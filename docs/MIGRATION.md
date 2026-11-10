@@ -343,6 +343,16 @@ To find affected code, run `pikku all` and read `PKU942`.
 
 In a workflow, `workflow.do(name, rpcName, ...)` and `workflow.expectEventually(...)` with an rpc name that is not a string literal, or a `const` of one, now stop the build with `[PKU943]`. A template string such as `` `step:${id}` `` counts as computed. The step would be missing from the workflow graph, so it cannot be replayed, migrated or found by `pikku graph`. A workflow that the DSL extractor already refuses (`PKU641`) is not reported twice. Pass a literal, or branch and call each step with its own literal. There is no opt-out.
 
+### A `pikkuWorkflowFunc` body with a construct the graph cannot show fails the build
+
+The body of a `pikkuWorkflowFunc` is analysed into a graph, but it runs again on every replay. Some constructs were dropped from the graph without a word while still running, so Studio and `pikku graph` showed a different workflow from the one that executed. They now stop `pikku validate` and `pikku all` with `[PKU641]`:
+
+- `forEach`, `reduce` and a bare `map` whose callback calls a workflow step, or that stands alone as a statement. Use `for (const x of data.items)` (sequential) or `await Promise.all(data.items.map((x) => workflow.do(...)))` (parallel). A `map` that only reshapes data and is not a step (`const ids = data.items.map((i) => i.id)`) is still fine.
+- A ternary (`a ? b : c`) anywhere in the body. Use `if`/`else`, which becomes a branch step, or compute the value inside a step function.
+- A `Promise.all(x.map(...))` that does not match the parallel fanout shape. The array must be a data array (`data.items`, not `data.items.filter(...)`), the callback an inline arrow with a plain item parameter, and its body a flat list of `workflow.do` steps. The message says which part did not match. A nested `Promise.all` or a `switch` per item belongs in `pikkuWorkflowComplexFunc`.
+
+`pikkuWorkflowComplexFunc` and scenarios run the body as written and are not checked. To find affected workflows, run `pikku all` and read `PKU641`. There is no opt-out.
+
 ### An `invokes` or `startsWorkflows` name that does not exist fails the build
 
 After the whole project is inspected, every literal name a function passes to `rpc.invoke`, `rpc.mesh` or `rpc.startWorkflow` must exist, or the build stops with `[PKU944]`. A plain name must be a function, an rpc name (internal, exposed or remote), a workflow or a graph workflow. A name `ns:fn` must be exposed by the addon wired as `ns`. If `ns` is wired but its metadata is not available (the addon is not installed or built), the name cannot be checked and is skipped; if `ns` is not wired, it is refused. An addon package is not checked at all: what it invokes may be provided by the app that wires it. The check does not run in the setup-only pass.

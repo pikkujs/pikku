@@ -113,7 +113,8 @@ ${sharedWorkflowConfigFields}
  * the runner persists progress between them so a restart resumes rather than
  * replays. The default choice for a workflow. Every \`const\` and \`let\` must
  * sit at the top level of the body (PKU641): declare it there and assign inside
- * the block. No try/catch around steps: declare \`compensate\` on the function.
+ * the block. \`forEach\`, \`reduce\`, a bare \`map\` and ternaries are PKU641 too: use
+ * if/else, for..of or \`Promise.all(items.map(...))\`. No try/catch around steps: declare \`compensate\` on the function.
  *
  * @example snippet: workflowSteps
  */

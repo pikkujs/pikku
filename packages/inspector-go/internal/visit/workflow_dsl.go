@@ -33,6 +33,7 @@ type dslCtx struct {
 	loopVars       map[string]bool
 	contextVars    *state.Map[dslContextVar]
 	depth          int
+	strict         bool // pikkuWorkflowFunc: unrecognized constructs are errors, not dropped
 }
 
 func (c *dslCtx) addError(msg string) {
@@ -143,9 +144,14 @@ func (s *Context) extractDSLWorkflow(funcNode *ast.Node, allowInline bool) (res 
 		errors:         &errs,
 		loopVars:       map[string]bool{},
 		contextVars:    state.NewMap[dslContextVar](),
+		strict:         !allowInline,
 	}
 	body := arrow.Body()
-	if pe := validateNoDisallowedPatterns(body, allowInline); len(pe) > 0 {
+	pe := validateNoDisallowedPatterns(body, allowInline)
+	if !allowInline {
+		pe = append(pe, validateStrictConstructs(body)...)
+	}
+	if len(pe) > 0 {
 		return dslResult{reason: formatValidationErrors(pe)}
 	}
 	if ae := validateAwaitedCalls(body); len(ae) > 0 {
@@ -935,22 +941,31 @@ func (c *dslCtx) extractFanoutBodyStep(stmt *ast.Node, body *[]*jsObj) {
 }
 
 func (c *dslCtx) extractParallelFanout(call *ast.Node) *jsObj {
+	step, why := c.matchParallelFanout(call)
+	if step == nil && c.strict {
+		c.addError("The parallel fanout '" + utf16Prefix(tsutil.NodeText(call), 60) + "' could not be expressed in a DSL workflow, " +
+			"so it would be silently dropped from the graph: " + why)
+	}
+	return step
+}
+
+func (c *dslCtx) matchParallelFanout(call *ast.Node) (*jsObj, string) {
 	mapCall := call.Arguments()[0]
 	if !ast.IsCallExpression(mapCall) || !ast.IsPropertyAccessExpression(mapCall.Expression()) {
-		return nil
+		return nil, "Promise.all needs 'items.map(...)' as its argument."
 	}
 	sourceVar, ok := extractSourcePath(mapCall.Expression().Expression())
 	if !ok {
-		return nil
+		return nil, "the array being mapped must be a data array (an identifier or field like 'data.items'), not a computed expression or a call such as 'items.filter(...).map(...)'. Compute it in a step first."
 	}
 	margs := mapCall.Arguments()
 	if len(margs) == 0 || !ast.IsArrowFunction(margs[0]) {
-		return nil
+		return nil, "the map callback must be an inline arrow function."
 	}
 	mapFn := margs[0]
 	params := mapFn.Parameters()
 	if len(params) == 0 || !ast.IsIdentifier(params[0].Name()) {
-		return nil
+		return nil, "the map callback must take the item as a plain identifier parameter (no destructuring)."
 	}
 	itemVar := params[0].Name().Text()
 	child := c.child(itemVar)
@@ -971,9 +986,9 @@ func (c *dslCtx) extractParallelFanout(call *ast.Node) *jsObj {
 		}
 	}
 	if len(body) == 0 {
-		return nil
+		return nil, "the map callback contains no 'workflow.do' call the DSL can model. Use pikkuWorkflowComplexFunc for work that is not a flat list of steps."
 	}
-	return newObj("type", "fanout", "sourceVar", sourceVar, "itemVar", itemVar, "mode", "parallel", "body", body)
+	return newObj("type", "fanout", "sourceVar", sourceVar, "itemVar", itemVar, "mode", "parallel", "body", body), ""
 }
 
 func (c *dslCtx) extractParallelGroup(call *ast.Node) *jsObj {
