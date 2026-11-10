@@ -1030,6 +1030,20 @@ export type PikkuCLIInput = {
      */
     enforceCliCommands?: 'off' | 'warn' | 'error'
     /**
+     * Opt in to the strict oxlint preset. While true, `pikku validate`
+     * requires the app's oxlint to enforce it: at `error`
+     * `typescript/no-floating-promises`, `no-misused-promises`,
+     * `await-thenable`, `only-throw-error`, `eqeqeq`, `no-new-func`,
+     * `no-throw-literal`, `prefer-promise-reject-errors`, `ban-ts-comment`,
+     * `consistent-type-imports`, `import/no-cycle` and
+     * `unicorn/no-process-exit`; at least `warn` `no-await-in-loop`,
+     * `typescript/no-unsafe-type-assertion`, `no-explicit-any`,
+     * `no-non-null-assertion`, `no-console`, `switch-exhaustiveness-check`
+     * and `no-shadow`. `pikku enable oxlint --strict` writes the rules and
+     * sets this key. Defaults to false.
+     */
+    strict?: boolean
+    /**
      * Flag a root `start`/`dev` script that boots a server without `pikku dev`
      * or `pikku serve`, since a hand-rolled entrypoint constructs its own
      * services and never runs the `pikkuServerLifecycle` hooks. Defaults to

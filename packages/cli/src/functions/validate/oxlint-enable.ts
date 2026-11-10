@@ -7,6 +7,11 @@ import {
   DEFEATING_OPTIONS,
   OXLINT_CONFIG_FILES,
   OXLINT_EXEMPT_FILES,
+  OXLINT_STRICT_PLUGINS,
+  OXLINT_STRICT_RULES,
+  isStrict,
+  isStrictTestOverride,
+  strictOverrides,
   activePolicyRules,
   missingPolicyEntries,
   policyLevels,
@@ -36,6 +41,8 @@ const LINT_SCRIPT = 'oxlint --type-aware'
 
 export const EnableOxlintInput = z.object({
   dryRun: z.boolean().optional(),
+  /** Also merge the strict preset and set `lint.strict` in pikku.config.json. */
+  strict: z.boolean().optional(),
 })
 
 export const EnableOxlintOutput = z.object({
@@ -89,30 +96,55 @@ const exemptOverride = (levels: PolicyLevels) => {
       }
 }
 
+/** The strict preset's rules, without the ones OXLINT_REQUIRED_RULES / the policy already carry at error. */
+const strictRules = (): Record<string, unknown> => ({ ...OXLINT_STRICT_RULES })
+
 /** A config file as it should be written when none exists. */
 export const newOxlintConfig = (
-  levels: PolicyLevels = ALL_POLICIES
+  levels: PolicyLevels = ALL_POLICIES,
+  strict = false
 ): Record<string, unknown> => {
   const override = exemptOverride(levels)
+  const overrides = [
+    ...(override ? [override] : []),
+    ...(strict ? strictOverrides() : []),
+  ]
   return {
     $schema: './node_modules/oxlint/configuration_schema.json',
-    plugins: [...DEFAULT_PLUGINS],
+    plugins: strict
+      ? [...new Set([...DEFAULT_PLUGINS, ...OXLINT_STRICT_PLUGINS])]
+      : [...DEFAULT_PLUGINS],
     options: { ...REQUIRED_CONFIG.options },
-    rules: { ...REQUIRED_CONFIG.rules, ...activePolicyRules(levels) },
-    ...(override ? { overrides: [override] } : {}),
+    rules: {
+      ...REQUIRED_CONFIG.rules,
+      ...activePolicyRules(levels),
+      ...(strict ? strictRules() : {}),
+    },
+    ...(overrides.length > 0 ? { overrides } : {}),
   }
 }
 
-export const snippetFor = (levels: PolicyLevels = ALL_POLICIES): string =>
+export const snippetFor = (
+  levels: PolicyLevels = ALL_POLICIES,
+  strict = false
+): string =>
   JSON.stringify(
     {
-      plugins: ['typescript'],
+      plugins: strict ? [...OXLINT_STRICT_PLUGINS] : ['typescript'],
       options: REQUIRED_CONFIG.options,
-      rules: { ...REQUIRED_CONFIG.rules, ...activePolicyRules(levels) },
+      rules: {
+        ...REQUIRED_CONFIG.rules,
+        ...activePolicyRules(levels),
+        ...(strict ? strictRules() : {}),
+      },
+      ...(strict ? { overrides: strictOverrides() } : {}),
     },
     null,
     2
   )
+
+const isOff = (v: unknown): boolean =>
+  (Array.isArray(v) ? v[0] : v) === 'off' || (Array.isArray(v) ? v[0] : v) === 0
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === 'object' && !Array.isArray(v)
@@ -129,7 +161,8 @@ export type MergeResult =
  */
 export const mergeOxlintConfig = (
   text: string,
-  levels: PolicyLevels = ALL_POLICIES
+  levels: PolicyLevels = ALL_POLICIES,
+  strict = false
 ): MergeResult => {
   let parsed: unknown
   try {
@@ -153,10 +186,18 @@ export const mergeOxlintConfig = (
     if (!Array.isArray(config.plugins)) {
       return { kind: 'unsafe', reason: '"plugins" is not an array' }
     }
-    if (!config.plugins.includes('typescript')) {
-      config.plugins.push('typescript')
-      changed = true
+    for (const plugin of strict ? OXLINT_STRICT_PLUGINS : ['typescript']) {
+      if (!config.plugins.includes(plugin)) {
+        config.plugins.push(plugin)
+        changed = true
+      }
     }
+  } else if (strict) {
+    // `import` is not a default plugin, and setting `plugins` replaces the defaults.
+    config.plugins = [
+      ...new Set([...DEFAULT_PLUGINS, ...OXLINT_STRICT_PLUGINS]),
+    ]
+    changed = true
   }
   if (config.options !== undefined && !isObject(config.options)) {
     return { kind: 'unsafe', reason: '"options" is not an object' }
@@ -252,6 +293,29 @@ export const mergeOxlintConfig = (
       }
     }
   }
+  if (strict) {
+    for (const [rule, level] of Object.entries(OXLINT_STRICT_RULES)) {
+      const current = rules[rule]
+      if (level === 'off') {
+        if (current === undefined) {
+          rules[rule] = 'off'
+          changed = true
+        }
+        continue
+      }
+      const ok =
+        current !== undefined &&
+        (isError(current) || (level === 'warn' && !!current && !isOff(current)))
+      if (!ok) {
+        // keep any options the user gave the rule, raise only the level
+        rules[rule] =
+          Array.isArray(current) && current.length > 1
+            ? [level, ...current.slice(1)]
+            : level
+        changed = true
+      }
+    }
+  }
   config.rules = rules
 
   // `process.env` is now `no-restricted-properties`; the rule this key used to
@@ -271,11 +335,38 @@ export const mergeOxlintConfig = (
     config.overrides = overrides
   }
 
+  if (strict) {
+    const overrides = Array.isArray(config.overrides) ? config.overrides : []
+    for (const wanted of strictOverrides()) {
+      const rule = Object.keys(wanted.rules)[0]
+      const present = overrides.some(
+        (o) =>
+          isObject(o) &&
+          isObject(o.rules) &&
+          o.rules[rule] !== undefined &&
+          Array.isArray(o.files) &&
+          wanted.files.every((f) => (o.files as unknown[]).includes(f))
+      )
+      if (!present) {
+        overrides.push(wanted)
+        changed = true
+      }
+    }
+    config.overrides = overrides
+  }
+
   if (Array.isArray(config.overrides)) {
     for (const override of config.overrides) {
       if (!isObject(override) || !isObject(override.rules)) continue
       for (const rule of OXLINT_REQUIRED_RULES) {
         const level = override.rules[rule]
+        if (
+          strict &&
+          rule === 'typescript/no-floating-promises' &&
+          isStrictTestOverride(override.files)
+        ) {
+          continue
+        }
         if (level !== undefined && !isError(level)) {
           warnings.push(
             `an override for ${JSON.stringify(override.files ?? [])} lowers ${rule}; left as is, remove it`
@@ -346,9 +437,15 @@ export const runEnableOxlint = async (
   root: string,
   {
     dryRun = false,
+    strict: strictFlag = false,
     install = defaultInstall,
     exec,
-  }: { dryRun?: boolean; install?: InstallFn; exec?: OxlintExec } = {}
+  }: {
+    dryRun?: boolean
+    strict?: boolean
+    install?: InstallFn
+    exec?: OxlintExec
+  } = {}
 ): Promise<EnableOxlintOutput> => {
   const out: EnableOxlintOutput = {
     ok: true,
@@ -401,22 +498,25 @@ export const runEnableOxlint = async (
 
   // 2. config
   const levels = policyLevels(project.config.lint)
+  // `--strict` turns the preset on; a project that already set `lint.strict` keeps it.
+  const strict = strictFlag || isStrict(project.config.lint)
   const existing = findOxlintConfig(project)
   let configSetsTypeAware = false
   const writes: Array<{ file: string; before: string; after: string }> = []
   if (!existing) {
     const file = join(project.installDir, OXLINT_CONFIG_FILES[0])
-    const after = JSON.stringify(newOxlintConfig(levels), null, 2) + '\n'
+    const after =
+      JSON.stringify(newOxlintConfig(levels, strict), null, 2) + '\n'
     writes.push({ file, before: '', after })
     configSetsTypeAware = true
     out.actions.push(`config: create ${rel(file)}`)
   } else if (existing.file.endsWith('.oxlintrc.json')) {
     const before = await readFile(existing.file, 'utf8')
-    const merged = mergeOxlintConfig(before, levels)
+    const merged = mergeOxlintConfig(before, levels, strict)
     if (merged.kind === 'unsafe') {
       out.ok = false
       out.manual.push(
-        `cannot edit ${rel(existing.file)} safely: ${merged.reason}. Merge this into it by hand:\n${snippetFor(levels)}`
+        `cannot edit ${rel(existing.file)} safely: ${merged.reason}. Merge this into it by hand:\n${snippetFor(levels, strict)}`
       )
     } else {
       configSetsTypeAware = true
@@ -431,7 +531,24 @@ export const runEnableOxlint = async (
   } else {
     out.ok = false
     out.manual.push(
-      `cannot edit ${rel(existing.file)} safely: only .oxlintrc.json is rewritten. Add this to it by hand (plugins, options.typeAware, rules):\n${snippetFor(levels)}`
+      `cannot edit ${rel(existing.file)} safely: only .oxlintrc.json is rewritten. Add this to it by hand (plugins, options.typeAware, rules):\n${snippetFor(levels, strict)}`
+    )
+  }
+
+  // `pikku validate` reads `lint.strict` to know the preset is required.
+  const configPath = join(project.root, 'pikku.config.json')
+  let pikkuConfigBefore: string | undefined
+  let pikkuConfigAfter: string | undefined
+  if (strictFlag && !isStrict(project.config.lint)) {
+    pikkuConfigBefore = await readFile(configPath, 'utf8')
+    const parsed = JSON.parse(pikkuConfigBefore) as Record<string, unknown>
+    parsed.lint = {
+      ...(isObject(parsed.lint) ? parsed.lint : {}),
+      strict: true,
+    }
+    pikkuConfigAfter = JSON.stringify(parsed, null, 2) + '\n'
+    out.actions.push(
+      'config: set "lint": { "strict": true } in pikku.config.json'
     )
   }
 
@@ -459,6 +576,12 @@ export const runEnableOxlint = async (
     for (const w of writes) {
       out.diffs.push({ file: rel(w.file), diff: lineDiff(w.before, w.after) })
     }
+    if (pikkuConfigAfter && pikkuConfigBefore) {
+      out.diffs.push({
+        file: rel(configPath),
+        diff: lineDiff(pikkuConfigBefore, pikkuConfigAfter),
+      })
+    }
     if (pkgAfter && pkgText) {
       out.diffs.push({
         file: rel(pkgPath),
@@ -469,6 +592,7 @@ export const runEnableOxlint = async (
   }
 
   for (const w of writes) await writeFile(w.file, w.after, 'utf8')
+  if (pikkuConfigAfter) await writeFile(configPath, pikkuConfigAfter, 'utf8')
 
   // The package manager rewrites package.json itself when it adds, so the
   // script edit goes in first and the add merges into it.

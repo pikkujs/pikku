@@ -69,6 +69,16 @@ no-restricted-properties -- why`. These rules apply to apps and addons, not libr
   Do not exempt a services directory: the factory is where a service gets its
   value, and it reads `variables` like everything else.
 
+- **No `await` in a loop in app code (strict mode).** With `lint.strict` on
+  (`pikku enable oxlint --strict`) `no-await-in-loop` warns. Use
+  `mapConcurrent(items, fn, { concurrency })` from `@pikku/core/utils`
+  (results in input order, `concurrency: 1` is sequential, first rejection
+  stops new work, optional `signal`), or keep the loop with
+  `// oxlint-disable-next-line no-await-in-loop -- reason`. Inside a
+  `pikkuWorkflowFunc` do the opposite: `for...of` with `workflow.do` is the
+  durable sequential fanout (`*.workflow.ts` is exempt), and `mapConcurrent`
+  must not be used there. See `references/config.md` for the whole preset.
+
 - **`secrets` never reaches a function.** `WiredServices` is wrapped in
   `SecretlessServices<…>`, so it is stripped at the type level rather than merely
   omitted by convention. Read a secret in a service factory or middleware and
