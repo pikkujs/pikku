@@ -185,6 +185,55 @@ export const okWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: a
 }
 
 #[test]
+fn dsl_workflow_replay_unsafe_calls() {
+    let res = run_project(
+        "replay",
+        "
+declare const crypto: { randomUUID(): string }
+declare function helper(): Promise<number>
+export const nowWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  await workflow.do('a', 'stepA', { id: `x-${Date.now()}` })
+})
+export const newDateWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  await workflow.do('a', 'stepA', { at: new Date().toISOString() })
+})
+export const randomWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  await workflow.do('a', 'stepA', { r: Math.random(), u: crypto.randomUUID() })
+})
+export const awaitWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  await helper()
+  await workflow.do('a', 'stepA', data)
+})
+export const okWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  const r = await workflow.do('a', 'stepA', data)
+  await workflow.sleep('nap', '1h')
+  await Promise.all([workflow.do('b', 'stepB', r), workflow.do('c', 'stepC', r)])
+  const fixed = new Date(0)
+})
+export const complexWf = pikkuWorkflowComplexFunc(async ({}: any, data: any, { workflow }: any) => {
+  await helper()
+  await workflow.do('a', 'stepA', { at: Date.now() })
+})
+",
+        true,
+    );
+    let got = diagnostics_text(&res);
+    for want in [
+        "Workflow 'nowWf' does not conform to DSL workflow rules:\n- Date.now() is not allowed",
+        "Workflow 'newDateWf' does not conform to DSL workflow rules:\n- new Date() is not allowed",
+        "Math.random() is not allowed",
+        "crypto.randomUUID() is not allowed",
+        "Workflow 'awaitWf' does not conform to DSL workflow rules:\n- The awaited call 'helper()' is not a workflow step",
+        "runs again on every replay",
+    ] {
+        assert!(got.contains(want), "missing diagnostic {want:?} in:\n{got}");
+    }
+    for name in ["okWf", "complexWf"] {
+        assert!(!got.contains(&format!("Workflow '{name}'")), "{name} must stay valid:\n{got}");
+    }
+}
+
+#[test]
 fn complex_workflow_falls_back() {
     let res = run_project(
         "complex",

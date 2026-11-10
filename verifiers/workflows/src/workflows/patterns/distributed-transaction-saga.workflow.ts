@@ -18,7 +18,7 @@ export const distributedTransactionSagaWorkflow = pikkuWorkflowFunc<
   func: async (_services, data, { workflow }) => {
     // Step 1: Debit source account (mock via payment process)
     const debit = await workflow.do('Debit source account', 'paymentProcess', {
-      orderId: `transfer-${Date.now()}`,
+      orderId: `transfer-${data.sourceAccountId}-${data.targetAccountId}`,
       amount: data.amount,
       currency: 'USD',
       paymentMethodId: data.sourceAccountId,

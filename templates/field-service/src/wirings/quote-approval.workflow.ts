@@ -39,7 +39,7 @@ export const quoteApprovalWorkflow = pikkuWorkflowFunc<
 >({
   expose: true,
   scopes: ['quotes:create'],
-  func: async (_services, data, { workflow, rpc }) => {
+  func: async (_services, data, { workflow }) => {
     const decision = await workflow.approval(`Approve quote ${data.quoteId}`, {
       schema: QuoteDecision,
       approvers: 'not-initiator',
@@ -60,7 +60,9 @@ export const quoteApprovalWorkflow = pikkuWorkflowFunc<
       approve: decision.data.approve,
     })
 
-    await rpc.invoke('noticeQuoteDecided', {
+    // A step, not a bare rpc.invoke: the body runs again on every replay, and a
+    // call outside a step would announce the decision each time.
+    await workflow.do('Announce the decision', 'noticeQuoteDecided', {
       quoteId: data.quoteId,
       status: result.status,
     })

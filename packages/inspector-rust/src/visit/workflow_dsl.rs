@@ -305,6 +305,17 @@ fn validate_strict_constructs(root: P<Node>) -> Vec<String> {
             if let Some(msg) = strict_call_message(n) {
                 errs.push(msg);
             }
+            if let Some(msg) = nondeterministic_message(n) {
+                errs.push(msg);
+            }
+        } else if ast::is_new_expression(n) {
+            if let Some(msg) = nondeterministic_message(n) {
+                errs.push(msg);
+            }
+        } else if ast::is_await_expression(n) {
+            if let Some(msg) = awaited_non_workflow_message(n) {
+                errs.push(msg);
+            }
         }
         n.for_each_child(&mut |c| {
             visit(c, errs);
@@ -341,6 +352,53 @@ fn strict_call_message(call: P<Node>) -> Option<String> {
         "map" => format!("The map call {text} is not allowed in DSL workflows unless it is the direct argument of Promise.all. Use Promise.all(items.map(...)) for a parallel fanout or a for..of loop for a sequential one."),
         _ => format!("The {name} call {text} is not allowed in DSL workflows: it is not part of the workflow graph. Compute the value inside a step function, or use a for..of loop."),
     })
+}
+
+const REPLAY_HINT: &str = " The body runs again on every replay, so the value would differ each time. Do it inside a step function and pass the result on.";
+
+/// Date.now(), new Date(), Math.random() and crypto.randomUUID() (also a bare
+/// randomUUID()) return a different value each time the body replays.
+fn nondeterministic_message(n: P<Node>) -> Option<String> {
+    let what = if ast::is_new_expression(n) {
+        let e = n.expression()?;
+        if ast::is_identifier(e) && e.text() == "Date" && n.arguments().is_empty() {
+            "new Date()".to_string()
+        } else {
+            return None;
+        }
+    } else {
+        let callee = n.expression()?;
+        if ast::is_identifier(callee) && callee.text() == "randomUUID" {
+            "randomUUID()".to_string()
+        } else if ast::is_property_access_expression(callee) && callee.expression().is_some_and(ast::is_identifier) {
+            let obj = callee.expression().unwrap().text().to_string();
+            let name = callee.name().unwrap().text().to_string();
+            if (obj == "Date" && name == "now") || (obj == "Math" && name == "random") || (obj == "crypto" && name == "randomUUID") {
+                format!("{obj}.{name}()")
+            } else {
+                return None;
+            }
+        } else {
+            return None;
+        }
+    };
+    Some(format!("{what} is not allowed in the body of a DSL workflow.{REPLAY_HINT}"))
+}
+
+/// `await f()` where f is not a workflow call or Promise.all: not a step, so
+/// not in the graph, but it still runs on every replay.
+fn awaited_non_workflow_message(n: P<Node>) -> Option<String> {
+    let mut e = n.expression()?;
+    while ast::is_parenthesized_expression(e) {
+        e = e.expression()?;
+    }
+    if !ast::is_call_expression(e) || !wire_method(e).is_empty() || is_promise_all(e) || strict_call_message(e).is_some() {
+        return None;
+    }
+    Some(format!(
+        "The awaited call '{}' is not a workflow step, so it is not part of the graph.{REPLAY_HINT}",
+        utf16_prefix(&node_text(e), 60)
+    ))
 }
 
 /// The call (through await and parentheses) is the whole expression of an
