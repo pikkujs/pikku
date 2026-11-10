@@ -19,6 +19,7 @@ import {
   assertFrontendSupported,
   backendState,
   buildBackend,
+  NOTHING_TO_DEPLOY,
   planBackendDeploys,
   planFrontendDeploys,
   resultFileFor,
@@ -470,6 +471,14 @@ export const deployApply = pikkuSessionlessFunc<
       backend: data?.backend,
       provider: data?.provider,
     })
+    if (
+      backends.length === 0 &&
+      planFrontendDeploys(config, { provider: data?.provider }, backends)
+        .length === 0
+    ) {
+      logger.info(NOTHING_TO_DEPLOY)
+      return
+    }
     // Every backend's provider is resolved before the first one builds, so a
     // missing package or an unsupported --runtime stops the run before any
     // backend has deployed.

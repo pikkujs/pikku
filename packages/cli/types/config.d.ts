@@ -1101,10 +1101,11 @@ export type PikkuCLIInput = {
   /**
    * The servers this project builds, by name. Each is a filtered, tree-shaken
    * build of the one functions package: its `filter` decides which functions
-   * it carries, so two backends may carry the same function. Always declared,
-   * even for a single server; a config without any is refused.
+   * it carries, so two backends may carry the same function. Optional: a
+   * project declares backends, frontends or both; one declaring neither is
+   * refused unless it is an addon.
    */
-  backends: Record<string, PikkuBackendInput>
+  backends?: Record<string, PikkuBackendInput>
 }
 
 /**
@@ -1121,7 +1122,8 @@ export type PikkuEnvironmentBackendInput = {
 
 /** An `environments.<name>` entry as written in pikku.config.json. */
 export type PikkuEnvironmentInput = {
-  backends: Record<string, string | PikkuEnvironmentBackendInput>
+  /** Required when the project declares backends. */
+  backends?: Record<string, string | PikkuEnvironmentBackendInput>
   frontends?: Record<string, string>
   /** Real consequences: only an `accountable` virtual user may run against it. */
   production?: boolean

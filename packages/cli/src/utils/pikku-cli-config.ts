@@ -461,9 +461,14 @@ const assertBackendsDeclared = (
     backends && typeof backends === 'object' && !Array.isArray(backends)
       ? Object.keys(backends)
       : []
-  if (names.length === 0) {
+  const frontends = config.frontends
+  const frontendNames =
+    frontends && typeof frontends === 'object' && !Array.isArray(frontends)
+      ? Object.keys(frontends)
+      : []
+  if (names.length === 0 && frontendNames.length === 0) {
     throw new PikkuCLIConfigError(
-      `${file} declares no backends. Declare every server this project builds, even a single one: "backends": { "api": { "filter": {} } }. An empty filter carries every function.`
+      `${file} declares no backends and no frontends. Declare at least one of backends or frontends (addon projects are exempt): "backends": { "api": { "filter": {} } }. An empty filter carries every function.`
     )
   }
 

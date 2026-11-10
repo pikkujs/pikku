@@ -121,7 +121,8 @@ Config lives in `pikku.config.json`:
 ```
 
 Generated files always land in `.pikku/` beside the config. `backends` names each
-deployable server; `filter` selects which functions it carries (`names`, `tags`,
+deployable server (a project declares `backends`, `frontends` or both; neither is
+an error unless it is an addon); `filter` selects which functions it carries (`names`, `tags`,
 `wires`, `directories`, `httpRoutes`, `excludeTags`, …). The loader accepts only
 the documented keys and refuses the rest, naming where a moved key now lives.
 

@@ -39,12 +39,17 @@ export type DevBackendProcess = {
  * - `parent`: two or more backends are selected. This process runs codegen once
  *   and watches; each backend is its own child process on its own port, serving
  *   `.pikku/backends/<name>` and running no codegen of its own.
+ * - `frontends`: the project declares frontends and no backend. Only the
+ *   frontends run: no server, no codegen, nothing for them to proxy to.
  */
 export type DevPlan =
   | { mode: 'inline'; backend?: string; port: number }
   | { mode: 'parent'; processes: DevBackendProcess[] }
+  | { mode: 'frontends' }
 
 type PlanConfig = {
+  addon?: unknown
+  frontends?: Record<string, unknown>
   backends?: Record<string, { dev?: { port?: number } }>
   environments?: Record<string, PikkuEnvironment>
 }
@@ -84,6 +89,13 @@ export const planDev = (
   }
 ): DevPlan => {
   const selected = selectBackends(config.backends, options.backend)
+  if (
+    selected.length === 0 &&
+    !config.addon &&
+    Object.keys(config.frontends ?? {}).length > 0
+  ) {
+    return { mode: 'frontends' }
+  }
   const hasPort = options.port !== undefined && options.port !== ''
   if (selected.length <= 1) {
     const [name] = selected

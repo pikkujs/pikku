@@ -24,9 +24,9 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
-### `pikku.config.json` declares `backends`; `extends`, `namedFilters` and the filter flags are gone
+### `pikku.config.json` declares `backends` and/or `frontends`; `extends`, `namedFilters` and the filter flags are gone
 
-Every config (addons excepted) must declare the servers it builds: `"backends": { "api": { "filter": {} } }`, even for one. A backend is a named, filtered build of your functions package; its `filter` takes every field `namedFilters` did (`tags`, `names`, `wires`, `target`, `excludeTarget`, ...). `pikku all` writes the full tree to `.pikku/`, then one filtered tree per backend to `.pikku/backends/<name>/`; `pikku all --backend <name>` builds only that one. Two or more backends each need `dev.port`.
+A config declares the servers it builds as `backends` (`"backends": { "api": { "filter": {} } }`, even for one), the apps it ships as `frontends`, or both. One declaring neither is refused; an addon declares neither and is exempt. A frontend-only project builds no backend: `pikku all` runs only the shared pass and writes no `.pikku/backends/` or `.pikku/sdk/`, `pikku dev` runs only its frontends, `pikku serve` errors "no backend to serve", and `environments.<name>.backends` may be omitted. A backend is a named, filtered build of your functions package; its `filter` takes every field `namedFilters` did (`tags`, `names`, `wires`, `target`, `excludeTarget`, ...). `pikku all` writes the full tree to `.pikku/`, then one filtered tree per backend to `.pikku/backends/<name>/`; `pikku all --backend <name>` builds only that one. Two or more backends each need `dev.port`.
 
 - `namedFilters` and a config-file `filters`: declare each as a backend. The loader names the new home.
 - `extends`: removed. Copy what the parent set into the one root config.

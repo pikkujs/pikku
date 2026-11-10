@@ -932,7 +932,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
             rootDir: config.rootDir,
             backend: name,
             backendOutDir,
-            publish: config.backends[name]?.publish === true,
+            publish: config.backends?.[name]?.publish === true,
           })
           logger.debug(`• backend ${name} SDK at ${sdk.dir}`)
         }

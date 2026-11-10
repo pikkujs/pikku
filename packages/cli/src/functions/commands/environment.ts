@@ -49,6 +49,11 @@ export const pickEnvironmentBackend = (
   backend?: string
 ): string => {
   const names = Object.keys(environment.backends)
+  if (names.length === 0) {
+    throw new Error(
+      `Environment '${name}' declares no backend, and this command calls one. Declare a backend in pikku.config.json and name it under environments.${name}.backends.`
+    )
+  }
   if (backend !== undefined) {
     if (!(backend in environment.backends)) {
       throw new Error(

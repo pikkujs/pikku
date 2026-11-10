@@ -179,7 +179,7 @@ type check stay on 7.
 `pikku.config.json` is the main configuration file:
 
 - `srcDirectories` — where your function definitions live
-- `backends` — each deployable server, with a `filter` and `dev.port`; clients are generated per backend at `.pikku/sdk/<backend>/exposed/`
+- `backends` — each deployable server, with a `filter` and `dev.port` (optional: declare `backends`, `frontends` or both; neither is an error unless the project is an addon); clients are generated per backend at `.pikku/sdk/<backend>/exposed/`
 - `packageMappings` — map local packages to published names
 - `openAPI` — OpenAPI generation settings
 

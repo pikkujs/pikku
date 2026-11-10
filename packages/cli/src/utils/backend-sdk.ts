@@ -208,7 +208,7 @@ export const writeBackendPassSdk = (
     exposed: Object.keys(state.rpc.exposedMeta).sort(),
     remote: Object.keys(state.rpc.remoteMeta).sort(),
   }
-  const publish = config.backends[backend]?.publish === true
+  const publish = config.backends?.[backend]?.publish === true
 
   if (summary.remote.length > 0) {
     try {

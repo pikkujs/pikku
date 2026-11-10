@@ -43,6 +43,7 @@ import {
 } from '../../server/local-content-config.js'
 import { disableDevVirtualUserSignIn } from '../../server/virtual-user-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
+import { assertBackendToServe } from '../../utils/select-backends.js'
 import { addGlobalMiddleware } from '@pikku/core/middleware'
 import { startRunTelemetry } from '../../utils/run-telemetry.js'
 
@@ -62,6 +63,7 @@ export const serve = pikkuSessionlessFunc<
     },
     { port, model, backend }
   ) => {
+    assertBackendToServe(config)
     disableDevVirtualUserSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
     const telemetry = startRunTelemetry({

@@ -2,6 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  pickEnvironmentBackend,
   apiUrlPort,
   DEFAULT_DEV_PORT,
   isLocalUrl,
@@ -380,5 +381,18 @@ describe('apiUrlPort', () => {
     assert.equal(apiUrlPort('http://localhost:4100/api'), 4100)
     assert.equal(apiUrlPort('http://localhost'), 80)
     assert.equal(apiUrlPort('https://localhost'), 443)
+  })
+})
+
+describe('an environment with no backend', () => {
+  test('a command that calls a backend says there is none', () => {
+    assert.throws(
+      () =>
+        pickEnvironmentBackend('local', {
+          backends: {},
+          frontends: {},
+        } as never),
+      /declares no backend/
+    )
   })
 })

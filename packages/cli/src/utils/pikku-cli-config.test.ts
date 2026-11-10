@@ -147,14 +147,62 @@ describe('getPikkuCLIConfig', () => {
       await assert.rejects(load(root), /publish/)
     })
 
-    test('refuses a config with no backends', async () => {
+    test('refuses a config with neither backends nor frontends', async () => {
       const root = await writeConfig({ backends: undefined })
-      await assert.rejects(load(root), /declares no backends/)
+      await assert.rejects(
+        load(root),
+        /declares no backends and no frontends.*at least one of backends or frontends/
+      )
     })
 
-    test('refuses an empty backends table', async () => {
-      const root = await writeConfig({ backends: {} })
-      await assert.rejects(load(root), /declares no backends/)
+    test('refuses empty backends and frontends tables', async () => {
+      const root = await writeConfig({ backends: {}, frontends: {} })
+      await assert.rejects(load(root), /declares no backends and no frontends/)
+    })
+
+    test('accepts backends only', async () => {
+      const root = await writeConfig()
+      const config = await load(root)
+      assert.deepEqual(Object.keys(config.backends ?? {}), ['api'])
+      assert.equal(config.frontends, undefined)
+    })
+
+    test('accepts frontends only', async () => {
+      const root = await writeConfig({
+        backends: undefined,
+        frontends: { web: { cwd: './web' } },
+      })
+      const config = await load(root)
+      assert.equal(config.backends, undefined)
+      assert.deepEqual(Object.keys(config.frontends ?? {}), ['web'])
+    })
+
+    test('accepts backends and frontends', async () => {
+      const root = await writeConfig({ frontends: { web: { cwd: './web' } } })
+      const config = await load(root)
+      assert.deepEqual(Object.keys(config.backends ?? {}), ['api'])
+      assert.deepEqual(Object.keys(config.frontends ?? {}), ['web'])
+    })
+
+    test('a frontend-only project may omit environments.<name>.backends', async () => {
+      const root = await writeConfig({
+        backends: undefined,
+        frontends: { web: { cwd: './web' } },
+        environments: {
+          local: { frontends: { web: 'http://localhost:5000' } },
+        },
+      })
+      const config = await load(root)
+      assert.deepEqual(config.environments?.local?.backends, {})
+    })
+
+    test('a project with backends still needs environments.<name>.backends', async () => {
+      const root = await writeConfig({
+        environments: {
+          local: { frontends: { web: 'http://localhost:5000' } },
+        },
+      })
+      await assert.rejects(load(root), /must name at least one backend/)
     })
 
     test('an addon declares no backends', async () => {

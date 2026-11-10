@@ -94,9 +94,53 @@ import {
   parseFrontendNames,
   selectDevFrontends,
   startDevFrontends,
+  type DevFrontend,
   type RunningFrontends,
 } from './dev-frontends.js'
 import { AUTH_GENERATED_DEV_SECRETS } from '../wirings/auth/serialize-auth-gen.js'
+
+/**
+ * `pikku dev` for a project that declares frontends and no backend: run the
+ * frontends and nothing else. There is no API for them to proxy to, so
+ * VITE_API_PROXY is left as the shell and .env set it.
+ */
+const runFrontendsOnly = async ({
+  frontends,
+  shellEnv,
+  rootEnv,
+  logger,
+}: {
+  frontends: DevFrontend[]
+  shellEnv: NodeJS.ProcessEnv
+  rootEnv: Record<string, string>
+  logger: { info: (m: string) => void; error: (m: string) => void }
+}): Promise<void> => {
+  if (frontends.length === 0) {
+    throw new Error(
+      'pikku dev: this project declares no backends and no frontend with dev.command, so there is nothing to run.'
+    )
+  }
+  const running = await startDevFrontends({
+    frontends,
+    write: (line) => console.log(line),
+    envFor: (frontend) => frontendEnv(shellEnv, rootEnv, frontend.cwd),
+  })
+  for (const { name, url, primary } of running.urls) {
+    logger.info(`  ${name}${primary ? ' (primary)' : ''}: ${url}`)
+  }
+  const stop = (exitCode: number) => {
+    running.stop()
+    process.exit(exitCode)
+  }
+  void running.failure.then(({ name, reason }) => {
+    logger.error(`dev: frontend "${name}" ${reason} — stopping`)
+    stop(1)
+  })
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(signal, () => stop(0))
+  }
+  await new Promise(() => {})
+}
 
 export const dev = pikkuSessionlessFunc<
   {
@@ -166,6 +210,15 @@ export const dev = pikkuSessionlessFunc<
     const shellEnv = { ...process.env }
     const rootEnvPath = join(config.rootDir, '.env')
     fillMissing(process.env, readEnvFile(rootEnvPath))
+    if (plan.mode === 'frontends') {
+      await runFrontendsOnly({
+        frontends: devFrontends,
+        shellEnv,
+        rootEnv: readEnvFile(rootEnvPath),
+        logger,
+      })
+      return
+    }
     process.env.PIKKU_ENV ??= resolveDevEnvironmentName(
       config.environments ?? {}
     )

@@ -117,6 +117,7 @@ A rule that was chosen, and what it rules out.
 - [A backend generates an exposed and a remote SDK](a-backend-generates-an-exposed-and-a-remote-sdk.md) — each backend gets .pikku/sdk/<backend>/exposed/ and, with remote functions, remote/; the pass writes inside its outDir and the parent relocates; publish is opt-in and fail closed
 - [Deploy is a project default with per-backend overrides](deploy-is-a-project-default-with-per-backend-overrides.md) — deploy sets provider and target for every unit, a backend or frontend overrides them, grouping and embed are per backend, no provider means standalone, and frontends deploy through a provider that supports their kind
 - [Content buckets are declared at the root and typed per backend](content-buckets-are-declared-at-the-root-and-typed-per-backend.md) — root content holds directory, limit and every bucket; a backend lists its buckets and prefixes; pikku all writes a ContentBucket type per backend; closed by default; runtime allowlist deferred
+- [A project declares backends, frontends or both](a-project-declares-backends-frontends-or-both.md) — each is optional, neither is an error unless the project is an addon; frontend-only means pikku all writes only the shared tree, dev runs only frontends, serve errors, deploy covers frontends
 - [The loader accepts only the keys of the CLI input type](the-loader-accepts-only-the-keys-of-the-cli-input-type.md) — unknown or moved keys are refused naming their home; environments name backends and frontends
 
 <!-- /pikku:knowledge-index -->

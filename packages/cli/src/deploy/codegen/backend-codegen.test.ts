@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { getInitialInspectorState } from '@pikku/inspector'
 import { generateBackendCodegen } from './per-unit-codegen.js'
 import { selectBackends } from '../../utils/select-backends.js'
@@ -36,6 +37,30 @@ writeFileSync(join(out, 'args.json'), JSON.stringify({ args, deployCodegen: proc
 }
 
 describe('generateBackendCodegen', () => {
+  test('no backends writes no .pikku/backends tree and runs nothing', async (t) => {
+    if (pathsAreBroken()) return t.skip('node:path is mocked as win32')
+    const root = await mkdtemp(`${tmpdir()}/pikku-backends-`)
+    dirs.push(root)
+    assert.deepEqual(selectBackends(undefined), [])
+    const { backendDirs, errors } = await generateBackendCodegen({
+      projectDir: root,
+      backends: selectBackends(undefined),
+      inspectorState: getInitialInspectorState(root) as never,
+      pikkuBin: await fakePikku(root),
+    })
+    assert.equal(backendDirs.size, 0)
+    assert.deepEqual(errors, [])
+    assert.equal(existsSync(join(root, '.pikku')), false)
+  })
+
+  test('--backend with no backends declared lists (none)', () => {
+    assert.throws(
+      () => selectBackends(undefined, 'api'),
+      /Declared backends: \(none\)/
+    )
+    assert.throws(() => parseCLIFilters({}, {}, 'api'), /\(none\)/)
+  })
+
   test('two backends sharing a function each get their own filtered tree', async (t) => {
     if (pathsAreBroken()) return t.skip('node:path is mocked as win32')
     const root = await mkdtemp(`${tmpdir()}/pikku-backends-`)

@@ -29,6 +29,24 @@ describe('planDev', () => {
     assert.deepEqual(plan, { mode: 'inline', port: 4555 })
   })
 
+  test('frontends and no backend plan frontends only', () => {
+    assert.deepEqual(planDev({ frontends: { web: {} } }, {}), {
+      mode: 'frontends',
+    })
+  })
+
+  test('an addon with no backend keeps the inline server', () => {
+    const plan = planDev({ addon: true, frontends: { web: {} } }, {})
+    assert.equal(plan.mode, 'inline')
+  })
+
+  test('--backend with no backend declared lists (none)', () => {
+    assert.throws(
+      () => planDev({ frontends: { web: {} } }, { backend: 'api' }),
+      /Declared backends: \(none\)/
+    )
+  })
+
   test('several backends become one process each on their own port', () => {
     const plan = planDev(two, {})
     assert.equal(plan.mode, 'parent')

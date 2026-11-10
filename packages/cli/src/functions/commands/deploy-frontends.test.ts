@@ -189,3 +189,38 @@ describe('plan and apply fail before any build', () => {
     })
   }
 })
+
+describe('a project with no backends', () => {
+  test('plans only its frontends', () => {
+    const plans = plan({
+      rootDir: '/proj',
+      outDir: '/proj/.pikku',
+      frontends: { web: { dist: '/proj/dist' } },
+    })
+    assert.deepEqual(
+      plans.map((p) => p.name),
+      ['web']
+    )
+  })
+
+  test('nothing to deploy when it declares neither or every frontend opts out', () => {
+    const config = {
+      rootDir: '/proj',
+      outDir: '/proj/.pikku',
+      frontends: { web: { dist: '/proj/dist', deploy: false } },
+    }
+    assert.deepEqual(planBackendDeploys(config as never, {}), [])
+    assert.deepEqual(plan(config), [])
+  })
+
+  test('--backend names nothing', () => {
+    assert.throws(
+      () =>
+        planBackendDeploys(
+          { rootDir: '/proj', outDir: '/proj/.pikku' } as never,
+          { backend: 'api' }
+        ),
+      /\(none\)/
+    )
+  })
+})

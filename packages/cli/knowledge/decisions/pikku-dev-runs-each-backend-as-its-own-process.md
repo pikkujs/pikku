@@ -22,6 +22,9 @@ declared one):
   `pikku dev --backend <n> --port <dev.port> --serveOnly --no-watch --no-frontends`
   plus the user's `--coverage`, `--test`, `--model`, `--no-hmr`. `--port` is
   refused here; each backend has its own `dev.port` (the loader already requires it).
+- **None, with frontends: frontends only.** A project that declares frontends and
+  no backend (an addon is exempt) runs only its frontends: no codegen, no server,
+  no `VITE_API_PROXY`. `--backend` here fails as unknown, listing `(none)`.
 - **A child never runs codegen.** `--serveOnly` loads the backend tree, inspects
   the project itself under the backend filter, and reloads (meta, schemas,
   re-imported wirings, addon registry) when the parent sends `SIGUSR2` after a

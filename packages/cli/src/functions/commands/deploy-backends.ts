@@ -231,3 +231,7 @@ export const buildBackend = (args: {
     bundler: args.bundler,
   })
 }
+
+/** Said when a deploy run covers no backend and no frontend. */
+export const NOTHING_TO_DEPLOY =
+  'Nothing to deploy: this project declares no backends, and no frontend is set to deploy.'

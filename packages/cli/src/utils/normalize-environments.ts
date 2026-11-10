@@ -52,7 +52,16 @@ export const normalizeEnvironments = (
         )
       }
     }
-    if (!isRecord(entry.backends) || Object.keys(entry.backends).length === 0) {
+    // A frontend-only project has no backend to name; an environment there
+    // names its frontends only.
+    const needsBackends = Object.keys(declared).length > 0 || !!config.addon
+    if (entry.backends === undefined && !needsBackends) {
+      entry.backends = {}
+    }
+    if (
+      !isRecord(entry.backends) ||
+      (needsBackends && Object.keys(entry.backends).length === 0)
+    ) {
       throw new PikkuCLIConfigError(
         `${at}.backends in ${file} must name at least one backend: { "api": "https://…" }.`
       )

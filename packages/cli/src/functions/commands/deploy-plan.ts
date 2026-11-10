@@ -15,6 +15,7 @@ import {
   assertFrontendSupported,
   backendState,
   buildBackend,
+  NOTHING_TO_DEPLOY,
   planBackendDeploys,
   planFrontendDeploys,
   resultFileFor,
@@ -78,6 +79,14 @@ export const deployPlan = pikkuSessionlessFunc<
       backend: data?.backend,
       provider: data?.provider,
     })
+    if (
+      backends.length === 0 &&
+      planFrontendDeploys(config, { provider: data?.provider }, backends)
+        .length === 0
+    ) {
+      logger.info(NOTHING_TO_DEPLOY)
+      return
+    }
     // Every provider is resolved, and every frontend checked against its
     // provider, before the first backend builds.
     const providers = new Map<string, ProviderAdapter>()

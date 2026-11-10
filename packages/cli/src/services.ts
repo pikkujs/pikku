@@ -309,6 +309,11 @@ export const createConfig: CreateConfig<
   if (isBackendPass) {
     clientFiles = { ...glue, ...exposedClientFiles(cliConfig.outDir) }
   } else if (hasGlue && !cliConfig.addon) {
+    if (declared.length === 0) {
+      throw new Error(
+        `clientFiles frontend glue (rpcFile, nextBackendFile, tanstackStartFile, ...) imports a backend's SDK, and ${cliConfig.configDir}/pikku.config.json declares no backends. Remove clientFiles, or declare the backend whose SDK it imports.`
+      )
+    }
     if (declared.length !== 1) {
       throw new Error(
         `clientFiles frontend glue (rpcFile, nextBackendFile, tanstackStartFile, ...) imports one backend's SDK, and ${cliConfig.configDir}/pikku.config.json declares ${declared.length}. Declare exactly one backend until frontends choose theirs.`
