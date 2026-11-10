@@ -1,14 +1,14 @@
 /**
  * Steps that drive an agent through the generated client — `pikkuRPC.agent.run`,
- * `.stream` and `.approve` from `.pikku/pikku-rpc.gen.ts`, over `PikkuFetch` — the
+ * `.stream` and `.approve` from `.pikku/sdk/api/exposed/pikku-rpc.gen.ts`, over `PikkuFetch` — the
  * same code a screen runs. The other agent scenarios post raw HTTP, so before these
  * nothing exercised the client, which is how its `stream` came to resolve
  * `undefined` without anyone seeing it.
  */
 import { pikkuScenarioStep, requireScenarioEnv } from '#pikku/scenario'
 import { PikkuAgentStreamError } from '@pikku/fetch'
-import { PikkuFetch } from '#pikku/pikku-fetch.gen.js'
-import { PikkuRPC } from '#pikku/pikku-rpc.gen.js'
+import { PikkuFetch } from '@sdk/api/pikku-fetch.gen.js'
+import { PikkuRPC } from '@sdk/api/pikku-rpc.gen.js'
 import { identityHeaders, type Identity } from './agent-transport.js'
 
 type AgentName = Parameters<PikkuRPC['agent']['run']>[0]

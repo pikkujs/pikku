@@ -6,8 +6,8 @@
  */
 import type { HTTPWiringsMap } from '#pikku/http/pikku-http-wirings-map.gen.d.js'
 import type { ChannelsMap } from '#pikku/channel/pikku-channels-map.gen.d.js'
-import { pikkuFetch } from '#pikku/pikku-fetch.gen.js'
-import { PikkuWebSocket } from '#pikku/pikku-websocket.gen.js'
+import { pikkuFetch } from '@sdk/api/pikku-fetch.gen.js'
+import { PikkuWebSocket } from '@sdk/api/pikku-websocket.gen.js'
 
 type Expect<T extends true> = T
 

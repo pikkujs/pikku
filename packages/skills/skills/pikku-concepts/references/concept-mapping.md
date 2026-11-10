@@ -38,22 +38,22 @@ Authoritative mapping table plus side-by-side code examples showing how common b
 
 ## Quick Reference Table
 
-| Generic Backend Concept                 | Pikku Equivalent                                                | Skill             |
-| --------------------------------------- | --------------------------------------------------------------- | ----------------- |
-| **Controller / Route Handler**          | `pikkuFunc` / `pikkuSessionlessFunc`                            | `pikku-concepts`  |
-| **Route definition** (`GET /users/:id`) | `wireHTTP({ route, method, func })`                             | `pikku-wiring`      |
+| Generic Backend Concept                 | Pikku Equivalent                                                | Skill              |
+| --------------------------------------- | --------------------------------------------------------------- | ------------------ |
+| **Controller / Route Handler**          | `pikkuFunc` / `pikkuSessionlessFunc`                            | `pikku-concepts`   |
+| **Route definition** (`GET /users/:id`) | `wireHTTP({ route, method, func })`                             | `pikku-wiring`     |
 | **Middleware** (Express/Koa-style)      | `pikkuMiddleware`                                               | `pikku-middleware` |
-| **Auth Guard / Auth Middleware**        | `authBearer()` / `authCookie()` / `authApiKey()`                | `pikku-auth`  |
-| **Authorization / Permissions**         | `pikkuPermission` / `pikkuAuth`                                 | `pikku-auth`  |
-| **DTO / Request Validation**            | Standard Schema (Zod, Valibot, ArkType)                         | `pikku-concepts`  |
-| **Dependency Injection**                | `pikkuServices` (singleton) + `pikkuWireServices` (per-request) | `pikku-services`  |
-| **WebSocket handlers**                  | `wireChannel`                                                   | `pikku-wiring` |
+| **Auth Guard / Auth Middleware**        | `authBearer()` / `authCookie()` / `authApiKey()`                | `pikku-auth`       |
+| **Authorization / Permissions**         | `pikkuPermission` / `pikkuAuth`                                 | `pikku-auth`       |
+| **DTO / Request Validation**            | Standard Schema (Zod, Valibot, ArkType)                         | `pikku-concepts`   |
+| **Dependency Injection**                | `pikkuServices` (singleton) + `pikkuWireServices` (per-request) | `pikku-services`   |
+| **WebSocket handlers**                  | `wireChannel`                                                   | `pikku-wiring`     |
 | **Job Queue workers**                   | `wireQueueWorker`                                               | `pikku-wiring`     |
-| **Cron / Scheduled tasks**              | `wireScheduler`                                                 | `pikku-wiring`      |
-| **Module / Feature grouping**           | Tags + wiring files                                             | `pikku-concepts`  |
-| **Error handling**                      | Throw typed errors (`NotFoundError`, `ForbiddenError`)          | `pikku-concepts`  |
-| **Type-safe API client**                | `npx pikku all` generates clients                               | `pikku-concepts`  |
-| **Secrets / Config**                    | `defineSecret`, `defineVariable`, `services.variables`          | `pikku-services`    |
+| **Cron / Scheduled tasks**              | `wireScheduler`                                                 | `pikku-wiring`     |
+| **Module / Feature grouping**           | Tags + wiring files                                             | `pikku-concepts`   |
+| **Error handling**                      | Throw typed errors (`NotFoundError`, `ForbiddenError`)          | `pikku-concepts`   |
+| **Type-safe API client**                | `npx pikku all` generates clients                               | `pikku-concepts`   |
+| **Secrets / Config**                    | `defineSecret`, `defineVariable`, `services.variables`          | `pikku-services`   |
 
 ## Route Handler / Controller → pikkuFunc
 
@@ -580,7 +580,7 @@ const data: unknown = await response.json()
 **Pikku (auto-generated, fully typed):**
 
 ```typescript
-import { createPikkuFetchClient } from './.pikku/pikku-fetch.gen.js'
+import { createPikkuFetchClient } from '@sdk/api/pikku-fetch.gen.js'
 
 const client = createPikkuFetchClient({ baseUrl: 'http://localhost:4002' })
 const result = await client.post('/todos', { title: 'New todo' })

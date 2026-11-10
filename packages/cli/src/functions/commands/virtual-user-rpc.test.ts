@@ -29,7 +29,7 @@ const run = (data: Record<string, unknown>, url = apiUrl) =>
     {
       config: {
         rootDir: '/nonexistent',
-        environments: { local: { apiUrl: url } },
+        environments: { local: { backends: { api: { url } }, frontends: {} } },
       },
       getInspectorState: async () => ({
         virtualUsers: { definitions: VIRTUAL_USERS },

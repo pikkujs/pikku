@@ -86,9 +86,12 @@ const readProjectFacts = async (config: any, state: any): Promise<string[]> => {
   ]
   const sources = new Map(dirs.map((dir) => [dir, readSources(dir)]))
   const screens = readScreens(config)
-  const client = config.clientFiles ?? {}
-  const rpcFile = client.rpcWiringsFile
-  const reactQueryFile = client.reactQueryFile ?? rpcFile
+  const sdkFile = (name: string) => {
+    const first = Object.keys(config.backends ?? {})[0]
+    return first ? join('.pikku', 'sdk', first, 'exposed', name) : undefined
+  }
+  const rpcFile = sdkFile('pikku-rpc.gen.ts')
+  const reactQueryFile = sdkFile('pikku-react-query.gen.ts') ?? rpcFile
   const servicesFile = [...(state.singletonServicesFactories?.keys() ?? [])][0]
   return formatProjectFacts({
     agents: Object.keys(state.agents?.agentsMeta ?? {}),

@@ -25,6 +25,10 @@ The `content` service needs a backend. In `pikku dev` the built-in local store i
    `uploadUrl` may be relative, so always resolve it. Check `ok`. The URL is short-lived, so ask just before sending. The server's own upload route only takes requests from its own origin. A page served elsewhere sends directly only if the upload endpoint allows that page's origin, method and headers through CORS; otherwise it proxies the upload route.
 3. A second function saves the key. It came from the client, so its `pikkuPermission` checks the owner prefix and that `content.listFilesByPrefix(bucket, fileKey, visibility)` (the upload's visibility) includes it, never the body. With several checks use one group, `permissions: { owner: [isMember, ownsKey] }`: separate groups are OR'd, so one passing skips the rest. The same goes for a function that reads a key.
 
+## Buckets
+
+A bucket must be declared. In pikku.config.json the root `content` lists every bucket (`"content": { "buckets": ["uploads"] }`, plus the shared `contentPath` and `sizeLimit`), and each backend that uses content lists its own (`"backends": { "api": { "content": { "buckets": ["uploads"], "assetUrlPrefix": "/content" } } }`). A backend with no `content` has none. `pikku all` writes `.pikku/backends/<name>/content-buckets.gen.ts` with `type ContentBucket`, and the app declares `content: ContentService<ContentBucket>` so a bucket the backend does not list fails to compile. It is a type check, not a runtime one.
+
 ## Save the key
 
 Store `fileKey` on the row. Not a URL, which expires. Not the file. Not `assetKey`.
@@ -39,7 +43,7 @@ Public and private are separate stores: pass the same `visibility` on every call
 
 ## Not checked for you
 
-The built-in store's `getUploadURL` checks neither `contentType` nor `size`, and another backend may enforce its own policy and refuse, so allow types with a `z.enum` on the input regardless. On the built-in store the largest upload is `content.sizeLimit` in pikku.config.json, default `1mb`, then 413: raise it for phone photos. A signed upload to another store is not bound by it.
+The built-in store's `getUploadURL` checks neither `contentType` nor `size`, and another backend may enforce its own policy and refuse, so allow types with a `z.enum` on the input regardless. On the built-in store the largest upload is the root `content.sizeLimit` in pikku.config.json, default `1mb`, then 413: raise it for phone photos. A signed upload to another store is not bound by it.
 
 `writeFile`, `copyFile` and `deleteFile` return `false` on failure instead of throwing.
 

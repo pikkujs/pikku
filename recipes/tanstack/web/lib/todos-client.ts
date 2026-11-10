@@ -1,4 +1,4 @@
-import { pikkuFetch } from '#pikku/pikku-fetch.gen.js'
+import { pikkuFetch } from '@sdk/app/pikku-fetch.gen'
 
 /**
  * The demo user the todo wirings default to. A real app would take this from a

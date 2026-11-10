@@ -6,6 +6,7 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "paths": {
+      "@sdk/app/*": ["../functions/.pikku/sdk/app/exposed/*"],
       "#pikku/*.js": ["../functions/.pikku/*.ts"],
       "#pikku/*": ["../functions/.pikku/*/index.ts", "../functions/.pikku/*"]
     }

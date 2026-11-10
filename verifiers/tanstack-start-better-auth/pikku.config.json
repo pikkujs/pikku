@@ -1,11 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "srcDirectories": ["./src", "./types"],
-  "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
   "clientFiles": {
-    "fetchFile": "./src/lib/pikku-fetch.gen.ts",
-    "rpcWiringsFile": "./src/lib/pikku-rpc.gen.ts",
     "tanstackStartFile": "./src/lib/pikku-start.gen.ts"
   },
   "schema": {
@@ -13,5 +10,10 @@
   },
   "lint": {
     "enforceContentService": "off"
+  },
+  "backends": {
+    "api": {
+      "filter": {}
+    }
   }
 }

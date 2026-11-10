@@ -1,4 +1,5 @@
 import type { InspectorFilters } from '@pikku/inspector'
+import { resolveDeploy } from '../deploy/resolve-deploy.js'
 
 export type CLIFilters = InspectorFilters & {
   excludeNames?: string[]
@@ -10,25 +11,31 @@ export type CLIFilters = InspectorFilters & {
 }
 
 /**
- * Parse CLI filter arguments into InspectorFilters format
+ * Resolve the filter a run applies.
+ *
+ * The only source of filtering is config: the selected backend's `filter`.
+ * `names` and `workflowMeta` are not user flags; per-unit deploy codegen passes
+ * them when it re-executes `pikku all` for one deployment unit.
  */
 export function parseCLIFilters(
-  data: any,
+  data: { names?: string[]; workflowMeta?: string[] },
   cliConfig?: {
     deploy?: {
       serverlessIncompatible?: string[]
-      defaultTarget?: 'serverless' | 'server'
+      target?: 'serverless' | 'server'
     }
     addon?: boolean | { serverlessIncompatible?: string[] }
-    namedFilters?: Record<string, InspectorFilters>
-  }
+    backends?: Record<
+      string,
+      {
+        filter?: CLIFilters
+        deploy?: { target?: 'serverless' | 'server' }
+      }
+    >
+  },
+  backend?: string
 ): CLIFilters {
   const filters: CLIFilters = {}
-
-  // Backward-compatible escape hatch for raw JSON filter blobs.
-  if (data.filters && data.filters.trim().startsWith('{')) {
-    return JSON.parse(data.filters)
-  }
 
   const mergeFilter = (source: CLIFilters | undefined) => {
     if (!source) return
@@ -56,45 +63,22 @@ export function parseCLIFilters(
     append('workflowMeta', source.workflowMeta)
   }
 
-  const namedFilters = cliConfig?.namedFilters ?? {}
-  const requestedNamedFilters: string[] | undefined =
-    data.filter ?? (data.filters ? [data.filters] : undefined)
-  if (requestedNamedFilters && requestedNamedFilters.length > 0) {
-    for (const name of requestedNamedFilters) {
-      const preset = namedFilters[name]
-      if (!preset) {
-        const available = Object.keys(namedFilters)
-        throw new Error(
-          available.length > 0
-            ? `Unknown --filter '${name}'. Available filters: ${available.join(', ')}`
-            : `Unknown --filter '${name}'. No named filters configured in pikku.config.json`
-        )
-      }
-      mergeFilter(preset)
+  if (backend) {
+    const declared = cliConfig?.backends ?? {}
+    const entry = declared[backend]
+    if (!entry) {
+      throw new Error(
+        `Unknown backend '${backend}'. Declared backends: ${Object.keys(declared).join(', ') || '(none)'}`
+      )
     }
+    mergeFilter(entry.filter)
   }
 
-  mergeFilter({
-    names: data.names,
-    tags: data.tags,
-    wires: data.wires,
-    directories: data.directories,
-    httpRoutes: data.httpRoutes,
-    httpMethods: data.httpMethods,
-    target: data.target,
-    excludeNames: data.excludeNames,
-    excludeTags: data.excludeTags,
-    excludeWires: data.excludeWires,
-    excludeDirectories: data.excludeDirectories,
-    excludeHttpRoutes: data.excludeHttpRoutes,
-    excludeHttpMethods: data.excludeHttpMethods,
-    excludeTarget: data.excludeTarget,
-    workflowMeta: data.workflowMeta,
-  })
+  mergeFilter({ names: data.names, workflowMeta: data.workflowMeta })
 
   const validateTargetList = (
     values: string[] | undefined,
-    argName: '--target' | '--exclude-target'
+    argName: 'filter.target' | 'filter.excludeTarget'
   ): Array<'serverless' | 'server'> | undefined => {
     if (!values || values.length === 0) return undefined
     const invalid = values.filter((t) => t !== 'serverless' && t !== 'server')
@@ -108,11 +92,11 @@ export function parseCLIFilters(
 
   filters.target = validateTargetList(
     filters.target as string[] | undefined,
-    '--target'
+    'filter.target'
   )
   filters.excludeTarget = validateTargetList(
     filters.excludeTarget as string[] | undefined,
-    '--exclude-target'
+    'filter.excludeTarget'
   )
   if (filters.target || filters.excludeTarget) {
     const addonIncompatible =
@@ -124,7 +108,12 @@ export function parseCLIFilters(
       ...addonIncompatible,
     ]
     filters.serverlessIncompatible = merged.length > 0 ? merged : undefined
-    filters.defaultTarget = cliConfig?.deploy?.defaultTarget
+    // A function with no explicit target counts as the target its backend
+    // deploys as, so a filter on `target` and the deploy agree on it.
+    filters.defaultTarget = resolveDeploy(
+      cliConfig ?? {},
+      backend ? { backend } : undefined
+    ).target
   }
 
   return filters

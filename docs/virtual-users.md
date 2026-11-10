@@ -442,9 +442,13 @@ a scenario concern the moment it gated virtual user sign-in:
 ```jsonc
 {
   "environments": {
-    "local": { "apiUrl": "…", "appUrl": "…" },
-    "staging": { "apiUrl": "…", "appUrl": "…" },
-    "prod": { "apiUrl": "…", "appUrl": "…", "production": true },
+    "local": { "backends": { "api": {} }, "frontends": { "web": "…" } },
+    "staging": { "backends": { "api": "…" }, "frontends": { "web": "…" } },
+    "prod": {
+      "backends": { "api": "…" },
+      "frontends": { "web": "…" },
+      "production": true,
+    },
   },
 }
 ```

@@ -115,8 +115,12 @@ for _addon in ../addon/pikku-changes-cli ../addon/pikku-cloud-cli; do
 done
 # `bootstrap` writes the type files first, because `all`'s zod schema generation
 # imports the tree that phase leaves behind.
-"$_bootstrap_dir/node_modules/.bin/pikku" bootstrap
-"$_bootstrap_dir/node_modules/.bin/pikku"
+#
+# `--outDir`: the config no longer has an `outDir` key (output is always `.pikku`),
+# but the published CLI predates that and crashes without one. The flag works on
+# both loaders, so it is what lets one config build with either.
+"$_bootstrap_dir/node_modules/.bin/pikku" bootstrap --outDir .pikku
+"$_bootstrap_dir/node_modules/.bin/pikku" all --outDir .pikku
 rm -rf "$_bootstrap_dir"
 
 # Build TypeScript (may fail if published CLI generates stale types)

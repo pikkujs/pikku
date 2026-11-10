@@ -12,7 +12,7 @@
 //~ type-checked: `'listJobs'` is a key of YOUR FlattenedRPCMap, and passing an input
 //~ the function does not accept is a compile error, not a 400 at runtime.
 // ===== FILE: src/components/job-list.tsx =====
-import { usePikkuQuery } from '../pikku/api.gen'
+import { usePikkuQuery } from '@sdk/api/pikku-react-query.gen'
 
 //~ The row type comes OUT of the generated map — never write a parallel interface for
 //~ it. A hand-written `type Job = { ... }` compiles happily while the backend schema

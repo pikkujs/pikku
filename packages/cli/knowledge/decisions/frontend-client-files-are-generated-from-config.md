@@ -7,7 +7,7 @@ tags: cli, codegen, frontend, react, better-auth
 
 # The frontend client files are generated from clientFiles, not copied into each app
 
-`pikku-command-rpc-client.ts` writes four more files beside `rpcWiringsFile`, each opt-in by
+`pikku-command-rpc-client.ts` writes four files, each opt-in by
 naming it under `clientFiles` in `pikku.config.json`: `typesFile` (`RPCInput<Name>`,
 `RPCOutput<Name>`, `FlattenedRPCMap`, and `AnalyticsEvent` only when `scaffold.analytics` is on),
 `envFile` (`apiUrl()`, `basePath()`, `appHref()`), `rpcFile` (`rpc()`, a PikkuRPC client that

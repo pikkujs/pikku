@@ -32,22 +32,6 @@ function resolveProjectRoot(): string {
   }
 }
 
-/** Read `addons.addonDir` from pikku.config.json if present (json only). */
-async function readAddonDirFromConfig(
-  root: string
-): Promise<string | undefined> {
-  const cfgPath = join(root, 'pikku.config.json')
-  if (!existsSync(cfgPath)) return undefined
-  try {
-    const cfg = JSON.parse(await readFile(cfgPath, 'utf8')) as {
-      addons?: { addonDir?: string }
-    }
-    return cfg.addons?.addonDir
-  } catch {
-    return undefined
-  }
-}
-
 /** Ensure the root package.json `workspaces` glob covers `<addonDir>/*`, so a
  *  later `yarn install` symlinks the addon into node_modules and `wireAddon`
  *  resolves it by package name. */
@@ -129,7 +113,7 @@ export const CloudAdd = pikkuSessionlessFunc({
     const artifact = Buffer.from(await dl.arrayBuffer())
 
     const root = resolveProjectRoot()
-    const addonDir = dir ?? (await readAddonDirFromConfig(root)) ?? 'addons'
+    const addonDir = dir ?? 'addons'
     const addonRoot = isAbsolute(addonDir) ? addonDir : join(root, addonDir)
 
     // 3. stage inside addonRoot (same filesystem — no EXDEV on the final move)

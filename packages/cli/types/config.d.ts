@@ -427,8 +427,11 @@ export type PikkuFrontendInput = {
    */
   dist?: string
   primary?: boolean
-  /** Whether Pikku Studio Cloud deploys it. */
-  deploy?: boolean
+  /**
+   * `false` keeps it out of the deploy. An object overrides the project's
+   * `deploy.provider` and `deploy.target` for this frontend.
+   */
+  deploy?: boolean | { provider?: string; target?: 'serverless' | 'server' }
   kind?: 'spa' | 'ssr' | 'static'
   dev?: { command: string[]; port: number; healthPath: string }
   /** Who the app is for, in their own word. */
@@ -469,29 +472,21 @@ export type PikkuFrontend = Omit<PikkuFrontendInput, 'serve'> & {
 export type PikkuCLIInput = {
   $schema?: string
 
-  /**
-   * Another config file, relative to this one, to start from. This file merges
-   * into it: objects merge key by key, `srcDirectories` appends this file's
-   * entries to the parent's (duplicates dropped), any other array or value set
-   * here replaces the parent's, and `null` removes it. Paths are resolved
-   * relative to the file that declares them; `rootDir` is inherited unless set
-   * here.
-   */
-  extends?: string
-
   rootDir: string
   /** Runtime artifacts directory (dev.db, content, tmp). Resolved relative to rootDir. Defaults to <rootDir>/.pikku-runtime. */
   runtimeDir?: string
-  /** How `pikku dev` and `pikku serve` store and serve files. */
+  /**
+   * Content storage shared by every backend: one directory and one size limit,
+   * and the buckets that exist. A backend opts in to some of them with
+   * `backends.<name>.content.buckets`.
+   */
   content?: {
     /** Where files are kept, relative to the project root. */
     contentPath?: string
-    /** Route uploads arrive on. Defaults to `/upload`. */
-    uploadUrlPrefix?: string
-    /** Route files are read from. Defaults to `/assets`. */
-    assetUrlPrefix?: string
     /** The most one upload may hold, such as `10mb`. Defaults to `1mb`. */
     sizeLimit?: string
+    /** Every bucket the project uses. */
+    buckets: string[]
   }
   srcDirectories: string[]
   ignoreFiles?: string[]
@@ -509,7 +504,6 @@ export type PikkuCLIInput = {
           hash: string
         }
       }
-  addonName?: string
 
   /**
    * Service names `createSingletonServices` is allowed to return even though
@@ -552,14 +546,15 @@ export type PikkuCLIInput = {
    */
   metaLocale?: string
 
-  configDir: string
   tsconfig: string
 
+  /**
+   * Frontend glue written into the frontend's own source. The clients
+   * themselves (fetch, websocket, rpc, react-query, realtime, queue, scopes)
+   * are not configured: `pikku all` generates them for every backend into
+   * `.pikku/sdk/<backend>/exposed/`.
+   */
   clientFiles?: {
-    fetchFile?: string
-    websocketFile?: string
-    rpcWiringsFile?: string
-    reactQueryFile?: string
     /**
      * Emit the frontend's record types here: `RPCInput<Name>`, `RPCOutput<Name>`,
      * `FlattenedRPCMap`, and `AnalyticsEvent` when `scaffold.analytics` is on.
@@ -586,16 +581,13 @@ export type PikkuCLIInput = {
      * function; where people are sent is set by `clientAuth`.
      */
     authClientFile?: string
-    realtimeFile?: string
     /**
      * Optional import for the EventHubTopics type so the realtime client is
      * fully typed. Format: `<path>#<TypeName>` resolved relative to
-     * `realtimeFile`. Example: `../types/eventhub-topics.js#EventHubTopics`.
+     * the realtime client. Example: `../types/eventhub-topics.js#EventHubTopics`.
      * If unset, the generated client treats topics as `Record<string, unknown>`.
      */
     realtimeEventHubTopicsImport?: string
-    queueWiringsFile?: string
-    mcpJsonFile?: string
     nextBackendFile?: string
     nextHTTPFile?: string
     /**
@@ -625,13 +617,6 @@ export type PikkuCLIInput = {
      * `rpcWiringsFile` (where the `PikkuRPC` class is generated).
      */
     tanstackStartFile?: string
-    /**
-     * Emit the browser-side scope client into this file: the project's
-     * `ScopeId` union and a `hasScopes(required, held)` for deciding what a UI
-     * renders. It has no imports, so a frontend never has to reach into
-     * `@pikku/core` — a server package — to check a permission.
-     */
-    scopesFile?: string
   }
 
   /** Where the generated Better Auth client (`clientFiles.authClientFile`) sends people. */
@@ -840,31 +825,7 @@ export type PikkuCLIInput = {
    *
    * The virtual user signing key comes from VIRTUAL_USER_SIGNING_KEY or `pikku dev`, never from here.
    */
-  environments?: Record<
-    string,
-    {
-      apiUrl: string
-      /** Virtual user sign-in path under apiUrl. Default: /auth/sign-in/virtual-user */
-      signInPath?: string
-      /**
-       * Where the session and its roles are read back. Default: `get-session`
-       * under the same mount as `signInPath`.
-       */
-      sessionPath?: string
-      /** Exposed-RPC prefix under apiUrl. Default: /rpc */
-      rpcPath?: string
-      /** Frontend base URL browser steps navigate against. Required for steps with a `browser` binding. */
-      appUrl?: string
-      /**
-       * This environment carries real consequences, so only an `accountable`
-       * virtual user may run against it.
-       *
-       * A flag rather than a reserved name: projects call it `prod`, `live` or
-       * `eu-prod`, and more than one environment can be production.
-       */
-      production?: boolean
-    }
-  >
+  environments?: Record<string, PikkuEnvironmentInput>
 
   scenarios?: {
     /**
@@ -1011,18 +972,6 @@ export type PikkuCLIInput = {
   }
 
   /**
-   * Community-registry addons installed via `pikku cloud addon add`. The
-   * source is copied into the project shadcn-style; each lands in
-   * `<addonDir>/<name>/` and the dir is registered as a yarn workspace so
-   * `wireAddon({ package })` resolves it by name. `addonDir` defaults to
-   * `addons` (top-level, outside the app's TS scan). Install provenance is
-   * tracked in pikku-addons.json.
-   */
-  addons?: {
-    addonDir?: string
-  }
-
-  /**
    * Model aliases, e.g. `{ "cheap": "openai/gpt-5-mini" }`, so a declaration
    * can name a model by what it is for and one edit repoints every use.
    * Optional — a model containing `/` is used as written. A bare name that is
@@ -1037,43 +986,6 @@ export type PikkuCLIInput = {
   forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
-
-  stateOutput?: string
-  stateInput?: string
-
-  /**
-   * Which inspector analyses the project: `go` (`pikku-inspect`) or `rs`
-   * (`pikku-inspect-rs`). `PIKKU_INSPECTOR` and `--inspector` override it.
-   */
-  inspector?: 'go' | 'rs'
-
-  /**
-   * Run the data-classification security lint (scans function return types for
-   * Private/Pii/Secret leaks). Off by default — it forces expensive return-type
-   * inference on every function and is not part of codegen. Enable here to always
-   * run it, or per-invocation via `pikku all --security`. Pair with
-   * `failOnError` to gate a build/CI on leaks.
-   */
-  security?: boolean
-
-  /**
-   * After codegen, run a real `tsc --noEmit` over the project's tsconfig and
-   * fail on type errors. `tsc` prints full diagnostics with code frames;
-   * `tscSummary` prints a compact one-line-per-error render (no code frames,
-   * capped) that's cheap for AI agents / CI logs. Off by default; enable per
-   * invocation via `pikku all --tsc` / `--tsc-summary`.
-   */
-  tsc?: boolean
-  tscSummary?: boolean
-
-  /**
-   * After a successful codegen run, emit a structural diff of the generated
-   * `.pikku` meta (functions/wirings/workflows/emails added/removed/changed vs
-   * the state before this run) as a `PIKKU_DIFF <json>` line on stdout. Only
-   * emitted on exit 0. Off by default; enable per invocation via
-   * `pikku all --diff`. Consumed by the sandbox "what changed" build card.
-   */
-  diff?: boolean
 
   lint?: {
     servicesNotDestructured?: 'off' | 'warn' | 'error'
@@ -1169,16 +1081,22 @@ export type PikkuCLIInput = {
     targets?: string[]
   }
 
+  /**
+   * Deploy defaults for every backend and frontend. A backend or frontend
+   * overrides `provider` and `target` in its own `deploy`.
+   */
   deploy?: {
-    providers: Record<string, string>
-    defaultProvider?: string
-    serverlessIncompatible?: string[]
+    /** Provider name to package, for providers beyond the built-in four. */
+    providers?: Record<string, string>
+    /** Where every backend and frontend deploys unless it says otherwise. */
+    provider?: string
     /**
-     * Default deploy target for functions that don't declare an explicit
-     * `deploy` flag and don't use a serverless-incompatible service.
-     * Defaults to 'serverless'.
+     * How a unit is deployed, and the target a function with no explicit
+     * `deploy` flag counts as. Defaults to 'serverless'. Not the same as
+     * `backends.<name>.filter.target`, which selects functions.
      */
-    defaultTarget?: 'serverless' | 'server'
+    target?: 'serverless' | 'server'
+    serverlessIncompatible?: string[]
     /**
      * Rename identifiers when minifying worker bundles. Defaults to true.
      * Set it to false to make a deployed worker's runtime errors name
@@ -1191,37 +1109,6 @@ export type PikkuCLIInput = {
      * Bun.build output misbehaves at runtime.
      */
     bundler?: 'auto' | 'bun' | 'esbuild'
-    /**
-     * Files a standalone binary carries, by name. Each path, relative to the
-     * project root, is embedded by `bun build --compile` and handed to the
-     * running app as `PIKKU_EMBEDDED_<NAME>` (upper-cased, `-` as `_`).
-     */
-    embed?: Record<string, string>
-    /**
-     * How many deployment units the app's functions collapse into.
-     *
-     * `strategy` decides what happens to a function no rule matches:
-     * 'function' (the default) gives it its own unit, 'single' puts it in
-     * one shared unit. `rules` are evaluated in order, first match wins —
-     * under 'function' a rule merges functions together, under 'single' it
-     * carves them out.
-     *
-     * A rule's predicates are ANDed; `tags` is ORed across its own list.
-     * Functions whose deploy target differs cannot share a unit.
-     */
-    grouping?: {
-      strategy?: 'function' | 'single'
-      rules?: Array<{
-        /** Deployment unit name. Must be unique across rules. */
-        unit: string
-        /** Matches a function carrying any one of these tags. */
-        tags?: string[]
-        /** Matches an addon namespace, placing all its exposed functions here. */
-        addon?: string
-        /** Glob patterns matched against a function's wired HTTP routes. */
-        routes?: string[]
-      }>
-    }
   }
 
   /** Branches `pikku release` moves; defaults staging → main via release/next on origin. */
@@ -1232,24 +1119,165 @@ export type PikkuCLIInput = {
     remote?: string
   }
 
-  /** Named filter presets keyed by name, used via CLI --filter <name>. */
-  namedFilters?: Record<string, InspectorFilters>
-
-  filters: InspectorFilters
-} & PikkuCLICoreOutputFiles
-
-export type PikkuCLIConfig = PikkuCLIInput & {
-  configFile?: string
-  /** Path to pikku.config.json, from the global `--config` / `-c` flag. */
-  config?: string
-  tags?: string[]
-  wires?: string[]
-  excludeWires?: string[]
-
-  /** Paths made absolute and defaults filled in by `getPikkuCLIConfig`. */
-  frontends?: Record<string, PikkuFrontend>
-
-  userSessionType?: string
-  singletonServicesFactoryType?: string
-  wireServicesFactoryType?: string
+  /**
+   * The servers this project builds, by name. Each is a filtered, tree-shaken
+   * build of the one functions package: its `filter` decides which functions
+   * it carries, so two backends may carry the same function. Optional: a
+   * project declares backends, frontends or both; one declaring neither is
+   * refused unless it is an addon.
+   */
+  backends?: Record<string, PikkuBackendInput>
 }
+
+/**
+ * One backend as an environment reaches it. `url` may be omitted for a backend
+ * with `backends.<name>.dev.port`: the loader derives http://localhost:<port>.
+ * The auth paths belong here because they are the backend's, not the stage's.
+ */
+export type PikkuEnvironmentBackendInput = {
+  url?: string
+  signInPath?: string
+  sessionPath?: string
+  rpcPath?: string
+}
+
+/** An `environments.<name>` entry as written in pikku.config.json. */
+export type PikkuEnvironmentInput = {
+  /** Required when the project declares backends. */
+  backends?: Record<string, string | PikkuEnvironmentBackendInput>
+  frontends?: Record<string, string>
+  /** Real consequences: only an `accountable` virtual user may run against it. */
+  production?: boolean
+}
+
+/** An `environments.<name>` entry after the loader has resolved every URL. */
+export type PikkuEnvironment = {
+  backends: Record<
+    string,
+    {
+      url: string
+      signInPath?: string
+      sessionPath?: string
+      rpcPath?: string
+    }
+  >
+  frontends: Record<string, string>
+  production?: boolean
+}
+
+export type PikkuDeployGrouping = {
+  strategy?: 'function' | 'single'
+  rules?: Array<{
+    /** Deployment unit name. Must be unique across rules. */
+    unit: string
+    /** Matches a function carrying any one of these tags. */
+    tags?: string[]
+    /** Matches an addon namespace, placing all its exposed functions here. */
+    addon?: string
+    /** Glob patterns matched against a function's wired HTTP routes. */
+    routes?: string[]
+  }>
+}
+
+export type PikkuBackendInput = {
+  /** Which functions and wirings this backend carries; empty carries all. */
+  filter?: InspectorFilters
+  deploy?: {
+    target?: 'serverless' | 'server'
+    provider?: string
+    /**
+     * How many deployment units this backend's functions collapse into.
+     *
+     * `strategy` decides what happens to a function no rule matches:
+     * 'function' (the default) gives it its own unit, 'single' puts it in
+     * one shared unit. `rules` are evaluated in order, first match wins —
+     * under 'function' a rule merges functions together, under 'single' it
+     * carves them out.
+     *
+     * A rule's predicates are ANDed; `tags` is ORed across its own list.
+     * Functions whose deploy target differs cannot share a unit.
+     */
+    grouping?: PikkuDeployGrouping
+    /**
+     * Files a standalone binary carries, by name. Each path, relative to the
+     * project root, is embedded by `bun build --compile` and handed to the
+     * running app as `PIKKU_EMBEDDED_<NAME>` (upper-cased, `-` as `_`).
+     */
+    embed?: Record<string, string>
+  }
+  /**
+   * The content buckets this backend may use, and the routes it serves them
+   * on. Each backend is its own server on its own port, so the route prefixes
+   * are per backend. A backend with no `content` has no content access. Each
+   * bucket must be declared in the root `content.buckets`. The directory and
+   * size limit are the root's: see `PikkuCLIInput.content`.
+   */
+  content?: {
+    /** Buckets this backend may use. Becomes its `ContentBucket` type in `.pikku/backends/<name>/content-buckets.gen.ts`. */
+    buckets: string[]
+    /** Route uploads arrive on. Defaults to `/upload`. */
+    uploadUrlPrefix?: string
+    /** Route files are read from. Defaults to `/assets`. */
+    assetUrlPrefix?: string
+  }
+  dev?: {
+    /** Required when the project declares two or more backends. */
+    port?: number
+  }
+  /**
+   * Pack this backend's `remote/` SDK as `<package>-<backend>-<version>.sdk.tgz`
+   * beside package.json, the artifact the registry takes. Opt-in; refused when
+   * the backend has no `remote: true` functions. Default false.
+   */
+  publish?: boolean
+}
+
+/**
+ * The client files `pikku all` writes for a backend into
+ * `.pikku/sdk/<backend>/exposed/`. Set by the loader, never by a person.
+ */
+export type PikkuClientSdkFiles = {
+  fetchFile?: string
+  websocketFile?: string
+  rpcWiringsFile?: string
+  reactQueryFile?: string
+  realtimeFile?: string
+  queueWiringsFile?: string
+  scopesFile?: string
+}
+
+/**
+ * Everything the loader resolves on top of `PikkuCLIInput`: generated-file
+ * paths, CLI flags that leak into the config object, and derived values.
+ */
+export type PikkuCLIConfig = Omit<PikkuCLIInput, 'environments'> &
+  PikkuCLICoreOutputFiles & {
+    environments?: Record<string, PikkuEnvironment>
+    clientFiles?: PikkuClientSdkFiles
+    filters: InspectorFilters
+    configDir: string
+    addonName?: string
+    stateOutput?: string
+    stateInput?: string
+    /** Which inspector analyses the project. `native` (default) or `typescript`; overridden by `--inspector` / `PIKKU_INSPECTOR`. */
+    inspector?: 'go' | 'rs'
+    /** Run the data-classification security lint (`pikku all --security`). */
+    security?: boolean
+    /** Run `tsc --noEmit` after codegen (`--tsc`); `tscSummary` prints a compact render (`--tsc-summary`). */
+    tsc?: boolean
+    tscSummary?: boolean
+    /** Emit a structural diff of generated meta as `PIKKU_DIFF <json>` (`--diff`). */
+    diff?: boolean
+    configFile?: string
+    /** Path to pikku.config.json, from the global `--config` / `-c` flag. */
+    config?: string
+    /** The backend named by `--backend`; narrows `pikku all` to that one. */
+    backend?: string
+
+    /** Paths made absolute and defaults filled in by `getPikkuCLIConfig`. */
+    frontends?: Record<string, PikkuFrontend>
+
+    userSessionType?: string
+    singletonServicesFactoryType?: string
+    wireServicesFactoryType?: string
+  }

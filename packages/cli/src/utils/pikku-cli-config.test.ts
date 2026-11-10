@@ -35,9 +35,8 @@ describe('getPikkuCLIConfig', () => {
         rootDir: '.',
         srcDirectories: ['src'],
         packageMappings: {},
-        outDir: '.pikku',
         tsconfig: 'tsconfig.json',
-        filters: {},
+        backends: { api: { filter: {} } },
         ...extra,
       })
     )
@@ -79,7 +78,7 @@ describe('getPikkuCLIConfig', () => {
     await assert.rejects(
       () =>
         getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
-      /startServerFnsFile is now clientFiles\.tanstackStartFile/
+      /startServerFnsFile .* is now clientFiles\.tanstackStartFile/
     )
   })
 
@@ -102,6 +101,371 @@ describe('getPikkuCLIConfig', () => {
       )
     })
   }
+
+  const load = (root: string) =>
+    getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), [])
+
+  describe('backends', () => {
+    test('loads the declared backends', async () => {
+      const root = await writeConfig({
+        backends: {
+          api: { filter: { tags: ['api'] }, dev: { port: 4000 } },
+          jobs: { filter: { tags: ['jobs'] }, dev: { port: 4001 } },
+        },
+      })
+      const config = await load(root)
+      assert.deepEqual(Object.keys(config.backends), ['api', 'jobs'])
+      assert.deepEqual(config.backends.api.filter, { tags: ['api'] })
+    })
+
+    test('refuses a generated-client path and names .pikku/sdk', async () => {
+      const root = await writeConfig({
+        clientFiles: { fetchFile: '.pikku/pikku-fetch.gen.ts' },
+      })
+      await assert.rejects(load(root), /\.pikku\/sdk\/<backend>\//)
+    })
+
+    test('refuses a map declaration path', async () => {
+      const root = await writeConfig({
+        rpcRemoteMapDeclarationFile: '.pikku/remote.d.ts',
+      })
+      await assert.rejects(load(root), /rpcRemoteMapDeclarationFile/)
+    })
+
+    test('keeps frontend glue paths', async () => {
+      const root = await writeConfig({
+        clientFiles: { tanstackStartFile: 'src/pikku.ts' },
+      })
+      assert.equal(
+        (await load(root)).clientFiles?.tanstackStartFile,
+        join(root, 'src/pikku.ts')
+      )
+    })
+
+    test('refuses a non-boolean publish', async () => {
+      const root = await writeConfig({ backends: { api: { publish: 'yes' } } })
+      await assert.rejects(load(root), /publish/)
+    })
+
+    test('refuses a config with neither backends nor frontends', async () => {
+      const root = await writeConfig({ backends: undefined })
+      await assert.rejects(
+        load(root),
+        /declares no backends and no frontends.*at least one of backends or frontends/
+      )
+    })
+
+    test('refuses empty backends and frontends tables', async () => {
+      const root = await writeConfig({ backends: {}, frontends: {} })
+      await assert.rejects(load(root), /declares no backends and no frontends/)
+    })
+
+    test('accepts backends only', async () => {
+      const root = await writeConfig()
+      const config = await load(root)
+      assert.deepEqual(Object.keys(config.backends ?? {}), ['api'])
+      assert.equal(config.frontends, undefined)
+    })
+
+    test('accepts frontends only', async () => {
+      const root = await writeConfig({
+        backends: undefined,
+        frontends: { web: { cwd: './web' } },
+      })
+      const config = await load(root)
+      assert.equal(config.backends, undefined)
+      assert.deepEqual(Object.keys(config.frontends ?? {}), ['web'])
+    })
+
+    test('accepts backends and frontends', async () => {
+      const root = await writeConfig({ frontends: { web: { cwd: './web' } } })
+      const config = await load(root)
+      assert.deepEqual(Object.keys(config.backends ?? {}), ['api'])
+      assert.deepEqual(Object.keys(config.frontends ?? {}), ['web'])
+    })
+
+    test('a frontend-only project may omit environments.<name>.backends', async () => {
+      const root = await writeConfig({
+        backends: undefined,
+        frontends: { web: { cwd: './web' } },
+        environments: {
+          local: { frontends: { web: 'http://localhost:5000' } },
+        },
+      })
+      const config = await load(root)
+      assert.deepEqual(config.environments?.local?.backends, {})
+    })
+
+    test('a project with backends still needs environments.<name>.backends', async () => {
+      const root = await writeConfig({
+        environments: {
+          local: { frontends: { web: 'http://localhost:5000' } },
+        },
+      })
+      await assert.rejects(load(root), /must name at least one backend/)
+    })
+
+    test('an addon declares no backends', async () => {
+      const root = await writeConfig({ backends: undefined, addon: true })
+      await writeFile(join(root, 'package.json'), '{"name":"my-addon"}')
+      assert.equal((await load(root)).addon, true)
+    })
+
+    test('names backends.<name>.filter as the home of namedFilters', async () => {
+      const root = await writeConfig({
+        namedFilters: { api: { tags: ['api'] } },
+      })
+      await assert.rejects(load(root), /namedFilters .* moved to backends/)
+    })
+
+    test('names backends.<name>.filter as the home of a config-file filters', async () => {
+      const root = await writeConfig({ filters: {} })
+      await assert.rejects(load(root), /filters .* backends\.<name>\.filter/)
+    })
+
+    test('rejects extends', async () => {
+      const root = await writeConfig({ extends: './base.json' })
+      await assert.rejects(load(root), /extends .* no longer supported/)
+    })
+
+    test('requires dev.port once two backends are declared', async () => {
+      const root = await writeConfig({
+        backends: { a: { dev: { port: 4000 } }, b: {} },
+      })
+      await assert.rejects(load(root), /backends\.b\.dev\.port is required/)
+    })
+
+    test('lets a single backend leave the port to be picked', async () => {
+      const root = await writeConfig({ backends: { only: {} } })
+      assert.deepEqual(Object.keys((await load(root)).backends), ['only'])
+    })
+
+    test('refuses two backends on one port', async () => {
+      const root = await writeConfig({
+        backends: { a: { dev: { port: 4000 } }, b: { dev: { port: 4000 } } },
+      })
+      await assert.rejects(load(root), /both set dev\.port 4000/)
+    })
+  })
+
+  describe('strict keys', () => {
+    const rejects = async (extra: Record<string, unknown>, message: RegExp) =>
+      assert.rejects(load(await writeConfig(extra)), message)
+
+    test('an unknown top-level key is named', async () => {
+      await rejects(
+        { bogus: 1 },
+        /bogus in .* is not a pikku\.config\.json key/
+      )
+    })
+
+    test('an unknown nested key is named with its section', async () => {
+      await rejects(
+        { scaffold: { nope: true } },
+        /scaffold\.nope in .* is not a pikku\.config\.json key/
+      )
+      await rejects(
+        { backends: { api: { filter: {}, typo: 1 } } },
+        /backends\.api\.typo/
+      )
+    })
+
+    test('outDir is fixed beside the config', async () => {
+      await rejects({ outDir: '.pikku' }, /outDir .* no longer a config key/)
+      const config = await load(await writeConfig())
+      assert.equal(config.outDir, join(config.configDir, '.pikku'))
+    })
+
+    test('dev moved to backends.<name>.dev', async () => {
+      await rejects({ dev: { db: true } }, /dev .* backends\.<name>\.dev/)
+    })
+
+    describe('content buckets', () => {
+      const withBackend = (content: unknown) => ({
+        content: { buckets: ['a', 'b'] },
+        backends: { api: { filter: {}, content } },
+      })
+
+      test('the accepted shape loads', async () => {
+        const config = await load(
+          await writeConfig({
+            content: {
+              contentPath: 'files',
+              sizeLimit: '2mb',
+              buckets: ['a', 'b'],
+            },
+            backends: {
+              api: {
+                filter: {},
+                dev: { port: 4001 },
+                content: { buckets: ['a'], assetUrlPrefix: '/content' },
+              },
+              jobs: { filter: {}, dev: { port: 4002 } },
+            },
+          })
+        )
+        assert.deepEqual(config.content?.buckets, ['a', 'b'])
+        assert.deepEqual(config.backends.api?.content?.buckets, ['a'])
+        assert.equal(config.backends.jobs?.content, undefined)
+      })
+
+      test('a bucket the root does not declare is refused', async () => {
+        await rejects(
+          withBackend({ buckets: ['a', 'c'] }),
+          /backends\.api\.content\.buckets .* 'c', which is not in the root content\.buckets/
+        )
+      })
+
+      test('contentPath and sizeLimit in a backend name the root', async () => {
+        await rejects(
+          withBackend({ buckets: ['a'], contentPath: 'x' }),
+          /backends\.api\.content\.contentPath .* root `content`/
+        )
+        await rejects(
+          withBackend({ buckets: ['a'], sizeLimit: '2mb' }),
+          /backends\.api\.content\.sizeLimit .* root `content`/
+        )
+      })
+
+      test('prefixes at the root name the backend', async () => {
+        await rejects(
+          { content: { buckets: ['a'], uploadUrlPrefix: '/u' } },
+          /content\.uploadUrlPrefix .* per backend/
+        )
+      })
+
+      test('a backend using content with no root buckets is refused', async () => {
+        await rejects(
+          { backends: { api: { filter: {}, content: { buckets: ['a'] } } } },
+          /declares no `content\.buckets`/
+        )
+        await rejects(
+          {
+            content: { sizeLimit: '2mb' },
+            backends: { api: { filter: {}, content: { buckets: ['a'] } } },
+          },
+          /content\.buckets .* non-empty list/
+        )
+      })
+
+      test('a backend without buckets is refused rather than open', async () => {
+        await rejects(
+          withBackend({ assetUrlPrefix: '/c' }),
+          /backends\.api\.content\.buckets .* non-empty list/
+        )
+      })
+
+      test('empty, duplicate and invalid names are refused', async () => {
+        await rejects(withBackend({ buckets: [] }), /non-empty list/)
+        await rejects(withBackend({ buckets: ['a', 'a'] }), /'a' twice/)
+        for (const bad of ['', '../x', 'a/b', '_public', 7]) {
+          await rejects(
+            { content: { buckets: [bad] }, backends: { api: { filter: {} } } },
+            /invalid bucket name/
+          )
+        }
+      })
+    })
+
+    test('a generated path is not configurable', async () => {
+      await rejects(
+        { scenarioSchemaDirectory: 'x' },
+        /scenarioSchemaDirectory .* generated path/
+      )
+    })
+
+    test('keys nobody reads are refused', async () => {
+      for (const key of ['entrypoint', 'showcase', 'fabric', 'node']) {
+        await rejects({ [key]: 'x' }, new RegExp(`${key} in .* not read`))
+      }
+    })
+
+    test('a stray top-level supportsImportAttributes points at schema', async () => {
+      await rejects(
+        { supportsImportAttributes: true },
+        /is now schema\.supportsImportAttributes/
+      )
+    })
+
+    test('a CLI flag leaked into the config is named as one', async () => {
+      await rejects({ security: true }, /`--security` flag/)
+    })
+
+    test('addons is not a collection yet', async () => {
+      await rejects({ addons: {} }, /addons .* wireAddon/)
+    })
+
+    test('an addon is held to the same keys', async () => {
+      await rejects({ addon: true, backends: undefined, outDir: 'x' }, /outDir/)
+    })
+  })
+
+  describe('environments', () => {
+    test('expands a url and derives a local one from dev.port', async () => {
+      const root = await writeConfig({
+        backends: { api: { dev: { port: 4021 } } },
+        environments: {
+          local: {
+            backends: { api: {} },
+            frontends: { web: 'http://localhost:5000' },
+          },
+          prod: {
+            backends: {
+              api: { url: 'https://api.test', signInPath: '/auth/sign-in/x' },
+            },
+            production: true,
+          },
+        },
+      })
+      const { environments } = await load(root)
+      assert.deepEqual(environments?.local, {
+        backends: { api: { url: 'http://localhost:4021' } },
+        frontends: { web: 'http://localhost:5000' },
+      })
+      assert.deepEqual(environments?.prod?.backends.api, {
+        url: 'https://api.test',
+        signInPath: '/auth/sign-in/x',
+      })
+      assert.equal(environments?.prod?.production, true)
+    })
+
+    test('the string shorthand is a url', async () => {
+      const root = await writeConfig({
+        environments: { stage: { backends: { api: 'https://s.test' } } },
+      })
+      assert.equal(
+        (await load(root)).environments?.stage?.backends.api?.url,
+        'https://s.test'
+      )
+    })
+
+    test('the old flat keys are refused with their new home', async () => {
+      for (const [key, home] of [
+        ['apiUrl', 'backends'],
+        ['appUrl', 'frontends'],
+        ['signInPath', 'backends'],
+      ] as const) {
+        const root = await writeConfig({
+          environments: { local: { [key]: 'x' } },
+        })
+        await assert.rejects(load(root), new RegExp(`${key} .* ${home}`))
+      }
+    })
+
+    test('a backend with neither url nor dev.port is refused', async () => {
+      const root = await writeConfig({
+        environments: { local: { backends: { api: {} } } },
+      })
+      await assert.rejects(load(root), /no url, and backends\.api\.dev\.port/)
+    })
+
+    test('an undeclared backend is refused', async () => {
+      const root = await writeConfig({
+        environments: { local: { backends: { ghost: 'http://x.test' } } },
+      })
+      await assert.rejects(load(root), /does not declare/)
+    })
+  })
 
   test('rejects a console scaffold still carrying the removed auth key', async () => {
     const root = await writeConfig({
@@ -144,13 +508,12 @@ describe('getPikkuCLIConfig', () => {
           rootDir: '.',
           srcDirectories: ['src'],
           packageMappings: {},
-          outDir: '.pikku',
           tsconfig: 'tsconfig.json',
           db: {
             engine: 'postgres',
             pgVersion: 18,
           },
-          filters: {},
+          backends: { api: { filter: {} } },
         },
         null,
         2
@@ -191,24 +554,6 @@ describe('getPikkuCLIConfig', () => {
     assert.equal(
       config.scenarioSchemaDirectory,
       join(root, '.pikku', 'scenarios', 'schemas')
-    )
-  })
-
-  test('a custom scenarioSchemaDirectory is honoured', async () => {
-    const root = await writeConfig({
-      scenarioSchemaDirectory: 'generated/scenario-schemas',
-    })
-
-    const config = await getPikkuCLIConfig(
-      silentLogger,
-      join(root, 'pikku.config.json'),
-      [],
-      false
-    )
-
-    assert.equal(
-      config.scenarioSchemaDirectory,
-      join(root, 'generated', 'scenario-schemas')
     )
   })
 
@@ -280,27 +625,18 @@ describe('getPikkuCLIConfig', () => {
     )
   })
 
-  test('a scenario schema directory equal to the app one is rejected', async () => {
+  test('a scenario schema directory equal to the app one is rejected', () => {
     // The scenario write owns its directory: it emits register.gen.ts and prunes
     // every schema file its own required-set does not name. Sharing the app's
     // directory would replace the application register with the scenario-only
     // one, which nothing downstream can detect.
-    const root = await writeConfig({
-      scenarioSchemaDirectory: '.pikku/schemas',
-    })
-
-    await assert.rejects(
-      getPikkuCLIConfig(
-        silentLogger,
-        join(root, 'pikku.config.json'),
-        [],
-        false
-      ),
-      (e: unknown) =>
-        e instanceof PikkuCLIConfigError &&
-        /scenarioSchemaDirectory must not be the same directory/.test(
-          (e as Error).message
-        )
+    assert.throws(
+      () =>
+        assertSchemaDirectoriesAreDistinct({
+          schemaDirectory: '/p/.pikku/schemas',
+          scenarioSchemaDirectory: '/p/.pikku/schemas',
+        }),
+      /scenarioSchemaDirectory must not be the same directory/
     )
   })
 
@@ -385,6 +721,90 @@ describe('getPikkuCLIConfig', () => {
     })
 
     await rejectsWith(root, /web and admin both set "serve"/)
+  })
+
+  describe('deploy keys', () => {
+    const load = async (extra: Record<string, unknown>) => {
+      const root = await writeConfig(extra)
+      return getPikkuCLIConfig(
+        silentLogger,
+        join(root, 'pikku.config.json'),
+        []
+      )
+    }
+
+    test('accepts a project default with per-backend and per-frontend overrides', async () => {
+      const config = await load({
+        deploy: { provider: 'cloudflare', target: 'serverless' },
+        backends: {
+          api: {
+            filter: {},
+            dev: { port: 4001 },
+            deploy: {
+              provider: 'standalone',
+              target: 'server',
+              grouping: { strategy: 'single' },
+            },
+          },
+          jobs: { filter: {}, dev: { port: 4002 } },
+        },
+        frontends: {
+          web: { cwd: 'apps/web', deploy: { provider: 'bunny' } },
+          off: { cwd: 'apps/off', deploy: false },
+        },
+      })
+      assert.equal(config.deploy?.provider, 'cloudflare')
+    })
+
+    for (const [key, home] of [
+      ['defaultProvider', 'deploy.provider'],
+      ['defaultTarget', 'deploy.target'],
+      ['grouping', 'backends.<name>.deploy.grouping'],
+      ['embed', 'backends.<name>.deploy.embed'],
+    ] as const) {
+      test(`refuses deploy.${key}, naming ${home}`, async () => {
+        await assert.rejects(
+          () =>
+            load({ deploy: { [key]: key === 'defaultProvider' ? 'x' : {} } }),
+          (error: Error) => {
+            assert.ok(error instanceof PikkuCLIConfigError)
+            assert.ok(error.message.includes(`deploy.${key}`))
+            assert.ok(error.message.includes(home))
+            return true
+          }
+        )
+      })
+    }
+
+    test('refuses a backend deploy key it does not know', async () => {
+      await assert.rejects(
+        () =>
+          load({
+            backends: { api: { filter: {}, deploy: { bundler: 'bun' } } },
+          }),
+        /backends\.api\.deploy\.bundler .* not a deploy key here/
+      )
+    })
+
+    test('refuses a backend target that is not a target', async () => {
+      await assert.rejects(
+        () =>
+          load({
+            backends: { api: { filter: {}, deploy: { target: 'edge' } } },
+          }),
+        /backends\.api\.deploy\.target .* 'serverless' or 'server'/
+      )
+    })
+
+    test('refuses a frontend deploy that is neither false nor an object', async () => {
+      await assert.rejects(
+        () =>
+          load({
+            frontends: { web: { cwd: 'apps/web', deploy: 'cloudflare' } },
+          }),
+        /frontends\.web\.deploy .* false or an object/
+      )
+    })
   })
 })
 
@@ -479,9 +899,8 @@ describe('tryGetPikkuCLIConfig', () => {
         rootDir: '.',
         srcDirectories: ['src'],
         packageMappings: {},
-        outDir: '.pikku',
         tsconfig: 'tsconfig.json',
-        filters: {},
+        backends: { api: { filter: {} } },
       })
     )
 

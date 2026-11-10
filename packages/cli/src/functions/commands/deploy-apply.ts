@@ -9,12 +9,22 @@ import type { EntryGenerationContext, ProviderAdapter } from '@pikku/deploy'
 import type { InspectorState } from '@pikku/inspector'
 import type { Logger } from '@pikku/core/services'
 import {
-  runBuildPipeline,
   describeBuildFailure,
   describeUnservedGateway,
   PikkuDeployBuildFailedError,
 } from '../../deploy/build-pipeline.js'
-import { nativeSidecars, servedFrontend } from '../../utils/frontend.js'
+import { DEFAULT_DEPLOY_PROVIDER } from '../../deploy/resolve-deploy.js'
+import { nativeSidecars } from '../../utils/frontend.js'
+import {
+  assertFrontendSupported,
+  backendState,
+  buildBackend,
+  NOTHING_TO_DEPLOY,
+  planBackendDeploys,
+  planFrontendDeploys,
+  resultFileFor,
+  type BackendDeploy,
+} from './deploy-backends.js'
 
 // A bundler reads anything not starting with `./` or `../` as a bare package
 // specifier, and a path into a dot-directory (`.pikku/...`) starts with a dot
@@ -295,16 +305,14 @@ const importProviderPackage = async (
 }
 
 export async function resolveProvider(
-  config?: {
-    deploy?: { providers: Record<string, string>; defaultProvider?: string }
-  },
-  providerName?: string,
+  config: { deploy?: { providers?: Record<string, string> } } | undefined,
+  providerName: string | undefined,
   options?: {
     projectDir?: string
     nativeSidecars?: Array<{ name: string; dir: string }>
   }
 ): Promise<ProviderAdapter> {
-  const name = providerName ?? config?.deploy?.defaultProvider ?? 'cloudflare'
+  const name = providerName ?? DEFAULT_DEPLOY_PROVIDER
 
   const providers = config?.deploy?.providers ?? {
     cloudflare: '@pikku/deploy-cloudflare',
@@ -449,6 +457,7 @@ export const deployApply = pikkuSessionlessFunc<
   {
     fromPlan?: boolean
     provider?: string
+    backend?: string
     runtime?: string
     resultFile?: string
     debugArtifacts?: boolean
@@ -458,69 +467,153 @@ export const deployApply = pikkuSessionlessFunc<
   func: async ({ logger, config, getInspectorState, bundler }, data) => {
     const projectDir = config.rootDir
     const fromPlan = data?.fromPlan ?? false
-    const provider = await resolveProvider(config, data?.provider, {
-      projectDir,
-      nativeSidecars: nativeSidecars(config.frontends),
+    const backends = planBackendDeploys(config, {
+      backend: data?.backend,
+      provider: data?.provider,
     })
-    assertRuntime(provider, data?.runtime)
-    const inspectorState = fromPlan ? undefined : await getInspectorState(true)
-    const resultFile = data?.resultFile
-
-    if (fromPlan) {
-      // Skip build pipeline — deploy from existing plan output
-      const { join } = await import('node:path')
-      const { existsSync } = await import('node:fs')
-
-      const providerDir = join(projectDir, '.deploy', provider.deployDirName)
-
-      // Every plan writes this; infra.json only exists for providers with
-      // infrastructure to describe, which a single-unit provider does not have.
-      if (!existsSync(join(providerDir, 'deployment-manifest.json'))) {
-        logger.error(
-          `No plan found at ${providerDir}. Run 'pikku deploy plan' first.`
-        )
-        await writeResultFile(resultFile, {
-          success: false,
-          errors: [{ step: 'plan', error: 'No plan found' }],
-        })
-        process.exit(1)
-      }
-
-      await runDeploy(provider, providerDir, logger, resultFile)
+    if (
+      backends.length === 0 &&
+      planFrontendDeploys(config, { provider: data?.provider }, backends)
+        .length === 0
+    ) {
+      logger.info(NOTHING_TO_DEPLOY)
       return
     }
+    // Every backend's provider is resolved before the first one builds, so a
+    // missing package or an unsupported --runtime stops the run before any
+    // backend has deployed.
+    const providers = new Map<string, ProviderAdapter>()
+    for (const backend of backends) {
+      const provider = await resolveProvider(config, backend.providerName, {
+        projectDir,
+        nativeSidecars: nativeSidecars(config.frontends),
+      })
+      assertRuntime(provider, data?.runtime)
+      providers.set(backend.name, provider)
+    }
+    const frontends = planFrontendDeploys(
+      config,
+      { provider: data?.provider },
+      backends
+    )
+    const frontendProviders = new Map<string, ProviderAdapter>()
+    for (const frontend of frontends) {
+      const provider =
+        [...providers.values()].find((p) => p.name === frontend.providerName) ??
+        (await resolveProvider(config, frontend.providerName, {
+          projectDir,
+          nativeSidecars: nativeSidecars(config.frontends),
+        }))
+      assertFrontendSupported(frontend, provider)
+      frontendProviders.set(frontend.name, provider)
+    }
+    const unfilteredState = fromPlan ? undefined : await getInspectorState(true)
 
-    // Full build + deploy pipeline
-    if (!inspectorState) return
+    for (const backend of backends) {
+      if (backend.many) logger.info(`Backend ${backend.name}`)
+      await applyBackend(backend, providers.get(backend.name)!, unfilteredState)
+    }
+
     const projectId = await resolveProjectId(projectDir)
+    for (const frontend of frontends) {
+      if (frontend.embedded) continue
+      logger.info(`Frontend ${frontend.name}`)
+      await frontendProviders.get(frontend.name)!.deployFrontend!({
+        name: frontend.name,
+        kind: frontend.kind,
+        dir: frontend.dir,
+        projectId,
+        logger,
+      })
+    }
 
-    const buildResult = await runBuildPipeline({
-      projectDir,
-      projectId,
-      provider,
-      inspectorState,
-      serverlessIncompatible: config.deploy?.serverlessIncompatible,
-      defaultTarget: config.deploy?.defaultTarget,
-      grouping: config.deploy?.grouping,
-      mangleIdentifiers: config.deploy?.mangleIdentifiers,
-      globalHTTPPrefix: config.globalHTTPPrefix,
-      getEntryContext,
-      frontend: servedFrontend(config.frontends),
-      outDir: config.outDir,
-      srcDirectories: config.srcDirectories,
-      sqliteExtensions: config.db?.sqliteExtensions,
-      embed: config.deploy?.embed,
-      debugArtifacts: data?.debugArtifacts ?? false,
-      logger,
-      bundler,
-    })
+    async function applyBackend(
+      backend: BackendDeploy,
+      provider: ProviderAdapter,
+      unfiltered: InspectorState | undefined
+    ): Promise<void> {
+      const resultFile = resultFileFor(data?.resultFile, backend)
+      const inspectorState = unfiltered
+        ? backendState(config, unfiltered, backend, logger)
+        : undefined
 
-    if (buildResult.manifest.units.length === 0) {
+      if (fromPlan) {
+        // Skip build pipeline — deploy from existing plan output
+        const { join } = await import('node:path')
+        const { existsSync } = await import('node:fs')
+
+        const providerDir = join(backend.deployDir, provider.deployDirName)
+
+        // Every plan writes this; infra.json only exists for providers with
+        // infrastructure to describe, which a single-unit provider does not have.
+        if (!existsSync(join(providerDir, 'deployment-manifest.json'))) {
+          logger.error(
+            `No plan found at ${providerDir}. Run 'pikku deploy plan' first.`
+          )
+          await writeResultFile(resultFile, {
+            success: false,
+            errors: [{ step: 'plan', error: 'No plan found' }],
+          })
+          process.exit(1)
+        }
+
+        await runDeploy(provider, providerDir, logger, resultFile)
+        return
+      }
+
+      // Full build + deploy pipeline
+      if (!inspectorState) return
+      const projectId = await resolveProjectId(projectDir)
+
+      const buildResult = await buildBackend({
+        config,
+        backend,
+        provider,
+        projectId,
+        inspectorState,
+        getEntryContext,
+        debugArtifacts: data?.debugArtifacts ?? false,
+        logger,
+        bundler,
+      })
+
+      if (buildResult.manifest.units.length === 0) {
+        const buildFailure = describeBuildFailure(buildResult)
+        if (buildFailure) {
+          await writeResultFile(resultFile, {
+            success: false,
+            errors: [
+              ...buildResult.unroutedWirings.map((r) => ({
+                step: 'route',
+                error: `${r.method} ${r.route} (func ${r.pikkuFuncId})`,
+              })),
+              ...buildResult.unservedGateways.map((g) => ({
+                step: 'gateway',
+                error: describeUnservedGateway(g),
+              })),
+            ],
+          })
+          throw new PikkuDeployBuildFailedError(buildFailure)
+        }
+        logger.info('No deployment units found. Nothing to deploy.')
+        await writeResultFile(resultFile, {
+          success: true,
+          workersDeployed: [],
+          resourcesCreated: [],
+          errors: [],
+        })
+        return
+      }
+
       const buildFailure = describeBuildFailure(buildResult)
       if (buildFailure) {
         await writeResultFile(resultFile, {
           success: false,
           errors: [
+            ...buildResult.bundleErrors.map((e) => ({
+              step: 'bundle',
+              error: `${e.unitName}: ${e.error}`,
+            })),
             ...buildResult.unroutedWirings.map((r) => ({
               step: 'route',
               error: `${r.method} ${r.route} (func ${r.pikkuFuncId})`,
@@ -530,56 +623,26 @@ export const deployApply = pikkuSessionlessFunc<
               error: describeUnservedGateway(g),
             })),
           ],
+          codegenErrors: buildResult.codegenErrors,
         })
         throw new PikkuDeployBuildFailedError(buildFailure)
       }
-      logger.info('No deployment units found. Nothing to deploy.')
-      await writeResultFile(resultFile, {
-        success: true,
-        workersDeployed: [],
-        resourcesCreated: [],
-        errors: [],
-      })
-      return
-    }
 
-    const buildFailure = describeBuildFailure(buildResult)
-    if (buildFailure) {
-      await writeResultFile(resultFile, {
-        success: false,
-        errors: [
-          ...buildResult.bundleErrors.map((e) => ({
-            step: 'bundle',
-            error: `${e.unitName}: ${e.error}`,
-          })),
-          ...buildResult.unroutedWirings.map((r) => ({
-            step: 'route',
-            error: `${r.method} ${r.route} (func ${r.pikkuFuncId})`,
-          })),
-          ...buildResult.unservedGateways.map((g) => ({
-            step: 'gateway',
-            error: describeUnservedGateway(g),
-          })),
-        ],
-        codegenErrors: buildResult.codegenErrors,
-      })
-      throw new PikkuDeployBuildFailedError(buildFailure)
-    }
+      const { providerDir, bundled } = buildResult
 
-    const { providerDir, bundled } = buildResult
-
-    if (typeof provider.deploy === 'function') {
-      await runDeploy(provider, providerDir, logger, resultFile)
-    } else {
-      logger.info(`${ANSI.green}${ANSI.bold}Build complete.${ANSI.reset}`)
-      logger.info(
-        `  ${bundled.length} functions bundled to ${ANSI.bold}${providerDir}${ANSI.reset}`
-      )
-      await writeResultFile(resultFile, {
-        success: true,
-        buildOnly: true,
-        unitCount: bundled.length,
-      })
+      if (typeof provider.deploy === 'function') {
+        await runDeploy(provider, providerDir, logger, resultFile)
+      } else {
+        logger.info(`${ANSI.green}${ANSI.bold}Build complete.${ANSI.reset}`)
+        logger.info(
+          `  ${bundled.length} functions bundled to ${ANSI.bold}${providerDir}${ANSI.reset}`
+        )
+        await writeResultFile(resultFile, {
+          success: true,
+          buildOnly: true,
+          unitCount: bundled.length,
+        })
+      }
     }
   },
 })

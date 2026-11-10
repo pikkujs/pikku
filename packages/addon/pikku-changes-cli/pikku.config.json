@@ -3,7 +3,6 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "ignoreFiles": ["**/*.test.ts", "**/node_modules/**", "**/dist/**"],
-  "outDir": "./.pikku",
   "addon": {
     "displayName": "Pikku Changes CLI",
     "description": "The pikku changes command group",

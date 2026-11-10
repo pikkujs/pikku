@@ -17,7 +17,7 @@ import { useEffect } from 'react'
 import { usePikkuRealtime } from '@pikku/react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { PikkuRealtime } from '#pikku/realtime.gen.js'
-import { usePikkuQuery } from '../pikku/api.gen'
+import { usePikkuQuery } from '@sdk/api/pikku-react-query.gen'
 
 export const LiveBoard = ({ companyId }: { companyId: string }) => {
   const realtime = usePikkuRealtime<PikkuRealtime>()

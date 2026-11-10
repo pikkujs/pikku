@@ -2,8 +2,8 @@
  * Client-side usage examples for the shop, typed by the generated clients.
  */
 
-import { pikkuFetch } from '#pikku/pikku-fetch.gen.js'
-import { pikkuRPC } from '#pikku/pikku-rpc.gen.js'
+import { pikkuFetch } from '@sdk/api/pikku-fetch.gen.js'
+import { pikkuRPC } from '@sdk/api/pikku-rpc.gen.js'
 
 // @snippet start fetchClient
 export async function shopApiExamples() {

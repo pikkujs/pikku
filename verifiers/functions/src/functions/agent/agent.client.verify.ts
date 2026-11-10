@@ -6,7 +6,7 @@
 
 import { usePikkuAgent } from '@pikku/react'
 import type { PikkuAgentEvent } from '@pikku/fetch'
-import { pikkuRPC } from '#pikku/pikku-rpc.gen.js'
+import { pikkuRPC } from '@sdk/api/pikku-rpc.gen.js'
 import '#pikku/pikku-react-query.gen.js'
 
 const input = { message: 'hi', threadId: 't1', resourceId: 'r1' }

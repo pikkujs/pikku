@@ -11,7 +11,6 @@
 - [Common patterns](#common-patterns)
 - [What NOT to do](#what-not-to-do)
 
-
 ## Discover what's available on the client
 
 Before writing a hook, get the full client surface in one call:
@@ -47,8 +46,8 @@ In your app entry (e.g. `main.tsx`):
 ```tsx
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { PikkuProvider, createPikku } from '@pikku/react'
-import { PikkuFetch } from './pikku/pikku-fetch.gen'
-import { PikkuRPC } from './pikku/pikku-rpc.gen'
+import { PikkuFetch } from '@sdk/api/pikku-fetch.gen'
+import { PikkuRPC } from '@sdk/api/pikku-rpc.gen'
 
 import { apiUrl } from './lib/env'
 
@@ -64,9 +63,11 @@ const pikku = createPikku(PikkuFetch, PikkuRPC, {
 </QueryClientProvider>
 ```
 
-The two generated files come from `pikku.config.json`'s
-`clientFiles.fetchFile` and `clientFiles.rpcWiringsFile`. Hooks live in
-the file at `clientFiles.reactQueryFile` (typically `api.gen.ts`).
+The generated files are not configured: each backend writes its own set to
+`.pikku/sdk/<backend>/exposed/` (`pikku-fetch.gen.ts`, `pikku-rpc.gen.ts`, and the
+hooks in `pikku-react-query.gen.ts`). Import them through a `@sdk/<backend>`
+alias, a tsconfig `paths` entry such as `"@sdk/api/*": [".pikku/sdk/api/exposed/*"]`
+(plus the same alias in the bundler config).
 
 `apiUrl()` is the shared server-URL helper — see `references/client.md`. Never
 inline `?? 'http://localhost:3000'`: a deploy that supplies the URL as a
@@ -112,7 +113,7 @@ import {
   usePikkuQuery,
   usePikkuMutation,
   usePikkuInfiniteQuery,
-} from './pikku/api.gen'
+} from '@sdk/api/pikku-react-query.gen'
 ```
 
 ### `usePikkuQuery(name, data, options?)`

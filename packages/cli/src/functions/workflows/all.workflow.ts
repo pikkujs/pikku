@@ -16,6 +16,13 @@ import {
   removeDisabledOriginScaffolds,
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
+import { backendBuckets } from '../../utils/content-buckets.js'
+import { generateBackendCodegen } from '../../deploy/codegen/per-unit-codegen.js'
+import {
+  assembleBackendSdk,
+  writeBackendPassSdk,
+} from '../../utils/backend-sdk.js'
+import { selectBackends } from '../../utils/select-backends.js'
 import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
 import {
   RemoteAddonSyncError,
@@ -99,6 +106,8 @@ const RUN_RECORDS_DIR = 'runs'
 const REMOTE_SDK_DIR = 'remote'
 // Written by a watcher that may outlive the tree it describes.
 const WATCH_STATUS_FILE = 'status.json'
+// Filtered per-backend trees live beside the shared output.
+const BACKENDS_DIR = 'backends'
 
 const hasGeneratedOutput = (outDir: string): boolean =>
   existsSync(outDir) &&
@@ -106,7 +115,8 @@ const hasGeneratedOutput = (outDir: string): boolean =>
     (entry) =>
       entry !== RUN_RECORDS_DIR &&
       entry !== REMOTE_SDK_DIR &&
-      entry !== WATCH_STATUS_FILE
+      entry !== WATCH_STATUS_FILE &&
+      entry !== BACKENDS_DIR
   )
 
 export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
@@ -804,6 +814,19 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do('Addon SDK', 'pikkuAddonSdk', null)
     }
 
+    // A backend pass cuts its remote SDK; the parent moves both SDKs into
+    // .pikku/sdk/<backend>/ once every pass is done.
+    if (config.backend && process.env.PIKKU_DEPLOY_CODEGEN === '1') {
+      await workflow.do('Backend SDK', async () => {
+        writeBackendPassSdk(
+          logger,
+          await getInspectorState(),
+          config,
+          config.backend!
+        )
+      })
+    }
+
     // Last, because a leaf index only exists for an entry file that was
     // actually generated — that absence is what makes `#pikku/http` fail to
     // resolve in an addon rather than resolve to a module missing the export.
@@ -869,6 +892,56 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       if (errorCount > 0) {
         throw new PikkuTypecheckFailedError(
           `Type check failed: ${errorCount} error${errorCount === 1 ? '' : 's'}`
+        )
+      }
+    }
+
+    // The shared pass above wrote the full, unfiltered tree. Each backend is a
+    // filtered build of it, written to .pikku/backends/<name>/. Re-executed
+    // children (per-unit deploy codegen, and these backend passes themselves)
+    // run a single pass.
+    const backendNames = Object.keys(config.backends ?? {})
+    if (
+      process.env.PIKKU_DEPLOY_CODEGEN !== '1' &&
+      !config.addon &&
+      backendNames.length > 0
+    ) {
+      const selected = selectBackends(config.backends, config.backend)
+      const { errors, backendDirs } = await workflow.do(
+        'Backends',
+        async () => {
+          const state = await getInspectorState(false, false, false, true)
+          const result = await generateBackendCodegen({
+            projectDir: config.configDir,
+            backends: selected,
+            contentBuckets: Object.fromEntries(
+              selected.map((name) => [name, backendBuckets(config, name)])
+            ),
+            inspectorState: state,
+            onProgress: (name, status) => {
+              if (status === 'done') logger.debug(`• backend ${name} generated`)
+            },
+          })
+          return { errors: result.errors, backendDirs: [...result.backendDirs] }
+        }
+      )
+      if (errors.length === 0) {
+        for (const [name, backendOutDir] of backendDirs) {
+          const sdk = assembleBackendSdk({
+            projectDir: config.configDir,
+            rootDir: config.rootDir,
+            backend: name,
+            backendOutDir,
+            publish: config.backends?.[name]?.publish === true,
+          })
+          logger.debug(`• backend ${name} SDK at ${sdk.dir}`)
+        }
+      }
+      if (errors.length > 0) {
+        throw new Error(
+          errors
+            .map((e) => `Backend '${e.backend}' failed: ${e.error}`)
+            .join('\n')
         )
       }
     }

@@ -23,6 +23,9 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '#pikku': fileURLToPath(new URL('../../.pikku', import.meta.url)),
+        '@sdk/api': fileURLToPath(
+          new URL('../../.pikku/sdk/api/exposed', import.meta.url)
+        ),
       },
     },
     build: {

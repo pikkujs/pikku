@@ -101,7 +101,7 @@ RPC calls go through Pikku's middleware and permission pipeline. Direct imports 
 After `npx pikku all`:
 
 ```typescript
-import { pikkuRPC } from '#pikku/pikku-rpc.gen.js'
+import { pikkuRPC } from '@sdk/api/pikku-rpc.gen.js'
 
 pikkuRPC.setServerUrl('http://localhost:4002')
 

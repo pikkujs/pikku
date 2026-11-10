@@ -8,8 +8,17 @@
  * a pikku.config.json per deployment.
  */
 
-/** One entry of `environments` in pikku.config.json. */
-export interface PikkuEnvironment {
+import type { PikkuEnvironment } from '../../../types/config.js'
+
+export type { PikkuEnvironment }
+
+/**
+ * An environment narrowed to the one backend a run drives: the flat shape the
+ * runners (scenarios, virtual users, browser steps) work with.
+ */
+export interface ResolvedEnvironment {
+  /** The backend entry of the environment this run signs in to and calls. */
+  backend: string
   apiUrl: string
   signInPath?: string
   /**
@@ -18,27 +27,61 @@ export interface PikkuEnvironment {
    */
   sessionPath?: string
   rpcPath?: string
+  /** The fallback frontend for a virtual user that names no app. */
   appUrl?: string
   /**
-   * Where each app is served, keyed by the `app` its virtual users declare.
-   *
-   * A product can be more than one frontend — staff in one, customers in
-   * another — and the two are usually different paths on one host. A browser
-   * step navigates as its virtual user, so the virtual user's app decides which of these it
-   * navigates against, and `appUrl` is the fallback for a virtual user that names
-   * no app. Without this a run has one base for everybody: whichever app owns
-   * it is proved twice and the other never, silently, because both sets of
-   * paths resolve against the wrong app and load.
+   * Where each app is served, keyed by the `app` its virtual users declare
+   * (the frontend's name). A browser step navigates against its virtual user's
+   * app; `appUrl` is the fallback for one that names none.
    */
   appUrls?: Record<string, string>
   /** Real consequences: only an `accountable` virtual user may run against it. */
   production?: boolean
 }
 
+/**
+ * The backend a run drives: the one asked for, else the environment's only
+ * backend. Two or more with none named is an error rather than a guess.
+ */
+export const pickEnvironmentBackend = (
+  name: string,
+  environment: PikkuEnvironment,
+  backend?: string
+): string => {
+  const names = Object.keys(environment.backends)
+  if (names.length === 0) {
+    throw new Error(
+      `Environment '${name}' declares no backend, and this command calls one. Declare a backend in pikku.config.json and name it under environments.${name}.backends.`
+    )
+  }
+  if (backend !== undefined) {
+    if (!(backend in environment.backends)) {
+      throw new Error(
+        `Environment '${name}' has no backend '${backend}'. Its backends: ${names.join(', ')}.`
+      )
+    }
+    return backend
+  }
+  if (names.length === 1) return names[0]!
+  throw new Error(
+    `Environment '${name}' has ${names.length} backends (${names.join(', ')}); say which one to call with --backend <name> or a \`backend\` on the step.`
+  )
+}
+
+/** The frontend marked `primary`, whose URL is an environment's fallback app. */
+export const primaryFrontendName = (
+  frontends: Record<string, { primary?: boolean }> | undefined
+): string | undefined =>
+  Object.entries(frontends ?? {}).find(([, frontend]) => frontend.primary)?.[0]
+
 export interface ResolveEnvironmentOptions {
   /** The name given on the command line. Must exist in config. */
   environment: string
   environments: Record<string, PikkuEnvironment>
+  /** `--backend`: which of the environment's backends to call. */
+  backend?: string
+  /** The frontend whose URL is the fallback when several are configured. */
+  primaryFrontend?: string
   /** `--api-url`, overriding the configured `apiUrl`. */
   apiUrl?: string
   /** `--app-url`, overriding the configured `appUrl`. */
@@ -99,10 +142,12 @@ const assertAbsoluteUrl = (flag: string, value: string): URL => {
 export const resolveEnvironment = ({
   environment,
   environments,
+  backend,
+  primaryFrontend,
   apiUrl,
   appUrl,
   spawn = false,
-}: ResolveEnvironmentOptions): PikkuEnvironment => {
+}: ResolveEnvironmentOptions): ResolvedEnvironment => {
   const configured = environments[environment]
   if (!configured) {
     const known = Object.keys(environments)
@@ -110,11 +155,33 @@ export const resolveEnvironment = ({
       `Unknown environment '${environment}'. ` +
         (known.length
           ? `Configured environments: ${known.join(', ')}`
-          : `Add environments to pikku.config.json, e.g. { "${environment}": { "apiUrl": "https://app.example.com/api" } }`)
+          : `Add environments to pikku.config.json, e.g. { "${environment}": { "backends": { "api": "https://app.example.com/api" } } }`)
     )
   }
 
-  const resolved: PikkuEnvironment = { ...configured }
+  const picked = pickEnvironmentBackend(environment, configured, backend)
+  const target = configured.backends[picked]!
+  const frontendNames = Object.keys(configured.frontends)
+  const fallbackFrontend =
+    frontendNames.length === 1
+      ? frontendNames[0]
+      : primaryFrontend && primaryFrontend in configured.frontends
+        ? primaryFrontend
+        : undefined
+  const resolved: ResolvedEnvironment = {
+    backend: picked,
+    apiUrl: target.url,
+    ...(target.signInPath ? { signInPath: target.signInPath } : {}),
+    ...(target.sessionPath ? { sessionPath: target.sessionPath } : {}),
+    ...(target.rpcPath ? { rpcPath: target.rpcPath } : {}),
+    ...(fallbackFrontend
+      ? { appUrl: configured.frontends[fallbackFrontend] }
+      : {}),
+    ...(frontendNames.length > 0
+      ? { appUrls: { ...configured.frontends } }
+      : {}),
+    ...(configured.production ? { production: true } : {}),
+  }
 
   if (apiUrl !== undefined) {
     const url = assertAbsoluteUrl('--api-url', apiUrl)
@@ -175,8 +242,8 @@ export const parseAppUrls = (
  * `PIKKU_ENV` — virtual user provisioning above all, which fails closed and so
  * provisions nothing at all when nobody says where the process is.
  *
- * Local means a configured, non-production environment whose `apiUrl` is a
- * loopback host; `local` wins when several qualify. A project that configures
+ * Local means a configured, non-production environment whose backends are all
+ * loopback hosts; `local` wins when several qualify. A project that configures
  * none gets `undefined` rather than a guess.
  */
 export const resolveDevEnvironmentName = (
@@ -186,8 +253,12 @@ export const resolveDevEnvironmentName = (
     if (environment.production) {
       return false
     }
+    const urls = Object.values(environment.backends).map((b) => b.url)
     try {
-      return LOCAL_HOSTNAMES.has(new URL(environment.apiUrl).hostname)
+      return (
+        urls.length > 0 &&
+        urls.every((url) => LOCAL_HOSTNAMES.has(new URL(url).hostname))
+      )
     } catch {
       return false
     }
@@ -212,7 +283,7 @@ export const apiUrlPort = (apiUrl: string): number => {
 /**
  * The port `pikku dev` binds.
  *
- * An explicit `--port` wins. Otherwise the local environment's `apiUrl` says it:
+ * An explicit `--port` wins. Otherwise the local environment's first backend URL says it:
  * that URL is what scenarios, virtual users and the frontend's proxy call, so a
  * server on any other port is one they cannot reach. A project with no local
  * environment gets {@link DEFAULT_DEV_PORT}.
@@ -231,5 +302,7 @@ export const resolveDevPort = (
     return port
   }
   const name = resolveDevEnvironmentName(environments)
-  return name ? apiUrlPort(environments[name]!.apiUrl) : DEFAULT_DEV_PORT
+  if (!name) return DEFAULT_DEV_PORT
+  const [first] = Object.values(environments[name]!.backends)
+  return first ? apiUrlPort(first.url) : DEFAULT_DEV_PORT
 }

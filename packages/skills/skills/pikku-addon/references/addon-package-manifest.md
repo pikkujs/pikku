@@ -38,9 +38,7 @@ package that declared them, and the extra segment is what stops a linked addon's
 {
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
-  "outDir": "./.pikku",
-  "addon": true,
-  "node": {
+  "addon": {
     "displayName": "My Addon",
     "description": "What this addon does",
     "categories": ["General"]
@@ -48,7 +46,8 @@ package that declared them, and the extra segment is what stops a linked addon's
 }
 ```
 
-`outDir` stays `./.pikku`; `addon: true` is what appends the `addon` segment.
+Generated files go to `./.pikku`; the `addon` block (or `"addon": true`) is what
+appends the `addon` segment. An addon declares no `backends`.
 
 ## package.json (key fields)
 

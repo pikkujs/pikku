@@ -24,18 +24,77 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### `pikku.config.json` declares `backends` and/or `frontends`; `extends`, `namedFilters` and the filter flags are gone
+
+A config declares the servers it builds as `backends` (`"backends": { "api": { "filter": {} } }`, even for one), the apps it ships as `frontends`, or both. One declaring neither is refused; an addon declares neither and is exempt. A frontend-only project builds no backend: `pikku all` runs only the shared pass and writes no `.pikku/backends/` or `.pikku/sdk/`, `pikku dev` runs only its frontends, `pikku serve` errors "no backend to serve", and `environments.<name>.backends` may be omitted. A backend is a named, filtered build of your functions package; its `filter` takes every field `namedFilters` did (`tags`, `names`, `wires`, `target`, `excludeTarget`, ...). `pikku all` writes the full tree to `.pikku/`, then one filtered tree per backend to `.pikku/backends/<name>/`; `pikku all --backend <name>` builds only that one. Two or more backends each need `dev.port`.
+
+- `namedFilters` and a config-file `filters`: declare each as a backend. The loader names the new home.
+- `extends`: removed. Copy what the parent set into the one root config.
+- `--filter`, `--tags`, `--wires`, `--excludeWires`, `--target`, `--excludeTarget` and the other `--exclude*`/`--names`/`--directories`/`--httpRoutes`/`--httpMethods` flags on `pikku all`: removed. A custom filter is another backend.
+- `addons.addonDir`: removed; `pikku cloud addon add --dir` or the `addons/` default decides.
+
+### Generated clients live in `.pikku/sdk/<backend>/`; the config paths for them are gone
+
+`pikku all` writes, for each declared backend, `.pikku/sdk/<backend>/exposed/` (fetch, rpc, websocket, react-query, realtime, queue and scope clients, with their typed maps under `contract/`, cut from that backend's `expose: true` functions) and, only when it has `remote: true` functions, `.pikku/sdk/<backend>/remote/` (a types-only contract in the shape of an addon SDK). Server code stays under `.pikku/backends/<name>/`. Tiers: `expose: true` is exposed, `remote: true` is remote, anything else is internal.
+
+- Removed from `clientFiles`: `fetchFile`, `websocketFile`, `rpcWiringsFile`, `reactQueryFile`, `realtimeFile`, `queueWiringsFile`, `scopesFile`, `mcpJsonFile`. Removed top level: `httpMapDeclarationFile`, `rpcMapDeclarationFile`, `channelsMapDeclarationFile`, `rpcRemoteMapDeclarationFile`, `mcpJsonFile`. The loader refuses each and names the new home. The MCP manifest is `.pikku/backends/<name>/mcp/mcp.gen.json`.
+- Still in `clientFiles` (frontend glue, until frontends choose a backend): `typesFile`, `envFile`, `rpcFile`, `authClientFile`, `nextBackendFile`, `nextHTTPFile`, `tanstackStartFile`. Glue imports one backend's SDK, so a project that sets it declares exactly one backend.
+- Imports: replace `#pikku/pikku-fetch.gen.js` and the other client imports with the SDK. Add a tsconfig path alias, for example `"@sdk/api/*": [".pikku/sdk/api/exposed/*"]`, then `import { PikkuFetch } from '@sdk/api/pikku-fetch.gen'`. In general `@sdk/<backend>` maps to `.pikku/sdk/<backend>/exposed/`.
+- `backends.<name>.publish: true` packs the `remote/` SDK as `<package>-<backend>-<version>.sdk.tgz` beside package.json, the way an addon SDK is. It is off by default and refuses a backend with no remote functions, a non-semver package version, or a package that declares no `@pikku/core` range.
+
+### `deploy` is a project default with per-backend overrides, and `standalone` is the default provider
+
+`deploy` at the top of `pikku.config.json` is the default for every backend and frontend: `provider`, `target` (`serverless` or `server`), `bundler`, `mangleIdentifiers`, `serverlessIncompatible`, and the `providers` name-to-package map. A backend overrides `provider` and `target` in `backends.<name>.deploy`, and a frontend in `frontends.<name>.deploy` (`deploy: false` still keeps a frontend out of the deploy). `grouping` and `embed` are per backend only. `target` in a backend `filter` is unchanged: it selects which functions the backend carries, and `deploy.target` says how the backend is deployed.
+
+- `deploy.defaultProvider` is now `deploy.provider`. `deploy.defaultTarget` is now `deploy.target`. `deploy.grouping` and `deploy.embed` moved to `backends.<name>.deploy.grouping` and `.embed`. The loader refuses the old keys and names the new home. `deploy.contributors` stays refused (register contributors in an addon).
+- A deploy with no provider resolves to `standalone` with target `server`. It used to fall back to cloudflare, and never does now. Precedence is `-p`, then `backends.<n>.deploy` / `frontends.<n>.deploy`, then `deploy.provider`, then `standalone`. A project that relied on the cloudflare fallback must set `deploy.provider: "cloudflare"`.
+- Frontends deploy through their resolved provider unless `deploy: false`. The provider must declare support for the frontend's `kind` (`frontends.kinds` on `ProviderAdapter`); otherwise the run fails before any build. Only `standalone` declares support (`spa`, `static`, embedded via `serve`). A `serve` frontend ships inside its backend's bundle with that backend's provider, so a differing `frontends.<n>.deploy.provider` is an error. `ProviderAdapter` gains optional `frontends` and `deployFrontend`.
+- `pikku deploy plan` and `apply` run once per declared backend, each on its own filtered state and `.pikku/backends/<name>/`; `--backend <name>` narrows. A project with one backend still builds into `.deploy/<provider>/`; with several, each builds into `.deploy/<backend>/<provider>/` and `--result-file` gains a `.<backend>` suffix.
+- A `serve` frontend ships inside a single-unit bundle, so a project with several backends cannot use `serve` with a single-unit provider (standalone).
+
+### The loader refuses unknown keys, `outDir` is fixed, and `environments` names backends and frontends
+
+Every key in `pikku.config.json` must be a key of the CLI input type (`packages/cli/types/config.d.ts`); the loader refuses the first one that is not, naming its new home when it moved.
+
+- `outDir`: removed. Generated files always go to `.pikku/` beside `pikku.config.json`.
+- `dev`: removed at the top level. `dev.port` is `backends.<name>.dev.port`; `dev.db` and `dev.contributors` are gone.
+- `entrypoint`, `showcase`, `fabric`, `node`, `rpc`, `frontend`, `verboseMeta`: nothing read them; delete.
+- `supportsImportAttributes` at the top level is `schema.supportsImportAttributes`. `nextHTTPFile` and `nextBackendFile` at the top level are `clientFiles.*`.
+- `security`, `tsc`, `diff`, `tags`, `wires` and the other flags that leaked into configs: delete (a filter is `backends.<name>.filter`).
+- Any `*File`, `*Dir` or `*Directory` generated path (`scenarioSchemaDirectory`, `workflowRoutesFile`): generated, not configurable. `authFile`, `authTypesFile` and `authMetaJsonFile` stay real keys.
+- `addons`: not a top-level collection yet; wire addons in code with `wireAddon`.
+- `scenarios.environments`: the top-level `environments`.
+
+`environments.<name>` is now `{ backends, frontends, production }`:
+
+```json
+"environments": {
+  "local": {
+    "backends": { "api": {} },
+    "frontends": { "web": "http://localhost:5173" }
+  },
+  "prod": {
+    "backends": { "api": { "url": "https://api.example.com", "signInPath": "/api/auth/sign-in/virtual-user" } },
+    "frontends": { "web": "https://example.com" },
+    "production": true
+  }
+}
+```
+
+A backend is a URL or `{ url, signInPath, sessionPath, rpcPath }`; with no `url` it is `http://localhost:<backends.<name>.dev.port>`. `apiUrl`, `appUrl`, `appUrls`, `signInPath`, `sessionPath` and `rpcPath` directly under an environment are refused, naming where each went. A frontend entry replaces `appUrls` (the key is the `app` a virtual user declares); with one frontend, or one marked `primary`, it is also the fallback for a virtual user that names no app. `pikku scenario run`, `pikku virtual-user run` and `rpc`, and `pikku pages screenshot` take `--backend <name>`; it defaults to the environment's only backend and is an error when there are several.
+
 ### A workflow or agent with no `auth` wants a session
 
 A workflow is a function, so it now takes the same `auth` default as one: unset means a session is required, and only an explicit `auth: false` is anonymous. The same goes for an agent. Both used to be open when `auth` was unset.
 
-| Before                                                        | Now                                                                       |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| A workflow or agent with no `auth` ran for anyone             | It needs a session. `auth: false` keeps the old behaviour                 |
-| `/workflow/:name/*` and `/rpc/agent/:name/*` reached any name | Only `expose: true` ones. Anything else answers 404                       |
+| Before                                                        | Now                                                                     |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| A workflow or agent with no `auth` ran for anyone             | It needs a session. `auth: false` keeps the old behaviour               |
+| `/workflow/:name/*` and `/rpc/agent/:name/*` reached any name | Only `expose: true` ones. Anything else answers 404                     |
 | A refused start left a failed run behind                      | Unchanged: the workflow refuses when it runs, and the run ends `failed` |
-| A graph applied no checks of its own                          | A graph's `auth` applies the same way                                     |
-| A run with no owner could be read by anyone with its id       | Refused, unless the workflow is `auth: false`                             |
-| Any run could be read through any workflow's URL              | The run must belong to the workflow in the URL                            |
+| A graph applied no checks of its own                          | A graph's `auth` applies the same way                                   |
+| A run with no owner could be read by anyone with its id       | Refused, unless the workflow is `auth: false`                           |
+| Any run could be read through any workflow's URL              | The run must belong to the workflow in the URL                          |
 
 The routes stay one per action. They take an optional session and leave the decision to the workflow's own `expose`, `auth`, `scopes`, `permissions` and input schema. `POST /rpc/<workflow>` is unchanged and runs the same declaration.
 
@@ -161,7 +220,6 @@ A permission that reads a wire other than `session`, such as `functionId`, is no
 
 To find the affected code, run `pikku all` and look for `PKU586`.
 
-
 ### `x-request-id` is replaced by `traceparent`
 
 Pikku now uses W3C trace context. An HTTP request's `wire.traceId` is 32 lowercase hex, and `wire.trace` adds `spanId`, `parentSpanId` and `sampled`. `errorId` in error responses has the same format.
@@ -241,13 +299,13 @@ To find affected code, search for `retries:` in your workflows.
 
 The `pikku verify` command is gone. `pikku validate` runs what it ran, and runs the type-checks by default.
 
-| Before | After |
-| --- | --- |
-| `pikku verify` | `pikku validate --codegen` |
-| `pikku verify --skipCodegen` | `pikku validate` |
+| Before                         | After                                      |
+| ------------------------------ | ------------------------------------------ |
+| `pikku verify`                 | `pikku validate --codegen`                 |
+| `pikku verify --skipCodegen`   | `pikku validate`                           |
 | `pikku verify --skipTypecheck` | `pikku validate --skipTypecheck --codegen` |
 | `pikku verify --skipFrontends` | `pikku validate --skipFrontends --codegen` |
-| `pikku verify --strict` | `pikku validate --strict --codegen` |
+| `pikku verify --strict`        | `pikku validate --strict --codegen`        |
 
 Three things change for anyone who already ran `pikku validate`:
 
@@ -895,6 +953,8 @@ The administration functions (users, roles and scopes, credentials, audit) moved
 - **`models`, `agentDefaults` and `agentOverrides` are gone** (see [Agents](#agents-ai--agent)).
 - **`node` → `addon`**, and `external` → `addon` everywhere (cli 0.12.3 `6e8777b`, core 0.12.1 `62a8725`). Addons are declared in code with `wireAddon({ name, package })`, not with an `addons` field in the config.
 - **`verboseMeta` is removed** (cli 0.12.93).
+- **`pikku dev` runs each backend as its own process** when the project declares two or more. The parent runs codegen once and watches; each backend serves `.pikku/backends/<name>` on its `dev.port`. `--backend <name>` runs one; `--port` is refused with several. A single declared backend runs as it did.
+- **`content` takes a `buckets` list, and the prefixes move to the backend.** Root `content` is `{ contentPath?, sizeLimit?, buckets }`: the shared directory and limit, and every bucket that exists. Each backend that uses content adds `backends.<name>.content: { buckets, uploadUrlPrefix?, assetUrlPrefix? }`: the buckets it may use (each must be in the root list) and its own route prefixes, because each backend is its own server. A backend with no `content` has no content access. `contentPath` and `sizeLimit` in a backend, and the prefixes at the root, are refused naming where they live. `pikku all` writes `.pikku/backends/<name>/content-buckets.gen.ts` with `type ContentBucket`; declare `content: ContentService<ContentBucket>` in your application types so an unlisted bucket fails to compile. This is a type check only, with no runtime allowlist. `pikku serve` takes `--backend <name>` when several backends are declared.
 
 **Find:** `rg -n "\"(locale|startServerFnsFile|frontend|actors|personas|models|agentDefaults|agentOverrides|node|external|addons|verboseMeta|auth)\"\s*:" pikku.config.json`
 

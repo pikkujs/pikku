@@ -1,3 +1,7 @@
+import {
+  exposedClientFiles,
+  finalGlueClientFiles,
+} from './utils/backend-sdk.js'
 import type {
   Config,
   Services,
@@ -277,14 +281,68 @@ export const createConfig: CreateConfig<
   // preserved (getPikkuCLIConfig already resolves relative --outDir to
   // an absolute path and recomputes all derived *File/*Dir paths).
   const { outDir: _rawOutDir, ...dataWithoutOutDir } = data
+  const backend = (data as { backend?: string }).backend
+  if (backend && !cliConfig.backends?.[backend]) {
+    const declared = Object.keys(cliConfig.backends ?? {})
+    throw new Error(
+      `Unknown --backend '${backend}'. Declared backends: ${declared.join(', ') || '(none)'}`
+    )
+  }
+  // A backend pass writes its clients inside its own output directory; the
+  // parent moves them to .pikku/sdk/<backend>/. Frontend glue in the
+  // frontend's source is written by the parent, against the final place.
+  const isBackendPass =
+    Boolean(backend) && process.env.PIKKU_DEPLOY_CODEGEN === '1'
+  const glue = cliConfig.clientFiles ?? {}
+  const hasGlue = Object.keys(glue).some((k) =>
+    [
+      'rpcFile',
+      'authClientFile',
+      'nextBackendFile',
+      'nextHTTPFile',
+      'tanstackStartFile',
+      'nextBackendTransport',
+    ].includes(k)
+  )
+  const declared = Object.keys(cliConfig.backends ?? {})
+  let clientFiles = cliConfig.clientFiles
+  if (isBackendPass) {
+    clientFiles = { ...glue, ...exposedClientFiles(cliConfig.outDir) }
+  } else if (hasGlue && !cliConfig.addon) {
+    if (declared.length === 0) {
+      throw new Error(
+        `clientFiles frontend glue (rpcFile, nextBackendFile, tanstackStartFile, ...) imports a backend's SDK, and ${cliConfig.configDir}/pikku.config.json declares no backends. Remove clientFiles, or declare the backend whose SDK it imports.`
+      )
+    }
+    if (declared.length !== 1) {
+      throw new Error(
+        `clientFiles frontend glue (rpcFile, nextBackendFile, tanstackStartFile, ...) imports one backend's SDK, and ${cliConfig.configDir}/pikku.config.json declares ${declared.length}. Declare exactly one backend until frontends choose theirs.`
+      )
+    }
+    clientFiles = {
+      ...glue,
+      ...finalGlueClientFiles(cliConfig.configDir, declared[0]!),
+    }
+  }
   return {
     ...cliConfig,
     ...dataWithoutOutDir,
+    clientFiles,
     // `pikku dev --frontends` is a flag, and the spread above would replace the
     // project's `frontends` table with its boolean.
     frontends: cliConfig.frontends,
-    tags: cliConfig.tags,
-    filters: parseCLIFilters(data, cliConfig),
+    filters: parseCLIFilters(
+      data as { names?: string[]; workflowMeta?: string[] },
+      cliConfig,
+      // `--backend` narrows which passes the parent runs; only the per-backend
+      // child (spawned with PIKKU_DEPLOY_CODEGEN) and a `pikku dev --backend`
+      // server apply that backend's filter.
+      process.env.PIKKU_DEPLOY_CODEGEN === '1' ||
+        commandPath.join('.') === 'dev'
+        ? backend
+        : undefined
+    ),
+    backend,
     preloadedInspectorState,
   }
 }
@@ -441,7 +499,6 @@ export const createSingletonServices: CreateSingletonServices<
           singletonServicesFactoryType: config.singletonServicesFactoryType,
           wireServicesFactoryType: config.wireServicesFactoryType,
         },
-        tags: config.tags,
         // Opt-in security lint (`--security`): scans function return types for
         // data-classification leaks. Off by default — it's the dominant codegen
         // cost. Never runs during a plain `pikku all`.

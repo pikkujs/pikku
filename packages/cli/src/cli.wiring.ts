@@ -314,8 +314,7 @@ wireCLI({
       description: 'Load inspector state from JSON file (skips inspection)',
     },
     outDir: {
-      description:
-        'Override output directory (default: from pikku.config.json)',
+      description: 'Override output directory (default: .pikku)',
       short: 'o',
     },
   },
@@ -350,79 +349,19 @@ wireCLI({
             'On success, emit a structural diff of the generated .pikku meta (what this run added/removed/changed) as a PIKKU_DIFF <json> line on stdout. Only emitted on exit 0.',
           default: false,
         },
-        filter: {
+        backend: {
           description:
-            'Named filter(s) from pikku.config.json filters map (comma-separated)',
-          type: 'string[]',
-        },
-        tags: {
-          description: 'Include functions by tags (comma-separated)',
-          short: 't',
-          type: 'string[]',
-        },
-        wires: {
-          description: 'Filter direct wirings by category (comma-separated)',
-          type: 'string[]',
-        },
-        excludeWires: {
-          description: 'Exclude direct wirings by category (comma-separated)',
-          type: 'string[]',
-        },
-        excludeTags: {
-          description: 'Exclude functions by tags (comma-separated)',
-          type: 'string[]',
-        },
-        directories: {
-          description: 'Include functions by directories (comma-separated)',
-          short: 'd',
-          type: 'string[]',
-        },
-        excludeDirectories: {
-          description: 'Exclude functions by directories (comma-separated)',
-          type: 'string[]',
-        },
-        httpMethods: {
-          description: 'Include HTTP routes by methods (comma-separated)',
-          type: 'string[]',
-        },
-        excludeHttpMethods: {
-          description: 'Exclude HTTP routes by methods (comma-separated)',
-          type: 'string[]',
-        },
-        httpRoutes: {
-          description:
-            'Include HTTP routes by route patterns (comma-separated)',
-          type: 'string[]',
-        },
-        excludeHttpRoutes: {
-          description:
-            'Exclude HTTP routes by route patterns (comma-separated)',
-          type: 'string[]',
+            'Build only this backend (a key of "backends" in pikku.config.json) after the shared pass. Default: every declared backend',
+          type: 'string',
         },
         names: {
           description:
-            'Include functions by name patterns (supports wildcards)',
-          short: 'n',
-          type: 'string[]',
-        },
-        excludeNames: {
-          description:
-            'Exclude functions by name patterns (supports wildcards)',
-          type: 'string[]',
-        },
-        target: {
-          description:
-            'Include functions by deploy target (comma-separated: serverless, server)',
-          type: 'string[]',
-        },
-        excludeTarget: {
-          description:
-            'Exclude functions by deploy target (comma-separated: serverless, server)',
+            'Internal: function names a per-unit deploy codegen run keeps. Filtering is declared in backends.<name>.filter',
           type: 'string[]',
         },
         workflowMeta: {
           description:
-            "Keep these workflows' meta without their registration, for a deploy unit that only starts them (comma-separated)",
+            "Internal: keep these workflows' meta without their registration, for a deploy unit that only starts them (comma-separated)",
           type: 'string[]',
         },
         forceRelativeImports: {
@@ -712,6 +651,16 @@ wireCLI({
           description:
             'Run only these frontends (comma separated names from "frontends" in pikku.config.json)',
         },
+        backend: {
+          description:
+            'Run only this backend (a key of "backends" in pikku.config.json), serving its filtered tree on its dev.port. Default: every declared backend, each as its own process',
+          type: 'string',
+        },
+        serveOnly: {
+          description:
+            'Internal: serve the named backend without running codegen or watching; the parent pikku dev does both and signals reloads',
+          default: false,
+        },
       },
     }),
     serve: pikkuCLICommand({
@@ -723,6 +672,11 @@ wireCLI({
           description: 'Port for the server',
           default: '3000',
           short: 'p',
+        },
+        backend: {
+          description:
+            'Which backend (a key of "backends" in pikku.config.json) this server is. Sets the content settings it uses; optional when one backend is declared',
+          type: 'string',
         },
         model: {
           description:
@@ -1486,13 +1440,18 @@ wireCLI({
               choices: ['off', 'failed', 'all'],
               default: 'failed',
             },
+            backend: {
+              description:
+                "Which of the environment's backends to sign in to and call. Optional when it has only one",
+              type: 'string',
+            },
             apiUrl: {
               description:
-                "Override the environment's apiUrl for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
+                "Override the selected backend's url for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
             },
             appUrl: {
               description:
-                "Override the environment's appUrl for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose virtual users sign into different apps — comma-separated, and a bare url is the fallback",
+                "Override the environment's frontend url for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose virtual users sign into different apps — comma-separated, and a bare url is the fallback",
             },
             runId: {
               description:
@@ -1647,7 +1606,12 @@ wireCLI({
                 },
                 environment: {
                   description:
-                    'Environment in pikku.config.json whose apiUrl --as signs in against. Defaults to local',
+                    'Environment in pikku.config.json whose backend --as signs in against. Defaults to local',
+                  type: 'string',
+                },
+                backend: {
+                  description:
+                    "Which of the environment's backends --as signs in to. Optional when it has only one",
                   type: 'string',
                 },
                 viewport: {
@@ -1763,9 +1727,14 @@ wireCLI({
               description:
                 'Start without verifying the declared roles against the stage. For a target whose auth reports roles somewhere pikku cannot read — findings from an unverified run may be seed drift rather than product bugs',
             },
+            backend: {
+              description:
+                "Which of the environment's backends to sign in to and call. Optional when it has only one",
+              type: 'string',
+            },
             apiUrl: {
               description:
-                "Override the environment's apiUrl for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
+                "Override the selected backend's url for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
             },
             out: {
               description:
@@ -1801,6 +1770,11 @@ wireCLI({
             environment: {
               description:
                 'Environment in pikku.config.json to call. Defaults to local',
+              type: 'string',
+            },
+            backend: {
+              description:
+                "Which of the environment's backends to sign in to and call. Optional when it has only one",
               type: 'string',
             },
             apiUrl: {
@@ -2243,8 +2217,12 @@ wireCLI({
           options: {
             provider: {
               description:
-                'Deployment provider (defaults to deploy.defaultProvider, then cloudflare)',
+                "Deployment provider. Overrides deploy.provider and any backend's deploy.provider; with neither set the deploy is refused",
               short: 'p',
+            },
+            backend: {
+              description:
+                'Deploy only this backend (a key of "backends" in pikku.config.json). Default: every declared backend',
             },
             resultFile: {
               description:
@@ -2258,8 +2236,12 @@ wireCLI({
           options: {
             provider: {
               description:
-                'Deployment provider (defaults to deploy.defaultProvider, then cloudflare)',
+                "Deployment provider. Overrides deploy.provider and any backend's deploy.provider; with neither set the deploy is refused",
               short: 'p',
+            },
+            backend: {
+              description:
+                'Deploy only this backend (a key of "backends" in pikku.config.json). Default: every declared backend',
             },
             runtime: {
               description:
@@ -2283,7 +2265,6 @@ wireCLI({
           options: {
             provider: {
               description: 'Deployment provider (cloudflare, aws)',
-              default: 'cloudflare',
               short: 'p',
             },
           },

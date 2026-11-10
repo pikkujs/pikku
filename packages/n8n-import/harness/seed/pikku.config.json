@@ -1,6 +1,12 @@
 {
   "srcDirectories": ["./src"],
-  "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
-  "scaffold": { "graph": true }
+  "scaffold": {
+    "graph": true
+  },
+  "backends": {
+    "api": {
+      "filter": {}
+    }
+  }
 }

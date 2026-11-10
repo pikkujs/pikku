@@ -1,7 +1,7 @@
 ---
 type: decision
 title: A dev run takes PIKKU_ENV from a loopback, non-production environment or leaves it unset
-description: pikku dev fills in PIKKU_ENV only when it is unset, choosing a non-production environment whose apiUrl is loopback and preferring one named local, and returns nothing when none qualifies
+description: pikku dev fills in PIKKU_ENV only when it is unset, choosing a non-production environment whose backend urls are all loopback and preferring one named local, and returns nothing when none qualifies
 tags: cli, dev, environments, virtual-users
 ---
 
@@ -9,7 +9,7 @@ tags: cli, dev, environments, virtual-users
 
 `pikku dev` sets `PIKKU_ENV` only when it is not already set (the `??=` in `packages/cli/src/functions/commands/dev.ts`). The value comes from `resolveDevEnvironmentName` (`packages/cli/src/functions/commands/environment.ts`).
 
-That function keeps environments that are not `production` and whose `apiUrl` hostname is in the loopback set. It prefers an environment named `local` and otherwise takes the first candidate. With no candidate it returns `undefined`.
+That function keeps environments that are not `production` and whose every backend url has a hostname in the loopback set. It prefers an environment named `local` and otherwise takes the first candidate. With no candidate it returns `undefined`.
 
 The loopback set is `localhost`, `127.0.0.1`, `0.0.0.0`, `::1` and `[::1]` (`LOCAL_HOSTNAMES` in `environment.ts`).
 

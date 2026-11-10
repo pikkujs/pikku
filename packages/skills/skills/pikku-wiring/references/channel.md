@@ -178,7 +178,7 @@ wireChannel({
 After `npx pikku all`:
 
 ```typescript
-import { PikkuWebSocket } from '#pikku/pikku-websocket.gen.js'
+import { PikkuWebSocket } from '@sdk/api/pikku-websocket.gen.js'
 
 const pikku = new PikkuWebSocket(ws)
 const todosRoute = pikku.getRoute('todos')

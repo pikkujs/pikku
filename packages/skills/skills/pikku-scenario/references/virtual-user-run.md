@@ -54,7 +54,7 @@ environment (`OPENAI_BASE_URL` + `OPENAI_API_KEY`, or `LITELLM_PROXY_URL` +
 | `--model`              | The model they think with                                                                                                                             |
 | `--allow-approval`     | Offer the endpoints the app marked as needing a human's approval. Off by default: those are the ones that spend money                                 |
 | `--skip-role-check`    | Start without verifying declared roles against the stage                                                                                              |
-| `--api-url`            | Override the environment's `apiUrl`, for a target that only exists at run time. It replaces the url, not the environment's classification — see below |
+| `--api-url`            | Override the selected backend's url, for a target that only exists at run time. It replaces the url, not the environment's classification — see below |
 | `--out`                | Write the whole run — every step, response and finding — as JSON                                                                                      |
 
 ## The dispositions

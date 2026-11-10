@@ -1,10 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
-  "srcDirectories": [
-    "./src",
-    "./types"
-  ],
-  "outDir": "./.pikku",
+  "srcDirectories": ["./src", "./types"],
   "tsconfig": "./tsconfig.json",
-  "mcpJsonFile": "./.pikku/mcp.json"
+  "backends": {
+    "api": {
+      "filter": {}
+    }
+  }
 }

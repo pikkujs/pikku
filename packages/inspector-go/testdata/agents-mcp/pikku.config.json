@@ -1,6 +1,12 @@
 {
   "rootDir": ".",
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src"],
-  "outDir": ".pikku"
+  "srcDirectories": [
+    "src"
+  ],
+  "backends": {
+    "api": {
+      "filter": {}
+    }
+  }
 }

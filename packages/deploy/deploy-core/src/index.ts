@@ -29,6 +29,9 @@ export {
 
 export type {
   EntryGenerationContext,
+  FrontendDeployContext,
+  FrontendKind,
+  FrontendSupport,
   ProviderAdapter,
 } from './provider-adapter.js'
 

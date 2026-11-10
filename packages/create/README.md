@@ -53,7 +53,6 @@ npm create pikku@latest -- --template express --name my-app --install --package-
 | `--package-manager <manager>` | `-p`  | Package manager to use                | `--package-manager yarn`     |
 | `--version <version>`         | `-v`  | Template version/branch               | `--version main`             |
 | `--yarn-link <path>`          |       | Link to local Pikku development       | `--yarn-link ../pikku`       |
-| `--stackblitz`                |       | Add StackBlitz configuration          | `--stackblitz`               |
 | `--variations`                |       | Show all template variations          | `--variations`               |
 | `--frontend <frontend>`       |       | Frontend to keep for starter template | `--frontend app` |
 | `--help`                      | `-h`  | Display help information              | `--help`                     |
@@ -123,12 +122,6 @@ npm create pikku@latest -- --template aws-lambda --name my-lambda-app --package-
 
 ```bash
 npm create pikku@latest -- --template express-middleware --name test-app --package-manager yarn --yarn-link /path/to/pikku --install
-```
-
-### StackBlitz Ready Project
-
-```bash
-npm create pikku@latest -- --template nextjs --name stackblitz-app --stackblitz --package-manager npm
 ```
 
 ### Starter Template

@@ -1,6 +1,6 @@
 import { createPikku } from '@pikku/react'
-import { PikkuFetch } from '../../../.pikku/pikku-fetch.gen'
-import { PikkuRPC } from '../../../.pikku/pikku-rpc.gen'
+import { PikkuFetch } from '@sdk/api/pikku-fetch.gen'
+import { PikkuRPC } from '@sdk/api/pikku-rpc.gen'
 import { PikkuRealtime } from '../../../.pikku/realtime.gen'
 
 /**

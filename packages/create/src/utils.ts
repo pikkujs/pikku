@@ -93,11 +93,9 @@ export function mergeJsonFiles(
 /**
  * Replaces all occurrences of '../functions' with './' in all project files.
  */
-export function replaceFunctionReferences(
-  targetPath: string,
-  stackblitz?: boolean
-): void {
-  const pikkuDir = stackblitz ? 'pikku-gen' : '.pikku'
+export function replaceFunctionReferences(targetPath: string): void {
+  // The CLI always writes generated files to `.pikku` beside pikku.config.json.
+  const pikkuDir = '.pikku'
 
   const toImportPath = (fromFilePath: string, toPath: string): string => {
     let relativePath = path.relative(path.dirname(fromFilePath), toPath)
@@ -146,8 +144,8 @@ export function replaceFunctionReferences(
 /**
  * Cleans up the tsconfig.json file
  */
-export function cleanTSConfig(targetPath: string, stackblitz?: boolean): void {
-  const pikkuDir = stackblitz ? 'pikku-gen' : '.pikku'
+export function cleanTSConfig(targetPath: string): void {
+  const pikkuDir = '.pikku'
 
   const tsconfigFile = path.join(targetPath, 'tsconfig.json')
   const tsconfig = JSON.parse(fs.readFileSync(tsconfigFile, 'utf-8'))
@@ -183,29 +181,6 @@ export function cleanPikkuConfig(
     if (hasFunctionsRef) {
       // Replace with both ./src and ./types (matching functions template structure)
       pikkuConfig.srcDirectories = ['./src', './types']
-    }
-  }
-
-  // Remove config options for unsupported features
-  if (pikkuConfig.clientFiles) {
-    if (
-      !supportedFeatures.includes('http') &&
-      !supportedFeatures.includes('workflows')
-    ) {
-      delete pikkuConfig.clientFiles.fetchFile
-      delete pikkuConfig.clientFiles.rpcWiringsFile
-    }
-
-    if (!supportedFeatures.includes('channel')) {
-      delete pikkuConfig.clientFiles.websocketFile
-    }
-
-    if (!supportedFeatures.includes('queue')) {
-      delete pikkuConfig.clientFiles.queueWiringsFile
-    }
-
-    if (!supportedFeatures.includes('mcp')) {
-      delete pikkuConfig.clientFiles.mcpJsonFile
     }
   }
 
@@ -402,8 +377,7 @@ export function updatePackageJSONScripts(
   targetPath: string,
   appName: string,
   packageManager: string,
-  supportedFeatures: string[],
-  stackblitz?: boolean
+  supportedFeatures: string[]
 ): void {
   const packageFilePath = path.join(targetPath, 'package.json')
   let packageJsonString = fs.readFileSync(packageFilePath, 'utf-8')
@@ -419,56 +393,32 @@ export function updatePackageJSONScripts(
   packageJson.scripts.postinstall = 'pikku all'
 
   // Create test script based on supported features
-  if (stackblitz) {
-    // For stackblitz, run individual test commands
-    const testCommands: string[] = []
-    if (supportedFeatures.includes('http')) {
-      testCommands.push('npm run test:http-fetch')
-    }
-    if (supportedFeatures.includes('channel')) {
-      testCommands.push('npm run test:websocket')
-    }
-    if (supportedFeatures.includes('rpc')) {
-      testCommands.push('npm run test:rpc')
-    }
-    if (supportedFeatures.includes('sse')) {
-      testCommands.push('npm run test:http-sse')
-    }
-    if (supportedFeatures.includes('queue')) {
-      testCommands.push('npm run test:queue')
-    }
-    if (supportedFeatures.includes('mcp')) {
-      testCommands.push('npm run test:mcp')
-    }
-    packageJson.scripts.test = testCommands.join(' && ')
-  } else {
-    // For regular templates, construct run-tests.sh command with appropriate flags
-    const testFlags: string[] = []
-    if (supportedFeatures.includes('http')) {
-      testFlags.push('--http')
-    }
-    if (supportedFeatures.includes('channel')) {
-      testFlags.push('--websocket')
-    }
-    if (supportedFeatures.includes('rpc')) {
-      testFlags.push('--rpc')
-    }
-    if (supportedFeatures.includes('sse')) {
-      testFlags.push('--http-sse')
-    }
-    if (supportedFeatures.includes('queue')) {
-      testFlags.push('--queue')
-    }
-    if (supportedFeatures.includes('mcp')) {
-      testFlags.push('--mcp')
-    }
-    if (supportedFeatures.includes('cli')) {
-      testFlags.push('--cli')
-    }
-    // Only add test script if it doesn't already exist
-    if (!packageJson.scripts.test) {
-      packageJson.scripts.test = `bash run-tests.sh${testFlags.length > 0 ? ' ' + testFlags.join(' ') : ''}`
-    }
+  // For regular templates, construct run-tests.sh command with appropriate flags
+  const testFlags: string[] = []
+  if (supportedFeatures.includes('http')) {
+    testFlags.push('--http')
+  }
+  if (supportedFeatures.includes('channel')) {
+    testFlags.push('--websocket')
+  }
+  if (supportedFeatures.includes('rpc')) {
+    testFlags.push('--rpc')
+  }
+  if (supportedFeatures.includes('sse')) {
+    testFlags.push('--http-sse')
+  }
+  if (supportedFeatures.includes('queue')) {
+    testFlags.push('--queue')
+  }
+  if (supportedFeatures.includes('mcp')) {
+    testFlags.push('--mcp')
+  }
+  if (supportedFeatures.includes('cli')) {
+    testFlags.push('--cli')
+  }
+  // Only add test script if it doesn't already exist
+  if (!packageJson.scripts.test) {
+    packageJson.scripts.test = `bash run-tests.sh${testFlags.length > 0 ? ' ' + testFlags.join(' ') : ''}`
   }
 
   if (packageManager === 'yarn') {
@@ -478,14 +428,6 @@ export function updatePackageJSONScripts(
   }
 
   packageJson.scripts.pikku = 'pikku all'
-
-  if (stackblitz) {
-    packageJson.scripts.stackblitz =
-      "concurrently 'pikku watch --silent' 'npm run dev'"
-    packageJson.stackblitz = {
-      startCommand: 'npm run stackblitz',
-    }
-  }
 
   // Remove addon dependency unless 'addon' is supported
   if (!supportedFeatures.includes('addon')) {

@@ -2,6 +2,10 @@
   "srcDirectories": [
     "./src"
   ],
-  "outDir": "./.pikku",
-  "tsconfig": "./tsconfig.json"
+  "tsconfig": "./tsconfig.json",
+  "backends": {
+    "api": {
+      "filter": {}
+    }
+  }
 }

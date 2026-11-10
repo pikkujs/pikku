@@ -167,7 +167,7 @@ set `'agui'`.
 After `npx pikku all`, a type-safe client is generated:
 
 ```typescript
-import { pikkuFetch } from '#pikku/pikku-fetch.gen.js'
+import { pikkuFetch } from '@sdk/api/pikku-fetch.gen.js'
 
 pikkuFetch.setServerUrl('http://localhost:4002')
 

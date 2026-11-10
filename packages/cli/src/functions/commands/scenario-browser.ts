@@ -154,7 +154,7 @@ export const resolveScenarioBrowserProvider = async ({
   if (!config.appUrl || config.appUrlSource === 'default') {
     throw new Error(
       `Scenario environment '${environment}' has browser steps but no 'appUrl', and '${driver}' resolved none from the environment. ` +
-        `Add it to environments.${environment} in pikku.config.json, pass --app-url for a target that only exists at run time, or run with --no-browser to skip them.`
+        `Add it to environments.${environment}.frontends in pikku.config.json, pass --app-url for a target that only exists at run time, or run with --no-browser to skip them.`
     )
   }
 
@@ -171,7 +171,7 @@ export const resolveScenarioBrowserProvider = async ({
   if (unmapped.length > 0 && Object.keys(config.appUrls ?? {}).length > 0) {
     throw new Error(
       `No app url for ${unmapped.map((app) => `'${app}'`).join(', ')}, which ${unmapped.length > 1 ? 'virtual users sign' : 'a virtual user signs'} into. ` +
-        `Pass --app-url ${unmapped[0]}=<url> (repeatable, comma-separated) or add it to environments.${environment}.appUrls in pikku.config.json.`
+        `Pass --app-url ${unmapped[0]}=<url> (repeatable, comma-separated) or add it to environments.${environment}.frontends in pikku.config.json.`
     )
   }
   const options: ScenarioBrowserDriverOptions = {

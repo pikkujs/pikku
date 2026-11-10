@@ -25,7 +25,7 @@ import {
   resolveStatementMint,
   runtimeDirOf,
 } from '../../utils/virtual-user-signer.js'
-import { resolveEnvironment } from './environment.js'
+import { primaryFrontendName, resolveEnvironment } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { formatVirtualUserReport } from './virtual-user-formatter.js'
 
@@ -74,6 +74,7 @@ export const virtualUserRun = pikkuSessionlessFunc<
     seed?: string
     model?: string
     apiUrl?: string
+    backend?: string
     allowApproval?: boolean
     skipRoleCheck?: boolean
     out?: string
@@ -93,6 +94,7 @@ export const virtualUserRun = pikkuSessionlessFunc<
       seed,
       model,
       apiUrl,
+      backend,
       allowApproval,
       skipRoleCheck,
       out,
@@ -142,6 +144,8 @@ export const virtualUserRun = pikkuSessionlessFunc<
     const env = resolveEnvironment({
       environment,
       environments,
+      backend,
+      primaryFrontend: primaryFrontendName(config.frontends),
       apiUrl,
     })
 

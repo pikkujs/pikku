@@ -174,10 +174,13 @@ scenario virtual user per person, and seeds a user row each:
     "browserDriver": "@pikku/playwright",
     "model": "claude-sonnet-4-5"
   },
+  "backends": { "api": { "filter": {}, "dev": { "port": 4077 } } },
   "environments": {
     "local": {
-      "apiUrl": "http://localhost:4077",
-      "signInPath": "/api/auth/sign-in/virtual-user"
+      "backends": {
+        "api": { "signInPath": "/api/auth/sign-in/virtual-user" }
+      },
+      "frontends": { "web": "http://localhost:7077" }
     }
   }
 }
@@ -186,7 +189,7 @@ scenario virtual user per person, and seeds a user row each:
 - `scenarios.emailDomain` is the mail domain virtual user addresses are built on.
 - `scenarios.browserDriver` is the package driving `browser` bindings.
 - `scenarios.model` is the model a virtual user thinks with (`virtualUser.converse`, `pikku virtual-user run`).
-- `environments.<name>` are the targets a run can point at. The key is the required positional of `pikku scenario run`; `apiUrl` is required; `signInPath` defaults to `/auth/sign-in/virtual-user`, `rpcPath` to `/rpc`, and `sessionPath` has a default too.
+- `environments.<name>` are the targets a run can point at. The key is the required positional of `pikku scenario run`. `backends` is required when the project declares backends (a frontend-only project may omit it) and names declared backends: an entry is a URL string or `{ url, signInPath, sessionPath, rpcPath }`, and with no `url` a local backend is `http://localhost:<backends.<name>.dev.port>`. `signInPath` defaults to `/auth/sign-in/virtual-user`, `rpcPath` to `/rpc`, and `sessionPath` has a default too. `frontends` maps a frontend name to its URL. With several backends, `--backend <name>` picks the one a run signs in to; with one it is implied.
 
 **`references/virtual-users.md`** covers the parts that bite: one entry is one
 person and one virtual user, emails are derived and never written, `runnable: false`

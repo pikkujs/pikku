@@ -10,7 +10,7 @@ import {
   resolveStatementMint,
   runtimeDirOf,
 } from '../../utils/virtual-user-signer.js'
-import { resolveEnvironment } from './environment.js'
+import { primaryFrontendName, resolveEnvironment } from './environment.js'
 
 const unreachable = (error: unknown): boolean => {
   const cause = (error as { cause?: { code?: string } })?.cause
@@ -30,12 +30,13 @@ export const virtualUserRpc = pikkuSessionlessFunc<
     data?: string
     environment?: string
     apiUrl?: string
+    backend?: string
   },
   void
 >({
   func: async (
     { config, getInspectorState, variables },
-    { rpc, as: virtualUserId, data, environment = 'local', apiUrl }
+    { rpc, as: virtualUserId, data, environment = 'local', apiUrl, backend }
   ) => {
     const state = await getInspectorState(true, false, false, true)
     const virtualUsers = resolveVirtualUsers(
@@ -75,6 +76,8 @@ export const virtualUserRpc = pikkuSessionlessFunc<
     const env = resolveEnvironment({
       environment,
       environments: config.environments ?? {},
+      backend,
+      primaryFrontend: primaryFrontendName(config.frontends),
       apiUrl,
     })
     const signedIn = createHttpVirtualUsers({

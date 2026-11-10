@@ -1,4 +1,4 @@
-import { pikkuFetch } from '#pikku/pikku-fetch.gen.js'
+import { pikkuFetch } from '@sdk/app/pikku-fetch.gen'
 import type { HTTPWiringHandlerOf } from '#pikku/http/pikku-http-wirings-map.gen.d.js'
 
 type Ingest = HTTPWiringHandlerOf<'/analytics', 'POST'>['input']

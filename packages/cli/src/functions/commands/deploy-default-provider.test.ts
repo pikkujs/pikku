@@ -66,14 +66,14 @@ beforeEach(() => {
     join(root, 'pikku.config.json'),
     JSON.stringify({
       tsconfig: 'tsconfig.json',
-      outDir: '.pikku',
       srcDirectories: ['src'],
+      backends: { api: { filter: {} } },
       deploy: {
         providers: {
           first: '@vendor/deploy-first',
           second: '@vendor/deploy-second',
         },
-        defaultProvider: 'first',
+        provider: 'first',
       },
     })
   )
@@ -86,7 +86,7 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true })
 })
 
-describe('deploy.defaultProvider', () => {
+describe('deploy.provider', () => {
   test('is used when no -p is given', async (t) => {
     if (!existsSync(cliBin)) return t.skip('dist not built')
     const { status, output } = await runCli('deploy', 'apply', '--fromPlan')
@@ -105,5 +105,22 @@ describe('deploy.defaultProvider', () => {
     )
     assert.notEqual(status, 0)
     assert.match(output, /\.deploy\/second/)
+  })
+
+  test('is standalone when the project names none', async (t) => {
+    if (!existsSync(cliBin)) return t.skip('dist not built')
+    writeProvider('standalone')
+    writeFileSync(
+      join(root, 'pikku.config.json'),
+      JSON.stringify({
+        tsconfig: 'tsconfig.json',
+        srcDirectories: ['src'],
+        backends: { api: { filter: {} } },
+        deploy: { providers: { standalone: '@vendor/deploy-standalone' } },
+      })
+    )
+    const { status, output } = await runCli('deploy', 'apply', '--fromPlan')
+    assert.notEqual(status, 0)
+    assert.match(output, /\.deploy\/standalone/)
   })
 })

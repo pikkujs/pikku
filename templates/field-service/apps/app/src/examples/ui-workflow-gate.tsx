@@ -12,7 +12,10 @@
 //~ Which is why it belongs in a URL or a row, not only in React state.
 // ===== FILE: src/components/quote-gate.tsx =====
 import { useState } from 'react'
-import { useStartWorkflow, useWorkflowStatus } from '../pikku/api.gen'
+import {
+  useStartWorkflow,
+  useWorkflowStatus,
+} from '@sdk/api/pikku-react-query.gen'
 
 export const QuoteGate = ({ quoteId }: { quoteId: string }) => {
   const [runId, setRunId] = useState<string | undefined>()

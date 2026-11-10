@@ -1,3 +1,4 @@
+import { reactQueryClientFile } from '../../utils/backend-sdk.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { diffMocks, type MocksDiff } from '../mocks/diff.js'
 import { projectAddonMockSources } from '../mocks/addon-mocks.js'
@@ -29,7 +30,7 @@ export const mocksDiff = pikkuSessionlessFunc<
             scanFrontend(
               config.rootDir,
               files,
-              config.clientFiles?.reactQueryFile
+              reactQueryClientFile(config.rootDir, config.backends)
             )
           )
         : undefined,
