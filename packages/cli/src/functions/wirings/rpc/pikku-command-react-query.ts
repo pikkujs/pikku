@@ -2,11 +2,28 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
+import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { addonMockSources } from '../../mocks/addon-mocks.js'
 import { mocksToGlob, serializeMocksModule } from './serialize-mocks-module.js'
 import { serializeReactQueryHooks } from './serialize-react-query-hooks.js'
 import { readStubMocks } from './read-stub-mocks.js'
+
+/** True when `name` resolves from `dir` the way a bundler would: some `node_modules` above it holds it. */
+export const canResolvePackage = (dir: string, name: string): boolean => {
+  let current = dir
+  for (;;) {
+    if (existsSync(join(current, 'node_modules', name, 'package.json'))) {
+      return true
+    }
+    const parent = dirname(current)
+    if (parent === current) return false
+    current = parent
+  }
+}
+
+/** The hooks import these two; a project without them cannot compile the file. */
+const REACT_QUERY_PACKAGES = ['@tanstack/react-query', '@pikku/react']
 
 export const pikkuReactQuery = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -21,6 +38,19 @@ export const pikkuReactQuery = pikkuSessionlessFunc<void, void>({
       logger.debug({
         message:
           "Skipping generating React Query hooks since reactQueryFile isn't set in the pikku config.",
+        type: 'skip',
+      })
+      return
+    }
+
+    // Every backend's SDK names this file now, so a project that does not use
+    // React Query would otherwise get a file importing packages it lacks.
+    const missing = REACT_QUERY_PACKAGES.filter(
+      (name) => !canResolvePackage(config.configDir, name)
+    )
+    if (missing.length > 0) {
+      logger.debug({
+        message: `Skipping React Query hooks: ${missing.join(' and ')} not installed for ${config.configDir}.`,
         type: 'skip',
       })
       return
