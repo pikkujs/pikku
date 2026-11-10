@@ -61,7 +61,7 @@ service's paths and size limit; omitting it does not disable it.
   | `child_process`, `execa`, `cross-spawn`, `shelljs`, `Bun.spawn`, `Bun.$`               | the Supervisor, which owns the process and its output                  | `enforceSupervisor`       |
   | `process.argv`, `Bun.argv`, `Deno.args`, `commander`, `yargs`, `minimist`, `parseArgs` | a `pikku` CLI command, which receives typed input                      | `enforceCliCommands`      |
 
-  Opting out: `start.ts`, `server.ts`, `bin/`, `scripts/` and tests are already
+  Opting out: `start.ts`, `server.ts`, `**/bin/**`, `**/scripts/**` and tests are already
   exempt by the `overrides` entry `pikku enable oxlint` writes. One line
   elsewhere takes a plain comment, `// oxlint-disable-next-line
 no-restricted-properties -- why`. These rules apply to apps and addons, not library packages. A whole
