@@ -170,6 +170,15 @@ const leafNameOf = (subpath: string): string =>
     // reaches it. The application's install leaf is bare `addon` and stays.
     .replace(/^addon\/(?=.)/, '')
 
+/**
+ * A backend's pass writes its own copy of every leaf under `#pikku/backends/<name>/`,
+ * and its SDKs under `#pikku/sdk/`. The `#pikku/*` import pattern matches across
+ * slashes, so those copies show up as entrypoints; the surface describes the
+ * shared leaves an application imports, not each backend's duplicate.
+ */
+export const isPerBackendCopy = (subpath: string): boolean =>
+  /^#pikku\/(backends|sdk)\//.test(subpath)
+
 const toLeaves = (
   entryPoint: SurfaceEntryPointId,
   entrypoints: SurfaceEntrypoint[],
@@ -180,6 +189,7 @@ const toLeaves = (
   const missing: string[] = []
 
   for (const entrypoint of entrypoints) {
+    if (isPerBackendCopy(entrypoint.subpath)) continue
     const name = leafNameOf(entrypoint.subpath)
     const copy = editorial(entrypoint.subpath)
     if (!copy) {
