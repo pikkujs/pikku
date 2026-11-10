@@ -442,6 +442,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly name = 'standalone'
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
+  readonly frontends = {
+    kinds: ['spa', 'static'],
+    embedded: true,
+  } as const
   readonly supportedRuntimes = ['bun'] as const
   readonly bundlesSqliteLibrary = true
   private readonly port: number

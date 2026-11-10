@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { ProviderAdapter } from '@pikku/deploy'
+import type { FrontendKind, ProviderAdapter } from '@pikku/deploy'
 import { filterInspectorState } from '@pikku/inspector'
 import type { InspectorState } from '@pikku/inspector'
 import type { Logger } from '@pikku/core/services'
@@ -61,6 +61,100 @@ export const planBackendDeploys = (
   })
 }
 
+/** One frontend a deploy run covers, with the provider it deploys through. */
+export type FrontendDeploy = {
+  name: string
+  kind: FrontendKind
+  providerName: string
+  dir: string
+  /** Set when `serve` ships it inside a backend's bundle. */
+  embedded: boolean
+}
+
+type FrontendsConfig = Parameters<typeof resolveDeploy>[0] & {
+  frontends?: Record<
+    string,
+    {
+      kind?: FrontendKind
+      dist?: string
+      deploy?: unknown
+      serve?: unknown
+    }
+  >
+}
+
+/**
+ * The frontends a deploy run covers, each with its resolved provider.
+ * `deploy: false` leaves one out. A `serve` frontend ships inside its backend's
+ * bundle, so it must use that backend's provider.
+ */
+export const planFrontendDeploys = (
+  config: FrontendsConfig,
+  options: { provider?: string },
+  backends: BackendDeploy[]
+): FrontendDeploy[] => {
+  const plans: FrontendDeploy[] = []
+  for (const [name, frontend] of Object.entries(config.frontends ?? {})) {
+    if (frontend.deploy === false) continue
+    const resolved = resolveDeploy(config, { frontend: name }, options.provider)
+    const embedded = Boolean(frontend.serve)
+    if (embedded) {
+      const own =
+        typeof frontend.deploy === 'object' && frontend.deploy
+          ? (frontend.deploy as { provider?: string }).provider
+          : undefined
+      const served = [...new Set(backends.map((b) => b.providerName))]
+      if (
+        own &&
+        !options.provider &&
+        served.length > 0 &&
+        !served.includes(own)
+      ) {
+        throw new Error(
+          `Frontend '${name}' sets serve, so it deploys inside its backend's bundle with that backend's provider (${served.join(', ')}), but frontends.${name}.deploy.provider is '${own}'. Remove frontends.${name}.deploy.provider, or remove serve.`
+        )
+      }
+    }
+    plans.push({
+      name,
+      kind: frontend.kind ?? 'spa',
+      providerName: resolved.provider,
+      dir: frontend.dist ?? 'dist',
+      embedded,
+    })
+  }
+  return plans
+}
+
+/**
+ * Throws unless the provider can host this frontend. Runs before any build so a
+ * deploy that cannot ship a frontend fails with nothing built.
+ */
+export const assertFrontendSupported = (
+  frontend: FrontendDeploy,
+  provider: ProviderAdapter
+): void => {
+  const support = provider.frontends
+  if (!support || !support.kinds.includes(frontend.kind)) {
+    throw new Error(
+      `Frontend '${frontend.name}' (kind ${frontend.kind}) cannot deploy to provider '${provider.name}': no ${frontend.kind} frontend support. Set frontends.${frontend.name}.deploy.provider to a provider that supports it, or deploy: false.`
+    )
+  }
+  if (frontend.embedded) {
+    if (!support.embedded) {
+      throw new Error(
+        `Frontend '${frontend.name}' sets serve, but provider '${provider.name}' cannot embed a frontend in a backend bundle. Remove serve and give it a provider that hosts frontends, or deploy: false.`
+      )
+    }
+    return
+  }
+  if (typeof provider.deployFrontend !== 'function') {
+    throw new Error(
+      `Frontend '${frontend.name}' cannot deploy to provider '${provider.name}': the provider declares frontend support but does not implement deployFrontend. Add serve to deploy it inside a backend bundle, or set deploy: false.`
+    )
+  }
+}
+
 /** With several backends one result file would be overwritten by each. */
 export const resultFileFor = (
   resultFile: string | undefined,
@@ -109,7 +203,7 @@ export const buildBackend = (args: {
     }
     if (frontend && backend.many) {
       throw new Error(
-        `A frontend sets serve, and ${provider.name} ships it inside one backend's bundle, but this project declares several backends and no key says which one. Deploy with a single backend, or remove serve.`
+        `Frontend '${frontend.name}' sets serve, and ${provider.name} ships it inside one backend's bundle, but this project declares several backends and no key says which one. Deploy one backend (--backend <name>), move the frontend to a provider that is not single-unit, or remove serve.`
       )
     }
   }

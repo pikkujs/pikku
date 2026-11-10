@@ -8,12 +8,15 @@ import {
   describeBuildFailure,
   PikkuDeployBuildFailedError,
 } from '../../deploy/build-pipeline.js'
+import type { ProviderAdapter } from '@pikku/deploy'
 import type { DeployProvider } from '../../deploy/plan/provider.js'
 import { resolveProvider, getEntryContext } from './deploy-apply.js'
 import {
+  assertFrontendSupported,
   backendState,
   buildBackend,
   planBackendDeploys,
+  planFrontendDeploys,
   resultFileFor,
 } from './deploy-backends.js'
 
@@ -75,15 +78,32 @@ export const deployPlan = pikkuSessionlessFunc<
       backend: data?.backend,
       provider: data?.provider,
     })
+    // Every provider is resolved, and every frontend checked against its
+    // provider, before the first backend builds.
+    const providers = new Map<string, ProviderAdapter>()
+    for (const backend of backends) {
+      providers.set(
+        backend.name,
+        await resolveProvider(config, backend.providerName, { projectDir })
+      )
+    }
+    for (const frontend of planFrontendDeploys(
+      config,
+      { provider: data?.provider },
+      backends
+    )) {
+      const provider =
+        [...providers.values()].find((p) => p.name === frontend.providerName) ??
+        (await resolveProvider(config, frontend.providerName, { projectDir }))
+      assertFrontendSupported(frontend, provider)
+    }
     const unfilteredState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
     const failures: string[] = []
 
     for (const backend of backends) {
       if (backend.many) logger.info(`Backend ${backend.name}`)
-      const provider = await resolveProvider(config, backend.providerName, {
-        projectDir,
-      })
+      const provider = providers.get(backend.name)!
 
       const result = await buildBackend({
         config,

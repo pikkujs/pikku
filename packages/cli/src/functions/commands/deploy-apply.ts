@@ -16,9 +16,11 @@ import {
 import { DEFAULT_DEPLOY_PROVIDER } from '../../deploy/resolve-deploy.js'
 import { nativeSidecars } from '../../utils/frontend.js'
 import {
+  assertFrontendSupported,
   backendState,
   buildBackend,
   planBackendDeploys,
+  planFrontendDeploys,
   resultFileFor,
   type BackendDeploy,
 } from './deploy-backends.js'
@@ -480,11 +482,40 @@ export const deployApply = pikkuSessionlessFunc<
       assertRuntime(provider, data?.runtime)
       providers.set(backend.name, provider)
     }
+    const frontends = planFrontendDeploys(
+      config,
+      { provider: data?.provider },
+      backends
+    )
+    const frontendProviders = new Map<string, ProviderAdapter>()
+    for (const frontend of frontends) {
+      const provider =
+        [...providers.values()].find((p) => p.name === frontend.providerName) ??
+        (await resolveProvider(config, frontend.providerName, {
+          projectDir,
+          nativeSidecars: nativeSidecars(config.frontends),
+        }))
+      assertFrontendSupported(frontend, provider)
+      frontendProviders.set(frontend.name, provider)
+    }
     const unfilteredState = fromPlan ? undefined : await getInspectorState(true)
 
     for (const backend of backends) {
       if (backend.many) logger.info(`Backend ${backend.name}`)
       await applyBackend(backend, providers.get(backend.name)!, unfilteredState)
+    }
+
+    const projectId = await resolveProjectId(projectDir)
+    for (const frontend of frontends) {
+      if (frontend.embedded) continue
+      logger.info(`Frontend ${frontend.name}`)
+      await frontendProviders.get(frontend.name)!.deployFrontend!({
+        name: frontend.name,
+        kind: frontend.kind,
+        dir: frontend.dir,
+        projectId,
+        logger,
+      })
     }
 
     async function applyBackend(

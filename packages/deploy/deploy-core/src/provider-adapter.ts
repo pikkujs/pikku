@@ -161,6 +161,24 @@ export interface EntryGenerationContext {
   platformServices?: EntryPlatformServices
 }
 
+export type FrontendKind = 'spa' | 'static' | 'ssr'
+
+/** The frontend kinds a provider can host, and whether it can embed one. */
+export interface FrontendSupport {
+  readonly kinds: readonly FrontendKind[]
+  /** Can ship a `serve` frontend inside the backend's own bundle. */
+  readonly embedded?: boolean
+}
+
+export interface FrontendDeployContext {
+  name: string
+  kind: FrontendKind
+  /** The built output, `pikku app build`'s `dist`. */
+  dir: string
+  projectId: string
+  logger: { info(msg: string): void; error(msg: string): void }
+}
+
 export interface ProviderAdapter {
   /** Provider name (e.g. 'cloudflare', 'aws') */
   readonly name: string
@@ -177,6 +195,15 @@ export interface ProviderAdapter {
    * Used by standalone adapter.
    */
   readonly singleUnit?: boolean
+
+  /** Absent means the provider hosts no frontend. */
+  readonly frontends?: FrontendSupport
+
+  /**
+   * Host a built frontend that is not embedded in a backend bundle. A provider
+   * that lists `frontends.kinds` and leaves this out can only embed.
+   */
+  deployFrontend?(ctx: FrontendDeployContext): Promise<void>
 
   /**
    * Whether the provider's workflow runtime needs synthesized per-step
