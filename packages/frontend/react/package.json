@@ -1,6 +1,6 @@
 {
   "name": "@pikku/react",
-  "version": "0.12.21",
+  "version": "0.12.22",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -54,7 +54,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@pikku/fetch": "^0.12.14"
+    "@pikku/fetch": "^0.12.15"
   },
   "peerDependencies": {
     "react": "^18 || ^19",

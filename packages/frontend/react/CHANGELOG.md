@@ -1,5 +1,14 @@
 # @pikku/react
 
+## 0.12.22
+
+### Patch Changes
+
+- 6e9e86f: Server-sent events with `\r\n` or `\r` line endings now parse, including a `\r\n` split across two chunks. `postStream` sends its headers through `Headers`, so any form of header init works, and it stops yielding once the abort signal fires.
+- Updated dependencies [6e9e86f]
+- Updated dependencies [be90d6c]
+  - @pikku/fetch@0.12.15
+
 ## 0.12.21
 
 ### Patch Changes

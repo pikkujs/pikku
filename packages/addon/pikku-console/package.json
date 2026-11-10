@@ -1,6 +1,6 @@
 {
   "name": "@pikku/addon-console",
-  "version": "0.12.68",
+  "version": "0.12.69",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -43,9 +43,9 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/better-auth": "^0.12.62",
-    "@pikku/cli": "^0.12.204",
-    "@pikku/core": "^0.12.152"
+    "@pikku/better-auth": "^0.12.64",
+    "@pikku/cli": "^0.12.208",
+    "@pikku/core": "^0.12.154"
   },
   "peerDependenciesMeta": {
     "@pikku/better-auth": {
@@ -53,15 +53,15 @@
     }
   },
   "devDependencies": {
-    "@pikku/better-auth": "^0.12.62",
-    "@pikku/cli": "^0.12.204",
-    "@pikku/core": "^0.12.152",
+    "@pikku/better-auth": "^0.12.64",
+    "@pikku/cli": "^0.12.208",
+    "@pikku/core": "^0.12.154",
     "@standard-schema/spec": "^1.1.0",
     "@types/json-schema": "^7.0.15",
     "oauth2-mock-server": "^9.3.0"
   },
   "dependencies": {
-    "@pikku/code-edit": "^0.12.11",
+    "@pikku/code-edit": "^0.12.13",
     "@pikku/knowledge": "^0.12.21",
     "json-schema": "^0.4.0",
     "open": "^11.0.4"
