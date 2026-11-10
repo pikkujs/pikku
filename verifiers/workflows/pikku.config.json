@@ -23,8 +23,6 @@
     "complexWorkflows": true
   },
   "lint": {
-    "enforceContentService": "off",
-    "enforceSupervisor": "off",
-    "enforceCliCommands": "off"
+    "enforceContentService": "off"
   }
 }

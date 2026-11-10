@@ -6,8 +6,5 @@
   "scaffold": {
     "meshRpc": true,
     "workflow": true
-  },
-  "lint": {
-    "enforceSupervisor": "off"
   }
 }

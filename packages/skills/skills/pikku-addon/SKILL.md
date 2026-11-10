@@ -43,10 +43,10 @@ Discover first (`pikku meta … --json`, `pikku info functions --verbose`, `pikk
 
 - **No `fs`** (`node:fs`, `fs/promises`, `fs-extra`, `require('fs')`). Use the `content` service: keyed, project-scoped, with signed reads and writes.
 - **No `child_process`** (`execa`, `cross-spawn`, `shelljs`, `Bun.spawn`, `Bun.$`). Use the Supervisor, which owns the process, its lifecycle and its output. Type-only imports from `node:child_process` are fine.
-- **No `process.env`**, including `{ ...process.env }`, `const { env } = process` and `globalThis.process.env`. Use the `variables` service for values and `secrets` for secrets, declared as above.
+- **No `process.env`**, including `{ ...process.env }`, `const { env } = process` and `globalThis.process.env` (also through `global` and `self`). Use the `variables` service for values and `secrets` for secrets, declared as above.
 - **No `process.argv`** (`Bun.argv`, `Deno.args`, `globalThis.process.argv`, `commander`, `yargs`, `minimist`, `parseArgs`). Expose a `pikku` CLI command, which receives typed input.
 
-`start.ts`, `server.ts`, `bin/`, `scripts/` and tests are exempt. Anywhere else, a one-line `// oxlint-disable-next-line <rule> -- reason` is the only way out. Do not set `lint.enforce*` to `"off"` to make an addon pass. Only a package that is a developer tool rather than something a host wires in (the console and the CLI packages) turns a key off in its own `pikku.config.json`.
+`start.ts`, `server.ts`, `bin/`, `scripts/` and tests are exempt. Anywhere else, a one-line `// oxlint-disable-next-line <rule> -- reason` is the only way out. Do not set `lint.enforce*` to `"off"` to make an addon pass. These keys apply to apps and addons, not to library packages: a library or developer-tool package that `pikku validate` checks sets the key it cannot meet to `"off"` in its own `pikku.config.json`.
 
 ## Writing an addon
 

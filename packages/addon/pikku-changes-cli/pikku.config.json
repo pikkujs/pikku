@@ -12,8 +12,6 @@
   },
   "lint": {
     "enforceContentService": "off",
-    "enforceVariablesService": "off",
-    "enforceSupervisor": "off",
-    "enforceCliCommands": "off"
+    "enforceVariablesService": "off"
   }
 }
