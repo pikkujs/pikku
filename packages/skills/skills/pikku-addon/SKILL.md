@@ -46,7 +46,7 @@ Discover first (`pikku meta … --json`, `pikku info functions --verbose`, `pikk
 - **No `process.env`**, including `{ ...process.env }`, `const { env } = process` and `globalThis.process.env` (also through `global` and `self`). Use the `variables` service for values and `secrets` for secrets, declared as above.
 - **No `process.argv`** (`Bun.argv`, `Deno.args`, `globalThis.process.argv`, `commander`, `yargs`, `minimist`, `parseArgs`). Expose a `pikku` CLI command, which receives typed input.
 
-`start.ts`, `server.ts`, `bin/`, `scripts/` and tests are exempt. Anywhere else, a one-line `// oxlint-disable-next-line <rule> -- reason` is the only way out. Do not set `lint.enforce*` to `"off"` to make an addon pass. These keys apply to apps and addons, not to library packages: a library or developer-tool package that `pikku validate` checks sets the key it cannot meet to `"off"` in its own `pikku.config.json`.
+`start.ts`, `server.ts`, `**/bin/**`, `**/scripts/**` and tests are exempt. Anywhere else, a one-line `// oxlint-disable-next-line <rule> -- reason` is the only way out. Do not set `lint.enforce*` to `"off"` to make an addon pass. These keys apply to apps and addons, not to library packages: a library or developer-tool package that `pikku validate` checks sets the key it cannot meet to `"off"` in its own `pikku.config.json`.
 
 ## Writing an addon
 
