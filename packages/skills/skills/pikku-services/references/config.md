@@ -6,7 +6,6 @@
 - [Secrets & Variables](#secrets-variables)
 - [Credentials](#credentials)
 
-
 ## Before You Start
 
 ```bash
@@ -224,12 +223,21 @@ const apiKey = services.variables.get('API_KEY')
     "functionDynamicImport": "warn",
     "enforceContentService": "error",
     "enforceVariablesService": "error",
+    "enforceSupervisor": "error",
+    "enforceCliCommands": "error",
     "customServerBootstrap": "warn"
   }
 }
 ```
 
-`enforceContentService` and `enforceVariablesService` are enforced by the app's own oxlint, which `pikku validate` requires and runs. `enforceContentService` requires `no-restricted-imports` on `fs` / `node:fs` / `fs/promises` / `node:fs/promises` plus `typescript/no-require-imports`: use the `content` service, which is keyed, project-scoped, and signs reads and writes. `enforceVariablesService` requires `node/no-process-env` (and the `node` plugin): use the `variables` service for non-secret values and the `secrets` service for secrets. Both default to `"error"`; `pikku enable oxlint` writes the rules with test files exempted. Exempt a single file (bootstrap, a script) with an oxlint `overrides` entry, or set a key to `"warn"` or `"off"` for the whole project, for example in a CLI tool that legitimately reads the developer's project files.
+The four `enforce*` keys are enforced by the app's own oxlint, which `pikku validate` requires and runs. All default to `"error"`; `pikku enable oxlint` writes the rules.
+
+- `enforceContentService`: `no-restricted-imports` on `fs`, `node:fs`, `fs/promises`, `node:fs/promises`, `fs-extra`, `graceful-fs`, plus `typescript/no-require-imports`. Use the `content` service, which is keyed, project-scoped, and signs reads and writes.
+- `enforceVariablesService`: `no-restricted-properties` on `process.env` and on `process` of `globalThis`, `global` and `self` (this catches `{ ...process.env }`, `const { env } = process` and `globalThis.process.env`, also through `global` and `self`; `node/no-process-env` no longer satisfies it). Use the `variables` service for non-secret values and the `secrets` service for secrets.
+- `enforceSupervisor`: `no-restricted-imports` on `child_process`, `node:child_process`, `execa`, `cross-spawn`, `shelljs` (type-only imports stay allowed), and `no-restricted-properties` on `Bun.spawn`, `Bun.spawnSync`, `Bun.$` and `Bun` of `globalThis`, `global` and `self`. Use the Supervisor.
+- `enforceCliCommands`: `no-restricted-properties` on `process.argv`, `Bun.argv`, `Deno.args` and `process`, `Bun` and `Deno` of `globalThis`, `global` and `self`, and `no-restricted-imports` on `commander`, `yargs`, `minimist` and `parseArgs` from `node:util`. Expose a `pikku` CLI command.
+
+These rules apply to apps and addons, not to library packages; a library or tool package sets a key it cannot meet to `"off"`. They share `no-restricted-imports` and `no-restricted-properties`, so the config holds one value of each with every entry. The `overrides` entry `pikku enable oxlint` writes turns the rules off for `**/start.ts`, `**/server.ts`, `**/bin/**`, `**/scripts/**` and `*.test.*` / `*.spec.*`. Exempt one line with `// oxlint-disable-next-line <rule> -- reason`, which works in `.ts` and `.tsx`, or set a key to `"warn"` or `"off"` for the whole project, for example in a CLI tool that legitimately reads the developer's project files or starts processes.
 
 `customServerBootstrap` is the one evaluated by `pikku validate` rather than codegen: it warns when the root `start`/`dev` script boots a server without `pikku dev` / `pikku serve` and no runtime adapter is installed. Set it to `"off"` to keep a hand-rolled entrypoint, or `"error"` to enforce the hooks.
 

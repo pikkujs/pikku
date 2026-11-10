@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "node"],
+  "plugins": ["typescript"],
   "env": {
     "es2022": true
   },
@@ -31,16 +31,119 @@
             "name": "node:fs/promises",
             "allowTypeImports": true,
             "message": "Use the `content` service: keyed, project-scoped, with signed reads and writes."
+          },
+          {
+            "name": "fs-extra",
+            "allowTypeImports": true,
+            "message": "Use the `content` service: keyed, project-scoped, with signed reads and writes."
+          },
+          {
+            "name": "graceful-fs",
+            "allowTypeImports": true,
+            "message": "Use the `content` service: keyed, project-scoped, with signed reads and writes."
+          },
+          {
+            "name": "child_process",
+            "allowTypeImports": true,
+            "message": "Run processes through the Supervisor, not child_process."
+          },
+          {
+            "name": "node:child_process",
+            "allowTypeImports": true,
+            "message": "Run processes through the Supervisor, not child_process."
+          },
+          {
+            "name": "execa",
+            "allowTypeImports": true,
+            "message": "Run processes through the Supervisor, not child_process."
+          },
+          {
+            "name": "cross-spawn",
+            "allowTypeImports": true,
+            "message": "Run processes through the Supervisor, not child_process."
+          },
+          {
+            "name": "shelljs",
+            "allowTypeImports": true,
+            "message": "Run processes through the Supervisor, not child_process."
+          },
+          {
+            "name": "commander",
+            "allowTypeImports": true,
+            "message": "Expose a `pikku` CLI command rather than parsing argv."
+          },
+          {
+            "name": "yargs",
+            "allowTypeImports": true,
+            "message": "Expose a `pikku` CLI command rather than parsing argv."
+          },
+          {
+            "name": "minimist",
+            "allowTypeImports": true,
+            "message": "Expose a `pikku` CLI command rather than parsing argv."
+          },
+          {
+            "name": "node:util",
+            "importNames": ["parseArgs"],
+            "allowTypeImports": true,
+            "message": "Expose a `pikku` CLI command rather than parsing argv."
+          },
+          {
+            "name": "util",
+            "importNames": ["parseArgs"],
+            "allowTypeImports": true,
+            "message": "Expose a `pikku` CLI command rather than parsing argv."
           }
         ]
       }
     ],
     "typescript/no-require-imports": "error",
-    "node/no-process-env": "error"
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "process",
+        "property": "env",
+        "message": "Use the `variables` service for values and the `secrets` service for secrets."
+      },
+      {
+        "object": "Bun",
+        "property": "spawn",
+        "message": "Run processes through the Supervisor, not Bun.spawn."
+      },
+      {
+        "object": "Bun",
+        "property": "spawnSync",
+        "message": "Run processes through the Supervisor, not Bun.spawn."
+      },
+      {
+        "object": "Bun",
+        "property": "$",
+        "message": "Run processes through the Supervisor, not Bun.spawn."
+      },
+      {
+        "object": "process",
+        "property": "argv",
+        "message": "Expose a `pikku` CLI command rather than reading argv."
+      },
+      {
+        "object": "Bun",
+        "property": "argv",
+        "message": "Expose a `pikku` CLI command rather than reading argv."
+      },
+      {
+        "object": "Deno",
+        "property": "args",
+        "message": "Expose a `pikku` CLI command rather than reading argv."
+      }
+    ]
   },
   "overrides": [
     {
       "files": [
+        "**/start.ts",
+        "**/server.ts",
+        "**/bin/**",
+        "**/scripts/**",
         "**/*.test.ts",
         "**/*.test.tsx",
         "**/*.spec.ts",
@@ -49,7 +152,7 @@
       "rules": {
         "no-restricted-imports": "off",
         "typescript/no-require-imports": "off",
-        "node/no-process-env": "off"
+        "no-restricted-properties": "off"
       }
     }
   ],

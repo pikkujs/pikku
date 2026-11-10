@@ -365,6 +365,9 @@ describe('Functions Test Suite', () => {
     assert.equal(config.options.typeAware, true)
     assert.equal(config.rules['typescript/no-misused-promises'], 'error')
     assert.equal(config.rules['typescript/no-floating-promises'], 'error')
+    assert.ok(config.rules['no-restricted-imports'])
+    assert.ok(config.rules['no-restricted-properties'])
+    assert.ok(config.overrides[0].files.includes('**/start.ts'))
 
     // second run, and a user-owned file: nothing is overwritten
     fs.writeFileSync(configPath, '{"mine":true}')

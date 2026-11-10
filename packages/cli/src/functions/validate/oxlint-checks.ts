@@ -41,43 +41,132 @@ export const DEFEATING_OPTIONS: Partial<
   },
 }
 
-const FS_MODULES = ['fs', 'node:fs', 'fs/promises', 'node:fs/promises']
+/** A `no-restricted-imports` path: the whole module, or only the named exports. */
+export type RestrictedPath = { name: string; importNames?: string[] }
 
-export type PolicyKey = 'enforceContentService' | 'enforceVariablesService'
+/** A `no-restricted-properties` entry: `object.property`. */
+export type RestrictedProperty = { object: string; property: string }
+
+const FS_MODULES = [
+  'fs',
+  'node:fs',
+  'fs/promises',
+  'node:fs/promises',
+  'fs-extra',
+  'graceful-fs',
+]
+
+const CHILD_PROCESS_MODULES = [
+  'child_process',
+  'node:child_process',
+  'execa',
+  'cross-spawn',
+  'shelljs',
+]
+
+const CLI_PARSER_MODULES = ['commander', 'yargs', 'minimist']
+
+export type PolicyKey =
+  | 'enforceContentService'
+  | 'enforceVariablesService'
+  | 'enforceSupervisor'
+  | 'enforceCliCommands'
 export type PolicyLevel = 'off' | 'warn' | 'error'
 export type PolicyLevels = Record<PolicyKey, PolicyLevel>
+
+const restrictedImports = (paths: RestrictedPath[], message: string) => [
+  'error',
+  {
+    paths: paths.map((p) => ({ ...p, allowTypeImports: true, message })),
+  },
+]
+
+/**
+ * Objects that reach the runtime globals. oxlint 1.88.0 matches a bare
+ * `{ object, property }` only, never a dotted object, so `globalThis.process`
+ * is restricted as the property `process` of `globalThis`.
+ */
+const GLOBAL_OBJECTS = ['globalThis', 'global', 'self']
+const viaGlobals = (property: string): RestrictedProperty[] =>
+  GLOBAL_OBJECTS.map((object) => ({ object, property }))
+
+const restrictedProperties = (
+  properties: RestrictedProperty[],
+  message: string
+) => ['error', ...properties.map((p) => ({ ...p, message }))]
 
 /**
  * Rules a `pikku.config.json` `lint` key requires while it is not `'off'`.
  * Unlike OXLINT_REQUIRED_RULES these may be relaxed per file through
- * `overrides`: tests, bootstrap and tooling legitimately read the disk and the
- * environment.
+ * `overrides`: tests, bootstrap and tooling legitimately read the disk, the
+ * environment and the command line. Several keys share `no-restricted-imports`
+ * and `no-restricted-properties`; `activePolicyRules` merges their entries.
  */
 export const OXLINT_POLICY_RULES: Record<
   PolicyKey,
-  { plugin?: string; use: string; rules: Record<string, unknown> }
+  { use: string; rules: Record<string, unknown> }
 > = {
   enforceContentService: {
     use: 'the `content` service, which is keyed, project-scoped, and signs reads and writes',
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: FS_MODULES.map((name) => ({
-            name,
-            allowTypeImports: true,
-            message:
-              'Use the `content` service: keyed, project-scoped, with signed reads and writes.',
-          })),
-        },
-      ],
+      'no-restricted-imports': restrictedImports(
+        FS_MODULES.map((name) => ({ name })),
+        'Use the `content` service: keyed, project-scoped, with signed reads and writes.'
+      ),
       'typescript/no-require-imports': 'error',
     },
   },
   enforceVariablesService: {
-    plugin: 'node',
     use: 'the `variables` service for values and the `secrets` service for secrets',
-    rules: { 'node/no-process-env': 'error' },
+    rules: {
+      'no-restricted-properties': restrictedProperties(
+        [{ object: 'process', property: 'env' }, ...viaGlobals('process')],
+        'Use the `variables` service for values and the `secrets` service for secrets.'
+      ),
+    },
+  },
+  enforceSupervisor: {
+    use: 'the Supervisor, which owns child processes, their lifecycle and their output',
+    rules: {
+      'no-restricted-imports': restrictedImports(
+        CHILD_PROCESS_MODULES.map((name) => ({ name })),
+        'Run processes through the Supervisor, not child_process.'
+      ),
+      'typescript/no-require-imports': 'error',
+      'no-restricted-properties': restrictedProperties(
+        [
+          { object: 'Bun', property: 'spawn' },
+          { object: 'Bun', property: 'spawnSync' },
+          { object: 'Bun', property: '$' },
+          ...viaGlobals('Bun'),
+        ],
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+    },
+  },
+  enforceCliCommands: {
+    use: 'a `pikku` CLI command, which receives typed input instead of reading argv',
+    rules: {
+      'no-restricted-imports': restrictedImports(
+        [
+          ...CLI_PARSER_MODULES.map((name) => ({ name })),
+          { name: 'node:util', importNames: ['parseArgs'] },
+          { name: 'util', importNames: ['parseArgs'] },
+        ],
+        'Expose a `pikku` CLI command rather than parsing argv.'
+      ),
+      'no-restricted-properties': restrictedProperties(
+        [
+          { object: 'process', property: 'argv' },
+          { object: 'Bun', property: 'argv' },
+          { object: 'Deno', property: 'args' },
+          ...viaGlobals('process'),
+          ...viaGlobals('Bun'),
+          ...viaGlobals('Deno'),
+        ],
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+    },
   },
 }
 
@@ -88,6 +177,19 @@ export const OXLINT_TEST_FILES = [
   '**/*.spec.tsx',
 ]
 
+/** Entry points and tooling, where the policy rules are off in the config `pikku enable oxlint` writes. */
+export const OXLINT_BOOTSTRAP_FILES = [
+  '**/start.ts',
+  '**/server.ts',
+  '**/bin/**',
+  '**/scripts/**',
+]
+
+export const OXLINT_EXEMPT_FILES = [
+  ...OXLINT_BOOTSTRAP_FILES,
+  ...OXLINT_TEST_FILES,
+]
+
 export const policyLevels = (lint: unknown): PolicyLevels => {
   const levelOfKey = (key: PolicyKey): PolicyLevel => {
     const v = (lint as Record<string, unknown> | undefined)?.[key]
@@ -96,45 +198,138 @@ export const policyLevels = (lint: unknown): PolicyLevels => {
   return {
     enforceContentService: levelOfKey('enforceContentService'),
     enforceVariablesService: levelOfKey('enforceVariablesService'),
+    enforceSupervisor: levelOfKey('enforceSupervisor'),
+    enforceCliCommands: levelOfKey('enforceCliCommands'),
   }
 }
 
-/** The rules the active policies add, at the level their key sets. */
+/**
+ * The rules the active policies add. A rule several policies share is written
+ * once: their `no-restricted-imports` paths and `no-restricted-properties`
+ * entries are concatenated, and it takes the strictest of their levels.
+ */
 export const activePolicyRules = (
   levels: PolicyLevels
-): Record<string, unknown> =>
-  Object.fromEntries(
-    (Object.keys(OXLINT_POLICY_RULES) as PolicyKey[])
-      .filter((key) => levels[key] !== 'off')
-      .flatMap((key) =>
-        Object.entries(OXLINT_POLICY_RULES[key].rules).map(([rule, value]) => [
-          rule,
-          Array.isArray(value) ? [levels[key], ...value.slice(1)] : levels[key],
-        ])
-      )
+): Record<string, unknown> => {
+  const merged: Record<string, { level: PolicyLevel; options: unknown[] }> = {}
+  for (const key of Object.keys(OXLINT_POLICY_RULES) as PolicyKey[]) {
+    if (levels[key] === 'off') continue
+    for (const [rule, value] of Object.entries(
+      OXLINT_POLICY_RULES[key].rules
+    )) {
+      const options = Array.isArray(value) ? value.slice(1) : []
+      const entry = merged[rule]
+      if (!entry) {
+        merged[rule] = { level: levels[key], options: structuredClone(options) }
+        continue
+      }
+      if (levels[key] === 'error') entry.level = 'error'
+      if (rule === 'no-restricted-imports') {
+        const into = entry.options[0] as { paths: unknown[] }
+        into.paths.push(...(options[0] as { paths: unknown[] }).paths)
+      } else if (rule === 'no-restricted-properties') {
+        const seen = new Set(
+          (entry.options as RestrictedProperty[]).map(
+            (o) => `${o.object}.${o.property}`
+          )
+        )
+        for (const o of options as RestrictedProperty[]) {
+          if (!seen.has(`${o.object}.${o.property}`)) {
+            entry.options.push(structuredClone(o))
+            seen.add(`${o.object}.${o.property}`)
+          }
+        }
+      }
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(merged).map(([rule, { level, options }]) => [
+      rule,
+      options.length > 0 ? [level, ...options] : level,
+    ])
   )
+}
 
-/** Module names a `no-restricted-imports` value restricts, flat or nested as `--print-config` prints it. */
-export const restrictedModules = (value: unknown): Set<string> => {
-  const names = new Set<string>()
-  if (!Array.isArray(value)) return names
+/** The entries of `no-restricted-imports` (flat, or nested as `--print-config` prints it). */
+export const restrictedPaths = (value: unknown): RestrictedPath[] => {
+  const out: RestrictedPath[] = []
+  if (!Array.isArray(value)) return out
   for (const o of value.slice(1).flat()) {
-    if (typeof o === 'string') names.add(o)
+    if (typeof o === 'string') out.push({ name: o })
     const paths = (o as { paths?: unknown } | null)?.paths
     if (!Array.isArray(paths)) continue
     for (const p of paths) {
-      if (typeof p === 'string') names.add(p)
-      else if (typeof (p as { name?: unknown })?.name === 'string')
-        names.add((p as { name: string }).name)
+      if (typeof p === 'string') out.push({ name: p })
+      else if (typeof (p as { name?: unknown })?.name === 'string') {
+        const { name, importNames } = p as RestrictedPath
+        out.push({
+          name,
+          ...(Array.isArray(importNames) ? { importNames } : {}),
+        })
+      }
     }
   }
-  return names
+  return out
 }
 
-export const missingFsModules = (value: unknown): string[] => {
-  const restricted = restrictedModules(value)
-  return FS_MODULES.filter((m) => !restricted.has(m))
+const pathLabel = (p: RestrictedPath) =>
+  p.importNames ? `${p.name} (${p.importNames.join(', ')})` : p.name
+
+/** What `wanted` restricts that `value` does not: a whole module, or the named exports of one. */
+export const missingRestrictedPaths = (
+  value: unknown,
+  wanted: unknown
+): RestrictedPath[] => {
+  const have = restrictedPaths(value)
+  return restrictedPaths(wanted).filter(
+    (w) =>
+      !have.some(
+        (h) =>
+          h.name === w.name &&
+          (!h.importNames ||
+            (!!w.importNames &&
+              w.importNames.every((n) => h.importNames!.includes(n))))
+      )
+  )
 }
+
+export const restrictedPropertiesOf = (
+  value: unknown
+): RestrictedProperty[] => {
+  if (!Array.isArray(value)) return []
+  return value
+    .slice(1)
+    .flat()
+    .filter(
+      (o): o is RestrictedProperty =>
+        typeof (o as RestrictedProperty | null)?.object === 'string' &&
+        typeof (o as RestrictedProperty).property === 'string'
+    )
+}
+
+export const missingRestrictedProperties = (
+  value: unknown,
+  wanted: unknown
+): RestrictedProperty[] => {
+  const have = restrictedPropertiesOf(value)
+  return restrictedPropertiesOf(wanted).filter(
+    (w) => !have.some((h) => h.object === w.object && h.property === w.property)
+  )
+}
+
+/** Every `no-restricted-imports` / `no-restricted-properties` entry of `wanted` that `value` lacks, as labels. */
+export const missingPolicyEntries = (
+  rule: string,
+  value: unknown,
+  wanted: unknown
+): string[] =>
+  rule === 'no-restricted-imports'
+    ? missingRestrictedPaths(value, wanted).map(pathLabel)
+    : rule === 'no-restricted-properties'
+      ? missingRestrictedProperties(value, wanted).map(
+          (p) => `${p.object}.${p.property}`
+        )
+      : []
 
 /** `no-empty` -> `oxlint-eslint-no-empty`, the id a diagnostic of that rule is reported under. */
 const findingIdOf = (rule: string) =>
@@ -709,20 +904,17 @@ const policyFindings = (
     if (level === 'off') continue
     const policy = OXLINT_POLICY_RULES[key]
     const reasons: string[] = []
-    if (policy.plugin && !(resolved.plugins ?? []).includes(policy.plugin)) {
-      reasons.push(`the "${policy.plugin}" plugin is not in "plugins"`)
-    }
-    for (const rule of Object.keys(policy.rules)) {
+    for (const [rule, wanted] of Object.entries(policy.rules)) {
       const value = resolved.rules?.[rule]
       if (!atLeast(value, level)) {
         reasons.push(
           `${rule}: ${levelOf(value) ? `set to "${levelOf(value)}"` : 'not enabled'}, it must be at least "${level}"`
         )
-      } else if (rule === 'no-restricted-imports') {
-        const missing = missingFsModules(value)
-        if (missing.length > 0)
-          reasons.push(`${rule}: does not restrict ${missing.join(', ')}`)
+        continue
       }
+      const missing = missingPolicyEntries(rule, value, wanted)
+      if (missing.length > 0)
+        reasons.push(`${rule}: does not restrict ${missing.join(', ')}`)
     }
     if (reasons.length === 0) continue
     findings.push({
@@ -732,14 +924,7 @@ const policyFindings = (
       path: configFile,
       fixHint: [
         `In ${rel(root, configFile)} make sure these are set (an "overrides" entry may switch them off for specific files):`,
-        JSON.stringify(
-          {
-            ...(policy.plugin ? { plugins: [policy.plugin] } : {}),
-            rules: policy.rules,
-          },
-          null,
-          2
-        ),
+        JSON.stringify({ rules: policy.rules }, null, 2),
         `Or set "lint": { "${key}": "off" } in pikku.config.json.`,
         ENABLE_HINT,
       ].join('\n'),

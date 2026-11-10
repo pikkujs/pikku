@@ -407,16 +407,31 @@ After the whole project is inspected, every literal name a function passes to `r
 
 Fix the name, or wire the addon that provides it. There is no opt-out.
 
-### Direct `fs` and `process.env` use fails validate
+### Direct `fs`, `process.env`, `child_process` and `process.argv` use fails validate
 
-Two lint keys are on by default at `error`. A project that sets nothing is enforced. Both are enforced by the app's own oxlint, which `pikku validate` already requires and runs; `pikku enable oxlint` writes the rules.
+Four lint keys are on by default at `error`. They apply to Pikku apps and addons, not to library packages: a library or developer-tool package that `pikku validate` checks and cannot meet a key sets that key to `"off"` in its `pikku.config.json`. A project that sets nothing is enforced. All are enforced by the app's own oxlint, which `pikku validate` already requires and runs; `pikku enable oxlint` writes the rules.
 
-| Key                            | oxlint rules required                                                                                                                             | Use instead                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `lint.enforceContentService`   | `no-restricted-imports` on `fs`, `node:fs`, `fs/promises` and `node:fs/promises` (type-only imports allowed), and `typescript/no-require-imports` | the `content` service: keyed, project-scoped, signed reads and writes            |
-| `lint.enforceVariablesService` | `node/no-process-env`, with the `node` plugin                                                                                                     | the `variables` service for non-secret values, the `secrets` service for secrets |
+| Key | oxlint rules required | Use instead |
+| --- | --- | --- |
+| `lint.enforceContentService` | `no-restricted-imports` on `fs`, `node:fs`, `fs/promises`, `node:fs/promises`, `fs-extra` and `graceful-fs` (type-only imports allowed), and `typescript/no-require-imports` | the `content` service: keyed, project-scoped, signed reads and writes |
+| `lint.enforceVariablesService` | `no-restricted-properties` on `process.env` | the `variables` service for non-secret values, the `secrets` service for secrets |
+| `lint.enforceSupervisor` | `no-restricted-imports` on `child_process`, `node:child_process`, `execa`, `cross-spawn` and `shelljs` (type-only imports allowed), `typescript/no-require-imports`, and `no-restricted-properties` on `Bun.spawn`, `Bun.spawnSync` and `Bun.$` | the Supervisor, which owns the process, its lifecycle and its output |
+| `lint.enforceCliCommands` | `no-restricted-properties` on `process.argv`, `Bun.argv` and `Deno.args`, and `no-restricted-imports` on `commander`, `yargs`, `minimist` and `parseArgs` from `node:util` (or `util`) | a `pikku` CLI command, which receives typed input |
 
-When a rule is missing or below the key's level, validate reports `oxlint-enforce-content-service` or `oxlint-enforce-variables-service`; each use in the source is reported as the oxlint finding (`oxlint-eslint-no-restricted-imports`, `oxlint-node-no-process-env`, ...). `pikku enable oxlint` exempts `*.test.*` and `*.spec.*` files through an `overrides` entry; exempt another file (bootstrap, a script) the same way. `const { env } = process` and `globalThis.process.env` are not caught.
+`lint.enforceSupervisor` and `lint.enforceCliCommands` are new. `lint.enforceVariablesService` changed rule: it required `node/no-process-env` with the `node` plugin, which reports `process.env.X` but not `{ ...process.env }` or `const { env } = process`. It now requires `no-restricted-properties` on `process.env`, which reports all three. `node/no-process-env` no longer satisfies the key. An app with a config that was valid yesterday therefore fails `pikku validate` with `oxlint-enforce-variables-service`, `oxlint-enforce-supervisor` and `oxlint-enforce-cli-commands`. Run `pikku enable oxlint`: it adds the missing `no-restricted-imports` paths and `no-restricted-properties` entries, keeps the entries you already have, removes a `node/no-process-env` set to `"error"` (it would report every site twice) and adds an `overrides` entry. Or set the key to `'off'`.
+
+Several keys share `no-restricted-imports` and `no-restricted-properties`; there is one value for each rule in the config, holding every entry (every `paths` entry in the one options object, one object per restricted property). A path restricted only for other names (`{ "name": "node:util", "importNames": ["promisify"] }`) does not count for `parseArgs`. A rule shared by keys at different levels runs at the stricter level.
+
+When a rule is missing or below the key's level, validate reports `oxlint-enforce-content-service`, `oxlint-enforce-variables-service`, `oxlint-enforce-supervisor` or `oxlint-enforce-cli-commands`; each use in the source is reported as the oxlint finding (`oxlint-eslint-no-restricted-imports`, `oxlint-eslint-no-restricted-properties`, `oxlint-typescript-no-require-imports`). `pikku enable oxlint` and `create-pikku` write an `overrides` entry that turns the policy rules off for `**/start.ts`, `**/server.ts`, `**/bin/**`, `**/scripts/**`, `*.test.*` and `*.spec.*`. There is no exemption for services directories. Exempt one line with a plain oxlint comment, which works in `.ts` and `.tsx` and for each of these rules:
+
+```ts
+// oxlint-disable-next-line no-restricted-properties -- bootstrap reads the port before services exist
+const port = process.env.PORT
+```
+
+Not caught: access through an alias (`const b = Bun; b.argv`), string-indirected imports, and the `Bun.file` / `Deno.readFile` file APIs. Caught: `globalThis.process.env`, `globalThis.process.argv`, `globalThis.Bun.argv`, `globalThis.Bun.spawn` (and `spawnSync`, `$`), `globalThis.Deno.args`, the same through `global` and `self` (`global.process.env`, `self.Bun.spawn`, `global.Deno.args`), `process['env']`, `process?.argv`, `(process as any).argv`, `const { env } = process`, `export { x } from 'node:child_process'` and `import x = require('child_process')`. A `require()` of a listed module is reported by `typescript/no-require-imports`, not by `no-restricted-imports`.
+
+oxlint 1.88.0 cannot match a dotted object such as `globalThis.process`. The `globalThis`, `global` and `self` forms are therefore restricted as whole properties: `globalThis.process`, `global.process`, `self.process`, and the same for `Bun` and `Deno` (`globalThis.process.cwd()` and `typeof self.Bun` are reported too, and plain `process.cwd()` is not). A config written before this change reports `oxlint-enforce-variables-service`, `oxlint-enforce-supervisor` and `oxlint-enforce-cli-commands` until `pikku enable oxlint` adds the entries.
 
 To relax a key for the whole project, set it to `'warn'` or `'off'`:
 
@@ -424,12 +439,14 @@ To relax a key for the whole project, set it to `'warn'` or `'off'`:
 {
   "lint": {
     "enforceContentService": "off",
-    "enforceVariablesService": "warn"
+    "enforceVariablesService": "warn",
+    "enforceSupervisor": "off",
+    "enforceCliCommands": "off"
   }
 }
 ```
 
-`pikkuConfig()` runs before any service exists, so a `process.env` read there is flagged too. Read the value through the `variables` argument instead: `pikkuConfig(async (variables) => ({ port: Number(variables?.get('API_PORT') ?? 4003) }))`. Every host passes one (Cloudflare, Lambda and Azure from their bindings, the CLI runner), and `pikku serve`, `pikku dev` and the `pikku db` commands now do too; before, they called `createConfig()` with no argument. Note `variables.get` parses JSON, so a port can arrive as a number: coerce it. Tools that read a developer's project files or environment (CLIs, addons that edit a checkout, test harnesses) should set the relevant key to `'off'`.
+`pikkuConfig()` runs before any service exists, so a `process.env` read there is flagged too. Read the value through the `variables` argument instead: `pikkuConfig(async (variables) => ({ port: Number(variables?.get('API_PORT') ?? 4003) }))`. Every host passes one (Cloudflare, Lambda and Azure from their bindings, the CLI runner), and `pikku serve`, `pikku dev` and the `pikku db` commands now do too; before, they called `createConfig()` with no argument. Note `variables.get` parses JSON, so a port can arrive as a number: coerce it. Tools that read a developer's project files, environment or command line, or start processes (CLIs, addons that edit a checkout, test harnesses), should set the relevant key to `'off'`.
 
 To find the affected code, run `pikku validate`. Each finding names the file and line.
 

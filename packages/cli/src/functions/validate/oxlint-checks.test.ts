@@ -7,6 +7,9 @@ import { describe, test } from 'node:test'
 import { newOxlintConfig } from './oxlint-enable.js'
 import {
   OXLINT_MAX_FINDINGS,
+  activePolicyRules,
+  missingPolicyEntries,
+  policyLevels,
   oxlintRunArgs,
   runOxlintRun,
   runOxlintSetupChecks,
@@ -68,25 +71,19 @@ const makeApp = async (opts: AppOptions = {}) => {
   return root
 }
 
-const RESOLVED_POLICY_RULES = {
-  'no-restricted-imports': [
-    'deny',
-    [
-      {
-        paths: ['fs', 'node:fs', 'fs/promises', 'node:fs/promises'].map(
-          (name) => ({ name, allowTypeImports: true })
-        ),
-      },
-    ],
-  ],
-  'typescript/no-require-imports': 'deny',
-  'node/no-process-env': 'deny',
-}
+/** What `--print-config` prints for a rule: `deny`, with the options one level down. */
+const printed = (value: unknown): unknown =>
+  Array.isArray(value) ? ['deny', value.slice(1)] : 'deny'
+
+const RESOLVED_POLICY_RULES: Record<string, unknown> = Object.fromEntries(
+  Object.entries(activePolicyRules(policyLevels(undefined))).map(
+    ([rule, value]) => [rule, printed(value)]
+  )
+)
 
 /**
  * The `--print-config` of a compliant app. `rules` and `plugins` given in
- * `over` replace the required ones while the policy rules and the `node`
- * plugin stay, so a test about one rule set is not also failing the other.
+ * `over` replace the required ones while the policy rules stay, so a test about one rule set is not also failing the other.
  */
 const resolvedConfig = (over: Record<string, unknown> = {}) => {
   const { rules, plugins, ...rest } = over as {
@@ -94,7 +91,7 @@ const resolvedConfig = (over: Record<string, unknown> = {}) => {
     plugins?: string[]
   }
   return {
-    plugins: [...(plugins ?? ['unicorn', 'typescript', 'oxc']), 'node'],
+    plugins: plugins ?? ['unicorn', 'typescript', 'oxc'],
     rules: {
       ...RESOLVED_POLICY_RULES,
       ...(rules ?? {
@@ -386,31 +383,26 @@ describe('oxlint setup checks', () => {
     }
   })
 
-  test('lint keys decide whether the content and variables rules are required', async () => {
-    const without = (...drop: string[]) => {
-      const rules: Record<string, unknown> = { ...RESOLVED_POLICY_RULES }
-      for (const r of drop) delete rules[r]
-      return {
-        plugins: ['unicorn', 'typescript', 'oxc'],
-        rules: {
-          'typescript/no-misused-promises': 'deny',
-          'typescript/no-floating-promises': 'deny',
-          'no-empty': 'deny',
-          ...rules,
-        },
-        options: { typeAware: true },
-        overrides: [],
-      }
+  test('lint keys decide which policy rules are required', async () => {
+    const bare = {
+      plugins: ['unicorn', 'typescript', 'oxc'],
+      rules: {
+        'typescript/no-misused-promises': 'deny',
+        'typescript/no-floating-promises': 'deny',
+        'no-empty': 'deny',
+      },
+      options: { typeAware: true },
+      overrides: [],
     }
-    const bare = without(
-      'no-restricted-imports',
-      'typescript/no-require-imports',
-      'node/no-process-env'
-    )
     const enforced = await makeApp()
     const warned = await makeApp({
       pikkuConfig: {
-        lint: { enforceContentService: 'warn', enforceVariablesService: 'off' },
+        lint: {
+          enforceContentService: 'warn',
+          enforceVariablesService: 'off',
+          enforceSupervisor: 'off',
+          enforceCliCommands: 'off',
+        },
       },
     })
     try {
@@ -423,13 +415,12 @@ describe('oxlint setup checks', () => {
         [
           ['oxlint-enforce-content-service', 'error'],
           ['oxlint-enforce-variables-service', 'error'],
+          ['oxlint-enforce-supervisor', 'error'],
+          ['oxlint-enforce-cli-commands', 'error'],
         ]
       )
-      assert.match(
-        findings[1]!.message,
-        /the "node" plugin is not in "plugins"/
-      )
       assert.match(findings[0]!.fixHint, /"enforceContentService": "off"/)
+      assert.match(findings[3]!.fixHint, /"enforceCliCommands": "off"/)
 
       const relaxed = await runOxlintSetupChecks(
         warned,
@@ -445,30 +436,269 @@ describe('oxlint setup checks', () => {
     }
   })
 
+  const resolvedWith = (policy: Record<string, unknown>) =>
+    resolvedConfig({
+      rules: {
+        'typescript/no-misused-promises': 'deny',
+        'typescript/no-floating-promises': 'deny',
+        'no-empty': 'deny',
+        ...policy,
+      },
+    })
+  const policyRules = (drop: string[], over: Record<string, unknown> = {}) => ({
+    ...Object.fromEntries(
+      Object.entries(RESOLVED_POLICY_RULES).filter(([r]) => !drop.includes(r))
+    ),
+    ...over,
+  })
+
   test('no-restricted-imports must name every fs module', async () => {
-    const root = await makeApp()
+    const root = await makeApp({
+      pikkuConfig: {
+        lint: { enforceSupervisor: 'off', enforceCliCommands: 'off' },
+      },
+    })
     try {
       const { exec } = fakeExec(() =>
         reply(
-          resolvedConfig({
-            rules: {
-              'typescript/no-misused-promises': 'deny',
-              'typescript/no-floating-promises': 'deny',
-              'no-empty': 'deny',
+          resolvedWith(
+            policyRules([], {
               'no-restricted-imports': ['deny', [{ paths: ['fs'] }]],
-            },
-          })
+            })
+          )
         )
       )
       const findings = await runOxlintSetupChecks(root, exec)
       assert.deepEqual(ids(findings), ['oxlint-enforce-content-service'])
       assert.match(
         findings[0]!.message,
-        /does not restrict node:fs, fs\/promises, node:fs\/promises/
+        /does not restrict node:fs, fs\/promises, node:fs\/promises, fs-extra, graceful-fs/
       )
     } finally {
       await cleanup(root)
     }
+  })
+
+  test('the legacy node/no-process-env alone no longer satisfies the variables key', async () => {
+    const root = await makeApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply(
+          resolvedConfig({
+            plugins: ['typescript', 'node'],
+            rules: {
+              'typescript/no-misused-promises': 'deny',
+              'typescript/no-floating-promises': 'deny',
+              'no-empty': 'deny',
+              'no-restricted-properties': undefined,
+              'node/no-process-env': 'deny',
+            },
+          })
+        )
+      )
+      const findings = await runOxlintSetupChecks(root, exec)
+      assert.deepEqual(ids(findings), [
+        'oxlint-enforce-variables-service',
+        'oxlint-enforce-supervisor',
+        'oxlint-enforce-cli-commands',
+      ])
+      assert.match(
+        findings[0]!.message,
+        /no-restricted-properties: not enabled/
+      )
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('no-restricted-properties must name every property of its keys', async () => {
+    const root = await makeApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply(
+          resolvedWith(
+            policyRules([], {
+              'no-restricted-properties': [
+                'deny',
+                [
+                  { object: 'process', property: 'argv' },
+                  { object: 'Bun', property: 'spawn' },
+                ],
+              ],
+            })
+          )
+        )
+      )
+      const findings = await runOxlintSetupChecks(root, exec)
+      assert.deepEqual(
+        findings.map((f) => [
+          f.id,
+          f.message.match(/does not restrict (.*?)(?:; |\. Code)/)![1],
+        ]),
+        [
+          [
+            'oxlint-enforce-variables-service',
+            'process.env, globalThis.process, global.process, self.process',
+          ],
+          [
+            'oxlint-enforce-supervisor',
+            'Bun.spawnSync, Bun.$, globalThis.Bun, global.Bun, self.Bun',
+          ],
+          [
+            'oxlint-enforce-cli-commands',
+            'Bun.argv, Deno.args, globalThis.process, global.process, self.process, globalThis.Bun, global.Bun, self.Bun, globalThis.Deno, global.Deno, self.Deno',
+          ],
+        ]
+      )
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('globalThis, global and self forms of process, Bun and Deno must be restricted too', async () => {
+    const root = await makeApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply(
+          resolvedWith(
+            policyRules([], {
+              'no-restricted-properties': [
+                'deny',
+                [
+                  { object: 'process', property: 'env' },
+                  { object: 'process', property: 'argv' },
+                  { object: 'Bun', property: 'spawn' },
+                  { object: 'Bun', property: 'spawnSync' },
+                  { object: 'Bun', property: '$' },
+                  { object: 'Bun', property: 'argv' },
+                  { object: 'Deno', property: 'args' },
+                ],
+              ],
+            })
+          )
+        )
+      )
+      const findings = await runOxlintSetupChecks(root, exec)
+      assert.deepEqual(
+        findings.map((f) => [
+          f.id,
+          f.message.match(/does not restrict (.*?)(?:; |\. Code)/)![1],
+        ]),
+        [
+          [
+            'oxlint-enforce-variables-service',
+            'globalThis.process, global.process, self.process',
+          ],
+          ['oxlint-enforce-supervisor', 'globalThis.Bun, global.Bun, self.Bun'],
+          [
+            'oxlint-enforce-cli-commands',
+            'globalThis.process, global.process, self.process, globalThis.Bun, global.Bun, self.Bun, globalThis.Deno, global.Deno, self.Deno',
+          ],
+        ]
+      )
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('supervisor and cli-commands name their modules', async () => {
+    const root = await makeApp({
+      pikkuConfig: {
+        lint: { enforceContentService: 'off', enforceVariablesService: 'off' },
+      },
+    })
+    try {
+      const { exec } = fakeExec(() =>
+        reply(
+          resolvedWith(
+            policyRules(['no-restricted-imports'], {
+              'no-restricted-imports': [
+                'deny',
+                [
+                  {
+                    paths: ['child_process', 'node:child_process', 'commander'],
+                  },
+                ],
+              ],
+            })
+          )
+        )
+      )
+      const findings = await runOxlintSetupChecks(root, exec)
+      assert.deepEqual(
+        findings.map((f) => [
+          f.id,
+          f.message.match(/does not restrict (.*?)(?:; |\. Code)/)![1],
+        ]),
+        [
+          ['oxlint-enforce-supervisor', 'execa, cross-spawn, shelljs'],
+          [
+            'oxlint-enforce-cli-commands',
+            'yargs, minimist, node:util (parseArgs), util (parseArgs)',
+          ],
+        ]
+      )
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('importNames: restricting other names of node:util is not parseArgs, restricting the module is', () => {
+    const wanted = activePolicyRules(policyLevels(undefined))[
+      'no-restricted-imports'
+    ]
+    const only = (paths: unknown[]) => ['deny', [{ paths }]]
+    const missing = (paths: unknown[]) =>
+      missingPolicyEntries('no-restricted-imports', only(paths), wanted).filter(
+        (m) => m.startsWith('node:util')
+      )
+    assert.deepEqual(
+      missing([{ name: 'node:util', importNames: ['promisify'] }]),
+      ['node:util (parseArgs)']
+    )
+    assert.deepEqual(missing(['node:util']), [])
+    assert.deepEqual(
+      missing([{ name: 'node:util', importNames: ['parseArgs', 'promisify'] }]),
+      []
+    )
+  })
+
+  test('shared rules are merged across keys, strictest level wins, off keys add nothing', () => {
+    const all = activePolicyRules(policyLevels(undefined)) as Record<
+      string,
+      unknown[]
+    >
+    const names = (
+      all['no-restricted-imports']![1] as {
+        paths: Array<{ name: string }>
+      }
+    ).paths.map((p) => p.name)
+    assert.ok(['fs-extra', 'execa', 'yargs'].every((n) => names.includes(n)))
+    assert.equal(all['no-restricted-properties']!.length, 1 + 16)
+    assert.equal(all['no-restricted-imports']![0], 'error')
+
+    const mixed = activePolicyRules(
+      policyLevels({
+        enforceContentService: 'warn',
+        enforceVariablesService: 'off',
+        enforceSupervisor: 'warn',
+        enforceCliCommands: 'off',
+      })
+    ) as Record<string, unknown>
+    assert.equal((mixed['no-restricted-imports'] as unknown[])[0], 'warn')
+    assert.equal(mixed['typescript/no-require-imports'], 'warn')
+    assert.equal((mixed['no-restricted-properties'] as unknown[]).length, 1 + 6)
+    assert.deepEqual(
+      activePolicyRules(
+        policyLevels({
+          enforceContentService: 'off',
+          enforceVariablesService: 'off',
+          enforceSupervisor: 'off',
+          enforceCliCommands: 'off',
+        })
+      ),
+      {}
+    )
   })
 
   test('an override exempting files from a policy rule is accepted', async () => {
@@ -480,7 +710,7 @@ describe('oxlint setup checks', () => {
             overrides: [
               {
                 files: ['src/bootstrap.ts'],
-                rules: { 'node/no-process-env': 'allow' },
+                rules: { 'no-restricted-properties': 'allow' },
               },
             ],
           })

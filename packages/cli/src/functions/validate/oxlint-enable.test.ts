@@ -104,6 +104,8 @@ const json = async (root: string, rel: string) =>
 const NO_POLICIES = {
   enforceContentService: 'off',
   enforceVariablesService: 'off',
+  enforceSupervisor: 'off',
+  enforceCliCommands: 'off',
 } as const
 
 describe('mergeOxlintConfig', () => {
@@ -137,27 +139,173 @@ describe('mergeOxlintConfig', () => {
     }
   })
 
-  test('adds the policy rules, the node plugin and a test-file exemption', () => {
+  test('adds the policy rules and an exemption for tests and bootstrap files', () => {
     const merged = mergeOxlintConfig('{}')
     assert.equal(merged.kind, 'merged')
     if (merged.kind !== 'merged') return
     const out = JSON.parse(merged.text)
-    assert.deepEqual(out.plugins, ['typescript', 'unicorn', 'oxc', 'node'])
-    assert.equal(out.rules['node/no-process-env'], 'error')
+    assert.equal('node/no-process-env' in out.rules, false)
     assert.equal(out.rules['typescript/no-require-imports'], 'error')
     assert.deepEqual(
       out.rules['no-restricted-imports'][1].paths.map(
         (p: { name: string }) => p.name
       ),
-      ['fs', 'node:fs', 'fs/promises', 'node:fs/promises']
+      [
+        'fs',
+        'node:fs',
+        'fs/promises',
+        'node:fs/promises',
+        'fs-extra',
+        'graceful-fs',
+        'child_process',
+        'node:child_process',
+        'execa',
+        'cross-spawn',
+        'shelljs',
+        'commander',
+        'yargs',
+        'minimist',
+        'node:util',
+        'util',
+      ]
     )
-    assert.deepEqual(out.overrides[0].rules, {
-      'no-restricted-imports': 'off',
-      'typescript/no-require-imports': 'off',
-      'node/no-process-env': 'off',
-    })
+    assert.deepEqual(
+      out.rules['no-restricted-properties']
+        .slice(1)
+        .map(
+          (p: { object: string; property: string }) =>
+            `${p.object}.${p.property}`
+        ),
+      [
+        'process.env',
+        'globalThis.process',
+        'global.process',
+        'self.process',
+        'Bun.spawn',
+        'Bun.spawnSync',
+        'Bun.$',
+        'globalThis.Bun',
+        'global.Bun',
+        'self.Bun',
+        'process.argv',
+        'Bun.argv',
+        'Deno.args',
+        'globalThis.Deno',
+        'global.Deno',
+        'self.Deno',
+      ]
+    )
+    assert.deepEqual(out.overrides, [
+      {
+        files: [
+          '**/start.ts',
+          '**/server.ts',
+          '**/bin/**',
+          '**/scripts/**',
+          '**/*.test.ts',
+          '**/*.test.tsx',
+          '**/*.spec.ts',
+          '**/*.spec.tsx',
+        ],
+        rules: {
+          'no-restricted-imports': 'off',
+          'typescript/no-require-imports': 'off',
+          'no-restricted-properties': 'off',
+        },
+      },
+    ])
     const again = mergeOxlintConfig(merged.text)
     assert.equal(again.kind === 'merged' && again.changed, false)
+  })
+
+  test('a key set to off adds none of its rules and no exemption for them', () => {
+    const merged = mergeOxlintConfig('{}', {
+      ...NO_POLICIES,
+      enforceCliCommands: 'error',
+    })
+    assert.equal(merged.kind, 'merged')
+    if (merged.kind !== 'merged') return
+    const out = JSON.parse(merged.text)
+    assert.deepEqual(
+      out.rules['no-restricted-imports'][1].paths.map(
+        (p: { name: string }) => p.name
+      ),
+      ['commander', 'yargs', 'minimist', 'node:util', 'util']
+    )
+    assert.equal('typescript/no-require-imports' in out.rules, false)
+    assert.deepEqual(out.overrides[0].rules, {
+      'no-restricted-imports': 'off',
+      'no-restricted-properties': 'off',
+    })
+  })
+
+  test('upgrading: node/no-process-env is replaced, the new rules and exemption are added, user entries stay', () => {
+    const merged = mergeOxlintConfig(
+      JSON.stringify({
+        plugins: ['typescript', 'node'],
+        rules: {
+          'node/no-process-env': 'error',
+          'no-restricted-properties': [
+            'error',
+            { object: 'window', property: 'name' },
+          ],
+          'no-restricted-imports': [
+            'error',
+            {
+              paths: ['fs', 'node:fs', 'fs/promises', 'node:fs/promises'].map(
+                (name) => ({ name })
+              ),
+            },
+          ],
+        },
+        overrides: [
+          {
+            files: ['**/*.test.ts'],
+            rules: { 'node/no-process-env': 'off' },
+          },
+        ],
+      })
+    )
+    assert.equal(merged.kind, 'merged')
+    if (merged.kind !== 'merged') return
+    const out = JSON.parse(merged.text)
+    assert.equal('node/no-process-env' in out.rules, false)
+    assert.deepEqual(out.rules['no-restricted-properties'][1], {
+      object: 'window',
+      property: 'name',
+    })
+    assert.equal(out.rules['no-restricted-properties'].length, 1 + 1 + 16)
+    assert.ok(
+      out.rules['no-restricted-imports'][1].paths.some(
+        (p: { name: string }) => p.name === 'execa'
+      )
+    )
+    assert.equal(out.overrides.length, 2)
+    assert.equal(out.overrides[1].files.includes('**/start.ts'), true)
+    const again = mergeOxlintConfig(merged.text)
+    assert.equal(again.kind === 'merged' && again.changed, false)
+  })
+
+  test('a user node:util path restricted for other names gets parseArgs added as its own entry', () => {
+    const merged = mergeOxlintConfig(
+      JSON.stringify({
+        rules: {
+          'no-restricted-imports': [
+            'error',
+            { paths: [{ name: 'node:util', importNames: ['promisify'] }] },
+          ],
+        },
+      }),
+      { ...NO_POLICIES, enforceCliCommands: 'error' }
+    )
+    assert.equal(merged.kind, 'merged')
+    if (merged.kind !== 'merged') return
+    const paths = JSON.parse(merged.text).rules['no-restricted-imports'][1]
+      .paths as Array<{ name: string; importNames?: string[] }>
+    assert.deepEqual(
+      paths.filter((p) => p.name === 'node:util').map((p) => p.importNames),
+      [['promisify'], ['parseArgs']]
+    )
   })
 
   test('fills in the fs modules an existing no-restricted-imports leaves out', () => {
@@ -170,7 +318,7 @@ describe('mergeOxlintConfig', () => {
           ],
         },
       }),
-      { enforceContentService: 'error', enforceVariablesService: 'off' }
+      { ...NO_POLICIES, enforceContentService: 'error' }
     )
     assert.equal(merged.kind, 'merged')
     if (merged.kind !== 'merged') return
@@ -178,7 +326,15 @@ describe('mergeOxlintConfig', () => {
       .paths as Array<string | { name: string; message?: string }>
     assert.deepEqual(
       paths.map((p) => (typeof p === 'string' ? p : p.name)),
-      ['lodash', 'fs', 'node:fs', 'fs/promises', 'node:fs/promises']
+      [
+        'lodash',
+        'fs',
+        'node:fs',
+        'fs/promises',
+        'node:fs/promises',
+        'fs-extra',
+        'graceful-fs',
+      ]
     )
     assert.equal((paths[1] as { message: string }).message, 'mine')
   })

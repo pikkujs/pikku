@@ -453,7 +453,8 @@ export const OXLINT_TSGOLINT_VERSION = '^7.0.2003'
  * Sets a new app up so `pikku validate` passes its oxlint checks: both
  * packages as devDependencies, a `.oxlintrc.json` with the type-aware promise
  * rules at error (a forgotten `await` on an async webhook verifier is a truthy
- * Promise), and a `lint` script. Existing files are never overwritten.
+ * Promise), the code-policy rules with their bootstrap and test exemption, and
+ * a `lint` script. Existing files are never overwritten.
  */
 export function ensureOxlintSetup(targetPath: string): void {
   const packageFilePath = path.join(targetPath, 'package.json')
@@ -483,7 +484,10 @@ export function ensureOxlintSetup(targetPath: string): void {
           rules: {
             'typescript/no-misused-promises': 'error',
             'typescript/no-floating-promises': 'error',
+            'no-empty': 'error',
+            ...oxlintPolicyRules(),
           },
+          overrides: [oxlintExemptOverride()],
           ignorePatterns: ['**/*.gen.ts', '**/.pikku/**'],
         },
         null,
@@ -492,6 +496,176 @@ export function ensureOxlintSetup(targetPath: string): void {
     )
   }
 }
+
+/**
+ * The code-policy rules `pikku validate` requires by default (`lint.enforce*`
+ * in pikku.config.json). Kept equal to `newOxlintConfig()` in packages/cli
+ * (src/functions/validate/oxlint-enable.ts); a test there compares the two.
+ */
+const oxlintPolicyRules = () => {
+  const restrict = (
+    names: Array<string | [string, string[]]>,
+    message: string
+  ) =>
+    names.map((n) => ({
+      name: typeof n === 'string' ? n : n[0],
+      ...(typeof n === 'string' ? {} : { importNames: n[1] }),
+      allowTypeImports: true,
+      message,
+    }))
+  const property = (object: string, name: string, message: string) => ({
+    object,
+    property: name,
+    message,
+  })
+  const content =
+    'Use the `content` service: keyed, project-scoped, with signed reads and writes.'
+  const supervisor = 'Run processes through the Supervisor, not child_process.'
+  const cli = 'Expose a `pikku` CLI command rather than parsing argv.'
+  return {
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          ...restrict(
+            [
+              'fs',
+              'node:fs',
+              'fs/promises',
+              'node:fs/promises',
+              'fs-extra',
+              'graceful-fs',
+            ],
+            content
+          ),
+          ...restrict(
+            [
+              'child_process',
+              'node:child_process',
+              'execa',
+              'cross-spawn',
+              'shelljs',
+            ],
+            supervisor
+          ),
+          ...restrict(
+            [
+              'commander',
+              'yargs',
+              'minimist',
+              ['node:util', ['parseArgs']],
+              ['util', ['parseArgs']],
+            ],
+            cli
+          ),
+        ],
+      },
+    ],
+    'typescript/no-require-imports': 'error',
+    'no-restricted-properties': [
+      'error',
+      property(
+        'process',
+        'env',
+        'Use the `variables` service for values and the `secrets` service for secrets.'
+      ),
+      property(
+        'globalThis',
+        'process',
+        'Use the `variables` service for values and the `secrets` service for secrets.'
+      ),
+      property(
+        'global',
+        'process',
+        'Use the `variables` service for values and the `secrets` service for secrets.'
+      ),
+      property(
+        'self',
+        'process',
+        'Use the `variables` service for values and the `secrets` service for secrets.'
+      ),
+      property(
+        'Bun',
+        'spawn',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'Bun',
+        'spawnSync',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'Bun',
+        '$',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'globalThis',
+        'Bun',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'global',
+        'Bun',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'self',
+        'Bun',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'process',
+        'argv',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+      property(
+        'Bun',
+        'argv',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+      property(
+        'Deno',
+        'args',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+      property(
+        'globalThis',
+        'Deno',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+      property(
+        'global',
+        'Deno',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+      property(
+        'self',
+        'Deno',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+    ],
+  }
+}
+
+/** Entry points, tooling and tests read the disk, the environment and argv. */
+const oxlintExemptOverride = () => ({
+  files: [
+    '**/start.ts',
+    '**/server.ts',
+    '**/bin/**',
+    '**/scripts/**',
+    '**/*.test.ts',
+    '**/*.test.tsx',
+    '**/*.spec.ts',
+    '**/*.spec.tsx',
+  ],
+  rules: {
+    'no-restricted-imports': 'off',
+    'typescript/no-require-imports': 'off',
+    'no-restricted-properties': 'off',
+  },
+})
 
 /**
  * Removes version constraints from @pikku/* packages when using yarn link.
