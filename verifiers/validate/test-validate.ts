@@ -178,9 +178,13 @@ export const run = () => {
   const bunArgv = globalThis.Bun.argv
   globalThis.Bun.spawn(['ps'])
   const denoArgs = globalThis.Deno.args
+  const globalEnv = global.process.env.GLOBAL_ENV
+  const selfArgv = self.process.argv
+  global.Bun.spawn(['ps'])
+  const selfDeno = self.Deno.args
   // oxlint-disable-next-line no-restricted-properties -- bootstrap value read before services exist
   const globalExempt = globalThis.process.env.GLOBAL_EXEMPT
-  return [token, copy, repo, home, mode, exempt, viaGlobal, argvViaGlobal, bunArgv, denoArgs, globalExempt]
+  return [token, copy, repo, home, mode, exempt, viaGlobal, argvViaGlobal, bunArgv, denoArgs, globalEnv, selfArgv, selfDeno, globalExempt]
 }
 `
 
@@ -217,7 +221,7 @@ const policyHits = async (file: string): Promise<string[]> => {
     .sort()
 }
 
-test('a service that spawns, reads the disk, the env and argv, directly or through globalThis, is reported line by line', async () => {
+test('a service that spawns, reads the disk, the env and argv, directly or through globalThis, global or self, is reported line by line', async () => {
   await withPolicyApp(newOxlintConfig(), async () => {
     assert.deepStrictEqual(await policyHits(servicePath), [
       'eslint-no-restricted-imports@1',
@@ -230,6 +234,10 @@ test('a service that spawns, reads the disk, the env and argv, directly or throu
       'eslint-no-restricted-properties@17',
       'eslint-no-restricted-properties@18',
       'eslint-no-restricted-properties@19',
+      'eslint-no-restricted-properties@20',
+      'eslint-no-restricted-properties@21',
+      'eslint-no-restricted-properties@22',
+      'eslint-no-restricted-properties@23',
     ])
   })
 })

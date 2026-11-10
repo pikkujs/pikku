@@ -7,7 +7,6 @@
     "webhook": true
   },
   "lint": {
-    "enforceContentService": "off",
-    "enforceSupervisor": "off"
+    "enforceContentService": "off"
   }
 }

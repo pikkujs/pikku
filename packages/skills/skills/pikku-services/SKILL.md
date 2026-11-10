@@ -57,15 +57,15 @@ service's paths and size limit; omitting it does not disable it.
   | Instead of                                                                             | Use                                                                    | `lint` key                |
   | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------- |
   | `fs`, `node:fs`, `fs/promises`, `fs-extra`                                             | the `content` service (keyed, project-scoped, signed reads and writes) | `enforceContentService`   |
-  | `process.env` (also `{ ...process.env }`, `const { env } = process`, `globalThis.process`) | `variables` for values, `secrets` for secrets                          | `enforceVariablesService` |
+  | `process.env` (also `{ ...process.env }`, `const { env } = process`, `globalThis`/`global`/`self`.process) | `variables` for values, `secrets` for secrets                          | `enforceVariablesService` |
   | `child_process`, `execa`, `cross-spawn`, `shelljs`, `Bun.spawn`, `Bun.$`               | the Supervisor, which owns the process and its output                  | `enforceSupervisor`       |
   | `process.argv`, `Bun.argv`, `Deno.args`, `commander`, `yargs`, `minimist`, `parseArgs` | a `pikku` CLI command, which receives typed input                      | `enforceCliCommands`      |
 
   Opting out: `start.ts`, `server.ts`, `bin/`, `scripts/` and tests are already
   exempt by the `overrides` entry `pikku enable oxlint` writes. One line
   elsewhere takes a plain comment, `// oxlint-disable-next-line
-no-restricted-properties -- why`. A whole project that is a tool (a CLI, a
-  harness that edits a checkout) sets the key to `"off"` in `pikku.config.json`.
+no-restricted-properties -- why`. These rules apply to apps and addons, not library packages. A whole
+  project that is a library or tool (a CLI, a harness that edits a checkout) sets the key to `"off"` in `pikku.config.json`.
   Do not exempt a services directory: the factory is where a service gets its
   value, and it reads `variables` like everything else.
 

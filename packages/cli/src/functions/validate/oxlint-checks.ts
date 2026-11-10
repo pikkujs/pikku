@@ -81,6 +81,15 @@ const restrictedImports = (paths: RestrictedPath[], message: string) => [
   },
 ]
 
+/**
+ * Objects that reach the runtime globals. oxlint 1.88.0 matches a bare
+ * `{ object, property }` only, never a dotted object, so `globalThis.process`
+ * is restricted as the property `process` of `globalThis`.
+ */
+const GLOBAL_OBJECTS = ['globalThis', 'global', 'self']
+const viaGlobals = (property: string): RestrictedProperty[] =>
+  GLOBAL_OBJECTS.map((object) => ({ object, property }))
+
 const restrictedProperties = (
   properties: RestrictedProperty[],
   message: string
@@ -111,10 +120,7 @@ export const OXLINT_POLICY_RULES: Record<
     use: 'the `variables` service for values and the `secrets` service for secrets',
     rules: {
       'no-restricted-properties': restrictedProperties(
-        [
-          { object: 'process', property: 'env' },
-          { object: 'globalThis', property: 'process' },
-        ],
+        [{ object: 'process', property: 'env' }, ...viaGlobals('process')],
         'Use the `variables` service for values and the `secrets` service for secrets.'
       ),
     },
@@ -132,7 +138,7 @@ export const OXLINT_POLICY_RULES: Record<
           { object: 'Bun', property: 'spawn' },
           { object: 'Bun', property: 'spawnSync' },
           { object: 'Bun', property: '$' },
-          { object: 'globalThis', property: 'Bun' },
+          ...viaGlobals('Bun'),
         ],
         'Run processes through the Supervisor, not Bun.spawn.'
       ),
@@ -154,9 +160,9 @@ export const OXLINT_POLICY_RULES: Record<
           { object: 'process', property: 'argv' },
           { object: 'Bun', property: 'argv' },
           { object: 'Deno', property: 'args' },
-          { object: 'globalThis', property: 'process' },
-          { object: 'globalThis', property: 'Bun' },
-          { object: 'globalThis', property: 'Deno' },
+          ...viaGlobals('process'),
+          ...viaGlobals('Bun'),
+          ...viaGlobals('Deno'),
         ],
         'Expose a `pikku` CLI command rather than reading argv.'
       ),

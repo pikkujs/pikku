@@ -179,14 +179,20 @@ describe('mergeOxlintConfig', () => {
       [
         'process.env',
         'globalThis.process',
+        'global.process',
+        'self.process',
         'Bun.spawn',
         'Bun.spawnSync',
         'Bun.$',
         'globalThis.Bun',
+        'global.Bun',
+        'self.Bun',
         'process.argv',
         'Bun.argv',
         'Deno.args',
         'globalThis.Deno',
+        'global.Deno',
+        'self.Deno',
       ]
     )
     assert.deepEqual(out.overrides, [
@@ -268,7 +274,7 @@ describe('mergeOxlintConfig', () => {
       object: 'window',
       property: 'name',
     })
-    assert.equal(out.rules['no-restricted-properties'].length, 1 + 1 + 10)
+    assert.equal(out.rules['no-restricted-properties'].length, 1 + 1 + 16)
     assert.ok(
       out.rules['no-restricted-imports'][1].paths.some(
         (p: { name: string }) => p.name === 'execa'
