@@ -8,6 +8,7 @@ import { wireChannelMiddleware } from '../middleware/channel-middleware.js'
 export const testAgent = pikkuAgent({
   name: 'testAgent',
   auth: false,
+  expose: true,
   description: 'Test agent with AI middleware',
   goal: 'Help users test AI middleware functionality.',
   model: 'test-provider/test-model',
