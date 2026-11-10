@@ -37,6 +37,17 @@ Discover first (`pikku meta … --json`, `pikku info functions --verbose`, `pikk
   - `globalSecrets` and `globalCredentials` take the _reason_, not a boolean, because every grant is enumerated in the deploy manifest (`unscopedSecretAddons`, `grantedSecretAddons`). Prefer `secretGrants`. Use `globalSecrets` only when no static list can exist, and never for an addon that performs outbound requests, where an unrestricted secret read is an exfiltration primitive.
   - A grant naming a secret your project does not declare is a build error from `pikku all`, resolved through the override map first: `Secret grant 'STIRPE_KEY' in addon 'graph' (@pikku/addon-graph) targets a secret that does not exist. Available secrets: …`.
 
+## What an addon must not do
+
+`pikku validate` fails an addon that reaches past the services it is given. An addon is installed into other people's apps, so the host, not the addon, decides where files live, which processes run and what the environment holds. Each of these is a validate error with a fix that stays inside Pikku:
+
+- **No `fs`** (`node:fs`, `fs/promises`, `fs-extra`, `require('fs')`). Use the `content` service: keyed, project-scoped, with signed reads and writes.
+- **No `child_process`** (`execa`, `cross-spawn`, `shelljs`, `Bun.spawn`, `Bun.$`). Use the Supervisor, which owns the process, its lifecycle and its output. Type-only imports from `node:child_process` are fine.
+- **No `process.env`**, including `{ ...process.env }` and `const { env } = process`. Use the `variables` service for values and `secrets` for secrets, declared as above.
+- **No `process.argv`** (`Bun.argv`, `Deno.args`, `commander`, `yargs`, `minimist`, `parseArgs`). Expose a `pikku` CLI command, which receives typed input.
+
+`start.ts`, `server.ts`, `bin/`, `scripts/` and tests are exempt. Anywhere else, a one-line `// oxlint-disable-next-line <rule> -- reason` is the only way out. Do not set `lint.enforce*` to `"off"` to make an addon pass. Only a package that is a developer tool rather than something a host wires in (the console and the CLI packages) turns a key off in its own `pikku.config.json`.
+
 ## Writing an addon
 
 - **Inside an addon, import from `#pikku/addon/function` and `#pikku/addon/setup`, never `#pikku/function`.** The generated tree roots at `.pikku/addon/`, and inside the addon `#pikku/function` names a leaf that does not exist.
