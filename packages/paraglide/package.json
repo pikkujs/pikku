@@ -10,15 +10,14 @@
   "license": "MIT",
   "description": "Paraglide tooling for pikku apps — typed enum-lookup maps from `enum__*` message keys, and the i18n-debug mask locale.",
   "type": "module",
-  "main": "dist/cjs/index.js",
+  "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
   "bin": {
     "paraglide-enums": "dist/esm/cli.js"
   },
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js"
+      "import": "./dist/esm/index.js"
     },
     "./vite": {
       "import": "./dist/esm/vite.js"
@@ -33,8 +32,7 @@
     "tsc": "tsc",
     "test": "tsx --test src/*.test.ts",
     "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
-    "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
-    "build": "bun run clean && bun run build:esm && bun run build:cjs",
+    "build": "bun run clean && bun run build:esm",
     "prepublishOnly": "bun run build",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },

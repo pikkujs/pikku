@@ -609,6 +609,16 @@ Search: `rg -n "agent\.stream\(|usePikkuAgent<"`.
 
 To find affected code, search for `assetKey` and `uploadFile`.
 
+### Six client and frontend packages are ESM only
+
+`@pikku/assistant-ui`, `@pikku/fetch`, `@pikku/websocket`, `@pikku/react`, `@pikku/paraglide` and `@pikku/voice-agents` no longer ship a CommonJS build. Their `exports` have only an `import` condition, and `main` points at `dist/esm/index.js`.
+
+- Use `import`. A CommonJS file can `require()` them on Node 22 and later, which loads ES modules, or use a dynamic `import()` on older versions.
+- A bundler or framework that resolves through `exports` needs no change.
+- A TypeScript project with `moduleResolution: node` (node10) does not read `exports`; switch to `bundler`, `node16` or `nodenext`.
+
+To find affected code, search for `require\('@pikku/(assistant-ui|fetch|websocket|react|paraglide|voice-agents)'`.
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.
