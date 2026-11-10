@@ -314,8 +314,7 @@ wireCLI({
       description: 'Load inspector state from JSON file (skips inspection)',
     },
     outDir: {
-      description:
-        'Override output directory (default: from pikku.config.json)',
+      description: 'Override output directory (default: .pikku)',
       short: 'o',
     },
   },
