@@ -5,6 +5,7 @@ import { pikkuConfig } from '#pikku/setup'
  * opens its Kysely against it, and `pikku db generate` / `pikku db migrate`
  * read it off the config to know which database the runtime tables belong in.
  */
+// oxlint-disable-next-line no-restricted-properties -- read at import time, before any service exists
 export const connectionString =
   process.env.DATABASE_URL ??
   'postgres://postgres:password@localhost:5432/pikku_queue'
