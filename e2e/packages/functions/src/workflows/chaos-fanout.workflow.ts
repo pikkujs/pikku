@@ -1,4 +1,4 @@
-import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * A batch of independent shards run concurrently, where one shard is rigged to
@@ -10,7 +10,7 @@ import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
  * retried. Concurrency is where step bookkeeping is most likely to race, so
  * the ledger — not the return value — is the thing worth asserting on.
  */
-export const chaosFanoutWorkflow = pikkuWorkflowFunc<
+export const chaosFanoutWorkflow = pikkuWorkflowComplexFunc<
   {
     batchId: string
     shards: number

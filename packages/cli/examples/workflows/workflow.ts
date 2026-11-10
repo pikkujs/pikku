@@ -1,6 +1,6 @@
 //~ name: workflow
 //~ title: Durable multi-step workflow (pikkuWorkflowFunc DSL + parallel fan-out + cron start)
-//~ when: The app needs a background multi-step process — daily digest, onboarding sequence, status rollup. This IS the canonical shape. The DSL supports if/else, for..of, and Promise.all(array.map()) — fan out per item with workflow.do named steps (parallel + durable). NEVER pikkuWorkflowComplexFunc / pikkuWorkflowGraph (approval-gated escape hatches). PKU641 = a const/let DECLARED inside a block — hoist the declaration to the top of the body and assign in the block.
+//~ when: The app needs a background multi-step process — daily digest, onboarding sequence, status rollup. This IS the canonical shape. The DSL supports if/else, for..of, and Promise.all(array.map()) — fan out per item with workflow.do named steps (parallel + durable). NEVER pikkuWorkflowComplexFunc / pikkuWorkflowGraph (approval-gated escape hatches). PKU641 = a const/let DECLARED inside a block (hoist the declaration to the top of the body and assign in the block), or a construct the graph cannot show: forEach, reduce, a bare map, a ternary (use if/else), a Promise.all(map) that is not a flat list of workflow.do steps.
 //~ entity: digest
 //~ Four files, and the SPLIT is the teaching. A wire* sharing a file with the workflow
 //~ func makes pikku SKIP the task at runtime ("Skipping scheduled task — metadata not
@@ -70,7 +70,9 @@ import { pikkuWorkflowFunc } from '#pikku/workflow'
 
 //~ Plain pikkuWorkflowFunc DSL. Control flow allowed in the body: if/else, for..of, and
 //~ Promise.all(array.map()). Declare every const/let at the TOP level of the body
-//~ (PKU641 fires on declarations inside blocks).
+//~ (PKU641 fires on declarations inside blocks). PKU641 also fires on forEach, reduce,
+//~ a bare map, ternaries and a Promise.all(map) that is not a flat list of workflow.do
+//~ steps: they would run on replay but never appear in the graph. Use if/else or for..of.
 export const DailyDigestWorkflowInput = z.object({})
 export const DailyDigestWorkflowOutput = z.object({ sent: z.number() })
 

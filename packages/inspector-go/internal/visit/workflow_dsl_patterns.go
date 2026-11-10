@@ -263,6 +263,73 @@ func validateNoDisallowedPatterns(root *ast.Node, allowInline bool) []dslValidat
 	return errs
 }
 
+// validateStrictConstructs rejects constructs the DSL graph cannot express but
+// which would still run when the workflow body replays. Without it they are
+// dropped from the graph silently. Only the pikkuWorkflowFunc (DSL) wrapper is
+// checked: complex workflows and scenarios run the body as written.
+func validateStrictConstructs(root *ast.Node) []dslValidationError {
+	var errs []dslValidationError
+	var visit func(n *ast.Node)
+	visit = func(n *ast.Node) {
+		switch {
+		case ast.IsConditionalExpression(n):
+			errs = append(errs, dslValidationError{message: "The ternary expression '" + utf16Prefix(tsutil.NodeText(n), 60) +
+				"' is not allowed in DSL workflows: it is not part of the workflow graph, so it would be silently ignored. " +
+				"Use if/else, which becomes a branch step, or compute the value inside a step function."})
+		case ast.IsCallExpression(n):
+			if msg := strictCallMessage(n); msg != "" {
+				errs = append(errs, dslValidationError{message: msg})
+			}
+		}
+		n.ForEachChild(func(c *ast.Node) bool { visit(c); return false })
+	}
+	visit(root)
+	return errs
+}
+
+// strictCallMessage flags forEach, reduce and a bare map. A map that is the
+// direct argument of Promise.all is the parallel fanout and is checked where it
+// is extracted. Outside that, the call is rejected when it contains workflow
+// calls or stands alone as a statement (its result is discarded, so it can only
+// be there for its effects).
+func strictCallMessage(call *ast.Node) string {
+	name := propertyCallName(call)
+	if name != "forEach" && name != "reduce" && name != "reduceRight" && name != "map" {
+		return ""
+	}
+	if name == "map" {
+		if p := call.Parent; p != nil && ast.IsCallExpression(p) && isPromiseAll(p) {
+			if args := p.Arguments(); len(args) > 0 && args[0] == call {
+				return ""
+			}
+		}
+	}
+	if !containsWorkflowCall(call) && !isStatementExpression(call) {
+		return ""
+	}
+	text := "'" + utf16Prefix(tsutil.NodeText(call), 60) + "'"
+	switch name {
+	case "forEach":
+		return "The forEach call " + text + " is not allowed in DSL workflows: it is dropped from the workflow graph but still runs when the body replays. " +
+			"Use a for..of loop (sequential fanout) or Promise.all(items.map(...)) (parallel fanout)."
+	case "map":
+		return "The map call " + text + " is not allowed in DSL workflows unless it is the direct argument of Promise.all. " +
+			"Use Promise.all(items.map(...)) for a parallel fanout or a for..of loop for a sequential one."
+	}
+	return "The " + name + " call " + text + " is not allowed in DSL workflows: it is not part of the workflow graph. " +
+		"Compute the value inside a step function, or use a for..of loop."
+}
+
+// isStatementExpression: the call (through await and parentheses) is the whole
+// expression of an expression statement.
+func isStatementExpression(n *ast.Node) bool {
+	p := n.Parent
+	for p != nil && (ast.IsAwaitExpression(p) || ast.IsParenthesizedExpression(p)) {
+		p = p.Parent
+	}
+	return p != nil && ast.IsExpressionStatement(p)
+}
+
 func validateAwaitedCalls(root *ast.Node) []dslValidationError {
 	var errs []dslValidationError
 	var visit func(n *ast.Node, parentIsAwait, insidePromiseAll bool)

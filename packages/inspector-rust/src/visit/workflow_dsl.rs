@@ -38,6 +38,8 @@ struct Dsl<'c, 'a> {
     errors: Vec<String>,
     context_vars: Map<ContextVar>,
     scope: Scope,
+    /// pikkuWorkflowFunc: unrecognized constructs are errors, not dropped.
+    strict: bool,
 }
 
 /// Go `dslResult`.
@@ -152,8 +154,12 @@ impl Context<'_> {
                 loop_vars: HashSet::new(),
                 depth: 0,
             },
+            strict: !allow_inline,
         };
-        let pe = validate_no_disallowed_patterns(body, allow_inline);
+        let mut pe = validate_no_disallowed_patterns(body, allow_inline);
+        if !allow_inline {
+            pe.extend(validate_strict_constructs(body));
+        }
         if !pe.is_empty() {
             return DslResult::failed(format_validation_errors(&pe));
         }
@@ -283,6 +289,72 @@ fn call_of(expr: P<Node>) -> Option<P<Node>> {
         return if ast::is_call_expression(e) { Some(e) } else { None };
     }
     if ast::is_call_expression(expr) { Some(expr) } else { None }
+}
+
+/// Rejects constructs the DSL graph cannot express but which would still run
+/// when the workflow body replays. Only the pikkuWorkflowFunc (DSL) wrapper is
+/// checked: complex workflows and scenarios run the body as written.
+fn validate_strict_constructs(root: P<Node>) -> Vec<String> {
+    fn visit(n: P<Node>, errs: &mut Vec<String>) {
+        if ast::is_conditional_expression(n) {
+            errs.push(format!(
+                "The ternary expression '{}' is not allowed in DSL workflows: it is not part of the workflow graph, so it would be silently ignored. Use if/else, which becomes a branch step, or compute the value inside a step function.",
+                utf16_prefix(&node_text(n), 60)
+            ));
+        } else if ast::is_call_expression(n) {
+            if let Some(msg) = strict_call_message(n) {
+                errs.push(msg);
+            }
+        }
+        n.for_each_child(&mut |c| {
+            visit(c, errs);
+            false
+        });
+    }
+    let mut errs = Vec::new();
+    visit(root, &mut errs);
+    errs
+}
+
+/// forEach, reduce and a bare map. A map that is the direct argument of
+/// Promise.all is the parallel fanout and is checked where it is extracted.
+/// Outside that, the call is rejected when it contains workflow calls or stands
+/// alone as a statement.
+fn strict_call_message(call: P<Node>) -> Option<String> {
+    let name = property_call_name(call);
+    if !matches!(name, "forEach" | "reduce" | "reduceRight" | "map") {
+        return None;
+    }
+    if name == "map" {
+        if let Some(p) = call.parent() {
+            if ast::is_call_expression(p) && is_promise_all(p) && p.arguments().first() == Some(&call) {
+                return None;
+            }
+        }
+    }
+    if !contains_workflow_call(call) && !is_statement_expression(call) {
+        return None;
+    }
+    let text = format!("'{}'", utf16_prefix(&node_text(call), 60));
+    Some(match name {
+        "forEach" => format!("The forEach call {text} is not allowed in DSL workflows: it is dropped from the workflow graph but still runs when the body replays. Use a for..of loop (sequential fanout) or Promise.all(items.map(...)) (parallel fanout)."),
+        "map" => format!("The map call {text} is not allowed in DSL workflows unless it is the direct argument of Promise.all. Use Promise.all(items.map(...)) for a parallel fanout or a for..of loop for a sequential one."),
+        _ => format!("The {name} call {text} is not allowed in DSL workflows: it is not part of the workflow graph. Compute the value inside a step function, or use a for..of loop."),
+    })
+}
+
+/// The call (through await and parentheses) is the whole expression of an
+/// expression statement.
+fn is_statement_expression(n: P<Node>) -> bool {
+    let mut p = n.parent();
+    while let Some(x) = p {
+        if ast::is_await_expression(x) || ast::is_parenthesized_expression(x) {
+            p = x.parent();
+        } else {
+            break;
+        }
+    }
+    p.is_some_and(ast::is_expression_statement)
 }
 
 fn contains_workflow_call(n: P<Node>) -> bool {
@@ -1004,19 +1076,36 @@ impl Dsl<'_, '_> {
     }
 
     fn extract_parallel_fanout(&mut self, call: P<Node>) -> Option<JsObj> {
+        match self.match_parallel_fanout(call) {
+            Ok(step) => Some(step),
+            Err(why) => {
+                if self.strict {
+                    self.add_error(format!(
+                        "The parallel fanout '{}' could not be expressed in a DSL workflow, so it would be silently dropped from the graph: {why}",
+                        utf16_prefix(&node_text(call), 60)
+                    ));
+                }
+                None
+            }
+        }
+    }
+
+    fn match_parallel_fanout(&mut self, call: P<Node>) -> Result<JsObj, &'static str> {
         let map_call = call.arguments()[0];
         if !ast::is_call_expression(map_call) || !ast::is_property_access_expression(map_call.expression().unwrap()) {
-            return None;
+            return Err("Promise.all needs 'items.map(...)' as its argument.");
         }
-        let source_var = extract_source_path(map_call.expression().unwrap().expression().unwrap())?;
+        let Some(source_var) = extract_source_path(map_call.expression().unwrap().expression().unwrap()) else {
+            return Err("the array being mapped must be a data array (an identifier or field like 'data.items'), not a computed expression or a call such as 'items.filter(...).map(...)'. Compute it in a step first.");
+        };
         let margs = map_call.arguments();
         if margs.is_empty() || !ast::is_arrow_function(margs[0]) {
-            return None;
+            return Err("the map callback must be an inline arrow function.");
         }
         let map_fn = margs[0];
         let params = map_fn.parameters();
         if params.is_empty() || !params[0].name().is_some_and(ast::is_identifier) {
-            return None;
+            return Err("the map callback must take the item as a plain identifier parameter (no destructuring).");
         }
         let item_var = params[0].name().unwrap().text().to_string();
         let body = self.in_child(&item_var, |c| {
@@ -1040,9 +1129,9 @@ impl Dsl<'_, '_> {
             body
         });
         if body.is_empty() {
-            return None;
+            return Err("the map callback contains no 'workflow.do' call the DSL can model. Use pikkuWorkflowComplexFunc for work that is not a flat list of steps.");
         }
-        Some(jo!("type" => "fanout", "sourceVar" => source_var, "itemVar" => item_var, "mode" => "parallel", "body" => body))
+        Ok(jo!("type" => "fanout", "sourceVar" => source_var, "itemVar" => item_var, "mode" => "parallel", "body" => body))
     }
 
     fn extract_parallel_group(&mut self, call: P<Node>) -> Option<JsObj> {

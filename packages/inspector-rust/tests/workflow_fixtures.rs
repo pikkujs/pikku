@@ -135,6 +135,56 @@ export const complex = pikkuWorkflowComplexFunc(async ({}: any, data: any, { wor
 }
 
 #[test]
+fn dsl_workflow_strict_constructs() {
+    let res = run_project(
+        "strict",
+        "
+export const forEachWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  data.items.forEach(async (i: any) => { await workflow.do('a', 'stepA', i) })
+})
+export const reduceWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  const total = await data.items.reduce(async (acc: any, i: any) => { await workflow.do('a', 'stepA', i); return acc }, 0)
+})
+export const mapWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  const ps = data.items.map((i: any) => workflow.do('a', 'stepA', i))
+  await Promise.all(ps)
+})
+export const ternaryWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  await workflow.do('a', 'stepA', { to: data.vip ? 'vip' : 'std' })
+})
+export const fanoutWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  await Promise.all(data.items.filter((i: any) => i.ok).map((i: any) => workflow.do('a', 'stepA', i)))
+})
+export const emptyFanoutWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  await Promise.all(data.items.map(async (i: any) => { console.log(i) }))
+})
+export const okWf = pikkuWorkflowFunc(async ({}: any, data: any, { workflow }: any) => {
+  for (const i of data.items) {
+    await workflow.do('seq', 'stepA', i)
+  }
+  await Promise.all(data.items.map((i: any) => workflow.do('par', 'stepB', i)))
+  const ids = data.items.map((i: any) => i.id)
+})
+",
+        false,
+    );
+    let got = diagnostics_text(&res);
+    for want in [
+        "Workflow 'forEachWf' does not conform to DSL workflow rules:\n- The forEach call",
+        "Workflow 'reduceWf' does not conform to DSL workflow rules:\n- The reduce call",
+        "Workflow 'mapWf' does not conform to DSL workflow rules:\n- The map call",
+        "Workflow 'ternaryWf' does not conform to DSL workflow rules:\n- The ternary expression",
+        "Workflow 'fanoutWf' does not conform to DSL workflow rules:\n- The parallel fanout",
+        "not a computed expression",
+        "Workflow 'emptyFanoutWf' does not conform to DSL workflow rules:\n- The parallel fanout",
+        "contains no 'workflow.do' call",
+    ] {
+        assert!(got.contains(want), "missing diagnostic {want:?} in:\n{got}");
+    }
+    assert!(!got.contains("Workflow 'okWf'"), "for-of, Promise.all(map) and a pure map must stay valid:\n{got}");
+}
+
+#[test]
 fn complex_workflow_falls_back() {
     let res = run_project(
         "complex",

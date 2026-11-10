@@ -224,19 +224,33 @@ export const checkoutWorkflow = pikkuWorkflowFunc<
       cardToken: data.cardToken,
     })
 
-    const status =
-      payment.status === 'succeeded'
-        ? ('paid' as const)
-        : ('payment_failed' as const)
+    // A DSL workflow branches with if/else, which becomes a branch step. A
+    // ternary would run but never appear in the graph.
+    if (payment.status === 'succeeded') {
+      await workflow.do('Finalize', 'finalizeOrder', {
+        orderId: order.orderId,
+        basketId: data.basketId,
+        userId: data.userId,
+        status: 'paid',
+      })
+      return {
+        orderId: order.orderId,
+        status: 'paid',
+        totalCents: basket.totalCents,
+      }
+    }
 
-    await workflow.do('Finalize', 'finalizeOrder', {
+    await workflow.do('Finalize failed payment', 'finalizeOrder', {
       orderId: order.orderId,
       basketId: data.basketId,
       userId: data.userId,
-      status,
+      status: 'payment_failed',
     })
-
-    return { orderId: order.orderId, status, totalCents: basket.totalCents }
+    return {
+      orderId: order.orderId,
+      status: 'payment_failed',
+      totalCents: basket.totalCents,
+    }
   },
 })
 // @snippet end wireWorkflow
