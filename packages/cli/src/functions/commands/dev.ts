@@ -440,6 +440,7 @@ export const dev = pikkuSessionlessFunc<
 
     const localContentConfig = resolveLocalContentConfig({
       appContent: userConfig.content,
+      rootContent: config.content,
       backendContent: backendForContent(
         config.backends,
         config.backend,

@@ -475,6 +475,19 @@ export type PikkuCLIInput = {
   rootDir: string
   /** Runtime artifacts directory (dev.db, content, tmp). Resolved relative to rootDir. Defaults to <rootDir>/.pikku-runtime. */
   runtimeDir?: string
+  /**
+   * Content storage shared by every backend: one directory and one size limit,
+   * and the buckets that exist. A backend opts in to some of them with
+   * `backends.<name>.content.buckets`.
+   */
+  content?: {
+    /** Where files are kept, relative to the project root. */
+    contentPath?: string
+    /** The most one upload may hold, such as `10mb`. Defaults to `1mb`. */
+    sizeLimit?: string
+    /** Every bucket the project uses. */
+    buckets: string[]
+  }
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
@@ -1170,19 +1183,19 @@ export type PikkuBackendInput = {
     embed?: Record<string, string>
   }
   /**
-   * How `pikku dev` and `pikku serve` store and serve this backend's files.
-   * Per backend because each runs as its own process on its own port, and two
-   * backends must not share one upload directory or url prefix.
+   * The content buckets this backend may use, and the routes it serves them
+   * on. Each backend is its own server on its own port, so the route prefixes
+   * are per backend. A backend with no `content` has no content access. Each
+   * bucket must be declared in the root `content.buckets`. The directory and
+   * size limit are the root's: see `PikkuCLIInput.content`.
    */
   content?: {
-    /** Where files are kept, relative to the project root. */
-    contentPath?: string
+    /** Buckets this backend may use. Becomes its `ContentBucket` type in `.pikku/backends/<name>/content-buckets.gen.ts`. */
+    buckets: string[]
     /** Route uploads arrive on. Defaults to `/upload`. */
     uploadUrlPrefix?: string
     /** Route files are read from. Defaults to `/assets`. */
     assetUrlPrefix?: string
-    /** The most one upload may hold, such as `10mb`. Defaults to `1mb`. */
-    sizeLimit?: string
   }
   dev?: {
     /** Required when the project declares two or more backends. */

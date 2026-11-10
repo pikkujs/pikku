@@ -112,3 +112,33 @@ describe('generateBackendCodegen', () => {
     assert.equal(errors[0]?.backend, 'api')
   })
 })
+
+describe('content buckets per backend', () => {
+  test('two backends with different buckets get different generated types', async (t) => {
+    if (pathsAreBroken()) return t.skip('node:path is mocked as win32')
+    const root = await mkdtemp(`${tmpdir()}/pikku-backends-`)
+    dirs.push(root)
+    const { errors } = await generateBackendCodegen({
+      projectDir: root,
+      backends: ['api', 'jobs', 'bare'],
+      contentBuckets: { api: ['photos', 'docs'], jobs: ['ingest'] },
+      inspectorState: getInitialInspectorState(root) as never,
+      pikkuBin: await fakePikku(root),
+    })
+    assert.deepEqual(errors, [])
+    const read = (name: string) =>
+      readFile(
+        join(root, '.pikku', 'backends', name, 'content-buckets.gen.ts'),
+        'utf-8'
+      )
+    const [api, jobs, bare] = await Promise.all([
+      read('api'),
+      read('jobs'),
+      read('bare'),
+    ])
+    assert.match(api, /export type ContentBucket = "photos" \| "docs"/)
+    assert.match(jobs, /export type ContentBucket = "ingest"\n/)
+    assert.match(bare, /export type ContentBucket = never\n/)
+    assert.match(api, /contentBuckets = \["photos","docs"\]/)
+  })
+})

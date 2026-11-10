@@ -136,6 +136,7 @@ export const serve = pikkuSessionlessFunc<
 
     const localContentConfig = resolveLocalContentConfig({
       appContent: userConfig.content,
+      rootContent: config.content,
       backendContent: backendForContent(config.backends, backend, 'pikku serve')
         .content,
       rootDir: config.rootDir,

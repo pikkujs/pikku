@@ -7,6 +7,12 @@
 //~ LocalContent in the sandbox (files on disk, served at /upload + /content), an
 //~ R2/S3-backed one in a deployed stage. It is ALWAYS injected: never guard it, and
 //~ never report it as unconfigured just because services.ts does not name it.
+//~ A bucket must be declared in pikku.config.json: "content": { "buckets": ["uploads"] }
+//~ at the root, and "content": { "buckets": ["uploads"] } on each backend that may use it
+//~ (a backend with no content block has no content access). `pikku all` then writes that
+//~ backend's `ContentBucket` type to .pikku/backends/<name>/content-buckets.gen.ts; declare
+//~ `content: ContentService<ContentBucket>` in application-types.d.ts so an unlisted bucket
+//~ fails to type-check.
 export const BUCKET = 'uploads'
 
 //~ keyGeneration — build a safe, namespaced storage key. PRIVATE files live under the

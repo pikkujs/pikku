@@ -13,6 +13,7 @@ import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
 import { assertKnownConfigKeys } from './config-keys.js'
+import { assertContentConfig } from './content-buckets.js'
 import { normalizeEnvironments } from './normalize-environments.js'
 import { DEFAULT_ADDON_REGISTRY } from './remote-addon-sync.js'
 
@@ -448,6 +449,7 @@ const assertBackendsDeclared = (
 
   assertMetaLocaleNotSpelledLocale(config)
   assertKnownConfigKeys(config, file)
+  assertContentConfig(config, file)
 
   // An addon is a package other projects wire, not a server; it builds no backend.
   if (config.addon) {

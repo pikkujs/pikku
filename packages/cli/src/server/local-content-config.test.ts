@@ -7,6 +7,7 @@ import {
 
 const base = {
   appContent: undefined,
+  rootContent: undefined,
   backendContent: undefined,
   rootDir: '/app',
   runtimeDir: undefined,
@@ -27,11 +28,8 @@ describe('resolveLocalContentConfig', () => {
   test('the pikku.config.json block is honoured', () => {
     const resolved = resolveLocalContentConfig({
       ...base,
-      backendContent: {
-        contentPath: 'files',
-        assetUrlPrefix: '/content',
-        sizeLimit: '10mb',
-      },
+      rootContent: { contentPath: 'files', sizeLimit: '10mb', buckets: ['a'] },
+      backendContent: { assetUrlPrefix: '/content' },
     })
     assert.equal(resolved.sizeLimit, '10mb')
     assert.equal(resolved.assetUrlPrefix, '/content')
@@ -42,7 +40,8 @@ describe('resolveLocalContentConfig', () => {
     const resolved = resolveLocalContentConfig({
       ...base,
       appContent: { sizeLimit: '50mb' },
-      backendContent: { sizeLimit: '10mb', assetUrlPrefix: '/content' },
+      rootContent: { sizeLimit: '10mb', buckets: ['a'] },
+      backendContent: { assetUrlPrefix: '/content' },
     })
     assert.equal(resolved.sizeLimit, '50mb')
     assert.equal(resolved.assetUrlPrefix, '/content')
@@ -51,19 +50,19 @@ describe('resolveLocalContentConfig', () => {
 
 describe('backendForContent', () => {
   const backends = {
-    web: { content: { sizeLimit: '2mb' } },
+    web: { content: { assetUrlPrefix: '/c' } },
     admin: {},
   }
   test('takes the named backend', () => {
     assert.deepEqual(backendForContent(backends, 'web', 'pikku serve'), {
       name: 'web',
-      content: { sizeLimit: '2mb' },
+      content: { assetUrlPrefix: '/c' },
     })
   })
   test('takes the only backend when none is named', () => {
     assert.deepEqual(
       backendForContent({ web: backends.web }, undefined, 'pikku serve'),
-      { name: 'web', content: { sizeLimit: '2mb' } }
+      { name: 'web', content: { assetUrlPrefix: '/c' } }
     )
   })
   test('refuses to guess between several backends', () => {

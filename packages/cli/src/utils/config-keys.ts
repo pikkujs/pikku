@@ -61,6 +61,7 @@ const SHAPE: Shape = obj({
   $schema: 'any',
   rootDir: 'any',
   runtimeDir: 'any',
+  content: obj({ contentPath: 'any', sizeLimit: 'any', buckets: 'any' }),
   srcDirectories: 'any',
   ignoreFiles: 'any',
   packageMappings: 'any',
@@ -180,10 +181,9 @@ const SHAPE: Shape = obj({
       deploy: 'any',
       dev: obj({ port: 'any' }),
       content: obj({
-        contentPath: 'any',
+        buckets: 'any',
         uploadUrlPrefix: 'any',
         assetUrlPrefix: 'any',
-        sizeLimit: 'any',
       }),
       publish: 'any',
     })
@@ -212,8 +212,6 @@ const MOVED_TOP_LEVEL: Record<
     }
     return 'has moved to backends.<name>.dev, which takes `port` only (`dev.db` and `dev.contributors` are gone). Delete it and set backends.<name>.dev.port'
   },
-  content:
-    'has moved to backends.<name>.content: each backend runs as its own process with its own files, so the content settings are per backend. Move the block there',
   addons:
     'is not a config key yet: wire an addon in code with wireAddon. Delete it',
   supportsImportAttributes: 'is now schema.supportsImportAttributes',
@@ -259,6 +257,14 @@ const NESTED_MOVED: Record<string, string> = {
     'is deploy.serverlessIncompatible, which the backend filter reads from the project',
   'backends.*.filter.defaultTarget':
     'is backends.<name>.deploy.target (or deploy.target for the project)',
+  'content.uploadUrlPrefix':
+    'is per backend, because each backend is its own server: backends.<name>.content.uploadUrlPrefix',
+  'content.assetUrlPrefix':
+    'is per backend, because each backend is its own server: backends.<name>.content.assetUrlPrefix',
+  'backends.*.content.contentPath':
+    'lives in the root `content` block (content.contentPath): the directory is shared by every backend, which only choose their buckets',
+  'backends.*.content.sizeLimit':
+    'lives in the root `content` block (content.sizeLimit): the limit is shared by every backend, which only choose their buckets',
   'backends.*.openapi': 'is the top-level openAPI block',
   'backends.*.workflows': 'is the top-level workflows block',
   'backends.*.globalHTTPPrefix': 'is the top-level globalHTTPPrefix',

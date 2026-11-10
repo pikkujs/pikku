@@ -16,6 +16,7 @@ import {
   removeDisabledOriginScaffolds,
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
+import { backendBuckets } from '../../utils/content-buckets.js'
 import { generateBackendCodegen } from '../../deploy/codegen/per-unit-codegen.js'
 import {
   assembleBackendSdk,
@@ -913,6 +914,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
           const result = await generateBackendCodegen({
             projectDir: config.configDir,
             backends: selected,
+            contentBuckets: Object.fromEntries(
+              selected.map((name) => [name, backendBuckets(config, name)])
+            ),
             inspectorState: state,
             onProgress: (name, status) => {
               if (status === 'done') logger.debug(`• backend ${name} generated`)

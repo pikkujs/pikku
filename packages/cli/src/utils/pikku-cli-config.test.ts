@@ -232,17 +232,91 @@ describe('getPikkuCLIConfig', () => {
       await rejects({ dev: { db: true } }, /dev .* backends\.<name>\.dev/)
     })
 
-    test('content moved to backends.<name>.content', async () => {
-      await rejects(
-        { content: { sizeLimit: '2mb' } },
-        /content .* backends\.<name>\.content/
-      )
-      const config = await load(
-        await writeConfig({
-          backends: { api: { content: { sizeLimit: '2mb' } } },
-        })
-      )
-      assert.equal(config.backends.api?.content?.sizeLimit, '2mb')
+    describe('content buckets', () => {
+      const withBackend = (content: unknown) => ({
+        content: { buckets: ['a', 'b'] },
+        backends: { api: { filter: {}, content } },
+      })
+
+      test('the accepted shape loads', async () => {
+        const config = await load(
+          await writeConfig({
+            content: {
+              contentPath: 'files',
+              sizeLimit: '2mb',
+              buckets: ['a', 'b'],
+            },
+            backends: {
+              api: {
+                filter: {},
+                dev: { port: 4001 },
+                content: { buckets: ['a'], assetUrlPrefix: '/content' },
+              },
+              jobs: { filter: {}, dev: { port: 4002 } },
+            },
+          })
+        )
+        assert.deepEqual(config.content?.buckets, ['a', 'b'])
+        assert.deepEqual(config.backends.api?.content?.buckets, ['a'])
+        assert.equal(config.backends.jobs?.content, undefined)
+      })
+
+      test('a bucket the root does not declare is refused', async () => {
+        await rejects(
+          withBackend({ buckets: ['a', 'c'] }),
+          /backends\.api\.content\.buckets .* 'c', which is not in the root content\.buckets/
+        )
+      })
+
+      test('contentPath and sizeLimit in a backend name the root', async () => {
+        await rejects(
+          withBackend({ buckets: ['a'], contentPath: 'x' }),
+          /backends\.api\.content\.contentPath .* root `content`/
+        )
+        await rejects(
+          withBackend({ buckets: ['a'], sizeLimit: '2mb' }),
+          /backends\.api\.content\.sizeLimit .* root `content`/
+        )
+      })
+
+      test('prefixes at the root name the backend', async () => {
+        await rejects(
+          { content: { buckets: ['a'], uploadUrlPrefix: '/u' } },
+          /content\.uploadUrlPrefix .* per backend/
+        )
+      })
+
+      test('a backend using content with no root buckets is refused', async () => {
+        await rejects(
+          { backends: { api: { filter: {}, content: { buckets: ['a'] } } } },
+          /declares no `content\.buckets`/
+        )
+        await rejects(
+          {
+            content: { sizeLimit: '2mb' },
+            backends: { api: { filter: {}, content: { buckets: ['a'] } } },
+          },
+          /content\.buckets .* non-empty list/
+        )
+      })
+
+      test('a backend without buckets is refused rather than open', async () => {
+        await rejects(
+          withBackend({ assetUrlPrefix: '/c' }),
+          /backends\.api\.content\.buckets .* non-empty list/
+        )
+      })
+
+      test('empty, duplicate and invalid names are refused', async () => {
+        await rejects(withBackend({ buckets: [] }), /non-empty list/)
+        await rejects(withBackend({ buckets: ['a', 'a'] }), /'a' twice/)
+        for (const bad of ['', '../x', 'a/b', '_public', 7]) {
+          await rejects(
+            { content: { buckets: [bad] }, backends: { api: { filter: {} } } },
+            /invalid bucket name/
+          )
+        }
+      })
     })
 
     test('a generated path is not configurable', async () => {

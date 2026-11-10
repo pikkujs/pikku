@@ -19,6 +19,7 @@ import type { InspectorState } from '@pikku/inspector'
 import { serializeInspectorState } from '@pikku/inspector'
 import type { DeploymentManifest, DeploymentUnit } from '@pikku/deploy'
 import { toSafeKebab } from '../analyzer/analyzer.js'
+import { renderContentBucketsFile } from '../../utils/content-buckets.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -113,6 +114,8 @@ export interface BackendCodegenOptions {
   /** Defaults to `<projectDir>/.pikku/backends`. */
   outRoot?: string
   pikkuBin?: string
+  /** Each backend's `content.buckets`; a backend missing here has none. */
+  contentBuckets?: Record<string, string[]>
   onProgress?: (
     backend: string,
     status: 'start' | 'done' | 'error',
@@ -161,6 +164,11 @@ export async function generateBackendCodegen(
           '--force-relative-imports',
           '--silent',
         ])
+        await writeFile(
+          join(dir, 'content-buckets.gen.ts'),
+          renderContentBucketsFile(options.contentBuckets?.[name] ?? []),
+          'utf-8'
+        )
         backendDirs.set(name, dir)
         onProgress?.(name, 'done')
       } catch (err) {

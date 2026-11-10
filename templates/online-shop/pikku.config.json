@@ -10,6 +10,10 @@
   "schema": {
     "supportsImportAttributes": true
   },
+  "content": {
+    "sizeLimit": "10mb",
+    "buckets": ["shop"]
+  },
   "scaffold": {
     "pikkuDir": "src/scaffold",
     "console": true,
@@ -65,9 +69,9 @@
         "port": 4011
       },
       "content": {
+        "buckets": ["shop"],
         "uploadUrlPrefix": "/upload",
-        "assetUrlPrefix": "/content",
-        "sizeLimit": "10mb"
+        "assetUrlPrefix": "/content"
       }
     }
   }

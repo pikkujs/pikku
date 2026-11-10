@@ -16,6 +16,7 @@ import type { DB } from '#pikku/db/schema.gen.js'
 import type { TypedSecretService } from '../.pikku/secrets/pikku-secrets.gen.js'
 import type { TypedVariablesService } from '../.pikku/variables/pikku-variables.gen.js'
 import type { auth } from './auth.js'
+import type { ContentBucket } from '../.pikku/backends/api/content-buckets.gen.js'
 
 export interface UserSession extends CoreUserSession {
   userId: string
@@ -53,9 +54,11 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   // `audit: true` ADDITIONALLY gets a kysely wrapped to capture every table write.
   auditLog: AuditLog
   // Constructed and injected by the CLI's dev/serve commands from the `content`
-  // block in pikku.config.json, so declare it REQUIRED for the same reason as
+  // blocks in pikku.config.json, so declare it REQUIRED for the same reason as
   // emailService above — optional here would force a guard on every upload.
-  content: ContentService
+  // Typed with this backend's buckets (backends.api.content.buckets), written by
+  // `pikku all`: a bucket the backend does not list is a type error.
+  content: ContentService<ContentBucket>
   // Per-invocation analytics buffer, injected into every function by the
   // runtime. Narrowed to THIS app's declared union (registry.ts) so
   // `analytics.record({ name: 'checkout_completed', ... })` is checked against

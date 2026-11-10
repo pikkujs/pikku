@@ -1,9 +1,21 @@
 import { join, resolve } from 'node:path'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'
-import type { PikkuBackendInput } from '../../types/config.js'
+import type { PikkuCLIInput } from '../../types/config.js'
 
-/** The `content` block a backend writes in `pikku.config.json`, or `createConfig` returns. */
-export type ContentSettings = NonNullable<PikkuBackendInput['content']>
+/**
+ * The settings one server resolves: the directory and size limit from the root
+ * `content` block, the route prefixes from the served backend's. `createConfig`
+ * may return any of them.
+ */
+export type ContentSettings = {
+  contentPath?: string
+  sizeLimit?: string
+  uploadUrlPrefix?: string
+  assetUrlPrefix?: string
+}
+
+type RootContent = PikkuCLIInput['content']
+type BackendContent = { uploadUrlPrefix?: string; assetUrlPrefix?: string }
 
 /**
  * `pikku dev` and `pikku serve` build the content service themselves, so its
@@ -13,19 +25,26 @@ export type ContentSettings = NonNullable<PikkuBackendInput['content']>
  */
 export const resolveLocalContentConfig = ({
   appContent,
+  rootContent,
   backendContent,
   rootDir,
   runtimeDir,
   server,
 }: {
   appContent: ContentSettings | undefined
-  backendContent: ContentSettings | undefined
+  rootContent: RootContent | undefined
+  backendContent: BackendContent | undefined
   rootDir: string
   runtimeDir: string | undefined
   server: string
 }): LocalContentConfig => {
   // An app key left undefined must not wipe out the project's value.
-  const settings: ContentSettings = { ...backendContent }
+  const settings: ContentSettings = {
+    contentPath: rootContent?.contentPath,
+    sizeLimit: rootContent?.sizeLimit,
+    uploadUrlPrefix: backendContent?.uploadUrlPrefix,
+    assetUrlPrefix: backendContent?.assetUrlPrefix,
+  }
   for (const [key, value] of Object.entries(appContent ?? {})) {
     if (value !== undefined) (settings as Record<string, unknown>)[key] = value
   }
@@ -51,10 +70,10 @@ export const resolveLocalContentConfig = ({
  * an error rather than a guess, because each backend keeps its own files.
  */
 export const backendForContent = (
-  backends: Record<string, { content?: ContentSettings }> | undefined,
+  backends: Record<string, { content?: BackendContent }> | undefined,
   named: string | undefined,
   command: string
-): { name: string | undefined; content: ContentSettings | undefined } => {
+): { name: string | undefined; content: BackendContent | undefined } => {
   const declared = Object.keys(backends ?? {})
   if (named) {
     if (!backends?.[named]) {
