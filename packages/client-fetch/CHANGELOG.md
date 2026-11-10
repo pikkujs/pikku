@@ -1,3 +1,10 @@
+## 0.12.15
+
+### Patch Changes
+
+- 6e9e86f: Server-sent events with `\r\n` or `\r` line endings now parse, including a `\r\n` split across two chunks. `postStream` sends its headers through `Headers`, so any form of header init works, and it stops yielding once the abort signal fires.
+- be90d6c: `pikku doc content` prints one whole upload from a compiled app, and a new `pikku-content` skill holds the rules around it. `content.getUploadURL` now returns `fileKey`, relative to the bucket, instead of `assetKey`. `uploadFile` on the fetch client takes and returns `fileKey`, resolves a relative `uploadUrl` against the server URL and uses the configured `fetch`. See `docs/MIGRATION.md`.
+
 ## 0.12.14
 
 ### Patch Changes

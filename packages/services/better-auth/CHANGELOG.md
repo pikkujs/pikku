@@ -1,5 +1,17 @@
 # @pikku/better-auth
 
+## 0.12.64
+
+### Patch Changes
+
+- 3099125: The workflow-run, agent-thread, webhook-delivery and virtual-user read functions move from `@pikku/addon-console` to `@pikku/addon-admin`, because a deployed stage has those and no console. Call them as `admin:getWorkflowRuns`, `admin:getAgentThreads` and so on, under the new `admin:workflows`, `admin:agents`, `admin:webhooks:deliveries` and `admin:virtualUsers` scopes. `scaffold.console` no longer generates `/workflow-run/:runId/stream`; the new `scaffold.admin` generates the `@pikku/addon-admin` wiring and that route as `ref('admin:streamWorkflowRun')`. `startVirtualUserRun` and `setVirtualUserSchedule` stay in the console because they read the project's meta from disk. `@pikku/better-auth`'s copy of the admin scope tree catches up with the new scopes and the earlier schedules, queues and webhooks
+- 2e4e7ab: A function requiring a live scope now runs its permissions, body and nested calls on the freshly resolved scopes, not only its scope check. better-auth reads the session secret only when the scopes cache is used, and skips the cache cookie when a snapshot would not fit in one.
+- Updated dependencies [be90d6c]
+- Updated dependencies [2e4e7ab]
+- Updated dependencies [54173f6]
+- Updated dependencies [1be4b68]
+  - @pikku/core@0.12.154
+
 ## 0.12.63
 
 ### Patch Changes

@@ -206,7 +206,7 @@
     },
     "packages/addon/pikku-admin": {
       "name": "@pikku/addon-admin",
-      "version": "0.12.15",
+      "version": "0.12.16",
       "devDependencies": {
         "@pikku/better-auth": "^0.12.57",
         "@pikku/cli": "^0.12.192",
@@ -263,7 +263,7 @@
     },
     "packages/addon/pikku-console": {
       "name": "@pikku/addon-console",
-      "version": "0.12.68",
+      "version": "0.12.69",
       "dependencies": {
         "@pikku/code-edit": "^0.12.10",
         "@pikku/knowledge": "^0.12.21",
@@ -328,7 +328,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.207",
+      "version": "0.12.208",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -409,7 +409,7 @@
     },
     "packages/client-fetch": {
       "name": "@pikku/fetch",
-      "version": "0.12.14",
+      "version": "0.12.15",
     },
     "packages/client-websocket": {
       "name": "@pikku/websocket",
@@ -420,7 +420,7 @@
     },
     "packages/code-edit": {
       "name": "@pikku/code-edit",
-      "version": "0.12.12",
+      "version": "0.12.13",
       "dependencies": {
         "@pikku/inspector-go": "^0.12.9",
       },
@@ -430,7 +430,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.153",
+      "version": "0.12.154",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -523,7 +523,7 @@
     },
     "packages/frontend/react": {
       "name": "@pikku/react",
-      "version": "0.12.21",
+      "version": "0.12.22",
       "dependencies": {
         "@pikku/fetch": "^0.12.13",
       },
@@ -591,7 +591,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.117",
+      "version": "0.12.118",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
       },
@@ -605,7 +605,7 @@
     },
     "packages/inspector-go": {
       "name": "@pikku/inspector-go",
-      "version": "0.12.11",
+      "version": "0.12.12",
       "dependencies": {
         "@pikku/inspector": "^0.12.115",
         "tsx": "^4.23.15",
@@ -1003,7 +1003,7 @@
     },
     "packages/services/aws-services": {
       "name": "@pikku/aws-services",
-      "version": "0.12.18",
+      "version": "0.12.19",
       "devDependencies": {
         "@aws-sdk/client-s3": "^3.1152.0",
         "@aws-sdk/client-secrets-manager": "^3.1152.0",
@@ -1024,14 +1024,14 @@
     },
     "packages/services/backblaze": {
       "name": "@pikku/backblaze",
-      "version": "0.12.11",
+      "version": "0.12.12",
       "peerDependencies": {
         "@pikku/core": "^0.12.139",
       },
     },
     "packages/services/better-auth": {
       "name": "@pikku/better-auth",
-      "version": "0.12.63",
+      "version": "0.12.64",
       "dependencies": {
         "@pikku/jose": "^0.12.10",
       },
@@ -1274,7 +1274,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.71",
+      "version": "0.12.72",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",

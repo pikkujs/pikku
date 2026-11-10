@@ -1,3 +1,14 @@
+## 0.12.19
+
+### Patch Changes
+
+- be90d6c: `pikku doc content` prints one whole upload from a compiled app, and a new `pikku-content` skill holds the rules around it. `content.getUploadURL` now returns `fileKey`, relative to the bucket, instead of `assetKey`. `uploadFile` on the fetch client takes and returns `fileKey`, resolves a relative `uploadUrl` against the server URL and uses the configured `fetch`. See `docs/MIGRATION.md`.
+- Updated dependencies [be90d6c]
+- Updated dependencies [2e4e7ab]
+- Updated dependencies [54173f6]
+- Updated dependencies [1be4b68]
+  - @pikku/core@0.12.154
+
 ## 0.12.18
 
 ### Patch Changes

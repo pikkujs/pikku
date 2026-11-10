@@ -1,3 +1,34 @@
+## 0.12.208
+
+### Patch Changes
+
+- 3099125: The workflow-run, agent-thread, webhook-delivery and virtual-user read functions move from `@pikku/addon-console` to `@pikku/addon-admin`, because a deployed stage has those and no console. Call them as `admin:getWorkflowRuns`, `admin:getAgentThreads` and so on, under the new `admin:workflows`, `admin:agents`, `admin:webhooks:deliveries` and `admin:virtualUsers` scopes. `scaffold.console` no longer generates `/workflow-run/:runId/stream`; the new `scaffold.admin` generates the `@pikku/addon-admin` wiring and that route as `ref('admin:streamWorkflowRun')`. `startVirtualUserRun` and `setVirtualUserSchedule` stay in the console because they read the project's meta from disk. `@pikku/better-auth`'s copy of the admin scope tree catches up with the new scopes and the earlier schedules, queues and webhooks
+- be90d6c: `pikku doc content` prints one whole upload from a compiled app, and a new `pikku-content` skill holds the rules around it. `content.getUploadURL` now returns `fileKey`, relative to the bucket, instead of `assetKey`. `uploadFile` on the fetch client takes and returns `fileKey`, resolves a relative `uploadUrl` against the server URL and uses the configured `fetch`. See `docs/MIGRATION.md`.
+- 5f236d5: `pikku doc` now answers what an agent used to open a sibling file for. `pikkuFunc` shows a complete function, imports included, with `permissions` and `rpc`. `pikkuListFunc` shows real paging. `ref` and `pikkuPermission` state their name and map rules. `pikku doc` gains pages for things that are not exports: `imports`, `rpc`, `models`, `hooks` and `threads`.
+- 502ad55: A `pikkuPermission` that never uses its `data` argument is now reported as PKU586, because it should have been a `pikkuAuth`. It is a warning, and a critical under `pikku all --strict-meta` and `pikku validate --strict --codegen`, which now runs codegen with `--strict-meta`. The inspector reads these cases, and anything that cannot be determined is left alone. `pikku doc PKU586` explains it. `pikku new permission` now scaffolds a `pikkuAuth`. See docs/MIGRATION.md.
+- 54173f6: `pikkuPermission` now refuses a call with no session without running the check, like `pikkuAuth`, so `session` is always defined inside a check. `skipWithoutSession: true` on either makes the check pass with no session instead, and the function decides what that caller may see. A check without it on a sessionless function, directly or as a global permission, is now the error PKU587. `pikku doc PKU587` explains it. See docs/MIGRATION.md.
+- 81ff938: Add `pikku graph <functionId>`, which joins the generated meta for one function: the routes, channels, schedulers, queues, triggers, MCP and CLI wirings, workflow steps, agent tools and functions that call it, what it invokes or starts, and the permissions and middleware that gate it. Add `--json` for the full record. The output has no `unresolved` section: the build refuses what would hide an edge, and the command prints nothing but the graph on stdout (no banner). An unknown id lists near matches.
+
+  The inspectors (Go and Rust) now fail the build on four code gaps, all critical with no opt-out. `PKU941`: `rpc.invoke`, `rpc.mesh` and `rpc.startWorkflow` with a computed name (it was a warning; a `const` string literal is accepted). `PKU942`: handing the wire itself (`wire`, `rpc`, `http`, `channel`, `queue` and the other capability members, matched by symbol) to a function declared outside the handler, as an argument to a call or `new`. Closures that only call the wire, functions declared inside the handler, data read from a wire, and callees declared in a `@pikku/*` package are allowed. `PKU943`: a computed rpc name in `workflow.do` or `workflow.expectEventually`. `PKU944`: an `invokes` or `startsWorkflows` name that is not a function, workflow or wired addon function. See `docs/MIGRATION.md`.
+
+- 1be4b68: A workflow or agent with `auth` unset now requires a session, like any function, and only an explicit `auth: false` is anonymous. The generated routes take an optional session and leave the decision to the declaration: they reach only `expose: true` names, through `rpc.exposedAgent` and `rpc.exposedWorkflow`, which hold the `expose` gate the way `rpc.exposed` does, so generated code holds no access logic, and a start records who started the run; the workflow judges its own auth, scopes, permissions and input when it runs, so a refused start leaves a failed run. Status, streams and approve look the workflow up by name, confirm the run belongs to it and check its owner. A run with an owner is only for that owner. A run stores only its owner's user id and loads the session from `sessionStore` every time it executes, running the full checks each time, so a permission revoked mid-run stops it; a run with an owner and no `sessionStore` stops with an error. Schedules and triggers with no user need `auth: false`; see `docs/MIGRATION.md`.
+- Updated dependencies [3099125]
+- Updated dependencies [6e9e86f]
+- Updated dependencies [be90d6c]
+- Updated dependencies [2e4e7ab]
+- Updated dependencies [502ad55]
+- Updated dependencies [54173f6]
+- Updated dependencies [81ff938]
+- Updated dependencies [031aeed]
+- Updated dependencies [1be4b68]
+  - @pikku/better-auth@0.12.64
+  - @pikku/fetch@0.12.15
+  - @pikku/core@0.12.154
+  - @pikku/skills@0.12.72
+  - @pikku/inspector@0.12.118
+  - @pikku/inspector-go@0.12.12
+  - @pikku/code-edit@0.12.13
+
 ## 0.12.207
 
 ### Patch Changes
