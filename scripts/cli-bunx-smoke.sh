@@ -22,7 +22,7 @@ stale_core=$(npm view @pikku/core versions --json | bun -e '
 
 app="$work/app"
 mkdir -p "$app/src"
-echo '{"srcDirectories":["./src"],"outDir":"./.pikku","tsconfig":"./tsconfig.json"}' > "$app/pikku.config.json"
+echo '{"srcDirectories":["./src"],"tsconfig":"./tsconfig.json","backends":{"api":{"filter":{}}}}' > "$app/pikku.config.json"
 echo '{}' > "$app/tsconfig.json"
 echo "{\"name\":\"cli-bunx-smoke\",\"private\":true,\"dependencies\":{\"@pikku/core\":\"$core_range\"}}" > "$app/package.json"
 
