@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { requireProvider, resolveDeploy } from './resolve-deploy.js'
+import { resolveDeploy } from './resolve-deploy.js'
 import { planBackendDeploys } from '../functions/commands/deploy-backends.js'
 import { resolveProvider } from '../functions/commands/deploy-apply.js'
 
@@ -73,9 +73,12 @@ describe('resolveDeploy', () => {
     )
   })
 
-  test('the target defaults to serverless when nothing sets it', () => {
+  test('the target defaults to serverless for a named provider', () => {
     assert.equal(
-      resolveDeploy({ backends: { a: {} } }, { backend: 'a' }).target,
+      resolveDeploy(
+        { deploy: { provider: 'cloudflare' }, backends: { a: {} } },
+        { backend: 'a' }
+      ).target,
       'serverless'
     )
   })
@@ -88,38 +91,36 @@ describe('resolveDeploy', () => {
   })
 })
 
-describe('a missing provider', () => {
+describe('a project that names no provider', () => {
   const bare = { backends: { app: { filter: {} } } }
 
-  test('is an error naming deploy.provider, never cloudflare', () => {
-    assert.throws(
-      () =>
-        requireProvider(resolveDeploy(bare, { backend: 'app' }), {
-          backend: 'app',
-        }),
-      (error: Error) => {
-        assert.match(error.message, /No deploy provider for backend 'app'/)
-        assert.match(error.message, /"deploy": \{ "provider"/)
-        assert.match(error.message, /backends\.app\.deploy\.provider/)
-        return true
-      }
-    )
+  test('deploys with standalone on the server target, never cloudflare', () => {
+    const resolved = resolveDeploy(bare, { backend: 'app' })
+    assert.equal(resolved.provider, 'standalone')
+    assert.equal(resolved.target, 'server')
   })
 
-  test('is satisfied by a backend override alone', () => {
-    const own = { backends: { app: { deploy: { provider: 'standalone' } } } }
+  test('a backend override still beats the default', () => {
+    const own = { backends: { app: { deploy: { provider: 'cloudflare' } } } }
+    const resolved = resolveDeploy(own, { backend: 'app' })
+    assert.equal(resolved.provider, 'cloudflare')
+    assert.equal(resolved.target, 'serverless')
+  })
+
+  test('-p beats the default', () => {
     assert.equal(
-      requireProvider(resolveDeploy(own, { backend: 'app' }), {
-        backend: 'app',
-      }),
-      'standalone'
+      resolveDeploy(bare, { backend: 'app' }, 'azure').provider,
+      'azure'
     )
   })
 
-  test('resolveProvider refuses to pick one', async () => {
+  test('resolveProvider with no name loads standalone', async () => {
     await assert.rejects(
-      resolveProvider({}, undefined),
-      /No deploy provider.*deploy.*provider/
+      resolveProvider(
+        { deploy: { providers: { standalone: '@x/absent' } } },
+        undefined
+      ),
+      /@x\/absent' is not installed/
     )
   })
 })
@@ -158,17 +159,17 @@ describe('planBackendDeploys', () => {
     assert.equal(plans[0]!.many, false)
   })
 
-  test('one backend without a provider stops the whole run', () => {
-    assert.throws(
-      () =>
-        planBackendDeploys(
-          {
-            ...config,
-            deploy: { ...config.deploy, provider: undefined },
-          },
-          {}
-        ),
-      /No deploy provider for backend 'app'/
+  test('a backend without a provider plans as standalone', () => {
+    const plans = planBackendDeploys(
+      { ...config, deploy: { ...config.deploy, provider: undefined } },
+      {}
+    )
+    assert.deepEqual(
+      plans.map((p) => [p.name, p.providerName]),
+      [
+        ['app', 'standalone'],
+        ['worker', 'standalone'],
+      ]
     )
   })
 

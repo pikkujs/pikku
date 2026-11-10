@@ -6,10 +6,12 @@ import type {
 
 export type DeployTarget = 'serverless' | 'server'
 
+export const DEFAULT_DEPLOY_PROVIDER = 'standalone'
+
 /** What `pikku deploy` needs to know about one backend or frontend. */
 export type ResolvedDeploy = {
-  /** Undefined until a project default, an override or `-p` names one. */
-  provider: string | undefined
+  /** `-p`, an override, the project default, else `standalone`. */
+  provider: string
   target: DeployTarget
   bundler: 'auto' | 'bun' | 'esbuild'
   mangleIdentifiers?: boolean
@@ -56,39 +58,15 @@ export const resolveDeploy = (
   } else if (unit && 'frontend' in unit) {
     override = frontendOverride(config.frontends?.[unit.frontend]?.deploy)
   }
+  const named = cliProvider ?? override?.provider ?? base.provider
   return {
-    provider: cliProvider ?? override?.provider ?? base.provider,
-    target: override?.target ?? base.target ?? 'serverless',
+    provider: named ?? DEFAULT_DEPLOY_PROVIDER,
+    target:
+      override?.target ?? base.target ?? (named ? 'serverless' : 'server'),
     bundler: base.bundler ?? 'auto',
     mangleIdentifiers: base.mangleIdentifiers,
     serverlessIncompatible: base.serverlessIncompatible,
     grouping: backend?.grouping,
     embed: backend?.embed,
   }
-}
-
-/**
- * A deploy with no provider is refused. There is no fallback provider: a
- * project that never named one has not chosen where it deploys.
- */
-export const requireProvider = (
-  resolved: ResolvedDeploy,
-  unit?: DeployUnitRef
-): string => {
-  if (resolved.provider) return resolved.provider
-  const label =
-    unit && 'backend' in unit
-      ? `backend '${unit.backend}'`
-      : unit && 'frontend' in unit
-        ? `frontend '${unit.frontend}'`
-        : 'this project'
-  const override =
-    unit && 'backend' in unit
-      ? `backends.${unit.backend}.deploy.provider`
-      : unit && 'frontend' in unit
-        ? `frontends.${unit.frontend}.deploy.provider`
-        : undefined
-  throw new Error(
-    `No deploy provider for ${label}. Set "deploy": { "provider": "<name>" } in pikku.config.json${override ? ` (or ${override} for this one)` : ''}, or pass --provider.`
-  )
 }

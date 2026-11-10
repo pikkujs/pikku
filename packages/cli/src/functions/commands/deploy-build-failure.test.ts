@@ -177,23 +177,19 @@ afterEach(() => {
 })
 
 describe('deploy plan provider resolution', () => {
-  test('refuses a project that names no deploy provider', async () => {
-    await assert.rejects(
-      () =>
-        deployPlan.func(
-          {
-            logger,
-            config: {
-              ...config(),
-              deploy: { providers: { fake: providerUrl } },
-            },
-            getInspectorState: async () => inspectorState(),
-            bundler: bundlerWith([]),
-          } as never,
-          {} as never,
-          {} as never
-        ),
-      /No deploy provider for backend 'api'.*"provider"/
+  test('a project that names no deploy provider resolves standalone', async () => {
+    await deployPlan.func(
+      {
+        logger,
+        config: {
+          ...config(),
+          deploy: { providers: { standalone: providerUrl } },
+        },
+        getInspectorState: async () => inspectorState(),
+        bundler: bundlerWith([]),
+      } as never,
+      {} as never,
+      {} as never
     )
   })
 

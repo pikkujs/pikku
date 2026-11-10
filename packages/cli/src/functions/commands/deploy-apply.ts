@@ -13,6 +13,7 @@ import {
   describeUnservedGateway,
   PikkuDeployBuildFailedError,
 } from '../../deploy/build-pipeline.js'
+import { DEFAULT_DEPLOY_PROVIDER } from '../../deploy/resolve-deploy.js'
 import { nativeSidecars } from '../../utils/frontend.js'
 import {
   backendState,
@@ -308,14 +309,7 @@ export async function resolveProvider(
     nativeSidecars?: Array<{ name: string; dir: string }>
   }
 ): Promise<ProviderAdapter> {
-  // `providerName` comes from `resolveDeploy`: the project's `deploy.provider`,
-  // a backend's override, or `--provider`. Nothing here picks one.
-  const name = providerName
-  if (!name) {
-    throw new Error(
-      'No deploy provider. Set "deploy": { "provider": "<name>" } in pikku.config.json, or pass --provider.'
-    )
-  }
+  const name = providerName ?? DEFAULT_DEPLOY_PROVIDER
 
   const providers = config?.deploy?.providers ?? {
     cloudflare: '@pikku/deploy-cloudflare',

@@ -107,4 +107,22 @@ describe('deploy.provider', () => {
     assert.notEqual(status, 0)
     assert.match(output, /\.deploy\/second/)
   })
+
+  test('is standalone when the project names none', async (t) => {
+    if (!existsSync(cliBin)) return t.skip('dist not built')
+    writeProvider('standalone')
+    writeFileSync(
+      join(root, 'pikku.config.json'),
+      JSON.stringify({
+        tsconfig: 'tsconfig.json',
+        outDir: '.pikku',
+        srcDirectories: ['src'],
+        backends: { api: { filter: {} } },
+        deploy: { providers: { standalone: '@vendor/deploy-standalone' } },
+      })
+    )
+    const { status, output } = await runCli('deploy', 'apply', '--fromPlan')
+    assert.notEqual(status, 0)
+    assert.match(output, /\.deploy\/standalone/)
+  })
 })

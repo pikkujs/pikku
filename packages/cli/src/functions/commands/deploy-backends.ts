@@ -9,7 +9,6 @@ import type { Logger } from '@pikku/core/services'
 import type { Bundler } from '../../deploy/bundler/bundler.interface.js'
 import { runBuildPipeline } from '../../deploy/build-pipeline.js'
 import {
-  requireProvider,
   resolveDeploy,
   type ResolvedDeploy,
 } from '../../deploy/resolve-deploy.js'
@@ -37,9 +36,8 @@ type DeployConfig = Parameters<typeof resolveDeploy>[0] & {
 }
 
 /**
- * The backends a deploy run covers, each with its resolved provider. Every
- * provider is resolved up front so a backend with none fails the run before any
- * backend builds.
+ * The backends a deploy run covers, each with its resolved provider. A
+ * backend that names no provider deploys with the default, `standalone`.
  */
 export const planBackendDeploys = (
   config: DeployConfig,
@@ -53,7 +51,7 @@ export const planBackendDeploys = (
     return {
       name,
       resolved,
-      providerName: requireProvider(resolved, { backend: name }),
+      providerName: resolved.provider,
       deployDir: many
         ? join(config.rootDir, '.deploy', name)
         : join(config.rootDir, '.deploy'),
