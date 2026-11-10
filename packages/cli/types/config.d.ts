@@ -1081,7 +1081,8 @@ export type PikkuCLIInput = {
     functionDynamicImport?: 'off' | 'warn' | 'error'
     /**
      * Whether `pikku validate` requires the app's oxlint to forbid `fs` /
-     * `node:fs` / `fs/promises` imports (`no-restricted-imports`) and `require`
+     * `node:fs` / `fs/promises` / `fs-extra` / `graceful-fs` imports
+     * (`no-restricted-imports`) and `require`
      * (`typescript/no-require-imports`) at this level. Content belongs behind
      * the `content` service: keyed, project-scoped, with signed reads and
      * writes. A file that needs the disk is exempted in an oxlint `overrides`
@@ -1090,12 +1091,32 @@ export type PikkuCLIInput = {
     enforceContentService?: 'off' | 'warn' | 'error'
     /**
      * Whether `pikku validate` requires the app's oxlint to forbid
-     * `process.env` reads (`node/no-process-env`) at this level. Use the
-     * `variables` service for non-secret values and the `secrets` service for
-     * secrets. Bootstrap code that needs the environment is exempted in an
+     * any use of `process.env` (`no-restricted-properties`, which also catches
+     * `{ ...process.env }` and `const { env } = process`) at this level. Use
+     * the `variables` service for non-secret values and the `secrets` service
+     * for secrets. Bootstrap code that needs the environment is exempted in an
      * oxlint `overrides` entry. Defaults to 'error'; set 'off' to opt out.
      */
     enforceVariablesService?: 'off' | 'warn' | 'error'
+    /**
+     * Whether `pikku validate` requires the app's oxlint to forbid starting
+     * processes: `child_process` / `node:child_process` / `execa` /
+     * `cross-spawn` / `shelljs` imports (`no-restricted-imports`, type-only
+     * imports allowed), `require` (`typescript/no-require-imports`) and
+     * `Bun.spawn` / `Bun.spawnSync` / `Bun.$` (`no-restricted-properties`) at
+     * this level. Processes belong to the Supervisor. Defaults to 'error';
+     * set 'off' to opt out.
+     */
+    enforceSupervisor?: 'off' | 'warn' | 'error'
+    /**
+     * Whether `pikku validate` requires the app's oxlint to forbid reading the
+     * command line: `process.argv` / `Bun.argv` / `Deno.args`
+     * (`no-restricted-properties`) and `commander` / `yargs` / `minimist` /
+     * `parseArgs` from `node:util` (`no-restricted-imports`) at this level.
+     * Expose a `pikku` CLI command instead. Defaults to 'error'; set 'off' to
+     * opt out.
+     */
+    enforceCliCommands?: 'off' | 'warn' | 'error'
     /**
      * Flag a root `start`/`dev` script that boots a server without `pikku dev`
      * or `pikku serve`, since a hand-rolled entrypoint constructs its own

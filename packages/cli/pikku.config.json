@@ -42,6 +42,8 @@
   },
   "lint": {
     "enforceContentService": "off",
-    "enforceVariablesService": "off"
+    "enforceVariablesService": "off",
+    "enforceSupervisor": "off",
+    "enforceCliCommands": "off"
   }
 }

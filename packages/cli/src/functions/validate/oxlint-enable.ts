@@ -6,12 +6,12 @@ import { z } from 'zod'
 import {
   DEFEATING_OPTIONS,
   OXLINT_CONFIG_FILES,
-  OXLINT_POLICY_RULES,
-  OXLINT_TEST_FILES,
+  OXLINT_EXEMPT_FILES,
   activePolicyRules,
-  missingFsModules,
+  missingPolicyEntries,
   policyLevels,
   type PolicyLevels,
+  type RestrictedProperty,
   OXLINT_REQUIRED_RULES,
   detectPackageManager,
   findOxlintConfig,
@@ -78,18 +78,13 @@ const DEFAULT_PLUGINS = ['typescript', 'unicorn', 'oxc']
 
 const ALL_POLICIES: PolicyLevels = policyLevels(undefined)
 
-const policyPlugins = (levels: PolicyLevels): string[] =>
-  (Object.keys(OXLINT_POLICY_RULES) as Array<keyof PolicyLevels>)
-    .filter((key) => levels[key] !== 'off')
-    .flatMap((key) => OXLINT_POLICY_RULES[key].plugin ?? [])
-
-/** Tests read fixtures and set the environment; the policy rules do not apply there. */
-const testOverride = (levels: PolicyLevels) => {
+/** Tests, entry points and tooling read the disk, the environment and argv; the policy rules do not apply there. */
+const exemptOverride = (levels: PolicyLevels) => {
   const rules = Object.keys(activePolicyRules(levels))
   return rules.length === 0
     ? undefined
     : {
-        files: OXLINT_TEST_FILES,
+        files: OXLINT_EXEMPT_FILES,
         rules: Object.fromEntries(rules.map((r) => [r, 'off'])),
       }
 }
@@ -98,10 +93,10 @@ const testOverride = (levels: PolicyLevels) => {
 export const newOxlintConfig = (
   levels: PolicyLevels = ALL_POLICIES
 ): Record<string, unknown> => {
-  const override = testOverride(levels)
+  const override = exemptOverride(levels)
   return {
     $schema: './node_modules/oxlint/configuration_schema.json',
-    plugins: [...DEFAULT_PLUGINS, ...policyPlugins(levels)],
+    plugins: [...DEFAULT_PLUGINS],
     options: { ...REQUIRED_CONFIG.options },
     rules: { ...REQUIRED_CONFIG.rules, ...activePolicyRules(levels) },
     ...(override ? { overrides: [override] } : {}),
@@ -111,7 +106,7 @@ export const newOxlintConfig = (
 export const snippetFor = (levels: PolicyLevels = ALL_POLICIES): string =>
   JSON.stringify(
     {
-      plugins: ['typescript', ...policyPlugins(levels)],
+      plugins: ['typescript'],
       options: REQUIRED_CONFIG.options,
       rules: { ...REQUIRED_CONFIG.rules, ...activePolicyRules(levels) },
     },
@@ -163,20 +158,6 @@ export const mergeOxlintConfig = (
       changed = true
     }
   }
-  const neededPlugins = policyPlugins(levels)
-  if (neededPlugins.length > 0) {
-    const plugins = (config.plugins as string[] | undefined) ?? [
-      ...DEFAULT_PLUGINS,
-    ]
-    for (const plugin of neededPlugins) {
-      if (!plugins.includes(plugin)) {
-        plugins.push(plugin)
-        changed = true
-      }
-    }
-    config.plugins = plugins
-  }
-
   if (config.options !== undefined && !isObject(config.options)) {
     return { kind: 'unsafe', reason: '"options" is not an object' }
   }
@@ -226,25 +207,64 @@ export const mergeOxlintConfig = (
       if (current === undefined) addedPolicyRule = true
       changed = true
     }
-    if (rule === 'no-restricted-imports' && Array.isArray(rules[rule])) {
-      const value = rules[rule] as unknown[]
-      const missing = missingFsModules(value)
+    if (
+      rule === 'no-restricted-imports' ||
+      rule === 'no-restricted-properties'
+    ) {
+      const value = Array.isArray(rules[rule])
+        ? (rules[rule] as unknown[])
+        : [rules[rule]]
+      const missing = missingPolicyEntries(rule, value, wanted)
       if (missing.length > 0) {
-        const wantedPaths = (
-          (wanted as unknown[])[1] as { paths: Array<{ name: string }> }
-        ).paths
-        const options = isObject(value[1]) ? value[1] : {}
-        const paths = Array.isArray(options.paths) ? options.paths : []
-        paths.push(...wantedPaths.filter((p) => missing.includes(p.name)))
-        options.paths = paths
-        rules[rule] = [value[0], options, ...value.slice(2)]
+        const wantedEntries = (wanted as unknown[]).slice(1)
+        if (rule === 'no-restricted-imports') {
+          const wantedPaths = (
+            wantedEntries[0] as {
+              paths: Array<{ name: string; importNames?: string[] }>
+            }
+          ).paths
+          const options = isObject(value[1]) ? value[1] : { paths: [] }
+          const paths = Array.isArray(options.paths) ? options.paths : []
+          paths.push(
+            ...wantedPaths.filter((p) =>
+              missing.includes(
+                p.importNames
+                  ? `${p.name} (${p.importNames.join(', ')})`
+                  : p.name
+              )
+            )
+          )
+          options.paths = paths
+          rules[rule] = [
+            value[0],
+            options,
+            ...value.slice(isObject(value[1]) ? 2 : 1),
+          ]
+        } else {
+          rules[rule] = [
+            ...value,
+            ...(wantedEntries as RestrictedProperty[]).filter((p) =>
+              missing.includes(`${p.object}.${p.property}`)
+            ),
+          ]
+        }
         changed = true
       }
     }
   }
   config.rules = rules
 
-  const override = testOverride(levels)
+  // `process.env` is now `no-restricted-properties`; the rule this key used to
+  // write would report every site twice.
+  if (
+    levels.enforceVariablesService !== 'off' &&
+    rules['node/no-process-env'] === 'error'
+  ) {
+    delete rules['node/no-process-env']
+    changed = true
+  }
+
+  const override = exemptOverride(levels)
   if (addedPolicyRule && override) {
     const overrides = Array.isArray(config.overrides) ? config.overrides : []
     overrides.push(override)
