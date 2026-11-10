@@ -45,7 +45,7 @@ describe('trigger verifier', () => {
     const invoke = getInvoker('test-event')
     assert.equal(typeof invoke, 'function')
 
-    await invoke?.({ payload: 'hello trigger' })
+    invoke?.({ payload: 'hello trigger' })
     await waitFor(() => getInvocations().length === 1)
 
     const invocations = getInvocations()

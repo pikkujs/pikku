@@ -50,6 +50,7 @@ export const verifyAgentClient = async () => {
   }
 
   // @ts-expect-error — stream is an async iterable, not a promise of a result
+  // oxlint-disable-next-line typescript/await-thenable -- deliberate type test
   const notAResult: { result: unknown } = await pikkuRPC.agent.stream(
     'agentMinimal',
     input

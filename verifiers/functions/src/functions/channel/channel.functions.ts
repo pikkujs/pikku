@@ -10,7 +10,7 @@ export const onConnect = pikkuChannelConnectionFunc<'hello!'>(
     logger.info(
       `Connected to event channel with opening data ${JSON.stringify(channel.openingData)}`
     )
-    channel.send('hello!')
+    await channel.send('hello!')
   }
 )
 
@@ -48,9 +48,9 @@ export const subscribe = pikkuChannelFunc<{ name: string }, void>(
 export const unsubscribe = pikkuChannelFunc<{ name: string }, 'valid'>(
   async ({ eventHub }, { name }, { channel }) => {
     // @ts-expect-error - We should only be able to send data that is in the output type
-    channel.send('invalid')
+    await channel.send('invalid')
 
-    channel.send('valid')
+    await channel.send('valid')
 
     await eventHub?.unsubscribe(name, channel.channelId)
   }
@@ -61,8 +61,6 @@ export const emitMessage = pikkuChannelFunc<
   { timestamp: string; from: string } | { message: string }
 >(async ({ eventHub }, { name }, { channel, session }) => {
   const sessionData = session
-
-  eventHub?.publish('bob', null, {})
 
   await eventHub?.publish(name, channel.channelId, {
     timestamp: new Date().toISOString(),
@@ -75,6 +73,6 @@ export const onMessage = pikkuChannelFunc<'hello', 'hey'>(
     logger.info(
       `Got a generic hello message with data ${JSON.stringify(channel.openingData)}`
     )
-    channel.send('hey')
+    await channel.send('hey')
   }
 )

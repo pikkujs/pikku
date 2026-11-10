@@ -10,10 +10,10 @@ export const timeSinceOpened = pikkuSessionlessFunc<
   const startedAt = Date.now()
   let count = 0
   const interval = setInterval(() => {
-    channel.send({ count: count++ })
+    void channel.send({ count: count++ })
     if (Date.now() - startedAt > 5000) {
       clearInterval(interval)
-      channel.close()
+      void channel.close()
     }
   }, 1000)
 
