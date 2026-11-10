@@ -5,5 +5,9 @@
   "tsconfig": "./tsconfig.json",
   "schema": {
     "supportsImportAttributes": true
+  },
+  "lint": {
+    "enforceSupervisor": "off",
+    "enforceCliCommands": "off"
   }
 }
