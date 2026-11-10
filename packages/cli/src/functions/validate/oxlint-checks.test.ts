@@ -536,9 +536,58 @@ describe('oxlint setup checks', () => {
           f.message.match(/does not restrict (.*?)(?:; |\. Code)/)![1],
         ]),
         [
-          ['oxlint-enforce-variables-service', 'process.env'],
-          ['oxlint-enforce-supervisor', 'Bun.spawnSync, Bun.$'],
-          ['oxlint-enforce-cli-commands', 'Bun.argv, Deno.args'],
+          [
+            'oxlint-enforce-variables-service',
+            'process.env, globalThis.process',
+          ],
+          ['oxlint-enforce-supervisor', 'Bun.spawnSync, Bun.$, globalThis.Bun'],
+          [
+            'oxlint-enforce-cli-commands',
+            'Bun.argv, Deno.args, globalThis.process, globalThis.Bun, globalThis.Deno',
+          ],
+        ]
+      )
+    } finally {
+      await cleanup(root)
+    }
+  })
+
+  test('globalThis.process, Bun and Deno must be restricted too', async () => {
+    const root = await makeApp()
+    try {
+      const { exec } = fakeExec(() =>
+        reply(
+          resolvedWith(
+            policyRules([], {
+              'no-restricted-properties': [
+                'deny',
+                [
+                  { object: 'process', property: 'env' },
+                  { object: 'process', property: 'argv' },
+                  { object: 'Bun', property: 'spawn' },
+                  { object: 'Bun', property: 'spawnSync' },
+                  { object: 'Bun', property: '$' },
+                  { object: 'Bun', property: 'argv' },
+                  { object: 'Deno', property: 'args' },
+                ],
+              ],
+            })
+          )
+        )
+      )
+      const findings = await runOxlintSetupChecks(root, exec)
+      assert.deepEqual(
+        findings.map((f) => [
+          f.id,
+          f.message.match(/does not restrict (.*?)(?:; |\. Code)/)![1],
+        ]),
+        [
+          ['oxlint-enforce-variables-service', 'globalThis.process'],
+          ['oxlint-enforce-supervisor', 'globalThis.Bun'],
+          [
+            'oxlint-enforce-cli-commands',
+            'globalThis.process, globalThis.Bun, globalThis.Deno',
+          ],
         ]
       )
     } finally {
@@ -619,7 +668,7 @@ describe('oxlint setup checks', () => {
       }
     ).paths.map((p) => p.name)
     assert.ok(['fs-extra', 'execa', 'yargs'].every((n) => names.includes(n)))
-    assert.equal(all['no-restricted-properties']!.length, 1 + 1 + 3 + 3)
+    assert.equal(all['no-restricted-properties']!.length, 1 + 10)
     assert.equal(all['no-restricted-imports']![0], 'error')
 
     const mixed = activePolicyRules(
@@ -632,7 +681,7 @@ describe('oxlint setup checks', () => {
     ) as Record<string, unknown>
     assert.equal((mixed['no-restricted-imports'] as unknown[])[0], 'warn')
     assert.equal(mixed['typescript/no-require-imports'], 'warn')
-    assert.equal((mixed['no-restricted-properties'] as unknown[]).length, 1 + 3)
+    assert.equal((mixed['no-restricted-properties'] as unknown[]).length, 1 + 4)
     assert.deepEqual(
       activePolicyRules(
         policyLevels({

@@ -111,7 +111,10 @@ export const OXLINT_POLICY_RULES: Record<
     use: 'the `variables` service for values and the `secrets` service for secrets',
     rules: {
       'no-restricted-properties': restrictedProperties(
-        [{ object: 'process', property: 'env' }],
+        [
+          { object: 'process', property: 'env' },
+          { object: 'globalThis', property: 'process' },
+        ],
         'Use the `variables` service for values and the `secrets` service for secrets.'
       ),
     },
@@ -129,6 +132,7 @@ export const OXLINT_POLICY_RULES: Record<
           { object: 'Bun', property: 'spawn' },
           { object: 'Bun', property: 'spawnSync' },
           { object: 'Bun', property: '$' },
+          { object: 'globalThis', property: 'Bun' },
         ],
         'Run processes through the Supervisor, not Bun.spawn.'
       ),
@@ -150,6 +154,9 @@ export const OXLINT_POLICY_RULES: Record<
           { object: 'process', property: 'argv' },
           { object: 'Bun', property: 'argv' },
           { object: 'Deno', property: 'args' },
+          { object: 'globalThis', property: 'process' },
+          { object: 'globalThis', property: 'Bun' },
+          { object: 'globalThis', property: 'Deno' },
         ],
         'Expose a `pikku` CLI command rather than reading argv.'
       ),
@@ -215,7 +222,17 @@ export const activePolicyRules = (
         const into = entry.options[0] as { paths: unknown[] }
         into.paths.push(...(options[0] as { paths: unknown[] }).paths)
       } else if (rule === 'no-restricted-properties') {
-        entry.options.push(...structuredClone(options))
+        const seen = new Set(
+          (entry.options as RestrictedProperty[]).map(
+            (o) => `${o.object}.${o.property}`
+          )
+        )
+        for (const o of options as RestrictedProperty[]) {
+          if (!seen.has(`${o.object}.${o.property}`)) {
+            entry.options.push(structuredClone(o))
+            seen.add(`${o.object}.${o.property}`)
+          }
+        }
       }
     }
   }
