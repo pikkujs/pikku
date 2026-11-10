@@ -575,7 +575,7 @@
           "pikkuFuncId": "stepNames",
           "functionType": "user",
           "funcWrapper": "pikkuWorkflowFunc",
-          "sessionless": true,
+          "sessionless": false,
           "name": "stepNames",
           "services": {
             "optimized": true,
@@ -607,7 +607,7 @@
           "pikkuFuncId": "templateStep",
           "functionType": "user",
           "funcWrapper": "pikkuWorkflowFunc",
-          "sessionless": true,
+          "sessionless": false,
           "name": "templateStep",
           "services": {
             "optimized": true,
@@ -800,7 +800,8 @@
             }
           ],
           "dsl": true,
-          "expose": null
+          "expose": null,
+          "auth": null
         }
       },
       "files": [
