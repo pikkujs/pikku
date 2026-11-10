@@ -17,6 +17,9 @@
     // `cloudflare:workers` is the Workers built-in module scheme, not the
     // `cloudflare` npm package. Installing that package would be wrong.
     "cloudflare",
+    // `@sdk/<backend>` is a tsconfig and bundler alias onto a backend's
+    // generated SDK in `.pikku/sdk/`, not an npm package.
+    "/^@sdk\\//",
   ],
 
   "ignoreBinaries": [
