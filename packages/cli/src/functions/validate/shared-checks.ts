@@ -603,8 +603,7 @@ export async function runSharedProjectChecks(
         'Minimum useful shape:',
         '{',
         '  "srcDirectories": ["packages/functions/src"],',
-        '  "outDir": "packages/functions/.pikku",',
-        '  "backends": { "api": {} }',
+        '  "backends": { "api": { "filter": {} } }',
         '}'
       )
     )
@@ -615,14 +614,6 @@ export async function runSharedProjectChecks(
         'pikku.config.json missing "srcDirectories"',
         pikkuConfigPath,
         'Add "srcDirectories": ["packages/functions/src"] to pikku.config.json'
-      )
-    }
-    if (!pikkuConfig.outDir) {
-      e(
-        'pikku-config-no-out-dir',
-        'pikku.config.json missing "outDir"',
-        pikkuConfigPath,
-        'Add "outDir": "packages/functions/.pikku" to pikku.config.json'
       )
     }
     if (!pikkuConfig.clientFiles) {
