@@ -50,6 +50,25 @@ service's paths and size limit; omitting it does not disable it.
   — and under `pikku dev` / `pikku serve` there is no `start.ts` at all, so
   startup work goes in a `pikkuServerLifecycle` hook, which receives the
   singletons and reads through `variables` too.
+- **Never `fs`, `child_process` or `process.argv` in app code either.**
+  `pikku validate` reports each of them through the app's oxlint, so a
+  function that needs one has the wrong shape:
+
+  | Instead of                                                                             | Use                                                                    | `lint` key                |
+  | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------- |
+  | `fs`, `node:fs`, `fs/promises`, `fs-extra`                                             | the `content` service (keyed, project-scoped, signed reads and writes) | `enforceContentService`   |
+  | `process.env` (also `{ ...process.env }`, `const { env } = process`)                   | `variables` for values, `secrets` for secrets                          | `enforceVariablesService` |
+  | `child_process`, `execa`, `cross-spawn`, `shelljs`, `Bun.spawn`, `Bun.$`               | the Supervisor, which owns the process and its output                  | `enforceSupervisor`       |
+  | `process.argv`, `Bun.argv`, `Deno.args`, `commander`, `yargs`, `minimist`, `parseArgs` | a `pikku` CLI command, which receives typed input                      | `enforceCliCommands`      |
+
+  Opting out: `start.ts`, `server.ts`, `bin/`, `scripts/` and tests are already
+  exempt by the `overrides` entry `pikku enable oxlint` writes. One line
+  elsewhere takes a plain comment, `// oxlint-disable-next-line
+no-restricted-properties -- why`. A whole project that is a tool (a CLI, a
+  harness that edits a checkout) sets the key to `"off"` in `pikku.config.json`.
+  Do not exempt a services directory: the factory is where a service gets its
+  value, and it reads `variables` like everything else.
+
 - **`secrets` never reaches a function.** `WiredServices` is wrapped in
   `SecretlessServices<…>`, so it is stripped at the type level rather than merely
   omitted by convention. Read a secret in a service factory or middleware and
