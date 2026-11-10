@@ -190,6 +190,90 @@ export const OXLINT_EXEMPT_FILES = [
   ...OXLINT_TEST_FILES,
 ]
 
+/** Plugins the strict preset's rules come from; `plugins`, when set, replaces oxlint's defaults. */
+export const OXLINT_STRICT_PLUGINS = [
+  'typescript',
+  'unicorn',
+  'import',
+] as const
+
+/**
+ * The opt-in strict preset (`lint.strict: true`, `pikku enable oxlint --strict`),
+ * on top of OXLINT_REQUIRED_RULES and the policy rules. oxlint 1.88.0 built-ins
+ * only. Rules the preset sets to `off` are documented, never validated: each
+ * conflicts with a Pikku convention.
+ *
+ * - `require-await`: a Pikku function is `async` by contract, even when its body awaits nothing.
+ * - `import/no-default-export`, `oxc/no-barrel-file`: the generated `.pikku` output and `index.ts` files are both.
+ * - `no-param-reassign`: Pikku middleware and permission hooks mutate the wire they are handed.
+ * - `import/no-unassigned-import`: generated side-effect imports.
+ * - pedantic style rules: not enabled, so no entry is needed.
+ */
+export const OXLINT_STRICT_RULES: Record<string, 'error' | 'warn' | 'off'> = {
+  'typescript/no-floating-promises': 'error',
+  'typescript/no-misused-promises': 'error',
+  'typescript/await-thenable': 'error',
+  'typescript/only-throw-error': 'error',
+  eqeqeq: 'error',
+  'no-new-func': 'error',
+  'no-throw-literal': 'error',
+  'prefer-promise-reject-errors': 'error',
+  'typescript/ban-ts-comment': 'error',
+  'typescript/consistent-type-imports': 'error',
+  'import/no-cycle': 'error',
+  'unicorn/no-process-exit': 'error',
+  'no-await-in-loop': 'warn',
+  'typescript/no-unsafe-type-assertion': 'warn',
+  'typescript/no-explicit-any': 'warn',
+  'typescript/no-non-null-assertion': 'warn',
+  'no-console': 'warn',
+  'typescript/switch-exhaustiveness-check': 'warn',
+  'no-shadow': 'warn',
+  'require-await': 'off',
+  'import/no-default-export': 'off',
+  'oxc/no-barrel-file': 'off',
+  'no-param-reassign': 'off',
+  'import/no-unassigned-import': 'off',
+}
+
+/**
+ * Workflow files, where `for...of` with `workflow.do` is the DSL's durable
+ * sequential fanout, so `no-await-in-loop` is off. (A `pikkuWorkflowFunc` in a
+ * `*.functions.ts` file is not covered: use an inline disable there.)
+ */
+export const OXLINT_WORKFLOW_FILES = ['**/*.workflow.ts']
+
+/**
+ * Test files, where `describe` / `test` / `it` return promises nobody awaits.
+ * The one place the strict preset lets `typescript/no-floating-promises` be off.
+ */
+export const OXLINT_STRICT_TEST_FILES = [
+  '**/*.assert.ts',
+  '**/*.verify.ts',
+  ...OXLINT_TEST_FILES,
+]
+
+/** The `overrides` entries the strict preset writes. */
+export const strictOverrides = (): Array<{
+  files: string[]
+  rules: Record<string, string>
+}> => [
+  { files: [...OXLINT_WORKFLOW_FILES], rules: { 'no-await-in-loop': 'off' } },
+  {
+    files: [...OXLINT_STRICT_TEST_FILES],
+    rules: { 'typescript/no-floating-promises': 'off' },
+  },
+]
+
+/** Whether an override with these files is the test-file exemption of the strict preset. */
+export const isStrictTestOverride = (files: unknown): boolean =>
+  Array.isArray(files) &&
+  files.length > 0 &&
+  files.every((f) => OXLINT_STRICT_TEST_FILES.includes(f))
+
+export const isStrict = (lint: unknown): boolean =>
+  (lint as Record<string, unknown> | undefined)?.strict === true
+
 export const policyLevels = (lint: unknown): PolicyLevels => {
   const levelOfKey = (key: PolicyKey): PolicyLevel => {
     const v = (lint as Record<string, unknown> | undefined)?.[key]
@@ -785,6 +869,7 @@ export const runOxlintSetupChecks = async (
     }
   }
 
+  const strict = isStrict(project.config.lint)
   if (config && resolved) {
     const missing: string[] = []
     const reasons: string[] = []
@@ -811,6 +896,13 @@ export const runOxlintSetupChecks = async (
       }
       for (const override of resolved.overrides ?? []) {
         const level = override.rules?.[rule]
+        if (
+          strict &&
+          rule === 'typescript/no-floating-promises' &&
+          isStrictTestOverride(override.files)
+        ) {
+          continue
+        }
         if (level !== undefined && !isError(level)) {
           missing.push(rule)
           reasons.push(
@@ -864,6 +956,7 @@ export const runOxlintSetupChecks = async (
         policyLevels(project.config.lint)
       )
     )
+    if (strict) findings.push(...strictFindings(root, config.file, resolved))
   } else if (config && located.bin && resolveError !== undefined) {
     findings.push({
       id: 'oxlint-rule-missing',
@@ -931,6 +1024,49 @@ const policyFindings = (
     })
   }
   return findings
+}
+
+/**
+ * `oxlint-strict` when `lint.strict` is true and the resolved config lacks a
+ * strict rule at its level (`error` needs error, `warn` needs warn or error) or
+ * the plugins those rules come from. Rules the preset sets to `off`, and
+ * `overrides`, are not inspected: a workflow or test exemption stands.
+ */
+export const strictFindings = (
+  root: string,
+  configFile: string,
+  resolved: ResolvedConfig
+): ValidateFinding[] => {
+  const reasons: string[] = []
+  const plugins = resolved.plugins
+  for (const [rule, level] of Object.entries(OXLINT_STRICT_RULES)) {
+    if (level === 'off') continue
+    const plugin = rule.includes('/') ? rule.split('/')[0] : undefined
+    if (plugin && plugins && !plugins.includes(plugin)) {
+      reasons.push(`${rule}: the "${plugin}" plugin is not in "plugins"`)
+      continue
+    }
+    const value = resolved.rules?.[rule]
+    if (!atLeast(value, level)) {
+      reasons.push(
+        `${rule}: ${levelOf(value) ? `set to "${levelOf(value)}"` : 'not enabled'}, it must be at least "${level}"`
+      )
+    }
+  }
+  if (reasons.length === 0) return []
+  return [
+    {
+      id: 'oxlint-strict',
+      severity: 'error',
+      message: `lint.strict is true but ${rel(root, configFile)} does not enforce the strict preset — ${reasons.join('; ')}`,
+      path: configFile,
+      fixHint: [
+        'Run `pikku enable oxlint --strict` to merge the preset, or set "lint": { "strict": false } in pikku.config.json.',
+        `The preset sets, in ${rel(root, configFile)}:`,
+        JSON.stringify({ rules: OXLINT_STRICT_RULES }, null, 2),
+      ].join('\n'),
+    },
+  ]
 }
 
 type OxlintDiagnostic = {
@@ -1098,6 +1234,11 @@ export const runOxlintRun = async (
       )
     }
     if (rule === 'eslint/no-empty') hints.push(NO_EMPTY_CATCH)
+    if (rule === 'eslint/no-await-in-loop') {
+      hints.push(
+        'Run independent work concurrently with `mapConcurrent(items, fn, { concurrency })` from @pikku/core, or keep the sequence and say why: `// oxlint-disable-next-line no-await-in-loop -- reason`. In a workflow, `for...of` with `workflow.do` is fine (`*.workflow.ts` files are exempt).'
+      )
+    }
     if (
       rule === 'eslint/no-restricted-imports' ||
       rule === 'typescript/no-require-imports'

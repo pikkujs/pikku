@@ -462,6 +462,20 @@ To relax a key for the whole project, set it to `'warn'` or `'off'`:
 
 To find the affected code, run `pikku validate`. Each finding names the file and line.
 
+### Opt in to the strict oxlint preset with `lint.strict`
+
+Nothing changes unless you opt in. `pikku enable oxlint --strict` merges a strict preset into `.oxlintrc.json` (adding the `import` plugin and two `overrides` entries) and sets `"lint": { "strict": true }` in `pikku.config.json`. From then on `pikku validate` reports `oxlint-strict` when the resolved config lacks a preset rule at its level or one of the `typescript`, `unicorn` and `import` plugins, and reports each use as an oxlint finding. Set `"strict": false` (the default) to stop requiring it. oxlint 1.88.0 built-in rules only.
+
+| Level | Rules |
+| --- | --- |
+| `error` | `typescript/no-floating-promises`, `typescript/no-misused-promises`, `typescript/await-thenable`, `typescript/only-throw-error`, `eqeqeq`, `no-new-func`, `no-throw-literal`, `prefer-promise-reject-errors`, `typescript/ban-ts-comment`, `typescript/consistent-type-imports`, `import/no-cycle`, `unicorn/no-process-exit` |
+| `warn` | `no-await-in-loop`, `typescript/no-unsafe-type-assertion`, `typescript/no-explicit-any`, `typescript/no-non-null-assertion`, `no-console`, `typescript/switch-exhaustiveness-check`, `no-shadow` |
+| `off` (conflict with Pikku) | `require-await`, `import/no-default-export`, `oxc/no-barrel-file`, `no-param-reassign`, `import/no-unassigned-import` |
+
+Two overrides ship with it: `no-await-in-loop` is off in `**/*.workflow.ts` (`for...of` with `workflow.do` is the workflow DSL's sequential fanout), and `typescript/no-floating-promises` is off in `**/*.assert.ts`, `**/*.verify.ts`, `*.test.*` and `*.spec.*`. That override of a required rule is accepted by validate only while `lint.strict` is true. A `pikkuWorkflowFunc` in a `*.functions.ts` file is not covered by the workflow glob: use `// oxlint-disable-next-line no-await-in-loop -- reason`.
+
+`@pikku/core/utils` gains `mapConcurrent(items, fn, { concurrency, signal? })` for the loops the warning reports: results in input order, `concurrency: 1` is sequential, the first rejection stops new work, and an aborted `signal` rejects with `signal.reason` before the next item starts. Do not use it inside a `pikkuWorkflowFunc` body.
+
 ### The mesh is named `mesh`, and remote addons use the public RPC route
 
 Cross-unit RPC inside one app (the deploymentService "mesh") no longer shares the word "remote" with `wireRemoteAddon`. See [`remote-rpc.md`](./remote-rpc.md).
