@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3577 observable things**: 1195 exported names, plus
-2382 members on the classes and interfaces among them, reachable
+**3578 observable things**: 1195 exported names, plus
+2383 members on the classes and interfaces among them, reachable
 through 65 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -22,7 +22,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel` | 33 | 33 | 92 |
 | `./types` | 24 | 21 | 84 |
 | `./queue` | 28 | 28 | 75 |
-| `./otlp` | 19 | 19 | 73 |
+| `./otlp` | 19 | 19 | 74 |
 | `./http` | 27 | 27 | 58 |
 | `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
@@ -6051,6 +6051,7 @@ export class OtlpLogger implements Logger {
 export interface OtlpLoggerOptions {
   minLevel?: LogLevel
   currentContext?: () => TraceContext | undefined
+  fields?: boolean
   traceId?: string
 }
 export interface OtlpLogRecord {

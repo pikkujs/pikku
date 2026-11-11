@@ -10,6 +10,8 @@ export interface OtlpLoggerOptions {
   minLevel?: LogLevel
   /** The trace and span a record belongs to, read per call. */
   currentContext?: () => TraceContext | undefined
+  /** Export an object's fields as log attributes (`PIKKU_OTLP_LOG_FIELDS=1`). Default off: only the message leaves. */
+  fields?: boolean
   /** A trace id every record carries (what `scope` sets). */
   traceId?: string
 }
@@ -37,56 +39,85 @@ const stringify = (value: unknown): string => {
 }
 
 const SENSITIVE_KEY =
-  /token|secret|password|passwd|authorization|cookie|key|credential|session|bearer/i
+  /token|secret|password|passwd|pwd|pass|auth|cookie|key|credential|session|bearer|jwt|otp|pin|ssn|sig|salt|dsn|csrf|xsrf|sid|cvv|card|oauth|url|headers|connection|database_url/i
 
 export const REDACTED_ATTRIBUTE = '[redacted]'
 
 const MAX_DEPTH = 4
 
 /**
- * Copies `value` with every field whose name looks sensitive replaced by
- * `[redacted]`, at any depth. Fails closed: a match on the name alone is
- * enough, whatever the value is.
+ * Copies `value` for export as field text: a field whose name looks sensitive
+ * becomes `[redacted]`, plain-string array elements and numeric keys are left
+ * out. Fails closed: a match on the name alone is enough, whatever the value is.
  */
-const redact = (value: unknown, depth = 0): unknown => {
+const sanitize = (value: unknown, depth = 0): unknown => {
   if (value === null || typeof value !== 'object') return value
   if (depth >= MAX_DEPTH) return REDACTED_ATTRIBUTE
-  if (Array.isArray(value)) return value.map((item) => redact(item, depth + 1))
-  const out: Record<string, unknown> = {}
   try {
+    if (Array.isArray(value)) {
+      return value
+        .filter((item) => typeof item !== 'string')
+        .map((item) => sanitize(item, depth + 1))
+    }
     const source =
       typeof (value as { toJSON?: unknown }).toJSON === 'function'
         ? (value as { toJSON: () => unknown }).toJSON()
         : value
     if (source === null || typeof source !== 'object') return source
+    const out: Record<string, unknown> = {}
     for (const [key, field] of Object.entries(source)) {
+      if (/^\d+$/.test(key)) continue
       out[key] = SENSITIVE_KEY.test(key)
         ? REDACTED_ATTRIBUTE
-        : redact(field, depth + 1)
+        : sanitize(field, depth + 1)
     }
+    return out
   } catch {
     return REDACTED_ATTRIBUTE
   }
-  return out
 }
 
-/** A scalar stays one; anything nested is JSON text, bounded. */
+const VALUE_PATTERNS: [RegExp, string][] = [
+  [/([a-z][a-z0-9+.-]*:\/\/)[^\s/@]+@/gi, `$1${REDACTED_ATTRIBUTE}@`],
+  [/\bBearer\s+[^\s,;"']+/gi, REDACTED_ATTRIBUTE],
+  [
+    /\bAuthorization["']?\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\r\n]*)/gi,
+    REDACTED_ATTRIBUTE,
+  ],
+  [
+    /(token|key|secret|password|passwd|pwd|signature|sig|code)(["']?\s*=\s*["']?|["']\s*:\s*["']?)[^\s&"',;]+/gi,
+    `$1$2${REDACTED_ATTRIBUTE}`,
+  ],
+]
+
+/**
+ * Best-effort scrub of secrets that look like secrets inside free text: URL
+ * userinfo, bearer tokens, `Authorization` headers and `token=...` style pairs.
+ */
+export const scrubText = (text: string): string =>
+  VALUE_PATTERNS.reduce(
+    (current, [pattern, replacement]) => current.replace(pattern, replacement),
+    text
+  )
+
+/** A scalar stays one; anything nested is JSON text, bounded. Strings are scrubbed. */
 const asAttribute = (value: unknown): SpanAttributeValue | undefined => {
   if (value === undefined || value === null) return undefined
   if (typeof value === 'boolean') return value
   if (typeof value === 'number')
     return Number.isFinite(value) ? value : String(value)
-  return clip(stringify(value), SPAN_LIMITS.stringLength)
+  return clip(scrubText(stringify(value)), SPAN_LIMITS.stringLength)
 }
 
 /**
- * A log call as an OTLP record: the message is the body; an object's top-level
- * fields are attributes, with sensitive-looking field names redacted at any depth. An `Error` contributes its class and message and never
- * its stack.
+ * A log call as an OTLP record: the scrubbed message is the body. An object's
+ * fields become attributes only when `fields` is on, and then sensitive-looking
+ * names are redacted. An `Error` contributes its message and never its stack.
  */
 const toRecord = (
   messageOrObj: unknown,
-  meta: unknown[]
+  meta: unknown[],
+  fields: boolean
 ): { body: string; attributes: Record<string, SpanAttributeValue> } => {
   const attributes: Record<string, SpanAttributeValue> = {}
   const add = (key: string, value: unknown) => {
@@ -101,13 +132,19 @@ const toRecord = (
   }
   const absorb = (value: unknown): string => {
     if (value instanceof Error) {
-      add('exception.type', value.name || 'Error')
+      if (fields) add('exception.type', value.name || 'Error')
       return value.message
     }
     if (value && typeof value === 'object') {
       const { message, ...rest } = value as Record<string, unknown>
-      for (const [key, field] of Object.entries(rest)) {
-        add(key, SENSITIVE_KEY.test(key) ? REDACTED_ATTRIBUTE : redact(field))
+      if (fields) {
+        for (const [key, field] of Object.entries(rest)) {
+          if (/^\d+$/.test(key)) continue
+          add(
+            key,
+            SENSITIVE_KEY.test(key) ? REDACTED_ATTRIBUTE : sanitize(field)
+          )
+        }
       }
       return typeof message === 'string' ? message : ''
     }
@@ -116,7 +153,10 @@ const toRecord = (
   const head = absorb(messageOrObj)
   const tail = meta.map(absorb).filter((part) => part.length > 0)
   return {
-    body: clip([head, ...tail].filter(Boolean).join(' '), BODY_LENGTH),
+    body: clip(
+      scrubText([head, ...tail].filter(Boolean).join(' ')),
+      BODY_LENGTH
+    ),
     attributes,
   }
 }
@@ -142,7 +182,11 @@ export class OtlpLogger implements Logger {
     try {
       const context = this.options.currentContext?.()
       const traceId = this.options.traceId ?? context?.traceId
-      const { body, attributes } = toRecord(messageOrObj, meta)
+      const { body, attributes } = toRecord(
+        messageOrObj,
+        meta,
+        this.options.fields === true
+      )
       this.exporter.exportLogs([
         {
           severity: SEVERITY[level],
