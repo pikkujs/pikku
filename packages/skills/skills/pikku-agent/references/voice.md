@@ -2,20 +2,12 @@
 
 ## Contents
 
-- `@pikku/ai-voice` is deprecated and empty
 - API Reference
 - Usage Pattern
 
-
-## `@pikku/ai-voice` is deprecated and empty
-
-The package still publishes, but its entire source is `export {}` — there are no
-`STTService`/`TTSService` interfaces and nothing to import. Do not add it as a
-dependency.
-
-Voice now lives in **`@pikku/core/agent`** as two AI middlewares, and the
+Voice lives in **`@pikku/core/agent`** as two AI middlewares, and the
 speech models are reached through the `agentRunner` (`transcribe` /
-`generateSpeech`) rather than through separate services. The runner reference covers that wiring.
+`generateSpeech`). The runner reference covers that wiring.
 
 ## API Reference
 
