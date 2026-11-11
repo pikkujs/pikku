@@ -31,7 +31,7 @@ describe('otlp encoding', () => {
       assert.ok(text.includes(needle), needle)
     }
   })
-  test('an id that is not lowercase hex of the right length is refused', () => {
+  test('a span id that is not hex of the right length is refused', () => {
     assert.throws(
       () =>
         encodeTraces(resource, [
@@ -48,18 +48,54 @@ describe('otlp encoding', () => {
         ]),
       TypeError
     )
-    assert.throws(
-      () =>
-        encodeLogs(resource, [
-          {
-            timeUnixNano: 1n,
-            severity: 'info',
-            body: '',
-            attributes: {},
-            spanId: 'ABC',
-          },
-        ]),
-      TypeError
+  })
+  test('a log with an id that is not hex loses the id, not the batch', () => {
+    const line = (traceId?: string, spanId?: string) => ({
+      timeUnixNano: 1n,
+      severity: 'info' as const,
+      body: 'b',
+      attributes: {},
+      traceId,
+      spanId,
+    })
+    const none = encodeLogs(resource, [line()])
+    for (const bad of ['', 'ABC', 'not-hex', 'g'.repeat(32), 'a'.repeat(31)]) {
+      const encoded = encodeLogs(resource, [line(bad, bad), line()])
+      const twoPlain = encodeLogs(resource, [line(), line()])
+      assert.deepEqual(encoded, twoPlain, `'${bad}'`)
+    }
+    assert.ok(encodeLogs(resource, [line('a'.repeat(32))]).length > none.length)
+  })
+  test('uppercase hex encodes the same bytes as lowercase', () => {
+    const line = (id: string, span: string) => ({
+      timeUnixNano: 1n,
+      severity: 'info' as const,
+      body: 'b',
+      attributes: {},
+      traceId: id,
+      spanId: span,
+    })
+    assert.deepEqual(
+      encodeLogs(resource, [
+        line('ABCDEF0123456789ABCDEF0123456789', 'ABCDEF0123456789'),
+      ]),
+      encodeLogs(resource, [
+        line('abcdef0123456789abcdef0123456789', 'abcdef0123456789'),
+      ])
+    )
+    const span = (traceId: string) => ({
+      traceId,
+      spanId: 'b'.repeat(16),
+      name: 'n',
+      kind: 'server' as const,
+      startTimeUnixNano: 1n,
+      endTimeUnixNano: 2n,
+      status: 'ok' as const,
+      attributes: {},
+    })
+    assert.deepEqual(
+      encodeTraces(resource, [span('ABCDEF0123456789ABCDEF0123456789')]),
+      encodeTraces(resource, [span('abcdef0123456789abcdef0123456789')])
     )
   })
   test('gauges are grouped by name and a whole-number double stays a double', () => {

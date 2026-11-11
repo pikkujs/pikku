@@ -45,6 +45,62 @@ export interface GreptimeStoreOptions {
   fetch?: typeof fetch
   /** How long the table/column listing is trusted, in ms. Default 2000. */
   schemaTtlMs?: number
+  /** The largest response body read, in bytes. Default 16 MiB. */
+  maxResponseBytes?: number
+  /** The most metric tables one `metrics()` call will read. Default 100. */
+  maxMetricTables?: number
+}
+
+export const DEFAULT_TIMEOUT_MS = 5000
+export const MAX_TIMEOUT_MS = 120_000
+export const DEFAULT_MAX_RESPONSE_BYTES = 16 * 1024 * 1024
+export const DEFAULT_MAX_METRIC_TABLES = 100
+/** Metric tables read at once, so a wide `metrics()` cannot flood the server. */
+const METRIC_CONCURRENCY = 4
+
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]', '::1'])
+
+/** Whether a URL's host is this machine. */
+export const isLoopbackHost = (hostname: string): boolean =>
+  LOOPBACK.has(hostname)
+
+/** A timeout in whole milliseconds, 1 to 120000. */
+export const checkTimeoutMs = (value: number): number => {
+  if (!Number.isSafeInteger(value) || value < 1 || value > MAX_TIMEOUT_MS) {
+    throw new TypeError(
+      `the timeout must be a whole number of milliseconds from 1 to ${MAX_TIMEOUT_MS}`
+    )
+  }
+  return value
+}
+
+/**
+ * Parses the GreptimeDB address. Nothing it throws contains the value: the
+ * address may carry a password a log line must never show. A host that is not
+ * this machine must be https, whatever credentials are set, because Basic auth
+ * and the telemetry itself would cross the network in clear text.
+ */
+export const parseGreptimeUrl = (raw: string): URL => {
+  let url: URL
+  try {
+    url = new URL(raw)
+  } catch {
+    throw new TypeError('the GreptimeDB url is not a URL')
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new TypeError('the GreptimeDB url must be http or https')
+  }
+  if (url.username || url.password) {
+    throw new TypeError(
+      'the GreptimeDB url must not contain credentials: pass them as a username and a password'
+    )
+  }
+  if (url.protocol === 'http:' && !isLoopbackHost(url.hostname)) {
+    throw new TypeError(
+      `the GreptimeDB url points at ${url.hostname}, which is not this machine, so it must be https`
+    )
+  }
+  return url
 }
 
 /** The store could not reach GreptimeDB, or it refused our credentials. */
@@ -141,29 +197,26 @@ export class GreptimeTelemetryStore implements TelemetryStore {
   private readonly fetcher: typeof fetch
   private readonly ttl?: string
   private readonly schemaTtlMs: number
+  private readonly maxResponseBytes: number
+  private readonly maxMetricTables: number
   private schema?: { at: number; value: Schema }
   private databaseReady?: Promise<void>
   private readonly spanKinds = new Map<string, SpanKind>()
   private spanKindsSeeded = false
 
   constructor(options: GreptimeStoreOptions) {
-    let url: URL
-    try {
-      url = new URL(options.url)
-    } catch {
-      throw new TypeError(`'${options.url}' is not a URL`)
-    }
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      throw new TypeError('the GreptimeDB url must be http or https')
-    }
+    const url = parseGreptimeUrl(options.url)
     if (Boolean(options.username) !== Boolean(options.password)) {
       throw new TypeError('set both a username and a password, or neither')
     }
     this.base = url.origin
-    this.database = options.database ?? 'pikku'
-    sql.createDatabaseSql(this.database)
+    this.database = sql.databaseName(options.database ?? 'pikku')
+    sql.createDatabaseSql(this.database, options.ttl)
     this.ttl = options.ttl
-    this.timeoutMs = options.timeoutMs ?? 5000
+    this.timeoutMs = checkTimeoutMs(options.timeoutMs ?? DEFAULT_TIMEOUT_MS)
+    this.maxResponseBytes =
+      options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES
+    this.maxMetricTables = options.maxMetricTables ?? DEFAULT_MAX_METRIC_TABLES
     this.schemaTtlMs = options.schemaTtlMs ?? 2000
     this.fetcher = options.fetch ?? fetch
     this.headers = {}
@@ -187,6 +240,7 @@ export class GreptimeTelemetryStore implements TelemetryStore {
       response = await this.fetcher(`${this.base}${path}`, {
         ...init,
         headers: { ...this.headers, ...init.headers },
+        redirect: 'error',
         signal: AbortSignal.timeout(this.timeoutMs),
       })
     } catch (cause) {
@@ -201,7 +255,7 @@ export class GreptimeTelemetryStore implements TelemetryStore {
         { cause }
       )
     }
-    const text = await response.text()
+    const text = await this.readBody(response)
     if (response.status === 401 || response.status === 403) {
       throw new TelemetryUnavailableError(
         'GreptimeDB refused the credentials',
@@ -215,6 +269,50 @@ export class GreptimeTelemetryStore implements TelemetryStore {
       )
     }
     return { status: response.status, text }
+  }
+
+  /** The body as text, refusing more than `maxResponseBytes`. */
+  private async readBody(response: Response): Promise<string> {
+    const tooLarge = () =>
+      new TelemetryQueryError(
+        `GreptimeDB answered with more than ${this.maxResponseBytes} bytes`,
+        undefined
+      )
+    const declared = Number(response.headers.get('content-length'))
+    if (Number.isFinite(declared) && declared > this.maxResponseBytes) {
+      void response.body?.cancel().catch(() => undefined)
+      throw tooLarge()
+    }
+    try {
+      if (!response.body) return await response.text()
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let size = 0
+      let text = ''
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        size += value.byteLength
+        if (size > this.maxResponseBytes) {
+          void reader.cancel().catch(() => undefined)
+          throw tooLarge()
+        }
+        text += decoder.decode(value, { stream: true })
+      }
+      return text + decoder.decode()
+    } catch (cause) {
+      if (cause instanceof TelemetryQueryError) throw cause
+      const timedOut =
+        cause instanceof Error &&
+        (cause.name === 'TimeoutError' || cause.name === 'AbortError')
+      throw new TelemetryUnavailableError(
+        timedOut
+          ? `GreptimeDB did not finish answering within ${this.timeoutMs}ms`
+          : 'the connection to GreptimeDB broke while reading the answer',
+        timedOut ? 'timeout' : 'unreachable',
+        { cause }
+      )
+    }
   }
 
   /** Runs a statement. Returns rows as objects; a statement with none returns []. */
@@ -271,6 +369,9 @@ export class GreptimeTelemetryStore implements TelemetryStore {
       sql.createDatabaseSql(this.database, this.ttl),
       'public'
     )
+      // Made here, before any telemetry table can claim the name, and so that
+      // every read finds it.
+      .then(() => this.exec(sql.createTombstonesSql()))
       .then(() => undefined)
       .catch((error) => {
         this.databaseReady = undefined
@@ -311,16 +412,26 @@ export class GreptimeTelemetryStore implements TelemetryStore {
       }
     }
     let tombstones: Map<string, number> | undefined
+    let tombstoneError: string | undefined
     if (tables.has(sql.TOMBSTONES_TABLE)) {
-      tombstones = new Map(
-        (await this.exec(sql.tombstonesQuery())).map((row) => [
-          String(row.project),
-          num(row.deleted_ms),
-        ])
-      )
+      try {
+        tombstones = new Map(
+          (await this.exec(sql.tombstonesQuery())).map((row) => [
+            String(row.project),
+            num(row.deleted_ms),
+          ])
+        )
+      } catch (error) {
+        // Not unreadable-means-nobody-deleted: that would show deleted data.
+        // Writes, retention and deleteProject (which makes the table again)
+        // carry on; reads say why they cannot answer.
+        if (!(error instanceof TelemetryQueryError)) throw error
+        tombstoneError = error.message
+      }
     }
     const value: Schema = {
       tombstones,
+      tombstoneError,
       logs: tables.get(sql.LOGS_TABLE),
       traces: tables.get(sql.TRACES_TABLE),
       traceTypes,
@@ -333,6 +444,15 @@ export class GreptimeTelemetryStore implements TelemetryStore {
     }
     this.schema = { at: now, value }
     return value
+  }
+
+  private requireTombstones(schema: Schema) {
+    if (schema.tombstoneError !== undefined) {
+      throw new TelemetryQueryError(
+        `${sql.TOMBSTONES_TABLE} cannot be read, so reads are refused rather than risk showing a deleted project: ${schema.tombstoneError}`,
+        undefined
+      )
+    }
   }
 
   private forgetSchema() {
@@ -351,6 +471,7 @@ export class GreptimeTelemetryStore implements TelemetryStore {
   ): Promise<T> {
     for (let attempt = 0; ; attempt++) {
       const schema = await this.loadSchema(attempt > 0)
+      this.requireTombstones(schema)
       const statement = build(schema)
       if (statement === null) return empty
       try {
@@ -529,19 +650,39 @@ export class GreptimeTelemetryStore implements TelemetryStore {
   async appendMetrics(scope: TelemetryScope, points: MetricPoint[]) {
     const resource = this.resource(scope)
     if (points.length === 0) return
+    // Checked for the whole batch before anything is sent: a point that would
+    // write under another scope, or into a table this store owns, is a caller
+    // bug and is refused, never quietly dropped or rewritten.
+    for (const point of points) {
+      if (typeof point.name !== 'string' || !point.name) {
+        throw new TypeError('a metric point needs a name')
+      }
+      if (sql.reservedMetricName(point.name)) {
+        throw new TypeError(
+          `the metric name '${point.name.slice(0, 80)}' is reserved: it would be stored in a table the store uses itself`
+        )
+      }
+      for (const key of Object.keys(point.attributes ?? {})) {
+        if (sql.reservedMetricAttribute(key)) {
+          throw new TypeError(
+            `the metric attribute '${key.slice(0, 80)}' is reserved (pikku.*, greptime_*, otel_*, deployment.environment*, service.*, job)`
+          )
+        }
+      }
+    }
     await this.otlp(
       'metrics',
       encodeGauges(
         resource,
         points.map((point) => {
-          const attributes: OtlpAttributes = {
-            'pikku.project': scope.project,
-            'pikku.stage': scope.stage,
-            'pikku.metric.name': point.name,
-          }
+          const attributes: OtlpAttributes = {}
           for (const [key, value] of Object.entries(point.attributes ?? {})) {
             attributes[key] = String(value)
           }
+          // Last, so nothing above can change which scope the point is in.
+          attributes['pikku.project'] = scope.project
+          attributes['pikku.stage'] = scope.stage
+          attributes['pikku.metric.name'] = point.name
           return {
             name: point.name,
             timeUnixNano: nsOf(point.at),
@@ -661,40 +802,62 @@ export class GreptimeTelemetryStore implements TelemetryStore {
   ): Promise<MetricPoint[]> {
     sql.requireScope(scope)
     const schema = await this.loadSchema()
+    this.requireTombstones(schema)
     const tables = sql.metricTables(q.name, schema)
-    const perTable = await Promise.all(
-      tables.map((table) =>
-        this.read(
-          (current) => sql.metricsQuery(table, scope, q, current),
-          [] as MetricPoint[],
-          (rows) =>
-            rows.map((row) => {
-              const attributes: TelemetryAttributes = {}
-              for (const [key, value] of Object.entries(row)) {
-                if (
-                  ['at_ms', 'value', 'metric_name'].includes(key) ||
-                  value === null ||
-                  value === undefined
-                )
-                  continue
-                attributes[key] = value as string
-              }
-              const point: MetricPoint = {
-                at: num(row.at_ms),
-                name: str(row.metric_name) ?? table,
-                value: num(row.value),
-              }
-              if (Object.keys(attributes).length) point.attributes = attributes
-              return point
-            })
-        )
+    if (tables.length > this.maxMetricTables) {
+      throw new TelemetryQueryError(
+        `the metric name matches ${tables.length} tables, more than the ${this.maxMetricTables} one call reads: name a narrower metric`,
+        undefined
       )
+    }
+    const limit = Math.min(q.limit ?? sql.DEFAULT_METRIC_LIMIT, sql.MAX_LIMIT)
+    const newest = (points: MetricPoint[]) =>
+      points
+        .sort((a, b) => b.at - a.at || a.name.localeCompare(b.name))
+        .slice(0, limit)
+    // A few tables at a time, keeping only the newest `limit` points so far:
+    // rows held never exceed (concurrency + 1) x limit, however many tables.
+    let kept: MetricPoint[] = []
+    for (let from = 0; from < tables.length; from += METRIC_CONCURRENCY) {
+      const batch = await Promise.all(
+        tables
+          .slice(from, from + METRIC_CONCURRENCY)
+          .map((table) => this.metricTable(table, scope, q))
+      )
+      kept = newest([...kept, ...batch.flat()])
+    }
+    return kept.reverse()
+  }
+
+  private metricTable(
+    table: string,
+    scope: TelemetryScope,
+    q: { name?: string; since: number; until?: number; limit?: number }
+  ): Promise<MetricPoint[]> {
+    return this.read(
+      (current) => sql.metricsQuery(table, scope, q, current),
+      [] as MetricPoint[],
+      (rows) =>
+        rows.map((row) => {
+          const attributes: TelemetryAttributes = {}
+          for (const [key, value] of Object.entries(row)) {
+            if (
+              ['at_ms', 'value', 'metric_name'].includes(key) ||
+              value === null ||
+              value === undefined
+            )
+              continue
+            attributes[key] = value as string
+          }
+          const point: MetricPoint = {
+            at: num(row.at_ms),
+            name: str(row.metric_name) ?? table,
+            value: num(row.value),
+          }
+          if (Object.keys(attributes).length) point.attributes = attributes
+          return point
+        })
     )
-    const merged = perTable
-      .flat()
-      .sort((a, b) => b.at - a.at || a.name.localeCompare(b.name))
-    const limit = q.limit ?? sql.DEFAULT_METRIC_LIMIT
-    return merged.slice(0, limit).reverse()
   }
 
   async metricsSummary(

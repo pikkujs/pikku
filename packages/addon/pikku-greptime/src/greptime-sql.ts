@@ -57,6 +57,8 @@ export interface Schema {
    * is read for it. Retention removes the rows for good.
    */
   tombstones?: Map<string, number>
+  /** The tombstone table exists but could not be read; scoped reads must not run without it. */
+  tombstoneError?: string
 }
 
 export const TOMBSTONES_TABLE = 'pikku_project_tombstones'
@@ -422,6 +424,38 @@ export const metricTableStem = (name: string): string =>
   name.replace(/[^A-Za-z0-9_]/g, '_')
 
 /**
+ * Names whose table would be one this store reads or writes itself: the OTLP
+ * log and trace tables, the metrics' physical table, the tombstones. A metric
+ * called `opentelemetry_traces` would create (or append to) that table.
+ */
+export const reservedMetricName = (name: string): boolean => {
+  const stem = metricTableStem(name).toLowerCase()
+  return (
+    stem.startsWith('opentelemetry_') ||
+    stem.startsWith('greptime_') ||
+    stem.startsWith(TOMBSTONES_TABLE) ||
+    stem === 'information_schema'
+  )
+}
+
+/**
+ * Data point attribute keys that name a column the store itself fills or the
+ * engine owns (scope, value, time, the resource tags). Compared with `.` and
+ * `-` folded to `_` and case folded, as the engine does when it makes columns.
+ */
+export const reservedMetricAttribute = (key: string): boolean => {
+  const column = key.toLowerCase().replace(/[.-]/g, '_')
+  return (
+    column.startsWith('pikku_') ||
+    column.startsWith('greptime_') ||
+    column.startsWith('otel_') ||
+    column.startsWith('deployment_environment') ||
+    column.startsWith('service_') ||
+    column === 'job'
+  )
+}
+
+/**
  * The metric tables a name can live in. The table name is the metric name with
  * dots turned to underscores plus a unit suffix the exporter adds
  * (`process_memory_rss_bytes`), so a name matches its stem or its stem and a
@@ -497,12 +531,66 @@ export const metricTagColumns = (columns: Set<string>): string[] =>
 
 // ---------------------------------------------------------------- admin
 
-export const SQL_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/
+export const SQL_IDENTIFIER = /^[a-z_][a-z0-9_]*$/
+export const MAX_DATABASE_NAME = 63
+/** Schemas the engine owns, and words a statement could mistake for syntax. */
+const RESERVED_DATABASES = new Set([
+  'information_schema',
+  'pg_catalog',
+  'public',
+  'greptime',
+  'greptime_private',
+  'greptime_public',
+  'system',
+  'default',
+  'select',
+  'from',
+  'where',
+  'table',
+  'database',
+  'drop',
+  'create',
+  'insert',
+  'delete',
+  'update',
+  'alter',
+  'user',
+  'order',
+  'group',
+  'null',
+  'true',
+  'false',
+  'all',
+  'and',
+  'or',
+  'not',
+])
+
+/**
+ * A database name, lowercase only: the same string goes into the DDL and the
+ * `x-greptime-db-name` header, and the engine folds unquoted DDL names to lower
+ * case, so an uppercase name would be created under one name and written under
+ * another.
+ */
+export const databaseName = (database: string): string => {
+  if (typeof database !== 'string' || !SQL_IDENTIFIER.test(database)) {
+    throw new TypeError(
+      `'${String(database).slice(0, 80)}' is not a usable database name: use lowercase letters, digits and underscores, starting with a letter or underscore`
+    )
+  }
+  if (database.length > MAX_DATABASE_NAME) {
+    throw new TypeError(
+      `the database name is longer than ${MAX_DATABASE_NAME} characters`
+    )
+  }
+  if (RESERVED_DATABASES.has(database)) {
+    throw new TypeError(`'${database}' is a reserved database name`)
+  }
+  return database
+}
 
 export const createDatabaseSql = (database: string, ttl?: string): string => {
-  if (!SQL_IDENTIFIER.test(database)) {
-    throw new TypeError(`'${database}' is not a usable database name`)
-  }
+  databaseName(database)
   if (ttl !== undefined && !/^\d+(ms|s|m|h|d|w|y)$/.test(ttl)) {
     throw new TypeError(`'${ttl}' is not a ttl such as '14d'`)
   }

@@ -124,6 +124,53 @@ describe('logs', () => {
       /LIMIT 10000$/
     )
   })
+  test('every limit is capped at MAX_LIMIT, not only the logs one', () => {
+    assert.equal(q.MAX_LIMIT, 10_000)
+    const huge = 10 ** 9
+    assert.match(q.logsQuery(scope, { limit: huge }, schema)!, /LIMIT 10000$/)
+    assert.match(
+      q.failuresQuery(scope, { since: 0, limit: huge }, schema)!,
+      /LIMIT 10000$/
+    )
+    assert.match(
+      q.tailAfterQuery(scope, { ns: '1' }, huge, schema)!,
+      /LIMIT 10000$/
+    )
+    assert.match(
+      q.tailSameTimestampQuery(scope, { ns: '1', seen: 0 }, huge, schema)!,
+      /LIMIT 10000 OFFSET 0$/
+    )
+    assert.match(
+      q.queueSummaryQuery(scope, { since: 0, limit: huge }, schema)!,
+      /LIMIT 10000$/
+    )
+    const metricSchema = {
+      metrics: new Map([
+        [
+          'm',
+          new Set([
+            'greptime_value',
+            'greptime_timestamp',
+            'deployment_environment_name',
+          ]),
+        ],
+      ]),
+    }
+    assert.match(
+      q.metricsQuery('m', scope, { since: 0, limit: huge }, metricSchema)!,
+      /LIMIT 10000$/
+    )
+    assert.match(q.logsQuery(scope, { limit: 10_000 }, schema)!, /LIMIT 10000$/)
+    assert.match(q.logsQuery(scope, { limit: 9_999 }, schema)!, /LIMIT 9999$/)
+  })
+  test('the warn filter also matches the warning the app logger sends, and both map back to warn', () => {
+    const query = q.logsQuery(scope, { severity: 'warn' }, schema)!
+    assert.ok(query.includes("lower(severity_text) IN ('warn', 'warning')"))
+    assert.ok(!query.includes("'warn')"))
+    assert.equal(q.severityOf('warning'), 'warn')
+    assert.equal(q.severityOf('WARN'), 'warn')
+    assert.match(q.logSeverityFacetQuery(scope, {}, schema)!, /severity_text/)
+  })
   test('severity text maps back, unknown to info', () => {
     assert.equal(q.severityOf('CRITICAL'), 'fatal')
     assert.equal(q.severityOf('warning'), 'warn')
@@ -324,5 +371,67 @@ describe('admin statements', () => {
       q.insertTombstoneSql("it's", 7),
       `INSERT INTO pikku_project_tombstones (project, deleted_at) VALUES ('it''s', to_timestamp_millis(7))`
     )
+  })
+})
+
+describe('database names', () => {
+  test('lowercase identifiers up to 63 characters are accepted', () => {
+    assert.equal(q.databaseName('pikku'), 'pikku')
+    assert.equal(q.databaseName('tel_2'), 'tel_2')
+    assert.equal(q.databaseName('a'.repeat(63)).length, 63)
+  })
+  test('uppercase, over-long, odd and reserved names are refused', () => {
+    for (const name of [
+      'Pikku',
+      'PIKKU',
+      'a'.repeat(64),
+      '',
+      '1abc',
+      'a-b',
+      'a b',
+      'a;drop',
+      'a"b',
+      'information_schema',
+      'pg_catalog',
+      'public',
+      'greptime_private',
+      'greptime',
+      'select',
+    ]) {
+      assert.throws(() => q.databaseName(name), TypeError, name)
+      assert.throws(() => q.createDatabaseSql(name), TypeError, name)
+    }
+  })
+})
+
+describe('reserved metric names and attributes', () => {
+  test('names that map onto the store tables', () => {
+    for (const name of [
+      'opentelemetry_traces',
+      'opentelemetry.logs',
+      'greptime_physical_table',
+      'pikku_project_tombstones',
+    ]) {
+      assert.equal(q.reservedMetricName(name), true, name)
+    }
+    for (const name of ['pikku.process.cpu', 'http.requests', 'tombstones']) {
+      assert.equal(q.reservedMetricName(name), false, name)
+    }
+  })
+  test('attribute keys that are scope or engine columns, in any spelling', () => {
+    for (const key of [
+      'pikku.project',
+      'pikku_stage',
+      'Pikku-Metric-Name',
+      'greptime_value',
+      'job',
+      'service.name',
+      'deployment.environment.name',
+    ]) {
+      assert.equal(q.reservedMetricAttribute(key), true, key)
+    }
+    for (const key of ['region', 'http.route', 'jobs', 'project']) {
+      assert.equal(q.reservedMetricAttribute(key), false, key)
+    }
   })
 })

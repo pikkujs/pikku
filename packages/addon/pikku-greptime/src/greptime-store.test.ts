@@ -143,6 +143,33 @@ describe('contributor environment', () => {
       'tel'
     )
   })
+  test('a database name that is not lowercase, is too long or is reserved is refused', () => {
+    for (const name of [
+      'Tel',
+      'a'.repeat(64),
+      'public',
+      'information_schema',
+    ]) {
+      assert.throws(
+        () =>
+          greptimeOptionsFromEnv({
+            PIKKU_GREPTIME_URL: 'http://127.0.0.1:1',
+            PIKKU_GREPTIME_DB: name,
+          }),
+        /PIKKU_GREPTIME_DB/,
+        name
+      )
+      assert.throws(
+        () =>
+          new GreptimeTelemetryStore({
+            url: 'http://127.0.0.1:1',
+            database: name,
+          }),
+        TypeError,
+        name
+      )
+    }
+  })
   test('half a credential pair is refused', () => {
     assert.throws(
       () =>
