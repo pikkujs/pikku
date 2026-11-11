@@ -333,6 +333,85 @@ describe('traceDialect with real SQLite', () => {
     assert.ok(!json.includes('LEAK-m@rk'), 'marker leaked into a span')
   })
 
+  test('ordinary orderBy direction, is null and set operations keep their text', async () => {
+    const tracer = new RecordingTracer()
+    const db = await make({
+      tracer,
+      currentTrace: here(createTrace()),
+      recordSqlText: true,
+    })
+    tracer.spans.length = 0
+    const todos = () => db.selectFrom('todos').select('id')
+    await todos().orderBy('id', 'desc').execute()
+    await todos().orderBy('id', 'asc').execute()
+    await todos()
+      .orderBy(
+        (eb) => eb.ref('id'),
+        (ob) => ob.desc().nullsLast()
+      )
+      .execute()
+    await todos().where('secret', 'is', null).execute()
+    await todos().where('secret', 'is not', null).execute()
+    for (const op of [
+      'union',
+      'unionAll',
+      'intersect',
+      'intersectAll',
+      'except',
+      'exceptAll',
+    ] as const) {
+      await (todos() as any)
+        [op](todos())
+        .execute()
+        .catch(() => {})
+    }
+    assert.ok(tracer.spans.length >= 11)
+    for (const span of tracer.spans) {
+      assert.equal(typeof span.attributes['db.query.text'], 'string', span.name)
+    }
+  })
+
+  test('a raw order direction and a non-null immediate value stay dropped', async () => {
+    const tracer = new RecordingTracer()
+    const db = await make({
+      tracer,
+      currentTrace: here(createTrace()),
+      recordSqlText: true,
+    })
+    tracer.spans.length = 0
+    const M = 'LEAK-dir'
+    const d = db as any
+    await d
+      .selectFrom('todos')
+      .select('id')
+      .orderBy('id', sql.raw(M))
+      .execute()
+      .catch(() => {})
+    await d
+      .selectFrom('todos')
+      .select('id')
+      .orderBy('id', sql.raw('desc, ' + M))
+      .execute()
+      .catch(() => {})
+    await d
+      .selectFrom('todos')
+      .select('id')
+      .where('title', '=', sql.lit(M))
+      .execute()
+    await d
+      .selectFrom('todos')
+      .select('id')
+      .where('title', '=', sql.lit(7))
+      .execute()
+    assert.equal(tracer.spans.length, 4)
+    const json = JSON.stringify(tracer.spans, (_k, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    )
+    assert.ok(!json.includes(M))
+    for (const span of tracer.spans)
+      assert.equal(span.attributes['db.query.text'], undefined)
+  })
+
   test('hasInlineSql fails closed on an unknown kind or unclassified string field', () => {
     assert.equal(hasInlineSql({ kind: 'MysteryNode' }), true)
     assert.equal(

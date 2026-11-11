@@ -557,6 +557,31 @@ describe('runPikkuFunc - spans', () => {
     assert.equal(runs, 1)
   })
 
+  test('runInFunctionSpan: a non-promise fn result with a rejecting tracer is the result, tracer disabled', async () => {
+    const inner = new RecordingTracer()
+    let calls = 0
+    const tracer: Tracer = {
+      startSpan: (n, c, o) => inner.startSpan(n, c, o),
+      runInSpan: (_s, fn) => {
+        calls++
+        fn()
+        return Promise.reject(new Error('tracer')) as any
+      },
+    }
+    const logger = { info() {}, warn() {}, error() {}, debug() {} } as any
+    const open = openFunctionSpan(
+      tracer,
+      logger,
+      { trace: createTrace() } as any,
+      'rpc',
+      {}
+    )
+    assert.equal(await runInFunctionSpan(open, (() => 'plain') as any), 'plain')
+    await new Promise((r) => setTimeout(r, 10))
+    assert.equal(await runInFunctionSpan(open, (() => 'plain') as any), 'plain')
+    assert.equal(calls, 1)
+  })
+
   test('with no tracer the function runs untouched', async () => {
     addTestFunction('plain', { func: async () => 'plain' })
     assert.equal(

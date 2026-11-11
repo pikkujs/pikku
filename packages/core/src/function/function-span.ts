@@ -207,7 +207,7 @@ export const runInFunctionSpan = <T>(
     Promise.resolve(result).catch((error) => {
       // The function's own rejection passing through is not the tracer's fault.
       if (!outcome) return disable(open.tracer, open.logger, error)
-      outcome.then(
+      Promise.resolve(outcome).then(
         () => disable(open.tracer, open.logger, error),
         (own) => {
           if (own !== error) disable(open.tracer, open.logger, error)
