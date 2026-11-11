@@ -436,8 +436,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      # The browser comes from Playwright's own CDN. Its system libraries come
+      # from apt, which the runner's Ubuntu mirror intermittently fails to
+      # resolve (each attempt then burns ~7 minutes in retries). The runner
+      # image already carries most of them, so the apt step is bounded and
+      # allowed to fail: a genuinely missing library fails the verifier loudly
+      # at browser launch instead.
       - name: Install chromium
-        run: cd verifiers/fullstack && npx playwright install --with-deps chromium
+        run: |
+          cd verifiers/fullstack
+          npx playwright install chromium
+          timeout 180 npx playwright install-deps chromium \
+            || echo "::warning::apt unavailable, relying on the runner image's libraries"
       - name: Run fullstack verifier
         run: cd verifiers/fullstack && bun run test
 
