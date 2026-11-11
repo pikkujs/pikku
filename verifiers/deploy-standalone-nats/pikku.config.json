@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "srcDirectories": ["./src", "./types"],
+  "tsconfig": "./tsconfig.json",
+  "backends": {
+    "app": {
+      "filter": {}
+    }
+  },
+  "deploy": {
+    "provider": "standalone"
+  }
+}
