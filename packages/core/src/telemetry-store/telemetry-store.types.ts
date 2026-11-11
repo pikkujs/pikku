@@ -165,7 +165,8 @@ export interface TelemetryStore {
    * Error root spans grouped by function, wire and message, most frequent
    * first (ties: most recent first). Default `limit` 50. `sampleTraceId` is
    * the trace of the latest failure in the group, by start time, not the
-   * largest id.
+   * largest id. Two failures with an identical start time: which is "latest"
+   * is undefined.
    */
   failures(
     scope: TelemetryScope,
@@ -210,7 +211,10 @@ export interface TelemetryStore {
    * lost, records sharing a timestamp included. A record that arrives late with
    * a position before the cursor is NOT guaranteed to be returned. With nothing
    * new the same cursor comes back. A store over an append-only table must not
-   * overwrite rows that share a timestamp, or records would be lost.
+   * overwrite rows that share a timestamp, or records would be lost. A store with
+   * an ingest delay (OpenObserve, GreptimeDB) may need its consumers to lag the
+   * read horizon slightly, because a record can become visible after a later
+   * one was already returned.
    */
   tail(
     scope: TelemetryScope,
