@@ -20,7 +20,7 @@ two backends sharing a function can expose it differently.
 ## Why the pass writes into its own directory
 
 The backend pass runs as a child with a write guard that skips any file outside
-its `outDir`. It therefore writes `<outDir>/sdk/`, and the parent moves that to
+its output directory (the internal `--outDir` flag). It therefore writes `<out>/sdk/`, and the parent moves that to
 `.pikku/sdk/<backend>/`, re-pointing relative imports (`relocateExposed` in
 `src/utils/backend-sdk.ts`). Files the pass reaches by relative import land under
 `exposed/contract/`; imports of project source keep their target.

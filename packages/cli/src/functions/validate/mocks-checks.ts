@@ -10,17 +10,17 @@ import { frontendFiles } from '../mocks/stub-scan.js'
 import { scanFrontend } from '../../inspector-helpers.js'
 import type { ValidateFinding as Finding } from './virtual-user-checks.js'
 
-const configOf = (dir: string): { outDir: string; client?: string } => {
+/** The loader fixes the output directory at `.pikku/` beside pikku.config.json. */
+const OUT_DIR = '.pikku'
+
+const clientOf = (dir: string): string | undefined => {
   try {
     const config = JSON.parse(
       readFileSync(join(dir, 'pikku.config.json'), 'utf8')
-    ) as { outDir?: unknown; backends?: Record<string, unknown> }
-    return {
-      outDir: typeof config.outDir === 'string' ? config.outDir : '.pikku',
-      client: reactQueryClientFile(dir, config.backends),
-    }
+    ) as { backends?: Record<string, unknown> }
+    return reactQueryClientFile(dir, config.backends)
   } catch {
-    return { outDir: '.pikku' }
+    return undefined
   }
 }
 
@@ -28,26 +28,25 @@ const configOf = (dir: string): { outDir: string; client?: string } => {
 export const usesMocks = (dir: string): boolean => {
   if (existsSync(join(dir, '.mocks'))) return true
   return (
-    scanFrontend(dir, frontendFiles(dir), configOf(dir).client).stubCalls
-      .length > 0
+    scanFrontend(dir, frontendFiles(dir), clientOf(dir)).stubCalls.length > 0
   )
 }
 
 export const runMocksChecks = async (dir: string): Promise<Finding[]> => {
-  const { outDir, client } = configOf(dir)
-  if (!hasBuiltOutput(dir, outDir)) {
+  const client = clientOf(dir)
+  if (!hasBuiltOutput(dir, OUT_DIR)) {
     return [
       {
         id: 'mocks-not-built',
         severity: 'warn',
         message:
           'Mocks and stub hooks were not checked: the project has not been built',
-        path: join(dir, outDir),
+        path: join(dir, OUT_DIR),
         fixHint: 'Run `pikku all`, then validate again.',
       },
     ]
   }
-  const check = await runMocksCheck({ rootDir: dir, outDir, client })
+  const check = await runMocksCheck({ rootDir: dir, outDir: OUT_DIR, client })
   const findings: Finding[] = []
   for (const call of check.calls) {
     if (!call.problem) continue
