@@ -140,6 +140,95 @@ describe('services a function holds', () => {
     }
   })
 
+  test('a webhook send records its event name and nothing from the url', async () => {
+    const tracer = new RecordingTracer()
+    const webhooks = traceWebhookService(
+      { send: async () => ({ jobId: 'j' }) } as any,
+      wire,
+      { tracer, logger }
+    )
+    await webhooks.send({
+      url: 'https://user:pw@example.com/hook?token=abc',
+      event: 'order.paid',
+    })
+    assert.deepEqual(tracer.spans[0]!.attributes, {
+      'messaging.system': 'pikku',
+      'messaging.destination.name': 'order.paid',
+    })
+  })
+
+  test('a traceparent the caller set wins over the producer span for scheduleRPC and send', async () => {
+    const tracer = new RecordingTracer()
+    const tracing = { tracer, logger }
+    const calls: unknown[][] = []
+    const sent: any[] = []
+    await traceSchedulerService(
+      {
+        scheduleRPC: async (...args: unknown[]) => (calls.push(args), 't'),
+      } as any,
+      wire,
+      tracing
+    ).scheduleRPC(10, 'later', {}, undefined, OTHER_TRACEPARENT)
+    await traceWebhookService(
+      { send: async (input: any) => (sent.push(input), { jobId: 'j' }) } as any,
+      wire,
+      tracing
+    ).send({
+      url: 'https://example.com/hook',
+      event: 'e',
+      traceparent: OTHER_TRACEPARENT,
+    })
+    assert.equal(calls[0]![4], OTHER_TRACEPARENT)
+    assert.equal(sent[0].traceparent, OTHER_TRACEPARENT)
+  })
+
+  for (const [what, tracer] of [
+    [
+      'startSpan',
+      {
+        startSpan: () => {
+          throw new Error('tracer bug')
+        },
+      },
+    ],
+    [
+      'span.end',
+      {
+        startSpan: () => ({
+          setAttribute() {},
+          addEvent() {},
+          end: () => {
+            throw new Error('tracer bug')
+          },
+        }),
+      },
+    ],
+  ] as const) {
+    test(`a tracer whose ${what} throws never breaks scheduleRPC or send`, async () => {
+      const calls: unknown[][] = []
+      const sent: any[] = []
+      const tracing = { tracer, logger }
+      const id = await traceSchedulerService(
+        {
+          scheduleRPC: async (...args: unknown[]) => (calls.push(args), 't'),
+        } as any,
+        wire,
+        tracing as any
+      ).scheduleRPC(10, 'later', {})
+      const result = await traceWebhookService(
+        {
+          send: async (input: any) => (sent.push(input), { jobId: 'j' }),
+        } as any,
+        wire,
+        tracing as any
+      ).send({ url: 'https://example.com/hook', event: 'e' })
+      assert.equal(id, 't')
+      assert.deepEqual(result, { jobId: 'j' })
+      assert.equal(calls.length, 1)
+      assert.equal(sent.length, 1)
+    })
+  }
+
   test('a webhook delivery job is traced, and the receiver sees no trace', async () => {
     pikkuState(null, 'package', 'singletonServices', {
       logger,
