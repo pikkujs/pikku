@@ -386,6 +386,8 @@ jobs:
             scopes,
             tracing,
             feature-flags,
+            product-hooks,
+            product-hooks-none,
             workflows,
             variables,
             functions,
