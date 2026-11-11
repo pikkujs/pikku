@@ -6089,7 +6089,7 @@ export interface OtlpTracerOptions {
   contextStorage?: ContextStorage
 }
 parseOtlpEndpoint: (endpoint: string, allowRemote: boolean) => URL
-parseOtlpHeaders: (raw: string | undefined) => Record<string, string>
+parseOtlpHeaders: (raw: string | undefined, variable?: string) => Record<string, string>
 export interface RuntimeTelemetry {
   enabled: boolean
   tracer: Tracer

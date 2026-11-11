@@ -163,6 +163,70 @@ describe('createRuntimeTelemetry', () => {
     await telemetry.close()
   })
 
+  test('PIKKU_OTLP_{TRACES,LOGS,METRICS}_HEADERS apply to their own signal only', async () => {
+    const { requests, fetchImpl } = capture()
+    const telemetry = createRuntimeTelemetry(
+      {
+        PIKKU_OTLP_ENDPOINT: 'http://127.0.0.1:4000/v1/otlp',
+        PIKKU_OTLP_HEADERS: 'x-db=pikku',
+        PIKKU_OTLP_TRACES_HEADERS: 'x-greptime-pipeline-name=greptime_trace_v1',
+        PIKKU_OTLP_LOGS_HEADERS: 'x-only=logs',
+      },
+      options({ fetch: fetchImpl })
+    )
+    telemetry.tracer.startSpan('s', createTrace()).end()
+    telemetry.logger.warn('hello')
+    await telemetry.flush()
+    await telemetry.close()
+    const at = (suffix: string) => requests.find((r) => r.url.endsWith(suffix))!
+    assert.equal(
+      at('/v1/traces').headers['x-greptime-pipeline-name'],
+      'greptime_trace_v1'
+    )
+    assert.equal(at('/v1/traces').headers['x-only'], undefined)
+    assert.equal(at('/v1/logs').headers['x-only'], 'logs')
+    assert.equal(at('/v1/logs').headers['x-greptime-pipeline-name'], undefined)
+    assert.equal(at('/v1/logs').headers['x-db'], 'pikku')
+  })
+
+  test('a malformed per-signal header names its own variable', () => {
+    assert.throws(
+      () =>
+        createRuntimeTelemetry(
+          {
+            PIKKU_OTLP_ENDPOINT: 'http://127.0.0.1:4000/v1/otlp',
+            PIKKU_OTLP_LOGS_HEADERS: 'broken',
+          },
+          options()
+        ),
+      /PIKKU_OTLP_LOGS_HEADERS/
+    )
+  })
+
+  test('credentials in the endpoint are refused without echoing the URL', () => {
+    assert.throws(
+      () => parseOtlpEndpoint('http://user:pw-sentinel@127.0.0.1:4000/', false),
+      (error: Error) =>
+        /credentials/.test(error.message) &&
+        !/pw-sentinel|user/.test(error.message)
+    )
+  })
+
+  test('PIKKU_OTLP_ALLOW_REMOTE=1 still requires https off the machine', () => {
+    assert.throws(
+      () => parseOtlpEndpoint('http://otel.example.com/', true),
+      /https/
+    )
+    assert.equal(
+      parseOtlpEndpoint('https://otel.example.com/', true).protocol,
+      'https:'
+    )
+    assert.equal(
+      parseOtlpEndpoint('http://127.0.0.1:4000/', true).protocol,
+      'http:'
+    )
+  })
+
   test('sends spans and logs with the resource, headers and service name from env', async () => {
     const { requests, fetchImpl } = capture()
     const telemetry = createRuntimeTelemetry(

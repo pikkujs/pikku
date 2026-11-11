@@ -38,5 +38,19 @@ export const parseOtlpEndpoint = (
         'Set PIKKU_OTLP_ALLOW_REMOTE=1 to export telemetry off this machine.'
     )
   }
+  if (url.username !== '' || url.password !== '') {
+    throw new Error(
+      'PIKKU_OTLP_ENDPOINT must not contain credentials; send them in PIKKU_OTLP_HEADERS'
+    )
+  }
+  if (
+    allowRemote &&
+    !isLoopbackHost(url.hostname) &&
+    url.protocol !== 'https:'
+  ) {
+    throw new Error(
+      'PIKKU_OTLP_ENDPOINT must be https when it is not a loopback address'
+    )
+  }
   return url
 }
