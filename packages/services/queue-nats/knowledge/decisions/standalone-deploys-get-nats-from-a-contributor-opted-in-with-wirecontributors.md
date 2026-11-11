@@ -27,7 +27,7 @@ opted-in deploy variant; that check predates this and was left alone.
 ## One stream per stage
 
 Whoever runs the broker (Studio) creates, up front, one stream per stage:
-`pikku_<project>_<stage>` (or `NATS_STREAM`), subjects `pikku.<project>.<stage>.>`,
+`pikku_<project>_<stage>` (always derived; there is no override), subjects `pikku.<project>.<stage>.>`,
 workqueue, `allow_msg_schedules`. The factory runs in `attachToStream` mode: it
 only reads the stream and refuses one that is missing, does not cover the
 stage's subjects, is not workqueue or has schedules off. It never creates or
@@ -103,3 +103,23 @@ server with the users in an `include`d file and `--signal reload=<pidfile>`.
 - Reload time with 200 users in one included file: about 120 ms; with 2000 users
   (925 KiB) about 350 ms. Unchanged users stay connected. One account per stage
   reloads in a similar time.
+
+## Gaps and constraints for whoever runs the broker
+
+- Open question: the generated `RequiredSingletonServices` still requires
+  `queueService`, `schedulerService`, `workflowService` and `workflowRunService`
+  for an app that wires a queue worker, although the contributor or the deploy
+  build provides them. The verifier app casts its services object (a comment says
+  why) so tsc can pass; the cast supplies no fallback, so a missing contributor
+  still fails at run time. Whether the type should know about contributor-provided
+  services is undecided.
+- NATS permissions cannot filter reply subjects or a push consumer's
+  `deliver_subject`. Observed: stage A can send a reply into B's inbox through
+  its own API. The data is A's own and request tokens are random, so nothing of
+  B's is exposed. Drop push-consumer support later if only pull is needed.
+- `stagePermissions` does not validate project and stage. Whoever generates
+  credentials (Studio, S6) must apply the token rule itself: `[a-z0-9]+(-[a-z0-9]+)*`,
+  at most 63. Without it, `a_b` + `c` and `a` + `b_c` name the same stream.
+- Stream names are always derived (`pikku_<project>_<stage>`); there is no
+  `NATS_STREAM` override, because attach mode never needs a name other than the
+  one the broker operator creates from the same two tokens.
