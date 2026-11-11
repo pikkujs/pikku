@@ -706,3 +706,49 @@ it('attach mode refuses a stream whose subjects only lookalike the stage prefix'
     await nc.close()
   }
 })
+
+it('only attach mode skips the $JS.API.INFO probe: a normal factory still makes it', async () => {
+  const nc = await connect({ servers: SERVER! })
+  const jsm = await jetstreamManager(nc)
+  const id = Math.random().toString(16).slice(2, 8)
+  const stream = `pikku_probe_${id}`
+  let probes = 0
+  const sub = nc.subscribe('$JS.API.INFO')
+  void (async () => {
+    for await (const _ of sub) probes++
+  })()
+  try {
+    const normal = new NatsServiceFactory({
+      servers: SERVER!,
+      streamName: `${stream}_normal`,
+      subjectPrefix: `probe_${id}_normal`,
+    })
+    await normal.init()
+    await normal.close()
+    await delay(200)
+    assert.ok(probes > 0, 'a non-attach factory must probe $JS.API.INFO')
+
+    probes = 0
+    await jsm.streams.add({
+      name: stream,
+      subjects: [`pikku.probe.${id}.>`],
+      retention: RetentionPolicy.Workqueue,
+      allow_msg_schedules: true,
+    })
+    const attached = new NatsServiceFactory({
+      servers: SERVER!,
+      streamName: stream,
+      subjectPrefix: `pikku.probe.${id}`,
+      attachToStream: true,
+    })
+    await attached.init()
+    await attached.close()
+    await delay(200)
+    assert.equal(probes, 0, 'attach mode must not probe $JS.API.INFO')
+  } finally {
+    sub.unsubscribe()
+    await jsm.streams.delete(stream).catch(() => {})
+    await jsm.streams.delete(`${stream}_normal`).catch(() => {})
+    await nc.close()
+  }
+})

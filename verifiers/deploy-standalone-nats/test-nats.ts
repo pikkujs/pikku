@@ -5,8 +5,8 @@
  * Build side: `pikku deploy plan --provider standalone` selects the `nats`
  * contributor of @pikku/queue-nats (opted in with wireContributors); the same
  * source planned for Cloudflare, which is how the cloud builds it, does not.
- * Run side: against a real nats-server (2.14+, JetStream) with a shared stream
- * created up front and one restricted user per stage (broker.ts), two copies of
+ * Run side: against a real nats-server (2.14+, JetStream) with one stream per
+ * stage created up front and one restricted user per stage (broker.ts), two copies of
  * the bundle each get only their own jobs and crons, a restart keeps a stage's
  * schedules and queued jobs, and every missing credential refuses to start.
  *
