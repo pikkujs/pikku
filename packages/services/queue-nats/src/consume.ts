@@ -7,11 +7,7 @@ import type {
   JsMsg,
 } from '@nats-io/jetstream'
 import type { Logger } from '@pikku/core/services'
-import {
-  consumerNameForQueue,
-  queueNameToToken,
-  subjectForQueue,
-} from './utils.js'
+import { consumerNameForQueue, subjectForQueue } from './utils.js'
 
 /** Backoff bounds for re-establishing a pull session that ended under us. */
 const REATTACH_MIN_DELAY_MS = 250
@@ -64,12 +60,6 @@ export interface ConsumeOptions {
   streamName: string
   subjectPrefix: string
   queueName: string
-  /**
-   * Prefix for the durable consumer's name, in place of the one derived from
-   * `subjectPrefix`. A shared stream holds several tenants' consumers, so a
-   * tenant names its own `<project>-<stage>-` to find and bound them.
-   */
-  consumerNamePrefix?: string
   /** Merged over the defaults produced by `mapPikkuWorkerToNats`. */
   config?: Partial<ConsumerConfig>
   /**
@@ -126,14 +116,11 @@ export const consumeQueue = async (
     streamName,
     subjectPrefix,
     queueName,
-    consumerNamePrefix,
     config,
     handler,
     logger,
   } = options
-  const durable = consumerNamePrefix
-    ? `${consumerNamePrefix}${queueNameToToken(queueName)}`
-    : consumerNameForQueue(subjectPrefix, queueName)
+  const durable = consumerNameForQueue(subjectPrefix, queueName)
 
   // `add` is CONSUMER.CREATE: a no-op when the existing durable matches, but it
   // THROWS "consumer already exists" when any setting differs. So create first,
