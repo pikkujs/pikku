@@ -68,103 +68,114 @@ const INLINE_KINDS = new Set(['RawNode', 'JSONPathNode', 'JSONPathLegNode'])
 
 /** Every keyword a node's own string field may hold (operators, modifiers, join types...). */
 const KEYWORDS = new Set([
-  ...[
-    '=',
-    '==',
-    '!=',
-    '<>',
-    '>',
-    '>=',
-    '<',
-    '<=',
-    'in',
-    'not in',
-    'is',
-    'is not',
-  ],
-  ...[
-    'like',
-    'not like',
-    'match',
-    'ilike',
-    'not ilike',
-    '@>',
-    '<@',
-    '^@',
-    '&&',
-  ],
-  ...[
-    '?',
-    '?&',
-    '?|',
-    '!<',
-    '!>',
-    '<=>',
-    '!~',
-    '~',
-    '~*',
-    '!~*',
-    '@@',
-    '@@@',
-    '!!',
-  ],
-  ...['<->', 'regexp', 'is distinct from', 'is not distinct from'],
-  ...[
-    '+',
-    '-',
-    '*',
-    '/',
-    '%',
-    '^',
-    '&',
-    '|',
-    '#',
-    '<<',
-    '>>',
-    '||',
-    '->',
-    '->>',
-  ],
-  ...[
-    '->$',
-    '->>$',
-    'exists',
-    'not exists',
-    'not',
-    'between',
-    'between symmetric',
-  ],
-  ...['InnerJoin', 'LeftJoin', 'RightJoin', 'FullJoin', 'CrossJoin'],
-  ...['LateralInnerJoin', 'LateralLeftJoin', 'LateralCrossJoin', 'Using'],
-  ...[
-    'OuterApply',
-    'CrossApply',
-    'only',
-    'with ties',
-    'percent',
-    'percent with ties',
-  ],
-  ...[
-    'first',
-    'last',
-    'cascade',
-    'restrict',
-    'no action',
-    'set default',
-    'set null',
-  ],
-  ...['preserve rows', 'delete rows', 'drop'],
-  ...[
-    'ForUpdate',
-    'ForNoKeyUpdate',
-    'ForShare',
-    'ForKeyShare',
-    'NoWait',
-    'SkipLocked',
-    'Distinct',
-  ],
-  ...['text', 'json', 'xml', 'yaml', 'traditional', 'tree'],
-  ...['ignore', 'replace', 'abort', 'fail', 'rollback'],
+  '=',
+  '==',
+  '!=',
+  '<>',
+  '>',
+  '>=',
+  '<',
+  '<=',
+  'in',
+  'not in',
+  'is',
+  'is not',
+  'like',
+  'not like',
+  'match',
+  'ilike',
+  'not ilike',
+  '@>',
+  '<@',
+  '^@',
+  '&&',
+  '?',
+  '?&',
+  '?|',
+  '!<',
+  '!>',
+  '<=>',
+  '!~',
+  '~',
+  '~*',
+  '!~*',
+  '@@',
+  '@@@',
+  '!!',
+  '<->',
+  'regexp',
+  'is distinct from',
+  'is not distinct from',
+  '+',
+  '-',
+  '*',
+  '/',
+  '%',
+  '^',
+  '&',
+  '|',
+  '#',
+  '<<',
+  '>>',
+  '||',
+  '->',
+  '->>',
+  '->$',
+  '->>$',
+  'exists',
+  'not exists',
+  'not',
+  'between',
+  'between symmetric',
+  'InnerJoin',
+  'LeftJoin',
+  'RightJoin',
+  'FullJoin',
+  'CrossJoin',
+  'LateralInnerJoin',
+  'LateralLeftJoin',
+  'LateralCrossJoin',
+  'Using',
+  'OuterApply',
+  'CrossApply',
+  'only',
+  'with ties',
+  'percent',
+  'percent with ties',
+  'first',
+  'last',
+  'cascade',
+  'restrict',
+  'no action',
+  'set default',
+  'set null',
+  'preserve rows',
+  'delete rows',
+  'drop',
+  'ForUpdate',
+  'ForNoKeyUpdate',
+  'ForShare',
+  'ForKeyShare',
+  'NoWait',
+  'SkipLocked',
+  'Distinct',
+  'text',
+  'json',
+  'xml',
+  'yaml',
+  'traditional',
+  'tree',
+  'ignore',
+  'replace',
+  'abort',
+  'fail',
+  'rollback',
+  'union',
+  'union all',
+  'intersect',
+  'intersect all',
+  'except',
+  'except all',
 ])
 
 const DATA_TYPES = new Set(
@@ -183,6 +194,23 @@ const isDataType = (value: string): boolean => {
   return match !== null && DATA_TYPES.has(match[1]!)
 }
 
+/** The one raw fragment allowed: Kysely's own `desc` / `asc` order direction. */
+const isDirection = (node: unknown): boolean => {
+  const raw = node as {
+    kind?: string
+    sqlFragments?: unknown
+    parameters?: unknown
+  }
+  return (
+    raw?.kind === 'RawNode' &&
+    Array.isArray(raw.sqlFragments) &&
+    raw.sqlFragments.length === 1 &&
+    (raw.sqlFragments[0] === 'desc' || raw.sqlFragments[0] === 'asc') &&
+    Array.isArray(raw.parameters) &&
+    raw.parameters.length === 0
+  )
+}
+
 /**
  * True when the node tree can put caller text into the compiled SQL itself
  * rather than as a parameter: raw SQL, an immediate value (`sql.lit`), a JSON
@@ -198,11 +226,14 @@ export function hasInlineSql(node: unknown): boolean {
   if (kind !== undefined) {
     if (typeof kind !== 'string' || !KNOWN_KINDS.has(kind)) return true
     if (INLINE_KINDS.has(kind)) return true
-    if (kind === 'ValueNode') return record.immediate === true
+    if (kind === 'ValueNode')
+      return record.immediate === true && record.value !== null
     if (kind === 'PrimitiveValueListNode') return false
   }
   for (const [key, value] of Object.entries(record)) {
     if (key === 'kind') continue
+    if (kind === 'OrderByItemNode' && key === 'direction' && isDirection(value))
+      continue
     if (typeof value === 'string') {
       if (key === 'name' && kind === 'IdentifierNode') {
         if (!SAFE_IDENTIFIER.test(value)) return true
