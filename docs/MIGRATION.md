@@ -433,12 +433,12 @@ Fix the name, or wire the addon that provides it. There is no opt-out.
 
 Four lint keys are on by default at `error`. They apply to Pikku apps and addons, not to library packages: a library or developer-tool package that `pikku validate` checks and cannot meet a key sets that key to `"off"` in its `pikku.config.json`. A project that sets nothing is enforced. All are enforced by the app's own oxlint, which `pikku validate` already requires and runs; `pikku enable oxlint` writes the rules.
 
-| Key | oxlint rules required | Use instead |
-| --- | --- | --- |
-| `lint.enforceContentService` | `no-restricted-imports` on `fs`, `node:fs`, `fs/promises`, `node:fs/promises`, `fs-extra` and `graceful-fs` (type-only imports allowed), and `typescript/no-require-imports` | the `content` service: keyed, project-scoped, signed reads and writes |
-| `lint.enforceVariablesService` | `no-restricted-properties` on `process.env` | the `variables` service for non-secret values, the `secrets` service for secrets |
-| `lint.enforceSupervisor` | `no-restricted-imports` on `child_process`, `node:child_process`, `execa`, `cross-spawn` and `shelljs` (type-only imports allowed), `typescript/no-require-imports`, and `no-restricted-properties` on `Bun.spawn`, `Bun.spawnSync` and `Bun.$` | the Supervisor, which owns the process, its lifecycle and its output |
-| `lint.enforceCliCommands` | `no-restricted-properties` on `process.argv`, `Bun.argv` and `Deno.args`, and `no-restricted-imports` on `commander`, `yargs`, `minimist` and `parseArgs` from `node:util` (or `util`) | a `pikku` CLI command, which receives typed input |
+| Key                            | oxlint rules required                                                                                                                                                                                                                           | Use instead                                                                      |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `lint.enforceContentService`   | `no-restricted-imports` on `fs`, `node:fs`, `fs/promises`, `node:fs/promises`, `fs-extra` and `graceful-fs` (type-only imports allowed), and `typescript/no-require-imports`                                                                    | the `content` service: keyed, project-scoped, signed reads and writes            |
+| `lint.enforceVariablesService` | `no-restricted-properties` on `process.env`                                                                                                                                                                                                     | the `variables` service for non-secret values, the `secrets` service for secrets |
+| `lint.enforceSupervisor`       | `no-restricted-imports` on `child_process`, `node:child_process`, `execa`, `cross-spawn` and `shelljs` (type-only imports allowed), `typescript/no-require-imports`, and `no-restricted-properties` on `Bun.spawn`, `Bun.spawnSync` and `Bun.$` | the Supervisor, which owns the process, its lifecycle and its output             |
+| `lint.enforceCliCommands`      | `no-restricted-properties` on `process.argv`, `Bun.argv` and `Deno.args`, and `no-restricted-imports` on `commander`, `yargs`, `minimist` and `parseArgs` from `node:util` (or `util`)                                                          | a `pikku` CLI command, which receives typed input                                |
 
 `lint.enforceSupervisor` and `lint.enforceCliCommands` are new. `lint.enforceVariablesService` changed rule: it required `node/no-process-env` with the `node` plugin, which reports `process.env.X` but not `{ ...process.env }` or `const { env } = process`. It now requires `no-restricted-properties` on `process.env`, which reports all three. `node/no-process-env` no longer satisfies the key. An app with a config that was valid yesterday therefore fails `pikku validate` with `oxlint-enforce-variables-service`, `oxlint-enforce-supervisor` and `oxlint-enforce-cli-commands`. Run `pikku enable oxlint`: it adds the missing `no-restricted-imports` paths and `no-restricted-properties` entries, keeps the entries you already have, removes a `node/no-process-env` set to `"error"` (it would report every site twice) and adds an `overrides` entry. Or set the key to `'off'`.
 
@@ -476,11 +476,11 @@ To find the affected code, run `pikku validate`. Each finding names the file and
 
 Nothing changes unless you opt in. `pikku enable oxlint --strict` merges a strict preset into `.oxlintrc.json` (adding the `import` plugin and two `overrides` entries) and sets `"lint": { "strict": true }` in `pikku.config.json`. From then on `pikku validate` reports `oxlint-strict` when the resolved config lacks a preset rule at its level or one of the `typescript`, `unicorn` and `import` plugins, and reports each use as an oxlint finding. Set `"strict": false` (the default) to stop requiring it. oxlint 1.88.0 built-in rules only.
 
-| Level | Rules |
-| --- | --- |
-| `error` | `typescript/no-floating-promises`, `typescript/no-misused-promises`, `typescript/await-thenable`, `typescript/only-throw-error`, `eqeqeq`, `no-new-func`, `no-throw-literal`, `prefer-promise-reject-errors`, `typescript/ban-ts-comment`, `typescript/consistent-type-imports`, `import/no-cycle`, `unicorn/no-process-exit` |
-| `warn` | `no-await-in-loop`, `typescript/no-unsafe-type-assertion`, `typescript/no-explicit-any`, `typescript/no-non-null-assertion`, `no-console`, `typescript/switch-exhaustiveness-check`, `no-shadow` |
-| `off` (conflict with Pikku) | `require-await`, `import/no-default-export`, `oxc/no-barrel-file`, `no-param-reassign`, `import/no-unassigned-import` |
+| Level                       | Rules                                                                                                                                                                                                                                                                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `error`                     | `typescript/no-floating-promises`, `typescript/no-misused-promises`, `typescript/await-thenable`, `typescript/only-throw-error`, `eqeqeq`, `no-new-func`, `no-throw-literal`, `prefer-promise-reject-errors`, `typescript/ban-ts-comment`, `typescript/consistent-type-imports`, `import/no-cycle`, `unicorn/no-process-exit` |
+| `warn`                      | `no-await-in-loop`, `typescript/no-unsafe-type-assertion`, `typescript/no-explicit-any`, `typescript/no-non-null-assertion`, `no-console`, `typescript/switch-exhaustiveness-check`, `no-shadow`                                                                                                                              |
+| `off` (conflict with Pikku) | `require-await`, `import/no-default-export`, `oxc/no-barrel-file`, `no-param-reassign`, `import/no-unassigned-import`                                                                                                                                                                                                         |
 
 Two overrides ship with it: `no-await-in-loop` is off in `**/*.workflow.ts` (`for...of` with `workflow.do` is the workflow DSL's sequential fanout), and `typescript/no-floating-promises` is off in `**/*.assert.ts`, `**/*.verify.ts`, `*.test.*` and `*.spec.*`. That override of a required rule is accepted by validate only while `lint.strict` is true. A `pikkuWorkflowFunc` in a `*.functions.ts` file is not covered by the workflow glob: use `// oxlint-disable-next-line no-await-in-loop -- reason`.
 
@@ -1161,3 +1161,14 @@ To move an app over:
 2. Run `pikku db generate`. A table that matches its migrations is adopted and not created again, and the command reports it as covered. If it differs, generate refuses and names the column and the difference. Fix the declaration, not the migration.
 3. Move the table's entries from `db/annotations.ts` into `annotations` on the declaration, and run `pikku db migrate`. Declared tables are optional in `db/annotations.ts`, and a value the two files disagree on is an error.
 4. From here on, change the declaration and run `pikku db generate`. Existing migration files stay as they are.
+
+### `pikku db migrate` warns about sensitive-looking column names
+
+`pikku db migrate` (and `reset`) now warns, with PKU486 and PKU487, about a column whose name reads like personal data or a credential and that has no `security` annotation. These are warnings only: nothing fails unless you pass `--fail-on-warn`. Nothing else changes. A column with no annotation was already `private` and still is, so the generated types and the manifest are the same as before.
+
+- PKU486: a name like `email`, `phone`, `first_name`, `address`, `dob`, `ssn`, `ip`, `lat`, or `name` on a person table. Declare `security: 'pii'`.
+- PKU487: a name like `password`, `api_key`, `token`, `client_secret`, `credential`. Declare `security: 'secret'`, with `form: 'hashed'` for a value you only verify, or `form: 'wrapped'` | `'sealed'` for a value you read back.
+
+Any explicit `security` ends the warning, `private` included, except `public` on a name that looks like pii. Tables that Better Auth, the runtime or an addon create are skipped. Booleans, dates and numbers are skipped, as are names ending `_at`, `_count`, `_id`, `_type`, `_ref` or `_verified`.
+
+**Find:** run `pikku db migrate` and read the PKU486 and PKU487 lines.

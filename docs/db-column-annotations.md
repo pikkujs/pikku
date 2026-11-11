@@ -119,6 +119,23 @@ Every `keyId` the manifest names has to be one the deployment's `KEKResolver`
 can answer for. A key it cannot resolve does not fail at startup — it fails at
 the first write to that one column.
 
+## Sensitive-looking names (PKU486, PKU487)
+
+A column with no `security` is `private`. If its name also reads like personal
+data or a credential, `pikku db migrate` warns until you say what it is:
+
+| Warning | Name tokens                                                                                                                                                                                                         | Declare                                                                                                                    |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| PKU486  | `email`, `phone`, `first_name`, `last_name`, `full_name`, `address`, `dob`, `birth_date`, `ssn`, `ip`, `lat`, `lng`; `name` on a user, person, customer, member, contact, profile, employee or account-holder table | `security: 'pii'`                                                                                                          |
+| PKU487  | `password`, `secret`, `api_key`, `private_key`, `token` (so `access_token`, `refresh_token`, `id_token`), `client_secret`, `credential`                                                                             | `security: 'secret'`, with `form: 'hashed'` for a value you only verify, or `'wrapped'` / `'sealed'` for one you read back |
+
+Names are split into whole tokens, so `zip` and `description` never match `ip`.
+Booleans, dates and numbers are skipped, and so are names that end `_at`,
+`_count`, `_id`, `_type`, `_ref`, `_verified` or start `is_` / `has_`. Tables
+that Better Auth, the runtime or an addon create are skipped. Any explicit
+`security` ends the warning, `private` included, except `public` on a pii-looking
+name. There is no config switch. `--fail-on-warn` turns both into failures.
+
 ## Dialect-awareness
 
 Only auto-detection is dialect-specific, and deliberately so. Postgres has real

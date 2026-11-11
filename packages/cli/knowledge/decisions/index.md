@@ -122,5 +122,6 @@ A rule that was chosen, and what it rules out.
 - [A project declares backends, frontends or both](a-project-declares-backends-frontends-or-both.md) — each is optional, neither is an error unless the project is an addon; frontend-only means pikku all writes only the shared tree, dev runs only frontends, serve errors, deploy covers frontends
 - [The loader accepts only the keys of the CLI input type](the-loader-accepts-only-the-keys-of-the-cli-input-type.md) — unknown or moved keys are refused naming their home; environments name backends and frontends
 - [Product hooks are generated into the backend SDK](product-hooks-are-generated-into-the-sdk.md) — useAnalytics and useFlag land in exposed/pikku-product.gen.ts, each only when its declaration and scaffold exist
+- [A column named like sensitive data warns until it is annotated](a-column-named-like-sensitive-data-warns-until-it-is-annotated.md) — PKU486 pii / PKU487 secret on whole-token name matches in db codegen; default stays private; only an annotation silences; framework tables skipped
 
 <!-- /pikku:knowledge-index -->

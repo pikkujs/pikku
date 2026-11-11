@@ -63,6 +63,8 @@ const (
 	DbSecretColumnStoredPlain         Code = "PKU483"
 	DbFormOnNonString                 Code = "PKU484"
 	DbDefaultSchemaNameCollision      Code = "PKU485"
+	DbPiiNameNotAnnotated             Code = "PKU486"
+	DbSecretNameNotAnnotated          Code = "PKU487"
 	SchemaGenerationError             Code = "PKU456"
 	SchemaReferenceUnresolved         Code = "PKU463"
 	InlineSchema                      Code = "PKU489"
