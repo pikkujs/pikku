@@ -1,5 +1,34 @@
 # @pikku/ai-voice
 
+## 0.12.7
+
+### Patch Changes
+
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- Updated dependencies [3a9c9d8]
+- Updated dependencies [dc952a8]
+- Updated dependencies [7e44a0c]
+- Updated dependencies [8ec91f0]
+- Updated dependencies [ffbe1a2]
+- Updated dependencies [9999ec1]
+- Updated dependencies [228faad]
+- Updated dependencies [84de1eb]
+- Updated dependencies [e659614]
+- Updated dependencies [6c79f8d]
+- Updated dependencies [fa308d4]
+- Updated dependencies [0a4676a]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [2e05e48]
+- Updated dependencies [a88391a]
+- Updated dependencies [3df9013]
+  - @pikku/core@0.12.144
+
 ## 0.12.6
 
 ### Patch Changes

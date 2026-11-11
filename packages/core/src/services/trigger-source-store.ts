@@ -1,7 +1,12 @@
 import type { WebhookSourceState } from '../wirings/trigger/webhook-source.types.js'
 
+/** The kinds of trigger source a provider can be registered for. */
 export type TriggerSourceKind = 'webhook'
 
+/**
+ * A trigger source as declared in code, before anything is registered with its
+ * provider.
+ */
 export type DeclaredTriggerSource = {
   name: string
   kind: TriggerSourceKind
@@ -31,6 +36,7 @@ export type TriggerSourceRow = Required<
   updatedAt: string | null
 }
 
+/** The outcome of a setup or teardown step for a trigger source. */
 export type TriggerSourceResult = {
   status: string
   state?: WebhookSourceState | null
@@ -48,6 +54,13 @@ export interface TriggerSourceStore {
   deleteTriggerSource(name: string): Promise<void>
 }
 
+/**
+ * A {@link TriggerSourceStore} held in process memory, for development and
+ * tests. Registrations are lost on restart.
+ *
+ * @throws Error from `recordTriggerSource` and `setTriggerSourceEnabled` when
+ * the source is unknown
+ */
 export class InMemoryTriggerSourceStore implements TriggerSourceStore {
   private rows = new Map<string, TriggerSourceRow>()
 

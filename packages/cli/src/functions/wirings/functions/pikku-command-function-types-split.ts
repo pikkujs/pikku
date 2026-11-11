@@ -8,6 +8,7 @@ import { serializeAddonRefs } from './serialize-addon-refs.js'
 import { serializeMiddlewareTypes } from '../middleware/serialize-middleware-types.js'
 import { serializeSetupTypes } from '../setup/serialize-setup-types.js'
 import { serializeAuthGuards } from '../auth/serialize-auth-guards.js'
+import { serializeContributorTypes } from '../contributors/serialize-contributor-types.js'
 
 export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
   { bootstrap?: boolean },
@@ -120,6 +121,19 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
         { addon: !!config.addon }
       )
     )
+
+    // An addon has no singleton services type of its own to type contributors
+    // against, so only an application gets the leaf (and a stale one is removed
+    // by the leaf-index command).
+    if (!config.addon) {
+      await writeFileInDir(
+        logger,
+        config.contributorTypesFile,
+        serializeContributorTypes(
+          `import type { ${singletonServicesType.type} as SingletonServices } from '${getFileImportRelativePath(config.contributorTypesFile, singletonServicesType.typePath, packageMappings)}'`
+        )
+      )
+    }
 
     await writeFileInDir(
       logger,

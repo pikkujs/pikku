@@ -1,6 +1,7 @@
 import { pikkuState } from '../../pikku-state.js'
 import type { Logger } from '../../services/index.js'
 
+/** Logs every wired channel and its route at info level, typically once at startup. */
 export const logChannels = (logger: Logger) => {
   const channels = pikkuState(null, 'channel', 'channels')
   if (channels.size === 0) {

@@ -145,11 +145,15 @@ export const getUser = pikkuSessionlessFunc({
 })
 `
 
+// Wired, so the clean project carries no PKU563 (an unused function is an
+// error diagnostic, which --fail-on-error blocks on too).
 const CLEAN_FUNC = `
 import { pikkuSessionlessFunc } from '@pikku/core'
+import { wireHTTP } from '@pikku/core/http'
 export const getStatus = pikkuSessionlessFunc({
   func: async () => ({ id: 1, status: 'active' })
 })
+wireHTTP({ route: '/status', method: 'get', auth: false, func: getStatus })
 `
 
 describe('diagnostic severity build gate — PKU910 (error severity)', () => {

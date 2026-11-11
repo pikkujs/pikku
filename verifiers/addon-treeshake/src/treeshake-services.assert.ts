@@ -1,9 +1,18 @@
 import { execFileSync } from 'node:child_process'
-import { readFileSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { createScriptContent, getText } from './script-content.js'
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)))
+// The content store is the generated output directory: the CLI writes to
+// <root>/private/shake/<name>, and the script reads and clears it through the
+// content service.
+const content = createScriptContent(join(rootDir, '.pikku-shake'))
+const outDirOf = (name: string) =>
+  join(rootDir, '.pikku-shake', 'private', 'shake', name)
+const clearOut = (name: string) => content.deleteByPrefix('shake', `${name}/`)
+const readOut = (name: string, file: string) =>
+  getText(content, 'shake', `${name}/${file}`)
 const ADDON_BOOTSTRAP_IMPORT =
   '@pikku/templates-function-addon/.pikku/pikku-bootstrap.gen.js'
 const WIRE_ADDON_FILE_IMPORT = 'src/function/treeshake.wiring.js'
@@ -84,8 +93,8 @@ const check = (scenario: string, label: string, ok: boolean) => {
 }
 
 for (const scenario of scenarios) {
-  const outDir = join(rootDir, '.pikku-shake', scenario.name)
-  rmSync(outDir, { recursive: true, force: true })
+  const outDir = outDirOf(scenario.name)
+  await clearOut(scenario.name)
   execFileSync(
     'npx',
     [
@@ -99,11 +108,8 @@ for (const scenario of scenarios) {
     { cwd: rootDir, stdio: 'pipe' }
   )
 
-  const bootstrap = readFileSync(join(outDir, 'pikku-bootstrap.gen.ts'), 'utf8')
-  const servicesGen = readFileSync(
-    join(outDir, 'pikku-services.gen.ts'),
-    'utf8'
-  )
+  const bootstrap = await readOut(scenario.name, 'pikku-bootstrap.gen.ts')
+  const servicesGen = await readOut(scenario.name, 'pikku-services.gen.ts')
 
   check(
     scenario.name,
@@ -124,6 +130,67 @@ for (const scenario of scenarios) {
     scenario.name,
     `auditSink: ${scenario.auditSink}`,
     flag(servicesGen, 'auditSink') === scenario.auditSink
+  )
+}
+
+// A Cloudflare unit's bootstrap defers the addon's functions and schemas to
+// loadAddons(), so evaluating it at Worker startup registers neither.
+{
+  const outDir = outDirOf('lazy')
+  await clearOut('lazy')
+  execFileSync(
+    'npx',
+    [
+      'pikku',
+      'all',
+      '--names=testAddonHello',
+      `--outDir=${outDir}`,
+      '--force-relative-imports',
+      '--lazy-addons',
+      '--silent',
+    ],
+    { cwd: rootDir, stdio: 'pipe' }
+  )
+  const bootstrap = await readOut('lazy', 'pikku-bootstrap.gen.ts')
+  const addon = '@pikku/templates-function-addon/.pikku'
+
+  check(
+    'lazy',
+    'addon bootstrap not imported whole',
+    !bootstrap.includes(ADDON_BOOTSTRAP_IMPORT)
+  )
+  check(
+    'lazy',
+    'addon meta imported up front',
+    bootstrap.includes(`import '${addon}/function/pikku-functions-meta.gen.js'`)
+  )
+  check(
+    'lazy',
+    'addon functions and schemas only imported from loadAddons()',
+    !bootstrap.includes(`import '${addon}/function/pikku-functions.gen.js'`) &&
+      bootstrap.includes(`import('${addon}/function/pikku-functions.gen.js')`)
+  )
+
+  const registered = JSON.parse(
+    execFileSync(
+      'npx',
+      [
+        'tsx',
+        join(rootDir, 'src', 'lazy-addons.check.ts'),
+        join(outDir, 'pikku-bootstrap.gen.ts'),
+      ],
+      { cwd: rootDir, stdio: 'pipe' }
+    ).toString()
+  ) as { atStartup: number; afterLoadAddons: number }
+  check(
+    'lazy',
+    `no addon function registered at startup (${registered.atStartup})`,
+    registered.atStartup === 0
+  )
+  check(
+    'lazy',
+    `loadAddons() registers them (${registered.afterLoadAddons})`,
+    registered.afterLoadAddons > 0
   )
 }
 

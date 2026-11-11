@@ -8,11 +8,13 @@ import {
   BACKOFF_TYPE_HEADER,
   DEFAULT_BACKOFF_DELAY_MS,
   SCHEDULE_SUBJECT_SEGMENT,
+  TRACEPARENT_HEADER,
   attemptsFor,
   attemptsHeaderValue,
   backoffDelayMs,
   backoffFor,
   consumerNameForQueue,
+  mapJsMsgToQueueJob,
   queueNameToToken,
   scheduleSubjectFor,
   subjectForQueue,
@@ -20,8 +22,8 @@ import {
 
 test('ordinary queue names pass through unchanged', () => {
   assert.equal(
-    subjectForQueue('pikku', 'pikku-remote-internal-rpc'),
-    'pikku.pikku-remote-internal-rpc'
+    subjectForQueue('pikku', 'pikku-mesh-rpc'),
+    'pikku.pikku-mesh-rpc'
   )
 })
 
@@ -180,4 +182,28 @@ test('attemptsHeaderValue refuses a fraction, which the worker would silently ro
 
 test('the refusal names the queue, so a bad enqueue is traceable', () => {
   assert.throws(() => attemptsHeaderValue(0, 'orchestrator'), /orchestrator/)
+})
+
+const natsMsg = (traceparent?: string) => {
+  const h = headers()
+  if (traceparent) h.set(TRACEPARENT_HEADER, traceparent)
+  return {
+    seq: 1,
+    headers: h,
+    info: { deliveryCount: 1, timestampNanos: 0 },
+    json: () => ({ n: 1 }),
+  } as unknown as JsMsg
+}
+
+test('a NATS job reads its traceparent from the header', () => {
+  const traceparent = `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`
+  const job = mapJsMsgToQueueJob('q', natsMsg(traceparent))
+  assert.equal(job.traceparent, traceparent)
+  assert.deepEqual(job.data, { n: 1 })
+})
+
+test('a NATS job published without the header has no traceparent', () => {
+  const job = mapJsMsgToQueueJob('q', natsMsg())
+  assert.equal(job.traceparent, undefined)
+  assert.deepEqual(job.data, { n: 1 })
 })

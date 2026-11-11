@@ -62,9 +62,42 @@ async function walk(dir: string): Promise<string[]> {
 const IMPORT_RE =
   /(?:^|[\s(};])(?:from|import|require)\s*\(?\s*['"]([^'"]+)['"]/g
 
+/**
+ * The source with its comments blanked. A generated file's header can show the
+ * import a hand-written file should make (`classification-map.gen.d.ts` does),
+ * and that example is not an import the shipped file makes.
+ */
+function withoutComments(source: string): string {
+  let out = ''
+  let quote: string | undefined
+  for (let i = 0; i < source.length; i++) {
+    const char = source[i]!
+    if (quote) {
+      out += char
+      if (char === '\\') out += source[++i] ?? ''
+      else if (char === quote) quote = undefined
+      continue
+    }
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char
+      out += char
+    } else if (char === '/' && source[i + 1] === '/') {
+      while (i < source.length && source[i] !== '\n') i++
+      out += '\n'
+    } else if (char === '/' && source[i + 1] === '*') {
+      const end = source.indexOf('*/', i + 2)
+      i = end === -1 ? source.length : end + 1
+      out += ' '
+    } else {
+      out += char
+    }
+  }
+  return out
+}
+
 function relativeSpecifiers(source: string): string[] {
   const found = new Set<string>()
-  for (const match of source.matchAll(IMPORT_RE)) {
+  for (const match of withoutComments(source).matchAll(IMPORT_RE)) {
     const specifier = match[1]!
     if (specifier.startsWith('.')) found.add(specifier)
   }

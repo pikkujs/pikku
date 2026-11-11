@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -34,8 +35,11 @@ export const isGenerated = (path: string) =>
  */
 export const collectAppSources = async (
   dir: string,
-  out: string[] = []
+  out: string[] = [],
+  root = dir
 ): Promise<string[]> => {
+  // A nested Pikku project (a workspace addon) is validated as its own project.
+  if (dir !== root && existsSync(join(dir, 'pikku.config.json'))) return out
   let entries
   try {
     entries = await readdir(dir, { withFileTypes: true })
@@ -46,7 +50,7 @@ export const collectAppSources = async (
     const path = join(dir, entry.name)
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue
-      await collectAppSources(path, out)
+      await collectAppSources(path, out, root)
     } else if (
       SOURCE_EXTENSIONS.some((ext) => entry.name.endsWith(ext)) &&
       !isGenerated(entry.name)

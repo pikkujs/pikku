@@ -10,6 +10,7 @@ export const complexInlineWorkflow = pikkuWorkflowComplexFunc<
   { email: string; name: string },
   { result: string }
 >({
+  auth: false,
   title: 'Complex Inline Steps',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

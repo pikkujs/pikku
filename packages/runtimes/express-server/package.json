@@ -1,6 +1,6 @@
 {
   "name": "@pikku/express",
-  "version": "0.12.17",
+  "version": "0.12.18",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -15,23 +15,24 @@
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "release": "npm run build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.141"
+    "@pikku/core": "^0.12.144"
   },
   "dependencies": {
-    "@pikku/express-middleware": "^0.12.9",
+    "@pikku/express-middleware": "^0.12.10",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5",
     "@types/express-serve-static-core": "^5.1.3",
-    "content-type": "^2.1.0",
+    "content-type": "^3.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "express": "^5",
@@ -41,6 +42,11 @@
     "node": ">=24"
   },
   "exports": {
-    ".": "./dist/index.js"
-  }
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ]
 }

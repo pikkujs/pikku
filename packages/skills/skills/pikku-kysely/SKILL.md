@@ -1,9 +1,7 @@
 ---
 name: pikku-kysely
 description: >-
-  Use when WRITING KYSELY QUERIES (select, join, aggregate, insert, update, delete) inside a Pikku function body, or when setting up SQL database services with Kysely. Covers the query builder API (joins, groupBy/having, returning, sql template, $if, transactions, jsonArrayFrom), how many round trips a function body costs and how to collapse sequential awaits into one statement, and @pikku/kysely service setup (channel stores, workflow, secret, AI storage and deployment services).
-  TRIGGER when: writing any non-trivial kysely query (join, count/sum, groupBy, subquery, transaction, conditional query), a function body awaits more than one query, the injected `kysely` service is used, code uses PikkuKysely, KyselyChannelStore, KyselyWorkflowService or KyselySecretService, or the user asks about SQL setup with Pikku.
-  DO NOT TRIGGER when: the services are MongoDB or Redis backed (use pikku-service-backends), or the task is the pagination contract rather than the query (use pikku-list-query).
+  Kysely queries in Pikku functions (joins, aggregates, transactions), collapsing sequential awaits, @pikku/kysely setup. A non-SQL store is pikku-service-backends; pagination is pikku-list-query.
 installGroups: [core]
 ---
 
@@ -119,15 +117,27 @@ just stop queuing behind each other.
 
 ```typescript
 // Three hops, in series
-const item = await kysely.selectFrom('item').where('id','=',id).selectAll().executeTakeFirst()
-const bins = await kysely.selectFrom('bin').where('warehouseId','=',wid).selectAll().execute()
-const moves = await kysely.selectFrom('stockMove').where('itemId','=',id).selectAll().execute()
+const item = await kysely
+  .selectFrom('item')
+  .where('id', '=', id)
+  .selectAll()
+  .executeTakeFirst()
+const bins = await kysely
+  .selectFrom('bin')
+  .where('warehouseId', '=', wid)
+  .selectAll()
+  .execute()
+const moves = await kysely
+  .selectFrom('stockMove')
+  .where('itemId', '=', id)
+  .selectAll()
+  .execute()
 
 // One hop's worth of latency
 const [item, bins, moves] = await Promise.all([
-  kysely.selectFrom('item').where('id','=',id).selectAll().executeTakeFirst(),
-  kysely.selectFrom('bin').where('warehouseId','=',wid).selectAll().execute(),
-  kysely.selectFrom('stockMove').where('itemId','=',id).selectAll().execute(),
+  kysely.selectFrom('item').where('id', '=', id).selectAll().executeTakeFirst(),
+  kysely.selectFrom('bin').where('warehouseId', '=', wid).selectAll().execute(),
+  kysely.selectFrom('stockMove').where('itemId', '=', id).selectAll().execute(),
 ])
 ```
 
@@ -142,7 +152,11 @@ wants.
 // N+1 — one extra hop per warehouse
 const warehouses = await kysely.selectFrom('warehouse').selectAll().execute()
 for (const w of warehouses) {
-  w.bins = await kysely.selectFrom('bin').where('warehouseId','=',w.id).selectAll().execute()
+  w.bins = await kysely
+    .selectFrom('bin')
+    .where('warehouseId', '=', w.id)
+    .selectAll()
+    .execute()
 }
 // One hop — see NESTED DATA above
 ```
@@ -158,7 +172,11 @@ and what comes back tells you which branch happened.
 
 ```typescript
 // Two hops and a race
-const existing = await kysely.selectFrom('item').where('sku','=',sku).select('id').executeTakeFirst()
+const existing = await kysely
+  .selectFrom('item')
+  .where('sku', '=', sku)
+  .select('id')
+  .executeTakeFirst()
 if (existing) throw new ConflictError()
 await kysely.insertInto('item').values({ sku, name }).execute()
 
@@ -183,8 +201,20 @@ never have crossed the wire.
 
 ```typescript
 // Two hops — the ids are only ever used as a filter
-const ids = await kysely.selectFrom('bin').where('warehouseId','=',wid).select('id').execute()
-const stock = await kysely.selectFrom('stock').where('binId','in', ids.map((b) => b.id)).selectAll().execute()
+const ids = await kysely
+  .selectFrom('bin')
+  .where('warehouseId', '=', wid)
+  .select('id')
+  .execute()
+const stock = await kysely
+  .selectFrom('stock')
+  .where(
+    'binId',
+    'in',
+    ids.map((b) => b.id)
+  )
+  .selectAll()
+  .execute()
 
 // One hop
 const stock = await kysely
@@ -220,6 +250,81 @@ Pikku's own stores. They differ in one place — `bun:sqlite` cannot register
 scalar functions, so `createBunSqliteKysely` throws if you pass `functions`.
 
 All implement standard Pikku interfaces from `@pikku/core`.
+
+## Declaring tables
+
+Declare the app's tables in `db/tables.ts`, and put their annotations beside
+them. One declaration gives the SQL, the types and the classification.
+`pikku meta db` says where the file is and what it already declares. You never
+need to know where migrations live.
+
+```typescript
+// db/tables.ts
+import { defineTables } from '@pikku/kysely'
+
+export const tables = defineTables({
+  statements: [
+    (db, _types, ctx) =>
+      db.schema
+        .createTable('invoice')
+        .addColumn('invoiceId', ctx.key, (col) => col.primaryKey())
+        .addColumn('customerEmail', ctx.text, (col) => col.notNull())
+        .addColumn('paidAt', 'timestamp'),
+    (db) =>
+      db.schema
+        .createIndex('invoice_customer_email_idx')
+        .on('invoice')
+        .column('customerEmail'),
+  ],
+  annotations: {
+    invoice: {
+      customerEmail: { security: 'pii', format: 'email' },
+      paidAt: { kind: 'date' },
+    },
+  },
+})
+```
+
+Then:
+
+```bash
+pikku db generate   # writes the SQL
+pikku db migrate    # applies it and regenerates the types
+```
+
+- **`statements` are `db.schema` calls**, tables and indexes only, written in
+  camelCase. `ctx.key` and `ctx.text` are the dialect's key and text types.
+- **Change a table by editing its statement** in place and running `generate`
+  again. It writes only the difference: new tables, new columns, new indexes.
+- **`generate` adds and nothing else.** A dropped column or table, a rename, a
+  changed type, and a new `NOT NULL` column with no default are refused with the
+  reason, and nothing is written. Declare a new column nullable or with a
+  default. Taking data away is a person's decision, so stop and ask.
+- **A foreign key onto a table outside this file** (Better Auth's `user`, a
+  hand-written table) has to be named in `requires`, and `requiredType` gives
+  the column its type:
+
+  ```typescript
+  import { defineTables, requiredType } from '@pikku/kysely'
+
+  export const tables = defineTables({
+    requires: [{ table: 'user', column: 'id', owner: 'Better Auth' }],
+    statements: [
+      (db, types, ctx) =>
+        db.schema
+          .createTable('note')
+          .addColumn('noteId', ctx.key, (col) => col.primaryKey())
+          .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
+            col.notNull().references('user.id').onDelete('cascade')
+          ),
+    ],
+  })
+  ```
+
+- **An annotation typo is an error**, as is annotating a column the declaration
+  doesn't have. `security` is `public`, `private`, `pii` or `secret`.
+- **`db check` and `db migrate` stop** when `db/tables.ts` is ahead of the
+  migrations, and tell you to run `generate`.
 
 ## Installation
 
@@ -290,14 +395,14 @@ functions query.
 ### MySQL and `pikku db`
 
 `mysqlUrl` in `createConfig` makes MySQL the third dialect the `pikku db`
-commands drive, with migrations in `db/mysql/` and the seed in
-`db/mysql-dev-seed.sql`. It behaves like the other two with four differences:
+commands drive, with the seed in `db/mysql-dev-seed.sql`. It behaves like the
+other two with four differences:
 
 - **No embedded engine.** Commands that need a throwaway database create and drop
   a `pikku_scratch_<hex>` one on your server, so the account needs `CREATE` and
   `DROP`.
 - **DDL is not transactional.** A migration that fails halfway is replayed from
-  the top, so write migrations that are safe to run twice.
+  the top, so a migration has to be safe to run twice.
 - **Inline `REFERENCES` is discarded** — declare foreign keys as
   `FOREIGN KEY (...) REFERENCES ...` or none exists.
 - **A key column cannot be `TEXT`**, nor can a `TEXT` column have a literal

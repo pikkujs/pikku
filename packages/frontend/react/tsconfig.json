@@ -11,5 +11,11 @@
     "lib": ["DOM", "ES2020"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["**/*.test.ts", "**/*.test-d.ts", "**/*.test-d.tsx", "node_modules"]
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.test-d.ts",
+    "**/*.test-d.tsx",
+    "node_modules"
+  ]
 }

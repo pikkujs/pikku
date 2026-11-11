@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "module": "Node18",
+    "skipLibCheck": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@sdk/app/*": ["../functions/.pikku/sdk/app/exposed/*"],
+      "#pikku/*.js": ["../functions/.pikku/*.ts"],
+      "#pikku/*": ["../functions/.pikku/*/index.ts", "../functions/.pikku/*"]
+    }
+  },
+  "include": ["src/", ".pikku/*", "client/queue-worker.ts"],
+  "files": []
+}

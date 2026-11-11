@@ -31,6 +31,8 @@ export type ChaosInput = {
   key: string
   /** Block for this long before returning, to open a window for a kill. */
   delayMs?: number
+  /** Only delay while the durable attempt count is below this. */
+  delayAttemptsBelow?: number
   /** Fail while the durable attempt count is below this. */
   failAttemptsBelow?: number
   /** Fail on every attempt, forever. */
@@ -62,25 +64,28 @@ const performEffect = async (
   data: ChaosInput,
   runId: string,
   invocationId: string | undefined,
-  attempt: number
+  attempt: number,
+  trace?: { traceId: string; spanId: string }
 ): Promise<ChaosOutput> => {
-  recordEffect(dir, {
+  await recordEffect(dir, {
     key: data.key,
     runId,
     invocationId,
     attempt,
     at: Date.now(),
     detail: data.echo,
+    traceId: trace?.traceId,
+    spanId: trace?.spanId,
   } satisfies ChaosLedgerEntry)
 
-  if (data.delayMs) {
+  if (data.delayMs && attempt < (data.delayAttemptsBelow ?? Infinity)) {
     await wait(data.delayMs)
   }
 
   if (data.failAlways) {
     throw new Error(`chaos:${data.key} is configured to always fail`)
   }
-  if (data.dependency && isDependencyDown(dir, data.dependency)) {
+  if (data.dependency && (await isDependencyDown(dir, data.dependency))) {
     throw new Error(
       `chaos:${data.key} dependency '${data.dependency}' is down (attempt ${attempt})`
     )
@@ -91,7 +96,9 @@ const performEffect = async (
     )
   }
 
-  const totalEffects = readEffects(dir).filter((e) => e.key === data.key).length
+  const totalEffects = (await readEffects(dir)).filter(
+    (e) => e.key === data.key
+  ).length
   return { key: data.key, attempt, echo: data.echo, totalEffects }
 }
 
@@ -107,14 +114,25 @@ export const chaosStep = pikkuSessionlessFunc<ChaosInput, ChaosOutput>({
   description:
     'Perform a recorded side effect with injectable delay and failure',
   expose: true,
-  func: async ({ variables }, data, { workflowStep }) =>
+  func: async ({ variables }, data, { workflowStep, trace }) =>
     performEffect(
       await ledgerDir(variables),
       data,
       workflowStep?.runId ?? 'no-run',
       workflowStep?.invocationId,
-      workflowStep?.attemptCount ?? 0
+      workflowStep?.attemptCount ?? 0,
+      trace
     ),
+  compensate: async ({ variables }, data, { workflowStep, trace }) => {
+    await recordEffect(await ledgerDir(variables), {
+      key: `undo:${data.key}`,
+      runId: workflowStep?.runId ?? 'no-run',
+      attempt: 0,
+      at: Date.now(),
+      traceId: trace?.traceId,
+      spanId: trace?.spanId,
+    })
+  },
 })
 
 /**
@@ -134,16 +152,18 @@ export const chaosCompensate = pikkuSessionlessFunc<
 >({
   description: 'Record a compensating action for a failed step',
   expose: true,
-  func: async ({ variables }, data, { workflowStep }) => {
+  func: async ({ variables }, data, { workflowStep, trace }) => {
     const runId = workflowStep?.runId ?? 'no-run'
     const compensated = data.key ?? `run:${runId}`
-    recordEffect(await ledgerDir(variables), {
+    await recordEffect(await ledgerDir(variables), {
       key: `compensate:${compensated}`,
       runId,
       invocationId: workflowStep?.invocationId,
       attempt: 0,
       at: Date.now(),
       detail: data.error?.message,
+      traceId: trace?.traceId,
+      spanId: trace?.spanId,
     })
     return { compensated }
   },
@@ -151,15 +171,73 @@ export const chaosCompensate = pikkuSessionlessFunc<
 
 /** Reads the ledger back, so a test can assert on effects without file access. */
 export const chaosReadLedger = pikkuSessionlessFunc<
-  { key?: string; runId?: string },
+  { key?: string; keyContains?: string; runId?: string },
   { entries: ChaosLedgerEntry[]; count: number }
 >({
   description: 'Read recorded chaos side effects',
   expose: true,
-  func: async ({ variables }, { key, runId }) => {
-    const entries = readEffects(await ledgerDir(variables)).filter(
-      (e) => (!key || e.key === key) && (!runId || e.runId === runId)
+  func: async ({ variables }, { key, keyContains, runId }) => {
+    const entries = (await readEffects(await ledgerDir(variables))).filter(
+      (e) =>
+        (!key || e.key === key) &&
+        (!keyContains || e.key.includes(keyContains)) &&
+        (!runId || e.runId === runId)
     )
     return { entries, count: entries.length }
+  },
+})
+
+/** A request that enqueues a job: the first hop of the trace chain. */
+export const chaosTraceKickoff = pikkuSessionlessFunc<
+  { tag: string },
+  { traceId: string }
+>({
+  description: 'Enqueue a job that starts a workflow, and report the trace',
+  expose: true,
+  func: async ({ queueService }, { tag }, { trace }) => {
+    await queueService!.add('chaos-trace', { tag })
+    return { traceId: trace!.traceId }
+  },
+})
+
+/** The job the request enqueued, or the one a workflow step enqueued. */
+export const chaosTraceJob = pikkuSessionlessFunc<
+  { tag: string; fromStep?: boolean },
+  void
+>({
+  description: 'Record the job, then start the workflow unless a step sent it',
+  func: async ({ variables }, { tag, fromStep }, { rpc, trace }) => {
+    await recordEffect(await ledgerDir(variables), {
+      key: `${fromStep ? 'step-job' : 'job'}:${tag}`,
+      runId: 'no-run',
+      attempt: 0,
+      at: Date.now(),
+      traceId: trace?.traceId,
+      spanId: trace?.spanId,
+    })
+    if (!fromStep) {
+      await rpc.startWorkflow('chaosTraceChainWorkflow', { tag })
+    }
+  },
+})
+
+/** A workflow step that enqueues a job of its own. */
+export const chaosTraceEnqueue = pikkuSessionlessFunc<{ tag: string }, void>({
+  description: 'Enqueue a job from inside a workflow step',
+  func: async ({ queueService }, { tag }) => {
+    await queueService!.add('chaos-trace', { tag, fromStep: true })
+  },
+})
+
+/** The trace a run has stored, read back from whichever process is alive. */
+export const chaosRunTrace = pikkuSessionlessFunc<
+  { runId: string },
+  { traceparent?: string; status?: string }
+>({
+  description: 'Read the trace and status stored on a run',
+  expose: true,
+  func: async ({ workflowService }, { runId }) => {
+    const run = await workflowService!.getRun(runId)
+    return { traceparent: run?.wire?.traceparent, status: run?.status }
   },
 })

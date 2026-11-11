@@ -7,6 +7,7 @@ interface ChannelDoc {
   channelName: string
   createdAt: Date
   openingData: any
+  traceparent?: string
   pikkuUserId: string | null
   state?: unknown
   lastWire: Date
@@ -47,11 +48,13 @@ export class MongoDBChannelStore extends ChannelStore {
     channelId,
     channelName,
     openingData,
+    traceparent,
   }: Channel): Promise<void> {
     await this.channels.insertOne({
       _id: channelId,
       channelName,
       openingData: openingData || {},
+      ...(traceparent ? { traceparent } : {}),
       pikkuUserId: null,
       createdAt: new Date(),
       lastWire: new Date(),
@@ -85,6 +88,7 @@ export class MongoDBChannelStore extends ChannelStore {
       channelId: row._id,
       channelName: row.channelName,
       openingData: row.openingData ?? {},
+      traceparent: row.traceparent,
       pikkuUserId: row.pikkuUserId ?? undefined,
     }
   }

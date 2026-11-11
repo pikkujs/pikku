@@ -1,0 +1,14 @@
+[
+  {
+    "project": "verifiers/dev-platform-contributors/scenarios/cycle",
+    "message": "depend on each other in a cycle: cycle-a -> cycle-b -> cycle-a"
+  },
+  {
+    "project": "verifiers/dev-platform-contributors/scenarios/dup",
+    "message": "Contributors 'dup-a' and 'dup-b' both provide 'shared'"
+  },
+  {
+    "project": "verifiers/dev-platform-contributors/scenarios/ghost",
+    "message": "Contributor 'needs-ghost' needs 'ghost', which nothing provides"
+  }
+]

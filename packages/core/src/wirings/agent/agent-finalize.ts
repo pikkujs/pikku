@@ -21,6 +21,8 @@ export type RunUsage = {
  * a scorer is shown is exactly what was stored — including the redactions.
  */
 export type FinalizedRun = {
+  /** The trace the run's scoring jobs stay in. */
+  traceparent?: string
   runId: string
   agentName: string
   threadId: string
@@ -187,7 +189,7 @@ export const finalizeAgentRun = async (
   // Best-effort and last: the client already has its answer, so a grading
   // failure must not surface as a failed run.
   try {
-    await scoreFinishedRun(snapshot, services)
+    await scoreFinishedRun(snapshot, services, run.traceparent)
   } catch (error) {
     services.logger?.error(
       `[pikku] Live scoring failed for run ${run.runId}`,

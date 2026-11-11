@@ -463,6 +463,43 @@ describe('Command Parser', () => {
       assert.ok(help.includes('Use loud greeting'))
     })
 
+    test('leaves hidden commands out of help but still parses them', () => {
+      const meta: CLIMeta = {
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            options: {},
+            commands: {
+              shown: { pikkuFuncId: 'shown', positionals: [], options: {} },
+              auth: {
+                pikkuFuncId: '',
+                positionals: [],
+                options: {},
+                hidden: true,
+                subcommands: {
+                  git: {
+                    pikkuFuncId: 'authGit',
+                    positionals: [{ name: 'operation', required: true }],
+                    options: {},
+                    hidden: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      } as CLIMeta
+      const root = generateCommandHelp('test-cli', meta)
+      assert.ok(root.includes('shown'))
+      assert.ok(!root.includes('auth'))
+      assert.ok(
+        !generateCommandHelp('test-cli', meta, ['auth']).includes('git')
+      )
+      const parsed = parseCLIArguments(['auth', 'git', 'get'], 'test-cli', meta)
+      assert.deepEqual(parsed.commandPath, ['auth', 'git'])
+      assert.equal(parsed.positionals.operation, 'get')
+    })
+
     test('should generate help for subcommand', () => {
       const help = generateCommandHelp('test-cli', testMeta, ['user', 'create'])
 

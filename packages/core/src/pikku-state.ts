@@ -26,6 +26,12 @@ const stateHost = globalThis as unknown as {
   [key: symbol]: Map<string, PikkuPackageState> | undefined
 }
 
+/**
+ * Every package's registry, keyed by package name (`__main__` for the app).
+ * The map lives on `globalThis` under a registered symbol, so duplicate copies
+ * of `@pikku/core` in one process share it.
+ * @internal
+ */
 export const getAllPackageStates = (): Map<string, PikkuPackageState> => {
   let states = stateHost[PIKKU_STATE_KEY]
   if (!states) {
@@ -35,6 +41,24 @@ export const getAllPackageStates = (): Map<string, PikkuPackageState> => {
   return states
 }
 
+/**
+ * Reads, or with `value` replaces, one slot of a package's registry: the
+ * functions, wirings, metadata, middleware and services that generated code and
+ * the `wire*` helpers register at import time.
+ *
+ * This is framework plumbing, not app state. Generated bootstrap files and
+ * runtime adapters call it; application code should go through the `wire*`,
+ * `add*` and `define*` helpers instead, because writing a slot directly
+ * bypasses the validation they do.
+ *
+ * @param packageName - The package whose registry to use; `null` means the app.
+ * The registry is created on first use.
+ * @param type - The area, such as `'function'`, `'http'` or `'misc'`.
+ * @param content - The slot within that area.
+ * @param value - When given, replaces the slot. `undefined` cannot be stored;
+ * it always reads.
+ * @returns The slot's current value.
+ */
 export const pikkuState = <
   Type extends keyof PikkuPackageState,
   Content extends keyof PikkuPackageState[Type],
@@ -161,12 +185,22 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   },
 })
 
+/**
+ * Creates an empty registry for `packageName` if it has none yet; an existing
+ * one is left untouched.
+ * @internal
+ */
 export const initializePikkuState = (packageName: string): void => {
   if (!getAllPackageStates().has(packageName)) {
     getAllPackageStates().set(packageName, createEmptyPackageState())
   }
 }
 
+/**
+ * Discards every package's registry and starts the app's afresh. Registered
+ * error classes are carried over, because they come from module side effects
+ * that will not run again. Meant for tests.
+ */
 export const resetPikkuState = () => {
   // Error definitions come from module-import side effects that never re-run.
   const existingErrors = getAllPackageStates().get('__main__')?.misc.errors
@@ -184,20 +218,35 @@ if (!getAllPackageStates().has('__main__')) {
   resetPikkuState()
 }
 
+/**
+ * The app's singleton services, as registered by the generated bootstrap or a
+ * runtime adapter.
+ * @throws {Error} When none have been registered yet.
+ */
 export const getSingletonServices = (): CoreSingletonServices => {
   const services = pikkuState(null, 'package', 'singletonServices')
   if (!services) throw new Error('Singleton services not initialized')
   return services
 }
 
+/** Registers the app's singleton services, replacing any registered before. */
 export const setSingletonServices = (services: CoreSingletonServices): void => {
   pikkuState(null, 'package', 'singletonServices', services)
 }
 
+/**
+ * The app's registered `createWireServices` factory, if it has one.
+ * @internal
+ */
 export const getCreateWireServices = (): CreateWireServices | undefined => {
   return pikkuState(null, 'package', 'factories')?.createWireServices
 }
 
+/**
+ * Registers the service factories for a package (an addon), replacing any
+ * registered before.
+ * @internal
+ */
 export const addPackageServiceFactories = (
   packageName: string,
   factories: NonNullable<PikkuPackageState['package']['factories']>

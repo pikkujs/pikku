@@ -1,5 +1,5 @@
 import type { CredentialOverrideMeta } from '../types.js'
-import type { SecretUsage } from './extract-secret-usage.js'
+import type { SecretUsage } from './usage-types.js'
 import type { JSONValue } from '@pikku/core/utils'
 import type {
   InspectorDiagnostic,
@@ -54,6 +54,8 @@ export interface SerializableInspectorState {
   addonRequiredParentServices: string[]
   addonCreatedServices: string[]
   addonServicesFactorySeen: boolean
+  analytics?: InspectorState['analytics']
+  outgoingWebhooks?: InspectorState['outgoingWebhooks']
   addonServerlessIncompatible: Array<[string, string[]]>
   configFactories: Array<
     [
@@ -98,6 +100,8 @@ export interface SerializableInspectorState {
     meta: InspectorState['functions']['meta']
     files: Array<[string, { path: string; exportedName: string }]>
     approvalDescriptions: InspectorState['functions']['approvalDescriptions']
+    dynamicImportIds?: string[]
+    disabled?: InspectorState['functions']['disabled']
   }
   http: {
     metaInputTypes: Array<
@@ -166,9 +170,11 @@ export interface SerializableInspectorState {
         string,
         {
           package: string
+          range?: string
           file?: string
           rpcEndpoint?: string
           remote?: boolean
+          local?: { package: string; ui?: boolean; contributors?: string[] }
           hasAuth?: boolean
           authCredentialId?: string
           authSecretId?: string
@@ -182,6 +188,7 @@ export interface SerializableInspectorState {
           contentBucket?: string
           contentGrants?: Record<string, string>
           globalContent?: string
+          contributors?: string[]
         },
       ]
     >
@@ -230,6 +237,7 @@ export interface SerializableInspectorState {
   scopes: {
     definitions: InspectorState['scopes']['definitions']
     files: string[]
+    declared?: Array<[string, string]>
   }
   systemRoles: {
     definitions: InspectorState['systemRoles']['definitions']
@@ -285,6 +293,7 @@ export interface SerializableInspectorState {
   permissions: {
     definitions: InspectorState['permissions']['definitions']
     instances: InspectorState['permissions']['instances']
+    global?: InspectorState['permissions']['global']
   }
   serviceAggregation: {
     requiredServices: string[]
@@ -294,6 +303,7 @@ export interface SerializableInspectorState {
     allSingletonServices: string[]
     allWireServices: string[]
   }
+  serviceTypes?: InspectorState['serviceTypes']
   resolvedIOTypes: Record<string, { inputType: string; outputType: string }>
   middlewareGroupsMeta: InspectorState['middlewareGroupsMeta']
   permissionsGroupsMeta: InspectorState['permissionsGroupsMeta']
@@ -301,8 +311,11 @@ export interface SerializableInspectorState {
   openAPISpec: Record<string, any> | null
   diagnostics: InspectorDiagnostic[]
   addonFunctions: InspectorState['addonFunctions']
-  screensManifest?: InspectorState['screensManifest']
-  addonScreens?: InspectorState['addonScreens']
+  remoteAddonFunctions?: InspectorState['remoteAddonFunctions']
+  studio?: InspectorState['studio']
+  addonStudio?: InspectorState['addonStudio']
+  contributorsManifest?: InspectorState['contributorsManifest']
+  optedInContributors?: InspectorState['optedInContributors']
   exportedContracts: InspectorState['exportedContracts']
 }
 
@@ -354,6 +367,8 @@ export function serializeInspectorState(
     addonRequiredParentServices: state.addonRequiredParentServices,
     addonCreatedServices: state.addonCreatedServices,
     addonServicesFactorySeen: state.addonServicesFactorySeen,
+    analytics: state.analytics,
+    outgoingWebhooks: state.outgoingWebhooks,
     addonServerlessIncompatible: Array.from(
       state.addonServerlessIncompatible.entries()
     ),
@@ -372,6 +387,10 @@ export function serializeInspectorState(
       meta: state.functions.meta,
       files: Array.from(state.functions.files.entries()),
       approvalDescriptions: state.functions.approvalDescriptions,
+      dynamicImportIds: Array.from(state.functions.dynamicImportIds ?? []),
+      ...(Object.keys(state.functions.disabled ?? {}).length > 0
+        ? { disabled: state.functions.disabled }
+        : {}),
     },
     http: {
       metaInputTypes: Array.from(state.http.metaInputTypes.entries()),
@@ -475,6 +494,9 @@ export function serializeInspectorState(
     scopes: {
       definitions: state.scopes.definitions,
       files: Array.from(state.scopes.files),
+      declared: state.scopes.declared
+        ? Array.from(state.scopes.declared.entries())
+        : undefined,
     },
     systemRoles: {
       definitions: state.systemRoles.definitions,
@@ -512,6 +534,7 @@ export function serializeInspectorState(
     permissions: {
       definitions: state.permissions.definitions,
       instances: state.permissions.instances,
+      global: state.permissions.global,
     },
     serviceAggregation: {
       requiredServices: Array.from(state.serviceAggregation.requiredServices),
@@ -521,6 +544,7 @@ export function serializeInspectorState(
       allSingletonServices: state.serviceAggregation.allSingletonServices,
       allWireServices: state.serviceAggregation.allWireServices,
     },
+    serviceTypes: state.serviceTypes,
     resolvedIOTypes: state.resolvedIOTypes,
     middlewareGroupsMeta: state.middlewareGroupsMeta,
     permissionsGroupsMeta: state.permissionsGroupsMeta,
@@ -528,8 +552,11 @@ export function serializeInspectorState(
     openAPISpec: state.openAPISpec,
     diagnostics: state.diagnostics,
     addonFunctions: state.addonFunctions,
-    screensManifest: state.screensManifest,
-    addonScreens: state.addonScreens,
+    remoteAddonFunctions: state.remoteAddonFunctions,
+    studio: state.studio,
+    addonStudio: state.addonStudio,
+    contributorsManifest: state.contributorsManifest,
+    optedInContributors: state.optedInContributors,
     exportedContracts: state.exportedContracts,
   }
 }
@@ -540,7 +567,7 @@ export function serializeInspectorState(
  */
 export function deserializeInspectorState(
   data: SerializableInspectorState
-): Omit<InspectorState, 'typesLookup' | 'schemaLookup'> & {
+): Omit<InspectorState, 'schemaLookup'> & {
   schemaLookup: Map<
     string,
     {
@@ -579,6 +606,8 @@ export function deserializeInspectorState(
     addonRequiredParentServices: data.addonRequiredParentServices || [],
     addonCreatedServices: data.addonCreatedServices || [],
     addonServicesFactorySeen: data.addonServicesFactorySeen ?? false,
+    analytics: data.analytics,
+    outgoingWebhooks: data.outgoingWebhooks,
     addonServerlessIncompatible: new Map(
       data.addonServerlessIncompatible || []
     ),
@@ -598,7 +627,8 @@ export function deserializeInspectorState(
       meta: data.functions.meta,
       files: new Map(data.functions.files),
       approvalDescriptions: (data.functions as any).approvalDescriptions || {},
-      dynamicImportIds: new Set(),
+      dynamicImportIds: new Set(data.functions.dynamicImportIds ?? []),
+      disabled: data.functions.disabled ?? {},
     },
     http: {
       metaInputTypes: new Map(data.http.metaInputTypes),
@@ -700,6 +730,9 @@ export function deserializeInspectorState(
     scopes: {
       definitions: data.scopes?.definitions || [],
       files: new Set(data.scopes?.files || []),
+      declared: data.scopes?.declared
+        ? new Map(data.scopes.declared)
+        : undefined,
     },
     systemRoles: {
       definitions: data.systemRoles?.definitions || [],
@@ -735,6 +768,7 @@ export function deserializeInspectorState(
     permissions: {
       definitions: data.permissions.definitions,
       instances: data.permissions.instances || {},
+      global: data.permissions.global || [],
     },
     serviceAggregation: {
       requiredServices: new Set(data.serviceAggregation.requiredServices),
@@ -744,6 +778,7 @@ export function deserializeInspectorState(
       allSingletonServices: data.serviceAggregation.allSingletonServices,
       allWireServices: data.serviceAggregation.allWireServices,
     },
+    serviceTypes: data.serviceTypes,
     resolvedIOTypes: data.resolvedIOTypes || {},
     middlewareGroupsMeta: data.middlewareGroupsMeta || {
       definitions: {},
@@ -759,8 +794,13 @@ export function deserializeInspectorState(
     openAPISpec: data.openAPISpec || null,
     diagnostics: data.diagnostics || [],
     addonFunctions: data.addonFunctions || {},
-    screensManifest: data.screensManifest,
-    addonScreens: data.addonScreens,
+    ...(data.remoteAddonFunctions
+      ? { remoteAddonFunctions: data.remoteAddonFunctions }
+      : {}),
+    studio: data.studio,
+    addonStudio: data.addonStudio,
+    contributorsManifest: data.contributorsManifest,
+    optedInContributors: data.optedInContributors,
     exportedContracts: data.exportedContracts || {
       http: {},
       cli: {},
@@ -769,6 +809,5 @@ export function deserializeInspectorState(
       addonCli: {},
       addonChannel: {},
     },
-    program: null,
   }
 }

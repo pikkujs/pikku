@@ -47,6 +47,21 @@ const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
   console.log(JSON.stringify(data))
 }
 
+/**
+ * Wires a command-line program: its commands, nested subcommands, options, renderers and middleware.
+ *
+ * Each command runs a pikku function with its positionals and options as input.
+ * The result is printed by the command's renderer, the program's `render`, or
+ * as JSON (also forced by `--json`). Run the program locally with
+ * {@link executeCLI}, or remotely over a channel.
+ *
+ * Registration needs the metadata `pikku` generates for the program. When none
+ * is found the wiring is skipped with a warning rather than throwing.
+ *
+ * @param cli - The program name, its commands, global options, renderer and middleware.
+ *
+ * @example snippet: wireCli
+ */
 export const wireCLI = <
   Commands extends Record<string, CoreCLICommandConfig<any, any, any>>,
   GlobalOptions,
@@ -254,6 +269,16 @@ function pluckCLIData(
   }
 }
 
+/**
+ * Runs one already-parsed CLI command. {@link executeCLI} calls this locally; the CLI channel runners call it for remote clients.
+ *
+ * Program middleware runs first, then the middleware of each command along the
+ * path. A local run has no session; over a channel, pass the session the
+ * connection authenticated as.
+ *
+ * @returns The command's result. It is also rendered, unless `onOutput` is set.
+ * @throws {NotFoundError} When the program or command path does not exist.
+ */
 export async function runCLICommand({
   program,
   commandPath,
@@ -434,6 +459,14 @@ export async function runCLICommand({
   }
 }
 
+/**
+ * Declares a renderer that prints a CLI command's result, typed against the command's output. Returns the renderer unchanged.
+ *
+ * Write to stdout only what the user should see; stdout is reserved for the
+ * command's output.
+ *
+ * @example snippet: cliRenderer
+ */
 export const pikkuCLIRender = <
   Data,
   Services extends CoreSingletonServices = CoreServices,
@@ -448,6 +481,16 @@ export const pikkuCLIRender = <
   return renderer
 }
 
+/**
+ * Runs a wired CLI program in this process: parses `args`, prints help when asked, builds config and singleton services, and runs the command.
+ *
+ * Config and services are created only after parsing succeeds, so `--help` and
+ * argument errors never touch the project. Parse warnings go to stderr.
+ *
+ * @param params.programName - The program passed to {@link wireCLI}.
+ * @param params.args - The arguments after the program name, usually `process.argv.slice(2)`.
+ * @throws {CLIError} On an unknown program or command, invalid arguments, or a failed command. The caller should exit with its `exitCode`.
+ */
 export async function executeCLI({
   programName,
   args,

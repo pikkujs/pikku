@@ -351,7 +351,7 @@ export async function applyDeploy(
     // refusal has to run here as well as on the input.
     if (input.reset) {
       assertResetAllowed({ branch })
-      const status = await rpc.invoke('getProjectStatus', { projectId })
+      const status = await rpc.invoke('cloud:getProjectStatus', { projectId })
       const app = status.projectName ?? projectId
       if (input.json) {
         emit({ event: 'reset', app, branch })
@@ -383,7 +383,7 @@ export async function applyDeploy(
       }
     }
 
-    const created = await rpc.invoke('deployByStageKind', {
+    const created = await rpc.invoke('cloud:deployByStageKind', {
       projectId,
       branch,
       ref: resolved,
@@ -763,9 +763,7 @@ export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
         'If that is empty too, the deploy failed before a build started — usually a cloud-side'
       )
     )
-    console.log(
-      dim('failure rather than a defect in this project (`pikku cloud smoke`).')
-    )
+    console.log(dim('failure rather than a defect in this project.'))
   }
   if (branch) console.log(dim(`Logs: \`pikku cloud logs --branch ${branch}\``))
 }

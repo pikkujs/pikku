@@ -1,6 +1,7 @@
 export type {
   AgentDefinition,
   ChannelDefinition,
+  GatewayDefinition,
   DeploymentHandler,
   DeploymentManifest,
   DeploymentUnit,
@@ -28,24 +29,25 @@ export {
 
 export type {
   EntryGenerationContext,
+  FrontendDeployContext,
+  FrontendKind,
+  FrontendSupport,
   ProviderAdapter,
 } from './provider-adapter.js'
 
 export type {
-  BindingSource,
-  ContributorPlatform,
-  PlatformServiceContributor,
-} from './platform-service-contributor.js'
-
+  ContributorSupport,
+  DeployContributorPlatform,
+  EntryPlatformServices,
+  FrameworkContributor,
+} from './contributor-support.js'
 export {
-  DEFAULT_BINDING_SOURCES,
-  assertContributorsSupported,
-  collectContributorImports,
-  collectContributorLines,
-  contributorBindingSources,
-  dedupeContributors,
-  partitionContributors,
-} from './platform-service-contributor.js'
+  appLifecycleVariable,
+  composedLifecycleLines,
+  composedLifecycleVariable,
+  entryLifecycleVariable,
+  withDeployUnit,
+} from './contributor-support.js'
 
 export { nodeBuiltinExternals } from './node-builtins.js'
 

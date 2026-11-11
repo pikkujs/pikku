@@ -1,3 +1,7 @@
+/**
+ * A held lease. `token` increases each time the key changes hands, so a stale
+ * holder can be told apart from the current one.
+ */
 export type Lease = {
   key: string
   holder: string
@@ -18,6 +22,7 @@ export interface LeaseService {
   get(key: string): Promise<Lease | null>
 }
 
+/** Thrown by `holdLease` when another holder already has the key. */
 export class LeaseTakenError extends Error {
   constructor(public readonly key: string) {
     super(`Lease ${key} is held by another holder`)

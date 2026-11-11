@@ -8,6 +8,7 @@ export const nestedLoopWithConditionWorkflow = pikkuWorkflowComplexFunc<
   { userIds: string[]; maxComments: number },
   { usersProcessed: number; totalComments: number }
 >({
+  auth: false,
   title: 'Nested Loop With Condition',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

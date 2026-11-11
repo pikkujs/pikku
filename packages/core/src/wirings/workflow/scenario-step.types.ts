@@ -48,6 +48,7 @@ export type ScenarioStepKind = 'virtualUser' | 'platform' | 'addon'
  */
 export type ScenarioSurface = 'browser' | 'cli' | 'default'
 
+/** Every {@link ScenarioSurface}, in order of preference. */
 export const SCENARIO_SURFACES: readonly ScenarioSurface[] = [
   'browser',
   'cli',

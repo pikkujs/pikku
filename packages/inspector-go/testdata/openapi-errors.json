@@ -1,0 +1,232 @@
+[
+  {
+    "name": "InvalidMiddlewareWireError",
+    "status": 500,
+    "message": "The middleware wire is invalid for the current wiring type."
+  },
+  {
+    "name": "PikkuMissingMetaError",
+    "status": 500,
+    "message": "Required metadata is missing"
+  },
+  {
+    "name": "MissingServiceError",
+    "status": 500,
+    "message": "A required service is not configured"
+  },
+  {
+    "name": "LocalEnvironmentOnlyError",
+    "status": 403,
+    "message": "This operation is only available in local development mode"
+  },
+  {
+    "name": "BadRequestError",
+    "status": 400,
+    "message": "The server cannot or will not process the request due to client error (e.g., malformed request syntax)."
+  },
+  {
+    "name": "UnauthorizedError",
+    "status": 401,
+    "message": "Authentication is required and has failed or has not yet been provided."
+  },
+  {
+    "name": "MissingSessionError",
+    "status": 401,
+    "message": "Session missing."
+  },
+  {
+    "name": "InvalidSessionError",
+    "status": 401,
+    "message": "The session provided is not valid."
+  },
+  {
+    "name": "PaymentRequiredError",
+    "status": 402,
+    "message": "Reserved for future use, often related to digital payment or subscription services."
+  },
+  {
+    "name": "ForbiddenError",
+    "status": 403,
+    "message": "The client does not have permission to access the requested resource."
+  },
+  {
+    "name": "MissingCredentialError",
+    "status": 403,
+    "message": "A required credential is not configured."
+  },
+  {
+    "name": "CredentialRejectedError",
+    "status": 403,
+    "message": "The upstream service rejected the stored credential; the user has to sign in again or reconnect it."
+  },
+  {
+    "name": "MissingScopeError",
+    "status": 403,
+    "message": "The session does not hold a scope required by this function."
+  },
+  {
+    "name": "FeatureUnavailableError",
+    "status": 503,
+    "message": "This feature is switched off."
+  },
+  {
+    "name": "ReadonlySessionError",
+    "status": 403,
+    "message": "The session is readonly and cannot access this function."
+  },
+  {
+    "name": "InvalidOriginError",
+    "status": 403,
+    "message": "The request was made from an origin that is not permitted to access this resource."
+  },
+  {
+    "name": "NotFoundError",
+    "status": 404,
+    "message": "The server cannot find the requested resource."
+  },
+  {
+    "name": "MethodNotAllowedError",
+    "status": 405,
+    "message": "The request method is known by the server but is not supported by the resource."
+  },
+  {
+    "name": "NotAcceptableError",
+    "status": 406,
+    "message": "The requested resource cannot produce a response matching the list of acceptable values in the request's headers."
+  },
+  {
+    "name": "ProxyAuthenticationRequiredError",
+    "status": 407,
+    "message": "The client must authenticate itself to get the requested response."
+  },
+  {
+    "name": "RequestTimeoutError",
+    "status": 408,
+    "message": "The request timeout has expired."
+  },
+  {
+    "name": "ConflictError",
+    "status": 409,
+    "message": "The request could not be completed due to a conflict with the current state of the target resource."
+  },
+  {
+    "name": "GoneError",
+    "status": 410,
+    "message": "The resource that is being accessed is no longer available and will not be available again."
+  },
+  {
+    "name": "LengthRequiredError",
+    "status": 411,
+    "message": "The request did not specify the length of its content, which is required by the requested resource."
+  },
+  {
+    "name": "PreconditionFailedError",
+    "status": 412,
+    "message": "The server does not meet one of the preconditions that the requester put on the request."
+  },
+  {
+    "name": "PayloadTooLargeError",
+    "status": 413,
+    "message": "The request is larger than the server is willing or able to process."
+  },
+  {
+    "name": "URITooLongError",
+    "status": 414,
+    "message": "The URI requested by the client is longer than the server is willing to interpret."
+  },
+  {
+    "name": "UnsupportedMediaTypeError",
+    "status": 415,
+    "message": "The server does not support the media format of the requested data."
+  },
+  {
+    "name": "RangeNotSatisfiableError",
+    "status": 416,
+    "message": "The client has asked for a portion of the file, but the server cannot supply that portion."
+  },
+  {
+    "name": "ExpectationFailedError",
+    "status": 417,
+    "message": "The server cannot meet the requirements of the Expect request-header field."
+  },
+  {
+    "name": "UnprocessableContentError",
+    "status": 422,
+    "message": "The server understood the content type of the request content, and the syntax of the request content was correct, but it was unable to process the contained instructions.."
+  },
+  {
+    "name": "LockedError",
+    "status": 423,
+    "message": "The resource is locked, meaning it can't be accessed. Its response body should contain information in WebDAV's XML format."
+  },
+  {
+    "name": "TooManyRequestsError",
+    "status": 429,
+    "message": "The user has sent too many requests in a given amount of time (\"rate limiting\")."
+  },
+  {
+    "name": "InternalServerError",
+    "status": 500,
+    "message": "A generic error message, given when no more specific message is suitable."
+  },
+  {
+    "name": "NotImplementedError",
+    "status": 501,
+    "message": "The server does not recognize the request method and cannot support it."
+  },
+  {
+    "name": "BadGatewayError",
+    "status": 502,
+    "message": "The server was acting as a gateway or proxy and received an invalid response from the upstream server."
+  },
+  {
+    "name": "ServiceUnavailableError",
+    "status": 503,
+    "message": "The server is currently unavailable (overloaded or down)."
+  },
+  {
+    "name": "GatewayTimeoutError",
+    "status": 504,
+    "message": "The server was acting as a gateway or proxy and did not receive a timely response from the upstream server."
+  },
+  {
+    "name": "HTTPVersionNotSupportedError",
+    "status": 505,
+    "message": "The server does not support the HTTP protocol version used in the request."
+  },
+  {
+    "name": "MaxComputeTimeReachedError",
+    "status": 524,
+    "message": "The server took too long to complete the request, reaching the maximum compute time allowed."
+  },
+  {
+    "name": "MissingSchemaError",
+    "status": 500,
+    "message": "A required schema was not found. Ensure schema generation has been run."
+  },
+  {
+    "name": "WeakKeyMaterialError",
+    "status": 500,
+    "message": "A configured secret does not carry enough entropy to be used."
+  },
+  {
+    "name": "AIProviderNotConfiguredError",
+    "status": 503,
+    "message": "No AI provider configured. Please set up an AI provider (e.g. OpenAI, Anthropic) and provide a valid API key to use this agent."
+  },
+  {
+    "name": "AIProviderAuthError",
+    "status": 401,
+    "message": "AI provider API key is missing or invalid. Please check your API key configuration."
+  },
+  {
+    "name": "SystemRoleImmutableError",
+    "status": 409,
+    "message": "This role is declared in code and cannot be changed here."
+  },
+  {
+    "name": "SystemRoleShadowedError",
+    "status": 409,
+    "message": "A system role of that name is already declared in code."
+  }
+]

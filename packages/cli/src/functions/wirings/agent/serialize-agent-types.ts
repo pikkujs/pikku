@@ -26,6 +26,8 @@ import type { AgentMap } from '${agentMapImportPath}'
 import type { ScopeId } from '${scopesImportPath}'
 import type { ScorerName } from '${scorerNamesImportPath}'
 
+export type { AgentInput, AgentStreamEvent } from '@pikku/core/agent'
+
 type AgentConfig<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
@@ -41,6 +43,11 @@ type AgentConfig<
 /**
  * Declares an agent: the model, the prompt, the tools it may call and the shape
  * of what it returns. Wire it like any other function.
+ *
+ * Its export name is what \`rpc.agent.run\` and \`usePikkuAgent\` take. \`model\` is
+ * \`provider/model\` or an alias (\`pikku doc models\`). \`tools\` takes the functions
+ * themselves or \`ref('name')\`. A function with \`approvalRequired: true\` pauses
+ * the run until it is approved. \`memory.storage\` names an agent storage service.
  *
  * @example snippet: aiAgent
  */
@@ -123,6 +130,8 @@ export const agentResume = () => {
 
 /**
  * A ready-made function that answers every pending approval for a run at once.
+ * Only runs of the agent named here are accepted: a run that belongs to any
+ * other agent is refused with a 403, even when the caller owns it.
  *
  * @example snippet: agentApproval
  */

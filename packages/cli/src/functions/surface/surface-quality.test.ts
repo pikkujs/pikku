@@ -1,7 +1,9 @@
 import assert from 'node:assert'
 import { describe, test } from 'node:test'
 
+import { ErrorCode } from '@pikku/inspector'
 import { renderSurfaceDoc } from './render-surface-doc.js'
+import { renderTopics } from '../commands/doc.js'
 import { readShippedSurfaceDoc } from './shipped-surface-doc.js'
 import type { SurfaceDoc, SurfaceDocSymbol } from './surface-doc.types.js'
 
@@ -42,7 +44,12 @@ const typed = (symbol: SurfaceDocSymbol): string[] => [
 const read = () => {
   assert.ok(doc, 'no shipped surface.json — build the CLI first')
   const symbols = doc.entryPoints.flatMap((entryPoint) =>
-    entryPoint.leaves.flatMap((leaf) => leaf.symbols)
+    entryPoint.leaves
+      // Package doors (`@pikku/react`, the core exports) sit beside the barrels but
+      // are hand-written API with no snippets in the template yet: they would
+      // swamp these gates rather than move them.
+      .filter((leaf) => leaf.specifier.startsWith('#pikku'))
+      .flatMap((leaf) => leaf.symbols)
   )
   const resolvable = new Set([
     ...symbols.map((symbol) => symbol.name),
@@ -88,11 +95,11 @@ const WIRED_BY_EXAMPLE = [
 const CORE_LEAK = 175
 const UNRESOLVABLE = 1234
 const BARE_ERRORS = 5
-const FUNCTIONS_WITHOUT_EXAMPLE = 18
+const FUNCTIONS_WITHOUT_EXAMPLE = 0
 const BARE_SYMBOLS = 0
 
 /** A floor rather than a ceiling: the assertion is `>=`. */
-const DOCUMENTED_KEYS = 79
+const DOCUMENTED_KEYS = 80
 
 describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
   test('does not name the internals the generated aliases exist to hide', () => {
@@ -213,7 +220,7 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
       [],
       `${missing.join(', ')} carry no example. These are the exports a reader ` +
         `reaches for first, and a signature alone does not show the shape of the ` +
-        `object they take. Wrap the real usage in examples/online-shop in ` +
+        `object they take. Wrap the real usage in templates/online-shop in ` +
         `"// @snippet start <name>" and point an "@example snippet: <name>" at it.`
     )
   })
@@ -230,7 +237,7 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
       missing.length <= FUNCTIONS_WITHOUT_EXAMPLE,
       `${missing.length} callables carry no example, up from ` +
         `${FUNCTIONS_WITHOUT_EXAMPLE}. Every door the doc lists is a door somebody ` +
-        `has to walk through: show it being used in examples/online-shop and point ` +
+        `has to walk through: show it being used in templates/online-shop and point ` +
         `an "@example snippet: <name>" at the region:\n  ` +
         `${[...new Set(missing)].sort().join(', ')}`
     )
@@ -247,6 +254,36 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
       'an "@example snippet: name" reached the shipped doc unresolved, so the ' +
         'reader is shown the reference instead of the code it names'
     )
+  })
+
+  test('a service interface read off a package lists its methods', () => {
+    assert.ok(doc, 'no shipped surface.json — build the CLI first')
+    const page = renderSurfaceDoc(doc, { target: 'ContentService' })
+    for (const method of [
+      'getUploadURL',
+      'getDownloadURL',
+      'readFileAsBuffer',
+    ]) {
+      assert.match(page, new RegExp(`${method}: `))
+    }
+  })
+
+  test('`pikku doc content` prints the whole upload, frontend included', () => {
+    assert.ok(doc, 'no shipped surface.json — build the CLI first')
+    const page = renderSurfaceDoc(doc, { target: 'content' })
+    for (const step of [
+      'buildFileKey = ',
+      'fileKeyIsUnderOrder = pikkuPermission',
+      'content.listFilesByPrefix(BUCKET, fileKey)',
+      'content.getUploadURL(',
+      'photo: [isOrderOwner, fileKeyIsUnderOrder, fileKeyIsStored]',
+      'content.getDownloadURL(',
+      "route: '/orders/:orderId/damage-photo/upload'",
+      'pikkuFetch.uploadFile(upload, photo, contentType)',
+    ]) {
+      assert.ok(page.includes(step), step)
+    }
+    assert.doesNotMatch(page, /base64|FormData/)
   })
 
   test('says what each key it lists is for', () => {
@@ -288,11 +325,71 @@ describe('a guessed name', () => {
     )
   })
 
+  test('a method that is no export is answered where it is described', () => {
+    if (!doc) return
+    const answer = renderSurfaceDoc(doc, { target: 'startWorkflow' })
+    assert.match(answer, /'startWorkflow' is not an export/)
+    assert.match(answer, /rpc\.startWorkflow\(name, input\)/)
+  })
+
+  test('one unknown name keeps the answers to the others', () => {
+    if (!doc) return
+    const answer = renderTopics(doc, ['qqqzzzwibble', 'pikkuFunc'], {
+      entryPoint: 'app',
+    })
+    assert.match(answer, /No door or export called 'qqqzzzwibble'/)
+    assert.match(answer, /pikkuFunc — function/)
+  })
+
   test('with nothing in common is sent to the index', () => {
     if (!doc) return
     assert.throws(
       () => renderSurfaceDoc(doc, { target: 'qqqzzzwibble' }),
       /Run 'pikku doc' for the index/
     )
+  })
+
+  test('an error code answers pikku doc, in either case', () => {
+    if (!doc) return
+    const answer = renderSurfaceDoc(doc, { target: 'pku641' })
+    assert.equal(answer, renderSurfaceDoc(doc, { target: 'PKU641' }))
+    assert.match(answer, /INVALID_DSL_WORKFLOW/)
+    assert.match(answer, /input parameter name/)
+    assert.match(answer, /fix\n/)
+    for (const code of Object.values(ErrorCode)) {
+      assert.match(renderSurfaceDoc(doc, { target: code }), new RegExp(code))
+    }
+  })
+
+  test('pikku doc says when a pikkuPermission should be a pikkuAuth', () => {
+    if (!doc) return
+    const answer = renderSurfaceDoc(doc, { target: 'pku586' })
+    assert.match(answer, /PERMISSION_DATA_UNUSED/)
+    assert.match(answer, /pikkuAuth\(async \(services, session\)/)
+    assert.match(answer, /--strict-meta/)
+  })
+
+  test('pikku doc says what a check on a sessionless function needs', () => {
+    if (!doc) return
+    const answer = renderSurfaceDoc(doc, { target: 'pku587' }).replace(
+      /\s+/g,
+      ' '
+    )
+    assert.match(answer, /PERMISSION_NEEDS_SKIP_WITHOUT_SESSION/)
+    assert.match(answer, /skipWithoutSession: true/)
+    assert.match(answer, /auth: true/)
+  })
+
+  test('the approval path is reachable from pikku doc', () => {
+    if (!doc) return
+    const read = (target: string) => renderSurfaceDoc(doc, { target })
+    assert.match(
+      read('WorkflowApprovalOptions'),
+      /workflowService\.approveStep\(/
+    )
+    assert.match(read('WorkflowRunService'), /pikkuWorkflowApproval/)
+    assert.match(read('ApprovalOutcome'), /decision\.data\.approve/)
+    assert.match(read('workflow'), /a no is an answer/)
+    assert.match(read('TypedWorkflow'), /FlattenedRPCMap/)
   })
 })

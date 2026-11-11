@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { pikkuState } from '../../pikku-state.js'
 
 const silentLogger = { error() {}, info() {}, warn() {}, debug() {} }

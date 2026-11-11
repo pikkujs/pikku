@@ -2,6 +2,11 @@ import { pikkuState } from '../../pikku-state.js'
 import type { CoreWorkflow } from './workflow.types.js'
 import type { CoreFeature, FeaturePlanEntry } from './scenario.types.js'
 
+/**
+ * Registers a scenario feature. Called by generated code for each `pikkuFeature`.
+ *
+ * @internal
+ */
 export const addFeature = (
   featureId: string,
   feature: CoreFeature,
@@ -10,6 +15,13 @@ export const addFeature = (
   pikkuState(packageName, 'workflows', 'features').set(featureId, feature)
 }
 
+/**
+ * Matches each feature's scenarios to the workflow names they are registered
+ * under, merging feature and scenario tags. Entries that name a scenario no
+ * workflow registration holds come back in `unresolved`.
+ *
+ * @internal
+ */
 export const resolveFeatureScenarios = (
   features: Map<string, CoreFeature>,
   registrations: Map<string, CoreWorkflow>

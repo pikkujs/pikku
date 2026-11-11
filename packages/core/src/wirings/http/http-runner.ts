@@ -24,11 +24,15 @@ import type {
 } from '../../middleware/middleware.types.js'
 import { NotFoundError } from '../../errors/errors.js'
 import { createWeakUID, isSerializable } from '../../utils.js'
+import { resolveHTTPTrace, type TraceContext } from '../../trace.js'
 import {
   getSingletonServices,
   getCreateWireServices,
 } from '../../pikku-state.js'
-import { PikkuSessionService } from '../../services/user-session-service.js'
+import {
+  PikkuSessionService,
+  createMiddlewareSessionWireProps,
+} from '../../services/user-session-service.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { isProduction } from '../../env.js'
@@ -60,6 +64,21 @@ function extractHeadersFromRequest(
   return headers
 }
 
+/**
+ * Adds middleware that runs before every HTTP route whose path matches `pattern`.
+ *
+ * `'*'` matches every route, and is also what an unmatched `OPTIONS` request
+ * runs, so CORS middleware belongs there. Calling it again for the same pattern
+ * appends rather than replaces. Group middleware runs before a route's own
+ * `middleware` and before the permissions on its function.
+ *
+ * @param pattern - `'*'`, or a route prefix such as `'/orders'`.
+ * @param middleware - The middleware to add, in the order it should run.
+ * @param packageName - The addon package that owns the group; `null` for the app.
+ * @returns The `middleware` passed in, so a group can be declared and exported in one statement.
+ *
+ * @example snippet: httpMiddleware
+ */
 export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   pattern: string,
   middleware: CorePikkuMiddlewareGroup,
@@ -73,6 +92,23 @@ export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   return middleware
 }
 
+/**
+ * Wires a pikku function to one HTTP method and route.
+ *
+ * A route requires a session unless it sets `auth: false`, and an open route
+ * can only point at a sessionless function. Every `:param` in `route` must be a
+ * key of the function's input, which is checked at compile time. On a request
+ * the route's `headers` schema is validated first, then middleware, then the
+ * function's permissions, then the function itself; its return value is sent as
+ * JSON unless `returnsJSON` is `false` or it returns a `Response`.
+ *
+ * Registration needs the metadata `pikku` generates for the route. When none is
+ * found the wiring is skipped with a warning rather than throwing.
+ *
+ * @param httpWiring - The method, route, function and options for this route.
+ *
+ * @example snippet: httpSingleRoute
+ */
 export const wireHTTP = <
   In,
   Out,
@@ -142,6 +178,10 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
   }
 }
 
+/**
+ * Bundles a request and response into the `http` part of a wire, or `undefined` when neither is given.
+ * @internal
+ */
 export const createHTTPWire = (
   request: PikkuHTTPRequest | undefined,
   response: PikkuHTTPResponse | undefined
@@ -166,7 +206,7 @@ const executeRoute = async (
     singletonServices: any
     createWireServices?: any
     skipUserSession: boolean
-    requestId: string
+    trace: TraceContext
   },
   matchedRoute: {
     matchedPath: any
@@ -180,7 +220,7 @@ const executeRoute = async (
   }
 ) => {
   const { params, route, meta } = matchedRoute
-  const { singletonServices, createWireServices, skipUserSession, requestId } =
+  const { singletonServices, createWireServices, skipUserSession, trace } =
     services
   const userSession = new PikkuSessionService<CoreUserSession>(
     singletonServices.sessionStore
@@ -297,13 +337,11 @@ const executeRoute = async (
   }
 
   const wire: PikkuRawWire = {
-    traceId: requestId,
+    traceId: trace.traceId,
+    trace,
     http,
     channel,
-    session: userSession.get() as CoreUserSession | undefined,
-    setSession: (s: any) => userSession.setInitial(s),
-    getSession: () => userSession.get(),
-    hasSessionChanged: () => userSession.sessionChanged,
+    ...createMiddlewareSessionWireProps(userSession),
   }
 
   const statusBeforeRoute = http?.response?.statusCode
@@ -367,6 +405,19 @@ const executeRoute = async (
   return { result }
 }
 
+/**
+ * Runs a web `Request` through the wired HTTP routes and returns a web `Response`.
+ *
+ * The entry point for fetch-based runtimes (Cloudflare Workers, Bun, Deno,
+ * Next.js route handlers). It uses the singleton services set by
+ * `setSingletonServices` / `pikkuState`, so they must be created first. Errors
+ * become JSON error responses rather than rejections, unless `bubbleErrors` is set.
+ *
+ * @param request - The incoming request. Its body is capped at `maxBodySize`
+ *   bytes (default {@link DEFAULT_MAX_BODY_SIZE}); a larger body is answered with 413.
+ * @param params - Options for this request; see {@link RunHTTPWiringOptions}.
+ * @returns The response, including a 404 for an unmatched route and a 204 for an unmatched `OPTIONS`.
+ */
 export const fetch = async <In, Out>(
   request: Request,
   params: RunHTTPWiringOptions = {}
@@ -376,6 +427,7 @@ export const fetch = async <In, Out>(
   return pikkuResponse.toResponse()
 }
 
+/** Like {@link fetch}, but returns the {@link PikkuFetchHTTPResponse} so a host can read or adjust it before converting it to a web `Response`. */
 export const pikkuFetch = async <In, Out>(
   request: Request | PikkuHTTPRequest,
   params: RunHTTPWiringOptions = {}
@@ -385,6 +437,27 @@ export const pikkuFetch = async <In, Out>(
   return pikkuResponse
 }
 
+/**
+ * Matches a request to a wired route, runs it, and writes the result into `response`.
+ *
+ * The lower-level form of {@link fetch} for adapters that bring their own
+ * request and response objects (Express, Fastify, uWS). A web `Request` is
+ * wrapped with the `maxBodySize` limit. The trace comes from a valid `traceId`,
+ * then `traceparent` when `trustInboundTraceparent` is set, and is otherwise new.
+ * Its id is returned to the client as `errorId` on failures.
+ *
+ * Errors are written to `response`: a 4xx keeps its message and payload, while a
+ * 5xx or an unknown error hides its message unless `exposeErrors` is set outside
+ * production. `exposeErrors` defaults to on outside production and is always off
+ * in production.
+ *
+ * @param request - A web `Request` or an adapter's {@link PikkuHTTPRequest}.
+ * @param response - Where the status, headers and body are written.
+ * @param options - See {@link RunHTTPWiringOptions}.
+ * @returns The function's return value, or `undefined` when the request failed or matched nothing.
+ * @throws The original error when `bubbleErrors` is set, after the error response has been written.
+ * @throws {Error} When `skipUserSession` is set on a route that requires auth.
+ */
 export const fetchData = async <In, Out>(
   request: Request | PikkuHTTPRequest,
   response: PikkuHTTPResponse,
@@ -395,8 +468,8 @@ export const fetchData = async <In, Out>(
     coerceDataFromSchema = true,
     bubbleErrors = false,
     exposeErrors = !isProduction(),
-    generateRequestId,
-    traceId: externalTraceId,
+    traceId,
+    trustInboundTraceparent,
     maxBodySize,
   }: RunHTTPWiringOptions = {}
 ): Promise<Out | void> => {
@@ -409,16 +482,14 @@ export const fetchData = async <In, Out>(
       ? new PikkuFetchHTTPRequest(request, { maxBodySize })
       : request
 
-  let requestId: string | null = externalTraceId ?? null
-  if (!requestId) {
-    try {
-      requestId = pikkuRequest.header('x-request-id')
-    } catch {}
-  }
-  requestId = requestId || generateRequestId?.() || createWeakUID()
-
-  const scopedLogger =
-    singletonServices.logger.scope?.(requestId) ?? singletonServices.logger
+  const trace = resolveHTTPTrace(
+    () => pikkuRequest.header('traceparent'),
+    singletonServices.logger,
+    { traceId, trustInboundTraceparent }
+  )
+  // Read at the point of logging: mesh auth can continue the caller's trace.
+  const scopedLogger = () =>
+    singletonServices.logger.scope?.(trace.traceId) ?? singletonServices.logger
   const http = createHTTPWire(pikkuRequest, response)
   const apiType = http!.request!.method()
   const apiRoute = http!.request!.path()
@@ -441,7 +512,7 @@ export const fetchData = async <In, Out>(
         response.status(204).json(undefined as never)
         return
       }
-      scopedLogger.info({
+      scopedLogger().info({
         message: 'Route not found',
         apiRoute,
         apiType,
@@ -454,7 +525,7 @@ export const fetchData = async <In, Out>(
         singletonServices,
         createWireServices,
         skipUserSession,
-        requestId,
+        trace,
       },
       matchedRoute,
       http!,
@@ -466,8 +537,8 @@ export const fetchData = async <In, Out>(
     handleHTTPError(
       e,
       http,
-      requestId,
-      scopedLogger,
+      trace.traceId,
+      scopedLogger(),
       logWarningsForStatusCodes,
       respondWith404,
       bubbleErrors,

@@ -11,7 +11,7 @@ import {
 
 const DEFAULT_URL = 'http://localhost:3000'
 
-interface LoginOptions {
+export interface LoginOptions {
   url?: string
   clientId?: string
   scope?: string

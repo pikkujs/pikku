@@ -52,6 +52,7 @@ export {
   backoffFor,
   scheduleSubjectFor,
   PIKKU_USER_ID_HEADER,
+  TRACEPARENT_HEADER,
   NATS_MSG_ID_HEADER,
   ATTEMPTS_HEADER,
   BACKOFF_TYPE_HEADER,

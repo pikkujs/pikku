@@ -3,13 +3,15 @@ import {
   LocalSecretService,
   LocalVariablesService,
   LocalCredentialService,
-  InMemoryQueueService,
+  InMemorySessionStore,
   isTestRun,
   stub,
 } from '@pikku/core/services'
+import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'
 import type { EmailService } from '@pikku/core/services'
-import { existsSync } from 'node:fs'
 import { openSqliteDatabase } from './sqlite-database.js'
+import { dirname, join } from 'node:path'
+import { createScriptContent } from './script-content.js'
 import { pikkuServices } from '#pikku/setup'
 import { pikkuState } from '@pikku/core/state'
 import { BetterAuthCredentialService } from '@pikku/better-auth'
@@ -42,6 +44,13 @@ import { RecordingAnalyticsService } from './recording-analytics-service.js'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { PikkuMetaService } from '#pikku/services/pikku-meta-service.gen.js'
 
+// The content service has no exists/stat, and cannot address an arbitrary
+// absolute path. Copying the file in succeeds only when it exists.
+const sqliteFileExists = (path: string): Promise<boolean> =>
+  createScriptContent(
+    join(dirname(path), '.pikku-runtime', 'script-content')
+  ).copyFile({ bucket: 'sqlite', key: 'probe.sqlite', fromAbsolutePath: path })
+
 export const createSingletonServices = pikkuServices(
   async (config, { variables, secrets, metaService, emailService }) => {
     const logger = new ConsoleLogger()
@@ -67,7 +76,7 @@ export const createSingletonServices = pikkuServices(
     // The deterministic agent suite replaces the provider rather than the
     // runner, so every code path under test — tool loop, streaming, memory,
     // approvals — is the real one; only the model's replies are scripted.
-    const mockLlm = process.env.PIKKU_MOCK_LLM === '1'
+    const mockLlm = String(await variables.get('PIKKU_MOCK_LLM')) === '1'
     const agentRunner = new VercelAgentRunner(
       mockLlm
         ? {
@@ -89,7 +98,7 @@ export const createSingletonServices = pikkuServices(
           }
     )
 
-    const backend = process.env.DB_BACKEND ?? 'sqlite'
+    const backend = String((await variables.get('DB_BACKEND')) ?? 'sqlite')
     let agentStorage: any
     let agentRunService: any
 
@@ -112,12 +121,15 @@ export const createSingletonServices = pikkuServices(
       // the process dies, so a crash-recovery test against it can only ever
       // report "Run not found" and never distinguishes a framework that
       // resumes correctly from one that does not.
-      const sqlitePath = process.env.SQLITE_PATH ?? ':memory:'
+      const sqlitePath = String(
+        (await variables.get('SQLITE_PATH')) ?? ':memory:'
+      )
       // The runtime creates no schema, so the harness — which owns this
       // database outright — writes it before the services that require it boot.
       // Only on a database that does not exist yet: SQLITE_PATH pointing at a
       // file the last run left behind already has these tables.
-      const freshDb = sqlitePath === ':memory:' || !existsSync(sqlitePath)
+      const freshDb =
+        sqlitePath === ':memory:' || !(await sqliteFileExists(sqlitePath))
       const db = new Kysely<KyselyPikkuDB>({
         dialect: new SqliteDialect({
           database: await openSqliteDatabase(sqlitePath),
@@ -362,6 +374,7 @@ export const createSingletonServices = pikkuServices(
       kysely,
       scopeDb,
       scopeService,
+      sessionStore: new InMemorySessionStore(),
       featureFlags,
       analyticsService,
       analyticsIdentity,

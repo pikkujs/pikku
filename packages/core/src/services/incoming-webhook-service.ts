@@ -1,17 +1,25 @@
 import type { QueueService } from '../wirings/queue/queue.types.js'
 import { DEFAULT_WEBHOOK_RETRIES } from './webhook-service.js'
-import {
-  PIKKU_INCOMING_WEBHOOK_QUEUE_NAME,
-  type TriggerEvent,
-  type WebhookRequest,
-  type WebhookSourceJob,
+import { PIKKU_INCOMING_WEBHOOK_QUEUE_NAME } from './incoming-webhook-queue.js'
+import type {
+  TriggerEvent,
+  WebhookRequest,
+  WebhookSourceJob,
 } from '../wirings/trigger/webhook-source.types.js'
 
+/**
+ * One dispatch of a received webhook event to a trigger, and the error if it
+ * failed.
+ */
 export type IncomingWebhookAttempt = {
   trigger: string
   error?: string
 }
 
+/**
+ * A received webhook event as a store-backed {@link IncomingWebhookService}
+ * records it.
+ */
 export type IncomingWebhookReceiptRecord = {
   receiptId: string
   source: string
@@ -43,19 +51,25 @@ export class IncomingWebhookService {
   public async accept({
     source,
     events,
+    traceparent,
   }: {
     source: string
     request: WebhookRequest
     events: TriggerEvent[]
+    /** The trace of the request that delivered the events. */
+    traceparent?: string
   }): Promise<number> {
     for (const event of events) {
-      await this.enqueue({ source, event })
+      await this.enqueue({ source, event }, traceparent)
     }
     return events.length
   }
 
   /** The job id is the provider's event id under its event name, which de-duplicates on queues that honour job ids. */
-  protected async enqueue(job: WebhookSourceJob): Promise<string> {
+  protected async enqueue(
+    job: WebhookSourceJob,
+    traceparent?: string
+  ): Promise<string> {
     const jobId =
       job.receiptId ??
       (job.event.id
@@ -66,6 +80,7 @@ export class IncomingWebhookService {
       attempts: this.retries + 1,
       ...(this.retries > 0 ? { backoff: 'exponential' as const } : {}),
       ...(jobId ? { jobId } : {}),
+      ...(traceparent ? { traceparent } : {}),
     })
   }
 
@@ -81,5 +96,12 @@ export class IncomingWebhookService {
     limit?: number
   }): Promise<IncomingWebhookReceiptRecord[]> {
     return []
+  }
+
+  /** Null when nothing is stored or no receipt has this id. */
+  public async getReceipt(
+    _receiptId: string
+  ): Promise<IncomingWebhookReceiptRecord | null> {
+    return null
   }
 }

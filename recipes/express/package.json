@@ -1,0 +1,31 @@
+{
+  "name": "@pikku/templates-express-server",
+  "main": "src/start.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc -b",
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
+    "start": "tsx src/start.ts start",
+    "dev": "tsx watch src/start.ts | pino-pretty -i time,hostname,pid"
+  },
+  "dependencies": {
+    "@pikku/core": "^0.12.154",
+    "@pikku/express": "^0.12.18",
+    "@pikku/schedule": "^0.12.12",
+    "pino-pretty": "^13.2.0",
+    "tslib": "^2.8.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "tsx": "^4.23.15"
+  },
+  "exports": {
+    ".": "./src/start.ts"
+  }
+}

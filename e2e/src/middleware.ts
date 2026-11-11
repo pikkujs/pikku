@@ -8,7 +8,7 @@ import { betterAuthSession } from '@pikku/better-auth'
 import './console-authz.js'
 
 const setSessionFromHeader: CorePikkuMiddleware = async (
-  _services,
+  services,
   wire,
   next
 ) => {
@@ -18,10 +18,19 @@ const setSessionFromHeader: CorePikkuMiddleware = async (
   // fails closed without one, so its success path would be untestable.
   const orgId = wire.http?.request?.header('x-org-id')
   if (userId || orgId) {
-    await wire.setSession?.({
+    const session = {
       ...(userId ? { userId } : {}),
       ...(orgId ? { orgId } : {}),
-    })
+    }
+    wire.setInitialSession?.(session)
+    // A workflow run keeps only this user id and reloads the session from the
+    // store each time it executes, so a signed-in caller has to be in it.
+    if (userId) {
+      await (services as CoreSingletonServices).sessionStore?.set(
+        userId,
+        session
+      )
+    }
   }
   await next()
 }

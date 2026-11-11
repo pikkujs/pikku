@@ -31,10 +31,10 @@ identifier is a migration, not an edit.
 { "metaLocale": "de" }
 ```
 
-Meta is the one part of a project the **Pikku Console** renders back to a human.
-A team reviewing their own functions, features and scenario reports in the
-Console is reading meta and nothing else, so a team whose working language is
-German should be able to read their Console in German. That is the entire reason
+Meta is the one part of a project that is read back to a human. A team
+reviewing their own functions, features and scenario reports is reading meta
+and nothing else, so a team whose working language is German should be able to
+read it in German. That is the entire reason
 the field exists.
 
 Read it before you author meta, and write descriptions, titles and templates in
@@ -79,7 +79,7 @@ settings, each on its own axis:
 // apps/app/src/i18n/active.json — what a first-time visitor opens in
 { "defaultLocale": "de" }
 
-// pikku.config.json — the language the team reads their Console in
+// pikku.config.json — the language the team reads their meta in
 { "metaLocale": "de" }
 ```
 

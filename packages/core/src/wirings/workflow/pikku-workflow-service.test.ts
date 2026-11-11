@@ -2,7 +2,8 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
-import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
+import { QueuedWorkflowHarness } from '../../testing/service-tests/queued-workflow-harness.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addWorkflow } from './dsl/workflow-runner.js'
 import {
@@ -395,6 +396,7 @@ describe('pikku-workflow-service version mismatch fallback', () => {
       name: workflowName,
       pikkuFuncId: workflowName,
       source: 'graph',
+      auth: false,
       graphHash: newHash,
       nodes: {
         changedNode: { nodeId: 'changedNode', rpcName: 'changedRpc' },
@@ -409,6 +411,7 @@ describe('pikku-workflow-service version mismatch fallback', () => {
         name: workflowName,
         pikkuFuncId: workflowName,
         source: 'graph',
+        auth: false,
         graphHash: oldHash,
         nodes: {},
         entryNodeIds: [],
@@ -746,6 +749,100 @@ describe('pikku-workflow-service approval', () => {
     cleanup()
   })
 
+  test('a no is a decision: the gate settles and the workflow takes its branch', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testApprovalDeclined'
+    const graphHash = 'approval-declined'
+
+    const cleanup = registerApprovalWorkflow(
+      workflowName,
+      graphHash,
+      async (_services, _data, { workflow }) => {
+        const decision = await workflow.approval('Approve invoice', {
+          schema: approvalDecisionSchema,
+        })
+        if (decision.status === 'decided' && !decision.data.approved) {
+          return { outcome: 'declined' }
+        }
+        return { outcome: 'paid' }
+      }
+    )
+
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+
+    await ws.approveStep(runId, 'Approve invoice', { approved: false })
+    await ws.runWorkflowJob(runId, {})
+
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'completed')
+    assert.deepEqual(run?.output, { outcome: 'declined' })
+    await assert.rejects(
+      ws.approveStep(runId, 'Approve invoice', { approved: true }),
+      (error: unknown) => error instanceof WorkflowApprovalResolvedError
+    )
+
+    cleanup()
+  })
+
+  test('a run waiting at a gate is found through the run service', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testApprovalWaiting'
+    const graphHash = 'approval-waiting'
+
+    const cleanup = registerApprovalWorkflow(
+      workflowName,
+      graphHash,
+      async (_services, _data, { workflow }) => {
+        await workflow.suspend('Waiting on the warehouse')
+        await workflow.approval('Approve invoice', {
+          schema: approvalDecisionSchema,
+        })
+        return {}
+      }
+    )
+
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
+    await assert.rejects(ws.runWorkflowJob(runId, {}))
+
+    const gatesOf = async (id: string) =>
+      (await ws.getRunSteps(id)).filter(
+        (step) =>
+          step.rpcName === 'pikkuWorkflowApproval' && step.status === 'running'
+      )
+
+    const [suspended] = await ws.listRuns({
+      workflowName,
+      status: 'suspended',
+    })
+    assert.equal(suspended?.id, runId)
+    assert.equal(
+      (await gatesOf(runId)).length,
+      0,
+      'a plain suspend is not waiting on an approval'
+    )
+
+    await ws.resumeWorkflow(runId)
+    await assert.rejects(ws.runWorkflowJob(runId, {}))
+
+    const [gate] = await gatesOf(runId)
+    assert.equal(gate?.data.reason, 'Approve invoice')
+    assert.equal((await ws.getRun(runId))?.status, 'suspended')
+
+    await ws.approveStep(runId, gate.data.reason, { approved: true })
+    await ws.runWorkflowJob(runId, {})
+    assert.deepEqual(await gatesOf(runId), [])
+
+    cleanup()
+  })
+
   test('approveStep rejects a payload that fails the schema', async () => {
     const ws = new InMemoryWorkflowService()
     const workflowName = 'testApprovalSchema'
@@ -971,4 +1068,27 @@ describe('pikku-workflow-service run identity on failure', () => {
     assert.equal(run?.status, 'failed')
     assert.equal(run?.error?.message, 'the scenario blew up')
   })
+
+  for (const inline of [true, false]) {
+    test(`reports the run id of a graph run started ${inline ? 'inline' : 'on the queue'}`, async () => {
+      const h = new QueuedWorkflowHarness(new InMemoryWorkflowService())
+      h.register('only', { ...h.ok(), queued: !inline })
+      h.defineGraph('onRunCreatedGraph', 'only', { only: {} })
+      const seenAtStep: Array<string | undefined> = []
+      h.handlers.only!.forward = async () => void seenAtStep.push(created[0])
+
+      const created: string[] = []
+      const { runId } = await h.ws.startWorkflow(
+        'onRunCreatedGraph',
+        {},
+        { type: 'test' },
+        h.rpc as never,
+        { inline, onRunCreated: (id) => created.push(id) }
+      )
+      await h.pump()
+
+      assert.deepEqual(created, [runId])
+      assert.deepEqual(seenAtStep, [runId], 'known before the first step ran')
+    })
+  }
 })

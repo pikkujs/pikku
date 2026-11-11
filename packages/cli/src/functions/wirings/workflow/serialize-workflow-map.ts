@@ -3,10 +3,12 @@
  */
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { type TypesMap, generateCustomTypes } from '@pikku/inspector'
+import type { TypesMap } from '@pikku/inspector'
+import { serializeCustomTypesImport } from '../../../utils/custom-types-file.js'
 import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
 import type { FunctionsMeta, Logger } from '@pikku/core/services'
 import { parseVersionedId } from '@pikku/core/utils'
+import { addonGeneratedImport } from '../../../utils/remote-addon-import.js'
 
 /**
  * A workflow or graph node name is free-form prose written by a human, so an
@@ -18,7 +20,7 @@ const key = (name: string) => JSON.stringify(name)
 
 type WireAddonDeclarations = Map<
   string,
-  { package: string; rpcEndpoint?: string }
+  { package: string; range?: string; rpcEndpoint?: string; sdkDir?: string }
 >
 
 export const serializeWorkflowMap = (
@@ -29,7 +31,10 @@ export const serializeWorkflowMap = (
   functionsMeta: FunctionsMeta,
   workflowsMeta: WorkflowsMeta,
   graphMeta: SerializedWorkflowGraphs,
-  wireAddonDeclarations?: WireAddonDeclarations
+  customTypesFile: string,
+  wireAddonDeclarations?: WireAddonDeclarations,
+  /** The project root, where a versioned remote addon's SDK is found. */
+  rootDir?: string
 ) => {
   const requiredTypes = new Set<string>()
 
@@ -49,9 +54,6 @@ export const serializeWorkflowMap = (
 
   const hasAny =
     Object.keys(workflowsMeta).length > 0 || Object.keys(graphMeta).length > 0
-  const serializedCustomTypes = hasAny
-    ? generateCustomTypes(typesMap, requiredTypes)
-    : ''
 
   const serializedImportMap = hasAny
     ? serializeImportMap(
@@ -63,20 +65,28 @@ export const serializeWorkflowMap = (
       )
     : ''
 
-  const serializedCustomTypesDeclarationsOnly = serializedCustomTypes
-    .split('\n')
-    .filter((line) => !line.startsWith('import '))
-    .join('\n')
-
-  const addonImports = generateAddonWorkflowImports(wireAddonDeclarations)
+  const addonImports = generateAddonWorkflowImports(
+    wireAddonDeclarations,
+    relativeToPath,
+    rootDir
+  )
   const mergedWorkflowMap = generateMergedWorkflowMap(wireAddonDeclarations)
+
+  const customTypesImport = hasAny
+    ? serializeCustomTypesImport(
+        relativeToPath,
+        customTypesFile,
+        packageMappings,
+        typesMap
+      )
+    : ''
 
   return `/**
  * Workflow type map with input/output types for each workflow
  */
 
 ${serializedImportMap}
-${serializedCustomTypesDeclarationsOnly}
+${customTypesImport}
 ${addonImports}
 
 interface WorkflowHandler<I, O> {
@@ -215,7 +225,9 @@ function toPascalCase(str: string): string {
 }
 
 function generateAddonWorkflowImports(
-  wireAddonDeclarations: WireAddonDeclarations | undefined
+  wireAddonDeclarations: WireAddonDeclarations | undefined,
+  relativeToPath: string,
+  rootDir: string | undefined
 ): string {
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
     return ''
@@ -223,7 +235,13 @@ function generateAddonWorkflowImports(
 
   let imports = '\n// Addon package Workflow maps\n'
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    imports += `import type { WorkflowMap as ${toPascalCase(namespace)}WorkflowMap } from '${decl.package}/.pikku/workflow/pikku-workflow-map.gen.d.js'\n`
+    const from = addonGeneratedImport(
+      decl,
+      'workflow/pikku-workflow-map.gen.d.js',
+      relativeToPath,
+      rootDir
+    )
+    imports += `import type { WorkflowMap as ${toPascalCase(namespace)}WorkflowMap } from '${from}'\n`
   }
   return imports
 }

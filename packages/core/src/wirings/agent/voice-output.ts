@@ -2,6 +2,10 @@ import type { AgentRunnerService } from '../../services/agent-runner-service.js'
 import { pikkuAgentMiddleware } from '../../middleware/middleware-factories.js'
 import { SPOKEN_TURN } from './voice-input.js'
 
+/**
+ * Per-reply state `voiceOutput` keeps while synthesizing: unspoken text and the audio emission chain.
+ * @internal
+ */
 export type VoiceOutputState = {
   textBuffer?: string
   /**
@@ -162,6 +166,16 @@ async function synthesizeAudio(
   }
 }
 
+/**
+ * Agent middleware that synthesizes the streamed reply to speech sentence by sentence, using the
+ * `agentRunner`'s `generateSpeech`, and sends the audio as it is ready, in order.
+ *
+ * By default it speaks only replies to spoken turns (see `voiceInput`); set `always` to speak every
+ * reply. Text in a script outside `speakableScripts` is left unspoken and reported once.
+ *
+ * @param config - Speech model, voice, format and the other synthesis options.
+ * @throws Error when the `agentRunner` has no `generateSpeech` support.
+ */
 export const voiceOutput = (config?: {
   model?: string
   format?: string

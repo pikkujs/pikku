@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { CLIProgramMeta } from '@pikku/core/cli'
 import { serializePublicRPC } from './rpc/serialize-public-rpc.js'
-import { serializeRemoteRPC } from './rpc/serialize-remote-rpc.js'
+import { serializeMeshRPC } from './rpc/serialize-mesh-rpc.js'
 import { serializeRemoteJobs } from './remote-jobs/serialize-remote-jobs.js'
 import { serializeWebhook } from './webhook/serialize-webhook.js'
 import { serializePublicAgent } from './agent/serialize-public-agent.js'
@@ -58,7 +58,7 @@ const channelCLI = serializeChannelCLI(
 describe("every function a scaffold generates is tagged as pikku's own", () => {
   const scaffolds: Array<[string, string]> = [
     ['public rpc', serializePublicRPC(leaf).functions],
-    ['remote rpc', serializeRemoteRPC(leaf).functions],
+    ['remote rpc', serializeMeshRPC(leaf).functions],
     ['remote jobs', serializeRemoteJobs(leaf).functions],
     ['outgoing webhooks', serializeWebhook(leaf).functions],
     ['public agent', serializePublicAgent(leaf).functions],

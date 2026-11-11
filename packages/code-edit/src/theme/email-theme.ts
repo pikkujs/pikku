@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { hexToLch, lchToHex } from './css.js'
 import type { Theme } from './presets.js'
 
 type EmailTheme = {
@@ -47,19 +48,40 @@ function readableOn(hex: string): string {
   return luminance > 0.5 ? '#111111' : '#ffffff'
 }
 
+/** Neutrals for a dark-mode design: the design's own page and ink, with surface, border and muted stepped from them. */
+function designedNeutrals(page: string, ink: string) {
+  const bg = hexToLch(page)
+  const fg = hexToLch(ink)
+  const step = (delta: number) =>
+    lchToHex({ ...bg, l: Math.min(1, Math.max(0, bg.l + delta)) })
+  return {
+    canvas: lchToHex(bg),
+    surface: step(0.04),
+    border: step(0.12),
+    text: lchToHex(fg),
+    muted: lchToHex({ ...fg, l: bg.l + (fg.l - bg.l) * 0.65 }),
+  }
+}
+
 /** Derive the email palette from the app's applied theme. */
 export function emailThemeFromTheme(theme: Theme): Omit<EmailTheme, 'appName'> {
   const dark = theme.structure.defaultColorScheme === 'dark'
   const tuple = theme.structure.darkSurface
-  const neutrals = dark
-    ? {
-        canvas: tuple?.[7] ?? DARK_NEUTRALS.canvas,
-        surface: tuple?.[6] ?? DARK_NEUTRALS.surface,
-        border: tuple?.[4] ?? DARK_NEUTRALS.border,
-        text: tuple?.[0] ?? DARK_NEUTRALS.text,
-        muted: tuple?.[2] ?? DARK_NEUTRALS.muted,
-      }
-    : LIGHT_NEUTRALS
+  const designed =
+    theme.structure.mode === 'dark' &&
+    theme.structure.page &&
+    theme.structure.ink
+  const neutrals = designed
+    ? designedNeutrals(theme.structure.page!, theme.structure.ink!)
+    : dark
+      ? {
+          canvas: tuple?.[7] ?? DARK_NEUTRALS.canvas,
+          surface: tuple?.[6] ?? DARK_NEUTRALS.surface,
+          border: tuple?.[4] ?? DARK_NEUTRALS.border,
+          text: tuple?.[0] ?? DARK_NEUTRALS.text,
+          muted: tuple?.[2] ?? DARK_NEUTRALS.muted,
+        }
+      : LIGHT_NEUTRALS
   const primary = theme.brand.colors.primary
   return {
     fonts: { body: theme.brand.fonts?.body ?? 'Inter, Arial, sans-serif' },
@@ -79,13 +101,18 @@ export function applyEmailTheme(repoDir: string, theme: Theme): boolean {
   let current: Record<string, unknown> = {}
   try {
     const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown
-    if (parsed && typeof parsed === 'object') current = parsed as Record<string, unknown>
+    if (parsed && typeof parsed === 'object')
+      current = parsed as Record<string, unknown>
   } catch {
     // A theme.json the project broke is replaced rather than merged: the templates
     // interpolate these keys directly, so a half-parsed file renders emails with
     // literal `{{theme.colors.text}}` in them. The keys we write are the full set.
   }
   const derived = emailThemeFromTheme(theme)
-  writeFileSync(path, `${JSON.stringify({ ...current, ...derived }, null, 2)}\n`, 'utf8')
+  writeFileSync(
+    path,
+    `${JSON.stringify({ ...current, ...derived }, null, 2)}\n`,
+    'utf8'
+  )
   return true
 }

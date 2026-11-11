@@ -1,0 +1,28 @@
+{
+  "name": "@pikku/verifiers-pikku-studio",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "An addon declaring Studio screens with definePlugin, and the build failures the inspector raises for them",
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "exports": {
+    "./.pikku/*": "./.pikku/addon/*"
+  },
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "peerDependencies": {
+    "@pikku/core": "*",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "zod": "^4"
+  }
+}

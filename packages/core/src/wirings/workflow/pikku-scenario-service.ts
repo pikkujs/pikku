@@ -1,4 +1,5 @@
 import { runPikkuFunc } from '../../function/function-runner.js'
+import { runTraceWire } from './workflow-run-trace.js'
 import {
   getSingletonServices,
   getCreateWireServices,
@@ -7,7 +8,7 @@ import {
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import { closeWireServices } from '../../utils.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
-import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { runScheduledTask } from '../scheduler/scheduler-runner.js'
 import { WorkflowStepNameNotString } from './workflow-errors.js'
 import type {
@@ -695,7 +696,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       appUrl: (await variables.get('APP_URL')) ?? undefined,
     }
     const { createHttpVirtualUsers } =
-      await import('../../services/http-virtual-users.js')
+      await import('../virtual-user/http-virtual-users.js')
     const { inProcessSignIn } =
       await import('../../services/virtual-user-sign-in.js')
     return createHttpVirtualUsers({
@@ -996,6 +997,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
         const runOnSurface = async (surface: ScenarioSurface) => {
           // No `rpc` yet — runPikkuFunc attaches it lazily for the invocation.
           const wire: PikkuRawWire = {
+            ...runTraceWire(await this.engine.getRunTraceparent(runId)),
             workflow: workflowWire,
             scenario: workflowWire,
             pikkuUserId: workflowWire.pikkuUserId,

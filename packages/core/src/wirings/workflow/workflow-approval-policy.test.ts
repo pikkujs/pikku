@@ -1,8 +1,9 @@
 import { describe, test } from 'node:test'
+import { InMemorySessionStore } from '../../services/in-memory-session-store.js'
 import assert from 'node:assert/strict'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
-import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addWorkflow } from './dsl/workflow-runner.js'
 import { WorkflowSuspendedException } from './workflow-errors.js'
@@ -31,6 +32,7 @@ const registerApprovalWorkflow = (
   audit?: { audit: (event: unknown) => Promise<void> }
 ) => {
   pikkuState(null, 'package', 'singletonServices', {
+    sessionStore: new InMemorySessionStore(),
     logger: { error() {}, info() {}, warn() {}, debug() {} },
     queueService: { add: async () => {} },
     audit,
@@ -104,11 +106,18 @@ describe('approval policy', () => {
     )
   })
 
-  test('a run with no initiator has no owner to compare against', () => {
-    assert.equal(
+  test('a run with no initiator has no owner, so no user qualifies', () => {
+    assert.match(
       approvalPolicyRefusal({ approvers: 'owner' }, undefined, {
         userId: 'anyone',
-      }),
+      })!,
+      /Only the user who started this run/
+    )
+  })
+
+  test('application code with no decider answers an ownerless run', () => {
+    assert.equal(
+      approvalPolicyRefusal({ approvers: 'owner' }, undefined, undefined),
       undefined
     )
   })

@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { createAuthUser, setAuthUserPassword } from './admin-users.js'
+import {
+  createAuthUser,
+  deleteAuthUser,
+  revokeAuthUserSessions,
+  sendAuthUserSignInLink,
+  setAuthUserPassword,
+} from './admin-users.js'
 
 const authWith = (
   internalAdapter: Record<string, any>,
@@ -289,5 +295,91 @@ describe('setAuthUserPassword', () => {
 
     assert.deepEqual(ctx.updatedAccounts, [])
     assert.deepEqual(ctx.passwords, [['user-1', 'hashed:longenough']])
+  })
+})
+
+describe('deleteAuthUser, revokeAuthUserSessions and sendAuthUserSignInLink', () => {
+  const realAuth = async (plugins: any[] = []) => {
+    const { betterAuth } = await import('better-auth')
+    const { memoryAdapter } = await import('better-auth/adapters/memory')
+    const db: Record<string, any[]> = {
+      user: [],
+      session: [],
+      account: [],
+      verification: [],
+    }
+    const auth = betterAuth({
+      baseURL: 'http://localhost:3000',
+      secret: 'a-test-secret-for-admin-users-0123456789',
+      database: memoryAdapter(db),
+      emailAndPassword: { enabled: true },
+      plugins,
+    })
+    const signedUp = await auth.api.signUpEmail({
+      body: { email: 'jane@example.com', password: 'password1234', name: 'J' },
+    })
+    return { auth, db, userId: signedUp.user.id, getAuth: async () => auth }
+  }
+
+  test('deleteAuthUser removes the user, its sessions and its accounts', async () => {
+    const { db, userId, getAuth } = await realAuth()
+    assert.equal(db.session!.length, 1)
+    await deleteAuthUser(getAuth, userId)
+    assert.equal(db.user!.length, 0)
+    assert.equal(db.session!.length, 0)
+    assert.equal(db.account!.length, 0)
+  })
+
+  test('deleteAuthUser refuses an unknown user', async () => {
+    const { getAuth } = await realAuth()
+    await assert.rejects(deleteAuthUser(getAuth, 'nobody'), /User not found/)
+  })
+
+  test('revokeAuthUserSessions signs the user out but keeps the account', async () => {
+    const { db, userId, getAuth } = await realAuth()
+    await revokeAuthUserSessions(getAuth, userId)
+    assert.equal(db.session!.length, 0)
+    assert.equal(db.user!.length, 1)
+    assert.equal(db.account!.length, 1)
+  })
+
+  test('sendAuthUserSignInLink mails a magic link to a normalised address', async () => {
+    const { magicLink } = await import('better-auth/plugins')
+    const sent: Array<{ email: string; url: string }> = []
+    const { getAuth } = await realAuth([
+      magicLink({
+        disableSignUp: true,
+        sendMagicLink: async ({ email, url }) => {
+          sent.push({ email, url })
+        },
+      }),
+    ])
+    await sendAuthUserSignInLink(getAuth, {
+      email: '  Jane@Example.com ',
+      callbackURL: '/welcome',
+    })
+    assert.equal(sent.length, 1)
+    assert.equal(sent[0]!.email, 'jane@example.com')
+    assert.match(sent[0]!.url, /callbackURL=%2Fwelcome/)
+  })
+
+  test('sendAuthUserSignInLink needs the magicLink plugin', async () => {
+    const { getAuth } = await realAuth()
+    await assert.rejects(
+      sendAuthUserSignInLink(getAuth, { email: 'jane@example.com' }),
+      /magicLink\(\) plugin/
+    )
+  })
+
+  test('every operation refuses when better-auth is not wired', async () => {
+    await assert.rejects(deleteAuthUser(undefined, 'u'), /services\.auth/)
+    await assert.rejects(
+      revokeAuthUserSessions(undefined, 'u'),
+      /services\.auth/
+    )
+    await assert.rejects(
+      sendAuthUserSignInLink(undefined, { email: 'a@b.c' }),
+      /services\.auth/
+    )
   })
 })

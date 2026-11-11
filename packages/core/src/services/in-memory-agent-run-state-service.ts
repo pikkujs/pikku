@@ -9,6 +9,11 @@ import type {
 } from '../wirings/agent/agent.types.js'
 import type { AgentRunScore } from '../wirings/agent-scorer/agent-scorer.types.js'
 
+/**
+ * An {@link AgentRunStateService} held in process memory, for development and
+ * tests. Runs are lost on restart and not shared between processes, so a run
+ * paused for approval cannot be resumed elsewhere.
+ */
 export class InMemoryAgentRunStateService implements AgentRunStateService {
   private runs = new Map<string, AgentRunState>()
   private scores = new Map<string, AgentRunScore[]>()

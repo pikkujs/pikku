@@ -15,7 +15,7 @@ import { generatePlan, formatPlan } from '../../cli/src/deploy/plan/index.js'
 const PROJECT_DIR = resolve(
   import.meta.dirname,
   '../../..',
-  'templates/functions'
+  'recipes/functions'
 )
 const DEPLOY_DIR = resolve(PROJECT_DIR, '.deploy')
 

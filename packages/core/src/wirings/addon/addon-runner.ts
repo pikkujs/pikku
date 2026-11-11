@@ -160,6 +160,16 @@ const scopeWebhookService = <T extends object>(
   return scoped
 }
 
+const authFromAppServices = () => {
+  const auth = pikkuState(null, 'package', 'singletonServices')?.auth
+  if (typeof auth !== 'function') {
+    throw new Error(
+      'auth was called before the app had finished creating its singleton services'
+    )
+  }
+  return auth()
+}
+
 export const getOrCreatePackageSingletonServices = async (
   packageName: string,
   parentServices: CoreSingletonServices,
@@ -179,6 +189,12 @@ export const getOrCreatePackageSingletonServices = async (
   const factories = pikkuState(packageName, 'package', 'factories')
 
   let existingServices = parentServices
+  if (
+    typeof existingServices.auth !== 'function' &&
+    pikkuState(null, 'package', 'authFactory')
+  ) {
+    existingServices = { ...existingServices, auth: authFromAppServices }
+  }
   if (addonInstance?.secretOverrides && parentServices.secrets) {
     existingServices = {
       ...existingServices,

@@ -1,13 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 
-import {
-  collectSurface,
-  type SurfaceEntrypoint,
-} from '@pikku/inspector/surface'
+import type { SurfaceEntrypoint } from '@pikku/inspector/surface'
+import { collectSurface } from '../../inspector-helpers.js'
+import { buildSurfaceErrors } from './surface-errors.js'
 import {
   ENTRY_POINT_EDITORIAL,
   LEAF_EDITORIAL,
+  SURFACE_GUIDES,
   type LeafEditorial,
 } from './surface-editorial.js'
 import type {
@@ -44,6 +44,15 @@ export class MissingSurfaceEditorialError extends Error {
       } to LEAF_EDITORIAL in src/functions/surface/surface-editorial.ts.`
     )
     this.name = 'MissingSurfaceEditorialError'
+  }
+}
+
+export class UnknownGuideSnippetError extends Error {
+  constructor(names: string[]) {
+    super(
+      `A guide names snippets no template declares: ${names.join(', ')}. Wrap the code in "// @snippet start <name>" / "// @snippet end <name>".`
+    )
+    this.name = 'UnknownGuideSnippetError'
   }
 }
 
@@ -161,6 +170,15 @@ const leafNameOf = (subpath: string): string =>
     // reaches it. The application's install leaf is bare `addon` and stays.
     .replace(/^addon\/(?=.)/, '')
 
+/**
+ * A backend's pass writes its own copy of every leaf under `#pikku/backends/<name>/`,
+ * and its SDKs under `#pikku/sdk/`. The `#pikku/*` import pattern matches across
+ * slashes, so those copies show up as entrypoints; the surface describes the
+ * shared leaves an application imports, not each backend's duplicate.
+ */
+export const isPerBackendCopy = (subpath: string): boolean =>
+  /^#pikku\/(backends|sdk)\//.test(subpath)
+
 const toLeaves = (
   entryPoint: SurfaceEntryPointId,
   entrypoints: SurfaceEntrypoint[],
@@ -171,6 +189,7 @@ const toLeaves = (
   const missing: string[] = []
 
   for (const entrypoint of entrypoints) {
+    if (isPerBackendCopy(entrypoint.subpath)) continue
     const name = leafNameOf(entrypoint.subpath)
     const copy = editorial(entrypoint.subpath)
     if (!copy) {
@@ -209,6 +228,10 @@ export type BuildSurfaceDocOptions = {
   version: string
   app: SurfaceProject
   addon: SurfaceProject
+  /** The `@pikku/react` package: no `.pikku` barrel leads to it, so it is surveyed itself. */
+  frontend?: string
+  /** `@pikku/core`, for the exports no generated barrel re-exports. */
+  core?: string
   /** Named regions an `@example snippet: <name>` resolves against. */
   snippets?: Map<string, string>
 }
@@ -237,22 +260,119 @@ const projectEntryPoint = async (
   }
 }
 
+const resolveGuideSnippets = (
+  snippets: Map<string, string>
+): Record<string, string> => {
+  const names = SURFACE_GUIDES.flatMap((guide) =>
+    (guide.snippets ?? []).map(({ name }) => name)
+  )
+  const unknown = names.filter((name) => !snippets.has(name))
+  if (unknown.length > 0) throw new UnknownGuideSnippetError(unknown)
+  return Object.fromEntries(names.map((name) => [name, snippets.get(name)!]))
+}
+
+/**
+ * Exports reached by package name rather than through a `.pikku` barrel. A
+ * barrel re-export would tie generated code to the core version it was built
+ * against, so they are read off the package instead and each lists exactly what
+ * belongs on the page.
+ */
+const CORE_DOORS: Array<{ name: string; subpath: string; only: string[] }> = [
+  { name: 'wire', subpath: './types', only: ['PikkuWire'] },
+  {
+    name: 'telemetry',
+    subpath: './middleware',
+    only: ['telemetryOuter', 'telemetryInner'],
+  },
+  { name: 'plugin', subpath: './addon', only: ['definePlugin'] },
+  {
+    name: 'webhook',
+    subpath: './webhook',
+    only: ['defineOutgoingWebhook', 'TypedWebhookService'],
+  },
+  {
+    name: 'email',
+    subpath: './services',
+    only: ['EmailService', 'SendEmailResult', 'EmailAttachment'],
+  },
+  { name: 'eventhub', subpath: './channel', only: ['EventHubService'] },
+  {
+    name: 'content',
+    subpath: './services',
+    only: [
+      'ContentService',
+      'ContentVisibility',
+      'GetUploadURLArgs',
+      'UploadURLResult',
+      'GetDownloadURLArgs',
+      'SignContentKeyArgs',
+      'SignURLArgs',
+      'BucketKeyArgs',
+      'WriteFileArgs',
+      'CopyFileArgs',
+    ],
+  },
+]
+
+const packageLeaf = async (
+  packageDir: string,
+  name: string,
+  subpath: string,
+  only: string[] | undefined,
+  snippets: Map<string, string> | undefined
+): Promise<SurfaceLeaf> => {
+  const entrypoints = await collectSurface(resolve(packageDir), {
+    subpaths: [subpath],
+    snippets,
+    ownMembers: true,
+  })
+  const [leaf] = toLeaves('app', entrypoints, () => LEAF_EDITORIAL[name], null)
+  if (!leaf) throw new MissingSurfaceEditorialError('app', [name])
+  return {
+    ...leaf,
+    name,
+    symbols: leaf.symbols.filter(
+      (symbol) => !only || only.includes(symbol.name)
+    ),
+  }
+}
+
 /**
  * An example names a snippet rather than restating it, and both entrypoints
  * resolve against the same map — the regions come from one running application
- * (`examples/online-shop`), not from whichever template happened to hold them.
+ * (`templates/online-shop`), not from whichever template happened to hold them.
  */
 export const buildSurfaceDoc = async ({
   version,
   app,
   addon,
+  frontend,
+  core,
   snippets,
 }: BuildSurfaceDocOptions): Promise<SurfaceDoc> => {
+  const appEntryPoint = await projectEntryPoint('app', app, snippets)
   return {
     version,
+    errors: buildSurfaceErrors(),
     entryPoints: [
-      await projectEntryPoint('app', app, snippets),
+      {
+        ...appEntryPoint,
+        leaves: [
+          ...appEntryPoint.leaves,
+          ...(frontend
+            ? [await packageLeaf(frontend, 'react', '.', undefined, snippets)]
+            : []),
+          ...(core
+            ? await Promise.all(
+                CORE_DOORS.map(({ name, subpath, only }) =>
+                  packageLeaf(core, name, subpath, only, snippets)
+                )
+              )
+            : []),
+        ].sort(byStepThenName),
+      },
       await projectEntryPoint('addon', addon, snippets),
     ],
+    ...(snippets ? { guideSnippets: resolveGuideSnippets(snippets) } : {}),
   }
 }

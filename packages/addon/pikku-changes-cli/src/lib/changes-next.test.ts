@@ -100,6 +100,27 @@ describe('waitForNext', () => {
     assert.strictEqual(result.outcome, 'timeout')
   })
 
+  test('never offers a change that is waiting for a person to approve it', async () => {
+    const list = {
+      changes: [change({ source: 'system', awaitingApproval: true })],
+      groups: [],
+    }
+    assert.deepStrictEqual(claimable(list as any, NOW), [])
+    const approved = {
+      changes: [change({ source: 'system', awaitingApproval: false })],
+      groups: [],
+    }
+    assert.strictEqual(claimable(approved as any, NOW).length, 1)
+    const { rpc, calls } = fakeRpc([list])
+    const result = await waitForNext(
+      rpc,
+      options({ claim: true, timeoutMs: 30_000 }),
+      fakeClock().clock
+    )
+    assert.strictEqual(result.outcome, 'timeout')
+    assert.ok(!calls.some((c) => c.name === 'claimChanges'))
+  })
+
   test('returns straight away when something is claimable', async () => {
     const { rpc, calls } = fakeRpc([{ changes: [change()], groups: [] }])
     const { clock, sleeps } = fakeClock()

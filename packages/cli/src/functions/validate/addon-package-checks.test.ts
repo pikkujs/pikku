@@ -335,6 +335,26 @@ describe('addon packaging', () => {
     }
   })
 
+  test('an import shown in a comment is not an import the file makes', async () => {
+    const tmp = await makeTmp()
+    try {
+      await writeBuiltAddon(tmp)
+      await write(
+        tmp,
+        'dist/.pikku/addon/db/classification-map.gen.d.ts',
+        '// Use this type in db/classifications.ts:\n' +
+          "//   import type { DbClassificationMap } from './.pikku/db/classification-map.gen.d.ts'\n" +
+          "/* import { x } from './missing.js' */\n" +
+          "export type Url = 'https://example.com/a'\n" +
+          "export { thing } from '../../../src/thing.js'\n"
+      )
+      await write(tmp, 'dist/src/thing.ts', 'export const thing = 1\n')
+      assert.deepStrictEqual(ids(await runAddonPackageChecks(tmp)), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('a .js specifier may resolve to the .ts beside it', async () => {
     const tmp = await makeTmp()
     try {

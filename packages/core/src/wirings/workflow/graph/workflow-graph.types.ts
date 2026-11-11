@@ -1,5 +1,6 @@
 import type { TemplateString } from './template.js'
 
+/** A reference to another node's output, or a path inside it, resolved when the node runs. */
 export interface RefValue {
   __isRef: true
   nodeId: string
@@ -12,6 +13,7 @@ export const createRef = (nodeId: string, path?: string): RefValue => ({
   path,
 })
 
+/** Whether a value is a {@link RefValue}. */
 export const isRef = (value: unknown): value is RefValue =>
   typeof value === 'object' &&
   value !== null &&
@@ -26,18 +28,27 @@ export type RefFn<NodeIds extends string = string> = (
 export type NextConfig<NodeIds extends string = string> =
   NodeIds | NodeIds[] | Record<string, NodeIds | NodeIds[]>
 
+/** The `template` helper as a graph node's `input` builder receives it. */
 export type TemplateFn = (
   templateStr: string,
   refs: Array<{ $ref: string; path?: string }>
 ) => TemplateString
 
+/** Refers to the current element (or a path inside it) of a `forEach` node. */
 export type ItemFn = (path?: string) => RefValue
 
+/**
+ * The upstream array a `forEach` node iterates: a node id, a ref, or a function returning a ref.
+ */
 export type ForEachConfig<NodeIds extends string = string> =
   NodeIds | RefValue | ((ref: RefFn<NodeIds>) => RefValue)
 
+/** Whether a `forEach` node's per-item instances run in parallel or one after another. */
 export type ForEachMode = 'parallel' | 'sequential'
 
+/**
+ * One node of a workflow graph: the RPC it runs, its input, its outgoing edges and its failure handling.
+ */
 export interface GraphNodeConfig<NodeIds extends string = string> {
   func: string
   /**

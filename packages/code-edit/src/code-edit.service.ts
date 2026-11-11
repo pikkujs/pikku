@@ -1,4 +1,4 @@
-import * as ts from 'typescript'
+import { findPikkuCall as findCall, readImports } from '@pikku/inspector-go'
 import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
@@ -61,6 +61,32 @@ export interface AgentConfigChanges {
   tags?: string[] | null
 }
 
+const AGENT_CONFIG_KEYS: ReadonlySet<string> = new Set(
+  Object.keys({
+    name: true,
+    description: true,
+    instructions: true,
+    role: true,
+    personality: true,
+    goal: true,
+    model: true,
+    maxSteps: true,
+    temperature: true,
+    toolChoice: true,
+    tools: true,
+    tags: true,
+  } satisfies Record<keyof AgentConfigChanges, true>)
+)
+
+const SINGLE_QUOTED_ESCAPES: Record<string, string> = {
+  '\\': '\\\\',
+  "'": "\\'",
+  '\n': '\\n',
+  '\r': '\\r',
+  '\u2028': '\\u2028',
+  '\u2029': '\\u2029',
+}
+
 interface PropertyLocation {
   name: string
   valueStart: number
@@ -70,7 +96,7 @@ interface PropertyLocation {
 }
 
 interface PikkuCallInfo {
-  objectLiteral: ts.ObjectLiteralExpression
+  objectEnd: number
   wrapperName: string
   properties: PropertyLocation[]
   funcProperty?: {
@@ -232,6 +258,13 @@ export class CodeEditService {
     exportedName: string,
     changes: AgentConfigChanges
   ): string {
+    for (const key of Object.keys(changes)) {
+      if (!AGENT_CONFIG_KEYS.has(key)) {
+        throw new Error(
+          `${JSON.stringify(key)} is not an agent config property`
+        )
+      }
+    }
     const callInfo = this.findPikkuCall(content, exportedName)
     const result = this.applyPropertyChanges(
       content,
@@ -330,99 +363,17 @@ export class CodeEditService {
   }
 
   private findPikkuCall(content: string, exportedName: string): PikkuCallInfo {
-    const sourceFile = ts.createSourceFile(
-      'temp.ts',
-      content,
-      ts.ScriptTarget.Latest,
-      true,
-      ts.ScriptKind.TS
-    )
-
-    let result: PikkuCallInfo | null = null
-
-    const visit = (node: ts.Node) => {
-      if (result) return
-
-      if (
-        ts.isVariableStatement(node) ||
-        ts.isVariableDeclaration(node) ||
-        ts.isExportAssignment(node)
-      ) {
-        // Find the variable declaration matching exportedName
-        if (ts.isVariableStatement(node)) {
-          for (const decl of node.declarationList.declarations) {
-            if (
-              ts.isIdentifier(decl.name) &&
-              decl.name.text === exportedName &&
-              decl.initializer
-            ) {
-              result = this.extractCallInfo(decl.initializer, content)
-              return
-            }
-          }
-        } else if (
-          ts.isVariableDeclaration(node) &&
-          ts.isIdentifier(node.name) &&
-          node.name.text === exportedName &&
-          node.initializer
-        ) {
-          result = this.extractCallInfo(node.initializer, content)
-          return
-        }
-      }
-
-      ts.forEachChild(node, visit)
-    }
-
-    ts.forEachChild(sourceFile, visit)
-
-    if (!result) {
+    const call = findCall(content, exportedName)
+    if (!call.found) {
       throw new Error(
         `Could not find exported variable '${exportedName}' with a pikku call`
       )
     }
-
-    return result
-  }
-
-  private extractCallInfo(
-    node: ts.Node,
-    content: string
-  ): PikkuCallInfo | null {
-    if (!ts.isCallExpression(node)) return null
-    if (!ts.isIdentifier(node.expression)) return null
-
-    const wrapperName = node.expression.text
-    if (!wrapperName.startsWith('pikku')) return null
-
-    const firstArg = node.arguments[0]
-    if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) return null
-
-    const properties: PropertyLocation[] = []
-    let funcProperty: PikkuCallInfo['funcProperty'] = undefined
-
-    for (const prop of firstArg.properties) {
-      if (!ts.isPropertyAssignment(prop)) continue
-      if (!ts.isIdentifier(prop.name)) continue
-
-      const name = prop.name.text
-      const valueStart = prop.initializer.getStart()
-      const valueEnd = prop.initializer.getEnd()
-      const propStart = prop.getStart()
-      const propEnd = prop.getEnd()
-
-      if (name === 'func') {
-        funcProperty = { valueStart, valueEnd }
-      }
-
-      properties.push({ name, valueStart, valueEnd, propStart, propEnd })
-    }
-
     return {
-      objectLiteral: firstArg,
-      wrapperName,
-      properties,
-      funcProperty,
+      objectEnd: call.objectEnd!,
+      wrapperName: call.wrapperName!,
+      properties: call.properties,
+      funcProperty: call.funcProperty ?? undefined,
     }
   }
 
@@ -495,7 +446,7 @@ export class CodeEditService {
     }
 
     if (additions.length > 0) {
-      const objEnd = callInfo.objectLiteral.getEnd() - 1
+      const objEnd = callInfo.objectEnd - 1
       const indent = this.detectIndent(content, callInfo)
       const newProps = additions
         .map(({ name, value }) => `${indent}${name}: ${value},`)
@@ -546,9 +497,14 @@ export class CodeEditService {
     return '  '
   }
 
-  private serializeToolsArray(tools: string[]): string {
+  private serializeToolsArray(tools: unknown[]): string {
     if (tools.length === 0) return '[]'
-    const items = tools.map((t) => `ref('${t}')`)
+    const items = tools.map((t) => {
+      if (typeof t !== 'string') {
+        throw new Error(`Agent tools must be strings, got ${typeof t}`)
+      }
+      return `ref(${this.serializeSingleQuoted(t)})`
+    })
     return `[${items.join(', ')}]`
   }
 
@@ -600,14 +556,6 @@ export class CodeEditService {
   private ensureImports(content: string, refs: SymbolRef[]): string {
     if (refs.length === 0) return content
 
-    const sourceFile = ts.createSourceFile(
-      'temp.ts',
-      content,
-      ts.ScriptTarget.Latest,
-      true,
-      ts.ScriptKind.TS
-    )
-
     const byModule = new Map<string, Set<string>>()
     for (const r of refs) {
       const names = byModule.get(r.from) ?? new Set<string>()
@@ -615,35 +563,17 @@ export class CodeEditService {
       byModule.set(r.from, names)
     }
 
+    const found = readImports(content)
+    const lastImportEnd = found.lastImportEnd
     const existing = new Map<
       string,
       { names: Set<string>; insertAt: number | null; end: number }
     >()
-    let lastImportEnd = 0
-
-    for (const statement of sourceFile.statements) {
-      if (!ts.isImportDeclaration(statement)) continue
-      lastImportEnd = Math.max(lastImportEnd, statement.getEnd())
-
-      const specifier = statement.moduleSpecifier
-      if (!ts.isStringLiteral(specifier)) continue
-
-      const names = new Set<string>()
-      let insertAt: number | null = null
-      const bindings = statement.importClause?.namedBindings
-
-      if (bindings && ts.isNamedImports(bindings)) {
-        for (const element of bindings.elements) {
-          names.add(element.name.text)
-        }
-        const last = bindings.elements[bindings.elements.length - 1]
-        insertAt = last ? last.getEnd() : bindings.getEnd() - 1
-      }
-
-      existing.set(specifier.text, {
-        names,
-        insertAt,
-        end: statement.getEnd(),
+    for (const entry of found.imports) {
+      existing.set(entry.module, {
+        names: new Set(entry.names),
+        insertAt: entry.insertAt,
+        end: entry.end,
       })
     }
 
@@ -693,9 +623,9 @@ export class CodeEditService {
     if (typeof value === 'string') {
       // Use single quotes for simple strings, template literals for multi-line
       if (value.includes('\n')) {
-        return '`' + value.replace(/`/g, '\\`').replace(/\$/g, '\\$') + '`'
+        return '`' + value.replace(/[\\`$]/g, (c) => `\\${c}`) + '`'
       }
-      return `'${value.replace(/'/g, "\\'")}'`
+      return this.serializeSingleQuoted(value)
     }
     if (typeof value === 'number' || typeof value === 'boolean') {
       return String(value)
@@ -707,11 +637,25 @@ export class CodeEditService {
     }
     if (typeof value === 'object' && value !== null) {
       const entries = Object.entries(value)
-        .map(([k, v]) => `${k}: ${this.serializeValue(v)}`)
+        .map(([k, v]) => `${this.serializeKey(k)}: ${this.serializeValue(v)}`)
         .join(', ')
       return `{ ${entries} }`
     }
     return String(value)
+  }
+
+  private serializeSingleQuoted(value: string): string {
+    const escaped = value.replace(
+      /[\\'\n\r\u2028\u2029]/g,
+      (c) => SINGLE_QUOTED_ESCAPES[c]!
+    )
+    return `'${escaped}'`
+  }
+
+  private serializeKey(key: string): string {
+    return /^[A-Za-z_$][\w$]*$/.test(key)
+      ? key
+      : this.serializeSingleQuoted(key)
   }
 
   private parsePropertyValue(raw: string): unknown {

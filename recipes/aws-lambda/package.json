@@ -1,0 +1,42 @@
+{
+  "name": "@pikku/templates-aws-lambda",
+  "main": "dist/index.mjs",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
+    "test": "bash ../functions/run-tests.sh --url http://localhost:3000/production --http",
+    "start": "npm run build && SLS_TELEMETRY_DISABLED=1 SLS_NOTIFICATIONS_MODE=off serverless offline",
+    "build": "rm -rf dist && esbuild ./src/main.ts --format=esm --minify --external:\"@aws-sdk/*\" --bundle --keep-names --sourcemap --platform=node --target=node24 --outdir=dist --out-extension:.js=.mjs --metafile=meta.json",
+    "deploy": "npm run build && serverless deploy"
+  },
+  "dependencies": {
+    "@pikku/aws-services": "^0.12.19",
+    "@pikku/core": "^0.12.154",
+    "@pikku/jose": "^0.12.10",
+    "@pikku/lambda": "^0.12.14",
+    "@pikku/schema-cfworker": "^0.12.9",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/client-secrets-manager": "^3.1152.0",
+    "@aws-sdk/client-sqs": "^3.1152.0",
+    "@aws-sdk/cloudfront-signer": "^3.1149.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/aws-lambda": "^8.10.164",
+    "@types/node": "^26",
+    "esbuild": "~0.28.2",
+    "serverless": "^4.44.0",
+    "serverless-offline": "^14.8.3",
+    "serverless-offline-sqs": "^9.0.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "exports": {
+    ".": "./dist/index.mjs"
+  }
+}

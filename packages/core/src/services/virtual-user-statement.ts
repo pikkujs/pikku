@@ -22,6 +22,10 @@ export const VIRTUAL_USER_SIGNING_KEY_VARIABLE = 'VIRTUAL_USER_SIGNING_KEY'
 /** The key a run reaches the in-process sign-in under, on `auth.api`. */
 export const VIRTUAL_USER_IN_PROCESS_ENDPOINT = 'signInVirtualUserInternal'
 
+/**
+ * Verifies the signed statement a virtual user presents to sign in to a
+ * deployed stage.
+ */
 export interface VirtualUserStatementVerifier {
   /**
    * Resolves to the virtual user the statement names. Throws
@@ -34,6 +38,10 @@ export interface VirtualUserStatementVerifier {
   ): Promise<{ virtualUserId: string }>
 }
 
+/**
+ * Thrown when a virtual user's sign-in statement is not valid: badly signed,
+ * expired, replayed, or for another audience.
+ */
 export class VirtualUserStatementError extends Error {
   constructor(message: string) {
     super(message)

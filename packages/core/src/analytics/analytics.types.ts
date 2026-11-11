@@ -17,6 +17,7 @@ export type AnalyticsEventBase = {
   name: string
 } & Record<string, unknown>
 
+/** An event as a caller submits it: name, free-form props and an optional client timestamp (ms). */
 export interface AnalyticsEventInput {
   name: string
   props?: Record<string, unknown>

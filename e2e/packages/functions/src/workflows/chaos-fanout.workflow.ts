@@ -1,4 +1,4 @@
-import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * A batch of independent shards run concurrently, where one shard is rigged to
@@ -10,18 +10,23 @@ import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
  * retried. Concurrency is where step bookkeeping is most likely to race, so
  * the ledger — not the return value — is the thing worth asserting on.
  */
-export const chaosFanoutWorkflow = pikkuWorkflowFunc<
+export const chaosFanoutWorkflow = pikkuWorkflowComplexFunc<
   {
     batchId: string
     shards: number
     /** Zero-based index of the shard rigged to fail; -1 for none. */
     poisonShard?: number
     shardDelayMs?: number
+    /** Shards whose first attempt stalls this long, so a kill finds them in flight. */
+    slowShards?: number[]
+    slowShardDelayMs?: number
     /** Retries granted to each shard, so a poisoned one burns attempts. */
     shardRetries?: number
   },
   { batchId: string; completed: number; attempts: number[] }
 >({
+  auth: false,
+  expose: true,
   func: async ({}, data, { workflow }) => {
     const indexes = Array.from({ length: data.shards }, (_, i) => i)
 
@@ -32,7 +37,9 @@ export const chaosFanoutWorkflow = pikkuWorkflowFunc<
           'chaosStep',
           {
             key: `shard:${data.batchId}:${index}`,
-            delayMs: data.shardDelayMs,
+            ...(data.slowShards?.includes(index)
+              ? { delayMs: data.slowShardDelayMs, delayAttemptsBelow: 2 }
+              : { delayMs: data.shardDelayMs }),
             failAlways: index === data.poisonShard,
             echo: `${data.batchId}/${index}`,
           },

@@ -5,14 +5,18 @@
  * Expects: pikku has been run first to generate .pikku/workflow/meta/ files
  */
 
-import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { createScriptContent, ingestText } from '../script-content.js'
 import assert from 'node:assert/strict'
 import { test, describe } from 'node:test'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const META_DIR = join(__dirname, '../../.pikku/workflow/meta')
+
+const content = createScriptContent(
+  join(__dirname, '../../.pikku-runtime/script-content')
+)
 
 async function loadMeta(name: string) {
   const files = [
@@ -20,11 +24,13 @@ async function loadMeta(name: string) {
     join(META_DIR, `${name}.gen.json`),
   ]
   for (const f of files) {
+    let text: string
     try {
-      return JSON.parse(await readFile(f, 'utf-8'))
-    } catch (err: any) {
-      if (err?.code !== 'ENOENT') throw err
+      text = await ingestText(content, f)
+    } catch {
+      continue // not generated: try the next candidate
     }
+    return JSON.parse(text)
   }
   throw new Error(`Meta not found for workflow: ${name}`)
 }

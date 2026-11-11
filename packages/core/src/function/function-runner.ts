@@ -1,12 +1,21 @@
 import { beginChanges } from './abort-scope.js'
-import { forwardStepName, isCompensationStepName } from './compensation-name.js'
+import {
+  forwardStepName,
+  isCompensationStepName,
+} from '../compensation-name.js'
 import { runMiddleware, combineMiddleware } from '../middleware-runner.js'
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
-} from '../wirings/channel/channel-middleware-runner.js'
+} from '../channel-middleware-runner.js'
 import { runPermissions, type PermissionWire } from '../permissions.js'
 import { withoutSecrets } from '../services/secretless.js'
+import {
+  traceQueueService,
+  traceSchedulerService,
+  traceWebhookService,
+} from './trace-queue-service.js'
+import { createTrace } from '../trace.js'
 import { getCreateWireServices, pikkuState } from '../pikku-state.js'
 import {
   applyDefaultsFromSchema,
@@ -29,9 +38,12 @@ import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.type
 import type { CorePikkuFunctionConfig } from './functions.types.js'
 import { parseVersionedId } from '../version.js'
 import type { SessionService } from '../services/user-session-service.js'
-import { PikkuSessionService } from '../services/user-session-service.js'
+import {
+  PikkuSessionService,
+  createFunctionSessionWireProps,
+} from '../services/user-session-service.js'
 import { MissingSessionError, ReadonlySessionError } from '../errors/errors.js'
-import { verifyScopes } from '../scopes.js'
+import { verifyScopes, withLiveScopes } from '../scopes.js'
 import { assertFeatureAvailable } from '../wirings/flag/assert-feature-available.js'
 import {
   PikkuCredentialWireService,
@@ -66,6 +78,13 @@ async function resolveSession(
   singletonServices: CoreSingletonServices,
   sessionService?: SessionService<CoreUserSession>
 ): Promise<void> {
+  // A session middleware established lives on the session service, not on the
+  // transport's snapshot of the wire. Read it from there, so it is what the
+  // function sees and what its user id is resolved from.
+  // knowledge: decisions/security/set-session-persists-and-set-initial-session-does-not.md
+  if (!wire.session && sessionService?.get()) {
+    wire.session = sessionService.get()
+  }
   const pikkuUserId = defaultPikkuUserIdResolver(wire)
   if (pikkuUserId) {
     wire.pikkuUserId = pikkuUserId
@@ -90,11 +109,29 @@ async function resolveSession(
   }
 }
 
+/**
+ * Registers a function's config under its id so wirings can run it by name.
+ * Generated code calls this for every function codegen found; an app rarely
+ * needs to. Registering the same id again replaces the earlier config.
+ *
+ * @param funcName - The function id, as it appears in the generated metadata.
+ * @param funcConfig - The object a `pikkuFunc` / `pikkuSessionlessFunc` returned.
+ * @param packageName - The addon package it belongs to; `null` for the app.
+ */
 export const addFunction = (
   funcName: string,
   funcConfig: CorePikkuFunctionConfig<any, any, any, any, any>,
   packageName: string | null = null
 ) => {
+  if (funcConfig.disabled) {
+    throw new Error(
+      `Function '${funcName}' is disabled` +
+        (typeof funcConfig.disabled === 'string'
+          ? ` (${funcConfig.disabled})`
+          : '') +
+        ' and cannot be registered.'
+    )
+  }
   pikkuState(packageName, 'function', 'functions').set(funcName, funcConfig)
 }
 
@@ -105,6 +142,10 @@ export const getFunctionNames = (
   return Object.keys(functionsMeta)
 }
 
+/**
+ * Every function id with generated metadata: the app's own, then each addon's
+ * prefixed with the namespace it was wired under (`ns:name`).
+ */
 export const getAllFunctionNames = (): string[] => {
   const functions: string[] = []
 
@@ -122,6 +163,34 @@ export const getAllFunctionNames = (): string[] => {
   return functions
 }
 
+/**
+ * Runs one registered function the way every wiring does. Each transport's
+ * runner (HTTP, channel, queue, scheduler, RPC, MCP, CLI, workflow, agent)
+ * ends up here; an app calls it directly only when it is building its own
+ * transport.
+ *
+ * In order, it: resolves the function (falling back from `name@vN` to the
+ * unversioned name, and into an addon for `ns:name`), runs the combined
+ * middleware, resolves the session, enforces auth, `readonly`, scopes and the
+ * feature flag, reads `data()`, applies schema defaults and validation, runs
+ * global and function permissions, builds and finally closes the wire
+ * services, and calls the function. The function and its permissions receive
+ * services whose `secrets` throws on access — they read secrets through the
+ * declared typed wrappers instead.
+ *
+ * @param wireType - The transport, recorded on `wire.wireType` if unset.
+ * @param wireId - The wiring's id (route, queue name, …), recorded on
+ * `wire.wireId` if unset. Middleware registered against it is applied.
+ * @param funcName - The registered function id.
+ * @returns Whatever the function returns.
+ * @throws {MissingSessionError} A session is required and none resolved.
+ * @throws {ReadonlySessionError} A readonly session called a mutating function.
+ * @throws {MissingScopeError} The session lacks a required scope.
+ * @throws {FeatureUnavailableError} The function's feature flag is off.
+ * @throws {ForbiddenError} A permission refused the call.
+ * @throws {Error} The function or its metadata is not registered. Errors thrown
+ * by validation, middleware and the function itself propagate unchanged.
+ */
 export const runPikkuFunc = async <In = any, Out = any>(
   wireType: PikkuWiringTypes,
   wireId: string,
@@ -328,6 +397,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   const resolvedAuditConfig = resolveAuditConfig(funcConfig.audit)
   const invocationWire = resolvedWire as PikkuWire
+  // A wire no runner gave a trace is the root of one.
+  const rootTrace = !invocationWire.trace
+  if (rootTrace) {
+    invocationWire.trace = createTrace(invocationWire.traceId)
+    invocationWire.traceId = invocationWire.trace.traceId
+  }
   const previousFunctionId = invocationWire.functionId
   const previousAudit = invocationWire.audit
   const previousAddonNamespace = invocationWire.addonNamespace
@@ -373,11 +448,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
     )
 
     if (sessionService) {
-      invocationWire.session = sessionService.freezeInitial()
-      invocationWire.setSession = (s: any) => sessionService.set(s)
-      invocationWire.clearSession = () => sessionService.clear()
-      invocationWire.getSession = () => sessionService.get()
-      invocationWire.hasSessionChanged = () => sessionService.sessionChanged
+      Object.assign(
+        invocationWire,
+        createFunctionSessionWireProps(sessionService)
+      )
     }
 
     const session = invocationWire.session
@@ -386,7 +460,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       if (
         wiringAuth === true ||
         funcConfig.auth === true ||
-        resolveAddonAuth(packageName, addonInstance?.namespace)
+        resolveAddonAuth(funcPackageName, addonInstance?.namespace)
       ) {
         if (!session) {
           throw new MissingSessionError('Authentication required')
@@ -416,16 +490,28 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
 
     // knowledge: decisions/security/addon-scopes-are-resolved-where-the-function-runs.md
+    // The function's package, not the wire's: a `ref('ns:fn')` route stays the
+    // app's, and reading the wire's left it outside the addon's floor.
     const addonScopes = resolveAddonScopes(
-      packageName,
+      funcPackageName,
       addonInstance?.namespace
     )
     const functionScopes = funcConfig.scopes ?? funcMeta.scopes
+    // A live function runs on freshly resolved scopes end to end: the check
+    // below, its permissions, its body and any nested call all see the same
+    // grants, so a permission cannot allow what the check just refused.
+    const effectiveSession = funcMeta.liveScopes
+      ? await withLiveScopes(session, resolvedSingletonServices.scopeService)
+      : session
+    if (effectiveSession !== session) {
+      sessionService?.setInitial(effectiveSession!)
+      invocationWire.session = effectiveSession
+    }
     verifyScopes(
       addonScopes.length > 0
         ? [...addonScopes, ...(functionScopes ?? [])]
         : functionScopes,
-      session
+      effectiveSession
     )
 
     const featureFlag = funcConfig.featureFlag ?? funcMeta.featureFlag
@@ -510,6 +596,31 @@ export const runPikkuFunc = async <In = any, Out = any>(
         )
         services = { ...services, auditLog: invocationAuditLog }
       }
+      services = {
+        ...services,
+        ...(rootTrace && {
+          logger:
+            services.logger.scope?.(invocationWire.traceId!) ?? services.logger,
+        }),
+        ...(services.queueService && {
+          queueService: traceQueueService(
+            services.queueService,
+            invocationWire
+          ),
+        }),
+        ...(services.schedulerService && {
+          schedulerService: traceSchedulerService(
+            services.schedulerService,
+            invocationWire
+          ),
+        }),
+        ...(services.webhookService && {
+          webhookService: traceWebhookService(
+            services.webhookService,
+            invocationWire
+          ),
+        }),
+      }
       // Unconditional, unlike the audit — every function can record. Built on
       // first access, since most invocations record nothing.
       if (!services.analytics) {
@@ -565,7 +676,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   }
 
   const addonTagMiddleware = resolveAddonTagMiddleware(
-    packageName,
+    funcPackageName,
     addonInstance?.namespace
   )
 

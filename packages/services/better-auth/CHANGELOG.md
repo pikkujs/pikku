@@ -1,5 +1,131 @@
 # @pikku/better-auth
 
+## 0.12.64
+
+### Patch Changes
+
+- 3099125: The workflow-run, agent-thread, webhook-delivery and virtual-user read functions move from `@pikku/addon-console` to `@pikku/addon-admin`, because a deployed stage has those and no console. Call them as `admin:getWorkflowRuns`, `admin:getAgentThreads` and so on, under the new `admin:workflows`, `admin:agents`, `admin:webhooks:deliveries` and `admin:virtualUsers` scopes. `scaffold.console` no longer generates `/workflow-run/:runId/stream`; the new `scaffold.admin` generates the `@pikku/addon-admin` wiring and that route as `ref('admin:streamWorkflowRun')`. `startVirtualUserRun` and `setVirtualUserSchedule` stay in the console because they read the project's meta from disk. `@pikku/better-auth`'s copy of the admin scope tree catches up with the new scopes and the earlier schedules, queues and webhooks
+- 2e4e7ab: A function requiring a live scope now runs its permissions, body and nested calls on the freshly resolved scopes, not only its scope check. better-auth reads the session secret only when the scopes cache is used, and skips the cache cookie when a snapshot would not fit in one.
+- Updated dependencies [be90d6c]
+- Updated dependencies [2e4e7ab]
+- Updated dependencies [54173f6]
+- Updated dependencies [1be4b68]
+  - @pikku/core@0.12.154
+
+## 0.12.63
+
+### Patch Changes
+
+- 942c8ba: Scopes can be declared `live` on any node of a `defineScope` tree (inherited by descendants, `live: false` opts a child out). The compiler flags every function that requires a live scope (a wildcard counts as its node) with `liveScopes` in its generated meta, and the runner re-reads that session's scopes from the `ScopeService` before checking them. The better-auth session middlewares take `scopesTtlSeconds` (default 0, unchanged: read on every request); above 0 a resolved scope snapshot is kept in a signed `pikku_scopes` cookie and trusted until it ages out. Scopes set by `mapSession`/`mapKey` are never replaced.
+- Updated dependencies [daca7c7]
+- Updated dependencies [0e75982]
+- Updated dependencies [2a90c35]
+- Updated dependencies [2121973]
+- Updated dependencies [942c8ba]
+- Updated dependencies [fa8c796]
+  - @pikku/core@0.12.153
+
+## 0.12.62
+
+### Patch Changes
+
+- 1a5b741: Document how a function invites a user. `pikku doc pikkuBetterAuth` now says functions reach the instance as `services.auth`, explains inviting with `createAuthUser` then `sendAuthUserSignInLink` (mailed through the app's own `sendMagicLink`), and shows a second example, `betterAuthInvite`. The TSDoc on `sendAuthUserSignInLink` is corrected: the magic-link plugin does not refuse an unknown address when sending, only when the link is clicked. The docs also name the pitfalls: a call from a function needs `baseURL` configured, `callbackURL` must be a path or a trusted origin, and the five-minute default expiry is too short for an invite.
+
+## 0.12.61
+
+### Patch Changes
+
+- 6108fac: Providers signed in through the OAuth proxy only accept redirect sign-in; ID-token sign-in is disabled for them, and a oneTap plugin that would check tokens against the proxy's client id is rejected at configuration time.
+- Updated dependencies [6108fac]
+  - @pikku/core@0.12.149
+
+## 0.12.60
+
+### Patch Changes
+
+- b86450a: Adds `@pikku/better-auth/client`, the browser side of Better Auth that every app used to copy: `createBetterAuthApp` returns the sign-in, sign-up, Google, password reset and sign-out calls, the session cookie refresh and the `requireAuthentication` / `redirectIfAuthenticated` route gates, parameterised by `apiUrl`, paths and the session fetcher. Adds `@pikku/better-auth/vite`, whose `crossSiteSession` plugin relays the session cookie through localStorage in third-party-cookie-blocking browsers during dev; its header names come from `cross-site-cookies.ts` so client and server cannot disagree. `vite` is an optional peer dependency.
+
+## 0.12.59
+
+### Patch Changes
+
+- 3a543d8: `betterAuthOAuthAccessToken` resolves the session from an OAuth access token on `Authorization: Bearer`, verified locally against the authorization server's JWKS. An MCP client that signed in through better-auth's `oauthProvider` can now call the app's `/mcp` and RPCs as that user.
+- Updated dependencies [679068f]
+  - @pikku/core@0.12.145
+
+## 0.12.58
+
+### Patch Changes
+
+- 424072d: Under `pikku dev`, signing in as a virtual user now grants the roles and app scope its `defineVirtualUsers` declaration names. Pass the app's `scopeService` to `pikkuVirtualUser({ scopeService })` (the starter template does); each sign-in grants what the account is missing and never revokes. A deployed stage still grants nothing on sign-in and leaves it to `provisionVirtualUsers`. Apps no longer have to seed a virtual user's roles by hand for local development.
+
+## 0.12.57
+
+### Patch Changes
+
+- 65682fc: `@pikku/better-auth/constants` exports the provider and plugin registries, OAuth proxy ids and virtual-user env names without loading the better-auth library. The CLI reads them from there, so it no longer loads better-auth on every command: `pikku --help` 0.53s → 0.43s.
+- c702ed6: Harden `@pikku/better-auth` for 0.13.
+
+  **Breaking:**
+
+  - `SessionStore` and `InMemorySessionStore` are renamed to `AuthSessionStorage` and `InMemoryAuthSessionStorage`, so they no longer clash with `@pikku/core`'s unrelated `SessionStore`. The interface is now better-auth 1.7's `SecondaryStorage` contract and adds `getAndDelete` and `increment`, so a custom implementation must provide both. `inMemorySessionStore()` and `prefixedSessionStore()` keep their names, and the in-memory store can be passed directly as `secondaryStorage`.
+  - `pikkuDelegatedAuth` no longer links an upstream identity to an existing local user with the same email unless you set `linkExistingUsersByEmail`. With `'non-admins'` it refuses anyone holding an `admin` or `pikku:console` scope, and links nobody when there is no ScopeService. With `'all'` it links anyone.
+
+  **Fixes:**
+
+  - The package no longer imports `@better-auth/core` or `@better-auth/utils`, which were only devDependencies. Under pnpm, isolated bun or Yarn PnP, `import '@pikku/better-auth'` used to fail at load time.
+  - The tarball ships only `dist`, `README.md` and `LICENSE`. The build clears `dist` and the tsbuildinfo first, so modules that were removed (fabric and the old virtual-user modules) can no longer ship. Adds a `types` export condition.
+  - `betterAuthStoreSession` now shares its session handling with the other two middlewares. It never overwrites a session that an earlier middleware set. It stands down when an addon's scope withholds the auth secret. It reads relayed cross-site cookies and reports an impersonation header that nothing is configured to honour. It also accepts storages that return parsed objects, treats a malformed `expiresAt` as expired, and takes a `cookiePrefix`.
+  - `betterAuthStatelessSession` recognises `jwe` and `jwt` cookie-cache strategies from the cookie's shape, and takes `cookiePrefix` and `cookieCache: { strategy, version, jwt }`. `pikkuBetterAuth` logs an error at startup when these disagree with the auth config.
+  - `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` is ignored under `NODE_ENV=production`.
+  - The singleton-credential platform user is now found by its reserved email (`PLATFORM_USER_EMAIL`, `findPlatformUserId`). Under `generateId: 'uuid' | 'serial'`, every link used to create another Platform user.
+  - `findPlatformUserId` no longer accepts whoever holds `platform@pikku.internal`. The platform user is created on first link, so until then anyone could sign up with that address by email and password and would have owned every singleton credential. A user with a password account there now throws the new `ReservedPlatformEmailError`, the link endpoint answers `409 PLATFORM_USER_RESERVED`, and `findPlatformUserId` needs `findAccounts` on the adapter it is given (better-auth's `internalAdapter` has it).
+  - `betterAuthStatelessSession` also reports a `cookieCache.version` that differs from the auth config's, which used to reject every cookie without a log line.
+  - `getAuthSession(factory, …)` builds the singleton services and the auth instance once, not once per call. The cache is weak at every level, so builders the caller drops are not kept alive.
+  - The option types that appear in public signatures are now exported. Unneeded `as any` casts are removed, and TSDoc is added to every export.
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 40855aa: Remove dev quick login. The `${basePath}/dev/quick-login` route, the `PIKKU_DEV_QUICK_LOGIN` flag that `pikku dev` and `pikku serve` set by default, and the `admin@pikku.dev` account it created are gone, and `createAuthHandler` now forwards every request to better-auth. Nothing in this repository called the route. Sign in through your normal sign-in, or `virtualUser()` under `pikku dev`. An `admin@pikku.dev` user already in a dev database is left as it is.
+- a88391a: **Breaking:** `setSession` now means the same in middleware as in a function body (#1451). It marks the session changed — so `authCookie` re-issues the cookie on the way out — and writes the session store under the session's `userId`. Until now a middleware's `setSession` only set the session for the request, under the same name and type.
+
+  Middleware that works out who the caller is from a credential it was handed (a cookie, a bearer token, an API key) should call the new `setInitialSession` instead. It sets the session the function sees without marking it changed or writing anything:
+
+  ```diff
+  -const apiKeyAuth = pikkuMiddleware(async ({ db }, { http, setSession, session }, next) => {
+  +const apiKeyAuth = pikkuMiddleware(async ({ db }, { http, setInitialSession, session }, next) => {
+     if (session) return next()
+     const row = await db.findKey(http?.request?.header('x-api-key'))
+  -  if (row) await setSession?.({ userId: row.userId })
+  +  if (row) setInitialSession?.({ userId: row.userId })
+     return next()
+   })
+  ```
+
+  Left on `setSession`, such a middleware re-issues the auth cookie and writes the session store on every request. Middleware that genuinely signs someone in keeps `setSession`, and now persists. `clearSession` is on the middleware wire too.
+
+  `authCookie`, `authBearer`, `authAPIKey`, `pikkuRemoteAuthMiddleware`, `addonScopeCap`, the better-auth session middleware and the CLI's studio and virtual-user sessions all use `setInitialSession`. `SessionService.set` stores a session under its own `userId` when no user was resolved yet, so a sign-in is persisted rather than dropped, and the function runner reads a middleware-set session from the session service explicitly rather than through the order `freezeInitial` happens to run in.
+
+- Updated dependencies [3a9c9d8]
+- Updated dependencies [dc952a8]
+- Updated dependencies [7e44a0c]
+- Updated dependencies [8ec91f0]
+- Updated dependencies [ffbe1a2]
+- Updated dependencies [9999ec1]
+- Updated dependencies [228faad]
+- Updated dependencies [84de1eb]
+- Updated dependencies [e659614]
+- Updated dependencies [6c79f8d]
+- Updated dependencies [fa308d4]
+- Updated dependencies [0a4676a]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [2e05e48]
+- Updated dependencies [19895c4]
+- Updated dependencies [a88391a]
+- Updated dependencies [3df9013]
+  - @pikku/core@0.12.144
+  - @pikku/jose@0.12.10
+
 ## 0.12.56
 
 ### Patch Changes

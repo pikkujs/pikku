@@ -27,7 +27,15 @@ import {
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import type { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
+import {
+  createTrace,
+  formatTraceparent,
+  parseTraceparent,
+  tracedLogger,
+  type TraceContext,
+} from '../../../trace.js'
 
+/** Parameters for the serverless channel runners: the connection, the {@link ChannelStore} that persists it, and the factory that builds a handler able to send through the platform. */
 export interface RunServerlessChannelParams<
   ChannelData,
 > extends RunChannelParams<ChannelData> {
@@ -70,6 +78,36 @@ const getVariablesForChannel = ({
   }
 }
 
+/**
+ * The connection's trace as connect stored it. A frame is a span in it, so this
+ * is the connection's own span and not a new one.
+ */
+// knowledge: decisions/internals/a-channel-connection-is-one-trace.md
+const storedTrace = (traceparent: string | undefined): TraceContext => {
+  const stored = parseTraceparent(traceparent)
+  return stored
+    ? {
+        traceId: stored.traceId,
+        spanId: stored.parentSpanId,
+        sampled: stored.sampled,
+      }
+    : createTrace()
+}
+
+/**
+ * Handles a serverless connect event: opens the channel, stores it, and runs `onConnect`.
+ *
+ * The opening data is validated against the channel's input schema. If
+ * `onConnect` (or its middleware) established a session, its `pikkuUserId` is
+ * stored with the channel, and later messages and the disconnect reload the
+ * session from `sessionStore` by that id. On success the response status is 101.
+ *
+ * Errors from `onConnect` are written to `response` as an HTTP error unless
+ * `bubbleErrors` is set.
+ *
+ * @throws {NotFoundError} When no channel is wired at `route`.
+ * @throws When the opening data fails validation.
+ */
 export const runChannelConnect = async ({
   channelId,
   channelObject,
@@ -104,18 +142,22 @@ export const runChannelConnect = async ({
     userSession,
   })
 
+  const trace = createTrace()
+
   try {
     await channelStore.addChannel({
       channelId,
       channelName: channelConfig.name,
       openingData,
       channelObject,
+      traceparent: formatTraceparent(trace),
     })
-    const { channel } = getVariablesForChannel({
+    const { channel, channelHandler } = getVariablesForChannel({
       channelId,
       channelHandlerFactory,
       channelName: channelConfig.name,
     })
+    channelHandler.trace = trace
     channel.setState = (state) => channelStore.setState(channelId, state)
     // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
     channel.getState = () => channelStore.getState(channelId) as never
@@ -147,6 +189,7 @@ export const runChannelConnect = async ({
         channelMiddlewareMeta: meta.channelMiddleware,
         userSession,
         wireServices,
+        trace: channelHandler.trace,
       })
     }
 
@@ -173,6 +216,13 @@ export const runChannelConnect = async ({
   }
 }
 
+/**
+ * Handles a serverless disconnect event: runs `onDisconnect` with the stored session, then removes the channel from the store.
+ *
+ * A channel already missing from the store is logged and ignored, and an error
+ * from `onDisconnect` is logged rather than thrown, so the channel is always
+ * removed.
+ */
 export const runChannelDisconnect = async ({
   channelId,
   channelStore,
@@ -192,7 +242,7 @@ export const runChannelDisconnect = async ({
     return
   }
 
-  const { openingData, channelName, pikkuUserId } = channelData
+  const { openingData, channelName, pikkuUserId, traceparent } = channelData
   const { channel, channelConfig, meta } = getVariablesForChannel({
     channelId,
     channelHandlerFactory,
@@ -241,6 +291,7 @@ export const runChannelDisconnect = async ({
         channelMiddlewareMeta: meta.channelMiddleware,
         userSession,
         wireServices,
+        trace: storedTrace(traceparent),
       })
     } catch (e: any) {
       singletonServices.logger.error(
@@ -254,6 +305,16 @@ export const runChannelDisconnect = async ({
   }
 }
 
+/**
+ * Handles one message on a serverless channel, with the session reloaded from `sessionStore` by the `pikkuUserId` stored on connect.
+ *
+ * @param params - The connection and its store.
+ * @param data - The message as received.
+ * @returns The handler's reply. When the handler throws, the error is logged and
+ *   `{ error, errorName }` is returned with the error's message, so the runtime
+ *   can send it to the client. Throw errors whose messages are safe to show.
+ * @throws Whatever the store throws for a channel it does not hold.
+ */
 export const runChannelMessage = async (
   {
     channelId,
@@ -265,7 +326,7 @@ export const runChannelMessage = async (
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
   let wireServices: WireServices | undefined
-  const { openingData, channelName, pikkuUserId } =
+  const { openingData, channelName, pikkuUserId, traceparent } =
     await channelStore.getChannel(channelId)
 
   const { channel, channelHandler, channelConfig } = getVariablesForChannel({
@@ -274,6 +335,7 @@ export const runChannelMessage = async (
     openingData,
     channelName,
   })
+  channelHandler.trace = storedTrace(traceparent)
   channel.setState = (state) => channelStore.setState(channelId, state)
   // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
   channel.getState = () => channelStore.getState(channelId) as never
@@ -315,12 +377,13 @@ export const runChannelMessage = async (
     )
     response = await onMessage(data)
   } catch (e: any) {
-    singletonServices.logger.error(
+    tracedLogger(singletonServices.logger, channelHandler.trace.traceId).error(
       `Error processing message: ${e.message || e}`
     )
     return {
       error: e.message || 'Unknown error',
       errorName: e.constructor?.name,
+      errorId: channelHandler.trace.traceId,
     }
   } finally {
     if (wireServices) {

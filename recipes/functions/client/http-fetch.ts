@@ -1,0 +1,77 @@
+import { pikkuFetch } from '@sdk/app/pikku-fetch.gen.js'
+
+const start = Date.now()
+
+async function check() {
+  const TIMEOUT = 30000
+  const RETRY_INTERVAL = 2000
+
+  try {
+    const todos = await pikkuFetch.get('/todos', {
+      userId: 'user1',
+      completed: undefined,
+      priority: undefined,
+      tag: undefined,
+    })
+
+    console.log('Todos:', todos)
+
+    const created = await pikkuFetch.post('/todos', {
+      title: 'Test todo from client',
+      priority: 'high',
+      userId: 'user1',
+      description: undefined,
+      dueDate: undefined,
+      tags: undefined,
+    })
+    console.log('Created todo:', created)
+
+    const completed = await pikkuFetch.post('/todos/:id/complete', {
+      id: created.todo.id,
+    })
+    console.log('Completed todo:', completed)
+
+    const deleted = await pikkuFetch.delete('/todos/:id', {
+      id: created.todo.id,
+    })
+    console.log('Deleted todo:', deleted)
+
+    // The analytics ingest is generated rather than written, so nothing in the
+    // project's source would fail if it stopped being wired. Posting one event
+    // here is what catches a route that is emitted and never registered.
+    const analytics = await pikkuFetch.post('/analytics', {
+      events: [
+        { at: Date.now(), event: { name: 'todo_created', priority: 'high' } },
+      ],
+    })
+    console.log('Analytics:', analytics)
+    if (analytics.accepted !== 1) {
+      throw new Error(
+        `analytics ingest accepted ${analytics.accepted} events, expected 1`
+      )
+    }
+
+    console.log('✅ HTTP test passed')
+
+    process.exit(0)
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : String(JSON.stringify(err))
+    console.log(`Still failing (${message}), retrying...`)
+  }
+
+  if (Date.now() - start > TIMEOUT) {
+    console.error(`❌ HTTP test failed after ${TIMEOUT / 1000} seconds`)
+    process.exit(1)
+  }
+
+  setTimeout(() => {
+    check().catch((error) => console.error(error))
+  }, RETRY_INTERVAL)
+}
+
+const url = process.env.TODO_APP_URL || 'http://localhost:4002'
+pikkuFetch.setServerUrl(url)
+console.log('Starting HTTP fetch test with url:', url)
+
+await check()

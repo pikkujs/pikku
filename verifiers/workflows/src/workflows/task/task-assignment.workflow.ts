@@ -12,6 +12,7 @@ export const taskAssignmentWorkflow = pikkuWorkflowFunc<
   { title: string; assigneeId: string; notifyAssignee: boolean },
   { taskId: string; assigneeName: string; notified: boolean }
 >({
+  auth: false,
   title: 'Task Assignment',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

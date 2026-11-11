@@ -1,0 +1,10 @@
+{
+  "lockfileVersion": 1,
+  "sdks": {
+    "@fixture/cloud-api": {
+      "range": "^1.4.0",
+      "version": "1.4.2",
+      "integrity": "sha512-fixture"
+    }
+  }
+}

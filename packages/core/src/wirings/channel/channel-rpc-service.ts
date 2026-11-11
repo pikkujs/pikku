@@ -16,7 +16,7 @@ import {
  * inbound route of its own.
  *
  * It slots into the existing `services.deploymentService` hole, leaving
- * `rpc.remote` resolution, session propagation and traceId plumbing unchanged.
+ * `rpc.mesh` resolution, session propagation and traceId plumbing unchanged.
  */
 export class ChannelDeploymentService implements DeploymentService {
   public readonly registry: ChannelRPCRegistry
@@ -62,7 +62,7 @@ export class ChannelDeploymentService implements DeploymentService {
     funcName: string,
     data: unknown,
     _session?: unknown,
-    traceId?: string
+    traceparent?: string
   ): Promise<unknown> {
     // Not a security control — the peer must check what it is handed, and a
     // hostile caller would send arguments that pass. It catches version drift
@@ -90,7 +90,7 @@ export class ChannelDeploymentService implements DeploymentService {
       id,
       funcName,
       data,
-      traceId,
+      traceparent,
     }
 
     try {

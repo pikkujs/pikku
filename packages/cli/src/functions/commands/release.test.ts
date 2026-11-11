@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import {
   cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -113,7 +114,7 @@ describe('pikku release', () => {
     assert.deepEqual(prepared.files, [
       'package.json',
       'CHANGELOG.md',
-      'surface.pikku.json',
+      'pikku.surface.json',
     ])
     assert.equal(version(), '0.1.1')
     assert.match(
@@ -167,7 +168,7 @@ describe('pikku release', () => {
     sh(nested, 'config', 'user.email', 'dev@example.com')
     sh(nested, 'config', 'user.name', 'dev')
     mkdirSync(join(nested, 'apps', 'api'), { recursive: true })
-    for (const file of ['package.json', 'CHANGELOG.md', 'surface.pikku.json']) {
+    for (const file of ['package.json', 'CHANGELOG.md', 'pikku.surface.json']) {
       writeFileSync(
         join(nested, 'apps', 'api', file),
         readFileSync(join(app, file), 'utf-8')
@@ -181,8 +182,30 @@ describe('pikku release', () => {
     assert.deepEqual(prepared.files, [
       'apps/api/package.json',
       'apps/api/CHANGELOG.md',
-      'apps/api/surface.pikku.json',
+      'apps/api/pikku.surface.json',
     ])
+  })
+
+  test('a legacy surface.pikku.json baseline is migrated to pikku.surface.json', async () => {
+    sh(app, 'mv', 'pikku.surface.json', 'surface.pikku.json')
+    sh(app, 'commit', '-q', '-m', 'legacy baseline')
+    sh(app, 'push', '-q', 'origin', 'HEAD:refs/heads/staging')
+    const prepared = await run(pikkuReleasePrepare)
+    assert.deepEqual(prepared.files, [
+      'package.json',
+      'CHANGELOG.md',
+      'pikku.surface.json',
+      'surface.pikku.json',
+    ])
+    assert.ok(existsSync(join(app, 'pikku.surface.json')))
+    assert.ok(!existsSync(join(app, 'surface.pikku.json')))
+  })
+
+  test('init treats a legacy baseline as present', async () => {
+    sh(app, 'mv', 'pikku.surface.json', 'surface.pikku.json')
+    const result = await run(pikkuReleaseInit)
+    assert.ok(result.skipped.includes('surface.pikku.json'))
+    assert.ok(!existsSync(join(app, 'pikku.surface.json')))
   })
 
   test('dry runs write nothing', async () => {

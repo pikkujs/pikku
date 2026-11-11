@@ -50,8 +50,10 @@ const emptyDb = (): Record<string, any[]> => ({
   verification: [],
 })
 
+// Each test builds its auth with different options, and `Auth<O>` is invariant
+// in them, so the helper asks only for the handler it calls.
 const post = (
-  auth: ReturnType<typeof betterAuth>,
+  auth: { handler: (request: Request) => Promise<Response> },
   path: string,
   body: Record<string, unknown>,
   headers: Record<string, string> = {}

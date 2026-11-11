@@ -4,10 +4,16 @@ process.on('warning', (w) => {
   if (w.name === 'ExperimentalWarning' && w.message.includes('SQLite')) return
   process.stderr.write(`${w.name}: ${w.message}\n`)
 })
+import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'fs'
 import { CLIError, formatCLIError, wantsStackTrace } from '@pikku/core/cli'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { dirname, join } from 'path'
+import {
+  decideRuntime,
+  nodeTooOldMessage,
+  RUNTIME_REEXEC_ENV,
+} from '../src/utils/runtime-check.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -102,6 +108,52 @@ const reportFatal = (error: unknown): void => {
 process.on('uncaughtException', reportFatal)
 process.on('unhandledRejection', reportFatal)
 
+/**
+ * Run this same entry under bun, as the whole of this process: its stdio, its
+ * exit code, and the signals sent to it. Resolves only if bun is not there.
+ */
+const reexecUnderBun = (): Promise<void> =>
+  new Promise((resolveMissing) => {
+    const child = spawn('bun', [__filename, ...process.argv.slice(2)], {
+      stdio: 'inherit',
+      env: { ...process.env, [RUNTIME_REEXEC_ENV]: '1' },
+    })
+    // Ctrl-C already reaches bun through the terminal's process group, so this
+    // process only has to outlive it; a second SIGINT would read as "force quit".
+    const forwarded = ['SIGINT', 'SIGTERM', 'SIGHUP'] as const
+    const forward = (signal: NodeJS.Signals) => {
+      if (signal !== 'SIGINT') child.kill(signal)
+    }
+    for (const signal of forwarded) process.on(signal, forward)
+    child.on('error', (error: NodeJS.ErrnoException) => {
+      for (const signal of forwarded) process.off(signal, forward)
+      if (error.code === 'ENOENT') return resolveMissing()
+      reportFatal(error)
+    })
+    child.on('exit', (code, signal) => {
+      for (const s of forwarded) process.off(s, forward)
+      if (signal) process.kill(process.pid, signal)
+      else process.exit(code ?? 1)
+    })
+  })
+
+const runtime = decideRuntime({
+  bunVersion: process.versions.bun,
+  nodeVersion: process.versions.node,
+  reexecuted: process.env[RUNTIME_REEXEC_ENV] === '1',
+})
+if (runtime.action === 'refuse') {
+  process.stderr.write(`${runtime.message}\n`, () => process.exit(1))
+  await new Promise(() => {})
+}
+if (runtime.action === 'reexec-bun') {
+  await reexecUnderBun()
+  process.stderr.write(`${nodeTooOldMessage(process.versions.node)}\n`, () =>
+    process.exit(1)
+  )
+  await new Promise(() => {})
+}
+
 // Use the generated Pikku CLI
 const pikkuCliPath = join(__dirname, '../.pikku/cli/pikku-cli.gen.js')
 
@@ -117,7 +169,9 @@ if (existsSync(pikkuCliPath)) {
     const updateCheck = checkForUpdate()
     await PikkuCLI(process.argv.slice(2))
     await updateCheck
-    process.exit(process.exitCode ?? 0)
+    const { exitWhenFlushed } =
+      await import('../src/utils/exit-when-flushed.js')
+    exitWhenFlushed(Number(process.exitCode ?? 0))
   } catch (error: any) {
     reportFatal(error)
   }

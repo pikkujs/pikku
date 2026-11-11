@@ -100,6 +100,18 @@ describe('workflow meta — static plannedSteps plan', async () => {
     )
   })
 
+  test('an approval gate bound to a variable stays in the graph and the plan', () => {
+    const wf = byName(corpus, 'approvalGateWorkflow')
+    const [entry] = wf.entryNodeIds
+    const node = wf.nodes[entry]
+    assert.ok(node && 'flow' in node && node.flow === 'approval')
+    assert.equal(node.outputVar, 'decision')
+    assert.equal(
+      wf.plannedSteps?.[0]?.stepName,
+      '__workflow_approval:Manager sign-off'
+    )
+  })
+
   test('a branchy loopless workflow lists all arms but is not deterministic', () => {
     const wf = byName(corpus, 'autoRestockWorkflow')
     assert.equal(wf.source, 'dsl')

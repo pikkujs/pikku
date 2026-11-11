@@ -41,6 +41,25 @@ export class MigrationDriftError extends Error {
   }
 }
 
+/**
+ * A migration the database refused, named by the file it came from — the
+ * driver's own error says what was wrong but not where.
+ */
+export class MigrationFailedError extends Error {
+  constructor(
+    public readonly file: string,
+    migrationsDir: string,
+    cause: unknown
+  ) {
+    super(
+      `[PKU-DB-MIGRATE] ${migrationsDir}/${file}\n\n` +
+        (cause instanceof Error ? cause.message : String(cause)),
+      { cause }
+    )
+    this.name = 'MigrationFailedError'
+  }
+}
+
 export interface MigrateResult {
   applied: string[]
   skipped: string[]
@@ -88,11 +107,15 @@ function sha256(bytes: Buffer): string {
  * A project that has never generated a migration has no directory to read, and
  * that is the ordinary first-run state rather than a failure — it is precisely
  * the project `db generate` exists to serve.
+ *
+ * Dotfiles are not migrations: a tarball packed on macOS carries a binary
+ * AppleDouble `._<name>.sql` beside every file (knowledge:
+ * a-dotfile-is-never-a-migration).
  */
 const migrationFiles = (migrationsDir: string): string[] =>
   existsSync(migrationsDir)
     ? readdirSync(migrationsDir)
-        .filter((f) => f.endsWith('.sql'))
+        .filter((f) => f.endsWith('.sql') && !f.startsWith('.'))
         .sort()
     : []
 
@@ -160,7 +183,11 @@ export async function migrate(
     }
     const raw = readFileSync(join(migrationsDir, name))
     const hash = sha256(raw)
-    await executor.runMigration(raw.toString('utf8'), name, hash)
+    try {
+      await executor.runMigration(raw.toString('utf8'), name, hash)
+    } catch (error) {
+      throw new MigrationFailedError(name, migrationsDir, error)
+    }
     result.applied.push(name)
   }
 
@@ -192,9 +219,7 @@ export function pendingMigrations(
   applied: AppliedMigration[]
 ): string[] {
   const appliedNames = new Set(applied.map((row) => row.name))
-  return migrationFiles(migrationsDir).filter(
-    (name) => !appliedNames.has(name)
-  )
+  return migrationFiles(migrationsDir).filter((name) => !appliedNames.has(name))
 }
 
 export async function baselineMigrations(

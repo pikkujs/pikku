@@ -49,12 +49,13 @@ sees real, compiled, working code. Apply = merge. Reject = `git branch -D`.
 Run **once** at the start of every feature request:
 
 ```bash
-yarn pikku meta context --json
+yarn pikku meta context
 ```
 
-This single call returns functions, wires, middleware, permissions, workflows,
-`capabilities` (which wire types are in use), and `layout` (where new files
-should land).
+This single call prints the project's map: tables, workflows, permissions,
+wires, screens, project facts and one line per function. `--json` gives the
+full document, including `capabilities` (which wire types are in use) and
+`layout` (where new files should land); filter it with `jq`.
 
 Only fall back to targeted commands when you need full input/output JSON
 schemas (`yarn pikku meta functions get <id>`) or workflow steps
@@ -65,7 +66,7 @@ schemas (`yarn pikku meta functions get <id>`) or workflow steps
 
 **Language rule:** read `metaLocale` in `pikku.config.json` (default `en`). It is
 the language of every `description`, `title` and step `template` you author —
-the meta the Pikku Console renders back to the team. It renames nothing:
+the meta that is read back to the team. It renames nothing:
 functions, components, types, files, tables and columns are English in every
 project, and what the app says to its users is the message catalogue. See
 `pikku-concepts` → _What Language You Write In_.
@@ -75,7 +76,7 @@ project, and what the app says to its users is the message catalogue. See
 Before touching any files, give the user one paragraph stating exactly what
 you'll do. This is the lightweight "plan" — it is chat, not JSON.
 
-> I'll add a `todos` table via a new migration in `sql/`, and two
+> I'll declare a `todos` table in `db/tables.ts`, and two
 > `pikkuSessionlessFunc`s (`createTodo`, `listTodos` with
 > `readonly: true`) in `packages/functions/src/functions/`. Both
 > `expose: true`, so they'll be reachable via the auto-generated RPC
@@ -113,8 +114,8 @@ and `.../wirings/` for style).
 ### RPC is the default transport
 
 **Just write the function with `expose: true`** — that's enough to make it
-callable. Pikku auto-generates an RPC client (and React Query hooks if the
-project's `clientFiles.reactQueryFile` is set) from every exposed function.
+callable. Pikku auto-generates an RPC client (and React Query hooks in
+`.pikku/sdk/<backend>/exposed/pikku-react-query.gen.ts`) from every exposed function.
 You do **not** need an HTTP wiring for callers to reach the function.
 
 Default flow for a feature:
@@ -151,8 +152,9 @@ in-app features don't.
   Use the `permissions` field with a `pikkuPermission` factory.
 - **Throw typed errors** from `#pikku/error` — `NotFoundError`,
   `ConflictError`, `BadRequestError`. Never bare `Error`.
-- **Migrations are inline SQL files** in the project's migrations dir
-  (typically `sql/`). Use a numbered prefix matching existing files.
+- **Tables are declared in `db/tables.ts`,** annotations with them, and
+  `pikku db generate` writes the SQL. Don't write migrations by hand. See the
+  **pikku-kysely** skill.
 - **Secrets and env-vars: NEVER `process.env`.** Declare them with
   `defineSecret` (sensitive) or `defineVariable` (non-sensitive) — both with a
   zod schema for type-safe access. Read variables with
@@ -213,7 +215,7 @@ Notes on running `tsc`:
 **Trust the exit code, not the stderr noise.** `yarn pikku all` may print
 warnings, `[PKUxxx]` messages, even `level: critical` log lines, while
 still exiting `0` — those are pre-existing project state, not your
-problem. Same for `meta context --json`: it streams logs to stderr that
+problem. Same for `meta context`: it streams logs to stderr that
 look scary on a clean baseline. The exit code is the source of truth.
 
 If a command exits non-zero, that's a real failure — fix or stop.
@@ -260,9 +262,7 @@ your branch and silently breaks theirs.
 
 Tell the user the branch name and how to review. Two options:
 
-- **Local review:** open the pikku console — the changes view diffs the
-  current branch against `main` with pikku-aware structure (added functions,
-  new wires, migrations).
+- **Local review:** `git diff main` on the branch.
 - **PR review:** ask before pushing. Once they confirm, `git push -u origin
 feature/<slug>` and surface the PR-create URL.
 
@@ -300,7 +300,7 @@ explanation of why and what would change.
 - Stage 2 (intent statement) is plain English, one paragraph.
 - Between stages, give one-line updates: "Discovered 30 functions, http+queue
   in use. Drafting intent..." → "Branch `feature/todos` created, implementing..."
-  → "`pikku all` clean, `tsc` clean, committed. Review via console or run
+  → "`pikku all` clean, `tsc` clean, committed. Review with
   `git diff main`."
 - Don't narrate file-by-file. Only surface what's interesting (new patterns,
   judgment calls, things you suppressed).

@@ -4,8 +4,9 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { glob } from 'tinyglobby'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { InMemoryWorkflowService } from '@pikku/core/services'
+import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { FileScenarioRunStore } from '@pikku/core/services/file-scenario-run-store'
+import { groupVirtualUsersByBackend } from './scenario-backend-users.js'
 import {
   createHttpVirtualUsers,
   statementSignIn,
@@ -18,7 +19,7 @@ import {
 import { pikkuState, getAllPackageStates } from '@pikku/core/state'
 import type { PikkuRPC } from '@pikku/core/rpc'
 import type { CoreWorkflow } from '@pikku/core/workflow'
-import type { CoreFeature, ScenarioSurface } from '@pikku/core/scenario'
+import type { CoreFeature } from '@pikku/core/scenario'
 
 import { loadScenarioBootstrap } from './load-user-project.js'
 import {
@@ -58,7 +59,12 @@ import type { GuideFeature, GuideLock, GuidePage } from './scenario-guide.js'
 import { buildScenarioPlan, identifyScenarioResult } from './scenario-plan.js'
 import { resolveScenarioRunVersion } from './scenario-version.js'
 import type { ScenarioPlanGroup, ScenarioRunIdentity } from './scenario-plan.js'
-import { resolveEnvironment, isLocalUrl } from './environment.js'
+import {
+  apiUrlPort,
+  primaryFrontendName,
+  resolveEnvironment,
+  isLocalUrl,
+} from './environment.js'
 import { readDevAddress } from './dev-address.js'
 import type { ScenarioBaseline } from '../db/scenario-baseline.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
@@ -151,6 +157,8 @@ export const scenarioList = pikkuSessionlessFunc<{}, void>({
   },
 })
 
+const SAFE_RUN_ID = /^[A-Za-z0-9][A-Za-z0-9_-]*$/
+
 export const scenarioRun = pikkuSessionlessFunc<
   {
     environment: string
@@ -159,7 +167,9 @@ export const scenarioRun = pikkuSessionlessFunc<
     tags?: string
     excludeTags?: string
     coverage?: boolean
-    run?: ScenarioSurface
+    // Spelled out, not `ScenarioSurface`: the schema generator cannot see through
+    // a type alias imported from another package (PKU456). Assignable to it.
+    run?: 'browser' | 'cli' | 'default'
     strict?: boolean
     spawn?: boolean
     keepAlive?: boolean
@@ -168,6 +178,8 @@ export const scenarioRun = pikkuSessionlessFunc<
     video?: 'off' | 'failed' | 'all'
     apiUrl?: string
     appUrl?: string
+    backend?: string
+    runId?: string
   },
   void
 >({
@@ -189,8 +201,15 @@ export const scenarioRun = pikkuSessionlessFunc<
       video = 'failed',
       apiUrl,
       appUrl,
+      backend,
+      runId,
     }
   ) => {
+    if (runId !== undefined && !SAFE_RUN_ID.test(runId)) {
+      throw new Error(
+        `--run-id '${runId}' is not a usable run id: letters, digits, '-' and '_' only, starting with a letter or digit.`
+      )
+    }
     if (!SCENARIO_SURFACES.includes(runSurface)) {
       throw new Error(
         `Unknown --run surface '${runSurface}'. Expected one of: ${SCENARIO_SURFACES.join(', ')}.`
@@ -204,6 +223,8 @@ export const scenarioRun = pikkuSessionlessFunc<
     const env = resolveEnvironment({
       environment,
       environments: config.environments ?? {},
+      backend,
+      primaryFrontend: primaryFrontendName(config.frontends),
       apiUrl,
       appUrl,
       spawn,
@@ -230,14 +251,20 @@ export const scenarioRun = pikkuSessionlessFunc<
     }
 
     if (spawn) {
-      const { hostname, port } = new URL(env.apiUrl)
-      const resolvedPort = Number(port || 80)
+      const { hostname } = new URL(env.apiUrl)
+      const resolvedPort = apiUrlPort(env.apiUrl)
       logger.info(`Starting a server for '${environment}' on ${env.apiUrl}`)
       const server = await spawnDevServer({
         cwd: config.rootDir,
         port: resolvedPort,
         hostname,
         coverage,
+        // One declared backend is the whole project; several need the one this
+        // run drives, or the spawned dev would start them all.
+        backend:
+          Object.keys(config.backends ?? {}).length > 1
+            ? env.backend
+            : undefined,
         env: { API_URL: env.apiUrl },
         onOutput: (text) => process.stdout.write(text),
       })
@@ -311,19 +338,48 @@ export const scenarioRun = pikkuSessionlessFunc<
       state.virtualUsers?.definitions ?? [],
       config.scenarios?.emailDomain
     )
-    const virtualUsers = createHttpVirtualUsers({
-      apiUrl: env.apiUrl,
-      signIn: statementSignIn({
-        apiUrl: env.apiUrl,
-        signInPath: env.signInPath,
-        mint,
-      }),
-      virtualUsers: scenarioVirtualUsers,
-      signInPath: env.signInPath,
-      sessionPath: env.sessionPath,
-      rpcPath: env.rpcPath,
-      model: config.scenarios?.model,
-    })
+    // One HttpVirtualUsers per backend a virtual user signs into; each reaches its
+    // own backend's url. A user naming no backend uses the run's resolved one.
+    const virtualUsers: ReturnType<typeof createHttpVirtualUsers> = {}
+    for (const [backendName, users] of groupVirtualUsersByBackend(
+      scenarioVirtualUsers,
+      env.backend
+    )) {
+      const target =
+        backendName === env.backend
+          ? env
+          : resolveEnvironment({
+              environment,
+              environments: config.environments ?? {},
+              backend: backendName,
+              primaryFrontend: primaryFrontendName(config.frontends),
+              spawn,
+            })
+      const targetMint =
+        target === env
+          ? mint
+          : await resolveStatementMint(variables, {
+              apiUrl: target.apiUrl,
+              runtimeDir: runtimeDirOf(config),
+              what: 'scenario virtual users',
+            })
+      Object.assign(
+        virtualUsers,
+        createHttpVirtualUsers({
+          apiUrl: target.apiUrl,
+          signIn: statementSignIn({
+            apiUrl: target.apiUrl,
+            signInPath: target.signInPath,
+            mint: targetMint,
+          }),
+          virtualUsers: users,
+          signInPath: target.signInPath,
+          sessionPath: target.sessionPath,
+          rpcPath: target.rpcPath,
+          model: config.scenarios?.model,
+        })
+      )
+    }
 
     const functionsMeta = state.functions?.meta ?? {}
     const scenarioNames = new Set(
@@ -424,6 +480,13 @@ export const scenarioRun = pikkuSessionlessFunc<
           `'${environment}' (${env.apiUrl}), not local services.`
       )
     }
+    const refuseAgentCalls = {
+      run: async (name: string) => refuseInternal(name),
+      stream: async (name: string) => refuseInternal(name),
+      resume: async (runId: string) => refuseInternal(runId),
+      approve: async (runId: string) => refuseInternal(runId),
+      interrupt: async (runId: string) => refuseInternal(runId),
+    }
     // `rpcWithWire` is named alongside `PikkuRPC` rather than left to it: the
     // workflow runner reaches for that member through an internally untyped
     // path, so it is the one the guard actually has to answer, and the type
@@ -434,16 +497,19 @@ export const scenarioRun = pikkuSessionlessFunc<
       depth: 0,
       global: false,
       invoke: async (rpcName: string) => refuseInternal(rpcName),
-      remote: async (rpcName: string) => refuseInternal(rpcName),
+      mesh: async (rpcName: string) => refuseInternal(rpcName),
       exposed: async (rpcName: string) => refuseInternal(rpcName),
       rpcWithWire: async (rpcName: string) => refuseInternal(rpcName),
       startWorkflow: async (name: string) => refuseInternal(name),
-      agent: {
+      agent: refuseAgentCalls,
+      exposedAgent: refuseAgentCalls,
+      exposedWorkflow: {
+        start: async (name: string) => refuseInternal(name),
         run: async (name: string) => refuseInternal(name),
-        stream: async (name: string) => refuseInternal(name),
-        resume: async (runId: string) => refuseInternal(runId),
-        approve: async (runId: string) => refuseInternal(runId),
-        interrupt: async (runId: string) => refuseInternal(runId),
+        status: async (name: string) => refuseInternal(name),
+        approve: async (name: string) => refuseInternal(name),
+        streamStatus: async (name: string) => refuseInternal(name),
+        streamStatusFull: async (name: string) => refuseInternal(name),
       },
     }
 
@@ -466,7 +532,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     // One id for the whole invocation, distinct from a scenario's own runId:
     // reviewing artifacts means opening what `pikku scenario run` just produced,
     // not hunting for one scenario's folder among many.
-    const captureRunId = randomUUID()
+    const captureRunId = runId ?? randomUUID()
     const capture = {
       dir: captureDir,
       runId: captureRunId,
@@ -549,6 +615,11 @@ export const scenarioRun = pikkuSessionlessFunc<
     // and the console can show a run while it is still going.
     const runStore = new FileScenarioRunStore({ dir: captureDir })
     const startedAtIso = new Date().toISOString()
+    if (runId && (await runStore.get(runId))) {
+      throw new Error(
+        `A scenario run '${runId}' already exists — pass a new --run-id.`
+      )
+    }
     const version = await resolveScenarioRunVersion(runStore, config.rootDir)
     try {
       const selection: ScenarioRunSelection = {

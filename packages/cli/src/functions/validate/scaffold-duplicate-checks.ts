@@ -32,14 +32,8 @@ export const SCAFFOLD_OUTPUTS: ReadonlyArray<{
 }> = [
   ['rpc', 'publicRpcFile', 'rpc', 'rpc-public.gen.ts', true],
   ['rpc', 'publicRpcSchemasFile', 'rpc', 'rpc-public.schemas.gen.ts', false],
-  ['remoteRpc', 'remoteRpcWorkersFile', 'rpc', 'rpc-remote.gen.ts', true],
-  [
-    'remoteRpc',
-    'remoteRpcSchemasFile',
-    'rpc',
-    'rpc-remote.schemas.gen.ts',
-    false,
-  ],
+  ['meshRpc', 'meshRpcWorkersFile', 'rpc', 'rpc-mesh.gen.ts', true],
+  ['meshRpc', 'meshRpcSchemasFile', 'rpc', 'rpc-mesh.schemas.gen.ts', false],
   ['graph', 'graphWiringsFile', 'graph', 'graph.wirings.gen.ts', true],
   ['webhook', 'webhookWorkersFile', 'webhook', 'webhook.gen.ts', true],
   ['webhook', 'webhookSchemasFile', 'webhook', 'webhook.schemas.gen.ts', false],
@@ -60,6 +54,15 @@ export const SCAFFOLD_OUTPUTS: ReadonlyArray<{
   ],
   ['analytics', 'analyticsFile', 'analytics', 'analytics.gen.ts', true],
   [
+    'analytics',
+    'analyticsOriginFile',
+    'analytics',
+    'analytics-origin.gen.ts',
+    false,
+  ],
+  ['cors', 'corsFile', 'cors', 'cors.gen.ts', true],
+  ['cors', 'corsOriginsFile', 'cors', 'cors-origins.gen.ts', false],
+  [
     'featureFlags',
     'featureFlagsFile',
     'feature-flags',
@@ -68,6 +71,7 @@ export const SCAFFOLD_OUTPUTS: ReadonlyArray<{
   ],
   ['agent', 'publicAgentFile', 'agent', 'agent.gen.ts', true],
   ['agent', 'publicAgentSchemasFile', 'agent', 'agent.schemas.gen.ts', false],
+  ['admin', 'adminFunctionsFile', 'admin', 'admin.gen.ts', true],
   ['console', 'consoleFunctionsFile', 'console', 'console.gen.ts', true],
   ['console', 'consoleSchemasFile', 'console', 'console.schemas.gen.ts', false],
   [
@@ -102,6 +106,7 @@ export const SCAFFOLD_OUTPUTS: ReadonlyArray<{
  * been generated yet; a generated one is read directly (see `wiredAddons`).
  */
 const SCAFFOLD_ADDONS: Record<string, { name: string; package: string }> = {
+  admin: { name: 'admin', package: '@pikku/addon-admin' },
   console: { name: 'console', package: '@pikku/addon-console' },
   graph: { name: 'graph', package: '@pikku/addon-graph' },
 }

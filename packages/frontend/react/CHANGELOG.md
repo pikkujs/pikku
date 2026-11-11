@@ -1,5 +1,55 @@
 # @pikku/react
 
+## 0.12.22
+
+### Patch Changes
+
+- 6e9e86f: Server-sent events with `\r\n` or `\r` line endings now parse, including a `\r\n` split across two chunks. `postStream` sends its headers through `Headers`, so any form of header init works, and it stops yielding once the abort signal fires.
+- Updated dependencies [6e9e86f]
+- Updated dependencies [be90d6c]
+  - @pikku/fetch@0.12.15
+
+## 0.12.21
+
+### Patch Changes
+
+- 0e75982: Document how analytics and feature flags are wired, for `pikku doc`, and stop pointing at a `pikku flags prune` command that does not exist.
+
+## 0.12.20
+
+### Patch Changes
+
+- a679e5d: `pikku verify` is merged into `pikku validate`, which now runs the type-check and correctness checks, skips codegen unless `--codegen` is passed, and exits non-zero on any error. The `pikku verify` command is gone; `runVerify`, `VerifyService` and the recorded results stay. See MIGRATION.md.
+
+## 0.12.19
+
+### Patch Changes
+
+- d7b030d: Fix the generated client's `agent.stream`, which parsed the event stream as JSON and resolved `undefined` once the run ended. It is now an async iterable of the run's AG-UI events, read by `CorePikkuFetch.agentStream`, and a `RUN_ERROR` throws a `PikkuAgentStreamError` instead of vanishing. `subscribeToSSE` shares the same frame reader (`readServerEvents`). `agent.run` and `agent.approve` are typed per agent and resolve to `status: 'suspended'` with `pendingApprovals` when a tool needs approval. `usePikkuAgent` passes all three through, typed; the generated React Query file registers the app's agents, so an unknown agent name is a type error. Breaking: `usePikkuAgent` no longer takes an `RPC` type argument — see docs/MIGRATION.md.
+- 2bdcc77: Document what a screen needs from `usePikkuAgent`: how to read `stream` as it arrives, what `run` and `approve` answer, how `threadId` keeps a conversation going, and how to load earlier messages with `getAgentThreadMessages`.
+- Updated dependencies [d7b030d]
+  - @pikku/fetch@0.12.14
+
+## 0.12.18
+
+### Patch Changes
+
+- b86450a: Adds `createAppI18n`, which turns Paraglide's compiled messages and runtime plus the app's `active.json` into the locale store, `useLocale`, `setActiveLocale`, `localeDir` and branded `m` an app used to assemble by hand. The app opens in the default locale `active.json` names, falling back to the base locale; `I18N_DEBUG` still masks every message. `brandMessages` is exported for apps that build their own.
+
+## 0.12.17
+
+### Patch Changes
+
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- 6a254e4: `createLocaleStore` now reads `I18N_DEBUG` through `globalThis.process`, so the source compiles without Node type definitions. Packages that type-check `@pikku/react` from source, such as `@pikku/workflow-graph`, used to fail with TS2591. Runtime behaviour is unchanged.
+- Updated dependencies [19895c4]
+  - @pikku/fetch@0.12.13
+
 ## 0.12.16
 
 ### Patch Changes

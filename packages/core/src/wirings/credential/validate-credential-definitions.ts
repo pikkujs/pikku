@@ -6,6 +6,13 @@ import type { SchemaRefLike } from '../../types/core.types.js'
 
 export type { SchemaRefLike }
 
+/**
+ * Merges the credential declarations the inspector found into meta keyed by name.
+ * A name declared more than once must agree on type and schema.
+ *
+ * @throws Error when two declarations of one name disagree on `type` or schema.
+ * @internal Called by the CLI when generating meta.
+ */
 export function validateAndBuildCredentialDefinitionsMeta(
   definitions: CredentialDefinitions,
   schemaLookup: Map<string, SchemaRefLike>

@@ -5,8 +5,10 @@ import { memoryAdapter } from 'better-auth/adapters/memory'
 
 import {
   pikkuCredentialOAuth,
+  PLATFORM_USER_EMAIL,
   PLATFORM_USER_ID,
 } from './credential-oauth.plugin.js'
+import { BetterAuthCredentialService } from './better-auth-credential.service.js'
 import type { CredentialOAuthProvider } from './credential-oauth-providers.js'
 
 const provider = (
@@ -196,14 +198,18 @@ describe('credentialOAuth plugin', () => {
     const { cookie } = await signUp(auth, 'user@example.com')
 
     const space = new URL((await (await link(auth, 'acme', cookie)).json()).url)
-    const comma = new URL((await (await link(auth, 'twist', cookie)).json()).url)
+    const comma = new URL(
+      (await (await link(auth, 'twist', cookie)).json()).url
+    )
 
     assert.equal(space.searchParams.get('scope'), 'read write')
     assert.equal(comma.searchParams.get('scope'), 'read,write')
   })
 
   test('a provider with no scopes gets no scope parameter', async () => {
-    const auth = makeAuth(emptyDb(), [{ ...provider('acme', 'wire'), scopes: [] }])
+    const auth = makeAuth(emptyDb(), [
+      { ...provider('acme', 'wire'), scopes: [] },
+    ])
     const { cookie } = await signUp(auth, 'user@example.com')
 
     const url = new URL((await (await link(auth, 'acme', cookie)).json()).url)
@@ -286,6 +292,43 @@ describe('credentialOAuth plugin', () => {
     const res = await link(auth, 'shared', cookie)
 
     assert.equal(res.status, 200)
+  })
+
+  // The platform user is found by its reserved address and created on first
+  // use, so until then that address is free to sign up with. Whoever took it
+  // must not become the owner of every singleton credential.
+  test('a user who signed up with the reserved address is refused as platform owner', async () => {
+    const db = emptyDb()
+    let auth = makeAuth(db, [provider('shared', 'singleton')])
+    const squatter = await signUp(auth, PLATFORM_USER_EMAIL)
+    const admin = await signUp(auth, 'admin@example.com')
+    auth = makeAuth(db, [provider('shared', 'singleton')], {
+      scopeService: scopeStore({ [admin.userId]: ['admin:credentials:link'] }),
+    })
+
+    const res = await link(auth, 'shared', admin.cookie)
+
+    assert.equal(res.status, 409)
+    assert.equal(((await res.json()) as any).code, 'PLATFORM_USER_RESERVED')
+    assert.equal(
+      db.account!.some(
+        (a) => a.userId === squatter.userId && a.providerId !== 'credential'
+      ),
+      false,
+      'no credential account may hang off the squatter'
+    )
+  })
+
+  test('the platform user is still found by its reserved address once created', async () => {
+    const db = emptyDb()
+    let auth = makeAuth(db, [provider('shared', 'singleton')])
+    const { userId, cookie } = await signUp(auth, 'admin@example.com')
+    auth = makeAuth(db, [provider('shared', 'singleton')], {
+      scopeService: scopeStore({ [userId]: ['admin:credentials:link'] }),
+    })
+
+    assert.equal((await link(auth, 'shared', cookie)).status, 200)
+    assert.equal((await link(auth, 'shared', cookie)).status, 200)
   })
 
   // Created on demand, once: an app with no singleton credentials should never
@@ -383,5 +426,76 @@ describe('credentialOAuth plugin', () => {
       1,
       'exactly one account row for the provider'
     )
+  })
+})
+
+describe('the platform user under database-assigned ids', () => {
+  // better-auth drops a non-numeric id under `serial` (and a non-uuid one under
+  // `uuid` on a database that generates them), so the reserved id is only ever
+  // a request. The row has to be found by its reserved email instead.
+  test('serial ids: one platform user, and the credential service finds its token', async () => {
+    const db = emptyDb()
+    const build = (scopeService?: unknown) =>
+      betterAuth({
+        baseURL: 'http://localhost:3000',
+        secret: 'better-auth-test-secret',
+        database: memoryAdapter(db),
+        emailAndPassword: { enabled: true },
+        advanced: { database: { generateId: 'serial' } },
+        plugins: [
+          pikkuCredentialOAuth({
+            config: [provider('shared', 'singleton')],
+            scopeService: scopeService as any,
+          }),
+        ],
+      })
+    let auth = build()
+    const { userId, cookie } = await signUp(auth as any, 'admin@example.com')
+    auth = build(scopeStore({ [userId]: ['admin'] }))
+
+    const restore = stubTokenEndpoint()
+    try {
+      for (let i = 0; i < 2; i++) {
+        const started = await startLink(auth as any, 'shared', cookie)
+        const res = await callback(
+          auth as any,
+          'shared',
+          started.state,
+          started.cookie
+        )
+        assert.equal(res.status, 302)
+      }
+    } finally {
+      restore()
+    }
+
+    const platformUsers = db.user!.filter(
+      (u) => u.email === PLATFORM_USER_EMAIL
+    )
+    assert.equal(platformUsers.length, 1, 'exactly one platform user row')
+    assert.notEqual(String(platformUsers[0]!.id), PLATFORM_USER_ID)
+    const accounts = db.account!.filter((a) => a.providerId === 'shared')
+    assert.equal(accounts.length, 1)
+    assert.equal(String(accounts[0]!.userId), String(platformUsers[0]!.id))
+
+    const service = new BetterAuthCredentialService({
+      getAuth: async () => auth,
+      oauth2Names: ['shared'],
+      singletonOAuth2Names: ['shared'],
+      fallback: {} as any,
+    })
+    assert.deepEqual(await service.get('shared'), { accessToken: 'at-1' })
+    assert.equal(await service.has('shared', 'someone-else'), true)
+  })
+
+  test('before any link, a singleton reads as not linked', async () => {
+    const auth = makeAuth(emptyDb(), [provider('shared', 'singleton')])
+    const service = new BetterAuthCredentialService({
+      getAuth: async () => auth,
+      oauth2Names: ['shared'],
+      singletonOAuth2Names: ['shared'],
+      fallback: {} as any,
+    })
+    assert.equal(await service.get('shared'), null)
   })
 })

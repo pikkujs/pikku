@@ -18,7 +18,7 @@ is a convention about who opens the browser tab; it is not a deployment
 boundary.
 
 The transport in front of that route is configured separately from the console:
-`scaffold.rpc` defaults to `"no-auth"` in `templates/functions/pikku.config.json`
+`scaffold.rpc` defaults to `"no-auth"` in `recipes/functions/pikku.config.json`
 and in `e2e/pikku.config.json`, which generates `wireHTTP({ route:
 '/rpc/:rpcName', auth: false })`. `scaffold.console: "auth"` does not raise it,
 and the generated `wireAddon` carries no `auth` key, so `addonConfig.auth` is

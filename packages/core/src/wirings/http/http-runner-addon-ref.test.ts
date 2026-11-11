@@ -1,6 +1,10 @@
 import { test, describe, beforeEach } from 'node:test'
 import * as assert from 'assert'
 import { addHTTPMiddleware, fetch, wireHTTP } from './http-runner.js'
+import {
+  addTagMiddleware,
+  clearMiddlewareCache,
+} from '../../middleware-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addSchema } from '../../schema.js'
 import { PikkuMockRequest } from '../channel/local/local-channel-runner.test.js'
@@ -22,10 +26,14 @@ class ParamsRequest extends PikkuMockRequest {
 
 const registerAddon = (
   sessionless = true,
-  inputSchemaName: string | null = null
+  inputSchemaName: string | null = null,
+  scopes?: string[],
+  tags?: string[]
 ) => {
   pikkuState(null, 'addons', 'packages').set(ADDON_NAMESPACE, {
     package: ADDON_PACKAGE,
+    ...(scopes && { scopes }),
+    ...(tags && { tags }),
   } as never)
   pikkuState(ADDON_PACKAGE, 'function', 'meta', {
     greet: {
@@ -234,5 +242,107 @@ describe('http routes wired with ref() to an addon function', () => {
     const response = await fetch(new ParamsRequest('/addon/greet', 'get'))
 
     assert.strictEqual(response.status, 401)
+  })
+
+  /**
+   * #1362. The console wires its SSE stream as a public route to a public
+   * function — `auth: false` on both — and relies on `wireAddon({ scopes })`
+   * as the floor. That floor belongs to the function's package, so it holds
+   * whether or not the route's metadata names the package: `wireHTTPRoutes`
+   * records it, a plain `wireHTTP({ func: ref(...) })` does not.
+   */
+  describe("the addon's scope floor on a public ref() route", () => {
+    beforeEach(() => clearMiddlewareCache())
+
+    const wirePublicRoute = (route: string, extra: Record<string, unknown>) => {
+      registerAddon(true, null, ['pikku:console'])
+      setRouteMeta(route, 'get', {
+        auth: false,
+        middleware: [{ type: 'http', route: '*' }],
+        ...extra,
+      })
+      wireHTTP({
+        route,
+        method: 'get',
+        auth: false,
+        func: { auth: false, func: async () => ({ message: 'hello' }) },
+      } as CoreHTTPFunctionWiring<unknown, unknown, string>)
+      httpRouter.initialize()
+    }
+
+    // A route that names the package resolves its HTTP middleware there, so
+    // the stand-in session bridge is registered on both sides.
+    const signIn = (scopes: string[]) => {
+      const bridge = [
+        async (_services: never, wire: any, next: () => Promise<void>) => {
+          wire.setSession?.({ userId: 'u1', scopes })
+          await next()
+        },
+      ] as never
+      addHTTPMiddleware('*', bridge)
+      addHTTPMiddleware('*', bridge, ADDON_PACKAGE)
+    }
+
+    for (const [label, extra, route] of [
+      [
+        'when the route names the package',
+        { packageName: ADDON_PACKAGE },
+        '/addon/named-stream',
+      ],
+      ['when the route does not', {}, '/addon/unnamed-stream'],
+    ] as const) {
+      test(`refuses a caller with no session ${label}`, async () => {
+        wirePublicRoute(route, extra)
+
+        const response = await fetch(new ParamsRequest(route, 'get'))
+
+        assert.strictEqual(response.status, 403)
+      })
+
+      test(`refuses a session without the scope ${label}`, async () => {
+        signIn(['other'])
+        wirePublicRoute(route, extra)
+
+        const response = await fetch(new ParamsRequest(route, 'get'))
+
+        assert.strictEqual(response.status, 403)
+      })
+
+      test(`serves a session holding the scope ${label}`, async () => {
+        signIn(['pikku:console'])
+        wirePublicRoute(route, extra)
+
+        const response = await fetch(new ParamsRequest(route, 'get'))
+
+        assert.strictEqual(response.status, 200)
+      })
+    }
+  })
+
+  test("applies the app's middleware for the addon's wireAddon tags", async () => {
+    registerAddon(true, null, undefined, ['audited'])
+    setRouteMeta('/addon/greet-tagged', 'get', { auth: false })
+    const ran: string[] = []
+    addTagMiddleware('audited', [
+      async (_services, _wire, next) => {
+        ran.push('audited')
+        await next()
+      },
+    ])
+
+    wireHTTP({
+      route: '/addon/greet-tagged',
+      method: 'get',
+      auth: false,
+      func: { func: async () => ({ message: 'hello' }) },
+    } as CoreHTTPFunctionWiring<unknown, unknown, string>)
+    httpRouter.initialize()
+
+    const response = await fetch(
+      new ParamsRequest('/addon/greet-tagged', 'get')
+    )
+
+    assert.strictEqual(response.status, 200)
+    assert.deepStrictEqual(ran, ['audited'])
   })
 })

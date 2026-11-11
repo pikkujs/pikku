@@ -3,6 +3,11 @@ import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import { getTagGroups } from '../../utils.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 import type { AddonInstance } from './addon-runner.js'
+import { AddonUsesShadowedError } from './addon-reach.js'
+/**
+ * Options for `wireAddon`: the instance name, its package, and what the consuming app grants it
+ * (auth, scopes, exposed functions, secret/credential/content access and overrides).
+ */
 export type WireAddonConfig = {
   /** How this instance is addressed. One package may be wired more than once, and the name is what tells the instances apart. */
   name: string
@@ -21,10 +26,10 @@ export type WireAddonConfig = {
   mcp?: boolean | string[]
   /**
    * Which of the addon's functions `rpc.exposed` may call, under
-   * `<name>:<function>`. Unset or `true` keeps the functions the addon itself
-   * declared `expose: true`; `false` exposes none of them; a list names exactly
-   * the functions to expose, whether or not the addon declared them, and is
-   * typed against the addon's function names.
+   * `<name>:<function>`. Only functions the addon itself declared
+   * `expose: true` can ever be exposed: `true` exposes all of them, a list
+   * only those it names, and unset or `false` none. A listed function the
+   * addon did not declare stays unexposed.
    *
    * knowledge: decisions/security/wire-addon-expose-selects-the-rpc-surface.md
    */
@@ -41,21 +46,25 @@ export type WireAddonConfig = {
    * been.
    */
   mcpEndpoint?: boolean | string
-  /** Filters this addon in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
+  /** Filters this addon in and out of a build (see the `tags` option on `pikku all`), and at runtime is added to every one of its functions' tags, so tag-resolved middleware and permissions apply. */
   tags?: string[]
   /**
-   * Mounts the screens the addon ships (see `defineScreens`) in the host under
-   * `/addons/<name>`. Without it the addon's screens are ignored. The package
-   * must declare at least one, or `pikku all` rejects the wiring.
+   * Mounts the screens the addon ships (see `definePlugin`) in the host, each at
+   * the path its `scope` gives it. Without it the addon's screens are ignored.
+   * The package must declare at least one, or `pikku all` rejects the wiring.
    */
   ui?: boolean
   /** Required of every function in the addon, on top of the function's own. */
   scopes?: string[]
   /**
-   * The other addons this one may call, as `{ '<package>': '<name>' }`: the
-   * package it was written against, and the name that package is wired under
-   * in this app. The addon calls `'<package>:<function>'`; anything it did not
-   * list is refused, whatever else the app has wired.
+   * The other addons this one may call, as `{ '<alias>': '<name>' }`: the name
+   * the addon calls another by, and the name that addon is wired under in this
+   * app — by `wireAddon` or `wireRemoteAddon`, either serves. The alias is the
+   * one the addon's package.json declares under `pikku.uses`
+   * (`{ "stripe": "@acme/addon-stripe@^1.0.0" }`), or, for an addon that lists
+   * plain names, the package name itself. The addon calls
+   * `'<alias>:<function>'`; anything it did not declare, or this app did not
+   * map, is refused, whatever else the app has wired.
    */
   uses?: Record<string, string>
   /** Points a secret the addon reads at a different key in this deployment, so two instances can hold different credentials. */
@@ -94,6 +103,12 @@ export type WireAddonConfig = {
   contentGrants?: Record<string, 'read' | 'write'>
   /** Hands over the whole `ContentService` unscoped. The value is the reason, recorded in the deploy manifest. */
   globalContent?: string
+  /**
+   * The contributors this project takes from the addon (those it registers with
+   * `defineContributors`), by name. None unless listed: an addon never injects
+   * services into a project that did not ask for them.
+   */
+  contributors?: string[]
 }
 
 /**
@@ -103,6 +118,10 @@ export type WireAddonConfig = {
  * @example snippet: addonWiring
  */
 export const wireAddon = (config: WireAddonConfig): void => {
+  const shadowed = config.uses?.[config.name]
+  if (shadowed !== undefined && shadowed !== config.name) {
+    throw new AddonUsesShadowedError(config.name, shadowed)
+  }
   pikkuState(null, 'addons', 'packages').set(config.name, {
     package: config.package,
     rpcEndpoint: config.rpcEndpoint,
@@ -136,8 +155,8 @@ export const wireAddon = (config: WireAddonConfig): void => {
 
 /**
  * Whether `rpc.exposed` may reach an addon function through the instance that
- * resolved it. The wiring's `expose` decides when it is `false` or a list;
- * otherwise the addon's own `expose: true` does.
+ * resolved it. Both sides must agree: the addon declares the function
+ * `expose: true`, and the wiring opts in with `true` or a list naming it.
  *
  * knowledge: decisions/security/wire-addon-expose-selects-the-rpc-surface.md
  */
@@ -146,13 +165,13 @@ export const isAddonFunctionExposed = (
   functionName: string,
   declaredExpose: boolean | undefined
 ): boolean => {
+  if (declaredExpose !== true) {
+    return false
+  }
   if (Array.isArray(expose)) {
     return expose.includes(functionName)
   }
-  if (expose === false) {
-    return false
-  }
-  return declaredExpose === true
+  return expose === true
 }
 
 /**

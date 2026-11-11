@@ -46,6 +46,7 @@ export interface ProvisionVirtualUsersServices {
  */
 export type VirtualUserOrphanPolicy = 'report' | 'ban'
 
+/** What {@link provisionVirtualUsers} provisions, and where. */
 export interface ProvisionVirtualUsersOptions {
   /** Virtual user id → the declaration with its address filled in — `virtualUserConfigs`. */
   virtualUsers: Record<string, ResolvedVirtualUser>
@@ -57,6 +58,7 @@ export interface ProvisionVirtualUsersOptions {
   orphans?: VirtualUserOrphanPolicy
 }
 
+/** What {@link provisionVirtualUsers} did. */
 export interface ProvisionVirtualUsersResult {
   created: number
   granted: number
@@ -79,6 +81,43 @@ type VirtualUserRow = {
   virtualUser?: boolean
   banned?: boolean
 } & Record<string, unknown>
+
+/**
+ * Grant one virtual user account the app scope and roles its declaration names,
+ * skipping what it already holds. Additive: it never revokes.
+ *
+ * Shared by {@link provisionVirtualUsers} and by `pikkuVirtualUser`'s sign-in
+ * under `pikku dev`, the one place that creates virtual user accounts on demand.
+ */
+export const grantVirtualUserAccess = async (
+  scopeService: ProvisionVirtualUsersServices['scopeService'],
+  userId: string,
+  virtualUser: { app?: string; roles?: readonly string[] }
+): Promise<{ granted: number; appsGranted: number; held: number }> => {
+  const result = { granted: 0, appsGranted: 0, held: 0 }
+  if (virtualUser.app) {
+    const scope = appScopeId(virtualUser.app)
+    const heldScopes = new Set(await scopeService.listUserScopes(userId))
+    if (heldScopes.has(scope)) {
+      result.held++
+    } else {
+      await scopeService.addScopeToUser(userId, scope)
+      result.appsGranted++
+    }
+  }
+  const roles = virtualUser.roles ?? []
+  if (roles.length === 0) return result
+  const already = new Set(await scopeService.listUserRoles(userId))
+  for (const role of roles) {
+    if (already.has(role)) {
+      result.held++
+      continue
+    }
+    await scopeService.addUserToRole(userId, role)
+    result.granted++
+  }
+  return result
+}
 
 /**
  * Provision the declared virtual users into the environment this process is running
@@ -164,7 +203,7 @@ export const provisionVirtualUsers = async (
       'Provisioning virtual users requires better-auth to be wired (services.auth is missing)'
     )
   }
-  const ctx = (await (await auth()).$context) as any
+  const ctx = await (await auth()).$context
 
   const banAvailable =
     typeof ctx.hasPlugin === 'function'
@@ -228,30 +267,14 @@ export const provisionVirtualUsers = async (
       result.unbanned++
     }
 
-    if (virtualUser.app) {
-      const scope = appScopeId(virtualUser.app)
-      const heldScopes = new Set(await scopeService.listUserScopes(user.id))
-      if (heldScopes.has(scope)) {
-        result.held++
-      } else {
-        await scopeService.addScopeToUser(user.id, scope)
-        result.appsGranted++
-      }
-    }
-
-    const roles = virtualUser.roles ?? []
-    if (roles.length === 0) {
-      continue
-    }
-    const already = new Set(await scopeService.listUserRoles(user.id))
-    for (const role of roles) {
-      if (already.has(role)) {
-        result.held++
-        continue
-      }
-      await scopeService.addUserToRole(user.id, role)
-      result.granted++
-    }
+    const grants = await grantVirtualUserAccess(
+      scopeService,
+      user.id,
+      virtualUser
+    )
+    result.granted += grants.granted
+    result.appsGranted += grants.appsGranted
+    result.held += grants.held
   }
 
   // Every virtual user row, not only the ones this run touched: what makes an account

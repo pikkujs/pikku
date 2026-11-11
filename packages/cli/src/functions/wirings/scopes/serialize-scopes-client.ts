@@ -71,6 +71,8 @@ const holds = (held: ReadonlySet<string>, scope: string): boolean =>
  *
  * Fails closed: absent grants satisfy nothing. An empty \`required\` is
  * satisfied by anything.
+ *
+ * @example snippet: hasScopes
  */
 export const hasScopes = (
   required: readonly string[] | undefined,

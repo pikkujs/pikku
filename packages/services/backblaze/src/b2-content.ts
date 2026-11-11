@@ -215,7 +215,7 @@ export class B2Content implements ContentService {
     )
     return {
       uploadUrl,
-      assetKey: fullKey,
+      fileKey: args.fileKey,
       uploadMethod: 'POST',
       uploadHeaders: {
         Authorization: authorizationToken,

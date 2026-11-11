@@ -5,45 +5,19 @@ import type { CoreSingletonServices } from '@pikku/core/types'
 import type { BetterAuthInstance } from './define-auth.js'
 import { PROVIDER_REGISTRY } from './provider-registry.js'
 import { isSecretForbidden, isSecretNotFound } from './secret-not-found.js'
-
-export const OAUTH_PROXY_SECRET_ID = 'OAUTH_PROXY_SECRET'
-export const OAUTH_PROXY_URL_VARIABLE = 'OAUTH_PROXY_URL'
-export const OAUTH_PROXY_KEY_ID_VARIABLE = 'OAUTH_PROXY_KEY_ID'
-export const OAUTH_PROXY_PROVIDERS_VARIABLE = 'OAUTH_PROXY_PROVIDERS'
-
-/** Providers a host may proxy. Each needs its `<ID>_OAUTH` secret declared. */
-export const OAUTH_PROXY_PROVIDER_IDS = [
-  'atlassian',
-  'cloudflare',
-  'discord',
-  'dropbox',
-  'facebook',
-  'figma',
-  'github',
-  'gitlab',
-  'google',
-  'huggingface',
-  'kakao',
-  'kick',
-  'line',
-  'linear',
-  'linkedin',
-  'microsoft',
-  'naver',
-  'notion',
-  'paybin',
-  'paypal',
-  'polar',
-  'railway',
-  'salesforce',
-  'slack',
-  'spotify',
-  'twitch',
-  'twitter',
-  'vercel',
-  'vk',
-  'zoom',
-] as const
+import {
+  OAUTH_PROXY_SECRET_ID,
+  OAUTH_PROXY_URL_VARIABLE,
+  OAUTH_PROXY_KEY_ID_VARIABLE,
+  OAUTH_PROXY_PROVIDERS_VARIABLE,
+} from './oauth-proxy-constants.js'
+export {
+  OAUTH_PROXY_SECRET_ID,
+  OAUTH_PROXY_URL_VARIABLE,
+  OAUTH_PROXY_KEY_ID_VARIABLE,
+  OAUTH_PROXY_PROVIDERS_VARIABLE,
+  OAUTH_PROXY_PROVIDER_IDS,
+} from './oauth-proxy-constants.js'
 
 /**
  * The client secret handed to a provider that signs in through the proxy. The
@@ -53,9 +27,14 @@ const PLACEHOLDER_CLIENT_SECRET = 'oauth-proxy'
 
 type ProxyServices = Pick<CoreSingletonServices, 'logger'> & {
   secrets?: { getSecret(id: string): Promise<{ reveal(): unknown }> }
-  variables?: { get(id: string): Promise<string | undefined | null> }
+  variables?: {
+    get(
+      id: string
+    ): Promise<string | undefined | null> | string | undefined | null
+  }
 }
 
+/** A stage's resolved OAuth proxy configuration. */
 export interface OAuthProxyConfig {
   productionURL: string
   secret: string
@@ -132,8 +111,7 @@ export const resolveOAuthProxyConfig = async (
       )
     }
     const credentials = (await readSecret(services, def.secretId)) as
-      | { clientId?: string }
-      | undefined
+      { clientId?: string } | undefined
     if (!credentials?.clientId) {
       throw new Error(
         `OAuth proxy: ${id} is listed in ${OAUTH_PROXY_PROVIDERS_VARIABLE} but ${def.secretId} has no clientId.`
@@ -197,7 +175,7 @@ export const applyOAuthProxy = async <I extends BetterAuthInstance>(
   const config = await resolveOAuthProxyConfig(services)
   if (!config) return instance
 
-  const options = (instance as any).options ?? {}
+  const options = instance.options ?? {}
   const own = Object.keys(options.socialProviders ?? {}).filter((id) =>
     Object.hasOwn(config.providers, id)
   )
@@ -207,13 +185,37 @@ export const applyOAuthProxy = async <I extends BetterAuthInstance>(
     )
   }
 
+  const google = config.providers.google
+  const oneTap = (options.plugins ?? []).find(
+    (plugin: { id?: string }) => plugin.id === 'one-tap'
+  ) as { options?: { clientId?: string | string[] } } | undefined
+  if (
+    google &&
+    oneTap &&
+    [oneTap.options?.clientId || google.clientId]
+      .flat()
+      .includes(google.clientId)
+  ) {
+    throw new Error(
+      `OAuth proxy is on for google, and the oneTap plugin would accept Google ID tokens issued to the proxy's shared client. Give oneTap the app's own clientId, remove the oneTap plugin, or remove google from ${OAUTH_PROXY_PROVIDERS_VARIABLE}.`
+    )
+  }
+
   services.logger?.info(
     `pikku: OAuth sign-in for ${Object.keys(config.providers).join(', ')} goes through ${config.productionURL}.`
   )
 
   return betterAuth({
     ...options,
-    socialProviders: { ...options.socialProviders, ...config.providers },
+    socialProviders: {
+      ...options.socialProviders,
+      ...Object.fromEntries(
+        Object.entries(config.providers).map(([id, provider]) => [
+          id,
+          { ...provider, disableIdTokenSignIn: true },
+        ])
+      ),
+    },
     plugins: [
       ...(options.plugins ?? []),
       oAuthProxy({

@@ -1,6 +1,13 @@
 import { pikkuState } from '../../../pikku-state.js'
 import { addFunction } from '../../../function/function-runner.js'
 
+/**
+ * Registers a workflow under its generated name. Called by generated code; an
+ * app declares workflows with `pikkuWorkflowFunc` and its relatives instead.
+ * Skipped with a warning when no metadata was generated for the name.
+ *
+ * @internal
+ */
 export const addWorkflow = (
   workflowName: string,
   workflowFunc: any,

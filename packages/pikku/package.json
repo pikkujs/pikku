@@ -1,6 +1,6 @@
 {
   "name": "pikku",
-  "version": "0.12.4",
+  "version": "0.12.5",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -15,20 +15,26 @@
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "release": "bun run build && npm test",
     "test": "bash run-tests.sh",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.108",
-    "@pikku/jose": "^0.12.7",
-    "@pikku/schema-ajv": "^0.12.7"
+    "@pikku/core": "^0.12.144",
+    "@pikku/jose": "^0.12.10",
+    "@pikku/schema-ajv": "^0.12.8"
   },
   "engines": {
     "node": ">=24"
   },
   "exports": {
-    ".": "./dist/index.js"
-  }
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ]
 }

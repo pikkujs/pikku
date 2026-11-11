@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
+import { oneTap } from 'better-auth/plugins'
 
 import { applyOAuthProxy, resolveOAuthProxyConfig } from './oauth-proxy.js'
 
@@ -19,7 +20,8 @@ const makeServices = (
       logger: { info: (m: string) => logs.push(m) } as any,
       secrets: {
         getSecret: async (id: string) => {
-          if (!(id in secrets)) throw new Error(`Requested secret not found: ${id}`)
+          if (!(id in secrets))
+            throw new Error(`Requested secret not found: ${id}`)
           return { reveal: () => secrets[id] }
         },
       },
@@ -32,7 +34,10 @@ const full = () =>
   makeServices(
     {
       OAUTH_PROXY_SECRET: 'stage-key',
-      GOOGLE_OAUTH: { clientId: 'cloud-google-id', clientSecret: 'oauth-proxy' },
+      GOOGLE_OAUTH: {
+        clientId: 'cloud-google-id',
+        clientSecret: 'oauth-proxy',
+      },
     },
     {
       OAUTH_PROXY_URL: PROXY,
@@ -41,13 +46,17 @@ const full = () =>
     }
   )
 
-const makeAuth = (socialProviders?: Record<string, unknown>) =>
+const makeAuth = (
+  socialProviders?: Record<string, unknown>,
+  plugins: any[] = []
+) =>
   betterAuth({
     secret: 'test-secret-test-secret-test-secret',
     baseURL: 'https://stage.example.com',
     database: memoryAdapter({}),
     emailAndPassword: { enabled: true },
     socialProviders: socialProviders as any,
+    plugins,
   })
 
 describe('resolveOAuthProxyConfig', () => {
@@ -169,7 +178,10 @@ describe('applyOAuthProxy', () => {
       `${PROXY}/api/auth/callback/google`
     )
     assert.ok(url.searchParams.get('state')!.startsWith(`${KEY_ID}.`))
-    assert.match(logs.join('\n'), /google goes through https:\/\/oauth.example.com/)
+    assert.match(
+      logs.join('\n'),
+      /google goes through https:\/\/oauth.example.com/
+    )
   })
 
   test('leaves the app its own providers and plugins', async () => {
@@ -186,6 +198,26 @@ describe('applyOAuthProxy', () => {
     assert.equal(options.emailAndPassword.enabled, true)
   })
 
+  test('refuses a raw id token for the shared client', async () => {
+    const { services } = full()
+    const auth = await applyOAuthProxy(makeAuth(), services)
+
+    assert.equal(
+      (auth as any).options.socialProviders.google.disableIdTokenSignIn,
+      true
+    )
+    await assert.rejects(
+      () =>
+        auth.api.signInSocial({
+          body: {
+            provider: 'google',
+            idToken: { token: 'eyJhbGciOiJSUzI1NiJ9.e30.sig' },
+          },
+        }),
+      (error: any) => error?.body?.code === 'ID_TOKEN_NOT_SUPPORTED'
+    )
+  })
+
   test('omits the key id prefix when none is configured', async () => {
     const { services } = makeServices(
       {
@@ -200,6 +232,37 @@ describe('applyOAuthProxy', () => {
     })
     const state = new URL(result.url!).searchParams.get('state')!
     assert.ok(!state.includes('.'))
+  })
+
+  test('refuses a oneTap plugin that would trust the shared Google client', async () => {
+    const { services } = full()
+    await assert.rejects(
+      () => applyOAuthProxy(makeAuth(undefined, [oneTap()]), services),
+      /oneTap plugin would accept Google ID tokens/
+    )
+    await assert.rejects(
+      () =>
+        applyOAuthProxy(
+          makeAuth(undefined, [oneTap({ clientId: 'cloud-google-id' })]),
+          services
+        ),
+      /oneTap plugin/
+    )
+    await assert.rejects(
+      () =>
+        applyOAuthProxy(
+          makeAuth(undefined, [oneTap({ clientId: '' })]),
+          services
+        ),
+      /oneTap plugin/
+    )
+    const auth = await applyOAuthProxy(
+      makeAuth(undefined, [oneTap({ clientId: 'own-google-id' })]),
+      services
+    )
+    assert.ok(
+      (auth as any).options.plugins.some((p: any) => p.id === 'one-tap')
+    )
   })
 
   test('refuses a provider the app also configures itself', async () => {

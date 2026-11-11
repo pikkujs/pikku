@@ -1,5 +1,10 @@
 import type { CredentialService } from './credential-service.js'
 
+/**
+ * A `CredentialService` held in process memory, for development and tests.
+ * Values are stored unencrypted and lost on restart; do not use it in
+ * production.
+ */
 export class LocalCredentialService implements CredentialService {
   private store: Map<string, unknown> = new Map()
 

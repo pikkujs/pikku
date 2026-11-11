@@ -298,7 +298,8 @@ describe('runScheduledTask', () => {
         .getLogs()
         .filter(
           (log) =>
-            log.level === 'warn' && /auth was explicitly disabled/.test(log.message)
+            log.level === 'warn' &&
+            /auth was explicitly disabled/.test(log.message)
         ),
       []
     )
@@ -831,5 +832,53 @@ describe('a scheduled task authorizes on the session its own middleware sets', (
     )
     await runScheduledTask({ name: 'platform-tick' })
     assert.equal(seen()?.userId, 'pikku-platform')
+  })
+})
+
+describe('runScheduledTask trace', () => {
+  const run = async (traceparent?: string) => {
+    let seen: any
+    pikkuState(null, 'scheduler', 'meta')['traced-task'] = {
+      pikkuFuncId: 'traced_task',
+      name: 'traced-task',
+      schedule: '* * * * *',
+    } as any
+    pikkuState(null, 'function', 'meta')['traced_task'] = {
+      pikkuFuncId: 'traced_task',
+      sessionless: true,
+    } as any
+    wireScheduler({
+      name: 'traced-task',
+      schedule: '* * * * *',
+      func: {
+        func: async (_services: any, _data: any, wire: any) => {
+          seen = wire
+        },
+        auth: false,
+      },
+    } as any)
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { info() {}, warn() {}, error() {}, debug() {} },
+    } as any)
+    await runScheduledTask({ name: 'traced-task', traceparent })
+    return seen
+  }
+
+  test('a task with no trace starts a valid one', async () => {
+    const wire = await run()
+    assert.match(wire.trace.traceId, /^[0-9a-f]{32}$/)
+    assert.equal(wire.traceId, wire.trace.traceId)
+  })
+
+  test('a delayed run continues the trace it was scheduled on', async () => {
+    const wire = await run(`00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`)
+    assert.equal(wire.trace.traceId, 'a'.repeat(32))
+    assert.equal(wire.trace.parentSpanId, 'b'.repeat(16))
+  })
+
+  test('an invalid traceparent starts a valid trace', async () => {
+    const wire = await run('cron-123')
+    assert.match(wire.trace.traceId, /^[0-9a-f]{32}$/)
+    assert.equal(wire.trace.parentSpanId, undefined)
   })
 })

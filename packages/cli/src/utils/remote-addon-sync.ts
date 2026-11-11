@@ -1,0 +1,494 @@
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { dirname, join, relative, resolve } from 'node:path'
+import semver from 'semver'
+import {
+  ADDONS_LOCK_FILE,
+  ErrorCode,
+  SDK_INTEGRITY_MARKER,
+  checkLockedSdk,
+  emptyAddonsLock,
+  readAddonsLock,
+  readSdkManifest,
+  remoteSdkDir,
+  serializeAddonsLock,
+  type AddonsLock,
+} from '@pikku/inspector'
+import { findSourceFiles } from './find-source-files.js'
+import {
+  addonDependencySdkSpecs,
+  checkWorkspaceDependencySdks,
+  resolveAddonDependencies,
+} from './addon-dependencies.js'
+import { readTgz, writeSdkEntries } from './extract-tgz.js'
+import type { FlattenedRPCMap } from '../../.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.js'
+
+/** Where versioned `wireRemoteAddon` packages resolve when `pikku.config.json` sets no `registry`. */
+export const DEFAULT_ADDON_REGISTRY = 'https://api.pikkustudio.app'
+
+/**
+ * `registry:resolveSdk`'s contract while the registry's SDK is not synced: a
+ * build with `PIKKU_CLI_WITHOUT_REGISTRY_SDK=1` (build.sh) has no such key in
+ * its RPC map, until the registry serves its own SDK.
+ * knowledge: the-cli-syncs-its-registry-sdk-like-any-consumer
+ */
+type UnsyncedRegistryResolveSdk = {
+  input: { name: string; range: string }
+  output: { version: string; integrity: string; url: string }
+}
+
+/** `registry:resolveSdk`, typed by the registry's own SDK whenever it is synced. */
+type RegistryResolveSdk =
+  FlattenedRPCMap extends Record<'registry:resolveSdk', infer Contract>
+    ? Contract
+    : UnsyncedRegistryResolveSdk
+export type ResolveSdkRequest = RegistryResolveSdk['input']
+/** The highest SDK satisfying the range: its version, `sha512-<base64>` integrity and a short-lived signed URL. */
+export type ResolvedSdk = RegistryResolveSdk['output']
+
+export type ResolveSdk = (request: ResolveSdkRequest) => Promise<ResolvedSdk>
+
+/** `rpc.invoke` seen only as `registry:resolveSdk`, which compiles with or without the synced SDK. */
+export type RegistryInvoke = (
+  name: 'registry:resolveSdk',
+  request: ResolveSdkRequest
+) => Promise<ResolvedSdk>
+
+export type DownloadSdk = (url: string) => Promise<Buffer>
+
+/** A sync failure carrying the PKU code it is reported under. */
+export class RemoteAddonSyncError extends Error {
+  readonly code: ErrorCode
+
+  constructor(code: ErrorCode, message: string) {
+    super(message)
+    this.name = 'RemoteAddonSyncError'
+    this.code = code
+  }
+}
+
+const isLoopback = (url: URL) =>
+  url.hostname === 'localhost' ||
+  url.hostname === '127.0.0.1' ||
+  url.hostname === '[::1]'
+
+/** True when a credential may be sent to `url`: https, or a local registry. */
+const mayCarryCredential = (url: URL) =>
+  url.protocol === 'https:' || isLoopback(url)
+
+/**
+ * The bearer for the registry: the Pikku Studio login the CLI already holds,
+ * else `PIKKU_REGISTRY_TOKEN`. Null when there is neither, and public SDKs
+ * still resolve.
+ */
+export const resolveRegistryToken = async (): Promise<string | null> => {
+  try {
+    const { resolveApiContext } = await import('@pikku/addon-cloud-cli/client')
+    const { token } = await resolveApiContext({ resolveProject: false })
+    if (token) return token
+  } catch {
+    // No login, or an api url the cloud client refuses: fall through.
+  }
+  return process.env.PIKKU_REGISTRY_TOKEN?.trim() || null
+}
+
+/** The registry the project's `pikku.config.json` names, else the default. */
+export const registryUrl = (config: unknown): string =>
+  (config as { registry?: string } | undefined)?.registry ??
+  DEFAULT_ADDON_REGISTRY
+
+/**
+ * The `registry` remote addon's bearer: the token from
+ * {@link resolveRegistryToken}, or null — a call with no credential — when
+ * there is none or the registry is plain http.
+ */
+export const registryCredential = async (
+  registry: string
+): Promise<string | null> =>
+  mayCarryCredential(new URL(registry)) ? resolveRegistryToken() : null
+
+/**
+ * The SDK download: a plain GET of the signed URL `resolveSdk` answered, sent
+ * without credentials. `fetch` is injectable for tests.
+ */
+export const createSdkDownloader =
+  (fetch: typeof globalThis.fetch = globalThis.fetch): DownloadSdk =>
+  async (url) => {
+    const target = new URL(url)
+    if (target.protocol !== 'https:' && !isLoopback(target)) {
+      throw new Error(
+        `refusing to download an SDK over ${target.protocol} from ${target.origin}`
+      )
+    }
+    const response = await fetch(target)
+    if (!response.ok) {
+      throw new Error(
+        `downloading ${target.origin}${target.pathname} failed: HTTP ${response.status}`
+      )
+    }
+    return Buffer.from(await response.arrayBuffer())
+  }
+
+export const sha512Integrity = (data: Buffer): string =>
+  `sha512-${createHash('sha512').update(data).digest('base64')}`
+
+/** A versioned `wireRemoteAddon` package found in the source. */
+export type RemoteAddonSdkSpec = {
+  name: string
+  range: string
+  /** Where it was found, for messages: `<file>:<line>`. */
+  at: string
+}
+
+/**
+ * Every versioned `wireRemoteAddon` package in the project's source, one per
+ * package. Two calls asking the same package for different ranges is an error:
+ * the lock holds one SDK per package.
+ */
+export const collectRemoteAddonSdkSpecs = async (config: {
+  rootDir: string
+  srcDirectories: string[]
+  ignoreFiles: string[]
+}): Promise<RemoteAddonSdkSpec[]> => {
+  const files = await findSourceFiles(
+    config.rootDir,
+    config.srcDirectories,
+    config.ignoreFiles
+  )
+  const candidates: { file: string; text: string }[] = []
+  for (const file of files) {
+    const text = await readFile(file, 'utf-8')
+    if (text.includes('wireRemoteAddon')) candidates.push({ file, text })
+  }
+  if (candidates.length === 0) return []
+  // The scan runs in the pikku-inspect binary; only spawn it when a file mentions the wiring.
+  const { findWireRemoteAddonSpecs } = await import('@pikku/inspector-go')
+  const byName = new Map<string, RemoteAddonSdkSpec>()
+  for (const { file, text } of candidates.sort((a, b) =>
+    a.file.localeCompare(b.file)
+  )) {
+    for (const found of findWireRemoteAddonSpecs(file, text)) {
+      if (!found.range) continue
+      const at = `${relative(config.rootDir, file)}:${found.line}`
+      const seen = byName.get(found.name)
+      if (seen && seen.range !== found.range) {
+        throw new RemoteAddonSyncError(
+          ErrorCode.REMOTE_ADDON_PACKAGE_INVALID,
+          `${found.name} is wired at '${seen.range}' (${seen.at}) and at '${found.range}' (${at}). ${ADDONS_LOCK_FILE} holds one SDK per package; use the same range in both.`
+        )
+      }
+      if (!seen)
+        byName.set(found.name, { name: found.name, range: found.range, at })
+    }
+  }
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** The installed @pikku/core version, walking up from `rootDir`. */
+const installedCoreVersion = (rootDir: string): string | null => {
+  let dir = resolve(rootDir)
+  for (;;) {
+    const path = join(dir, 'node_modules', '@pikku', 'core', 'package.json')
+    if (existsSync(path)) {
+      try {
+        return JSON.parse(readFileSync(path, 'utf-8')).version ?? null
+      } catch {
+        return null
+      }
+    }
+    const parent = dirname(dir)
+    if (parent === dir) return null
+    dir = parent
+  }
+}
+
+export type SyncedSdk = {
+  name: string
+  range: string
+  version: string
+  /** `cached`: the lock and files matched, nothing was fetched. */
+  source: 'cached' | 'downloaded'
+  dir: string
+  pikkuCore?: string
+}
+
+export type SyncResult = {
+  sdks: SyncedSdk[]
+  lock: AddonsLock
+  /** Whether `pikku-addons.lock` was rewritten. */
+  lockChanged: boolean
+}
+
+export type SyncLogger = {
+  debug: (message: string) => void
+  info: (message: string) => void
+  diagnostic: (d: {
+    severity: 'warn' | 'error' | 'critical'
+    code: ErrorCode
+    message: string
+  }) => void
+}
+
+/** Downloads `url`, checks it against `integrity`, and extracts it into the SDK directory. */
+const fetchAndExtract = async (
+  rootDir: string,
+  name: string,
+  version: string,
+  integrity: string,
+  url: string,
+  download: DownloadSdk
+): Promise<string> => {
+  if (!integrity.startsWith('sha512-')) {
+    throw new RemoteAddonSyncError(
+      ErrorCode.REMOTE_ADDON_SDK_INTEGRITY_MISMATCH,
+      `The registry gave ${name}@${version} the integrity '${integrity}', which is not a sha512 digest. Refusing to install it.`
+    )
+  }
+  const tarball = await download(url)
+  const actual = sha512Integrity(tarball)
+  if (actual !== integrity) {
+    throw new RemoteAddonSyncError(
+      ErrorCode.REMOTE_ADDON_SDK_INTEGRITY_MISMATCH,
+      `The SDK tarball downloaded for ${name}@${version} hashes to ${actual}, not the ${integrity} it was published with. Nothing was installed.`
+    )
+  }
+  const dir = remoteSdkDir(rootDir, name, version)
+  const staging = `${dir}.partial-${process.pid}`
+  await rm(staging, { recursive: true, force: true })
+  try {
+    await mkdir(staging, { recursive: true })
+    await writeSdkEntries(readTgz(tarball), staging)
+    const manifest = readSdkManifest(staging)
+    if (!manifest || manifest.name !== name || manifest.version !== version) {
+      throw new RemoteAddonSyncError(
+        ErrorCode.REMOTE_ADDON_SDK_INTEGRITY_MISMATCH,
+        `The SDK tarball for ${name}@${version} has a manifest.json naming ${manifest ? `${manifest.name}@${manifest.version}` : 'nothing'}. Nothing was installed.`
+      )
+    }
+    await writeFile(join(staging, SDK_INTEGRITY_MARKER), `${integrity}\n`)
+    await rm(dir, { recursive: true, force: true })
+    await rename(staging, dir)
+  } finally {
+    await rm(staging, { recursive: true, force: true })
+  }
+  return dir
+}
+
+/**
+ * Brings `.pikku/remote` and `pikku-addons.lock` in line with `specs`.
+ *
+ * A locked version that still satisfies the spec's range is kept: when its
+ * files are on disk with the lock's integrity nothing touches the network,
+ * and otherwise the registry is asked for exactly that version and must serve
+ * the same bytes. A range the lock cannot satisfy resolves afresh. Entries for
+ * packages no longer wired are dropped, and the lock is written sorted, so an
+ * unchanged project rewrites nothing.
+ */
+export const syncRemoteAddonSdks = async ({
+  rootDir,
+  specs,
+  resolveSdk,
+  download,
+  logger,
+  coreVersion = installedCoreVersion(rootDir),
+}: {
+  rootDir: string
+  specs: RemoteAddonSdkSpec[]
+  resolveSdk: ResolveSdk
+  download: DownloadSdk
+  logger: SyncLogger
+  coreVersion?: string | null
+}): Promise<SyncResult> => {
+  let previous: AddonsLock
+  try {
+    previous = readAddonsLock(rootDir)
+  } catch (e: any) {
+    throw new RemoteAddonSyncError(
+      ErrorCode.REMOTE_ADDON_PACKAGE_INVALID,
+      `${e?.message ?? e}. Delete it and run 'pikku all' to write a fresh one.`
+    )
+  }
+  const lock = emptyAddonsLock()
+  const sdks: SyncedSdk[] = []
+
+  for (const spec of specs) {
+    const { name, range } = spec
+    if (!semver.validRange(range)) {
+      throw new RemoteAddonSyncError(
+        ErrorCode.REMOTE_ADDON_PACKAGE_INVALID,
+        `${name}@${range} (${spec.at}) is not a valid semver range. Write e.g. '${name}@^1.0.0'.`
+      )
+    }
+    const pinned = previous.sdks[name]
+    let version: string
+    let integrity: string
+    let dir: string
+    let source: SyncedSdk['source']
+
+    if (pinned && semver.satisfies(pinned.version, range)) {
+      version = pinned.version
+      integrity = pinned.integrity
+      const onDisk = checkLockedSdk(rootDir, name, pinned.range, previous)
+      if (onDisk.ok) {
+        dir = onDisk.dir
+        source = 'cached'
+      } else {
+        const resolved = await resolveSdk({ name, range: pinned.version })
+        if (
+          resolved.version !== pinned.version ||
+          resolved.integrity !== pinned.integrity
+        ) {
+          throw new RemoteAddonSyncError(
+            ErrorCode.REMOTE_ADDON_SDK_INTEGRITY_MISMATCH,
+            `${ADDONS_LOCK_FILE} pins ${name}@${pinned.version} at ${pinned.integrity}, but the registry now serves ${resolved.version} at ${resolved.integrity}. Nothing was installed. If the change is expected, remove the ${name} entry from ${ADDONS_LOCK_FILE} and sync again.`
+          )
+        }
+        dir = await fetchAndExtract(
+          rootDir,
+          name,
+          version,
+          integrity,
+          resolved.url,
+          download
+        )
+        source = 'downloaded'
+      }
+    } else {
+      const resolved = await resolveSdk({ name, range })
+      if (
+        !semver.valid(resolved.version) ||
+        !semver.satisfies(resolved.version, range)
+      ) {
+        throw new Error(
+          `The registry resolved ${name}@${range} to '${resolved.version}', which does not satisfy the range.`
+        )
+      }
+      version = resolved.version
+      integrity = resolved.integrity
+      dir = await fetchAndExtract(
+        rootDir,
+        name,
+        version,
+        integrity,
+        resolved.url,
+        download
+      )
+      source = 'downloaded'
+    }
+
+    lock.sdks[name] = { range, version, integrity }
+    const manifest = readSdkManifest(dir)
+    const pikkuCore = manifest?.pikkuCore
+    if (
+      pikkuCore &&
+      coreVersion &&
+      semver.validRange(pikkuCore) &&
+      !semver.satisfies(coreVersion, pikkuCore, { includePrerelease: true })
+    ) {
+      logger.diagnostic({
+        severity: 'warn',
+        code: ErrorCode.REMOTE_ADDON_SDK_CORE_MISMATCH,
+        message: `The ${name}@${version} SDK was generated against @pikku/core ${pikkuCore}, but ${coreVersion} is installed. Its types may not line up; update @pikku/core or pin an SDK built for ${coreVersion}.`,
+      })
+    }
+    logger.debug(
+      `• ${name}@${range} → ${version} (${source === 'cached' ? 'locked' : 'downloaded'})`
+    )
+    sdks.push({
+      name,
+      range,
+      version,
+      source,
+      dir,
+      ...(pikkuCore ? { pikkuCore } : {}),
+    })
+  }
+
+  const next = serializeAddonsLock(lock)
+  const lockPath = join(rootDir, ADDONS_LOCK_FILE)
+  const current = existsSync(lockPath) ? readFileSync(lockPath, 'utf-8') : null
+  // No versioned addons and no lock: write nothing, not an empty lock.
+  const lockChanged =
+    current !== next && !(current === null && specs.length === 0)
+  if (lockChanged) {
+    await writeFile(lockPath, next)
+  }
+  return { sdks, lock, lockChanged }
+}
+
+export type AddonSyncConfig = {
+  rootDir: string
+  srcDirectories: string[]
+  ignoreFiles?: string[]
+  /** Set when the project is an addon: its `pikku.uses` dependencies are synced too. */
+  addon?: unknown
+}
+
+/**
+ * The wiring's specs and the addon's dependency specs, one per package. A
+ * package asked for at two ranges is an error: the lock holds one SDK each.
+ */
+export const mergeSdkSpecs = (
+  wired: RemoteAddonSdkSpec[],
+  dependencies: RemoteAddonSdkSpec[]
+): RemoteAddonSdkSpec[] => {
+  const byName = new Map(wired.map((spec) => [spec.name, spec]))
+  for (const spec of dependencies) {
+    const seen = byName.get(spec.name)
+    if (seen && seen.range !== spec.range) {
+      throw new RemoteAddonSyncError(
+        ErrorCode.REMOTE_ADDON_PACKAGE_INVALID,
+        `${spec.name} is asked for at '${seen.range}' (${seen.at}) and at '${spec.range}' (${spec.at}). ${ADDONS_LOCK_FILE} holds one SDK per package; use the same range in both.`
+      )
+    }
+    if (!seen) byName.set(spec.name, spec)
+  }
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/**
+ * Finds the project's versioned `wireRemoteAddon` packages — and, in an addon,
+ * the registry packages its `pikku.uses` declares — and syncs their SDKs: the
+ * first step of `pikku all`. Null when the project has none and no
+ * lock, so nothing ran. The registry is called only when a spec needs the
+ * network, through `resolveSdk` — the CLI's `registry:resolveSdk`, or a stub.
+ */
+export const runAddonSync = async ({
+  config,
+  logger,
+  resolveSdk,
+  download = createSdkDownloader(),
+}: {
+  config: AddonSyncConfig
+  logger: SyncLogger
+  resolveSdk: ResolveSdk
+  download?: DownloadSdk
+}): Promise<SyncResult | null> => {
+  const dependencies = config.addon
+    ? resolveAddonDependencies(config.rootDir)
+    : []
+  for (const problem of checkWorkspaceDependencySdks(dependencies)) {
+    logger.diagnostic({ severity: 'critical', ...problem })
+  }
+  const specs = mergeSdkSpecs(
+    await collectRemoteAddonSdkSpecs({
+      ...config,
+      ignoreFiles: config.ignoreFiles ?? [],
+    }),
+    addonDependencySdkSpecs(dependencies)
+  )
+  if (
+    specs.length === 0 &&
+    !existsSync(join(config.rootDir, ADDONS_LOCK_FILE))
+  ) {
+    return null
+  }
+  return syncRemoteAddonSdks({
+    rootDir: config.rootDir,
+    specs,
+    resolveSdk,
+    download,
+    logger,
+  })
+}

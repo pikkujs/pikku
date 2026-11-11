@@ -93,11 +93,9 @@ export function mergeJsonFiles(
 /**
  * Replaces all occurrences of '../functions' with './' in all project files.
  */
-export function replaceFunctionReferences(
-  targetPath: string,
-  stackblitz?: boolean
-): void {
-  const pikkuDir = stackblitz ? 'pikku-gen' : '.pikku'
+export function replaceFunctionReferences(targetPath: string): void {
+  // The CLI always writes generated files to `.pikku` beside pikku.config.json.
+  const pikkuDir = '.pikku'
 
   const toImportPath = (fromFilePath: string, toPath: string): string => {
     let relativePath = path.relative(path.dirname(fromFilePath), toPath)
@@ -146,8 +144,8 @@ export function replaceFunctionReferences(
 /**
  * Cleans up the tsconfig.json file
  */
-export function cleanTSConfig(targetPath: string, stackblitz?: boolean): void {
-  const pikkuDir = stackblitz ? 'pikku-gen' : '.pikku'
+export function cleanTSConfig(targetPath: string): void {
+  const pikkuDir = '.pikku'
 
   const tsconfigFile = path.join(targetPath, 'tsconfig.json')
   const tsconfig = JSON.parse(fs.readFileSync(tsconfigFile, 'utf-8'))
@@ -183,29 +181,6 @@ export function cleanPikkuConfig(
     if (hasFunctionsRef) {
       // Replace with both ./src and ./types (matching functions template structure)
       pikkuConfig.srcDirectories = ['./src', './types']
-    }
-  }
-
-  // Remove config options for unsupported features
-  if (pikkuConfig.clientFiles) {
-    if (
-      !supportedFeatures.includes('http') &&
-      !supportedFeatures.includes('workflows')
-    ) {
-      delete pikkuConfig.clientFiles.fetchFile
-      delete pikkuConfig.clientFiles.rpcWiringsFile
-    }
-
-    if (!supportedFeatures.includes('channel')) {
-      delete pikkuConfig.clientFiles.websocketFile
-    }
-
-    if (!supportedFeatures.includes('queue')) {
-      delete pikkuConfig.clientFiles.queueWiringsFile
-    }
-
-    if (!supportedFeatures.includes('mcp')) {
-      delete pikkuConfig.clientFiles.mcpJsonFile
     }
   }
 
@@ -279,7 +254,7 @@ const FILE_FEATURE_MAPPING = {
   'workflow.': ['workflows'],
   'graph.': ['workflows'],
   'cli.': ['cli'],
-  'remote-rpc.': ['remote-rpc'],
+  'mesh-rpc.': ['mesh-rpc'],
 } as const
 
 /**
@@ -402,8 +377,7 @@ export function updatePackageJSONScripts(
   targetPath: string,
   appName: string,
   packageManager: string,
-  supportedFeatures: string[],
-  stackblitz?: boolean
+  supportedFeatures: string[]
 ): void {
   const packageFilePath = path.join(targetPath, 'package.json')
   let packageJsonString = fs.readFileSync(packageFilePath, 'utf-8')
@@ -419,73 +393,41 @@ export function updatePackageJSONScripts(
   packageJson.scripts.postinstall = 'pikku all'
 
   // Create test script based on supported features
-  if (stackblitz) {
-    // For stackblitz, run individual test commands
-    const testCommands: string[] = []
-    if (supportedFeatures.includes('http')) {
-      testCommands.push('npm run test:http-fetch')
-    }
-    if (supportedFeatures.includes('channel')) {
-      testCommands.push('npm run test:websocket')
-    }
-    if (supportedFeatures.includes('rpc')) {
-      testCommands.push('npm run test:rpc')
-    }
-    if (supportedFeatures.includes('sse')) {
-      testCommands.push('npm run test:http-sse')
-    }
-    if (supportedFeatures.includes('queue')) {
-      testCommands.push('npm run test:queue')
-    }
-    if (supportedFeatures.includes('mcp')) {
-      testCommands.push('npm run test:mcp')
-    }
-    packageJson.scripts.test = testCommands.join(' && ')
-  } else {
-    // For regular templates, construct run-tests.sh command with appropriate flags
-    const testFlags: string[] = []
-    if (supportedFeatures.includes('http')) {
-      testFlags.push('--http')
-    }
-    if (supportedFeatures.includes('channel')) {
-      testFlags.push('--websocket')
-    }
-    if (supportedFeatures.includes('rpc')) {
-      testFlags.push('--rpc')
-    }
-    if (supportedFeatures.includes('sse')) {
-      testFlags.push('--http-sse')
-    }
-    if (supportedFeatures.includes('queue')) {
-      testFlags.push('--queue')
-    }
-    if (supportedFeatures.includes('mcp')) {
-      testFlags.push('--mcp')
-    }
-    if (supportedFeatures.includes('cli')) {
-      testFlags.push('--cli')
-    }
-    // Only add test script if it doesn't already exist
-    if (!packageJson.scripts.test) {
-      packageJson.scripts.test = `bash run-tests.sh${testFlags.length > 0 ? ' ' + testFlags.join(' ') : ''}`
-    }
+  // For regular templates, construct run-tests.sh command with appropriate flags
+  const testFlags: string[] = []
+  if (supportedFeatures.includes('http')) {
+    testFlags.push('--http')
+  }
+  if (supportedFeatures.includes('channel')) {
+    testFlags.push('--websocket')
+  }
+  if (supportedFeatures.includes('rpc')) {
+    testFlags.push('--rpc')
+  }
+  if (supportedFeatures.includes('sse')) {
+    testFlags.push('--http-sse')
+  }
+  if (supportedFeatures.includes('queue')) {
+    testFlags.push('--queue')
+  }
+  if (supportedFeatures.includes('mcp')) {
+    testFlags.push('--mcp')
+  }
+  if (supportedFeatures.includes('cli')) {
+    testFlags.push('--cli')
+  }
+  // Only add test script if it doesn't already exist
+  if (!packageJson.scripts.test) {
+    packageJson.scripts.test = `bash run-tests.sh${testFlags.length > 0 ? ' ' + testFlags.join(' ') : ''}`
   }
 
   if (packageManager === 'yarn') {
     packageJson.packageManager = 'yarn@4.9.2'
   } else if (packageManager === 'bun') {
-    packageJson.packageManager = 'bun@1.4.0'
+    packageJson.packageManager = 'bun@1.4.3'
   }
 
   packageJson.scripts.pikku = 'pikku all'
-
-  if (stackblitz) {
-    packageJson.scripts.stackblitz =
-      "concurrently 'pikku watch --silent' 'npm run dev'"
-    packageJson.stackblitz = {
-      startCommand: 'npm run stackblitz',
-    }
-  }
 
   // Remove addon dependency unless 'addon' is supported
   if (!supportedFeatures.includes('addon')) {
@@ -511,7 +453,8 @@ export const OXLINT_TSGOLINT_VERSION = '^7.0.2003'
  * Sets a new app up so `pikku validate` passes its oxlint checks: both
  * packages as devDependencies, a `.oxlintrc.json` with the type-aware promise
  * rules at error (a forgotten `await` on an async webhook verifier is a truthy
- * Promise), and a `lint` script. Existing files are never overwritten.
+ * Promise), the code-policy rules with their bootstrap and test exemption, and
+ * a `lint` script. Existing files are never overwritten.
  */
 export function ensureOxlintSetup(targetPath: string): void {
   const packageFilePath = path.join(targetPath, 'package.json')
@@ -541,7 +484,10 @@ export function ensureOxlintSetup(targetPath: string): void {
           rules: {
             'typescript/no-misused-promises': 'error',
             'typescript/no-floating-promises': 'error',
+            'no-empty': 'error',
+            ...oxlintPolicyRules(),
           },
+          overrides: [oxlintExemptOverride()],
           ignorePatterns: ['**/*.gen.ts', '**/.pikku/**'],
         },
         null,
@@ -550,6 +496,176 @@ export function ensureOxlintSetup(targetPath: string): void {
     )
   }
 }
+
+/**
+ * The code-policy rules `pikku validate` requires by default (`lint.enforce*`
+ * in pikku.config.json). Kept equal to `newOxlintConfig()` in packages/cli
+ * (src/functions/validate/oxlint-enable.ts); a test there compares the two.
+ */
+const oxlintPolicyRules = () => {
+  const restrict = (
+    names: Array<string | [string, string[]]>,
+    message: string
+  ) =>
+    names.map((n) => ({
+      name: typeof n === 'string' ? n : n[0],
+      ...(typeof n === 'string' ? {} : { importNames: n[1] }),
+      allowTypeImports: true,
+      message,
+    }))
+  const property = (object: string, name: string, message: string) => ({
+    object,
+    property: name,
+    message,
+  })
+  const content =
+    'Use the `content` service: keyed, project-scoped, with signed reads and writes.'
+  const supervisor = 'Run processes through the Supervisor, not child_process.'
+  const cli = 'Expose a `pikku` CLI command rather than parsing argv.'
+  return {
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          ...restrict(
+            [
+              'fs',
+              'node:fs',
+              'fs/promises',
+              'node:fs/promises',
+              'fs-extra',
+              'graceful-fs',
+            ],
+            content
+          ),
+          ...restrict(
+            [
+              'child_process',
+              'node:child_process',
+              'execa',
+              'cross-spawn',
+              'shelljs',
+            ],
+            supervisor
+          ),
+          ...restrict(
+            [
+              'commander',
+              'yargs',
+              'minimist',
+              ['node:util', ['parseArgs']],
+              ['util', ['parseArgs']],
+            ],
+            cli
+          ),
+        ],
+      },
+    ],
+    'typescript/no-require-imports': 'error',
+    'no-restricted-properties': [
+      'error',
+      property(
+        'process',
+        'env',
+        'Use the `variables` service for values and the `secrets` service for secrets.'
+      ),
+      property(
+        'globalThis',
+        'process',
+        'Use the `variables` service for values and the `secrets` service for secrets.'
+      ),
+      property(
+        'global',
+        'process',
+        'Use the `variables` service for values and the `secrets` service for secrets.'
+      ),
+      property(
+        'self',
+        'process',
+        'Use the `variables` service for values and the `secrets` service for secrets.'
+      ),
+      property(
+        'Bun',
+        'spawn',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'Bun',
+        'spawnSync',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'Bun',
+        '$',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'globalThis',
+        'Bun',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'global',
+        'Bun',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'self',
+        'Bun',
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+      property(
+        'process',
+        'argv',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+      property(
+        'Bun',
+        'argv',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+      property(
+        'Deno',
+        'args',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+      property(
+        'globalThis',
+        'Deno',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+      property(
+        'global',
+        'Deno',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+      property(
+        'self',
+        'Deno',
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+    ],
+  }
+}
+
+/** Entry points, tooling and tests read the disk, the environment and argv. */
+const oxlintExemptOverride = () => ({
+  files: [
+    '**/start.ts',
+    '**/server.ts',
+    '**/bin/**',
+    '**/scripts/**',
+    '**/*.test.ts',
+    '**/*.test.tsx',
+    '**/*.spec.ts',
+    '**/*.spec.tsx',
+  ],
+  rules: {
+    'no-restricted-imports': 'off',
+    'typescript/no-require-imports': 'off',
+    'no-restricted-properties': 'off',
+  },
+})
 
 /**
  * Removes version constraints from @pikku/* packages when using yarn link.

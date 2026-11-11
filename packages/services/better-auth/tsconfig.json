@@ -6,7 +6,8 @@
     "outDir": "dist",
     "target": "esnext",
     "declaration": true,
-    "composite": true
+    "composite": true,
+    "lib": ["ESNext", "DOM"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["**/*.test.ts", "node_modules"],

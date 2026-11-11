@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "rootDir": ".",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["./src", "./test"],
+  "emailTemplatesDir": "./emails",
+  "packageMappings": {
+    ".": "@pikku/example-field-service"
+  },
+  "schema": {
+    "supportsImportAttributes": true
+  },
+  "scaffold": {
+    "pikkuDir": "src/scaffold",
+    "rpc": true,
+    "agent": true,
+    "workflow": true,
+    "scenarios": true,
+    "events": true
+  },
+  "scenarios": {
+    "emailDomain": "virtualuser.local"
+  },
+  "environments": {
+    "local": {
+      "backends": {
+        "api": {
+          "signInPath": "/api/auth/sign-in/virtual-user"
+        }
+      },
+      "frontends": {
+        "web": "http://localhost:7213"
+      }
+    }
+  },
+  "backends": {
+    "api": {
+      "filter": {},
+      "dev": {
+        "port": 4013
+      }
+    }
+  }
+}

@@ -3,10 +3,8 @@
  * runs the addon's receive, and fires its own `ext:ping.sent` trigger.
  */
 import { fetch } from '@pikku/core/http'
-import {
-  IncomingWebhookService,
-  InMemoryQueueService,
-} from '@pikku/core/services'
+import { IncomingWebhookService } from '@pikku/core/services'
+import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'
 import { pikkuState } from '@pikku/core/state'
 import { createConfig, createSingletonServices } from './services.js'
 import { receivedPings } from './function/ping.trigger.js'

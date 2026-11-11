@@ -58,6 +58,7 @@ export const projectUpdate = pikkuSessionlessFunc<
   { projectId: string; name?: string; description?: string; status?: string },
   { id: string; name: string; status: string; updatedAt: string }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Update Project',
   func: async ({ logger }, data) => {
     logger.info(`Updating project: ${data.projectId}`)

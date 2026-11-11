@@ -6,6 +6,7 @@ import type {
   WorkflowRunWire,
   WorkflowRunStatus,
   StepState,
+  WorkflowRecoveryOptions,
   WorkflowStatus,
   WorkflowVersionStatus,
 } from '../wirings/workflow/workflow.types.js'
@@ -14,8 +15,17 @@ import type {
   ReconstructedRunState,
 } from '../wirings/workflow/run-timeline.js'
 
+/**
+ * Stores and drives workflow runs, provided as the `workflowService` singleton
+ * service (implementations ship in `@pikku/kysely`, `@pikku/redis` and others,
+ * and an in-memory one in core). It records every step so a run can resume
+ * after a crash or a wait, and serialises work on one run through a lease.
+ */
 export interface WorkflowService {
   wireQueueWorkers?(): void
+  /** Sweep for work a dead process left behind, now and on an interval. */
+  startRecovery?(options?: WorkflowRecoveryOptions | false): void
+  stopRecovery?(): void
   createRun(
     workflowName: string,
     input: any,
@@ -49,7 +59,14 @@ export interface WorkflowService {
    * The payload is stored as given and validated on replay inside the workflow
    * body, so an invalid one re-closes the gate rather than failing the run.
    *
-   * The session must belong to the run's owner — see `assertWorkflowRunOwner`.
+   * A no is a decision like a yes: the workflow reads it from `decision.data`
+   * and branches, so there is no separate decline call. `reason` is the exact
+   * string given to `workflow.approval`. The session is judged against the
+   * gate's `approvers` and `approverScope`. The `owner` and `not-initiator`
+   * policies compare it with the recorded run owner; there is no other owner
+   * check outside the gate's policy. Application code may call this with no
+   * session; a generated route never does.
+   *
    */
   approveStep(
     runId: string,

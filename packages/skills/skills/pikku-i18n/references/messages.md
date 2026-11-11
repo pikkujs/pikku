@@ -17,7 +17,7 @@
 
 Use this skill as an execution checklist, not reference material.
 
-1. Every user-facing string in a frontend is a message. Never hardcode display text — add a key to `messages/en.json` and render `m.the__key()`. This holds even when the app ships only English; the messages are the seam a second language slots into later.
+1. Every user-facing string in a frontend is a message. Never hardcode display text — add the key with `pikku i18n key <key> en="…"` (add `--update` to reword an existing one; never hand-edit the JSON or run `tsc` just to apply wording) and render `m.the__key()`. This holds even when the app ships only English; the messages are the seam a second language slots into later.
 2. One `messages/<locale>.json` per language at the app root (NOT under `src/`), declared in `project.inlang/settings.json`. English (`en`) is `baseLocale` and the only locale until someone adds another. **`baseLocale` stays `en` whatever language the product speaks** — see [The product's language is not the code's language](#the-products-language-is-not-the-codes-language), which is the first thing to read if the brief says the app is not in English.
 3. Messages compile to typed ESM functions in `src/paraglide/` (generated, self-gitignored — never edit or commit it). The Vite plugin compiles during `dev`/`build` with HMR on message edits; run the CLI compile only when you need `tsc` before Vite has ever run.
 4. Validate with the app's own `tsc` then its `build`. The deploy pipeline compiles Paraglide and runs each frontend's `tsc` before building it — an i18n mistake blocks the deploy.
@@ -29,11 +29,11 @@ is a statement about **one** of three separate things, and reading it as a
 statement about the codebase is the single most expensive mistake available in
 this skill. Three axes:
 
-| Axis            | What it covers                                                                                          | What sets it                                                    |
-| --------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| **Identifiers** | Function, component, type and file names; database tables and columns                                   | Nothing — always English, no setting                            |
-| **Meta**        | `description` / `name` / `title` / `template` authored inside the code, which the Pikku Console renders | `metaLocale` in `pikku.config.json`, default `en`                   |
-| **Product UI**  | Every string the app shows a user                                                                       | `messages/<locale>.json` + `defaultLocale` — **this axis only** |
+| Axis            | What it covers                                                                                | What sets it                                                    |
+| --------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| **Identifiers** | Function, component, type and file names; database tables and columns                         | Nothing — always English, no setting                            |
+| **Meta**        | `description` / `name` / `title` / `template` authored inside the code, read back to the team | `metaLocale` in `pikku.config.json`, default `en`               |
+| **Product UI**  | Every string the app shows a user                                                             | `messages/<locale>.json` + `defaultLocale` — **this axis only** |
 
 A non-English product moves the third row and nothing else.
 
@@ -63,7 +63,7 @@ So a German medical portal is **three** settings, not one:
 // apps/app/src/i18n/active.json — what a visitor opens in
 { "defaultLocale": "de" }
 
-// pikku.config.json — the language the team reads their Console in
+// pikku.config.json — the language the team reads their meta in
 { "metaLocale": "de" }
 ```
 
@@ -220,8 +220,6 @@ The wrapper alternative — a module that walks the namespace and pipes each mes
 - Don't translate message **keys**. `auth__login__title` stays English in `de.json`; only the value changes.
 - Don't edit or commit anything under `src/paraglide/` — it's regenerated; change `messages/*.json` instead.
 - **Don't wrap `m`.** No re-export module, no branding layer, no resolver. Components import `m` from `../paraglide/messages.js` and call it. `@pikku/react`'s `I18nString` is declared as `string & { readonly __brand: 'LocalizedString' }` — deliberately identical to Paraglide's own `LocalizedString` — so `m.some__key()` satisfies the template's `I18nNode` gate natively. A wrapper adds nothing and costs per-message tree-shaking.
-
-  `packages/console` is the one place in this repo that still wraps it, in `src/i18n/messages.ts`, to keep the debug mask (`█`) it carried over from i18next. That wrapper is a leftover, not a pattern — the generated-locale approach above is how a new app gets the same masking without touching every export. Don't copy it.
 
   The `mKey`/`mList` runtime resolvers that used to live beside it are **gone**, and must not come back. `mList` resolved indexed `prefix.0` keys that no longer exist; `mKey` took a computed string, which is exactly the type safety Paraglide exists to provide. Where a key really is dynamic, map the discriminant to a message _function_ and call it — the map is type-checked, a string is not.
 

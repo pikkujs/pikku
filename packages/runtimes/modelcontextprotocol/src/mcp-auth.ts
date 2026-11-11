@@ -190,6 +190,15 @@ const GATED_METHODS: Record<string, ['tool' | 'resource' | 'prompt', string]> =
     'prompts/get': ['prompt', 'name'],
   }
 
+/** The handshake and the listings: refused only when nothing on the server is open. */
+const LISTING_METHODS = new Set([
+  'initialize',
+  'tools/list',
+  'resources/list',
+  'resources/templates/list',
+  'prompts/list',
+])
+
 /**
  * Whether this request must be refused at the door for carrying no credentials.
  *
@@ -225,7 +234,7 @@ export const requestNeedsCredentials = async (
   return messages.some((message) => {
     const method = (message as { method?: string })?.method ?? ''
     // See `the-mcp-handshake-is-challenged-only-when-every-target-is-gated.md`.
-    if (method === 'initialize') {
+    if (LISTING_METHODS.has(method)) {
       return mcpEveryTargetRequiresSession()
     }
     const target = GATED_METHODS[method]

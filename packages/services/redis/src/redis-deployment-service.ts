@@ -1,4 +1,4 @@
-import { buildRemoteHeaders } from '@pikku/core/remote'
+import { buildMeshHeaders } from '@pikku/core/mesh'
 import type {
   DeploymentService,
   DeploymentServiceConfig,
@@ -108,14 +108,14 @@ export class RedisDeploymentService implements DeploymentService {
     funcName: string,
     data: unknown,
     session?: unknown,
-    traceId?: string
+    traceparent?: string
   ): Promise<unknown> {
-    const headers = await buildRemoteHeaders(
+    const headers = await buildMeshHeaders(
       this.jwt,
       this.secrets,
       funcName,
       session,
-      traceId
+      traceparent
     )
     const indexKey = this.functionsIndexKey(funcName)
     const now = Date.now()
@@ -136,7 +136,7 @@ export class RedisDeploymentService implements DeploymentService {
       throw new Error(`No deployment found for function '${funcName}'`)
     }
 
-    const url = `${endpoint}/remote/rpc/${encodeURIComponent(funcName)}`
+    const url = `${endpoint}/mesh/rpc/${encodeURIComponent(funcName)}`
     const response = await fetch(url, {
       method: 'POST',
       headers,
@@ -144,7 +144,7 @@ export class RedisDeploymentService implements DeploymentService {
     })
     if (!response.ok) {
       throw new Error(
-        `Remote RPC call to '${funcName}' failed: ${response.status}`
+        `Mesh RPC call to '${funcName}' failed: ${response.status}`
       )
     }
     return response.json()

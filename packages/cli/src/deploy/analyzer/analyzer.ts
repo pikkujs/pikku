@@ -7,16 +7,13 @@
  * Workflow orchestrators dispatch to step units via queue or RPC (inline).
  */
 
-import {
-  incompatibleServicesFor,
-  resolveDeployTarget,
-  type InspectorState,
-  type SerializedWorkflowGraph,
-} from '@pikku/inspector'
+import type { InspectorState, SerializedWorkflowGraph } from '@pikku/inspector'
+import { incompatibleServicesFor, resolveDeployTarget } from '@pikku/inspector'
 import { relative } from 'node:path'
 import type { FunctionMeta } from '@pikku/core/services'
 import type { ChannelMeta } from '@pikku/core/channel'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
+import type { GatewaysMeta } from '@pikku/core/gateway'
 import {
   isScenarioFunction,
   withoutScenarios,
@@ -36,6 +33,7 @@ import type {
   QueueDefinition,
   ScheduledTaskDefinition,
   ChannelDefinition,
+  GatewayDefinition,
   AgentDefinition,
   MCPEndpointDefinition,
   WorkflowDefinition,
@@ -120,6 +118,17 @@ const SKIPPED_SCAFFOLD_UNITS = new Set([
 
 const MCP_PATH = '/mcp'
 
+/**
+ * The HTTP functions a webhook gateway answers on. The inspector projects them
+ * into `http.meta` so the route is visible, but neither one is the gateway's
+ * code: both hand the message to the function the gateway was wired with, so
+ * they belong in that function's unit rather than in units of their own.
+ */
+const webhookGatewayWrapperIds = (gatewayName: string) => [
+  `gateway__${gatewayName}__post`,
+  `gateway__${gatewayName}__verify`,
+]
+
 /** The discovery document `PikkuMCPServer` serves, per RFC 9728. */
 const WELL_KNOWN_PRM = '/.well-known/oauth-protected-resource'
 
@@ -182,6 +191,7 @@ export function analyzeDeployment(
   const queues: QueueDefinition[] = []
   const scheduledTasks: ScheduledTaskDefinition[] = []
   const channels: ChannelDefinition[] = []
+  const gateways: GatewayDefinition[] = []
   const agents: AgentDefinition[] = []
   const mcpEndpoints: MCPEndpointDefinition[] = []
   const workflows: WorkflowDefinition[] = []
@@ -316,6 +326,10 @@ export function analyzeDeployment(
     return name
   }
 
+  const gatewayWrapperIds = new Set(
+    Object.keys(state.gateways?.meta ?? {}).flatMap(webhookGatewayWrapperIds)
+  )
+
   const routesWithNamedOwner = new Set<string>()
   for (const method of HTTP_METHODS) {
     const methodRoutes = httpMeta[method]
@@ -349,6 +363,11 @@ export function analyzeDeployment(
 
     // Skip scaffold catch-all functions — they're bundled into units that need them
     if (SKIPPED_SCAFFOLD_UNITS.has(funcId)) {
+      continue
+    }
+
+    // Gateway webhook wrappers join their handler's unit in Step 4b
+    if (gatewayWrapperIds.has(funcId)) {
       continue
     }
 
@@ -418,7 +437,7 @@ export function analyzeDeployment(
       const funcName = funcMeta.name ?? funcId
       const remoteRoute = {
         method: 'post',
-        route: prefixed(`/remote/rpc/${funcName}`),
+        route: prefixed(`/mesh/rpc/${funcName}`),
         pikkuFuncId: funcId,
       }
       const fetchHandler = handlers.find(
@@ -470,14 +489,15 @@ export function analyzeDeployment(
   // ── Step 1b: Addon units ───────────────────────────────────────────
   const addonUnitByRpcName = new Map<string, string>()
   for (const [namespace, addonMeta] of entries(state.addonFunctions ?? {})) {
-    // The wiring's `expose` decides when it is `false` or a list; otherwise
-    // the addon's own `expose: true` does — the same rule `rpc.exposed`
+    // The addon must declare the function `expose: true` and the wiring must
+    // opt in, with `true` or a list naming it — the same rule `rpc.exposed`
     // applies at runtime, so the unit carries exactly what can be called.
     const wiredExpose = state.rpc?.wireAddonDeclarations?.get(namespace)?.expose
     const isExposed = (funcName: string, meta: { expose?: boolean }) =>
-      Array.isArray(wiredExpose)
+      !!meta.expose &&
+      (Array.isArray(wiredExpose)
         ? wiredExpose.includes(funcName)
-        : wiredExpose !== false && !!meta.expose
+        : wiredExpose === true)
     const wired = entries(addonMeta).filter(
       ([funcName, meta]) =>
         isExposed(funcName, meta) ||
@@ -513,7 +533,7 @@ export function analyzeDeployment(
         })
         routes.push({
           method: 'post',
-          route: prefixed(`/remote/rpc/${rpcName}`),
+          route: prefixed(`/mesh/rpc/${rpcName}`),
           pikkuFuncId: rpcName,
         })
       }
@@ -738,6 +758,71 @@ export function analyzeDeployment(
       route: channelMeta.route,
       unitName,
       functionIds: funcIds,
+    })
+  }
+
+  // ── Step 4b: Webhook gateways ──────────────────────────────────────
+  // Unlike the gateways above, a webhook gateway's code is an ordinary
+  // function, so it is served from that function's unit: the wrappers that
+  // answer the route, the handler they call, and the services it builds.
+  // Websocket and listener gateways get nothing here; `unservedGateways`
+  // reports them so the build fails instead of dropping them.
+  for (const [gatewayName, gatewayMeta] of entries(
+    state.gateways?.meta ?? {}
+  )) {
+    if (gatewayMeta.type !== 'webhook' || !gatewayMeta.route) continue
+    const handlerId = gatewayMeta.pikkuFuncId
+
+    const wrapperIds = webhookGatewayWrapperIds(gatewayName).filter(
+      (id) => functionsMeta[id]
+    )
+    const routes = wrapperIds.flatMap((id) =>
+      collectHttpRoutes(httpMeta, id, claimedSyntheticBridges)
+    )
+    if (routes.length === 0) continue
+
+    const handlerMeta = functionsMeta[handlerId]
+    const invokedAgents = handlerMeta
+      ? collectInvokedAgents(state, handlerId)
+      : []
+    const forcedBy = handlerMeta
+      ? incompatibleServicesFor(handlerMeta, serverlessIncompatible)
+      : []
+    const unitName = unitFor(handlerId)
+    const groupedBy = resolver.ruleForUnit(unitName)
+
+    addFunctionUnit({
+      name: unitName,
+      role: 'function',
+      target: handlerMeta
+        ? resolveDeployTarget(
+            handlerMeta,
+            serverlessIncompatible,
+            handlerId,
+            defaultTarget
+          )
+        : defaultTarget,
+      functionIds: [handlerId, ...wrapperIds],
+      services: handlerMeta
+        ? withAgentServices(
+            collectServicesForFunction(handlerMeta),
+            invokedAgents
+          )
+        : [],
+      dependsOn: [],
+      handlers: [{ type: 'fetch', routes }],
+      tags: [...new Set([...(gatewayMeta.tags ?? []), ...tagsFor(handlerId)])],
+      ...(invokedAgents.length > 0 && { invokedAgents }),
+      ...(groupedBy && { groupedBy }),
+      ...(forcedBy.length > 0 && { targetForcedBy: forcedBy }),
+    })
+
+    gateways.push({
+      name: gatewayName,
+      type: 'webhook',
+      route: gatewayMeta.route,
+      unitName,
+      functionId: handlerId,
     })
   }
 
@@ -1108,6 +1193,7 @@ export function analyzeDeployment(
     queues,
     scheduledTasks,
     channels,
+    gateways,
     agents,
     mcpEndpoints,
     workflows,
@@ -1429,6 +1515,22 @@ export function unroutedHttpWirings(
     }
   }
   return unrouted
+}
+
+/**
+ * Gateways the deployment does not serve. A webhook gateway is served from its
+ * handler's unit; a websocket or listener gateway has no unit a provider can
+ * host, and leaving it out of the build would let it work under `pikku dev`
+ * and vanish once deployed.
+ */
+export function unservedGateways(
+  gatewaysMeta: GatewaysMeta | undefined,
+  manifest: Pick<DeploymentManifest, 'gateways'>
+): GatewaysMeta[string][] {
+  const served = new Set(manifest.gateways.map((g) => g.name))
+  return values(gatewaysMeta ?? {}).filter(
+    (gateway) => !served.has(gateway.name)
+  )
 }
 
 function collectHttpRoutes(

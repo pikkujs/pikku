@@ -78,6 +78,8 @@ export const encodeSetCookies = (cookies: string[]): string =>
 /**
  * Never throws — the client half runs this on whatever a response carried, and
  * a mangled header must degrade to "no cookies" rather than break its fetch.
+ *
+ * @example snippet: betterAuthCrossSiteRelay
  */
 export const decodeSetCookies = (encoded: string): string[] => {
   let parsed: unknown

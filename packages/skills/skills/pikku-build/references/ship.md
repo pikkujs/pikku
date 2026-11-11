@@ -25,8 +25,47 @@ with Node, or a self-contained executable compiled with `bun build --compile`.
 factories the deploy codegen expects, and hand-rolling an `ExportedHandler` is
 how a worker deploy fails at runtime instead of at build.
 
+Platform services an addon builds for the bundle come from contributors the
+project opted in to with `wireAddon({ contributors: [...] })`; the addon
+registers them with `defineContributors`. `plan` and `apply` select the `deploy`
+variant of each, drop what `when` rules out, order them by `needs`/`provides`
+and, on standalone, run them after the database is open, with `runtime.logger`
+and `runtime.kysely` in reach. Standalone, the generic server entry and the
+Cloudflare adapter support contributors; a provider without `contributorSupport`
+fails the build when a project opts in to one with a deploy variant. On a
+Cloudflare Worker a contributor with `onServerStart` is a build error. See
+`docs/contributors.md`.
+
 Always run `plan` before `apply`, and read it. It names what will be created,
 updated and deleted — the deletions are the reason to look.
+
+### `pikku ci` — the whole gate as one command
+
+```sh
+bunx --bun pikku ci                          # in place: codegen, validate, audit, test, app build
+bunx --bun pikku ci -p standalone            # the same in a clean worktree, plus deploy plan
+bunx --bun pikku ci -p standalone --deploy   # and apply that plan, without rebuilding
+```
+
+It runs bootstrap, `db migrate` (local databases only, regenerating the db types),
+`emails generate`, `all --failOnError`, `validate`, `audit --failOn high`, the
+root `test` script, then the app builds, and stops at the first failed step
+with a non-zero exit. It never prompts.
+
+- With `-p` it builds the commit, not your tree: it refuses uncommitted work,
+  checks the commit out into a throwaway git worktree, runs
+  `bun install --frozen-lockfile`, removes the console scaffold, plans, and
+  copies `.deploy/` (including `audit.json`) back. The worktree is removed even
+  on failure; `--keepWorktree` keeps it to inspect.
+- `--deploy` needs `-p`: there is no default target. On Cloudflare it refuses
+  until you confirm the required secrets are set there (`--secretsSet`; the
+  refusal names them) and that any shipped migration is applied
+  (`--migrationsApplied`).
+- No `test` script fails the run; `--skipTests` is the explicit opt-out.
+- The audit fails on any high or critical advisory, except those already in the
+  previous `.deploy/audit.json` (or `--auditBaseline <file>`).
+- `--json` streams `workflow.step.*` events, so a driver can show which step
+  failed.
 
 ### How many workers you get
 
@@ -41,7 +80,6 @@ shape:
   "grouping": {
     "strategy": "single",
     "rules": [
-      { "unit": "console", "addon": "console" },
       { "unit": "pdf", "tags": ["pdf"] }
     ]
   }
@@ -50,11 +88,11 @@ shape:
 
 `strategy` is the fallback for a function no rule matches:
 
-| strategy | fallback |
-| --- | --- |
+| strategy   | fallback                                                      |
+| ---------- | ------------------------------------------------------------- |
 | `services` | one unit per distinct set of singleton services (the default) |
-| `function` | one unit each |
-| `single` | one shared unit |
+| `function` | one unit each                                                 |
+| `single`   | one shared unit                                               |
 
 Rules are ordered, first match wins, and match on `tags`, an `addon` namespace
 or `routes` globs. A rule always beats the strategy, so under `function` a rule
@@ -68,7 +106,7 @@ builds anyway (`config`, `logger`, `variables`, `schema`, `secrets`, and the
 per-request `rpc`/`mcp`/`channel`/`userSession`). Units are named for that set —
 `svc-todo-store`, `svc-event-hub-todo-store`, `svc-base` for functions needing
 nothing else — and each records it as `servicesKey` in the manifest. On the
-`templates/functions` app it turns 44 units into 10.
+`recipes/functions` app it turns 44 units into 10.
 
 The deploy target is part of the key, so a `server` unit is named `-server` and
 can never merge with its serverless twin. That is what keeps `services` from
@@ -116,7 +154,7 @@ this wrong and sign-in fails on one app only, which is a miserable thing to debu
 To serve one frontend from the pikku server's own origin instead — one binary,
 one hostname, first-party cookies — give its `frontends` entry `"serve": {}`
 (`urlPrefix` defaults to `/`, `spaFallback` to true). `pikku serve`, `pikku dev`
-and a standalone deploy then mount its built `dist`. Pikku never builds it, so
+and a standalone deploy then mount its built `dist`. `pikku app build` makes it, so
 build the frontend first. Only one entry may set `serve`.
 
 To ship an app as a desktop or Android app, read the native-app reference (see SKILL.md).

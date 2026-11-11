@@ -17,7 +17,7 @@ describe('createConfig --config', () => {
     }
   })
 
-  const project = async () => {
+  const project = async (extra: Record<string, unknown> = {}) => {
     const root = await mkdtemp(join(tmpdir(), 'pikku-config-flag-'))
     tempDirs.push(root)
     await mkdir(join(root, 'backend', 'src'), { recursive: true })
@@ -27,9 +27,9 @@ describe('createConfig --config', () => {
         rootDir: '.',
         srcDirectories: ['src'],
         packageMappings: {},
-        outDir: '.pikku',
         tsconfig: 'tsconfig.json',
-        filters: {},
+        backends: { api: { filter: {} } },
+        ...extra,
       })
     )
     return root

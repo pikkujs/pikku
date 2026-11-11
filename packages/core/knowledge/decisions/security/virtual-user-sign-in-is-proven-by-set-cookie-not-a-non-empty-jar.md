@@ -7,7 +7,7 @@ tags: services
 
 # Virtual user sign-in is proven by Set-Cookie, not a non-empty jar
 
-`HttpVirtualUser` (`packages/core/src/services/http-virtual-users.ts`) keeps a
+`HttpVirtualUser` (`packages/core/src/wirings/virtual-user/http-virtual-users.ts`) keeps a
 private `signedIn` boolean rather than inferring the session from its cookie
 jar. Both `VirtualUserSignIn` implementations in
 `packages/core/src/services/virtual-user-sign-in.ts` — `statementSignIn` and

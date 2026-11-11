@@ -6,15 +6,17 @@
  */
 
 import { join, relative } from 'node:path'
-import { existsSync, readFileSync } from 'node:fs'
-import { cp, mkdir, writeFile, copyFile } from 'node:fs/promises'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { cp, mkdir, rm, writeFile, copyFile } from 'node:fs/promises'
 import type { InspectorState } from '@pikku/inspector'
 import { PikkuError } from '@pikku/core/errors'
+import type { GatewaysMeta } from '@pikku/core/gateway'
 
 import {
   analyzeDeployment,
   serverlessSseRoutes,
   unroutedHttpWirings,
+  unservedGateways,
 } from './analyzer/index.js'
 import type { GroupingConfig } from './analyzer/index.js'
 import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partition.js'
@@ -25,17 +27,23 @@ import {
 } from './codegen/per-unit-codegen.js'
 import { materializeFrontend } from './frontend-assets.js'
 import { stageSqliteExtensions } from './sqlite-extension-assets.js'
+import {
+  parseBunCompileTarget,
+  type SqliteBuildTarget,
+} from '../functions/db/sqlite/sqlite-library.js'
 import { stageEmbeddedFiles } from './embedded-assets.js'
 import { assertFrontendBuilt } from '../utils/frontend.js'
 import type { Bundler } from './bundler/bundler.interface.js'
 import { getDeadGenFilePatterns } from './bundler/bundler.js'
 import { verifyUnitsRuntime } from './runtime-verifier.js'
+import { readCoercionMap } from '../functions/db/db-codegen.js'
 import type { BundleResult } from './bundler/types.js'
-import type { ProviderAdapter } from '@pikku/deploy'
+import type { EntryGenerationContext, ProviderAdapter } from '@pikku/deploy'
+import { writeUnitPlatformServices } from './platform-services.js'
 import {
-  loadUserConfigForDb,
-  type UserConfigShape,
-} from '../functions/commands/db-shared.js'
+  buildContributorPlatform,
+  detectDatabaseDialect,
+} from '../contributors/contributor-platform.js'
 import {
   generateServerEntrySource,
   SERVER_DOCKERFILE,
@@ -48,6 +56,8 @@ export interface BuildLogger {
   debug(msg: string): void
 }
 
+type UnservedGateway = Pick<GatewaysMeta[string], 'name' | 'type' | 'route'>
+
 export interface BuildPipelineResult {
   manifest: DeploymentManifest
   providerDir: string
@@ -58,6 +68,8 @@ export interface BuildPipelineResult {
   bundleErrors: Array<{ unitName: string; error: string }>
   codegenErrors: Array<{ unitName: string; error: string }>
   unroutedWirings: HttpRouteInfo[]
+  /** `wireGateway`s no unit serves — websocket and listener gateways. */
+  unservedGateways: UnservedGateway[]
 }
 
 /**
@@ -68,13 +80,38 @@ export interface BuildPipelineResult {
 export class PikkuDeployBuildFailedError extends PikkuError {}
 
 /**
+ * Ship every engine's SQL migrations beside the plan, whichever provider built
+ * it, so whatever applies them can pick by the target database. Dev seeds stay
+ * behind: they are local data, never production.
+ */
+export async function stageMigrations(
+  projectDir: string,
+  providerDir: string
+): Promise<void> {
+  const dbDir = join(projectDir, 'db')
+  for (const engine of ['sqlite', 'postgres', 'mysql']) {
+    const target = join(providerDir, 'db', engine)
+    await rm(target, { recursive: true, force: true })
+    await rm(join(providerDir, 'db', `${engine}-dev-seed.sql`), { force: true })
+    const source = join(dbDir, engine)
+    if (!existsSync(source)) continue
+    await mkdir(target, { recursive: true })
+    for (const file of readdirSync(source)) {
+      if (file.endsWith('.sql') && !file.endsWith('-dev-seed.sql')) {
+        await cp(join(source, file), join(target, file))
+      }
+    }
+  }
+}
+
+/**
  * The message for a build that produced an incomplete artifact, or `null`
  * when every unit was generated and bundled.
  */
 export function describeBuildFailure(
   result: Pick<
     BuildPipelineResult,
-    'bundleErrors' | 'codegenErrors' | 'unroutedWirings'
+    'bundleErrors' | 'codegenErrors' | 'unroutedWirings' | 'unservedGateways'
   >
 ): string | null {
   const failures = [
@@ -82,7 +119,8 @@ export function describeBuildFailure(
     ...result.bundleErrors.map((e) => `bundle ${e.unitName}: ${e.error}`),
   ]
   const unrouted = result.unroutedWirings ?? []
-  if (failures.length === 0 && unrouted.length === 0) {
+  const gateways = result.unservedGateways ?? []
+  if (failures.length === 0 && unrouted.length === 0 && gateways.length === 0) {
     return null
   }
   const parts: string[] = []
@@ -99,8 +137,18 @@ export function describeBuildFailure(
           .join('\n  ')
     )
   }
+  if (gateways.length > 0) {
+    parts.push(
+      `Deploy build failed — ${gateways.length} gateway(s) cannot be deployed to separate units; only webhook gateways can:\n  ` +
+        gateways.map(describeUnservedGateway).join('\n  ') +
+        `\n  Serve them from a standalone deploy, or change them to type: 'webhook'.`
+    )
+  }
   return parts.join('\n\n')
 }
+
+export const describeUnservedGateway = (gateway: UnservedGateway) =>
+  `${gateway.name} (${gateway.type}${gateway.route ? ` ${gateway.route}` : ''})`
 
 const MERGED_SERVER_UNIT_NAME = 'pikku-server-container'
 const UNITS_DIR_NAME = 'units'
@@ -149,38 +197,6 @@ function resolveProjectVersion(projectDir: string): string | undefined {
 }
 
 /**
- * The project's own database declaration, or nothing it could read.
- *
- * A config that throws, or names no `createConfig` at all, is reported as no
- * declaration rather than as a build failure: it is only ever one of two
- * signals here, and the directory conventions still answer for a project whose
- * config needs an environment this build does not have.
- */
-async function loadConfiguredDb(
-  projectDir: string,
-  srcDirectories: string[],
-  logger: BuildLogger
-): Promise<UserConfigShape | null> {
-  try {
-    return await loadUserConfigForDb({
-      config: { rootDir: projectDir, srcDirectories },
-      logger: {
-        error: (msg) => logger.debug(msg),
-        warn: (msg) => logger.debug(msg),
-      },
-    })
-  } catch (error: any) {
-    logger.debug(
-      `Could not read createConfig to resolve the deploy database: ${error?.message ?? error}`
-    )
-    return null
-  }
-}
-
-const listAll = (names: string[]): string =>
-  `${names.length === 2 ? 'both' : 'all of'} ${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
-
-/**
  * The database a standalone bundle has to open for itself.
  *
  * Every other provider deploys onto a host that supplies `kysely` — `pikku dev`
@@ -221,7 +237,10 @@ export async function resolveStandaloneDb(
   srcDirectories: string[],
   logger: BuildLogger,
   sqliteExtensions?: string[],
-  { withSqliteLibrary = false }: { withSqliteLibrary?: boolean } = {}
+  {
+    withSqliteLibrary = false,
+    compileTarget,
+  }: { withSqliteLibrary?: boolean; compileTarget?: SqliteBuildTarget } = {}
 ): Promise<
   | {
       engine: 'sqlite' | 'postgres'
@@ -231,32 +250,12 @@ export async function resolveStandaloneDb(
     }
   | undefined
 > {
-  const present = (['sqlite', 'postgres', 'mysql'] as const).filter((engine) =>
-    existsSync(join(projectDir, 'db', engine))
+  const chosen = await detectDatabaseDialect(
+    projectDir,
+    srcDirectories,
+    logger,
+    'a standalone build'
   )
-
-  if (present.length > 1) {
-    throw new Error(
-      `This project has ${listAll(present.map((engine) => `db/${engine}`))} migrations, so a standalone build cannot tell which database the app is meant to open. Keep the one this app deploys against.`
-    )
-  }
-
-  const userConfig = await loadConfiguredDb(projectDir, srcDirectories, logger)
-
-  const configured = (
-    [
-      ['postgres', 'postgresUrl'],
-      ['sqlite', 'sqliteDb'],
-      ['mysql', 'mysqlUrl'],
-    ] as const
-  ).filter(([, key]) => userConfig?.[key])
-  if (configured.length > 1) {
-    throw new Error(
-      `createConfig sets ${listAll(configured.map(([, key]) => key))}, so a standalone build cannot tell which database the app is meant to open. Configure exactly one database dialect.`
-    )
-  }
-
-  const chosen = configured[0]?.[0] ?? present[0]
   if (chosen === 'mysql') {
     throw new Error(
       'This project is on MySQL, and the standalone bundle has no MySQL driver yet — it opens a SQLite file or a postgres.js connection. Build it as a server deployment, or run it against sqlite or postgres.'
@@ -278,6 +277,7 @@ export async function resolveStandaloneDb(
     engine === 'sqlite'
       ? await stageSqliteExtensions(projectDir, unitDir, sqliteExtensions, {
           withLibrary: withSqliteLibrary,
+          compileTarget,
         })
       : { extensions: [], library: undefined }
   if (extensions.length > 0) {
@@ -353,7 +353,13 @@ export async function runBuildPipeline(options: {
     spaFallback: boolean
   }
   deployDir?: string
+  /** The shared `.pikku`: db assets and contributors are project-wide. */
   outDir?: string
+  /**
+   * The backend's own filtered tree (`.pikku/backends/<name>`). A single-unit
+   * bundle imports its bootstrap from here, so it carries only that backend.
+   */
+  backendDir?: string
   /**
    * The project's source roots, for finding the `createConfig` that declares
    * which database a standalone artifact has to open.
@@ -409,6 +415,11 @@ export async function runBuildPipeline(options: {
   const unroutedWirings = provider.singleUnit
     ? []
     : unroutedHttpWirings(inspectorState.http.meta, manifest.units)
+  const unservedGatewayList = provider.singleUnit
+    ? []
+    : unservedGateways(inspectorState.gateways?.meta, manifest).map(
+        ({ name, type, route }) => ({ name, type, route })
+      )
 
   let bundled: BundleResult[] = []
   let bundleErrors: Array<{ unitName: string; error: string }> = []
@@ -440,6 +451,7 @@ export async function runBuildPipeline(options: {
 
     const unitDir = join(providerDir, unitName)
     const pikkuDir = options.outDir ?? join(projectDir, '.pikku')
+    const bootstrapDir = options.backendDir ?? pikkuDir
     await mkdir(unitDir, { recursive: true })
 
     let frontendMount: { urlPrefix: string; spaFallback: boolean } | undefined
@@ -453,16 +465,20 @@ export async function runBuildPipeline(options: {
       logger.info(`Frontend: ${keys.length} files from ${options.frontend.dir}`)
     }
 
-    const embedded = await stageEmbeddedFiles(projectDir, unitDir, options.embed)
+    const embedded = await stageEmbeddedFiles(
+      projectDir,
+      unitDir,
+      options.embed
+    )
     if (embedded.length > 0) logger.info(`Embedded: ${embedded.join(', ')}`)
 
-    const ctx = {
+    const ctx: EntryGenerationContext = {
       ...(getEntryContext(
         unitDir,
-        pikkuDir,
+        bootstrapDir,
         singleUnit,
         inspectorState
-      ) as object),
+      ) as EntryGenerationContext),
       frontend: frontendMount,
       embedded: embedded.length > 0,
       version: resolveProjectVersion(projectDir),
@@ -473,11 +489,35 @@ export async function runBuildPipeline(options: {
         options.srcDirectories ?? ['src'],
         logger,
         options.sqliteExtensions,
-        { withSqliteLibrary: provider.bundlesSqliteLibrary }
+        {
+          withSqliteLibrary: provider.bundlesSqliteLibrary,
+          // Only the compiled bun binary is cross-built; see the standalone
+          // adapter's `bun build --compile --target`.
+          compileTarget: provider.bundlesSqliteLibrary
+            ? parseBunCompileTarget(process.env.PIKKU_COMPILE_TARGET)
+            : undefined,
+        }
       ),
+      // The whole app is this one unit, so the facts are the app's own — the
+      // same ones `pikku dev` hands its contributors.
+      contributorPlatform: await buildContributorPlatform({
+        projectDir,
+        pikkuDir,
+        srcDirectories: options.srcDirectories ?? ['src'],
+        logger,
+        serviceNames: inspectorState.serviceAggregation.requiredServices,
+        subject: 'a standalone build',
+      }),
       lifecycle: resolveLifecycle(unitDir, inspectorState),
     }
-    const source = provider.generateEntrySource(ctx as never)
+    ctx.platformServices = await writeUnitPlatformServices({
+      provider,
+      ctx,
+      state: inspectorState,
+      projectDir,
+      warn: (message) => logger.info(`Warning: ${message}`),
+    })
+    const source = provider.generateEntrySource(ctx)
 
     const entryPath = join(unitDir, 'entry.ts')
     await writeFile(entryPath, source, 'utf-8')
@@ -511,6 +551,8 @@ export async function runBuildPipeline(options: {
     logger.info(
       `Bundled standalone${bundleErrors.length > 0 ? ` (${bundleErrors.length} errors)` : ''}`
     )
+  } else if (manifest.units.length === 0) {
+    logger.info('No backend units found, skipping codegen and bundling')
   } else {
     // Multi-unit mode: per-function decomposition
     const serverlessUnits = manifest.units.filter(
@@ -521,20 +563,6 @@ export async function runBuildPipeline(options: {
     logger.info(
       `Found ${manifest.units.length} units (${serverlessUnits.length} serverless, ${serverUnits.length} server), ${manifest.queues.length} queues, ${manifest.scheduledTasks.length} scheduled tasks`
     )
-
-    if (manifest.units.length === 0) {
-      return {
-        manifest,
-        providerDir,
-        deploymentManifestPath,
-        infraPath,
-        projectId,
-        bundled: [],
-        bundleErrors: [],
-        codegenErrors: [],
-        unroutedWirings,
-      }
-    }
 
     // Step 2: Per-unit filtered codegen (serverless units only)
     // Server units share a single codegen pass (step 2b).
@@ -547,6 +575,7 @@ export async function runBuildPipeline(options: {
         inspectorState,
         deployDir: unitsDir,
         workflowQueues,
+        lazyAddons: provider.lazyAddonRegistration ?? false,
         onProgress: (unitName, status, error) => {
           if (status === 'start') {
             logger.info(`  Codegen: ${unitName}...`)
@@ -659,6 +688,13 @@ export async function runBuildPipeline(options: {
     logger.info('Bundling...')
     const serverlessEntryFiles = new Map<string, string>()
     const serverEntryFiles = new Map<string, string>()
+    const coercionMap = readCoercionMap(
+      join(
+        options.outDir ?? join(projectDir, '.pikku'),
+        'db',
+        'coercion.gen.ts'
+      )
+    )
 
     for (const unit of manifest.units) {
       const pikkuDir = unitPikkuDirs.get(unit.name)
@@ -669,15 +705,48 @@ export async function runBuildPipeline(options: {
       const entryPath = join(unitDir, 'entry.ts')
       await mkdir(unitDir, { recursive: true })
 
-      const ctx = {
-        ...(getEntryContext(unitDir, pikkuDir, unit, inspectorState) as object),
+      const ctx: EntryGenerationContext = {
+        ...(getEntryContext(
+          unitDir,
+          pikkuDir,
+          unit,
+          inspectorState
+        ) as EntryGenerationContext),
         lifecycle: resolveLifecycle(unitDir, inspectorState),
+        coercionMap,
+        contributorPlatform: await buildContributorPlatform({
+          projectDir,
+          pikkuDir: options.outDir ?? join(projectDir, '.pikku'),
+          srcDirectories: options.srcDirectories ?? ['src'],
+          logger,
+          serviceNames: unit.services.map((s) => s.sourceServiceName),
+          needs: {
+            queue: unit.services.some((s) => s.capability === 'queue'),
+            workflow: unit.services.some(
+              (s) => s.capability === 'workflow-state'
+            ),
+            agent: unit.services.some(
+              (s) =>
+                s.capability === 'ai-storage' || s.capability === 'ai-model'
+            ),
+          },
+          subject: 'a deploy build',
+        }),
       }
+      ctx.platformServices = await writeUnitPlatformServices({
+        provider,
+        ctx,
+        state: inspectorState,
+        projectDir,
+        genericServerEntry:
+          unit.target === 'server' && !provider.generateServerEntrySource,
+        warn: (message) => logger.info(`Warning: ${message}`),
+      })
       const source =
         unit.target === 'server'
-          ? (provider.generateServerEntrySource?.(ctx as never) ??
-            generateServerEntrySource(ctx as never))
-          : provider.generateEntrySource(ctx as never)
+          ? (provider.generateServerEntrySource?.(ctx) ??
+            generateServerEntrySource(ctx))
+          : provider.generateEntrySource(ctx)
 
       await writeFile(entryPath, source, 'utf-8')
       if (unit.target === 'server') {
@@ -808,6 +877,8 @@ export async function runBuildPipeline(options: {
   )
   logger.info('Generated deployment manifest')
 
+  await stageMigrations(projectDir, providerDir)
+
   const infraContent = provider.generateInfraManifest(manifest)
   if (infraContent) {
     infraPath = join(providerDir, 'infra.json')
@@ -866,5 +937,6 @@ export async function runBuildPipeline(options: {
     bundleErrors,
     codegenErrors,
     unroutedWirings,
+    unservedGateways: unservedGatewayList,
   }
 }

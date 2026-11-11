@@ -11,7 +11,7 @@ A virtual user's `roles` (and the `app` it signs into) are declared in
 `defineVirtualUsers` and carried on `ResolvedVirtualUser`
 (`packages/core/src/services/virtual-users-service.ts`) into the generated
 `virtualUserConfigs`. Nothing in core reads them to grant anything:
-`createHttpVirtualUsers` (`packages/core/src/services/http-virtual-users.ts`) only
+`createHttpVirtualUsers` (`packages/core/src/wirings/virtual-user/http-virtual-users.ts`) only
 signs the virtual user in.
 
 The grant is performed by `provisionVirtualUsers`
@@ -20,6 +20,10 @@ stage itself and calls `addUserToRole` / `addScopeToUser` on the `scopeService` 
 app passes in. Its doc comment says it is additive — it creates and grants, never
 deletes or revokes — and that it throws rather than grant a virtual user's roles to
 an address a real user already holds.
+
+Under `pikku dev`, where `pikkuVirtualUser` creates accounts on sign-in, the
+same grant (`grantVirtualUserAccess`) runs on each sign-in when the app passes
+its `scopeService` to the plugin. A deployed stage never grants on sign-in.
 
 Core cannot do the granting: which scope store exists, whether roles have been
 created, and what a role means are all the application's own. Worse, a framework

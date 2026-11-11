@@ -1,4 +1,4 @@
-import { existsSync } from 'fs'
+import { existsSync, statSync } from 'fs'
 import { join, resolve } from 'path'
 import { pathToFileURL } from 'url'
 import { register } from 'tsx/esm/api'
@@ -76,6 +76,23 @@ export async function loadUserModule(
 ): Promise<Record<string, any>> {
   ensureTsxRegistered()
   return importUserPath(filePath)
+}
+
+/**
+ * {@link loadUserModule} for a file that may have changed since it was last
+ * imported in this process. The URL carries the modification time, so a long
+ * lived process reads the new contents rather than the module cache's copy.
+ */
+export async function loadFreshUserModule(
+  filePath: string
+): Promise<Record<string, any>> {
+  ensureTsxRegistered()
+  const mtime = statSync(filePath).mtimeMs
+  // Bun keys its cache without a `file:` URL's query, and keeps a path's.
+  if (isBunRuntime()) return import(`${filePath}?mtime=${mtime}`)
+  const url = pathToFileURL(filePath)
+  url.searchParams.set('mtime', String(mtime))
+  return import(url.href)
 }
 
 /**

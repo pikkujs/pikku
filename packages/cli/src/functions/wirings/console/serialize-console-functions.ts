@@ -73,16 +73,9 @@ export const consoleRoutes = defineHTTPRoutes({
   auth: false,
   tags: ['pikku'],
   routes: {
-    workflowRunStream: {
-      route: '/workflow-run/:runId/stream',
-      method: 'get',
-      sse: true,
-      func: ref('console:streamWorkflowRun'),
-    },
     // A route rather than an RPC because a <video> and an <img> take a URL.
-    // Authenticated even though the group is not: everything else here is
-    // metadata, and these are recordings of an application being used. \`path\`
-    // arrives as a query parameter because an artifact key contains slashes.
+    // Authenticated even though the group is not. \`path\` arrives as a query
+    // parameter because an artifact key contains slashes.
     metaChangesStream: {
       route: '/meta/stream',
       method: 'get',
@@ -106,6 +99,7 @@ export const consoleRoutes = defineHTTPRoutes({
 wireAddon({
   name: 'console',
   package: '@pikku/addon-console',
+  expose: true,
   scopes: ['pikku:console'],
   globalSecrets:
     'the console administers secrets an operator names at runtime, so no static declaration can cover them',

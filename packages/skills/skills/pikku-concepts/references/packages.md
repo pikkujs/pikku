@@ -4,14 +4,16 @@
 
 | Package                       | Use Case                              |
 | ----------------------------- | ------------------------------------- |
-| `@pikku/express-server`       | Express standalone server             |
+| `@pikku/express`              | Express standalone server             |
 | `@pikku/express-middleware`   | Express as middleware in existing app |
-| `@pikku/fastify-server`       | Fastify standalone                    |
+| `@pikku/fastify`              | Fastify standalone                    |
 | `@pikku/fastify-plugin`       | Fastify plugin                        |
 | `@pikku/next`                 | Next.js API routes                    |
-| `@pikku/aws-lambda`           | AWS Lambda handlers                   |
+| `@pikku/lambda`               | AWS Lambda handlers                   |
 | `@pikku/cloudflare`           | Cloudflare Workers                    |
-| `@pikku/uws-server`           | uWebSockets.js (high perf)            |
+| `@pikku/uws`                  | uWebSockets.js (high perf)            |
+| `@pikku/ws`                   | `ws` WebSocket server                 |
+| `@pikku/azure-functions`      | Azure Functions                       |
 | `@pikku/modelcontextprotocol` | MCP server                            |
 
 ## Service Packages

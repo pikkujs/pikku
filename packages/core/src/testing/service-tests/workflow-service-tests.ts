@@ -37,6 +37,37 @@ export const defineWorkflowServiceTests = (
       assert.equal(run.graphHash, 'hash-1')
     })
 
+    test('a run keeps the traceparent it was created with', async () => {
+      const traceparent = `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`
+      const runId = await service.createRun(
+        'traced-workflow',
+        {},
+        false,
+        'hash-trace',
+        { ...wire, traceparent }
+      )
+
+      const run = await service.getRun(runId)
+      assert.equal(run?.wire?.traceparent, traceparent)
+      assert.equal(run?.wire?.type, wire.type)
+    })
+
+    test('a run created without a trace is given one', async () => {
+      const runId = await service.createRun(
+        'untraced-workflow',
+        {},
+        false,
+        'hash-untraced',
+        wire
+      )
+
+      const run = await service.getRun(runId)
+      assert.match(
+        run?.wire?.traceparent ?? '',
+        /^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/
+      )
+    })
+
     test('updateRunStatus', async () => {
       const runId = await service.createRun(
         'status-workflow',

@@ -1,14 +1,17 @@
 export { authAPIKey } from './auth-apikey.js'
 export { authCookie } from './auth-cookie.js'
 export { authBearer } from './auth-bearer.js'
-export {
-  addonScopeCap,
-  ADDON_HEADER,
-} from './addon-scope-cap.js'
+export { addonScopeCap, ADDON_HEADER } from './addon-scope-cap.js'
 export { remoteJobsSecret } from './remote-jobs-secret.js'
-export { pikkuRemoteAuthMiddleware } from './remote-auth.js'
+export { pikkuMeshAuthMiddleware } from './mesh-auth.js'
 export { cors } from './cors.js'
-export { requireOrigin, isAllowedOrigin, toOrigin } from './require-origin.js'
+export {
+  requireOrigin,
+  isAllowedOrigin,
+  toOrigin,
+  hostOriginOf,
+  allowedOriginsFromVariables,
+} from './require-origin.js'
 export { telemetryOuter, telemetryInner } from './telemetry.js'
 export {
   addTagMiddleware,

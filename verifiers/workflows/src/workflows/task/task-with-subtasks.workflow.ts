@@ -12,6 +12,7 @@ export const taskWithSubtasksWorkflow = pikkuWorkflowFunc<
   { parentTitle: string; subtaskTitles: string[] },
   { parentTaskId: string; subtaskIds: string[]; totalSubtasks: number }
 >({
+  auth: false,
   title: 'Task with Subtasks',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

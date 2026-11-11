@@ -36,7 +36,20 @@
     // for rustc only to say whether this machine can build what it wrote.
     "rustfmt",
     "rustc",
+    // The Go toolchain that compiles pikku-inspect. `build-go.mjs` skips the
+    // native build when it is absent and the CLI falls back to TypeScript.
+    "go",
   ],
+
+  // `pikkuStudio` is kept as a deprecated alias of `definePlugin` for apps
+  // that have not renamed yet; two names for one value is the point.
+  "ignoreIssues": {
+    "packages/core/src/wirings/addon/define-plugin.ts": ["duplicates"],
+    // `@sdk/<backend>` is a tsconfig and bundler alias onto a backend's
+    // generated SDK in `.pikku/sdk/`, not an npm package. On a clean checkout the
+    // generated file is not there yet, so knip cannot follow the alias.
+    "e2e/packages/web/src/main.tsx": ["unlisted"],
+  },
 
   // Build output and generated sources are not hand-authored, and their
   // imports are already accounted for by the source they are generated from.

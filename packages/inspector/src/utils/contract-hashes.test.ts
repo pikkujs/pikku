@@ -525,17 +525,58 @@ describe('extractContractsFromMeta', () => {
     assert.strictEqual(result.get('createUser')!.version, 1)
   })
 
-  test('skips remote functions', () => {
+  test('includes remote functions: their callers are other services', () => {
     const meta: FunctionsMeta = {
       remoteFunc: {
         pikkuFuncId: 'remoteFunc',
         inputSchemaName: null,
         outputSchemaName: null,
         remote: true,
-        contractHash: 'shouldskip',
+        contractHash: 'remotehash123456',
       },
     }
     const result = extractContractsFromMeta(meta)
+    assert.strictEqual(result.size, 1)
+    assert.strictEqual(
+      result.get('remoteFunc')!.contractHash,
+      'remotehash123456'
+    )
+  })
+
+  test('a changed remote contract without a version bump fails validation', () => {
+    const manifest: VersionManifest = {
+      manifestVersion: 1,
+      contracts: {
+        remoteFunc: { latest: 1, versions: { '1': 'remotehash123456' } },
+      },
+    }
+    const contracts = extractContractsFromMeta({
+      remoteFunc: {
+        pikkuFuncId: 'remoteFunc',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        remote: true,
+        contractHash: 'changedhash12345',
+      },
+    })
+    const result = validateContracts(manifest, contracts)
+    assert.strictEqual(result.valid, false)
+    assert.strictEqual(
+      result.errors[0]!.code,
+      ErrorCode.FUNCTION_VERSION_MODIFIED
+    )
+  })
+
+  test('still skips webhook receivers', () => {
+    const result = extractContractsFromMeta({
+      hook: {
+        pikkuFuncId: 'hook',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        webhookReceive: true,
+        contractHash: 'hookhash12345678',
+      },
+    })
     assert.strictEqual(result.size, 0)
   })
 

@@ -2,12 +2,13 @@
  * Urgent alert workflow with parallel escalation
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
-export const urgentAlertWorkflow = pikkuWorkflowFunc<
+export const urgentAlertWorkflow = pikkuWorkflowComplexFunc<
   { alertTitle: string; alertMessage: string; oncallUserIds: string[] },
   { notifiedCount: number }
 >({
+  auth: false,
   title: 'Urgent Alert',
   tags: ['notification'],
   func: async (_services, data, { workflow }) => {

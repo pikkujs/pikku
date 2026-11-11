@@ -3,12 +3,13 @@
  * Creates temp projects with invalid workflows and asserts pikku exits with code 1.
  */
 
-import { mkdtemp, writeFile, rm, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { randomUUID } from 'node:crypto'
+import { join, relative } from 'path'
 import { tmpdir } from 'os'
 import { execFileSync } from 'child_process'
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
+import { createScriptContent, putText } from '../script-content.js'
 
 const PIKKU_BIN = join(
   import.meta.dirname!,
@@ -20,6 +21,8 @@ interface TestCase {
   wrapper: 'pikkuWorkflowFunc' | 'pikkuWorkflowComplexFunc'
   body: string
   shouldFail: boolean
+  /** The diagnostic that has to be the reason it failed. */
+  mentions?: string
 }
 
 const cases: TestCase[] = [
@@ -104,10 +107,63 @@ const cases: TestCase[] = [
       }`,
     shouldFail: true,
   },
+
+  // --- constructs the graph cannot show must fail, not vanish ---
+  {
+    name: 'dsl: rejects forEach around a workflow call',
+    wrapper: 'pikkuWorkflowFunc',
+    body: `
+      ;(data as any).items.forEach(async (i: any) => {
+        await workflow.do('step', 'myRpc', { i })
+      })`,
+    shouldFail: true,
+    mentions: 'PKU641',
+  },
+  {
+    name: 'dsl: rejects a ternary in the body',
+    wrapper: 'pikkuWorkflowFunc',
+    body: `await workflow.do('step', 'myRpc', { to: data.value ? 'a' : 'b' })`,
+    shouldFail: true,
+    mentions: 'PKU641',
+  },
+  {
+    name: 'dsl: rejects a Promise.all(map) that is not over a data array',
+    wrapper: 'pikkuWorkflowFunc',
+    body: `
+      await Promise.all(
+        [data.value].filter(Boolean).map((v) => workflow.do('step', 'myRpc', { v }))
+      )`,
+    shouldFail: true,
+    mentions: 'PKU641',
+  },
+
+  // --- approval gates must say who answers them ---
+  {
+    name: 'dsl: rejects an approval with no approvers',
+    wrapper: 'pikkuWorkflowFunc',
+    body: `await workflow.approval('sign-off', { schema: data as any })`,
+    shouldFail: true,
+    mentions: 'PKU645',
+  },
+  {
+    name: 'complex: rejects an approval with no approvers',
+    wrapper: 'pikkuWorkflowComplexFunc',
+    body: `await workflow.approval('sign-off', { schema: data as any })`,
+    shouldFail: true,
+  },
 ]
 
-async function createTestProject(testCase: TestCase): Promise<string> {
-  const tmpDir = await mkdtemp(join(tmpdir(), 'pikku-dsl-test-'))
+type TestProject = { dir: string; remove: () => Promise<void> }
+
+// The content service has no temp dir, so the project is a bucket of a
+// content store rooted at a fresh directory; a LocalContent keeps a bucket's
+// files under `<root>/private/<bucket>`, which is the project's working dir.
+async function createTestProject(testCase: TestCase): Promise<TestProject> {
+  const root = join(tmpdir(), `pikku-dsl-test-${randomUUID()}`)
+  const content = createScriptContent(root)
+  const tmpDir = join(root, 'private', 'project')
+  const writeFile = (path: string, text: string) =>
+    putText(content, 'project', relative(tmpDir, path), text)
 
   await writeFile(
     join(tmpDir, 'pikku.config.json'),
@@ -144,8 +200,6 @@ async function createTestProject(testCase: TestCase): Promise<string> {
     })
   )
 
-  await mkdir(join(tmpDir, 'src'), { recursive: true })
-
   const workflowCode = `
 import { ${testCase.wrapper} } from '../.pikku/workflow/pikku-workflow-types.gen.js'
 
@@ -157,7 +211,12 @@ export const testWorkflow = ${testCase.wrapper}<{ value: string }, unknown>({
 `
   await writeFile(join(tmpDir, 'src', 'test.workflow.ts'), workflowCode)
 
-  return tmpDir
+  return {
+    dir: tmpDir,
+    remove: async () => {
+      await content.deleteByPrefix('project', '')
+    },
+  }
 }
 
 function runPikku(dir: string): { exitCode: number; output: string } {
@@ -179,9 +238,9 @@ function runPikku(dir: string): { exitCode: number; output: string } {
 describe('DSL validation verifier', () => {
   for (const testCase of cases) {
     test(testCase.name, async () => {
-      const tmpDir = await createTestProject(testCase)
+      const project = await createTestProject(testCase)
       try {
-        const { exitCode, output } = runPikku(tmpDir)
+        const { exitCode, output } = runPikku(project.dir)
 
         if (testCase.shouldFail) {
           assert.notEqual(
@@ -189,6 +248,12 @@ describe('DSL validation verifier', () => {
             0,
             `Expected pikku to fail for "${testCase.name}" but it succeeded.\nOutput: ${output}`
           )
+          if (testCase.mentions) {
+            assert.ok(
+              output.includes(testCase.mentions),
+              `Expected "${testCase.name}" to fail with ${testCase.mentions}.\nOutput: ${output}`
+            )
+          }
         } else {
           assert.equal(
             exitCode,
@@ -197,7 +262,7 @@ describe('DSL validation verifier', () => {
           )
         }
       } finally {
-        await rm(tmpDir, { recursive: true, force: true })
+        await project.remove()
       }
     })
   }

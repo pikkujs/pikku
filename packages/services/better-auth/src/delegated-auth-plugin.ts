@@ -4,6 +4,7 @@ import { setSessionCookie } from 'better-auth/cookies'
 import type { BetterAuthPlugin } from 'better-auth'
 import type { Logger } from '@pikku/core/services'
 import type { ScopeService } from '@pikku/core/services'
+import { ADMIN_SCOPE_ROOT, CONSOLE_SCOPE_ROOT } from './auth-scopes.js'
 
 /** providerId of the account row that keys a delegated identity to its upstream. */
 export const DELEGATED_PROVIDER_ID = 'delegated'
@@ -33,7 +34,10 @@ export interface UpstreamIdentity {
    */
   syntheticEmail?: boolean
   name?: string
-  /** Upstream role; mapped via {@link DelegatedAuthOptions.mapRole} when set. */
+  /**
+   * Upstream role; mapped via {@link DelegatedAuthOptions.mapRole} when set.
+   * Only ever granted: a role the upstream stops returning is not revoked.
+   */
   role?: string
   /** Upstream tenant (informational; travels inside `credential`). */
   tenantId?: string
@@ -45,6 +49,7 @@ export interface UpstreamIdentity {
   credential: unknown
 }
 
+/** Options for {@link pikkuDelegatedAuth}. */
 export interface DelegatedAuthOptions {
   /**
    * Verify the credentials against THE upstream system of record (exactly one
@@ -74,6 +79,47 @@ export interface DelegatedAuthOptions {
   scopeService?: ScopeService
   /** Logger for role-grant warnings. */
   logger?: Logger
+  /**
+   * Whether a first sign-in may attach the upstream identity to a local user
+   * that already has the same email. Only ever an email the upstream itself
+   * returned (`syntheticEmail: false`) — and that is still the upstream's word
+   * for it, which is account takeover if the upstream lets users set an
+   * unverified address.
+   *
+   * - `false` (default): refused with "Email is already used by another user".
+   * - `'non-admins'`: linked unless the local user holds anything under the
+   *   `admin` or `pikku:console` roots. Needs `scopeService` to tell; without
+   *   one nothing is linked.
+   * - `'all'`: linked whoever it is, administrators included.
+   */
+  linkExistingUsersByEmail?: false | 'non-admins' | 'all'
+}
+
+const OPERATOR_ROOTS = [ADMIN_SCOPE_ROOT, CONSOLE_SCOPE_ROOT]
+
+/**
+ * Whether `userId` may be claimed by an upstream identity under the
+ * `'non-admins'` policy. Fails closed: with no ScopeService an administrator
+ * cannot be told apart from anyone else.
+ */
+const isLinkableNonAdmin = async (
+  options: DelegatedAuthOptions,
+  userId: string
+): Promise<boolean> => {
+  if (!options.scopeService) {
+    options.logger?.warn?.(
+      `delegated sign-in: linkExistingUsersByEmail is 'non-admins' but no ScopeService is registered, so no existing user can be linked`
+    )
+    return false
+  }
+  const scopes = await options.scopeService.resolveScopes(userId)
+  return !scopes.some(
+    (scope) =>
+      scope === '*' ||
+      OPERATOR_ROOTS.some(
+        (root) => scope === root || scope.startsWith(`${root}:`)
+      )
+  )
 }
 
 /**
@@ -119,6 +165,11 @@ const grantRole = async (
  * the upstream token per-user, and mints a normal session. Passwords are never
  * stored; the name is refreshed on every sign-in, and the resolved role is
  * re-granted through the {@link DelegatedAuthOptions.scopeService}.
+ *
+ * A first sign-in never claims an existing local user unless
+ * {@link DelegatedAuthOptions.linkExistingUsersByEmail} allows it.
+ *
+ * @example snippet: betterAuthDelegated
  */
 export const pikkuDelegatedAuth = (
   options: DelegatedAuthOptions
@@ -198,7 +249,11 @@ export const pikkuDelegatedAuth = (
           const existing = await adapter.findUserByEmail(identityEmail, {
             includeAccounts: true,
           })
-          if (existing && identity.syntheticEmail !== false) {
+          const linkPolicy = options.linkExistingUsersByEmail ?? false
+          if (
+            existing &&
+            (identity.syntheticEmail !== false || linkPolicy === false)
+          ) {
             throw new APIError('UNAUTHORIZED', {
               message: 'Email is already used by another user',
             })
@@ -219,6 +274,14 @@ export const pikkuDelegatedAuth = (
             if (conflicting) {
               throw new APIError('UNAUTHORIZED', {
                 message: 'Email is linked to a different upstream user',
+              })
+            }
+            if (
+              linkPolicy === 'non-admins' &&
+              !(await isLinkableNonAdmin(options, existingUser.id))
+            ) {
+              throw new APIError('UNAUTHORIZED', {
+                message: 'Email is already used by another user',
               })
             }
             user = (await adapter.updateUser(existingUser.id, {

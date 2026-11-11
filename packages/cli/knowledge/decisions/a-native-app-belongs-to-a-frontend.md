@@ -79,4 +79,4 @@ flag on deploy (see [every app command lives under `pikku app`](every-app-comman
 A `kind: "ssr"` frontend needs a server to render its pages, and a native app
 has no server to run it on. `pikku app native init` refuses the default mode for
 one and says to either build it as a static SPA (TanStack Start's SPA mode is
-what `templates/tanstack` already serves) or use `url` mode.
+what `recipes/tanstack` already serves) or use `url` mode.

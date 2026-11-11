@@ -218,6 +218,8 @@ export interface SerializedWorkflowGraph {
   pikkuFuncId: string
   /** Source type: 'dsl' for pikkuWorkflowFunc, 'graph' for pikkuWorkflowGraph */
   source: WorkflowSourceType
+  /** True for a scenario, so meta readers can tell it from a real workflow */
+  scenario?: boolean
   /** Optional short display name */
   title?: string
   /** Optional description */

@@ -14,7 +14,10 @@ import type {
   PikkuAgentMiddlewareHooks,
   SessionScope,
 } from './agent.types.js'
-import type { AgentRunnerParams } from '../../services/agent-runner-service.js'
+import type {
+  AgentRunnerParams,
+  AgentRunnerService,
+} from '../../services/agent-runner-service.js'
 import { PikkuError } from '../../errors/error-handler.js'
 import {
   checkAuthPermissions,
@@ -22,15 +25,17 @@ import {
   type PermissionWire,
 } from '../../permissions.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
-import { ForbiddenError, MissingSessionError } from '../../errors/errors.js'
+import {
+  ForbiddenError,
+  MissingSessionError,
+  NotFoundError,
+} from '../../errors/errors.js'
 import { verifyScopes } from '../../scopes.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import { randomUUID } from './agent-utils.js'
 import { awaitPendingInterruptNote } from './agent-interrupt.js'
-import { streamAgent } from './agent-stream.js'
-import { runAgent } from './agent-runner.js'
 import {
   resolveNamespace,
   ContextAwareRPCService,
@@ -42,13 +47,26 @@ import {
   trimMessages,
 } from './agent-memory.js'
 import { resolveModelConfig } from './agent-model-config.js'
+import {
+  childTraceWire,
+  createTrace,
+  outgoingTraceparent,
+  tracedLogger,
+  type TraceContext,
+} from '../../trace.js'
 
+/**
+ * Per-request context for running an agent: the caller's session, credential access and, for
+ * a sessionless request, the minted anonymous owner id.
+ */
 export type RunAgentParams = {
   sessionService?: SessionService<CoreUserSession>
   /** Credential accessor for the current request — used to read per-user overrides (e.g. AI_API_KEY). */
   getCredential?: GetCredential
   /** Ephemeral owner identity minted for a sessionless request; never client-supplied, never reused across requests. */
   anonymousOwnerResourceId?: string
+  /** The caller's trace. Each tool call is a span in it. */
+  trace?: TraceContext
 }
 
 export function resolveSessionPrincipal(
@@ -122,6 +140,10 @@ export function sessionPrincipals(
   )
 }
 
+/**
+ * Whether a stored thread or run `resourceId` belongs to `principal`: it is the principal itself
+ * or one of its `principal:` sub-partitions.
+ */
 export function isOwnedByPrincipal(
   storedResourceId: string,
   principal: string
@@ -132,12 +154,23 @@ export function isOwnedByPrincipal(
   )
 }
 
+/**
+ * The principals (user id, then org id) a session may list threads for. Pass it as the `owners`
+ * filter to `AgentRunService.listThreads`; an empty array, for a missing session, matches nothing.
+ */
 export function threadOwnerConstraint(
   session: { userId?: string; orgId?: string } | undefined
 ): string[] {
   return sessionPrincipals(session)
 }
 
+/**
+ * Whether `session` may read the thread or run stored under `storedResourceId`: true only when the
+ * resource belongs to the session's user or org. A missing session is always refused.
+ *
+ * Use it before returning a thread over the wire; answering "not found" for both a missing and a
+ * forbidden thread avoids revealing which threads exist.
+ */
 export function canAccessThread(
   storedResourceId: string,
   session: { userId?: string; orgId?: string } | undefined
@@ -174,6 +207,10 @@ export const agentCallOptions = (input: AgentInput): AgentInput => ({
   ...(input.context ? { context: input.context } : {}),
 })
 
+/**
+ * Options for a streamed run: which tool calls need approval (`'all'`, only tools that declare it,
+ * or none) and a callback receiving the run id once it is created.
+ */
 export type StreamAgentOptions = {
   requiresToolApproval?: 'all' | 'explicit' | false
   onRunCreated?: (runId: string) => void
@@ -192,6 +229,10 @@ export const CREDENTIAL_REQUIRED: unique symbol = Symbol(
   'pikku.ai.credentialRequired'
 )
 
+/**
+ * Raised when a tool call needs a human's approval before it runs. The run is suspended with the
+ * call recorded in `pendingApprovals`, and resumes through `agentResume` or `agentApprove`.
+ */
 export class ToolApprovalRequired extends PikkuError {
   public readonly toolCallId: string
   public readonly toolName: string
@@ -221,6 +262,11 @@ export class ToolApprovalRequired extends PikkuError {
   }
 }
 
+/**
+ * Raised when a tool needs a credential the user has not connected. The run is suspended and the
+ * client is sent the credential's name, type and connect URL. Only requests pikku itself produced
+ * are honoured, so tool output cannot forge one.
+ */
 export class ToolCredentialRequired extends PikkuError {
   public readonly toolCallId: string
   public readonly toolName: string
@@ -330,6 +376,27 @@ export const resolveAgent = (
   throw new Error(`AI agent not found: ${agentName}`)
 }
 
+/**
+ * The expose gate of `rpc.exposedAgent`, the entry a generated route calls.
+ * `rpc.agent` never comes through here, so application code reaches any agent.
+ * Only an `expose: true` agent is reachable from outside, and anything else is a
+ * 404 so hidden names cannot be probed. Who may then call it is the agent's own
+ * `auth`, scopes and permissions.
+ */
+export const assertAgentExposed = (agentName: string): void => {
+  if (findAgent(agentName)?.expose !== true) {
+    throw new NotFoundError(`AI agent not found: ${agentName}`)
+  }
+}
+
+const findAgent = (agentName: string): CoreAgent | undefined => {
+  try {
+    return resolveAgent(agentName).agent
+  } catch {
+    return undefined
+  }
+}
+
 export async function assertAgentAuthorized(
   agent: CoreAgent,
   params: RunAgentParams,
@@ -339,7 +406,7 @@ export async function assertAgentAuthorized(
     ? await params.sessionService.get()
     : undefined
 
-  if (agent.auth === true && !session) {
+  if (agent.auth !== false && !session) {
     throw new MissingSessionError('Authentication required')
   }
 
@@ -479,6 +546,8 @@ export async function buildToolDefs(
 ): Promise<{ tools: AgentToolDef[]; missingRpcs: string[] }> {
   const singletonServices = getSingletonServices()
   const tools: AgentToolDef[] = []
+  // Every tool of a run sits under one trace, whoever started the run.
+  const trace = params.trace ?? createTrace()
   const missingRpcs: string[] = []
   const approvalPolicy =
     streamContext?.options?.requiresToolApproval ?? 'explicit'
@@ -628,9 +697,14 @@ export async function buildToolDefs(
         approvalDescriptionFn,
         readonly: fnMeta?.readonly || undefined,
         execute: async (toolInput: unknown, options) => {
-          const wire: PikkuRawWire = params.sessionService
-            ? { ...createMiddlewareSessionWireProps(params.sessionService) }
-            : {}
+          // The call below is the tool's span, under the run's.
+          const wire: PikkuRawWire = {
+            traceId: trace.traceId,
+            trace,
+            ...(params.sessionService
+              ? createMiddlewareSessionWireProps(params.sessionService)
+              : {}),
+          }
           if (options?.abortScope) wire.abortScope = options.abortScope
           const rpcService = new ContextAwareRPCService(
             singletonServices,
@@ -693,6 +767,8 @@ export async function buildToolDefs(
             agentSessionMap.set(sessionKey, threadId)
           }
 
+          // A sub-agent runs on the same runners that build these tools. They
+          // import this module, so importing them back statically is a cycle.
           if (streamContext) {
             const isDelegate = agentMode !== 'supervise'
             if (isDelegate && streamContext.delegateState) {
@@ -723,6 +799,7 @@ export async function buildToolDefs(
                     await subChannel.send(event)
                   },
                 }
+            const { streamAgent } = await import('./agent-stream.js')
             const resultText = await streamAgent(
               subAgentName,
               buildSubAgentRunInput(
@@ -755,6 +832,7 @@ export async function buildToolDefs(
             return resultText
           }
 
+          const { runAgent } = await import('./agent-runner.js')
           const result = await runAgent(
             subAgentName,
             buildSubAgentRunInput(message, threadId, resourceId, parentContext),
@@ -825,9 +903,12 @@ export async function buildToolDefs(
               `workflowService is not configured — cannot run workflow tool '${workflowName}'`
             )
           }
-          const wire: PikkuRawWire = params.sessionService
-            ? { ...createMiddlewareSessionWireProps(params.sessionService) }
-            : {}
+          const wire: PikkuRawWire = {
+            ...childTraceWire(trace),
+            ...(params.sessionService
+              ? createMiddlewareSessionWireProps(params.sessionService)
+              : {}),
+          }
           if (options?.abortScope) wire.abortScope = options.abortScope
           const rpcService = new ContextAwareRPCService(
             singletonServices,
@@ -838,7 +919,12 @@ export async function buildToolDefs(
             workflowName,
             toolInput,
             rpcService,
-            { wire: { type: 'internal' } }
+            {
+              wire: {
+                type: 'internal',
+                traceparent: outgoingTraceparent(wire),
+              },
+            }
           )
         },
       })
@@ -858,7 +944,7 @@ export async function buildToolDefs(
             ...err.payload,
           }
         }
-        singletonServices.logger.error(
+        tracedLogger(singletonServices.logger, trace.traceId).error(
           `AI agent tool '${tool.name}' threw during execute()`,
           err
         )
@@ -927,6 +1013,29 @@ export async function buildToolDefs(
   return { tools, missingRpcs }
 }
 
+/**
+ * The singleton `agentRunner`, keyed with the caller's `AI_API_KEY` credential when one is set.
+ * Every entry that calls the model (run, stream, approve, resume) goes through this.
+ */
+export async function resolveAgentRunner(
+  singletonServices: { agentRunner?: AgentRunnerService },
+  params: RunAgentParams
+): Promise<AgentRunnerService> {
+  const agentRunner = singletonServices.agentRunner
+  if (!agentRunner) {
+    throw new AIProviderNotConfiguredError()
+  }
+  if (params.getCredential && agentRunner.withApiKey) {
+    const aiCredential = await params.getCredential<{ apiKey: string }>(
+      'AI_API_KEY'
+    )
+    if (aiCredential?.apiKey?.trim()) {
+      return agentRunner.withApiKey(aiCredential.apiKey)
+    }
+  }
+  return agentRunner
+}
+
 export async function prepareAgentRun(
   agentName: string,
   input: AgentInput,
@@ -939,19 +1048,7 @@ export async function prepareAgentRun(
 
   await assertAgentAuthorized(agent, params, packageName)
 
-  let agentRunner = singletonServices.agentRunner
-  if (!agentRunner) {
-    throw new AIProviderNotConfiguredError()
-  }
-
-  if (params.getCredential && agentRunner.withApiKey) {
-    const aiCredential = await params.getCredential<{ apiKey: string }>(
-      'AI_API_KEY'
-    )
-    if (aiCredential?.apiKey?.trim()) {
-      agentRunner = agentRunner.withApiKey(aiCredential.apiKey)
-    }
-  }
+  const agentRunner = await resolveAgentRunner(singletonServices, params)
 
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory

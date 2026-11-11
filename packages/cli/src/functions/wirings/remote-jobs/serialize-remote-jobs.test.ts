@@ -13,6 +13,15 @@ describe('serializeRemoteJobs', () => {
     assert.ok(functions.includes("tags: ['pikku']"))
   })
 
+  test('the schemas keep what core reads, which zod would otherwise strip', () => {
+    const { schemas } = serializeRemoteJobs(leaf)
+    const [queue, scheduled] = schemas.split('RemoteScheduledJob')
+    assert.ok(queue?.includes('traceparent: z.string().optional()'))
+    assert.ok(queue?.includes('pikkuUserId: z.string().optional()'))
+    assert.ok(scheduled?.includes('traceparent: z.string().optional()'))
+    assert.ok(!schemas.includes('traceId'))
+  })
+
   test('spells the routes out so the inspector can read them', () => {
     const { functions } = serializeRemoteJobs(leaf)
     assert.ok(
@@ -25,9 +34,19 @@ describe('serializeRemoteJobs', () => {
     const { functions } = serializeRemoteJobs(leaf)
     assert.ok(functions.includes('pikkuRemoteQueueJobFunc'))
     assert.ok(functions.includes('pikkuRemoteScheduledJobFunc'))
-    assert.ok(functions.includes("from '@pikku/core/services'"))
     assert.ok(
-      !functions.includes('runQueueJob') && !functions.includes('runScheduledTask'),
+      functions.includes(
+        "import { pikkuRemoteQueueJobFunc } from '@pikku/core/queue'"
+      )
+    )
+    assert.ok(
+      functions.includes(
+        "import { pikkuRemoteScheduledJobFunc } from '@pikku/core/scheduler'"
+      )
+    )
+    assert.ok(
+      !functions.includes('runQueueJob') &&
+        !functions.includes('runScheduledTask'),
       'the runners belong to core, not to generated source'
     )
   })
@@ -35,7 +54,9 @@ describe('serializeRemoteJobs', () => {
   test('guards both routes with the middleware core exports', () => {
     const { functions } = serializeRemoteJobs(leaf)
     assert.ok(
-      functions.includes("import { remoteJobsSecret } from '@pikku/core/middleware'")
+      functions.includes(
+        "import { remoteJobsSecret } from '@pikku/core/middleware'"
+      )
     )
     assert.equal(
       functions.split('middleware: [remoteJobsSecret]').length - 1,
@@ -47,7 +68,9 @@ describe('serializeRemoteJobs', () => {
   test('imports each wiring helper from its own leaf', () => {
     const { functions } = serializeRemoteJobs(leaf)
     assert.ok(
-      functions.includes("import { pikkuSessionlessFunc } from './function/index.js'")
+      functions.includes(
+        "import { pikkuSessionlessFunc } from './function/index.js'"
+      )
     )
     assert.ok(functions.includes("import { wireHTTP } from './http/index.js'"))
   })
@@ -65,9 +88,13 @@ describe('serializeRemoteJobs', () => {
 
   test('imports the schemas by the name the command writes them under', () => {
     const { functions } = serializeRemoteJobs(leaf)
-    const written = remoteJobsSchemasFile('/app/.pikku/remote-jobs/remote-jobs.gen.ts')
+    const written = remoteJobsSchemasFile(
+      '/app/.pikku/remote-jobs/remote-jobs.gen.ts'
+    )
     assert.ok(
-      functions.includes(`from './${written!.split('/').pop()!.replace('.ts', '.js')}'`)
+      functions.includes(
+        `from './${written!.split('/').pop()!.replace('.ts', '.js')}'`
+      )
     )
   })
 

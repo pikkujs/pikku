@@ -9,20 +9,25 @@
  * two-step the frontend takes (see frontend-assets.ts for why the manifest has
  * to be a generated module of literal imports).
  *
- * The libraries are the build machine's. That is right because a standalone
- * artifact is built on, and for, one platform: `bun build --compile` targets
- * its host, and the node bundle ships beside nothing else native.
+ * The libraries are the build machine's, so they are only right for an
+ * artifact built for the build machine's platform. A cross-compiled build
+ * (`PIKKU_COMPILE_TARGET`) refuses an extension it can only find the host's
+ * build of, and ships a libsqlite3 only when the target is macOS.
  */
 
 import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { basename, isAbsolute, join } from 'node:path'
 import {
   DEFAULT_SQLITE_EXTENSIONS,
   resolveSqliteExtension,
 } from '../functions/db/sqlite/sqlite-extensions.js'
 import {
   findSqliteLibrary,
+  hostSqliteBuildTarget,
+  isCrossTarget,
   needsSqliteLibrary,
+  SQLITE_LIBRARY_ENV,
+  type SqliteBuildTarget,
 } from '../functions/db/sqlite/sqlite-library.js'
 
 export const SQLITE_EXTENSIONS_DIR_NAME = 'sqlite-extensions'
@@ -78,23 +83,32 @@ export interface StagedSqliteAssets {
  * lacks vec0 fails later, on a machine further from the fix. `[]` in
  * `db.sqliteExtensions` is how a project builds without them.
  *
- * With `withLibrary`, the host's libsqlite3 is staged too, wherever the target
- * runtime would otherwise open one that cannot load extensions (bun on macOS).
- * It is staged even with no extensions, so the artifact runs on the same
- * SQLite whether or not the project loads any; not finding one fails the build.
+ * With `withLibrary`, a libsqlite3 is staged too when `compileTarget` is a
+ * runtime that would otherwise open one that cannot load extensions (bun on
+ * macOS). It is staged even with no extensions, so the artifact runs on the
+ * same SQLite whether or not the project loads any; not finding one fails the
+ * build. Any other target opens bun's own SQLite, and gets none.
  */
 export async function stageSqliteExtensions(
   projectDir: string,
   unitDir: string,
   declared: string[] | undefined,
-  { withLibrary = false }: { withLibrary?: boolean } = {}
+  {
+    withLibrary = false,
+    compileTarget = hostSqliteBuildTarget(),
+  }: { withLibrary?: boolean; compileTarget?: SqliteBuildTarget } = {}
 ): Promise<StagedSqliteAssets> {
   const specs = declared ?? DEFAULT_SQLITE_EXTENSIONS
   const target = join(unitDir, SQLITE_EXTENSIONS_DIR_NAME)
   await rm(target, { recursive: true, force: true })
   await rm(join(unitDir, SQLITE_EXTENSIONS_MANIFEST_FILE), { force: true })
 
-  const libraryPath = withLibrary ? stagedLibraryPath() : undefined
+  const cross = isCrossTarget(compileTarget)
+  if (cross) refuseHostOnlyExtensions(specs, declared, compileTarget)
+
+  const libraryPath = withLibrary
+    ? stagedLibraryPath(compileTarget, cross)
+    : undefined
   if (specs.length === 0 && !libraryPath) return { extensions: [] }
 
   const names: string[] = []
@@ -145,10 +159,56 @@ export async function stageSqliteExtensions(
   return { extensions: names, ...(library ? { library } : {}) }
 }
 
-/** The host's libsqlite3 when the target needs one, failing if it has none. */
-function stagedLibraryPath(): string | undefined {
-  if (!needsSqliteLibrary()) return undefined
-  const lookup = findSqliteLibrary()
+const describe = ({ platform, arch }: SqliteBuildTarget) =>
+  `${platform}-${arch}`
+
+/**
+ * A package extension resolves to the build machine's library only, so a build
+ * for another platform would ship a file its target cannot load. A path is the
+ * project naming the file itself, and is taken as meant for the target.
+ */
+function refuseHostOnlyExtensions(
+  specs: string[],
+  declared: string[] | undefined,
+  compileTarget: SqliteBuildTarget
+): void {
+  const packaged = specs.filter(
+    (spec) => !spec.startsWith('.') && !isAbsolute(spec)
+  )
+  if (packaged.length === 0) return
+  throw new Error(
+    `This build is compiled for ${describe(compileTarget)}, but the SQLite ` +
+      `extension${packaged.length > 1 ? 's' : ''} ${packaged.join(', ')} ` +
+      `resolve${packaged.length > 1 ? '' : 's'} to this machine's ` +
+      `(${describe(hostSqliteBuildTarget())}) build. ` +
+      (declared === undefined
+        ? `sqlite-vec is loaded by default; set db.sqliteExtensions to [] in ` +
+          `pikku.config.json to build without it, or `
+        : `Set db.sqliteExtensions to [], or `) +
+      `name the ${describe(compileTarget)} library file by path.`
+  )
+}
+
+/**
+ * The libsqlite3 to carry when the target needs one, failing if there is none.
+ * Only the host's is found by looking; a macOS target on another architecture
+ * has to be handed one through PIKKU_SQLITE_LIBRARY.
+ */
+function stagedLibraryPath(
+  compileTarget: SqliteBuildTarget,
+  cross: boolean
+): string | undefined {
+  if (!needsSqliteLibrary(compileTarget.platform)) return undefined
+  if (cross && !process.env[SQLITE_LIBRARY_ENV]) {
+    throw new Error(
+      `A bun build for macOS ships its own libsqlite3, and this one is ` +
+        `compiled for ${describe(compileTarget)} on a ` +
+        `${describe(hostSqliteBuildTarget())} machine, whose libsqlite3 it ` +
+        `cannot use. Point ${SQLITE_LIBRARY_ENV} at a ` +
+        `${describe(compileTarget)} libsqlite3.`
+    )
+  }
+  const lookup = findSqliteLibrary(process.env, compileTarget.platform)
   if (lookup.reason !== undefined) {
     throw new Error(
       `A bun build on macOS ships its own libsqlite3, since bun there would ` +

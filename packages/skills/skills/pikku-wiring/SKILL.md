@@ -1,31 +1,17 @@
 ---
 name: pikku-wiring
 description: >-
-  Use when exposing a Pikku function over a transport — HTTP routes and SSE, WebSocket channels,
-  typed realtime pub/sub, internal and exposed RPC, queue workers, cron schedules, event triggers,
-  MCP tools/resources/prompts, CLI commands, or a Slack gateway. Covers choosing the wiring, what
-  every wiring shares, and what differs: function type, session source, and which calls throw
-  instead of returning. TRIGGER when: code uses wireHTTP, defineHTTPRoutes, wireChannel,
-  wireQueueWorker, wireScheduler, wireTrigger, wireTriggerSource, wireCLI, wireMCPResource,
-  wireMCPPrompt, `mcp: true`, `sse: true`, `expose: true`, rpc.invoke, SlackGatewayAdapter, or the
-  user asks how to expose, route, schedule, queue, stream or publish a function. DO NOT TRIGGER
-  when: writing the function body (use pikku-concepts), authorization (use pikku-permissions), serving on
-  a runtime (use pikku-deploy), building a live-updating view (use pikku-realtime), or sending
-  outgoing webhooks (use pikku-webhook).
+  Expose a Pikku function: wireHTTP, SSE, channels, pub/sub, RPC, queue workers, cron, triggers, MCP, CLI, Slack gateway. Outgoing webhooks are pikku-webhook; live views are pikku-realtime.
 installGroups: [core]
 ---
 
 # Pikku Wiring
 
-## Agent Operating Procedure
+What to reach for and why. For how to call it, run this once, with the doors you need: `pikku doc http channel queue scheduler trigger mcp cli gateway wireHTTP`. Depth: the references named under Pick a wiring.
 
-Use this skill as an execution checklist, not reference material.
+Discover first with `pikku meta ... --json`. Find the source that owns the behaviour; do not start from generated output, `.pikku`, `node_modules`, vendored packages or build artifacts. Make the smallest source change, never hand-edit SDKs, schema output or typegen, validate narrowly first, then `pikku all` when functions, wirings, schemas or clients may have changed. If validation fails, fix the source cause and rerun.
 
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+Before changing a function, run `pikku graph <functionId> --json`: it joins the function to its routes, channels, schedulers, queues, MCP and CLI wirings, workflow steps, agent tools and callers, its callees, and the permissions and middleware that gate it. The build refuses what would hide a caller or callee: computed rpc and workflow names (PKU941, PKU943), a wire passed to any other function (PKU942), and an `invokes` or `startsWorkflows` name that does not exist (PKU944). Callers outside the project (other deployments, clients) are the one thing the meta cannot hold.
 
 ## Before you start
 
@@ -35,10 +21,9 @@ pikku info tags --verbose        # project organisation and naming conventions
 pikku info middleware --verbose  # what middleware is already applied
 ```
 
-Follow the patterns you find. Option tables and exact signatures come from
-`pikku doc` — run `pikku doc --ai` for the installed surface. This skill is what
-the compiler cannot tell you: which wiring to reach for, and what changes when
-you move a function from one to another.
+Follow the patterns you find. This skill is what the compiler cannot tell you:
+which wiring to reach for, and what changes when you move a function from one to
+another.
 
 ## What a wiring is
 
@@ -55,7 +40,7 @@ Three consequences that hold for every wiring below:
 - **Permissions are never declared on the wiring.** Wire-level permissions were
   removed in #972 — declare them on the function (`pikkuFunc({ permissions })`,
   see `pikku-permissions`) or app-wide via `addGlobalPermission`. Tags and
-  patterns now target *middleware* only.
+  patterns now target _middleware_ only.
 - **The wire is the third argument**, not a service. `channel`, `rpc`, `session`,
   `setSession`, `mcp`, `queue`, `scheduledTask` and `cli` all live there.
 
@@ -70,30 +55,22 @@ exactly the typing that makes the wiring worth having, silently.
 naming the `#pikku` leaf to use instead. `@pikku/core/services` is the one
 subpath it exempts — the service implementations bootstrap picks.
 
-| Wiring | Import from |
-| --- | --- |
-| `wireHTTP`, `defineHTTPRoutes`, `wireHTTPRoutes` | `#pikku/http` |
-| `wireChannel`, `defineChannelRoutes` | `#pikku/channel` |
-| `wireQueueWorker` | `#pikku/queue` |
-| `wireScheduler` | `#pikku/scheduler` |
-| `wireTrigger`, `wireTriggerSource`, `pikkuTriggerFunc` | `#pikku/trigger` |
-| `wireCLI`, `pikkuCLICommand`, `pikkuCLIRender` | `#pikku/cli` |
-| `pikkuMCPToolFunc`, `pikkuMCPResourceFunc`, `pikkuMCPPromptFunc`, `wireMCPResource`, `wireMCPPrompt` | `#pikku/mcp` |
+`pikku doc <export>` names each one's `#pikku` leaf on its first line.
 
 ## Pick a wiring
 
-| Reach for | When | Reference |
-| --- | --- | --- |
-| **HTTP** | REST endpoints, web APIs, and SSE streams (`sse: true`, `get` only) | `references/http.md`; every field in `references/http-options.md` |
-| **Channel** | A hand-designed WebSocket protocol with your own action routing | `references/channel.md` |
-| **Realtime** | Typed pub/sub push — the scaffolded `/events` channel and SSE topics, plus subscribing to any other `sse: true` route or channel from the client | `references/realtime.md` |
-| **RPC** | One function calling another, or dispatching a name from outside | `references/rpc.md` |
-| **Queue** | Reliable background work that must survive a crash and retry | `references/queue.md` |
-| **Scheduler** | Recurring work on a cron expression | `references/scheduler.md` |
-| **Trigger** | Reacting in-process to an external event source (Redis pub/sub, PG LISTEN) | `references/trigger.md` |
-| **MCP** | Exposing functions to an AI assistant as tools, resources or prompts | `references/mcp.md` |
-| **CLI** | A terminal program with commands, subcommands and options | `references/cli.md`; end-to-end walkthrough in `references/cli-complete-example.md` |
-| **Gateway** | An inbound integration from a third-party product — Slack is the shipped adapter | `references/gateway-slack.md` |
+| Reach for     | When                                                                                                                                             | Reference                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| **HTTP**      | REST endpoints, web APIs, and SSE streams (`sse: true`, `get` only)                                                                              | `references/http.md`; every field in `references/http-options.md`                   |
+| **Channel**   | A hand-designed WebSocket protocol with your own action routing                                                                                  | `references/channel.md`                                                             |
+| **Realtime**  | Typed pub/sub push — the scaffolded `/events` channel and SSE topics, plus subscribing to any other `sse: true` route or channel from the client | `references/realtime.md`                                                            |
+| **RPC**       | One function calling another, or dispatching a name from outside                                                                                 | `references/rpc.md`                                                                 |
+| **Queue**     | Reliable background work that must survive a crash and retry                                                                                     | `references/queue.md`                                                               |
+| **Scheduler** | Recurring work on a cron expression                                                                                                              | `references/scheduler.md`                                                           |
+| **Trigger**   | Reacting in-process to an external event source                                                                       | `references/trigger.md`                                                             |
+| **MCP**       | Exposing functions to an AI assistant as tools, resources or prompts                                                                             | `references/mcp.md`                                                                 |
+| **CLI**       | A terminal program with commands, subcommands and options                                                                                        | `references/cli.md`; end-to-end walkthrough in `references/cli-complete-example.md` |
+| **Gateway**   | An inbound integration from a third-party product — Slack is the shipped adapter                                                                 | `references/gateway-slack.md`                                                       |
 
 Realtime and Channel are the pair most often confused. If the shape is "server
 pushes typed events to subscribers", use Realtime — `pikku enable events`
@@ -104,11 +81,11 @@ only when the client also sends structured messages you need to route on.
 
 ### Each wiring demands a particular function type
 
-| Wiring | Function type | Why |
-| --- | --- | --- |
-| HTTP, Channel, Queue, CLI, MCP | `pikkuFunc` / `pikkuSessionlessFunc` | Ordinary request/response |
-| Scheduler | **`pikkuVoidFunc`** | A cron has no input and no caller to return to |
-| Trigger *source* | **`pikkuTriggerFunc`** | Runs **once at startup**, not once per event |
+| Wiring                         | Function type                        | Why                                            |
+| ------------------------------ | ------------------------------------ | ---------------------------------------------- |
+| HTTP, Channel, Queue, CLI, MCP | `pikkuFunc` / `pikkuSessionlessFunc` | Ordinary request/response                      |
+| Scheduler                      | **`pikkuVoidFunc`**                  | A cron has no input and no caller to return to |
+| Trigger _source_               | **`pikkuTriggerFunc`**               | Runs **once at startup**, not once per event   |
 
 A trigger source is the one that surprises people: it sets up a listener, calls
 `trigger.invoke(...)` per event, and returns a teardown function. It receives
@@ -145,11 +122,11 @@ logging them as errors.
 
 ### Delivery semantics differ, and that is usually the real choice
 
-| Wiring | Delivery | Runs where |
-| --- | --- | --- |
-| Trigger | **At-most-once**, synchronous | In-process, alongside the listener |
-| Queue | **At-least-once** with retries and a dead-letter queue | Distributed workers |
-| Scheduler | Depends on the runtime — see below | Wherever the scheduler service runs |
+| Wiring    | Delivery                                               | Runs where                          |
+| --------- | ------------------------------------------------------ | ----------------------------------- |
+| Trigger   | **At-most-once**, synchronous                          | In-process, alongside the listener  |
+| Queue     | **At-least-once** with retries and a dead-letter queue | Distributed workers                 |
+| Scheduler | Depends on the runtime — see below                     | Wherever the scheduler service runs |
 
 Reach for a trigger to react immediately, and a queue when the work must not be
 lost. A trigger that must not drop events is a queue with extra steps.
@@ -160,14 +137,37 @@ cron expression can decide which tasks fire. `pikku-deploy` has the comparison.
 
 ### Codegen owns several wirings — do not hand-write them
 
-| Turn it on | Codegen writes | Never hand-write |
-| --- | --- | --- |
-| `pikku enable rpc` | `rpc-public.gen.ts` — the `POST /rpc/:rpcName` route | A second route on the same path collides |
+| Turn it on            | Codegen writes                                                   | Never hand-write                                  |
+| --------------------- | ---------------------------------------------------------------- | ------------------------------------------------- |
+| `pikku enable rpc`    | `rpc-public.gen.ts` — the `POST /rpc/:rpcName` route             | A second route on the same path collides          |
 | `pikku enable events` | `events.gen.ts` — the `/events` channel and `GET /events/:topic` | A hand-rolled `/events` misses disconnect cleanup |
-| `wireCLI` | `<program>-channel.gen.ts` — the same commands over a channel | It is regenerated on every build |
+| `wireCLI`             | `<program>-channel.gen.ts` — the same commands over a channel    | It is regenerated on every build                  |
 
 Enabling the RPC endpoint says the endpoint exists, not who may call it — each
 `expose: true` function is still gated by its own `auth`, permissions and scopes.
+
+## A function nothing uses: wire it or disable it
+
+`pikku validate --codegen` fails on an app function that is not wired, exposed, or called
+by name (`rpc.invoke`, a workflow step, an agent tool) — `[PKU563]`, naming the
+function and its file. `pikku all` still builds; only verify fails. Addon
+functions are never flagged, in the addon or in an app that uses it.
+
+Workflows are checked too. A workflow is used when it is wired, exposed, or
+started by a literal name: `rpc.startWorkflow('name')`,
+`workflowService.startWorkflow` / `runToCompletion('name')`,
+`rpc.invoke('name')`, another workflow's step, or a client helper. A workflow
+started only through a computed name is flagged.
+
+To keep a function in the source but out of the build, set `disabled`.
+
+A disabled function is left out of everything: meta, RPC maps, clients, MCP,
+CLI, HTTP, addon SDKs. It cannot be registered at runtime either. Anything
+that still references it — a wiring, an `rpc.invoke('oldReport')`, a workflow
+step, an agent tool — fails the build with `[PKU562]`, naming both sides.
+`pikku all` lists the disabled functions once, with file and reason.
+
+The value must be `true` or a string literal; a computed value is refused.
 
 ## What NOT to do
 

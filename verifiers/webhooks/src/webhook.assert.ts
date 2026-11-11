@@ -3,7 +3,10 @@ import { createHmac } from 'node:crypto'
 import { after, before, beforeEach, describe, test } from 'node:test'
 
 import '../.pikku/pikku-bootstrap.gen.js'
-import type { WebhookService } from '@pikku/core/services'
+import {
+  LocalVariablesService,
+  type WebhookService,
+} from '@pikku/core/services'
 import { createConfig, createSingletonServices } from './services.js'
 import { startMockReceiver, type MockReceiver } from './mock-receiver.js'
 
@@ -28,7 +31,7 @@ async function waitFor(
 const settle = () => new Promise((resolve) => setTimeout(resolve, 250))
 
 before(async () => {
-  process.env.WEBHOOK_SIGNING_KEY = SIGNING_KEY
+  new LocalVariablesService().set('WEBHOOK_SIGNING_KEY', SIGNING_KEY)
   const config = await createConfig()
   const singletonServices = await createSingletonServices(config)
   assert.ok(

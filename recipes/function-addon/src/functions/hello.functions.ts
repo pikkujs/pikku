@@ -1,0 +1,31 @@
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
+import { addonMiddleware } from '../middleware.js'
+
+export const hello = pikkuSessionlessFunc<
+  { name: string; greeting?: string },
+  { message: string; timestamp: number; noopCalls: number }
+>({
+  description: 'Sends a friendly greeting message',
+  mcp: true,
+  func: async ({ logger, noop }, data) => {
+    const greeting = data.greeting || 'Hello'
+    const message = `${greeting}, ${data.name}!`
+
+    logger.info(`Addon: ${message}`)
+
+    const noopResult = noop.execute()
+
+    return {
+      message,
+      timestamp: Date.now(),
+      noopCalls: noopResult.callCount,
+    }
+  },
+  middleware: [addonMiddleware('hello')],
+  tags: ['addon'],
+  node: {
+    displayName: 'Say Hello',
+    category: 'Communication',
+    type: 'action',
+  },
+})

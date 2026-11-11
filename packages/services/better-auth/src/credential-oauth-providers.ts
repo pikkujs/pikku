@@ -2,6 +2,7 @@ import type { SecretValue } from '@pikku/core/classification'
 import type { OAuth2CredentialConfig } from '@pikku/core/secret'
 import { isSecretNotFound } from './secret-not-found.js'
 
+/** The generated `CREDENTIAL_OAUTH2_CONFIGS`: each `defineCredential({ oauth2 })` by name. */
 export type CredentialOAuth2Configs = Record<
   string,
   OAuth2CredentialConfig & {
@@ -33,6 +34,7 @@ export interface CredentialOAuthApp {
   clientSecret?: string
 }
 
+/** Reads an OAuth app's `{ clientId, clientSecret }`; the singleton `secrets` satisfies it. */
 export interface CredentialOAuthSecretReader {
   /**
    * `undefined` for a secret declared `optional`, which every OAuth app secret
@@ -47,25 +49,16 @@ export interface CredentialOAuthLogger {
 }
 
 /**
- * Turns `defineCredential({ oauth2 })` declarations into better-auth genericOAuth
- * providers, one per credential, with the credential name as the providerId.
+ * Turns `defineCredential({ oauth2 })` declarations into the providers
+ * {@link pikkuCredentialOAuth} links, one per credential, with the credential
+ * name as the providerId.
  *
  * One provider per credential rather than reusing better-auth's social
  * providers: accounts are keyed by (providerId, userId), so an addon sharing
  * `google` with the app's login provider would collide on a single account row
  * despite needing different scopes.
  *
- * Pass the generated `CREDENTIAL_OAUTH2_CONFIGS`:
- *
- * ```ts
- * genericOAuth({
- *   config: await credentialOAuthProviders(
- *     CREDENTIAL_OAUTH2_CONFIGS,
- *     services.secrets,
- *     services.logger
- *   ),
- * })
- * ```
+ * Pass the generated `CREDENTIAL_OAUTH2_CONFIGS`.
  *
  * An OAuth2 credential whose app secret is simply UNCONFIGURED (the secret does
  * not exist yet — e.g. an installed addon's provider the operator has not set
@@ -73,6 +66,8 @@ export interface CredentialOAuthLogger {
  * provider must not brick the whole auth instance (every getSession would then
  * 500). A secret that IS present but malformed (no clientId) is a genuine
  * misconfiguration and still throws.
+ *
+ * @example snippet: betterAuthCredentialOAuth
  */
 export const credentialOAuthProviders = async (
   configs: CredentialOAuth2Configs,

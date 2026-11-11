@@ -1,6 +1,14 @@
 import { pikkuState } from '../../pikku-state.js'
 import type { PikkuAgentScorer } from './agent-scorer.types.js'
 
+/**
+ * Registers a scorer's runtime config under its name. Called by generated code.
+ *
+ * Skipped with a warning when the inspector recorded no metadata (scorers must live in a `*.scorer.ts` file).
+ *
+ * @throws Error when a scorer with the same name is already registered.
+ * @internal
+ */
 export const addAgentScorer = (
   scorerName: string,
   scorer: PikkuAgentScorer<any>,
@@ -20,8 +28,10 @@ export const addAgentScorer = (
   scorers.set(scorerName, scorer)
 }
 
+/** Every registered scorer, keyed by name. */
 export const getAgentScorers = () => pikkuState(null, 'agent', 'scorers')
 
+/** The inspector-generated metadata for every scorer, keyed by name. */
 export const getAgentScorersMeta = () =>
   pikkuState(null, 'agent', 'scorersMeta')
 

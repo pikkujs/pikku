@@ -18,6 +18,7 @@ export const leadCreate = pikkuSessionlessFunc<
     createdAt: string
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Create Lead',
   func: async ({ logger }, data) => {
     logger.info(`Creating lead: ${data.email}`)
@@ -168,6 +169,7 @@ export const dealUpdate = pikkuSessionlessFunc<
   { dealId: string; title?: string; value?: number; stage?: string },
   { id: string; title: string; value: number; stage: string; updatedAt: string }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Update Deal',
   func: async ({ logger }, data) => {
     logger.info(`Updating deal: ${data.dealId}`)

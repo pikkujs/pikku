@@ -1,3 +1,7 @@
+import {
+  exposedClientFiles,
+  finalGlueClientFiles,
+} from './utils/backend-sdk.js'
 import type {
   Config,
   Services,
@@ -16,27 +20,29 @@ import {
   LogLevel,
   NoopAuditService,
 } from '@pikku/core/services'
-import { InMemoryWorkflowService } from '@pikku/core/services'
+import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { CLILogger } from './services/cli-logger.service.js'
+import { CLIWorkflowMirror } from './services/ci-workflow-mirror.js'
 import {
   getPikkuCLIConfig,
   tryGetPikkuCLIConfig,
 } from './utils/pikku-cli-config.js'
 import type { InspectorState, InspectorDiagnostic } from '@pikku/inspector'
 import {
-  inspect,
   serializeInspectorState,
   deserializeInspectorState,
   filterInspectorState,
   getInitialInspectorState,
   ErrorCode,
 } from '@pikku/inspector'
+import { inspect as inspectWithGo } from '@pikku/inspector-go'
+import { selectInspectorEngine } from './inspector-engine.js'
 import { findSourceFiles } from './utils/find-source-files.js'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
 import type { ForwardedLogMessage } from './services/cli-logger-forwarder.service.js'
 import { CLILoggerForwarder } from './services/cli-logger-forwarder.service.js'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import { loadManifest } from './utils/contract-versions.js'
 import { getTsWriteGeneration } from './utils/file-writer.js'
@@ -68,6 +74,29 @@ const LINT_DEFAULTS: NonNullable<PikkuCLIConfig['lint']> = {
   functionDynamicImport: 'warn',
 }
 
+/** Line and column are 1-based, the way an editor and `tsc` count them. */
+export const diagnosticPosition = ({
+  sourceFile,
+  position,
+}: Pick<InspectorDiagnostic, 'sourceFile' | 'position'>): {
+  file?: string
+  line?: number
+  column?: number
+} => {
+  if (!sourceFile) return {}
+  try {
+    const before = readFileSync(sourceFile, 'utf8').slice(0, position)
+    const lines = before.split('\n')
+    return {
+      file: sourceFile,
+      line: lines.length,
+      column: lines[lines.length - 1]!.length + 1,
+    }
+  } catch {
+    return { file: sourceFile }
+  }
+}
+
 export function processDiagnostics(
   diagnostics: InspectorDiagnostic[],
   lint?: PikkuCLIConfig['lint'],
@@ -79,7 +108,11 @@ export function processDiagnostics(
       ? (lint?.[lintKey] ?? LINT_DEFAULTS[lintKey] ?? 'off')
       : 'off'
     if (severity === 'error') {
-      log.critical(diagnostic.code as ErrorCode, diagnostic.message)
+      log.critical(
+        diagnostic.code as ErrorCode,
+        diagnostic.message,
+        diagnosticPosition(diagnostic)
+      )
     } else if (severity === 'warn') {
       log.warn(`[${diagnostic.code}] ${diagnostic.message}`)
     }
@@ -111,7 +144,7 @@ export const defaultCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
  * `skills install` writes agent skills into a repo that has no pikku.config.json
  * yet — that is the whole point of it — so it cannot require one to start, and
  * `doc` answers from the surface shipped inside the CLI rather than the project.
- * `cloud report` sends a report about pikku itself: a scaffold that never
+ * `report` files a report about pikku itself: a scaffold that never
  * produced a config, or a command run from the wrong directory, is exactly the
  * kind of thing worth reporting, so demanding a config would refuse the report
  * at the moment it is most worth having.
@@ -127,7 +160,9 @@ export const CONFIG_FREE_COMMANDS = new Set([
   'skills.install',
   'doc',
   'cloud.login',
-  'cloud.report',
+  'cloud.logout',
+  'cloud.auth.git',
+  'report',
   'changes',
   'changes.list',
   'changes.wait',
@@ -144,6 +179,19 @@ export const CONFIG_FREE_COMMANDS = new Set([
   'changes.ready',
   'changes.next',
 ])
+
+/**
+ * Commands another program reads the stdout of, such as git reading a
+ * credential helper's answer, so nothing but the command's own output may be
+ * printed — not even the logo.
+ */
+export const SILENT_COMMANDS = new Set(['cloud.auth.git'])
+
+/**
+ * Commands whose stdout is the answer, read by a person's pipe or an agent:
+ * the logo would sit in front of it. Their diagnostics still print.
+ */
+export const NO_LOGO_COMMANDS = new Set(['graph'])
 
 export const createConfig: CreateConfig<
   Config,
@@ -162,7 +210,7 @@ export const createConfig: CreateConfig<
 
   logger.setOutputMode(outputMode)
 
-  if ((data as any).silent) {
+  if ((data as any).silent || SILENT_COMMANDS.has(commandPath.join('.'))) {
     logLevel = LogLevel.critical
     isSilent = true
   } else if ((data as any).loglevel) {
@@ -190,7 +238,11 @@ export const createConfig: CreateConfig<
   logger.setFailOn(extraFailOn)
 
   // Display logo unless in silent mode
-  if (!isSilent && outputMode !== 'json') {
+  if (
+    !isSilent &&
+    outputMode !== 'json' &&
+    !NO_LOGO_COMMANDS.has(commandPath.join('.'))
+  ) {
     logger.logLogo()
   }
 
@@ -202,9 +254,13 @@ export const createConfig: CreateConfig<
       ({} as PikkuCLIConfig))
     : await getPikkuCLIConfig(logger, data.config, [], true, data.outDir)
 
+  selectInspectorEngine({
+    flag: (data as any).inspector,
+    config: (cliConfig as any).inspector,
+  })
+
   // Load inspector state from file if stateInput is provided
-  let preloadedInspectorState: Omit<InspectorState, 'typesLookup'> | undefined =
-    undefined
+  let preloadedInspectorState: InspectorState | undefined = undefined
 
   if (data.stateInput) {
     try {
@@ -225,11 +281,68 @@ export const createConfig: CreateConfig<
   // preserved (getPikkuCLIConfig already resolves relative --outDir to
   // an absolute path and recomputes all derived *File/*Dir paths).
   const { outDir: _rawOutDir, ...dataWithoutOutDir } = data
+  const backend = (data as { backend?: string }).backend
+  if (backend && !cliConfig.backends?.[backend]) {
+    const declared = Object.keys(cliConfig.backends ?? {})
+    throw new Error(
+      `Unknown --backend '${backend}'. Declared backends: ${declared.join(', ') || '(none)'}`
+    )
+  }
+  // A backend pass writes its clients inside its own output directory; the
+  // parent moves them to .pikku/sdk/<backend>/. Frontend glue in the
+  // frontend's source is written by the parent, against the final place.
+  const isBackendPass =
+    Boolean(backend) && process.env.PIKKU_DEPLOY_CODEGEN === '1'
+  const glue = cliConfig.clientFiles ?? {}
+  const hasGlue = Object.keys(glue).some((k) =>
+    [
+      'rpcFile',
+      'authClientFile',
+      'nextBackendFile',
+      'nextHTTPFile',
+      'tanstackStartFile',
+      'nextBackendTransport',
+    ].includes(k)
+  )
+  const declared = Object.keys(cliConfig.backends ?? {})
+  let clientFiles = cliConfig.clientFiles
+  if (isBackendPass) {
+    clientFiles = { ...glue, ...exposedClientFiles(cliConfig.outDir) }
+  } else if (hasGlue && !cliConfig.addon) {
+    if (declared.length === 0) {
+      throw new Error(
+        `clientFiles frontend glue (rpcFile, nextBackendFile, tanstackStartFile, ...) imports a backend's SDK, and ${cliConfig.configDir}/pikku.config.json declares no backends. Remove clientFiles, or declare the backend whose SDK it imports.`
+      )
+    }
+    if (declared.length !== 1) {
+      throw new Error(
+        `clientFiles frontend glue (rpcFile, nextBackendFile, tanstackStartFile, ...) imports one backend's SDK, and ${cliConfig.configDir}/pikku.config.json declares ${declared.length}. Declare exactly one backend until frontends choose theirs.`
+      )
+    }
+    clientFiles = {
+      ...glue,
+      ...finalGlueClientFiles(cliConfig.configDir, declared[0]!),
+    }
+  }
   return {
     ...cliConfig,
     ...dataWithoutOutDir,
-    tags: cliConfig.tags,
-    filters: parseCLIFilters(data, cliConfig),
+    clientFiles,
+    // `pikku dev --frontends` is a flag, and the spread above would replace the
+    // project's `frontends` table with its boolean.
+    frontends: cliConfig.frontends,
+    filters: parseCLIFilters(
+      data as { names?: string[]; workflowMeta?: string[] },
+      cliConfig,
+      // `--backend` narrows which passes the parent runs; only the per-backend
+      // child (spawned with PIKKU_DEPLOY_CODEGEN) and a `pikku dev --backend`
+      // server apply that backend's filter.
+      process.env.PIKKU_DEPLOY_CODEGEN === '1' ||
+        commandPath.join('.') === 'dev'
+        ? backend
+        : undefined
+    ),
+    backend,
     preloadedInspectorState,
   }
 }
@@ -247,17 +360,12 @@ export const createSingletonServices: CreateSingletonServices<
   const variables = new LocalVariablesService()
 
   // Store unfiltered state
-  let unfilteredState:
-    InspectorState | Omit<InspectorState, 'typesLookup'> | undefined =
-    preloadedInspectorState
+  let unfilteredState: InspectorState | undefined = preloadedInspectorState
   let unfilteredStateIsSetupOnly = false
   let inspectedTsGeneration: number | undefined
   let inspectorInvalidated = false
 
   let inspectPass = 0
-  const releaseProgram = (state: { program?: unknown } | undefined) => {
-    if (state) state.program = undefined
-  }
 
   /**
    * `unfiltered` is for commands that RUN the project rather than generate from
@@ -331,8 +439,9 @@ export const createSingletonServices: CreateSingletonServices<
       )
 
       const scaffoldFiles = [
+        config.adminFunctionsFile,
         config.consoleFunctionsFile,
-        config.remoteRpcWorkersFile,
+        config.meshRpcWorkersFile,
         config.webhookWorkersFile,
         config.webhookSourcesFile,
         config.remoteJobsFile,
@@ -344,6 +453,12 @@ export const createSingletonServices: CreateSingletonServices<
         // this the route is written and never registered: no HTTP wiring, no
         // entry in the fetch client, an endpoint that 404s.
         config.analyticsFile,
+        // The analytics origin lock and the CORS middleware are middleware
+        // registrations nothing imports, and the origins file carries the
+        // CORS_ORIGINS variable definition the deploy plan reads.
+        config.analyticsOriginFile,
+        config.corsFile,
+        config.corsOriginsFile,
         // Same for the feature flag read wire.
         config.featureFlagsFile,
         // The auth scaffold (catch-all routes + session middleware) and its
@@ -370,25 +485,13 @@ export const createSingletonServices: CreateSingletonServices<
         ? ((await loadManifest(join(config.rootDir, 'versions.pikku.json'))) ??
           undefined)
         : undefined
-      // The outgoing state's `typesLookup` holds live `ts.Type`s. A type reaches
-      // its checker and the checker reaches the whole program, so that one map
-      // pins a parsed program and an exercised checker for as long as the state
-      // exists — `releaseProgram` alone frees nothing. Every reader of the old
-      // state is done once a re-inspection is asked for, so drop the types here
-      // and the old program is collectable while the new one is built, instead
-      // of both being live at once.
-      if (unfilteredState && 'typesLookup' in unfilteredState) {
-        unfilteredState.typesLookup.clear()
-      }
-      const oldProgram = unfilteredState?.program ?? undefined
       const inspectStart = Date.now()
       unfilteredStateIsSetupOnly = setupOnly
       const tsGenerationAtInspect = getTsWriteGeneration()
-      unfilteredState = await inspect(logger, wiringFiles, {
+      unfilteredState = await inspectWithGo(logger, wiringFiles, {
         setupOnly,
         rootDir,
         isAddon: !!config.addon,
-        oldProgram,
         tsconfig: config.tsconfig,
         types: {
           configFileType: config.configFile,
@@ -396,7 +499,6 @@ export const createSingletonServices: CreateSingletonServices<
           singletonServicesFactoryType: config.singletonServicesFactoryType,
           wireServicesFactoryType: config.wireServicesFactoryType,
         },
-        tags: config.tags,
         // Opt-in security lint (`--security`): scans function return types for
         // data-classification leaks. Off by default — it's the dominant codegen
         // cost. Never runs during a plain `pikku all`.
@@ -439,8 +541,6 @@ export const createSingletonServices: CreateSingletonServices<
       inspectedTsGeneration = tsGenerationAtInspect
       inspectorInvalidated = false
 
-      releaseProgram(unfilteredState)
-
       if (
         'diagnostics' in unfilteredState &&
         unfilteredState.diagnostics.length > 0
@@ -448,7 +548,7 @@ export const createSingletonServices: CreateSingletonServices<
         processDiagnostics(unfilteredState.diagnostics, config.lint)
       }
 
-      if (stateOutput && 'typesLookup' in unfilteredState) {
+      if (stateOutput) {
         try {
           logger.info(`Saving inspector state to ${stateOutput}`)
           const serialized = serializeInspectorState(unfilteredState)
@@ -488,7 +588,9 @@ export const createSingletonServices: CreateSingletonServices<
     unfilteredStateIsSetupOnly = false
   }
 
-  const workflowService = new InMemoryWorkflowService()
+  const workflowService = new InMemoryWorkflowService({
+    mirror: new CLIWorkflowMirror(logger),
+  })
 
   // Resolve the runtime ONCE here, then inject runtime-specific implementations.
   // Keeping the check in this single place avoids `typeof Bun` branches leaking

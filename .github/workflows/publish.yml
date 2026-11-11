@@ -28,10 +28,19 @@ jobs:
   # succeeded, nothing less. A Version Packages commit skips every Full Suite
   # job (it only bumps versions), so its run reads green whatever the code is;
   # for that commit the result of the commit below it is what counts.
+  #
+  # `branches: [main]` is matched against the run's head branch, which for a
+  # fork pull request is whatever the fork named its branch, and the pull
+  # request can give its own copy of full.yml a `pull_request` trigger. So the
+  # run must also come from this repository and from a push or a dispatch, the
+  # two events only someone with write access can raise.
   gate:
     name: Gate
     runs-on: ubuntu-24.04
-    if: github.event.workflow_run.conclusion != 'cancelled'
+    if: >-
+      github.event.workflow_run.conclusion != 'cancelled' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
     timeout-minutes: 100
     permissions:
       actions: read
@@ -59,7 +68,9 @@ jobs:
             conclusion=missing
             for _ in $(seq 1 90); do
               conclusion=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/full.yml/runs?branch=main&per_page=50" \
-                --jq "[.workflow_runs[] | select(.display_title == \"Full Suite ${sha}\")][0] | if . == null then \"missing\" else (.conclusion // \"pending\") end")
+                --jq "[.workflow_runs[] | select(.display_title == \"Full Suite ${sha}\")
+                  | select(.head_repository.full_name == \"${GITHUB_REPOSITORY}\" and (.event == \"push\" or .event == \"workflow_dispatch\"))][0]
+                  | if . == null then \"missing\" else (.conclusion // \"pending\") end")
               case "$conclusion" in
                 missing|pending) sleep 60 ;;
                 *) break ;;
@@ -76,11 +87,107 @@ jobs:
             echo "Full Suite on \`${sha:0:9}\`: **$conclusion**. **Not publishing.**" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  # pikku-inspect-rs for every platform it ships on, built natively on a runner
+  # of each: @pikku/inspector-go publishes it beside pikku-inspect under
+  # prebuilt/. The Publish job below needs all three.
+  inspector-rs:
+    name: Rust build (pikku-inspect-rs, ${{ matrix.target }})
+    needs: gate
+    if: >-
+      needs.gate.outputs.ok == 'true' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: linux-x64
+            os: ubuntu-24.04
+          - target: linux-arm64
+            os: ubuntu-24.04-arm
+          - target: darwin-arm64
+            os: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: ${{ matrix.target }}
+      - name: Build pikku-inspect-rs
+        run: cargo build --release --locked --manifest-path packages/inspector-rust/Cargo.toml
+      - name: Place the binary under its prebuilt/ target
+        run: |
+          mkdir -p packages/inspector-go/prebuilt/${{ matrix.target }}
+          cp packages/inspector-rust/target/release/pikku-inspect-rs packages/inspector-go/prebuilt/${{ matrix.target }}/
+      - name: Pack
+        run: tar cf pikku-inspect-rs-${{ matrix.target }}.tar packages/inspector-go/prebuilt/${{ matrix.target }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pikku-inspect-rs-${{ matrix.target }}
+          path: pikku-inspect-rs-${{ matrix.target }}.tar
+          retention-days: 1
+
+  # pikku-inspect (Go) for every target, one runner each. They are static
+  # cross-compiles (CGO_ENABLED=0), so every one builds on ubuntu; a matrix
+  # rather than `--all` on the Publish runner turns one ~6 minute serial wait
+  # into the slowest single target. Publish needs all four.
+  inspector-go:
+    name: Go build (pikku-inspect, ${{ matrix.target }})
+    needs: gate
+    if: >-
+      needs.gate.outputs.ok == 'true' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      matrix:
+        target: [darwin-arm64, linux-x64, linux-arm64, win32-x64]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      # The module cache is keyed on go.sum, the build cache is not: a key that
+      # never changes is never saved again, so the build cache is keyed on the
+      # run and restored from the newest run before it (restore-keys), which
+      # refreshes it every time.
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: packages/inspector-go/go.mod
+          cache-dependency-path: packages/inspector-go/**/go.sum
+      - name: Restore the Go build cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/go-build
+          key: go-build-${{ matrix.target }}-${{ hashFiles('packages/inspector-go/go.mod', 'packages/inspector-go/**/go.sum') }}-${{ github.run_id }}
+          restore-keys: |
+            go-build-${{ matrix.target }}-${{ hashFiles('packages/inspector-go/go.mod', 'packages/inspector-go/**/go.sum') }}-
+            go-build-${{ matrix.target }}-
+      - name: Build pikku-inspect
+        run: node packages/inspector-go/scripts/build-go.mjs --target ${{ matrix.target }}
+      - name: Pack
+        run: tar cf pikku-inspect-${{ matrix.target }}.tar packages/inspector-go/prebuilt/${{ matrix.target }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pikku-inspect-${{ matrix.target }}
+          path: pikku-inspect-${{ matrix.target }}.tar
+          retention-days: 1
+
   publish:
     name: Publish
     runs-on: ubuntu-24.04
-    needs: gate
-    if: needs.gate.outputs.ok == 'true'
+    needs: [gate, inspector-rs, inspector-go]
+    if: >-
+      needs.gate.outputs.ok == 'true' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
     # Publishing is npm trusted publishing (OIDC), so the job needs to mint an
     # id-token. Naming any permission drops the repo-wide `write` default for
     # every one not listed, so the two this job already relied on are spelled
@@ -92,7 +199,7 @@ jobs:
       id-token: write
     outputs:
       published: ${{ steps.changesets.outputs.published }}
-      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+      publishedPackages: ${{ steps.changesets.outputs.published-packages }}
     steps:
       # `workflow_run` starts from the default branch, so the commit that was
       # actually tested has to be named explicitly. Full history is what
@@ -101,6 +208,16 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+      # Before anything in the checked-out tree runs, the commit has to be on main.
+      - name: Require the tested commit to be on main
+        shell: bash
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if ! git merge-base --is-ancestor "$HEAD_SHA" refs/remotes/origin/main; then
+            echo "::error::${HEAD_SHA} is not on main. Not publishing."
+            exit 1
+          fi
       # `download-build: false` because there is no `build-output` artifact to
       # download: it is uploaded by the `Build` job of the *Full Suite* run, and a
       # `workflow_run` job can only reach its own run's artifacts. `bun run release`
@@ -114,22 +231,45 @@ jobs:
           download-build: 'false'
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.3
+      # @pikku/inspector-go ships a pikku-inspect binary for every target under
+      # prebuilt/, which is gitignored: the `inspector-go` jobs build them and
+      # they are unpacked here before `bun run release` publishes it. They are
+      # checked up front too: its prepublishOnly checks them, but only as npm
+      # reaches it, by which time packages before it in the run are already on
+      # npm.
+      - name: Download pikku-inspect for every target
+        uses: actions/download-artifact@v8
+        with:
+          pattern: pikku-inspect-*
+          merge-multiple: true
+      - name: Unpack pikku-inspect and pikku-inspect-rs
+        run: for t in pikku-inspect-*.tar; do tar xf "$t" && rm "$t"; done
+      - name: Check every target has its binary
+        run: node packages/inspector-go/scripts/check-platform-binary.mjs
       - name: Create Release Pull Request or Publish
         id: changesets
-        uses: changesets/action@v1
+        # v2 because @changesets/cli 3 stopped printing the `New tag:` lines v1
+        # scraped. v1 then reported `published: false` after a successful
+        # publish, so no tag, GitHub Release, binary upload, Homebrew update or
+        # template sync ran from #1302 on. v2 reads the file named by
+        # CHANGESETS_OUTPUT instead, which reaches `changeset publish` through
+        # `bun run release`.
+        uses: changesets/action@v2.1.2
         with:
-          version: node .github/changeset-version.cjs
-          publish: bun run release
-          createGithubReleases: true
+          version-script: node .github/changeset-version.cjs
+          publish-script: bun run release
+          create-github-releases: true
+          # Pushes the same way v1 did. v2's default is the GitHub API.
+          push-with-git-cli: true
         # No NPM_TOKEN, deliberately. npm now demands a 2FA OTP that a classic
         # token cannot answer, which is what had every release since 2026-09-02
         # failing on `child "otp" fails`. Trusted publishing is exempt — but in
         # bun run the OIDC branch sits *after* the token check, so a token left in
         # this env would short-circuit OIDC and put the failure straight back.
-        # changesets/action is likewise guarded on NPM_TOKEN being absent.
+        # changesets/action takes its GitHub token from the `github-token` input,
+        # which defaults to this job's token, and does not touch npm auth.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HUSKY: '0'
       - name: Upload CLI native binaries to GitHub Release
         if: steps.changesets.outputs.published == 'true'
@@ -138,7 +278,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          published='${{ steps.changesets.outputs.publishedPackages }}'
+          published='${{ steps.changesets.outputs.published-packages }}'
           cli_version=$(echo "$published" | node -e "
             const pkgs = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
             const cli = pkgs.find(p => p.name === '@pikku/cli');
@@ -150,22 +290,71 @@ jobs:
           fi
           echo "cli_version=${cli_version}" >> "$GITHUB_OUTPUT"
           tag="@pikku/cli@${cli_version}"
+          # A missing binary is a release a user cannot install, so it fails here
+          # instead of uploading whatever happens to be in the directory.
+          for name in pikku-linux-x64 pikku-linux-arm64 pikku-darwin-arm64 pikku-windows-x64.exe; do
+            if [ ! -f "packages/cli/release/binaries/$name" ]; then
+              echo "::error::$name was not built; bun run release sets PIKKU_CLI_BINARIES=all"
+              exit 1
+            fi
+          done
           echo "Uploading binaries for $tag"
           for f in packages/cli/release/binaries/*; do
             [ -f "$f" ] || continue
             echo "  Uploading $(basename $f)"
             gh release upload "$tag" "$f" --clobber
           done
+      - name: Upload pikku-inspect binaries to GitHub Release
+        if: steps.changesets.outputs.published == 'true'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          published='${{ steps.changesets.outputs.published-packages }}'
+          version=$(echo "$published" | node -e "
+            const pkgs = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            const go = pkgs.find(p => p.name === '@pikku/inspector-go');
+            if (go) process.stdout.write(go.version);
+          ")
+          if [ -z "$version" ]; then
+            echo "@pikku/inspector-go was not published this run — skipping binary upload"
+            exit 0
+          fi
+          tag="@pikku/inspector-go@${version}"
+          assets=$(mktemp -d)
+          for dir in packages/inspector-go/prebuilt/*/; do
+            target=$(basename "$dir")
+            ext=""
+            [[ "$target" == win32-* ]] && ext=".exe"
+            cp "${dir}pikku-inspect${ext}" "$assets/pikku-inspect-${target}${ext}"
+            [ -f "${dir}pikku-inspect-rs" ] && cp "${dir}pikku-inspect-rs" "$assets/pikku-inspect-rs-${target}"
+          done
+          (cd "$assets" && sha256sum pikku-inspect-* > SHA256SUMS)
+          echo "Uploading pikku-inspect binaries for $tag"
+          gh release upload "$tag" "$assets"/* --clobber
       - name: Update Homebrew tap
         if: steps.upload-binaries.outputs.cli_version != ''
         shell: bash
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           CLI_VERSION="${{ steps.upload-binaries.outputs.cli_version }}"
-          ARM_SHA=$(sha256sum packages/cli/release/binaries/pikku-darwin-arm64 | cut -d' ' -f1)
-          X64_SHA=$(sha256sum packages/cli/release/binaries/pikku-darwin-x64 | cut -d' ' -f1)
           ENCODED_TAG="%40pikku%2Fcli%40${CLI_VERSION}"
+
+          # A cask downloads one file per arch, so pikku and the pikku-inspect
+          # built in this run go out together. The compiled CLI has no
+          # prebuilt/ of its own and finds pikku-inspect beside itself.
+          archives=$(mktemp -d)
+          for arch in arm64; do
+            dir=$(mktemp -d)
+            cp "packages/cli/release/binaries/pikku-darwin-${arch}" "$dir/pikku"
+            cp "packages/inspector-go/prebuilt/darwin-${arch}/pikku-inspect" "$dir/pikku-inspect"
+            chmod 755 "$dir/pikku" "$dir/pikku-inspect"
+            tar -czf "$archives/pikku-darwin-${arch}.tar.gz" -C "$dir" pikku pikku-inspect
+          done
+          gh release upload "@pikku/cli@${CLI_VERSION}" "$archives"/*.tar.gz --clobber
+          ARM_SHA=$(sha256sum "$archives/pikku-darwin-arm64.tar.gz" | cut -d' ' -f1)
 
           git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/pikkujs/homebrew-pikku.git" tap
           cd tap
@@ -176,15 +365,12 @@ jobs:
             version "${CLI_VERSION}"
 
             on_arm do
-              url "https://github.com/pikkujs/pikku/releases/download/${ENCODED_TAG}/pikku-darwin-arm64"
+              url "https://github.com/pikkujs/pikku/releases/download/${ENCODED_TAG}/pikku-darwin-arm64.tar.gz"
               sha256 "${ARM_SHA}"
-              binary "pikku-darwin-arm64", target: "pikku"
             end
-            on_intel do
-              url "https://github.com/pikkujs/pikku/releases/download/${ENCODED_TAG}/pikku-darwin-x64"
-              sha256 "${X64_SHA}"
-              binary "pikku-darwin-x64", target: "pikku"
-            end
+
+            binary "pikku"
+            binary "pikku-inspect"
 
             name "Pikku"
             desc "Code generation tool for type-safe backend development"
@@ -227,8 +413,8 @@ jobs:
             bullmq,
             workflows-bullmq,
             workflows-pg-boss,
-            remote-rpc-pg,
-            remote-rpc-redis,
+            mesh-rpc-pg,
+            mesh-rpc-redis,
           ]
     steps:
       - name: Check out repository code

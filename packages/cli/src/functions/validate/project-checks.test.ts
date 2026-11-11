@@ -53,6 +53,7 @@ async function makeValidProject(root: string) {
       reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
     },
     environments: { local: { apiUrl: 'http://localhost:4002' } },
+    db: { engine: 'sqlite' },
     validate: NO_OXLINT,
   })
   await writeJson(join(root, 'package.json'), {
@@ -311,27 +312,6 @@ describe('project checks', () => {
       }
     })
 
-    test('missing outDir → error', async () => {
-      const tmp = await makeTmp()
-      try {
-        await makeValidProject(tmp)
-        await writeJson(join(tmp, 'pikku.config.json'), {
-          srcDirectories: ['packages/functions/src'],
-          clientFiles: {
-            rpcMapDeclarationFile:
-              'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
-          },
-        })
-        const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, false)
-        assert.ok(
-          result.findings.some((f) => f.id === 'pikku-config-no-out-dir')
-        )
-      } finally {
-        await rm(tmp, { recursive: true, force: true })
-      }
-    })
-
     test('empty scaffold → error for console/rpc/agent/workflow, warn for events', async () => {
       const tmp = await makeTmp()
       try {
@@ -398,6 +378,7 @@ describe('project checks', () => {
             workflow: true,
             events: true,
           },
+          db: { engine: 'sqlite' },
           validate: NO_OXLINT,
         })
         const result = await runValidate(tmp)
@@ -2050,50 +2031,6 @@ describe('declared frontends + type-check (live project checks)', () => {
       await rm(tmp, { recursive: true, force: true })
     }
   })
-
-  test('a frontend that cannot be type-checked warns — and --skip-typecheck suppresses it', async () => {
-    const tmp = await makeTmp()
-    try {
-      await makeValidProject(tmp)
-      await declareFrontends(tmp, { app: { cwd: 'apps/app' } })
-      await mkdir(join(tmp, 'apps', 'app'), { recursive: true })
-      await writeJson(join(tmp, 'apps', 'app', 'package.json'), { name: 'app' })
-
-      const checked = await runLiveValidate(tmp)
-      assert.ok(
-        checked.findings.some((f) => f.id === 'frontend-typecheck-skipped-app'),
-        `expected frontend-typecheck-skipped-app, got: ${findingIds(checked.findings)}`
-      )
-
-      const skipped = await runLiveValidate(tmp, { skipTypecheck: true })
-      assert.ok(
-        !skipped.findings.some((f) => f.id.startsWith('frontend-typecheck-')),
-        `expected no type-check findings, got: ${findingIds(skipped.findings)}`
-      )
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
-  })
-
-  test('a frontend declared with deploy:false is not type-checked', async () => {
-    const tmp = await makeTmp()
-    try {
-      await makeValidProject(tmp)
-      await declareFrontends(tmp, {
-        app: { cwd: 'apps/app', deploy: false },
-      })
-      await mkdir(join(tmp, 'apps', 'app'), { recursive: true })
-      await writeJson(join(tmp, 'apps', 'app', 'package.json'), { name: 'app' })
-
-      const result = await runLiveValidate(tmp)
-      assert.ok(
-        !result.findings.some((f) => f.id.startsWith('frontend-typecheck-')),
-        `expected no type-check findings, got: ${findingIds(result.findings)}`
-      )
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
-  })
 })
 
 describe('deployed frontend API base (live project checks)', () => {
@@ -2801,6 +2738,77 @@ describe('an app whose baseLocale is not English (live project checks)', () => {
   })
 })
 
+describe('a database without a config db', () => {
+  const dbFinding = (r: Awaited<ReturnType<typeof runValidate>>) =>
+    r.findings.find((f) => f.id === 'pikku-config-no-db')
+  const setDb = async (root: string, db: unknown) => {
+    const path = join(root, 'pikku.config.json')
+    const config = JSON.parse(await readFile(path, 'utf8'))
+    if (db === undefined) delete config.db
+    else config.db = db
+    await writeJson(path, config)
+  }
+
+  test('db/sqlite and no config db is an error naming the fix', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await setDb(tmp, undefined)
+      const result = await runValidate(tmp)
+      const finding = dbFinding(result)
+      assert.ok(finding, 'expected pikku-config-no-db')
+      assert.equal(finding.severity, 'critical')
+      assert.match(
+        finding.message,
+        /has a sqlite database \(createConfig or db\/sqlite\) but the pikku config has no `db`/
+      )
+      assert.match(finding.path, /pikku\.config\.json$/)
+      assert.match(finding.fixHint, /"db": \{ "engine": "sqlite" \}/)
+      assert.equal(result.ok, false)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a config db clears it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      assert.equal(dbFinding(await runValidate(tmp)), undefined)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('no database at all is not an error', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await setDb(tmp, undefined)
+      await rm(join(tmp, 'db'), { recursive: true, force: true })
+      assert.equal(dbFinding(await runValidate(tmp)), undefined)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('db/postgres and no config db names postgres', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await setDb(tmp, undefined)
+      await rm(join(tmp, 'db'), { recursive: true, force: true })
+      await mkdir(join(tmp, 'db', 'postgres'), { recursive: true })
+      const finding = dbFinding(await runValidate(tmp))
+      assert.ok(finding)
+      assert.match(finding.message, /postgres database/)
+      assert.match(finding.fixHint, /"engine": "postgres"/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
+
 describe('the generated coercion map', () => {
   const coercionPath = (root: string) =>
     join(root, 'packages', 'functions', '.pikku', 'db', 'coercion.gen.ts')
@@ -2853,6 +2861,90 @@ describe('the generated coercion map', () => {
         !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
         'expected no finding once the plugin is wired'
       )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent when the app takes the platform kysely', async () => {
+    // pikku dev, standalone and Cloudflare apply the map to
+    // existingServices.kysely themselves; attaching it again double-parses.
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `export const createSingletonServices = async (c: any, existingServices?: any) => {\n` +
+          `  if (!existingServices?.kysely) throw new Error('no kysely')\n` +
+          `  const kysely = existingServices.kysely\n` +
+          `  return { kysely }\n` +
+          `}\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected no finding when the platform hands over kysely'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent when kysely is destructured from existingServices', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `export const f = (existingServices: any) => {\n` +
+          `  const { kysely } = existingServices\n` +
+          `  return kysely\n` +
+          `}\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(!result.findings.some((f) => f.id === 'coercion-map-not-wired'))
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent when the factory destructures kysely in its parameters', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `export const createSingletonServices = async (c: any, { kysely }: any) => {\n` +
+          `  return { kysely }\n` +
+          `}\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(!result.findings.some((f) => f.id === 'coercion-map-not-wired'))
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is still an error when existingServices.kysely only appears in a comment', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `// TODO: use existingServices.kysely one day\n` +
+          `/* const { kysely } = existingServices */\n` +
+          `export const x = 1\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(result.findings.some((f) => f.id === 'coercion-map-not-wired'))
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

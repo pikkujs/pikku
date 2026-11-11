@@ -1,6 +1,7 @@
 import { pikkuState } from '../../pikku-state.js'
 import type { Logger } from '../../services/index.js'
 
+/** Logs every wired HTTP route at info level, typically once at startup. */
 export const logRoutes = (logger: Logger) => {
   const routesByType = pikkuState(null, 'http', 'routes')
   if (routesByType.size === 0) {

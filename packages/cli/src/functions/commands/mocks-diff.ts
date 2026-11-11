@@ -1,10 +1,12 @@
+import { reactQueryClientFile } from '../../utils/backend-sdk.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { diffMocks, type MocksDiff } from '../mocks/diff.js'
 import { projectAddonMockSources } from '../mocks/addon-mocks.js'
 import { loadSurface } from '../mocks/load.js'
 import { readLock } from '../mocks/lock.js'
 import { readMocks } from '../mocks/read.js'
-import { callIndex, frontendFiles, scanFrontend } from '../mocks/stub-scan.js'
+import { callIndex, frontendFiles } from '../mocks/stub-scan.js'
+import { scanFrontend } from '../../inspector-helpers.js'
 import { renderMocksDiff } from '../mocks/render.js'
 
 export const mocksDiff = pikkuSessionlessFunc<
@@ -28,7 +30,7 @@ export const mocksDiff = pikkuSessionlessFunc<
             scanFrontend(
               config.rootDir,
               files,
-              config.clientFiles?.reactQueryFile
+              reactQueryClientFile(config.rootDir, config.backends)
             )
           )
         : undefined,

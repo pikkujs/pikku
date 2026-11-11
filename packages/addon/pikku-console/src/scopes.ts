@@ -90,6 +90,10 @@ defineScope({
               manage: {
                 description: 'Delete scenario runs and their artifacts',
               },
+              run: {
+                description:
+                  'Start a scenario run against the local copy, as `pikku scenario run` does',
+              },
             },
           },
           agents: {
@@ -181,13 +185,6 @@ defineScope({
             scopes: {
               read: { description: 'Read the changes queue' },
               write: { description: 'File, move, answer and complete changes' },
-            },
-          },
-          wishes: {
-            description: 'The wish list shown while a project is set up',
-            scopes: {
-              read: { description: 'Read the wish list' },
-              write: { description: 'Like or dislike a wish' },
             },
           },
           design: {

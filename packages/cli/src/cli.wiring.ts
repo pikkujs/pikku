@@ -38,6 +38,7 @@ import { scopesPrune } from './functions/commands/scopes-prune.js'
 import { rolesAudit } from './functions/commands/roles-audit.js'
 import { rolesPrune } from './functions/commands/roles-prune.js'
 import { pikkuAudit } from './functions/commands/audit.js'
+import { pikkuCi } from './functions/commands/ci.js'
 import { pikkuSemver } from './functions/commands/semver.js'
 import { renderSemver } from './functions/commands/semver-render.js'
 import {
@@ -51,7 +52,7 @@ import {
   renderReleasePrepare,
 } from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
-import { pikkuVerify, renderPikkuVerify } from './functions/commands/verify.js'
+import { check, renderCheck } from './functions/commands/check.js'
 import {
   examplesAdd,
   examplesList,
@@ -84,6 +85,7 @@ import {
   mocksCheck,
   renderMocksCheck,
 } from './functions/commands/mocks-check.js'
+import { mocksAdd, renderMocksAdd } from './functions/commands/mocks-add.js'
 import { mocksDiff, renderMocksDiff } from './functions/commands/mocks-diff.js'
 import { mocksSync, renderMocksSync } from './functions/commands/mocks-sync.js'
 import {
@@ -150,6 +152,7 @@ import { pikkuNewAddon } from './functions/commands/new-addon.js'
 import { pikkuAddonsAdd } from './functions/commands/addons.js'
 import { pikkuAppNew, renderAppNew } from './functions/commands/app-new.js'
 import {
+  appBuild,
   appList,
   appNativeAdd,
   appNativeCheck,
@@ -176,7 +179,7 @@ import {
   enableAgent,
   enableWorkflow,
   enableEvents,
-  enableRemoteRpc,
+  enableMeshRpc,
   enableRemoteJobs,
   enableWebhook,
 } from './functions/commands/enable.js'
@@ -213,12 +216,22 @@ import {
   pikkuMetaWorkflowsList,
   pikkuMetaContext,
   pikkuMetaClients,
+  pikkuMetaDb,
+  pikkuMetaEmails,
+  pikkuMetaGrep,
+  pikkuMetaScreens,
+  pikkuMetaServices,
   pikkuMetaApply,
 } from './functions/commands/meta.js'
+import { pikkuGraph } from './functions/commands/graph.js'
 import { defaultCLIRenderer } from './services.js'
 
 wireAddon({ name: 'changes', package: '@pikku/addon-changes-cli' })
-wireAddon({ name: 'cloud', package: '@pikku/addon-cloud-cli' })
+wireAddon({
+  name: 'cloudCli',
+  package: '@pikku/addon-cloud-cli',
+  uses: { cloud: 'cloudApi' },
+})
 
 wireCLI({
   program: 'pikku',
@@ -267,7 +280,7 @@ wireCLI({
     },
     strictMeta: {
       description:
-        "Fail the build when an AI agent's tool has no description. Without one the model is offered the tool under its own name, so this is a quality gate rather than a correctness one — hence off by default. A 'title' does not satisfy it.",
+        "Fail the build when an AI agent's tool has no description, or when a pikkuPermission never uses its data (PKU586, otherwise a warning). Without a description the model is offered the tool under its own name, so these are quality gates rather than correctness ones — hence off by default. A 'title' does not satisfy it.",
       default: false,
     },
     tsc: {
@@ -290,6 +303,10 @@ wireCLI({
     wireServicesFactoryType: {
       description: 'Specify which wire services factory to use',
     },
+    inspector: {
+      description:
+        'Which inspector analyses the project: go (pikku-inspect, the reference) or rs (pikku-inspect-rs). Overrides PIKKU_INSPECTOR and the "inspector" key of pikku.config.json.',
+    },
     stateOutput: {
       description: 'Save inspector state to JSON file for reuse',
     },
@@ -297,12 +314,12 @@ wireCLI({
       description: 'Load inspector state from JSON file (skips inspection)',
     },
     outDir: {
-      description:
-        'Override output directory (default: from pikku.config.json)',
+      description: 'Override output directory (default: .pikku)',
       short: 'o',
     },
   },
   commands: {
+    ...refCLI('cloudCli:reportCommands'),
     doc: pikkuCLICommand({
       func: doc,
       render: renderDoc,
@@ -332,84 +349,29 @@ wireCLI({
             'On success, emit a structural diff of the generated .pikku meta (what this run added/removed/changed) as a PIKKU_DIFF <json> line on stdout. Only emitted on exit 0.',
           default: false,
         },
-        filter: {
+        backend: {
           description:
-            'Named filter(s) from pikku.config.json filters map (comma-separated)',
-          type: 'string[]',
-        },
-        tags: {
-          description: 'Include functions by tags (comma-separated)',
-          short: 't',
-          type: 'string[]',
-        },
-        wires: {
-          description: 'Filter direct wirings by category (comma-separated)',
-          type: 'string[]',
-        },
-        excludeWires: {
-          description: 'Exclude direct wirings by category (comma-separated)',
-          type: 'string[]',
-        },
-        excludeTags: {
-          description: 'Exclude functions by tags (comma-separated)',
-          type: 'string[]',
-        },
-        directories: {
-          description: 'Include functions by directories (comma-separated)',
-          short: 'd',
-          type: 'string[]',
-        },
-        excludeDirectories: {
-          description: 'Exclude functions by directories (comma-separated)',
-          type: 'string[]',
-        },
-        httpMethods: {
-          description: 'Include HTTP routes by methods (comma-separated)',
-          type: 'string[]',
-        },
-        excludeHttpMethods: {
-          description: 'Exclude HTTP routes by methods (comma-separated)',
-          type: 'string[]',
-        },
-        httpRoutes: {
-          description:
-            'Include HTTP routes by route patterns (comma-separated)',
-          type: 'string[]',
-        },
-        excludeHttpRoutes: {
-          description:
-            'Exclude HTTP routes by route patterns (comma-separated)',
-          type: 'string[]',
+            'Build only this backend (a key of "backends" in pikku.config.json) after the shared pass. Default: every declared backend',
+          type: 'string',
         },
         names: {
           description:
-            'Include functions by name patterns (supports wildcards)',
-          short: 'n',
-          type: 'string[]',
-        },
-        excludeNames: {
-          description:
-            'Exclude functions by name patterns (supports wildcards)',
-          type: 'string[]',
-        },
-        target: {
-          description:
-            'Include functions by deploy target (comma-separated: serverless, server)',
-          type: 'string[]',
-        },
-        excludeTarget: {
-          description:
-            'Exclude functions by deploy target (comma-separated: serverless, server)',
+            'Internal: function names a per-unit deploy codegen run keeps. Filtering is declared in backends.<name>.filter',
           type: 'string[]',
         },
         workflowMeta: {
           description:
-            "Keep these workflows' meta without their registration, for a deploy unit that only starts them (comma-separated)",
+            "Internal: keep these workflows' meta without their registration, for a deploy unit that only starts them (comma-separated)",
           type: 'string[]',
         },
         forceRelativeImports: {
           description:
             'Emit relative imports even when packageMappings would apply (used by per-unit deploy codegen)',
+          default: false,
+        },
+        lazyAddons: {
+          description:
+            "Register wired addons' functions and schemas from an exported loadAddons() instead of at startup (used by per-unit deploy codegen)",
           default: false,
         },
       },
@@ -430,6 +392,54 @@ wireCLI({
         },
       },
     }),
+    ci: pikkuCLICommand({
+      func: pikkuCi,
+      description:
+        'Run the whole path from a commit to a deployable build, non-interactively: codegen, validate, audit, tests and app builds. With -p, in a throwaway worktree, removing the console and producing a deploy plan.',
+      options: {
+        provider: {
+          description:
+            'Build for this deploy provider, in a throwaway git worktree. No default: without it, pikku ci runs in place and plans nothing',
+          short: 'p',
+        },
+        deploy: {
+          description: 'Apply the output of this run. Needs -p',
+          default: false,
+        },
+        skipTests: {
+          description:
+            'Run without a "test" script, which is otherwise an error',
+          default: false,
+        },
+        keepWorktree: {
+          description: 'Leave the worktree in place after the run',
+          default: false,
+        },
+        worktreeDir: {
+          description:
+            'Create the worktree under this directory instead of the system temp directory',
+        },
+        auditBaseline: {
+          description:
+            'A previous audit.json to compare against. Defaults to .deploy/audit.json, which a passing pikku ci -p writes',
+        },
+        migrationsApplied: {
+          description:
+            'With --deploy on Cloudflare, confirm the migrations in this build are already applied',
+          default: false,
+        },
+        secretsSet: {
+          description:
+            'With --deploy on Cloudflare, confirm the secrets this build needs are set in Cloudflare',
+          default: false,
+        },
+        skipDeployChecks: {
+          description:
+            'Skip the Pikku Studio hosting conventions in the validate stage',
+          default: false,
+        },
+      },
+    }),
     audit: pikkuCLICommand({
       func: pikkuAudit,
       description:
@@ -438,6 +448,14 @@ wireCLI({
         outdated: {
           description: 'Also report available dependency updates',
           default: false,
+        },
+        failOn: {
+          description:
+            'Exit non-zero on an advisory at this severity or worse (critical, high, moderate, low, info), or when no report could be made',
+        },
+        baseline: {
+          description:
+            'A previous audit.json: advisories it lists do not fail --fail-on',
         },
       },
     }),
@@ -508,7 +526,7 @@ wireCLI({
           options: {
             against: {
               description:
-                'Baseline to compare against instead of surface.pikku.json: a .pikku directory, a snapshot file, or a snapshot URL',
+                'Baseline to compare against instead of pikku.surface.json: a .pikku directory, a snapshot file, or a snapshot URL',
             },
             out: {
               description:
@@ -536,10 +554,10 @@ wireCLI({
           func: pikkuReleaseInit,
           render: renderReleaseInit,
           description:
-            'Write surface.pikku.json and CHANGELOG.md, the baseline the first release is measured against',
+            'Write pikku.surface.json and CHANGELOG.md, the baseline the first release is measured against',
           options: {
             force: {
-              description: 'Overwrite an existing surface.pikku.json',
+              description: 'Overwrite an existing pikku.surface.json',
               default: false,
             },
           },
@@ -564,11 +582,25 @@ wireCLI({
     },
     watch: pikkuCLICommand({
       func: watch,
-      description: 'Watch for file changes and regenerate automatically',
+      description:
+        'Watch for file changes, regenerate, type-check, and keep .pikku/status.json current for `pikku check`',
       options: {
         hmr: {
           description: 'Enable hot module reload for registered functions',
           default: false,
+        },
+      },
+    }),
+    check: pikkuCLICommand({
+      func: check,
+      render: renderCheck,
+      description:
+        "Report whether the project builds and type-checks: asks the running watcher, or does a full run if there isn't one",
+      options: {
+        timeout: {
+          description:
+            'Seconds to wait before failing and naming the stuck stage',
+          default: '120',
         },
       },
     }),
@@ -584,8 +616,8 @@ wireCLI({
       },
       options: {
         port: {
-          description: 'Port for the dev server',
-          default: '3000',
+          description:
+            "Port for the dev server. Defaults to the port in the local environment's apiUrl, else 3000",
           short: 'p',
         },
         watch: {
@@ -610,6 +642,25 @@ wireCLI({
           description:
             'Repoint model aliases for this run, e.g. \'cheap:openai/gpt-5-nano,tool:anthropic/claude-haiku-4-5\'. Overrides the "models" table in pikku.config.json without editing it',
         },
+        frontends: {
+          description:
+            'Run every frontend that sets "dev.command" beside the API; --no-frontends runs the API alone',
+          default: true,
+        },
+        frontend: {
+          description:
+            'Run only these frontends (comma separated names from "frontends" in pikku.config.json)',
+        },
+        backend: {
+          description:
+            'Run only this backend (a key of "backends" in pikku.config.json), serving its filtered tree on its dev.port. Default: every declared backend, each as its own process',
+          type: 'string',
+        },
+        serveOnly: {
+          description:
+            'Internal: serve the named backend without running codegen or watching; the parent pikku dev does both and signals reloads',
+          default: false,
+        },
       },
     }),
     serve: pikkuCLICommand({
@@ -621,6 +672,11 @@ wireCLI({
           description: 'Port for the server',
           default: '3000',
           short: 'p',
+        },
+        backend: {
+          description:
+            'Which backend (a key of "backends" in pikku.config.json) this server is. Sets the content settings it uses; optional when one backend is declared',
+          type: 'string',
         },
         model: {
           description:
@@ -784,10 +840,17 @@ wireCLI({
           func: dbMigrate,
           description:
             'Apply pending SQL migrations and regenerate db/schema.gen.ts',
+          options: {
+            localOnly: {
+              description: 'Refuse any database that is not on this machine',
+              default: false,
+            },
+          },
         }),
         generate: pikkuCLICommand({
           func: dbGenerate,
-          description: 'Generate SQL migrations from detected schema changes',
+          description:
+            'Write the SQL migrations for everything that declares tables: db/tables.ts, Better Auth, the Pikku runtime and addons. Refuses a drop, a rename or a changed column',
         }),
         check: pikkuCLICommand({
           func: dbCheck,
@@ -1094,6 +1157,58 @@ wireCLI({
       description:
         'Mock data for RPCs, kept in .mocks/ and checked against the functions it stands in for',
       subcommands: {
+        add: pikkuCLICommand({
+          func: mocksAdd,
+          render: renderMocksAdd,
+          parameters: '<rpc>',
+          description:
+            'Add a mock for an RPC in one step. Checks the RPC is a function of the project, writes .mocks/<rpc with : as .>/<state>.json and <state>.meta.json (label, description, state, default, status), keeps exactly one default (the first mock is the default; --default moves it), checks the body against the function output, and with --flag declares the feature flag in the project flags file. Prints the stub hook to use. Never overwrites a mock without --force. The body is required unless the mock is an error mock, or an empty mock of a function that returns a list.',
+          options: {
+            state: {
+              description: 'healthy (default), empty, error or slow',
+              type: 'string',
+            },
+            name: {
+              description:
+                'Mock name, the file name without .json (default: the state); use it for a second mock of the same state',
+              type: 'string',
+            },
+            label: {
+              description: 'Label shown in the mock picker',
+              type: 'string',
+            },
+            description: {
+              description: 'What the mock stands for',
+              type: 'string',
+            },
+            default: {
+              description:
+                'Make this the mock the screen opens with, clearing the previous default',
+              default: false,
+            },
+            status: {
+              description: 'HTTP status of an error mock (default 500)',
+              type: 'number',
+            },
+            flag: {
+              description:
+                'Feature flag the stub hook publishes behind; added to the flags file when it is not declared yet',
+              type: 'string',
+            },
+            body: {
+              description: 'The response, as JSON text',
+              type: 'string',
+            },
+            from: {
+              description: 'Read the response from a JSON file',
+              type: 'string',
+            },
+            force: {
+              description: 'Overwrite a mock that already exists',
+              default: false,
+            },
+          },
+        }),
         diff: pikkuCLICommand({
           func: mocksDiff,
           render: renderMocksDiff,
@@ -1228,11 +1343,24 @@ wireCLI({
       func: validate,
       render: renderValidate,
       description:
-        'Run every check that applies to this project — app structure, deploy readiness, and the published file set of any addon it contains',
+        'Run every check that applies to this project — app structure, deploy readiness, type-checks, correctness checks, and the published file set of any addon it contains. Exits non-zero on any error',
       options: {
+        codegen: {
+          description: 'Run codegen first and report what it finds',
+          default: false,
+        },
+        strict: {
+          description:
+            'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings, and with --codegen, codegen runs with --strict-meta',
+          default: false,
+        },
         skipTypecheck: {
           description:
-            'Skip the frontend type-check stage (structural checks only)',
+            'Skip every type-check and the type-aware lint (structural checks only)',
+          default: false,
+        },
+        skipFrontends: {
+          description: 'Skip the frontend type-checks',
           default: false,
         },
         skipDeployChecks: {
@@ -1243,32 +1371,6 @@ wireCLI({
         migrationsBase: {
           description:
             'Git ref whose migrations are frozen: a migration file on it may not be modified, deleted or renamed (default origin/main, or $PIKKU_MIGRATIONS_BASE)',
-        },
-      },
-    }),
-    verify: pikkuCLICommand({
-      func: pikkuVerify,
-      render: renderPikkuVerify,
-      description:
-        'Run codegen, type-check the backend and every frontend, and the correctness checks codegen and tsc cannot see; findings are located and explained',
-      options: {
-        skipCodegen: {
-          description:
-            'Check the tree as it stands, without running codegen first',
-          default: false,
-        },
-        skipTypecheck: {
-          description: 'Skip the backend type-check',
-          default: false,
-        },
-        skipFrontends: {
-          description: 'Skip the frontend type-checks',
-          default: false,
-        },
-        strict: {
-          description:
-            'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings',
-          default: false,
         },
       },
     }),
@@ -1338,13 +1440,22 @@ wireCLI({
               choices: ['off', 'failed', 'all'],
               default: 'failed',
             },
+            backend: {
+              description:
+                "Which of the environment's backends to sign in to and call. Optional when it has only one",
+              type: 'string',
+            },
             apiUrl: {
               description:
-                "Override the environment's apiUrl for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
+                "Override the selected backend's url for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
             },
             appUrl: {
               description:
-                "Override the environment's appUrl for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose virtual users sign into different apps — comma-separated, and a bare url is the fallback",
+                "Override the environment's frontend url for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose virtual users sign into different apps — comma-separated, and a bare url is the fallback",
+            },
+            runId: {
+              description:
+                'The id to record this run under in .pikku/scenario-runs, instead of a fresh one — so whoever started the run can follow it. Must not already exist',
             },
           },
         }),
@@ -1428,8 +1539,20 @@ wireCLI({
                   description: 'Heading font, a Google Fonts family',
                 },
                 fontBody: { description: 'Body font, a Google Fonts family' },
-                page: { description: 'Light-mode page colour, as hex' },
-                ink: { description: 'Light-mode text colour, as hex' },
+                mode: {
+                  description:
+                    'light (default) or dark. With dark, --page and --ink are the dark ground and the text on it, and card, muted, border, input and every foreground are derived for that ground (written to :root and .dark, color-scheme: dark)',
+                  choices: ['light', 'dark'] as const,
+                  default: 'light' as const,
+                },
+                page: {
+                  description:
+                    'Page colour, as hex: the light-mode page, or the dark ground with --mode dark',
+                },
+                ink: {
+                  description:
+                    'Text colour, as hex: the light-mode text, or the text on the dark ground with --mode dark',
+                },
               },
             }),
           },
@@ -1483,7 +1606,12 @@ wireCLI({
                 },
                 environment: {
                   description:
-                    'Environment in pikku.config.json whose apiUrl --as signs in against. Defaults to local',
+                    'Environment in pikku.config.json whose backend --as signs in against. Defaults to local',
+                  type: 'string',
+                },
+                backend: {
+                  description:
+                    "Which of the environment's backends --as signs in to. Optional when it has only one",
                   type: 'string',
                 },
                 viewport: {
@@ -1503,16 +1631,20 @@ wireCLI({
         add: pikkuCLICommand({
           func: pikkuAddonsAdd,
           description:
-            'Add an addon to this app: a published name (@pikku/addon-stripe, or just stripe) is installed and wired; an OpenAPI spec path or URL is generated into packages/, wired and built. With no argument it uses specs/api-spec.yaml|yml|json. Prints the secrets, variables and credentials to fill in',
+            'Add an addon to this app: a published name (@pikku/addon-stripe, or just stripe) is installed and wired; an OpenAPI spec path or URL, or the name of one in the registry catalogue (amazonaws.com:applicationcostprofiler), is generated into packages/, wired and built. With no argument it uses specs/api-spec.yaml|yml|json. Prints the secrets, variables and credentials to fill in',
           parameters: '[nameOrSpec]',
           options: {
             auth: {
               description:
-                'Required for a spec: user (each user connects their own account), shared (one key behind every user) or none (public API)',
+                'For a spec: user (each user connects their own account), shared (one key behind every user) or none (public API). Required for a path or URL; a registry name defaults to what its catalogue entry records',
             },
             name: {
               description:
-                'For a spec: the addon name (defaults to the spec title)',
+                'For a spec: the addon name (defaults to the registry name, else the spec title)',
+            },
+            registry: {
+              description:
+                'Registry to look a catalogue name up in (default: the registry in pikku.config.json, else https://api.pikkustudio.app)',
             },
             openapiHeader: {
               description:
@@ -1595,9 +1727,14 @@ wireCLI({
               description:
                 'Start without verifying the declared roles against the stage. For a target whose auth reports roles somewhere pikku cannot read — findings from an unverified run may be seed drift rather than product bugs',
             },
+            backend: {
+              description:
+                "Which of the environment's backends to sign in to and call. Optional when it has only one",
+              type: 'string',
+            },
             apiUrl: {
               description:
-                "Override the environment's apiUrl for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
+                "Override the selected backend's url for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
             },
             out: {
               description:
@@ -1608,7 +1745,7 @@ wireCLI({
         sync: pikkuCLICommand({
           func: virtualUserSync,
           description:
-            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to pikkuCloud from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
+            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to provisionVirtualUsers from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
           parameters: '<environment>',
         }),
         list: pikkuCLICommand({
@@ -1635,6 +1772,11 @@ wireCLI({
                 'Environment in pikku.config.json to call. Defaults to local',
               type: 'string',
             },
+            backend: {
+              description:
+                "Which of the environment's backends to sign in to and call. Optional when it has only one",
+              type: 'string',
+            },
             apiUrl: {
               description: "Override the environment's apiUrl",
               type: 'string',
@@ -1646,7 +1788,7 @@ wireCLI({
     cloud: {
       description:
         'Pikku Studio Cloud commands (login, link, deploy, domains, secrets, logs, …)',
-      subcommands: { ...refCLI('cloud:cloudCommands') },
+      subcommands: { ...refCLI('cloudCli:cloudCommands') },
     },
     fetch: pikkuCLICommand({
       func: pikkuFetch,
@@ -1713,10 +1855,10 @@ wireCLI({
           description:
             'Enable the realtime events channel + SSE stream (scaffolds events.gen.ts)',
         }),
-        'remote-rpc': pikkuCLICommand({
-          func: enableRemoteRpc,
+        'mesh-rpc': pikkuCLICommand({
+          func: enableMeshRpc,
           description:
-            'Enable the remote internal RPC queue worker + HTTP endpoint (scaffolds rpc-remote.gen.ts)',
+            'Enable the mesh RPC queue worker + HTTP endpoint (scaffolds rpc-mesh.gen.ts)',
         }),
         oxlint: pikkuCLICommand({
           func: enableOxlint,
@@ -1727,6 +1869,11 @@ wireCLI({
             dryRun: {
               description:
                 'Print the plan and diffs; write and install nothing',
+              default: false,
+            },
+            strict: {
+              description:
+                'Also merge the strict preset (type-aware promise and throw rules, no-cycle, no-console and more) and set lint.strict in pikku.config.json',
               default: false,
             },
           },
@@ -1773,6 +1920,22 @@ wireCLI({
             install: {
               description: 'Run `bun install` afterwards',
               default: true,
+            },
+          },
+        }),
+        build: pikkuCLICommand({
+          func: appBuild,
+          description:
+            "Run each frontend's own build script in its directory, side by side, skipping deploy: false",
+          options: {
+            onlyServed: {
+              description:
+                'Build only the frontend with "serve", which deploy plan embeds',
+              default: false,
+            },
+            skipServed: {
+              description: 'Build every frontend except the one with "serve"',
+              default: false,
             },
           },
         }),
@@ -1947,7 +2110,11 @@ wireCLI({
             },
             openapi: {
               description:
-                'Path or URL of an OpenAPI 3.x / Swagger 2.0 spec (YAML or JSON) to generate functions from',
+                'Path or URL of an OpenAPI 3.x / Swagger 2.0 spec (YAML or JSON) to generate functions from, or the name of one in the registry catalogue (e.g. amazonaws.com:applicationcostprofiler)',
+            },
+            registry: {
+              description:
+                'Registry to look an --openapi name up in (default: the registry in pikku.config.json, else https://api.pikkustudio.app)',
             },
             openapiHeader: {
               description:
@@ -2054,9 +2221,13 @@ wireCLI({
             'Show deployment plan (what will be created, updated, deleted)',
           options: {
             provider: {
-              description: 'Deployment provider (cloudflare, aws)',
-              default: 'cloudflare',
+              description:
+                "Deployment provider. Overrides deploy.provider and any backend's deploy.provider; with neither set the deploy is refused",
               short: 'p',
+            },
+            backend: {
+              description:
+                'Deploy only this backend (a key of "backends" in pikku.config.json). Default: every declared backend',
             },
             resultFile: {
               description:
@@ -2069,9 +2240,17 @@ wireCLI({
           description: 'Execute the deployment plan',
           options: {
             provider: {
-              description: 'Deployment provider (cloudflare, aws)',
-              default: 'cloudflare',
+              description:
+                "Deployment provider. Overrides deploy.provider and any backend's deploy.provider; with neither set the deploy is refused",
               short: 'p',
+            },
+            backend: {
+              description:
+                'Deploy only this backend (a key of "backends" in pikku.config.json). Default: every declared backend',
+            },
+            runtime: {
+              description:
+                'The runtime the deploy must target. Refused unless the provider supports it (standalone: bun)',
             },
             fromPlan: {
               description:
@@ -2091,7 +2270,6 @@ wireCLI({
           options: {
             provider: {
               description: 'Deployment provider (cloudflare, aws)',
-              default: 'cloudflare',
               short: 'p',
             },
           },
@@ -2153,13 +2331,53 @@ wireCLI({
         }),
       },
     },
+    graph: pikkuCLICommand({
+      func: pikkuGraph,
+      description:
+        'Show one function joined to the rest of the meta: what calls it (routes, channels, schedulers, queues, triggers, MCP, CLI, workflow steps, agent tools, other functions), what it calls, and the permissions and middleware that gate it. Add --json for the full record.',
+      parameters: '<functionId>',
+    }),
     meta: {
       description: 'Inspect project metadata in machine-readable form',
       subcommands: {
         context: pikkuCLICommand({
           func: pikkuMetaContext,
           description:
-            'Bulk project context for planners (functions, wires, middleware, permissions, workflows, capabilities, layout) in one call',
+            'A short map of the project: tables, workflows, permissions, screens, emails, one line per function. --json or --full gives the whole planner document',
+          options: {
+            full: {
+              description: 'Print the full JSON document',
+              default: false,
+              short: 'f',
+            },
+          },
+        }),
+        grep: pikkuCLICommand({
+          func: pikkuMetaGrep,
+          description:
+            'Search the whole project: functions, workflows, wires, permissions, middleware, clients, tables and columns, screens, services, emails, translations, models. Terms are word-aware and any can match: `invit` finds `invitation`, `a|b` means either',
+          parameters: '<terms...>',
+        }),
+        db: pikkuCLICommand({
+          func: pikkuMetaDb,
+          description:
+            'Where the project declares its tables and what they compile to; name tables to get their generated column types',
+          parameters: '[tables...]',
+        }),
+        screens: pikkuCLICommand({
+          func: pikkuMetaScreens,
+          description:
+            'Frontend routes: path, the RPCs the page reaches, and its page file',
+        }),
+        services: pikkuCLICommand({
+          func: pikkuMetaServices,
+          description:
+            "The project's session fields, declared services and auth setup",
+        }),
+        emails: pikkuCLICommand({
+          func: pikkuMetaEmails,
+          description:
+            'Email templates with the data each takes, and their locales',
         }),
         clients: pikkuCLICommand({
           func: pikkuMetaClients,

@@ -1,11 +1,19 @@
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import type { TypesMap } from '@pikku/inspector'
-import { generateCustomTypes } from '@pikku/inspector'
+import { serializeCustomTypesImport } from '../../../utils/custom-types-file.js'
 import type { Logger } from '@pikku/core/services'
+import { addonGeneratedImport } from '../../../utils/remote-addon-import.js'
 
 type WireAddonDeclarations = Map<
   string,
-  { package: string; rpcEndpoint?: string; remote?: boolean }
+  {
+    package: string
+    range?: string
+    rpcEndpoint?: string
+    remote?: boolean
+    /** An addon's dependency in the same workspace: the SDK it generated. */
+    sdkDir?: string
+  }
 >
 
 export const serializeTypedRPCMap = (
@@ -15,12 +23,14 @@ export const serializeTypedRPCMap = (
   typesMap: TypesMap,
   rpcMeta: Record<string, string>,
   resolvedIOTypes: Record<string, { inputType: string; outputType: string }>,
+  customTypesFile: string,
   wireAddonDeclarations?: WireAddonDeclarations,
   workflowMapPath?: string,
-  agentMapPath?: string
+  agentMapPath?: string,
+  /** The project root, where a versioned remote addon's SDK is found. */
+  rootDir?: string
 ) => {
   const requiredTypes = new Set<string>()
-  const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
   const serializedRPCs = generateRPCs(rpcMeta, resolvedIOTypes, requiredTypes)
 
   const mcpTypes = [
@@ -45,17 +55,20 @@ export const serializeTypedRPCMap = (
     requiredTypes
   )
 
-  const serializedCustomTypesDeclarationsOnly = serializedCustomTypes
-    .split('\n')
-    .filter((line) => !line.startsWith('import '))
-    .join('\n')
-
   const addonImports = generateAddonImports(
     wireAddonDeclarations,
-    relativeToPath
+    relativeToPath,
+    rootDir
   )
 
   const mergedRPCMap = generateMergedRPCMap(wireAddonDeclarations)
+
+  const customTypesImport = serializeCustomTypesImport(
+    relativeToPath,
+    customTypesFile,
+    packageMappings,
+    typesMap
+  )
 
   return `/**
  * This provides the structure needed for typescript to be aware of RPCs and their return types
@@ -63,7 +76,7 @@ export const serializeTypedRPCMap = (
 
 ${mcpImport}
 ${serializedImportMap}
-${serializedCustomTypesDeclarationsOnly}
+${customTypesImport}
 
 interface RPCHandler<I, O> {
     input: I;
@@ -80,7 +93,7 @@ export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
     : [name: Name, data: FlattenedRPCMap[Name]['input']]
 ) => Promise<FlattenedRPCMap[Name]['output']>
 
-export type RPCRemote = <Name extends keyof FlattenedRPCMap>(
+export type RPCMesh = <Name extends keyof FlattenedRPCMap>(
   ...args: IsVoidishInput<FlattenedRPCMap[Name]['input']> extends true
     ? [name: Name]
     : [name: Name, data: FlattenedRPCMap[Name]['input']]
@@ -89,16 +102,17 @@ export type RPCRemote = <Name extends keyof FlattenedRPCMap>(
 ${workflowMapPath ? `import type { FlattenedWorkflowMap } from '${workflowMapPath}'` : `type FlattenedWorkflowMap = {}`}
 
 ${agentMapPath ? `import type { AgentMap } from '${agentMapPath}'` : `type AgentMap = {}`}
-${generateAddonAgentImports(wireAddonDeclarations)}
+${generateAddonAgentImports(wireAddonDeclarations, relativeToPath, rootDir)}
 ${generateMergedAgentMap(wireAddonDeclarations)}
 
 import type { PikkuRPC } from '@pikku/core/rpc'
 import type { AgentInput } from '@pikku/core/agent'
+import type { WorkflowRunWire } from '@pikku/core/workflow'
 
 export type TypedStartWorkflow = <Name extends keyof FlattenedWorkflowMap>(
   name: Name,
   input: FlattenedWorkflowMap[Name]['input'],
-  options?: { startNode?: string }
+  options?: { startNode?: string; wire?: WorkflowRunWire }
 ) => Promise<{ runId: string }>
 
 export type TypedRunWorkflow = <Name extends keyof FlattenedWorkflowMap>(
@@ -111,28 +125,63 @@ export type TypedWorkflowStatus = (
   runId: string
 ) => Promise<{ id: string; status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled' | 'compensating' | 'compensated' | 'compensation_failed'; output?: unknown; error?: { message?: string } }>
 
-type TypedAgentRun = [keyof FlattenedAgentMap] extends [never]
-  ? (name: string, input: AgentInput) => Promise<any>
-  : <Name extends keyof FlattenedAgentMap>(
-      name: Name,
-      input: AgentInput
-    ) => Promise<{ runId: string; result: FlattenedAgentMap[Name]['output']; usage: { inputTokens: number; outputTokens: number } }>
+/** A tool call waiting for the user's approval, as \`run\` and \`approve\` return it. */
+export type AgentPendingApproval = {
+  toolCallId: string
+  toolName: string
+  args: unknown
+  reason?: string
+  runId: string
+}
 
-type TypedAgentStream = [keyof FlattenedAgentMap] extends [never]
-  ? (name: string, input: AgentInput, options?: { requiresToolApproval?: 'all' | 'explicit' | false }) => Promise<void>
-  : <Name extends keyof FlattenedAgentMap>(
-      name: Name,
-      input: AgentInput,
-      options?: { requiresToolApproval?: 'all' | 'explicit' | false }
-    ) => Promise<void>
+/**
+ * What \`agent.run\` and \`agent.approve\` resolve to. A run that stopped for approval has
+ * \`status: 'suspended'\` and the calls waiting in \`pendingApprovals\`; answer them with
+ * \`approve\` and the same \`runId\`.
+ */
+export type AgentRunResult<Output = unknown> = {
+  runId: string
+  result: Output
+  usage: { inputTokens: number; outputTokens: number }
+} & (
+  | { status?: undefined; pendingApprovals?: undefined }
+  | { status: 'suspended'; pendingApprovals: AgentPendingApproval[] }
+)
 
-export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote, TypedStartWorkflow, TypedAgentRun, TypedAgentStream>
+/** The body \`agent.approve\` sends: one decision per pending tool call of the run. */
+export type AgentApproveInput = {
+  runId: string
+  approvals: { toolCallId: string; approved: boolean }[]
+}
+
+export type AgentName = [keyof FlattenedAgentMap] extends [never] ? string : keyof FlattenedAgentMap & string
+
+export type AgentOutputOf<Name> = Name extends keyof FlattenedAgentMap ? FlattenedAgentMap[Name]['output'] : unknown
+
+export type TypedAgentRun = <Name extends AgentName>(
+  name: Name,
+  input: AgentInput
+) => Promise<AgentRunResult<AgentOutputOf<Name>>>
+
+export type TypedAgentApprove = <Name extends AgentName>(
+  name: Name,
+  input: AgentApproveInput
+) => Promise<AgentRunResult<AgentOutputOf<Name>>>
+
+type TypedAgentStream = <Name extends AgentName>(
+  name: Name,
+  input: AgentInput,
+  options?: { requiresToolApproval?: 'all' | 'explicit' | false }
+) => Promise<void>
+
+export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCMesh, TypedStartWorkflow, TypedAgentRun, TypedAgentStream>
   `
 }
 
 function generateAddonImports(
   wireAddonDeclarations: WireAddonDeclarations | undefined,
-  relativeToPath: string
+  relativeToPath: string,
+  rootDir: string | undefined
 ): string {
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
     return ''
@@ -147,7 +196,13 @@ function generateAddonImports(
     const mapFile = decl.remote
       ? 'pikku-rpc-wirings-map.remote.gen.js'
       : 'pikku-rpc-wirings-map.internal.gen.js'
-    imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${decl.package}/.pikku/rpc/${mapFile}'\n`
+    const from = addonGeneratedImport(
+      decl,
+      `rpc/${mapFile}`,
+      relativeToPath,
+      rootDir
+    )
+    imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${from}'\n`
   }
   return imports
 }
@@ -204,7 +259,9 @@ function toPascalCase(str: string): string {
 }
 
 function generateAddonAgentImports(
-  wireAddonDeclarations: WireAddonDeclarations | undefined
+  wireAddonDeclarations: WireAddonDeclarations | undefined,
+  relativeToPath: string,
+  rootDir: string | undefined
 ): string {
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
     return ''
@@ -212,7 +269,13 @@ function generateAddonAgentImports(
 
   let imports = '\n// Addon package Agent maps\n'
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    imports += `import type { AgentMap as ${toPascalCase(namespace)}AgentMap } from '${decl.package}/.pikku/agent/pikku-agent-map.gen.d.js'\n`
+    const from = addonGeneratedImport(
+      decl,
+      'agent/pikku-agent-map.gen.d.js',
+      relativeToPath,
+      rootDir
+    )
+    imports += `import type { AgentMap as ${toPascalCase(namespace)}AgentMap } from '${from}'\n`
   }
   return imports
 }

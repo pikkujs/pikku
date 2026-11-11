@@ -281,6 +281,31 @@ describe('source checks', () => {
     ])
   })
 
+  test('runVerify runs codegen with --strict-meta only in strict mode', async () => {
+    const root = project({
+      'package.json': '{}',
+      'pikku.config.json': '{}',
+      'cli.mjs':
+        "import { writeFileSync } from 'node:fs'\nwriteFileSync('argv.json', JSON.stringify(process.argv.slice(2)))\n",
+    })
+    const codegenArgs = async (strict: boolean) => {
+      await runVerify({
+        rootDir: root,
+        pikkuCli: join(root, 'cli.mjs'),
+        typecheck: false,
+        record: false,
+        strict,
+      })
+      return JSON.parse(readFileSync(join(root, 'argv.json'), 'utf8'))
+    }
+    assert.deepEqual(await codegenArgs(false), ['all', '--json'])
+    assert.deepEqual(await codegenArgs(true), [
+      'all',
+      '--json',
+      '--strict-meta',
+    ])
+  })
+
   test('i18n-stub message names the file, line, and trimmed text', async () => {
     const root = project({
       'package.json': '{"workspaces":["packages/*"]}',
@@ -861,6 +886,25 @@ describe('codegen output', () => {
     assert.equal(findings.length, 1)
     assert.equal(findings[0]!.id, 'PKU718')
     assert.doesNotMatch(findings[0]!.message, /at assertCore/)
+  })
+})
+
+describe('readVerifyProject', () => {
+  test('reads the file --config named, not pikku.config.json beside it', () => {
+    const root = project({
+      'pikku.config.json': JSON.stringify({ frontends: {} }),
+      'pikku.staging.json': JSON.stringify({
+        frontends: { admin: { cwd: 'apps/admin' } },
+      }),
+      'apps/admin/tsconfig.json': '{}',
+    })
+    assert.deepEqual(readVerifyProject(root).frontends, [])
+    assert.deepEqual(
+      readVerifyProject(root, join(root, 'pikku.staging.json')).frontends.map(
+        (f) => f.name
+      ),
+      ['admin']
+    )
   })
 })
 

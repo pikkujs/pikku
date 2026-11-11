@@ -1,3 +1,7 @@
+/**
+ * The declaration {@link defineVariable} takes: a non-secret setting read from the
+ * environment. Anything sensitive belongs in {@link defineSecret} instead.
+ */
 export type CoreVariable<T = unknown> = {
   /** How the variable is asked for in code. Generated into `VariablesMap`, so it is what `variables.get` autocompletes. */
   name: string
@@ -15,6 +19,7 @@ export type CoreVariable<T = unknown> = {
   docsUrl?: string
 }
 
+/** A variable declaration as recorded in generated meta, with the schema replaced by its name. */
 export type VariableDefinitionMeta = {
   name: string
   displayName: string
@@ -26,8 +31,10 @@ export type VariableDefinitionMeta = {
   sourceFile?: string
 }
 
+/** Variable declarations collected by the CLI, keyed by name. */
 export type VariableDefinitionsMeta = Record<string, VariableDefinitionMeta>
 
+/** Variable declarations as the inspector found them, before de-duplication. */
 export type VariableDefinitions = VariableDefinitionMeta[]
 
 /**

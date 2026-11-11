@@ -8,6 +8,7 @@ export interface CredentialStatusInfo {
   oauth2?: boolean
 }
 
+/** Generated metadata for one declared credential. */
 export type CredentialMetaInfo = {
   name: string
   displayName: string
@@ -15,6 +16,11 @@ export type CredentialMetaInfo = {
   oauth2?: boolean
 }
 
+/**
+ * Wraps a `CredentialService` with the credential types generated from your
+ * `defineCredential` declarations, and reports which declared credentials are
+ * configured. Calls pass through unchanged.
+ */
 export class TypedCredentialService<
   TMap = Record<string, unknown>,
 > implements CredentialService {

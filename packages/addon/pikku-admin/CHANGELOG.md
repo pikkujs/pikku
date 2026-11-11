@@ -1,5 +1,89 @@
 # @pikku/addon-admin
 
+## 0.12.16
+
+### Patch Changes
+
+- 3099125: The workflow-run, agent-thread, webhook-delivery and virtual-user read functions move from `@pikku/addon-console` to `@pikku/addon-admin`, because a deployed stage has those and no console. Call them as `admin:getWorkflowRuns`, `admin:getAgentThreads` and so on, under the new `admin:workflows`, `admin:agents`, `admin:webhooks:deliveries` and `admin:virtualUsers` scopes. `scaffold.console` no longer generates `/workflow-run/:runId/stream`; the new `scaffold.admin` generates the `@pikku/addon-admin` wiring and that route as `ref('admin:streamWorkflowRun')`. `startVirtualUserRun` and `setVirtualUserSchedule` stay in the console because they read the project's meta from disk. `@pikku/better-auth`'s copy of the admin scope tree catches up with the new scopes and the earlier schedules, queues and webhooks
+- Updated dependencies [3099125]
+- Updated dependencies [be90d6c]
+- Updated dependencies [2e4e7ab]
+- Updated dependencies [54173f6]
+- Updated dependencies [1be4b68]
+  - @pikku/better-auth@0.12.64
+  - @pikku/core@0.12.154
+
+## 0.12.15
+
+### Patch Changes
+
+- c2314ca: Separate the mesh from remote addons, make addon `expose` opt-in, and stop passing remote addon errors through.
+
+  **Breaking — the mesh is renamed.** `PIKKU_REMOTE_SECRET` → `PIKKU_MESH_SECRET`, `POST /remote/rpc/:rpcName` → `POST /mesh/rpc/:rpcName`, `rpc.remote()` → `rpc.mesh()`, `pikkuRemoteAuthMiddleware` → `pikkuMeshAuthMiddleware`, `@pikku/core/remote` (`buildRemoteHeaders`) → `@pikku/core/mesh` (`buildMeshHeaders`), `pikku enable remote-rpc` / `scaffold.remoteRpc` → `pikku enable mesh-rpc` / `scaffold.meshRpc`, and the queue `pikku-remote-internal-rpc` → `pikku-mesh-rpc`. Mesh tokens now use audience `pikku-mesh` and HKDF info `pikku:mesh-session`, so every unit of a split deploy must be released together. `remote: true` on a function is unchanged.
+
+  **Breaking — `wireAddon({ expose })` is opt-in.** Installing an addon no longer puts its `expose: true` functions on `POST /rpc`. `expose: true` on the wiring opens them, a list opens the named ones, and a list can no longer open a function the addon did not declare `expose: true` (PKU343). The "exposed function has no gate" warning moves from the addon's own build to the app that opts in. OpenAPI-generated addons now declare every operation `expose: true`, so their install-time lists keep working.
+
+  **Breaking — `wireRemoteAddon` uses the host's public RPC route.** Calls go to `{serverUrl}/rpc/<fn>` with `{ rpcName, data }` and `x-pikku-remote-contract: 1`; a host answers such a call only for functions that are `expose: true` and `remote: true`. `wireRemoteAddon` gains `expose` (forwarded from `rpc.exposed`, after the caller's `addonMayReach` check), `timeoutMs` (default 30s) and a `headers` hook. `RemoteAddonRequestError` is removed: a registered `PikkuError` named by a 4xx is rebuilt with its status and message, any other 4xx becomes the standard error for its status without the body, and a 5xx, network failure or unreadable body becomes `RemoteAddonFailedError` (502) and is logged on the consumer. A timeout is `RemoteAddonTimeoutError` (504).
+
+- Updated dependencies [c416188]
+- Updated dependencies [c2314ca]
+- Updated dependencies [bf1b54c]
+- Updated dependencies [6fe33e9]
+  - @pikku/core@0.12.146
+
+## 0.12.14
+
+### Patch Changes
+
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- Updated dependencies [3a9c9d8]
+- Updated dependencies [dc952a8]
+- Updated dependencies [7e44a0c]
+- Updated dependencies [65682fc]
+- Updated dependencies [c702ed6]
+- Updated dependencies [8ec91f0]
+- Updated dependencies [ffbe1a2]
+- Updated dependencies [9999ec1]
+- Updated dependencies [228faad]
+- Updated dependencies [84de1eb]
+- Updated dependencies [e659614]
+- Updated dependencies [6c79f8d]
+- Updated dependencies [fa308d4]
+- Updated dependencies [0a4676a]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [2e05e48]
+- Updated dependencies [40855aa]
+- Updated dependencies [a88391a]
+- Updated dependencies [3df9013]
+  - @pikku/core@0.12.144
+  - @pikku/better-auth@0.12.57
+
+## 0.12.13
+
+### Patch Changes
+
+- de9af6a: RPCs for Pikku Studio's migrated screens. Runtime state that must be visible on a deployed app lives in `@pikku/addon-admin`; local-copy tools stay in `@pikku/addon-console`.
+
+  `@pikku/addon-admin`:
+
+  - `admin:getSchedulerHistory` returns each scheduled task's last run, next run and recent runs, from a new `SchedulerService.getTaskRuns()` (empty by default). `InMemorySchedulerService` records the last 50 runs per cron task with status, duration and error. Scope `admin:schedules:read`.
+  - `admin:getQueueHistory({ queueNames?, limit? })` returns live counts and recent jobs per queue, from a new optional `QueueService.inspect(queueName, { limit })`, implemented by `InMemoryQueueService` and `BullQueueService` and forwarded by `SignedQueueService`. Scope `admin:queues:read`.
+  - `admin:listIncomingWebhookReceipts` / `admin:getIncomingWebhookReceipt` expose received webhooks, backed by a new `IncomingWebhookService.getReceipt(receiptId)` (null by default; implemented by `KyselyIncomingWebhookService`). Scope `admin:webhooks:read`.
+
+  `@pikku/addon-console`:
+
+  - `console:variableGet` / `console:variableSet` read and write a project variable, gated on `pikku:console:variables:read` / `:write`.
+  - `console:runScenarios({ names?, environment? })` starts `pikku scenario run` as a detached child process and returns `{ runId }` to follow through `listScenarioRuns` / `getScenarioRun`, gated on the new `pikku:console:scenarios:run` scope. `pikku scenario run` takes `--run-id <id>` to record under a caller-chosen id.
+
+- Updated dependencies [de9af6a]
+  - @pikku/core@0.12.143
+
 ## 0.12.12
 
 ### Patch Changes

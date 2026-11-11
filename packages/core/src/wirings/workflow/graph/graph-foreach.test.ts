@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { InMemoryWorkflowService } from '../../../services/in-memory-workflow-service.js'
+import { InMemoryWorkflowService } from '../in-memory-workflow-service.js'
 import { runWorkflowGraph } from './graph-runner.js'
 import { pikkuState } from '../../../pikku-state.js'
 
@@ -30,6 +30,7 @@ describe('graph forEach fanout', () => {
       name: 'fanoutParallel',
       pikkuFuncId: 'fanoutParallel',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['list'],
       graphHash: 'fanout-parallel-hash',
       nodes: {
@@ -87,6 +88,7 @@ describe('graph forEach fanout', () => {
       name: 'fanoutWholeItem',
       pikkuFuncId: 'fanoutWholeItem',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['list'],
       graphHash: 'fanout-whole-hash',
       nodes: {
@@ -144,6 +146,7 @@ describe('graph forEach fanout', () => {
       name: 'fanoutOrdered',
       pikkuFuncId: 'fanoutOrdered',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['list'],
       graphHash: 'fanout-ordered-hash',
       nodes: {
@@ -208,6 +211,7 @@ describe('graph forEach fanout', () => {
       name: 'fanoutJoin',
       pikkuFuncId: 'fanoutJoin',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['list'],
       graphHash: 'fanout-join-hash',
       nodes: {
@@ -269,6 +273,7 @@ describe('graph forEach fanout', () => {
       name: 'fanoutSequential',
       pikkuFuncId: 'fanoutSequential',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['list'],
       graphHash: 'fanout-seq-hash',
       nodes: {
@@ -320,6 +325,7 @@ describe('graph forEach fanout', () => {
       name: 'fanoutNotArray',
       pikkuFuncId: 'fanoutNotArray',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['list'],
       graphHash: 'fanout-not-array-hash',
       nodes: {
@@ -378,6 +384,7 @@ describe('graph forEach fanout', () => {
       name: 'fanoutChained',
       pikkuFuncId: 'fanoutChained',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['groups'],
       graphHash: 'fanout-chained-hash',
       nodes: {
@@ -453,6 +460,7 @@ describe('graph forEach fanout', () => {
       name: 'fanoutEmpty',
       pikkuFuncId: 'fanoutEmpty',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['list'],
       graphHash: 'fanout-empty-hash',
       nodes: {
@@ -505,6 +513,7 @@ describe('graph forEach fanout', () => {
       name: 'fanoutTrigger',
       pikkuFuncId: 'fanoutTrigger',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['handle'],
       graphHash: 'fanout-trigger-hash',
       nodes: {
@@ -538,6 +547,7 @@ describe('graph forEach fanout', () => {
       name: 'fanoutUnknownSource',
       pikkuFuncId: 'fanoutUnknownSource',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['a'],
       graphHash: 'fanout-unknown-hash',
       nodes: {
@@ -586,6 +596,7 @@ describe('graph forEach fanout', () => {
       name: 'plainGraph',
       pikkuFuncId: 'plainGraph',
       source: 'graph',
+      auth: false,
       entryNodeIds: ['first'],
       graphHash: 'plain-hash',
       nodes: {

@@ -1,5 +1,8 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { serializeTypedRPCMap } from './serialize-typed-rpc-map.js'
 
 describe('serializeTypedRPCMap', () => {
@@ -20,7 +23,7 @@ describe('serializeTypedRPCMap', () => {
     },
   } as any
 
-  test('uses strict voidish detection for RPCInvoke and RPCRemote', () => {
+  test('uses strict voidish detection for RPCInvoke and RPCMesh', () => {
     const result = serializeTypedRPCMap(
       logger,
       '/tmp/pikku-rpc-map.gen.d.ts',
@@ -30,7 +33,8 @@ describe('serializeTypedRPCMap', () => {
       {
         health: { inputType: 'void', outputType: 'string' },
         list: { inputType: 'any', outputType: 'string' },
-      }
+      },
+      '/tmp/pikku-custom-types.gen.d.ts'
     )
 
     assert.match(result, /type IsAny<T> = 0 extends \(1 & T\) \? true : false/)
@@ -38,6 +42,31 @@ describe('serializeTypedRPCMap', () => {
     assert.match(
       result,
       /\.\.\.args: IsVoidishInput<FlattenedRPCMap\[Name\]\['input'\]> extends true/
+    )
+  })
+
+  test('agent run and approve resolve to a result carrying status and pendingApprovals', () => {
+    const result = serializeTypedRPCMap(
+      logger,
+      '/tmp/pikku-rpc-map.gen.d.ts',
+      {},
+      emptyTypesMap,
+      {},
+      {},
+      '/tmp/pikku-custom-types.gen.d.ts'
+    )
+
+    assert.match(
+      result,
+      /\| \{ status\?: undefined; pendingApprovals\?: undefined \}\n  \| \{ status: 'suspended'; pendingApprovals: AgentPendingApproval\[\] \}/
+    )
+    assert.match(
+      result,
+      /export type TypedAgentRun = <Name extends AgentName>\([\s\S]*?\) => Promise<AgentRunResult<AgentOutputOf<Name>>>/
+    )
+    assert.match(
+      result,
+      /export type TypedAgentApprove = <Name extends AgentName>\(\n  name: Name,\n  input: AgentApproveInput\n\) => Promise<AgentRunResult<AgentOutputOf<Name>>>/
     )
   })
 
@@ -49,6 +78,7 @@ describe('serializeTypedRPCMap', () => {
       emptyTypesMap,
       {},
       {},
+      '/tmp/pikku-custom-types.gen.d.ts',
       new Map([
         ['registry', { package: '@pikkustudio/addon-registry', remote: true }],
       ])
@@ -70,6 +100,7 @@ describe('serializeTypedRPCMap', () => {
       emptyTypesMap,
       {},
       {},
+      '/tmp/pikku-custom-types.gen.d.ts',
       new Map([['slack', { package: '@pikku/addon-slack' }]])
     )
 
@@ -86,7 +117,8 @@ describe('serializeTypedRPCMap', () => {
       {},
       emptyTypesMap,
       {},
-      {}
+      {},
+      '/tmp/pikku-custom-types.gen.d.ts'
     )
 
     assert.match(
@@ -96,5 +128,56 @@ describe('serializeTypedRPCMap', () => {
     // A second declaration drops every optional field the runner honours —
     // model, temperature, attachments, context — from the call site.
     assert.doesNotMatch(result, /interface AgentInput/)
+  })
+
+  test('a versioned remote addon imports its maps from the synced SDK', () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'pikku-rpc-map-sdk-'))
+    const name = '@pikkustudio/addon-registry'
+    try {
+      const integrity = 'sha512-AAAA'
+      writeFileSync(
+        join(rootDir, 'pikku-addons.lock'),
+        JSON.stringify({
+          lockfileVersion: 1,
+          sdks: { [name]: { range: '^1.4.0', version: '1.4.2', integrity } },
+        })
+      )
+      const sdk = join(rootDir, '.pikku', 'remote', `${name}@1.4.2`)
+      mkdirSync(sdk, { recursive: true })
+      writeFileSync(
+        join(sdk, 'manifest.json'),
+        JSON.stringify({ name, version: '1.4.2' })
+      )
+      writeFileSync(join(sdk, '.integrity'), integrity)
+
+      const result = serializeTypedRPCMap(
+        logger,
+        join(rootDir, '.pikku', 'rpc', 'pikku-rpc-wirings-map.gen.d.ts'),
+        {},
+        emptyTypesMap,
+        {},
+        {},
+        join(rootDir, '.pikku', 'pikku-custom-types.gen.d.ts'),
+        new Map([
+          ['registry', { package: name, range: '^1.4.0', remote: true }],
+        ]),
+        undefined,
+        undefined,
+        rootDir
+      )
+
+      assert.ok(
+        result.includes(
+          `import type { RPCMap as RegistryRPCMap } from '../remote/${name}@1.4.2/rpc/pikku-rpc-wirings-map.remote.gen.js'`
+        )
+      )
+      assert.ok(
+        result.includes(
+          `import type { AgentMap as RegistryAgentMap } from '../remote/${name}@1.4.2/agent/pikku-agent-map.gen.d.js'`
+        )
+      )
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true })
+    }
   })
 })

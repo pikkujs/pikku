@@ -39,10 +39,13 @@ export const CloudVariablesGet = pikkuSessionlessFunc({
       ctx.projectId,
       requested
     )
-    const { exists, value } = await rpc.invoke('getStageConsoleVariable', {
-      stageId,
-      variableId: name,
-    })
+    const { exists, value } = await rpc.invoke(
+      'cloud:getStageConsoleVariable',
+      {
+        stageId,
+        variableId: name,
+      }
+    )
 
     if (json) {
       console.log(JSON.stringify({ branch, name, exists, value }, null, 2))

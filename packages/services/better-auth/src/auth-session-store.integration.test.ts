@@ -22,11 +22,7 @@ const signUp = async () => {
     }),
     emailAndPassword: { enabled: true },
     plugins: [bearer()],
-    secondaryStorage: {
-      get: (key) => store.get(key),
-      set: (key, value, ttl) => store.set(key, value, ttl),
-      delete: (key) => store.delete(key),
-    },
+    secondaryStorage: store,
   })
 
   const response = await auth.api.signUpEmail({
@@ -61,7 +57,7 @@ const resolve = async (
         headers: () => headers,
       },
     },
-    setSession: (s: any) => captured.push(s),
+    setInitialSession: (s: any) => captured.push(s),
   }
   await betterAuthStoreSession({ store: () => store })(
     services,

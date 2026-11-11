@@ -1,7 +1,17 @@
-import { test, describe } from 'node:test'
+import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
+import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { streamWorkflowRunStatus } from './workflow-status-stream.js'
+import { MissingSessionError } from '../../errors/errors.js'
+import { WorkflowNotFoundError } from './workflow-errors.js'
 import type { WorkflowRunService } from './workflow.types.js'
+
+beforeEach(() => {
+  resetPikkuState()
+  pikkuState(null, 'workflows', 'meta', {
+    checkout: { name: 'checkout', source: 'graph', expose: true },
+  } as any)
+})
 
 const run = (over: Record<string, unknown> = {}) =>
   ({
@@ -9,7 +19,7 @@ const run = (over: Record<string, unknown> = {}) =>
     workflow: 'checkout',
     status: 'running',
     input: {},
-    wire: {},
+    wire: { pikkuUserId: 'user-a' },
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -24,7 +34,7 @@ const step = (stepName: string, status: string, over: any = {}) =>
  */
 const harness = (
   polls: Array<{ run: any; steps: any[] }>,
-  { detailed = false, session = undefined as any } = {}
+  { detailed = false, session = { userId: 'user-a' } as any } = {}
 ) => {
   const sent: any[] = []
   let closed = false
@@ -47,6 +57,7 @@ const harness = (
     stream: () =>
       streamWorkflowRunStatus({
         workflowRunService,
+        workflowName: 'checkout',
         runId: 'run-1',
         channel: {
           send: async (data: any) => {
@@ -56,12 +67,34 @@ const harness = (
             closed = true
           },
         },
-        session,
+        wire: { session },
         detailed,
         pollIntervalMs: 1,
       }),
   }
 }
+
+describe('streamWorkflowRunStatus refuses anyone but the owner of this workflow', () => {
+  const refused = (polled: any, session: any) =>
+    assert.rejects(
+      harness([{ run: polled, steps: [] }], { session }).stream(),
+      /Not authorized to access this workflow run/
+    )
+
+  test('a run with no owner', () =>
+    refused(run({ wire: { type: 'trigger' } }), { userId: 'user-a' }))
+  test('another user', () => refused(run(), { userId: 'user-b' }))
+  test('a run of a different workflow', () =>
+    assert.rejects(
+      harness([{ run: run({ workflow: 'other' }), steps: [] }]).stream(),
+      WorkflowNotFoundError
+    ))
+  test('no session', () =>
+    assert.rejects(
+      harness([{ run: run(), steps: [] }], { session: null }).stream(),
+      MissingSessionError
+    ))
+})
 
 describe('streamWorkflowRunStatus', () => {
   test('a run that is already finished never starts a timer', async () => {
@@ -286,9 +319,10 @@ describe('streamWorkflowRunStatus', () => {
           },
           getRunSteps: async () => [],
         } as unknown as WorkflowRunService,
+        workflowName: 'checkout',
         runId: 'run-1',
         channel: { send: async () => {}, close: async () => {} },
-        session: undefined,
+        wire: { session: { userId: 'user-a' } },
         pollIntervalMs: 1,
       }),
       /the database went away/
@@ -321,6 +355,7 @@ describe('streamWorkflowRunStatus closes the channel when a poll throws', () => 
       stream: () =>
         streamWorkflowRunStatus({
           workflowRunService,
+          workflowName: 'checkout',
           runId: 'run-1',
           channel: {
             send: async () => {},
@@ -328,7 +363,7 @@ describe('streamWorkflowRunStatus closes the channel when a poll throws', () => 
               closed = true
             },
           },
-          session: undefined as any,
+          wire: { session: { userId: 'user-a' } },
           pollIntervalMs: 1,
         }),
     }
@@ -377,6 +412,7 @@ describe('streamWorkflowRunStatus never runs two polls at once', () => {
 
     await streamWorkflowRunStatus({
       workflowRunService,
+      workflowName: 'checkout',
       runId: 'run-1',
       channel: {
         send: async (d: any) => {
@@ -384,7 +420,7 @@ describe('streamWorkflowRunStatus never runs two polls at once', () => {
         },
         close: async () => {},
       },
-      session: undefined as any,
+      wire: { session: { userId: 'user-a' } },
       pollIntervalMs: 1,
     })
 

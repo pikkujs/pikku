@@ -1,7 +1,7 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { WorkflowNotFoundError } from './workflow-errors.js'
 

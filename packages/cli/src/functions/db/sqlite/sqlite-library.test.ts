@@ -3,7 +3,12 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, symlinkSync, writeFileSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { findSqliteLibrary, SQLITE_LIBRARY_ENV } from './sqlite-library.js'
+import {
+  findSqliteLibrary,
+  isCrossTarget,
+  parseBunCompileTarget,
+  SQLITE_LIBRARY_ENV,
+} from './sqlite-library.js'
 
 describe('findSqliteLibrary', () => {
   test('takes the library the environment names, resolved through links', () => {
@@ -53,5 +58,45 @@ describe('findSqliteLibrary', () => {
     })
 
     assert.equal(lookup.path, undefined)
+  })
+})
+
+describe('parseBunCompileTarget', () => {
+  const host = { platform: 'darwin' as const, arch: 'arm64' }
+
+  test('is the host when no target is set', () => {
+    assert.deepEqual(parseBunCompileTarget(undefined, host), host)
+    assert.equal(isCrossTarget(parseBunCompileTarget('', host), host), false)
+  })
+
+  test("reads bun's target names, variants included", () => {
+    assert.deepEqual(parseBunCompileTarget('bun-linux-arm64', host), {
+      platform: 'linux',
+      arch: 'arm64',
+    })
+    assert.deepEqual(parseBunCompileTarget('bun-linux-x64-musl', host), {
+      platform: 'linux',
+      arch: 'x64',
+    })
+    assert.deepEqual(parseBunCompileTarget('bun-windows-x64-baseline', host), {
+      platform: 'win32',
+      arch: 'x64',
+    })
+    assert.deepEqual(parseBunCompileTarget('bun-darwin', host), host)
+  })
+
+  test('a Linux target from a Mac is a cross build', () => {
+    assert.equal(
+      isCrossTarget(parseBunCompileTarget('bun-linux-arm64', host), host),
+      true
+    )
+  })
+
+  test('refuses a target it cannot read', () => {
+    assert.throws(
+      () => parseBunCompileTarget('linux-arm64', host),
+      /bun-linux-arm64/
+    )
+    assert.throws(() => parseBunCompileTarget('bun-freebsd-x64', host))
   })
 })

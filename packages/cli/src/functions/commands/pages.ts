@@ -20,7 +20,7 @@ import {
   DEFAULT_BROWSER_DRIVER,
   resolveScenarioBrowserProvider,
 } from './scenario-browser.js'
-import { resolveEnvironment } from './environment.js'
+import { primaryFrontendName, resolveEnvironment } from './environment.js'
 import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
 import {
   resolveStatementMint,
@@ -94,7 +94,7 @@ export const pagesScreenshot = pikkuSessionlessFunc({
   output: PagesScreenshotOutput,
   func: async (
     { config, getInspectorState, variables },
-    { baseUrl, app, out, params, as, environment = 'local', viewport }
+    { baseUrl, app, out, params, as, environment = 'local', backend, viewport }
   ) => {
     const root = findWorkspaceRoot(config.rootDir)
     const all = await discoverPages(root, app ? { apps: [app] } : {})
@@ -117,6 +117,8 @@ export const pagesScreenshot = pikkuSessionlessFunc({
       const env = resolveEnvironment({
         environment,
         environments: config.environments ?? {},
+        backend,
+        primaryFrontend: primaryFrontendName(config.frontends),
         appUrl: baseUrl,
       })
       const provider = await resolveScenarioBrowserProvider({

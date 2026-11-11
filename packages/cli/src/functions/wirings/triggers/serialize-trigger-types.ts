@@ -24,7 +24,8 @@ ${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = 
 
 /**
  * A trigger function that sets up a subscription and returns a teardown function.
- * The trigger is fired via wire.trigger.invoke(data).
+ * The trigger is fired via wire.trigger.invoke(data), or
+ * wire.trigger.invoke(data, { pikkuUserId }) to run the target as that user.
  *
  * @template TInput - Input type (configuration passed when wired)
  * @template TOutput - Output type produced when trigger fires
@@ -197,6 +198,8 @@ ${
  * stays off until someone turns it on. Declaration only: nothing runs here.
  *
  * @param source - Webhook source with name, events and its steps
+ *
+ * @example snippet: wireTriggerWebhookSource
  */
 export const wireTriggerWebhookSource = <
   Events extends Record<string, StandardSchemaV1> = Record<string, StandardSchemaV1>

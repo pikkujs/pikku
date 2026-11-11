@@ -1,5 +1,13 @@
 import { pikkuState } from '../pikku-state.js'
 
+/**
+ * Base class for errors a function throws on purpose. Subclass it and register
+ * the subclass with {@link addError} to choose the status and message the
+ * caller gets; an unregistered error answers 500. `name` is set to the
+ * subclass's name, and {@link isExpectedError} treats every `PikkuError` as
+ * expected, so it is logged by message rather than with a stack trace.
+ * @group Error
+ */
 export class PikkuError extends Error {
   constructor(message: string = 'An error occurred') {
     super(message)
@@ -20,6 +28,7 @@ export const isExpectedError = (error: unknown): boolean =>
   error instanceof PikkuError ||
   (error as { expected?: unknown } | null)?.expected === true
 
+/** What {@link addError} registers against an error class. */
 export interface ErrorDetails {
   /** The HTTP status this error answers with, instead of a 500. */
   status: number

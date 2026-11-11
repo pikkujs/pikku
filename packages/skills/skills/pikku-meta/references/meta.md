@@ -10,19 +10,23 @@
 `pikku info` is the same ground as human-readable tables. Prefer `meta` when you are
 going to act on the output; prefer `info` when a person is going to read it.
 
-
 ## Reading
 
-| Command                         | What it answers                                                                                                                  |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `pikku meta context`            | Everything a planner needs in one call — functions, wires, middleware, permissions, workflows, capabilities, layout. Start here. |
-| `pikku meta functions get <id>` | One function's input/output schema names, source file, tags, expose/readonly                                                     |
-| `pikku meta schemas get <name>` | One generated JSON schema                                                                                                        |
-| `pikku meta workflows get <id>` | One workflow's steps                                                                                                             |
-| `pikku meta permissions list`   | What permissions exist and where they are defined                                                                                |
-| `pikku meta middleware list`    | What middleware exists                                                                                                           |
-| `pikku meta wires list`         | Wires by transport (http, channel, scheduler, queue, trigger)                                                                    |
-| `pikku meta clients`            | Exposed RPCs/workflows/channels with their type names — what a frontend can call                                                 |
+| Command                         | What it answers                                                                                                                                |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pikku meta context`            | A short map of the project; add `--json` for the full planner view                                                                             |
+| `pikku meta grep <terms>`       | Search functions, workflows, wires, permissions, screens, translations; quote `'a\|b'` for either                                              |
+| `pikku meta db [tables]`        | JSON: where tables are declared, which ones, their generated types, and the commands that make the SQL; naming tables lists their column types |
+| `pikku meta screens`            | Frontend routes, the RPCs each page reaches, and its file                                                                                      |
+| `pikku meta services`           | Session fields, declared services and auth setup                                                                                               |
+| `pikku meta emails`             | Email templates, the data each takes, and their locales                                                                                        |
+| `pikku meta functions get <id>` | One function's input/output schema names, source file, tags, expose/readonly                                                                   |
+| `pikku meta schemas get <name>` | One generated JSON schema                                                                                                                      |
+| `pikku meta workflows get <id>` | One workflow's steps                                                                                                                           |
+| `pikku meta permissions list`   | What permissions exist and where they are defined                                                                                              |
+| `pikku meta middleware list`    | What middleware exists                                                                                                                         |
+| `pikku meta wires list`         | Wires by transport (http, channel, scheduler, queue, trigger)                                                                                  |
+| `pikku meta clients`            | Exposed RPCs/workflows/channels with their type names — what a frontend can call                                                               |
 
 `list` is the default for each group, so `pikku meta functions` and `pikku meta functions list`
 are the same call.

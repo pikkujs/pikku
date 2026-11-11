@@ -4,7 +4,13 @@ import type {
   PikkuChannelHandler,
 } from './channel.types.js'
 import { channelRemote, releaseChannelHostRPC } from './channel-host-rpc.js'
+import { outgoingTraceparent, type TraceContext } from '../../trace.js'
 
+/**
+ * Base class for a runtime's {@link PikkuChannelHandler}. A runtime implements `send` and `sendBinary`; this builds the {@link PikkuChannel} on top, with in-memory state and `remote`.
+ *
+ * Closing the channel fails any `remote` calls still waiting on the peer.
+ */
 export abstract class PikkuAbstractChannelHandler<
   OpeningData = unknown,
   Out = unknown,
@@ -16,6 +22,8 @@ export abstract class PikkuAbstractChannelHandler<
     public channelName: string,
     protected openingData: OpeningData
   ) {}
+
+  public trace?: TraceContext
 
   public abstract send(message: Out, isBinary?: boolean): Promise<void> | void
 
@@ -40,7 +48,12 @@ export abstract class PikkuAbstractChannelHandler<
           channelState = undefined
         },
         remote: (funcName: string, data?: unknown) =>
-          channelRemote(this.getChannel(), funcName, data),
+          channelRemote(
+            this.getChannel(),
+            funcName,
+            data,
+            outgoingTraceparent(this)
+          ),
       }
     }
     return this.channel

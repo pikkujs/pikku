@@ -14,6 +14,17 @@ import type {
   MiddlewarePriority,
 } from './middleware.types.js'
 
+/**
+ * Declares middleware that runs around a function: authentication, logging,
+ * headers, rate limits. Takes the middleware itself, or `{ func, name,
+ * description, priority }`; `priority` (default `medium`) orders it among the
+ * other middleware on the same invocation, `highest` outermost.
+ *
+ * The inspector reads the destructured services and wire parameters to know
+ * what the middleware uses, so destructure them rather than taking them whole.
+ *
+ * @example snippet: corsMiddleware
+ */
 export const pikkuMiddleware = <
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
@@ -33,6 +44,12 @@ export const pikkuMiddleware = <
   return func
 }
 
+/**
+ * Declares middleware that takes options, so one definition can be wired
+ * several times with different configuration.
+ *
+ * @example snippet: middlewareFactory
+ */
 export const pikkuMiddlewareFactory = <In = any>(
   factory: CorePikkuMiddlewareFactory<In>
 ): CorePikkuMiddlewareFactory<In> => {

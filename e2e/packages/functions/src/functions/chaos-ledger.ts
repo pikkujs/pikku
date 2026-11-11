@@ -1,5 +1,9 @@
-import { appendFileSync, mkdirSync, readFileSync, existsSync } from 'fs'
-import { dirname, join } from 'path'
+import {
+  createScriptContent,
+  getText,
+  hasKey,
+  putText,
+} from '../script-content.js'
 
 /**
  * A file-backed record of every side effect the chaos steps perform.
@@ -10,8 +14,9 @@ import { dirname, join } from 'path'
  * time? An in-memory ledger is cleared by the very event under test and would
  * report "ran once" for both the correct and the incorrect outcome.
  *
- * Appends are single `O_APPEND` writes so that concurrent steps in a parallel
- * branch interleave whole lines instead of corrupting each other.
+ * The content service has no append, so an append is a read-modify-write. A
+ * per-directory promise chain serialises appends inside this process so that
+ * concurrent steps in a parallel branch still add whole lines.
  */
 export type ChaosLedgerEntry = {
   key: string
@@ -26,20 +31,54 @@ export type ChaosLedgerEntry = {
   attempt: number
   at: number
   detail?: unknown
+  /** The trace this effect ran on, and its own span within it. */
+  traceId?: string
+  spanId?: string
 }
 
-const ledgerPath = (dir: string) => join(dir, 'chaos-ledger.jsonl')
+const BUCKET = 'chaos'
+const LEDGER_KEY = 'chaos-ledger.jsonl'
 
-export const recordEffect = (dir: string, entry: ChaosLedgerEntry): void => {
-  const path = ledgerPath(dir)
-  mkdirSync(dirname(path), { recursive: true })
-  appendFileSync(path, `${JSON.stringify(entry)}\n`)
+const stores = new Map<string, ReturnType<typeof createScriptContent>>()
+const queues = new Map<string, Promise<unknown>>()
+
+const storeFor = (dir: string) => {
+  let store = stores.get(dir)
+  if (!store) {
+    store = createScriptContent(dir)
+    stores.set(dir, store)
+  }
+  return store
 }
 
-export const readEffects = (dir: string): ChaosLedgerEntry[] => {
-  const path = ledgerPath(dir)
-  if (!existsSync(path)) return []
-  return readFileSync(path, 'utf-8')
+export const recordEffect = (
+  dir: string,
+  entry: ChaosLedgerEntry
+): Promise<void> => {
+  const store = storeFor(dir)
+  const next = (queues.get(dir) ?? Promise.resolve()).then(async () => {
+    const previous = (await hasKey(store, BUCKET, LEDGER_KEY))
+      ? await getText(store, BUCKET, LEDGER_KEY)
+      : ''
+    await putText(
+      store,
+      BUCKET,
+      LEDGER_KEY,
+      `${previous}${JSON.stringify(entry)}\n`
+    )
+  })
+  queues.set(
+    dir,
+    next.catch(() => {})
+  )
+  return next
+}
+
+export const readEffects = async (dir: string): Promise<ChaosLedgerEntry[]> => {
+  await queues.get(dir)
+  const store = storeFor(dir)
+  if (!(await hasKey(store, BUCKET, LEDGER_KEY))) return []
+  return (await getText(store, BUCKET, LEDGER_KEY))
     .split('\n')
     .filter(Boolean)
     .map((line) => JSON.parse(line) as ChaosLedgerEntry)
@@ -51,5 +90,5 @@ export const readEffects = (dir: string): ChaosLedgerEntry[] => {
  * than attempt count. `attemptCount` alone can only express flakiness that
  * resolves itself on a schedule the workflow already knows.
  */
-export const isDependencyDown = (dir: string, name: string): boolean =>
-  existsSync(join(dir, `down-${name}`))
+export const isDependencyDown = (dir: string, name: string): Promise<boolean> =>
+  hasKey(storeFor(dir), BUCKET, `down-${name}`)

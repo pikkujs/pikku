@@ -1,6 +1,7 @@
 import { pikkuState } from '../../pikku-state.js'
 import type { Logger } from '../../services/index.js'
 
+/** Logs every wired scheduled task and its schedule at info level, typically once at startup. */
 export const logSchedulers = (logger: Logger) => {
   const scheduledTasks = pikkuState(null, 'scheduler', 'tasks')
   if (scheduledTasks.size === 0) {

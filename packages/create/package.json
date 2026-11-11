@@ -1,6 +1,6 @@
 {
   "name": "create-pikku",
-  "version": "0.12.12",
+  "version": "0.12.16",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -11,24 +11,30 @@
   "bin": "dist/index.js",
   "scripts": {
     "build:esm": "npx tsc",
-    "build": "bun run build:esm",
+    "build": "bun run clean && bun run build:esm",
     "test": "bash run-tests.sh",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@inquirer/prompts": "^8.5.2",
-    "chalk": "^6.0.0",
+    "@inquirer/prompts": "^8.7.3",
+    "chalk": "^6.0.1",
     "commander": "^15.0.0",
     "giget": "^3.3.1",
     "nanospinner": "^1.2.2"
   },
   "devDependencies": {
-    "@types/node": "^22.20.1",
-    "tsx": "^4.23.12"
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15"
   },
   "type": "module",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "license": "MIT"
 }

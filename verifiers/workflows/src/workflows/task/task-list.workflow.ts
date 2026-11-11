@@ -12,6 +12,7 @@ export const taskListWorkflow = pikkuWorkflowFunc<
   { projectId: string; taskTitles: string[] },
   { createdTasks: string[]; listedCount: number }
 >({
+  auth: false,
   title: 'Task List',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

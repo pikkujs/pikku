@@ -22,6 +22,7 @@ export interface CredentialStatus {
   oauth2?: { tokenSecretId: string }
 }
 
+/** Generated metadata for one declared secret. */
 export type CredentialMeta = {
   name: string
   displayName: string
@@ -34,6 +35,17 @@ export type CredentialMeta = {
   oauth2?: { tokenSecretId: string }
 }
 
+/**
+ * Wraps a {@link SecretService} with the secret types generated from your
+ * `defineSecret` declarations. An `optional` secret that is not set resolves to
+ * `undefined` instead of throwing.
+ *
+ * Values are cached for the life of the process (writes and deletes through
+ * this wrapper clear the key), so a secret rotated in the store is not seen
+ * until restart.
+ *
+ * @example snippet: shopServices
+ */
 export class TypedSecretService<
   TMap = Record<string, unknown>,
 > implements SecretService {

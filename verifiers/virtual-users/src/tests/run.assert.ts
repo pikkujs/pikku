@@ -18,6 +18,7 @@ import { runScheduledTask } from '@pikku/core/scheduler'
 import { boot, HOUR } from './boot.js'
 
 const GATE = 'PIKKU_DEV_VIRTUAL_USER_SIGN_IN'
+const envVariables = new LocalVariablesService()
 
 /**
  * The app a run signs in to: better-auth with the virtual user plugin behind a
@@ -25,8 +26,8 @@ const GATE = 'PIKKU_DEV_VIRTUAL_USER_SIGN_IN'
  * reaches it the way a deployed one does, by URL, carrying the cookie it got.
  */
 const startApp = async (gateOpen: boolean) => {
-  if (gateOpen) process.env[GATE] = 'true'
-  else delete process.env[GATE]
+  if (gateOpen) envVariables.set(GATE, 'true')
+  else envVariables.delete(GATE)
   const hits: { email: string }[] = []
   let auth: any
   const handle = async (req: IncomingMessage, res: ServerResponse) => {
@@ -129,7 +130,7 @@ describe('a scheduled virtual user run signs in and uses the app', () => {
   let app: Awaited<ReturnType<typeof startApp>>
 
   afterEach(async () => {
-    delete process.env[GATE]
+    envVariables.delete(GATE)
     await app.close()
   })
 
@@ -168,7 +169,11 @@ describe('a scheduled virtual user run signs in and uses the app', () => {
     const [run] = await world.virtualUserRunStore.list({
       virtualUserId: 'guest',
     })
-    assert.equal(run!.status, 'completed', run!.error ?? undefined)
+    assert.equal(
+      run!.status,
+      'completed',
+      run!.error ?? 'the run did not complete'
+    )
     const steps = await world.virtualUserRunStore.steps(run!.runId)
     const call = steps.find((s) => s.action.kind === 'call')!
     assert.equal(call.status, 200, 'the authenticated call succeeded')

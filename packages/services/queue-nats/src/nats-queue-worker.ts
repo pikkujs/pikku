@@ -18,8 +18,14 @@ import {
   runQueueJob,
 } from '@pikku/core/queue'
 import { pikkuState } from '@pikku/core/state'
+import { parseTraceparent, tracedLogger } from '@pikku/core/trace'
 import type { Logger } from '@pikku/core/services'
-import { attemptsFor, backoffFor, mapJsMsgToQueueJob } from './utils.js'
+import {
+  attemptsFor,
+  backoffFor,
+  mapJsMsgToQueueJob,
+  TRACEPARENT_HEADER,
+} from './utils.js'
 import { consumeQueue, type ConsumeHandle } from './consume.js'
 
 const MS_TO_NS = 1_000_000
@@ -206,9 +212,13 @@ export class NatsQueueWorkers implements QueueWorkers {
       // to mean "never retry"), while max_deliver is per-consumer — and an unset
       // max_deliver means unlimited, so without this a step marked no-retry
       // would be redelivered forever.
+      const failed = tracedLogger(
+        logger,
+        parseTraceparent(msg.headers?.get(TRACEPARENT_HEADER))?.traceId
+      )
       const attempts = attemptsFor(msg)
       if (attempts !== undefined && msg.info.deliveryCount >= attempts) {
-        logger.error(
+        failed.error(
           `NATS message ${msg.seq} on ${queueName} failed after ${msg.info.deliveryCount}/${attempts} attempts, giving up: ${message}`
         )
         msg.term()
@@ -216,7 +226,7 @@ export class NatsQueueWorkers implements QueueWorkers {
       }
 
       const delayMs = backoffFor(msg)
-      logger.error(
+      failed.error(
         `NATS message ${msg.seq} on ${queueName} failed (attempt ${msg.info.deliveryCount}${attempts ? `/${attempts}` : ''}), retrying in ${delayMs}ms: ${message}`
       )
       // nak(delay) is what makes backoff real. A bare nak() redelivers as fast

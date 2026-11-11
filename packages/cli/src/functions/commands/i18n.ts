@@ -231,7 +231,7 @@ export const renderI18nKey = (
 
 export const i18nCheck = pikkuSessionlessFunc({
   description:
-    'Read-only gate over the message catalogs: keys in two catalogs, mismatched placeholders, stale keys, and values still marked to translate.',
+    'Read-only gate over the message catalogs: keys in two catalogs, mismatched placeholders, stale keys, keys missing from a locale, and values still marked to translate.',
   input: I18nCheckInput,
   output: I18nCheckOutput,
   func: async ({ config }, { app, catalog, strict }) => {
@@ -271,6 +271,10 @@ export const renderI18nCheck = (
       for (const s of c.stale)
         lines.push(
           `    ${s.locale}: stale, not in ${a.baseLocale}: ${s.keys.join(', ')}`
+        )
+      for (const s of c.missing)
+        lines.push(
+          `    ${s.locale}: missing, in ${a.baseLocale} but not here: ${s.keys.join(', ')}`
         )
       console.log(`  ${c.catalog} ${lines.length ? '' : dim('ok')}`)
       for (const l of lines) console.log(l)

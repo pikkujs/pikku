@@ -1,5 +1,7 @@
 import { existsSync } from 'fs'
 import { resolve, join } from 'path'
+import { LocalVariablesService } from '@pikku/core/services'
+import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { loadUserModule } from './load-user-project.js'
 
 export interface UserConfigShape {
@@ -87,5 +89,8 @@ export async function loadUserConfigForDb(
     )
     return null
   }
-  return (await userCreateConfig()) as UserConfigShape
+  return (await callUserCreateConfig(
+    userCreateConfig,
+    new LocalVariablesService()
+  )) as UserConfigShape
 }

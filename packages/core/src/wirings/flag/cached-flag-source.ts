@@ -2,6 +2,7 @@ import type { FeatureFlagSource } from '../../services/feature-flag-service.js'
 import type { DeclaredFlag, FlagConfigSnapshot } from './flag.types.js'
 import { compiledFallbackSnapshot } from './validate-flag-definitions.js'
 
+/** Tuning for a {@link CachedFlagSource}. */
 export interface CachedFlagSourceOptions {
   /**
    * How long a snapshot is served before it is refreshed, in milliseconds.

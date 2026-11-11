@@ -9,6 +9,14 @@ import {
   type RunAgentParams,
 } from './agent-prepare.js'
 
+/**
+ * Registers an agent's runtime config under its name. Called by generated code.
+ *
+ * Skipped with a warning when the inspector recorded no metadata for the agent.
+ *
+ * @throws Error when an agent with the same name is already registered.
+ * @internal
+ */
 export const addAgent = (
   agentName: string,
   agent: CoreAgent<any, any>,
@@ -33,7 +41,6 @@ export async function approveAgent(
   agentRunState: AgentRunStateService,
   runId: string,
   approvals: { toolCallId: string; approved: boolean }[],
-  expectedAgentName?: string,
   params: RunAgentParams = {}
 ): Promise<{
   status: 'resumed' | 'suspended'
@@ -52,11 +59,6 @@ export async function approveAgent(
     run.resourceId,
     'run'
   )
-  if (expectedAgentName && run.agentName !== expectedAgentName) {
-    throw new Error(
-      `Run ${runId} belongs to agent '${run.agentName}', not '${expectedAgentName}'`
-    )
-  }
   if (run.status !== 'suspended')
     throw new Error('Run is not suspended: ' + run.status)
 

@@ -26,6 +26,7 @@ export const STALE_RUN_AFTER_MS = 2 * 60 * 60 * 1000
  * not the one that finds the most.
  */
 export const DEFAULT_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000
+/** The upper bound of the default cadence; see {@link DEFAULT_MIN_INTERVAL_MS}. */
 export const DEFAULT_MAX_INTERVAL_MS = 24 * 60 * 60 * 1000
 
 /** Whether a row is the tick's business, for stores that cannot ask in a query. */
@@ -58,6 +59,9 @@ export const nextRunAt = (
 export type VirtualUserSkipReason =
   'in-flight' | 'dispatch-failed' | 'claimed-elsewhere'
 
+/**
+ * What one scheduling tick did: runs started, virtual users skipped and why, and stranded runs reaped.
+ */
 export interface VirtualUserTickResult {
   dispatched: { virtualUserId: string; runId: string }[]
   skipped: { virtualUserId: string; reason: VirtualUserSkipReason }[]
@@ -65,6 +69,7 @@ export interface VirtualUserTickResult {
   reaped: string[]
 }
 
+/** The stores a scheduling tick reads and the callback that starts a run. */
 export interface VirtualUserTickParams {
   schedules: VirtualUserScheduleStore
   runs: VirtualUserRunStore

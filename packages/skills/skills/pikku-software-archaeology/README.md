@@ -38,7 +38,7 @@ Concept names are the stable IDs. On re-run after code changes, re-extract only 
 
 ## How Pikku consumes the blueprint
 
-Full mapping table in `references/pikku-mapping.md`. Summary: entities → Kysely migrations + Zod schemas; commands/queries → `pikkuFunc`s; api surfaces → `wireHTTP`; policies → shared permission functions (collapsing duplicated legacy checks); system workflows → `wireScheduler`/`wireQueueWorker`/`pikkuWorkflowFunc`; integrations → injected services with `defineSecret`/`defineCredential`; test-derived scenarios → `pikkuUserFlow` stories / e2e tests. Humans resolve `migration.json.decisionsNeeded` before any generation starts.
+Full mapping table in `references/pikku-mapping.md`. Summary: entities → Kysely migrations + Zod schemas; commands/queries → `pikkuFunc`s; api surfaces → `wireHTTP`; policies → shared permission functions (collapsing duplicated legacy checks); system workflows → `wireScheduler`/`wireQueueWorker`/`pikkuWorkflowFunc`; integrations → injected services with `defineSecret`/`defineCredential`; test-derived scenarios → `pikkuScenario` / `pikkuFeature` (see `references/tests-to-scenarios.md`). Humans resolve `migration.json.decisionsNeeded` before any generation starts.
 
 ## How uncertainty is represented
 
@@ -75,6 +75,8 @@ pikku-software-archaeology/
 ├── references/
 │   ├── blueprint.schema.json         # the output contract (JSON Schema)
 │   ├── pikku-mapping.md              # blueprint → Pikku primitives
+│   ├── tests-to-scenarios.md         # legacy test suite → blueprint scenarios → pikkuScenario
+│   ├── sources/                      # per-framework guides: rails, laravel, nestjs, express
 │   ├── second-opinion.md             # blueprint → owner-facing report: method, voice, red flags
 │   └── second-opinion-report-template.md  # the layered structure to fill in
 ├── example/
@@ -82,3 +84,12 @@ pikku-software-archaeology/
 └── scripts/
     └── validate.mjs                  # schema + cross-file validation (node, no deps)
 ```
+
+## Backlog: real-app test runs
+
+The framework guides in `references/sources/` are written from general knowledge of each framework and have not been run against a real codebase yet. Run the skill on these, scoped to one slice each (not the whole repo), clone into a scratch directory rather than a pikku repo, and fix whatever the guides miss:
+
+- **Redmine** (Rails, issue tracker, ~2006): the hardest test of `sources/rails.md` — callbacks, workflow states, plugins. Scope to issues + workflow transitions.
+- **Immich** (NestJS, photo backend): exercises `sources/nestjs.md` — guards, cron/queues, event handlers. Scope to one domain (e.g. albums or sharing).
+
+Things to check on each run: implicit events found, validator passes, which grep patterns in the guide come up empty, and how `tests-to-scenarios.md` handles the repo's own suite.

@@ -61,7 +61,7 @@ imports, and `tsc` never emits a hand-written `.d.ts` to `outDir`, so nothing
 put it in `dist`. Consumers got 8 unresolved-module errors plus 6
 `RequiredServices does not satisfy CoreSecretlessSingletonServices` follow-ons
 inside `node_modules`, for merely depending on an addon. The scaffold template
-had been right the whole time — `templates/function-addon` copies `types/` —
+had been right the whole time — `recipes/function-addon` copies `types/` —
 and the published packages had drifted from it with nothing watching.
 
 ## The check walks whichever generated directory a package ships

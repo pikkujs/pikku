@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { canonicalTypeString } from './utils/canonical-type-string.js'
 
 export class TypesMap {
   private map: Map<string, { originalName: string; path: string | null }> =
@@ -7,7 +8,7 @@ export class TypesMap {
     new Map()
 
   public addCustomType(name: string, type: string, references: string[]) {
-    this.customTypes.set(name, { type, references })
+    this.customTypes.set(name, { type: canonicalTypeString(type), references })
   }
 
   public addType(originalName: string, path: string) {

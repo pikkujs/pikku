@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
+import type { CLILogger } from '../../services/cli-logger.service.js'
 import { added, changed, dim, removed } from '../../utils/output.js'
 import {
   runValidate,
@@ -13,7 +14,8 @@ export { readJsonSafe, readTextSafe } from './shared-checks.js'
 
 export const FindingSchema = z.object({
   id: z.string(),
-  severity: z.enum(['error', 'warn', 'info']),
+  code: z.string().optional(),
+  severity: z.enum(['critical', 'error', 'warn', 'info']),
   message: z.string(),
   path: z.string(),
   fixHint: z.string(),
@@ -22,12 +24,26 @@ export const FindingSchema = z.object({
 export type Finding = z.infer<typeof FindingSchema>
 
 export const ValidateInput = z.object({
+  codegen: z
+    .boolean()
+    .optional()
+    .describe('Run `pikku all` first and report what it finds, such as PKU563'),
+  strict: z
+    .boolean()
+    .optional()
+    .describe(
+      'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings, and with `codegen`, codegen runs with `--strict-meta`'
+    ),
   skipTypecheck: z
     .boolean()
     .optional()
     .describe(
-      'Skip the frontend type-check stage (structural checks only, much faster)'
+      'Skip every type-check, backend and frontend, and the type-aware lint (structural checks only, much faster)'
     ),
+  skipFrontends: z
+    .boolean()
+    .optional()
+    .describe('Skip the frontend type-checks'),
   skipDeployChecks: z
     .boolean()
     .optional()
@@ -128,9 +144,14 @@ function describeRan(ran: z.infer<typeof ValidateOutput>['ran']): string {
 }
 
 export const renderValidate = (
-  _s: unknown,
-  { ok, root, ran, findings }: z.infer<typeof ValidateOutput>
+  { logger }: { logger: CLILogger },
+  output: z.infer<typeof ValidateOutput>
 ): void => {
+  if (logger.getOutputMode() === 'json') {
+    process.stdout.write(`${JSON.stringify(output)}\n`)
+    return
+  }
+  const { ok, root, ran, findings } = output
   // A green tick for a run that checked nothing is the one outcome worth
   // guarding against: auto-detection that finds nothing looks identical to
   // auto-detection that found everything and liked it.
@@ -156,13 +177,14 @@ export const renderValidate = (
       ? p.slice(root.length + 1)
       : p
 
+  const criticals = findings.filter((f) => f.severity === 'critical')
   const errors = findings.filter((f) => f.severity === 'error')
   const warns = findings.filter((f) => f.severity === 'warn')
   const infos = findings.filter((f) => f.severity === 'info')
 
-  for (const f of [...errors, ...warns, ...infos]) {
+  for (const f of [...criticals, ...errors, ...warns, ...infos]) {
     const icon =
-      f.severity === 'error'
+      f.severity === 'critical' || f.severity === 'error'
         ? removed('✗')
         : f.severity === 'warn'
           ? changed('⚠')
@@ -174,6 +196,9 @@ export const renderValidate = (
   }
 
   const counts: string[] = []
+  if (criticals.length) {
+    counts.push(removed(`${criticals.length} critical`))
+  }
   if (errors.length) {
     counts.push(
       removed(`${errors.length} error${errors.length !== 1 ? 's' : ''}`)

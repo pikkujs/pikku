@@ -137,6 +137,8 @@ export function createAzureHandler(
         queueName,
         data: data.data ?? data,
         id: context.invocationId,
+        traceparent: data.traceparent as string | undefined,
+        pikkuUserId: data.pikkuUserId as string | undefined,
         status: async () => 'active' as QueueJobStatus,
         metadata: () => ({
           processedAt: new Date(),
@@ -166,10 +168,9 @@ export function createAzureHandler(
       _context: InvocationContext
     ): Promise<void> => {
       await setupServices(factories)
-      const traceId = `cron-${crypto.randomUUID()}`
       const scheduledTasks = getScheduledTasks()
       for (const [name] of scheduledTasks) {
-        await runScheduledTask({ name, traceId })
+        await runScheduledTask({ name })
       }
     }
   }

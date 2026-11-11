@@ -47,13 +47,13 @@ harmless but worth knowing before you align it to the surrounding code.
 One more thing worth knowing before writing a rich virtual user: **`virtualUser.converse`
 builds its prompt from `name`, `jobTitle`, `personality` and the scenario's
 `task` only.** Fields like `disposition`, `goals` and `roles` are read and
-stored, and the console shows them, but they do not reach the conversing
+stored, but they do not reach the conversing
 virtual user's instructions. Anything that must shape how someone talks belongs in
 `personality` or in the task.
 
 A project that never declares a virtual user keeps working: a scenario that names no virtual user needs none.
 
-- `environments.<name>.apiUrl` is required. `signInPath` defaults to `/auth/sign-in/virtual-user`, `rpcPath` to `/rpc`.
+- `environments.<name>.backends` is required when the project declares backends (a URL, or `{ url, signInPath, rpcPath }` per backend; a local backend with no `url` takes `http://localhost:<dev.port>`). `signInPath` defaults to `/auth/sign-in/virtual-user`, `rpcPath` to `/rpc`. With several backends, pass `--backend <name>`.
 - **The signing key never goes in `pikku.config.json`.** `pikku dev` creates one under `.pikku-runtime/virtual-user/`; a deployed stage's deployer holds `VIRTUAL_USER_SIGNING_KEY`. `pikku scenario run` throws without a key.
 
 ## Virtual users that call a third-party API

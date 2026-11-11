@@ -1,8 +1,12 @@
 import type { BetterAuthInstance } from './define-auth.js'
 
+/**
+ * Resolves the better-auth instance — `services.auth`. `undefined` when the app
+ * wires no auth, which every operation here refuses with an error.
+ */
 export type AuthGetter = (() => Promise<BetterAuthInstance>) | undefined
 
-/**
+/*
  * User administration against better-auth's internal adapter.
  *
  * These are the capabilities better-auth's `admin()` plugin exposed as HTTP
@@ -17,7 +21,7 @@ export type AuthGetter = (() => Promise<BetterAuthInstance>) | undefined
  * They live here rather than in `@pikku/addon-admin` so a host can drive the
  * same operations from its own functions without taking the addon.
  *
- * Ban state is written here but enforced by the {@link ban} plugin, which must
+ * Ban state is written here but enforced by the `pikkuBan` plugin, which must
  * be wired for the columns to exist.
  */
 /**
@@ -45,7 +49,9 @@ const context = async (auth: AuthGetter) => {
       'User management requires better-auth to be wired (services.auth is missing)'
     )
   }
-  return (await auth()).$context as any
+  return await (
+    await auth()
+  ).$context
 }
 
 const assertPasswordLength = (ctx: any, password: string) => {
@@ -70,6 +76,14 @@ const assertPasswordLength = (ctx: any, password: string) => {
  * across them, so a failed link deletes the user it was for. Without that, the
  * caller is left with a passwordless user and every retry fails on the
  * duplicate email instead.
+ *
+ * For an invite, omit the password and follow with
+ * {@link sendAuthUserSignInLink}. The duplicate refusal is a plain `Error`;
+ * to treat an existing user as already invited, look them up first with
+ * `(await auth()).$context.internalAdapter.findUserByEmail(email)`.
+ *
+ * @example snippet: betterAuthUserAdmin
+ * @example snippet: betterAuthInvite
  */
 export const createAuthUser = async (
   auth: AuthGetter,
@@ -121,6 +135,8 @@ export const createAuthUser = async (
 /**
  * Set a user's password, creating their credential account if they signed up
  * through a social provider and never had one.
+ *
+ * @example snippet: betterAuthUserAdmin
  */
 export const setAuthUserPassword = async (
   auth: AuthGetter,
@@ -157,6 +173,8 @@ export const setAuthUserPassword = async (
 /**
  * Ban or unban a user. Banning also signs them out everywhere, so the ban takes
  * effect immediately rather than when their current session expires.
+ *
+ * @example snippet: betterAuthUserAdmin
  */
 export const setAuthUserBanned = async (
   auth: AuthGetter,
@@ -196,7 +214,11 @@ export const setAuthUserBanned = async (
   await ctx.internalAdapter.deleteUserSessions(userId)
 }
 
-/** Delete a user along with their sessions and linked accounts. */
+/**
+ * Delete a user along with their sessions and linked accounts.
+ *
+ * @example snippet: betterAuthUserAdmin
+ */
 export const deleteAuthUser = async (
   auth: AuthGetter,
   userId: string
@@ -208,7 +230,11 @@ export const deleteAuthUser = async (
   await ctx.internalAdapter.deleteUser(userId)
 }
 
-/** Sign a user out of every device, leaving the account intact. */
+/**
+ * Sign a user out of every device, leaving the account intact.
+ *
+ * @example snippet: betterAuthUserAdmin
+ */
 export const revokeAuthUserSessions = async (
   auth: AuthGetter,
   userId: string
@@ -226,11 +252,26 @@ export const revokeAuthUserSessions = async (
  * construction rather than by a separate invitation table. Clicking it verifies
  * the address as a side effect.
  *
- * Goes through `auth.api` rather than the internal adapter because the token,
- * its expiry and the send are the plugin's, and the endpoint it exposes is the
- * only place they are assembled. `email` is not checked against the directory
- * first: the plugin refuses an unknown address itself, and looking it up here
- * would only turn one authoritative answer into two that can disagree.
+ * Goes through `auth.api.signInMagicLink` rather than the internal adapter
+ * because the token, its expiry and the send are the plugin's, and the endpoint
+ * it exposes is the only place they are assembled. The mail goes out through
+ * the plugin's `sendMagicLink` callback, so the app's own template is used and
+ * the URL is never returned here.
+ *
+ * `email` is not checked against the directory. The plugin does not check it at
+ * send time either: an unknown address is mailed a link, and `disableSignUp`
+ * refuses it only when clicked (`new_user_signup_disabled`). An invite therefore
+ * creates the user first ({@link createAuthUser}).
+ *
+ * The link is built from better-auth's `baseURL`. Called from a function there
+ * is no request to derive it from, so without `baseURL` in the config (or
+ * `BETTER_AUTH_URL`) the send fails with "Invalid URL". `callbackURL` defaults to
+ * `/`; anything other than a path or a `trustedOrigins` origin is refused when
+ * the link is clicked. The plugin's default `expiresIn` is five minutes, which
+ * is too short for an invite.
+ *
+ * @example snippet: betterAuthUserAdmin
+ * @example snippet: betterAuthInvite
  */
 export const sendAuthUserSignInLink = async (
   auth: AuthGetter,
@@ -241,7 +282,7 @@ export const sendAuthUserSignInLink = async (
       'Sign-in links require better-auth to be wired (services.auth is missing)'
     )
   }
-  const instance = (await auth()) as any
+  const instance = await auth()
   if (typeof instance.api?.signInMagicLink !== 'function') {
     throw new Error(
       'Sign-in links require the magicLink() plugin to be wired into better-auth'

@@ -15,7 +15,9 @@ outcomes:
   (reason `allow-outside-dev-env`). This is the only value that opens it outside
   dev.
 - `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` equals `true` (reason `pikku-dev`). The CLI sets
-  this in `pikku dev`.
+  this in `pikku dev`. It counts only when `NODE_ENV` is not `production`: a
+  deploy that inherited the dev environment is not `pikku dev`, and must not get
+  statement-free switching or new virtual user rows from it.
 - Anything else is disabled.
 
 Rules that go with the gate:

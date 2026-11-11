@@ -1,6 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicolo-ribaudo/oxlint-config/refs/heads/main/schema.json",
-  "ignorePatterns": ["packages/cli/examples/**"],
+  "ignorePatterns": [
+    "packages/cli/examples/**",
+    "packages/inspector-go/testdata/**",
+    "inspector-parity/fixtures/**"
+  ],
   "rules": {
     "no-unused-vars": "off",
     "no-empty-pattern": "off",

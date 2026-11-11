@@ -28,16 +28,18 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { LocalVariablesService } from '@pikku/core/services'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
 
 import { createSingletonServices } from '../services.js'
 import { createConfig, connectionString } from '../config.js'
 import { readStepStarts } from './crash-reclaim-markers.js'
+import { createScriptContent } from '../script-content.js'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
 
@@ -48,10 +50,13 @@ const STEP_TIMEOUT_MS = 30_000
 const RUN_TIMEOUT_MS = 30_000
 const POLL_INTERVAL_MS = 100
 
-const markerDir = mkdtempSync(
-  join(process.env.CRASH_MARKER_BASE ?? tmpdir(), 'pikku-crash-reclaim-')
+const variables = new LocalVariablesService()
+const markerDir = join(
+  variables.get<string>('CRASH_MARKER_BASE') ?? tmpdir(),
+  `pikku-crash-reclaim-${randomUUID()}`
 )
-process.env.CRASH_MARKER_DIR = markerDir
+const markerContent = createScriptContent(markerDir)
+variables.set('CRASH_MARKER_DIR', markerDir)
 
 const workerPath = fileURLToPath(
   new URL('./crash-reclaim-worker.ts', import.meta.url)
@@ -88,7 +93,7 @@ const workers: ChildProcess[] = []
 const spawnWorker = async (label: string): Promise<Worker> => {
   const child = spawn(process.execPath, [...process.execArgv, workerPath], {
     env: {
-      ...process.env,
+      ...variables.getAll(),
       DATABASE_URL: connectionString,
       CRASH_STEP_LEASE_MS: String(STEP_LEASE_MS),
     },
@@ -111,7 +116,7 @@ const spawnWorker = async (label: string): Promise<Worker> => {
       )
     )
   })
-  if (process.env.CRASH_VERBOSE) {
+  if (variables.get('CRASH_VERBOSE')) {
     child.stdout!.on('data', (c) => process.stdout.write(`[${label}] ${c}`))
     child.stderr!.on('data', (c) => process.stderr.write(`[${label}] ${c}`))
   }
@@ -181,7 +186,10 @@ async function setup(): Promise<Harness> {
 
 const startAttempt = (runId: string, attempt: number) =>
   waitFor(
-    () => readStepStarts(markerDir, runId).find((s) => s.attempt === attempt),
+    async () =>
+      (await readStepStarts(markerDir, runId)).find(
+        (s) => s.attempt === attempt
+      ),
     STEP_TIMEOUT_MS,
     `attempt ${attempt} of run ${runId} to start`
   )
@@ -221,16 +229,32 @@ const attemptsOf = async (h: Harness, runId: string) =>
     status: row.status,
   }))
 
-const start = (h: Harness, workflow: string, crashes: number) =>
-  h.workflowService
-    .startWorkflow(workflow, { crashes }, { type: 'test' }, null as any)
-    .then(({ runId }) => runId)
+/** Each workflow this runner drives, started by its literal name. */
+const starters = {
+  crashReclaimWorkflow: (h: Harness, crashes: number) =>
+    h.workflowService.startWorkflow(
+      'crashReclaimWorkflow',
+      { crashes },
+      { type: 'test' },
+      null as any
+    ),
+  crashReclaimGraph: (h: Harness, crashes: number) =>
+    h.workflowService.startWorkflow(
+      'crashReclaimGraph',
+      { crashes },
+      { type: 'test' },
+      null as any
+    ),
+}
+
+const start = (h: Harness, workflow: keyof typeof starters, crashes: number) =>
+  starters[workflow](h, crashes).then(({ runId }) => runId)
 
 /** Kill the worker on attempt 1, let its lease lapse, and sweep into a new one. */
 async function reclaimAfterOneCrash(
   h: Harness,
   label: string,
-  workflow: string
+  workflow: keyof typeof starters
 ): Promise<void> {
   console.log(`\n--- ${label} ---`)
   const first = await spawnWorker('w1')
@@ -309,7 +333,7 @@ async function failsOnceAttemptsAreSpent(h: Harness): Promise<void> {
     `the step failed with WorkflowStepLeaseExpiredError`,
     { status: step.status, error: step.error }
   )
-  const starts = readStepStarts(markerDir, runId)
+  const starts = await readStepStarts(markerDir, runId)
   check(
     starts.length === 2,
     `no third attempt ran (retries: 1 allows two)`,
@@ -335,7 +359,7 @@ async function sweepJudgesTheLease(h: Harness): Promise<void> {
 
   await leaseLapsed(h, runId)
   await sleep(QUIET_WINDOW_MS)
-  const starts = readStepStarts(markerDir, runId)
+  const starts = await readStepStarts(markerDir, runId)
   const idle = await h.workflowService.getRun(runId)
   check(
     starts.length === 1 && idle?.status === 'running',
@@ -391,7 +415,7 @@ async function main(): Promise<void> {
   }
 
   await h.cleanup()
-  rmSync(markerDir, { recursive: true, force: true })
+  await markerContent.deleteByPrefix('markers', '')
   console.log(`\n${failures === 0 ? 'All passed' : `${failures} failed`}`)
   process.exit(failures === 0 ? 0 : 1)
 }

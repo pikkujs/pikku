@@ -1,0 +1,31 @@
+{
+  "name": "@pikku/verifiers-addon-deps-billing",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "An addon that calls the stripe addon by the alias it declares in pikku.uses",
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "exports": {
+    "./.pikku/*": "./.pikku/addon/*"
+  },
+  "pikku": {
+    "uses": {
+      "stripe": "@pikku/verifiers-addon-deps-stripe@^1.0.0"
+    }
+  },
+  "peerDependencies": {
+    "@pikku/core": "*",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@pikku/verifiers-addon-deps-stripe": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "zod": "^4"
+  }
+}

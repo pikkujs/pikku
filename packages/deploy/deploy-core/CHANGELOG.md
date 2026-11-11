@@ -1,5 +1,63 @@
 # @pikku/deploy
 
+## 0.12.19
+
+### Patch Changes
+
+- c7db9e2: `pikku deploy apply` now exits non-zero when the deploy fails, and `--fromPlan` works for providers that write no `infra.json`, such as standalone. `deploy plan` stages `deploy.embed`, so a plan applied later carries the same files. `deploy.defaultProvider` now takes effect when `-p` is not given. `deploy apply --runtime` is a real option, refused unless the provider supports that runtime.
+- Updated dependencies [a679e5d]
+- Updated dependencies [307fb8d]
+  - @pikku/core@0.12.152
+
+## 0.12.18
+
+### Patch Changes
+
+- edd7abf: Platform-service contributors are plain objects an addon registers with `defineContributors` (new `@pikku/core/contributors`) and a project opts in to by name with `wireAddon({ contributors })`. `dev.contributors`, `deploy.contributors`, addon `pikku.contributors`, the string-emitting `PlatformServiceContributor` API and its helpers, the adapter `contributors` option and the `devPlatformServicesFile` config output are removed, and a leftover one is a hard error: the CLI refuses the config keys by name and the inspector reports an addon `package.json` with `pikku.contributors` as PKU364 (see `docs/MIGRATION.md`). Contributors can declare `onServerStart` / `onServerStop`, run around the app's server lifecycle in `pikku dev`, `pikku serve`, the generic server entry, standalone and the Cloudflare container entry (which now runs the app's own `serverLifecycle`); on a Worker `onServerStart` is a build error. `ProviderAdapter.contributorSupport` gains a required `runsServerLifecycle`. `@pikku/core` is a new peer dependency of the deploy packages and `@pikku/kysely` of `@pikku/deploy-cloudflare`. The names in `wireAddon({ contributors })` are typed from the addon's published contributors meta, so a name the addon does not register fails `tsc` and completes in the editor. A project gets a generated `#pikku/contributor` (`defineContributors` and `Contributor` typed against its own singleton services, type-only apart from core's helper); addons keep using `@pikku/core/contributors`.
+- Updated dependencies [3562771]
+- Updated dependencies [edd7abf]
+- Updated dependencies [8a4233a]
+  - @pikku/core@0.12.148
+
+## 0.12.17
+
+### Patch Changes
+
+- a9318bd: Platform service contributors declare `needs` and `provides` and run in the order those require; an unmet need, a key provided twice or a cycle fails codegen by name. Generated `createPlatformServices(env, runtime)` receives the services the entry already built (`runtime.kysely` on standalone, after the database opens). Addons ship contributors in their package.json under `pikku.contributors`, picked up by `pikku dev` codegen and by `pikku deploy plan` / `apply`, which now also pass `deploy.contributors` from `pikku.config.json` to the adapter.
+
+## 0.12.16
+
+### Patch Changes
+
+- be98e56: `@pikku/deploy-cloudflare` applies the generated column coercion map, as `pikku dev` does.
+
+  The adapter now ships `coercionContributor`, on by default: when `db/coercion.gen.ts` exists, every entry's `createPlatformServices` wraps the platform's `services.kysely` with `createCoercionPlugin` and the map as a literal. It runs after every other contributor so it wraps the kysely they built. A platform whose own contributor already applies the map passes `coercion: false`.
+
+  `EntryGenerationContext` gains `coercionMap`, filled by the deploy build from the project's `coercion.gen.ts`, and a contributor's `imports` function now receives the entry context as a second argument (`collectContributorImports` takes it as a third).
+
+- 1112955: Deploy: `wireGateway` routes reach the deployment manifest.
+
+  A webhook gateway is now served from its handler's unit — the POST/GET wrappers, the handler they call and the services it builds — and is listed under the new `manifest.gateways` (`GatewayDefinition`). Previously the wrappers became two units of their own without the handler's services or meta, and the gateway itself appeared nowhere in the manifest.
+
+  Websocket and listener gateways have no unit a multi-unit provider can host, so `pikku deploy plan` / `apply` now fails naming each one and its route instead of building without it. Single-unit (standalone) deploys are unaffected.
+
+  The inspector filter now filters gateways — by handler function id, gateway name, tags or route — so a per-unit build only imports the gateway wirings it serves, and `tags` on `wireGateway` takes effect on `pikku all` as documented.
+
+  Breaking: `DeploymentManifest` has a required `gateways` field; code that constructs a manifest by hand has to supply it.
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 939dac7: Cloudflare units register their addons' functions and schemas on first use instead of at Worker startup.
+
+  `pikku all --lazy-addons` splits each wired addon's published bootstrap: its meta is still imported statically, while `schemas/register.gen.js` and `function/pikku-functions.gen.js` move into an exported, memoised `loadAddons()` as dynamic imports. Per-unit deploy codegen passes the flag for a provider whose adapter sets the new `ProviderAdapter.lazyAddonRegistration`; the Cloudflare adapter does, and its worker entries await `loadAddons()` before building singleton services. Addons already published work unchanged — the split reads their existing bootstrap, and one it does not recognise is imported whole. Other runtimes and the server container keep the eager bootstrap.
+
+  On a synthetic addon the size of `@pikku/addon-github` (811 functions, 1416 schemas) module evaluation at startup fell from ~438ms to ~191ms and registers nothing until the first request.
+
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
 ## 0.12.15
 
 ### Patch Changes

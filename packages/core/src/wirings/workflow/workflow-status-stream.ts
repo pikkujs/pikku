@@ -1,6 +1,8 @@
-import type { CoreUserSession } from '../../types/core.types.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
-import { assertWorkflowRunOwner } from './workflow-run-ownership.js'
+import {
+  checkWorkflowRunAccess,
+  type WorkflowCallerWire,
+} from './workflow-run-access.js'
 import type { WorkflowRunService, WorkflowStatus } from './workflow.types.js'
 
 /**
@@ -22,11 +24,15 @@ const TERMINAL: ReadonlySet<string> = new Set<WorkflowStatus>([
 
 const DEFAULT_POLL_INTERVAL_MS = 500
 
+/** What `streamWorkflowRunStatus` streams, to whom, and how much detail it includes. */
 export interface WorkflowStatusStreamParams {
   workflowRunService: WorkflowRunService
+  /** The workflow the route named. A run of any other workflow is refused. */
+  workflowName: string
   runId: string
   channel: Pick<PikkuChannel<unknown, any>, 'send' | 'close'>
-  session: CoreUserSession | undefined
+  /** Who is reading: the wire of the function serving the stream. */
+  wire: WorkflowCallerWire
   /**
    * Whether to include what the run produced. Off for the user-facing route:
    * a workflow's output and its error messages are internal detail, and a step
@@ -50,9 +56,10 @@ export interface WorkflowStatusStreamParams {
  */
 export const streamWorkflowRunStatus = async ({
   workflowRunService,
+  workflowName,
   runId,
   channel,
-  session,
+  wire,
   detailed = false,
   pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
 }: WorkflowStatusStreamParams): Promise<void> => {
@@ -66,10 +73,10 @@ export const streamWorkflowRunStatus = async ({
       await channel.close()
       return false
     }
-    // Checked on every poll, not just the first: ownership is read from the run
-    // itself, and a stream that outlives a session should stop rather than keep
-    // reporting.
-    assertWorkflowRunOwner(run.wire, session)
+    // Checked on every poll, not just the first, so a change to the run's owner
+    // or the workflow's access rules stops the stream. It runs against the wire
+    // captured at open, so session expiry or revocation is not re-validated.
+    await checkWorkflowRunAccess(workflowName, run, wire, 'read')
 
     const steps = await workflowRunService.getRunSteps(runId)
 
@@ -137,7 +144,7 @@ export const streamWorkflowRunStatus = async ({
   }
 
   // Every exit from here closes the channel, including the ones a throw takes:
-  // `assertWorkflowRunOwner` rejecting a session that lost access is exactly
+  // `checkWorkflowRunAccess` rejecting a session that lost access is exactly
   // the case where the stream should end rather than be left hanging open.
   try {
     // A run that is already finished is answered without ever starting a timer.

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/code-edit",
-  "version": "0.12.7",
+  "version": "0.12.13",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -72,21 +72,27 @@
       "types": "./dist/brand/index.d.ts",
       "import": "./dist/brand/index.js",
       "default": "./dist/brand/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "scripts": {
     "tsc": "tsc",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "release": "bun run build && npm test",
     "test": "bash run-tests.sh",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "typescript": "^6.0.3"
+    "@pikku/inspector-go": "^0.12.12"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3"
+    "@types/node": "^26.6.5"
   },
   "engines": {
     "node": ">=24"

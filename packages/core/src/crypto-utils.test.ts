@@ -248,9 +248,9 @@ describe('key derivation hardening', () => {
 })
 
 describe('encryptWithKeyMaterial / decryptWithKeyMaterial', () => {
-  const NAME = 'PIKKU_REMOTE_SECRET'
+  const NAME = 'PIKKU_MESH_SECRET'
   const keyMaterial = 'k'.repeat(43)
-  const info = 'pikku:remote-session'
+  const info = 'pikku:mesh-session'
 
   const SALT_BYTES = 16
   const IV_BYTES = 12
@@ -346,7 +346,7 @@ describe('encryptWithKeyMaterial / decryptWithKeyMaterial', () => {
     const encrypted = await encryptWithKeyMaterial(
       NAME,
       keyMaterial,
-      'pikku:remote-session',
+      'pikku:mesh-session',
       { data: 'sensitive' }
     )
     await assert.rejects(() =>

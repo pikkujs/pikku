@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { relative } from 'node:path'
-import { readModuleSpecifiers } from '@pikku/inspector'
+import { readModuleSpecifiersOf } from '../../inspector-helpers.js'
 import { collectAppSources } from './app-sources.js'
 import type { ValidateFinding } from './virtual-user-checks.js'
 
@@ -11,9 +11,6 @@ import type { ValidateFinding } from './virtual-user-checks.js'
  */
 const isBarrel = (specifier: string) =>
   specifier === '#pikku' || /^#pikku\/pikku-types\.gen(\.js)?$/.test(specifier)
-
-const barrelImports = (file: string, content: string): string[] =>
-  readModuleSpecifiers(file, content).filter(isBarrel)
 
 /**
  * `#pikku` is the app tier's only door onto Pikku, and it is a namespace rather
@@ -30,10 +27,14 @@ export const runPikkuBarrelChecks = async (
 ): Promise<ValidateFinding[]> => {
   const findings: ValidateFinding[] = []
 
-  for (const file of await collectAppSources(dir)) {
-    const content = await readFile(file, 'utf8')
-    if (!content.includes('#pikku')) continue
-    for (const specifier of barrelImports(file, content)) {
+  const sources: { fileName: string; content: string }[] = []
+  for (const fileName of await collectAppSources(dir)) {
+    const content = await readFile(fileName, 'utf8')
+    if (content.includes('#pikku')) sources.push({ fileName, content })
+  }
+  const specifiersOf = readModuleSpecifiersOf(sources)
+  for (const [index, { fileName: file }] of sources.entries()) {
+    for (const specifier of specifiersOf[index]!.filter(isBarrel)) {
       findings.push({
         id: 'pikku-barrel-import',
         severity: 'error',

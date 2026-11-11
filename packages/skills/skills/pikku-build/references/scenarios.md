@@ -254,10 +254,10 @@ bunx --bun pikku scenario run local --spawn --run browser    # the same journeys
 
 In a multi-app project that one run covers both frontends: each virtual user carries
 its own `app` and `@pikku/playwright` resolves the base url from the
-environment's `appUrls` map, so there is no second environment to run.
+environment's `frontends` map, so there is no second environment to run.
 
 `--spawn` starts and stops the server for the run; drop it if `bun run dev` is already up. The
-browser pass needs the environment's `appUrl` and a browser driver installed — without them the run
+browser pass needs a `frontends` entry in the environment and a browser driver installed — without them the run
 fails fast rather than half-running.
 
 **Run the whole suite, not the changeset's own scenarios.** The changeset's scenarios are the ones

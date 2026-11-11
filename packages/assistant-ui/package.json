@@ -1,6 +1,6 @@
 {
   "name": "@pikku/assistant-ui",
-  "version": "0.12.13",
+  "version": "0.12.14",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -10,26 +10,30 @@
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",
-  "main": "dist/cjs/index.js",
+  "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js"
-    }
+      "import": "./dist/esm/index.js"
+    },
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "scripts": {
     "tsc": "tsc",
     "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
-    "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
-    "build": "bun run build:esm && bun run build:cjs",
-    "prepublishOnly": "bun run build"
+    "build": "bun run clean && bun run build:esm",
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@ag-ui/client": "^0.0.57",
-    "@assistant-ui/react": "^0.15.14",
-    "@assistant-ui/react-ag-ui": "^0.0.54",
-    "@pikku/voice-agents": "^0.0.6",
+    "@ag-ui/client": "^0.0.59",
+    "@assistant-ui/react": "^0.15.29",
+    "@assistant-ui/react-ag-ui": "^0.0.70",
+    "@pikku/voice-agents": "^0.0.7",
     "react-markdown": "^10.1.0",
     "rxjs": "7.8.1"
   },

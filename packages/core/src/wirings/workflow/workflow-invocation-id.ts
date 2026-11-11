@@ -84,6 +84,7 @@ const sha1 = (message: Uint8Array): Uint8Array => {
   return out
 }
 
+/** A name-based (version 5) UUID, deterministic for the same name and namespace. */
 export const uuidv5 = (
   name: string,
   namespace: string = PIKKU_WORKFLOW_NAMESPACE
@@ -99,5 +100,8 @@ export const uuidv5 = (
   return formatUuid(bytes)
 }
 
+/**
+ * A stable id for one step of one run, the same on every retry and replay — usable as an idempotency key.
+ */
 export const deriveInvocationId = (runId: string, stepName: string): string =>
   uuidv5(`${runId}:${stepName}`)

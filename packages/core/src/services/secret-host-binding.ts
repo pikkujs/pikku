@@ -1,5 +1,10 @@
 import type { SecretDefinitionsMeta } from '../wirings/secret/secret.types.js'
 
+/**
+ * Thrown when a secret would be sent to a host its `defineSecret` declaration
+ * does not list in `allowedHosts`, or, when the project requires
+ * `allowedHosts`, when it lists none.
+ */
 export class SecretHostNotAllowedError extends Error {
   constructor(
     public readonly secretId: string,

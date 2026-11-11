@@ -3,16 +3,19 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "ignoreFiles": [
-    "**/sdk/**",
+    "**/contract/**",
     "**/*.test.ts",
     "**/node_modules/**",
     "**/dist/**"
   ],
-  "outDir": "./.pikku",
   "addon": {
     "displayName": "Pikku Studio Cloud CLI",
     "description": "The pikku cloud command group",
     "categories": ["Utility"],
     "icon": "./package.svg"
+  },
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "off"
   }
 }

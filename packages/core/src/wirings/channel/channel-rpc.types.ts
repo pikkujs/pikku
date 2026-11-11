@@ -7,14 +7,17 @@ export const CHANNEL_RPC_REQUEST = 'pikku-rpc-request'
 export const CHANNEL_RPC_RESPONSE = 'pikku-rpc-response'
 export const CHANNEL_RPC_PENDING = 'pikku-rpc-pending'
 
+/** A request frame asking the peer on a channel to run one of its capabilities. */
 export interface ChannelRPCRequest {
   action: typeof CHANNEL_RPC_REQUEST
   id: string
   funcName: string
   data: unknown
-  traceId?: string
+  /** A claim by the peer. See `trustInboundTraceparent` on the responder. */
+  traceparent?: string
 }
 
+/** The answer to a {@link ChannelRPCRequest} with the same `id`: a result when `ok`, an error name and message otherwise. */
 export interface ChannelRPCResponse {
   action: typeof CHANNEL_RPC_RESPONSE
   id: string
@@ -52,7 +55,7 @@ export const isChannelRPCRequest = (
   message.id.length > 0 &&
   typeof message.funcName === 'string' &&
   message.funcName.length > 0 &&
-  (message.traceId === undefined || typeof message.traceId === 'string')
+  (message.traceparent === undefined || typeof message.traceparent === 'string')
 
 export const isChannelRPCResponse = (
   message: unknown
@@ -98,7 +101,11 @@ export interface ApprovalPolicy {
   approvalDescriptionFn?: (input: unknown) => Promise<string> | string
 }
 
-export type CapabilityHandler = (data: any) => Promise<unknown> | unknown
+/** A function one end of a channel offers for the peer to call through `channel.remote`. */
+export type CapabilityHandler = (
+  data: any,
+  context?: { traceparent?: string }
+) => Promise<unknown> | unknown
 
 /**
  * `needsApproval` is required here on purpose. On `AgentToolDef` the same
@@ -110,8 +117,10 @@ export interface CapabilityDef extends ApprovalPolicy {
   execute: CapabilityHandler
 }
 
+/** A capability as registered: a bare handler, which is treated as needing approval, or a {@link CapabilityDef} that says whether it does. */
 export type Capability = CapabilityHandler | CapabilityDef
 
+/** The capabilities one end of a channel answers to, by name. Only names listed here run; anything else the peer asks for is refused. */
 export type Capabilities = Record<string, Capability>
 
 export const isCapabilityDef = (

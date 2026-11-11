@@ -18,13 +18,13 @@ and a dictionary.
 
 `encryptWithKeyMaterial` / `decryptWithKeyMaterial` take **high-entropy key
 material** and use HKDF-SHA256, which is effectively free. They protect the
-remote-RPC session envelope, whose secret is a generated deployment value. HKDF
+mesh RPC session envelope, whose secret is a generated deployment value. HKDF
 offers no brute-force resistance at all, which is why the minimum length is
 enforced fail-closed at both ends: the entropy has to live in the secret,
 because nothing else supplies it.
 
 The split exists because the cost profiles are opposites. Stretching on a
-per-request path cost ~269ms per remote hop and would have consumed most of a
+per-request path cost ~269ms per mesh hop and would have consumed most of a
 Cloudflare Workers CPU budget; expanding a human passphrase would leave it
 one cheap hash from being guessed. Both blobs use the same
 `[salt:16][iv:12][ct+tag]` layout, so they are indistinguishable on the wire but

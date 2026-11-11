@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
  * installed dependencies, build output, and its own generated `.pikku`.
  */
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
-const appTrees = ['templates', 'e2e', 'verifiers']
+const appTrees = ['recipes', 'e2e', 'verifiers']
 const skipped = new Set(['node_modules', 'dist', '.next', 'build'])
 
 /**

@@ -98,7 +98,7 @@ Authorization is not a wiring concern — declare it on the function via `permis
 ### Middleware
 
 ```typescript
-import { cors, authBearer } from '@pikku/core/middleware'
+import { cors, authBearer } from '#pikku/middleware'
 
 // Global middleware
 addHTTPMiddleware('*', [
@@ -167,7 +167,7 @@ set `'agui'`.
 After `npx pikku all`, a type-safe client is generated:
 
 ```typescript
-import { pikkuFetch } from '#pikku/pikku-fetch.gen.js'
+import { pikkuFetch } from '@sdk/api/pikku-fetch.gen.js'
 
 pikkuFetch.setServerUrl('http://localhost:4002')
 
@@ -206,7 +206,7 @@ export const getBook = pikkuFunc({
 
 // wirings/books.http.ts — same defineHTTPRoutes/wireHTTPRoutes shape as the Route Groups example above
 import { addHTTPMiddleware } from '#pikku/middleware'
-import { cors, authBearer } from '@pikku/core/middleware'
+import { cors, authBearer } from '#pikku/middleware'
 
 addHTTPMiddleware('*', [cors(), authBearer()])
 ```

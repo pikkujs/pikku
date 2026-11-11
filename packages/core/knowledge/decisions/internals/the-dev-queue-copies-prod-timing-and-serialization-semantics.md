@@ -7,7 +7,7 @@ tags: services
 
 # The dev queue copies prod timing and serialization semantics
 
-`InMemoryQueueService` (`packages/core/src/services/in-memory-queue-service.ts`)
+`InMemoryQueueService` (`packages/core/src/wirings/queue/in-memory-queue-service.ts`)
 is the local/dev queue, and it is deliberately less direct than it could be. It
 schedules jobs on the macrotask queue via `setTimeout` rather than calling the
 worker inline, it redelivers a failed job up to `options.attempts` times with

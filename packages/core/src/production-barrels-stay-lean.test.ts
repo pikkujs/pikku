@@ -21,7 +21,7 @@ const TYPE_ONLY = /^\s*(?:import|export)\s+type\b/
  * does no tree-shaking — it loads whatever the graph names.
  */
 const FORBIDDEN = [
-  'services/http-virtual-users.ts',
+  'wirings/virtual-user/http-virtual-users.ts',
   'wirings/virtual-user/conversation/run-conversation.ts',
   'wirings/workflow/pikku-scenario-service.ts',
 ]
@@ -102,7 +102,7 @@ describe('production barrels stay lean', () => {
     // no matter what the barrels imported.
     const reached = runtimeGraph(join(srcRoot, 'wirings/virtual-user/index.ts'))
     assert.ok(
-      reached.has(join(srcRoot, 'services/http-virtual-users.ts')),
+      reached.has(join(srcRoot, 'wirings/virtual-user/http-virtual-users.ts')),
       `walker failed to reach a known value import; reached ${reached.size} files:\n` +
         [...reached].map((f) => relative(srcRoot, f)).join('\n')
     )

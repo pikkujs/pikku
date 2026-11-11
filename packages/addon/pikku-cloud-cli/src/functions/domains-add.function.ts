@@ -37,7 +37,7 @@ export const CloudDomainsAdd = pikkuSessionlessFunc({
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
 
-    const stagesResult = await rpc.invoke('listStages', {
+    const stagesResult = await rpc.invoke('cloud:listStages', {
       projectId,
     })
     const production = stagesResult.stages.find((s) => s.type === 'production')
@@ -46,7 +46,7 @@ export const CloudDomainsAdd = pikkuSessionlessFunc({
         'No production stage exists yet — deploy the project first.'
       )
 
-    const result = await rpc.invoke('addStageCustomHostname', {
+    const result = await rpc.invoke('cloud:addStageCustomHostname', {
       stageId: production.stageId,
       hostname,
       target,

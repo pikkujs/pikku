@@ -66,19 +66,21 @@ singletons — you write neither by hand):
 
 ## 3. Generate the typed client
 
-Add to `pikku.config.json`:
+`pikku all` writes the client to `.pikku/sdk/<backend>/exposed/pikku-realtime.gen.ts`;
+import it through the `@sdk/<backend>` alias (a tsconfig `paths` entry,
+`"@sdk/api/*": [".pikku/sdk/api/exposed/*"]`). For full type inference on
+subscribe/unsubscribe, point the one optional key at your topics type in
+`pikku.config.json`:
 
 ```jsonc
 {
   "clientFiles": {
-    "realtimeFile": "packages/sdk/src/pikku/realtime.gen.ts",
-    // Optional: full type inference for subscribe/unsubscribe
     "realtimeEventHubTopicsImport": "../../../functions/types/eventhub-topics.js#EventHubTopics",
   },
 }
 ```
 
-Run `pikku all` (or `pikku realtime` to regenerate just this file). Everything is
+Run `pikku all` to regenerate. Everything is
 on one class — both transports are methods, so switching from WebSocket to SSE is
 a one-word change, not a different import:
 
@@ -184,9 +186,9 @@ auth are configured **once** and shared across HTTP, RPC, and realtime transport
 
 ```tsx
 import { createPikku, PikkuProvider } from '@pikku/react'
-import { PikkuFetch } from './pikku/pikku-fetch.gen'
-import { PikkuRPC } from './pikku/pikku-rpc.gen'
-import { PikkuRealtime } from './pikku/realtime.gen'
+import { PikkuFetch } from '@sdk/api/pikku-fetch.gen'
+import { PikkuRPC } from '@sdk/api/pikku-rpc.gen'
+import { PikkuRealtime } from '@sdk/api/pikku-realtime.gen'
 
 const pikku = createPikku(
   PikkuFetch,

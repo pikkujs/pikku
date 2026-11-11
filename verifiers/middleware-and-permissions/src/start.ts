@@ -21,7 +21,9 @@ import {
   testAgentRunWiring,
 } from './functions/agent.assert.js'
 import { testPriorityWiring } from './functions/priority.assert.js'
+import { testGlobalPermissionWiring } from './functions/global-permission.assert.js'
 import { testAgentProviderOptionsMeta } from './functions/agent-provider-options.assert.js'
+import { testAgentApproveScope } from './functions/agent-approve.assert.js'
 
 async function main(): Promise<void> {
   try {
@@ -90,6 +92,24 @@ async function main(): Promise<void> {
       singletonServices
     )
 
+    // A global permission registered in a file nothing else imports
+    const globalPermissionPassed = await testGlobalPermissionWiring()
+
+    // Tag middleware registered through an aliased and a namespace import
+    const httpAliasedPassed = await testHTTPWiring(
+      '/aliased',
+      [
+        { name: 'global', type: 'http', phase: 'before' },
+        { name: 'session', type: 'tag', phase: 'before' },
+        { name: 'aliased', type: 'tag', phase: 'before' },
+        { name: 'namespaced', type: 'tag', phase: 'before' },
+        { name: 'function', type: 'tag', phase: 'before' },
+        { name: 'noOp', type: 'function', phase: 'before' },
+        { name: 'function', type: 'function-permission' },
+      ],
+      singletonServices
+    )
+
     // Test wireHTTPRoutes - direct route with group config cascading
     // Note: function's own tags ('function') are NOT applied when wired via wireHTTPRoutes
     // Only group and route tags are merged. Function-level middleware still runs.
@@ -135,7 +155,7 @@ async function main(): Promise<void> {
       singletonServices
     )
 
-    // Test Queue
+    // Test Queue. A job has no session, so functionPermission is skipped.
     const queuePassed = await testQueueWiring(
       [
         { name: 'session', type: 'tag', phase: 'before' },
@@ -143,7 +163,6 @@ async function main(): Promise<void> {
         { name: 'queue', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'function', type: 'function-permission' },
       ],
       singletonServices
     )
@@ -217,7 +236,7 @@ async function main(): Promise<void> {
       singletonServices
     )
 
-    // Test Channel (Local Runner)
+    // Test Channel (Local Runner). No session, so functionPermission is skipped.
     // TODO: Fix middleware execution order - function inline middleware should run AFTER tag middleware
     // Currently: channel-inline → noOp (function) → function (tag)
     // Should be: channel-inline → function (tag) → noOp (function)
@@ -231,7 +250,6 @@ async function main(): Promise<void> {
         { name: 'channel-inline', type: 'wire', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' }, // TODO: Should be after 'function' tag
         { name: 'function', type: 'tag', phase: 'before' }, // TODO: Should be before 'noOp'
-        { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices
@@ -249,7 +267,6 @@ async function main(): Promise<void> {
         { name: 'message-middleware', type: 'message', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices
@@ -267,7 +284,6 @@ async function main(): Promise<void> {
         { name: 'channel-test', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices
@@ -286,7 +302,6 @@ async function main(): Promise<void> {
         { name: 'message-middleware', type: 'message', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices
@@ -304,7 +319,6 @@ async function main(): Promise<void> {
         { name: 'message-middleware', type: 'message', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'channelSend', type: 'function', phase: 'before' },
-        { name: 'function', type: 'function-permission' },
         { name: 'test-cm', type: 'channel-middleware', phase: 'before' },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
@@ -323,7 +337,6 @@ async function main(): Promise<void> {
         { name: 'channel-inline', type: 'wire', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' }, // TODO: Should be after 'function' tag
         { name: 'function', type: 'tag', phase: 'before' }, // TODO: Should be before 'noOp'
-        { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
@@ -340,7 +353,6 @@ async function main(): Promise<void> {
         { name: 'message-middleware', type: 'message', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
@@ -357,7 +369,6 @@ async function main(): Promise<void> {
         { name: 'channel-test', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
@@ -375,7 +386,6 @@ async function main(): Promise<void> {
         { name: 'message-middleware', type: 'message', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
@@ -393,7 +403,6 @@ async function main(): Promise<void> {
         { name: 'message-middleware', type: 'message', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'channelSend', type: 'function', phase: 'before' },
-        { name: 'function', type: 'function-permission' },
         { name: 'test-cm', type: 'channel-middleware', phase: 'before' },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
@@ -470,6 +479,9 @@ async function main(): Promise<void> {
       singletonServices
     )
 
+    const agentApproveScopePassed =
+      await testAgentApproveScope(singletonServices)
+
     // Test Internal RPC with external package call
     // Note: testExternalWithAuth only has 'function' tag (no 'session' tag)
     // When calling ext:hello, the external package's middleware and permissions also execute
@@ -500,6 +512,8 @@ async function main(): Promise<void> {
       priorityPassed &&
       httpTest1Passed &&
       httpTest2Passed &&
+      httpAliasedPassed &&
+      globalPermissionPassed &&
       httpRoutesDirectPassed &&
       httpRoutesGroupedPassed &&
       schedulerPassed &&
@@ -521,6 +535,7 @@ async function main(): Promise<void> {
       rpcPassed &&
       agentStreamPassed &&
       agentRunPassed &&
+      agentApproveScopePassed &&
       agentProviderOptionsPassed
 
     if (allPassed) {

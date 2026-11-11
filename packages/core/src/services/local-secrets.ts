@@ -7,6 +7,14 @@ import { LocalVariablesService } from './local-variables.js'
 import type { SecretService, SecretValues } from './secret-service.js'
 import type { VariablesService } from './variables-service.js'
 
+/**
+ * A {@link SecretService} for development that reads secrets from a
+ * `VariablesService` (by default `process.env`), with values set at runtime
+ * kept in memory. Values that parse as JSON are returned parsed. Use a
+ * vault-backed implementation in production.
+ *
+ * @example snippet: shopServices
+ */
 export class LocalSecretService implements SecretService {
   private localSecrets: Map<string, string> = new Map()
 

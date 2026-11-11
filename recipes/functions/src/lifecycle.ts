@@ -1,0 +1,24 @@
+import { pikkuServerLifecycle } from '#pikku/setup'
+
+/**
+ * Server lifecycle hooks, run by `pikku dev`, `pikku serve` and the generated
+ * server entries (generic server, standalone and Cloudflare container).
+ *
+ * Every hook is optional and receives the singleton services after they have
+ * been created, so startup work that needs a service — migrations, seeding,
+ * warming a cache, starting a consumer — belongs here rather than in the
+ * service factory.
+ *
+ * Order is beforeStart -> server starts -> afterStart, then on shutdown
+ * beforeStop -> services stopped -> server stopped -> afterStop. Note that
+ * afterStop runs once the services are already stopped, so anything needing a
+ * live service goes in beforeStop.
+ *
+ * Runtimes that own their own entrypoint (Express, Fastify, uWS, Lambda,
+ * Cloudflare Workers, Next.js) do not run these hooks — do that work in start.ts.
+ */
+export const lifecycle = pikkuServerLifecycle({
+  afterStart: async ({ logger }) => {
+    logger.info('Todo server ready')
+  },
+})

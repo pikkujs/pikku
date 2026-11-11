@@ -1,12 +1,15 @@
+import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { rm } from 'node:fs/promises'
-import { join, resolve } from 'path'
+import { resolve } from 'path'
 import { codegenStateFile, runCodegenChild } from './codegen-child.js'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
+import { projectScopeDefinitions } from '../wirings/scopes/pikku-command-scopes.js'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import { ConsoleLogger, InMemoryTriggerSourceStore } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
+import { composeServerLifecycle } from '@pikku/core/lifecycle'
 import { pikkuState } from '@pikku/core/state'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
@@ -14,10 +17,7 @@ import {
   VaultSecretService,
   vaultConnectionFromEnv,
 } from '../../utils/vault-secret-service.js'
-import {
-  LocalContent,
-  type LocalContentConfig,
-} from '@pikku/core/services/local-content'
+import { LocalContent } from '@pikku/core/services/local-content'
 import { InMemorySchedulerService } from '@pikku/schedule'
 import {
   resolveDb,
@@ -32,17 +32,23 @@ import {
 } from './load-user-project.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
+import { loadDevPlatformServices } from './dev-platform-services.js'
 import { resolveFrontendMount } from './serve-frontend.js'
 import { servedFrontend } from '../../utils/frontend.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
+import {
+  backendForContent,
+  resolveLocalContentConfig,
+} from '../../server/local-content-config.js'
 import { disableDevVirtualUserSignIn } from '../../server/virtual-user-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
+import { assertBackendToServe } from '../../utils/select-backends.js'
 import { addGlobalMiddleware } from '@pikku/core/middleware'
 import { startRunTelemetry } from '../../utils/run-telemetry.js'
 
 export const serve = pikkuSessionlessFunc<
-  { port?: string; model?: string },
+  { port?: string; model?: string; backend?: string },
   void
 >({
   remote: true,
@@ -55,9 +61,9 @@ export const serve = pikkuSessionlessFunc<
       variables,
       devServerRunner,
     },
-    { port, model }
+    { port, model, backend }
   ) => {
-    process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
+    assertBackendToServe(config)
     disableDevVirtualUserSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
     const telemetry = startRunTelemetry({
@@ -112,7 +118,7 @@ export const serve = pikkuSessionlessFunc<
     const userCreateSingletonServices =
       servicesModule[singletonServicesFactory.variable]
 
-    const userConfig = await userCreateConfig()
+    const userConfig = await callUserCreateConfig(userCreateConfig, variables)
 
     const envDatabaseUrl = await variables.get('DATABASE_URL')
     const effectiveDbConfig = envDatabaseUrl
@@ -130,17 +136,15 @@ export const serve = pikkuSessionlessFunc<
       ? await createKysely(resolvedLocalDb)
       : undefined
 
-    const resolvedRuntimeDir =
-      config.runtimeDir ?? join(config.rootDir, '.pikku-runtime')
-    const localContentConfig: LocalContentConfig = {
-      localFileUploadPath: userConfig.content?.contentPath
-        ? resolve(config.rootDir, userConfig.content.contentPath)
-        : join(resolvedRuntimeDir, 'content'),
-      uploadUrlPrefix: userConfig.content?.uploadUrlPrefix ?? '/upload',
-      assetUrlPrefix: userConfig.content?.assetUrlPrefix ?? '/assets',
+    const localContentConfig = resolveLocalContentConfig({
+      appContent: userConfig.content,
+      rootContent: config.content,
+      backendContent: backendForContent(config.backends, backend, 'pikku serve')
+        .content,
+      rootDir: config.rootDir,
+      runtimeDir: config.runtimeDir,
       server: `http://${hostname}:${resolvedPort}`,
-      sizeLimit: userConfig.content?.sizeLimit,
-    }
+    })
     const contentSigningJWT = createEphemeralContentSigningJWT()
     const localContent = new LocalContent(
       localContentConfig,
@@ -172,7 +176,7 @@ export const serve = pikkuSessionlessFunc<
     // (so sqlite extensions and embedded postgres apply), its event hub and
     // content store, and the gates read off the live inspector rather than the
     // ones baked in at the last codegen.
-    const localServices = await createLocalServices(
+    const baseLocalServices = await createLocalServices(
       userConfig,
       {
         kysely: kysely ?? null,
@@ -189,11 +193,24 @@ export const serve = pikkuSessionlessFunc<
       {
         logger,
         requiredServices,
-        scopes: flattenScopeDefinitions(inspectorState.scopes.definitions),
+        scopes: flattenScopeDefinitions(
+          projectScopeDefinitions(inspectorState, config)
+        ),
         systemRoles: flattenSystemRoleDefinitions(
           inspectorState.systemRoles.definitions
         ),
       }
+    )
+
+    const {
+      services: localServices,
+      startHooks,
+      stopHooks,
+    } = await loadDevPlatformServices(
+      baseLocalServices,
+      config.rootDir,
+      config.devContributorsFile,
+      process.env
     )
 
     const singletonServices = await userCreateSingletonServices(
@@ -235,12 +252,18 @@ export const serve = pikkuSessionlessFunc<
       { contentSigningJWT }
     )
 
-    const lifecycle = await loadLifecycle()
+    const lifecycle = composeServerLifecycle(await loadLifecycle(), {
+      start: startHooks,
+      stop: stopHooks,
+    })
 
     await pikkuServer.init()
-    await lifecycle?.beforeStart?.(resolvedServices)
+    await lifecycle.beforeStart?.(resolvedServices)
     await pikkuServer.start()
-    await lifecycle?.afterStart?.(resolvedServices)
+    await lifecycle.afterStart?.(resolvedServices)
+    resolvedServices.workflowService?.startRecovery?.(
+      userConfig.workflow?.recovery
+    )
 
     // Not `resolvedPort`: `--port 0` asks the OS for a free port, and every URL
     // announced from here has to name the one it actually handed out.
@@ -257,10 +280,15 @@ export const serve = pikkuSessionlessFunc<
     const onSigint = async () => {
       logger.info('Stopping server...')
       try {
-        await lifecycle?.beforeStop?.(resolvedServices)
+        resolvedServices.workflowService?.stopRecovery?.()
+        await lifecycle.beforeStop?.(resolvedServices)
         await stopSingletonServices()
         await pikkuServer.stop()
-        await lifecycle?.afterStop?.(resolvedServices)
+        await lifecycle.afterStop?.(resolvedServices)
+      } catch (error) {
+        logger.error(
+          `Error stopping server: ${error instanceof Error ? error.message : String(error)}`
+        )
       } finally {
         process.exit(0)
       }

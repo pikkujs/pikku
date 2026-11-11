@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { resolveScaffoldFeature } from './resolve-scaffold-feature.js'
+import {
+  analyticsOriginLockEnabled,
+  resolveScaffoldFeature,
+} from './resolve-scaffold-feature.js'
 
 describe('resolveScaffoldFeature', () => {
   test('an absent feature is off', () => {
@@ -91,6 +94,58 @@ describe('resolveScaffoldFeature', () => {
     assert.throws(
       () => resolveScaffoldFeature('rpc', null as never),
       /must be true, false, or an object/
+    )
+  })
+})
+
+describe('per-feature options', () => {
+  test('true and {} carry no options', () => {
+    assert.equal(resolveScaffoldFeature('analytics', true).options, undefined)
+    assert.equal(resolveScaffoldFeature('analytics', {}).options, undefined)
+  })
+
+  test('an option is carried alongside path', () => {
+    assert.deepEqual(
+      resolveScaffoldFeature('analytics', {
+        originLock: false,
+        path: 'a.ts',
+      } as never),
+      { enabled: true, path: 'a.ts', options: { originLock: false } }
+    )
+    assert.deepEqual(
+      resolveScaffoldFeature('cors', { port: 5173 } as never).options,
+      {
+        port: 5173,
+      }
+    )
+  })
+
+  test('an option of the wrong type is refused', () => {
+    assert.throws(
+      () => resolveScaffoldFeature('analytics', { originLock: 'no' } as never),
+      /scaffold\.analytics\.originLock must be a boolean/
+    )
+  })
+
+  test('an option belonging to another feature is refused', () => {
+    assert.throws(
+      () => resolveScaffoldFeature('rpc', { originLock: false } as never),
+      /scaffold\.rpc has no "originLock" option/
+    )
+    assert.throws(
+      () => resolveScaffoldFeature('cors', { originLock: false } as never),
+      /"port"/
+    )
+  })
+
+  test('the analytics origin lock is on by default and only off when asked', () => {
+    assert.equal(analyticsOriginLockEnabled(undefined), false)
+    assert.equal(analyticsOriginLockEnabled({ analytics: false }), false)
+    assert.equal(analyticsOriginLockEnabled({ analytics: true }), true)
+    assert.equal(analyticsOriginLockEnabled({ analytics: {} }), true)
+    assert.equal(
+      analyticsOriginLockEnabled({ analytics: { originLock: false } as never }),
+      false
     )
   })
 })

@@ -1,5 +1,8 @@
 import { defineCLICommands, pikkuCLICommand } from '#pikku/addon/cli'
 import { CloudLogin } from './functions/login.function.js'
+import { CloudLogout } from './functions/logout.function.js'
+import { CloudAuthGit, renderAuthGit } from './functions/auth-git.function.js'
+import { CloudGit, renderGit } from './functions/git.function.js'
 import { CloudStatus, renderStatus } from './functions/status.function.js'
 import { CloudInit } from './functions/init.function.js'
 import { CloudLink } from './functions/link.function.js'
@@ -56,7 +59,6 @@ import { CloudDomainsList } from './functions/domains-list.function.js'
 import { CloudDomainsAdd } from './functions/domains-add.function.js'
 import { CloudDomainsRemove } from './functions/domains-remove.function.js'
 import { CloudLLMKey, renderLLMKey } from './functions/llm-key.function.js'
-import { CloudSmoke, renderSmoke } from './functions/smoke.function.js'
 import { CloudPublish } from './functions/publish.function.js'
 import { CloudAdd } from './functions/add.function.js'
 import {
@@ -72,6 +74,61 @@ import {
   CloudAddonVerify,
   renderAddonVerify,
 } from './functions/addon-verify.function.js'
+
+/**
+ * Its own contract so `pikku report` sits at the top level, beside the `cloud`
+ * group rather than in it: filing needs no account.
+ */
+export const reportCommands = defineCLICommands({
+  report: pikkuCLICommand({
+    parameters: '[title]',
+    func: CloudReport,
+    description:
+      'File a finding — something about pikku that cost time. It stays in .pikku/findings until you are logged in and say yes. With no finding, asks about the ones held from this build',
+    options: {
+      stdin: {
+        description:
+          'Read the whole finding as JSON on stdin instead of from flags (prose survives the shell intact)',
+        default: false,
+      },
+      kind: {
+        description:
+          'product (fix pikku) or harness (fix the skill that misled you)',
+      },
+      model: { description: 'The model that hit this' },
+      expected: { description: 'What you expected pikku to do' },
+      actual: { description: 'What it did instead' },
+      skill: {
+        description: 'For a harness finding, the skill that misled you',
+      },
+      passage: { description: 'The passage in that skill it contradicts' },
+      command: { description: 'The command you ran' },
+      error: { description: "The error's message line, verbatim" },
+      repro: { description: 'The shortest way to reach it again' },
+      workaround: { description: 'What you did instead, inside the app' },
+      proposal: {
+        description:
+          'What pikku should do — named file and function, mechanism, suggested change',
+      },
+      tried: {
+        description:
+          'For an unresolved finding, what you tried and how each attempt failed',
+      },
+      unresolved: {
+        description: 'No workaround was found — a blocker, not a tax',
+        default: false,
+      },
+      area: { description: 'The part of pikku this is about' },
+      surface: { description: 'Where it showed up: local, deployed or both' },
+      cost: { description: 'What it cost, measured or estimated' },
+      deployTarget: { description: 'The deploy target in use' },
+      consent: {
+        description:
+          'The user\'s answer to "send them under this account?": yes or no for what is held now, always or never to stop asking',
+      },
+    },
+  }),
+})
 
 export const cloudCommands = defineCLICommands({
   login: pikkuCLICommand({
@@ -91,31 +148,51 @@ export const cloudCommands = defineCLICommands({
       },
     },
   }),
+  logout: pikkuCLICommand({
+    func: CloudLogout,
+    description: 'Forget the saved cloud token and the git credential helper',
+    options: {
+      apiUrl: { description: 'Override the cloud API URL to log out of' },
+    },
+  }),
+  git: pikkuCLICommand({
+    func: CloudGit,
+    render: renderGit,
+    description:
+      'Show where the linked project’s repo lives, or move it between GitHub and cloud’s Gitea with --move-to',
+    options: {
+      moveTo: {
+        description:
+          'Where to move the repo: gitea, github (with --repo), or the URL of an existing repo',
+      },
+      repo: {
+        description:
+          'The GitHub repo to move to, as owner/name or a full URL (create it on github.com first)',
+      },
+      dryRun: {
+        description: 'Print what cloud would do and change nothing',
+        default: false,
+      },
+      apiUrl: { description: 'Override the cloud API URL for this call' },
+    },
+  }),
+  auth: {
+    description: 'Credential helpers registered by login',
+    hidden: true,
+    subcommands: {
+      git: pikkuCLICommand({
+        parameters: '<operation>',
+        func: CloudAuthGit,
+        render: renderAuthGit,
+        description: 'Git credential helper for the cloud git server',
+        hidden: true,
+      }),
+    },
+  },
   status: pikkuCLICommand({
     func: CloudStatus,
     render: renderStatus,
     description: 'Show the linked project status (active + in-flight deploy)',
-  }),
-  smoke: pikkuCLICommand({
-    func: CloudSmoke,
-    render: renderSmoke,
-    description:
-      'Run a clean-room Pikku Studio Cloud smoke test: temp worktree, install, codegen, migrate, and verify pikku dev startup',
-    options: {
-      keepTemp: {
-        description: 'Keep the temp worktree even on success',
-        default: false,
-      },
-      timeoutSeconds: {
-        description: 'Per-step timeout for install/build/codegen commands',
-      },
-      startupTimeoutSeconds: {
-        description: 'Timeout for waiting on pikku dev /health-check',
-      },
-      port: {
-        description: 'Port to use for the temporary pikku dev startup check',
-      },
-    },
   }),
   init: pikkuCLICommand({
     parameters: '<repo>',
@@ -454,54 +531,6 @@ export const cloudCommands = defineCLICommands({
         default: false,
       },
       json: { description: 'Machine-readable output', default: false },
-    },
-  }),
-  report: pikkuCLICommand({
-    parameters: '[title]',
-    func: CloudReport,
-    description:
-      'Report a finding — something about pikku that cost time — to the Pikku team. With no finding, asks about the ones held from this build',
-    options: {
-      stdin: {
-        description:
-          'Read the whole finding as JSON on stdin instead of from flags (prose survives the shell intact)',
-        default: false,
-      },
-      kind: {
-        description:
-          'product (fix pikku) or harness (fix the skill that misled you)',
-      },
-      model: { description: 'The model that hit this' },
-      expected: { description: 'What you expected pikku to do' },
-      actual: { description: 'What it did instead' },
-      skill: {
-        description: 'For a harness finding, the skill that misled you',
-      },
-      passage: { description: 'The passage in that skill it contradicts' },
-      command: { description: 'The command you ran' },
-      error: { description: "The error's message line, verbatim" },
-      repro: { description: 'The shortest way to reach it again' },
-      workaround: { description: 'What you did instead, inside the app' },
-      proposal: {
-        description:
-          'What pikku should do — named file and function, mechanism, suggested change',
-      },
-      tried: {
-        description:
-          'For an unresolved finding, what you tried and how each attempt failed',
-      },
-      unresolved: {
-        description: 'No workaround was found — a blocker, not a tax',
-        default: false,
-      },
-      area: { description: 'The part of pikku this is about' },
-      surface: { description: 'Where it showed up: local, deployed or both' },
-      cost: { description: 'What it cost, measured or estimated' },
-      deployTarget: { description: 'The deploy target in use' },
-      consent: {
-        description:
-          'The user\'s answer to "send them?": yes or no for what is held now, always or never to stop asking',
-      },
     },
   }),
   metrics: pikkuCLICommand({

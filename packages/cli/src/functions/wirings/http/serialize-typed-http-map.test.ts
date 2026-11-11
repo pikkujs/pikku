@@ -41,6 +41,7 @@ const serialize = (
     new Map(),
     {},
     '.pikku/pikku-rpc-map.gen.ts',
+    '.pikku/pikku-custom-types.gen.d.ts',
     wireAddonDeclarations
   )
 

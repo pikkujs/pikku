@@ -1,3 +1,11 @@
+/**
+ * Reads and writes non-secret configuration, provided as the `variables`
+ * singleton service ({@link LocalVariablesService} reads `process.env`). Use
+ * {@link SecretService} for anything sensitive: variables are plain values and
+ * are not redacted from logs.
+ *
+ * @example snippet: shopServices
+ */
 export interface VariablesService {
   get<T = string>(name: string): Promise<T | undefined> | T | undefined
   /** Same contract as `SecretService.getSecrets`: missing keys are omitted, hence `Partial<T>`. */

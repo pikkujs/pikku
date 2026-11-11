@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import { runAgent, resumeAgentSync } from './agent-runner.js'
+import { createAgentRPC } from './agent-rpc.js'
 import type {
   AgentRunState,
   CoreAgent,
@@ -20,6 +21,7 @@ beforeEach(() => {
 
 const addTestAgent = (agentName: string) => {
   const agent: CoreAgent = {
+    auth: false,
     name: agentName,
     description: 'test agent',
     instructions: 'be helpful',
@@ -894,7 +896,7 @@ describe('resumeAgentSync', () => {
     assert.equal(executions, 1, 'the loser did not run it a second time')
   })
 
-  test('records denied approvals and rejects agent mismatches', async () => {
+  test('records denied approvals', async () => {
     addTestAgent('resume-agent')
 
     const baseRun: AgentRunState = {
@@ -964,20 +966,6 @@ describe('resumeAgentSync', () => {
       /explicitly declined/
     )
     assert.equal(denied.text, 'Declined')
-
-    await assert.rejects(
-      () =>
-        resumeAgentSync(
-          'run-deny',
-          [{ toolCallId: 'tc-2', approved: false }],
-          asOwner('resource-deny'),
-          'other-agent'
-        ),
-      {
-        message:
-          "Run run-deny belongs to agent 'resume-agent', not 'other-agent'",
-      }
-    )
   })
 
   test('captures tool execution errors during resume and persists them as tool results', async () => {
@@ -1183,6 +1171,108 @@ describe('getCredential API key override', () => {
     )
 
     assert.equal(originalRunCalls.length, 1)
+  })
+})
+
+describe('getCredential API key override on approve', () => {
+  const suspendedForKey = (): AgentRunState => ({
+    runId: 'run-keyed',
+    agentName: 'keyed-approve-agent',
+    threadId: 'thread-keyed',
+    resourceId: 'resource-keyed',
+    status: 'suspended',
+    suspendReason: 'approval',
+    pendingApprovals: [
+      {
+        type: 'tool-call',
+        toolCallId: 'tc-keyed',
+        toolName: 'deploy',
+        args: {},
+      },
+    ],
+    usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
+
+  const keyedServices = (keysSeen: string[]) =>
+    ({
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      agentRunner: {
+        run: async (): Promise<AgentStepResult> =>
+          makeStepResult({ text: 'from-singleton', finishReason: 'stop' }),
+        withApiKey: (key: string) => {
+          keysSeen.push(key)
+          return {
+            run: async (): Promise<AgentStepResult> =>
+              makeStepResult({ text: 'from-caller-key', finishReason: 'stop' }),
+          }
+        },
+      },
+      agentRunState: {
+        getRun: async () => suspendedForKey(),
+        resolveApproval: async () => true,
+        updateRun: async () => {},
+      },
+      agentStorage: {
+        saveMessages: async () => {},
+        getMessages: async () => [],
+      },
+    }) as any
+
+  test('resumeAgentSync continues on the caller-keyed runner', async () => {
+    addTestAgent('keyed-approve-agent')
+    const keysSeen: string[] = []
+    pikkuState(null, 'package', 'singletonServices', keyedServices(keysSeen))
+
+    const result = await resumeAgentSync(
+      'run-keyed',
+      [{ toolCallId: 'tc-keyed', approved: false }],
+      {
+        ...asOwner('resource-keyed'),
+        getCredential: async () => ({ apiKey: 'caller-key' }),
+      } as any
+    )
+
+    assert.equal(result.text, 'from-caller-key')
+    assert.deepEqual(keysSeen, ['caller-key'])
+  })
+
+  test('resumeAgentSync keeps the singleton runner without a credential', async () => {
+    addTestAgent('keyed-approve-agent')
+    const keysSeen: string[] = []
+    pikkuState(null, 'package', 'singletonServices', keyedServices(keysSeen))
+
+    const result = await resumeAgentSync(
+      'run-keyed',
+      [{ toolCallId: 'tc-keyed', approved: false }],
+      asOwner('resource-keyed')
+    )
+
+    assert.equal(result.text, 'from-singleton')
+    assert.deepEqual(keysSeen, [])
+  })
+
+  test('rpc.agent.approve passes the wire credential through', async () => {
+    addTestAgent('keyed-approve-agent')
+    const keysSeen: string[] = []
+    pikkuState(null, 'package', 'singletonServices', keyedServices(keysSeen))
+
+    const agent = createAgentRPC(
+      { getCredential: async () => ({ apiKey: 'wire-key' }) } as any,
+      asOwner('resource-keyed') as any
+    )
+    const result = await agent.approve('run-keyed', [
+      { toolCallId: 'tc-keyed', approved: false },
+    ])
+
+    assert.equal(result.result, 'from-caller-key')
+    assert.deepEqual(keysSeen, ['wire-key'])
   })
 })
 

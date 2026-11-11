@@ -11,23 +11,23 @@
  * bundle into a single self-contained executable via `bun build --compile`.
  * No runtime needed on the target host.
  */
+import type { ContributorBindingSource } from '@pikku/core/contributors'
 import type {
-  BindingSource,
-  ContributorPlatform,
+  ContributorSupport,
   EntryGenerationContext,
-  PlatformServiceContributor,
   ProviderAdapter,
 } from '@pikku/deploy'
 import {
-  assertContributorsSupported,
-  collectContributorImports,
-  collectContributorLines,
-  dedupeContributors,
+  composedLifecycleLines,
+  entryLifecycleVariable,
   nodeBuiltinExternals,
   SERVER_READY_MARKER,
+  withDeployUnit,
 } from '@pikku/deploy'
 
-export const STANDALONE_BINDING_SOURCES: readonly BindingSource[] = ['env']
+export const STANDALONE_BINDING_SOURCES: readonly ContributorBindingSource[] = [
+  'env',
+]
 
 /**
  * Directory the built frontend is copied to, both inside the unit and beside
@@ -340,12 +340,12 @@ const lifecycleImportLines = (
  * request — a seeded admin account, a schema probe — is finished when one
  * arrives.
  */
-const lifecycleStartLines = (): string[] => [
-  `  await __pikkuLifecycle?.beforeStart?.(singletonServices)`,
+const lifecycleStartLines = (variable: string): string[] => [
+  `  await ${variable}?.beforeStart?.(singletonServices)`,
 ]
 
-const lifecycleAfterStartLines = (): string[] => [
-  `  await __pikkuLifecycle?.afterStart?.(singletonServices)`,
+const lifecycleAfterStartLines = (variable: string): string[] => [
+  `  await ${variable}?.afterStart?.(singletonServices)`,
 ]
 
 /**
@@ -360,9 +360,10 @@ const shutdownHooksArg = (ctx: EntryGenerationContext): string => {
   const before: string[] = []
   const after: string[] = []
 
-  if (ctx.lifecycle) {
-    before.push(`await __pikkuLifecycle?.beforeStop?.(singletonServices)`)
-    after.push(`await __pikkuLifecycle?.afterStop?.(singletonServices)`)
+  const lifecycle = entryLifecycleVariable(ctx)
+  if (lifecycle) {
+    before.push(`await ${lifecycle}?.beforeStop?.(singletonServices)`)
+    after.push(`await ${lifecycle}?.afterStop?.(singletonServices)`)
   }
   if (ctx.db?.engine === 'postgres') {
     after.push(`await __pikkuPg.close()`)
@@ -419,84 +420,89 @@ export interface StandaloneProviderAdapterOptions {
    * this in from the config.
    */
   nativeSidecars?: ReadonlyArray<{ name: string; dir: string }>
-  contributors?: PlatformServiceContributor[]
   port?: number
 }
 
-const contributorPlatform = (
-  ctx: EntryGenerationContext
-): ContributorPlatform => {
-  const services = ctx.unit.services ?? []
-  return {
-    serviceNames: services.map((s) => s.sourceServiceName),
-    needsQueue: services.some((s) => s.capability === 'queue'),
-    needsWorkflow: services.some((s) => s.capability === 'workflow-state'),
-    needsAgent: services.some(
-      (s) => s.capability === 'ai-storage' || s.capability === 'ai-model'
-    ),
-  }
-}
+/**
+ * What the entry has built by the time `createPlatformServices` runs, passed
+ * to it as `runtime`.
+ */
+const runtimeServiceNames = (ctx: EntryGenerationContext): string[] => [
+  'logger',
+  ...(ctx.db ? ['kysely'] : []),
+  'schedulerService',
+  'queueService',
+  'workflowService',
+  'triggerService',
+  'triggerSourceStore',
+  'eventHub',
+]
 
 export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly name = 'standalone'
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
+  readonly frontends = {
+    kinds: ['spa', 'static'],
+    embedded: true,
+  } as const
+  readonly supportedRuntimes = ['bun'] as const
   readonly bundlesSqliteLibrary = true
   private readonly port: number
   readonly nativeSidecars: ReadonlyArray<{ name: string; dir: string }>
-  readonly contributors: PlatformServiceContributor[]
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
     this.port = options.port ?? 3000
     this.nativeSidecars = options.nativeSidecars ?? []
-    this.contributors = dedupeContributors(options.contributors)
-    assertContributorsSupported(
-      this.contributors,
-      STANDALONE_BINDING_SOURCES,
-      this.name
-    )
+  }
+
+  /**
+   * The entry holds `kysely` when it opens a database, and the contributors'
+   * platform says it has one from the same facts, so the two must agree: a
+   * contributor selected on `platform.db` would otherwise read a `runtime.kysely`
+   * that is not there, or the reverse.
+   */
+  contributorSupport(ctx: EntryGenerationContext): ContributorSupport {
+    if (ctx.contributorPlatform && !ctx.db !== !ctx.contributorPlatform.db) {
+      throw new Error(
+        `The standalone entry ${ctx.db ? 'opens' : 'does not open'} a database but the contributor platform says the project ${ctx.contributorPlatform.db ? 'has' : 'has no'} one; both are read from the project's database declaration and must agree.`
+      )
+    }
+    return {
+      supported: STANDALONE_BINDING_SOURCES,
+      runsServerLifecycle: true,
+      runtimeServices: runtimeServiceNames(ctx),
+      widenPlatform: (platform) => withDeployUnit(platform, ctx.unit),
+    }
   }
 
   private contributorImportLines(ctx: EntryGenerationContext): string[] {
-    if (this.contributors.length === 0) return []
-    return collectContributorImports(
-      this.contributors,
-      contributorPlatform(ctx)
-    )
-  }
-
-  private platformServicesBlock(ctx: EntryGenerationContext): string[] {
-    if (this.contributors.length === 0) return []
+    if (!ctx.platformServices) return []
     return [
-      `const createPlatformServices = async (env: Record<string, string | undefined>): Promise<${ctx.servicesType}> => {`,
-      `  const services: ${ctx.servicesType} = {}`,
-      ...collectContributorLines(this.contributors, {
-        ctx,
-        platform: contributorPlatform(ctx),
-        isGateway: false,
-      }),
-      `  return services`,
-      `}`,
-      ``,
+      `import { createPlatformServices } from '${ctx.platformServices.importPath}'`,
     ]
   }
 
-  private platformServicesCallLines(): string[] {
-    if (this.contributors.length === 0) return []
+  private platformServicesCallLines(ctx: EntryGenerationContext): string[] {
+    if (!ctx.platformServices) return []
     return [
-      `  const platformServices = await createPlatformServices(process.env as Record<string, string | undefined>)`,
+      `  const platformServices = await createPlatformServices(process.env as Record<string, string | undefined>, { ${runtimeServiceNames(ctx).join(', ')} })`,
     ]
   }
 
-  private platformServicesSpreadLines(): string[] {
-    if (this.contributors.length === 0) return []
+  private platformServicesSpreadLines(ctx: EntryGenerationContext): string[] {
+    if (!ctx.platformServices) return []
     return [`    ...platformServices,`]
   }
 
   generateEntrySource(ctx: EntryGenerationContext): string {
+    const lifecycle = entryLifecycleVariable(ctx)
     return [
       `// Generated standalone entry — all functions in one process`,
-      `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryTriggerSourceStore, InMemoryWorkflowService } from '@pikku/core/services'`,
+      `import { ConsoleLogger, InMemoryTriggerSourceStore } from '@pikku/core/services'`,
+      `import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'`,
+      `import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'`,
+      `import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'`,
       ...(ctx.db
         ? [`import { KyselyTriggerSourceStore } from '@pikku/kysely'`]
         : []),
@@ -521,6 +527,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...(ctx.db ? dbImportLines(ctx.db) : []),
       ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
       ...this.contributorImportLines(ctx),
+      ...composedLifecycleLines(ctx).imports,
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -528,6 +535,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ctx.mcpImport,
       `import '${ctx.bootstrapPath}'`,
       ``,
+      ...composedLifecycleLines(ctx).declaration,
+      ...(ctx.platformServices ? [``] : []),
       `const logger = new ConsoleLogger()`,
       `const port = parseInt(process.env.PORT || '${this.port}', 10)`,
       `const hostname = process.env.HOST || '0.0.0.0'`,
@@ -539,10 +548,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ``,
       ...commandParseLines(ctx),
       ``,
-      ...this.platformServicesBlock(ctx),
       `async function main() {`,
       `  const config = await ${ctx.configVar}()`,
-      ...this.platformServicesCallLines(),
       `  const schedulerService = new InMemorySchedulerService()`,
       `  const queueService = new InMemoryQueueService()`,
       `  const workflowService = new InMemoryWorkflowService()`,
@@ -553,6 +560,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...(ctx.db ? dbSetupLines(ctx.db) : []),
       ...triggerSourceStoreLines(ctx.db !== undefined),
       ...commandDispatchLines(ctx),
+      ...this.platformServicesCallLines(ctx),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
       ...(ctx.db ? [`    kysely,`] : []),
@@ -563,7 +571,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `    triggerService,`,
       `    triggerSourceStore,`,
       `    eventHub,`,
-      ...this.platformServicesSpreadLines(),
+      ...this.platformServicesSpreadLines(ctx),
       `  })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
@@ -584,10 +592,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  await server.init()`,
       `  await singletonServices.schedulerService?.start()`,
       `  await singletonServices.triggerService?.start()`,
-      ...(ctx.lifecycle ? lifecycleStartLines() : []),
+      ...(lifecycle ? lifecycleStartLines(lifecycle) : []),
       `  server.enableExitOnSignals(${shutdownHooksArg(ctx)})`,
       `  await server.start()`,
-      ...(ctx.lifecycle ? lifecycleAfterStartLines() : []),
+      ...(lifecycle ? lifecycleAfterStartLines(lifecycle) : []),
       ...sidecarHandshakeLines(),
       `}`,
       ``,
@@ -744,6 +752,9 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
         [
           'build',
           '--compile',
+          ...(process.env.PIKKU_COMPILE_TARGET
+            ? [`--target=${process.env.PIKKU_COMPILE_TARGET}`]
+            : []),
           '--minify',
           `--outfile=${binaryPath}`,
           join(outDir, 'bundle.js'),

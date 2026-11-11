@@ -1,6 +1,9 @@
 import type { ResolvedVirtualUser } from '../../services/virtual-users-service.js'
 import type { AgentMessage } from '../agent/agent.types.js'
-import type { VirtualUserLLM } from './conversation/run-conversation.js'
+import {
+  readObject,
+  type VirtualUserLLM,
+} from './conversation/run-conversation.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import {
   catalogueIndex,
@@ -74,6 +77,7 @@ export interface VirtualUserCallContext {
   disposition: VirtualUserDisposition
 }
 
+/** Everything one autonomous virtual-user run is given. */
 export interface RunVirtualUserParams {
   /** The person being run — name, job title, personality, goals. */
   virtualUser: ResolvedVirtualUser
@@ -141,23 +145,6 @@ const msg = (role: AgentMessage['role'], content: string): AgentMessage => ({
   content,
   createdAt: new Date(),
 })
-
-/** Read a structured result, falling back to parsing JSON out of the text. */
-const readObject = <T>(result: {
-  object?: unknown
-  text?: string
-}): T | null => {
-  if (result.object && typeof result.object === 'object')
-    return result.object as T
-  if (result.text) {
-    try {
-      return JSON.parse(result.text) as T
-    } catch {
-      return null
-    }
-  }
-  return null
-}
 
 /**
  * The arguments for a call, however the model chose to spell them.

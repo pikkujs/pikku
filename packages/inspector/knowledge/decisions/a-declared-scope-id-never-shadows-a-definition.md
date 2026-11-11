@@ -10,11 +10,14 @@ tags: [inspector, scopes]
 `addDeclareScopes` in `packages/inspector/src/add/add-scope.ts` records each valid id
 in `state.scopes.declared` and keeps the first source file for it (lines 164-167).
 
-`applyDeclaredScopes` folds those ids into `state.scopes.definitions` later (lines
-178-192). It reuses a root that already exists (lines 181-185). For each further
-segment it uses `??=`, so a node that is already there is kept (lines 188-189). The
-comments at lines 137-141 and 173-177 say an addon's richer declaration "is never
-shadowed by a bare id" and that an id already held "is left alone".
+`applyDeclaredScopes` in `packages/inspector/src/utils/apply-declared-scopes.ts`
+folds those ids into `state.scopes.definitions` during finalize (lines 10-26). It
+reuses a root that already exists (lines 15-19). For each further segment it uses
+`??=`, so a node that is already there is kept (lines 22-23). The comment at
+add-scope.ts line 140 and the doc comment at apply-declared-scopes.ts lines 4-9 say
+an addon's richer declaration "is never shadowed by a bare id" and that an id already
+held "is left alone". It moved out of `add-scope.ts`, which re-exports it, so the
+TypeScript-free finalize can import it without loading the compiler.
 
 **What this rules out:** a bare `declareScopes` entry overwriting the richer tree an
 addon or `defineScope` provided.

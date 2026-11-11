@@ -78,6 +78,20 @@ class InvocationAnalyticsLog implements AnalyticsLog {
   }
 }
 
+/**
+ * Creates the per-invocation `analytics` log handed to a function.
+ *
+ * Events are buffered and written to `service` in one batch on `flush()`/`close()`.
+ * Identity is stamped from the wire's session (never from the event payload), merged
+ * with whatever `resolveIdentity` returns. A failed write is logged as a warning and
+ * dropped, so analytics can never fail the request.
+ *
+ * @param service - The sink the batch is written to.
+ * @param wire - The invocation's wire; supplies session, trace and function ids.
+ * @param logger - Fallback logger when the wire carries none.
+ * @param resolveIdentity - Adds browser-originated ids and consent to each record.
+ * @internal
+ */
 export const createInvocationAnalytics = (
   service: AnalyticsService,
   wire: PikkuWire<any, any, any, CoreUserSession>,

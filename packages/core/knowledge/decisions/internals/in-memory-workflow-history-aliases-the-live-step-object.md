@@ -7,7 +7,7 @@ tags: services
 
 # In-memory workflow history aliases the live step object
 
-`InMemoryWorkflowService` (`packages/core/src/services/in-memory-workflow-service.ts`)
+`InMemoryWorkflowService` (`packages/core/src/wirings/workflow/in-memory-workflow-service.ts`)
 stores each step twice: in `steps`, keyed `${runId}:${stepName}`, and appended to
 `stepHistory` for the run. Both hold the _same object_. `createStepImpl` and
 `createRetryAttemptImpl` push the reference they just put into `steps`, not a

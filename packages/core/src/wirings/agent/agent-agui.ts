@@ -25,12 +25,12 @@ type AGUIEvent =
       type: 'RUN_FINISHED'
       threadId: string
       runId: string
-      model?: string
-      usage?: {
-        promptTokens: number
-        completionTokens: number
+      usage?: Array<{
+        model?: string
+        inputTokens: number
+        outputTokens: number
         totalTokens: number
-      }
+      }>
     }
   | { type: 'RUN_ERROR'; message: string; code?: string }
   | { type: 'STEP_STARTED'; stepName: string }
@@ -56,6 +56,15 @@ function resultToString(result: unknown): string {
   }
 }
 
+/**
+ * Wraps an agent stream channel so the events written to it go out as AG-UI protocol events
+ * (`RUN_STARTED`, `TEXT_MESSAGE_CONTENT`, `TOOL_CALL_START`, ...) instead of Pikku's own
+ * `AgentStreamEvent`s. `rpc.agent.stream` and `rpc.agent.resume` apply it for you.
+ *
+ * @param inner - The channel the AG-UI events are sent on.
+ * @param options - Thread and run ids to stamp on the events; generated when absent.
+ * @returns A channel that accepts `AgentStreamEvent`s.
+ */
 export function wrapChannelWithAGUI(
   inner: AgentStreamChannel,
   options?: AGUIChannelOptions
@@ -145,14 +154,16 @@ export function wrapChannelWithAGUI(
       type: 'RUN_FINISHED',
       threadId,
       runId: resolveRunId(),
-      ...(usageModel ? { model: usageModel } : {}),
       ...(sawUsage
         ? {
-            usage: {
-              promptTokens: usageTotals.input,
-              completionTokens: usageTotals.output,
-              totalTokens: usageTotals.input + usageTotals.output,
-            },
+            usage: [
+              {
+                ...(usageModel ? { model: usageModel } : {}),
+                inputTokens: usageTotals.input,
+                outputTokens: usageTotals.output,
+                totalTokens: usageTotals.input + usageTotals.output,
+              },
+            ],
           }
         : {}),
     })

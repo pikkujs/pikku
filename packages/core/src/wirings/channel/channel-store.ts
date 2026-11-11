@@ -1,10 +1,20 @@
+/** A channel as a {@link ChannelStore} persists it between serverless invocations. */
 export type Channel<ChannelType = unknown, OpeningData = unknown> = {
   channelId: string
   channelName: string
   channelObject?: ChannelType
   openingData?: OpeningData
+  /** The connection's W3C trace, so every frame continues it. */
+  traceparent?: string
 }
 
+/**
+ * Persists open channels for serverless runtimes, where each connect, message and disconnect runs in a separate invocation.
+ *
+ * It keeps the channel's opening data, its trace, its state, and the
+ * `pikkuUserId` of the session established on connect. The session itself is not stored: each
+ * message reloads it from the `sessionStore` by that id.
+ */
 export abstract class ChannelStore<
   ChannelType = unknown,
   OpeningData = unknown,

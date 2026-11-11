@@ -63,6 +63,15 @@ export type SurfaceEntryPoint = {
   leaves: SurfaceLeaf[]
 }
 
+/** What a `PKU` diagnostic means, for `pikku doc PKU641`. */
+export type SurfaceError = {
+  code: string
+  name: string
+  /** Absent for a code with nothing to add to its diagnostic and its docs page. */
+  meaning?: string
+  fix?: string
+}
+
 /**
  * Metadata about the framework itself rather than about any one project: which
  * leaves an application gets, which an addon gets, and what each one exports.
@@ -73,6 +82,9 @@ export type SurfaceDoc = {
   /** The `@pikku/cli` version this surface was computed from. */
   version: string
   entryPoints: SurfaceEntryPoint[]
+  errors: SurfaceError[]
+  /** The code of each region a guide names, keyed by region. */
+  guideSnippets?: Record<string, string>
 }
 
 export type SurfaceSymbolUsage = {

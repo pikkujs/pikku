@@ -154,7 +154,8 @@ export type WorkflowApprovalApprovers = 'any' | 'owner' | 'not-initiator'
  */
 export interface WorkflowApprovalPolicy {
   /**
-   * Defaults to `any`. See {@link WorkflowApprovalApprovers}.
+   * Required by the compiler: a gate has to say who answers it. `any` means any
+   * signed-in user. See {@link WorkflowApprovalApprovers}.
    */
   approvers?: WorkflowApprovalApprovers
   /**
@@ -177,7 +178,11 @@ export interface ApprovalDecider {
 }
 
 /**
- * Options for workflow.approval().
+ * Options for workflow.approval(). The run waits until
+ * `workflowService.approveStep(runId, reason, decision, session)` answers the
+ * gate; a no is a `decision` too, so there is no separate decline.
+ *
+ * @example snippet: workflowApprovalAnswer
  */
 export interface WorkflowApprovalOptions<
   TSchema extends StandardSchemaV1 = StandardSchemaV1,
@@ -202,6 +207,8 @@ export interface WorkflowApprovalOptions<
  * must handle the deadline case, and so "skip it and carry on" stays trivial.
  * `decided` means a human answered — whether that answer was yes or no is
  * carried in `data` and is the application's business, not the framework's.
+ *
+ * @example snippet: workflowApprovalGate
  */
 export type ApprovalOutcome<T> =
   | {
@@ -588,14 +595,15 @@ export interface WorkflowStepWire {
   fromInvocationId?: string
 }
 
-/**
- * Workflow wire object for DSL workflows
- * Provides workflow-specific capabilities to function execution
- */
+/** The outcome of the forward call a `compensate` function is undoing. */
 export type CompensatingFor<Out = unknown> =
   | { ok: true; output: Out; stepName?: string }
   | { ok: false; output: null; error: SerializedError; stepName?: string }
 
+/**
+ * Workflow wire object for DSL workflows
+ * Provides workflow-specific capabilities to function execution
+ */
 export interface PikkuWorkflowWire {
   /**
    * Set only while a function's `compensate` is running: the outcome of the
@@ -648,6 +656,9 @@ export type ScenarioContext<Out = unknown> = 0 extends 1 & Out
     ? Partial<Out>
     : Record<string, unknown>
 
+/**
+ * The workflow wire a scenario body receives: every workflow step, plus the expectation steps and the shared `context`.
+ */
 export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
   /**
    * Scratch the body writes and the `before`/`after` hooks read. A hook is a

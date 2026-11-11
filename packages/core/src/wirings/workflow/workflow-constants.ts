@@ -1,3 +1,8 @@
+import type { StepStatus } from './workflow.types.js'
+
+/**
+ * How many times a failed step is retried when neither the step nor the app's `workflow.retries` config says.
+ */
 export const DEFAULT_STEP_RETRIES = 5
 
 /** Statuses from which a run never advances again on its own. */
@@ -17,6 +22,13 @@ export const WORKFLOW_TERMINAL_STATES: ReadonlySet<string> = new Set([
   'cancelled',
   'compensated',
   'compensation_failed',
+])
+
+/** Step statuses that mean the step has not settled yet. */
+export const STEP_IN_FLIGHT_STATES: ReadonlySet<StepStatus> = new Set([
+  'pending',
+  'scheduled',
+  'running',
 ])
 
 export const NO_COMPENSATE_STATE_PREFIX = 'noCompensate:'
@@ -48,6 +60,13 @@ export const isMilestoneStepName = (stepName: string): boolean =>
 export const isRunSettled = (status: string): boolean =>
   WORKFLOW_TERMINAL_STATES.has(status)
 
+/**
+ * True for a run its own pass must no longer write an outcome for. That is a
+ * settled run, or one unwinding, which `cancelRun` moves there on its own.
+ */
+export const isRunStopped = (status: string): boolean =>
+  isRunSettled(status) || status === 'compensating'
+
 export const WORKFLOW_POLL_MIN_MS = 10
 
 export const WORKFLOW_POLL_FACTOR = 1.6
@@ -69,6 +88,18 @@ export const DEFAULT_UNDISPATCHED_STEP_MS = 30_000
 
 /** Steps re-driven per `relayUndispatchedSteps` call, so one tick is bounded. */
 export const DEFAULT_UNDISPATCHED_STEP_LIMIT = 100
+
+/** How far past its wake time a sleep sits before a sweep decides its timer is lost. */
+export const SLEEP_WAKE_GRACE_MS = 5_000
+
+/** `scheduled` steps read per query, so a sweep pages rather than loads them all. */
+export const SCHEDULED_STEP_PAGE_SIZE = 200
+
+/** How often a long-running host sweeps for lost work, after its startup pass. */
+export const DEFAULT_RECOVERY_INTERVAL_MS = 30_000
+
+/** Idle window `startRecovery` treats as stalled; the run's lease is what makes it safe. */
+export const DEFAULT_RECOVERY_STALLED_MS = 30_000
 
 /** First wait before a step already re-dispatched once is re-dispatched again. */
 export const REDISPATCH_BACKOFF_MS = 30_000
@@ -118,4 +149,4 @@ export {
   compensationStepName,
   forwardStepName,
   isCompensationStepName,
-} from '../../function/compensation-name.js'
+} from '../../compensation-name.js'

@@ -53,7 +53,9 @@ describe('core import checks', () => {
       `import { NotFoundError } from '@pikku/core/errors'\n` +
         `import { defineSecret } from '@pikku/core/secret'\n` +
         `import { defineSystemRole } from '@pikku/core/role'\n` +
-        `import { pikkuAgentScorer } from '@pikku/core/agent-scorer'\n`
+        `import { pikkuAgentScorer } from '@pikku/core/agent-scorer'\n` +
+        `import { defineFeatureFlags } from '@pikku/core/flag'\n` +
+        `import { defineAnalyticsEvents } from '@pikku/core/analytics'\n`
     )
 
     const hints = (await runCoreImportChecks(root)).map((f) => f.fixHint)
@@ -62,6 +64,8 @@ describe('core import checks', () => {
       "Import the same names from '#pikku/secrets'",
       "Import the same names from '#pikku/scopes'",
       "Import the same names from '#pikku/agent'",
+      "Import the same names from '#pikku/scopes'",
+      "Import the same names from '#pikku/analytics'",
     ])
   })
 
@@ -182,5 +186,56 @@ describe('core import checks', () => {
     await write(root, 'src/a.ts', `export * from '@pikku/core/workflow'\n`)
 
     assert.equal((await runCoreImportChecks(root)).length, 1)
+  })
+
+  test('leaves a nested Pikku project to its own run', async () => {
+    const root = await project()
+    await write(root, 'packages/addon-x/pikku.config.json', '{}\n')
+    await write(
+      root,
+      'packages/addon-x/src/a.ts',
+      `import { NotFoundError } from '@pikku/core/errors'\n`
+    )
+
+    assert.deepEqual(await runCoreImportChecks(root), [])
+    assert.equal(
+      (await runCoreImportChecks(join(root, 'packages/addon-x'))).length,
+      1
+    )
+  })
+
+  test('points an addon at its own leaves under #pikku/addon', async () => {
+    const root = await project('{ "addon": { "displayName": "X" } }\n')
+    await write(
+      root,
+      'src/a.ts',
+      `import { NotFoundError } from '@pikku/core/errors'\n`
+    )
+
+    const hints = (await runCoreImportChecks(root)).map((f) => f.fixHint)
+    assert.deepEqual(hints, ["Import the same names from '#pikku/addon/error'"])
+  })
+
+  test('points a project at #pikku/contributor for the typed helper', async () => {
+    const root = await project()
+    await write(
+      root,
+      'src/a.ts',
+      `import { defineContributors } from '@pikku/core/contributors'\n`
+    )
+
+    const hints = (await runCoreImportChecks(root)).map((f) => f.fixHint)
+    assert.deepEqual(hints, ["Import the same names from '#pikku/contributor'"])
+  })
+
+  test('lets an addon author contributors against core, which has no such leaf for it', async () => {
+    const root = await project('{ "addon": { "displayName": "X" } }\n')
+    await write(
+      root,
+      'src/a.ts',
+      `import { defineContributors } from '@pikku/core/contributors'\n`
+    )
+
+    assert.deepEqual(await runCoreImportChecks(root), [])
   })
 })

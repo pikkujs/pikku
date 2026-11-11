@@ -1,3 +1,4 @@
+/** Display metadata for one better-auth plugin, keyed by its factory name. */
 export interface AuthPluginDef {
   /** Human-readable name for the plugin (shown in the console SSO page). */
   displayName: string
@@ -15,9 +16,10 @@ export interface AuthPluginDef {
  * {@link pluginDisplayName}).
  *
  * Pikku's own plugins are keyed under both names: `pikkuBan` and friends are
- * what a call site says today, and the bare `ban` is what the deprecated alias
- * still reads as. The derived fallback would render the prefixed names as
- * "Pikku Ban", which is the package talking rather than the capability.
+ * what a call site says, and the bare `ban` is what an `auth.ts` written
+ * before the unprefixed aliases were removed still says. The derived fallback
+ * would render the prefixed names as "Pikku Ban", which is the package talking
+ * rather than the capability.
  */
 export const PLUGIN_REGISTRY: Record<string, AuthPluginDef> = {
   virtualUser: { displayName: 'VirtualUser' },

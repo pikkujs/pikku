@@ -64,24 +64,22 @@ const addGithubStar = pikkuFunc<
 Services are initialized at server startup and available to all functions. Pikku uses two types of services:
 
 ```ts
-import { pikkuServices, pikkuWireServices } from '#pikku/function'
-import { ConsoleLogger, JWTService } from '@pikku/core/services'
+import { pikkuServices, pikkuWireServices } from '#pikku/setup'
+import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
 
 // Singleton services - created once at startup
 export const createSingletonServices = pikkuServices(async (config) => {
+  const variables = new LocalVariablesService()
   const logger = new ConsoleLogger()
   const db = new DatabaseClient()
-  const jwt = new JWTService(['your-secret-key'], logger)
 
-  return { logger, db, jwt }
+  return { variables, logger, db }
 })
 
 // Wire services - created per request
 export const createWireServices = pikkuWireServices(
-  async (services, interaction, session) => {
-    return {
-      scopedLogger: new ScopedLogger(session.userId),
-    }
+  async (singletonServices, wire) => {
+    return {}
   }
 )
 ```
@@ -91,7 +89,7 @@ export const createWireServices = pikkuWireServices(
 Pikku automatically generates type-safe clients from your API definitions:
 
 ```bash
-npx pikku prebuild
+npx pikku all
 ```
 
 Generates:
@@ -104,14 +102,20 @@ Generates:
 
 Pikku works across multiple runtime environments:
 
-| Runtime            | Status | Package                     |
-| ------------------ | ------ | --------------------------- |
-| Express            | ✅     | `@pikku/express`            |
-| Fastify            | ✅     | `@pikku/fastify`            |
-| Next.js            | ✅     | `@pikku/nextjs`             |
-| AWS Lambda         | ✅     | `@pikku/aws-lambda`         |
-| Cloudflare Workers | ✅     | `@pikku/cloudflare-workers` |
-| Bun                | ✅     | `@pikku/bun`                |
+| Runtime                | Package                                       |
+| ---------------------- | --------------------------------------------- |
+| Express                | `@pikku/express`, `@pikku/express-middleware` |
+| Fastify                | `@pikku/fastify`, `@pikku/fastify-plugin`     |
+| Next.js                | `@pikku/next`                                 |
+| TanStack Start         | `@pikku/tanstack-start`                       |
+| AWS Lambda             | `@pikku/lambda`                               |
+| Azure Functions        | `@pikku/azure-functions`                      |
+| Cloudflare Workers     | `@pikku/cloudflare`                           |
+| Bun                    | `@pikku/bun-server`                           |
+| Node.js HTTP           | `@pikku/node-http-server`                     |
+| uWebSockets.js         | `@pikku/uws`, `@pikku/uws-handler`            |
+| WebSockets (`ws`)      | `@pikku/ws`                                   |
+| Model Context Protocol | `@pikku/modelcontextprotocol`                 |
 
 ## Example: One Function, Multiple Ways
 
@@ -148,13 +152,14 @@ wireQueueWorker({
 })
 ```
 
-Wire it as an MCP tool:
+Offer it as an MCP tool by setting `mcp: true` on the function:
 
 ```ts
-wireMCPTool({
-  name: 'github-star',
-  description: 'Add a star to a GitHub repository',
-  func: addGithubStar,
+const addGithubStar = pikkuFunc<{ repo: string }, { success: boolean }>({
+  func: async ({ githubService }, { repo }) => {
+    /* … */
+  },
+  mcp: true,
 })
 ```
 
@@ -179,11 +184,19 @@ The documentation is available at [pikku.dev](https://pikku.dev).
 
 ## Migration
 
-Migration guides are available in [docs/MIGRATION.md](docs/MIGRATION.md).
+Upgrading from an earlier 0.12 release? See [docs/MIGRATION.md](docs/MIGRATION.md).
 
 ## Contributing
 
-We welcome contributions! See our [Contributing Guide](docs/CONTRIBUTING.md) for details on:
+We welcome contributions! The repository is a [bun](https://bun.sh/) workspace (bun 1.4, Node.js 24 or later):
+
+```bash
+bun install
+bun run build:packages
+bun run test
+```
+
+See our [Contributing Guide](docs/CONTRIBUTING.md) for details on:
 
 - Setting up the development environment
 - Running tests and type checking
@@ -198,7 +211,7 @@ We welcome contributions! See our [Contributing Guide](docs/CONTRIBUTING.md) for
 
 ## Contributors
 
-Thanks to [all contributors](https://github.com/yourusername/pikku/graphs/contributors)!
+Thanks to [all contributors](https://github.com/pikkujs/pikku/graphs/contributors)!
 
 ## License
 

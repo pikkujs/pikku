@@ -1,5 +1,8 @@
 import type { ScenarioStepPhase } from './scenario-step.types.js'
 
+/**
+ * Fills a step template's `{key}` placeholders from its input, collapsing whitespace. Missing values render as empty.
+ */
 export const renderStepTemplate = (
   template: string,
   input: unknown
@@ -22,6 +25,9 @@ const formatValue = (value: unknown): string => {
   return String(value)
 }
 
+/**
+ * Renders one scenario step as a Gherkin-style sentence — keyword, virtual user, then the step text.
+ */
 export const composeStepProse = ({
   phase,
   description,

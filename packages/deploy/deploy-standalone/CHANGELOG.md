@@ -1,5 +1,84 @@
 # @pikku/deploy-standalone
 
+## 0.12.30
+
+### Patch Changes
+
+- c7db9e2: `pikku deploy apply` now exits non-zero when the deploy fails, and `--fromPlan` works for providers that write no `infra.json`, such as standalone. `deploy plan` stages `deploy.embed`, so a plan applied later carries the same files. `deploy.defaultProvider` now takes effect when `-p` is not given. `deploy apply --runtime` is a real option, refused unless the provider supports that runtime.
+- Updated dependencies [c7db9e2]
+- Updated dependencies [a679e5d]
+- Updated dependencies [307fb8d]
+  - @pikku/deploy@0.12.19
+  - @pikku/core@0.12.152
+
+## 0.12.29
+
+### Patch Changes
+
+- edd7abf: Platform-service contributors are plain objects an addon registers with `defineContributors` (new `@pikku/core/contributors`) and a project opts in to by name with `wireAddon({ contributors })`. `dev.contributors`, `deploy.contributors`, addon `pikku.contributors`, the string-emitting `PlatformServiceContributor` API and its helpers, the adapter `contributors` option and the `devPlatformServicesFile` config output are removed, and a leftover one is a hard error: the CLI refuses the config keys by name and the inspector reports an addon `package.json` with `pikku.contributors` as PKU364 (see `docs/MIGRATION.md`). Contributors can declare `onServerStart` / `onServerStop`, run around the app's server lifecycle in `pikku dev`, `pikku serve`, the generic server entry, standalone and the Cloudflare container entry (which now runs the app's own `serverLifecycle`); on a Worker `onServerStart` is a build error. `ProviderAdapter.contributorSupport` gains a required `runsServerLifecycle`. `@pikku/core` is a new peer dependency of the deploy packages and `@pikku/kysely` of `@pikku/deploy-cloudflare`. The names in `wireAddon({ contributors })` are typed from the addon's published contributors meta, so a name the addon does not register fails `tsc` and completes in the editor. A project gets a generated `#pikku/contributor` (`defineContributors` and `Contributor` typed against its own singleton services, type-only apart from core's helper); addons keep using `@pikku/core/contributors`.
+- Updated dependencies [3562771]
+- Updated dependencies [edd7abf]
+- Updated dependencies [8a4233a]
+  - @pikku/core@0.12.148
+  - @pikku/deploy@0.12.18
+
+## 0.12.28
+
+### Patch Changes
+
+- a9318bd: Platform service contributors declare `needs` and `provides` and run in the order those require; an unmet need, a key provided twice or a cycle fails codegen by name. Generated `createPlatformServices(env, runtime)` receives the services the entry already built (`runtime.kysely` on standalone, after the database opens). Addons ship contributors in their package.json under `pikku.contributors`, picked up by `pikku dev` codegen and by `pikku deploy plan` / `apply`, which now also pass `deploy.contributors` from `pikku.config.json` to the adapter.
+- c09cd23: `pikku deploy apply -p standalone` cross-compiles when `PIKKU_COMPILE_TARGET` is set (for example `bun-linux-arm64`), passing it to `bun build --compile --target`.
+- Updated dependencies [a9318bd]
+  - @pikku/deploy@0.12.17
+
+## 0.12.27
+
+### Patch Changes
+
+- 6c79f8d: **Breaking:** `@pikku/core/services` no longer re-exports the in-memory implementations of a wire, so importing it stops loading the workflow, queue, trigger and gateway runtimes (102 modules down to 40). Each implementation now has its own subpath, and the remote job runners moved to the wire they run:
+
+  | Export                        | Was                    | Now                                       |
+  | ----------------------------- | ---------------------- | ----------------------------------------- |
+  | `InMemoryWorkflowService`     | `@pikku/core/services` | `@pikku/core/services/in-memory-workflow` |
+  | `InMemoryQueueService`        | `@pikku/core/services` | `@pikku/core/services/in-memory-queue`    |
+  | `InMemoryTriggerService`      | `@pikku/core/services` | `@pikku/core/services/in-memory-trigger`  |
+  | `LocalGatewayService`         | `@pikku/core/services` | `@pikku/core/services/local-gateway`      |
+  | `pikkuRemoteQueueJobFunc`     | `@pikku/core/services` | `@pikku/core/queue`                       |
+  | `pikkuRemoteScheduledJobFunc` | `@pikku/core/services` | `@pikku/core/scheduler`                   |
+
+  ```diff
+  -import { ConsoleLogger, InMemoryTriggerService } from '@pikku/core/services'
+  +import { ConsoleLogger } from '@pikku/core/services'
+  +import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
+  ```
+
+  The `REMOTE_*` constants and the `RemoteQueueJobData`/`RemoteScheduledJobData` types stay on `@pikku/core/services`. `@pikku/core/middleware` no longer loads the queue and scheduler runners through `remoteJobsSecret` (50 modules down to 23).
+
+  Core also has no runtime import cycles left: the rpc runner and an agent's sub-agent tools reach the runners that call them lazily, and `wirings-stay-decoupled.test.ts` now fails on any module cycle, on a new cycle between areas, on code outside `wirings/` reaching a wire it is not declared to, and on `@pikku/core/services` loading wire runtime or more than 45 modules.
+
+  The CLI's generated local services and remote job inbox, and the standalone deploy entry, import from the new paths.
+
+- be98e56: `@pikku/deploy-cloudflare` applies the generated column coercion map, as `pikku dev` does.
+
+  The adapter now ships `coercionContributor`, on by default: when `db/coercion.gen.ts` exists, every entry's `createPlatformServices` wraps the platform's `services.kysely` with `createCoercionPlugin` and the map as a literal. It runs after every other contributor so it wraps the kysely they built. A platform whose own contributor already applies the map passes `coercion: false`.
+
+  `EntryGenerationContext` gains `coercionMap`, filled by the deploy build from the project's `coercion.gen.ts`, and a contributor's `imports` function now receives the entry context as a second argument (`collectContributorImports` takes it as a third).
+
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- Updated dependencies [be98e56]
+- Updated dependencies [1112955]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [939dac7]
+- Updated dependencies [19895c4]
+  - @pikku/deploy@0.12.16
+  - @pikku/migrator-sql@0.12.9
+
 ## 0.12.26
 
 ### Patch Changes

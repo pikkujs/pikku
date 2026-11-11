@@ -38,7 +38,7 @@ pikkuAgent({
   personality?: string,          // How it sounds: tone, verbosity
   goal: string,                  // REQUIRED — what it is for
 
-  model: string,                 // e.g. 'openai/gpt-5-mini'
+  model: string,                 // an alias from `models` in pikku.config.json, e.g. 'fast' (define it there first)
   temperature?: number,
   providerOptions?: {            // passed through untouched, keyed by provider
     openai?: { reasoningEffort?: 'minimal' | ... },
@@ -98,13 +98,13 @@ From inside a Pikku function, go through `wire.rpc.agent` — it carries the
 session, credentials, and RPC depth for you:
 
 ```typescript
-const result = await rpc.agent.run('todo-agent', {
+const result = await rpc.agent.run('todoAgent', {
   message, threadId, resourceId,     // required
   attachments?, model?, temperature?, context?,
 })
 
-await rpc.agent.stream('todo-agent', input)              // writes to the wire's channel
-await rpc.agent.approve(runId, [{ toolCallId, approved }], expectedAgentName?)
+await rpc.agent.stream('todoAgent', input)              // writes to the wire's channel
+await rpc.agent.approve(runId, [{ toolCallId, approved }])
 await rpc.agent.resume(runId, { toolCallId, approved })
 await rpc.agent.interrupt(runId, 'user' | 'speech' | 'timeout')
 ```
@@ -178,7 +178,7 @@ export const todoAgent = pikkuAgent({
   name: 'todo-agent',
   description: 'Manages a todo list',
   goal: 'You help users manage their todos. You can list, add, complete and delete them.',
-  model: 'openai/gpt-5-mini',
+  model: 'fast',
   tools: [
     ref('todos:listTodos'),
     ref('todos:addTodo'),
@@ -212,7 +212,7 @@ export const structuredAgent = pikkuAgent({
   name: 'structured-agent',
   description: 'Classifies a message and returns a structured verdict',
   goal: 'You classify the sentiment of the user message.',
-  model: 'openai/gpt-5-mini',
+  model: 'fast',
   output: z.object({ sentiment: z.string(), score: z.number() }),
 })
 ```
@@ -224,7 +224,7 @@ model. Each entry carries **either** `data` (base64, no `data:` prefix) **or**
 `url`, plus a `mediaType`:
 
 ```typescript
-const { object } = await rpc.agent.run('read-receipt', {
+const { object } = await rpc.agent.run('readReceipt', {
   message: 'List every line item on this receipt.',
   threadId, resourceId,
   attachments: [{ type: 'image', data: base64Jpeg, mediaType: 'image/jpeg' }],
@@ -315,7 +315,7 @@ export const todoAssistant = pikkuAgent({
   goal: `Keep the user's todos accurate.
     - When creating todos, infer priority if not specified
     - When listing todos, summarize the results`,
-  model: 'openai/gpt-5-mini',
+  model: 'fast',
   tools: [
     ref('todos:listTodos'),
     ref('todos:createTodo'),
@@ -334,7 +334,7 @@ wireHTTP({
   func: pikkuFunc({
     title: 'Chat',
     func: async (_services, { message, threadId }, { session, rpc }) => {
-      return await rpc.agent.run('todo-assistant', {
+      return await rpc.agent.run('todoAssistant', {
         message,
         threadId,
         resourceId: session.userId,

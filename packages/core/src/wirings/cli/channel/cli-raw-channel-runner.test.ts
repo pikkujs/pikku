@@ -170,7 +170,7 @@ describe('handleRawCLI', () => {
     singletonServices.deploymentService = deployment
 
     wireTestCLI(async (_services, _data, { cli, rpc }: any) => {
-      const { sha } = (await rpc.remote('gitHead', {})) as { sha: string }
+      const { sha } = (await rpc.mesh('gitHead', {})) as { sha: string }
       await cli.channel.send({ phase: `resolved ${sha}` })
       return { deployed: sha }
     })

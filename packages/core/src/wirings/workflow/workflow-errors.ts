@@ -29,6 +29,9 @@ export class WorkflowCancelledException extends Error {
   }
 }
 
+/**
+ * Thrown to stop a run that is now waiting to be resumed — a `suspend`, an approval gate. Not a failure.
+ */
 export class WorkflowSuspendedException extends Error {
   constructor(
     public readonly runId: string,
@@ -39,6 +42,7 @@ export class WorkflowSuspendedException extends Error {
   }
 }
 
+/** A step could not be queued; the queue's error is the `cause`. */
 export class WorkflowDispatchException extends Error {
   constructor(
     public readonly runId: string,
@@ -53,6 +57,7 @@ export class WorkflowDispatchException extends Error {
   }
 }
 
+/** No workflow is registered under the name asked for. Responds 404. */
 export class WorkflowNotFoundError extends PikkuError {
   constructor(name: string) {
     super(`Workflow not found: ${name}`)
@@ -63,6 +68,7 @@ addError(WorkflowNotFoundError, {
   message: 'Workflow not found.',
 })
 
+/** No run exists with the id asked for. Responds 404. */
 export class WorkflowRunNotFoundError extends PikkuError {
   constructor(runId: string) {
     super(`Workflow run not found: ${runId}`)
@@ -95,6 +101,9 @@ addError(WorkflowRunCancelledError, {
   message: 'Workflow was cancelled.',
 })
 
+/**
+ * The approval gate already has a recorded outcome, so a second decision is refused. Responds 409.
+ */
 export class WorkflowApprovalResolvedError extends PikkuError {
   public payload: {
     reason: string
@@ -110,6 +119,10 @@ addError(WorkflowApprovalResolvedError, {
   message: 'Approval has already been resolved.',
 })
 
+/**
+ * A queued step named a different function from the one the workflow recorded
+ * when it dispatched the step, so the worker refuses to run it. Responds 409.
+ */
 export class WorkflowStepFunctionMismatchError extends PikkuError {
   constructor(
     public readonly runId: string,

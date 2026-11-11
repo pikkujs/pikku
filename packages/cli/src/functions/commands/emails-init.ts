@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { generateEmailsArtifacts } from '../wirings/emails/pikku-command-emails.js'
 
-type EmailsInitInput = {
+export type EmailsInitInput = {
   force?: boolean
 }
 

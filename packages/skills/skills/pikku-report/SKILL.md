@@ -1,15 +1,7 @@
 ---
 name: pikku-report
 description: >-
-  Use when pikku itself cost you time — wrong generated types, a check that passes when it should
-  not, output that is quietly wrong, a skill that misled you — or when the user asks you to report
-  a framework bug or file a finding. Owns `pikku cloud report` (a finding is about pikku, not the
-  app), the product-vs-harness kinds, the workaround-first ladder, and asking the user at hand-over
-  whether to send what was filed. TRIGGER when: the framework fought you, codegen produced
-  something broken, a skill told you to run something that does not exist, the user says "report
-  this to pikku" / "file a finding", or you are handing over a build. DO NOT TRIGGER when: the bug
-  is in the app you are building (fix it there), you are debugging a deployed stage,
-  or you are tempted to patch pikku's source (never do that from an app).
+  Report Pikku itself when it cost you time or asked to file a bug, and at every build hand-over: `pikku report`. Not your app's bugs. Never patch pikku's source from an app.
 installGroups: [core]
 ---
 
@@ -19,9 +11,10 @@ A finding is about **pikku**, not about the app you are building. It is how the
 framework learns what cost its users time — the bug, the misleading skill, the
 silence where a check should have complained.
 
-File each one the moment it happens. Nothing leaves the machine until the user
-says so at hand-over, and nothing is written to the repository. The command is
-spelled `pikku cloud report` — there is no top-level report command.
+File each one the moment it happens. Unless the user saved Always, nothing leaves
+the machine until they say so at hand-over, and nothing is written to the
+repository. The command is
+`pikku report`; `pikku cloud report` no longer exists.
 
 ## Report at the moment it happens
 
@@ -62,7 +55,7 @@ baseline noise that was already failing before you started.
 - `--kind harness` — a skill misled you: it told you to run something that does
   not exist, described a flag that is spelled differently, or contradicted what
   the CLI actually did. Pass `--skill <name>` and `--passage "<the line or
-  section>"`. This is the most useful kind to file, because it is fixable
+section>"`. This is the most useful kind to file, because it is fixable
   immediately — so file it even when the cost was small.
 
 ## The command
@@ -75,7 +68,7 @@ follows it. Quote the heredoc delimiter (`<<'EOF'`, never `<<EOF`) so the shell
 leaves the body alone.
 
 ```bash
-pikku cloud report --stdin <<'EOF'
+pikku report --stdin <<'EOF'
 {
   "title": "<one-line title>",
   "kind": "product",
@@ -116,7 +109,7 @@ The last thing in the hand-over — after the app runs, and is deployed if they
 chose to — is:
 
 ```bash
-pikku cloud report
+pikku report
 ```
 
 With no finding, it lists what this build filed. What happens next depends on
@@ -130,16 +123,18 @@ what the user said before, which the CLI keeps on their machine:
   **Never**. Then run it again with their answer:
 
   ```bash
-  pikku cloud report --consent yes|no|always|never
+  pikku report --consent yes|no|always|never
   ```
 
   Yes sends and No discards what is held now; Always and Never are saved and the
   question is not asked again. If nobody answers, leave them held and say that
-  `pikku cloud report` sends them later.
+  `pikku report` sends them later.
 
 Findings are anonymous: no account, no project. The receipt printed when you
-filed each one is exactly what leaves the machine. A send that fails keeps what
-was not sent; do not retry or file it twice.
+filed each one shows what leaves the machine; the environment flags it omits
+(version skew, linked framework) are sent too. A send that fails keeps what was
+not sent: run `pikku report --consent yes` later to resend it, and never
+file it twice.
 
 ## Never fix pikku itself
 

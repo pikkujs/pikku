@@ -38,6 +38,27 @@ runs:
         key: ts-build-v3-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'bun.lock') }}
         restore-keys: |
           ts-build-v3-
+    # Codegen runs in the pikku-inspect binary, so this job builds the host copy
+    # itself (inspector-go's build step). The cross-compiled copies other jobs
+    # download come from the inspector-go-build job.
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: packages/inspector-go/go.mod
+        cache-dependency-path: packages/inspector-go/**/go.sum
+    # The Rust inspector (PIKKU_INSPECTOR=rs, or the default once it is). Built
+    # for the host beside the Go one, into the same bin/ the build artifact
+    # carries; the cross-platform copies come from inspector-rs-build.
+    - name: Set up Rust
+      uses: ./.github/actions/setup-rust
+    - name: Build pikku-inspect-rs
+      shell: bash
+      run: |
+        start=$SECONDS
+        cargo build --release --locked --manifest-path packages/inspector-rust/Cargo.toml
+        mkdir -p packages/inspector-go/bin
+        cp packages/inspector-rust/target/release/pikku-inspect-rs packages/inspector-go/bin/
+        echo "::notice::⏱ Build pikku-inspect-rs: $((SECONDS - start))s"
     - name: Build packages
       shell: bash
       run: |
@@ -65,7 +86,7 @@ runs:
       shell: bash
       run: |
         start=$SECONDS
-        cd templates/function-addon && bun run pikku && bun run build
+        cd recipes/function-addon && bun run pikku && bun run build
         echo "::notice::⏱ Build function-addon template: $((SECONDS - start))s"
     - name: Generate pikku files
       shell: bash
@@ -73,20 +94,20 @@ runs:
         start=$SECONDS
         bun run pikku
         echo "::notice::⏱ Generate pikku files: $((SECONDS - start))s"
-    - name: Build templates
+    - name: Build recipes
       if: ${{ inputs.templates == 'true' }}
       shell: bash
       run: |
         start=$SECONDS
-        bun run build:templates
-        echo "::notice::⏱ Build templates: $((SECONDS - start))s"
+        bun run build:recipes
+        echo "::notice::⏱ Build recipes: $((SECONDS - start))s"
 
     # One tar rather than the tree: upload-artifact sends each file on its own,
     # and ~16 MB of small build files took two minutes that way.
     #
     # The node_modules prune keeps every dependency's own dist and .pikku out.
     #
-    # `templates/functions/pikku` is the scaffold directory that config's
+    # `recipes/functions/pikku` is the scaffold directory that config's
     # `scaffold.pikkuDir` names, and it is build output exactly as `.pikku`
     # is. It has to travel with it: a variable or a secret declared in a
     # scaffold is imported by name from `.pikku`, so shipping one without the
@@ -96,9 +117,9 @@ runs:
       shell: bash
       run: |
         {
-          find packages templates -name node_modules -prune -o -type d \( -name dist -o -name .pikku \) -print -prune \
+          find packages recipes -name node_modules -prune -o -type d \( -name dist -o -name .pikku \) -print -prune \
             -o -path 'packages/*' -type d -name bin -print -prune
-          for dir in templates/functions/pikku; do
+          for dir in recipes/functions/pikku; do
             [ -d "$dir" ] && echo "$dir"
           done
         } > "$RUNNER_TEMP/build-output.list"

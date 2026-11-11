@@ -6,11 +6,19 @@ import type {
 } from '../wirings/workflow/scenario-step.types.js'
 import type { CommonWireMeta } from '../types/core.types.js'
 
+/**
+ * The services a function's body uses, as read by the inspector. `optimized`
+ * says whether the list could be determined statically and so can be relied on.
+ */
 export interface FunctionServicesMeta {
   optimized: boolean
   services: string[]
 }
 
+/**
+ * The wire keys a function's body uses, as read by the inspector. `optimized`
+ * says whether the list could be determined statically and so can be relied on.
+ */
 export interface FunctionWiresMeta {
   optimized: boolean
   wires: string[]
@@ -26,12 +34,22 @@ export type PermissionMetadata = {
   inline?: boolean
 }
 
+/**
+ * The part of a function's generated metadata the runtime needs to run it:
+ * schemas, auth, scopes, flags and exposure. The verbose fields live on
+ * {@link FunctionMeta}.
+ */
 export type FunctionRuntimeMeta = {
   pikkuFuncId: string
   inputSchemaName: string | null
   outputSchemaName: string | null
   /** Scopes the session must hold to run this function. All are required (AND). */
   scopes?: string[]
+  /**
+   * Set by codegen when a required scope is declared `live`. The runner then
+   * re-resolves the session's scopes from the `ScopeService` before checking.
+   */
+  liveScopes?: boolean
   /** The feature this function belongs to. Checked for availability only. */
   featureFlag?: string
   expose?: boolean
@@ -139,6 +157,11 @@ export type FunctionRuntimeMeta = {
   outputHash?: string
 }
 
+/**
+ * Everything codegen records about one function: the runtime fields plus the
+ * source locations, inputs, middleware and call graph that tooling (the
+ * console, deploy planner, coverage) reads.
+ */
 export type FunctionMeta = FunctionRuntimeMeta &
   Partial<
     {
@@ -157,7 +180,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
       exportedName: string
       /**
        * RPC names this function's own body calls by literal name through
-       * `rpc.invoke(...)` / `rpc.remote(...)`. The deploy planner binds the
+       * `rpc.invoke(...)` / `rpc.mesh(...)`. The deploy planner binds the
        * function's unit to each callee's unit from this; a call with a computed
        * name is not listed, and is warned about instead.
        */
@@ -178,5 +201,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
     } & CommonWireMeta
   >
 
+/** Runtime metadata for every function, keyed by function id. */
 export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>
+/** Full metadata for every function, keyed by function id. */
 export type FunctionsMeta = Record<string, FunctionMeta>

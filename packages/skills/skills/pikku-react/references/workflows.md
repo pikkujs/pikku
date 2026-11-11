@@ -11,7 +11,6 @@
 - [Backend: streaming richer progress](#backend-streaming-richer-progress)
 - [What NOT to do](#what-not-to-do)
 
-
 ## Discover what workflows exist
 
 ```bash
@@ -34,7 +33,7 @@ For short, synchronous-feeling workflows. Returns a mutation that
 resolves to the workflow's output.
 
 ```tsx
-import { useRunWorkflow } from './pikku/api.gen'
+import { useRunWorkflow } from '@sdk/api/pikku-react-query.gen'
 
 function ChargeButton({ orderId }: { orderId: string }) {
   const run = useRunWorkflow('chargeOrder', {
@@ -74,7 +73,7 @@ Polls the workflow runtime for a run's status. Returns a typed status
 object with `status`, optional `output`, and optional `error`.
 
 ```tsx
-import { useWorkflowStatus } from './pikku/api.gen'
+import { useWorkflowStatus } from '@sdk/api/pikku-react-query.gen'
 
 function VideoStatus({ runId }: { runId: string }) {
   const { data: status } = useWorkflowStatus('processVideo', runId, {

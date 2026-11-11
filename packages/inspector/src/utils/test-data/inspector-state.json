@@ -2,48 +2,48 @@
   "rootDir": "src",
   "singletonServicesTypeImportMap": [
     [
-      "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts",
       [
         {
           "variable": "SingletonServices",
           "type": "SingletonServices",
-          "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+          "typePath": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts"
         }
       ]
     ]
   ],
   "wireServicesTypeImportMap": [
     [
-      "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts",
       [
         {
           "variable": "Services",
           "type": "Services",
-          "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+          "typePath": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts"
         }
       ]
     ]
   ],
   "userSessionTypeImportMap": [
     [
-      "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts",
       [
         {
           "variable": "UserSession",
           "type": "UserSession",
-          "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+          "typePath": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts"
         }
       ]
     ]
   ],
   "configTypeImportMap": [
     [
-      "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts",
       [
         {
           "variable": "Config",
           "type": "Config",
-          "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+          "typePath": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts"
         }
       ]
     ]
@@ -87,28 +87,28 @@
   ],
   "filesAndMethods": {
     "userSessionType": {
-      "file": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "file": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts",
       "type": "UserSession",
       "variable": "UserSession",
-      "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+      "typePath": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts"
     },
     "singletonServicesType": {
-      "file": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "file": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts",
       "type": "SingletonServices",
       "variable": "SingletonServices",
-      "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+      "typePath": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts"
     },
     "wireServicesType": {
-      "file": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "file": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts",
       "type": "Services",
       "variable": "Services",
-      "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+      "typePath": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts"
     },
     "pikkuConfigType": {
-      "file": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "file": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts",
       "type": "Config",
       "variable": "Config",
-      "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+      "typePath": "/Users/yasser/git/pikku/pikku/recipes/functions/types/application-types.d.ts"
     },
     "pikkuConfigFactory": {
       "file": "src/services.ts",

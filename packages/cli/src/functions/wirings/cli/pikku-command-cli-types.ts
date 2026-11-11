@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeCLITypes } from './serialize-cli-types.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 
-type CLITypesCommandInput = {
+export type CLITypesCommandInput = {
   bootstrap?: boolean
 }
 

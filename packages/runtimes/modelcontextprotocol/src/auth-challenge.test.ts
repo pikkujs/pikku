@@ -216,6 +216,35 @@ describe('the handshake tells a client whether there is a sign-in at all', () =>
     await server.stop()
   })
 
+  test('a fully gated server challenges the listings too, an open one answers them', async () => {
+    const list = (
+      handler: (request: Request) => Promise<Response>,
+      method: string
+    ) =>
+      handler(
+        new Request('http://localhost/mcp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json, text/event-stream',
+          },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params: {} }),
+        })
+      )
+
+    const gated = await startServer({ open: false })
+    const closed = gated.createFetchHandler({ path: '/mcp' }).handler
+    for (const method of ['tools/list', 'resources/list', 'prompts/list']) {
+      assert.equal((await list(closed, method)).status, 401, method)
+    }
+    await gated.stop()
+
+    const open = await startServer({ open: true })
+    const handler = open.createFetchHandler({ path: '/mcp' }).handler
+    assert.equal((await list(handler, 'tools/list')).status, 200)
+    await open.stop()
+  })
+
   test('a server with one open target completes initialize unauthenticated', async () => {
     const server = await startServer({ open: true })
     const { handler } = server.createFetchHandler({ path: '/mcp' })

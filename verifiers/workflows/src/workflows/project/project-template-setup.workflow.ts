@@ -16,6 +16,7 @@ export const projectTemplateSetupWorkflow = pikkuWorkflowFunc<
   },
   { projectId: string; taskCount: number }
 >({
+  auth: false,
   title: 'Project Template Setup',
   tags: ['project'],
   func: async (_services, data, { workflow }) => {

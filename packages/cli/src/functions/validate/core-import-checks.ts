@@ -1,9 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import { readModuleSpecifiers } from '@pikku/inspector'
+import { readModuleSpecifiersOf } from '../../inspector-helpers.js'
 import { collectAppSources } from './app-sources.js'
 import { readJsonSafe } from './shared-checks.js'
-import type { ValidateFinding, ValidateSeverity } from './virtual-user-checks.js'
+import type {
+  ValidateFinding,
+  ValidateSeverity,
+} from './virtual-user-checks.js'
 
 /**
  * The one core subpath an app is meant to name.
@@ -38,10 +41,13 @@ const LEAF_FOR_SUBPATH = new Map<string, string>([
   ['@pikku/core/addon', 'addon'],
   ['@pikku/core/agent', 'agent'],
   ['@pikku/core/agent-scorer', 'agent'],
+  ['@pikku/core/analytics', 'analytics'],
   ['@pikku/core/channel', 'channel'],
   ['@pikku/core/cli', 'cli'],
+  ['@pikku/core/contributors', 'contributor'],
   ['@pikku/core/credential', 'credentials'],
   ['@pikku/core/errors', 'error'],
+  ['@pikku/core/flag', 'scopes'],
   ['@pikku/core/function', 'function'],
   ['@pikku/core/gateway', 'gateway'],
   ['@pikku/core/http', 'http'],
@@ -107,25 +113,35 @@ const severityFor = (
 export const runCoreImportChecks = async (
   dir: string
 ): Promise<ValidateFinding[]> => {
-  const pikkuConfig = await readJsonSafe<{ lint?: unknown }>(
+  const pikkuConfig = await readJsonSafe<{ lint?: unknown; addon?: unknown }>(
     join(dir, 'pikku.config.json')
   )
   const severity = severityFor(pikkuConfig)
   if (severity === 'off') return []
+  // An addon's generated tree roots one level down (see pikku-cli-config.ts).
+  const leafPrefix = pikkuConfig?.addon ? '#pikku/addon/' : '#pikku/'
 
   const findings: ValidateFinding[] = []
   let scenarioEntry: string | undefined
 
-  for (const file of await collectAppSources(dir)) {
-    const content = await readFile(file, 'utf8')
-    if (!content.includes('@pikku/core')) continue
-    for (const specifier of readModuleSpecifiers(file, content)) {
+  const sources: { fileName: string; content: string }[] = []
+  for (const fileName of await collectAppSources(dir)) {
+    const content = await readFile(fileName, 'utf8')
+    if (content.includes('@pikku/core')) sources.push({ fileName, content })
+  }
+  const specifiersOf = readModuleSpecifiersOf(sources)
+  for (const [index, { fileName: file }] of sources.entries()) {
+    for (const specifier of specifiersOf[index]!) {
       if (!isCoreImport(specifier) || isAllowed(specifier)) continue
+      // An addon has no `#pikku/contributor`, because it has no singleton
+      // services type of its own to give it: it authors against core's helper.
+      if (pikkuConfig?.addon && specifier === '@pikku/core/contributors')
+        continue
 
       const leaf = LEAF_FOR_SUBPATH.get(specifier)
       const alias = SCENARIO_SUBPATHS.has(specifier)
         ? (scenarioEntry ??= await scenarioAlias(dir))
-        : leaf && `#pikku/${leaf}`
+        : leaf && `${leafPrefix}${leaf}`
 
       findings.push({
         id: 'core-import',

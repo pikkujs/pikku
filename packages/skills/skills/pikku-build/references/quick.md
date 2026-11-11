@@ -49,7 +49,7 @@ defaults are the point.
 Do not ask about language either — take the defaults and note them in §6.
 Identifiers are English in every project, whatever the product's market;
 `metaLocale` in `pikku.config.json` (the language of `description`/`title`/step
-`template`, which the Console renders) stays `en` unless the user already told
+`template`) stays `en` unless the user already told
 you otherwise. If the request says the app's UI is not English, that is the
 message catalogue only: add the locale and set `defaultLocale`, and leave
 `baseLocale` at `en`. the app workflow's §1a has the three axes in full; getting
@@ -129,9 +129,9 @@ codegen depends on; without it your first `db migrate` fails with
 
 Then, in this order — it is the order codegen depends on:
 
-1. **Migration** — SQL in `db/sqlite/` (or `db/postgres/`, `db/mysql/` when
-   `createConfig` sets `postgresUrl` or `mysqlUrl`), numbered on from what is there. Apply
-   with `bunx --bun pikku db migrate`, which regenerates the Kysely types.
+1. **Tables** — declare them, annotations included, in `db/tables.ts` (shape in
+   the **pikku-kysely** skill). `bunx --bun pikku db generate` writes the SQL; apply
+   it with `bunx --bun pikku db migrate`, which regenerates the Kysely types.
 2. **Seed** — rows in `db/sqlite-dev-seed.sql`. There is no seed command:
    `bunx --bun pikku db reset` wipes, migrates and seeds in one go, and is the
    only thing that applies the file. It always starts from a wiped database, so
@@ -262,7 +262,7 @@ bunx --bun pikku scenario run local --spawn
 ## 6. Hand it over honestly
 
 Tell the user, in one short paragraph and at their level (SKILL.md, "Who you
-are talking to"), with console links rather than descriptions: what runs, what
+are talking to"), with the app and API links `bun run dev` printed: what runs, what
 it is seeded with, and that this is a quick build — no knowledge base, no
 changesets, no design pass, access control clicked-through rather than proven.
 

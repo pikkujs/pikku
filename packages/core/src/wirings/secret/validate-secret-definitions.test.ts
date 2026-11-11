@@ -229,4 +229,56 @@ describe('validateAndBuildSecretDefinitionsMeta', () => {
     assert.strictEqual(result['sampleApi']!.optional, true)
     assert.strictEqual(result['stripe']!.optional, undefined)
   })
+  test('carries generate into the meta so the deployment can create the value', () => {
+    const result = validateAndBuildSecretDefinitionsMeta(
+      [
+        {
+          name: 'visitorKey',
+          displayName: 'Visitor key',
+          secretId: 'VISITOR_KEY',
+          rotationPeriod: '30day',
+          generate: { size: 32 },
+          sourceFile: 'a.ts',
+        },
+      ] as any,
+      new Map()
+    )
+    assert.deepStrictEqual(result['visitorKey'].generate, { size: 32 })
+  })
+
+  test('a generated secret must declare a rotationPeriod', () => {
+    assert.throws(
+      () =>
+        validateAndBuildSecretDefinitionsMeta(
+          [
+            {
+              name: 'visitorKey',
+              displayName: 'Visitor key',
+              secretId: 'VISITOR_KEY',
+              generate: { size: 32 },
+              sourceFile: 'a.ts',
+            },
+          ] as any,
+          new Map()
+        ),
+      /VISITOR_KEY.*rotationPeriod/s
+    )
+  })
+
+  test("rotationPeriod 'never' is the explicit way to generate once", () => {
+    const result = validateAndBuildSecretDefinitionsMeta(
+      [
+        {
+          name: 'visitorKey',
+          displayName: 'Visitor key',
+          secretId: 'VISITOR_KEY',
+          rotationPeriod: 'never',
+          generate: { size: 32 },
+          sourceFile: 'a.ts',
+        },
+      ] as any,
+      new Map()
+    )
+    assert.strictEqual(result['visitorKey'].rotationPeriod, 'never')
+  })
 })

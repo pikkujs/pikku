@@ -6,6 +6,7 @@ import type { SurfaceDoc } from './surface-doc.types.js'
 
 const doc: SurfaceDoc = {
   version: '1.0.0',
+  errors: [],
   entryPoints: [
     {
       id: 'app',

@@ -1,0 +1,7 @@
+{
+  "srcDirectories": [
+    "./src"
+  ],
+  "tsconfig": "./tsconfig.json",
+  "addon": true
+}

@@ -109,7 +109,7 @@ export const CloudLink = pikkuSessionlessFunc({
     // Only check GitHub App installation for github.com repos.
     // Gitea (local dev) and other hosts use shared tokens — no App needed.
     if (isGithubUrl(remoteUrl)) {
-      const ghInstall = await rpc.invoke('checkGithubInstall', {})
+      const ghInstall = await rpc.invoke('cloud:checkGithubInstall', {})
       if (!ghInstall.installed) {
         if (!ghInstall.installUrl) {
           throw new CloudPreconditionError(
@@ -126,7 +126,7 @@ export const CloudLink = pikkuSessionlessFunc({
         let installed = false
         while (Date.now() < deadline) {
           await new Promise((r) => setTimeout(r, GITHUB_POLL_INTERVAL_MS))
-          const check = await rpc.invoke('checkGithubInstall', {})
+          const check = await rpc.invoke('cloud:checkGithubInstall', {})
           if (check.installed) {
             installed = true
             console.log(`  GitHub connected (${check.accountLogin})`)
@@ -141,7 +141,7 @@ export const CloudLink = pikkuSessionlessFunc({
       }
     }
 
-    const project = await rpc.invoke('importProject', {
+    const project = await rpc.invoke('cloud:importProject', {
       repoUrl: remoteUrl,
       productionBranch: 'main',
       ...(organizationId ? { organizationId } : {}),
@@ -159,7 +159,7 @@ export const CloudLink = pikkuSessionlessFunc({
 
     const safety = await assertDeploySafety()
 
-    const deploy = await rpc.invoke('deployByStageKind', {
+    const deploy = await rpc.invoke('cloud:deployByStageKind', {
       projectId: project.projectId,
       branch: safety.branch,
       expectedHeadSha: safety.headSha,
@@ -260,7 +260,7 @@ async function createRemote({
   const name = repoName ?? basename(process.cwd())
   const branch = await currentBranch()
 
-  const repo = await rpc.invoke('provisionRepo', { name })
+  const repo = await rpc.invoke('cloud:provisionRepo', { name })
   console.log(`[cloud] created ${repo.repoUrl}`)
 
   await addRemote('origin', repo.cloneUrl)

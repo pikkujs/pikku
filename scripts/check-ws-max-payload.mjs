@@ -18,7 +18,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const SEARCH_ROOTS = ['packages', 'templates']
+const SEARCH_ROOTS = ['packages', 'recipes']
 const SKIP_DIRS = new Set([
   'node_modules',
   'dist',

@@ -1,0 +1,139 @@
+import type { CoreSingletonServices, PikkuRawWire } from './types/core.types.js'
+import type { MiddlewareMetadata } from './middleware/middleware.types.js'
+import type { CorePikkuChannelMiddleware } from './wirings/channel/channel.types.js'
+import { pikkuState } from './pikku-state.js'
+import { freezeDedupe, getTagGroups } from './utils.js'
+
+/**
+ * Registers channel middleware for every channel carrying `tag`. It wraps each
+ * message the channel sends. Registering the same tag again replaces its
+ * group rather than appending to it.
+ *
+ * @returns The middleware it was given.
+ * @example snippet: addChannelMiddleware
+ */
+export const addChannelMiddleware = (
+  tag: string,
+  middleware: CorePikkuChannelMiddleware[],
+  packageName: string | null = null
+): CorePikkuChannelMiddleware[] => {
+  const tagGroups = pikkuState(packageName, 'channelMiddleware', 'tagGroup')
+  tagGroups[tag] = middleware
+  return middleware
+}
+
+/** Like `getMiddlewareByName`: the package's own namespace, then the application's. */
+const getChannelMiddlewareByName = (
+  name: string,
+  packageName: string | null
+): CorePikkuChannelMiddleware | undefined => {
+  const own = pikkuState(packageName, 'misc', 'channelMiddleware')[name]?.[0]
+  if (own || packageName === null) return own
+  return pikkuState(null, 'misc', 'channelMiddleware')[name]?.[0]
+}
+
+const channelMiddlewareCache: Record<
+  string,
+  readonly CorePikkuChannelMiddleware[]
+> = {}
+
+export const clearChannelMiddlewareCache = () => {
+  for (const key of Object.keys(channelMiddlewareCache)) {
+    delete channelMiddlewareCache[key]
+  }
+}
+
+/**
+ * Resolves the channel middleware for one wiring: the tag and named middleware
+ * its metadata inherits, then the wiring's own, de-duplicated. The inherited
+ * part is cached per wiring.
+ * @internal
+ */
+export const combineChannelMiddleware = (
+  wireType: string,
+  uid: string,
+  {
+    wireInheritedChannelMiddleware,
+    wireChannelMiddleware,
+    packageName = null,
+  }: {
+    wireInheritedChannelMiddleware?: MiddlewareMetadata[]
+    wireChannelMiddleware?: CorePikkuChannelMiddleware[]
+    packageName?: string | null
+  } = {}
+): readonly CorePikkuChannelMiddleware[] => {
+  const cacheKey = `${packageName ?? ''}\0${wireType}:${uid}`
+  let inherited = channelMiddlewareCache[cacheKey]
+  if (!inherited) {
+    const resolved: CorePikkuChannelMiddleware[] = []
+    if (wireInheritedChannelMiddleware) {
+      for (const meta of wireInheritedChannelMiddleware) {
+        if (meta.type === 'tag') {
+          const groups = getTagGroups(
+            pikkuState(packageName, 'channelMiddleware', 'tagGroup'),
+            meta.tag
+          )
+          for (const group of groups) {
+            resolved.push(...group)
+          }
+        } else if (meta.type === 'wire') {
+          const middleware = getChannelMiddlewareByName(meta.name, packageName)
+          if (middleware) {
+            resolved.push(middleware)
+          }
+        }
+      }
+    }
+    inherited = channelMiddlewareCache[cacheKey] = freezeDedupe(
+      resolved
+    ) as readonly CorePikkuChannelMiddleware[]
+  }
+
+  if (!wireChannelMiddleware?.length) {
+    return inherited
+  }
+
+  return freezeDedupe([
+    ...inherited,
+    ...wireChannelMiddleware,
+  ]) as readonly CorePikkuChannelMiddleware[]
+}
+
+export function wrapChannelWithMiddleware<Out>(
+  wire: PikkuRawWire,
+  services: CoreSingletonServices,
+  middlewares: readonly CorePikkuChannelMiddleware[]
+): PikkuRawWire {
+  if (middlewares.length === 0 || !wire.channel) return wire
+
+  const channel = wire.channel
+  const originalSend = channel.send.bind(channel)
+
+  const dispatch = async (index: number, event: Out): Promise<void> => {
+    if (index >= middlewares.length) {
+      await originalSend(event)
+      return
+    }
+
+    const middleware = middlewares[index]!
+    await middleware(services, event, async (result: any) => {
+      if (result === null || result === undefined) return
+      if (Array.isArray(result)) {
+        for (const item of result) {
+          await dispatch(index + 1, item)
+        }
+      } else {
+        await dispatch(index + 1, result)
+      }
+    })
+  }
+
+  return {
+    ...wire,
+    channel: {
+      ...channel,
+      send: ((data: Out) => dispatch(0, data)) as typeof channel.send,
+      sendBinary: channel.sendBinary,
+    },
+  }
+}

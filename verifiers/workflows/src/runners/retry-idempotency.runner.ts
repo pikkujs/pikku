@@ -138,16 +138,43 @@ async function main(): Promise<void> {
 
   const results: Array<{ name: string; ok: boolean; error?: string }> = []
 
+  // Each workflow this runner drives, started by its literal name.
+  const starters = {
+    idempotentDedupeWorkflow: (input: unknown) =>
+      workflowService.startWorkflow(
+        'idempotentDedupeWorkflow',
+        input,
+        { type: 'test' },
+        null as any
+      ),
+    noRetryWorkflow: (input: unknown) =>
+      workflowService.startWorkflow(
+        'noRetryWorkflow',
+        input,
+        { type: 'test' },
+        null as any
+      ),
+    defaultRetryExhaustWorkflow: (input: unknown) =>
+      workflowService.startWorkflow(
+        'defaultRetryExhaustWorkflow',
+        input,
+        { type: 'test' },
+        null as any
+      ),
+    defaultRetryRecoverWorkflow: (input: unknown) =>
+      workflowService.startWorkflow(
+        'defaultRetryRecoverWorkflow',
+        input,
+        { type: 'test' },
+        null as any
+      ),
+  }
+
   async function runToTerminal(
-    name: string,
+    name: keyof typeof starters,
     input: unknown
   ): Promise<'completed' | 'failed' | 'cancelled'> {
-    const { runId } = await workflowService.startWorkflow(
-      name,
-      input,
-      { type: 'test' },
-      null as any
-    )
+    const { runId } = await starters[name](input)
     const deadline = Date.now() + TIMEOUT_MS
     while (true) {
       const run = await workflowService.getRun(runId)

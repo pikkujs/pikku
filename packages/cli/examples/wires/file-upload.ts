@@ -7,6 +7,12 @@
 //~ LocalContent in the sandbox (files on disk, served at /upload + /content), an
 //~ R2/S3-backed one in a deployed stage. It is ALWAYS injected: never guard it, and
 //~ never report it as unconfigured just because services.ts does not name it.
+//~ A bucket must be declared in pikku.config.json: "content": { "buckets": ["uploads"] }
+//~ at the root, and "content": { "buckets": ["uploads"] } on each backend that may use it
+//~ (a backend with no content block has no content access). `pikku all` then writes that
+//~ backend's `ContentBucket` type to .pikku/backends/<name>/content-buckets.gen.ts; declare
+//~ `content: ContentService<ContentBucket>` in application-types.d.ts so an unlisted bucket
+//~ fails to type-check.
 export const BUCKET = 'uploads'
 
 //~ keyGeneration — build a safe, namespaced storage key. PRIVATE files live under the
@@ -36,7 +42,7 @@ export const RequestFileUploadOutput = z.object({
   //~ The client PUTs the raw file bytes to this presigned URL (use uploadMethod).
   uploadUrl: z.string(),
   //~ Persist THIS on your row — it's how you read the file back. It's bucket-less on
-  //~ purpose (getFileViewUrl re-adds the bucket), so never store `assetKey` instead.
+  //~ purpose (getFileViewUrl re-adds the bucket).
   fileKey: z.string(),
   uploadMethod: z.enum(['PUT', 'POST']).optional(),
   uploadHeaders: z.record(z.string(), z.string()).optional(),
@@ -95,17 +101,15 @@ export const getFileViewUrl = pikkuFunc({
   input: GetFileViewUrlInput,
   output: GetFileViewUrlOutput,
   func: async ({ content }, input) => {
-    //~ signContentKey mints a signed, time-limited URL at the /content prefix. The
-    //~ sandbox's LocalContent requires a signed URL even for public reads, so BOTH
-    //~ paths sign — the difference is the window: public gets a far-future expiry
-    //~ (effectively a stable shareable link), private a short one. In a deployed R2
-    //~ stage a truly-public file can instead be served from a public bucket, but the
-    //~ signed-URL path works everywhere, so prefer it unless you need hot-linking.
+    //~ Pass `visibility` on the read too: public and private are separate stores, so
+    //~ a read that leaves it out looks in the private one and a public file answers 404.
+    //~ A public URL needs no signature; a private one is signed and expires.
     const ttlMs = input.visibility === 'public' ? 3650 * 24 * 3_600_000 : 3_600_000
     const dateLessThan = new Date(Date.now() + ttlMs)
     const url = await content.signContentKey({
       bucket: BUCKET,
       contentKey: input.fileKey,
+      visibility: input.visibility,
       dateLessThan,
     })
     return { url, expiresAt: dateLessThan.toISOString() }

@@ -1,5 +1,10 @@
 import type { OAuth2CredentialConfig } from '../secret/secret.types.js'
 
+/**
+ * The declaration {@link defineCredential} takes: a credential a user or the
+ * deployment has to supply, such as an API key or an OAuth connection. Values are
+ * stored by the `CredentialService`, never in code or generated meta.
+ */
 export type CoreCredential<T = unknown> = {
   /** How the credential is asked for in code. Generated into `CredentialsMap`, so it is what `credentials.get` autocompletes. */
   name: string
@@ -32,6 +37,8 @@ export type CredentialDefinitionMeta = {
   sourceFile?: string
 }
 
+/** Credential declarations collected by the CLI, keyed by name. */
 export type CredentialDefinitionsMeta = Record<string, CredentialDefinitionMeta>
 
+/** Credential declarations as the inspector found them, before de-duplication. */
 export type CredentialDefinitions = CredentialDefinitionMeta[]

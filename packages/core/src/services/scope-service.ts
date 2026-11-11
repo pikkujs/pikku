@@ -1,6 +1,7 @@
 import type { FlatScope } from '../wirings/scope/scope.types.js'
 import type { SystemRole } from '../wirings/role/role.types.js'
 
+/** A named set of scopes that can be granted to a user. */
 export interface Role {
   name: string
   description?: string
@@ -20,6 +21,15 @@ export interface Role {
 }
 
 // knowledge: decisions/security/scope-resolution-happens-at-the-session-boundary-and-sync-never-deletes.md
+/**
+ * Stores the scopes and roles declared in code and who holds them, and resolves
+ * a user's effective scopes. Sessions call {@link ScopeService.resolveScopes}
+ * so `scopes` checks on functions see role grants as well as direct ones.
+ *
+ * Syncing from code is additive: a scope or system role removed from code is
+ * marked `declared: false` rather than deleted, so a deploy never revokes
+ * grants on its own; `pikku scopes prune` and `pikku roles prune` remove them.
+ */
 export interface ScopeService {
   syncScopes(scopes: FlatScope[]): Promise<void>
 

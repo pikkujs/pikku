@@ -1,5 +1,77 @@
 # @pikku/code-edit
 
+## 0.12.13
+
+### Patch Changes
+
+- 502ad55: A `pikkuPermission` that never uses its `data` argument is now reported as PKU586, because it should have been a `pikkuAuth`. It is a warning, and a critical under `pikku all --strict-meta` and `pikku validate --strict --codegen`, which now runs codegen with `--strict-meta`. The inspector reads these cases, and anything that cannot be determined is left alone. `pikku doc PKU586` explains it. `pikku new permission` now scaffolds a `pikkuAuth`. See docs/MIGRATION.md.
+- Updated dependencies [502ad55]
+- Updated dependencies [54173f6]
+- Updated dependencies [81ff938]
+- Updated dependencies [031aeed]
+- Updated dependencies [1be4b68]
+  - @pikku/inspector-go@0.12.12
+
+## 0.12.12
+
+### Patch Changes
+
+- 54def56: Add `pikku check`, which answers whether the project builds and type-checks without doing the work again. `pikku watch` and `pikku dev` now type-check the backend and every frontend with the project's own `tsc`, one process per project in parallel, killing any a newer edit supersedes, and publish the result to `.pikku/status.json`. `pikku check` reads that, waits only if the watcher is working on the latest files, never reports a result older than the newest edit, and fails naming the stage if the watcher is stuck (`--timeout`, default 120 seconds). Each frontend's `paraglide` or `i18n:compile` script runs before the type check when its messages change. With no watcher running it does one full `pikku all`, message compile and `tsc`. `--json` is available. `CodedDiagnostic` gains optional `file`, `line` and `column`. When codegen fails, `pikku check` now lists the run's real errors, causes first and without stack frames. `pikku all` recovers on its own from a generated variables or secrets file that imports something the project removed, and a second `pikku all` on the same output directory waits instead of corrupting it. Both also generate a TanStack Router route tree before the type check, so `pikku check` no longer depends on a running Vite.
+
+  An idle watcher now catches up on files written behind a run even when no file event arrives, and `pikku check` wakes it instead of timing out.
+
+  `pikku watch` and `pikku dev` pass `--security` on to codegen and record it, and `pikku check --security` ignores a watcher that skipped the lint. `--config` now selects the frontends too, one `--timeout` bounds a whole check including its fallback full run, and `tsc` failing only in files outside the project is reported rather than passing. A run interrupted before its message or route stage keeps that stage requested, a stage that throws becomes a failed result, and editing `tsr.config.json` moves the watched route paths.
+
+- Updated dependencies [e5a83ec]
+- Updated dependencies [daca7c7]
+- Updated dependencies [0e75982]
+- Updated dependencies [2121973]
+  - @pikku/inspector-go@0.12.11
+
+## 0.12.11
+
+### Patch Changes
+
+- 91e7fc8: The Rust inspector (`pikku-inspect-rs`) can now be selected beside the Go one with `PIKKU_INSPECTOR=go|rs`, `--inspector` or the `inspector` key of `pikku.config.json`, with `PIKKU_INSPECTOR_RS_BIN` to point at a binary; `@pikku/inspector-go` ships it for linux-x64, linux-arm64 and darwin-arm64. The default engine is now Rust; set `PIKKU_INSPECTOR=go` for the Go reference.
+- c254266: The TypeScript inspector engine is retired: `pikku-inspect` (the Go binary built on typescript-go) is the only inspector. No Pikku package depends on TypeScript 6 any more.
+
+  - `@pikku/cli`: the `--inspector` flag, the `PIKKU_INSPECTOR` variable, the `inspector` key in `pikku.config.json`, `pikku inspector parity` and `pikku experiment native-comparison` are removed. A CLI with no `pikku-inspect` binary for its platform fails at inspection and names `PIKKU_INSPECTOR_GO_BIN`; it no longer falls back.
+  - `@pikku/inspector` keeps only its types, `ErrorCode`, serializers and data helpers, and drops its `typescript`, `ts-json-schema-generator`, `zod`, `tsx`, `path-to-regexp` and `openapi-types` dependencies. `inspect`, `analyzeProgram`, `finalizeInspectorState`, `collectSurface`, `readModuleSpecifiers`, `readJsxLiteralText`, `readTsconfigOutDir`, `findWireRemoteAddonSpecs` and the `./lite`, `./finalize` and `./schema-generator` entry points are gone; `InspectorState` has no `typesLookup` or `program`, and `InspectorOptions` has no `oldProgram` or `sourceFile`. `./surface` exports the surface types only.
+  - `@pikku/inspector-go` gains the helpers that replace the compiler API (`readSyntaxErrors`, `scanMessageUsage`, `readJsxProps`, `writeJsxProp`, `writeJsxStyle`, `findPikkuCall`, `readImports`, `findWireRemoteAddonSpecs`, the `scan*` source checks), an `InspectorSession` for the type-checking `serve` process, and the Zod helpers the Node schema fallback uses. `output.schema.json` lists `stats.filesReused`.
+  - `@pikku/code-edit` and `@pikku/n8n-import` no longer depend on `typescript`. `TypeScriptService.diagnostics()` is now async and the service has a `dispose()` method; the console's `get-file-diagnostics` awaits it.
+
+- Updated dependencies [90e6a50]
+- Updated dependencies [91e7fc8]
+- Updated dependencies [7aedf4e]
+- Updated dependencies [8d4195c]
+- Updated dependencies [c254266]
+  - @pikku/inspector-go@0.12.9
+
+## 0.12.10
+
+### Patch Changes
+
+- b746b55: Security: stop OpenAPI spec titles, versions and tag names from breaking out of generated comments; restrict agent-config edits to known keys and escape their values; refuse addon server URLs containing line breaks before writing them to `.env`.
+- 1cc6cf7: `pikku validate` now fails when a language the app serves (listed in `project.inlang/settings.json` `locales`) is missing translations: absent keys, values still marked `%i18n-missing%`, mismatched placeholders, invalid plurals or stale keys. Locales with a messages file that are not listed are drafts and are skipped. `pikku i18n check` also reports keys missing from a locale as errors and `I18nCheckReport` gains `liveLocales` and per-catalog `missing`.
+
+## 0.12.9
+
+### Patch Changes
+
+- 4af4a6d: `pikku ui theme apply --mode dark` derives every token for a dark design: `--page`/`--ink` are the dark ground and its text, and card, muted, border, input, the `-foreground` tokens and ring are derived for it, written to both `:root` and `.dark` with `color-scheme: dark`. Derived foregrounds are now contrast-checked against their fill on the light path too (no more white on a light primary), and apply prints a contrast report. Default light output is unchanged.
+
+## 0.12.8
+
+### Patch Changes
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 135811c: Move @types/node to 26.
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
 ## 0.12.7
 
 ### Patch Changes

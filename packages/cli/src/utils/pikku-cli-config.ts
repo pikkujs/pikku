@@ -5,23 +5,28 @@ import type {
   PikkuCLIInput,
   PikkuScaffoldFeature,
 } from '../../types/config.js'
-import { resolveScaffoldFeature } from './resolve-scaffold-feature.js'
+import {
+  analyticsOriginLockEnabled,
+  resolveScaffoldFeature,
+} from './resolve-scaffold-feature.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
+import { assertKnownConfigKeys } from './config-keys.js'
+import { assertContentConfig } from './content-buckets.js'
+import { normalizeEnvironments } from './normalize-environments.js'
+import { DEFAULT_ADDON_REGISTRY } from './remote-addon-sync.js'
 
+// Frontend glue a person still places in the frontend's own source. The
+// clients themselves are SDK outputs and not config keys (REMOVED_CLIENT_FILES).
 const CLIENT_FILE_KEYS = [
-  'fetchFile',
-  'websocketFile',
-  'realtimeFile',
-  'rpcWiringsFile',
-  'reactQueryFile',
-  'queueWiringsFile',
-  'mcpJsonFile',
+  'typesFile',
+  'envFile',
+  'rpcFile',
+  'authClientFile',
   'nextBackendFile',
   'nextHTTPFile',
   'tanstackStartFile',
-  'scopesFile',
 ] as const
 
 export const getPikkuCLIConfig = async (
@@ -70,7 +75,7 @@ export const tryGetPikkuCLIConfig = async (
   )
 }
 
-async function findConfigFileOrNull(): Promise<string | null> {
+export async function findConfigFileOrNull(): Promise<string | null> {
   let dir = process.cwd()
   const { root } = parsePath(dir)
   while (true) {
@@ -245,6 +250,260 @@ const assertMetaLocaleNotSpelledLocale = (result: Record<string, unknown>) => {
   )
 }
 
+/**
+ * Where a removed generated-file key now lives. A client, or the map it is
+ * typed by, is an output of the backend that serves it, written to a fixed
+ * place by `pikku all`; a config that still names a path believes it can move
+ * one, so the loader refuses and says where the file went.
+ */
+const SDK_HOME = '.pikku/sdk/<backend>/exposed/'
+const REMOVED_CLIENT_FILES: Record<string, string> = {
+  fetchFile: `${SDK_HOME}pikku-fetch.gen.ts`,
+  websocketFile: `${SDK_HOME}pikku-websocket.gen.ts`,
+  rpcWiringsFile: `${SDK_HOME}pikku-rpc.gen.ts`,
+  reactQueryFile: `${SDK_HOME}pikku-react-query.gen.ts`,
+  realtimeFile: `${SDK_HOME}pikku-realtime.gen.ts`,
+  queueWiringsFile: `${SDK_HOME}pikku-queue.gen.ts`,
+  scopesFile: `${SDK_HOME}pikku-scope-client.gen.ts`,
+  mcpJsonFile: '.pikku/backends/<backend>/mcp/mcp.gen.json',
+}
+const REMOVED_TOP_LEVEL_FILES: Record<string, string> = {
+  httpMapDeclarationFile: `${SDK_HOME}contract/ (the backend's HTTP map)`,
+  rpcMapDeclarationFile: `${SDK_HOME}contract/ (the backend's RPC map)`,
+  channelsMapDeclarationFile: `${SDK_HOME}contract/ (the backend's channel map)`,
+  rpcRemoteMapDeclarationFile:
+    '.pikku/sdk/<backend>/remote/ (only for a backend with remote functions)',
+  mcpJsonFile: '.pikku/backends/<backend>/mcp/mcp.gen.json',
+}
+
+const assertNoRemovedClientFiles = (
+  config: Record<string, unknown>,
+  file: string
+) => {
+  for (const [key, home] of Object.entries(REMOVED_TOP_LEVEL_FILES)) {
+    if (key in config) {
+      throw new PikkuCLIConfigError(
+        `${key} in ${file} is no longer a config key. It is generated for each backend at ${home}; delete it.`
+      )
+    }
+  }
+  const clientFiles = config.clientFiles
+  if (clientFiles && typeof clientFiles === 'object') {
+    for (const [key, home] of Object.entries(REMOVED_CLIENT_FILES)) {
+      if (key in clientFiles) {
+        throw new PikkuCLIConfigError(
+          `clientFiles.${key} in ${file} is no longer a config key. \`pikku all\` generates it for each backend at ${home}; delete it and import it from there (see docs/MIGRATION.md).`
+        )
+      }
+    }
+  }
+}
+
+const DEPLOY_TARGETS = ['serverless', 'server']
+const PROJECT_DEPLOY_KEYS = [
+  'providers',
+  'provider',
+  'target',
+  'serverlessIncompatible',
+  'mangleIdentifiers',
+  'bundler',
+]
+const BACKEND_DEPLOY_KEYS = ['provider', 'target', 'grouping', 'embed']
+const FRONTEND_DEPLOY_KEYS = ['provider', 'target']
+
+const assertDeployOverride = (
+  at: string,
+  value: Record<string, unknown>,
+  allowed: string[],
+  file: string
+) => {
+  for (const key of Object.keys(value)) {
+    if (!allowed.includes(key)) {
+      throw new PikkuCLIConfigError(
+        `${at}.${key} in ${file} is not a deploy key here. Allowed: ${allowed.join(', ')}.`
+      )
+    }
+  }
+  if (value.provider !== undefined && typeof value.provider !== 'string') {
+    throw new PikkuCLIConfigError(
+      `${at}.provider in ${file} must be a provider name — got ${JSON.stringify(value.provider)}`
+    )
+  }
+  if (
+    value.target !== undefined &&
+    !DEPLOY_TARGETS.includes(value.target as string)
+  ) {
+    throw new PikkuCLIConfigError(
+      `${at}.target in ${file} must be 'serverless' or 'server' — got ${JSON.stringify(value.target)}`
+    )
+  }
+}
+
+/**
+ * `deploy` is the project's default for every backend and frontend; each
+ * backend and frontend overrides `provider` and `target` in its own `deploy`.
+ * Keys that used to live at the project level and now belong to a backend are
+ * refused, naming the new home.
+ */
+const assertDeployShape = (config: Record<string, unknown>, file: string) => {
+  const deploy = config.deploy
+  if (deploy !== undefined) {
+    if (!deploy || typeof deploy !== 'object' || Array.isArray(deploy)) {
+      throw new PikkuCLIConfigError(`deploy in ${file} must be an object.`)
+    }
+    const project = deploy as Record<string, unknown>
+    if ('defaultProvider' in project) {
+      throw new PikkuCLIConfigError(
+        `deploy.defaultProvider in ${file} is now deploy.provider; a backend or frontend overrides it in its own deploy.provider.`
+      )
+    }
+    if ('defaultTarget' in project) {
+      throw new PikkuCLIConfigError(
+        `deploy.defaultTarget in ${file} is now deploy.target; a backend or frontend overrides it in its own deploy.target.`
+      )
+    }
+    if ('contributors' in project) {
+      throw new PikkuCLIConfigError(
+        `deploy.contributors is no longer read — remove it from ${file}. Register the contributors with defineContributors in an addon and opt in with wireAddon({ contributors: [...] }); see docs/contributors.md`
+      )
+    }
+    for (const key of ['grouping', 'embed']) {
+      if (key in project) {
+        throw new PikkuCLIConfigError(
+          `deploy.${key} in ${file} has moved to backends.<name>.deploy.${key}; ${key} is per backend.`
+        )
+      }
+    }
+    assertDeployOverride('deploy', project, PROJECT_DEPLOY_KEYS, file)
+  }
+
+  const backends = config.backends
+  if (backends && typeof backends === 'object') {
+    for (const [name, entry] of Object.entries(backends)) {
+      const own = (entry as Record<string, unknown> | undefined)?.deploy
+      if (own === undefined) continue
+      if (!own || typeof own !== 'object' || Array.isArray(own)) {
+        throw new PikkuCLIConfigError(
+          `backends.${name}.deploy in ${file} must be an object.`
+        )
+      }
+      assertDeployOverride(
+        `backends.${name}.deploy`,
+        own as Record<string, unknown>,
+        BACKEND_DEPLOY_KEYS,
+        file
+      )
+    }
+  }
+
+  const frontends = config.frontends
+  if (frontends && typeof frontends === 'object') {
+    for (const [name, entry] of Object.entries(frontends)) {
+      const own = (entry as Record<string, unknown> | undefined)?.deploy
+      if (own === undefined || typeof own === 'boolean') continue
+      if (!own || typeof own !== 'object' || Array.isArray(own)) {
+        throw new PikkuCLIConfigError(
+          `frontends.${name}.deploy in ${file} must be false or an object with provider and target.`
+        )
+      }
+      assertDeployOverride(
+        `frontends.${name}.deploy`,
+        own as Record<string, unknown>,
+        FRONTEND_DEPLOY_KEYS,
+        file
+      )
+    }
+  }
+}
+
+/**
+ * Backends are the one place a project says what it builds.
+ *
+ * `namedFilters`, a config-file `filters` and `extends` each answered a piece of
+ * that question before `backends` existed. They are refused, naming the new
+ * home, rather than read: a config that still sets one believes it does
+ * something, and silently ignoring it would teach the opposite.
+ */
+const assertBackendsDeclared = (
+  config: Record<string, unknown>,
+  configDir: string
+) => {
+  const file = `${configDir}/pikku.config.json`
+  if ('extends' in config) {
+    throw new PikkuCLIConfigError(
+      `extends in ${file} is no longer supported. One root config declares every backend: copy what the parent config set into this file and delete "extends".`
+    )
+  }
+  assertNoRemovedClientFiles(config, file)
+  assertDeployShape(config, file)
+  if ('namedFilters' in config) {
+    throw new PikkuCLIConfigError(
+      `namedFilters in ${file} has moved to backends. Declare each preset as a backend: "backends": { "<name>": { "filter": { ... } } }, and select one with \`pikku all --backend <name>\`.`
+    )
+  }
+  if ('filters' in config) {
+    throw new PikkuCLIConfigError(
+      `filters in ${file} has moved to backends.<name>.filter. Declare the build it describes as a backend: "backends": { "<name>": { "filter": { ... } } }.`
+    )
+  }
+
+  assertMetaLocaleNotSpelledLocale(config)
+  assertKnownConfigKeys(config, file)
+  assertContentConfig(config, file)
+
+  // An addon is a package other projects wire, not a server; it builds no backend.
+  if (config.addon) {
+    return
+  }
+
+  const backends = config.backends
+  const names =
+    backends && typeof backends === 'object' && !Array.isArray(backends)
+      ? Object.keys(backends)
+      : []
+  const frontends = config.frontends
+  const frontendNames =
+    frontends && typeof frontends === 'object' && !Array.isArray(frontends)
+      ? Object.keys(frontends)
+      : []
+  if (names.length === 0 && frontendNames.length === 0) {
+    throw new PikkuCLIConfigError(
+      `${file} declares no backends and no frontends. Declare at least one of backends or frontends (addon projects are exempt): "backends": { "api": { "filter": {} } }. An empty filter carries every function.`
+    )
+  }
+
+  const ports = new Map<number, string>()
+  for (const name of names) {
+    const entry = (backends as Record<string, any>)[name] ?? {}
+    if (entry.publish !== undefined && typeof entry.publish !== 'boolean') {
+      throw new PikkuCLIConfigError(
+        `backends.${name}.publish in ${file} must be true or false — got ${JSON.stringify(entry.publish)}`
+      )
+    }
+    const port = entry.dev?.port
+    if (port === undefined) {
+      if (names.length > 1) {
+        throw new PikkuCLIConfigError(
+          `backends.${name}.dev.port is required in ${file}: ${names.length} backends are declared and each runs as its own process on its own port.`
+        )
+      }
+      continue
+    }
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new PikkuCLIConfigError(
+        `backends.${name}.dev.port in ${file} must be an integer between 1 and 65535 — got ${JSON.stringify(port)}`
+      )
+    }
+    const other = ports.get(port)
+    if (other) {
+      throw new PikkuCLIConfigError(
+        `backends.${other} and backends.${name} both set dev.port ${port} in ${file}; each backend needs its own port.`
+      )
+    }
+    ports.set(port, name)
+  }
+}
+
 const _getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
@@ -257,63 +516,35 @@ const _getPikkuCLIConfig = async (
   }
 
   try {
-    let result: PikkuCLIConfig
     const file = await readFile(configFile, 'utf-8')
     const configDir = dirname(configFile)
-    const config: PikkuCLIConfig = JSON.parse(file)
-    if (config.extends) {
-      const extendedConfig = await getPikkuCLIConfig(
-        logger,
-        resolve(configDir, config.extends),
-        [],
-        exitProcess
-      )
-      result = {
-        ...extendedConfig,
-        ...config,
-        configDir,
-        packageMappings: {
-          ...extendedConfig.packageMappings,
-          ...config.packageMappings,
-        },
-        ignoreFiles: config.ignoreFiles ??
-          extendedConfig.ignoreFiles ?? [
-            '**/*.test.ts',
-            '**/*.spec.ts',
-            '**/node_modules/**',
-            '**/dist/**',
-          ],
-        schema: {
-          additionalProperties: false,
-          supportsImportAttributes: true,
-          ...extendedConfig.schema,
-          ...config.schema,
-        },
-      }
-    } else {
-      result = {
-        ...config,
-        configDir,
-        packageMappings: config.packageMappings || {},
-        rootDir: config.rootDir
-          ? resolve(configDir, config.rootDir)
-          : configDir,
-        ignoreFiles: config.ignoreFiles ?? [
-          '**/*.test.ts',
-          '**/*.spec.ts',
-          '**/node_modules/**',
-          '**/dist/**',
-        ],
-        schema: {
-          additionalProperties: false,
-          supportsImportAttributes: true,
-          ...config.schema,
-        },
-      }
-    }
-
-    if (result.outDir && !isAbsolute(result.outDir)) {
-      result.outDir = resolve(configDir, result.outDir)
+    const config: PikkuCLIInput = JSON.parse(file)
+    assertBackendsDeclared(
+      config as unknown as Record<string, unknown>,
+      configDir
+    )
+    const result: PikkuCLIConfig = {
+      ...(config as unknown as PikkuCLIConfig),
+      environments: normalizeEnvironments(
+        config,
+        `${configDir}/pikku.config.json`
+      ),
+      outDir: join(configDir, '.pikku'),
+      configDir,
+      packageMappings: config.packageMappings || {},
+      rootDir: config.rootDir ? resolve(configDir, config.rootDir) : configDir,
+      registry: config.registry ?? DEFAULT_ADDON_REGISTRY,
+      ignoreFiles: config.ignoreFiles ?? [
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        '**/node_modules/**',
+        '**/dist/**',
+      ],
+      schema: {
+        additionalProperties: false,
+        supportsImportAttributes: true,
+        ...config.schema,
+      },
     }
 
     // Override outDir if provided via CLI flag (must happen before derived paths)
@@ -351,6 +582,12 @@ const _getPikkuCLIConfig = async (
 
     if (!result.schemaDirectory) {
       result.schemaDirectory = join(result.outDir, 'schemas')
+    }
+    if (!result.customTypesDeclarationFile) {
+      result.customTypesDeclarationFile = join(
+        result.outDir,
+        'pikku-custom-types.gen.d.ts'
+      )
     }
 
     // Functions
@@ -391,6 +628,14 @@ const _getPikkuCLIConfig = async (
       result.addonSetupTypesFile = join(
         setupDir,
         'pikku-addon-setup-types.gen.ts'
+      )
+    }
+
+    if (!result.contributorTypesFile) {
+      result.contributorTypesFile = join(
+        result.outDir,
+        'contributor',
+        'pikku-contributor-types.gen.ts'
       )
     }
 
@@ -562,7 +807,10 @@ const _getPikkuCLIConfig = async (
     // variables service: that service JSON-parses, so `'1'` arrives as the
     // number 1 and every `=== '1'` check against it silently never matched.
     setScaffoldWriteGuard(
-      process.env.PIKKU_DEPLOY_CODEGEN === '1' ? resolvedScaffoldDir : undefined
+      process.env.PIKKU_DEPLOY_CODEGEN === '1'
+        ? resolvedScaffoldDir
+        : undefined,
+      result.outDir
     )
 
     // Read every scaffold feature once, here, so a malformed value fails at
@@ -575,14 +823,16 @@ const _getPikkuCLIConfig = async (
     const SCAFFOLD_OUTPUT_FIELDS: Record<string, string> = {
       rpc: 'publicRpcFile',
       analytics: 'analyticsFile',
+      cors: 'corsFile',
       featureFlags: 'featureFlagsFile',
       agent: 'publicAgentFile',
+      admin: 'adminFunctionsFile',
       console: 'consoleFunctionsFile',
       scenarios: 'scenariosFunctionsFile',
       virtualUser: 'virtualUserFunctionsFile',
       workflow: 'workflowRoutesFile',
       events: 'eventsChannelFile',
-      remoteRpc: 'remoteRpcWorkersFile',
+      meshRpc: 'meshRpcWorkersFile',
       remoteJobs: 'remoteJobsFile',
     }
     const scaffoldBlock = result.scaffold as
@@ -599,18 +849,18 @@ const _getPikkuCLIConfig = async (
         : join(result.rootDir, resolved.path)
     }
 
-    if (result.scaffold?.remoteRpc && !result.remoteRpcWorkersFile) {
-      result.remoteRpcWorkersFile = join(
+    if (result.scaffold?.meshRpc && !result.meshRpcWorkersFile) {
+      result.meshRpcWorkersFile = join(
         resolvedScaffoldDir,
         'rpc',
-        'rpc-remote.gen.ts'
+        'rpc-mesh.gen.ts'
       )
     }
-    if (result.scaffold?.remoteRpc && !result.remoteRpcSchemasFile) {
-      result.remoteRpcSchemasFile = join(
+    if (result.scaffold?.meshRpc && !result.meshRpcSchemasFile) {
+      result.meshRpcSchemasFile = join(
         resolvedScaffoldDir,
         'rpc',
-        'rpc-remote.schemas.gen.ts'
+        'rpc-mesh.schemas.gen.ts'
       )
     }
     if (result.scaffold?.graph && !result.graphWiringsFile) {
@@ -662,6 +912,33 @@ const _getPikkuCLIConfig = async (
         'analytics.gen.ts'
       )
     }
+    if (result.scaffold?.cors && !result.corsFile) {
+      result.corsFile = join(resolvedScaffoldDir, 'cors', 'cors.gen.ts')
+    }
+    // The origins helper sits beside the middleware when there is one, and is
+    // also wanted by the analytics origin lock on its own, so it is derived
+    // from either. Never settable: the generated imports reach it as a sibling.
+    const analyticsOriginLock =
+      analyticsOriginLockEnabled(result.scaffold) &&
+      Boolean(result.analyticsFile)
+    if (
+      (resolveScaffoldFeature('cors', result.scaffold?.cors).enabled ||
+        analyticsOriginLock) &&
+      !result.corsOriginsFile
+    ) {
+      result.corsOriginsFile = join(
+        result.corsFile
+          ? dirname(result.corsFile)
+          : join(resolvedScaffoldDir, 'cors'),
+        'cors-origins.gen.ts'
+      )
+    }
+    if (result.scaffold?.analytics && result.analyticsFile) {
+      result.analyticsOriginFile = join(
+        dirname(result.analyticsFile),
+        'analytics-origin.gen.ts'
+      )
+    }
     if (result.scaffold?.featureFlags && !result.featureFlagsFile) {
       result.featureFlagsFile = join(
         resolvedScaffoldDir,
@@ -695,6 +972,13 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'agent',
         'agent.schemas.gen.ts'
+      )
+    }
+    if (result.scaffold?.admin && !result.adminFunctionsFile) {
+      result.adminFunctionsFile = join(
+        resolvedScaffoldDir,
+        'admin',
+        'admin.gen.ts'
       )
     }
     if (result.scaffold?.console && !result.consoleFunctionsFile) {
@@ -764,16 +1048,6 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'realtime',
         'events.schemas.gen.ts'
-      )
-    }
-    if (
-      result.scaffold?.events &&
-      result.clientFiles?.fetchFile &&
-      !result.clientFiles.realtimeFile
-    ) {
-      result.clientFiles.realtimeFile = join(
-        dirname(result.clientFiles.fetchFile),
-        'realtime.gen.ts'
       )
     }
     const triggerDir = join(result.outDir, 'trigger')
@@ -1229,6 +1503,23 @@ const _getPikkuCLIConfig = async (
       result.flagsMetaJsonFile = join(scopesDir, 'pikku-flags-meta.gen.json')
     }
 
+    // Contributors, when the package calls defineContributors: the meta is
+    // published beside the other generated files so a host can opt in, and the
+    // dev file is what `pikku dev` loads for the contributors a project wired.
+    const contributorsDir = join(result.outDir, 'contributors')
+    if (!result.contributorsMetaJsonFile) {
+      result.contributorsMetaJsonFile = join(
+        contributorsDir,
+        'pikku-contributors-meta.gen.json'
+      )
+    }
+    if (!result.devContributorsFile) {
+      result.devContributorsFile = join(
+        contributorsDir,
+        'pikku-dev-contributors.gen.ts'
+      )
+    }
+
     // Addon screens, when the package declares any. Their own directory:
     // the host imports the screens file and the meta is published beside it.
     const screensDir = join(result.outDir, 'screens')
@@ -1339,6 +1630,15 @@ const _getPikkuCLIConfig = async (
             result[objectKey] = join(result.rootDir, result[objectKey])
           }
         }
+      }
+    }
+
+    for (const section of ['dev', 'deploy'] as const) {
+      const value = (result as Record<string, any>)[section]
+      if (value && typeof value === 'object' && 'contributors' in value) {
+        throw new PikkuCLIConfigError(
+          `${section}.contributors is no longer read — remove it from ${result.configDir}/pikku.config.json. Register the contributors with defineContributors in an addon and opt in with wireAddon({ contributors: [...] }); see docs/contributors.md`
+        )
       }
     }
 

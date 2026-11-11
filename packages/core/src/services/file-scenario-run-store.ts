@@ -60,6 +60,10 @@ const CONTENT_TYPES: Record<string, string> = {
   webm: 'video/webm',
 }
 
+/**
+ * The MIME type a scenario artifact is served with, from its file extension.
+ * Unknown extensions are served as `application/octet-stream`.
+ */
 export const scenarioArtifactContentType = (path: string): string =>
   CONTENT_TYPES[path.split('.').pop()?.toLowerCase() ?? ''] ??
   'application/octet-stream'
@@ -72,6 +76,7 @@ export const scenarioArtifactContentType = (path: string): string =>
 const SAFE_ARTIFACT_PATH =
   /^[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/
 
+/** Options for {@link FileScenarioRunStore}. */
 export interface FileScenarioRunStoreOptions {
   /** The directory runs live under — one folder per run, named by its id. */
   dir: string

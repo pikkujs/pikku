@@ -13,11 +13,411 @@ import { applyRuleSeverity } from './rule-severity.js'
  * `tsc` does not flag the `!` form. These two rules (type-aware, so they need
  * `oxlint-tsgolint`) flag every shape of it: a negated or `&&`-ed promise, a
  * promise stored then branched on, and a bare un-awaited call.
+ *
+ * `no-empty` reports an empty `catch {}`, which turns a real failure into
+ * "nothing happened". A comment inside the block is how a deliberate one says so.
  */
 export const OXLINT_REQUIRED_RULES = [
   'typescript/no-misused-promises',
   'typescript/no-floating-promises',
+  'no-empty',
 ] as const
+
+type RequiredRule = (typeof OXLINT_REQUIRED_RULES)[number]
+
+/** A rule option that keeps the rule on while switching off the case it is required for. */
+export const DEFEATING_OPTIONS: Partial<
+  Record<RequiredRule, { option: string; value: boolean; consequence: string }>
+> = {
+  'typescript/no-misused-promises': {
+    option: 'checksConditionals',
+    value: false,
+    consequence: '`if (!verify(sig))` is not reported',
+  },
+  'no-empty': {
+    option: 'allowEmptyCatch',
+    value: true,
+    consequence: 'an empty `catch {}` is not reported',
+  },
+}
+
+/** A `no-restricted-imports` path: the whole module, or only the named exports. */
+export type RestrictedPath = { name: string; importNames?: string[] }
+
+/** A `no-restricted-properties` entry: `object.property`. */
+export type RestrictedProperty = { object: string; property: string }
+
+const FS_MODULES = [
+  'fs',
+  'node:fs',
+  'fs/promises',
+  'node:fs/promises',
+  'fs-extra',
+  'graceful-fs',
+]
+
+const CHILD_PROCESS_MODULES = [
+  'child_process',
+  'node:child_process',
+  'execa',
+  'cross-spawn',
+  'shelljs',
+]
+
+const CLI_PARSER_MODULES = ['commander', 'yargs', 'minimist']
+
+export type PolicyKey =
+  | 'enforceContentService'
+  | 'enforceVariablesService'
+  | 'enforceSupervisor'
+  | 'enforceCliCommands'
+export type PolicyLevel = 'off' | 'warn' | 'error'
+export type PolicyLevels = Record<PolicyKey, PolicyLevel>
+
+const restrictedImports = (paths: RestrictedPath[], message: string) => [
+  'error',
+  {
+    paths: paths.map((p) => ({ ...p, allowTypeImports: true, message })),
+  },
+]
+
+/**
+ * Objects that reach the runtime globals. oxlint 1.88.0 matches a bare
+ * `{ object, property }` only, never a dotted object, so `globalThis.process`
+ * is restricted as the property `process` of `globalThis`.
+ */
+const GLOBAL_OBJECTS = ['globalThis', 'global', 'self']
+const viaGlobals = (property: string): RestrictedProperty[] =>
+  GLOBAL_OBJECTS.map((object) => ({ object, property }))
+
+const restrictedProperties = (
+  properties: RestrictedProperty[],
+  message: string
+) => ['error', ...properties.map((p) => ({ ...p, message }))]
+
+/**
+ * Rules a `pikku.config.json` `lint` key requires while it is not `'off'`.
+ * Unlike OXLINT_REQUIRED_RULES these may be relaxed per file through
+ * `overrides`: tests, bootstrap and tooling legitimately read the disk, the
+ * environment and the command line. Several keys share `no-restricted-imports`
+ * and `no-restricted-properties`; `activePolicyRules` merges their entries.
+ */
+export const OXLINT_POLICY_RULES: Record<
+  PolicyKey,
+  { use: string; rules: Record<string, unknown> }
+> = {
+  enforceContentService: {
+    use: 'the `content` service, which is keyed, project-scoped, and signs reads and writes',
+    rules: {
+      'no-restricted-imports': restrictedImports(
+        FS_MODULES.map((name) => ({ name })),
+        'Use the `content` service: keyed, project-scoped, with signed reads and writes.'
+      ),
+      'typescript/no-require-imports': 'error',
+    },
+  },
+  enforceVariablesService: {
+    use: 'the `variables` service for values and the `secrets` service for secrets',
+    rules: {
+      'no-restricted-properties': restrictedProperties(
+        [{ object: 'process', property: 'env' }, ...viaGlobals('process')],
+        'Use the `variables` service for values and the `secrets` service for secrets.'
+      ),
+    },
+  },
+  enforceSupervisor: {
+    use: 'the Supervisor, which owns child processes, their lifecycle and their output',
+    rules: {
+      'no-restricted-imports': restrictedImports(
+        CHILD_PROCESS_MODULES.map((name) => ({ name })),
+        'Run processes through the Supervisor, not child_process.'
+      ),
+      'typescript/no-require-imports': 'error',
+      'no-restricted-properties': restrictedProperties(
+        [
+          { object: 'Bun', property: 'spawn' },
+          { object: 'Bun', property: 'spawnSync' },
+          { object: 'Bun', property: '$' },
+          ...viaGlobals('Bun'),
+        ],
+        'Run processes through the Supervisor, not Bun.spawn.'
+      ),
+    },
+  },
+  enforceCliCommands: {
+    use: 'a `pikku` CLI command, which receives typed input instead of reading argv',
+    rules: {
+      'no-restricted-imports': restrictedImports(
+        [
+          ...CLI_PARSER_MODULES.map((name) => ({ name })),
+          { name: 'node:util', importNames: ['parseArgs'] },
+          { name: 'util', importNames: ['parseArgs'] },
+        ],
+        'Expose a `pikku` CLI command rather than parsing argv.'
+      ),
+      'no-restricted-properties': restrictedProperties(
+        [
+          { object: 'process', property: 'argv' },
+          { object: 'Bun', property: 'argv' },
+          { object: 'Deno', property: 'args' },
+          ...viaGlobals('process'),
+          ...viaGlobals('Bun'),
+          ...viaGlobals('Deno'),
+        ],
+        'Expose a `pikku` CLI command rather than reading argv.'
+      ),
+    },
+  },
+}
+
+export const OXLINT_TEST_FILES = [
+  '**/*.test.ts',
+  '**/*.test.tsx',
+  '**/*.spec.ts',
+  '**/*.spec.tsx',
+]
+
+/** Entry points and tooling, where the policy rules are off in the config `pikku enable oxlint` writes. */
+export const OXLINT_BOOTSTRAP_FILES = [
+  '**/start.ts',
+  '**/server.ts',
+  '**/bin/**',
+  '**/scripts/**',
+]
+
+export const OXLINT_EXEMPT_FILES = [
+  ...OXLINT_BOOTSTRAP_FILES,
+  ...OXLINT_TEST_FILES,
+]
+
+/** Plugins the strict preset's rules come from; `plugins`, when set, replaces oxlint's defaults. */
+export const OXLINT_STRICT_PLUGINS = [
+  'typescript',
+  'unicorn',
+  'import',
+] as const
+
+/**
+ * The opt-in strict preset (`lint.strict: true`, `pikku enable oxlint --strict`),
+ * on top of OXLINT_REQUIRED_RULES and the policy rules. oxlint 1.88.0 built-ins
+ * only. Rules the preset sets to `off` are documented, never validated: each
+ * conflicts with a Pikku convention.
+ *
+ * - `require-await`: a Pikku function is `async` by contract, even when its body awaits nothing.
+ * - `import/no-default-export`, `oxc/no-barrel-file`: the generated `.pikku` output and `index.ts` files are both.
+ * - `no-param-reassign`: Pikku middleware and permission hooks mutate the wire they are handed.
+ * - `import/no-unassigned-import`: generated side-effect imports.
+ * - pedantic style rules: not enabled, so no entry is needed.
+ */
+export const OXLINT_STRICT_RULES: Record<string, 'error' | 'warn' | 'off'> = {
+  'typescript/no-floating-promises': 'error',
+  'typescript/no-misused-promises': 'error',
+  'typescript/await-thenable': 'error',
+  'typescript/only-throw-error': 'error',
+  eqeqeq: 'error',
+  'no-new-func': 'error',
+  'no-throw-literal': 'error',
+  'prefer-promise-reject-errors': 'error',
+  'typescript/ban-ts-comment': 'error',
+  'typescript/consistent-type-imports': 'error',
+  'import/no-cycle': 'error',
+  'unicorn/no-process-exit': 'error',
+  'no-await-in-loop': 'warn',
+  'typescript/no-unsafe-type-assertion': 'warn',
+  'typescript/no-explicit-any': 'warn',
+  'typescript/no-non-null-assertion': 'warn',
+  'no-console': 'warn',
+  'typescript/switch-exhaustiveness-check': 'warn',
+  'no-shadow': 'warn',
+  'require-await': 'off',
+  'import/no-default-export': 'off',
+  'oxc/no-barrel-file': 'off',
+  'no-param-reassign': 'off',
+  'import/no-unassigned-import': 'off',
+}
+
+/**
+ * Workflow files, where `for...of` with `workflow.do` is the DSL's durable
+ * sequential fanout, so `no-await-in-loop` is off. (A `pikkuWorkflowFunc` in a
+ * `*.functions.ts` file is not covered: use an inline disable there.)
+ */
+export const OXLINT_WORKFLOW_FILES = ['**/*.workflow.ts']
+
+/**
+ * Test files, where `describe` / `test` / `it` return promises nobody awaits.
+ * The one place the strict preset lets `typescript/no-floating-promises` be off.
+ */
+export const OXLINT_STRICT_TEST_FILES = [
+  '**/*.assert.ts',
+  '**/*.verify.ts',
+  ...OXLINT_TEST_FILES,
+]
+
+/** The `overrides` entries the strict preset writes. */
+export const strictOverrides = (): Array<{
+  files: string[]
+  rules: Record<string, string>
+}> => [
+  { files: [...OXLINT_WORKFLOW_FILES], rules: { 'no-await-in-loop': 'off' } },
+  {
+    files: [...OXLINT_STRICT_TEST_FILES],
+    rules: { 'typescript/no-floating-promises': 'off' },
+  },
+]
+
+/** Whether an override with these files is the test-file exemption of the strict preset. */
+export const isStrictTestOverride = (files: unknown): boolean =>
+  Array.isArray(files) &&
+  files.length > 0 &&
+  files.every((f) => OXLINT_STRICT_TEST_FILES.includes(f))
+
+export const isStrict = (lint: unknown): boolean =>
+  (lint as Record<string, unknown> | undefined)?.strict === true
+
+export const policyLevels = (lint: unknown): PolicyLevels => {
+  const levelOfKey = (key: PolicyKey): PolicyLevel => {
+    const v = (lint as Record<string, unknown> | undefined)?.[key]
+    return v === 'off' || v === 'warn' ? v : 'error'
+  }
+  return {
+    enforceContentService: levelOfKey('enforceContentService'),
+    enforceVariablesService: levelOfKey('enforceVariablesService'),
+    enforceSupervisor: levelOfKey('enforceSupervisor'),
+    enforceCliCommands: levelOfKey('enforceCliCommands'),
+  }
+}
+
+/**
+ * The rules the active policies add. A rule several policies share is written
+ * once: their `no-restricted-imports` paths and `no-restricted-properties`
+ * entries are concatenated, and it takes the strictest of their levels.
+ */
+export const activePolicyRules = (
+  levels: PolicyLevels
+): Record<string, unknown> => {
+  const merged: Record<string, { level: PolicyLevel; options: unknown[] }> = {}
+  for (const key of Object.keys(OXLINT_POLICY_RULES) as PolicyKey[]) {
+    if (levels[key] === 'off') continue
+    for (const [rule, value] of Object.entries(
+      OXLINT_POLICY_RULES[key].rules
+    )) {
+      const options = Array.isArray(value) ? value.slice(1) : []
+      const entry = merged[rule]
+      if (!entry) {
+        merged[rule] = { level: levels[key], options: structuredClone(options) }
+        continue
+      }
+      if (levels[key] === 'error') entry.level = 'error'
+      if (rule === 'no-restricted-imports') {
+        const into = entry.options[0] as { paths: unknown[] }
+        into.paths.push(...(options[0] as { paths: unknown[] }).paths)
+      } else if (rule === 'no-restricted-properties') {
+        const seen = new Set(
+          (entry.options as RestrictedProperty[]).map(
+            (o) => `${o.object}.${o.property}`
+          )
+        )
+        for (const o of options as RestrictedProperty[]) {
+          if (!seen.has(`${o.object}.${o.property}`)) {
+            entry.options.push(structuredClone(o))
+            seen.add(`${o.object}.${o.property}`)
+          }
+        }
+      }
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(merged).map(([rule, { level, options }]) => [
+      rule,
+      options.length > 0 ? [level, ...options] : level,
+    ])
+  )
+}
+
+/** The entries of `no-restricted-imports` (flat, or nested as `--print-config` prints it). */
+export const restrictedPaths = (value: unknown): RestrictedPath[] => {
+  const out: RestrictedPath[] = []
+  if (!Array.isArray(value)) return out
+  for (const o of value.slice(1).flat()) {
+    if (typeof o === 'string') out.push({ name: o })
+    const paths = (o as { paths?: unknown } | null)?.paths
+    if (!Array.isArray(paths)) continue
+    for (const p of paths) {
+      if (typeof p === 'string') out.push({ name: p })
+      else if (typeof (p as { name?: unknown })?.name === 'string') {
+        const { name, importNames } = p as RestrictedPath
+        out.push({
+          name,
+          ...(Array.isArray(importNames) ? { importNames } : {}),
+        })
+      }
+    }
+  }
+  return out
+}
+
+const pathLabel = (p: RestrictedPath) =>
+  p.importNames ? `${p.name} (${p.importNames.join(', ')})` : p.name
+
+/** What `wanted` restricts that `value` does not: a whole module, or the named exports of one. */
+export const missingRestrictedPaths = (
+  value: unknown,
+  wanted: unknown
+): RestrictedPath[] => {
+  const have = restrictedPaths(value)
+  return restrictedPaths(wanted).filter(
+    (w) =>
+      !have.some(
+        (h) =>
+          h.name === w.name &&
+          (!h.importNames ||
+            (!!w.importNames &&
+              w.importNames.every((n) => h.importNames!.includes(n))))
+      )
+  )
+}
+
+export const restrictedPropertiesOf = (
+  value: unknown
+): RestrictedProperty[] => {
+  if (!Array.isArray(value)) return []
+  return value
+    .slice(1)
+    .flat()
+    .filter(
+      (o): o is RestrictedProperty =>
+        typeof (o as RestrictedProperty | null)?.object === 'string' &&
+        typeof (o as RestrictedProperty).property === 'string'
+    )
+}
+
+export const missingRestrictedProperties = (
+  value: unknown,
+  wanted: unknown
+): RestrictedProperty[] => {
+  const have = restrictedPropertiesOf(value)
+  return restrictedPropertiesOf(wanted).filter(
+    (w) => !have.some((h) => h.object === w.object && h.property === w.property)
+  )
+}
+
+/** Every `no-restricted-imports` / `no-restricted-properties` entry of `wanted` that `value` lacks, as labels. */
+export const missingPolicyEntries = (
+  rule: string,
+  value: unknown,
+  wanted: unknown
+): string[] =>
+  rule === 'no-restricted-imports'
+    ? missingRestrictedPaths(value, wanted).map(pathLabel)
+    : rule === 'no-restricted-properties'
+      ? missingRestrictedProperties(value, wanted).map(
+          (p) => `${p.object}.${p.property}`
+        )
+      : []
+
+/** `no-empty` -> `oxlint-eslint-no-empty`, the id a diagnostic of that rule is reported under. */
+const findingIdOf = (rule: string) =>
+  `oxlint-${(rule.includes('/') ? rule : `eslint/${rule}`).replace(/[^a-zA-Z0-9]+/g, '-')}`
 
 const OXLINT_PACKAGES = ['oxlint', 'oxlint-tsgolint'] as const
 
@@ -100,6 +500,7 @@ type OxlintConfigShape = {
   srcDirectories?: unknown
   outDir?: unknown
   scaffold?: Record<string, unknown>
+  lint?: Record<string, unknown>
   validate?: {
     rules?: Record<string, unknown>
     oxlint?: { timeoutSeconds?: unknown }
@@ -334,6 +735,11 @@ const NO_VOID = [
   'Await the call, or await it and check the result: `if (!(await verify(sig))) reject()`.',
 ].join('\n')
 
+const NO_EMPTY_CATCH = [
+  'Do NOT "fix" an empty catch by adding a comment and nothing else unless the failure is genuinely safe to ignore.',
+  'Rethrow it, log it with context, or return something the caller can act on.',
+].join('\n')
+
 /** The typed shape of `oxlint --print-config` that these checks read. */
 type ResolvedConfig = {
   plugins?: string[] | null
@@ -357,23 +763,22 @@ export const isError = (value: unknown) => {
 }
 
 /**
- * `no-misused-promises` stops looking at `if (!p)` when `checksConditionals`
- * is switched off, which is the one shape this exists for.
+ * `--print-config` nests the options one level down (`["deny", [{...}]]`)
+ * while a config file holds them flat (`["error", {...}]`); both are read.
  */
 const optionsDisableCoverage = (
-  rule: string,
+  rule: RequiredRule,
   value: unknown
 ): string | null => {
-  if (!Array.isArray(value)) return null
-  const options = value.slice(1)
-  for (const o of options) {
+  const defeat = DEFEATING_OPTIONS[rule]
+  if (!defeat || !Array.isArray(value)) return null
+  for (const o of value.slice(1).flat()) {
     if (
-      rule === 'typescript/no-misused-promises' &&
       o &&
       typeof o === 'object' &&
-      (o as { checksConditionals?: unknown }).checksConditionals === false
+      (o as Record<string, unknown>)[defeat.option] === defeat.value
     ) {
-      return '"checksConditionals" is false, so `if (!verify(sig))` is not reported'
+      return `"${defeat.option}" is ${defeat.value}, so ${defeat.consequence}`
     }
   }
   return null
@@ -464,6 +869,7 @@ export const runOxlintSetupChecks = async (
     }
   }
 
+  const strict = isStrict(project.config.lint)
   if (config && resolved) {
     const missing: string[] = []
     const reasons: string[] = []
@@ -471,7 +877,7 @@ export const runOxlintSetupChecks = async (
       !resolved.plugins || resolved.plugins.includes('typescript')
     for (const rule of OXLINT_REQUIRED_RULES) {
       const value = resolved.rules?.[rule]
-      if (!hasTypescriptPlugin) {
+      if (rule.startsWith('typescript/') && !hasTypescriptPlugin) {
         missing.push(rule)
         reasons.push(
           `${rule}: the "typescript" plugin is not in "plugins" (${(resolved.plugins ?? []).join(', ')})`
@@ -490,6 +896,13 @@ export const runOxlintSetupChecks = async (
       }
       for (const override of resolved.overrides ?? []) {
         const level = override.rules?.[rule]
+        if (
+          strict &&
+          rule === 'typescript/no-floating-promises' &&
+          isStrictTestOverride(override.files)
+        ) {
+          continue
+        }
         if (level !== undefined && !isError(level)) {
           missing.push(rule)
           reasons.push(
@@ -502,12 +915,12 @@ export const runOxlintSetupChecks = async (
       findings.push({
         id: 'oxlint-rule-missing',
         severity: 'error',
-        message: `${rel(root, config.file)} does not enforce ${[...new Set(missing)].join(' and ')} at "error" — ${reasons.join('; ')}. Without them a forgotten \`await\` on an async helper (\`if (!verify(sig))\`) is not caught`,
+        message: `${rel(root, config.file)} does not enforce ${[...new Set(missing)].join(' and ')} at "error" — ${reasons.join('; ')}. Without them a forgotten \`await\` on an async helper (\`if (!verify(sig))\`) or an empty \`catch {}\` is not caught`,
         path: config.file,
         fixHint: [
           `In ${rel(root, config.file)} (and anything it extends) make sure these are set:`,
           CONFIG_SNIPPET,
-          'Remove any "overrides" entry that sets these rules to "off" or "warn", keep "typescript" in "plugins" if "plugins" is set, and do not pass { "checksConditionals": false } to typescript/no-misused-promises.',
+          'Remove any "overrides" entry that sets these rules to "off" or "warn", keep "typescript" in "plugins" if "plugins" is set, and do not pass { "checksConditionals": false } to typescript/no-misused-promises or { "allowEmptyCatch": true } to no-empty.',
           ENABLE_HINT,
         ].join('\n'),
       })
@@ -535,6 +948,15 @@ export const runOxlintSetupChecks = async (
         ].join('\n'),
       })
     }
+    findings.push(
+      ...policyFindings(
+        root,
+        config.file,
+        resolved,
+        policyLevels(project.config.lint)
+      )
+    )
+    if (strict) findings.push(...strictFindings(root, config.file, resolved))
   } else if (config && located.bin && resolveError !== undefined) {
     findings.push({
       id: 'oxlint-rule-missing',
@@ -550,6 +972,101 @@ export const runOxlintSetupChecks = async (
   }
 
   return applyRuleSeverity(findings, project.config.validate?.rules)
+}
+
+const atLeast = (value: unknown, level: PolicyLevel): boolean => {
+  const actual = levelOf(value)
+  if (level === 'warn') return actual === 'warn' || isError(value)
+  return isError(value)
+}
+
+/**
+ * One finding per `lint` key whose oxlint rules are not on at the key's level:
+ * `oxlint-enforce-content-service` and `oxlint-enforce-variables-service`, at
+ * that level. `overrides` are not inspected, so a per-file exemption stands.
+ */
+const policyFindings = (
+  root: string,
+  configFile: string,
+  resolved: ResolvedConfig,
+  levels: PolicyLevels
+): ValidateFinding[] => {
+  const findings: ValidateFinding[] = []
+  for (const key of Object.keys(OXLINT_POLICY_RULES) as PolicyKey[]) {
+    const level = levels[key]
+    if (level === 'off') continue
+    const policy = OXLINT_POLICY_RULES[key]
+    const reasons: string[] = []
+    for (const [rule, wanted] of Object.entries(policy.rules)) {
+      const value = resolved.rules?.[rule]
+      if (!atLeast(value, level)) {
+        reasons.push(
+          `${rule}: ${levelOf(value) ? `set to "${levelOf(value)}"` : 'not enabled'}, it must be at least "${level}"`
+        )
+        continue
+      }
+      const missing = missingPolicyEntries(rule, value, wanted)
+      if (missing.length > 0)
+        reasons.push(`${rule}: does not restrict ${missing.join(', ')}`)
+    }
+    if (reasons.length === 0) continue
+    findings.push({
+      id: `oxlint-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`,
+      severity: level,
+      message: `lint.${key} is "${level}" but ${rel(root, configFile)} does not enforce it — ${reasons.join('; ')}. Code that should go through ${policy.use} is not caught`,
+      path: configFile,
+      fixHint: [
+        `In ${rel(root, configFile)} make sure these are set (an "overrides" entry may switch them off for specific files):`,
+        JSON.stringify({ rules: policy.rules }, null, 2),
+        `Or set "lint": { "${key}": "off" } in pikku.config.json.`,
+        ENABLE_HINT,
+      ].join('\n'),
+    })
+  }
+  return findings
+}
+
+/**
+ * `oxlint-strict` when `lint.strict` is true and the resolved config lacks a
+ * strict rule at its level (`error` needs error, `warn` needs warn or error) or
+ * the plugins those rules come from. Rules the preset sets to `off`, and
+ * `overrides`, are not inspected: a workflow or test exemption stands.
+ */
+export const strictFindings = (
+  root: string,
+  configFile: string,
+  resolved: ResolvedConfig
+): ValidateFinding[] => {
+  const reasons: string[] = []
+  const plugins = resolved.plugins
+  for (const [rule, level] of Object.entries(OXLINT_STRICT_RULES)) {
+    if (level === 'off') continue
+    const plugin = rule.includes('/') ? rule.split('/')[0] : undefined
+    if (plugin && plugins && !plugins.includes(plugin)) {
+      reasons.push(`${rule}: the "${plugin}" plugin is not in "plugins"`)
+      continue
+    }
+    const value = resolved.rules?.[rule]
+    if (!atLeast(value, level)) {
+      reasons.push(
+        `${rule}: ${levelOf(value) ? `set to "${levelOf(value)}"` : 'not enabled'}, it must be at least "${level}"`
+      )
+    }
+  }
+  if (reasons.length === 0) return []
+  return [
+    {
+      id: 'oxlint-strict',
+      severity: 'error',
+      message: `lint.strict is true but ${rel(root, configFile)} does not enforce the strict preset — ${reasons.join('; ')}`,
+      path: configFile,
+      fixHint: [
+        'Run `pikku enable oxlint --strict` to merge the preset, or set "lint": { "strict": false } in pikku.config.json.',
+        `The preset sets, in ${rel(root, configFile)}:`,
+        JSON.stringify({ rules: OXLINT_STRICT_RULES }, null, 2),
+      ].join('\n'),
+    },
+  ]
 }
 
 type OxlintDiagnostic = {
@@ -699,9 +1216,7 @@ export const runOxlintRun = async (
     )
   }
 
-  const required = new Set(
-    OXLINT_REQUIRED_RULES.map((r) => `oxlint-${r.replace('/', '-')}`)
-  )
+  const required = new Set(OXLINT_REQUIRED_RULES.map(findingIdOf))
   const diagnostics = parsed.diagnostics ?? []
   const all: ValidateFinding[] = diagnostics.map((d) => {
     const rule = ruleOf(d.code)
@@ -710,14 +1225,31 @@ export const runOxlintRun = async (
     const where = span
       ? `${rel(root, file)}:${span.line}:${span.column}`
       : rel(root, file)
-    const id = rule
-      ? `oxlint-${rule.replace(/[^a-zA-Z0-9]+/g, '-')}`
-      : 'oxlint-diagnostic'
+    const id = rule ? findingIdOf(rule) : 'oxlint-diagnostic'
     const hints = [d.help, d.url].filter(Boolean) as string[]
     if (rule === 'typescript/no-floating-promises') hints.push(NO_VOID)
     if (rule === 'typescript/no-misused-promises') {
       hints.push(
         'A Promise is truthy: await it before branching on it, e.g. `if (!(await verify(sig)))`.'
+      )
+    }
+    if (rule === 'eslint/no-empty') hints.push(NO_EMPTY_CATCH)
+    if (rule === 'eslint/no-await-in-loop') {
+      hints.push(
+        'Run independent work concurrently with `mapConcurrent(items, fn, { concurrency })` from @pikku/core, or keep the sequence and say why: `// oxlint-disable-next-line no-await-in-loop -- reason`. In a workflow, `for...of` with `workflow.do` is fine (`*.workflow.ts` files are exempt).'
+      )
+    }
+    if (
+      rule === 'eslint/no-restricted-imports' ||
+      rule === 'typescript/no-require-imports'
+    ) {
+      hints.push(
+        `Read and write files through ${OXLINT_POLICY_RULES.enforceContentService.use}. For a file that genuinely needs the disk, switch the rule off for it in an "overrides" entry, or set "lint": { "enforceContentService": "off" } in pikku.config.json.`
+      )
+    }
+    if (rule === 'node/no-process-env') {
+      hints.push(
+        `Read configuration through ${OXLINT_POLICY_RULES.enforceVariablesService.use}. For bootstrap code that genuinely needs the environment, switch the rule off for it in an "overrides" entry, or set "lint": { "enforceVariablesService": "off" } in pikku.config.json.`
       )
     }
     return {

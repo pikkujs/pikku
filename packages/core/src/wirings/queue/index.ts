@@ -7,7 +7,10 @@ export type {
   PikkuJobConfig,
   PikkuWorkerConfig,
   PikkuQueue,
+  QueueInspection,
   QueueJob,
+  QueueJobCounts,
+  QueueJobRecord,
   QueueJobStatus,
   QueueService,
   QueueWorkers,
@@ -23,7 +26,9 @@ export {
 export type { QueueIdentityBinding } from './queue-identity.js'
 
 export { SignedQueueService } from './signed-queue-service.js'
+export { unwrapJobTrace, wrapJobTrace } from './queue-trace.js'
 export type { QueueConfigMapping } from './validate-worker-config.js'
 
 export { registerQueueWorkers } from './register-queue-helper.js'
 export type { QueueRegistrationCallback } from './register-queue-helper.js'
+export { pikkuRemoteQueueJobFunc } from './remote-queue-job.js'

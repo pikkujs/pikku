@@ -1,22 +1,14 @@
 ---
 name: pikku-services
 description: >-
-  Use for the service layer of a Pikku app — dependency injection with pikkuServices and
-  pikkuWireServices, startup/shutdown work with pikkuServerLifecycle, configuration through the
-  secrets, variables and credentials services, the audit sink and buffer, and structured logging.
-  TRIGGER when: code uses pikkuServices/pikkuWireServices/pikkuServerLifecycle, defineSecret,
-  defineVariable or defineCredential, user asks about services.ts, lifecycle.ts, dependency
-  injection, env vars, secrets, API credentials, audit logging, AuditService, PinoLogger, or a
-  built-in service. DO NOT TRIGGER when: user asks about middleware (use pikku-middleware),
-  authentication or permissions (use pikku-auth), or a third-party backend such as Redis, S3 or
-  MongoDB (use pikku-service-backends).
+  Pikku service layer: pikkuServices/pikkuWireServices DI, pikkuServerLifecycle, defineSecret, defineVariable, defineCredential, env vars, audit sink, logging. Choosing a service backend is pikku-service-backends.
 installGroups: [core]
 ---
 
 # Pikku Services
 
-Signatures and option keys come from `pikku doc` — run `pikku doc --ai` for the
-installed surface. This skill is the part the compiler cannot tell you: where a
+For how to call it, run this once: `pikku doc setup secrets variables pikkuServices pikkuWireServices pikkuServerLifecycle defineSecret defineVariable defineCredential`.
+This skill is the part the compiler cannot tell you: where a
 value is allowed to be read, and what a service's lifetime commits you to.
 
 ## Two lifetimes, and that is the whole model
@@ -48,7 +40,7 @@ service's paths and size limit; omitting it does not disable it.
 | Reading config — secrets, env vars, or a per-user API credential             | `references/config.md`                                       |
 | Recording audit events, or choosing a sink                                   | `references/audit.md` and `references/audit-wire-service.md` |
 | Setting up structured logging                                                | `references/pino.md`                                         |
-| Reaching for Redis, S3, SQS, MongoDB or a schema backend                     | `pikku-service-backends`                                     |
+| Choosing what sits behind a core service                                     | `pikku-service-backends`                                     |
 | Sending outgoing webhooks to a customer's endpoint                           | `pikku-webhook`                                              |
 
 ## Where a value may be read
@@ -58,6 +50,35 @@ service's paths and size limit; omitting it does not disable it.
   — and under `pikku dev` / `pikku serve` there is no `start.ts` at all, so
   startup work goes in a `pikkuServerLifecycle` hook, which receives the
   singletons and reads through `variables` too.
+- **Never `fs`, `child_process` or `process.argv` in app code either.**
+  `pikku validate` reports each of them through the app's oxlint, so a
+  function that needs one has the wrong shape:
+
+  | Instead of                                                                             | Use                                                                    | `lint` key                |
+  | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------- |
+  | `fs`, `node:fs`, `fs/promises`, `fs-extra`                                             | the `content` service (keyed, project-scoped, signed reads and writes) | `enforceContentService`   |
+  | `process.env` (also `{ ...process.env }`, `const { env } = process`, `globalThis`/`global`/`self`.process) | `variables` for values, `secrets` for secrets                          | `enforceVariablesService` |
+  | `child_process`, `execa`, `cross-spawn`, `shelljs`, `Bun.spawn`, `Bun.$`               | the Supervisor, which owns the process and its output                  | `enforceSupervisor`       |
+  | `process.argv`, `Bun.argv`, `Deno.args`, `commander`, `yargs`, `minimist`, `parseArgs` | a `pikku` CLI command, which receives typed input                      | `enforceCliCommands`      |
+
+  Opting out: `start.ts`, `server.ts`, `**/bin/**`, `**/scripts/**` and tests are already
+  exempt by the `overrides` entry `pikku enable oxlint` writes. One line
+  elsewhere takes a plain comment, `// oxlint-disable-next-line
+no-restricted-properties -- why`. These rules apply to apps and addons, not library packages. A whole
+  project that is a library or tool (a CLI, a harness that edits a checkout) sets the key to `"off"` in `pikku.config.json`.
+  Do not exempt a services directory: the factory is where a service gets its
+  value, and it reads `variables` like everything else.
+
+- **No `await` in a loop in app code (strict mode).** With `lint.strict` on
+  (`pikku enable oxlint --strict`) `no-await-in-loop` warns. Use
+  `mapConcurrent(items, fn, { concurrency })` from `@pikku/core/utils`
+  (results in input order, `concurrency: 1` is sequential, first rejection
+  stops new work, optional `signal`), or keep the loop with
+  `// oxlint-disable-next-line no-await-in-loop -- reason`. Inside a
+  `pikkuWorkflowFunc` do the opposite: `for...of` with `workflow.do` is the
+  durable sequential fanout (`*.workflow.ts` is exempt), and `mapConcurrent`
+  must not be used there. See `references/config.md` for the whole preset.
+
 - **`secrets` never reaches a function.** `WiredServices` is wrapped in
   `SecretlessServices<…>`, so it is stripped at the type level rather than merely
   omitted by convention. Read a secret in a service factory or middleware and
@@ -75,13 +96,18 @@ service's paths and size limit; omitting it does not disable it.
 - **Do not take `services` as a named parameter and cast in the body.** The
   inspector reads the destructuring pattern to build the manifest; a cast makes
   the service invisible to it, so tree-shaking drops what the function needs.
+- **Do not cast a service factory.** `pikkuServices(...) as X` (or `as unknown
+as`, `!`, `<X>`) hides the call from the inspector,
+  so the factory would not be registered; the build fails with `PKU564`
+  instead. Export the direct `pikkuServices(...)` / `pikkuWireServices(...)` /
+  `pikkuConfig(...)` call and fix the type mismatch the cast was hiding.
+  `satisfies` and parentheses are fine: the inspector reads through them.
 - **Do not hand-roll an audit table.** `auditLog.write()` on an `audit: true`
   function enriches the event with the function id, wire type, trace id and user
   identity; an `insertInto('audit_log')` of your own gets none of that, and a
   write inside a transaction that later rolls back records nothing.
 - **Do not reach for `node:os` (`tmpdir()`, `homedir()`) or hand-roll `mkdtemp`
-  to get a scratch file.** `node:os` is missing from the Cloudflare Workers
-  runtime, so one import fails the whole worker at upload, even if the code path
+  to get a scratch file.** `node:os` is missing from some runtimes, so one import fails the whole worker at upload, even if the code path
   never runs there. `TemporaryFileService` (`@pikku/core/services/temporary-file-service`)
   is a **wire service**, not a singleton: build it in `pikkuWireServices` with
   `new TemporaryFileService(singletonServices.logger, tempDir).createInstance()`

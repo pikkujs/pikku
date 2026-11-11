@@ -1,4 +1,4 @@
-import { buildRemoteHeaders } from '@pikku/core/remote'
+import { buildMeshHeaders } from '@pikku/core/mesh'
 import type {
   DeploymentService,
   DeploymentServiceConfig,
@@ -90,14 +90,14 @@ export class MongoDBDeploymentService implements DeploymentService {
     funcName: string,
     data: unknown,
     session?: unknown,
-    traceId?: string
+    traceparent?: string
   ): Promise<unknown> {
-    const headers = await buildRemoteHeaders(
+    const headers = await buildMeshHeaders(
       this.jwt,
       this.secrets,
       funcName,
       session,
-      traceId
+      traceparent
     )
     const cutoff = new Date(Date.now() - this.heartbeatTtl)
     const result = await this.deployments.findOne(
@@ -107,7 +107,7 @@ export class MongoDBDeploymentService implements DeploymentService {
     if (!result) {
       throw new Error(`No deployment found for function '${funcName}'`)
     }
-    const url = `${result.endpoint}/remote/rpc/${encodeURIComponent(funcName)}`
+    const url = `${result.endpoint}/mesh/rpc/${encodeURIComponent(funcName)}`
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
@@ -115,7 +115,7 @@ export class MongoDBDeploymentService implements DeploymentService {
     })
     if (!response.ok) {
       throw new Error(
-        `Remote RPC call to '${funcName}' failed: ${response.status}`
+        `Mesh RPC call to '${funcName}' failed: ${response.status}`
       )
     }
     return response.json()

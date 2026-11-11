@@ -23,7 +23,11 @@ describe('LocalMetaService reads the scenario meta alongside the app meta', () =
     )
     await writeFile(
       join(pikkuDir, 'scenarios', 'meta', 'codeEditorScenario.gen.json'),
-      JSON.stringify({ name: 'codeEditorScenario', source: 'scenario' })
+      JSON.stringify({
+        name: 'codeEditorScenario',
+        source: 'scenario',
+        scenario: true,
+      })
     )
     await writeFile(
       join(pikkuDir, 'function', 'pikku-functions-meta.gen.json'),
@@ -48,6 +52,8 @@ describe('LocalMetaService reads the scenario meta alongside the app meta', () =
       'orderWorkflow',
     ])
     assert.equal(meta['codeEditorScenario']!.source, 'scenario')
+    assert.equal(meta['codeEditorScenario']!.scenario, true)
+    assert.equal(meta['orderWorkflow']!.scenario, undefined)
   })
 
   test('a scenario step is still a function to whoever reads the meta', async () => {

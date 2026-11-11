@@ -41,7 +41,7 @@
  *   13. app:   pikku db baseline               → adopts a database that already has it
  *   14. app:   pikku db baseline               → refuses one that is actually behind
  */
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { DatabaseSync } from 'node:sqlite'
 import {
   existsSync,
@@ -119,6 +119,18 @@ const contains = (haystack, needle, label) =>
 function run(label, file, args, cwd = here) {
   console.log(`\n▶ ${label}`)
   execFileSync(file, args, { cwd, stdio: 'inherit', env })
+}
+
+/** Run a command that must succeed, and hand back everything it printed. */
+function captureAll(label, file, args, cwd = here) {
+  console.log(`\n▶ ${label}`)
+  const result = spawnSync(file, args, { cwd, encoding: 'utf8', env })
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`
+  process.stdout.write(output)
+  if (result.status !== 0) {
+    throw new Error(`${label} exited ${result.status ?? result.signal}`)
+  }
+  return output
 }
 
 function capture(label, file, args, cwd = here) {
@@ -352,6 +364,150 @@ run(
   remoteAddonDir
 )
 
+// The remote addon's consumers get its contract as a types-only SDK, which
+// `pikku all` cut beside package.json at its version. Its remote function is
+// zod-typed (PKU922 refuses a generic one), so the SDK can carry it without a
+// single import into the addon's src/.
+console.log('\n▶ assert: the remote addon’s SDK is types only')
+const sdkTarball = join(
+  remoteAddonDir,
+  'pikku-verifier-db-remote-addon-0.1.0.sdk.tgz'
+)
+check(
+  existsSync(sdkTarball),
+  'pikku all packed <scope>-<name>-<version>.sdk.tgz on its own'
+)
+const sdkEntries = execFileSync('tar', ['tzf', sdkTarball], {
+  encoding: 'utf8',
+})
+  .split('\n')
+  .filter(Boolean)
+  .sort()
+check(
+  sdkEntries.join(',') ===
+    [
+      'agent/pikku-agent-map.gen.d.ts',
+      'function/pikku-functions-meta.gen.json',
+      'manifest.json',
+      'rpc/pikku-rpc-wirings-map.remote.gen.d.ts',
+      'workflow/pikku-workflow-map.gen.d.ts',
+    ].join(','),
+  `the SDK holds exactly the five spec files (${sdkEntries.join(', ')})`
+)
+const sdkDir = join(remoteAddonDir, '.pikku', 'sdk')
+const sdkManifest = JSON.parse(
+  readFileSync(join(sdkDir, 'manifest.json'), 'utf8')
+)
+check(
+  sdkManifest.name === REMOTE_ADDON_PKG &&
+    sdkManifest.version === '0.1.0' &&
+    typeof sdkManifest.pikkuCore === 'string' &&
+    /^[0-9a-f]{64}$/.test(sdkManifest.contractHash),
+  'manifest.json carries name, version, pikkuCore and contractHash'
+)
+const sdkMeta = JSON.parse(
+  readFileSync(
+    join(sdkDir, 'function', 'pikku-functions-meta.gen.json'),
+    'utf8'
+  )
+)
+check(
+  Object.keys(sdkMeta).join(',') === 'listNotes@v1,listNotes@v2' &&
+    Object.values(sdkMeta).every((m) =>
+      /^[0-9a-f]{16}$/.test(m.contractHash ?? '')
+    ),
+  `the SDK meta lists both versions of the remote function with their contract hashes (${Object.keys(sdkMeta).join(', ')})`
+)
+check(
+  Object.values(sdkMeta).every(
+    (m) => m.versions?.join(',') === '1,2' && m.latestVersion === 2
+  ),
+  'each SDK entry carries the versions the SDK can call and the latest of them'
+)
+const sdkRpcMap = readFileSync(
+  join(sdkDir, 'rpc', 'pikku-rpc-wirings-map.remote.gen.d.ts'),
+  'utf8'
+)
+const sdkImports = [...sdkRpcMap.matchAll(/from '([^']+)'/g)].map((m) => m[1])
+check(
+  sdkImports.every((s) => s.startsWith('../') || s.startsWith('@pikku/core/')),
+  `the remote map imports only its siblings and @pikku/core (${sdkImports.join(', ')})`
+)
+contains(
+  sdkRpcMap,
+  "readonly 'listNotes': RPCHandler<null, ListNotesOutput>",
+  'the remote map types the zod contract'
+)
+contains(
+  sdkRpcMap,
+  "readonly 'listNotes@v1': RPCHandler<null, ListNotesV1Output>",
+  'the remote map keeps v1 callable by its own id'
+)
+contains(
+  sdkRpcMap,
+  "readonly 'listNotes@v2': RPCHandler<null, ListNotesOutput>",
+  'the remote map names the latest version explicitly too'
+)
+check(
+  !/CountNotes|countNotes/.test(
+    [...sdkEntries].map((e) => readFileSync(join(sdkDir, e), 'utf8')).join('\n')
+  ),
+  'the internal countNotes and its CountNotesOutput type are nowhere in the SDK'
+)
+
+// The same contract packs to the same bytes, so a registry can tell a re-run
+// from a changed SDK by its integrity alone.
+const firstPack = readFileSync(sdkTarball)
+run('remote addon: pikku all (again)', 'node', [PIKKU, 'all'], remoteAddonDir)
+check(
+  readFileSync(sdkTarball).equals(firstPack),
+  'a second pikku all packs the same SDK bytes'
+)
+
+// No SDK step decides whether the version moved: `pikku versions check` does,
+// and it covers `remote: true` functions. A manifest that recorded another
+// output for the published listNotes@v2 is a contract change without a bump.
+const versionsFile = join(remoteAddonDir, 'versions.pikku.json')
+try {
+  run(
+    'remote addon: pikku versions init',
+    'node',
+    [PIKKU, 'versions', 'init'],
+    remoteAddonDir
+  )
+  // `init` writes an empty manifest; `update` records the current contracts.
+  run(
+    'remote addon: pikku versions update',
+    'node',
+    [PIKKU, 'versions', 'update'],
+    remoteAddonDir
+  )
+  run(
+    'remote addon: pikku versions check',
+    'node',
+    [PIKKU, 'versions', 'check'],
+    remoteAddonDir
+  )
+  const versions = JSON.parse(readFileSync(versionsFile, 'utf8'))
+  check(
+    versions.contracts.listNotes?.versions?.['2'] !== undefined,
+    'versions init records the remote listNotes@v2 contract'
+  )
+  versions.contracts.listNotes.versions['2'].outputHash = '00000000'
+  writeFileSync(versionsFile, JSON.stringify(versions, null, 2))
+  const drifted = expectFailure(
+    'remote addon: pikku versions check (listNotes changed without a bump)',
+    [PIKKU, 'versions', 'check'],
+    remoteAddonDir
+  )
+  check(
+    drifted.status !== 0,
+    'pikku versions check refuses a remote contract change without a version bump'
+  )
+} finally {
+  rmSync(versionsFile, { force: true })
+}
+
 console.log('\n▶ assert: the published artifact describes the addon’s table')
 // An addon roots its whole generated tree under `.pikku/addon`, so that every
 // leaf it authors is reached as `#pikku/addon/<leaf>` and cannot be shadowed by
@@ -430,7 +586,14 @@ check(
 
 // 3-4. The consumer discovers the addon because it is wired, then writes one
 //      migration per source.
-run('app: pikku all', 'node', [PIKKU, 'all'])
+const firstBuild = captureAll('app: pikku all', 'node', [PIKKU, 'all'])
+// The addon is granted BETTER_AUTH_SECRET (labels.functions.ts), which only
+// auth-secrets.gen.ts declares — a file this clean build writes after its
+// first inspection. That inspection must still count the secret as declared.
+check(
+  !firstBuild.includes('PKU124'),
+  'a clean build does not report the addon grant of BETTER_AUTH_SECRET as targeting nothing (PKU124)'
+)
 const generated = capture('app: pikku db generate', 'node', [
   PIKKU,
   'db',
@@ -590,6 +753,39 @@ check(
 check(
   !(await store.hasTable(REMOTE_TABLE)),
   `\`${REMOTE_TABLE}\` is not in this database — the remote addon reads it on another one`
+)
+
+// 10b. A tarball packed on macOS carries an AppleDouble `._<name>.sql` beside
+//      every file. Extracted on Linux it is a real file that sorts before the
+//      migrations, and it is binary: Bun's sqlite refuses it and fails the whole
+//      migrate, node's reads it as empty and records a migration that is not one.
+console.log('\n▶ migrate: an AppleDouble ._ file beside the migrations')
+const appliedBefore = await store.appliedCount()
+const appleDouble = join(MIGRATIONS_DIR, `._${authFile}`)
+writeFileSync(
+  appleDouble,
+  Buffer.concat([
+    Buffer.from([0x00, 0x05, 0x16, 0x07, 0x00, 0x02, 0x00, 0x00]),
+    Buffer.from('Mac OS X        ', 'ascii'),
+    Buffer.alloc(139),
+  ])
+)
+const withAppleDouble = spawnSync('node', [PIKKU, 'db', 'migrate'], {
+  cwd: here,
+  encoding: 'utf8',
+  env,
+})
+rmSync(appleDouble)
+process.stdout.write(
+  `${withAppleDouble.stdout ?? ''}${withAppleDouble.stderr ?? ''}`
+)
+check(
+  withAppleDouble.status === 0,
+  'db migrate leaves the ._ file alone instead of running it as SQL'
+)
+check(
+  (await store.appliedCount()) === appliedBefore,
+  'the ._ file is not recorded as an applied migration'
 )
 
 // 11. Running it again must be a no-op, or every deploy grows a migration.

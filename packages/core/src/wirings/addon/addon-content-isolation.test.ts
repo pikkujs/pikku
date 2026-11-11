@@ -27,7 +27,7 @@ const recordingContent = () => {
     },
     getUploadURL: async (a: any) => {
       calls.push({ method: 'getUploadURL', bucket: a.bucket, key: a.fileKey })
-      return { uploadUrl: 'u', assetKey: `${a.bucket}/${a.fileKey}` }
+      return { uploadUrl: 'u', fileKey: a.fileKey }
     },
     deleteFile: async (a: any) => {
       calls.push({ method: 'deleteFile', bucket: a.bucket, key: a.key })

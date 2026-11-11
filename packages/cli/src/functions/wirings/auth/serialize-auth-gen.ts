@@ -5,7 +5,7 @@ import {
   OAUTH_PROXY_URL_VARIABLE,
   OAUTH_PROXY_KEY_ID_VARIABLE,
   OAUTH_PROXY_PROVIDERS_VARIABLE,
-} from '@pikku/better-auth'
+} from '@pikku/better-auth/constants'
 import { AUTH_HANDLER_FUNC_ID } from '@pikku/inspector'
 import type { AuthDefinition } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
@@ -33,6 +33,13 @@ function variableSchemaName(name: string, field: string): string {
 }
 
 /**
+ * Secrets the generated auth file declares that `pikku dev` creates for a new
+ * checkout: a committed value would be the same in every scaffold, and a
+ * missing one fails the first sign-up.
+ */
+export const AUTH_GENERATED_DEV_SECRETS = ['BETTER_AUTH_SECRET'] as const
+
+/**
  * The two files generated from a `pikkuBetterAuth` export.
  *
  * They are split because the CLI's schema/wiring-separation rule (PKU490)
@@ -50,6 +57,27 @@ export interface AuthGenOutput {
   /** Global session-middleware registration, split into its own file only when
    * `session.cookieCache` is enabled (stateless path); undefined otherwise. */
   middleware?: string
+}
+
+/**
+ * The stateless middleware never builds the auth instance, so it reads the
+ * cookie with the prefix, strategy and version the inspector found in the
+ * config; anything it could not read statically was warned about there.
+ */
+const statelessSessionOptions = (definition: AuthDefinition): string => {
+  const cookieCache = [
+    definition.cookieCacheStrategy !== undefined &&
+      `strategy: ${JSON.stringify(definition.cookieCacheStrategy)}`,
+    definition.cookieCacheVersion !== undefined &&
+      `version: ${JSON.stringify(definition.cookieCacheVersion)}`,
+  ].filter(Boolean)
+  const options = [
+    `priority: 'lowest'`,
+    definition.cookiePrefix !== undefined &&
+      `cookiePrefix: ${JSON.stringify(definition.cookiePrefix)}`,
+    cookieCache.length > 0 && `cookieCache: { ${cookieCache.join(', ')} }`,
+  ].filter(Boolean)
+  return `{ ${options.join(', ')} }`
 }
 
 /**
@@ -372,7 +400,7 @@ export const serializeAuthGen = (
       `import { betterAuthStatelessSession } from '@pikku/better-auth'`,
       '',
       `addGlobalMiddleware([`,
-      `  betterAuthStatelessSession({ priority: 'lowest' }),`,
+      `  betterAuthStatelessSession(${statelessSessionOptions(definition)}),`,
       ...(includeConsoleToken ? consoleTokenMiddlewareLines() : []),
       `])`,
       '',

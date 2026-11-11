@@ -207,6 +207,34 @@ describe('installAddonIntoApp', () => {
     )
   })
 
+  test('a server URL carrying a line break or control character never reaches .env', async () => {
+    for (const baseUrl of [
+      'https://api.example.com\nNODE_OPTIONS=--import=data:text/javascript,1',
+      'https://api.example.com\r\nNODE_OPTIONS=--inspect',
+      'https://api.example.com\rNODE_OPTIONS=--inspect',
+      'https://api.example.com\u2028NODE_OPTIONS=--inspect',
+      'https://api.example.com\u0000',
+    ]) {
+      const root = await mkdtemp(join(tmpdir(), 'install-addon-'))
+      created.push(root)
+      const srcDir = join(root, 'src')
+      await mkdir(srcDir, { recursive: true })
+      const { written, notes } = installAddonIntoApp(
+        install({ projectRoot: root, srcDir, mode: 'none', baseUrl })
+      )
+      assert.ok(written.includes('.env'))
+      assert.equal(
+        await readFile(join(root, '.env'), 'utf8'),
+        'DOLIBARR_BASE_URL=\n'
+      )
+      assert.ok(
+        notes.some((note) =>
+          /line break or control character.*DOLIBARR_BASE_URL/.test(note)
+        )
+      )
+    }
+  })
+
   test('an existing dependency is left as it is', async () => {
     const root = await mkdtemp(join(tmpdir(), 'install-addon-'))
     created.push(root)

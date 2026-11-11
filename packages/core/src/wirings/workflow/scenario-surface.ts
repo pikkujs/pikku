@@ -3,6 +3,7 @@ import type {
   ScenarioSurface,
   ScenarioSurfaceResolution,
 } from './scenario-step.types.js'
+import { stableStringify } from '../../utils/stable-stringify.js'
 
 /**
  * Resolve which of a step's declared bindings run, for one step, in one run.
@@ -54,18 +55,4 @@ export const witnessesAgree = (a: unknown, b: unknown): boolean => {
     return true
   }
   return stableStringify(a) === stableStringify(b)
-}
-
-const stableStringify = (value: unknown): string => {
-  if (value === null || typeof value !== 'object') {
-    return JSON.stringify(value) ?? 'undefined'
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(',')}]`
-  }
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, v]) => v !== undefined)
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`)
-  return `{${entries.join(',')}}`
 }

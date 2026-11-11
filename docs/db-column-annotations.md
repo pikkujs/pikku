@@ -6,6 +6,9 @@ schema can't tell us: privacy classification, anonymize strategy, and type/zod
 refinements. This document explains the pipeline and gives a recipe for each way
 you might want to extend it.
 
+A table declared in `db/tables.ts` carries its annotations on the declaration
+instead, and those merge into the same sidecar. See [Declaring tables](./db-tables.md).
+
 ## The pipeline
 
 ```
@@ -24,19 +27,32 @@ AnnotationMap  ── generateSchemaTypes() (db-codegen.ts) ──► .pikku/db/
 
 Key files (all under `packages/cli/src/functions/db/`):
 
-| File                                            | Responsibility                                                                              |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `annotation-parser.ts`                          | `ColAnnotation` shape; `AnnotationKind`; `loadAnnotations()` reads + validates the sidecar  |
-| `db-introspector.ts`                            | dialect-agnostic `ColumnInfo` / `EnumInfo` interfaces                                       |
+| File                                                       | Responsibility                                                                              |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `annotation-parser.ts`                                     | `ColAnnotation` shape; `AnnotationKind`; `loadAnnotations()` reads + validates the sidecar  |
+| `db-introspector.ts`                                       | dialect-agnostic `ColumnInfo` / `EnumInfo` interfaces                                       |
 | `postgres/postgres-introspector.ts`, `mysql/…`, `sqlite/…` | per-dialect introspection                                                                   |
-| `db-codegen.ts`                                 | `schema.gen.d.ts` typing, coercion map, manifest, **owns snake→Pascal/camel name mapping**  |
-| `zod-codegen.ts`                                | parses `schema.gen.d.ts` textually → `zod.gen.ts`; **owns the canonical `ZOD_FORMATS` map** |
+| `db-codegen.ts`                                            | `schema.gen.d.ts` typing, coercion map, manifest, **owns snake→Pascal/camel name mapping**  |
+| `zod-codegen.ts`                                           | parses `schema.gen.d.ts` textually → `zod.gen.ts`; **owns the canonical `ZOD_FORMATS` map** |
 
 The runtime Kysely plugin lives outside the CLI, in `@pikku/kysely`
 (`packages/services/kysely/src/coercion-plugin.ts`): `ColumnKind`, `CoercionMap`
 and the `fromDb()` coercion. The CLI, `@pikku/kysely-node-sqlite` and
 `@pikku/kysely-bun-sqlite` all use that one implementation, so a fix cannot
 land in one and miss the others.
+
+The map only takes effect where something attaches the plugin to the `kysely`
+an app is handed:
+
+- `pikku dev`, `pikku serve` and a generated local CLI — the local services file
+  opens the database with `createCoercionPlugin({ map: coercionMap })`.
+- Standalone deploys — the entry imports the map (`db.coercionImportPath`).
+- Cloudflare deploys — the adapter selects the optional contributor
+  `kysely-coercion` (`@pikku/deploy-cloudflare`'s `coercionContributor`, on by
+  default). It decorates the `services.kysely` another contributor provides, so
+  it applies only when some contributor provides `kysely` and the app has a
+  coercion map. A platform whose own `kysely` contributor already applies the
+  map passes `coercion: false` to the adapter. See [`contributors.md`](./contributors.md).
 
 ## Two axes: what changes the _type_ vs only the _validator_
 

@@ -514,6 +514,7 @@ export function convertDslToGraph(
     name: workflowName,
     pikkuFuncId: meta.pikkuFuncId,
     source,
+    scenario: meta.scenario || undefined,
     title: meta.title,
     description: meta.description,
     tags: meta.tags,

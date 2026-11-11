@@ -1,0 +1,1362 @@
+{
+ "workflows": {
+  "meta": {
+   "wfA": {
+    "pikkuFuncId": "wfA",
+    "name": "wfA",
+    "steps": [
+     {
+      "type": "rpc",
+      "stepName": "s1",
+      "rpcName": "rpcOne",
+      "outputVar": "r1",
+      "inputs": {
+       "a": {
+        "from": "input",
+        "path": "a"
+       },
+       "list": {
+        "from": "literal",
+        "value": [
+         "a",
+         "b"
+        ]
+       },
+       "obj": {
+        "from": "literal",
+        "value": {
+         "x": 1,
+         "y": "two",
+         "z": [
+          1,
+          2,
+          null,
+          true
+         ]
+        }
+       },
+       "n": {
+        "from": "literal",
+        "value": 16
+       },
+       "lit": {
+        "from": "literal",
+        "value": "z"
+       },
+       "arr": {
+        "from": "literal",
+        "value": [
+         {
+          "$ref": "trigger",
+          "path": "q"
+         },
+         3
+        ]
+       },
+       "nested": {
+        "from": "literal",
+        "value": {
+         "k": {
+          "$ref": "trigger",
+          "path": "k"
+         }
+        }
+       },
+       "tpl": {
+        "from": "template",
+        "parts": [
+         "x",
+         "z",
+         ""
+        ],
+        "expressions": [
+         {
+          "from": "input",
+          "path": "y"
+         },
+         {
+          "from": "input",
+          "path": "count"
+         }
+        ]
+       },
+       "plain": {
+        "from": "literal",
+        "value": "p"
+       }
+      }
+     },
+     {
+      "type": "rpc",
+      "stepName": "s2",
+      "rpcName": "rpcTwo",
+      "outputVar": "r2",
+      "inputs": "passthrough",
+      "options": {
+       "retries": 2,
+       "retryDelay": "5s",
+       "description": "hello"
+      },
+      "virtualUser": "bob"
+     },
+     {
+      "type": "filter",
+      "sourceVar": "data.users",
+      "itemVar": "u",
+      "condition": {
+       "type": "and",
+       "conditions": [
+        {
+         "type": "simple",
+         "expression": "u.active"
+        },
+        {
+         "type": "simple",
+         "expression": "!u.gone"
+        }
+       ]
+      },
+      "outputVar": "active"
+     },
+     {
+      "type": "arrayPredicate",
+      "mode": "some",
+      "sourceVar": "data.users",
+      "itemVar": "u",
+      "condition": {
+       "type": "simple",
+       "expression": "u.ok"
+      },
+      "outputVar": "any1"
+     },
+     {
+      "type": "arrayPredicate",
+      "mode": "every",
+      "sourceVar": "data.users",
+      "itemVar": "u",
+      "condition": {
+       "type": "or",
+       "conditions": [
+        {
+         "type": "simple",
+         "expression": "u.ok"
+        },
+        {
+         "type": "simple",
+         "expression": "u.fine"
+        }
+       ]
+      },
+      "outputVar": "all1"
+     },
+     {
+      "type": "switch",
+      "expression": "data.kind",
+      "cases": [
+       {
+        "value": "a",
+        "steps": [
+         {
+          "type": "rpc",
+          "stepName": "sa",
+          "rpcName": "rpcA",
+          "inputs": {
+           "v": {
+            "from": "outputVar",
+            "name": "r1",
+            "path": "id"
+           }
+          }
+         }
+        ]
+       },
+       {
+        "value": 1,
+        "steps": [
+         {
+          "type": "set",
+          "variable": "count",
+          "value": 1
+         }
+        ]
+       },
+       {
+        "expression": "data.other",
+        "steps": [
+         {
+          "type": "sleep",
+          "stepName": "sl",
+          "duration": 100
+         }
+        ]
+       }
+      ],
+      "defaultSteps": [
+       {
+        "type": "rpc",
+        "stepName": "sd",
+        "rpcName": "rpcD"
+       }
+      ]
+     },
+     {
+      "type": "branch",
+      "branches": [
+       {
+        "condition": {
+         "type": "simple",
+         "expression": "data.x"
+        },
+        "steps": [
+         {
+          "type": "suspend",
+          "reason": "wait here"
+         }
+        ]
+       },
+       {
+        "condition": {
+         "type": "simple",
+         "expression": "data.y"
+        },
+        "steps": [
+         {
+          "type": "milestone",
+          "name": "m1"
+         }
+        ]
+       }
+      ],
+      "elseSteps": [
+       {
+        "type": "sleep",
+        "stepName": "z",
+        "duration": "2m"
+       }
+      ]
+     },
+     {
+      "type": "approval",
+      "reason": "ok?",
+      "outputVar": "approval",
+      "expiry": "1d",
+      "approvers": "admin",
+      "approverScope": "ops"
+     },
+     {
+      "type": "fanout",
+      "sourceVar": "data.items",
+      "itemVar": "it",
+      "mode": "parallel",
+      "body": [
+       {
+        "type": "rpc",
+        "stepName": "each",
+        "rpcName": "rpcEach",
+        "outputVar": "q",
+        "inputs": {
+         "id": {
+          "from": "item",
+          "path": "id"
+         },
+         "c": {
+          "from": "input",
+          "path": "count"
+         }
+        }
+       },
+       {
+        "type": "sleep",
+        "stepName": "pause",
+        "duration": 10
+       }
+      ]
+     },
+     {
+      "type": "fanout",
+      "sourceVar": "data.users",
+      "itemVar": "u",
+      "mode": "sequential",
+      "body": [
+       {
+        "type": "rpc",
+        "stepName": "seq",
+        "rpcName": "rpcSeq",
+        "inputs": {
+         "u": {
+          "from": "item",
+          "path": "u"
+         }
+        }
+       }
+      ],
+      "timeBetween": "7ms"
+     },
+     {
+      "type": "set",
+      "variable": "name",
+      "value": "y"
+     },
+     {
+      "type": "set",
+      "variable": "flag",
+      "expression": "data.f"
+     },
+     {
+      "type": "set",
+      "variable": "count",
+      "expression": "data.cnt"
+     },
+     {
+      "type": "branch",
+      "branches": [
+       {
+        "condition": {
+         "type": "simple",
+         "expression": "data.cancel"
+        },
+        "steps": [
+         {
+          "type": "cancel",
+          "reason": "stop"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "return",
+      "outputs": {
+       "r1": {
+        "from": "outputVar",
+        "name": "r1"
+       },
+       "n": {
+        "from": "outputVar",
+        "name": "r2",
+        "path": "name"
+       },
+       "count": {
+        "from": "stateVar",
+        "name": "count"
+       },
+       "name": {
+        "from": "stateVar",
+        "name": "name"
+       },
+       "lit": {
+        "from": "literal",
+        "value": 5
+       },
+       "d": {
+        "from": "input",
+        "path": "zzz"
+       },
+       "tpl": {
+        "from": "expression",
+        "expression": "`a`"
+       },
+       "ex": {
+        "from": "expression",
+        "expression": "data.a + 1"
+       }
+      },
+      "spread": [
+       "r1"
+      ]
+     }
+    ],
+    "context": {
+     "count": {
+      "type": "number",
+      "default": 0
+     },
+     "name": {
+      "type": "string",
+      "default": "x"
+     },
+     "flag": {
+      "type": "boolean",
+      "default": false
+     },
+     "items": {
+      "type": "array",
+      "default": [
+       1,
+       2
+      ]
+     },
+     "cfg": {
+      "type": "object",
+      "default": {
+       "a": 1
+      }
+     }
+    },
+    "dsl": true,
+    "title": "A",
+    "summary": "sum",
+    "tags": [
+     "t1"
+    ],
+    "expose": true,
+    "auth": null,
+    "skip": "no",
+    "virtualUsers": [
+     "bob"
+    ]
+   },
+   "wfB": {
+    "pikkuFuncId": "wfB",
+    "name": "wfB",
+    "steps": [
+     {
+      "type": "parallel",
+      "children": [
+       {
+        "type": "rpc",
+        "stepName": "a",
+        "rpcName": "ra",
+        "outputVar": "a",
+        "inputs": "passthrough"
+       },
+       {
+        "type": "rpc",
+        "stepName": "b",
+        "rpcName": "rb",
+        "outputVar": "b",
+        "inputs": "passthrough"
+       }
+      ]
+     },
+     {
+      "type": "return",
+      "outputs": {},
+      "spread": [
+       "a"
+      ]
+     }
+    ],
+    "dsl": true
+   },
+   "wfD": {
+    "pikkuFuncId": "wfD",
+    "name": "wfD",
+    "steps": [
+     {
+      "type": "rpc",
+      "stepName": "s",
+      "rpcName": "rr",
+      "outputVar": "r"
+     },
+     {
+      "type": "inline",
+      "stepName": "inl",
+      "options": {
+       "description": "desc",
+       "retries": 1
+      }
+     },
+     {
+      "type": "inline",
+      "stepName": "dyn${data.x}"
+     },
+     {
+      "type": "sleep",
+      "stepName": "z${data.x}",
+      "duration": 0
+     },
+     {
+      "type": "sleep",
+      "stepName": "y",
+      "duration": "abc"
+     }
+    ],
+    "dsl": false
+   },
+   "scn": {
+    "pikkuFuncId": "scn",
+    "name": "scn",
+    "steps": [
+     {
+      "type": "scenarioStep",
+      "stepName": "g1",
+      "stepFunc": "giveFn",
+      "phase": "given",
+      "outputVar": "g",
+      "inputs": {
+       "a": {
+        "from": "literal",
+        "value": 1
+       }
+      },
+      "virtualUser": "alice"
+     },
+     {
+      "type": "scenarioStep",
+      "stepName": "w1",
+      "stepFunc": "whenFn",
+      "phase": "when",
+      "inputs": "passthrough"
+     },
+     {
+      "type": "scenarioStep",
+      "stepName": "t1",
+      "stepFunc": "thenFn",
+      "phase": "then"
+     },
+     {
+      "type": "rpc",
+      "stepName": "ee",
+      "rpcName": "eeFn",
+      "virtualUser": "carol",
+      "expectEventually": true
+     }
+    ],
+    "dsl": false,
+    "expose": null,
+    "auth": null,
+    "scenario": true,
+    "asserts": true,
+    "virtualUsers": [
+     "alice",
+     "carol"
+    ]
+   }
+  },
+  "files": [
+   [
+    "wfA",
+    {
+     "path": "<root>/wf.ts",
+     "exportedName": "wfA"
+    }
+   ],
+   [
+    "wfB",
+    {
+     "path": "<root>/wf.ts",
+     "exportedName": "wfB"
+    }
+   ],
+   [
+    "wfC",
+    {
+     "path": "<root>/wf.ts",
+     "exportedName": "wfC"
+    }
+   ],
+   [
+    "wfD",
+    {
+     "path": "<root>/wf.ts",
+     "exportedName": "wfD"
+    }
+   ],
+   [
+    "scn",
+    {
+     "path": "<root>/wf.ts",
+     "exportedName": "scn"
+    }
+   ],
+   [
+    "wfE",
+    {
+     "path": "<root>/wf.ts",
+     "exportedName": "wfE"
+    }
+   ],
+   [
+    "wfF",
+    {
+     "path": "<root>/wf.ts",
+     "exportedName": "wfF"
+    }
+   ],
+   [
+    "wfG",
+    {
+     "path": "<root>/wf.ts",
+     "exportedName": "wfG"
+    }
+   ],
+   [
+    "wfH",
+    {
+     "path": "<root>/wf.ts",
+     "exportedName": "wfH"
+    }
+   ],
+   [
+    "wfI",
+    {
+     "path": "<root>/wf.ts",
+     "exportedName": "wfI"
+    }
+   ]
+  ],
+  "graphMeta": {
+   "g-one": {
+    "name": "g-one",
+    "pikkuFuncId": "g-one",
+    "source": "graph",
+    "tags": [
+     "a",
+     "b"
+    ],
+    "notes": [
+     "n1"
+    ],
+    "nodes": {
+     "a": {
+      "nodeId": "a",
+      "rpcName": "ra",
+      "input": {},
+      "mode": "seq",
+      "next": {
+       "ok": "b",
+       "no": [
+        "c",
+        "d-e"
+       ]
+      },
+      "onError": "c",
+      "retries": 3,
+      "retryDelay": "1s",
+      "notes": "hi",
+      "stepHash": "bfc622d4a6d4"
+     },
+     "b": {
+      "nodeId": "b",
+      "rpcName": "rb",
+      "input": {
+       "x": {
+        "$ref": "a",
+        "path": "out"
+       },
+       "y": {
+        "$ref": "$item",
+        "path": "p"
+       },
+       "z": 5,
+       "w": [
+        1,
+        {
+         "$ref": "a"
+        },
+        -2.5
+       ],
+       "q": {
+        "k": "v"
+       },
+       "s": {
+        "$template": {
+         "parts": [
+          "",
+          "-",
+          "-",
+          ""
+         ],
+         "expressions": [
+          {
+           "$ref": "a",
+           "path": "y"
+          },
+          {
+           "$ref": "a",
+           "path": "x"
+          },
+          {
+           "$ref": "unknown"
+          }
+         ]
+        }
+       }
+      },
+      "next": "c",
+      "stepHash": "1f867faa1c89"
+     },
+     "c": {
+      "nodeId": "c",
+      "rpcName": "rc",
+      "input": {
+       "quoted": {
+        "$ref": "b",
+        "path": "p"
+       }
+      },
+      "forEach": {
+       "$ref": "a",
+       "path": "items"
+      },
+      "retryDelay": 100,
+      "stepHash": "826c0d7d3c42"
+     },
+     "d-e": {
+      "nodeId": "d-e",
+      "rpcName": "rd",
+      "input": {},
+      "stepHash": "6898b65f6ade"
+     }
+    },
+    "entryNodeIds": [
+     "a"
+    ],
+    "graphHash": "0ef06ac8e81b"
+   },
+   "wfA": {
+    "name": "wfA",
+    "pikkuFuncId": "wfA",
+    "source": "dsl",
+    "title": "A",
+    "tags": [
+     "t1"
+    ],
+    "expose": true,
+    "skip": "no",
+    "virtualUsers": [
+     "bob"
+    ],
+    "context": {
+     "count": {
+      "type": "number",
+      "default": 0
+     },
+     "name": {
+      "type": "string",
+      "default": "x"
+     },
+     "flag": {
+      "type": "boolean",
+      "default": false
+     },
+     "items": {
+      "type": "array",
+      "default": [
+       1,
+       2
+      ]
+     },
+     "cfg": {
+      "type": "object",
+      "default": {
+       "a": 1
+      }
+     }
+    },
+    "nodes": {
+     "s1": {
+      "nodeId": "s1",
+      "rpcName": "rpcOne",
+      "stepName": "s1",
+      "next": "s2",
+      "input": {
+       "a": {
+        "$ref": "trigger",
+        "path": "a"
+       },
+       "list": [
+        "a",
+        "b"
+       ],
+       "obj": {
+        "x": 1,
+        "y": "two",
+        "z": [
+         1,
+         2,
+         null,
+         true
+        ]
+       },
+       "n": 16,
+       "lit": "z",
+       "arr": [
+        {
+         "$ref": "trigger",
+         "path": "q"
+        },
+        3
+       ],
+       "nested": {
+        "k": {
+         "$ref": "trigger",
+         "path": "k"
+        }
+       },
+       "tpl": {
+        "$template": {
+         "parts": [
+          "x",
+          "z",
+          ""
+         ],
+         "expressions": [
+          {
+           "$ref": "trigger",
+           "path": "y"
+          },
+          {
+           "$ref": "trigger",
+           "path": "count"
+          }
+         ]
+        }
+       },
+       "plain": "p"
+      },
+      "outputVar": "r1",
+      "stepHash": "ab13d3d4ad38"
+     },
+     "s2": {
+      "nodeId": "s2",
+      "rpcName": "rpcTwo",
+      "stepName": "s2",
+      "next": "step_2",
+      "virtualUser": "bob",
+      "input": {
+       "$passthrough": {
+        "$ref": "trigger"
+       }
+      },
+      "outputVar": "r2",
+      "options": {
+       "retries": 2,
+       "retryDelay": "5s"
+      },
+      "stepHash": "a6bd630c6857"
+     },
+     "step_2": {
+      "nodeId": "step_2",
+      "flow": "filter",
+      "sourceVar": "data.users",
+      "itemVar": "u",
+      "condition": {
+       "type": "and",
+       "conditions": [
+        {
+         "type": "simple",
+         "expression": "u.active"
+        },
+        {
+         "type": "simple",
+         "expression": "!u.gone"
+        }
+       ]
+      },
+      "outputVar": "active",
+      "next": "step_3"
+     },
+     "step_3": {
+      "nodeId": "step_3",
+      "flow": "arrayPredicate",
+      "mode": "some",
+      "sourceVar": "data.users",
+      "itemVar": "u",
+      "condition": {
+       "type": "simple",
+       "expression": "u.ok"
+      },
+      "outputVar": "any1",
+      "next": "step_4"
+     },
+     "step_4": {
+      "nodeId": "step_4",
+      "flow": "arrayPredicate",
+      "mode": "every",
+      "sourceVar": "data.users",
+      "itemVar": "u",
+      "condition": {
+       "type": "or",
+       "conditions": [
+        {
+         "type": "simple",
+         "expression": "u.ok"
+        },
+        {
+         "type": "simple",
+         "expression": "u.fine"
+        }
+       ]
+      },
+      "outputVar": "all1",
+      "next": "step_5"
+     },
+     "step_5": {
+      "nodeId": "step_5",
+      "flow": "switch",
+      "expression": "data.kind",
+      "cases": [
+       {
+        "value": "a",
+        "entry": "sa"
+       },
+       {
+        "value": 1,
+        "entry": "step_5_case1_0"
+       },
+       {
+        "expression": "data.other",
+        "entry": "sl"
+       }
+      ],
+      "defaultEntry": "sd",
+      "next": "step_6"
+     },
+     "sa": {
+      "nodeId": "sa",
+      "rpcName": "rpcA",
+      "stepName": "sa",
+      "next": "step_6",
+      "input": {
+       "v": {
+        "$ref": "r1",
+        "path": "id"
+       }
+      },
+      "stepHash": "32f867df4c1c"
+     },
+     "step_5_case1_0": {
+      "nodeId": "step_5_case1_0",
+      "flow": "set",
+      "variable": "count",
+      "value": 1,
+      "next": "step_6"
+     },
+     "sl": {
+      "nodeId": "sl",
+      "flow": "sleep",
+      "stepName": "sl",
+      "duration": 100,
+      "next": "step_6"
+     },
+     "sd": {
+      "nodeId": "sd",
+      "rpcName": "rpcD",
+      "stepName": "sd",
+      "next": "step_6",
+      "stepHash": "a064619ec37e"
+     },
+     "step_6": {
+      "nodeId": "step_6",
+      "flow": "branch",
+      "branches": [
+       {
+        "condition": {
+         "type": "simple",
+         "expression": "data.x"
+        },
+        "entry": "step_6_branch0_0"
+       },
+       {
+        "condition": {
+         "type": "simple",
+         "expression": "data.y"
+        },
+        "entry": "step_6_branch1_0"
+       }
+      ],
+      "elseEntry": "z",
+      "next": "step_7"
+     },
+     "step_6_branch0_0": {
+      "nodeId": "step_6_branch0_0",
+      "flow": "suspend",
+      "reason": "wait here",
+      "next": "step_7"
+     },
+     "step_6_branch1_0": {
+      "nodeId": "step_6_branch1_0",
+      "flow": "milestone",
+      "reason": "m1",
+      "next": "step_7"
+     },
+     "z": {
+      "nodeId": "z",
+      "flow": "sleep",
+      "stepName": "z",
+      "duration": "2m",
+      "next": "step_7"
+     },
+     "step_7": {
+      "nodeId": "step_7",
+      "flow": "approval",
+      "reason": "ok?",
+      "outputVar": "approval",
+      "expiry": "1d",
+      "next": "step_8"
+     },
+     "step_8": {
+      "nodeId": "step_8",
+      "flow": "fanout",
+      "sourceVar": "data.items",
+      "itemVar": "it",
+      "mode": "parallel",
+      "childEntry": "each",
+      "next": "step_9"
+     },
+     "each": {
+      "nodeId": "each",
+      "rpcName": "rpcEach",
+      "stepName": "each",
+      "next": "pause",
+      "input": {
+       "id": {
+        "$ref": "$item",
+        "path": "id"
+       },
+       "c": {
+        "$ref": "trigger",
+        "path": "count"
+       }
+      },
+      "outputVar": "q",
+      "stepHash": "02d88dc3ab0d"
+     },
+     "pause": {
+      "nodeId": "pause",
+      "flow": "sleep",
+      "stepName": "pause",
+      "duration": 10
+     },
+     "step_9": {
+      "nodeId": "step_9",
+      "flow": "fanout",
+      "sourceVar": "data.users",
+      "itemVar": "u",
+      "mode": "sequential",
+      "childEntry": "seq",
+      "timeBetween": "7ms",
+      "next": "step_10"
+     },
+     "seq": {
+      "nodeId": "seq",
+      "rpcName": "rpcSeq",
+      "stepName": "seq",
+      "input": {
+       "u": {
+        "$ref": "$item",
+        "path": "u"
+       }
+      },
+      "stepHash": "532ee976ed0a"
+     },
+     "step_10": {
+      "nodeId": "step_10",
+      "flow": "set",
+      "variable": "name",
+      "value": "y",
+      "next": "step_11"
+     },
+     "step_11": {
+      "nodeId": "step_11",
+      "flow": "set",
+      "variable": "flag",
+      "expression": "data.f",
+      "next": "step_12"
+     },
+     "step_12": {
+      "nodeId": "step_12",
+      "flow": "set",
+      "variable": "count",
+      "expression": "data.cnt",
+      "next": "step_13"
+     },
+     "step_13": {
+      "nodeId": "step_13",
+      "flow": "branch",
+      "branches": [
+       {
+        "condition": {
+         "type": "simple",
+         "expression": "data.cancel"
+        },
+        "entry": "step_13_branch0_0"
+       }
+      ],
+      "next": "step_14"
+     },
+     "step_13_branch0_0": {
+      "nodeId": "step_13_branch0_0",
+      "flow": "cancel",
+      "reason": "stop"
+     },
+     "step_14": {
+      "nodeId": "step_14",
+      "flow": "return",
+      "outputs": {
+       "r1": {
+        "from": "outputVar",
+        "name": "r1"
+       },
+       "n": {
+        "from": "outputVar",
+        "name": "r2",
+        "path": "name"
+       },
+       "count": {
+        "from": "stateVar",
+        "name": "count"
+       },
+       "name": {
+        "from": "stateVar",
+        "name": "name"
+       },
+       "lit": {
+        "from": "literal",
+        "value": 5
+       },
+       "d": {
+        "from": "input",
+        "path": "zzz"
+       },
+       "tpl": {
+        "from": "expression",
+        "expression": "`a`"
+       },
+       "ex": {
+        "from": "expression",
+        "expression": "data.a + 1"
+       }
+      },
+      "spread": [
+       "r1"
+      ]
+     }
+    },
+    "entryNodeIds": [
+     "s1"
+    ],
+    "graphHash": "e62591c7d4cd",
+    "deterministic": false
+   },
+   "wfB": {
+    "name": "wfB",
+    "pikkuFuncId": "wfB",
+    "source": "dsl",
+    "nodes": {
+     "step_0": {
+      "nodeId": "step_0",
+      "flow": "parallel",
+      "children": [
+       "a",
+       "b"
+      ],
+      "next": "step_1"
+     },
+     "a": {
+      "nodeId": "a",
+      "rpcName": "ra",
+      "stepName": "a",
+      "next": "b",
+      "input": {
+       "$passthrough": {
+        "$ref": "trigger"
+       }
+      },
+      "outputVar": "a",
+      "stepHash": "bfc622d4a6d4"
+     },
+     "b": {
+      "nodeId": "b",
+      "rpcName": "rb",
+      "stepName": "b",
+      "input": {
+       "$passthrough": {
+        "$ref": "trigger"
+       }
+      },
+      "outputVar": "b",
+      "stepHash": "1f867faa1c89"
+     },
+     "step_1": {
+      "nodeId": "step_1",
+      "flow": "return",
+      "outputs": {},
+      "spread": [
+       "a"
+      ]
+     }
+    },
+    "entryNodeIds": [
+     "step_0"
+    ],
+    "graphHash": "f9f1df8cd2e8",
+    "deterministic": true,
+    "plannedSteps": [
+     {
+      "stepName": "a"
+     },
+     {
+      "stepName": "b"
+     }
+    ]
+   },
+   "wfD": {
+    "name": "wfD",
+    "pikkuFuncId": "wfD",
+    "source": "complex",
+    "nodes": {
+     "s": {
+      "nodeId": "s",
+      "rpcName": "rr",
+      "stepName": "s",
+      "next": "inl",
+      "outputVar": "r",
+      "stepHash": "05d8bd490f04"
+     },
+     "inl": {
+      "nodeId": "inl",
+      "flow": "inline",
+      "next": "dyn${data.x}"
+     },
+     "dyn${data.x}": {
+      "nodeId": "dyn${data.x}",
+      "flow": "inline",
+      "next": "z${data.x}"
+     },
+     "z${data.x}": {
+      "nodeId": "z${data.x}",
+      "flow": "sleep",
+      "stepName": "z${data.x}",
+      "duration": 0,
+      "next": "y"
+     },
+     "y": {
+      "nodeId": "y",
+      "flow": "sleep",
+      "stepName": "y",
+      "duration": "abc"
+     }
+    },
+    "entryNodeIds": [
+     "s"
+    ],
+    "graphHash": "94db543edcbb"
+   },
+   "scn": {
+    "name": "scn",
+    "pikkuFuncId": "scn",
+    "source": "scenario",
+    "scenario": true,
+    "virtualUsers": [
+     "alice",
+     "carol"
+    ],
+    "nodes": {
+     "g1": {
+      "nodeId": "g1",
+      "rpcName": "giveFn",
+      "stepName": "g1",
+      "scenarioStepPhase": "given",
+      "next": "w1",
+      "virtualUser": "alice",
+      "input": {
+       "a": 1
+      },
+      "outputVar": "g",
+      "stepHash": "5d3b23b7d7bc"
+     },
+     "w1": {
+      "nodeId": "w1",
+      "rpcName": "whenFn",
+      "stepName": "w1",
+      "scenarioStepPhase": "when",
+      "next": "t1",
+      "input": {
+       "$passthrough": {
+        "$ref": "trigger"
+       }
+      },
+      "stepHash": "d2a9f6068a76"
+     },
+     "t1": {
+      "nodeId": "t1",
+      "rpcName": "thenFn",
+      "stepName": "t1",
+      "scenarioStepPhase": "then",
+      "next": "ee",
+      "stepHash": "fc2637b32d53"
+     },
+     "ee": {
+      "nodeId": "ee",
+      "rpcName": "eeFn",
+      "stepName": "ee",
+      "virtualUser": "carol",
+      "expectEventually": true,
+      "stepHash": "9aeb6a4710e0"
+     }
+    },
+    "entryNodeIds": [
+     "g1"
+    ],
+    "graphHash": "52166c9478bc"
+   }
+  },
+  "graphFiles": [
+   [
+    "g-one",
+    {
+     "path": "<root>/wf.ts",
+     "exportedName": "g1"
+    }
+   ]
+  ],
+  "featureFiles": [],
+  "invokedWorkflows": []
+ },
+ "invokedFunctions": [
+  "rpcOne",
+  "rpcTwo",
+  "rpcA",
+  "rpcD",
+  "rpcEach",
+  "rpcSeq",
+  "ra",
+  "rb",
+  "y",
+  "dd",
+  "ii",
+  "rr",
+  "giveFn",
+  "whenFn",
+  "thenFn",
+  "eeFn",
+  "kk",
+  "rc",
+  "rd"
+ ],
+ "diagnostics": [
+  {
+   "level": "critical",
+   "code": "PKU641",
+   "message": "Workflow 'wfC' does not conform to DSL workflow rules:\n- The for-of loop 'for (const i of [1,2,3]) { await workflow.do('x', 'y', {}) }' can't be expressed in a DSL workflow — its iterable must be a data array (an identifier or field like 'data.items'), not a computed/inline iterable such as '[...Array(n).keys()]'. Use pikkuWorkflowComplexFunc for a control-flow/counting loop, or iterate over a real input array.\n- Destructuring a step result is not supported in DSL workflows. Assign it to a variable first (e.g. `const result = await workflow.do(...)`) and read its properties.\n- Variable declaration 'inner' inside block is not supported in DSL workflows. Move all let/const declarations to the top level.\n- A single declaration statement may only declare one variable in DSL workflows. Split 'let a1 = 1, b1 = 2' into separate statements."
+  },
+  {
+   "level": "critical",
+   "code": "PKU641",
+   "message": "Workflow 'wfE' does not conform to DSL workflow rules:\n- Destructuring a step result is not supported in DSL workflows. Assign it to a variable first (e.g. `const result = await workflow.do(...)`) and read its properties."
+  },
+  {
+   "level": "critical",
+   "code": "PKU641",
+   "message": "Workflow 'wfF' does not conform to DSL workflow rules:\n- Variable declaration 'inner' inside block is not supported in DSL workflows. Move all let/const declarations to the top level."
+  },
+  {
+   "level": "critical",
+   "code": "PKU641",
+   "message": "Workflow 'wfG' does not conform to DSL workflow rules:\n- Statement type 'TryStatement' is not allowed in DSL workflows. Allowed: const/let, if/else, switch/case, for..of, return, throw, and workflow calls. If this should be supported, please report the node type: TryStatement"
+  },
+  {
+   "level": "critical",
+   "code": "PKU641",
+   "message": "Workflow 'wfH' does not conform to DSL workflow rules:\n- Destructuring binds 2 name(s) but Promise.all has 1 step(s). They must match so each result can be bound to its step."
+  },
+  {
+   "level": "critical",
+   "code": "PKU641",
+   "message": "Workflow 'wfI' does not conform to DSL workflow rules:\nCould not determine input parameter name"
+  }
+ ]
+}

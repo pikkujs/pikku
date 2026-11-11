@@ -30,12 +30,15 @@ export type DevVirtualUser = {
   jobTitle: string | null
 }
 
+/** A virtual user as the dev switcher is given it, before it is filtered to the signable ones. */
 export type DevSignInVirtualUser = {
   id: string
   name?: string
   jobTitle?: string
   email?: string
   app?: string
+  /** Roles sign-in grants under `pikku dev`, when the plugin is given a `scopeService`. */
+  roles?: readonly string[]
   runnable?: boolean
 }
 

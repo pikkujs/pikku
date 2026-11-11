@@ -74,6 +74,12 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'The events a project can measure, declared by name so the generated ingest knows what to accept. Where they go is an AnalyticsService on singleton services; what a function records into is the analytics service on the invocation.',
   },
+  contributor: {
+    step: 'enhance it',
+    skill: null,
+    summary:
+      "Services the target the app runs on owns, such as a queue or a database client built from a binding, declared as contributors typed against this project's own singleton services. An addon registers its contributors with core's untyped helper instead, and a project opts in to them by name with `wireAddon`.",
+  },
   utils: {
     step: 'enhance it',
     skill: null,
@@ -145,6 +151,54 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'Who may call a function, and what the call is made with: permissions that see the request, auth gates that run before it, and the credentials a function borrows rather than holds.',
   },
+  telemetry: {
+    step: 'enhance it',
+    skill: null,
+    summary:
+      'Middleware that times a call: `telemetryOuter` around all middleware, `telemetryInner` around the function alone.',
+  },
+  wire: {
+    step: 'create a function',
+    skill: null,
+    summary:
+      'The third argument of a function body: `rpc` and `getCredential` are always there; the rest depend on what wired the call, so `http`, `channel`, `queue` and the like are undefined elsewhere.',
+  },
+  plugin: {
+    step: 'wire it up',
+    skill: 'pikku-addon',
+    summary:
+      'An addon package ships its screens with `definePlugin`; a host mounts them with `wireAddon({ ui: true })`.',
+  },
+  content: {
+    step: 'enhance it',
+    skill: null,
+    summary:
+      "File storage, on services as `content`, not `contentService`: `async ({ content }) => ...`. It is optional on the core services type, so declare `content: ContentService` on your SingletonServices, and forward `existingServices` from `createSingletonServices` so the runtime's reaches your functions. A browser sends a file to the URL `content.getUploadURL` returns, never through a function; `pikku doc ContentService` shows the whole loop.",
+  },
+  webhook: {
+    step: 'wire it up',
+    skill: null,
+    summary:
+      'Declares an outgoing webhook and delivers it through `TypedWebhookService`.',
+  },
+  email: {
+    step: 'wire it up',
+    skill: null,
+    summary:
+      'Sends mail through the `emailService` service. Templates live in `emails/`; `pikku emails generate` builds them.',
+  },
+  eventhub: {
+    step: 'wire it up',
+    skill: null,
+    summary:
+      'Publish and subscribe across channels through the `eventHub` service.',
+  },
+  react: {
+    step: 'wire it up',
+    skill: 'pikku-build',
+    summary:
+      'Calls the backend from React screens: `createPikku` and `PikkuProvider` set it up, and these hooks reach the client. Typed data hooks are generated into the `reactQueryFile` set in pikku.config.json, not exported here: `usePikkuQuery`, `usePikkuMutation`, `usePikkuInfiniteQuery`, and `usePikkuQueryStub` and `usePikkuMutationStub` for a backend not written yet.',
+  },
   scopes: {
     step: 'guard it',
     skill: 'pikku-auth',
@@ -155,13 +209,13 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     step: 'orchestrate it',
     skill: 'pikku-workflow',
     summary:
-      'Composes functions into a durable workflow whose steps survive a restart and retry on their own.',
+      'Composes functions into a durable workflow whose steps survive a restart and retry on their own. A trigger starts one from a function with `rpc.startWorkflow(name, input)`, which returns `{ runId }` without waiting. `workflow.approval(reason, { schema })` holds a run for a human: `workflowService.approveStep(runId, reason, decision, session)` answers it, and a no is an answer in `decision`, not a cancellation. `pikku doc WorkflowApprovalOptions` shows that, and `pikku doc WorkflowRunService` how to find the runs waiting.',
   },
   agent: {
     step: 'orchestrate it',
     skill: 'pikku-agent',
     summary:
-      'Defines an AI agent, the tools it may call and the scorers that judge what it did.',
+      'Defines an AI agent, the tools it may call and the scorers that judge what it did. `model` is `provider/model` or an alias from the `models` table in pikku.config.json. Threads and messages live in the `agentStorage` service, in-flight run state in `agentRunState`, and `agentRunService` reads them back.',
   },
   scenarios: {
     step: 'test it',
@@ -186,3 +240,152 @@ export const ENTRY_POINT_EDITORIAL: Record<
       'An addon declares functions and contracts; the host application decides how the world reaches them. The same barrels are generated under #pikku/addon/*, minus every wiring — an addon that called wireHTTP would be registering a route in a registry it does not own.',
   },
 }
+
+/**
+ * A page for something an agent asks `pikku doc` for that is no export: a
+ * config table, the generated hooks, the `rpc` on the wire. Its example is
+ * written here where the template that proves the snippets has nothing to show,
+ * as it has neither a React client nor a `models` table. Anything it does have
+ * is named under `snippets` instead, which the doc build resolves or refuses.
+ */
+export type SurfaceGuide = {
+  /** The first is the page's name; every name opens it. */
+  names: string[]
+  title: string
+  points: string[]
+  example?: string
+  /** Regions printed in order, each opened by its step. */
+  snippets?: Array<{ step: string; name: string }>
+}
+
+export const SURFACE_GUIDES: SurfaceGuide[] = [
+  {
+    names: ['imports', 'import', '#pikku', '#pikku/*'],
+    title: 'where an import comes from',
+    points: [
+      '`#pikku/<door>` is a package.json `imports` entry, not a tsconfig path. It resolves to code generated into `.pikku`, so run `pikku all` when one is missing. Import from the door, never from a `.gen` file or `@pikku/core`. The header of `pikku doc <export>` names the door.',
+    ],
+    example: `import { pikkuFunc, ref } from '#pikku/function'
+import { NotFoundError } from '#pikku/error'
+import { pikkuPermission } from '#pikku/auth'
+import { pikkuAgent } from '#pikku/agent'`,
+  },
+  {
+    names: [
+      'rpc',
+      'RPCService',
+      'rpc.invoke',
+      'rpc.startWorkflow',
+      'rpc.agent',
+    ],
+    title: 'calling functions, workflows and agents from a function',
+    points: [
+      '`rpc` is on the third argument of `func`, beside `session`. Names are export names and are type-checked. A function does not need `expose` to be called this way.',
+      "`rpc.agent.run` also takes `attachments`, `model`, `temperature` and `context`. It answers `status: 'suspended'` with `pendingApprovals` when a tool needs approval; `rpc.agent.approve` carries on and answers the same shape.",
+    ],
+    example: `func: async (_services, { itemId }, { session, rpc }) => {
+  const item = await rpc.invoke('getItem', { itemId })
+  const { runId } = await rpc.startWorkflow('refundWorkflow', input)
+  const reply = await rpc.agent.run('shopAssistant', {
+    message: 'Find a USB hub',
+    threadId,
+    resourceId: session.userId,
+  })
+  // reply: { runId, result, usage, status?, pendingApprovals? }
+  await rpc.agent.approve(reply.runId, [{ toolCallId, approved: true }], 'shopAssistant')
+}`,
+  },
+  {
+    names: ['models', 'model', 'PIKKU_MODEL_ALIASES'],
+    title: 'what `model` accepts on an agent',
+    points: [
+      'A name with a `/` is used as written. A bare name is an alias from the `models` table in pikku.config.json, and one missing from the table fails codegen, so an empty table means every agent spells out `provider/model`.',
+      '`PIKKU_MODEL_ALIASES=fast:openai/gpt-5-mini` overrides the table at runtime.',
+    ],
+    example: `// pikku.config.json
+{ "models": { "fast": "openai/gpt-5-mini" } }
+
+// the agent
+model: 'fast'`,
+  },
+  {
+    names: [
+      'hooks',
+      'react-query',
+      'usePikkuQuery',
+      'usePikkuMutation',
+      'usePikkuInfiniteQuery',
+      'useStartWorkflow',
+      'useRunWorkflow',
+      'useWorkflowStatus',
+      'useSession',
+      'usePikkuAgent',
+      'PikkuProvider',
+      'createPikku',
+    ],
+    title: 'calling functions from React',
+    points: [
+      '`usePikkuQuery`, `usePikkuMutation`, `usePikkuInfiniteQuery`, `useStartWorkflow`, `useRunWorkflow`, `useWorkflowStatus` and `useSession` are generated: import them from the file `clientFiles.reactQueryFile` in pikku.config.json names, not from `@pikku/react`. Names are the export names of exposed functions, and inputs and outputs are typed.',
+      'Query keys are `[name, data]`, so `invalidateQueries({ queryKey: [name] })` refreshes every call of a function. `usePikkuInfiniteQuery` takes a function whose output has `nextCursor` and supplies `cursor` itself.',
+      '`usePikkuAgent(name)`, `PikkuProvider` and `createPikku` come from `@pikku/react`. Every hook needs the provider at the root.',
+    ],
+    example: `// PikkuFetch and PikkuRPC are the classes clientFiles generates
+const pikku = createPikku(PikkuFetch, PikkuRPC, { serverUrl: '/api' })
+<PikkuProvider pikku={pikku}>...</PikkuProvider>
+
+const item = usePikkuQuery('getItem', { itemId })
+const pages = usePikkuInfiniteQuery('listItemRows', { limit: 20 })
+const rows = pages.data?.pages.flatMap((page) => page.rows)
+const add = usePikkuMutation('addToBasket', {
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ['getBasket'] }),
+})
+add.mutate({ itemId, quantity: 1 })
+
+const agent = usePikkuAgent('shopAssistant')
+const reply = await agent.run({ message, threadId, resourceId })
+await agent.approve({ runId, approvals: [{ toolCallId, approved: true }] })`,
+  },
+  {
+    names: [
+      'content',
+      'upload',
+      'uploadFile',
+      'getUploadURL',
+      'getDownloadURL',
+      'listFilesByPrefix',
+    ],
+    title: 'files: one whole upload, worked through',
+    points: [
+      'The service is `content` on `services`. Adapt the steps below: a function signs the upload, the browser sends the file, a function saves the key, and a function signs each read. `getUploadURL` answers `{ uploadUrl, fileKey, uploadHeaders?, uploadMethod? }`, and `getDownloadURL` takes `{ bucket, key, visibility?, expiresInSeconds? }`.',
+    ],
+    snippets: [
+      { step: 'the key, built on the server', name: 'contentFileKey' },
+      { step: 'the permissions', name: 'contentPermissions' },
+      { step: 'sign the upload', name: 'contentUploadUrl' },
+      { step: 'save the key', name: 'contentSaveKey' },
+      { step: 'sign a read', name: 'contentDownloadUrl' },
+      { step: 'the routes', name: 'httpUpload' },
+      { step: 'the browser', name: 'contentBrowserUpload' },
+    ],
+  },
+  {
+    names: [
+      'threads',
+      'getAgentThreads',
+      'getAgentThreadMessages',
+      'getAgentThreadRuns',
+      'deleteAgentThread',
+      'listThreads',
+      'AgentThread',
+    ],
+    title: "reading an agent's conversations",
+    points: [
+      '`scaffold.agent` in pikku.config.json generates these as exposed functions, so a client calls them like any other. It also generates the routes `/rpc/agent/:agentName`, with `/stream`, `/approve` and `/resume`.',
+      'A thread is `{ id, resourceId, title?, metadata?, createdAt, updatedAt }`, and `resourceId` is its owner. The three that take a `threadId` check the owner against the session.',
+    ],
+    example: `getAgentThreads({ agentName?, resourceId?, limit?, offset? })
+getAgentThreadMessages({ threadId })
+getAgentThreadRuns({ threadId })
+deleteAgentThread({ threadId })  // { deleted }`,
+  },
+]

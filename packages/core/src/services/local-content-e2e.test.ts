@@ -134,6 +134,12 @@ describe('local content over real HTTP', () => {
     const bytes = Buffer.from('private bytes')
     const put = await upload({ bucket: 'lib', fileKey: 'a/private.txt' }, bytes)
     assert.equal(put.status, 200)
+    const { fileKey } = await content.getUploadURL({
+      bucket: 'lib',
+      fileKey: 'a/private.txt',
+      contentType: 'text/plain',
+    })
+    assert.equal(fileKey, 'a/private.txt')
 
     const url = await content.signContentKey({
       bucket: 'lib',

@@ -12,9 +12,9 @@ import { pikkuConfig } from '#pikku/setup'
  * `db check` and `db baseline` are separate CLI processes, so the thing under
  * test has to outlive any one of them.
  */
-export const createConfig = pikkuConfig(async () => {
-  const postgresUrl = process.env.PIKKU_VERIFIER_POSTGRES_URL
-  const mysqlUrl = process.env.PIKKU_VERIFIER_MYSQL_URL
+export const createConfig = pikkuConfig(async (variables) => {
+  const postgresUrl = variables?.get('PIKKU_VERIFIER_POSTGRES_URL')
+  const mysqlUrl = variables?.get('PIKKU_VERIFIER_MYSQL_URL')
   if (mysqlUrl) return { mysqlUrl }
   return postgresUrl ? { postgresUrl } : { sqliteDb: '.pikku-runtime/dev.db' }
 })

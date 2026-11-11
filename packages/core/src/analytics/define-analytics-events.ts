@@ -26,6 +26,12 @@ export type AnalyticsEventDefinitions = Record<
  * It registers nothing at runtime: where events go is an `AnalyticsService` on
  * singleton services.
  *
+ * Two ways in. A function calls `analytics.record({ name, ...props })`. A screen
+ * calls `.event(name, props)` on `usePikkuAnalytics()`, which needs the generated
+ * `POST /analytics` (`scaffold.analytics`) and rejects anything undeclared, an
+ * extra prop included. Both are stamped with who it was from the session, so an
+ * identity never belongs in the props.
+ *
  * @example snippet: analyticsEvents
  */
 export const defineAnalyticsEvents = <

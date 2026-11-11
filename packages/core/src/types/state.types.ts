@@ -66,10 +66,7 @@ import type {
   CreateConfig,
   CreateSingletonServices,
   CreateWireServices,
-  CoreConfig,
   CoreSingletonServices,
-  CoreServices,
-  CoreUserSession,
 } from './core.types.js'
 import type { FunctionsMeta } from '../function/function-meta.types.js'
 import type {
@@ -78,6 +75,10 @@ import type {
 } from '../middleware/middleware.types.js'
 import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.types.js'
 
+/**
+ * The shape of one package's registry, as read and written by `pikkuState`.
+ * @internal
+ */
 export interface PikkuPackageState {
   function: {
     meta: FunctionsMeta
@@ -102,7 +103,7 @@ export interface PikkuPackageState {
         rpcEndpoint?: string
         auth?: boolean
         tags?: string[]
-        /** Which functions `rpc.exposed` may call: unset/`true` keeps the addon's own `expose`, `false` none, a list exactly those */
+        /** Which functions `rpc.exposed` may call, from those the addon declared `expose: true`: `true` all of them, a list those named, unset/`false` none */
         expose?: boolean | string[]
         /** Required of every function in this package, on top of the function's own */
         scopes?: string[]
@@ -136,9 +137,21 @@ export interface PikkuPackageState {
         remoteAuth?:
           | { credentialId: string }
           | { secretId: string }
-          | { resolve: (services: any, wire: any) => string | Promise<string> }
-        /** Map consumer-facing fn name → remote fn name (wireRemoteAddon) */
+          | {
+              resolve: (
+                services: any,
+                wire: any
+              ) => string | null | Promise<string | null>
+            }
+        /** Map consumer-facing base fn name → remote fn name (wireRemoteAddon); `@vN` is appended after */
         remoteName?: (fn: string) => string
+        /** Milliseconds a remote addon call may take before it is aborted (wireRemoteAddon) */
+        remoteTimeoutMs?: number
+        /** Extra headers sent on every call to the hosted addon (wireRemoteAddon) */
+        remoteHeaders?: (
+          services: any,
+          wire: any
+        ) => Record<string, string> | Promise<Record<string, string>>
       }
     >
   }
@@ -222,17 +235,11 @@ export interface PikkuPackageState {
     permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]>
   }
   package: {
+    /** Every package's own factories, each typed where it is defined. */
     factories: {
-      createConfig?: CreateConfig<CoreConfig>
-      createSingletonServices?: CreateSingletonServices<
-        CoreConfig,
-        CoreSingletonServices
-      >
-      createWireServices?: CreateWireServices<
-        CoreSingletonServices,
-        CoreServices,
-        CoreUserSession
-      >
+      createConfig?: CreateConfig<any>
+      createSingletonServices?: CreateSingletonServices<any, any>
+      createWireServices?: CreateWireServices<any, any, any>
     } | null
     singletonServices: CoreSingletonServices | null
     /** The pikkuBetterAuth factory, self-registered when auth.ts is evaluated.

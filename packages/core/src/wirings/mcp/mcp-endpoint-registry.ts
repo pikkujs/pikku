@@ -29,6 +29,13 @@ export interface MCPPromptEndpoint {
   enabled: boolean
 }
 
+/**
+ * Holds an MCP server's tools, resources and prompts as listed to clients, loaded from the
+ * generated MCP JSON, and tracks which of them are currently enabled.
+ *
+ * Used by MCP server adapters to answer `list` requests. Only `getTools()` filters by the
+ * enabled flag, and disabling an entry does not by itself refuse a call to it.
+ */
 export class MCPEndpointRegistry {
   private tools: Map<string, MCPToolEndpoint> = new Map()
   private resources: Map<string, MCPResourceEndpoint> = new Map()

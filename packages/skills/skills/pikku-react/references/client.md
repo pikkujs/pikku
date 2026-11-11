@@ -64,8 +64,8 @@ For local dev, set `VITE_API_URL`, or proxy `/api` → your backend in
 
 ```tsx
 import { createPikku, PikkuProvider } from '@pikku/react'
-import { PikkuFetch } from './pikku/pikku-fetch.gen'
-import { PikkuRPC } from './pikku/pikku-rpc.gen'
+import { PikkuFetch } from '@sdk/api/pikku-fetch.gen'
+import { PikkuRPC } from '@sdk/api/pikku-rpc.gen'
 import { apiUrl } from './lib/env'
 
 const pikku = createPikku(PikkuFetch, PikkuRPC, {
@@ -93,16 +93,17 @@ const pikku = createPikku(PikkuFetch, PikkuRPC, PikkuRealtime, {
 // (server URL + auth configured once).
 ```
 
-The generated classes come from your `pikku.config.json`:
+The generated classes are written per backend to `.pikku/sdk/<backend>/exposed/`;
+their paths are not configurable. Import them through the `@sdk/<backend>` alias
+(tsconfig `paths`: `"@sdk/api/*": [".pikku/sdk/api/exposed/*"]`):
 
-| config field                 | generated file                                        |
-| ---------------------------- | ----------------------------------------------------- |
-| `clientFiles.fetchFile`      | typed HTTP client (`PikkuFetch` class)                |
-| `clientFiles.rpcWiringsFile` | RPC client (`PikkuRPC` class) calling all exposed fns |
-| `clientFiles.realtimeFile`   | `PikkuRealtime` (websocket events + SSE + channels)   |
+| generated file          | class                                                 |
+| ----------------------- | ----------------------------------------------------- |
+| `pikku-fetch.gen.ts`    | typed HTTP client (`PikkuFetch` class)                |
+| `pikku-rpc.gen.ts`      | RPC client (`PikkuRPC` class) calling all exposed fns |
+| `pikku-realtime.gen.ts` | `PikkuRealtime` (websocket events + SSE + channels)   |
 
-If a file isn't being generated, that field is missing from the config —
-add it and re-run `pikku all`.
+If a file is missing, the backend has no function of that kind exposed; re-run `pikku all`.
 
 `createPikku(...)` accepts the same `CorePikkuFetchOptions` as `PikkuFetch`
 plus `serverUrl`. Auth headers, request interceptors, etc. are configured
@@ -183,8 +184,16 @@ The first three live in your generated `api.gen.ts` (see the
 call methods with it already applied:
 
 ```tsx
-const agent = usePikkuAgent('todo-agent')
-const { text } = await agent.run({ message, threadId })
+const agent = usePikkuAgent('todoAgent') // the agent's export name
+const { result, status, pendingApprovals } = await agent.run({
+  message,
+  threadId,
+  resourceId,
+})
+for await (const event of agent.stream({ message, threadId, resourceId })) {
+  if (event.type === 'TEXT_MESSAGE_CONTENT')
+    setReply((text) => text + event.delta)
+}
 
 const workflow = usePikkuWorkflow('onboardUser')
 const { runId } = await workflow.start({ email })
@@ -239,11 +248,29 @@ pikku.fetch.setHeader('x-tenant', tenantId)
 `authHeaders.jwt` becomes `Authorization: Bearer …` and `authHeaders.apiKey`
 becomes `X-API-KEY`; setting a JWT takes precedence over an API key.
 
+## Generated client files
+
+Name any of these under `clientFiles` in `pikku.config.json` and `pikku all` writes them, with
+import paths computed from the config:
+
+- `typesFile` — `RPCInput<'name'>`, `RPCOutput<'name'>`, `FlattenedRPCMap` (and `AnalyticsEvent`
+  when `scaffold.analytics` is on). Use these instead of reaching into the functions package.
+- `envFile` — `apiUrl()`, `basePath()`, `appHref(path)`.
+- `rpcFile` — `rpc()`, a client for code outside React such as a route `beforeLoad`. It forwards
+  the request cookie during SSR (TanStack Start). Needs `envFile`.
+- `authClientFile` — the Better Auth client glue from `@pikku/better-auth/client`. Needs
+  `rpcFile`, `envFile` and a `getSession` function; `clientAuth` sets the login and home paths.
+
+In `vite.config.ts`, `pikkuVite()` from `@pikku/vite` adds `testIds()` and, with Better Auth, the
+dev cross-site session plugin. `pikku dev` runs every frontend that sets `dev.command`
+(`--frontend a,b`, `--no-frontends`) and creates `BETTER_AUTH_SECRET` in `.env` on first run.
+
 ## What NOT to do
 
 - Don't instantiate `PikkuFetch`/`PikkuRPC` inside a component — `createPikku`
   goes once at the app root, the instance flows through Context.
 - Don't call `usePikkuRPC()` outside a `<PikkuProvider>` — it throws.
+- Don't copy a `rpc.ts` or `env.ts` between apps — generate them with `rpcFile` and `envFile`.
 - Don't write a custom RPC client. The generated one already covers every
   exposed function with full types.
 - Don't hardcode user-facing strings. Every display string goes through an

@@ -126,6 +126,7 @@ describe('pikkuServices', () => {
     addonRequiredParentServices: [],
     scopes: { definitions: [] },
     systemRoles: { definitions: [] },
+    virtualUsers: { definitions: [] },
     ...(authDefinition === undefined
       ? {}
       : { auth: { definition: authDefinition } }),

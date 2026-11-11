@@ -1,6 +1,6 @@
 {
   "name": "@pikku/core",
-  "version": "0.12.142",
+  "version": "0.12.154",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -12,17 +12,19 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc && tsc -p tsconfig.type-tests.json",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "ncu": "npx npm-check-updates",
     "release": "npm run build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
     "prepublishOnly": "bun run build",
-    "api-report": "tsx scripts/generate-api-report.mts"
+    "api-report": "tsx scripts/generate-api-report.mts",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "sideEffects": [
     "./dist/errors/errors.js",
+    "./dist/wirings/addon/addon-reach.js",
     "./dist/wirings/addon/remote-addon-auth.js",
     "./dist/wirings/agent/agent-rpc.js",
     "./dist/wirings/rpc/rpc-runner.js",
@@ -31,6 +33,7 @@
     "./dist/wirings/workflow/workflow-errors.js",
     "./dist/wirings/workflow/workflow-run-ownership.js"
   ],
+  "types": "./dist/bootstrap-compat/root.d.ts",
   "exports": {
     ".": "./dist/bootstrap-compat/root.js",
     "./types": "./dist/types/index.js",
@@ -47,7 +50,7 @@
     "./channel/local": "./dist/wirings/channel/local/index.js",
     "./channel/serverless": "./dist/wirings/channel/serverless/index.js",
     "./http": "./dist/wirings/http/index.js",
-    "./remote": "./dist/remote.js",
+    "./mesh": "./dist/mesh.js",
     "./queue": "./dist/wirings/queue/index.js",
     "./scheduler": "./dist/wirings/scheduler/index.js",
     "./trigger": "./dist/wirings/trigger/index.js",
@@ -73,8 +76,13 @@
     "./oauth2": "./dist/wirings/oauth2/index.js",
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",
+    "./trace": "./dist/trace.js",
     "./flag": "./dist/wirings/flag/index.js",
     "./services/local-meta": "./dist/services/meta-service.js",
+    "./services/in-memory-queue": "./dist/wirings/queue/in-memory-queue-service.js",
+    "./services/in-memory-trigger": "./dist/wirings/trigger/in-memory-trigger-service.js",
+    "./services/in-memory-workflow": "./dist/wirings/workflow/in-memory-workflow-service.js",
+    "./services/local-gateway": "./dist/wirings/gateway/local-gateway-service.js",
     "./services/v8-coverage": "./dist/services/v8-coverage-service.js",
     "./services/istanbul-coverage": "./dist/services/istanbul-coverage-service.js",
     "./services/local-content": "./dist/services/local-content.js",
@@ -86,25 +94,37 @@
     "./state": "./dist/pikku-state.js",
     "./classification": "./dist/classification/index.js",
     "./utils": "./dist/utils.js",
+    "./contributors": "./dist/contributors/index.js",
     "./lifecycle": "./dist/lifecycle.js",
     "./schema": "./dist/schema.js",
     "./testing": "./dist/testing/index.js",
-    "./dev": "./dist/dev/hot-reload.js"
+    "./dev": "./dist/dev/hot-reload.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@standard-schema/spec": "^1.1.0",
     "@types/json-schema": "^7.0.15",
     "cookie": "^2.0.1",
-    "json-schema": "^0.4.0",
     "path-to-regexp": "^8.4.2",
     "picoquery": "^2.5.0"
   },
+  "peerDependencies": {
+    "esbuild": ">=0.28.2 <1"
+  },
+  "peerDependenciesMeta": {
+    "esbuild": {
+      "optional": true
+    }
+  },
   "devDependencies": {
-    "@ag-ui/core": "0.0.57",
-    "@pikku/deploy": "^0.12.15",
-    "@types/node": "^24.13.3",
+    "@ag-ui/core": "0.0.59",
+    "@pikku/deploy": "^0.12.19",
+    "@types/node": "^26.6.5",
     "esbuild": "~0.28.2",
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.15"
   },
   "engines": {
     "node": ">=24"

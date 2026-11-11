@@ -45,16 +45,25 @@ export type {
   PermissionMetadata as PermissionMeta,
 }
 export type { AgentsMeta }
+/** Generated metadata for one agent. */
 export type AgentMeta = AgentsMeta[string]
 
+/**
+ * Generated metadata for the MCP tools, resources and prompts the app exposes.
+ */
 export interface MCPMeta {
   resources: MCPResourceMeta
   tools: MCPToolMeta
   prompts: MCPPromptMeta
 }
 
+/** Generated map from each RPC name to the function it invokes. */
 export type RPCMetaRecord = Record<string, string>
 
+/**
+ * Generated description of one service: its package, interface and expanded
+ * properties.
+ */
 export interface ServiceMeta {
   name: string
   summary: string
@@ -66,8 +75,10 @@ export interface ServiceMeta {
   expandedProperties: Record<string, string>
 }
 
+/** Generated {@link ServiceMeta}, keyed by service name. */
 export type ServicesMetaRecord = Record<string, ServiceMeta>
 
+/** Where a middleware is defined and which services it uses. */
 export interface MiddlewareDefinitionMeta {
   services: { optimized: boolean; services: string[] }
   sourceFile: string
@@ -79,6 +90,7 @@ export interface MiddlewareDefinitionMeta {
   package?: string
 }
 
+/** One place a middleware definition is used. */
 export interface MiddlewareInstanceMeta {
   definitionId: string
   sourceFile: string
@@ -86,6 +98,9 @@ export interface MiddlewareInstanceMeta {
   isFactoryCall: boolean
 }
 
+/**
+ * Middleware or permissions applied together to an HTTP route pattern or a tag.
+ */
 export interface GroupMeta {
   exportName: string | null
   sourceFile: string
@@ -96,6 +111,7 @@ export interface GroupMeta {
   isFactory: boolean
 }
 
+/** Generated metadata for every middleware definition, use and group. */
 export interface MiddlewareGroupsMeta {
   definitions: Record<string, MiddlewareDefinitionMeta>
   instances: Record<string, MiddlewareInstanceMeta>
@@ -103,6 +119,7 @@ export interface MiddlewareGroupsMeta {
   tagGroups: Record<string, GroupMeta>
 }
 
+/** Where a permission is defined and which services it uses. */
 export interface PermissionDefinitionMeta {
   services: { optimized: boolean; services: string[] }
   sourceFile: string
@@ -113,10 +130,15 @@ export interface PermissionDefinitionMeta {
   description?: string
 }
 
+/** Generated metadata for every permission definition. */
 export interface PermissionsGroupsMeta {
   definitions: Record<string, PermissionDefinitionMeta>
 }
 
+/**
+ * Content hashes of one email template in one locale, used to tell when a
+ * template changed.
+ */
 export interface EmailTemplateLocaleMeta {
   contentHash: string
   htmlHash: string
@@ -124,6 +146,10 @@ export interface EmailTemplateLocaleMeta {
   textHash: string
 }
 
+/**
+ * Generated metadata for one email template: the variables it reads, which
+ * parts it has, and its locales.
+ */
 export interface EmailTemplateMeta {
   variables: string[]
   hasHtml: boolean
@@ -132,12 +158,18 @@ export interface EmailTemplateMeta {
   locales: Record<string, EmailTemplateLocaleMeta>
 }
 
+/** Generated metadata for every email template. */
 export interface EmailsMeta {
   src: string
   themeHash: string
   templates: Record<string, EmailTemplateMeta>
 }
 
+/**
+ * The raw sources of one email template in one locale, as read from disk for
+ * previewing. `missing` names the required parts (`theme`, `locale`, `html`,
+ * `subject`, `text`) that were not found.
+ */
 export interface EmailTemplateAssets {
   theme: Record<string, unknown>
   strings: Record<string, unknown>
@@ -231,6 +263,12 @@ export interface MetaService {
   clearCache(): void
 }
 
+/**
+ * A {@link MetaService} that reads the generated metadata from a `.pikku`
+ * directory on local disk and caches each file after its first read. Missing
+ * files are returned as empty metadata rather than errors. Used by the console
+ * and dev tooling.
+ */
 export class LocalMetaService implements MetaService {
   public readonly basePath: string
 
@@ -244,7 +282,8 @@ export class LocalMetaService implements MetaService {
   private gatewayMetaCache: GatewaysMeta | null = null
   private rpcMetaCache: RPCMetaRecord | null = null
   private workflowMetaCache: WorkflowsMeta | null = null
-  private virtualUsersMetaCache: Record<string, ResolvedVirtualUser> | null = null
+  private virtualUsersMetaCache: Record<string, ResolvedVirtualUser> | null =
+    null
   private systemRolesMetaCache: SystemRoleDefinitionsMeta | null = null
   private scopesMetaCache: ScopeDefinitionsMeta | null = null
   private featureFlagsMetaCache: FeatureFlagDefinitionsMeta | null = null

@@ -2,6 +2,8 @@ import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { ref } from '#pikku/function'
 
 export const todoReadAgent = pikkuAgent({
+  expose: true,
+  auth: false,
   name: 'todo-read-agent',
   description: 'Manages a todo list with read-only workflow access',
   goal: 'You help users manage their todos. You can list all todos, get details of a specific todo, add new todos, and delete todos.',
@@ -17,4 +19,6 @@ export const todoReadAgent = pikkuAgent({
   maxSteps: 10,
   toolChoice: 'auto',
   scorers: ['brevity', 'restraint', 'helpfulness'],
+  instructions:
+    'You help users manage their todos. You can list all todos, get details of a specific todo, add new todos, and delete todos.',
 })

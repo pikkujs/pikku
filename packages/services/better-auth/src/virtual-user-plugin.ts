@@ -27,7 +27,10 @@ import {
   listDevVirtualUsers,
 } from './dev-virtual-users.js'
 import type { DevSignInVirtualUser } from './dev-virtual-users.js'
+import { grantVirtualUserAccess } from './provision-virtual-users.js'
+import type { ProvisionVirtualUsersServices } from './provision-virtual-users.js'
 
+/** Options for {@link pikkuVirtualUser}. */
 export interface VirtualUserPluginOptions {
   /**
    * The opt-in that enables sign-in outside `pikku dev`, when the caller has
@@ -73,16 +76,31 @@ export interface VirtualUserPluginOptions {
     featureFlags?: FeatureFlagSource
     allowed?: () => boolean | Promise<boolean>
   }
+  /**
+   * The app's scope service. Under `pikku dev`, where sign-in creates virtual
+   * user accounts on demand, each sign-in also grants the app scope and roles the
+   * virtual user declares (additively, never revoking). A deployed stage leaves
+   * this to `provisionVirtualUsers`.
+   */
+  scopeService?: ProvisionVirtualUsersServices['scopeService']
   /** Defaults to `console`: `virtualUser()` is wired inside `betterAuth({...})`, where the app's logger is often not in scope. */
   logger?: Pick<Logger, 'info' | 'warn'>
   /**
    * Upstream credentials a virtual user carries into its session, e.g. the token an
    * addon calls a third-party API with. Read at every sign-in from
-   * `VIRTUAL_USER_CREDENTIAL_<VIRTUAL_USER>_<NAME>`, so a value never lives in code.
+   * `VIRTUAL_USER_CREDENTIAL_<LOCAL_PART>_<NAME>`, so a value never lives in code.
+   * `<LOCAL_PART>` is the part of the virtual user's email before the `@` (the
+   * domain is not read), and both it and `<NAME>` are uppercased with each run of
+   * non-alphanumeric characters replaced by a single `_`.
    */
   credentials?: VirtualUserCredentialsOptions
 }
 
+/**
+ * Upstream credentials a virtual user carries, read from
+ * `VIRTUAL_USER_CREDENTIAL_<LOCAL_PART>_<NAME>` variables at each sign-in, where
+ * `<LOCAL_PART>` is the email before the `@`. See {@link virtualUserCredentialEnvKey}.
+ */
 export interface VirtualUserCredentialsOptions {
   /** Credential names to look up, as the addon declares them (`defineCredential({ name })`). */
   names: string[]
@@ -97,7 +115,14 @@ export interface VirtualUserCredentialsOptions {
 const envSegment = (value: string) =>
   value.replace(/[^a-zA-Z0-9]+/g, '_').toUpperCase()
 
-/** `dan@virtualuser.local` + `dolibarr` → `VIRTUAL_USER_CREDENTIAL_DAN_DOLIBARR`. */
+/**
+ * The variable a virtual user's credential is read from. Only the email's local
+ * part is used, never the domain; the local part and the credential name are each
+ * uppercased with runs of non-alphanumeric characters replaced by `_`.
+ *
+ * `dan@virtualuser.local` + `dolibarr` → `VIRTUAL_USER_CREDENTIAL_DAN_DOLIBARR`.
+ * `a.b-c@x.test` + `my token` → `VIRTUAL_USER_CREDENTIAL_A_B_C_MY_TOKEN`.
+ */
 export const virtualUserCredentialEnvKey = (email: string, name: string) =>
   `VIRTUAL_USER_CREDENTIAL_${envSegment(email.split('@')[0]!)}_${envSegment(name)}`
 
@@ -157,6 +182,8 @@ const storeVirtualUserCredentials = async (
  * Non-virtual-user rows are refused, and rows are created only under
  * `pikku dev`. With the gate shut none of the sign-in endpoints is registered:
  * production has no route to refuse and no handler to reach.
+ *
+ * @example snippet: betterAuthConfig
  */
 export const pikkuVirtualUser = (
   options: VirtualUserPluginOptions = {}
@@ -222,6 +249,13 @@ export const pikkuVirtualUser = (
           message: 'Failed to create virtual user user',
         })
       }
+    }
+
+    const declaration = options.virtualUserSignIn?.virtualUsers.find(
+      (candidate) => candidate.email?.toLowerCase() === email
+    )
+    if (gate.mayProvision && options.scopeService && declaration) {
+      await grantVirtualUserAccess(options.scopeService, user.id, declaration)
     }
 
     const session = await ctx.context.internalAdapter.createSession(user.id)

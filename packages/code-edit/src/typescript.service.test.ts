@@ -2,7 +2,8 @@ import assert from 'node:assert'
 import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, test } from 'node:test'
+import { after, before, describe, test } from 'node:test'
+import { availableEngines, engineEnv } from './test-engines.js'
 import { TypeScriptService } from './typescript.service.js'
 
 const project = async (): Promise<string> => {
@@ -41,26 +42,43 @@ const project = async (): Promise<string> => {
   return root
 }
 
-describe('TypeScriptService', () => {
+for (const engine of availableEngines())
+describe(`TypeScriptService (${engine})`, () => {
+  const env = engineEnv(engine)
+  before(env.select)
+  after(env.restore)
+
   test('resolves package.json imports through the project tsconfig', async () => {
     const ts = new TypeScriptService(await project())
-    assert.deepStrictEqual(ts.diagnostics('src/index.ts'), [])
+    try {
+      assert.deepStrictEqual(await ts.diagnostics('src/index.ts'), [])
+    } finally {
+      ts.dispose()
+    }
   })
 
   test('checks unsaved content against the rest of the project', async () => {
     const ts = new TypeScriptService(await project())
-    const [d] = ts.diagnostics(
-      'src/index.ts',
-      "import { add } from '#lib/math'\nexport const n: string = add(1, 2)\n"
-    )
-    assert.strictEqual(d?.code, 2322)
-    assert.strictEqual(d?.startLine, 2)
-    assert.deepStrictEqual(ts.diagnostics('src/index.ts'), [])
+    try {
+      const [d] = await ts.diagnostics(
+        'src/index.ts',
+        "import { add } from '#lib/math'\nexport const n: string = add(1, 2)\n"
+      )
+      assert.strictEqual(d?.code, 2322)
+      assert.strictEqual(d?.startLine, 2)
+      assert.deepStrictEqual(await ts.diagnostics('src/index.ts'), [])
+    } finally {
+      ts.dispose()
+    }
   })
 
   test('skips files that are not code', async () => {
     const ts = new TypeScriptService(await project())
-    assert.deepStrictEqual(ts.diagnostics('package.json'), [])
+    try {
+      assert.deepStrictEqual(await ts.diagnostics('package.json'), [])
+    } finally {
+      ts.dispose()
+    }
   })
   test('a catch-all base tsconfig does not claim files, so JSX still works', async () => {
     const root = await mkdtemp(join(tmpdir(), 'pikku-ts-'))
@@ -73,9 +91,14 @@ describe('TypeScriptService', () => {
       join(root, 'web/main.tsx'),
       'export const el = <div data-testid="x" />\n'
     )
-    const codes = new TypeScriptService(root)
-      .diagnostics('web/main.tsx')
-      .map((d) => d.code)
-    assert.ok(!codes.includes(17004), `got ${codes}`)
+    const service = new TypeScriptService(root)
+    try {
+      const codes = (await service.diagnostics('web/main.tsx')).map(
+        (d) => d.code
+      )
+      assert.ok(!codes.includes(17004), `got ${codes}`)
+    } finally {
+      service.dispose()
+    }
   })
 })

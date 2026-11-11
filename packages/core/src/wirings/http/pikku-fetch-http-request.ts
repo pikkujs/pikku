@@ -5,7 +5,9 @@ import {
   PayloadTooLargeError,
   UnprocessableContentError,
 } from '../../errors/errors.js'
+import { mergeRequestData } from './merge-request-data.js'
 
+/** The request body limit, in bytes (10 MiB), applied when a web `Request` is wrapped and no `maxBodySize` is given. A larger body is refused with a 413 before it is fully read. */
 export const DEFAULT_MAX_BODY_SIZE = 10 * 1024 * 1024
 
 export type PikkuFetchHTTPRequestOptions = Partial<{
@@ -173,26 +175,7 @@ export class PikkuFetchHTTPRequest<
 
   public async data(): Promise<In> {
     const body = await this.body()
-    const parts = [this.params(), this.query(), body]
-    const merged: Record<string, unknown> = {}
-    for (const part of parts) {
-      for (const [key, value] of Object.entries(part)) {
-        if (
-          key === '__proto__' ||
-          key === 'constructor' ||
-          key === 'prototype'
-        ) {
-          continue
-        }
-        if (key in merged && !valuesAreEquivalent(merged[key], value)) {
-          throw new UnprocessableContentError(
-            `Conflicting values for key "${key}": "${merged[key]}" vs "${value}"`
-          )
-        }
-        merged[key] ??= value
-      }
-    }
-    return merged as In
+    return mergeRequestData<In>(this.params(), this.query(), body)
   }
 
   private async body(): Promise<any> {
@@ -242,19 +225,4 @@ export class PikkuFetchHTTPRequest<
     }
     return body
   }
-}
-
-function valuesAreEquivalent(a: unknown, b: unknown): boolean {
-  return coerce(a) === coerce(b)
-}
-
-function coerce(value: unknown): unknown {
-  if (typeof value === 'boolean' || typeof value === 'number') return value
-  if (typeof value === 'string') {
-    if (value === 'true') return true
-    if (value === 'false') return false
-    const num = Number(value)
-    return isNaN(num) ? value : num
-  }
-  return value
 }

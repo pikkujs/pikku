@@ -13,6 +13,8 @@ export type Structure = {
   density?: Density
   shadows?: Record<string, string>
   defaultColorScheme?: 'light' | 'dark' | 'auto'
+  /** `dark`: `page`/`ink` are the dark ground and its text, and every token is derived for it. Absent means light. */
+  mode?: 'light' | 'dark'
   page?: string
   ink?: string
   darkSurface?: string[]
@@ -40,7 +42,8 @@ export type Preset = {
 export const STRUCTURES: Record<string, NamedStructure> = {
   aurora: {
     name: 'Aurora',
-    description: 'Soft gradient surfaces, large radius, big diffuse shadows. Modern SaaS.',
+    description:
+      'Soft gradient surfaces, large radius, big diffuse shadows. Modern SaaS.',
     radius: 'lg',
     defaultColorScheme: 'light',
     darkSurface: [
@@ -65,7 +68,8 @@ export const STRUCTURES: Record<string, NamedStructure> = {
   },
   linear: {
     name: 'Linear',
-    description: 'Ultra-minimal: hairline borders, near-flat, tiny radius. Vercel/Linear feel.',
+    description:
+      'Ultra-minimal: hairline borders, near-flat, tiny radius. Vercel/Linear feel.',
     radius: 'sm',
     defaultColorScheme: 'light',
     darkSurface: [
@@ -90,7 +94,8 @@ export const STRUCTURES: Record<string, NamedStructure> = {
   },
   glass: {
     name: 'Glass',
-    description: 'Translucent blurred panels (backdrop-blur) with soft glow. Glassmorphism.',
+    description:
+      'Translucent blurred panels (backdrop-blur) with soft glow. Glassmorphism.',
     radius: 'lg',
     defaultColorScheme: 'light',
     darkSurface: [
@@ -115,7 +120,8 @@ export const STRUCTURES: Record<string, NamedStructure> = {
   },
   breeze: {
     name: 'Breeze',
-    description: 'Airy pastel, big radius, light soft shadows, NO hard borders. Wellness/booking.',
+    description:
+      'Airy pastel, big radius, light soft shadows, NO hard borders. Wellness/booking.',
     radius: 'xl',
     defaultColorScheme: 'light',
     shadows: {
@@ -128,7 +134,8 @@ export const STRUCTURES: Record<string, NamedStructure> = {
   },
   brutalist: {
     name: 'Brutalist',
-    description: 'Square corners, hard black offset shadows, thick borders, heavy type.',
+    description:
+      'Square corners, hard black offset shadows, thick borders, heavy type.',
     radius: '0',
     defaultColorScheme: 'light',
     shadows: {
@@ -141,7 +148,8 @@ export const STRUCTURES: Record<string, NamedStructure> = {
   },
   neon: {
     name: 'Neon',
-    description: 'Dark, glowing colored shadows on near-black, vibrant accents. Gaming/nightlife.',
+    description:
+      'Dark, glowing colored shadows on near-black, vibrant accents. Gaming/nightlife.',
     radius: 'md',
     defaultColorScheme: 'dark',
     darkSurface: [
@@ -180,7 +188,8 @@ export const STRUCTURES: Record<string, NamedStructure> = {
   },
   editorial: {
     name: 'Editorial',
-    description: 'Serif headings, squared bordered cards, restrained shadow. Magazine/news/docs.',
+    description:
+      'Serif headings, squared bordered cards, restrained shadow. Magazine/news/docs.',
     radius: 'xs',
     defaultColorScheme: 'light',
     shadows: {
@@ -251,7 +260,8 @@ export const STRUCTURES: Record<string, NamedStructure> = {
   },
   blueprint: {
     name: 'Blueprint',
-    description: 'Thin cyan lines on deep navy, schematic/technical grid. Engineering/data.',
+    description:
+      'Thin cyan lines on deep navy, schematic/technical grid. Engineering/data.',
     radius: 'xs',
     defaultColorScheme: 'dark',
     darkSurface: [
@@ -276,7 +286,8 @@ export const STRUCTURES: Record<string, NamedStructure> = {
   },
   monopro: {
     name: 'Mono Pro',
-    description: 'Grayscale + single accent, compact dense, crisp small shadows. Pro tools/admin.',
+    description:
+      'Grayscale + single accent, compact dense, crisp small shadows. Pro tools/admin.',
     radius: 'sm',
     defaultColorScheme: 'light',
     shadows: {
@@ -304,7 +315,8 @@ export const STRUCTURES: Record<string, NamedStructure> = {
   },
   matrix: {
     name: 'Matrix',
-    description: 'Very dark monospace, phosphor green, minimal chrome, subtle glow. Dev tools.',
+    description:
+      'Very dark monospace, phosphor green, minimal chrome, subtle glow. Dev tools.',
     radius: '0',
     defaultColorScheme: 'dark',
     darkSurface: [
@@ -393,7 +405,11 @@ export const BRANDS: Record<string, NamedBrand> = {
   quorum: {
     name: 'Quorum',
     colors: { primary: '#2E6F54', secondary: '#C09030', accent: '#4E9B72' },
-    fonts: { heading: 'Source Serif 4', body: 'Public Sans', mono: 'IBM Plex Mono' },
+    fonts: {
+      heading: 'Source Serif 4',
+      body: 'Public Sans',
+      mono: 'IBM Plex Mono',
+    },
   },
   storybook: {
     name: 'Storybook',
@@ -413,7 +429,15 @@ export const PRESETS: Preset[] = [
     name: 'Aurora',
     description:
       'Modern SaaS: soft indigo→violet gradients, large radius, big diffuse shadows. Dark.',
-    tags: ['saas', 'startup', 'dashboard', 'product', 'b2b', 'onboarding', 'ai'],
+    tags: [
+      'saas',
+      'startup',
+      'dashboard',
+      'product',
+      'b2b',
+      'onboarding',
+      'ai',
+    ],
     brandId: 'aurora',
     structureId: 'aurora',
   },
@@ -422,14 +446,22 @@ export const PRESETS: Preset[] = [
     name: 'Linear',
     description:
       'Ultra-minimal, hairline borders, near-flat, tight radius. Vercel/Linear feel. Dark.',
-    tags: ['productivity', 'issues', 'dev-tools', 'internal-tool', 'minimal', 'project-management'],
+    tags: [
+      'productivity',
+      'issues',
+      'dev-tools',
+      'internal-tool',
+      'minimal',
+      'project-management',
+    ],
     brandId: 'linear',
     structureId: 'linear',
   },
   {
     id: 'glass',
     name: 'Glass',
-    description: 'Glassmorphism: translucent blurred panels, soft glow, sky/cyan. Dark.',
+    description:
+      'Glassmorphism: translucent blurred panels, soft glow, sky/cyan. Dark.',
     tags: ['dashboard', 'analytics', 'fintech', 'premium', 'crypto', 'metrics'],
     brandId: 'glass',
     structureId: 'glass',
@@ -437,15 +469,25 @@ export const PRESETS: Preset[] = [
   {
     id: 'breeze',
     name: 'Breeze',
-    description: 'Airy pastel teal, big radius, light shadows, no hard borders. Light.',
-    tags: ['health', 'wellness', 'booking', 'clinic', 'fitness', 'appointments', 'spa'],
+    description:
+      'Airy pastel teal, big radius, light shadows, no hard borders. Light.',
+    tags: [
+      'health',
+      'wellness',
+      'booking',
+      'clinic',
+      'fitness',
+      'appointments',
+      'spa',
+    ],
     brandId: 'breeze',
     structureId: 'breeze',
   },
   {
     id: 'brutalist',
     name: 'Brutalist',
-    description: 'Square, hard black offset shadows, thick borders, yellow/black. Light.',
+    description:
+      'Square, hard black offset shadows, thick borders, yellow/black. Light.',
     tags: ['marketing', 'agency', 'portfolio', 'landing', 'creative', 'bold'],
     brandId: 'brutalist',
     structureId: 'brutalist',
@@ -453,15 +495,25 @@ export const PRESETS: Preset[] = [
   {
     id: 'neon',
     name: 'Neon',
-    description: 'Dark with glowing violet/cyan accents on near-black. Gaming/nightlife.',
-    tags: ['gaming', 'nightlife', 'music', 'streaming', 'entertainment', 'events', 'crypto'],
+    description:
+      'Dark with glowing violet/cyan accents on near-black. Gaming/nightlife.',
+    tags: [
+      'gaming',
+      'nightlife',
+      'music',
+      'streaming',
+      'entertainment',
+      'events',
+      'crypto',
+    ],
     brandId: 'neon',
     structureId: 'neon',
   },
   {
     id: 'pop',
     name: 'Pop',
-    description: 'High-contrast chunky blocks, bright red/orange, bold borders. Light.',
+    description:
+      'High-contrast chunky blocks, bright red/orange, bold borders. Light.',
     tags: ['marketing', 'campaign', 'sports', 'social', 'community', 'landing'],
     brandId: 'pop',
     structureId: 'pop',
@@ -469,39 +521,76 @@ export const PRESETS: Preset[] = [
   {
     id: 'editorial',
     name: 'Editorial',
-    description: 'Serif headings, squared bordered cards, restrained. News/magazine/docs. Light.',
-    tags: ['blog', 'news', 'magazine', 'docs', 'publishing', 'content', 'notes'],
+    description:
+      'Serif headings, squared bordered cards, restrained. News/magazine/docs. Light.',
+    tags: [
+      'blog',
+      'news',
+      'magazine',
+      'docs',
+      'publishing',
+      'content',
+      'notes',
+    ],
     brandId: 'editorial',
     structureId: 'editorial',
   },
   {
     id: 'terminal',
     name: 'Terminal',
-    description: 'Monospace phosphor green on black, square, CRT glow. CLI/hacker. Dark.',
-    tags: ['dev-tools', 'cli', 'logs', 'monitoring', 'sysadmin', 'hacker', 'observability'],
+    description:
+      'Monospace phosphor green on black, square, CRT glow. CLI/hacker. Dark.',
+    tags: [
+      'dev-tools',
+      'cli',
+      'logs',
+      'monitoring',
+      'sysadmin',
+      'hacker',
+      'observability',
+    ],
     brandId: 'terminal',
     structureId: 'terminal',
   },
   {
     id: 'blueprint',
     name: 'Blueprint',
-    description: 'Thin cyan lines on deep navy, schematic grid. Engineering/data. Dark.',
-    tags: ['engineering', 'data', 'iot', 'cad', 'infrastructure', 'analytics', 'technical'],
+    description:
+      'Thin cyan lines on deep navy, schematic grid. Engineering/data. Dark.',
+    tags: [
+      'engineering',
+      'data',
+      'iot',
+      'cad',
+      'infrastructure',
+      'analytics',
+      'technical',
+    ],
     brandId: 'blueprint',
     structureId: 'blueprint',
   },
   {
     id: 'monopro',
     name: 'Mono Pro',
-    description: 'Grayscale + single blue accent, compact dense, crisp. Pro tools/admin. Light.',
-    tags: ['admin', 'console', 'internal-tool', 'data', 'settings', 'enterprise', 'crm'],
+    description:
+      'Grayscale + single blue accent, compact dense, crisp. Pro tools/admin. Light.',
+    tags: [
+      'admin',
+      'console',
+      'internal-tool',
+      'data',
+      'settings',
+      'enterprise',
+      'crm',
+    ],
     brandId: 'monopro',
     structureId: 'monopro',
   },
   {
     id: 'matrix',
     name: 'Matrix',
-    description: 'Very dark monospace, phosphor green, minimal chrome, glow. Dev tools. Dark.',
+    description:
+      'Very dark monospace, phosphor green, minimal chrome, glow. Dev tools. Dark.',
     tags: ['dev-tools', 'terminal', 'security', 'monitoring', 'data', 'hacker'],
     brandId: 'matrix',
     structureId: 'matrix',
@@ -579,7 +668,9 @@ export const HIDDEN_PRESET_IDS = new Set<string>([
   'matrix',
 ])
 
-export const LISTED_PRESETS: Preset[] = PRESETS.filter((p) => !HIDDEN_PRESET_IDS.has(p.id))
+export const LISTED_PRESETS: Preset[] = PRESETS.filter(
+  (p) => !HIDDEN_PRESET_IDS.has(p.id)
+)
 
 export function presetToTheme(preset: Preset): Theme {
   const b = BRANDS[preset.brandId]

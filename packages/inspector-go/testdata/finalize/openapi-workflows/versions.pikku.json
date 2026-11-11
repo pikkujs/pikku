@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 1,
+  "contracts": {
+    "getItem": { "latest": 1, "versions": { "1": "deadbeefcafe" } },
+    "createItem": { "latest": 3, "versions": { "1": { "inputHash": "aaaa", "outputHash": "bbbb" }, "2": { "inputHash": "cccc", "outputHash": "dddd" } } },
+    "deleteItem": { "latest": 2, "versions": { "1": "x1", "2": "x2" } },
+    "listItems": { "latest": 2, "versions": { "2": { "inputHash": "y", "outputHash": "z" } } },
+    "ping": { "latest": 1, "versions": { "1": { "inputHash": "p", "outputHash": "q" } } },
+    "goneFunction": { "latest": 1, "versions": { "1": "gone" } }
+  }
+}

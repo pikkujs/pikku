@@ -111,6 +111,7 @@ export const orderList = pikkuSessionlessFunc<
     }>
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'List Orders',
   func: async ({ logger }, data) => {
     logger.info(`Listing orders for customer: ${data.customerId}`)
@@ -153,6 +154,7 @@ export const orderItemAdd = pikkuSessionlessFunc<
     addedAt: string
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Add Order Item',
   func: async ({ logger }, data) => {
     logger.info(`Adding item ${data.productId} to order: ${data.orderId}`)
@@ -250,6 +252,7 @@ export const shipmentUpdateStatus = pikkuSessionlessFunc<
   { shipmentId: string; status: string },
   { id: string; status: string; updatedAt: string }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Update Shipment Status',
   func: async ({ logger }, data) => {
     logger.info(

@@ -5,6 +5,7 @@ import type {
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
 
+/** Generated metadata for every wired scheduled task, keyed by name. */
 export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
   Record<
     string,
@@ -15,6 +16,7 @@ export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
     }
   >
 
+/** The configuration {@link wireScheduler} takes. An app's generated `wireScheduler` narrows the function and middleware types to its own. */
 export type CoreScheduledTask<
   PikkuFunctionConfig = CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<void, void>
@@ -33,10 +35,25 @@ export type CoreScheduledTask<
   middleware?: PikkuMiddleware[]
 }
 
+/** The `scheduledTask` part of a scheduled function's wire: which task is running, when, and a `skip` to end the run without treating it as a failure. */
 export interface PikkuScheduledTask {
   name: string
   schedule: string
   executionTime: Date
   /** Never returns — throws to abort the run. */
   skip: (reason?: string) => void
+}
+
+export interface ScheduledTaskRun {
+  startedAt: Date
+  status: 'completed' | 'failed' | 'skipped'
+  durationMs: number
+  error: string | null
+}
+
+export interface ScheduledTaskRuns {
+  nextRun: Date | null
+  lastRun: ScheduledTaskRun | null
+  /** Newest first. */
+  history: ScheduledTaskRun[]
 }

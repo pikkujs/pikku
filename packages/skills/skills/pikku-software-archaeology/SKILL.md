@@ -1,6 +1,7 @@
 ---
 name: pikku-software-archaeology
-description: 'Use when reverse-engineering an existing repository into a `.knowledge/` Product Blueprint — recovering what product an undocumented or organically-grown codebase implements so it can be rebuilt cleanly (e.g. as a Pikku app) — and when turning that blueprint into a plain-language second opinion for the non-technical owner of the app. TRIGGER when: user says "extract a blueprint", "reverse engineer this app", "what does this codebase actually do as a product", "prepare this repo for a rewrite/migration", points at a legacy repo (any language) and asks for its domains, workflows, business rules or a rebuild plan, or asks "explain how my app works" / "what would you do differently" / "is this built well?" for a founder, PM or operator. Not the `knowledge/` notes of pikku-knowledge. DO NOT TRIGGER for: documenting code structure, API docs for a clean codebase, an engineer-facing code review, or rebuilding from an existing blueprint.'
+description: >-
+  Reverse-engineer a repo into a `.knowledge/` Product Blueprint for a rebuild, and explain it plainly to a non-technical owner. Not `knowledge/` notes (pikku-knowledge) or code review.
 installGroups: [core]
 ---
 
@@ -75,7 +76,14 @@ Build an inventory before interpreting anything:
 - TODO / FIXME / HACK / XXX / deprecated markers — each is a gaps.json candidate.
 - **The test suite** — locate it now, excavate it in Phase 2.
 
-Where intent hides, per ecosystem (read these first):
+**Framework guides.** Once you know the framework, read its guide before extracting. Each lists where intent hides, how its idioms map to blueprint concepts, the traps, and a grep checklist. Read only the ones that apply:
+
+- Rails: `references/sources/rails.md`
+- Laravel: `references/sources/laravel.md`
+- NestJS: `references/sources/nestjs.md`
+- Express (also the approach for Koa/Fastify/Hono): `references/sources/express.md`
+
+Other ecosystems fall back to this table. Where intent hides, per ecosystem (read these first):
 
 | Ecosystem                 | Highest-yield locations                                                                                                                                                                                                                                                                                                                  |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -91,7 +99,7 @@ Where intent hides, per ecosystem (read these first):
 Tests are the closest thing to an executable product spec. For every test file:
 
 - `describe`/`context`/`it` names → **scenarios** (attach to the matching workflow in `workflows.json` under `scenarios[]`, with `fromTest` set).
-- User-flow/journey harnesses (`pikkuUserFlow` stories, `.feature` files, Playwright journeys) are the highest-grade scenario source — they already ARE given/when/outcome sequences; extract them verbatim.
+- Journey harnesses (`pikkuScenario` flows, `.feature` files, Playwright/Capybara journeys, request/feature/e2e specs) are the highest-grade scenario source — they already ARE given/when/outcome sequences; extract them verbatim. Triage every test by kind first: see `references/tests-to-scenarios.md`.
 - Assertions → confirmations of policies and invariants (upgrade their `confidence` to `high`, add the test as evidence).
 - Fixtures/factories → entity attribute shapes and realistic example data.
 - Edge-case tests → business rules that exist **nowhere else in the code** (e.g. "replayed webhook events are idempotent" may only be stated in a test).

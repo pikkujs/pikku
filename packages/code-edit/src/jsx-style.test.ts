@@ -1,20 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import * as ts from 'typescript'
+import { readSyntaxErrors } from '@pikku/inspector-go'
 import { JsxStyleError, writeJsxStyle } from './jsx-props.js'
 
 const assertParses = (source: string) => {
-  const { diagnostics = [] } = ts.transpileModule(source, {
-    fileName: 'x.tsx',
-    reportDiagnostics: true,
-    compilerOptions: { jsx: ts.JsxEmit.Preserve },
-  })
-  assert.deepEqual(
-    diagnostics.map((d) =>
-      ts.flattenDiagnosticMessageText(d.messageText, '\n')
-    ),
-    []
-  )
+  assert.deepEqual(readSyntaxErrors(source, 'x.tsx'), [])
 }
 
 test('writeJsxStyle adds a className when there is none', () => {

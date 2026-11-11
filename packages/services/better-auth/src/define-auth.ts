@@ -9,15 +9,40 @@ import { applyOAuthProxy } from './oauth-proxy.js'
  * unlinking needs, since better-auth exposes no session-free way to remove an
  * account row.
  */
-export interface BetterAuthInstance extends AuthInstance {}
+export interface BetterAuthInstance extends AuthInstance {
+  /**
+   * The options the instance was built with. Read by the wrappers
+   * `pikkuBetterAuth` applies, and by the auth handler for `basePath`.
+   */
+  options?: Record<string, any>
+}
 
-export const PIKKU_BETTER_AUTH = Symbol.for('pikku.betterAuth')
+import { PIKKU_BETTER_AUTH } from './constants.js'
+export { PIKKU_BETTER_AUTH }
 
+/** Builds the app's better-auth instance from its singleton services. */
 export type PikkuBetterAuthFactory<
   I extends BetterAuthInstance = BetterAuthInstance,
   S extends CoreSingletonServices = CoreSingletonServices,
 > = (services: S) => I | Promise<I>
 
+/**
+ * Declares the app's better-auth instance. The CLI reads the call off the
+ * AST to generate the auth route, the session middleware and the secrets; at
+ * runtime the factory runs once, when singleton services are built, and its
+ * instance becomes `services.auth`.
+ *
+ * The returned factory applies the OAuth proxy when the stage configures one,
+ * and gives a stateless app's unset `session.cookieCache.maxAge` a usable
+ * default. Export exactly one per project.
+ *
+ * To invite someone from a function, see `createAuthUser` and
+ * `sendAuthUserSignInLink`: create or find the user, then mail them a
+ * link through the `magicLink()` plugin's own `sendMagicLink`.
+ *
+ * @example snippet: betterAuthConfig
+ * @example snippet: betterAuthInvite
+ */
 export const pikkuBetterAuth = <
   I extends BetterAuthInstance,
   S extends CoreSingletonServices = CoreSingletonServices,
@@ -40,8 +65,8 @@ export const pikkuBetterAuth = <
    */
   const wrapped: PikkuBetterAuthFactory<I, S> = async (services) => {
     const built = await factory(services)
-    const instance = await applyOAuthProxy(built, services as any)
-    await applyStatelessCookieCacheDefault(instance, services as any)
+    const instance = await applyOAuthProxy(built, services)
+    await applyStatelessCookieCacheDefault(instance, services)
     return instance
   }
 
@@ -54,6 +79,13 @@ export const pikkuBetterAuth = <
     value: factory,
     enumerable: false,
   })
-  pikkuState(null, 'package', 'authFactory', wrapped as any)
+  // State holds the factory under the base services type; the app's own `S`
+  // is what pikkuServices actually hands it.
+  pikkuState(
+    null,
+    'package',
+    'authFactory',
+    wrapped as (services: CoreSingletonServices) => Promise<I>
+  )
   return wrapped
 }

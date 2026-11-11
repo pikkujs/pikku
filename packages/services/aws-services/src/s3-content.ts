@@ -124,7 +124,7 @@ export class S3Content implements ContentService {
     })
     return {
       uploadUrl,
-      assetKey: Key,
+      fileKey: args.fileKey,
       ...(isPublic ? { uploadHeaders: { 'x-amz-acl': PUBLIC_ACL } } : {}),
     }
   }

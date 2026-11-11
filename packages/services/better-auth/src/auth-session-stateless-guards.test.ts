@@ -41,7 +41,7 @@ async function run(opts: {
         headers: () => ({}),
       },
     },
-    setSession: (s: unknown) => {
+    setInitialSession: (s: unknown) => {
       setTo = s
     },
     // The build-time snapshot: undefined for the whole chain, whatever the

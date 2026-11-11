@@ -2,14 +2,18 @@ import type { Density, Radius, Theme } from './presets.js'
 
 export type Lch = { l: number; c: number; h: number }
 
-const toLinear = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
-const fromLinear = (v: number) => (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055)
+const toLinear = (v: number) =>
+  v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+const fromLinear = (v: number) =>
+  v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055
 const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v))
 
 export function hexToLch(hex: string): Lch {
   let h = hex.replace('#', '')
   if (h.length === 3 || h.length === 4) h = [...h].map((c) => c + c).join('')
-  const [r, g, b] = [0, 2, 4].map((i) => toLinear(parseInt(h.slice(i, i + 2), 16) / 255)) as [number, number, number]
+  const [r, g, b] = [0, 2, 4].map((i) =>
+    toLinear(parseInt(h.slice(i, i + 2), 16) / 255)
+  ) as [number, number, number]
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
   const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
   const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
@@ -17,7 +21,11 @@ export function hexToLch(hex: string): Lch {
   const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
   const bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
   const c = Math.hypot(a, bb)
-  return { l: L, c, h: c < 1e-4 ? 0 : ((Math.atan2(bb, a) * 180) / Math.PI + 360) % 360 }
+  return {
+    l: L,
+    c,
+    h: c < 1e-4 ? 0 : ((Math.atan2(bb, a) * 180) / Math.PI + 360) % 360,
+  }
 }
 
 function toLinearRgb({ l, c, h }: Lch): [number, number, number] {
@@ -39,17 +47,25 @@ const luminance = (color: Lch) => {
 }
 
 export function contrast(a: Lch, b: Lch): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number]
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [
+    number,
+    number,
+  ]
   return (hi + 0.05) / (lo + 0.05)
 }
 
-export const formatLch = ({ l, c, h }: Lch) => `oklch(${clamp(l).toFixed(3)} ${c.toFixed(3)} ${h.toFixed(1)})`
+export const formatLch = ({ l, c, h }: Lch) =>
+  `oklch(${clamp(l).toFixed(3)} ${c.toFixed(3)} ${h.toFixed(1)})`
 
 export function lchToHex(color: Lch): string {
   return (
     '#' +
     toLinearRgb(color)
-      .map((v) => Math.round(clamp(fromLinear(v)) * 255).toString(16).padStart(2, '0'))
+      .map((v) =>
+        Math.round(clamp(fromLinear(v)) * 255)
+          .toString(16)
+          .padStart(2, '0')
+      )
       .join('')
   )
 }
@@ -69,8 +85,19 @@ function reachAgainst(fg: Lch, backgrounds: Lch[], min: number): Lch {
   return backgrounds.reduce((color, bg) => reach(color, bg, min), fg)
 }
 
+const NEAR_BLACK: Lch = { l: 0.145, c: 0, h: 0 }
+const NEAR_WHITE: Lch = { l: 0.985, c: 0, h: 0 }
+
+/** White or the ink, whichever reads better; when neither clears 4.5:1 (an ink of the wrong polarity, say), near-black or near-white by contrast. */
 function readable(bg: Lch, ink: Lch): Lch {
-  return contrast(WHITE, bg) >= contrast(ink, bg) ? WHITE : ink
+  const pick = contrast(WHITE, bg) >= contrast(ink, bg) ? WHITE : ink
+  return contrast(pick, bg) >= 4.5 ? pick : blackOrWhite(bg)
+}
+
+function blackOrWhite(bg: Lch): Lch {
+  return contrast(NEAR_BLACK, bg) >= contrast(NEAR_WHITE, bg)
+    ? NEAR_BLACK
+    : NEAR_WHITE
 }
 
 const RADIUS: Record<Radius, string> = {
@@ -82,7 +109,11 @@ const RADIUS: Record<Radius, string> = {
   xl: '1rem',
 }
 
-const DENSITY: Record<Density, string> = { compact: '0.22rem', comfortable: '0.25rem', roomy: '0.29rem' }
+const DENSITY: Record<Density, string> = {
+  compact: '0.22rem',
+  comfortable: '0.25rem',
+  roomy: '0.29rem',
+}
 
 const SHADOW_KEYS = ['xs', 'sm', 'md', 'lg', 'xl'] as const
 
@@ -93,9 +124,17 @@ function lightPalette(theme: Theme): Palette {
   const brand = hexToLch(primary)
   const hue = brand.h
   const tint = Math.min(0.02, brand.c * 0.12)
-  const background = theme.structure.page ? hexToLch(theme.structure.page) : { l: 1, c: 0, h: hue }
-  const ink = theme.structure.ink ? hexToLch(theme.structure.ink) : { l: 0.16, c: tint, h: hue }
-  const step = (delta: number): Lch => ({ l: clamp(background.l + delta), c: Math.max(tint, background.c), h: background.c > tint ? background.h : hue })
+  const background = theme.structure.page
+    ? hexToLch(theme.structure.page)
+    : { l: 1, c: 0, h: hue }
+  const ink = theme.structure.ink
+    ? hexToLch(theme.structure.ink)
+    : { l: 0.16, c: tint, h: hue }
+  const step = (delta: number): Lch => ({
+    l: clamp(background.l + delta),
+    c: Math.max(tint, background.c),
+    h: background.c > tint ? background.h : hue,
+  })
   const card = theme.structure.page ? background : WHITE
   const muted = step(-0.04)
   const secondaryFill = secondary ? hexToLch(secondary) : step(-0.06)
@@ -128,16 +167,27 @@ function darkPalette(theme: Theme): Palette {
   const brand = hexToLch(primary)
   const hue = brand.h
   const tint = Math.min(0.02, brand.c * 0.12)
-  const surface = theme.structure.darkSurface?.length === 10 ? theme.structure.darkSurface.map(hexToLch) : undefined
-  const at = (index: number, fallback: number): Lch => surface?.[index] ?? { l: fallback, c: tint, h: hue }
+  const surface =
+    theme.structure.darkSurface?.length === 10
+      ? theme.structure.darkSurface.map(hexToLch)
+      : undefined
+  const at = (index: number, fallback: number): Lch =>
+    surface?.[index] ?? { l: fallback, c: tint, h: hue }
   const background = at(7, 0.16)
   const card = at(6, 0.2)
   const muted = at(5, 0.25)
   const border = at(4, 0.3)
   const text = at(0, 0.96)
-  const secondaryFill = secondary ? { ...hexToLch(secondary), l: clamp(hexToLch(secondary).l * 0.55) } : muted
-  const accentFill = accent ? { ...hexToLch(accent), l: clamp(hexToLch(accent).l * 0.6) } : border
-  const primaryOnDark = brand.c < 0.03 ? { l: 0.92, c: brand.c, h: hue } : reach(brand, background, 3)
+  const secondaryFill = secondary
+    ? { ...hexToLch(secondary), l: clamp(hexToLch(secondary).l * 0.55) }
+    : muted
+  const accentFill = accent
+    ? { ...hexToLch(accent), l: clamp(hexToLch(accent).l * 0.6) }
+    : border
+  const primaryOnDark =
+    brand.c < 0.03
+      ? { l: 0.92, c: brand.c, h: hue }
+      : reach(brand, background, 3)
   return {
     background,
     foreground: reach(text, background, 7),
@@ -160,27 +210,139 @@ function darkPalette(theme: Theme): Palette {
   }
 }
 
+/** A dark-only design: `page` and `ink` are the dark ground and the text on it, every other token is derived for that ground. */
+function darkDesignPalette(theme: Theme): Palette {
+  const { primary, secondary, accent } = theme.brand.colors
+  const brand = hexToLch(primary)
+  const background = theme.structure.page
+    ? hexToLch(theme.structure.page)
+    : { l: 0.16, c: Math.min(0.02, brand.c * 0.12), h: brand.h }
+  const ink = theme.structure.ink
+    ? hexToLch(theme.structure.ink)
+    : { l: 0.96, c: Math.min(0.01, brand.c * 0.06), h: brand.h }
+  const step = (delta: number): Lch => ({
+    ...background,
+    l: clamp(background.l + delta),
+  })
+  const card = step(0.04)
+  const muted = step(0.08)
+  const secondaryFill = secondary ? hexToLch(secondary) : muted
+  const accentFill = accent ? hexToLch(accent) : step(0.11)
+  const mutedText = reachAgainst(
+    { ...ink, l: clamp(background.l + (ink.l - background.l) * 0.65) },
+    [background, card, muted],
+    4.6
+  )
+  const primaryOnDark = reach(brand, background, 3)
+  return {
+    background,
+    foreground: reach(ink, background, 7),
+    card,
+    'card-foreground': reach(ink, card, 7),
+    popover: card,
+    'popover-foreground': reach(ink, card, 7),
+    primary: primaryOnDark,
+    'primary-foreground': blackOrWhite(primaryOnDark),
+    secondary: secondaryFill,
+    'secondary-foreground': blackOrWhite(secondaryFill),
+    muted,
+    'muted-foreground': mutedText,
+    accent: accentFill,
+    'accent-foreground': blackOrWhite(accentFill),
+    destructive: { l: 0.704, c: 0.191, h: 22.216 },
+    border: reach(step(0.12), background, 1.5),
+    input: reach(step(0.3), background, 3),
+    ring: primaryOnDark,
+  }
+}
+
+/** The palettes `themeToCss` writes: `light` goes in `:root`, `dark` in `.dark`; a dark-mode design uses one palette for both. */
+function palettes(theme: Theme): { light: Palette; dark: Palette } {
+  if (theme.structure.mode === 'dark') {
+    const design = darkDesignPalette(theme)
+    return { light: design, dark: design }
+  }
+  return { light: lightPalette(theme), dark: darkPalette(theme) }
+}
+
+export type ContrastCheck = {
+  pair: string
+  ratio: number
+  target: number
+  ok: boolean
+}
+
+/** Contrast of the pairs that decide whether the applied theme is readable, measured on the palette `:root` boots with. */
+export function themeContrast(theme: Theme): ContrastCheck[] {
+  const p = palettes(theme).light
+  const check = (
+    pair: string,
+    fg: string,
+    bg: string,
+    target: number
+  ): ContrastCheck => {
+    const ratio = contrast(p[fg]!, p[bg]!)
+    return {
+      pair,
+      ratio: Math.round(ratio * 100) / 100,
+      target,
+      ok: ratio >= target,
+    }
+  }
+  return [
+    check('text/page', 'foreground', 'background', 4.5),
+    check('muted-text/page', 'muted-foreground', 'background', 4.5),
+    check('primary-foreground/primary', 'primary-foreground', 'primary', 4.5),
+    check('border/page', 'border', 'background', 1.3),
+    check('input/page', 'input', 'background', 3),
+  ]
+}
+
 const block = (selector: string, palette: Palette, extra: string[] = []) =>
-  [`${selector} {`, ...Object.entries(palette).map(([name, color]) => `  --${name}: ${formatLch(color)};`), ...extra, '}'].join('\n')
+  [
+    `${selector} {`,
+    ...Object.entries(palette).map(
+      ([name, color]) => `  --${name}: ${formatLch(color)};`
+    ),
+    ...extra,
+    '}',
+  ].join('\n')
 
 const family = (name?: string) => (name ? `'${name}', ` : '')
 
 export function googleFontsHref(theme: Theme): string | undefined {
-  const names = [...new Set([theme.brand.fonts?.heading, theme.brand.fonts?.body, theme.brand.fonts?.mono].filter(Boolean))] as string[]
+  const names = [
+    ...new Set(
+      [
+        theme.brand.fonts?.heading,
+        theme.brand.fonts?.body,
+        theme.brand.fonts?.mono,
+      ].filter(Boolean)
+    ),
+  ] as string[]
   if (!names.length) return undefined
-  const families = names.map((name) => `family=${encodeURIComponent(name).replace(/%20/g, '+')}:wght@400;500;600;700`)
+  const families = names.map(
+    (name) =>
+      `family=${encodeURIComponent(name).replace(/%20/g, '+')}:wght@400;500;600;700`
+  )
   return `https://fonts.googleapis.com/css2?${families.join('&')}&display=swap`
 }
 
 export function themeToCss(theme: Theme): string {
-  const light = lightPalette(theme)
-  const dark = darkPalette(theme)
+  const { light, dark } = palettes(theme)
+  const scheme = theme.structure.mode === 'dark' ? 'dark' : 'light'
   const chart = (palette: Palette): Record<string, Lch> => {
     const base = palette.primary!
     return {
       'chart-1': base,
-      'chart-2': palette.secondary!.c > 0.02 ? palette.secondary! : { ...base, h: (base.h + 60) % 360 },
-      'chart-3': palette.accent!.c > 0.02 ? palette.accent! : { ...base, h: (base.h + 150) % 360 },
+      'chart-2':
+        palette.secondary!.c > 0.02
+          ? palette.secondary!
+          : { ...base, h: (base.h + 60) % 360 },
+      'chart-3':
+        palette.accent!.c > 0.02
+          ? palette.accent!
+          : { ...base, h: (base.h + 150) % 360 },
       'chart-4': { ...base, h: (base.h + 210) % 360 },
       'chart-5': { ...base, h: (base.h + 280) % 360 },
     }
@@ -197,7 +359,12 @@ export function themeToCss(theme: Theme): string {
     `  --theme-font-body: ${family(fonts?.body)}ui-sans-serif, system-ui, sans-serif;`,
     `  --theme-font-mono: ${family(fonts?.mono)}ui-monospace, SFMono-Regular, monospace;`,
   ]
-  const shared = [`  --radius: ${radius};`, `  --theme-spacing: ${density};`, ...fontVars, ...shadows]
+  const shared = [
+    `  --radius: ${radius};`,
+    `  --theme-spacing: ${density};`,
+    ...fontVars,
+    ...shadows,
+  ]
   const names = [
     'background',
     'foreground',
@@ -233,13 +400,18 @@ export function themeToCss(theme: Theme): string {
     '  --font-sans: var(--theme-font-body);',
     '  --font-heading: var(--theme-font-heading);',
     '  --font-mono: var(--theme-font-mono);',
-    ...SHADOW_KEYS.filter((key) => theme.structure.shadows?.[key]).map((key) => `  --shadow-${key}: var(--theme-shadow-${key});`),
+    ...SHADOW_KEYS.filter((key) => theme.structure.shadows?.[key]).map(
+      (key) => `  --shadow-${key}: var(--theme-shadow-${key});`
+    ),
   ]
   const fontsHref = googleFontsHref(theme)
   return [
     `/* Generated by \`pikku ui theme apply\` — do not edit. */`,
     ...(fontsHref ? [`@import url('${fontsHref}');`] : []),
-    block(':root', { ...light, ...chart(light) }, [...shared, '  color-scheme: light;']),
+    block(':root', { ...light, ...chart(light) }, [
+      ...shared,
+      `  color-scheme: ${scheme};`,
+    ]),
     '',
     block('.dark', { ...dark, ...chart(dark) }, ['  color-scheme: dark;']),
     '',

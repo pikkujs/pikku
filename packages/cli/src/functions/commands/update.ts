@@ -4,6 +4,12 @@ import { spawnSync } from 'node:child_process'
 import { glob } from 'tinyglobby'
 import semver from 'semver'
 import { pikkuSessionlessFunc } from '#pikku/function'
+import { checkLockedSdk, readAddonsLock } from '@pikku/inspector'
+import { findSourceFiles } from '../../utils/find-source-files.js'
+import type {
+  RegistryInvoke,
+  ResolveSdk,
+} from '../../utils/remote-addon-sync.js'
 
 export type PackageManager = 'bun' | 'npm' | 'yarn' | 'pnpm' | 'unknown'
 
@@ -12,6 +18,14 @@ export type DependencyField =
   | 'devDependencies'
   | 'peerDependencies'
   | 'optionalDependencies'
+  | 'overrides'
+  | 'resolutions'
+  /**
+   * A versioned `wireRemoteAddon({ package: '@scope/name@^1.4.0' })`; its
+   * manifest is the .ts file. `pikku update` only reports these: the range is
+   * edited by hand and the next `pikku all` resolves and locks it.
+   */
+  | 'wireRemoteAddon'
 
 export type UpdateStatus =
   'current' | 'outdated' | 'stale-install' | 'linked' | 'manual' | 'unresolved'
@@ -29,6 +43,8 @@ export type UpdateEntry = {
   target: string | null
   status: UpdateStatus
   reason?: string
+  /** For a wireRemoteAddon entry: the 1-based line of its `package` literal in `manifest`. */
+  line?: number
 }
 
 export type PeerFinding = {
@@ -53,7 +69,7 @@ export type UpdateResult = {
   entries: UpdateEntry[]
   peers: PeerFinding[]
   applied: boolean
-  /** Manifests rewritten by `--update`, relative to the project root. */
+  /** package.json files rewritten by `--update`, relative to the project root. Source files are never written. */
   written: string[]
   installed: boolean
   summary: {
@@ -75,11 +91,33 @@ export type UpdateInput = {
   registry?: string
 }
 
+/**
+ * The versioned `wireRemoteAddon` packages `pikku update` checks alongside
+ * package.json. Their latest version comes from the addon registry.
+ */
+export type RemoteAddonUpdateOptions = {
+  /** The pikku project root: where pikku-addons.lock and .pikku/remote live. */
+  rootDir: string
+  srcDirectories: string[]
+  ignoreFiles?: string[]
+  /** Answers `{ name, range: '*' }` with the highest published SDK. */
+  resolveSdk: ResolveSdk
+}
+
+/** The range `resolveSdk` is asked for to find an SDK's latest version. */
+export const LATEST_SDK_RANGE = '*'
+
 const DEPENDENCY_FIELDS: DependencyField[] = [
   'dependencies',
   'devDependencies',
   'peerDependencies',
   'optionalDependencies',
+]
+
+const VERSIONED_FIELDS: DependencyField[] = [
+  ...DEPENDENCY_FIELDS,
+  'overrides',
+  'resolutions',
 ]
 
 const LOCKFILES: Array<[string, PackageManager]> = [
@@ -306,6 +344,116 @@ const writeManifest = (
   )
 }
 
+/**
+ * One entry per versioned `wireRemoteAddon` literal. `installed` is the SDK
+ * version pikku-addons.lock pins, when the SDK on disk matches it; when it
+ * does not the entry is `stale-install` until `pikku all` syncs it. Nothing
+ * here writes: an outdated entry carries the line to edit by hand.
+ */
+const collectRemoteAddonEntries = async (
+  root: string,
+  options: RemoteAddonUpdateOptions
+): Promise<{
+  entries: UpdateEntry[]
+  cores: { name: string; version: string; pikkuCore: string }[]
+}> => {
+  const files = await findSourceFiles(
+    options.rootDir,
+    options.srcDirectories,
+    options.ignoreFiles ?? []
+  )
+  const found: {
+    manifest: string
+    line: number
+    name: string
+    range: string
+  }[] = []
+  for (const path of files.sort()) {
+    const text = readFileSync(path, 'utf-8')
+    if (!text.includes('wireRemoteAddon')) continue
+    const { findWireRemoteAddonSpecs } = await import('@pikku/inspector-go')
+    for (const spec of findWireRemoteAddonSpecs(path, text)) {
+      if (!spec.range) continue
+      found.push({
+        manifest: relative(root, path).split(sep).join('/'),
+        line: spec.line,
+        name: spec.name,
+        range: spec.range,
+      })
+    }
+  }
+  if (found.length === 0) return { entries: [], cores: [] }
+
+  let lock: ReturnType<typeof readAddonsLock> | null = null
+  try {
+    lock = readAddonsLock(options.rootDir)
+  } catch {
+    // Reported as stale below; the sync in `pikku all` explains what is wrong.
+  }
+  const latest = new Map<string, string | null>()
+  const reasons = new Map<string, string>()
+  await Promise.all(
+    [...new Set(found.map((spec) => spec.name))].map(async (name) => {
+      try {
+        const resolved = await options.resolveSdk({
+          name,
+          range: LATEST_SDK_RANGE,
+        })
+        latest.set(name, resolved.version)
+      } catch (e: any) {
+        latest.set(name, null)
+        reasons.set(name, e?.message ?? String(e))
+      }
+    })
+  )
+
+  const entries: UpdateEntry[] = []
+  const cores = new Map<
+    string,
+    { name: string; version: string; pikkuCore: string }
+  >()
+  for (const { manifest, line, name, range } of found) {
+    const locked = lock
+      ? checkLockedSdk(options.rootDir, name, range, lock)
+      : ({ ok: false, reason: 'pikku-addons.lock cannot be read' } as const)
+    const latestVersion = latest.get(name) ?? null
+    const entry: UpdateEntry = {
+      package: name,
+      manifest,
+      field: 'wireRemoteAddon',
+      range,
+      installed: locked.ok ? locked.entry.version : null,
+      latest: latestVersion,
+      target: null,
+      status: 'current',
+      line,
+    }
+    if (locked.ok && locked.manifest.pikkuCore) {
+      cores.set(name, {
+        name,
+        version: locked.entry.version,
+        pikkuCore: locked.manifest.pikkuCore,
+      })
+    }
+    const rewritten = latestVersion ? rewriteRange(range, latestVersion) : null
+    if (!latestVersion) {
+      entry.status = 'unresolved'
+      entry.reason = `the addon registry did not resolve it${reasons.has(name) ? `: ${reasons.get(name)}` : ''}`
+    } else if (rewritten === null) {
+      entry.status = 'manual'
+      entry.reason = `'${range}' is not a plain caret, tilde, >= or exact range`
+    } else if (rewritten !== range) {
+      entry.status = 'outdated'
+      entry.target = rewritten
+    } else if (!locked.ok) {
+      entry.status = 'stale-install'
+      entry.reason = `${locked.reason} — run \`pikku all\``
+    }
+    entries.push(entry)
+  }
+  return { entries, cores: [...cores.values()] }
+}
+
 export const runUpdate = async ({
   rootDir,
   apply,
@@ -314,6 +462,7 @@ export const runUpdate = async ({
   tag,
   registry,
   fetchPackument,
+  remoteAddons,
 }: {
   rootDir: string
   apply: boolean
@@ -322,6 +471,7 @@ export const runUpdate = async ({
   tag: string
   registry: string
   fetchPackument?: FetchPackument
+  remoteAddons?: RemoteAddonUpdateOptions
 }): Promise<UpdateResult> => {
   const root = findProjectRoot(rootDir)
   const { dir: installDir, packageManager } = findInstallRoot(root)
@@ -342,9 +492,9 @@ export const runUpdate = async ({
 
   const names = new Set<string>()
   for (const manifest of manifests) {
-    for (const field of DEPENDENCY_FIELDS) {
-      for (const name of Object.keys(manifest.json[field] ?? {})) {
-        if (isPikkuPackage(name)) {
+    for (const field of VERSIONED_FIELDS) {
+      for (const [name, range] of Object.entries(manifest.json[field] ?? {})) {
+        if (isPikkuPackage(name) && typeof range === 'string') {
           names.add(name)
         }
       }
@@ -360,10 +510,10 @@ export const runUpdate = async ({
 
   const entries: UpdateEntry[] = []
   for (const manifest of manifests) {
-    for (const field of DEPENDENCY_FIELDS) {
-      const deps: Record<string, string> = manifest.json[field] ?? {}
+    for (const field of VERSIONED_FIELDS) {
+      const deps: Record<string, unknown> = manifest.json[field] ?? {}
       for (const [name, range] of Object.entries(deps)) {
-        if (!isPikkuPackage(name)) {
+        if (!isPikkuPackage(name) || typeof range !== 'string') {
           continue
         }
         const installedVersion = resolveInstalled(manifest.dir, name)
@@ -401,6 +551,11 @@ export const runUpdate = async ({
     }
   }
 
+  const remote = remoteAddons
+    ? await collectRemoteAddonEntries(root, remoteAddons)
+    : { entries: [], cores: [] }
+  entries.push(...remote.entries)
+
   /**
    * Peers are read off the version the run lands on, not the one installed —
    * the point is what the *target* needs. So resolve every @pikku package to
@@ -413,6 +568,7 @@ export const runUpdate = async ({
 
   const pikkuTargets = new Map<string, string>()
   for (const entry of entries) {
+    if (entry.field === 'wireRemoteAddon') continue
     const version = targetVersion(entry)
     if (version && semver.valid(version)) {
       const existing = pikkuTargets.get(entry.package)
@@ -479,6 +635,37 @@ export const runUpdate = async ({
     }
   }
 
+  // A remote addon's SDK names the @pikku/core its types were generated
+  // against; it is a peer of the project's own @pikku/core.
+  const rootManifest = manifests.find((manifest) => manifest.dir === root)
+  for (const sdk of remote.cores) {
+    const found =
+      DEPENDENCY_FIELDS.map(
+        (field) => rootManifest?.json[field]?.['@pikku/core']
+      ).find((range): range is string => typeof range === 'string') ?? null
+    const resolved =
+      pikkuTargets.get('@pikku/core') ??
+      resolveInstalled(root, '@pikku/core') ??
+      (found ? floorOf(found) : null)
+    if (
+      resolved &&
+      semver.validRange(sdk.pikkuCore) &&
+      semver.satisfies(resolved, sdk.pikkuCore, { includePrerelease: true })
+    ) {
+      continue
+    }
+    peers.push({
+      package: `${sdk.name}@${sdk.version}`,
+      peer: '@pikku/core',
+      required: sdk.pikkuCore,
+      found,
+      resolved,
+      manifest: rootManifest?.relative ?? 'package.json',
+      optional: false,
+      target: sdk.pikkuCore,
+    })
+  }
+
   const written: string[] = []
   if (apply) {
     for (const manifest of manifests) {
@@ -510,7 +697,8 @@ export const runUpdate = async ({
   }
 
   let ranInstall = false
-  if (apply && install && written.length > 0 && packageManager !== 'unknown') {
+  const manifestsWritten = written.some((path) => path.endsWith('.json'))
+  if (apply && install && manifestsWritten && packageManager !== 'unknown') {
     const result = spawnSync(packageManager, ['install'], {
       cwd: installDir,
       stdio: 'inherit',
@@ -549,7 +737,7 @@ export const runUpdate = async ({
 }
 
 export const pikkuUpdate = pikkuSessionlessFunc<UpdateInput, UpdateResult>({
-  func: async ({ config }, input) => {
+  func: async ({ config }, input, { rpc }) => {
     const updatePeers = input?.updatePeers === true
     return runUpdate({
       rootDir: config.rootDir,
@@ -561,6 +749,13 @@ export const pikkuUpdate = pikkuSessionlessFunc<UpdateInput, UpdateResult>({
         input?.registry ||
         process.env.npm_config_registry ||
         'https://registry.npmjs.org',
+      remoteAddons: {
+        rootDir: config.rootDir,
+        srcDirectories: config.srcDirectories,
+        ignoreFiles: config.ignoreFiles,
+        resolveSdk: (request) =>
+          (rpc.invoke as RegistryInvoke)('registry:resolveSdk', request),
+      },
     })
   },
 })

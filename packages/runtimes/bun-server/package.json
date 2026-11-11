@@ -1,6 +1,6 @@
 {
   "name": "@pikku/bun-server",
-  "version": "0.12.14",
+  "version": "0.12.15",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -11,18 +11,23 @@
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "type": "module",
   "scripts": {
     "tsc": "tsc",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.141",
-    "@pikku/modelcontextprotocol": "^0.12.14"
+    "@pikku/core": "^0.12.144",
+    "@pikku/modelcontextprotocol": "^0.12.18"
   },
   "peerDependenciesMeta": {
     "@pikku/modelcontextprotocol": {
@@ -30,9 +35,9 @@
     }
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.141",
-    "@pikku/modelcontextprotocol": "^0.12.14",
-    "@types/bun": "^1.4.0"
+    "@pikku/core": "^0.12.144",
+    "@pikku/modelcontextprotocol": "^0.12.18",
+    "@types/bun": "^1.4.3"
   },
   "engines": {
     "bun": ">=1.4.0"

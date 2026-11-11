@@ -24,12 +24,12 @@ Pikku aims to normalize the different ways you interact with Node.js servers by 
 
 ## Development Setup
 
-Pikku uses [Yarn](https://yarnpkg.com/) as its package manager for this monorepo workspace.
+Pikku is a [bun](https://bun.sh/) workspace monorepo. `AGENTS.md` at the repository root is the most detailed guide to the repository's commands and conventions.
 
 ### Prerequisites
 
-- Node.js 18+
-- Yarn (latest version recommended)
+- Node.js 24 or later (`.node-version` pins 24)
+- bun 1.4 (the root `package.json` pins `packageManager: bun@1.4.0`)
 - Git
 
 ### Getting Started
@@ -44,25 +44,29 @@ Pikku uses [Yarn](https://yarnpkg.com/) as its package manager for this monorepo
 2. **Install Dependencies**
 
    ```bash
-   yarn install
+   bun install
    ```
 
-3. **Build the Project**
+3. **Build the Packages**
 
    ```bash
-   yarn build
+   bun run build:packages   # the packages only
+   bun run build            # packages, addons, generated code and templates
    ```
 
 4. **Run Tests**
 
    ```bash
-   yarn test
+   bun run test
    ```
 
 5. **Type Check**
+
    ```bash
-   yarn tsc
+   bun run tsc
    ```
+
+The Husky pre-commit hook runs `bun install` and checks that `bun.lock` did not change, then runs lint-staged, `changeset status` and the licence check. `changeset status` fails when your branch changes a publishable package without a changeset (see [Changesets](#changesets)).
 
 ## Contributor License Agreement
 
@@ -72,10 +76,11 @@ By submitting a pull request, you agree to the terms of our [Contributor License
 
 Before submitting a PR, please ensure:
 
-- [ ] Your code passes all tests: `yarn test`
-- [ ] TypeScript compilation succeeds: `yarn tsc`
-- [ ] Code follows the project's linting rules: `yarn lint`
+- [ ] Your code passes all tests: `bun run test`
+- [ ] TypeScript compilation succeeds: `bun run tsc`
+- [ ] Code follows the project's linting and formatting rules: `bun run lint` and `bun run prettier`
 - [ ] You've added tests for new functionality
+- [ ] You've added a changeset for every publishable package you changed
 - [ ] Documentation is updated if needed
 - [ ] Commit messages follow conventional commit format
 
@@ -91,24 +96,23 @@ Pikku is organized as a monorepo with multiple packages:
 
 ### Working with Packages
 
-To run tests for a specific package:
+Each package has its own test runner, `run-tests.sh`, which runs its `*.test.ts` files with `bun test`:
 
 ```bash
 cd packages/core
-yarn test
+bun run test            # or: ./run-tests.sh --watch / --coverage
 ```
 
 To build a specific package:
 
 ```bash
-cd packages/cli
-yarn build
+bun run --filter '@pikku/core' build
 ```
 
 ## Testing Guidelines
 
 - Write unit tests for new functionality
-- Use Node.js built-in test runner with `tsx`
+- Tests run on bun's test runner (`bun test`), through each package's `run-tests.sh`. A few packages (`@pikku/ws`, `@pikku/uws` and `@pikku/kysely`) stay on Node's runner, and their `run-tests.sh` says why
 - Test files should be named `*.test.ts`
 - Ensure tests cover both success and error cases
 - Mock external dependencies appropriately
@@ -117,14 +121,24 @@ yarn build
 
 ```bash
 # Run all tests
-yarn test
+bun run test
 
 # Run tests with coverage
-yarn test:coverage
+bun run test:coverage
 
-# Run specific test file
-npx tsx --test packages/core/src/path/to/file.test.ts
+# Run one test file
+bun test packages/core/src/path/to/file.test.ts
 ```
+
+## Changesets
+
+Every PR that changes a publishable package needs a changeset:
+
+```bash
+bun run changeset
+```
+
+Changesets are always `patch`, and CI rejects any other bump. The package names must match the `name` in each package's own `package.json`.
 
 ## Runtime Adapters
 

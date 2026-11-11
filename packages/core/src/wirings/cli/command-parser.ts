@@ -78,6 +78,7 @@ function warnUnknownOption(
   )
 }
 
+/** The result of {@link parseCLIArguments}: which command was named, its positionals and options, and any errors that stop it running. */
 export interface ParsedCommand {
   program: string
   commandPath: string[]
@@ -227,6 +228,17 @@ function assignOptionValue(
   }
 }
 
+/**
+ * Parses argv against a program's generated CLI metadata.
+ *
+ * Never throws on bad input: unknown commands and invalid values are returned in
+ * `errors`, unknown options in `warnings`. Safe to run on argv from a remote
+ * client, since the work done is bounded by the input's length.
+ *
+ * @param args - The arguments after the program name.
+ * @param programName - The program to parse for.
+ * @param allMeta - Generated CLI metadata.
+ */
 export function parseCLIArguments(
   args: string[],
   programName: string,
@@ -605,6 +617,7 @@ function applyOptionDefaults(
   }
 }
 
+/** Builds the help text for a program, or for the command at `commandPath`, from its generated metadata. */
 export function generateCommandHelp(
   programName: string,
   allMeta: CLIMeta,
@@ -623,6 +636,7 @@ export function generateCommandHelp(
     lines.push('Commands:')
 
     for (const [name, cmd] of Object.entries(meta.commands)) {
+      if (cmd.hidden) continue
       const desc = cmd.description || ''
       const defaultMarker = cmd.isDefault ? ' (default)' : ''
       lines.push(`  ${name.padEnd(20)} ${desc}${defaultMarker}`)
@@ -667,6 +681,7 @@ export function generateCommandHelp(
       lines.push('')
       lines.push('Subcommands:')
       for (const [name, sub] of Object.entries(commandMeta.subcommands)) {
+        if (sub.hidden) continue
         const desc = sub.description || ''
         lines.push(`  ${name.padEnd(20)} ${desc}`)
       }

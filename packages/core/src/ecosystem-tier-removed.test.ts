@@ -20,11 +20,28 @@ const skipped = new Set([
   '.claude',
 ])
 
+/**
+ * The parallel unit-test job runs other suites alongside this one, and some
+ * write a fixture inside their own `src/` for the length of a test — the
+ * inspector's, for one. A path listed a moment ago can be gone by the time it
+ * is read, and a file that no longer exists imports nothing.
+ */
+const unlessGone = <T>(read: () => T): T | undefined => {
+  try {
+    return read()
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+}
+
 const collectSourceFiles = (
   directory: string,
   out: string[] = []
 ): string[] => {
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+  const entries =
+    unlessGone(() => readdirSync(directory, { withFileTypes: true })) ?? []
+  for (const entry of entries) {
     if (entry.isDirectory()) {
       if (!skipped.has(entry.name)) {
         collectSourceFiles(join(directory, entry.name), out)
@@ -60,7 +77,9 @@ describe('the ecosystem entry-point tier is gone', () => {
       .filter(
         (file) =>
           withoutExtension(file) !== self &&
-          /@pikku\/core\/ecosystem/.test(readFileSync(file, 'utf-8'))
+          /@pikku\/core\/ecosystem/.test(
+            unlessGone(() => readFileSync(file, 'utf-8')) ?? ''
+          )
       )
       .map((file) => relative(repoRoot, file))
     assert.deepEqual(

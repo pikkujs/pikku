@@ -40,18 +40,18 @@
   ],
   "scripts": {
     "prebuild": "pikku all",
-    "build": "tsc && pikku dist && mkdir -p dist/src/sdk && cp src/sdk/rpc-map.gen.d.ts dist/src/sdk/",
+    "build": "tsc && pikku dist && mkdir -p dist/.pikku && cp -R .pikku/remote dist/.pikku/remote",
     "pikku": "pikku all",
     "test": "bun test --parallel src"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.142",
+    "@pikku/core": "^0.12.154",
     "zod": "^4",
-    "@pikku/cli": "^0.12.189",
+    "@pikku/cli": "^0.12.208",
     "@pikku/addon-changes-cli": "^0.12.2"
   },
   "dependencies": {
-    "@pikku/fetch": "^0.12.12"
+    "@pikku/fetch": "^0.12.15"
   },
   "devDependencies": {
     "@pikku/addon-changes-cli": "workspace:*",
@@ -60,5 +60,10 @@
     "@standard-schema/spec": "^1.1.0",
     "zod": "^4"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "pikku": {
+    "uses": {
+      "cloud": "@pikkustudio/addon-cloud-api@^0.0.2"
+    }
+  }
 }

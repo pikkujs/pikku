@@ -11,15 +11,15 @@
     "**/node_modules/**",
     "**/dist/**"
   ],
-  "outDir": ".pikku",
+  "backends": {
+    "cli": {
+      "filter": {}
+    }
+  },
   "packageMappings": {
     "../inspector/src": "@pikku/inspector"
   },
   "schemasFromTypes": ["PikkuCLIConfig"],
-  "clientFiles": {
-    "websocketFile": ".pikku/pikku-websocket.gen.ts"
-  },
-  "supportsImportAttributes": true,
   "allow": {
     "complexWorkflows": true
   },
@@ -39,5 +39,9 @@
         }
       ]
     }
+  },
+  "lint": {
+    "enforceContentService": "off",
+    "enforceVariablesService": "off"
   }
 }

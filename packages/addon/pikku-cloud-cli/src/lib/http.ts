@@ -1,15 +1,15 @@
 /**
- * Type-safe RPC client backed by the snapshot SDK in `../sdk/`. The map is
- * a copy of cloud's generated rpc-map at the time of the addon's last
- * release — versioning bumps are taken by republishing this package.
+ * Type-safe RPC client for the cloud API. Names and types come from the
+ * published contract, synced by `pikku all` (package.json `pikku.uses.cloud`);
+ * see `rpc-client.ts`.
  */
-import { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import { CloudRPC } from './rpc-client.js'
 
 export function getCloudRPC(opts: {
   apiUrl: string
   token: string | null
-}): PikkuRPC {
-  const rpc = new PikkuRPC()
+}): CloudRPC {
+  const rpc = new CloudRPC()
   rpc.setServerUrl(opts.apiUrl)
   rpc.setAuthorizationJWT(opts.token)
   return rpc

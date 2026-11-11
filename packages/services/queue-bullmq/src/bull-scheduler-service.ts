@@ -1,3 +1,4 @@
+import { unwrapJobTrace, wrapJobTrace } from '@pikku/core/queue'
 import type { ConnectionOptions } from 'bullmq'
 import { Queue, Worker } from 'bullmq'
 import { runScheduledTask } from '@pikku/core/scheduler'
@@ -30,7 +31,7 @@ export class BullSchedulerService extends SchedulerService {
 
   constructor(private redisConnectionOptions: ConnectionOptions) {
     super()
-    this.queue = new Queue('pikku-remote-internal-rpc', {
+    this.queue = new Queue('pikku-mesh-rpc', {
       connection: redisConnectionOptions,
     })
     this.recurringQueue = new Queue(RECURRING_QUEUE_NAME, {
@@ -53,7 +54,8 @@ export class BullSchedulerService extends SchedulerService {
     delay: number | string,
     rpcName: string,
     data?: any,
-    session?: CoreUserSession
+    session?: CoreUserSession,
+    traceparent?: string
   ): Promise<string> {
     // Parse delay if it's a string
     const delayMs =
@@ -66,10 +68,14 @@ export class BullSchedulerService extends SchedulerService {
     }
 
     // Use add() with delay for one-off delayed execution
-    const job = await this.queue.add('pikku-remote-internal-rpc', jobData, {
-      delay: delayMs, // delay in milliseconds
-      jobId: `${rpcName}-${Date.now()}`, // Ensure uniqueness
-    })
+    const job = await this.queue.add(
+      'pikku-mesh-rpc',
+      wrapJobTrace(jobData, traceparent),
+      {
+        delay: delayMs, // delay in milliseconds
+        jobId: `${rpcName}-${Date.now()}`, // Ensure uniqueness
+      }
+    )
 
     if (!job.id) {
       throw new Error('Failed to schedule RPC')
@@ -100,7 +106,7 @@ export class BullSchedulerService extends SchedulerService {
       return null
     }
 
-    const jobData = job.data as ScheduledJobData
+    const jobData = unwrapJobTrace(job.data).data as ScheduledJobData
     const state = await job.getState()
 
     // Calculate scheduled time from delay or processedOn
@@ -125,7 +131,7 @@ export class BullSchedulerService extends SchedulerService {
     const jobs = await this.queue.getJobs(['delayed', 'waiting'])
 
     return jobs.map((job) => {
-      const jobData = job.data as ScheduledJobData
+      const jobData = unwrapJobTrace(job.data).data as ScheduledJobData
       const scheduledFor = job.delay
         ? new Date(job.timestamp + job.delay)
         : new Date(job.timestamp)

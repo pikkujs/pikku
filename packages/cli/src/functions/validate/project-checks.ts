@@ -3,7 +3,6 @@ import { readFile, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
-import { typeCheckFrontends } from './frontend-typecheck.js'
 import {
   readJsonSafe,
   readTextSafe,
@@ -19,12 +18,29 @@ import { blankScenarioMeta } from './blank-scenario-meta.js'
 
 const FindingSchema = z.object({
   id: z.string(),
-  severity: z.enum(['error', 'warn', 'info']),
+  severity: z.enum(['critical', 'error', 'warn', 'info']),
   message: z.string(),
   path: z.string(),
   fixHint: z.string(),
 })
 type Finding = z.infer<typeof FindingSchema>
+
+/**
+ * True when source reads `kysely` off `existingServices`, the instance the
+ * platform has already applied the coercion map to (pikku dev, standalone,
+ * Cloudflare). Attaching the plugin to it again would parse json twice.
+ */
+const takesPlatformKysely = (source: string): boolean => {
+  // Comments are blanked first: a mention of `existingServices.kysely` in a
+  // comment does not take the platform's instance.
+  const text = blankComments(source)
+  return (
+    /existingServices\??\.kysely\b/.test(text) ||
+    /\{[^{}]*\bkysely\b[^{}]*\}\s*=\s*existingServices\b/.test(text) ||
+    // The factory's second parameter, destructured: `(config, { kysely })`.
+    /\(\s*\w+\s*(?::[^,)]+)?,\s*\{[^{}]*\bkysely\b[^{}]*\}/.test(text)
+  )
+}
 
 export const ProjectChecksInput = z.object({
   skipTypecheck: z
@@ -369,7 +385,7 @@ export async function runProjectChecks(
         rootPkgPath,
         lines(
           'Add it to the root package.json:',
-          '  "packageManager": "bun@1.4.0"',
+          '  "packageManager": "bun@1.4.3"',
           'then run `bun install` to generate bun.lock and commit both.'
         )
       )
@@ -380,7 +396,7 @@ export async function runProjectChecks(
         rootPkgPath,
         lines(
           'Set the root package.json to bun:',
-          '  "packageManager": "bun@1.4.0"',
+          '  "packageManager": "bun@1.4.3"',
           'then migrate the lockfile:',
           '  bun install && rm -f yarn.lock pnpm-lock.yaml package-lock.json',
           'and commit bun.lock.'
@@ -830,37 +846,6 @@ export async function runProjectChecks(
         )
       }
 
-      // .pikku leaf index .js wrapper — the sandbox runs `pikku dev` via
-      // bare Node.js (no tsx), which cannot load .ts files. Every .ts in
-      // .pikku/ needs a matching .js wrapper. The sandbox entrypoint creates
-      // these during provisioning but NOT on subsequent restarts after agent
-      // edits — so after any restart pikku dev crashes with
-      // "Cannot find module '#pikku/function'". Run `pikku cloud smoke`
-      // to test locally; the smoke command recreates the wrappers automatically.
-      {
-        const leafDir = join(fnDir, '.pikku', 'function')
-        const indexTs = join(leafDir, 'index.ts')
-        const indexJs = join(leafDir, 'index.js')
-        // A warning, not an error: the wrapper is gitignored and recreated by
-        // the sandbox entrypoint and `cloud smoke`, so a freshly cloned or
-        // freshly scaffolded project never has it. As an error, "validate must
-        // pass clean" was unachievable from a clean checkout.
-        if (existsSync(indexTs) && !existsSync(indexJs)) {
-          w(
-            'pikku-types-js-wrapper-missing',
-            'packages/functions/.pikku/function/index.js is missing — the sandbox runs pikku dev via bare Node.js, which cannot load .ts files; without the .js wrapper it crashes with "Cannot find module \'#pikku/function\'" on every restart',
-            indexTs,
-            lines(
-              'Create packages/functions/.pikku/function/index.js:',
-              "  import './index.ts';",
-              "  export * from './index.ts';",
-              'Or run `pikku cloud smoke` to test the full boot locally (it creates the wrappers).',
-              'This file is gitignored — it must be recreated after every `pikku all` run.'
-            )
-          )
-        }
-      }
-
       const fnAllDeps = {
         ...fnPkg.dependencies,
         ...fnPkg.devDependencies,
@@ -1187,26 +1172,42 @@ export async function runProjectChecks(
         await Promise.all(
           (await walkSourceFiles(root)).map((f) => readTextSafe(f))
         )
-      ).some((text) => text?.includes('createCoercionPlugin'))
+      ).some(
+        (text) =>
+          text !== undefined &&
+          text !== null &&
+          (text.includes('createCoercionPlugin') || takesPlatformKysely(text))
+      )
       if (!wired) {
         e(
           'coercion-map-not-wired',
           `${join(outDirRel, 'db', 'coercion.gen.ts')} declares coercions that no Kysely instance applies`,
           coercionPath,
           lines(
-            'Attach the plugin where the kysely singleton is created, in',
-            'createSingletonServices:',
+            'Nothing here takes the kysely the platform hands over, so the',
+            'platform cannot reach this instance. Either build the app on',
+            'existingServices.kysely (pikku dev, standalone and Cloudflare',
+            'already apply the map to it; do not attach the plugin again, it',
+            'is not idempotent), or attach the plugin to the instance',
+            'createSingletonServices builds itself, never to',
+            'existingServices.kysely:',
             '',
             "  import { createCoercionPlugin } from '@pikku/kysely'",
             "  import { coercionMap } from '#pikku/db/coercion.gen.js'",
             '',
-            '  kysely: existingServices.kysely.withPlugin(',
-            '    createCoercionPlugin({ map: coercionMap }),',
-            '  )',
+            '  kysely: existingServices?.kysely ??',
+            '    createMyKysely(config).withPlugin(',
+            '      createCoercionPlugin({ map: coercionMap })',
+            '    ),',
+            '',
+            'Replace createMyKysely with whatever builds your Kysely instance.',
+            'Keep the fallback built and plugged this way, so an adapter that',
+            'hands over no kysely still gets the map.',
             '',
             'Without it a deployed stage returns raw strings and integers where',
             'the generated schema promises Date and boolean. The dev driver',
-            'hydrates them for you, so this cannot fail locally.'
+            'hydrates them for you, so this cannot fail locally. AWS Lambda and',
+            'Azure deploys hand over no kysely, so they always need the plugin.'
           )
         )
       }
@@ -1595,7 +1596,7 @@ export async function runProjectChecks(
             lines(
               'Remove "i18next", "react-i18next" and "i18next-browser-languagedetector".',
               'Add "@inlang/paraglide-js" (devDependencies) and the src/i18n scaffold.',
-              'Reference: templates/starter-template/apps/app.'
+              'Reference: recipes/starter-template/apps/app.'
             )
           )
         }
@@ -1628,7 +1629,7 @@ export async function runProjectChecks(
               '2. messages/<locale>.json + project.inlang/settings.json (snake_case keys).',
               '3. src/i18n scaffold: config.ts (useLocale), messages.ts (branded `m`), ident.ts.',
               '4. vite.config: paraglideVitePlugin({ project: "./project.inlang", outdir: "./src/paraglide" }).',
-              'Route every user-visible string through `m.*()`; reference templates/starter-template/apps/app/src/i18n.'
+              'Route every user-visible string through `m.*()`; reference recipes/starter-template/apps/app/src/i18n.'
             )
           )
         } else if (!hasMessagesDir || !hasInlangProject) {
@@ -1731,12 +1732,8 @@ export async function runProjectChecks(
           `${rel(cfgPath)} declares ${deadKeys.join(', ')} — the Next.js pikku client is no longer generated by codegen, so the referenced *.gen file is gitignored + never regenerated and is absent in a clean build (tsc fails "Cannot find module")`,
           cfgPath,
           lines(
-            `Remove the ${deadKeys.join('/')} key(s) and generate the fetch client into the functions-sdk instead:`,
-            '"clientFiles": {',
-            '  "fetchFile": "packages/functions-sdk/src/pikku/pikku-fetch.gen.ts",',
-            '  "rpcWiringsFile": "packages/functions-sdk/src/pikku/pikku-rpc.gen.ts"',
-            '}',
-            'Then in the frontend: import { PikkuFetch } / { PikkuRPC } from "@<scope>/functions-sdk/pikku/..." and wire them with createPikku(PikkuFetch, PikkuRPC, { serverUrl }).'
+            `Remove the ${deadKeys.join('/')} key(s); the fetch client is generated per backend at .pikku/sdk/<backend>/exposed/.`,
+            'Then in the frontend: import { PikkuFetch } / { PikkuRPC } from "@sdk/<backend>/pikku-fetch.gen" and wire them with createPikku(PikkuFetch, PikkuRPC, { serverUrl }).'
           )
         )
       }
@@ -1770,7 +1767,7 @@ export async function runProjectChecks(
               "  import { PikkuFetch } from '@<scope>/functions-sdk/pikku/pikku-fetch.gen'",
               "  import { PikkuRPC } from '@<scope>/functions-sdk/pikku/pikku-rpc.gen'",
               '  const pikku = createPikku(PikkuFetch, PikkuRPC, { serverUrl })',
-              'Emit those files via pikku.config.json clientFiles (fetchFile/rpcWiringsFile) and remove nextHTTPFile/nextBackendFile.'
+              'Those files are generated at .pikku/sdk/<backend>/exposed/; remove nextHTTPFile/nextBackendFile.'
             )
           )
         }
@@ -2052,46 +2049,6 @@ export async function runProjectChecks(
     )
   }
 
-  // ── frontend type-check (what the build container actually runs) ───────
-  // Every check above is a heuristic standing in for this compile. The build
-  // container type-checks each deployable frontend and aborts the deploy on a
-  // non-zero exit, so running the same compile here is the difference between
-  // a 20-second local failure and a burned deploy out of the daily 10.
-  if (!opts.skipTypecheck) {
-    const frontends = declaredFrontends
-      .filter((fe) => fe.deploy)
-      .map((fe) => ({ name: fe.slug, dir: fe.dir }))
-
-    for (const result of await typeCheckFrontends(root, frontends)) {
-      if (result.skipped) {
-        w(
-          `frontend-typecheck-skipped-${result.name}`,
-          `could not type-check frontend "${result.name}" — ${result.skipped}`,
-          result.dir,
-          lines(
-            'The build container type-checks every deployable frontend and aborts the deploy if it fails.',
-            'Give the app a tsconfig.json and a "tsc" script so the same check runs locally.'
-          )
-        )
-        continue
-      }
-      if (result.errors.length === 0) continue
-      const shown = result.errors.slice(0, 20)
-      const extra = result.errors.length - shown.length
-      e(
-        `frontend-typecheck-${result.name}`,
-        `frontend "${result.name}" does not type-check — the build container aborts the deploy on this`,
-        result.dir,
-        lines(
-          ...shown,
-          ...(extra > 0 ? [`… and ${extra} more`] : []),
-          '',
-          `Reproduce with: cd ${result.dir.slice(root.length + 1)} && ${result.command}`
-        )
-      )
-    }
-  }
-
   // ── oxlint (last: it is the slow one) ──────────────────────────────────
   // Type-aware, so it is held back with the type-check: `skipTypecheck` is
   // "structural checks only" (the deploy guard runs it that way).
@@ -2099,6 +2056,8 @@ export async function runProjectChecks(
     findings.push(...(await runOxlintRun(root)))
   }
 
-  const ok = !findings.some((f) => f.severity === 'error')
+  const ok = !findings.some(
+    (f) => f.severity === 'error' || f.severity === 'critical'
+  )
   return { ok, root, findings, migrationsDir: reportedMigrationsDir }
 }

@@ -1,13 +1,7 @@
 ---
 name: pikku-tailwind
 description: >-
-  Use when building a Tailwind + shadcn/ui interface on top of a Pikku backend — rendering dates that
-  came back from a generated client, keeping layout flow-relative so the app survives an RTL locale,
-  branching on colour scheme without hardcoding a shade, and choosing components. TRIGGER when:
-  putting a value from usePikkuQuery or an RPC response on screen, writing margins/padding/alignment
-  classes, choosing a date input or any shadcn component, handling light/dark, or fixing a
-  `@shadcn/lint` error. DO NOT TRIGGER when: the data does not come from a Pikku client (this is only
-  about what the generated clients hand you), or for user-facing copy (use pikku-i18n).
+  Tailwind + shadcn/ui on a Pikku backend: rendering dates and query values, RTL-safe flow-relative classes, light/dark, picking components, `@shadcn/lint` errors. User-facing copy is pikku-i18n.
 installGroups: [client]
 ---
 
@@ -83,15 +77,15 @@ All of this applies to stub and fixture dates exactly as it does to real data.
 Write layout classes flow-relative so the UI works in both LTR and RTL languages. Pikku's i18n ships
 Arabic, Hebrew, Farsi and Urdu support, and a physical margin is what breaks under it.
 
-| Avoid                    | Use instead                 |
-| ------------------------ | --------------------------- |
-| `ml-*`, `mr-*`           | `ms-*`, `me-*`              |
-| `pl-*`, `pr-*`           | `ps-*`, `pe-*`              |
-| `left-*`, `right-*`      | `start-*`, `end-*`          |
-| `text-left`, `text-right`| `text-start`, `text-end`    |
-| `border-l`, `border-r`   | `border-s`, `border-e`      |
-| `rounded-l`, `rounded-r` | `rounded-s`, `rounded-e`    |
-| `flex-row-reverse`       | the `dir` attribute         |
+| Avoid                     | Use instead              |
+| ------------------------- | ------------------------ |
+| `ml-*`, `mr-*`            | `ms-*`, `me-*`           |
+| `pl-*`, `pr-*`            | `ps-*`, `pe-*`           |
+| `left-*`, `right-*`       | `start-*`, `end-*`       |
+| `text-left`, `text-right` | `text-start`, `text-end` |
+| `border-l`, `border-r`    | `border-s`, `border-e`   |
+| `rounded-l`, `rounded-r`  | `rounded-s`, `rounded-e` |
+| `flex-row-reverse`        | the `dir` attribute      |
 
 Directional icons (chevrons, arrows) flip with `rtl:rotate-180`.
 

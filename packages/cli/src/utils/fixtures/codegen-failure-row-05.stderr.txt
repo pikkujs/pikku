@@ -1,0 +1,27 @@
+[PKU719] Dependencies resolve shared packages at a different version than this project:
+  "@pikkustudio/addon-inbox" is linked to /linked/packages/addons/inbox and resolves better-auth@1.7.11 there, while this project resolves better-auth@1.7.6 — two type identities for better-auth
+  "@pikkustudio/addon-inbox" is linked to /linked/packages/addons/inbox and resolves @pikku/core@0.12.148 there, while this project resolves @pikku/core@0.12.144 — two type identities for @pikku/core
+  "@pikkustudio/addon-inbox" is linked to /linked/packages/addons/inbox and resolves kysely@0.29.6 there, while this project resolves kysely@0.29.7 — two type identities for kysely
+  "@pikkustudio/addon-inbox" is linked to /linked/packages/addons/inbox and resolves zod@4.6.7 there, while this project resolves zod@4.6.5 — two type identities for zod
+TypeScript treats each pair as two unrelated types and structurally compares them
+wherever they meet, which inside a generic inference chain can exhaust the heap —
+codegen then dies of memory pressure instead of reporting an error.
+
+Fix: align the versions so the install resolves one copy, or drop the link and
+reinstall. Set PIKKU_SKIP_TYPE_IDENTITY_CHECK=1 to silence this.
+Could not find exported schema 'SendWeeklyTestCountInput' in /project/packages/functions/src/functions/probe/weekly-test-count.workflow.ts for SendWeeklyTestCountInput. Available exports: sendWeeklyTestCount, weeklyTestCount
+Workflow allWorkflow (run b2e5ece6-aee7-4ca2-a1df-6a1ce384a0f8) failed:
+Error: [PKU724] 'SingletonServices' resolved to no services at all, which means it did not resolve.
+Declared in /project/packages/functions/src/application-types.d.ts.
+
+This is usually a stale or partial generated tree: a source file imports a `#pikku/*` leaf that the current output no longer writes, so the type it feeds resolves to an error type. Delete the output directory and re-run to rebuild it from scratch.
+    at Object.func (file:///project/node_modules/.bun/@pikku+cli@0.12.194+f9081834af33374e/node_modules/@pikku/cli/dist/src/functions/wirings/functions/pikku-command-services.js:135:19)
+    at async executeFunction (file:///project/node_modules/.bun/@pikku+core@0.12.144+3981553be2c58a5b/node_modules/@pikku/core/dist/function/function-runner.js:368:20)
+    at async dispatch (file:///project/node_modules/.bun/@pikku+core@0.12.144+3981553be2c58a5b/node_modules/@pikku/core/dist/middleware-runner.js:34:22)
+    at async Array.<anonymous> (file:///project/node_modules/.bun/@pikku+cli@0.12.194+f9081834af33374e/node_modules/@pikku/cli/dist/src/middleware/log-command-info-and-time.js:9:9)
+    at async dispatch (file:///project/node_modules/.bun/@pikku+core@0.12.144+3981553be2c58a5b/node_modules/@pikku/core/dist/middleware-runner.js:31:20)
+    at async runMiddleware (file:///project/node_modules/.bun/@pikku+core@0.12.144+3981553be2c58a5b/node_modules/@pikku/core/dist/middleware-runner.js:37:5)
+    at async runPikkuFunc (file:///project/node_modules/.bun/@pikku+core@0.12.144+3981553be2c58a5b/node_modules/@pikku/core/dist/function/function-runner.js:391:21)
+    at async ContextAwareRPCService.rpcWithWire (file:///project/node_modules/.bun/@pikku+core@0.12.144+3981553be2c58a5b/node_modules/@pikku/core/dist/wirings/rpc/rpc-runner.js:382:16)
+    at async runInlineRetryLoop (file:///project/node_modules/.bun/@pikku+core@0.12.144+3981553be2c58a5b/node_modules/@pikku/core/dist/wirings/workflow/workflow-step-retry.js:13:22)
+    at async Object.do (file:///project/node_modules/.bun/@pikku+core@0.12.144+3981553be2c58a5b/node_modules/@pikku/core/dist/wirings/workflow/pikku-workflow-service.js:985:28)

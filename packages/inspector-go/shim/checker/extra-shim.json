@@ -1,0 +1,13 @@
+{
+  "ExtraMethods": {
+    "Checker": [
+      "formatUnionTypes",
+      "getAwaitedType",
+      "getFullyQualifiedName",
+      "getModifiersTypeFromMappedType",
+      "getNumberLiteralType",
+      "getStringLiteralType",
+      "isMappedTypeWithKeyofConstraintDeclaration"
+    ]
+  }
+}

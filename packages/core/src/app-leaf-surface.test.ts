@@ -48,14 +48,35 @@ const skipped = new Set([
   // into `generated/` and leaves them behind, so a second test run in the same
   // checkout (a retried push, say) scanned CLI output this repo does not own.
   'generated',
+  // Inspector engine fixtures (`packages/inspector-go/testdata`): projects
+  // written to exercise the inspector, deprecated imports included.
+  'testdata',
   'starter-template',
 ])
 
+/** A verifier's scratch project, left behind by a run that did not clean up. */
+const isScratchProject = (entry: string) => entry.startsWith('.tmp-')
+
+/**
+ * The parallel unit-test job runs other suites alongside this one, and a suite
+ * may write a fixture into the repo for the length of a test. A path listed a
+ * moment ago can be gone by the time it is read, and a file that no longer
+ * exists imports nothing.
+ */
+const unlessGone = <T>(read: () => T): T | undefined => {
+  try {
+    return read()
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+}
+
 const findProjects = (dir: string, out: string[] = []): string[] => {
-  for (const entry of readdirSync(dir)) {
-    if (skipped.has(entry)) continue
+  for (const entry of unlessGone(() => readdirSync(dir)) ?? []) {
+    if (skipped.has(entry) || isScratchProject(entry)) continue
     const path = join(dir, entry)
-    if (!statSync(path).isDirectory()) continue
+    if (!unlessGone(() => statSync(path).isDirectory())) continue
     if (existsSync(join(path, 'pikku.config.json'))) out.push(path)
     findProjects(path, out)
   }
@@ -63,10 +84,10 @@ const findProjects = (dir: string, out: string[] = []): string[] => {
 }
 
 const walk = (dir: string, out: string[] = []): string[] => {
-  for (const entry of readdirSync(dir)) {
-    if (skipped.has(entry)) continue
+  for (const entry of unlessGone(() => readdirSync(dir)) ?? []) {
+    if (skipped.has(entry) || isScratchProject(entry)) continue
     const path = join(dir, entry)
-    if (statSync(path).isDirectory()) walk(path, out)
+    if (unlessGone(() => statSync(path).isDirectory())) walk(path, out)
     else if (path.endsWith('.ts') || path.endsWith('.tsx')) out.push(path)
   }
   return out
@@ -81,10 +102,10 @@ const isGenerated = (path: string) =>
 
 const projectSourceFiles = (project: string) => {
   const files: string[] = []
-  for (const entry of readdirSync(project)) {
-    if (skipped.has(entry)) continue
+  for (const entry of unlessGone(() => readdirSync(project)) ?? []) {
+    if (skipped.has(entry) || isScratchProject(entry)) continue
     const path = join(project, entry)
-    if (!statSync(path).isDirectory()) continue
+    if (!unlessGone(() => statSync(path).isDirectory())) continue
     if (existsSync(join(path, 'pikku.config.json'))) continue
     walk(path, files)
   }
@@ -97,12 +118,9 @@ const projectSourceFiles = (project: string) => {
  * the CLI itself makes.
  */
 const barrelSpecifiers = (file: string) => {
-  const source = ts.createSourceFile(
-    file,
-    readFileSync(file, 'utf8'),
-    ts.ScriptTarget.Latest,
-    true
-  )
+  const text = unlessGone(() => readFileSync(file, 'utf8'))
+  if (text === undefined) return []
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true)
   const found: { specifier: string; line: number }[] = []
   for (const statement of source.statements) {
     if (
@@ -144,12 +162,9 @@ const namesOwnedByALeaf = new Map<string, string>([
 ])
 
 const coreNamesThatHaveALeaf = (file: string) => {
-  const source = ts.createSourceFile(
-    file,
-    readFileSync(file, 'utf8'),
-    ts.ScriptTarget.Latest,
-    true
-  )
+  const text = unlessGone(() => readFileSync(file, 'utf8'))
+  if (text === undefined) return []
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true)
   const found: { name: string; leaf: string; line: number }[] = []
   for (const statement of source.statements) {
     if (!ts.isImportDeclaration(statement)) continue

@@ -14,7 +14,7 @@ const recording = () => {
     }
   const service = {
     signContentKey: record('signContentKey', 'signed'),
-    getUploadURL: record('getUploadURL', { uploadUrl: 'u', assetKey: 'k' }),
+    getUploadURL: record('getUploadURL', { uploadUrl: 'u', fileKey: 'k' }),
     deleteFile: record('deleteFile', true),
     writeFile: record('writeFile', true),
     readFile: record('readFile', null),
@@ -32,6 +32,17 @@ const recording = () => {
 }
 
 describe('a scoped content service passes visibility through unchanged', () => {
+  test('answers an upload with the key the addon passed, not the scoped one', async () => {
+    const { service } = recording()
+    const scoped = new ScopedContentService(service, 'spindle')
+    const upload = await scoped.getUploadURL({
+      bucket: 'b',
+      fileKey: 'a/k.png',
+      contentType: 't',
+    })
+    assert.equal(upload.fileKey, 'a/k.png')
+  })
+
   for (const visibility of ['private', 'public'] as const) {
     test(`${visibility}: upload, write, delete, read, download`, async () => {
       const { calls, service } = recording()

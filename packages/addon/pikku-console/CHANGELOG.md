@@ -1,3 +1,191 @@
+## 0.12.69
+
+### Patch Changes
+
+- 3099125: The workflow-run, agent-thread, webhook-delivery and virtual-user read functions move from `@pikku/addon-console` to `@pikku/addon-admin`, because a deployed stage has those and no console. Call them as `admin:getWorkflowRuns`, `admin:getAgentThreads` and so on, under the new `admin:workflows`, `admin:agents`, `admin:webhooks:deliveries` and `admin:virtualUsers` scopes. `scaffold.console` no longer generates `/workflow-run/:runId/stream`; the new `scaffold.admin` generates the `@pikku/addon-admin` wiring and that route as `ref('admin:streamWorkflowRun')`. `startVirtualUserRun` and `setVirtualUserSchedule` stay in the console because they read the project's meta from disk. `@pikku/better-auth`'s copy of the admin scope tree catches up with the new scopes and the earlier schedules, queues and webhooks
+- 1be4b68: A workflow or agent with `auth` unset now requires a session, like any function, and only an explicit `auth: false` is anonymous. The generated routes take an optional session and leave the decision to the declaration: they reach only `expose: true` names, through `rpc.exposedAgent` and `rpc.exposedWorkflow`, which hold the `expose` gate the way `rpc.exposed` does, so generated code holds no access logic, and a start records who started the run; the workflow judges its own auth, scopes, permissions and input when it runs, so a refused start leaves a failed run. Status, streams and approve look the workflow up by name, confirm the run belongs to it and check its owner. A run with an owner is only for that owner. A run stores only its owner's user id and loads the session from `sessionStore` every time it executes, running the full checks each time, so a permission revoked mid-run stops it; a run with an owner and no `sessionStore` stops with an error. Schedules and triggers with no user need `auth: false`; see `docs/MIGRATION.md`.
+- Updated dependencies [3099125]
+- Updated dependencies [be90d6c]
+- Updated dependencies [5f236d5]
+- Updated dependencies [2e4e7ab]
+- Updated dependencies [502ad55]
+- Updated dependencies [54173f6]
+- Updated dependencies [81ff938]
+- Updated dependencies [1be4b68]
+  - @pikku/better-auth@0.12.64
+  - @pikku/cli@0.12.208
+  - @pikku/core@0.12.154
+  - @pikku/code-edit@0.12.13
+
+## 0.12.68
+
+### Patch Changes
+
+- a679e5d: `pikku verify` is merged into `pikku validate`, which now runs the type-check and correctness checks, skips codegen unless `--codegen` is passed, and exits non-zero on any error. The `pikku verify` command is gone; `runVerify`, `VerifyService` and the recorded results stay. See MIGRATION.md.
+- Updated dependencies [dc39996]
+- Updated dependencies [23de209]
+- Updated dependencies [4e96e0e]
+- Updated dependencies [c7db9e2]
+- Updated dependencies [15111a3]
+- Updated dependencies [b3e29cf]
+- Updated dependencies [67c83ff]
+- Updated dependencies [c9850cc]
+- Updated dependencies [a679e5d]
+- Updated dependencies [307fb8d]
+  - @pikku/cli@0.12.204
+  - @pikku/core@0.12.152
+
+## 0.12.67
+
+### Patch Changes
+
+- c254266: The TypeScript inspector engine is retired: `pikku-inspect` (the Go binary built on typescript-go) is the only inspector. No Pikku package depends on TypeScript 6 any more.
+
+  - `@pikku/cli`: the `--inspector` flag, the `PIKKU_INSPECTOR` variable, the `inspector` key in `pikku.config.json`, `pikku inspector parity` and `pikku experiment native-comparison` are removed. A CLI with no `pikku-inspect` binary for its platform fails at inspection and names `PIKKU_INSPECTOR_GO_BIN`; it no longer falls back.
+  - `@pikku/inspector` keeps only its types, `ErrorCode`, serializers and data helpers, and drops its `typescript`, `ts-json-schema-generator`, `zod`, `tsx`, `path-to-regexp` and `openapi-types` dependencies. `inspect`, `analyzeProgram`, `finalizeInspectorState`, `collectSurface`, `readModuleSpecifiers`, `readJsxLiteralText`, `readTsconfigOutDir`, `findWireRemoteAddonSpecs` and the `./lite`, `./finalize` and `./schema-generator` entry points are gone; `InspectorState` has no `typesLookup` or `program`, and `InspectorOptions` has no `oldProgram` or `sourceFile`. `./surface` exports the surface types only.
+  - `@pikku/inspector-go` gains the helpers that replace the compiler API (`readSyntaxErrors`, `scanMessageUsage`, `readJsxProps`, `writeJsxProp`, `writeJsxStyle`, `findPikkuCall`, `readImports`, `findWireRemoteAddonSpecs`, the `scan*` source checks), an `InspectorSession` for the type-checking `serve` process, and the Zod helpers the Node schema fallback uses. `output.schema.json` lists `stats.filesReused`.
+  - `@pikku/code-edit` and `@pikku/n8n-import` no longer depend on `typescript`. `TypeScriptService.diagnostics()` is now async and the service has a `dispose()` method; the console's `get-file-diagnostics` awaits it.
+
+- Updated dependencies [d7b030d]
+- Updated dependencies [2c56c0f]
+- Updated dependencies [1a5b741]
+- Updated dependencies [417ccb7]
+- Updated dependencies [e4b0cd1]
+- Updated dependencies [1d6c722]
+- Updated dependencies [91e7fc8]
+- Updated dependencies [93f8669]
+- Updated dependencies [c254266]
+- Updated dependencies [b0c2c49]
+- Updated dependencies [9dd9d9a]
+  - @pikku/cli@0.12.203
+  - @pikku/better-auth@0.12.62
+  - @pikku/code-edit@0.12.11
+
+## 0.12.66
+
+### Patch Changes
+
+- c8a477d: The CLI wires `@pikkustudio/addon-cloud-api` as `cloudApi` and maps it to the `pikku cloud` addon, so `pikku all` syncs the cloud API contract and pins it in `pikku-addons.lock`. `@pikku/addon-console` calls the cloud API as `cloud:<name>` and drops the wish deck: the `listStudioWishes` and `reactToStudioWish` functions, the `pikku:console:wishes` scopes, and the wish and model access parts of the studio host are removed (breaking, documented here per the patch-only rule). The `pikku cloud` addon is now mounted as `cloudCli` (the `pikku cloud` command is unchanged) because its dependency key `cloud` equalled its mount, and an addon's own namespace wins over `uses`, so `cloud:<fn>` could never reach `cloudApi`. `wireAddon` now throws when an addon's `uses` maps its own name to another addon.
+- Updated dependencies [5d48c4a]
+- Updated dependencies [c8a477d]
+- Updated dependencies [539c25d]
+- Updated dependencies [593a855]
+- Updated dependencies [63648ee]
+- Updated dependencies [1b265fa]
+- Updated dependencies [db5f42f]
+- Updated dependencies [d5cc4f1]
+- Updated dependencies [bf979a0]
+- Updated dependencies [a275026]
+- Updated dependencies [8bad71e]
+- Updated dependencies [4cf8e97]
+- Updated dependencies [63e12c4]
+- Updated dependencies [bec7301]
+- Updated dependencies [7ce879d]
+- Updated dependencies [b746b55]
+- Updated dependencies [a3a67f3]
+- Updated dependencies [c964ee9]
+- Updated dependencies [54c11c3]
+- Updated dependencies [ceedd4b]
+- Updated dependencies [1cc6cf7]
+- Updated dependencies [4263e9d]
+  - @pikku/core@0.12.151
+  - @pikku/cli@0.12.202
+  - @pikku/code-edit@0.12.10
+
+## 0.12.65
+
+### Patch Changes
+
+- 0b0a75d: Scenario workflow meta now carries `scenario: true` alongside `source: 'scenario'`, so Studio and the console can tell a scenario from a real workflow. The console's workflow count no longer includes scenarios.
+- Updated dependencies [3a543d8]
+- Updated dependencies [679068f]
+- Updated dependencies [7b1d0e6]
+- Updated dependencies [a9318bd]
+- Updated dependencies [e7c739a]
+  - @pikku/better-auth@0.12.59
+  - @pikku/cli@0.12.195
+  - @pikku/core@0.12.145
+
+## 0.12.64
+
+### Patch Changes
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- Updated dependencies [3a9c9d8]
+- Updated dependencies [dc952a8]
+- Updated dependencies [7e44a0c]
+- Updated dependencies [65682fc]
+- Updated dependencies [c702ed6]
+- Updated dependencies [01036e4]
+- Updated dependencies [ca35477]
+- Updated dependencies [031f001]
+- Updated dependencies [50314e2]
+- Updated dependencies [534f971]
+- Updated dependencies [6a9488c]
+- Updated dependencies [46e2c7e]
+- Updated dependencies [237ec7c]
+- Updated dependencies [a0ae9bb]
+- Updated dependencies [7178b88]
+- Updated dependencies [fbee6df]
+- Updated dependencies [2edf04f]
+- Updated dependencies [8ec91f0]
+- Updated dependencies [ffbe1a2]
+- Updated dependencies [9999ec1]
+- Updated dependencies [228faad]
+- Updated dependencies [84de1eb]
+- Updated dependencies [e659614]
+- Updated dependencies [6c79f8d]
+- Updated dependencies [fa308d4]
+- Updated dependencies [802076e]
+- Updated dependencies [be98e56]
+- Updated dependencies [1112955]
+- Updated dependencies [0a4676a]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [54b8891]
+- Updated dependencies [2e05e48]
+- Updated dependencies [a8eb397]
+- Updated dependencies [ffb53f2]
+- Updated dependencies [ef17c47]
+- Updated dependencies [939dac7]
+- Updated dependencies [19895c4]
+- Updated dependencies [40855aa]
+- Updated dependencies [a88391a]
+- Updated dependencies [3df9013]
+  - @pikku/core@0.12.144
+  - @pikku/cli@0.12.192
+  - @pikku/better-auth@0.12.57
+  - @pikku/code-edit@0.12.8
+  - @pikku/knowledge@0.12.21
+
+## 0.12.63
+
+### Patch Changes
+
+- de9af6a: RPCs for Pikku Studio's migrated screens. Runtime state that must be visible on a deployed app lives in `@pikku/addon-admin`; local-copy tools stay in `@pikku/addon-console`.
+
+  `@pikku/addon-admin`:
+
+  - `admin:getSchedulerHistory` returns each scheduled task's last run, next run and recent runs, from a new `SchedulerService.getTaskRuns()` (empty by default). `InMemorySchedulerService` records the last 50 runs per cron task with status, duration and error. Scope `admin:schedules:read`.
+  - `admin:getQueueHistory({ queueNames?, limit? })` returns live counts and recent jobs per queue, from a new optional `QueueService.inspect(queueName, { limit })`, implemented by `InMemoryQueueService` and `BullQueueService` and forwarded by `SignedQueueService`. Scope `admin:queues:read`.
+  - `admin:listIncomingWebhookReceipts` / `admin:getIncomingWebhookReceipt` expose received webhooks, backed by a new `IncomingWebhookService.getReceipt(receiptId)` (null by default; implemented by `KyselyIncomingWebhookService`). Scope `admin:webhooks:read`.
+
+  `@pikku/addon-console`:
+
+  - `console:variableGet` / `console:variableSet` read and write a project variable, gated on `pikku:console:variables:read` / `:write`.
+  - `console:runScenarios({ names?, environment? })` starts `pikku scenario run` as a detached child process and returns `{ runId }` to follow through `listScenarioRuns` / `getScenarioRun`, gated on the new `pikku:console:scenarios:run` scope. `pikku scenario run` takes `--run-id <id>` to record under a caller-chosen id.
+
+- Updated dependencies [de9af6a]
+- Updated dependencies [f07b1c2]
+  - @pikku/core@0.12.143
+  - @pikku/cli@0.12.191
+
 ## 0.12.62
 
 ### Patch Changes

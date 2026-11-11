@@ -19,7 +19,7 @@ import { PikkuMCPServer } from './index.js'
  * the per-request `_meta` envelope — which no v1 client sends. What keeps them
  * working is the entry's stateless legacy fallback, and that is a default
  * rather than something pikku asks for, so it is worth pinning: a v1 client is
- * what `examples/online-shop` drives the MCP scenario with, and what anyone
+ * what `templates/online-shop` drives the MCP scenario with, and what anyone
  * running an older Claude Desktop has.
  *
  * The whole v1 flow is exercised, not just a tool call — `connect` performs

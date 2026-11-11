@@ -2,11 +2,11 @@ import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/setup'
 import {
   ConsoleLogger,
   IncomingWebhookService,
-  InMemoryQueueService,
   LocalSecretService,
   LocalVariablesService,
   QueueWebhookService,
 } from '@pikku/core/services'
+import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { FileCredentialService } from './file-credential-service.js'
@@ -36,7 +36,7 @@ export const createSingletonServices = pikkuServices(
     const queueService =
       existingServices?.queueService || new InMemoryQueueService()
     const credentialService = new FileCredentialService(
-      await variables.get('CREDENTIALS_FILE')
+      await variables.get('WEBHOOK_SCRATCH_DIR')
     )
 
     return {

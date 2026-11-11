@@ -169,6 +169,19 @@ export const runPermissions = async ({
   }
 }
 
+/**
+ * Decides, from the session alone, whether a function is worth offering to
+ * that session: only the `pikkuAuth` checks among the global and the given
+ * permissions are run, since they need no input. Resolves `true` when there
+ * are none or any one of them passes. Used to filter an agent's tools before
+ * the model sees them; it is not the enforcement point, which remains the full
+ * permission check when the function is called.
+ *
+ * @param funcPermissions - The live permission group from the function or
+ * agent config, never the generated metadata, which carries no functions.
+ * @param packageName - The package whose global permissions apply; `null` for
+ * the app.
+ */
 export const checkAuthPermissions = async (
   /** Must be the live permission group from the func/agent config, never metadata. */
   funcPermissions: CorePermissionGroup | undefined,

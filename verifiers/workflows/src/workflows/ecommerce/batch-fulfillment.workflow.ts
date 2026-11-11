@@ -12,6 +12,7 @@ export const batchFulfillmentWorkflow = pikkuWorkflowComplexFunc<
   { orderIds: string[]; carrier: string },
   { fulfilledOrders: string[]; failedOrders: string[] }
 >({
+  auth: false,
   title: 'Batch Fulfillment',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {

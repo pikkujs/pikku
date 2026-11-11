@@ -29,10 +29,33 @@ describe('definition types', () => {
 
   test('the scopes leaf carries defineScope and defineSystemRole', () => {
     const scopes = serializeScopeDefinitionTypes()
-    assert.match(scopes, /export \{ defineScope \} from '@pikku\/core\/scope'/)
+    assert.match(
+      scopes,
+      /export \{ defineScope, declareScopes, hasScopes \} from '@pikku\/core\/scope'/
+    )
     assert.match(
       scopes,
       /export \{ defineSystemRole \} from '@pikku\/core\/role'/
+    )
+  })
+
+  test('the scopes leaf carries hasScopes and declareScopes', () => {
+    const scopes = serializeScopeDefinitionTypes()
+    assert.match(
+      scopes,
+      /export \{ defineScope, declareScopes, hasScopes \} from '@pikku\/core\/scope'/
+    )
+  })
+
+  test('the scopes leaf carries the flag surface an app names', () => {
+    const scopes = serializeScopeDefinitionTypes()
+    assert.match(
+      scopes,
+      /export \{ defineFeatureFlags \} from '@pikku\/core\/flag'/
+    )
+    assert.match(
+      scopes,
+      /export type \{ DeclaredFlag \} from '@pikku\/core\/flag'/
     )
   })
 

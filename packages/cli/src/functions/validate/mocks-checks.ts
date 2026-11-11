@@ -1,3 +1,4 @@
+import { reactQueryClientFile } from '../../utils/backend-sdk.js'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
@@ -5,18 +6,18 @@ import {
   PROBLEM_REASON,
   runMocksCheck,
 } from '../mocks/run-check.js'
-import { frontendFiles, scanFrontend } from '../mocks/stub-scan.js'
+import { frontendFiles } from '../mocks/stub-scan.js'
+import { scanFrontend } from '../../inspector-helpers.js'
 import type { ValidateFinding as Finding } from './virtual-user-checks.js'
 
 const configOf = (dir: string): { outDir: string; client?: string } => {
   try {
     const config = JSON.parse(
       readFileSync(join(dir, 'pikku.config.json'), 'utf8')
-    ) as { outDir?: unknown; clientFiles?: { reactQueryFile?: unknown } }
-    const client = config.clientFiles?.reactQueryFile
+    ) as { outDir?: unknown; backends?: Record<string, unknown> }
     return {
       outDir: typeof config.outDir === 'string' ? config.outDir : '.pikku',
-      client: typeof client === 'string' ? join(dir, client) : undefined,
+      client: reactQueryClientFile(dir, config.backends),
     }
   } catch {
     return { outDir: '.pikku' }

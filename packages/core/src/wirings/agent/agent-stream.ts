@@ -10,16 +10,16 @@ import type {
   CoreAgent,
   AgentMemoryConfig,
 } from './agent.types.js'
+import { outgoingTraceparent } from '../../trace.js'
 import { finalizeAgentRun, lastUserMessageText } from './agent-finalize.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
-import { applyInputMiddleware } from './agent-turn.js'
-import { AIProviderNotConfiguredError } from '../../errors/errors.js'
+import { applyInputMiddleware, describeApprovals } from './agent-turn.js'
 import { deniedToolResult, randomUUID } from './agent-utils.js'
 import { SPOKEN_TRANSCRIPT } from './voice-input.js'
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
-} from '../channel/channel-middleware-runner.js'
+} from '../../channel-middleware-runner.js'
 import type { CorePikkuChannelMiddleware } from '../channel/channel.types.js'
 import type { CoreSingletonServices } from '../../types/core.types.js'
 import type { AgentStorageService } from '../../services/agent-storage-service.js'
@@ -45,6 +45,7 @@ import {
   assertResourceOwner,
   assertResourcePrincipalOwner,
   assertAgentAuthorized,
+  resolveAgentRunner,
   ToolApprovalRequired,
   ToolCredentialRequired,
   APPROVAL_REQUIRED,
@@ -281,9 +282,11 @@ async function postStreamCleanup(
     threadId: string
     resourceId?: string
     input: string
+    traceparent?: string
   }
 ): Promise<void> {
   await finalizeAgentRun(agentRunState, {
+    traceparent: run.traceparent,
     runId,
     agentName: run.agentName,
     threadId: run.threadId,
@@ -428,16 +431,7 @@ async function runStreamStepLoop(
 
     const approvalsNeeded = checkForApprovals(stepResult, runnerParams.tools)
     if (approvalsNeeded.length > 0) {
-      for (const approval of approvalsNeeded) {
-        const toolDef = runnerParams.tools.find(
-          (t) => t.name === approval.toolName
-        )
-        if (toolDef?.approvalDescriptionFn && !approval.reason) {
-          try {
-            approval.reason = await toolDef.approvalDescriptionFn(approval.args)
-          } catch {}
-        }
-      }
+      await describeApprovals(approvalsNeeded, runnerParams.tools)
       return { outcome: 'approval', approvals: approvalsNeeded }
     }
 
@@ -707,6 +701,22 @@ function handleCredentialRequests(
   })()
 }
 
+/**
+ * Runs an agent and streams its progress (text deltas, tool calls, approvals, usage) to `channel`.
+ *
+ * Authorization and thread partitioning are as for `runAgent`. A tool needing approval or a
+ * credential ends the stream with an `approval-request` or `credential-request` event and leaves the run
+ * suspended for `resumeAgent`.
+ *
+ * @param agentName - The agent to run.
+ * @param input - The user message, thread and resource ids, and optional model overrides.
+ * @param channel - Receives the `AgentStreamEvent`s.
+ * @param params - The caller's session and credential access.
+ * @param agentSessionMap - Sub-agent session ids, shared across delegated calls in one run.
+ * @param options - Approval policy and a run-created callback.
+ * @returns The full text of the streamed reply.
+ * @throws As `runAgent` does, before the stream starts.
+ */
 export async function streamAgent(
   agentName: string,
   input: {
@@ -976,6 +986,7 @@ export async function streamAgent(
     }
 
     await postStreamCleanup(persistingChannel, agentRunState, runId, {
+      traceparent: outgoingTraceparent({ trace: params.trace }),
       agentName,
       threadId,
       resourceId: input.resourceId,
@@ -1098,6 +1109,20 @@ export async function interruptAgent(
   return { stopped, inFlightTools: getInFlightTools(input.runId) }
 }
 
+/**
+ * Answers one pending approval on a suspended run and streams the continuation to `channel`.
+ * Backs `rpc.agent.resume`.
+ *
+ * Only the run's owner may resume it, and the agent is re-authorized. The approval is claimed
+ * atomically, so a second concurrent resume fails instead of running the tool again.
+ *
+ * @param input - The run, the tool call being answered and the decision.
+ * @param channel - Receives the continuation's `AgentStreamEvent`s.
+ * @param params - The caller's session.
+ * @param options - Approval policy for the rest of the run.
+ * @throws ForbiddenError when the caller does not own the run; Error when the run or its pending
+ * approval is missing, or the approval was already resolved.
+ */
 export async function resumeAgent(
   input: {
     runId: string
@@ -1138,6 +1163,8 @@ export async function resumeAgent(
 
   await assertAgentAuthorized(agent, params, packageName)
 
+  const agentRunner = await resolveAgentRunner(singletonServices, params)
+
   // The read above is not a claim — concurrent resumes all see the same pending
   // approval. `resolveApproval` is the claim, and the loser must not go on to
   // run the tool a second time.
@@ -1153,10 +1180,6 @@ export async function resumeAgent(
 
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory
-  const agentRunner = singletonServices.agentRunner
-  if (!agentRunner) {
-    throw new AIProviderNotConfiguredError()
-  }
 
   if (!input.approved) {
     if (pending.type === 'agent-call') {
@@ -1585,6 +1608,7 @@ async function continueAfterToolResult(
     }
 
     await postStreamCleanup(persistingChannel, agentRunState, run.runId, {
+      traceparent: outgoingTraceparent({ trace: params.trace }),
       ...run,
       input: lastUserMessageText(runnerParams.messages),
     })

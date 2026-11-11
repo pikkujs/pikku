@@ -35,7 +35,7 @@ import { tmpdir } from 'os'
 import { spawnSync } from 'child_process'
 import fs, { unlinkSync, writeFileSync } from 'fs'
 
-const BASE_URL = 'gh:pikkujs/pikku/templates'
+const BASE_URL = 'gh:pikkujs/pikku/recipes'
 const DEFAULT_TEMPLATE = 'starter-template'
 const DEFAULT_PROJECT_NAME = 'my-app'
 const DEFAULT_PIKKUSTUDIO_APP = 'app'
@@ -139,16 +139,16 @@ const templates = [
     supports: ['cli'],
   },
   {
-    template: 'remote-rpc-pg',
+    template: 'mesh-rpc-pg',
     description:
-      'A two-server remote RPC template with PostgreSQL deployment discovery',
-    supports: ['http', 'remote-rpc'],
+      'A two-server mesh RPC template with PostgreSQL deployment discovery',
+    supports: ['http', 'mesh-rpc'],
   },
   {
-    template: 'remote-rpc-redis',
+    template: 'mesh-rpc-redis',
     description:
-      'A two-server remote RPC template with Redis deployment discovery',
-    supports: ['http', 'remote-rpc'],
+      'A two-server mesh RPC template with Redis deployment discovery',
+    supports: ['http', 'mesh-rpc'],
   },
   {
     template: 'workflows-pg-boss',
@@ -188,7 +188,6 @@ interface CliOptions {
   skipInstall?: boolean
   packageManager: PackageManager
   yarnLink?: string
-  stackblitz?: boolean
   variations?: boolean
   frontend?: string
 }
@@ -205,7 +204,6 @@ program
   )
   .option('-p, --package-manager <packageManager>', 'Package manager')
   .option('--yarn-link <link>', 'Yarn link (for local pikku development)')
-  .option('--stackblitz', 'Add StackBlitz configuration')
   .option('--variations', 'Show all template variations')
   .option('--frontend <frontend>', 'Frontend app to keep for cloud')
   .parse(process.argv)
@@ -320,11 +318,11 @@ async function setupTemplate(cliOptions: CliOptions) {
     mergeJsonFiles([functionsPath, templatePath], targetPath, 'tsconfig.json')
     mergeDirectories(functionsPath, targetPath)
     mergeDirectories(templatePath, targetPath)
-    replaceFunctionReferences(targetPath, cliOptions.stackblitz)
+    replaceFunctionReferences(targetPath)
     if (template !== 'functions') {
       removeFunctionsOnlyFiles(targetPath)
     }
-    cleanTSConfig(targetPath, cliOptions.stackblitz)
+    cleanTSConfig(targetPath)
     cleanPikkuConfig(targetPath, supportedFeatures)
     wranglerChanges(targetPath, name)
     serverlessChanges(targetPath, name)
@@ -332,19 +330,9 @@ async function setupTemplate(cliOptions: CliOptions) {
       targetPath,
       name,
       packageManager,
-      supportedFeatures,
-      cliOptions.stackblitz
+      supportedFeatures
     )
     ensureOxlintSetup(targetPath)
-
-    if (cliOptions.stackblitz) {
-      try {
-        unlinkSync(path.join(targetPath, 'run-tests.sh'))
-      } catch {
-        // File doesn't exist, ignore
-      }
-      writeFileSync(path.join(targetPath, '.nvmrc'), '22\n')
-    }
 
     if (packageManager === 'yarn') {
       writeFileSync(path.join(targetPath, 'yarn.lock'), '')
@@ -516,7 +504,6 @@ async function run() {
     install,
     packageManager,
     yarnLink: cliOptions.yarnLink,
-    stackblitz: cliOptions.stackblitz,
     variations: cliOptions.variations,
     frontend: cliOptions.frontend,
   }

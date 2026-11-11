@@ -4,11 +4,23 @@ import type { QueueConfigMapping } from './validate-worker-config.js'
 import { validateWorkerConfig } from './validate-worker-config.js'
 import type { Logger } from '../../services/logger.js'
 
+/** Called by {@link registerQueueWorkers} once per wired worker, to attach it to the adapter's backend. */
 export type QueueRegistrationCallback<T = any> = (
   queueName: string,
   processor: CoreQueueWorker
 ) => Promise<T>
 
+/**
+ * Validates every wired queue worker's config against an adapter's mapping and registers each one through `registerCallback`.
+ *
+ * A worker whose registration throws is logged and skipped, so one bad worker
+ * does not stop the rest.
+ *
+ * @param configMappings - Which {@link PikkuWorkerConfig} keys the adapter supports and how they map.
+ * @param logger - Receives registration progress, config warnings and failures.
+ * @param registerCallback - Attaches one worker to the backend.
+ * @returns The config validation result for each queue.
+ */
 export async function registerQueueWorkers<T = any>(
   configMappings: QueueConfigMapping,
   logger: Logger,

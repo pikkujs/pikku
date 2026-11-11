@@ -1,16 +1,7 @@
 ---
 name: pikku-meta
 description: >-
-  Use to inspect or evolve a project you did not just write — `pikku meta` and `pikku info` for
-  what the project declares (functions, schemas, wires, workflows, middleware, permissions) and
-  `pikku meta apply` to change it, `pikku versions` / `pikku release` for contract hashes,
-  breaking-change detection, the semver a release should get and shipping it, and `pikku audit` / `pikku
-  update` for dependency advisories and moving Pikku forward. TRIGGER when: user asks what
-  functions or routes exist, wants a function's input/output shape, wants to retag a function or
-  set config on a declaration, asks about API versioning, breaking changes, what semver a release
-  deserves, dependency vulnerabilities, the console Security screen, or upgrading Pikku. DO NOT
-  TRIGGER when: user is writing a new function or wiring (use the wiring skill) or asking about
-  Pikku concepts (use pikku-concepts).
+  Inspect or evolve an existing project: `pikku meta`/`info` (functions, schemas, wires), `pikku versions`/`release` (breaking changes, semver), `pikku audit`/`update` (vulnerabilities, upgrades).
 installGroups: [core]
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku info *)
 argument-hint: '[context|functions|schemas|workflows|middleware|permissions|wires|apply|versions|release|audit|update]'
@@ -23,18 +14,30 @@ and change it through the write path rather than by hand.
 
 ## Pick the reference
 
-| You are… | Read |
-| --- | --- |
-| Asking what exists, or setting config on a declaration | `references/meta.md` |
+| You are…                                                    | Read                       |
+| ----------------------------------------------------------- | -------------------------- |
+| Asking what exists, or setting config on a declaration      | `references/meta.md`       |
 | Versioning a contract, or versioning and shipping a release | `references/versioning.md` |
-| Chasing a dependency advisory, or upgrading Pikku | `references/audit.md` |
+| Chasing a dependency advisory, or upgrading Pikku           | `references/audit.md`      |
 
 ## Start with `pikku meta context`
 
-It answers in one call what a planner needs — functions, wires, middleware,
-permissions, workflows, capabilities, layout. Reach for `pikku meta` when you
-are going to act on the output and `pikku info` when a person will read it;
-they are the same ground in two shapes.
+`pikku meta context` is the first call. It prints a short map and no JSON: tables, workflows, permissions, middleware, emails, wire counts, screens, what the project says about itself (agent runner and model aliases, locales and how to add a key, the generated client's import, where routes, shell, nav and UI components are), then one line per function (id, `x` exposed, `r` readonly, a few words). Read it whole; it is about 12 KB for 165 functions. `pikku meta` alone only lists the subcommands and exits 1, so skip it.
+
+Then ask the narrower question instead of opening files:
+
+- `pikku meta grep <terms>`: everything the project knows, grouped by kind (functions, workflows, wires, tables and columns, screens, services, emails, translations in every locale, model aliases). Word-aware and any term may match: `invit` finds `invitation`, `'a|b'` means either.
+- `pikku meta db <table>`: column types. `pikku meta screens`, `services`, `emails`: routes with the RPCs each page reaches, session fields and services, email templates with their data.
+- `pikku meta context --json` is the full planner document (about 75 KB for the same app). Filter it with `jq` (`pikku meta context --json | jq '.functions[] | select(.id | test("cancel"; "i")) | {id, description, sourceFile}'`), never `head`. `pikku meta functions get <id>` has one function's schemas.
+
+Reach for `pikku meta` when you are going to act on the output and `pikku info` when a person will read it; they are the same ground in two shapes.
+
+## Tables: `pikku meta db`
+
+`pikku meta db` (also the `db` block of `pikku meta context --json`) says where the
+project declares its tables, which ones it declares, where their generated types
+are, and the commands that make the SQL. There is no migrations path in it,
+because you don't need one: change the declaration and run `pikku db generate`.
 
 ## Direction decides whether a change is breaking
 
@@ -48,7 +51,7 @@ that asymmetry built in, so let it decide rather than eyeballing a diff.
 
 - **Do not infer a function's input or output by reading its body**, and do not
   cast a call site to make it compile. The schema is the type; `pikku meta
-  functions get <id>` has it.
+functions get <id>` has it.
 - **Do not expect an unversioned function to be promoted for you.** Without an
   explicit `version: 2` it is version 1 of its contract, collides with the
   pinned `@v1`, and `pikku versions check` reports the published contract as
@@ -63,5 +66,5 @@ that asymmetry built in, so let it decide rather than eyeballing a diff.
   companions come from `@pikku/core`; the CLI writes it, the addon reads it, the
   UI renders it.
 - **Do not treat a failed audit run as a clean one.** `bun audit` exits non-zero
-  when it *finds* advisories and still writes its payload, so non-zero with
+  when it _finds_ advisories and still writes its payload, so non-zero with
   output is data; non-zero with no output throws on purpose.

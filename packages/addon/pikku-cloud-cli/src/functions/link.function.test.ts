@@ -48,18 +48,18 @@ await mock.module('../lib/http.js', () => ({
           invoke: async (name: string, data: any) => {
             order.push(`rpc:${name}`)
             invoked.push({ name, data })
-            if (name === 'importProject')
+            if (name === 'cloud:importProject')
               return { projectId: 'proj_1', projectSlug: 'shop' }
-            if (name === 'provisionRepo')
+            if (name === 'cloud:provisionRepo')
               return {
                 repoUrl: 'https://gitea.test/acme/shop',
                 cloneUrl: 'https://gitea.test/acme/shop.git',
                 username: 'u',
                 password: 'p',
               }
-            if (name === 'deployByStageKind')
+            if (name === 'cloud:deployByStageKind')
               return { deploymentId: 'dep_1', stageId: 'stage_1' }
-            if (name === 'checkGithubInstall') return { installed: true }
+            if (name === 'cloud:checkGithubInstall') return { installed: true }
             return {}
           },
         }
@@ -148,13 +148,13 @@ describe('cloud link', () => {
 
     assert.deepStrictEqual(
       invoked.map((i) => i.name),
-      ['importProject', 'deployByStageKind']
+      ['cloud:importProject', 'cloud:deployByStageKind']
     )
     assert.deepStrictEqual(order, [
-      'rpc:importProject',
+      'rpc:cloud:importProject',
       'writeConfigProjectId',
       'assertDeploySafety',
-      'rpc:deployByStageKind',
+      'rpc:cloud:deployByStageKind',
     ])
     assert.deepStrictEqual(pushes, [])
     assert.deepStrictEqual(result, {
@@ -182,14 +182,14 @@ describe('cloud link', () => {
 
     assert.deepStrictEqual(
       invoked.map((i) => i.name),
-      ['provisionRepo', 'importProject', 'deployByStageKind']
+      ['cloud:provisionRepo', 'cloud:importProject', 'cloud:deployByStageKind']
     )
     assert.deepStrictEqual(
       pushes.map((p) => p[0]),
       ['addRemote', 'pushWithCredential']
     )
     assert.strictEqual(
-      invoked.find((i) => i.name === 'importProject')?.data.repoUrl,
+      invoked.find((i) => i.name === 'cloud:importProject')?.data.repoUrl,
       'https://gitea.test/acme/shop'
     )
     assert.strictEqual(result.projectId, 'proj_1')

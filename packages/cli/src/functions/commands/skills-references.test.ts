@@ -14,6 +14,7 @@ const packageRoot = join(here, '..', '..', '..')
 assert.ok(skillsPackageDir, 'expected @pikku/skills to expose its skills/ dir')
 const skillsDir = skillsPackageDir
 const wiringPath = join(packageRoot, 'src', 'cli.wiring.ts')
+const addonsDir = join(packageRoot, '..', 'addon')
 const secretServicePath = join(
   packageRoot,
   '..',
@@ -45,6 +46,49 @@ function propertyNamed(
 }
 
 /**
+ * The top-level commands an addon contract adds to `commands` through
+ * `...refCLI('<namespace>:<contract>')`, read from the addon's own
+ * `defineCLICommands` call. `pikku report` is wired this way, so reading only
+ * the literal keys of `commands` misses it.
+ */
+function spreadContractCommands(expression: ts.Expression): string[] {
+  if (
+    !ts.isCallExpression(expression) ||
+    expression.expression.getText() !== 'refCLI'
+  ) {
+    return []
+  }
+  const [reference] = expression.arguments
+  if (!reference || !ts.isStringLiteralLike(reference)) return []
+  const contract = reference.text.split(':')[1]
+  const names: string[] = []
+  for (const addon of readdirSync(addonsDir, { withFileTypes: true })) {
+    const path = join(addonsDir, addon.name, 'src', 'contracts.ts')
+    if (!addon.isDirectory() || !existsSync(path)) continue
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        node.name.getText() === contract &&
+        node.initializer &&
+        ts.isCallExpression(node.initializer) &&
+        node.initializer.expression.getText() === 'defineCLICommands' &&
+        node.initializer.arguments[0] &&
+        ts.isObjectLiteralExpression(node.initializer.arguments[0])
+      ) {
+        for (const p of node.initializer.arguments[0].properties) {
+          if (ts.isPropertyAssignment(p)) {
+            names.push(p.name.getText().replace(/['"]/g, ''))
+          }
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(parse(path))
+  }
+  return names
+}
+
+/**
  * The set of commands `pikku` actually exposes, read from the wireCLI call that
  * defines them. Parsed from source rather than from `.pikku/*.gen.json`, which
  * is gitignored and so absent on a fresh clone.
@@ -63,6 +107,10 @@ function realCommands(): Set<string> {
         for (const p of block.initializer.properties) {
           if (ts.isPropertyAssignment(p)) {
             commands.add(p.name.getText().replace(/['"]/g, ''))
+          } else if (ts.isSpreadAssignment(p)) {
+            for (const name of spreadContractCommands(p.expression)) {
+              commands.add(name)
+            }
           }
         }
       }

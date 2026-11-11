@@ -1,15 +1,7 @@
 ---
 name: pikku-architect
 description: >-
-  Use to turn one claimed changeset into the technical plan its build is measured against —
-  the tables, functions, wires, roles, scopes, screens and scenarios it owes, split into passes and
-  written through `pikku knowledge plan set`. The plan is the denominator
-  `pikku knowledge plan progress` divides by, so it is written BEFORE any of the changeset's code
-  exists and never edited afterwards to match what got built. TRIGGER when: `pikku changes
-  claim` says a changeset needs a plan, `changes done` or `pikku changes next` refuses one for having no
-  plan, or the user asks to plan or architect a changeset. DO NOT TRIGGER when: the knowledge notes
-  themselves are still being written (use pikku-knowledge), the plan already exists and the job is
-  to build it (use pikku-changes), or the changeset was claimed with no plan needed.
+  Write a claimed changeset's technical plan with `pikku knowledge plan set`, before any code; never edit it to match the build. For when `pikku changes claim` or `next` needs a plan.
 installGroups: [core]
 agent:
   tools: read, write, edit, bash, grep
@@ -20,7 +12,6 @@ agent:
     verify:
       - id: knowledge-consistent
         command: pikku knowledge validate
-
 ---
 
 # Plan one changeset
@@ -94,8 +85,8 @@ pikku knowledge plan schema       # the only spec for what you are about to writ
 
 Then read the changeset's changes in full (`pikku changes show <n>` for each), every
 knowledge note they touch — the entity notes, and the note a change's `Knowledge:` line names — the
-decisions that constrain them, and the migrations already in `db/sqlite/`: those say whether your
-tables are new or an alter.
+decisions that constrain them, and `pikku meta db` with the file it names: that says whether your
+tables are new or a change to one already declared.
 
 **Do not re-interview.** If a change leaves something that alters the schema or a screen genuinely
 undecided, `pikku changes ask` on it and plan the rest; otherwise plan the reading that
@@ -192,9 +183,10 @@ produce identical schemas until someone deletes something. A `cascade` is checke
 migrations by `plan progress`, and needs `provedBy` naming a scenario in this same plan that deletes
 the parent and asserts the children are gone.
 
-A table that already exists is altered by a NEW forward migration, numbered on from the ones in
-`db/sqlite/`. Editing an applied migration is the hash mismatch that makes a deployed database
-refuse to migrate, so plan the alter as its own file.
+A table that already exists is altered by changing its declaration in `db/tables.ts`:
+`pikku db generate` writes the next migration, and adds only. Plan a new column as nullable or with
+a default. A drop, a rename or a type change is refused, so plan that as a person's decision rather
+than as a step of the build.
 
 ### `functions` — with their wire and their rule on them
 

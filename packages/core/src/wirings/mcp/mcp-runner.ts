@@ -26,6 +26,12 @@ import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
 } from '../../services/user-session-service.js'
+import { traceWire, tracedLogger } from '../../trace.js'
+
+/**
+ * A JSON-RPC error raised by `runMCPTool`, `runMCPResource` and `runMCPPrompt`; `error` is the
+ * response body to send back to the MCP client.
+ */
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse) {
     super(error?.message || 'MCP Error')
@@ -54,6 +60,16 @@ export type RunMCPEndpointParams<Tools extends string = any> = {
   exposeErrors?: boolean
 }
 
+/**
+ * Registers the function behind an MCP resource, addressed by `uri` (which may contain `{param}` placeholders).
+ *
+ * Skipped with a warning when the inspector recorded no metadata for the URI, which usually
+ * means the wiring shares a file the inspector could not resolve.
+ *
+ * @param mcpResource - The resource's URI, description and function.
+ * @throws Error when a resource with the same URI is already wired.
+ * @example snippet: mcpResource
+ */
 export const wireMCPResource = <
   PikkuFunctionConfig extends CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<any, any>
@@ -77,6 +93,15 @@ export const wireMCPResource = <
   resources.set(mcpResource.uri, mcpResource)
 }
 
+/**
+ * Registers the function behind an MCP prompt, addressed by `name`.
+ *
+ * Skipped with a warning when the inspector recorded no metadata for the prompt.
+ *
+ * @param mcpPrompt - The prompt's name, description and function.
+ * @throws Error when a prompt with the same name is already wired.
+ * @example snippet: mcpPrompt
+ */
 export const wireMCPPrompt = <
   PikkuFunctionConfig extends CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<any, any>
@@ -100,6 +125,20 @@ export const wireMCPPrompt = <
   prompts.set(mcpPrompt.name, mcpPrompt)
 }
 
+/**
+ * Runs a `resources/read` request through the function runner, matching `uri` exactly first and
+ * then against each templated resource URI, whose captured parameters are merged into the input.
+ *
+ * The resource's own middleware and permissions apply (keyed by the template, not the concrete
+ * URI). Auth middleware only sees a session when `params.http` carries the originating request.
+ *
+ * @param request - The JSON-RPC request; `params` becomes the function input.
+ * @param params - The MCP wire, HTTP request (if any) and error-exposure flag.
+ * @param uri - The concrete URI the client asked for.
+ * @returns The JSON-RPC response holding the function's result.
+ * @throws MCPError with the error's registered `mcpCode`, or `-32603` (internal error) otherwise.
+ * Stack details are attached only when `exposeErrors` is set and not in production.
+ */
 export async function runMCPResource(
   request: JsonRpcRequest,
   params: RunMCPEndpointParams,
@@ -161,6 +200,18 @@ export async function runMCPResource(
   )
 }
 
+/**
+ * Runs a `tools/call` request for the tool registered as `name` through the function runner.
+ *
+ * A result is wrapped as a single JSON text part unless the function declares `MCPToolResponse`
+ * as its output. Errors and auth behave as in `runMCPResource`.
+ *
+ * @param request - The JSON-RPC request; `params` becomes the function input.
+ * @param params - The MCP wire, HTTP request (if any) and error-exposure flag.
+ * @param name - The registered tool name (resolve a wire name with `mcpResolveWireName` first).
+ * @returns The JSON-RPC response holding the tool result.
+ * @throws MCPError as `runMCPResource` does; an unknown tool is a not-found error.
+ */
 export async function runMCPTool(
   request: JsonRpcRequest,
   params: RunMCPEndpointParams,
@@ -177,6 +228,16 @@ export async function runMCPTool(
   )
 }
 
+/**
+ * Runs a `prompts/get` request for the prompt registered as `name` through the function runner.
+ * Errors and auth behave as in `runMCPResource`.
+ *
+ * @param request - The JSON-RPC request; `params` becomes the prompt arguments.
+ * @param params - The MCP wire, HTTP request (if any) and error-exposure flag.
+ * @param name - The prompt name.
+ * @returns The JSON-RPC response holding the prompt messages.
+ * @throws MCPError as `runMCPResource` does; an unknown prompt is a not-found error.
+ */
 export async function runMCPPrompt(
   request: JsonRpcRequest,
   params: RunMCPEndpointParams,
@@ -208,6 +269,10 @@ async function runMCPPikkuFunc(
 ): Promise<JsonRpcResponse> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
+  // Here rather than left to the function runner: a call refused before it
+  // gets there still has to be found in the logs.
+  const trace = traceWire()
+  const logger = tracedLogger(singletonServices.logger, trace.traceId)
 
   try {
     if (request.jsonrpc !== '2.0') {
@@ -234,6 +299,7 @@ async function runMCPPikkuFunc(
       singletonServices.sessionStore
     )
     const wire: PikkuRawWire = {
+      ...trace,
       mcp: mcpWire,
       // Only when the transport supplied one. Setting `http: undefined`
       // explicitly would be the same to a reader and different to a spread.
@@ -286,45 +352,46 @@ async function runMCPPikkuFunc(
       result,
     }
   } catch (e: any) {
-    singletonServices.logger.error(
-      `Error running MCP ${type} '${name}':`,
-      e.constructor
-    )
+    logger.error(`Error running MCP ${type} '${name}':`, e.constructor)
     const errorResponse = getErrorResponse(e)
     if (errorResponse?.mcpCode) {
       throw new MCPError({
         id: request.id,
         code: errorResponse.mcpCode,
         message: errorResponse.message,
+        data: { errorId: trace.traceId },
       })
     } else {
       if (errorResponse) {
-        singletonServices.logger.warn(
-          `Got error without a mapping: ${errorResponse.message}`
-        )
+        logger.warn(`Got error without a mapping: ${errorResponse.message}`)
       }
       throw new MCPError({
         id: request.id,
         code: -32603,
         message: 'Internal error',
         // knowledge: decisions/security/mcp-internal-error-details-are-double-gated-on-production.md
-        data:
-          exposeErrors && !isProduction() && e instanceof Error
+        data: {
+          errorId: trace.traceId,
+          ...(exposeErrors && !isProduction() && e instanceof Error
             ? { message: e.message, stack: e.stack }
-            : undefined,
+            : {}),
+        },
       })
     }
   }
 }
 
+/** The inspector-generated metadata for every MCP resource, keyed by URI (template). */
 export const getMCPResourcesMeta = () => {
   return pikkuState(null, 'mcp', 'resourcesMeta')
 }
 
+/** The inspector-generated metadata for every MCP tool, keyed by name. */
 export const getMCPToolsMeta = () => {
   return pikkuState(null, 'mcp', 'toolsMeta')
 }
 
+/** The inspector-generated metadata for every MCP prompt, keyed by name. */
 export const getMCPPromptsMeta = () => {
   return pikkuState(null, 'mcp', 'promptsMeta')
 }
@@ -401,6 +468,7 @@ export const mcpEveryTargetRequiresSession = (): boolean => {
   return seen > 0
 }
 
+/** The three kinds of MCP target a server exposes. */
 export type McpTargetType = 'tool' | 'resource' | 'prompt'
 
 const mcpMetaFor = (type: McpTargetType) =>

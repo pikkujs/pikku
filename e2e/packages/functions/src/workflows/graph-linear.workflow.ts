@@ -1,6 +1,8 @@
 import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 export const graphLinearWorkflow = pikkuWorkflowGraph({
+  auth: false,
+  expose: true,
   description: 'Linear graph: double then format then notify',
   tags: ['graph', 'linear'],
   nodes: {

@@ -52,6 +52,7 @@ export const userUpdate = pikkuSessionlessFunc<
   { userId: string; name?: string; role?: string; status?: string },
   { id: string; name: string; role: string; status: string; updatedAt: string }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Update User',
   func: async ({ logger }, data) => {
     logger.info(`Updating user: ${data.userId}`)
@@ -69,6 +70,7 @@ export const userDelete = pikkuSessionlessFunc<
   { userId: string },
   { deleted: boolean; userId: string }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Delete User',
   func: async ({ logger }, data) => {
     logger.info(`Deleting user: ${data.userId}`)
@@ -91,6 +93,7 @@ export const userList = pikkuSessionlessFunc<
     }>
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'List Users',
   func: async ({ logger }, data) => {
     logger.info(`Listing users with role: ${data.role}, status: ${data.status}`)
@@ -134,6 +137,7 @@ export const userInvite = pikkuSessionlessFunc<
     expiresAt: string
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Invite User',
   func: async ({ logger }, data) => {
     logger.info(`Inviting user: ${data.email}`)
@@ -152,6 +156,7 @@ export const userInviteAccept = pikkuSessionlessFunc<
   { token: string; name: string; password: string },
   { userId: string; email: string; name: string; status: string }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Accept User Invite',
   func: async ({ logger }, data) => {
     logger.info(`Accepting invite with token: ${data.token}`)

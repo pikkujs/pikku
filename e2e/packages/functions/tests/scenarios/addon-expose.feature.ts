@@ -1,7 +1,8 @@
 /**
  * `wireAddon`'s `expose` decides what `POST /rpc/<name>:<fn>` reaches for an
- * addon instance. The todos addon never declared `getTodo` exposed, and the
- * app's list names it; `deleteTodo` is in neither, so it stays a 404.
+ * addon instance, from the functions the addon declared exposed. The todos
+ * addon declares `getTodo` exposed and the app's list names it; `deleteTodo`
+ * is not declared, so it stays a 404.
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
@@ -11,7 +12,7 @@ export const addonExposeListOpensScenario = pikkuScenario<
 >({
   title: 'An addon function the wiring lists is reachable over RPC',
   description:
-    'getTodo was never declared exposed by the addon; the expose list opens it',
+    'getTodo is declared exposed by the addon, and the expose list opts in to it',
   tags: ['scenario', 'addon-expose'],
   func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.given(
@@ -40,8 +41,8 @@ export const addonExposeListClosesScenario = pikkuScenario<
   void,
   { status: 404 }
 >({
-  title: 'An addon function the wiring does not list is not found over RPC',
-  description: 'deleteTodo is neither declared nor listed, so /rpc answers 404',
+  title: 'An addon function the addon does not expose is not found over RPC',
+  description: 'deleteTodo is not declared exposed, so /rpc answers 404',
   tags: ['scenario', 'addon-expose'],
   func: async (_services, _data, { scenario, virtualUsers }) => {
     const call = await scenario.when(

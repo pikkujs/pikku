@@ -94,6 +94,7 @@ export interface CLICommandMeta {
   subcommands?: Record<string, CLICommandMeta>
   middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
   isDefault?: boolean
+  hidden?: boolean
 }
 
 /**
@@ -288,6 +289,8 @@ export type CoreCLICommandConfig<
   permissions?: any[]
   /** Runs when the parent is invoked with no subcommand named. */
   isDefault?: boolean
+  /** Still runs, but is left out of `--help`: for commands a program invokes, not a person. */
+  hidden?: boolean
 }
 
 /**
@@ -319,6 +322,7 @@ export interface CoreCLICommand<
   tags?: string[]
   subcommands?: Subcommands
   isDefault?: boolean
+  hidden?: boolean
 }
 
 /**

@@ -1,5 +1,5 @@
 import { execSync } from 'child_process'
-import { readFileSync, existsSync, unlinkSync } from 'fs'
+import { readFileSync, existsSync, unlinkSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { test } from 'node:test'
 import * as assert from 'node:assert'
@@ -11,12 +11,39 @@ const INSPECTOR_STATE_FILE = join(
   'inspector-state.json'
 )
 
+// Filtering is declared in config now, so a scenario's flag-style filter string
+// becomes a backend in a generated config. PIKKU_DEPLOY_CODEGEN makes `pikku all`
+// run the one filtered pass the backend names instead of building every backend.
+const SCENARIO_CONFIG = 'pikku.scenario.config.json'
+
 function runPikkuCLI(args: string[]): void {
   const command = `node ../../packages/cli/dist/bin/pikku.js ${args.join(' ')}`
   execSync(command, {
     cwd: process.cwd(),
     stdio: 'pipe',
+    env: { ...process.env, PIKKU_DEPLOY_CODEGEN: '1' },
   })
+}
+
+/** `--tags=a,b --excludeTags=c` -> `{ tags: ['a','b'], excludeTags: ['c'] }` */
+function filterFromFlags(flags: string): Record<string, string[]> {
+  const filter: Record<string, string[]> = {}
+  for (const token of flags.split(' ').filter(Boolean)) {
+    const match = /^--([A-Za-z]+)=(.*)$/.exec(token)
+    if (!match) throw new Error(`Cannot read scenario filter "${token}"`)
+    filter[match[1]] = match[2].split(',')
+  }
+  return filter
+}
+
+/** Writes the project config plus a `scenario` backend carrying the flags' filter. */
+function writeScenarioConfig(flags: string): void {
+  const base = JSON.parse(readFileSync('pikku.config.json', 'utf-8'))
+  base.backends = {
+    ...base.backends,
+    scenario: { filter: filterFromFlags(flags) },
+  }
+  writeFileSync(SCENARIO_CONFIG, JSON.stringify(base, null, 2))
 }
 
 /**
@@ -170,8 +197,15 @@ function runPikkuWithFilter(filter: string): {
   try {
     // Run pikku all with the filter, loading from the cached state
     const args = ['all', `--state-input=${INSPECTOR_STATE_FILE}`]
-    if (filter) {
-      args.push(...filter.split(' ').filter(Boolean))
+    const named = /^--filter=(\S+)$/.exec(filter)
+    if (named) {
+      // A backend the project config declares by that name.
+      args.push(`--backend=${named[1]}`)
+    } else if (filter) {
+      writeScenarioConfig(filter)
+      args.push(`--config=${SCENARIO_CONFIG}`, '--backend=scenario')
+    } else {
+      args.push('--backend=all')
     }
 
     runPikkuCLI(args)
@@ -449,6 +483,8 @@ async function runTests() {
     unlinkSync(INSPECTOR_STATE_FILE)
     console.log(`🧹 Cleaned up state file: ${INSPECTOR_STATE_FILE}\n`)
   }
+
+  if (existsSync(SCENARIO_CONFIG)) unlinkSync(SCENARIO_CONFIG)
 
   if (failed > 0) {
     process.exit(1)

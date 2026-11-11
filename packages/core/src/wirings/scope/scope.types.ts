@@ -7,6 +7,13 @@ export type CoreScopeNode = {
   displayName?: string
   /** Surfaced in the console when granting. */
   description?: string
+  /**
+   * A function that requires this scope, or one beneath it, is resolved live:
+   * its scopes are re-read from the `ScopeService` on every call rather than
+   * trusted from a session that may carry a cached grant. Descendants inherit
+   * the flag.
+   */
+  live?: boolean
   /** Nested scopes, keyed by their segment. */
   scopes?: Record<string, CoreScopeNode>
 }
@@ -18,9 +25,11 @@ export type CoreScopeNode = {
  */
 export type CoreScopes = Record<string, CoreScopeNode>
 
+/** A node of a scope tree as recorded in generated meta. */
 export type ScopeNodeMeta = {
   displayName?: string
   description?: string
+  live?: boolean
   scopes?: Record<string, ScopeNodeMeta>
 }
 
@@ -33,18 +42,23 @@ export type ScopeOrigin =
   | { kind: 'generated' }
   | { kind: 'addon'; package: string; displayName?: string }
 
+/** A root scope tree as recorded in generated meta, with where it came from. */
 export type ScopeDefinitionMeta = {
   name: string
   displayName?: string
   description?: string
+  live?: boolean
   scopes?: Record<string, ScopeNodeMeta>
   sourceFile?: string
   origin?: ScopeOrigin
 }
 
+/** Scope trees as the inspector found them. */
 export type ScopeDefinitions = ScopeDefinitionMeta[]
+/** Scope trees collected by the CLI, keyed by root segment. */
 export type ScopeDefinitionsMeta = Record<string, ScopeDefinitionMeta>
 
+/** One grantable scope from a flattened scope tree; every node, not just the leaves, appears. */
 export type FlatScope = {
   /** Colon-delimited id, e.g. `admin:invoices:create`. */
   id: string

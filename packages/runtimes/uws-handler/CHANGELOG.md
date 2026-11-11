@@ -1,3 +1,40 @@
+## 0.12.11
+
+### Patch Changes
+
+- 9999ec1: `@pikku/core/http` exports `mergeRequestData(...parts)`, the params/query/body merge and conflict check every `PikkuHTTPRequest.data()` performs. The fetch request and the Express, Fastify and uWS adapters now all call it instead of carrying their own copy.
+
+  Behaviour change for the Express, Fastify and uWS adapters: a request whose params, query or body carries a `__proto__`, `constructor` or `prototype` key now has that key dropped, as the fetch adapter already did, instead of being rejected with a 422 "Conflicting values" error.
+
+  All four adapters (fetch included) now check for a conflict only against keys the merge itself has set, using `Object.hasOwn`. A request key that names an `Object.prototype` member, such as `?toString=1` or `hasOwnProperty`, used to collide with the inherited member and fail with a 422; it is now merged like any other key.
+
+  These adapters need an `@pikku/core` that exports `mergeRequestData`.
+
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- Updated dependencies [3a9c9d8]
+- Updated dependencies [dc952a8]
+- Updated dependencies [7e44a0c]
+- Updated dependencies [8ec91f0]
+- Updated dependencies [ffbe1a2]
+- Updated dependencies [9999ec1]
+- Updated dependencies [228faad]
+- Updated dependencies [84de1eb]
+- Updated dependencies [e659614]
+- Updated dependencies [6c79f8d]
+- Updated dependencies [fa308d4]
+- Updated dependencies [0a4676a]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [2e05e48]
+- Updated dependencies [a88391a]
+- Updated dependencies [3df9013]
+  - @pikku/core@0.12.144
+
 ## 0.12.10
 
 ### Patch Changes

@@ -1,4 +1,7 @@
-import { PROVIDER_REGISTRY, pluginDisplayName } from '@pikku/better-auth'
+import {
+  PROVIDER_REGISTRY,
+  pluginDisplayName,
+} from '@pikku/better-auth/constants'
 import type { AuthDefinition } from '@pikku/inspector'
 
 export interface AuthMetaProvider {

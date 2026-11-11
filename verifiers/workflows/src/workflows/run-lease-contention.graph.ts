@@ -3,6 +3,7 @@ import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 // The graph twin of `runLeaseContentionWorkflow`: a `forEach` fan-out whose
 // items all finish at `releaseAt`.
 export const graphRunLeaseContention = pikkuWorkflowGraph({
+  auth: false,
   description: 'Graph fan-out whose items all finish at the same instant',
   tags: ['test', 'lease'],
   nodes: {

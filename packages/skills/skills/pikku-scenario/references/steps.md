@@ -358,10 +358,9 @@ is the app's language, not the team's. Ask, or leave it `en`.
 
 **Where a non-`en` `metaLocale` still shows English, today.** The reporter composes a
 sentence as `<Keyword> <virtual user> <template>` (`composeStepProse`), and the keyword is
-an English literal. The Console translates the Given/When/Then keywords into its own
-UI language; the CLI reporter does not, so `metaLocale: "de"` gives you German step
+an English literal. The CLI reporter does not translate the Given/When/Then keywords, so `metaLocale: "de"` gives you German step
 prose inside an English frame — `Given shopper kauft 1 Äpfel`. Write templates that read
 acceptably in that frame rather than trying to defeat it. A second gap: where a
-function or scenario declares no `title`, the Console falls back to splitting the
-**identifier** into an English-looking label (`toEnglishName`), so under a
+function or scenario declares no `title`, the label falls back to splitting the
+**identifier** into English words (`toEnglishName`), so under a
 non-`en` `metaLocale` meta is worth authoring rather than leaving to the fallback.

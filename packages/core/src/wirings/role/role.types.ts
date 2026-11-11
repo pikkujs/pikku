@@ -27,6 +27,7 @@ export type CoreSystemRole = {
  */
 export type CoreSystemRoles = Record<string, CoreSystemRole>
 
+/** A system role declaration as recorded in generated meta. */
 export type SystemRoleDefinitionMeta = {
   name: string
   displayName?: string
@@ -35,7 +36,9 @@ export type SystemRoleDefinitionMeta = {
   sourceFile?: string
 }
 
+/** System role declarations as the inspector found them. */
 export type SystemRoleDefinitions = SystemRoleDefinitionMeta[]
+/** System role declarations collected by the CLI, keyed by name. */
 export type SystemRoleDefinitionsMeta = Record<string, SystemRoleDefinitionMeta>
 
 /** A declared system role, ready to sync into a scope store. */

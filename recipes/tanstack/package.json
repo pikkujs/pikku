@@ -1,0 +1,39 @@
+{
+  "name": "@pikku/templates-tanstack",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "vite build && tsc --noEmit",
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
+    "dev": "concurrently 'pikku dev --port 4002' 'vite dev'",
+    "pikku": "pikku",
+    "start": "pikku serve --port 4002",
+    "test:fullstack": "npx tsx client/fullstack.ts",
+    "test": "bash ../functions/run-tests.sh --build 'npm run build' --server 'npm run start' --url http://localhost:4002 --fullstack",
+    "test:browser": "npx tsx client/browser.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "^0.12.154",
+    "@pikku/fetch": "^0.12.15",
+    "@tanstack/react-router": "^1.170.45",
+    "@tanstack/react-start": "^1.169.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tslib": "^2.8.1",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@pikku/cli": "^0.12.208",
+    "@playwright/test": "1.64.1",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  }
+}

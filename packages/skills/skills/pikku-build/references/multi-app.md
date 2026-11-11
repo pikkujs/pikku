@@ -139,16 +139,17 @@ field — not the `virtualUsers` array on the `frontends` entry — is what
 with no `app` lands on the fallback frontend, which is the other app's screens
 with the right session on them.
 
-One environment is enough. `pikku.config.json` takes an `appUrls` map beside the
-single `appUrl` fallback, and the CLI takes `--app-url <app>=<url>,<app>=<url>`:
+One environment is enough. An environment's `frontends` maps each frontend name to
+its URL, and the CLI takes `--app-url <app>=<url>,<app>=<url>`:
 
 ```json
 "local": {
-  "apiUrl": "http://localhost:3000",
-  "appUrl": "http://localhost:7104",
-  "appUrls": { "app": "http://localhost:7104", "admin": "http://localhost:7105" }
+  "backends": { "api": {} },
+  "frontends": { "app": "http://localhost:7104", "admin": "http://localhost:7105" }
 }
 ```
+
+The local backend's url comes from `backends.api.dev.port`.
 
 Three things follow, and each one has cost a run:
 

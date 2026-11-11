@@ -8,6 +8,16 @@ import type {
 } from './http.types.js'
 import { wireHTTP } from './http-runner.js'
 
+/**
+ * Declares a group of HTTP routes without wiring them, so the group can be composed and typed as a contract.
+ *
+ * Accepts either a bare route map or a config with `basePath`, `auth`, `tags`
+ * and `middleware` that apply to every route in it. Nested groups concatenate
+ * `basePath`s, tags and middleware; a route's own `auth` wins over the group's.
+ * Pass the result to {@link wireHTTPRoutes} to register it.
+ *
+ * @example snippet: wireHttp
+ */
 export function defineHTTPRoutes<T extends HTTPRouteMap>(
   routes: T
 ): HTTPRouteContract<T>
@@ -27,6 +37,17 @@ export function defineHTTPRoutes<T extends HTTPRouteMap>(
   return { routes: configOrRoutes as T }
 }
 
+/**
+ * Wires a map (or array) of routes and route groups in one call.
+ *
+ * Each route is registered through {@link wireHTTP} with its group's `basePath`
+ * prefixed to its path, the group's middleware run before its own, and the
+ * group's `auth` applied when the route sets none.
+ *
+ * @param config - Group options plus `routes`: a map of routes, groups from {@link defineHTTPRoutes}, or nested maps.
+ *
+ * @example snippet: httpRoutesWiring
+ */
 export const wireHTTPRoutes = (config: WireHTTPRoutesConfig): void => {
   const { routes, ...groupConfig } = config
 

@@ -1,8 +1,16 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, test } from 'node:test'
 
 import type { AnalyticsEventMeta } from '@pikku/core/analytics'
+
+import { createScriptContent, ingestText } from './script-content.js'
+
+const content = createScriptContent(
+  fileURLToPath(new URL('../.pikku-runtime/script-content', import.meta.url))
+)
+const readGenerated = async (relative: string) =>
+  ingestText(content, fileURLToPath(new URL(relative, import.meta.url)))
 
 /**
  * The console's event catalog is built from this file and nothing else: it is
@@ -12,13 +20,7 @@ import type { AnalyticsEventMeta } from '@pikku/core/analytics'
  * rather than left to the ingest tests above.
  */
 const meta: Record<string, AnalyticsEventMeta> = JSON.parse(
-  readFileSync(
-    new URL(
-      '../.pikku/analytics/pikku-analytics-meta.gen.json',
-      import.meta.url
-    ),
-    'utf-8'
-  )
+  await readGenerated('../.pikku/analytics/pikku-analytics-meta.gen.json')
 )
 
 describe('the generated analytics meta', () => {
@@ -68,17 +70,13 @@ describe('the generated analytics meta', () => {
   })
 })
 
-describe('the scaffolded ingest', () => {
-  const functions: Record<string, { tags?: string[] }> = JSON.parse(
-    readFileSync(
-      new URL(
-        '../.pikku/function/pikku-functions-meta-verbose.gen.json',
-        import.meta.url
-      ),
-      'utf-8'
-    )
+const functions: Record<string, { tags?: string[] }> = JSON.parse(
+  await readGenerated(
+    '../.pikku/function/pikku-functions-meta-verbose.gen.json'
   )
+)
 
+describe('the scaffolded ingest', () => {
   test("is tagged as pikku's own, so the console lists it as built-in", () => {
     assert.deepEqual(functions.analyticsIngest?.tags, ['pikku', 'analytics'])
   })

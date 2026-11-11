@@ -12,6 +12,9 @@ export type ReportConsent = 'always' | 'never'
 /** One answer to the question: `yes` and `no` apply to what is held now only. */
 export type ReportAnswer = 'yes' | 'no' | ReportConsent
 
+/** 2: `always` covers findings sent with the account. */
+const CONSENT_VERSION = 2
+
 export const REPORT_ANSWERS: ReportAnswer[] = ['yes', 'no', 'always', 'never']
 
 export function consentFile(): string {
@@ -24,7 +27,8 @@ export function consentFile(): string {
 /**
  * Consent belongs to the person, so it lives on their machine rather than in
  * a project config that is committed and shared. `PIKKU_REPORT` overrides it
- * for CI and sandboxes, where there is no one to ask.
+ * for CI and sandboxes, where there is no one to ask and the home directory
+ * may be read-only.
  */
 export async function readConsent(): Promise<ReportConsent | null> {
   const fromEnv = process.env.PIKKU_REPORT
@@ -32,8 +36,11 @@ export async function readConsent(): Promise<ReportConsent | null> {
   const file = consentFile()
   if (!existsSync(file)) return null
   try {
-    const { consent } = JSON.parse(await readFile(file, 'utf8'))
-    return consent === 'always' || consent === 'never' ? consent : null
+    const { consent, version } = JSON.parse(await readFile(file, 'utf8'))
+    if (consent === 'never') return consent
+    // `always` saved before findings were linked to an account was agreed to
+    // for anonymous reports, so it is asked again.
+    return consent === 'always' && version === CONSENT_VERSION ? consent : null
   } catch {
     return null
   }
@@ -44,8 +51,11 @@ export async function saveConsent(consent: ReportConsent): Promise<void> {
   await mkdir(dirname(file), { recursive: true })
   await writeFile(
     file,
-    JSON.stringify({ consent, savedAt: new Date().toISOString() }, null, 2) +
-      '\n',
+    JSON.stringify(
+      { consent, version: CONSENT_VERSION, savedAt: new Date().toISOString() },
+      null,
+      2
+    ) + '\n',
     { encoding: 'utf8', mode: 0o600 }
   )
 }

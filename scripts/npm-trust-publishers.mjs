@@ -45,7 +45,7 @@ const REPO = 'pikkujs/pikku'
 // package dies on `YN0033: No authentication configured for request`.
 const WORKFLOW = 'publish.yml'
 
-// Every directory a publishable package can live in. `templates/`, `verifiers/`
+// Every directory a publishable package can live in. `recipes/`, `verifiers/`
 // and `e2e/` are private by definition, so they are not walked at all.
 const PACKAGE_ROOTS = ['packages']
 

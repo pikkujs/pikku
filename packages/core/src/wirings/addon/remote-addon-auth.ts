@@ -5,16 +5,34 @@ import {
   type SecretValue,
 } from '../../classification/secret-value.js'
 
+/**
+ * Where the bearer token for a remote addon call comes from: a per-user credential, a deployment
+ * secret, or a resolver function. `credentialId` needs a wire with credential access.
+ */
 export type RemoteAddonAuthBinding =
   | { credentialId: string }
   | { secretId: string }
   | {
+      /**
+       * `null` says this call carries no credential, for a host whose surface
+       * is public to anonymous callers. An empty or undefined token still
+       * throws, so a resolver that lost its token does not go out anonymous.
+       */
       resolve: (
         services: CoreServices,
         wire: PikkuRawWire
-      ) => string | SecretValue<string> | Promise<string | SecretValue<string>>
+      ) =>
+        | string
+        | SecretValue<string>
+        | null
+        | Promise<string | SecretValue<string> | null>
     }
 
+/**
+ * Thrown (401) when a remote addon's token cannot be resolved: the binding needs credential
+ * access the wire lacks, or it resolved to an empty value. The call is refused rather than sent
+ * unauthenticated.
+ */
 export class RemoteAddonAuthError extends PikkuError {
   public readonly namespace: string
   constructor(namespace: string, detail: string) {
@@ -27,7 +45,10 @@ addError(RemoteAddonAuthError, {
   message: 'Remote addon authentication could not be resolved.',
 })
 
-/** Returns `null` only when no auth is bound; an empty resolved token throws. */
+/**
+ * Returns `null` when no auth is bound or `resolve` answers `null`; any other
+ * empty token throws.
+ */
 export async function resolveRemoteAddonToken(
   auth: RemoteAddonAuthBinding | undefined,
   services: CoreServices,
@@ -51,6 +72,7 @@ export async function resolveRemoteAddonToken(
     token = await services.secrets.getSecret(auth.secretId)
   } else if (typeof auth.resolve === 'function') {
     token = await auth.resolve(services, wire)
+    if (token === null) return null
   }
 
   // The wire is where a secret is meant to end up, so unwrap it here rather

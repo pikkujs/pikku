@@ -6,10 +6,10 @@ export const progressiveEnhancementExample = pikkuSessionlessFunc<
 >(async ({}, _, { channel }) => {
   if (channel) {
     setTimeout(() => {
-      channel?.send({ state: 'pending' })
+      void channel?.send({ state: 'pending' })
     }, 2500)
     setTimeout(() => {
-      channel?.send({ state: 'done' })
+      void channel?.send({ state: 'done' })
     }, 5000)
   }
   return { state: 'initial' }

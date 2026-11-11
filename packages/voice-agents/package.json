@@ -1,6 +1,6 @@
 {
   "name": "@pikku/voice-agents",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -10,27 +10,31 @@
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",
-  "main": "dist/cjs/index.js",
+  "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js"
-    }
+      "import": "./dist/esm/index.js"
+    },
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "scripts": {
     "tsc": "tsc",
     "test": "bash run-tests.sh",
     "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
-    "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
-    "build": "bun run build:esm && bun run build:cjs",
-    "prepublishOnly": "bun run build"
+    "build": "bun run clean && bun run build:esm",
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "peerDependencies": {
     "react": "^18 || ^19"
   },
   "devDependencies": {
-    "@ricky0123/vad-web": "^0.0.30",
+    "@ricky0123/vad-web": "^0.0.31",
     "@types/react": "^19",
     "react": "^19"
   }

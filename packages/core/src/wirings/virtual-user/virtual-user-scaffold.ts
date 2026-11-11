@@ -6,7 +6,7 @@ import type { Logger } from '../../services/logger.js'
 import type { MetaService } from '../../services/meta-service.js'
 import type { VariablesService } from '../../services/variables-service.js'
 import type { AgentRunnerService } from '../../services/agent-runner-service.js'
-import type { HttpVirtualUsersConfig } from '../../services/http-virtual-users.js'
+import type { HttpVirtualUsersConfig } from './http-virtual-users.js'
 import type {
   ResolvedVirtualUser,
   ScenarioVirtualUsers,
@@ -118,6 +118,11 @@ export const requireVirtualUserRunStore = (
   return store
 }
 
+/**
+ * The schedule store, or an error naming the one to wire.
+ *
+ * @throws Error when no `virtualUserScheduleStore` is wired.
+ */
 export const requireVirtualUserScheduleStore = (
   store: VirtualUserScheduleStore | undefined
 ): VirtualUserScheduleStore => {
@@ -350,6 +355,9 @@ export const serializeVirtualUserSchedule = (
   }
 }
 
+/**
+ * What a request to create or change a virtual user's schedule carries. Omitted fields keep their current value.
+ */
 export interface WriteVirtualUserScheduleParams {
   store: VirtualUserScheduleStore | undefined
   virtualUsers: ScaffoldVirtualUsers
@@ -474,6 +482,7 @@ export const logVirtualUserTick = (
   }
 }
 
+/** What the scaffolded run worker needs to execute one recorded virtual-user run. */
 export interface ExecuteVirtualUserRunParams {
   runStore: VirtualUserRunStore | undefined
   metaService: MetaService | undefined

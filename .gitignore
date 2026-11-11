@@ -17,6 +17,8 @@ dist
 
 my-app
 .pikku
+# The SDK tarball `pikku all` packs beside an addon's package.json.
+*.sdk.tgz
 .deploy
 .tmp-pii-gate-*
 console-app
@@ -189,3 +191,14 @@ verifiers/addon-openapi/generated/
 # native init` from pikku.config.json, and dist-native is `build:native` output.
 e2e/packages/web/dist-native/
 e2e/packages/web/src-tauri/
+
+# pikku-inspect built locally by `bun run build:go`
+packages/inspector-go/bin/
+# cross-compiled pikku-inspect binaries, built in CI by `build-go.mjs --all`
+packages/inspector-go/prebuilt/
+
+# pikku-inspect-rs built by cargo
+packages/inspector-rust/target/
+
+# pikku ci verifier fixtures, removed by the suite
+verifiers/ci/.fixture-*

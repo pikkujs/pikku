@@ -1,3 +1,4 @@
+import { unwrapJobTrace, wrapJobTrace } from '@pikku/core/queue'
 import type { PgBoss } from 'pg-boss'
 import { runScheduledTask } from '@pikku/core/scheduler'
 import { SchedulerService } from '@pikku/core/services'
@@ -49,7 +50,8 @@ export class PgBossSchedulerService extends SchedulerService {
     delay: number | string,
     rpcName: string,
     data?: any,
-    session?: CoreUserSession
+    session?: CoreUserSession,
+    traceparent?: string
   ): Promise<string> {
     // Parse delay if it's a string
     const delayMs =
@@ -63,8 +65,8 @@ export class PgBossSchedulerService extends SchedulerService {
 
     // Use send() with startAfter for one-off delayed execution
     const taskId = await this.pgBoss.send(
-      'pikku-remote-internal-rpc',
-      jobData,
+      'pikku-mesh-rpc',
+      wrapJobTrace(jobData, traceparent),
       {
         startAfter: new Date(Date.now() + delayMs),
         singletonKey: `${rpcName}-${Date.now()}`, // Ensure uniqueness
@@ -82,7 +84,7 @@ export class PgBossSchedulerService extends SchedulerService {
    * Unschedule (cancel) a task by ID
    */
   async unschedule(taskId: string): Promise<boolean> {
-    await this.pgBoss.cancel('pikku-remote-internal-rpc', taskId)
+    await this.pgBoss.cancel('pikku-mesh-rpc', taskId)
     return true
   }
 
@@ -90,16 +92,13 @@ export class PgBossSchedulerService extends SchedulerService {
    * Get a scheduled task by ID with full details
    */
   async getTask(taskId: string): Promise<ScheduledTaskInfo | null> {
-    const job = await this.pgBoss.getJobById(
-      'pikku-remote-internal-rpc',
-      taskId
-    )
+    const job = await this.pgBoss.getJobById('pikku-mesh-rpc', taskId)
 
     if (!job) {
       return null
     }
 
-    const jobData = job.data as ScheduledJobData
+    const jobData = unwrapJobTrace(job.data).data as ScheduledJobData
 
     return {
       taskId: job.id,

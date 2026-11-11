@@ -12,6 +12,7 @@ export const parallelTagsWorkflow = pikkuWorkflowFunc<
   { taskId: string; tagsToAdd: string[]; tagsToRemove: string[] },
   { addedCount: number; removedCount: number }
 >({
+  auth: false,
   title: 'Parallel Tags',
   tags: ['task'],
   func: async (_services, data, { workflow }) => {

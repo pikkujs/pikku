@@ -27,10 +27,17 @@ which is worse than no gate. `runPikkuFunc` is the one point all of them share.
 Merging is a union, not an override, because `firstUnsatisfied` in `scopes.ts`
 requires every listed scope. An addon scope is therefore an additional
 requirement and can only narrow access — an addon can never weaken a function
-that declares stricter scopes of its own. `ref('namespace:fn')` routes are
-gated for the same reason from the other direction: the generated wrapper is a
-local function that calls `rpc.invoke`, so the addon's scopes attach on the
-inner call rather than the route.
+that declares stricter scopes of its own.
+
+The package is the **function's**, not the wire's. A `ref('namespace:fn')`
+route stays the consuming app's — `wireHTTP` records no `packageName` for it, so
+the app's middleware runs rather than the addon's — and `runPikkuFunc` only
+learns the addon package when `resolveAddonFunctionTarget` resolves the target.
+Reading the floor from the wire's package left every such route outside it: the
+console's `workflowRunStream` (#1362), public on both the route and the
+function, was refused only because `wireHTTPRoutes` happens to record the
+package where `wireHTTP` does not. Addon `auth` and `tags` resolve from the same
+package for the same reason.
 
 When the caller carries an `addonInstance`, its namespace selects that
 instance's scopes exactly. The direct-wiring paths know only a package name, so

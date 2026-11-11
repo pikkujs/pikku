@@ -114,7 +114,7 @@ export function coreSatisfiesRange(
   return false
 }
 
-// The CLI's own package.json — version + declared @pikku/core peer range.
+// The CLI's own package.json — version + declared @pikku/core range.
 // Dual path like get-cli-version.ts: ../../ from src/, ../../../ from dist/src/.
 async function getCliManifest(): Promise<{
   version: string
@@ -130,7 +130,7 @@ async function getCliManifest(): Promise<{
     try {
       const pkg = JSON.parse(raw)
       if (pkg.name !== '@pikku/cli') continue
-      const corePeerRange = pkg.peerDependencies?.['@pikku/core']
+      const corePeerRange = pkg.dependencies?.['@pikku/core']
       if (typeof pkg.version === 'string' && typeof corePeerRange === 'string')
         return { version: pkg.version, corePeerRange }
     } catch {
@@ -224,7 +224,7 @@ export async function assertSingleCoreVersion(
   throw new Error(message)
 }
 
-// SKEW (PKU718): a single installed core that violates the CLI's own peer range.
+// SKEW (PKU718): a single installed core that violates the CLI's own dependency range.
 async function assertCoreVersionInPeerRange(
   coreVersion: string | undefined,
   logger: { warn: (message: string) => void }
@@ -237,7 +237,7 @@ async function assertCoreVersionInPeerRange(
 
   const message =
     `[${ErrorCode.CORE_VERSION_SKEW}] @pikku/cli@${cli.version} requires @pikku/core@${cli.corePeerRange} ` +
-    `(peerDependencies), but ${coreVersion} is installed.\n` +
+    `(dependencies), but ${coreVersion} is installed.\n` +
     `Some package managers (bun, yarn) install past an unsatisfied peer range instead of\n` +
     `failing, and a cli/core version skew breaks codegen and runtime with cryptic\n` +
     `missing-export errors.\n\n` +

@@ -20,6 +20,10 @@ export interface ListInput<
   search?: string
 }
 
+/**
+ * The output a list function returns: one page of rows and the cursor for the
+ * next.
+ */
 export interface ListOutput<Row> {
   rows: Row[]
   /** Null when no more pages. */

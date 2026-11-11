@@ -4,11 +4,13 @@ import {
   DEFAULT_STEP_RETRIES,
   NO_COMPENSATE_STATE_PREFIX,
   WORKFLOW_TERMINAL_STATES,
+  isRunStopped,
   compensationStepName,
 } from './workflow-constants.js'
 import { pikkuState } from '../../pikku-state.js'
 import { resolveNamespace } from '../rpc/rpc-runner.js'
 import { runningStepLease } from './workflow-step-lease.js'
+import { isWorkflowName } from './workflow-meta-resolver.js'
 import { planUnwind, type UnwindRecord } from './workflow-unwind-plan.js'
 import type {
   StepState,
@@ -357,8 +359,7 @@ export const functionHasCompensation = (rpcName: string): boolean => {
 }
 
 export const isChildWorkflowRecord = (record: UnwindRecord): boolean =>
-  !!record.rpcName &&
-  pikkuState(null, 'workflows', 'meta')[record.rpcName] !== undefined
+  !!record.rpcName && isWorkflowName(record.rpcName)
 
 export const recordHasCompensation = (record: UnwindRecord): boolean =>
   isChildWorkflowRecord(record)
@@ -456,6 +457,23 @@ export const isUnwound = (status: string | undefined): boolean =>
   status === 'compensating' ||
   status === 'compensated' ||
   status === 'compensation_failed'
+
+/**
+ * The status of a run that can no longer take an outcome from a pass of its
+ * own. An unwind that stopped to wait on the steps in flight is finished here:
+ * those steps were this pass's, and nothing else will wake an inline run.
+ */
+export const settleStoppedRun = async (
+  api: CompensationApi,
+  runId: string
+): Promise<WorkflowStatus | undefined> => {
+  const status = (await api.getRun(runId))?.status
+  if (!status || !isRunStopped(status)) return undefined
+  if (status === 'compensating') {
+    await driveUnwind(createUnwindHost(api), runId)
+  }
+  return status
+}
 
 export const failRunOrUnwind = async (
   api: CompensationApi,

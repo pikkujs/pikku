@@ -2,6 +2,7 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { CamelCasePlugin, Kysely, SqliteDialect } from 'kysely'
 import Database from 'better-sqlite3'
+import { NotFoundError } from '@pikku/core/errors'
 import { SerializePlugin } from './serialize-plugin.js'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { KyselyFeatureFlagStore } from './kysely-feature-flag-store.js'
@@ -187,5 +188,69 @@ describe('KyselyFeatureFlagStore — prune', () => {
     await store.syncFlags(FLAGS)
     assert.deepEqual(await store.pruneFlags(), [])
     assert.equal((await store.listFlags()).length, 2)
+  })
+})
+
+describe('KyselyFeatureFlagStore — writing before the first sync', () => {
+  class DeclaredStore extends KyselyFeatureFlagStore {
+    knows(flags: typeof FLAGS) {
+      this.setDeclared(flags)
+    }
+  }
+
+  let unsynced: DeclaredStore
+
+  beforeEach(async () => {
+    await db.deleteFrom('pikkuFeatureFlags').execute()
+    unsynced = new DeclaredStore(db, { ttlMs: 0 })
+    await unsynced.init()
+    unsynced.knows(FLAGS)
+  })
+
+  test('turning a declared flag off takes effect with no row yet', async () => {
+    assert.equal((await unsynced.listFlags()).length, 0)
+    await unsynced.setEnabled('newBilling', false)
+    assert.deepEqual(
+      (await unsynced.listFlags()).map((r) => [r.name, r.enabled, r.declared]),
+      [['newBilling', false, true]]
+    )
+    assert.equal((await unsynced.snapshot()).newBilling?.enabled, false)
+  })
+
+  test('keeps the declaration on the row it creates', async () => {
+    await unsynced.setEnabled('sandboxes', true)
+    const [row] = await unsynced.listFlags()
+    assert.equal(row?.description, 'Sandboxes')
+    assert.deepEqual(row?.anyOf, ['admin:sandboxes'])
+  })
+
+  test('a rollout does not also switch the flag off', async () => {
+    await unsynced.setRollout('newBilling', 100)
+    const [row] = await unsynced.listFlags()
+    assert.equal(row?.enabled, true)
+    assert.equal(row?.rolloutPercent, 100)
+  })
+
+  test('an override lands on a declared flag with no row yet', async () => {
+    await unsynced.setOverride('newBilling', { userId: 'u1' }, false)
+    assert.equal((await unsynced.listOverrides('newBilling')).length, 1)
+  })
+
+  test('refuses a name that is neither stored nor declared', async () => {
+    for (const write of [
+      () => unsynced.setEnabled('newBiling', false),
+      () => unsynced.setRollout('newBiling', 50),
+      () => unsynced.setOverride('newBiling', { userId: 'u1' }, true),
+    ]) {
+      await assert.rejects(write, NotFoundError)
+    }
+    assert.equal((await unsynced.listFlags()).length, 0)
+  })
+
+  test('still writes to a row whose declaration has gone', async () => {
+    await unsynced.setEnabled('newBilling', true)
+    unsynced.knows([])
+    await unsynced.setEnabled('newBilling', false)
+    assert.equal((await unsynced.listFlags())[0]?.enabled, false)
   })
 })

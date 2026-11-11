@@ -51,10 +51,10 @@ export const authCookie = pikkuMiddlewareFactory<{
   return pikkuMiddleware(
     async (
       { jwt: jwtService, logger },
-      { http, setSession, getSession, session, hasSessionChanged },
+      { http, setInitialSession, getSession, session, hasSessionChanged },
       next
     ) => {
-      if (!http?.request || !setSession || session) {
+      if (!http?.request || !setInitialSession || session) {
         return next()
       }
 
@@ -67,7 +67,7 @@ export const authCookie = pikkuMiddlewareFactory<{
         // standard JWT timestamp, so an identity-less token is treated as no
         // session rather than as an authenticated one.
         if (userSession && hasSessionIdentity(userSession)) {
-          await setSession?.(userSession)
+          setInitialSession?.(userSession)
         }
       }
 

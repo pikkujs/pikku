@@ -13,6 +13,7 @@ import {
 } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { resolveQueueJobIdentity } from './queue-identity.js'
+import { continueTrace } from '../../trace.js'
 
 class QueueWorkerNotFoundError extends PikkuError {
   constructor(name: string) {
@@ -20,6 +21,7 @@ class QueueWorkerNotFoundError extends PikkuError {
   }
 }
 
+/** Thrown by `queue.fail()` inside a worker. Queue adapters treat it as a failed attempt, so the backend's retry policy applies. */
 export class QueueJobFailedError extends PikkuError {
   constructor(jobId: string, reason?: string) {
     super(`Queue job ${jobId} failed${reason ? `: ${reason}` : ''}`)
@@ -27,6 +29,7 @@ export class QueueJobFailedError extends PikkuError {
   }
 }
 
+/** Thrown by `queue.discard()` inside a worker. Queue adapters treat it as the end of the job: it is not retried and is not reported as a failure. */
 export class QueueJobDiscardedError extends PikkuError {
   constructor(jobId: string, reason?: string) {
     super(`Queue job ${jobId} discarded${reason ? `: ${reason}` : ''}`)
@@ -34,6 +37,23 @@ export class QueueJobDiscardedError extends PikkuError {
   }
 }
 
+/**
+ * Registers the function that processes jobs on a queue.
+ *
+ * The worker's function is sessionless: a job has no request to authenticate.
+ * The only identity it sees is `queue.pikkuUserId` on its wire, which is set
+ * only when the producer's identity claim verifies against the
+ * `PIKKU_QUEUE_IDENTITY_SECRET` secret, and is dropped otherwise.
+ *
+ * Registration needs the metadata `pikku` generates for the queue. When none is
+ * found the wiring is skipped with a warning rather than throwing. A queue
+ * adapter (BullMQ, pg-boss, SQS, …) picks up registered workers through
+ * {@link registerQueueWorkers}.
+ *
+ * @param queueWorker - The queue name, the function to run per job, and optional worker config and middleware.
+ *
+ * @example snippet: wireQueue
+ */
 export const wireQueueWorker = <
   InputData = any,
   OutputData = any,
@@ -66,10 +86,12 @@ export const wireQueueWorker = <
   registrations.set(queueWorker.name, queueWorker)
 }
 
+/** Every registered queue worker, keyed by queue name. */
 export function getQueueWorkers(): Map<string, CoreQueueWorker> {
   return pikkuState(null, 'queue', 'registrations')
 }
 
+/** Unregisters the worker for `name`. Throws when no worker is registered under it. */
 export async function removeQueueWorker(name: string): Promise<void> {
   const registrations = pikkuState(null, 'queue', 'registrations')
   const registration = registrations.get(name)
@@ -81,21 +103,34 @@ export async function removeQueueWorker(name: string): Promise<void> {
   registrations.delete(name)
 }
 
+/**
+ * Runs one job through the worker registered for its queue. Queue adapters call this for every job they receive.
+ *
+ * The job's `pikkuUserId` claim is verified before the function runs; an
+ * unsigned or invalid claim is logged and the job runs without one. The function
+ * runs with `auth: false`, the worker's middleware, and a `queue` wire carrying
+ * `updateProgress`, `fail` and `discard`. It continues the job's `traceparent`,
+ * or starts a new trace when the job has no valid one.
+ *
+ * @param params.job - The job as the adapter received it.
+ * @param params.updateProgress - Reports progress to the backend; defaults to logging it.
+ * @returns What the worker's function returned.
+ * @throws {PikkuMissingMetaError} When no metadata was generated for the queue.
+ * @throws {QueueJobFailedError | QueueJobDiscardedError} When the worker called `fail` or `discard`.
+ * @throws Whatever the worker threw, after logging it, so the adapter can apply its retry policy.
+ */
 export async function runQueueJob({
   job,
   updateProgress,
-  traceId,
 }: {
   job: QueueJob
   updateProgress?: (progress: number | string | object) => Promise<void>
-  traceId?: string
 }): Promise<void> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
-  const resolvedTraceId = traceId ?? `q-${job.id}`
+  const trace = continueTrace(job.traceparent)
   const logger =
-    singletonServices.logger.scope?.(resolvedTraceId) ??
-    singletonServices.logger
+    singletonServices.logger.scope?.(trace.traceId) ?? singletonServices.logger
 
   const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[job.queueName]
@@ -140,7 +175,8 @@ export async function runQueueJob({
     logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
 
     const wire: PikkuRawWire = {
-      traceId: resolvedTraceId,
+      traceId: trace.traceId,
+      trace,
       queue,
     }
 

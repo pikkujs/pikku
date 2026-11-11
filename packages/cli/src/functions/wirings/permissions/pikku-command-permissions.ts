@@ -14,8 +14,9 @@ export const pikkuPermissions = pikkuSessionlessFunc<void, boolean | undefined>(
 
       const hasIndividual =
         Object.keys(state.permissions.definitions).length > 0
+      const hasGlobal = (state.permissions.global?.length ?? 0) > 0
 
-      if (hasIndividual) {
+      if (hasIndividual || hasGlobal) {
         const metaData = state.permissionsGroupsMeta
 
         await writeFileInDir(

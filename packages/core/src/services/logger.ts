@@ -1,5 +1,9 @@
 import type { Safe } from '../classification/secret-value.js'
 
+/**
+ * Log levels in increasing severity. A logger set to one level drops the levels
+ * below it.
+ */
 export enum LogLevel {
   trace,
   debug,

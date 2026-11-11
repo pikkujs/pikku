@@ -78,6 +78,11 @@ function state(): InspectorState {
         },
       },
     },
+    rpc: {
+      wireAddonDeclarations: new Map([
+        ['console', { package: '@pikku/addon-console', expose: true }],
+      ]),
+    },
     agents: { agentsMeta: {} },
     mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
     channels: { meta: {} },

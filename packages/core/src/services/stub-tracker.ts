@@ -1,3 +1,4 @@
+/** One recorded call on a stubbed service. */
 export type StubCall = { service: string; method: string; args: unknown[] }
 
 type Call = { method: string; args: unknown[]; verified: boolean }

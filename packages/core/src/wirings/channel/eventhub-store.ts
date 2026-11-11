@@ -1,3 +1,4 @@
+/** Persists topic subscriptions for serverless runtimes, where the subscribing and publishing invocations do not share memory. */
 export abstract class EventHubStore<
   EventTopics extends Record<string, any> = {},
 > {

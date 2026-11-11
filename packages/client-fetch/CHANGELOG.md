@@ -1,3 +1,26 @@
+## 0.12.15
+
+### Patch Changes
+
+- 6e9e86f: Server-sent events with `\r\n` or `\r` line endings now parse, including a `\r\n` split across two chunks. `postStream` sends its headers through `Headers`, so any form of header init works, and it stops yielding once the abort signal fires.
+- be90d6c: `pikku doc content` prints one whole upload from a compiled app, and a new `pikku-content` skill holds the rules around it. `content.getUploadURL` now returns `fileKey`, relative to the bucket, instead of `assetKey`. `uploadFile` on the fetch client takes and returns `fileKey`, resolves a relative `uploadUrl` against the server URL and uses the configured `fetch`. See `docs/MIGRATION.md`.
+
+## 0.12.14
+
+### Patch Changes
+
+- d7b030d: Fix the generated client's `agent.stream`, which parsed the event stream as JSON and resolved `undefined` once the run ended. It is now an async iterable of the run's AG-UI events, read by `CorePikkuFetch.agentStream`, and a `RUN_ERROR` throws a `PikkuAgentStreamError` instead of vanishing. `subscribeToSSE` shares the same frame reader (`readServerEvents`). `agent.run` and `agent.approve` are typed per agent and resolve to `status: 'suspended'` with `pendingApprovals` when a tool needs approval. `usePikkuAgent` passes all three through, typed; the generated React Query file registers the app's agents, so an unknown agent name is a type error. Breaking: `usePikkuAgent` no longer takes an `RPC` type argument — see docs/MIGRATION.md.
+
+## 0.12.13
+
+### Patch Changes
+
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
 ## 0.12.12
 
 ### Patch Changes

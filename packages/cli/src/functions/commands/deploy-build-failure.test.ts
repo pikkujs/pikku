@@ -6,6 +6,7 @@ import {
   rmSync,
   writeFileSync,
   readFileSync,
+  existsSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -33,9 +34,11 @@ export const createAdapter = () => ({
   generateEntrySource: () => 'export default {}',
   generateUnitConfigs: () => new Map(),
   generateInfraManifest: () => null,
+  supportedRuntimes: ['bun'],
   deploy: async () => {
     globalThis.__pikkuFakeProviderDeployed.push('deploy')
-    return { success: true, workersDeployed: [], resourcesCreated: [], errors: [] }
+    if (globalThis.__pikkuFakeProviderThrows) throw new Error('upload refused')
+    return globalThis.__pikkuFakeProviderResult ?? { success: true, workersDeployed: [], resourcesCreated: [], errors: [] }
   },
 })
 `
@@ -62,13 +65,15 @@ const config = () => ({
   outDir: join(root, '.pikku'),
   deploy: {
     providers: { fake: providerUrl },
-    defaultProvider: 'fake',
+    provider: 'fake',
   },
+  backends: { api: { filter: {} } },
 })
 
 const inspectorState = (): InspectorState =>
   ({
     rootDir: root,
+    serviceAggregation: { requiredServices: new Set<string>() },
     functions: {
       meta: { createTodo: { pikkuFuncId: 'createTodo', name: 'createTodo' } },
     },
@@ -153,7 +158,7 @@ beforeEach(() => {
   ;(globalThis as Record<string, unknown>).__pikkuFakeProviderDeployed =
     deployed
   mkdirSync(join(root, 'src'), { recursive: true })
-  mkdirSync(join(root, '.pikku'), { recursive: true })
+  mkdirSync(join(root, '.pikku', 'backends', 'api'), { recursive: true })
   writeFileSync(
     join(root, 'package.json'),
     JSON.stringify({ name: 'todo-app' }),
@@ -164,7 +169,46 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(root, { recursive: true, force: true })
-  delete (globalThis as Record<string, unknown>).__pikkuFakeProviderDeployed
+  const globals = globalThis as Record<string, unknown>
+  delete globals.__pikkuFakeProviderDeployed
+  delete globals.__pikkuFakeProviderResult
+  delete globals.__pikkuFakeProviderThrows
+  process.exitCode = 0
+})
+
+describe('deploy plan provider resolution', () => {
+  test('a project that names no deploy provider resolves standalone', async () => {
+    await deployPlan.func(
+      {
+        logger,
+        config: {
+          ...config(),
+          deploy: { providers: { standalone: providerUrl } },
+        },
+        getInspectorState: async () => inspectorState(),
+        bundler: bundlerWith([]),
+      } as never,
+      {} as never,
+      {} as never
+    )
+  })
+
+  test('takes the provider from the backend that sets one', async () => {
+    await deployPlan.func(
+      {
+        logger,
+        config: {
+          ...config(),
+          deploy: { providers: { fake: providerUrl } },
+          backends: { api: { filter: {}, deploy: { provider: 'fake' } } },
+        },
+        getInspectorState: async () => inspectorState(),
+        bundler: bundlerWith([]),
+      } as never,
+      {} as never,
+      {} as never
+    )
+  })
 })
 
 describe('deploy plan bundle failures', () => {
@@ -194,6 +238,41 @@ describe('deploy plan bundle failures', () => {
   })
 })
 
+describe('deploy plan without backend units', () => {
+  test('writes a successful result file and an empty manifest', async () => {
+    writeFileSync(
+      join(root, 'multi-provider.mjs'),
+      PROVIDER_SOURCE.replace('singleUnit: true', 'singleUnit: false'),
+      'utf-8'
+    )
+    providerUrl = pathToFileURL(join(root, 'multi-provider.mjs')).href
+    const resultFile = join(root, 'result.json')
+    await deployPlan.func(
+      {
+        logger,
+        config: config(),
+        getInspectorState: async () => ({
+          ...inspectorState(),
+          http: { meta: {} },
+        }),
+        bundler: bundlerWith([]),
+      } as never,
+      { resultFile } as never,
+      {} as never
+    )
+    const result = JSON.parse(readFileSync(resultFile, 'utf-8'))
+    assert.equal(result.success, true)
+    assert.equal(result.unitCount, 0)
+    const manifest = JSON.parse(
+      readFileSync(
+        join(result.providerDir, 'deployment-manifest.json'),
+        'utf-8'
+      )
+    )
+    assert.deepEqual(manifest.units, [])
+  })
+})
+
 describe('deploy apply bundle failures', () => {
   test('throws and never deploys when a unit failed to bundle', async () => {
     await assert.rejects(
@@ -218,5 +297,94 @@ describe('deploy apply bundle failures', () => {
   test('deploys when every unit bundled', async () => {
     await run(deployApply, [])
     assert.deepEqual(deployed, ['deploy'])
+  })
+})
+
+describe('deploy apply outcome', () => {
+  const failed = {
+    success: false,
+    errors: [{ step: 'upload', error: 'worker rejected' }],
+  }
+
+  test('a deploy that reports failure exits non-zero', async () => {
+    ;(globalThis as Record<string, unknown>).__pikkuFakeProviderResult = failed
+    await run(deployApply, [])
+    assert.deepEqual(deployed, ['deploy'])
+    assert.equal(process.exitCode, 1)
+  })
+
+  test('a deploy that throws exits non-zero', async () => {
+    ;(globalThis as Record<string, unknown>).__pikkuFakeProviderThrows = true
+    await run(deployApply, [])
+    assert.equal(process.exitCode, 1)
+  })
+
+  test('a deploy that succeeds leaves the exit code alone', async () => {
+    await run(deployApply, [])
+    assert.deepEqual(deployed, ['deploy'])
+    assert.ok(!process.exitCode)
+  })
+
+  test('the failure is in the result file too', async () => {
+    ;(globalThis as Record<string, unknown>).__pikkuFakeProviderResult = failed
+    const resultFile = join(root, 'result.json')
+    await run(deployApply, [], { resultFile })
+    const result = JSON.parse(readFileSync(resultFile, 'utf-8'))
+    assert.equal(result.success, false)
+    assert.equal(process.exitCode, 1)
+  })
+})
+
+describe('deploy apply --fromPlan', () => {
+  test('applies a single-unit plan, which writes no infra.json', async () => {
+    await run(deployPlan, [])
+    assert.ok(
+      existsSync(join(root, '.deploy', 'fake', 'deployment-manifest.json'))
+    )
+    assert.ok(!existsSync(join(root, '.deploy', 'fake', 'infra.json')))
+
+    await run(deployApply, [], { fromPlan: true })
+    assert.deepEqual(deployed, ['deploy'])
+  })
+})
+
+describe('deploy plan keeps what apply would build', () => {
+  test('plan stages a backend deploy.embed, so a --fromPlan apply ships it', async () => {
+    writeFileSync(join(root, 'seed.txt'), 'seed', 'utf-8')
+    await deployPlan.func(
+      {
+        logger,
+        config: {
+          ...config(),
+          backends: {
+            api: { filter: {}, deploy: { embed: { seed: 'seed.txt' } } },
+          },
+        },
+        getInspectorState: async () => inspectorState(),
+        bundler: bundlerWith([]),
+      } as never,
+      {} as never,
+      {} as never
+    )
+    assert.ok(
+      logs.some((line) => line.startsWith('Embedded:')),
+      logs.join('\n')
+    )
+  })
+})
+
+describe('deploy apply --runtime', () => {
+  test('a runtime the provider has is accepted', async () => {
+    await run(deployApply, [], { runtime: 'bun' })
+    assert.deepEqual(deployed, ['deploy'])
+  })
+
+  test('any other runtime is refused before anything is built', async () => {
+    await assert.rejects(
+      () => run(deployApply, [], { runtime: 'node' }),
+      /provider 'fake' does not run on 'node'.*bun/
+    )
+    assert.deepEqual(deployed, [])
+    assert.ok(!existsSync(join(root, '.deploy')))
   })
 })

@@ -38,7 +38,7 @@ wireScheduler({
 })
 ```
 
-`runScheduledTask` builds its wire with a `sessionService`, so a `setSession`
+`runScheduledTask` builds its wire with a `sessionService`, so a `setInitialSession`
 here is the session the function is frozen with. See the machine-auth section of
 `pikku-middleware` for the factory and for why a cron is not a user row.
 
@@ -62,6 +62,12 @@ consequence that bites is in middleware — a `try/catch` around `await next()`
 will catch a skip and report it as a failure. If your middleware distinguishes
 success from failure, let the skip pass through rather than logging it as an
 error.
+
+### Tracing
+
+Each cron firing starts a new trace, on `wire.trace`. A delayed call fires on the
+trace passed as the last argument of `scheduleRPC`: a workflow sleep passes the
+run's, and nothing passes it for you elsewhere, so use `wire.rpc.traceparent`.
 
 ### Cron Expression Reference
 

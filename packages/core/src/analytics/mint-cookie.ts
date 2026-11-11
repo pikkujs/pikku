@@ -5,6 +5,7 @@ type AnyWire = PikkuWire<any, any, any, CoreUserSession>
 
 const minted = new WeakMap<object, Map<string, string>>()
 
+/** Options for `mintCookie`, including the consent purposes that gate writing it. */
 export interface MintCookieOptions {
   /** Cookie attributes. Long-lived and first-party is the usual shape. */
   cookie: SerializeOptions

@@ -744,6 +744,7 @@ describe('runPikkuFunc - Integration Tests', () => {
   test('should set session helpers on the wire when a session service is provided', async () => {
     const sessionStore = {
       get: async () => undefined,
+      set: async () => {},
     }
     const sessionService = new PikkuSessionService(sessionStore as any)
     const wire: any = {}
@@ -1537,6 +1538,102 @@ describe('runPikkuFunc - scopes', () => {
     )
   })
 
+  describe('live scopes', () => {
+    const runLive = (
+      session: Record<string, unknown>,
+      resolve: (userId: string) => Promise<string[]>
+    ) =>
+      runPikkuFunc('rpc', Math.random().toString(), 'liveFn', {
+        singletonServices: {
+          ...mockSingletonServices,
+          scopeService: { resolveScopes: resolve } as any,
+        },
+        data: () => ({}),
+        auth: false,
+        wire: { session: { userId: 'u1', ...session } as any },
+      })
+
+    const liveFunction = (live: boolean) => {
+      addTestFunction('liveFn', { func: async () => 'ok', scopes: ['admin'] })
+      if (live) {
+        pikkuState(null, 'function', 'meta').liveFn.liveScopes = true
+      }
+    }
+
+    test('re-reads a resolved snapshot and refuses a revoked grant', async () => {
+      liveFunction(true)
+      await assert.rejects(
+        () =>
+          runLive(
+            { scopes: ['admin'], scopesResolvedAt: Date.now() },
+            async () => []
+          ),
+        MissingScopeError
+      )
+    })
+
+    test('re-reads even when the snapshot is fresh and accepts a new grant', async () => {
+      liveFunction(true)
+      let reads = 0
+      const result = await runLive(
+        { scopes: [], scopesResolvedAt: Date.now() },
+        async () => {
+          reads++
+          return ['admin']
+        }
+      )
+      assert.equal(result, 'ok')
+      assert.equal(reads, 1)
+    })
+
+    test('the body and permissions see the refreshed scopes, not the cached ones', async () => {
+      let seenByPermission: string[] | undefined
+      addTestFunction('liveFn', {
+        func: async (_services: any, _data: any, wire: any) =>
+          wire.session.scopes,
+        scopes: ['admin'],
+        permissions: {
+          sees: async (_s: any, _d: any, wire: any) => {
+            seenByPermission = wire.session.scopes
+            return true
+          },
+        },
+      })
+      pikkuState(null, 'function', 'meta').liveFn.liveScopes = true
+      const result = await runLive(
+        { scopes: ['admin', 'extra'], scopesResolvedAt: Date.now() },
+        async () => ['admin']
+      )
+      assert.deepEqual(result, ['admin'])
+      assert.deepEqual(seenByPermission, ['admin'])
+    })
+
+    test('a non-live function trusts the session snapshot', async () => {
+      liveFunction(false)
+      let reads = 0
+      const result = await runLive(
+        { scopes: ['admin'], scopesResolvedAt: Date.now() },
+        async () => {
+          reads++
+          return []
+        }
+      )
+      assert.equal(result, 'ok')
+      assert.equal(reads, 0)
+    })
+
+    test('scopes a mapSession set (no stamp) stay authoritative', async () => {
+      liveFunction(true)
+      let reads = 0
+      const result = await runLive({ scopes: ['admin'] }, async () => {
+        reads++
+        return []
+      })
+      assert.equal(result, 'ok')
+      assert.equal(reads, 0)
+    })
+  })
+
   // The load-bearing test. Scopes are an AND gate separate from permissions, so
   // a passing global (or function) permission must never satisfy a scope.
   test('a passing global permission does not satisfy a scope', async () => {
@@ -1795,5 +1892,19 @@ describe('runPikkuFunc - inline compensate', () => {
   test('a function without compensate has no :compensate sibling', async () => {
     addTestFunction('plain', { func: async () => 'x' })
     await assert.rejects(run('plain:compensate', {}), /Function not found/)
+  })
+})
+
+describe('disabled functions', () => {
+  test('a disabled function cannot be registered', () => {
+    assert.throws(
+      () =>
+        addFunction('retired', {
+          disabled: 'no callers',
+          func: async () => 'never',
+        }),
+      /Function 'retired' is disabled \(no callers\) and cannot be registered\./
+    )
+    assert.ok(!pikkuState(null, 'function', 'functions').has('retired'))
   })
 })

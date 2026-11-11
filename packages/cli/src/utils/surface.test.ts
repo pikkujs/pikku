@@ -29,7 +29,7 @@ before(() => {
       inputSchemaName: 'GetUserV2Input',
       outputSchemaName: null,
     },
-    someoneElsesFunction: { pikkuFuncId: 'someoneElsesFunction', remote: true },
+    calledRemotely: { pikkuFuncId: 'calledRemotely', remote: true },
   })
 
   writeJson(join(pikkuDir, 'http', 'pikku-http-wirings-meta.gen.json'), {
@@ -62,6 +62,7 @@ describe('readSurface', () => {
   test('splits functions from wirings and strips version suffixes into key/version', () => {
     const surface = readSurface(pikkuDir)
     assert.deepEqual(Object.keys(surface.functions).sort(), [
+      'calledRemotely',
       'getUser',
       'getUser@v2',
     ])
@@ -75,9 +76,9 @@ describe('readSurface', () => {
     ])
   })
 
-  test('a remote function belongs to another service, not this surface', () => {
+  test('a remote function is on the surface: other services call it', () => {
     const surface = readSurface(pikkuDir)
-    assert.equal(surface.functions['someoneElsesFunction'], undefined)
+    assert.equal(surface.functions['calledRemotely']?.key, 'calledRemotely')
   })
 
   test('only schemas some function references travel with the snapshot', () => {

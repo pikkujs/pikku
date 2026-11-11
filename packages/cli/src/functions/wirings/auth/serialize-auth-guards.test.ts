@@ -43,14 +43,20 @@ describe('serializeAuthGuards', () => {
 
   // Re-implementing core's `pikkuAuth` would let the generated copy drift from
   // the shape the permission runner actually evaluates.
-  test('pikkuAuth delegates to core rather than re-implementing it', () => {
+  test('the definers delegate to core rather than re-implementing them', () => {
     const content = emit()
 
-    assert.match(
-      content,
-      /import \{ pikkuAuth as pikkuAuthCore \} from '@pikku\/core\/function'/
-    )
+    assert.match(content, /pikkuAuth as pikkuAuthCore/)
     assert.match(content, /pikkuAuthCore\(auth as any\)/)
+    assert.match(content, /pikkuPermissionCore\(permission as any\)/)
+    assert.match(content, /pikkuPermissionFactoryCore\(factory as any\)/)
+  })
+
+  test('a check is typed with a required session', () => {
+    assert.match(
+      emit(),
+      /PickRequired<PikkuWire<In, never, false, Session>, 'session'>/
+    )
   })
 
   // Namespaced so an addon's global permission is attributed to the addon

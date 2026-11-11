@@ -1,5 +1,290 @@
 # @pikku/skills
 
+## 0.12.72
+
+### Patch Changes
+
+- be90d6c: `pikku doc content` prints one whole upload from a compiled app, and a new `pikku-content` skill holds the rules around it. `content.getUploadURL` now returns `fileKey`, relative to the bucket, instead of `assetKey`. `uploadFile` on the fetch client takes and returns `fileKey`, resolves a relative `uploadUrl` against the server URL and uses the configured `fetch`. See `docs/MIGRATION.md`.
+- 502ad55: A `pikkuPermission` that never uses its `data` argument is now reported as PKU586, because it should have been a `pikkuAuth`. It is a warning, and a critical under `pikku all --strict-meta` and `pikku validate --strict --codegen`, which now runs codegen with `--strict-meta`. The inspector reads these cases, and anything that cannot be determined is left alone. `pikku doc PKU586` explains it. `pikku new permission` now scaffolds a `pikkuAuth`. See docs/MIGRATION.md.
+- 54173f6: `pikkuPermission` now refuses a call with no session without running the check, like `pikkuAuth`, so `session` is always defined inside a check. `skipWithoutSession: true` on either makes the check pass with no session instead, and the function decides what that caller may see. A check without it on a sessionless function, directly or as a global permission, is now the error PKU587. `pikku doc PKU587` explains it. See docs/MIGRATION.md.
+- 81ff938: Add `pikku graph <functionId>`, which joins the generated meta for one function: the routes, channels, schedulers, queues, triggers, MCP and CLI wirings, workflow steps, agent tools and functions that call it, what it invokes or starts, and the permissions and middleware that gate it. Add `--json` for the full record. The output has no `unresolved` section: the build refuses what would hide an edge, and the command prints nothing but the graph on stdout (no banner). An unknown id lists near matches.
+
+  The inspectors (Go and Rust) now fail the build on four code gaps, all critical with no opt-out. `PKU941`: `rpc.invoke`, `rpc.mesh` and `rpc.startWorkflow` with a computed name (it was a warning; a `const` string literal is accepted). `PKU942`: handing the wire itself (`wire`, `rpc`, `http`, `channel`, `queue` and the other capability members, matched by symbol) to a function declared outside the handler, as an argument to a call or `new`. Closures that only call the wire, functions declared inside the handler, data read from a wire, and callees declared in a `@pikku/*` package are allowed. `PKU943`: a computed rpc name in `workflow.do` or `workflow.expectEventually`. `PKU944`: an `invokes` or `startsWorkflows` name that is not a function, workflow or wired addon function. See `docs/MIGRATION.md`.
+
+## 0.12.71
+
+### Patch Changes
+
+- 8b261d4: An app can declare its tables and their annotations in `db/tables.ts` with `defineTables`, and `pikku db generate` writes the SQL. It adds new tables, columns and indexes, adopts tables the migrations already create, and refuses a drop, a rename or a changed column with the reason, writing nothing. `pikku db migrate` and `pikku db check` stop when the declaration is ahead of the migrations. New `pikku meta db`, and a `db` block in `pikku meta context`, say where tables are declared. Opt-in by the presence of the file; an app with hand-written migrations is unchanged. See docs/db-tables.md and docs/MIGRATION.md.
+- 2a90c35: `pikku doc` answers error codes (`pikku doc PKU641`), and documents answering and listing workflow approvals and how `workflow.do` is typed. `#pikku/workflow` re-exports `WorkflowService` and `WorkflowRunService`.
+- d961a19: Skills cut calls the build agent wastes: `pikku-meta` says never to run bare `pikku meta` and how to read `pikku meta context --json` with `jq`, names which `meta` subcommands exist in the current release, `pikku-build` says to write early, run `pikku validate` once and filter it to the files touched, and `pikku-agent` says `usePikkuAgent` needs no proof from `node_modules`.
+- b7aecf3: `pikku-meta` and `pikku-build` start from `pikku meta context` (a short map) and `pikku meta grep`, and name `screens`, `services`, `emails` and `db <table>` now that the CLI has them; bare `pikku meta` only lists the subcommands. `pikku-i18n` points at `pikku i18n key` and triggers when rewording a label.
+
+## 0.12.70
+
+### Patch Changes
+
+- da0e253: Adds `pikku-analytics` and `pikku-flags`, for what `pikku doc` cannot say: measure outcomes where the result is known, keep identity out of props, put the real flag check on the server, and what "turn X off for now" means.
+- da1267e: Skill descriptions are now one or two plain lines, because a harness puts every description in every system prompt: 34 skills went from 20,594 to about 6,460 characters. The `pikku-agent`, `pikku-workflow`, `pikku-emails`, `pikku-list-query`, `pikku-permissions`, `pikku-build` and `pikku-i18n` bodies are shorter with their rules kept; approval-gate enforcement detail for `pikku-workflow` moved to `references/workflow-reference.md`. `pikku-agent` gains a rule: never call a model or model SDK directly, all AI goes through `pikkuAgent` and its runner so the console can show it, and an owner who asks to skip that hears what they lose and confirms first.
+
+  Skills now read as design guidelines: what to reach for, the rules, one `pikku doc a b c` line for how to call it, and a short "Not in `pikku doc` yet" list for what the doc does not print. `pikku-workflow`, `pikku-addon`, `pikku-middleware`, `pikku-scenario` and `pikku-list-query` lost the code samples and option lists `pikku doc` already prints, with every rule, failure mode and security point kept. `pikku-permissions`, `pikku-wiring`, `pikku-concepts`, `pikku-auth`, `pikku-agent` and `pikku-services` gain exact `pikku doc` lines.
+
+- 9fa3c58: Adds the `pikku-content` skill: how a file reaches storage and comes back, with what the browser sends, why the key is saved rather than the URL, and why the function handing out a read URL carries the permission. Work that mentions uploads, files, photos, documents, attachments or PDFs now predicts it.
+- 3739928: `pikku dev` without `--port` now listens on the port in the local environment's `apiUrl` (the non-production loopback environment, `local` preferred), falling back to 3000; an explicit `--port` still wins and a non-numeric one is refused. The `pikku` bin re-runs itself on bun when Node is older than 24 (which has no `node:sqlite`), and exits with a message naming both fixes when bun is not installed, so `bunx --bun` is no longer needed. The starter's `scripts/dev.mjs` is gone: its `dev` script is plain `pikku dev`, which already loads `.env`, generates the local secrets and starts every frontend. Behaviour change for a project whose local `apiUrl` names a port other than 3000 and that ran `pikku dev` without `--port`: it now binds the apiUrl's port.
+- df5ed76: Add pikku-review: a per-function adversarial review with gold, fix or bug verdicts, a question list per kind of bug, and a way to test a reviewer.
+- 09e3943: Skills drop syntax `pikku doc` now prints and point at the exact one-call `pikku doc` line, keeping the rules and failure modes. `pikku-emails` now sends through `emailService`, the real service name.
+- a0534a8: The `pikku-workflow` skill now says anything started by a trigger (a schedule, an event, a webhook, a form submit that kicks off background work) is a workflow, even with a single step. The trigger starts it and the work is its steps. On-screen request/response functions stay plain functions, and a workflow is never moved to a queue worker without the owner deciding. This replaces the old "one durable step is a queue worker" rule.
+
+## 0.12.69
+
+### Patch Changes
+
+- dc39996: Add `pikku app build`, which runs each deployed frontend's own `build` script in its directory, side by side, and exits non-zero if any app fails.
+- 23de209: `pikku audit` gains `--fail-on <severity>` and `--baseline <audit.json>`. With `--fail-on`, an advisory at or above that severity that the baseline does not list fails the run, and so does an audit that could not produce a report.
+- 67c83ff: Add `pikku ci`: bootstrap, local `db migrate`, `emails generate`, `all`, `validate` beside `audit --failOn high`, tests and app builds as one non-interactive workflow that stops at the first failed step. `-p <provider>` runs it in a throwaway git worktree of the commit, removes the console scaffold and produces a deploy plan; `--deploy` applies that plan; on Cloudflare it first needs `--secretsSet` and `--migrationsApplied` to confirm what the adapter cannot do itself. With `--json`, CLI workflows stream `workflow.step.*` events.
+- c9850cc: `pikku dev` without `--port` now listens on the port in the local environment's `apiUrl` (the non-production loopback environment, `local` preferred), falling back to 3000; an explicit `--port` still wins and a non-numeric one is refused. The `pikku` bin re-runs itself on bun when Node is older than 24 (which has no `node:sqlite`), and exits with a message naming both fixes when bun is not installed, so `bunx --bun` is no longer needed. The starter's `scripts/dev.mjs` is gone: its `dev` script is plain `pikku dev`, which already loads `.env`, generates the local secrets and starts every frontend. Behaviour change for a project whose local `apiUrl` names a port other than 3000 and that ran `pikku dev` without `--port`: it now binds the apiUrl's port.
+- a679e5d: `pikku verify` is merged into `pikku validate`, which now runs the type-check and correctness checks, skips codegen unless `--codegen` is passed, and exits non-zero on any error. The `pikku verify` command is gone; `runVerify`, `VerifyService` and the recorded results stay. See MIGRATION.md.
+
+## 0.12.68
+
+### Patch Changes
+
+- d7b030d: Fix the generated client's `agent.stream`, which parsed the event stream as JSON and resolved `undefined` once the run ended. It is now an async iterable of the run's AG-UI events, read by `CorePikkuFetch.agentStream`, and a `RUN_ERROR` throws a `PikkuAgentStreamError` instead of vanishing. `subscribeToSSE` shares the same frame reader (`readServerEvents`). `agent.run` and `agent.approve` are typed per agent and resolve to `status: 'suspended'` with `pendingApprovals` when a tool needs approval. `usePikkuAgent` passes all three through, typed; the generated React Query file registers the app's agents, so an unknown agent name is a type error. Breaking: `usePikkuAgent` no longer takes an `RPC` type argument — see docs/MIGRATION.md.
+
+## 0.12.67
+
+### Patch Changes
+
+- 5d48c4a: A screen can also set `defaultChat: false` to hide Studio's general Chat tab beside its agent tab (with no `agent`, the screen has no chat). It defaults to `true`, must be a boolean literal (PKU345 otherwise), and is recorded only when declared.
+
+  The agent and its skills ship in the addon's package: `pikku new addon <name> --ui` now puts `agents` and `skills` in `package.json` `files`, and writes the `studio` block Studio links an addon by, `"studio": { "addon": "<name>", "ui": "./src", "messages": "./messages/{locale}.json" }`. `pikku all` fails with PKU366 when a `files` list leaves out `agents/` while a screen names a valid agent the addon ships (one that is already PKU365 gets that error alone), or leaves out `skills/` while the addon has a `skills/<name>/SKILL.md`. A package with no `files` field is not checked.
+
+- 539c25d: Trace every wire
+
+  Channels, agent tools and tool workflows, MCP, CLI, triggers, webhook sources, gateways and Cloudflare `runRpc` now carry `traceparent`. A wire with no trace becomes the root of one, and `scheduleRPC` and `webhookService.send` called from a function are stamped with its trace.
+
+  Channel RPC frames take `traceparent` instead of `traceId`, and a responder ignores it unless `trustInboundTraceparent` is set. See `docs/MIGRATION.md`.
+
+- 593a855: Keep the trace when something fails
+
+  A local RPC now runs as a span of its own under its caller. Errors logged by MCP, channels, triggers, agent tools, remote addon calls and inline workflows now carry the trace, and MCP errors and channel error frames return `errorId`, as HTTP does. A job whose data looks like the trace envelope now reaches its worker unchanged.
+
+- 8bad71e: Keep one trace through jobs, scheduled tasks and workflow runs
+
+  A function's `queueService.add` stamps the caller's `traceparent` on the job, and a workflow run stores its trace on `run.wire.traceparent`, so every step, retry, sleep, resume, child workflow and recovery stays on it. Every queue adapter carries `traceparent`, and queue and scheduler wires always have `wire.trace`.
+
+  The `q-<id>` and `cron-<id>` trace ids are gone. `runQueueJob` no longer takes `traceId`, and remote job bodies take `traceparent`. Breaking: see docs/MIGRATION.md.
+
+- ceedd4b: Trace with W3C `traceparent`, and remove `x-request-id`
+
+  `wire.traceId` on an HTTP request is now 32 lowercase hex and `wire.trace` adds its span id, parent span and sampled flag. Mesh and remote addon calls send `traceparent`; `x-request-id` is no longer read or sent, `CF-Ray` no longer sets the trace, and `generateRequestId` is gone.
+
+  Public HTTP ignores an inbound `traceparent` unless `trustInboundTraceparent` is set. `pikkuMeshAuthMiddleware` continues a caller's trace once its token has verified. Breaking: see docs/MIGRATION.md.
+
+- 4263e9d: Workflows survive a restart
+
+  `pikku dev` and `pikku serve` now recover runs after a crash or deploy. Sleeps are re-armed from when they were scheduled, in-flight steps retry as a counted attempt with the same `invocationId`, and a sweep skips any run another live instance holds the lease on. Other hosts call `workflowService.recoverWorkflows()` from a scheduled task, and `workflow.recovery: false` turns it off. See `docs/MIGRATION.md`.
+
+## 0.12.66
+
+### Patch Changes
+
+- 3d06dfa: An addon's Studio screen can name an `agent` in `definePlugin`: the agent that answers in Studio's chat panel, in a second tab beside the general chat, while that screen is open. It resolves to `agents/<name>.md` in the addon package, which holds the agent's instructions and names the skills it follows (plain `skills/<name>/SKILL.md` folders, found by convention). `agent: 'studio:<name>'` instead picks an agent Studio ships; `pikku all` only checks the format, looks up no file and records no title or description. The file starts with frontmatter whose `title` and `description` are message keys in the addon's `messages/en.json`. `pikku all` reads `agent` as a string literal and records it, with `agentTitle` and `agentDescription`, on the screen in the generated addon metadata. It fails with PKU365 when the value is neither a name `/^[a-z][a-z0-9-]*$/` nor `studio:<name>`, or a name, the file is missing or empty, or the frontmatter lacks a `title` or `description`; a key missing from `messages/en.json` is PKU358, as for screen titles.
+
+## 0.12.65
+
+### Patch Changes
+
+- c169417: `pikku addons add amazonaws.com:applicationcostprofiler` installs an addon generated from an OpenAPI in the registry catalogue, naming it after the entry and taking `--auth` from what the registry records (OAuth is always per user). `pikku new addon <name> --openapi` takes a catalogue name too. `--registry` points either at another registry.
+
+## 0.12.64
+
+### Patch Changes
+
+- b86450a: The pikku-react skill now documents the generated client files (`typesFile`, `envFile`, `rpcFile`, `authClientFile`), `pikkuVite()`, and what `pikku dev` runs and generates.
+- 5ea2815: The middleware examples import `cors`, `authBearer`, `pikkuChannelMiddleware` and `addGlobalMiddleware` from `#pikku/middleware` instead of `@pikku/core/middleware`: app code reaches Pikku through the generated alias, and `pikku validate` reports the other form as an error.
+
+## 0.12.63
+
+### Patch Changes
+
+- d9be115: `pikku mocks add <rpc>` writes a mock in one step: it checks the RPC is a function of the project, writes `.mocks/<rpc.name>/<state>.json` and `<state>.meta.json` in the format `mocks diff`, `sync` and `check` read, keeps exactly one default, checks the body against the function's output, can declare the `--flag` in the project's flags file, and prints the stub hook call to use. It never overwrites a mock without `--force`.
+- edd7abf: Platform-service contributors are plain objects an addon registers with `defineContributors` (new `@pikku/core/contributors`) and a project opts in to by name with `wireAddon({ contributors })`. `dev.contributors`, `deploy.contributors`, addon `pikku.contributors`, the string-emitting `PlatformServiceContributor` API and its helpers, the adapter `contributors` option and the `devPlatformServicesFile` config output are removed, and a leftover one is a hard error: the CLI refuses the config keys by name and the inspector reports an addon `package.json` with `pikku.contributors` as PKU364 (see `docs/MIGRATION.md`). Contributors can declare `onServerStart` / `onServerStop`, run around the app's server lifecycle in `pikku dev`, `pikku serve`, the generic server entry, standalone and the Cloudflare container entry (which now runs the app's own `serverLifecycle`); on a Worker `onServerStart` is a build error. `ProviderAdapter.contributorSupport` gains a required `runsServerLifecycle`. `@pikku/core` is a new peer dependency of the deploy packages and `@pikku/kysely` of `@pikku/deploy-cloudflare`. The names in `wireAddon({ contributors })` are typed from the addon's published contributors meta, so a name the addon does not register fails `tsc` and completes in the editor. A project gets a generated `#pikku/contributor` (`defineContributors` and `Contributor` typed against its own singleton services, type-only apart from core's helper); addons keep using `@pikku/core/contributors`.
+- 8a4233a: Breaking: `pikkuStudio` is now `definePlugin`. An addon declares the screens and nav it brings to Studio with `definePlugin({ title, screens })` from `@pikku/core/addon`. The manifest shape is unchanged; rename the import and the call. `pikku new addon-ui` scaffolds the new name.
+- 4af4a6d: `pikku ui theme apply --mode dark` derives every token for a dark design: `--page`/`--ink` are the dark ground and its text, and card, muted, border, input, the `-foreground` tokens and ring are derived for it, written to both `:root` and `.dark` with `color-scheme: dark`. Derived foregrounds are now contrast-checked against their fill on the light path too (no more white on a light primary), and apply prints a contrast report. Default light output is unchanged.
+
+## 0.12.62
+
+### Patch Changes
+
+- e26796f: An addon can call another addon with full types. It declares the dependency in its package.json as `"pikku": { "uses": { "stripe": "@pikkustudio/addon-stripe@^0.12.0" } }` and calls `rpc.invoke('stripe:charge', ...)`, `rpc.startWorkflow('stripe:...')` or an agent with no cast. `pikku all` in the addon types `stripe:*` from the dependency's SDK: a workspace package's own `.pikku/sdk`, or a registry SDK pinned in `pikku-addons.lock`.
+
+  The app maps the alias with `wireAddon({ ..., uses: { stripe: '<wired name>' } })`, whether the target is wired with `wireAddon` or `wireRemoteAddon`. New codes: PKU354 (the wired instance's version is outside the declared range), PKU355 (`uses` maps a name the addon did not declare), PKU356 (a malformed `pikku.uses` entry). PKU347 and PKU348 now also cover the alias form.
+
+  Breaking (fail-closed): for an addon that declares `pikku.uses`, a `wireAddon` `uses` key it did not declare is now an error (PKU355). Agent `run`/`stream` from an addon now go through `uses` like invoke and workflows, so an unmapped agent call throws `AddonNotUsedError`. See docs/MIGRATION.md.
+
+- 2fdd2d2: A service factory export wrapped in a cast now fails the build with `PKU564` (`FACTORY_NOT_A_DIRECT_CALL`, critical), in both inspectors. That covers `as`, `<T>`, `satisfies`, a non-null assertion and parentheses around `pikkuServices`, `pikkuAddonServices`, `pikkuWireServices`, `pikkuAddonWireServices`, `pikkuConfig`, `pikkuAddonConfig` or `pikkuServerLifecycle`. Before, the inspector skipped the factory without a word: an addon written as `pikkuAddonServices(...) as unknown as CreateSingletonServices<...>` generated no `pikku-package.gen.ts`, and its workflows failed at runtime with `WorkflowNotFoundError`. The message names the export, its file and line, and asks for the cast to be removed and the type it hid to be fixed.
+
+  Core's package factory slots (`PikkuPackageState['package']['factories']`, which every generated `pikku-package.gen.ts` assigns) are now typed `CreateConfig<any>`, `CreateSingletonServices<any, any>` and `CreateWireServices<any, any, any>`. Typed against `CoreConfig` / `CoreSingletonServices`, they refused an addon whose `Config` has required fields of its own or whose services narrow a core one, which is what pushed addons into the cast. Such an addon's factory now type-checks as written.
+
+- fd0c346: Functions take `disabled: true | 'reason'`. A disabled function is left out of the build entirely (meta, RPC maps, clients, addon SDKs, MCP, CLI, HTTP and every wiring) and `addFunction` refuses it at run time. Anything that still references one — a wiring, `rpc.invoke('name')`, a workflow step, an agent tool, or an inline definition inside a wiring — fails the build with `PKU562`, naming both sides. `pikku all` lists the disabled functions once, with file and reason.
+
+  `pikku verify` now fails on an app function that is not wired, exposed or called by name (`PKU563`, an `error` diagnostic that `pikku all` prints but does not fail on). Addon functions are never checked; workflows are, and count as used when started by a literal name (`rpc.startWorkflow`, `workflowService.startWorkflow` / `runToCompletion`, `rpc.invoke`, a workflow step). Use the function or mark it `disabled`.
+
+  References in generated files (`*.gen.ts` / `*.gen.js`) do not count for `PKU562`, so disabling a function no longer fails the next `pikku all` on the previous run's output. Functions in generated scaffolds are never `PKU563`.
+
+  An inline `defineChannelRoutes({...})` inside `wireChannel`'s `onMessageWiring` is now read, so its message routes reach the channel meta.
+
+- 28a0d77: An addon declares its Pikku Studio screens with `pikkuStudio({ title, screens })` from `@pikku/core/addon`. Each screen has a `path`, a `title` (a message key in the addon's `messages/{locale}.json`, also the nav label), a lazy `component` or an `app`, and a `scope`: `'studio'` (`/<path>`), `'team'` (`/<team>/<path>`) or `'project'` (`/<team>/<project>[/<target>]/<path>`). Optional: `nav: { area: 'rail' | 'team' | 'project' | 'account', icon, order, badge? }` where `badge` names a function of the addon returning a count, `replaces`, `needsApp` (project screens only, default false), `layout: 'bare'` and `scopes` (hide the screen; not access control). Both inspectors emit the screens in the `studio` metadata, and `pikku new addon-ui` scaffolds the new form with a `messages/en.json`.
+
+  New codes: PKU357 (two screens of an addon use the same path), PKU358 (a title key missing from the addon's `messages/en.json`), PKU359 (a `nav.badge` naming no function of the addon). A non-literal field is PKU345, and a key missing from another locale is a warning.
+
+  Breaking: `defineScreens` and its types (`ScreensManifest`, `AddonScreen`, `AddonComponentScreen`, `AddonAppScreen`) are removed with no alias, the manifest's top-level `icon` is gone, and `nav` is an object instead of a boolean. The serialized inspector state's `screensManifest`/`addonScreens` are now `studio`/`addonStudio`. See docs/MIGRATION.md.
+
+- 576f2f2: PKU564 now fails only on a real cast around a service factory: `as`, `<T>` or a non-null assertion (`!`). `satisfies` and parentheses leave the factory's type as written, so the inspector reads through them: `pikkuConfig(...) satisfies CreateConfig<Config>` or `(pikkuWireServices(...))` registers exactly like a direct call, addon contract included. A cast with `satisfies` or parentheses between it and the call is still PKU564, and the message names the outermost cast.
+
+## 0.12.61
+
+### Patch Changes
+
+- c416188: `wireRemoteAddon({ package: '@scope/name@^1.4.0' })` pins a remote addon by version range instead of a devDependency. The first step of `pikku all` resolves the range against the addon registry (`registry` in `pikku.config.json`, default `https://registry.pikkustudio.app`), verifies the SDK's sha512, extracts it to `.pikku/remote/<name>@<version>` and records it in the committed `pikku-addons.lock`. Codegen imports the remote addon's RPC, workflow and agent maps from the SDK, PKU338 checks the SDK against the lock, and `pikku update` reports versioned addons with the exact hand edit (file:line, old and new literal); it never rewrites source, and `--update` only touches package.json. New codes: PKU350 (package not a literal), PKU351 (SDK built for another @pikku/core), PKU352 (integrity mismatch), PKU353 (invalid package spec).
+- c2314ca: Separate the mesh from remote addons, make addon `expose` opt-in, and stop passing remote addon errors through.
+
+  **Breaking — the mesh is renamed.** `PIKKU_REMOTE_SECRET` → `PIKKU_MESH_SECRET`, `POST /remote/rpc/:rpcName` → `POST /mesh/rpc/:rpcName`, `rpc.remote()` → `rpc.mesh()`, `pikkuRemoteAuthMiddleware` → `pikkuMeshAuthMiddleware`, `@pikku/core/remote` (`buildRemoteHeaders`) → `@pikku/core/mesh` (`buildMeshHeaders`), `pikku enable remote-rpc` / `scaffold.remoteRpc` → `pikku enable mesh-rpc` / `scaffold.meshRpc`, and the queue `pikku-remote-internal-rpc` → `pikku-mesh-rpc`. Mesh tokens now use audience `pikku-mesh` and HKDF info `pikku:mesh-session`, so every unit of a split deploy must be released together. `remote: true` on a function is unchanged.
+
+  **Breaking — `wireAddon({ expose })` is opt-in.** Installing an addon no longer puts its `expose: true` functions on `POST /rpc`. `expose: true` on the wiring opens them, a list opens the named ones, and a list can no longer open a function the addon did not declare `expose: true` (PKU343). The "exposed function has no gate" warning moves from the addon's own build to the app that opts in. OpenAPI-generated addons now declare every operation `expose: true`, so their install-time lists keep working.
+
+  **Breaking — `wireRemoteAddon` uses the host's public RPC route.** Calls go to `{serverUrl}/rpc/<fn>` with `{ rpcName, data }` and `x-pikku-remote-contract: 1`; a host answers such a call only for functions that are `expose: true` and `remote: true`. `wireRemoteAddon` gains `expose` (forwarded from `rpc.exposed`, after the caller's `addonMayReach` check), `timeoutMs` (default 30s) and a `headers` hook. `RemoteAddonRequestError` is removed: a registered `PikkuError` named by a 4xx is rebuilt with its status and message, any other 4xx becomes the standard error for its status without the body, and a 5xx, network failure or unreadable body becomes `RemoteAddonFailedError` (502) and is logged on the consumer. A timeout is `RemoteAddonTimeoutError` (504).
+
+## 0.12.60
+
+### Patch Changes
+
+- 7b1d0e6: A pikku config that `extends` another now merges into it instead of replacing whole fields: objects merge key by key, `srcDirectories` appends the child's entries to the parent's (duplicates dropped), any other array or value the child sets replaces the parent's, and `null` removes a parent value. Paths are resolved relative to the file that declares them, output files are derived from the merged `outDir`, and an `extends` cycle is refused instead of recursing forever.
+- a9318bd: Platform service contributors declare `needs` and `provides` and run in the order those require; an unmet need, a key provided twice or a cycle fails codegen by name. Generated `createPlatformServices(env, runtime)` receives the services the entry already built (`runtime.kysely` on standalone, after the database opens). Addons ship contributors in their package.json under `pikku.contributors`, picked up by `pikku dev` codegen and by `pikku deploy plan` / `apply`, which now also pass `deploy.contributors` from `pikku.config.json` to the adapter.
+
+## 0.12.59
+
+### Patch Changes
+
+- dc952a8: An agent's structured output is now validated (#1823).
+
+  **Breaking:** a `pikkuAgent` with an `output` schema fails its run with the new `AgentOutputValidationError` (502; `issues` lists what did not match) when the model's object does not match, instead of returning the malformed object. This applies to `rpc.agent.run`, `rpc.agent.approve` and sub-agent calls, and uses the app's `SchemaService`, like function input validation. The run is marked `failed` and `onError` agent middleware runs, as for any other agent failure; nothing is retried. A `null` the model sends for an optional field — which `@pikku/ai-vercel` invites by making optional properties nullable for OpenAI strict mode — is now dropped, so the field comes back absent rather than `null`.
+
+  A streamed run (`streamAgent`) is not validated: its answer reaches the client as it is generated, before there is a complete object to check. A direct `agentRunner.run` call has no agent, so no declared `output`, and is not validated either.
+
+- 8c85de6: `pikku-software-archaeology` now has per-framework guides for Rails, Laravel, NestJS and Express (`references/sources/`), read once the framework is detected. A new `references/tests-to-scenarios.md` covers triaging a legacy test suite and translating it to `pikkuScenario` / `pikkuFeature`. The skill's Pikku mapping no longer points at `pikkuUserFlow`, which was renamed to scenario.
+- c702ed6: Harden `@pikku/better-auth` for 0.13.
+
+  **Breaking:**
+
+  - `SessionStore` and `InMemorySessionStore` are renamed to `AuthSessionStorage` and `InMemoryAuthSessionStorage`, so they no longer clash with `@pikku/core`'s unrelated `SessionStore`. The interface is now better-auth 1.7's `SecondaryStorage` contract and adds `getAndDelete` and `increment`, so a custom implementation must provide both. `inMemorySessionStore()` and `prefixedSessionStore()` keep their names, and the in-memory store can be passed directly as `secondaryStorage`.
+  - `pikkuDelegatedAuth` no longer links an upstream identity to an existing local user with the same email unless you set `linkExistingUsersByEmail`. With `'non-admins'` it refuses anyone holding an `admin` or `pikku:console` scope, and links nobody when there is no ScopeService. With `'all'` it links anyone.
+
+  **Fixes:**
+
+  - The package no longer imports `@better-auth/core` or `@better-auth/utils`, which were only devDependencies. Under pnpm, isolated bun or Yarn PnP, `import '@pikku/better-auth'` used to fail at load time.
+  - The tarball ships only `dist`, `README.md` and `LICENSE`. The build clears `dist` and the tsbuildinfo first, so modules that were removed (fabric and the old virtual-user modules) can no longer ship. Adds a `types` export condition.
+  - `betterAuthStoreSession` now shares its session handling with the other two middlewares. It never overwrites a session that an earlier middleware set. It stands down when an addon's scope withholds the auth secret. It reads relayed cross-site cookies and reports an impersonation header that nothing is configured to honour. It also accepts storages that return parsed objects, treats a malformed `expiresAt` as expired, and takes a `cookiePrefix`.
+  - `betterAuthStatelessSession` recognises `jwe` and `jwt` cookie-cache strategies from the cookie's shape, and takes `cookiePrefix` and `cookieCache: { strategy, version, jwt }`. `pikkuBetterAuth` logs an error at startup when these disagree with the auth config.
+  - `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` is ignored under `NODE_ENV=production`.
+  - The singleton-credential platform user is now found by its reserved email (`PLATFORM_USER_EMAIL`, `findPlatformUserId`). Under `generateId: 'uuid' | 'serial'`, every link used to create another Platform user.
+  - `findPlatformUserId` no longer accepts whoever holds `platform@pikku.internal`. The platform user is created on first link, so until then anyone could sign up with that address by email and password and would have owned every singleton credential. A user with a password account there now throws the new `ReservedPlatformEmailError`, the link endpoint answers `409 PLATFORM_USER_RESERVED`, and `findPlatformUserId` needs `findAccounts` on the adapter it is given (better-auth's `internalAdapter` has it).
+  - `betterAuthStatelessSession` also reports a `cookieCache.version` that differs from the auth config's, which used to reject every cookie without a log line.
+  - `getAuthSession(factory, …)` builds the singleton services and the auth instance once, not once per call. The cache is weak at every level, so builders the caller drops are not kept alive.
+  - The option types that appear in public signatures are now exported. Unneeded `as any` casts are removed, and TSDoc is added to every export.
+
+- ca35477: The test project `pikku new addon` scaffolds imports its application types from `@pikku/core/types`, like the addon itself, instead of the package root, which no longer exports them. Four skill references (`pikku-middleware`, `pikku-services`, `pikku-wiring` channels, `pikku-deploy` ws) import `addGlobalMiddleware`, `pikkuServerLifecycle`, `pikkuChannelMiddleware` and `stopSingletonServices` from the subpaths that export them. The CLI tarball no longer ships `dist/bin/pikku-bin.mjs`, the entry the native binaries are compiled from, nor the bootstrap leaf index `dist/.pikku/node/index.js` whose source the build regenerates away.
+- a0ae9bb: The generated `betterAuthStatelessSession` now reads the session cookie the way the auth config writes it. The inspector reads `advanced.cookiePrefix`, `session.cookieCache.strategy` and `session.cookieCache.version` from the `betterAuth({...})` call when they are string literals, and the CLI passes them through. Before this, an app with a custom cookie prefix was anonymous on every request, and bumping the cookie version invalidated nothing.
+
+  If one of these options is set but isn't a string literal (an environment variable, for example), or a later spread in the same object can replace it (`{ version: '2', ...override }`), the inspector warns about it and does not pass the value on. A spread written before the option is fine, because the option wins. In that case, register `betterAuthStatelessSession({ cookiePrefix, cookieCache })` yourself with `addGlobalMiddleware`. Your registration runs before the generated one, and the generated one then does nothing. `cookieCache.jwt` is never passed through and needs that same manual registration.
+
+- 6c79f8d: **Breaking:** `@pikku/core/services` no longer re-exports the in-memory implementations of a wire, so importing it stops loading the workflow, queue, trigger and gateway runtimes (102 modules down to 40). Each implementation now has its own subpath, and the remote job runners moved to the wire they run:
+
+  | Export                        | Was                    | Now                                       |
+  | ----------------------------- | ---------------------- | ----------------------------------------- |
+  | `InMemoryWorkflowService`     | `@pikku/core/services` | `@pikku/core/services/in-memory-workflow` |
+  | `InMemoryQueueService`        | `@pikku/core/services` | `@pikku/core/services/in-memory-queue`    |
+  | `InMemoryTriggerService`      | `@pikku/core/services` | `@pikku/core/services/in-memory-trigger`  |
+  | `LocalGatewayService`         | `@pikku/core/services` | `@pikku/core/services/local-gateway`      |
+  | `pikkuRemoteQueueJobFunc`     | `@pikku/core/services` | `@pikku/core/queue`                       |
+  | `pikkuRemoteScheduledJobFunc` | `@pikku/core/services` | `@pikku/core/scheduler`                   |
+
+  ```diff
+  -import { ConsoleLogger, InMemoryTriggerService } from '@pikku/core/services'
+  +import { ConsoleLogger } from '@pikku/core/services'
+  +import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
+  ```
+
+  The `REMOTE_*` constants and the `RemoteQueueJobData`/`RemoteScheduledJobData` types stay on `@pikku/core/services`. `@pikku/core/middleware` no longer loads the queue and scheduler runners through `remoteJobsSecret` (50 modules down to 23).
+
+  Core also has no runtime import cycles left: the rpc runner and an agent's sub-agent tools reach the runners that call them lazily, and `wirings-stay-decoupled.test.ts` now fails on any module cycle, on a new cycle between areas, on code outside `wirings/` reaching a wire it is not declared to, and on `@pikku/core/services` loading wire runtime or more than 45 modules.
+
+  The CLI's generated local services and remote job inbox, and the standalone deploy entry, import from the new paths.
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 135811c: Move @types/node to 26.
+- 54b8891: `pikku dev` takes the same platform-service contributors a deploy does. List modules exporting a `PlatformServiceContributor` under `dev.contributors` in `pikku.config.json`; `pikku all` writes `.pikku/pikku-dev-platform-services.gen.ts` from them (nothing when none are configured), and `pikku dev` merges its `createPlatformServices(env)` over the local services before `createSingletonServices`, so a host can inject an `emailService` into a running project. `pikku serve` never loads it (dev only) and `NODE_ENV=production` ignores it. A contributor import given as a `file://` URL or absolute path is emitted as the package export that resolves to it, or relative to `.pikku/`, so the generated file typechecks.
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- afe6fe4: Split the pikku-build app reference by phase: `references/app.md` is now a short index and the rules that hold throughout, and each phase has its own file (`phase-1-what-it-is`, `phase-2-people-and-apps`, `phase-3-plan`, `phase-4-build`, `phase-5-prove-and-ship`). Section numbers are unchanged, and sections that restated the scenarios, theming, design and ship references now point at them.
+- 40855aa: Remove dev quick login. The `${basePath}/dev/quick-login` route, the `PIKKU_DEV_QUICK_LOGIN` flag that `pikku dev` and `pikku serve` set by default, and the `admin@pikku.dev` account it created are gone, and `createAuthHandler` now forwards every request to better-auth. Nothing in this repository called the route. Sign in through your normal sign-in, or `virtualUser()` under `pikku dev`. An `admin@pikku.dev` user already in a dev database is left as it is.
+- a88391a: **Breaking:** `setSession` now means the same in middleware as in a function body (#1451). It marks the session changed — so `authCookie` re-issues the cookie on the way out — and writes the session store under the session's `userId`. Until now a middleware's `setSession` only set the session for the request, under the same name and type.
+
+  Middleware that works out who the caller is from a credential it was handed (a cookie, a bearer token, an API key) should call the new `setInitialSession` instead. It sets the session the function sees without marking it changed or writing anything:
+
+  ```diff
+  -const apiKeyAuth = pikkuMiddleware(async ({ db }, { http, setSession, session }, next) => {
+  +const apiKeyAuth = pikkuMiddleware(async ({ db }, { http, setInitialSession, session }, next) => {
+     if (session) return next()
+     const row = await db.findKey(http?.request?.header('x-api-key'))
+  -  if (row) await setSession?.({ userId: row.userId })
+  +  if (row) setInitialSession?.({ userId: row.userId })
+     return next()
+   })
+  ```
+
+  Left on `setSession`, such a middleware re-issues the auth cookie and writes the session store on every request. Middleware that genuinely signs someone in keeps `setSession`, and now persists. `clearSession` is on the middleware wire too.
+
+  `authCookie`, `authBearer`, `authAPIKey`, `pikkuRemoteAuthMiddleware`, `addonScopeCap`, the better-auth session middleware and the CLI's studio and virtual-user sessions all use `setInitialSession`. `SessionService.set` stores a session under its own `userId` when no user was resolved yet, so a sign-in is persisted rather than dropped, and the function runner reads a middleware-set session from the session service explicitly rather than through the order `freezeInitial` happens to run in.
+
+- bec7622: Tighten every skill description (about 24% fewer characters, same TRIGGER and DO NOT TRIGGER conditions) so less sits in context on every task, and correct the runtime package names in `pikku-concepts` (`@pikku/express`, `@pikku/fastify`, `@pikku/lambda`, `@pikku/uws`, not the directory names).
+
+  Remove the deleted Console from the skills (no console links, deep-link tables or console-inspection steps; progress is reported in plain words with the app and API links `bun run dev` prints), and split `pikku-concepts` so its look-up material (CLI commands, functions, schemas, testing) lives in references and `SKILL.md` drops from about 23 KB to 9 KB.
+
+- 3df9013: A trigger source can now say which user an event belongs to (#1618): `trigger.invoke(data, { pikkuUserId })`. The target RPC or workflow runs as that user, the way a queue job or workflow run carrying a `pikkuUserId` does — its `type: 'wire'` credentials and stored session resolve for them, and a started workflow records the id on the run. Without the option nothing changes: the target runs as nobody.
+
+  The user is a separate argument so nothing in the event data can choose it; a source should pass only a user it established itself, such as the one whose credential it polled with. A `pikkuUserId` that is not a non-empty string drops the event with an error log.
+
+  `PikkuTrigger` and the new `TriggerInvokeOptions` are exported from `@pikku/core/trigger`. A custom `PikkuTriggerService` subclass must pass the new optional `options` argument of the `onTrigger` callback through to `onTriggerFire`, or the user never reaches the target.
+
+## 0.12.58
+
+### Patch Changes
+
+- de9af6a: RPCs for Pikku Studio's migrated screens. Runtime state that must be visible on a deployed app lives in `@pikku/addon-admin`; local-copy tools stay in `@pikku/addon-console`.
+
+  `@pikku/addon-admin`:
+
+  - `admin:getSchedulerHistory` returns each scheduled task's last run, next run and recent runs, from a new `SchedulerService.getTaskRuns()` (empty by default). `InMemorySchedulerService` records the last 50 runs per cron task with status, duration and error. Scope `admin:schedules:read`.
+  - `admin:getQueueHistory({ queueNames?, limit? })` returns live counts and recent jobs per queue, from a new optional `QueueService.inspect(queueName, { limit })`, implemented by `InMemoryQueueService` and `BullQueueService` and forwarded by `SignedQueueService`. Scope `admin:queues:read`.
+  - `admin:listIncomingWebhookReceipts` / `admin:getIncomingWebhookReceipt` expose received webhooks, backed by a new `IncomingWebhookService.getReceipt(receiptId)` (null by default; implemented by `KyselyIncomingWebhookService`). Scope `admin:webhooks:read`.
+
+  `@pikku/addon-console`:
+
+  - `console:variableGet` / `console:variableSet` read and write a project variable, gated on `pikku:console:variables:read` / `:write`.
+  - `console:runScenarios({ names?, environment? })` starts `pikku scenario run` as a detached child process and returns `{ runId }` to follow through `listScenarioRuns` / `getScenarioRun`, gated on the new `pikku:console:scenarios:run` scope. `pikku scenario run` takes `--run-id <id>` to record under a caller-chosen id.
+
+## 0.12.57
+
+### Patch Changes
+
+- ef62615: `pikku update` now moves `@pikku/*` entries in `overrides` and `resolutions` along with the dependency fields. Before, a root override such as `"@pikku/core": "0.12.139"` kept the old version installed after `pikku update --update` had rewritten every range. Nested overrides (objects) are left alone.
+
 ## 0.12.56
 
 ### Patch Changes

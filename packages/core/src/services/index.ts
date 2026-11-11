@@ -14,7 +14,6 @@ export { LocalEmailService } from './local-email-service.js'
 export { LocalCredentialService } from './local-credential-service.js'
 export { LocalVariablesService } from './local-variables.js'
 export { ConsoleLogger, JsonConsoleLogger } from './logger-console.js'
-export { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 export {
   QueueWebhookService,
   pikkuWebhookWorkerFunc,
@@ -29,13 +28,9 @@ export {
   REMOTE_JOBS_SECRET_VARIABLE,
   REMOTE_QUEUE_JOB_PATH,
   REMOTE_SCHEDULER_JOB_PATH,
-  pikkuRemoteQueueJobFunc,
-  pikkuRemoteScheduledJobFunc,
   type RemoteQueueJobData,
   type RemoteScheduledJobData,
 } from './remote-jobs.js'
-export { InMemoryQueueService } from './in-memory-queue-service.js'
-export { InMemoryTriggerService } from './in-memory-trigger-service.js'
 export {
   InMemoryTriggerSourceStore,
   type DeclaredTriggerSource,
@@ -53,7 +48,6 @@ export {
 } from './lease-service.js'
 export { InMemoryLeaseService } from './in-memory-lease-service.js'
 export { InMemoryAgentRunStateService } from './in-memory-agent-run-state-service.js'
-export { LocalGatewayService } from './local-gateway-service.js'
 export type {
   ContentService,
   ContentVisibility,

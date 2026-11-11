@@ -1,0 +1,32 @@
+{
+  "name": "@pikku/templates-fastify-plugin",
+  "main": "src/start.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc -b",
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
+    "start": "tsx src/start.ts",
+    "dev": "tsx --watch src/start.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "^0.12.154",
+    "@pikku/fastify-plugin": "^0.12.10",
+    "@pikku/schedule": "^0.12.12",
+    "fastify": "^5.12.7",
+    "fastify-plugin": "^6.0.1",
+    "tslib": "^2.8.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "fastify": "^5.12.7"
+  },
+  "exports": {
+    ".": "./src/start.ts"
+  }
+}

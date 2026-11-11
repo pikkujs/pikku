@@ -1,6 +1,5 @@
-import type * as ts from 'typescript'
-import type { SecretUsage } from './utils/extract-secret-usage.js'
-import type { SurfaceUsageCounts } from './utils/extract-surface-usage.js'
+import type { SecretUsage, SurfaceUsageCounts } from './utils/usage-types.js'
+import type { AddonDependency } from './utils/addon-dependencies.js'
 import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
 import type { GatewaysMeta } from '@pikku/core/gateway'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
@@ -31,6 +30,15 @@ import type { VirtualUserDefinitions } from '@pikku/core/virtual-user'
 import type { VariableDefinitions } from '@pikku/core/variable'
 import type { TypesMap } from './types-map.js'
 import type { FunctionsMeta } from '@pikku/core/services'
+
+/**
+ * A remote addon SDK's function meta: each contract function, with the
+ * versions of its name the SDK can call and the one a call without `@vN` goes to.
+ */
+export type RemoteAddonFunctionsMeta = Record<
+  string,
+  FunctionsMeta[string] & { versions?: number[]; latestVersion?: number }
+>
 import type {
   FunctionServicesMeta,
   FunctionWiresMeta,
@@ -48,6 +56,8 @@ export type PathToNameAndType = Map<
   string,
   { variable: string; type: string | null; typePath: string | null }[]
 >
+
+export type FilesAndMethodsErrors = Map<string, PathToNameAndType>
 
 export type MetaInputTypes = Map<
   string,
@@ -121,6 +131,20 @@ export interface InspectorFunctionState {
    * inspection pass — deliberately not part of the serialized function meta.
    */
   dynamicImportIds: Set<string>
+  /**
+   * Functions declared with `disabled`, keyed by pikkuFuncId. They are in no
+   * other part of the state: nothing is generated for them, and a reference
+   * to one is PKU562.
+   */
+  disabled: Record<string, DisabledFunctionMeta>
+}
+
+export interface DisabledFunctionMeta {
+  name: string
+  sourceFile: string
+  exportedName?: string
+  /** The string `disabled` was given, when it was not just `true`. */
+  reason?: string
 }
 
 export interface InspectorChannelState {
@@ -253,6 +277,18 @@ export interface InspectorPermissionDefinition {
   description?: string
   package?: string
   requiresData?: boolean
+  /**
+   * Set on a `pikkuPermission` written inline that provably never reads its
+   * data argument and needs nothing from the wire but the session, so it could
+   * have been a `pikkuAuth`. Absent whenever that cannot be told (PKU586).
+   */
+  dataUnused?: boolean
+  /**
+   * Set when the config turns `skipWithoutSession` on, and also when that
+   * cannot be told statically (a spread, a value that is not a literal, a
+   * factory whose body cannot be read), because PKU587 must not flag those.
+   */
+  skipWithoutSession?: boolean
 }
 
 export interface InspectorPermissionInstance {
@@ -262,9 +298,24 @@ export interface InspectorPermissionInstance {
   isFactoryCall: boolean
 }
 
+/**
+ * One `addGlobalPermission(...)` call. It registers at module evaluation, so
+ * codegen must import its file — or call `exportName`, when the call sits in an
+ * exported zero-argument factory — or the global gate does not exist.
+ */
+export interface InspectorGlobalPermissionRegistration {
+  sourceFile: string
+  position: number
+  exportName: string | null
+  definitionIds: string[]
+  /** Registered for a named package, so which functions it reaches is not known here. */
+  targetsPackage?: boolean
+}
+
 export interface InspectorPermissionState {
   definitions: Record<string, InspectorPermissionDefinition>
   instances: Record<string, InspectorPermissionInstance>
+  global: InspectorGlobalPermissionRegistration[]
 }
 
 export type InspectorFilters = {
@@ -337,14 +388,14 @@ export type InspectorOptions = Partial<{
   rootDir: string
   isAddon: boolean
   /**
-   * Fail the build on metadata that only an agent needs — currently an agent
-   * tool with no description. Off by default: the runtime falls back to the
-   * tool's own name, so this is a quality gate rather than a correctness one.
+   * Fail the build on quality gates the runtime can live without: an agent tool
+   * with no description (the runtime falls back to the tool's own name), and a
+   * `pikkuPermission` that never reads its data, which is otherwise a warning
+   * (PKU586). Off by default.
    */
   strictMeta: boolean
   /** The `models` table from pikku.config.json, alias -> `provider/model`. */
   modelAliases: Record<string, string>
-  sourceFile: ts.SourceFile
   /**
    * The project's tsconfig, read for its path mappings only. The inspector's
    * program needs them to resolve imports the project reaches through `paths`;
@@ -374,7 +425,6 @@ export type InspectorOptions = Partial<{
   }
   tags: string[]
   manifest: VersionManifest
-  oldProgram: ts.Program | undefined
   /**
    * Run the data-classification leak scan (Private/Pii/Secret brands in function
    * return types). Off by default — it forces return-type inference on every
@@ -428,13 +478,6 @@ export interface InspectorLogger {
   endValidationPass?: () => void
 }
 
-export type AddWiring = (
-  logger: InspectorLogger,
-  node: ts.Node,
-  checker: ts.TypeChecker,
-  state: InspectorState,
-  options: InspectorOptions
-) => void
 export interface InspectorFilesAndMethods {
   userSessionType?: {
     file: string
@@ -513,6 +556,12 @@ export interface AuthDefinition {
   /** Whether `session.cookieCache` is enabled — drives the stateless session
    * middleware split in the auth codegen. Absent/false ⇒ stateful middleware. */
   cookieCache?: boolean
+  /** `advanced.cookiePrefix`, when written as a string literal. */
+  cookiePrefix?: string
+  /** `session.cookieCache.strategy`, when written as a string literal. */
+  cookieCacheStrategy?: string
+  /** `session.cookieCache.version`, when written as a string literal. */
+  cookieCacheVersion?: string
   /**
    * Singleton services the generated auth handler must have available at
    * runtime — the services the `pikkuBetterAuth` factory reaches for (either
@@ -578,37 +627,94 @@ export interface InspectorFeature {
 export type CredentialOverrideMeta =
   string | { name?: string; mode?: 'singleton' | 'wire' }
 
-/** A screen of an addon as `defineScreens` declares it, read statically. */
-export type AddonScreenMeta = {
+/** A screen's nav entry as `definePlugin` declares it, read statically. */
+export type StudioNavMeta = {
+  area: 'rail' | 'team' | 'project' | 'account'
+  icon: string
+  order: number
+  badge?: string
+}
+
+/** A screen of an addon as `definePlugin` declares it, read statically. */
+export type StudioScreenMeta = {
   path: string
   title: string
-  nav?: boolean
+  scope: 'studio' | 'team' | 'project'
+  nav?: StudioNavMeta
+  replaces?: boolean
+  needsApp?: boolean
+  layout?: 'bare'
   scopes?: string[]
+  agent?: string
+  /** Message key from the agent file's frontmatter, filled by validation. */
+  agentTitle?: string
+  /** Message key from the agent file's frontmatter, filled by validation. */
+  agentDescription?: string
+  defaultChat?: boolean
 } & (
   | { component: string; app?: undefined }
   | { app: string; component?: undefined }
 )
 
-export type ScreensManifestMeta = {
+export type StudioMeta = {
   title: string
-  icon?: string
-  /** The source file whose `defineScreens` call declared this manifest. */
+  /** The source file whose `definePlugin` call declared this manifest. */
   file: string
-  screens: AddonScreenMeta[]
+  screens: StudioScreenMeta[]
   /**
    * The addon's role: every scope its own functions require, derived by
-   * `pikku all` and never declared. Absent from the raw `defineScreens` read.
+   * `pikku all` and never declared. Absent from the raw `definePlugin` read.
    * On a wired instance it also carries the host's `wireAddon` scopes, which
    * the runner demands of every function in the package.
    */
   scopes?: string[]
 }
 
+/**
+ * Where a contributor variant lives, so a host can import only that variant.
+ * `module` is the source file that declares it (absolute while it is in
+ * inspector state, relative to the addon package in the published meta);
+ * `export` is the name that module exports it under.
+ */
+export type ContributorRef = {
+  module: string
+  export: string
+}
+
+/** One `defineContributors` entry: each variant optional, each its own import. */
+export type ContributorVariantsMeta = {
+  dev?: ContributorRef
+  deploy?: ContributorRef
+}
+
+/** The contributors an addon registers, keyed by name. */
+export type ContributorsManifestMeta = Record<string, ContributorVariantsMeta>
+
+/** The contributors a project opted in to for one wired addon. */
+export type OptedInContributorsMeta = {
+  packageName: string
+  /** Each opted-in name with the variants the addon recorded; `module` is relative to the addon package. */
+  contributors: ContributorsManifestMeta
+}
+
+export interface InspectorServiceTypes {
+  /** Property names of the project's SingletonServices type, sorted. */
+  singletonServices: string[] | null
+  /** Property names of the project's Services type, unfiltered. */
+  services: string[] | null
+  /** Singleton services that are a `SecretService` under another name. */
+  secretAliases: string[]
+}
+
 export interface InspectorState {
-  /** Set when this package calls `defineScreens`: the screens it ships. */
-  screensManifest?: ScreensManifestMeta
-  /** The screens of the addons this project wires with `ui: true`, by namespace. */
-  addonScreens?: Record<string, ScreensManifestMeta>
+  /** Set when this package calls `definePlugin`: the screens it ships. */
+  studio?: StudioMeta
+  /** The `definePlugin` metadata of the addons this project wires with `ui: true`, by namespace. */
+  addonStudio?: Record<string, StudioMeta>
+  /** Set when this package calls `defineContributors`: the contributors it registers, by name. */
+  contributorsManifest?: ContributorsManifestMeta
+  /** Per wired addon namespace, the contributors `wireAddon({ contributors })` opted in to. */
+  optedInContributors?: Record<string, OptedInContributorsMeta>
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
   wireServicesTypeImportMap: PathToNameAndType
@@ -646,7 +752,6 @@ export interface InspectorState {
   serverLifecycleFactories: PathToNameAndType
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>
-  typesLookup: Map<string, ts.Type[]> // Lookup for types by name (e.g., function input types, Config type)
   /**
    * What this pass cost, in counts rather than time where it can be counted:
    * counts don't move with the machine, so they are what a perf gate can
@@ -712,8 +817,20 @@ export interface InspectorState {
         /** Declared with `ui: true`: the package must ship screens, and the host mounts them. */
         ui?: boolean
         rpcEndpoint?: string
-        /** The other addons this instance may call: package -> the name it is wired under. */
+        /**
+         * The other addons this instance may call: the name the addon calls
+         * (its declared alias, or the package name) -> the name the target is
+         * wired under in this app.
+         */
         uses?: Record<string, string>
+        /**
+         * The names the addon's package.json declares under `pikku.uses`, in
+         * either form. Read when its meta loads; absent when it declares
+         * nothing, which leaves `uses` unchecked against a declaration.
+         */
+        declaredUses?: string[]
+        /** The `{ alias: 'package@range' }` form of `pikku.uses`, per alias. */
+        dependencies?: AddonDependency[]
         /**
          * `true` offers every function the addon declared `mcp: true`; a list
          * names the functions to offer, whatever the addon declared. Absent
@@ -743,8 +860,20 @@ export interface InspectorState {
         auth?: boolean
         tags?: string[]
         scopes?: string[]
+        /**
+         * wireRemoteAddon: a package installed in this project that carries the
+         * screens and contributors for this name, when they live apart from the
+         * contract package. `ui` and `contributors` are read from it.
+         */
+        local?: { package: string; ui?: boolean; contributors?: string[] }
         /** True when declared via `wireRemoteAddon` — import the addon's `.remote.gen` map, not `.internal.gen` */
         remote?: boolean
+        /**
+         * wireRemoteAddon: the semver range written after the package name
+         * (`@scope/name@^1.4.0`). Present means the contract comes from the
+         * SDK `pikku all` downloads, not from an installed package.
+         */
+        range?: string
         /** wireRemoteAddon: whether an `auth` binding was supplied (vs a public surface) */
         hasAuth?: boolean
         /** wireRemoteAddon: statically-known `auth.credentialId`, for verify */
@@ -775,6 +904,8 @@ export interface InspectorState {
          * `ContentService` instead of one scoped to its own folder.
          */
         globalContent?: string
+        /** The addon contributor names this project opted in to, as `wireAddon({ contributors })` listed them. */
+        contributors?: string[]
       }
     >
     wireAddonFiles: Set<string>
@@ -869,6 +1000,12 @@ export interface InspectorState {
   channelMiddleware: InspectorChannelMiddlewareState
   agentMiddleware: InspectorAIMiddlewareState
   permissions: InspectorPermissionState
+  /**
+   * What the checker concluded about the project's core service types, read
+   * during analysis so that finalize never needs `typesLookup`. A field is null
+   * when the type did not resolve.
+   */
+  serviceTypes?: InspectorServiceTypes
   serviceAggregation: {
     requiredServices: Set<string>
     usedFunctions: Set<string>
@@ -896,6 +1033,7 @@ export interface InspectorState {
   openAPISpec: Record<string, any> | null
   diagnostics: InspectorDiagnostic[]
   addonFunctions: Record<string, FunctionsMeta> // namespace -> addon's function metadata
+  /** The function metadata of each versioned `wireRemoteAddon`'s SDK, by namespace. Kept apart from `addonFunctions`: none of it runs here. */
+  remoteAddonFunctions?: Record<string, RemoteAddonFunctionsMeta>
   exportedContracts: InspectorExportedContractsState
-  program: ts.Program | null // Retained for incremental re-inspection
 }

@@ -30,6 +30,11 @@ const config = (root: string, extra: Record<string, unknown> = {}) =>
     packageMappings: {},
     scaffold: { analytics: true },
     analyticsFile: join(root, 'src/scaffold/analytics/analytics.gen.ts'),
+    analyticsOriginFile: join(
+      root,
+      'src/scaffold/analytics/analytics-origin.gen.ts'
+    ),
+    corsOriginsFile: join(root, 'src/scaffold/cors/cors-origins.gen.ts'),
     ...extra,
   }) as never
 
@@ -233,5 +238,60 @@ describe('pikkuAnalytics', () => {
     )
     const functions = await readFile(cfg.analyticsFile, 'utf8')
     assert.match(functions, /from '\.\/analytics\.schemas\.gen\.js'/)
+  })
+
+  test('writes the origin lock by default, over the shared allowlist', async () => {
+    const root = await project()
+    const cfg = config(root)
+
+    await run({
+      logger,
+      config: cfg,
+      variables: variables(),
+      getInspectorState: getInspectorState(declared(root)),
+    })
+
+    const lock = await readFile(cfg.analyticsOriginFile, 'utf8')
+    assert.match(lock, /addHTTPMiddleware\('\/analytics'/)
+    assert.match(lock, /requireOrigin/)
+    assert.match(lock, /from '\.\.\/cors\/cors-origins\.gen\.js'/)
+  })
+
+  test('originLock: false writes no lock, and removes one it wrote before', async () => {
+    const root = await project()
+    const on = config(root)
+    const state = getInspectorState(declared(root))
+    await run({
+      logger,
+      config: on,
+      variables: variables(),
+      getInspectorState: state,
+    })
+    assert.ok(existsSync(on.analyticsOriginFile))
+
+    const off = config(root, { scaffold: { analytics: { originLock: false } } })
+    await run({
+      logger,
+      config: off,
+      variables: variables(),
+      getInspectorState: state,
+    })
+    assert.equal(existsSync(off.analyticsOriginFile), false)
+    assert.ok(existsSync(off.analyticsFile), 'the ingest itself stays')
+  })
+
+  test('the lock is refused, not silently skipped, without an allowlist file', async () => {
+    const root = await project()
+    const cfg = config(root, { corsOriginsFile: undefined })
+    errors.length = 0
+
+    await run({
+      logger,
+      config: cfg,
+      variables: variables(),
+      getInspectorState: getInspectorState(declared(root)),
+    })
+    assert.equal(existsSync(cfg.analyticsOriginFile), false)
+    assert.match(errors[0]!, /originLock/)
   })
 })

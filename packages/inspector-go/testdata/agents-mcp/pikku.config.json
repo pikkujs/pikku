@@ -1,0 +1,12 @@
+{
+  "rootDir": ".",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": [
+    "src"
+  ],
+  "backends": {
+    "api": {
+      "filter": {}
+    }
+  }
+}

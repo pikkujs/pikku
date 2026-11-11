@@ -2,6 +2,8 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 import {
   flattenScopeDefinitions,
+  liveScopeIds,
+  requiresLiveScope,
   validateAndBuildScopeDefinitionsMeta,
 } from './validate-scope-definitions.js'
 import type { ScopeDefinitions } from './scope.types.js'
@@ -170,6 +172,46 @@ describe('validateAndBuildScopeDefinitionsMeta', () => {
           { name: 'admin', scopes: { '*': {} } },
         ]),
       /wildcard/i
+    )
+  })
+})
+
+describe('live scopes', () => {
+  const definitions: ScopeDefinitions = [
+    {
+      name: 'admin',
+      scopes: {
+        users: {
+          live: true,
+          scopes: { ban: {}, view: { live: false } },
+        },
+        audit: {},
+      },
+    },
+    { name: 'billing', live: true, scopes: { read: {} } },
+    { name: 'plain' },
+  ]
+
+  test('a live node makes itself and its descendants live', () => {
+    assert.deepEqual([...liveScopeIds(definitions)].sort(), [
+      'admin:users',
+      'admin:users:ban',
+      'billing',
+      'billing:read',
+    ])
+  })
+
+  test('a requirement is live when its scope is, and a wildcard counts as its node', () => {
+    const live = liveScopeIds(definitions)
+    assert.equal(requiresLiveScope(['plain', 'admin:users:*'], live), true)
+    assert.equal(requiresLiveScope(['admin', 'admin:audit'], live), false)
+    assert.equal(requiresLiveScope(undefined, live), false)
+  })
+
+  test('live survives into the built meta', () => {
+    assert.equal(
+      validateAndBuildScopeDefinitionsMeta(definitions).billing?.live,
+      true
     )
   })
 })

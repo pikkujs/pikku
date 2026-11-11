@@ -1,10 +1,23 @@
-import { createHMAC } from '@better-auth/utils/hmac'
-
 const tryDecode = (value: string): string => {
   try {
     return decodeURIComponent(value)
   } catch {
     return value
+  }
+}
+
+/**
+ * better-call signs with standard, padded base64; accepting the URL-safe
+ * alphabet and a missing pad as well costs nothing and tolerates a client that
+ * re-encoded the value.
+ */
+const decodeSignature = (signature: string): Uint8Array<ArrayBuffer> | null => {
+  const standard = signature.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = standard.padEnd(Math.ceil(standard.length / 4) * 4, '=')
+  try {
+    return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
+  } catch {
+    return null
   }
 }
 
@@ -36,14 +49,23 @@ export const verifySessionCredential = async (
   if (!token || !signature) {
     return null
   }
-  try {
-    const valid = await createHMAC('SHA-256', 'base64urlnopad').verify(
-      secret,
-      token,
-      signature
-    )
-    return valid ? token : null
-  } catch {
+  const signatureBytes = decodeSignature(signature)
+  if (!signatureBytes) {
     return null
   }
+  const encoder = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['verify']
+  )
+  const valid = await crypto.subtle.verify(
+    'HMAC',
+    key,
+    signatureBytes,
+    encoder.encode(token)
+  )
+  return valid ? token : null
 }

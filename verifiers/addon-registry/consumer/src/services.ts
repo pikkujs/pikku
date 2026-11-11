@@ -4,6 +4,7 @@ import {
   LocalVariablesService,
   LocalSecretService,
 } from '@pikku/core/services'
+import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 
 import '../.pikku/pikku-bootstrap.gen.js'
 
@@ -19,6 +20,7 @@ export const createSingletonServices = pikkuServices(async (config) => {
     logger: new ConsoleLogger(),
     variables,
     secrets: new LocalSecretService(variables),
+    workflowService: new InMemoryWorkflowService(),
   }
 })
 

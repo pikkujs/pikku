@@ -12,6 +12,7 @@ export const bulkMemberRemovalWorkflow = pikkuWorkflowFunc<
   { projectId: string; memberIds: string[]; notifyMembers: boolean },
   { removedCount: number; notifiedCount: number }
 >({
+  auth: false,
   title: 'Bulk Member Removal',
   tags: ['project'],
   func: async (_services, data, { workflow }) => {

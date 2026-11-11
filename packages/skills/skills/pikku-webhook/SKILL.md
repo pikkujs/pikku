@@ -1,16 +1,7 @@
 ---
 name: pikku-webhook
 description: >-
-  Use when an application needs to SEND outgoing webhooks — notifying a customer's endpoint that
-  something happened, with signing, retries and a delivery log. Covers WebhookService,
-  QueueWebhookService, the `pikku-outgoing-webhooks` queue worker, `scaffold.webhook`,
-  `config.webhook`, signature verification on the receiving side, and KyselyWebhookService's
-  delivery history. TRIGGER when: code uses webhookService, QueueWebhookService,
-  KyselyWebhookService, pikkuWebhookWorkerFunc, PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
-  SendWebhookInput or X-Pikku-Signature. TRIGGER when: the user asks to emit events to a
-  customer URL, build a webhook endpoint settings screen, add a signing secret, or show
-  delivery attempts. DO NOT TRIGGER when: the user is RECEIVING webhooks from a third party
-  into a route — that is an ordinary wireHTTP function (use pikku-wiring).
+  Send outgoing webhooks to customer URLs: WebhookService, QueueWebhookService, signing, retries, delivery log, pikkuWebhookWorkerFunc, X-Pikku-Signature. Receiving webhooks is pikku-wiring.
 installGroups: [core]
 ---
 
@@ -28,6 +19,8 @@ an outgoing event.** If the shipped signing scheme or delivery model genuinely
 does not fit, subclass `WebhookService` — it is an abstract class precisely so
 an app can substitute its own transport (direct send, Svix) and keep the same
 call sites and delivery history.
+
+Typed events: `pikku doc defineOutgoingWebhook TypedWebhookService`. Declaring one types `data` and sends nothing.
 
 ## Agent Operating Procedure
 
@@ -201,7 +194,7 @@ const deliveries = await webhookService.listDeliveries({
 const detail = await webhookService.getDelivery(deliveryId) // { delivery, attempts }
 ```
 
-Building a console screen is `listDeliveries` for the list and `getDelivery` for
+Building a deliveries screen is `listDeliveries` for the list and `getDelivery` for
 the drill-in. A hand-written select over `webhookDelivery` is a sign the wrong
 service is registered.
 

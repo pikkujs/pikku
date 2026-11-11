@@ -155,7 +155,7 @@ export {
   HttpVirtualUser,
   createHttpVirtualUsers,
   type HttpVirtualUsersConfig,
-} from '../../services/http-virtual-users.js'
+} from './http-virtual-users.js'
 export {
   statementSignIn,
   inProcessSignIn,

@@ -58,6 +58,8 @@ type TypedVirtualUser = Omit<CoreVirtualUser, 'roles' | 'environments'> & {
 
 /**
  * Declare the people who use this application.
+ *
+ * @example snippet: defineVirtualUsers
  */
 export const defineVirtualUsers = (virtualUsers: Record<string, TypedVirtualUser>): void =>
   defineVirtualUsersCore(virtualUsers)
@@ -65,6 +67,7 @@ export const defineVirtualUsers = (virtualUsers: Record<string, TypedVirtualUser
 /** Declared virtual users, keyed by id. Read by the console and \`pikku virtual-user\`. */
 export const VIRTUAL_USERS: VirtualUsersMeta = definitions as unknown as VirtualUsersMeta
 
+/** The same virtual users as a list, for iterating over them. */
 export const VIRTUAL_USER_LIST: VirtualUserMeta[] = Object.values(VIRTUAL_USERS)
 `
 }

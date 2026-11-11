@@ -30,6 +30,11 @@ export type LocalContentRequestHandler = (
   request: Request
 ) => Promise<Response | null>
 
+/**
+ * Options for {@link createLocalContentRequestHandler}. `content` must match
+ * the config the {@link LocalContent} service was built with, and `getJWT` must
+ * return the same `JWTService` it signs with.
+ */
 export type LocalContentRequestHandlerOptions = {
   content: LocalContentConfig
   logger: Logger
@@ -53,6 +58,10 @@ const text = (status: number, body: string) =>
     headers: { 'content-type': 'text/plain; charset=utf-8' },
   })
 
+/**
+ * The verdict of {@link verifySignedContentRequest}: either valid, or the
+ * status and body to refuse the request with.
+ */
 export type SignedContentVerification =
   { ok: true } | { ok: false; status: number; body: string }
 
@@ -134,6 +143,17 @@ export const verifySignedContentRequest = async (
   return { ok: true }
 }
 
+/**
+ * Creates the request handler that serves {@link LocalContent}: signed `PUT`
+ * uploads under `uploadUrlPrefix`, and `GET`/`HEAD` reads under
+ * `assetUrlPrefix`.
+ *
+ * Uploads always require a valid signature; reads require one unless the file
+ * is public. Paths that escape the content root are refused with 400, and
+ * uploads over `sizeLimit` (default `1mb`) with 413. When no `JWTService` is
+ * available, every signed request is refused and the misconfiguration is logged
+ * once.
+ */
 export const createLocalContentRequestHandler = ({
   content,
   logger,

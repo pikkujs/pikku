@@ -14,6 +14,11 @@ export class AbandonedError extends Error {
   }
 }
 
+/**
+ * Whether the caller of an invocation is still waiting for it, as consulted by
+ * {@link beginChanges}. Set by wirings whose callers can go away mid-run, such
+ * as an interrupted agent run.
+ */
 export interface AbortScope {
   /** Whether whatever asked for this work has gone away. */
   readonly abandoned: boolean

@@ -24,10 +24,14 @@ export type {
   ScenarioBrowserFailure,
 } from './scenario-step.types.js'
 
+/**
+ * A scenario a feature runs: the scenario itself, or the scenario paired with the input it runs with.
+ */
 export type CoreFeatureScenario =
   | CorePikkuFunctionConfig<any, any, any>
   | { scenario: CorePikkuFunctionConfig<any, any, any>; data: unknown }
 
+/** What `pikkuFeature` takes: a named group of scenarios, with hooks around them. */
 export type CoreFeature = {
   name: string
   description?: string
@@ -50,6 +54,7 @@ export type FeatureMetaEntry = {
   data?: unknown
 }
 
+/** Generated metadata for one feature. */
 export type FeatureMeta = {
   id: string
   name: string
@@ -63,6 +68,7 @@ export type FeatureMeta = {
   hasAfter: boolean
 }
 
+/** Generated metadata for every feature, keyed by id. */
 export type FeaturesMeta = Record<string, FeatureMeta>
 
 export type FeaturePlanEntry = {

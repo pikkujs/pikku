@@ -33,6 +33,7 @@ export const unhappyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
   { result: number }
 >({
+  auth: false,
   func: async ({}, data, { workflow }) => {
     // If value is negative, cancel the workflow immediately
     if (data.value < 0) {
@@ -72,6 +73,7 @@ export const unhappyRetry = pikkuSessionlessFunc<
     }>
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   func: async ({ workflowService, logger }, data, { rpc }) => {
     // Start the workflow
     const { runId } = await rpc.startWorkflow('unhappyRetryWorkflow', data)

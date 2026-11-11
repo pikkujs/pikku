@@ -1,101 +1,49 @@
 ---
 name: pikku-list-query
 description: >-
-  Use when building a paginated or infinite-scroll list: any RPC that returns rows a user scrolls through (tables, card grids, search results). Covers the backend pikkuListFunc, the ListInput/ListOutput cursor contract, the filter tree, and the generated usePikkuInfiniteQuery hook.
-  TRIGGER when: user asks for infinite scroll, "load more", a paginated table/list/grid, or a list that could grow beyond a single page.
-  DO NOT TRIGGER when: the list is small and fixed (for example 5 settings items), where a plain pikkuFunc plus usePikkuQuery returning a full array is correct, or when the task is general React provider and hook setup (use pikku-react).
+  Paginated or infinite-scroll lists, "load more": pikkuListFunc, ListInput/ListOutput cursors, filter tree, usePikkuInfiniteQuery. Not small fixed lists (plain pikkuFunc plus usePikkuQuery).
 installGroups: [core, client]
 ---
 
 # Pikku List Queries
 
+What to reach for and why. For how to call it, run this once: `pikku doc pikkuListFunc ListInput ListOutput Filter`.
+
 ## Agent Operating Procedure
 
-1. Capture baseline. Run `pikku all` BEFORE writing code; only NEW errors are yours to fix.
-2. Write the backend function with `pikkuListFunc` (below) — never a bespoke `{items: [...]}` shape once the list can page.
-3. Run `pikku all` to regenerate `usePikkuInfiniteQuery` for the new function.
-4. Wire the frontend with `usePikkuInfiniteQuery`, not a hand-rolled `useState` page counter and not a raw `useInfiniteQuery` — the generated hook already resolves cursor plumbing from your function's types.
-5. Validate with `pikku all`.
+1. Write the backend with `pikkuListFunc`, never a bespoke `{items: [...]}` shape once the list can page. With no filters write `pikkuListFunc<Record<string, unknown>, Row>`: `Record<string, never>` makes the hook's `limit` a type error.
+2. Wire the frontend with `usePikkuInfiniteQuery`, not a hand-rolled `useState` page counter or a raw `useInfiniteQuery`. The generated hook resolves cursor plumbing from your function's types.
+3. Validate with `pikku all`, which also regenerates the hook.
 
 ## The `pikkuListFunc` contract
 
-A list function is a normal `pikkuFunc`/`pikkuSessionlessFunc` whose input/output conform to two shared shapes from `@pikku/core`:
+A list function is a normal `pikkuFunc`/`pikkuSessionlessFunc` whose input and output are `ListInput` and `ListOutput`. Echo `cursor` back opaquely.
 
-```typescript
-interface ListInput<F extends Record<string, unknown> = {}, S extends string = never> {
-  cursor?: string // opaque — echo back whatever you returned as nextCursor
-  limit?: number // page size; server may cap it
-  sort?: Array<{ column: S; direction: 'asc' | 'desc' }>
-  filter?: Filter<F> // structured AND/OR tree, Prisma-style leaf operators
-  search?: string // free-text search across server-chosen fields
-}
+The react-query codegen detects any RPC whose output includes `nextCursor` and generates an infinite-query hook for it. No manual wiring, no opt-in flag.
 
-interface ListOutput<Row> {
-  rows: Row[]
-  nextCursor: string | null // null = no more pages
-  totalCount?: number // optional — skip when expensive to compute
-}
-```
+Rules for the function body:
 
-Adopting this shape is what makes the function eligible for the generated `usePikkuInfiniteQuery` hook — the react-query codegen structurally detects any RPC whose output includes `nextCursor` and generates an infinite-query hook for it automatically. No manual wiring, no opt-in flag.
+- `input` is inferred as `ListInput<F>` from the generics. Never re-annotate it inline.
+- **`limit` is caller-supplied on an exposed RPC, so it is CAPPED, not trusted:** `Math.min(Math.max(Math.trunc(input.limit ?? 20) || 20, 1), 100)`.
+- An offset cursor is untrusted too: accept it only if `Number.isSafeInteger(parsed) && parsed >= 0`, else start at 0.
+- Scope the query to the session with a `where`, and read filters with a helper like `leafEquals` below.
+- Set `nextCursor` to `null` once `offset + rows.length` reaches the total.
 
-```typescript
-import { pikkuListFunc } from '#pikku/function'
-
-interface Item {
-  id: string
-  label: string
-}
-
-export const listItems = pikkuListFunc<{ status?: string }, Item>({
-  expose: true,
-  auth: true,
-  readonly: true,
-  description: 'List items for the signed-in user, paginated.',
-  // `input` is inferred as ListInput<{ status?: string }> from the generics above —
-  // never re-annotate it inline.
-  func: async ({ kysely }, input, { session }) => {
-    // `limit` is caller-supplied on an exposed RPC, so it is CAPPED, not trusted —
-    // `ListInput` says "server may cap" and this is where that happens.
-    const limit = Math.min(Math.max(Math.trunc(input.limit ?? 20) || 20, 1), 100)
-    const parsed = input.cursor ? Number(input.cursor) : 0
-    const offset = Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : 0
-
-    let query = kysely.selectFrom('item').where('userId', '=', session!.userId)
-    const status = leafEquals(input.filter, 'status')
-    if (status !== undefined) {
-      query = query.where('status', '=', status)
-    }
-
-    const rows = await query.orderBy('createdAt', 'desc').offset(offset).limit(limit).execute()
-    const nextOffset = offset + rows.length
-    const totalCount = await query
-      .select((eb) => eb.fn.countAll<number>().as('count'))
-      .executeTakeFirstOrThrow()
-
-    return {
-      rows: rows.map((r) => ({ id: r.id, label: r.label })),
-      nextCursor: nextOffset < totalCount.count ? String(nextOffset) : null,
-      totalCount: totalCount.count,
-    }
-  },
-})
-```
-
-Cursor doesn't have to be a numeric offset — any opaque string works (a keyset value, an encoded timestamp, etc.), as long as you can turn it back into a query position on the next call.
+A cursor can be any opaque string (a keyset value, an encoded timestamp) you can turn back into a query position.
 
 ## Frontend: `usePikkuInfiniteQuery`
 
-Generated automatically alongside `usePikkuQuery`/`usePikkuMutation` once `reactQueryFile` is configured (see the react-query wiring docs) — no separate setup for list functions specifically.
+Generated alongside `usePikkuQuery`/`usePikkuMutation` in `pikku-react-query.gen.ts` of the backend's SDK (see the react-query wiring docs); no separate setup.
 
 ```tsx
 import { usePikkuInfiniteQuery } from '.pikku/pikku-react-query.gen'
 
 function ItemList() {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = usePikkuInfiniteQuery(
-    'listItems',
-    { limit: 20 }, // never pass cursor here — the hook manages it
-  )
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    usePikkuInfiniteQuery(
+      'listItems',
+      { limit: 20 } // never pass cursor here — the hook manages it
+    )
 
   const rows = data?.pages.flatMap((page) => page.rows) ?? []
 
@@ -114,41 +62,38 @@ function ItemList() {
 }
 ```
 
-For scroll-triggered loading (rather than a button), pair it with an `IntersectionObserver` sentinel at the end of the list that calls `fetchNextPage()` when it enters the viewport and `hasNextPage` is true — don't poll on a scroll event handler.
+For scroll-triggered loading, put an `IntersectionObserver` sentinel at the end of the list that calls `fetchNextPage({ cancelRefetch: false })` when it enters the viewport while `hasNextPage && !isFetching`, so re-entry never restarts a request in flight. `isFetchingNextPage` is false during a background refetch, and `cancelRefetch: false` would then reuse that refetch instead of loading the next page, so gate on `isFetching` and re-check a still-visible sentinel when the fetch settles (an effect on `isFetching`), or pagination stalls. Don't poll on a scroll event handler.
 
 ## Common mistakes
 
-- **Bespoke output shape** (`{items, total}` with no `nextCursor`) — compiles, but disqualifies the function from `usePikkuInfiniteQuery`; you're left hand-rolling pagination state. Use `ListOutput<Row>`'s field names (`rows`, `nextCursor`) even if you don't need `filter`/`sort`/`search` yet — they're optional.
-- **Fixed large `limit` instead of real pagination** (e.g. `{ limit: 500 }` fetched once) — works until the collection outgrows the cap, then silently truncates. If a list can grow unbounded, page it from the start.
-- **Passing `cursor` manually into `usePikkuInfiniteQuery`'s input argument** — the hook injects it into each page request itself; the input you pass is the _base_ filter/limit shared by every page.
+- **Bespoke output shape** (`{items, total}` with no `nextCursor`): compiles, but disqualifies the function from `usePikkuInfiniteQuery`. Use `ListOutput<Row>`'s `rows` and `nextCursor` even if you don't need `filter`/`sort`/`search` yet; they're optional.
+- **Fixed large `limit`** (e.g. `{ limit: 500 }` fetched once): silently truncates once the collection outgrows the cap. If a list can grow unbounded, page it from the start.
+- **Passing `cursor` into `usePikkuInfiniteQuery`'s input**: the hook injects it per page; your input is the _base_ filter/limit shared by every page.
 
 ## `filter` is a TREE, not a bag of fields
 
-`Filter<F>` is recursive: an **array** is an AND of its children, a **multi-key object** is
-an OR keyed by labels that mean nothing at evaluation time, and only a **single-key object**
-is a leaf. A leaf's value is either the value itself or an operator object
-(`{ contains, in, gt, gte, lt, lte, not, startsWith, … }`).
+`Filter<F>` is recursive: an **array** is an AND of its children, a **multi-key object** is an OR keyed by labels that mean nothing at evaluation time, and only a **single-key object** is a leaf. A leaf's value is the value itself or an operator object (`{ contains, in, gt, gte, lt, lte, not, startsWith, … }`).
 
-So `'status' in input.filter` answers `false` for `[{ status: 'open' }, { userId: 'u1' }]`
-and for `{ status: { in: ['open', 'held'] } }` — the first because the filter is an array,
-the second because the value is an operator object rather than the string the code then
-compares. Both cases **silently return unfiltered rows**, which on a list endpoint means
-handing back records the caller asked to exclude. Pikku ships no filter-to-SQL helper: the
-backend decides what it accepts, and it has to say so.
+So `'status' in input.filter` is `false` for `[{ status: 'open' }, { userId: 'u1' }]` (array), and code comparing the value breaks on `{ status: { in: ['open', 'held'] } }` (operator object). Both **silently return unfiltered rows**, handing back records the caller asked to exclude. Pikku ships no filter-to-SQL helper: the backend decides what it accepts, and has to say so.
 
-Read exactly the shape you support, and refuse the rest rather than ignoring it:
+Read exactly the shape you support, and refuse the rest:
 
 ```typescript
 import type { Filter } from '@pikku/core/function'
 
 /** The one shape this endpoint accepts: a single-key leaf with a plain value. */
-function leafEquals<F extends Record<string, unknown>, K extends keyof F & string>(
-  filter: Filter<F> | undefined,
-  field: K,
-): F[K] | undefined {
-  if (!filter || Array.isArray(filter)) return undefined
+function leafEquals<
+  F extends Record<string, unknown>,
+  K extends keyof F & string,
+>(filter: Filter<F> | undefined, field: K): F[K] | undefined {
+  if (!filter) return undefined
   const keys = Object.keys(filter)
-  if (keys.length !== 1 || keys[0] !== field) return undefined
+  if (Array.isArray(filter) || keys.length !== 1) {
+    throw new Error(
+      'filter takes one single-key leaf, not an array or a multi-key object'
+    )
+  }
+  if (keys[0] !== field) return undefined
   const value = (filter as Record<string, unknown>)[field]
   if (value !== null && typeof value === 'object') {
     throw new Error(`filter.${field} takes a value, not an operator object`)
@@ -157,7 +102,4 @@ function leafEquals<F extends Record<string, unknown>, K extends keyof F & strin
 }
 ```
 
-Supporting AND/OR or operators means walking the tree properly — recurse into the array and
-the multi-key object, and map each leaf operator to its Kysely equivalent. Do that when the
-UI needs it; until then, throwing on the shapes you do not handle is what stops a filter
-from being quietly dropped.
+Supporting AND/OR or operators means walking the tree: recurse into the array and multi-key object, and map each leaf operator to its Kysely equivalent. Do that when the UI needs it; until then, throw on shapes you do not handle so a filter is never quietly dropped.

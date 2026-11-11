@@ -3,16 +3,6 @@ import type { Logger } from '@pikku/core/services'
 import type { ScopeService } from '@pikku/core/services'
 import type { CoreServices } from '@pikku/core/types'
 
-/**
- * The scope ids this package's own gates check.
- *
- * Declared here so a host never has to spell them out as bare strings, and so
- * the tree an app must `defineScope` is discoverable from one place. Every one
- * hangs off the `admin` root, which means a single `admin` grant covers the
- * lot — pikku's parent-grant rule makes it the direct replacement for what
- * better-auth's `admin()` plugin expressed as `role === 'admin'`, without a
- * column that has to be kept in step with the grants it is checked against.
- */
 /** The umbrella grant: holding it satisfies every scope beneath it. */
 export const ADMIN_SCOPE_ROOT = 'admin'
 
@@ -25,6 +15,16 @@ export const ADMIN_SCOPE_ROOT = 'admin'
  */
 export const CONSOLE_SCOPE_ROOT = 'pikku:console'
 
+/**
+ * The scope ids this package's own gates check.
+ *
+ * Declared here so a host never has to spell them out as bare strings, and so
+ * the tree an app must `defineScope` is discoverable from one place. Every one
+ * hangs off the `admin` root, which means a single `admin` grant covers the
+ * lot — pikku's parent-grant rule makes it the direct replacement for what
+ * better-auth's `admin()` plugin expressed as `role === 'admin'`, without a
+ * column that has to be kept in step with the grants it is checked against.
+ */
 export const ADMIN_SCOPES = {
   /** Act as another user via the impersonation header. */
   impersonate: 'admin:impersonate',
@@ -132,6 +132,62 @@ export const ADMIN_SCOPE_TREE = {
           },
         },
       },
+      schedules: {
+        description: 'Scheduled tasks',
+        scopes: {
+          read: {
+            description:
+              'See when each scheduled task last ran, how it went, and when it runs next',
+          },
+        },
+      },
+      queues: {
+        description: 'Background job queues',
+        scopes: {
+          read: {
+            description:
+              'See how many jobs are waiting, running and failed, and the recent ones',
+          },
+        },
+      },
+      webhooks: {
+        description: 'Webhooks received from other services',
+        scopes: {
+          read: {
+            description: 'See each received webhook and what became of it',
+          },
+          deliveries: {
+            description: 'See each outgoing webhook delivery and its result',
+          },
+        },
+      },
+      workflows: {
+        description: 'Workflow runs',
+        scopes: {
+          read: {
+            description:
+              "See workflow runs, their steps and history, and watch a run's progress",
+          },
+          manage: { description: 'Delete workflow runs' },
+        },
+      },
+      agents: {
+        description: 'AI agent conversations',
+        scopes: {
+          read: {
+            description: 'See agent threads, their messages, runs and scores',
+          },
+          manage: { description: 'Delete agent threads' },
+        },
+      },
+      virtualUsers: {
+        description: 'Virtual users',
+        scopes: {
+          read: {
+            description: 'See virtual-user runs, their steps and schedules',
+          },
+        },
+      },
       audit: {
         description: 'The audit trail',
         scopes: {
@@ -158,6 +214,8 @@ export const ADMIN_SCOPE_TREE = {
  * authorized; that denial is logged at `warn` because an app wiring an admin
  * capability with no ScopeService has a configuration bug, not a permissions
  * problem.
+ *
+ * @example snippet: betterAuthScopeGate
  */
 export const resolvedUserHoldsScopes = async (
   userId: string | undefined,
@@ -191,6 +249,6 @@ export const userHoldsScopes = async (
   resolvedUserHoldsScopes(
     userId,
     required,
-    (services as any).scopeService as ScopeService | undefined,
+    services.scopeService,
     services.logger
   )

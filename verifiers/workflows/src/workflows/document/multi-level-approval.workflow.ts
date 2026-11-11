@@ -11,6 +11,7 @@ export const multiLevelApprovalWorkflow = pikkuWorkflowComplexFunc<
   },
   { documentId: string; approvedLevels: number[]; finalStatus: string }
 >({
+  auth: false,
   title: 'Multi Level Approval',
   tags: ['document'],
   func: async (_services, data, { workflow }) => {

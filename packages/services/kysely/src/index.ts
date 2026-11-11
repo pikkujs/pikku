@@ -29,7 +29,13 @@ export { KyselyVirtualUserScheduleStore } from './kysely-virtual-user-schedule-s
 // Re-exported so a generated file that constructs the services above opens and
 // types its database with the same copy of kysely those services were built
 // against, rather than a second copy the project may resolve on its own.
-export { CamelCasePlugin, Kysely, MysqlDialect, PostgresDialect } from 'kysely'
+export {
+  CamelCasePlugin,
+  Kysely,
+  MysqlDialect,
+  PostgresDialect,
+  sql,
+} from 'kysely'
 
 export {
   SerializePlugin,
@@ -82,8 +88,14 @@ export {
   requirePikkuSchema,
   resolveRequirements,
   withUserTable,
+  defineTables,
+  requiredType,
+  type AppTables,
+  type ColumnAnnotation,
   type PikkuSchema,
   type RequiredTypes,
+  type SchemaRequirement,
+  type TableAnnotations,
   type UnmetRequirement,
   type SchemaStatementFactory,
 } from './schema/index.js'

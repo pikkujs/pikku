@@ -338,6 +338,24 @@ describe('serializeAuthGen', () => {
       assert.doesNotMatch(mw, /import '\.\.\/src\/auth\.js'/)
       assert.doesNotMatch(mw, /createAuthHandler/)
     })
+
+    // Otherwise a custom prefix reads no cookie at all and every request is
+    // anonymous, and a version bump invalidates nothing.
+    test('the stateless verifier reads the cookie the way the auth config writes it', () => {
+      const mw = gen(
+        ['github'],
+        def({
+          cookieCache: true,
+          cookiePrefix: 'shop',
+          cookieCacheStrategy: 'jwe',
+          cookieCacheVersion: '2',
+        })
+      ).middleware!
+      assert.match(
+        mw,
+        /betterAuthStatelessSession\(\{ priority: 'lowest', cookiePrefix: "shop", cookieCache: \{ strategy: "jwe", version: "2" \} \}\)/
+      )
+    })
   })
 
   describe('console bearer token (scaffold.console enabled)', () => {

@@ -16,6 +16,7 @@ export const orderProcessingWorkflow = pikkuWorkflowFunc<
   },
   { orderId: string; paymentId: string; status: string }
 >({
+  auth: false,
   title: 'Order Processing',
   tags: ['ecommerce'],
   func: async (_services, data, { workflow }) => {
@@ -46,17 +47,23 @@ export const orderProcessingWorkflow = pikkuWorkflowFunc<
         subject: `Order ${order.id} Confirmed`,
         body: `Your order for $${order.total} has been confirmed.`,
       })
+
+      return {
+        orderId: order.id,
+        paymentId: payment.id,
+        status: 'paid',
+      }
     } else {
       await workflow.do('Update order to payment_failed', 'orderUpdate', {
         orderId: order.id,
         status: 'payment_failed',
       })
-    }
 
-    return {
-      orderId: order.id,
-      paymentId: payment.id,
-      status: payment.status === 'completed' ? 'paid' : 'payment_failed',
+      return {
+        orderId: order.id,
+        paymentId: payment.id,
+        status: 'payment_failed',
+      }
     }
   },
 })

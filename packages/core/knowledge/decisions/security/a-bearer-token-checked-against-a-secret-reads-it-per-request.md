@@ -14,7 +14,7 @@ and becomes `undefined` (`:65`), and the code comments that an unset secret mean
 the feature is off, never a request error (`:62`).
 
 An undefined expected value skips the comparison (`:68`). `userSession` stays
-null, and `setSession` is not called (`:55`, `:75-77`). A malformed scheme is a
+null, and `setInitialSession` is not called (`:55`, `:75-77`). A malformed scheme is a
 different case: it throws `InvalidSessionError` (`:50-53`).
 
 The static and JWT branches of this middleware are covered by the existing

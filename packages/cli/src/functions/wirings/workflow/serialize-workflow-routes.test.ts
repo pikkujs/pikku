@@ -8,14 +8,14 @@ describe('serializeWorkflowRoutes', () => {
   test('both stream variants are the same core poller, told how much to say', () => {
     const { functions: result } = serializeWorkflowRoutes(leaf)
 
-    const delegations = result.match(/await streamWorkflowRunStatus\(/g) ?? []
-    assert.equal(delegations.length, 2)
-    const detailed = result.match(/detailed: true/g) ?? []
+    // The poller lives in core behind rpc.exposedWorkflow, so a route only
+    // names which variant it wants.
+    assert.equal(result.match(/exposedWorkflow\.streamStatus\(/g)?.length, 1)
     assert.equal(
-      detailed.length,
-      1,
-      'only the full stream asks for output, error and child run ids'
+      result.match(/exposedWorkflow\.streamStatusFull\(/g)?.length,
+      1
     )
+    assert.ok(!result.includes('streamWorkflowRunStatus'))
   })
 
   // The frames themselves are core's, tested by running the poller in
@@ -34,38 +34,86 @@ describe('serializeWorkflowRoutes', () => {
     assert.ok(!result.includes('plannedSteps'))
   })
 
-  test('emits an approve route wired to approveStep', () => {
+  test('emits an approve route wired to rpc.exposedWorkflow.approve', () => {
     const { functions: result } = serializeWorkflowRoutes(leaf)
 
     assert.match(result, /route: '\/workflow\/:workflowName\/approve\/:runId'/)
     assert.match(result, /func: workflowApprover/)
     assert.match(
       result,
-      /await workflowService\.approveStep\(runId, reason, decision, session\)/
+      /await wire\.rpc\.exposedWorkflow\.approve\(workflowName, runId, reason, decision\)/
     )
   })
 
-  test('every run entrypoint is gated on run ownership', () => {
-    const { functions: result } = serializeWorkflowRoutes(leaf)
+  const body = (output: string, name: string) => {
+    const start = output.indexOf(`export const ${name} =`)
+    assert.notEqual(start, -1, `expected ${name} to be generated`)
+    const end = output.indexOf('\nexport const ', start + 1)
+    return output.slice(start, end === -1 ? undefined : end)
+  }
 
-    assert.match(
-      result,
-      /assertWorkflowRunOwner,?\n?[^}]*\} from '@pikku\/core\/workflow'/
-    )
-    const ownershipChecks =
-      result.match(/assertWorkflowRunOwner\(run\.wire, session\)/g) ?? []
+  const routeFunctions = [
+    'workflowStarter',
+    'workflowRunner',
+    'workflowStatusChecker',
+    'workflowStatusStream',
+    'workflowStatusStreamFull',
+    'workflowApprover',
+  ]
+
+  for (const name of routeFunctions) {
+    test(`${name} leaves the session optional: the workflow decides`, () => {
+      const { functions } = serializeWorkflowRoutes(leaf)
+      const declaration = body(functions, name)
+      assert.match(declaration, /= pikkuSessionlessFunc\(\{/)
+      assert.match(declaration, /\n  auth: false,/)
+    })
+  }
+
+  test('one route per action: there is no separate anonymous route', () => {
+    const { functions } = serializeWorkflowRoutes(leaf)
+
+    assert.ok(!functions.includes('/anonymous'))
     assert.equal(
-      ownershipChecks.length,
-      1,
-      'the status checker owns the run itself; both streams hand session to streamWorkflowRunStatus, which owns it there'
+      functions.match(/route: '\/workflow\/:workflowName\/start'/g)?.length,
+      1
     )
-    const sessionsPassed =
-      result.match(/streamWorkflowRunStatus\(\{[^}]*session/g) ?? []
-    assert.equal(
-      sessionsPassed.length,
-      2,
-      'a stream that forgot to pass session would poll an unowned run'
-    )
+  })
+
+  test('every route goes through rpc.exposedWorkflow and holds no access logic', () => {
+    const { functions } = serializeWorkflowRoutes(leaf)
+
+    const calls: Record<string, string> = {
+      workflowStarter: 'exposedWorkflow.start(workflowName, data)',
+      workflowRunner: 'exposedWorkflow.run(workflowName, data)',
+      workflowStatusChecker: 'exposedWorkflow.status(workflowName, runId)',
+      workflowStatusStream: 'exposedWorkflow.streamStatus(workflowName, runId)',
+      workflowStatusStreamFull:
+        'exposedWorkflow.streamStatusFull(workflowName, runId)',
+      workflowApprover:
+        'exposedWorkflow.approve(workflowName, runId, reason, decision)',
+    }
+    for (const [name, call] of Object.entries(calls)) {
+      assert.ok(
+        body(functions, name).includes(`wire.rpc.${call}`),
+        `${name} should call wire.rpc.${call}`
+      )
+    }
+    // The expose gate and the declaration checks are the callee's, so none of
+    // them can appear in generated code, and the start is not made internally.
+    for (const logic of [
+      /checkWorkflowRunAccess/,
+      /streamWorkflowRunStatus/,
+      /startWorkflow\(/,
+      /runToCompletion/,
+      /approveStep/,
+      /\bexpose\b/,
+    ]) {
+      const code = functions
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '')
+      assert.ok(!logic.test(code), `generated routes must not contain ${logic}`)
+    }
   })
 
   test('no route lets a caller pick the graph entry node', () => {
@@ -87,7 +135,7 @@ describe('serializeWorkflowRoutes', () => {
     // route's access rather than failing the build.
     assert.match(
       result,
-      /func: async \(\{ workflowService \}, \{ runId, reason, decision \}, \{ session \}\)/
+      /func: async \(\{ workflowService \}, \{ workflowName, runId, reason, decision \}, wire\)/
     )
   })
 
@@ -99,7 +147,7 @@ describe('serializeWorkflowRoutes', () => {
     assert.match(functions, /from '\.\/workflow-routes\.schemas\.gen\.js'/)
     assert.match(functions, /input: WorkflowStart/)
     assert.ok(
-      !functions.includes('pikkuSessionlessFunc<'),
+      !/pikku(Sessionless)?Func</.test(functions),
       'schemas and generics are mutually exclusive'
     )
   })

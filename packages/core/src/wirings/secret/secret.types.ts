@@ -1,3 +1,14 @@
+export const SECRET_GENERATE_MIN_SIZE = 16
+
+/** A deployment creates the value: `size` random bytes, hex encoded. */
+export type SecretGenerate = {
+  size: number
+}
+
+/**
+ * The declaration {@link defineSecret} takes. It describes a secret, never its
+ * value: the value lives in the `SecretService` under `secretId`.
+ */
 export type CoreSecret<T = unknown> = {
   /** The key code reads it by: `secrets.getSecret('NAME')`. SCREAMING_SNAKE_CASE. */
   name: string
@@ -16,8 +27,16 @@ export type CoreSecret<T = unknown> = {
   optional?: boolean
   /** Where a user goes to obtain this value, surfaced beside a missing one. */
   docsUrl?: string
-  /** Rotation cadence as a duration string, e.g. `'1d'`, `'30day'`, `'1w'`. */
+  /**
+   * Rotation cadence as a duration string, e.g. `'1d'`, `'30day'`, `'1w'`.
+   * With `generate` it is required, and `'never'` opts out of rotation.
+   */
   rotationPeriod?: string
+  /**
+   * Makes the deployment create and replace the value. Nobody supplies it, and
+   * `setSecret` from a person is rejected. Requires `rotationPeriod`.
+   */
+  generate?: SecretGenerate
   /**
    * Hosts this secret may be sent to, e.g. `['api.notion.com']` or
    * `'*.notion.com'`. Omitted means unrestricted unless
@@ -26,6 +45,10 @@ export type CoreSecret<T = unknown> = {
   allowedHosts?: string[]
 }
 
+/**
+ * The OAuth 2 provider endpoints and scopes for a secret or credential that is
+ * obtained by an authorization-code flow rather than pasted in.
+ */
 export type OAuth2CredentialConfig = {
   /** Where access/refresh tokens are stored */
   tokenSecretId: string
@@ -43,6 +66,7 @@ export type OAuth2CredentialConfig = {
   additionalParams?: Record<string, string>
 }
 
+/** A secret declaration as recorded in generated meta, with the schema replaced by its name. */
 export type SecretDefinitionMeta = {
   name: string
   displayName: string
@@ -53,6 +77,7 @@ export type SecretDefinitionMeta = {
   docsUrl?: string
   oauth2?: OAuth2CredentialConfig
   rotationPeriod?: string
+  generate?: SecretGenerate
   /**
    * Hosts this secret may be sent to, e.g. `['api.notion.com']` or
    * `'*.notion.com'`. Omitted means unrestricted unless
@@ -62,8 +87,10 @@ export type SecretDefinitionMeta = {
   sourceFile?: string
 }
 
+/** Secret declarations collected by the CLI, keyed by name. */
 export type SecretDefinitionsMeta = Record<string, SecretDefinitionMeta>
 
+/** Secret declarations as the inspector found them, before de-duplication. */
 export type SecretDefinitions = SecretDefinitionMeta[]
 
 /**

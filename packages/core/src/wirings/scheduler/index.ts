@@ -8,4 +8,7 @@ export { logSchedulers } from './log-schedulers.js'
 export type {
   CoreScheduledTask,
   ScheduledTasksMeta,
+  ScheduledTaskRun,
+  ScheduledTaskRuns,
 } from './scheduler.types.js'
+export { pikkuRemoteScheduledJobFunc } from './remote-scheduled-job.js'

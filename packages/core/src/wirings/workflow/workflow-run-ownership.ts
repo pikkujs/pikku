@@ -3,6 +3,7 @@ import { addError } from '../../errors/error-handler.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import type { WorkflowRunWire } from './workflow.types.js'
 
+/** The caller is not the user who started this workflow run. Responds 403. */
 export class WorkflowRunForbiddenError extends ForbiddenError {
   constructor() {
     super('Not authorized to access this workflow run')
@@ -18,20 +19,17 @@ addError(WorkflowRunForbiddenError, {
  * only that user may read it. Who may *answer* a run's approval gates is the
  * gate's own declaration — see `approvers` on `workflow.approval()`.
  *
- * A run with no recorded owner — started by a trigger, a scheduler, or a route
- * wired without auth — has nobody to compare a caller against, so ownership is
- * not a control that exists for it. Gate those with `auth` or `permissions` on
- * the entrypoint instead.
+ * A run with no recorded owner is refused here: nobody can prove it is theirs,
+ * and a run id is not a capability. `checkWorkflowRunAccess` decides when a
+ * workflow's own declaration opens one. Consoles and other internal readers do
+ * not use this check; they gate themselves with their own scopes.
  */
 export const assertWorkflowRunOwner = (
   wire: WorkflowRunWire | undefined,
   session: CoreUserSession | undefined
 ): void => {
   const owner = wire?.pikkuUserId
-  if (!owner) {
-    return
-  }
-  if (!session?.userId || session.userId !== owner) {
+  if (!owner || !session?.userId || session.userId !== owner) {
     throw new WorkflowRunForbiddenError()
   }
 }

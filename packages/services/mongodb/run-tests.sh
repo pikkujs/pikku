@@ -64,5 +64,13 @@ if [ "$coverage_mode" = true ]; then
   export PIKKU_TEST_COVERAGE=1
 fi
 
+# Fetch the mongod binary once, here, before the workers start. Each test file
+# runs in its own `--parallel` worker and each calls MongoMemoryServer.create();
+# on a cold cache (CI) two workers download the same binary at once and trip
+# mongodb-memory-server's lockfile ("Cannot unlock file ... not locked by this
+# process", then ENOENT renaming the .downloading file). With the binary already
+# cached the workers only read it.
+bun -e "import { MongoBinary } from 'mongodb-memory-server'; await MongoBinary.getPath()" || exit 1
+
 # Execute the bun command with the expanded list of files
 "${bun_cmd[@]}" "${files[@]}"

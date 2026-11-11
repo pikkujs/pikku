@@ -33,9 +33,10 @@ import { fileURLToPath } from 'node:url'
 import type { LeaseService } from '@pikku/core/services'
 import {
   InMemoryLeaseService,
-  InMemoryQueueService,
+  LocalVariablesService,
   LogLevel,
 } from '@pikku/core/services'
+import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
 import { pikkuState } from '@pikku/core/state'
 import { CamelCasePlugin, Kysely, MysqlDialect, sql } from 'kysely'
@@ -45,6 +46,7 @@ import { createConfig, connectionString } from '../config.js'
 import {
   RunLeaseProbe,
   maxOverlap,
+  passesOutsideLease,
   recordingPasses,
   type Interval,
 } from './run-lease-contention-probe.js'
@@ -77,12 +79,14 @@ const argValue = (name: string) => {
 const backend = (argValue('--backend') ?? 'pgboss') as Backend
 const isWorker = process.argv.includes('--worker')
 
+const env = new LocalVariablesService()
 const redisConnection = () => {
-  const url = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379')
+  const url = new URL(env.get<string>('REDIS_URL') ?? 'redis://localhost:6379')
   return { host: url.hostname, port: Number(url.port || 6379) }
 }
 const mysqlUrl =
-  process.env.MYSQL_URL ?? 'mysql://root:password@localhost:3306/pikku_leases'
+  env.get<string>('MYSQL_URL') ??
+  'mysql://root:password@localhost:3306/pikku_leases'
 
 const MYSQL_TABLES = [
   `create table if not exists workflow_runs (workflow_run_id varchar(64) primary key, workflow varchar(255) not null, status varchar(32) not null, input longtext not null, output longtext, error longtext, state longtext, inline boolean default false, graph_hash varchar(255), \`deterministic\` boolean default false, planned_steps longtext, wire longtext, created_at timestamp(3) default current_timestamp(3) not null, updated_at timestamp(3) default current_timestamp(3) not null)`,
@@ -229,13 +233,16 @@ async function setup(): Promise<Harness> {
 type Report = {
   passes: Interval[]
   holders: Interval[]
+  /** Holders granted but not yet given back when the report was taken. */
+  heldNow: Interval[]
   refused: number
   lost: number
 }
 
 const report = ({ workflowService, probe }: Harness): Report => ({
-  passes: workflowService.passes.intervals,
-  holders: probe.holders.intervals,
+  passes: [...workflowService.passes.intervals],
+  holders: [...probe.holders.intervals],
+  heldNow: probe.holders.stillOpen(),
   refused: probe.refused,
   lost: probe.lost,
 })
@@ -386,9 +393,16 @@ async function phase(
   const mine = report(harness)
   const theirs: Report = child
     ? await stopWorker(child)
-    : { passes: [], holders: [], refused: 0, lost: 0 }
-  const passes = [...mine.passes.slice(mark.passes), ...theirs.passes]
-  const holders = [...mine.holders.slice(mark.holders), ...theirs.holders]
+    : { passes: [], holders: [], heldNow: [], refused: 0, lost: 0 }
+  const minePasses = mine.passes.slice(mark.passes)
+  const mineHolders = [...mine.holders.slice(mark.holders), ...mine.heldNow]
+  const theirHolders = [...theirs.holders, ...theirs.heldNow]
+  const passes = [...minePasses, ...theirs.passes]
+  const holders = [...mineHolders, ...theirHolders]
+  const outside = [
+    ...passesOutsideLease(minePasses, mineHolders),
+    ...passesOutsideLease(theirs.passes, theirHolders),
+  ]
   const refused = mine.refused - mark.refused + theirs.refused
   const lost = mine.lost - mark.lost + theirs.lost
   const maxPasses = maxOverlap(passes)
@@ -398,8 +412,8 @@ async function phase(
     [maxPasses <= 1, `max concurrent passes per run: ${maxPasses}`],
     [maxHolders <= 1, `max concurrent lease holders per run: ${maxHolders}`],
     [
-      passes.length === holders.length,
-      `passes under the lease: ${holders.length}/${passes.length}`,
+      outside.length === 0,
+      `passes under the lease: ${passes.length - outside.length}/${passes.length}`,
     ],
     [refused > 0, `acquires refused (contention): ${refused}, lost: ${lost}`],
     [

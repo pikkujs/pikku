@@ -24,7 +24,7 @@ const commit = (
 const noChanges: SurfaceChanges = {
   schemaVersion: 1,
   generatedAt: '',
-  baseline: 'surface.pikku.json',
+  baseline: 'pikku.surface.json',
   verdict: 'patch',
   summary: { breaking: 0, added: 0, removed: 0, modified: 0 },
   changes: [],

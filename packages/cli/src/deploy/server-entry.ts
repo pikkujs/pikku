@@ -9,8 +9,11 @@
  */
 
 import type { EntryGenerationContext } from '@pikku/deploy'
+import { composedLifecycleLines, entryLifecycleVariable } from '@pikku/deploy'
 
 export function generateServerEntrySource(ctx: EntryGenerationContext): string {
+  const lifecycle = entryLifecycleVariable(ctx)
+  const composed = composedLifecycleLines(ctx)
   const lines: string[] = [
     `// Generated server entry for "${ctx.unit.name}" (${ctx.unit.role})`,
     `import { PikkuBunServer } from '@pikku/bun-server'`,
@@ -23,14 +26,27 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
           `import { ${ctx.lifecycle.variable} as __pikkuLifecycle } from '${ctx.lifecycle.importPath}'`,
         ]
       : []),
+    ...(ctx.platformServices
+      ? [
+          `import { createPlatformServices } from '${ctx.platformServices.importPath}'`,
+        ]
+      : []),
+    ...composed.imports,
     `import '${ctx.bootstrapPath}'`,
     ``,
+    ...composed.declaration,
+    ...(composed.declaration.length > 0 ? [``] : []),
     `const PORT = Number(process.env.PORT ?? 8080)`,
     `const HOST = process.env.HOST ?? '0.0.0.0'`,
     ``,
     `async function main(): Promise<void> {`,
     `  const config = await ${ctx.configVar}()`,
-    `  const singletonServices = await ${ctx.servicesVar}(config)`,
+    ...(ctx.platformServices
+      ? [
+          `  const platformServices = await createPlatformServices(process.env as Record<string, string | undefined>)`,
+          `  const singletonServices = await ${ctx.servicesVar}(config, platformServices)`,
+        ]
+      : [`  const singletonServices = await ${ctx.servicesVar}(config)`]),
     `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
     ``,
     `  const server = new PikkuBunServer(`,
@@ -39,17 +55,17 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
     `    { ${ctx.mcpServerOption}}`,
     `  )`,
     `  server.enableExitOnSignals(${
-      ctx.lifecycle
-        ? `{ beforeStop: () => __pikkuLifecycle?.beforeStop?.(singletonServices), afterStop: () => __pikkuLifecycle?.afterStop?.(singletonServices) }`
+      lifecycle
+        ? `{ beforeStop: () => ${lifecycle}?.beforeStop?.(singletonServices), afterStop: () => ${lifecycle}?.afterStop?.(singletonServices) }`
         : ''
     })`,
     `  await server.init()`,
-    ...(ctx.lifecycle
-      ? [`  await __pikkuLifecycle?.beforeStart?.(singletonServices)`]
+    ...(lifecycle
+      ? [`  await ${lifecycle}?.beforeStart?.(singletonServices)`]
       : []),
     `  await server.start()`,
-    ...(ctx.lifecycle
-      ? [`  await __pikkuLifecycle?.afterStart?.(singletonServices)`]
+    ...(lifecycle
+      ? [`  await ${lifecycle}?.afterStart?.(singletonServices)`]
       : []),
     `}`,
     ``,

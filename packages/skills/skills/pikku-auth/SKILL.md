@@ -1,23 +1,14 @@
 ---
 name: pikku-auth
 description: >-
-  Use for identity in a Pikku app: authenticating a caller (login, logout, sessions, cookies,
-  bearer tokens, API keys, JWT, OAuth/social providers, MFA, Better Auth, machine callers,
-  `pikku login`). Covers telling authentication from authorization, the built-in strategies and
-  the JWT service. Authorization rules (ownership, roles, scopes, global permissions) live in
-  pikku-permissions. TRIGGER when: user asks about login, logout, session, cookie auth, bearer
-  tokens, API keys, JWT, Better Auth, social providers, how a CLI/agent/sandbox authenticates,
-  or hits InvalidSessionError. DO NOT TRIGGER when: the question is who may call a function,
-  such as ownership, roles, per-row checks, scopes or MissingScopeError (use pikku-permissions),
-  middleware mechanics with no identity involved (use pikku-middleware), or secrets and env
-  vars (use pikku-services).
+  Identity: login, sessions, cookies, bearer tokens, API keys, JWT, OAuth, MFA, Better Auth, machine callers, `pikku login`, InvalidSessionError. Who may call a function is pikku-permissions.
 installGroups: [core]
 ---
 
 # Pikku Auth
 
-Signatures and option keys come from `pikku doc` — run `pikku doc --ai` for the
-installed surface. This skill is the part the compiler cannot tell you: which of
+For how to call it, run this once: `pikku doc auth scopes authBearer authCookie authAPIKey`.
+This skill is the part the compiler cannot tell you: which of
 the two problems you actually have, and what goes wrong in each.
 
 ## First: authentication or authorization?
@@ -26,7 +17,7 @@ They are separate gates, and confusing them is the most common mistake in a
 Pikku app.
 
 **Authentication** answers _who is calling_. It happens in middleware, before the
-function runs, and ends in a call to `setSession`.
+function runs, and ends in a call to `setInitialSession`.
 
 **Authorization** answers _may this caller do this_. It is declared on the
 function — `scopes` and `permissions` — never checked inside its body. All of it is
@@ -39,21 +30,29 @@ middleware instead.
 
 ## Pick the reference
 
-| You are… | Read |
-| --- | --- |
-| Restricting who may call a function — ownership, roles, scopes | the pikku-permissions skill |
-| Reading or setting the session, or wiring `authBearer`/`authCookie`/`authAPIKey` | `references/sessions.md` |
-| Standing up user sign-in — OAuth, email+password, MFA, organizations | `references/better-auth.md` |
-| Authenticating a CLI, agent, sandbox or worker — API keys, `pikku login` | `references/machine-auth.md` |
-| Configuring the JWT service, or rotating a signing secret | `references/jose.md` |
+| You are…                                                                         | Read                         |
+| -------------------------------------------------------------------------------- | ---------------------------- |
+| Restricting who may call a function — ownership, roles, scopes                   | the pikku-permissions skill  |
+| Reading or setting the session, or wiring `authBearer`/`authCookie`/`authAPIKey` | `references/sessions.md`     |
+| Standing up user sign-in — OAuth, email+password, MFA, organizations             | `references/better-auth.md`  |
+| Authenticating a CLI, agent, sandbox or worker — API keys, `pikku login`         | `references/machine-auth.md` |
+| Configuring the JWT service, or rotating a signing secret                        | `references/jose.md`         |
 
 ## All authentication goes through `@pikku/better-auth`
 
 There is no second auth story. A hand-rolled user table, a bespoke password
-hash, a custom OAuth dance — all of them are the wrong answer, and the console
-will not work against them. `references/better-auth.md` has the setup; the
+hash, a custom OAuth dance — all of them are the wrong answer, and nothing else
+in Pikku will work against them. `references/better-auth.md` has the setup; the
 built-in strategies in `references/sessions.md` are how a resolved credential
 becomes a Pikku session, not a replacement for it.
+
+Inviting someone: `createAuthUser` with no password, then `sendAuthUserSignInLink`, from `@pikku/better-auth`. The link is the invitation: no throwaway password, no hashing, no invitations table, and no reading better-auth's source.
+
+- Trim the email once (`email.trim()`) and pass the same value to both: `createAuthUser` lowercases but keeps whitespace, while the link trims, so they can disagree.
+- better-auth needs a `baseURL` in its config (or `BETTER_AUTH_URL`) to build the link. Without one, `sendAuthUserSignInLink` fails with `Invalid URL` after the user already exists.
+- It needs `magicLink({ sendMagicLink, disableSignUp: true })` wired in better-auth, with `sendMagicLink` mailing the link. `disableSignUp: true` keeps it invitation-only.
+- `createAuthUser` refuses an existing email, so for an existing account, or to retry a failed send, call `sendAuthUserSignInLink` alone.
+- The link signs the person in. It does not add them to an organization: use better-auth's organization invitation for that.
 
 ## What NOT to do
 

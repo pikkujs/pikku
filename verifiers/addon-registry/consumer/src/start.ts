@@ -94,6 +94,41 @@ async function main(): Promise<void> {
     passed = false
   }
 
+  // The addon's `deployWorkflow` starts its own `waitForBuildHost` by bare
+  // name. Its meta lives under the addon package, so a step resolving
+  // workflows against the app's meta alone ran the child as a plain RPC, and
+  // the child's first `workflow.do` threw on an undefined `workflow`.
+  const deploy = await runPikkuFunc<
+    { host: string },
+    {
+      status: string
+      output: any
+      children: Array<{ workflow: string; status: string }>
+    }
+  >('rpc', 'consumeDeploy', 'consumeDeploy', {
+    singletonServices,
+    createWireServices,
+    data: () => ({ host: 'bh-1' }),
+    wire: {},
+  })
+  const [child] = deploy.children
+  if (
+    deploy.status === 'completed' &&
+    deploy.output?.buildHost?.ready === true &&
+    deploy.children.length === 1 &&
+    child?.workflow === 'ext:waitForBuildHost' &&
+    child.status === 'completed'
+  ) {
+    console.log(
+      '✓ addon workflow started its own child workflow, which ran its steps'
+    )
+  } else {
+    console.log(
+      `✗ addon child workflow did not run as a child — got: ${JSON.stringify(deploy)}`
+    )
+    passed = false
+  }
+
   if (!passed) process.exit(1)
 }
 

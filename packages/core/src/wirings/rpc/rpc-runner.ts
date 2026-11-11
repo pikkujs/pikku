@@ -1,4 +1,14 @@
-import { addonCallerOf, addonMayReach } from '../addon/addon-reach.js'
+import {
+  childTraceWire,
+  outgoingTraceparent,
+  tracedLogger,
+} from '../../trace.js'
+import {
+  AddonNotUsedError,
+  addonCallerOf,
+  addonMayReach,
+  mapAddonCall,
+} from '../addon/addon-reach.js'
 import type {
   CoreServices,
   PikkuWire,
@@ -7,10 +17,10 @@ import type {
 import {
   forwardStepName,
   isCompensationStepName,
-} from '../../function/compensation-name.js'
+} from '../../compensation-name.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
-import { runPikkuFunc } from '../../function/function-runner.js'
+import type { runPikkuFunc as RunPikkuFunc } from '../../function/function-runner.js'
 import type { AddonInstance } from '../addon/addon-runner.js'
 import { addonInstanceForNamespace } from '../addon/addon-runner.js'
 import { isAddonFunctionExposed } from '../addon/wire-addon.js'
@@ -19,6 +29,40 @@ import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
 import { resolveRemoteAddonToken } from '../addon/remote-addon-auth.js'
+import {
+  DEFAULT_REMOTE_ADDON_TIMEOUT_MS,
+  REMOTE_CONTRACT_HEADER,
+} from '../addon/wire-remote-addon.js'
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  GoneError,
+  LockedError,
+  NotFoundError,
+  PayloadTooLargeError,
+  PaymentRequiredError,
+  PreconditionFailedError,
+  TooManyRequestsError,
+  UnauthorizedError,
+  UnprocessableContentError,
+  UnsupportedMediaTypeError,
+} from '../../errors/errors.js'
+
+/**
+ * The function runner, reached lazily. `function-runner` builds every
+ * invocation's `wire.rpc` from this module, so a static import back would be a
+ * module cycle. By the time an rpc call runs the runner is loaded, and the
+ * import resolves from the module cache once.
+ */
+let functionRunner: typeof RunPikkuFunc | undefined
+const runPikkuFunc = async <In, Out>(
+  ...args: Parameters<typeof RunPikkuFunc<In, Out>>
+): Promise<Out> => {
+  functionRunner ??= (await import('../../function/function-runner.js'))
+    .runPikkuFunc
+  return functionRunner<In, Out>(...args)
+}
 
 /**
  * The session for a wire: read through `getSession` when a runner attached one,
@@ -27,10 +71,16 @@ import { resolveRemoteAddonToken } from '../addon/remote-addon-auth.js'
 const resolveWireSession = async (wire: PikkuRawWire) =>
   typeof wire.getSession === 'function' ? await wire.getSession() : wire.session
 
+/**
+ * Thrown when an RPC name resolves to no function, or to one that `rpc.exposed` may not call. Maps to HTTP 404 and MCP `-32601`.
+ *
+ * An unexposed function is reported as not found rather than forbidden, so the
+ * response does not reveal whether an internal function by that name exists.
+ */
 export class RPCNotFoundError extends PikkuError {
   public readonly rpcName: string
-  constructor(rpcName: string) {
-    super(`RPC function not found: ${rpcName}`)
+  constructor(rpcName: string, message = `RPC function not found: ${rpcName}`) {
+    super(message)
     this.rpcName = rpcName
   }
 }
@@ -40,6 +90,7 @@ addError(RPCNotFoundError, {
   message: 'RPC function not found.',
 })
 
+/** Thrown when a remote addon's configuration cannot be used, for example when its `serverUrl` resolves empty. Maps to HTTP 500. */
 export class RemoteAddonConfigError extends PikkuError {
   constructor(namespace: string, detail: string) {
     super(`Remote addon '${namespace}' is misconfigured: ${detail}`)
@@ -50,36 +101,142 @@ addError(RemoteAddonConfigError, {
   message: 'Remote addon is misconfigured.',
 })
 
-export class RemoteAddonRequestError extends PikkuError {
-  public readonly httpStatus: number
-  constructor(
-    namespace: string,
-    fnName: string,
-    status: number,
-    detail: string
-  ) {
-    super(
-      `Remote addon '${namespace}:${fnName}' returned ${status}${detail ? `: ${detail}` : ''}`
-    )
-    this.httpStatus = status
+/**
+ * Thrown when a remote addon fails on its own side — a 5xx, an unreachable
+ * host, or a response that is not JSON. Maps to HTTP 502. What went wrong is
+ * logged on this host; none of it reaches the caller.
+ */
+export class RemoteAddonFailedError extends PikkuError {
+  constructor(namespace: string, fnName: string) {
+    super(`Remote addon '${namespace}:${fnName}' failed`)
   }
 }
-addError(RemoteAddonRequestError, {
+addError(RemoteAddonFailedError, {
   status: 502,
-  message: 'Remote addon request failed.',
+  message: 'Remote addon failed.',
 })
 
-export class AddonNotUsedError extends PikkuError {
-  constructor(caller: string, target: string) {
+/** Thrown when a remote addon does not answer within the wiring's `timeoutMs`. Maps to HTTP 504. */
+export class RemoteAddonTimeoutError extends PikkuError {
+  constructor(namespace: string, fnName: string, timeoutMs: number) {
     super(
-      `Addon '${caller}' called '${target}' but does not list it in its wireAddon 'uses'.`
+      `Remote addon '${namespace}:${fnName}' did not answer within ${timeoutMs}ms`
     )
   }
 }
-addError(AddonNotUsedError, {
-  status: 403,
-  message: 'Addon called another addon it does not use.',
+addError(RemoteAddonTimeoutError, {
+  status: 504,
+  message: 'Remote addon timed out.',
 })
+
+/** Headers a wiring's `headers` hook cannot set: the call's auth, trace and contract. */
+const RESERVED_REMOTE_HEADERS = new Set([
+  'authorization',
+  'traceparent',
+  REMOTE_CONTRACT_HEADER,
+  'content-type',
+  'accept',
+])
+
+/**
+ * The plain error for each 4xx a remote addon may answer with, used when its
+ * body names no error this host knows. Constructed without a message, so the
+ * caller gets the registered generic one.
+ */
+const GENERIC_CLIENT_ERRORS: Record<number, new () => PikkuError> = {
+  400: BadRequestError,
+  401: UnauthorizedError,
+  402: PaymentRequiredError,
+  403: ForbiddenError,
+  404: NotFoundError,
+  409: ConflictError,
+  410: GoneError,
+  412: PreconditionFailedError,
+  413: PayloadTooLargeError,
+  415: UnsupportedMediaTypeError,
+  422: UnprocessableContentError,
+  423: LockedError,
+  429: TooManyRequestsError,
+}
+
+/**
+ * The registered error class named `name` whose status is `status`, rebuilt
+ * without running its constructor — a constructor's arguments are not on the
+ * wire, and running one with the wrong ones could throw or mislabel the error.
+ */
+const rebuildRegisteredError = (
+  name: unknown,
+  status: number,
+  message: unknown
+): Error | undefined => {
+  if (typeof name !== 'string' || !name) {
+    return undefined
+  }
+  for (const [ErrorClass, details] of pikkuState(null, 'misc', 'errors')) {
+    if (ErrorClass.name !== name || details.status !== status) {
+      continue
+    }
+    const error: Error = Object.create(ErrorClass.prototype)
+    Object.defineProperty(error, 'name', {
+      value: name,
+      writable: true,
+      configurable: true,
+    })
+    Object.defineProperty(error, 'message', {
+      value: typeof message === 'string' && message ? message : details.message,
+      writable: true,
+      configurable: true,
+    })
+    Error.captureStackTrace?.(error, rebuildRegisteredError)
+    return error
+  }
+  return undefined
+}
+
+/**
+ * The error a non-2xx response from a remote addon becomes on this host.
+ *
+ * A 4xx naming an error registered here with the same status is rebuilt as
+ * that error, message included — the addon already chose to show it to its
+ * caller. Any other 4xx becomes the generic error for its status. A 5xx, or a
+ * status with no generic error, becomes {@link RemoteAddonFailedError}. The
+ * response body is never passed through: anything beyond the rebuilt message
+ * is logged here and goes no further.
+ *
+ * knowledge: decisions/security/remote-addon-errors-are-rebuilt-not-passed-through.md
+ */
+const remoteAddonResponseError = async (
+  res: Response,
+  namespace: string,
+  fnName: string,
+  logger: CoreServices['logger']
+): Promise<Error> => {
+  const body = await res.text().catch(() => '')
+  if (res.status >= 400 && res.status < 500) {
+    let parsed: { name?: unknown; message?: unknown } | undefined
+    try {
+      parsed = JSON.parse(body)
+    } catch {}
+    const rebuilt = rebuildRegisteredError(
+      parsed?.name,
+      res.status,
+      parsed?.message
+    )
+    if (rebuilt) {
+      return rebuilt
+    }
+    const GenericError = GENERIC_CLIENT_ERRORS[res.status]
+    if (GenericError) {
+      return new GenericError()
+    }
+  }
+  logger.error(
+    `Remote addon '${namespace}:${fnName}' answered ${res.status}: ${body.slice(0, 1000)}`
+  )
+  return new RemoteAddonFailedError(namespace, fnName)
+}
+
+export { AddonNotUsedError }
 
 export const resolveNamespace = (
   namespacedFunction: string
@@ -151,6 +308,27 @@ const resolvePikkuFunction = (
 }
 
 /**
+ * A caller from outside names `fn@vN` because it was built against that
+ * version. Serving it the latest instead would hand it a contract it does not
+ * know, so a version this host no longer has is refused, not resolved to the
+ * base name the way an internal caller's is. An unversioned function is its
+ * own v1.
+ */
+const refuseUnknownVersion = (rpcName: string): void => {
+  const { baseName, version } = parseVersionedId(rpcName)
+  if (version === null) return
+  const rpc = pikkuState(null, 'rpc', 'meta')
+  if (rpc[rpcName]) return
+  const current = rpc[baseName]
+  if (!current) return
+  if (version === 1 && parseVersionedId(current).version === null) return
+  throw new RPCNotFoundError(
+    rpcName,
+    `RPC function not found: ${rpcName}. Version ${version} of '${baseName}' is no longer served here; update the SDK this call was built against.`
+  )
+}
+
+/**
  * Marks an addon RPC name that could not be resolved. Module-private on purpose:
  * resolution failure must never be conflated with an `RPCNotFoundError` thrown by
  * a function that already started executing, and it must never escape to callers.
@@ -185,6 +363,10 @@ export class ContextAwareRPCService {
     private packageName: string | null = null
   ) {}
 
+  public get traceparent(): string | undefined {
+    return outgoingTraceparent(this.wire)
+  }
+
   public async rpcExposed(funcName: string, data: any): Promise<any> {
     const addonCaller = addonCallerOf(this.wire)
     if (addonCaller && !addonMayReach(addonCaller, funcName)) {
@@ -194,26 +376,49 @@ export class ContextAwareRPCService {
     let resolvedAddon: ResolvedFunction | null = null
     if (funcName.includes(':')) {
       resolvedAddon = resolveNamespace(funcName)
+      if (resolvedAddon?.addonConfig.remote) {
+        // A remote addon's functions have no meta on this host. Its contract
+        // stands in for the addon's own `expose`, and the host enforces it:
+        // every forwarded call carries REMOTE_CONTRACT_HEADER.
+        if (
+          !isAddonFunctionExposed(
+            resolvedAddon.addonConfig.expose,
+            parseVersionedId(resolvedAddon.function).baseName,
+            true
+          )
+        ) {
+          throw new RPCNotFoundError(funcName)
+        }
+        return await this.rpc(funcName, data)
+      }
       if (resolvedAddon) {
         functionMeta = pikkuState(resolvedAddon.package, 'function', 'meta')[
           resolvedAddon.function
         ]
       }
     } else {
+      if (!this.packageName) refuseUnknownVersion(funcName)
       const resolved = resolvePikkuFunction(funcName, this.packageName)
       functionMeta = pikkuState(resolved.packageName, 'function', 'meta')[
         resolved.pikkuFuncId
       ]
     }
     if (!functionMeta) {
+      // Whether a function is in the remote contract is only known where its
+      // meta is, so a contract call never leaves this unit.
+      if (this.wire.http?.request?.header(REMOTE_CONTRACT_HEADER)) {
+        throw new RPCNotFoundError(funcName)
+      }
       // The addon runs in another deploy unit, which only carries the
-      // functions the analyzer found exposed. A wiring present here still
-      // gets to narrow what is forwarded.
+      // functions the analyzer found exposed. The wiring present here must
+      // still opt in to the function before it is forwarded.
       const refusedHere =
         resolvedAddon &&
-        (resolvedAddon.addonConfig.expose === false ||
-          (Array.isArray(resolvedAddon.addonConfig.expose) &&
-            !resolvedAddon.addonConfig.expose.includes(resolvedAddon.function)))
+        !isAddonFunctionExposed(
+          resolvedAddon.addonConfig.expose,
+          resolvedAddon.function,
+          true
+        )
       if (
         funcName.includes(':') &&
         this.services.deploymentService &&
@@ -233,6 +438,12 @@ export class ContextAwareRPCService {
     if (!exposed || functionMeta.scenarioStep) {
       throw new RPCNotFoundError(funcName)
     }
+    if (
+      this.wire.http?.request?.header(REMOTE_CONTRACT_HEADER) &&
+      functionMeta.remote !== true
+    ) {
+      throw new RPCNotFoundError(funcName)
+    }
     return await this.rpc(funcName, data)
   }
 
@@ -240,9 +451,10 @@ export class ContextAwareRPCService {
     funcName: string,
     data: In
   ): Promise<Out> {
-    const updatedWire: PikkuRawWire = {
-      ...this.wire,
-    }
+    // A local function is a span of its own. Across a boundary the callee's
+    // parent must be a span that exists, so that is the caller's.
+    const updatedWire: PikkuRawWire = { ...this.wire }
+    const localWire: PikkuRawWire = { ...updatedWire, ...this.callSpan() }
 
     if (funcName.includes(':')) {
       funcName = this.mapUsedAddon(funcName)
@@ -251,7 +463,7 @@ export class ContextAwareRPCService {
         return await this.executeAddonFunction<In, Out>(
           addonCall,
           data,
-          updatedWire
+          addonCall.kind === 'remote' ? updatedWire : localWire
         )
       }
     }
@@ -267,7 +479,7 @@ export class ContextAwareRPCService {
             funcName,
             data,
             session,
-            this.wire.traceId
+            outgoingTraceparent(this.wire)
           ) as Promise<Out>
         }
       }
@@ -284,22 +496,24 @@ export class ContextAwareRPCService {
       auth: this.options.requiresAuth,
       singletonServices: this.services,
       data: () => data,
-      wire: updatedWire,
+      wire: localWire,
       packageName: resolved.packageName,
       addonInstance,
     })
   }
 
+  /** A call runs as a span of its own under the caller's. */
+  private callSpan() {
+    return this.wire.trace ? childTraceWire(this.wire.trace) : {}
+  }
+
+  /** The services' logger, on the trace of the wire this service belongs to. */
+  private get logger() {
+    return tracedLogger(this.services.logger, this.wire.traceId)
+  }
+
   private mapUsedAddon(funcName: string): string {
-    const caller = this.wire.addonNamespace
-    if (!caller) return funcName
-    const colon = funcName.indexOf(':')
-    const prefix = funcName.slice(0, colon)
-    if (prefix === caller) return funcName
-    const uses = pikkuState(null, 'addons', 'packages').get(caller)?.uses
-    const mapped = uses?.[prefix]
-    if (mapped) return `${mapped}${funcName.slice(colon)}`
-    throw new AddonNotUsedError(caller, funcName)
+    return mapAddonCall(this.wire.addonNamespace, funcName)
   }
 
   /**
@@ -386,7 +600,8 @@ export class ContextAwareRPCService {
         addonCall.namespace,
         addonCall.fnName,
         data,
-        addonCall.addonConfig
+        addonCall.addonConfig,
+        outgoingTraceparent(wire)
       )
     }
 
@@ -410,7 +625,8 @@ export class ContextAwareRPCService {
     namespace: string,
     fnName: string,
     data: In,
-    cfg: ResolvedFunction['addonConfig']
+    cfg: ResolvedFunction['addonConfig'],
+    traceparent: string | undefined
   ): Promise<Out> {
     const serverUrl =
       typeof cfg.serverUrl === 'function'
@@ -420,7 +636,19 @@ export class ContextAwareRPCService {
       throw new RemoteAddonConfigError(namespace, 'serverUrl resolved empty')
     }
 
-    const remoteFn = cfg.remoteName ? cfg.remoteName(fnName) : fnName
+    // The host serves `fn` as its own latest, which may be newer than the
+    // contract this consumer was built against, so a call always names a
+    // version: the caller's, or the newest in the SDK (registered by codegen).
+    const versionedFn =
+      parseVersionedId(fnName).version !== null
+        ? fnName
+        : (pikkuState(cfg.package, 'rpc', 'meta')[fnName] ?? fnName)
+    // `remoteName` maps the base name; the version rides on the mapped name,
+    // so a lookup-table mapping still matches a versioned call.
+    const { baseName, version } = parseVersionedId(versionedFn)
+    const remoteFn = cfg.remoteName
+      ? `${cfg.remoteName(baseName)}${version !== null ? `@v${version}` : ''}`
+      : versionedFn
     const token = await resolveRemoteAddonToken(
       cfg.remoteAuth,
       this.services,
@@ -432,33 +660,71 @@ export class ContextAwareRPCService {
       'content-type': 'application/json',
       accept: 'application/json',
     }
+    if (cfg.remoteHeaders) {
+      for (const [name, value] of Object.entries(
+        await cfg.remoteHeaders(this.services, this.wire)
+      )) {
+        // Matched case-insensitively: `Authorization` next to `authorization`
+        // would reach the host as one combined value.
+        if (!RESERVED_REMOTE_HEADERS.has(name.toLowerCase())) {
+          headers[name] = value
+        }
+      }
+    }
+    headers[REMOTE_CONTRACT_HEADER] = '1'
     if (token) {
       headers.authorization = `Bearer ${token}`
     }
-    if (this.wire.traceId) {
-      headers['x-request-id'] = this.wire.traceId
+    if (traceparent) {
+      headers.traceparent = traceparent
     }
 
+    const timeoutMs = cfg.remoteTimeoutMs ?? DEFAULT_REMOTE_ADDON_TIMEOUT_MS
     const base = serverUrl.replace(/\/+$/, '')
-    const res = await fetch(
-      `${base}/remote/rpc/${encodeURIComponent(remoteFn)}`,
-      {
+    let res: Response
+    try {
+      // The body the generated `POST /rpc/:rpcName` route reads, the same one
+      // the generated fetch client sends.
+      res = await fetch(`${base}/rpc/${encodeURIComponent(remoteFn)}`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ rpcName: remoteFn, data }),
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+    } catch (e) {
+      if ((e as Error | undefined)?.name === 'TimeoutError') {
+        throw new RemoteAddonTimeoutError(namespace, remoteFn, timeoutMs)
       }
-    )
+      this.logger.error(
+        `Remote addon '${namespace}:${remoteFn}' could not be reached: ${e instanceof Error ? e.message : e}`
+      )
+      throw new RemoteAddonFailedError(namespace, remoteFn)
+    }
 
     if (!res.ok) {
-      const detail = (await res.text().catch(() => '')).slice(0, 300)
-      throw new RemoteAddonRequestError(namespace, remoteFn, res.status, detail)
+      throw await remoteAddonResponseError(
+        res,
+        namespace,
+        remoteFn,
+        this.logger
+      )
     }
 
     if (res.status === 204) {
       return undefined as Out
     }
     const text = await res.text()
-    return (text ? JSON.parse(text) : undefined) as Out
+    if (!text) {
+      return undefined as Out
+    }
+    try {
+      return JSON.parse(text) as Out
+    } catch {
+      this.logger.error(
+        `Remote addon '${namespace}:${remoteFn}' answered ${res.status} with a body that is not JSON`
+      )
+      throw new RemoteAddonFailedError(namespace, remoteFn)
+    }
   }
 
   public async rpcWithWire<In = any, Out = any>(
@@ -497,7 +763,7 @@ export class ContextAwareRPCService {
           rpcName,
           data,
           session,
-          mergedWire.traceId
+          outgoingTraceparent(mergedWire)
         ) as Promise<Out>
       }
       throw e
@@ -524,7 +790,12 @@ export class ContextAwareRPCService {
     input: In,
     options?: {
       startNode?: string
-      wire?: { type: string; id?: string; parentRunId?: string }
+      wire?: {
+        type: string
+        id?: string
+        parentRunId?: string
+        traceparent?: string
+      }
     }
   ): Promise<{ runId: string }> {
     if (!this.services.workflowService) {
@@ -534,11 +805,17 @@ export class ContextAwareRPCService {
       workflowName = this.mapUsedAddon(workflowName)
     }
     const parentRunId = this.wire.workflowStep?.runId ?? this.wire.graph?.runId
-    const wire = options?.wire ?? {
-      type: this.wire.wireType ?? 'unknown',
-      id: this.wire.wireId,
-      ...(parentRunId ? { parentRunId } : {}),
-      ...(this.wire.pikkuUserId ? { pikkuUserId: this.wire.pikkuUserId } : {}),
+    const traceparent = options?.wire?.traceparent ?? this.traceparent
+    const wire = {
+      ...(options?.wire ?? {
+        type: this.wire.wireType ?? 'unknown',
+        id: this.wire.wireId,
+        ...(parentRunId ? { parentRunId } : {}),
+        ...(this.wire.pikkuUserId
+          ? { pikkuUserId: this.wire.pikkuUserId }
+          : {}),
+      }),
+      ...(traceparent ? { traceparent } : {}),
     }
     return this.services.workflowService.startWorkflow(
       workflowName,
@@ -560,23 +837,66 @@ export class ContextAwareRPCService {
    * the tree behind it.
    */
   public get agent(): PikkuRPC['agent'] {
+    return this.agentRPC(false)
+  }
+
+  /**
+   * `rpc.agent` for a request from outside: every call is a 404 unless the agent
+   * is `expose: true`. What `rpc.exposed` is to `rpc.invoke`.
+   */
+  public get exposedAgent(): PikkuRPC['exposedAgent'] {
+    return this.agentRPC(true)
+  }
+
+  private agentRPC(exposed: boolean): PikkuRPC['agent'] {
     const createAgentRPC = pikkuState(null, 'agent', 'rpcFactory')
     if (!createAgentRPC) {
       throw new Error(
         'Agent runtime not available: import @pikku/core/agent in this deployment unit to use rpc.agent'
       )
     }
-    return createAgentRPC(this.wire, this.options)
+    return createAgentRPC(this.wire, this.options, exposed)
   }
 
-  public async remote<In = any, Out = any>(
+  /**
+   * The workflow calls behind the generated `/workflow/*` routes: a 404 unless
+   * the workflow is `expose: true`, then the workflow's own declaration. What
+   * `rpc.exposed` is to `rpc.invoke`, for `rpc.startWorkflow`.
+   *
+   * Loaded on call, so a unit that never serves these routes does not bundle the
+   * run-access and status-stream code through this file.
+   */
+  public get exposedWorkflow(): PikkuRPC['exposedWorkflow'] {
+    const call =
+      <K extends keyof PikkuRPC['exposedWorkflow']>(name: K) =>
+      async (...args: any[]) => {
+        const { createExposedWorkflowRPC } =
+          await import('../workflow/exposed-workflow-rpc.js')
+        const entry = createExposedWorkflowRPC(
+          this.services,
+          this.wire,
+          this as unknown as PikkuRPC
+        )
+        return (entry[name] as (...a: any[]) => any)(...args)
+      }
+    return {
+      start: call('start'),
+      run: call('run'),
+      status: call('status'),
+      approve: call('approve'),
+      streamStatus: call('streamStatus'),
+      streamStatusFull: call('streamStatusFull'),
+    }
+  }
+
+  public async mesh<In = any, Out = any>(
     funcName: string,
     data: In
   ): Promise<Out> {
     if (!this.services.deploymentService) {
       throw new Error(
-        `No DeploymentService configured for remote RPC: ${funcName}. ` +
-          `Set up a DeploymentService to enable remote function calls.`
+        `No DeploymentService configured for mesh RPC: ${funcName}. ` +
+          `Set up a DeploymentService to enable mesh function calls.`
       )
     }
 
@@ -586,11 +906,26 @@ export class ContextAwareRPCService {
       funcName,
       data,
       session,
-      this.wire.traceId
+      outgoingTraceparent(this.wire)
     ) as Promise<Out>
   }
 }
 
+/**
+ * Builds the `rpc` object handed to every function on its wire.
+ *
+ * `rpc.invoke(name, data)` calls another function in-process, or through the
+ * `DeploymentService` when the function lives in another deployment unit.
+ * `rpc.exposed` does the same but only reaches functions marked `expose: true`
+ * (and, for addons, those the consuming app exposes), which is what the public
+ * RPC endpoint uses. `rpc.mesh` always goes through the `DeploymentService`.
+ * Calls carry the caller's wire, so the session and trace ID propagate. An addon
+ * can only call the addons it lists in `uses`.
+ *
+ * Runtimes create this through {@link rpcService}; apps reach it as `rpc` on the wire.
+ *
+ * @example snippet: rpcInternalCall
+ */
 export class PikkuRPCService<
   Services extends CoreServices,
   TypedRPC = PikkuRPC,
@@ -639,7 +974,7 @@ export class PikkuRPCService<
 class ContextRPCView {
   public readonly global = false
   public readonly invoke: ContextAwareRPCService['rpc']
-  public readonly remote: ContextAwareRPCService['remote']
+  public readonly mesh: ContextAwareRPCService['mesh']
   public readonly exposed: ContextAwareRPCService['rpcExposed']
   public readonly startWorkflow: ContextAwareRPCService['startWorkflow']
   public readonly rpcWithWire: ContextAwareRPCService['rpcWithWire']
@@ -649,15 +984,28 @@ class ContextRPCView {
     public readonly depth: number
   ) {
     this.invoke = serviceRPC.rpc.bind(serviceRPC)
-    this.remote = serviceRPC.remote.bind(serviceRPC)
+    this.mesh = serviceRPC.mesh.bind(serviceRPC)
     this.exposed = serviceRPC.rpcExposed.bind(serviceRPC)
     this.startWorkflow = serviceRPC.startWorkflow.bind(serviceRPC)
     this.rpcWithWire = serviceRPC.rpcWithWire.bind(serviceRPC)
   }
 
+  get traceparent() {
+    return this.serviceRPC.traceparent
+  }
+
   get agent() {
     return this.serviceRPC.agent
   }
+
+  get exposedAgent() {
+    return this.serviceRPC.exposedAgent
+  }
+
+  get exposedWorkflow() {
+    return this.serviceRPC.exposedWorkflow
+  }
 }
 
+/** The shared {@link PikkuRPCService}. Function runners call `getContextRPCService` on it to give each invocation its own `rpc`. */
 export const rpcService = new PikkuRPCService()

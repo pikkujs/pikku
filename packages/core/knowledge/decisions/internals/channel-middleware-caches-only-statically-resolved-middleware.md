@@ -8,7 +8,7 @@ tags: channel
 # Channel middleware caching covers only statically resolved middleware
 
 `combineChannelMiddleware` in
-`packages/core/src/wirings/channel/channel-middleware-runner.ts` caches only the
+`packages/core/src/channel-middleware-runner.ts` caches only the
 `wireInheritedChannelMiddleware` slice — the tag groups and named middleware
 resolved out of `pikkuState` — under the key `${wireType}:${uid}`. That slice is
 deterministic for a given `uid`. `wireChannelMiddleware` is not: it is a per-run

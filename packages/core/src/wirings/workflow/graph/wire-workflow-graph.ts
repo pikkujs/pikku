@@ -1,3 +1,4 @@
+/** What `pikkuWorkflowGraph` takes. */
 export interface PikkuWorkflowGraphConfig<
   FuncMap extends Record<string, string>,
   T,
@@ -10,6 +11,10 @@ export interface PikkuWorkflowGraphConfig<
   description?: string
   /** Filters this graph in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
+  /** Reachable through the generated workflow routes. Without it those routes answer 404. */
+  expose?: boolean
+  /** `false` means no session is needed to start it. Absent means one is, as for any function. */
+  auth?: boolean
   /** The graph's steps, keyed by node id, each naming a function. `pikku meta` lists the names available here. */
   nodes: FuncMap
   /** Per-node settings — retries, timeouts, the edges between them. */
@@ -18,6 +23,7 @@ export interface PikkuWorkflowGraphConfig<
   notes?: string[]
 }
 
+/** The marker `pikkuWorkflowGraph` returns; the graph itself is read from source by `pikku all`. */
 export interface PikkuWorkflowGraphResult {
   __type: 'pikkuWorkflowGraph'
   name?: string
@@ -26,6 +32,16 @@ export interface PikkuWorkflowGraphResult {
   notes?: string[]
 }
 
+/**
+ * Declares a workflow as a graph: each node names an RPC, and `config` says what
+ * feeds it and which nodes run next. The shape is data, so the console can draw
+ * it and a run records which branch it took.
+ *
+ * The inspector reads the graph from source at build time; at runtime this only
+ * returns a marker carrying the descriptive fields.
+ *
+ * @example snippet: workflowGraph
+ */
 export function pikkuWorkflowGraph<
   const FuncMap extends Record<string, string>,
 >(config: PikkuWorkflowGraphConfig<FuncMap, any>): PikkuWorkflowGraphResult {

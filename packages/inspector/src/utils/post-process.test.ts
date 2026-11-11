@@ -41,7 +41,7 @@ const makeOverrideState = (
   declaredNames: string[],
   overrides: Record<string, string>,
   overrideKey: 'secretOverrides' | 'credentialOverrides' | 'variableOverrides'
-): Omit<InspectorState, 'typesLookup'> =>
+): InspectorState =>
   ({
     rpc: {
       wireAddonDeclarations: new Map([
@@ -63,7 +63,7 @@ const makeOverrideState = (
       definitions:
         kind === 'variables' ? declaredNames.map((name) => ({ name })) : [],
     },
-  }) as unknown as Omit<InspectorState, 'typesLookup'>
+  }) as unknown as InspectorState
 
 const makeGrantState = (
   kind: 'secrets' | 'credentials',
@@ -74,7 +74,7 @@ const makeGrantState = (
     secretOverrides?: Record<string, string>
     credentialOverrides?: Record<string, CredentialOverrideMeta>
   }
-): Omit<InspectorState, 'typesLookup'> =>
+): InspectorState =>
   ({
     rpc: {
       wireAddonDeclarations: new Map([
@@ -90,7 +90,7 @@ const makeGrantState = (
         kind === 'credentials' ? declaredNames.map((name) => ({ name })) : [],
     },
     variables: { definitions: [] },
-  }) as unknown as Omit<InspectorState, 'typesLookup'>
+  }) as unknown as InspectorState
 
 function makeState(
   overrides: {
@@ -106,7 +106,7 @@ function makeState(
     credentialDefinitions?: any[]
     webhookSourceMeta?: Record<string, any>
   } = {}
-): Omit<InspectorState, 'typesLookup'> {
+): InspectorState {
   return {
     serviceAggregation: {
       requiredServices: new Set<string>(),
@@ -155,7 +155,7 @@ function makeState(
           },
         }
       : {},
-  } as unknown as Omit<InspectorState, 'typesLookup'>
+  } as unknown as InspectorState
 }
 
 const CONSOLE_PARENT_SERVICES = [
@@ -390,6 +390,62 @@ describe('aggregateRequiredServices — per-function addon services', () => {
   })
 })
 
+describe('aggregateRequiredServices — incomingWebhookService an addon forwards', () => {
+  const adminAddon = (extra: Record<string, any> = {}) => ({
+    usedFunctions: [
+      'admin:listIncomingWebhookReceipts',
+      'admin:listScopes',
+      ...Object.keys(extra).map((id) => `admin:${id}`),
+    ],
+    addonFunctions: {
+      admin: {
+        listIncomingWebhookReceipts: {
+          services: { optimized: true, services: ['incomingWebhookService'] },
+        },
+        listScopes: {
+          services: { optimized: true, services: ['scopeService'] },
+        },
+        ...extra,
+      },
+    },
+    addonRequiredParentServices: ['scopeService', 'incomingWebhookService'],
+  })
+
+  test('is not required when the app wires no incoming webhook', () => {
+    const state = makeState(adminAddon())
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(!required.has('incomingWebhookService'))
+    assert.ok(required.has('scopeService'))
+  })
+
+  test('is not required through the parent blanket either', () => {
+    const state = makeState(
+      adminAddon({
+        ownStore: { services: { optimized: true, services: ['addonStore'] } },
+      })
+    )
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(!required.has('incomingWebhookService'))
+    assert.ok(required.has('scopeService'))
+  })
+
+  test('is required when the app wires a webhook source', () => {
+    const state = makeState({
+      ...adminAddon(),
+      functionsMeta: { 'http:post:/webhooks/stripe': {} },
+      webhookSourceMeta: {
+        stripe: { method: 'post', route: '/webhooks/stripe' },
+      },
+    })
+    aggregateRequiredServices(state)
+    assert.ok(
+      state.serviceAggregation.requiredServices.has('incomingWebhookService')
+    )
+  })
+})
+
 describe('aggregateRequiredServices — the auth factory’s own services', () => {
   test('an auth definition contributes its services before its handler exists', () => {
     // The state a clean checkout produces: the project declares
@@ -504,6 +560,62 @@ describe('override validation resolves the override target (value), not the logi
     assert.equal(criticals.length, 2)
   })
 
+  const aliasState = (uses: Record<string, string>, stripePackage: string) => {
+    const state = makeOverrideState(
+      'credentials',
+      [],
+      {},
+      'credentialOverrides'
+    )
+    state.rpc.wireAddonDeclarations.set('mail', {
+      package: '@a/mail',
+      uses,
+      declaredUses: ['stripe'],
+      dependencies: [
+        { alias: 'stripe', package: '@a/addon-stripe', range: '^0.12.0' },
+      ],
+    } as never)
+    state.rpc.wireAddonDeclarations.set('payments', {
+      package: stripePackage,
+    } as never)
+    return state
+  }
+
+  test('validateAddonUses accepts an alias mapped to an instance of its declared package', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAddonUses(
+      logger,
+      aliasState({ stripe: 'payments' }, '@a/addon-stripe')
+    )
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateAddonUses flags an alias mapped to an instance of another package (PKU347)', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAddonUses(
+      logger,
+      aliasState({ stripe: 'payments' }, '@a/addon-paypal')
+    )
+    assert.deepEqual(
+      criticals.map((c) => c.code),
+      ['PKU347']
+    )
+    assert.match(criticals[0]!.message, /@a\/addon-stripe as 'stripe'/)
+  })
+
+  test('validateAddonUses refuses a mapping the addon never declared (PKU355)', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAddonUses(
+      logger,
+      aliasState({ stripe: 'payments', crm: 'payments' }, '@a/addon-stripe')
+    )
+    assert.deepEqual(
+      criticals.map((c) => c.code),
+      ['PKU355']
+    )
+    assert.match(criticals[0]!.message, /'crm'/)
+  })
+
   test('validateAddonContentGrants accepts a grant under a wired addon bucket, by name or contentBucket', () => {
     const { logger, criticals } = makeCriticalLogger()
     const state = makeOverrideState(
@@ -578,6 +690,38 @@ describe('override validation resolves the override target (value), not the logi
     assert.match(criticals[0]!.message, /STRIPE_KEY/)
   })
 
+  test('validateSecretOverrides accepts a BETTER_AUTH_SECRET grant when the project has auth, before auth-secrets.gen.ts exists', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', [], {
+      secretGrants: ['BETTER_AUTH_SECRET'],
+    })
+    ;(state as any).auth = { definition: {} }
+    validateSecretOverrides(logger, state)
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateSecretOverrides accepts an override onto BETTER_AUTH_SECRET when the project has auth', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', [], {
+      secretGrants: ['AUTH_SECRET'],
+      secretOverrides: { AUTH_SECRET: 'BETTER_AUTH_SECRET' },
+    })
+    ;(state as any).auth = { definition: {} }
+    validateSecretOverrides(logger, state)
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateSecretOverrides still flags a BETTER_AUTH_SECRET grant when the project has no auth', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', [], {
+      secretGrants: ['BETTER_AUTH_SECRET'],
+    })
+    validateSecretOverrides(logger, state)
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.INVALID_VALUE)
+    assert.match(criticals[0]!.message, /Available secrets: none/)
+  })
+
   test('validateSecretOverrides resolves a grant through its override before looking it up', () => {
     const { logger, criticals } = makeCriticalLogger()
     const state = makeGrantState('secrets', ['PROD_EMAIL_KEY'], {
@@ -622,7 +766,7 @@ describe('validateCredentialOverrides — one credential holds one mode', () => 
   const makeTwoAddonState = (
     first: Record<string, CredentialOverrideMeta>,
     second: Record<string, CredentialOverrideMeta>
-  ): Omit<InspectorState, 'typesLookup'> =>
+  ): InspectorState =>
     ({
       rpc: {
         wireAddonDeclarations: new Map([
@@ -633,7 +777,7 @@ describe('validateCredentialOverrides — one credential holds one mode', () => 
       secrets: { definitions: [] },
       credentials: { definitions: [{ name: 'SHARED' }] },
       variables: { definitions: [] },
-    }) as unknown as Omit<InspectorState, 'typesLookup'>
+    }) as unknown as InspectorState
 
   test('flags two addons that wire one name to opposite modes', () => {
     const { logger, criticals } = makeCriticalLogger()
@@ -686,7 +830,7 @@ const makeRemoteState = (
     file?: string
   },
   declared: { credentials?: string[]; secrets?: string[] } = {}
-): Omit<InspectorState, 'typesLookup'> =>
+): InspectorState =>
   ({
     rootDir,
     rpc: {
@@ -698,7 +842,7 @@ const makeRemoteState = (
     secrets: {
       definitions: (declared.secrets ?? []).map((name) => ({ name })),
     },
-  }) as unknown as Omit<InspectorState, 'typesLookup'>
+  }) as unknown as InspectorState
 
 describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependency)', () => {
   const writePkg = (
@@ -1030,7 +1174,7 @@ const makeAgentState = (
     addons?: string[]
     internalMeta?: Record<string, string>
   } = {}
-): Omit<InspectorState, 'typesLookup'> =>
+): InspectorState =>
   ({
     agents: {
       agentsMeta: {
@@ -1045,7 +1189,7 @@ const makeAgentState = (
     },
     functions: { meta: functions },
     addonFunctions,
-  }) as unknown as Omit<InspectorState, 'typesLookup'>
+  }) as unknown as InspectorState
 
 describe('validateAgentToolReferences (ref() resolved at build time)', () => {
   test('a local tool that does not exist is an error', () => {
@@ -1149,9 +1293,7 @@ describe('validateAgentToolReferences (ref() resolved at build time)', () => {
   })
 })
 
-const makeModelState = (
-  models: Record<string, string>
-): Omit<InspectorState, 'typesLookup'> =>
+const makeModelState = (models: Record<string, string>): InspectorState =>
   ({
     agents: {
       agentsMeta: Object.fromEntries(
@@ -1161,7 +1303,7 @@ const makeModelState = (
         ])
       ),
     },
-  }) as unknown as Omit<InspectorState, 'typesLookup'>
+  }) as unknown as InspectorState
 
 describe('validateAgentModels (aliases resolve against pikku.config.json)', () => {
   test('a provider-qualified model needs no alias', () => {

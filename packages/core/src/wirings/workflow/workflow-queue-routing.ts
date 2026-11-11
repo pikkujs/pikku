@@ -10,6 +10,7 @@ import type {
   WorkflowStepOptions,
 } from './workflow.types.js'
 import { DEFAULT_STEP_RETRIES, forwardStepName } from './workflow-constants.js'
+import { isWorkflowName } from './workflow-meta-resolver.js'
 
 export type WorkflowQueueStrategy = 'per-workflow' | 'shared-groups'
 
@@ -104,9 +105,7 @@ export const stepDispatchTarget = async (
     }
     return 'queue'
   }
-  const isWorkflow =
-    pikkuState(null, 'workflows', 'meta')[rpcName] !== undefined
-  if (!isWorkflow || !hasQueue) {
+  if (!isWorkflowName(rpcName) || !hasQueue) {
     return 'inline'
   }
   return (await parentIsInline()) ? 'inline' : 'queue'

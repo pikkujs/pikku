@@ -1,0 +1,5 @@
+{
+  "srcDirectories": ["./src", "./types"],
+  "outDir": "./.pikku",
+  "tsconfig": "./tsconfig.json"
+}

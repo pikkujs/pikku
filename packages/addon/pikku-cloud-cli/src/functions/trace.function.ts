@@ -49,7 +49,7 @@ export const CloudTrace = pikkuSessionlessFunc({
       )
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const res = await rpc.invoke('getTraceByStageKind', {
+    const res = await rpc.invoke('cloud:getTraceByStageKind', {
       projectId: ctx.projectId,
       branch,
       traceId,

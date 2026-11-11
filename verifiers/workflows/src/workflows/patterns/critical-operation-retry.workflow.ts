@@ -8,6 +8,7 @@ export const criticalOperationRetryWorkflow = pikkuWorkflowFunc<
   { operationId: string; maxAttempts: number },
   { completed: boolean }
 >({
+  auth: false,
   title: 'Critical Operation Retry',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

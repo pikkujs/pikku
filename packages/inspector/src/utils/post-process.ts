@@ -11,22 +11,26 @@ import type {
   PermissionMetadata,
 } from '@pikku/core/function'
 import type { MiddlewareMetadata } from '@pikku/core/middleware'
-import type ts from 'typescript'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
-import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
-import { findSecretAliasServices } from './secret-alias-services.js'
 import { deriveOAuth2AppSecrets } from '@pikku/core/secret'
-import { resolveCoreType } from './resolve-core-type.js'
 import { relative } from 'node:path'
-import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
+import {
+  AUTH_HANDLER_FUNC_ID,
+  DYNAMIC_SCENARIO_STEP_TARGET,
+} from './inspector-constants.js'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import type { WorkflowStepMeta } from '@pikku/core/workflow'
 import type { ScenarioStepMeta } from '@pikku/core/scenario'
-import { DYNAMIC_SCENARIO_STEP_TARGET } from './workflow/dsl/patterns.js'
 import { addonResolutionDirs } from './addon-resolution.js'
+import {
+  ADDONS_LOCK_FILE,
+  checkLockedSdk,
+  readAddonsLock,
+  type AddonsLock,
+} from './remote-addon-sdk.js'
 
 /**
  * Stamp the inspected authorize/callbacks service set onto the generated auth
@@ -41,9 +45,7 @@ import { addonResolutionDirs } from './addon-resolution.js'
  * onto the handler meta. Re-derived every inspect and ordered BEFORE
  * `aggregateRequiredServices` so it flows into `requiredServices`.
  */
-export function stampAuthHandlerServices(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
-): void {
+export function stampAuthHandlerServices(state: InspectorState): void {
   const definition = state.auth.definition
   if (!definition) return
   const handlerMeta = state.functions.meta[AUTH_HANDLER_FUNC_ID]
@@ -77,7 +79,7 @@ export function extractWireNames(
  */
 function expandAndAddGroupServices(
   list: MiddlewareMetadata[] | undefined,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  state: InspectorState,
   addServices: (services: FunctionServicesMeta | undefined) => void
 ): void {
   if (!list) return
@@ -98,38 +100,27 @@ function expandAndAddGroupServices(
 }
 
 /**
- * Extracts all service names from SingletonServices and Services types.
- * This provides the complete list of available services for code generation.
- * Only runs if typesLookup is available (omitted in deserialized states).
+ * Applies the service names of the SingletonServices and Services types, which
+ * `resolveServiceTypes` read off the checker during analysis. This provides the
+ * complete list of available services for code generation.
+ * Skipped when analysis did not resolve them (e.g. an older serialized state).
  */
-function extractAllServices(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
-): void {
-  // Skip if typesLookup is not available (e.g., deserialized state)
-  if (!('typesLookup' in state)) {
+function extractAllServices(state: InspectorState): void {
+  const resolved = state.serviceTypes
+  if (!resolved) {
     return
   }
 
-  // Extract all singleton services from the SingletonServices type
-  const singletonServicesType = resolveCoreType(
-    state.typesLookup,
-    state.singletonServicesTypeImportMap
-  )
-  if (singletonServicesType) {
-    state.serviceAggregation.allSingletonServices = extractTypeKeys(
-      singletonServicesType
-    ).sort()
+  if (resolved.singletonServices) {
+    state.serviceAggregation.allSingletonServices = [
+      ...resolved.singletonServices,
+    ]
   }
 
-  // Extract all services from the Services type
-  const servicesType = resolveCoreType(
-    state.typesLookup,
-    state.wireServicesTypeImportMap
-  )
-  if (servicesType) {
+  if (resolved.services) {
     // Wire services are those in Services but not in SingletonServices
     const singletonSet = new Set(state.serviceAggregation.allSingletonServices)
-    state.serviceAggregation.allWireServices = extractTypeKeys(servicesType)
+    state.serviceAggregation.allWireServices = resolved.services
       .filter((name) => !singletonSet.has(name))
       .sort()
     markSingletonServicesOnly(
@@ -146,7 +137,7 @@ function extractAllServices(
  * mark every function.
  */
 function markSingletonServicesOnly(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  state: InspectorState,
   wireServices: Set<string>
 ): void {
   for (const meta of Object.values(state.functions.meta)) {
@@ -168,9 +159,7 @@ function markSingletonServicesOnly(
  * Note: usedFunctions, usedMiddleware, and usedPermissions are tracked directly
  * in the add-* methods during AST traversal for efficiency.
  */
-export function aggregateRequiredServices(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
-): void {
+export function aggregateRequiredServices(state: InspectorState): void {
   // First, extract all available services from types
   extractAllServices(state)
 
@@ -226,6 +215,21 @@ export function aggregateRequiredServices(
       addServices(permissionMeta.services)
     }
   })
+
+  // 3b. Global permissions and global middleware apply to every function, so
+  // whatever they touch is required wherever any function runs.
+  for (const registration of state.permissions?.global ?? []) {
+    for (const definitionId of registration.definitionIds) {
+      addServices(state.permissions.definitions[definitionId]?.services)
+    }
+  }
+  for (const [instanceId, instance] of Object.entries(
+    state.middleware?.instances ?? {}
+  )) {
+    if (instanceId.startsWith('global:')) {
+      addServices(state.middleware.definitions[instance.definitionId]?.services)
+    }
+  }
 
   // 4. Services from middleware/permission groups used in wirings
   // We need to check all wirings and expand any tag/HTTP-pattern groups they use
@@ -306,10 +310,10 @@ export function aggregateRequiredServices(
     ({ method, route }) =>
       state.functions.meta[`http:${method}:${route}`] !== undefined
   )
-  if (
+  const wiresIncomingWebhooks =
     hasWebhookSources ||
     state.functions.meta['queue:pikku-incoming-webhooks'] !== undefined
-  ) {
+  if (wiresIncomingWebhooks) {
     requiredServices.add('incomingWebhookService')
     requiredServices.add('queueService')
   }
@@ -416,6 +420,13 @@ export function aggregateRequiredServices(
       )
     }
   }
+  // An addon forwarding `incomingWebhookService` (pikku-admin lists receipts)
+  // reads it when the app has one; it never makes the app keep receipts. Only
+  // the app's own webhook sources do, so only they bring in the service and its
+  // tables — otherwise an app with no webhook wired fails to boot on a
+  // `webhook_receipt` table nothing writes to.
+  const readOnlyIfPresent = (service: string) =>
+    service === 'incomingWebhookService' && !wiresIncomingWebhooks
   const parentDeclared = state.addonRequiredParentServices ?? []
   const parentDeclaredSet = new Set(parentDeclared)
   const defaultServices = new Set([
@@ -436,6 +447,9 @@ export function aggregateRequiredServices(
       continue
     }
     for (const service of services) {
+      if (readOnlyIfPresent(service)) {
+        continue
+      }
       if (parentDeclaredSet.has(service)) {
         requiredServices.add(service)
       } else if (
@@ -448,7 +462,9 @@ export function aggregateRequiredServices(
   }
   if (usesAddonFn && addonFactoryNeeded) {
     for (const service of parentDeclared) {
-      requiredServices.add(service)
+      if (!readOnlyIfPresent(service)) {
+        requiredServices.add(service)
+      }
     }
   }
 
@@ -484,7 +500,7 @@ export function aggregateRequiredServices(
 
 export function validateSecretOverrides(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -495,6 +511,10 @@ export function validateSecretOverrides(
   const secretIds = new Set(
     state.secrets.definitions.map((d: any) => d.secretId ?? d.name)
   )
+  // auth-secrets.gen.ts declares it, but that file is written after the first
+  // inspection of a fresh project, so its defineSecret is not seen yet — the
+  // same fallback validateSecretUsage takes.
+  if (state.auth?.definition) secretIds.add('BETTER_AUTH_SECRET')
 
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
     for (const [logicalName, resolvedName] of Object.entries(
@@ -527,23 +547,34 @@ export function validateSecretOverrides(
 
 export function validateAddonUses(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
 
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
-    for (const [pkg, target] of Object.entries(addonDecl.uses ?? {})) {
+    for (const [name, target] of Object.entries(addonDecl.uses ?? {})) {
+      if (addonDecl.declaredUses && !addonDecl.declaredUses.includes(name)) {
+        logger.critical(
+          ErrorCode.ADDON_USES_NOT_DECLARED,
+          `Addon '${namespace}' maps '${name}' to '${target}', but ${addonDecl.package} does not declare '${name}' in the pikku.uses of its package.json. It declares: ${addonDecl.declaredUses.join(', ') || 'nothing'}. Remove '${name}' from uses, or have the addon declare it.`
+        )
+        continue
+      }
+      const expected =
+        addonDecl.dependencies?.find((d) => d.alias === name)?.package ?? name
       const wired = wireAddonDeclarations.get(target)
       if (!wired) {
         logger.critical(
           ErrorCode.ADDON_USES_NOT_WIRED,
-          `Addon '${namespace}' uses '${pkg}' as '${target}', but no addon is wired under the name '${target}'. Wired: ${Array.from(wireAddonDeclarations.keys()).join(', ')}`
+          `Addon '${namespace}' uses '${name}' as '${target}', but no addon is wired under the name '${target}'. Wired: ${Array.from(wireAddonDeclarations.keys()).join(', ')}`
         )
-      } else if (wired.package !== pkg) {
+      } else if (wired.package !== expected) {
         logger.critical(
           ErrorCode.ADDON_USES_NOT_WIRED,
-          `Addon '${namespace}' uses '${pkg}' as '${target}', but '${target}' is wired from '${wired.package}'.`
+          expected === name
+            ? `Addon '${namespace}' uses '${name}' as '${target}', but '${target}' is wired from '${wired.package}'.`
+            : `Addon '${namespace}' calls ${expected} as '${name}', mapped to '${target}', but '${target}' is wired from '${wired.package}'.`
         )
       }
     }
@@ -552,7 +583,7 @@ export function validateAddonUses(
 
 export function validateAddonContentGrants(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -584,7 +615,7 @@ export function validateAddonContentGrants(
 
 export function validateCredentialOverrides(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -664,7 +695,7 @@ export function validateCredentialOverrides(
 
 export function validateVariableOverrides(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -753,7 +784,7 @@ type PackageManifest = {
  */
 export function validateRemoteAddonDependencies(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -790,8 +821,40 @@ export function validateRemoteAddonDependencies(
     return manifest
   }
 
+  // A versioned remote addon's contract is the SDK `pikku all`
+  // downloaded, so what has to hold is that the SDK on disk is the one the
+  // lock pins, not that a package is installed.
+  let lock: AddonsLock | Error | undefined
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    if (!decl.remote) continue
+    if (!decl.remote || !decl.range) continue
+    if (lock === undefined) {
+      try {
+        lock = readAddonsLock(state.rootDir)
+      } catch (e) {
+        lock = e instanceof Error ? e : new Error(String(e))
+      }
+    }
+    const reason =
+      lock instanceof Error
+        ? lock.message
+        : (() => {
+            const locked = checkLockedSdk(
+              state.rootDir,
+              decl.package,
+              decl.range!,
+              lock
+            )
+            return locked.ok ? null : locked.reason
+          })()
+    if (reason === null) continue
+    logger.critical(
+      ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY,
+      `Remote addon '${namespace}' ('${decl.package}@${decl.range}') has no SDK matching ${ADDONS_LOCK_FILE}: ${reason}. Run 'pikku all' to download it.`
+    )
+  }
+
+  for (const [namespace, decl] of wireAddonDeclarations.entries()) {
+    if (!decl.remote || decl.range) continue
     const pkgJsonPath = join(
       addonResolutionDirs(state.rootDir, decl.file)[0],
       'package.json'
@@ -825,7 +888,7 @@ export function validateRemoteAddonDependencies(
  */
 export function validateRemoteAddonAuth(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
@@ -1062,7 +1125,7 @@ export function validateSchemaReferences(
  */
 export function validateAgentModels(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  state: InspectorState,
   modelAliases: Record<string, string> = {}
 ): void {
   for (const [, meta] of Object.entries(state.agents.agentsMeta)) {
@@ -1103,7 +1166,7 @@ export function validateAgentModels(
  */
 export function validateScenarioServices(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
     if (!meta.scenario) continue
@@ -1225,7 +1288,7 @@ const capitaliseFirst = (value: string): string =>
  */
 export function validateScenarioSteps(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const phasesSeen = new Set<string>()
 
@@ -1320,7 +1383,7 @@ export function validateScenarioSteps(
  */
 export function validateScenarioFeatures(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const features = state.workflows.featureFiles
   if (!features) {
@@ -1483,20 +1546,9 @@ export function validateSchemaWiringSeparation(
  */
 export function validateNoSecretAliasServices(
   logger: InspectorLogger,
-  checker: ts.TypeChecker,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
-  if (!('typesLookup' in state)) {
-    return
-  }
-  const singletonServicesType = resolveCoreType(
-    state.typesLookup,
-    state.singletonServicesTypeImportMap
-  )
-  if (!singletonServicesType) {
-    return
-  }
-  const aliases = findSecretAliasServices(singletonServicesType, checker)
+  const aliases = state.serviceTypes?.secretAliases ?? []
   if (aliases.length === 0) {
     return
   }
@@ -1533,9 +1585,7 @@ export function validateNoSecretAliasServices(
  * deployment is asked for the client id and secret every connect flow needs
  * without an author restating a shape the runtime already fixes.
  */
-export function registerDerivedOAuth2AppSecrets(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
-): void {
+export function registerDerivedOAuth2AppSecrets(state: InspectorState): void {
   const derived = deriveOAuth2AppSecrets(
     state.credentials?.definitions ?? [],
     state.secrets.definitions
@@ -1545,7 +1595,7 @@ export function registerDerivedOAuth2AppSecrets(
 
 export function validateSecretUsage(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const declared = new Set(state.secrets.definitions.map((d) => d.secretId))
   for (const definition of state.secrets.definitions) {
@@ -1670,7 +1720,7 @@ export function computeDiagnostics(state: InspectorState): void {
  */
 export function validateScopeReferences(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const declared = new Set(
     flattenScopeDefinitions(state.scopes.definitions).map((s) => s.id)
@@ -1720,7 +1770,7 @@ export function validateScopeReferences(
  */
 export function validateAgentToolReferences(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  state: InspectorState,
   options: InspectorOptions = {}
 ): void {
   const agents = Object.entries(state.agents.agentsMeta)
@@ -1798,7 +1848,7 @@ export function validateAgentToolReferences(
  */
 export function validateAgentScorerReferences(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   const known = Object.keys(state.scorers.scorersMeta)
 
@@ -1829,7 +1879,7 @@ export function validateAgentScorerReferences(
  */
 export function validateSystemRoleScopes(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   if (!state.systemRoles.definitions.length) {
     return
@@ -1874,7 +1924,7 @@ export function validateSystemRoleScopes(
  */
 export function validateVirtualUserRoles(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState
 ): void {
   if (!state.virtualUsers.definitions.length) {
     return

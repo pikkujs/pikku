@@ -86,7 +86,7 @@ describe('collectFilterNames - addon units', () => {
           },
           {
             method: 'post',
-            route: '/remote/rpc/console:runSecurityAudit',
+            route: '/mesh/rpc/console:runSecurityAudit',
             pikkuFuncId: 'console:runSecurityAudit',
           },
         ],
@@ -108,8 +108,8 @@ describe('collectFilterNames - addon units', () => {
   })
 
   test('the remote RPC scaffold joins the filter', () => {
-    assert.ok(names().includes('remoteRPCHandler'))
-    assert.ok(names().includes('/remote/rpc/:rpcName'))
+    assert.ok(names().includes('meshRPCHandler'))
+    assert.ok(names().includes('/mesh/rpc/:rpcName'))
   })
 })
 

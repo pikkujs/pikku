@@ -8,6 +8,11 @@
  * The generic pipeline handles: analysis, codegen, bundling, plan/apply.
  */
 
+import type { ContributorPlatform } from '@pikku/core/contributors'
+import type {
+  ContributorSupport,
+  EntryPlatformServices,
+} from './contributor-support.js'
 import type { DeploymentManifest, DeploymentUnit } from './manifest.js'
 import type { RuntimeProfile } from './runtime-profile.js'
 import type { RuntimeTier } from './runtime-tier.js'
@@ -115,6 +120,17 @@ export interface EntryGenerationContext {
   }
 
   /**
+   * The column coercion map `pikku db migrate` generated into
+   * `db/coercion.gen.ts`, or undefined when the app has none.
+   *
+   * It travels as data rather than as an import path because the providers
+   * that apply it emit it as a literal into an entry bundled away from the
+   * functions package. It is the same map `pikku dev` attaches, so a deployed
+   * query returns the Date, boolean and parsed JSON values it does locally.
+   */
+  coercionMap?: Record<string, Record<string, 'date' | 'bool' | 'json'>>
+
+  /**
    * The app's `pikkuServerLifecycle` export, when it declares one.
    *
    * Only `pikku dev` and `pikku serve` have ever called these hooks, so an app
@@ -129,6 +145,38 @@ export interface EntryGenerationContext {
     /** The exported name to call the hooks on. */
     variable: string
   }
+
+  /**
+   * The build-time facts `pikku dev` hands its contributors, for this unit
+   * (the whole app for a single-unit build). Set by the pipeline; the provider
+   * widens it through `contributorSupport`.
+   */
+  contributorPlatform?: ContributorPlatform
+
+  /**
+   * The generated file holding the contributors selected for this unit, written
+   * beside the entry by the pipeline. Undefined when none was selected, in
+   * which case the entry builds no contributor services at all.
+   */
+  platformServices?: EntryPlatformServices
+}
+
+export type FrontendKind = 'spa' | 'static' | 'ssr'
+
+/** The frontend kinds a provider can host, and whether it can embed one. */
+export interface FrontendSupport {
+  readonly kinds: readonly FrontendKind[]
+  /** Can ship a `serve` frontend inside the backend's own bundle. */
+  readonly embedded?: boolean
+}
+
+export interface FrontendDeployContext {
+  name: string
+  kind: FrontendKind
+  /** The built output, `pikku app build`'s `dist`. */
+  dir: string
+  projectId: string
+  logger: { info(msg: string): void; error(msg: string): void }
 }
 
 export interface ProviderAdapter {
@@ -138,12 +186,24 @@ export interface ProviderAdapter {
   /** Subdirectory name under .deploy/ (e.g. 'cloudflare') */
   readonly deployDirName: string
 
+  /** The values `pikku deploy apply --runtime` accepts. Absent means none. */
+  readonly supportedRuntimes?: readonly string[]
+
   /**
    * When true, skips per-unit decomposition and bundles everything
    * into a single unit using the project's full .pikku/ directory.
    * Used by standalone adapter.
    */
   readonly singleUnit?: boolean
+
+  /** Absent means the provider hosts no frontend. */
+  readonly frontends?: FrontendSupport
+
+  /**
+   * Host a built frontend that is not embedded in a backend bundle. A provider
+   * that lists `frontends.kinds` and leaves this out can only embed.
+   */
+  deployFrontend?(ctx: FrontendDeployContext): Promise<void>
 
   /**
    * Whether the provider's workflow runtime needs synthesized per-step
@@ -160,6 +220,15 @@ export interface ProviderAdapter {
    *   `wireQueue(...)` user code are unaffected.
    */
   readonly workflowQueues?: boolean
+
+  /**
+   * Whether a serverless unit's bootstrap defers its addons' function and
+   * schema registration to an exported `loadAddons()`, which the provider's
+   * entry awaits before building services. For runtimes that cap the CPU a
+   * script may spend at startup, where evaluating an addon's whole surface
+   * fails the deploy. Defaults to `false`.
+   */
+  readonly lazyAddonRegistration?: boolean
 
   /**
    * Whether the artifact opens SQLite through a libsqlite3 it has to carry
@@ -188,6 +257,15 @@ export interface ProviderAdapter {
    * platform services.
    */
   generateServerEntrySource?(ctx: EntryGenerationContext): string
+
+  /**
+   * How the contributors the project opted in to apply to this unit's runtime:
+   * which bindings it supplies, which services the entry holds first, and what
+   * the provider selects itself. Omit it and the provider supports no
+   * contributors: the build fails if the project opted in to any with a deploy
+   * variant.
+   */
+  contributorSupport?(ctx: EntryGenerationContext): ContributorSupport
 
   /**
    * Generate provider-specific config files per unit (e.g. wrangler.toml).

@@ -1,16 +1,34 @@
 import { existsSync, readdirSync } from 'fs'
-import { join } from 'path'
+import { join, relative } from 'path'
 import { loadUserConfigForDb } from '../commands/db-shared.js'
-import { unresolvedSchemaReferences } from '@pikku/inspector'
+import {
+  ErrorCode,
+  findUnusedFunctions,
+  unresolvedSchemaReferences,
+} from '@pikku/inspector'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
+import { checkAddonDependencyVersions } from '../../utils/addon-dependencies.js'
 import { warnOnSplitTypeIdentity } from '../validate/type-identity-checks.js'
 import {
   pruneLegacyScaffoldFiles,
   refreshScaffoldsImportingRemovedEntryPoints,
+  removeDisabledOriginScaffolds,
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
+import { backendBuckets } from '../../utils/content-buckets.js'
+import { generateBackendCodegen } from '../../deploy/codegen/per-unit-codegen.js'
+import {
+  assembleBackendSdk,
+  writeBackendPassSdk,
+} from '../../utils/backend-sdk.js'
+import { selectBackends } from '../../utils/select-backends.js'
 import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
+import {
+  RemoteAddonSyncError,
+  runAddonSync,
+  type RegistryInvoke,
+} from '../../utils/remote-addon-sync.js'
 import { writeSchemaArtifact } from '../db/local-db.js'
 import { ensureDbTypes } from '../db/ensure-db-types.js'
 import {
@@ -23,7 +41,9 @@ import {
 type ScaffoldGenerator =
   | 'pikkuPublicRPC'
   | 'pikkuAnalytics'
+  | 'pikkuCors'
   | 'pikkuFeatureFlagsScaffold'
+  | 'pikkuAdminFunctions'
   | 'pikkuConsoleFunctions'
   | 'pikkuVirtualUserFunctions'
   | 'pikkuPublicAgent'
@@ -43,10 +63,19 @@ const scaffoldFiles = (
     files.push({ file: config.publicRpcFile, generator: 'pikkuPublicRPC' })
   if (config.scaffold?.analytics && config.analyticsFile)
     files.push({ file: config.analyticsFile, generator: 'pikkuAnalytics' })
+  // The origins file is wanted by `scaffold.cors` and by the analytics origin
+  // lock alike, so the one generator is queued for whichever needs it.
+  if (config.corsOriginsFile)
+    files.push({ file: config.corsOriginsFile, generator: 'pikkuCors' })
   if (config.scaffold?.featureFlags && config.featureFlagsFile)
     files.push({
       file: config.featureFlagsFile,
       generator: 'pikkuFeatureFlagsScaffold',
+    })
+  if (config.scaffold?.admin && config.adminFunctionsFile)
+    files.push({
+      file: config.adminFunctionsFile,
+      generator: 'pikkuAdminFunctions',
     })
   if (config.scaffold?.console && config.consoleFunctionsFile)
     files.push({
@@ -72,14 +101,32 @@ const scaffoldFiles = (
 }
 
 const RUN_RECORDS_DIR = 'runs'
+// The remote addon sync writes SDKs into .pikku/remote before anything is
+// generated, so its presence says nothing about whether codegen has run.
+const REMOTE_SDK_DIR = 'remote'
+// Written by a watcher that may outlive the tree it describes.
+const WATCH_STATUS_FILE = 'status.json'
+// Filtered per-backend trees live beside the shared output.
+const BACKENDS_DIR = 'backends'
 
 const hasGeneratedOutput = (outDir: string): boolean =>
   existsSync(outDir) &&
-  readdirSync(outDir).some((entry) => entry !== RUN_RECORDS_DIR)
+  readdirSync(outDir).some(
+    (entry) =>
+      entry !== RUN_RECORDS_DIR &&
+      entry !== REMOTE_SDK_DIR &&
+      entry !== WATCH_STATUS_FILE &&
+      entry !== BACKENDS_DIR
+  )
 
 export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
   title: 'Pikku All',
-  func: async ({ logger, config, getInspectorState }, _data, { workflow }) => {
+  auth: false,
+  func: async (
+    { logger, config, getInspectorState },
+    _data,
+    { workflow, rpc }
+  ) => {
     // Preflight: a split @pikku/core install silently breaks wiring registration
     // (workflows/RPCs "disappear"), so refuse to codegen against it.
     await assertSingleCoreVersion(config.rootDir, logger)
@@ -91,6 +138,30 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await pruneLegacyScaffoldFiles(config)
     await refreshScaffoldsImportingRemovedEntryPoints(config)
     await removeRetiredScaffoldFiles(config)
+    await removeDisabledOriginScaffolds(config)
+
+    // Before the first inspection: codegen imports the remote addons' types
+    // from their SDKs, and the inspector refuses an SDK that does not match
+    // pikku-addons.lock. A sync that cannot reach the registry is reported and
+    // left to that check (PKU338), so an offline build with a matching lock
+    // still runs.
+    await workflow.do('Sync remote addon SDKs', async () => {
+      try {
+        await runAddonSync({
+          config,
+          logger,
+          // Typed by the registry's synced SDK (see RegistryInvoke); a lock hit never calls it.
+          resolveSdk: (request) =>
+            (rpc.invoke as RegistryInvoke)('registry:resolveSdk', request),
+        })
+      } catch (e: any) {
+        if (e instanceof RemoteAddonSyncError) {
+          logger.critical(e.code, e.message)
+        } else {
+          logger.error(`Syncing remote addon SDKs failed: ${e?.message ?? e}`)
+        }
+      }
+    })
 
     const needsBootstrap = !hasGeneratedOutput(config.outDir)
     // Only a MySQL project needs its createConfig read this early: its scratch
@@ -223,8 +294,62 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       (s) => !existsSync(s.file)
     )
     if (missingScaffolds.length > 0) {
+      // One literal call per generator: the inspector reads the rpc name of
+      // every step (PKU943), so it cannot be a loop variable.
       for (const { generator } of missingScaffolds) {
-        await workflow.do(`Scaffold ${generator}`, generator, null)
+        switch (generator) {
+          case 'pikkuGraphWirings':
+            await workflow.do(
+              'Scaffold pikkuGraphWirings',
+              'pikkuGraphWirings',
+              null
+            )
+            break
+          case 'pikkuPublicRPC':
+            await workflow.do('Scaffold pikkuPublicRPC', 'pikkuPublicRPC', null)
+            break
+          case 'pikkuAnalytics':
+            await workflow.do('Scaffold pikkuAnalytics', 'pikkuAnalytics', null)
+            break
+          case 'pikkuCors':
+            await workflow.do('Scaffold pikkuCors', 'pikkuCors', null)
+            break
+          case 'pikkuFeatureFlagsScaffold':
+            await workflow.do(
+              'Scaffold pikkuFeatureFlagsScaffold',
+              'pikkuFeatureFlagsScaffold',
+              null
+            )
+            break
+          case 'pikkuConsoleFunctions':
+            await workflow.do(
+              'Scaffold pikkuConsoleFunctions',
+              'pikkuConsoleFunctions',
+              null
+            )
+            break
+          case 'pikkuVirtualUserFunctions':
+            await workflow.do(
+              'Scaffold pikkuVirtualUserFunctions',
+              'pikkuVirtualUserFunctions',
+              null
+            )
+            break
+          case 'pikkuPublicAgent':
+            await workflow.do(
+              'Scaffold pikkuPublicAgent',
+              'pikkuPublicAgent',
+              null
+            )
+            break
+          case 'pikkuEventsScaffold':
+            await workflow.do(
+              'Scaffold pikkuEventsScaffold',
+              'pikkuEventsScaffold',
+              null
+            )
+            break
+        }
       }
     }
 
@@ -286,7 +411,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       )
     }
     await Promise.all(typeGenerators)
-    await workflow.do('CLI types', 'pikkuCLITypes', null)
+    await workflow.do('CLI types', 'pikkuCLITypes', {})
 
     const [middleware, permissions] = await Promise.all([
       workflow.do('Middleware', 'pikkuMiddleware', null),
@@ -333,8 +458,10 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await Promise.all([
       workflow.do('Graph wirings', 'pikkuGraphWirings', null),
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
+      workflow.do('CORS scaffold', 'pikkuCors', null),
       workflow.do('Analytics ingest', 'pikkuAnalytics', null),
       workflow.do('Feature flag wire', 'pikkuFeatureFlagsScaffold', null),
+      workflow.do('Admin functions', 'pikkuAdminFunctions', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
       workflow.do('Virtual user functions', 'pikkuVirtualUserFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
@@ -349,8 +476,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('VirtualUsers', 'pikkuVirtualUsers', {}),
       workflow.do('Variables', 'pikkuVariables', null),
       workflow.do('Outgoing webhooks', 'pikkuOutgoingWebhooks', null),
-      workflow.do('Addon types', 'pikkuAddonTypes', null),
+      workflow.do('Addon types', 'pikkuAddonTypes', {}),
       workflow.do('Screens', 'pikkuScreens', null),
+      workflow.do('Contributors', 'pikkuContributors', null),
     ])
 
     if (hasInternalRPCs) {
@@ -435,16 +563,29 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('RPC internal map', 'pikkuRPCInternalMap', null),
       workflow.do('RPC exposed map', 'pikkuRPCExposedMap', null),
       workflow.do('RPC remote map', 'pikkuRPCRemoteMap', null),
-      workflow.do('Workflow', 'pikkuWorkflow', null),
+      workflow.do('Workflow', 'pikkuWorkflow', {}),
     ])
 
-    let remoteRPC = false
+    // The inspector checks that a wired addon's declared dependencies are
+    // mapped to the right packages; whether the versions fit needs semver,
+    // which stays out of the inspector.
+    await workflow.do('Addon dependency versions', async () => {
+      const { rpc: rpcState } = await getInspectorState()
+      for (const problem of checkAddonDependencyVersions(
+        config.rootDir,
+        rpcState.wireAddonDeclarations
+      )) {
+        logger.critical(problem.code, problem.message)
+      }
+    })
+
+    let meshRPC = false
     let webhook = false
     let webhookSources = false
     let remoteJobs = false
     let workflowRoutes = false
     if (!config.addon) {
-      remoteRPC = await workflow.do('Remote RPC', 'pikkuRemoteRPC', null)
+      meshRPC = await workflow.do('Mesh RPC', 'pikkuMeshRPC', null)
       webhook = await workflow.do('Webhook', 'pikkuWebhook', null)
       webhookSources = await workflow.do(
         'Webhook sources',
@@ -478,7 +619,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     if (
       workflows ||
-      remoteRPC ||
+      meshRPC ||
       webhook ||
       webhookSources ||
       remoteJobs ||
@@ -667,6 +808,25 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     await workflow.do('Versions update', 'pikkuVersionsUpdate', null)
 
+    // An addon's types-only SDK, from the maps and meta written above, at the
+    // package.json version. `pikku versions check` gates a contract change.
+    if (config.addon) {
+      await workflow.do('Addon SDK', 'pikkuAddonSdk', null)
+    }
+
+    // A backend pass cuts its remote SDK; the parent moves both SDKs into
+    // .pikku/sdk/<backend>/ once every pass is done.
+    if (config.backend && process.env.PIKKU_DEPLOY_CODEGEN === '1') {
+      await workflow.do('Backend SDK', async () => {
+        writeBackendPassSdk(
+          logger,
+          await getInspectorState(),
+          config,
+          config.backend!
+        )
+      })
+    }
+
     // Last, because a leaf index only exists for an entry file that was
     // actually generated — that absence is what makes `#pikku/http` fail to
     // resolve in an addon rather than resolve to a module missing the export.
@@ -679,6 +839,38 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await writeSurfaceUsage(logger, config, surfaceUsage ?? {})
     })
 
+    // Disabled functions are left out of everything above; say which, once.
+    // An app function nothing uses fails `pikku validate --codegen` (error, not critical,
+    // so the build itself still goes through). Addon functions are never judged.
+    await workflow.do('Disabled and unused functions', async () => {
+      const state = await getInspectorState()
+      const disabled = Object.values(state.functions.disabled ?? {})
+      if (disabled.length > 0) {
+        logger.warn(
+          `${disabled.length} disabled function${disabled.length === 1 ? '' : 's'} left out of the build:\n` +
+            disabled
+              .map(
+                (fn) =>
+                  `  ${fn.name} (${relative(config.rootDir, fn.sourceFile)})` +
+                  (fn.reason ? `: ${fn.reason}` : '')
+              )
+              .join('\n')
+        )
+      }
+      for (const fn of findUnusedFunctions(state, { addon: !!config.addon })) {
+        logger.diagnostic({
+          severity: 'error',
+          code: ErrorCode.UNUSED_FUNCTION,
+          message:
+            `'${fn.name ?? fn.pikkuFuncId}'` +
+            (fn.sourceFile
+              ? ` in ${relative(config.rootDir, fn.sourceFile)}`
+              : '') +
+            ' is not wired, exposed or called by anything. Use it, or mark it `disabled`.',
+        })
+      }
+    })
+
     await workflow.do('Bootstrap', 'pikkuBootstrap', { allImports })
     await workflow.do('Summary', 'pikkuSummary', null)
 
@@ -688,7 +880,10 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     // (like assertSingleCoreVersion) so it reliably fails the run.
     if (config.tsc || config.tscSummary) {
       const errorCount = await workflow.do('Type check', async () => {
-        const result = runProjectTypecheck(config.tsconfig, config.rootDir)
+        const result = await runProjectTypecheck(
+          config.tsconfig,
+          config.rootDir
+        )
         logger.info(
           config.tsc ? renderTscFull(result) : renderTscSummary(result)
         )
@@ -697,6 +892,56 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       if (errorCount > 0) {
         throw new PikkuTypecheckFailedError(
           `Type check failed: ${errorCount} error${errorCount === 1 ? '' : 's'}`
+        )
+      }
+    }
+
+    // The shared pass above wrote the full, unfiltered tree. Each backend is a
+    // filtered build of it, written to .pikku/backends/<name>/. Re-executed
+    // children (per-unit deploy codegen, and these backend passes themselves)
+    // run a single pass.
+    const backendNames = Object.keys(config.backends ?? {})
+    if (
+      process.env.PIKKU_DEPLOY_CODEGEN !== '1' &&
+      !config.addon &&
+      backendNames.length > 0
+    ) {
+      const selected = selectBackends(config.backends, config.backend)
+      const { errors, backendDirs } = await workflow.do(
+        'Backends',
+        async () => {
+          const state = await getInspectorState(false, false, false, true)
+          const result = await generateBackendCodegen({
+            projectDir: config.configDir,
+            backends: selected,
+            contentBuckets: Object.fromEntries(
+              selected.map((name) => [name, backendBuckets(config, name)])
+            ),
+            inspectorState: state,
+            onProgress: (name, status) => {
+              if (status === 'done') logger.debug(`• backend ${name} generated`)
+            },
+          })
+          return { errors: result.errors, backendDirs: [...result.backendDirs] }
+        }
+      )
+      if (errors.length === 0) {
+        for (const [name, backendOutDir] of backendDirs) {
+          const sdk = assembleBackendSdk({
+            projectDir: config.configDir,
+            rootDir: config.rootDir,
+            backend: name,
+            backendOutDir,
+            publish: config.backends?.[name]?.publish === true,
+          })
+          logger.debug(`• backend ${name} SDK at ${sdk.dir}`)
+        }
+      }
+      if (errors.length > 0) {
+        throw new Error(
+          errors
+            .map((e) => `Backend '${e.backend}' failed: ${e.error}`)
+            .join('\n')
         )
       }
     }

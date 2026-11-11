@@ -1,22 +1,30 @@
-import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { refCLI, refChannel, refHTTP } from '#pikku/function'
 import { RPCNotFoundError, rpcService } from '@pikku/core/rpc'
 import { createConfig, createSingletonServices } from './services.js'
+import { createScriptContent, ingestText } from './script-content.js'
 
 const ADDON_PACKAGE = '@pikku/templates-function-addon'
 
 const callable = (config: any): unknown =>
   typeof config === 'function' ? config : config?.func
 
-const readMeta = (relativePath: string): any => {
+const content = createScriptContent(
+  fileURLToPath(new URL('../.pikku-runtime/script-content', import.meta.url))
+)
+
+const readMeta = async (relativePath: string): Promise<any> => {
   const url = new URL(relativePath, import.meta.url)
-  return JSON.parse(readFileSync(fileURLToPath(url), 'utf8'))
+  return JSON.parse(await ingestText(content, fileURLToPath(url)))
 }
 
-const httpMeta = readMeta('../.pikku/http/pikku-http-wirings-meta.gen.json')
-const channelMeta = readMeta('../.pikku/channel/pikku-channels-meta.gen.json')
-const cliMeta = readMeta('../.pikku/cli/pikku-cli-wirings-meta.gen.json')
+const httpMeta = await readMeta(
+  '../.pikku/http/pikku-http-wirings-meta.gen.json'
+)
+const channelMeta = await readMeta(
+  '../.pikku/channel/pikku-channels-meta.gen.json'
+)
+const cliMeta = await readMeta('../.pikku/cli/pikku-cli-wirings-meta.gen.json')
 
 console.log('\nAddon Contract Metadata Verifier')
 console.log('=========================')
@@ -111,7 +119,7 @@ if (overridden.basePath === '/custom') {
 
 // `mcp: ['goodbye']` is the app choosing the tool menu: the addon declared
 // `hello` a tool and not `goodbye`, and neither declaration decides this.
-const mcpMeta = readMeta('../.pikku/mcp/mcp.gen.json')
+const mcpMeta = await readMeta('../.pikku/mcp/mcp.gen.json')
 const toolNames = (mcpMeta?.tools ?? []).map((tool: any) => tool.name).sort()
 if (toolNames.length === 1 && toolNames[0] === 'ext:goodbye') {
   console.log('✓ wireAddon mcp list offers exactly the tools it names')
@@ -122,8 +130,8 @@ if (toolNames.length === 1 && toolNames[0] === 'ext:goodbye') {
   passed = false
 }
 
-// `expose: ['goodbye']` is the app choosing what `rpc.exposed` — and so
-// `POST /rpc/:rpcName` — reaches. Neither function declared `expose: true`.
+// `expose: ['goodbye']` is the app opting in to what `rpc.exposed` — and so
+// `POST /rpc/:rpcName` — reaches, out of what the addon declared exposed.
 const rpc = rpcService.getContextRPCService(
   (await createSingletonServices(await createConfig())) as any,
   {}

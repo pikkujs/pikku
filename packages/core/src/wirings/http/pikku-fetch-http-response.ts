@@ -2,6 +2,7 @@ import type { PikkuHTTPResponse } from './http.types.js'
 import type { SerializeOptions as CookieSerializeOptions } from 'cookie'
 import { stringifySetCookie } from 'cookie'
 
+/** A {@link PikkuHTTPResponse} that collects status, headers, cookies and body in memory, or as a stream for SSE, and converts them to a web `Response` with `toResponse()`. */
 export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   #statusCode: number = 200
   #headers = new Headers()

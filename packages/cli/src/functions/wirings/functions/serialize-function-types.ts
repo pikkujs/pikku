@@ -48,6 +48,7 @@ import type { TypedScenario, TypedVirtualUsers } from '../scenarios/pikku-scenar
 
 import type { PickRequired } from '@pikku/core/utils'
 import type { ListInput, ListOutput } from '@pikku/core/function'
+export type { ListInput, ListOutput, Filter } from '@pikku/core/function'
 import type { CorePermissionGroup } from '@pikku/core/function'
 import type { PikkuWire, SecretlessServices } from '@pikku/core/types'
 import type {
@@ -272,12 +273,16 @@ type PikkuFunctionConfigWithSchema<
   >,
   'func' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
 > & {
+  /** The function body: \`async (services, data, wire) => output\`. */
   func:
     | PikkuFunction<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
     | PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
+  /** Zod schema for the input. Validated at runtime; the type of \`data\` is inferred from it. */
   input?: InputSchema
+  /** Zod schema for the output. The function's return type is inferred from it. */
   output?: OutputSchema
   node?: NodeConfig
+  /** \`pikkuPermission\` guards checked before the body runs. Pass one, an array, or groups of alternatives. */
   permissions?: InputSchema extends StandardSchemaV1
     ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
     : undefined
@@ -293,10 +298,17 @@ type PikkuFunctionConfigWithSchema<
  * Define the input and output with Zod schemas — the function's types are
  * inferred from them, and the schemas double as runtime validation.
  *
+ * The export name is the function's name in \`rpc.invoke\`, \`ref()\` and the
+ * generated clients. \`expose: true\` is enough for a client to call it; add a
+ * wiring only for an HTTP route of your own. A session is required, and
+ * \`pikkuSessionlessFunc\` is the one to use when it is not. \`permissions\` is
+ * \`{ name: guard }\`, and the caller is admitted when any name passes. Errors
+ * come from \`#pikku/error\`, and \`pikku doc rpc\` covers the \`rpc\` on the wire.
+ *
  * @param config - Function definition with \`input\`/\`output\` Zod schemas and \`func\`.
  * @returns The normalized configuration object
  *
- * @example snippet: sessionFunction
+ * @example snippet: completeFunction
  */
 export function pikkuFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -305,6 +317,7 @@ export function pikkuFunc<
   config: PikkuFunctionConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>
 ): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
 export function pikkuFunc<In, Out = unknown>(
+  /** The function body: \`async (services, data, wire) => output\`. */
   func:
     | PikkuFunction<In, Out, 'session' | 'rpc'>
     | PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
@@ -317,6 +330,12 @@ export function pikkuFunc(func: any) {
  * A \`pikkuFunc\` whose input and output are already the shared list shape —
  * filters, sort, paging in; rows and a total out — so a listing endpoint pages
  * the same way everywhere.
+ *
+ * Input: \`{ limit?, cursor?, search?, sort?: [{ column, direction }], filter? }\`.
+ * Output: \`{ rows, nextCursor, totalCount? }\`, where \`nextCursor\` is an opaque
+ * string and \`null\` on the last page. The generics are the filterable fields,
+ * the row and the sortable columns. \`usePikkuInfiniteQuery\` reads it a page at a
+ * time (\`pikku doc hooks\`).
  *
  * @example snippet: listFunction
  */
@@ -353,15 +372,19 @@ type PikkuFunctionSessionlessConfigWithSchema<
   >,
   'func' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
 > & {
+  /** The function body: \`async (services, data, wire) => output\`. */
   func: PikkuFunctionSessionless<
     SchemaInferred<InputSchema>,
     SchemaInferred<OutputSchema>,
     RequiredWires,
     RequiredServices
   >
+  /** Zod schema for the input. Validated at runtime; the type of \`data\` is inferred from it. */
   input?: InputSchema
+  /** Zod schema for the output. The function's return type is inferred from it. */
   output?: OutputSchema
   node?: NodeConfig
+  /** \`pikkuPermission\` guards checked before the body runs. Pass one, an array, or groups of alternatives. */
   permissions?: InputSchema extends StandardSchemaV1
     ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
     : undefined
@@ -390,6 +413,7 @@ export function pikkuSessionlessFunc<
   config: PikkuFunctionSessionlessConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc', RequiredServices>
 ): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
 export function pikkuSessionlessFunc<In, Out = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices>(
+  /** The function body: \`async (services, data, wire) => output\`. */
   func:
     | PikkuFunctionSessionless<In, Out, 'session' | 'rpc', RequiredServices>
     | PikkuFunctionSessionlessConfig<In, Out, 'session' | 'rpc', PikkuFunctionSessionless<In, Out, 'session' | 'rpc', RequiredServices>>
@@ -408,6 +432,7 @@ export function pikkuSessionlessFunc(func: any) {
  * @example snippet: cleanupFunction
  */
 export const pikkuVoidFunc = (
+  /** The function body: \`async (services, data, wire) => output\`. */
   func:
     | PikkuFunctionSessionless<void, void, 'session' | 'rpc'>
     | PikkuFunctionSessionlessConfig<void, void, 'session' | 'rpc'>
@@ -418,6 +443,10 @@ export const pikkuVoidFunc = (
 /**
  * References a registered function by name for use in any wiring.
  * Works for both local and addon functions — resolves via RPC at runtime.
+ *
+ * A local function's name is its plain export name, with no prefix. \`ns:name\`
+ * is for addons only, where \`ns\` is the addon's namespace. Names are
+ * type-checked, so a wrong one fails the build.
  *
  * @template Name - The function name (must be a key in FlattenedRPCMap)
  * @param rpcName - The name of the function to reference

@@ -1,6 +1,12 @@
 import { transformDates } from './transform-date.js'
 import { corePikkuFetch } from './pikku-fetch.js'
 import { PikkuFetchError } from './pikku-fetch-error.js'
+import { readServerEvents } from './server-events.js'
+import {
+  PikkuAgentStreamError,
+  type PikkuAgentEvent,
+  type PikkuAgentStreamOptions,
+} from './agent-events.js'
 
 type AuthHeaders = {
   jwt?: string
@@ -44,6 +50,20 @@ export class CorePikkuFetch {
    */
   constructor(private options: CorePikkuFetchOptions = {}) {
     this.authHeaders = options.authHeaders || {}
+  }
+
+  /**
+   * The default headers with the caller's laid over them. Names match without regard to
+   * case, so a caller's `authorization` replaces the default `Authorization` instead of
+   * being sent beside it.
+   */
+  private mergeHeaders(init?: HeadersInit): Record<string, string> {
+    const headers = this.getHeaders()
+    const overrides = Object.fromEntries(new Headers(init).entries())
+    for (const name of Object.keys(headers)) {
+      if (name.toLowerCase() in overrides) delete headers[name]
+    }
+    return { ...headers, ...overrides }
   }
 
   /**
@@ -137,26 +157,28 @@ export class CorePikkuFetch {
 
   /**
    * Uploads a file to a URL obtained from `getUploadURL`.
-   * Handles both presigned URLs (e.g. S3) and header-based auth (e.g. B2).
+   * Handles both presigned URLs (e.g. S3) and header-based auth (e.g. B2). The
+   * session is not sent: the URL is the grant.
    *
    * @param {Object} uploadInfo - The result from the backend's `getUploadURL` call.
-   * @param {string} uploadInfo.uploadUrl - The URL to upload to.
-   * @param {string} uploadInfo.assetKey - The finalized asset key.
+   * @param {string} uploadInfo.uploadUrl - The URL to upload to. A relative one resolves against the server URL.
+   * @param {string} uploadInfo.fileKey - The key to save on the row.
    * @param {Record<string, string>} [uploadInfo.uploadHeaders] - Optional headers required by the storage backend.
    * @param {Blob | File | Buffer | ReadableStream} body - The file content to upload.
    * @param {string} [contentType] - The MIME type (used as fallback if not in uploadHeaders).
-   * @returns {Promise<{ assetKey: string; response: Response }>} - The asset key and raw response.
+   * @returns {Promise<{ fileKey: string; response: Response }>} - The file key and raw response.
+   * @throws {PikkuFetchError} - Throws a decoded error if the status code is >= 400.
    */
   public async uploadFile(
     uploadInfo: {
       uploadUrl: string
-      assetKey: string
+      fileKey: string
       uploadHeaders?: Record<string, string>
       uploadMethod?: 'PUT' | 'POST'
     },
     body: Blob | File | BufferSource | ReadableStream,
     contentType?: string
-  ): Promise<{ assetKey: string; response: Response }> {
+  ): Promise<{ fileKey: string; response: Response }> {
     const headers: Record<string, string> = {
       ...uploadInfo.uploadHeaders,
     }
@@ -164,7 +186,11 @@ export class CorePikkuFetch {
       headers['Content-Type'] = contentType
     }
 
-    const response = await fetch(uploadInfo.uploadUrl, {
+    const send = this.options.fetch ?? globalThis.fetch
+    const url = /^([a-z][a-z\d+.-]*:|\/\/)/i.test(uploadInfo.uploadUrl)
+      ? uploadInfo.uploadUrl
+      : this.resolveServerUrl(uploadInfo.uploadUrl)
+    const response = await send(url, {
       method: uploadInfo.uploadMethod ?? 'PUT',
       headers,
       body: body as any,
@@ -174,7 +200,7 @@ export class CorePikkuFetch {
       throw await PikkuFetchError.fromResponse(response)
     }
 
-    return { assetKey: uploadInfo.assetKey, response }
+    return { fileKey: uploadInfo.fileKey, response }
   }
 
   /**
@@ -219,10 +245,7 @@ export class CorePikkuFetch {
     handler: (event: T) => void,
     onError?: (err: unknown) => void
   ): { close: () => void } {
-    this.verifyServerUrlSet()
-    const url = path.startsWith('/')
-      ? `${this.options.serverUrl}${path}`
-      : `${this.options.serverUrl}/${path}`
+    const url = this.resolveServerUrl(path)
 
     const controller = new AbortController()
     let closed = false
@@ -244,33 +267,9 @@ export class CorePikkuFetch {
         if (!response.ok || !response.body) {
           throw new Error(`SSE request failed: ${response.status}`)
         }
-        const reader = response.body
-          .pipeThrough(new TextDecoderStream())
-          .getReader()
-        let buffer = ''
-        while (!closed) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buffer += value
-          let sep: number
-          while ((sep = buffer.indexOf('\n\n')) !== -1) {
-            const raw = buffer.slice(0, sep)
-            buffer = buffer.slice(sep + 2)
-            const data = raw
-              .split('\n')
-              .filter((l) => l.startsWith('data:'))
-              .map((l) => l.slice(5).trimStart())
-              .join('\n')
-            if (!data) continue
-            let parsed: T
-            try {
-              parsed = JSON.parse(data) as T
-            } catch {
-              /* ignore malformed event */
-              continue
-            }
-            handler(parsed)
-          }
+        for await (const event of readServerEvents<T>(response.body, 'skip')) {
+          if (closed) break
+          handler(event)
         }
         // Clean EOF before caller called close() = unexpected stream termination.
         if (!closed) throw new Error('SSE stream closed unexpectedly')
@@ -290,6 +289,66 @@ export class CorePikkuFetch {
   }
 
   /**
+   * POSTs `data` and reads the reply as a server-event stream, yielding the JSON in each
+   * `data:` frame. A status of 400 or above throws a `PikkuFetchError` before anything is
+   * yielded, and a frame that is not JSON throws rather than being skipped.
+   *
+   * @param uri - The endpoint URI for the request.
+   * @param data - The JSON body.
+   * @param options - Request options; pass `signal` to abort the stream.
+   */
+  public async *postStream<T = unknown>(
+    uri: string,
+    data: unknown,
+    options?: RequestInit
+  ): AsyncGenerator<T, void, undefined> {
+    // Headers, [name, value] tuples and plain objects all spread differently.
+    const headers = Object.fromEntries(new Headers(options?.headers).entries())
+    const response = await this.fetch(uri, 'POST', data, {
+      ...options,
+      headers: { ...headers, accept: 'text/event-stream' },
+    })
+    if (response.status >= 400) {
+      throw await PikkuFetchError.fromResponse(response)
+    }
+    if (!response.body) {
+      throw new Error(`Stream request to ${uri} returned no body`)
+    }
+    for await (const event of readServerEvents<T>(response.body)) {
+      // A chunk can hold several frames: stop at the abort, not after the chunk.
+      options?.signal?.throwIfAborted()
+      yield event
+    }
+  }
+
+  /**
+   * Runs an agent over `POST /rpc/agent/:agentName/stream` and yields its AG-UI events,
+   * ending with `RUN_FINISHED`. A `RUN_ERROR` frame throws a `PikkuAgentStreamError`
+   * carrying the server's message, and so does a stream that ends before `RUN_FINISHED`.
+   *
+   * @param uri - The stream route, with the agent name already in it.
+   * @param input - The agent input (`message`, `threadId`, `resourceId`, ...).
+   * @param options - Pass `signal` to abort the run's stream.
+   */
+  public async *agentStream(
+    uri: string,
+    input: unknown,
+    options?: PikkuAgentStreamOptions
+  ): AsyncGenerator<PikkuAgentEvent, void, undefined> {
+    const events = this.postStream<
+      PikkuAgentEvent | { type: 'RUN_ERROR'; message: string; code?: string }
+    >(uri, input, { signal: options?.signal })
+    for await (const event of events) {
+      if (event.type === 'RUN_ERROR') {
+        throw new PikkuAgentStreamError(event.message, event.code)
+      }
+      yield event
+      if (event.type === 'RUN_FINISHED') return
+    }
+    throw new PikkuAgentStreamError('Agent stream ended before RUN_FINISHED')
+  }
+
+  /**
    * Makes a raw fetch request with the specified URI, method, and data.
    *
    * @param {string} uri - The endpoint URI for the request.
@@ -304,25 +363,31 @@ export class CorePikkuFetch {
     data: any,
     options?: RequestInit
   ) {
-    this.verifyServerUrlSet()
-    if (uri.startsWith('/')) {
-      uri = `${this.options.serverUrl}${uri}`
-    } else {
-      uri = `${this.options.serverUrl}/${uri}`
-    }
-
     return await corePikkuFetch(
-      uri,
+      this.resolveServerUrl(uri),
       data,
       {
         ...options,
         method,
         mode: this.options.mode,
         credentials: this.options.credentials,
-        headers: { ...this.getHeaders(), ...options?.headers },
+        headers: this.mergeHeaders(options?.headers),
       },
       this.options.fetch
     )
+  }
+
+  /**
+   * Joins a server-relative path onto the server URL. Joined rather than parsed
+   * with `new URL`, which would drop a path on the server URL such as `/api`.
+   *
+   * @throws {Error} - Throws an error if the server URL is not set.
+   */
+  private resolveServerUrl(path: string): string {
+    this.verifyServerUrlSet()
+    return path.startsWith('/')
+      ? `${this.options.serverUrl}${path}`
+      : `${this.options.serverUrl}/${path}`
   }
 
   /**

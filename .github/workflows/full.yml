@@ -59,6 +59,238 @@ jobs:
         run: node --test scripts/ai-e2e-gate.test.mjs
       - name: Test the native apps gate
         run: node --test scripts/native-gate.test.mjs
+      - name: Test the Go gate
+        run: node --test scripts/inspector-go-gate.test.mjs
+
+  # pikku-inspect, the Go inspector. Needs no bun install: the fixture tests
+  # that inspect recipes/functions skip themselves without its node_modules.
+  # The cross-compile is the release build, so a target that stops building
+  # fails here rather than in Publish.
+  inspector-go:
+    name: Go (inspector-go)
+    needs: inspector-rs-build
+    if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: packages/inspector-go
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: packages/inspector-go/go.mod
+          cache-dependency-path: packages/inspector-go/**/go.sum
+      - name: Check the typescript-go pin and generated shims
+        run: bash scripts/check-tsgo-pin.sh
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test ./...
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Cross-compile every target
+        run: node scripts/build-go.mjs --all
+      - name: Download pikku-inspect-rs for every platform
+        uses: actions/download-artifact@v8
+        with:
+          pattern: pikku-inspect-rs-*
+          merge-multiple: true
+      - name: Unpack pikku-inspect-rs
+        working-directory: ${{ github.workspace }}
+        run: for t in pikku-inspect-rs-*.tar; do tar xf "$t" && rm "$t"; done
+      - name: Check every target has its binary
+        run: node scripts/check-platform-binary.mjs
+      - name: Smoke-test the linux-x64 binary
+        run: |
+          out=$(printf '%s' '{"fileName":"a.ts","content":"export * from \"./b.js\""}' \
+            | prebuilt/linux-x64/pikku-inspect helper readModuleSpecifiers)
+          echo "$out"
+          [ "$out" = '{"result":["./b.js"]}' ]
+
+  # pikku-inspect cross-compiled in parallel with Build, for the jobs that ask
+  # for it through the setup action's download-inspector-go (it lands in
+  # prebuilt/, which the install smoke test needs). Every job that downloads the
+  # build artifact already has the host build, which travels in
+  # packages/inspector-go/bin. Publish cross-compiles every platform itself
+  # (build-go.mjs --all).
+  inspector-go-build:
+    name: Go build (pikku-inspect)
+    if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: packages/inspector-go/go.mod
+          cache-dependency-path: packages/inspector-go/**/go.sum
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Build pikku-inspect
+        run: node packages/inspector-go/scripts/build-go.mjs --target linux-x64 --target darwin-arm64
+      - name: Smoke-test the linux-x64 binary
+        run: |
+          out=$(printf '%s' '{"fileName":"a.ts","content":"export * from \"./b.js\""}' \
+            | packages/inspector-go/prebuilt/linux-x64/pikku-inspect helper readModuleSpecifiers)
+          echo "$out"
+          [ "$out" = '{"result":["./b.js"]}' ]
+      - name: Pack
+        run: tar cf pikku-inspect.tar packages/inspector-go/prebuilt/linux-x64 packages/inspector-go/prebuilt/darwin-arm64
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pikku-inspect
+          path: pikku-inspect.tar
+          retention-days: 1
+
+  # pikku-inspect-rs, the Rust inspector, built natively on each runner it ships
+  # for (cargo cross-compiles badly against the tsrs crates, so there is no
+  # cross build). Each leg uploads its own artifact, which the setup action's
+  # download-inspector-rs unpacks into prebuilt/ for the runner's platform.
+  # Publish builds the same three itself.
+  inspector-rs-build:
+    name: Rust build (pikku-inspect-rs, ${{ matrix.target }})
+    if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            os: ubuntu-24.04
+          - target: linux-arm64
+            os: ubuntu-24.04-arm
+          - target: darwin-arm64
+            os: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: ${{ matrix.target }}
+      - name: Build pikku-inspect-rs
+        run: cargo build --release --locked --manifest-path packages/inspector-rust/Cargo.toml
+      - name: Place the binary where the TypeScript wrapper looks
+        run: |
+          mkdir -p packages/inspector-go/prebuilt/${{ matrix.target }}
+          cp packages/inspector-rust/target/release/pikku-inspect-rs packages/inspector-go/prebuilt/${{ matrix.target }}/
+      - name: Smoke-test the binary
+        run: |
+          out=$(printf '%s' '{"fileName":"a.ts","content":"export * from \"./b.js\""}' \
+            | packages/inspector-go/prebuilt/${{ matrix.target }}/pikku-inspect-rs helper readModuleSpecifiers)
+          echo "$out"
+          [ "$out" = '{"result":["./b.js"]}' ]
+      - name: Pack
+        run: tar cf pikku-inspect-rs-${{ matrix.target }}.tar packages/inspector-go/prebuilt/${{ matrix.target }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pikku-inspect-rs-${{ matrix.target }}
+          path: pikku-inspect-rs-${{ matrix.target }}.tar
+          retention-days: 1
+
+  # The Rust crate's own tests. Not blocking yet: the crate is new beside Go.
+  inspector-rust:
+    name: Rust (inspector-rust)
+    if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: test
+      - name: cargo test
+        run: cargo test --release --locked --manifest-path packages/inspector-rust/Cargo.toml
+
+  # Rust against Go, byte for byte, on every project under templates/, recipes/
+  # and verifiers/. Go is the oracle: the exit code is non-zero if any project's
+  # inspector output differs. The binaries are the host builds the Build job
+  # leaves in packages/inspector-go/bin. Non-blocking while the Rust inspector
+  # is not the default; drop continue-on-error from both jobs when it is.
+  inspector-parity:
+    name: Inspector parity (Go vs Rust)
+    if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    continue-on-error: true
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Compare pikku-inspect and pikku-inspect-rs on every project
+        run: |
+          bun inspector-parity/scripts/parity.ts \
+            "$PWD/packages/inspector-go/bin/pikku-inspect" \
+            "$PWD/packages/inspector-go/bin/pikku-inspect-rs" \
+            --out "$RUNNER_TEMP/parity"
+      - name: Check the committed Go goldens against Go
+        if: ${{ !cancelled() }}
+        run: bun inspector-parity/scripts/golden-check.ts "$PWD/packages/inspector-go/bin/pikku-inspect"
+      - name: Upload the scoreboard
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: inspector-parity
+          path: ${{ runner.temp }}/parity/summary.md
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The same comparison with schema generation on (the Zod route included).
+  # Separate and non-blocking: it is the part of the Rust port least proven.
+  inspector-parity-schemas:
+    name: Inspector parity with schemas (Go vs Rust)
+    if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    continue-on-error: true
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Compare pikku-inspect and pikku-inspect-rs with schemas
+        run: |
+          bun inspector-parity/scripts/parity.ts \
+            "$PWD/packages/inspector-go/bin/pikku-inspect" \
+            "$PWD/packages/inspector-go/bin/pikku-inspect-rs" \
+            --schemas --out "$RUNNER_TEMP/parity-schemas"
+      - name: Upload the scoreboard
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: inspector-parity-schemas
+          path: ${{ runner.temp }}/parity-schemas/summary.md
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The Zod converter's tests and the install smoke test.
+  inspector-go-zod-smoke:
+    name: Inspector-go (Zod, install smoke)
+    if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: [build, inspector-go-build, inspector-rs-build]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          download-inspector-go: 'true'
+          download-inspector-rs: 'true'
+      # The converter's own tests need zod from node_modules, which the Go job
+      # does not install.
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: packages/inspector-go/go.mod
+          cache-dependency-path: packages/inspector-go/**/go.sum
+      - name: Zod conversion without Node
+        working-directory: packages/inspector-go
+        run: go test ./internal/schemas/zodjs/
+      # `bun install @pikku/cli` from a registry, as a user does: inspector-go
+      # arrives with every binary, and the CLI's inspector-go runs this platform's.
+      - name: Install smoke test
+        run: node packages/inspector-go/install-smoke/run.mjs
 
   lint:
     name: Lint & Format
@@ -104,6 +336,10 @@ jobs:
     if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # Publish only runs on a green Full Suite, so a release target that stops
+    # compiling fails here rather than in the publish job.
+    env:
+      PIKKU_CLI_BINARIES: all
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -126,7 +362,9 @@ jobs:
     name: Verifiers (${{ matrix.verifier }})
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    needs: build
+    # Codegen runs in the pikku-inspect binary; the build artifact carries the
+    # host copy (packages/inspector-go/bin), so no row needs a separate download.
+    needs: [build, inspector-go-build, inspector-rs-build]
     strategy:
       fail-fast: false
       matrix:
@@ -137,6 +375,7 @@ jobs:
             addon-registry,
             addon-treeshake,
             addon-workspace,
+            addon-dependencies,
             analytics,
             classification,
             gateway,
@@ -145,18 +384,23 @@ jobs:
             types,
             secrets,
             scopes,
+            tracing,
             feature-flags,
             workflows,
             variables,
             functions,
+            disabled-functions,
             hmr,
             dev-bun,
+            dev-port,
+            dev-platform-contributors,
             deploy-cloudflare,
             deploy-serverless,
             deploy-grouping,
             release,
             deploy-azure,
             deploy-standalone,
+            ci,
             app-native,
             better-auth,
             next-better-auth,
@@ -167,10 +411,14 @@ jobs:
             validate,
             mcp-auth,
             virtual-users,
+            pikku-studio,
           ]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+        with:
+          download-inspector-go: ${{ matrix.verifier == 'dev-platform-contributors' }}
+          download-inspector-rs: ${{ matrix.verifier == 'dev-platform-contributors' }}
       - run: cd verifiers/${{ matrix.verifier }} && bun run test
 
   # The only verifier that runs a browser, so it gets its own job rather than a
@@ -198,17 +446,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # windows-latest excluded: its pre-installed global Yarn 1.22 shadows
-        # Corepack's Yarn 4 in the shared setup action, breaking `bun install`.
-        # The pikku-windows-x64.exe is still cross-compiled and published on each
-        # release (see packages/cli/build.sh).
+        # windows-latest is not run here. The pikku-windows-x64.exe is still
+        # cross-compiled and published on each release (see packages/cli/build.sh).
         os: [ubuntu-24.04, macos-latest]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.3
       - name: Run binary verifier
         shell: bash
         run: cd verifiers/binary && bun run test
@@ -221,17 +467,24 @@ jobs:
     name: Vector extensions (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
-    needs: build
+    # The macOS leg inspects a project, and the build artifact's binaries are the
+    # Linux ones; the download brings this runner's platform.
+    needs: [build, inspector-go-build, inspector-rs-build]
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-latest]
     steps:
       - uses: actions/checkout@v7
+      # The macOS row runs the CLI there, so it needs the darwin-arm64 build,
+      # not the Linux one the build artifact carries.
       - uses: ./.github/actions/setup
+        with:
+          download-inspector-go: 'true'
+          download-inspector-rs: 'true'
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.3
       - name: Install a SQLite that loads extensions
         if: runner.os == 'macOS'
         run: brew list sqlite >/dev/null 2>&1 || brew install sqlite
@@ -453,9 +706,9 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Generate, migrate and type-check
-        run: cd examples/${{ matrix.example }} && bun run build
+        run: cd templates/${{ matrix.example }} && bun run build
       - name: Test
-        run: cd examples/${{ matrix.example }} && bun run test
+        run: cd templates/${{ matrix.example }} && bun run test
 
   templates:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
@@ -501,39 +754,23 @@ jobs:
             bullmq,
             workflows-bullmq,
             workflows-pg-boss,
-            remote-rpc-pg,
-            remote-rpc-redis,
+            mesh-rpc-pg,
+            mesh-rpc-redis,
             # ai-postgres is disabled: it drives a live agent turn, and the
-            # OPENAI_API_KEY it runs against has no credits left, so both the
-            # yarn and bun jobs burn five minutes retrying and fail on `You have
+            # OPENAI_API_KEY it runs against has no credits left, so the job
+            # burns five minutes retrying and fails on `You have
             # no credits remaining.` on every push to every branch. Disabled in
             # `develop.yml` too, for the other dead key. Re-enable in both once
             # one of them is funded.
             # ai-postgres,
             bun,
           ]
-        package-manager: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["bun"]' || '["yarn","bun"]') }}
-        exclude:
-          - package-manager: bun
-            template: uws
-          - package-manager: bun
-            template: aws-lambda
-          - package-manager: bun
-            template: aws-lambda-websocket
-          - package-manager: bun
-            template: cloudflare-workers
-          - package-manager: bun
-            template: cloudflare-websocket
-          - package-manager: bun
-            template: nextjs
-          - package-manager: bun
-            template: nextjs-full
+        package-manager: [bun]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
-          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
       - name: Test template
         timeout-minutes: 5
         run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION" "$PACKAGE_MANAGER"
@@ -587,7 +824,6 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
-          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
       - name: Test template
         timeout-minutes: 5
         run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION" "$PACKAGE_MANAGER"
@@ -643,10 +879,9 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
-          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
       - name: Test functions template runtime target
         timeout-minutes: 5
-        run: cd templates/functions && bun run test:runtime ${{ matrix.target }}
+        run: cd recipes/functions && bun run test:runtime ${{ matrix.target }}
         env:
           AWS_ACCESS_KEY_ID: local
           AWS_SECRET_ACCESS_KEY: local

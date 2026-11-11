@@ -1,0 +1,23 @@
+{
+  "resolveSdk": {
+    "pikkuFuncId": "resolveSdk",
+    "remote": true,
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "range": { "type": "string" }
+      },
+      "required": ["name", "range"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "version": { "type": "string" },
+        "integrity": { "type": "string" },
+        "url": { "type": "string" }
+      },
+      "required": ["version", "integrity", "url"]
+    }
+  }
+}

@@ -1,5 +1,29 @@
 # @pikku/migrator-sql
 
+## 0.12.11
+
+### Patch Changes
+
+- 8b261d4: An app can declare its tables and their annotations in `db/tables.ts` with `defineTables`, and `pikku db generate` writes the SQL. It adds new tables, columns and indexes, adopts tables the migrations already create, and refuses a drop, a rename or a changed column with the reason, writing nothing. `pikku db migrate` and `pikku db check` stop when the declaration is ahead of the migrations. New `pikku meta db`, and a `db` block in `pikku meta context`, say where tables are declared. Opt-in by the presence of the file; an app with hand-written migrations is unchanged. See docs/db-tables.md and docs/MIGRATION.md.
+
+## 0.12.10
+
+### Patch Changes
+
+- a28fefd: The migrator no longer treats dotfiles as migrations. A tarball packed on macOS carries a binary AppleDouble `._<name>.sql` beside every migration; extracted on Linux it sorted first and was run as SQL, failing `migrate` under Bun's sqlite and being recorded as an applied migration under `node:sqlite`. A migration the database refuses now throws `MigrationFailedError` (`[PKU-DB-MIGRATE]`), which names the file and keeps the driver's error as `cause`.
+
+## 0.12.9
+
+### Patch Changes
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 135811c: Move @types/node to 26.
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
 ## 0.12.8
 
 ### Patch Changes

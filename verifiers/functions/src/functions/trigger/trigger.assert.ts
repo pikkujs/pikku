@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, beforeEach, describe, test } from 'node:test'
 
 import '../../../.pikku/pikku-bootstrap.gen.js'
-import { InMemoryTriggerService } from '@pikku/core/services'
+import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
 import { createConfig, createSingletonServices } from '../../services.js'
 import { clearInvokers, getInvoker } from './trigger.functions.js'
 import { clearInvocations, getInvocations } from './trigger-target.functions.js'
@@ -45,7 +45,7 @@ describe('trigger verifier', () => {
     const invoke = getInvoker('test-event')
     assert.equal(typeof invoke, 'function')
 
-    await invoke?.({ payload: 'hello trigger' })
+    invoke?.({ payload: 'hello trigger' })
     await waitFor(() => getInvocations().length === 1)
 
     const invocations = getInvocations()
@@ -58,5 +58,23 @@ describe('trigger verifier', () => {
     triggerService = null
 
     assert.equal(getInvoker('test-event'), undefined)
+  })
+
+  test('runs the target as the user the source names', async () => {
+    const invoke = getInvoker('test-event')
+
+    invoke?.({ payload: 'for alice' }, { pikkuUserId: 'alice' })
+    invoke?.({ payload: 'for bob' }, { pikkuUserId: 'bob' })
+    invoke?.({ payload: 'for nobody' })
+    await waitFor(() => getInvocations().length === 3)
+
+    const byPayload = Object.fromEntries(
+      getInvocations().map((i) => [i.data.payload, i.pikkuUserId])
+    )
+    assert.deepEqual(byPayload, {
+      'for alice': 'alice',
+      'for bob': 'bob',
+      'for nobody': undefined,
+    })
   })
 })

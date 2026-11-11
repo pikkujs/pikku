@@ -2,7 +2,7 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { createScenarioRunner } from './pikku-scenario-service.js'
-import type { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import type { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import type { ScenarioVirtualUser } from '../../services/virtual-users-service.js'
 

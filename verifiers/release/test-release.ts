@@ -207,7 +207,7 @@ scaffold()
 check('init writes a baseline from the generated surface', () => {
   pikku([])
   pikku(['release', 'init'])
-  const snapshot = readFileSync(join(APP, 'surface.pikku.json'), 'utf-8')
+  const snapshot = readFileSync(join(APP, 'pikku.surface.json'), 'utf-8')
   assert(
     snapshot.includes('greet'),
     `snapshot has no greet function:\n${snapshot}`

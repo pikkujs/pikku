@@ -2,6 +2,7 @@ import { parse as parseQuery } from 'picoquery'
 import { parseCookie } from 'cookie'
 import type { PikkuHTTPRequest } from '@pikku/core/http'
 import type { HTTPMethod, PikkuQuery } from '@pikku/core/http'
+import { mergeRequestData } from '@pikku/core/http'
 import { UnprocessableContentError } from '@pikku/core/errors'
 
 export class UWSPikkuHTTPRequest<In = unknown> implements PikkuHTTPRequest<In> {
@@ -65,20 +66,7 @@ export class UWSPikkuHTTPRequest<In = unknown> implements PikkuHTTPRequest<In> {
   }
 
   public async data(): Promise<In> {
-    const body = this.parseBody()
-    const parts = [this.params(), this.query(), body]
-    const merged: Record<string, unknown> = {}
-    for (const part of parts) {
-      for (const [key, value] of Object.entries(part)) {
-        if (key in merged && !valuesAreEquivalent(merged[key], value)) {
-          throw new UnprocessableContentError(
-            `Conflicting values for key "${key}": "${merged[key]}" vs "${value}"`
-          )
-        }
-        merged[key] ??= value
-      }
-    }
-    return merged as In
+    return mergeRequestData<In>(this.params(), this.query(), this.parseBody())
   }
 
   private parseBody(): any {
@@ -113,19 +101,4 @@ export class UWSPikkuHTTPRequest<In = unknown> implements PikkuHTTPRequest<In> {
       throw new UnprocessableContentError(`Error parsing body: ${e}`)
     }
   }
-}
-
-function valuesAreEquivalent(a: unknown, b: unknown): boolean {
-  return coerce(a) === coerce(b)
-}
-
-function coerce(value: unknown): string | number | boolean {
-  if (typeof value === 'boolean' || typeof value === 'number') return value
-  if (typeof value === 'string') {
-    if (value === 'true') return true
-    if (value === 'false') return false
-    const num = Number(value)
-    return isNaN(num) ? value : num
-  }
-  return value as any
 }

@@ -31,8 +31,8 @@ export type SqliteLibraryLookup =
 /**
  * Find the libsqlite3 to load on this platform, or say why there is none.
  *
- * `platform` is the target's, which for everything here is the host's: the CLI
- * runs where it is, and `bun build --compile` targets the machine it runs on.
+ * `platform` is the target's: the host's for the CLI itself, and the compile
+ * target's for a standalone build.
  * Symlinks are resolved so a copy staged into an artifact is the library, not a
  * dangling link to it.
  */
@@ -61,6 +61,58 @@ export function findSqliteLibrary(
           `\`brew install sqlite\`, or point ${SQLITE_LIBRARY_ENV} at one`,
       }
 }
+
+/** The platform and architecture a standalone artifact is built to run on. */
+export interface SqliteBuildTarget {
+  platform: NodeJS.Platform
+  arch: string
+}
+
+export const hostSqliteBuildTarget = (): SqliteBuildTarget => ({
+  platform: process.platform,
+  arch: process.arch,
+})
+
+const BUN_TARGET_PLATFORMS: Record<string, NodeJS.Platform> = {
+  linux: 'linux',
+  darwin: 'darwin',
+  windows: 'win32',
+}
+
+const BUN_TARGET_ARCHES: Record<string, string> = {
+  x64: 'x64',
+  arm64: 'arm64',
+  aarch64: 'arm64',
+}
+
+/**
+ * Read a `bun build --compile --target` value (`bun-linux-arm64`,
+ * `bun-linux-x64-musl`, `bun-darwin-x64-baseline`) as the platform the binary
+ * runs on. No target is the host; one that names no architecture keeps the
+ * host's. Anything else is refused rather than guessed at, since a wrong guess
+ * ships another platform's native libraries.
+ */
+export function parseBunCompileTarget(
+  target: string | undefined,
+  host: SqliteBuildTarget = hostSqliteBuildTarget()
+): SqliteBuildTarget {
+  if (!target) return host
+  const [runtime, os, arch] = target.split('-')
+  const platform = os === undefined ? undefined : BUN_TARGET_PLATFORMS[os]
+  const mappedArch = arch === undefined ? host.arch : BUN_TARGET_ARCHES[arch]
+  if (runtime !== 'bun' || !platform || !mappedArch) {
+    throw new Error(
+      `The compile target ${target} is not one this build can tell the ` +
+        `platform of; name it the way bun does, such as bun-linux-arm64.`
+    )
+  }
+  return { platform, arch: mappedArch }
+}
+
+export const isCrossTarget = (
+  target: SqliteBuildTarget,
+  host: SqliteBuildTarget = hostSqliteBuildTarget()
+): boolean => target.platform !== host.platform || target.arch !== host.arch
 
 /** Only needed where bun would otherwise open Apple's SQLite. */
 export const needsSqliteLibrary = (

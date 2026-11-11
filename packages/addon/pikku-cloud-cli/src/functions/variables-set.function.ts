@@ -45,7 +45,7 @@ export const CloudVariablesSet = pikkuSessionlessFunc({
     // secret would mean it could not be read back, which is most of the value of
     // having it separate from `secrets` in the first place. Anything that would
     // hurt to print belongs in `pikku cloud secrets set`.
-    const { success } = await rpc.invoke('setStageConsoleVariable', {
+    const { success } = await rpc.invoke('cloud:setStageConsoleVariable', {
       stageId,
       variableId: name,
       value: parseVariableValue(value),

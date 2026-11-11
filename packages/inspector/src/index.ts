@@ -1,11 +1,17 @@
-export { inspect, getInitialInspectorState } from './inspector.js'
-export type { TypesMap } from './types-map.js'
+export { getInitialInspectorState } from './initial-state.js'
+export { TypesMap } from './types-map.js'
 export type {
   AddonConfig,
   AuthDefinition,
   CredentialOverrideMeta,
-  ScreensManifestMeta,
-  AddonScreenMeta,
+  FilesAndMethodsErrors,
+  StudioMeta,
+  StudioScreenMeta,
+  StudioNavMeta,
+  ContributorRef,
+  ContributorVariantsMeta,
+  ContributorsManifestMeta,
+  OptedInContributorsMeta,
   InspectorDiagnostic,
   InspectorFilters,
   InspectorHTTPState,
@@ -13,16 +19,16 @@ export type {
   InspectorMiddlewareState,
   InspectorOptions,
   InspectorPermissionState,
+  InspectorServiceTypes,
   InspectorState,
   MetaInputTypes,
   MiddlewareGroupMeta,
   MiddlewareRegistration,
   SchemaRef,
 } from './types.js'
-export type { FilesAndMethodsErrors } from './utils/get-files-and-methods.js'
 export { ErrorCode } from './error-codes.js'
 export type { DiagnosticSeverity, CodedDiagnostic } from './error-codes.js'
-export { AUTH_HANDLER_FUNC_ID } from './add/add-auth.js'
+export { AUTH_HANDLER_FUNC_ID } from './utils/inspector-constants.js'
 export {
   SCENARIO_INSTRUMENTATION_FUNCTIONS,
   isScenarioInstrumentationFunction,
@@ -40,11 +46,18 @@ export {
 } from './utils/resolve-deploy-target.js'
 export {
   generateCustomTypes,
+  customTypeNames,
   sanitizeTypeName,
 } from './utils/custom-types-generator.js'
+export type { GenerateCustomTypesOptions } from './utils/custom-types-generator.js'
 export { unresolvedSchemaReferences } from './utils/post-process.js'
-export type { SurfaceUsageCounts } from './utils/extract-surface-usage.js'
 export {
+  findUnusedFunctions,
+  type UnusedFunction,
+} from './utils/find-unused-functions.js'
+export type { SecretUsage, SurfaceUsageCounts } from './utils/usage-types.js'
+export {
+  computeContractHash,
   createEmptyManifest,
   serializeManifest,
 } from './utils/contract-hashes.js'
@@ -62,18 +75,43 @@ export {
   deserializeDslWorkflow,
   deserializeGraphWorkflow,
   deserializeAllDslWorkflows,
-} from './utils/workflow/dsl/index.js'
-export { getFilesAndMethods } from './utils/get-files-and-methods.js'
+} from './utils/workflow/dsl/deserialize-dsl-workflow.js'
 export { resolveFunctionMeta } from './utils/resolve-function-meta.js'
 export type {
   SerializedWorkflowGraph,
   SerializedWorkflowGraphs,
 } from './utils/workflow/graph/index.js'
-export { resolveCoreType } from './utils/resolve-core-type.js'
-export { readModuleSpecifiers } from './utils/read-module-specifiers.js'
-export { readJsxLiteralText } from './utils/read-jsx-literal-text.js'
-export { readTsconfigOutDir } from './utils/read-tsconfig-out-dir.js'
 export {
   addonResolutionDirs,
   createAddonResolver,
 } from './utils/addon-resolution.js'
+export {
+  ADDONS_LOCK_FILE,
+  REMOTE_SDK_DIR,
+  SDK_INTEGRITY_MARKER,
+  parseRemoteAddonPackage,
+  emptyAddonsLock,
+  readAddonsLock,
+  serializeAddonsLock,
+  remoteSdkDir,
+  readSdkManifest,
+  checkLockedSdk,
+} from './utils/remote-addon-sdk.js'
+export type {
+  AddonsLock,
+  AddonsLockEntry,
+  RemoteAddonSdkManifest,
+  RemoteAddonPackageSpec,
+  LockedSdk,
+} from './utils/remote-addon-sdk.js'
+export type { WireRemoteAddonSpec } from './utils/find-wire-remote-addon-specs.js'
+export {
+  declaredAddonNames,
+  findInstalledPackageDir,
+  parseAddonDependencies,
+  readAddonDependencies,
+} from './utils/addon-dependencies.js'
+export type {
+  AddonDependency,
+  AddonDependencies,
+} from './utils/addon-dependencies.js'

@@ -71,17 +71,18 @@ trigger source, next to the existing one, and consumers stay plain triggers.
 This is how n8n (`webhook()` beside `trigger()` and `poll()`), Activepieces
 (`TriggerStrategy.WEBHOOK | POLLING`) and Zapier (`hook | polling`) model it.
 
-Three wires, one per kind, so each has its own shape and errors:
+Two wires, one per kind, so each has its own shape and errors:
 
-| Wire                       | Lowers onto                                             | Runs                    |
-| -------------------------- | ------------------------------------------------------- | ----------------------- |
-| `wireTriggerSource`        | unchanged: a long-lived subscription returning teardown | trigger worker          |
-| `wireTriggerWebhookSource` | an HTTP route, `auth: false`                            | every API instance      |
-| `wireTriggerPollSource`    | a scheduled task `trigger-poll:<source>`                | wherever schedulers run |
+| Wire                       | Lowers onto                                             | Runs               |
+| -------------------------- | ------------------------------------------------------- | ------------------ |
+| `wireTriggerSource`        | unchanged: a long-lived subscription returning teardown | trigger worker     |
+| `wireTriggerWebhookSource` | an HTTP route, `auth: false`                            | every API instance |
 
-Webhook and poll sources lower onto routes and scheduled tasks the deploy
-analyzer already handles, so no deploy target changes. A source with no wired
-trigger lowers onto nothing.
+A third kind, poll sources, is planned but not implemented (see
+[Slices](#slices)); there is no poll-source wire in the code today.
+
+Webhook sources lower onto routes the deploy analyzer already handles, so no
+deploy target changes. A source with no wired trigger lowers onto nothing.
 
 ### Events
 
@@ -161,7 +162,7 @@ POST /webhooks/<source> → receive → validate → enqueue one job per event �
   — the reliable de-duplication — and a `webhookReceiptAttempt` row per
   dispatch, mirroring the outgoing tables. The console reads these.
 
-A poll source enqueues into the same queue, so there is one dispatch path.
+A poll source, once there is one, is meant to enqueue into the same queue, so there stays one dispatch path.
 
 ### Lifecycle: check, setup, teardown
 
@@ -213,8 +214,9 @@ teardown`.
 4. **@pikku/kysely** — `KyselyIncomingWebhookService` and its tables.
 5. **commerce-stripe** — the four functions and event schemas.
 6. **Pikku Studio Cloud** — the CI phase, stored results, the gate, removing the event map.
-7. **poll sources** — `wireTriggerPollSource`, cursor in a `triggerSourceState`
-   row.
+7. **poll sources** — not started. The design is a scheduled task per source
+   (`trigger-poll:<source>`) that keeps its cursor in a stored row; neither the
+   wire nor the state table exists yet.
 
 Later: `invoke(name, data)` on subscription sources, shared app-level endpoints
 (Slack, Meta), expiring registrations (Graph, Gmail `watch`), JSON Schema for

@@ -1,3 +1,4 @@
+import { outgoingTraceparent } from '../../trace.js'
 import type {
   AgentInput,
   AgentOutput,
@@ -31,6 +32,7 @@ import {
   agentSessionScope,
   assertResourcePrincipalOwner,
   assertAgentAuthorized,
+  resolveAgentRunner,
   type RunAgentParams,
 } from './agent-prepare.js'
 import { checkForApprovals, appendStepMessages } from './agent-stream.js'
@@ -55,7 +57,7 @@ import {
   lastUserMessageText,
 } from './agent-finalize.js'
 import { resolveModelConfig } from './agent-model-config.js'
-import { AIProviderNotConfiguredError } from '../../errors/errors.js'
+import { validateAgentOutput } from './agent-output.js'
 import { deniedToolResult, randomUUID } from './agent-utils.js'
 
 function stripNulls(obj: unknown): unknown {
@@ -86,6 +88,24 @@ function extractStructuredAssistantOutput(object: unknown): {
   }
 }
 
+/**
+ * Runs an agent to completion: loads the thread, applies agent middleware, calls the model step by
+ * step (up to the agent's `maxSteps`) and persists the messages and run state.
+ *
+ * Before anything runs, the agent's `auth`, `scopes` and `permissions` are checked against the
+ * session, and `input.resourceId` is partitioned under the session principal (or an anonymous id
+ * minted per request), so a caller cannot address another user's thread.
+ *
+ * @param agentName - The agent to run.
+ * @param input - The user message, thread and resource ids, and optional model overrides.
+ * @param params - The caller's session and credential access.
+ * @param agentSessionMap - Sub-agent session ids, shared across delegated calls in one run.
+ * @returns The run's text or structured output, its steps and usage. A run that needs approval or
+ * a credential, or names RPCs that are not registered, returns `status: 'suspended'` instead.
+ * @throws MissingSessionError when the agent requires auth and there is no session; ForbiddenError
+ * for a scope or permission failure or a thread owned by someone else; AIProviderNotConfiguredError
+ * when no `agentRunner` service is set.
+ */
 export async function runAgent(
   agentName: string,
   input: AgentInput,
@@ -105,6 +125,8 @@ export async function runAgent(
 
   const {
     agent,
+    packageName,
+    resolvedName,
     agentRunner,
     storage,
     memoryConfig,
@@ -304,7 +326,13 @@ export async function runAgent(
       appendStepMessages(runnerParams, stepResult)
     }
 
-    const finalObject = lastStepResult?.object
+    const finalObject = await validateAgentOutput(
+      agentName,
+      pikkuState(packageName, 'agent', 'agentsMeta')[resolvedName]
+        ?.outputSchema,
+      lastStepResult?.object,
+      packageName
+    )
     const structuredOutput = extractStructuredAssistantOutput(finalObject)
     const finalText = structuredOutput.text ?? lastStepResult?.text ?? ''
 
@@ -335,6 +363,7 @@ export async function runAgent(
     )
 
     await finalizeAgentRun(agentRunState, {
+      traceparent: outgoingTraceparent({ trace: params.trace }),
       runId,
       agentName,
       threadId,
@@ -387,11 +416,24 @@ export async function runAgent(
   }
 }
 
+/**
+ * Answers pending approvals on a suspended run and runs it to completion without streaming. Backs
+ * `rpc.agent.approve`.
+ *
+ * Only the run's owner may resume it, and the agent is re-authorized. Each approval is claimed
+ * atomically, so concurrent callers cannot run the same tool twice.
+ *
+ * @param runId - The suspended run.
+ * @param approvals - The decision for each pending tool call.
+ * @param params - The caller's session.
+ * @returns The run's final output, or `status: 'suspended'` again if more approvals are needed.
+ * @throws ForbiddenError when the caller does not own the run; Error when the run is missing, not
+ * suspended, or every approval was already claimed.
+ */
 export async function resumeAgentSync(
   runId: string,
   approvals: { toolCallId: string; approved: boolean }[],
-  params: RunAgentParams,
-  expectedAgentName?: string
+  params: RunAgentParams
 ): Promise<AgentOutput> {
   const singletonServices = getSingletonServices()
   const { agentRunState } = singletonServices
@@ -407,11 +449,6 @@ export async function resumeAgentSync(
     run.resourceId,
     'run'
   )
-  if (expectedAgentName && run.agentName !== expectedAgentName) {
-    throw new Error(
-      `Run ${runId} belongs to agent '${run.agentName}', not '${expectedAgentName}'`
-    )
-  }
   if (run.status !== 'suspended') {
     throw new Error(`Run ${runId} is not suspended (status: ${run.status})`)
   }
@@ -422,10 +459,7 @@ export async function resumeAgentSync(
 
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory
-  const agentRunner = singletonServices.agentRunner
-  if (!agentRunner) {
-    throw new AIProviderNotConfiguredError()
-  }
+  const agentRunner = await resolveAgentRunner(singletonServices, params)
 
   const approvedIds = new Set(
     approvals.filter((a) => a.approved).map((a) => a.toolCallId)
@@ -773,7 +807,12 @@ async function continueAfterToolResultSync(
     }
 
     const finalText = lastStepResult?.text ?? ''
-    const finalObject = lastStepResult?.object
+    const finalObject = await validateAgentOutput(
+      run.agentName,
+      meta?.outputSchema,
+      lastStepResult?.object,
+      packageName
+    )
 
     const result = {
       text: finalText,
@@ -803,6 +842,7 @@ async function continueAfterToolResultSync(
     )
 
     await finalizeAgentRun(agentRunState, {
+      traceparent: outgoingTraceparent({ trace: params.trace }),
       runId: run.runId,
       agentName: resolvedName,
       threadId: run.threadId,

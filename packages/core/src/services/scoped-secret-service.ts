@@ -1,6 +1,11 @@
 import type { SecretValue } from '../classification/secret-value.js'
 import type { SecretService, SecretValues } from './secret-service.js'
 
+/**
+ * A read-only view of a {@link SecretService} limited to an allow-list of keys,
+ * for handing to code that should see only the secrets it declared. Reading a
+ * key outside the list throws, and every write method throws.
+ */
 export class ScopedSecretService implements SecretService {
   constructor(
     private secrets: SecretService,

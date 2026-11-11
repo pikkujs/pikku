@@ -2,7 +2,7 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { createScenarioRunner } from './pikku-scenario-service.js'
-import type { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import type { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
 import type { ScenarioVirtualUser } from '../../services/virtual-users-service.js'
@@ -150,7 +150,11 @@ describe('scenario virtual user steps (workflow.do with `virtualUser`)', () => {
       wire.do('step', 'createTodo', {}, { virtualUser: broken, retries: 2 }),
       /returned 403/
     )
-    assert.equal(broken.calls.length, 2, 'retries bounds total attempts')
+    assert.equal(
+      broken.calls.length,
+      3,
+      'retries are on top of the first attempt'
+    )
   })
 })
 

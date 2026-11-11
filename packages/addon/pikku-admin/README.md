@@ -22,6 +22,7 @@ import { wireAddon } from '#pikku/pikku-types.gen.js'
 wireAddon({
   name: 'admin',
   package: '@pikku/addon-admin',
+  expose: true,
   globalCredentials:
     'administering credentials means setting and clearing any of them, for any user, so it cannot be scoped to a declared set',
 })
@@ -34,7 +35,7 @@ call finds nothing. Leave it off if you only want users, scopes and audits.
 
 Every function carries its own `admin:*` scope, so a role can grant reading the
 directory without granting the ability to ban anyone. Note the absence of
-`scopes` on `wireAddon`: addon scopes are required *in addition to* a function's
+`scopes` on `wireAddon`: addon scopes are required _in addition to_ a function's
 own, so declaring `admin` there would force the umbrella grant on every caller.
 
 `admin:users:*` needs better-auth wired, and banning additionally needs its

@@ -18,7 +18,7 @@ export const crashProneStep = pikkuSessionlessFunc<
   workflowQueued: true,
   func: async ({ variables }, data, { workflowStep, graph }) => {
     const runId = workflowStep?.runId ?? graph!.runId
-    const attempt = recordStepStart(
+    const attempt = await recordStepStart(
       (await variables.get('CRASH_MARKER_DIR'))!,
       runId,
       process.pid
@@ -34,6 +34,7 @@ export const crashReclaimWorkflow = pikkuWorkflowFunc<
   { crashes: number },
   { attempt: number; pid: number }
 >({
+  auth: false,
   func: async (_services, data, { workflow }) => {
     return await workflow.do('crash-prone step', 'crashProneStep', data, {
       retries: 1,

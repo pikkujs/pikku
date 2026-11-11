@@ -4,10 +4,20 @@ Guidance for coding agents working in the Pikku repository.
 
 ## Knowledge
 
-Durable project knowledge — decisions, gotchas, working agreements, project
-status, plans — lives in `knowledge/`, an OKF v0.2 bundle. **Read it there, and
-save new knowledge there, rather than in the `~/.claude` memory store.** Start
-at `knowledge/index.md`; the `knowledge` skill has the read/write protocol.
+Durable project knowledge — decisions, gotchas, working agreements — lives in
+OKF v0.2 bundles. **Read it there, and save new knowledge there, rather than in
+the `~/.claude` memory store.**
+
+- Each package keeps its own tracked bundle in `packages/<package>/knowledge/`
+  (start at its `index.md`, for example `packages/core/knowledge/index.md`).
+  Decisions about a package's behaviour belong in that package's bundle.
+- A root `knowledge/` directory exists only in maintainers' checkouts. It is
+  deliberately untracked (see `.gitignore`), because it holds material that does
+  not belong in this public repository. Do not expect it in a fresh clone, and do
+  not add files under it to a commit.
+
+The `pikku-knowledge` skill (`packages/skills/skills/pikku-knowledge/`) has the
+read/write protocol.
 
 ## Skills
 
@@ -51,9 +61,9 @@ A TypeScript framework that normalizes the different ways you interact with Node
 A bun workspace monorepo with strict TypeScript and Husky pre-commit hooks:
 
 - `packages/` — the Pikku packages
-- `templates/` — runtime templates
+- `recipes/` — runtime templates
 - `verifiers/` — verifier suites (see Testing)
-- `examples/` — running applications CI compiles; `online-shop` is the doc snippet source
+- `templates/` — running applications CI compiles; `online-shop` is the doc snippet source
 - `e2e/` — end-to-end project
 - `benchmarks/`, `docs/`, `scripts/`
 
@@ -82,67 +92,90 @@ Individual packages carry their own runner: `./run-tests.sh` from inside the pac
 
 ### TypeScript 6 and 7 side by side
 
-Type checking runs on **TypeScript 7**, which is roughly three times faster
-(`bun run tsc` across the monorepo: 192s → 65s). TypeScript 6 stays installed
-because 7 ships no compiler API — its `.` export is only a version stub, and
-the replacement lives behind `./unstable/*` pending the 7.1 API.
+Type checking runs on a native compiler, which is roughly three times faster
+than TypeScript 6 (`bun run tsc` across the monorepo: 192s → 65s on TypeScript
+7). TypeScript 6 stays installed because 7 ships no compiler API — its `.`
+export is only a version stub, and the replacement lives behind `./unstable/*`
+pending the 7.1 API.
 
-The root installs both, following the arrangement TypeScript ships for exactly
-this case:
+Two engines can be that native compiler, and `tsc` is an alias for whichever is
+chosen: **tsrs** (the Rust port, `npm:tsrs`) by default, or **TypeScript 7**.
+Choose with `PIKKU_TSC=tsrs|ts7`; the default is the `DEFAULT_TSC` constant in
+`packages/tsc/bin/tsc.mjs`, the one place to change it.
+
+```bash
+PIKKU_TSC=ts7 bun run tsc      # one run on TypeScript 7
+```
+
+The alias is the private workspace package `@pikku/tsc`: it owns the `tsc` bin,
+depends on both engines, and forwards its arguments and exit code, so the ~250
+`tsc`, `tsc -b` and `tsc --noEmit` scripts across the repo are unchanged. The
+recipes and templates declare their own `typescript` (their `package.json` is
+copied into a user's app), and a package's own `.bin` comes before the root's,
+so a bare `tsc` run inside one is always TypeScript 7. The root `bun run tsc`
+therefore runs them through the dispatcher itself (`scripts/tsc-all.mjs`), so
+`PIKKU_TSC` applies to them too; running `tsc` by hand inside a recipe or
+template is TypeScript 7. The buildinfo records the compiler version, so
+switching engines makes `tsc -b` projects rebuild once. With `--noEmit` a type
+error exits 1 under TypeScript 7 and 2 under tsrs; both are non-zero.
+
+The root installs the alias and TypeScript 6:
 
 ```json
-"@typescript/native": "npm:typescript@^7.0.2",
+"@pikku/tsc": "workspace:*",
 "typescript": "npm:@typescript/typescript6@^6.0.2"
 ```
 
-So `tsc` at the root is 7, `tsc6` is 6, and `import ts from 'typescript'`
+So `tsc` at the root is the alias, `tsc6` is 6, and `import ts from 'typescript'`
 resolves to the 6 compat package with the full 6 API. Every workspace that
 does not declare its own `typescript` inherits the root `tsc`, which is why
 the dependency was dropped from the ~100 workspaces that only ever needed a
 compiler binary.
 
-Three packages still declare a real `typescript: ^6.0.3`, because they call
-the compiler API at runtime: `inspector`, `code-edit` and `n8n-import`. Under
-bun's isolated layout that nests a real 6, whose `tsc` shadows the root's — so
-those three type-check on 6. Templates keep theirs too: their `package.json` is
-copied into a user's app, and an aliased dependency there would be a surprise.
+No workspace package depends on TypeScript 6 at runtime. The compiler API is
+reached only through the `pikku-inspect` binary (`@pikku/inspector-go`), which
+is built on typescript-go: the inspector's analysis, `code-edit`'s source scans
+and edits and type-checking, and `n8n-import`'s syntax check are all helpers
+of that binary, and `@pikku/inspector`, `@pikku/code-edit` and
+`@pikku/n8n-import` declare no `typescript` at all. Templates and recipes
+declare a plain `typescript: ^7.0.2`: their `package.json` is copied into a
+user's app, so it carries a real version rather than the root's alias.
 
-**The inspector owns the compiler API.** Anything that has to parse or
-type-check TypeScript belongs there, behind a named export, rather than in the
-package that wants the answer. `collectSurface` (`@pikku/inspector/surface`),
-`readModuleSpecifiers` and `readTsconfigOutDir` all moved out of the CLI for
-this reason. `code-edit` is the exception, and deliberately so — the console
-imports it lazily and degrades to a null service, because it is the one package
-a self-contained bundle can ship without.
+What still resolves `import ts from 'typescript'` is test code only — 25 test
+files in `cli`, 4 in `core` and 1 in `openapi-parser` compile generated source
+with the compiler API — and it gets the 6 compat package through the root
+alias. That is why the alias stays: 7 has no way to turn a string into a tree
+in-process. 7.0.2 does ship an AST surface at `typescript/unstable/ast` (409
+exports, all 347 `is*` predicates, `SyntaxKind`, a factory, a visitor, a
+scanner), but no `createSourceFile` and no `forEachChild`; the only route to a
+`SourceFile` is `API` → `Snapshot` → `Project` → `Program.getSourceFile()`,
+which needs a whole project loaded. Re-check this when 7.1 lands its stable
+API.
 
-**Why none of this can move to 7 yet.** 7.0.2 does ship an AST surface at
-`typescript/unstable/ast` — 409 exports, all 347 `is*` predicates,
-`SyntaxKind`, a factory, a visitor, a scanner — so the _walking_ code would
-port almost unchanged. What is missing is the entry point: there is no
-`createSourceFile` and no `forEachChild`, so nothing can turn a string into a
-tree. The only route to a `SourceFile` is `API` → `Snapshot` → `Project` →
-`Program.getSourceFile()`, which needs a whole project loaded. Re-check this
-when 7.1 lands its stable API.
+**The binary owns the compiler API.** Anything that has to parse or
+type-check TypeScript belongs in `packages/inspector-go` as a helper
+(`internal/helpers`, with a wrapper in `src/helpers.ts`), rather than in the
+package that wants the answer. There is no second engine and no TypeScript
+reference to diff against; see
+`packages/inspector-go/knowledge/decisions/the-typescript-inspector-engine-is-retired.md`.
+The console still imports `code-edit` lazily and degrades to a null service,
+because it is the one package a self-contained bundle can ship without.
 
 Compiling _with_ 7 is safe for every package, including the ones that import
 the 6 API — only module resolution of `typescript` has to stay on 6. Emit was
 verified identical: zero `.js` differences, and `.d.ts` differences confined to
 quote style and declaration ordering.
 
-The one exception is the dual CommonJS emit. Six packages —
-`assistant-ui`, `client-fetch`, `client-websocket`, `react`,
-`paraglide`, `voice-agents` — build a second output through a
-`tsconfig.cjs.json` that sets `moduleResolution: node`, which 7 removed.
-Dropping the option is not equivalent: `assistant-ui` then resolves two copies
-of `@ag-ui/client`. Their `build:cjs` calls `tsc6`; their ESM build and their
-type check stay on 7.
+The client and frontend packages (`assistant-ui`, `client-fetch`, `client-websocket`,
+`react`, `paraglide`, `voice-agents`) publish ESM only, so nothing in the build
+path needs `tsc6`: it stays installed only for the `typescript` alias.
 
 ## Configuration
 
 `pikku.config.json` is the main configuration file:
 
 - `srcDirectories` — where your function definitions live
-- `outDir` — where generated output goes
+- `backends` — each deployable server, with a `filter` and `dev.port` (optional: declare `backends`, `frontends` or both; neither is an error unless the project is an addon); clients are generated per backend at `.pikku/sdk/<backend>/exposed/`
 - `packageMappings` — map local packages to published names
 - `openAPI` — OpenAPI generation settings
 
@@ -150,19 +183,17 @@ type check stay on 7.
 {
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src"],
-  "outDir": ".pikku",
-  "fetchFile": "pikku-fetch.gen.ts",
-  "websocketFile": "pikku-websocket.gen.ts"
+  "backends": { "api": { "filter": {}, "dev": { "port": 4000 } } }
 }
 ```
 
 ## Code generation
 
-`npx pikku prebuild` (or `bun run prebuild`) generates HTTP clients, WebSocket clients, and type definitions. Run it after modifying function definitions.
+`pikku all` (in the templates, `bun run pikku` or `bun run prebuild`) generates HTTP clients, WebSocket clients, and type definitions. Run it after modifying function definitions.
 
 **Generated DB files are output** — change the source and regenerate:
 
-- `outDir/db/schema.d.ts` — Kysely types with `Private<T>`/`Secret<T>` brands, regenerated by `pikku db migrate`. Schema changes go through a SQL migration first.
+- `outDir/db/schema.gen.ts` — Kysely types with `Private<T>`/`Secret<T>` brands, regenerated by `pikku db migrate`. Schema changes go through a SQL migration first.
 - `outDir/db/classification.gen.ts` — per-column `private`/`secret`/`public` manifest plus anonymize strategy, same regeneration path. To change a column's classification, edit the column's entry in the hand-authored `db/annotations.ts` (`DbClassificationMap`) and re-run migrate — there is no SQL-comment fallback.
 - `outDir/db/coercion.gen.ts` — runtime coercion map, same path.
 
@@ -177,7 +208,10 @@ type check stay on 7.
 
 ### Testing templates
 
-Build a real app from the template rather than testing inside `templates/` — that's the only way code generation (workflow workers, queue processors, …) runs properly, the app is structured as end users see it, dependencies are linked as they would be, and tests run in the right environment.
+Build a real app from the template rather than testing inside `recipes/` — that's the only way code generation (workflow workers, queue processors, …) runs properly, the app is structured as end users see it, dependencies are linked as they would be, and tests run in the right environment.
+
+This is the one flow that uses yarn: `create-pikku`'s `--yarn-link` links the
+local packages with `yarn link`, which has no bun equivalent in the tool.
 
 ```bash
 cd packages/create
@@ -199,8 +233,8 @@ reviewer decides whether that is acceptable, not the author.
 - [ ] **E2E** — when the change is reachable from a running app, `e2e/` covers it end to end.
 - [ ] **Skills** — if the change alters how an agent should work in this repo (a new command, a new failure mode, a workflow that is now different), update `.claude/skills/` or this file.
 - [ ] **Docs** — user-facing behaviour goes in the website docs. A config key nobody can find is a config key nobody uses.
-- [ ] **Knowledge** — durable decisions, rejected alternatives and gotchas go in the `knowledge/` bundle, **not** in code comments. A comment explaining why one approach was chosen over another is knowledge in the wrong place; see Code style → Comments.
-- [ ] **Changeset** — `yarn changeset`, always `patch`.
+- [ ] **Knowledge** — durable decisions, rejected alternatives and gotchas go in the owning package's `knowledge/` bundle, **not** in code comments. A comment explaining why one approach was chosen over another is knowledge in the wrong place; see Code style → Comments.
+- [ ] **Changeset** — `bun run changeset`, always `patch`.
 
 Roughly the order to do them in, because each one finds what the previous one
 missed.
@@ -292,7 +326,7 @@ An `@example` names a region, never restates code:
 ```
 
 The region is a `// @snippet start <name>` … `// @snippet end <name>` pair in
-`examples/online-shop`, the only source — an export missing an example gets the
+`templates/online-shop`, the only source — an export missing an example gets the
 usage written there first. Regions may nest, `.sql` files use `--` markers, and
 `packages/cli/build.sh` collects them into the `snippets.json` the CLI ships.
 

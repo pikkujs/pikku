@@ -47,9 +47,9 @@ export interface AnalyticsDeclaration {
 const alias = (index: number) => `events${index}`
 
 /**
- * Generate the ingest wire and its schemas. No middleware is emitted: an origin
- * lock is not a security boundary and rejects every native client, so which
- * guard belongs here is the project's call.
+ * Generate the ingest wire and its schemas. The origin lock is a separate file
+ * (`serializeAnalyticsOrigin`), because it rejects every native client and so is
+ * opt-out via `scaffold.analytics.originLock`.
  */
 export const serializeAnalytics = (
   leaf: (name: string) => string,

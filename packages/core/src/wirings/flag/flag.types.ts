@@ -35,6 +35,7 @@ export type CoreFeatureFlag = {
  */
 export type CoreFeatureFlags = Record<string, CoreFeatureFlag>
 
+/** A feature flag declaration as recorded in generated meta. */
 export type FeatureFlagDefinitionMeta = {
   name: string
   description?: string
@@ -42,7 +43,9 @@ export type FeatureFlagDefinitionMeta = {
   sourceFile?: string
 }
 
+/** Feature flag declarations as the inspector found them. */
 export type FeatureFlagDefinitions = FeatureFlagDefinitionMeta[]
+/** Feature flag declarations collected by the CLI, keyed by name. */
 export type FeatureFlagDefinitionsMeta = Record<
   string,
   FeatureFlagDefinitionMeta

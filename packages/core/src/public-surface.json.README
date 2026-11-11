@@ -33,7 +33,9 @@ const expand = ([sub, dist]: [string, string]): [string, string][] => {
 const surface: Record<string, string[]> = {}
 for (const [sub, dist] of Object.entries(
   pkg.exports as Record<string, string>
-).flatMap(expand)) {
+)
+  .filter(([, dist]) => dist.endsWith('.js'))
+  .flatMap(expand)) {
   const src = pathToFileURL(resolve(dist.replace('./dist/', './src/'))).href
   surface[sub] = Object.keys(await import(src)).sort()
 }

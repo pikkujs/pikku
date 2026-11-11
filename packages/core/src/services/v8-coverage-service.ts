@@ -1,23 +1,31 @@
+/** A V8 coverage range: byte offsets in the script and how often it ran. */
 export interface CoverageRange {
   startOffset: number
   endOffset: number
   count: number
 }
 
+/** V8 coverage for one function in a script. */
 export interface FunctionCoverage {
   functionName: string
   isBlockCoverage: boolean
   ranges: CoverageRange[]
 }
 
+/** V8 coverage for one loaded script. */
 export interface ScriptCoverage {
   scriptId: string
   url: string
   functions: FunctionCoverage[]
 }
 
+/** Hit counts per line, keyed by file then line number. */
 export type LineHits = Map<string, Map<number, number>>
 
+/**
+ * Coverage collected so far: raw V8 script coverage, or line hits from an
+ * instrumented build.
+ */
 export type CoverageSnapshot =
   | {
       kind: 'v8-scripts'
@@ -26,8 +34,13 @@ export type CoverageSnapshot =
     }
   | { kind: 'line-hits'; lineHits: LineHits }
 
+/**
+ * Whether a function's lines all ran, some ran, none ran, or its source could
+ * not be mapped.
+ */
 export type CoverageStatus = 'covered' | 'partial' | 'uncovered' | 'unknown'
 
+/** Line coverage for one pikku function. */
 export interface FunctionCoverageEntry {
   name: string
   sourceFile: string
@@ -40,6 +53,7 @@ export interface FunctionCoverageEntry {
   status: CoverageStatus
 }
 
+/** Line coverage per pikku function, with totals. */
 export interface FunctionCoverageReport {
   generatedAt: string
   summary: {
@@ -53,6 +67,9 @@ export interface FunctionCoverageReport {
   functions: FunctionCoverageEntry[]
 }
 
+/**
+ * Where a pikku function's body is in its source, for mapping coverage onto it.
+ */
 export interface CoverageFunctionMeta {
   name: string
   sourceFile: string
@@ -65,6 +82,11 @@ export interface CoverageFunctionMeta {
   funcWrapper?: string
 }
 
+/**
+ * Collects code coverage from a running app, so a scenario run can report which
+ * functions it exercised. Provided as the `coverageService` singleton service
+ * during development and test runs.
+ */
 export interface CoverageService {
   start(): Promise<void>
   takeCoverage(): Promise<CoverageSnapshot>
@@ -87,6 +109,11 @@ type InspectorSession = {
   ): void
 }
 
+/**
+ * A {@link CoverageService} that collects precise coverage from the V8
+ * inspector in the current Node process. Only `file://` scripts are reported.
+ * Not for production: precise coverage slows execution.
+ */
 export class V8CoverageService implements CoverageService {
   private session: InspectorSession | null = null
   private startPromise: Promise<void> | null = null

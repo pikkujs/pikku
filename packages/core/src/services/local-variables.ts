@@ -1,5 +1,11 @@
 import type { VariablesService } from './variables-service.js'
 
+/**
+ * A {@link VariablesService} backed by a plain object, `process.env` by
+ * default. Values that parse as JSON are returned parsed.
+ *
+ * @example snippet: shopServices
+ */
 export class LocalVariablesService implements VariablesService {
   private variables: Record<string, string | undefined>
 

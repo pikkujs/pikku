@@ -8,8 +8,12 @@
  * for a workspace member) lets `wireAddon({ package })` resolve it by name.
  * addons/ sits outside the consumer's tsconfig/pikku scan, so it never collides
  * with the app's own CoreConfig.
+ *   0. a cast around pikkuAddonServices(...) fails pikku all with PKU564
+ *   0b. `satisfies` and parentheses around it are read through: pikku all
+ *       passes and generates pikku-package.gen.ts
  *   1. pikku all on the source addon
- *   1b. tsc --noEmit on the source                        (node category narrowing)
+ *   1b. tsc --noEmit on the source                        (node category narrowing,
+ *       and pikku-package.gen.ts for an addon Config/services core's types reject)
  *   2. npm pack the addon → tgz                           (publish artifact)
  *   3. copy into consumer/addons/<name> (strip 1)         (add: shadcn copy)
  *   3b. symlink node_modules/<pkg> → addons/<name>        (yarn workspace link)
@@ -18,7 +22,7 @@
  *   5. invoke consumeHello → rpc.invoke('ext:hello') and assert the result
  *   6. POST /webhooks/ext → the addon's receive → the consumer's ext:ping.sent
  */
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import {
   existsSync,
   mkdirSync,
@@ -54,12 +58,88 @@ function capture(file, args, cwd) {
   return execFileSync(file, args, { cwd, encoding: 'utf8' })
 }
 
+// 0. A cast around the services factory hides it from the inspector: the
+// addon would build without registering it, and fail at runtime. It must fail
+// the build instead, naming the export and its line.
+{
+  const servicesPath = join(sourceDir, 'src', 'services.ts')
+  const original = readFileSync(servicesPath, 'utf8')
+  let result
+  try {
+    writeFileSync(
+      servicesPath,
+      original.replace(
+        /\n\)\n$/,
+        '\n) as unknown as typeof pikkuAddonServices\n'
+      )
+    )
+    result = spawnSync('node', [PIKKU, 'all'], {
+      cwd: sourceDir,
+      encoding: 'utf8',
+    })
+  } finally {
+    writeFileSync(servicesPath, original)
+  }
+  const output = `${result.stdout}${result.stderr}`
+  const expected =
+    /\[PKU564\].*'createSingletonServices' at src\/services\.ts:4 wraps pikkuAddonServices\(\.\.\.\) in an `as` cast/
+  if (result.status === 0 || !expected.test(output)) {
+    console.error(output)
+    throw new Error(
+      'a cast around pikkuAddonServices(...) did not fail pikku all with PKU564'
+    )
+  }
+  console.log(
+    '✓ a cast around pikkuAddonServices(...) fails the build (PKU564)'
+  )
+}
+
+// 0b. `satisfies` and parentheses leave the factory's type as written, so the
+// inspector reads through them: the build passes and the factory is registered,
+// which is what generates the addon's pikku-package.gen.ts.
+{
+  const servicesPath = join(sourceDir, 'src', 'services.ts')
+  const packageGen = join(sourceDir, '.pikku', 'addon', 'pikku-package.gen.ts')
+  const original = readFileSync(servicesPath, 'utf8')
+  let result
+  try {
+    rmSync(packageGen, { force: true })
+    writeFileSync(
+      servicesPath,
+      original
+        .replace(
+          'export const createSingletonServices = pikkuAddonServices(',
+          'export const createSingletonServices = (pikkuAddonServices('
+        )
+        .replace(/\n\)\n$/, '\n) satisfies unknown)\n')
+    )
+    result = spawnSync('node', [PIKKU, 'all'], {
+      cwd: sourceDir,
+      encoding: 'utf8',
+    })
+  } finally {
+    writeFileSync(servicesPath, original)
+  }
+  const output = `${result.stdout}${result.stderr}`
+  if (result.status !== 0 || /PKU564/.test(output) || !existsSync(packageGen)) {
+    console.error(output)
+    throw new Error(
+      '(pikkuAddonServices(...) satisfies unknown) did not build and register the factory'
+    )
+  }
+  console.log(
+    '✓ satisfies and parentheses around pikkuAddonServices(...) are read through'
+  )
+}
+
 // 1. Build the source addon
 run('source: pikku all', 'node', [PIKKU, 'all'], sourceDir)
 
 // 1b. Type-check the source too. The addon declares `categories`, so this is
 // where `NodeConfig`'s narrowing is proved — type-tests/node-category.assert.ts
-// expects an undeclared category to be an error.
+// expects an undeclared category to be an error. It is also where the generated
+// pikku-package.gen.ts registers a factory whose Config has a required field of
+// its own and whose services narrow a core one (types/application-types.d.ts).
 run('source: tsc --noEmit', TSC, ['--noEmit', '-p', 'tsconfig.json'], sourceDir)
 
 // 2. Pack the addon — npm pack respects the `files` field (src + types + .pikku)

@@ -4,18 +4,18 @@ import type {
   CorePikkuMiddleware,
   MiddlewarePriority,
 } from '@pikku/core/middleware'
-import type { BetterAuthInstance } from './define-auth.js'
-import { defaultSession } from './default-session.js'
-import { stampVirtualUserFlag } from './stamp-virtual-user-flag.js'
-import {
-  resolveImpersonatedSession,
-  warnImpersonationUnconfigured,
-  type ImpersonationOptions,
-} from './auth-session-impersonation.js'
+import type { ImpersonationOptions } from './auth-session-impersonation.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { mergeRelayedCookies } from './cross-site-cookies.js'
+import {
+  hasLiveSession,
+  readSessionSecret,
+  resolveAndSetSession,
+} from './resolve-session.js'
+import { scopesCookieCache } from './scopes-cookie.js'
 
-type BetterAuthSessionResult = { user: any; session: any }
+/** The `{ user, session }` better-auth's `getSession` resolves. */
+export type BetterAuthSessionResult = { user: any; session: any }
 
 /**
  * The shape returned by the API Key plugin's `verifyApiKey` endpoint. `key`
@@ -26,7 +26,8 @@ type BetterAuthSessionResult = { user: any; session: any }
  */
 type VerifiedApiKey = { valid: boolean; error: unknown; key: any }
 
-type BetterAuthSessionOptions = {
+/** Options for {@link betterAuthSession}. */
+export type BetterAuthSessionOptions = {
   /**
    * Map a human/cookie/bearer session (from `getSession`) to the app session.
    * Receives the singleton `services` so callers can enrich the session from
@@ -37,7 +38,17 @@ type BetterAuthSessionOptions = {
     result: BetterAuthSessionResult,
     services: CoreServices
   ) => CoreUserSession | Promise<CoreUserSession>
+  /** Honour the impersonation header for callers allowed to; off when omitted. */
   impersonation?: ImpersonationOptions
+  /**
+   * Seconds a resolved scope snapshot, kept in a signed `pikku_scopes` cookie,
+   * is trusted before the `ScopeService` is read again. Defaults to 0: read on
+   * every request. Scopes that a `live` scope gates are always read fresh, and
+   * scopes from `mapSession` are never replaced. Needs `secretId` to be set.
+   */
+  scopesTtlSeconds?: number
+  /** Secret the scope snapshot cookie is signed with. Defaults to `BETTER_AUTH_SECRET`. */
+  secretId?: string
   /**
    * Where this sits in the middleware order. The CLI generates its default-map
    * registration at `lowest` so an app's own registration (default `medium`)
@@ -75,28 +86,46 @@ type BetterAuthSessionOptions = {
   }
 }
 
+/**
+ * The stateful better-auth session middleware: resolves the session through
+ * `services.auth().api.getSession`, so it sees a revoked session on the next
+ * request — and bundles the better-auth server wherever it runs. See
+ * {@link betterAuthStatelessSession} and {@link betterAuthStoreSession} for the
+ * lean alternatives.
+ *
+ * Stands down when an earlier middleware already set a session or when
+ * `services.auth` is absent (an addon's scope). A failing `getSession` throws
+ * rather than serving the request anonymously.
+ *
+ * @example snippet: betterAuthSessionMiddleware
+ */
 export const betterAuthSession = (
   options: BetterAuthSessionOptions = {}
 ): CorePikkuMiddleware => {
-  const { mapSession, apiKey, impersonation, priority } = options
+  const {
+    mapSession,
+    apiKey,
+    impersonation,
+    priority,
+    scopesTtlSeconds = 0,
+    secretId = 'BETTER_AUTH_SECRET',
+  } = options
   const apiKeyHeader = apiKey?.header ?? 'x-api-key'
 
   return pikkuMiddleware({
     priority,
     func: async (services, wire, next) => {
-      const { http, setSession, getSession } = wire
-      // Check the LIVE session, not the wire's static `session` snapshot: that
-      // snapshot is taken at wire construction and is never updated by a prior
-      // middleware's setSession (which writes the session service, not the
-      // snapshot). Reading it stale makes this middleware re-resolve and clobber
-      // a session another middleware already set (e.g. an app's own
-      // role-enriching betterAuthSession), overwriting it with the default map.
-      const existingSession = getSession ? getSession() : wire.session
-      if (!http?.request || !setSession || existingSession) {
+      const { http, setInitialSession } = wire
+      if (
+        !http?.request ||
+        !setInitialSession ||
+        (await hasLiveSession(wire))
+      ) {
         return next()
       }
       // See `a-session-middleware-stands-down-where-it-cannot-authenticate.md`.
-      if (typeof (services as any).auth !== 'function') {
+      const getAuth = services.auth
+      if (typeof getAuth !== 'function') {
         return next()
       }
       // Capture the narrowed request so deferred closures (the impersonation
@@ -115,16 +144,13 @@ export const betterAuthSession = (
           // silently serving the request anonymously.
           let mapped: CoreUserSession | null | undefined
           try {
-            const auth = (await (services as any).auth()) as BetterAuthInstance
+            const auth = await getAuth()
             const verified = (await auth.api.verifyApiKey({
               body: { key: rawKey },
             })) as VerifiedApiKey | null
 
             if (verified?.valid && verified.key) {
-              mapped = await apiKey.mapKey(
-                verified.key,
-                services as CoreServices
-              )
+              mapped = await apiKey.mapKey(verified.key, services)
             }
           } catch (e: any) {
             services.logger?.warn(
@@ -132,9 +158,7 @@ export const betterAuthSession = (
             )
           }
           if (mapped) {
-            await setSession(
-              await withResolvedScopes(mapped, services as CoreServices)
-            )
+            await setInitialSession(await withResolvedScopes(mapped, services))
           }
           // The api-key header is authoritative for this request — never fall
           // through to getSession (a bare mock session would shadow our scope).
@@ -148,7 +172,7 @@ export const betterAuthSession = (
       // "not logged in" path returns null here — it does not throw.
       let result: BetterAuthSessionResult | null
       try {
-        const auth = (await (services as any).auth()) as BetterAuthInstance
+        const auth = await getAuth()
         // getSession only needs the request headers — build them directly
         // instead of going through toWebRequest(), which (for a POST) would
         // otherwise read the single-use request body just to discard it,
@@ -163,40 +187,31 @@ export const betterAuthSession = (
         throw e
       }
 
-      // mapSession / impersonation hooks are caller code — let their errors
-      // propagate (a thrown claim assertion is a deliberate signal, not a reason
-      // to silently fall back to anonymous and serve a baffling 403).
       if (result?.user) {
-        if (impersonation) {
-          const impersonated = await resolveImpersonatedSession(
-            result,
-            impersonation,
-            services as CoreServices,
-            (name) => request.header(name),
-            mapSession
-          )
-          if (impersonated) {
-            // Scopes resolve for the impersonated userId, not the admin's — an
-            // impersonated session runs as the target, with the target's rights.
-            await setSession(
-              await withResolvedScopes(impersonated, services as CoreServices)
-            )
-            return next()
-          }
-        } else {
-          warnImpersonationUnconfigured(services as CoreServices, (name) =>
-            request.header(name)
-          )
-        }
-        const mapped = mapSession
-          ? await mapSession(result, services as CoreServices)
-          : defaultSession(result)
-        await setSession(
-          await withResolvedScopes(
-            stampVirtualUserFlag(mapped, result.user),
-            services as CoreServices
-          )
-        )
+        // The secret is read inside the cache, only once a snapshot is
+        // actually read or written, so a request that never needs the cache
+        // (mapped scopes, no scope service) does not depend on the secret store.
+        const scopesCache =
+          scopesTtlSeconds > 0
+            ? scopesCookieCache({
+                ttlSeconds: scopesTtlSeconds,
+                secret: () =>
+                  readSessionSecret(services, secretId, 'betterAuthSession'),
+                cookieHeader: mergeRelayedCookies(
+                  new Headers(request.headers())
+                ).get('cookie'),
+                response: http.response,
+              })
+            : undefined
+        await resolveAndSetSession({
+          result,
+          services,
+          getHeader: (name) => request.header(name),
+          setInitialSession,
+          mapSession,
+          impersonation,
+          scopesCache,
+        })
       }
 
       return next()

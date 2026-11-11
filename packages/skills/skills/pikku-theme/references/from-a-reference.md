@@ -20,6 +20,9 @@ has no extractor: you read the design off the source and pass it to `pikku ui th
    pikku ui theme apply --preset breeze --primary '#0B6E99' --font-heading 'Manrope' --font-body 'Manrope' --page '#F7F5F0' --ink '#1C2A33'
    ```
 
+   If the reference is dark, add `--mode dark` (then `--page`/`--ink` are the dark ground and its
+   text); without it a dark page is derived as a light one.
+
    You are the art director: what you read is signal, not a finished theme. Check page and ink
    against each other and against the primary for 4.5:1 before applying.
 

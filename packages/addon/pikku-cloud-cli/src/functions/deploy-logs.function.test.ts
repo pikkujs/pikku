@@ -92,7 +92,7 @@ describe('deploy logs', () => {
   test('asks for exactly the deployment named', async () => {
     await run({ deploymentId: 'dep-9' })
     assert.deepEqual(invoked, [
-      { name: 'getDeploymentBuildLog', data: { deploymentId: 'dep-9' } },
+      { name: 'cloud:getDeploymentBuildLog', data: { deploymentId: 'dep-9' } },
     ])
   })
 

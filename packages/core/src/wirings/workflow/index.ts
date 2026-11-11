@@ -20,6 +20,10 @@ export {
   assertWorkflowRunOwner,
   WorkflowRunForbiddenError,
 } from './workflow-run-ownership.js'
+export {
+  checkWorkflowRunAccess,
+  type WorkflowCallerWire,
+} from './workflow-run-access.js'
 export { WorkflowApprovalForbiddenError } from './workflow-approval-policy.js'
 export {
   streamWorkflowRunStatus,
@@ -30,6 +34,7 @@ export type {
   WorkflowRunExtension,
 } from './workflow-run-engine.types.js'
 export { deriveInvocationId, uuidv5 } from './workflow-invocation-id.js'
+export { runTraceWire } from './workflow-run-trace.js'
 
 export { isRef } from './graph/workflow-graph.types.js'
 export type { RefValue } from './graph/workflow-graph.types.js'
@@ -59,6 +64,7 @@ export type {
   WorkflowService,
   WorkflowQueueOptions,
   WorkflowServiceOptions,
+  WorkflowRecoveryOptions,
   WorkflowServiceConfig,
   WorkflowPlannedStep,
   WorkflowRunWire,
@@ -114,3 +120,9 @@ export type {
   ItemFn,
   TemplateFn,
 } from './graph/workflow-graph.types.js'
+export type {
+  ScheduledStep,
+  StalledSweepOptions,
+  UndispatchedSweepOptions,
+  WorkflowRecoveryPass,
+} from './workflow-recovery.js'

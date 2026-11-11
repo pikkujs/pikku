@@ -1,0 +1,29 @@
+{
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["packages/functions/src"],
+  "db": {
+    "engine": "sqlite"
+  },
+  "scaffold": {
+    "pikkuDir": "packages/functions/src/scaffold",
+    "rpc": true,
+    "agent": true,
+    "workflow": true,
+    "events": true,
+    "console": true
+  },
+  "frontends": {
+    "web": {
+      "cwd": "apps/web"
+    },
+    "off": {
+      "cwd": "apps/off",
+      "deploy": false
+    }
+  },
+  "backends": {
+    "api": {
+      "filter": {}
+    }
+  }
+}

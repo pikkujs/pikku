@@ -25,7 +25,10 @@ export interface AuthFile {
   defaultApiUrl?: string
 }
 
-const authFilePath = () => join(homedir(), '.pikkustudio', 'auth.json')
+// HOME first: bun's homedir() ignores a HOME changed at runtime, so tests that
+// point HOME at a temp dir would otherwise overwrite the real login.
+const authFilePath = () =>
+  join(process.env.HOME || homedir(), '.pikkustudio', 'auth.json')
 
 export async function readAuthFile(): Promise<AuthFile> {
   if (!existsSync(authFilePath())) return { tokens: {} }
@@ -94,8 +97,9 @@ export type { LinkedProject, ProjectSource }
  *   3. the api-url of the last `login`
  *   4. hardcoded default
  *
- * Token comes from the PIKKUSTUDIO_API_KEY env var (a sandbox or CI holds no file),
- * else ~/.pikkustudio/auth.json keyed by the resolved api-url. The
+ * Token comes from the PIKKUSTUDIO_API_KEY env var (a sandbox or CI holds no file,
+ * and may be refused the one that exists), else ~/.pikkustudio/auth.json keyed by
+ * the resolved api-url. The
  * project is resolved by `resolveLinkedProject` — env, then the git
  * remote — and only when there is a token to ask cloud with.
  * `resolveProject: false` skips it for commands that never use it.
@@ -107,7 +111,11 @@ export async function resolveApiContext(
     resolveProject?: boolean
   } = {}
 ): Promise<ResolvedApiContext> {
-  const auth = await readAuthFile()
+  const apiKey = process.env.PIKKUSTUDIO_API_KEY?.trim()
+  const auth = await readAuthFile().catch((error) => {
+    if (apiKey) return { tokens: {} } as AuthFile
+    throw error
+  })
   const [apiUrl, apiUrlSource]: [string, ApiUrlSource] = opts.apiUrlOverride
     ? [opts.apiUrlOverride, 'flag']
     : process.env.PIKKUSTUDIO_API_URL
@@ -116,8 +124,7 @@ export async function resolveApiContext(
         ? [auth.defaultApiUrl, 'login']
         : [DEFAULT_API_URL, 'default']
   assertSecureApiUrl(apiUrl, apiUrlSource)
-  const token =
-    process.env.PIKKUSTUDIO_API_KEY?.trim() || auth.tokens[apiUrl] || null
+  const token = apiKey || auth.tokens[apiUrl] || null
 
   const project =
     opts.resolveProject === false

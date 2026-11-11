@@ -1,11 +1,18 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
+import type { ResolvedVirtualUser } from '@pikku/core/services'
 import { provisionVirtualUsers } from './provision-virtual-users.js'
 
 const ENVIRONMENTS = {
   local: {},
   prod: { production: true },
 }
+
+/** A declared virtual user, with the fields provisioning never reads defaulted. */
+const virtualUser = (
+  user: Pick<ResolvedVirtualUser, 'id' | 'name' | 'email' | 'roles'> &
+    Partial<ResolvedVirtualUser>
+): ResolvedVirtualUser => ({ goals: [], tags: [], runnable: true, ...user })
 
 const VIRTUAL_USERS: Record<string, any> = {
   susan: {
@@ -64,7 +71,10 @@ const harness = (
           },
           findUserById: async (userId: string) => byId(userId) ?? null,
           createUser: async (values: Record<string, any>) => {
-            const user = { id: `user-${users.length + 1}`, ...values }
+            const user: Record<string, any> = {
+              id: `user-${users.length + 1}`,
+              ...values,
+            }
             users.push(user)
             created.push(user.email)
             return user
@@ -147,20 +157,20 @@ describe('provisionVirtualUsers', () => {
 
     const result = await provisionVirtualUsers(h, {
       virtualUsers: {
-        staffer: {
+        staffer: virtualUser({
           id: 'staffer',
           name: 'Staffer',
           email: 'staffer@e2e.test',
           roles: ['report-viewer'],
           app: 'staff',
-        },
-        shopper: {
+        }),
+        shopper: virtualUser({
           id: 'shopper',
           name: 'Shopper',
           email: 'shopper@e2e.test',
           roles: [],
           app: 'portal',
-        },
+        }),
       },
       environments: ENVIRONMENTS,
       environment: 'local',
@@ -191,13 +201,13 @@ describe('provisionVirtualUsers', () => {
   test('holds an app grant it has already applied', async () => {
     const h = harness()
     const virtualUsers = {
-      staffer: {
+      staffer: virtualUser({
         id: 'staffer',
         name: 'Staffer',
         email: 'staffer@e2e.test',
         roles: [],
         app: 'staff',
-      },
+      }),
     }
     const options = {
       virtualUsers,

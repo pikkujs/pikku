@@ -42,6 +42,31 @@ describe('addonSource', () => {
     assert.equal(addonSource('api/spec', root)?.kind, 'spec')
   })
 
+  test('a domain-qualified name is a registry OpenAPI', () => {
+    const root = tempApp()
+    assert.deepEqual(
+      addonSource('amazonaws.com:applicationcostprofiler', root),
+      { kind: 'registry', name: 'amazonaws.com:applicationcostprofiler' }
+    )
+    assert.deepEqual(addonSource('stripe.com', root), {
+      kind: 'registry',
+      name: 'stripe.com',
+    })
+  })
+
+  test('a scoped package with a dot is still a package', () => {
+    assert.deepEqual(addonSource('@acme.io/addon-billing', tempApp()), {
+      kind: 'package',
+      packageName: '@acme.io/addon-billing',
+    })
+  })
+
+  test('a registry-shaped name that exists on disk is a spec', () => {
+    const root = tempApp()
+    writeFileSync(join(root, 'stripe.com'), '')
+    assert.equal(addonSource('stripe.com', root)?.kind, 'spec')
+  })
+
   test('no argument finds specs/api-spec.*', () => {
     const root = tempApp()
     assert.equal(addonSource(undefined, root), undefined)
@@ -58,7 +83,10 @@ describe('addonSource', () => {
 describe('names', () => {
   test('package and wiring names', () => {
     assert.equal(addonPackageName('addon-google-sheets'), 'addon-google-sheets')
-    assert.equal(addonPackageName('google-sheets'), '@pikku/addon-google-sheets')
+    assert.equal(
+      addonPackageName('google-sheets'),
+      '@pikku/addon-google-sheets'
+    )
     assert.equal(addonCamelName('@pikku/addon-google-sheets'), 'googleSheets')
     assert.equal(addonCamelName('pikku-addon-stripe'), 'stripe')
   })
@@ -94,7 +122,9 @@ describe('addonRequirements', () => {
   test('nothing declared', () => {
     const dir = tempApp()
     mkdirSync(join(dir, 'dist', '.pikku', 'addon'), { recursive: true })
-    assert.deepEqual(requirementLines(addonRequirements(dir)), ['Nothing to fill in.'])
+    assert.deepEqual(requirementLines(addonRequirements(dir)), [
+      'Nothing to fill in.',
+    ])
   })
 
   test('not built yet', () => {
@@ -149,7 +179,10 @@ describe('wireAddonFile uses', () => {
 
 describe('add-on grants', () => {
   const lines = grantLines([
-    { name: 'mail', uses: { '@pikku/addon-stripe': 'stripe', '@pikku/addon-crm': 'crm' } },
+    {
+      name: 'mail',
+      uses: { '@pikku/addon-stripe': 'stripe', '@pikku/addon-crm': 'crm' },
+    },
     { name: 'stripe', uses: {} },
   ])
 

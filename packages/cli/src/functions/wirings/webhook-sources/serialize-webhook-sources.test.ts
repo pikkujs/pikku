@@ -57,7 +57,7 @@ describe('serializeWebhookSourceWirings', () => {
   test('wires one worker on the incoming queue', () => {
     assert.equal(content.match(/wireQueueWorker\(\{/g)?.length, 1)
     assert.match(content, /name: 'pikku-incoming-webhooks'/)
-    assert.match(content, /dispatchWebhookSourceJob\(data\)/)
+    assert.match(content, /dispatchWebhookSourceJob\(data, wire\)/)
     assert.match(content, /input: WebhookSourceJob,/)
     assert.match(content, /from '\.\/pikku-webhook-sources\.schemas\.gen\.js'/)
     assert.match(content, /from '\.\.\/http\/index\.js'/)

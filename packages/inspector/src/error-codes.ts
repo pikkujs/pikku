@@ -33,6 +33,7 @@ export enum ErrorCode {
   WORKFLOW_GRAPH_ADDON_NOT_WIRED = 'PKU642',
   COMPLEX_WORKFLOW_NOT_ALLOWED = 'PKU643',
   SINGLE_STEP_WORKFLOW = 'PKU644',
+  WORKFLOW_APPROVAL_MISSING_APPROVERS = 'PKU645',
 
   // Remote addon (wireRemoteAddon) validation
   REMOTE_ADDON_NOT_DEV_DEPENDENCY = 'PKU338',
@@ -46,6 +47,23 @@ export enum ErrorCode {
   ADDON_USES_NOT_WIRED = 'PKU347',
   ADDON_NEEDS_NOT_MAPPED = 'PKU348',
   ADDON_CONTENT_GRANT_INVALID = 'PKU349',
+  REMOTE_ADDON_PACKAGE_NOT_STATIC = 'PKU350',
+  REMOTE_ADDON_SDK_CORE_MISMATCH = 'PKU351',
+  REMOTE_ADDON_SDK_INTEGRITY_MISMATCH = 'PKU352',
+  REMOTE_ADDON_PACKAGE_INVALID = 'PKU353',
+  ADDON_DEPENDENCY_VERSION_MISMATCH = 'PKU354',
+  ADDON_USES_NOT_DECLARED = 'PKU355',
+  ADDON_DEPENDENCY_INVALID = 'PKU356',
+  STUDIO_SCREEN_PATH_DUPLICATE = 'PKU357',
+  STUDIO_MESSAGE_KEY_MISSING = 'PKU358',
+  STUDIO_BADGE_FUNCTION_NOT_FOUND = 'PKU359',
+  CONTRIBUTORS_NOT_STATIC = 'PKU360',
+  CONTRIBUTOR_NAME_DUPLICATED = 'PKU361',
+  ADDON_CONTRIBUTORS_NOT_STATIC = 'PKU362',
+  ADDON_CONTRIBUTOR_UNKNOWN = 'PKU363',
+  ADDON_LEGACY_CONTRIBUTORS = 'PKU364',
+  STUDIO_SCREEN_AGENT_INVALID = 'PKU365',
+  STUDIO_PACKAGE_FILES_MISSING = 'PKU366',
 
   // Database schema codegen warnings
   DB_COLUMN_NAME_TYPE_CONTRADICTION = 'PKU480',
@@ -62,6 +80,9 @@ export enum ErrorCode {
 
   // Function errors
   FUNCTION_METADATA_NOT_FOUND = 'PKU559',
+  DISABLED_FUNCTION_REFERENCED = 'PKU562',
+  UNUSED_FUNCTION = 'PKU563',
+  FACTORY_NOT_A_DIRECT_CALL = 'PKU564',
 
   // Auth errors
   DUPLICATE_AUTH_DEFINITION = 'PKU581',
@@ -74,6 +95,12 @@ export enum ErrorCode {
   // declares. Do not reuse those two numbers for anything else.
   DUPLICATE_VIRTUAL_USERS_DEFINITION = 'PKU585',
 
+  // A pikkuPermission that never reads its input is a session check.
+  PERMISSION_DATA_UNUSED = 'PKU586',
+  // A check with no skipWithoutSession refuses every call without a session,
+  // so on a sessionless function it has to say what happens then.
+  PERMISSION_NEEDS_SKIP_WITHOUT_SESSION = 'PKU587',
+
   // HTTP Route errors
   ROUTE_PARAM_MISMATCH = 'PKU571',
   ROUTE_QUERY_MISMATCH = 'PKU572',
@@ -81,6 +108,7 @@ export enum ErrorCode {
   EXPOSED_FUNCTION_HAS_NO_GATE = 'PKU574',
   TAG_RESOLVES_TO_NO_MIDDLEWARE = 'PKU575',
   PERMISSIONS_IN_BODY_NOT_ALLOWED = 'PKU576',
+  REGISTRATION_NOT_A_DIRECT_CALL = 'PKU577',
 
   // Versioning errors
   DUPLICATE_FUNCTION_VERSION = 'PKU850',
@@ -120,6 +148,9 @@ export enum ErrorCode {
   WIRES_NOT_DESTRUCTURED = 'PKU411',
   FUNCTION_DYNAMIC_IMPORT = 'PKU498',
 
+  // PKU412 (direct fs) and PKU413 (direct process.env) are retired, not free:
+  // they moved to oxlint rules that `pikku validate` requires. Do not reuse them.
+
   // Dependency integrity errors
   DUPLICATE_CORE_VERSION = 'PKU717',
   CORE_VERSION_SKEW = 'PKU718',
@@ -132,8 +163,13 @@ export enum ErrorCode {
   // Addon authoring errors
   ADDON_WIRING_NOT_ALLOWED = 'PKU920',
   ADDON_CONTRACT_HANDLERS_NOT_ALLOWED = 'PKU921',
+  ADDON_REMOTE_CONTRACT_NOT_ZOD = 'PKU922',
 
   RPC_INVOCATION_TYPE_CAST = 'PKU940',
+  RPC_NAME_NOT_LITERAL = 'PKU941',
+  WIRE_PASSED_TO_HELPER = 'PKU942',
+  WORKFLOW_STEP_NAME_NOT_LITERAL = 'PKU943',
+  RPC_TARGET_NOT_FOUND = 'PKU944',
 
   // Knowledge base errors
   KNOWLEDGE_NOTE_MISSING = 'PKU960',
@@ -158,4 +194,8 @@ export interface CodedDiagnostic {
   severity: DiagnosticSeverity
   code: ErrorCode
   message: string
+  /** Where the problem is, when the reporter knows. */
+  file?: string
+  line?: number
+  column?: number
 }

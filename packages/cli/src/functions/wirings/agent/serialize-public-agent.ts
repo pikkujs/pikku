@@ -69,6 +69,7 @@ export const ThreadDeleted = z.object({ deleted: z.boolean() })
 } from '@pikku/core/agent'
 import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { pikkuPermission } from '${leaf('auth')}'
+import { MissingServiceError } from '@pikku/core/errors'
 import { defineHTTPRoutes, wireHTTPRoutes } from '${leaf('http')}'
 import {
   AgentCall,
@@ -86,6 +87,7 @@ import {
  */
 export const isThreadOwner = pikkuPermission<{ threadId: string }>(
   async ({ agentRunService }, { threadId }, { session }) => {
+    if (!agentRunService) throw new MissingServiceError('agentRunService is required')
     const thread = await agentRunService.getThread(threadId)
     // A missing thread is denied rather than 404'd so it is indistinguishable
     // from one owned by someone else — no existence oracle.
@@ -100,7 +102,7 @@ export const agentCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
-    return await rpc.agent.run(data.agentName as any, agentCallOptions(data))
+    return await rpc.exposedAgent.run(data.agentName, agentCallOptions(data))
   },
 })
 
@@ -109,7 +111,7 @@ export const agentStreamCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
-    await rpc.agent.stream(data.agentName as any, agentCallOptions(data))
+    await rpc.exposedAgent.stream(data.agentName, agentCallOptions(data))
   },
 })
 
@@ -118,7 +120,7 @@ export const agentApproveCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentApproval,
   func: async (_services, { runId, approvals, agentName }, { rpc }) => {
-    return await rpc.agent.approve(runId, approvals, agentName)
+    return await rpc.exposedAgent.approve(runId, approvals, agentName)
   },
 })
 
@@ -127,9 +129,10 @@ export const agentResumeCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentResume,
   func: async (_services, data, { rpc }) => {
-    await rpc.agent.resume(data.runId, {
+    await rpc.exposedAgent.resume(data.runId, {
       toolCallId: data.toolCallId,
       approved: data.approved,
+      expectedAgentName: data.agentName,
     })
   },
 })
@@ -143,6 +146,8 @@ export const getAgentThreads = pikkuSessionlessFunc({
   expose: true,
   auth: true,
   func: async ({ agentRunService }, input, { session }) => {
+    if (!agentRunService) throw new MissingServiceError('agentRunService is required')
+
     // \`owners\` is an authorization constraint derived from the session, never
     // from input — \`resourceId\` remains a caller-supplied filter within it.
     return await agentRunService.listThreads({
@@ -162,9 +167,10 @@ export const getAgentThreadMessages = pikkuSessionlessFunc({
   description:
     'Returns all messages for a given AI agent thread, ordered by creation time.',
   expose: true,
-  auth: false,
+  auth: true,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
+    if (!agentRunService) throw new MissingServiceError('agentRunService is required')
     return await agentRunService.getThreadMessages(input.threadId)
   },
 })
@@ -176,9 +182,10 @@ export const getAgentThreadRuns = pikkuSessionlessFunc({
   description:
     'Returns the run history for a given AI agent thread, ordered by creation time.',
   expose: true,
-  auth: false,
+  auth: true,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
+    if (!agentRunService) throw new MissingServiceError('agentRunService is required')
     return await agentRunService.getThreadRuns(input.threadId)
   },
 })
@@ -191,9 +198,10 @@ export const deleteAgentThread = pikkuSessionlessFunc({
   description:
     'Deletes an AI agent thread and all of its persisted state.',
   expose: true,
-  auth: false,
+  auth: true,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
+    if (!agentRunService) throw new MissingServiceError('agentRunService is required')
     const deleted = await agentRunService.deleteThread(input.threadId)
     return { deleted }
   },

@@ -101,7 +101,7 @@ const formatMetadata = (
     .join(', ')
 }
 
-type InfoInput = { limit?: string; verbose?: boolean }
+export type InfoInput = { limit?: string; verbose?: boolean }
 
 export const pikkuInfoFunctions = pikkuSessionlessFunc<InfoInput, void>({
   func: async ({ getInspectorState }, data) => {

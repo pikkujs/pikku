@@ -33,10 +33,14 @@ application's model budget the moment somebody ran `pikku all`, on a host that
 may not even run schedulers. One line in the project turns it on:
 
 ```ts
-wireScheduler({ name: 'virtualUsers', schedule: '0 * * * *', func: tickVirtualUserSchedules })
+wireScheduler({
+  name: 'virtualUsers',
+  schedule: '0 * * * *',
+  func: tickVirtualUserSchedules,
+})
 ```
 
-Tick resolution bounds how *late* a due virtual user is, never how often it runs — a
+Tick resolution bounds how _late_ a due virtual user is, never how often it runs — a
 virtual user due at 09:07 under an hourly tick starts at 10:00. Running the tick more
 often costs one indexed query and changes no cadence.
 

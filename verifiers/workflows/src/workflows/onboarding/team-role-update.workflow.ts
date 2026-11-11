@@ -8,6 +8,7 @@ export const teamRoleUpdateWorkflow = pikkuWorkflowFunc<
   { teamId: string; userId: string; newRole: string; reason: string },
   { updated: boolean; previousRole: string; newRole: string }
 >({
+  auth: false,
   title: 'Team Role Update',
   tags: ['onboarding'],
   func: async (_services, data, { workflow }) => {

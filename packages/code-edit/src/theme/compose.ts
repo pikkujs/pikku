@@ -1,4 +1,10 @@
-import { PRESETS, STRUCTURES, presetToTheme, type Preset, type Theme } from './presets.js'
+import {
+  PRESETS,
+  STRUCTURES,
+  presetToTheme,
+  type Preset,
+  type Theme,
+} from './presets.js'
 
 export type ThemeInput = {
   preset?: string
@@ -7,23 +13,37 @@ export type ThemeInput = {
   fonts?: { heading?: string; body?: string }
   page?: string
   ink?: string
+  mode?: 'light' | 'dark'
 }
 
 /** A preset (or the first one) with any structure, colours, fonts, page and ink layered over it. */
 export function composeTheme(input: ThemeInput): { id: string; theme: Theme } {
-  const preset = input.preset ? PRESETS.find((p) => p.id === input.preset) : undefined
+  const preset = input.preset
+    ? PRESETS.find((p) => p.id === input.preset)
+    : undefined
   if (input.preset && !preset) {
-    throw new Error(`No preset "${input.preset}". Available: ${PRESETS.map((p) => p.id).join(', ')}`)
+    throw new Error(
+      `No preset "${input.preset}". Available: ${PRESETS.map((p) => p.id).join(', ')}`
+    )
   }
   if (input.structure && !STRUCTURES[input.structure]) {
-    throw new Error(`No structure "${input.structure}". Available: ${Object.keys(STRUCTURES).join(', ')}`)
+    throw new Error(
+      `No structure "${input.structure}". Available: ${Object.keys(STRUCTURES).join(', ')}`
+    )
+  }
+  if (input.mode && input.mode !== 'light' && input.mode !== 'dark') {
+    throw new Error(`Invalid mode "${String(input.mode)}". Use light or dark.`)
   }
   const first = PRESETS[0]!
   const base = presetToTheme(preset ?? first)
   const structure = input.structure
     ? presetToTheme(
         PRESETS.find((p) => p.structureId === input.structure) ??
-          ({ ...first, structureId: input.structure, brandId: preset?.brandId ?? first.brandId } as Preset)
+          ({
+            ...first,
+            structureId: input.structure,
+            brandId: preset?.brandId ?? first.brandId,
+          } as Preset)
       ).structure
     : base.structure
   const secondary = input.colors?.secondary ?? base.brand.colors.secondary
@@ -48,6 +68,9 @@ export function composeTheme(input: ThemeInput): { id: string; theme: Theme } {
         ...structure,
         ...(input.page ? { page: input.page } : {}),
         ...(input.ink ? { ink: input.ink } : {}),
+        ...(input.mode === 'dark'
+          ? { mode: 'dark' as const, defaultColorScheme: 'dark' as const }
+          : {}),
       },
     },
   }

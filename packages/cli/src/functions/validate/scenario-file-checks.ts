@@ -22,11 +22,13 @@ const SCENARIO_DECLARATIONS = [
 /**
  * A file allowed to declare them.
  *
- * Three suffixes rather than one because the split that matters is scenarios
+ * Several suffixes rather than one because the split that matters is scenarios
  * apart from application code, not a particular spelling: `.scenario.ts` and
- * `.scenarios.ts` hold the scenarios, `.steps.ts` holds the steps they call.
+ * `.scenarios.ts` hold the scenarios, `.feature.ts` the features that group
+ * them, and `.step.ts` / `.steps.ts` the steps they call — the starter
+ * template's `test/features/*.feature.ts` and `test/steps/*.step.ts`.
  */
-const SCENARIO_FILE = /\.(scenario|scenarios|steps)\.tsx?$/
+const SCENARIO_FILE = /\.(scenario|scenarios|feature|features|step|steps)\.tsx?$/
 
 /**
  * The declarations that make up a virtual user, and where they live.
@@ -38,7 +40,11 @@ const SCENARIO_FILE = /\.(scenario|scenarios|steps)\.tsx?$/
  */
 const VIRTUAL_USER_DECLARATIONS = ['defineVirtualUsers', 'runVirtualUser'] as const
 
-const VIRTUAL_USER_FILE = /\.(virtual-user|vu)\.tsx?$/
+/**
+ * `virtual-users.ts` is the one file the scaffold reads and edits
+ * (`virtualUsersSourcePath`), so the plain name counts as dedicated too.
+ */
+const VIRTUAL_USER_FILE = /(\.(virtual-user|vu)|(^|[/\\])virtual-users)\.tsx?$/
 
 /**
  * The declarations that grade an agent, and where they live.
@@ -114,7 +120,7 @@ export const runScenarioFileChecks = async (
     findings.push({
       id: 'scenario-declared-outside-scenario-file',
       severity: 'error',
-      message: `${rel} declares ${used.join(', ')} — scenarios, features and steps must live in a *.scenario.ts, *.scenarios.ts or *.steps.ts file, not mixed into application code`,
+      message: `${rel} declares ${used.join(', ')} — scenarios, features and steps must live in a *.scenario(s).ts, *.feature.ts or *.step(s).ts file, not mixed into application code`,
       path: file,
       fixHint: [
         `Move the ${used.length === 1 ? 'declaration' : 'declarations'} into a dedicated file, e.g.:`,
@@ -139,7 +145,7 @@ export const runScenarioFileChecks = async (
     findings.push({
       id: 'virtual-user-declared-outside-virtual-user-file',
       severity: 'error',
-      message: `${rel} declares ${used.join(', ')} — the virtual users it declares must live in a *.virtual-user.ts (or *.vu.ts) file, not mixed into application code`,
+      message: `${rel} declares ${used.join(', ')} — the virtual users it declares must live in virtual-users.ts or a *.virtual-user.ts (or *.vu.ts) file, not mixed into application code`,
       path: file,
       fixHint: [
         'Move the declaration into a dedicated file, e.g.:',

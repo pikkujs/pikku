@@ -22,6 +22,8 @@ export const COLUMN_LABELS: Record<BoardStatus, string> = {
 type HostedChange = ListChangesOutput['changes'][number]
 export type BoardChange = Omit<HostedChange, 'status'> & {
   status: BoardStatus
+  /** Set by the hosted API on a change cloud filed itself that no person has approved yet. */
+  awaitingApproval?: boolean
 }
 export type BoardGroup = ListChangesOutput['groups'][number]
 export type BoardList = { changes: BoardChange[]; groups: BoardGroup[] }

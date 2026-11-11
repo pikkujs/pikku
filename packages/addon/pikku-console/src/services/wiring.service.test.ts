@@ -150,4 +150,18 @@ describe('WiringService.readAllMeta', () => {
     assert.equal(result.counts.functions, 1)
     assert.equal(result.functions.length, 4)
   })
+
+  test('counts only real workflows, but returns every one', async () => {
+    const metaService = makeMetaService({
+      getWorkflowMeta: async () => ({
+        orderWorkflow: { name: 'orderWorkflow', steps: [] },
+        orderScenario: { name: 'orderScenario', steps: [], scenario: true },
+      }),
+    })
+    const service = new WiringService(metaService as never)
+    const result = await service.readAllMeta()
+
+    assert.equal(result.counts.workflows, 1)
+    assert.equal(Object.keys(result.workflows).length, 2)
+  })
 })

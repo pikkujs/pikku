@@ -80,6 +80,7 @@ export const documentDelete = pikkuSessionlessFunc<
   { documentId: string },
   { deleted: boolean; documentId: string }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Delete Document',
   func: async ({ logger }, data) => {
     logger.info(`Deleting document: ${data.documentId}`)
@@ -290,6 +291,7 @@ export const documentBatchProcess = pikkuSessionlessFunc<
     completedAt: string
   }
 >({
+  disabled: 'no callers found, 2026-10-20',
   title: 'Batch Process Documents',
   func: async ({ logger }, data) => {
     logger.info(`Batch processing ${data.documentIds.length} documents`)

@@ -16,6 +16,7 @@ export const tripleNestedLoopWorkflow = pikkuWorkflowFunc<
   },
   { totalProcessed: number }
 >({
+  auth: false,
   title: 'Triple Nested Loop',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {

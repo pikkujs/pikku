@@ -1,7 +1,7 @@
 /**
  * Offline verifier for Cloudflare deploy pipeline.
  *
- * Has its own pikku.config.json extending templates/functions.
+ * Has its own pikku.config.json extending recipes/functions.
  * Runs pikku + deploy plan from this directory, asserts actual content.
  */
 
@@ -12,11 +12,14 @@ import {
   existsSync,
   readdirSync,
   statSync,
+  mkdirSync,
+  rmSync,
+  symlinkSync,
 } from 'fs'
 import { join } from 'path'
 import { createHash } from 'crypto'
 
-const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'templates', 'functions')
+const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'recipes', 'functions')
 const REPO_ROOT = join(process.cwd(), '..', '..')
 const PIKKU_BIN = join(REPO_ROOT, 'packages', 'cli', 'dist', 'bin', 'pikku.js')
 const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'cloudflare')
@@ -35,8 +38,61 @@ const CONFIG_FILE = join(FUNCTIONS_DIR, 'pikku.config.json')
  * pins one-per-function; how units are partitioned is verifiers/deploy-grouping's
  * subject.
  */
+/**
+ * Fixtures the template does not carry: a webhook gateway, and the coercion
+ * map `pikku db migrate` would write for an app with annotated columns. Both
+ * are removed with the config pin below.
+ */
+const GATEWAY_FUNCTION_FILE = join(
+  FUNCTIONS_DIR,
+  'src',
+  'functions',
+  'verifier-gateway.functions.ts'
+)
+const GATEWAY_WIRING_FILE = join(
+  FUNCTIONS_DIR,
+  'src',
+  'wirings',
+  'verifier-gateway.wiring.ts'
+)
+const COERCION_FILE = join(FUNCTIONS_DIR, '.pikku', 'db', 'coercion.gen.ts')
+const COERCION_MAP = { todo: { due_at: 'date', done: 'bool' } }
+const GATEWAY_ROUTE = '/verifier/webhook'
+
+// The template has no database, so nothing provides `kysely` and the adapter's
+// coercion contributor (which decorates it) is correctly left out. An addon that
+// provides one is linked into the shared project for the run, so the coercion
+// check below covers a real selection; both are removed on exit.
+const ADDON_DIR = join(process.cwd(), 'contrib-kysely')
+const ADDON_LINK = join(
+  FUNCTIONS_DIR,
+  'node_modules',
+  '@verifier',
+  'contrib-kysely'
+)
+// A coercion map only reaches a contributor for an app with a known database
+// dialect, so the run also gives the project an (empty) db/sqlite folder.
+const DB_DIALECT_DIR = join(FUNCTIONS_DIR, 'db')
+const ADDON_WIRING_FILE = join(
+  FUNCTIONS_DIR,
+  'src',
+  'zz-contributors-wiring.ts'
+)
+
 const originalConfig = readFileSync(CONFIG_FILE, 'utf-8')
-const restoreConfig = () => writeFileSync(CONFIG_FILE, originalConfig)
+const restoreConfig = () => {
+  writeFileSync(CONFIG_FILE, originalConfig)
+  for (const fixture of [
+    GATEWAY_FUNCTION_FILE,
+    GATEWAY_WIRING_FILE,
+    COERCION_FILE,
+    ADDON_WIRING_FILE,
+    ADDON_LINK,
+    DB_DIALECT_DIR,
+  ]) {
+    rmSync(fixture, { force: true, recursive: true })
+  }
+}
 process.on('exit', restoreConfig)
 process.on('SIGINT', () => {
   restoreConfig()
@@ -55,15 +111,74 @@ pinnedConfig.deploy = {
   ...pinnedConfig.deploy,
   grouping: { strategy: 'function' },
 }
+pinnedConfig.db = { engine: 'sqlite' }
 writeFileSync(CONFIG_FILE, JSON.stringify(pinnedConfig, null, 2))
+
+writeFileSync(
+  GATEWAY_FUNCTION_FILE,
+  `import { pikkuSessionlessFunc } from '#pikku/function'
+
+export const verifierWebhookReply = pikkuSessionlessFunc<
+  { text: string },
+  { text: string }
+>({
+  func: async (_services, { text }) => ({ text: \`echo: \${text}\` }),
+})
+`
+)
+writeFileSync(
+  GATEWAY_WIRING_FILE,
+  `import { wireGateway } from '#pikku/gateway'
+import { verifierWebhookReply } from '../functions/verifier-gateway.functions.js'
+
+wireGateway({
+  name: 'verifier-webhook',
+  type: 'webhook',
+  route: '${GATEWAY_ROUTE}',
+  adapter: {
+    name: 'verifier',
+    parse: (data: any) => ({ senderId: 'verifier', text: data.text, raw: data }),
+    send: async () => {},
+    init: async () => {},
+    close: async () => {},
+  },
+  func: verifierWebhookReply,
+})
+`
+)
 
 console.log('Setting up: running pikku codegen + deploy plan (cloudflare)...')
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
+execSync(`node ${PIKKU_BIN} all`, {
+  cwd: ADDON_DIR,
+  stdio: 'pipe',
+  timeout: 60_000,
+})
+mkdirSync(join(DB_DIALECT_DIR, 'sqlite'), { recursive: true })
+mkdirSync(join(FUNCTIONS_DIR, 'node_modules', '@verifier'), { recursive: true })
+rmSync(ADDON_LINK, { force: true })
+symlinkSync(ADDON_DIR, ADDON_LINK, 'dir')
+writeFileSync(
+  ADDON_WIRING_FILE,
+  `import { wireAddon } from '#pikku/addon'
+
+wireAddon({
+  name: 'kyselyStandIn',
+  package: '@verifier/contrib-kysely',
+  contributors: ['kysely-stand-in'],
+})
+`
+)
 execSync(`node ${PIKKU_BIN}`, {
   cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
   timeout: 60_000,
 })
+mkdirSync(join(FUNCTIONS_DIR, '.pikku', 'db'), { recursive: true })
+writeFileSync(
+  COERCION_FILE,
+  `export const coercionMap = ${JSON.stringify(COERCION_MAP, null, 2)} as const\n`
+)
 execSync(
   `node ${PIKKU_BIN} deploy plan --provider cloudflare --result-file .deploy/cloudflare/plan-result.json`,
   {
@@ -393,6 +508,82 @@ check('every worker unit has entry.ts', () => {
     if (u === SERVER_UNIT_NAME || u === 'pikku-server-proxy') continue
     if (!existsSync(join(getUnitPath(u), 'entry.ts')))
       throw new Error(`${u} missing entry.ts`)
+  }
+})
+
+// --- wireGateway (#1906) ---
+const manifestGateways = ((deploymentManifest as Record<string, unknown>)
+  ?.gateways ?? []) as Array<{ name: string; route: string; unitName: string }>
+const unitBootstrap = (unitName: string) =>
+  readText(join(getUnitPath(unitName), '.pikku', 'pikku-bootstrap.gen.ts'))
+check('manifest lists the webhook gateway', () => {
+  const gateway = manifestGateways.find((g) => g.name === 'verifier-webhook')
+  if (!gateway)
+    throw new Error('verifier-webhook missing from manifest.gateways')
+  if (gateway.route !== GATEWAY_ROUTE)
+    throw new Error(`Expected route ${GATEWAY_ROUTE}, got ${gateway.route}`)
+})
+check('the gateway unit routes the webhook and holds its handler', () => {
+  const gateway = manifestGateways.find((g) => g.name === 'verifier-webhook')
+  const unit = deploymentManifest?.units?.find(
+    (u) => u.name === gateway?.unitName
+  ) as
+    | {
+        functionIds: string[]
+        handlers: Array<{
+          type: string
+          routes?: Array<{ route: string; method: string }>
+        }>
+      }
+    | undefined
+  if (!unit) throw new Error(`No unit ${gateway?.unitName}`)
+  if (!unit.functionIds.includes('verifierWebhookReply'))
+    throw new Error(`Handler not bundled: ${unit.functionIds.join(', ')}`)
+  const routes = unit.handlers.flatMap((h) => h.routes ?? [])
+  if (!routes.some((r) => r.route === GATEWAY_ROUTE && r.method === 'POST'))
+    throw new Error(`POST ${GATEWAY_ROUTE} not routed`)
+  if (!unitBootstrap(gateway!.unitName).includes('pikku-gateway-wirings.gen'))
+    throw new Error('gateway unit does not import the gateway wiring')
+})
+check('a unit without the gateway does not import its wiring', () => {
+  if (unitBootstrap('greet').includes('pikku-gateway-wirings.gen'))
+    throw new Error('greet imports the gateway wiring')
+})
+
+// --- Column coercion (#1913) ---
+check('a worker entry applies the generated coercion map', () => {
+  const unit = getUnitPath('greet')
+  const services = readText(join(unit, 'platform-services.gen.ts'))
+  if (!services.includes('// kysely-coercion'))
+    throw new Error(
+      'platform services do not run the kysely-coercion contributor'
+    )
+  if (!services.includes(JSON.stringify(COERCION_MAP)))
+    throw new Error('platform services do not carry the coercion map')
+  if (
+    services.indexOf('// kysely-stand-in') >
+    services.indexOf('// kysely-coercion')
+  )
+    throw new Error('coercion runs before the contributor providing kysely')
+  if (!readText(join(unit, 'bundle.js')).includes('createCoercionPlugin'))
+    throw new Error('the unit bundle does not contain createCoercionPlugin')
+})
+
+// --- Lazy addon registration (#1497) ---
+// No worker unit in this template wires an addon; verifiers/addon-treeshake
+// checks the deferred imports themselves. Here: every worker bootstrap exports
+// loadAddons() and every worker entry awaits it before building services.
+check('worker entries await loadAddons() from a lazy bootstrap', () => {
+  const workers = unitDirs.filter((u) =>
+    existsSync(join(getUnitPath(u), '.pikku', 'pikku-bootstrap.gen.ts'))
+  )
+  if (workers.length === 0) throw new Error('no worker unit bootstraps')
+  for (const u of workers) {
+    if (u === SERVER_UNIT_NAME) continue
+    if (!unitBootstrap(u).includes('export const loadAddons'))
+      throw new Error(`${u}: bootstrap has no loadAddons`)
+    if (!readText(join(getUnitPath(u), 'entry.ts')).includes('loadAddons?.()'))
+      throw new Error(`${u}: entry does not await loadAddons`)
   }
 })
 

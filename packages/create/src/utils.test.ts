@@ -260,47 +260,6 @@ describe('Functions Test Suite', () => {
     })
   })
 
-  /**
-   * StackBlitz cannot serve a dotfile directory, so the generated output is
-   * `pikku-gen` there. The alias has to follow it, or a scaffolded StackBlitz
-   * project resolves `#pikku` to a directory that was never written.
-   */
-  test('replaceFunctionReferences: follows the alias to pikku-gen on stackblitz', () => {
-    const testDir = path.join(tempRoot, 'aliasStackblitz')
-    fs.mkdirSync(testDir, { recursive: true })
-    fs.writeFileSync(
-      path.join(testDir, 'package.json'),
-      JSON.stringify({
-        imports: {
-          '#pikku/*.js': './.pikku/*.ts',
-          '#pikku/*': './.pikku/*/index.ts',
-        },
-      }),
-      'utf-8'
-    )
-    fs.writeFileSync(
-      path.join(testDir, 'index.ts'),
-      `import '#pikku/pikku-bootstrap.gen.js'`,
-      'utf-8'
-    )
-
-    replaceFunctionReferences(testDir, true)
-
-    const pkg = JSON.parse(
-      fs.readFileSync(path.join(testDir, 'package.json'), 'utf-8')
-    )
-    assert.deepStrictEqual(pkg.imports, {
-      '#pikku/*.js': './pikku-gen/*.ts',
-      '#pikku/*': './pikku-gen/*/index.ts',
-    })
-
-    assert.equal(
-      fs.readFileSync(path.join(testDir, 'index.ts'), 'utf-8'),
-      `import '#pikku/pikku-bootstrap.gen.js'`,
-      'The alias itself is stable — only what it points at moves'
-    )
-  })
-
   test('cleanTSConfig: removes extends', () => {
     const testDir = path.join(tempRoot, 'tsconfigTest')
     fs.mkdirSync(testDir, { recursive: true })
@@ -406,6 +365,9 @@ describe('Functions Test Suite', () => {
     assert.equal(config.options.typeAware, true)
     assert.equal(config.rules['typescript/no-misused-promises'], 'error')
     assert.equal(config.rules['typescript/no-floating-promises'], 'error')
+    assert.ok(config.rules['no-restricted-imports'])
+    assert.ok(config.rules['no-restricted-properties'])
+    assert.ok(config.overrides[0].files.includes('**/start.ts'))
 
     // second run, and a user-owned file: nothing is overwritten
     fs.writeFileSync(configPath, '{"mine":true}')

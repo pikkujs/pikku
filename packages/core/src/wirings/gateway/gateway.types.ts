@@ -85,6 +85,7 @@ export interface GatewayAdapter {
   ): WebhookVerificationResult | Promise<WebhookVerificationResult>
 }
 
+/** Builds a gateway adapter from the singleton services, for an adapter that needs a token or client. Called once per gateway. */
 export type GatewayAdapterFactory = (
   services: CoreSingletonServices
 ) => GatewayAdapter | Promise<GatewayAdapter>
@@ -99,6 +100,7 @@ export interface PikkuGateway {
 /** 'webhook' the platform POSTs to us, 'websocket' the client connects to us, 'listener' no route at all. */
 export type GatewayTransportType = 'webhook' | 'websocket' | 'listener'
 
+/** The configuration `wireGateway` takes: transport, route, adapter, handler and middleware. */
 export type CoreGateway<
   PikkuFunctionConfig = CorePikkuFunctionConfig<any, any>,
   PikkuMiddleware extends CorePikkuMiddleware = CorePikkuMiddleware,
@@ -134,4 +136,5 @@ export type GatewayMeta = CommonWireMeta & {
   gateway: true
 }
 
+/** Inspector-generated metadata for every wired gateway, keyed by name. */
 export type GatewaysMeta = Record<string, GatewayMeta>

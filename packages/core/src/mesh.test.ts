@@ -1,0 +1,309 @@
+import { describe, test, beforeEach } from 'node:test'
+import assert from 'node:assert'
+import { buildMeshHeaders } from './mesh.js'
+import { pikkuMeshAuthMiddleware } from './middleware/mesh-auth.js'
+import { resetPikkuState } from './pikku-state.js'
+import { WeakKeyMaterialError } from './errors/errors.js'
+import { createSecretValue } from './classification/secret-value.js'
+
+beforeEach(() => {
+  resetPikkuState()
+})
+
+const algorithmName = (algorithm: AlgorithmIdentifier): string =>
+  typeof algorithm === 'string' ? algorithm : algorithm.name
+
+const STRONG_SECRET = 'a'.repeat(43)
+const WEAK_SECRET = 'dev-mesh-secret'
+
+const createSecrets = (secret: string) => ({
+  hasSecret: async (key: string) => key === 'PIKKU_MESH_SECRET',
+  getSecret: async (key: string) => {
+    if (key === 'PIKKU_MESH_SECRET') return createSecretValue(secret)
+    throw new Error(`Secret ${key} not found`)
+  },
+})
+
+/**
+ * Signing is deliberately free here so the round trip exercises only the session encryption.
+ */
+const createJWT = () => ({
+  encode: async (_expiresIn: unknown, payload: unknown) =>
+    Buffer.from(JSON.stringify(payload)).toString('base64url'),
+  decode: async (token: string) =>
+    JSON.parse(Buffer.from(token, 'base64url').toString('utf-8')),
+})
+
+const createRequest = (
+  headers: Record<string, string>,
+  path = '/mesh/rpc/myFunc'
+) => ({
+  header: (name: string) => headers[name.toLowerCase()] || headers[name],
+  path: () => path,
+  method: () => 'POST',
+})
+
+const roundTrip = async (secret: string, session: unknown) => {
+  const jwt = createJWT()
+  const secrets = createSecrets(secret)
+
+  const headers = await buildMeshHeaders(
+    jwt as any,
+    secrets as any,
+    'myFunc',
+    session
+  )
+
+  let received: unknown
+  await pikkuMeshAuthMiddleware(
+    { secrets, jwt } as any,
+    {
+      http: {
+        request: createRequest({ authorization: headers.authorization! }),
+      },
+      setInitialSession: async (s: unknown) => {
+        received = s
+      },
+    } as any,
+    async () => {}
+  )
+  return received
+}
+
+describe('mesh RPC session round trip', () => {
+  test('sends the caller as traceparent and no legacy header', async () => {
+    const traceparent =
+      '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01'
+    const headers = await buildMeshHeaders(
+      createJWT() as any,
+      createSecrets(STRONG_SECRET) as any,
+      'myFunc',
+      undefined,
+      traceparent
+    )
+    assert.equal(headers.traceparent, traceparent)
+    assert.deepEqual(Object.keys(headers).sort(), [
+      'authorization',
+      'content-type',
+      'traceparent',
+    ])
+  })
+
+  test('a verified mesh caller continues its trace on the receiver', async () => {
+    const traceparent =
+      '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01'
+    const secrets = createSecrets(STRONG_SECRET)
+    const jwt = createJWT()
+    const headers = await buildMeshHeaders(
+      jwt as any,
+      secrets as any,
+      'myFunc',
+      undefined,
+      traceparent
+    )
+    const wire: any = {
+      traceId: 'a'.repeat(32),
+      trace: {
+        traceId: 'a'.repeat(32),
+        spanId: 'b'.repeat(16),
+        sampled: true,
+      },
+      http: { request: createRequest(headers) },
+    }
+    await pikkuMeshAuthMiddleware({ secrets, jwt } as any, wire, async () => {})
+    assert.equal(wire.traceId, '4bf92f3577b34da6a3ce929d0e0e4736')
+    assert.equal(wire.trace.parentSpanId, '00f067aa0ba902b7')
+    assert.equal(wire.trace.spanId, 'b'.repeat(16))
+  })
+
+  test('a caller that fails verification cannot set the trace', async () => {
+    const secrets = createSecrets(STRONG_SECRET)
+    const jwt = createJWT()
+    const wire: any = {
+      traceId: 'a'.repeat(32),
+      trace: {
+        traceId: 'a'.repeat(32),
+        spanId: 'b'.repeat(16),
+        sampled: true,
+      },
+      http: {
+        request: createRequest({
+          authorization: 'Bearer forged',
+          traceparent:
+            '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+        }),
+      },
+    }
+    await assert.rejects(
+      pikkuMeshAuthMiddleware({ secrets, jwt } as any, wire, async () => {})
+    )
+    assert.equal(wire.traceId, 'a'.repeat(32))
+  })
+
+  test('round-trips the session through header build and middleware verify', async () => {
+    const session = { userId: 'user-1', role: 'admin' }
+    assert.deepStrictEqual(await roundTrip(STRONG_SECRET, session), session)
+  })
+
+  test('a header built with one secret is rejected by a peer holding another', async () => {
+    const jwt = createJWT()
+    const headers = await buildMeshHeaders(
+      jwt as any,
+      createSecrets(STRONG_SECRET) as any,
+      'myFunc',
+      { userId: 'user-1' }
+    )
+
+    await assert.rejects(() =>
+      pikkuMeshAuthMiddleware(
+        { secrets: createSecrets('b'.repeat(43)), jwt } as any,
+        {
+          http: {
+            request: createRequest({ authorization: headers.authorization! }),
+          },
+          setInitialSession: async () => {},
+        } as any,
+        async () => {}
+      )
+    )
+  })
+
+  test('a full round trip derives one HKDF key per hop and never runs a password KDF', async (t) => {
+    const subtle = globalThis.crypto.subtle
+    const importKey = t.mock.method(subtle, 'importKey')
+    const deriveKey = t.mock.method(subtle, 'deriveKey')
+    const deriveBits = t.mock.method(subtle, 'deriveBits')
+    const session = { userId: 'user-1', role: 'admin' }
+    assert.deepStrictEqual(await roundTrip(STRONG_SECRET, session), session)
+
+    assert.deepStrictEqual(
+      deriveKey.mock.calls.map((call) => algorithmName(call.arguments[0])),
+      ['HKDF', 'HKDF']
+    )
+    assert.deepStrictEqual(
+      importKey.mock.calls.map((call) => algorithmName(call.arguments[2])),
+      ['HKDF', 'HKDF']
+    )
+    assert.strictEqual(deriveBits.mock.callCount(), 0)
+  })
+})
+
+describe('PIKKU_MESH_SECRET strength', () => {
+  test('buildMeshHeaders rejects a secret shorter than 32 characters', async () => {
+    await assert.rejects(
+      () =>
+        buildMeshHeaders(
+          createJWT() as any,
+          createSecrets(WEAK_SECRET) as any,
+          'myFunc',
+          { userId: 'user-1' }
+        ),
+      (err: unknown) => err instanceof WeakKeyMaterialError
+    )
+  })
+
+  test('buildMeshHeaders rejects a weak secret even with no session to encrypt', async () => {
+    await assert.rejects(
+      () =>
+        buildMeshHeaders(
+          createJWT() as any,
+          createSecrets(WEAK_SECRET) as any,
+          'myFunc'
+        ),
+      (err: unknown) => err instanceof WeakKeyMaterialError
+    )
+  })
+
+  test('the middleware rejects a weak secret rather than authenticating with it', async () => {
+    const jwt = createJWT()
+    const headers = await buildMeshHeaders(
+      jwt as any,
+      createSecrets(STRONG_SECRET) as any,
+      'myFunc',
+      { userId: 'user-1' }
+    )
+
+    await assert.rejects(
+      () =>
+        pikkuMeshAuthMiddleware(
+          { secrets: createSecrets(WEAK_SECRET), jwt } as any,
+          {
+            http: {
+              request: createRequest({ authorization: headers.authorization! }),
+            },
+            setInitialSession: async () => {},
+          } as any,
+          async () => {}
+        ),
+      (err: unknown) => err instanceof WeakKeyMaterialError
+    )
+  })
+
+  test('a secret of exactly 32 characters is accepted', async () => {
+    const session = { userId: 'user-1' }
+    assert.deepStrictEqual(await roundTrip('x'.repeat(32), session), session)
+  })
+})
+
+describe('reading PIKKU_MESH_SECRET', () => {
+  test('sends an unauthenticated call when no secret is configured', async () => {
+    const headers = await buildMeshHeaders(
+      createJWT() as any,
+      {
+        hasSecret: async () => false,
+        getSecret: async () => {
+          throw new Error('not found')
+        },
+      } as any,
+      'myFunc'
+    )
+    assert.strictEqual(headers.authorization, undefined)
+  })
+
+  test('sends an unauthenticated call when there is no secrets service', async () => {
+    const headers = await buildMeshHeaders(
+      createJWT() as any,
+      undefined,
+      'myFunc'
+    )
+    assert.strictEqual(headers.authorization, undefined)
+  })
+
+  test('fails closed when the secrets backend errors on read', async () => {
+    const backendError = new Error('vault unreachable')
+    await assert.rejects(
+      () =>
+        buildMeshHeaders(
+          createJWT() as any,
+          {
+            hasSecret: async () => true,
+            getSecret: async () => {
+              throw backendError
+            },
+          } as any,
+          'myFunc'
+        ),
+      (err: unknown) =>
+        err instanceof Error &&
+        err.message.includes('PIKKU_MESH_SECRET') &&
+        err.cause === backendError
+    )
+  })
+
+  test('fails closed when the secrets backend errors on lookup', async () => {
+    await assert.rejects(
+      () =>
+        buildMeshHeaders(
+          createJWT() as any,
+          {
+            hasSecret: async () => {
+              throw new Error('vault unreachable')
+            },
+            getSecret: async () => createSecretValue(STRONG_SECRET),
+          } as any,
+          'myFunc'
+        ),
+      /PIKKU_MESH_SECRET/
+    )
+  })
+})

@@ -1,7 +1,8 @@
 import { describe, test } from 'node:test'
+import { InMemorySessionStore } from '../../services/in-memory-session-store.js'
 import assert from 'node:assert/strict'
 
-import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { pikkuState } from '../../pikku-state.js'
 
 const silentLogger = { error() {}, info() {}, warn() {}, debug() {} }
@@ -25,6 +26,7 @@ function capturingRpcService(): {
 describe('queued workflow steps carry the run wire pikkuUserId', () => {
   test('invokeStepRpc merges run.wire.pikkuUserId into the step wire override', async () => {
     pikkuState(null, 'package', 'singletonServices', {
+      sessionStore: new InMemorySessionStore(),
       logger: silentLogger,
     } as any)
 
@@ -59,6 +61,7 @@ describe('queued workflow steps carry the run wire pikkuUserId', () => {
 
   test('no pikkuUserId key is injected when the run wire has none', async () => {
     pikkuState(null, 'package', 'singletonServices', {
+      sessionStore: new InMemorySessionStore(),
       logger: silentLogger,
     } as any)
 

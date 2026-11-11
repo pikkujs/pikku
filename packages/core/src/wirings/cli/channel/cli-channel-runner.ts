@@ -7,6 +7,14 @@ const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
   console.log(JSON.stringify(data))
 }
 
+/**
+ * Runs a CLI program whose commands execute on a server, sending each parsed command over a pikku WebSocket and rendering the result locally.
+ *
+ * Parsing and help happen on the client. Exits the process with status 1 when
+ * the program does not exist or the arguments do not parse; resolves when the
+ * server reports the command complete or the socket closes, and rejects on a
+ * socket or renderer error.
+ */
 export async function executeCLIViaChannel({
   programName,
   pikkuWS,

@@ -1,8 +1,21 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { createServer } from 'node:net'
+import { tmpdir } from 'node:os'
+import { delimiter, join } from 'node:path'
 
-import { assertPortFree, createReadyBarrier } from './spawn-dev-server.js'
+import {
+  assertPortFree,
+  createReadyBarrier,
+  spawnDevServer,
+} from './spawn-dev-server.js'
 import { SERVER_READY_MARKER, serverReadyLine } from './server-ready.js'
 
 const listenOnFreePort = (): Promise<{
@@ -85,4 +98,77 @@ test('a server that goes quiet times out rather than hanging', async () => {
     () => barrier.wait({ timeoutMs: 20, pollMs: 1 }),
     (error: Error) => error.message.includes('did not report ready within')
   )
+})
+
+/** Spawns a stand-in for `npx`, so this needs no built app. */
+const withSpawnedServer = async (
+  run: (
+    server: Awaited<ReturnType<typeof spawnDevServer>>,
+    isAlive: () => boolean
+  ) => Promise<void>
+) => {
+  const dir = mkdtempSync(join(tmpdir(), 'spawn-dev-server-'))
+  const pidFile = join(dir, 'pid')
+  const npx = join(dir, 'npx')
+  writeFileSync(npx, `#!/bin/sh\necho $$ > "${pidFile}"\nexec sleep 30\n`)
+  chmodSync(npx, 0o755)
+  const { port, close } = await listenOnFreePort()
+  await close()
+
+  const server = await spawnDevServer({
+    cwd: dir,
+    port,
+    env: { PATH: `${dir}${delimiter}${process.env.PATH}` },
+    onOutput: () => {},
+  })
+  let pid = 0
+  try {
+    await waitFor(() => {
+      pid = Number(readFileSync(pidFile, 'utf8').trim())
+      return pid > 0
+    })
+    await run(server, () => {
+      try {
+        process.kill(pid, 0)
+        return true
+      } catch {
+        return false
+      }
+    })
+  } finally {
+    server.kill('SIGKILL')
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+const waitFor = async (condition: () => boolean, timeoutMs = 5_000) => {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    try {
+      if (condition()) return true
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  return false
+}
+
+// `process.once('exit', server.stop)` calls it with the exit code. Read as a
+// signal, a clean exit's 0 only asks whether the group is alive, so the server
+// outlived every passing run and held its port against the next.
+test('stop used as an exit listener still stops the server', async () => {
+  await withSpawnedServer(async (server, isAlive) => {
+    const exitListener: (code: number) => void = server.stop
+
+    exitListener(0)
+
+    assert.ok(await waitFor(() => !isAlive()), 'the server survived stop')
+  })
+})
+
+test('kill sends the signal it is given', async () => {
+  await withSpawnedServer(async (server, isAlive) => {
+    server.kill('SIGKILL')
+
+    assert.ok(await waitFor(() => !isAlive()), 'the server survived kill')
+  })
 })

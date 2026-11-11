@@ -8,7 +8,7 @@ import {
   signQueueIdentity,
 } from './queue-identity.js'
 import {
-  REMOTE_SESSION_INFO,
+  MESH_SESSION_INFO,
   signWithKeyMaterial,
   verifyWithKeyMaterial,
 } from '../../crypto-utils.js'
@@ -336,7 +336,7 @@ describe('queue identity key derivation', () => {
       await verifyWithKeyMaterial(
         QUEUE_IDENTITY_SECRET_NAME,
         SECRET,
-        REMOTE_SESSION_INFO,
+        MESH_SESSION_INFO,
         payload,
         signature
       ),

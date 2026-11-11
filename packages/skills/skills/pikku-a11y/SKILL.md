@@ -1,9 +1,7 @@
 ---
 name: pikku-a11y
 description: >-
-  Accessibility rules (WCAG 2.2) for shadcn/Tailwind app UI: labeled inputs, real buttons/links, keyboard and focus, contrast and not-color-alone, modals, reduced motion.
-  TRIGGER when: building forms or any interactive UI, icon-only buttons, modals/drawers, tables/lists with actions, keyboard/focus work, or the user mentions accessibility / screen readers / WCAG.
-  DO NOT TRIGGER when: working on backend functions, database, or deployment with no UI.
+  WCAG 2.2 accessibility for shadcn/Tailwind UI: forms, labels, icon buttons, modals, tables with actions, keyboard, focus, contrast, reduced motion, screen readers.
 installGroups: [client]
 ---
 

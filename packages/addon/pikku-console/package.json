@@ -1,6 +1,6 @@
 {
   "name": "@pikku/addon-console",
-  "version": "0.12.62",
+  "version": "0.12.69",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -28,10 +28,12 @@
       "types": "./dist/src/channels.d.ts",
       "import": "./dist/src/channels.js",
       "default": "./dist/src/channels.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.tsbuildinfo"
   ],
   "scripts": {
     "build": "rm -rf dist && pikku all && tsc && (cp .pikku/addon/rpc/*.d.ts dist/.pikku/addon/rpc/ 2>/dev/null || true) && (cp .pikku/addon/agent/*.d.ts dist/.pikku/addon/agent/ 2>/dev/null || true) && (cp .pikku/addon/workflow/*.d.ts dist/.pikku/addon/workflow/ 2>/dev/null || true) && (mkdir -p dist/.pikku/addon/function && cp .pikku/addon/function/*-verbose.gen.json dist/.pikku/addon/function/ 2>/dev/null || true) && (mkdir -p dist/types && cp types/*.d.ts dist/types/) && (mkdir -p dist/.pikku/addon/db && cp .pikku/addon/db/pikku-db-meta.gen.json dist/.pikku/addon/db/) && (mkdir -p dist/.pikku/addon/console && cp .pikku/addon/console/pikku-addon-meta.gen.json dist/.pikku/addon/console/)",
@@ -41,9 +43,9 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/better-auth": "^0.12.56",
-    "@pikku/cli": "^0.12.189",
-    "@pikku/core": "^0.12.142"
+    "@pikku/better-auth": "^0.12.64",
+    "@pikku/cli": "^0.12.208",
+    "@pikku/core": "^0.12.154"
   },
   "peerDependenciesMeta": {
     "@pikku/better-auth": {
@@ -51,18 +53,18 @@
     }
   },
   "devDependencies": {
-    "@pikku/better-auth": "^0.12.56",
-    "@pikku/cli": "^0.12.189",
-    "@pikku/core": "^0.12.142",
+    "@pikku/better-auth": "^0.12.64",
+    "@pikku/cli": "^0.12.208",
+    "@pikku/core": "^0.12.154",
     "@standard-schema/spec": "^1.1.0",
     "@types/json-schema": "^7.0.15",
-    "oauth2-mock-server": "^9.1.0"
+    "oauth2-mock-server": "^9.3.0"
   },
   "dependencies": {
-    "@pikku/code-edit": "^0.12.7",
-    "@pikku/knowledge": "^0.12.20",
+    "@pikku/code-edit": "^0.12.13",
+    "@pikku/knowledge": "^0.12.21",
     "json-schema": "^0.4.0",
-    "open": "^11.0.1"
+    "open": "^11.0.4"
   },
   "license": "MIT"
 }
