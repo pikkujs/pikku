@@ -1649,6 +1649,7 @@
         "@pikku/fetch": "^0.12.13",
         "@pikku/jose": "^0.12.10",
         "@pikku/next": "^0.12.13",
+        "@pikku/schedule": "^0.12.12",
         "better-auth": "^1.7.10",
         "next": "16.4.2",
         "react": "^19",
