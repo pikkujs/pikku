@@ -77,6 +77,7 @@
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",
     "./trace": "./dist/trace.js",
+    "./otlp": "./dist/otlp/index.js",
     "./flag": "./dist/wirings/flag/index.js",
     "./services/local-meta": "./dist/services/meta-service.js",
     "./services/in-memory-queue": "./dist/wirings/queue/in-memory-queue-service.js",

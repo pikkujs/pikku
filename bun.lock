@@ -2417,6 +2417,16 @@
         "tsx": "^4.23.15",
       },
     },
+    "verifiers/otlp": {
+      "name": "@pikku/verifiers-otlp",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "^26",
+        "tsx": "^4.23.15",
+      },
+    },
     "verifiers/pikku-studio": {
       "name": "@pikku/verifiers-pikku-studio",
       "version": "1.0.0",
@@ -3693,6 +3703,8 @@
     "@pikku/verifiers-middleware-and-permissions": ["@pikku/verifiers-middleware-and-permissions@workspace:verifiers/middleware-and-permissions"],
 
     "@pikku/verifiers-next-better-auth": ["@pikku/verifiers-next-better-auth@workspace:verifiers/next-better-auth"],
+
+    "@pikku/verifiers-otlp": ["@pikku/verifiers-otlp@workspace:verifiers/otlp"],
 
     "@pikku/verifiers-pikku-studio": ["@pikku/verifiers-pikku-studio@workspace:verifiers/pikku-studio"],
 

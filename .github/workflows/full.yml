@@ -386,6 +386,7 @@ jobs:
             secrets,
             scopes,
             tracing,
+            otlp,
             feature-flags,
             product-hooks,
             product-hooks-none,

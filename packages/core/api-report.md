@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3451 observable things**: 1168 exported names, plus
-2283 members on the classes and interfaces among them, reachable
-through 64 entry points.
+**3574 observable things**: 1194 exported names, plus
+2380 members on the classes and interfaces among them, reachable
+through 65 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -22,10 +22,12 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel` | 33 | 33 | 92 |
 | `./types` | 24 | 21 | 84 |
 | `./queue` | 28 | 28 | 75 |
+| `./otlp` | 18 | 18 | 72 |
 | `./http` | 27 | 27 | 58 |
 | `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
 | `./trigger` | 42 | 42 | 13 |
+| `./testing` | 18 | 18 | 32 |
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 16 | 14 | 27 |
@@ -48,7 +50,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scheduler` | 10 | 10 | 8 |
 | `./scope` | 17 | 17 | 0 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
-| `./testing` | 10 | 10 | 7 |
 | `./addon` | 14 | 14 | 2 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./rpc` | 9 | 9 | 6 |
@@ -6001,6 +6002,113 @@ export interface Tracer {
 traceWire: (traceparent?: unknown) => { traceId: string; trace: TraceContext; }
 ```
 
+## ./otlp
+
+```ts
+export interface ContextStorage {
+  run<T>(context: TraceContext, fn: () => T): T
+  get(): TraceContext | undefined
+}
+createRuntimeTelemetry: (env: Env, options: RuntimeTelemetryOptions) => RuntimeTelemetry
+isLoopbackHost: (hostname: string) => boolean
+OTLP_QUEUE_LIMITS: { readonly spans: 2048; readonly logs: 4096; readonly metrics: 512; }
+export interface OtlpExporterOptions {
+  endpoint: string
+  headers?: Record<string, string>
+  headersBySignal?: Partial< Record<'traces' | 'logs' | 'metrics', Record<string, string>> >
+  resource: OtlpResource
+  flushIntervalMs?: number
+  maxBatch?: number
+  fetch?: typeof fetch
+  logger?: Pick<Logger, 'warn'> & Partial<Pick<Logger, 'debug'>>
+  retryDelayMs?: number
+  backoffAfterFailures?: number
+  backoffMs?: number
+  requestTimeoutMs?: number
+  now?: () => number
+}
+export class OtlpHttpExporter {
+  constructor(private readonly options: OtlpExporterOptions)
+  get stats(): { dropped: { spans: number; logs: number; metrics: number; }; attributesDropped: number; }
+  exportSpans(spans: FinishedSpan[]): void
+  exportLogs(records: OtlpLogRecord[]): void
+  exportMetrics(points: OtlpMetricPoint[]): void
+  async flush(): Promise<void>
+  async close(): Promise<void>
+}
+export class OtlpLogger implements Logger {
+  constructor(private readonly inner: Logger, private readonly exporter: OtlpHttpExporter, private readonly options: OtlpLoggerOptions = {})
+  info(messageOrObj: unknown, ...meta: unknown[]): void
+  warn(messageOrObj: unknown, ...meta: unknown[]): void
+  error(messageOrObj: unknown, ...meta: unknown[]): void
+  debug(message: string, ...meta: unknown[]): void
+  trace(message: string, ...meta: unknown[]): void
+  setLevel(level: LogLevel): void
+  scope(traceId: string): Logger
+}
+export interface OtlpLoggerOptions {
+  minLevel?: LogLevel
+  currentContext?: () => TraceContext | undefined
+  traceId?: string
+}
+export interface OtlpLogRecord {
+  timeUnixNano?: bigint
+  severity: OtlpSeverity
+  body: string
+  attributes?: Record<string, SpanAttributeValue>
+  traceId?: string
+  spanId?: string
+}
+export interface OtlpMetricPoint {
+  name: string
+  unit?: string
+  kind: 'gauge' | 'sum'
+  value: number
+  integer?: boolean
+  timeUnixNano?: bigint
+  startTimeUnixNano?: bigint
+  attributes?: Record<string, SpanAttributeValue>
+}
+export interface OtlpResource {
+  serviceName: string
+  serviceVersion?: string
+  environment?: string
+  project?: string
+  stage?: string
+}
+export class OtlpTracer implements Tracer {
+  readonly stats: { started: number; dropped: number; }
+  constructor(private readonly exporter: OtlpHttpExporter, private readonly options: OtlpTracerOptions = {})
+  startSpan(name: string, context: TraceContext, options: { kind?: SpanKind; attributes?: Record<string, SpanAttributeValue>; startTimeUnixNano?: bigint } = {}): Span
+  runInSpan<T>(span: Span, fn: () => T): T
+  currentContext(): TraceContext | undefined
+  flush(): Promise<void>
+  close(): Promise<void>
+}
+export interface OtlpTracerOptions {
+  contextStorage?: ContextStorage
+}
+parseOtlpEndpoint: (endpoint: string, allowRemote: boolean) => URL
+parseOtlpHeaders: (raw: string | undefined) => Record<string, string>
+export interface RuntimeTelemetry {
+  enabled: boolean
+  tracer: Tracer
+  logger: Logger
+  recordSqlText: boolean
+  stopMetrics(): void
+  flush(): Promise<void>
+  close(): Promise<void>
+}
+export interface RuntimeTelemetryOptions {
+  logger: Logger
+  serviceName: string
+  version?: string
+  contextStorage?: ContextStorage
+  fetch?: typeof fetch
+}
+startProcessMetrics: (exporter: OtlpHttpExporter, options?: { everyMs?: number | undefined; }) => { stop(): void; }
+```
+
 ## ./flag
 
 ```ts
@@ -6820,6 +6928,44 @@ validateSchema: (logger: Logger, schemaService: SchemaService | undefined, schem
 
 ```ts
 clearPikkuRuntimeState: () => void
+export interface DecodedExport<T> {
+  resource: Record<string, DecodedValue>
+  items: T[]
+}
+export interface DecodedLog {
+  timeUnixNano: bigint
+  severityNumber: number
+  severityText: string
+  body: DecodedValue
+  attributes: Record<string, DecodedValue>
+  traceId?: string
+  spanId?: string
+}
+export interface DecodedMetric {
+  name: string
+  unit?: string
+  type: 'gauge' | 'sum'
+  monotonic?: boolean
+  temporality?: number
+  points: { startTimeUnixNano: bigint; timeUnixNano: bigint; value: number | bigint; attributes: Record<string, DecodedValue> }[]
+}
+export interface DecodedSpan {
+  traceId: string
+  spanId: string
+  parentSpanId?: string
+  name: string
+  kind: number
+  startTimeUnixNano: bigint
+  endTimeUnixNano: bigint
+  attributes: Record<string, DecodedValue>
+  events: { name: string; timeUnixNano: bigint; attributes: Record<string, DecodedValue> }[]
+  status: { code: number; message?: string }
+}
+export type DecodedValue =
+  { string: string } | { bool: boolean } | { int: bigint } | { double: number }
+decodeLogs: (body: Uint8Array<ArrayBufferLike>) => DecodedExport<DecodedLog>
+decodeMetrics: (body: Uint8Array<ArrayBufferLike>) => DecodedExport<DecodedMetric>
+decodeTraces: (body: Uint8Array<ArrayBufferLike>) => DecodedExport<DecodedSpan>
 defineEventHubServiceTests: (name: string, makeHub: () => EventHubService<Record<string, any>> | Promise<EventHubService<Record<string, any>>>, { deliversToHandlers }?: { deliversToHandlers?: boolean | undefined; }) => void
 defineQueueIdentityTransportTests: (name: string, create: (services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => QueueIdentityTransport) => void
 defineQueueTraceConformance: (name: string, create: () => Promise<QueueTraceAdapter>, { settleMs }?: { settleMs?: number | undefined; }) => void
