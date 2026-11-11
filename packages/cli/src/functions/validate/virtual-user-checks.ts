@@ -114,9 +114,7 @@ const countVirtualUsers = async (
  * Two shapes count. `pikkuVirtualUser()` from `@pikku/better-auth` is the one the
  * scaffold wires, and a hand-rolled `/sign-in/virtual-user` route is the one a project
  * that does not use better-auth ends up with. Both terminate at the same
- * endpoint, so either satisfies the check. The deprecated `virtualUser()` alias is
- * matched too — an app on an older version wires the same plugin under that
- * name, which was removed from the library.
+ * endpoint, so either satisfies the check.
  */
 const hasVirtualUserSignIn = async (
   sourceFiles: string[]
@@ -126,7 +124,7 @@ const hasVirtualUserSignIn = async (
     if (!text) continue
     const wiresPlugin =
       /@pikku\/better-auth/.test(text) &&
-      /(^|[^\w$.])(pikkuVirtualUser|virtualUser)\s*\(/.test(text)
+      /(^|[^\w$.])pikkuVirtualUser\s*\(/.test(text)
     if (wiresPlugin || /sign-in\/virtual-user/.test(text)) return true
   }
   return false
