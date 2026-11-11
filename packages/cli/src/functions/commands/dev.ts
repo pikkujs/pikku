@@ -79,8 +79,6 @@ import {
   setDevVirtualUserApiUrl,
 } from '../../server/virtual-user-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
-import { addGlobalMiddleware } from '@pikku/core/middleware'
-import { startRunTelemetry } from '../../utils/run-telemetry.js'
 import { servedFrontend } from '../../utils/frontend.js'
 import {
   betterAuthGeneratedSecrets,
@@ -228,12 +226,6 @@ export const dev = pikkuSessionlessFunc<
       config.runtimeDir ?? join(config.rootDir, '.pikku-runtime')
     )
     applyModelAliasOverride(logger, model, config.models)
-    // A parent only supervises: telemetry and coverage belong to the backend
-    // processes it starts, one each.
-    const telemetry =
-      plan.mode === 'inline'
-        ? startRunTelemetry({ rootDir: config.rootDir, command: 'dev' })
-        : undefined
     if (test) {
       process.env.PIKKU_TEST_RUN = 'true'
     }
@@ -456,7 +448,6 @@ export const dev = pikkuSessionlessFunc<
     }
 
     await loadUserBootstrap(pikkuDir)
-    if (telemetry?.middleware) addGlobalMiddleware([telemetry.middleware])
 
     // Scenario instrumentation exists only on a development server: the runner
     // calls it over RPC to reset and snapshot coverage and stub calls. It is

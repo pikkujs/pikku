@@ -45,7 +45,7 @@ describe(`StandaloneProviderAdapter contributors`, () => {
     )
     assert.match(
       source,
-      /eventHub,\n    \.\.\.platformServices,\n  \}\)/,
+      /eventHub,\n    \.\.\.\(__pikkuTelemetry\.enabled \? \{ tracer: __pikkuTelemetry\.tracer \} : \{\}\),\n    \.\.\.platformServices,\n  \}\)/,
       'contributed services must be spread last so they override the defaults'
     )
     assert.doesNotMatch(source, /const createPlatformServices = async/)
@@ -173,7 +173,7 @@ describe(`StandaloneProviderAdapter contributor server hooks`, () => {
     )
     assert.match(
       source,
-      /server\.enableExitOnSignals\(\{ beforeStop: async \(\) => \{ await __pikkuServerLifecycle\?\.beforeStop\?\.\(singletonServices\) \}, afterStop: async \(\) => \{ await __pikkuServerLifecycle\?\.afterStop\?\.\(singletonServices\) \} \}\)/
+      /server\.enableExitOnSignals\(\{ beforeStop: async \(\) => \{ await __pikkuServerLifecycle\?\.beforeStop\?\.\(singletonServices\) \}, afterStop: async \(\) => \{ await __pikkuServerLifecycle\?\.afterStop\?\.\(singletonServices\); await __pikkuTelemetry\.close\(\) \} \}\)/
     )
   })
 
@@ -190,7 +190,7 @@ describe(`StandaloneProviderAdapter contributor server hooks`, () => {
     })
     assert.match(
       source,
-      /afterStop: async \(\) => \{ await __pikkuServerLifecycle\?\.afterStop\?\.\(singletonServices\); await __pikkuPg\.close\(\) \}/
+      /afterStop: async \(\) => \{ await __pikkuServerLifecycle\?\.afterStop\?\.\(singletonServices\); await __pikkuPg\.close\(\); await __pikkuTelemetry\.close\(\) \}/
     )
   })
 })

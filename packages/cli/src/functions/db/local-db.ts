@@ -17,6 +17,7 @@ import { transformSync } from 'esbuild'
 import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
 import { CamelCasePlugin, Kysely, PostgresDialect, sql } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
+import { traceDialect, type TraceDriverOptions } from '@pikku/kysely'
 import {
   migrate,
   baselineMigrations,
@@ -1086,8 +1087,13 @@ export function loadClassifications(classificationsFile: string): unknown {
   }
 }
 
+/**
+ * `tracing` records db spans for the SQLite and Postgres-by-URL paths a served
+ * project uses; MySQL and the embedded PGlite are not wrapped.
+ */
 export async function createKysely<DB>(
-  resolved: ResolvedDb
+  resolved: ResolvedDb,
+  tracing?: Omit<TraceDriverOptions, 'system'>
 ): Promise<Kysely<DB>> {
   const coercionMap = await loadCoercionPlugin(resolved.coercionFile)
   const plugins = coercionMap
@@ -1100,6 +1106,7 @@ export async function createKysely<DB>(
       db: await openSqlite(resolved, resolved.dbFile),
       camelCase: resolved.camelCase,
       plugins,
+      tracing,
     })
   }
 
@@ -1118,7 +1125,10 @@ export async function createKysely<DB>(
       max: 10,
     })
     return new Kysely<DB>({
-      dialect: new PostgresDialect({ pool }),
+      dialect: traceDialect(new PostgresDialect({ pool }), {
+        ...tracing,
+        system: 'postgresql',
+      }),
       plugins: resolved.camelCase
         ? [new CamelCasePlugin(), ...plugins]
         : plugins,
