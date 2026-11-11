@@ -64,7 +64,13 @@ fields on. The name match is a substring, so it over-redacts (`pinned`,
 
 Message text and every exported string go through a best-effort scrub:
 `scheme://user:pw@` userinfo, `Bearer <x>`, `Authorization: ...` and
-`token|key|secret|password|passwd|pwd|sig|signature|code=<value>` pairs become
-`[redacted]`. Limits: the scrub is pattern based and cannot recognise a secret
-with no marker (a bare API key or password in prose). A secret in the message
-text can still leave; do not log one. A `SecretValue` serializes to `[secret]`.
+`token|key|secret|password|passwd|pwd|sig|signature|code=<value>` pairs,
+`password|passwd|pwd: <value>`, and `Cookie`/`Set-Cookie` header values become
+`[redacted]`. Input is clipped to 8 KB before scrubbing and every pattern is
+anchored on a literal (the URL scheme is bounded to 32 characters behind a
+lookbehind), so cost is linear: all patterns together measure under 20 ms on
+1 MB of hostile text, and a regression test holds the bound. Limits: the scrub is pattern based and cannot recognise a secret
+with no marker (a bare API key or password in prose). Known gaps: a raw JWT, provider keys
+(`AKIA...`, `ghp_...`), PEM blocks, url-encoded separators (`%3D`), and userinfo
+whose password contains `/`. A secret in the message text can still leave; do
+not log one. A `SecretValue` serializes to `[secret]`.

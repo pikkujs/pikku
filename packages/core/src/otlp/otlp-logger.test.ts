@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { LogLevel, type Logger } from '../services/logger.js'
 import { decodeLogs } from '../testing/otlp-decoder.js'
 import { OtlpHttpExporter } from './otlp-http-exporter.js'
-import { OtlpLogger } from './otlp-logger.js'
+import { OtlpLogger, scrubText, SCRUB_INPUT_LIMIT } from './otlp-logger.js'
 
 const setup = (options: ConstructorParameters<typeof OtlpLogger>[2] = {}) => {
   const bodies: Uint8Array[] = []
@@ -281,5 +281,52 @@ describe('OtlpLogger', () => {
     }
     assert.ok(text.includes('state=ok'))
     assert.ok(text.includes('[redacted]'))
+  })
+  test('Cookie headers and colon-form passwords are scrubbed', async () => {
+    const out = scrubText(
+      'Cookie: sid=abc; theme=dark\nSet-Cookie: s=zzz; Path=/\npassword: hunter2 pwd:p4 passwd : p5 done'
+    )
+    for (const leaked of [
+      'sid=abc',
+      'theme=dark',
+      's=zzz',
+      'hunter2',
+      'p4',
+      'p5',
+    ])
+      assert.equal(out.includes(leaked), false, leaked)
+    assert.ok(out.includes('done'))
+  })
+
+  test('scrubbing stays fast on 1 MB of hostile text', async () => {
+    const MB = 1 << 20
+    const rep = (unit: string) => unit.repeat(Math.ceil(MB / unit.length))
+    const shapes: Record<string, string> = {
+      a: 'a'.repeat(MB),
+      hex: rep('deadbeef0123'),
+      base64: rep('QUJDREVGR0hJSktM+/='),
+      spaces: ' '.repeat(MB),
+      'token=': rep('token='),
+      'Bearer ': rep('Bearer '),
+      'Authorization:': rep('Authorization: '),
+      'a://': rep('a://'),
+      'password:': rep('password: '),
+      'cookie :': rep('cookie : '),
+      '=': '='.repeat(MB),
+      quotes: '"'.repeat(MB),
+    }
+    for (const [name, text] of Object.entries(shapes)) {
+      const start = performance.now()
+      const out = scrubText(text)
+      const ms = performance.now() - start
+      assert.ok(ms < 20, `${name}: ${ms.toFixed(1)} ms`)
+      assert.ok(out.length <= SCRUB_INPUT_LIMIT * 4, name)
+    }
+    const { logger, sent } = setup({ fields: true })
+    const start = performance.now()
+    logger.info({ message: shapes.hex, blob: shapes.base64 })
+    assert.ok(performance.now() - start < 100)
+    const [record] = await sent()
+    assert.ok(record!.attributes.blob !== undefined)
   })
 })
