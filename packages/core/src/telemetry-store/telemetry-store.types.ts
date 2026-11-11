@@ -158,10 +158,15 @@ export interface TelemetryStore {
   /** Drop records older than `policy.days`. */
   retain?(policy: { days: number }): Promise<void>
 
-  /** Newest first, up to `q.limit`. */
+  /** Newest first, up to `q.limit` (default 100). */
   logs(scope: TelemetryScope, q: LogsQuery): Promise<LogRecord[]>
   logFacets(scope: TelemetryScope, q: { since?: number }): Promise<LogFacets>
-  /** Error root spans grouped by function, wire and message, most frequent first. */
+  /**
+   * Error root spans grouped by function, wire and message, most frequent
+   * first (ties: most recent first). Default `limit` 50. `sampleTraceId` is
+   * the trace of the latest failure in the group, by start time, not the
+   * largest id.
+   */
   failures(
     scope: TelemetryScope,
     q: { since: number; limit?: number }
@@ -174,23 +179,38 @@ export interface TelemetryStore {
     scope: TelemetryScope,
     q: { name?: string; since: number; until?: number; limit?: number }
   ): Promise<MetricPoint[]>
-  /** Root spans in `[since, until)`. */
+  /**
+   * Root spans in `[since, until)`. Default 30 buckets. Bucket width is
+   * `ceil((until - since) / buckets)` and buckets are aligned to `since` (the
+   * origin, as `date_bin(width, ts, since)` does), not to the epoch; `at` is
+   * the bucket start. Only non-empty buckets are returned.
+   */
   metricsSummary(
     scope: TelemetryScope,
     q: { since: number; until: number; buckets?: number }
   ): Promise<MetricsSummaryRow>
-  /** Every span of a trace, oldest first. An unknown trace is `[]`. */
+  /**
+   * Every span of a trace, oldest first; spans with the same start time order
+   * by span id ascending. An unknown trace is `[]`.
+   */
   trace(scope: TelemetryScope, traceId: string): Promise<SpanRecord[]>
-  /** Queue-wire root spans grouped by queue, most recently run first. */
+  /**
+   * Queue-wire root spans (a child span is never a job) grouped by queue, most
+   * recently run first. Default `limit` 50; `recent` holds the newest 10.
+   */
   queueJobs(
     scope: TelemetryScope,
     q: { since: number; limit?: number }
   ): Promise<QueueJobRow[]>
   /**
-   * Log records in ingestion order after `cursor`; `null` starts at the
-   * beginning. Walking the returned cursors yields every record exactly once,
-   * records sharing a timestamp included. With nothing new the same cursor
-   * comes back.
+   * Log records ordered by `at`, then a stable store-defined tiebreak, after
+   * `cursor`; `null` starts at the beginning. The cursor is opaque. The
+   * guarantee: every record visible at read time whose position is after the
+   * cursor is returned exactly once across successive pages, none duplicated or
+   * lost, records sharing a timestamp included. A record that arrives late with
+   * a position before the cursor is NOT guaranteed to be returned. With nothing
+   * new the same cursor comes back. A store over an append-only table must not
+   * overwrite rows that share a timestamp, or records would be lost.
    */
   tail(
     scope: TelemetryScope,
