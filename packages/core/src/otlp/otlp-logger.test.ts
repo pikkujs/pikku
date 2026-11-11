@@ -71,8 +71,8 @@ describe('OtlpLogger', () => {
     )
   })
 
-  test('an object becomes attributes, an Error loses its stack', async () => {
-    const { logger, sent } = setup()
+  test('with fields on, an object becomes attributes and an Error loses its stack', async () => {
+    const { logger, sent } = setup({ fields: true })
     logger.info({
       message: 'created',
       invoiceId: 'inv_1',
@@ -143,7 +143,7 @@ describe('OtlpLogger', () => {
     assert.doesNotThrow(() => logger.info('x'))
   })
   test('sensitive field names are redacted at any depth, whatever the casing', async () => {
-    const { logger, sent } = setup()
+    const { logger, sent } = setup({ fields: true })
     logger.info({
       message: 'login',
       token: 'tok-1',
@@ -154,7 +154,7 @@ describe('OtlpLogger', () => {
       user_password: 'p',
       sessionId: 'sess',
       userId: 'u1',
-      headers: { Authorization: 'Bearer nested', accept: 'json' },
+      meta: { Authorization: 'Bearer nested', accept: 'json' },
       list: [{ passwd: 'x', ok: 1 }],
     })
     const [record] = await sent()
@@ -171,8 +171,8 @@ describe('OtlpLogger', () => {
       assert.deepEqual(attrs[key], { string: '[redacted]' }, key)
     }
     assert.deepEqual(attrs.userId, { string: 'u1' })
-    assert.deepEqual(attrs.headers, {
-      string: '{"Authorization":"[redacted]","accept":"json"}',
+    assert.deepEqual(attrs.meta, {
+      string: '{"[redacted],"accept":"json"}',
     })
     assert.deepEqual(attrs.list, { string: '[{"passwd":"[redacted]","ok":1}]' })
     const wire = JSON.stringify(record, (_k, v) =>
@@ -180,5 +180,106 @@ describe('OtlpLogger', () => {
     )
     for (const leaked of ['tok-1', 'key-1', 'abc', 'nested', 'sid=1'])
       assert.equal(wire.includes(leaked), false, leaked)
+  })
+  test('by default only the message leaves: no object fields, no exception type', async () => {
+    const { logger, sent } = setup()
+    logger.info({ message: 'created', invoiceId: 'inv_1', note: 'private' })
+    logger.error(new RangeError('too big'))
+    const [object, err] = await sent()
+    assert.deepEqual(object!.body, { string: 'created' })
+    assert.deepEqual(object!.attributes, {})
+    assert.deepEqual(err!.attributes, {})
+    assert.deepEqual(err!.body, { string: 'too big' })
+  })
+
+  test('every reviewed spelling of a sensitive field is redacted with fields on', async () => {
+    const { logger, sent } = setup({ fields: true })
+    const names = [
+      'auth',
+      'pwd',
+      'pass',
+      'passphrase',
+      'jwt',
+      'otp',
+      'pin',
+      'ssn',
+      'signature',
+      'sig',
+      'salt',
+      'dsn',
+      'DATABASE_URL',
+      'connectionString',
+      'url',
+      'headers',
+      'csrf',
+      'xsrf',
+      'sid',
+      'cvv',
+      'card',
+      'creditCard',
+      'oauth',
+      'Auth',
+      'JWT',
+      'xCsrfToken',
+    ]
+    logger.info({
+      message: 'x',
+      ...Object.fromEntries(names.map((name) => [name, 'v-' + name])),
+      ok: 'fine',
+    })
+    const [record] = await sent()
+    for (const name of names) {
+      assert.deepEqual(record!.attributes[name], { string: '[redacted]' }, name)
+    }
+    assert.deepEqual(record!.attributes.ok, { string: 'fine' })
+  })
+
+  test('plain-string array elements and numeric keys are not exported', async () => {
+    const { logger, sent } = setup({ fields: true })
+    logger.info({
+      message: 'x',
+      ids: ['a', 'b'],
+      mixed: ['s', { n: 1 }, 2],
+      0: 'zero',
+    })
+    const [record] = await sent()
+    assert.deepEqual(record!.attributes.ids, { string: '[]' })
+    assert.deepEqual(record!.attributes.mixed, { string: '[{"n":1},2]' })
+    assert.equal(record!.attributes['0'], undefined)
+  })
+
+  test('secrets inside message text and exported strings are scrubbed', async () => {
+    const { logger, sent } = setup({ fields: true })
+    logger.info(
+      'connect postgres://app:hunter2@db.internal/x with Bearer abc.def.ghi'
+    )
+    logger.info('Authorization: Basic dXNlcjpwdw== sent')
+    logger.warn(
+      'GET /cb?code=abc123&state=ok&access_token=zzz and sig=s1 key=k1 password=p1 pwd=p2 secret=s2 signature=s3'
+    )
+    logger.info({ message: 'f', note: 'see https://u:pw@h/x?token=t9' })
+    const records = await sent()
+    const text = JSON.stringify(records, (_k, v) =>
+      typeof v === 'bigint' ? 0 : v
+    )
+    for (const leaked of [
+      'hunter2',
+      'abc.def.ghi',
+      'dXNlcjpwdw',
+      'abc123',
+      'zzz',
+      's1',
+      'k1',
+      'p1',
+      'p2',
+      's2',
+      's3',
+      'u:pw',
+      't9',
+    ]) {
+      assert.equal(text.includes(leaked), false, leaked)
+    }
+    assert.ok(text.includes('state=ok'))
+    assert.ok(text.includes('[redacted]'))
   })
 })

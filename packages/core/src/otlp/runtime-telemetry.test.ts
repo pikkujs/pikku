@@ -95,6 +95,8 @@ describe('loopback guard', () => {
     for (const endpoint of [
       'http://127.0.0.1:4000/v1/otlp?api_key=hunter2',
       'http://127.0.0.1:4000/v1/otlp#frag',
+      'http://127.0.0.1:4000/v1/otlp?',
+      'http://127.0.0.1:4000/v1/otlp#',
     ]) {
       assert.throws(
         () => parseOtlpEndpoint(endpoint, false),

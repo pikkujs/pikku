@@ -179,6 +179,7 @@ export const createRuntimeTelemetry = (
   })
   const logger = new OtlpLogger(options.logger, exporter, {
     minLevel,
+    fields: env.PIKKU_OTLP_LOG_FIELDS === '1',
     ...(options.contextStorage
       ? { currentContext: () => options.contextStorage!.get() }
       : {}),

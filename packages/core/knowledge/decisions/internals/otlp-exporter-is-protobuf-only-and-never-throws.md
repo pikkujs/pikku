@@ -41,18 +41,30 @@ byte against an independent encoder, and `@pikku/core/testing` has a reader
 | `PIKKU_OTLP_HEADERS` | none | `k=v,k2=v2`, sent with every signal. |
 | `PIKKU_OTLP_TRACES_HEADERS`, `PIKKU_OTLP_LOGS_HEADERS`, `PIKKU_OTLP_METRICS_HEADERS` | none | Added to one signal only. |
 | `PIKKU_OTLP_LOG_LEVEL` | `info` | Lowest level forwarded as an OTLP log. An unknown name logs a warning and uses `info`. |
+| `PIKKU_OTLP_LOG_FIELDS` | unset | `1` also exports an object's fields as log attributes (sensitive names redacted). Off by default: only the message text leaves. |
 | `PIKKU_OTLP_SQL_TEXT` | unset | `1` records the (parameterless) SQL text on `db.*` spans. Off by default. |
 | `PIKKU_OTLP_SERVICE_NAME` | `PIKKU_PROJECT`, else the unit or project name | `service.name`. |
 | `PIKKU_STAGE`, `PIKKU_PROJECT` | none | Resource attributes when set. |
 
-Fails closed, at boot (exit 1), never by silently dropping telemetry: a non-loopback host without `PIKKU_OTLP_ALLOW_REMOTE=1`; a non-loopback `http` endpoint; credentials in the URL; a query string or fragment in the URL (send credentials in a headers variable); a malformed headers value; a non-http(s) or unparsable URL. Error messages never echo the URL, only the host of a refused remote endpoint.
+Fails closed, at boot (exit 1), never by silently dropping telemetry: a non-loopback host without `PIKKU_OTLP_ALLOW_REMOTE=1`; a non-loopback `http` endpoint; credentials in the URL; a query string, fragment or trailing `?` or `#` in the URL (send credentials in a headers variable); a malformed headers value; a non-http(s) or unparsable URL. Error messages never echo the URL, only the host of a refused remote endpoint.
 
-### Log attributes are redacted by field name
+### Logs export the message only; fields are opt-in and redacted
 
-`OtlpLogger` exports an object's fields as log attributes. Any field whose name
-contains (case-insensitive) `token`, `secret`, `password`, `passwd`,
-`authorization`, `cookie`, `key`, `credential`, `session` or `bearer` has its
-value replaced by `[redacted]`, at any nesting depth (nesting is cut at 4
-levels). The match is on the name alone, so it fails closed: `sessionId` and
-`keyboard` are redacted too. A `SecretValue` already serializes to `[secret]`.
-The message text itself is not scanned: do not put a secret in the message.
+`OtlpLogger` forwards the scrubbed message text, the level and the trace and
+span ids. An object's fields are not exported unless `PIKKU_OTLP_LOG_FIELDS=1`
+(security-first: nothing leaves by default). With it on, any field whose name
+contains (case-insensitive) `token`, `secret`, `password`, `passwd`, `pwd`,
+`pass`, `auth`, `cookie`, `key`, `credential`, `session`, `bearer`, `jwt`,
+`otp`, `pin`, `ssn`, `sig`, `salt`, `dsn`, `csrf`, `xsrf`, `sid`, `cvv`, `card`,
+`oauth`, `url`, `headers`, `connection` or `database_url` has its value replaced
+by `[redacted]`, at any depth (cut at 4 levels). Plain-string array elements and
+numeric keys are never exported, and `exception.type` is exported only with
+fields on. The name match is a substring, so it over-redacts (`pinned`,
+`sidebar`) on purpose.
+
+Message text and every exported string go through a best-effort scrub:
+`scheme://user:pw@` userinfo, `Bearer <x>`, `Authorization: ...` and
+`token|key|secret|password|passwd|pwd|sig|signature|code=<value>` pairs become
+`[redacted]`. Limits: the scrub is pattern based and cannot recognise a secret
+with no marker (a bare API key or password in prose). A secret in the message
+text can still leave; do not log one. A `SecretValue` serializes to `[secret]`.

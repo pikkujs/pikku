@@ -38,7 +38,12 @@ export const parseOtlpEndpoint = (
         'Set PIKKU_OTLP_ALLOW_REMOTE=1 to export telemetry off this machine.'
     )
   }
-  if (url.search !== '' || url.hash !== '') {
+  if (
+    url.search !== '' ||
+    url.hash !== '' ||
+    endpoint.includes('?') ||
+    endpoint.includes('#')
+  ) {
     throw new Error(
       'PIKKU_OTLP_ENDPOINT must not contain a query string or fragment; send headers in PIKKU_OTLP_HEADERS'
     )
