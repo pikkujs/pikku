@@ -7,7 +7,8 @@ import { addFunction, runPikkuFunc } from '@pikku/core/function'
 import { pikkuState, resetPikkuState } from '@pikku/core/state'
 import { createTrace, childTraceWire } from '@pikku/core/trace'
 import type { Span, TraceContext, Tracer } from '@pikku/core/trace'
-import { RecordingTracer } from '@pikku/core/testing'
+import { RecordingTracer, decodeTraces } from '@pikku/core/testing'
+import { asContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'
 
 import { traceDialect, SQL_TEXT_LIMIT } from './trace-driver.js'
 import { collectTableNames, hasInlineSql } from './table-names.js'
@@ -738,5 +739,72 @@ describe('end to end through the function runner (verifier style)', () => {
     tracer.spans.length = 0
     await sql`select 1`.execute(db)
     assert.equal(tracer.spans.length, 0)
+  })
+})
+
+describe('through the real OtlpTracer (contextStorage + runInSpan + currentTrace)', () => {
+  test('the db span is a child of the function span in the exported OTLP spans', async () => {
+    const exported: Uint8Array[] = []
+    const fakeFetch = (async (
+      url: string | URL | Request,
+      init?: RequestInit
+    ) => {
+      if (String(url).endsWith('/v1/traces')) {
+        exported.push(new Uint8Array(init!.body as ArrayBuffer))
+      }
+      return new Response(null, { status: 200 })
+    }) as typeof fetch
+    const telemetry = createRuntimeTelemetry(
+      { PIKKU_OTLP_ENDPOINT: 'http://127.0.0.1:4318/v1/otlp' },
+      {
+        logger: { info() {}, warn() {}, error() {}, debug() {} } as any,
+        serviceName: 'kysely-otlp-test',
+        contextStorage: asContextStorage(new AsyncLocalStorage()),
+        fetch: fakeFetch,
+      }
+    )
+    assert.equal(telemetry.enabled, true)
+    const db = await make({
+      tracer: telemetry.tracer,
+      currentTrace: telemetry.currentTrace,
+    })
+
+    const funcName = 'otlpListTodos'
+    addFunction(funcName, {
+      func: async () => {
+        await db.selectFrom('todos').selectAll().execute()
+        return 'done'
+      },
+    } as any)
+    pikkuState(null, 'function', 'meta')[funcName] = {
+      pikkuFuncId: funcName,
+      inputSchemaName: null,
+      outputSchemaName: null,
+      sessionless: true,
+    } as any
+    const trace = createTrace()
+    const services = {
+      logger: { info() {}, warn() {}, error() {}, debug() {} },
+      tracer: telemetry.tracer,
+    } as any
+    await runPikkuFunc('rpc', 'wire-1', funcName, {
+      singletonServices: services,
+      getAllServices: () => services,
+      data: () => ({}),
+      auth: false,
+      wire: { trace },
+    } as any)
+    // outside a function: no current trace, no span
+    await sql`select 1`.execute(db)
+    await telemetry.close()
+
+    const spans = exported.flatMap((body) => decodeTraces(body).items)
+    const fn = spans.find((s) => s.name === funcName)
+    const dbSpans = spans.filter((s) => s.name.startsWith('db.'))
+    assert.ok(fn, 'function span exported')
+    assert.equal(fn.spanId, trace.spanId)
+    assert.equal(dbSpans.length, 1, 'only the query inside the function')
+    assert.equal(dbSpans[0]!.parentSpanId, fn.spanId)
+    assert.equal(dbSpans[0]!.traceId, fn.traceId)
   })
 })

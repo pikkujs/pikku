@@ -6,6 +6,7 @@ export { OtlpLogger } from './otlp-logger.js'
 export type { OtlpLoggerOptions } from './otlp-logger.js'
 export { startProcessMetrics } from './process-metrics.js'
 export {
+  asContextStorage,
   createRuntimeTelemetry,
   parseOtlpHeaders,
 } from './runtime-telemetry.js'

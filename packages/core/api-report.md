@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3574 observable things**: 1194 exported names, plus
-2380 members on the classes and interfaces among them, reachable
+**3577 observable things**: 1195 exported names, plus
+2382 members on the classes and interfaces among them, reachable
 through 65 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -22,7 +22,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel` | 33 | 33 | 92 |
 | `./types` | 24 | 21 | 84 |
 | `./queue` | 28 | 28 | 75 |
-| `./otlp` | 18 | 18 | 72 |
+| `./otlp` | 19 | 19 | 73 |
 | `./http` | 27 | 27 | 58 |
 | `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
@@ -31,7 +31,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 16 | 14 | 27 |
-| `./trace` | 19 | 19 | 19 |
+| `./trace` | 19 | 19 | 20 |
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
@@ -5996,6 +5996,7 @@ export type TraceContext = {
 tracedLogger: (logger: Logger, traceId?: string | undefined) => Logger
 export interface Tracer {
   startSpan(name: string, context: TraceContext, options?: { kind?: SpanKind; attributes?: Record<string, SpanAttributeValue>; startTimeUnixNano?: bigint }): Span
+  runInSpan?<T>(span: Span, fn: () => T): T
   flush?(): Promise<void>
   close?(): Promise<void>
 }
@@ -6005,6 +6006,7 @@ traceWire: (traceparent?: unknown) => { traceId: string; trace: TraceContext; }
 ## ./otlp
 
 ```ts
+asContextStorage: (storage: { run<T>(context: TraceContext, fn: () => T): T; getStore(): TraceContext | undefined; }) => ContextStorage
 export interface ContextStorage {
   run<T>(context: TraceContext, fn: () => T): T
   get(): TraceContext | undefined
@@ -6094,6 +6096,7 @@ export interface RuntimeTelemetry {
   enabled: boolean
   tracer: Tracer
   logger: Logger
+  currentTrace: () => TraceContext | undefined
   recordSqlText: boolean
   stopMetrics(): void
   flush(): Promise<void>
