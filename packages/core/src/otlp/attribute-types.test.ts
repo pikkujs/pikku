@@ -92,4 +92,37 @@ describe('AttributeTypes', () => {
     for (let n = 0; n < 600; n++) types.coerce({ [`db.k${n}`]: 1 })
     assert.ok(types.dropped > 0)
   })
+
+  test('an event keeps exception.type and exception.message only, and counts the rest', () => {
+    const types = new AttributeTypes()
+    const out = types.events([
+      {
+        name: 'exception',
+        attributes: {
+          'exception.type': 'Error',
+          'exception.message': 'm',
+          'exception.stacktrace': 'at x',
+          other: 'x',
+        },
+      },
+    ])
+    assert.deepEqual(out[0]!.attributes, {
+      'exception.type': 'Error',
+      'exception.message': 'm',
+    })
+    assert.equal(types.dropped, 2)
+  })
+
+  test('an event whose name is not a short identifier is dropped whole', () => {
+    const types = new AttributeTypes()
+    assert.deepEqual(
+      types.events([
+        { name: 'Has Space' },
+        { name: 'a'.repeat(65) },
+        { name: 'ok.event_1' },
+      ]),
+      [{ name: 'ok.event_1', attributes: {} }]
+    )
+    assert.equal(types.dropped, 2)
+  })
 })

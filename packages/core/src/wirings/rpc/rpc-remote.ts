@@ -15,7 +15,7 @@ const SAFE_RPC_NAME = /^[A-Za-z0-9_.:@/-]{1,128}$/
  * nothing because the callee is already its own span. Only the function name
  * and the service it belongs to are recorded, never the arguments.
  *
- * knowledge: decisions/internals/a-job-inherits-the-trace-of-the-function-that-enqueued-it.md
+ * knowledge: decisions/internals/a-local-rpc-is-a-span-of-its-own.md
  */
 export const invokeRemote = <Out>(
   services: CoreServices,
