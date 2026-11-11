@@ -169,6 +169,12 @@ export const CLOUDSUPPORT: CloudSupportData = {
               serverless: false,
             },
           },
+          './telemetry-store/testing': {
+            cloud: {
+              edge: false,
+              serverless: false,
+            },
+          },
           './dev': {
             cloud: {
               edge: false,

@@ -1,0 +1,16 @@
+export type {
+  FailureRow,
+  LogFacets,
+  LogRecord,
+  LogsQuery,
+  MetricPoint,
+  MetricsSummaryFunction,
+  MetricsSummaryRow,
+  QueueJobRow,
+  Severity,
+  SpanRecord,
+  TailCursor,
+  TelemetryAttributes,
+  TelemetryScope,
+  TelemetryStore,
+} from './telemetry-store.types.js'

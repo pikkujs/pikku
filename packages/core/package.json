@@ -96,6 +96,8 @@
     "./classification": "./dist/classification/index.js",
     "./utils": "./dist/utils.js",
     "./contributors": "./dist/contributors/index.js",
+    "./telemetry-store": "./dist/telemetry-store/index.js",
+    "./telemetry-store/testing": "./dist/telemetry-store/testing/index.js",
     "./lifecycle": "./dist/lifecycle.js",
     "./schema": "./dist/schema.js",
     "./testing": "./dist/testing/index.js",
