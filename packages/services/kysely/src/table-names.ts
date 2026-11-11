@@ -36,3 +36,27 @@ export function collectTableNames(node: unknown, out: Set<string>): void {
     collectTableNames(value, out)
   }
 }
+
+/** Nodes whose compiled text can hold caller-supplied literal text. */
+const INLINE_KINDS = new Set(['RawNode', 'JSONPathNode', 'JSONPathLegNode'])
+
+/**
+ * True when the node tree can put caller text into the compiled SQL itself
+ * rather than as a parameter: raw SQL, an immediate value (`sql.lit`), a JSON
+ * path. Parameter values are not entered. Errs towards true.
+ */
+export function hasInlineSql(node: unknown): boolean {
+  if (!node || typeof node !== 'object') return false
+  const candidate = node as { kind?: string; immediate?: unknown }
+  if (candidate.kind !== undefined) {
+    if (INLINE_KINDS.has(candidate.kind)) return true
+    if (candidate.kind === 'ValueNode') return candidate.immediate === true
+    if (candidate.kind === 'PrimitiveValueListNode') return false
+  }
+  for (const value of Object.values(node as Record<string, unknown>)) {
+    if (Array.isArray(value)) {
+      if (value.some(hasInlineSql)) return true
+    } else if (hasInlineSql(value)) return true
+  }
+  return false
+}

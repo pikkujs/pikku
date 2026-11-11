@@ -166,8 +166,11 @@ export const redactSpanError = (
     type,
     /** The bare message, truncated: what `exception.message` carries. */
     text,
-    /** `Type: message`, truncated: what `status.message` carries. */
-    message: truncate(`${type}: ${text}`, SPAN_LIMITS.statusMessageLength),
+    /** `Type: message` (or bare type when empty), truncated: what `status.message` carries. */
+    message: truncate(
+      text ? `${type}: ${text}` : type,
+      SPAN_LIMITS.statusMessageLength
+    ),
   }
 }
 
