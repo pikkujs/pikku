@@ -74,11 +74,10 @@ describe('nats contributor registration', () => {
 })
 
 describe('natsOptionsFromEnv', () => {
-  test('names the subjects, consumers and inbox after project and stage, and attaches to the shared stream', () => {
+  test('names the stream, subjects and inbox after project and stage, and attaches to its own stream', () => {
     const options = natsOptionsFromEnv(env)
-    assert.equal(options.streamName, 'PIKKU')
+    assert.equal(options.streamName, 'pikku_shop_prod')
     assert.equal(options.subjectPrefix, 'pikku.shop.prod')
-    assert.equal(options.consumerNamePrefix, 'shop_prod_')
     assert.equal(options.inboxPrefix, '_INBOX.shop.prod')
     assert.equal(options.attachToStream, true)
     assert.deepEqual(options.servers, ['nats://localhost:4222'])
@@ -130,7 +129,7 @@ describe('natsOptionsFromEnv', () => {
     }
   })
 
-  test('project and stage cannot be split differently to share a consumer prefix', () => {
+  test('project and stage cannot be split differently to name the same stream', () => {
     const one = natsOptionsFromEnv({
       ...env,
       PIKKU_PROJECT: 'a-b',
@@ -141,7 +140,7 @@ describe('natsOptionsFromEnv', () => {
       PIKKU_PROJECT: 'a',
       PIKKU_STAGE: 'b-c',
     })
-    assert.notEqual(one.consumerNamePrefix, two.consumerNamePrefix)
+    assert.notEqual(one.streamName, two.streamName)
   })
 })
 

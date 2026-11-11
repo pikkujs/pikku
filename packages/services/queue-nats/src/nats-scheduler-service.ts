@@ -45,9 +45,6 @@ interface ScheduledJobData {
  */
 const RECURRING_TASK_QUEUE = 'pikku-recurring-scheduled-task'
 
-/** Payload key of the last fire of a schedule that was retired without a purge. */
-const RETIRED_MARKER = 'pikkuRetired'
-
 /** Queue a one-off `scheduleRPC` fires onto — a registered pikku worker. */
 const MESH_RPC_QUEUE = 'pikku-mesh-rpc'
 
@@ -146,17 +143,7 @@ export class NatsSchedulerService extends SchedulerService {
      * without a `TZ=` prefix; absent means the server's own zone, which is UTC
      * unless it was configured otherwise.
      */
-    private readonly defaultTimezone?: string,
-    /** See `ConsumeOptions.consumerNamePrefix`. */
-    private readonly consumerNamePrefix?: string,
-    /**
-     * Whether this process may purge the stream. A purge applies to the whole
-     * stream or to a subject filter the CALLER names, and a broker permission
-     * cannot tell the two apart, so a tenant of a shared stream must not hold
-     * it. Without it an orphaned schedule is retired by republishing it as a
-     * one-shot that fires at once and is ignored (see `RETIRED_MARKER`).
-     */
-    private readonly canPurge: boolean = true
+    private readonly defaultTimezone?: string
   ) {
     super()
   }
@@ -283,7 +270,6 @@ export class NatsSchedulerService extends SchedulerService {
       jsm: this.jsm,
       streamName: this.streamName,
       subjectPrefix: this.subjectPrefix,
-      consumerNamePrefix: this.consumerNamePrefix,
       queueName: RECURRING_TASK_QUEUE,
       config: {
         ack_policy: AckPolicy.Explicit,
@@ -344,11 +330,7 @@ export class NatsSchedulerService extends SchedulerService {
     try {
       for (const subject of await this.scheduleSubjects(RECURRING_TASK_QUEUE)) {
         if (expected.has(subject)) continue
-        if (this.canPurge) {
-          await this.jsm.streams.purge(this.streamName, { filter: subject })
-        } else {
-          await this.retireSchedule(subject)
-        }
+        await this.jsm.streams.purge(this.streamName, { filter: subject })
         logger.warn(`Pruned orphaned scheduled task: ${subject}`)
       }
     } catch (err) {
@@ -356,23 +338,6 @@ export class NatsSchedulerService extends SchedulerService {
         `Failed to prune orphaned scheduled tasks: ${err instanceof Error ? err.message : String(err)}`
       )
     }
-  }
-
-  /**
-   * Replace a schedule with a one-shot that fires now. The server removes an
-   * `@at` schedule once it has fired, and the fire it produces carries
-   * `RETIRED_MARKER`, which `runFire` acknowledges without running anything.
-   */
-  private async retireSchedule(subject: string): Promise<void> {
-    const hdrs = headers()
-    hdrs.set(SCHEDULE_HEADER, `@at ${new Date().toISOString()}`)
-    hdrs.set(
-      SCHEDULE_TARGET_HEADER,
-      subjectForQueue(this.subjectPrefix, RECURRING_TASK_QUEUE)
-    )
-    await this.js.publish(subject, JSON.stringify({ [RETIRED_MARKER]: true }), {
-      headers: hdrs,
-    })
   }
 
   /**
@@ -415,12 +380,7 @@ export class NatsSchedulerService extends SchedulerService {
     const logger = pikkuState(null, 'package', 'singletonServices')!.logger
     let rpcName: string | undefined
     try {
-      const fire = msg.json<ScheduledJobData & { [RETIRED_MARKER]?: boolean }>()
-      if (fire?.[RETIRED_MARKER]) {
-        msg.ack()
-        return
-      }
-      rpcName = fire?.rpcName
+      rpcName = msg.json<ScheduledJobData>()?.rpcName
       if (!rpcName) {
         logger.error(`Malformed scheduled task fire ${msg.seq} (no rpcName)`)
         msg.term()
