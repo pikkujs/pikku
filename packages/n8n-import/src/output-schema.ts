@@ -3,7 +3,7 @@ import {
   schemaToZod,
   createContext,
   type OpenAPISchema,
-} from '@pikku/openapi-to-zod-schema'
+} from '@pikku/openapi-parser'
 import type { ParsedNode } from './types.js'
 
 /**

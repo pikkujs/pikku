@@ -53,15 +53,6 @@ export const CLOUDSUPPORT: CloudSupportData = {
         },
       },
     ],
-    '@pikku/ai-voice': [
-      {
-        versions: '*',
-        cloud: {
-          edge: ['cloudflare-workers'],
-          serverless: true,
-        },
-      },
-    ],
     '@pikku/aws-services': [
       {
         versions: '*',

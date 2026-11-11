@@ -29,7 +29,7 @@
     "!dist/**/*.tsbuildinfo"
   ],
   "dependencies": {
-    "@pikku/openapi-to-zod-schema": "^0.12.8",
+    "@pikku/openapi-parser": "^0.12.26",
     "@pikku/inspector-go": "^0.12.9",
     "to-json-schema": "^0.2.5"
   },
