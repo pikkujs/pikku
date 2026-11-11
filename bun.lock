@@ -2427,6 +2427,41 @@
         "zod": "^4",
       },
     },
+    "verifiers/product-hooks": {
+      "name": "@pikku/verifiers-product-hooks",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
+        "@pikku/react": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+        "react": "^19",
+        "zod": "^4",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "@types/react": "^19",
+        "tsx": "^4.23.15",
+      },
+    },
+    "verifiers/product-hooks-none": {
+      "name": "@pikku/verifiers-product-hooks-none",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
+        "@pikku/react": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+        "react": "^19",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "@types/react": "^19",
+        "tsx": "^4.23.15",
+      },
+    },
     "verifiers/release": {
       "name": "@pikku/verifiers-release",
       "devDependencies": {
@@ -3657,6 +3692,10 @@
     "@pikku/verifiers-next-better-auth": ["@pikku/verifiers-next-better-auth@workspace:verifiers/next-better-auth"],
 
     "@pikku/verifiers-pikku-studio": ["@pikku/verifiers-pikku-studio@workspace:verifiers/pikku-studio"],
+
+    "@pikku/verifiers-product-hooks": ["@pikku/verifiers-product-hooks@workspace:verifiers/product-hooks"],
+
+    "@pikku/verifiers-product-hooks-none": ["@pikku/verifiers-product-hooks-none@workspace:verifiers/product-hooks-none"],
 
     "@pikku/verifiers-release": ["@pikku/verifiers-release@workspace:verifiers/release"],
 

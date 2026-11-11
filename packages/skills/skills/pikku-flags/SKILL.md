@@ -13,7 +13,7 @@ Flags are declared in `packages/functions/src/flags.ts`. The one already there i
 
 ## The rule
 
-**The real check is on the server.** Put `featureFlag: 'name'` on every function behind the feature, then hide its screen with `useFlag('name')` from `@/lib/product`. Hiding alone leaves it callable. The function answers 503 with `FeatureUnavailableError`: show "not available right now", not a permission message.
+**The real check is on the server.** Put `featureFlag: 'name'` on every function behind the feature, then hide its screen with `useFlag('name')`, which `pikku all` generates into the backend SDK (`@sdk/<backend>/pikku-product.gen`) once the app declares flags and sets `scaffold.featureFlags`. Import it from there; do not write a binding file. Hiding alone leaves it callable. The function answers 503 with `FeatureUnavailableError`: show "not available right now", not a permission message.
 
 **A flag is availability, not access.** Who may use something is `scopes` and `permissions`. `anyOf` only shapes what a client is told; it does not gate the function.
 

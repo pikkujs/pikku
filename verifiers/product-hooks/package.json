@@ -1,0 +1,29 @@
+{
+  "name": "@pikku/verifiers-product-hooks",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/fetch": "workspace:*",
+    "@pikku/react": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*",
+    "react": "^19",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "@types/react": "^19",
+    "tsx": "^4.23.15"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit",
+    "pikku": "pikku",
+    "test": "pikku && tsc --noEmit && node --import tsx --test src/product.assert.ts"
+  }
+}

@@ -1258,6 +1258,7 @@ export type PikkuClientSdkFiles = {
   realtimeFile?: string
   queueWiringsFile?: string
   scopesFile?: string
+  productFile?: string
 }
 
 /**
