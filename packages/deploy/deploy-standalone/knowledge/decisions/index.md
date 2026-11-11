@@ -18,4 +18,5 @@ description: What "a standalone unit with a UI" does and does not mean, and what
 - [The desktop shell runs the server as a sidecar, not embedded](the-desktop-shell-runs-the-server-as-a-sidecar.md) — Tauri spawns the compiled pikku binary and points the webview at its HTTP origin, so cookies, CORS and OAuth behave exactly as they do in a browser
 - [The native project generator lives here, behind `./native`](the-native-generator-lives-here-behind-native.md) — Tauri project generation, sync and check stay in @pikku/deploy-standalone and are exported from its `./native` subpath; the CLI's `pikku app native` commands only read config and call it
 - [The sidecar reports its port; the shell never picks one](the-sidecar-reports-its-port-the-shell-never-picks-one.md) — The server binds :0 and prints the port it got on the ready line; Rust blocks on that line rather than choosing a free port and passing it down
+- [A standalone binary exports telemetry only when its environment asks](a-standalone-binary-exports-telemetry-from-its-environment.md) — PIKKU_OTLP_* only, inert otherwise
 <!-- /pikku:knowledge-index -->
