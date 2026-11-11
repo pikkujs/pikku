@@ -4,5 +4,6 @@ export type { WorkflowFencingHarness } from './service-tests/workflow-fencing-te
 export { defineQueueIdentityTransportTests } from './queue-identity-transport-tests.js'
 export type { QueueIdentityTransport } from './queue-identity-transport-tests.js'
 export { clearPikkuRuntimeState } from '../test-utils.js'
+export { defineEventHubServiceTests } from './service-tests/event-hub-service-tests.js'
 export { defineQueueTraceConformance } from './queue-trace-conformance.js'
 export type { QueueTraceAdapter } from './queue-trace-conformance.js'
