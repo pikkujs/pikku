@@ -11,6 +11,7 @@ import {
   mergeJsonFiles,
   replaceFunctionReferences,
   cleanTSConfig,
+  cleanPikkuConfig,
   removeFunctionsOnlyFiles,
   wranglerChanges,
   serverlessChanges,
@@ -849,5 +850,39 @@ describe('retrying a transient download', () => {
       /attempt 3/
     )
     assert.equal(attempts, 3)
+  })
+})
+
+describe('cleanPikkuConfig', () => {
+  const run = (config: Record<string, unknown>) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pikku-clean-config-'))
+    try {
+      fs.writeFileSync(
+        path.join(dir, 'pikku.config.json'),
+        JSON.stringify(config)
+      )
+      cleanPikkuConfig(dir, [])
+      return JSON.parse(
+        fs.readFileSync(path.join(dir, 'pikku.config.json'), 'utf-8')
+      )
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  }
+
+  test('a copy no longer points its root and tsconfig at the shared ../functions project', () => {
+    const out = run({
+      rootDir: '../functions',
+      tsconfig: '../functions/tsconfig.json',
+      srcDirectories: ['./src', './types'],
+    })
+    assert.equal(out.rootDir, undefined)
+    assert.equal(out.tsconfig, './tsconfig.json')
+  })
+
+  test('a rootDir or tsconfig that is the project own is left alone', () => {
+    const out = run({ rootDir: './app', tsconfig: './tsconfig.build.json' })
+    assert.equal(out.rootDir, './app')
+    assert.equal(out.tsconfig, './tsconfig.build.json')
   })
 })
