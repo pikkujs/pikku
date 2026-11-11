@@ -398,6 +398,23 @@ describe('getPikkuCLIConfig', () => {
     test('an addon is held to the same keys', async () => {
       await rejects({ addon: true, backends: undefined, outDir: 'x' }, /outDir/)
     })
+
+    test('the keys `pikku new addon --openapi` records are accepted', async () => {
+      const root = await writeConfig({
+        addon: {
+          displayName: 'Acme',
+          openapi: {
+            version: '1',
+            hash: 'abc',
+            camelCase: true,
+            authConfig: true,
+          },
+        },
+        backends: undefined,
+      })
+      await writeFile(join(root, 'package.json'), '{"name":"my-addon"}')
+      assert.equal(typeof (await load(root)).addon, 'object')
+    })
   })
 
   describe('environments', () => {

@@ -71,7 +71,12 @@ const SHAPE: Shape = obj({
     displayName: 'any',
     description: 'any',
     serverlessIncompatible: 'any',
-    openapi: obj({ version: 'any', hash: 'any' }),
+    openapi: obj({
+      version: 'any',
+      hash: 'any',
+      camelCase: 'any',
+      authConfig: 'any',
+    }),
   }),
   allowShadowedServices: 'any',
   metaLocale: 'any',

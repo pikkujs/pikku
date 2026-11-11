@@ -145,6 +145,23 @@ const scaffoldErrors = (displayName: string, description: string) => {
 }
 
 describe('getAddonFiles', () => {
+  /**
+   * `outDir` is no longer a config key: generated files always go to `.pikku/`
+   * beside pikku.config.json, and the CLI refuses a config that names it. A
+   * scaffolded addon (and its test app) that wrote it failed its first `pikku`.
+   */
+  test('the generated pikku.config.json files do not name outDir', () => {
+    const flags = { secret: false, variable: false, oauth: false }
+    const addon = JSON.parse(
+      getAddonFiles(vars('Acme CRM', 'desc'), flags)['pikku.config.json']!
+    )
+    const testApp = JSON.parse(
+      getTestFiles(vars('Acme CRM', 'desc'))['pikku.config.json']!
+    )
+    assert.equal('outDir' in addon, false)
+    assert.equal('outDir' in testApp, false)
+  })
+
   test('scaffolds parseable sources for ordinary prose', () => {
     assert.deepEqual(scaffoldErrors('Acme CRM', 'Acme CRM integration'), [])
   })
@@ -576,5 +593,18 @@ describe('openapi onboarding', () => {
       { Authorization: 'Bearer x', Accept: 'a, b' }
     )
     assert.throws(() => parseHeaderOptions(['no-colon']), /Name: value/)
+  })
+
+  test('a header option that arrives as one string, with no schema to split it', () => {
+    assert.deepEqual(parseHeaderOptions('X-Spec-Token: let-me-in'), {
+      'X-Spec-Token': 'let-me-in',
+    })
+    assert.deepEqual(
+      parseHeaderOptions('Authorization: Bearer x,Accept: a,b'),
+      {
+        Authorization: 'Bearer x',
+        Accept: 'a, b',
+      }
+    )
   })
 })

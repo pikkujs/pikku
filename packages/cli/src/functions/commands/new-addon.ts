@@ -280,7 +280,6 @@ export function getAddonFiles(
         'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
       tsconfig: './tsconfig.json',
       srcDirectories: ['src', 'types'],
-      outDir: './.pikku',
       addon: {
         displayName,
         description,
@@ -843,7 +842,6 @@ export function getTestFiles(vars: AddonVars): Record<string, string> {
       $schema:
         'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
       srcDirectories: ['./src', './types'],
-      outDir: './.pikku',
       tsconfig: './tsconfig.json',
     },
     null,
@@ -1110,13 +1108,23 @@ export const buildGeneratedAddon = (
 }
 
 /**
+ * The CLI runner turns a `string[]` option into a list only when the command's
+ * input schema is generated; without one the raw string arrives, and walking it
+ * as a list reads a header one character at a time.
+ */
+const asList = (value: string[] | string | undefined): string[] | undefined =>
+  typeof value === 'string' ? value.split(',') : value
+
+/**
  * `string[]` options split on commas, which would cut a header value like
  * `Accept: a, b` in two; a piece that does not start a new `Name:` rejoins the
  * previous one.
  */
-export function parseHeaderOptions(raw: string[] = []): Record<string, string> {
+export function parseHeaderOptions(
+  raw: string[] | string = []
+): Record<string, string> {
   const joined: string[] = []
-  for (const piece of raw) {
+  for (const piece of asList(raw) ?? []) {
     if (/^[A-Za-z0-9!#$%&'*+.^_`|~-]+\s*:/.test(piece) || joined.length === 0) {
       joined.push(piece)
     } else {
@@ -1367,7 +1375,11 @@ export async function newAddon(
         headers: parseHeaderOptions(openapiHeader),
       })
       const total = spec.operations.length
-      spec = filterOperations(spec, { tags, include, exclude })
+      spec = filterOperations(spec, {
+        tags: asList(tags),
+        include: asList(include),
+        exclude: asList(exclude),
+      })
       if (spec.operations.length === 0) {
         throw new Error(
           `No operations left out of ${total} after --tags/--include/--exclude`
