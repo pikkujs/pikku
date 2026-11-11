@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3413 observable things**: 1159 exported names, plus
+**3415 observable things**: 1161 exported names, plus
 2254 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
@@ -40,9 +40,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./virtual-user/conversation` | 6 | 6 | 22 |
 | `./scenario/coverage` | 7 | 7 | 19 |
 | `./gateway` | 11 | 11 | 14 |
+| `./utils` | 24 | 21 | 2 |
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
-| `./utils` | 22 | 19 | 2 |
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./scheduler` | 10 | 10 | 8 |
 | `./addon` | 15 | 15 | 2 |
@@ -6687,6 +6687,11 @@ export type JSONValue =
     }
 export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
   Required<Pick<T, K>>
+mapConcurrent: <T, R>(items: readonly T[], fn: (item: T, index: number, signal?: AbortSignal | undefined) => R | Promise<R>, { concurrency, signal }: MapConcurrentOptions) => Promise<R[]>
+export type MapConcurrentOptions = {
+  concurrency: number
+  signal?: AbortSignal
+}
 parseDurationString: (duration: string) => number
 parseJson: <T = any>(input: string | Uint8Array<ArrayBufferLike>) => T
 parseVersionedId: (id: string) => { baseName: string; version: number | null; }
