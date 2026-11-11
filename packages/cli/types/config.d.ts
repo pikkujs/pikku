@@ -502,6 +502,10 @@ export type PikkuCLIInput = {
         openapi?: {
           version: string
           hash: string
+          /** Written by `pikku new addon --camel-case`: method names are camelCased. */
+          camelCase?: boolean
+          /** Written by `pikku new addon --auth-config`: the addon ships a delegated login or custom auth headers. */
+          authConfig?: boolean
         }
       }
 

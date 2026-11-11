@@ -263,8 +263,8 @@ try {
     JSON.stringify(
       {
         srcDirectories: ['src'],
-        outDir: '.pikku',
         tsconfig: './tsconfig.json',
+        backends: { api: { filter: {} } },
       },
       null,
       2
