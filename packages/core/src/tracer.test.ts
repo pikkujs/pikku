@@ -50,6 +50,7 @@ describe('redactSpanError', () => {
   test('handles a thrown non-error', () => {
     assert.deepEqual(redactSpanError('nope'), {
       type: 'string',
+      text: 'nope',
       message: 'string: nope',
     })
     assert.equal(redactSpanError(null).type, 'null')

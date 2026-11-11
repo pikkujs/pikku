@@ -1,3 +1,4 @@
+import { getErrorResponse } from '../errors/error-handler.js'
 import type { Logger } from '../services/logger.js'
 import type { PikkuWire, PikkuWiringTypes } from '../types/core.types.js'
 import {
@@ -72,40 +73,67 @@ export const openFunctionSpan = (
   }
 }
 
-/** The facts only known once the invocation is over, from the allow-list. */
+/**
+ * The facts only known once the invocation is over, from the allow-list. Each
+ * read is guarded on its own: one throwing accessor costs that attribute, not
+ * the span.
+ */
 const endAttributes = (
   wire: PikkuWire,
   wireType: PikkuWiringTypes,
-  durationMs: number | undefined
+  durationMs: number | undefined,
+  failure: { error: unknown } | undefined
 ): Record<string, SpanAttributeValue> => {
   const attributes: Record<string, SpanAttributeValue> = {}
-  const set = (key: string, value: SpanAttributeValue | undefined | null) => {
-    if (value !== undefined && value !== null) attributes[key] = value
+  const set = (key: string, read: () => unknown) => {
+    try {
+      const value = read()
+      if (
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean'
+      ) {
+        attributes[key] = value
+      }
+    } catch {
+      // This attribute is lost; the span is not.
+    }
   }
-  set('pikku.function.duration_ms', durationMs)
-  set('pikku.user.id', readUserId(wire))
-  set('pikku.org.id', wire.session?.orgId)
+  set('pikku.function.duration_ms', () => durationMs)
+  set('pikku.user.id', () => readUserId(wire))
+  set('pikku.org.id', () => wire.session?.orgId)
   // A nested call runs on a copy of its caller's wire, so a transport's fields
   // are only this span's own when this invocation arrived by that transport.
   if (wireType === 'http' && wire.http) {
-    set('http.request.method', wire.http.request?.method())
-    set('http.route', wire.wireId)
-    set('http.response.status_code', wire.http.response?.statusCode)
+    const http = wire.http
+    set('http.request.method', () => http.request?.method())
+    set('http.route', () => wire.wireId)
+    // The error response is written after the runner returns, so a failure's
+    // status is what the HTTP layer is about to write, not what is on the
+    // response yet.
+    set('http.response.status_code', () =>
+      failure
+        ? (getErrorResponse(failure.error as Error)?.status ?? 500)
+        : http.response?.statusCode
+    )
   }
   if (wireType === 'queue' && wire.queue) {
-    set('pikku.queue.name', wire.queue.queueName)
-    set('pikku.queue.job_id', wire.queue.jobId)
+    const queue = wire.queue
+    set('pikku.queue.name', () => queue.queueName)
+    set('pikku.queue.job_id', () => queue.jobId)
   }
   if (wireType === 'scheduler') {
-    set('pikku.scheduler.task', wire.scheduledTask?.name)
+    set('pikku.scheduler.task', () => wire.scheduledTask?.name)
   }
-  if (wire.workflow) {
-    set('pikku.workflow.name', wire.workflow.name)
-    set('pikku.workflow.run_id', wire.workflow.runId)
+  if (wireType === 'workflow') {
+    set('pikku.workflow.name', () => wire.workflow?.name)
+    set('pikku.workflow.run_id', () => wire.workflow?.runId)
+    set('pikku.workflow.step', () => wire.workflowStep?.stepId)
   }
-  set('pikku.workflow.step', wire.workflowStep?.stepId)
-  if (wireType === 'channel') set('pikku.channel.id', wire.channel?.channelId)
-  if (wireType === 'mcp') set('pikku.mcp.tool', wire.wireId)
+  if (wireType === 'channel') {
+    set('pikku.channel.id', () => wire.channel?.channelId)
+  }
+  if (wireType === 'mcp') set('pikku.mcp.tool', () => wire.wireId)
   return attributes
 }
 
@@ -125,17 +153,17 @@ export const endFunctionSpan = (
 ) => {
   const { span, wireType, tracer, logger, wire } = open
   if (disabled.has(tracer)) return
+  // Gathering is guarded per read; only the tracer's own calls can disable it.
+  const attributes = endAttributes(wire, wireType, durationMs, failure)
   try {
-    for (const [key, value] of Object.entries(
-      endAttributes(wire, wireType, durationMs)
-    )) {
+    for (const [key, value] of Object.entries(attributes)) {
       span.setAttribute(key, value)
     }
     if (failure) {
-      const { type, message } = redactSpanError(failure.error)
+      const { type, text } = redactSpanError(failure.error)
       span.addEvent('exception', {
         'exception.type': type,
-        'exception.message': message,
+        'exception.message': text,
       })
       span.end({ code: 'error', error: failure.error })
     } else {

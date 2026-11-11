@@ -327,3 +327,102 @@ describe('runPikkuFunc - spans', () => {
     )
   })
 })
+
+describe('runPikkuFunc - spans, hostile inputs', () => {
+  const run = async (
+    name: string,
+    tracer: Tracer,
+    wire: Record<string, unknown>,
+    wireType: PikkuWiringTypes
+  ) =>
+    runPikkuFunc(wireType, `hostile-${name}`, name, {
+      singletonServices: { ...mockSingletonServices, tracer },
+      getAllServices: () => ({ ...mockServices, tracer }) as any,
+      data: () => ({}),
+      auth: false,
+      wire,
+    } as any)
+
+  test('workflow attributes belong to a workflow invocation, not a nested rpc on its wire', async () => {
+    const tracer = new RecordingTracer()
+    addTestFunction('step', { func: async () => 1 })
+    const wire = {
+      trace: createTrace(),
+      workflow: { name: 'wf', runId: 'r1' },
+      workflowStep: { stepId: 's1' },
+    }
+    await run('step', tracer, { ...wire }, 'workflow')
+    await run('step', tracer, { ...wire, trace: createTrace() }, 'rpc')
+    const [own, nested] = tracer.spans
+    assert.equal(own!.attributes['pikku.workflow.name'], 'wf')
+    assert.equal(own!.attributes['pikku.workflow.run_id'], 'r1')
+    assert.equal(own!.attributes['pikku.workflow.step'], 's1')
+    assert.equal(nested!.attributes['pikku.workflow.name'], undefined)
+    assert.equal(nested!.attributes['pikku.workflow.run_id'], undefined)
+    assert.equal(nested!.attributes['pikku.workflow.step'], undefined)
+  })
+
+  test('a throwing accessor loses that attribute only: the span ends, the tracer stays enabled, the result stands', async () => {
+    const tracer = new RecordingTracer()
+    addTestFunction('accessor', { func: async () => 'result' })
+    const http = {
+      request: {
+        method: () => {
+          throw new Error('accessor exploded')
+        },
+      },
+      response: { statusCode: 200 },
+    }
+    for (let i = 0; i < 2; i++) {
+      assert.equal(
+        await run('accessor', tracer, { trace: createTrace(), http }, 'http'),
+        'result'
+      )
+    }
+    assert.equal(tracer.spans.length, 2, 'both invocations were recorded')
+    const [span] = tracer.spans
+    assert.deepEqual(span!.status, { code: 'ok' })
+    assert.equal(span!.attributes['http.request.method'], undefined)
+    assert.equal(span!.attributes['http.response.status_code'], 200)
+  })
+
+  test('an error whose toString and message throw still ends the span and is rethrown', async () => {
+    const tracer = new RecordingTracer()
+    const hostile = Object.create(null)
+    hostile.toString = () => {
+      throw new Error('hostile toString')
+    }
+    addTestFunction('hostile', {
+      func: async () => {
+        throw hostile
+      },
+    })
+    await assert.rejects(
+      run('hostile', tracer, { trace: createTrace() }, 'rpc'),
+      (e) => e === hostile
+    )
+    assert.equal(tracer.spans.length, 1)
+    assert.equal(tracer.spans[0]!.status.code, 'error')
+    const [event] = tracer.spans[0]!.events!
+    assert.equal(event!.attributes!['exception.message'], '[unprintable error]')
+    // The tracer was not disabled.
+    await assert.rejects(
+      run('hostile', tracer, { trace: createTrace() }, 'rpc')
+    )
+    assert.equal(tracer.spans.length, 2)
+  })
+
+  test('exception.message is the bare message, not Type: message', async () => {
+    const tracer = new RecordingTracer()
+    addTestFunction('bare', {
+      func: async () => {
+        throw new RangeError('out of range')
+      },
+    })
+    await assert.rejects(run('bare', tracer, { trace: createTrace() }, 'rpc'))
+    const [event] = tracer.spans[0]!.events!
+    assert.equal(event!.attributes!['exception.type'], 'RangeError')
+    assert.equal(event!.attributes!['exception.message'], 'out of range')
+    assert.equal(tracer.spans[0]!.status.message, 'RangeError: out of range')
+  })
+})

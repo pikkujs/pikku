@@ -37,7 +37,11 @@ export interface Span {
   readonly context: TraceContext
   setAttribute(key: string, value: SpanAttributeValue): void
   addEvent(name: string, attributes?: Record<string, SpanAttributeValue>): void
-  /** Idempotent. `error` is redacted here, never by the caller. */
+  /**
+   * Idempotent. `error` is the RAW thrown value: the runner does not redact it,
+   * so an implementation MUST redact before recording (class and message only,
+   * never a stack). `redactSpanError` and `RecordingTracer` are the reference.
+   */
   end(status?: { code: 'ok' } | { code: 'error'; error: unknown }): void
 }
 
@@ -122,16 +126,38 @@ export const setBoundedAttribute = (
  */
 export const redactSpanError = (
   error: unknown
-): { type: string; message: string } => {
-  const type =
-    error instanceof Error
-      ? error.name || 'Error'
-      : error === null
-        ? 'null'
-        : typeof error
-  const text = error instanceof Error ? error.message : String(error)
+): { type: string; text: string; message: string } => {
+  const read = <T>(fn: () => T, fallback: T): T => {
+    try {
+      return fn()
+    } catch {
+      return fallback
+    }
+  }
+  const type = truncate(
+    read(
+      () =>
+        error instanceof Error
+          ? error.name || 'Error'
+          : error === null
+            ? 'null'
+            : typeof error,
+      'Error'
+    ),
+    SPAN_LIMITS.keyLength
+  )
+  const text = truncate(
+    read(
+      () => (error instanceof Error ? error.message : String(error)),
+      '[unprintable error]'
+    ),
+    SPAN_LIMITS.statusMessageLength
+  )
   return {
     type,
+    /** The bare message, truncated: what `exception.message` carries. */
+    text,
+    /** `Type: message`, truncated: what `status.message` carries. */
     message: truncate(`${type}: ${text}`, SPAN_LIMITS.statusMessageLength),
   }
 }
