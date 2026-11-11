@@ -636,6 +636,8 @@
     "resolveContributors",
     "selectContributors"
   ],
+  "./telemetry-store": [],
+  "./telemetry-store/testing": ["MemoryTelemetryStore", "conformance"],
   "./lifecycle": [
     "composeServerLifecycle",
     "onShutdownSignals",
