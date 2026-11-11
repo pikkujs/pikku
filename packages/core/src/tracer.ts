@@ -60,6 +60,15 @@ export interface Tracer {
       startTimeUnixNano?: bigint
     }
   ): Span
+  /**
+   * Optional. Runs `fn` with `span` as the current span of the async call tree
+   * `fn` starts, so code that has no wire in hand (a database driver) can read
+   * it back. The function runner calls it when present, around the middleware
+   * chain and the function. Core imports no `AsyncLocalStorage`; a tracer that
+   * implements this owns the storage. Must call `fn` exactly once and return
+   * what it returns.
+   */
+  runInSpan?<T>(span: Span, fn: () => T): T
   /** Flush what is buffered; called by `onServerStop` and `pikku serve` shutdown. */
   flush?(): Promise<void>
   close?(): Promise<void>

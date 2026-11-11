@@ -8,6 +8,7 @@ import type {
   RootOperationNode,
   UnknownRow,
 } from 'kysely'
+import { collectTableNames } from './table-names.js'
 
 export interface CreateAuditedKyselyOptions {
   audit: AuditLog
@@ -49,30 +50,6 @@ function getIdentifierName(node: unknown): string | undefined {
     candidate.identifier?.name ??
     candidate.table?.identifier?.name
   )
-}
-
-function collectTableNames(node: unknown, out: Set<string>): void {
-  if (!node || typeof node !== 'object') return
-
-  const candidate = node as {
-    kind?: string
-    table?: { identifier?: { name?: string } }
-  }
-
-  if (
-    candidate.kind === 'TableNode' &&
-    typeof candidate.table?.identifier?.name === 'string'
-  ) {
-    out.add(candidate.table.identifier.name)
-  }
-
-  for (const value of Object.values(node as Record<string, unknown>)) {
-    if (Array.isArray(value)) {
-      for (const item of value) collectTableNames(item, out)
-      continue
-    }
-    collectTableNames(value, out)
-  }
 }
 
 function extractValue(node: unknown): unknown {

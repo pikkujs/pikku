@@ -319,6 +319,106 @@ describe('runPikkuFunc - spans', () => {
     assert.equal(ends, 1)
   })
 
+  test('runInSpan scopes the function and the middleware, once, with the open span', async () => {
+    const inner = new RecordingTracer()
+    const seen: unknown[] = []
+    let current: unknown
+    const tracer: Tracer = {
+      startSpan: (n, c, o) => inner.startSpan(n, c, o),
+      runInSpan: (span, fn) => {
+        seen.push(span.context.spanId)
+        current = span.context
+        try {
+          return fn()
+        } finally {
+          // an ALS would restore here; the awaited work below has already read it
+        }
+      },
+    }
+    let readInside: unknown
+    addTestFunction('scoped', {
+      func: async () => {
+        readInside = current
+        return 'v'
+      },
+      middleware: [async (_s: any, _w: any, next: any) => next()],
+    })
+    const trace = createTrace()
+    assert.equal(await run('scoped', tracer, { trace }), 'v')
+    assert.deepEqual(seen, [trace.spanId])
+    assert.equal((readInside as { spanId: string }).spanId, trace.spanId)
+  })
+
+  test('runInSpan is not called for an unsampled trace or a tracer without it', async () => {
+    let calls = 0
+    const tracer: Tracer = {
+      startSpan: () => {
+        throw new Error('not reached')
+      },
+      runInSpan: (_s, fn) => {
+        calls++
+        return fn()
+      },
+    }
+    addTestFunction('nope', { func: async () => 'x' })
+    const unsampled = { ...createTrace(), sampled: false }
+    assert.equal(await run('nope', tracer, { trace: unsampled }), 'x')
+    assert.equal(calls, 0)
+    const plain = new RecordingTracer()
+    assert.equal(await run('nope', plain, { trace: createTrace() }), 'x')
+  })
+
+  test('a runInSpan that throws runs the function once, keeps result and error, and is disabled', async () => {
+    let runs = 0
+    let scopes = 0
+    const inner = new RecordingTracer()
+    const tracer: Tracer = {
+      startSpan: (n, c, o) => inner.startSpan(n, c, o),
+      runInSpan: () => {
+        scopes++
+        throw new Error('scope exploded')
+      },
+    }
+    addTestFunction('okRun', {
+      func: async () => {
+        runs++
+        return 'fine'
+      },
+    })
+    addTestFunction('badRun', {
+      func: async () => {
+        throw new Error('boom')
+      },
+    })
+    assert.equal(await run('okRun', tracer, { trace: createTrace() }), 'fine')
+    assert.equal(runs, 1)
+    await assert.rejects(
+      run('badRun', tracer, { trace: createTrace() }),
+      /boom/
+    )
+    assert.equal(scopes, 1, 'disabled after the first throw')
+  })
+
+  test('a runInSpan that runs the function then throws does not rerun it', async () => {
+    let runs = 0
+    const inner = new RecordingTracer()
+    const tracer: Tracer = {
+      startSpan: (n, c, o) => inner.startSpan(n, c, o),
+      runInSpan: (_s, fn) => {
+        fn()
+        throw new Error('after')
+      },
+    }
+    addTestFunction('once', {
+      func: async () => {
+        runs++
+        return 'r'
+      },
+    })
+    assert.equal(await run('once', tracer, { trace: createTrace() }), 'r')
+    assert.equal(runs, 1)
+  })
+
   test('with no tracer the function runs untouched', async () => {
     addTestFunction('plain', { func: async () => 'plain' })
     assert.equal(

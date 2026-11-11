@@ -4,10 +4,17 @@ import {
   type KyselyPlugin,
   type SqliteDatabase,
 } from 'kysely'
-import { SerializePlugin } from '@pikku/kysely'
+import {
+  SerializePlugin,
+  traceDialect,
+  type TraceDriverOptions,
+} from '@pikku/kysely'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 
-export interface CreateSQLiteKyselyOptions {
+export interface CreateSQLiteKyselyOptions extends Omit<
+  TraceDriverOptions,
+  'system'
+> {
   /** Extra plugins to layer on, ahead of the always-last SerializePlugin. */
   plugins?: KyselyPlugin[]
 }
@@ -17,7 +24,12 @@ export function createSQLiteKysely(
   options: CreateSQLiteKyselyOptions = {}
 ): Kysely<KyselyPikkuDB> {
   return new Kysely<KyselyPikkuDB>({
-    dialect: new SqliteDialect({ database }),
+    dialect: traceDialect(new SqliteDialect({ database }), {
+      tracer: options.tracer,
+      currentTrace: options.currentTrace,
+      recordSqlText: options.recordSqlText,
+      system: 'sqlite',
+    }),
     plugins: [...(options.plugins ?? []), new SerializePlugin()],
   })
 }

@@ -72,7 +72,11 @@ import {
 } from '../wirings/addon/wire-addon.js'
 import type { AddonInstance } from '../wirings/addon/addon-runner.js'
 import { closeWireServices } from '../utils.js'
-import { endFunctionSpan, openFunctionSpan } from './function-span.js'
+import {
+  endFunctionSpan,
+  openFunctionSpan,
+  runInFunctionSpan,
+} from './function-span.js'
 
 async function resolveSession(
   wire: PikkuRawWire,
@@ -726,11 +730,13 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   if (allMiddleware.length > 0) {
     try {
-      return (await runMiddleware<CorePikkuMiddleware>(
-        resolvedSingletonServices,
-        invocationWire,
-        allMiddleware,
-        executeFunction
+      return (await runInFunctionSpan(openSpan, () =>
+        runMiddleware<CorePikkuMiddleware>(
+          resolvedSingletonServices,
+          invocationWire,
+          allMiddleware,
+          executeFunction
+        )
       )) as Out
     } catch (error) {
       failure = { error }
@@ -741,7 +747,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   }
 
   try {
-    return (await executeFunction()) as Out
+    return (await runInFunctionSpan(openSpan, executeFunction)) as Out
   } catch (error) {
     failure = { error }
     throw error

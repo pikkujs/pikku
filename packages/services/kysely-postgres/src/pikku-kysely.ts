@@ -1,6 +1,7 @@
 import type { Logger } from '@pikku/core/services'
 import type { PostgresConfig } from '@pikku/core/types'
 import { CamelCasePlugin, Kysely } from 'kysely'
+import { traceDialect, type TraceDriverOptions } from '@pikku/kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
 
@@ -13,7 +14,13 @@ export class PikkuKysely<DB> {
     private logger: Logger,
     connectionOrConfig: postgres.Sql<{}> | postgres.Options<{}> | string,
     defaultSchemaName?: string,
-    poolConfig?: PostgresConfig
+    poolConfig?: PostgresConfig,
+    /**
+     * Record each statement as a `db.<operation>` client span (operation and
+     * first table; never parameters, never an error message). Needs both
+     * `tracer` and `currentTrace`, otherwise nothing is wrapped.
+     */
+    tracing?: Omit<TraceDriverOptions, 'system'>
   ) {
     // Map the runtime pool config to postgres.js options. Only set keys that
     // were provided so postgres.js keeps its own defaults otherwise.
@@ -48,9 +55,12 @@ export class PikkuKysely<DB> {
     }
 
     this.kysely = new Kysely<DB>({
-      dialect: new PostgresJSDialect({
-        postgres: this.postgres,
-      }),
+      dialect: traceDialect(
+        new PostgresJSDialect({
+          postgres: this.postgres,
+        }),
+        { ...tracing, system: 'postgresql' }
+      ),
       plugins: [new CamelCasePlugin()],
     })
 

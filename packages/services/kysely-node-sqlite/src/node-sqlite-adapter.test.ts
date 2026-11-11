@@ -1,5 +1,8 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { RecordingTracer } from '@pikku/core/testing'
+import { createTrace } from '@pikku/core/trace'
+import { sql } from 'kysely'
 import { createNodeSqliteKysely } from './create-node-sqlite-kysely.js'
 
 interface DB {
@@ -71,4 +74,25 @@ describe('NodeSqliteDatabase', () => {
         ['id', 'name']
       )
     }))
+})
+
+describe('tracing', () => {
+  test('a query is a db span, a child of the current trace', async () => {
+    const tracer = new RecordingTracer()
+    const parent = createTrace()
+    const db = createNodeSqliteKysely({
+      filename: ':memory:',
+      camelCase: false,
+      tracer,
+      currentTrace: () => parent,
+    })
+    await sql`create table t (id integer)`.execute(db)
+    await db.insertInto('t').values({ id: 1 }).execute()
+    await db.destroy()
+    const insert = tracer.spans.find((s) => s.name === 'db.insert')!
+    assert.equal(insert.parentSpanId, parent.spanId)
+    assert.equal(insert.attributes['db.system'], 'sqlite')
+    assert.equal(insert.attributes['db.collection.name'], 't')
+    assert.equal(insert.attributes['db.query.text'], undefined)
+  })
 })

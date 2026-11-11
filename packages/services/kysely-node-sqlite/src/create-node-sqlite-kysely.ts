@@ -5,11 +5,15 @@ import {
   CamelCasePlugin,
   type KyselyPlugin,
 } from 'kysely'
+import { traceDialect, type TraceDriverOptions } from '@pikku/kysely'
 import type { SqliteFunctionMap } from '@pikku/kysely-sqlite'
 import { NodeSqliteDatabase } from './node-sqlite-adapter.js'
 import { registerSqliteFunctions } from './register-functions.js'
 
-export interface CreateNodeSqliteKyselyOptions {
+export interface CreateNodeSqliteKyselyOptions extends Omit<
+  TraceDriverOptions,
+  'system'
+> {
   /** Path to the SQLite file. Use ':memory:' for an in-memory DB. */
   filename: string
   /** Apply CamelCasePlugin so DB columns map to camelCase TS fields. Default true. */
@@ -52,7 +56,15 @@ export function createNodeSqliteKysely<DB>(
   if (options.plugins) plugins.push(...options.plugins)
 
   return new Kysely<DB>({
-    dialect: new SqliteDialect({ database: new NodeSqliteDatabase(db) }),
+    dialect: traceDialect(
+      new SqliteDialect({ database: new NodeSqliteDatabase(db) }),
+      {
+        tracer: options.tracer,
+        currentTrace: options.currentTrace,
+        recordSqlText: options.recordSqlText,
+        system: 'sqlite',
+      }
+    ),
     plugins,
   })
 }

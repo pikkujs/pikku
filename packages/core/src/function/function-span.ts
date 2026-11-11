@@ -173,3 +173,22 @@ export const endFunctionSpan = (
     disable(tracer, logger, error)
   }
 }
+
+/**
+ * Runs `fn` inside the span when the tracer can scope it (`runInSpan`), else
+ * just runs it. `fn` runs exactly once and its result or error is what the
+ * caller sees, whatever the tracer does; a tracer that throws is disabled.
+ */
+export const runInFunctionSpan = <T>(
+  open: FunctionSpan | undefined,
+  fn: () => Promise<T>
+): Promise<T> => {
+  if (!open?.tracer.runInSpan || disabled.has(open.tracer)) return fn()
+  let outcome: Promise<T> | undefined
+  try {
+    return open.tracer.runInSpan(open.span, () => (outcome = fn()))
+  } catch (error) {
+    disable(open.tracer, open.logger, error)
+    return outcome ?? fn()
+  }
+}
