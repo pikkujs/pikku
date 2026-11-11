@@ -6874,6 +6874,7 @@ export interface TelemetryStore {
 conformance: (store: TelemetryStore, options?: ConformanceOptions) => void
 export type ConformanceOptions = {
   ingest?: TelemetryIngest
+  spans?: boolean
 }
 export class MemoryTelemetryStore implements TelemetryStore {
   async appendLogs(scope: TelemetryScope, records: LogRecord[]): Promise<void>

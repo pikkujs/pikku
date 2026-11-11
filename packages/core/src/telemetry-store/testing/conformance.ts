@@ -26,6 +26,13 @@ export type ConformanceOptions = {
    * (the cloud's, over an ingest path it does not own) must pass it.
    */
   ingest?: TelemetryIngest
+  /**
+   * Whether the store keeps a span tree. Default true. Pass false for a store
+   * that only holds logs and metrics: the suite then skips every test derived
+   * from spans (`failures`, `metricsSummary`, `trace`, `queueJobs`) and never
+   * ingests a span. It does not fake spans for such a store.
+   */
+  spans?: boolean
 }
 
 const NOW = Date.now()
@@ -78,6 +85,8 @@ export const conformance = (
   store: TelemetryStore,
   options: ConformanceOptions = {}
 ): void => {
+  const withSpans = options.spans !== false
+  const spanTest = { skip: !withSpans }
   const ingest: TelemetryIngest =
     options.ingest ??
     (async (scope, data) => {
@@ -104,19 +113,24 @@ export const conformance = (
         const trace = 'b'.repeat(32)
         await ingest(mine, {
           logs: [log({ body: 'only here', traceId: trace })],
-          spans: [
-            span({
-              id: '1',
-              traceId: trace,
-              status: 'error',
-              statusMessage: 'boom',
-              attributes: fn('f'),
-            }),
-            span({
-              id: '2',
-              attributes: { ...fn('q', 'queue'), 'pikku.queue.name': 'mail' },
-            }),
-          ],
+          spans: withSpans
+            ? [
+                span({
+                  id: '1',
+                  traceId: trace,
+                  status: 'error',
+                  statusMessage: 'boom',
+                  attributes: fn('f'),
+                }),
+                span({
+                  id: '2',
+                  attributes: {
+                    ...fn('q', 'queue'),
+                    'pikku.queue.name': 'mail',
+                  },
+                }),
+              ]
+            : [],
           metrics: [{ at: NOW - MIN, name: 'pikku.m', value: 1 }],
         })
         const since = NOW - 10 * MIN
@@ -189,6 +203,18 @@ export const conformance = (
         )
       })
 
+      test('returns at most 100 records by default', async () => {
+        const s = freshScope()
+        await ingest(s, {
+          logs: Array.from({ length: 101 }, (_, i) =>
+            log({ at: NOW - 200 * 1000 + i * 1000, body: `n${i}` })
+          ),
+        })
+        const got = await store.logs(s, {})
+        assert.equal(got.length, 100)
+        assert.equal(got[0]!.body, 'n100')
+      })
+
       test('since is inclusive and until is exclusive', async () => {
         const [, second, third] = records()
         const got = await store.logs(scope, {
@@ -259,77 +285,105 @@ export const conformance = (
     })
 
     describe('failures', () => {
-      test('groups error root spans and names a sample trace', async () => {
+      const t = (c: string) => c.repeat(32)
+
+      test(
+        'groups error root spans, orders by count, names the latest trace',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          await ingest(s, {
+            spans: [
+              // getUser fails twice. The older failure has the lexicographically
+              // larger trace id, so "max trace id" is not "latest trace".
+              span({
+                id: '1',
+                traceId: t('f'),
+                status: 'error',
+                statusMessage: 'db down',
+                startAt: NOW - 5 * MIN,
+                attributes: fn('getUser'),
+              }),
+              span({
+                id: '2',
+                traceId: t('2'),
+                status: 'error',
+                statusMessage: 'db down',
+                startAt: NOW - 3 * MIN,
+                attributes: fn('getUser'),
+              }),
+              // saveUser fails once, and most recently: count order, not recency.
+              span({
+                id: '3',
+                traceId: t('3'),
+                status: 'error',
+                statusMessage: 'bad input',
+                startAt: NOW - 1 * MIN,
+                attributes: fn('saveUser'),
+              }),
+              // Not counted: a child span, an ok span, and one before `since`.
+              span({
+                id: '4',
+                traceId: t('2'),
+                parentSpanId: '2'.padStart(16, '0'),
+                status: 'error',
+                statusMessage: 'db down',
+                attributes: fn('getUser'),
+              }),
+              span({ id: '5', traceId: t('5'), attributes: fn('getUser') }),
+              span({
+                id: '6',
+                traceId: t('6'),
+                status: 'error',
+                statusMessage: 'old',
+                startAt: NOW - 60 * MIN,
+                attributes: fn('getUser'),
+              }),
+            ],
+          })
+          const rows = await store.failures(s, { since: NOW - 10 * MIN })
+          assert.deepEqual(rows, [
+            {
+              functionId: 'getUser',
+              wireType: 'http',
+              message: 'db down',
+              count: 2,
+              last: NOW - 3 * MIN,
+              sampleTraceId: t('2'),
+            },
+            {
+              functionId: 'saveUser',
+              wireType: 'http',
+              message: 'bad input',
+              count: 1,
+              last: NOW - 1 * MIN,
+              sampleTraceId: t('3'),
+            },
+          ])
+          const one = await store.failures(s, {
+            since: NOW - 10 * MIN,
+            limit: 1,
+          })
+          assert.equal(one.length, 1)
+          assert.deepEqual(await store.failures(s, { since: NOW }), [])
+        }
+      )
+
+      test('returns at most 50 groups by default', spanTest, async () => {
         const s = freshScope()
-        const t = (c: string) => c.repeat(32)
         await ingest(s, {
-          spans: [
+          spans: Array.from({ length: 51 }, (_, i) =>
             span({
-              id: '1',
-              traceId: t('1'),
+              id: String(i + 1),
+              traceId: String(i + 1).padStart(32, '0'),
               status: 'error',
-              statusMessage: 'db down',
-              startAt: NOW - 5 * MIN,
-              attributes: fn('getUser'),
-            }),
-            span({
-              id: '2',
-              traceId: t('2'),
-              status: 'error',
-              statusMessage: 'db down',
-              startAt: NOW - 2 * MIN,
-              attributes: fn('getUser'),
-            }),
-            span({
-              id: '3',
-              traceId: t('3'),
-              status: 'error',
-              statusMessage: 'bad input',
-              startAt: NOW - 3 * MIN,
-              attributes: fn('saveUser'),
-            }),
-            // Not counted: a child span, an ok span, and one before `since`.
-            span({
-              id: '4',
-              traceId: t('2'),
-              parentSpanId: '2'.padStart(16, '0'),
-              status: 'error',
-              statusMessage: 'db down',
-              attributes: fn('getUser'),
-            }),
-            span({ id: '5', traceId: t('5'), attributes: fn('getUser') }),
-            span({
-              id: '6',
-              traceId: t('6'),
-              status: 'error',
-              statusMessage: 'old',
-              startAt: NOW - 60 * MIN,
-              attributes: fn('getUser'),
-            }),
-          ],
+              statusMessage: 'x',
+              attributes: fn(`fn${i}`),
+            })
+          ),
         })
         const rows = await store.failures(s, { since: NOW - 10 * MIN })
-        assert.deepEqual(rows, [
-          {
-            functionId: 'getUser',
-            wireType: 'http',
-            message: 'db down',
-            count: 2,
-            last: NOW - 2 * MIN,
-            sampleTraceId: t('2'),
-          },
-          {
-            functionId: 'saveUser',
-            wireType: 'http',
-            message: 'bad input',
-            count: 1,
-            last: NOW - 3 * MIN,
-            sampleTraceId: t('3'),
-          },
-        ])
-        const one = await store.failures(s, { since: NOW - 10 * MIN, limit: 1 })
-        assert.equal(one.length, 1)
-        assert.deepEqual(await store.failures(s, { since: NOW }), [])
+        assert.equal(rows.length, 50)
       })
     })
 
@@ -377,223 +431,356 @@ export const conformance = (
         )
       })
 
-      test('summarises root spans: totals, traffic and per-function rows', async () => {
-        const s = freshScope()
-        const since = NOW - 10 * MIN
-        const slow = (
-          id: string,
-          startAt: number,
-          ms: number,
-          fnId: string,
-          status: 'ok' | 'error' = 'ok'
-        ) =>
-          span({
-            id,
-            traceId: id.repeat(32).slice(0, 32),
-            startAt,
-            endAt: startAt + ms,
-            durationMs: ms,
-            status,
-            attributes: fn(fnId),
-          })
-        await ingest(s, {
-          spans: [
-            slow('1', since + 1 * MIN, 10, 'a'),
-            slow('2', since + 1 * MIN + 1, 30, 'a', 'error'),
-            slow('3', since + 8 * MIN, 50, 'b'),
-            // Excluded: a child, and one outside the window.
+      test(
+        'summarises root spans: totals, traffic and per-function rows',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const since = NOW - 10 * MIN
+          const slow = (
+            id: string,
+            startAt: number,
+            ms: number,
+            fnId: string,
+            status: 'ok' | 'error' = 'ok'
+          ) =>
             span({
-              id: '4',
-              parentSpanId: '1'.padStart(16, '0'),
-              startAt: since + 1 * MIN,
-              durationMs: 999,
-            }),
-            slow('5', since - MIN, 999, 'a'),
-          ],
-        })
-        const sum = await store.metricsSummary(s, {
-          since,
-          until: NOW,
-          buckets: 2,
-        })
-        assert.deepEqual(sum.totals, {
-          requests: 3,
-          errors: 1,
-          avgMs: 30,
-          maxMs: 50,
-        })
-        assert.deepEqual(sum.traffic, [
-          { at: since, requests: 2, errors: 1, avgMs: 20, maxMs: 30 },
-          { at: since + 5 * MIN, requests: 1, errors: 0, avgMs: 50, maxMs: 50 },
-        ])
-        assert.deepEqual(sum.functions, [
-          {
-            name: 'a',
-            wire: 'http',
-            requests: 2,
+              id,
+              traceId: id.repeat(32).slice(0, 32),
+              startAt,
+              endAt: startAt + ms,
+              durationMs: ms,
+              status,
+              attributes: fn(fnId),
+            })
+          await ingest(s, {
+            spans: [
+              slow('1', since + 1 * MIN, 10, 'a'),
+              slow('2', since + 1 * MIN + 1, 30, 'a', 'error'),
+              slow('3', since + 8 * MIN, 50, 'b'),
+              // Excluded: a child, and one outside the window.
+              span({
+                id: '4',
+                parentSpanId: '1'.padStart(16, '0'),
+                startAt: since + 1 * MIN,
+                durationMs: 999,
+              }),
+              slow('5', since - MIN, 999, 'a'),
+            ],
+          })
+          const sum = await store.metricsSummary(s, {
+            since,
+            until: NOW,
+            buckets: 2,
+          })
+          assert.deepEqual(sum.totals, {
+            requests: 3,
             errors: 1,
-            avgMs: 20,
-            lastRun: since + 1 * MIN + 1,
-          },
-          {
-            name: 'b',
-            wire: 'http',
-            requests: 1,
-            errors: 0,
-            avgMs: 50,
-            lastRun: since + 8 * MIN,
-          },
-        ])
+            avgMs: 30,
+            maxMs: 50,
+          })
+          assert.deepEqual(sum.traffic, [
+            { at: since, requests: 2, errors: 1, avgMs: 20, maxMs: 30 },
+            {
+              at: since + 5 * MIN,
+              requests: 1,
+              errors: 0,
+              avgMs: 50,
+              maxMs: 50,
+            },
+          ])
+          assert.deepEqual(sum.functions, [
+            {
+              name: 'a',
+              wire: 'http',
+              requests: 2,
+              errors: 1,
+              avgMs: 20,
+              lastRun: since + 1 * MIN + 1,
+            },
+            {
+              name: 'b',
+              wire: 'http',
+              requests: 1,
+              errors: 0,
+              avgMs: 50,
+              lastRun: since + 8 * MIN,
+            },
+          ])
+        }
+      )
+
+      test('defaults to 30 buckets aligned to since', spanTest, async () => {
+        const s = freshScope()
+        const since = NOW - 30 * MIN
+        await ingest(s, {
+          spans: Array.from({ length: 60 }, (_, i) =>
+            span({
+              id: String(i + 1),
+              traceId: String(i + 1).padStart(32, '0'),
+              startAt: since + i * 30_000,
+            })
+          ),
+        })
+        const sum = await store.metricsSummary(s, { since, until: NOW })
+        assert.equal(sum.traffic.length, 30)
+        assert.deepEqual(
+          sum.traffic.map((b) => b.at),
+          Array.from({ length: 30 }, (_, i) => since + i * MIN)
+        )
+        assert.ok(sum.traffic.every((b) => b.requests === 2))
       })
 
-      test('an empty window summarises to nulls, not zeros or NaN', async () => {
-        const s = freshScope()
-        const sum = await store.metricsSummary(s, {
-          since: NOW - 10 * MIN,
-          until: NOW,
-        })
-        assert.deepEqual(sum, {
-          totals: { requests: 0, errors: 0, avgMs: null, maxMs: null },
-          traffic: [],
-          functions: [],
-        })
-      })
+      test(
+        'an empty window summarises to nulls, not zeros or NaN',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const sum = await store.metricsSummary(s, {
+            since: NOW - 10 * MIN,
+            until: NOW,
+          })
+          assert.deepEqual(sum, {
+            totals: { requests: 0, errors: 0, avgMs: null, maxMs: null },
+            traffic: [],
+            functions: [],
+          })
+        }
+      )
     })
 
     describe('trace', () => {
-      test('returns every span of the trace, oldest first, and no other', async () => {
-        const s = freshScope()
-        const trace = 'd'.repeat(32)
-        await ingest(s, {
-          spans: [
-            span({
-              id: '2',
-              traceId: trace,
-              parentSpanId: '1'.padStart(16, '0'),
-              name: 'child',
-              startAt: NOW - MIN + 5,
-            }),
-            span({ id: '1', traceId: trace, name: 'root', startAt: NOW - MIN }),
-            span({ id: '3', traceId: 'e'.repeat(32), name: 'elsewhere' }),
-          ],
-        })
-        const spans = await store.trace(s, trace)
-        assert.deepEqual(
-          spans.map((x) => x.name),
-          ['root', 'child']
-        )
-        assert.equal(spans[1]!.parentSpanId, '1'.padStart(16, '0'))
-        assert.equal(spans[0]!.parentSpanId, undefined)
-        assert.deepEqual(await store.trace(s, 'f'.repeat(32)), [])
-      })
+      test(
+        'returns every span of the trace, oldest first, and no other',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const trace = 'd'.repeat(32)
+          await ingest(s, {
+            spans: [
+              span({
+                id: '2',
+                traceId: trace,
+                parentSpanId: '1'.padStart(16, '0'),
+                name: 'child',
+                startAt: NOW - MIN + 5,
+              }),
+              span({
+                id: '1',
+                traceId: trace,
+                name: 'root',
+                startAt: NOW - MIN,
+              }),
+              span({ id: '3', traceId: 'e'.repeat(32), name: 'elsewhere' }),
+            ],
+          })
+          const spans = await store.trace(s, trace)
+          assert.deepEqual(
+            spans.map((x) => x.name),
+            ['root', 'child']
+          )
+          assert.equal(spans[1]!.parentSpanId, '1'.padStart(16, '0'))
+          assert.equal(spans[0]!.parentSpanId, undefined)
+          assert.deepEqual(await store.trace(s, 'f'.repeat(32)), [])
+        }
+      )
+
+      test(
+        'spans with the same start time order by span id',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const trace = '9'.repeat(32)
+          await ingest(s, {
+            spans: ['3', '1', '2'].map((id) =>
+              span({ id, traceId: trace, name: `s${id}`, startAt: NOW - MIN })
+            ),
+          })
+          assert.deepEqual(
+            (await store.trace(s, trace)).map((x) => x.name),
+            ['s1', 's2', 's3']
+          )
+        }
+      )
     })
 
     describe('queueJobs', () => {
-      test('counts outcomes per queue and lists recent runs newest first', async () => {
-        const s = freshScope()
-        const job = (
-          id: string,
-          queue: string,
-          at: number,
-          status: 'ok' | 'error' = 'ok',
-          ms = 5
-        ) =>
-          span({
-            id,
-            traceId: id.repeat(32).slice(0, 32),
-            startAt: at,
-            durationMs: ms,
-            status,
-            statusMessage: status === 'error' ? 'smtp refused' : undefined,
-            attributes: { ...fn('send', 'queue'), 'pikku.queue.name': queue },
-          })
-        await ingest(s, {
-          spans: [
-            job('1', 'mail', NOW - 5 * MIN),
-            job('2', 'mail', NOW - 3 * MIN, 'error', 7),
-            job('3', 'mail', NOW - 4 * MIN),
-            job('4', 'resize', NOW - 9 * MIN),
-            // Not a queue job: an http root span.
-            span({ id: '5', attributes: fn('getUser') }),
-          ],
+      const job = (
+        id: string,
+        queue: string,
+        at: number,
+        status: 'ok' | 'error' = 'ok',
+        ms = 5,
+        parentSpanId?: string
+      ) =>
+        span({
+          id,
+          traceId: id.padStart(32, '0'),
+          parentSpanId,
+          startAt: at,
+          durationMs: ms,
+          status,
+          statusMessage: status === 'error' ? 'smtp refused' : undefined,
+          attributes: { ...fn('send', 'queue'), 'pikku.queue.name': queue },
         })
-        const rows = await store.queueJobs(s, { since: NOW - 20 * MIN })
-        assert.deepEqual(
-          rows.map((r) => [r.queue, r.completed, r.failed, r.lastRun]),
-          [
-            ['mail', 2, 1, NOW - 3 * MIN],
-            ['resize', 1, 0, NOW - 9 * MIN],
-          ]
-        )
-        assert.deepEqual(rows[0]!.recent, [
-          {
-            at: NOW - 3 * MIN,
-            outcome: 'failed',
-            durationMs: 7,
-            error: 'smtp refused',
-          },
-          {
-            at: NOW - 4 * MIN,
-            outcome: 'completed',
-            durationMs: 5,
-            error: null,
-          },
-          {
-            at: NOW - 5 * MIN,
-            outcome: 'completed',
-            durationMs: 5,
-            error: null,
-          },
-        ])
-        const recentOnly = await store.queueJobs(s, { since: NOW - 6 * MIN })
-        assert.deepEqual(
-          recentOnly.map((r) => r.queue),
-          ['mail']
-        )
+
+      test(
+        'counts outcomes per queue and lists queues most recently run first',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          await ingest(s, {
+            // Inserted oldest queue first: recency order is not insertion order.
+            spans: [
+              job('4', 'resize', NOW - 9 * MIN),
+              job('1', 'mail', NOW - 5 * MIN),
+              job('2', 'mail', NOW - 3 * MIN, 'error', 7),
+              job('3', 'mail', NOW - 4 * MIN),
+              // Not queue jobs: an http root span, and a queue-typed child span.
+              span({ id: '5', attributes: fn('getUser') }),
+              job('6', 'ghost', NOW - 1 * MIN, 'ok', 5, '1'.padStart(16, '0')),
+            ],
+          })
+          const rows = await store.queueJobs(s, { since: NOW - 20 * MIN })
+          assert.deepEqual(
+            rows.map((r) => [r.queue, r.completed, r.failed, r.lastRun]),
+            [
+              ['mail', 2, 1, NOW - 3 * MIN],
+              ['resize', 1, 0, NOW - 9 * MIN],
+            ]
+          )
+          assert.deepEqual(rows[0]!.recent, [
+            {
+              at: NOW - 3 * MIN,
+              outcome: 'failed',
+              durationMs: 7,
+              error: 'smtp refused',
+            },
+            {
+              at: NOW - 4 * MIN,
+              outcome: 'completed',
+              durationMs: 5,
+              error: null,
+            },
+            {
+              at: NOW - 5 * MIN,
+              outcome: 'completed',
+              durationMs: 5,
+              error: null,
+            },
+          ])
+          const recentOnly = await store.queueJobs(s, { since: NOW - 6 * MIN })
+          assert.deepEqual(
+            recentOnly.map((r) => r.queue),
+            ['mail']
+          )
+        }
+      )
+
+      test(
+        'recent keeps the newest 10 of a busier queue',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          await ingest(s, {
+            spans: Array.from({ length: 12 }, (_, i) =>
+              job(String(i + 1), 'mail', NOW - (20 - i) * MIN)
+            ),
+          })
+          const [row] = await store.queueJobs(s, { since: NOW - 60 * MIN })
+          assert.equal(row!.completed, 12)
+          assert.equal(row!.recent.length, 10)
+          assert.equal(row!.recent[0]!.at, NOW - 9 * MIN)
+          assert.equal(row!.recent[9]!.at, NOW - 18 * MIN)
+        }
+      )
+
+      test('returns at most 50 queues by default', spanTest, async () => {
+        const s = freshScope()
+        await ingest(s, {
+          spans: Array.from({ length: 51 }, (_, i) =>
+            job(String(i + 1), `q${i}`, NOW - MIN)
+          ),
+        })
+        const rows = await store.queueJobs(s, { since: NOW - 10 * MIN })
+        assert.equal(rows.length, 50)
       })
     })
 
     describe('tail cursor', () => {
-      const lines = (from: number, n: number) =>
-        Array.from({ length: n }, (_, i) =>
-          // Every record shares one timestamp: a cursor on time alone loses some.
-          log({ at: NOW - MIN, body: `line ${from + i}` })
-        )
-
-      test('walks every record exactly once, in order, in pages', async () => {
-        const s = freshScope()
-        await ingest(s, { logs: lines(0, 7) })
-        const seen: string[] = []
+      // A page-walk: every page of `limit`, until one comes back empty.
+      const walk = async (s: TelemetryScope, limit: number) => {
+        const seen: LogRecord[] = []
         let cursor: string | null = null
-        for (let guard = 0; guard < 10; guard++) {
+        for (let guard = 0; guard < 50; guard++) {
           const page: Awaited<ReturnType<typeof store.tail>> = await store.tail(
             s,
             cursor,
-            { limit: 3 }
+            { limit }
           )
-          seen.push(...page.records.map((r) => r.body))
+          seen.push(...page.records)
           if (!page.records.length) break
           cursor = page.cursor
         }
+        return seen
+      }
+
+      test('unique timestamps come back in timestamp order across pages', async () => {
+        const s = freshScope()
+        // Ingested out of order on purpose: order is by timestamp.
+        const order = [3, 1, 4, 0, 2]
+        await ingest(s, {
+          logs: order.map((i) =>
+            log({ at: NOW - (10 - i) * MIN, body: `line ${i}` })
+          ),
+        })
+        const seen = await walk(s, 2)
         assert.deepEqual(
-          seen,
+          seen.map((r) => r.body),
+          ['line 0', 'line 1', 'line 2', 'line 3', 'line 4']
+        )
+      })
+
+      test('records sharing a timestamp are each returned exactly once across pages', async () => {
+        const s = freshScope()
+        await ingest(s, {
+          logs: Array.from({ length: 7 }, (_, i) =>
+            log({ at: NOW - MIN, body: `line ${i}` })
+          ),
+        })
+        const seen = (await walk(s, 2)).map((r) => r.body)
+        assert.equal(seen.length, 7)
+        assert.deepEqual(
+          [...seen].sort(),
           Array.from({ length: 7 }, (_, i) => `line ${i}`)
         )
       })
 
-      test('with nothing new the same cursor comes back, and new records follow it', async () => {
+      test('null starts at the beginning', async () => {
         const s = freshScope()
-        await ingest(s, { logs: lines(0, 2) })
+        await ingest(s, {
+          logs: [log({ body: 'a', at: NOW - 2 * MIN }), log({ body: 'b' })],
+        })
+        const page = await store.tail(s, null, {})
+        assert.deepEqual(
+          page.records.map((r) => r.body),
+          ['a', 'b']
+        )
+      })
+
+      test('with nothing new the same cursor comes back, and newer records follow it', async () => {
+        const s = freshScope()
+        await ingest(s, { logs: [log({ body: 'a', at: NOW - 3 * MIN })] })
         const first = await store.tail(s, null, {})
-        assert.equal(first.records.length, 2)
+        assert.equal(first.records.length, 1)
         const idle = await store.tail(s, first.cursor, {})
         assert.deepEqual(idle.records, [])
         assert.equal(idle.cursor, first.cursor)
-        await ingest(s, { logs: lines(2, 1) })
+        await ingest(s, { logs: [log({ body: 'b', at: NOW - 2 * MIN })] })
         const next = await store.tail(s, idle.cursor, {})
         assert.deepEqual(
           next.records.map((r) => r.body),
-          ['line 2']
+          ['b']
         )
       })
 
@@ -601,7 +788,7 @@ export const conformance = (
         const s = freshScope()
         const empty = await store.tail(s, null, {})
         assert.deepEqual(empty.records, [])
-        await ingest(s, { logs: lines(0, 1) })
+        await ingest(s, { logs: [log()] })
         const after = await store.tail(s, empty.cursor, {})
         assert.equal(after.records.length, 1)
       })
@@ -609,11 +796,15 @@ export const conformance = (
       test("a cursor from one scope never leaks another scope's records", async () => {
         const a = freshScope()
         const b = { ...a, stage: 'develop' }
-        await ingest(a, { logs: lines(0, 1) })
+        await ingest(a, { logs: [log({ body: 'in a' })] })
         await ingest(b, { logs: [log({ body: 'in b' })] })
         const fromA = await store.tail(a, null, {})
         const fromB = await store.tail(b, fromA.cursor, {})
         assert.ok(fromB.records.every((r) => r.body === 'in b'))
+        assert.deepEqual(
+          (await store.tail(a, null, {})).records.map((r) => r.body),
+          ['in a']
+        )
       })
     })
 
