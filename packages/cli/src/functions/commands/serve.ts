@@ -44,6 +44,7 @@ import {
 import { disableDevVirtualUserSignIn } from '../../server/virtual-user-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 import { assertBackendToServe } from '../../utils/select-backends.js'
+import { resolveProjectVersion } from '../../deploy/build-pipeline.js'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { asContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'
 
@@ -71,6 +72,7 @@ export const serve = pikkuSessionlessFunc<
     const telemetry = createRuntimeTelemetry(process.env, {
       logger: new ConsoleLogger(),
       serviceName: basename(config.rootDir),
+      version: resolveProjectVersion(config.rootDir),
       contextStorage: asContextStorage(new AsyncLocalStorage()),
     })
     const tracing = telemetry.enabled

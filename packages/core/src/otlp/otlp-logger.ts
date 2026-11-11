@@ -36,6 +36,40 @@ const stringify = (value: unknown): string => {
   }
 }
 
+const SENSITIVE_KEY =
+  /token|secret|password|passwd|authorization|cookie|key|credential|session|bearer/i
+
+export const REDACTED_ATTRIBUTE = '[redacted]'
+
+const MAX_DEPTH = 4
+
+/**
+ * Copies `value` with every field whose name looks sensitive replaced by
+ * `[redacted]`, at any depth. Fails closed: a match on the name alone is
+ * enough, whatever the value is.
+ */
+const redact = (value: unknown, depth = 0): unknown => {
+  if (value === null || typeof value !== 'object') return value
+  if (depth >= MAX_DEPTH) return REDACTED_ATTRIBUTE
+  if (Array.isArray(value)) return value.map((item) => redact(item, depth + 1))
+  const out: Record<string, unknown> = {}
+  try {
+    const source =
+      typeof (value as { toJSON?: unknown }).toJSON === 'function'
+        ? (value as { toJSON: () => unknown }).toJSON()
+        : value
+    if (source === null || typeof source !== 'object') return source
+    for (const [key, field] of Object.entries(source)) {
+      out[key] = SENSITIVE_KEY.test(key)
+        ? REDACTED_ATTRIBUTE
+        : redact(field, depth + 1)
+    }
+  } catch {
+    return REDACTED_ATTRIBUTE
+  }
+  return out
+}
+
 /** A scalar stays one; anything nested is JSON text, bounded. */
 const asAttribute = (value: unknown): SpanAttributeValue | undefined => {
   if (value === undefined || value === null) return undefined
@@ -47,7 +81,7 @@ const asAttribute = (value: unknown): SpanAttributeValue | undefined => {
 
 /**
  * A log call as an OTLP record: the message is the body; an object's top-level
- * fields are attributes. An `Error` contributes its class and message and never
+ * fields are attributes, with sensitive-looking field names redacted at any depth. An `Error` contributes its class and message and never
  * its stack.
  */
 const toRecord = (
@@ -72,7 +106,9 @@ const toRecord = (
     }
     if (value && typeof value === 'object') {
       const { message, ...rest } = value as Record<string, unknown>
-      for (const [key, field] of Object.entries(rest)) add(key, field)
+      for (const [key, field] of Object.entries(rest)) {
+        add(key, SENSITIVE_KEY.test(key) ? REDACTED_ATTRIBUTE : redact(field))
+      }
       return typeof message === 'string' ? message : ''
     }
     return typeof value === 'string' ? value : stringify(value)

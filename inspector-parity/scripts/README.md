@@ -126,7 +126,7 @@ installed as `PIKKU_INSPECTOR_GO_BIN`/`_RS_BIN` and tees each request (`--stdin`
 NDJSON, `helper <m>`) to `<out>/captured/<project>/<cold|warm>/<engine>/`. After each Go
 run, while the generated state exists, every captured request is replayed against both
 binaries and compared byte for byte (same normalisations as `parity.ts`). The trees
-are compared file by file; `.pikku/runs/` (timestamped run logs) is the only exclusion.
+are compared file by file; `node_modules` is the only exclusion.
 `--corpus default` is templates/recipes/verifiers (64), `tracked` every
 `git ls-files '*pikku.config.json'`, `extra` the difference. The default outDir is
 used on purpose: the CLI's Zod step imports from `.pikku/` and `--outDir` elsewhere

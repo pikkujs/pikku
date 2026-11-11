@@ -142,4 +142,43 @@ describe('OtlpLogger', () => {
     )
     assert.doesNotThrow(() => logger.info('x'))
   })
+  test('sensitive field names are redacted at any depth, whatever the casing', async () => {
+    const { logger, sent } = setup()
+    logger.info({
+      message: 'login',
+      token: 'tok-1',
+      apiKey: 'key-1',
+      Authorization: 'Bearer abc',
+      SET_COOKIE: 'sid=1',
+      clientSecret: 's',
+      user_password: 'p',
+      sessionId: 'sess',
+      userId: 'u1',
+      headers: { Authorization: 'Bearer nested', accept: 'json' },
+      list: [{ passwd: 'x', ok: 1 }],
+    })
+    const [record] = await sent()
+    const attrs = record!.attributes
+    for (const key of [
+      'token',
+      'apiKey',
+      'Authorization',
+      'SET_COOKIE',
+      'clientSecret',
+      'user_password',
+      'sessionId',
+    ]) {
+      assert.deepEqual(attrs[key], { string: '[redacted]' }, key)
+    }
+    assert.deepEqual(attrs.userId, { string: 'u1' })
+    assert.deepEqual(attrs.headers, {
+      string: '{"Authorization":"[redacted]","accept":"json"}',
+    })
+    assert.deepEqual(attrs.list, { string: '[{"passwd":"[redacted]","ok":1}]' })
+    const wire = JSON.stringify(record, (_k, v) =>
+      typeof v === 'bigint' ? 0 : v
+    )
+    for (const leaked of ['tok-1', 'key-1', 'abc', 'nested', 'sid=1'])
+      assert.equal(wire.includes(leaked), false, leaked)
+  })
 })

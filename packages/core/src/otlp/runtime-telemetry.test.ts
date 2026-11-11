@@ -92,6 +92,17 @@ describe('loopback guard', () => {
       /http or https/
     )
     assert.throws(() => parseOtlpEndpoint('not a url', true), /valid URL/)
+    for (const endpoint of [
+      'http://127.0.0.1:4000/v1/otlp?api_key=hunter2',
+      'http://127.0.0.1:4000/v1/otlp#frag',
+    ]) {
+      assert.throws(
+        () => parseOtlpEndpoint(endpoint, false),
+        (error: Error) =>
+          /query string or fragment/.test(error.message) &&
+          !error.message.includes('hunter2')
+      )
+    }
   })
 })
 
@@ -146,6 +157,19 @@ describe('createRuntimeTelemetry', () => {
     )
     assert.equal(telemetry.enabled, false)
     assert.equal(telemetry.tracer, NOOP_TRACER)
+  })
+
+  test('PIKKU_TELEMETRY 0, false and off in any case or padding are off', () => {
+    for (const value of ['0', 'false', 'FALSE', ' off ', 'Off']) {
+      const telemetry = createRuntimeTelemetry(
+        {
+          PIKKU_OTLP_ENDPOINT: 'http://127.0.0.1:4000/v1/otlp',
+          PIKKU_TELEMETRY: value,
+        },
+        options()
+      )
+      assert.equal(telemetry.enabled, false, value)
+    }
   })
 
   test('a non-loopback endpoint throws at boot unless PIKKU_OTLP_ALLOW_REMOTE=1', async () => {
