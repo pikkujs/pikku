@@ -429,7 +429,11 @@ export const metricTableStem = (name: string): string =>
  * called `opentelemetry_traces` would create (or append to) that table.
  */
 export const reservedMetricName = (name: string): boolean => {
-  const stem = metricTableStem(name).toLowerCase()
+  // The engine strips leading punctuation and folds odd characters when it
+  // names a table, so the test runs on the stem with those stripped too.
+  const stem = metricTableStem(name)
+    .toLowerCase()
+    .replace(/^[^a-z0-9]+/, '')
   return (
     stem.startsWith('opentelemetry_') ||
     stem.startsWith('greptime_') ||
@@ -437,6 +441,9 @@ export const reservedMetricName = (name: string): boolean => {
     stem === 'information_schema'
   )
 }
+
+/** A name or key the engine keeps as written: it renames or drops anything else. */
+export const SAFE_METRIC_TEXT = /^[A-Za-z][A-Za-z0-9_.-]*$/
 
 /**
  * Data point attribute keys that name a column the store itself fills or the

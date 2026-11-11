@@ -414,8 +414,42 @@ describe('reserved metric names and attributes', () => {
     ]) {
       assert.equal(q.reservedMetricName(name), true, name)
     }
+    for (const name of [
+      '_opentelemetry_logs',
+      '.opentelemetry.logs',
+      '-opentelemetry-logs',
+      '\topentelemetry_logs',
+      '_opentelemetry_traces_spans',
+      '__greptime_x',
+      '_pikku_project_tombstones',
+    ]) {
+      assert.equal(q.reservedMetricName(name), true, JSON.stringify(name))
+    }
     for (const name of ['pikku.process.cpu', 'http.requests', 'tombstones']) {
       assert.equal(q.reservedMetricName(name), false, name)
+    }
+  })
+  test('only plain names and keys are safe: a letter first, then letters, digits, _ . -', () => {
+    for (const text of ['a', 'http.route', 'a_b-c.d9', 'Region']) {
+      assert.equal(q.SAFE_METRIC_TEXT.test(text), true, text)
+    }
+    for (const text of [
+      '',
+      '_a',
+      '.a',
+      '-a',
+      '9a',
+      '\ta',
+      'a b',
+      'a:b',
+      'a/b',
+      'a$b',
+      'a\u2024b',
+      '\uff4fpentelemetry_logs',
+      'caf\u00e9',
+      'a\n',
+    ]) {
+      assert.equal(q.SAFE_METRIC_TEXT.test(text), false, JSON.stringify(text))
     }
   })
   test('attribute keys that are scope or engine columns, in any spelling', () => {
