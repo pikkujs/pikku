@@ -502,9 +502,8 @@ function emitClassificationMap(
   declaredTables: ReadonlySet<string> = new Set()
 ): string {
   const colEntry = [
-    `  /** Privacy level — can the value leave the process? Defaults to 'private'.`,
-    `   *  'encrypted' is the legacy spelling of \`security: 'secret', form: 'wrapped'\`. */`,
-    `  security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'`,
+    `  /** Privacy level — can the value leave the process? Defaults to 'private'. */`,
+    `  security?: 'public' | 'private' | 'pii' | 'secret'`,
     `  /** How the value is held at rest, independent of \`security\`. A form other`,
     `   *  than 'plain' makes the column's INSERT/UPDATE type nominal, so only a`,
     `   *  real encrypt/seal/hash result can be written to it. Defaults to 'plain',`,

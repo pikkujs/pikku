@@ -56,21 +56,15 @@ test('loadAnnotations maps the authored `security` level to classification', () 
   assert.deepEqual(result.organization?.name, { classification: 'public' })
 })
 
-test('loadAnnotations maps pii and expands legacy encrypted into both axes', () => {
+test('loadAnnotations maps pii', () => {
   writeSidecar({
     person: {
       ssn: { security: 'pii' },
-      card: { security: 'encrypted' },
     },
   })
 
   const result = loadAnnotations(root)
   assert.deepEqual(result.person?.ssn, { classification: 'pii' })
-  // `encrypted` predates the form axis and always meant both halves at once.
-  assert.deepEqual(result.person?.card, {
-    classification: 'secret',
-    form: 'wrapped',
-  })
 })
 
 test('loadAnnotations reads an explicit form', () => {
@@ -88,18 +82,6 @@ test('loadAnnotations reads an explicit form', () => {
   // Absent means plain, and stays absent so an audit can tell "held in the
   // clear, stated" from "nobody has said".
   assert.equal(result.api_token?.note?.form, undefined)
-})
-
-test('an explicit form wins over the one legacy encrypted implies', () => {
-  writeSidecar({
-    person: { card: { security: 'encrypted', form: 'sealed' } },
-  })
-
-  const result = loadAnnotations(root)
-  assert.deepEqual(result.person?.card, {
-    classification: 'secret',
-    form: 'sealed',
-  })
 })
 
 test('an unrecognised form is dropped rather than trusted', () => {
