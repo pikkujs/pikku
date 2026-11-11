@@ -50,12 +50,12 @@ export type PikkuCorsScaffoldOptions = {
 }
 
 export interface PikkuCLICoreOutputFiles {
-  // Base directory
+  // Base directory: always `.pikku/` beside pikku.config.json, not a config key
   outDir: string
 
   // Schema and types
   schemaDirectory: string
-  /** The custom types every typed map imports, emitted once rather than per map. */
+  /** The custom types every typed map imports, emitted once rather than per map, at `.pikku/pikku-custom-types.gen.d.ts`. Derived, not a config key. */
   customTypesDeclarationFile: string
 
   // Function definitions
@@ -683,7 +683,7 @@ export type PikkuCLIInput = {
 
   /**
    * Path to write the generated typed `pikkuBetterAuth` re-export (auth.types.ts).
-   * Defaults to `{outDir}/auth/auth.types.ts`. Re-exported from `#pikku` so
+   * Defaults to `.pikku/auth/auth.types.ts`. Re-exported from `#pikku` so
    * user code can `import { pikkuBetterAuth } from '#pikku'` with project-typed services.
    */
   authTypesFile?: string
@@ -691,7 +691,7 @@ export type PikkuCLIInput = {
   /**
    * Path to write the generated Better Auth metadata (auth-meta.gen.json) —
    * the enabled social providers and plugins the console SSO page reads via
-   * getAuthProviders. Defaults to `{outDir}/auth/pikku-auth-meta.gen.json`.
+   * getAuthProviders. Defaults to `.pikku/auth/pikku-auth-meta.gen.json`.
    */
   authMetaJsonFile?: string
 

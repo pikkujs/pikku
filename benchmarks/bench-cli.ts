@@ -33,7 +33,7 @@ const PIKKU_NODE_MODULES = resolve(SIBLING_PIKKU, 'node_modules')
 //                          which is the only number that says whether making
 //                          the inspector faster is worth anything.
 //   --bin=<path>           pikku binary to run (default: the sibling checkout's)
-//   --cold                 wipe outDir and the schema cache before every run
+//   --cold                 wipe .pikku/ and the schema cache before every run
 function argOf(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`))
   return hit?.slice(name.length + 3)
@@ -92,7 +92,7 @@ function setupProject() {
         $schema:
           'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
         srcDirectories: ['./src', './types'],
-        outDir: './.pikku',
+        backends: { api: { filter: {} } },
         tsconfig: './tsconfig.json',
         // The generated graphs are built from pikkuWorkflowComplexFunc.
         allow: { complexWorkflows: true },
@@ -660,27 +660,24 @@ function parseTiming(
   return { totalMs, peakMB, inspectPasses, steps }
 }
 
-/** outDir and the ts-json-schema-generator cache, the two things a warm run reuses. */
+/** `.pikku/` and the ts-json-schema-generator cache, the two things a warm run reuses. */
 function coldPaths(dir: string): string[] {
   const cfg = JSON.parse(
     readFileSync(resolve(dir, 'pikku.config.json'), 'utf-8')
-  ) as { rootDir?: string; outDir?: string }
+  ) as { rootDir?: string }
   const root = resolve(dir, cfg.rootDir ?? '.')
-  return [
-    resolve(root, cfg.outDir ?? '.pikku'),
-    resolve(root, 'node_modules/.cache/pikku'),
-  ]
+  return [resolve(root, '.pikku'), resolve(root, 'node_modules/.cache/pikku')]
 }
 
 async function mainExternal(dir: string) {
   console.log(`Project:   ${dir}`)
   console.log(`Pikku bin: ${BIN}`)
   console.log(
-    `Mode:      ${COLD ? 'cold (outDir + schema cache wiped per run)' : 'warm'}\n`
+    `Mode:      ${COLD ? 'cold (.pikku/ + schema cache wiped per run)' : 'warm'}\n`
   )
 
   // A cold run needs a completed warm run first: codegen writes the `#pikku/*`
-  // tree its own inputs import, so a wiped outDir on an unbuilt project fails
+  // tree its own inputs import, so a wiped .pikku/ on an unbuilt project fails
   // the first pass rather than measuring it.
   if (COLD) {
     process.stdout.write('Priming (untimed)... ')

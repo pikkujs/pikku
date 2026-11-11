@@ -15,7 +15,7 @@ const write = async (root: string, rel: string, text: string) => {
 const project = async (files: Record<string, string>): Promise<string> => {
   const root = await mkdtemp(join(tmpdir(), 'pikku-mocks-validate-'))
   await write(root, 'package.json', '{"name":"app","workspaces":["apps/*"]}')
-  await write(root, 'pikku.config.json', '{"outDir":".pikku"}')
+  await write(root, 'pikku.config.json', '{}')
   await write(root, '.pikku/function/pikku-functions-meta.gen.json', '{}')
   for (const [rel, text] of Object.entries(files)) await write(root, rel, text)
   return root

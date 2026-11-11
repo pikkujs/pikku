@@ -14,7 +14,7 @@ calls `rpc.invoke('stripe:charge')` typed, with no cast
 **Where the types come from.** `resolveAddonDependencies` follows the
 `node_modules/<package>` link. When its real path has no `node_modules`
 segment the package is in this workspace, and its SDK is read where it was
-generated, `<package>/<outDir>/sdk`. Anything else becomes a registry spec
+generated, `<package>/.pikku/sdk`. Anything else becomes a registry spec
 merged into `runAddonSync` (`utils/remote-addon-sync.ts`), downloaded and
 pinned in `pikku-addons.lock` exactly as a versioned `wireRemoteAddon` is. One
 package asked for at two ranges is PKU353, as it is for two wirings.

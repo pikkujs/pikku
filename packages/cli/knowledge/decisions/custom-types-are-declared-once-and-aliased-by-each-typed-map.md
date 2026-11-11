@@ -1,7 +1,7 @@
 ---
 type: decision
 title: Custom types are declared once and each typed map aliases them
-description: The custom types are written to one shared outDir file with relative imports, and each typed map re-exports them as one-line aliases rather than through an export-from statement
+description: The custom types are written to one shared `.pikku/` file with relative imports, and each typed map re-exports them as one-line aliases rather than through an export-from statement
 tags: cli, codegen, types
 ---
 
@@ -14,8 +14,8 @@ with them. Those import lines used absolute paths, and several maps also had a
 relative import of the same name from `serializeImportMap`, so a project without
 `skipLibCheck` got `TS2300 Duplicate identifier` from the generated maps.
 
-The declarations now live in `customTypesDeclarationFile`
-(`<outDir>/pikku-custom-types.gen.d.ts` by default), written by
+The declarations now live in `.pikku/pikku-custom-types.gen.d.ts` (the loader's
+derived `customTypesDeclarationFile`, not a config key), written by
 `writeCustomTypesFile` in `packages/cli/src/utils/custom-types-file.ts`. Its
 imports go through `getFileImportRelativePath`, via the `resolveImportPath`
 option on `generateCustomTypes`. Every map command writes the file before its
