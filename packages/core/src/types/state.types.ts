@@ -213,7 +213,7 @@ export interface PikkuPackageState {
     meta: GatewaysMeta
   }
   cli: {
-    meta: CLIMeta | Record<string, any> // Backward compatible with old published CLI format
+    meta: CLIMeta
     programs: Record<string, CLIProgramState>
   }
   middleware: {

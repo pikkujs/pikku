@@ -37,8 +37,11 @@ describe('createLocalContentRequestHandler', () => {
 
   before(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'pikku-content-handler-'))
-    mkdirSync(join(tmpDir, 'bucket'), { recursive: true })
-    writeFileSync(join(tmpDir, 'bucket', 'existing.bin'), 'already here')
+    mkdirSync(join(tmpDir, 'private', 'bucket'), { recursive: true })
+    writeFileSync(
+      join(tmpDir, 'private', 'bucket', 'existing.bin'),
+      'already here'
+    )
 
     const config = {
       localFileUploadPath: tmpDir,
@@ -191,7 +194,7 @@ describe('createLocalContentRequestHandler', () => {
       contentKey: 'existing.bin',
       dateLessThan: new Date(Date.now() + 60_000),
     } as any)
-    writeFileSync(join(tmpDir, 'bucket', 'sibling.bin'), 'sibling')
+    writeFileSync(join(tmpDir, 'private', 'bucket', 'sibling.bin'), 'sibling')
     const query = signed.slice(signed.indexOf('?'))
     const response = await handler(
       new Request(`http://localhost/assets/bucket/sibling.bin${query}`)
@@ -235,6 +238,9 @@ describe('createLocalContentRequestHandler', () => {
     assert.equal(response?.status, 413)
     // Abandoning the stream must leave nothing behind — a partial file here
     // would be a truncated asset that later reads would serve as if whole.
-    assert.equal(existsSync(join(tmpDir, 'bucket', 'big.bin')), false)
+    assert.equal(
+      existsSync(join(tmpDir, 'private', 'bucket', 'big.bin')),
+      false
+    )
   })
 })

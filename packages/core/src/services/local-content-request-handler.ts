@@ -189,11 +189,7 @@ export const createLocalContentRequestHandler = ({
     }
 
     const key = contentKey(pathname, content.uploadUrlPrefix)
-    const target = await resolveContentRequestTarget(
-      content.localFileUploadPath,
-      key,
-      'write'
-    )
+    const target = resolveContentRequestTarget(content.localFileUploadPath, key)
     if (!target) {
       return text(400, 'Invalid path')
     }
@@ -221,11 +217,7 @@ export const createLocalContentRequestHandler = ({
     pathname: string
   ): Promise<Response> => {
     const key = contentKey(pathname, content.assetUrlPrefix)
-    const target = await resolveContentRequestTarget(
-      content.localFileUploadPath,
-      key,
-      'read'
-    )
+    const target = resolveContentRequestTarget(content.localFileUploadPath, key)
     if (!target) {
       return text(400, 'Invalid path')
     }

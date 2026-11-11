@@ -1,6 +1,6 @@
 import { createReadStream, createWriteStream, promises } from 'fs'
 import { randomUUID } from 'crypto'
-import { mkdir, readFile, readdir, rename, rm, stat } from 'fs/promises'
+import { mkdir, readFile, readdir, rename, rm } from 'fs/promises'
 import { resolve, normalize, sep } from 'path'
 import type {
   BucketKeyArgs,
@@ -78,7 +78,6 @@ export const CONTENT_VISIBILITIES: readonly ContentVisibility[] = [
 export type ContentUrlPath = {
   visibility: ContentVisibility
   rest: string
-  prefixed: boolean
 }
 
 /**
@@ -90,9 +89,9 @@ export type ContentUrlPath = {
 export const parseContentUrlPath = (key: string): ContentUrlPath => {
   const [first, ...rest] = key.split('/')
   if (first === PUBLIC_URL_SEGMENT) {
-    return { visibility: 'public', rest: rest.join('/'), prefixed: true }
+    return { visibility: 'public', rest: rest.join('/') }
   }
-  return { visibility: 'private', rest: key, prefixed: false }
+  return { visibility: 'private', rest: key }
 }
 
 /**
@@ -129,16 +128,14 @@ export type ContentRequestTarget = {
 /**
  * Maps the part of a content URL after the asset/upload prefix to a file under
  * the content root: `_public/...` to the public side, anything else to the
- * private side, falling back for reads to an unprefixed file from before the
- * split. Returns `null` for a path that escapes its side or names no file.
+ * private side. Returns `null` for a path that escapes its side or names no file.
  * Every server of local content resolves through here, and skips the signature
  * check only when the result is public.
  */
-export const resolveContentRequestTarget = async (
+export const resolveContentRequestTarget = (
   basePath: string,
-  key: string,
-  mode: 'read' | 'write'
-): Promise<ContentRequestTarget | null> => {
+  key: string
+): ContentRequestTarget | null => {
   const parsed = parseContentUrlPath(key)
   const root = resolve(resolve(basePath), parsed.visibility)
   const path = resolveVisibilityPath(
@@ -148,24 +145,6 @@ export const resolveContentRequestTarget = async (
     ''
   )
   if (!path || path === root) return null
-  if (mode === 'read' && !parsed.prefixed) {
-    const exists = await stat(path).then(
-      () => true,
-      () => false
-    )
-    if (!exists) {
-      const [first] = normalize(parsed.rest).split(/[\\/]/)
-      const base = resolve(basePath)
-      const legacy = resolve(base, normalize(parsed.rest))
-      if (
-        first !== PUBLIC_URL_SEGMENT &&
-        first !== 'private' &&
-        legacy.startsWith(base + sep)
-      ) {
-        return { path: legacy, visibility: 'private' }
-      }
-    }
-  }
   return { path, visibility: parsed.visibility }
 }
 
@@ -282,41 +261,6 @@ export class LocalContent implements ContentService {
       throw new Error('Invalid asset key')
     }
     return target
-  }
-
-  private async existingPath(
-    bucket: string,
-    key: string,
-    visibility: ContentVisibility = 'private'
-  ): Promise<string> {
-    const path = this.safePath(bucket, key, visibility)
-    if (visibility === 'private') {
-      const exists = await stat(path).then(
-        () => true,
-        () => false
-      )
-      if (!exists) {
-        const legacy = this.legacyPath(bucket, key)
-        if (
-          legacy &&
-          (await stat(legacy).then(
-            () => true,
-            () => false
-          ))
-        ) {
-          return legacy
-        }
-      }
-    }
-    return path
-  }
-
-  private legacyPath(bucket: string, key: string): string | null {
-    const [first] = normalize(bucket).split(/[\\/]/)
-    if (first === PUBLIC_URL_SEGMENT || first === 'private') return null
-    const base = resolve(this.config.localFileUploadPath)
-    const target = resolve(base, normalize(bucket), normalize(key))
-    return target.startsWith(base + sep) ? target : null
   }
 
   private publicBase(): string {
@@ -462,11 +406,7 @@ export class LocalContent implements ContentService {
   ): Promise<ReadableStream | NodeJS.ReadableStream> {
     this.logger.debug(`Getting key: ${args.bucket}/${args.key}`)
 
-    const filePath = await this.existingPath(
-      args.bucket,
-      args.key,
-      args.visibility
-    )
+    const filePath = this.safePath(args.bucket, args.key, args.visibility)
 
     try {
       const stream = createReadStream(filePath)
@@ -488,11 +428,7 @@ export class LocalContent implements ContentService {
   }
 
   public async readFileAsBuffer(args: BucketKeyArgs): Promise<Buffer> {
-    const filePath = await this.existingPath(
-      args.bucket,
-      args.key,
-      args.visibility
-    )
+    const filePath = this.safePath(args.bucket, args.key, args.visibility)
     this.logger.debug(`Reading file as buffer: ${args.bucket}/${args.key}`)
     return readFile(filePath)
   }

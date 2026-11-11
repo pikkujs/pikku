@@ -83,7 +83,7 @@ export class PikkuExpressServer {
     this.app.get(`${configContent.assetUrlPrefix}/*path`, async (req, res) => {
       const requestUrl = new URL(req.originalUrl, 'http://localhost')
       const key = (req.params as any).path.join('/')
-      const target = await resolveContentRequestTarget(basePath, key, 'read')
+      const target = resolveContentRequestTarget(basePath, key)
       if (!target) {
         res.status(400).end('Invalid path')
         return
@@ -129,7 +129,7 @@ export class PikkuExpressServer {
       }
 
       const key = (req.params as any).path.join('/')
-      const target = await resolveContentRequestTarget(basePath, key, 'write')
+      const target = resolveContentRequestTarget(basePath, key)
       if (!target) {
         res.status(400).end('Invalid path')
         return

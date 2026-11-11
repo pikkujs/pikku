@@ -172,24 +172,6 @@ describe('local content keeps public and private in separate folders', () => {
       content.listFilesByPrefix('docs', '../../private', 'public')
     )
   })
-
-  test('existing unprefixed files still read as private', async () => {
-    await mkdir(join(root, 'old'), { recursive: true })
-    await writeFile(join(root, 'old/legacy.txt'), 'legacy')
-    assert.equal(
-      (
-        await content.readFileAsBuffer({ bucket: 'old', key: 'legacy.txt' })
-      ).toString(),
-      'legacy'
-    )
-    await assert.rejects(() =>
-      content.readFileAsBuffer({
-        bucket: 'old',
-        key: 'legacy.txt',
-        visibility: 'public',
-      })
-    )
-  })
 })
 
 describe('the content route serves public unsigned and private only signed', () => {
@@ -322,19 +304,5 @@ describe('the content route serves public unsigned and private only signed', () 
     )
     assert.equal(res?.status, 403)
     assert.ok(!existsSync(join(root, 'public/docs/u.txt')))
-  })
-
-  test('a legacy unprefixed file is served signed, and public/ never falls back to it', async () => {
-    await mkdir(join(root, 'old'), { recursive: true })
-    await writeFile(join(root, 'old/legacy.txt'), 'legacy')
-    const url = await content.getDownloadURL({
-      bucket: 'old',
-      key: 'legacy.txt',
-    })
-    assert.equal((await get(url))?.status, 200)
-    assert.equal(
-      (await get('http://x.test/assets/_public/old/legacy.txt'))?.status,
-      404
-    )
   })
 })
