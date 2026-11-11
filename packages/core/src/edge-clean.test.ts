@@ -41,6 +41,7 @@ const EXPECTED_SERVER_SUBPATHS = [
   './services/local-meta',
   './services/temporary-file-service',
   './services/v8-coverage',
+  './telemetry-store/testing',
   './testing',
 ]
 

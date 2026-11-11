@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3422 observable things**: 1162 exported names, plus
-2260 members on the classes and interfaces among them, reachable
-through 64 entry points.
+**3528 observable things**: 1180 exported names, plus
+2348 members on the classes and interfaces among them, reachable
+through 66 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -22,6 +22,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel` | 33 | 33 | 92 |
 | `./types` | 24 | 21 | 83 |
 | `./queue` | 28 | 28 | 75 |
+| `./telemetry-store` | 14 | 14 | 74 |
 | `./http` | 27 | 27 | 58 |
 | `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
@@ -45,6 +46,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel/local` | 3 | 3 | 18 |
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./scheduler` | 10 | 10 | 8 |
+| `./telemetry-store/testing` | 4 | 4 | 14 |
 | `./scope` | 17 | 17 | 0 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./addon` | 14 | 14 | 2 |
@@ -6760,6 +6762,143 @@ export interface SkippedContributor {
   name: string
   reason: 'when' | 'requires' | 'needs'
 }
+```
+
+## ./telemetry-store
+
+```ts
+export interface FailureRow {
+  functionId: string
+  wireType: string | null
+  message: string
+  count: number
+  last: number | null
+  sampleTraceId: string | null
+}
+export interface LogFacets {
+  severities: Record<Severity, number>
+  functions: string[]
+  wires: string[]
+}
+export interface LogRecord {
+  at: number
+  severity: Severity
+  body: string
+  traceId?: string
+  spanId?: string
+  functionId?: string
+  wireType?: string
+  wireId?: string
+  source: string
+  attributes?: TelemetryAttributes
+}
+export interface LogsQuery {
+  since?: number
+  until?: number
+  limit?: number
+  severity?: Severity
+  search?: string
+  traceId?: string
+  functionId?: string
+  wireType?: string
+  wireId?: string
+  source?: string
+}
+export interface MetricPoint {
+  at: number
+  name: string
+  value: number
+  attributes?: TelemetryAttributes
+}
+export interface MetricsSummaryFunction {
+  name: string
+  wire: string | null
+  requests: number
+  errors: number
+  avgMs: number | null
+  lastRun: number | null
+}
+export interface MetricsSummaryRow {
+  totals: { requests: number; errors: number; avgMs: number | null; maxMs: number | null }
+  traffic: Array<{ at: number; requests: number; errors: number; avgMs: number; maxMs: number }>
+  functions: MetricsSummaryFunction[]
+}
+export interface QueueJobRow {
+  queue: string
+  completed: number
+  failed: number
+  lastRun: number | null
+  recent: Array<{ at: number; outcome: string; durationMs: number | null; error: string | null }>
+}
+export type Severity = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
+export interface SpanRecord {
+  traceId: string
+  spanId: string
+  parentSpanId?: string
+  name: string
+  kind: string
+  startAt: number
+  endAt: number
+  durationMs: number
+  status: 'ok' | 'error' | 'unset'
+  statusMessage?: string
+  attributes: TelemetryAttributes
+}
+export type TailCursor = string
+export type TelemetryAttributes = Record<string, string | number | boolean>
+export interface TelemetryScope {
+  project: string
+  stage: string
+}
+export interface TelemetryStore {
+  appendLogs?(scope: TelemetryScope, records: LogRecord[]): Promise<void>
+  appendMetrics?(scope: TelemetryScope, points: MetricPoint[]): Promise<void>
+  appendSpans?(scope: TelemetryScope, spans: SpanRecord[]): Promise<void>
+  deleteProject?(project: string): Promise<void>
+  retain?(policy: { days: number }): Promise<void>
+  logs(scope: TelemetryScope, q: LogsQuery): Promise<LogRecord[]>
+  logFacets(scope: TelemetryScope, q: { since?: number }): Promise<LogFacets>
+  failures(scope: TelemetryScope, q: { since: number; limit?: number }): Promise<FailureRow[]>
+  metrics(scope: TelemetryScope, q: { name?: string; since: number; until?: number; limit?: number }): Promise<MetricPoint[]>
+  metricsSummary(scope: TelemetryScope, q: { since: number; until: number; buckets?: number }): Promise<MetricsSummaryRow>
+  trace(scope: TelemetryScope, traceId: string): Promise<SpanRecord[]>
+  queueJobs(scope: TelemetryScope, q: { since: number; limit?: number }): Promise<QueueJobRow[]>
+  tail(scope: TelemetryScope, cursor: TailCursor | null, q: { limit?: number }): Promise<{ records: LogRecord[]; cursor: TailCursor }>
+  close?(): Promise<void>
+}
+```
+
+## ./telemetry-store/testing
+
+```ts
+conformance: (store: TelemetryStore, options?: ConformanceOptions) => void
+export type ConformanceOptions = {
+  ingest?: TelemetryIngest
+}
+export class MemoryTelemetryStore implements TelemetryStore {
+  async appendLogs(scope: TelemetryScope, records: LogRecord[]): Promise<void>
+  async appendSpans(scope: TelemetryScope, spans: SpanRecord[]): Promise<void>
+  async appendMetrics(scope: TelemetryScope, points: MetricPoint[]): Promise<void>
+  async deleteProject(project: string): Promise<void>
+  async retain(policy: { days: number }): Promise<void>
+  async logs(scope: TelemetryScope, q: LogsQuery): Promise<LogRecord[]>
+  async logFacets(scope: TelemetryScope, q: { since?: number }): Promise<LogFacets>
+  async failures(scope: TelemetryScope, q: { since: number; limit?: number }): Promise<FailureRow[]>
+  async metrics(scope: TelemetryScope, q: { name?: string; since: number; until?: number; limit?: number }): Promise<MetricPoint[]>
+  async metricsSummary(scope: TelemetryScope, q: { since: number; until: number; buckets?: number }): Promise<MetricsSummaryRow>
+  async trace(scope: TelemetryScope, traceId: string): Promise<SpanRecord[]>
+  async queueJobs(scope: TelemetryScope, q: { since: number; limit?: number }): Promise<QueueJobRow[]>
+  async tail(scope: TelemetryScope, cursor: TailCursor | null, q: { limit?: number }): Promise<{ records: LogRecord[]; cursor: TailCursor }>
+  async close(): Promise<void>
+}
+export type TelemetryIngest = (
+  scope: TelemetryScope,
+  data: {
+    logs?: LogRecord[]
+    spans?: SpanRecord[]
+    metrics?: MetricPoint[]
+  }
+) => Promise<void>
 ```
 
 ## ./lifecycle

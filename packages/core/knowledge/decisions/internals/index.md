@@ -197,4 +197,5 @@ caller is entitled to assume.
 - [A suspended workflow run keeps its in-process context; only terminal runs release it](workflow-suspended-runs-keep-their-in-process-context.md) — `suspended` is absent from the terminal set on purpose, and a context is dropped only when nothing is holding it open
 - [BullMQ and pg-boss carry traceparent in a payload envelope](bullmq-and-pg-boss-carry-traceparent-in-a-payload-envelope.md) — Neither queue has a per-job metadata slot that survives; a job with a trace or an identity claim has its payload wrapped by the adapter and unwrapped before job.data is read
 
+- [The telemetry store is types in core, and the reference store sits behind a testing subpath](the-telemetry-store-is-types-in-core-and-the-reference-behind-testing.md) — '@pikku/core/telemetry-store' is types only; MemoryTelemetryStore and conformance() live in '@pikku/core/telemetry-store/testing', a server-tier subpath, so no runtime import reaches them
 <!-- /pikku:knowledge-index -->
