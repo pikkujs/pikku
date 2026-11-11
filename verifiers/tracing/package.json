@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
+    "@pikku/fetch": "workspace:*",
     "@pikku/jose": "workspace:*",
     "@pikku/node-http-server": "workspace:*",
     "@pikku/queue-bullmq": "workspace:*",

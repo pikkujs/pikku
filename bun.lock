@@ -1520,14 +1520,14 @@
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
-        "@pikku/cli": "^0.12.202",
-        "@pikku/core": "^0.12.151",
+        "@pikku/cli": "^0.12.208",
+        "@pikku/core": "^0.12.154",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^7.0.2",
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.151",
+        "@pikku/core": "^0.12.154",
         "zod": "^4",
       },
     },
@@ -1923,6 +1923,9 @@
     },
     "verifiers/addon-registry": {
       "name": "@pikku/verifiers-addon-registry",
+      "dependencies": {
+        "@pikku/fetch": "workspace:*",
+      },
     },
     "verifiers/addon-registry/consumer": {
       "name": "@pikku/verifier-registry-consumer",
@@ -1959,6 +1962,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
         "@pikku/templates-function-addon": "workspace:*",
       },
       "devDependencies": {
@@ -1991,6 +1995,7 @@
       "name": "@pikku/verifiers-analytics",
       "dependencies": {
         "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "zod": "^4",
       },
@@ -2290,6 +2295,7 @@
       "name": "@pikku/verifiers-feature-flags",
       "dependencies": {
         "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
       },
       "devDependencies": {
@@ -2303,6 +2309,7 @@
       "name": "@pikku/verifiers-fullstack",
       "dependencies": {
         "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
       },
       "devDependencies": {
@@ -2537,6 +2544,7 @@
       "name": "@pikku/verifiers-tracing",
       "dependencies": {
         "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
         "@pikku/jose": "workspace:*",
         "@pikku/node-http-server": "workspace:*",
         "@pikku/queue-bullmq": "workspace:*",
@@ -2627,6 +2635,7 @@
       "name": "@pikku/verifiers-webhooks",
       "dependencies": {
         "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "zod": "^4",
       },

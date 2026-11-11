@@ -6,6 +6,7 @@
  */
 
 import { execSync } from 'child_process'
+import { execCli } from '../exec-cli.js'
 import {
   readFileSync,
   writeFileSync,
@@ -52,15 +53,18 @@ process.on('SIGTERM', () => {
 
 console.log('Setting up: running pikku codegen + deploy plan (serverless)...')
 const config = JSON.parse(originalConfig)
-config.deploy = { ...config.deploy, grouping: { strategy: 'function' } }
+config.backends.app.deploy = {
+  ...config.backends.app.deploy,
+  grouping: { strategy: 'function' },
+}
 writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2))
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
-execSync(`node ${PIKKU_BIN}`, {
+execCli(`node ${PIKKU_BIN}`, {
   cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
   timeout: 60_000,
 })
-execSync(
+execCli(
   // --debug-artifacts emits per-unit metafiles for the tree-shaking checks below.
   `node ${PIKKU_BIN} deploy plan --provider serverless --debug-artifacts --result-file .deploy/serverless/plan-result.json`,
   {

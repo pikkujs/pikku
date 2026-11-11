@@ -11,6 +11,7 @@
  */
 
 import { execFileSync, spawn } from 'child_process'
+import { execCli } from '../exec-cli.js'
 import {
   readFileSync,
   writeFileSync,
@@ -112,7 +113,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.exit(130)
   })
 }
-execFileSync('node', [PIKKU_BIN, 'all'], {
+execCli(`node ${PIKKU_BIN} all`, {
   cwd: ADDON_DIR,
   stdio: 'pipe',
   timeout: 60_000,
@@ -161,8 +162,8 @@ export const lifecycle = pikkuServerLifecycle({
 })
 `
 )
-pinnedConfig.deploy = {
-  ...pinnedConfig.deploy,
+pinnedConfig.backends.app.deploy = {
+  ...pinnedConfig.backends.app.deploy,
   grouping: { strategy: 'function' },
 }
 writeFileSync(CONFIG_FILE, JSON.stringify(pinnedConfig, null, 2))
@@ -175,25 +176,15 @@ rmSync(join(FUNCTIONS_DIR, 'src', 'scaffold'), {
   recursive: true,
   force: true,
 })
-execFileSync('node', [PIKKU_BIN], {
+execCli(`node ${PIKKU_BIN}`, {
   cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
   timeout: 60_000,
 })
-execFileSync(
-  'node',
-  [
-    PIKKU_BIN,
-    'deploy',
-    'plan',
-    '--provider',
-    'standalone',
-    '--result-file',
-    '.deploy/standalone/plan-result.json',
-  ],
+execCli(
+  `node ${PIKKU_BIN} deploy plan --provider standalone --result-file .deploy/standalone/plan-result.json`,
   {
     cwd: FUNCTIONS_DIR,
-    stdio: 'pipe',
     timeout: 300_000,
   }
 )

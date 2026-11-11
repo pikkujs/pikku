@@ -1,4 +1,4 @@
-import { execSync } from 'child_process'
+import { execCli } from '../exec-cli.js'
 import { readFileSync, existsSync, unlinkSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { test } from 'node:test'
@@ -18,9 +18,8 @@ const SCENARIO_CONFIG = 'pikku.scenario.config.json'
 
 function runPikkuCLI(args: string[]): void {
   const command = `node ../../packages/cli/dist/bin/pikku.js ${args.join(' ')}`
-  execSync(command, {
+  execCli(command, {
     cwd: process.cwd(),
-    stdio: 'pipe',
     env: { ...process.env, PIKKU_DEPLOY_CODEGEN: '1' },
   })
 }
@@ -41,7 +40,9 @@ function writeScenarioConfig(flags: string): void {
   const base = JSON.parse(readFileSync('pikku.config.json', 'utf-8'))
   base.backends = {
     ...base.backends,
-    scenario: { filter: filterFromFlags(flags) },
+    // Four backends run as four processes, so each needs its own port; the
+    // project's own three take 4000-4002.
+    scenario: { filter: filterFromFlags(flags), dev: { port: 4003 } },
   }
   writeFileSync(SCENARIO_CONFIG, JSON.stringify(base, null, 2))
 }

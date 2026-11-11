@@ -2,10 +2,10 @@
  * Verifier: a project's dev script can be plain `pikku dev`.
  *
  * 1. Without `--port`, `pikku dev` listens on the port in the local
- *    environment's `apiUrl`. Booted against recipes/functions through a config
- *    that extends its own and adds `environments.local` on PORT.
+ *    environment's backend url. Booted against recipes/functions through a copy
+ *    of its config that adds `environments.local` on PORT.
  *    Fail-before: the server binds 3000 and PORT never answers.
- * 2. An explicit `--port` still wins over the apiUrl.
+ * 2. An explicit `--port` still wins over the url.
  * 3. Under a Node older than 24 (no `node:sqlite`) the bin re-runs itself on
  *    bun: the server reports `pikku-bun-server`. Runs only when OLD_NODE names
  *    such a node binary (CI images carry one Node), and is reported as skipped
@@ -13,8 +13,9 @@
  */
 
 import { execFileSync, spawn } from 'child_process'
-import { rmSync, writeFileSync } from 'fs'
+import { readFileSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import { execCli } from '../exec-cli.js'
 
 const REPO_ROOT = join(process.cwd(), '..', '..')
 const FUNCTIONS_DIR = join(REPO_ROOT, 'recipes', 'functions')
@@ -23,18 +24,24 @@ const CONFIG = join(FUNCTIONS_DIR, 'pikku.dev-port.config.json')
 const PORT = 4097
 const EXPLICIT_PORT = 4096
 
+// One root config declares every backend and `extends` is gone, so the test
+// config is a copy of the project's own with `environments.local` added.
+const projectConfig = JSON.parse(
+  readFileSync(join(FUNCTIONS_DIR, 'pikku.config.json'), 'utf-8')
+)
 writeFileSync(
   CONFIG,
   JSON.stringify({
-    extends: './pikku.config.json',
-    environments: { local: { apiUrl: `http://localhost:${PORT}` } },
+    ...projectConfig,
+    environments: {
+      local: { backends: { app: `http://localhost:${PORT}` } },
+    },
   })
 )
 
 console.log('Setting up: pikku codegen for recipes/functions...')
-execFileSync('node', [PIKKU_BIN, 'all', '-c', CONFIG], {
+execCli(`node ${PIKKU_BIN} all -c ${CONFIG}`, {
   cwd: FUNCTIONS_DIR,
-  stdio: 'pipe',
   timeout: 120_000,
 })
 console.log('Setup complete.\n')
@@ -119,13 +126,13 @@ const attempt = async (name: string, fn: () => Promise<void>) => {
 
 try {
   await attempt(
-    "no --port: serves on the local environment's apiUrl port",
+    "no --port: serves on the local environment's backend url port",
     async () => {
       await bootDev('node', [], PORT)
     }
   )
 
-  await attempt('--port wins over the apiUrl', async () => {
+  await attempt('--port wins over the url', async () => {
     await bootDev('node', ['--port', String(EXPLICIT_PORT)], EXPLICIT_PORT)
   })
 

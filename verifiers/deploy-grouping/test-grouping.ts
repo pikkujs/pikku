@@ -9,6 +9,7 @@
  */
 
 import { execSync } from 'child_process'
+import { execCli } from '../exec-cli.js'
 import { readFileSync, writeFileSync, existsSync, statSync } from 'fs'
 import { join } from 'path'
 
@@ -83,7 +84,7 @@ const SERVER_CONTAINER = 'pikku-server-container'
 function runPlan():
   { ok: true; manifest: Manifest } | { ok: false; output: string } {
   try {
-    execSync(`node ${PIKKU_BIN} deploy plan --provider cloudflare`, {
+    execCli(`node ${PIKKU_BIN} deploy plan --provider cloudflare`, {
       cwd: FUNCTIONS_DIR,
       stdio: 'pipe',
       timeout: 600_000,
@@ -118,7 +119,7 @@ process.on('SIGINT', () => {
 try {
   console.log('Setting up: pikku codegen against recipes/functions...')
   execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
-  execSync(`node ${PIKKU_BIN}`, {
+  execCli(`node ${PIKKU_BIN}`, {
     cwd: FUNCTIONS_DIR,
     stdio: 'pipe',
     timeout: 120_000,

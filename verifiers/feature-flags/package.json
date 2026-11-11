@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
+    "@pikku/fetch": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*"
   },
   "devDependencies": {
