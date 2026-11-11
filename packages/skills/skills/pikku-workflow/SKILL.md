@@ -76,6 +76,20 @@ export const sendWeeklyReport = pikkuSessionlessFunc({
 })
 ```
 
+## Step calls, all in one place
+
+Every call is made on `workflow` (third argument of `func`), each step has a unique name, and none needs a read of `node_modules` or `.pikku` to learn its shape:
+
+```ts
+await workflow.do('Load the order', 'loadOrder', data)                               // a function, or 'addon:function'
+await workflow.do('Charge', 'chargeCard', input, { retries: 3, retryDelay: '30s' }) // options: description, retries, retryDelay, compensate: false
+await workflow.sleep('Wait two days', '2d')                                          // a duration: '30s', '5min', '2h', '2d' (whole numbers, no spaces) or milliseconds
+const answer = await workflow.approval('A manager approves', { schema, approvers: 'not-initiator', expiry: '48h' })
+await Promise.all(items.map((x) => workflow.do(`Notify ${x.id}`, 'notify', x)))      // parallel fanout; a for...of with await is the sequential one
+```
+
+A branch is a plain `if`/`else` on an earlier step's result. A child workflow is a `workflow.do` whose function is another `pikkuWorkflowFunc`'s name. `pikku meta workflows get <name>` prints the steps the compiler found, which is the check that each call above was read as a step.
+
 ## An approval, whole
 
 Four pieces: the workflow with its gate, a function that starts it, one that lists what waits, and one that answers. The gate's `reason` is one exported constant, because the answer must name the same gate or it lands on nothing.
