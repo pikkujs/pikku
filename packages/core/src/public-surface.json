@@ -504,6 +504,7 @@
     "tracedLogger"
   ],
   "./otlp": [
+    "asContextStorage",
     "createRuntimeTelemetry",
     "isLoopbackHost",
     "OTLP_QUEUE_LIMITS",

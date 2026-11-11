@@ -1183,3 +1183,16 @@ To move an app over:
 Any explicit `security` ends the warning, `private` included, except `public` on a name that looks like pii. Tables that Better Auth, the runtime or an addon create are skipped. Booleans, dates and numbers are skipped, as are names ending `_at`, `_count`, `_id`, `_type`, `_ref` or `_verified`.
 
 **Find:** run `pikku db migrate` and read the PKU486 and PKU487 lines.
+
+### Run telemetry moves to OTLP; `.pikku/runs` is gone
+
+`pikku dev` and `pikku all` no longer write run samples to `.pikku/runs`, and the run-telemetry middleware (`packages/cli/src/utils/run-telemetry.ts`) is deleted. Nothing reads those files any more.
+
+Spans, logs and process metrics now leave a standalone binary and `pikku serve` over OTLP/HTTP, and only when asked:
+
+- `PIKKU_OTLP_ENDPOINT` turns it on. Unset, or `PIKKU_TELEMETRY=0`, means no exporter and no connection.
+- `PIKKU_OTLP_HEADERS` applies to every signal; `PIKKU_OTLP_TRACES_HEADERS`, `PIKKU_OTLP_LOGS_HEADERS` and `PIKKU_OTLP_METRICS_HEADERS` add to one signal. For GreptimeDB put `x-greptime-pipeline-name=greptime_trace_v1` on the traces variable only.
+- A non-loopback endpoint needs `PIKKU_OTLP_ALLOW_REMOTE=1` and `https`. Credentials in the URL, or a malformed headers value, stop the process at boot.
+- The generated Kysely database now records a `db.*` child span under the function span when telemetry is on.
+
+**Find:** search for `.pikku/runs` and for imports of `run-telemetry`. Anything that read the samples should read the exported spans instead.

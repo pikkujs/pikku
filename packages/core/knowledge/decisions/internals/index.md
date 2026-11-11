@@ -200,6 +200,7 @@ caller is entitled to assume.
 - [A span's attributes are an allow-list](a-spans-attributes-are-an-allow-list.md) — Core sets a fixed set of framework facts on a span and nothing else, so no input, header, query or stack can reach a telemetry store
 - [The function runner owns the span; middleware cannot](the-function-runner-owns-the-span-middleware-cannot.md) — The runner opens the span after the wire has its trace and ends it in the same finally that restores the wire, so every invocation is recorded once, whatever middleware does
 - [Telemetry never breaks a request](telemetry-never-breaks-a-request.md) — Every tracer call the runner makes is wrapped; a tracer that throws is logged once and disabled for the process, and the function's result and error are untouched
+- [The runtime passes the trace to the database through its own context storage](runtime-telemetry-passes-the-trace-to-the-database-through-context-storage.md) — core takes no async_hooks; the runtime supplies the storage
 <!-- /pikku:knowledge-index -->
 - [The OTLP exporter is protobuf-only and never throws](otlp-exporter-is-protobuf-only-and-never-throws.md) — Telemetry export is best-effort, bounded in memory, loopback by default, and cannot fail or slow the app that produces it
 - [GreptimeDB 1.3 OTLP ingest findings](greptimedb-1-3-otlp-ingest-findings.md) — Verified against a real v1.3.0 standalone - headers per signal, the trace column names, status strings and metric table names the GreptimeDB addon reads
