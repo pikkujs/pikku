@@ -22,7 +22,9 @@ import {
   statSync,
   rmSync,
 } from 'fs'
+import { createServer as createHttpServer } from 'http'
 import { connect, createServer } from 'net'
+import { decodeTraces } from '@pikku/core/testing'
 import { join } from 'path'
 
 function getFreePort(): Promise<number> {
@@ -707,6 +709,159 @@ if (!BUN_AVAILABLE) {
             throw new Error(`got ${JSON.stringify(log)}`)
         }
       )
+      // --- runtime telemetry (PIKKU_OTLP_*), against a real OTLP receiver ---
+      const receive = async () => {
+        const requests: Array<{
+          url: string
+          headers: Record<string, string | string[] | undefined>
+          body: Buffer
+        }> = []
+        const server = createHttpServer((req, res) => {
+          const chunks: Buffer[] = []
+          req.on('data', (c) => chunks.push(c))
+          req.on('end', () => {
+            requests.push({
+              url: req.url ?? '',
+              headers: req.headers,
+              body: Buffer.concat(chunks),
+            })
+            res.statusCode = 200
+            res.end()
+          })
+        })
+        await new Promise<void>((r) => server.listen(0, '127.0.0.1', r))
+        const address = server.address() as { port: number }
+        return {
+          requests,
+          endpoint: `http://127.0.0.1:${address.port}/v1/otlp`,
+          close: () => new Promise<void>((r) => server.close(() => r())),
+        }
+      }
+
+      /** Starts the binary on its own port, calls GET /todos, stops it with SIGTERM. */
+      const serveOnce = async (env: Record<string, string>) => {
+        const ownPort = await getFreePort()
+        const proc = spawn(binaryPath, [], {
+          env: {
+            ...process.env,
+            PORT: String(ownPort),
+            HOST: '127.0.0.1',
+            PIKKU_HOOK_LOG: HOOK_LOG,
+            ...env,
+          },
+          stdio: 'pipe',
+          cwd: join(DEPLOY_DIR, unitName),
+        })
+        const exited = new Promise<number | null>((r) => proc.on('exit', r))
+        let ready = false
+        for (let i = 0; i < 100 && !ready && proc.exitCode === null; i++) {
+          try {
+            await fetch(`http://127.0.0.1:${ownPort}/todos`)
+            ready = true
+          } catch {
+            await new Promise((r) => setTimeout(r, 100))
+          }
+        }
+        if (!ready) throw new Error('the binary never started listening')
+        await fetch(`http://127.0.0.1:${ownPort}/todos`)
+        proc.kill('SIGTERM')
+        await exited
+      }
+
+      await check(
+        'runtime: PIKKU_OTLP_ENDPOINT exports a function span, a log and process metrics; per-signal headers reach only their signal',
+        async () => {
+          const receiver = await receive()
+          try {
+            await serveOnce({
+              PIKKU_OTLP_ENDPOINT: receiver.endpoint,
+              PIKKU_OTLP_HEADERS: 'x-test-all=1',
+              PIKKU_OTLP_TRACES_HEADERS: 'x-test-traces=1',
+              PIKKU_PROJECT: 'verifier',
+              PIKKU_STAGE: 'production',
+            })
+            const at = (suffix: string) =>
+              receiver.requests.filter((r) => r.url.endsWith(suffix))
+            const traces = at('/v1/traces')
+            const logs = at('/v1/logs')
+            const metrics = at('/v1/metrics')
+            if (!traces.length) throw new Error('no trace export arrived')
+            if (!logs.length) throw new Error('no log export arrived')
+            if (!metrics.length) throw new Error('no metric export arrived')
+            const decoded = traces.flatMap((r) => decodeTraces(r.body))
+            const spans = decoded.flatMap((d) => d.items)
+            if (!spans.some((s) => s.name === 'listTodos'))
+              throw new Error(
+                `no listTodos span in ${JSON.stringify(spans.map((s) => s.name))}`
+              )
+            const resource = decoded[0]!.resource
+            if (
+              JSON.stringify(resource['pikku.project']) !==
+              '{"string":"verifier"}'
+            )
+              throw new Error(`resource ${JSON.stringify(resource)}`)
+            for (const r of [...traces, ...logs, ...metrics]) {
+              if (r.headers['x-test-all'] !== '1')
+                throw new Error(`${r.url} lost x-test-all`)
+            }
+            if (!traces.every((r) => r.headers['x-test-traces'] === '1'))
+              throw new Error('traces lost their own header')
+            if ([...logs, ...metrics].some((r) => 'x-test-traces' in r.headers))
+              throw new Error('the traces-only header leaked to logs/metrics')
+          } finally {
+            await receiver.close()
+          }
+        }
+      )
+
+      await check(
+        'runtime: an unset endpoint, or PIKKU_TELEMETRY=0, opens no connection to the endpoint',
+        async () => {
+          const receiver = await receive()
+          try {
+            await serveOnce({})
+            await serveOnce({
+              PIKKU_TELEMETRY: '0',
+              PIKKU_OTLP_ENDPOINT: receiver.endpoint,
+            })
+            if (receiver.requests.length)
+              throw new Error(
+                `${receiver.requests.length} request(s) reached the receiver`
+              )
+          } finally {
+            await receiver.close()
+          }
+        }
+      )
+
+      for (const [label, env, message] of [
+        [
+          'a non-loopback http endpoint',
+          { PIKKU_OTLP_ENDPOINT: 'http://telemetry.example.com:4318/v1/otlp' },
+          /not a loopback address/,
+        ],
+        [
+          'a remote http endpoint even with PIKKU_OTLP_ALLOW_REMOTE=1',
+          {
+            PIKKU_OTLP_ENDPOINT: 'http://telemetry.example.com:4318/v1/otlp',
+            PIKKU_OTLP_ALLOW_REMOTE: '1',
+          },
+          /must be https/,
+        ],
+        [
+          'credentials in the endpoint URL',
+          { PIKKU_OTLP_ENDPOINT: 'http://user:pw@127.0.0.1:4318/v1/otlp' },
+          /must not contain credentials/,
+        ],
+      ] as const) {
+        await check(`runtime: ${label} is refused at boot`, async () => {
+          const result = await runToExit({ ...env })
+          if (result.code === 0 || result.code === null)
+            throw new Error(`expected a non-zero exit, got ${result.code}`)
+          if (!message.test(result.output))
+            throw new Error(`wrong refusal:\n${result.output}`)
+        })
+      }
     } catch (e) {
       if (!results.some((r) => r.name.startsWith('runtime:'))) {
         failures++
