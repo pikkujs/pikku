@@ -28,6 +28,21 @@ conformance(readOnly, {
   },
 })
 
+// A store with no span tree: the span-derived tests are skipped, none faked.
+const logsOnly = new MemoryTelemetryStore()
+conformance(logsOnly, {
+  spans: false,
+  ingest: async (scope, data) => {
+    assert.equal(
+      data.spans?.length ?? 0,
+      0,
+      'no span reaches a spans:false store'
+    )
+    await logsOnly.appendLogs(scope, data.logs ?? [])
+    await logsOnly.appendMetrics(scope, data.metrics ?? [])
+  },
+})
+
 describe('MemoryTelemetryStore', () => {
   test('rejects a tail cursor it did not return', async () => {
     const store = new MemoryTelemetryStore()

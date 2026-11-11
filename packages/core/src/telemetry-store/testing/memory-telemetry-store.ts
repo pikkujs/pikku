@@ -259,7 +259,9 @@ export class MemoryTelemetryStore implements TelemetryStore {
       this.bucket(scope)
         .spans.filter((s) => s.traceId === traceId)
         .sort(
-          (a, b) => a.startAt - b.startAt || a.spanId.localeCompare(b.spanId)
+          (a, b) =>
+            a.startAt - b.startAt ||
+            (a.spanId < b.spanId ? -1 : a.spanId > b.spanId ? 1 : 0)
         )
     )
   }
@@ -304,16 +306,25 @@ export class MemoryTelemetryStore implements TelemetryStore {
     cursor: TailCursor | null,
     q: { limit?: number }
   ): Promise<{ records: LogRecord[]; cursor: TailCursor }> {
-    const after = cursor === null ? 0 : Number(cursor)
-    if (!Number.isSafeInteger(after) || after < 0) {
-      throw new RangeError('not a cursor this store returned')
+    // A cursor is the position of the last record returned: its timestamp and
+    // its ingestion number, which breaks ties between equal timestamps.
+    let after: [number, number] = [-Infinity, 0]
+    if (cursor !== null && cursor !== 'start') {
+      const match = /^(-?\d+):(\d+)$/.exec(cursor)
+      if (!match) throw new RangeError('not a cursor this store returned')
+      after = [Number(match[1]), Number(match[2])]
     }
     const page = this.bucket(scope)
-      .logs.filter(({ seq }) => seq > after)
+      .logs.filter(
+        ({ seq, record }) =>
+          record.at > after[0] || (record.at === after[0] && seq > after[1])
+      )
+      .sort((a, b) => a.record.at - b.record.at || a.seq - b.seq)
       .slice(0, q.limit ?? 100)
+    const last = page[page.length - 1]
     return {
       records: structuredClone(page.map(({ record }) => record)),
-      cursor: String(page.length ? page[page.length - 1]!.seq : after),
+      cursor: last ? `${last.record.at}:${last.seq}` : (cursor ?? 'start'),
     }
   }
 

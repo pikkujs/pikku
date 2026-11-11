@@ -26,8 +26,9 @@ must not load the test runner.
 
 **Semantics a backend must match** are written on the interface and enforced by
 the suite: scope (`project` and `stage`, both required) isolates every read;
-`logs` is newest first; `tail` walks ingestion order and never loses a record
-that shares a timestamp; the write half is optional, and a read-only store is
+`logs` is newest first; `tail` orders by timestamp then a store-defined tiebreak and
+never loses or repeats a record that shares one (a record arriving late, before
+the cursor, is not guaranteed); the write half is optional, and a read-only store is
 seeded through `conformance`'s `ingest` callback.
 
 Backends are addons, not part of core.
