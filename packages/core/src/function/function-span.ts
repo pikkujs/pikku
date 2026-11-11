@@ -1,11 +1,8 @@
 import { getErrorResponse } from '../errors/error-handler.js'
 import type { Logger } from '../services/logger.js'
 import type { PikkuWire, PikkuWiringTypes } from '../types/core.types.js'
-import {
-  disableTracer,
-  isTracerDisabled,
-  workflowStepOfTrace,
-} from '../boundary-span.js'
+import { disableTracer, isTracerDisabled } from '../boundary-span.js'
+import { workflowStepOfTrace } from '../workflow-step-mark.js'
 import {
   nowUnixNano,
   redactSpanError,
