@@ -37,18 +37,38 @@ export function collectTableNames(node: unknown, out: Set<string>): void {
   }
 }
 
+/** The only shape of identifier whose text is recorded. */
+export const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/
+
 /** Nodes whose compiled text can hold caller-supplied literal text. */
 const INLINE_KINDS = new Set(['RawNode', 'JSONPathNode', 'JSONPathLegNode'])
 
 /**
  * True when the node tree can put caller text into the compiled SQL itself
  * rather than as a parameter: raw SQL, an immediate value (`sql.lit`), a JSON
- * path. Parameter values are not entered. Errs towards true.
+ * path, or an identifier / function name outside {@link SAFE_IDENTIFIER}. Parameter values are not entered. Errs towards true.
  */
 export function hasInlineSql(node: unknown): boolean {
   if (!node || typeof node !== 'object') return false
-  const candidate = node as { kind?: string; immediate?: unknown }
+  const candidate = node as {
+    kind?: string
+    immediate?: unknown
+    name?: unknown
+    func?: unknown
+  }
   if (candidate.kind !== undefined) {
+    if (candidate.kind === 'IdentifierNode')
+      return !(
+        typeof candidate.name === 'string' &&
+        SAFE_IDENTIFIER.test(candidate.name)
+      )
+    if (candidate.kind === 'FunctionNode')
+      return typeof candidate.func !== 'string' ||
+        !SAFE_IDENTIFIER.test(candidate.func)
+        ? true
+        : Object.values(node as object).some((v) =>
+            Array.isArray(v) ? v.some(hasInlineSql) : hasInlineSql(v)
+          )
     if (INLINE_KINDS.has(candidate.kind)) return true
     if (candidate.kind === 'ValueNode') return candidate.immediate === true
     if (candidate.kind === 'PrimitiveValueListNode') return false

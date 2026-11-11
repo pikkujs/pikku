@@ -185,21 +185,30 @@ export const runInFunctionSpan = <T>(
   fn: () => Promise<T>
 ): Promise<T> => {
   if (!open?.tracer.runInSpan || disabled.has(open.tracer)) return fn()
+  let started = false
   let outcome: Promise<T> | undefined
+  // Whoever calls first starts fn; any later call gets the same promise.
+  const once = (): Promise<T> => {
+    if (!started) {
+      started = true
+      outcome = fn()
+    }
+    return outcome as Promise<T>
+  }
   try {
-    const result = open.tracer.runInSpan(open.span, () => (outcome = fn()))
-    if (outcome === undefined) {
-      // Returned without running fn: the function must not be skipped.
+    const result = open.tracer.runInSpan(open.span, once)
+    if (!started) {
+      // Returned without starting fn: the function must not be skipped.
       disable(
         open.tracer,
         open.logger,
         new Error('runInSpan returned without running the function')
       )
-      return fn()
+      return once()
     }
     return result
   } catch (error) {
     disable(open.tracer, open.logger, error)
-    return outcome ?? fn()
+    return once()
   }
 }

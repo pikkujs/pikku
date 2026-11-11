@@ -229,6 +229,60 @@ describe('traceDialect with real SQLite', () => {
     assert.ok(!text.includes('S3CR3T'))
   })
 
+  test('dynamic identifiers outside the safe pattern drop the text and the collection name', async () => {
+    const tracer = new RecordingTracer()
+    const db = await make({
+      tracer,
+      currentTrace: here(createTrace()),
+      recordSqlText: true,
+    })
+    tracer.spans.length = 0
+    const M = 'ZQX a b;--'
+    const d = db as any
+    const cases: Array<() => Promise<unknown>> = [
+      () => d.selectFrom(M).selectAll().execute(),
+      () =>
+        d
+          .selectFrom('todos')
+          .select('id as ' + M)
+          .execute(),
+      () =>
+        d
+          .selectFrom('todos as ' + M)
+          .selectAll()
+          .execute(),
+      () =>
+        d
+          .selectFrom('todos')
+          .select((eb: any) => eb.fn(M, ['id']).as('x'))
+          .execute(),
+      () => d.insertInto(M).values({ a: 1 }).execute(),
+      () => sql`select 1 from ${sql.table(M)}`.execute(db),
+      () => db.schema.createTable(M).addColumn('a', 'integer').execute(),
+    ]
+    for (const run of cases) await run().catch(() => {})
+    assert.ok(tracer.spans.length >= cases.length)
+    const json = JSON.stringify(tracer.spans, (_k, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    )
+    assert.ok(!json.includes('ZQX'), 'identifier leaked into a span')
+  })
+
+  test('a pattern-conforming dynamic identifier IS recorded (documented limitation)', async () => {
+    const tracer = new RecordingTracer()
+    const db = await make({
+      tracer,
+      currentTrace: here(createTrace()),
+      recordSqlText: true,
+    })
+    tracer.spans.length = 0
+    await (db as any).selectFrom('todos as ZQXMARK9').selectAll().execute()
+    assert.match(
+      String(tracer.spans[0]!.attributes['db.query.text']),
+      /ZQXMARK9/
+    )
+  })
+
   test('hasInlineSql flags raw, immediate and json-path nodes (postgres-shaped cases)', () => {
     assert.equal(hasInlineSql({ kind: 'RawNode' }), true)
     assert.equal(

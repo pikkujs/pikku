@@ -20,14 +20,19 @@ kind `client`, with `db.system`, `db.operation.name` and `db.collection.name`
   a JSON path records no text, only operation and table: masking SQL is not
   reliable (escapes, comments, quoting per dialect), so there is none. This is
   a fail-closed rule, not a promise about what the text can hold: the opt-in
-  accepts that identifiers and structure appear in it.
+  accepts that identifiers and structure appear in it. Identifiers (tables,
+  columns, aliases, function names) are recorded as-is, and a query whose
+  identifier or function name does not match `^[A-Za-z_][A-Za-z0-9_]{0,63}$`
+  records no text; `db.collection.name` is omitted under the same rule. A
+  caller-supplied value that does match the pattern (`selectFrom(userInput)`)
+  IS recorded: identifiers MUST be developer-controlled, never caller input.
 - **Parameters** (`compiledQuery.parameters`) are never read, and
   `collectTableNames` does not walk into `ValueNode`s, so a value cannot be
   touched, or spoof a table.
 - **Errors**: the message of a database error can echo a value, so the span gets
   the error class only (`exception.type`). The status message is `"<Class>"`
   because the tracer builds it from the error it is handed; we hand it one with
-  an empty message. `db.collection.name` is capped at 128 characters.
+  an empty message.
 - **No parent, no span.** The parent comes from `currentTrace()`, read per query
   (one Kysely serves many invocations). If it returns nothing, or an unsampled
   trace, nothing is recorded; a span is never given a guessed parent.

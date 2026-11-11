@@ -443,6 +443,43 @@ describe('runPikkuFunc - spans', () => {
     assert.equal(calls, 1, 'a disabled tracer is not asked again')
   })
 
+  describe('fn runs exactly once whatever runInSpan does', () => {
+    const cases: Record<string, (fn: () => any) => any> = {
+      sync: (fn) => fn(),
+      deferred: (fn) => new Promise((r) => setTimeout(() => r(fn()), 5)),
+      never: () => Promise.resolve('skipped'),
+      'throws before': () => {
+        throw new Error('before')
+      },
+      'throws after': (fn) => {
+        fn()
+        throw new Error('after')
+      },
+    }
+    for (const [name, runInSpan] of Object.entries(cases)) {
+      test(name, async () => {
+        let runs = 0
+        const inner = new RecordingTracer()
+        const tracer: Tracer = {
+          startSpan: (n, c, o) => inner.startSpan(n, c, o),
+          runInSpan: (_s, fn) => runInSpan(fn),
+        }
+        addTestFunction('once-' + name, {
+          func: async () => {
+            runs++
+            return 'r'
+          },
+        })
+        assert.equal(
+          await run('once-' + name, tracer, { trace: createTrace() }),
+          'r'
+        )
+        await new Promise((r) => setTimeout(r, 20))
+        assert.equal(runs, 1)
+      })
+    }
+  })
+
   test('with no tracer the function runs untouched', async () => {
     addTestFunction('plain', { func: async () => 'plain' })
     assert.equal(

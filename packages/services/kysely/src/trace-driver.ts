@@ -8,7 +8,11 @@ import type {
 } from 'kysely'
 import { childTraceWire } from '@pikku/core/trace'
 import type { Span, TraceContext, Tracer } from '@pikku/core/trace'
-import { collectTableNames, hasInlineSql } from './table-names.js'
+import {
+  collectTableNames,
+  hasInlineSql,
+  SAFE_IDENTIFIER,
+} from './table-names.js'
 
 // knowledge: decisions/query-spans-record-operation-and-table-sql-text-opt-in-never-parameters.md
 
@@ -27,7 +31,11 @@ export interface TraceDriverOptions {
    * {@link SQL_TEXT_LIMIT} characters. Default false: an explicit opt-in.
    * Only a query built from structured nodes has its text recorded (values
    * are `?` / `$n` placeholders); a query with raw SQL, `sql.lit` or a JSON
-   * path records no text. Parameter values are never read either way.
+   * path records no text, nor does one with an identifier or function name
+   * outside `[A-Za-z_][A-Za-z0-9_]{0,63}`. Identifiers (tables, columns,
+   * aliases) are recorded as-is: they MUST be developer-controlled, never
+   * caller input, because a conforming name cannot be told from a value.
+   * Parameter values are never read either way.
    */
   recordSqlText?: boolean
   /** `db.system`: `sqlite`, `postgresql`, `mysql`. */
@@ -130,8 +138,8 @@ class TracedConnection implements DatabaseConnection {
       const tables = new Set<string>()
       collectTableNames(query.query, tables)
       const [table] = tables
-      if (table !== undefined)
-        attributes['db.collection.name'] = table.slice(0, 128)
+      if (table !== undefined && SAFE_IDENTIFIER.test(table))
+        attributes['db.collection.name'] = table
       if (recordSqlText) {
         const text = sqlText(query)
         if (text !== undefined) attributes['db.query.text'] = text
