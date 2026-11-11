@@ -85,7 +85,7 @@ export const optedInVariants = (
     state.optedInContributors ?? {}
   )) {
     const declaration = state.rpc.wireAddonDeclarations.get(namespace)
-    const dirs = addonResolutionDirs(rootDir, declaration?.file)
+    const dirs = addonResolutionDirs(rootDir, opted.file ?? declaration?.file)
     const packageDir = findInstalledPackageDir(dirs, opted.packageName)
     for (const [name, byTarget] of Object.entries(opted.contributors)) {
       const ref = byTarget[target]
