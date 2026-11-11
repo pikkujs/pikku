@@ -603,6 +603,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
         )
         services = { ...services, auditLog: invocationAuditLog }
       }
+      const boundaryTracing = {
+        tracer: resolvedSingletonServices.tracer,
+        logger: resolvedSingletonServices.logger,
+      }
       services = {
         ...services,
         ...(rootTrace && {
@@ -612,19 +616,22 @@ export const runPikkuFunc = async <In = any, Out = any>(
         ...(services.queueService && {
           queueService: traceQueueService(
             services.queueService,
-            invocationWire
+            invocationWire,
+            boundaryTracing
           ),
         }),
         ...(services.schedulerService && {
           schedulerService: traceSchedulerService(
             services.schedulerService,
-            invocationWire
+            invocationWire,
+            boundaryTracing
           ),
         }),
         ...(services.webhookService && {
           webhookService: traceWebhookService(
             services.webhookService,
-            invocationWire
+            invocationWire,
+            boundaryTracing
           ),
         }),
       }

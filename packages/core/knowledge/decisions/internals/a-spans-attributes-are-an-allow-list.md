@@ -11,8 +11,12 @@ The function runner (`function/function-span.ts`) sets span attributes by name
 from a fixed table: wire type and id, function id, package, addon namespace,
 whether the trace is a root, `pikku.function.duration_ms`, `pikku.user.id`,
 `pikku.org.id`, the HTTP method, route and status, queue name and job id,
-scheduler task, workflow name, run id and step, channel id, MCP tool. Every value
-is an id or a number the framework already holds.
+scheduler task, workflow name, run id and step, channel id, MCP tool. Boundary
+spans (a queue publish, a scheduled RPC, a webhook send, a remote RPC) add
+`messaging.system`, `messaging.destination.name` (a queue name, an RPC name or a
+webhook event name, never a payload or URL) and `rpc.service` (the addon
+namespace of a remote call). Every value is an id or a number the framework
+already holds. `otlp/attribute-types.ts` fixes each key's column type.
 
 Nothing is derived from function input, query parameters, headers, cookies or the
 session beyond the two ids. An error leaves only as `Name: message`, cut to 256

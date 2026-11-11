@@ -1,6 +1,7 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { unwrapJobTrace, wrapJobTrace } from './queue-trace.js'
+import { RecordingTracer } from '../../testing/recording-tracer.js'
 import { traceQueueService } from '../../function/trace-queue-service.js'
 import { InMemoryQueueService } from './in-memory-queue-service.js'
 import { SignedQueueService } from './signed-queue-service.js'
@@ -43,6 +44,84 @@ describe('traceQueueService', () => {
     await traceQueueService(queue, { trace }).add('q', { a: 1 } as any)
     assert.equal(added[0]!.options?.traceparent, formatTraceparent(trace))
     assert.deepEqual(added[0]!.data, { a: 1 })
+  })
+
+  test('a publish is a producer span and the job is its child', async () => {
+    const { queue, added } = recordingQueue()
+    const tracer = new RecordingTracer()
+    const trace = createTrace()
+    await traceQueueService(queue, { trace }, { tracer, logger }).add(
+      'emails',
+      { to: 'a@example.com', secret: 'payload' } as any
+    )
+    const span = tracer.spans[0]!
+    assert.equal(span.name, 'queue.publish emails')
+    assert.equal(span.kind, 'producer')
+    assert.equal(span.traceId, trace.traceId)
+    assert.equal(span.parentSpanId, trace.spanId)
+    assert.deepEqual(span.attributes, {
+      'messaging.system': 'pikku',
+      'messaging.destination.name': 'emails',
+    })
+    assert.equal(
+      added[0]!.options?.traceparent,
+      `00-${span.traceId}-${span.spanId}-01`
+    )
+    assert.ok(
+      !JSON.stringify(span, (_, v) =>
+        typeof v === 'bigint' ? String(v) : v
+      ).includes('payload')
+    )
+  })
+
+  test('a failed publish ends the span in error and rethrows', async () => {
+    const tracer = new RecordingTracer()
+    const boom = new Error('broker down')
+    const queue = {
+      supportsResults: false,
+      add: async () => {
+        throw boom
+      },
+      getJob: async () => null,
+    } as QueueService
+    await assert.rejects(
+      () =>
+        traceQueueService(
+          queue,
+          { trace: createTrace() },
+          { tracer, logger }
+        ).add('q', {} as any),
+      boom
+    )
+    assert.equal(tracer.spans[0]!.status.code, 'error')
+  })
+
+  test('an unsampled trace or a missing tracer records nothing and stamps the wire trace', async () => {
+    const tracer = new RecordingTracer()
+    const { queue, added } = recordingQueue()
+    const unsampled = { ...createTrace(), sampled: false }
+    await traceQueueService(
+      queue,
+      { trace: unsampled },
+      { tracer, logger }
+    ).add('q', {} as any)
+    assert.equal(tracer.spans.length, 0)
+    assert.equal(added[0]!.options?.traceparent, formatTraceparent(unsampled))
+  })
+
+  test('a tracer that throws never breaks the publish', async () => {
+    const { queue, added } = recordingQueue()
+    const tracer = {
+      startSpan: () => {
+        throw new Error('tracer bug')
+      },
+    }
+    const trace = createTrace()
+    await traceQueueService(queue, { trace }, { tracer, logger }).add(
+      'q',
+      {} as any
+    )
+    assert.equal(added[0]!.options?.traceparent, formatTraceparent(trace))
   })
 
   test('keeps a traceparent the caller set, and the other options', async () => {

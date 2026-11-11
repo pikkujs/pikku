@@ -2,6 +2,11 @@ import { getErrorResponse } from '../errors/error-handler.js'
 import type { Logger } from '../services/logger.js'
 import type { PikkuWire, PikkuWiringTypes } from '../types/core.types.js'
 import {
+  disableTracer,
+  isTracerDisabled,
+  workflowStepOfTrace,
+} from '../boundary-span.js'
+import {
   nowUnixNano,
   redactSpanError,
   type Span,
@@ -9,22 +14,6 @@ import {
   type SpanKind,
   type Tracer,
 } from '../tracer.js'
-
-// knowledge: decisions/internals/the-function-runner-owns-the-span-middleware-cannot.md
-// A tracer that throws is logged once and then left alone for the process.
-const disabled = new WeakSet<Tracer>()
-
-const disable = (tracer: Tracer, logger: Logger, error: unknown) => {
-  if (disabled.has(tracer)) return
-  disabled.add(tracer)
-  try {
-    logger.warn(
-      `The tracer threw and is disabled for this process: ${redactSpanError(error).message}`
-    )
-  } catch {
-    // Reporting the failure must not become a second one.
-  }
-}
 
 const KINDS: Partial<Record<PikkuWiringTypes, SpanKind>> = {
   http: 'server',
@@ -59,16 +48,19 @@ export const openFunctionSpan = (
   attributes: Record<string, SpanAttributeValue>
 ): FunctionSpan | undefined => {
   const trace = wire.trace
-  if (!tracer || !trace?.sampled || disabled.has(tracer)) return undefined
+  if (!tracer || !trace?.sampled || isTracerDisabled(tracer)) return undefined
   try {
     const span = tracer.startSpan(wire.functionId ?? '', trace, {
-      kind: KINDS[wireType] ?? 'internal',
+      // A workflow step is a hop of a run, not a nested call: it consumes work.
+      kind: workflowStepOfTrace(trace)
+        ? 'consumer'
+        : (KINDS[wireType] ?? 'internal'),
       attributes,
       startTimeUnixNano: nowUnixNano(),
     })
     return { span, wireType, tracer, logger, wire }
   } catch (error) {
-    disable(tracer, logger, error)
+    disableTracer(tracer, logger, error)
     return undefined
   }
 }
@@ -130,6 +122,13 @@ const endAttributes = (
     set('pikku.workflow.run_id', () => wire.workflow?.runId)
     set('pikku.workflow.step', () => wire.workflowStep?.stepId)
   }
+  // Only the span a workflow engine opened for a step: a call a step's function
+  // makes copies the step's wire but is not itself the step.
+  const step = wire.trace && workflowStepOfTrace(wire.trace)
+  if (step) {
+    set('pikku.workflow.run_id', () => step.runId)
+    set('pikku.workflow.step', () => step.stepId)
+  }
   if (wireType === 'channel') {
     set('pikku.channel.id', () => wire.channel?.channelId)
   }
@@ -152,7 +151,7 @@ export const endFunctionSpan = (
   failure?: { error: unknown }
 ) => {
   const { span, wireType, tracer, logger, wire } = open
-  if (disabled.has(tracer)) return
+  if (isTracerDisabled(tracer)) return
   // Gathering is guarded per read; only the tracer's own calls can disable it.
   const attributes = endAttributes(wire, wireType, durationMs, failure)
   try {
@@ -170,7 +169,7 @@ export const endFunctionSpan = (
       span.end({ code: 'ok' })
     }
   } catch (error) {
-    disable(tracer, logger, error)
+    disableTracer(tracer, logger, error)
   }
 }
 
@@ -184,7 +183,7 @@ export const runInFunctionSpan = <T>(
   open: FunctionSpan | undefined,
   fn: () => Promise<T>
 ): Promise<T> => {
-  if (!open?.tracer.runInSpan || disabled.has(open.tracer)) return fn()
+  if (!open?.tracer.runInSpan || isTracerDisabled(open.tracer)) return fn()
   let started = false
   let outcome: Promise<T> | undefined
   // Whoever calls first starts fn; any later call gets the same promise. A
@@ -206,16 +205,16 @@ export const runInFunctionSpan = <T>(
     // disabled, and the function's outcome is the only thing the caller sees.
     Promise.resolve(result).catch((error) => {
       // The function's own rejection passing through is not the tracer's fault.
-      if (!outcome) return disable(open.tracer, open.logger, error)
+      if (!outcome) return disableTracer(open.tracer, open.logger, error)
       Promise.resolve(outcome).then(
-        () => disable(open.tracer, open.logger, error),
+        () => disableTracer(open.tracer, open.logger, error),
         (own) => {
-          if (own !== error) disable(open.tracer, open.logger, error)
+          if (own !== error) disableTracer(open.tracer, open.logger, error)
         }
       )
     })
     if (!started) {
-      disable(
+      disableTracer(
         open.tracer,
         open.logger,
         new Error('runInSpan returned without running the function')
@@ -223,7 +222,7 @@ export const runInFunctionSpan = <T>(
     }
     return once()
   } catch (error) {
-    disable(open.tracer, open.logger, error)
+    disableTracer(open.tracer, open.logger, error)
     return once()
   }
 }

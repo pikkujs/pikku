@@ -1538,7 +1538,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const run = knownRun ?? (await this.getRunIdentity(runId))
     assertRunSessionStore(run?.wire?.pikkuUserId)
     return rpcService.rpcWithWire(rpcName, data, {
-      ...runTraceWire(run?.wire?.traceparent),
+      ...runTraceWire(run?.wire?.traceparent, runId, stepState.stepId),
       ...(run?.wire?.pikkuUserId ? { pikkuUserId: run.wire.pikkuUserId } : {}),
       ...(compensatingFor
         ? {

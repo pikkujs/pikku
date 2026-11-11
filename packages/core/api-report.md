@@ -1325,7 +1325,7 @@ export interface RpcStepMeta {
   expectEventually?: boolean
 }
 export type RunTimeline = RunTimelineEvent[]
-runTraceWire: (traceparent: string | undefined) => { traceId?: string | undefined; trace?: TraceContext | undefined; }
+runTraceWire: (traceparent: string | undefined, runId?: string | undefined, stepId?: string | undefined) => { traceId?: string | undefined; trace?: TraceContext | undefined; }
 export type ScheduledStep = {
   runId: string
   stepId: string

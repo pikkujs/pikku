@@ -6,7 +6,8 @@ import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { CoreServices } from '../types/core.types.js'
 import { MissingSessionError } from '../errors/errors.js'
 import { RecordingTracer } from '../testing/recording-tracer.js'
-import { childTraceWire, createTrace } from '../trace.js'
+import { childTraceWire, createTrace, formatTraceparent } from '../trace.js'
+import { runTraceWire } from '../wirings/workflow/workflow-run-trace.js'
 import type { Tracer } from '../tracer.js'
 import type { PikkuWiringTypes } from '../types/core.types.js'
 
@@ -81,6 +82,64 @@ describe('runPikkuFunc - spans', () => {
     await run('root', tracer)
     assert.equal(tracer.spans[0]!.attributes['pikku.trace.root'], true)
     assert.equal(tracer.spans[0]!.parentSpanId, undefined)
+  })
+
+  test('a workflow step is a consumer span with the run and step; a call it makes is not', async () => {
+    const tracer = new RecordingTracer()
+    addTestFunction('inner', { func: async () => 'inner' })
+    addTestFunction('stepFn', {
+      func: async (_s: unknown, _d: unknown, wire: any) =>
+        run('inner', tracer, {
+          ...wire,
+          trace: childTraceWire(wire.trace).trace,
+        }),
+    })
+    const stepWire = runTraceWire(
+      formatTraceparent(createTrace()),
+      'run-1',
+      'step-1'
+    )
+    await run('stepFn', tracer, stepWire)
+
+    const byName = Object.fromEntries(tracer.spans.map((s) => [s.name, s]))
+    assert.equal(byName.stepFn!.kind, 'consumer')
+    assert.equal(byName.stepFn!.attributes['pikku.workflow.step'], 'step-1')
+    assert.equal(byName.stepFn!.attributes['pikku.workflow.run_id'], 'run-1')
+    assert.equal(byName.inner!.kind, 'internal')
+    assert.equal(byName.inner!.attributes['pikku.workflow.step'], undefined)
+  })
+
+  test('a function that publishes to a queue leaves a producer span under its own', async () => {
+    const tracer = new RecordingTracer()
+    const added: any[] = []
+    addTestFunction('publisher', {
+      func: async (services: any) => {
+        await services.queueService.add('emails', { to: 'x' })
+      },
+    })
+    const queueService = {
+      supportsResults: false,
+      add: async (...args: unknown[]) => (added.push(args), 'job-1'),
+      getJob: async () => null,
+    }
+    await runPikkuFunc('rpc', 'wire-publisher', 'publisher', {
+      singletonServices: { ...mockSingletonServices, tracer, queueService },
+      getAllServices: () => ({ ...mockServices, tracer, queueService }) as any,
+      data: () => ({}),
+      auth: false,
+      wire: { trace: createTrace() },
+    } as any)
+
+    const byName = Object.fromEntries(tracer.spans.map((s) => [s.name, s]))
+    assert.equal(tracer.spans.length, 2)
+    assert.equal(
+      byName['queue.publish emails']!.parentSpanId,
+      byName.publisher!.spanId
+    )
+    assert.equal(
+      added[0][2].traceparent,
+      `00-${byName['queue.publish emails']!.traceId}-${byName['queue.publish emails']!.spanId}-01`
+    )
   })
 
   test('a nested call is a child of the caller span', async () => {

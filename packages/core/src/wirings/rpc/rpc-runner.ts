@@ -2,6 +2,7 @@ import {
   childTraceWire,
   outgoingTraceparent,
   tracedLogger,
+  type TraceContext,
 } from '../../trace.js'
 import {
   AddonNotUsedError,
@@ -25,6 +26,10 @@ import type { AddonInstance } from '../addon/addon-runner.js'
 import { addonInstanceForNamespace } from '../addon/addon-runner.js'
 import { isAddonFunctionExposed } from '../addon/wire-addon.js'
 import { pikkuState } from '../../pikku-state.js'
+import {
+  endBoundaryWhenSettled,
+  startBoundarySpan,
+} from '../../boundary-span.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
@@ -55,6 +60,42 @@ import {
  * module cycle. By the time an rpc call runs the runner is loaded, and the
  * import resolves from the module cache once.
  */
+/**
+ * Calls a function hosted by another deployment. The call is a `client` span,
+ * the remote function's parent, so the trace shows the hop; a local call adds
+ * nothing because the callee is already its own span. Only the function name
+ * and the service it belongs to are recorded, never the arguments.
+ */
+const invokeRemote = <Out>(
+  services: CoreServices,
+  wire: { trace?: TraceContext },
+  funcName: string,
+  data: unknown,
+  session: unknown
+): Promise<Out> => {
+  const boundary = startBoundarySpan(
+    { tracer: services.tracer, logger: services.logger },
+    wire,
+    `rpc.call ${funcName}`,
+    'client',
+    {
+      'rpc.service': funcName.includes(':')
+        ? funcName.slice(0, funcName.indexOf(':'))
+        : 'deployment',
+    }
+  )
+  return endBoundaryWhenSettled(
+    boundary,
+    () =>
+      services.deploymentService!.invoke(
+        funcName,
+        data,
+        session,
+        boundary.traceparent
+      ) as Promise<Out>
+  )
+}
+
 let functionRunner: typeof RunPikkuFunc | undefined
 const runPikkuFunc = async <In, Out>(
   ...args: Parameters<typeof RunPikkuFunc<In, Out>>
@@ -475,12 +516,13 @@ export class ContextAwareRPCService {
       if (e instanceof RPCNotFoundError) {
         if (!this.packageName && this.services.deploymentService) {
           const session = await resolveWireSession(this.wire)
-          return this.services.deploymentService.invoke(
+          return invokeRemote<Out>(
+            this.services,
+            this.wire,
             funcName,
             data,
-            session,
-            outgoingTraceparent(this.wire)
-          ) as Promise<Out>
+            session
+          )
         }
       }
       throw e
@@ -759,12 +801,13 @@ export class ContextAwareRPCService {
         this.services.deploymentService
       ) {
         const session = await resolveWireSession(mergedWire)
-        return this.services.deploymentService.invoke(
+        return invokeRemote<Out>(
+          this.services,
+          mergedWire,
           rpcName,
           data,
-          session,
-          outgoingTraceparent(mergedWire)
-        ) as Promise<Out>
+          session
+        )
       }
       throw e
     }
@@ -902,12 +945,7 @@ export class ContextAwareRPCService {
 
     const session = await resolveWireSession(this.wire)
 
-    return this.services.deploymentService.invoke(
-      funcName,
-      data,
-      session,
-      outgoingTraceparent(this.wire)
-    ) as Promise<Out>
+    return invokeRemote<Out>(this.services, this.wire, funcName, data, session)
   }
 }
 
