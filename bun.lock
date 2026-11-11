@@ -304,6 +304,18 @@
         "zod": "^4",
       },
     },
+    "packages/addon/pikku-greptime": {
+      "name": "@pikku/addon-greptime",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@pikku/cli": "^0.12.208",
+        "@pikku/core": "*",
+        "@standard-schema/spec": "^1.1.0",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.154",
+      },
+    },
     "packages/assistant-ui": {
       "name": "@pikku/assistant-ui",
       "version": "0.12.14",
@@ -1909,6 +1921,21 @@
         "zod": "^4",
       },
     },
+    "verifiers/addon-greptime": {
+      "name": "@pikku/verifiers-addon-greptime",
+      "dependencies": {
+        "@pikku/addon-greptime": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "tsx": "^4.23.15",
+      },
+    },
     "verifiers/addon-openapi": {
       "name": "@pikku/verifiers-addon-openapi",
       "dependencies": {
@@ -3428,6 +3455,8 @@
 
     "@pikku/addon-graph": ["@pikku/addon-graph@workspace:packages/addon/pikku-graph"],
 
+    "@pikku/addon-greptime": ["@pikku/addon-greptime@workspace:packages/addon/pikku-greptime"],
+
     "@pikku/addon-hmac-signer": ["@pikku/addon-hmac-signer@workspace:e2e/packages/hmac-signer"],
 
     "@pikku/addon-mandrill": ["@pikku/addon-mandrill@0.1.2", "", { "peerDependencies": { "@pikku/core": "^0.12.36", "zod": "^4" } }, "sha512-i7zXOPOYQaFoo2Q0quM6/TkaY4lWlBqutSfHNXJU8OwHOGtswExaaD80Tv0A5SY7GfyBAaagJ2eKs5Gb2Hxb+g=="],
@@ -3631,6 +3660,8 @@
     "@pikku/verifiers-addon-deps-host": ["@pikku/verifiers-addon-deps-host@workspace:verifiers/addon-dependencies/host"],
 
     "@pikku/verifiers-addon-deps-stripe": ["@pikku/verifiers-addon-deps-stripe@workspace:verifiers/addon-dependencies/stripe"],
+
+    "@pikku/verifiers-addon-greptime": ["@pikku/verifiers-addon-greptime@workspace:verifiers/addon-greptime"],
 
     "@pikku/verifiers-addon-openapi": ["@pikku/verifiers-addon-openapi@workspace:verifiers/addon-openapi"],
 
