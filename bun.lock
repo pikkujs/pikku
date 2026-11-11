@@ -306,7 +306,7 @@
     },
     "packages/assistant-ui": {
       "name": "@pikku/assistant-ui",
-      "version": "0.12.14",
+      "version": "0.12.15",
       "dependencies": {
         "@ag-ui/client": "^0.0.59",
         "@assistant-ui/react": "^0.15.29",
@@ -328,7 +328,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.208",
+      "version": "0.12.209",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -409,11 +409,11 @@
     },
     "packages/client-fetch": {
       "name": "@pikku/fetch",
-      "version": "0.12.15",
+      "version": "0.12.16",
     },
     "packages/client-websocket": {
       "name": "@pikku/websocket",
-      "version": "0.12.6",
+      "version": "0.12.7",
       "optionalDependencies": {
         "ws": "^8.22.0",
       },
@@ -430,7 +430,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.154",
+      "version": "0.12.155",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -454,7 +454,7 @@
     },
     "packages/create": {
       "name": "create-pikku",
-      "version": "0.12.16",
+      "version": "0.12.17",
       "bin": "dist/index.js",
       "dependencies": {
         "@inquirer/prompts": "^8.7.3",
@@ -491,7 +491,7 @@
     },
     "packages/deploy/deploy-core": {
       "name": "@pikku/deploy",
-      "version": "0.12.19",
+      "version": "0.12.20",
       "dependencies": {
         "semver": "^7.8.5",
       },
@@ -512,7 +512,7 @@
     },
     "packages/deploy/deploy-standalone": {
       "name": "@pikku/deploy-standalone",
-      "version": "0.12.30",
+      "version": "0.12.31",
       "dependencies": {
         "@pikku/deploy": "^0.12.19",
         "@pikku/migrator-sql": "^0.12.9",
@@ -523,7 +523,7 @@
     },
     "packages/frontend/react": {
       "name": "@pikku/react",
-      "version": "0.12.22",
+      "version": "0.12.23",
       "dependencies": {
         "@pikku/fetch": "^0.12.13",
       },
@@ -591,7 +591,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.118",
+      "version": "0.12.119",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
       },
@@ -605,7 +605,7 @@
     },
     "packages/inspector-go": {
       "name": "@pikku/inspector-go",
-      "version": "0.12.12",
+      "version": "0.12.13",
       "dependencies": {
         "@pikku/inspector": "^0.12.118",
         "tsx": "^4.23.15",
@@ -642,7 +642,7 @@
     },
     "packages/n8n-import": {
       "name": "@pikku/n8n-import",
-      "version": "0.0.10",
+      "version": "0.0.11",
       "dependencies": {
         "@pikku/inspector-go": "^0.12.9",
         "@pikku/openapi-parser": "^0.12.26",
@@ -662,7 +662,7 @@
     },
     "packages/paraglide": {
       "name": "@pikku/paraglide",
-      "version": "0.12.9",
+      "version": "0.12.10",
       "bin": {
         "paraglide-enums": "dist/esm/cli.js",
       },
@@ -699,7 +699,7 @@
     },
     "packages/runtimes/aws-lambda": {
       "name": "@pikku/lambda",
-      "version": "0.12.14",
+      "version": "0.12.15",
       "devDependencies": {
         "@aws-sdk/client-apigatewaymanagementapi": "^3.1152.0",
         "@aws-sdk/client-lambda": "^3.1152.0",
@@ -727,7 +727,7 @@
     },
     "packages/runtimes/bun-server": {
       "name": "@pikku/bun-server",
-      "version": "0.12.15",
+      "version": "0.12.16",
       "devDependencies": {
         "@pikku/core": "^0.12.144",
         "@pikku/modelcontextprotocol": "^0.12.18",
@@ -743,7 +743,7 @@
     },
     "packages/runtimes/cloudflare": {
       "name": "@pikku/cloudflare",
-      "version": "0.12.32",
+      "version": "0.12.33",
       "dependencies": {
         "kysely-d1": "^0.4.0",
       },
@@ -789,7 +789,7 @@
     },
     "packages/runtimes/express-server": {
       "name": "@pikku/express",
-      "version": "0.12.18",
+      "version": "0.12.19",
       "dependencies": {
         "@pikku/express-middleware": "^0.12.10",
         "@types/cookie-parser": "^1.4.10",
@@ -877,7 +877,7 @@
     },
     "packages/runtimes/node-http-server": {
       "name": "@pikku/node-http-server",
-      "version": "0.12.21",
+      "version": "0.12.22",
       "devDependencies": {
         "@pikku/core": "^0.12.144",
         "@pikku/modelcontextprotocol": "^0.12.18",
@@ -910,7 +910,7 @@
     },
     "packages/runtimes/uws-handler": {
       "name": "@pikku/uws-handler",
-      "version": "0.12.11",
+      "version": "0.12.12",
       "dependencies": {
         "cookie": "^2.0.1",
         "picoquery": "^2.5.0",
@@ -955,7 +955,7 @@
     },
     "packages/schedule": {
       "name": "@pikku/schedule",
-      "version": "0.12.12",
+      "version": "0.12.13",
       "dependencies": {
         "cron": "^4.4.0",
         "cron-schedule": "^6.0.0",
@@ -1139,7 +1139,7 @@
     },
     "packages/services/kysely-postgres": {
       "name": "@pikku/kysely-postgres",
-      "version": "0.12.28",
+      "version": "0.12.29",
       "dependencies": {
         "@pikku/kysely": "^0.13.39",
         "kysely": "^0.29.6",
@@ -1263,7 +1263,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.72",
+      "version": "0.12.73",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",
@@ -1282,7 +1282,7 @@
     },
     "packages/voice-agents": {
       "name": "@pikku/voice-agents",
-      "version": "0.0.7",
+      "version": "0.0.8",
       "devDependencies": {
         "@ricky0123/vad-web": "^0.0.31",
         "@types/react": "^19",

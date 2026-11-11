@@ -1,5 +1,13 @@
 # @pikku/assistant-ui
 
+## 0.12.15
+
+### Patch Changes
+
+- ff9c2cf: Drop the CommonJS build. These packages now ship ESM only: `exports` has no `require` condition and `main` points at `dist/esm/index.js`. Breaking change: see docs/MIGRATION.md.
+- Updated dependencies [ff9c2cf]
+  - @pikku/voice-agents@0.0.8
+
 ## 0.12.14
 
 ### Patch Changes

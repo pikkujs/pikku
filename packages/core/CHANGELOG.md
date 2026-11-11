@@ -1,3 +1,25 @@
+## 0.12.155
+
+### Patch Changes
+
+- bcdb663: Fix SSE channels never receiving published events.
+
+  `onChannelOpened`/`onChannelClosed` were called but not declared on `EventHubService`, so two signatures diverged: `onChannelOpened(channelHandler)` in core, `onChannelOpened(channelId, socket)` in the Bun and uWS hubs. An SSE stream on those runtimes registered under the wrong key and stayed open and silent. Both are now on the interface; Bun and uWS take the raw socket through `registerSocket(channelId, ws)` instead.
+
+  `server.publish` (Bun) and `socket.publish` (uWS) only reach WebSockets, so both hubs now also keep a `LocalEventHubService` for non-socket channels and publish to both. `PgEventHubService` routed its lifecycle to the built-in hub while everything else went to the injected one; it now uses `delivery` throughout.
+
+  Lambda and Cloudflare cannot hold a stream the publisher can reach, so a hub-subscribed SSE route belongs on a server target. Their hubs accept the channel and log a warning that published events will not reach it; the stream still works as a plain one the function writes to. Core warns when an SSE route has no hub configured.
+
+  Adds `defineEventHubServiceTests` to `@pikku/core/testing`, a conformance suite covering delivery to a channel that is not the runtime's native socket, with `deliversToHandlers: false` for hubs that cannot.
+
+  An SSE stream whose hub refuses the channel is now closed rather than left
+  open: `onChannelOpened` runs before `close` is wrapped, so a rejection used to
+  leave the client holding a stream no hub would ever publish to.
+
+- 7ff1d77: Delete everything deprecated, with no shims: the `@pikku/ai-voice` and `@pikku/openapi-to-zod-schema` packages (use `@pikku/core/agent` and `@pikku/openapi-parser`), the `pikkuStudio` alias (use `definePlugin`), the `PikkuTaskScheduler` alias (use `InMemorySchedulerService`), the `pikku semver` command (use `pikku release diff` / `pikku release snapshot`), the unprefixed local-content read fallback (files must live under `private/` or `public/`; `resolveContentRequestTarget` drops its `mode` argument), the legacy `security: 'encrypted'` column annotation (use `security: 'secret'` with `form: 'wrapped'`), and the validator checks for the removed `ban()`/`virtualUser()` aliases and the dead Next.js client.
+- 70e4eee: Add an opt-in strict oxlint preset and `mapConcurrent`. `pikku enable oxlint --strict` merges the preset (built-in oxlint rules: `typescript/no-floating-promises`, `await-thenable`, `only-throw-error`, `eqeqeq`, `import/no-cycle` and others at `error`; `no-await-in-loop`, `no-console`, `no-explicit-any` and others at `warn`) and sets `lint.strict` in `pikku.config.json`; while it is true `pikku validate` reports `oxlint-strict` when the config lacks it. It adds overrides that turn `no-await-in-loop` off in `**/*.workflow.ts` and `typescript/no-floating-promises` off in `*.assert.ts`, `*.verify.ts`, `*.test.*` and `*.spec.*`. `@pikku/core/utils` exports `mapConcurrent(items, fn, { concurrency, signal? })` (in input order, fails fast, abortable); do not use it inside a `pikkuWorkflowFunc` body. Nothing changes unless `lint.strict` is set. See `docs/MIGRATION.md`.
+- 9bdfec9: A virtual user can declare `backend`, the backend it signs into. `pikku scenario run` builds one HTTP virtual-user set per backend, each against that backend's url in the run environment.
+
 ## 0.12.154
 
 ### Patch Changes

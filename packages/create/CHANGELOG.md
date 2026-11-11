@@ -1,3 +1,11 @@
+## 0.12.17
+
+### Patch Changes
+
+- 95f52d4: `cleanPikkuConfig` strips a `../functions` `rootDir` and rewrites the `../functions/tsconfig.json` reference, so templates copied out of `recipes/` no longer point outside the new project.
+- bc54ce1: Remove `--stackblitz`. It scaffolded `pikku-gen` as the generated directory, but the CLI now always writes `.pikku` and has no `outDir` setting, so the option produced a project that could not resolve `#pikku`. Generated files go to `.pikku`; use a different sandbox.
+- a028d3e: `pikku validate` requires two more code-policy rules in the app's oxlint, and `lint.enforceVariablesService` moves to a stricter rule. `lint.enforceSupervisor` (default `error`) forbids `child_process`, `execa`, `cross-spawn`, `shelljs` and `Bun.spawn` / `Bun.spawnSync` / `Bun.$`. `lint.enforceCliCommands` (default `error`) forbids `process.argv`, `Bun.argv`, `Deno.args`, `commander`, `yargs`, `minimist` and `parseArgs` from `node:util`. `lint.enforceContentService` also covers `fs-extra` and `graceful-fs`. `lint.enforceVariablesService` now requires `no-restricted-properties` on `process.env` instead of `node/no-process-env`, so `{ ...process.env }`, `const { env } = process` and `globalThis.process.env` (also through `global` and `self`, and for `Bun` and `Deno`) are reported; a config that only has the node rule fails with `oxlint-enforce-variables-service`. Run `pikku enable oxlint` to add the entries; it also writes an `overrides` entry that turns the rules off for `start.ts`, `server.ts`, `bin/`, `scripts/` and tests, and `create-pikku` writes the same config. One line is exempted with `// oxlint-disable-next-line <rule> -- reason`. The keys apply to apps and addons, not library packages. See `docs/MIGRATION.md`.
+
 ## 0.12.16
 
 ### Patch Changes

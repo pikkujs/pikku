@@ -1,5 +1,19 @@
 # @pikku/inspector-go
 
+## 0.12.13
+
+### Patch Changes
+
+- 9bdfec9: A virtual user can declare `backend`, the backend it signs into. `pikku scenario run` builds one HTTP virtual-user set per backend, each against that backend's url in the run environment.
+- 7763691: A `pikkuWorkflowFunc` body that uses a construct the workflow graph cannot show now fails with `PKU641` instead of being dropped from the graph while still running on replay. Newly rejected: `forEach`, `reduce` and a bare `map` that wraps workflow calls or stands as a statement, ternary expressions (use `if`/`else`), a `Promise.all(x.map(...))` that does not match the parallel fanout shape (the message says which part did not), and what replay would repeat: `Date.now()`, `new Date()`, `Math.random()`, `crypto.randomUUID()` and `await` of a call that is not a workflow step. `for..of` and `Promise.all(items.map(...))` stay valid, and `pikkuWorkflowComplexFunc` and scenarios are unchanged. The `online-shop` checkout and the field-service quote approval and a few verifier workflows were rewritten to match. See `docs/MIGRATION.md`.
+- Updated dependencies [bcdb663]
+- Updated dependencies [9471201]
+- Updated dependencies [7ff1d77]
+- Updated dependencies [70e4eee]
+- Updated dependencies [9bdfec9]
+  - @pikku/core@0.12.155
+  - @pikku/inspector@0.12.119
+
 ## 0.12.12
 
 ### Patch Changes

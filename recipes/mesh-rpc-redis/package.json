@@ -14,8 +14,8 @@
     "test:http-fetch": "tsx client/test-mesh-rpc.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.154",
-    "@pikku/express": "^0.12.18",
+    "@pikku/core": "^0.12.155",
+    "@pikku/express": "^0.12.19",
     "@pikku/jose": "^0.12.10",
     "@pikku/redis": "^0.12.26",
     "@pikku/schema-cfworker": "^0.12.9",
@@ -26,7 +26,7 @@
     "typescript": "^7.0.2"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.208",
+    "@pikku/cli": "^0.12.209",
     "@standard-schema/spec": "^1.1.0",
     "@types/node": "^26"
   },

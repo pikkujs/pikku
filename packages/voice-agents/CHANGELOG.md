@@ -1,5 +1,11 @@
 # @pikku/voice-agents
 
+## 0.0.8
+
+### Patch Changes
+
+- ff9c2cf: Drop the CommonJS build. These packages now ship ESM only: `exports` has no `require` condition and `main` points at `dist/esm/index.js`. Breaking change: see docs/MIGRATION.md.
+
 ## 0.0.7
 
 ### Patch Changes

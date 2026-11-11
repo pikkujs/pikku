@@ -1,5 +1,14 @@
 # @pikku/n8n-import
 
+## 0.0.11
+
+### Patch Changes
+
+- 7ff1d77: Delete everything deprecated, with no shims: the `@pikku/ai-voice` and `@pikku/openapi-to-zod-schema` packages (use `@pikku/core/agent` and `@pikku/openapi-parser`), the `pikkuStudio` alias (use `definePlugin`), the `PikkuTaskScheduler` alias (use `InMemorySchedulerService`), the `pikku semver` command (use `pikku release diff` / `pikku release snapshot`), the unprefixed local-content read fallback (files must live under `private/` or `public/`; `resolveContentRequestTarget` drops its `mode` argument), the legacy `security: 'encrypted'` column annotation (use `security: 'secret'` with `form: 'wrapped'`), and the validator checks for the removed `ban()`/`virtualUser()` aliases and the dead Next.js client.
+- Updated dependencies [9bdfec9]
+- Updated dependencies [7763691]
+  - @pikku/inspector-go@0.12.13
+
 ## 0.0.10
 
 ### Patch Changes
