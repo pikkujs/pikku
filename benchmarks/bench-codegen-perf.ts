@@ -109,7 +109,7 @@ function setupProject() {
         $schema:
           'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
         srcDirectories: ['./src', './types'],
-        outDir: './.pikku',
+        backends: { api: { filter: {} } },
         tsconfig: './tsconfig.json',
       },
       null,
