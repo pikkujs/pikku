@@ -169,8 +169,8 @@ async function createTestProject(testCase: TestCase): Promise<TestProject> {
     join(tmpDir, 'pikku.config.json'),
     JSON.stringify({
       srcDirectories: ['./src'],
-      outDir: './.pikku',
       tsconfig: './tsconfig.json',
+      backends: { api: { filter: {} } },
     })
   )
 

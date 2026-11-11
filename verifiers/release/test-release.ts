@@ -103,8 +103,8 @@ function scaffold() {
     JSON.stringify(
       {
         srcDirectories: ['./src', './types'],
-        outDir: './.pikku',
         tsconfig: './tsconfig.json',
+        backends: { api: { filter: {} } },
       },
       null,
       2

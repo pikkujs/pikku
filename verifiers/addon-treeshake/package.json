@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
+    "@pikku/fetch": "workspace:*",
     "@pikku/templates-function-addon": "workspace:*"
   },
   "devDependencies": {

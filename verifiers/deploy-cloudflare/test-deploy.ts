@@ -6,6 +6,7 @@
  */
 
 import { execSync } from 'child_process'
+import { execCli } from '../exec-cli.js'
 import {
   readFileSync,
   writeFileSync,
@@ -107,8 +108,8 @@ process.on('SIGTERM', () => {
   process.exit(143)
 })
 const pinnedConfig = JSON.parse(originalConfig)
-pinnedConfig.deploy = {
-  ...pinnedConfig.deploy,
+pinnedConfig.backends.app.deploy = {
+  ...pinnedConfig.backends.app.deploy,
   grouping: { strategy: 'function' },
 }
 pinnedConfig.db = { engine: 'sqlite' }
@@ -149,7 +150,7 @@ wireGateway({
 
 console.log('Setting up: running pikku codegen + deploy plan (cloudflare)...')
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
-execSync(`node ${PIKKU_BIN} all`, {
+execCli(`node ${PIKKU_BIN} all`, {
   cwd: ADDON_DIR,
   stdio: 'pipe',
   timeout: 60_000,
@@ -169,7 +170,7 @@ wireAddon({
 })
 `
 )
-execSync(`node ${PIKKU_BIN}`, {
+execCli(`node ${PIKKU_BIN}`, {
   cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
   timeout: 60_000,
@@ -179,7 +180,7 @@ writeFileSync(
   COERCION_FILE,
   `export const coercionMap = ${JSON.stringify(COERCION_MAP, null, 2)} as const\n`
 )
-execSync(
+execCli(
   `node ${PIKKU_BIN} deploy plan --provider cloudflare --result-file .deploy/cloudflare/plan-result.json`,
   {
     cwd: FUNCTIONS_DIR,

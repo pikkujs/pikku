@@ -8,7 +8,7 @@ import {
   usePikkuQuery,
   usePikkuMutation,
   usePikkuInfiniteQuery,
-} from '#pikku/pikku-react-query.gen.js'
+} from '@sdk/api/pikku-react-query.gen.js'
 
 void usePikkuQuery('rpcTest', { in: 1 })
 void usePikkuQuery('rpcTest', { in: 1 }, { staleTime: 5000 })

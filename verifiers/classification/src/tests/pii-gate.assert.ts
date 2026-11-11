@@ -110,8 +110,8 @@ async function createProject(functionSource: string): Promise<string> {
     join(dir, 'pikku.config.json'),
     JSON.stringify({
       srcDirectories: ['./src'],
-      outDir: './.pikku',
       tsconfig: './tsconfig.json',
+      backends: { api: { filter: {} } },
     })
   )
   await writeFile(

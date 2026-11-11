@@ -115,7 +115,10 @@ async function main(): Promise<void> {
   ] as never)
 
   const mcpJson = JSON.parse(
-    await readFile(new URL('../.pikku/mcp.json', import.meta.url), 'utf-8')
+    await readFile(
+      new URL('../.pikku/backends/api/mcp/mcp.gen.json', import.meta.url),
+      'utf-8'
+    )
   )
 
   console.log('\nMCP Auth Verifier')

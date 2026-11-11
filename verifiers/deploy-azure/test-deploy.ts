@@ -6,6 +6,7 @@
  */
 
 import { execSync } from 'child_process'
+import { execCli } from '../exec-cli.js'
 import {
   readFileSync,
   writeFileSync,
@@ -51,20 +52,20 @@ process.on('SIGTERM', () => {
   process.exit(143)
 })
 const pinnedConfig = JSON.parse(originalConfig)
-pinnedConfig.deploy = {
-  ...pinnedConfig.deploy,
+pinnedConfig.backends.app.deploy = {
+  ...pinnedConfig.backends.app.deploy,
   grouping: { strategy: 'function' },
 }
 writeFileSync(CONFIG_FILE, JSON.stringify(pinnedConfig, null, 2))
 
 console.log('Setting up: running pikku codegen + deploy plan (azure)...')
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
-execSync(`node ${PIKKU_BIN}`, {
+execCli(`node ${PIKKU_BIN}`, {
   cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
   timeout: 60_000,
 })
-execSync(
+execCli(
   `node ${PIKKU_BIN} deploy plan --provider azure --result-file .deploy/azure/plan-result.json`,
   {
     cwd: FUNCTIONS_DIR,
