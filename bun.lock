@@ -2243,7 +2243,11 @@
         "@pikku/schema-cfworker": "workspace:*",
       },
       "devDependencies": {
+        "@nats-io/jetstream": "^3.4.0",
+        "@nats-io/transport-node": "^3.4.0",
         "@pikku/cli": "workspace:*",
+        "@pikku/cloudflare": "workspace:*",
+        "@pikku/deploy-cloudflare": "workspace:*",
         "@pikku/deploy-standalone": "workspace:*",
         "@pikku/fetch": "workspace:*",
         "@standard-schema/spec": "^1.1.0",

@@ -146,7 +146,8 @@ export class NatsQueueWorkers implements QueueWorkers {
     private readonly jsm: JetStreamManager,
     private readonly streamName: string,
     private readonly subjectPrefix: string,
-    private readonly defaultConsumerConfig: Partial<ConsumerConfig> = {}
+    private readonly defaultConsumerConfig: Partial<ConsumerConfig> = {},
+    private readonly consumerNamePrefix?: string
   ) {}
 
   async registerQueues(
@@ -171,6 +172,7 @@ export class NatsQueueWorkers implements QueueWorkers {
           jsm: this.jsm,
           streamName: this.streamName,
           subjectPrefix: this.subjectPrefix,
+          consumerNamePrefix: this.consumerNamePrefix,
           queueName,
           config: {
             ...this.defaultConsumerConfig,

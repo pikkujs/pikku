@@ -40,6 +40,24 @@ export interface NatsServiceFactoryOptions {
    * means the server's own zone.
    */
   schedulerTimezone?: string
+  /**
+   * The stream is shared and already exists: never create or modify it.
+   *
+   * The caller's credentials then need no stream-level write permission. Boot
+   * checks the stream is there, holds `subjectPrefix`'s subjects and allows
+   * message schedules, and fails with a message naming what is missing.
+   */
+  attachToStream?: boolean
+  /**
+   * Prefix of every durable consumer name (`<project>-<stage>-`), so a tenant
+   * of a shared stream owns, and can be permissioned to, only its own.
+   */
+  consumerNamePrefix?: string
+  /**
+   * Prefix for this connection's reply inboxes, in place of `_INBOX`. Lets a
+   * broker permission subscribe to one tenant's inbox only.
+   */
+  inboxPrefix?: string
   /** Credentials/auth passthrough. */
   user?: string
   pass?: string
@@ -129,6 +147,9 @@ export class NatsServiceFactory {
       pass: this.options.pass,
       token: this.options.token,
       name: this.options.name,
+      ...(this.options.inboxPrefix
+        ? { inboxPrefix: this.options.inboxPrefix }
+        : {}),
       // RECONNECT FOREVER. The client default is 10 attempts, 2s apart, so about
       // twenty seconds of NATS being unreachable CLOSES the connection for good —
       // and `init()` runs once at boot, so nothing ever reopens it. The process
@@ -160,7 +181,9 @@ export class NatsServiceFactory {
 
     assertSchedulerSupport(this.connection.info?.version)
 
-    const jsm = await jetstreamManager(this.connection)
+    // `checkAPI: false` skips the `$JS.API.INFO` probe, which a tenant with
+    // narrow permissions is not given.
+    const jsm = await jetstreamManager(this.connection, { checkAPI: false })
     const js = jetstream(this.connection)
     this.js = js
     this.jsm = jsm
@@ -193,20 +216,24 @@ export class NatsServiceFactory {
         : {}),
     }
 
-    // `add` is STREAM.CREATE, which errors if the stream exists with a different
-    // config — so the first deploy that changes duplicate_window or replicas
-    // would fail at boot rather than converge. Try create, then update. Update
-    // is the right call for a stream that exists: it applies the new config in
-    // place without touching the messages already in it.
-    try {
-      await jsm.streams.add(streamConfig)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      // Only "already exists" is recoverable this way; anything else (no
-      // JetStream enabled, bad subject, insufficient replicas for the cluster
-      // size) must surface, not be papered over by a second failing call.
-      if (!/already in use|already exists/i.test(message)) throw err
-      await jsm.streams.update(this.options.streamName, streamConfig)
+    if (this.options.attachToStream) {
+      await this.assertSharedStream(jsm)
+    } else {
+      // `add` is STREAM.CREATE, which errors if the stream exists with a different
+      // config — so the first deploy that changes duplicate_window or replicas
+      // would fail at boot rather than converge. Try create, then update. Update
+      // is the right call for a stream that exists: it applies the new config in
+      // place without touching the messages already in it.
+      try {
+        await jsm.streams.add(streamConfig)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        // Only "already exists" is recoverable this way; anything else (no
+        // JetStream enabled, bad subject, insufficient replicas for the cluster
+        // size) must surface, not be papered over by a second failing call.
+        if (!/already in use|already exists/i.test(message)) throw err
+        await jsm.streams.update(this.options.streamName, streamConfig)
+      }
     }
 
     // Wired at construction rather than via setDelayedPublisher: the pg-boss
@@ -223,16 +250,59 @@ export class NatsServiceFactory {
       jsm,
       this.options.streamName,
       this.options.subjectPrefix,
-      this.options.defaultConsumerConfig
+      this.options.defaultConsumerConfig,
+      this.options.consumerNamePrefix
     )
     this.schedulerService = new NatsSchedulerService(
       js,
       jsm,
       this.options.streamName,
       this.options.subjectPrefix,
-      this.options.schedulerTimezone
+      this.options.schedulerTimezone,
+      this.options.consumerNamePrefix,
+      !this.options.attachToStream
     )
     this.initialized = true
+  }
+
+  /**
+   * Attach mode: the shared stream is created and owned by someone else, so
+   * boot only reads it, and refuses a stream this package could not work in.
+   */
+  private async assertSharedStream(jsm: JetStreamManager): Promise<void> {
+    const name = this.options.streamName
+    let info
+    try {
+      info = await jsm.streams.info(name)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      throw new Error(
+        `NATS stream '${name}' is not available (${message}). It is shared and created up front by whoever runs the broker; this process never creates or changes it.`
+      )
+    }
+    const { config } = info
+    const covered = (config.subjects ?? []).some(
+      (subject) =>
+        subject === `${this.options.subjectPrefix}.>` ||
+        subject === '>' ||
+        (subject.endsWith('.>') &&
+          this.options.subjectPrefix.startsWith(subject.slice(0, -2)))
+    )
+    if (!covered) {
+      throw new Error(
+        `NATS stream '${name}' does not hold subjects under '${this.options.subjectPrefix}' (it holds ${(config.subjects ?? []).join(', ') || 'none'}).`
+      )
+    }
+    if (config.retention !== RetentionPolicy.Workqueue) {
+      throw new Error(
+        `NATS stream '${name}' uses ${config.retention} retention; the queue needs workqueue.`
+      )
+    }
+    if (!config.allow_msg_schedules) {
+      throw new Error(
+        `NATS stream '${name}' has allow_msg_schedules off, so cron and delayed jobs cannot work. Create it with allow_msg_schedules.`
+      )
+    }
   }
 
   /**

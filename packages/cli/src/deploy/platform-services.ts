@@ -84,7 +84,10 @@ export async function writeUnitPlatformServices(options: {
     )
   }
   const withRuntime = { ...base, runtimeServices: [...support.runtimeServices] }
-  const platform = support.widenPlatform?.(withRuntime) ?? withRuntime
+  const platform = {
+    ...(support.widenPlatform?.(withRuntime) ?? withRuntime),
+    provider: provider.name,
+  }
 
   const { ordered, ignoredStopHooks } = await resolveTargetContributors({
     state,
