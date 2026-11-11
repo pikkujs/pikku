@@ -1,5 +1,19 @@
 # @pikku/deploy-standalone
 
+## 0.12.31
+
+### Patch Changes
+
+- 1540091: Frontends deploy through their resolved provider unless `deploy: false`. `ProviderAdapter` gains optional `frontends: { kinds, embedded }` and `deployFrontend()`; `standalone` declares `spa` and `static`, embedded. `pikku deploy plan` and `apply` fail before any build when a frontend's provider does not support its `kind`, and a `serve` frontend must use its backend's provider.
+- Updated dependencies [bcdb663]
+- Updated dependencies [7ff1d77]
+- Updated dependencies [1540091]
+- Updated dependencies [70e4eee]
+- Updated dependencies [9bdfec9]
+- Updated dependencies [bcdb663]
+  - @pikku/core@0.12.155
+  - @pikku/deploy@0.12.20
+
 ## 0.12.30
 
 ### Patch Changes

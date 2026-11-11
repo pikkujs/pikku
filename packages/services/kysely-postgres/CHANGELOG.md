@@ -1,5 +1,29 @@
 # @pikku/kysely-postgres
 
+## 0.12.29
+
+### Patch Changes
+
+- bcdb663: Fix SSE channels never receiving published events.
+
+  `onChannelOpened`/`onChannelClosed` were called but not declared on `EventHubService`, so two signatures diverged: `onChannelOpened(channelHandler)` in core, `onChannelOpened(channelId, socket)` in the Bun and uWS hubs. An SSE stream on those runtimes registered under the wrong key and stayed open and silent. Both are now on the interface; Bun and uWS take the raw socket through `registerSocket(channelId, ws)` instead.
+
+  `server.publish` (Bun) and `socket.publish` (uWS) only reach WebSockets, so both hubs now also keep a `LocalEventHubService` for non-socket channels and publish to both. `PgEventHubService` routed its lifecycle to the built-in hub while everything else went to the injected one; it now uses `delivery` throughout.
+
+  Lambda and Cloudflare cannot hold a stream the publisher can reach, so a hub-subscribed SSE route belongs on a server target. Their hubs accept the channel and log a warning that published events will not reach it; the stream still works as a plain one the function writes to. Core warns when an SSE route has no hub configured.
+
+  Adds `defineEventHubServiceTests` to `@pikku/core/testing`, a conformance suite covering delivery to a channel that is not the runtime's native socket, with `deliversToHandlers: false` for hubs that cannot.
+
+  An SSE stream whose hub refuses the channel is now closed rather than left
+  open: `onChannelOpened` runs before `close` is wrapped, so a rejection used to
+  leave the client holding a stream no hub would ever publish to.
+
+- Updated dependencies [bcdb663]
+- Updated dependencies [7ff1d77]
+- Updated dependencies [70e4eee]
+- Updated dependencies [9bdfec9]
+  - @pikku/core@0.12.155
+
 ## 0.12.28
 
 ### Patch Changes

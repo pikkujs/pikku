@@ -1,6 +1,6 @@
 {
   "name": "@pikku/n8n-import",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -30,7 +30,7 @@
   ],
   "dependencies": {
     "@pikku/openapi-parser": "^0.12.26",
-    "@pikku/inspector-go": "^0.12.9",
+    "@pikku/inspector-go": "^0.12.13",
     "to-json-schema": "^0.2.5"
   },
   "devDependencies": {

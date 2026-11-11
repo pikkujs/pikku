@@ -1,3 +1,14 @@
+## 0.12.19
+
+### Patch Changes
+
+- 7ff1d77: Delete everything deprecated, with no shims: the `@pikku/ai-voice` and `@pikku/openapi-to-zod-schema` packages (use `@pikku/core/agent` and `@pikku/openapi-parser`), the `pikkuStudio` alias (use `definePlugin`), the `PikkuTaskScheduler` alias (use `InMemorySchedulerService`), the `pikku semver` command (use `pikku release diff` / `pikku release snapshot`), the unprefixed local-content read fallback (files must live under `private/` or `public/`; `resolveContentRequestTarget` drops its `mode` argument), the legacy `security: 'encrypted'` column annotation (use `security: 'secret'` with `form: 'wrapped'`), and the validator checks for the removed `ban()`/`virtualUser()` aliases and the dead Next.js client.
+- Updated dependencies [bcdb663]
+- Updated dependencies [7ff1d77]
+- Updated dependencies [70e4eee]
+- Updated dependencies [9bdfec9]
+  - @pikku/core@0.12.155
+
 ## 0.12.18
 
 ### Patch Changes

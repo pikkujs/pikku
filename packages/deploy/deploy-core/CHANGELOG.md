@@ -1,5 +1,21 @@
 # @pikku/deploy
 
+## 0.12.20
+
+### Patch Changes
+
+- 7ff1d77: Delete everything deprecated, with no shims: the `@pikku/ai-voice` and `@pikku/openapi-to-zod-schema` packages (use `@pikku/core/agent` and `@pikku/openapi-parser`), the `pikkuStudio` alias (use `definePlugin`), the `PikkuTaskScheduler` alias (use `InMemorySchedulerService`), the `pikku semver` command (use `pikku release diff` / `pikku release snapshot`), the unprefixed local-content read fallback (files must live under `private/` or `public/`; `resolveContentRequestTarget` drops its `mode` argument), the legacy `security: 'encrypted'` column annotation (use `security: 'secret'` with `form: 'wrapped'`), and the validator checks for the removed `ban()`/`virtualUser()` aliases and the dead Next.js client.
+- 1540091: Frontends deploy through their resolved provider unless `deploy: false`. `ProviderAdapter` gains optional `frontends: { kinds, embedded }` and `deployFrontend()`; `standalone` declares `spa` and `static`, embedded. `pikku deploy plan` and `apply` fail before any build when a frontend's provider does not support its `kind`, and a `serve` frontend must use its backend's provider.
+- bcdb663: Warn when an SSE route is deployed to a serverless target.
+
+  `HttpRouteInfo` in the deployment manifest now carries `sse: true` for a route wired with `sse: true`, so anything reading the manifest can tell which routes hold a connection open. The build logs a warning for each SSE route on a serverless unit: a published event cannot reach it and it costs more than a WebSocket. Nothing is forced to a server target; the route deploys where it was going to.
+
+- Updated dependencies [bcdb663]
+- Updated dependencies [7ff1d77]
+- Updated dependencies [70e4eee]
+- Updated dependencies [9bdfec9]
+  - @pikku/core@0.12.155
+
 ## 0.12.19
 
 ### Patch Changes

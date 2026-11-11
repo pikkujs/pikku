@@ -1,3 +1,14 @@
+## 0.12.119
+
+### Patch Changes
+
+- 9471201: `pikku db migrate` warns (PKU486 pii, PKU487 secret) about a column named like personal data or a credential that has no `security` annotation. Unannotated columns were already `private` and still are; any explicit `security` ends the warning. See docs/MIGRATION.md.
+- Updated dependencies [bcdb663]
+- Updated dependencies [7ff1d77]
+- Updated dependencies [70e4eee]
+- Updated dependencies [9bdfec9]
+  - @pikku/core@0.12.155
+
 ## 0.12.118
 
 ### Patch Changes
