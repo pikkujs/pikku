@@ -2,7 +2,6 @@ import {
   childTraceWire,
   outgoingTraceparent,
   tracedLogger,
-  type TraceContext,
 } from '../../trace.js'
 import {
   AddonNotUsedError,
@@ -26,10 +25,7 @@ import type { AddonInstance } from '../addon/addon-runner.js'
 import { addonInstanceForNamespace } from '../addon/addon-runner.js'
 import { isAddonFunctionExposed } from '../addon/wire-addon.js'
 import { pikkuState } from '../../pikku-state.js'
-import {
-  endBoundaryWhenSettled,
-  startBoundarySpan,
-} from '../../boundary-span.js'
+import { invokeRemote } from './rpc-remote.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
@@ -60,42 +56,6 @@ import {
  * module cycle. By the time an rpc call runs the runner is loaded, and the
  * import resolves from the module cache once.
  */
-/**
- * Calls a function hosted by another deployment. The call is a `client` span,
- * the remote function's parent, so the trace shows the hop; a local call adds
- * nothing because the callee is already its own span. Only the function name
- * and the service it belongs to are recorded, never the arguments.
- */
-const invokeRemote = <Out>(
-  services: CoreServices,
-  wire: { trace?: TraceContext },
-  funcName: string,
-  data: unknown,
-  session: unknown
-): Promise<Out> => {
-  const boundary = startBoundarySpan(
-    { tracer: services.tracer, logger: services.logger },
-    wire,
-    `rpc.call ${funcName}`,
-    'client',
-    {
-      'rpc.service': funcName.includes(':')
-        ? funcName.slice(0, funcName.indexOf(':'))
-        : 'deployment',
-    }
-  )
-  return endBoundaryWhenSettled(
-    boundary,
-    () =>
-      services.deploymentService!.invoke(
-        funcName,
-        data,
-        session,
-        boundary.traceparent
-      ) as Promise<Out>
-  )
-}
-
 let functionRunner: typeof RunPikkuFunc | undefined
 const runPikkuFunc = async <In, Out>(
   ...args: Parameters<typeof RunPikkuFunc<In, Out>>

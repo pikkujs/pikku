@@ -91,12 +91,13 @@ export const startBoundarySpan = (
       if (isTracerDisabled(tracer)) return
       try {
         if (failure) {
-          const { type, text } = redactSpanError(failure.error)
-          span.addEvent('exception', {
-            'exception.type': type,
-            'exception.message': text,
+          // Only the class: a backend error can carry a connection URL or credentials.
+          const { type } = redactSpanError(failure.error)
+          span.addEvent('exception', { 'exception.type': type })
+          span.end({
+            code: 'error',
+            error: Object.assign(new Error(), { name: type }),
           })
-          span.end({ code: 'error', error: failure.error })
         } else {
           span.end({ code: 'ok' })
         }
