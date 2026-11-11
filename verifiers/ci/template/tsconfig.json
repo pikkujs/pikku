@@ -7,7 +7,19 @@
     "noEmit": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "#pikku/*.js": [
+        "./.pikku/*.ts"
+      ],
+      "#pikku/*": [
+        "./.pikku/*/index.ts",
+        "./.pikku/*"
+      ]
+    }
   },
-  "include": ["packages/functions/src/", ".pikku/*"]
+  "include": [
+    "packages/functions/src/",
+    ".pikku/*"
+  ]
 }

@@ -9,9 +9,11 @@
     "vendor/*"
   ],
   "scripts": {
-    "test": "touch test-ran.marker"
+    "test": "touch test-ran.marker",
+    "lint": "oxlint --type-aware"
   },
   "dependencies": {
-    "@pikku/core": "workspace:*"
+    "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*"
   }
 }

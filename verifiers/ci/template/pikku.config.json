@@ -14,7 +14,8 @@
   },
   "frontends": {
     "web": {
-      "cwd": "apps/web"
+      "cwd": "apps/web",
+      "serve": {}
     },
     "off": {
       "cwd": "apps/off",
