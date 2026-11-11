@@ -312,7 +312,7 @@ describe('OtlpHttpExporter', () => {
 
   test('a 400 is not retried and never logs attribute values', async () => {
     const { exporter, calls, warnings } = harness([400])
-    exporter.exportSpans([span('rejected', { secret: 'hunter2' })])
+    exporter.exportSpans([span('rejected', { 'db.secret': 'hunter2' })])
     await exporter.flush()
     assert.equal(calls.length, 1)
     assert.match(warnings[0]!, /HTTP 400/)
@@ -430,16 +430,35 @@ describe('OtlpHttpExporter', () => {
 
   test('a later value of a different type is coerced to the key first seen', async () => {
     const { exporter, calls } = harness()
-    exporter.exportSpans([span('a', { 'plugin.size': 3 })])
+    exporter.exportSpans([span('a', { 'db.size': 3 })])
     await exporter.flush()
     exporter.exportSpans([
-      span('b', { 'plugin.size': 2.5, 'pikku.function.duration_ms': 0.4 }),
+      span('b', { 'db.size': 2.5, 'pikku.function.duration_ms': 0.4 }),
     ])
     await exporter.flush()
     const second = decodeTraces(calls[1]!.body).items[0]!
-    assert.deepEqual(second.attributes['plugin.size'], { int: 3n })
+    assert.deepEqual(second.attributes['db.size'], { int: 3n })
     assert.deepEqual(second.attributes['pikku.function.duration_ms'], {
       int: 0n,
+    })
+  })
+
+  test('a key that is not allow-listed never leaves, and the loss is a metric', async () => {
+    const { exporter, calls } = harness()
+    exporter.exportSpans([
+      span('a', { 'pikku.function.id': 'f', 'user.email': 'a@example.com' }),
+    ])
+    await exporter.flush()
+    const [first] = decodeTraces(calls[0]!.body).items
+    assert.deepEqual(Object.keys(first!.attributes), ['pikku.function.id'])
+    assert.equal(exporter.stats.attributesDropped, 1)
+    exporter.exportMetrics([{ name: 'g', kind: 'gauge', value: 1 }])
+    await exporter.flush()
+    const metrics = decodeMetrics(calls[1]!.body).items
+    const dropped = metrics.find((m) => m.name === 'pikku.telemetry.dropped')!
+    assert.equal(dropped.points[0]!.value, 1n)
+    assert.deepEqual(dropped.points[0]!.attributes.signal, {
+      string: 'span_attributes',
     })
   })
 

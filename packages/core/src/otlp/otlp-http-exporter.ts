@@ -107,6 +107,7 @@ export class OtlpHttpExporter {
   private readonly logs = newState<OtlpLogRecord>()
   private readonly metrics = newState<OtlpMetricPoint>()
   private readonly types = new AttributeTypes()
+  private attributesReported = 0
   private readonly startedAt = nowUnixNano()
   private readonly doFetch: typeof fetch
   private readonly base: string
@@ -260,10 +261,21 @@ export class OtlpHttpExporter {
         attributes: { signal },
       })
     }
+    if (this.types.dropped !== this.attributesReported) {
+      points.push({
+        name: 'pikku.telemetry.dropped',
+        unit: '1',
+        kind: 'sum',
+        integer: true,
+        value: this.types.dropped,
+        attributes: { signal: 'span_attributes' },
+      })
+    }
     return points
   }
 
   private markReported() {
+    this.attributesReported = this.types.dropped
     for (const signal of ['spans', 'logs', 'metrics'] as const) {
       const state = this.state(signal)
       state.reported = state.dropped

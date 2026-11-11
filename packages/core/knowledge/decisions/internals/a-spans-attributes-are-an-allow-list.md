@@ -18,6 +18,12 @@ webhook event name, never a payload or URL) and `rpc.service` (the addon
 namespace of a remote call). Every value is an id or a number the framework
 already holds. `otlp/attribute-types.ts` fixes each key's column type.
 
+The exporter enforces the list too: `AttributeTypes.coerce` drops any key that is
+neither listed nor under a plugin prefix (`db.`, the Kysely plugin's open-ended
+family), and counts it in `pikku.telemetry.dropped` with `signal=span_attributes`.
+A key a user plugin invents on its own span is therefore dropped unless core adds
+its prefix by name; there is no opt-in for user prefixes.
+
 Nothing is derived from function input, query parameters, headers, cookies or the
 session beyond the two ids. An error leaves only as `Name: message`, cut to 256
 characters, plus `exception.type`/`exception.message`: never `exception.stacktrace`,
