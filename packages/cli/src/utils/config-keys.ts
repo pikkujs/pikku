@@ -162,6 +162,7 @@ const SHAPE: Shape = obj({
     enforceVariablesService: 'any',
     customServerBootstrap: 'any',
     coreImport: 'any',
+    strict: 'any',
   }),
   allow: obj({ permissionsInBody: 'any', complexWorkflows: 'any' }),
   addonMetaJsonFile: 'any',
