@@ -1,5 +1,6 @@
 import { describe, test, beforeEach } from 'node:test'
 import * as assert from 'node:assert'
+import { openFunctionSpan, runInFunctionSpan } from './function-span.js'
 import { addFunction, runPikkuFunc } from './function-runner.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { CoreServices } from '../types/core.types.js'
@@ -443,41 +444,117 @@ describe('runPikkuFunc - spans', () => {
     assert.equal(calls, 1, 'a disabled tracer is not asked again')
   })
 
-  describe('fn runs exactly once whatever runInSpan does', () => {
-    const cases: Record<string, (fn: () => any) => any> = {
-      sync: (fn) => fn(),
-      deferred: (fn) => new Promise((r) => setTimeout(() => r(fn()), 5)),
-      never: () => Promise.resolve('skipped'),
+  describe('fn runs once and the caller gets exactly its outcome', () => {
+    const tick = (ms = 0) => new Promise((r) => setTimeout(r, ms))
+    const tracers: Record<string, (fn: () => any) => any> = {
+      'sync call': (fn) => fn(),
+      'microtask defer': (fn) => Promise.resolve().then(() => fn()),
+      'setTimeout defer': (fn) =>
+        new Promise((r, j) =>
+          setTimeout(() => {
+            Promise.resolve(fn()).then(r, j)
+          }, 5)
+        ),
+      'never calls': () => Promise.resolve('DIFF'),
       'throws before': () => {
         throw new Error('before')
       },
       'throws after': (fn) => {
-        fn()
+        fn().catch(() => {})
         throw new Error('after')
       },
+      'calls twice': (fn) => {
+        fn().catch(() => {})
+        return fn()
+      },
+      'returns a different value': (fn) => {
+        fn().catch(() => {})
+        return Promise.resolve('DIFF')
+      },
+      'calls then awaits': async (fn) => {
+        const r = await fn()
+        return r
+      },
+      'async throws after': async (fn) => {
+        await fn().catch(() => {})
+        throw new Error('async after')
+      },
     }
-    for (const [name, runInSpan] of Object.entries(cases)) {
-      test(name, async () => {
-        let runs = 0
-        const inner = new RecordingTracer()
-        const tracer: Tracer = {
-          startSpan: (n, c, o) => inner.startSpan(n, c, o),
-          runInSpan: (_s, fn) => runInSpan(fn),
-        }
-        addTestFunction('once-' + name, {
-          func: async () => {
-            runs++
-            return 'r'
-          },
+    const fns: Record<string, () => Promise<string>> = {
+      resolves: async () => 'R',
+      rejects: async () => {
+        throw new Error('fn-rejected')
+      },
+      'throws synchronously': (() => {
+        throw new Error('fn-sync')
+      }) as any,
+    }
+    for (const [tname, runInSpan] of Object.entries(tracers)) {
+      for (const [fname, body] of Object.entries(fns)) {
+        test(`${tname} x fn ${fname}`, async () => {
+          const unhandled: unknown[] = []
+          const onUnhandled = (e: unknown) => unhandled.push(e)
+          process.on('unhandledRejection', onUnhandled)
+          try {
+            let runs = 0
+            const inner = new RecordingTracer()
+            const tracer: Tracer = {
+              startSpan: (n, c, o) => inner.startSpan(n, c, o),
+              runInSpan: (_s, fn) => runInSpan(fn),
+            }
+            const id = `o-${tname}-${fname}`
+            addTestFunction(id, {
+              func: (async () => {
+                runs++
+                return body()
+              }) as any,
+            })
+            const outcome = await run(id, tracer, {
+              trace: createTrace(),
+            }).then(
+              (v: unknown) => ({ ok: v }),
+              (e: Error) => ({ err: e.message })
+            )
+            await tick(30)
+            assert.equal(runs, 1)
+            assert.deepEqual(
+              outcome,
+              fname === 'resolves'
+                ? { ok: 'R' }
+                : { err: fname === 'rejects' ? 'fn-rejected' : 'fn-sync' }
+            )
+            assert.deepEqual(unhandled, [])
+          } finally {
+            process.off('unhandledRejection', onUnhandled)
+          }
         })
-        assert.equal(
-          await run('once-' + name, tracer, { trace: createTrace() }),
-          'r'
-        )
-        await new Promise((r) => setTimeout(r, 20))
-        assert.equal(runs, 1)
-      })
+      }
     }
+  })
+
+  test('runInFunctionSpan: a synchronously throwing fn rejects, once', async () => {
+    let runs = 0
+    const inner = new RecordingTracer()
+    const tracer: Tracer = {
+      startSpan: (n, c, o) => inner.startSpan(n, c, o),
+      runInSpan: (_s, fn) => fn(),
+    }
+    const logger = { info() {}, warn() {}, error() {}, debug() {} } as any
+    const open = openFunctionSpan(
+      tracer,
+      logger,
+      { trace: createTrace() } as any,
+      'rpc',
+      {}
+    )
+    await assert.rejects(
+      runInFunctionSpan(open, (() => {
+        runs++
+        throw new Error('sync')
+      }) as any),
+      /sync/
+    )
+    assert.equal(runs, 1)
   })
 
   test('with no tracer the function runs untouched', async () => {
