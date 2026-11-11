@@ -315,14 +315,6 @@ test('a public column can still declare a form', async () => {
   )
 })
 
-test('legacy security: encrypted still brands as wrapped', async () => {
-  const result = await run([col({ name: 'card', type: 'text' })], {
-    widget: { card: { security: 'encrypted' } },
-  })
-  const schema = readFileSync(result.outFile, 'utf8')
-  assert.match(schema, /card: ColumnType<Secret<WrappedValue>/)
-})
-
 test('warns when a secret column has not said how it is held', async () => {
   const result = await run([col({ name: 'host_token', type: 'text' })], {
     widget: { host_token: { security: 'secret' } },

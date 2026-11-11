@@ -170,9 +170,7 @@ export function loadAnnotations(rootDir: string): AnnotationMap {
         if (ann.tsType) entry.tsType = ann.tsType
         if (ann.format && ann.format in ZOD_FORMATS)
           entry.format = ann.format as ZodFormat
-        // `security` is the privacy level. The legacy `encrypted` value
-        // predates `form` and conflated the two axes; it still parses, as the
-        // pair it always meant.
+        // `security` is the privacy level; `form` is how it is held at rest.
         switch (ann.security) {
           case 'public':
           case 'private':
@@ -180,12 +178,7 @@ export function loadAnnotations(rootDir: string): AnnotationMap {
           case 'secret':
             entry.classification = ann.security
             break
-          case 'encrypted':
-            entry.classification = 'secret'
-            entry.form = 'wrapped'
-            break
         }
-        // An explicit `form` wins over the one implied by legacy `encrypted`.
         if (
           ann.form &&
           (COLUMN_FORMS as readonly string[]).includes(ann.form)
