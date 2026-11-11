@@ -26,6 +26,28 @@ export const traceCallsMesh = pikkuSessionlessFunc<void, { mesh: Hop } & Hop>({
   }),
 })
 
+export const traceRpcLeaf = pikkuSessionlessFunc<void, Hop>({
+  func: async (_services, _data, { trace, traceId }) => ({
+    at: 'rpc-leaf',
+    traceId,
+    parentSpanId: trace?.parentSpanId,
+  }),
+})
+
+export const traceRpcMiddle = pikkuSessionlessFunc<void, Hop>({
+  func: async (_services, _data, { rpc, trace, traceId }) => {
+    await rpc.invoke('traceRpcLeaf', undefined)
+    return { at: 'rpc-middle', traceId, parentSpanId: trace?.parentSpanId }
+  },
+})
+
+export const traceRpcChain = pikkuSessionlessFunc<void, Hop>({
+  func: async (_services, _data, { rpc, traceId }) => {
+    await rpc.invoke('traceRpcMiddle', undefined)
+    return { at: 'rpc-chain', traceId }
+  },
+})
+
 export const traceEnqueues = pikkuSessionlessFunc<void, Hop>({
   func: async ({ queueService }, _data, { traceId }) => {
     await queueService!.add('trace-job', { at: 'job' })
@@ -84,6 +106,12 @@ wireHTTP({
   method: 'post',
   auth: false,
   func: traceCallsMesh,
+})
+wireHTTP({
+  route: '/trace/rpc',
+  method: 'post',
+  auth: false,
+  func: traceRpcChain,
 })
 wireHTTP({
   route: '/trace/job',

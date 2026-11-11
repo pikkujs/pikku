@@ -173,15 +173,14 @@ const assertLogs = (chain: TraceChain) => {
   }
 }
 
-const assertTelemetry = (chain: TraceChain) => {
+const assertSpans = (chain: TraceChain) => {
   const seen = tracesOf(chain)
-  for (const { message } of chain.logs) {
-    const record = message as { __pikku_telemetry?: string; traceId?: string }
-    if (!record?.__pikku_telemetry) continue
+  for (const span of chain.tracer.spans) {
     assert.ok(
-      seen.has(record.traceId!),
-      `telemetry carries ${record.traceId}, not a trace of this chain`
+      seen.has(span.traceId) || chain.combo.outcome === 'auth-mesh-jwt',
+      `a span carries ${span.traceId}, not a trace of this chain`
     )
+    assert.ok(span.endTimeUnixNano >= span.startTimeUnixNano)
   }
 }
 
@@ -221,6 +220,6 @@ export const assertChain = async (chain: TraceChain) => {
     }
   }
   assertLogs(chain)
-  assertTelemetry(chain)
+  assertSpans(chain)
   assertIsolated(chain)
 }

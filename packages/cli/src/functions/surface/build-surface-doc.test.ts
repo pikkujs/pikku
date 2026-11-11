@@ -354,7 +354,7 @@ describe('the editorial layer', () => {
     const core = await mkdtemp(join(tmpdir(), 'pikku-surface-doc-'))
     const subpaths = [
       'types',
-      'middleware',
+      'trace',
       'addon',
       'webhook',
       'services',
@@ -376,7 +376,7 @@ describe('the editorial layer', () => {
       await write(
         core,
         `${name}.ts`,
-        'export const internal = () => 1\nexport const telemetryOuter = () => 1\n'
+        'export const internal = () => 1\nexport const NOOP_TRACER = () => 1\n'
       )
     }
     try {
@@ -391,7 +391,7 @@ describe('the editorial layer', () => {
       )
       assert.deepEqual(
         leaf?.symbols.map(({ name }) => name),
-        ['telemetryOuter']
+        ['NOOP_TRACER']
       )
     } finally {
       await rm(app, { recursive: true, force: true })

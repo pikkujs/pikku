@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3422 observable things**: 1162 exported names, plus
-2260 members on the classes and interfaces among them, reachable
+**3451 observable things**: 1168 exported names, plus
+2283 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -20,7 +20,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scenario` | 50 | 48 | 157 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 33 | 33 | 92 |
-| `./types` | 24 | 21 | 83 |
+| `./types` | 24 | 21 | 84 |
 | `./queue` | 28 | 28 | 75 |
 | `./http` | 27 | 27 | 58 |
 | `./errors` | 52 | 52 | 25 |
@@ -29,6 +29,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 16 | 14 | 27 |
+| `./trace` | 19 | 19 | 19 |
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
@@ -36,8 +37,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
-| `./middleware` | 31 | 29 | 0 |
 | `./virtual-user/conversation` | 6 | 6 | 22 |
+| `./middleware` | 29 | 27 | 0 |
 | `./scenario/coverage` | 7 | 7 | 19 |
 | `./gateway` | 11 | 11 | 14 |
 | `./utils` | 24 | 21 | 2 |
@@ -47,13 +48,12 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scheduler` | 10 | 10 | 8 |
 | `./scope` | 17 | 17 | 0 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
+| `./testing` | 10 | 10 | 7 |
 | `./addon` | 14 | 14 | 2 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./rpc` | 9 | 9 | 6 |
 | `./workflow/types` | 48 | 1 | 13 |
-| `./testing` | 9 | 9 | 4 |
 | `./cli/channel` | 7 | 7 | 5 |
-| `./trace` | 12 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./secret` | 10 | 10 | 0 |
 | `./safe-fetch` | 6 | 6 | 3 |
@@ -212,6 +212,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   logger: Logger
   variables: VariablesService
   secrets: SecretService
+  tracer?: Tracer
   workflowService?: WorkflowService
   queueService?: QueueService
   eventHub?: EventHubService<Record<string, any>>
@@ -517,8 +518,6 @@ pikkuMiddlewareFactory: <In = any>(factory: CorePikkuMiddlewareFactory<In>) => C
 remoteJobsSecret: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 requireOrigin: CorePikkuMiddlewareFactory<{ origins?: string[] | ((services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => string[] | Promise<string[]>) | undefined; }>
 runMiddleware: <Middleware extends CorePikkuMiddleware<any, any>>(services: Parameters<Middleware>[0], wire: Parameters<Middleware>[1], middlewares: readonly Middleware[], main?: (() => Promise<unknown>) | undefined) => Promise<unknown>
-telemetryInner: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }>
-telemetryOuter: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }>
 toOrigin: (value: string | null | undefined) => string | null
 ```
 
@@ -5956,11 +5955,37 @@ adoptTraceparent: (wire: { traceId?: string | undefined; trace?: TraceContext | 
 childTraceWire: (parent: TraceContext | undefined) => { traceId: string; trace: TraceContext; }
 continueTrace: (traceparent: unknown) => TraceContext
 createTrace: (traceId?: string | undefined) => TraceContext
+export interface FinishedSpan {
+  traceId: string
+  spanId: string
+  parentSpanId?: string
+  name: string
+  kind: SpanKind
+  startTimeUnixNano: bigint
+  endTimeUnixNano: bigint
+  status: SpanStatus
+  attributes: Record<string, SpanAttributeValue>
+  events?: ReadonlyArray<{ name: string; timeUnixNano: bigint; attributes?: Record<string, SpanAttributeValue> }>
+}
 formatTraceparent: (trace: Pick<TraceContext, "traceId" | "sampled" | "spanId">) => string
 isValidTraceId: (value: unknown) => value is string
+NOOP_TRACER: Tracer
 outgoingTraceparent: (wire: { trace?: TraceContext | undefined; }) => string | undefined
 parseTraceparent: (header: unknown) => (Pick<TraceContext, "traceId" | "sampled"> & { parentSpanId: string; }) | undefined
 resolveHTTPTrace: (readHeader: () => unknown, logger: Logger, { traceId, trustInboundTraceparent, }: { traceId?: string | undefined; trustInboundTraceparent?: boolean | undefined; }) => TraceContext
+export interface Span {
+  readonly context: TraceContext
+  setAttribute(key: string, value: SpanAttributeValue): void
+  addEvent(name: string, attributes?: Record<string, SpanAttributeValue>): void
+  end(status?: { code: 'ok' } | { code: 'error'; error: unknown }): void
+}
+export type SpanAttributeValue = string | number | boolean
+export type SpanKind =
+  'internal' | 'server' | 'client' | 'producer' | 'consumer'
+export interface SpanStatus {
+  code: 'ok' | 'error' | 'unset'
+  message?: string
+}
 export type TraceContext = {
   traceId: string
   spanId: string
@@ -5968,6 +5993,11 @@ export type TraceContext = {
   sampled: boolean
 }
 tracedLogger: (logger: Logger, traceId?: string | undefined) => Logger
+export interface Tracer {
+  startSpan(name: string, context: TraceContext, options?: { kind?: SpanKind; attributes?: Record<string, SpanAttributeValue>; startTimeUnixNano?: bigint }): Span
+  flush?(): Promise<void>
+  close?(): Promise<void>
+}
 traceWire: (traceparent?: unknown) => { traceId: string; trace: TraceContext; }
 ```
 
@@ -6804,6 +6834,11 @@ export type QueueTraceAdapter = {
   stop: () => Promise<void>
   publishRaw: (queueName: string, payload: unknown) => Promise<void>
   envelope?: boolean
+}
+export class RecordingTracer implements Tracer {
+  readonly spans: FinishedSpan[]
+  readonly stats: { dropped: number; started: number; }
+  startSpan(name: string, context: TraceContext, options: { kind?: SpanKind; attributes?: Record<string, SpanAttributeValue>; startTimeUnixNano?: bigint } = {}): Span
 }
 export interface ServiceTestConfig {
   name: string

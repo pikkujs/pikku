@@ -12,7 +12,6 @@ export {
   hostOriginOf,
   allowedOriginsFromVariables,
 } from './require-origin.js'
-export { telemetryOuter, telemetryInner } from './telemetry.js'
 export {
   addTagMiddleware,
   addGlobalMiddleware,

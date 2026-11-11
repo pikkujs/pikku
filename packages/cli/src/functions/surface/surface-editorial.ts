@@ -155,7 +155,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     step: 'enhance it',
     skill: null,
     summary:
-      'Middleware that times a call: `telemetryOuter` around all middleware, `telemetryInner` around the function alone.',
+      'Spans: the function runner records one per call when a runtime injects a `tracer`; `NOOP_TRACER` is the default that records nothing.',
   },
   wire: {
     step: 'create a function',

@@ -1,5 +1,6 @@
 import type { AbortScope } from '../function/abort-scope.js'
 import type { TraceContext } from '../trace.js'
+import type { Tracer } from '../tracer.js'
 
 export type { TraceContext }
 import type { IncomingWebhookService } from '../services/incoming-webhook-service.js'
@@ -188,6 +189,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   logger: Logger
   variables: VariablesService
   secrets: SecretService
+  /** Where spans go; unset means spans are not recorded (the no-op tracer). */
+  tracer?: Tracer
   workflowService?: WorkflowService
   queueService?: QueueService
   eventHub?: EventHubService<Record<string, any>>

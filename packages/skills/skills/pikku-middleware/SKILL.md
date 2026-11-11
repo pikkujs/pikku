@@ -37,9 +37,9 @@ global → httpGroup/* → httpGroup/prefix → wiringTags → wiringMiddleware 
 
 Step 2 sorts that whole flat list: `highest → high → medium (default) → low → lowest`.
 
-**Priority is the primary key across every scope, not within one.** The list is flattened first and sorted once, so a `priority: 'lowest'` global runs _after_ an inline per-route middleware of default priority: the narrower scope does not win. Scope order survives only as the tiebreaker between equal priorities, because the sort is stable. Set priority with the config-object form of `pikkuMiddleware`, when a middleware must run before or after others wherever it was registered (telemetry wrapping everything, session extraction before auth checks).
+**Priority is the primary key across every scope, not within one.** The list is flattened first and sorted once, so a `priority: 'lowest'` global runs _after_ an inline per-route middleware of default priority: the narrower scope does not win. Scope order survives only as the tiebreaker between equal priorities, because the sort is stable. Set priority with the config-object form of `pikkuMiddleware`, when a middleware must run before or after others wherever it was registered (session extraction before auth checks).
 
-`telemetryOuter` ships with `priority: 'highest'` and `telemetryInner` with `'lowest'`, so they bracket every other middleware. Equal priorities keep collection order, so register `telemetryOuter` first among the `highest` entries and `telemetryInner` last among the `lowest`.
+Timing a call is not middleware: the function runner records one span per invocation when a runtime injects `singletonServices.tracer`.
 
 ## ⛔ MACHINE AUTH: THE TOKEN BECOMES A SESSION. ⛔
 
