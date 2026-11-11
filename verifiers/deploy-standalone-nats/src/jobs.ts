@@ -23,8 +23,10 @@ export const processJob = pikkuSessionlessFunc<{ id: string }, void>({
 
 export const tick = pikkuSessionlessFunc<void, void>({
   auth: false,
-  func: async ({ logger }) => {
-    logger.info('NATS_VERIFIER cron fired')
+  func: async ({ logger, variables }) => {
+    logger.info(
+      `NATS_VERIFIER cron fired stage=${await variables.get('PIKKU_STAGE')}`
+    )
   },
 })
 

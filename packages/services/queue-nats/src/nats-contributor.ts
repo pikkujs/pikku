@@ -5,8 +5,16 @@ import type { NatsServiceFactoryOptions } from './nats-service-factory.js'
 
 const DRAIN_TIMEOUT_MS = 10_000
 
-/** Lowercase letters, digits, `-` and `_`: legal in a stream name and in one subject token. */
-const SLUG = /^[a-z0-9][a-z0-9_-]*$/
+/**
+ * Lowercase letters and digits in `-`-separated groups: legal as one NATS
+ * subject token and in a consumer name, and free of `_`, which separates the
+ * project from the stage in a consumer name (`<project>_<stage>_<queue>`).
+ * With `-` allowed in both, `a-b` + `c` and `a` + `b-c` would share a prefix.
+ */
+const TOKEN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+/** The shared stream's name unless `NATS_STREAM` says otherwise. */
+const DEFAULT_STREAM = 'PIKKU'
 
 type NatsFactory = Pick<
   NatsServiceFactory,
@@ -37,30 +45,54 @@ const required = (env: Env, name: string, why: string): string => {
   return value
 }
 
+const token = (env: Env, name: string, what: string): string => {
+  const value = required(env, name, what)
+  if (!TOKEN.test(value) || value.length > 63) {
+    throw new Error(
+      `${name} '${value}' is not usable in a NATS subject: use lowercase letters and digits, with single '-' between them (at most 63 characters).`
+    )
+  }
+  return value
+}
+
 /**
- * The stream and subject prefix are named after the app, not the release, so
- * two releases of one app share the same queues and a redeploy resumes them.
+ * Everything the app needs from its environment, and nothing it can do without.
+ *
+ * The app is one tenant of a shared broker. Its subjects are
+ * `pikku.<project>.<stage>.>` and its consumers are named
+ * `<project>_<stage>_<queue>`, both identical across releases so a new
+ * release resumes the old one's queue. The stream is shared, created by
+ * whoever runs the broker, and this process never creates or changes it.
+ * There is no anonymous connection: the user and password are required.
  */
 export const natsOptionsFromEnv = (env: Env): NatsServiceFactoryOptions => {
   const servers = required(env, 'NATS_URL', 'the NATS server to connect to')
-  const slug = required(
+  const user = required(env, 'NATS_USER', 'the broker user for this stage')
+  const pass = required(
     env,
-    'PIKKU_APP_SLUG',
-    'names the stream and subject prefix, identical across releases'
+    'NATS_PASSWORD',
+    'the broker password for this stage'
   )
-  if (!SLUG.test(slug)) {
-    throw new Error(
-      `PIKKU_APP_SLUG '${slug}' is not usable in a NATS stream name: use lowercase letters, digits, '-' and '_', starting with a letter or digit.`
-    )
-  }
+  const project = token(
+    env,
+    'PIKKU_PROJECT',
+    'names the project in subjects and consumers'
+  )
+  const stage = token(
+    env,
+    'PIKKU_STAGE',
+    'names the stage in subjects and consumers'
+  )
   return {
     servers: servers.split(',').map((s) => s.trim()),
-    streamName: `pikku-${slug}`,
-    subjectPrefix: `pikku.${slug}`,
-    ...(env.NATS_TOKEN ? { token: env.NATS_TOKEN } : {}),
-    ...(env.NATS_USER ? { user: env.NATS_USER } : {}),
-    ...(env.NATS_PASSWORD ? { pass: env.NATS_PASSWORD } : {}),
-    name: `pikku-${slug}`,
+    streamName: env.NATS_STREAM || DEFAULT_STREAM,
+    subjectPrefix: `pikku.${project}.${stage}`,
+    attachToStream: true,
+    consumerNamePrefix: `${project}_${stage}_`,
+    inboxPrefix: `_INBOX.${project}.${stage}`,
+    user,
+    pass,
+    name: `pikku-${project}-${stage}`,
   }
 }
 
@@ -69,7 +101,11 @@ export const createNatsDeploy = (
     new NatsServiceFactory(options)
 ): Contributor => ({
   provides: ['queueService', 'schedulerService', 'natsLifecycle'],
-  when: (platform) => platform.needsQueue,
+  // Only a standalone deploy, and only when it uses the queue. The platform
+  // names the provider on every deploy build and never on `pikku dev`, so the
+  // same app built for Cloudflare, or run in dev, keeps its in-memory queue
+  // even though its source opts in. Absent the provider, this is not applied.
+  when: (platform) => platform.needsQueue && platform.provider === 'standalone',
   async run(services, env) {
     const factory = newFactory(natsOptionsFromEnv(env))
     await factory.init()
