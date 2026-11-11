@@ -1,7 +1,7 @@
 import { createPikku } from '@pikku/react'
 import { PikkuFetch } from '@sdk/api/pikku-fetch.gen'
 import { PikkuRPC } from '@sdk/api/pikku-rpc.gen'
-import { PikkuRealtime } from '../../../.pikku/realtime.gen'
+import { PikkuRealtime } from '@sdk/api/pikku-realtime.gen'
 
 /**
  * One client for the whole app, built from the generated classes.
