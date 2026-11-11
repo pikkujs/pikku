@@ -5,11 +5,15 @@ import {
   CamelCasePlugin,
   type KyselyPlugin,
 } from 'kysely'
+import { traceDialect, type TraceDriverOptions } from '@pikku/kysely'
 import type { SqliteFunctionMap } from '@pikku/kysely-sqlite'
 import { BunSqliteDatabase } from './bun-sqlite-adapter.js'
 import { registerSqliteFunctions } from './register-functions.js'
 
-export interface CreateBunSqliteKyselyOptions {
+export interface CreateBunSqliteKyselyOptions extends Omit<
+  TraceDriverOptions,
+  'system'
+> {
   /** Path to the SQLite file. Use ':memory:' for an in-memory DB. */
   filename: string
   /** Apply CamelCasePlugin so DB columns map to camelCase TS fields. Default true. */
@@ -48,7 +52,15 @@ export function createBunSqliteKysely<DB>(
   if (options.plugins) plugins.push(...options.plugins)
 
   return new Kysely<DB>({
-    dialect: new SqliteDialect({ database: new BunSqliteDatabase(db) }),
+    dialect: traceDialect(
+      new SqliteDialect({ database: new BunSqliteDatabase(db) }),
+      {
+        tracer: options.tracer,
+        currentTrace: options.currentTrace,
+        recordSqlText: options.recordSqlText,
+        system: 'sqlite',
+      }
+    ),
     plugins,
   })
 }

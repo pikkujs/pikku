@@ -21,6 +21,13 @@ export {
   createAuditedKysely,
   type CreateAuditedKyselyOptions,
 } from './create-audited-kysely.js'
+export {
+  traceDriver,
+  traceDialect,
+  SQL_TEXT_LIMIT,
+  type TraceDriverOptions,
+} from './trace-driver.js'
+export { collectTableNames } from './table-names.js'
 export { KyselyAuditService } from './kysely-audit-service.js'
 export { KyselyAnalyticsService } from './kysely-analytics-service.js'
 export { KyselyVirtualUserRunStore } from './kysely-virtual-user-run-store.js'

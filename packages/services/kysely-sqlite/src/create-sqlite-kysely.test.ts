@@ -1,5 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { RecordingTracer } from '@pikku/core/testing'
+import { createTrace } from '@pikku/core/trace'
 import { sql, type SqliteDatabase, type SqliteStatement } from 'kysely'
 import { createSQLiteKysely, createCoercionPlugin } from './index.js'
 
@@ -50,5 +52,25 @@ describe('createSQLiteKysely', () => {
     const { rows } = await sql`select sizes from garment`.execute(db)
     assert.deepEqual(rows[0]!.sizes, ['S', 'M'])
     await db.destroy()
+  })
+})
+
+describe('tracing', () => {
+  // The statement path is the same driver the real-SQLite suites in @pikku/kysely
+  // and the bun/node packages exercise; this proves the factory wires it.
+  test('a query on the sqlite database is a db span', async () => {
+    const tracer = new RecordingTracer()
+    const parent = createTrace()
+    const db = createSQLiteKysely(stubDatabase([{ id: 1 }]), {
+      tracer,
+      currentTrace: () => parent,
+    })
+    await db
+      .selectFrom('workflow_runs' as never)
+      .selectAll()
+      .execute()
+    assert.equal(tracer.spans[0]!.name, 'db.select')
+    assert.equal(tracer.spans[0]!.parentSpanId, parent.spanId)
+    assert.equal(tracer.spans[0]!.attributes['db.system'], 'sqlite')
   })
 })
