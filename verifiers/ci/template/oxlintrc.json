@@ -134,6 +134,51 @@
         "object": "Deno",
         "property": "args",
         "message": "Expose a `pikku` CLI command rather than reading argv."
+      },
+      {
+        "object": "globalThis",
+        "property": "process",
+        "message": "Use the `variables` service for values and the `secrets` service for secrets."
+      },
+      {
+        "object": "global",
+        "property": "process",
+        "message": "Use the `variables` service for values and the `secrets` service for secrets."
+      },
+      {
+        "object": "self",
+        "property": "process",
+        "message": "Use the `variables` service for values and the `secrets` service for secrets."
+      },
+      {
+        "object": "globalThis",
+        "property": "Bun",
+        "message": "Run processes through the Supervisor, not Bun.spawn."
+      },
+      {
+        "object": "global",
+        "property": "Bun",
+        "message": "Run processes through the Supervisor, not Bun.spawn."
+      },
+      {
+        "object": "self",
+        "property": "Bun",
+        "message": "Run processes through the Supervisor, not Bun.spawn."
+      },
+      {
+        "object": "globalThis",
+        "property": "Deno",
+        "message": "Expose a `pikku` CLI command rather than reading argv."
+      },
+      {
+        "object": "global",
+        "property": "Deno",
+        "message": "Expose a `pikku` CLI command rather than reading argv."
+      },
+      {
+        "object": "self",
+        "property": "Deno",
+        "message": "Expose a `pikku` CLI command rather than reading argv."
       }
     ]
   },

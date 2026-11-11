@@ -2,10 +2,6 @@
   "name": "functions",
   "private": true,
   "type": "module",
-  "imports": {
-    "#pikku/*.js": "../../.pikku/*.ts",
-    "#pikku/*": "../../.pikku/*/index.ts"
-  },
   "dependencies": {
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",
