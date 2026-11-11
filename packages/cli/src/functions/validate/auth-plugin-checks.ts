@@ -157,13 +157,7 @@ export const runAuthPluginChecks = async (
     if (!text) continue
     if (configuresPlugin(text, 'better-auth/plugins', 'admin'))
       adminFiles.push(file)
-    // `pikkuBan` is the export. `ban` was its alias until it was removed, and
-    // an app written against an older version still configures exactly the same
-    // plugin under that name, so it must satisfy the check too.
-    if (
-      configuresPlugin(text, '@pikku/better-auth', 'pikkuBan') ||
-      configuresPlugin(text, '@pikku/better-auth', 'ban')
-    )
+    if (configuresPlugin(text, '@pikku/better-auth', 'pikkuBan'))
       bansAnywhere = true
   }
 
