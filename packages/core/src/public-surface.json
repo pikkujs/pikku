@@ -641,6 +641,7 @@
   ],
   "./testing": [
     "clearPikkuRuntimeState",
+    "defineEventHubServiceTests",
     "defineQueueIdentityTransportTests",
     "defineQueueTraceConformance",
     "defineServiceTests"

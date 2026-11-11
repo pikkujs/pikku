@@ -52,8 +52,11 @@ describe('PikkuBunServer local content', () => {
       },
     } as any)
     tmpDir = mkdtempSync(join(tmpdir(), 'pikku-bun-content-'))
-    mkdirSync(join(tmpDir, 'bucket'), { recursive: true })
-    writeFileSync(join(tmpDir, 'bucket', 'existing.bin'), 'already here')
+    mkdirSync(join(tmpDir, 'private', 'bucket'), { recursive: true })
+    writeFileSync(
+      join(tmpDir, 'private', 'bucket', 'existing.bin'),
+      'already here'
+    )
 
     const contentConfig = {
       localFileUploadPath: tmpDir,
@@ -131,7 +134,7 @@ describe('PikkuBunServer local content', () => {
       contentKey: 'existing.bin',
       dateLessThan: new Date(Date.now() + 60_000),
     } as any)
-    writeFileSync(join(tmpDir, 'bucket', 'other.bin'), 'other')
+    writeFileSync(join(tmpDir, 'private', 'bucket', 'other.bin'), 'other')
 
     const query = signed.slice(signed.indexOf('?'))
     const response = await fetch(`${origin}/assets/bucket/other.bin${query}`)

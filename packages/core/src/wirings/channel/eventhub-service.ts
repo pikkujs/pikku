@@ -1,3 +1,5 @@
+import type { PikkuChannelHandler } from './channel.types.js'
+
 /**
  * Pub/sub between channels, available as `eventHub` on singleton services.
  *
@@ -22,4 +24,8 @@ export interface EventHubService<Topics extends Record<string, any>> {
     data: Topics[T],
     isBinary?: boolean
   ): Promise<void> | void
+
+  onChannelOpened(channelHandler: PikkuChannelHandler): Promise<void> | void
+
+  onChannelClosed(channelId: string): Promise<void> | void
 }

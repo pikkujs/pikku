@@ -1,5 +1,6 @@
 export {
   analyzeDeployment,
+  serverlessSseRoutes,
   unroutedHttpWirings,
   unservedGateways,
 } from './analyzer.js'

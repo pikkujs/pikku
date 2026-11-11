@@ -301,7 +301,11 @@ const executeRoute = async (
       remote: unsupportedChannelRemote,
     }
 
-    if (singletonServices.eventHub?.onChannelOpened) {
+    if (!singletonServices.eventHub) {
+      singletonServices.logger.warn(
+        `SSE route ${route.route} has no eventHub configured: the stream will open but never receive a published event`
+      )
+    } else {
       const channelRef = channel
       const channelHandler = {
         getChannel: () => channelRef,
@@ -311,10 +315,22 @@ const executeRoute = async (
         },
         sendBinary: (data: any) => channelRef.sendBinary(data),
       }
-      singletonServices.eventHub.onChannelOpened(channelHandler)
+      try {
+        await singletonServices.eventHub.onChannelOpened(channelHandler)
+      } catch (error) {
+        // The stream is already open and `close` is not yet wrapped, so the
+        // error handler below has nothing to close it with: the client would
+        // hold an SSE connection that no hub will ever publish to.
+        try {
+          await channel.close()
+        } catch {
+          // the original failure is the one worth reporting
+        }
+        throw error
+      }
       const originalClose = channel.close
       channel.close = async () => {
-        singletonServices.eventHub.onChannelClosed(channelId)
+        singletonServices.eventHub!.onChannelClosed(channelId)
         await originalClose()
       }
     }
