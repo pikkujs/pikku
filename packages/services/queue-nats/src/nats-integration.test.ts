@@ -386,8 +386,10 @@ it('drain waits for an in-flight handler to ack instead of killing it', async ()
       config: mapPikkuWorkerToNats({ batchSize: 10, lockDuration: 1_000 }),
       handler: async (msg) => {
         await delay(600)
+        // ackAck waits for the server to confirm: a plain ack() is fire and
+        // forget, so the stream-info check below could race the ack.
+        await msg.ackAck()
         finished = true
-        msg.ack()
       },
     })
 

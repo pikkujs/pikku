@@ -623,7 +623,8 @@
     "defineContributors",
     "orderContributors",
     "resolveContributors",
-    "selectContributors"
+    "selectContributors",
+    "wireContributors"
   ],
   "./lifecycle": [
     "composeServerLifecycle",
