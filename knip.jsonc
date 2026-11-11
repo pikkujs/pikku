@@ -17,9 +17,6 @@
     // `cloudflare:workers` is the Workers built-in module scheme, not the
     // `cloudflare` npm package. Installing that package would be wrong.
     "cloudflare",
-    // `@sdk/<backend>` is a tsconfig and bundler alias onto a backend's
-    // generated SDK in `.pikku/sdk/`, not an npm package.
-    "/^@sdk\\//",
   ],
 
   "ignoreBinaries": [
@@ -48,6 +45,10 @@
   // that have not renamed yet; two names for one value is the point.
   "ignoreIssues": {
     "packages/core/src/wirings/addon/define-plugin.ts": ["duplicates"],
+    // `@sdk/<backend>` is a tsconfig and bundler alias onto a backend's
+    // generated SDK in `.pikku/sdk/`, not an npm package. On a clean checkout the
+    // generated file is not there yet, so knip cannot follow the alias.
+    "e2e/packages/web/src/main.tsx": ["unlisted"],
   },
 
   // Build output and generated sources are not hand-authored, and their
