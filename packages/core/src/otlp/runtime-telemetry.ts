@@ -108,10 +108,14 @@ const inert = (logger: Logger): RuntimeTelemetry => ({
   close: async () => {},
 })
 
+/** `0`, `false` and `off`, trimmed and case-insensitive, turn telemetry off. */
+const telemetryDisabled = (value: string | undefined): boolean =>
+  ['0', 'false', 'off'].includes(value?.trim().toLowerCase() ?? '')
+
 /**
  * Builds the tracer, OTLP logger and process-metrics sampler a runtime injects,
  * from `PIKKU_OTLP_*` (see the table in the Tracing docs). Unset endpoint or
- * `PIKKU_TELEMETRY=0` gives the no-op tracer and the plain logger. A
+ * `PIKKU_TELEMETRY=0|false|off` gives the no-op tracer and the plain logger. A
  * non-loopback endpoint throws unless `PIKKU_OTLP_ALLOW_REMOTE=1`: this is read
  * at boot, never by app code.
  */
@@ -120,7 +124,8 @@ export const createRuntimeTelemetry = (
   options: RuntimeTelemetryOptions
 ): RuntimeTelemetry => {
   const endpoint = env.PIKKU_OTLP_ENDPOINT?.trim()
-  if (env.PIKKU_TELEMETRY === '0' || !endpoint) return inert(options.logger)
+  if (telemetryDisabled(env.PIKKU_TELEMETRY) || !endpoint)
+    return inert(options.logger)
 
   const url = parseOtlpEndpoint(endpoint, env.PIKKU_OTLP_ALLOW_REMOTE === '1')
   const headers = parseOtlpHeaders(env.PIKKU_OTLP_HEADERS)

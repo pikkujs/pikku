@@ -185,7 +185,7 @@ function findLockfile(projectDir: string): string | null {
  * Absent is a real answer — a project need not version itself — and is better
  * reported as unknown than as a number this made up.
  */
-function resolveProjectVersion(projectDir: string): string | undefined {
+export function resolveProjectVersion(projectDir: string): string | undefined {
   try {
     const pkg = JSON.parse(
       readFileSync(join(projectDir, 'package.json'), 'utf-8')

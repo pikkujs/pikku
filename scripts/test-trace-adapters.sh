@@ -44,7 +44,7 @@ run packages/services/queue-bullmq bun test src/bull-queue-trace.test.ts --timeo
 run packages/services/queue-pg-boss bun test src/pg-boss-queue-trace.test.ts --timeout 180000
 run packages/services/queue-nats bun test src/nats-queue-trace.test.ts src/nats-integration.test.ts --timeout 180000
 export DATABASE_URL="$PG_BOSS_TEST_URL"
-run packages/services/kysely-postgres bun test src/pg-kysely-server.test.ts --timeout 180000
+run packages/services/kysely-postgres bun test src/pg-kysely-server.test.ts src/pikku-kysely-trace.test.ts --timeout 180000
 run verifiers/tracing bun run test:distributed
 
 exit $status

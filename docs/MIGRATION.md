@@ -1195,4 +1195,22 @@ Spans, logs and process metrics now leave a standalone binary and `pikku serve` 
 - A non-loopback endpoint needs `PIKKU_OTLP_ALLOW_REMOTE=1` and `https`. Credentials in the URL, or a malformed headers value, stop the process at boot.
 - The generated Kysely database now records a `db.*` child span under the function span when telemetry is on.
 
+The full environment, in one table (also in `packages/core/knowledge/decisions/internals/otlp-exporter-is-protobuf-only-and-never-throws.md`):
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PIKKU_OTLP_ENDPOINT` | unset (off) | OTLP/HTTP base URL. Unset means no exporter, no timer, no connection. |
+| `PIKKU_TELEMETRY` | unset | `0`, `false` or `off` (trimmed, any case) turns telemetry off even when an endpoint is set. |
+| `PIKKU_OTLP_ALLOW_REMOTE` | unset | `1` allows a non-loopback host. The endpoint must then be `https`. |
+| `PIKKU_OTLP_HEADERS` | none | `k=v,k2=v2`, sent with every signal. |
+| `PIKKU_OTLP_TRACES_HEADERS`, `PIKKU_OTLP_LOGS_HEADERS`, `PIKKU_OTLP_METRICS_HEADERS` | none | Added to one signal only. |
+| `PIKKU_OTLP_LOG_LEVEL` | `info` | Lowest level forwarded as an OTLP log. An unknown name logs a warning and uses `info`. |
+| `PIKKU_OTLP_SQL_TEXT` | unset | `1` records the (parameterless) SQL text on `db.*` spans. Off by default. |
+| `PIKKU_OTLP_SERVICE_NAME` | `PIKKU_PROJECT`, else the unit or project name | `service.name`. |
+| `PIKKU_STAGE`, `PIKKU_PROJECT` | none | Resource attributes when set. |
+
+Fails closed, at boot (exit 1), never by silently dropping telemetry: a non-loopback host without `PIKKU_OTLP_ALLOW_REMOTE=1`; a non-loopback `http` endpoint; credentials in the URL; a query string or fragment in the URL (send credentials in a headers variable); a malformed headers value; a non-http(s) or unparsable URL. Error messages never echo the URL, only the host of a refused remote endpoint.
+
+Log attributes whose field name contains `token`, `secret`, `password`, `passwd`, `authorization`, `cookie`, `key`, `credential`, `session` or `bearer` are exported as `[redacted]`.
+
 **Find:** search for `.pikku/runs` and for imports of `run-telemetry`. Anything that read the samples should read the exported spans instead.
