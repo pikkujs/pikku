@@ -83,10 +83,10 @@ describe('natsOptionsFromEnv', () => {
     assert.deepEqual(options.servers, ['nats://localhost:4222'])
   })
 
-  test('the stream name can be overridden, nothing else about the naming can', () => {
+  test('the stream name is always derived: there is no override', () => {
     assert.equal(
       natsOptionsFromEnv({ ...env, NATS_STREAM: 'OTHER' }).streamName,
-      'OTHER'
+      `pikku_${env.PIKKU_PROJECT}_${env.PIKKU_STAGE}`
     )
   })
 
@@ -96,7 +96,7 @@ describe('natsOptionsFromEnv', () => {
     assert.equal(options.pass, 'secret')
   })
 
-  for (const name of Object.keys(env).filter((key) => key !== 'NATS_STREAM')) {
+  for (const name of Object.keys(env)) {
     test(`refuses a missing ${name}, without falling back to the in-memory queue`, () => {
       assert.throws(
         () => natsOptionsFromEnv(without(name)),
@@ -192,5 +192,21 @@ describe('nats contributor lifecycle', () => {
     })
     assert.deepEqual(fake.calls, ['drain:10000', 'close'])
     assert.match(warnings[0]!, /slow/)
+  })
+
+  test('onServerStop still closes the connection when the drain throws', async () => {
+    const fake = fakeFactory()
+    fake.factory.drainWorkers = async () => {
+      fake.calls.push('drain')
+      throw new Error('drain failed')
+    }
+    await assert.rejects(
+      createNatsDeploy(() => fake.factory).onServerStop!({
+        natsLifecycle: await lifecycleOf(fake),
+        logger: { warn: () => {} },
+      }),
+      /drain failed/
+    )
+    assert.deepEqual(fake.calls, ['drain', 'close'])
   })
 })
