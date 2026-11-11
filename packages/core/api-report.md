@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3415 observable things**: 1161 exported names, plus
-2254 members on the classes and interfaces among them, reachable
+**3423 observable things**: 1163 exported names, plus
+2260 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -19,7 +19,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow` | 99 | 47 | 165 |
 | `./scenario` | 50 | 48 | 157 |
 | `./agent` | 52 | 50 | 81 |
-| `./channel` | 32 | 32 | 86 |
+| `./channel` | 33 | 33 | 92 |
 | `./types` | 24 | 21 | 83 |
 | `./queue` | 28 | 28 | 75 |
 | `./http` | 27 | 27 | 58 |
@@ -51,9 +51,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./rpc` | 9 | 9 | 6 |
 | `./workflow/types` | 48 | 1 | 13 |
+| `./testing` | 9 | 9 | 4 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./trace` | 12 | 12 | 0 |
-| `./testing` | 8 | 8 | 4 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./secret` | 10 | 10 | 0 |
 | `./safe-fetch` | 6 | 6 | 3 |
@@ -981,6 +981,8 @@ export interface EventHubService<Topics extends Record<string, any>> {
   subscribe<T extends keyof Topics>(topic: T, channelId: string): Promise<void> | void
   unsubscribe<T extends keyof Topics>(topic: T, channelId: string): Promise<void> | void
   publish<T extends keyof Topics>(topic: T, channelId: string | null, data: Topics[T], isBinary?: boolean): Promise<void> | void
+  onChannelOpened(channelHandler: PikkuChannelHandler): Promise<void> | void
+  onChannelClosed(channelId: string): Promise<void> | void
 }
 export abstract class EventHubStore< EventTopics extends Record<string, any> = {}, > {
   public abstract getChannelIdsForTopic(topic: string): Promise<string[]>
@@ -1009,6 +1011,12 @@ export interface PikkuChannel< OpeningData, out Out, Remote extends (...args: an
   getState<T>(): Promise<T | undefined> | T | undefined
   clearState(): Promise<void> | void
   remote: Remote
+}
+export interface PikkuChannelHandler<OpeningData = unknown, Out = unknown> {
+  trace?: TraceContext
+  send(message: Out, isBinary?: boolean): Promise<void> | void
+  sendBinary(data: BinaryData): Promise<void> | void
+  getChannel(): PikkuChannel<OpeningData, Out>
 }
 export type PikkuChannelHandlerFactory<OpeningData = unknown, Out = unknown> = (
   channelId: string,
@@ -6484,7 +6492,7 @@ export type LocalContentRequestHandlerOptions = {
 }
 export type SignedContentVerification =
   { ok: true } | { ok: false; status: number; body: string }
-verifySignedContentRequest: (requestUrl: URL, jwt: JWTService | undefined, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
+verifySignedContentRequest: (requestUrl: URL, jwt: any, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
 ```
 
 ## ./services/temporary-file-service
@@ -6784,6 +6792,7 @@ validateSchema: (logger: Logger, schemaService: SchemaService | undefined, schem
 
 ```ts
 clearPikkuRuntimeState: () => void
+defineEventHubServiceTests: (name: string, makeHub: () => EventHubService<Record<string, any>> | Promise<EventHubService<Record<string, any>>>, { deliversToHandlers }?: { deliversToHandlers?: boolean | undefined; }) => void
 defineQueueIdentityTransportTests: (name: string, create: (services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => QueueIdentityTransport) => void
 defineQueueTraceConformance: (name: string, create: () => Promise<QueueTraceAdapter>, { settleMs }?: { settleMs?: number | undefined; }) => void
 defineServiceTests: (config: ServiceTestConfig) => void
