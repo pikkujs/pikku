@@ -22,6 +22,15 @@ group them into changesets, and take one: claim it, build it, mark its items don
 starts a fresh agent for the next one, so nothing you hold in context carries over — whatever the next
 changeset needs to know goes in a commit or a `reply`.
 
+## When the request says to build
+
+Filing is how work enters the queue when nobody has asked for it to be built yet. It is not the only
+way a request can end. When the person's own request tells you to build it now, or tells you not to
+file changes or ask questions, that wins: do not `file`, `ask` or `claim`. Decide the open points
+yourself, build it in the working tree with the skill for the feature (pikku-workflow, pikku-addon,
+pikku-wiring and so on), run `pikku all` and `tsc --noEmit`, and finish. Note what you decided in the
+knowledge base, not in a question. Only a decision the person has kept for themselves is worth an `ask`.
+
 ## The loop
 
 **Never poll.** No `sleep` loops, no repeated `list`, no re-running `show` to see if
