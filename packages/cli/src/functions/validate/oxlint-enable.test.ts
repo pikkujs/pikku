@@ -668,6 +668,17 @@ describe('strict preset', () => {
     assert.equal(out.overrides.length, 2)
   })
 
+  test('a user rule set to allow is treated as off and raised to the preset warn', () => {
+    const merged = mergeOxlintConfig(
+      JSON.stringify({ rules: { 'no-shadow': 'allow' } }),
+      NO_POLICIES,
+      true
+    )
+    assert.equal(merged.kind, 'merged')
+    if (merged.kind !== 'merged') return
+    assert.equal(JSON.parse(merged.text).rules['no-shadow'], 'warn')
+  })
+
   test('merging twice is a no-op, and an existing plugins list gains only what is missing', () => {
     const first = mergeOxlintConfig(
       JSON.stringify({ plugins: ['react'] }),

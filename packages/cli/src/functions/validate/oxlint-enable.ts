@@ -143,8 +143,10 @@ export const snippetFor = (
     2
   )
 
-const isOff = (v: unknown): boolean =>
-  (Array.isArray(v) ? v[0] : v) === 'off' || (Array.isArray(v) ? v[0] : v) === 0
+const isOff = (v: unknown): boolean => {
+  const level = Array.isArray(v) ? v[0] : v
+  return level === 'off' || level === 'allow' || level === 0
+}
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === 'object' && !Array.isArray(v)
