@@ -36,28 +36,6 @@ export const disableTracer = (
   }
 }
 
-/** The workflow run and step a span belongs to. */
-export type WorkflowStepTrace = { runId: string; stepId: string }
-
-const stepTraces = new WeakMap<TraceContext, WorkflowStepTrace>()
-
-/**
- * Remembers that `trace` is the span of one workflow step, against the object
- * itself: the function runner can then tell the step's own span from a call the
- * step's function makes, which copies the wire but gets a trace of its own.
- */
-export const markWorkflowStep = (
-  trace: TraceContext,
-  step: WorkflowStepTrace
-): void => {
-  stepTraces.set(trace, step)
-}
-
-/** The step `trace` was marked with by {@link markWorkflowStep}, if any. */
-export const workflowStepOfTrace = (
-  trace: TraceContext
-): WorkflowStepTrace | undefined => stepTraces.get(trace)
-
 // knowledge: decisions/internals/a-job-inherits-the-trace-of-the-function-that-enqueued-it.md
 /** A span for a call that leaves the function: the one that is open until the call settles. */
 export type BoundarySpan = {

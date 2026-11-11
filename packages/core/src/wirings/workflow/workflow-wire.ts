@@ -1,7 +1,9 @@
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import { milestoneStepName } from './workflow-constants.js'
+import { deriveInvocationId } from './workflow-invocation-id.js'
 import type {
   PikkuWorkflowWire,
+  StepState,
   WorkflowApprovalOptions,
   WorkflowRun,
 } from './workflow.types.js'
@@ -24,6 +26,21 @@ export type WorkflowWireSteps = {
     options: WorkflowApprovalOptions
   ) => Promise<any>
 }
+
+/** The `workflowStep` wire of one attempt of a step: its run, step, invocation id and the attempt it replays. */
+export const buildWorkflowStepWire = (
+  runId: string,
+  stepName: string,
+  stepState: StepState
+) => ({
+  runId,
+  stepId: stepState.stepId,
+  invocationId: deriveInvocationId(runId, stepName),
+  attemptCount: stepState.attemptCount,
+  fromInvocationId: stepState.fromStepName
+    ? deriveInvocationId(runId, stepState.fromStepName)
+    : undefined,
+})
 
 export const buildWorkflowWire = (
   name: string,

@@ -94,11 +94,10 @@ describe('runPikkuFunc - spans', () => {
           trace: childTraceWire(wire.trace).trace,
         }),
     })
-    const stepWire = runTraceWire(
-      formatTraceparent(createTrace()),
-      'run-1',
-      'step-1'
-    )
+    const stepWire = runTraceWire(formatTraceparent(createTrace()), {
+      runId: 'run-1',
+      stepId: 'step-1',
+    })
     await run('stepFn', tracer, stepWire)
 
     const byName = Object.fromEntries(tracer.spans.map((s) => [s.name, s]))

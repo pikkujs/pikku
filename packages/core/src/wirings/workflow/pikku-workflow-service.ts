@@ -1,7 +1,7 @@
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { assertRunSessionStore } from './workflow-graph-session.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
-import { buildWorkflowWire } from './workflow-wire.js'
+import { buildWorkflowStepWire, buildWorkflowWire } from './workflow-wire.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
@@ -40,7 +40,6 @@ import { isExpectedError } from '../../errors/error-handler.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
-import { deriveInvocationId } from './workflow-invocation-id.js'
 import { approvalDeciderFrom } from './workflow-approval-policy.js'
 import {
   buildRunTimeline,
@@ -1538,7 +1537,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const run = knownRun ?? (await this.getRunIdentity(runId))
     assertRunSessionStore(run?.wire?.pikkuUserId)
     return rpcService.rpcWithWire(rpcName, data, {
-      ...runTraceWire(run?.wire?.traceparent, runId, stepState.stepId),
+      ...runTraceWire(run?.wire?.traceparent, {
+        runId,
+        stepId: stepState.stepId,
+      }),
       ...(run?.wire?.pikkuUserId ? { pikkuUserId: run.wire.pikkuUserId } : {}),
       ...(compensatingFor
         ? {
@@ -1552,15 +1554,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             },
           }
         : {}),
-      workflowStep: {
-        runId,
-        stepId: stepState.stepId,
-        invocationId: deriveInvocationId(runId, stepName),
-        attemptCount: stepState.attemptCount,
-        fromInvocationId: stepState.fromStepName
-          ? deriveInvocationId(runId, stepState.fromStepName)
-          : undefined,
-      },
+      workflowStep: buildWorkflowStepWire(runId, stepName, stepState),
     })
   }
 

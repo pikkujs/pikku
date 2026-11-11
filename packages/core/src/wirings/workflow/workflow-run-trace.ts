@@ -6,7 +6,10 @@ import {
   tracedLogger,
   type TraceContext,
 } from '../../trace.js'
-import { markWorkflowStep } from '../../boundary-span.js'
+import {
+  markWorkflowStep,
+  type WorkflowStepTrace,
+} from '../../workflow-step-mark.js'
 import type { Logger } from '../../services/logger.js'
 import type { WorkflowRunWire } from './workflow.types.js'
 
@@ -24,19 +27,17 @@ export const withRunTrace = (wire: WorkflowRunWire): WorkflowRunWire =>
 
 /**
  * The wire fields for one hop of a run: the run's trace with a new span, so
- * each attempt of a step is its own span in the same trace. Given the run and step,
- * the span is marked as that step's. Empty for a run
- * that was stored without a trace.
+ * each attempt of a step is its own span in the same trace. Given `step`, the
+ * span is marked as that step's. Empty for a run that was stored without a trace.
  */
 export const runTraceWire = (
   traceparent: string | undefined,
-  runId?: string,
-  stepId?: string
+  step?: WorkflowStepTrace
 ): { traceId?: string; trace?: TraceContext } => {
   if (!traceparent) return {}
   const trace = continueTrace(traceparent)
   // The span of a step is told apart from the calls the step makes.
-  if (runId && stepId) markWorkflowStep(trace, { runId, stepId })
+  if (step) markWorkflowStep(trace, step)
   return { traceId: trace.traceId, trace }
 }
 

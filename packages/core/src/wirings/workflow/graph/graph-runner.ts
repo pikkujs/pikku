@@ -1038,11 +1038,10 @@ async function invokeGraphNodeRpc(
   const owner = (await workflowService.getRunIdentity(runId))?.wire?.pikkuUserId
   assertRunSessionStore(owner)
   const result = await rpcService.rpcWithWire(rpcName, input, {
-    ...runTraceWire(
-      await workflowService.getRunTraceparent(runId),
+    ...runTraceWire(await workflowService.getRunTraceparent(runId), {
       runId,
-      stepId
-    ),
+      stepId,
+    }),
     ...(owner ? { pikkuUserId: owner } : {}),
     graph: graphWire,
     workflow: workflowService.createWorkflowWire(graphName, runId, rpcService),
