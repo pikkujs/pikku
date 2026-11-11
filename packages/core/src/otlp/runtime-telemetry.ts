@@ -51,7 +51,8 @@ const HEADER_NAME = /^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/
  * telemetry to the wrong database.
  */
 export const parseOtlpHeaders = (
-  raw: string | undefined
+  raw: string | undefined,
+  variable = 'PIKKU_OTLP_HEADERS'
 ): Record<string, string> => {
   const headers: Record<string, string> = {}
   for (const entry of (raw ?? '').split(',')) {
@@ -59,22 +60,16 @@ export const parseOtlpHeaders = (
     const at = entry.indexOf('=')
     const name = (at < 0 ? entry : entry.slice(0, at)).trim()
     if (at < 0 || !HEADER_NAME.test(name)) {
-      throw new Error(
-        'PIKKU_OTLP_HEADERS must be comma-separated name=value pairs'
-      )
+      throw new Error(`${variable} must be comma-separated name=value pairs`)
     }
     let value: string
     try {
       value = decodeURIComponent(entry.slice(at + 1).trim())
     } catch {
-      throw new Error(
-        `PIKKU_OTLP_HEADERS has a bad percent-encoding for ${name}`
-      )
+      throw new Error(`${variable} has a bad percent-encoding for ${name}`)
     }
     if (/[\r\n]/.test(value)) {
-      throw new Error(
-        `PIKKU_OTLP_HEADERS value for ${name} contains a line break`
-      )
+      throw new Error(`${variable} value for ${name} contains a line break`)
     }
     headers[name] = value
   }
@@ -108,9 +103,18 @@ export const createRuntimeTelemetry = (
   const url = parseOtlpEndpoint(endpoint, env.PIKKU_OTLP_ALLOW_REMOTE === '1')
   const headers = parseOtlpHeaders(env.PIKKU_OTLP_HEADERS)
   const headersBySignal = {
-    traces: parseOtlpHeaders(env.PIKKU_OTLP_TRACES_HEADERS),
-    logs: parseOtlpHeaders(env.PIKKU_OTLP_LOGS_HEADERS),
-    metrics: parseOtlpHeaders(env.PIKKU_OTLP_METRICS_HEADERS),
+    traces: parseOtlpHeaders(
+      env.PIKKU_OTLP_TRACES_HEADERS,
+      'PIKKU_OTLP_TRACES_HEADERS'
+    ),
+    logs: parseOtlpHeaders(
+      env.PIKKU_OTLP_LOGS_HEADERS,
+      'PIKKU_OTLP_LOGS_HEADERS'
+    ),
+    metrics: parseOtlpHeaders(
+      env.PIKKU_OTLP_METRICS_HEADERS,
+      'PIKKU_OTLP_METRICS_HEADERS'
+    ),
   }
 
   const levelName = env.PIKKU_OTLP_LOG_LEVEL?.trim().toLowerCase()

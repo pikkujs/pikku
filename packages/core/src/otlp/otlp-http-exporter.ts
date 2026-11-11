@@ -83,8 +83,15 @@ const newState = <T>(): SignalState<T> => ({
   lastWarnAt: -Infinity,
 })
 
-const sleep = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms))
+/** A sleep that never keeps the process alive, and can be cancelled. */
+const sleep = (ms: number) => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const done = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, ms)
+    ;(timer as { unref?: () => void }).unref?.()
+  })
+  return { done, cancel: () => clearTimeout(timer) }
+}
 
 /**
  * Batches spans, logs and metrics and POSTs them as OTLP/HTTP protobuf.
@@ -130,9 +137,7 @@ export class OtlpHttpExporter {
   }
 
   exportSpans(spans: FinishedSpan[]): void {
-    this.enqueue(
-      'spans',
-      this.spans,
+    this.enqueue('spans', this.spans, () =>
       spans.map((span) => ({
         ...span,
         attributes: this.types.coerce(span.attributes),
@@ -141,11 +146,11 @@ export class OtlpHttpExporter {
   }
 
   exportLogs(records: OtlpLogRecord[]): void {
-    this.enqueue('logs', this.logs, records)
+    this.enqueue('logs', this.logs, () => records)
   }
 
   exportMetrics(points: OtlpMetricPoint[]): void {
-    this.enqueue('metrics', this.metrics, points)
+    this.enqueue('metrics', this.metrics, () => points)
   }
 
   /** Sends everything queued. Never rejects. */
@@ -162,13 +167,20 @@ export class OtlpHttpExporter {
     if (this.closed) return
     if (this.timer) clearTimeout(this.timer)
     this.timer = undefined
-    await Promise.race([this.flush(), sleep(CLOSE_CAP_MS)])
-    this.closed = true
+    const cap = sleep(CLOSE_CAP_MS)
+    try {
+      await Promise.race([this.flush(), cap.done])
+    } finally {
+      cap.cancel()
+      this.closed = true
+    }
   }
 
-  private enqueue<T>(signal: Signal, state: SignalState<T>, items: T[]) {
-    if (this.closed || items.length === 0) return
+  private enqueue<T>(signal: Signal, state: SignalState<T>, make: () => T[]) {
+    if (this.closed) return
     try {
+      const items = make()
+      if (items.length === 0) return
       state.queue.push(...items)
       const overflow = state.queue.length - OTLP_QUEUE_LIMITS[signal]
       if (overflow > 0) {
@@ -216,10 +228,12 @@ export class OtlpHttpExporter {
         if (sent) {
           state.failures = 0
           if (signal === 'metrics') this.markReported()
-        } else if (
-          ++state.failures >= (this.options.backoffAfterFailures ?? 10)
-        ) {
-          state.backoffUntil = this.now() + (this.options.backoffMs ?? 30_000)
+        } else {
+          // Lost for good: count it, except the loss counters themselves.
+          state.dropped += batch.length - extra.length
+          if (++state.failures >= (this.options.backoffAfterFailures ?? 10)) {
+            state.backoffUntil = this.now() + (this.options.backoffMs ?? 30_000)
+          }
         }
       }
     } catch {
@@ -276,7 +290,11 @@ export class OtlpHttpExporter {
         this.rejected(signal, batch, status)
         return false
       }
-      if (attempt === 0) await sleep(this.options.retryDelayMs ?? 1000)
+      if (attempt === 0) {
+        const wait = sleep(this.options.retryDelayMs ?? 1000)
+        await wait.done
+        wait.cancel()
+      }
     }
     this.warn(signal, `export of ${batch.length} ${signal} failed; dropped`)
     return false

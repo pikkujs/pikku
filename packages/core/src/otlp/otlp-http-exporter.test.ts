@@ -149,6 +149,96 @@ describe('OtlpHttpExporter', () => {
     assert.equal(calls.length, 2)
     assert.equal(warnings.length, 1)
     assert.match(warnings[0]!, /failed; dropped/)
+    assert.equal(exporter.stats.dropped.spans, 1)
+  })
+
+  test('a batch rejected with a 4xx is counted as dropped, and exported in the loss counter', async () => {
+    const { exporter, calls } = harness([400, 200])
+    exporter.exportSpans([span('a'), span('b')])
+    await exporter.flush()
+    assert.equal(exporter.stats.dropped.spans, 2)
+    exporter.exportMetrics([{ name: 'g', kind: 'gauge', value: 1 }])
+    await exporter.flush()
+    const metrics = decodeMetrics(calls[1]!.body).items
+    const dropped = metrics.find((m) => m.name === 'pikku.telemetry.dropped')!
+    assert.equal(dropped.points[0]!.value, 2n)
+  })
+
+  test('a batch that cannot be encoded is counted as dropped', async () => {
+    const { exporter } = harness([200])
+    const bad = span('bad')
+    bad.startTimeUnixNano = 'x' as unknown as bigint
+    exporter.exportSpans([bad])
+    await exporter.flush()
+    assert.equal(exporter.stats.dropped.spans, 1)
+  })
+
+  test('a failed metrics batch counts its points but not the loss counters it carried', async () => {
+    const { exporter } = harness(['throw'])
+    exporter.exportLogs(
+      Array.from({ length: OTLP_QUEUE_LIMITS.logs + 1 }, () => ({
+        severity: 'info' as const,
+        body: 'x',
+      }))
+    )
+    exporter.exportMetrics([{ name: 'g', kind: 'gauge', value: 1 }])
+    await exporter.flush()
+    assert.equal(exporter.stats.dropped.metrics, 1)
+  })
+
+  test('close() on an idle exporter returns promptly and leaves no live timer', async () => {
+    const { exporter } = harness([200])
+    const before = process
+      .getActiveResourcesInfo()
+      .filter((r) => r === 'Timeout').length
+    const started = Date.now()
+    await exporter.close()
+    assert.ok(Date.now() - started < 500)
+    const after = process
+      .getActiveResourcesInfo()
+      .filter((r) => r === 'Timeout').length
+    assert.ok(after <= before, `timers ${before} -> ${after}`)
+  })
+
+  test('headersBySignal overrides the global header and content-type always wins', async () => {
+    const { exporter, calls } = harness([200], {
+      headers: {
+        'x-a': 'global',
+        'x-greptime-db-name': 'pikku',
+        'content-type': 'text/plain',
+      },
+      headersBySignal: {
+        traces: { 'x-a': 'traces', 'content-type': 'application/json' },
+      },
+    })
+    exporter.exportSpans([span('s')])
+    exporter.exportLogs([{ severity: 'info', body: 'l' }])
+    await exporter.flush()
+    const byUrl = (suffix: string) => calls.find((c) => c.url.endsWith(suffix))!
+    assert.equal(byUrl('/v1/traces').headers['x-a'], 'traces')
+    assert.equal(byUrl('/v1/logs').headers['x-a'], 'global')
+    assert.equal(byUrl('/v1/traces').headers['x-greptime-db-name'], 'pikku')
+    for (const c of calls) {
+      assert.equal(c.headers['content-type'], 'application/x-protobuf')
+    }
+  })
+
+  test('header values never appear in warn or debug output', async () => {
+    const SENTINEL = 'sentinel-secret-value'
+    const logs: string[] = []
+    const { exporter } = harness(['throw'], {
+      headers: { authorization: `Bearer ${SENTINEL}` },
+      headersBySignal: { traces: { 'x-extra': SENTINEL } },
+      logger: {
+        warn: (m: string) => logs.push(m),
+        debug: (m: string) => logs.push(m),
+      },
+    })
+    exporter.exportSpans([span('s')])
+    exporter.exportLogs([{ severity: 'info', body: 'l' }])
+    await exporter.flush()
+    assert.ok(logs.length > 0)
+    assert.doesNotMatch(logs.join('\n'), new RegExp(SENTINEL))
   })
 
   test('a 400 is not retried and never logs attribute values', async () => {
@@ -175,15 +265,25 @@ describe('OtlpHttpExporter', () => {
       exporter.exportSpans([span(`s${n}`)])
       await exporter.flush()
     }
-    assert.equal(warnings.length, 1)
+    const spanWarnings = () => warnings.filter((w) => /spans/.test(w))
+    assert.equal(spanWarnings().length, 1)
     tick(61_000)
     exporter.exportSpans([span('later')])
     await exporter.flush()
-    assert.equal(warnings.length, 2)
+    assert.equal(spanWarnings().length, 2)
   })
 
   test('ten failed batches in a row back the signal off for 30 s, still queueing', async () => {
-    const { exporter, calls, tick } = harness([400])
+    const { exporter, calls: all, tick } = harness([400])
+    // The loss counter rides on the metrics signal; only traces are under test.
+    const calls = {
+      get length() {
+        return all.filter((c) => c.url.endsWith('/v1/traces')).length
+      },
+      get 10() {
+        return all.filter((c) => c.url.endsWith('/v1/traces'))[10]!
+      },
+    }
     for (let n = 0; n < 10; n++) {
       exporter.exportSpans([span(`s${n}`)])
       await exporter.flush()
@@ -197,7 +297,7 @@ describe('OtlpHttpExporter', () => {
     tick(30_001)
     await exporter.flush()
     assert.equal(calls.length, 11)
-    assert.equal(decodeTraces(calls[10]!.body).items[0]!.name, 'during backoff')
+    assert.equal(decodeTraces(calls[10].body).items[0]!.name, 'during backoff')
   })
 
   test('a success resets the failure count', async () => {
@@ -206,7 +306,7 @@ describe('OtlpHttpExporter', () => {
       exporter.exportSpans([span(`s${n}`)])
       await exporter.flush()
     }
-    assert.equal(calls.length, 12)
+    assert.equal(calls.filter((c) => c.url.endsWith('/v1/traces')).length, 12)
   })
 
   test('the span queue holds 2048 and drops the oldest, exporting the loss as a metric', async () => {
