@@ -61,6 +61,14 @@ const assertEntry = (chain: TraceChain, instance: Instance) => {
 const assertHops = (chain: TraceChain, instance: Instance) => {
   const entries = instance.entries
   const parents = new Map(entries.map((entry) => [entry.spanId, entry]))
+  // A producer or client span the runtime records for a call that leaves the
+  // function stands between the caller and the hop it makes, like a relay.
+  for (const span of chain.tracer.spans) {
+    const parent = span.parentSpanId && parents.get(span.parentSpanId)
+    if (parent && (span.kind === 'producer' || span.kind === 'client')) {
+      parents.set(span.spanId, parent)
+    }
+  }
   for (const relay of instance.relays) {
     const parent = parents.get(relay.parentSpanId!)
     assert.ok(parent, `a relay hangs off ${relay.parentSpanId}`)

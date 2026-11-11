@@ -17,6 +17,14 @@ call site that forgot.
 `options.traceparent ?? outgoingTraceparent(wire)` at add time and everything
 else passes through. An explicit `traceparent` wins.
 
+With a tracer, the publish is also a `producer` span, `queue.publish <queue>`,
+child of the invocation's span; the job carries the producer span's
+`traceparent`, so the consumer's span is the producer's child. The same holds for
+`scheduleRPC` (`scheduler.schedule`) and a webhook `send` (`webhook.send`). The
+span covers the `add` call until it settles. A caller-set `traceparent` still
+wins on the job, and the span is then a record only. With no tracer or an
+unsampled trace nothing is recorded and the wire's own trace is stamped.
+
 The wrapper sits around whatever the application registered. `SignedQueueService`
 and `PikkuQueue` still see their own calls, and neither has to know about traces:
 signing covers `data` and `pikkuUserId`, so the trace is not signed. A trace on a
@@ -35,8 +43,6 @@ enqueue without a trace, so the job starts a new one:
 - singleton producers: webhook services, the agent scorer, and anything else
   that captured `queueService` at start-up
 - a queue service captured in `createWireServices`, or held under another key
-- `schedulerService.scheduleRPC` called from a function. The workflow engine
-  passes the run's trace for a sleep; nothing stamps other callers.
 
 The runner's guard forbids `function` importing `wirings/queue` at runtime, which
 is why the wrapper lives in `function/trace-queue-service.ts`.

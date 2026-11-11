@@ -136,6 +136,9 @@ describe('background work', () => {
   })
 })
 
+const bigintSafe = (_key: string, value: unknown) =>
+  typeof value === 'bigint' ? String(value) : value
+
 const spanNamed = (name: string) => {
   const found = tracer.spans.filter((span) => span.name === name)
   assert.equal(found.length, 1, `${name}: ${found.length} spans`)
@@ -214,5 +217,76 @@ describe('the function runner records a span per hop', () => {
       at = byId.get(at.parentSpanId)!
     }
     assert.equal(at, callerSpan)
+  })
+
+  test('a queue publish is a producer span, and the job it enqueues is its child', async () => {
+    const request = await post('/trace/job')
+    await waitForHops('job')
+    const enqueuer = spanNamed('traceEnqueues')
+    const publish = spanNamed('queue.publish trace-job')
+    const job = spanNamed('traceJob')
+    assert.equal(publish.kind, 'producer')
+    assert.equal(publish.attributes['messaging.system'], 'pikku')
+    assert.equal(publish.attributes['messaging.destination.name'], 'trace-job')
+    assert.equal(publish.parentSpanId, enqueuer.spanId)
+    assert.equal(job.parentSpanId, publish.spanId)
+    assert.equal(job.traceId, request.traceId)
+    assert.equal(publish.traceId, request.traceId)
+    assert.ok(!JSON.stringify(publish, bigintSafe).includes('"at":"job"'))
+  })
+
+  test('a delayed RPC is scheduled by a producer span and runs as its child', async () => {
+    await post('/trace/delayed')
+    await waitForHops('delayed')
+    const schedule = spanNamed('scheduler.schedule')
+    const delayed = spanNamed('traceJob')
+    assert.equal(schedule.kind, 'producer')
+    assert.equal(schedule.attributes['messaging.destination.name'], 'traceJob')
+    assert.equal(delayed.parentSpanId, schedule.spanId)
+    assert.equal(delayed.traceId, schedule.traceId)
+  })
+
+  test('a mesh call is a client span, and the remote handler hangs off it', async () => {
+    await post('/trace/mesh')
+    const caller = spanNamed('traceCallsMesh')
+    const call = spanNamed('rpc.call traceEcho')
+    const handler = spanNamed('meshRPCHandler')
+    const callee = spanNamed('traceEcho')
+    assert.equal(call.kind, 'client')
+    assert.equal(call.attributes['rpc.service'], 'deployment')
+    assert.equal(call.parentSpanId, caller.spanId)
+    assert.equal(handler.parentSpanId, call.spanId)
+    assert.equal(callee.parentSpanId, handler.spanId)
+    assert.ok(call.endTimeUnixNano >= handler.endTimeUnixNano)
+  })
+
+  test('a local rpc adds no client span', async () => {
+    await post('/trace/rpc')
+    assert.deepEqual(
+      tracer.spans.filter((span) => span.kind === 'client'),
+      []
+    )
+  })
+
+  test('each workflow step span is a consumer that names its run and step', async () => {
+    await post('/trace/run')
+    await waitForHops('step-one', 'step-two')
+    const steps = tracer.spans.filter(
+      (span) => span.attributes['pikku.workflow.step'] !== undefined
+    )
+    assert.equal(steps.length, 2, JSON.stringify(steps.map((s) => s.name)))
+    for (const step of steps) {
+      assert.equal(step.kind, 'consumer')
+      assert.equal(step.name, 'traceJob')
+      assert.equal(typeof step.attributes['pikku.workflow.run_id'], 'string')
+    }
+    assert.notEqual(
+      steps[0]!.attributes['pikku.workflow.step'],
+      steps[1]!.attributes['pikku.workflow.step']
+    )
+    assert.equal(
+      steps[0]!.attributes['pikku.workflow.run_id'],
+      steps[1]!.attributes['pikku.workflow.run_id']
+    )
   })
 })

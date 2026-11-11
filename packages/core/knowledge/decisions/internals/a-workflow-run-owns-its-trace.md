@@ -44,3 +44,9 @@ need to read the run before its first log line. Sleep wake-ups pass it to
 
 An agent's tool calls build a fresh wire in `agent-prepare.ts`, so an agent step
 keeps the run's trace up to the agent, and its tools do not.
+
+The span of a step is told apart from the calls its function makes: `runTraceWire`
+marks the trace object it builds for a step with its run and step (`markWorkflowStep`),
+and the function runner reads the mark off `wire.trace`, never off the wire, since a
+nested call copies the step's wire. Only that span is a `consumer` carrying
+`pikku.workflow.run_id` and `pikku.workflow.step`.

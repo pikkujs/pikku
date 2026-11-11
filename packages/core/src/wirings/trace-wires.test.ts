@@ -1,6 +1,7 @@
 import { beforeEach, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { addFunction, runPikkuFunc } from '../function/function-runner.js'
+import { RecordingTracer } from '../testing/recording-tracer.js'
 import {
   traceSchedulerService,
   traceWebhookService,
@@ -94,6 +95,49 @@ describe('services a function holds', () => {
     await scheduler.scheduleRPC(10, 'later', {}, undefined, OTHER_TRACEPARENT)
     assert.equal(calls[0]![4], CALLER_TRACEPARENT)
     assert.equal(calls[1]![4], OTHER_TRACEPARENT)
+  })
+
+  test('scheduleRPC and webhook send are producer spans without payload or url', async () => {
+    const tracer = new RecordingTracer()
+    const tracing = { tracer, logger }
+    const calls: unknown[][] = []
+    const scheduler = traceSchedulerService(
+      {
+        scheduleRPC: async (...args: unknown[]) => {
+          calls.push(args)
+          return 'task-1'
+        },
+      } as any,
+      wire,
+      tracing
+    )
+    await scheduler.scheduleRPC(10, 'later', { secret: 'payload' })
+    const sent: any[] = []
+    const webhooks = traceWebhookService(
+      { send: async (input: any) => (sent.push(input), { jobId: 'j' }) } as any,
+      wire,
+      tracing
+    )
+    await webhooks.send({
+      url: 'https://example.com/hook?token=abc',
+      event: 'order.paid',
+      data: { secret: 'payload' },
+    })
+    const [schedule, send] = tracer.spans
+    assert.equal(schedule!.name, 'scheduler.schedule')
+    assert.equal(schedule!.kind, 'producer')
+    assert.equal(schedule!.attributes['messaging.destination.name'], 'later')
+    assert.equal(calls[0]![4], `00-${schedule!.traceId}-${schedule!.spanId}-01`)
+    assert.equal(send!.name, 'webhook.send')
+    assert.equal(send!.attributes['messaging.system'], 'pikku')
+    assert.equal(sent[0].traceparent, `00-${send!.traceId}-${send!.spanId}-01`)
+    for (const span of tracer.spans) {
+      assert.equal(span.parentSpanId, CALLER.spanId)
+      const text = JSON.stringify(span, (_, v) =>
+        typeof v === 'bigint' ? String(v) : v
+      )
+      assert.ok(!text.includes('payload') && !text.includes('token=abc'))
+    }
   })
 
   test('a webhook delivery job is traced, and the receiver sees no trace', async () => {

@@ -11,9 +11,10 @@ Every hop gets a new span, and a function called over `rpc` is a hop even though
 it stays in the process. Sharing the caller's span made two functions
 indistinguishable in a trace, so `rpc()` gives the local function a child span.
 
-A mesh or remote addon call does not make one. Nothing records the span of a call
-that only leaves the process, so naming it as the callee's parent would point at
-a span nobody saw. The callee's parent is the function that called.
+A call through the `DeploymentService` (mesh, or an unregistered function that
+falls back to it) is a `client` span `rpc.call <name>` under the caller, and the
+remote callee is that span's child. The local callee adds nothing extra: it is
+already its own span. A remote addon call over HTTP does not make one yet.
 
 `rpcWithWire` leaves the wire alone. A workflow passes the span of the step, and
 [a run owns its trace](a-workflow-run-owns-its-trace.md).
