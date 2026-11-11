@@ -47,6 +47,12 @@ const ALLOW_LIST_KINDS: Record<string, AttributeKind> = {
  */
 const PLUGIN_PREFIXES = ['db.']
 
+/** The only attributes a span event may carry: the redacted class and message of an error. */
+const EVENT_ATTRIBUTE_KEYS = ['exception.type', 'exception.message']
+
+/** An event name is a short dotted identifier; anything else is data. */
+const EVENT_NAME = /^[a-z][a-z0-9_.]{0,63}$/
+
 /** More distinct keys than this in one process means keys built from data. */
 const MAX_KEYS = 512
 
@@ -100,6 +106,31 @@ export class AttributeTypes {
       const coerced = this.to(expected, kind, value)
       if (coerced === undefined) this.dropped++
       else out[key] = coerced
+    }
+    return out
+  }
+
+  /**
+   * `events` with only what an event may carry: an event whose name is not a
+   * short identifier is dropped whole, and an attribute other than
+   * `exception.type` and `exception.message` is dropped. Each drop is counted.
+   */
+  events<
+    E extends { name: string; attributes?: Record<string, SpanAttributeValue> },
+  >(events: readonly E[]): E[] {
+    const out: E[] = []
+    for (const event of events) {
+      if (!EVENT_NAME.test(event.name)) {
+        this.dropped++
+        continue
+      }
+      const kept: Record<string, SpanAttributeValue> = {}
+      for (const [key, value] of Object.entries(event.attributes ?? {})) {
+        if (EVENT_ATTRIBUTE_KEYS.includes(key) && typeof value === 'string')
+          kept[key] = value
+        else this.dropped++
+      }
+      out.push({ ...event, attributes: kept })
     }
     return out
   }

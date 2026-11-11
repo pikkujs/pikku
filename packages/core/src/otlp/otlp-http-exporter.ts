@@ -142,6 +142,7 @@ export class OtlpHttpExporter {
       spans.map((span) => ({
         ...span,
         attributes: this.types.coerce(span.attributes),
+        ...(span.events ? { events: this.types.events(span.events) } : {}),
       }))
     )
   }

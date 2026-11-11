@@ -298,7 +298,7 @@ describe('OtlpLogger', () => {
     assert.ok(out.includes('done'))
   })
 
-  test('scrubbing stays fast on 1 MB of hostile text', async () => {
+  test('scrubbing is bounded by the clip, not the input size, on hostile text', async () => {
     const MB = 1 << 20
     const rep = (unit: string) => unit.repeat(Math.ceil(MB / unit.length))
     const shapes: Record<string, string> = {
@@ -315,17 +315,30 @@ describe('OtlpLogger', () => {
       '=': '='.repeat(MB),
       quotes: '"'.repeat(MB),
     }
+    // No wall-clock budget, which a loaded machine breaks: doubling the input
+    // must not change the work, because scrubbing clips it first. A quadratic
+    // scrub would take about four times as long. The best of three runs
+    // discards scheduler noise.
+    const best = (run: () => unknown) => {
+      let fastest = Infinity
+      for (let n = 0; n < 3; n++) {
+        const start = performance.now()
+        run()
+        fastest = Math.min(fastest, performance.now() - start)
+      }
+      return fastest
+    }
     for (const [name, text] of Object.entries(shapes)) {
-      const start = performance.now()
-      const out = scrubText(text)
-      const ms = performance.now() - start
-      assert.ok(ms < 20, `${name}: ${ms.toFixed(1)} ms`)
-      assert.ok(out.length <= SCRUB_INPUT_LIMIT * 4, name)
+      assert.ok(scrubText(text).length <= SCRUB_INPUT_LIMIT * 4, name)
+      const single = best(() => scrubText(text))
+      const double = best(() => scrubText(text + text))
+      assert.ok(
+        double < Math.max(single * 3, 5),
+        `${name}: ${single.toFixed(1)} ms for 1 MB, ${double.toFixed(1)} ms for 2 MB`
+      )
     }
     const { logger, sent } = setup({ fields: true })
-    const start = performance.now()
     logger.info({ message: shapes.hex, blob: shapes.base64 })
-    assert.ok(performance.now() - start < 100)
     const [record] = await sent()
     assert.ok(record!.attributes.blob !== undefined)
   })

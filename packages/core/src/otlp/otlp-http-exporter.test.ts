@@ -250,7 +250,8 @@ describe('OtlpHttpExporter', () => {
   })
 
   test('a failing endpoint after a lost batch gets one extras-only metrics attempt per flush', async () => {
-    const { exporter, calls } = harness(['throw'])
+    // No background flush: only the explicit ones below send.
+    const { exporter, calls } = harness(['throw'], { flushIntervalMs: 60_000 })
     exporter.exportSpans([span('lost')])
     await exporter.flush()
     const metricCalls = () => calls.filter((c) => c.url.endsWith('/v1/metrics'))
@@ -460,6 +461,36 @@ describe('OtlpHttpExporter', () => {
     assert.deepEqual(dropped.points[0]!.attributes.signal, {
       string: 'span_attributes',
     })
+  })
+
+  test('a span event keeps only exception.type and exception.message and a short identifier name', async () => {
+    const { exporter, calls } = harness()
+    const event = (name: string, attributes: Record<string, string>) => ({
+      name,
+      timeUnixNano: 1n,
+      attributes,
+    })
+    exporter.exportSpans([
+      {
+        ...span('a'),
+        events: [
+          event('exception', {
+            'exception.type': 'TypeError',
+            'exception.message': 'm',
+            'user.email': 'a@example.com',
+          }),
+          event('user a@example.com did x', {}),
+        ],
+      },
+    ])
+    await exporter.flush()
+    const [decoded] = decodeTraces(calls[0]!.body).items
+    assert.equal(decoded!.events.length, 1)
+    assert.deepEqual(Object.keys(decoded!.events[0]!.attributes).sort(), [
+      'exception.message',
+      'exception.type',
+    ])
+    assert.equal(exporter.stats.attributesDropped, 2)
   })
 
   test('close flushes what is queued and then refuses more, never rejecting', async () => {

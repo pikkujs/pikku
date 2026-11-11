@@ -21,7 +21,9 @@ already holds. `otlp/attribute-types.ts` fixes each key's column type.
 The exporter enforces the list too: `AttributeTypes.coerce` drops any key that is
 neither listed nor under a plugin prefix (`db.`, the Kysely plugin's open-ended
 family), and counts it in `pikku.telemetry.dropped` with `signal=span_attributes`.
-A key a user plugin invents on its own span is therefore dropped unless core adds
+Span events are held to the same rule: an event may carry only `exception.type`
+and `exception.message`, and its name must be a short lowercase dotted
+identifier; anything else is dropped and counted in the same counter. A key a user plugin invents on its own span is therefore dropped unless core adds
 its prefix by name; there is no opt-in for user prefixes.
 
 Nothing is derived from function input, query parameters, headers, cookies or the
