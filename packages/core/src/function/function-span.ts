@@ -187,26 +187,41 @@ export const runInFunctionSpan = <T>(
   if (!open?.tracer.runInSpan || disabled.has(open.tracer)) return fn()
   let started = false
   let outcome: Promise<T> | undefined
-  // Whoever calls first starts fn; any later call gets the same promise.
+  // Whoever calls first starts fn; any later call gets the same promise. A
+  // synchronous throw becomes a rejection, like an async function's.
   const once = (): Promise<T> => {
     if (!started) {
       started = true
-      outcome = fn()
+      try {
+        outcome = fn()
+      } catch (error) {
+        outcome = Promise.reject(error)
+      }
     }
     return outcome as Promise<T>
   }
   try {
     const result = open.tracer.runInSpan(open.span, once)
+    // Whatever the tracer returns, a failure of its own is swallowed: it is
+    // disabled, and the function's outcome is the only thing the caller sees.
+    Promise.resolve(result).catch((error) => {
+      // The function's own rejection passing through is not the tracer's fault.
+      if (!outcome) return disable(open.tracer, open.logger, error)
+      outcome.then(
+        () => disable(open.tracer, open.logger, error),
+        (own) => {
+          if (own !== error) disable(open.tracer, open.logger, error)
+        }
+      )
+    })
     if (!started) {
-      // Returned without starting fn: the function must not be skipped.
       disable(
         open.tracer,
         open.logger,
         new Error('runInSpan returned without running the function')
       )
-      return once()
     }
-    return result
+    return once()
   } catch (error) {
     disable(open.tracer, open.logger, error)
     return once()

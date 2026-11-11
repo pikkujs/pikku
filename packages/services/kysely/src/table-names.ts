@@ -40,43 +40,185 @@ export function collectTableNames(node: unknown, out: Set<string>): void {
 /** The only shape of identifier whose text is recorded. */
 export const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/
 
-/** Nodes whose compiled text can hold caller-supplied literal text. */
+const KNOWN_KINDS = new Set(
+  (
+    'AddColumnNode AddConstraintNode AddIndexNode AddValueNode AggregateFunctionNode AliasNode ' +
+    'AlterColumnNode AlterTableNode AlterTypeNode AndNode BinaryOperationNode CaseNode CastNode ' +
+    'CheckConstraintNode CollateNode ColumnDefinitionNode ColumnNode ColumnUpdateNode ' +
+    'CommonTableExpressionNameNode CommonTableExpressionNode CreateIndexNode CreateSchemaNode ' +
+    'CreateTableNode CreateTypeNode CreateViewNode DataTypeNode DefaultInsertValueNode ' +
+    'DefaultValueNode DeleteQueryNode DropColumnNode DropConstraintNode DropIndexNode ' +
+    'DropSchemaNode DropTableNode DropTypeNode DropViewNode ExplainNode FetchNode ' +
+    'ForeignKeyConstraintNode FromNode FunctionNode GeneratedNode GroupByItemNode GroupByNode ' +
+    'HavingNode IdentifierNode InsertQueryNode JoinNode JSONOperatorChainNode JSONPathLegNode ' +
+    'JSONPathNode JSONReferenceNode LimitNode ListNode MatchedNode MergeQueryNode ' +
+    'ModifyColumnNode OffsetNode OnConflictNode OnDuplicateKeyNode OnNode OperatorNode ' +
+    'OrActionNode OrderByItemNode OrderByNode OrNode OutputNode OverNode ParensNode ' +
+    'PartitionByItemNode PartitionByNode PrimaryKeyConstraintNode PrimitiveValueListNode RawNode ' +
+    'ReferenceNode ReferencesNode RefreshMaterializedViewNode RenameColumnNode ' +
+    'RenameConstraintNode RenameValueNode ReturningNode SchemableIdentifierNode SelectAllNode ' +
+    'SelectionNode SelectModifierNode SelectQueryNode SetOperationNode TableNode TopNode ' +
+    'TupleNode UnaryOperationNode UniqueConstraintNode UpdateQueryNode UsingNode ValueListNode ' +
+    'ValueNode ValuesNode WhenNode WhereNode WithNode'
+  ).split(' ')
+)
+
+/** Kinds that carry caller-controllable text no pattern can vouch for. */
 const INLINE_KINDS = new Set(['RawNode', 'JSONPathNode', 'JSONPathLegNode'])
+
+/** Every keyword a node's own string field may hold (operators, modifiers, join types...). */
+const KEYWORDS = new Set([
+  ...[
+    '=',
+    '==',
+    '!=',
+    '<>',
+    '>',
+    '>=',
+    '<',
+    '<=',
+    'in',
+    'not in',
+    'is',
+    'is not',
+  ],
+  ...[
+    'like',
+    'not like',
+    'match',
+    'ilike',
+    'not ilike',
+    '@>',
+    '<@',
+    '^@',
+    '&&',
+  ],
+  ...[
+    '?',
+    '?&',
+    '?|',
+    '!<',
+    '!>',
+    '<=>',
+    '!~',
+    '~',
+    '~*',
+    '!~*',
+    '@@',
+    '@@@',
+    '!!',
+  ],
+  ...['<->', 'regexp', 'is distinct from', 'is not distinct from'],
+  ...[
+    '+',
+    '-',
+    '*',
+    '/',
+    '%',
+    '^',
+    '&',
+    '|',
+    '#',
+    '<<',
+    '>>',
+    '||',
+    '->',
+    '->>',
+  ],
+  ...[
+    '->$',
+    '->>$',
+    'exists',
+    'not exists',
+    'not',
+    'between',
+    'between symmetric',
+  ],
+  ...['InnerJoin', 'LeftJoin', 'RightJoin', 'FullJoin', 'CrossJoin'],
+  ...['LateralInnerJoin', 'LateralLeftJoin', 'LateralCrossJoin', 'Using'],
+  ...[
+    'OuterApply',
+    'CrossApply',
+    'only',
+    'with ties',
+    'percent',
+    'percent with ties',
+  ],
+  ...[
+    'first',
+    'last',
+    'cascade',
+    'restrict',
+    'no action',
+    'set default',
+    'set null',
+  ],
+  ...['preserve rows', 'delete rows', 'drop'],
+  ...[
+    'ForUpdate',
+    'ForNoKeyUpdate',
+    'ForShare',
+    'ForKeyShare',
+    'NoWait',
+    'SkipLocked',
+    'Distinct',
+  ],
+  ...['text', 'json', 'xml', 'yaml', 'traditional', 'tree'],
+  ...['ignore', 'replace', 'abort', 'fail', 'rollback'],
+])
+
+const DATA_TYPES = new Set(
+  (
+    'varchar char text integer int2 int4 int8 smallint bigint boolean real double~precision float4 float8 ' +
+    'decimal numeric binary bytea date datetime time timetz timestamp timestamptz serial bigserial uuid ' +
+    'json jsonb datetime2 blob varbinary int4range int4multirange int8range int8multirange numrange ' +
+    'nummultirange tsrange tsmultirange tstzrange tstzmultirange daterange datemultirange'
+  )
+    .split(' ')
+    .map((t) => t.replace('~', ' '))
+)
+
+const isDataType = (value: string): boolean => {
+  const match = /^([a-z0-9 ]+?)(?:\(\d+(?:, \d+)?\))?$/.exec(value)
+  return match !== null && DATA_TYPES.has(match[1]!)
+}
 
 /**
  * True when the node tree can put caller text into the compiled SQL itself
  * rather than as a parameter: raw SQL, an immediate value (`sql.lit`), a JSON
- * path, or an identifier / function name outside {@link SAFE_IDENTIFIER}. Parameter values are not entered. Errs towards true.
+ * path, an identifier or function name outside {@link SAFE_IDENTIFIER}, or any
+ * node kind or string field this function has not classified. Parameter values
+ * are not entered. Fails closed: unknown means true.
  */
 export function hasInlineSql(node: unknown): boolean {
+  if (Array.isArray(node)) return node.some(hasInlineSql)
   if (!node || typeof node !== 'object') return false
-  const candidate = node as {
-    kind?: string
-    immediate?: unknown
-    name?: unknown
-    func?: unknown
+  const record = node as Record<string, unknown>
+  const kind = record.kind
+  if (kind !== undefined) {
+    if (typeof kind !== 'string' || !KNOWN_KINDS.has(kind)) return true
+    if (INLINE_KINDS.has(kind)) return true
+    if (kind === 'ValueNode') return record.immediate === true
+    if (kind === 'PrimitiveValueListNode') return false
   }
-  if (candidate.kind !== undefined) {
-    if (candidate.kind === 'IdentifierNode')
-      return !(
-        typeof candidate.name === 'string' &&
-        SAFE_IDENTIFIER.test(candidate.name)
-      )
-    if (candidate.kind === 'FunctionNode')
-      return typeof candidate.func !== 'string' ||
-        !SAFE_IDENTIFIER.test(candidate.func)
-        ? true
-        : Object.values(node as object).some((v) =>
-            Array.isArray(v) ? v.some(hasInlineSql) : hasInlineSql(v)
-          )
-    if (INLINE_KINDS.has(candidate.kind)) return true
-    if (candidate.kind === 'ValueNode') return candidate.immediate === true
-    if (candidate.kind === 'PrimitiveValueListNode') return false
-  }
-  for (const value of Object.values(node as Record<string, unknown>)) {
-    if (Array.isArray(value)) {
-      if (value.some(hasInlineSql)) return true
-    } else if (hasInlineSql(value)) return true
+  for (const [key, value] of Object.entries(record)) {
+    if (key === 'kind') continue
+    if (typeof value === 'string') {
+      if (key === 'name' && kind === 'IdentifierNode') {
+        if (!SAFE_IDENTIFIER.test(value)) return true
+      } else if (
+        key === 'func' &&
+        (kind === 'FunctionNode' || kind === 'AggregateFunctionNode')
+      ) {
+        if (!SAFE_IDENTIFIER.test(value)) return true
+      } else if (key === 'dataType' && kind === 'DataTypeNode') {
+        if (!isDataType(value)) return true
+      } else if (!KEYWORDS.has(value)) {
+        return true
+      }
+    } else if (hasInlineSql(value)) {
+      return true
+    }
   }
   return false
 }

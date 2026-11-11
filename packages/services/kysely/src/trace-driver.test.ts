@@ -268,6 +268,100 @@ describe('traceDialect with real SQLite', () => {
     assert.ok(!json.includes('ZQX'), 'identifier leaked into a span')
   })
 
+  test('aggregate function names and other free-text node fields drop the text', async () => {
+    const tracer = new RecordingTracer()
+    const db = await make({
+      tracer,
+      currentTrace: here(createTrace()),
+      recordSqlText: true,
+    })
+    tracer.spans.length = 0
+    const M = 'LEAK-m@rk'
+    const d = db as any
+    const cases: Array<() => Promise<unknown>> = [
+      () =>
+        d
+          .selectFrom('todos')
+          .select((eb: any) => eb.fn.agg(M, ['id']).as('x'))
+          .execute(),
+      () =>
+        d
+          .selectFrom('todos')
+          .select((eb: any) =>
+            eb.fn
+              .agg('count', ['id'])
+              .over((ob: any) => ob.partitionBy(M))
+              .as('x')
+          )
+          .execute(),
+      () => d.selectFrom('todos').selectAll().where('id', M, 1).execute(),
+      () => d.selectFrom('todos').selectAll().collate?.(M),
+      () =>
+        d
+          .selectFrom('todos')
+          .select(sql`cast(id as ${sql.raw(M)})`.as('x'))
+          .execute(),
+      () => d.selectFrom('todos').selectAll().modifyEnd(sql.raw(M)).execute(),
+      () => d.selectFrom('todos').selectAll().orderBy('id', M).execute(),
+      () => d.selectFrom('todos').selectAll().innerJoin(M, 'a', 'b').execute(),
+      () => d.selectFrom('todos').selectAll().orderBy(M).execute(),
+      () => d.selectFrom('todos').select(M).execute(),
+      () => d.selectFrom('todos').select(`todos.${M}`).execute(),
+      () => d.selectFrom('todos').select(`${M}.id`).execute(),
+      () =>
+        d
+          .insertInto('todos')
+          .values({ [M]: 1 })
+          .execute(),
+      () =>
+        d
+          .updateTable('todos')
+          .set({ [M]: 1 })
+          .execute(),
+      () =>
+        d
+          .insertInto('todos')
+          .values({ title: 'a' })
+          .onConflict((oc: any) => oc.column(M).doNothing())
+          .execute(),
+    ]
+    for (const run of cases) await (async () => run())().catch(() => {})
+    const json = JSON.stringify(tracer.spans, (_k, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    )
+    assert.ok(tracer.spans.length >= 10)
+    assert.ok(!json.includes('LEAK-m@rk'), 'marker leaked into a span')
+  })
+
+  test('hasInlineSql fails closed on an unknown kind or unclassified string field', () => {
+    assert.equal(hasInlineSql({ kind: 'MysteryNode' }), true)
+    assert.equal(
+      hasInlineSql({ kind: 'AggregateFunctionNode', func: 'a b' }),
+      true
+    )
+    assert.equal(
+      hasInlineSql({ kind: 'AggregateFunctionNode', func: 'count' }),
+      false
+    )
+    assert.equal(hasInlineSql({ kind: 'OperatorNode', operator: 'x y' }), true)
+    assert.equal(hasInlineSql({ kind: 'OperatorNode', operator: '=' }), false)
+    assert.equal(
+      hasInlineSql({ kind: 'DataTypeNode', dataType: 'varchar(20)' }),
+      false
+    )
+    assert.equal(hasInlineSql({ kind: 'DataTypeNode', dataType: 'evil' }), true)
+    assert.equal(
+      hasInlineSql({ kind: 'OrActionNode', action: 'ignore' }),
+      false
+    )
+    assert.equal(hasInlineSql({ kind: 'OrActionNode', action: 'zz' }), true)
+    assert.equal(
+      hasInlineSql({ kind: 'JoinNode', joinType: 'LeftJoin' }),
+      false
+    )
+    assert.equal(hasInlineSql({ kind: 'JoinNode', joinType: 'nope' }), true)
+  })
+
   test('a pattern-conforming dynamic identifier IS recorded (documented limitation)', async () => {
     const tracer = new RecordingTracer()
     const db = await make({
