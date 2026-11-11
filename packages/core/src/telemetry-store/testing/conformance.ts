@@ -369,6 +369,39 @@ export const conformance = (
         }
       )
 
+      test(
+        'groups with equal counts put the more recent first',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          await ingest(s, {
+            spans: [
+              span({
+                id: '1',
+                traceId: t('1'),
+                status: 'error',
+                statusMessage: 'old',
+                startAt: NOW - 5 * MIN,
+                attributes: fn('older'),
+              }),
+              span({
+                id: '2',
+                traceId: t('2'),
+                status: 'error',
+                statusMessage: 'new',
+                startAt: NOW - 1 * MIN,
+                attributes: fn('newer'),
+              }),
+            ],
+          })
+          const rows = await store.failures(s, { since: NOW - 10 * MIN })
+          assert.deepEqual(
+            rows.map((r) => r.functionId),
+            ['newer', 'older']
+          )
+        }
+      )
+
       test('returns at most 50 groups by default', spanTest, async () => {
         const s = freshScope()
         await ingest(s, {
@@ -530,6 +563,34 @@ export const conformance = (
         )
         assert.ok(sum.traffic.every((b) => b.requests === 2))
       })
+
+      test(
+        'bucket width rounds up when the range does not divide',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const since = NOW - 1000
+          // 100 ms over 30 buckets: width is ceil(3.33) = 4, not 3.
+          await ingest(s, {
+            spans: [0, 4, 99].map((offset, i) =>
+              span({
+                id: String(i + 1),
+                traceId: String(i + 1).padStart(32, '0'),
+                startAt: since + offset,
+              })
+            ),
+          })
+          const sum = await store.metricsSummary(s, {
+            since,
+            until: since + 100,
+            buckets: 30,
+          })
+          assert.deepEqual(
+            sum.traffic.map((b) => b.at),
+            [since, since + 4, since + 96]
+          )
+        }
+      )
 
       test(
         'an empty window summarises to nulls, not zeros or NaN',
@@ -753,6 +814,41 @@ export const conformance = (
         assert.deepEqual(
           [...seen].sort(),
           Array.from({ length: 7 }, (_, i) => `line ${i}`)
+        )
+      })
+
+      test('limit caps a page and the cursor continues after it', async () => {
+        const s = freshScope()
+        await ingest(s, {
+          logs: Array.from({ length: 5 }, (_, i) =>
+            log({ at: NOW - (10 - i) * MIN, body: `line ${i}` })
+          ),
+        })
+        const first = await store.tail(s, null, { limit: 2 })
+        assert.deepEqual(
+          first.records.map((r) => r.body),
+          ['line 0', 'line 1']
+        )
+        const second = await store.tail(s, first.cursor, { limit: 2 })
+        assert.deepEqual(
+          second.records.map((r) => r.body),
+          ['line 2', 'line 3']
+        )
+      })
+
+      test('returns at most 100 records by default', async () => {
+        const s = freshScope()
+        await ingest(s, {
+          logs: Array.from({ length: 101 }, (_, i) =>
+            log({ at: NOW - 200_000 + i * 1000, body: `n${i}` })
+          ),
+        })
+        const page = await store.tail(s, null, {})
+        assert.equal(page.records.length, 100)
+        const rest = await store.tail(s, page.cursor, {})
+        assert.deepEqual(
+          rest.records.map((r) => r.body),
+          ['n100']
         )
       })
 
