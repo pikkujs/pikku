@@ -155,6 +155,16 @@ await check('a remote host without credentials is refused', () =>
     /not this machine/
   )
 )
+await check('a remote http address is refused even with credentials', () =>
+  refusesToStart(
+    {
+      PIKKU_GREPTIME_URL: 'http://greptime.invalid:4000',
+      PIKKU_GREPTIME_USER: 'u',
+      PIKKU_GREPTIME_PASSWORD: 'p',
+    },
+    /must be https/
+  )
+)
 await check(
   'an address nothing listens on stops the start, not the first request',
   async () => {

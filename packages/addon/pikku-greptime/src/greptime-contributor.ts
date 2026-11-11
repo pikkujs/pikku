@@ -1,13 +1,15 @@
 import type { Contributor } from '@pikku/core/contributors'
 import {
   GreptimeTelemetryStore,
+  checkTimeoutMs,
+  isLoopbackHost,
+  parseGreptimeUrl,
   type GreptimeStoreOptions,
 } from './greptime-store.js'
+import { databaseName } from './greptime-sql.js'
 import { startRetentionJob } from './retention.js'
 
 type Env = Record<string, string | undefined>
-
-const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]', '::1'])
 
 const required = (env: Env, name: string, why: string): string => {
   const value = env[name]
@@ -28,9 +30,12 @@ export const greptimeOptionsFromEnv = (env: Env): GreptimeStoreOptions => {
   const url = required(env, 'PIKKU_GREPTIME_URL', 'the GreptimeDB HTTP address')
   let host: string
   try {
-    host = new URL(url).hostname
-  } catch {
-    throw new Error(`PIKKU_GREPTIME_URL '${url}' is not a URL`)
+    // Its errors never contain the value: it may carry a password.
+    host = parseGreptimeUrl(url).hostname
+  } catch (error) {
+    throw new Error(
+      `PIKKU_GREPTIME_URL is not usable: ${(error as Error).message}`
+    )
   }
   const username = env.PIKKU_GREPTIME_USER || undefined
   const password = env.PIKKU_GREPTIME_PASSWORD || undefined
@@ -39,18 +44,35 @@ export const greptimeOptionsFromEnv = (env: Env): GreptimeStoreOptions => {
       'Set both PIKKU_GREPTIME_USER and PIKKU_GREPTIME_PASSWORD, or neither.'
     )
   }
-  if (!username && !LOOPBACK.has(host)) {
+  if (!username && !isLoopbackHost(host)) {
     throw new Error(
       `PIKKU_GREPTIME_URL points at ${host}, which is not this machine, so PIKKU_GREPTIME_USER and PIKKU_GREPTIME_PASSWORD are required.`
     )
   }
   const timeout = env.PIKKU_GREPTIME_TIMEOUT_MS
+  let timeoutMs: number | undefined
+  if (timeout) {
+    try {
+      if (!/^\d{1,9}$/.test(timeout)) throw new TypeError('not a number')
+      timeoutMs = checkTimeoutMs(Number(timeout))
+    } catch {
+      throw new Error(
+        `PIKKU_GREPTIME_TIMEOUT_MS '${timeout.slice(0, 20)}' must be a whole number of milliseconds from 1 to 120000`
+      )
+    }
+  }
+  const database = env.PIKKU_GREPTIME_DB || 'pikku'
+  try {
+    databaseName(database)
+  } catch (error) {
+    throw new Error(`PIKKU_GREPTIME_DB: ${(error as Error).message}`)
+  }
   return {
     url,
-    database: env.PIKKU_GREPTIME_DB || 'pikku',
+    database,
     username,
     password,
-    timeoutMs: timeout ? Number(timeout) : undefined,
+    timeoutMs,
     ttl: env.PIKKU_GREPTIME_TTL || undefined,
   }
 }

@@ -32,9 +32,22 @@ start and not the first request. `onServerStop` closes the store.
 
 - `PIKKU_GREPTIME_URL` is required. There is no fallback to the in-memory store.
 - `PIKKU_GREPTIME_USER` and `PIKKU_GREPTIME_PASSWORD` are both set or both absent.
-- A host that is not loopback needs the credentials.
+- A host that is not loopback needs the credentials, and must be https even with them:
+  an http remote is refused. Credentials inside the URL are refused too, and no error
+  ever contains the URL value.
 - `PIKKU_GREPTIME_DB` (default `pikku`), `PIKKU_GREPTIME_TTL` (applied only when the
-  database is created) and `PIKKU_GREPTIME_TIMEOUT_MS` (default 5000) are optional.
+  database is created) and `PIKKU_GREPTIME_TIMEOUT_MS` (whole milliseconds, 1 to 120000,
+  default 5000) are optional. The database name is lowercase, at most 63 characters and
+  not a reserved name.
+- Requests never follow redirects, a response body is capped at 16 MiB, and one
+  `metrics()` call reads at most 100 tables, four at a time.
+- Metric writes refuse a point attribute that names a scope or engine column
+  (`pikku.*`, `greptime_*`, `otel_*`, `deployment.environment*`, `service.*`, `job`) and a
+  metric name that would land in a table the store uses (`opentelemetry_*`, `greptime_*`,
+  `pikku_project_tombstones`). The scope tags are set last.
+- The tombstone table is created with the database. If it exists but cannot be read,
+  reads fail with a `TelemetryQueryError` naming it (never "nobody deleted anything"),
+  while writes, retention and `deleteProject` keep working.
 - A store that cannot reach GreptimeDB, or is refused its credentials, throws
   `TelemetryUnavailableError` (reason `unreachable`, `timeout`, `auth` or `server`). It
   never answers an empty list for a failed query. A statement GreptimeDB rejects is a

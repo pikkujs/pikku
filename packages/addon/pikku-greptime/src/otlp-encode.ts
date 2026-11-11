@@ -220,12 +220,22 @@ const envelope = (
 }
 
 const checkId = (what: string, id: string, length: number): string => {
-  if (!new RegExp(`^[0-9a-f]{${length}}$`).test(id)) {
+  if (!new RegExp(`^[0-9a-fA-F]{${length}}$`).test(id)) {
     throw new TypeError(
-      `${what} must be ${length} lowercase hex characters, got '${id}'`
+      `${what} must be ${length} hex characters, got '${id.slice(0, 40)}'`
     )
   }
-  return id
+  return id.toLowerCase()
+}
+
+/**
+ * A log line's id as bytes, or nothing. A line's ids come from text nobody
+ * validated (a stdout line), and one bad id must not cost the rest of the
+ * batch, so an id that is not hex of the right length is left off the record.
+ */
+const optionalId = (id: string | undefined, length: number) => {
+  if (!id || !new RegExp(`^[0-9a-fA-F]{${length}}$`).test(id)) return undefined
+  return unhex(id.toLowerCase())
 }
 
 export const encodeLogs = (
@@ -240,12 +250,10 @@ export const encodeLogs = (
         log.string(3, record.severity)
         writeValue(log, 5, record.body)
         writeAttributes(log, 6, record.attributes)
-        if (record.traceId) {
-          log.raw(9, unhex(checkId('traceId', record.traceId, 32)))
-        }
-        if (record.spanId) {
-          log.raw(10, unhex(checkId('spanId', record.spanId, 16)))
-        }
+        const traceId = optionalId(record.traceId, 32)
+        if (traceId) log.raw(9, traceId)
+        const spanId = optionalId(record.spanId, 16)
+        if (spanId) log.raw(10, spanId)
         log.fixed64(11, record.timeUnixNano)
       })
     }
