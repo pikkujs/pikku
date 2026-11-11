@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3415 observable things**: 1161 exported names, plus
-2254 members on the classes and interfaces among them, reachable
+**3416 observable things**: 1161 exported names, plus
+2255 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -32,7 +32,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
-| `./contributors` | 15 | 15 | 20 |
+| `./contributors` | 15 | 15 | 21 |
 | `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
@@ -6733,6 +6733,7 @@ export interface ContributorPlatform {
   needsAgent: boolean
   runtimeServices?: string[]
   db?: ContributorDb
+  provider?: string
 }
 export type ContributorTarget = 'dev' | 'deploy'
 export interface ContributorVariants< TServices = any, TPlatform extends ContributorPlatform = ContributorPlatform, > {

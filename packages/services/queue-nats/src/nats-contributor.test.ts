@@ -4,7 +4,15 @@ import assert from 'node:assert/strict'
 import { createNatsDeploy, natsOptionsFromEnv } from './nats-contributor.js'
 import { contributors } from './contributors.js'
 
-const env = { NATS_URL: 'nats://localhost:4222', PIKKU_APP_SLUG: 'shop' }
+const env = {
+  NATS_URL: 'nats://localhost:4222',
+  NATS_USER: 'shop-prod',
+  NATS_PASSWORD: 'secret',
+  PIKKU_PROJECT: 'shop',
+  PIKKU_STAGE: 'prod',
+}
+const without = (name: string) =>
+  Object.fromEntries(Object.entries(env).filter(([key]) => key !== name))
 
 const fakeFactory = () => {
   const calls: string[] = []
@@ -37,12 +45,23 @@ describe('nats contributor registration', () => {
     assert.equal('dev' in contributors.nats, false)
   })
 
-  test('is selected only when the app uses the queue', () => {
+  test('is selected only for a standalone deploy that uses the queue', () => {
     const nats = createNatsDeploy()
-    const platform = (needsQueue: boolean) =>
-      ({ serviceNames: [], needsQueue }) as any
-    assert.equal(nats.when!(platform(true)), true)
-    assert.equal(nats.when!(platform(false)), false)
+    const platform = (needsQueue: boolean, provider?: string) =>
+      ({ serviceNames: [], needsQueue, provider }) as any
+    assert.equal(nats.when!(platform(true, 'standalone')), true)
+    assert.equal(nats.when!(platform(false, 'standalone')), false)
+  })
+
+  test('is not selected for another provider, or when the provider is unknown', () => {
+    const nats = createNatsDeploy()
+    for (const provider of ['cloudflare', 'aws', 'azure', '', undefined]) {
+      assert.equal(
+        nats.when!({ serviceNames: [], needsQueue: true, provider } as any),
+        false,
+        String(provider)
+      )
+    }
   })
 
   test('replaces the baseline queue and scheduler and exposes the factory', () => {
@@ -55,52 +74,74 @@ describe('nats contributor registration', () => {
 })
 
 describe('natsOptionsFromEnv', () => {
-  test('derives stream and prefix from the app slug alone', () => {
+  test('names the subjects, consumers and inbox after project and stage, and attaches to the shared stream', () => {
     const options = natsOptionsFromEnv(env)
-    assert.equal(options.streamName, 'pikku-shop')
-    assert.equal(options.subjectPrefix, 'pikku.shop')
+    assert.equal(options.streamName, 'PIKKU')
+    assert.equal(options.subjectPrefix, 'pikku.shop.prod')
+    assert.equal(options.consumerNamePrefix, 'shop_prod_')
+    assert.equal(options.inboxPrefix, '_INBOX.shop.prod')
+    assert.equal(options.attachToStream, true)
     assert.deepEqual(options.servers, ['nats://localhost:4222'])
   })
 
-  test('the same slug gives the same names whatever else changes', () => {
-    assert.deepEqual(
-      natsOptionsFromEnv({ ...env, NATS_TOKEN: 'a' }).streamName,
-      natsOptionsFromEnv({ ...env, NATS_TOKEN: 'b' }).streamName
+  test('the stream name can be overridden, nothing else about the naming can', () => {
+    assert.equal(
+      natsOptionsFromEnv({ ...env, NATS_STREAM: 'OTHER' }).streamName,
+      'OTHER'
     )
   })
 
-  test('refuses a missing NATS_URL', () => {
-    assert.throws(
-      () => natsOptionsFromEnv({ PIKKU_APP_SLUG: 'shop' }),
-      /needs NATS_URL.*never falls back to the in-memory queue/
-    )
+  test('passes the user and password to the connection', () => {
+    const options = natsOptionsFromEnv(env)
+    assert.equal(options.user, 'shop-prod')
+    assert.equal(options.pass, 'secret')
   })
 
-  test('refuses a missing PIKKU_APP_SLUG', () => {
-    assert.throws(
-      () => natsOptionsFromEnv({ NATS_URL: env.NATS_URL }),
-      /needs PIKKU_APP_SLUG/
-    )
-  })
-
-  test('refuses a slug that cannot be a stream name or subject token', () => {
-    for (const bad of ['a.b', 'a b', 'Shop', '-x', 'a>', 'a*']) {
+  for (const name of Object.keys(env).filter((key) => key !== 'NATS_STREAM')) {
+    test(`refuses a missing ${name}, without falling back to the in-memory queue`, () => {
       assert.throws(
-        () => natsOptionsFromEnv({ ...env, PIKKU_APP_SLUG: bad }),
-        /not usable in a NATS stream name/,
-        bad
+        () => natsOptionsFromEnv(without(name)),
+        new RegExp(`needs ${name}.*never falls back to the in-memory queue`)
       )
+    })
+  }
+
+  test('refuses a project or stage that is not one safe subject token', () => {
+    for (const name of ['PIKKU_PROJECT', 'PIKKU_STAGE']) {
+      for (const bad of [
+        'a.b',
+        'a b',
+        'Shop',
+        '-x',
+        'x-',
+        'a--b',
+        'a_b',
+        'a>',
+        'a*',
+        '>',
+        'a'.repeat(64),
+      ]) {
+        assert.throws(
+          () => natsOptionsFromEnv({ ...env, [name]: bad }),
+          /not usable in a NATS subject/,
+          `${name}=${bad}`
+        )
+      }
     }
   })
 
-  test('passes credentials through when set', () => {
-    const options = natsOptionsFromEnv({
+  test('project and stage cannot be split differently to share a consumer prefix', () => {
+    const one = natsOptionsFromEnv({
       ...env,
-      NATS_USER: 'u',
-      NATS_PASSWORD: 'p',
+      PIKKU_PROJECT: 'a-b',
+      PIKKU_STAGE: 'c',
     })
-    assert.equal(options.user, 'u')
-    assert.equal(options.pass, 'p')
+    const two = natsOptionsFromEnv({
+      ...env,
+      PIKKU_PROJECT: 'a',
+      PIKKU_STAGE: 'b-c',
+    })
+    assert.notEqual(one.consumerNamePrefix, two.consumerNamePrefix)
   })
 })
 
