@@ -321,6 +321,21 @@ pikku db migrate    # applies it and regenerates the types
   })
   ```
 
+- **A column named like personal data or a credential, with no `security`,
+  warns** (PKU486 pii, PKU487 secret) on `pikku db migrate`. The column is
+  still `private`, which is the default for every unannotated column; the
+  warning asks you to say so. Whole-token matching on the name: `email`,
+  `phone`, `first_name`, `address`, `dob`, `ssn`, `ip`, `lat`/`lng` suggest
+  `security: 'pii'`; `password`, `api_key`, `token`, `client_secret`,
+  `credential` suggest `security: 'secret'` with `form: 'hashed'` (a value you
+  only verify) or `'wrapped'`/`'sealed'` (a value you read back; `wrapped` is
+  decrypted on read by the kysely plugin, writes go through
+  `ClassificationCrypto.encryptColumn()`). `name` warns only on person tables
+  (user, person, customer, member, contact, profile, employee, account holder).
+  Any explicit `security` silences it, `private` included, except `public` on a
+  pii-looking name. Booleans, dates and numbers, and names ending `_at`,
+  `_count`, `_id`, `_type`, `_ref`, `_verified`, are never flagged. Framework
+  tables are skipped. There is no config opt-out: annotate the column.
 - **An annotation typo is an error**, as is annotating a column the declaration
   doesn't have. `security` is `public`, `private`, `pii` or `secret`.
 - **`db check` and `db migrate` stop** when `db/tables.ts` is ahead of the

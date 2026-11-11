@@ -236,8 +236,8 @@
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/cli": "^0.12.207",
-        "@pikku/core": "^0.12.153",
+        "@pikku/cli": "^0.12.208",
+        "@pikku/core": "^0.12.154",
         "zod": "^4",
       },
     },
@@ -245,7 +245,7 @@
       "name": "@pikku/addon-cloud-cli",
       "version": "0.12.2",
       "dependencies": {
-        "@pikku/fetch": "^0.12.14",
+        "@pikku/fetch": "^0.12.15",
       },
       "devDependencies": {
         "@pikku/addon-changes-cli": "workspace:*",
@@ -256,8 +256,8 @@
       },
       "peerDependencies": {
         "@pikku/addon-changes-cli": "^0.12.2",
-        "@pikku/cli": "^0.12.207",
-        "@pikku/core": "^0.12.153",
+        "@pikku/cli": "^0.12.208",
+        "@pikku/core": "^0.12.154",
         "zod": "^4",
       },
     },
@@ -339,16 +339,16 @@
         "@electric-sql/pglite-pgvector": "0.0.11",
         "@jridgewell/trace-mapping": "^0.3.31",
         "@pikku/ai-vercel": "^0.12.16",
-        "@pikku/better-auth": "^0.12.63",
+        "@pikku/better-auth": "^0.12.64",
         "@pikku/bun-server": "^0.12.15",
-        "@pikku/code-edit": "^0.12.12",
-        "@pikku/core": "^0.12.153",
+        "@pikku/code-edit": "^0.12.13",
+        "@pikku/core": "^0.12.154",
         "@pikku/deploy": "^0.12.19",
         "@pikku/deploy-cloudflare": "^0.12.24",
         "@pikku/deploy-standalone": "^0.12.30",
-        "@pikku/fetch": "^0.12.14",
-        "@pikku/inspector": "^0.12.117",
-        "@pikku/inspector-go": "^0.12.11",
+        "@pikku/fetch": "^0.12.15",
+        "@pikku/inspector": "^0.12.118",
+        "@pikku/inspector-go": "^0.12.12",
         "@pikku/knowledge": "^0.12.22",
         "@pikku/kysely": "^0.13.42",
         "@pikku/migrator-sql": "^0.12.11",
@@ -356,7 +356,7 @@
         "@pikku/node-http-server": "^0.12.21",
         "@pikku/openapi-parser": "^0.12.26",
         "@pikku/schedule": "^0.12.12",
-        "@pikku/skills": "^0.12.71",
+        "@pikku/skills": "^0.12.72",
         "@pikku/websocket": "^0.12.6",
         "@types/cookie": "^1.0.0",
         "@types/json-schema": "^7.0.15",
@@ -422,7 +422,7 @@
       "name": "@pikku/code-edit",
       "version": "0.12.13",
       "dependencies": {
-        "@pikku/inspector-go": "^0.12.11",
+        "@pikku/inspector-go": "^0.12.12",
       },
       "devDependencies": {
         "@types/node": "^26.6.5",
@@ -1037,7 +1037,7 @@
         "vite": "^7.0.0",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.153",
+        "@pikku/core": "^0.12.154",
         "better-auth": "^1.7.5",
         "vite": "^5 || ^6 || ^7",
         "zod": "^4",
@@ -2082,6 +2082,16 @@
         "@pikku/inspector": "workspace:*",
         "@types/node": "^26",
         "pg": "^8.23.1",
+        "tsx": "^4.23.15",
+      },
+    },
+    "verifiers/column-security-lint": {
+      "name": "@pikku/verifiers-column-security-lint",
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@pikku/inspector": "workspace:*",
+        "@types/node": "^26",
         "tsx": "^4.23.15",
       },
     },
@@ -3638,6 +3648,8 @@
     "@pikku/verifiers-ci": ["@pikku/verifiers-ci@workspace:verifiers/ci"],
 
     "@pikku/verifiers-classification": ["@pikku/verifiers-classification@workspace:verifiers/classification"],
+
+    "@pikku/verifiers-column-security-lint": ["@pikku/verifiers-column-security-lint@workspace:verifiers/column-security-lint"],
 
     "@pikku/verifiers-db-schema": ["@pikku/verifiers-db-schema@workspace:verifiers/db-schema"],
 
