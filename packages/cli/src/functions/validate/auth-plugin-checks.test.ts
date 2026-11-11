@@ -27,17 +27,6 @@ const AUTH_WITH_BAN = [
   ')',
 ].join('\n')
 
-// pikkuBan() was named ban() until the plugins grew their pikku prefix. The
-// alias is still exported, so an app that never renamed its import must still
-// read as banning users.
-const AUTH_WITH_DEPRECATED_BAN_ALIAS = [
-  "import { pikkuBetterAuth, ban } from '@pikku/better-auth'",
-  "import { betterAuth } from 'better-auth'",
-  'export const auth = pikkuBetterAuth(() =>',
-  '  betterAuth({ plugins: [ban()] })',
-  ')',
-].join('\n')
-
 const AUTH_WITH_ADMIN = [
   "import { pikkuBetterAuth } from '@pikku/better-auth'",
   "import { betterAuth } from 'better-auth'",
@@ -95,16 +84,6 @@ describe('runAuthPluginChecks', () => {
     }
   })
 
-  test('is silent when the deprecated ban() alias is wired', async () => {
-    const root = await makeTmp()
-    try {
-      await writeSource(root, 'auth.ts', AUTH_WITH_DEPRECATED_BAN_ALIAS)
-      assert.deepEqual(await runAuthPluginChecks(root, config), [])
-    } finally {
-      await rm(root, { recursive: true, force: true })
-    }
-  })
-
   test('reports admin() only, not a missing ban(), when both apply', async () => {
     const root = await makeTmp()
     try {
@@ -123,11 +102,11 @@ describe('runAuthPluginChecks', () => {
         root,
         'auth.ts',
         [
-          "import { pikkuBetterAuth, ban } from '@pikku/better-auth'",
+          "import { pikkuBetterAuth, pikkuBan } from '@pikku/better-auth'",
           "import { betterAuth } from 'better-auth'",
           "import { admin } from './my-helpers.js'",
           'export const auth = pikkuBetterAuth(() =>',
-          '  betterAuth({ plugins: [ban()] })',
+          '  betterAuth({ plugins: [pikkuBan()] })',
           ')',
           'admin()',
         ].join('\n')
@@ -167,11 +146,11 @@ describe('runAuthPluginChecks', () => {
         root,
         'auth.ts',
         [
-          "import { pikkuBetterAuth, ban } from '@pikku/better-auth'",
+          "import { pikkuBetterAuth, pikkuBan } from '@pikku/better-auth'",
           "import { betterAuth } from 'better-auth'",
           "import { admin } from 'better-auth/plugins'",
           'export const auth = pikkuBetterAuth(() =>',
-          '  betterAuth({ plugins: [ban()] })',
+          '  betterAuth({ plugins: [pikkuBan()] })',
           ')',
         ].join('\n')
       )
@@ -188,7 +167,7 @@ describe('runAuthPluginChecks', () => {
         root,
         'auth.ts',
         [
-          "import { pikkuBetterAuth, ban } from '@pikku/better-auth'",
+          "import { pikkuBetterAuth, pikkuBan } from '@pikku/better-auth'",
           "import { betterAuth } from 'better-auth'",
           "import { bearer } from 'better-auth/plugins'",
           'export const auth = pikkuBetterAuth(() =>',

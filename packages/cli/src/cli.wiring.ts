@@ -2,6 +2,7 @@ import { pikkuSchemas } from './functions/wirings/functions/schemas.js'
 import { pikkuFetch } from './functions/runtimes/fetch/index.js'
 import { pikkuWebSocketTyped } from './functions/runtimes/websocket/pikku-command-websocket-typed.js'
 import { pikkuRPCClient } from './functions/wirings/rpc/pikku-command-rpc-client.js'
+import { pikkuProduct } from './functions/wirings/product/pikku-command-product.js'
 import { pikkuReactQuery } from './functions/wirings/rpc/pikku-command-react-query.js'
 import { pikkuTanStackStart } from './functions/runtimes/tanstack-start/pikku-command-tanstack-start.js'
 import { pikkuQueueService } from './functions/wirings/queue/pikku-command-queue-service.js'
@@ -39,7 +40,6 @@ import { rolesAudit } from './functions/commands/roles-audit.js'
 import { rolesPrune } from './functions/commands/roles-prune.js'
 import { pikkuAudit } from './functions/commands/audit.js'
 import { pikkuCi } from './functions/commands/ci.js'
-import { pikkuSemver } from './functions/commands/semver.js'
 import { renderSemver } from './functions/commands/semver-render.js'
 import {
   pikkuReleaseDiff,
@@ -487,30 +487,6 @@ wireCLI({
         registry: {
           description:
             'Registry to read versions from (default: npm_config_registry, else https://registry.npmjs.org)',
-        },
-      },
-    }),
-    semver: pikkuCLICommand({
-      func: pikkuSemver,
-      render: renderSemver,
-      description:
-        'Deprecated: use `pikku release diff` or `pikku release snapshot`',
-      options: {
-        against: {
-          description:
-            'Baseline to compare against: a .pikku directory, a snapshot file, or a snapshot URL',
-        },
-        emit: {
-          description: 'Same as `pikku release snapshot`',
-          default: false,
-        },
-        out: {
-          description:
-            'Where to write the output (defaults to .pikku/changes.gen.json; with --emit, stdout)',
-        },
-        failOn: {
-          description:
-            'Exit non-zero when the verdict is at or above this level: major, minor or patch',
         },
       },
     }),
@@ -1805,6 +1781,11 @@ wireCLI({
     'react-query': pikkuCLICommand({
       func: pikkuReactQuery,
       description: 'Generate React Query hooks from RPC map',
+    }),
+    product: pikkuCLICommand({
+      func: pikkuProduct,
+      description:
+        'Generate the typed useAnalytics and useFlag hooks from declared events and flags',
     }),
     'tanstack-start': pikkuCLICommand({
       func: pikkuTanStackStart,

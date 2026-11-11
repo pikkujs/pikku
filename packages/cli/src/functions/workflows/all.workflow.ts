@@ -652,6 +652,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
           workflow.do('Fetch', 'pikkuFetch', null),
           workflow.do('RPC client', 'pikkuRPCClient', null),
           workflow.do('React query', 'pikkuReactQuery', null),
+          workflow.do('Product hooks', 'pikkuProduct', null),
           workflow.do('TanStack Start', 'pikkuTanStackStart', null),
           workflow.do('Realtime client', 'pikkuRealtime', null),
         ])

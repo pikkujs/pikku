@@ -44,14 +44,6 @@ const virtualUserWiring = [
   '',
 ].join('\n')
 
-// The name pikkuVirtualUser() shipped under before the plugins took a pikku prefix.
-// The alias is still exported, so wiring it still counts as virtual user sign-in.
-const deprecatedVirtualUserAliasWiring = [
-  "import { virtualUser } from '@pikku/better-auth'",
-  'export const auth = () => ({ plugins: [virtualUser({ secret: undefined })] })',
-  '',
-].join('\n')
-
 const virtualUserDeclaration = [
   "import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'",
   'defineVirtualUsers({',
@@ -92,18 +84,6 @@ describe('virtual user checks', () => {
     try {
       await writeSource(tmp, 'virtual-users.ts', virtualUserDeclaration)
       await writeSource(tmp, 'auth.wiring.ts', virtualUserWiring)
-      const findings = await runVirtualUserChecks(tmp, config)
-      assert.deepStrictEqual(ids(findings), [])
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
-  })
-
-  test('the deprecated virtualUser() alias still counts as virtual user sign-in', async () => {
-    const tmp = await makeTmp()
-    try {
-      await writeSource(tmp, 'virtual-users.ts', virtualUserDeclaration)
-      await writeSource(tmp, 'auth.wiring.ts', deprecatedVirtualUserAliasWiring)
       const findings = await runVirtualUserChecks(tmp, config)
       assert.deepStrictEqual(ids(findings), [])
     } finally {

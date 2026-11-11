@@ -11,10 +11,7 @@ import { normalize, resolve } from 'node:path'
 import type { MCPAuthOptions } from '@pikku/modelcontextprotocol'
 
 import type { CoreConfig } from '@pikku/core/types'
-import {
-  onShutdownSignals,
-  stopSingletonServices,
-} from '@pikku/core/lifecycle'
+import { onShutdownSignals, stopSingletonServices } from '@pikku/core/lifecycle'
 import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import { pikkuState } from '@pikku/core/state'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'
@@ -600,11 +597,7 @@ export class PikkuNodeHTTPServer {
     }
 
     const key = this.contentKey(pathname, content.uploadUrlPrefix)
-    const target = await resolveContentRequestTarget(
-      content.localFileUploadPath,
-      key,
-      'write'
-    )
+    const target = resolveContentRequestTarget(content.localFileUploadPath, key)
 
     if (!target) {
       res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' })
@@ -642,11 +635,7 @@ export class PikkuNodeHTTPServer {
   ): Promise<void> {
     const pathname = decodeURIComponent(requestUrl.pathname)
     const key = this.contentKey(pathname, content.assetUrlPrefix)
-    const target = await resolveContentRequestTarget(
-      content.localFileUploadPath,
-      key,
-      'read'
-    )
+    const target = resolveContentRequestTarget(content.localFileUploadPath, key)
 
     if (!target) {
       res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' })

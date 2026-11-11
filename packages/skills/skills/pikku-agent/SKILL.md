@@ -85,4 +85,3 @@ const ask = async (message: string) => {
 - **Do not trust a caller-supplied `resourceId` as an owner.** The session's principal (`userId`, or `orgId` under `sessionScope: 'org'`) is prefixed onto it, so a client sub-partitions inside its own boundary and cannot read across one. A sessionless run gets an ephemeral anonymous owner.
 - **Do not rely on the tool menu alone for authorization.** It is two-layer: the session decides which tools an agent sees, and the function's own `permissions` still guard the call.
 - **Do not point the `'*'` provider at a single vendor.** It resolves every provider name with no exact entry, so an `anthropic/…` string silently reaches OpenAI. Point it at a gateway or scripted test provider, something that accepts arbitrary model names.
-- **Do not add `@pikku/ai-voice` as a dependency.** It still publishes but its source is `export {}`. Voice is two middlewares in `@pikku/core/agent`, with speech models reached through the `agentRunner`.

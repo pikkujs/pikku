@@ -152,7 +152,6 @@ npx pikku release prepare                                # bump package.json, wr
 as a `.pikku` tree, an `http(s)` URL is fetched as a published snapshot, and any
 other file is read as a snapshot. `snapshot` without `--out` writes to stdout
 _after_ the CLI banner, so a bare `> file.json` captures the banner too.
-`pikku semver` is a deprecated alias for `release diff` / `release snapshot`.
 
 ### Shipping a release
 

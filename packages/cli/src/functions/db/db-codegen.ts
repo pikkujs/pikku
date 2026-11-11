@@ -15,6 +15,7 @@ import {
 } from './migration-provenance.js'
 import type { CodedDiagnostic } from '@pikku/inspector'
 import { ErrorCode } from '@pikku/inspector'
+import { suggestSecurityForColumn } from './sensitive-names.js'
 import type { ColumnKind, CoercionMap } from '@pikku/kysely'
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────
@@ -270,7 +271,8 @@ function emitInterface(
   dialect: Dialect,
   enumByName: Map<string, string[]>,
   formatHints: Record<string, Record<string, ZodFormat>>,
-  warnings: CodedDiagnostic[]
+  warnings: CodedDiagnostic[],
+  frameworkTables: ReadonlySet<string> = new Set()
 ): string {
   const ifaceName = tableToInterfaceName(table.displayName ?? table.name)
   const bare = bareTableName(table.name)
@@ -376,6 +378,44 @@ function emitInterface(
       }
 
       const classification: Classification = ann?.classification ?? 'private'
+
+      // A name that reads like personal data or a credential, on a column
+      // nobody has classified. The default stays `private`; this only asks the
+      // author to say so. Any explicit level is an answer (an explicit
+      // `private` included) — except `public` on a pii-looking name.
+      // Framework tables are not the app's to annotate, so they are skipped.
+      if (!frameworkTables.has(bare)) {
+        const suggestion = suggestSecurityForColumn(bare, col.name, col.type)
+        if (
+          suggestion?.security === 'secret' &&
+          ann?.classification === undefined
+        ) {
+          warnings.push({
+            severity: 'warn',
+            code: ErrorCode.DB_SECRET_NAME_NOT_ANNOTATED,
+            message:
+              `Column "${bare}.${col.name}" looks like a credential but is not annotated secret ` +
+              `(unannotated columns default to private). Declare security: 'secret' and how it is held: ` +
+              `form: 'hashed' for a value you only verify, or form: 'wrapped' | 'sealed' for a value ` +
+              `you read back. Pikku encrypts those transparently through the kysely plugin: ` +
+              `form: 'wrapped' is decrypted on read, and writes go through ` +
+              `ClassificationCrypto.encryptColumn(). An explicit security level, even 'private', ends this warning.`,
+          })
+        } else if (
+          suggestion?.security === 'pii' &&
+          (ann?.classification === undefined || ann.classification === 'public')
+        ) {
+          warnings.push({
+            severity: 'warn',
+            code: ErrorCode.DB_PII_NAME_NOT_ANNOTATED,
+            message:
+              `Column "${bare}.${col.name}" looks like personal data but is ` +
+              `${ann?.classification === 'public' ? "annotated 'public'" : 'not annotated pii (unannotated columns default to private)'}. ` +
+              `If it holds personal data, declare security: 'pii'. An explicit security level, ` +
+              `even 'private', ends this warning.`,
+          })
+        }
+      }
 
       // A form brands the column with a nominal string subtype, so it only
       // means anything where the resolved type IS a string. On a bytea/blob or
@@ -502,9 +542,8 @@ function emitClassificationMap(
   declaredTables: ReadonlySet<string> = new Set()
 ): string {
   const colEntry = [
-    `  /** Privacy level — can the value leave the process? Defaults to 'private'.`,
-    `   *  'encrypted' is the legacy spelling of \`security: 'secret', form: 'wrapped'\`. */`,
-    `  security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'`,
+    `  /** Privacy level — can the value leave the process? Defaults to 'private'. */`,
+    `  security?: 'public' | 'private' | 'pii' | 'secret'`,
     `  /** How the value is held at rest, independent of \`security\`. A form other`,
     `   *  than 'plain' makes the column's INSERT/UPDATE type nominal, so only a`,
     `   *  real encrypt/seal/hash result can be written to it. Defaults to 'plain',`,
@@ -777,6 +816,11 @@ export async function generateSchemaTypes(
   }
   const displayName = (name: string): string => displayNames.get(name) ?? name
 
+  const frameworkTables = new Set(
+    options.migrationsDir
+      ? readMigrationProvenance(options.migrationsDir).keys()
+      : []
+  )
   const zodFormats: Record<string, Record<string, ZodFormat>> = {}
   const interfaces = tables
     .map((t) =>
@@ -787,7 +831,8 @@ export async function generateSchemaTypes(
         dialect,
         enumByName,
         zodFormats,
-        warnings
+        warnings,
+        frameworkTables
       )
     )
     .join('\n\n')
