@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src", "types"],
+  "addon": {
+    "displayName": "GreptimeDB Telemetry",
+    "description": "Stores and serves logs, traces and metrics for Pikku Studio from GreptimeDB",
+    "categories": ["Observability"],
+    "icon": "./pikku-greptime.svg"
+  }
+}

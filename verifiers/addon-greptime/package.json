@@ -1,0 +1,26 @@
+{
+  "name": "@pikku/verifiers-addon-greptime",
+  "type": "module",
+  "private": true,
+  "description": "Provisions @pikku/addon-greptime through its contributor in a tiny app and reads the TelemetryStore it provides, against a real GreptimeDB",
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/addon-greptime": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@pikku/fetch": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "tsx": "^4.23.15"
+  },
+  "scripts": {
+    "pikku": "pikku all",
+    "test": "npx tsx test-greptime.ts"
+  }
+}
