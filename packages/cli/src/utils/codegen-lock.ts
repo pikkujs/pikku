@@ -8,13 +8,27 @@ import type { Logger } from '@pikku/core/services'
 const POLL_MS = 200
 const WAIT_MS = 5 * 60_000
 
-const isRunning = (pid: number): boolean => {
+/**
+ * A killed process whose parent is gone and never reaps it (a container whose
+ * init does not wait on orphans) stays a zombie, and `kill(pid, 0)` still
+ * succeeds on it. It runs nothing, so it holds nothing.
+ */
+const isZombie = (pid: number): boolean => {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8')
+    return stat.slice(stat.lastIndexOf(')') + 2).startsWith('Z')
+  } catch {
+    return false
+  }
+}
+
+export const isRunning = (pid: number): boolean => {
   try {
     process.kill(pid, 0)
-    return true
   } catch (error) {
     return (error as NodeJS.ErrnoException).code === 'EPERM'
   }
+  return !isZombie(pid)
 }
 
 const lockFileFor = (outDir: string): string =>
