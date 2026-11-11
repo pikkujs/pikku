@@ -78,26 +78,38 @@ const sanitize = (value: unknown, depth = 0): unknown => {
 }
 
 const VALUE_PATTERNS: [RegExp, string][] = [
-  [/([a-z][a-z0-9+.-]*:\/\/)[^\s/@]+@/gi, `$1${REDACTED_ATTRIBUTE}@`],
+  [
+    /(?<![a-z0-9+.-])([a-z][a-z0-9+.-]{0,31}:\/\/)[^\s/@]+@/gi,
+    `$1${REDACTED_ATTRIBUTE}@`,
+  ],
   [/\bBearer\s+[^\s,;"']+/gi, REDACTED_ATTRIBUTE],
   [
-    /\bAuthorization["']?\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\r\n]*)/gi,
+    /\b(?:Authorization|Cookie)["']?\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\r\n]*)/gi,
     REDACTED_ATTRIBUTE,
   ],
   [
     /(token|key|secret|password|passwd|pwd|signature|sig|code)(["']?\s*=\s*["']?|["']\s*:\s*["']?)[^\s&"',;]+/gi,
     `$1$2${REDACTED_ATTRIBUTE}`,
   ],
+  [
+    /\b(password|passwd|pwd)(\s*:\s*)[^\s,;"'}]+/gi,
+    `$1$2${REDACTED_ATTRIBUTE}`,
+  ],
 ]
+
+/** Text longer than this is cut before scrubbing, so a hostile or huge value cannot stall the event loop. */
+export const SCRUB_INPUT_LIMIT = 8192
 
 /**
  * Best-effort scrub of secrets that look like secrets inside free text: URL
- * userinfo, bearer tokens, `Authorization` headers and `token=...` style pairs.
+ * userinfo, bearer tokens, `Authorization` and `Cookie` headers and
+ * `token=...` style pairs. The input is clipped to {@link SCRUB_INPUT_LIMIT}
+ * first and every pattern is anchored on a literal, so the cost is linear.
  */
 export const scrubText = (text: string): string =>
   VALUE_PATTERNS.reduce(
     (current, [pattern, replacement]) => current.replace(pattern, replacement),
-    text
+    clip(text, SCRUB_INPUT_LIMIT)
   )
 
 /** A scalar stays one; anything nested is JSON text, bounded. Strings are scrubbed. */
