@@ -24,6 +24,16 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### Deprecated aliases and packages are deleted
+
+- `@pikku/ai-voice` (an empty package) is gone: use `voiceInput` / `voiceOutput` from `@pikku/core/agent`.
+- `@pikku/openapi-to-zod-schema` is gone: import `schemaToZod`, `createContext` and `OpenAPISchema` from `@pikku/openapi-parser`.
+- `pikkuStudio` is gone: use `definePlugin`.
+- `PikkuTaskScheduler` is gone: use `InMemorySchedulerService` from `@pikku/schedule`.
+- `pikku semver` is gone: use `pikku release diff` (or `--emit` becomes `pikku release snapshot`).
+- Local content no longer reads files stored outside `private/` and `public/` under `localFileUploadPath`: move any old `<bucket>/<key>` files into `private/<bucket>/<key>`. `resolveContentRequestTarget(basePath, key)` is synchronous and takes no `mode`.
+- A `db/annotations.ts` entry with `security: 'encrypted'` is no longer read: write `security: 'secret', form: 'wrapped'`.
+
 ### `pikku.config.json` declares `backends` and/or `frontends`; `extends`, `namedFilters` and the filter flags are gone
 
 A config declares the servers it builds as `backends` (`"backends": { "api": { "filter": {} } }`, even for one), the apps it ships as `frontends`, or both. One declaring neither is refused; an addon declares neither and is exempt. A frontend-only project builds no backend: `pikku all` runs only the shared pass and writes no `.pikku/backends/` or `.pikku/sdk/`, `pikku dev` runs only its frontends, `pikku serve` errors "no backend to serve", and `environments.<name>.backends` may be omitted. A backend is a named, filtered build of your functions package; its `filter` takes every field `namedFilters` did (`tags`, `names`, `wires`, `target`, `excludeTarget`, ...). `pikku all` writes the full tree to `.pikku/`, then one filtered tree per backend to `.pikku/backends/<name>/`; `pikku all --backend <name>` builds only that one. Two or more backends each need `dev.port`.
