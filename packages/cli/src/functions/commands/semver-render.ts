@@ -1,6 +1,8 @@
 import { added, changed, dim, removed, table } from '../../utils/output.js'
 import type { SurfaceChange } from '../../utils/surface-diff.js'
-import type { SemverResult } from './semver.js'
+import type { ReleaseDiffResult, ReleaseSnapshotResult } from './release.js'
+
+type SemverResult = ReleaseSnapshotResult | ReleaseDiffResult
 
 const STATUS_COLOUR = {
   added,
