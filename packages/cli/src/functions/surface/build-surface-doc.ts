@@ -281,8 +281,8 @@ const CORE_DOORS: Array<{ name: string; subpath: string; only: string[] }> = [
   { name: 'wire', subpath: './types', only: ['PikkuWire'] },
   {
     name: 'telemetry',
-    subpath: './middleware',
-    only: ['telemetryOuter', 'telemetryInner'],
+    subpath: './trace',
+    only: ['NOOP_TRACER'],
   },
   { name: 'plugin', subpath: './addon', only: ['definePlugin'] },
   {

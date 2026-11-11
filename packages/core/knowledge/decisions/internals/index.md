@@ -197,4 +197,7 @@ caller is entitled to assume.
 - [A suspended workflow run keeps its in-process context; only terminal runs release it](workflow-suspended-runs-keep-their-in-process-context.md) — `suspended` is absent from the terminal set on purpose, and a context is dropped only when nothing is holding it open
 - [BullMQ and pg-boss carry traceparent in a payload envelope](bullmq-and-pg-boss-carry-traceparent-in-a-payload-envelope.md) — Neither queue has a per-job metadata slot that survives; a job with a trace or an identity claim has its payload wrapped by the adapter and unwrapped before job.data is read
 
+- [A span's attributes are an allow-list](a-spans-attributes-are-an-allow-list.md) — Core sets a fixed set of framework facts on a span and nothing else, so no input, header, query or stack can reach a telemetry store
+- [The function runner owns the span; middleware cannot](the-function-runner-owns-the-span-middleware-cannot.md) — The runner opens the span after the wire has its trace and ends it in the same finally that restores the wire, so every invocation is recorded once, whatever middleware does
+- [Telemetry never breaks a request](telemetry-never-breaks-a-request.md) — Every tracer call the runner makes is wrapped; a tracer that throws is logged once and disabled for the process, and the function's result and error are untouched
 <!-- /pikku:knowledge-index -->

@@ -1,5 +1,15 @@
 import type { Logger } from './services/logger.js'
 
+export { NOOP_TRACER } from './tracer.js'
+export type {
+  FinishedSpan,
+  Span,
+  SpanAttributeValue,
+  SpanKind,
+  SpanStatus,
+  Tracer,
+} from './tracer.js'
+
 /** One invocation's place in a W3C trace. */
 export type TraceContext = {
   /** 32 lowercase hex characters, shared by every hop of the trace. */

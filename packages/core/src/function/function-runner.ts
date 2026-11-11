@@ -72,6 +72,7 @@ import {
 } from '../wirings/addon/wire-addon.js'
 import type { AddonInstance } from '../wirings/addon/addon-runner.js'
 import { closeWireServices } from '../utils.js'
+import { endFunctionSpan, openFunctionSpan } from './function-span.js'
 
 async function resolveSession(
   wire: PikkuRawWire,
@@ -440,6 +441,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
     invocationWire.addonNamespace = addonInstance.namespace
   }
 
+  let functionDurationMs: number | undefined
+
   const executeFunction = async () => {
     await resolveSession(
       invocationWire,
@@ -660,11 +663,16 @@ export const runPikkuFunc = async <In = any, Out = any>(
         configurable: true,
         enumerable: true,
       })
-      return await funcConfig.func(
-        withoutSecrets(services, 'a pikku function'),
-        actualData,
-        invocationWire
-      )
+      const functionStartedAt = performance.now()
+      try {
+        return await funcConfig.func(
+          withoutSecrets(services, 'a pikku function'),
+          actualData,
+          invocationWire
+        )
+      } finally {
+        functionDurationMs = Math.round(performance.now() - functionStartedAt)
+      }
     } finally {
       // Flush the runner-installed audit buffer before wire services close.
       await invocationAuditLog?.close()
@@ -691,6 +699,31 @@ export const runPikkuFunc = async <In = any, Out = any>(
     packageName,
   })
 
+  // knowledge: decisions/internals/the-function-runner-owns-the-span-middleware-cannot.md
+  // The span wraps the middleware chain, so its duration is the whole
+  // invocation; the function body alone is `pikku.function.duration_ms`.
+  const openSpan = openFunctionSpan(
+    resolvedSingletonServices.tracer,
+    resolvedSingletonServices.logger,
+    invocationWire,
+    wireType,
+    {
+      'pikku.wire.type': wireType,
+      'pikku.wire.id': wireId,
+      'pikku.function.id': resolvedFunctionId,
+      ...(funcPackageName ? { 'pikku.package': funcPackageName } : {}),
+      ...(addonInstance
+        ? { 'pikku.addon.namespace': addonInstance.namespace }
+        : {}),
+      'pikku.trace.root': rootTrace,
+    }
+  )
+  let failure: { error: unknown } | undefined
+  const finish = () => {
+    if (openSpan) endFunctionSpan(openSpan, functionDurationMs, failure)
+    restoreInvocationWire()
+  }
+
   if (allMiddleware.length > 0) {
     try {
       return (await runMiddleware<CorePikkuMiddleware>(
@@ -699,14 +732,20 @@ export const runPikkuFunc = async <In = any, Out = any>(
         allMiddleware,
         executeFunction
       )) as Out
+    } catch (error) {
+      failure = { error }
+      throw error
     } finally {
-      restoreInvocationWire()
+      finish()
     }
   }
 
   try {
     return (await executeFunction()) as Out
+  } catch (error) {
+    failure = { error }
+    throw error
   } finally {
-    restoreInvocationWire()
+    finish()
   }
 }

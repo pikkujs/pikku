@@ -10,12 +10,16 @@ import {
 import type { DeploymentService } from '@pikku/core/services'
 import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'
 import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
+import { RecordingTracer } from '@pikku/core/testing'
 import { JoseJWTService } from '@pikku/jose'
 import { InMemorySchedulerService } from '@pikku/schedule'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
 
 export const SIGNING_KEY = 'tracing-verifier-signing-key'
+
+/** Every span the runner records while the verifier runs. */
+export const tracer = new RecordingTracer()
 
 export const createConfig = pikkuConfig(async () => ({}))
 
@@ -67,6 +71,7 @@ export const createSingletonServices = pikkuServices(
       config,
       secrets,
       logger,
+      tracer,
       variables,
       schema,
       jwt,

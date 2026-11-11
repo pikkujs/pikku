@@ -643,6 +643,17 @@ To find affected code, search for `assetKey` and `uploadFile`.
 
 To find affected code, search for `require\('@pikku/(assistant-ui|fetch|websocket|react|paraglide|voice-agents)'`.
 
+### `telemetryOuter` and `telemetryInner` are removed; the function runner records a span
+
+The two middleware (and the `__pikku_telemetry` log lines they wrote) are gone from `@pikku/core/middleware`. A runtime now injects `singletonServices.tracer` (`Tracer`, from `@pikku/core/trace`) and the function runner records one span per invocation: the span covers the whole middleware chain, and `pikku.function.duration_ms` is the function body alone.
+
+- Delete `addGlobalMiddleware([telemetryOuter()])`, `telemetryInner()` and any per-route use of them.
+- Nothing reads `__pikku_telemetry` log lines from core any more. A log collector that parsed them must read spans from a `Tracer` instead.
+- With no `tracer` nothing is recorded. `NOOP_TRACER` is the explicit form.
+- The `environmentId` and `orgId` options are gone; `pikku.org.id` is taken from the session's `orgId`.
+
+To find affected code, search for `telemetryOuter|telemetryInner`.
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.

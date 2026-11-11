@@ -23,8 +23,6 @@
     "remoteJobsSecret",
     "requireOrigin",
     "runMiddleware",
-    "telemetryInner",
-    "telemetryOuter",
     "toOrigin"
   ],
   "./function": [
@@ -497,6 +495,7 @@
     "continueTrace",
     "createTrace",
     "formatTraceparent",
+    "NOOP_TRACER",
     "isValidTraceId",
     "outgoingTraceparent",
     "parseTraceparent",
@@ -644,7 +643,8 @@
     "defineEventHubServiceTests",
     "defineQueueIdentityTransportTests",
     "defineQueueTraceConformance",
-    "defineServiceTests"
+    "defineServiceTests",
+    "RecordingTracer"
   ],
   "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
 }

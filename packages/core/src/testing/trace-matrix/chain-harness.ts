@@ -6,7 +6,7 @@ import {
   UnprocessableContentError,
 } from '../../errors/errors.js'
 import { pikkuMeshAuthMiddleware } from '../../middleware/mesh-auth.js'
-import { telemetryOuter } from '../../middleware/telemetry.js'
+import { RecordingTracer } from '../recording-tracer.js'
 import { pikkuState } from '../../pikku-state.js'
 import { httpRouter } from '../../wirings/http/routers/http-router.js'
 import {
@@ -140,6 +140,7 @@ const sessionless = (name: string, extra: object = {}) =>
  */
 export class TraceChain {
   readonly logs: LogEntry[] = []
+  readonly tracer = new RecordingTracer()
   readonly h = new QueuedWorkflowHarness(new ScheduledSleeps())
   readonly instances: Instance[]
   private pending: Array<{
@@ -273,6 +274,7 @@ export class TraceChain {
     }
     pikkuState(null, 'package', 'singletonServices', {
       logger: this.logger(),
+      tracer: this.tracer,
       config: {},
       queueService,
       schedulerService,
@@ -371,7 +373,6 @@ export class TraceChain {
     }
     this.register(entry, entryFunc, {
       schema: this.entryFails && this.isSchemaOutcome,
-      telemetry: true,
     })
     this.register(
       target,
@@ -430,11 +431,7 @@ export class TraceChain {
   private register(
     name: string,
     func: (...args: any[]) => any,
-    {
-      permissions,
-      schema,
-      telemetry,
-    }: { permissions?: boolean; schema?: boolean; telemetry?: boolean } = {}
+    { permissions, schema }: { permissions?: boolean; schema?: boolean } = {}
   ) {
     addFunction(name, {
       func,
@@ -448,7 +445,6 @@ export class TraceChain {
             },
           }
         : {}),
-      ...(telemetry ? { middleware: [telemetryOuter()] } : {}),
     } as never)
     const inputSchemaName = schema ? 'Refused' : 'Accepted'
     pikkuState(null, 'function', 'meta')[name] = sessionless(name, {
