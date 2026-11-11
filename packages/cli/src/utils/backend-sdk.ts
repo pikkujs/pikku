@@ -30,7 +30,7 @@ import { packTarGz } from './sdk-tarball.js'
  * parent then moves them to `.pikku/sdk/<name>/`:
  *
  *   exposed/   the clients (fetch, rpc, websocket, react-query, realtime,
- *              queue, scopes) and, under contract/, the maps they are typed by,
+ *              queue, scopes, product) and, under contract/, the maps they are typed by,
  *              all cut from the backend's `expose: true` functions
  *   remote/    a types-only contract cut from its `remote: true` functions, in
  *              the shape of an addon SDK; present only when it has any
@@ -69,6 +69,7 @@ export const exposedClientFiles = (
     realtimeFile: join(dir, 'pikku-realtime.gen.ts'),
     queueWiringsFile: join(dir, 'pikku-queue.gen.ts'),
     scopesFile: join(dir, 'pikku-scope-client.gen.ts'),
+    productFile: join(dir, 'pikku-product.gen.ts'),
   }
 }
 
