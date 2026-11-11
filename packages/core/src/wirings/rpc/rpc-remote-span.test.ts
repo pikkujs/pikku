@@ -93,6 +93,49 @@ describe('ContextAwareRPCService.rpc - boundary spans', () => {
     assert.equal(span.events?.[0]?.name, 'exception')
   })
 
+  test('a failed remote call records the error class, never its message', async () => {
+    const tracer = new RecordingTracer()
+    const service = new ContextAwareRPCService(
+      createServices({
+        tracer,
+        deploymentService: {
+          invoke: async () => {
+            throw new TypeError(
+              'connect ECONNREFUSED nats://user:hunter2@10.0.0.5:4222'
+            )
+          },
+        },
+      }),
+      { trace: REMOTE_TRACE, getSession: async () => undefined } as never,
+      {}
+    )
+    await assert.rejects(() => service.rpc('acme:missing', {}))
+    const span = tracer.spans[0]!
+    assert.equal(span.events?.[0]?.attributes?.['exception.type'], 'TypeError')
+    const text = JSON.stringify(span, (_, v) =>
+      typeof v === 'bigint' ? String(v) : v
+    )
+    assert.ok(!text.includes('hunter2') && !text.includes('nats://'))
+  })
+
+  test('a function name that is not a plain identifier gets a fixed span name', async () => {
+    const tracer = new RecordingTracer()
+    const service = new ContextAwareRPCService(
+      createServices({
+        tracer,
+        deploymentService: { invoke: async () => undefined },
+      }),
+      { trace: REMOTE_TRACE, getSession: async () => undefined } as never,
+      {}
+    )
+    await service.rpc('user 42@example.com: lookup?id=7', {})
+    await service.rpc('x'.repeat(200), {})
+    for (const span of tracer.spans) {
+      assert.equal(span.name, 'rpc.call')
+      assert.deepEqual(span.attributes, { 'rpc.service': 'deployment' })
+    }
+  })
+
   test('a remote call with no tracer keeps the caller trace on the wire', async () => {
     const calls: unknown[][] = []
     const service = new ContextAwareRPCService(

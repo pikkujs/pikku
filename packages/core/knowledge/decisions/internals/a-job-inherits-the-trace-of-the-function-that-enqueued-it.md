@@ -25,6 +25,13 @@ span covers the `add` call until it settles. A caller-set `traceparent` still
 wins on the job, and the span is then a record only. With no tracer or an
 unsampled trace nothing is recorded and the wire's own trace is stamped.
 
+A failed call records only `exception.type` on the span, never the message: a
+queue or transport error can carry a connection URL with credentials, and the
+span text is what a store keeps. The span closes when the promise the backend
+returns settles; every queue and scheduler backend returns a real promise from
+`add`, so there is no callback form to handle. A synchronous throw also ends the
+span and is rethrown.
+
 The wrapper sits around whatever the application registered. `SignedQueueService`
 and `PikkuQueue` still see their own calls, and neither has to know about traces:
 signing covers `data` and `pikkuUserId`, so the trace is not signed. A trace on a

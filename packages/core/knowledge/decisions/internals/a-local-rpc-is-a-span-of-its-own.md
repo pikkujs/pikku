@@ -16,5 +16,11 @@ falls back to it) is a `client` span `rpc.call <name>` under the caller, and the
 remote callee is that span's child. The local callee adds nothing extra: it is
 already its own span. A remote addon call over HTTP does not make one yet.
 
+The span name carries the function name only when it is a plain identifier
+(letters, digits and `_ . : @ / -`, up to 128 characters). Anything else is
+unbounded data, so the span is named `rpc.call` and `rpc.service` is
+`deployment`. A failed call records the error class only: a transport error can
+carry a connection URL with credentials.
+
 `rpcWithWire` leaves the wire alone. A workflow passes the span of the step, and
 [a run owns its trace](a-workflow-run-owns-its-trace.md).

@@ -28,6 +28,8 @@ Nothing is derived from function input, query parameters, headers, cookies or th
 session beyond the two ids. An error leaves only as `Name: message`, cut to 256
 characters, plus `exception.type`/`exception.message`: never `exception.stacktrace`,
 because stacks carry file paths and, for some errors, interpolated input.
+Boundary spans (a publish, a remote call) keep only `exception.type`, since the
+error comes from a backend that can carry a connection URL.
 `redactSpanError` in `tracer.ts` is the only place an error becomes span text,
 and `Span.end` applies it, so a caller cannot hand a raw error to a sink.
 

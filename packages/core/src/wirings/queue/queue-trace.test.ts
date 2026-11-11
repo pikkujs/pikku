@@ -96,6 +96,32 @@ describe('traceQueueService', () => {
     assert.equal(tracer.spans[0]!.status.code, 'error')
   })
 
+  test('a failed publish records the error class, never its message', async () => {
+    const tracer = new RecordingTracer()
+    const queue = {
+      supportsResults: false,
+      add: async () => {
+        throw new TypeError(
+          'connect ECONNREFUSED redis://user:hunter2@10.0.0.5:6379'
+        )
+      },
+      getJob: async () => null,
+    } as QueueService
+    await assert.rejects(() =>
+      traceQueueService(
+        queue,
+        { trace: createTrace() },
+        { tracer, logger }
+      ).add('q', {} as any)
+    )
+    const span = tracer.spans[0]!
+    assert.equal(span.events?.[0]?.attributes?.['exception.type'], 'TypeError')
+    const text = JSON.stringify(span, (_, v) =>
+      typeof v === 'bigint' ? String(v) : v
+    )
+    assert.ok(!text.includes('hunter2') && !text.includes('redis://'))
+  })
+
   test('an unsampled trace or a missing tracer records nothing and stamps the wire trace', async () => {
     const tracer = new RecordingTracer()
     const { queue, added } = recordingQueue()
