@@ -1,4 +1,5 @@
 import { LogLevel, type Logger } from '../services/logger.js'
+import type { TraceContext } from '../trace.js'
 import { NOOP_TRACER, type Tracer } from '../tracer.js'
 import { parseOtlpEndpoint } from './loopback.js'
 import { OtlpHttpExporter } from './otlp-http-exporter.js'
@@ -23,6 +24,13 @@ export interface RuntimeTelemetry {
   enabled: boolean
   tracer: Tracer
   logger: Logger
+  /**
+   * The context of the span whose work is running, read per query by the
+   * Kysely trace plugin. Undefined when no `contextStorage` was given (an
+   * edge runtime): the plugin then records no db span rather than a wrongly
+   * parented one.
+   */
+  currentTrace: () => TraceContext | undefined
   /** `PIKKU_OTLP_SQL_TEXT=1`: the Kysely plugin may record parameterised SQL. */
   recordSqlText: boolean
   stopMetrics(): void
@@ -31,6 +39,19 @@ export interface RuntimeTelemetry {
   /** Stops sampling, flushes (capped at two seconds) and refuses further records. */
   close(): Promise<void>
 }
+
+/**
+ * Shapes an `AsyncLocalStorage<TraceContext>` as the {@link ContextStorage} the
+ * tracer takes, so core never imports `node:async_hooks` itself:
+ * `asContextStorage(new AsyncLocalStorage())`.
+ */
+export const asContextStorage = (storage: {
+  run<T>(context: TraceContext, fn: () => T): T
+  getStore(): TraceContext | undefined
+}): ContextStorage => ({
+  run: (context, fn) => storage.run(context, fn),
+  get: () => storage.getStore(),
+})
 
 type Env = Record<string, string | undefined>
 
@@ -80,6 +101,7 @@ const inert = (logger: Logger): RuntimeTelemetry => ({
   enabled: false,
   tracer: NOOP_TRACER,
   logger,
+  currentTrace: () => undefined,
   recordSqlText: false,
   stopMetrics() {},
   flush: async () => {},
@@ -162,6 +184,7 @@ export const createRuntimeTelemetry = (
     enabled: true,
     tracer,
     logger,
+    currentTrace: () => options.contextStorage?.get(),
     recordSqlText: env.PIKKU_OTLP_SQL_TEXT === '1',
     stopMetrics: () => metrics.stop(),
     flush: () => exporter.flush(),
