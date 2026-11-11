@@ -256,9 +256,8 @@ describe('SCAFFOLD_OUTPUTS', () => {
         rootDir: '.',
         srcDirectories: ['src'],
         packageMappings: {},
-        outDir: '.pikku',
         tsconfig: 'tsconfig.json',
-        filters: {},
+        backends: { api: { filter: {} } },
         scaffold: Object.fromEntries(
           [...new Set(SCAFFOLD_OUTPUTS.map((o) => o.feature))]
             .filter((f) => f !== 'auth')

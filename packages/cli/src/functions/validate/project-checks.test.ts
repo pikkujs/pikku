@@ -312,27 +312,6 @@ describe('project checks', () => {
       }
     })
 
-    test('missing outDir → error', async () => {
-      const tmp = await makeTmp()
-      try {
-        await makeValidProject(tmp)
-        await writeJson(join(tmp, 'pikku.config.json'), {
-          srcDirectories: ['packages/functions/src'],
-          clientFiles: {
-            rpcMapDeclarationFile:
-              'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
-          },
-        })
-        const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, false)
-        assert.ok(
-          result.findings.some((f) => f.id === 'pikku-config-no-out-dir')
-        )
-      } finally {
-        await rm(tmp, { recursive: true, force: true })
-      }
-    })
-
     test('empty scaffold → error for console/rpc/agent/workflow, warn for events', async () => {
       const tmp = await makeTmp()
       try {

@@ -49,7 +49,7 @@ beforeEach(() => {
     JSON.stringify({
       tsconfig: 'tsconfig.json',
       srcDirectories: ['src'],
-      outDir: '.pikku',
+      backends: { api: { filter: {} } },
     })
   )
   writeFileSync(join(root, 'tsconfig.json'), '{}')
