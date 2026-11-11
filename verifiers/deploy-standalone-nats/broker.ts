@@ -5,75 +5,62 @@
  * touch another.
  */
 import { spawn, type ChildProcess } from 'node:child_process'
+import { RetentionPolicy } from '@nats-io/jetstream'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-export const STREAM = 'PIKKU'
-
 /**
- * Queues the framework registers beside the app's own: recurring cron fires and
- * one-off scheduled RPCs. The app's own come from its build (see `appQueues`).
+ * One stage of one project: a broker user and the stream it owns. Studio
+ * creates both up front; the app only ever attaches to them.
  */
-export const FRAMEWORK_QUEUES = [
-  'pikku-recurring-scheduled-task',
-  'pikku-mesh-rpc',
-]
-
-/**
- * Every queue the built app consumes: its wired queue workers (workflow
- * orchestrators among them, one per workflow) plus the framework's. A stage's
- * permissions list one consumer per entry, so this is what Studio would read
- * from the build to generate them.
- */
-export const appQueues = (projectDir: string): string[] => [
-  ...Object.keys(
-    JSON.parse(
-      readFileSync(
-        join(
-          projectDir,
-          '.pikku',
-          'queue',
-          'pikku-queue-workers-wirings-meta.gen.json'
-        ),
-        'utf-8'
-      )
-    )
-  ),
-  ...FRAMEWORK_QUEUES,
-]
-
 export type Stage = {
   project: string
   stage: string
   user: string
   password: string
-  queues?: string[]
 }
 
-export const queueToken = (queue: string) => queue.replace(/[.*>\s]/g, '_')
-export const consumerName = (s: Stage, queue: string) =>
-  `${s.project}_${s.stage}_${queueToken(queue)}`
 export const prefixOf = (s: Stage) => `pikku.${s.project}.${s.stage}`
 
+/** The stage's own stream, `pikku_<project>_<stage>` (what the contributor derives). */
+export const streamOf = (s: Stage) => `pikku_${s.project}_${s.stage}`
+
+/**
+ * The stream Studio creates for a stage. The app never creates or changes it:
+ * workqueue so an acked job leaves, schedules on so cron and delays work, and
+ * only the stage's own subjects so a schedule cannot name another stage.
+ */
+export const streamConfig = (s: Stage) => ({
+  name: streamOf(s),
+  subjects: [`${prefixOf(s)}.>`],
+  retention: RetentionPolicy.Workqueue,
+  allow_msg_schedules: true,
+})
+
+/**
+ * What a stage's user may do. Everything is scoped by the stage's own stream
+ * name or subject prefix, so the list does not depend on the app's queues.
+ * Not granted: creating, updating or deleting any stream, deleting a consumer,
+ * `$JS.API.INFO`, listing streams, and anything on another stream.
+ */
 export const stagePermissions = (s: Stage) => {
+  const stream = streamOf(s)
   const prefix = prefixOf(s)
-  const consumers = (s.queues ?? []).map((q) => consumerName(s, q))
   return {
     publish: {
       allow: [
-        // Its own jobs, and the schedule messages that live beside them.
         `${prefix}.>`,
-        // Read-only: the boot check that the shared stream is there and set up.
-        `$JS.API.STREAM.INFO.${STREAM}`,
-        ...consumers.flatMap((c) => [
-          // Create or update the consumer, filtered to this stage's subjects.
-          `$JS.API.CONSUMER.CREATE.${STREAM}.${c}.${prefix}.>`,
-          `$JS.API.CONSUMER.INFO.${STREAM}.${c}`,
-          `$JS.API.CONSUMER.MSG.NEXT.${STREAM}.${c}`,
-          `$JS.ACK.${STREAM}.${c}.>`,
-        ]),
+        // Boot check, and the listing of its own schedules.
+        `$JS.API.STREAM.INFO.${stream}`,
+        // Prune an orphaned schedule, read one back: only its own stream.
+        `$JS.API.STREAM.PURGE.${stream}`,
+        `$JS.API.STREAM.MSG.GET.${stream}`,
+        `$JS.API.CONSUMER.CREATE.${stream}.>`,
+        `$JS.API.CONSUMER.INFO.${stream}.>`,
+        `$JS.API.CONSUMER.MSG.NEXT.${stream}.>`,
+        `$JS.ACK.${stream}.>`,
       ],
     },
     subscribe: { allow: [`_INBOX.${s.project}.${s.stage}.>`] },

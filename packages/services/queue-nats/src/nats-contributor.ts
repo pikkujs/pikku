@@ -7,14 +7,11 @@ const DRAIN_TIMEOUT_MS = 10_000
 
 /**
  * Lowercase letters and digits in `-`-separated groups: legal as one NATS
- * subject token and in a consumer name, and free of `_`, which separates the
- * project from the stage in a consumer name (`<project>_<stage>_<queue>`).
- * With `-` allowed in both, `a-b` + `c` and `a` + `b-c` would share a prefix.
+ * subject token and in a stream name, and free of `_`, which joins project and
+ * stage in the stream name (`pikku_<project>_<stage>`). With `-` allowed in
+ * both, `a-b` + `c` and `a` + `b-c` would name the same stream.
  */
 const TOKEN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-
-/** The shared stream's name unless `NATS_STREAM` says otherwise. */
-const DEFAULT_STREAM = 'PIKKU'
 
 type NatsFactory = Pick<
   NatsServiceFactory,
@@ -58,12 +55,11 @@ const token = (env: Env, name: string, what: string): string => {
 /**
  * Everything the app needs from its environment, and nothing it can do without.
  *
- * The app is one tenant of a shared broker. Its subjects are
- * `pikku.<project>.<stage>.>` and its consumers are named
- * `<project>_<stage>_<queue>`, both identical across releases so a new
- * release resumes the old one's queue. The stream is shared, created by
- * whoever runs the broker, and this process never creates or changes it.
- * There is no anonymous connection: the user and password are required.
+ * Each stage owns one JetStream stream, `pikku_<project>_<stage>`, holding
+ * `pikku.<project>.<stage>.>`. Whoever runs the broker creates it up front;
+ * this process never creates or changes it. The names are identical across
+ * releases so a new release resumes the old one's queue. There is no anonymous
+ * connection: the user and password are required.
  */
 export const natsOptionsFromEnv = (env: Env): NatsServiceFactoryOptions => {
   const servers = required(env, 'NATS_URL', 'the NATS server to connect to')
@@ -85,10 +81,9 @@ export const natsOptionsFromEnv = (env: Env): NatsServiceFactoryOptions => {
   )
   return {
     servers: servers.split(',').map((s) => s.trim()),
-    streamName: env.NATS_STREAM || DEFAULT_STREAM,
+    streamName: env.NATS_STREAM || `pikku_${project}_${stage}`,
     subjectPrefix: `pikku.${project}.${stage}`,
     attachToStream: true,
-    consumerNamePrefix: `${project}_${stage}_`,
     inboxPrefix: `_INBOX.${project}.${stage}`,
     user,
     pass,

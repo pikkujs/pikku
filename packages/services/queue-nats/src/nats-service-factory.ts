@@ -41,18 +41,14 @@ export interface NatsServiceFactoryOptions {
    */
   schedulerTimezone?: string
   /**
-   * The stream is shared and already exists: never create or modify it.
+   * The stream already exists and is owned by whoever runs the broker: never
+   * create or modify it.
    *
    * The caller's credentials then need no stream-level write permission. Boot
    * checks the stream is there, holds `subjectPrefix`'s subjects and allows
    * message schedules, and fails with a message naming what is missing.
    */
   attachToStream?: boolean
-  /**
-   * Prefix of every durable consumer name (`<project>-<stage>-`), so a tenant
-   * of a shared stream owns, and can be permissioned to, only its own.
-   */
-  consumerNamePrefix?: string
   /**
    * Prefix for this connection's reply inboxes, in place of `_INBOX`. Lets a
    * broker permission subscribe to one tenant's inbox only.
@@ -250,17 +246,14 @@ export class NatsServiceFactory {
       jsm,
       this.options.streamName,
       this.options.subjectPrefix,
-      this.options.defaultConsumerConfig,
-      this.options.consumerNamePrefix
+      this.options.defaultConsumerConfig
     )
     this.schedulerService = new NatsSchedulerService(
       js,
       jsm,
       this.options.streamName,
       this.options.subjectPrefix,
-      this.options.schedulerTimezone,
-      this.options.consumerNamePrefix,
-      !this.options.attachToStream
+      this.options.schedulerTimezone
     )
     this.initialized = true
   }

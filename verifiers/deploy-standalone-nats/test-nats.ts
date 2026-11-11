@@ -17,14 +17,10 @@ import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { connect, headers } from '@nats-io/transport-node'
+import { jetstream, jetstreamManager } from '@nats-io/jetstream'
 import {
-  jetstream,
-  jetstreamManager,
-  RetentionPolicy,
-} from '@nats-io/jetstream'
-import {
-  STREAM,
-  appQueues,
+  streamConfig,
+  streamOf,
   freePort,
   prefixOf,
   startBroker,
@@ -153,20 +149,17 @@ if (!natsOk || !bunOk) {
 } else {
   const project = 'acme'
   const admin = { user: 'admin', password: 'admin-pw' }
-  const queues = appQueues(HERE)
   const A: Stage = {
     project,
     stage: 'alpha',
     user: 'acme-alpha',
     password: 'pw-a',
-    queues,
   }
   const B: Stage = {
     project,
     stage: 'beta',
     user: 'acme-beta',
     password: 'pw-b',
-    queues,
   }
   const broker = await startBroker(NATS_BIN, admin, [A, B])
   const procs: ChildProcess[] = []
@@ -181,13 +174,9 @@ if (!natsOk || !bunOk) {
   })
   const adminJsm = await jetstreamManager(adminNc)
   const adminJs = jetstream(adminNc)
-  // The stream is created up front, by the broker's operator, never by an app.
-  await adminJsm.streams.add({
-    name: STREAM,
-    subjects: ['pikku.>'],
-    retention: RetentionPolicy.Workqueue,
-    allow_msg_schedules: true,
-  })
+  // Each stage's stream is created up front, by the broker's operator, never by an app.
+  await adminJsm.streams.add(streamConfig(A))
+  await adminJsm.streams.add(streamConfig(B))
 
   type App = ReturnType<typeof run>
   const run = (env: Record<string, string>) => {
@@ -228,13 +217,14 @@ if (!natsOk || !bunOk) {
       body: JSON.stringify({ id }),
     })
   const scheduleSubjects = async (s: Stage) => {
-    const info = await adminJsm.streams.info(STREAM, {
+    const info = await adminJsm.streams.info(streamOf(s), {
       subjects_filter: `${prefixOf(s)}._schedule.>`,
     })
     return Object.keys(info.state.subjects ?? {}).sort()
   }
   const scheduleSeq = async (s: Stage, subject: string) =>
-    (await adminJsm.streams.getMessage(STREAM, { last_by_subj: subject })).seq
+    (await adminJsm.streams.getMessage(streamOf(s), { last_by_subj: subject }))
+      .seq
 
   try {
     console.log('\nRun: refuses to start without what it needs')
@@ -305,20 +295,15 @@ if (!natsOk || !bunOk) {
       })
     }
     await check(
-      'refuses to start when the shared stream does not exist',
+      "refuses to start when the stage's stream does not exist",
       async () => {
-        await adminJsm.streams.delete(STREAM)
+        await adminJsm.streams.delete(streamOf(A))
         const app = run(await envFor(A))
         const code = await app.exited
         if (code === 0) throw new Error('it started')
-        if (!/stream 'PIKKU' is not available/.test(app.output()))
+        if (!/stream 'pikku_acme_alpha' is not available/.test(app.output()))
           throw new Error(app.output().slice(-600))
-        await adminJsm.streams.add({
-          name: STREAM,
-          subjects: ['pikku.>'],
-          retention: RetentionPolicy.Workqueue,
-          allow_msg_schedules: true,
-        })
+        await adminJsm.streams.add(streamConfig(A))
       }
     )
 
@@ -331,20 +316,21 @@ if (!natsOk || !bunOk) {
     await ready(appB)
 
     await check(
-      'the broker holds one stream; each stage has its own consumers and schedule',
+      'each stage has its own stream, consumers and schedule',
       async () => {
-        const names = (
-          await adminJsm.streams.info(STREAM, { deleted_details: false })
-        ).config.name
-        if (names !== STREAM) throw new Error(names)
-        const consumers: string[] = []
-        for await (const c of adminJsm.consumers.list(STREAM))
-          consumers.push(c.name)
-        for (const s of [A, B])
-          if (!consumers.includes(`${s.project}_${s.stage}_jobs`))
-            throw new Error(`no consumer for ${s.stage}: ${consumers}`)
-        if (consumers.some((c) => !/^acme_(alpha|beta)_/.test(c)))
-          throw new Error(`stray consumer: ${consumers}`)
+        for (const s of [A, B]) {
+          const consumers: string[] = []
+          for await (const c of adminJsm.consumers.list(streamOf(s)))
+            consumers.push(c.name)
+          if (!consumers.includes(`pikku_${s.project}_${s.stage}_jobs`))
+            throw new Error(`no jobs consumer for ${s.stage}: ${consumers}`)
+          if (
+            consumers.some(
+              (c) => !c.startsWith(`pikku_${s.project}_${s.stage}_`)
+            )
+          )
+            throw new Error(`stray consumer: ${consumers}`)
+        }
         for (const s of [A, B]) {
           const subjects = await scheduleSubjects(s)
           if (

@@ -1,7 +1,7 @@
 ---
 type: decision
 title: Standalone deploys get NATS from a contributor opted in with wireContributors, not an addon
-description: '@pikku/queue-nats publishes a standalone-only deploy contributor that puts a stage on a shared JetStream stream as one restricted tenant; it fails closed without its credentials and names everything after PIKKU_PROJECT and PIKKU_STAGE'
+description: '@pikku/queue-nats publishes a standalone-only deploy contributor that puts a stage on its own JetStream stream as a restricted user; it fails closed without its credentials and names everything after PIKKU_PROJECT and PIKKU_STAGE'
 tags: [nats, contributors, deploy, standalone, permissions]
 ---
 
@@ -24,48 +24,54 @@ Absent the provider the contributor is not applied. Limit: a provider with no
 contributor support at all (serverless, Azure) still fails the build for any
 opted-in deploy variant; that check predates this and was left alone.
 
-## Tenant on a shared stream
+## One stream per stage
 
-The stream (`PIKKU`, `pikku.>`, workqueue, `allow_msg_schedules`, or
-`NATS_STREAM`) is created by whoever runs the broker. The factory runs in
-`attachToStream` mode: it only reads the stream and refuses one that is
-missing, does not cover the stage's subjects, is not workqueue or has
-schedules off. It never creates, updates or purges it.
+Whoever runs the broker (Studio) creates, up front, one stream per stage:
+`pikku_<project>_<stage>` (or `NATS_STREAM`), subjects `pikku.<project>.<stage>.>`,
+workqueue, `allow_msg_schedules`. The factory runs in `attachToStream` mode: it
+only reads the stream and refuses one that is missing, does not cover the
+stage's subjects, is not workqueue or has schedules off. It never creates or
+updates it. `streamConfig` in `verifiers/deploy-standalone-nats/broker.ts` is
+the config to reuse.
 
 - Needs `NATS_URL`, `NATS_USER`, `NATS_PASSWORD`, `PIKKU_PROJECT`,
   `PIKKU_STAGE`. Any one missing, or a project or stage that is not
   `[a-z0-9]+(-[a-z0-9]+)*` (at most 63), refuses to start. No anonymous
   connection, no in-memory fallback.
-- Subjects are `pikku.<project>.<stage>.<queue>` and schedules sit at
-  `pikku.<project>.<stage>._schedule.<queue>.<task>`, all inside the stage
-  prefix. Cron fires go to one recurring-task queue, not one subject per task.
-- Consumers are named `<project>_<stage>_<queue>`. The separator is `_`, which
-  the token rule forbids in project and stage, so `a-b` + `c` and `a` + `b-c`
-  cannot share a prefix.
-- Reply inboxes use `_INBOX.<project>.<stage>`, so a stage subscribes to its
-  own replies only.
-- It provides `natsLifecycle`, not the factory. The server stops every
-  singleton service with `stop()` before the stop hooks run, which would close
-  the workers before they drain. `onServerStop` drains (10s), then closes.
+- Subjects are `pikku.<project>.<stage>.<queue>`; schedules sit at
+  `pikku.<project>.<stage>._schedule.<queue>.<task>`.
+- The stream name joins project and stage with `_`, which the token rule
+  forbids inside them, so `a-b`+`c` and `a`+`b-c` name different streams.
+  Consumers use the library default names; the old `<project>_<stage>_` consumer
+  prefix and its exact-name scoping are gone.
+- Reply inboxes use `_INBOX.<project>.<stage>`.
+- It provides `natsLifecycle`, not the factory (the server stops singleton
+  services before stop hooks, which would close workers before they drain).
+  `onServerStop` drains (10s), then closes.
 
-## What the broker permissions can and cannot do
+## Permissions
 
-JetStream API permissions cannot match a consumer-name prefix (`*` is a whole
-token). Only `CONSUMER.CREATE` carries the filter subject, which can be scoped.
-So a stage is granted its exact consumer names, read from the build's queue
-list (wired workers, one orchestrator per workflow, plus the recurring-task and
-mesh-rpc queues). The lists are in
-`verifiers/deploy-standalone-nats/broker.ts`.
+Everything is scoped by the stage's stream name or subject prefix, so the list
+does not depend on the app's queues (one `wf-orchestrator-<workflow>` per
+workflow just works). Publish: `pikku.<p>.<s>.>`, `$JS.API.STREAM.INFO.<stream>`,
+`$JS.API.STREAM.PURGE.<stream>`, `$JS.API.STREAM.MSG.GET.<stream>`,
+`$JS.API.CONSUMER.CREATE.<stream>.>`, `$JS.API.CONSUMER.INFO.<stream>.>`,
+`$JS.API.CONSUMER.MSG.NEXT.<stream>.>`, `$JS.ACK.<stream>.>`. Subscribe:
+`_INBOX.<p>.<s>.>`. Not granted: stream create/update/delete, consumer delete,
+`$JS.API.INFO`, stream list, anything on another stream.
 
-A purge is whole-stream or by a filter the caller names, and a permission
-cannot tell them apart, so a stage is not granted it. The scheduler therefore
-retires an orphaned schedule by republishing it as a one-shot that fires now
-and is acknowledged without running. Stored messages (`MSG.GET`) are not
-granted either, so `getTask` and `getAllTasks` find nothing.
+Purge and message get are now safe to grant: the stream holds only the stage's
+own subjects, so the worst a stage can do is purge its own queue. The scheduler
+prunes orphaned schedules with a filtered purge again (the retire-by-republish
+path is removed), and `getTask`/`getAllTasks` work.
 
-A schedule's `Nats-Schedule-Target` is not checked against the publisher's
-permissions: a stage may schedule a message onto another stage's subject.
-Permissions cannot close this; only a stream per stage would.
+The cross-stage schedule-target hole is closed: a schedule whose
+`Nats-Schedule-Target` is outside the stream's subjects is refused by the server
+("message schedules target is invalid"), and stage A cannot read B's stream
+info, so no subject names or counts leak.
+
+Removing a stage means dropping its user (reload) and deleting its stream;
+dropping the user alone leaves the stream with its messages and consumers.
 
 ## Known limits
 
