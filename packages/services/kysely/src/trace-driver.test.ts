@@ -5,12 +5,12 @@ import Database from 'better-sqlite3'
 import { Kysely, SqliteDialect, sql, type Generated } from 'kysely'
 import { addFunction, runPikkuFunc } from '@pikku/core/function'
 import { pikkuState, resetPikkuState } from '@pikku/core/state'
-import { createTrace } from '@pikku/core/trace'
+import { createTrace, childTraceWire } from '@pikku/core/trace'
 import type { Span, TraceContext, Tracer } from '@pikku/core/trace'
 import { RecordingTracer } from '@pikku/core/testing'
 
 import { traceDialect, SQL_TEXT_LIMIT } from './trace-driver.js'
-import { collectTableNames } from './table-names.js'
+import { collectTableNames, hasInlineSql } from './table-names.js'
 
 interface TestDB {
   todos: { id: Generated<number>; title: string; secret: string | null }
@@ -141,9 +141,114 @@ describe('traceDialect with real SQLite', () => {
       /^insert into "todos" .* values \(\?, \?\)/
     )
     assert.ok(!String(insert!.attributes['db.query.text']).includes('hunter2'))
-    const text = String(select!.attributes['db.query.text'])
-    assert.ok(!text.includes('inline-literal'), text)
-    assert.match(text, /title = \?/)
+    // sql.lit inlines the literal: such a query records no text.
+    assert.equal(select!.attributes['db.query.text'], undefined)
+    assert.equal(select!.attributes['db.operation.name'], 'select')
+  })
+
+  test('recordSqlText never leaks a marker from raw SQL, literals, comments or escapes', async () => {
+    const tracer = new RecordingTracer()
+    const db = await make({
+      tracer,
+      currentTrace: here(createTrace()),
+      recordSqlText: true,
+    })
+    tracer.spans.length = 0
+    const M = 'S3CR3T'
+    const cases: Array<() => Promise<unknown>> = [
+      () => sql.raw(`select 'it''s ${M}'`).execute(db),
+      () => sql.raw(`select E'it\\'s ${M}'`).execute(db),
+      () => sql.raw(`select 1 -- ${M}`).execute(db),
+      () => sql.raw(`select 1 /* ${M} */`).execute(db),
+      () =>
+        sql
+          .raw(`select "${M}"`)
+          .execute(db)
+          .catch(() => {}),
+      () =>
+        sql
+          .raw(`select ${M}`)
+          .execute(db)
+          .catch(() => {}),
+      () =>
+        sql
+          .raw(`select 'unterminated ${M}`)
+          .execute(db)
+          .catch(() => {}),
+      () =>
+        sql
+          .raw(`select $x$ ${M}`)
+          .execute(db)
+          .catch(() => {}),
+      () => sql`select ${sql.lit(M)}`.execute(db),
+      () =>
+        db
+          .selectFrom('todos')
+          .selectAll()
+          .where(sql<boolean>`title = ${sql.lit(M)}`)
+          .execute(),
+      () =>
+        db
+          .selectFrom('todos')
+          .selectAll()
+          .where('title', '=', sql.lit(M) as never)
+          .execute(),
+      () =>
+        db
+          .selectFrom('todos')
+          .select(sql.raw<string>(`'${M}'`).as('x'))
+          .execute(),
+      () => sql.raw(`select 1 ${' '.repeat(200000)}-- ${M}`).execute(db),
+    ]
+    for (const run of cases) await run().catch(() => {})
+    const json = JSON.stringify(tracer.spans, (_k, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    )
+    assert.ok(tracer.spans.length >= cases.length)
+    assert.ok(!json.includes(M), 'marker leaked into a span')
+    for (const span of tracer.spans) {
+      assert.equal(span.attributes['db.query.text'], undefined)
+    }
+  })
+
+  test('a structured query with a bound marker records placeholders only', async () => {
+    const tracer = new RecordingTracer()
+    const db = await make({
+      tracer,
+      currentTrace: here(createTrace()),
+      recordSqlText: true,
+    })
+    tracer.spans.length = 0
+    await db
+      .selectFrom('todos')
+      .selectAll()
+      .where('title', '=', 'S3CR3T')
+      .execute()
+    const text = String(tracer.spans[0]!.attributes['db.query.text'])
+    assert.match(text, /where "title" = \?/)
+    assert.ok(!text.includes('S3CR3T'))
+  })
+
+  test('hasInlineSql flags raw, immediate and json-path nodes (postgres-shaped cases)', () => {
+    assert.equal(hasInlineSql({ kind: 'RawNode' }), true)
+    assert.equal(
+      hasInlineSql({
+        kind: 'SelectQueryNode',
+        where: [{ kind: 'ValueNode', immediate: true }],
+      }),
+      true
+    )
+    assert.equal(
+      hasInlineSql({ kind: 'SelectQueryNode', x: { kind: 'JSONPathLegNode' } }),
+      true
+    )
+    assert.equal(
+      hasInlineSql({
+        kind: 'SelectQueryNode',
+        x: [{ kind: 'ValueNode', value: 'a' }],
+      }),
+      false
+    )
   })
 
   test('sql text is capped at 1024 characters', async () => {
@@ -154,10 +259,11 @@ describe('traceDialect with real SQLite', () => {
       recordSqlText: true,
     })
     tracer.spans.length = 0
-    const columns = Array.from({ length: 400 }, (_, i) => `1 as c${i}`).join(
-      ', '
-    )
-    await sql.raw(`select ${columns}`).execute(db)
+    const columns = Array.from({ length: 400 }, (_, i) => `id as c${i}`)
+    await db
+      .selectFrom('todos')
+      .select(columns as never)
+      .execute()
     const text = String(tracer.spans[0]!.attributes['db.query.text'])
     assert.equal(text.length, SQL_TEXT_LIMIT)
   })
@@ -179,7 +285,7 @@ describe('traceDialect with real SQLite', () => {
     const event = span!.events!.find((e) => e.name === 'exception')!
     assert.deepEqual(Object.keys(event.attributes!), ['exception.type'])
     assert.equal(event.attributes!['exception.type'], 'SqliteError')
-    assert.equal(span!.status.message, 'SqliteError: ')
+    assert.equal(span!.status.message, 'SqliteError')
     assert.ok(!span!.attributes['exception.message'])
   })
 
@@ -257,6 +363,86 @@ describe('collectTableNames', () => {
       out
     )
     assert.deepEqual([...out], ['real'])
+  })
+})
+
+describe('parallel invocations', () => {
+  test('40 concurrent functions with nested rpc and queries keep their own parents', async () => {
+    const tracer = new ScopedTracer()
+    const db = await make({
+      tracer,
+      currentTrace: () => tracer.storage.getStore(),
+    })
+    tracer.spans.length = 0
+    const services: any = {
+      logger: { info() {}, warn() {}, error() {}, debug() {} },
+      tracer,
+    }
+    const call = (name: string, wire: any) =>
+      runPikkuFunc('rpc', 'w-' + name, name, {
+        singletonServices: services,
+        getAllServices: () => services,
+        data: () => ({}),
+        auth: false,
+        wire,
+      } as any)
+    const reg = (name: string, func: any) => {
+      addFunction(name, { func } as any)
+      pikkuState(null, 'function', 'meta')[name] = {
+        pikkuFuncId: name,
+        inputSchemaName: null,
+        outputSchemaName: null,
+        sessionless: true,
+      } as any
+    }
+    reg('conc-inner', async () => {
+      await new Promise((r) => setTimeout(r, Math.random() * 5))
+      await db.insertInto('tags').values({ todoId: 1, name: 'x' }).execute()
+      return 'i'
+    })
+    reg('conc-outer', async (_s: any, _d: any, wire: any) => {
+      await new Promise((r) => setTimeout(r, Math.random() * 5))
+      await db.selectFrom('tags').selectAll().execute()
+      await call('conc-inner', { trace: childTraceWire(wire.trace).trace })
+      await db.transaction().execute(async (trx) => {
+        await trx.selectFrom('tags').selectAll().execute()
+        await new Promise((r) => setTimeout(r, 2))
+        await trx.updateTable('tags').set({ name: 'y' }).execute()
+      })
+      await db.deleteFrom('tags').execute()
+      return 'o'
+    })
+    const N = 40
+    const traces = Array.from({ length: N }, () => createTrace())
+    const results = await Promise.all(
+      traces.map((trace) => call('conc-outer', { trace }))
+    )
+    assert.ok(results.every((r) => r === 'o'))
+    const byId = new Map(tracer.spans.map((s) => [s.spanId, s]))
+    const dbSpans = tracer.spans.filter((s) => s.name.startsWith('db.'))
+    assert.equal(dbSpans.length, N * 5)
+    for (const trace of traces) {
+      const mine = dbSpans.filter((s) => s.traceId === trace.traceId)
+      assert.equal(mine.length, 5)
+      const outerSpan = tracer.spans.find((s) => s.spanId === trace.spanId)!
+      assert.ok(
+        mine.every((s) => {
+          const parent = byId.get(s.parentSpanId!)
+          return parent && !parent.name.startsWith('db.')
+        })
+      )
+      assert.equal(
+        mine.filter((s) => s.parentSpanId === outerSpan.spanId).length,
+        4
+      )
+      const innerSpan = tracer.spans.find(
+        (s) => s.name === 'conc-inner' && s.traceId === trace.traceId
+      )!
+      assert.equal(
+        mine.filter((s) => s.parentSpanId === innerSpan.spanId).length,
+        1
+      )
+    }
   })
 })
 

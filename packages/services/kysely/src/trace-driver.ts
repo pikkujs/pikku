@@ -8,7 +8,7 @@ import type {
 } from 'kysely'
 import { childTraceWire } from '@pikku/core/trace'
 import type { Span, TraceContext, Tracer } from '@pikku/core/trace'
-import { collectTableNames } from './table-names.js'
+import { collectTableNames, hasInlineSql } from './table-names.js'
 
 // knowledge: decisions/query-spans-record-operation-and-table-sql-text-opt-in-never-parameters.md
 
@@ -23,9 +23,11 @@ export interface TraceDriverOptions {
    */
   currentTrace?: () => TraceContext | undefined
   /**
-   * Record the statement text on the span (`db.query.text`): placeholders
-   * only, string literals masked, at most {@link SQL_TEXT_LIMIT} characters.
-   * Default false. Parameter values are never read either way.
+   * Record the statement text on the span (`db.query.text`), at most
+   * {@link SQL_TEXT_LIMIT} characters. Default false: an explicit opt-in.
+   * Only a query built from structured nodes has its text recorded (values
+   * are `?` / `$n` placeholders); a query with raw SQL, `sql.lit` or a JSON
+   * path records no text. Parameter values are never read either way.
    */
   recordSqlText?: boolean
   /** `db.system`: `sqlite`, `postgresql`, `mysql`. */
@@ -42,16 +44,22 @@ const OPERATIONS: Record<string, string> = {
   DeleteQueryNode: 'delete',
 }
 
-// A literal can reach the text through sql.lit / sql.raw; the compiler only
-// parameterises what goes through a value. Mask single-quoted strings and
-// dollar-quoted bodies so the text holds structure and placeholders only.
-const LITERALS = /'(?:[^']|'')*'|\$([A-Za-z_]*)\$[\s\S]*?\$\1\$/g
-
-const sqlText = (sql: string): string => {
-  const masked = sql.replace(LITERALS, '?')
-  return masked.length > SQL_TEXT_LIMIT
-    ? `${masked.slice(0, SQL_TEXT_LIMIT - 1)}…`
-    : masked
+/**
+ * The statement text, or undefined when it cannot be trusted to hold only
+ * placeholders. Text compiled from structured nodes (select, insert, update,
+ * delete) has `?` / `$n` where a value goes; text from raw SQL, an immediate
+ * literal (`sql.lit`) or a JSON path can carry anything, and no masking of
+ * SQL (escapes, comments, quoting rules per dialect) is reliable, so such a
+ * query records no text at all. Fails closed: any doubt means no text.
+ */
+const sqlText = (query: CompiledQuery): string | undefined => {
+  const kind = (query.query as { kind?: string }).kind ?? ''
+  if (!(kind in OPERATIONS)) return undefined
+  if (hasInlineSql(query.query)) return undefined
+  const { sql } = query
+  return sql.length > SQL_TEXT_LIMIT
+    ? `${sql.slice(0, SQL_TEXT_LIMIT - 1)}…`
+    : sql
 }
 
 /** The class of a driver error, never its message (which can echo values). */
@@ -122,8 +130,12 @@ class TracedConnection implements DatabaseConnection {
       const tables = new Set<string>()
       collectTableNames(query.query, tables)
       const [table] = tables
-      if (table !== undefined) attributes['db.collection.name'] = table
-      if (recordSqlText) attributes['db.query.text'] = sqlText(query.sql)
+      if (table !== undefined)
+        attributes['db.collection.name'] = table.slice(0, 128)
+      if (recordSqlText) {
+        const text = sqlText(query)
+        if (text !== undefined) attributes['db.query.text'] = text
+      }
       return tracer.startSpan(`db.${operation}`, child, {
         kind: 'client',
         attributes,

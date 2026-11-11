@@ -419,6 +419,30 @@ describe('runPikkuFunc - spans', () => {
     assert.equal(runs, 1)
   })
 
+  test('a runInSpan that returns without running the function: it still runs once and the tracer is disabled', async () => {
+    let runs = 0
+    let calls = 0
+    const inner = new RecordingTracer()
+    const tracer: Tracer = {
+      startSpan: (n, c, o) => inner.startSpan(n, c, o),
+      runInSpan: () => {
+        calls++
+        return Promise.resolve('skipped') as any
+      },
+    }
+    addTestFunction('skipme', {
+      func: async () => {
+        runs++
+        return 'r'
+      },
+    })
+    assert.equal(await run('skipme', tracer, { trace: createTrace() }), 'r')
+    assert.equal(runs, 1)
+    assert.equal(await run('skipme', tracer, { trace: createTrace() }), 'r')
+    assert.equal(runs, 2)
+    assert.equal(calls, 1, 'a disabled tracer is not asked again')
+  })
+
   test('with no tracer the function runs untouched', async () => {
     addTestFunction('plain', { func: async () => 'plain' })
     assert.equal(
