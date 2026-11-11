@@ -8,3 +8,11 @@ export { defineEventHubServiceTests } from './service-tests/event-hub-service-te
 export { defineQueueTraceConformance } from './queue-trace-conformance.js'
 export type { QueueTraceAdapter } from './queue-trace-conformance.js'
 export { RecordingTracer } from './recording-tracer.js'
+export { decodeLogs, decodeMetrics, decodeTraces } from './otlp-decoder.js'
+export type {
+  DecodedExport,
+  DecodedLog,
+  DecodedMetric,
+  DecodedSpan,
+  DecodedValue,
+} from './otlp-decoder.js'

@@ -1,0 +1,16 @@
+{
+  "name": "@pikku/verifiers-otlp",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@pikku/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26",
+    "tsx": "^4.23.15"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit",
+    "test": "tsc --noEmit && node --import tsx --test src/otlp.assert.ts"
+  }
+}

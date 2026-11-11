@@ -503,6 +503,17 @@
     "traceWire",
     "tracedLogger"
   ],
+  "./otlp": [
+    "createRuntimeTelemetry",
+    "isLoopbackHost",
+    "OTLP_QUEUE_LIMITS",
+    "OtlpHttpExporter",
+    "OtlpLogger",
+    "OtlpTracer",
+    "parseOtlpEndpoint",
+    "parseOtlpHeaders",
+    "startProcessMetrics"
+  ],
   "./flag": [
     "CachedFlagSource",
     "assertFeatureAvailable",
@@ -640,6 +651,9 @@
   ],
   "./testing": [
     "clearPikkuRuntimeState",
+    "decodeLogs",
+    "decodeMetrics",
+    "decodeTraces",
     "defineEventHubServiceTests",
     "defineQueueIdentityTransportTests",
     "defineQueueTraceConformance",
