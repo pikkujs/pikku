@@ -102,6 +102,63 @@ if (!url) {
       assert.equal((await store.trace(scope, 'a'.repeat(32))).length, 1)
     })
 
+    test('names and keys the engine would strip or rename cannot take over a store table', async () => {
+      const { store } = await fresh('hard_strip')
+      const scope = { project: 'p', stage: 's' }
+      const names = [
+        '_opentelemetry_logs',
+        '.opentelemetry.logs',
+        '-opentelemetry-logs',
+        '\topentelemetry_logs',
+        '_opentelemetry_traces',
+        '.opentelemetry.traces',
+        '-opentelemetry_traces',
+        '\topentelemetry_traces',
+        '_opentelemetry_traces_spans',
+        '\uff4fpentelemetry_logs',
+      ]
+      for (const name of names) {
+        await assert.rejects(
+          store.appendMetrics(scope, [{ name, at: now, value: 1 }]),
+          TypeError,
+          JSON.stringify(name)
+        )
+      }
+      for (const key of ['a b', 'a:b', 'a/b', 'a$b', 'a\u2024b', 'caf\u00e9']) {
+        await assert.rejects(
+          store.appendMetrics(scope, [
+            {
+              name: 'ok.metric',
+              at: now,
+              value: 1,
+              attributes: { [key]: 'x' },
+            },
+          ]),
+          TypeError,
+          JSON.stringify(key)
+        )
+      }
+      await store.appendLogs(scope, [
+        { at: now, severity: 'info', body: 'still works', source: 'app' },
+      ])
+      await store.appendSpans(scope, [
+        {
+          traceId: 'c'.repeat(32),
+          spanId: 'd'.repeat(16),
+          name: 'GET /y',
+          kind: 'server',
+          startAt: now,
+          endAt: now + 1,
+          durationMs: 1,
+          status: 'ok',
+          attributes: {},
+        },
+      ])
+      assert.equal((await store.logs(scope, {})).length, 1)
+      assert.equal((await store.trace(scope, 'c'.repeat(32))).length, 1)
+      assert.deepEqual(await store.metrics(scope, { since: now - 1000 }), [])
+    })
+
     test('the tombstone table exists after ensureDatabase, before the first delete', async () => {
       const { database } = await fresh('hard_tomb')
       const body = await sqlOf(

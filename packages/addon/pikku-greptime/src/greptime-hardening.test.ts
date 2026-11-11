@@ -81,6 +81,16 @@ describe('metric writes cannot change scope or reach the store own tables', () =
       'pikku_project_tombstones',
       'pikku.project.tombstones',
       'pikku_project_tombstones_total',
+      '_opentelemetry_logs',
+      '.opentelemetry.logs',
+      '-opentelemetry-logs',
+      '\topentelemetry_logs',
+      '_opentelemetry_traces',
+      '.opentelemetry.traces',
+      '-opentelemetry_traces',
+      '\topentelemetry_traces',
+      '_opentelemetry_traces_spans',
+      '\uff4fpentelemetry_logs',
     ]) {
       const { calls, fetcher } = counting()
       await assert.rejects(
@@ -89,6 +99,28 @@ describe('metric writes cannot change scope or reach the store own tables', () =
         name
       )
       assert.equal(calls.length, 0, name)
+    }
+  })
+  test('an attribute key the engine would rename or drop is refused', async () => {
+    for (const key of [
+      'a b',
+      'a:b',
+      'a/b',
+      'a$b',
+      'a\u2024b',
+      'caf\u00e9',
+      '_a',
+      '',
+    ]) {
+      const { calls, fetcher } = counting()
+      await assert.rejects(
+        make(fetcher).appendMetrics(scope, [
+          { name: 'm', at: 1, value: 1, attributes: { [key]: 'x' } },
+        ]),
+        TypeError,
+        JSON.stringify(key)
+      )
+      assert.equal(calls.length, 0)
     }
   })
   test('ordinary names and attributes are not caught', async () => {

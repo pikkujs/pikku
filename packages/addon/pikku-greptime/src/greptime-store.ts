@@ -657,12 +657,22 @@ export class GreptimeTelemetryStore implements TelemetryStore {
       if (typeof point.name !== 'string' || !point.name) {
         throw new TypeError('a metric point needs a name')
       }
+      if (!sql.SAFE_METRIC_TEXT.test(point.name)) {
+        throw new TypeError(
+          `the metric name '${JSON.stringify(point.name.slice(0, 80))}' must start with a letter and use only letters, digits, '_', '.' and '-'`
+        )
+      }
       if (sql.reservedMetricName(point.name)) {
         throw new TypeError(
           `the metric name '${point.name.slice(0, 80)}' is reserved: it would be stored in a table the store uses itself`
         )
       }
       for (const key of Object.keys(point.attributes ?? {})) {
+        if (!sql.SAFE_METRIC_TEXT.test(key)) {
+          throw new TypeError(
+            `the metric attribute ${JSON.stringify(key.slice(0, 80))} must start with a letter and use only letters, digits, '_', '.' and '-'`
+          )
+        }
         if (sql.reservedMetricAttribute(key)) {
           throw new TypeError(
             `the metric attribute '${key.slice(0, 80)}' is reserved (pikku.*, greptime_*, otel_*, deployment.environment*, service.*, job)`
