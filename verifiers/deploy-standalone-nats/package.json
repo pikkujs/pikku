@@ -10,7 +10,7 @@
     "pikku": "echo 'skip'",
     "tsc": "echo 'skip'",
     "build": "echo 'skip'",
-    "test": "npx tsx test-nats.ts && npx tsx test-permissions.ts"
+    "test": "npx tsx test-nats.ts && npx tsx test-permissions.ts && npx tsx test-reload.ts"
   },
   "dependencies": {
     "@pikku/core": "workspace:*",

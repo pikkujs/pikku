@@ -81,3 +81,25 @@ dropping the user alone leaves the stream with its messages and consumers.
   leaseService on SQLite.
 - A cron-only app has no queue capability, so `needsQueue` is false and it
   keeps the in-memory scheduler.
+
+## Broker operations, measured on nats-server 2.15.2
+
+Proven by `verifiers/deploy-standalone-nats/test-reload.ts` against a real
+server with the users in an `include`d file and `--signal reload=<pidfile>`.
+
+- A reload that leaves a stage's user alone keeps its connection (same
+  connection id) and an in-flight job finishes. Changing that user's
+  permissions did not close the connection either.
+- Removing a user closes its connection ("Authorization Violation") and it
+  cannot log in again. A running stage whose user is revoked is closed for
+  good, even if the user is granted again a few seconds later: the process must
+  be restarted, and the restarted stage picks up the jobs queued meanwhile.
+- `unschedule`, `getTask`, `getAllTasks` and `pruneAll` all work in attach mode
+  under the stage's own permissions, on its own stream only. A task id naming
+  another stage is refused by the service before it reaches the broker.
+- `discard: new` cannot be combined with `allow_msg_schedules`, so a stream
+  cannot refuse writes at a size cap. `max_bytes` with `discard: old` bounds the
+  disk but drops the oldest jobs when a stage runs away.
+- Reload time with 200 users in one included file: about 120 ms; with 2000 users
+  (925 KiB) about 350 ms. Unchanged users stay connected. One account per stage
+  reloads in a similar time.

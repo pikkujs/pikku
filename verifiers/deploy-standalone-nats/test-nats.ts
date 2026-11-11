@@ -323,13 +323,15 @@ if (!natsOk || !bunOk) {
           for await (const c of adminJsm.consumers.list(streamOf(s)))
             consumers.push(c.name)
           if (!consumers.includes(`pikku_${s.project}_${s.stage}_jobs`))
-            throw new Error(`no jobs consumer for ${s.stage}: ${consumers}`)
+            throw new Error(
+              `no jobs consumer for ${s.stage}: ${consumers.join()}`
+            )
           if (
             consumers.some(
               (c) => !c.startsWith(`pikku_${s.project}_${s.stage}_`)
             )
           )
-            throw new Error(`stray consumer: ${consumers}`)
+            throw new Error(`stray consumer: ${consumers.join()}`)
         }
         for (const s of [A, B]) {
           const subjects = await scheduleSubjects(s)
@@ -337,7 +339,7 @@ if (!natsOk || !bunOk) {
             subjects.length !== 1 ||
             !subjects[0]!.startsWith(`${prefixOf(s)}._schedule.`)
           )
-            throw new Error(`${s.stage} schedules: ${subjects}`)
+            throw new Error(`${s.stage} schedules: ${subjects.join()}`)
         }
       }
     )
@@ -439,7 +441,7 @@ if (!natsOk || !bunOk) {
         )
         const after = await scheduleSubjects(A)
         if (after.join() !== alphaBefore.join())
-          throw new Error(`before ${alphaBefore}, after ${after}`)
+          throw new Error(`before ${alphaBefore.join()}, after ${after.join()}`)
         await until(
           'cron after restart',
           () => count(appA, /cron fired stage=alpha/g) >= 2
