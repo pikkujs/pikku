@@ -177,9 +177,12 @@ export class NatsServiceFactory {
 
     assertSchedulerSupport(this.connection.info?.version)
 
-    // `checkAPI: false` skips the `$JS.API.INFO` probe, which a tenant with
+    // In attach mode `checkAPI: false` skips the `$JS.API.INFO` probe, which a tenant with
     // narrow permissions is not given.
-    const jsm = await jetstreamManager(this.connection, { checkAPI: false })
+    const jsm = await jetstreamManager(
+      this.connection,
+      this.options.attachToStream ? { checkAPI: false } : undefined
+    )
     const js = jetstream(this.connection)
     this.js = js
     this.jsm = jsm
@@ -213,7 +216,7 @@ export class NatsServiceFactory {
     }
 
     if (this.options.attachToStream) {
-      await this.assertSharedStream(jsm)
+      await this.assertStageStream(jsm)
     } else {
       // `add` is STREAM.CREATE, which errors if the stream exists with a different
       // config — so the first deploy that changes duplicate_window or replicas
@@ -259,10 +262,10 @@ export class NatsServiceFactory {
   }
 
   /**
-   * Attach mode: the shared stream is created and owned by someone else, so
+   * Attach mode: the stage's stream is created and owned by someone else, so
    * boot only reads it, and refuses a stream this package could not work in.
    */
-  private async assertSharedStream(jsm: JetStreamManager): Promise<void> {
+  private async assertStageStream(jsm: JetStreamManager): Promise<void> {
     const name = this.options.streamName
     let info
     try {
@@ -270,17 +273,18 @@ export class NatsServiceFactory {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       throw new Error(
-        `NATS stream '${name}' is not available (${message}). It is shared and created up front by whoever runs the broker; this process never creates or changes it.`
+        `NATS stream '${name}' is not available (${message}). It is created up front by whoever runs the broker; this process never creates or changes it.`
       )
     }
     const { config } = info
-    const covered = (config.subjects ?? []).some(
-      (subject) =>
-        subject === `${this.options.subjectPrefix}.>` ||
-        subject === '>' ||
-        (subject.endsWith('.>') &&
-          this.options.subjectPrefix.startsWith(subject.slice(0, -2)))
-    )
+    const prefix = this.options.subjectPrefix
+    // Token-aligned: `pikku.ac.>` must not cover `pikku.acme.alpha`.
+    const covered = (config.subjects ?? []).some((subject) => {
+      if (subject === '>') return true
+      if (!subject.endsWith('.>')) return false
+      const base = subject.slice(0, -2)
+      return prefix === base || prefix.startsWith(`${base}.`)
+    })
     if (!covered) {
       throw new Error(
         `NATS stream '${name}' does not hold subjects under '${this.options.subjectPrefix}' (it holds ${(config.subjects ?? []).join(', ') || 'none'}).`

@@ -1,5 +1,5 @@
 /**
- * A nats-server config for a shared stream with one user per tenant stage, and
+ * A nats-server config with one stream and one user per stage, and
  * the exact permission lists those users need. The lists are what Studio would
  * generate; the tests prove they are enough to run a stage and not enough to
  * touch another.

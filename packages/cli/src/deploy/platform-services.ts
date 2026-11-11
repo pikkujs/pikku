@@ -70,7 +70,7 @@ export async function writeUnitPlatformServices(options: {
   if (!support) {
     if (hasDeployVariant(state)) {
       throw new Error(
-        `The ${provider.name} deploy cannot run the contributors the project opted in to with wireAddon (unit '${ctx.unit.name}'): its entry builds no platform services. Remove them from wireAddon({ contributors }) or deploy with a provider that supports them.`
+        `The ${provider.name} deploy cannot run the contributors the project opted in to with wireAddon or wireContributors (unit '${ctx.unit.name}'): its entry builds no platform services. Remove them from wireAddon({ contributors }) or wireContributors({ contributors }), or deploy with a provider that supports them.`
       )
     }
     await remove()

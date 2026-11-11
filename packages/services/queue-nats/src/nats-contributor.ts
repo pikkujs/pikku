@@ -81,7 +81,7 @@ export const natsOptionsFromEnv = (env: Env): NatsServiceFactoryOptions => {
   )
   return {
     servers: servers.split(',').map((s) => s.trim()),
-    streamName: env.NATS_STREAM || `pikku_${project}_${stage}`,
+    streamName: `pikku_${project}_${stage}`,
     subjectPrefix: `pikku.${project}.${stage}`,
     attachToStream: true,
     inboxPrefix: `_INBOX.${project}.${stage}`,
@@ -123,13 +123,16 @@ export const createNatsDeploy = (
   },
   async onServerStop(services) {
     const lifecycle: NatsLifecycle = services.natsLifecycle
-    const unfinished = await lifecycle.drainWorkers(DRAIN_TIMEOUT_MS)
-    if (unfinished.length > 0) {
-      services.logger?.warn(
-        `NATS queues still had jobs in flight after ${DRAIN_TIMEOUT_MS}ms: ${unfinished.join(', ')}. They are redelivered after ack_wait.`
-      )
+    try {
+      const unfinished = await lifecycle.drainWorkers(DRAIN_TIMEOUT_MS)
+      if (unfinished.length > 0) {
+        services.logger?.warn(
+          `NATS queues still had jobs in flight after ${DRAIN_TIMEOUT_MS}ms: ${unfinished.join(', ')}. They are redelivered after ack_wait.`
+        )
+      }
+    } finally {
+      await lifecycle.close()
     }
-    await lifecycle.close()
   },
 })
 
