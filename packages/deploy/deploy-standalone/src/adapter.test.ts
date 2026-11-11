@@ -486,7 +486,11 @@ describe(`StandaloneProviderAdapter server lifecycle`, () => {
     )
 
     assert.doesNotMatch(source, /__pikkuLifecycle/)
-    assert.match(source, /server\.enableExitOnSignals\(\)/)
+    // the exporter is always flushed on the way out, so there is always a hook
+    assert.match(
+      source,
+      /server\.enableExitOnSignals\(\{ afterStop: async \(\) => \{ await __pikkuTelemetry\.close\(\) \} \}\)/
+    )
   })
 
   test('the lifecycle is imported under a reserved name', () => {
@@ -784,5 +788,66 @@ describe(`StandaloneProviderAdapter trigger source store`, () => {
 
     assert.match(source, /new InMemoryTriggerSourceStore\(\)/)
     assert.doesNotMatch(source, /KyselyTriggerSourceStore/)
+  })
+})
+
+describe('StandaloneProviderAdapter runtime telemetry', () => {
+  const generate = (ctx: unknown) =>
+    new StandaloneProviderAdapter({}).generateEntrySource(ctx as never)
+
+  test('telemetry is built from the environment, before the database and the services', () => {
+    const source = generate(withDb)
+    const telemetry = source.indexOf('createRuntimeTelemetry(')
+    assert.ok(telemetry > 0)
+    assert.ok(telemetry < source.indexOf('createBunSqliteKysely({'))
+    assert.ok(telemetry < source.indexOf('createSingletonServices('))
+    assert.match(source, /from '@pikku\/core\/otlp'/)
+    assert.match(source, /AsyncLocalStorage as __pikkuAsyncLocalStorage/)
+  })
+
+  test('only a serve run exports; commands get an empty environment', () => {
+    const source = generate(baseContext)
+    assert.match(
+      source,
+      /createRuntimeTelemetry\(__pikkuCommand\.kind === 'serve' \? process\.env : \{\}/
+    )
+  })
+
+  test('the logger the server and services use is the telemetry logger', () => {
+    const source = generate(baseContext)
+    assert.match(source, /const logger = __pikkuTelemetry\.logger/)
+    assert.match(source, /const baseLogger = new ConsoleLogger\(\)/)
+    assert.match(
+      source,
+      /tracer: __pikkuTelemetry\.tracer \} : \{\}\),\n/,
+      'the tracer reaches createSingletonServices only when exporting'
+    )
+  })
+
+  test('the sqlite factory gets the tracer and currentTrace only when exporting', () => {
+    const source = generate(withDb)
+    assert.match(source, /\.\.\.__pikkuTracing,/)
+    assert.match(source, /const __pikkuTracing = __pikkuTelemetry\.enabled/)
+    assert.match(source, /currentTrace: __pikkuTelemetry\.currentTrace/)
+    assert.match(source, /recordSqlText: __pikkuTelemetry\.recordSqlText/)
+  })
+
+  test('the postgres connection gets the same tracing options', () => {
+    const source = generate(withPostgres)
+    assert.match(
+      source,
+      /new PikkuKysely\(logger, __pikkuDbUrl, undefined, undefined, __pikkuTracing\)/
+    )
+  })
+
+  test('the exporter is flushed and closed after every other stop hook', () => {
+    const source = generate(withPostgres)
+    const close = source.indexOf('await __pikkuTelemetry.close()')
+    assert.ok(close > source.indexOf('await __pikkuPg.close()'))
+    assert.match(source, /enableExitOnSignals\(\{ afterStop:/)
+  })
+
+  test('a fatal error is logged on the base logger, which exists before main runs', () => {
+    assert.match(generate(baseContext), /baseLogger\.error\('Fatal: '/)
   })
 })

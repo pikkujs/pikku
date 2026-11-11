@@ -74,6 +74,34 @@ const hasSqliteLibrary = (
   db?.engine === 'sqlite' && Boolean(db.sqliteLibrary)
 
 /**
+ * Builds the runtime telemetry from `PIKKU_OTLP_*` before anything that logs or
+ * queries is built, so the logger, the database and the services all share it.
+ *
+ * Only a `serve` run exports: `migrate` and the other commands get an empty
+ * environment, which is the inert case, so a one-shot command never opens a
+ * connection or starts the metrics sampler. The context storage is what lets a
+ * query's span find the function span that is running it; core takes it as an
+ * argument because it never imports `node:async_hooks` itself.
+ */
+const telemetryLines = (ctx: EntryGenerationContext): string[] => [
+  `  const __pikkuTelemetry = createRuntimeTelemetry(__pikkuCommand.kind === 'serve' ? process.env : {}, {`,
+  `    logger: baseLogger,`,
+  `    serviceName: '${ctx.unit.name.replace(/'/g, "\\'")}',`,
+  `    version: '${(ctx.version ?? 'unknown').replace(/'/g, "\\'")}',`,
+  `    contextStorage: __pikkuAsContextStorage(new __pikkuAsyncLocalStorage()),`,
+  `  })`,
+  `  const logger = __pikkuTelemetry.logger`,
+  `  // Handed to the Kysely factory only when exporting: a disabled run keeps the plain dialect.`,
+  `  const __pikkuTracing = __pikkuTelemetry.enabled`,
+  `    ? {`,
+  `        tracer: __pikkuTelemetry.tracer,`,
+  `        currentTrace: __pikkuTelemetry.currentTrace,`,
+  `        recordSqlText: __pikkuTelemetry.recordSqlText,`,
+  `      }`,
+  `    : {}`,
+]
+
+/**
  * Lines every standalone entry ends with, whatever the runtime.
  *
  * The ready line is the handshake a parent process — `pikku dev --spawn`, or
@@ -208,6 +236,7 @@ const dbSetupLines = (
       `  const kysely = ${SQLITE_FACTORY.fn}({`,
       `    filename: __pikkuDbFile,`,
       `    plugins: ${plugins},`,
+      `    ...__pikkuTracing,`,
       ...(hasSqliteExtensions(db)
         ? [`    extensions: __pikkuSqliteExtensions,`]
         : []),
@@ -222,7 +251,7 @@ const dbSetupLines = (
     `      'This build connects to Postgres, so it needs ${DATABASE_URL_VAR} set to the database it should open.'`,
     `    )`,
     `  }`,
-    `  const __pikkuPg = new PikkuKysely(logger, __pikkuDbUrl)`,
+    `  const __pikkuPg = new PikkuKysely(logger, __pikkuDbUrl, undefined, undefined, __pikkuTracing)`,
     `  await __pikkuPg.init()`,
     ...(db.coercionImportPath
       ? [
@@ -368,6 +397,8 @@ const shutdownHooksArg = (ctx: EntryGenerationContext): string => {
   if (ctx.db?.engine === 'postgres') {
     after.push(`await __pikkuPg.close()`)
   }
+  // Last, so spans and logs the stop hooks themselves produce still leave.
+  after.push(`await __pikkuTelemetry.close()`)
 
   if (before.length === 0 && after.length === 0) return ''
 
@@ -503,6 +534,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'`,
       `import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'`,
       `import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'`,
+      `import { AsyncLocalStorage as __pikkuAsyncLocalStorage } from 'node:async_hooks'`,
+      `import { asContextStorage as __pikkuAsContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'`,
       ...(ctx.db
         ? [`import { KyselyTriggerSourceStore } from '@pikku/kysely'`]
         : []),
@@ -537,7 +570,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ``,
       ...composedLifecycleLines(ctx).declaration,
       ...(ctx.platformServices ? [``] : []),
-      `const logger = new ConsoleLogger()`,
+      `const baseLogger = new ConsoleLogger()`,
       `const port = parseInt(process.env.PORT || '${this.port}', 10)`,
       `const hostname = process.env.HOST || '0.0.0.0'`,
       ...(ctx.embedded
@@ -550,6 +583,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ``,
       `async function main() {`,
       `  const config = await ${ctx.configVar}()`,
+      ...telemetryLines(ctx),
       `  const schedulerService = new InMemorySchedulerService()`,
       `  const queueService = new InMemoryQueueService()`,
       `  const workflowService = new InMemoryWorkflowService()`,
@@ -571,6 +605,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `    triggerService,`,
       `    triggerSourceStore,`,
       `    eventHub,`,
+      `    ...(__pikkuTelemetry.enabled ? { tracer: __pikkuTelemetry.tracer } : {}),`,
       ...this.platformServicesSpreadLines(ctx),
       `  })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
@@ -600,7 +635,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `}`,
       ``,
       `main().catch((err) => {`,
-      `  logger.error('Fatal: ' + err.message)`,
+      `  baseLogger.error('Fatal: ' + err.message)`,
       `  process.exit(1)`,
       `})`,
       ``,

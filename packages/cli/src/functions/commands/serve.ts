@@ -1,6 +1,6 @@
 import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { rm } from 'node:fs/promises'
-import { resolve } from 'path'
+import { basename, resolve } from 'path'
 import { codegenStateFile, runCodegenChild } from './codegen-child.js'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -44,8 +44,8 @@ import {
 import { disableDevVirtualUserSignIn } from '../../server/virtual-user-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 import { assertBackendToServe } from '../../utils/select-backends.js'
-import { addGlobalMiddleware } from '@pikku/core/middleware'
-import { startRunTelemetry } from '../../utils/run-telemetry.js'
+import { AsyncLocalStorage } from 'node:async_hooks'
+import { asContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'
 
 export const serve = pikkuSessionlessFunc<
   { port?: string; model?: string; backend?: string },
@@ -66,10 +66,20 @@ export const serve = pikkuSessionlessFunc<
     assertBackendToServe(config)
     disableDevVirtualUserSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
-    const telemetry = startRunTelemetry({
-      rootDir: config.rootDir,
-      command: 'serve',
+    // PIKKU_OTLP_ENDPOINT unset (or PIKKU_TELEMETRY=0) is the inert case: no
+    // exporter, no connection. A non-loopback endpoint throws here, at boot.
+    const telemetry = createRuntimeTelemetry(process.env, {
+      logger: new ConsoleLogger(),
+      serviceName: basename(config.rootDir),
+      contextStorage: asContextStorage(new AsyncLocalStorage()),
     })
+    const tracing = telemetry.enabled
+      ? {
+          tracer: telemetry.tracer,
+          currentTrace: telemetry.currentTrace,
+          recordSqlText: telemetry.recordSqlText,
+        }
+      : undefined
     const resolvedPort = parseInt(port || '3000', 10)
     const hostname = 'localhost'
     const bindHostname = '127.0.0.1'
@@ -101,7 +111,6 @@ export const serve = pikkuSessionlessFunc<
     }
 
     await loadUserBootstrap(pikkuDir)
-    if (telemetry.middleware) addGlobalMiddleware([telemetry.middleware])
 
     // Scenario instrumentation exists only on a locally served project: the
     // runner calls it over RPC to reset and snapshot coverage and stub calls.
@@ -133,7 +142,7 @@ export const serve = pikkuSessionlessFunc<
     )
     const resolvedLocalDb: ResolvedDb | undefined = resolvedDb ?? undefined
     const kysely = resolvedLocalDb
-      ? await createKysely(resolvedLocalDb)
+      ? await createKysely(resolvedLocalDb, tracing)
       : undefined
 
     const localContentConfig = resolveLocalContentConfig({
@@ -180,7 +189,8 @@ export const serve = pikkuSessionlessFunc<
       userConfig,
       {
         kysely: kysely ?? null,
-        logger: new ConsoleLogger(),
+        logger: telemetry.enabled ? telemetry.logger : new ConsoleLogger(),
+        ...(telemetry.enabled ? { tracer: telemetry.tracer } : {}),
         ...(vaultSecrets ? { secrets: vaultSecrets } : {}),
         ...(agentRunner ? { agentRunner } : {}),
         metaService: new LocalMetaService(pikkuDir),
@@ -248,7 +258,7 @@ export const serve = pikkuSessionlessFunc<
         content: localContentConfig,
         ...(staticMounts.length ? { staticMounts } : {}),
       },
-      logger,
+      telemetry.enabled ? telemetry.logger : logger,
       { contentSigningJWT }
     )
 
@@ -290,6 +300,7 @@ export const serve = pikkuSessionlessFunc<
           `Error stopping server: ${error instanceof Error ? error.message : String(error)}`
         )
       } finally {
+        await telemetry.close()
         process.exit(0)
       }
     }

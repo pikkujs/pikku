@@ -6,6 +6,7 @@ import {
   type SqliteDatabase,
   type SqliteStatement,
 } from 'kysely'
+import { traceDialect, type TraceDriverOptions } from '@pikku/kysely'
 import type {
   SyncSqliteDatabase,
   SyncSqliteStatement,
@@ -102,6 +103,8 @@ export interface CreateSqliteKyselyOptions {
   db: SyncSqliteDatabase
   camelCase?: boolean
   plugins?: KyselyPlugin[]
+  /** Record each statement as a `db.<operation>` span; see `traceDialect`. */
+  tracing?: Omit<TraceDriverOptions, 'system'>
 }
 
 export function createSqliteKysely<DB>(
@@ -112,9 +115,12 @@ export function createSqliteKysely<DB>(
   if (options.plugins) plugins.push(...options.plugins)
 
   return new Kysely<DB>({
-    dialect: new SqliteDialect({
-      database: new RuntimeSqliteDatabase(options.db),
-    }),
+    dialect: traceDialect(
+      new SqliteDialect({
+        database: new RuntimeSqliteDatabase(options.db),
+      }),
+      { ...options.tracing, system: 'sqlite' }
+    ),
     plugins,
   })
 }

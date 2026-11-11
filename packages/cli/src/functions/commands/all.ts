@@ -2,13 +2,11 @@ import type { WorkflowService } from '@pikku/core/workflow'
 import { pikkuVoidFunc } from '#pikku/function'
 import { withCodegenLock } from '../../utils/codegen-lock.js'
 import { computeMetaDiff, readMetaSnapshot } from '../../utils/meta-diff.js'
-import { startRunTelemetry } from '../../utils/run-telemetry.js'
 import { repairStaleLeaves } from '../../utils/stale-leaves.js'
 
 export const all = pikkuVoidFunc({
   remote: true,
   func: async ({ workflowService, logger, config }, _data, { rpc }) => {
-    startRunTelemetry({ rootDir: config.rootDir, command: 'all' })
     await withCodegenLock(logger, config.outDir, async () => {
       await repairStaleLeaves(logger, config)
 
