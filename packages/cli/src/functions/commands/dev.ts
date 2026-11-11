@@ -1,3 +1,4 @@
+import { exitWhenParentDies } from '../../utils/parent-watch.js'
 import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { rm } from 'node:fs/promises'
 import { join, resolve } from 'path'
@@ -777,6 +778,9 @@ export const dev = pikkuSessionlessFunc<
     }
 
     if (serveOnly) {
+      // A killed parent cannot SIGTERM its backends; without this they would
+      // outlive it, holding the port and the database.
+      exitWhenParentDies(process.ppid, () => process.exit(0))
       // The parent finished a codegen pass: load what it wrote.
       process.on(BACKEND_RELOAD_SIGNAL, () => {
         void reloadServed(true).then(
