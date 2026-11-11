@@ -92,14 +92,14 @@ describe('OtlpTracer', () => {
   test('limits: 64 attributes, 128 char keys, 1024 char strings, 32 events', async () => {
     const { tracer, sent } = setup()
     const span = tracer.startSpan('fn', createTrace())
-    for (let n = 0; n < 80; n++) span.setAttribute(`k${n}`, 'v')
+    for (let n = 0; n < 80; n++) span.setAttribute(`db.k${n}`, 'v')
     span.setAttribute('k'.repeat(SPAN_LIMITS.keyLength + 1), 'x')
-    span.setAttribute('k0', 'z'.repeat(5000))
+    span.setAttribute('db.k0', 'z'.repeat(5000))
     for (let n = 0; n < 40; n++) span.addEvent(`e${n}`)
     span.end({ code: 'ok' })
     const [out] = await sent()
     assert.equal(Object.keys(out!.attributes).length, SPAN_LIMITS.attributes)
-    const value = out!.attributes.k0 as { string: string }
+    const value = out!.attributes['db.k0'] as { string: string }
     assert.equal(value.string.length, SPAN_LIMITS.stringLength)
     assert.equal(value.string.endsWith('…'), true)
     assert.equal(out!.events.length, SPAN_LIMITS.events)

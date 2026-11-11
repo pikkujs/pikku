@@ -39,6 +39,14 @@ const ALLOW_LIST_KINDS: Record<string, AttributeKind> = {
   'db.query.text': 'string',
 }
 
+/**
+ * Key prefixes a plugin owns. A key under one is kept even when it is not
+ * listed, with the type it was first seen with: the Kysely plugin's `db.*`
+ * family is open-ended (`db.namespace`, and whatever a dialect adds). Every other
+ * key must be in the list above.
+ */
+const PLUGIN_PREFIXES = ['db.']
+
 /** More distinct keys than this in one process means keys built from data. */
 const MAX_KEYS = 512
 
@@ -55,6 +63,11 @@ const kindOf = (value: SpanAttributeValue): AttributeKind | undefined => {
  * double into an int column by rounding. A value that cannot be coerced without
  * inventing data (a string into a number, anything into a bool) is dropped, and
  * counted, rather than risking the whole batch.
+ *
+ * Fail closed: a key that is neither allow-listed nor under a plugin prefix is
+ * dropped and counted, so nothing a caller invents reaches the store.
+ *
+ * knowledge: decisions/internals/a-spans-attributes-are-an-allow-list.md
  */
 export class AttributeTypes {
   private readonly kinds = new Map<string, AttributeKind>(
@@ -73,6 +86,10 @@ export class AttributeTypes {
       }
       let expected = this.kinds.get(key)
       if (!expected) {
+        if (!PLUGIN_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+          this.dropped++
+          continue
+        }
         if (this.kinds.size >= MAX_KEYS) {
           this.dropped++
           continue
