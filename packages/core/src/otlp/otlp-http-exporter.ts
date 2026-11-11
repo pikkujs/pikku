@@ -230,10 +230,14 @@ export class OtlpHttpExporter {
           if (signal === 'metrics') this.markReported()
         } else {
           // Lost for good: count it, except the loss counters themselves.
-          state.dropped += batch.length - extra.length
+          const lost = batch.length - extra.length
+          state.dropped += lost
           if (++state.failures >= (this.options.backoffAfterFailures ?? 10)) {
             state.backoffUntil = this.now() + (this.options.backoffMs ?? 30_000)
           }
+          // Only the loss counters failed: they stay unreported and go out with
+          // the next flush; looping would just resend them.
+          if (lost === 0) return
         }
       }
     } catch {

@@ -186,18 +186,87 @@ describe('OtlpHttpExporter', () => {
     assert.equal(exporter.stats.dropped.metrics, 1)
   })
 
-  test('close() on an idle exporter returns promptly and leaves no live timer', async () => {
+  /** Records every timer made while `run` executes: its delay, unref and clear. */
+  const spyTimers = async (run: () => Promise<void>) => {
+    type Rec = { ms: number; unref: boolean; cleared: boolean; handle: unknown }
+    const recs: Rec[] = []
+    const realSet = globalThis.setTimeout
+    const realClear = globalThis.clearTimeout
+    globalThis.setTimeout = ((
+      fn: () => void,
+      ms?: number,
+      ...args: unknown[]
+    ) => {
+      const handle = (realSet as (...a: unknown[]) => unknown)(
+        fn,
+        ms,
+        ...args
+      ) as {
+        unref?: () => unknown
+      }
+      const rec: Rec = { ms: ms ?? 0, unref: false, cleared: false, handle }
+      const realUnref = handle.unref?.bind(handle)
+      handle.unref = () => {
+        rec.unref = true
+        return realUnref?.()
+      }
+      recs.push(rec)
+      return handle
+    }) as unknown as typeof setTimeout
+    globalThis.clearTimeout = ((handle: unknown) => {
+      for (const rec of recs) if (rec.handle === handle) rec.cleared = true
+      return (realClear as (h: unknown) => void)(handle)
+    }) as typeof clearTimeout
+    try {
+      await run()
+    } finally {
+      globalThis.setTimeout = realSet
+      globalThis.clearTimeout = realClear
+    }
+    return recs
+  }
+
+  test('close() on an idle exporter returns promptly, unrefs its timer and clears the cap', async () => {
     const { exporter } = harness([200])
-    const before = process
-      .getActiveResourcesInfo()
-      .filter((r) => r === 'Timeout').length
     const started = Date.now()
-    await exporter.close()
+    const timers = await spyTimers(() => exporter.close())
     assert.ok(Date.now() - started < 500)
-    const after = process
-      .getActiveResourcesInfo()
-      .filter((r) => r === 'Timeout').length
-    assert.ok(after <= before, `timers ${before} -> ${after}`)
+    const cap = timers.find((t) => t.ms === 2000)
+    assert.ok(cap, 'close() arms a 2s cap')
+    assert.ok(
+      timers.every((t) => t.unref),
+      'every timer close() makes is unref d'
+    )
+    assert.ok(cap.cleared, 'the cap timer is cleared after the race')
+  })
+
+  test('the retry sleep is unref d', async () => {
+    const { exporter, calls } = harness([503, 200], { retryDelayMs: 7 })
+    exporter.exportSpans([span('retry')])
+    const timers = await spyTimers(() => exporter.flush())
+    assert.equal(calls.length, 2)
+    const sleep = timers.find((t) => t.ms === 7)
+    assert.ok(sleep?.unref, 'the retry sleep does not keep the process alive')
+  })
+
+  test('a failing endpoint after a lost batch gets one extras-only metrics attempt per flush', async () => {
+    const { exporter, calls } = harness(['throw'])
+    exporter.exportSpans([span('lost')])
+    await exporter.flush()
+    const metricCalls = () => calls.filter((c) => c.url.endsWith('/v1/metrics'))
+    // The loss is only known once the span batch has failed, so the counter
+    // goes out with the next flush: one batch, an attempt plus its single
+    // retry, not ten rounds of the same points.
+    assert.equal(metricCalls().length, 0)
+    await exporter.flush()
+    assert.equal(metricCalls().length, 2)
+    assert.equal(
+      exporter.stats.dropped.metrics,
+      0,
+      'counters are not counted as lost'
+    )
+    await exporter.flush()
+    assert.equal(metricCalls().length, 4)
   })
 
   test('headersBySignal overrides the global header and content-type always wins', async () => {
