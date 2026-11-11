@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3423 observable things**: 1163 exported names, plus
+**3422 observable things**: 1162 exported names, plus
 2260 members on the classes and interfaces among them, reachable
 through 64 entry points.
 
@@ -45,9 +45,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel/local` | 3 | 3 | 18 |
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./scheduler` | 10 | 10 | 8 |
-| `./addon` | 15 | 15 | 2 |
 | `./scope` | 17 | 17 | 0 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
+| `./addon` | 14 | 14 | 2 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./rpc` | 9 | 9 | 6 |
 | `./workflow/types` | 48 | 1 | 13 |
@@ -296,7 +296,7 @@ export interface PikkuPackageState {
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
   agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string>; rpcFactory?: AgentRPCFactory }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }
-  cli: { meta: CLIMeta | Record<string, any>; programs: Record<string, CLIProgramState> }
+  cli: { meta: CLIMeta; programs: Record<string, CLIProgramState> }
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
   channelMiddleware: { tagGroup: Record<string, CorePikkuChannelMiddleware[]> }
   permissions: { global: (CorePermissionGroup | CorePikkuPermission)[] }
@@ -3563,7 +3563,6 @@ rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefi
 
 ```ts
 definePlugin: (manifest: StudioManifest) => StudioManifest
-pikkuStudio: (manifest: StudioManifest) => StudioManifest
 export type RemoteAddonAuth =
   | { credentialId: string }
   | { secretId: string }
@@ -6442,7 +6441,6 @@ export type ContentRequestTarget = {
 export type ContentUrlPath = {
   visibility: ContentVisibility
   rest: string
-  prefixed: boolean
 }
 export class LocalContent implements ContentService {
   constructor(private config: LocalContentConfig, private logger: Logger, private jwt: JWTService)
@@ -6469,7 +6467,7 @@ export interface LocalContentConfig {
 parseContentSizeLimit: (sizeLimit: string) => number
 parseContentUrlPath: (key: string) => ContentUrlPath
 PUBLIC_URL_SEGMENT: "_public"
-resolveContentRequestTarget: (basePath: string, key: string, mode: "read" | "write") => Promise<ContentRequestTarget | null>
+resolveContentRequestTarget: (basePath: string, key: string) => ContentRequestTarget | null
 resolveVisibilityPath: (basePath: string, visibility: ContentVisibility, bucket: string, key: string) => string | null
 signedContentPath: (urlOrPath: string) => string
 streamUploadToFile: (source: AsyncIterable<Uint8Array<ArrayBufferLike>>, targetPath: string, maxBytes: number) => Promise<number>
@@ -6598,7 +6596,7 @@ export interface PikkuPackageState {
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
   agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string>; rpcFactory?: AgentRPCFactory }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }
-  cli: { meta: CLIMeta | Record<string, any>; programs: Record<string, CLIProgramState> }
+  cli: { meta: CLIMeta; programs: Record<string, CLIProgramState> }
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
   channelMiddleware: { tagGroup: Record<string, CorePikkuChannelMiddleware[]> }
   permissions: { global: (CorePermissionGroup | CorePikkuPermission)[] }
