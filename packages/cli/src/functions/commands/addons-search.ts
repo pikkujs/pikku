@@ -216,7 +216,13 @@ export const pikkuAddonsSearch = pikkuSessionlessFunc<
         api.toString(),
         `openapi search "${query}"`
       )
-      result.openapi = (found.apis ?? []).map((a) => ({
+      // `public` means the catalogue reached it without a key; an OAuth/key/bearer API, or a paid plan, is not "no key".
+      const keyless = (a: Record<string, unknown>) =>
+        (!a.authType || a.authType === 'none' || a.authType === 'unknown') &&
+        !['paid', 'enterprise', 'usage_based'].includes(
+          String(a.pricingModel ?? '')
+        )
+      result.openapi = (found.apis ?? []).filter(keyless).map((a) => ({
         name: String(a.name),
         title: String(a.title ?? a.name),
         provider: String(a.provider ?? ''),

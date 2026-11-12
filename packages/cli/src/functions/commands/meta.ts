@@ -267,6 +267,19 @@ export const pikkuMetaWorkflowsList = pikkuSessionlessFunc<{}, void>({
       name: wf.name ?? id,
       description: wf.description ?? null,
     }))
+    // Graph workflows (pikkuWorkflowGraph, e.g. from `pikku import n8n`) live in
+    // graphMeta, not meta; list the ones that are not also a function workflow.
+    for (const [id, g] of Object.entries(
+      (state.workflows as any)?.graphMeta ?? {}
+    ) as [string, any][]) {
+      if (id in meta) continue
+      workflows.push({
+        id,
+        name: g?.name ?? id,
+        description: g?.description ?? null,
+        source: 'graph',
+      } as any)
+    }
     out({ workflows })
   },
 })
@@ -278,6 +291,18 @@ export const pikkuMetaWorkflowsGet = pikkuSessionlessFunc<
   func: async ({ getInspectorState }, data) => {
     const state = await getInspectorState()
     const wf = (state.workflows?.meta ?? {})[data.workflowId] as any
+    const graph = ((state.workflows as any)?.graphMeta ?? {})[
+      data.workflowId
+    ] as any
+    if (!wf && graph) {
+      return void out({
+        workflowId: data.workflowId,
+        name: graph.name ?? data.workflowId,
+        source: 'graph',
+        entryNodeIds: graph.entryNodeIds ?? [],
+        nodes: graph.nodes ?? {},
+      })
+    }
     if (!wf) throw new Error(`Workflow not found: ${data.workflowId}`)
     out({
       workflowId: data.workflowId,

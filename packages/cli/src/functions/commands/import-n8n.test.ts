@@ -148,4 +148,17 @@ describe('pikkuImportN8n — batch import', () => {
     assert.equal(graphs.length, 1)
     assert.ok(graphs[0]!.includes('solo'))
   })
+  test('an output dir under /functions/ does not count graph files as stubs', async () => {
+    const file = join(base, 'single.json')
+    await writeFile(file, JSON.stringify(workflow('Epsilon')), 'utf-8')
+    const out = join(base, 'packages', 'functions', 'src')
+    const { logger, info } = fakeLogger()
+
+    await (pikkuImportN8n as any).func({ logger, config: {} }, { file, out })
+
+    assert.ok(
+      !info.some((m) => /stub function/.test(m)),
+      'a stub-free import must not report stubs'
+    )
+  })
 })

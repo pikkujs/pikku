@@ -91,11 +91,14 @@ async function importOne(
         .join(', ')}`
     )
   }
-  const stubCount = written.filter((f) => f.includes('/functions/')).length
-  if (stubCount > 0) {
+  // Judge by the path inside the output dir: baseDir itself may contain
+  // "/functions/" (packages/functions/...), which is not a stub.
+  const stubFiles = Object.keys(files).filter((f) => f.includes('/functions/'))
+  if (stubFiles.length > 0) {
     logger.info(
-      `  ${stubCount} stub function(s) to implement — run the pikku-n8n-import skill to fill them in`
+      `  ${stubFiles.length} stub function(s) to implement — run the pikku-n8n-import skill to fill them in:`
     )
+    for (const f of stubFiles) logger.info(`    ${join(baseDir, f)}`)
   }
   return true
 }
