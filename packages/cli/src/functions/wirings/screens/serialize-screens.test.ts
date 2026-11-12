@@ -6,6 +6,8 @@ import {
   serializeScreens,
   serializeAddonRoles,
   serializeInstalledAddons,
+  serializePluginTypes,
+  catalogMessageKeys,
 } from './serialize-screens.js'
 
 const manifest = {
@@ -145,5 +147,100 @@ describe('host emit', () => {
     const out = serializeAddonRoles(installed as any)
     assert.match(out, /"invoices": \[\s*"invoices:read"\s*\]/)
     assert.doesNotMatch(out, /import/)
+  })
+})
+
+describe('widgets, things and arranged screens', () => {
+  const declared = {
+    ...manifest,
+    file: 'src/screens.ts',
+    widgets: [
+      {
+        id: 'mini',
+        title: 'mini__title',
+        description: 'mini__description',
+        states: ['tile'],
+        actions: [],
+        component: './widgets/Mini.js',
+      },
+    ],
+    things: [
+      {
+        kind: 'invoice',
+        label: 'invoice__label',
+        source: 'invoiceCard',
+        copy: { unpaid: { name: 'invoice_unpaid__name', compact: 'c' } },
+        parts: [],
+      },
+    ],
+    arrangedScreens: [
+      {
+        id: 'overview',
+        path: '/invoices-next',
+        title: 't',
+        scope: 'project',
+        source: 'console:getAllMeta',
+        slots: [{ widget: 'mini', from: 'x', own: true }],
+        poll: { fast: 3000, slow: 45000 },
+      },
+    ],
+  }
+
+  test('the published meta keeps them as declared', () => {
+    const meta = JSON.parse(serializeScreensMeta(declared as any, '/', []))
+    assert.deepEqual(meta.arrangedScreens, declared.arrangedScreens)
+    assert.deepEqual(meta.things, declared.things)
+  })
+
+  test('the host imports widgets through the package widgets export, and things and arranged screens as data', () => {
+    const out = serializeInstalledAddons([
+      { name: 'invoices', package: '@acme/addon-invoices', manifest: declared },
+    ] as any)
+    assert.match(out, /package: "@acme\/addon-invoices"/)
+    assert.match(
+      out,
+      /id: "mini", title: "mini__title", description: "mini__description", states: \["tile"\], actions: \[\], component: \(\) => import\("@acme\/addon-invoices\/widgets\/Mini"\) as never/
+    )
+    assert.match(out, /things: \[\{"kind":"invoice"/)
+    assert.match(out, /arrangedScreens: \[\{"id":"overview"/)
+  })
+
+  test('an addon without them has none in the host emit', () => {
+    const out = serializeInstalledAddons([
+      { name: 'invoices', package: '@acme/addon-invoices', manifest },
+    ] as any)
+    assert.doesNotMatch(out, /widgets:|things:|arrangedScreens:/)
+  })
+})
+
+describe('#pikku/screens', () => {
+  test('types definePlugin against the addon functions and catalog keys', () => {
+    const out = serializePluginTypes('../rpc/map.d.js', [
+      'a__title',
+      'b__title',
+    ])
+    assert.match(out, /import type \{ RPCMap \} from '\.\.\/rpc\/map\.d\.js'/)
+    assert.match(
+      out,
+      /export type StudioMessageKey =\n {2}\| "a__title"\n {2}\| "b__title"/
+    )
+    assert.match(out, /DefinePlugin<\s*RPCMap,\s*StudioMessageKey\s*>/)
+  })
+
+  test('keys are any string without a catalog', () => {
+    assert.match(
+      serializePluginTypes('./m.js', undefined),
+      /export type StudioMessageKey =\n {2}string/
+    )
+  })
+
+  test('reads the catalog keys, leaving out $schema, and refuses what is not a catalog', () => {
+    assert.deepEqual(
+      catalogMessageKeys('{"$schema": "x", "a": "A", "b": "B"}'),
+      ['a', 'b']
+    )
+    assert.equal(catalogMessageKeys('[1]'), undefined)
+    assert.equal(catalogMessageKeys('not json'), undefined)
+    assert.equal(catalogMessageKeys(undefined), undefined)
   })
 })

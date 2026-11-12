@@ -1532,6 +1532,11 @@ const _getPikkuCLIConfig = async (
     if (!result.screensFile) {
       result.screensFile = join(screensDir, 'pikku-screens.gen.ts')
     }
+    // An addon's definePlugin typed against its functions and message keys,
+    // reached as #pikku/screens.
+    if (!result.pluginTypesFile) {
+      result.pluginTypesFile = join(screensDir, 'pikku-plugin-types.gen.ts')
+    }
     if (!result.installedAddonsFile) {
       result.installedAddonsFile = join(
         screensDir,
