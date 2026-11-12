@@ -67,16 +67,299 @@ export type StudioAppScreen = StudioScreenBase & {
 /** One screen an addon ships: either a component the host renders or a static app it serves in a sandboxed iframe. */
 export type StudioScreen = StudioComponentScreen | StudioAppScreen
 
-/** The manifest passed to `definePlugin`: the addon's title, a message key, and its screens. */
+/**
+ * The core widgets a host ships, by id, each mapped to the data it draws.
+ * Empty here: the host's widget package fills it by module augmentation,
+ * `declare module '@pikku/core/addon' { interface WidgetRegistry { ... } }`.
+ * A slot may name any id in it, or one of the addon's own `widgets`.
+ */
+export interface WidgetRegistry {}
+
+/** How much room a widget has: the whole lane, a tile, or a one-line chip. */
+export type StudioWidgetState = 'full' | 'tile' | 'chip'
+/** What a widget can ask its host to do. The host performs every action. */
+export type StudioWidgetActionType =
+  'open' | 'run' | 'scope' | 'submit' | 'link' | 'input' | 'event'
+/** Where a widget is drawn: at a desk, or on a headset. */
+export type StudioSkin = 'desk' | 'headset'
+/** How many lanes a slot takes. */
+export type StudioSpan = 'full' | 'wide' | 'half'
+/** What a slot becomes when its screen has one lane: kept whole, folded to a one-line tile, or left out. Defaults to `'tile'`. */
+export type StudioCompact = 'full' | 'tile' | 'hide'
+
+/** A widget the addon ships. Its key in `widgets` is its id, which may not reuse a core widget's id. */
+export type StudioWidget<Key extends string = string> = {
+  /** A message key in the addon's catalog. */
+  title: Key
+  /** A message key in the addon's catalog: one plain sentence saying what it shows. */
+  description: Key
+  states: readonly StudioWidgetState[]
+  actions: readonly StudioWidgetActionType[]
+  /** Defaults to both. */
+  skins?: readonly StudioSkin[]
+  component: () => Promise<{ default: unknown }>
+}
+
+/**
+ * A raw value a source returns for the host to format: a string that is not
+ * the addon's to translate (a name, a raw error message, what a user typed),
+ * a number, or an ISO 8601 time. The host formats numbers, counts, dates and
+ * relative times with `Intl` in the viewer's locale.
+ */
+export type StudioValue = string | number
+
+/**
+ * What a source returns where the host shows words: data, never words.
+ * `variant` picks the wording the declaration gives in `copy`, and `values`
+ * fills that wording's `{placeholders}`.
+ */
+export type StudioVariantData<Variant extends string = string> = {
+  variant: Variant
+  values?: Record<string, StudioValue>
+}
+
+/**
+ * The wording of one variant of a slot: each text the widget shows, named as
+ * the widget names it, mapped to a message key in the addon's catalog,
+ * `messages/{locale}.json`. The host resolves the keys, filling their
+ * `{placeholders}` from the data's `values`, and hands the widget the
+ * resolved strings.
+ */
+export type StudioSlotCopy<Key extends string = string> = {
+  readonly [text: string]: Key
+}
+
+/** One widget placed on an arranged screen or a thing's card. */
+export type StudioSlot<
+  WidgetId extends string = string,
+  From extends string = string,
+  Variant extends string = string,
+  Key extends string = string,
+> = {
+  /** A core widget's id or one of the addon's own; never another addon's. */
+  widget: WidgetId
+  /** A key of the source function's output that feeds this widget. A missing or null value hides the slot. */
+  from: From
+  span?: StudioSpan
+  compact?: StudioCompact
+  /** The wording of every variant the data at `from` can name. */
+  copy?: { readonly [V in Variant]: StudioSlotCopy<Key> }
+}
+
+/**
+ * The head of a thing's card, which the thing's source returns as `head`:
+ * data, never words. Its `variant` picks the wording the thing declares in
+ * `copy`.
+ */
+export type StudioCardHead<Variant extends string = string> =
+  StudioVariantData<Variant> & {
+    state?: 'wrong' | 'slow' | 'fine' | 'empty' | 'new'
+    tone?: 'bad' | 'warn' | 'good' | 'idle'
+    /** The one obvious next step, worded by the variant's `copy.primary`. `run` names a function of the addon. */
+    primary?: { run?: string }
+  }
+
+/**
+ * The wording of one variant of a thing's card head: message keys in the
+ * addon's catalog, whose `{placeholders}` the host fills from the head's
+ * `values`.
+ */
+export type StudioThingCopy<Key extends string = string> = {
+  name: Key
+  lead?: Key
+  /** The tile and chip line. */
+  compact: Key
+  /** `draft` is written into the chat box, never sent. */
+  primary?: { label: Key; draft?: Key }
+}
+
+/** What the host calls every source function with. */
+export type StudioSourceInput = {
+  projectKey: string
+  stage: string | null
+  range?: string
+  /** Set for a thing's source: which thing. */
+  subject?: { kind: string; id: string }
+}
+
+/**
+ * Something an addon can open as a card beside a screen. Its key in `things`
+ * is its kind. `source` names a function of the addon, called with
+ * `StudioSourceInput` and its `subject`, that returns `{ head: StudioCardHead }`
+ * and one key per part. `copy` words each variant the head can name.
+ */
+export type StudioThing<
+  WidgetId extends string = string,
+  Kind extends string = string,
+  From extends string = string,
+  Fn extends string = string,
+  Variant extends string = string,
+  Key extends string = string,
+  Parts = readonly StudioSlot<WidgetId, From, string, Key>[],
+> = {
+  /** A message key in the addon's catalog. */
+  label: Key
+  source: Fn
+  copy: { readonly [V in Variant]: StudioThingCopy<Key> }
+  /** The card's body under its head, in reading order. */
+  parts: Parts
+  /** The addon's own kinds this card can open beside itself. */
+  related?: readonly Kind[]
+  alwaysFull?: boolean
+  measure?: 'narrow' | 'normal' | 'fill'
+}
+
+/**
+ * A screen the host lays out from widgets. Its key in `arrangedScreens` is its
+ * id. `source` names a function of the addon, called with
+ * `StudioSourceInput`, whose output has one key per slot's `from`.
+ */
+export type StudioArrangedScreen<
+  WidgetId extends string = string,
+  Kind extends string = string,
+  From extends string = string,
+  Fn extends string = string,
+  Key extends string = string,
+  Slots = readonly StudioSlot<WidgetId, From, string, Key>[],
+> = StudioScreenBase & {
+  /** A message key in the addon's catalog. It is also the nav label. */
+  title: Key
+  /** A message key in the addon's catalog. */
+  about?: Key
+  source: Fn
+  slots: Slots
+  /** The addon's own thing kinds this screen shows. */
+  shows?: readonly Kind[]
+  /** The most lanes the screen pours into. Defaults to 4. */
+  lanes?: 1 | 2 | 3 | 4 | 5 | 6
+  chat?: 'collapse'
+  /** Shows the place-and-time picker. */
+  scoped?: boolean
+}
+
+/**
+ * The manifest passed to `definePlugin`: the addon's title, a message key, its
+ * screens, and optionally the widgets, things and arranged screens it ships.
+ */
 export type StudioManifest = {
   title: string
   screens: StudioScreen[]
+  widgets?: Record<string, StudioWidget>
+  things?: Record<string, StudioThing>
+  arrangedScreens?: Record<string, StudioArrangedScreen>
 }
+
+/** The functions a typed `definePlugin` checks `source` and `from` against: `#pikku/screens` passes the addon's own. */
+export type StudioFunctionMap = Record<string, { input: any; output: any }>
+
+type CoreWidgetId = Extract<keyof WidgetRegistry, string>
+type WidgetIdOf<W> = Extract<keyof (W & WidgetRegistry), string>
+type SourceOf<T> = T extends { source: infer S } ? S : never
+type OutputOf<Fns extends StudioFunctionMap, Source> = Source extends keyof Fns
+  ? NonNullable<Fns[Source]['output']>
+  : unknown
+type OutputKey<Fns extends StudioFunctionMap, Source> = Source extends keyof Fns
+  ? Extract<keyof OutputOf<Fns, Source>, string>
+  : string
+type VariantOf<Data> = Data extends { variant: infer V }
+  ? Extract<V, string>
+  : string
+type DataAt<Output, Slot> = Slot extends { from: infer F }
+  ? F extends keyof Output
+    ? NonNullable<Output[F]>
+    : unknown
+  : unknown
+type CheckedSlots<Output, WidgetId extends string, Key extends string, S> = {
+  readonly [I in keyof S]: StudioSlot<
+    WidgetId,
+    Output extends unknown ? Extract<keyof Output, string> : never,
+    VariantOf<DataAt<Output, S[I]>>,
+    Key
+  >
+}
+type PartsOf<T> = T extends { parts: infer P } ? P : never
+type SlotsOf<T> = T extends { slots: infer S } ? S : never
+
+type CheckedWidgets<W, Key extends string> = {
+  [K in keyof W]: K extends CoreWidgetId ? never : StudioWidget<Key>
+}
+type CheckedThings<Fns extends StudioFunctionMap, W, T, Key extends string> = {
+  [K in keyof T]: StudioThing<
+    WidgetIdOf<W>,
+    Extract<keyof T, string>,
+    OutputKey<Fns, SourceOf<T[K]>>,
+    Extract<keyof Fns, string>,
+    VariantOf<
+      OutputOf<Fns, SourceOf<T[K]>> extends { head: infer H } ? H : unknown
+    >,
+    Key,
+    CheckedSlots<
+      SourceOf<T[K]> extends keyof Fns
+        ? OutputOf<Fns, SourceOf<T[K]>>
+        : Record<string, unknown>,
+      WidgetIdOf<W>,
+      Key,
+      PartsOf<T[K]>
+    >
+  >
+}
+type CheckedArrangedScreens<
+  Fns extends StudioFunctionMap,
+  W,
+  T,
+  A,
+  Key extends string,
+> = {
+  [K in keyof A]: StudioArrangedScreen<
+    WidgetIdOf<W>,
+    Extract<keyof T, string>,
+    OutputKey<Fns, SourceOf<A[K]>>,
+    Extract<keyof Fns, string>,
+    Key,
+    CheckedSlots<
+      SourceOf<A[K]> extends keyof Fns
+        ? OutputOf<Fns, SourceOf<A[K]>>
+        : Record<string, unknown>,
+      WidgetIdOf<W>,
+      Key,
+      SlotsOf<A[K]>
+    >
+  >
+}
+
+/**
+ * `definePlugin`, checked against the addon's functions and message keys. A
+ * slot's `widget` must be one of the addon's own `widgets` or a core widget in
+ * `WidgetRegistry`; `related` and `shows` name the addon's own thing kinds;
+ * `source` names one of `Fns`, and `from` a key of that function's output;
+ * the `copy` of a slot or a thing words every `variant` its data can name; and
+ * the message keys of widgets, things and arranged screens are `Key`s. With
+ * the defaults, `source`, `from`, variants and keys are any string.
+ */
+export type DefinePlugin<
+  Fns extends StudioFunctionMap = StudioFunctionMap,
+  Key extends string = string,
+> = <
+  const W extends CheckedWidgets<W, Key> = {},
+  const T extends CheckedThings<Fns, W, T, Key> = {},
+  const A extends CheckedArrangedScreens<Fns, W, T, A, Key> = {},
+>(manifest: {
+  title: string
+  screens: StudioScreen[]
+  widgets?: W
+  things?: T
+  arrangedScreens?: A
+}) => StudioManifest
 
 /**
  * Declares the screens and nav an addon brings to Pikku Studio. Read
  * statically by `pikku all`, so every field must be a literal. Titles are
  * message keys in the addon's own catalog, `messages/{locale}.json`: a key
  * missing from `messages/en.json` fails the build.
+ *
+ * Import it from `#pikku/screens` to have `source`, `from`, the variants a
+ * `copy` words and the message keys checked against the addon's own functions
+ * and catalog.
  */
-export const definePlugin = (manifest: StudioManifest) => manifest
+export const definePlugin: DefinePlugin = (manifest) =>
+  manifest as StudioManifest

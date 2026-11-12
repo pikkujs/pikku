@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3716 observable things**: 1224 exported names, plus
+**3734 observable things**: 1242 exported names, plus
 2492 members on the classes and interfaces among them, reachable
 through 67 entry points.
 
@@ -36,6 +36,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
+| `./addon` | 32 | 32 | 2 |
 | `./contributors` | 14 | 14 | 20 |
 | `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
@@ -52,7 +53,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./telemetry-store/testing` | 4 | 4 | 14 |
 | `./scope` | 17 | 17 | 0 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
-| `./addon` | 14 | 14 | 2 |
 | `./safe-fetch` | 9 | 9 | 7 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./rpc` | 9 | 9 | 6 |
@@ -3571,7 +3571,21 @@ rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefi
 ## ./addon
 
 ```ts
-definePlugin: (manifest: StudioManifest) => StudioManifest
+definePlugin: DefinePlugin<StudioFunctionMap, string>
+export type DefinePlugin<
+  Fns extends StudioFunctionMap = StudioFunctionMap,
+  Key extends string = string,
+> = <
+  const W extends CheckedWidgets<W, Key> = {},
+  const T extends CheckedThings<Fns, W, T, Key> = {},
+  const A extends CheckedArrangedScreens<Fns, W, T, A, Key> = {},
+>(manifest: {
+  title: string
+  screens: StudioScreen[]
+  widgets?: W
+  things?: T
+  arrangedScreens?: A
+}) => StudioManifest
 export type RemoteAddonAuth =
   | { credentialId: string }
   | { secretId: string }
@@ -3602,12 +3616,40 @@ resolveRemoteAddonToken: (auth: RemoteAddonAuthBinding | undefined, services: Co
 export type StudioAppScreen = StudioScreenBase & {
   app: string
 }
+export type StudioArrangedScreen<
+  WidgetId extends string = string,
+  Kind extends string = string,
+  From extends string = string,
+  Fn extends string = string,
+  Key extends string = string,
+  Slots = readonly StudioSlot<WidgetId, From, string, Key>[],
+> = StudioScreenBase & {
+  title: Key
+  about?: Key
+  source: Fn
+  slots: Slots
+  shows?: readonly Kind[]
+  lanes?: 1 | 2 | 3 | 4 | 5 | 6
+  chat?: 'collapse'
+  scoped?: boolean
+}
+export type StudioCardHead<Variant extends string = string> =
+  StudioVariantData<Variant> & {
+    state?: 'wrong' | 'slow' | 'fine' | 'empty' | 'new'
+    tone?: 'bad' | 'warn' | 'good' | 'idle'
+    primary?: { run?: string }
+  }
+export type StudioCompact = 'full' | 'tile' | 'hide'
 export type StudioComponentScreen = StudioScreenBase & {
   component: () => Promise<{ default: unknown }>
 }
+export type StudioFunctionMap = Record<string, { input: any; output: any }>
 export type StudioManifest = {
   title: string
   screens: StudioScreen[]
+  widgets?: Record<string, StudioWidget>
+  things?: Record<string, StudioThing>
+  arrangedScreens?: Record<string, StudioArrangedScreen>
 }
 export type StudioNav = {
   area: 'rail' | 'team' | 'project' | 'account'
@@ -3616,6 +3658,69 @@ export type StudioNav = {
   badge?: string
 }
 export type StudioScreen = StudioComponentScreen | StudioAppScreen
+export type StudioSkin = 'desk' | 'headset'
+export type StudioSlot<
+  WidgetId extends string = string,
+  From extends string = string,
+  Variant extends string = string,
+  Key extends string = string,
+> = {
+  widget: WidgetId
+  from: From
+  span?: StudioSpan
+  compact?: StudioCompact
+  copy?: { readonly [V in Variant]: StudioSlotCopy<Key> }
+}
+export type StudioSlotCopy<Key extends string = string> = {
+  readonly [text: string]: Key
+}
+export type StudioSourceInput = {
+  projectKey: string
+  stage: string | null
+  range?: string
+  subject?: { kind: string; id: string }
+}
+export type StudioSpan = 'full' | 'wide' | 'half'
+export type StudioThing<
+  WidgetId extends string = string,
+  Kind extends string = string,
+  From extends string = string,
+  Fn extends string = string,
+  Variant extends string = string,
+  Key extends string = string,
+  Parts = readonly StudioSlot<WidgetId, From, string, Key>[],
+> = {
+  label: Key
+  source: Fn
+  copy: { readonly [V in Variant]: StudioThingCopy<Key> }
+  parts: Parts
+  related?: readonly Kind[]
+  alwaysFull?: boolean
+  measure?: 'narrow' | 'normal' | 'fill'
+}
+export type StudioThingCopy<Key extends string = string> = {
+  name: Key
+  lead?: Key
+  compact: Key
+  primary?: { label: Key; draft?: Key }
+}
+export type StudioValue = string | number
+export type StudioVariantData<Variant extends string = string> = {
+  variant: Variant
+  values?: Record<string, StudioValue>
+}
+export type StudioWidget<Key extends string = string> = {
+  title: Key
+  description: Key
+  states: readonly StudioWidgetState[]
+  actions: readonly StudioWidgetActionType[]
+  skins?: readonly StudioSkin[]
+  component: () => Promise<{ default: unknown }>
+}
+export type StudioWidgetActionType =
+  'open' | 'run' | 'scope' | 'submit' | 'link' | 'input' | 'event'
+export type StudioWidgetState = 'full' | 'tile' | 'chip'
+export interface WidgetRegistry {}
 wireAddon: (config: WireAddonConfig) => void
 export type WireAddonConfig = {
   name: string
@@ -6680,7 +6785,7 @@ export type LocalContentRequestHandlerOptions = {
 }
 export type SignedContentVerification =
   { ok: true } | { ok: false; status: number; body: string }
-verifySignedContentRequest: (requestUrl: URL, jwt: JWTService | undefined, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
+verifySignedContentRequest: (requestUrl: URL, jwt: any, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
 ```
 
 ## ./services/temporary-file-service
