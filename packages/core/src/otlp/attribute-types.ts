@@ -13,6 +13,7 @@ const ALLOW_LIST_KINDS: Record<string, AttributeKind> = {
   'pikku.wire.type': 'string',
   'pikku.wire.id': 'string',
   'pikku.function.id': 'string',
+  'pikku.function.version': 'int',
   'pikku.package': 'string',
   'pikku.addon.namespace': 'string',
   'pikku.trace.root': 'bool',

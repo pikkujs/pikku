@@ -713,6 +713,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   // knowledge: decisions/internals/the-function-runner-owns-the-span-middleware-cannot.md
   // The span wraps the middleware chain, so its duration is the whole
   // invocation; the function body alone is `pikku.function.duration_ms`.
+  const functionVersion = parseVersionedId(resolvedFunctionId).version
   const openSpan = openFunctionSpan(
     resolvedSingletonServices.tracer,
     resolvedSingletonServices.logger,
@@ -722,6 +723,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
       'pikku.wire.type': wireType,
       'pikku.wire.id': wireId,
       'pikku.function.id': resolvedFunctionId,
+      ...(functionVersion !== null
+        ? { 'pikku.function.version': functionVersion }
+        : {}),
       ...(funcPackageName ? { 'pikku.package': funcPackageName } : {}),
       ...(addonInstance
         ? { 'pikku.addon.namespace': addonInstance.namespace }

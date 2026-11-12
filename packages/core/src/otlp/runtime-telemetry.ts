@@ -181,7 +181,10 @@ export const createRuntimeTelemetry = (
     minLevel,
     fields: env.PIKKU_OTLP_LOG_FIELDS === '1',
     ...(options.contextStorage
-      ? { currentContext: () => options.contextStorage!.get() }
+      ? {
+          currentContext: () => options.contextStorage!.get(),
+          contextAttributes: (context) => tracer.attributesOf(context),
+        }
       : {}),
   })
   const metrics = startProcessMetrics(exporter)

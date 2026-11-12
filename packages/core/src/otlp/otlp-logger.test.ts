@@ -134,6 +134,59 @@ describe('OtlpLogger', () => {
     assert.equal(record!.spanId, '00f067aa0ba902b7')
   })
 
+  test("a record written inside a span carries the span's function, version, wire and tenant, and nothing else of it", async () => {
+    const context = {
+      traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+      spanId: '00f067aa0ba902b7',
+      sampled: true,
+    }
+    const { logger, sent } = setup({
+      currentContext: () => context,
+      contextAttributes: () => ({
+        'pikku.function.id': 'invoice@v2',
+        'pikku.function.version': 2,
+        'pikku.wire.type': 'http',
+        'pikku.org.id': 'org_1',
+        'http.route': '/invoices',
+        'pikku.function.duration_ms': 5,
+      }),
+    })
+    logger.info('inside')
+    const [record] = await sent()
+    assert.deepEqual(record!.attributes['pikku.function.id'], {
+      string: 'invoice@v2',
+    })
+    assert.deepEqual(record!.attributes['pikku.function.version'], { int: 2n })
+    assert.deepEqual(record!.attributes['pikku.wire.type'], { string: 'http' })
+    assert.deepEqual(record!.attributes['pikku.org.id'], { string: 'org_1' })
+    assert.equal(record!.attributes['http.route'], undefined)
+    assert.equal(record!.attributes['pikku.function.duration_ms'], undefined)
+  })
+
+  test('a record outside any span, or scoped to another trace, carries none of it', async () => {
+    const context = {
+      traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+      spanId: '00f067aa0ba902b7',
+      sampled: true,
+    }
+    const attributes = () => ({ 'pikku.function.id': 'f' })
+    const outside = setup({ contextAttributes: attributes })
+    outside.logger.info('no context')
+    assert.equal(
+      (await outside.sent())[0]!.attributes['pikku.function.id'],
+      undefined
+    )
+    const inside = setup({
+      currentContext: () => context,
+      contextAttributes: attributes,
+    })
+    inside.logger.scope!('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa').info('other trace')
+    assert.equal(
+      (await inside.sent())[0]!.attributes['pikku.function.id'],
+      undefined
+    )
+  })
+
   test('scope(traceId) scopes the inner logger and stamps the trace id', async () => {
     const { logger, written, sent } = setup()
     const scoped = logger.scope!('4bf92f3577b34da6a3ce929d0e0e4736')

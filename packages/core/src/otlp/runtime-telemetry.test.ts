@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import type { Logger } from '../services/logger.js'
 import { NOOP_TRACER } from '../tracer.js'
 import { decodeLogs, decodeTraces } from '../testing/otlp-decoder.js'
-import { createTrace } from '../trace.js'
+import { createTrace, type TraceContext } from '../trace.js'
 import { isLoopbackHost, parseOtlpEndpoint } from './loopback.js'
 import {
   createRuntimeTelemetry,
@@ -295,6 +295,61 @@ describe('createRuntimeTelemetry', () => {
       logs.items.map((l) => l.body),
       [{ string: 'over the floor' }]
     )
+  })
+
+  test("a log written inside a function span carries that span's function and wire; one outside carries none", async () => {
+    const { requests, fetchImpl } = capture()
+    let current: TraceContext | undefined
+    const telemetry = createRuntimeTelemetry(
+      { PIKKU_OTLP_ENDPOINT: 'http://127.0.0.1:4000/v1/otlp' },
+      options({
+        fetch: fetchImpl,
+        contextStorage: {
+          run: (context: TraceContext, fn: () => unknown) => {
+            const before = current
+            current = context
+            try {
+              return fn()
+            } finally {
+              current = before
+            }
+          },
+          get: () => current,
+        },
+      })
+    )
+    const span = telemetry.tracer.startSpan('invoices', createTrace(), {
+      attributes: {
+        'pikku.function.id': 'invoices',
+        'pikku.wire.type': 'http',
+        'http.route': '/invoices',
+      },
+    })
+    ;(
+      telemetry.tracer as unknown as {
+        runInSpan: (s: typeof span, fn: () => void) => void
+      }
+    ).runInSpan(span, () => telemetry.logger.info('inside'))
+    span.setAttribute('pikku.org.id', 'late')
+    telemetry.logger.info('outside')
+    telemetry.stopMetrics()
+    await telemetry.flush()
+    await telemetry.close()
+    const logs = decodeLogs(
+      requests.find((r) => r.url.endsWith('/v1/logs'))!.body
+    ).items
+    const inside = logs.find(
+      (l) => (l.body as { string: string }).string === 'inside'
+    )!
+    const outside = logs.find(
+      (l) => (l.body as { string: string }).string === 'outside'
+    )!
+    assert.deepEqual(inside.attributes['pikku.function.id'], {
+      string: 'invoices',
+    })
+    assert.deepEqual(inside.attributes['pikku.wire.type'], { string: 'http' })
+    assert.equal(inside.attributes['http.route'], undefined)
+    assert.equal(outside.attributes['pikku.function.id'], undefined)
   })
 
   test('service name falls back to the explicit override, then project, then the package', () => {
