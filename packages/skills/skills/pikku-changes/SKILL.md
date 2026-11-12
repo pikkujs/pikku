@@ -31,6 +31,17 @@ yourself, build it in the working tree with the skill for the feature (pikku-wor
 pikku-wiring and so on), run `pikku all` and `tsc --noEmit`, and finish. Note what you decided in the
 knowledge base, not in a question. Only a decision the person has kept for themselves is worth an `ask`.
 
+### The sequence for a workflow that uses addons
+
+About eight calls when nothing goes wrong; each step is one command or one write:
+
+1. **Addons.** The vendor is named: `pikku addons add <vendor>` for each (installs, wires, prints the secrets and variables to fill in). Not named, or unsure: `pikku addons search <words>` first (rules in pikku-addon).
+2. **Shapes.** `pikku meta functions get <addon>:<function>` for every function you will call, in one command. Fields without `?` are required. A field the addon authenticates itself (a `token`) is passed as an empty string.
+3. **One write** for everything: `db/tables.ts` if the workflow needs a table; a `pikkuSessionlessFunc` per database read or write; a starter function that calls `rpc.startWorkflow('<workflowName>', data)` wired with `wireHTTP` (or a schedule); the workflow in `src/wirings/<name>.workflow.ts` with each step `workflow.do('<step name>', '<function or addon:function>', input, { retries, retryDelay })`; one `defineVariable` per config value (its `schema` is an exported constant, not inline). `mkdir -p src/wirings` first. The whole shape is in `pikku-workflow/references/addon-workflow-example.md`.
+4. **Tables.** `pikku db generate && pikku db migrate`. Queries on a new table type-check only after `migrate`.
+5. **Check.** `pikku all && pikku check`. A `PKU###` code is explained by `pikku doc PKU###`.
+6. **Prove the steps.** `pikku meta workflows get <name>` lists every step, the addon ones as `<addon>:<function>`.
+
 ## The loop
 
 **Never poll.** No `sleep` loops, no repeated `list`, no re-running `show` to see if
