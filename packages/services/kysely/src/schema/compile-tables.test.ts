@@ -106,6 +106,13 @@ describe('compileTables: column types', () => {
     ])
   })
 
+  test('refuses a bounded string of length 0', () => {
+    assert.throws(
+      () => compileTables({ t: { columns: { a: { type: 'string(0)' } } } }),
+      /'t.a' has type 'string\(0\)'. A bounded string needs a length of at least 1/
+    )
+  })
+
   test('a text column in a key is bounded on mysql and text elsewhere', () => {
     const keyed = defineTables({
       tag: { columns: { name: { type: 'text', unique: true } } },
@@ -209,6 +216,23 @@ describe('compileTables: onDelete', () => {
                 required: true,
               },
             },
+          },
+        }),
+      /'child.parentId' is required, so onDelete 'setNull' could never succeed/
+    )
+  })
+
+  test('refuses setNull on a column in a composite primary key', () => {
+    assert.throws(
+      () =>
+        compileTables({
+          parent: { columns: { id: { type: 'id', primaryKey: true } } },
+          child: {
+            columns: {
+              parentId: { references: 'parent.id', onDelete: 'setNull' },
+              seq: { type: 'integer' },
+            },
+            primaryKey: ['parentId', 'seq'],
           },
         }),
       /'child.parentId' is required, so onDelete 'setNull' could never succeed/
@@ -362,6 +386,39 @@ describe('compileTables: indexes', () => {
       }
     })
 
+    test('mysql refuses before applying anything', async () => {
+      const executed: string[] = []
+      class RecordingDriver extends DummyDriver {
+        override async acquireConnection() {
+          return {
+            executeQuery: async (query: CompiledQuery) => {
+              executed.push(query.sql)
+              return { rows: [] }
+            },
+            streamQuery: async function* () {},
+          }
+        }
+      }
+      const db = new Kysely<any>({
+        dialect: {
+          createAdapter: () => new MysqlAdapter(),
+          createDriver: () => new RecordingDriver(),
+          createIntrospector: (i: Kysely<any>) => new MysqlIntrospector(i),
+          createQueryCompiler: () => new MysqlQueryCompiler(),
+        },
+      })
+      await assert.rejects(
+        applyPikkuSchemas(db, [
+          { name: 'app', statements: compileTables(partial) },
+        ]),
+        /MySQL has no partial indexes/
+      )
+      assert.deepEqual(
+        executed.filter((q) => /^create /i.test(q)),
+        []
+      )
+    })
+
     test('mysql refuses, naming the index', () => {
       assert.throws(
         () => compile('mysql', partial),
@@ -422,6 +479,7 @@ describe('compileTables: references take their target type', () => {
               x: { references: 'user.id' },
               y: { references: 'user.id' },
               z: { references: 'orgMember.memberId' },
+              w: { references: 'apiURL.keyID' },
             },
           },
         }),
@@ -430,6 +488,7 @@ describe('compileTables: references take their target type', () => {
       [
         { table: 'user', column: 'id', owner: 'Better Auth' },
         { table: 'org_member', column: 'member_id', owner: 'Better Auth' },
+        { table: 'api_url', column: 'key_id', owner: 'Better Auth' },
       ]
     )
     assert.deepEqual(

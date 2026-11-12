@@ -97,7 +97,7 @@ export interface SchemaContext {
 }
 
 /** A foreign key target: `table.column`, with `onDelete` when it is not `restrict`. */
-export type ForeignKeyTarget = string | { target: string; onDelete: OnDelete }
+export type ForeignKeyTarget = string | { target: string; onDelete?: OnDelete }
 
 const ON_DELETE_SQL = {
   cascade: 'cascade',
