@@ -4,6 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeWiringMeta } from '../../../utils/write-wiring-meta.js'
+import { withCLIEntrypoints } from './cli-entrypoints.js'
 
 export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -70,7 +71,7 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
 
     await writeWiringMeta({
       logger,
-      meta: cli.meta,
+      meta: withCLIEntrypoints(cli.meta, config),
       metaJsonFile: cliWiringMetaJsonFile,
       metaFile: cliWiringMetaFile,
       packageMappings,
