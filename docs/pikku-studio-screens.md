@@ -39,19 +39,19 @@ export default definePlugin({
 
 ## Screen fields
 
-| Field                | Meaning                                                                                                                                                                                                                              |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `path`               | The route path.                                                                                                                                                                                                                      |
-| `title`              | A message key in the addon's catalog. It is also the nav label.                                                                                                                                                                      |
-| `component` or `app` | A lazy `() => import('...')` the host renders, or `app`, a static program it serves in a sandboxed iframe.                                                                                                                           |
-| `scope`              | `'studio'` gives `/<path>`, `'team'` gives `/<team>/<path>`, `'project'` gives `/<team>/<project>[/<target>]/<path>`.                                                                                                                |
-| `nav?`               | `{ area: 'rail' \| 'team' \| 'project' \| 'account', icon, order, badge? }`. `badge` names a function of the addon that returns a count. Without `nav` the screen is routed but not listed.                                          |
-| `replaces?`          | `true` takes over the core screen at the same path. Only first-party addons may use it.                                                                                                                                              |
-| `needsApp?`          | Project screens only. Defaults to `false`.                                                                                                                                                                                           |
-| `layout?`            | `'bare'` renders the screen without the shell.                                                                                                                                                                                       |
+| Field                | Meaning                                                                                                                                                                                                                                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`               | The route path.                                                                                                                                                                                                                                                                                             |
+| `title`              | A message key in the addon's catalog. It is also the nav label.                                                                                                                                                                                                                                             |
+| `component` or `app` | A lazy `() => import('...')` the host renders, or `app`, a static program it serves in a sandboxed iframe.                                                                                                                                                                                                  |
+| `scope`              | `'studio'` gives `/<path>`, `'team'` gives `/<team>/<path>`, `'project'` gives `/<team>/<project>[/<target>]/<path>`.                                                                                                                                                                                       |
+| `nav?`               | `{ area: 'rail' \| 'team' \| 'project' \| 'account', icon, order, badge? }`. `badge` names a function of the addon that returns a count. Without `nav` the screen is routed but not listed.                                                                                                                 |
+| `replaces?`          | `true` takes over the core screen at the same path. Only first-party addons may use it.                                                                                                                                                                                                                     |
+| `needsApp?`          | Project screens only. Defaults to `false`.                                                                                                                                                                                                                                                                  |
+| `layout?`            | `'bare'` renders the screen without the shell.                                                                                                                                                                                                                                                              |
 | `agent?`             | The agent that answers in Studio's chat panel, in a second tab beside the general chat, while this screen is open. Either a name (`/^[a-z][a-z0-9-]*$/`) for an agent the addon ships, resolving to `agents/<name>.md` in its package, or `studio:<name>` for an agent Studio ships. See [Agents](#agents). |
-| `defaultChat?`       | Whether Studio's general Chat tab shows on this screen, beside the `agent` tab. Defaults to `true`; `false` hides it, and with no `agent` the screen has no chat at all. A boolean literal. See [Agents](#agents). |
-| `scopes?`            | Hides the screen and its nav from viewers without access. This is not access control: the addon's functions must enforce the same scopes.                                                                                            |
+| `defaultChat?`       | Whether Studio's general Chat tab shows on this screen, beside the `agent` tab. Defaults to `true`; `false` hides it, and with no `agent` the screen has no chat at all. A boolean literal. See [Agents](#agents).                                                                                          |
+| `scopes?`            | Hides the screen and its nav from viewers without access. This is not access control: the addon's functions must enforce the same scopes.                                                                                                                                                                   |
 
 The manifest `title` is a message key too: the addon's name in Studio.
 
@@ -196,7 +196,10 @@ export default definePlugin({
           compact: 'invoices_overdue__compact',
           primary: { label: 'invoices_remind__label' },
         },
-        paid: { name: 'invoices_paid__name', compact: 'invoices_paid__compact' },
+        paid: {
+          name: 'invoices_paid__name',
+          compact: 'invoices_paid__compact',
+        },
       },
       parts: [{ widget: 'aging-chart', from: 'aging' }],
       actions: {
@@ -253,7 +256,8 @@ screen) name the addon's own thing kinds. Arranged screens take `path`, `title`,
   `'admin:listUsers'`. Studio calls it from the browser with the same client its
   own screens use. Its output is not typed, so `from` and variants are any string.
 
-An action's `run` names a function the same two ways.
+An action's `run` names a function the same two ways, or is `go:/<path>`:
+Studio then takes the viewer to that path instead of calling anything.
 
 ### Actions, redirect and poll
 
@@ -279,6 +283,25 @@ No words cross the wire. A source returns data: a `variant`, and raw `values`
 - a thing's `copy`: for each variant its `head` can name, `name`, `compact`,
   `lead?` and `primary?: { label, draft? }`.
 
+A copy entry nests for deeper texts (`status: { text: 'key' }`), and numeric
+names place list items (`tags: { 0: 'key' }`). A value that is itself a variant
+(`values: { why: { variant: 'why_timeout' } }`) is worded by that variant's
+`$`: `why_timeout: { $: 'key' }`. A head or a slot's data can carry `figures`,
+`[{ variant, value?: { n, unit: 'count' | 'ms' | 'percent' } }]`, each worded
+by its variant's `{ label, note?, value? }` in the same `copy`.
+
+Copy is often shared. The inspector follows a `const` declared at the top of
+the same file, and spreads of one, so this reads:
+
+```ts
+const VALUES = { why_timeout: { $: 'invoices_why_timeout' } }
+
+copy: { ...VALUES, late: { headline: 'invoices_verdict_late__headline' } }
+```
+
+It does not follow a function call (`word('key')`), an import, or a `let`:
+write `{ $: 'key' }` in place, or the build fails with PKU345.
+
 Studio resolves the keys, fills their `{placeholders}` from `values`, formats
 numbers, dates and plurals with `Intl`, and hands the widget the resolved
 strings and the raw values. A widget's own chrome (axis labels, empty states)
@@ -297,7 +320,7 @@ Imported from there rather than from `@pikku/core/addon`, tsc checks:
 
 - `source` and `run` name a function of the addon, or a project RPC by shape;
 - `from` is a key of the source function's output;
-- each `copy` words every `variant` its data can name;
+- each `copy` words every `variant` its data can name, figures included;
 - `redirect` keys are variants of the source and its targets are arranged
   screen ids or paths;
 - every message key is in `messages/en.json`.
@@ -310,19 +333,36 @@ plain string; the build checks below still run.
 Studio decides which addons may place widgets at all; this release declares no
 trust field.
 
+### Calling another addon
+
+An addon that calls another addon's functions declares it under `pikku.uses`
+in its `package.json`, a record of alias to `package@range`
+(`{ "cloud": "@acme/addon-cloud@^1" }`), and the app maps each alias on
+`wireAddon({ uses: { cloud: 'cloudApi' } })`; see
+[remote-rpc.md](./remote-rpc.md). A project RPC source or action
+(`'console:listAgents'`) needs no declaration: Studio calls it through the
+host's own project client.
+
+### What the host receives
+
+The generated `installedAddons` carries each addon's `widgets`, `things` and
+`arrangedScreens` as records keyed by id (a thing's by its kind), and their
+`actions` the same way, as `definePlugin` declares them. A widget's
+`component` is a lazy import through the package's `./widgets/*` export.
+
 ## What `pikku all` checks
 
 The inspector reads `definePlugin` statically and writes the screens into the
 addon's `studio` metadata. It fails the build on:
 
-| Code   | When                                                                                                                                          |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| PKU345 | a field is not a literal: a variable, a call, a spread or a value outside its set; a `source` or `run` that is neither a name nor `<namespace>:<function>`; a destructive action without `confirm`; `lanes` outside 1-6; a `poll` that is not a positive whole number of milliseconds |
-| PKU357 | two screens or arranged screens of the addon use the same path                                                                                |
-| PKU358 | a title key, an agent's `title` / `description` key, or a key of a widget (`title`, `description`), thing (`label`, `copy`), arranged screen (`title`, `about`), slot `copy` or action (`label`, `confirm`) is missing from `messages/en.json` |
-| PKU359 | a `nav.badge` names no function of the addon                                                                                                  |
-| PKU365 | an `agent` is neither a name `/^[a-z][a-z0-9-]*$/` nor `studio:<name>`; or a name has no non-empty `agents/<name>.md`, or that file lacks frontmatter with a `title` and `description` |
-| PKU366 | `package.json` has a `files` list that leaves out `agents/` while a screen names a valid agent the addon ships (not `studio:<name>`, and not already PKU365), or leaves out `skills/` while the addon has a `skills/<name>/SKILL.md` |
+| Code   | When                                                                                                                                                                                                                                                                                                                                                                               |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PKU345 | a field is not a literal: a call, an import, a variable that is not a top-level `const` of the same file, or a value outside its set; a `source` that is neither a name nor `<namespace>:<function>`, or a `run` that is none of those nor `go:/<path>`; a destructive action without `confirm`; `lanes` outside 1-6; a `poll` that is not a positive whole number of milliseconds |
+| PKU357 | two screens or arranged screens of the addon use the same path                                                                                                                                                                                                                                                                                                                     |
+| PKU358 | a title key, an agent's `title` / `description` key, or a key of a widget (`title`, `description`), thing (`label`, `copy`, nested and `$` keys included), arranged screen (`title`, `about`), slot `copy` or action (`label`, `confirm`) is missing from `messages/en.json`                                                                                                       |
+| PKU359 | a `nav.badge` names no function of the addon                                                                                                                                                                                                                                                                                                                                       |
+| PKU365 | an `agent` is neither a name `/^[a-z][a-z0-9-]*$/` nor `studio:<name>`; or a name has no non-empty `agents/<name>.md`, or that file lacks frontmatter with a `title` and `description`                                                                                                                                                                                             |
+| PKU366 | `package.json` has a `files` list that leaves out `agents/` while a screen names a valid agent the addon ships (not `studio:<name>`, and not already PKU365), or leaves out `skills/` while the addon has a `skills/<name>/SKILL.md`                                                                                                                                               |
 
 A key missing from any other locale's catalog is a warning.
 
