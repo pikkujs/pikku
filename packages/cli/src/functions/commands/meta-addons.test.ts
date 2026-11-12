@@ -8,6 +8,7 @@ import {
   addonFunctionRows,
   addonSummary,
   describeSchema,
+  graphChecks,
   similarAddonFunctions,
   wiredAddons,
 } from './meta-addons.js'
@@ -120,5 +121,42 @@ describe('meta addons', () => {
       ),
     }
     assert.equal(describeSchema(big).at(-1), '… 10 more fields')
+  })
+})
+
+describe('graphChecks', () => {
+  const graph = {
+    nodes: {
+      send: {
+        rpcName: 'gmail:messageSend',
+        input: { subject: 'Hi', body: 'x' },
+      },
+      whole: { rpcName: 'gmail:messageSend', input: { $ref: 'send' } },
+      list: { rpcName: 'gmail:messageList', input: {} },
+      deal: { rpcName: 'pipedrive__createDeal', input: { a: 1 } },
+    },
+  }
+  const required = (rpc: string) =>
+    rpc === 'gmail:messageSend' ? ['to', 'subject', 'body'] : undefined
+  test('names the required fields an addon step does not hand over, and the stubs', () => {
+    const out = graphChecks(
+      graph,
+      required,
+      (rpc) => rpc === 'pipedrive__createDeal'
+    )
+    assert.deepEqual(out.missingRequiredInputs, { send: ['to'] })
+    assert.deepEqual(out.stubs, ['deal'])
+  })
+  test('a clean graph reports nothing', () => {
+    const out = graphChecks(
+      {
+        nodes: {
+          a: { rpcName: 'graph:sort', input: { items: { $ref: 'x' } } },
+        },
+      },
+      () => ['items'],
+      () => false
+    )
+    assert.deepEqual(out, { missingRequiredInputs: {}, stubs: [] })
   })
 })

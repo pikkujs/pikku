@@ -2,6 +2,39 @@ import { existsSync } from 'fs'
 import { basename, isAbsolute, join, resolve } from 'path'
 import { mkdir, readdir, readFile, stat, writeFile } from 'fs/promises'
 import { pikkuSessionlessFunc } from '#pikku/function'
+import { registryUrl } from '../../utils/remote-addon-sync.js'
+import {
+  dropUnpublished,
+  namespacesUsed,
+  startFile,
+  triggerOf,
+  wiredPackages,
+} from './import-n8n-next.js'
+
+/**
+ * Which of these `@pikku/addon-*` packages the registry publishes. Undefined when the registry cannot be reached: the
+ * caller then claims nothing rather than dropping a package that exists.
+ */
+async function publishedPackages(
+  registry: string,
+  packages: string[]
+): Promise<Set<string> | undefined> {
+  const published = new Set<string>()
+  try {
+    for (const pkg of packages) {
+      const url = new URL('/registry/addons/search', registry)
+      url.searchParams.set('query', pkg.replace('@pikku/addon-', ''))
+      const response = await fetch(url, { signal: AbortSignal.timeout(5000) })
+      if (!response.ok) return undefined
+      const entries = (await response.json()) as Array<{ name?: string }>
+      if (Array.isArray(entries) && entries.some((e) => e.name === pkg))
+        published.add(pkg)
+    }
+  } catch {
+    return undefined
+  }
+  return published
+}
 
 async function writeFiles(
   baseDir: string,
@@ -46,7 +79,8 @@ type ImportLogger = {
 async function importOne(
   { raw, nameHint }: ImportJob,
   baseDir: string,
-  logger: ImportLogger
+  logger: ImportLogger,
+  registry?: string
 ): Promise<boolean> {
   // Imported here: the n8n importer loads the TypeScript compiler, which no
   // other command run needs.
@@ -74,6 +108,37 @@ async function importOne(
     return false
   }
 
+  // The trigger node is not part of the graph: write what starts it (an HTTP route or a schedule).
+  const graphKey = Object.keys(files).find((f) => f.endsWith('.graph.ts'))
+  const dir = graphKey ? graphKey.slice(0, graphKey.lastIndexOf('/')) : ''
+  const start = startFile(parsed.name, parsed.slug, triggerOf(raw as never))
+  if (graphKey)
+    files[`${dir ? dir + '/' : ''}${parsed.slug}.start.ts`] = start.code
+
+  // A guessed addon package that the registry does not publish would fail `pikku all` (PKU340): leave it out.
+  const addonsKey = Object.keys(files).find((f) => f.endsWith('.addons.gen.ts'))
+  const wired = wiredPackages(addonsKey ? files[addonsKey] : undefined)
+  const nsToPkg = new Map(wired.map((w) => [w.name, w.pkg]))
+  const needed = new Set<string>()
+  for (const ns of namespacesUsed(files))
+    needed.add(nsToPkg.get(ns) ?? `@pikku/addon-${ns}`)
+  for (const w of wired) needed.add(w.pkg)
+  const published = registry
+    ? await publishedPackages(
+        registry,
+        [...needed].filter((p) => p !== '@pikku/addon-graph')
+      )
+    : undefined
+  published?.add('@pikku/addon-graph')
+  const unpublished = new Set(
+    published ? [...needed].filter((p) => !published.has(p)) : []
+  )
+  if (addonsKey && unpublished.size) {
+    const rest = dropUnpublished(files[addonsKey], unpublished)
+    if (rest) files[addonsKey] = rest
+    else delete files[addonsKey]
+  }
+
   const written = await writeFiles(baseDir, files)
 
   logger.info(
@@ -84,9 +149,13 @@ async function importOne(
       `  ${manifest.length} integration node(s) recorded in ${parsed.slug}.integrations.json`
     )
   }
-  if (credentialInstances.length > 0) {
+  const keptInstances = credentialInstances.filter(
+    (i) =>
+      !unpublished.has(wired.find((w) => w.name === i.instanceName)?.pkg ?? '')
+  )
+  if (keptInstances.length > 0) {
     logger.info(
-      `  ${credentialInstances.length} addon instance(s) wired in ${parsed.slug}.addons.gen.ts: ${credentialInstances
+      `  ${keptInstances.length} addon instance(s) wired in ${parsed.slug}.addons.gen.ts: ${keptInstances
         .map((i) => i.instanceName)
         .join(', ')}`
     )
@@ -100,6 +169,21 @@ async function importOne(
     )
     for (const f of stubFiles) logger.info(`    ${join(baseDir, f)}`)
   }
+  if (graphKey)
+    logger.info(
+      `  start wiring: ${start.wiring} (${join(baseDir, dir, parsed.slug + '.start.ts')})`
+    )
+  if (unpublished.size)
+    logger.info(
+      `  no published addon for ${[...unpublished].join(', ')}: its nodes stay stubs and must be reported as missing integrations, not invented`
+    )
+  const install = [...needed]
+    .filter((p) => !unpublished.has(p))
+    .map((p) => p.replace('@pikku/addon-', ''))
+  if (install.length)
+    logger.info(
+      `  next: ${install.map((n) => `pikku addons add ${n}`).join(' && ')}  then  pikku all --tsc-summary`
+    )
   return true
 }
 
@@ -111,6 +195,7 @@ export const pikkuImportN8n = pikkuSessionlessFunc<
   void
 >({
   func: async ({ logger, config }, { file, out }) => {
+    const registry = registryUrl(config)
     const inputPath = isAbsolute(file) ? file : resolve(process.cwd(), file)
     if (!existsSync(inputPath)) {
       logger.error(`n8n workflow file not found: ${inputPath}`)
@@ -160,7 +245,7 @@ export const pikkuImportN8n = pikkuSessionlessFunc<
 
     let failed = 0
     for (const job of jobs) {
-      if (!(await importOne(job, baseDir, logger))) failed++
+      if (!(await importOne(job, baseDir, logger, registry))) failed++
     }
 
     if (jobs.length > 1) {

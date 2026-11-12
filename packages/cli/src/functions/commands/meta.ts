@@ -2,7 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { getSchema } from '@pikku/core/schema'
 import { I18nService } from '@pikku/code-edit/i18n'
 import type { CodeEditOperation } from '@pikku/code-edit'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
 import { databaseContext } from '../db/db-context.js'
@@ -180,6 +180,8 @@ const readServiceRows = (state: any, config: any): MetaRow[] => {
 
 import {
   addonFunctionDetail,
+  addonRequiredInputs,
+  graphChecks,
   addonFunctionRows,
   addonSummary,
   similarAddonFunctions,
@@ -292,19 +294,37 @@ export const pikkuMetaWorkflowsGet = pikkuSessionlessFunc<
   { workflowId: string },
   void
 >({
-  func: async ({ getInspectorState }, data) => {
+  func: async ({ getInspectorState, config }, data) => {
     const state = await getInspectorState()
     const wf = (state.workflows?.meta ?? {})[data.workflowId] as any
     const graph = ((state.workflows as any)?.graphMeta ?? {})[
       data.workflowId
     ] as any
     if (!wf && graph) {
+      const fmeta: Record<string, any> = state.functions?.meta ?? {}
+      const stubText = (rpcName: string): boolean => {
+        const file = fmeta[rpcName]?.sourceFile
+        try {
+          return !!file && /implement me|Stub:/.test(readFileSync(file, 'utf8'))
+        } catch {
+          return false
+        }
+      }
+      const { missingRequiredInputs, stubs } = graphChecks(
+        graph,
+        (rpcName) => addonRequiredInputs(config, state, rpcName),
+        stubText
+      )
       return void out({
         workflowId: data.workflowId,
         name: graph.name ?? data.workflowId,
         source: 'graph',
         entryNodeIds: graph.entryNodeIds ?? [],
         nodes: graph.nodes ?? {},
+        ...(Object.keys(missingRequiredInputs).length
+          ? { missingRequiredInputs }
+          : {}),
+        ...(stubs.length ? { stubs } : {}),
       })
     }
     if (!wf) throw new Error(`Workflow not found: ${data.workflowId}`)

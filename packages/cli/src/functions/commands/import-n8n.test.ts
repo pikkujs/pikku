@@ -1,6 +1,6 @@
 import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile, rm, readdir } from 'fs/promises'
+import { mkdtemp, mkdir, writeFile, rm, readdir, readFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { pikkuImportN8n } from './import-n8n.js'
@@ -51,6 +51,16 @@ const fakeLogger = () => {
     info,
     error,
   }
+}
+
+const listAll = async (dir: string): Promise<string[]> => {
+  const out: string[] = []
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) out.push(...(await listAll(full)))
+    else out.push(full)
+  }
+  return out
 }
 
 const graphFiles = async (dir: string): Promise<string[]> => {
@@ -160,5 +170,86 @@ describe('pikkuImportN8n — batch import', () => {
       !info.some((m) => /stub function/.test(m)),
       'a stub-free import must not report stubs'
     )
+  })
+
+  test('writes the start wiring, drops an unpublished addon, and says what to install next', async () => {
+    const { createServer } = await import('http')
+    const server = createServer((req, res) => {
+      const q = new URL(req.url!, 'http://x').searchParams.get('query')
+      res.setHeader('content-type', 'application/json')
+      res.end(
+        JSON.stringify(q === 'gmail' ? [{ name: '@pikku/addon-gmail' }] : [])
+      )
+    })
+    await new Promise<void>((r) => server.listen(0, r))
+    const registry = `http://localhost:${(server.address() as { port: number }).port}`
+    try {
+      const wf = {
+        name: 'Mixed',
+        nodes: [
+          {
+            id: 't',
+            name: 'Webhook',
+            type: 'n8n-nodes-base.webhook',
+            typeVersion: 1,
+            position: [0, 0],
+            parameters: { path: 'mixed', httpMethod: 'POST' },
+          },
+          {
+            id: 'g',
+            name: 'Send',
+            type: 'n8n-nodes-base.gmail',
+            typeVersion: 2.1,
+            position: [200, 0],
+            parameters: { sendTo: 'a@b.co', subject: 's', message: 'm' },
+            credentials: { gmailOAuth2: { id: '1', name: 'g' } },
+          },
+          {
+            id: 'p',
+            name: 'Deal',
+            type: 'n8n-nodes-base.pipedrive',
+            typeVersion: 1,
+            position: [400, 0],
+            parameters: { resource: 'deal', operation: 'create' },
+            credentials: { pipedriveApi: { id: '2', name: 'p' } },
+          },
+        ],
+        connections: {
+          Webhook: { main: [[{ node: 'Send', type: 'main', index: 0 }]] },
+          Send: { main: [[{ node: 'Deal', type: 'main', index: 0 }]] },
+        },
+      }
+      const file = join(base, 'mixed.json')
+      await writeFile(file, JSON.stringify(wf), 'utf-8')
+      const out = join(base, 'out')
+      const { logger, info } = fakeLogger()
+      await (pikkuImportN8n as any).func(
+        { logger, config: { registry } },
+        { file, out }
+      )
+
+      const files = (await listAll(out)).map((f) => f.slice(out.length))
+      assert.ok(
+        files.some((f) => f.endsWith('mixed.start.ts')),
+        files.join(',')
+      )
+      const start = await readFile(
+        join(out, 'mixed', 'mixed.start.ts'),
+        'utf-8'
+      )
+      assert.match(start, /route: "\/mixed"/)
+      const gen = files.find((f) => f.endsWith('.addons.gen.ts'))
+      if (gen)
+        assert.doesNotMatch(
+          await readFile(join(out, gen), 'utf-8'),
+          /pipedrive/
+        )
+      const text = info.join('\n')
+      assert.match(text, /no published addon for @pikku\/addon-pipedrive/)
+      assert.match(text, /next: pikku addons add gmail\s+then\s+pikku all/)
+      assert.doesNotMatch(text, /addons add pipedrive/)
+    } finally {
+      server.close()
+    }
   })
 })

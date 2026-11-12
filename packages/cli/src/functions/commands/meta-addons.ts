@@ -226,3 +226,59 @@ export const similarAddonFunctions = (
     .slice(0, 5)
     .map((row) => row.name)
 }
+
+/** Required input fields of a wired addon function (`gmail:messageSend`), or undefined when they cannot be read. */
+export const addonRequiredInputs = (
+  config: { rootDir: string },
+  state: any,
+  id: string
+): string[] | undefined => {
+  const colon = id.indexOf(':')
+  if (colon <= 0) return undefined
+  const addon = wiredAddons(state).find(
+    (candidate) => candidate.namespace === id.slice(0, colon)
+  )
+  if (!addon) return undefined
+  const { dir, meta } = functionsOf(config, addon)
+  const entry = meta?.[id.slice(colon + 1)]
+  if (!dir || !entry) return undefined
+  if (!entry.inputSchemaName) return []
+  const schema = readAddonSchema(dir, entry.inputSchemaName) as any
+  return Array.isArray(schema?.required) ? schema.required : []
+}
+
+/**
+ * What a graph workflow (an n8n import) still needs, node by node: an addon step that does not hand over a field its
+ * function requires (the importer maps by name, so a field n8n spelled differently is dropped, and graph node inputs are
+ * loosely typed, so tsc does not see it), and a step that is a throwing stub.
+ */
+export const graphChecks = (
+  graph: { nodes?: Record<string, any> },
+  requiredOf: (rpcName: string) => string[] | undefined,
+  isStub: (rpcName: string) => boolean
+): { missingRequiredInputs: Record<string, string[]>; stubs: string[] } => {
+  const missingRequiredInputs: Record<string, string[]> = {}
+  const stubs: string[] = []
+  for (const [nodeId, node] of Object.entries(graph.nodes ?? {})) {
+    const rpcName = node?.rpcName
+    if (typeof rpcName !== 'string') continue
+    if (isStub(rpcName)) stubs.push(nodeId)
+    const required = requiredOf(rpcName)
+    if (!required?.length) continue
+    const input = node.input
+    // the whole input is one reference to another node's output: nothing to compare
+    if (
+      input &&
+      typeof input === 'object' &&
+      Object.keys(input).length === 1 &&
+      '$ref' in input
+    )
+      continue
+    const given = new Set(
+      input && typeof input === 'object' ? Object.keys(input) : []
+    )
+    const missing = required.filter((field) => !given.has(field))
+    if (missing.length) missingRequiredInputs[nodeId] = missing
+  }
+  return { missingRequiredInputs, stubs }
+}
