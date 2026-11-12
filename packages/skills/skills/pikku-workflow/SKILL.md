@@ -76,8 +76,6 @@ export const sendWeeklyReport = pikkuSessionlessFunc({
 })
 ```
 
-A complete small build (table, two addons, a branch, retries, an HTTP starter) is in `references/addon-workflow-example.md`; read it before writing the first file.
-
 ## Step calls, all in one place
 
 **When the CLI cannot tell you, report it; do not dig for it.** `pikku doc`, `pikku meta` and `pikku addons search` are the source of truth for how Pikku is called and what this project has. If one fails, or lacks a fact you need, run `pikku report "<the exact command and what was missing>"` once, then carry on from what you do know. Do not read `node_modules`, `dist` or `.pikku` to work around it: the report is how the gap gets fixed.
