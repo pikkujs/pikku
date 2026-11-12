@@ -35,3 +35,12 @@ sandboxId }`; adapters map it, the contract does not grow a third key.
 **What stays out.** Reads across stages or projects (an org's traffic table, an
 org-wide issue list), billing counts and sandbox host metrics are not
 observability of one scope. They stay in the cloud's own store.
+
+**Tie order is by code unit.** Where the contract says "ties ascending" (function
+id, wire type, queue name), strings compare by UTF-16 code unit, so `B` sorts
+before `a`. A SQL store that compares by UTF-8 bytes (Greptime, OpenObserve)
+agrees with that for every pair except one case: an astral character (U+10000
+and above, a surrogate pair in UTF-16) against a character in U+E000..U+FFFF.
+UTF-16 puts the astral one first, UTF-8 puts it last. The conformance suite does
+not exercise that pair; a store should not rely on the order of those two
+ranges, and the contract does not promise it.

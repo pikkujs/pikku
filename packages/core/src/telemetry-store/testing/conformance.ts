@@ -1505,6 +1505,65 @@ export const conformance = (
       )
 
       test(
+        'since is inclusive and one earlier is excluded in every windowed view',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const since = NOW - 5 * MIN
+          const until = NOW + MIN
+          const root = (id: string, startAt: number, extra = {}) =>
+            span({
+              id,
+              traceId: id.repeat(32),
+              startAt,
+              endAt: startAt + 5,
+              durationMs: 5,
+              status: 'error',
+              statusMessage: 'boom',
+              attributes: {
+                ...fn('edge', 'queue'),
+                'pikku.queue.name': 'q',
+                ...extra,
+              },
+            })
+          await ingest(s, {
+            spans: [root('1', since), root('2', since - 1)],
+            logs: [
+              log({ at: since, body: 'in' }),
+              log({ at: since - 1, body: 'out' }),
+            ],
+            metrics: [
+              { at: since, name: 'pikku.edge', value: 1 },
+              { at: since - 1, name: 'pikku.edge', value: 2 },
+            ],
+          })
+          const [failure] = await store.failures(s, { since })
+          assert.equal(failure!.count, 1)
+          const [job] = await store.queueJobs(s, { since })
+          assert.equal(job!.failed, 1)
+          assert.equal(job!.recent.length, 1)
+          const [run] = await store.wireRuns(s, { wireType: 'queue', since })
+          assert.equal(run!.failed, 1)
+          const [metric] = await store.functionMetrics(s, { since, until })
+          assert.equal(metric!.requests, 1)
+          assert.equal(
+            (await store.metricsSummary(s, { since, until })).totals.requests,
+            1
+          )
+          assert.deepEqual(
+            (await store.logs(s, { since })).map((r) => r.body),
+            ['in']
+          )
+          assert.deepEqual(
+            (await store.metrics(s, { name: 'pikku.edge', since })).map(
+              (m) => m.value
+            ),
+            [1]
+          )
+        }
+      )
+
+      test(
         'with several root spans in one trace the longest duration is the request duration',
         spanTest,
         async () => {
