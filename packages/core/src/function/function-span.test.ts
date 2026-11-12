@@ -122,7 +122,9 @@ describe('runPikkuFunc - spans', () => {
     })
     const versioned = spans.find((span) => span.name === 'foo@v2')!
     const plain = spans.find((span) => span.name === 'foo')!
-    assert.deepEqual(versioned.attributes['pikku.function.version'], { int: 2 })
+    assert.deepStrictEqual(versioned.attributes['pikku.function.version'], {
+      int: 2n,
+    })
     assert.ok(!('pikku.function.version' in plain.attributes))
   })
 
