@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve as resolvePath } from 'node:path'
 import { spawn } from 'node:child_process'
 import { PikkuError } from '@pikku/core/errors'
 import {
@@ -29,6 +31,36 @@ export type TypecheckResult = {
   durationMs: number
 }
 export type { TscCheckResult, TscDiagnostic } from '@pikku/code-edit/verify'
+
+/**
+ * TypeScript reports a `workflow.do(step, 'fn', input)` whose INPUT does not match as "No overload matches this call",
+ * with the last overload's complaint about the step-name argument (`'fn' is not assignable to keyof WorkflowMap`, or
+ * "Argument of type 'string' is not assignable to parameter of type '() => unknown'"). The name is fine; the input
+ * object is what is wrong (a missing required field, a wrong type). Say so, and where to look.
+ */
+export const workflowInputHint = (
+  d: { file?: string; line?: number; code: string | number; message: string },
+  cwd: string = process.cwd()
+): string | null => {
+  const code = String(d.code).replace(/^TS/, '')
+  if (code !== '2769' || !d.file || !d.line) return null
+  let text: string
+  try {
+    text = readFileSync(resolvePath(cwd, d.file), 'utf8')
+  } catch {
+    return null
+  }
+  const around = text
+    .split('\n')
+    .slice(Math.max(0, d.line - 3), d.line + 1)
+    .join('\n')
+  const call =
+    /workflow\.do\(\s*(?:'[^']*'|"[^"]*"|`[^`]*`)\s*,\s*['"]([^'"]+)['"]/.exec(
+      around
+    )
+  if (!call) return null
+  return `hint: the step name '${call[1]}' is fine; its input object does not match (a missing required field or a wrong type). Compare with \`pikku meta functions get ${call[1]}\`.`
+}
 
 const DEFAULT_MAX_LINES = 50
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024
@@ -64,6 +96,8 @@ export const renderTscSummary = (
   for (const d of shown) {
     const at = d.line > 0 ? `${d.file}:${d.line}:${d.column}` : d.file
     lines.push(`  ${at}  TS${d.code}  ${d.message}`)
+    const hint = workflowInputHint(d)
+    if (hint) lines.push(`    ${hint}`)
   }
   const remaining = result.diagnostics.length - shown.length
   if (remaining > 0) {
