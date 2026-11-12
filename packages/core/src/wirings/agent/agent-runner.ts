@@ -470,6 +470,16 @@ export async function resumeAgentSync(
 
   const savedPendingApprovals = [...(run.pendingApprovals ?? [])]
 
+  const pendingIds = new Set(savedPendingApprovals.map((p) => p.toolCallId))
+  const foreignIds = approvals
+    .map((a) => a.toolCallId)
+    .filter((toolCallId) => !pendingIds.has(toolCallId))
+  if (foreignIds.length > 0) {
+    throw new Error(
+      `No pending approval for toolCallId ${foreignIds.join(', ')} on run ${runId}`
+    )
+  }
+
   // The read above is not a claim — concurrent resumes all see the same pending
   // list. `resolveApproval` is the claim, and only the caller it returns true
   // for may run the tool.

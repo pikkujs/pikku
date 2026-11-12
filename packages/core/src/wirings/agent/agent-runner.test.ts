@@ -896,6 +896,59 @@ describe('resumeAgentSync', () => {
     assert.equal(executions, 1, 'the loser did not run it a second time')
   })
 
+  test('refuses a toolCallId that is not pending on this run, before claiming anything', async () => {
+    addTestAgent('cross-run-agent')
+
+    const ownRun: AgentRunState = {
+      runId: 'run-own',
+      agentName: 'cross-run-agent',
+      threadId: 'thread-own',
+      resourceId: 'resource-own',
+      status: 'suspended',
+      suspendReason: 'approval',
+      pendingApprovals: [
+        { type: 'tool-call', toolCallId: 'tc-own', toolName: 't', args: {} },
+      ],
+      usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const claimed: string[] = []
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      agentRunner: { run: async () => makeStepResult() },
+      agentRunState: {
+        getRun: async () => ownRun,
+        createRun: async () => 'unused',
+        updateRun: async () => {},
+        resolveApproval: async (claim: any) => {
+          claimed.push(typeof claim === 'string' ? claim : claim.toolCallId)
+          return true
+        },
+      },
+    } as any)
+
+    await assert.rejects(
+      () =>
+        resumeAgentSync(
+          'run-own',
+          [
+            { toolCallId: 'tc-own', approved: true },
+            { toolCallId: 'tc-other-run', approved: true },
+          ],
+          asOwner('resource-own')
+        ),
+      /No pending approval for toolCallId tc-other-run on run run-own/
+    )
+    assert.deepEqual(claimed, [], 'nothing was claimed')
+  })
+
   test('records denied approvals', async () => {
     addTestAgent('resume-agent')
 
