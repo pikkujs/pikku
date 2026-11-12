@@ -294,12 +294,12 @@ Copy is often shared. The inspector follows a `const` declared at the top of
 the same file, and spreads of one, so this reads:
 
 ```ts
-const VALUES = { why_timeout: { $: 'invoices_why_timeout' } }
+const VALUES = { why_timeout: { $: 'invoices_why_timeout' } } as const
 
 copy: { ...VALUES, late: { headline: 'invoices_verdict_late__headline' } }
 ```
 
-It does not follow a function call (`word('key')`), an import, or a `let`:
+Declare it `as const`, or tsc widens each key to `string` and refuses it. It does not follow a function call (`word('key')`), an import, or a `let`:
 write `{ $: 'key' }` in place, or the build fails with PKU345.
 
 Studio resolves the keys, fills their `{placeholders}` from `values`, formats

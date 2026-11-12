@@ -4,9 +4,10 @@ import { definePlugin } from '#pikku/addon/screens'
 
 // Values that are words, shared through a const and spread into each copy
 // that can meet them: a value naming 'why_timeout' is worded by its `$`.
+// `as const` keeps each key a literal, so tsc checks it against the catalog.
 const VALUES = {
   why_timeout: { $: 'studio_verifier_why_timeout' },
-}
+} as const
 
 export default definePlugin({
   title: 'studio_verifier__title',
