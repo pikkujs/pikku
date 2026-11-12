@@ -8,6 +8,7 @@ import {
   agentRunnerFacts,
   agentRows,
   agentSummaries,
+  layoutFacts,
   formatProjectFacts,
   frontendFacts,
   readSources,
@@ -213,6 +214,25 @@ describe('frontendFacts', () => {
   test('a folder with no sources is no frontend', () => {
     const root = project({ 'apps/web/package.json': '{}' })
     assert.equal(frontendFacts(join(root, 'apps/web'), root, []), null)
+  })
+})
+
+describe('layoutFacts', () => {
+  test('names the folders for an agent, its tools and its wiring', () => {
+    const line = layoutFacts('src')
+    assert.match(line, /src\/agents\/<name>\.agent\.ts/)
+    assert.match(line, /src\/functions\/<name>\.function\.ts/)
+    assert.match(line, /src\/wirings\/<name>\.wiring\.ts/)
+  })
+  test('rides on the agents line when there is none yet, and only then', () => {
+    assert.equal(
+      formatProjectFacts({ ...nothing, layout: 'here' })[0],
+      'agents: none yet; here'
+    )
+    assert.equal(
+      formatProjectFacts({ ...nothing, agents: ['a (x)'], layout: 'here' })[0],
+      'agents:'
+    )
   })
 })
 
