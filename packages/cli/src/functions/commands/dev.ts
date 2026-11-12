@@ -1,7 +1,8 @@
 import { exitWhenParentDies } from '../../utils/parent-watch.js'
 import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { rm } from 'node:fs/promises'
-import { join, resolve } from 'path'
+import { AsyncLocalStorage } from 'node:async_hooks'
+import { basename, join, resolve } from 'path'
 import {
   codegenStateFile,
   collectCodegenPass,
@@ -36,6 +37,7 @@ import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow
 import { stopSingletonServices } from '@pikku/core/utils'
 import { composeServerLifecycle } from '@pikku/core/lifecycle'
 import { pikkuState } from '@pikku/core/state'
+import { asContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
 import {
@@ -79,6 +81,7 @@ import {
   setDevVirtualUserApiUrl,
 } from '../../server/virtual-user-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
+import { resolveProjectVersion } from '../../deploy/build-pipeline.js'
 import { servedFrontend } from '../../utils/frontend.js'
 import {
   betterAuthGeneratedSecrets,
@@ -229,6 +232,26 @@ export const dev = pikkuSessionlessFunc<
     if (test) {
       process.env.PIKKU_TEST_RUN = 'true'
     }
+    // The process that serves builds the runtime telemetry from PIKKU_OTLP_*,
+    // exactly as `pikku serve` does: unset (or PIKKU_TELEMETRY=0) is inert, a
+    // non-loopback endpoint throws here, at boot. The parent of a multi-backend
+    // dev serves nothing and leaves it to its backends, which inherit the env.
+    const telemetry = createRuntimeTelemetry(
+      plan.mode === 'inline' ? process.env : {},
+      {
+        logger: new ConsoleLogger(),
+        serviceName: basename(config.rootDir),
+        version: resolveProjectVersion(config.rootDir),
+        contextStorage: asContextStorage(new AsyncLocalStorage()),
+      }
+    )
+    const tracing = telemetry.enabled
+      ? {
+          tracer: telemetry.tracer,
+          currentTrace: telemetry.currentTrace,
+          recordSqlText: telemetry.recordSqlText,
+        }
+      : undefined
     const coverageService =
       coverage && plan.mode === 'inline'
         ? await startCoverageService(logger, config.rootDir)
@@ -480,7 +503,7 @@ export const dev = pikkuSessionlessFunc<
     )
     const resolvedLocalDb: ResolvedDb | undefined = resolvedDb ?? undefined
     const kysely = resolvedLocalDb
-      ? await createKysely(resolvedLocalDb)
+      ? await createKysely(resolvedLocalDb, tracing)
       : undefined
 
     const localContentConfig = resolveLocalContentConfig({
@@ -549,7 +572,8 @@ export const dev = pikkuSessionlessFunc<
       userConfig,
       {
         kysely: kysely ?? null,
-        logger: new ConsoleLogger(),
+        logger: telemetry.enabled ? telemetry.logger : new ConsoleLogger(),
+        ...(telemetry.enabled ? { tracer: telemetry.tracer } : {}),
         ...(vaultSecrets ? { secrets: vaultSecrets } : {}),
         ...(agentRunner ? { agentRunner } : {}),
         ...(test
@@ -639,7 +663,7 @@ export const dev = pikkuSessionlessFunc<
         content: localContentConfig,
         ...(staticMounts.length > 0 ? { staticMounts } : {}),
       },
-      logger,
+      telemetry.enabled ? telemetry.logger : logger,
       { contentSigningJWT, mcpJson, mcpSurfaces }
     )
 
@@ -715,6 +739,7 @@ export const dev = pikkuSessionlessFunc<
         )
       } finally {
         if (!serveOnly) clearDevAddress(resolvedRuntimeDir)
+        await telemetry.close()
         process.exit(exitCode)
       }
     }
