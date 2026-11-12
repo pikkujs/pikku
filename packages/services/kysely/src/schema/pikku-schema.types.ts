@@ -6,7 +6,11 @@ import {
   type Kysely,
   type RawBuilder,
 } from 'kysely'
-import type { OnDelete, TableAnnotations } from '@pikku/core/db'
+import type {
+  OnDelete,
+  TableAnnotations,
+  TablesDeclaration,
+} from '@pikku/core/db'
 
 type DataTypeExpression = Parameters<
   CreateTableBuilder<any, any>['addColumn']
@@ -205,10 +209,22 @@ export const requiredType = (
  */
 export interface PikkuSchema {
   name: string
-  statements: SchemaStatementFactory[]
+  /** The tables, as a plain declaration `compileTables` turns into DDL. */
+  tables: TablesDeclaration
   /**
-   * Tables this schema references but does not create, which something else
-   * must have created first.
+   * DDL the declaration cannot express, run after its tables and indexes — an
+   * index over an expression, say.
+   */
+  extraStatements?: SchemaStatementFactory[]
+  /**
+   * Who creates the tables `tables` references outside itself, named in the
+   * refusal when one is missing. The requirements themselves are read off the
+   * declaration.
+   */
+  foreignOwner?: string
+  /**
+   * Columns `extraStatements` reference but this schema does not create. The
+   * declaration's own are inferred and do not belong here.
    *
    * Declared rather than discovered so the failure arrives as a sentence naming
    * what is missing and who owns it, instead of a foreign key error from the
@@ -291,7 +307,7 @@ export function rawStatement(
 export function rawStatement(
   source: RawBuilder<unknown> | ((ctx: SchemaContext) => RawBuilder<unknown>)
 ): SchemaStatementFactory {
-  return (db, _types, ctx = unqualifiedContext) => {
+  return (db, _types, ctx) => {
     const fragment = typeof source === 'function' ? source(ctx) : source
     return {
       execute: () => fragment.execute(db),

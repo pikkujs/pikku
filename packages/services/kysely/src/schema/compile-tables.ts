@@ -9,6 +9,7 @@ import type {
   ColumnDeclaration,
   ColumnDefault,
   ColumnType,
+  NamedConstraint,
   TableDeclaration,
   TablesDeclaration,
 } from '@pikku/core/db'
@@ -63,6 +64,12 @@ const isPostgres = (db: Kysely<any>): boolean =>
     .compile()
     .sql.includes('$1')
 
+/** A table constraint's columns and, when it keeps an existing one, its name. */
+const constraint = (
+  declared: readonly string[] | NamedConstraint
+): { columns: readonly string[]; name?: string } =>
+  'columns' in declared ? declared : { columns: declared }
+
 const splitTarget = (target: string, where: string): [string, string] => {
   const parts = target.split('.')
   if (parts.length !== 2 || !parts[0] || !parts[1]) {
@@ -111,8 +118,10 @@ const keyedColumns = (
 ): Set<string> => {
   const declaration = tables[table]!
   const keyed = new Set<string>([
-    ...(declaration.primaryKey ?? []),
-    ...(declaration.unique ?? []).flat(),
+    ...(declaration.primaryKey
+      ? constraint(declaration.primaryKey).columns
+      : []),
+    ...(declaration.unique ?? []).flatMap((group) => constraint(group).columns),
     ...(declaration.indexes ?? []).flatMap((index) => index.columns),
   ])
   for (const [name, column] of Object.entries(declaration.columns)) {
@@ -160,17 +169,11 @@ const dataType = (
   }
 }
 
-const defaultValue = (
-  value: ColumnDefault,
-  type: ResolvedType,
-  ctx: SchemaContext
-) => {
+const defaultValue = (value: ColumnDefault, ctx: SchemaContext) => {
   if (typeof value === 'object') {
     return 'now' in value ? sql`CURRENT_TIMESTAMP` : sql.raw(value.sql)
   }
-  const textual =
-    type.kind === 'declared' && (type.type === 'text' || type.type === 'json')
-  return typeof value === 'string' && textual ? ctx.defaultText(value) : value
+  return typeof value === 'string' ? ctx.defaultText(value) : value
 }
 
 const validate = (tables: TablesDeclaration): void => {
@@ -185,9 +188,12 @@ const validate = (tables: TablesDeclaration): void => {
         }
       }
     }
-    known(declaration.primaryKey ?? [], 'primary key')
+    const primaryKey = declaration.primaryKey
+      ? constraint(declaration.primaryKey).columns
+      : []
+    known(primaryKey, 'primary key')
     for (const group of declaration.unique ?? [])
-      known(group, 'unique constraints')
+      known(constraint(group).columns, 'unique constraints')
     for (const index of declaration.indexes ?? [])
       known(index.columns, 'indexes')
 
@@ -228,9 +234,7 @@ const validate = (tables: TablesDeclaration): void => {
       }
       if (
         column.onDelete === 'setNull' &&
-        (column.required ||
-          column.primaryKey ||
-          declaration.primaryKey?.includes(name))
+        (column.required || column.primaryKey || primaryKey.includes(name))
       ) {
         throw new Error(
           `'${here}' is required, so onDelete 'setNull' could never succeed. Make it optional, or choose another onDelete.`
@@ -304,7 +308,7 @@ const createTable = (
         if (column.required) col = col.notNull()
         if (column.unique) col = col.unique()
         if (column.default !== undefined) {
-          col = col.defaultTo(defaultValue(column.default, resolved, ctx))
+          col = col.defaultTo(defaultValue(column.default, ctx))
         }
         if (column.references) {
           col = ctx.references(col, column.references, column.onDelete)
@@ -319,14 +323,16 @@ const createTable = (
       }
     }
     if (declaration.primaryKey) {
-      builder = builder.addPrimaryKeyConstraint(`${snake(table)}_pk`, [
-        ...declaration.primaryKey,
+      const { columns, name } = constraint(declaration.primaryKey)
+      builder = builder.addPrimaryKeyConstraint(name ?? `${snake(table)}_pk`, [
+        ...columns,
       ] as never)
     }
     for (const group of declaration.unique ?? []) {
+      const { columns, name } = constraint(group)
       builder = builder.addUniqueConstraint(
-        `${snake(table)}_${group.map(snake).join('_')}_key`,
-        [...group] as never
+        name ?? `${snake(table)}_${columns.map(snake).join('_')}_key`,
+        [...columns] as never
       )
     }
     return builder.$call(ctx.foreignKeys(table, foreignKeys))

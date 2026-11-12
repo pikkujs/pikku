@@ -130,7 +130,8 @@ export async function loadTableDeclaration(
   return {
     schema: {
       name: APP_TABLES_SOURCE,
-      statements: tables.statements,
+      tables: {},
+      extraStatements: tables.statements,
       requires: tables.requires,
     },
     annotations: physicalAnnotations(tables.annotations, TABLES_FILE),

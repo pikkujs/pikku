@@ -64,7 +64,7 @@ const compile = (
 ): string[] =>
   compilePikkuSchemas(
     compilerFor(kind),
-    [{ name: 'app', statements: compileTables(tables) }],
+    [{ name: 'app', tables }],
     types
   ).split('\n\n')
 
@@ -153,6 +153,17 @@ describe('compileTables: defaults', () => {
     assert.deepEqual(compile('postgres', tables), [
       `create table "note" ("status" text default 'draft' not null, "count" integer default 0, "pinned" boolean default false, "created_at" timestamp default CURRENT_TIMESTAMP not null, "token" uuid default gen_random_uuid());`,
     ])
+  })
+
+  test('mysql takes a bounded string default as an expression too', () => {
+    assert.deepEqual(
+      compile('mysql', {
+        run: {
+          columns: { status: { type: 'string(50)', default: 'running' } },
+        },
+      }),
+      ["create table `run` (`status` varchar(50) default ('running'));"]
+    )
   })
 
   test('mysql takes a text literal default as an expression', () => {
@@ -291,6 +302,39 @@ describe('compileTables: primary keys and unique constraints', () => {
     ])
   })
 
+  test('a named constraint keeps the name it has in a deployed database', () => {
+    const named = defineTables({
+      membership: {
+        columns: {
+          orgId: { type: 'id', required: true },
+          userId: { type: 'id', required: true },
+        },
+        primaryKey: { name: 'pk_membership', columns: ['orgId', 'userId'] },
+        unique: [{ name: 'membership_user_unique', columns: ['userId'] }],
+      },
+    })
+    assert.deepEqual(compile('postgres', named), [
+      'create table "membership" ("org_id" text not null, "user_id" text not null, constraint "pk_membership" primary key ("org_id", "user_id"), constraint "membership_user_unique" unique ("user_id"));',
+    ])
+  })
+
+  test('a setNull column in a named primary key is refused', () => {
+    assert.throws(
+      () =>
+        compileTables({
+          parent: { columns: { id: { type: 'id', primaryKey: true } } },
+          t: {
+            columns: {
+              a: { references: 'parent.id', onDelete: 'setNull' },
+              b: { type: 'id' },
+            },
+            primaryKey: { name: 't_key', columns: ['a', 'b'] },
+          },
+        }),
+      /onDelete 'setNull' could never succeed/
+    )
+  })
+
   test('refuses a primary key on both the table and a column', () => {
     assert.throws(
       () =>
@@ -408,9 +452,7 @@ describe('compileTables: indexes', () => {
         },
       })
       await assert.rejects(
-        applyPikkuSchemas(db, [
-          { name: 'app', statements: compileTables(partial) },
-        ]),
+        applyPikkuSchemas(db, [{ name: 'app', tables: partial }]),
         /MySQL has no partial indexes/
       )
       assert.deepEqual(
@@ -585,9 +627,7 @@ const live = defineTables({
 })
 
 const exerciseOnDelete = async (db: Kysely<any>) => {
-  await applyPikkuSchemas(db, [
-    { name: 'live', statements: compileTables(live) },
-  ])
+  await applyPikkuSchemas(db, [{ name: 'live', tables: live }])
   await sql`insert into parent (id) values ('a'), ('b')`.execute(db)
   for (const table of ['cascades', 'nulls']) {
     await sql`insert into ${sql.table(table)} (parent_id) values ('a')`.execute(

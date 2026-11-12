@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3756 observable things**: 1235 exported names, plus
-2521 members on the classes and interfaces among them, reachable
+**3759 observable things**: 1236 exported names, plus
+2523 members on the classes and interfaces among them, reachable
 through 68 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -30,10 +30,10 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./trigger` | 43 | 43 | 13 |
 | `./testing` | 18 | 18 | 35 |
 | `./services/local-meta` | 22 | 2 | 43 |
+| `./db` | 12 | 12 | 31 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 17 | 15 | 27 |
 | `./trace` | 19 | 19 | 21 |
-| `./db` | 11 | 11 | 29 |
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
@@ -7167,12 +7167,16 @@ export interface IndexDeclaration {
   where?: string
   name?: string
 }
+export interface NamedConstraint {
+  columns: readonly string[]
+  name: string
+}
 export type OnDelete = 'cascade' | 'setNull' | 'restrict' | 'noAction'
 export type TableAnnotations = Record<string, Record<string, ColumnAnnotation>>
 export interface TableDeclaration {
   columns: Record<string, ColumnDeclaration>
-  primaryKey?: readonly string[]
-  unique?: readonly (readonly string[])[]
+  primaryKey?: readonly string[] | NamedConstraint
+  unique?: readonly (readonly string[] | NamedConstraint)[]
   indexes?: readonly IndexDeclaration[]
 }
 export type TablesDeclaration = Record<string, TableDeclaration>
