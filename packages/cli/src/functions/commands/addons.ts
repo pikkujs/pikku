@@ -20,6 +20,7 @@ import {
   registryAuthMode,
 } from './openapi-registry.js'
 import { registryUrl } from '../../utils/remote-addon-sync.js'
+import { buildLayoutFacts } from './meta-facts.js'
 
 export type AddonSource =
   | { kind: 'spec'; spec: string }
@@ -167,6 +168,7 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
     const srcDir = config.srcDirectories?.[0]
       ? join(root, config.srcDirectories[0])
       : undefined
+    const srcDirName: string = config.srcDirectories?.[0] ?? 'src'
     if (
       !srcDir ||
       config.addon ||
@@ -244,6 +246,11 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
         }
       )
       for (const line of requirementLines(addonRequirements(addonDir)))
+        logger.info(line)
+      for (const line of [
+        'Where the build goes:',
+        ...buildLayoutFacts(srcDirName).map((l) => `  ${l}`),
+      ])
         logger.info(line)
       console.log(addonDir)
       return
@@ -358,6 +365,12 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
       process.exit(1)
     }
     for (const line of lines) logger.info(line)
+    // Where the build goes, once, at the point every agent passes: it saves the `find`/`grep` tour of the project.
+    for (const line of [
+      'Where the build goes:',
+      ...buildLayoutFacts(srcDirName).map((l) => `  ${l}`),
+    ])
+      logger.info(line)
     const grants = grantLines(wired)
     for (const line of grants) logger.info(line)
     if (input.dryRun) {
