@@ -1498,8 +1498,11 @@ describe('HTTP route contract', () => {
     assert.match(source, /export const testApiRoutes = defineHTTPRoutes\(\{/)
     assert.match(
       source,
-      /getItem: \{ method: "get", route: "\/items\/:id", func: getItem, tags: \["items"\] \}/
+      /getItem: \{ method: "get", route: "\/items\/:id", func: getItem \}/
     )
+    // Route-level tags would be readonly in the host's const-inferred view of
+    // the contract and break its type-check against core's `tags?: string[]`.
+    assert.doesNotMatch(source, /\btags:/)
     assert.match(
       source,
       /createItem: \{ method: "post", route: "\/items", func: createItem \}/
