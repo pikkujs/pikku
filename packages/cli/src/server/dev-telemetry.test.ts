@@ -67,7 +67,7 @@ test('the parent of several backends is inert even with an endpoint in its envir
   )
 })
 
-test('each backend names itself in its service name; one backend alone keeps the plain name', async () => {
+test('each served backend names itself in its service name', async () => {
   const api = await serviceName({
     mode: 'inline',
     env: ENDPOINT,
@@ -83,6 +83,21 @@ test('each backend names itself in its service name; one backend alone keeps the
   assert.deepEqual(api!['service.name'], { string: 'shop.api' })
   assert.deepEqual(worker!['service.name'], { string: 'shop.worker' })
   assert.deepEqual(api!['pikku.project'], { string: 'shop' })
+})
+
+test('a dev server with no backend named keeps the plain service name, set or not', async () => {
+  const unset = await serviceName({
+    mode: 'inline',
+    env: ENDPOINT,
+    rootDir: '/p/shop',
+  })
+  const set = await serviceName({
+    mode: 'inline',
+    env: { ...ENDPOINT, PIKKU_OTLP_SERVICE_NAME: 'billing' },
+    rootDir: '/p/shop',
+  })
+  assert.deepEqual(unset!['service.name'], { string: 'shop' })
+  assert.deepEqual(set!['service.name'], { string: 'billing' })
 })
 
 test('a non-loopback endpoint stops the process that serves, at boot', () => {
