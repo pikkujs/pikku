@@ -416,9 +416,9 @@ export const agentRows = (
     kind: 'agent',
     name: id,
     detail: [
-      agent?.description,
       `model ${agent?.model ?? '?'}`,
       `tools ${(agent?.tools ?? []).join(' ') || 'none'}`,
+      agent?.description,
     ]
       .filter(Boolean)
       .join('; '),

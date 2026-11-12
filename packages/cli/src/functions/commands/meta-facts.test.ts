@@ -238,7 +238,7 @@ describe('agent facts', () => {
     assert.equal(row!.source, 'src/a.ts')
     assert.match(
       row!.detail!,
-      /Triages tickets\.; model fast; tools lookupTicket issueRefund/
+      /model fast; tools lookupTicket issueRefund; Triages tickets\./
     )
   })
 })
