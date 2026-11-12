@@ -341,7 +341,9 @@ export const conformance = (
               }),
             ],
           })
-          const rows = await store.failures(s, { since: NOW - 10 * MIN })
+          const rows = (await store.failures(s, { since: NOW - 10 * MIN })).map(
+            ({ firstSeen, httpPath, httpMethod, httpStatus, ...base }) => base
+          )
           assert.deepEqual(rows, [
             {
               functionId: 'getUser',
@@ -765,6 +767,519 @@ export const conformance = (
         })
         const rows = await store.queueJobs(s, { since: NOW - 10 * MIN })
         assert.equal(rows.length, 50)
+      })
+    })
+
+    describe('tenant, duration and per-function views', () => {
+      const org = (id: string, user?: string) => ({
+        'pikku.org.id': id,
+        ...(user ? { 'pikku.user.id': user } : {}),
+      })
+
+      test(
+        'a log line carries the duration of its request root span',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const traceId = 'd'.repeat(32)
+          await ingest(s, {
+            spans: [
+              span({
+                id: '1',
+                traceId,
+                durationMs: 42,
+                attributes: fn('getUser'),
+              }),
+              span({
+                id: '2',
+                traceId,
+                parentSpanId: '1'.padStart(16, '0'),
+                durationMs: 5,
+              }),
+            ],
+            logs: [
+              log({ traceId, body: 'in request' }),
+              log({ body: 'no trace', at: NOW - 2 * MIN }),
+            ],
+          })
+          const rows = await store.logs(s, {})
+          assert.equal(
+            rows.find((r) => r.body === 'in request')!.durationMs,
+            42
+          )
+          assert.equal(
+            rows.find((r) => r.body === 'no trace')!.durationMs,
+            undefined
+          )
+        }
+      )
+
+      test('logs filter by tenant and a tenant nobody has returns nothing', async () => {
+        const s = freshScope()
+        await ingest(s, {
+          logs: [
+            log({ body: 'a', attributes: org('acme', 'u1') }),
+            log({
+              body: 'b',
+              attributes: org('acme', 'u2'),
+              at: NOW - 2 * MIN,
+            }),
+            log({ body: 'c', attributes: org('other'), at: NOW - 3 * MIN }),
+            log({ body: 'd', at: NOW - 4 * MIN }),
+          ],
+        })
+        const bodies = async (tenant: { org?: string; user?: string }) =>
+          (await store.logs(s, { tenant })).map((r) => r.body)
+        assert.deepEqual(await bodies({ org: 'acme' }), ['a', 'b'])
+        assert.deepEqual(await bodies({ org: 'acme', user: 'u2' }), ['b'])
+        assert.deepEqual(await bodies({ org: 'nobody' }), [])
+        assert.deepEqual(await bodies({ user: "u1' OR '1'='1" }), [])
+      })
+
+      test('span reads filter by tenant', spanTest, async () => {
+        const s = freshScope()
+        const traceA = 'e'.repeat(32)
+        const traceB = 'f'.repeat(32)
+        await ingest(s, {
+          spans: [
+            span({
+              id: '1',
+              traceId: traceA,
+              attributes: { ...fn('a'), ...org('acme') },
+            }),
+            span({
+              id: '2',
+              traceId: traceA,
+              parentSpanId: '1'.padStart(16, '0'),
+            }),
+            span({
+              id: '3',
+              traceId: traceB,
+              attributes: { ...fn('b'), ...org('other') },
+            }),
+            span({
+              id: '4',
+              traceId: 'c'.repeat(32),
+              attributes: fn('untagged'),
+            }),
+          ],
+        })
+        const window = { since: NOW - 10 * MIN, until: NOW }
+        const acme = { org: 'acme' }
+        assert.deepEqual(
+          (
+            await store.metricsSummary(s, { ...window, tenant: acme })
+          ).functions.map((f) => f.name),
+          ['a']
+        )
+        assert.deepEqual(
+          (await store.functionMetrics(s, { ...window, tenant: acme })).map(
+            (f) => f.functionId
+          ),
+          ['a']
+        )
+        assert.deepEqual(
+          await store.wireTypes(s, { since: window.since, tenant: acme }),
+          [{ wireType: 'http', requests: 1 }]
+        )
+        assert.equal((await store.trace(s, traceA, { tenant: acme })).length, 2)
+        assert.deepEqual(await store.trace(s, traceB, { tenant: acme }), [])
+        assert.deepEqual(
+          await store.trace(s, 'c'.repeat(32), { tenant: acme }),
+          []
+        )
+        assert.deepEqual(
+          (
+            await store.metricsSummary(s, {
+              ...window,
+              tenant: { org: 'nobody' },
+            })
+          ).functions,
+          []
+        )
+        const other = freshScope()
+        assert.deepEqual(await store.trace(other, traceA, { tenant: acme }), [])
+      })
+
+      test('metricsSummary narrows to one function', spanTest, async () => {
+        const s = freshScope()
+        await ingest(s, {
+          spans: [
+            span({ id: '1', attributes: fn('a'), durationMs: 10 }),
+            span({
+              id: '2',
+              traceId: 'b'.repeat(32),
+              attributes: fn('b'),
+              durationMs: 30,
+            }),
+          ],
+        })
+        const q = { since: NOW - 10 * MIN, until: NOW }
+        const only = await store.metricsSummary(s, { ...q, functionId: 'a' })
+        assert.equal(only.totals.requests, 1)
+        assert.equal(only.totals.maxMs, 10)
+        assert.deepEqual(
+          only.functions.map((f) => f.name),
+          ['a']
+        )
+        const none = await store.metricsSummary(s, { ...q, functionId: 'zzz' })
+        assert.equal(none.totals.requests, 0)
+        assert.deepEqual(none.traffic, [])
+      })
+
+      test(
+        'failures carry first seen and the latest failure http details',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const bad = (
+            id: string,
+            at: number,
+            extra: Record<string, string | number>
+          ) =>
+            span({
+              id,
+              traceId: id.repeat(32).slice(0, 32),
+              startAt: at,
+              status: 'error',
+              statusMessage: 'boom',
+              attributes: { ...fn('save'), ...extra },
+            })
+          await ingest(s, {
+            spans: [
+              bad('1', NOW - 9 * MIN, {
+                'pikku.http.path': '/old',
+                'pikku.http.method': 'GET',
+                'http.response.status_code': 500,
+              }),
+              bad('2', NOW - 3 * MIN, {
+                'pikku.http.path': '/new',
+                'pikku.http.method': 'POST',
+                'http.response.status_code': 502,
+              }),
+              span({
+                id: '3',
+                traceId: '3'.repeat(32),
+                startAt: NOW - 2 * MIN,
+                status: 'error',
+                statusMessage: 'plain',
+                attributes: fn('other'),
+              }),
+            ],
+          })
+          const rows = await store.failures(s, { since: NOW - 20 * MIN })
+          const save = rows.find((r) => r.functionId === 'save')!
+          assert.equal(save.firstSeen, NOW - 9 * MIN)
+          assert.equal(save.last, NOW - 3 * MIN)
+          assert.equal(save.httpPath, '/new')
+          assert.equal(save.httpMethod, 'POST')
+          assert.equal(save.httpStatus, 502)
+          const other = rows.find((r) => r.functionId === 'other')!
+          assert.deepEqual(
+            [other.httpPath, other.httpMethod, other.httpStatus],
+            [null, null, null]
+          )
+        }
+      )
+
+      test(
+        'functionMetrics groups by function and wire with weighted average and buckets',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const since = NOW - 10 * MIN
+          const until = NOW
+          await ingest(s, {
+            spans: [
+              span({
+                id: '1',
+                startAt: since + 1000,
+                durationMs: 10,
+                attributes: fn('a'),
+              }),
+              span({
+                id: '2',
+                traceId: 'b'.repeat(32),
+                startAt: since + 2000,
+                durationMs: 30,
+                status: 'error',
+                attributes: fn('a'),
+              }),
+              span({
+                id: '3',
+                traceId: 'c'.repeat(32),
+                startAt: since + 8 * MIN,
+                durationMs: 20,
+                attributes: fn('a'),
+              }),
+              span({
+                id: '4',
+                traceId: 'd'.repeat(32),
+                startAt: since + 3 * MIN,
+                durationMs: 7,
+                attributes: fn('b', 'queue'),
+              }),
+              span({
+                id: '5',
+                traceId: 'a'.repeat(32),
+                parentSpanId: '1'.padStart(16, '0'),
+                startAt: since + 1000,
+                attributes: fn('child'),
+              }),
+              span({
+                id: '6',
+                traceId: 'e'.repeat(32),
+                startAt: until,
+                attributes: fn('late'),
+              }),
+            ],
+          })
+          const rows = await store.functionMetrics(s, {
+            since,
+            until,
+            buckets: 10,
+          })
+          assert.deepEqual(
+            rows.map((r) => [
+              r.functionId,
+              r.wireType,
+              r.requests,
+              r.errors,
+              r.avgMs,
+              r.lastRun,
+            ]),
+            [
+              ['a', 'http', 3, 1, 20, since + 8 * MIN],
+              ['b', 'queue', 1, 0, 7, since + 3 * MIN],
+            ]
+          )
+          assert.deepEqual(rows[0]!.buckets, [
+            { at: since, requests: 2, errors: 1 },
+            { at: since + 8 * MIN, requests: 1, errors: 0 },
+          ])
+          const defaults = await store.functionMetrics(s, { since, until })
+          assert.equal(defaults[0]!.buckets.length > 0, true)
+          assert.equal(
+            (await store.functionMetrics(s, { since, until, limit: 1 })).length,
+            1
+          )
+          await assert.rejects(() =>
+            store.functionMetrics(s, { since, until, limit: 0 })
+          )
+          await assert.rejects(() =>
+            store.functionMetrics(s, { since, until, buckets: 1.5 })
+          )
+        }
+      )
+
+      test(
+        'functionMetrics returns at most 200 functions by default',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          await ingest(s, {
+            spans: Array.from({ length: 201 }, (_, i) =>
+              span({
+                id: String(i + 1),
+                traceId: String(i + 1).padStart(32, '0'),
+                attributes: fn(`f${i}`),
+              })
+            ),
+          })
+          const rows = await store.functionMetrics(s, {
+            since: NOW - 10 * MIN,
+            until: NOW,
+          })
+          assert.equal(rows.length, 200)
+        }
+      )
+
+      test(
+        'wireTypes counts root spans by wire, unknown when unset',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          await ingest(s, {
+            spans: [
+              span({ id: '1', attributes: fn('a', 'http') }),
+              span({
+                id: '2',
+                traceId: 'b'.repeat(32),
+                attributes: fn('a', 'http'),
+              }),
+              span({
+                id: '3',
+                traceId: 'c'.repeat(32),
+                attributes: fn('b', 'scheduler'),
+              }),
+              span({ id: '4', traceId: 'd'.repeat(32), attributes: {} }),
+              span({
+                id: '5',
+                traceId: 'a'.repeat(32),
+                parentSpanId: '1'.padStart(16, '0'),
+                attributes: fn('x', 'rpc'),
+              }),
+              span({
+                id: '6',
+                traceId: 'e'.repeat(32),
+                startAt: NOW - 30 * MIN,
+                attributes: fn('old', 'cli'),
+              }),
+            ],
+          })
+          assert.deepEqual(
+            await store.wireTypes(s, { since: NOW - 10 * MIN }),
+            [
+              { wireType: 'http', requests: 2 },
+              { wireType: 'scheduler', requests: 1 },
+              { wireType: 'unknown', requests: 1 },
+            ]
+          )
+          assert.deepEqual(
+            await store.wireTypes(s, {
+              since: NOW - 40 * MIN,
+              until: NOW - 20 * MIN,
+            }),
+            [{ wireType: 'cli', requests: 1 }]
+          )
+        }
+      )
+
+      test(
+        'wireRuns lists one wire type grouped by function, newest first',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const run = (
+            id: string,
+            name: string,
+            at: number,
+            status: 'ok' | 'error' = 'ok'
+          ) =>
+            span({
+              id,
+              traceId: id.padStart(32, '0'),
+              startAt: at,
+              durationMs: 4,
+              status,
+              statusMessage: status === 'error' ? 'cron failed' : undefined,
+              attributes: fn(name, 'scheduler'),
+            })
+          await ingest(s, {
+            spans: [
+              run('1', 'nightly', NOW - 10 * MIN),
+              run('2', 'nightly', NOW - 4 * MIN, 'error'),
+              run('3', 'hourly', NOW - 6 * MIN),
+              span({
+                id: '4',
+                traceId: '4'.padStart(32, '0'),
+                attributes: fn('http-fn', 'http'),
+              }),
+              span({
+                id: '5',
+                traceId: '1'.padStart(32, '0'),
+                parentSpanId: '1'.padStart(16, '0'),
+                attributes: fn('child', 'scheduler'),
+              }),
+            ],
+          })
+          const rows = await store.wireRuns(s, {
+            wireType: 'scheduler',
+            since: NOW - 20 * MIN,
+          })
+          assert.deepEqual(
+            rows.map((r) => [
+              r.name,
+              r.wireType,
+              r.completed,
+              r.failed,
+              r.lastRun,
+            ]),
+            [
+              ['nightly', 'scheduler', 1, 1, NOW - 4 * MIN],
+              ['hourly', 'scheduler', 1, 0, NOW - 6 * MIN],
+            ]
+          )
+          assert.deepEqual(rows[0]!.recent[0], {
+            at: NOW - 4 * MIN,
+            outcome: 'failed',
+            durationMs: 4,
+            error: 'cron failed',
+          })
+          assert.deepEqual(
+            await store.wireRuns(s, { wireType: "x' OR '1'='1", since: 0 }),
+            []
+          )
+          assert.equal(
+            (
+              await store.wireRuns(s, {
+                wireType: 'scheduler',
+                since: NOW - 20 * MIN,
+                limit: 1,
+              })
+            ).length,
+            1
+          )
+          await assert.rejects(() =>
+            store.wireRuns(s, { wireType: 'scheduler', since: 0, limit: -1 })
+          )
+        }
+      )
+
+      test(
+        'wireRuns keeps the newest 10 and returns at most 50 functions by default',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          await ingest(s, {
+            spans: [
+              ...Array.from({ length: 12 }, (_, i) =>
+                span({
+                  id: String(i + 1),
+                  traceId: String(i + 1).padStart(32, '0'),
+                  startAt: NOW - (30 - i) * MIN,
+                  attributes: fn('busy', 'scheduler'),
+                })
+              ),
+              ...Array.from({ length: 50 }, (_, i) =>
+                span({
+                  id: String(i + 100),
+                  traceId: String(i + 100).padStart(32, '0'),
+                  attributes: fn(`t${i}`, 'scheduler'),
+                })
+              ),
+            ],
+          })
+          const rows = await store.wireRuns(s, {
+            wireType: 'scheduler',
+            since: NOW - 60 * MIN,
+          })
+          assert.equal(rows.length, 50)
+          const busy = (
+            await store.wireRuns(s, {
+              wireType: 'scheduler',
+              since: NOW - 60 * MIN,
+              limit: 100,
+            })
+          ).find((r) => r.name === 'busy')!
+          assert.equal(busy.completed, 12)
+          assert.equal(busy.recent.length, 10)
+        }
+      )
+
+      test('the new views never cross scopes', spanTest, async () => {
+        const a = freshScope()
+        const b = freshScope()
+        await ingest(a, {
+          spans: [span({ id: '1', attributes: fn('a', 'scheduler') })],
+        })
+        const q = { since: NOW - 10 * MIN, until: NOW }
+        assert.deepEqual(await store.functionMetrics(b, q), [])
+        assert.deepEqual(await store.wireTypes(b, { since: q.since }), [])
+        assert.deepEqual(
+          await store.wireRuns(b, { wireType: 'scheduler', since: q.since }),
+          []
+        )
       })
     })
 

@@ -35,6 +35,12 @@ export interface LogRecord {
   /** Where the line came from: `app`, `dev`, `stage`, `website`, `studio`. */
   source: string
   attributes?: TelemetryAttributes
+  /**
+   * Read side only, never ingested. The duration of the request this line was
+   * written in: the root span of `traceId`, joined by the store. Absent when
+   * the line has no trace, or its root span is not (yet) stored.
+   */
+  durationMs?: number
 }
 
 /** A finished span, with millisecond times. */
@@ -65,6 +71,17 @@ export interface MetricPoint {
   attributes?: TelemetryAttributes
 }
 
+/**
+ * Narrows a read to one tenant. `org` matches the `pikku.org.id` attribute and
+ * `user` the `pikku.user.id` attribute, on the span (for span reads) or the log
+ * line (for log reads). Fail closed: a store with no value for a named key
+ * returns nothing, never the unfiltered rows.
+ */
+export interface TenantFilter {
+  org?: string
+  user?: string
+}
+
 export interface LogsQuery {
   /** Inclusive lower bound on `at`. */
   since?: number
@@ -81,6 +98,7 @@ export interface LogsQuery {
   wireType?: string
   wireId?: string
   source?: string
+  tenant?: TenantFilter
 }
 
 export interface LogFacets {
@@ -99,6 +117,12 @@ export interface FailureRow {
   count: number
   last: number | null
   sampleTraceId: string | null
+  /** Start of the earliest failure in the group. */
+  firstSeen?: number | null
+  /** From the latest failure of the group; null when it carries no value. */
+  httpPath?: string | null
+  httpMethod?: string | null
+  httpStatus?: number | null
 }
 
 export interface MetricsSummaryFunction {
@@ -130,6 +154,39 @@ export interface MetricsSummaryRow {
 
 export interface QueueJobRow {
   queue: string
+  completed: number
+  failed: number
+  lastRun: number | null
+  /** Newest first, at most 10. */
+  recent: Array<{
+    at: number
+    outcome: string
+    durationMs: number | null
+    error: string | null
+  }>
+}
+
+export interface FunctionMetricsRow {
+  functionId: string
+  wireType: string | null
+  requests: number
+  errors: number
+  /** Mean root-span duration, so request-weighted across buckets. */
+  avgMs: number | null
+  lastRun: number | null
+  /** Non-empty buckets only, oldest first. `at` is the bucket start. */
+  buckets: Array<{ at: number; requests: number; errors: number }>
+}
+
+export interface WireTypeRow {
+  wireType: string
+  requests: number
+}
+
+export interface WireRunRow {
+  /** The function id of the task (`pikku.function.id`, else the span name). */
+  name: string
+  wireType: string
   completed: number
   failed: number
   lastRun: number | null
@@ -188,13 +245,26 @@ export interface TelemetryStore {
    */
   metricsSummary(
     scope: TelemetryScope,
-    q: { since: number; until: number; buckets?: number }
+    q: {
+      since: number
+      until: number
+      buckets?: number
+      /** Narrows totals, traffic and functions to one function. */
+      functionId?: string
+      tenant?: TenantFilter
+    }
   ): Promise<MetricsSummaryRow>
   /**
    * Every span of a trace, oldest first; spans with the same start time order
-   * by span id ascending. An unknown trace is `[]`.
+   * by span id ascending. An unknown trace is `[]`. With `tenant`, the trace is
+   * returned only when at least one of its spans carries every named key and no
+   * span carries a different value for it; otherwise `[]`.
    */
-  trace(scope: TelemetryScope, traceId: string): Promise<SpanRecord[]>
+  trace(
+    scope: TelemetryScope,
+    traceId: string,
+    q?: { tenant?: TenantFilter }
+  ): Promise<SpanRecord[]>
   /**
    * Queue-wire root spans (a child span is never a job) grouped by queue, most
    * recently run first. Default `limit` 50; `recent` holds the newest 10.
@@ -203,6 +273,40 @@ export interface TelemetryStore {
     scope: TelemetryScope,
     q: { since: number; limit?: number }
   ): Promise<QueueJobRow[]>
+  /**
+   * Root spans in `[since, until)` grouped by function and wire type, most
+   * requests first (ties: function id ascending), at most `limit` (default
+   * 200). `buckets` (default 30) and their alignment are those of
+   * `metricsSummary`. `limit` is a positive integer or the call throws.
+   */
+  functionMetrics(
+    scope: TelemetryScope,
+    q: {
+      since: number
+      until: number
+      buckets?: number
+      limit?: number
+      tenant?: TenantFilter
+    }
+  ): Promise<FunctionMetricsRow[]>
+  /**
+   * Root spans in `[since, until)` counted by wire type, most requests first
+   * (ties: wire type ascending). A span with no wire type is `'unknown'`.
+   * `until` is exclusive and defaults to no upper bound.
+   */
+  wireTypes(
+    scope: TelemetryScope,
+    q: { since: number; until?: number; tenant?: TenantFilter }
+  ): Promise<WireTypeRow[]>
+  /**
+   * Root spans of one wire type (`scheduler`, `queue`, ...) from `since`,
+   * grouped by function id, most recently run first. Default `limit` 50;
+   * `recent` holds the newest 10. `queueJobs` is this grouped by queue name.
+   */
+  wireRuns(
+    scope: TelemetryScope,
+    q: { wireType: string; since: number; limit?: number }
+  ): Promise<WireRunRow[]>
   /**
    * Log records ordered by `at`, then a stable store-defined tiebreak, after
    * `cursor`; `null` starts at the beginning. The cursor is opaque. The

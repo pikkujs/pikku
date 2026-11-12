@@ -704,6 +704,10 @@ pikkuUserFlow|FABRIC_|pikkuFabric|pikku (fabric|persona|userflow|tests|console)\
 
 ## `@pikku/core`
 
+### `TelemetryStore` has three more required methods
+
+(core, patch release) An implementation of `TelemetryStore` must now provide `functionMetrics(scope, q)`, `wireTypes(scope, q)` and `wireRuns(scope, q)`. Their signatures and the ordering, limits and tenant rules are in `@pikku/core/telemetry-store` and proved by `conformance()` from `@pikku/core/telemetry-store/testing`. `trace` takes an optional second argument, `{ tenant }`. A store that has no span tree can return `[]` from the three methods; run `conformance(store, { spans: false })` to see what it must still answer. Find affected code with `grep -rn "implements TelemetryStore"`.
+
 ### The package root, `@pikku/core/ecosystem/*` and `@pikku/core/internal` are gone
 
 **What:** `import { … } from '@pikku/core'` no longer resolves to the framework surface. The `.` entry is now a type-only shim kept for the pinned bootstrap CLI. The `@pikku/core/ecosystem/*` facades and the `@pikku/core/internal` alias were deleted too (core 0.12.83 `438b776`, core 0.12.85 `266e3bc`, core 0.12.90 `cfd364a`).
