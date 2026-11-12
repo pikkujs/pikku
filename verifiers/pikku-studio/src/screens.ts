@@ -2,6 +2,12 @@
 // addon's functions and message keys.
 import { definePlugin } from '#pikku/addon/screens'
 
+// Values that are words, shared through a const and spread into each copy
+// that can meet them: a value naming 'why_timeout' is worded by its `$`.
+const VALUES = {
+  why_timeout: { $: 'studio_verifier_why_timeout' },
+}
+
 export default definePlugin({
   title: 'studio_verifier__title',
   screens: [
@@ -79,13 +85,27 @@ export default definePlugin({
           from: 'verdict',
           span: 'full',
           copy: {
-            wrong: { headline: 'studio_verifier_verdict_wrong__headline' },
+            ...VALUES,
+            wrong: {
+              headline: 'studio_verifier_verdict_wrong__headline',
+              status: { text: 'studio_verifier_verdict__status' },
+            },
             fine: { headline: 'studio_verifier_verdict_fine__headline' },
+            fig_pending: {
+              label: 'studio_verifier_fig_pending__label',
+              note: 'studio_verifier_fig_pending__note',
+            },
           },
         },
         { widget: 'mini', from: 'pending', compact: 'hide' },
       ],
       shows: ['meta'],
+      actions: {
+        inbox: {
+          run: 'go:/studio-verifier',
+          label: 'studio_verifier_inbox__title',
+        },
+      },
       poll: { fast: 3000, slow: 45000 },
     },
   },

@@ -33,6 +33,17 @@
  *  14. a destructive action
  *      without confirm, or a
  *      malformed RPC name    → PKU345
+ *  15. copy shared through a
+ *      const and spread, nested
+ *      texts, `$` and a head's
+ *      figures; a go:/<path>
+ *      action                → reach the meta as written; a figure the
+ *                              source returns with no wording fails tsc
+ *  16. a nested copy key or a
+ *      widget description key
+ *      missing from en.json  → PKU358
+ *  17. a go: action without a
+ *      leading slash         → PKU345
  */
 import { spawnSync } from 'node:child_process'
 import {
@@ -322,6 +333,62 @@ withFile(
 console.log(
   '✓ a destructive action without confirm, or a malformed RPC name, fails with PKU345'
 )
+
+const verdictCopy = health?.slots?.[0]?.copy
+const inboxAction = health?.actions?.find((action) => action.id === 'inbox')
+if (
+  verdictCopy?.why_timeout?.$ !== 'studio_verifier_why_timeout' ||
+  verdictCopy?.wrong?.status?.text !== 'studio_verifier_verdict__status' ||
+  verdictCopy?.fig_pending?.label !== 'studio_verifier_fig_pending__label' ||
+  inboxAction?.run !== 'go:/studio-verifier'
+) {
+  fail(
+    'shared, nested and figure copy, or the go: action, is not in the meta as written',
+    JSON.stringify(health, null, 2)
+  )
+}
+withFile(
+  screensPath,
+  (text) => text.replace(/            fig_pending: \{\n[^}]*\},\n/, ''),
+  () =>
+    expectTscFailure(
+      'src/screens.ts',
+      'a figure the source returns with no wording passed tsc'
+    )
+)
+console.log(
+  '✓ copy shared through a const, nested texts, `$`, figures and a go: action reach the meta; an unworded figure fails tsc'
+)
+
+withFile(
+  enPath,
+  (text) =>
+    text.replace('  "studio_verifier_verdict__status": "{status}",\n', ''),
+  () => expectFailure('PKU358', 'a nested copy key missing from en.json built')
+)
+withFile(
+  enPath,
+  (text) =>
+    text.replace(
+      '  "studio_verifier_mini__description": "How many items wait",\n',
+      ''
+    ),
+  () =>
+    expectFailure(
+      'PKU358',
+      'a widget description key missing from en.json built'
+    )
+)
+console.log(
+  '✓ a nested copy key or a widget description key missing from messages/en.json fails with PKU358'
+)
+
+withFile(
+  screensPath,
+  (text) => text.replace("'go:/studio-verifier'", "'go:studio-verifier'"),
+  () => expectFailure('PKU345', 'a go: action without a leading slash built')
+)
+console.log('✓ a go: action without a leading slash fails with PKU345')
 
 const inbox = meta.screens.find((screen) => screen.path === '/studio-verifier')
 if (inbox?.defaultChat !== false) {

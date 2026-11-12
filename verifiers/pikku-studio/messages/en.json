@@ -14,5 +14,9 @@
   "studio_verifier_forget__confirm": "Forget {count} unused switches?",
   "studio_verifier_health__title": "Health",
   "studio_verifier_verdict_wrong__headline": "{count} things went wrong",
-  "studio_verifier_verdict_fine__headline": "All is well"
+  "studio_verifier_verdict_fine__headline": "All is well",
+  "studio_verifier_why_timeout": "it timed out",
+  "studio_verifier_verdict__status": "{status}",
+  "studio_verifier_fig_pending__label": "Pending",
+  "studio_verifier_fig_pending__note": "waiting now"
 }
