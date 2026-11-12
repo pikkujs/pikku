@@ -300,6 +300,10 @@ export const unsatisfiedRequirements = async (
  * failure the check cannot foresee: a statement that dies mid-list takes the
  * ones before it with it. On an engine without transactional DDL the rollback
  * is the engine's to give, not ours.
+ *
+ * Every statement is built before any runs, so one its factory refuses (a
+ * partial index on MySQL, say) stops the whole list with nothing applied,
+ * where MySQL's implicit DDL commit would otherwise keep the tables before it.
  */
 export const applyPikkuSchemas = async (
   db: Kysely<any>,
@@ -321,14 +325,17 @@ export const applyPikkuSchemas = async (
   await db.transaction().execute(async (trx) => {
     const bound = bind(trx)
     const ctx = contextFor(bound)
-    for (const schema of schemas) {
-      for (const statement of schema.statements) {
-        const query = statement(bound, types, ctx)
-        try {
-          await query.execute()
-        } catch (error) {
-          throw explain(error, query.compile().sql, schema)
-        }
+    const queries = schemas.flatMap((schema) =>
+      schema.statements.map((statement) => ({
+        schema,
+        query: statement(bound, types, ctx),
+      }))
+    )
+    for (const { schema, query } of queries) {
+      try {
+        await query.execute()
+      } catch (error) {
+        throw explain(error, query.compile().sql, schema)
       }
     }
   })

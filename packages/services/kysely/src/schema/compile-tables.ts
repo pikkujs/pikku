@@ -1,4 +1,10 @@
-import { sql, type CreateTableBuilder, type Kysely, type SqlBool } from 'kysely'
+import {
+  CamelCasePlugin,
+  sql,
+  type CreateTableBuilder,
+  type Kysely,
+  type SqlBool,
+} from 'kysely'
 import type {
   ColumnDeclaration,
   ColumnDefault,
@@ -34,9 +40,16 @@ const SIMPLE_TYPES = new Set<string>([
 ])
 const BOUNDED_STRING = /^string\((\d+)\)$/
 
+/** Exposes the conversion `CamelCasePlugin` applies, so names match it exactly (`apiURL` is `api_url`). */
+class PhysicalNames extends CamelCasePlugin {
+  physical(name: string): string {
+    return this.snakeCase(name)
+  }
+}
+const physicalNames = new PhysicalNames()
+
 /** The physical name `CamelCasePlugin` gives a logical one. */
-const snake = (name: string) =>
-  name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
+const snake = (name: string) => physicalNames.physical(name)
 
 /**
  * Whether `db` compiles for postgres. Placeholders are the tell: `$1` there,
@@ -192,13 +205,15 @@ const validate = (tables: TablesDeclaration): void => {
 
     for (const [name, column] of Object.entries(columns)) {
       const here = `${table}.${name}`
-      if (
-        column.type &&
-        !SIMPLE_TYPES.has(column.type) &&
-        !BOUNDED_STRING.test(column.type)
-      ) {
+      const bounded = column.type ? BOUNDED_STRING.exec(column.type) : null
+      if (column.type && !SIMPLE_TYPES.has(column.type) && !bounded) {
         throw new Error(
           `'${here}' has type '${column.type}', which is not a column type.`
+        )
+      }
+      if (bounded && Number(bounded[1]) < 1) {
+        throw new Error(
+          `'${here}' has type '${column.type}'. A bounded string needs a length of at least 1.`
         )
       }
       if (!column.type && !column.references) {
@@ -213,7 +228,9 @@ const validate = (tables: TablesDeclaration): void => {
       }
       if (
         column.onDelete === 'setNull' &&
-        (column.required || column.primaryKey)
+        (column.required ||
+          column.primaryKey ||
+          declaration.primaryKey?.includes(name))
       ) {
         throw new Error(
           `'${here}' is required, so onDelete 'setNull' could never succeed. Make it optional, or choose another onDelete.`
