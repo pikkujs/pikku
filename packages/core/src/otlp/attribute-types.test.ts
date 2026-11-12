@@ -43,6 +43,50 @@ describe('AttributeTypes', () => {
     assert.equal(types.dropped, 0)
   })
 
+  test('the network client keys are allow-listed with fixed types', () => {
+    const types = new AttributeTypes()
+    assert.deepEqual(
+      types.coerce({
+        'server.address': 'api.stripe.com',
+        'server.port': 443,
+        'pikku.network.rule': '*.stripe.com',
+        'pikku.network.blocked': false,
+      }),
+      {
+        'server.address': 'api.stripe.com',
+        'server.port': 443,
+        'pikku.network.rule': '*.stripe.com',
+        'pikku.network.blocked': false,
+      }
+    )
+    assert.equal(types.dropped, 0)
+    assert.deepEqual(
+      types.coerce({
+        'server.address': 10,
+        'server.port': 8443.2,
+        'pikku.network.blocked': 'true',
+      }),
+      { 'server.address': '10', 'server.port': 8443 }
+    )
+    assert.equal(types.dropped, 1)
+  })
+
+  test('the URL, its path and its query never leave on a span', () => {
+    const types = new AttributeTypes()
+    assert.deepEqual(
+      types.coerce({
+        'server.address': 'api.example.com',
+        'url.full': 'https://api.example.com/v1/users?token=abc',
+        'url.path': '/v1/users',
+        'url.query': 'token=abc',
+        'url.scheme': 'https',
+        'http.request.header.authorization': 'Bearer abc',
+      }),
+      { 'server.address': 'api.example.com' }
+    )
+    assert.equal(types.dropped, 5)
+  })
+
   test('a key under the db. plugin prefix keeps the type it was first seen with', () => {
     const types = new AttributeTypes()
     assert.deepEqual(types.coerce({ 'db.n': 1 }), { 'db.n': 1 })

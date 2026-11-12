@@ -14,6 +14,11 @@ run_pikku() {
 copy_generated_types() {
   mkdir -p dist/.pikku/rpc dist/.pikku/agent dist/.pikku/workflow
   cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ 2>/dev/null || true
+  # `pikku all` writes an addon's rpc maps under .pikku/addon/rpc, and consumers resolve them from
+  # dist/.pikku/addon/rpc. Without this the published package has no rpc map, and every `graph:*`
+  # step fails type-checking in the project that uses it (TS2322).
+  mkdir -p dist/.pikku/addon/rpc
+  cp .pikku/addon/rpc/*.d.ts dist/.pikku/addon/rpc/
   cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null || true
   cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null || true
   copy_verbose_meta
