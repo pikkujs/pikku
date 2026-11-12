@@ -298,6 +298,30 @@ describe('runPikkuFunc - spans', () => {
     assert.equal(attributes['pikku.user.id'], 'u1')
   })
 
+  test('the user and org are on the span when it opens, not only when it ends', async () => {
+    const started: Array<Record<string, unknown>> = []
+    class StartCapturingTracer extends RecordingTracer {
+      override startSpan(
+        ...args: Parameters<RecordingTracer['startSpan']>
+      ): ReturnType<RecordingTracer['startSpan']> {
+        started.push({ ...(args[2]?.attributes ?? {}) })
+        return super.startSpan(...args)
+      }
+    }
+    const tracer = new StartCapturingTracer()
+    addTestFunction('identified', { func: async () => 1 })
+    await run('identified', tracer, {
+      trace: createTrace(),
+      pikkuUserId: 'u1',
+      session: { userId: 'u1', orgId: 'org_1' },
+    })
+    await run('identified', tracer, { trace: createTrace() })
+    assert.equal(started[0]!['pikku.user.id'], 'u1')
+    assert.equal(started[0]!['pikku.org.id'], 'org_1')
+    assert.ok(!('pikku.user.id' in started[1]!))
+    assert.ok(!('pikku.org.id' in started[1]!))
+  })
+
   test('an http span carries method, route and status; a nested call on its wire does not', async () => {
     const tracer = new RecordingTracer()
     addTestFunction('route', { func: async () => 1 })

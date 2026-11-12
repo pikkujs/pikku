@@ -32,6 +32,28 @@ export type FunctionSpan = {
   wire: PikkuWire
 }
 
+const readIdentity = (
+  wire: PikkuWire,
+  attributes: Record<string, SpanAttributeValue>
+) => {
+  const set = (key: string, read: () => unknown) => {
+    try {
+      const value = read()
+      if (typeof value === 'string') attributes[key] = value
+    } catch {}
+  }
+  set('pikku.user.id', () => readUserId(wire))
+  set('pikku.org.id', () => wire.session?.orgId)
+}
+
+const identityAttributes = (
+  wire: PikkuWire
+): Record<string, SpanAttributeValue> => {
+  const attributes: Record<string, SpanAttributeValue> = {}
+  readIdentity(wire, attributes)
+  return attributes
+}
+
 /**
  * Opens the span of one invocation. Returns undefined when nothing is recorded:
  * no tracer, an unsampled trace, a tracer already disabled, or a tracer that
@@ -52,7 +74,7 @@ export const openFunctionSpan = (
       kind: workflowStepOfTrace(trace)
         ? 'consumer'
         : (KINDS[wireType] ?? 'internal'),
-      attributes,
+      attributes: { ...identityAttributes(wire), ...attributes },
       startTimeUnixNano: nowUnixNano(),
     })
     return { span, wireType, tracer, logger, wire }
