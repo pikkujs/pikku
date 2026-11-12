@@ -55,3 +55,43 @@ func TestValidateStudioAgentKeepsTheFieldWhoseKeyExists(t *testing.T) {
 		})
 	}
 }
+
+func TestStudioMessageKeysCoverWidgetsThingsAndArrangedScreens(t *testing.T) {
+	raw := `{
+	  "title": "t", "file": "f", "screens": [{"title": "s"}],
+	  "widgets": [{"id": "w", "title": "w_t", "description": "w_d"}],
+	  "things": [{"kind": "k", "label": "k_l",
+	    "copy": {"failed": {"name": "k_n", "lead": "k_lead", "compact": "k_c", "primary": {"label": "k_p", "draft": "k_dr"}}},
+	    "parts": [{"widget": "x", "from": "y", "copy": {"a": {"headline": "p_a"}}, "own": false}],
+	    "actions": [{"id": "f", "run": "admin:f", "label": "a_l", "confirm": "a_c", "destructive": true}]}],
+	  "arrangedScreens": [{"id": "h", "title": "h_t", "about": "h_a",
+	    "slots": [{"widget": "v", "from": "v", "copy": {"wrong": {"headline": "v_w"}, "fine": {"headline": "v_f"}}, "own": false}]}]
+	}`
+	var studio studioView
+	if err := json.Unmarshal([]byte(raw), &studio); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"t", "s", "w_t", "w_d", "k_l", "k_n", "k_lead", "k_c", "k_p", "k_dr", "p_a", "a_l", "a_c", "h_t", "h_a", "v_w", "v_f"}
+	if got := studio.messageKeys(); !reflect.DeepEqual(got, want) {
+		t.Errorf("keys = %v, want %v", got, want)
+	}
+}
+
+func TestStudioManifestDeclaresUI(t *testing.T) {
+	for raw, want := range map[string]bool{
+		`{"screens": []}`:                                   false,
+		`{"screens": [], "widgets": []}`:                    false,
+		`{"screens": [{"path": "/a"}]}`:                     true,
+		`{"screens": [], "arrangedScreens": [{"id": "h"}]}`: true,
+		`{"things": [{"kind": "k"}]}`:                       true,
+		`{"widgets": [{"id": "w"}]}`:                        true,
+	} {
+		m, err := parseOJSON([]byte(raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := studioManifestDeclaresUI(m); got != want {
+			t.Errorf("%s: got %v, want %v", raw, got, want)
+		}
+	}
+}

@@ -742,6 +742,7 @@
       "usedAddons": [
         "shop",
         "bare",
+        "board",
         "unbuilt",
         "missing",
         "registry",
@@ -823,6 +824,14 @@
             "file": "<fixture>/src/addons.ts",
             "mcp": true,
             "mcpEndpoint": "/mcp/bare-tools"
+          }
+        ],
+        [
+          "board",
+          {
+            "package": "@fixture/board-addon",
+            "ui": true,
+            "file": "<fixture>/src/addons.ts"
           }
         ],
         [
@@ -1392,7 +1401,8 @@
           "outputSchemaName": null,
           "mcp": true
         }
-      }
+      },
+      "board": {}
     },
     "remoteAddonFunctions": {
       "cloudapi": {
@@ -1531,6 +1541,144 @@
           "defaultChat": false,
           "app": "y"
         }
+      ],
+      "widgets": [
+        {
+          "id": "release-chart",
+          "title": "admin_release_chart__title",
+          "description": "admin_release_chart__description",
+          "states": [
+            "full",
+            "tile"
+          ],
+          "actions": [
+            "open"
+          ],
+          "skins": [
+            "desk"
+          ],
+          "component": "./widgets/release-chart.js"
+        }
+      ],
+      "things": [
+        {
+          "kind": "problem",
+          "label": "admin_problem__label",
+          "source": "nightly",
+          "copy": {
+            "failed": {
+              "name": "admin_problem_failed__name",
+              "lead": "admin_problem_failed__lead",
+              "compact": "admin_problem_failed__compact",
+              "primary": {
+                "label": "admin_problem_failed__fix",
+                "draft": "admin_problem_failed__draft"
+              }
+            }
+          },
+          "parts": [
+            {
+              "widget": "release-chart",
+              "from": "releases",
+              "span": "wide",
+              "own": true
+            },
+            {
+              "widget": "trend",
+              "from": "trend",
+              "compact": "hide",
+              "own": false
+            }
+          ],
+          "related": [
+            "problem"
+          ],
+          "actions": [
+            {
+              "id": "forget",
+              "run": "admin:triggerSourceForget",
+              "label": "admin_forget__label",
+              "confirm": "admin_forget__confirm",
+              "destructive": true
+            },
+            {
+              "id": "retry",
+              "run": "nightly",
+              "label": "admin_retry__label"
+            }
+          ],
+          "alwaysFull": true,
+          "measure": "narrow"
+        }
+      ],
+      "arrangedScreens": [
+        {
+          "id": "health",
+          "path": "/health-next",
+          "title": "admin_health__title",
+          "scope": "project",
+          "about": "admin_health__about",
+          "source": "nightly",
+          "slots": [
+            {
+              "widget": "verdict",
+              "from": "verdict",
+              "span": "full",
+              "copy": {
+                "wrong": {
+                  "headline": "admin_verdict_wrong__headline"
+                },
+                "fine": {
+                  "headline": "admin_verdict_fine__headline"
+                }
+              },
+              "own": false
+            },
+            {
+              "widget": "release-chart",
+              "from": "releases",
+              "own": true
+            }
+          ],
+          "shows": [
+            "problem"
+          ],
+          "lanes": 3,
+          "chat": "collapse",
+          "scoped": true,
+          "actions": [
+            {
+              "id": "verify",
+              "run": "console:runVerify",
+              "label": "admin_retry__label"
+            }
+          ],
+          "redirect": {
+            "new": "start",
+            "gone": "/home"
+          },
+          "poll": {
+            "fast": 3000,
+            "slow": 45000
+          }
+        },
+        {
+          "id": "start",
+          "path": "/start-next",
+          "title": "admin_health__title",
+          "scope": "project",
+          "source": "console:getAllMeta",
+          "slots": [],
+          "poll": 60000
+        },
+        {
+          "id": "again",
+          "path": "/users",
+          "title": "admin_docs__title",
+          "scope": "team",
+          "source": "nightly",
+          "slots": []
+        }
       ]
     },
     "addonStudio": {
@@ -1557,6 +1705,27 @@
           "payments:read",
           "zeta"
         ]
+      },
+      "board": {
+        "title": "board__title",
+        "screens": [],
+        "arrangedScreens": [
+          {
+            "id": "home",
+            "path": "/home-next",
+            "title": "board_home__title",
+            "scope": "project",
+            "source": "homeScreen",
+            "slots": [
+              {
+                "widget": "verdict",
+                "from": "verdict",
+                "own": false
+              }
+            ]
+          }
+        ],
+        "scopes": []
       },
       "hosted": {
         "title": "shop__title",
@@ -1796,8 +1965,43 @@
     },
     {
       "level": "critical",
+      "code": "PKU345",
+      "message": "A widget's states must be an array of 'full', 'tile', 'chip', got: ['huge' as any]"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A screen's source must be a function of the addon or a project RPC '<namespace>:<function>', got: 'Console::all'"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "Action 'wipe' is destructive, so it needs a confirm message key"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A screen's poll must be a positive whole number of milliseconds or { fast, slow }, got: 0"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A screen's lanes must be a whole number from 1 to 6, got: 9"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A definePlugin arranged screen must be an object literal, got: {\n      path: '/arranged-component',\n      title: 'admin_docs__title',\n      scope: 'team',\n      source: 'nightly',\n      slots: [],\n      component: () => import('./screens/users.js'),\n    } as any"
+    },
+    {
+      "level": "critical",
       "code": "PKU357",
       "message": "definePlugin declares two screens at '/docs'; each screen needs its own path"
+    },
+    {
+      "level": "critical",
+      "code": "PKU357",
+      "message": "definePlugin declares two screens at '/users'; each screen needs its own path"
     },
     {
       "level": "critical",
@@ -1822,7 +2026,7 @@
     {
       "level": "critical",
       "code": "PKU346",
-      "message": "wireAddon('bare') sets ui: true, but @fixture/bare-addon declares no screens. Add a definePlugin call to the package, or drop ui."
+      "message": "wireAddon('bare') sets ui: true, but @fixture/bare-addon declares no screens, arranged screens, things or widgets. Add a definePlugin call to the package, or drop ui."
     },
     {
       "level": "warn",
@@ -1900,6 +2104,16 @@
     },
     {
       "level": "critical",
+      "code": "PKU358",
+      "message": "definePlugin uses the message key 'admin_problem_failed__draft', which is missing from the addon's messages/en.json"
+    },
+    {
+      "level": "critical",
+      "code": "PKU358",
+      "message": "definePlugin uses the message key 'admin_verdict_fine__headline', which is missing from the addon's messages/en.json"
+    },
+    {
+      "level": "critical",
       "code": "PKU359",
       "message": "Screen '/inbox' has the nav badge 'noSuchFunction', which names no function in this addon"
     },
@@ -1943,6 +2157,66 @@
     },
     {
       "level": "warn",
+      "message": "definePlugin uses the message key 'admin_release_chart__title', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_release_chart__description', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_problem__label', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_problem_failed__name', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_problem_failed__lead', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_problem_failed__compact', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_problem_failed__fix', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_problem_failed__draft', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_forget__label', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_forget__confirm', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_retry__label', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_health__title', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_health__about', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_verdict_wrong__headline', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_verdict_fine__headline', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
       "message": "definePlugin uses the message key 'admin_agent__description', which is missing from the addon's messages/de.json"
     },
     {
@@ -1968,7 +2242,7 @@
     {
       "level": "critical",
       "code": "PKU347",
-      "message": "Addon 'shop' uses 'kysely' as 'db', but no addon is wired under the name 'db'. Wired: shop, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing, hosted"
+      "message": "Addon 'shop' uses 'kysely' as 'db', but no addon is wired under the name 'db'. Wired: shop, bare, board, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing, hosted"
     },
     {
       "level": "critical",
@@ -1983,7 +2257,7 @@
     {
       "level": "critical",
       "code": "PKU349",
-      "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing, hosted"
+      "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, board, unbuilt, missing, registry, public, custom, cloudapi, unsynced, billing, hosted"
     },
     {
       "level": "critical",
@@ -2022,7 +2296,7 @@
     }
   ],
   "validationPass": {
-    "start": 50,
-    "end": 65
+    "start": 74,
+    "end": 89
   }
 }

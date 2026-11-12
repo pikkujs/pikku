@@ -1,6 +1,6 @@
 import { definePlugin } from '@pikku/core/addon'
 
-export const screens = definePlugin({
+export const screens = definePlugin(({
   title: 'admin__title',
   screens: [
     {
@@ -160,7 +160,129 @@ export const screens = definePlugin({
     { title: 'No path', app: 'z' } as any,
     'not-an-object' as any,
   ],
-})
+  widgets: {
+    'release-chart': {
+      title: 'admin_release_chart__title',
+      description: 'admin_release_chart__description',
+      states: ['full', 'tile'],
+      actions: ['open'],
+      skins: ['desk'],
+      component: () => import('./widgets/release-chart.js'),
+    },
+    'bad-state': {
+      title: 'admin_release_chart__title',
+      description: 'admin_release_chart__description',
+      states: ['huge' as any],
+      actions: [],
+      component: () => import('./widgets/release-chart.js'),
+    },
+  },
+  things: {
+    problem: {
+      label: 'admin_problem__label',
+      source: 'nightly',
+      copy: {
+        failed: {
+          name: 'admin_problem_failed__name',
+          lead: 'admin_problem_failed__lead',
+          compact: 'admin_problem_failed__compact',
+          primary: { label: 'admin_problem_failed__fix', draft: 'admin_problem_failed__draft' },
+        },
+      },
+      parts: [
+        { widget: 'release-chart', from: 'releases', span: 'wide' },
+        { widget: 'trend', from: 'trend', compact: 'hide' },
+      ],
+      related: ['problem'],
+      actions: {
+        forget: {
+          run: 'admin:triggerSourceForget',
+          label: 'admin_forget__label',
+          destructive: true,
+          confirm: 'admin_forget__confirm',
+        },
+        retry: { run: 'nightly', label: 'admin_retry__label' },
+      },
+      alwaysFull: true,
+      measure: 'narrow',
+    },
+  },
+  arrangedScreens: {
+    health: {
+      path: '/health-next',
+      title: 'admin_health__title',
+      about: 'admin_health__about',
+      scope: 'project',
+      source: 'nightly',
+      slots: [
+        {
+          widget: 'verdict',
+          from: 'verdict',
+          span: 'full',
+          copy: {
+            wrong: { headline: 'admin_verdict_wrong__headline' },
+            fine: { headline: 'admin_verdict_fine__headline' },
+          },
+        },
+        { widget: 'release-chart', from: 'releases' },
+      ],
+      shows: ['problem'],
+      lanes: 3,
+      chat: 'collapse',
+      scoped: true,
+      actions: { verify: { run: 'console:runVerify', label: 'admin_retry__label' } },
+      redirect: { new: 'start', gone: '/home' },
+      poll: { fast: 3000, slow: 45000 },
+    },
+    start: {
+      path: '/start-next',
+      title: 'admin_health__title',
+      scope: 'project',
+      source: 'console:getAllMeta',
+      slots: [],
+      poll: 60000,
+    },
+    badRpc: {
+      path: '/bad-rpc',
+      title: 'admin_docs__title',
+      scope: 'team',
+      source: 'Console::all',
+      slots: [],
+    },
+    badActions: {
+      path: '/bad-actions',
+      title: 'admin_docs__title',
+      scope: 'team',
+      source: 'nightly',
+      slots: [],
+      actions: { wipe: { run: 'admin:wipe', label: 'admin_docs__title', destructive: true } },
+      poll: 0,
+    },
+    again: {
+      path: '/users',
+      title: 'admin_docs__title',
+      scope: 'team',
+      source: 'nightly',
+      slots: [],
+    },
+    lanes: {
+      path: '/lanes',
+      title: 'admin_docs__title',
+      scope: 'team',
+      source: 'nightly',
+      slots: [],
+      lanes: 9,
+    },
+    component: {
+      path: '/arranged-component',
+      title: 'admin_docs__title',
+      scope: 'team',
+      source: 'nightly',
+      slots: [],
+      component: () => import('./screens/users.js'),
+    } as any,
+  },
+}) as const)
 
 declare const LAYOUT: 'bare'
 declare const ICON: string
