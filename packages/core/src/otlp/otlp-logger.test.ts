@@ -38,6 +38,21 @@ const setup = (options: ConstructorParameters<typeof OtlpLogger>[2] = {}) => {
 }
 
 describe('OtlpLogger', () => {
+  test('stamps each record when it is logged, not when the batch is flushed', async () => {
+    const { logger, sent } = setup()
+    logger.info('first')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    logger.info('second')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    const [first, second] = await sent()
+    assert.deepEqual(first!.body, { string: 'first' })
+    assert.deepEqual(second!.body, { string: 'second' })
+    assert.ok(
+      second!.timeUnixNano - first!.timeUnixNano >= 10_000_000n,
+      `expected a gap of at least 10 ms, got ${second!.timeUnixNano - first!.timeUnixNano} ns`
+    )
+  })
+
   test('writes through the inner logger and forwards info and above', async () => {
     const { logger, written, sent } = setup()
     logger.debug('quiet')
