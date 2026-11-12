@@ -85,6 +85,7 @@ Every call is made on `workflow` (third argument of `func`), each step has a uni
 ```ts
 await workflow.do('Load the order', 'loadOrder', data)                               // a function, or 'addon:function'
 await workflow.do('Charge', 'chargeCard', input, { retries: 3, retryDelay: '30s' }) // options: description, retries, retryDelay, compensate: false
+await workflow.do('Latest item', 'addon:listLatest', null)                                // a function that takes no input is given `null` ({} and leaving it out do not type-check)
 await workflow.sleep('Wait two days', '2d')                                          // a duration: '30s', '5min', '2h', '2d' (whole numbers, no spaces) or milliseconds
 const answer = await workflow.approval('A manager approves', { schema, approvers: 'not-initiator', expiry: '48h' })
 await Promise.all(items.map((x) => workflow.do(`Notify ${x.id}`, 'notify', x)))      // parallel fanout; a for...of with await is the sequential one

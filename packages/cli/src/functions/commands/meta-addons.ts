@@ -181,7 +181,11 @@ export const addonFunctionDetail = (
     input: {
       name: inputName,
       fields: describeSchema(input),
-      ...(inputName ? {} : { note: 'takes no input: pass {}' }),
+      ...(inputName
+        ? {}
+        : {
+            note: 'takes no input: pass null as the input (`workflow.do("<step>", "<id>", null)`); {} and omitting it do not type-check',
+          }),
     },
     output: {
       name: outputName,
