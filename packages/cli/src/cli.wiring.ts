@@ -167,6 +167,10 @@ import {
 import { pikkuImportN8n } from './functions/commands/import-n8n.js'
 import { doc, renderDoc } from './functions/commands/doc.js'
 import {
+  pikkuAddonsSearch,
+  renderAddonsSearch,
+} from './functions/commands/addons-search.js'
+import {
   pikkuInfoFunctions,
   pikkuInfoTags,
   pikkuInfoMiddleware,
@@ -1604,6 +1608,24 @@ wireCLI({
       description:
         'Addons this app uses — published packages, or generated from an OpenAPI spec',
       subcommands: {
+        search: pikkuCLICommand({
+          func: pikkuAddonsSearch,
+          render: renderAddonsSearch,
+          description:
+            'Search the addon registry for what you want to connect to (a vendor name, or what you want to do) and say whether the project already has one: the verdict is wired, installed, exact, several or none',
+          parameters: '[terms...]',
+          options: {
+            openapi: {
+              description:
+                'Also search the public OpenAPI catalogue (services that need no key)',
+              default: false,
+            },
+            registry: {
+              description:
+                'Registry to search (default: the registry in pikku.config.json, else https://api.pikkustudio.app)',
+            },
+          },
+        }),
         add: pikkuCLICommand({
           func: pikkuAddonsAdd,
           description:
