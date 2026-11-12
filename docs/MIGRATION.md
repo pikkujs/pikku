@@ -654,6 +654,16 @@ The two middleware (and the `__pikku_telemetry` log lines they wrote) are gone f
 
 To find affected code, search for `telemetryOuter|telemetryInner`.
 
+### `AgentRunStateService.resolveApproval` takes one claim object naming the run
+
+`resolveApproval(toolCallId, status)` is replaced by `resolveApproval({ runId, toolCallId, status })` (`ApprovalClaim`, from `@pikku/core/services`). There is no two-argument form any more. The stores used to claim by tool call id alone, so a caller authorized for one run could claim an approval pending on another. Now a store claims only an approval that is pending on `claim.runId`, and returns `false` for any other.
+
+- A custom `AgentRunStateService` (or `AgentStorageService`) must take the object and add the run to its claim: only remove the approval from, or move off `pending`, a row that belongs to `runId`. It is still a compare-and-swap, and still returns whether this caller won.
+- Callers pass the run the approval was read from: `resolveApproval({ runId: run.runId, toolCallId, status: 'approved' })`.
+- `resumeAgentSync` (and `rpc.agent.approve`) now refuse, before claiming anything, an approval list that names a tool call that is not pending on the run being resumed.
+
+To find affected code, search for `resolveApproval\(`.
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.

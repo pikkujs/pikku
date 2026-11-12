@@ -27,7 +27,20 @@ The claim is per tool call, not per run, so concurrent approvals of _different_
 tool calls on one run all proceed — which is the case that made a run-level
 `claimSuspendedRun` the worse fit.
 
+The claim also names the run. It used to name only the tool call, so the
+Kysely run-state store scanned every suspended run and the tool-call stores
+updated by tool call id alone; `resumeAgentSync` claimed whatever ids its caller
+sent, so a caller who owned run A could claim, and run, run B's approved tool by
+passing B's tool call id. `resolveApproval` now takes
+`{ runId, toolCallId, status }` and claims only an approval pending on that run,
+and `resumeAgentSync` refuses an approval list naming a tool call not pending on
+the run it authorized, before claiming any of it. The object argument is
+deliberate: a third positional `runId` would still type-check against an old
+two-argument implementation (method parameters are bivariant) and be read as the
+tool call id.
+
 **What this rules out:** treating `getRun` as a claim, adding a resume path that
-executes a tool without a `true` from `resolveApproval`, and implementing
+executes a tool without a `true` from `resolveApproval`, claiming an approval by
+tool call id without the run it was authorized against, and implementing
 `resolveApproval` as a read-modify-write in any new store — the return value is
 a promise about atomicity, not a convenience.

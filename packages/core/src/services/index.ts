@@ -133,6 +133,7 @@ export type {
 } from './agent-runner-service.js'
 export type { AIEmbeddingService } from './ai-embedding-service.js'
 export type {
+  ApprovalClaim,
   CreateRunInput,
   SaveScoreInput,
   AgentRunStateService,

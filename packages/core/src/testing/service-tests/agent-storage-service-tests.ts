@@ -346,14 +346,35 @@ export const defineAiStorageServiceTests = (
       assert.ok(run.pendingApprovals)
       assert.equal(run.pendingApprovals.length, 1)
 
-      const claimed = await storage.resolveApproval('approval-tc', 'approved')
+      const foreign = await storage.resolveApproval({
+        runId: 'run-that-does-not-own-it',
+        toolCallId: 'approval-tc',
+        status: 'approved',
+      })
+      assert.equal(
+        foreign,
+        false,
+        "a claim naming another run does not claim this run's approval"
+      )
+      run = await storage.getRun(runId)
+      assert.equal(run?.pendingApprovals?.length, 1, 'still pending')
+
+      const claimed = await storage.resolveApproval({
+        runId,
+        toolCallId: 'approval-tc',
+        status: 'approved',
+      })
       assert.equal(claimed, true, 'the first approver claims the approval')
 
       run = await storage.getRun(runId)
       assert.ok(run)
       assert.equal(run.pendingApprovals, undefined)
 
-      const second = await storage.resolveApproval('approval-tc', 'approved')
+      const second = await storage.resolveApproval({
+        runId,
+        toolCallId: 'approval-tc',
+        status: 'approved',
+      })
       assert.equal(
         second,
         false,

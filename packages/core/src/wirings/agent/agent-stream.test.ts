@@ -1633,7 +1633,13 @@ describe('resumeAgent', () => {
       },
       agentRunState: {
         getRun: async () => remainingRun,
-        resolveApproval: async (toolCallId: string, status: string) => {
+        resolveApproval: async ({
+          toolCallId,
+          status,
+        }: {
+          toolCallId: string
+          status: string
+        }) => {
           resolveCalls.push({ toolCallId, status })
           return true
         },
@@ -1755,7 +1761,13 @@ describe('resumeAgent', () => {
           getRunCalls++
           return getRunCalls === 1 ? run : { ...run, pendingApprovals: [] }
         },
-        resolveApproval: async (toolCallId: string, status: string) => {
+        resolveApproval: async ({
+          toolCallId,
+          status,
+        }: {
+          toolCallId: string
+          status: string
+        }) => {
           resolveCalls.push({ toolCallId, status })
           return true
         },

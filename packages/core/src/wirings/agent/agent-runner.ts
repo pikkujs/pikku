@@ -485,10 +485,11 @@ export async function resumeAgentSync(
   // for may run the tool.
   const claimedIds = new Set<string>()
   for (const { toolCallId, approved } of approvals) {
-    const claimed = await agentRunState.resolveApproval(
+    const claimed = await agentRunState.resolveApproval({
+      runId,
       toolCallId,
-      approved ? 'approved' : 'denied'
-    )
+      status: approved ? 'approved' : 'denied',
+    })
     if (claimed) {
       claimedIds.add(toolCallId)
     }

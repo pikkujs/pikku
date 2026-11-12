@@ -5,6 +5,7 @@ import type { AgentRunState } from '@pikku/core/agent'
 import type { AgentRunScore } from '@pikku/core/agent-scorer'
 import type {
   AgentRunStateService,
+  ApprovalClaim,
   CreateRunInput,
   SaveScoreInput,
 } from '@pikku/core/services'
@@ -93,50 +94,49 @@ export class KyselyAgentRunStateService implements AgentRunStateService {
     return rows.map((r) => this.toRunState(r))
   }
 
-  async resolveApproval(
-    toolCallId: string,
-    status: 'approved' | 'denied'
-  ): Promise<boolean> {
-    const rows = await this.db
+  async resolveApproval({
+    runId,
+    toolCallId,
+    status,
+  }: ApprovalClaim): Promise<boolean> {
+    const row = await this.db
       .selectFrom('agentRun')
       .select(['runId', 'pendingApprovals'])
+      .where('runId', '=', runId)
       .where('status', '=', 'suspended')
-      .execute()
+      .executeTakeFirst()
+    if (!row) return false
 
-    for (const row of rows) {
-      let approvals: PendingApproval[] = []
-      if (row.pendingApprovals) {
-        try {
-          approvals = JSON.parse(row.pendingApprovals)
-        } catch {
-          console.warn(
-            `Failed to parse pendingApprovals for run ${row.runId}, treating as empty`
-          )
-        }
-      }
-      const filtered = approvals.filter((a) => a.toolCallId !== toolCallId)
-      if (filtered.length !== approvals.length) {
-        const updates: Record<string, unknown> = {
-          pendingApprovals:
-            filtered.length > 0 ? JSON.stringify(filtered) : null,
-          updatedAt: sql`CURRENT_TIMESTAMP`,
-        }
-        if (filtered.length === 0) {
-          updates.status = status
-        }
-        // Compare-and-swap on the list we read: a concurrent approver that got
-        // there first has already rewritten it, and this update matches no row.
-        const result = await this.db
-          .updateTable('agentRun')
-          .set(updates as any)
-          .where('runId', '=', row.runId)
-          .where('status', '=', 'suspended')
-          .where('pendingApprovals', '=', row.pendingApprovals)
-          .executeTakeFirst()
-        return Number(result?.numUpdatedRows ?? 0) > 0
+    let approvals: PendingApproval[] = []
+    if (row.pendingApprovals) {
+      try {
+        approvals = JSON.parse(row.pendingApprovals)
+      } catch {
+        console.warn(
+          `Failed to parse pendingApprovals for run ${row.runId}, treating as empty`
+        )
       }
     }
-    return false
+    const filtered = approvals.filter((a) => a.toolCallId !== toolCallId)
+    if (filtered.length === approvals.length) return false
+
+    const updates: Record<string, unknown> = {
+      pendingApprovals: filtered.length > 0 ? JSON.stringify(filtered) : null,
+      updatedAt: sql`CURRENT_TIMESTAMP`,
+    }
+    if (filtered.length === 0) {
+      updates.status = status
+    }
+    // Compare-and-swap on the list we read: a concurrent approver that got
+    // there first has already rewritten it, and this update matches no row.
+    const result = await this.db
+      .updateTable('agentRun')
+      .set(updates as any)
+      .where('runId', '=', row.runId)
+      .where('status', '=', 'suspended')
+      .where('pendingApprovals', '=', row.pendingApprovals)
+      .executeTakeFirst()
+    return Number(result?.numUpdatedRows ?? 0) > 0
   }
 
   async findRunByToolCallId(

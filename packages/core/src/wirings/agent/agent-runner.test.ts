@@ -784,7 +784,13 @@ describe('resumeAgentSync', () => {
         updateRun: async (_runId: string, patch: any) => {
           updates.push(patch)
         },
-        resolveApproval: async (toolCallId: string, status: string) => {
+        resolveApproval: async ({
+          toolCallId,
+          status,
+        }: {
+          toolCallId: string
+          status: string
+        }) => {
           resolveCalls.push({ toolCallId, status })
           return true
         },
@@ -928,7 +934,7 @@ describe('resumeAgentSync', () => {
         createRun: async () => 'unused',
         updateRun: async () => {},
         resolveApproval: async (claim: any) => {
-          claimed.push(typeof claim === 'string' ? claim : claim.toolCallId)
+          claimed.push(claim.toolCallId)
           return true
         },
       },
@@ -992,7 +998,13 @@ describe('resumeAgentSync', () => {
         getRun: async () => baseRun,
         createRun: async () => 'unused',
         updateRun: async () => {},
-        resolveApproval: async (toolCallId: string, status: string) => {
+        resolveApproval: async ({
+          toolCallId,
+          status,
+        }: {
+          toolCallId: string
+          status: string
+        }) => {
           resolveCalls.push({ toolCallId, status })
           return true
         },

@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3684 observable things**: 1213 exported names, plus
-2471 members on the classes and interfaces among them, reachable
+**3688 observable things**: 1214 exported names, plus
+2474 members on the classes and interfaces among them, reachable
 through 67 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 170 | 144 | 439 |
+| `./services` | 171 | 145 | 442 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./workflow` | 99 | 47 | 165 |
 | `./scenario` | 50 | 48 | 157 |
@@ -4945,7 +4945,7 @@ export interface AgentRunStateService {
   updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
   getRun(runId: string): Promise<AgentRunState | null>
   getRunsByThread(threadId: string): Promise<AgentRunState[]>
-  resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
+  resolveApproval(claim: ApprovalClaim): Promise<boolean>
   findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
   saveScore(score: SaveScoreInput): Promise<void>
   getScores(runId: string): Promise<AgentRunScore[]>
@@ -5007,6 +5007,11 @@ export interface AIEmbeddingService {
   readonly dimensions?: number
   embedDocuments(values: string[]): Promise<number[][]>
   embedQuery(value: string): Promise<number[]>
+}
+export interface ApprovalClaim {
+  runId: string
+  toolCallId: string
+  status: 'approved' | 'denied'
 }
 assertSecretAllowedForHost: (secretId: string, url: string | URL, secretDefinitions: SecretDefinitionsMeta | undefined, requireAllowedHosts?: boolean) => void
 export type AuditConfig =
@@ -5329,7 +5334,7 @@ export class InMemoryAgentRunStateService implements AgentRunStateService {
   async updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
   async getRun(runId: string): Promise<AgentRunState | null>
   async getRunsByThread(threadId: string): Promise<AgentRunState[]>
-  async resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
+  async resolveApproval(claim: ApprovalClaim): Promise<boolean>
   async findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
   async saveScore(score: SaveScoreInput): Promise<void>
   async getScores(runId: string): Promise<AgentRunScore[]>

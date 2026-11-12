@@ -7,6 +7,7 @@ import type { AgentRunScore } from '@pikku/core/agent-scorer'
 import type {
   AgentRunStateService,
   AgentStorageService,
+  ApprovalClaim,
   CreateRunInput,
   SaveScoreInput,
 } from '@pikku/core/services'
@@ -604,15 +605,17 @@ export class KyselyAgentStorageService
     return { run, approval }
   }
 
-  async resolveApproval(
-    toolCallId: string,
-    status: 'approved' | 'denied'
-  ): Promise<boolean> {
+  async resolveApproval({
+    runId,
+    toolCallId,
+    status,
+  }: ApprovalClaim): Promise<boolean> {
     // Only the caller that moves the tool call off 'pending' has claimed it.
     const result = await this.db
       .updateTable('agentToolCall')
       .set({ approvalStatus: status })
       .where('id', '=', toolCallId)
+      .where('runId', '=', runId)
       .where('approvalStatus', '=', 'pending')
       .executeTakeFirst()
     return Number(result?.numUpdatedRows ?? 0) > 0

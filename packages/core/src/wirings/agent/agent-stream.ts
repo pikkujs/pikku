@@ -1168,10 +1168,11 @@ export async function resumeAgent(
   // The read above is not a claim — concurrent resumes all see the same pending
   // approval. `resolveApproval` is the claim, and the loser must not go on to
   // run the tool a second time.
-  const claimed = await agentRunState.resolveApproval(
-    input.toolCallId,
-    input.approved ? 'approved' : 'denied'
-  )
+  const claimed = await agentRunState.resolveApproval({
+    runId: input.runId,
+    toolCallId: input.toolCallId,
+    status: input.approved ? 'approved' : 'denied',
+  })
   if (!claimed) {
     throw new Error(
       `Approval for toolCallId ${input.toolCallId} was already resolved by another caller`

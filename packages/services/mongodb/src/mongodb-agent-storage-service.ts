@@ -7,6 +7,7 @@ import type { AgentRunScore } from '@pikku/core/agent-scorer'
 import type {
   AgentRunStateService,
   AgentStorageService,
+  ApprovalClaim,
   CreateRunInput,
   SaveScoreInput,
 } from '@pikku/core/services'
@@ -589,13 +590,14 @@ export class MongoDBAgentStorageService
     return { run, approval }
   }
 
-  async resolveApproval(
-    toolCallId: string,
-    status: 'approved' | 'denied'
-  ): Promise<boolean> {
+  async resolveApproval({
+    runId,
+    toolCallId,
+    status,
+  }: ApprovalClaim): Promise<boolean> {
     // Only the caller that moves the tool call off 'pending' has claimed it.
     const result = await this.toolCalls.updateOne(
-      { _id: toolCallId, approvalStatus: 'pending' },
+      { _id: toolCallId, runId, approvalStatus: 'pending' },
       { $set: { approvalStatus: status } }
     )
     return result.modifiedCount > 0

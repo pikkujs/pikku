@@ -1,5 +1,6 @@
 import type {
   AgentRunStateService,
+  ApprovalClaim,
   CreateRunInput,
   SaveScoreInput,
 } from './agent-run-state-service.js'
@@ -43,25 +44,17 @@ export class InMemoryAgentRunStateService implements AgentRunStateService {
     return [...this.runs.values()].filter((r) => r.threadId === threadId)
   }
 
-  async resolveApproval(
-    toolCallId: string,
-    status: 'approved' | 'denied'
-  ): Promise<boolean> {
-    for (const run of this.runs.values()) {
-      if (run.pendingApprovals) {
-        const approval = run.pendingApprovals.find(
-          (a) => a.toolCallId === toolCallId
-        )
-        if (approval) {
-          run.pendingApprovals = run.pendingApprovals.filter(
-            (a) => a.toolCallId !== toolCallId
-          )
-          run.updatedAt = new Date()
-          return true
-        }
-      }
+  async resolveApproval(claim: ApprovalClaim): Promise<boolean> {
+    const { runId, toolCallId } = claim
+    const run = this.runs.get(runId)
+    if (!run?.pendingApprovals?.some((a) => a.toolCallId === toolCallId)) {
+      return false
     }
-    return false
+    run.pendingApprovals = run.pendingApprovals.filter(
+      (a) => a.toolCallId !== toolCallId
+    )
+    run.updatedAt = new Date()
+    return true
   }
 
   async findRunByToolCallId(
