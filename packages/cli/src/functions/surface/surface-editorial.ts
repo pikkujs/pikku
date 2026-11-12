@@ -260,6 +260,45 @@ export type SurfaceGuide = {
 
 export const SURFACE_GUIDES: SurfaceGuide[] = [
   {
+    names: ['graph', 'graphWorkflow', 'importedWorkflow', 'n8n'],
+    title: 'editing a graph workflow (what `pikku import n8n` writes)',
+    points: [
+      "`pikku import n8n` writes `<slug>.graph.ts`, a `pikkuWorkflowGraph`. It is the workflow: edit it in place, do not rewrite it as `pikkuWorkflowFunc`. `nodes` maps a node id to the function it runs: an addon function (`gmail:messageSend`, `graph:sort`; `pikku meta grep <words>` finds them, `pikku meta functions get <id>` shows the fields) or one of the project's own functions. To replace a throwing stub, put the real function name in `nodes` and delete the stub file.",
+      "`config.<node>.input` is an object, or `(ref, template, $item) => ({ ... })`. `ref('trigger', 'body.email')` reads what started the workflow (an HTTP request body is under `body`); `ref('<node>')` is that node's whole output; `ref('<node>', '<field>')` one field of it (the field must exist in the node's output type); `template('Hello $0', [ref(...)])` builds a string from refs.",
+      "`config.<node>.next` is a node id, a list of ids, or an object keyed by the branch outcome (`graph:branch` takes the key of the first case that matches, or its `fallback`). Two nodes that name the same `next` both feed it. `forEach` (a node id, or `(ref) => ref('<node>', 'items')`) runs a node once per element and its result is the array of results; `$item('field')` reads the current element in that node's input; `mode: 'sequential'` runs them in order. `onError` names the node to take when this one fails.",
+      "`pikku meta workflows get '<name>'` prints every node with its input, and lists `missingRequiredInputs` (a required field the import could not map, e.g. a Gmail `to`) and `stubs` (nodes that still throw). Fix those in the graph file; `pikku all --tsc-summary` then checks it.",
+    ],
+    example: `export const ageGateWorkflow = pikkuWorkflowGraph({
+  name: 'Age Gate',
+  nodes: {
+    checkAge: 'graph:branch',
+    notifyAdult: 'gmail:messageSend',
+    notifyMinor: 'gmail:messageSend',
+  },
+  config: {
+    checkAge: {
+      input: (ref) => ({
+        cases: [
+          { key: '0', combinator: 'and' as const, conditions: [{ left: ref('trigger', 'body.age'), right: 18, type: 'number' as const, operation: 'gte' }] },
+        ],
+        fallback: '1',
+      }),
+      next: { '0': ['notifyAdult'], '1': ['notifyMinor'] },
+    },
+    notifyAdult: {
+      input: (ref) => ({
+        to: [{ email: 'team@example.com' }],
+        subject: 'Welcome aboard',
+        body: 'Thanks for joining.',
+      }),
+    },
+    notifyMinor: {
+      input: () => ({ to: [{ email: 'team@example.com' }], subject: 'Access denied', body: 'Not yet.' }),
+    },
+  },
+})`,
+  },
+  {
     names: ['CredentialOverrides', 'CredentialOverride', 'credentialOverrides'],
     title: "wireAddon's credentialOverrides",
     points: [
