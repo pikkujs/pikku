@@ -357,7 +357,7 @@ import { pikkuAgent } from '#pikku/agent'`,
     names: ['models', 'model', 'PIKKU_MODEL_ALIASES'],
     title: 'what `model` accepts on an agent',
     points: [
-      'A name with a `/` is used as written. A bare name is an alias from the `models` table in pikku.config.json, and one missing from the table fails codegen, so an empty table means every agent spells out `provider/model`.',
+      'A name with a `/` is used as written. A bare name is an alias from the `models` table in pikku.config.json, and one missing from the table fails codegen. An empty table is not a reason to spell `provider/model` in an agent: add an alias to the table, name it for its job, and use that, so one edit repoints every agent.',
       '`PIKKU_MODEL_ALIASES=fast:openai/gpt-5-mini` overrides the table at runtime.',
     ],
     example: `// pikku.config.json
