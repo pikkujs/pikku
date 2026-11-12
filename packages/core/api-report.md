@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3688 observable things**: 1214 exported names, plus
+**3690 observable things**: 1216 exported names, plus
 2474 members on the classes and interfaces among them, reachable
 through 67 entry points.
 
@@ -18,7 +18,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./virtual-user` | 104 | 102 | 255 |
 | `./workflow` | 99 | 47 | 165 |
 | `./scenario` | 50 | 48 | 157 |
-| `./agent` | 52 | 50 | 81 |
+| `./agent` | 54 | 52 | 81 |
 | `./channel` | 33 | 33 | 92 |
 | `./types` | 24 | 21 | 84 |
 | `./queue` | 28 | 28 | 75 |
@@ -4058,6 +4058,7 @@ export interface AgentThread {
   createdAt: Date
   updatedAt: Date
 }
+APPROVAL_EXPIRED_MESSAGE: "approval expired"
 canAccessThread: (storedResourceId: string, session: { userId?: string | undefined; orgId?: string | undefined; } | undefined) => boolean
 export type CoreAgent<
   PikkuPermission = CorePikkuPermission<any, any>,
@@ -4082,6 +4083,7 @@ export type CoreAgent<
   agentMode?: 'delegate' | 'supervise'
   memory?: AgentMemoryConfig
   maxSteps?: number
+  approvalTtlMs?: number
   toolChoice?: 'auto' | 'required' | 'none'
   providerOptions?: AIProviderOptions
   input?: unknown
@@ -4103,6 +4105,7 @@ export type CoreAgent<
   scopes?: Scope[]
   permissions?: CorePermissionGroup<PikkuPermission>
 }
+DEFAULT_AGENT_APPROVAL_TTL_MS: number
 interruptAgent: (input: { runId: string; reason?: "speech" | "user" | "timeout" | undefined; }, params: RunAgentParams) => Promise<AgentInterruptResult>
 export interface InterruptibleRunHandle {
   readonly signal: AbortSignal
@@ -4122,6 +4125,7 @@ export type PendingApproval =
       toolCallId: string
       toolName: string
       args: unknown
+      expiresAt?: Date
     }
   | {
       type: 'agent-call'
@@ -4130,6 +4134,7 @@ export type PendingApproval =
       agentRunId: string
       displayToolName: string
       displayArgs: unknown
+      expiresAt?: Date
     }
   | {
       type: 'credential-request'
@@ -4139,6 +4144,7 @@ export type PendingApproval =
       credentialName: string
       credentialType: 'oauth2' | 'apikey'
       connectUrl?: string
+      expiresAt?: Date
     }
 export interface PikkuAgentMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, SingletonServices extends CoreSingletonServices = CoreSingletonServices, > {
   modifyInput?: (services: SingletonServices, ctx: { messages: AgentMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AgentMessage[]; instructions: string }> | { messages: AgentMessage[]; instructions: string }

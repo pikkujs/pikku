@@ -52,3 +52,18 @@ export interface AgentRunStateService {
   saveScore(score: SaveScoreInput): Promise<void>
   getScores(runId: string): Promise<AgentRunScore[]>
 }
+
+/**
+ * Whether an approval can no longer be claimed. One with no `expiresAt` — saved
+ * before approvals expired, or by a store that dropped it — counts as expired.
+ * Accepts a string as well as a `Date`, since a JSON round trip turns one into
+ * the other.
+ */
+export const isApprovalExpired = (
+  approval: { expiresAt?: Date | string | null },
+  now: number = Date.now()
+): boolean => {
+  const expiresAt =
+    approval.expiresAt == null ? NaN : new Date(approval.expiresAt).getTime()
+  return !(expiresAt > now)
+}

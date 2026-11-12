@@ -1,8 +1,9 @@
-import type {
-  AgentRunStateService,
-  ApprovalClaim,
-  CreateRunInput,
-  SaveScoreInput,
+import {
+  isApprovalExpired,
+  type AgentRunStateService,
+  type ApprovalClaim,
+  type CreateRunInput,
+  type SaveScoreInput,
 } from './agent-run-state-service.js'
 import type {
   AgentRunState,
@@ -47,7 +48,10 @@ export class InMemoryAgentRunStateService implements AgentRunStateService {
   async resolveApproval(claim: ApprovalClaim): Promise<boolean> {
     const { runId, toolCallId } = claim
     const run = this.runs.get(runId)
-    if (!run?.pendingApprovals?.some((a) => a.toolCallId === toolCallId)) {
+    const approval = run?.pendingApprovals?.find(
+      (a) => a.toolCallId === toolCallId
+    )
+    if (!run?.pendingApprovals || !approval || isApprovalExpired(approval)) {
       return false
     }
     run.pendingApprovals = run.pendingApprovals.filter(

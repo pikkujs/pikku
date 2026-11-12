@@ -664,6 +664,18 @@ To find affected code, search for `telemetryOuter|telemetryInner`.
 
 To find affected code, search for `resolveApproval\(`.
 
+### Agent approvals expire, and a resume after that fails the run
+
+A run suspended for an approval or a credential now records `expiresAt` on each `PendingApproval`: 10 minutes after it suspended (`DEFAULT_AGENT_APPROVAL_TTL_MS`), or `approvalTtlMs` from the agent definition. `approvalTtlMs` must be a finite number above zero; `addAgent` refuses `Infinity`, `0` and `NaN`, so the expiry cannot be switched off.
+
+- `rpc.agent.resume`, `rpc.agent.approve` (`resumeAgentSync`) and `approveAgent` refuse an expired approval with a `GoneError` (410) naming the run, the tool call and when it expired. The tool and the model are not called. The run is set to `failed` with `errorMessage: 'approval expired'` and its pending list cleared; a delegating parent run is failed with it.
+- **Approvals saved before this release have no expiry and are refused.** Runs that were suspended at upgrade time cannot be resumed; start them again.
+- Every store refuses an expired approval inside its own claim as well. A custom `AgentRunStateService` must persist `expiresAt` and make `resolveApproval` return `false` for an approval past it, or with none.
+- Expired runs nobody resumes stay `suspended`; nothing sweeps them.
+- **Database:** `@pikku/kysely`'s `agentToolCall` table has a new nullable `approvalExpiresAt bigint` column (epoch milliseconds). Run `pikku db generate` and then `pikku db migrate` before deploying. `KyselyAgentRunStateService` keeps approvals in its JSON column and needs no migration; MongoDB needs none.
+
+To find affected code, search for `implements AgentRunStateService|PendingApproval`.
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.

@@ -15,6 +15,12 @@ import { finalizeAgentRun, lastUserMessageText } from './agent-finalize.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { applyInputMiddleware, describeApprovals } from './agent-turn.js'
 import { deniedToolResult, randomUUID } from './agent-utils.js'
+import { GoneError } from '../../errors/errors.js'
+import {
+  approvalExpiresAt,
+  expireRun,
+  refuseExpiredApprovals,
+} from './agent-approval-expiry.js'
 import { SPOKEN_TRANSCRIPT } from './voice-input.js'
 import {
   combineChannelMiddleware,
@@ -613,7 +619,8 @@ function handleApprovals(
   runId: string,
   channel: AgentStreamChannel,
   agentRunState: AgentRunStateService,
-  persistingChannel: PersistingChannel
+  persistingChannel: PersistingChannel,
+  expiresAt: Date
 ): Promise<void> {
   return (async () => {
     await persistingChannel.flush()
@@ -627,12 +634,14 @@ function handleApprovals(
             agentRunId: err.agentRunId,
             displayToolName: err.displayToolName ?? err.toolName,
             displayArgs: err.displayArgs ?? err.args,
+            expiresAt,
           }
         : {
             type: 'tool-call' as const,
             toolCallId: err.toolCallId,
             toolName: err.toolName,
             args: err.args,
+            expiresAt,
           }
     )
 
@@ -663,7 +672,8 @@ function handleCredentialRequests(
   runId: string,
   channel: AgentStreamChannel,
   agentRunState: AgentRunStateService,
-  persistingChannel: PersistingChannel
+  persistingChannel: PersistingChannel,
+  expiresAt: Date
 ): Promise<void> {
   return (async () => {
     await persistingChannel.flush()
@@ -676,6 +686,7 @@ function handleCredentialRequests(
       credentialName: req.credentialName,
       credentialType: req.credentialType,
       connectUrl: req.connectUrl,
+      expiresAt,
     }))
 
     await agentRunState.updateRun(runId, {
@@ -969,7 +980,8 @@ export async function streamAgent(
         runId,
         channel,
         agentRunState,
-        persistingChannel
+        persistingChannel,
+        approvalExpiresAt(agent)
       )
       return persistingChannel.fullText
     }
@@ -980,7 +992,8 @@ export async function streamAgent(
         runId,
         channel,
         agentRunState,
-        persistingChannel
+        persistingChannel,
+        approvalExpiresAt(agent)
       )
       return persistingChannel.fullText
     }
@@ -1163,6 +1176,8 @@ export async function resumeAgent(
 
   await assertAgentAuthorized(agent, params, packageName)
 
+  await refuseExpiredApprovals(agentRunState, run.runId, [pending])
+
   const agentRunner = await resolveAgentRunner(singletonServices, params)
 
   // The read above is not a claim — concurrent resumes all see the same pending
@@ -1269,16 +1284,23 @@ export async function resumeAgent(
       input: null,
     })
 
-    await resumeAgent(
-      {
-        runId: pending.agentRunId,
-        toolCallId: subPending.toolCallId,
-        approved: true,
-      },
-      subChannel,
-      params,
-      options
-    )
+    try {
+      await resumeAgent(
+        {
+          runId: pending.agentRunId,
+          toolCallId: subPending.toolCallId,
+          approved: true,
+        },
+        subChannel,
+        params,
+        options
+      )
+    } catch (err) {
+      if (err instanceof GoneError) {
+        await expireRun(agentRunState, run.runId)
+      }
+      throw err
+    }
 
     await channel.send({
       type: 'agent-result',
@@ -1592,7 +1614,8 @@ async function continueAfterToolResult(
         run.runId,
         channel,
         agentRunState,
-        persistingChannel
+        persistingChannel,
+        approvalExpiresAt(agent)
       )
       return
     }
@@ -1603,7 +1626,8 @@ async function continueAfterToolResult(
         run.runId,
         channel,
         agentRunState,
-        persistingChannel
+        persistingChannel,
+        approvalExpiresAt(agent)
       )
       return
     }

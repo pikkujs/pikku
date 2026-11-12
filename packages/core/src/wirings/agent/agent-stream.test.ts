@@ -22,6 +22,21 @@ import type {
   PikkuAgentMiddlewareHooks,
 } from './agent.types.js'
 import type { AgentStepResult } from '../../services/agent-runner-service.js'
+import { DEFAULT_AGENT_APPROVAL_TTL_MS } from './agent-approval-expiry.js'
+
+/** The expiry a suspend just stamped, after checking it is the default TTL from now. */
+const stampedExpiry = (expiresAt: unknown): Date => {
+  assert.ok(expiresAt instanceof Date, 'the pending approval carries an expiry')
+  const ttl = expiresAt.getTime() - Date.now()
+  assert.ok(
+    ttl <= DEFAULT_AGENT_APPROVAL_TTL_MS &&
+      ttl > DEFAULT_AGENT_APPROVAL_TTL_MS - 5000,
+    `expires in the default ${DEFAULT_AGENT_APPROVAL_TTL_MS}ms, not ${ttl}ms`
+  )
+  return expiresAt
+}
+/** An approval expiry far enough ahead that no test outlives it. */
+const LIVE = new Date(Date.now() + 60 * 60 * 1000)
 
 beforeEach(() => {
   resetPikkuState()
@@ -316,6 +331,9 @@ describe('streamAgent', () => {
               toolCallId: 'tool-call-1',
               toolName: 'tool-x',
               args: { id: 1 },
+              expiresAt: stampedExpiry(
+                updates[0]?.patch?.pendingApprovals?.[0]?.expiresAt
+              ),
             },
           ],
         },
@@ -618,6 +636,9 @@ describe('streamAgent', () => {
               agentRunId: 'sub-run-1',
               displayToolName: 'deleteTodo',
               displayArgs: { todoId: '2' },
+              expiresAt: stampedExpiry(
+                updates[0]?.patch?.pendingApprovals?.[0]?.expiresAt
+              ),
             },
           ],
         },
@@ -1010,6 +1031,9 @@ describe('streamAgent', () => {
               credentialName: 'github',
               credentialType: 'oauth2',
               connectUrl: '/connect',
+              expiresAt: stampedExpiry(
+                updates[0]?.patch?.pendingApprovals?.[0]?.expiresAt
+              ),
             },
           ],
         },
@@ -1091,6 +1115,7 @@ describe('streamAgent', () => {
             toolCallId: 'tc-1',
             toolName: 'echo',
             args: { value: 1 },
+            expiresAt: LIVE,
           })
           channel.send({
             type: 'tool-result',
@@ -1602,12 +1627,14 @@ describe('resumeAgent', () => {
           toolCallId: 'tool-1',
           toolName: 'deploy',
           args: { env: 'prod' },
+          expiresAt: LIVE,
         },
         {
           type: 'tool-call',
           toolCallId: 'tool-2',
           toolName: 'deploy',
           args: { env: 'stage' },
+          expiresAt: LIVE,
         },
       ],
       usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
@@ -1723,6 +1750,7 @@ describe('resumeAgent', () => {
           toolCallId: 'tool-1',
           toolName: 'deploy',
           args: { env: 'prod' },
+          expiresAt: LIVE,
         },
       ],
       usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
@@ -1832,6 +1860,7 @@ describe('resumeAgent API key override', () => {
           toolCallId: 'tool-keyed',
           toolName: 'deploy',
           args: {},
+          expiresAt: LIVE,
         },
       ],
       usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
@@ -1919,6 +1948,7 @@ describe('resumeAgent API key override', () => {
               toolCallId: 'tool-fail',
               toolName: 'deploy',
               args: {},
+              expiresAt: LIVE,
             },
           ],
           usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },

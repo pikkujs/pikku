@@ -17,6 +17,9 @@ import { ForbiddenError, MissingScopeError } from '../../errors/errors.js'
 import type { CoreAgent } from './agent.types.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 
+/** An approval expiry far enough ahead that no test outlives it. */
+const LIVE = new Date(Date.now() + 60 * 60 * 1000)
+
 const logger = {
   debug: () => {},
   info: () => {},
@@ -184,12 +187,14 @@ describe('approveAgent', () => {
               toolCallId: 'call-1',
               toolName: 'a',
               args: {},
+              expiresAt: LIVE,
             },
             {
               type: 'tool-call',
               toolCallId: 'call-2',
               toolName: 'b',
               args: {},
+              expiresAt: LIVE,
             },
           ],
           usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
@@ -212,7 +217,13 @@ describe('approveAgent', () => {
       {
         status: 'running',
         pendingApprovals: [
-          { type: 'tool-call', toolCallId: 'call-2', toolName: 'b', args: {} },
+          {
+            type: 'tool-call',
+            toolCallId: 'call-2',
+            toolName: 'b',
+            args: {},
+            expiresAt: LIVE,
+          },
         ],
       },
     ])
@@ -242,6 +253,7 @@ describe('approveAgent', () => {
               toolCallId: 'call-1',
               toolName: 'a',
               args: {},
+              expiresAt: LIVE,
             },
           ],
           usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
@@ -281,7 +293,13 @@ describe('approveAgent authorization', () => {
     resourceId,
     status: 'suspended',
     pendingApprovals: [
-      { type: 'tool-call', toolCallId: 'call-1', toolName: 'refund', args: {} },
+      {
+        type: 'tool-call',
+        toolCallId: 'call-1',
+        toolName: 'refund',
+        args: {},
+        expiresAt: LIVE,
+      },
     ],
     usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
     createdAt: new Date(),

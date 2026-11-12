@@ -443,6 +443,13 @@ export type CoreAgent<
   memory?: AgentMemoryConfig
   /** How many model turns a single run may take before it is stopped. The guard against a tool loop that never converges. */
   maxSteps?: number
+  /**
+   * How long, in milliseconds, a run suspended for an approval or a credential
+   * waits to be resumed. After that the approval cannot be claimed, and a resume
+   * fails the run. Defaults to `DEFAULT_AGENT_APPROVAL_TTL_MS` (10 minutes); it
+   * must be a finite number above zero, so the expiry cannot be switched off.
+   */
+  approvalTtlMs?: number
   /** Whether the model may answer without calling a tool (`auto`), must call one (`required`), or may not (`none`). */
   toolChoice?: 'auto' | 'required' | 'none'
   /** Per-provider settings passed through untouched, for what only one vendor offers. */
@@ -639,6 +646,8 @@ export type PendingApproval =
       toolCallId: string
       toolName: string
       args: unknown
+      /** When the approval stops being claimable. An approval with none recorded is treated as expired. */
+      expiresAt?: Date
     }
   | {
       type: 'agent-call'
@@ -647,6 +656,8 @@ export type PendingApproval =
       agentRunId: string
       displayToolName: string
       displayArgs: unknown
+      /** When the approval stops being claimable. An approval with none recorded is treated as expired. */
+      expiresAt?: Date
     }
   | {
       type: 'credential-request'
@@ -656,6 +667,8 @@ export type PendingApproval =
       credentialName: string
       credentialType: 'oauth2' | 'apikey'
       connectUrl?: string
+      /** When the approval stops being claimable. An approval with none recorded is treated as expired. */
+      expiresAt?: Date
     }
 
 /** A run's persisted state: status, why it is suspended, its pending approvals and token usage. */

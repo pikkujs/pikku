@@ -13,6 +13,9 @@ import type {
   AgentRunnerParams,
 } from '../../services/agent-runner-service.js'
 
+/** An approval expiry far enough ahead that no test outlives it. */
+const LIVE = new Date(Date.now() + 60 * 60 * 1000)
+
 beforeEach(() => {
   resetPikkuState()
 })
@@ -338,6 +341,7 @@ describe('delegate mode on the resume path', () => {
         toolName: 'sub',
         args: { message: 'approved hand-off', session: 's0' },
         runId: 'run-1',
+        expiresAt: LIVE,
       },
     ]
     services.agentRunState = {

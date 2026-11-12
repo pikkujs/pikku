@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import { runAgent, resumeAgentSync } from './agent-runner.js'
+import { DEFAULT_AGENT_APPROVAL_TTL_MS } from './agent-approval-expiry.js'
 import { createAgentRPC } from './agent-rpc.js'
 import type {
   AgentRunState,
@@ -14,6 +15,20 @@ import {
   AIProviderNotConfiguredError,
   ForbiddenError,
 } from '../../errors/errors.js'
+
+/** The expiry a suspend just stamped, after checking it is the default TTL from now. */
+const stampedExpiry = (expiresAt: unknown): Date => {
+  assert.ok(expiresAt instanceof Date, 'the pending approval carries an expiry')
+  const ttl = expiresAt.getTime() - Date.now()
+  assert.ok(
+    ttl <= DEFAULT_AGENT_APPROVAL_TTL_MS &&
+      ttl > DEFAULT_AGENT_APPROVAL_TTL_MS - 5000,
+    `expires in the default ${DEFAULT_AGENT_APPROVAL_TTL_MS}ms, not ${ttl}ms`
+  )
+  return expiresAt
+}
+/** An approval expiry far enough ahead that no test outlives it. */
+const LIVE = new Date(Date.now() + 60 * 60 * 1000)
 
 beforeEach(() => {
   resetPikkuState()
@@ -639,6 +654,9 @@ describe('runAgent', () => {
         runId: 'run-approval',
       },
     ])
+    const expiresAt = stampedExpiry(
+      updates[0]?.pendingApprovals?.[0]?.expiresAt
+    )
     assert.deepEqual(updates, [
       {
         status: 'suspended',
@@ -649,6 +667,7 @@ describe('runAgent', () => {
             toolCallId: 'tc-approve',
             toolName: 'deploy',
             args: { env: 'prod' },
+            expiresAt,
           },
         ],
         usage: { inputTokens: 4, outputTokens: 2, model: 'test/test-model' },
@@ -757,6 +776,7 @@ describe('resumeAgentSync', () => {
           toolCallId: 'tc-1',
           toolName: 'deploy',
           args: JSON.stringify({ env: 'prod', optional: null }),
+          expiresAt: LIVE,
         },
       ],
       usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
@@ -855,6 +875,7 @@ describe('resumeAgentSync', () => {
           toolCallId: 'tc-claim',
           toolName: 'refund',
           args: {},
+          expiresAt: LIVE,
         },
       ],
       usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
@@ -913,7 +934,13 @@ describe('resumeAgentSync', () => {
       status: 'suspended',
       suspendReason: 'approval',
       pendingApprovals: [
-        { type: 'tool-call', toolCallId: 'tc-own', toolName: 't', args: {} },
+        {
+          type: 'tool-call',
+          toolCallId: 'tc-own',
+          toolName: 't',
+          args: {},
+          expiresAt: LIVE,
+        },
       ],
       usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
       createdAt: new Date(),
@@ -971,6 +998,7 @@ describe('resumeAgentSync', () => {
           toolCallId: 'tc-2',
           toolName: 'deploy',
           args: { env: 'prod' },
+          expiresAt: LIVE,
         },
       ],
       usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
@@ -1068,6 +1096,7 @@ describe('resumeAgentSync', () => {
           toolCallId: 'tc-error',
           toolName: 'deploy',
           args: { env: 'prod' },
+          expiresAt: LIVE,
         },
       ],
       usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
@@ -1253,6 +1282,7 @@ describe('getCredential API key override on approve', () => {
         toolCallId: 'tc-keyed',
         toolName: 'deploy',
         args: {},
+        expiresAt: LIVE,
       },
     ],
     usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
