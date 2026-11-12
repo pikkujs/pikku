@@ -20,6 +20,19 @@
  *                              there is no "files" at all
  *  10. pikku new addon --ui  → package.json carries the studio block and
  *                              ships agents and skills
+ *  11. widgets, things and
+ *      arranged screens      → reach the meta as written, project RPC
+ *                              sources and destructive actions included
+ *  12. #pikku/addon/screens  → definePlugin typed against the addon's
+ *                              functions and message keys: the fixture passes
+ *                              tsc, and a slot `from` naming no key of its
+ *                              source's output, or an unknown message key,
+ *                              fails tsc
+ *  13. a slot copy key
+ *      missing from en.json  → PKU358
+ *  14. a destructive action
+ *      without confirm, or a
+ *      malformed RPC name    → PKU345
  */
 import { spawnSync } from 'node:child_process'
 import {
@@ -37,6 +50,7 @@ import { fileURLToPath } from 'node:url'
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(here, '../..')
 const PIKKU = join(repoRoot, 'packages/cli/dist/bin/pikku.js')
+const TSC = join(repoRoot, 'node_modules/.bin/tsc')
 const screensPath = join(here, 'src', 'screens.ts')
 const enPath = join(here, 'messages', 'en.json')
 const packagePath = join(here, 'package.json')
@@ -192,6 +206,122 @@ withFile(
   () => expectFailure('PKU359', 'a badge naming no function built')
 )
 console.log('✓ a badge naming no function fails with PKU359')
+
+const health = meta.arrangedScreens?.find((screen) => screen.id === 'health')
+if (
+  health?.path !== '/studio-verifier/health-next' ||
+  health.source !== 'healthScreen' ||
+  JSON.stringify(health.poll) !== JSON.stringify({ fast: 3000, slow: 45000 }) ||
+  JSON.stringify(health.shows) !== JSON.stringify(['meta']) ||
+  health.slots?.[0]?.copy?.wrong?.headline !==
+    'studio_verifier_verdict_wrong__headline' ||
+  health.slots?.[1]?.own !== true
+) {
+  fail(
+    'the arranged screen is not in the meta as written',
+    JSON.stringify(meta.arrangedScreens, null, 2)
+  )
+}
+const thing = meta.things?.find((entry) => entry.kind === 'meta')
+const forget = thing?.actions?.find((action) => action.id === 'forget')
+if (
+  thing?.source !== 'console:getAllMeta' ||
+  forget?.run !== 'admin:flagPrune' ||
+  forget.destructive !== true ||
+  forget.confirm !== 'studio_verifier_forget__confirm'
+) {
+  fail('the thing is not in the meta as written', JSON.stringify(meta.things))
+}
+const mini = meta.widgets?.find((widget) => widget.id === 'mini')
+if (mini?.component !== './widgets/Mini.js') {
+  fail('the widget is not in the meta as written', JSON.stringify(meta.widgets))
+}
+console.log(
+  '✓ widgets, things and arranged screens reach the meta, project RPC sources and destructive actions included'
+)
+
+const pluginTypesPath = join(
+  here,
+  '.pikku',
+  'addon',
+  'screens',
+  'pikku-plugin-types.gen.ts'
+)
+const pluginTypes = existsSync(pluginTypesPath)
+  ? readFileSync(pluginTypesPath, 'utf8')
+  : ''
+if (
+  !pluginTypes.includes('import type { RPCMap }') ||
+  !pluginTypes.includes('"studio_verifier_health__title"')
+) {
+  fail('#pikku/addon/screens does not type definePlugin', pluginTypes)
+}
+const tsc = () => {
+  const result = spawnSync(TSC, ['--noEmit', '-p', 'tsconfig.json'], {
+    cwd: here,
+    encoding: 'utf8',
+  })
+  return { status: result.status, output: `${result.stdout}${result.stderr}` }
+}
+const typed = tsc()
+if (typed.status !== 0) fail('the fixture does not pass tsc', typed.output)
+const expectTscFailure = (needle, message) => {
+  const result = tsc()
+  if (result.status === 0 || !result.output.includes(needle)) {
+    fail(message, result.output)
+  }
+}
+withFile(
+  screensPath,
+  (text) =>
+    text.replace(
+      "{ widget: 'mini', from: 'pending',",
+      "{ widget: 'mini', from: 'pendng',"
+    ),
+  () =>
+    expectTscFailure(
+      'src/screens.ts',
+      'a slot from naming no key of the source output passed tsc'
+    )
+)
+withFile(
+  screensPath,
+  (text) =>
+    text.replace(
+      "title: 'studio_verifier_health__title',",
+      "title: 'studio_verifier_health__titel',"
+    ),
+  () => expectTscFailure('src/screens.ts', 'an unknown message key passed tsc')
+)
+console.log(
+  '✓ #pikku/addon/screens types definePlugin: a wrong from or an unknown key fails tsc'
+)
+
+withFile(
+  enPath,
+  (text) =>
+    text.replace(
+      '  "studio_verifier_verdict_wrong__headline": "{count} things went wrong",\n',
+      ''
+    ),
+  () => expectFailure('PKU358', 'a slot copy key missing from en.json built')
+)
+console.log('✓ a slot copy key missing from messages/en.json fails with PKU358')
+
+withFile(
+  screensPath,
+  (text) =>
+    text.replace("          confirm: 'studio_verifier_forget__confirm',\n", ''),
+  () => expectFailure('PKU345', 'a destructive action without confirm built')
+)
+withFile(
+  screensPath,
+  (text) => text.replace("'admin:flagPrune'", "'Admin::flagPrune'"),
+  () => expectFailure('PKU345', 'a malformed project RPC name built')
+)
+console.log(
+  '✓ a destructive action without confirm, or a malformed RPC name, fails with PKU345'
+)
 
 const inbox = meta.screens.find((screen) => screen.path === '/studio-verifier')
 if (inbox?.defaultChat !== false) {
