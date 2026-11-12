@@ -11,6 +11,17 @@ export type CreateRunInput = Omit<AgentRunState, 'runId'>
 export type SaveScoreInput = Omit<AgentRunScore, 'createdAt'>
 
 /**
+ * One approver's decision on one pending approval. The claim names the run as
+ * well as the tool call, so a caller can only ever claim an approval that is
+ * pending on the run it was authorized against.
+ */
+export interface ApprovalClaim {
+  runId: string
+  toolCallId: string
+  status: 'approved' | 'denied'
+}
+
+/**
  * Persists agent runs between steps, so a run that stops for a tool approval
  * can be resumed later, possibly by another process. Implementations must make
  * {@link AgentRunStateService.resolveApproval} atomic: it is what stops one
@@ -25,12 +36,10 @@ export interface AgentRunStateService {
    * Claims an approval: removes it from the run's pending list and records the
    * decision, as one atomic step. Returns whether THIS caller made the claim —
    * concurrent approvals of the same tool call produce exactly one `true`, and
-   * only that caller may run the tool.
+   * only that caller may run the tool. An approval pending on any run other
+   * than `claim.runId` is never claimed.
    */
-  resolveApproval(
-    toolCallId: string,
-    status: 'approved' | 'denied'
-  ): Promise<boolean>
+  resolveApproval(claim: ApprovalClaim): Promise<boolean>
   findRunByToolCallId(
     toolCallId: string
   ): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
@@ -42,4 +51,19 @@ export interface AgentRunStateService {
    */
   saveScore(score: SaveScoreInput): Promise<void>
   getScores(runId: string): Promise<AgentRunScore[]>
+}
+
+/**
+ * Whether an approval can no longer be claimed. One with no `expiresAt` — saved
+ * before approvals expired, or by a store that dropped it — counts as expired.
+ * Accepts a string as well as a `Date`, since a JSON round trip turns one into
+ * the other.
+ */
+export const isApprovalExpired = (
+  approval: { expiresAt?: Date | string | null },
+  now: number = Date.now()
+): boolean => {
+  const expiresAt =
+    approval.expiresAt == null ? NaN : new Date(approval.expiresAt).getTime()
+  return !(expiresAt > now)
 }

@@ -49,7 +49,7 @@ const setup = (agentName: string, resourceId = 'u1') => {
     logger,
     agentRunState: {
       getRun: async () => suspendedRun(agentName, resourceId),
-      resolveApproval: async (toolCallId: string) => {
+      resolveApproval: async ({ toolCallId }: { toolCallId: string }) => {
         resolved.push(toolCallId)
         return true
       },

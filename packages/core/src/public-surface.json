@@ -274,7 +274,9 @@
     "wireMCPResource"
   ],
   "./agent": [
+    "APPROVAL_EXPIRED_MESSAGE",
     "AgentInterruptedError",
+    "DEFAULT_AGENT_APPROVAL_TTL_MS",
     "NoSpeechDetectedError",
     "SPOKEN_TRANSCRIPT",
     "SPOKEN_TURN",

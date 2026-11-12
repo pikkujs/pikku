@@ -125,6 +125,8 @@ export interface AgentToolCallTable {
   agentRunId: string | null
   displayToolName: string | null
   displayArgs: string | null
+  /** Epoch milliseconds after which a pending approval can no longer be claimed. */
+  approvalExpiresAt: number | null
   createdAt: Generated<Date>
 }
 

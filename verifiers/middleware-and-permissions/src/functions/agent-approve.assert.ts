@@ -11,7 +11,9 @@ import { MockAgentRunner, MockAgentStorage } from './agent.assert.js'
 export async function testAgentApproveScope(
   singletonServices: any
 ): Promise<boolean> {
-  console.log('\n\nTest: agentApprove only approves its own agent')
+  console.log(
+    '\n\nTest: agentApprove only approves its own agent, run and live approvals'
+  )
   console.log('─────────────────────────')
 
   const agentRunState = new InMemoryAgentRunStateService()
@@ -22,7 +24,12 @@ export async function testAgentApproveScope(
     agentStorage: new MockAgentStorage(),
   })
 
-  const suspendedRun = (agentName: string, toolCallId: string) =>
+  const inAnHour = () => new Date(Date.now() + 60 * 60 * 1000)
+  const suspendedRun = (
+    agentName: string,
+    toolCallId: string,
+    expiresAt: Date = inAnHour()
+  ) =>
     agentRunState.createRun({
       agentName,
       threadId: `thread-${toolCallId}`,
@@ -30,7 +37,13 @@ export async function testAgentApproveScope(
       status: 'suspended',
       suspendReason: 'approval',
       pendingApprovals: [
-        { type: 'tool-call', toolCallId, toolName: 'deploy', args: {} },
+        {
+          type: 'tool-call',
+          toolCallId,
+          toolName: 'deploy',
+          args: {},
+          expiresAt,
+        },
       ],
       usage: { inputTokens: 0, outputTokens: 0, model: 'test' },
       createdAt: new Date(),
@@ -73,6 +86,37 @@ export async function testAgentApproveScope(
       : `✗ The route's own agent's run was not answered: status ${ownResponse.status}, run ${ownRun?.status}`
   )
 
+  const foreignRunId = await suspendedRun('testAgent', 'tc-foreign-a')
+  await suspendedRun('testAgent', 'tc-foreign-b')
+  const foreignResponse = await approve(foreignRunId, 'tc-foreign-b')
+  const foreignRun = await agentRunState.getRun(foreignRunId)
+  const foreignRefused =
+    foreignResponse.status >= 400 &&
+    foreignRun?.status === 'suspended' &&
+    foreignRun.pendingApprovals?.length === 1
+  console.log(
+    foreignRefused
+      ? '✓ A toolCallId pending on another run was refused and this run left suspended'
+      : `✗ A toolCallId from another run was not refused: status ${foreignResponse.status}, run ${foreignRun?.status}`
+  )
+
+  const expiredRunId = await suspendedRun(
+    'testAgent',
+    'tc-expired',
+    new Date(Date.now() - 1000)
+  )
+  const expiredResponse = await approve(expiredRunId, 'tc-expired')
+  const expiredRun = await agentRunState.getRun(expiredRunId)
+  const expiredRefused =
+    expiredResponse.status === 410 &&
+    expiredRun?.status === 'failed' &&
+    expiredRun.errorMessage === 'approval expired'
+  console.log(
+    expiredRefused
+      ? '✓ An expired approval was refused (410) and the run failed'
+      : `✗ An expired approval was not refused: status ${expiredResponse.status}, run ${expiredRun?.status}`
+  )
+
   pikkuState(null, 'package', 'singletonServices', singletonServices)
-  return otherRefused && ownAccepted
+  return otherRefused && ownAccepted && foreignRefused && expiredRefused
 }

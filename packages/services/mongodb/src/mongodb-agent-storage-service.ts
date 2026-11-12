@@ -7,6 +7,7 @@ import type { AgentRunScore } from '@pikku/core/agent-scorer'
 import type {
   AgentRunStateService,
   AgentStorageService,
+  ApprovalClaim,
   CreateRunInput,
   SaveScoreInput,
 } from '@pikku/core/services'
@@ -29,6 +30,9 @@ interface AgentMessageDoc {
   createdAt: Date
 }
 
+const toDate = (date: Date | string | undefined): Date | null =>
+  date == null ? null : new Date(date)
+
 interface AgentToolCallDoc {
   _id: string
   threadId: string
@@ -42,6 +46,7 @@ interface AgentToolCallDoc {
   agentRunId: string | null
   displayToolName: string | null
   displayArgs: any | null
+  approvalExpiresAt?: Date | null
   createdAt: Date
 }
 
@@ -440,6 +445,7 @@ export class MongoDBAgentStorageService
             agentRunId: null,
             displayToolName: null,
             displayArgs: null,
+            approvalExpiresAt: null,
           },
         }
       )
@@ -493,6 +499,7 @@ export class MongoDBAgentStorageService
               agentRunId: a.agentRunId,
               displayToolName: a.displayToolName,
               displayArgs: a.displayArgs,
+              approvalExpiresAt: toDate(a.expiresAt),
             },
           }
         )
@@ -504,6 +511,7 @@ export class MongoDBAgentStorageService
               approvalStatus: 'pending',
               runId,
               approvalType: 'tool-call',
+              approvalExpiresAt: toDate(a.expiresAt),
             },
           }
         )
@@ -522,6 +530,7 @@ export class MongoDBAgentStorageService
               agentRunId: a.agentRunId as string,
               displayToolName: a.displayToolName as string,
               displayArgs: a.displayArgs as unknown,
+              expiresAt: a.approvalExpiresAt ?? undefined,
             }
           }
           return {
@@ -529,6 +538,7 @@ export class MongoDBAgentStorageService
             toolCallId: a._id as string,
             toolName: a.toolName as string,
             args: a.args as unknown,
+            expiresAt: a.approvalExpiresAt ?? undefined,
           }
         })
       : undefined
@@ -576,6 +586,7 @@ export class MongoDBAgentStorageService
         agentRunId: tc.agentRunId!,
         displayToolName: tc.displayToolName!,
         displayArgs: tc.displayArgs as unknown,
+        expiresAt: tc.approvalExpiresAt ?? undefined,
       }
     } else {
       approval = {
@@ -583,19 +594,27 @@ export class MongoDBAgentStorageService
         toolCallId: tc._id,
         toolName: tc.toolName,
         args: tc.args as unknown,
+        expiresAt: tc.approvalExpiresAt ?? undefined,
       }
     }
 
     return { run, approval }
   }
 
-  async resolveApproval(
-    toolCallId: string,
-    status: 'approved' | 'denied'
-  ): Promise<boolean> {
+  async resolveApproval({
+    runId,
+    toolCallId,
+    status,
+  }: ApprovalClaim): Promise<boolean> {
     // Only the caller that moves the tool call off 'pending' has claimed it.
     const result = await this.toolCalls.updateOne(
-      { _id: toolCallId, approvalStatus: 'pending' },
+      {
+        _id: toolCallId,
+        runId,
+        approvalStatus: 'pending',
+        // A missing or null expiry never matches, so an approval with none is refused.
+        approvalExpiresAt: { $gt: new Date() },
+      },
       { $set: { approvalStatus: status } }
     )
     return result.modifiedCount > 0

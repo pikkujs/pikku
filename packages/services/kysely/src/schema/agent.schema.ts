@@ -76,6 +76,7 @@ export const agentSchema: PikkuSchema = {
         .addColumn('agentRunId', 'varchar(36)')
         .addColumn('displayToolName', 'varchar(255)')
         .addColumn('displayArgs', ctx.text)
+        .addColumn('approvalExpiresAt', 'bigint')
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
