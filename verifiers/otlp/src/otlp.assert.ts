@@ -5,8 +5,14 @@ import { after, before, describe, test } from 'node:test'
 
 import { ConsoleLogger } from '@pikku/core/services'
 import { decodeLogs, decodeMetrics, decodeTraces } from '@pikku/core/testing'
-import { createTrace } from '@pikku/core/trace'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import {
+  childTraceWire,
+  createTrace,
+  type TraceContext,
+} from '@pikku/core/trace'
+import {
+  asContextStorage,
   createRuntimeTelemetry,
   OTLP_QUEUE_LIMITS,
   OtlpHttpExporter,
@@ -109,6 +115,76 @@ describe('createRuntimeTelemetry against a real HTTP receiver', () => {
 
     const metrics = at('metrics').flatMap((r) => decodeMetrics(r.body).items)
     assert.ok(metrics.some((m) => m.name === 'process.memory.rss'))
+  })
+
+  test('a service built at startup parents an outbound client span on the running span, host only', async () => {
+    const sink = await receiver()
+    const telemetry = createRuntimeTelemetry(
+      { PIKKU_OTLP_ENDPOINT: `http://127.0.0.1:${sink.port}/v1/otlp` },
+      {
+        logger: quiet,
+        serviceName: 'verifier',
+        contextStorage: asContextStorage(new AsyncLocalStorage<TraceContext>()),
+      }
+    )
+    const { tracer } = telemetry
+    // What an addon's scoped `http` service does: it has no wire, only the tracer.
+    const startupHttp = async (blocked: boolean) => {
+      const parent = tracer.currentContext?.()
+      if (!parent) return
+      const span = tracer.startSpan('HTTP GET', childTraceWire(parent).trace, {
+        kind: 'client',
+        attributes: {
+          'http.request.method': 'GET',
+          'server.address': 'api.example.com',
+          'server.port': 443,
+          'pikku.network.rule': '*.example.com',
+          'pikku.network.blocked': blocked,
+          'url.full': 'https://api.example.com/v1/users?token=secret',
+          'url.path': '/v1/users',
+          'url.query': 'token=secret',
+        },
+      })
+      await new Promise((resolve) => setTimeout(resolve, 1))
+      span.end({ code: 'ok' })
+    }
+
+    const trace = createTrace()
+    const fn = tracer.startSpan('callVendor', trace, { kind: 'server' })
+    await tracer.runInSpan!(fn, () => startupHttp(false))
+    fn.end({ code: 'ok' })
+    await startupHttp(true)
+    await telemetry.close()
+    await sink.close()
+
+    const spans = sink.received
+      .filter((r) => r.path === '/v1/otlp/v1/traces')
+      .flatMap((r) => decodeTraces(r.body).items)
+    const client = spans.filter((s) => s.name === 'HTTP GET')
+    assert.equal(client.length, 1, 'outside a span no client span is opened')
+    const [span] = client
+    assert.equal(span!.traceId, trace.traceId)
+    assert.equal(span!.parentSpanId, trace.spanId)
+    assert.equal(span!.kind, 3)
+    assert.deepEqual(span!.attributes['server.address'], {
+      string: 'api.example.com',
+    })
+    assert.deepEqual(span!.attributes['server.port'], { int: 443n })
+    assert.deepEqual(span!.attributes['pikku.network.rule'], {
+      string: '*.example.com',
+    })
+    assert.deepEqual(span!.attributes['pikku.network.blocked'], {
+      bool: false,
+    })
+    for (const key of ['url.full', 'url.path', 'url.query']) {
+      assert.equal(span!.attributes[key], undefined, `${key} is never exported`)
+    }
+    assert.ok(
+      !sink.received.some((r) =>
+        Buffer.from(r.body).toString('latin1').includes('token=secret')
+      ),
+      'the query string reaches no OTLP request'
+    )
   })
 })
 
