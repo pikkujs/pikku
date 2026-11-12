@@ -108,7 +108,10 @@ describe('resolveImpersonatedSession', () => {
       services,
       () => 'u_admin'
     )
-    assert.deepEqual(out, { userId: 'u_admin' })
+    assert.deepEqual(out, {
+      userId: 'u_admin',
+      impersonated: { by: 'u_guest' },
+    })
   })
 
   test('default gate: fails closed and warns with no ScopeService', async () => {
@@ -144,7 +147,10 @@ describe('resolveImpersonatedSession', () => {
       services,
       () => 'u_admin'
     )
-    assert.deepEqual(out, { userId: 'u_admin' })
+    assert.deepEqual(out, {
+      userId: 'u_admin',
+      impersonated: { by: 'u_guest' },
+    })
   })
 
   test('a custom header name is honored', async () => {
@@ -159,7 +165,10 @@ describe('resolveImpersonatedSession', () => {
         return name === 'x-act-as' ? 'u_guest' : undefined
       }
     )
-    assert.deepEqual(out, { userId: 'u_guest' })
+    assert.deepEqual(out, {
+      userId: 'u_guest',
+      impersonated: { by: 'u_admin' },
+    })
     assert.deepEqual(seen, ['x-act-as'])
   })
 

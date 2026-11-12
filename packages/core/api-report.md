@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3716 observable things**: 1224 exported names, plus
-2492 members on the classes and interfaces among them, reachable
+**3719 observable things**: 1224 exported names, plus
+2495 members on the classes and interfaces among them, reachable
 through 67 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -20,9 +20,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scenario` | 50 | 48 | 157 |
 | `./agent` | 54 | 52 | 81 |
 | `./channel` | 33 | 33 | 92 |
-| `./types` | 24 | 21 | 84 |
+| `./types` | 24 | 21 | 85 |
 | `./queue` | 28 | 28 | 75 |
-| `./otlp` | 19 | 19 | 74 |
+| `./otlp` | 19 | 19 | 76 |
 | `./errors` | 55 | 55 | 34 |
 | `./telemetry-store` | 14 | 14 | 74 |
 | `./http` | 27 | 27 | 58 |
@@ -255,6 +255,7 @@ export interface CoreUserSession {
   scopes?: string[]
   scopesResolvedAt?: number
   readonly?: boolean
+  impersonated?: { by: string }
 }
 export type CreateConfig<
   Config extends CoreConfig,
@@ -6100,6 +6101,7 @@ export interface OtlpLoggerOptions {
   minLevel?: LogLevel
   currentContext?: () => TraceContext | undefined
   fields?: boolean
+  contextAttributes?: (context: TraceContext) => Readonly<Record<string, SpanAttributeValue>> | undefined
   traceId?: string
 }
 export interface OtlpLogRecord {
@@ -6133,6 +6135,7 @@ export class OtlpTracer implements Tracer {
   startSpan(name: string, context: TraceContext, options: { kind?: SpanKind; attributes?: Record<string, SpanAttributeValue>; startTimeUnixNano?: bigint } = {}): Span
   runInSpan<T>(span: Span, fn: () => T): T
   currentContext(): TraceContext | undefined
+  attributesOf(context: TraceContext): Readonly<Record<string, SpanAttributeValue>> | undefined
   flush(): Promise<void>
   close(): Promise<void>
 }

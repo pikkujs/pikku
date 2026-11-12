@@ -168,7 +168,9 @@ describe('betterAuthStatelessSession reads the cookie better-auth wrote', () => 
       },
       { headers: { 'x-pikku-impersonate-user-id': 'u_target' } }
     )
-    assert.deepEqual(session, { userId: 'u_target' })
+    assert.equal(session?.userId, 'u_target')
+    assert.equal(typeof session?.impersonated?.by, 'string')
+    assert.notEqual(session?.impersonated?.by, 'u_target')
   })
 
   test('a cookie better-auth chunked across several is reassembled', async () => {
