@@ -6,13 +6,7 @@ import {
   type Kysely,
   type RawBuilder,
 } from 'kysely'
-import type {
-  ColumnAnnotation,
-  OnDelete,
-  TableAnnotations,
-} from '@pikku/core/db'
-
-export type { ColumnAnnotation, OnDelete, TableAnnotations }
+import type { OnDelete, TableAnnotations } from '@pikku/core/db'
 
 type DataTypeExpression = Parameters<
   CreateTableBuilder<any, any>['addColumn']

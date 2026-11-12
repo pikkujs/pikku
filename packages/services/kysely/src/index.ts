@@ -100,13 +100,10 @@ export {
   compileTables,
   tableRequirements,
   type AppTables,
-  type ColumnAnnotation,
   type ForeignKeyTarget,
-  type OnDelete,
   type PikkuSchema,
   type RequiredTypes,
   type SchemaRequirement,
-  type TableAnnotations,
   type UnmetRequirement,
   type SchemaStatementFactory,
 } from './schema/index.js'

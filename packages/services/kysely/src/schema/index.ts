@@ -28,16 +28,13 @@ export { compileTables, tableRequirements } from './compile-tables.js'
 
 export type {
   AppTables,
-  ColumnAnnotation,
   ForeignKeyTarget,
-  OnDelete,
   PikkuSchema,
   RequiredTypes,
   SchemaContext,
   SchemaRequirement,
   SchemaStatement,
   SchemaStatementFactory,
-  TableAnnotations,
 } from './pikku-schema.types.js'
 export {
   defineTables,
