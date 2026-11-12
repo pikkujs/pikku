@@ -20,6 +20,8 @@ const ALLOW_LIST_KINDS: Record<string, AttributeKind> = {
   'pikku.function.duration_ms': 'int',
   'pikku.user.id': 'string',
   'pikku.org.id': 'string',
+  'pikku.impersonated': 'bool',
+  'pikku.impersonated.by': 'string',
   'http.request.method': 'string',
   'http.route': 'string',
   'http.response.status_code': 'int',

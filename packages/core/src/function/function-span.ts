@@ -32,6 +32,20 @@ export type FunctionSpan = {
   wire: PikkuWire
 }
 
+/** `pikku.impersonated` (true) and `pikku.impersonated.by` only when the session carries `impersonated`; a normal session carries neither. */
+const setImpersonation = (
+  wire: PikkuWire,
+  attributes: Record<string, SpanAttributeValue>
+) => {
+  try {
+    const by = wire.session?.impersonated?.by
+    if (typeof by === 'string' && by) {
+      attributes['pikku.impersonated'] = true
+      attributes['pikku.impersonated.by'] = by
+    }
+  } catch {}
+}
+
 const readIdentity = (
   wire: PikkuWire,
   attributes: Record<string, SpanAttributeValue>
@@ -44,6 +58,7 @@ const readIdentity = (
   }
   set('pikku.user.id', () => readUserId(wire))
   set('pikku.org.id', () => wire.session?.orgId)
+  setImpersonation(wire, attributes)
 }
 
 const identityAttributes = (
@@ -113,6 +128,7 @@ const endAttributes = (
   set('pikku.function.duration_ms', () => durationMs)
   set('pikku.user.id', () => readUserId(wire))
   set('pikku.org.id', () => wire.session?.orgId)
+  setImpersonation(wire, attributes)
   // A nested call runs on a copy of its caller's wire, so a transport's fields
   // are only this span's own when this invocation arrived by that transport.
   if (wireType === 'http' && wire.http) {

@@ -17,7 +17,7 @@ exports whatever an object holds, which is why it is off by default.
 `contextAttributes(context)` and, when a record is written inside a span of its
 own trace, copies `CONTEXT_ATTRIBUTES` from it: `pikku.function.id`,
 `pikku.function.version`, `pikku.wire.type`, `pikku.wire.id`, `pikku.user.id`,
-`pikku.org.id`. They are the span's own names so one column serves both. The
+`pikku.org.id`, `pikku.impersonated`, `pikku.impersonated.by`. They are the span's own names so one column serves both. The
 list is fixed: a span's other attributes (a route, a duration, a queue) are not
 part of a log line.
 

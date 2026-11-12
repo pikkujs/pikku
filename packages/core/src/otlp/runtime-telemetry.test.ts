@@ -352,6 +352,57 @@ describe('createRuntimeTelemetry', () => {
     assert.equal(outside.attributes['pikku.function.id'], undefined)
   })
 
+  test('a span and a log inside it carry pikku.impersonated as a bool and who by', async () => {
+    const { requests, fetchImpl } = capture()
+    let current: TraceContext | undefined
+    const telemetry = createRuntimeTelemetry(
+      { PIKKU_OTLP_ENDPOINT: 'http://127.0.0.1:4000/v1/otlp' },
+      options({
+        fetch: fetchImpl,
+        contextStorage: {
+          run: (context: TraceContext, fn: () => unknown) => {
+            const before = current
+            current = context
+            try {
+              return fn()
+            } finally {
+              current = before
+            }
+          },
+          get: () => current,
+        },
+      })
+    )
+    const span = telemetry.tracer.startSpan('acting', createTrace(), {
+      attributes: {
+        'pikku.function.id': 'acting',
+        'pikku.impersonated': true,
+        'pikku.impersonated.by': 'u_admin',
+      },
+    })
+    ;(
+      telemetry.tracer as unknown as {
+        runInSpan: (s: typeof span, fn: () => void) => void
+      }
+    ).runInSpan(span, () => telemetry.logger.info('inside'))
+    span.end()
+    telemetry.stopMetrics()
+    await telemetry.flush()
+    await telemetry.close()
+    const logs = decodeLogs(
+      requests.find((r) => r.url.endsWith('/v1/logs'))!.body
+    ).items
+    const spans = decodeTraces(
+      requests.find((r) => r.url.endsWith('/v1/traces'))!.body
+    ).items
+    for (const { attributes } of [logs[0]!, spans[0]!]) {
+      assert.deepEqual(attributes['pikku.impersonated'], { bool: true })
+      assert.deepEqual(attributes['pikku.impersonated.by'], {
+        string: 'u_admin',
+      })
+    }
+  })
+
   test('service name falls back to the explicit override, then project, then the package', () => {
     const name = async (env: Record<string, string>) => {
       const { requests, fetchImpl } = capture()

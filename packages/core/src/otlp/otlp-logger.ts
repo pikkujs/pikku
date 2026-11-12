@@ -43,6 +43,8 @@ export const CONTEXT_ATTRIBUTES = [
   'pikku.wire.id',
   'pikku.user.id',
   'pikku.org.id',
+  'pikku.impersonated',
+  'pikku.impersonated.by',
 ] as const
 
 const clip = (text: string, max: number) =>

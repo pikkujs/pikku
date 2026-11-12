@@ -163,6 +163,35 @@ describe('OtlpLogger', () => {
     assert.equal(record!.attributes['pikku.function.duration_ms'], undefined)
   })
 
+  test('a record written inside an impersonated span carries who impersonates; a normal span adds neither', async () => {
+    const context = {
+      traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+      spanId: '00f067aa0ba902b7',
+      sampled: true,
+    }
+    const impersonated = setup({
+      currentContext: () => context,
+      contextAttributes: () => ({
+        'pikku.impersonated': true,
+        'pikku.impersonated.by': 'u_admin',
+      }),
+    })
+    impersonated.logger.info('inside')
+    const [record] = await impersonated.sent()
+    assert.deepEqual(record!.attributes['pikku.impersonated'], { bool: true })
+    assert.deepEqual(record!.attributes['pikku.impersonated.by'], {
+      string: 'u_admin',
+    })
+    const normal = setup({
+      currentContext: () => context,
+      contextAttributes: () => ({ 'pikku.user.id': 'u1' }),
+    })
+    normal.logger.info('inside')
+    const [plain] = await normal.sent()
+    assert.equal(plain!.attributes['pikku.impersonated'], undefined)
+    assert.equal(plain!.attributes['pikku.impersonated.by'], undefined)
+  })
+
   test('a record outside any span, or scoped to another trace, carries none of it', async () => {
     const context = {
       traceId: '4bf92f3577b34da6a3ce929d0e0e4736',

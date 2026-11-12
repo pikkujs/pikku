@@ -164,6 +164,14 @@ export interface CoreUserSession {
    * throws `ReadonlySessionError` for anything else.
    */
   readonly?: boolean
+  /**
+   * Set by the server when a real user is acting as this session's user: `by` is
+   * the id of the real user doing the impersonating. Absent means not
+   * impersonated. Never read from client input; whoever builds the session sets
+   * it, and the tracer records it as `pikku.impersonated` and
+   * `pikku.impersonated.by`.
+   */
+  impersonated?: { by: string }
 }
 
 /**
