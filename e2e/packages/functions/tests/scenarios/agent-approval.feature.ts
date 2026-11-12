@@ -11,6 +11,7 @@
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const AGENT = 'todoAgent'
+const EXPIRING_AGENT = 'todoExpiryAgent'
 const RESOURCE_ID = 'agent-approval'
 const ALICE = { userId: 'alice' }
 
@@ -239,6 +240,68 @@ export const agentApprovalBatchAllExecuteScenario = pikkuScenario<
   },
 })
 
+export const agentApprovalExpiredIsRefusedScenario = pikkuScenario<
+  void,
+  { refused: true }
+>({
+  title: 'An approval answered after it expired is refused and nothing runs',
+  description:
+    'The agent sets approvalTtlMs, so approving late answers 410 and the tool never executes',
+  tags: ['scenario', 'agent-protocol', 'agent-approval'],
+  func: async (_services, _data, { scenario }) => {
+    const thread = await scenario.given('opens a thread', 'startsAgentThread')
+    await scenario.given('resets the todo list', 'resetsTodos')
+
+    const run = await scenario.when(
+      'runs the todo agent whose approvals expire at once',
+      'runsAgent',
+      {
+        agent: EXPIRING_AGENT,
+        script: 'add-todo-then-text',
+        message: 'add a todo',
+        threadId: thread.threadId,
+        resourceId: RESOURCE_ID,
+        identity: ALICE,
+      }
+    )
+    await scenario.then('sees the run suspended', 'expectsApprovalState', {
+      run,
+      suspended: true,
+      count: 1,
+    })
+
+    const late = await scenario.when(
+      'approves after the approval expired',
+      'resolvesApprovals',
+      {
+        agent: EXPIRING_AGENT,
+        runId: run.runId,
+        pendingApprovals: run.pendingApprovals,
+        approved: true,
+        identity: ALICE,
+      }
+    )
+    await scenario.then(
+      'sees the approval refused as gone',
+      'expectsApprovalAnswer',
+      {
+        resolution: late,
+        status: 410,
+      }
+    )
+
+    const todos = await scenario.when('reads the todo list', 'callsRpcAs', {
+      rpcName: 'todos:listTodos',
+      data: {},
+    })
+    await scenario.then('sees nothing added', 'expectsTodos', {
+      call: todos,
+      excludes: 'Write e2e tests',
+    })
+    return { refused: true }
+  },
+})
+
 export const agentApprovalFeature = pikkuFeature({
   name: 'Approval-gated tools suspend, resume, and honour the decision',
   description:
@@ -250,5 +313,6 @@ export const agentApprovalFeature = pikkuFeature({
     agentApprovalDenialSkipsToolScenario,
     agentApprovalDeleteReasonNamesRecordScenario,
     agentApprovalBatchAllExecuteScenario,
+    agentApprovalExpiredIsRefusedScenario,
   ],
 })
