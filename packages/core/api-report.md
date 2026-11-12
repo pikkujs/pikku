@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3737 observable things**: 1245 exported names, plus
-2492 members on the classes and interfaces among them, reachable
-through 67 entry points.
+**3777 observable things**: 1256 exported names, plus
+2521 members on the classes and interfaces among them, reachable
+through 68 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -33,6 +33,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 17 | 15 | 27 |
 | `./trace` | 19 | 19 | 21 |
+| `./db` | 11 | 11 | 29 |
 | `./function` | 32 | 27 | 10 |
 | `./addon` | 35 | 35 | 2 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
@@ -7234,6 +7235,69 @@ coerceTopLevelDataFromSchema: (schemaName: string, data: any, packageName?: stri
 compileAllSchemas: (logger: Logger, schemaService?: SchemaService | undefined) => void
 getSchema: (name: string, packageName?: string | null) => Record<string, unknown> | undefined
 validateSchema: (logger: Logger, schemaService: SchemaService | undefined, schemaName: string | null | undefined, data: any, packageName?: string | null) => Promise<void>
+```
+
+## ./db
+
+```ts
+export interface ColumnAnnotation {
+  security?: 'public' | 'private' | 'pii' | 'secret'
+  form?: 'plain' | 'hashed' | 'wrapped' | 'sealed'
+  keyId?: string
+  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
+  kind?: 'date' | 'bool' | 'json' | 'uuid'
+  tsType?: string
+  format?: string
+  description?: string
+}
+export type ColumnDeclaration = ColumnFields &
+  ({ type: ColumnType } | { type?: ColumnType; references: string })
+export type ColumnDefault =
+  string | number | boolean | { now: true } | { sql: string }
+export interface ColumnFields extends ColumnAnnotation {
+  required?: boolean
+  default?: ColumnDefault
+  primaryKey?: boolean
+  unique?: boolean
+  index?: boolean
+  references?: string
+  onDelete?: OnDelete
+  enum?: readonly string[]
+  min?: number
+  max?: number
+  minLength?: number
+  maxLength?: number
+  pattern?: string
+}
+export type ColumnType =
+  | 'id'
+  | 'key'
+  | 'text'
+  | `string(${number})`
+  | 'integer'
+  | 'bigint'
+  | 'real'
+  | 'boolean'
+  | 'timestamp'
+  | 'timestamptz'
+  | 'uuid'
+  | 'json'
+defineTables: <const T extends TablesDeclaration>(tables: T) => T
+export interface IndexDeclaration {
+  columns: readonly string[]
+  unique?: boolean
+  where?: string
+  name?: string
+}
+export type OnDelete = 'cascade' | 'setNull' | 'restrict' | 'noAction'
+export type TableAnnotations = Record<string, Record<string, ColumnAnnotation>>
+export interface TableDeclaration {
+  columns: Record<string, ColumnDeclaration>
+  primaryKey?: readonly string[]
+  unique?: readonly (readonly string[])[]
+  indexes?: readonly IndexDeclaration[]
+}
+export type TablesDeclaration = Record<string, TableDeclaration>
 ```
 
 ## ./testing
