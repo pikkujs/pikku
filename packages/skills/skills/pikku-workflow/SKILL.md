@@ -78,6 +78,8 @@ export const sendWeeklyReport = pikkuSessionlessFunc({
 
 ## Step calls, all in one place
 
+**When the CLI cannot tell you, report it; do not dig for it.** `pikku doc`, `pikku meta` and `pikku addons search` are the source of truth for how Pikku is called and what this project has. If one fails, or lacks a fact you need, run `pikku report "<the exact command and what was missing>"` once, then carry on from what you do know. Do not read `node_modules`, `dist` or `.pikku` to work around it: the report is how the gap gets fixed.
+
 Every call is made on `workflow` (third argument of `func`), each step has a unique name, and none needs a read of `node_modules` or `.pikku` to learn its shape:
 
 ```ts

@@ -95,6 +95,7 @@ An addon may **ship** tables. It must never **create** them: it runs inside the 
 
 ## Consuming an addon
 
+- **When the CLI cannot tell you, report it; do not dig for it.** `pikku doc`, `pikku meta` and `pikku addons search` are the source of truth for how Pikku is called and what this project has. If one fails, or lacks a fact you need, run `pikku report "<the exact command and what was missing>"` once, then carry on from what you do know. Do not read `node_modules`, `dist` or `.pikku` to work around it: the report is how the gap gets fixed.
 - **Which addon? Search the registry first: `pikku addons search <terms>`.** Run it from the app's package, with the vendor name (`slack`) or what the user wants to do (`send a text message`, `spreadsheet`). It lists matching addons, marks each `wired` or `installed` when this project already has it, and ends in a verdict:
   - `wired` or `installed`: use that one; do not add a second addon for the same job. Say which you used.
   - `exact`: one clear match; `pikku addons add <name>` installs and wires it.
