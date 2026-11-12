@@ -8,7 +8,9 @@ import { dirname, join, relative, resolve } from 'node:path'
 import { databaseContext } from '../db/db-context.js'
 import { workspaceRoot } from '../../utils/workspace-root.js'
 import {
+  agentRows,
   agentRunnerFacts,
+  agentSummaries,
   formatProjectFacts,
   frontendFacts,
   readSources,
@@ -94,7 +96,7 @@ const readProjectFacts = async (config: any, state: any): Promise<string[]> => {
   const reactQueryFile = sdkFile('pikku-react-query.gen.ts') ?? rpcFile
   const servicesFile = [...(state.singletonServicesFactories?.keys() ?? [])][0]
   return formatProjectFacts({
-    agents: Object.keys(state.agents?.agentsMeta ?? {}),
+    agents: agentSummaries(state.agents?.agentsMeta),
     models: config.models ?? {},
     configFile: config.configFile
       ? relative(rootDir, config.configFile)
@@ -782,6 +784,7 @@ const readProjectRows = async (
   return [
     ...definitions('function', functions),
     ...addonFunctions,
+    ...agentRows(state.agents?.agentsMeta, inProject),
     ...Object.entries(state.workflows?.meta ?? {}).map(
       ([id, workflow]: [string, any]) => ({
         kind: 'workflow',

@@ -215,7 +215,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     step: 'orchestrate it',
     skill: 'pikku-agent',
     summary:
-      'Defines an AI agent, the tools it may call and the scorers that judge what it did. `model` is `provider/model` or an alias from the `models` table in pikku.config.json. Threads and messages live in the `agentStorage` service, in-flight run state in `agentRunState`, and `agentRunService` reads them back.',
+      'Defines an AI agent, the tools it may call and the scorers that judge what it did. `model` is `provider/model` or an alias from the `models` table in pikku.config.json. Threads and messages live in the `agentStorage` service, in-flight run state in `agentRunState`, and `agentRunService` reads them back. `pikku doc agents` is the whole recipe: tools, agent, how it is reached, approval, permissions, guardrails.',
   },
   scenarios: {
     step: 'test it',
@@ -286,6 +286,36 @@ export const tables = defineTables({
   },
 })
 // then: pikku db generate && pikku db migrate`,
+  },
+  {
+    names: ['agents', 'agentRecipe', 'agentWiring', 'scheduledAgent', 'tools'],
+    title: 'building an agent, whole',
+    points: [
+      'Order: the tools, the agent, how it is reached, then `pikku all` and `pikku meta grep <agentName>` (it prints the model and the tools the build resolved; `pikku meta context` lists every agent). An agent is a `*.agent.ts` file anywhere under `srcDirectories`; its export name is what `rpc.agent.run` and `usePikkuAgent` take, and `name` is a kebab-case label.',
+      "A tool is any function listed as `ref('exportName')` or by value. The model picks tools on their `description`, so give every tool one; `readonly: true` for lookups. `approvalRequired: true` on a tool pauses the run until a human approves (the default policy); do not also `expose` that tool.",
+      "`model` is an alias from `models` in pikku.config.json (`pikku doc models`); one that is missing fails codegen. The prompt is `goal` (required), with optional `role` and `personality`. `memory: { storage: 'agentStorage', lastMessages: 20 }` keeps history per `threadId` and `resourceId` the caller sends.",
+      "Reaching it. `expose: true` serves `POST /rpc/agent/<name>`. From your own function: `rpc.agent.run('agentExport', { message, threadId, resourceId })` answers `{ runId, result, usage }`. A cron or other sessionless caller needs `auth: false` on the agent, and the cron's function is `pikkuVoidFunc`, which runs the agent and returns nothing. `permissions` and `scopes` are enforced either way.",
+      '`permissions: { name: guard }` takes a `pikkuPermission` that reads the input, or a `pikkuAuth(async (services, session) => ...)` when it reads only the session (PKU586 otherwise). Hooks for guardrails: `agentMiddleware: [pikkuAgentMiddleware({ beforeToolCall, modifyOutput })]` from `#pikku/middleware`; a hook that throws stops the call. `pikku doc pikkuAgentMiddleware` lists the hooks.',
+      'A file that declares zod schemas must not also call `wireHTTP` or `wireScheduler` (PKU490): keep the functions in one file and the wirings in another.',
+    ],
+    example: `// src/functions/tickets.function.ts
+export const lookupTicket = pikkuFunc({ description: 'Finds a ticket by id.', readonly: true, input: LookupTicketInput, output: LookupTicketOutput, func: async ({ kysely }, { ticketId }) => { /* ... */ } })
+
+// src/agents/triage.agent.ts
+import { pikkuAgent } from '#pikku/agent'
+import { ref } from '#pikku/function'
+export const supportTriage = pikkuAgent({
+  name: 'support-triage',
+  description: 'Triages support tickets.',
+  goal: 'Look the ticket up with a tool, then say how urgent it is.',
+  model: 'fast',
+  tools: [ref('lookupTicket')],
+  memory: { storage: 'agentStorage', lastMessages: 20 },
+  expose: true,
+})
+
+// src/wirings/digest.wiring.ts  (the cron runs a void function that calls the agent)
+wireScheduler({ name: 'morningDigest', schedule: '0 7 * * *', func: runDigest })`,
   },
   {
     names: ['imports', 'import', '#pikku', '#pikku/*'],

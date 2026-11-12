@@ -398,12 +398,41 @@ const frontendLines = (
   ]
 }
 
+/** One line per agent: what it runs on and which tools it lists. */
+export const agentSummaries = (
+  agentsMeta: Record<string, any> | undefined
+): string[] =>
+  Object.entries(agentsMeta ?? {}).map(([id, agent]) => {
+    const tools: string[] = agent?.tools ?? []
+    return `${id} (model ${agent?.model ?? '?'}; tools ${tools.length ? tools.join(', ') : 'none'})`
+  })
+
+/** Agents as `pikku meta grep` rows: searchable by name, description, model and tool. */
+export const agentRows = (
+  agentsMeta: Record<string, any> | undefined,
+  inProject: (file: string | null | undefined) => string | undefined
+): Array<{ kind: string; name: string; detail?: string; source?: string }> =>
+  Object.entries(agentsMeta ?? {}).map(([id, agent]) => ({
+    kind: 'agent',
+    name: id,
+    detail: [
+      agent?.description,
+      `model ${agent?.model ?? '?'}`,
+      `tools ${(agent?.tools ?? []).join(' ') || 'none'}`,
+    ]
+      .filter(Boolean)
+      .join('; '),
+    source: inProject(agent?.sourceFile),
+  }))
+
 export const formatProjectFacts = (facts: ProjectFacts): string[] => {
   const aliases = Object.entries(facts.models).map(
     ([alias, model]) => `${alias}=${model}`
   )
   return [
-    `agents: ${listOr(facts.agents, 'none yet')}`,
+    ...(facts.agents.length === 0
+      ? ['agents: none yet']
+      : ['agents:', ...facts.agents.map((agent) => `  ${agent}`)]),
     `model aliases: ${listOr(aliases, 'none yet')}; add in ${facts.configFile} "models" as "alias": "provider/model"`,
     ...(facts.runner ? [runnerLine(facts.runner)] : []),
     ...facts.texts.flatMap((text) => textLines(text, facts.texts.length > 1)),
