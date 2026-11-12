@@ -93,6 +93,12 @@ describe('webhook source: off until turned on', () => {
         status: 'skipped',
         reason: 'disabled',
       },
+      {
+        source: 'relay',
+        url: 'https://shop.test/api/webhooks/relay',
+        status: 'skipped',
+        reason: 'disabled',
+      },
     ])
     assert.deepEqual(await readEndpoints(), [])
   })

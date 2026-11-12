@@ -112,6 +112,28 @@
       "kind": "token"
      },
      "credential": "sharedSrcWebhookSecret"
+    },
+    "shorthand-src": {
+     "name": "shorthand-src",
+     "method": "post",
+     "route": "/webhooks/shorthand-src",
+     "events": [],
+     "receive": "trigger-webhook:shorthand-src:receive",
+     "verify": {
+      "kind": "hmac"
+     },
+     "credential": "shorthandSrcWebhookSecret"
+    },
+    "shorthand-fn-src": {
+     "name": "shorthand-fn-src",
+     "method": "post",
+     "route": "/webhooks/shorthand-fn-src",
+     "events": [],
+     "receive": "trigger-webhook:shorthand-fn-src:receive",
+     "verify": {
+      "kind": "function"
+     },
+     "credential": "shorthandSecret"
     }
    },
    "files": [
@@ -425,6 +447,24 @@
     {
      "name": "sharedSrcWebhookSecret",
      "displayName": "shared-src webhook secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    },
+    {
+     "name": "shorthandSrcWebhookSecret",
+     "displayName": "shorthand-src webhook secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    },
+    {
+     "name": "shorthandSecret",
+     "displayName": "shorthand-fn-src webhook secret",
      "type": "singleton",
      "schema": {
       "type": "string"

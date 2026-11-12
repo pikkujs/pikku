@@ -179,6 +179,11 @@ describe('pikku webhooks: provider lifecycle', () => {
         url: 'https://shop.test/api/webhooks/shop',
         status: 'missing',
       },
+      {
+        source: 'relay',
+        url: 'https://shop.test/api/webhooks/relay',
+        status: 'skipped',
+      },
     ])
   })
 

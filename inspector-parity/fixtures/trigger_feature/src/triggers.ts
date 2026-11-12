@@ -69,3 +69,16 @@ wireTriggerWebhookSource({
 })
 const sharedVerify = { token: { header: 'x-token' } }
 wireTriggerWebhookSource({ name: 'shared-src', receive, verify: sharedVerify })
+{
+  const verify = { hmac: { header: 'x-shorthand-signature' } }
+  wireTriggerWebhookSource({ name: 'shorthand-src', receive, verify })
+}
+{
+  const verify = async () => true
+  wireTriggerWebhookSource({
+    name: 'shorthand-fn-src',
+    receive,
+    verify,
+    credential: 'shorthandSecret',
+  })
+}

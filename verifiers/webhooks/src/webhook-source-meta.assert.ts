@@ -12,3 +12,9 @@ test('the generated metadata records how the shop source verifies and where its 
   })
   assert.equal(shop?.credential, 'shopWebhookSecret')
 })
+
+test('a shorthand verify is recorded with its credential like a written one', () => {
+  const relay = pikkuState(null, 'trigger', 'webhookSourceMeta').relay
+  assert.deepEqual(relay?.verify, { kind: 'function' })
+  assert.equal(relay?.credential, 'relayWebhookSecret')
+})
