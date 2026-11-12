@@ -328,7 +328,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.209",
+      "version": "0.12.210",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -430,7 +430,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.155",
+      "version": "0.12.156",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -491,7 +491,7 @@
     },
     "packages/deploy/deploy-core": {
       "name": "@pikku/deploy",
-      "version": "0.12.20",
+      "version": "0.12.21",
       "dependencies": {
         "semver": "^7.8.5",
       },
@@ -512,7 +512,7 @@
     },
     "packages/deploy/deploy-standalone": {
       "name": "@pikku/deploy-standalone",
-      "version": "0.12.31",
+      "version": "0.12.32",
       "dependencies": {
         "@pikku/deploy": "^0.12.20",
         "@pikku/migrator-sql": "^0.12.9",
@@ -727,7 +727,7 @@
     },
     "packages/runtimes/bun-server": {
       "name": "@pikku/bun-server",
-      "version": "0.12.16",
+      "version": "0.12.17",
       "devDependencies": {
         "@pikku/core": "^0.12.155",
         "@pikku/modelcontextprotocol": "^0.12.18",
@@ -1071,7 +1071,7 @@
     },
     "packages/services/kysely": {
       "name": "@pikku/kysely",
-      "version": "0.13.42",
+      "version": "0.13.43",
       "bin": {
         "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js",
       },
@@ -1092,7 +1092,7 @@
     },
     "packages/services/kysely-bun-sqlite": {
       "name": "@pikku/kysely-bun-sqlite",
-      "version": "0.12.11",
+      "version": "0.12.12",
       "dependencies": {
         "@pikku/kysely": "^0.13.39",
         "@pikku/kysely-sqlite": "^0.12.18",
@@ -1122,7 +1122,7 @@
     },
     "packages/services/kysely-node-sqlite": {
       "name": "@pikku/kysely-node-sqlite",
-      "version": "0.12.10",
+      "version": "0.12.11",
       "dependencies": {
         "@pikku/kysely": "^0.13.39",
         "@pikku/kysely-sqlite": "^0.12.18",
@@ -1139,7 +1139,7 @@
     },
     "packages/services/kysely-postgres": {
       "name": "@pikku/kysely-postgres",
-      "version": "0.12.29",
+      "version": "0.12.30",
       "dependencies": {
         "@pikku/kysely": "^0.13.39",
         "kysely": "^0.29.6",
@@ -1156,7 +1156,7 @@
     },
     "packages/services/kysely-sqlite": {
       "name": "@pikku/kysely-sqlite",
-      "version": "0.12.18",
+      "version": "0.12.19",
       "dependencies": {
         "@pikku/kysely": "^0.13.39",
         "kysely": "^0.29.6",
@@ -1263,7 +1263,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.73",
+      "version": "0.12.74",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",
