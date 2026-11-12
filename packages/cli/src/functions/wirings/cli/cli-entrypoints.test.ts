@@ -5,6 +5,8 @@ import {
   normalizeCLIEntrypoints,
   withCLIEntrypoints,
 } from './cli-entrypoints.js'
+import { serializeChannelCLIClient } from './serialize-channel-cli-client.js'
+import type { Config } from '../../../../types/application-types.js'
 
 const program = (name: string): CLIProgramMeta => ({
   program: name,
@@ -170,5 +172,33 @@ describe('withCLIEntrypoints', () => {
     assert.strictEqual(result.programs.tools!.entrypoints, undefined)
     assert.strictEqual(result.programs.ghost, undefined)
     assert.strictEqual(meta.programs.admin!.entrypoints, undefined)
+  })
+})
+
+describe('the generated channel client connects to the channel route', () => {
+  const clientURL = (globalHTTPPrefix?: string) => {
+    const [entrypoint] = normalizeCLIEntrypoints(
+      'admin',
+      { type: 'channel', wirePath: 'src/cli.gen.ts' },
+      globalHTTPPrefix
+    )
+    assert.strictEqual(entrypoint!.type, 'channel')
+    const out = serializeChannelCLIClient(
+      'admin',
+      program('admin'),
+      '/proj/src/cli-client.gen.ts',
+      { packageMappings: {} } as Config,
+      '/proj/.pikku/pikku-bootstrap.gen.ts',
+      entrypoint!.type === 'channel' ? entrypoint!.route : undefined
+    )
+    return out.match(/'ws:\/\/localhost:4002([^']*)'/)?.[1]
+  }
+
+  test('without globalHTTPPrefix the route is /cli/<program>', () => {
+    assert.strictEqual(clientURL(), '/cli/admin')
+  })
+
+  test('with globalHTTPPrefix the route carries the prefix', () => {
+    assert.strictEqual(clientURL('/api'), '/api/cli/admin')
   })
 })
