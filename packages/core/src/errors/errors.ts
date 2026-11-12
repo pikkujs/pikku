@@ -671,3 +671,48 @@ addError(SystemRoleShadowedError, {
   status: 409,
   message: 'A system role of that name is already declared in code.',
 })
+
+/** Why an outbound request was refused by {@link NetworkHostNotAllowedError}. */
+export type NetworkRefusalReason =
+  'not-declared' | 'private-address' | 'scheme' | 'redirect'
+
+/** Who was refused and why, as carried by {@link NetworkHostNotAllowedError}. */
+export interface NetworkHostRefusal {
+  host: string
+  reason: NetworkRefusalReason
+  addon?: string
+  package?: string
+}
+
+/**
+ * An outbound request was refused: its host is not in the allowed hosts, it is
+ * (or resolves to) a private address, its scheme is not permitted, or a
+ * redirect led somewhere one of those rules refuses. The message names hosts
+ * only, never a path or query. Answers 500.
+ * @group Error
+ */
+export class NetworkHostNotAllowedError extends PikkuError {
+  public readonly host: string
+  public readonly reason: NetworkRefusalReason
+  public readonly addon?: string
+  public readonly package?: string
+
+  constructor(refusal: NetworkHostRefusal, explanation: string) {
+    const owner = refusal.addon
+      ? ` for addon '${refusal.addon}'${refusal.package ? ` (${refusal.package})` : ''}`
+      : refusal.package
+        ? ` for '${refusal.package}'`
+        : ''
+    super(
+      `Refusing to fetch '${refusal.host || '(no host)'}'${owner}: ${explanation}`
+    )
+    this.host = refusal.host
+    this.reason = refusal.reason
+    this.addon = refusal.addon
+    this.package = refusal.package
+  }
+}
+addError(NetworkHostNotAllowedError, {
+  status: 500,
+  message: 'An outbound request was refused by the network policy.',
+})

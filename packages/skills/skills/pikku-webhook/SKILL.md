@@ -63,15 +63,19 @@ const config: Config = {
     signatureHeader: 'X-Pikku-Signature', // default
     retries: 3, // default; attempts = retries + 1
     retryDelay: '30s', // omit for exponential backoff
-    allowedHosts: ['hooks.example.com'], // SSRF allowlist
+    allowedHosts: ['hooks.example.com', '*.example.org'], // SSRF allowlist
+    privateHosts: [], // receivers allowed to be private/internal addresses
   },
 }
 ```
 
-`allowedHosts` set means _only_ those hostnames are deliverable. Omitted, every
-public host is allowed and private/internal ranges are blocked — loopback,
-RFC1918, link-local `169.254.0.0/16` (cloud metadata), CGNAT `100.64.0.0/10`
-(Alibaba's metadata endpoint), multicast and the TEST-NETs. A URL is
+`allowedHosts` set means _only_ matching hosts are deliverable (`host`,
+`host:port`, or one leading `*.` with at least two labels after it). Omitted,
+every public host is allowed. Either way private/internal ranges are blocked —
+loopback, RFC1918, link-local `169.254.0.0/16` (cloud metadata), CGNAT
+`100.64.0.0/10` (Alibaba's metadata endpoint), multicast and the TEST-NETs, and
+any name that resolves to one — unless the host is also in `privateHosts`.
+Listing an internal receiver in `allowedHosts` alone does not reach it. A URL is
 user-supplied data; do not bypass `safeFetch` by delivering yourself.
 
 ## Sending

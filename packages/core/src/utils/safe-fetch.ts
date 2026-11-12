@@ -1,36 +1,16 @@
-/**
- * Parses the textual IPv4 encodings `fetch`/`undici` accept — a dotted quad
- * whose octets may be decimal, octal (`0177`) or hex (`0x7f`), or the whole
- * address as a single 32-bit integer. `null` when not an IPv4 literal.
- */
-function parseIPv4Octets(
-  host: string
-): [number, number, number, number] | null {
-  const toInt = (part: string): number | null => {
-    let n: number
-    if (/^0x[0-9a-f]+$/.test(part)) n = parseInt(part, 16)
-    else if (/^0[0-7]+$/.test(part)) n = parseInt(part, 8)
-    else if (/^\d+$/.test(part)) n = parseInt(part, 10)
-    else return null
-    return Number.isInteger(n) ? n : null
-  }
+import {
+  NetworkHostNotAllowedError,
+  type NetworkRefusalReason,
+} from '../errors/errors.js'
+import {
+  effectivePort,
+  hostMatches,
+  validateHostPattern,
+} from './host-match.js'
+import { isIpLiteral, parseIPv4Octets, parseIPv6Groups } from './ip-literal.js'
 
-  if (!host.includes('.')) {
-    const n = toInt(host)
-    if (n === null || n < 0 || n > 0xffffffff) return null
-    return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff]
-  }
-
-  const parts = host.split('.')
-  if (parts.length !== 4) return null
-  const octets: number[] = []
-  for (const part of parts) {
-    const n = toInt(part)
-    if (n === null || n < 0 || n > 0xff) return null
-    octets.push(n)
-  }
-  return octets as [number, number, number, number]
-}
+export { hostMatches, validateHostPattern } from './host-match.js'
+export type { HostPatternValidation } from './host-match.js'
 
 /**
  * IPv4 blocks that must never be reachable from user-supplied URLs: private,
@@ -69,46 +49,6 @@ const isPrivateIPv4 = (octets: [number, number, number, number]): boolean => {
   return PRIVATE_IPV4_RANGES.some(
     ([base, mask]) => (addr & mask) >>> 0 === base
   )
-}
-
-/**
- * Expands an IPv6 literal into its eight 16-bit groups, handling `::` elision
- * and a trailing dotted-quad. `null` when not a well-formed IPv6 literal.
- */
-function parseIPv6Groups(host: string): number[] | null {
-  const zoneless = host.split('%')[0]!
-  const halves = zoneless.split('::')
-  if (halves.length > 2) return null
-
-  const parseSide = (side: string): number[] | null => {
-    if (side === '') return []
-    const parts = side.split(':')
-    const groups: number[] = []
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i]!
-      if (i === parts.length - 1 && part.includes('.')) {
-        const v4 = parseIPv4Octets(part)
-        if (!v4) return null
-        groups.push((v4[0] << 8) | v4[1], (v4[2] << 8) | v4[3])
-        continue
-      }
-      if (!/^[0-9a-f]{1,4}$/.test(part)) return null
-      groups.push(parseInt(part, 16))
-    }
-    return groups
-  }
-
-  const head = parseSide(halves[0]!)
-  if (head === null) return null
-
-  if (halves.length === 1) {
-    return head.length === 8 ? head : null
-  }
-
-  const tail = parseSide(halves[1]!)
-  if (tail === null) return null
-  if (head.length + tail.length > 7) return null
-  return [...head, ...new Array(8 - head.length - tail.length).fill(0), ...tail]
 }
 
 const embeddedIPv4 = (
@@ -203,10 +143,28 @@ export function setDefaultHostResolver(resolver: HostResolver | undefined) {
 /** Restrictions {@link safeFetch} and {@link assertFetchableUrl} apply to each URL they visit. */
 export interface SafeFetchOptions {
   /**
-   * When set, the host of every hop must appear in this allowlist. When omitted,
-   * any host that is not {@link isPrivateHost} is permitted.
+   * When set, the host of every hop must match one of these patterns (see
+   * {@link hostMatches}: `api.example.com`, `api.example.com:8443`,
+   * `*.example.com`). When omitted, any host is permitted. Either way a
+   * private or internal address is refused unless it is in `privateHosts`.
    */
   allowedHosts?: string[]
+  /**
+   * Hosts that may be, or resolve to, a private or internal address. The
+   * private-address and DNS checks are skipped only for a host matching one of
+   * these; listing a host in `allowedHosts` alone does not.
+   */
+  privateHosts?: string[]
+  /**
+   * Decides which hosts may be reached over plain `http:`. When given, an
+   * `http:` URL whose host it returns `false` for is refused. When omitted,
+   * `http:` is accepted for any host.
+   */
+  allowHttp?: (host: string) => boolean
+  /** The `fetch` each hop is sent through. Defaults to the global `fetch`. */
+  fetch?: typeof fetch
+  /** Who is fetching, named in the refusal so the fix is findable. */
+  caller?: { addon?: string; package?: string }
   /** Maximum redirect hops to follow (each re-validated). Defaults to 3. */
   maxRedirects?: number
   /**
@@ -217,75 +175,161 @@ export interface SafeFetchOptions {
   resolveHost?: HostResolver | null
 }
 
-/** Whether a hostname is already an IP literal, which the sync check covers. */
-function isIpLiteral(hostname: string): boolean {
-  const host = hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '')
-  if (host.includes(':')) return parseIPv6Groups(host.toLowerCase()) !== null
-  return parseIPv4Octets(host) !== null
+interface HopRefusal {
+  reason: NetworkRefusalReason
+  explanation: string
 }
 
-/**
- * Rejects a hostname that resolves to an internal address.
- *
- * Resolution happens once per hop and the connection is not pinned to the
- * address checked, so a rebind between this check and the socket connecting is
- * still possible; catching that needs a runtime-level connect hook.
- */
-async function assertResolvedHostAllowed(
-  hostname: string,
-  options: SafeFetchOptions
-): Promise<void> {
-  if (options.allowedHosts) return
-  const resolver =
-    options.resolveHost === null
-      ? undefined
-      : (options.resolveHost ?? defaultHostResolver)
-  if (!resolver || isIpLiteral(hostname)) return
+const matchesAny = (url: URL, patterns: string[] | undefined): boolean =>
+  !!patterns?.some((pattern) =>
+    hostMatches(url.hostname, effectivePort(url), pattern)
+  )
 
-  const addresses = await resolver(hostname)
-  if (addresses.length === 0) {
-    throw new Error(`Refusing to fetch: '${hostname}' resolved to no addresses`)
-  }
-  for (const address of addresses) {
-    if (isPrivateHost(address)) {
-      throw new Error(
-        `Refusing to fetch from a private/internal host: '${hostname}' resolves to ${address}`
+function assertValidPatterns(
+  option: 'allowedHosts' | 'privateHosts',
+  patterns: string[] | undefined
+): void {
+  for (const pattern of patterns ?? []) {
+    const result = validateHostPattern(pattern)
+    if (!result.valid) {
+      throw new TypeError(
+        `${option} entry '${pattern}' is not a valid host pattern: ${result.reason}`
       )
     }
   }
 }
 
+/** The checks that need no DNS: scheme, the allowlist, and private literals. */
+function literalRefusal(
+  url: URL,
+  options: SafeFetchOptions
+): HopRefusal | undefined {
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    return {
+      reason: 'scheme',
+      explanation: `non-HTTP(S) URL scheme ${url.protocol}`,
+    }
+  }
+  if (
+    url.protocol === 'http:' &&
+    options.allowHttp &&
+    !options.allowHttp(url.hostname)
+  ) {
+    return {
+      reason: 'scheme',
+      explanation: 'plain http: is not allowed for this host; use https:',
+    }
+  }
+  if (options.allowedHosts && !matchesAny(url, options.allowedHosts)) {
+    return {
+      reason: 'not-declared',
+      explanation:
+        'the host is not in the allowlist. Add it to allowedHosts if this is intended.',
+    }
+  }
+  if (!matchesAny(url, options.privateHosts) && isPrivateHost(url.hostname)) {
+    return {
+      reason: 'private-address',
+      explanation:
+        'it is a private/internal host. Add it to privateHosts if this is intended.',
+    }
+  }
+  return undefined
+}
+
 /**
- * Synchronous SSRF guard for a single URL: only `http:`/`https:` is accepted, and
- * the host must be in `allowedHosts` when given, or else must not be a private,
- * loopback or link-local literal ({@link isPrivateHost}).
+ * Refuses a hostname that resolves to an internal address, unless the host is
+ * in `privateHosts`.
+ *
+ * Resolution happens once per hop and the connection is not pinned to the
+ * address checked, so a rebind between this check and the socket connecting is
+ * still possible; catching that needs a runtime-level connect hook.
+ */
+async function resolvedRefusal(
+  url: URL,
+  options: SafeFetchOptions
+): Promise<HopRefusal | undefined> {
+  if (matchesAny(url, options.privateHosts)) return undefined
+  const resolver =
+    options.resolveHost === null
+      ? undefined
+      : (options.resolveHost ?? defaultHostResolver)
+  if (!resolver || isIpLiteral(url.hostname)) return undefined
+
+  const addresses = await resolver(url.hostname)
+  if (addresses.length === 0) {
+    return {
+      reason: 'private-address',
+      explanation: 'it resolved to no addresses',
+    }
+  }
+  const privateAddress = addresses.find((address) => isPrivateHost(address))
+  if (privateAddress) {
+    return {
+      reason: 'private-address',
+      explanation: `it resolves to ${privateAddress}, a private/internal host. Add it to privateHosts if this is intended.`,
+    }
+  }
+  return undefined
+}
+
+function refuse(
+  url: URL,
+  refusal: HopRefusal,
+  options: SafeFetchOptions,
+  redirectedFrom?: URL
+): never {
+  const owner = {
+    addon: options.caller?.addon,
+    package: options.caller?.package,
+  }
+  if (redirectedFrom) {
+    throw new NetworkHostNotAllowedError(
+      { ...owner, host: url.hostname, reason: 'redirect' },
+      `redirected from '${redirectedFrom.hostname}', and ${refusal.explanation}`
+    )
+  }
+  throw new NetworkHostNotAllowedError(
+    { ...owner, host: url.hostname, reason: refusal.reason },
+    refusal.explanation
+  )
+}
+
+/**
+ * Synchronous SSRF guard for a single URL: only `http:`/`https:` is accepted
+ * (and `http:` only where `allowHttp` agrees), the host must match
+ * `allowedHosts` when given, and it must not be a private, loopback or
+ * link-local literal ({@link isPrivateHost}) unless it matches `privateHosts`.
  *
  * It does not resolve DNS, so a public name pointing at an internal address
  * passes; {@link safeFetch} adds that check per hop.
  *
  * @param url - The URL to check.
- * @param options - Only `allowedHosts` is read here.
+ * @param options - `allowedHosts`, `privateHosts`, `allowHttp` and `caller` are read here.
  * @returns The parsed URL.
- * @throws TypeError for an unparseable URL; Error for a refused scheme or host.
+ * @throws TypeError for an unparseable URL or an invalid host pattern;
+ * NetworkHostNotAllowedError for a refused scheme or host.
  */
 export function assertFetchableUrl(
   url: string,
   options: SafeFetchOptions = {}
 ): URL {
+  assertValidPatterns('allowedHosts', options.allowedHosts)
+  assertValidPatterns('privateHosts', options.privateHosts)
   const parsed = new URL(url)
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    throw new Error(`Refusing to fetch non-HTTP(S) URL: ${parsed.protocol}`)
-  }
-  if (options.allowedHosts) {
-    if (!options.allowedHosts.includes(parsed.hostname)) {
-      throw new Error(`URL host is not in the allowlist: ${parsed.hostname}`)
-    }
-  } else if (isPrivateHost(parsed.hostname)) {
-    throw new Error(
-      `Refusing to fetch from a private/internal host: ${parsed.hostname}`
-    )
-  }
+  const refusal = literalRefusal(parsed, options)
+  if (refusal) refuse(parsed, refusal, options)
   return parsed
+}
+
+async function assertHopAllowed(
+  url: URL,
+  options: SafeFetchOptions,
+  redirectedFrom?: URL
+): Promise<void> {
+  const refusal =
+    literalRefusal(url, options) ?? (await resolvedRefusal(url, options))
+  if (refusal) refuse(url, refusal, options, redirectedFrom)
 }
 
 /** The only 3xx statuses followed; every other 3xx is returned to the caller. */
@@ -316,10 +360,16 @@ function redirectInit(status: number, init: RequestInit): RequestInit {
 }
 
 /**
- * `fetch` with SSRF protection on the initial URL and every redirect hop.
+ * `fetch` with SSRF protection on the initial URL and every redirect hop. Each
+ * hop is checked for its scheme, against `allowedHosts`, and for a private
+ * address (literal or resolved) unless it matches `privateHosts`.
+ * `Authorization` and `Cookie` are dropped when a redirect crosses origin.
  * When a redirect cannot be followed (no `Location`, or the hop budget is
  * spent) the raw redirect response is returned for the caller to handle by
  * status.
+ *
+ * @throws NetworkHostNotAllowedError when a hop is refused; `reason` is
+ * `'redirect'` when the refused hop came from a redirect.
  */
 export async function safeFetch(
   url: string,
@@ -327,13 +377,14 @@ export async function safeFetch(
   options: SafeFetchOptions = {}
 ): Promise<Response> {
   const maxRedirects = options.maxRedirects ?? 3
+  const send = options.fetch ?? globalThis.fetch
   const initial = assertFetchableUrl(url, options)
-  await assertResolvedHostAllowed(initial.hostname, options)
-  let currentUrl = initial.toString()
+  await assertHopAllowed(initial, options)
+  let currentUrl = initial
   let currentInit = init
 
   for (let hop = 0; ; hop++) {
-    const response = await fetch(currentUrl, {
+    const response = await send(currentUrl.toString(), {
       ...currentInit,
       redirect: 'manual',
     })
@@ -344,18 +395,17 @@ export async function safeFetch(
     if (!location || hop >= maxRedirects) {
       return response
     }
-    const next = assertFetchableUrl(
-      new URL(location, currentUrl).toString(),
-      options
-    )
-    await assertResolvedHostAllowed(next.hostname, options)
-    const nextUrl = next.toString()
-    await response.body?.cancel()
+    const next = new URL(location, currentUrl)
+    try {
+      await assertHopAllowed(next, options, currentUrl)
+    } finally {
+      await response.body?.cancel()
+    }
     let nextInit = redirectInit(response.status, currentInit)
-    if (new URL(nextUrl).origin !== new URL(currentUrl).origin) {
+    if (next.origin !== currentUrl.origin) {
       nextInit = stripCredentialHeaders(nextInit)
     }
     currentInit = nextInit
-    currentUrl = nextUrl
+    currentUrl = next
   }
 }

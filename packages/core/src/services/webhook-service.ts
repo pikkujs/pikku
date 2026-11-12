@@ -46,10 +46,17 @@ export interface WebhookServiceConfig {
   secret?: string
   signatureHeader?: string
   /**
-   * SSRF allowlist. Set: only these hostnames may be delivered to. Omitted:
-   * private/internal hosts are blocked and every other public host is allowed.
+   * SSRF allowlist of host patterns (`hooks.example.com`, `*.example.com`,
+   * `host:port`). Set: only matching hosts may be delivered to. Omitted: every
+   * public host is allowed. Private/internal hosts are blocked either way
+   * unless listed in `privateHosts`.
    */
   allowedHosts?: string[]
+  /**
+   * Host patterns that may be, or resolve to, a private/internal address, for
+   * receivers inside your own network.
+   */
+  privateHosts?: string[]
 }
 
 /** A signed webhook as queued for delivery. */

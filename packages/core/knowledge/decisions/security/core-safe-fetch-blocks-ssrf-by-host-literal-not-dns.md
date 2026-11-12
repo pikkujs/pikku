@@ -24,10 +24,12 @@ re-validates every hop through `assertFetchableUrl` before following it, follows
 only the statuses in `REDIRECT_STATUSES` (301/302/303/307/308 — `300`, `304`,
 `305` and `306` are returned to the caller as-is), applies the WHATWG
 method/body transform per hop, cancels each intermediate response body, and
-strips `Authorization` and `Cookie` whenever a hop crosses origin. What it
-deliberately does **not** cover is DNS rebinding: a public hostname that itself
-resolves to a private IP passes, because catching that needs resolution the
-runtime does not offer.
+strips `Authorization` and `Cookie` whenever a hop crosses origin. Where the
+runtime can resolve names (Node installs `nodeHostResolver`), each hop's name is
+resolved and refused if any address is private, whether or not the host is in
+`allowedHosts`. What it still does **not** cover is DNS rebinding between that
+check and the connection, and on runtimes with no resolver a public name
+pointing at a private IP passes.
 
 **What this rules out:** "simplifying" `isPrivateHost` down to a `localhost` /
 `127.0.0.1` string check — the octal, hex, integer and IPv4-mapped-IPv6 branches

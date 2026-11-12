@@ -110,8 +110,9 @@ export class QueueWebhookService extends WebhookService {
 // knowledge: decisions/internals/webhook-delivery-history-records-every-attempt-best-effort.md
 /**
  * The queue worker that delivers one outgoing webhook. It POSTs through
- * `safeFetch`, so private and internal hosts are refused unless listed in
- * `config.webhook.allowedHosts`, and times out after 30 seconds. Each attempt
+ * `safeFetch`, so only hosts matching `config.webhook.allowedHosts` (when set)
+ * are reached, private and internal hosts are refused unless listed in
+ * `config.webhook.privateHosts`, and it times out after 30 seconds. Each attempt
  * is recorded when the service keeps delivery history.
  *
  * @throws Error when the receiver does not answer with a 2xx status, so the
@@ -127,8 +128,11 @@ export async function pikkuWebhookWorkerFunc(
   let delivered = false
 
   let allowedHosts: string[] | undefined
+  let privateHosts: string[] | undefined
   try {
-    allowedHosts = getSingletonServices().config?.webhook?.allowedHosts
+    const webhookConfig = getSingletonServices().config?.webhook
+    allowedHosts = webhookConfig?.allowedHosts
+    privateHosts = webhookConfig?.privateHosts
   } catch {
     // Uninitialised singletons (a bare worker invocation): fall back to the
     // default private-host block rather than failing the delivery.
@@ -143,7 +147,7 @@ export async function pikkuWebhookWorkerFunc(
         body,
         signal: AbortSignal.timeout(30_000),
       },
-      { allowedHosts }
+      { allowedHosts, privateHosts }
     )
     statusCode = response.status
     delivered = response.status >= 200 && response.status < 300

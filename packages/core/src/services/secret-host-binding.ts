@@ -1,4 +1,5 @@
 import type { SecretDefinitionsMeta } from '../wirings/secret/secret.types.js'
+import { effectivePort, hostMatches } from '../utils/host-match.js'
 
 /**
  * Thrown when a secret would be sent to a host its `defineSecret` declaration
@@ -20,16 +21,6 @@ export class SecretHostNotAllowedError extends Error {
   }
 }
 
-/** Exact match, or a single leading `*.` wildcard anchored on a dot. */
-const hostMatches = (host: string, pattern: string): boolean => {
-  const h = host.toLowerCase()
-  const p = pattern.toLowerCase()
-  if (p.startsWith('*.')) {
-    return h.endsWith(p.slice(1)) && h.length > p.length - 1
-  }
-  return h === p
-}
-
 /** Refuses a secret/host pairing the declarations do not permit. */
 export const assertSecretAllowedForHost = (
   secretId: string,
@@ -37,7 +28,9 @@ export const assertSecretAllowedForHost = (
   secretDefinitions: SecretDefinitionsMeta | undefined,
   requireAllowedHosts = false
 ): void => {
-  const host = (typeof url === 'string' ? new URL(url) : url).hostname
+  const parsed = typeof url === 'string' ? new URL(url) : url
+  const host = parsed.hostname
+  const port = effectivePort(parsed)
   const definition = Object.values(secretDefinitions ?? {}).find(
     (d) => d.secretId === secretId
   )
@@ -50,7 +43,7 @@ export const assertSecretAllowedForHost = (
     return
   }
 
-  if (!allowedHosts.some((pattern) => hostMatches(host, pattern))) {
+  if (!allowedHosts.some((pattern) => hostMatches(host, port, pattern))) {
     throw new SecretHostNotAllowedError(secretId, host, allowedHosts)
   }
 }

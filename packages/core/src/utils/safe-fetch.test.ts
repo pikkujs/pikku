@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
+import { NetworkHostNotAllowedError } from '../errors/errors.js'
 import { assertFetchableUrl, isPrivateHost, safeFetch } from './safe-fetch.js'
 
 describe('isPrivateHost', () => {
@@ -260,7 +261,7 @@ describe('safeFetch', () => {
     )
   })
 
-  test('does not resolve an IP literal or an allowlisted host', async () => {
+  test('does not resolve an IP literal or a privateHosts host', async () => {
     await withStubbedFetch(
       () => new Response('ok', { status: 200 }),
       async () => {
@@ -273,7 +274,7 @@ describe('safeFetch', () => {
         await safeFetch(
           'https://internal.example.com/',
           {},
-          { resolveHost, allowedHosts: ['internal.example.com'] }
+          { resolveHost, privateHosts: ['internal.example.com'] }
         )
         assert.equal(resolverCalls, 0)
       }
@@ -511,5 +512,322 @@ describe('safeFetch', () => {
         assert.equal(seenRedirect, 'manual')
       }
     )
+  })
+})
+
+describe('safeFetch network rules', () => {
+  const recordingFetch = (
+    handler: (url: string) => Response = () => new Response('ok')
+  ) => {
+    const seen: Array<{ url: string; headers: Headers }> = []
+    const fetchImpl = (async (u: any, init: any) => {
+      seen.push({ url: String(u), headers: new Headers(init?.headers) })
+      return handler(String(u))
+    }) as typeof fetch
+    return { seen, fetchImpl }
+  }
+
+  const refusedWith =
+    (reason: string, host: string) =>
+    (error: unknown): boolean => {
+      assert.ok(error instanceof NetworkHostNotAllowedError)
+      assert.equal(error.reason, reason)
+      assert.equal(error.host, host)
+      return true
+    }
+
+  test('sends through the injected fetch, not the global one', async () => {
+    const original = globalThis.fetch
+    globalThis.fetch = (async () => {
+      throw new Error('global fetch must not be used')
+    }) as typeof fetch
+    try {
+      const { seen, fetchImpl } = recordingFetch()
+      const res = await safeFetch(
+        'https://api.example.com/v1',
+        {},
+        { fetch: fetchImpl, resolveHost: null }
+      )
+      assert.equal(res.status, 200)
+      assert.deepEqual(
+        seen.map((s) => s.url),
+        ['https://api.example.com/v1']
+      )
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  test('refuses a host not in allowedHosts without fetching it', async () => {
+    const { seen, fetchImpl } = recordingFetch()
+    await assert.rejects(
+      safeFetch(
+        'https://evil.test/collect?token=abc',
+        {},
+        { allowedHosts: ['*.example.com'], fetch: fetchImpl, resolveHost: null }
+      ),
+      refusedWith('not-declared', 'evil.test')
+    )
+    assert.equal(seen.length, 0)
+  })
+
+  test('the refusal names the host and owner, never the path or query', async () => {
+    const { fetchImpl } = recordingFetch()
+    await assert.rejects(
+      safeFetch(
+        'https://evil.test/secret-path?token=abc',
+        {},
+        {
+          allowedHosts: ['api.example.com'],
+          fetch: fetchImpl,
+          resolveHost: null,
+          caller: { addon: 'stripe', package: '@pikku/addon-stripe' },
+        }
+      ),
+      (error: Error) => {
+        assert.match(error.message, /'evil\.test'/)
+        assert.match(error.message, /addon 'stripe' \(@pikku\/addon-stripe\)/)
+        assert.doesNotMatch(error.message, /secret-path|token|abc/)
+        return true
+      }
+    )
+  })
+
+  test('matches allowedHosts with wildcards and ports', async () => {
+    const { seen, fetchImpl } = recordingFetch()
+    const options = {
+      allowedHosts: ['*.example.com', 'api.other.com:8443'],
+      fetch: fetchImpl,
+      resolveHost: null,
+    }
+    await safeFetch('https://a.example.com/', {}, options)
+    await safeFetch('https://api.other.com:8443/', {}, options)
+    await assert.rejects(
+      safeFetch('https://api.other.com/', {}, options),
+      refusedWith('not-declared', 'api.other.com')
+    )
+    await assert.rejects(
+      safeFetch('https://example.com/', {}, options),
+      refusedWith('not-declared', 'example.com')
+    )
+    assert.equal(seen.length, 2)
+  })
+
+  test('an invalid allowedHosts entry is a TypeError, not a silent miss', async () => {
+    const { fetchImpl } = recordingFetch()
+    await assert.rejects(
+      safeFetch(
+        'https://a.example.com/',
+        {},
+        { allowedHosts: ['*.com'], fetch: fetchImpl }
+      ),
+      (error: Error) =>
+        error instanceof TypeError &&
+        /allowedHosts entry '\*\.com'/.test(error.message)
+    )
+  })
+
+  test('an allowed name resolving to a private address is refused', async () => {
+    const { seen, fetchImpl } = recordingFetch()
+    await assert.rejects(
+      safeFetch(
+        'https://api.example.com/',
+        {},
+        {
+          allowedHosts: ['api.example.com'],
+          fetch: fetchImpl,
+          resolveHost: async () => ['10.0.0.1'],
+        }
+      ),
+      (error: Error) =>
+        refusedWith('private-address', 'api.example.com')(error) &&
+        /resolves to 10\.0\.0\.1/.test(error.message)
+    )
+    assert.equal(seen.length, 0)
+  })
+
+  test('an allowed private literal is refused unless it is in privateHosts', async () => {
+    const { seen, fetchImpl } = recordingFetch()
+    await assert.rejects(
+      safeFetch(
+        'http://10.0.0.5:8080/',
+        {},
+        { allowedHosts: ['10.0.0.5:8080'], fetch: fetchImpl }
+      ),
+      refusedWith('private-address', '10.0.0.5')
+    )
+    assert.equal(seen.length, 0)
+    await safeFetch(
+      'http://10.0.0.5:8080/',
+      {},
+      {
+        allowedHosts: ['10.0.0.5:8080'],
+        privateHosts: ['10.0.0.5:8080'],
+        fetch: fetchImpl,
+      }
+    )
+    assert.equal(seen.length, 1)
+  })
+
+  test('privateHosts lifts the private check for a name that resolves privately', async () => {
+    const { seen, fetchImpl } = recordingFetch()
+    await safeFetch(
+      'https://db.internal.example.com/',
+      {},
+      {
+        allowedHosts: ['*.internal.example.com'],
+        privateHosts: ['*.internal.example.com'],
+        fetch: fetchImpl,
+        resolveHost: async () => ['10.0.0.1'],
+      }
+    )
+    assert.equal(seen.length, 1)
+  })
+
+  test('privateHosts does not widen allowedHosts', async () => {
+    const { fetchImpl } = recordingFetch()
+    await assert.rejects(
+      safeFetch(
+        'http://10.0.0.5/',
+        {},
+        {
+          allowedHosts: ['api.example.com'],
+          privateHosts: ['10.0.0.5'],
+          fetch: fetchImpl,
+        }
+      ),
+      refusedWith('not-declared', '10.0.0.5')
+    )
+  })
+
+  test('a redirect to an undeclared host is refused and never fetched', async () => {
+    const { seen, fetchImpl } = recordingFetch((url) =>
+      url.includes('api.example.com')
+        ? new Response(null, {
+            status: 302,
+            headers: { location: 'https://evil.test/steal' },
+          })
+        : new Response('ok')
+    )
+    await assert.rejects(
+      safeFetch(
+        'https://api.example.com/',
+        {},
+        {
+          allowedHosts: ['api.example.com'],
+          fetch: fetchImpl,
+          resolveHost: null,
+        }
+      ),
+      (error: Error) =>
+        refusedWith('redirect', 'evil.test')(error) &&
+        /redirected from 'api\.example\.com'/.test(error.message) &&
+        !/steal/.test(error.message)
+    )
+    assert.deepEqual(
+      seen.map((s) => s.url),
+      ['https://api.example.com/']
+    )
+  })
+
+  test('a redirect to a name resolving privately is refused', async () => {
+    const { seen, fetchImpl } = recordingFetch((url) =>
+      url.includes('api.example.com')
+        ? new Response(null, {
+            status: 302,
+            headers: { location: 'https://rebind.example.com/' },
+          })
+        : new Response('ok')
+    )
+    await assert.rejects(
+      safeFetch(
+        'https://api.example.com/',
+        {},
+        {
+          allowedHosts: ['*.example.com'],
+          fetch: fetchImpl,
+          resolveHost: async (host) =>
+            host === 'api.example.com'
+              ? ['93.184.216.34']
+              : ['169.254.169.254'],
+        }
+      ),
+      refusedWith('redirect', 'rebind.example.com')
+    )
+    assert.equal(seen.length, 1)
+  })
+
+  test('http: is refused for a host allowHttp rejects', async () => {
+    const { seen, fetchImpl } = recordingFetch()
+    const options = {
+      fetch: fetchImpl,
+      resolveHost: null,
+      allowHttp: (host: string) => host === 'plain.example.com',
+    }
+    await assert.rejects(
+      safeFetch('http://api.example.com/', {}, options),
+      refusedWith('scheme', 'api.example.com')
+    )
+    await safeFetch('http://plain.example.com/', {}, options)
+    await safeFetch('https://api.example.com/', {}, options)
+    assert.equal(seen.length, 2)
+  })
+
+  test('a redirect downgrading to http: is refused under allowHttp', async () => {
+    const { seen, fetchImpl } = recordingFetch((url) =>
+      url.startsWith('https:')
+        ? new Response(null, {
+            status: 301,
+            headers: { location: 'http://api.example.com/' },
+          })
+        : new Response('ok')
+    )
+    await assert.rejects(
+      safeFetch(
+        'https://api.example.com/',
+        {},
+        { fetch: fetchImpl, resolveHost: null, allowHttp: () => false }
+      ),
+      refusedWith('redirect', 'api.example.com')
+    )
+    assert.equal(seen.length, 1)
+  })
+
+  test('without allowHttp, http: is still accepted', async () => {
+    const { seen, fetchImpl } = recordingFetch()
+    await safeFetch(
+      'http://api.example.com/',
+      {},
+      { fetch: fetchImpl, resolveHost: null }
+    )
+    assert.equal(seen.length, 1)
+  })
+
+  test('a non-HTTP scheme is refused with reason scheme', () => {
+    assert.throws(
+      () => assertFetchableUrl('file:///etc/passwd'),
+      (error: unknown) =>
+        error instanceof NetworkHostNotAllowedError && error.reason === 'scheme'
+    )
+  })
+
+  test('strips credentials on a cross-origin redirect through the injected fetch', async () => {
+    const { seen, fetchImpl } = recordingFetch((url) =>
+      url.includes('a.example.com')
+        ? new Response(null, {
+            status: 307,
+            headers: { location: 'https://b.example.com/next' },
+          })
+        : new Response('ok')
+    )
+    await safeFetch(
+      'https://a.example.com/',
+      { headers: { authorization: 'Bearer secret', cookie: 's=1' } },
+      { allowedHosts: ['*.example.com'], fetch: fetchImpl, resolveHost: null }
+    )
+    assert.equal(seen.length, 2)
+    assert.equal(seen[0]!.headers.get('authorization'), 'Bearer secret')
+    assert.equal(seen[1]!.headers.get('authorization'), null)
+    assert.equal(seen[1]!.headers.get('cookie'), null)
   })
 })
