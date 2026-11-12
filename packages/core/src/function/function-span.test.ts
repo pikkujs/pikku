@@ -6,6 +6,7 @@ import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { CoreServices } from '../types/core.types.js'
 import { MissingSessionError } from '../errors/errors.js'
 import { RecordingTracer } from '../testing/recording-tracer.js'
+import { decodeTraces } from '../testing/otlp-decoder.js'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import {
   childTraceWire,
@@ -13,7 +14,10 @@ import {
   formatTraceparent,
   type TraceContext,
 } from '../trace.js'
-import { asContextStorage } from '../otlp/runtime-telemetry.js'
+import {
+  asContextStorage,
+  createRuntimeTelemetry,
+} from '../otlp/runtime-telemetry.js'
 import { runTraceWire } from '../wirings/workflow/workflow-run-trace.js'
 import type { Tracer } from '../tracer.js'
 import type { PikkuWiringTypes } from '../types/core.types.js'
@@ -81,6 +85,45 @@ describe('runPikkuFunc - spans', () => {
       typeof span!.attributes['pikku.function.duration_ms'],
       'number'
     )
+  })
+
+  test('a versioned function carries its version as an int; an unversioned one carries none', async () => {
+    const requests: Uint8Array[] = []
+    const telemetry = createRuntimeTelemetry(
+      { PIKKU_OTLP_ENDPOINT: 'http://127.0.0.1:1/v1/otlp' },
+      {
+        logger: mockSingletonServices.logger,
+        serviceName: 'svc',
+        contextStorage: asContextStorage(new AsyncLocalStorage()),
+        fetch: (async (_url: string, init: RequestInit) => {
+          requests.push(init.body as Uint8Array)
+          return new Response(null, { status: 200 })
+        }) as never,
+      }
+    )
+    telemetry.stopMetrics()
+    const recording = new RecordingTracer()
+    addTestFunction('foo@v2', { func: async () => 1 })
+    addTestFunction('foo', { func: async () => 1 })
+    await run('foo@v2', recording)
+    await run('foo', recording)
+    assert.strictEqual(recording.spans[0]!.attributes['pikku.function.version'], 2)
+    assert.ok(!('pikku.function.version' in recording.spans[1]!.attributes))
+
+    await run('foo@v2', telemetry.tracer)
+    await run('foo', telemetry.tracer)
+    await telemetry.close()
+    const spans = requests.flatMap((body) => {
+      try {
+        return decodeTraces(body).items
+      } catch {
+        return []
+      }
+    })
+    const versioned = spans.find((span) => span.name === 'foo@v2')!
+    const plain = spans.find((span) => span.name === 'foo')!
+    assert.deepEqual(versioned.attributes['pikku.function.version'], { int: 2 })
+    assert.ok(!('pikku.function.version' in plain.attributes))
   })
 
   test('a wire with no trace makes a root span', async () => {

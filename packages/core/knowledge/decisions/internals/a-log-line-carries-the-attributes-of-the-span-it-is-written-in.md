@@ -25,3 +25,5 @@ Limits. `pikku.user.id` and `pikku.org.id` are written to the span when it ends,
 so a line logged while the function runs does not have them yet. A logger
 `scope`d to another trace carries nothing of the current span. `pikku.function.version`
 is the `vN` of a versioned function id and is absent for an unversioned one.
+
+A log written inside a child span that is not a function span (for example a `db.select` span a service opens) carries the attributes of that span, which has no `pikku.function.id`, so such a line has no function or wire attributes. Only a line written in the function's own span, or with no inner span open, carries them.
