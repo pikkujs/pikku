@@ -111,22 +111,52 @@ export type StudioValue = string | number
 /**
  * What a source returns where the host shows words: data, never words.
  * `variant` picks the wording the declaration gives in `copy`, and `values`
- * fills that wording's `{placeholders}`.
+ * fills that wording's `{placeholders}`. A value that is itself
+ * `{ variant, values? }` takes words that depend on the data (why something
+ * failed): it is worded by the same copy's `$` text for that variant before
+ * it fills the placeholder.
  */
 export type StudioVariantData<Variant extends string = string> = {
   variant: Variant
-  values?: Record<string, StudioValue>
+  values?: Record<string, StudioValue | StudioVariantData>
 }
+
+/** A raw number and what it measures, which the host writes with `Intl` in the viewer's locale. */
+export type StudioAmount = { n: number; unit: 'count' | 'ms' | 'percent' }
+
+/**
+ * One figure of a head (a verdict's or a thing card's): data, never words.
+ * Its `variant` picks the wording in the same `copy`, `{ label, note?,
+ * value? }`; `value` is a raw amount, or worded by the copy's `value` when
+ * there is no number to show.
+ */
+export type StudioFigure<Variant extends string = string> =
+  StudioVariantData<Variant> & { value?: StudioAmount }
 
 /**
  * The wording of one variant of a slot: each text the widget shows, named as
  * the widget names it, mapped to a message key in the addon's catalog,
- * `messages/{locale}.json`. The host resolves the keys, filling their
+ * `messages/{locale}.json`. A deeper text nests (`status: { text }`, `empty:
+ * { title, text }`, a list's item `tags: { 0: key }`). `$` is the text of a
+ * value that names this variant. The host resolves the keys, filling their
  * `{placeholders}` from the data's `values`, and hands the widget the
  * resolved strings.
  */
 export type StudioSlotCopy<Key extends string = string> = {
-  readonly [text: string]: Key
+  readonly [text: string]: Key | StudioSlotCopy<Key>
+}
+
+/**
+ * Every variant's wording: each variant the data names (`Required`) must be
+ * worded; other entries are allowed for the variants of list items, figures
+ * and values the types cannot see. Any string when the variants are unknown.
+ */
+export type StudioCopy<
+  Required extends string = string,
+  Entry = StudioSlotCopy,
+  Key extends string = string,
+> = (string extends Required ? {} : { readonly [V in Required]: Entry }) & {
+  readonly [variant: string]: Entry | StudioSlotCopy<Key>
 }
 
 /** One widget placed on an arranged screen or a thing's card. */
@@ -142,8 +172,8 @@ export type StudioSlot<
   from: From
   span?: StudioSpan
   compact?: StudioCompact
-  /** The wording of every variant the data at `from` can name. */
-  copy?: { readonly [V in Variant]: StudioSlotCopy<Key> }
+  /** The wording of every variant the data at `from` can name, its figures' included. */
+  copy?: StudioCopy<Variant, StudioSlotCopy<Key>, Key>
 }
 
 /**
@@ -151,27 +181,35 @@ export type StudioSlot<
  * data, never words. Its `variant` picks the wording the thing declares in
  * `copy`.
  */
-export type StudioCardHead<Variant extends string = string> =
-  StudioVariantData<Variant> & {
-    state?: 'wrong' | 'slow' | 'fine' | 'empty' | 'new'
-    tone?: 'bad' | 'warn' | 'good' | 'idle'
-    /** The one obvious next step, worded by the variant's `copy.primary`. `action` names one of the thing's `actions`. */
-    primary?: { action?: string }
-  }
+export type StudioCardHead<
+  Variant extends string = string,
+  FigureVariant extends string = string,
+> = StudioVariantData<Variant> & {
+  state?: 'wrong' | 'slow' | 'fine' | 'empty' | 'new'
+  tone?: 'bad' | 'warn' | 'good' | 'idle'
+  /**
+   * The one obvious next step, worded by the variant's `copy.primary`.
+   * `action` names one of the thing's `actions`, or is `go:/<path>`.
+   */
+  primary?: { action?: string }
+  /** Up to three figures, the strip under the lead, each worded by its own variant in `copy`. */
+  figures?: readonly StudioFigure<FigureVariant>[]
+}
 
 /**
  * The wording of one variant of a thing's card head: message keys in the
  * addon's catalog, whose `{placeholders}` the host fills from the head's
  * `values`.
  */
-export type StudioThingCopy<Key extends string = string> = {
-  name: Key
-  lead?: Key
-  /** The tile and chip line. */
-  compact: Key
-  /** `draft` is written into the chat box, never sent. */
-  primary?: { label: Key; draft?: Key }
-}
+export type StudioThingCopy<Key extends string = string> =
+  StudioSlotCopy<Key> & {
+    name: Key
+    lead?: Key
+    /** The tile and chip line. */
+    compact: Key
+    /** `draft` is written into the chat box, never sent. */
+    primary?: { label: Key; draft?: Key }
+  }
 
 /**
  * A function of the user's project rather than of the addon, by its RPC name,
@@ -183,8 +221,16 @@ export type StudioThingCopy<Key extends string = string> = {
 export type StudioRpcRef = `${string}:${string}`
 
 /**
+ * An action that opens another screen or thing by its path instead of
+ * running a function, such as `'go:/health-next'`. A widget's button or a
+ * head's `primary.action` may name one too.
+ */
+export type StudioGoRef = `go:/${string}`
+
+/**
  * Something a person can do from a thing's card or an arranged screen: `run`
- * calls a function of the addon or a project RPC. A destructive action needs a
+ * calls a function of the addon or a project RPC, or `go:/<path>` opens
+ * another screen or thing. A destructive action needs a
  * `confirm`, a message key whose `{placeholders}` the host fills from the
  * data's `values`; the host asks before it runs.
  */
@@ -192,7 +238,7 @@ export type StudioAction<
   Fn extends string = string,
   Key extends string = string,
 > = {
-  run: Fn | StudioRpcRef
+  run: Fn | StudioRpcRef | StudioGoRef
   /** A message key in the addon's catalog. */
   label: Key
 } & (
@@ -229,11 +275,17 @@ export type StudioThing<
   Variant extends string = string,
   Key extends string = string,
   Parts = readonly StudioSlot<WidgetId, From, string, Key>[],
+  FigureVariant extends string = string,
 > = {
   /** A message key in the addon's catalog. */
   label: Key
   source: Fn | StudioRpcRef
-  copy: { readonly [V in Variant]: StudioThingCopy<Key> }
+  /**
+   * The head's wording by variant; the same copy words the head's figures
+   * (`{ label, note?, value? }`) and the values that name a variant (`$`).
+   */
+  copy: StudioCopy<Variant, StudioThingCopy<Key>, Key> &
+    StudioCopy<FigureVariant, StudioSlotCopy<Key>, Key>
   /** The card's body under its head, in reading order. */
   parts: Parts
   /** The addon's own kinds this card can open beside itself. */
@@ -310,6 +362,13 @@ type OutputKey<Fns extends StudioFunctionMap, Source> = Source extends keyof Fns
 type VariantOf<Data> = Data extends { variant: infer V }
   ? Extract<V, string>
   : string
+type FigureVariantOf<Data> = Data extends {
+  figures?: readonly (infer F)[]
+}
+  ? F extends { variant: infer V }
+    ? Extract<V, string>
+    : never
+  : never
 type DataAt<Output, Slot> = Slot extends { from: infer F }
   ? F extends keyof Output
     ? NonNullable<Output[F]>
@@ -319,7 +378,7 @@ type CheckedSlots<Output, WidgetId extends string, Key extends string, S> = {
   readonly [I in keyof S]: StudioSlot<
     WidgetId,
     Output extends unknown ? Extract<keyof Output, string> : never,
-    VariantOf<DataAt<Output, S[I]>>,
+    VariantOf<DataAt<Output, S[I]>> | FigureVariantOf<DataAt<Output, S[I]>>,
     Key
   >
 }
@@ -346,6 +405,9 @@ type CheckedThings<Fns extends StudioFunctionMap, W, T, Key extends string> = {
       WidgetIdOf<W>,
       Key,
       PartsOf<T[K]>
+    >,
+    FigureVariantOf<
+      OutputOf<Fns, SourceOf<T[K]>> extends { head: infer H } ? H : unknown
     >
   >
 }

@@ -6,6 +6,7 @@ import { definePlugin } from './define-plugin.js'
 import type {
   DefinePlugin,
   StudioCardHead,
+  StudioFigure,
   StudioManifest,
   StudioSourceInput,
   StudioVariantData,
@@ -191,6 +192,18 @@ type Fns = {
       trend: { points: number[] }
     }
   }
+  readonly partCard: {
+    input: StudioSourceInput
+    output: { head: StudioCardHead<'fine', 'fig_asked' | 'fig_asked_none'> }
+  }
+  readonly homeScreen: {
+    input: StudioSourceInput
+    output: {
+      hello: StudioVariantData<'running'> & {
+        figures: StudioFigure<'fig_app'>[]
+      }
+    }
+  }
 }
 type Keys =
   | 'health__title'
@@ -203,6 +216,12 @@ type Keys =
   | 'problem_slow__compact'
   | 'forget__label'
   | 'forget__confirm'
+  | 'verdict__status'
+  | 'why_timeout'
+  | 'fig_asked__label'
+  | 'fig_note'
+  | 'nothing_yet'
+  | 'tag'
 const typedDefinePlugin = definePlugin as DefinePlugin<Fns, Keys>
 
 const failed = {
@@ -474,11 +493,149 @@ typedDefinePlugin({
   },
 })
 
+// Copy nests for deeper texts, `$` words a value that names a variant, and
+// variants the types cannot see (values, list items) may be worded too.
+typedDefinePlugin({
+  title: 't',
+  screens: [],
+  arrangedScreens: {
+    health: {
+      path: '/health-next',
+      title: 'health__title',
+      scope: 'project',
+      source: 'healthScreen',
+      slots: [
+        {
+          widget: 'verdict',
+          from: 'verdict',
+          copy: {
+            wrong: {
+              headline: 'verdict_wrong__headline',
+              status: { text: 'verdict__status' },
+              tags: { 0: 'tag' },
+            },
+            fine: { headline: 'verdict_fine__headline' },
+            why_timeout: { $: 'why_timeout' },
+          },
+        },
+      ],
+      actions: { open: { run: 'go:/health-next', label: 'forget__label' } },
+    },
+  },
+})
+
+typedDefinePlugin({
+  title: 't',
+  screens: [],
+  arrangedScreens: {
+    health: {
+      path: '/health-next',
+      title: 'health__title',
+      scope: 'project',
+      source: 'healthScreen',
+      slots: [
+        {
+          widget: 'verdict',
+          from: 'verdict',
+          copy: {
+            wrong: {
+              headline: 'verdict_wrong__headline',
+              // @ts-expect-error a nested text is a message key too
+              status: { text: 'Failing' },
+            },
+            fine: { headline: 'verdict_fine__headline' },
+          },
+        },
+      ],
+    },
+  },
+})
+
+// A head's figures are worded by their own variants in the same copy.
+typedDefinePlugin({
+  title: 't',
+  screens: [],
+  things: {
+    part: {
+      label: 'problem__label',
+      source: 'partCard',
+      copy: {
+        fine: failed,
+        fig_asked: { label: 'fig_asked__label', note: 'fig_note' },
+        fig_asked_none: { label: 'fig_asked__label', value: 'nothing_yet' },
+      },
+      parts: [],
+    },
+  },
+  arrangedScreens: {
+    home: {
+      path: '/home-next',
+      title: 'health__title',
+      scope: 'project',
+      source: 'homeScreen',
+      slots: [
+        {
+          widget: 'verdict',
+          from: 'hello',
+          copy: {
+            running: { headline: 'verdict_fine__headline' },
+            fig_app: { label: 'fig_asked__label', value: 'nothing_yet' },
+          },
+        },
+      ],
+    },
+  },
+})
+
+typedDefinePlugin({
+  title: 't',
+  screens: [],
+  things: {
+    part: {
+      label: 'problem__label',
+      source: 'partCard',
+      // @ts-expect-error the head can show 'fig_asked_none', which has no wording
+      copy: {
+        fine: failed,
+        fig_asked: { label: 'fig_asked__label', note: 'fig_note' },
+      },
+      parts: [],
+    },
+  },
+})
+
+typedDefinePlugin({
+  title: 't',
+  screens: [],
+  arrangedScreens: {
+    home: {
+      path: '/home-next',
+      title: 'health__title',
+      scope: 'project',
+      source: 'homeScreen',
+      slots: [
+        {
+          widget: 'verdict',
+          from: 'hello',
+          // @ts-expect-error the verdict's figure 'fig_app' has no wording
+          copy: { running: { headline: 'verdict_fine__headline' } },
+        },
+      ],
+    },
+  },
+})
+
 // A source returns a variant and raw values, never words.
 const _head: StudioCardHead<'failed'> = {
   variant: 'failed',
-  values: { count: 23, last: '2026-11-12T16:41:00Z', error: 'ECONNRESET' },
+  values: {
+    count: 23,
+    last: '2026-11-12T16:41:00Z',
+    error: 'ECONNRESET',
+    why: { variant: 'why_timeout' },
+  },
   tone: 'bad',
+  primary: { action: 'go:/health-next' },
 }
 void _head
 
@@ -494,3 +651,16 @@ const _badValue: StudioCardHead<'failed'> = {
   values: { at: new Date() },
 }
 void _badValue
+
+const _figures: StudioCardHead<'fine', 'fig_asked'> = {
+  variant: 'fine',
+  figures: [{ variant: 'fig_asked', value: { n: 120, unit: 'count' } }],
+}
+void _figures
+
+const _badFigure: StudioCardHead<'fine', 'fig_asked'> = {
+  variant: 'fine',
+  // @ts-expect-error a figure's value is a raw amount, never words
+  figures: [{ variant: 'fig_asked', value: '120 calls' }],
+}
+void _badFigure

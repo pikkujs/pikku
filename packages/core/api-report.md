@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3777 observable things**: 1256 exported names, plus
+**3781 observable things**: 1260 exported names, plus
 2521 members on the classes and interfaces among them, reachable
 through 68 entry points.
 
@@ -32,10 +32,10 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 17 | 15 | 27 |
+| `./addon` | 39 | 39 | 2 |
 | `./trace` | 19 | 19 | 21 |
 | `./db` | 11 | 11 | 29 |
 | `./function` | 32 | 27 | 10 |
-| `./addon` | 35 | 35 | 2 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
 | `./contributors` | 14 | 14 | 20 |
@@ -3618,11 +3618,12 @@ export type StudioAction<
   Fn extends string = string,
   Key extends string = string,
 > = {
-  run: Fn | StudioRpcRef
+  run: Fn | StudioRpcRef | StudioGoRef
   label: Key
 } & (
   { destructive: true; confirm: Key } | { destructive?: false; confirm?: Key }
 )
+export type StudioAmount = { n: number; unit: 'count' | 'ms' | 'percent' }
 export type StudioAppScreen = StudioScreenBase & {
   app: string
 }
@@ -3648,17 +3649,30 @@ export type StudioArrangedScreen<
   redirect?: { readonly [V in Variant]?: Target }
   poll?: StudioPoll
 }
-export type StudioCardHead<Variant extends string = string> =
-  StudioVariantData<Variant> & {
-    state?: 'wrong' | 'slow' | 'fine' | 'empty' | 'new'
-    tone?: 'bad' | 'warn' | 'good' | 'idle'
-    primary?: { action?: string }
-  }
+export type StudioCardHead<
+  Variant extends string = string,
+  FigureVariant extends string = string,
+> = StudioVariantData<Variant> & {
+  state?: 'wrong' | 'slow' | 'fine' | 'empty' | 'new'
+  tone?: 'bad' | 'warn' | 'good' | 'idle'
+  primary?: { action?: string }
+  figures?: readonly StudioFigure<FigureVariant>[]
+}
 export type StudioCompact = 'full' | 'tile' | 'hide'
 export type StudioComponentScreen = StudioScreenBase & {
   component: () => Promise<{ default: unknown }>
 }
+export type StudioCopy<
+  Required extends string = string,
+  Entry = StudioSlotCopy,
+  Key extends string = string,
+> = (string extends Required ? {} : { readonly [V in Required]: Entry }) & {
+  readonly [variant: string]: Entry | StudioSlotCopy<Key>
+}
+export type StudioFigure<Variant extends string = string> =
+  StudioVariantData<Variant> & { value?: StudioAmount }
 export type StudioFunctionMap = Record<string, { input: any; output: any }>
+export type StudioGoRef = `go:/${string}`
 export type StudioManifest = {
   title: string
   screens: StudioScreen[]
@@ -3686,10 +3700,10 @@ export type StudioSlot<
   from: From
   span?: StudioSpan
   compact?: StudioCompact
-  copy?: { readonly [V in Variant]: StudioSlotCopy<Key> }
+  copy?: StudioCopy<Variant, StudioSlotCopy<Key>, Key>
 }
 export type StudioSlotCopy<Key extends string = string> = {
-  readonly [text: string]: Key
+  readonly [text: string]: Key | StudioSlotCopy<Key>
 }
 export type StudioSourceInput = {
   projectKey: string
@@ -3706,26 +3720,29 @@ export type StudioThing<
   Variant extends string = string,
   Key extends string = string,
   Parts = readonly StudioSlot<WidgetId, From, string, Key>[],
+  FigureVariant extends string = string,
 > = {
   label: Key
   source: Fn | StudioRpcRef
-  copy: { readonly [V in Variant]: StudioThingCopy<Key> }
+  copy: StudioCopy<Variant, StudioThingCopy<Key>, Key> &
+    StudioCopy<FigureVariant, StudioSlotCopy<Key>, Key>
   parts: Parts
   related?: readonly Kind[]
   actions?: { readonly [id: string]: StudioAction<Fn, Key> }
   alwaysFull?: boolean
   measure?: 'narrow' | 'normal' | 'fill'
 }
-export type StudioThingCopy<Key extends string = string> = {
-  name: Key
-  lead?: Key
-  compact: Key
-  primary?: { label: Key; draft?: Key }
-}
+export type StudioThingCopy<Key extends string = string> =
+  StudioSlotCopy<Key> & {
+    name: Key
+    lead?: Key
+    compact: Key
+    primary?: { label: Key; draft?: Key }
+  }
 export type StudioValue = string | number
 export type StudioVariantData<Variant extends string = string> = {
   variant: Variant
-  values?: Record<string, StudioValue>
+  values?: Record<string, StudioValue | StudioVariantData>
 }
 export type StudioWidget<Key extends string = string> = {
   title: Key
