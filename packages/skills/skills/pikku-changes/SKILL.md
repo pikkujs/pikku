@@ -33,7 +33,9 @@ has kept for themselves is worth an `ask`.
 
 **The request's own finish line is the finish line.** When it names the checks to run (for example
 `pikku all` and `tsc --noEmit`), the build is done when they pass and `pikku meta workflows get <name>`
-lists the steps you meant. Knowledge notes (`knowledge/`, `pikku knowledge validate|gaps`), change
+lists the steps you meant: every addon function you use is there as an `<addon>:<function>` step. An
+addon reached through `rpc.invoke` inside a function of your own is not a step; move that call into the
+workflow. Knowledge notes (`knowledge/`, `pikku knowledge validate|gaps`), change
 requests and a second tour of the project are separate jobs: do them only when the request asks.
 
 ## The loop
