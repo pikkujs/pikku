@@ -1,7 +1,7 @@
 /**
  * A nats-server config with one stream and one user per stage, and
- * the exact permission lists those users need. The lists are what Studio would
- * generate; the tests prove they are enough to run a stage and not enough to
+ * the exact permission lists those users need. The lists are what the broker operator
+ * would generate; the tests prove they are enough to run a stage and not enough to
  * touch another.
  */
 import { spawn, type ChildProcess } from 'node:child_process'
@@ -12,8 +12,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 /**
- * One stage of one project: a broker user and the stream it owns. Studio
- * creates both up front; the app only ever attaches to them.
+ * One stage of one project: a broker user and the stream it owns. The broker
+ * operator creates both up front; the app only ever attaches to them.
  */
 export type Stage = {
   project: string
@@ -28,7 +28,7 @@ export const prefixOf = (s: Stage) => `pikku.${s.project}.${s.stage}`
 export const streamOf = (s: Stage) => `pikku_${s.project}_${s.stage}`
 
 /**
- * The stream Studio creates for a stage. The app never creates or changes it:
+ * The stream the broker operator creates for a stage. The app never creates or changes it:
  * workqueue so an acked job leaves, schedules on so cron and delays work, and
  * only the stage's own subjects so a schedule cannot name another stage.
  */

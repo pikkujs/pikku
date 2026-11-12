@@ -223,7 +223,7 @@ if (!natsOk || !bunOk) {
     return Object.keys(info.state.subjects ?? {}).sort()
   }
   const scheduleSeq = async (s: Stage, subject: string) =>
-    (await adminJsm.streams.getMessage(streamOf(s), { last_by_subj: subject }))
+    (await adminJsm.streams.getMessage(streamOf(s), { last_by_subj: subject }))!
       .seq
 
   try {

@@ -452,6 +452,28 @@ jobs:
       - name: Run fullstack verifier
         run: cd verifiers/fullstack && bun run test
 
+  # Needs a real nats-server (JetStream, 2.14+) for the run-side checks, which
+  # skip themselves when no binary is on the path, so it gets its own job that
+  # installs one and tells the suite where it is. A row in the matrix above would
+  # run the build checks only and report green.
+  verifiers-deploy-standalone-nats:
+    name: Verifiers (deploy-standalone-nats)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: build
+    env:
+      NATS_SERVER_VERSION: v2.15.2
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Install nats-server
+        run: |
+          curl -fsSL "https://github.com/nats-io/nats-server/releases/download/${NATS_SERVER_VERSION}/nats-server-${NATS_SERVER_VERSION}-linux-amd64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
+          echo "NATS_SERVER_BIN=$RUNNER_TEMP/nats-server-${NATS_SERVER_VERSION}-linux-amd64/nats-server" >> "$GITHUB_ENV"
+      - name: Run deploy-standalone-nats verifier
+        run: cd verifiers/deploy-standalone-nats && bun run test
+
   verifiers-binary:
     name: Binary (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

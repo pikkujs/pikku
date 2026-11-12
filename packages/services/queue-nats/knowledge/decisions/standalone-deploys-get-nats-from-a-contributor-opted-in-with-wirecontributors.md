@@ -26,7 +26,7 @@ opted-in deploy variant; that check predates this and was left alone.
 
 ## One stream per stage
 
-Whoever runs the broker (Studio) creates, up front, one stream per stage:
+Whoever runs the broker creates, up front, one stream per stage:
 `pikku_<project>_<stage>` (always derived; there is no override), subjects `pikku.<project>.<stage>.>`,
 workqueue, `allow_msg_schedules`. The factory runs in `attachToStream` mode: it
 only reads the stream and refuses one that is missing, does not cover the
@@ -118,7 +118,7 @@ server with the users in an `include`d file and `--signal reload=<pidfile>`.
   its own API. The data is A's own and request tokens are random, so nothing of
   B's is exposed. Drop push-consumer support later if only pull is needed.
 - `stagePermissions` does not validate project and stage. Whoever generates
-  credentials (Studio, S6) must apply the token rule itself: `[a-z0-9]+(-[a-z0-9]+)*`,
+  credentials (the broker operator) must apply the token rule itself: `[a-z0-9]+(-[a-z0-9]+)*`,
   at most 63. Without it, `a_b` + `c` and `a` + `b_c` name the same stream.
 - Stream names are always derived (`pikku_<project>_<stage>`); there is no
   `NATS_STREAM` override, because attach mode never needs a name other than the

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "pikku": "echo 'skip'",
-    "tsc": "echo 'skip'",
+    "tsc": "tsc --noEmit -p tsconfig.check.json",
     "build": "echo 'skip'",
     "test": "npx tsx test-nats.ts && npx tsx test-permissions.ts && npx tsx test-reload.ts"
   },

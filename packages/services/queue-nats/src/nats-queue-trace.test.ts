@@ -38,7 +38,7 @@ if (!servers) {
 
   // The same suite through the attach path the standalone contributor ships:
   // the options come from natsOptionsFromEnv, and the stage's own stream is
-  // created up front by a separate admin connection, as Studio does. The
+  // created up front by a separate admin connection, as the broker operator does. The
   // factory must only ever attach to it.
   const project = 'trace'
   const stage = `att${id}`

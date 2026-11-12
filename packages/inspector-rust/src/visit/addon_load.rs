@@ -64,6 +64,9 @@ pub struct AddonDecl {
     pub uses: Option<Record<String>>,
     /// The addon contributor names the project opted in to.
     pub contributors: Vec<String>,
+    /// A wireContributors entry: the contributors are taken from a plain
+    /// package that is not an addon.
+    pub contributors_only: bool,
     /// A wireRemoteAddon's local package: the screens and contributors shown
     /// under the remote name are read from it.
     pub(crate) local: Option<AddonLocal>,
@@ -132,6 +135,7 @@ impl AddonDecl {
             scopes: o.get("scopes").map(OJson::string_members).unwrap_or_default(),
             uses: string_record_of(o.get("uses")),
             contributors: o.get("contributors").map(OJson::string_members).unwrap_or_default(),
+            contributors_only: false,
             local,
             secret_overrides: object_record_of(o.get("secretOverrides")),
             variable_overrides: object_record_of(o.get("variableOverrides")),
@@ -163,6 +167,10 @@ impl Context<'_> {
     /// generated metadata so the routes sweep can resolve addon functions.
     pub fn load_addon_functions_meta(&mut self) {
         let mut l = Loader { state: self.state, log: self.log, root_dir: &self.root_dir };
+        for decl in &self.contributor_wirings {
+            let req = AddonResolver(addon_resolution_dirs(l.root_dir, &decl.file));
+            l.record_opted_in_contributors(&decl.pkg, decl, &req);
+        }
         l.load_addon_functions_meta();
     }
 }
@@ -560,12 +568,13 @@ impl Loader<'_> {
     /// for a service and would otherwise build without it.
     fn record_opted_in_contributors(&mut self, ns: &str, decl: &AddonDecl, req: &AddonResolver) {
         let mut registered = OJson::new_object();
+        let via = if decl.contributors_only { format!("wireContributors('{ns}')") } else { format!("wireAddon('{ns}')") };
         if let Some(path) = resolve_addon_meta(req, &decl.pkg, "contributors/pikku-contributors-meta") {
             match read_json_file(&path) {
                 Err(e) => {
                     self.log.critical(
                         codes::ADDON_CONTRIBUTOR_UNKNOWN,
-                        format!("wireAddon('{ns}') opts in to contributors, but the contributors manifest of {} could not be read: {e}", decl.pkg),
+                        format!("{via} opts in to contributors, but the contributors manifest of {} could not be read: {e}", decl.pkg),
                     );
                     return;
                 }
@@ -591,7 +600,7 @@ impl Loader<'_> {
                     };
                     self.log.critical(
                         codes::ADDON_CONTRIBUTOR_UNKNOWN,
-                        format!("wireAddon('{ns}') opts in to contributor '{name}', but {} registers no such contributor. {hint}", decl.pkg),
+                        format!("{via} opts in to contributor '{name}', but {} registers no such contributor. {hint}", decl.pkg),
                     );
                 }
                 Some(v) => selected.set(name, v.clone()),
@@ -603,6 +612,9 @@ impl Loader<'_> {
         let mut entry = OJson::new_object();
         entry.set("packageName", OJson::string(&decl.pkg));
         entry.set("contributors", selected);
+        if decl.contributors_only {
+            entry.set("file", OJson::string(&decl.file));
+        }
 
         let mut all = OJson::new_object();
         if let Some(existing) = ojson_of_raw(&self.state.opted_in_contributors)

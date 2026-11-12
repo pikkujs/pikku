@@ -38,6 +38,7 @@ pub mod group_addon_bans;
 pub mod group_approval_description;
 pub mod group_analytics;
 pub mod group_define_contributors;
+pub mod group_wire_contributors;
 pub mod group_feature;
 pub mod group_feature_flag;
 pub mod group_channel;
@@ -166,6 +167,9 @@ pub struct Context<'a> {
     pub core_types: Vec<CoreType>,
     /// Go `cliConfigTypeWarned`: the missing-Config warning is logged once.
     pub cli_config_type_warned: bool,
+    /// Go `contributorWirings`: the wireContributors calls, build-time opt-ins
+    /// to a package's contributors that is not an addon.
+    pub contributor_wirings: Vec<addon_load::AddonDecl>,
 }
 
 /// Go `coreType`: a core interface's name and its symbol.
@@ -188,6 +192,7 @@ impl<'a> Context<'a> {
             types_lookup: HashMap::new(),
             core_types: Vec::new(),
             cli_config_type_warned: false,
+            contributor_wirings: Vec::new(),
         }
     }
 
@@ -257,6 +262,7 @@ pub fn register_groups(r: &mut Registry) {
     group_virtual_users::register(r);
     group_analytics::register(r);
     group_define_contributors::register(r);
+    group_wire_contributors::register(r);
     group_pikku_studio::register(r);
     group_middleware::register(r);
     group_permission::register(r);

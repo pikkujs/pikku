@@ -78,7 +78,7 @@ fn str_value(s: &str) -> Option<Value> {
 }
 
 /// A property's key when it is `key: value` with an identifier or string name.
-fn prop_key(p: P<Node>) -> Option<&'static str> {
+pub(crate) fn prop_key(p: P<Node>) -> Option<&'static str> {
     if !is_property_assignment(p) {
         return None;
     }

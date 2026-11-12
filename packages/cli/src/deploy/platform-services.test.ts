@@ -39,7 +39,7 @@ describe('writeUnitPlatformServices', () => {
     )
     writeFileSync(
       join(root, 'node_modules', 'addon', 'src', 'fake-only.ts'),
-      `export const fakeOnly = { provides: ['marker'], when: (p: any) => p.provider === 'fake', run(s: any) { s.marker = 1 } }\n`
+      `export const fakeOnly = { provides: ['marker'], when: (p: { provider?: string }) => p.provider === 'fake', run(s: Record<string, unknown>) { s.marker = 1 } }\n`
     )
     writeFileSync(
       join(root, 'node_modules', 'addon', 'src', 'bindings.ts'),
@@ -120,7 +120,7 @@ describe('writeUnitPlatformServices', () => {
   test('the platform names the provider, so a contributor can apply to one target only', async () => {
     const st = state('fakeOnly', 'src/fake-only.ts', 'fakeOnly')
     assert.ok(await run('api', st))
-    const other = { ...(provider(['env']) as any), name: 'cloudflare' } as never
+    const other = { ...provider(['env']), name: 'cloudflare' } as never
     assert.equal(await run('api', st, other), undefined)
   })
 

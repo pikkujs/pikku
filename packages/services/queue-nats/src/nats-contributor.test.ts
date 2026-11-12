@@ -20,15 +20,15 @@ const fakeFactory = () => {
   const schedulerService = { kind: 'scheduler' }
   const factory = {
     init: async () => void calls.push('init'),
-    getQueueService: () => queueService as any,
-    getSchedulerService: () => schedulerService as any,
+    getQueueService: () => queueService as never,
+    getSchedulerService: () => schedulerService as never,
     getQueueWorkers: () =>
       ({
         registerQueues: async (logger: unknown) => {
           calls.push(`registerQueues:${logger === 'logger'}`)
           return {}
         },
-      }) as any,
+      }) as never,
     drainWorkers: async (ms: number) => {
       calls.push(`drain:${ms}`)
       return ['slow']
@@ -48,7 +48,7 @@ describe('nats contributor registration', () => {
   test('is selected only for a standalone deploy that uses the queue', () => {
     const nats = createNatsDeploy()
     const platform = (needsQueue: boolean, provider?: string) =>
-      ({ serviceNames: [], needsQueue, provider }) as any
+      ({ serviceNames: [], needsQueue, provider }) as never
     assert.equal(nats.when!(platform(true, 'standalone')), true)
     assert.equal(nats.when!(platform(false, 'standalone')), false)
   })
@@ -57,7 +57,7 @@ describe('nats contributor registration', () => {
     const nats = createNatsDeploy()
     for (const provider of ['cloudflare', 'aws', 'azure', '', undefined]) {
       assert.equal(
-        nats.when!({ serviceNames: [], needsQueue: true, provider } as any),
+        nats.when!({ serviceNames: [], needsQueue: true, provider } as never),
         false,
         String(provider)
       )
@@ -144,31 +144,47 @@ describe('natsOptionsFromEnv', () => {
   })
 })
 
+type Lifecycle = {
+  registerQueues(logger: unknown): Promise<unknown>
+  drainWorkers(timeoutMs: number): Promise<string[]>
+  close(): Promise<void>
+}
+type Services = {
+  queueService?: unknown
+  schedulerService?: unknown
+  natsLifecycle?: Lifecycle
+}
+
 const lifecycleOf = async (fake: ReturnType<typeof fakeFactory>) => {
-  const services: Record<string, any> = {}
-  await createNatsDeploy(() => fake.factory).run(services, env, {}, {} as any)
+  const services: Services = {}
+  await createNatsDeploy(() => fake.factory).run(services, env, {}, {} as never)
   fake.calls.length = 0
-  return services.natsLifecycle
+  return services.natsLifecycle as Lifecycle
 }
 
 describe('nats contributor lifecycle', () => {
   test('run connects, then provides queue, scheduler and the factory', async () => {
     const fake = fakeFactory()
-    const services: Record<string, any> = {}
-    await createNatsDeploy(() => fake.factory).run(services, env, {}, {} as any)
+    const services: Services = {}
+    await createNatsDeploy(() => fake.factory).run(
+      services,
+      env,
+      {},
+      {} as never
+    )
     assert.deepEqual(fake.calls, ['init'])
     assert.equal(services.queueService, fake.queueService)
     assert.equal(services.schedulerService, fake.schedulerService)
     // The server stops every singleton service that has stop(); this one must
     // not, or the workers close before onServerStop can drain them.
-    assert.equal('stop' in services.natsLifecycle, false)
-    assert.equal(services.natsLifecycle.drainWorkers.length, 1)
+    assert.equal('stop' in services.natsLifecycle!, false)
+    assert.equal(services.natsLifecycle!.drainWorkers.length, 1)
   })
 
   test('run fails before connecting when the env is incomplete', async () => {
     const fake = fakeFactory()
     await assert.rejects(
-      createNatsDeploy(() => fake.factory).run({}, {}, {}, {} as any),
+      createNatsDeploy(() => fake.factory).run({}, {}, {}, {} as never),
       /needs NATS_URL/
     )
     assert.deepEqual(fake.calls, [])

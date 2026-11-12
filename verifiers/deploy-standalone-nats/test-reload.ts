@@ -2,7 +2,7 @@
  * Real-broker proof of what a stage's connection does when the broker's users
  * file changes, of the scheduler's scoped permissions, and of how many users a
  * file can hold. The users sit in an `include`d file and are reloaded with
- * `nats-server --signal reload=<pidfile>`, which is what Studio would do.
+ * `nats-server --signal reload=<pidfile>`, which is what the broker operator would do.
  *
  *  - R3: a job survives a reload, with the stage's user unchanged and with its
  *    permissions changed (the server closes that connection; the client must
@@ -10,7 +10,7 @@
  *  - 5.4: removing a user on reload closes its connection.
  *  - 2.P5-4: unschedule / getTask / getAllTasks / pruneAll work in attach mode
  *    under the stage's restricted permissions, on its own stream only.
- *  - S6 inputs: per-stream limits refuse a runaway stage; reload time with N
+ *  - Broker operation inputs: per-stream limits refuse a runaway stage; reload time with N
  *    users in one file (N = SCALE_USERS, default 200) and as N accounts.
  *
  * Needs NATS_SERVER_BIN or nats-server on PATH (2.14+); skips otherwise.
@@ -32,6 +32,8 @@ import {
   RetentionPolicy,
   jetstream,
   jetstreamManager,
+  type JetStreamClient,
+  type JetStreamManager,
 } from '@nats-io/jetstream'
 import {
   freePort,
@@ -178,7 +180,10 @@ const factoryFor = (s: Stage) =>
 console.log('A job survives a reload of the users file (attach mode)')
 const fa = factoryFor(A)
 await fa.init()
-const internals = fa as unknown as { js: any; jsm: any }
+const internals = fa as unknown as {
+  js: JetStreamClient
+  jsm: JetStreamManager
+}
 const done: string[] = []
 let inFlight = 0
 let lost = 0
@@ -188,9 +193,8 @@ const handle = await consumeQueue({
   streamName: streamOf(A),
   subjectPrefix: prefixOf(A),
   queueName: 'jobs',
-  consumerNamePrefix: undefined,
   config: mapPikkuWorkerToNats({ batchSize: 5, lockDuration: 3_000 }),
-  onConnectionLost: () => lost++,
+  logger: { error: () => void lost++, info: () => {} },
   handler: async (msg) => {
     inFlight++
     const id = (msg.json() as { id: string }).id
@@ -206,7 +210,7 @@ const handle = await consumeQueue({
     done.push(id)
     inFlight--
   },
-} as any)
+})
 const queue = fa.getQueueService()
 
 await check(
@@ -359,7 +363,7 @@ await check(
   }
 )
 
-console.log('\nPer-stream limits (S6)')
+console.log('\nPer-stream limits')
 await check(
   'discard new cannot be combined with message schedules, so a hard refusal is not available per stream',
   async () => {
@@ -552,7 +556,10 @@ await check(
     if (stale !== 0) throw new Error('the old process reconnected by itself')
     const again = factoryFor(A)
     await again.init()
-    const internals2 = again as unknown as { js: any; jsm: any }
+    const internals2 = again as unknown as {
+      js: JetStreamClient
+      jsm: JetStreamManager
+    }
     const h2 = await consumeQueue({
       js: internals2.js,
       jsm: internals2.jsm,
@@ -564,7 +571,7 @@ await check(
         done.push((msg.json() as { id: string }).id)
         await msg.ackAck()
       },
-    } as any)
+    })
     await until(
       'j5 done by the restarted stage',
       () => done.includes('j5'),

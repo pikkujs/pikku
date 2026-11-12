@@ -182,6 +182,12 @@ wireAddon({
 })
 ```
 
+A package that is not an addon but registers contributors is opted in with
+`wireContributors({ package: '@my-org/queue', contributors: ['nats'] })`
+(build-time only, no addon is declared). `platform.provider` tells a `when`
+which deploy provider is building (`standalone`, `cloudflare`, ...); it is unset
+under `pikku dev`.
+
 Nothing is injected without that list. `pikku all` resolves the `dev` variants
 (dropping what `when` or `requires` rules out, ordering by `needs`/`provides`)
 and writes `.pikku/contributors/pikku-dev-contributors.gen.ts`; `pikku dev` and

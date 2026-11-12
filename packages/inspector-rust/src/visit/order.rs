@@ -19,6 +19,7 @@ pub const ADD_RPC_INVOCATIONS: i32 = 100;
 pub const ADD_WIRE_ADDON: i32 = 110;
 pub const ADD_PIKKU_STUDIO: i32 = 120;
 pub const ADD_DEFINE_CONTRIBUTORS: i32 = 125;
+pub const ADD_WIRE_CONTRIBUTORS: i32 = 126;
 pub const ADD_WIRE_REMOTE_ADDON: i32 = 130;
 pub const ADD_MIDDLEWARE: i32 = 140;
 pub const ADD_PERMISSION: i32 = 150;

@@ -42,6 +42,6 @@
     "!dist/**/*.tsbuildinfo"
   ],
   "devDependencies": {
-    "@pikku/cli": "^0.12.208"
+    "@pikku/cli": "workspace:*"
   }
 }

@@ -144,6 +144,29 @@ The type is the editor-time guard; the build is the backstop. A name the addon d
 
 The services contributors build reach your app as the second argument of `createSingletonServices(config, existingServices)`, so read them from `existingServices` and put them on the object you return.
 
+### Contributors from a plain package: `wireContributors`
+
+A package that registers contributors with `defineContributors` but is not an addon (it has no functions or screens to wire) is opted in with `wireContributors`, which declares no addon:
+
+```ts
+import { wireContributors } from '@pikku/core/contributors'
+
+wireContributors({
+  package: '@my-org/queue',
+  contributors: ['nats'],
+})
+```
+
+It is read statically at build time and does nothing when the app runs. The package and every name must be string literals (PKU362 otherwise), and a name the package does not register is PKU363, as for `wireAddon`.
+
+### Choosing by deploy provider
+
+`platform.provider` is the deploy provider building the unit (`standalone`, `cloudflare`, ...). Every deploy build sets it; `pikku dev` never does, and a `when` should treat an unset value as "not mine":
+
+```ts
+when: (platform) => platform.needsQueue && platform.provider === 'standalone'
+```
+
 ### Hosts that inject an addon
 
 A host that adds an addon on the project's behalf (CI, Pikku Studio) does the same thing. It writes a host-owned, gitignored wiring file in the project's source tree containing `wireAddon({ name, package, contributors })`. There is no config-file route for contributors: a config cannot carry source.

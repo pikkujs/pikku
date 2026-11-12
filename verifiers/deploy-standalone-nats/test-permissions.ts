@@ -2,7 +2,7 @@
  * Broker-level proof that stages of one project, each with its own JetStream
  * stream and its own restricted user, cannot touch each other. Real
  * nats-server (2.14+); streams and users are created by an admin, the way
- * Studio would (broker.ts).
+ * the broker operator would (broker.ts).
  *
  * Needs NATS_SERVER_BIN or nats-server on PATH; skips otherwise.
  */
@@ -127,7 +127,7 @@ await check(
       const batch = await consumer.fetch({ max_messages: 5, expires: 1_500 })
       const got: string[] = []
       for await (const m of batch) {
-        got.push((m.json() as any).for)
+        got.push((m.json() as { for: string }).for)
         m.ack()
       }
       if (got.join() !== s.stage)
@@ -245,7 +245,7 @@ await check(
     )
     await denied('create own name', () => a.jsm.streams.add(streamConfig(A)))
     await denied('update', () =>
-      a.jsm.streams.update(streamOf(A), { subjects: ['pikku.>'] } as any)
+      a.jsm.streams.update(streamOf(A), { subjects: ['pikku.>'] })
     )
     await denied('delete', () => a.jsm.streams.delete(streamOf(A)))
   }
