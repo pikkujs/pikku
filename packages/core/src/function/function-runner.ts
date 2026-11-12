@@ -75,6 +75,7 @@ import { closeWireServices } from '../utils.js'
 import {
   endFunctionSpan,
   openFunctionSpan,
+  recordFunctionSpanIdentity,
   runInFunctionSpan,
 } from './function-span.js'
 
@@ -674,6 +675,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         configurable: true,
         enumerable: true,
       })
+      if (openSpan) recordFunctionSpanIdentity(openSpan)
       const functionStartedAt = performance.now()
       try {
         return await funcConfig.func(

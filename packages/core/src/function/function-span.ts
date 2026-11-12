@@ -177,6 +177,25 @@ const readUserId = (wire: PikkuWire): string | undefined => {
 }
 
 /**
+ * Writes the identity the session carries onto the span now. A session a
+ * middleware establishes after the span opened is not in its start attributes;
+ * the runner calls this just before the function body, so a log line written in
+ * the body (which inherits the span's attributes) carries it, not only the span
+ * once it ends. Never throws.
+ */
+export const recordFunctionSpanIdentity = (open: FunctionSpan) => {
+  const { span, tracer, logger, wire } = open
+  if (isTracerDisabled(tracer)) return
+  try {
+    for (const [key, value] of Object.entries(identityAttributes(wire))) {
+      span.setAttribute(key, value)
+    }
+  } catch (error) {
+    disableTracer(tracer, logger, error)
+  }
+}
+
+/**
  * Closes the span with the invocation's outcome. Never throws and never alters
  * the error the caller is about to rethrow.
  */

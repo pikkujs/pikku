@@ -21,8 +21,11 @@ own trace, copies `CONTEXT_ATTRIBUTES` from it: `pikku.function.id`,
 list is fixed: a span's other attributes (a route, a duration, a queue) are not
 part of a log line.
 
-Limits. `pikku.user.id` and `pikku.org.id` are written to the span when it ends,
-so a line logged while the function runs does not have them yet. A logger
+Limits. A session a middleware establishes after the span opened is not in its start
+attributes; the runner writes the identity (`pikku.user.id`, `pikku.org.id`,
+`pikku.impersonated`, `pikku.impersonated.by`) onto the span again just before the
+function body, so a line logged in the body has it, while a line logged by a
+middleware before the session is set does not. A logger
 `scope`d to another trace carries nothing of the current span. `pikku.function.version`
 is the `vN` of a versioned function id and is absent for an unversioned one.
 

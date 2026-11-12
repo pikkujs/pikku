@@ -352,6 +352,44 @@ describe('runPikkuFunc - spans', () => {
     assert.ok(!('pikku.impersonated' in tracer.spans[1]!.attributes))
   })
 
+  test('a session a middleware sets after the span opened is on the span before the function body runs', async () => {
+    class LiveTracer extends RecordingTracer {
+      live: Record<string, unknown> = {}
+      override startSpan(
+        ...args: Parameters<RecordingTracer['startSpan']>
+      ): ReturnType<RecordingTracer['startSpan']> {
+        const span = super.startSpan(...args)
+        this.live = { ...(args[2]?.attributes ?? {}) }
+        const set = span.setAttribute.bind(span)
+        span.setAttribute = (key, value) => {
+          this.live[key] = value
+          set(key, value)
+        }
+        return span
+      }
+    }
+    const tracer = new LiveTracer()
+    let seenInBody: Record<string, unknown> = {}
+    addTestFunction('late', {
+      func: async () => {
+        seenInBody = { ...tracer.live }
+      },
+      middleware: [
+        async (_s: unknown, wire: any, next: () => Promise<void>) => {
+          wire.session = {
+            userId: 'u_target',
+            impersonated: { by: 'u_admin' },
+          }
+          await next()
+        },
+      ],
+    })
+    await run('late', tracer, { trace: createTrace() })
+    assert.equal(seenInBody['pikku.user.id'], 'u_target')
+    assert.equal(seenInBody['pikku.impersonated'], true)
+    assert.equal(seenInBody['pikku.impersonated.by'], 'u_admin')
+  })
+
   test('an http span carries method, route and status; a nested call on its wire does not', async () => {
     const tracer = new RecordingTracer()
     addTestFunction('route', { func: async () => 1 })

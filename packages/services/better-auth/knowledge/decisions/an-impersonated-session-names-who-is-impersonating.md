@@ -20,7 +20,9 @@ builds and is never read from request input.
 
 The function span writes `pikku.impersonated` (a boolean, `true`) and
 `pikku.impersonated.by` when it opens, beside `pikku.user.id` and
-`pikku.org.id`, and again at its end. Both are in the attribute allow-list and in
+`pikku.org.id`, and again just before the function body (a middleware such as
+the better-auth session one sets the session after the span opens) and at its
+end. Both are in the attribute allow-list and in
 the logger's `CONTEXT_ATTRIBUTES`, so a log line written inside the span carries
 them. A normal session has neither attribute: there is no `false` to write.
 
