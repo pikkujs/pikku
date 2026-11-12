@@ -1,5 +1,12 @@
 import { existsSync, readFileSync } from 'fs'
-import { dirname, join, relative as relativePath, resolve, sep } from 'path'
+import {
+  basename,
+  dirname,
+  join,
+  relative as relativePath,
+  resolve,
+  sep,
+} from 'path'
 import { mkdir, writeFile } from 'fs/promises'
 import { spawnSync } from 'node:child_process'
 import { findInstallRoot } from './update.js'
@@ -280,7 +287,6 @@ export function getAddonFiles(
         'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
       tsconfig: './tsconfig.json',
       srcDirectories: ['src', 'types'],
-      outDir: './.pikku',
       addon: {
         displayName,
         description,
@@ -843,7 +849,6 @@ export function getTestFiles(vars: AddonVars): Record<string, string> {
       $schema:
         'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
       srcDirectories: ['./src', './types'],
-      outDir: './.pikku',
       tsconfig: './tsconfig.json',
     },
     null,
@@ -1223,6 +1228,13 @@ function findAppProject(
   return { root, srcDir: join(root, src) }
 }
 
+/** Where a generated addon goes for an app: beside it when the app lives in packages/<app>, else <app>/packages. */
+export function appPackagesDir(appRoot: string): string {
+  return basename(dirname(appRoot)) === 'packages'
+    ? dirname(appRoot)
+    : join(appRoot, 'packages')
+}
+
 export type NewAddonInput = {
   name: string
   ui?: boolean
@@ -1312,7 +1324,10 @@ export async function newAddon(
   }
 
   // Resolve target directory
-  const workspacePackages = app ? join(app.root, 'packages') : undefined
+  // An app whose config sits in packages/<app> (the usual monorepo) puts the
+  // addon beside it, so the `packages/*` workspace picks it up; otherwise in
+  // <app>/packages.
+  const workspacePackages = app ? appPackagesDir(app.root) : undefined
   const baseDir =
     dir ||
     config.scaffold?.addonDir ||
