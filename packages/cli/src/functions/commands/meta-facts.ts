@@ -329,6 +329,8 @@ export type ProjectFacts = {
   configFile: string
   /** Where new files go, so nobody lists directories to find out. */
   layout?: string
+  /** Where a workflow, its functions, addons, tables and variables go; printed after the agent facts. */
+  buildLayout?: string[]
   runner: AgentRunnerFacts | null
   texts: TextFacts[]
   frontends: FrontendFacts[]
@@ -404,6 +406,15 @@ const frontendLines = (
 export const layoutFacts = (srcDir: string): string =>
   `an agent is ${srcDir}/agents/<name>.agent.ts, its tools are functions in ${srcDir}/functions/<name>.function.ts, a route or cron that reaches it is ${srcDir}/wirings/<name>.wiring.ts (or expose: true on the agent); pikku doc agents is the recipe`
 
+/** Where the parts of a workflow build go, so nobody has to `ls` and `cat` the project to find out. */
+export const buildLayoutFacts = (srcDir: string): string[] => [
+  `workflow: ${srcDir}/wirings/<name>.workflow.ts (pikkuWorkflowFunc; mkdir -p ${srcDir}/wirings), started by ${srcDir}/wirings/<name>.http.ts (wireHTTP) or a schedule, calling a starter function with rpc.startWorkflow('<workflowName>', data); steps are workflow.do('<step name>', '<function or addon:function>', input, { retries })`,
+  `functions: ${srcDir}/functions/<area>/<name>.function.ts (pikkuSessionlessFunc); a database read or write is its own function`,
+  `addons: \`pikku addons add <name>\` installs, wires (${srcDir}/addons/<name>.addon.ts) and prints what to fill in; \`pikku meta grep <name> <words>\` then \`pikku meta functions get <name>:<function>\` give the steps' inputs`,
+  `tables: db/tables.ts (defineTables from @pikku/kysely), then \`pikku db generate && pikku db migrate\`; config values: ${srcDir}/definitions/<name>.ts (defineVariable, its schema an exported constant)`,
+  'check: `pikku all && pikku check`; `pikku meta workflows get <name>` lists the steps (an addon call is an <addon>:<function> step)',
+]
+
 /** One line per agent: what it runs on and which tools it lists. */
 export const agentSummaries = (
   agentsMeta: Record<string, any> | undefined
@@ -440,6 +451,7 @@ export const formatProjectFacts = (facts: ProjectFacts): string[] => {
       ? [`agents: none yet${facts.layout ? `; ${facts.layout}` : ''}`]
       : ['agents:', ...facts.agents.map((agent) => `  ${agent}`)]),
     `model aliases: ${listOr(aliases, 'none yet')}; add in ${facts.configFile} "models" as "alias": "provider/model"`,
+    ...(facts.buildLayout ?? []),
     ...(facts.runner ? [runnerLine(facts.runner)] : []),
     ...facts.texts.flatMap((text) => textLines(text, facts.texts.length > 1)),
     ...facts.frontends.flatMap((frontend) =>

@@ -12,6 +12,7 @@ import {
   agentRunnerFacts,
   agentSummaries,
   layoutFacts,
+  buildLayoutFacts,
   formatProjectFacts,
   frontendFacts,
   readSources,
@@ -103,6 +104,9 @@ const readProjectFacts = async (config: any, state: any): Promise<string[]> => {
       ? relative(rootDir, config.configFile)
       : 'pikku.config.json',
     layout: layoutFacts((config.srcDirectories ?? ['src'])[0] ?? 'src'),
+    buildLayout: buildLayoutFacts(
+      (config.srcDirectories ?? ['src'])[0] ?? 'src'
+    ),
     runner: servicesFile ? agentRunnerFacts(servicesFile, rootDir) : null,
     texts: apps.map((app) => {
       const dir = resolve(root, app.app)
