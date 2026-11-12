@@ -6,7 +6,14 @@ import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { CoreServices } from '../types/core.types.js'
 import { MissingSessionError } from '../errors/errors.js'
 import { RecordingTracer } from '../testing/recording-tracer.js'
-import { childTraceWire, createTrace, formatTraceparent } from '../trace.js'
+import { AsyncLocalStorage } from 'node:async_hooks'
+import {
+  childTraceWire,
+  createTrace,
+  formatTraceparent,
+  type TraceContext,
+} from '../trace.js'
+import { asContextStorage } from '../otlp/runtime-telemetry.js'
 import { runTraceWire } from '../wirings/workflow/workflow-run-trace.js'
 import type { Tracer } from '../tracer.js'
 import type { PikkuWiringTypes } from '../types/core.types.js'
@@ -406,6 +413,36 @@ describe('runPikkuFunc - spans', () => {
     assert.equal(await run('scoped', tracer, { trace }), 'v')
     assert.deepEqual(seen, [trace.spanId])
     assert.equal((readInside as { spanId: string }).spanId, trace.spanId)
+  })
+
+  test('a service with no wire parents its client span on the function span through currentContext', async () => {
+    const tracer = new RecordingTracer({
+      contextStorage: asContextStorage(new AsyncLocalStorage<TraceContext>()),
+    })
+    const startupService = {
+      call: async () => {
+        const parent = tracer.currentContext()
+        if (!parent) return
+        tracer
+          .startSpan('HTTP GET', childTraceWire(parent).trace, {
+            kind: 'client',
+          })
+          .end({ code: 'ok' })
+      },
+    }
+    addTestFunction('egress', {
+      func: async () => {
+        await startupService.call()
+        return 'v'
+      },
+    })
+    const trace = createTrace()
+    assert.equal(await run('egress', tracer, { trace }), 'v')
+    await startupService.call()
+    const client = tracer.spans.filter((s) => s.kind === 'client')
+    assert.equal(client.length, 1)
+    assert.equal(client[0]!.traceId, trace.traceId)
+    assert.equal(client[0]!.parentSpanId, trace.spanId)
   })
 
   test('runInSpan is not called for an unsampled trace or a tracer without it', async () => {

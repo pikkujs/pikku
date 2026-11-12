@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3692 observable things**: 1218 exported names, plus
-2474 members on the classes and interfaces among them, reachable
+**3696 observable things**: 1218 exported names, plus
+2478 members on the classes and interfaces among them, reachable
 through 67 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -28,11 +28,11 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
 | `./trigger` | 43 | 43 | 13 |
-| `./testing` | 18 | 18 | 32 |
+| `./testing` | 18 | 18 | 35 |
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 17 | 15 | 27 |
-| `./trace` | 19 | 19 | 20 |
+| `./trace` | 19 | 19 | 21 |
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
@@ -6020,6 +6020,7 @@ tracedLogger: (logger: Logger, traceId?: string | undefined) => Logger
 export interface Tracer {
   startSpan(name: string, context: TraceContext, options?: { kind?: SpanKind; attributes?: Record<string, SpanAttributeValue>; startTimeUnixNano?: bigint }): Span
   runInSpan?<T>(span: Span, fn: () => T): T
+  currentContext?(): TraceContext | undefined
   flush?(): Promise<void>
   close?(): Promise<void>
 }
@@ -7149,6 +7150,9 @@ export type QueueTraceAdapter = {
 export class RecordingTracer implements Tracer {
   readonly spans: FinishedSpan[]
   readonly stats: { dropped: number; started: number; }
+  constructor(private readonly options: { contextStorage?: ContextStorage } = {})
+  runInSpan<T>(span: Span, fn: () => T): T
+  currentContext(): TraceContext | undefined
   startSpan(name: string, context: TraceContext, options: { kind?: SpanKind; attributes?: Record<string, SpanAttributeValue>; startTimeUnixNano?: bigint } = {}): Span
 }
 export interface ServiceTestConfig {
