@@ -52,6 +52,13 @@ export type StaticMount = {
 export type BunServerConfig = CoreConfig & {
   port: number
   hostname?: string
+  /**
+   * Seconds a connection may sit idle before Bun closes it. Left unset, Bun's
+   * own default (10s) applies, which cuts quiet SSE streams and long polls
+   * whose heartbeat is slower than that. Bun's maximum is 255; 0 disables the
+   * timeout.
+   */
+  idleTimeout?: number
   staticMounts?: StaticMount[]
   healthCheckPath?: string
   /**
@@ -281,6 +288,9 @@ export class PikkuBunServer {
     this.server = Bun.serve<WsData>({
       port: config.port,
       hostname: config.hostname,
+      ...(config.idleTimeout !== undefined && {
+        idleTimeout: config.idleTimeout,
+      }),
 
       fetch: async (req, server) => {
         if (req.headers.get('upgrade')?.toLowerCase() === 'websocket') {

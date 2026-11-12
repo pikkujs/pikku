@@ -1,5 +1,18 @@
 # @pikku/bun-server
 
+## 0.12.17
+
+### Patch Changes
+
+- aac0cdf: Add an optional `idleTimeout` server config (seconds) passed to `Bun.serve`, so quiet SSE streams are not cut at Bun's 10s default. Unset keeps the current behaviour.
+- Updated dependencies [60f3aa7]
+- Updated dependencies [70ee10a]
+- Updated dependencies [42f4280]
+- Updated dependencies [cedc84c]
+- Updated dependencies [996d0af]
+- Updated dependencies [de7d8cf]
+  - @pikku/core@0.12.156
+
 ## 0.12.16
 
 ### Patch Changes

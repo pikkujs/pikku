@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/microsoft/typescript-go/shim/ast"
+	"github.com/microsoft/typescript-go/shim/checker"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
@@ -168,15 +169,22 @@ func (s *Context) addWireTriggerWebhookSource(node, obj *ast.Node) {
 		o.set(step, id)
 		s.State.ServiceAggregation.UsedFunctions.Add(id)
 	}
-	s.State.Triggers.WebhookSourceMeta.Set(name, o.raw())
-	s.State.Triggers.Files.Add(file)
-
-	if s.getPropertyAssignmentInitializer(obj, "verify", false) == nil {
-		return
-	}
+	verify := s.getPropertyAssignmentInitializer(obj, "verify", true)
 	credential := webhookSecretCredentialName(name)
 	if v := tsutil.GetPropertyValue(obj, "credential"); v.Present {
 		credential = v.AsString()
+	}
+	if verify != nil {
+		if v := s.webhookVerifyMeta(verify); v != nil {
+			o.set("verify", v)
+		}
+		o.set("credential", credential)
+	}
+	s.State.Triggers.WebhookSourceMeta.Set(name, o.raw())
+	s.State.Triggers.Files.Add(file)
+
+	if verify == nil {
+		return
 	}
 	var c jsObject
 	c.set("name", credential)
@@ -189,6 +197,52 @@ func (s *Context) addWireTriggerWebhookSource(node, obj *ast.Node) {
 	c.set("sourceFile", file)
 	s.State.Credentials.Files.Add(file)
 	s.State.Credentials.Definitions = append(s.State.Credentials.Definitions, c.raw())
+}
+
+var webhookVerifyKinds = []string{"hmac", "token", "publicKey"}
+
+// webhookVerifyMeta is the scheme a source's verify declares, with the header
+// and algorithm only when they are written as string literals. A function, or
+// a value whose scheme is known only from its type, records the kind alone.
+func (s *Context) webhookVerifyMeta(init *ast.Node) state.Raw {
+	init = tsutil.UnwrapNonNullParens(tsutil.UnwrapAs(init))
+	var o jsObject
+	if ast.IsObjectLiteralExpression(init) {
+		for _, kind := range webhookVerifyKinds {
+			p := tsutil.FindPropertyAssignment(init, kind)
+			if p == nil {
+				continue
+			}
+			o.set("kind", kind)
+			if inner := tsutil.UnwrapAs(p.Initializer()); ast.IsObjectLiteralExpression(inner) {
+				for _, field := range []string{"header", "algorithm"} {
+					if f := tsutil.FindPropertyAssignment(inner, field); f != nil {
+						if v, ok := tsutil.FoldStaticString(f.Initializer()); ok {
+							o.set(field, v)
+						}
+					}
+				}
+			}
+			return o.raw()
+		}
+	}
+	t := s.Checker.GetTypeAtLocation(init)
+	if t == nil {
+		return nil
+	}
+	if len(s.Checker.GetSignaturesOfType(t, checker.SignatureKindCall)) > 0 {
+		o.set("kind", "function")
+		return o.raw()
+	}
+	for _, p := range s.Checker.GetPropertiesOfType(t) {
+		for _, kind := range webhookVerifyKinds {
+			if p.Name == kind {
+				o.set("kind", kind)
+				return o.raw()
+			}
+		}
+	}
+	return nil
 }
 
 type webhookSourceView struct {

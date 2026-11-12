@@ -1,5 +1,18 @@
 # @pikku/deploy
 
+## 0.12.21
+
+### Patch Changes
+
+- 996d0af: Add the `TelemetryStore` interface and row types to `@pikku/core/telemetry-store` (types only), and `MemoryTelemetryStore` plus the `conformance(store, { ingest })` suite to `@pikku/core/telemetry-store/testing`. The testing subpath imports `node:test`, so it is declared server-tier in the cloud-support data. No new dependency.
+- Updated dependencies [60f3aa7]
+- Updated dependencies [70ee10a]
+- Updated dependencies [42f4280]
+- Updated dependencies [cedc84c]
+- Updated dependencies [996d0af]
+- Updated dependencies [de7d8cf]
+  - @pikku/core@0.12.156
+
 ## 0.12.20
 
 ### Patch Changes

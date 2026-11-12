@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3690 observable things**: 1216 exported names, plus
+**3692 observable things**: 1218 exported names, plus
 2474 members on the classes and interfaces among them, reachable
 through 67 entry points.
 
@@ -27,11 +27,11 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./http` | 27 | 27 | 58 |
 | `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
-| `./trigger` | 42 | 42 | 13 |
+| `./trigger` | 43 | 43 | 13 |
 | `./testing` | 18 | 18 | 32 |
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
-| `./cli` | 16 | 14 | 27 |
+| `./cli` | 17 | 15 | 27 |
 | `./trace` | 19 | 19 | 20 |
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
@@ -3428,6 +3428,8 @@ export type WebhookSourceMeta = {
   check?: string
   setup?: string
   teardown?: string
+  verify?: WebhookVerifyMeta
+  credential?: string
 }
 export type WebhookSourceMethod = 'post' | 'put' | 'get' | 'head'
 export type WebhookSourceOutcome = {
@@ -3474,6 +3476,11 @@ export type WebhookVerify<Services = any> =
       secret: string,
       services: Services
     ) => boolean | Promise<boolean>)
+export type WebhookVerifyMeta = {
+  kind: 'hmac' | 'token' | 'publicKey' | 'function'
+  header?: string
+  algorithm?: string
+}
 wireTrigger: (trigger: CoreTrigger<any>) => void
 wireTriggerSource: <TInput = unknown, TOutput = unknown>(source: CoreTriggerSource<TInput, TOutput>) => void
 wireTriggerWebhookSource: <Events extends Record<string, StandardSchemaV1>>(source: CoreTriggerWebhookSource<Events>) => void
@@ -4456,12 +4463,15 @@ export interface CLIMeta {
   programs: Record<string, CLIProgramMeta>
   renderers: RenderersMeta
 }
+export type CLIProgramEntrypoint =
+  { type: 'local' } | { type: 'channel'; channel: string; route: string }
 export type CLIProgramMeta = {
   program: string
   commands: Record<string, CLICommandMeta>
   options: Record<string, CLIOption>
   defaultRenderName?: string
   auth?: boolean
+  entrypoints?: CLIProgramEntrypoint[]
 }
 export interface CoreCLI< Commands extends Record<string, CoreCLICommandConfig<any, any, any>>, Options, PikkuMiddleware, PikkuCLIRender, > {
   program: string

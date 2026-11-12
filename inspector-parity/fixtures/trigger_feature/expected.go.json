@@ -30,14 +30,110 @@
      "route": "/webhooks/billing",
      "events": [],
      "receive": "trigger-webhook:billing:receive",
-     "setup": "stripe:setup"
+     "setup": "stripe:setup",
+     "credential": "billingWebhookSecret"
     },
     "git-hub_events": {
      "name": "git-hub_events",
      "method": "post",
      "route": "/hooks/gh",
      "events": [],
-     "receive": "trigger-webhook:git-hub_events:receive"
+     "receive": "trigger-webhook:git-hub_events:receive",
+     "credential": "custom"
+    },
+    "hmac-src": {
+     "name": "hmac-src",
+     "method": "post",
+     "route": "/webhooks/hmac-src",
+     "events": [],
+     "receive": "trigger-webhook:hmac-src:receive",
+     "verify": {
+      "kind": "hmac",
+      "header": "X-Hub-Signature-256",
+      "algorithm": "sha256"
+     },
+     "credential": "hmacSrcWebhookSecret"
+    },
+    "token-src": {
+     "name": "token-src",
+     "method": "post",
+     "route": "/webhooks/token-src",
+     "events": [],
+     "receive": "trigger-webhook:token-src:receive",
+     "verify": {
+      "kind": "token",
+      "header": "X-Gitlab-Token"
+     },
+     "credential": "tokenSrcWebhookSecret"
+    },
+    "key-src": {
+     "name": "key-src",
+     "method": "post",
+     "route": "/webhooks/key-src",
+     "events": [],
+     "receive": "trigger-webhook:key-src:receive",
+     "verify": {
+      "kind": "publicKey",
+      "header": "X-Signature-Ed25519",
+      "algorithm": "ed25519"
+     },
+     "credential": "discordPublicKey"
+    },
+    "fn-src": {
+     "name": "fn-src",
+     "method": "post",
+     "route": "/webhooks/fn-src",
+     "events": [],
+     "receive": "trigger-webhook:fn-src:receive",
+     "verify": {
+      "kind": "function"
+     },
+     "credential": "fnSrcWebhookSecret"
+    },
+    "dynamic-src": {
+     "name": "dynamic-src",
+     "method": "post",
+     "route": "/webhooks/dynamic-src",
+     "events": [],
+     "receive": "trigger-webhook:dynamic-src:receive",
+     "verify": {
+      "kind": "hmac",
+      "algorithm": "sha1"
+     },
+     "credential": "dynamicSrcWebhookSecret"
+    },
+    "shared-src": {
+     "name": "shared-src",
+     "method": "post",
+     "route": "/webhooks/shared-src",
+     "events": [],
+     "receive": "trigger-webhook:shared-src:receive",
+     "verify": {
+      "kind": "token"
+     },
+     "credential": "sharedSrcWebhookSecret"
+    },
+    "shorthand-src": {
+     "name": "shorthand-src",
+     "method": "post",
+     "route": "/webhooks/shorthand-src",
+     "events": [],
+     "receive": "trigger-webhook:shorthand-src:receive",
+     "verify": {
+      "kind": "hmac"
+     },
+     "credential": "shorthandSrcWebhookSecret"
+    },
+    "shorthand-fn-src": {
+     "name": "shorthand-fn-src",
+     "method": "post",
+     "route": "/webhooks/shorthand-fn-src",
+     "events": [],
+     "receive": "trigger-webhook:shorthand-fn-src:receive",
+     "verify": {
+      "kind": "function"
+     },
+     "credential": "shorthandSecret"
     }
    },
    "files": [
@@ -297,6 +393,78 @@
     {
      "name": "custom",
      "displayName": "git-hub_events webhook secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    },
+    {
+     "name": "hmacSrcWebhookSecret",
+     "displayName": "hmac-src webhook secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    },
+    {
+     "name": "tokenSrcWebhookSecret",
+     "displayName": "token-src webhook secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    },
+    {
+     "name": "discordPublicKey",
+     "displayName": "key-src webhook secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    },
+    {
+     "name": "fnSrcWebhookSecret",
+     "displayName": "fn-src webhook secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    },
+    {
+     "name": "dynamicSrcWebhookSecret",
+     "displayName": "dynamic-src webhook secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    },
+    {
+     "name": "sharedSrcWebhookSecret",
+     "displayName": "shared-src webhook secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    },
+    {
+     "name": "shorthandSrcWebhookSecret",
+     "displayName": "shorthand-src webhook secret",
+     "type": "singleton",
+     "schema": {
+      "type": "string"
+     },
+     "sourceFile": "<fixture>/src/triggers.ts"
+    },
+    {
+     "name": "shorthandSecret",
+     "displayName": "shorthand-fn-src webhook secret",
      "type": "singleton",
      "schema": {
       "type": "string"

@@ -1,3 +1,26 @@
+## 0.12.156
+
+### Patch Changes
+
+- 60f3aa7: Record the calls a function makes across a boundary as spans. A queue `add` is a `producer` span `queue.publish <queue>`, `scheduleRPC` is `scheduler.schedule` and a webhook `send` is `webhook.send`, each with `messaging.system` and `messaging.destination.name`; the job carries the producer span's `traceparent`, so the consumer is its child. A call through the `DeploymentService` is a `client` span `rpc.call <name>` with `rpc.service`. A workflow step's span is a `consumer` with `pikku.workflow.run_id` and `pikku.workflow.step`. Nothing is recorded without a tracer or on an unsampled trace, and no payload, argument or URL is ever an attribute.
+- 70ee10a: Kysely query spans. `@pikku/kysely` exports `traceDriver` / `traceDialect`, which wrap a driver so each statement is a `db.<operation>` client span, a child of the trace `currentTrace()` returns. A span carries `db.system`, `db.operation.name` and the first table (`db.collection.name`); `db.query.text` only with `recordSqlText` (placeholders, string literals masked, 1024 characters at most). Parameters are never read and a database error's message is dropped, only its class is recorded. With no current trace, no span is recorded. The sqlite, bun-sqlite, node-sqlite factories and `PikkuKysely` take `tracer`, `currentTrace` and `recordSqlText`.
+
+  `@pikku/core`: `Tracer` gains an optional `runInSpan(span, fn)`; the function runner calls it around the middleware chain and the function when present, so a tracer that keeps the current span in an `AsyncLocalStorage` can answer `currentTrace`. A tracer whose `runInSpan` throws is disabled and the function still runs once.
+
+  `collectTableNames` moved to `table-names.ts`, is exported, and no longer walks into parameter values.
+
+- 42f4280: Add the `@pikku/core/otlp` subpath: a dependency-free OTLP/HTTP protobuf exporter (`OtlpHttpExporter`), an `OtlpTracer`, an `OtlpLogger`, process metrics, and `createRuntimeTelemetry(env, options)`, which reads `PIKKU_OTLP_*` and refuses a non-loopback endpoint unless `PIKKU_OTLP_ALLOW_REMOTE=1`. Add protobuf decoders (`decodeTraces`, `decodeLogs`, `decodeMetrics`) to `@pikku/core/testing`.
+- cedc84c: The OTLP runtime telemetry exposes `currentTrace()` and `asContextStorage()`, so the runtime can hand the active trace to the database layer.
+
+  `OtlpLogger` exports the message only: object fields become log attributes only with `PIKKU_OTLP_LOG_FIELDS=1`, with sensitive field names redacted, and message text and exported strings are scrubbed of URL credentials, bearer tokens and `token=` style pairs. `PIKKU_TELEMETRY` also accepts `false` and `off`, and an endpoint with a query string, fragment or trailing `?` or `#` is refused.
+
+- 996d0af: Add the `TelemetryStore` interface and row types to `@pikku/core/telemetry-store` (types only), and `MemoryTelemetryStore` plus the `conformance(store, { ingest })` suite to `@pikku/core/telemetry-store/testing`. The testing subpath imports `node:test`, so it is declared server-tier in the cloud-support data. No new dependency.
+- de7d8cf: Adds a `Tracer` service and one span per function invocation; removes the `telemetryOuter` and `telemetryInner` middleware.
+
+  `singletonServices.tracer` (optional, `Tracer` from `@pikku/core/trace`) receives a span for every invocation, opened by the function runner from the ids already on `wire.trace` and ended in the runner's `finally` with the outcome. Attributes are a fixed allow-list of framework facts; errors are redacted to class and message with no stack; a tracer that throws is disabled for the process and never changes the function's result or error. With no tracer nothing is recorded (`NOOP_TRACER`). `@pikku/core/testing` gains `RecordingTracer`.
+
+  `telemetryOuter` and `telemetryInner` (and the `__pikku_telemetry` log lines they wrote) are removed from `@pikku/core/middleware`; see `docs/MIGRATION.md`.
+
 ## 0.12.155
 
 ### Patch Changes
