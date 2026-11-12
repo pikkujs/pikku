@@ -1,4 +1,3 @@
-import { sql } from 'kysely'
 import type { PikkuSchema } from './pikku-schema.types.js'
 
 /**
@@ -12,38 +11,47 @@ import type { PikkuSchema } from './pikku-schema.types.js'
  */
 export const secretSchema: PikkuSchema = {
   name: 'secret',
-  statements: [
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('secrets')
-        .addColumn('key', 'varchar(255)', (col) => col.primaryKey())
-        .addColumn('ciphertext', ctx.text, (col) => col.notNull())
-        .addColumn('wrappedDek', ctx.text, (col) => col.notNull())
-        .addColumn('keyVersion', 'integer', (col) => col.notNull())
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addColumn('updatedAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        ),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('secretKekSalts')
-        .addColumn('keyVersion', 'integer', (col) => col.primaryKey())
-        .addColumn('salt', 'varchar(64)', (col) => col.notNull())
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        ),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('secretsAudit')
-        .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
-        .addColumn('secretKey', 'varchar(255)', (col) => col.notNull())
-        .addColumn('action', 'varchar(20)', (col) => col.notNull())
-        .addColumn('performedAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        ),
-  ],
+  tables: {
+    secrets: {
+      columns: {
+        key: { type: 'string(255)', primaryKey: true },
+        ciphertext: { type: 'text', required: true },
+        wrappedDek: { type: 'text', required: true },
+        keyVersion: { type: 'integer', required: true },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+        updatedAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+    },
+    secretKekSalts: {
+      columns: {
+        keyVersion: { type: 'integer', primaryKey: true },
+        salt: { type: 'string(64)', required: true },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+    },
+    secretsAudit: {
+      columns: {
+        id: { type: 'string(36)', primaryKey: true },
+        secretKey: { type: 'string(255)', required: true },
+        action: { type: 'string(20)', required: true },
+        performedAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+    },
+  },
 }
