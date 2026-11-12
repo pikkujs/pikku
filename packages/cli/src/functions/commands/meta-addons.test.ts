@@ -160,3 +160,37 @@ describe('graphChecks', () => {
     assert.deepEqual(out, { missingRequiredInputs: {}, stubs: [] })
   })
 })
+
+describe('field shapes', () => {
+  test('an array of objects shows the object shape (a Gmail `to`)', () => {
+    const lines = describeSchema({
+      required: ['to'],
+      properties: {
+        to: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['email'],
+            properties: { email: { type: 'string' }, name: { type: 'string' } },
+          },
+        },
+        note: { type: 'object', properties: { a: { type: 'string' } } },
+      },
+    })
+    assert.deepEqual(lines, [
+      'to: array<{ email: string, name?: string }>',
+      'note?: { a?: string }',
+    ])
+  })
+  test('graphChecks says how a missing field is written when it can', () => {
+    const out = graphChecks(
+      { nodes: { send: { rpcName: 'gmail:messageSend', input: {} } } },
+      () => ['to'],
+      () => false,
+      () => ({ to: 'array<{ email: string }>' })
+    )
+    assert.deepEqual(out.missingRequiredInputs, {
+      send: ['to: array<{ email: string }>'],
+    })
+  })
+})

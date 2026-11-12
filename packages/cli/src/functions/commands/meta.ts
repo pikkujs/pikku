@@ -180,6 +180,7 @@ const readServiceRows = (state: any, config: any): MetaRow[] => {
 
 import {
   addonFunctionDetail,
+  addonInputFieldTypes,
   addonRequiredInputs,
   graphChecks,
   addonFunctionRows,
@@ -313,7 +314,8 @@ export const pikkuMetaWorkflowsGet = pikkuSessionlessFunc<
       const { missingRequiredInputs, stubs } = graphChecks(
         graph,
         (rpcName) => addonRequiredInputs(config, state, rpcName),
-        stubText
+        stubText,
+        (rpcName) => addonInputFieldTypes(config, state, rpcName)
       )
       return void out({
         workflowId: data.workflowId,

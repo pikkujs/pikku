@@ -120,7 +120,21 @@ const typeOf = (value: any, depth = 0): string => {
   if (value.const !== undefined) return JSON.stringify(value.const)
   const type = Array.isArray(value.type) ? value.type.join('|') : value.type
   if (type === 'array')
-    return `array<${depth < 1 ? typeOf(value.items, depth + 1) : '…'}>`
+    return `array<${depth < 2 ? typeOf(value.items, depth + 1) : '…'}>`
+  // an object with known properties: its shape, two levels down at most (`{ email: string, name?: string }`)
+  if (type === 'object' && depth < 2 && value.properties) {
+    const required = new Set<string>(
+      Array.isArray(value.required) ? value.required : []
+    )
+    const entries = Object.entries(value.properties as Record<string, any>)
+    if (entries.length && entries.length <= 6)
+      return `{ ${entries
+        .map(
+          ([key, v]) =>
+            `${key}${required.has(key) ? '' : '?'}: ${typeOf(v, depth + 1)}`
+        )
+        .join(', ')} }`
+  }
   if (type) return type
   if (value.$ref) return 'ref'
   const union = value.anyOf ?? value.oneOf
@@ -255,7 +269,8 @@ export const addonRequiredInputs = (
 export const graphChecks = (
   graph: { nodes?: Record<string, any> },
   requiredOf: (rpcName: string) => string[] | undefined,
-  isStub: (rpcName: string) => boolean
+  isStub: (rpcName: string) => boolean,
+  typeOfField?: (rpcName: string) => Record<string, string>
 ): { missingRequiredInputs: Record<string, string[]>; stubs: string[] } => {
   const missingRequiredInputs: Record<string, string[]> = {}
   const stubs: string[] = []
@@ -277,8 +292,34 @@ export const graphChecks = (
     const given = new Set(
       input && typeof input === 'object' ? Object.keys(input) : []
     )
-    const missing = required.filter((field) => !given.has(field))
+    const types = typeOfField?.(rpcName) ?? {}
+    const missing = required
+      .filter((field) => !given.has(field))
+      .map((field) => (types[field] ? `${field}: ${types[field]}` : field))
     if (missing.length) missingRequiredInputs[nodeId] = missing
   }
   return { missingRequiredInputs, stubs }
+}
+
+/** `field: type` for each field of a wired addon function's input, to say how a missing one is written. */
+export const addonInputFieldTypes = (
+  config: { rootDir: string },
+  state: any,
+  id: string
+): Record<string, string> => {
+  const colon = id.indexOf(':')
+  if (colon <= 0) return {}
+  const addon = wiredAddons(state).find(
+    (candidate) => candidate.namespace === id.slice(0, colon)
+  )
+  if (!addon) return {}
+  const { dir, meta } = functionsOf(config, addon)
+  const entry = meta?.[id.slice(colon + 1)]
+  if (!dir || !entry?.inputSchemaName) return {}
+  const schema = readAddonSchema(dir, entry.inputSchemaName) as any
+  return Object.fromEntries(
+    Object.entries((schema?.properties ?? {}) as Record<string, any>).map(
+      ([key, value]) => [key, typeOf(value)]
+    )
+  )
 }
