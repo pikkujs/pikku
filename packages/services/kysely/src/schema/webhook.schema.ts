@@ -30,7 +30,7 @@ export const webhookSchema: PikkuSchema = {
         .createTable('webhookDeliveryAttempt')
         .addColumn('attemptId', ctx.key, (col) => col.primaryKey())
         .addColumn('deliveryId', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'webhookDelivery.deliveryId')
+          ctx.references(col.notNull(), 'webhookDelivery.deliveryId', 'cascade')
         )
         .addColumn('attemptNumber', 'integer', (col) => col.notNull())
         .addColumn('statusCode', 'integer')
@@ -41,7 +41,10 @@ export const webhookSchema: PikkuSchema = {
         )
         .$call(
           ctx.foreignKeys('webhookDeliveryAttempt', {
-            deliveryId: 'webhookDelivery.deliveryId',
+            deliveryId: {
+              target: 'webhookDelivery.deliveryId',
+              onDelete: 'cascade',
+            },
           })
         ),
 

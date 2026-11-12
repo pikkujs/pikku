@@ -58,16 +58,16 @@ export const scopeSchema: PikkuSchema = {
       db.schema
         .createTable('pikkuRoleScopes')
         .addColumn('role', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'pikkuRoles.name')
+          ctx.references(col.notNull(), 'pikkuRoles.name', 'cascade')
         )
         .addColumn('scope', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'pikkuScopes.name')
+          ctx.references(col.notNull(), 'pikkuScopes.name', 'cascade')
         )
         .addPrimaryKeyConstraint('pikku_role_scopes_pk', ['role', 'scope'])
         .$call(
           ctx.foreignKeys('pikkuRoleScopes', {
-            role: 'pikkuRoles.name',
-            scope: 'pikkuScopes.name',
+            role: { target: 'pikkuRoles.name', onDelete: 'cascade' },
+            scope: { target: 'pikkuScopes.name', onDelete: 'cascade' },
           })
         ),
 
@@ -75,10 +75,10 @@ export const scopeSchema: PikkuSchema = {
       db.schema
         .createTable('pikkuUserRole')
         .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
-          ctx.references(col.notNull(), 'user.id')
+          ctx.references(col.notNull(), 'user.id', 'cascade')
         )
         .addColumn('role', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'pikkuRoles.name')
+          ctx.references(col.notNull(), 'pikkuRoles.name', 'cascade')
         )
         .addColumn('grantedBy', ctx.text)
         .addColumn('grantedAt', 'timestamp', (col) =>
@@ -87,8 +87,8 @@ export const scopeSchema: PikkuSchema = {
         .addPrimaryKeyConstraint('pikku_user_role_pk', ['userId', 'role'])
         .$call(
           ctx.foreignKeys('pikkuUserRole', {
-            userId: 'user.id',
-            role: 'pikkuRoles.name',
+            userId: { target: 'user.id', onDelete: 'cascade' },
+            role: { target: 'pikkuRoles.name', onDelete: 'cascade' },
           })
         ),
 
@@ -96,10 +96,10 @@ export const scopeSchema: PikkuSchema = {
       db.schema
         .createTable('pikkuUserScope')
         .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
-          ctx.references(col.notNull(), 'user.id')
+          ctx.references(col.notNull(), 'user.id', 'cascade')
         )
         .addColumn('scope', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'pikkuScopes.name')
+          ctx.references(col.notNull(), 'pikkuScopes.name', 'cascade')
         )
         .addColumn('grantedBy', ctx.text)
         .addColumn('grantedAt', 'timestamp', (col) =>
@@ -108,8 +108,8 @@ export const scopeSchema: PikkuSchema = {
         .addPrimaryKeyConstraint('pikku_user_scope_pk', ['userId', 'scope'])
         .$call(
           ctx.foreignKeys('pikkuUserScope', {
-            userId: 'user.id',
-            scope: 'pikkuScopes.name',
+            userId: { target: 'user.id', onDelete: 'cascade' },
+            scope: { target: 'pikkuScopes.name', onDelete: 'cascade' },
           })
         ),
 

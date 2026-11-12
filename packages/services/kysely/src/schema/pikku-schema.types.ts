@@ -6,6 +6,7 @@ import {
   type Kysely,
   type RawBuilder,
 } from 'kysely'
+import type { OnDelete, TableAnnotations } from '@pikku/core/db'
 
 type DataTypeExpression = Parameters<
   CreateTableBuilder<any, any>['addColumn']
@@ -71,7 +72,8 @@ export interface SchemaContext {
    */
   defaultText: (value: string) => string | RawBuilder<unknown>
   /**
-   * An inline `references ... on delete cascade` on a column.
+   * An inline `references ... on delete <onDelete>` on a column. `onDelete`
+   * defaults to `restrict`.
    *
    * A no-op on MySQL, which parses an inline `REFERENCES` and discards it — the
    * constraint never exists. There the same relationship is declared once, at
@@ -79,18 +81,34 @@ export interface SchemaContext {
    */
   references: (
     column: ColumnDefinitionBuilder,
-    target: string
+    target: string,
+    onDelete?: OnDelete
   ) => ColumnDefinitionBuilder
   /**
    * The table-level foreign keys MySQL needs in place of inline `references`,
-   * keyed by local column to `table.column` target. Identity everywhere else,
-   * where `references` has already done the work.
+   * keyed by local column to a `table.column` target, or to the target and its
+   * `onDelete` (default `restrict`). Identity everywhere else, where
+   * `references` has already done the work.
    */
   foreignKeys: (
     table: string,
-    keys: Record<string, string>
+    keys: Record<string, ForeignKeyTarget>
   ) => <T extends CreateTableBuilder<any, any>>(builder: T) => T
 }
+
+/** A foreign key target: `table.column`, with `onDelete` when it is not `restrict`. */
+export type ForeignKeyTarget = string | { target: string; onDelete: OnDelete }
+
+const ON_DELETE_SQL = {
+  cascade: 'cascade',
+  setNull: 'set null',
+  restrict: 'restrict',
+  noAction: 'no action',
+} as const satisfies Record<OnDelete, string>
+
+/** `onDelete` as the schema builder spells it. */
+export const onDeleteAction = (onDelete: OnDelete = 'restrict') =>
+  ON_DELETE_SQL[onDelete]
 
 /**
  * The `SchemaContext` for DDL that names no schema.
@@ -115,12 +133,18 @@ function buildContext(
     key: mysql ? sql.raw('varchar(255)') : 'text',
     text: mysql ? sql.raw('longtext') : 'text',
     defaultText: (value) => (mysql ? sql`(${sql.lit(value)})` : value),
-    references: (column, target) =>
-      mysql ? column : column.references(target).onDelete('cascade'),
+    references: (column, target, onDelete) =>
+      mysql
+        ? column
+        : column.references(target).onDelete(onDeleteAction(onDelete)),
     foreignKeys: (table, keys) => (builder) =>
       mysql
         ? (Object.entries(keys).reduce(
-            (acc, [column, target]) => {
+            (acc, [column, key]) => {
+              const { target, onDelete } =
+                typeof key === 'string'
+                  ? { target: key, onDelete: undefined }
+                  : key
               const [targetTable, targetColumn] = target.split('.') as [
                 string,
                 string,
@@ -130,7 +154,7 @@ function buildContext(
                 [column],
                 targetTable,
                 [targetColumn],
-                (fk) => fk.onDelete('cascade')
+                (fk) => fk.onDelete(onDeleteAction(onDelete))
               )
             },
             builder as CreateTableBuilder<any, any>
@@ -212,34 +236,6 @@ export interface PikkuSchema {
    */
   ownedBy?: string[]
 }
-
-/**
- * What a project says about one column of a table it declares.
- *
- * The same entry `db/annotations.ts` takes, moved onto the declaration so one
- * file gives a table's shape, its types and its classification.
- */
-export interface ColumnAnnotation {
-  /** Privacy level: can the value leave the process? Defaults to `private`. */
-  security?: 'public' | 'private' | 'pii' | 'secret'
-  /** How the value is held at rest, independent of `security`. Defaults to `plain`. */
-  form?: 'plain' | 'hashed' | 'wrapped' | 'sealed'
-  /** Which key protects a `wrapped` or `sealed` column. */
-  keyId?: string
-  /** Anonymize strategy. */
-  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
-  /** Column kind, for coercion and typing. */
-  kind?: 'date' | 'bool' | 'json' | 'uuid'
-  /** TypeScript type override, e.g. `string[]`. Wins over `kind`. */
-  tsType?: string
-  /** Zod string format, e.g. `email`. Keeps the TypeScript type as `string`. */
-  format?: string
-  /** What the column holds, for people and agents reading the schema. */
-  description?: string
-}
-
-/** Annotations keyed by table, then column, spelled the way the statements spell them. */
-export type TableAnnotations = Record<string, Record<string, ColumnAnnotation>>
 
 /**
  * A project's own tables, declared in `db/tables.ts`.
