@@ -203,7 +203,7 @@ type Keys =
   | 'problem_slow__compact'
   | 'forget__label'
   | 'forget__confirm'
-declare const typedDefinePlugin: DefinePlugin<Fns, Keys>
+const typedDefinePlugin = definePlugin as DefinePlugin<Fns, Keys>
 
 const failed = {
   name: 'problem_failed__name',
