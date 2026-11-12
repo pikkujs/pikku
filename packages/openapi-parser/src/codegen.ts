@@ -444,10 +444,20 @@ export function generateAddonFromOpenAPI(
     )
   }
 
+  // HTTP route contract: one route per function, so a host can serve the whole
+  // API with a single `wireHTTPRoutes({ routes: refHTTP('<ns>:<name>Routes') })`.
+  const httpRoutes = generateHttpRoutesFile(opPairs, vars, flags)
+  if (httpRoutes) {
+    files[`src/${name}.http.ts`] = httpRoutes.file
+  }
+
   // Generate index.ts with all exports
   files['src/index.ts'] = generateIndexFile(functionExports, {
     upstreamAuth: upstreamAuthExport
       ? { name, export: upstreamAuthExport }
+      : undefined,
+    httpRoutes: httpRoutes
+      ? { name, export: httpRoutes.exportName }
       : undefined,
   })
 
@@ -921,14 +931,43 @@ function generateFunctionFile(
 
   // Bug 3: Avoid duplicate identifier when camelName is 'data' (TS2300)
   const inputParamName = camelName === 'data' ? 'inputData' : 'data'
-  const funcParams = hasInput
-    ? `{ ${camelName} }, ${inputParamName}`
-    : `{ ${camelName} }`
+  // Header parameters declared in the spec are forwarded from the request on
+  // the wire when there is one (HTTP). Only the declared ones: anything else on
+  // the incoming request is addressed to this service, not the upstream.
+  const headerParams = [
+    ...new Map(
+      parsed.headerParams.map((param) => [param.name, param])
+    ).values(),
+  ]
+  const forwardsHeaders = headerParams.length > 0
+  const funcParams = forwardsHeaders
+    ? `{ ${camelName} }, ${inputParamName}, wire`
+    : hasInput
+      ? `{ ${camelName} }, ${inputParamName}`
+      : `{ ${camelName} }`
 
   const returnCast = ' as any'
+  const callData = forwardsHeaders
+    ? `{ ...${inputParamName}, ...headers }`
+    : inputParamName
+  const headerLines = forwardsHeaders
+    ? [
+        '    const request = wire.http?.request',
+        `    const headers = Object.fromEntries(${JSON.stringify(
+          headerParams.map((param) => [
+            param.name,
+            flags.camelCase ? snakeToCamel(param.name) : param.name,
+          ])
+        )}.flatMap(([name, key]) => {`,
+        '      const value = request?.header(name)',
+        '      return value == null ? [] : [[key, value]]',
+        '    }))',
+      ]
+    : []
   funcConfig.push(
     `  func: async (${funcParams}) => {`,
-    `    return ${camelName}.call(${JSON.stringify(method)}, ${JSON.stringify(parsed.path)}${hasInput ? `, ${inputParamName}` : ''})${returnCast}`,
+    ...headerLines,
+    `    return ${camelName}.call(${JSON.stringify(method)}, ${JSON.stringify(parsed.path)}${hasInput ? `, ${callData}` : ''})${returnCast}`,
     '  },'
   )
 
@@ -942,6 +981,25 @@ function generateFunctionFile(
     schemasFile: schemaExports.length > 0 ? schemaLines.join('\n') : undefined,
   }
 }
+
+/**
+ * The input key for a request body that is not an object (an array, say).
+ *
+ * Pikku's HTTP layer delivers such a body as `{ data: <body> }`, so `data` is
+ * the key a route and its function agree on. A parameter already called `data`
+ * takes precedence, and the body falls back to `body`.
+ */
+function bodyInputKey(parsed: ParsedOperation): 'data' | 'body' {
+  const taken = [
+    ...parsed.pathParams,
+    ...parsed.queryParams,
+    ...parsed.headerParams,
+  ].some((param) => param.name === 'data')
+  return taken ? 'body' : 'data'
+}
+
+const hasNonObjectBody = (parsed: ParsedOperation): boolean =>
+  !!parsed.requestBody && !parsed.requestBody.properties
 
 function buildInputSchema(
   parsed: ParsedOperation,
@@ -979,10 +1037,13 @@ function buildInputSchema(
     }
   }
 
+  // A header is not part of the input Pikku builds from an HTTP request: the
+  // function reads it from the request on the wire. It stays an OPTIONAL input
+  // field so a caller with no request (RPC) can still supply it.
   for (const param of deduplicateParams(parsed.headerParams)) {
     if (!emittedNames.has(param.name)) {
       emittedNames.add(param.name)
-      props.push(formatParamProp(param, ctx, useCamel))
+      props.push(formatParamProp({ ...param, required: false }, ctx, useCamel))
     }
   }
 
@@ -1009,7 +1070,7 @@ function buildInputSchema(
       }
     } else {
       const bodyZod = schemaToZod(parsed.requestBody, ctx)
-      props.push(`  body: ${bodyZod},`)
+      props.push(`  ${bodyInputKey(parsed)}: ${bodyZod},`)
     }
   }
 
@@ -1097,7 +1158,10 @@ function buildOutputSchema(schema: any, ctx: ZodCodegenContext): string {
 
 function generateIndexFile(
   functionExports: string[],
-  extras?: { upstreamAuth?: { name: string; export: string } }
+  extras?: {
+    upstreamAuth?: { name: string; export: string }
+    httpRoutes?: { name: string; export: string }
+  }
 ): string {
   const lines: string[] = []
   for (const name of functionExports) {
@@ -1108,8 +1172,124 @@ function generateIndexFile(
       `export { ${extras.upstreamAuth.export} } from './${extras.upstreamAuth.name}-upstream-auth.js'`
     )
   }
+  if (extras?.httpRoutes) {
+    lines.push(
+      `export { ${extras.httpRoutes.export} } from './${extras.httpRoutes.name}.http.js'`
+    )
+  }
   lines.push('')
   return lines.join('\n')
+}
+
+const ROUTABLE_METHODS = new Set([
+  'get',
+  'post',
+  'put',
+  'patch',
+  'delete',
+  'head',
+  'options',
+])
+
+function httpRouteSkipReason(parsed: ParsedOperation): string | undefined {
+  if (!ROUTABLE_METHODS.has(parsed.method.toLowerCase())) {
+    return `method ${parsed.method.toUpperCase()} has no Pikku HTTP route`
+  }
+  if (hasNonObjectBody(parsed) && bodyInputKey(parsed) !== 'data') {
+    return 'request body is not an object and a parameter is already named "data", the key Pikku delivers it under'
+  }
+  return undefined
+}
+
+/**
+ * Emit `src/<name>.http.ts`: the addon's HTTP route contract, one route per
+ * operation, each pointing at the function generated for it.
+ *
+ * Addons may declare contracts but never wire them, so this only calls
+ * `defineHTTPRoutes`; the consuming app mounts it with
+ * `wireHTTPRoutes({ routes: refHTTP('<namespace>:<name>Routes') })`, and adds
+ * its own auth, middleware and permissions there.
+ *
+ * Pikku builds a function's input from the path params, the query string and
+ * the JSON body merged into ONE flat object, which is exactly the shape
+ * `buildInputSchema` produces, so a route and its function agree without an
+ * adapter. Header parameters are not part of that input; the function reads
+ * the ones the spec declares from the request on the wire and forwards them.
+ * Operations whose input cannot arrive that way are left out and listed in the
+ * file header rather than emitted broken:
+ *  - a request body that is not an object, when a parameter is already named
+ *    `data`. Pikku delivers such a body as `{ data }`, which is the input key
+ *    `bodyInputKey` uses, so only that collision leaves a route out.
+ *  - a method Pikku has no route for (`trace`).
+ * With `camelCase` the input keys differ from the names on the wire, so the
+ * whole contract is omitted.
+ */
+function generateHttpRoutesFile(
+  opPairs: Array<{ named: NamedOperation; parsed: ParsedOperation }>,
+  vars: AddonVars,
+  flags: CodegenFlags
+): { file: string; exportName: string } | undefined {
+  if (opPairs.length === 0) return undefined
+  if (flags.camelCase) {
+    console.warn(
+      '[openapi] Skipping the HTTP route contract: --camel-case renames input keys, so they no longer match the names on the wire'
+    )
+    return undefined
+  }
+
+  const exportName = `${vars.camelName}Routes`
+  const routes: string[] = []
+  const skipped: string[] = []
+  const imports: string[] = []
+
+  for (const { named, parsed } of opPairs) {
+    const reason = httpRouteSkipReason(parsed)
+    if (reason) {
+      skipped.push(
+        `${parsed.method.toUpperCase()} ${parsed.path} (${named.functionName}): ${reason}`
+      )
+      continue
+    }
+    imports.push(
+      `import { ${named.functionName} } from './functions/${named.functionName}.function.js'`
+    )
+    const route = parsed.path.replace(/\{([^}]+)\}/g, ':$1')
+    const tags = parsed.tags.length
+      ? `, tags: ${JSON.stringify(parsed.tags.map((tag) => String(tag)))}`
+      : ''
+    routes.push(
+      `    ${safeKey(named.functionName)}: { method: ${JSON.stringify(parsed.method.toLowerCase())}, route: ${JSON.stringify(route)}, func: ${named.functionName}${tags} },`
+    )
+  }
+
+  if (routes.length === 0) return undefined
+
+  const lines: string[] = [
+    `// HTTP route contract for ${vars.displayName}: ${routes.length} of ${opPairs.length} operations, each mapped straight to its function.`,
+    '// GENERATED by `pikku new-addon --openapi` — do not edit by hand.',
+    '//',
+    `// Mount it in the host app with \`wireHTTPRoutes({ routes: refHTTP('<namespace>:${exportName}') })\`.`,
+  ]
+  if (skipped.length > 0) {
+    lines.push(
+      '//',
+      `// Not routed (${skipped.length}) — still callable as functions, but not over HTTP:`,
+      ...skipped.map((entry) => `//   - ${entry.replace(/\s+/g, ' ')}`)
+    )
+  }
+  lines.push(
+    '',
+    "import { defineHTTPRoutes } from '#pikku/addon/http/pikku-http-types.gen.js'",
+    ...imports,
+    '',
+    `export const ${exportName} = defineHTTPRoutes({`,
+    '  routes: {',
+    ...routes,
+    '  },',
+    '})',
+    ''
+  )
+  return { file: lines.join('\n'), exportName }
 }
 
 /**
@@ -1326,6 +1506,8 @@ interface RouteInfo {
   query: string[]
   headers: string[]
   body?: 'form' | 'multipart'
+  /** Set when the body is not an object: the input key it arrives under. */
+  bodyKey?: 'data' | 'body'
   errors?: Record<number, string>
 }
 
@@ -1394,6 +1576,9 @@ function generateServiceFile(
       query: parsed.queryParams.map((p) => p.name),
       headers: parsed.headerParams.map((p) => p.name),
     }
+    if (hasNonObjectBody(parsed)) {
+      route.bodyKey = bodyInputKey(parsed)
+    }
     if (parsed.requestBodyMediaType?.includes('x-www-form-urlencoded')) {
       route.body = 'form'
     } else if (parsed.requestBodyMediaType?.includes('multipart/form-data')) {
@@ -1437,7 +1622,7 @@ function generateServiceFile(
   return `${credential === 'secret' ? `import type { ${pascalName}Secrets } from './${name}.secret.js'\n` : ''}import { ${errorClasses.join(', ')} } from '@pikku/core/errors'
 import type { TypedVariablesService } from '#pikku/addon/variables/pikku-variables.gen.js'
 
-const ROUTES: Record<string, { path: string[], query: string[], headers: string[], body?: 'form' | 'multipart', errors?: Record<number, string> }> = ${JSON.stringify(routes, null, 2)}
+const ROUTES: Record<string, { path: string[], query: string[], headers: string[], body?: 'form' | 'multipart', bodyKey?: 'data' | 'body', errors?: Record<number, string> }> = ${JSON.stringify(routes, null, 2)}
 ${
   flags.camelCase
     ? `
@@ -1490,7 +1675,7 @@ export class ${pascalName}Service {
     const input = data as Record<string, unknown> | undefined${flags.camelCase ? '\n    const rawData = input ? _toSnakeCase(input) : input' : ''}
     const route = ROUTES[\`\${method} \${path}\`]
     let endpoint = path
-    let body: Record<string, unknown> | undefined
+    let body: unknown
     const query: Record<string, string> = {}
     const headers: Record<string, string> = {${extraHeaders}
     }
@@ -1515,7 +1700,11 @@ export class ${pascalName}Service {
       const remaining = Object.fromEntries(
         Object.entries(${dataVar}).filter(([k]) => !pathQueryHeaders.has(k))
       )
-      if (Object.keys(remaining).length > 0) {
+      if (route.bodyKey) {
+        // A body that is not an object travels as \`{ \${route.bodyKey}: <body> }\`
+        // (what Pikku's HTTP layer produces), so send the value itself.
+        body = remaining[route.bodyKey]
+      } else if (Object.keys(remaining).length > 0) {
         body = remaining
       }
     }
@@ -1529,11 +1718,11 @@ ${authLine ? `    ${authLine}\n` : ''}
     if (body && route?.body === 'form') {
       headers['Content-Type'] = 'application/x-www-form-urlencoded'
       payload = new URLSearchParams(
-        Object.entries(body).map(([k, v]) => [k, String(v)])
+        Object.entries(body as Record<string, unknown>).map(([k, v]) => [k, String(v)])
       ).toString()
     } else if (body && route?.body === 'multipart') {
       const form = new FormData()
-      for (const [k, v] of Object.entries(body)) {
+      for (const [k, v] of Object.entries(body as Record<string, unknown>)) {
         form.append(k, v instanceof Blob ? v : String(v))
       }
       payload = form
