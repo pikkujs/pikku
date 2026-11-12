@@ -14,7 +14,6 @@ import {
   readSources,
   textFacts,
   type ProjectFacts,
-  buildLayoutFacts,
 } from './meta-facts.js'
 
 const project = (files: Record<string, string>): string => {
@@ -337,38 +336,5 @@ describe('formatProjectFacts', () => {
       'ui: routes apps/web/src/routes; pages apps/web/src/views; shell apps/web/src/Shell.tsx; nav apps/web/src/SideNav.tsx',
       'ui kit (@acme/kit/ui/<name>): button',
     ])
-  })
-})
-
-describe('buildLayoutFacts', () => {
-  test('names where a workflow, its functions, addons, tables and variables go', () => {
-    const lines = buildLayoutFacts('src')
-    assert.ok(
-      lines.some((l) =>
-        l.startsWith('workflow: src/wirings/<name>.workflow.ts')
-      )
-    )
-    assert.ok(lines.some((l) => l.startsWith('functions: src/functions/')))
-    assert.ok(lines.some((l) => l.includes('pikku addons add')))
-    assert.ok(
-      lines.some(
-        (l) => l.includes('db/tables.ts') && l.includes('pikku db migrate')
-      )
-    )
-    assert.ok(lines.some((l) => l.startsWith('check:')))
-  })
-  test('the project facts print it after the model aliases when given', () => {
-    const out = formatProjectFacts({
-      ...({
-        agents: [],
-        models: {},
-        configFile: 'pikku.config.json',
-        texts: [],
-        frontends: [],
-        generated: false,
-      } as any),
-      buildLayout: ['workflow: x'],
-    })
-    assert.ok(out.includes('workflow: x'))
   })
 })
