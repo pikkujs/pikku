@@ -941,7 +941,7 @@ function generateFunctionFile(
   ]
   const forwardsHeaders = headerParams.length > 0
   const funcParams = forwardsHeaders
-    ? `{ ${camelName} }, ${inputParamName}, wire`
+    ? `{ ${camelName} }, ${inputParamName}, { http }`
     : hasInput
       ? `{ ${camelName} }, ${inputParamName}`
       : `{ ${camelName} }`
@@ -952,7 +952,7 @@ function generateFunctionFile(
     : inputParamName
   const headerLines = forwardsHeaders
     ? [
-        '    const request = wire.http?.request',
+        '    const request = http?.request',
         `    const headers = Object.fromEntries(${JSON.stringify(
           headerParams.map((param) => [
             param.name,
@@ -1254,11 +1254,12 @@ function generateHttpRoutesFile(
       `import { ${named.functionName} } from './functions/${named.functionName}.function.js'`
     )
     const route = parsed.path.replace(/\{([^}]+)\}/g, ':$1')
-    const tags = parsed.tags.length
-      ? `, tags: ${JSON.stringify(parsed.tags.map((tag) => String(tag)))}`
-      : ''
+    // No route-level `tags`: the generated functions already carry them, and
+    // a host sees this contract through a const-inferred (readonly) type that
+    // core's mutable `tags?: string[]` rejects, so one tagged route would stop
+    // the whole contract from type-checking at the `wireHTTPRoutes` call.
     routes.push(
-      `    ${safeKey(named.functionName)}: { method: ${JSON.stringify(parsed.method.toLowerCase())}, route: ${JSON.stringify(route)}, func: ${named.functionName}${tags} },`
+      `    ${safeKey(named.functionName)}: { method: ${JSON.stringify(parsed.method.toLowerCase())}, route: ${JSON.stringify(route)}, func: ${named.functionName} },`
     )
   }
 
