@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3685 observable things**: 1214 exported names, plus
+**3686 observable things**: 1215 exported names, plus
 2471 members on the classes and interfaces among them, reachable
 through 67 entry points.
 
@@ -27,7 +27,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./http` | 27 | 27 | 58 |
 | `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
-| `./trigger` | 42 | 42 | 13 |
+| `./trigger` | 43 | 43 | 13 |
 | `./testing` | 18 | 18 | 32 |
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
@@ -3428,6 +3428,8 @@ export type WebhookSourceMeta = {
   check?: string
   setup?: string
   teardown?: string
+  verify?: WebhookVerifyMeta
+  credential?: string
 }
 export type WebhookSourceMethod = 'post' | 'put' | 'get' | 'head'
 export type WebhookSourceOutcome = {
@@ -3474,6 +3476,11 @@ export type WebhookVerify<Services = any> =
       secret: string,
       services: Services
     ) => boolean | Promise<boolean>)
+export type WebhookVerifyMeta = {
+  kind: 'hmac' | 'token' | 'publicKey' | 'function'
+  header?: string
+  algorithm?: string
+}
 wireTrigger: (trigger: CoreTrigger<any>) => void
 wireTriggerSource: <TInput = unknown, TOutput = unknown>(source: CoreTriggerSource<TInput, TOutput>) => void
 wireTriggerWebhookSource: <Events extends Record<string, StandardSchemaV1>>(source: CoreTriggerWebhookSource<Events>) => void
