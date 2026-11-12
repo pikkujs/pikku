@@ -67,6 +67,8 @@ const positive = (
   return value
 }
 
+const ordinal = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
+
 const average = (values: number[]) =>
   values.reduce((sum, v) => sum + v, 0) / values.length
 
@@ -151,7 +153,12 @@ export class MemoryTelemetryStore implements TelemetryStore {
     const bucket = this.bucket(scope)
     const rootDuration = new Map<string, number>()
     for (const span of bucket.spans) {
-      if (isRoot(span)) rootDuration.set(span.traceId, span.durationMs)
+      if (isRoot(span)) {
+        rootDuration.set(
+          span.traceId,
+          Math.max(rootDuration.get(span.traceId) ?? -Infinity, span.durationMs)
+        )
+      }
     }
     const matches = bucket.logs
       .map(({ record }) => record)
@@ -315,7 +322,7 @@ export class MemoryTelemetryStore implements TelemetryStore {
           lastRun: Math.max(...group.map((s) => s.startAt)),
         }
       })
-      .sort((a, b) => b.requests - a.requests || a.name.localeCompare(b.name))
+      .sort((a, b) => b.requests - a.requests || ordinal(a.name, b.name))
 
     return {
       totals: {
@@ -381,8 +388,7 @@ export class MemoryTelemetryStore implements TelemetryStore {
         }
       })
       .sort(
-        (a, b) =>
-          b.requests - a.requests || a.functionId.localeCompare(b.functionId)
+        (a, b) => b.requests - a.requests || ordinal(a.functionId, b.functionId)
       )
       .slice(0, limit)
   }
@@ -406,8 +412,7 @@ export class MemoryTelemetryStore implements TelemetryStore {
     return [...counts.entries()]
       .map(([wireType, requests]) => ({ wireType, requests }))
       .sort(
-        (a, b) =>
-          b.requests - a.requests || a.wireType.localeCompare(b.wireType)
+        (a, b) => b.requests - a.requests || ordinal(a.wireType, b.wireType)
       )
   }
 
@@ -470,7 +475,9 @@ export class MemoryTelemetryStore implements TelemetryStore {
     }
     return [...byName.entries()]
       .map(([name, group]) => {
-        const newest = [...group].sort((a, b) => b.startAt - a.startAt)
+        const newest = [...group].sort(
+          (a, b) => b.startAt - a.startAt || ordinal(b.spanId, a.spanId)
+        )
         return {
           name,
           completed: group.filter((s) => s.status !== 'error').length,
@@ -484,7 +491,9 @@ export class MemoryTelemetryStore implements TelemetryStore {
           })),
         }
       })
-      .sort((a, b) => (b.lastRun ?? 0) - (a.lastRun ?? 0))
+      .sort(
+        (a, b) => (b.lastRun ?? 0) - (a.lastRun ?? 0) || ordinal(a.name, b.name)
+      )
       .slice(0, limit)
   }
 
@@ -496,7 +505,7 @@ export class MemoryTelemetryStore implements TelemetryStore {
       scope,
       'queue',
       q.since,
-      q.limit ?? 50,
+      positive(q.limit, 'limit', 50),
       (span) => str(span.attributes['pikku.queue.name']) ?? span.name
     ).map(({ name, ...rest }) => ({ queue: name, ...rest }))
   }

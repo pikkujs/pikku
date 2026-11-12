@@ -1283,6 +1283,289 @@ export const conformance = (
       })
     })
 
+    describe('hostile values, ties and boundaries', () => {
+      const hostile = [
+        '\\',
+        "a'b",
+        'a"b',
+        'café \u{1F600}',
+        'x; DROP TABLE logs',
+        '--',
+        "\\' OR 1=1 --",
+        'a\nb',
+      ]
+      const attempt = async <T>(
+        read: () => Promise<T>
+      ): Promise<T | undefined> => {
+        try {
+          return await read()
+        } catch (error) {
+          if (error instanceof TypeError || error instanceof RangeError)
+            return undefined
+          throw error
+        }
+      }
+
+      test('a hostile value answers exactly or is refused, and never reaches another scope', async () => {
+        const mine = freshScope()
+        const victim = freshScope()
+        const victimTrace = 'f'.repeat(32)
+        const now = NOW - MIN
+        await ingest(victim, {
+          logs: [
+            log({
+              body: 'VICTIM',
+              traceId: victimTrace,
+              functionId: 'victimFn',
+              wireType: 'http',
+              wireId: 'victimWire',
+              attributes: {
+                'pikku.org.id': 'victim-org',
+                'pikku.user.id': 'victim-user',
+              },
+            }),
+          ],
+          spans: withSpans
+            ? [
+                span({
+                  id: '1',
+                  traceId: victimTrace,
+                  attributes: {
+                    ...fn('victimFn'),
+                    'pikku.org.id': 'victim-org',
+                    'pikku.user.id': 'victim-user',
+                  },
+                }),
+              ]
+            : [],
+        })
+        await ingest(mine, {
+          logs: [
+            log({
+              body: 'MINE',
+              traceId: 'e'.repeat(32),
+              functionId: 'mineFn',
+              wireType: 'http',
+            }),
+            ...hostile.map((value, i) =>
+              log({
+                body: `H${i}`,
+                at: now - i,
+                functionId: value,
+                wireId: value,
+                traceId: `h${i}`,
+              })
+            ),
+          ],
+        })
+        const noVictim = (value: unknown) =>
+          assert.ok(
+            !JSON.stringify(value ?? null).includes('victim'),
+            JSON.stringify(value)
+          )
+        for (const [i, h] of hostile.entries()) {
+          const byFunction = await attempt(() =>
+            store.logs(mine, { functionId: h })
+          )
+          if (byFunction) {
+            assert.ok(
+              byFunction.every((r) => r.functionId === h),
+              `functionId ${h}`
+            )
+            assert.ok(
+              byFunction.some((r) => r.body === `H${i}`),
+              `functionId ${h} finds its own row`
+            )
+          }
+          const byWire = await attempt(() => store.logs(mine, { wireId: h }))
+          if (byWire) {
+            assert.ok(
+              byWire.every((r) => r.wireId === h),
+              `wireId ${h}`
+            )
+          }
+          for (const q of [
+            { traceId: h },
+            { wireType: h },
+            { source: h },
+            { search: h },
+            { tenant: { org: h } },
+            { tenant: { user: h } },
+          ]) {
+            noVictim(await attempt(() => store.logs(mine, q)))
+          }
+          const other = { project: h, stage: 'production' }
+          noVictim(await attempt(() => store.logs(other, {})))
+          noVictim(
+            await attempt(() =>
+              store.logs({ project: mine.project, stage: h }, {})
+            )
+          )
+          noVictim(await attempt(() => store.logFacets(other, {})))
+          noVictim(await attempt(() => store.tail(other, null, {})))
+          if (!withSpans) continue
+          const since = NOW - 10 * MIN
+          const until = NOW + MIN
+          noVictim(await attempt(() => store.trace(mine, h)))
+          noVictim(
+            await attempt(() =>
+              store.trace(mine, victimTrace, { tenant: { org: h } })
+            )
+          )
+          noVictim(
+            await attempt(() =>
+              store.trace(mine, h, { tenant: { org: h, user: h } })
+            )
+          )
+          noVictim(
+            await attempt(() =>
+              store.metricsSummary(mine, { since, until, functionId: h })
+            )
+          )
+          noVictim(
+            await attempt(() =>
+              store.metricsSummary(mine, { since, until, tenant: { org: h } })
+            )
+          )
+          noVictim(
+            await attempt(() =>
+              store.functionMetrics(mine, {
+                since,
+                until,
+                tenant: { user: h },
+              })
+            )
+          )
+          noVictim(
+            await attempt(() =>
+              store.wireTypes(mine, { since, tenant: { org: h } })
+            )
+          )
+          noVictim(
+            await attempt(() => store.wireRuns(mine, { wireType: h, since }))
+          )
+          noVictim(await attempt(() => store.failures(other, { since })))
+          noVictim(await attempt(() => store.queueJobs(other, { since })))
+        }
+      })
+
+      test(
+        'ties order by code unit, and since is inclusive',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const since = NOW - 5 * MIN
+          const at = (ms: number) => ({ startAt: ms, endAt: ms + 1 })
+          await ingest(s, {
+            spans: [
+              span({
+                id: '1',
+                traceId: '1'.repeat(32),
+                ...at(since),
+                attributes: fn('b', 'b'),
+              }),
+              span({
+                id: '2',
+                traceId: '2'.repeat(32),
+                ...at(since),
+                attributes: fn('B', 'B'),
+              }),
+              span({
+                id: '3',
+                traceId: '3'.repeat(32),
+                ...at(since),
+                attributes: fn('a', 'a'),
+              }),
+              span({
+                id: '4',
+                traceId: '4'.repeat(32),
+                ...at(since - 1),
+                attributes: fn('early', 'early'),
+              }),
+            ],
+          })
+          const until = NOW + MIN
+          assert.deepEqual(
+            (await store.functionMetrics(s, { since, until })).map(
+              (f) => f.functionId
+            ),
+            ['B', 'a', 'b']
+          )
+          assert.deepEqual(
+            (await store.wireTypes(s, { since })).map((w) => w.wireType),
+            ['B', 'a', 'b']
+          )
+          const summary = await store.metricsSummary(s, { since, until })
+          assert.deepEqual(
+            summary.functions.map((f) => f.name),
+            ['B', 'a', 'b']
+          )
+          assert.equal(summary.totals.requests, 3)
+        }
+      )
+
+      test(
+        'with several root spans in one trace the longest duration is the request duration',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const traceId = '9'.repeat(32)
+          await ingest(s, {
+            spans: [
+              span({ id: '1', traceId, durationMs: 10, attributes: fn('f') }),
+              span({ id: '2', traceId, durationMs: 30, attributes: fn('f') }),
+              span({ id: '3', traceId, durationMs: 20, attributes: fn('f') }),
+            ],
+            logs: [log({ traceId, body: 'tied' })],
+          })
+          const [record] = await store.logs(s, {})
+          assert.equal(record!.durationMs, 30)
+        }
+      )
+
+      test(
+        'runs of equal start time list the higher span id first, and queue limits are validated',
+        spanTest,
+        async () => {
+          const s = freshScope()
+          const since = NOW - 5 * MIN
+          const queue = (id: string, durationMs: number, wire: string) =>
+            span({
+              id,
+              traceId: id.repeat(32),
+              startAt: since + 1000,
+              endAt: since + 1000 + durationMs,
+              durationMs,
+              attributes: { ...fn('worker', wire), 'pikku.queue.name': 'mail' },
+            })
+          await ingest(s, {
+            spans: [
+              queue('1', 11, 'queue'),
+              queue('2', 22, 'queue'),
+              queue('3', 33, 'scheduler'),
+            ],
+          })
+          const [job] = await store.queueJobs(s, { since })
+          assert.deepEqual(
+            job!.recent.map((r) => r.durationMs),
+            [22, 11]
+          )
+          const [run] = await store.wireRuns(s, { wireType: 'queue', since })
+          assert.deepEqual(
+            run!.recent.map((r) => r.durationMs),
+            [22, 11]
+          )
+          for (const limit of [-1, 1.5]) {
+            await assert.rejects(
+              store.queueJobs(s, { since, limit }),
+              (error: unknown) =>
+                error instanceof TypeError || error instanceof RangeError
+            )
+          }
+        }
+      )
+    })
+
     describe('tail cursor', () => {
       // A page-walk: every page of `limit`, until one comes back empty.
       const walk = async (s: TelemetryScope, limit: number) => {

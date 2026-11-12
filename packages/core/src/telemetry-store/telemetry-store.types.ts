@@ -38,7 +38,8 @@ export interface LogRecord {
   /**
    * Read side only, never ingested. The duration of the request this line was
    * written in: the root span of `traceId`, joined by the store. Absent when
-   * the line has no trace, or its root span is not (yet) stored.
+   * the line has no trace, or its root span is not (yet) stored. When a trace
+   * stores more than one root span, the longest duration wins.
    */
   durationMs?: number
 }
@@ -267,7 +268,9 @@ export interface TelemetryStore {
   ): Promise<SpanRecord[]>
   /**
    * Queue-wire root spans (a child span is never a job) grouped by queue, most
-   * recently run first. Default `limit` 50; `recent` holds the newest 10.
+   * recently run first (ties: queue name ascending). Default `limit` 50, a
+   * positive integer or the call throws; `recent` holds the newest 10, equal
+   * start times ordered by span id descending.
    */
   queueJobs(
     scope: TelemetryScope,
@@ -275,7 +278,7 @@ export interface TelemetryStore {
   ): Promise<QueueJobRow[]>
   /**
    * Root spans in `[since, until)` grouped by function and wire type, most
-   * requests first (ties: function id ascending), at most `limit` (default
+   * requests first (ties: function id ascending in code unit order, so `B` before `a`), at most `limit` (default
    * 200). `buckets` (default 30) and their alignment are those of
    * `metricsSummary`. `limit` is a positive integer or the call throws.
    */
@@ -291,7 +294,7 @@ export interface TelemetryStore {
   ): Promise<FunctionMetricsRow[]>
   /**
    * Root spans in `[since, until)` counted by wire type, most requests first
-   * (ties: wire type ascending). A span with no wire type is `'unknown'`.
+   * (ties: wire type ascending in code unit order). A span with no wire type is `'unknown'`.
    * `until` is exclusive and defaults to no upper bound.
    */
   wireTypes(
@@ -300,8 +303,9 @@ export interface TelemetryStore {
   ): Promise<WireTypeRow[]>
   /**
    * Root spans of one wire type (`scheduler`, `queue`, ...) from `since`,
-   * grouped by function id, most recently run first. Default `limit` 50;
-   * `recent` holds the newest 10. `queueJobs` is this grouped by queue name.
+   * grouped by function id, most recently run first (ties: function id
+   * ascending). Default `limit` 50; `recent` holds the newest 10, equal start
+   * times ordered by span id descending. `queueJobs` is this grouped by queue name.
    */
   wireRuns(
     scope: TelemetryScope,
