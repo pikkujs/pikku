@@ -948,6 +948,31 @@ Sessionless agent threads are no longer shared (core 0.12.74 `afef587`). Reading
 
 **Find:** `rg -n "hmacSha256Hex|hmacDigest|verifyHmacSignature|verifyPublicKeySignature|verifySlackSignature|webhookService\.(sign|verify)|WebhookSigningSecret|respond:"`. Also check every `wireTriggerWebhookSource` that passes `secret`.
 
+### Outbound fetches: an allowlist no longer unlocks a private host
+
+- **`safeFetch` runs its private-address and DNS checks even for a host in `allowedHosts`** (core after 0.12.156). Before, listing a host in `allowedHosts` skipped both checks, so an allowlisted name resolving to `10.x` or `169.254.169.254` was fetched. A host that is meant to be private (a self-hosted service, `localhost`, an in-cluster receiver) now goes in the new `privateHosts` option as well. It is affected wherever an allowlist reaches it:
+  - **Outgoing webhooks:** `config.webhook.allowedHosts: ['127.0.0.1']` alone no longer delivers to `127.0.0.1`. Add `privateHosts: ['127.0.0.1']`.
+  - **`voiceInput`:** an audio URL on a private host is refused even when it is in `allowedAudioHosts`. There is no private opt-in here; send that audio inline as `data`.
+  - **`@pikku/ai-vercel` attachment downloads** (`safeDownload(allowedHosts)`) behave the same way as `voiceInput`.
+  - **Direct `safeFetch` / `assertFetchableUrl` callers:** add `privateHosts` next to `allowedHosts`.
+
+  ```ts
+  // before
+  await safeFetch(url, init, { allowedHosts: ['billing.internal'] })
+
+  // after
+  await safeFetch(url, init, {
+    allowedHosts: ['billing.internal'],
+    privateHosts: ['billing.internal'],
+  })
+  ```
+
+- **Refusals are `NetworkHostNotAllowedError`** (from `@pikku/core/errors`) with `host` and `reason` (`'not-declared' | 'private-address' | 'scheme' | 'redirect'`), instead of a plain `Error`. It still extends `Error`. The messages changed wording, and name hosts only: code that matched on `'URL host is not in the allowlist: '` or the old `'Refusing to fetch from a private/internal host: <host>'` text should check `error.reason` instead.
+- **`allowedHosts` entries are host patterns, and an invalid one throws a `TypeError`.** An entry is `host`, `host:port`, an IP literal, or one leading `*.` with at least two labels after it (`*.example.com`). `*.com`, a bare `*`, a wildcard over an IP, empty labels, and anything with a scheme or path (`https://api.example.com`) used to be compared literally and never matched; they are now refused when the call is made. `hostMatches` and `validateHostPattern` are exported from `@pikku/core/safe-fetch`.
+- **A secret's `allowedHosts` uses the same matcher.** A wildcard entry no longer matches an IP literal, an entry `validateHostPattern` refuses matches nothing, and an entry with a port matches only that port.
+
+**Find:** `rg -n "allowedHosts|allowedAudioHosts|safeFetch|assertFetchableUrl|not in the allowlist|private/internal host"`
+
 ### Secrets, content and other removals
 
 - **Stored secrets and credentials must be set again** (core 0.12.74 `afef587`). The key derivation is now PBKDF2 with a salt. Values held by the Kysely, MongoDB and Redis secret services and by the Kysely credential service cannot be decrypted after the upgrade, and the app fails on the first read until each value is set again.

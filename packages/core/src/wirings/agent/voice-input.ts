@@ -97,8 +97,9 @@ export const SPOKEN_TRANSCRIPT = 'voice:transcript'
  * using the `agentRunner`'s transcription support. Records whether the turn was spoken, which
  * `voiceOutput` reads to decide whether to answer aloud.
  *
- * Audio sent by URL is fetched with `safeFetch`: only the `allowedAudioHosts` when given, otherwise
- * any host that is not private or loopback. Audio over the size limit is rejected.
+ * Audio sent by URL is fetched with `safeFetch`: only hosts matching `allowedAudioHosts` when given,
+ * otherwise any public host. A private or loopback host is refused either way. Audio over the size
+ * limit is rejected.
  *
  * @param config - The transcription model (required once audio arrives), language, and hosts audio
  * URLs may be fetched from.

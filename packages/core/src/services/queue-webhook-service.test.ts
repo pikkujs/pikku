@@ -266,6 +266,47 @@ describe('pikkuWebhookWorkerFunc', () => {
     assert.equal(requests.length, 0, 'must never issue the request')
   })
 
+  test('an allowedHosts entry alone does not reach a private host', async (t) => {
+    t.after(() => {
+      restoreFetch()
+      resetPikkuState()
+    })
+    const requests = stubFetch(() => ({ status: 200 }))
+    pikkuState(null, 'package', 'singletonServices', {
+      config: { webhook: { allowedHosts: ['10.0.0.5'] } },
+    } as any)
+
+    await assert.rejects(
+      pikkuWebhookWorkerFunc({} as any, {
+        url: 'http://10.0.0.5/hook',
+        body: '{}',
+        headers: {},
+      }),
+      /private\/internal host/
+    )
+    assert.equal(requests.length, 0)
+  })
+
+  test('config.webhook.privateHosts lets delivery reach an internal receiver', async (t) => {
+    t.after(() => {
+      restoreFetch()
+      resetPikkuState()
+    })
+    const requests = stubFetch(() => ({ status: 200 }))
+    pikkuState(null, 'package', 'singletonServices', {
+      config: {
+        webhook: { allowedHosts: ['10.0.0.5'], privateHosts: ['10.0.0.5'] },
+      },
+    } as any)
+
+    await pikkuWebhookWorkerFunc({} as any, {
+      url: 'http://10.0.0.5/hook',
+      body: '{}',
+      headers: {},
+    })
+    assert.equal(requests.length, 1)
+  })
+
   test('records a delivered attempt via the store when a deliveryId is present', async (t) => {
     t.after(restoreFetch)
     stubFetch(() => ({ status: 200 }))

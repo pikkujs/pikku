@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3692 observable things**: 1218 exported names, plus
-2474 members on the classes and interfaces among them, reachable
+**3712 observable things**: 1224 exported names, plus
+2488 members on the classes and interfaces among them, reachable
 through 67 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 171 | 145 | 442 |
+| `./services` | 171 | 145 | 443 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./workflow` | 99 | 47 | 165 |
 | `./scenario` | 50 | 48 | 157 |
@@ -23,9 +23,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./types` | 24 | 21 | 84 |
 | `./queue` | 28 | 28 | 75 |
 | `./otlp` | 19 | 19 | 74 |
+| `./errors` | 55 | 55 | 34 |
 | `./telemetry-store` | 14 | 14 | 74 |
 | `./http` | 27 | 27 | 58 |
-| `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
 | `./trigger` | 43 | 43 | 13 |
 | `./testing` | 18 | 18 | 32 |
@@ -53,13 +53,13 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scope` | 17 | 17 | 0 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./addon` | 14 | 14 | 2 |
+| `./safe-fetch` | 9 | 9 | 7 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./rpc` | 9 | 9 | 6 |
 | `./workflow/types` | 48 | 1 | 13 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./secret` | 10 | 10 | 0 |
-| `./safe-fetch` | 6 | 6 | 3 |
 | `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
 | `./webhook` | 7 | 7 | 1 |
@@ -3663,15 +3663,23 @@ export type WireRemoteAddonConfig = {
 
 ```ts
 assertFetchableUrl: (url: string, options?: SafeFetchOptions) => URL
+hostMatches: (host: string, port: string | number | undefined, pattern: string) => boolean
+export type HostPatternValidation =
+  { valid: true } | { valid: false; reason: string }
 export type HostResolver = (hostname: string) => Promise<string[]>
 isPrivateHost: (hostname: string) => boolean
 safeFetch: (url: string, init?: RequestInit, options?: SafeFetchOptions) => Promise<Response>
 export interface SafeFetchOptions {
   allowedHosts?: string[]
+  privateHosts?: string[]
+  allowHttp?: (host: string) => boolean
+  fetch?: typeof fetch
+  caller?: { addon?: string; package?: string }
   maxRedirects?: number
   resolveHost?: HostResolver | null
 }
 setDefaultHostResolver: (resolver: HostResolver | undefined) => void
+validateHostPattern: (pattern: string) => HostPatternValidation
 ```
 
 ## ./node-host-resolver
@@ -4882,6 +4890,21 @@ export class MissingScopeError extends PikkuError {
 }
 export class MissingServiceError extends PikkuError {}
 export class MissingSessionError extends PikkuError {}
+export class NetworkHostNotAllowedError extends PikkuError {
+  public readonly host: string
+  public readonly reason: NetworkRefusalReason
+  public readonly addon?: string
+  public readonly package?: string
+  constructor(refusal: NetworkHostRefusal, explanation: string)
+}
+export interface NetworkHostRefusal {
+  host: string
+  reason: NetworkRefusalReason
+  addon?: string
+  package?: string
+}
+export type NetworkRefusalReason =
+  'not-declared' | 'private-address' | 'scheme' | 'redirect'
 export class NotAcceptableError extends PikkuError {}
 export class NotFoundError extends PikkuError {}
 export class NotImplementedError extends PikkuError {}
@@ -5965,6 +5988,7 @@ export interface WebhookServiceConfig {
   secret?: string
   signatureHeader?: string
   allowedHosts?: string[]
+  privateHosts?: string[]
 }
 withoutSecrets: <T extends object>(services: T, context: string) => SecretlessServices<T>
 export interface WriteFileArgs< TBucket extends string = string, > extends BucketKeyArgs<TBucket> {

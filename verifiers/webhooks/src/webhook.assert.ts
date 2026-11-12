@@ -14,6 +14,7 @@ const SIGNING_KEY = 'verifier-signing-key'
 
 let webhookService: WebhookService
 let receiver: MockReceiver
+let config: Awaited<ReturnType<typeof createConfig>>
 
 async function waitFor(
   predicate: () => boolean,
@@ -32,7 +33,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 250))
 
 before(async () => {
   new LocalVariablesService().set('WEBHOOK_SIGNING_KEY', SIGNING_KEY)
-  const config = await createConfig()
+  config = await createConfig()
   const singletonServices = await createSingletonServices(config)
   assert.ok(
     singletonServices.webhookService,
@@ -98,6 +99,35 @@ describe('outgoing webhook delivery (scaffolded pikku-outgoing-webhooks queue wo
     )
     const bodies = receiver.received.map((request) => JSON.parse(request.body))
     assert.deepEqual(bodies[0], bodies[2], 'payload is identical on retries')
+  })
+
+  test('allowedHosts alone does not reach a private receiver; privateHosts does', async () => {
+    receiver.respondWith([200, 200])
+    const webhookConfig = config.webhook!
+    const privateHosts = webhookConfig.privateHosts
+    webhookConfig.privateHosts = undefined
+    try {
+      await webhookService.send({
+        url: receiver.url,
+        data: { attempt: 'allowlisted-but-private' },
+        retries: 0,
+      })
+      await settle()
+      assert.equal(
+        receiver.received.length,
+        0,
+        'an allowedHosts entry must not unlock a private address'
+      )
+    } finally {
+      webhookConfig.privateHosts = privateHosts
+    }
+
+    await webhookService.send({
+      url: receiver.url,
+      data: { attempt: 'private-host-granted' },
+      retries: 0,
+    })
+    await waitFor(() => receiver.received.length === 1)
   })
 
   test('stops after retries are exhausted', async () => {
