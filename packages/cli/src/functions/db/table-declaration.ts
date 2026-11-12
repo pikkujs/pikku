@@ -1,11 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import type {
-  AppTables,
-  ColumnAnnotation,
-  PikkuSchema,
-  TableAnnotations,
-} from '@pikku/kysely'
+import type { ColumnAnnotation, TableAnnotations } from '@pikku/core/db'
+import type { AppTables, PikkuSchema } from '@pikku/kysely'
 import { loadFreshUserModule } from '../commands/load-user-project.js'
 import { flattenAnnotationTables } from './annotation-parser.js'
 import type { ColumnInfo } from './db-introspector.js'

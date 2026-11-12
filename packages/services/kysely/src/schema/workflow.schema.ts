@@ -49,7 +49,7 @@ export const workflowSchema: PikkuSchema = {
         .createTable('workflowStep')
         .addColumn('workflowStepId', ctx.key, (col) => col.primaryKey())
         .addColumn('workflowRunId', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'workflowRuns.workflowRunId')
+          ctx.references(col.notNull(), 'workflowRuns.workflowRunId', 'cascade')
         )
         .addColumn('stepName', ctx.key, (col) => col.notNull())
         .addColumn('rpcName', ctx.text)
@@ -78,7 +78,10 @@ export const workflowSchema: PikkuSchema = {
         ])
         .$call(
           ctx.foreignKeys('workflowStep', {
-            workflowRunId: 'workflowRuns.workflowRunId',
+            workflowRunId: {
+              target: 'workflowRuns.workflowRunId',
+              onDelete: 'cascade',
+            },
           })
         ),
 
@@ -87,7 +90,11 @@ export const workflowSchema: PikkuSchema = {
         .createTable('workflowStepHistory')
         .addColumn('historyId', ctx.key, (col) => col.primaryKey())
         .addColumn('workflowStepId', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'workflowStep.workflowStepId')
+          ctx.references(
+            col.notNull(),
+            'workflowStep.workflowStepId',
+            'cascade'
+          )
         )
         .addColumn('status', ctx.key, (col) => col.notNull())
         .addColumn('result', ctx.text)
@@ -102,7 +109,10 @@ export const workflowSchema: PikkuSchema = {
         .addColumn('failedAt', 'timestamp')
         .$call(
           ctx.foreignKeys('workflowStepHistory', {
-            workflowStepId: 'workflowStep.workflowStepId',
+            workflowStepId: {
+              target: 'workflowStep.workflowStepId',
+              onDelete: 'cascade',
+            },
           })
         ),
 

@@ -28,7 +28,7 @@ export const channelSchema: PikkuSchema = {
       db.schema
         .createTable('channelSubscriptions')
         .addColumn('channelId', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'channels.channelId')
+          ctx.references(col.notNull(), 'channels.channelId', 'cascade')
         )
         .addColumn('topic', ctx.key, (col) => col.notNull())
         .addPrimaryKeyConstraint('channel_subscriptions_pk', [
@@ -37,7 +37,7 @@ export const channelSchema: PikkuSchema = {
         ])
         .$call(
           ctx.foreignKeys('channelSubscriptions', {
-            channelId: 'channels.channelId',
+            channelId: { target: 'channels.channelId', onDelete: 'cascade' },
           })
         ),
   ],

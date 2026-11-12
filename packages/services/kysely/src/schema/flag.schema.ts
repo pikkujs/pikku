@@ -56,7 +56,7 @@ export const flagSchema: PikkuSchema = {
       db.schema
         .createTable('pikkuFeatureFlagOverrides')
         .addColumn('flag', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'pikkuFeatureFlags.name')
+          ctx.references(col.notNull(), 'pikkuFeatureFlags.name', 'cascade')
         )
         .addColumn('subjectId', ctx.key, (col) => col.notNull())
         // Which id this is, for the console to render. Resolution keys on the
@@ -75,7 +75,7 @@ export const flagSchema: PikkuSchema = {
         ])
         .$call(
           ctx.foreignKeys('pikkuFeatureFlagOverrides', {
-            flag: 'pikkuFeatureFlags.name',
+            flag: { target: 'pikkuFeatureFlags.name', onDelete: 'cascade' },
           })
         ),
   ],

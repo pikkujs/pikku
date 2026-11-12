@@ -21,7 +21,11 @@ export const deploymentSchema: PikkuSchema = {
       db.schema
         .createTable('pikkuDeploymentFunctions')
         .addColumn('deploymentId', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'pikkuDeployments.deploymentId')
+          ctx.references(
+            col.notNull(),
+            'pikkuDeployments.deploymentId',
+            'cascade'
+          )
         )
         .addColumn('functionName', ctx.key, (col) => col.notNull())
         .addPrimaryKeyConstraint('pikku_deployment_functions_pk', [
@@ -30,7 +34,10 @@ export const deploymentSchema: PikkuSchema = {
         ])
         .$call(
           ctx.foreignKeys('pikkuDeploymentFunctions', {
-            deploymentId: 'pikkuDeployments.deploymentId',
+            deploymentId: {
+              target: 'pikkuDeployments.deploymentId',
+              onDelete: 'cascade',
+            },
           })
         ),
 
