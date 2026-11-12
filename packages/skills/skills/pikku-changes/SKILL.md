@@ -28,8 +28,13 @@ Filing is how work enters the queue when nobody has asked for it to be built yet
 way a request can end. When the person's own request tells you to build it now, or tells you not to
 file changes or ask questions, that wins: do not `file`, `ask` or `claim`. Decide the open points
 yourself, build it in the working tree with the skill for the feature (pikku-workflow, pikku-addon,
-pikku-wiring and so on), run `pikku all` and `tsc --noEmit`, and finish. Note what you decided in the
-knowledge base, not in a question. Only a decision the person has kept for themselves is worth an `ask`.
+pikku-wiring and so on), run `pikku all` and `tsc --noEmit`, and finish. Only a decision the person
+has kept for themselves is worth an `ask`.
+
+**The request's own finish line is the finish line.** When it names the checks to run (for example
+`pikku all` and `tsc --noEmit`), the build is done when they pass and `pikku meta workflows get <name>`
+lists the steps you meant. Knowledge notes (`knowledge/`, `pikku knowledge validate|gaps`), change
+requests and a second tour of the project are separate jobs: do them only when the request asks.
 
 ### The sequence for a workflow that uses addons
 
