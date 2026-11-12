@@ -1,4 +1,11 @@
-import { join, dirname, resolve, isAbsolute, parse as parsePath } from 'path'
+import {
+  join,
+  dirname,
+  resolve,
+  relative,
+  isAbsolute,
+  parse as parsePath,
+} from 'path'
 import { readdir, readFile } from 'fs/promises'
 import type {
   PikkuCLIConfig,
@@ -97,14 +104,61 @@ export async function findConfigFileOrNull(): Promise<string | null> {
   return null
 }
 
+const SKIP_DIRS = new Set([
+  'node_modules',
+  '.git',
+  'dist',
+  '.pikku',
+  '.output',
+  'coverage',
+  '.cache',
+])
+
+/** pikku.config files below `start`, at most `depth` directories down, never inside generated or vendored folders. */
+export async function findConfigFilesBelow(
+  start: string,
+  depth = 3
+): Promise<string[]> {
+  const found: string[] = []
+  const walk = async (dir: string, level: number): Promise<void> => {
+    let entries
+    try {
+      entries = await readdir(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (entry.isFile() && /^pikku\.config\.(ts|js|json)$/.test(entry.name))
+        found.push(join(dir, entry.name))
+      else if (
+        entry.isDirectory() &&
+        level < depth &&
+        !SKIP_DIRS.has(entry.name) &&
+        !entry.name.startsWith('.')
+      )
+        await walk(join(dir, entry.name), level + 1)
+    }
+  }
+  await walk(start, 0)
+  return found.sort()
+}
+
 async function findConfigFile(): Promise<string> {
   const configFile = await findConfigFileOrNull()
-  if (!configFile) {
-    throw new PikkuCLIConfigError(
-      `No pikku.config.json in ${process.cwd()} or any directory above it. Run this from inside a pikku project, create one with \`pikku init\`, or pass --config <path>.`
+  if (configFile) return configFile
+  // Run from the repo root of a workspace: the project is a few folders down. One config there is unambiguous; several are not.
+  const below = await findConfigFilesBelow(process.cwd())
+  if (below.length === 1) {
+    console.error(
+      `Using ${relative(process.cwd(), below[0]!)} (found below the current directory)`
     )
+    return below[0]!
   }
-  return configFile
+  throw new PikkuCLIConfigError(
+    below.length > 1
+      ? `No pikku.config.json in ${process.cwd()} or any directory above it, and several below it: ${below.map((f) => relative(process.cwd(), f)).join(', ')}. Run this from the project's folder or pass --config <path>.`
+      : `No pikku.config.json in ${process.cwd()} or any directory above it. Run this from inside a pikku project, create one with \`pikku init\`, or pass --config <path>.`
+  )
 }
 
 export { PikkuCLIConfigError }
