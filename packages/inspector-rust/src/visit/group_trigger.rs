@@ -3,6 +3,7 @@
 use regex::Regex;
 use serde_json::Value;
 use tsrs_ast::{self as ast, Node};
+use tsrs_checker::SignatureKind;
 use tsrs_core::P;
 
 use super::group_schedule::or_null;
@@ -19,6 +20,9 @@ pub fn register(r: &mut Registry) {
 
 /// `webhookSourceSteps` (addon_load.go).
 const WEBHOOK_SOURCE_STEPS: [&str; 4] = ["receive", "check", "setup", "teardown"];
+
+/// Go `webhookVerifyKinds`: the declared forms of a webhook source's verify.
+const WEBHOOK_VERIFY_KINDS: [&str; 3] = ["hmac", "token", "publicKey"];
 
 impl Context<'_> {
     pub fn add_trigger(&mut self, node: P<Node>) {
@@ -148,16 +152,21 @@ impl Context<'_> {
             o.set_str(step, &id);
             self.state.service_aggregation.used_functions.add(id);
         }
-        self.state.triggers.webhook_source_meta.get_or_insert_with(Default::default).set(name.clone(), o.raw());
-        self.state.triggers.files.add(file.clone());
-
-        if self.get_property_assignment_initializer(obj, "verify", false).is_none() {
-            return;
-        }
+        let verify = self.get_property_assignment_initializer(obj, "verify", false);
         let mut credential = webhook_secret_credential_name(&name);
         let v = tsutil::get_property_value(obj, "credential");
         if v.present {
             credential = v.as_string();
+        }
+        if let Some(verify) = verify {
+            o.set("verify", self.webhook_verify_meta(verify));
+            o.set_str("credential", &credential);
+        }
+        self.state.triggers.webhook_source_meta.get_or_insert_with(Default::default).set(name.clone(), o.raw());
+        self.state.triggers.files.add(file.clone());
+
+        if verify.is_none() {
+            return;
         }
         let mut c = JsObject::new();
         c.set_str("name", &credential);
@@ -171,6 +180,44 @@ impl Context<'_> {
         c.set_str("sourceFile", &file);
         self.state.credentials.files.add(file);
         self.state.credentials.definitions.push(c.raw());
+    }
+
+    /// Go `webhookVerifyMeta`: the scheme a source's verify declares, with the
+    /// header and algorithm only when they are written as string literals. A
+    /// function, or a value whose scheme is known only from its type, records
+    /// the kind alone.
+    fn webhook_verify_meta(&mut self, init: P<Node>) -> Option<Value> {
+        let init = tsutil::unwrap_non_null_parens(tsutil::unwrap_as(init));
+        let mut o = JsObject::new();
+        if ast::is_object_literal_expression(init) {
+            for kind in WEBHOOK_VERIFY_KINDS {
+                let Some(p) = tsutil::find_property_assignment(init, kind) else { continue };
+                o.set_str("kind", kind);
+                let inner = tsutil::unwrap_as(tsutil::initializer_of(p));
+                if ast::is_object_literal_expression(inner) {
+                    for field in ["header", "algorithm"] {
+                        if let Some(f) = tsutil::find_property_assignment(inner, field) {
+                            if let Some(v) = tsutil::fold_static_string(tsutil::initializer_of(f)) {
+                                o.set_str(field, &v);
+                            }
+                        }
+                    }
+                }
+                return Some(o.into_value());
+            }
+        }
+        let t = self.checker.get_type_at_location(init);
+        if !self.checker.get_signatures_of_type_exported(t, SignatureKind::Call).is_empty() {
+            o.set_str("kind", "function");
+            return Some(o.into_value());
+        }
+        for p in self.checker.get_properties_of_type_exported(t) {
+            if let Some(kind) = WEBHOOK_VERIFY_KINDS.iter().find(|k| p.name() == **k) {
+                o.set_str("kind", kind);
+                return Some(o.into_value());
+            }
+        }
+        None
     }
 
     /// Go `ValidateWebhookSourceTriggers` (validateWebhookSourceTriggers), run

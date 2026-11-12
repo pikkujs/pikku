@@ -649,7 +649,11 @@
           "receive": "receive",
           "check": "trigger-webhook:github:check",
           "setup": "shop:charge",
-          "teardown": "missing:fn"
+          "teardown": "missing:fn",
+          "verify": {
+            "kind": "function"
+          },
+          "credential": "githubWebhookSecret"
         },
         "my-hook_source": {
           "name": "my-hook_source",
@@ -659,7 +663,11 @@
           ],
           "route": "/hooks/custom",
           "events": [],
-          "receive": "notAReceiver"
+          "receive": "notAReceiver",
+          "verify": {
+            "kind": "function"
+          },
+          "credential": "customSecret"
         },
         "no-verify": {
           "name": "no-verify",
