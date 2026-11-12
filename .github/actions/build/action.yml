@@ -42,7 +42,7 @@ runs:
     # itself (inspector-go's build step). The cross-compiled copies other jobs
     # download come from the inspector-go-build job.
     - name: Set up Go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7
       with:
         go-version-file: packages/inspector-go/go.mod
         cache-dependency-path: packages/inspector-go/**/go.sum

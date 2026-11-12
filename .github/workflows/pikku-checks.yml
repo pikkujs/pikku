@@ -87,12 +87,12 @@ jobs:
   prepare:
     runs-on: ${{ inputs.runs-on }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.bun-version }}
           bun-version-file: ${{ inputs.bun-version == '' && format('{0}/package.json', inputs.working-directory) || '' }}
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
@@ -156,7 +156,7 @@ jobs:
           wc -l "$RUNNER_TEMP/prepared.list"
           tar -czf "$RUNNER_TEMP/prepared.tar.gz" -T "$RUNNER_TEMP/prepared.list"
           ls -lh "$RUNNER_TEMP/prepared.tar.gz"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: pikku-prepared
           path: ${{ runner.temp }}/prepared.tar.gz
@@ -169,17 +169,17 @@ jobs:
     continue-on-error: ${{ !inputs.validate-blocking }}
     runs-on: ${{ inputs.runs-on }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.bun-version }}
           bun-version-file: ${{ inputs.bun-version == '' && format('{0}/package.json', inputs.working-directory) || '' }}
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
           restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: pikku-prepared
           path: ${{ runner.temp }}
@@ -199,17 +199,17 @@ jobs:
     continue-on-error: ${{ !inputs.audit-blocking }}
     runs-on: ${{ inputs.runs-on }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.bun-version }}
           bun-version-file: ${{ inputs.bun-version == '' && format('{0}/package.json', inputs.working-directory) || '' }}
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
           restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: pikku-prepared
           path: ${{ runner.temp }}
@@ -233,17 +233,17 @@ jobs:
     if: ${{ !inputs.skip-tests }}
     runs-on: ${{ inputs.runs-on }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.bun-version }}
           bun-version-file: ${{ inputs.bun-version == '' && format('{0}/package.json', inputs.working-directory) || '' }}
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
           restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: pikku-prepared
           path: ${{ runner.temp }}
@@ -268,17 +268,17 @@ jobs:
     if: ${{ inputs.tsc }}
     runs-on: ${{ inputs.runs-on }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.bun-version }}
           bun-version-file: ${{ inputs.bun-version == '' && format('{0}/package.json', inputs.working-directory) || '' }}
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
           restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: pikku-prepared
           path: ${{ runner.temp }}

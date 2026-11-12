@@ -151,19 +151,19 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
       # The module cache is keyed on go.sum, the build cache is not: a key that
       # never changes is never saved again, so the build cache is keyed on the
       # run and restored from the newest run before it (restore-keys), which
       # refreshes it every time.
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: packages/inspector-go/go.mod
           cache-dependency-path: packages/inspector-go/**/go.sum
       - name: Restore the Go build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/go-build
           key: go-build-${{ matrix.target }}-${{ hashFiles('packages/inspector-go/go.mod', 'packages/inspector-go/**/go.sum') }}-${{ github.run_id }}
