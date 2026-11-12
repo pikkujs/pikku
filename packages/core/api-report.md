@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3684 observable things**: 1213 exported names, plus
+**3685 observable things**: 1214 exported names, plus
 2471 members on the classes and interfaces among them, reachable
 through 67 entry points.
 
@@ -31,7 +31,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./testing` | 18 | 18 | 32 |
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
-| `./cli` | 16 | 14 | 27 |
+| `./cli` | 17 | 15 | 27 |
 | `./trace` | 19 | 19 | 20 |
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
@@ -4450,12 +4450,15 @@ export interface CLIMeta {
   programs: Record<string, CLIProgramMeta>
   renderers: RenderersMeta
 }
+export type CLIProgramEntrypoint =
+  { type: 'local' } | { type: 'channel'; channel: string; route: string }
 export type CLIProgramMeta = {
   program: string
   commands: Record<string, CLICommandMeta>
   options: Record<string, CLIOption>
   defaultRenderName?: string
   auth?: boolean
+  entrypoints?: CLIProgramEntrypoint[]
 }
 export interface CoreCLI< Commands extends Record<string, CoreCLICommandConfig<any, any, any>>, Options, PikkuMiddleware, PikkuCLIRender, > {
   program: string

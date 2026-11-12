@@ -15,5 +15,13 @@
     "api": {
       "filter": {}
     }
+  },
+  "cli": {
+    "entrypoints": {
+      "my-cli": {
+        "type": "channel",
+        "wirePath": "src/functions/cli/my-cli-channel.gen.ts"
+      }
+    }
   }
 }

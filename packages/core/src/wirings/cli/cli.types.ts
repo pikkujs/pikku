@@ -111,7 +111,17 @@ export type CLIProgramMeta = {
    * executed CLI has no connection to authenticate.
    */
   auth?: boolean
+  /**
+   * How the program is reached, from `cli.entrypoints` in pikku.config: `local`
+   * runs the app in-process, `channel` talks to a running app over the named
+   * channel. A program configured both ways lists both.
+   */
+  entrypoints?: CLIProgramEntrypoint[]
 }
+
+/** One way a CLI program is reached. */
+export type CLIProgramEntrypoint =
+  { type: 'local' } | { type: 'channel'; channel: string; route: string }
 
 /**
  * Renderer metadata for CLI commands
