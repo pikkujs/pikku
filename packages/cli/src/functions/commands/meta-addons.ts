@@ -110,6 +110,28 @@ export const addonSummary = (config: { rootDir: string }, state: any) =>
 
 const SHAPE_LIMIT = 60
 
+/** A JSON-schema type in a few words: enums as their values, arrays with their item type. */
+const typeOf = (value: any, depth = 0): string => {
+  if (!value || typeof value !== 'object') return 'any'
+  if (Array.isArray(value.enum)) {
+    const values = value.enum.slice(0, 8).map((v: unknown) => JSON.stringify(v))
+    return values.join('|') + (value.enum.length > 8 ? '|…' : '')
+  }
+  if (value.const !== undefined) return JSON.stringify(value.const)
+  const type = Array.isArray(value.type) ? value.type.join('|') : value.type
+  if (type === 'array')
+    return `array<${depth < 1 ? typeOf(value.items, depth + 1) : '…'}>`
+  if (type) return type
+  if (value.$ref) return 'ref'
+  const union = value.anyOf ?? value.oneOf
+  if (Array.isArray(union))
+    return union
+      .slice(0, 4)
+      .map((v: any) => typeOf(v, depth + 1))
+      .join(' | ')
+  return 'any'
+}
+
 /** A schema's fields in one short line each: enough to write a call without the raw JSON. */
 export const describeSchema = (schema: any): string[] => {
   if (!schema || typeof schema !== 'object') return []
@@ -120,15 +142,11 @@ export const describeSchema = (schema: any): string[] => {
   const lines = Object.entries(properties)
     .slice(0, SHAPE_LIMIT)
     .map(([key, value]) => {
-      const type = Array.isArray(value?.type)
-        ? value.type.join('|')
-        : (value?.type ??
-          (value?.$ref ? 'ref' : value?.anyOf ? 'union' : 'any'))
       const note =
         typeof value?.description === 'string'
           ? ` — ${value.description.replace(/\s+/g, ' ').slice(0, 90)}`
           : ''
-      return `${key}${required.has(key) ? '' : '?'}: ${type}${note}`
+      return `${key}${required.has(key) ? '' : '?'}: ${typeOf(value)}${note}`
     })
   const more = Object.keys(properties).length - lines.length
   return more > 0 ? [...lines, `… ${more} more fields`] : lines
@@ -160,8 +178,20 @@ export const addonFunctionDetail = (
     addon: { namespace, package: addon.packageName },
     description: entry.description ?? null,
     tags: entry.tags ?? [],
-    input: { name: inputName, fields: describeSchema(input) },
-    output: { name: outputName, fields: describeSchema(output) },
+    input: {
+      name: inputName,
+      fields: describeSchema(input),
+      ...(inputName ? {} : { note: 'takes no input: pass {}' }),
+    },
+    output: {
+      name: outputName,
+      fields: describeSchema(output),
+      ...(outputName && describeSchema(output).length
+        ? {}
+        : {
+            note: 'no response shape is declared: the result is untyped, narrow it in a step of your own',
+          }),
+    },
     call: `await workflow.do('<step name>', '${id}', { ...input })`,
   }
 }

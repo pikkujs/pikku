@@ -94,6 +94,21 @@ describe('meta addons', () => {
       ['slack:chatPostMessage', 'slack:searchMessages']
     )
   })
+  test('enums and arrays say what they hold; a function with no input says so', () => {
+    assert.deepEqual(
+      describeSchema({
+        properties: {
+          base: { type: 'string', enum: ['EUR', 'USD'] },
+          ids: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['base'],
+      }),
+      ['base: "EUR"|"USD"', 'ids?: array<string>']
+    )
+    const { config, state } = project()
+    const d = addonFunctionDetail(config, state, 'slack:searchMessages')!
+    assert.equal(d.input.note, undefined)
+  })
   test('summary counts functions per addon; describeSchema caps long field lists', () => {
     const { config, state } = project()
     assert.deepEqual(addonSummary(config, state), [
