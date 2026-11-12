@@ -260,6 +260,22 @@ export type SurfaceGuide = {
 
 export const SURFACE_GUIDES: SurfaceGuide[] = [
   {
+    names: ['CredentialOverrides', 'CredentialOverride', 'credentialOverrides'],
+    title: "wireAddon's credentialOverrides",
+    points: [
+      '`credentialOverrides` is optional on `wireAddon`. A build works without it: an addon keeps the credential kind its author declared. Add it only when the request says a credential is shared by the whole deployment, or personal to each user, or lives under another key.',
+      "It is a record keyed by the credential NAME the addon declared (`pikku addons add <name>` prints them as `credential <name> (...)`). Each value is either a string, which renames the key this deployment holds the value under, or an object `{ name?: string; mode?: 'wire' | 'singleton' }`.",
+      "`mode: 'wire'` is per user (each user connects their own account); `mode: 'singleton'` is one value for the whole deployment (a team account). `name` is the key the deployment holds it under.",
+      'These are the only two fields of the object; any other key is a type error.',
+    ],
+    example: `wireAddon({
+  name: 'slack',
+  package: '@pikku/addon-slack',
+  // one workspace-wide Slack credential instead of one per user
+  credentialOverrides: { slack: { mode: 'singleton' } },
+})`,
+  },
+  {
     names: ['defineTables', 'tables', 'db/tables.ts', 'requiredType'],
     title: 'declaring tables in db/tables.ts',
     points: [
