@@ -180,6 +180,10 @@ type Fns = {
       traffic: { points: number[] }
     }
   }
+  readonly startScreen: {
+    input: StudioSourceInput
+    output: { variant: 'new' | 'started'; steps: { points: number[] } }
+  }
   readonly problemCard: {
     input: StudioSourceInput
     output: {
@@ -197,6 +201,8 @@ type Keys =
   | 'problem_failed__compact'
   | 'problem_slow__name'
   | 'problem_slow__compact'
+  | 'forget__label'
+  | 'forget__confirm'
 declare const typedDefinePlugin: DefinePlugin<Fns, Keys>
 
 const failed = {
@@ -353,6 +359,117 @@ typedDefinePlugin({
       source: 'problemCard',
       copy: { failed, slow },
       parts: [],
+    },
+  },
+})
+
+// A source or an action may name a project RPC; its output is not checked.
+typedDefinePlugin({
+  title: 't',
+  screens: [],
+  things: {
+    agent: {
+      label: 'problem__label',
+      source: 'console:getAgent',
+      copy: { any: failed },
+      parts: [{ widget: 'trend', from: 'anything' }],
+      actions: {
+        forget: {
+          run: 'admin:forgetAgent',
+          label: 'forget__label',
+          destructive: true,
+          confirm: 'forget__confirm',
+        },
+        retry: { run: 'problemCard', label: 'forget__label' },
+      },
+    },
+  },
+  arrangedScreens: {
+    start: {
+      path: '/start-next',
+      title: 'health__title',
+      scope: 'project',
+      source: 'startScreen',
+      slots: [{ widget: 'trend', from: 'steps' }],
+      redirect: { started: 'health' },
+      poll: { fast: 3000, slow: 45000 },
+    },
+    health: {
+      path: '/health-next',
+      title: 'health__title',
+      scope: 'project',
+      source: 'console:listAgents',
+      slots: [],
+      redirect: { gone: '/home' },
+      poll: 60000,
+    },
+  },
+})
+
+typedDefinePlugin({
+  title: 't',
+  screens: [],
+  things: {
+    agent: {
+      label: 'problem__label',
+      source: 'problemCard',
+      copy: { failed, slow },
+      parts: [],
+      actions: {
+        // @ts-expect-error a destructive action needs a confirm
+        forget: {
+          run: 'admin:forgetAgent',
+          label: 'forget__label',
+          destructive: true,
+        },
+      },
+    },
+  },
+})
+
+typedDefinePlugin({
+  title: 't',
+  screens: [],
+  things: {
+    agent: {
+      label: 'problem__label',
+      source: 'problemCard',
+      copy: { failed, slow },
+      parts: [],
+      // @ts-expect-error 'nope' is neither a function of the addon nor a project RPC
+      actions: { retry: { run: 'nope', label: 'forget__label' } },
+    },
+  },
+})
+
+typedDefinePlugin({
+  title: 't',
+  screens: [],
+  arrangedScreens: {
+    start: {
+      path: '/start-next',
+      title: 'health__title',
+      scope: 'project',
+      source: 'startScreen',
+      slots: [],
+      // @ts-expect-error 'done' is not a variant startScreen returns
+      redirect: { done: '/home' },
+    },
+  },
+})
+
+typedDefinePlugin({
+  title: 't',
+  screens: [],
+  arrangedScreens: {
+    start: {
+      path: '/start-next',
+      title: 'health__title',
+      scope: 'project',
+      source: 'startScreen',
+      slots: [],
+      // @ts-expect-error neither an arranged screen of the addon nor a path
+      redirect: { new: 'getting-started' },
     },
   },
 })

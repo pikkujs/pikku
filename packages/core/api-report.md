@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3734 observable things**: 1242 exported names, plus
+**3737 observable things**: 1245 exported names, plus
 2492 members on the classes and interfaces among them, reachable
 through 67 entry points.
 
@@ -34,9 +34,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./cli` | 17 | 15 | 27 |
 | `./trace` | 19 | 19 | 21 |
 | `./function` | 32 | 27 | 10 |
+| `./addon` | 35 | 35 | 2 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
-| `./addon` | 32 | 32 | 2 |
 | `./contributors` | 14 | 14 | 20 |
 | `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
@@ -3613,6 +3613,15 @@ export class RemoteAddonAuthError extends PikkuError {
   constructor(namespace: string, detail: string)
 }
 resolveRemoteAddonToken: (auth: RemoteAddonAuthBinding | undefined, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, wire: PikkuRawWire, namespace: string) => Promise<string | null>
+export type StudioAction<
+  Fn extends string = string,
+  Key extends string = string,
+> = {
+  run: Fn | StudioRpcRef
+  label: Key
+} & (
+  { destructive: true; confirm: Key } | { destructive?: false; confirm?: Key }
+)
 export type StudioAppScreen = StudioScreenBase & {
   app: string
 }
@@ -3623,21 +3632,26 @@ export type StudioArrangedScreen<
   Fn extends string = string,
   Key extends string = string,
   Slots = readonly StudioSlot<WidgetId, From, string, Key>[],
+  Variant extends string = string,
+  Target extends string = string,
 > = StudioScreenBase & {
   title: Key
   about?: Key
-  source: Fn
+  source: Fn | StudioRpcRef
   slots: Slots
   shows?: readonly Kind[]
   lanes?: 1 | 2 | 3 | 4 | 5 | 6
   chat?: 'collapse'
   scoped?: boolean
+  actions?: { readonly [id: string]: StudioAction<Fn, Key> }
+  redirect?: { readonly [V in Variant]?: Target }
+  poll?: StudioPoll
 }
 export type StudioCardHead<Variant extends string = string> =
   StudioVariantData<Variant> & {
     state?: 'wrong' | 'slow' | 'fine' | 'empty' | 'new'
     tone?: 'bad' | 'warn' | 'good' | 'idle'
-    primary?: { run?: string }
+    primary?: { action?: string }
   }
 export type StudioCompact = 'full' | 'tile' | 'hide'
 export type StudioComponentScreen = StudioScreenBase & {
@@ -3657,6 +3671,8 @@ export type StudioNav = {
   order: number
   badge?: string
 }
+export type StudioPoll = number | { fast: number; slow: number }
+export type StudioRpcRef = `${string}:${string}`
 export type StudioScreen = StudioComponentScreen | StudioAppScreen
 export type StudioSkin = 'desk' | 'headset'
 export type StudioSlot<
@@ -3691,10 +3707,11 @@ export type StudioThing<
   Parts = readonly StudioSlot<WidgetId, From, string, Key>[],
 > = {
   label: Key
-  source: Fn
+  source: Fn | StudioRpcRef
   copy: { readonly [V in Variant]: StudioThingCopy<Key> }
   parts: Parts
   related?: readonly Kind[]
+  actions?: { readonly [id: string]: StudioAction<Fn, Key> }
   alwaysFull?: boolean
   measure?: 'narrow' | 'normal' | 'fill'
 }
@@ -6785,7 +6802,7 @@ export type LocalContentRequestHandlerOptions = {
 }
 export type SignedContentVerification =
   { ok: true } | { ok: false; status: number; body: string }
-verifySignedContentRequest: (requestUrl: URL, jwt: any, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
+verifySignedContentRequest: (requestUrl: URL, jwt: JWTService | undefined, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
 ```
 
 ## ./services/temporary-file-service

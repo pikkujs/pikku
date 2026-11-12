@@ -155,8 +155,8 @@ export type StudioCardHead<Variant extends string = string> =
   StudioVariantData<Variant> & {
     state?: 'wrong' | 'slow' | 'fine' | 'empty' | 'new'
     tone?: 'bad' | 'warn' | 'good' | 'idle'
-    /** The one obvious next step, worded by the variant's `copy.primary`. `run` names a function of the addon. */
-    primary?: { run?: string }
+    /** The one obvious next step, worded by the variant's `copy.primary`. `action` names one of the thing's `actions`. */
+    primary?: { action?: string }
   }
 
 /**
@@ -172,6 +172,39 @@ export type StudioThingCopy<Key extends string = string> = {
   /** `draft` is written into the chat box, never sent. */
   primary?: { label: Key; draft?: Key }
 }
+
+/**
+ * A function of the user's project rather than of the addon, by its RPC name,
+ * `<namespace>:<function>`, such as `'console:listAgents'` or
+ * `'admin:listUsers'`. The host calls it from the browser with the same
+ * project client the addon's screens use. Its output is not typed here, so
+ * the `from` keys and variants of a slot it feeds are any string.
+ */
+export type StudioRpcRef = `${string}:${string}`
+
+/**
+ * Something a person can do from a thing's card or an arranged screen: `run`
+ * calls a function of the addon or a project RPC. A destructive action needs a
+ * `confirm`, a message key whose `{placeholders}` the host fills from the
+ * data's `values`; the host asks before it runs.
+ */
+export type StudioAction<
+  Fn extends string = string,
+  Key extends string = string,
+> = {
+  run: Fn | StudioRpcRef
+  /** A message key in the addon's catalog. */
+  label: Key
+} & (
+  { destructive: true; confirm: Key } | { destructive?: false; confirm?: Key }
+)
+
+/**
+ * How often the host calls an arranged screen's source again, in
+ * milliseconds. `{ fast, slow }` backs off: `fast` while the data keeps
+ * changing, `slow` once it has settled.
+ */
+export type StudioPoll = number | { fast: number; slow: number }
 
 /** What the host calls every source function with. */
 export type StudioSourceInput = {
@@ -199,12 +232,14 @@ export type StudioThing<
 > = {
   /** A message key in the addon's catalog. */
   label: Key
-  source: Fn
+  source: Fn | StudioRpcRef
   copy: { readonly [V in Variant]: StudioThingCopy<Key> }
   /** The card's body under its head, in reading order. */
   parts: Parts
   /** The addon's own kinds this card can open beside itself. */
   related?: readonly Kind[]
+  /** What a person can do from the card, by id. */
+  actions?: { readonly [id: string]: StudioAction<Fn, Key> }
   alwaysFull?: boolean
   measure?: 'narrow' | 'normal' | 'fill'
 }
@@ -221,12 +256,14 @@ export type StudioArrangedScreen<
   Fn extends string = string,
   Key extends string = string,
   Slots = readonly StudioSlot<WidgetId, From, string, Key>[],
+  Variant extends string = string,
+  Target extends string = string,
 > = StudioScreenBase & {
   /** A message key in the addon's catalog. It is also the nav label. */
   title: Key
   /** A message key in the addon's catalog. */
   about?: Key
-  source: Fn
+  source: Fn | StudioRpcRef
   slots: Slots
   /** The addon's own thing kinds this screen shows. */
   shows?: readonly Kind[]
@@ -235,6 +272,15 @@ export type StudioArrangedScreen<
   chat?: 'collapse'
   /** Shows the place-and-time picker. */
   scoped?: boolean
+  /** What a person can do from the screen, by id. */
+  actions?: { readonly [id: string]: StudioAction<Fn, Key> }
+  /**
+   * Sends the viewer elsewhere when the source's `variant` is one of these:
+   * to another of the addon's arranged screens, by id, or to a path.
+   */
+  redirect?: { readonly [V in Variant]?: Target }
+  /** Calls the source again on a timer. Off by default. */
+  poll?: StudioPoll
 }
 
 /**
@@ -323,7 +369,9 @@ type CheckedArrangedScreens<
       WidgetIdOf<W>,
       Key,
       SlotsOf<A[K]>
-    >
+    >,
+    VariantOf<OutputOf<Fns, SourceOf<A[K]>>>,
+    Extract<keyof A, string> | `/${string}`
   >
 }
 
@@ -331,7 +379,8 @@ type CheckedArrangedScreens<
  * `definePlugin`, checked against the addon's functions and message keys. A
  * slot's `widget` must be one of the addon's own `widgets` or a core widget in
  * `WidgetRegistry`; `related` and `shows` name the addon's own thing kinds;
- * `source` names one of `Fns`, and `from` a key of that function's output;
+ * `source` names one of `Fns`, and `from` a key of that function's output, or
+ * a project RPC (`StudioRpcRef`), whose output is not checked;
  * the `copy` of a slot or a thing words every `variant` its data can name; and
  * the message keys of widgets, things and arranged screens are `Key`s. With
  * the defaults, `source`, `from`, variants and keys are any string.
