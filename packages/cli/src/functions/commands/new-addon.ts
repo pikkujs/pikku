@@ -249,8 +249,6 @@ export function getAddonFiles(
           import: './dist/src/index.js',
         },
         './.pikku/*': './dist/.pikku/addon/*',
-        './.pikku/pikku-metadata.gen.json':
-          './dist/.pikku/addon/pikku-metadata.gen.json',
         './.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js': {
           types:
             './dist/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.ts',
