@@ -174,8 +174,15 @@ const readServiceRows = (state: any, config: any): MetaRow[] => {
   ]
 }
 
+import {
+  addonFunctionDetail,
+  addonFunctionRows,
+  addonSummary,
+  similarAddonFunctions,
+} from './meta-addons.js'
+
 export const pikkuMetaFunctionsList = pikkuSessionlessFunc<{}, void>({
-  func: async ({ getInspectorState }) => {
+  func: async ({ getInspectorState, config }) => {
     const state = await getInspectorState()
     const meta = state.functions.meta ?? {}
     const functions = Object.entries(meta).map(([id, m]) => ({
@@ -184,7 +191,10 @@ export const pikkuMetaFunctionsList = pikkuSessionlessFunc<{}, void>({
       description: m.description ?? null,
       tags: m.tags ?? [],
     }))
-    out({ functions })
+    // The wired addons' functions are not in this list (there are hundreds): `pikku meta grep <addon> <words>`
+    // finds them and `pikku meta functions get <addon>:<function>` gives the input and output shapes.
+    const addons = addonSummary(config, state)
+    out(addons.length ? { functions, addons } : { functions })
   },
 })
 
@@ -192,10 +202,22 @@ export const pikkuMetaFunctionsGet = pikkuSessionlessFunc<
   { functionId: string },
   void
 >({
-  func: async ({ getInspectorState }, data) => {
+  func: async ({ getInspectorState, config }, data) => {
     const state = await getInspectorState()
     const m = state.functions.meta?.[data.functionId]
-    if (!m) throw new Error(`Function not found: ${data.functionId}`)
+    if (!m) {
+      const addon = addonFunctionDetail(config, state, data.functionId)
+      if (addon) return void out(addon)
+      const similar = similarAddonFunctions(config, state, data.functionId)
+      throw new Error(
+        `Function not found: ${data.functionId}` +
+          (similar.length
+            ? `. Wired addon functions like it: ${similar.join(', ')}`
+            : data.functionId.includes(':')
+              ? '. Is that addon wired? `pikku addons search <name>` says'
+              : '')
+      )
+    }
     out({
       functionId: data.functionId,
       name: m.name ?? data.functionId,
@@ -704,6 +726,7 @@ const readProjectRows = async (
 ): Promise<MetaRow[]> => {
   const state = await getInspectorState()
   const functions = (state.functions.meta ?? {}) as Record<string, any>
+  const addonFunctions = addonFunctionRows(config, state)
   const inProject = (file: string | null | undefined): string | undefined =>
     file ? relative(config.rootDir, resolve(config.rootDir, file)) : undefined
   const definitions = (kind: string, entries: Record<string, any>): MetaRow[] =>
@@ -733,6 +756,7 @@ const readProjectRows = async (
 
   return [
     ...definitions('function', functions),
+    ...addonFunctions,
     ...Object.entries(state.workflows?.meta ?? {}).map(
       ([id, workflow]: [string, any]) => ({
         kind: 'workflow',
