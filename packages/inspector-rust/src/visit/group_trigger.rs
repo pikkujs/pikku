@@ -152,7 +152,7 @@ impl Context<'_> {
             o.set_str(step, &id);
             self.state.service_aggregation.used_functions.add(id);
         }
-        let verify = self.get_property_assignment_initializer(obj, "verify", false);
+        let verify = self.get_property_assignment_initializer(obj, "verify", true);
         let mut credential = webhook_secret_credential_name(&name);
         let v = tsutil::get_property_value(obj, "credential");
         if v.present {

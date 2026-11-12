@@ -169,7 +169,7 @@ func (s *Context) addWireTriggerWebhookSource(node, obj *ast.Node) {
 		o.set(step, id)
 		s.State.ServiceAggregation.UsedFunctions.Add(id)
 	}
-	verify := s.getPropertyAssignmentInitializer(obj, "verify", false)
+	verify := s.getPropertyAssignmentInitializer(obj, "verify", true)
 	credential := webhookSecretCredentialName(name)
 	if v := tsutil.GetPropertyValue(obj, "credential"); v.Present {
 		credential = v.AsString()
