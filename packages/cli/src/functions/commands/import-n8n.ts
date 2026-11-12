@@ -1,3 +1,4 @@
+import { spawnSync } from 'child_process'
 import { existsSync } from 'fs'
 import { basename, isAbsolute, join, resolve } from 'path'
 import { mkdir, readdir, readFile, stat, writeFile } from 'fs/promises'
@@ -6,6 +7,7 @@ import { registryUrl } from '../../utils/remote-addon-sync.js'
 import {
   dropUnpublished,
   namespacesUsed,
+  runSetup,
   startFile,
   triggerOf,
   wiredPackages,
@@ -80,7 +82,8 @@ async function importOne(
   { raw, nameHint }: ImportJob,
   baseDir: string,
   logger: ImportLogger,
-  registry?: string
+  registry?: string,
+  setup?: { install: string[]; names: string[] }
 ): Promise<boolean> {
   // Imported here: the n8n importer loads the TypeScript compiler, which no
   // other command run needs.
@@ -180,6 +183,10 @@ async function importOne(
   const install = [...needed]
     .filter((p) => !unpublished.has(p))
     .map((p) => p.replace('@pikku/addon-', ''))
+  if (setup) {
+    setup.install.push(...install)
+    setup.names.push(parsed.name)
+  }
   if (install.length)
     logger.info(
       `  next: ${install.map((n) => `pikku addons add ${n}`).join(' && ')}  then  pikku all --tsc-summary`
@@ -191,10 +198,11 @@ export const pikkuImportN8n = pikkuSessionlessFunc<
   {
     file: string
     out?: string
+    setup?: boolean
   },
   void
 >({
-  func: async ({ logger, config }, { file, out }) => {
+  func: async ({ logger, config }, { file, out, setup }) => {
     const registry = registryUrl(config)
     const inputPath = isAbsolute(file) ? file : resolve(process.cwd(), file)
     if (!existsSync(inputPath)) {
@@ -244,8 +252,30 @@ export const pikkuImportN8n = pikkuSessionlessFunc<
     }
 
     let failed = 0
+    const setupSteps = setup
+      ? { install: [] as string[], names: [] as string[] }
+      : undefined
     for (const job of jobs) {
-      if (!(await importOne(job, baseDir, logger, registry))) failed++
+      if (!(await importOne(job, baseDir, logger, registry, setupSteps)))
+        failed++
+    }
+    if (setupSteps) {
+      runSetup(
+        (args) => {
+          const r = spawnSync(process.execPath, [process.argv[1]!, ...args], {
+            cwd: process.cwd(),
+            encoding: 'utf8',
+            timeout: 600_000,
+          })
+          return {
+            code: r.status ?? 1,
+            out: `${r.stdout ?? ''}${r.stderr ?? ''}`,
+          }
+        },
+        setupSteps.install,
+        setupSteps.names,
+        (message) => logger.info(message)
+      )
     }
 
     if (jobs.length > 1) {

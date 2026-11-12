@@ -4,6 +4,7 @@ import {
   cronOf,
   dropUnpublished,
   namespacesUsed,
+  runSetup,
   startFile,
   triggerOf,
   wiredPackages,
@@ -164,5 +165,69 @@ wireAddon({
       'a/a.graph.ts': `nodes: { x: "gmail:messageSend", y: "graph:sort", z: "stubFn" }`,
     }
     assert.deepEqual([...namespacesUsed(files)].sort(), ['gmail', 'graph'])
+  })
+})
+
+describe('runSetup', () => {
+  test('installs each addon once, type-checks, and reports what is missing and what is a stub', () => {
+    const calls: string[] = []
+    const out: string[] = []
+    runSetup(
+      (args) => {
+        calls.push(args.join(' '))
+        if (args[0] === 'addons')
+          return {
+            code: 0,
+            out: 'bun add\nFill these in:\n  secret GMAIL_APP_CREDENTIALS\n  credential gmailOAuth (each user connects their own)\n',
+          }
+        if (args[0] === 'all')
+          return {
+            code: 0,
+            out: '◇◆ pikku ::\n  • 4 Workflows\nType check passed — no errors.\n',
+          }
+        return {
+          code: 0,
+          out: '◇◆ pikku ::\n{"nodes":{"a":{},"b":{}},"missingRequiredInputs":{"a":["to"]},"stubs":["b"]}',
+        }
+      },
+      ['graph', 'gmail', 'graph'],
+      ['Gmail Ops'],
+      (m) => out.push(m)
+    )
+    assert.deepEqual(calls, [
+      'addons add graph',
+      'addons add gmail',
+      'all --tsc-summary',
+      'meta workflows get Gmail Ops',
+    ])
+    const text = out.join('\n')
+    assert.match(
+      text,
+      /addons add gmail: ok\n\s+Fill these in:\n\s+secret GMAIL_APP_CREDENTIALS/
+    )
+    assert.match(text, /pikku all --tsc-summary: ok\nType check passed/)
+    assert.doesNotMatch(text, /4 Workflows/)
+    assert.match(
+      text,
+      /"Gmail Ops" \(2 nodes\)\n\s+a: missing required to\n\s+stubs: b/
+    )
+  })
+  test('a failing install and a clean graph are said plainly', () => {
+    const out: string[] = []
+    runSetup(
+      (args) =>
+        args[0] === 'addons'
+          ? { code: 1, out: 'not found' }
+          : args[0] === 'all'
+            ? { code: 1, out: 'Type check: 1 error' }
+            : { code: 0, out: '{"nodes":{"a":{}}}' },
+      ['nope'],
+      ['W'],
+      (m) => out.push(m)
+    )
+    const text = out.join('\n')
+    assert.match(text, /addons add nope: FAILED\nnot found/)
+    assert.match(text, /pikku all --tsc-summary: FAILED/)
+    assert.match(text, /nothing missing/)
   })
 })

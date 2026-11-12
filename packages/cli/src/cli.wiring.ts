@@ -2176,6 +2176,11 @@ wireCLI({
                 'Output directory (defaults to scaffold.functionDir or cwd)',
               short: 'o',
             },
+            setup: {
+              description:
+                'After the import: install the addons it names (pikku addons add), run pikku all --tsc-summary, and print what each graph still needs (missing required inputs, stubs)',
+              default: false,
+            },
           },
         }),
       },

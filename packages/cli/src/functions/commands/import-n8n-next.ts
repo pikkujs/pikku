@@ -171,3 +171,64 @@ export const dropUnpublished = (
   })
   return kept.length ? head + kept.join('') : undefined
 }
+
+export type Run = (args: string[]) => { code: number; out: string }
+
+const tail = (text: string, n: number): string =>
+  text
+    .split('\n')
+    .filter((l) => l.trim() && !/^\s*•|completed in|^◇◆ pikku ::/.test(l))
+    .slice(-n)
+    .join('\n')
+
+/**
+ * What `pikku import n8n --setup` does after the import: install the addons it named, regenerate and type-check,
+ * then say what the graph still needs (the same facts `pikku meta workflows get` gives), so the next call is a fix.
+ */
+export const runSetup = (
+  run: Run,
+  install: string[],
+  workflowNames: string[],
+  info: (message: string) => void
+): void => {
+  for (const name of [...new Set(install)]) {
+    const r = run(['addons', 'add', name])
+    const needs = r.out
+      .split('\n')
+      .filter((l) => /^Fill these in|^\s+(secret|credential|variable) /.test(l))
+    info(
+      r.code === 0
+        ? `setup: pikku addons add ${name}: ok${needs.length ? '\n' + needs.map((l) => '    ' + l.trim()).join('\n') : ''}`
+        : `setup: pikku addons add ${name}: FAILED\n${tail(r.out, 6)}`
+    )
+  }
+  const all = run(['all', '--tsc-summary'])
+  info(
+    `setup: pikku all --tsc-summary: ${all.code === 0 ? 'ok' : 'FAILED'}\n${tail(all.out, 14)}`
+  )
+  for (const name of workflowNames) {
+    const r = run(['meta', 'workflows', 'get', name])
+    let checks = ''
+    try {
+      const json = JSON.parse(
+        r.out.split('\n').find((l) => l.startsWith('{')) ?? ''
+      )
+      const missing = json.missingRequiredInputs ?? {}
+      const lines = Object.entries(missing).map(
+        ([node, fields]) =>
+          `    ${node}: missing required ${(fields as string[]).join(', ')}`
+      )
+      if (json.stubs?.length) lines.push(`    stubs: ${json.stubs.join(', ')}`)
+      checks = lines.length
+        ? lines.join('\n')
+        : '    nothing missing: no required input dropped, no stub left'
+      info(
+        `setup: "${name}" (${Object.keys(json.nodes ?? {}).length} nodes)\n${checks}`
+      )
+    } catch {
+      info(
+        `setup: pikku meta workflows get "${name}" gave no JSON\n${tail(r.out, 6)}`
+      )
+    }
+  }
+}
