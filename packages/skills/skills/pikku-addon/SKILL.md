@@ -113,12 +113,17 @@ An addon declares the screens it adds to Pikku Studio with `definePlugin`, in `s
 - `defaultChat: false` hides Studio's general Chat tab on the screen, so the screen's `agent` is its only chat.
 - `agents/` and `skills/` ship in the package: a `files` list must name both folders; a root glob such as `**/*.md` does not count.
 - `package.json` carries a `studio` block, `{ "addon": "<name>", "ui": "./src", "messages": "./messages/{locale}.json" }`. Studio only links a package with `studio.addon`, the `<addon>` in an agent's scope `agent:<addon>:<name>`. `--ui` scaffolds it.
+- Optional `widgets` (own components, by id), `things` (cards, by kind) and `arrangedScreens` (screens Studio lays out from widgets, by id; no `component`/`app`/`nav`). Import `definePlugin` from `#pikku/addon/screens` so tsc checks them against the addon's functions and `messages/en.json` keys.
+- A slot `{ widget, from, span?, compact?, copy? }`: `widget` is the addon's own or a core widget (typed by `WidgetRegistry`, filled by Studio); `from` is a key of the `source` function's output.
+- `source` (and an action's `run`) names a function of the addon or a project RPC `'<namespace>:<function>'` (e.g. `'console:listAgents'`), whose output is untyped.
+- Sources return data only: `{ variant, values }`. Words are message keys in `copy`, per variant (slot: the widget's texts; thing: `name`, `compact`, `lead?`, `primary?: { label, draft? }`). Never return or declare plain text: text is always a declared key or an explicitly marked dynamic value. `{placeholders}` are not typed against `values`.
+- `actions: { id: { run, label, confirm?, destructive? } }`; `destructive: true` requires `confirm`. Arranged screens also take `redirect` (`{ variant: screenId | '/path' }`) and `poll` (ms or `{ fast, slow }`).
 
 | Code   | `pikku all` fails when                                                                                                                    |
 | ------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| PKU345 | a field is not a literal (variable, call, spread, bad value)                                                                              |
+| PKU345 | a field is not a literal (variable, call, spread, bad value), a malformed RPC name, or a destructive action without `confirm`            |
 | PKU357 | two screens of the addon use the same path                                                                                                |
-| PKU358 | a title or agent frontmatter key is missing from `messages/en.json`                                                                       |
+| PKU358 | a title, agent frontmatter, widget, thing, arranged screen, slot `copy` or action key is missing from `messages/en.json`                  |
 | PKU359 | `nav.badge` names no function of the addon                                                                                                |
 | PKU365 | `agent` is neither a name nor `studio:<name>`, or a name has no non-empty `agents/<name>.md`, or no frontmatter `title` and `description` |
 | PKU366 | `package.json` `files` leaves out `agents/` while a screen names a valid (no PKU365) non-`studio:` agent, or `skills/` while the addon has a `skills/<name>/SKILL.md` |

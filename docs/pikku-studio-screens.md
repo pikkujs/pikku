@@ -160,6 +160,156 @@ pattern.
 `pikku new addon <name> --ui` scaffolds both the `files` list and the `studio`
 block, with `addon` set to `<name>`.
 
+## Widgets, things and arranged screens
+
+Beside its own screens, an addon can declare three things Studio draws for it,
+all optional:
+
+- `widgets`: components the addon ships, by id. Studio draws them from data.
+- `things`: something the addon can open as a card beside a screen, by kind.
+- `arrangedScreens`: screens Studio lays out from widgets, by id. The addon
+  writes no component for them: a `source` returns data, and each slot hands one
+  key of it to a widget.
+
+```ts
+import { definePlugin } from '#pikku/addon/screens'
+
+export default definePlugin({
+  title: 'invoices__title',
+  screens: [],
+  widgets: {
+    'aging-chart': {
+      title: 'invoices_aging__title',
+      description: 'invoices_aging__description',
+      states: ['full', 'tile'],
+      actions: ['open'],
+      component: () => import('./widgets/AgingChart.js'),
+    },
+  },
+  things: {
+    invoice: {
+      label: 'invoices_invoice__label',
+      source: 'invoiceCard',
+      copy: {
+        overdue: {
+          name: 'invoices_overdue__name',
+          compact: 'invoices_overdue__compact',
+          primary: { label: 'invoices_remind__label' },
+        },
+        paid: { name: 'invoices_paid__name', compact: 'invoices_paid__compact' },
+      },
+      parts: [{ widget: 'aging-chart', from: 'aging' }],
+      actions: {
+        void: {
+          run: 'voidInvoice',
+          label: 'invoices_void__label',
+          destructive: true,
+          confirm: 'invoices_void__confirm',
+        },
+      },
+    },
+  },
+  arrangedScreens: {
+    overview: {
+      path: '/invoices-next',
+      title: 'invoices_overview__title',
+      scope: 'project',
+      source: 'invoicesOverview',
+      slots: [
+        {
+          widget: 'verdict',
+          from: 'verdict',
+          span: 'full',
+          copy: {
+            late: { headline: 'invoices_verdict_late__headline' },
+            fine: { headline: 'invoices_verdict_fine__headline' },
+          },
+        },
+        { widget: 'aging-chart', from: 'aging' },
+      ],
+      shows: ['invoice'],
+      redirect: { empty: '/invoices/getting-started' },
+      poll: { fast: 3000, slow: 45000 },
+    },
+  },
+})
+```
+
+A slot's `widget` is one of the addon's own `widgets` or a core widget Studio
+ships, never another addon's. `related` (on a thing) and `shows` (on an arranged
+screen) name the addon's own thing kinds. Arranged screens take `path`, `title`,
+`scope`, `scopes` and `needsApp` like any screen, but no `component`, `app` or
+`nav`; in this release Studio mounts them at their path only.
+
+### Sources
+
+`source` names the function Studio calls for the data, with
+`{ projectKey, stage, range?, subject? }` (`subject` is set for a thing:
+`{ kind, id }`). It is either:
+
+- a function of the addon, by name. Its output has one key per slot's `from`;
+  a thing's also has `head`, a `StudioCardHead`.
+- a project RPC, `<namespace>:<function>`, such as `'console:listAgents'` or
+  `'admin:listUsers'`. Studio calls it from the browser with the same client its
+  own screens use. Its output is not typed, so `from` and variants are any string.
+
+An action's `run` names a function the same two ways.
+
+### Actions, redirect and poll
+
+- `actions` (on a thing or an arranged screen), by id: `run`, `label` (a message
+  key), and `confirm` (a message key whose `{placeholders}` Studio fills from
+  the data's `values`). `destructive: true` requires `confirm`; Studio asks
+  before it runs.
+- `redirect` (arranged screens) sends the viewer elsewhere when the source's
+  `variant` is one of its keys: to another arranged screen of the addon, by id,
+  or to a path (`'/...'`).
+- `poll` (arranged screens) calls the source again: a number of milliseconds,
+  or `{ fast, slow }` to back off from `fast` to `slow` once the data stops
+  changing. Off by default.
+
+### Text is always a declared key or an explicitly marked dynamic value
+
+No words cross the wire. A source returns data: a `variant`, and raw `values`
+(strings and numbers) beside it. The words are declared in `definePlugin` as
+`copy`, per variant, and every one is a message key in the addon's catalog:
+
+- a slot's `copy`: for each variant the data at its `from` can name, the texts
+  the widget shows, by the widget's own names (`headline`, ...), each a key.
+- a thing's `copy`: for each variant its `head` can name, `name`, `compact`,
+  `lead?` and `primary?: { label, draft? }`.
+
+Studio resolves the keys, fills their `{placeholders}` from `values`, formats
+numbers, dates and plurals with `Intl`, and hands the widget the resolved
+strings and the raw values. A widget's own chrome (axis labels, empty states)
+lives in its package's catalog. Data that is not the addon's words (a user's
+name, an invoice reference) is ordinary data: Studio marks it as dynamic before
+it is shown. A plain string is never a way to show text.
+
+`{placeholders}` are not typed against `values`: a key whose placeholder the
+data does not carry renders the placeholder's name. Keep the two in step.
+
+### Typing: `#pikku/addon/screens`
+
+`pikku all` writes `#pikku/addon/screens` for an addon: `definePlugin` typed
+against the addon's own functions and the keys of its `messages/en.json`.
+Imported from there rather than from `@pikku/core/addon`, tsc checks:
+
+- `source` and `run` name a function of the addon, or a project RPC by shape;
+- `from` is a key of the source function's output;
+- each `copy` words every `variant` its data can name;
+- `redirect` keys are variants of the source and its targets are arranged
+  screen ids or paths;
+- every message key is in `messages/en.json`.
+
+Core widgets are typed through `WidgetRegistry`, which `@pikku/core` leaves
+empty; Studio's widget package fills it by module augmentation, with the data
+each widget takes. With `@pikku/core/addon`'s own `definePlugin` everything is a
+plain string; the build checks below still run.
+
+Studio decides which addons may place widgets at all; this release declares no
+trust field.
+
 ## What `pikku all` checks
 
 The inspector reads `definePlugin` statically and writes the screens into the
@@ -167,9 +317,9 @@ addon's `studio` metadata. It fails the build on:
 
 | Code   | When                                                                                                                                          |
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| PKU345 | a field is not a literal: a variable, a call, a spread or a value outside its set                                                             |
-| PKU357 | two screens of the addon use the same path                                                                                                    |
-| PKU358 | a title key, or an agent's `title` / `description` key, is missing from `messages/en.json`                                                    |
+| PKU345 | a field is not a literal: a variable, a call, a spread or a value outside its set; a `source` or `run` that is neither a name nor `<namespace>:<function>`; a destructive action without `confirm`; `lanes` outside 1-6; a `poll` that is not a positive whole number of milliseconds |
+| PKU357 | two screens or arranged screens of the addon use the same path                                                                                |
+| PKU358 | a title key, an agent's `title` / `description` key, or a key of a widget (`title`, `description`), thing (`label`, `copy`), arranged screen (`title`, `about`), slot `copy` or action (`label`, `confirm`) is missing from `messages/en.json` |
 | PKU359 | a `nav.badge` names no function of the addon                                                                                                  |
 | PKU365 | an `agent` is neither a name `/^[a-z][a-z0-9-]*$/` nor `studio:<name>`; or a name has no non-empty `agents/<name>.md`, or that file lacks frontmatter with a `title` and `description` |
 | PKU366 | `package.json` has a `files` list that leaves out `agents/` while a screen names a valid agent the addon ships (not `studio:<name>`, and not already PKU365), or leaves out `skills/` while the addon has a `skills/<name>/SKILL.md` |
