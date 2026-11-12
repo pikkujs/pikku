@@ -87,8 +87,100 @@ func quotedList(values []string) string {
 	return strings.Join(quoted, ", ")
 }
 
+// studioConst is the initializer of `const <name> = ...` declared at the top
+// of n's file, or nil.
+func studioConst(n *ast.Node, name string) *ast.Node {
+	sf := ast.GetSourceFileOfNode(n)
+	if sf == nil {
+		return nil
+	}
+	for _, st := range sf.Statements.Nodes {
+		if !ast.IsVariableStatement(st) {
+			continue
+		}
+		list := st.AsVariableStatement().DeclarationList
+		if list == nil || list.Flags&ast.NodeFlagsConst == 0 {
+			continue
+		}
+		for _, d := range list.AsVariableDeclarationList().Declarations.Nodes {
+			if ast.IsIdentifier(d.Name()) && d.Name().Text() == name && d.Initializer() != nil {
+				return d.Initializer()
+			}
+		}
+	}
+	return nil
+}
+
+// studioLit is n seen through parentheses, `as`, `satisfies` and identifiers
+// naming a const declared at the top of the same file, so a declaration can
+// share copy through consts. Anything else is returned as it is.
+func studioLit(n *ast.Node) *ast.Node {
+	for i := 0; n != nil && i < 32; i++ {
+		switch {
+		case ast.IsParenthesizedExpression(n), ast.IsAsExpression(n), ast.IsSatisfiesExpression(n):
+			n = n.Expression()
+		case ast.IsIdentifier(n):
+			init := studioConst(n, n.Text())
+			if init == nil {
+				return n
+			}
+			n = init
+		default:
+			return n
+		}
+	}
+	return n
+}
+
+// studioProp is one field of an object literal: its key, whether the key is
+// a literal, the node to quote when it is not, and its value through studioLit.
+type studioProp struct {
+	key  string
+	ok   bool
+	node *ast.Node
+	init *ast.Node
+}
+
+// studioProps is an object literal's fields, keyed by identifiers, string or
+// number literals, with each `...spread` of a same-file const object put in
+// its place. A later field of the same key wins, as in JavaScript.
+func studioProps(obj *ast.Node) []studioProp {
+	return studioPropsAt(obj, 0)
+}
+
+func studioPropsAt(obj *ast.Node, depth int) []studioProp {
+	out := []studioProp{}
+	for _, p := range obj.Properties() {
+		switch {
+		case ast.IsSpreadAssignment(p):
+			if src := studioLit(p.Expression()); depth < 32 && ast.IsObjectLiteralExpression(src) {
+				out = append(out, studioPropsAt(src, depth+1)...)
+			} else {
+				out = append(out, studioProp{node: p})
+			}
+		case ast.IsShorthandPropertyAssignment(p):
+			name := p.Name().Text()
+			out = append(out, studioProp{key: name, ok: name != "", node: p, init: studioLit(p.Name())})
+		case ast.IsPropertyAssignment(p) && (ast.IsIdentifier(p.Name()) || ast.IsStringLiteral(p.Name()) || ast.IsNumericLiteral(p.Name())):
+			out = append(out, studioProp{key: p.Name().Text(), ok: true, node: p, init: studioLit(p.Initializer())})
+		default:
+			out = append(out, studioProp{node: p})
+		}
+	}
+	return out
+}
+
+// studioElements is an array literal's elements through studioLit.
+func studioElements(arr *ast.Node) []*ast.Node {
+	out := []*ast.Node{}
+	for _, el := range arr.Elements() {
+		out = append(out, studioLit(el))
+	}
+	return out
+}
+
 // pluginManifest is the object literal passed to definePlugin, seen through
-// `as const`, `satisfies` and parentheses.
+// `as`, `satisfies`, parentheses and a same-file const.
 func pluginManifest(node *ast.Node) *ast.Node {
 	if !ast.IsCallExpression(node) || !ast.IsIdentifier(node.Expression()) || node.Expression().Text() != "definePlugin" {
 		return nil
@@ -97,10 +189,7 @@ func pluginManifest(node *ast.Node) *ast.Node {
 	if len(args) == 0 {
 		return nil
 	}
-	arg := args[0]
-	for ast.IsAsExpression(arg) || ast.IsSatisfiesExpression(arg) || ast.IsParenthesizedExpression(arg) {
-		arg = arg.Expression()
-	}
+	arg := studioLit(args[0])
 	if !ast.IsObjectLiteralExpression(arg) {
 		return nil
 	}
@@ -172,13 +261,13 @@ func (s *Context) addPikkuStudio(node *ast.Node) {
 	paths := []string{}
 	var widgets, things, arranged []studioEntry
 	var hasWidgets, hasThings, hasArranged bool
-	for _, p := range obj.Properties() {
-		key, ok := propKey(p)
+	for _, p := range studioProps(obj) {
+		key, ok := p.key, p.ok
 		if !ok || key == "" {
-			fail("A definePlugin field must be a literal, got: " + tsutil.NodeText(p))
+			fail("A definePlugin field must be a literal, got: " + tsutil.NodeText(p.node))
 			continue
 		}
-		init := p.Initializer()
+		init := p.init
 		switch key {
 		case "title":
 			if ast.IsStringLiteral(init) {
@@ -191,7 +280,7 @@ func (s *Context) addPikkuStudio(node *ast.Node) {
 				fail("definePlugin's screens must be an array literal, got: " + tsutil.NodeText(init))
 				continue
 			}
-			for _, el := range init.Elements() {
+			for _, el := range studioElements(init) {
 				if sc, path, ok := s.readStudioScreen(el, false, fail); ok {
 					screens = append(screens, sc.head)
 					paths = append(paths, path)
@@ -270,13 +359,13 @@ func studioReadMap(init *ast.Node, field, idKey string, fail func(string), read 
 		fail(fmt.Sprintf("definePlugin's %s must be an object literal, got: %s", field, tsutil.NodeText(init)))
 		return out
 	}
-	for _, p := range init.Properties() {
-		key, ok := propKey(p)
+	for _, p := range studioProps(init) {
+		key, ok := p.key, p.ok
 		if !ok || key == "" {
-			fail(fmt.Sprintf("A definePlugin %s entry must be keyed by a literal, got: %s", field, tsutil.NodeText(p)))
+			fail(fmt.Sprintf("A definePlugin %s entry must be keyed by a literal, got: %s", field, tsutil.NodeText(p.node)))
 			continue
 		}
-		e, ok := read(p.Initializer(), fail)
+		e, ok := read(p.init, fail)
 		if !ok {
 			continue
 		}
@@ -335,6 +424,21 @@ func studioFunctionRef(n *ast.Node) (string, bool) {
 
 const studioFunctionRefExpected = "a function of the addon or a project RPC '<namespace>:<function>'"
 
+// studioGoRef is the shape of an action that opens another screen or thing
+// by its path, `go:/<path>`, instead of running a function.
+var studioGoRef = regexp.MustCompile(`^go:/\S*$`)
+
+// studioActionRun is what an action runs: a function reference, or
+// `go:/<path>`.
+func studioActionRun(n *ast.Node) (string, bool) {
+	if ast.IsStringLiteral(n) && studioGoRef.MatchString(n.Text()) {
+		return n.Text(), true
+	}
+	return studioFunctionRef(n)
+}
+
+const studioActionRunExpected = "a function of the addon, a project RPC '<namespace>:<function>' or 'go:/<path>'"
+
 // studioWholeMs is a positive whole number literal of milliseconds.
 func studioWholeMs(n *ast.Node) (float64, bool) {
 	num, ok := studioNumber(n)
@@ -351,19 +455,19 @@ func readStudioPoll(n *ast.Node) (any, bool) {
 	}
 	var fast, slow float64
 	var hasFast, hasSlow bool
-	for _, f := range n.Properties() {
-		key, ok := propKey(f)
+	for _, f := range studioProps(n) {
+		key, ok := f.key, f.ok
 		if !ok {
 			return nil, false
 		}
 		switch key {
 		case "fast":
-			fast, hasFast = studioWholeMs(f.Initializer())
+			fast, hasFast = studioWholeMs(f.init)
 			if !hasFast {
 				return nil, false
 			}
 		case "slow":
-			slow, hasSlow = studioWholeMs(f.Initializer())
+			slow, hasSlow = studioWholeMs(f.init)
 			if !hasSlow {
 				return nil, false
 			}
@@ -389,31 +493,31 @@ func readStudioActions(n *ast.Node, fail func(string)) ([]state.Raw, bool) {
 	}
 	out := []state.Raw{}
 	ok := true
-	for _, p := range n.Properties() {
-		id, isProp := propKey(p)
-		v := p.Initializer()
+	for _, p := range studioProps(n) {
+		id, isProp := p.key, p.ok
+		v := p.init
 		if !isProp || id == "" || !ast.IsObjectLiteralExpression(v) {
-			fail("An action must be an object literal keyed by a literal, got: " + tsutil.NodeText(p))
+			fail("An action must be an object literal keyed by a literal, got: " + tsutil.NodeText(p.node))
 			ok = false
 			continue
 		}
 		var run, label, confirm string
 		var destructive *bool
 		actionOK := true
-		for _, f := range v.Properties() {
-			key, isField := propKey(f)
+		for _, f := range studioProps(v) {
+			key, isField := f.key, f.ok
 			if !isField || key == "" {
-				fail("An action's field must be a literal, got: " + tsutil.NodeText(f))
+				fail("An action's field must be a literal, got: " + tsutil.NodeText(f.node))
 				actionOK = false
 				continue
 			}
-			fv := f.Initializer()
+			fv := f.init
 			read := false
 			expected := "a literal"
 			switch key {
 			case "run":
-				run, read = studioFunctionRef(fv)
-				expected = studioFunctionRefExpected
+				run, read = studioActionRun(fv)
+				expected = studioActionRunExpected
 			case "label":
 				if read = ast.IsStringLiteral(fv); read {
 					label = fv.Text()
@@ -471,14 +575,14 @@ func readStudioWidget(n *ast.Node, fail func(string)) (studioEntry, bool) {
 	var title, description, component string
 	var states, actions, skins []string
 	ok := true
-	for _, f := range n.Properties() {
-		key, isProp := propKey(f)
+	for _, f := range studioProps(n) {
+		key, isProp := f.key, f.ok
 		if !isProp || key == "" {
-			fail("A widget's field must be a literal, got: " + tsutil.NodeText(f))
+			fail("A widget's field must be a literal, got: " + tsutil.NodeText(f.node))
 			ok = false
 			continue
 		}
-		v := f.Initializer()
+		v := f.init
 		read := false
 		expected := "a literal"
 		switch key {
@@ -536,94 +640,61 @@ func readStudioStringRecord(n *ast.Node) (*jsObject, bool) {
 		return nil, false
 	}
 	var o jsObject
-	for _, f := range n.Properties() {
-		key, ok := propKey(f)
-		if !ok || key == "" || !ast.IsStringLiteral(f.Initializer()) {
+	for _, f := range studioProps(n) {
+		key, ok := f.key, f.ok
+		if !ok || key == "" || !ast.IsStringLiteral(f.init) {
 			return nil, false
 		}
-		o.set(key, f.Initializer().Text())
+		o.set(key, f.init.Text())
 	}
 	return &o, true
 }
 
-// readStudioCopy is `{ [variant]: <entry> }`, each entry read by entry.
-func readStudioCopy(n *ast.Node, entry func(*ast.Node) (*jsObject, bool)) (*jsObject, bool) {
+// readStudioCopy is `{ [variant]: <entry> }`, each entry a variant's wording.
+func readStudioCopy(n *ast.Node) (*jsObject, bool) {
 	if !ast.IsObjectLiteralExpression(n) {
 		return nil, false
 	}
 	var o jsObject
-	for _, f := range n.Properties() {
-		key, ok := propKey(f)
-		if !ok || key == "" {
+	for _, f := range studioProps(n) {
+		if !f.ok || f.key == "" {
 			return nil, false
 		}
-		v, ok := entry(f.Initializer())
+		v, ok := readStudioCopyEntry(f.init)
 		if !ok {
 			return nil, false
 		}
-		o.set(key, v.raw())
+		o.set(f.key, v.raw())
 	}
 	return &o, true
 }
 
-// readStudioThingCopyEntry is one variant of a thing's copy: name, lead,
-// compact and primary { label, draft }, all string literals.
-func readStudioThingCopyEntry(n *ast.Node) (*jsObject, bool) {
+// readStudioCopyEntry is one variant's wording: each text the widget shows,
+// by its name, to a message key, nested for deeper texts (`status: { text }`,
+// `tags: { 0: ... }`). `$` words a value that names this variant.
+func readStudioCopyEntry(n *ast.Node) (*jsObject, bool) {
 	if !ast.IsObjectLiteralExpression(n) {
 		return nil, false
 	}
-	var name, lead, compact string
-	var primary *jsObject
-	for _, f := range n.Properties() {
-		key, ok := propKey(f)
-		if !ok || key == "" {
+	var o jsObject
+	for _, f := range studioProps(n) {
+		if !f.ok || f.key == "" {
 			return nil, false
 		}
-		v := f.Initializer()
-		switch key {
-		case "name", "lead", "compact":
-			if !ast.IsStringLiteral(v) {
-				return nil, false
-			}
-			switch key {
-			case "name":
-				name = v.Text()
-			case "lead":
-				lead = v.Text()
-			default:
-				compact = v.Text()
-			}
-		case "primary":
-			rec, ok := readStudioStringRecord(v)
-			if !ok {
-				return nil, false
-			}
-			label, hasLabel := rec.rec.Get("label")
-			if !hasLabel {
-				return nil, false
-			}
-			var p jsObject
-			p.rec.Set("label", label)
-			if draft, has := rec.rec.Get("draft"); has {
-				p.rec.Set("draft", draft)
-			}
-			primary = &p
+		if ast.IsStringLiteral(f.init) {
+			o.set(f.key, f.init.Text())
+			continue
 		}
-	}
-	if name == "" || compact == "" {
-		return nil, false
-	}
-	var o jsObject
-	o.set("name", name)
-	if lead != "" {
-		o.set("lead", lead)
-	}
-	o.set("compact", compact)
-	if primary != nil {
-		o.set("primary", primary.raw())
+		inner, ok := readStudioCopyEntry(f.init)
+		if !ok {
+			return nil, false
+		}
+		o.set(f.key, inner.raw())
 	}
 	return &o, true
 }
+
+const studioCopyExpected = "an object literal of variants, each mapping texts (nested for deeper ones) to message keys"
 
 func readStudioSlots(n *ast.Node, field string, fail func(string)) ([]studioSlot, bool) {
 	if !ast.IsArrayLiteralExpression(n) {
@@ -632,7 +703,7 @@ func readStudioSlots(n *ast.Node, field string, fail func(string)) ([]studioSlot
 	}
 	slots := []studioSlot{}
 	ok := true
-	for _, el := range n.Elements() {
+	for _, el := range studioElements(n) {
 		if sl, slotOK := readStudioSlot(el, fail); slotOK {
 			slots = append(slots, sl)
 		} else {
@@ -649,14 +720,14 @@ func readStudioSlot(n *ast.Node, fail func(string)) (studioSlot, bool) {
 		return sl, false
 	}
 	ok := true
-	for _, f := range n.Properties() {
-		key, isProp := propKey(f)
+	for _, f := range studioProps(n) {
+		key, isProp := f.key, f.ok
 		if !isProp || key == "" {
-			fail("A slot's field must be a literal, got: " + tsutil.NodeText(f))
+			fail("A slot's field must be a literal, got: " + tsutil.NodeText(f.node))
 			ok = false
 			continue
 		}
-		v := f.Initializer()
+		v := f.init
 		read := false
 		expected := "a literal"
 		switch key {
@@ -675,8 +746,8 @@ func readStudioSlot(n *ast.Node, fail func(string)) (studioSlot, bool) {
 			sl.compact, read = studioOneOf(v, studioCompacts)
 			expected = "one of " + quotedList(studioCompacts)
 		case "copy":
-			sl.copy, read = readStudioCopy(v, readStudioStringRecord)
-			expected = "an object literal of variants, each mapping texts to message keys"
+			sl.copy, read = readStudioCopy(v)
+			expected = studioCopyExpected
 		default:
 			continue
 		}
@@ -709,14 +780,14 @@ func readStudioThing(n *ast.Node, fail func(string)) (studioEntry, bool) {
 	var alwaysFull *bool
 	hasParts := false
 	ok := true
-	for _, f := range n.Properties() {
-		key, isProp := propKey(f)
+	for _, f := range studioProps(n) {
+		key, isProp := f.key, f.ok
 		if !isProp || key == "" {
-			fail("A thing's field must be a literal, got: " + tsutil.NodeText(f))
+			fail("A thing's field must be a literal, got: " + tsutil.NodeText(f.node))
 			ok = false
 			continue
 		}
-		v := f.Initializer()
+		v := f.init
 		read := false
 		expected := "a literal"
 		switch key {
@@ -733,8 +804,8 @@ func readStudioThing(n *ast.Node, fail func(string)) (studioEntry, bool) {
 			ok = ok && actionsOK
 			continue
 		case "copy":
-			copy, read = readStudioCopy(v, readStudioThingCopyEntry)
-			expected = "an object literal of variants, each with literal name and compact keys"
+			copy, read = readStudioCopy(v)
+			expected = studioCopyExpected
 		case "parts":
 			var slotsOK bool
 			parts, slotsOK = readStudioSlots(v, "thing's parts", fail)
@@ -797,14 +868,14 @@ func (s *Context) readStudioNav(n *ast.Node, fail func(string)) (jsObject, bool)
 	var badge *string
 	var order *float64
 	ok := true
-	for _, f := range n.Properties() {
-		key, isProp := propKey(f)
+	for _, f := range studioProps(n) {
+		key, isProp := f.key, f.ok
 		if !isProp || key == "" {
-			fail("A screen's nav field must be a literal, got: " + tsutil.NodeText(f))
+			fail("A screen's nav field must be a literal, got: " + tsutil.NodeText(f.node))
 			ok = false
 			continue
 		}
-		v := f.Initializer()
+		v := f.init
 		read := false
 		switch key {
 		case "area":
@@ -853,8 +924,8 @@ func (s *Context) readStudioNav(n *ast.Node, fail func(string)) (jsObject, bool)
 
 // hasStringLiteralProp: the object sets key to a string literal (which may be empty).
 func hasStringLiteralProp(obj *ast.Node, key string) bool {
-	for _, f := range obj.Properties() {
-		if k, ok := propKey(f); ok && k == key && ast.IsStringLiteral(f.Initializer()) {
+	for _, f := range studioProps(obj) {
+		if k, ok := f.key, f.ok; ok && k == key && ast.IsStringLiteral(f.init) {
 			return true
 		}
 	}
@@ -886,14 +957,14 @@ func (s *Context) readStudioScreen(el *ast.Node, arranged bool, fail func(string
 	var slots []studioSlot
 	hasSlots := false
 	ok := true
-	for _, f := range el.Properties() {
-		key, isProp := propKey(f)
+	for _, f := range studioProps(el) {
+		key, isProp := f.key, f.ok
 		if !isProp || key == "" {
-			fail("A screen's field must be a literal, got: " + tsutil.NodeText(f))
+			fail("A screen's field must be a literal, got: " + tsutil.NodeText(f.node))
 			ok = false
 			continue
 		}
-		v := f.Initializer()
+		v := f.init
 		read := false
 		expected := "a literal"
 		switch key {
@@ -1134,17 +1205,23 @@ type studioScreenView struct {
 }
 
 type studioSlotView struct {
-	Copy *state.Record[state.Record[string]] `json:"copy"`
+	Copy json.RawMessage `json:"copy"`
 }
 
-type studioThingCopyView struct {
-	Name    string `json:"name"`
-	Lead    string `json:"lead"`
-	Compact string `json:"compact"`
-	Primary *struct {
-		Label string `json:"label"`
-		Draft string `json:"draft"`
-	} `json:"primary"`
+// studioCopyKeys is every message key a copy names, walking nested texts in
+// declaration order.
+func studioCopyKeys(copy json.RawMessage) []string {
+	keys := []string{}
+	var text string
+	if json.Unmarshal(copy, &text) == nil {
+		return append(keys, text)
+	}
+	var rec state.Record[json.RawMessage]
+	if json.Unmarshal(copy, &rec) != nil {
+		return keys
+	}
+	rec.Each(func(_ string, v json.RawMessage) { keys = append(keys, studioCopyKeys(v)...) })
+	return keys
 }
 
 type studioView struct {
@@ -1156,10 +1233,10 @@ type studioView struct {
 		Description string `json:"description"`
 	} `json:"widgets"`
 	Things []struct {
-		Label   string                             `json:"label"`
-		Copy    *state.Record[studioThingCopyView] `json:"copy"`
-		Parts   []studioSlotView                   `json:"parts"`
-		Actions []studioActionView                 `json:"actions"`
+		Label   string             `json:"label"`
+		Copy    json.RawMessage    `json:"copy"`
+		Parts   []studioSlotView   `json:"parts"`
+		Actions []studioActionView `json:"actions"`
 	} `json:"things"`
 	ArrangedScreens []studioScreenView `json:"arrangedScreens"`
 }
@@ -1168,12 +1245,9 @@ type studioView struct {
 func studioSlotKeys(slots []studioSlotView) []string {
 	keys := []string{}
 	for _, sl := range slots {
-		if sl.Copy == nil {
-			continue
+		if sl.Copy != nil {
+			keys = append(keys, studioCopyKeys(sl.Copy)...)
 		}
-		sl.Copy.Each(func(_ string, texts state.Record[string]) {
-			texts.Each(func(_ string, key string) { keys = append(keys, key) })
-		})
 	}
 	return keys
 }
@@ -1191,19 +1265,7 @@ func (studio studioView) messageKeys() []string {
 	for _, t := range studio.Things {
 		keys = append(keys, t.Label)
 		if t.Copy != nil {
-			t.Copy.Each(func(_ string, c studioThingCopyView) {
-				keys = append(keys, c.Name)
-				if c.Lead != "" {
-					keys = append(keys, c.Lead)
-				}
-				keys = append(keys, c.Compact)
-				if c.Primary != nil {
-					keys = append(keys, c.Primary.Label)
-					if c.Primary.Draft != "" {
-						keys = append(keys, c.Primary.Draft)
-					}
-				}
-			})
+			keys = append(keys, studioCopyKeys(t.Copy)...)
 		}
 		keys = append(keys, studioSlotKeys(t.Parts)...)
 		keys = append(keys, studioActionKeys(t.Actions)...)

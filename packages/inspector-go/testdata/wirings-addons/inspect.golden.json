@@ -1558,6 +1558,16 @@
             "desk"
           ],
           "component": "./widgets/release-chart.js"
+        },
+        {
+          "id": "no-description",
+          "title": "admin_release_chart__title",
+          "description": "admin_no_description__description",
+          "states": [
+            "full"
+          ],
+          "actions": [],
+          "component": "./widgets/release-chart.js"
         }
       ],
       "things": [
@@ -1566,6 +1576,9 @@
           "label": "admin_problem__label",
           "source": "nightly",
           "copy": {
+            "why_timeout": {
+              "$": "admin_why_timeout"
+            },
             "failed": {
               "name": "admin_problem_failed__name",
               "lead": "admin_problem_failed__lead",
@@ -1574,6 +1587,10 @@
                 "label": "admin_problem_failed__fix",
                 "draft": "admin_problem_failed__draft"
               }
+            },
+            "fig_last": {
+              "label": "admin_fig_last__label",
+              "value": "admin_fig_last__none"
             }
           },
           "parts": [
@@ -1587,6 +1604,28 @@
               "widget": "trend",
               "from": "trend",
               "compact": "hide",
+              "own": false
+            },
+            {
+              "widget": "rows",
+              "from": "where",
+              "copy": {
+                "why_timeout": {
+                  "$": "admin_why_timeout"
+                },
+                "row": {
+                  "name": "admin_problem_failed__name",
+                  "status": {
+                    "text": "admin_row__status"
+                  },
+                  "tags": {
+                    "0": "admin_row__tag"
+                  }
+                },
+                "where": {
+                  "title": "admin_where__title"
+                }
+              },
               "own": false
             }
           ],
@@ -1605,6 +1644,11 @@
               "id": "retry",
               "run": "nightly",
               "label": "admin_retry__label"
+            },
+            {
+              "id": "health",
+              "run": "go:/health-next",
+              "label": "admin_health__title"
             }
           ],
           "alwaysFull": true,
@@ -1916,7 +1960,7 @@
     {
       "level": "critical",
       "code": "PKU345",
-      "message": "A screen's component must be () => import('<literal>'), got: (() => null) as any"
+      "message": "A screen's component must be () => import('<literal>'), got: () => null"
     },
     {
       "level": "critical",
@@ -1931,7 +1975,7 @@
     {
       "level": "critical",
       "code": "PKU345",
-      "message": "A screen's scope must be one of 'studio', 'team', 'project', got: 'org' as any"
+      "message": "A screen's scope must be one of 'studio', 'team', 'project', got: 'org'"
     },
     {
       "level": "critical",
@@ -1946,7 +1990,7 @@
     {
       "level": "critical",
       "code": "PKU345",
-      "message": "A screen's nav area must be one of 'rail', 'team', 'project', 'account', got: 'side' as any"
+      "message": "A screen's nav area must be one of 'rail', 'team', 'project', 'account', got: 'side'"
     },
     {
       "level": "critical",
@@ -1956,12 +2000,12 @@
     {
       "level": "critical",
       "code": "PKU345",
-      "message": "A definePlugin screen must be an object literal, got: { title: 'No path', app: 'z' } as any"
+      "message": "A definePlugin screen needs a literal path, title and scope, and either a lazy component or an app: { title: 'No path', app: 'z' }"
     },
     {
       "level": "critical",
       "code": "PKU345",
-      "message": "A definePlugin screen must be an object literal, got: 'not-an-object' as any"
+      "message": "A definePlugin screen must be an object literal, got: 'not-an-object'"
     },
     {
       "level": "critical",
@@ -1981,6 +2025,11 @@
     {
       "level": "critical",
       "code": "PKU345",
+      "message": "An action's run must be a function of the addon, a project RPC '<namespace>:<function>' or 'go:/<path>', got: 'go:health-next'"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
       "message": "A screen's poll must be a positive whole number of milliseconds or { fast, slow }, got: 0"
     },
     {
@@ -1991,7 +2040,12 @@
     {
       "level": "critical",
       "code": "PKU345",
-      "message": "A definePlugin arranged screen must be an object literal, got: {\n      path: '/arranged-component',\n      title: 'admin_docs__title',\n      scope: 'team',\n      source: 'nightly',\n      slots: [],\n      component: () => import('./screens/users.js'),\n    } as any"
+      "message": "A slot's copy must be an object literal of variants, each mapping texts (nested for deeper ones) to message keys, got: { ...ELSEWHERE }"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "An arranged screen has slots, not a component: {\n      path: '/arranged-component',\n      title: 'admin_docs__title',\n      scope: 'team',\n      source: 'nightly',\n      slots: [],\n      component: () => import('./screens/users.js'),\n    }"
     },
     {
       "level": "critical",
@@ -2105,7 +2159,17 @@
     {
       "level": "critical",
       "code": "PKU358",
+      "message": "definePlugin uses the message key 'admin_no_description__description', which is missing from the addon's messages/en.json"
+    },
+    {
+      "level": "critical",
+      "code": "PKU358",
       "message": "definePlugin uses the message key 'admin_problem_failed__draft', which is missing from the addon's messages/en.json"
+    },
+    {
+      "level": "critical",
+      "code": "PKU358",
+      "message": "definePlugin uses the message key 'admin_row__tag', which is missing from the addon's messages/en.json"
     },
     {
       "level": "critical",
@@ -2165,7 +2229,15 @@
     },
     {
       "level": "warn",
+      "message": "definePlugin uses the message key 'admin_no_description__description', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
       "message": "definePlugin uses the message key 'admin_problem__label', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_why_timeout', which is missing from the addon's messages/de.json"
     },
     {
       "level": "warn",
@@ -2186,6 +2258,26 @@
     {
       "level": "warn",
       "message": "definePlugin uses the message key 'admin_problem_failed__draft', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_fig_last__label', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_fig_last__none', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_row__status', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_row__tag', which is missing from the addon's messages/de.json"
+    },
+    {
+      "level": "warn",
+      "message": "definePlugin uses the message key 'admin_where__title', which is missing from the addon's messages/de.json"
     },
     {
       "level": "warn",
@@ -2296,7 +2388,7 @@
     }
   ],
   "validationPass": {
-    "start": 74,
-    "end": 89
+    "start": 85,
+    "end": 100
   }
 }

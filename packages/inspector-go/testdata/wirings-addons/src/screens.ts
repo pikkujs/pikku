@@ -1,5 +1,52 @@
 import { definePlugin } from '@pikku/core/addon'
 
+/** Values that are words, shared through a const and spread into each copy that meets them. */
+const VALUES = {
+  why_timeout: { $: 'admin_why_timeout' },
+}
+
+const PROBLEM_COPY = {
+  ...VALUES,
+  failed: {
+    name: 'admin_problem_failed__name',
+    lead: 'admin_problem_failed__lead',
+    compact: 'admin_problem_failed__compact',
+    primary: { label: 'admin_problem_failed__fix', draft: 'admin_problem_failed__draft' },
+  },
+  fig_last: { label: 'admin_fig_last__label', value: 'admin_fig_last__none' },
+}
+
+const ROW_COPY = {
+  ...VALUES,
+  row: { name: 'admin_problem_failed__name', status: { text: 'admin_row__status' }, tags: { 0: 'admin_row__tag' } },
+}
+
+/** The widgets, shared through a const the manifest names. */
+const WIDGETS = {
+  'release-chart': {
+    title: 'admin_release_chart__title',
+    description: 'admin_release_chart__description',
+    states: ['full', 'tile'],
+    actions: ['open'],
+    skins: ['desk'],
+    component: () => import('./widgets/release-chart.js'),
+  },
+  'no-description': {
+    title: 'admin_release_chart__title',
+    description: 'admin_no_description__description',
+    states: ['full'],
+    actions: [],
+    component: () => import('./widgets/release-chart.js'),
+  },
+  'bad-state': {
+    title: 'admin_release_chart__title',
+    description: 'admin_release_chart__description',
+    states: ['huge' as any],
+    actions: [],
+    component: () => import('./widgets/release-chart.js'),
+  },
+}
+
 export const screens = definePlugin(({
   title: 'admin__title',
   screens: [
@@ -160,38 +207,16 @@ export const screens = definePlugin(({
     { title: 'No path', app: 'z' } as any,
     'not-an-object' as any,
   ],
-  widgets: {
-    'release-chart': {
-      title: 'admin_release_chart__title',
-      description: 'admin_release_chart__description',
-      states: ['full', 'tile'],
-      actions: ['open'],
-      skins: ['desk'],
-      component: () => import('./widgets/release-chart.js'),
-    },
-    'bad-state': {
-      title: 'admin_release_chart__title',
-      description: 'admin_release_chart__description',
-      states: ['huge' as any],
-      actions: [],
-      component: () => import('./widgets/release-chart.js'),
-    },
-  },
+  widgets: WIDGETS,
   things: {
     problem: {
       label: 'admin_problem__label',
       source: 'nightly',
-      copy: {
-        failed: {
-          name: 'admin_problem_failed__name',
-          lead: 'admin_problem_failed__lead',
-          compact: 'admin_problem_failed__compact',
-          primary: { label: 'admin_problem_failed__fix', draft: 'admin_problem_failed__draft' },
-        },
-      },
+      copy: PROBLEM_COPY,
       parts: [
         { widget: 'release-chart', from: 'releases', span: 'wide' },
         { widget: 'trend', from: 'trend', compact: 'hide' },
+        { widget: 'rows', from: 'where', copy: { ...ROW_COPY, where: { title: 'admin_where__title' } } },
       ],
       related: ['problem'],
       actions: {
@@ -202,6 +227,7 @@ export const screens = definePlugin(({
           confirm: 'admin_forget__confirm',
         },
         retry: { run: 'nightly', label: 'admin_retry__label' },
+        health: { run: 'go:/health-next', label: 'admin_health__title' },
       },
       alwaysFull: true,
       measure: 'narrow',
@@ -255,7 +281,10 @@ export const screens = definePlugin(({
       scope: 'team',
       source: 'nightly',
       slots: [],
-      actions: { wipe: { run: 'admin:wipe', label: 'admin_docs__title', destructive: true } },
+      actions: {
+        wipe: { run: 'admin:wipe', label: 'admin_docs__title', destructive: true },
+        away: { run: 'go:health-next', label: 'admin_docs__title' },
+      },
       poll: 0,
     },
     again: {
@@ -273,6 +302,13 @@ export const screens = definePlugin(({
       slots: [],
       lanes: 9,
     },
+    elsewhere: {
+      path: '/elsewhere',
+      title: 'admin_docs__title',
+      scope: 'team',
+      source: 'nightly',
+      slots: [{ widget: 'rows', from: 'rows', copy: { ...ELSEWHERE } }],
+    },
     component: {
       path: '/arranged-component',
       title: 'admin_docs__title',
@@ -287,3 +323,4 @@ export const screens = definePlugin(({
 declare const LAYOUT: 'bare'
 declare const ICON: string
 declare const SHOW_CHAT: boolean
+declare const ELSEWHERE: Record<string, Record<string, string>>

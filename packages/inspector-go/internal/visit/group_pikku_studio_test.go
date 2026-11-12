@@ -62,7 +62,7 @@ func TestStudioMessageKeysCoverWidgetsThingsAndArrangedScreens(t *testing.T) {
 	  "widgets": [{"id": "w", "title": "w_t", "description": "w_d"}],
 	  "things": [{"kind": "k", "label": "k_l",
 	    "copy": {"failed": {"name": "k_n", "lead": "k_lead", "compact": "k_c", "primary": {"label": "k_p", "draft": "k_dr"}}},
-	    "parts": [{"widget": "x", "from": "y", "copy": {"a": {"headline": "p_a"}}, "own": false}],
+	    "parts": [{"widget": "x", "from": "y", "copy": {"a": {"headline": "p_a", "status": {"text": "p_s"}, "tags": {"0": "p_t"}}, "why": {"$": "p_why"}}, "own": false}],
 	    "actions": [{"id": "f", "run": "admin:f", "label": "a_l", "confirm": "a_c", "destructive": true}]}],
 	  "arrangedScreens": [{"id": "h", "title": "h_t", "about": "h_a",
 	    "slots": [{"widget": "v", "from": "v", "copy": {"wrong": {"headline": "v_w"}, "fine": {"headline": "v_f"}}, "own": false}]}]
@@ -71,7 +71,7 @@ func TestStudioMessageKeysCoverWidgetsThingsAndArrangedScreens(t *testing.T) {
 	if err := json.Unmarshal([]byte(raw), &studio); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"t", "s", "w_t", "w_d", "k_l", "k_n", "k_lead", "k_c", "k_p", "k_dr", "p_a", "a_l", "a_c", "h_t", "h_a", "v_w", "v_f"}
+	want := []string{"t", "s", "w_t", "w_d", "k_l", "k_n", "k_lead", "k_c", "k_p", "k_dr", "p_a", "p_s", "p_t", "p_why", "a_l", "a_c", "h_t", "h_a", "v_w", "v_f"}
 	if got := studio.messageKeys(); !reflect.DeepEqual(got, want) {
 		t.Errorf("keys = %v, want %v", got, want)
 	}

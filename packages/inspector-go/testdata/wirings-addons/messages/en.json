@@ -19,5 +19,10 @@
   "admin_verdict_wrong__headline": "Something is wrong",
   "admin_forget__label": "Forget it",
   "admin_forget__confirm": "Forget {name}? This cannot be undone.",
-  "admin_retry__label": "Try again"
+  "admin_retry__label": "Try again",
+  "admin_why_timeout": "it timed out",
+  "admin_fig_last__label": "Last",
+  "admin_fig_last__none": "never",
+  "admin_row__status": "{status}",
+  "admin_where__title": "Where"
 }

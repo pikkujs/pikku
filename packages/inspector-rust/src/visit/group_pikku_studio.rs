@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use regex::Regex;
 use serde_json::{Map, Value};
-use tsrs_ast::{self as ast, Kind, Node};
+use tsrs_ast::{self as ast, Kind, Node, NodeFlags};
 use tsrs_core::P;
 
 use super::util_wire_meta::num_value;
@@ -22,14 +22,95 @@ pub fn register(r: &mut Registry) {
 const STUDIO_SCOPES: [&str; 3] = ["studio", "team", "project"];
 const STUDIO_NAV_AREAS: [&str; 4] = ["rail", "team", "project", "account"];
 
-/// `propKey` (group_wire_addon.go): a property assignment keyed by an
-/// identifier or string literal.
-fn prop_key(p: P<Node>) -> Option<String> {
-    if !ast::is_property_assignment(p) {
-        return None;
+/// The initializer of `const <name> = ...` declared at the top of `n`'s file
+/// (`studioConst`, group_pikku_studio.go).
+fn studio_const(n: P<Node>, name: &str) -> Option<P<Node>> {
+    let sf = ast::get_source_file_of_node(n)?;
+    for st in sf.statements().nodes() {
+        let st = *st;
+        if st.kind() != Kind::VariableStatement {
+            continue;
+        }
+        let list = st.as_variable_statement().declaration_list;
+        if !list.flags().intersects(NodeFlags::Const) {
+            continue;
+        }
+        for d in list.as_variable_declaration_list().declarations.nodes() {
+            let d = *d;
+            if let (Some(id), Some(init)) = (d.name(), d.initializer()) {
+                if ast::is_identifier(id) && id.text() == name {
+                    return Some(init);
+                }
+            }
+        }
     }
-    let n = p.name()?;
-    if ast::is_identifier(n) || ast::is_string_literal(n) { Some(n.text().to_string()) } else { None }
+    None
+}
+
+/// `n` seen through parentheses, `as`, `satisfies` and identifiers naming a
+/// const declared at the top of the same file (`studioLit`).
+fn studio_lit(mut n: P<Node>) -> P<Node> {
+    for _ in 0..32 {
+        if ast::is_parenthesized_expression(n) || n.kind() == Kind::AsExpression || n.kind() == Kind::SatisfiesExpression {
+            match n.expression() {
+                Some(e) => n = e,
+                None => return n,
+            }
+        } else if ast::is_identifier(n) {
+            match studio_const(n, n.text()) {
+                Some(init) => n = init,
+                None => return n,
+            }
+        } else {
+            return n;
+        }
+    }
+    n
+}
+
+/// One field of an object literal: its key when it is a literal, the node to
+/// quote when it is not, and its value through `studio_lit` (`studioProp`).
+struct StudioProp {
+    key: Option<String>,
+    node: P<Node>,
+    init: Option<P<Node>>,
+}
+
+/// An object literal's fields, keyed by identifiers, string or number
+/// literals, with each `...spread` of a same-file const object put in its
+/// place (`studioProps`). A later field of the same key wins.
+fn studio_props(obj: P<Node>) -> Vec<StudioProp> {
+    studio_props_at(obj, 0)
+}
+
+fn studio_props_at(obj: P<Node>, depth: usize) -> Vec<StudioProp> {
+    let mut out = Vec::new();
+    for p in obj.properties() {
+        let p = *p;
+        if p.kind() == Kind::SpreadAssignment {
+            let src = p.expression().map(studio_lit);
+            match src {
+                Some(src) if depth < 32 && ast::is_object_literal_expression(src) => out.extend(studio_props_at(src, depth + 1)),
+                _ => out.push(StudioProp { key: None, node: p, init: None }),
+            }
+        } else if ast::is_shorthand_property_assignment(p) {
+            let name = p.name().unwrap();
+            let key = Some(name.text().to_string()).filter(|k| !k.is_empty());
+            out.push(StudioProp { key, node: p, init: Some(studio_lit(name)) });
+        } else if ast::is_property_assignment(p)
+            && p.name().is_some_and(|n| ast::is_identifier(n) || ast::is_string_literal(n) || ast::is_numeric_literal(n))
+        {
+            out.push(StudioProp { key: Some(p.name().unwrap().text().to_string()), node: p, init: p.initializer().map(studio_lit) });
+        } else {
+            out.push(StudioProp { key: None, node: p, init: None });
+        }
+    }
+    out
+}
+
+/// An array literal's elements through `studio_lit`.
+fn studio_elements(arr: P<Node>) -> Vec<P<Node>> {
+    arr.elements().iter().map(|el| studio_lit(*el)).collect()
 }
 
 /// `parseStringArray` (group_wire_addon.go): an array of string literals.
@@ -98,7 +179,7 @@ fn quoted_list(values: &[&str]) -> String {
 
 /// The object sets `key` to a string literal (which may be empty).
 fn has_string_literal_prop(obj: P<Node>, key: &str) -> bool {
-    obj.properties().iter().any(|f| prop_key(*f).as_deref() == Some(key) && ast::is_string_literal(f.initializer().unwrap()))
+    studio_props(obj).iter().any(|f| f.key.as_deref() == Some(key) && f.init.is_some_and(ast::is_string_literal))
 }
 
 fn read_studio_nav(n: P<Node>, fails: &mut Vec<String>) -> Option<Map<String, Value>> {
@@ -110,17 +191,16 @@ fn read_studio_nav(n: P<Node>, fails: &mut Vec<String>) -> Option<Map<String, Va
     let mut badge: Option<String> = None;
     let mut order: Option<f64> = None;
     let mut ok = true;
-    for f in n.properties() {
-        let f = *f;
-        let key = match prop_key(f) {
+    for f in studio_props(n) {
+        let key = match f.key.clone() {
             Some(k) if !k.is_empty() => k,
             _ => {
-                fails.push(format!("A screen's nav field must be a literal, got: {}", node_text(f)));
+                fails.push(format!("A screen's nav field must be a literal, got: {}", node_text(f.node)));
                 ok = false;
                 continue;
             }
         };
-        let v = f.initializer().unwrap();
+        let v = f.init.unwrap();
         let read = match key.as_str() {
             "area" => match studio_one_of(v, &STUDIO_NAV_AREAS) {
                 Some(a) => {
@@ -238,8 +318,8 @@ const STUDIO_SPANS: [&str; 3] = ["full", "wide", "half"];
 const STUDIO_COMPACTS: [&str; 3] = ["full", "tile", "hide"];
 const STUDIO_MEASURES: [&str; 3] = ["narrow", "normal", "fill"];
 
-/// The object literal passed to definePlugin, seen through `as const`,
-/// `satisfies` and parentheses.
+/// The object literal passed to definePlugin, seen through `as`,
+/// `satisfies`, parentheses and a same-file const.
 fn plugin_manifest(node: P<Node>) -> Option<P<Node>> {
     if !ast::is_call_expression(node) {
         return None;
@@ -252,10 +332,7 @@ fn plugin_manifest(node: P<Node>) -> Option<P<Node>> {
     if args.is_empty() {
         return None;
     }
-    let mut arg = args[0];
-    while arg.kind() == Kind::AsExpression || arg.kind() == Kind::SatisfiesExpression || ast::is_parenthesized_expression(arg) {
-        arg = arg.expression()?;
-    }
+    let arg = studio_lit(args[0]);
     if !ast::is_object_literal_expression(arg) {
         return None;
     }
@@ -274,10 +351,9 @@ fn read_studio_string_record(n: P<Node>) -> Option<Map<String, Value>> {
         return None;
     }
     let mut o = Map::new();
-    for f in n.properties() {
-        let f = *f;
-        let key = prop_key(f).filter(|k| !k.is_empty())?;
-        let v = f.initializer()?;
+    for f in studio_props(n) {
+        let key = f.key.clone().filter(|k| !k.is_empty())?;
+        let v = f.init?;
         if !ast::is_string_literal(v) {
             return None;
         }
@@ -286,72 +362,41 @@ fn read_studio_string_record(n: P<Node>) -> Option<Map<String, Value>> {
     Some(o)
 }
 
-/// `{ [variant]: <entry> }`, each entry read by `entry`.
-fn read_studio_copy(n: P<Node>, entry: fn(P<Node>) -> Option<Map<String, Value>>) -> Option<Map<String, Value>> {
+/// `{ [variant]: <entry> }`, each entry a variant's wording.
+fn read_studio_copy(n: P<Node>) -> Option<Map<String, Value>> {
     if !ast::is_object_literal_expression(n) {
         return None;
     }
     let mut o = Map::new();
-    for f in n.properties() {
-        let f = *f;
-        let key = prop_key(f).filter(|k| !k.is_empty())?;
-        let v = entry(f.initializer()?)?;
+    for f in studio_props(n) {
+        let key = f.key.filter(|k| !k.is_empty())?;
+        let v = read_studio_copy_entry(f.init?)?;
         o.insert(key, Value::Object(v));
     }
     Some(o)
 }
 
-/// One variant of a thing's copy: name, lead, compact and primary
-/// { label, draft }, all string literals.
-fn read_studio_thing_copy_entry(n: P<Node>) -> Option<Map<String, Value>> {
+/// One variant's wording: each text the widget shows, by its name, to a
+/// message key, nested for deeper texts. `$` words a value that names this
+/// variant.
+fn read_studio_copy_entry(n: P<Node>) -> Option<Map<String, Value>> {
     if !ast::is_object_literal_expression(n) {
         return None;
     }
-    let (mut name, mut lead, mut compact) = (String::new(), String::new(), String::new());
-    let mut primary: Option<Map<String, Value>> = None;
-    for f in n.properties() {
-        let f = *f;
-        let key = prop_key(f).filter(|k| !k.is_empty())?;
-        let v = f.initializer()?;
-        match key.as_str() {
-            "name" | "lead" | "compact" => {
-                if !ast::is_string_literal(v) {
-                    return None;
-                }
-                let text = v.text().to_string();
-                match key.as_str() {
-                    "name" => name = text,
-                    "lead" => lead = text,
-                    _ => compact = text,
-                }
-            }
-            "primary" => {
-                let rec = read_studio_string_record(v)?;
-                let label = rec.get("label")?.clone();
-                let mut p = Map::new();
-                p.insert("label".into(), label);
-                if let Some(draft) = rec.get("draft") {
-                    p.insert("draft".into(), draft.clone());
-                }
-                primary = Some(p);
-            }
-            _ => {}
-        }
-    }
-    if name.is_empty() || compact.is_empty() {
-        return None;
-    }
     let mut o = Map::new();
-    o.insert("name".into(), Value::from(name));
-    if !lead.is_empty() {
-        o.insert("lead".into(), Value::from(lead));
-    }
-    o.insert("compact".into(), Value::from(compact));
-    if let Some(p) = primary {
-        o.insert("primary".into(), Value::Object(p));
+    for f in studio_props(n) {
+        let key = f.key.filter(|k| !k.is_empty())?;
+        let v = f.init?;
+        if ast::is_string_literal(v) {
+            o.insert(key, Value::from(v.text()));
+        } else {
+            o.insert(key, Value::Object(read_studio_copy_entry(v)?));
+        }
     }
     Some(o)
 }
+
+const STUDIO_COPY_EXPECTED: &str = "an object literal of variants, each mapping texts (nested for deeper ones) to message keys";
 
 fn read_studio_slot(n: P<Node>, fails: &mut Vec<String>) -> Option<StudioSlot> {
     if !ast::is_object_literal_expression(n) {
@@ -360,17 +405,16 @@ fn read_studio_slot(n: P<Node>, fails: &mut Vec<String>) -> Option<StudioSlot> {
     }
     let mut sl = StudioSlot { widget: String::new(), from: String::new(), span: String::new(), compact: String::new(), copy: None };
     let mut ok = true;
-    for f in n.properties() {
-        let f = *f;
-        let key = match prop_key(f) {
+    for f in studio_props(n) {
+        let key = match f.key.clone() {
             Some(k) if !k.is_empty() => k,
             _ => {
-                fails.push(format!("A slot's field must be a literal, got: {}", node_text(f)));
+                fails.push(format!("A slot's field must be a literal, got: {}", node_text(f.node)));
                 ok = false;
                 continue;
             }
         };
-        let v = f.initializer().unwrap();
+        let v = f.init.unwrap();
         let (read, expected) = match key.as_str() {
             "widget" => {
                 let r = ast::is_string_literal(v);
@@ -395,8 +439,8 @@ fn read_studio_slot(n: P<Node>, fails: &mut Vec<String>) -> Option<StudioSlot> {
                 (!sl.compact.is_empty(), format!("one of {}", quoted_list(&STUDIO_COMPACTS)))
             }
             "copy" => {
-                sl.copy = read_studio_copy(v, read_studio_string_record);
-                (sl.copy.is_some(), "an object literal of variants, each mapping texts to message keys".to_string())
+                sl.copy = read_studio_copy(v);
+                (sl.copy.is_some(), STUDIO_COPY_EXPECTED.to_string())
             }
             _ => continue,
         };
@@ -424,8 +468,8 @@ fn read_studio_slots(n: P<Node>, field: &str, fails: &mut Vec<String>) -> Option
     }
     let mut slots = Vec::new();
     let mut ok = true;
-    for el in n.elements() {
-        match read_studio_slot(*el, fails) {
+    for el in studio_elements(n) {
+        match read_studio_slot(el, fails) {
             Some(sl) => slots.push(sl),
             None => ok = false,
         }
@@ -449,6 +493,17 @@ fn studio_function_ref(n: P<Node>) -> Option<String> {
     Some(text.to_string())
 }
 
+const STUDIO_ACTION_RUN_EXPECTED: &str = "a function of the addon, a project RPC '<namespace>:<function>' or 'go:/<path>'";
+
+/// What an action runs: a function reference, or `go:/<path>`, which opens
+/// another screen or thing by its path.
+fn studio_action_run(n: P<Node>) -> Option<String> {
+    if ast::is_string_literal(n) && Regex::new(r"^go:/\S*$").unwrap().is_match(n.text()) {
+        return Some(n.text().to_string());
+    }
+    studio_function_ref(n)
+}
+
 /// A positive whole number literal of milliseconds.
 fn studio_whole_ms(n: P<Node>) -> Option<f64> {
     studio_number(n).filter(|num| *num > 0.0 && *num == num.trunc())
@@ -463,12 +518,11 @@ fn read_studio_poll(n: P<Node>) -> Option<Value> {
         return None;
     }
     let (mut fast, mut slow): (Option<f64>, Option<f64>) = (None, None);
-    for f in n.properties() {
-        let f = *f;
-        let key = prop_key(f)?;
+    for f in studio_props(n) {
+        let key = f.key.clone()?;
         match key.as_str() {
-            "fast" => fast = Some(studio_whole_ms(f.initializer()?)?),
-            "slow" => slow = Some(studio_whole_ms(f.initializer()?)?),
+            "fast" => fast = Some(studio_whole_ms(f.init?)?),
+            "slow" => slow = Some(studio_whole_ms(f.init?)?),
             _ => return None,
         }
     }
@@ -487,33 +541,31 @@ fn read_studio_actions(n: P<Node>, fails: &mut Vec<String>) -> Option<Vec<Value>
     }
     let mut out = Vec::new();
     let mut ok = true;
-    for p in n.properties() {
-        let p = *p;
-        let id = prop_key(p).filter(|k| !k.is_empty());
-        let v = p.initializer();
+    for p in studio_props(n) {
+        let id = p.key.clone().filter(|k| !k.is_empty());
+        let v = p.init;
         let (Some(id), Some(v)) = (id, v.filter(|v| ast::is_object_literal_expression(*v))) else {
-            fails.push(format!("An action must be an object literal keyed by a literal, got: {}", node_text(p)));
+            fails.push(format!("An action must be an object literal keyed by a literal, got: {}", node_text(p.node)));
             ok = false;
             continue;
         };
         let (mut run, mut label, mut confirm) = (String::new(), String::new(), String::new());
         let mut destructive: Option<bool> = None;
         let mut action_ok = true;
-        for f in v.properties() {
-            let f = *f;
-            let key = match prop_key(f) {
+        for f in studio_props(v) {
+            let key = match f.key.clone() {
                 Some(k) if !k.is_empty() => k,
                 _ => {
-                    fails.push(format!("An action's field must be a literal, got: {}", node_text(f)));
+                    fails.push(format!("An action's field must be a literal, got: {}", node_text(f.node)));
                     action_ok = false;
                     continue;
                 }
             };
-            let fv = f.initializer().unwrap();
+            let fv = f.init.unwrap();
             let (read, expected) = match key.as_str() {
                 "run" => {
-                    run = studio_function_ref(fv).unwrap_or_default();
-                    (!run.is_empty(), STUDIO_FUNCTION_REF_EXPECTED)
+                    run = studio_action_run(fv).unwrap_or_default();
+                    (!run.is_empty(), STUDIO_ACTION_RUN_EXPECTED)
                 }
                 "label" => {
                     let r = ast::is_string_literal(fv);
@@ -575,17 +627,16 @@ fn read_studio_widget(n: P<Node>, fails: &mut Vec<String>) -> Option<StudioEntry
     let (mut title, mut description, mut component) = (String::new(), String::new(), String::new());
     let (mut states, mut actions, mut skins): (Option<Vec<String>>, Option<Vec<String>>, Option<Vec<String>>) = (None, None, None);
     let mut ok = true;
-    for f in n.properties() {
-        let f = *f;
-        let key = match prop_key(f) {
+    for f in studio_props(n) {
+        let key = match f.key.clone() {
             Some(k) if !k.is_empty() => k,
             _ => {
-                fails.push(format!("A widget's field must be a literal, got: {}", node_text(f)));
+                fails.push(format!("A widget's field must be a literal, got: {}", node_text(f.node)));
                 ok = false;
                 continue;
             }
         };
-        let v = f.initializer().unwrap();
+        let v = f.init.unwrap();
         let (read, expected) = match key.as_str() {
             "title" => {
                 let r = ast::is_string_literal(v);
@@ -667,17 +718,16 @@ fn read_studio_thing(n: P<Node>, fails: &mut Vec<String>) -> Option<StudioEntry>
     let mut always_full: Option<bool> = None;
     let mut has_parts = false;
     let mut ok = true;
-    for f in n.properties() {
-        let f = *f;
-        let key = match prop_key(f) {
+    for f in studio_props(n) {
+        let key = match f.key.clone() {
             Some(k) if !k.is_empty() => k,
             _ => {
-                fails.push(format!("A thing's field must be a literal, got: {}", node_text(f)));
+                fails.push(format!("A thing's field must be a literal, got: {}", node_text(f.node)));
                 ok = false;
                 continue;
             }
         };
-        let v = f.initializer().unwrap();
+        let v = f.init.unwrap();
         let (read, expected) = match key.as_str() {
             "label" => {
                 let r = ast::is_string_literal(v);
@@ -697,8 +747,8 @@ fn read_studio_thing(n: P<Node>, fails: &mut Vec<String>) -> Option<StudioEntry>
                 continue;
             }
             "copy" => {
-                copy = read_studio_copy(v, read_studio_thing_copy_entry);
-                (copy.is_some(), "an object literal of variants, each with literal name and compact keys".to_string())
+                copy = read_studio_copy(v);
+                (copy.is_some(), STUDIO_COPY_EXPECTED.to_string())
             }
             "parts" => {
                 parts = read_studio_slots(v, "thing's parts", fails);
@@ -767,16 +817,15 @@ fn studio_read_map(
         fails.push(format!("definePlugin's {field} must be an object literal, got: {}", node_text(init)));
         return out;
     }
-    for p in init.properties() {
-        let p = *p;
-        let key = match prop_key(p) {
+    for p in studio_props(init) {
+        let key = match p.key.clone() {
             Some(k) if !k.is_empty() => k,
             _ => {
-                fails.push(format!("A definePlugin {field} entry must be keyed by a literal, got: {}", node_text(p)));
+                fails.push(format!("A definePlugin {field} entry must be keyed by a literal, got: {}", node_text(p.node)));
                 continue;
             }
         };
-        let Some(mut e) = read(p.initializer().unwrap(), fails) else { continue };
+        let Some(mut e) = read(p.init.unwrap(), fails) else { continue };
         let mut head = Map::new();
         head.insert(id_key.into(), Value::from(key));
         for (k, v) in std::mem::take(&mut e.head) {
@@ -817,17 +866,16 @@ fn read_studio_screen(el: P<Node>, arranged: bool, fails: &mut Vec<String>) -> O
     let mut redirect: Option<Map<String, Value>> = None;
     let mut poll: Option<Value> = None;
     let mut ok = true;
-    for f in el.properties() {
-        let f = *f;
-        let key = match prop_key(f) {
+    for f in studio_props(el) {
+        let key = match f.key.clone() {
             Some(k) if !k.is_empty() => k,
             _ => {
-                fails.push(format!("A screen's field must be a literal, got: {}", node_text(f)));
+                fails.push(format!("A screen's field must be a literal, got: {}", node_text(f.node)));
                 ok = false;
                 continue;
             }
         };
-        let v = f.initializer().unwrap();
+        let v = f.init.unwrap();
         let read = match key.as_str() {
             "path" => {
                 let r = ast::is_string_literal(v);
@@ -1075,16 +1123,15 @@ impl Context<'_> {
         let mut paths: Vec<String> = Vec::new();
         let (mut widgets, mut things, mut arranged): (Option<Vec<StudioEntry>>, Option<Vec<StudioEntry>>, Option<Vec<StudioEntry>>) =
             (None, None, None);
-        for p in obj.properties() {
-            let p = *p;
-            let key = match prop_key(p) {
+        for p in studio_props(obj) {
+            let key = match p.key.clone() {
                 Some(k) if !k.is_empty() => k,
                 _ => {
-                    fails.push(format!("A definePlugin field must be a literal, got: {}", node_text(p)));
+                    fails.push(format!("A definePlugin field must be a literal, got: {}", node_text(p.node)));
                     continue;
                 }
             };
-            let init = p.initializer().unwrap();
+            let init = p.init.unwrap();
             match key.as_str() {
                 "title" => {
                     if ast::is_string_literal(init) {
@@ -1098,8 +1145,8 @@ impl Context<'_> {
                         fails.push(format!("definePlugin's screens must be an array literal, got: {}", node_text(init)));
                         continue;
                     }
-                    for el in init.elements() {
-                        if let Some((sc, path)) = read_studio_screen(*el, false, &mut fails) {
+                    for el in studio_elements(init) {
+                        if let Some((sc, path)) = read_studio_screen(el, false, &mut fails) {
                             screens.push(Value::Object(sc.head));
                             paths.push(path);
                         }
@@ -1169,11 +1216,19 @@ fn studio_action_keys(actions: Option<&Value>, out: &mut Vec<String>) {
 /// The message keys of the slots' copy, in declaration order.
 fn studio_slot_keys(slots: Option<&Value>, out: &mut Vec<String>) {
     for sl in slots.and_then(Value::as_array).into_iter().flatten() {
-        for texts in sl.get("copy").and_then(Value::as_object).into_iter().flat_map(|c| c.values()) {
-            for key in texts.as_object().into_iter().flat_map(|t| t.values()) {
-                out.push(key.as_str().unwrap_or("").to_string());
-            }
+        if let Some(copy) = sl.get("copy") {
+            studio_copy_keys(copy, out);
         }
+    }
+}
+
+/// Every message key a copy names, walking nested texts in declaration order
+/// (`studioCopyKeys`).
+fn studio_copy_keys(copy: &Value, out: &mut Vec<String>) {
+    match copy {
+        Value::String(key) => out.push(key.clone()),
+        Value::Object(o) => o.values().for_each(|v| studio_copy_keys(v, out)),
+        _ => {}
     }
 }
 
@@ -1191,18 +1246,8 @@ fn studio_message_keys(studio: &Map<String, Value>) -> Vec<String> {
     }
     for t in list("things") {
         keys.push(str_at(&t, "label").unwrap_or("").to_string());
-        for c in t.get("copy").and_then(Value::as_object).into_iter().flat_map(|c| c.values()) {
-            keys.push(str_at(c, "name").unwrap_or("").to_string());
-            if let Some(lead) = str_at(c, "lead").filter(|l| !l.is_empty()) {
-                keys.push(lead.to_string());
-            }
-            keys.push(str_at(c, "compact").unwrap_or("").to_string());
-            if let Some(primary) = c.get("primary") {
-                keys.push(str_at(primary, "label").unwrap_or("").to_string());
-                if let Some(draft) = str_at(primary, "draft").filter(|d| !d.is_empty()) {
-                    keys.push(draft.to_string());
-                }
-            }
+        if let Some(copy) = t.get("copy") {
+            studio_copy_keys(copy, &mut keys);
         }
         studio_slot_keys(t.get("parts"), &mut keys);
         studio_action_keys(t.get("actions"), &mut keys);
@@ -1502,7 +1547,7 @@ mod tests {
               "widgets": [{"id": "w", "title": "w_t", "description": "w_d"}],
               "things": [{"kind": "k", "label": "k_l",
                 "copy": {"failed": {"name": "k_n", "lead": "k_lead", "compact": "k_c", "primary": {"label": "k_p", "draft": "k_dr"}}},
-                "parts": [{"widget": "x", "from": "y", "copy": {"a": {"headline": "p_a"}}, "own": false}],
+                "parts": [{"widget": "x", "from": "y", "copy": {"a": {"headline": "p_a", "status": {"text": "p_s"}, "tags": {"0": "p_t"}}, "why": {"$": "p_why"}}, "own": false}],
                 "actions": [{"id": "f", "run": "admin:f", "label": "a_l", "confirm": "a_c", "destructive": true}]}],
               "arrangedScreens": [{"id": "h", "title": "h_t", "about": "h_a",
                 "slots": [{"widget": "v", "from": "v", "copy": {"wrong": {"headline": "v_w"}, "fine": {"headline": "v_f"}}, "own": false}]}]
@@ -1510,7 +1555,7 @@ mod tests {
         )
         .unwrap();
         let keys = studio_message_keys(&studio);
-        let want = ["t", "s", "w_t", "w_d", "k_l", "k_n", "k_lead", "k_c", "k_p", "k_dr", "p_a", "a_l", "a_c", "h_t", "h_a", "v_w", "v_f"];
+        let want = ["t", "s", "w_t", "w_d", "k_l", "k_n", "k_lead", "k_c", "k_p", "k_dr", "p_a", "p_s", "p_t", "p_why", "a_l", "a_c", "h_t", "h_a", "v_w", "v_f"];
         assert_eq!(keys, want);
     }
 }
