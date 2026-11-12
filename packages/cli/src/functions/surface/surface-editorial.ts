@@ -318,7 +318,27 @@ export const supportTriage = pikkuAgent({
 })
 
 // src/wirings/digest.wiring.ts  (the cron runs a void function that calls the agent)
-wireScheduler({ name: 'morningDigest', schedule: '0 7 * * *', func: runDigest })`,
+wireScheduler({ name: 'morningDigest', schedule: '0 7 * * *', func: runDigest })
+
+// facets, each on the agent (memory, sub-agent, guardrail, access, limits) or on a tool (approval)
+export const GuestPrefs = z.object({ diet: z.string().optional() })
+export const concierge = pikkuAgent({
+  // name, description, goal, model as above
+  tools: [ref('chargeCard')],
+  agents: [replyWriter], agentMode: 'delegate', // imported agent value
+  memory: { storage: 'agentStorage', lastMessages: 10, workingMemory: GuestPrefs },
+  agentMiddleware: [supportGuard], // pikkuAgentMiddleware({ modifyInput, beforeToolCall, afterToolCall, modifyOutput }) from #pikku/middleware
+  permissions: { manager: isManager }, maxSteps: 6, temperature: 0.2,
+})
+export const chargeCard = pikkuFunc({
+  description: 'Charges the card for an order.',
+  approvalRequired: true,
+  approvalDescription: pikkuApprovalDescription(async (_s, { orderId, amount }: { orderId: string; amount: number }) => \`Charge \${amount} on order \${orderId}\`),
+  input: ChargeInput, output: ChargeOutput,
+  func: async (_s, { orderId, amount }) => ({ charged: true }),
+})
+// guardrail hooks: modifyInput refuses (throw), beforeToolCall vetoes (throw), modifyOutput rewrites text, afterToolCall audits
+// an agent with an \`output\` schema has no tools; its caller reads reply.result as that shape`,
   },
   {
     names: ['imports', 'import', '#pikku', '#pikku/*'],
