@@ -110,6 +110,18 @@ const packageSubpath = (file: string, specifier: string): string =>
  * lazy imports through the package's own `./screens/*` export, so the host
  * bundler splits them and the screen code never reaches the server bundle.
  */
+/** `list` as a record by each entry's `key`, which is left out of the entry. */
+const keyedBy = <K extends string, T extends Record<K, string>>(
+  list: T[],
+  key: K
+): Record<string, Omit<T, K>> =>
+  Object.fromEntries(
+    list.map((entry) => {
+      const { [key]: id, ...rest } = entry
+      return [id, rest]
+    })
+  )
+
 export const serializeInstalledAddons = (
   addons: InstalledAddonScreens[]
 ): string => {
@@ -125,15 +137,37 @@ export const serializeInstalledAddons = (
     })
     // Widgets load through the package's own `./widgets/*` export, like
     // screens through `./screens/*`. Things and arranged screens are data.
-    const widgets = (manifest.widgets ?? []).map(({ component, ...widget }) => {
-      const fields = Object.entries(widget).map(
-        ([key, value]) => `${key}: ${JSON.stringify(value)}`
-      )
-      fields.push(
-        `component: () => import(${JSON.stringify(`${pkg}/${packageSubpath(manifest.file, component)}`)}) as never`
-      )
-      return `      { ${fields.join(', ')} },`
-    })
+    // Each is a record keyed by its id (a thing's by its kind), as are their
+    // actions, the way `definePlugin` declares them.
+    const widgets = (manifest.widgets ?? []).map(
+      ({ id, component, ...widget }) => {
+        const fields = Object.entries(widget).map(
+          ([key, value]) => `${key}: ${JSON.stringify(value)}`
+        )
+        fields.push(
+          `component: () => import(${JSON.stringify(`${pkg}/${packageSubpath(manifest.file, component)}`)}) as never`
+        )
+        return `      ${JSON.stringify(id)}: { ${fields.join(', ')} },`
+      }
+    )
+    const things = manifest.things
+      ? keyedBy(
+          manifest.things.map(({ actions, ...thing }) => ({
+            ...thing,
+            ...(actions ? { actions: keyedBy(actions, 'id') } : {}),
+          })),
+          'kind'
+        )
+      : undefined
+    const arranged = manifest.arrangedScreens
+      ? keyedBy(
+          manifest.arrangedScreens.map(({ actions, ...screen }) => ({
+            ...screen,
+            ...(actions ? { actions: keyedBy(actions, 'id') } : {}),
+          })),
+          'id'
+        )
+      : undefined
     return [
       '  {',
       `    name: ${JSON.stringify(name)},`,
@@ -142,12 +176,10 @@ export const serializeInstalledAddons = (
       '    screens: [',
       ...screens,
       '    ],',
-      ...(manifest.widgets ? ['    widgets: [', ...widgets, '    ],'] : []),
-      ...(manifest.things
-        ? [`    things: ${JSON.stringify(manifest.things)},`]
-        : []),
-      ...(manifest.arrangedScreens
-        ? [`    arrangedScreens: ${JSON.stringify(manifest.arrangedScreens)},`]
+      ...(manifest.widgets ? ['    widgets: {', ...widgets, '    },'] : []),
+      ...(things ? [`    things: ${JSON.stringify(things)},`] : []),
+      ...(arranged
+        ? [`    arrangedScreens: ${JSON.stringify(arranged)},`]
         : []),
       '  },',
     ].join('\n')

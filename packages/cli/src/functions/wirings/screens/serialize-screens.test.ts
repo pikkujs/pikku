@@ -1,3 +1,4 @@
+import { runInNewContext } from 'node:vm'
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import {
@@ -169,8 +170,14 @@ describe('widgets, things and arranged screens', () => {
         kind: 'invoice',
         label: 'invoice__label',
         source: 'invoiceCard',
-        copy: { unpaid: { name: 'invoice_unpaid__name', compact: 'c' } },
+        copy: {
+          unpaid: { name: 'invoice_unpaid__name', compact: 'c' },
+          why_late: { $: 'invoice_why_late' },
+        },
         parts: [],
+        actions: [
+          { id: 'open', run: 'go:/invoices-next', label: 'open__label' },
+        ],
       },
     ],
     arrangedScreens: [
@@ -192,17 +199,42 @@ describe('widgets, things and arranged screens', () => {
     assert.deepEqual(meta.things, declared.things)
   })
 
-  test('the host imports widgets through the package widgets export, and things and arranged screens as data', () => {
+  test('the host gets widgets, things and arranged screens as records keyed by id, widgets loaded through the package widgets export', () => {
     const out = serializeInstalledAddons([
       { name: 'invoices', package: '@acme/addon-invoices', manifest: declared },
     ] as any)
-    assert.match(out, /package: "@acme\/addon-invoices"/)
     assert.match(
       out,
-      /id: "mini", title: "mini__title", description: "mini__description", states: \["tile"\], actions: \[\], component: \(\) => import\("@acme\/addon-invoices\/widgets\/Mini"\) as never/
+      /"mini": \{ title: "mini__title", description: "mini__description", states: \["tile"\], actions: \[\], component: \(\) => import\("@acme\/addon-invoices\/widgets\/Mini"\) as never/
     )
-    assert.match(out, /things: \[\{"kind":"invoice"/)
-    assert.match(out, /arrangedScreens: \[\{"id":"overview"/)
+    // Evaluate the emit (less its casts and lazy imports) to read the
+    // records, brought back to this realm's plain objects.
+    const [addon] = JSON.parse(
+      JSON.stringify(
+        runInNewContext(
+          out
+            .replace('export const installedAddons =', '')
+            .replace(/\(\) => import\(("[^"]+")\) as never/g, '$1')
+        )
+      )
+    )
+    assert.deepEqual(Object.keys(addon.widgets), ['mini'])
+    assert.equal(
+      addon.widgets.mini.component,
+      '@acme/addon-invoices/widgets/Mini'
+    )
+    assert.equal(addon.widgets.mini.id, undefined)
+    assert.deepEqual(addon.things, {
+      invoice: {
+        label: 'invoice__label',
+        source: 'invoiceCard',
+        copy: declared.things[0]!.copy,
+        parts: [],
+        actions: { open: { run: 'go:/invoices-next', label: 'open__label' } },
+      },
+    })
+    const { id: _, ...overview } = declared.arrangedScreens[0]!
+    assert.deepEqual(addon.arrangedScreens, { overview })
   })
 
   test('an addon without them has none in the host emit', () => {
