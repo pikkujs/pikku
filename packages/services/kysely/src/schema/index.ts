@@ -24,9 +24,13 @@ import { workflowSchema } from './workflow.schema.js'
 import { virtualUserSchema } from './virtual-user.schema.js'
 import { virtualUserScheduleSchema } from './virtual-user-schedule.schema.js'
 
+export { compileTables, tableRequirements } from './compile-tables.js'
+
 export type {
   AppTables,
   ColumnAnnotation,
+  ForeignKeyTarget,
+  OnDelete,
   PikkuSchema,
   RequiredTypes,
   SchemaContext,
@@ -37,6 +41,7 @@ export type {
 } from './pikku-schema.types.js'
 export {
   defineTables,
+  onDeleteAction,
   rawStatement,
   requiredType,
   schemaContext,
@@ -81,13 +86,18 @@ export const withUserTable = (
           ),
           {
             ...ctx,
-            references: (column, target) =>
-              ctx.references(column, retarget(target)),
+            references: (column, target, onDelete) =>
+              ctx.references(column, retarget(target), onDelete),
             foreignKeys: (table, keys) =>
               ctx.foreignKeys(
                 table,
                 Object.fromEntries(
-                  Object.entries(keys).map(([k, v]) => [k, retarget(v)])
+                  Object.entries(keys).map(([k, v]) => [
+                    k,
+                    typeof v === 'string'
+                      ? retarget(v)
+                      : { ...v, target: retarget(v.target) },
+                  ])
                 )
               ),
           }

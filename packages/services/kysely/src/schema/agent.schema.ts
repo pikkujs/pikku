@@ -40,7 +40,7 @@ export const agentSchema: PikkuSchema = {
         .createTable('agentMessage')
         .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
         .addColumn('threadId', 'varchar(36)', (col) =>
-          ctx.references(col.notNull(), 'agentThreads.id')
+          ctx.references(col.notNull(), 'agentThreads.id', 'cascade')
         )
         .addColumn('role', 'varchar(50)', (col) => col.notNull())
         .addColumn('content', ctx.text)
@@ -48,7 +48,9 @@ export const agentSchema: PikkuSchema = {
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
         .$call(
-          ctx.foreignKeys('agentMessage', { threadId: 'agentThreads.id' })
+          ctx.foreignKeys('agentMessage', {
+            threadId: { target: 'agentThreads.id', onDelete: 'cascade' },
+          })
         ),
 
     (db, _types, ctx) =>
@@ -62,10 +64,10 @@ export const agentSchema: PikkuSchema = {
         .createTable('agentToolCall')
         .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
         .addColumn('threadId', 'varchar(36)', (col) =>
-          ctx.references(col.notNull(), 'agentThreads.id')
+          ctx.references(col.notNull(), 'agentThreads.id', 'cascade')
         )
         .addColumn('messageId', 'varchar(36)', (col) =>
-          ctx.references(col.notNull(), 'agentMessage.id')
+          ctx.references(col.notNull(), 'agentMessage.id', 'cascade')
         )
         .addColumn('runId', 'varchar(36)')
         .addColumn('toolName', 'varchar(255)', (col) => col.notNull())
@@ -82,8 +84,8 @@ export const agentSchema: PikkuSchema = {
         )
         .$call(
           ctx.foreignKeys('agentToolCall', {
-            threadId: 'agentThreads.id',
-            messageId: 'agentMessage.id',
+            threadId: { target: 'agentThreads.id', onDelete: 'cascade' },
+            messageId: { target: 'agentMessage.id', onDelete: 'cascade' },
           })
         ),
 
@@ -116,7 +118,7 @@ export const agentSchema: PikkuSchema = {
         .addColumn('runId', 'varchar(36)', (col) => col.primaryKey())
         .addColumn('agentName', 'varchar(255)', (col) => col.notNull())
         .addColumn('threadId', 'varchar(36)', (col) =>
-          ctx.references(col.notNull(), 'agentThreads.id')
+          ctx.references(col.notNull(), 'agentThreads.id', 'cascade')
         )
         .addColumn('resourceId', 'varchar(255)', (col) => col.notNull())
         .addColumn('status', 'varchar(50)', (col) =>
@@ -141,7 +143,11 @@ export const agentSchema: PikkuSchema = {
         .addColumn('updatedAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
-        .$call(ctx.foreignKeys('agentRun', { threadId: 'agentThreads.id' })),
+        .$call(
+          ctx.foreignKeys('agentRun', {
+            threadId: { target: 'agentThreads.id', onDelete: 'cascade' },
+          })
+        ),
 
     (db, _types, ctx) =>
       db.schema
@@ -154,7 +160,7 @@ export const agentSchema: PikkuSchema = {
         .createTable('agentRunScore')
         .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
         .addColumn('runId', 'varchar(36)', (col) =>
-          ctx.references(col.notNull(), 'agentRun.runId')
+          ctx.references(col.notNull(), 'agentRun.runId', 'cascade')
         )
         .addColumn('scorerName', 'varchar(255)', (col) => col.notNull())
         .addColumn('score', 'real', (col) => col.notNull())
@@ -163,7 +169,11 @@ export const agentSchema: PikkuSchema = {
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
-        .$call(ctx.foreignKeys('agentRunScore', { runId: 'agentRun.runId' })),
+        .$call(
+          ctx.foreignKeys('agentRunScore', {
+            runId: { target: 'agentRun.runId', onDelete: 'cascade' },
+          })
+        ),
 
     (db, _types, ctx) =>
       db.schema
