@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3720 observable things**: 1224 exported names, plus
-2496 members on the classes and interfaces among them, reachable
-through 67 entry points.
+**3789 observable things**: 1261 exported names, plus
+2528 members on the classes and interfaces among them, reachable
+through 68 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -30,8 +30,10 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./trigger` | 43 | 43 | 13 |
 | `./testing` | 18 | 18 | 35 |
 | `./services/local-meta` | 22 | 2 | 43 |
+| `./db` | 12 | 12 | 32 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 17 | 15 | 27 |
+| `./addon` | 39 | 39 | 2 |
 | `./trace` | 19 | 19 | 22 |
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
@@ -52,7 +54,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./telemetry-store/testing` | 4 | 4 | 14 |
 | `./scope` | 17 | 17 | 0 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
-| `./addon` | 14 | 14 | 2 |
 | `./safe-fetch` | 9 | 9 | 7 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./rpc` | 9 | 9 | 6 |
@@ -3572,7 +3573,21 @@ rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefi
 ## ./addon
 
 ```ts
-definePlugin: (manifest: StudioManifest) => StudioManifest
+definePlugin: DefinePlugin<StudioFunctionMap, string>
+export type DefinePlugin<
+  Fns extends StudioFunctionMap = StudioFunctionMap,
+  Key extends string = string,
+> = <
+  const W extends CheckedWidgets<W, Key> = {},
+  const T extends CheckedThings<Fns, W, T, Key> = {},
+  const A extends CheckedArrangedScreens<Fns, W, T, A, Key> = {},
+>(manifest: {
+  title: string
+  screens: StudioScreen[]
+  widgets?: W
+  things?: T
+  arrangedScreens?: A
+}) => StudioManifest
 export type RemoteAddonAuth =
   | { credentialId: string }
   | { secretId: string }
@@ -3600,15 +3615,71 @@ export class RemoteAddonAuthError extends PikkuError {
   constructor(namespace: string, detail: string)
 }
 resolveRemoteAddonToken: (auth: RemoteAddonAuthBinding | undefined, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: Partial<WorkflowServiceConfig> | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, wire: PikkuRawWire, namespace: string) => Promise<string | null>
+export type StudioAction<
+  Fn extends string = string,
+  Key extends string = string,
+> = {
+  run: Fn | StudioRpcRef | StudioGoRef
+  label: Key
+} & (
+  { destructive: true; confirm: Key } | { destructive?: false; confirm?: Key }
+)
+export type StudioAmount = { n: number; unit: 'count' | 'ms' | 'percent' }
 export type StudioAppScreen = StudioScreenBase & {
   app: string
 }
+export type StudioArrangedScreen<
+  WidgetId extends string = string,
+  Kind extends string = string,
+  From extends string = string,
+  Fn extends string = string,
+  Key extends string = string,
+  Slots = readonly StudioSlot<WidgetId, From, string, Key>[],
+  Variant extends string = string,
+  Target extends string = string,
+> = StudioScreenBase & {
+  title: Key
+  about?: Key
+  source: Fn | StudioRpcRef
+  slots: Slots
+  shows?: readonly Kind[]
+  lanes?: 1 | 2 | 3 | 4 | 5 | 6
+  chat?: 'collapse'
+  scoped?: boolean
+  actions?: { readonly [id: string]: StudioAction<Fn, Key> }
+  redirect?: { readonly [V in Variant]?: Target }
+  poll?: StudioPoll
+}
+export type StudioCardHead<
+  Variant extends string = string,
+  FigureVariant extends string = string,
+> = StudioVariantData<Variant> & {
+  state?: 'wrong' | 'slow' | 'fine' | 'empty' | 'new'
+  tone?: 'bad' | 'warn' | 'good' | 'idle'
+  primary?: { action?: string }
+  figures?: readonly StudioFigure<FigureVariant>[]
+}
+export type StudioCompact = 'full' | 'tile' | 'hide'
 export type StudioComponentScreen = StudioScreenBase & {
   component: () => Promise<{ default: unknown }>
 }
+export type StudioCopy<
+  Required extends string = string,
+  Entry = StudioSlotCopy,
+  Key extends string = string,
+> = (string extends Required ? {} : { readonly [V in Required]: Entry }) & {
+  readonly [variant: string]: Entry | StudioSlotCopy<Key>
+}
+export type StudioFigure<Variant extends string = string> =
+  StudioVariantData<Variant> & { value?: StudioAmount }
+export type StudioFunctionMap = Record<string, { input: any; output: any }>
+export type StudioGoRef = `go:/${string}`
 export type StudioManifest = {
   title: string
   screens: StudioScreen[]
+  widgets?: Record<string, StudioWidget>
+  things?: Record<string, StudioThing>
+  arrangedScreens?: Record<string, StudioArrangedScreen>
 }
 export type StudioNav = {
   area: 'rail' | 'team' | 'project' | 'account'
@@ -3616,7 +3687,76 @@ export type StudioNav = {
   order: number
   badge?: string
 }
+export type StudioPoll = number | { fast: number; slow: number }
+export type StudioRpcRef = `${string}:${string}`
 export type StudioScreen = StudioComponentScreen | StudioAppScreen
+export type StudioSkin = 'desk' | 'headset'
+export type StudioSlot<
+  WidgetId extends string = string,
+  From extends string = string,
+  Variant extends string = string,
+  Key extends string = string,
+> = {
+  widget: WidgetId
+  from: From
+  span?: StudioSpan
+  compact?: StudioCompact
+  copy?: StudioCopy<Variant, StudioSlotCopy<Key>, Key>
+}
+export type StudioSlotCopy<Key extends string = string> = {
+  readonly [text: string]: Key | StudioSlotCopy<Key>
+}
+export type StudioSourceInput = {
+  projectKey: string
+  stage: string | null
+  range?: string
+  subject?: { kind: string; id: string }
+}
+export type StudioSpan = 'full' | 'wide' | 'half'
+export type StudioThing<
+  WidgetId extends string = string,
+  Kind extends string = string,
+  From extends string = string,
+  Fn extends string = string,
+  Variant extends string = string,
+  Key extends string = string,
+  Parts = readonly StudioSlot<WidgetId, From, string, Key>[],
+  FigureVariant extends string = string,
+> = {
+  label: Key
+  source: Fn | StudioRpcRef
+  copy: StudioCopy<Variant, StudioThingCopy<Key>, Key> &
+    StudioCopy<FigureVariant, StudioSlotCopy<Key>, Key>
+  parts: Parts
+  related?: readonly Kind[]
+  actions?: { readonly [id: string]: StudioAction<Fn, Key> }
+  alwaysFull?: boolean
+  measure?: 'narrow' | 'normal' | 'fill'
+}
+export type StudioThingCopy<Key extends string = string> =
+  StudioSlotCopy<Key> & {
+    name: Key
+    lead?: Key
+    compact: Key
+    primary?: { label: Key; draft?: Key }
+  }
+export type StudioValue = string | number
+export type StudioVariantData<Variant extends string = string> = {
+  variant: Variant
+  values?: Record<string, StudioValue | StudioVariantData>
+}
+export type StudioWidget<Key extends string = string> = {
+  title: Key
+  description: Key
+  states: readonly StudioWidgetState[]
+  actions: readonly StudioWidgetActionType[]
+  skins?: readonly StudioSkin[]
+  component: () => Promise<{ default: unknown }>
+}
+export type StudioWidgetActionType =
+  'open' | 'run' | 'scope' | 'submit' | 'link' | 'input' | 'event'
+export type StudioWidgetState = 'full' | 'tile' | 'chip'
+export interface WidgetRegistry {}
 wireAddon: (config: WireAddonConfig) => void
 export type WireAddonConfig = {
   name: string
@@ -7116,6 +7256,74 @@ coerceTopLevelDataFromSchema: (schemaName: string, data: any, packageName?: stri
 compileAllSchemas: (logger: Logger, schemaService?: SchemaService | undefined) => void
 getSchema: (name: string, packageName?: string | null) => Record<string, unknown> | undefined
 validateSchema: (logger: Logger, schemaService: SchemaService | undefined, schemaName: string | null | undefined, data: any, packageName?: string | null) => Promise<void>
+```
+
+## ./db
+
+```ts
+export interface ColumnAnnotation {
+  security?: 'public' | 'private' | 'pii' | 'secret'
+  form?: 'plain' | 'hashed' | 'wrapped' | 'sealed'
+  keyId?: string
+  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
+  kind?: 'date' | 'bool' | 'json' | 'uuid'
+  tsType?: string
+  format?: string
+  description?: string
+}
+export type ColumnDeclaration = ColumnFields &
+  ({ type: ColumnType } | { type?: ColumnType; references: string })
+export type ColumnDefault =
+  string | number | boolean | { now: true } | { sql: string }
+export interface ColumnFields extends ColumnAnnotation {
+  required?: boolean
+  default?: ColumnDefault
+  primaryKey?: boolean
+  unique?: boolean
+  index?: boolean
+  references?: string
+  onDelete?: OnDelete
+  enum?: readonly string[]
+  min?: number
+  max?: number
+  minLength?: number
+  maxLength?: number
+  pattern?: string
+}
+export type ColumnType =
+  | 'id'
+  | 'key'
+  | 'text'
+  | `string(${number})`
+  | 'integer'
+  | 'bigint'
+  | 'real'
+  | 'boolean'
+  | 'timestamp'
+  | 'timestamptz'
+  | 'uuid'
+  | 'json'
+defineTables: <const T extends TablesDeclaration>(tables: T) => T
+export interface IndexDeclaration {
+  columns: readonly string[]
+  unique?: boolean
+  where?: string
+  name?: string
+}
+export interface NamedConstraint {
+  columns: readonly string[]
+  name: string
+}
+export type OnDelete = 'cascade' | 'setNull' | 'restrict' | 'noAction'
+export type TableAnnotations = Record<string, Record<string, ColumnAnnotation>>
+export interface TableDeclaration {
+  columns: Record<string, ColumnDeclaration>
+  primaryKey?: readonly string[] | NamedConstraint
+  unique?: readonly (readonly string[] | NamedConstraint)[]
+  indexes?: readonly IndexDeclaration[]
+  declareOnly?: boolean
+}
+export type TablesDeclaration = Record<string, TableDeclaration>
 ```
 
 ## ./testing
