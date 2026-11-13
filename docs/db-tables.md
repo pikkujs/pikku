@@ -54,12 +54,25 @@ and `declareOnly`.
 constraints named `<table>_<column>_<kind>_check` (`kind` is `enum`, `min`,
 `max`, `minlength` or `maxlength`); `enum` also types the column as a union.
 `pattern` is checked by the generated zod schema only, never in SQL, because
-regex dialects differ. A `CHECK` is written on `CREATE TABLE` and on a column
-added later, which is what lets sqlite add one with `ADD COLUMN`. Adding or
-changing a constraint on a column that already exists is refused, naming the
-check: write that migration by hand (`ALTER TABLE ... ADD CONSTRAINT` on
-postgres and MySQL, a rebuilt table on sqlite) or take it out of
-`db/tables.ts`. A bound on a column of the wrong kind (`min` on text,
+regex dialects differ. A `CHECK` is written on `CREATE TABLE` and on a column added later, which is what
+lets sqlite add one with `ADD COLUMN`. On a column that already exists:
+
+- **Postgres** adds it `NOT VALID` and then `VALIDATE`s it in a second statement,
+  so writes continue during the scan. Changing one drops and re-adds it;
+  removing it from the declaration drops it (only checks named
+  `<table>_<column>_<kind>_check`; one you wrote yourself is left alone).
+- **MySQL** uses `ADD CONSTRAINT ... CHECK` and `DROP CHECK`, which need 8.0.16
+  or later. An older server parses a `CHECK` and ignores it, so generate refuses.
+- **sqlite** cannot alter a constraint; it is refused until the table is rebuilt.
+
+Each added check is preceded by a `-- pikku:check-probe SELECT 1 FROM t WHERE NOT
+(...) LIMIT 1` comment. A deploy runs that probe first: any row back means the
+existing data breaks the new check. `runCheckProbe` in `check-migration.ts`
+runs it with a 30 second timeout (`CHECK_PROBE_TIMEOUT_MS`) and declines tables
+estimated above 10 million rows (`CHECK_PROBE_MAX_ROWS`), where the migration
+should be written by hand.
+
+A bound on a column of the wrong kind (`min` on text,
 `minLength` on a number) is an error when the file loads.
 
 A field that is not one of these is an error, as is an invalid annotation value:

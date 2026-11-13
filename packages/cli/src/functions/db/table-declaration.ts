@@ -9,8 +9,8 @@ import type {
 } from '@pikku/core/db'
 import { compileTables, type PikkuSchema } from '@pikku/kysely'
 import { loadFreshUserModule } from '../commands/load-user-project.js'
-import { checkFingerprint } from './check-enums.js'
-import type { ColumnCheck, ColumnInfo } from './db-introspector.js'
+import { planConstraints } from './check-migration.js'
+import type { ColumnInfo } from './db-introspector.js'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'
 import { ZOD_FORMATS } from './zod-codegen.js'
 
@@ -306,65 +306,6 @@ function columnChanges(desired: ColumnInfo, actual: ColumnInfo): string[] {
 }
 
 /**
- * The `CHECK` names a declaration generates: `<table>_<column>_<kind>_check`.
- * A check named like this that the declaration no longer asks for was generated
- * from it once, so its removal is a constraint change; one named otherwise is a
- * person's, and the declaration says nothing about it.
- */
-const GENERATED_CHECK = /_(enum|min|max|minlength|maxlength)_check$/
-
-/**
- * How the constraints on an existing column differ from its declaration.
- *
- * A check counts as present when the migrations hold one of the same name and
- * condition, or the same condition under another name, since a person who
- * hand-wrote the migration this refusal asked for may have named it as they
- * liked.
- */
-function constraintChanges(
-  table: string,
-  column: string,
-  desired: ColumnInfo,
-  actual: ColumnInfo
-): string[] {
-  const wanted: ColumnCheck[] = desired.checks ?? []
-  const held: ColumnCheck[] = actual.checks ?? []
-  const changes: string[] = []
-  for (const check of wanted) {
-    const sameName = held.find((h) => h.name === check.name)
-    if (sameName) {
-      if (
-        checkFingerprint(sameName.expression) !==
-        checkFingerprint(check.expression)
-      ) {
-        changes.push(
-          `${check.name} is (${sameName.expression}) in the migrations and (${check.expression}) in the declaration`
-        )
-      }
-    } else if (
-      !held.some(
-        (h) =>
-          checkFingerprint(h.expression) === checkFingerprint(check.expression)
-      )
-    ) {
-      changes.push(
-        `${check.name} (${check.expression}) is not in the migrations`
-      )
-    }
-  }
-  for (const check of held) {
-    if (
-      check.name.startsWith(`${table}_${column}_`) &&
-      GENERATED_CHECK.test(check.name) &&
-      !wanted.some((w) => w.name === check.name)
-    ) {
-      changes.push(`${check.name} (${check.expression}) is no longer declared`)
-    }
-  }
-  return changes
-}
-
-/**
  * Why a declared table cannot be brought into line by adding to it, if it can't.
  *
  * Everything here is either destructive or a guess. Dropping loses data; a
@@ -379,7 +320,8 @@ export function refuseTableChanges(
   desired: Map<string, ColumnInfo>,
   actual: Map<string, ColumnInfo>,
   migrationsDir: string,
-  rootDir: string
+  rootDir: string,
+  dialect: string
 ): string[] {
   const refusals: string[] = []
   const where = relative(rootDir, migrationsDir)
@@ -414,14 +356,16 @@ export function refuseTableChanges(
       }
       continue
     }
-    const constraints = constraintChanges(table, name, column, existing)
+    // Postgres and MySQL alter a constraint in place; sqlite has to rebuild the table.
+    const constraints =
+      dialect === 'sqlite'
+        ? planConstraints(table, name, column, existing).reasons
+        : []
     if (constraints.length > 0) {
       refusals.push(
         `${table}.${name} already exists, and its constraints differ from the migrations: ${constraints.join('; ')}. ` +
-          `generate puts constraints on new tables and new columns only, because rows already in ${table} ` +
-          `may break a new one. Write that migration by hand in ${where} ` +
-          `(ALTER TABLE ... ADD CONSTRAINT on postgres and MySQL, a rebuilt table on sqlite), ` +
-          `or take the constraint out of ${TABLES_FILE}.`
+          `sqlite cannot alter a constraint, so generate puts them on new tables and new columns only. ` +
+          `Write that migration by hand in ${where} (a rebuilt table), or take the constraint out of ${TABLES_FILE}.`
       )
     }
     const changes = columnChanges(column, existing)

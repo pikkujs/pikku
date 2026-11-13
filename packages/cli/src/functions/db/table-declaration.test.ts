@@ -721,9 +721,8 @@ describe('constraints on the declaration', () => {
     assert.deepEqual((await generate(resolved)).refusals, [])
   })
 
-  for (const dialect of ['sqlite', 'postgres'] as const) {
-    const project = () =>
-      dialect === 'sqlite' ? sqliteProject() : postgresProject()
+  for (const dialect of ['sqlite'] as const) {
+    const project = () => sqliteProject()
 
     test(`${dialect}: adding a constraint to an existing column is refused with what to do`, async () => {
       declare(ITEM)
@@ -767,6 +766,74 @@ describe('constraints on the declaration', () => {
       )
     })
   }
+
+  describe('postgres alters constraints in place', () => {
+    const NAME_ONLY = `item: { columns: {
+        id: { type: 'key', primaryKey: true },
+        name: { type: 'text', required: true },
+      } }`
+    const bounded = (n: number) => `item: { columns: {
+        id: { type: 'key', primaryKey: true },
+        name: { type: 'text', required: true, maxLength: ${n} },
+      } }`
+
+    test('adding one is NOT VALID, then VALIDATE, with a probe above it', async () => {
+      declare(NAME_ONLY)
+      const resolved = postgresProject()
+      await generate(resolved)
+      declare(bounded(20))
+      const { written, refusals } = await generate(resolved)
+      assert.deepEqual(refusals, [])
+      const sql = readFileSync(written[0]!.file, 'utf8')
+      assert.match(
+        sql,
+        /-- pikku:check-probe SELECT 1 FROM "item" WHERE NOT \(.*length.*<= 20\) LIMIT 1\nALTER TABLE "item" ADD CONSTRAINT "item_name_maxlength_check" CHECK \(.*\) NOT VALID;/
+      )
+      assert.match(
+        sql,
+        /ALTER TABLE "item" VALIDATE CONSTRAINT "item_name_maxlength_check";/
+      )
+      assert.deepEqual((await generate(resolved)).written, [])
+    })
+
+    test('changing one drops and re-adds it, removing one drops it', async () => {
+      declare(bounded(20))
+      const resolved = postgresProject()
+      await generate(resolved)
+
+      declare(bounded(30))
+      const changed = await generate(resolved)
+      assert.deepEqual(changed.refusals, [])
+      const sql = readFileSync(changed.written[0]!.file, 'utf8')
+      assert.match(
+        sql,
+        /DROP CONSTRAINT "item_name_maxlength_check";[\s\S]*ADD CONSTRAINT "item_name_maxlength_check" CHECK \(.*30\) NOT VALID;/
+      )
+      assert.deepEqual((await generate(resolved)).written, [])
+
+      declare(NAME_ONLY)
+      const removed = await generate(resolved)
+      assert.deepEqual(removed.refusals, [])
+      assert.match(
+        readFileSync(removed.written[0]!.file, 'utf8'),
+        /ALTER TABLE "item" DROP CONSTRAINT "item_name_maxlength_check";/
+      )
+      assert.deepEqual((await generate(resolved)).written, [])
+    })
+
+    test('a schema qualifies every statement', async () => {
+      handWritten('postgres', 'CREATE SCHEMA app;')
+      declare(NAME_ONLY)
+      const resolved = postgresProject('app')
+      await generate(resolved)
+      declare(bounded(20))
+      const { written } = await generate(resolved)
+      assert.match(
+        readFileSync(written[0]!.file, 'utf8'),
+        /ALTER TABLE "app"."item" ADD CONSTRAINT .* NOT VALID;[\s\S]*ALTER TABLE "app"."item" VALIDATE CONSTRAINT/
+      )
+    })
+  })
 
   test('a check a person wrote by hand, under any name, satisfies the declaration', async () => {
     handWritten(

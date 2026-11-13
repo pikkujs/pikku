@@ -71,6 +71,14 @@ import { devSeed as runDevSeed, type DevSeedResult } from './sqlite/dev-seed.js'
 import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
 import { createPGliteKysely } from './postgres/pglite-kysely.js'
 import { MysqlMigrationExecutor } from '@pikku/migrator-sql/mysql'
+import {
+  MYSQL_MIN_CHECK_VERSION,
+  addCheckStatements,
+  dropCheckStatement,
+  inlineCheckExpression,
+  mysqlEnforcesChecks,
+  planConstraints,
+} from './check-migration.js'
 import { MysqlIntrospector } from './mysql/mysql-introspector.js'
 import {
   createMysqlKysely,
@@ -2097,7 +2105,8 @@ export async function planDeclaredTables(
             desired.tables.get(table)!,
             actual,
             resolved.migrationsDir,
-            resolved.rootDir
+            resolved.rootDir,
+            resolved.dialect
           )
         : []
     })
@@ -2158,6 +2167,55 @@ export async function planDeclaredTables(
     }
   }
 
+  if (resolved.dialect !== 'sqlite') {
+    const dialect = resolved.dialect
+    for (const table of tables) {
+      const actual = coveredTable(covered, table, schemaName)
+      if (!actual) continue
+      const { columns: definitions } = tableDefinitions(desired.sql, table)
+      for (const [column, info] of desired.tables.get(table)!) {
+        const existing = actual.get(column)
+        if (!existing) continue
+        const plan = planConstraints(table, column, info, existing)
+        if (plan.drop.length + plan.add.length === 0) continue
+        if (dialect === 'mysql' && !(await mysqlChecksEnforced(resolved))) {
+          refusals.push(
+            `${table}.${column}: ${plan.reasons.join('; ')}. This MySQL server is older than ` +
+              `${MYSQL_MIN_CHECK_VERSION}, which parses a CHECK and ignores it, so generate will not write one. ` +
+              `Upgrade the server, or take the constraint out of ${TABLES_FILE}.`
+          )
+          continue
+        }
+        for (const name of plan.drop) {
+          statements.push(
+            dropCheckStatement(dialect, qualify(table), name, quote)
+          )
+        }
+        for (const check of plan.add) {
+          const expression = inlineCheckExpression(
+            definitions.get(column) ?? '',
+            check.name
+          )
+          if (!expression) {
+            refusals.push(
+              `${table}.${column}: ${check.name} is not written inline on the column, so generate cannot lift its text.`
+            )
+            continue
+          }
+          statements.push(
+            ...addCheckStatements(
+              dialect,
+              qualify(table),
+              check.name,
+              expression,
+              quote
+            )
+          )
+        }
+      }
+    }
+  }
+
   // An index on a new table came with its `CREATE TABLE` above.
   const newIndexes = shapes.filter(
     ({ shape }) =>
@@ -2184,6 +2242,14 @@ export async function planDeclaredTables(
     ]
   })
   return { tables, body: rehearsal.length ? '' : body, refusals: rehearsal }
+}
+
+/** Whether the configured MySQL server enforces `CHECK`, which it does from 8.0.16. */
+async function mysqlChecksEnforced(resolved: ResolvedDb): Promise<boolean> {
+  return withThrowawayKysely(resolved, async (db) => {
+    const { rows } = await sql<{ v: string }>`select version() as v`.execute(db)
+    return mysqlEnforcesChecks(String(rows[0]?.v ?? ''))
+  })
 }
 
 /**
