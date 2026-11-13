@@ -1,7 +1,7 @@
 ---
 type: decision
 title: The API report pins members, because the export list only pins names
-description: public-surface.json catches an export appearing or vanishing; it cannot see a method added to an interface, which is the change that breaks a consumer's build
+description: public-surface.json catches an export appearing or vanishing; it cannot see a method added to an interface, which is the change that breaks a consumer's build. The report is generated in CI and commented on the PR, not committed
 tags: core, api
 ---
 
@@ -31,8 +31,27 @@ Demonstrated rather than assumed: adding `probeAddedMember(): void` to
 
 So `api-report.md` is generated from the type checker — every exported symbol
 with its full signature, interfaces and classes rendered as their declarations
-so member changes land in the diff. It is committed, and the test fails when
-the code and the report disagree. Regenerate with `yarn api-report`.
+so member changes land in the diff.
+
+**It is not committed.** It used to be, with a pre-commit hook regenerating it
+and a test failing when it was stale. That cost more than it bought:
+
+- Any two branches touching the public surface rewrote the same ~7000 lines and
+  collided on every rebase, which a merge driver papered over and
+  "regenerate after merging main" commits then paid for.
+- The report resolves `@pikku/core/*` imports through core's own `dist/`. The
+  pre-commit hook regenerated it in whatever install the committer had; in an
+  incomplete one (core not built) those imports resolve to `any`, and the
+  commit quietly wrote `jwt: any` where the real signature says
+  `jwt: JWTService | undefined`. A stale-report test cannot tell a wrong
+  report from a right one.
+
+So the `API report` workflow (`.github/workflows/api-report.yml`) builds core
+from the PR's base and from its merge result, both in CI, diffs the two with
+`scripts/api-report-diff.sh`, and keeps one sticky PR comment with the diff, or
+"No public API changes". Reviewers still see the member-level diff; nobody
+commits or merges it. To see it locally, build core and run
+`bun run --filter @pikku/core api-report` (output is gitignored).
 
 **What this rules out:** treating `public-surface.json` as the API guard. It
 guards the front door; this guards the rooms. Both are needed, and the export
