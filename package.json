@@ -36,7 +36,7 @@
     ]
   },
   "scripts": {
-    "postinstall": "husky && node scripts/setup-merge-drivers.mjs",
+    "postinstall": "husky",
     "prepack": "pinst --disable",
     "postpack": "pinst --enable",
     "pre-commit": "bun run test && bun run prettier && bun run lint",
@@ -135,10 +135,6 @@
     "*.ts": [
       "oxlint",
       "prettier --write"
-    ],
-    "packages/core/src/**/*.ts": [
-      "bun run --filter @pikku/core api-report",
-      "git add packages/core/api-report.md"
     ]
   }
 }

@@ -250,11 +250,13 @@ evidence.
 The body is written from the outside in. What a reader needs first is what
 _they_ now see differently, not how it was built.
 
-1. **What moved on the public surface**, quoted from the `api-report.md` diff —
+1. **What moved on the public surface**, quoted from the API report diff —
    the new entry point and its row, the exported type that changed shape, the
-   field added to an interface everyone implements. `packages/core/api-report.md`
-   is generated (`bun run --filter @pikku/core api-report`) and is the one
-   artifact that states the compatibility promise, so its diff is the honest
+   field added to an interface everyone implements. The `API report` workflow
+   posts that diff as a sticky comment on every PR (the report is generated and
+   gitignored, not committed; to see it locally, build core with
+   `bun run --filter @pikku/core build`, then run
+   `bun run --filter @pikku/core api-report`). It states the compatibility promise, so its diff is the honest
    summary of what this PR did to it. A PR that moves the counts and does not
    say so is hiding its own blast radius.
 2. **The interfaces and types a caller touches** — what an app now declares,
@@ -274,7 +276,7 @@ being the interesting part of the work.
 
 A change with genuinely no public surface — an internal fix, a generator's
 output that no one imports — says so in a sentence and goes straight to (3);
-`api-report.md` not moving is itself worth stating. A change with no code at all
+the API report comment saying "no public API changes" is itself worth stating. A change with no code at all
 — a rename, a dependency bump, a revert — says that instead.
 
 The same rule applies to replies on review comments: the fix is shown, not

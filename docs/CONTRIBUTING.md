@@ -68,6 +68,10 @@ Pikku is a [bun](https://bun.sh/) workspace monorepo. `AGENTS.md` at the reposit
 
 The Husky pre-commit hook runs `bun install` and checks that `bun.lock` did not change, then runs lint-staged, `changeset status` and the licence check. `changeset status` fails when your branch changes a publishable package without a changeset (see [Changesets](#changesets)).
 
+### The public API report
+
+`@pikku/core`'s public API is summarised in `packages/core/api-report.md`, but that file is generated and not committed. The `API report` workflow builds it for the PR's base and merge result and posts the diff as one comment on your pull request, so there is nothing to regenerate or commit. To read it locally, run `bun run --filter @pikku/core build` and then `bun run --filter @pikku/core api-report`; building core first matters, because without it the report types core's own re-exports as `any`.
+
 ## Contributor License Agreement
 
 By submitting a pull request, you agree to the terms of our [Contributor License Agreement](../CLA.md). This allows the project to accept your contributions while maintaining licensing flexibility.

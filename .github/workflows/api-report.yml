@@ -1,0 +1,101 @@
+name: API report
+
+# Comments the change to @pikku/core's public API on the pull request. The report
+# is generated, not committed: it is built from the base and from the PR's merge
+# result, both in this run, so there is no baseline in git to go stale.
+#
+# Runs for drafts too (unlike CI): it is one core build, and the diff is the
+# thing a draft's reader wants first.
+#
+# Two jobs, split on trust. `report` runs the PR's code (a build and the
+# generator) with a read-only token and no secrets. `comment` holds the only
+# write permission and runs nothing from the PR: it posts the text `report`
+# uploaded. This is `pull_request`, never `pull_request_target`, so a fork's PR
+# is never checked out with a write token; a fork gets the diff in the run
+# summary instead of a comment, because its token cannot write one.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: api-report-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Build and diff
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      # The PR's merge commit: first parent is the base branch's current tip,
+      # second is the PR head. Diffing against the merge result rather than the
+      # PR head keeps a stale branch from showing other people's merged API
+      # changes as this PR removing them.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - name: Check out the base tree
+        run: |
+          git rev-parse --verify --quiet 'HEAD^2' >/dev/null || {
+            echo "::error::HEAD is not a merge commit, so there is no base to diff against"
+            exit 1
+          }
+          mkdir -p "$RUNNER_TEMP/base"
+          git archive 'HEAD^1' | tar -x -C "$RUNNER_TEMP/base"
+      - name: Build both reports and diff them
+        run: scripts/api-report-diff.sh "$RUNNER_TEMP/base" "$GITHUB_WORKSPACE" "$RUNNER_TEMP/api-report"
+      - name: Show the diff in the run summary
+        run: cat "$RUNNER_TEMP/api-report/comment.md" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: api-report
+          path: |
+            ${{ runner.temp }}/api-report/comment.md
+            ${{ runner.temp }}/api-report/api-report.diff
+          retention-days: 7
+
+  comment:
+    name: Comment on the PR
+    needs: report
+    # A fork's token is read-only, so there is nothing to post with.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: api-report
+      - name: Create or update the one API report comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          marker='<!-- pikku-api-report -->'
+          # The body came out of a job that ran the PR's code: post it only if it
+          # still looks like what that job writes, and never past the API limit.
+          [ "$(head -n1 comment.md)" = "$marker" ] || { echo "::error::comment.md lacks the marker"; exit 1; }
+          [ "$(wc -c < comment.md)" -le 65000 ] || { echo "::error::comment.md is too large"; exit 1; }
+          # Only this workflow's own earlier comment counts as the sticky one, so
+          # a comment that merely quotes the marker is never edited.
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" | head -n1)
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@comment.md >/dev/null
+            echo "updated comment $id"
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@comment.md >/dev/null
+            echo "created comment"
+          fi
