@@ -40,6 +40,7 @@ What an app sees:
 
 - **No new PKU483.** Every built-in secret states its `form`.
 - **PKU910 on `pikku all --security`** for a function (sessioned or not) that returns one of the secret columns, for example a `select * from account` result. Strip the column before returning. `user.email` was already `Private` (the default), so a sessionless function returning it was already flagged; it is now `Pii`.
+- **PKU954 on `pikku all --security`** for code that logs or otherwise sinks one of the new pii/secret values, for example `logger.info({ to: user.email })`. Log an id instead; the online-shop template's `sendOrderConfirmation` did exactly this and now logs `userId`.
 - **A compile error on a direct write to `account.password`** through the typed Kysely: the column's insert and update type is now `HashedValue`. Wrap the hash Better Auth produced with `unsafeAsHashed(hash)` from `@pikku/core/classification`. Better Auth's own writes are unaffected.
 - **`user.email`'s zod validator is `z.email()`** in `.pikku/db/zod.gen.ts`.
 - **Opting out of one**: declare the table `declareOnly: true` in `db/tables.ts` and annotate the column. Your column replaces the built-in one entirely (for example `access_token: { type: 'text', security: 'private' }`).
@@ -1269,7 +1270,8 @@ export const tables = defineTables({
         .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
           col.notNull().references('user.id').onDelete('cascade')
         ),
-    (db) => db.schema.createIndex('note_user_id_idx').on('note').column('userId'),
+    (db) =>
+      db.schema.createIndex('note_user_id_idx').on('note').column('userId'),
   ],
   annotations: { note: { body: { security: 'pii' } } },
 })
