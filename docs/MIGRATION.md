@@ -32,7 +32,7 @@ Version numbers in brackets are the release of the named package that shipped th
 - `PikkuTaskScheduler` is gone: use `InMemorySchedulerService` from `@pikku/schedule`.
 - `pikku semver` is gone: use `pikku release diff` (or `--emit` becomes `pikku release snapshot`).
 - Local content no longer reads files stored outside `private/` and `public/` under `localFileUploadPath`: move any old `<bucket>/<key>` files into `private/<bucket>/<key>`. `resolveContentRequestTarget(basePath, key)` is synchronous and takes no `mode`.
-- A `db/annotations.ts` entry with `security: 'encrypted'` is no longer read: write `security: 'secret', form: 'wrapped'`.
+- A column with `security: 'encrypted'` is no longer read: write `security: 'secret', form: 'wrapped'`.
 
 ### `pikku.config.json` declares `backends` and/or `frontends`; `extends`, `namedFilters` and the filter flags are gone
 
@@ -1285,7 +1285,7 @@ To move an app that has no `db/tables.ts` yet:
 
 1. Create `db/tables.ts` and declare the existing tables as they stand, one at a time if you like. A table you leave out stays hand-written.
 2. Run `pikku db generate`. A table that matches its migrations is adopted and not created again. If it differs, generate refuses and names the column and the difference. Fix the declaration, not the migration.
-3. Move the table's entries from `db/annotations.ts` onto its columns, and run `pikku db migrate`. Declared tables are optional in `db/annotations.ts`; while a field is set in both, `db/annotations.ts` wins.
+3. Move the table's entries from `db/annotations.ts` onto its columns, delete that file, and run `pikku db migrate`. See [`db/annotations.ts` is removed](#dbannotationsts-is-removed).
 4. From here on, change the declaration and run `pikku db generate`. Existing migration files stay as they are.
 
 **Find:** search for `statements:` and for `defineTables`, `requiredType`, `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` imported from `@pikku/kysely`.
@@ -1301,6 +1301,57 @@ import type { ColumnAnnotation, TableAnnotations } from '@pikku/core/db'
 Find affected code by searching for `ColumnAnnotation` and `TableAnnotations` imported from `@pikku/kysely`.
 
 A declared foreign key now defaults to `onDelete: 'restrict'` instead of always cascading. Write `onDelete: 'cascade'` on a column that relied on it.
+
+### `db/annotations.ts` is removed
+
+Column annotations live on the columns in `db/tables.ts`, and nowhere else. `pikku db migrate`, `generate`, `check` and `pikku validate` refuse a project that still has `db/annotations.ts`, with one sentence pointing here. Nothing falls back to it, so a classification it held would otherwise stop applying without a word.
+
+Removed with it:
+
+- `pikku db annotate`, which wrote `db/annotations.ts` for you.
+- `.pikku/db/classification-map.gen.d.ts` and its `DbClassificationMap` type, which the file was written against.
+- The scaffolder that created an empty `db/annotations.ts` on first migrate.
+
+`db/annotations.gen.json` stays: the console, codegen and coercion read it. `pikku db migrate` now writes it from `db/tables.ts` alone, and deletes it when there is no `db/tables.ts`.
+
+The fields keep their names: `security`, `form`, `keyId`, `classification` (the anonymize strategy), `kind`, `tsType`, `format`, `description`. A table your migrations create is declared `declareOnly: true`: it gets its types and annotations, and no SQL is generated for it. Give each column its `type` as the migration made it (`pikku db generate` names any mismatch). Table and column keys may be camelCase or snake_case. A map nested under a schema name (`{ app: { user: … } }`) becomes bare table names.
+
+Before:
+
+```ts
+// db/annotations.ts
+import type { DbClassificationMap } from '../.pikku/db/classification-map.gen.d.ts'
+
+export const classifications = {
+  user: {
+    email: { security: 'pii', classification: 'fake:email' },
+    apiKey: { security: 'secret', form: 'wrapped' },
+    createdAt: { kind: 'date' },
+  },
+} satisfies DbClassificationMap
+```
+
+After:
+
+```ts
+// db/tables.ts
+import { defineTables } from '@pikku/core/db'
+
+export const tables = defineTables({
+  user: {
+    declareOnly: true,
+    columns: {
+      email: { type: 'text', security: 'pii', classification: 'fake:email' },
+      apiKey: { type: 'text', security: 'secret', form: 'wrapped' },
+      createdAt: { type: 'timestamp', kind: 'date' },
+    },
+  },
+})
+```
+
+Then delete `db/annotations.ts` and run `pikku db migrate`. A column you do not list stays `private`, as before.
+
+**Find:** `db/annotations.ts`, `DbClassificationMap`, `classification-map.gen.d.ts` and `pikku db annotate` in scripts.
 
 ### `PikkuSchema` is a table declaration, not a list of statements
 
@@ -1350,18 +1401,18 @@ Spans, logs and process metrics now leave a standalone binary and `pikku serve` 
 
 The full environment, in one table (also in `packages/core/knowledge/decisions/internals/otlp-exporter-is-protobuf-only-and-never-throws.md`):
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `PIKKU_OTLP_ENDPOINT` | unset (off) | OTLP/HTTP base URL. Unset means no exporter, no timer, no connection. |
-| `PIKKU_TELEMETRY` | unset | `0`, `false` or `off` (trimmed, any case) turns telemetry off even when an endpoint is set. |
-| `PIKKU_OTLP_ALLOW_REMOTE` | unset | `1` allows a non-loopback host. The endpoint must then be `https`. |
-| `PIKKU_OTLP_HEADERS` | none | `k=v,k2=v2`, sent with every signal. |
-| `PIKKU_OTLP_TRACES_HEADERS`, `PIKKU_OTLP_LOGS_HEADERS`, `PIKKU_OTLP_METRICS_HEADERS` | none | Added to one signal only. |
-| `PIKKU_OTLP_LOG_LEVEL` | `info` | Lowest level forwarded as an OTLP log. An unknown name logs a warning and uses `info`. |
-| `PIKKU_OTLP_LOG_FIELDS` | unset | `1` also exports an object's fields as log attributes (sensitive names redacted). Off by default: only the message text leaves. |
-| `PIKKU_OTLP_SQL_TEXT` | unset | `1` records the (parameterless) SQL text on `db.*` spans. Off by default. |
-| `PIKKU_OTLP_SERVICE_NAME` | `PIKKU_PROJECT`, else the unit or project name | `service.name`. |
-| `PIKKU_STAGE`, `PIKKU_PROJECT` | none | Resource attributes when set. |
+| Variable                                                                             | Default                                        | Meaning                                                                                                                         |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `PIKKU_OTLP_ENDPOINT`                                                                | unset (off)                                    | OTLP/HTTP base URL. Unset means no exporter, no timer, no connection.                                                           |
+| `PIKKU_TELEMETRY`                                                                    | unset                                          | `0`, `false` or `off` (trimmed, any case) turns telemetry off even when an endpoint is set.                                     |
+| `PIKKU_OTLP_ALLOW_REMOTE`                                                            | unset                                          | `1` allows a non-loopback host. The endpoint must then be `https`.                                                              |
+| `PIKKU_OTLP_HEADERS`                                                                 | none                                           | `k=v,k2=v2`, sent with every signal.                                                                                            |
+| `PIKKU_OTLP_TRACES_HEADERS`, `PIKKU_OTLP_LOGS_HEADERS`, `PIKKU_OTLP_METRICS_HEADERS` | none                                           | Added to one signal only.                                                                                                       |
+| `PIKKU_OTLP_LOG_LEVEL`                                                               | `info`                                         | Lowest level forwarded as an OTLP log. An unknown name logs a warning and uses `info`.                                          |
+| `PIKKU_OTLP_LOG_FIELDS`                                                              | unset                                          | `1` also exports an object's fields as log attributes (sensitive names redacted). Off by default: only the message text leaves. |
+| `PIKKU_OTLP_SQL_TEXT`                                                                | unset                                          | `1` records the (parameterless) SQL text on `db.*` spans. Off by default.                                                       |
+| `PIKKU_OTLP_SERVICE_NAME`                                                            | `PIKKU_PROJECT`, else the unit or project name | `service.name`.                                                                                                                 |
+| `PIKKU_STAGE`, `PIKKU_PROJECT`                                                       | none                                           | Resource attributes when set.                                                                                                   |
 
 Fails closed, at boot (exit 1), never by silently dropping telemetry: a non-loopback host without `PIKKU_OTLP_ALLOW_REMOTE=1`; a non-loopback `http` endpoint; credentials in the URL; a query string, fragment or trailing `?` or `#` in the URL (send credentials in a headers variable); a malformed headers value; a non-http(s) or unparsable URL. Error messages never echo the URL, only the host of a refused remote endpoint.
 

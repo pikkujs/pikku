@@ -12,8 +12,6 @@ import { tmpdir } from 'node:os'
 import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
-import { runInNewContext } from 'node:vm'
-import { transformSync } from 'esbuild'
 import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
 import { CamelCasePlugin, Kysely, PostgresDialect, sql } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
@@ -53,7 +51,6 @@ import {
   declaredTablesMarker,
   declareOnlyProblems,
   loadTableDeclaration,
-  mergeAnnotations,
   recordedDeclaredTables,
   refuseTableChanges,
   TABLES_FILE,
@@ -91,9 +88,8 @@ interface ResolvedDbBase {
   schemaFile: string
   coercionFile: string
   manifestFile: string
-  classificationMapFile: string
   schemaJsonFile: string
-  classificationsFile: string
+  /** The annotations sidecar, compiled from the column annotations in db/tables.ts. */
   classificationsGenJsonFile: string
   /** Where the project declares its own tables, whether or not it does. */
   tablesFile: string
@@ -237,14 +233,10 @@ export function resolveDb(
     schemaFile: join(outDir, 'db', 'schema.gen.ts'),
     coercionFile: join(outDir, 'db', 'coercion.gen.ts'),
     manifestFile: join(outDir, 'db', 'classification.gen.ts'),
-    classificationMapFile: join(outDir, 'db', 'classification-map.gen.d.ts'),
     schemaJsonFile: join(outDir, 'db', 'pikku-db-schema.gen.json'),
     enumsFile: join(outDir, 'db', 'enums.gen.ts'),
-    classificationsFile: join(rootDir, 'db', 'annotations.ts'),
-    // Compiled sidecar lives beside the authored annotations.ts in db/ — this is
-    // where both consumers read it: the codegen's loadAnnotations() and the
-    // pikku-console addon (db/annotations.gen.json). Writing it into outDir
-    // (.pikku) would leave both readers looking at a file that never appears.
+    // The sidecar lives in db/, where both readers look for it: the codegen's
+    // loadAnnotations() and the pikku-console addon (db/annotations.gen.json).
     classificationsGenJsonFile: join(rootDir, 'db', 'annotations.gen.json'),
     tablesFile: join(rootDir, TABLES_FILE),
     zodFile: join(outDir, 'db', 'zod.gen.ts'),
@@ -673,7 +665,6 @@ export interface MigrateAndCodegenOutcome {
   migrate: MigrateResult
   codegen: CodegenResult
   zod: ZodCodegenResult
-  classificationsScaffolded: boolean
   classificationsJsonWritten: boolean
 }
 
@@ -705,21 +696,11 @@ export async function migrateAndCodegen(
 
   const declaration = await loadTableDeclaration(resolved.rootDir)
 
-  // Compile any authored db/annotations.ts → sidecar BEFORE codegen so edits
-  // reflect in a single `db migrate` (codegen reads the sidecar).
-  compileClassifications(
-    resolved.classificationsFile,
+  // Codegen reads the sidecar, so it is written first.
+  const classificationsJsonWritten = writeAnnotationsSidecar(
     resolved.classificationsGenJsonFile,
     declaration
   )
-  // A table the declaration has since dropped is still declared until a
-  // migration says otherwise, and only the migrations remember it.
-  const declaredTables = new Set([
-    ...recordedDeclaredTables(resolved.migrationsDir),
-    ...(declaration
-      ? Object.values(declaredTableNames(declaration)).flat()
-      : []),
-  ])
 
   if (resolved.dialect === 'sqlite') {
     if (!options.scratch) {
@@ -741,14 +722,12 @@ export async function migrateAndCodegen(
         outFile: resolved.schemaFile,
         coercionFile: resolved.coercionFile,
         manifestFile: resolved.manifestFile,
-        classificationMapFile: resolved.classificationMapFile,
         schemaJsonFile: resolved.schemaJsonFile,
         enumsFile: resolved.enumsFile,
         camelCase: resolved.camelCase,
         defaultSchema: resolved.defaultSchema,
         rootDir: resolved.rootDir,
         dialect: 'sqlite',
-        declaredTables,
         migrationsDir: resolved.migrationsDir,
       })
     } finally {
@@ -768,14 +747,12 @@ export async function migrateAndCodegen(
         outFile: resolved.schemaFile,
         coercionFile: resolved.coercionFile,
         manifestFile: resolved.manifestFile,
-        classificationMapFile: resolved.classificationMapFile,
         schemaJsonFile: resolved.schemaJsonFile,
         enumsFile: resolved.enumsFile,
         camelCase: resolved.camelCase,
         defaultSchema: resolved.defaultSchema,
         rootDir: resolved.rootDir,
         dialect: 'mysql',
-        declaredTables,
         migrationsDir: resolved.migrationsDir,
       })
     })
@@ -796,14 +773,12 @@ export async function migrateAndCodegen(
           outFile: resolved.schemaFile,
           coercionFile: resolved.coercionFile,
           manifestFile: resolved.manifestFile,
-          classificationMapFile: resolved.classificationMapFile,
           schemaJsonFile: resolved.schemaJsonFile,
           enumsFile: resolved.enumsFile,
           camelCase: resolved.camelCase,
           defaultSchema: resolved.defaultSchema,
           rootDir: resolved.rootDir,
           dialect: 'postgres',
-          declaredTables,
           migrationsDir: resolved.migrationsDir,
         })
       } finally {
@@ -818,25 +793,11 @@ export async function migrateAndCodegen(
     formats: codegenResult.zodFormats,
   })
 
-  // ── Classifications step ──────────────────────────────────────────────────
-  // Scaffold the authored file if missing (needs the table list), then compile
-  // it to the sidecar so a freshly-scaffolded file is captured too.
-  const scaffolded = scaffoldClassificationsFile(
-    resolved.classificationsFile,
-    codegenResult.tables
-  )
-  const jsonWritten = compileClassifications(
-    resolved.classificationsFile,
-    resolved.classificationsGenJsonFile,
-    declaration
-  )
-
   return {
     migrate: migrateResult,
     codegen: codegenResult,
     zod: zodResult,
-    classificationsScaffolded: scaffolded,
-    classificationsJsonWritten: jsonWritten,
+    classificationsJsonWritten,
   }
 }
 
@@ -966,129 +927,32 @@ export async function reset(
   })
 }
 
-// ── Classification sync ───────────────────────────────────────────────────────
+// ── Annotations sidecar ───────────────────────────────────────────────────────
 
 /**
- * If `db/annotations.ts` doesn't exist yet, write a scaffold listing every
- * table/column so the developer has a typed starting point. Every field of
- * `ColumnEntry` is optional, so the empty-per-table scaffold is valid and means
- * "everything default `private`". Returns whether a scaffold was written.
+ * Write the column annotations `db/tables.ts` declares to the
+ * `annotations.gen.json` sidecar that the codegen and the pikku-console addon
+ * read. With no declaration there is nothing to annotate, so a sidecar left
+ * from an earlier run is removed rather than kept classifying columns nothing
+ * declares. Returns whether the sidecar changed on disk.
  */
-function scaffoldClassificationsFile(
-  classificationsFile: string,
-  tableNames: string[]
-): boolean {
-  if (existsSync(classificationsFile)) return false
-
-  const relMap = join(
-    dirname(classificationsFile),
-    '..',
-    '.pikku',
-    'db',
-    'classification-map.gen.d.ts'
-  )
-  const relMapPosix = relMap.replace(/\\/g, '/')
-
-  const groups = new Map<string, string[]>()
-  for (const name of tableNames) {
-    const dot = name.indexOf('.')
-    const schema = dot >= 0 ? name.slice(0, dot) : ''
-    const table = dot >= 0 ? name.slice(dot + 1) : name
-    if (!groups.has(schema)) groups.set(schema, [])
-    groups.get(schema)!.push(table)
-  }
-
-  const bodyLines: string[] = [
-    `import type { DbClassificationMap } from '${relMapPosix}'`,
-    ``,
-    `export const classifications = {`,
-  ]
-  for (const [schema, tables] of groups) {
-    if (schema) bodyLines.push(`  ${JSON.stringify(schema)}: {`)
-    for (const table of tables) {
-      bodyLines.push(
-        schema
-          ? `    ${JSON.stringify(table)}: {`
-          : `  ${JSON.stringify(table)}: {`
-      )
-      bodyLines.push(schema ? `    },` : `  },`)
-    }
-    if (schema) bodyLines.push(`  },`)
-  }
-  bodyLines.push(`} satisfies DbClassificationMap`, ``)
-
-  mkdirSync(dirname(classificationsFile), { recursive: true })
-  writeFileSync(classificationsFile, bodyLines.join('\n'), 'utf8')
-  return true
-}
-
-/**
- * Compile `db/annotations.ts` into the `annotations.gen.json` sidecar that the
- * codegen and the pikku-console addon read. No-op if the authored file doesn't
- * exist (nothing to compile yet). Returns whether the sidecar changed on disk.
- *
- * Uses esbuild (a CLI dependency) to transpile the TS in-process and a `vm`
- * sandbox to evaluate it — no subprocess and no tsx. The previous `node --import
- * tsx/esm` subprocess silently fails on Node ≥ 23 (ERR_REQUIRE_CYCLE_MODULE),
- * which is why this sidecar never materialised before.
- *
- * Run BEFORE codegen so authored edits reflect in a single `db migrate` (and
- * again after, to capture a freshly-scaffolded file).
- */
-function compileClassifications(
-  classificationsFile: string,
+function writeAnnotationsSidecar(
   genJsonFile: string,
-  declaration: LoadedDeclaration | null = null
+  declaration: LoadedDeclaration | null
 ): boolean {
-  const hasAuthored = existsSync(classificationsFile)
-  if (!hasAuthored && !declaration) return false
-  const value = hasAuthored ? loadClassifications(classificationsFile) : {}
-  if (value === undefined) {
-    // Without a declaration a stale sidecar is what this has always left. With
-    // one, it would also drop the classifications the declaration just added.
-    if (declaration) {
-      throw new Error(
-        `${classificationsFile} could not be compiled, so the annotations in ${TABLES_FILE} cannot be applied.`
-      )
-    }
-    return false
-  }
-  const merged = declaration
-    ? mergeAnnotations(
-        value as Record<string, Record<string, unknown>>,
-        declaration.annotations
-      )
-    : value
-  const next = JSON.stringify(merged, null, 2) + '\n'
   const existing = existsSync(genJsonFile)
     ? readFileSync(genJsonFile, 'utf8')
     : null
-  if (existing !== next) {
-    mkdirSync(dirname(genJsonFile), { recursive: true })
-    writeFileSync(genJsonFile, next, 'utf8')
+  if (!declaration) {
+    if (existing === null) return false
+    rmSync(genJsonFile)
     return true
   }
-  return false
-}
-
-/** Evaluates the authored `db/annotations.ts` and returns its exported map, or undefined when it is missing or does not compile. */
-export function loadClassifications(classificationsFile: string): unknown {
-  if (!existsSync(classificationsFile)) return undefined
-  try {
-    const { code } = transformSync(readFileSync(classificationsFile, 'utf8'), {
-      loader: 'ts',
-      format: 'cjs',
-    })
-    const mod: { exports: Record<string, unknown> } = { exports: {} }
-    runInNewContext(code, {
-      module: mod,
-      exports: mod.exports,
-      require: createRequire(classificationsFile),
-    })
-    return Object.values(mod.exports)[0]
-  } catch {
-    return undefined
-  }
+  const next = JSON.stringify(declaration.annotations, null, 2) + '\n'
+  if (existing === next) return false
+  mkdirSync(dirname(genJsonFile), { recursive: true })
+  writeFileSync(genJsonFile, next, 'utf8')
+  return true
 }
 
 /**

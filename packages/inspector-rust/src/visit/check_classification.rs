@@ -319,7 +319,7 @@ impl Context<'_> {
                 Level::Error,
                 codes::PII_IN_OUTPUT,
                 format!(
-                    "Sessionless function '{name}' exposes private-classified field(s) in its return type: {}.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly.",
+                    "Sessionless function '{name}' exposes private-classified field(s) in its return type: {}.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set security: 'public' on the column in db/tables.ts if it is safe to expose publicly.",
                     private_paths.join(", ")
                 ),
             );

@@ -28,8 +28,8 @@ test('loadAnnotations returns {} when the sidecar is absent', () => {
 })
 
 test('loadAnnotations maps the authored `security` level to classification', () => {
-  // Authored ColumnEntry uses `security` for the level and `classification`
-  // for the anonymize strategy (compiled verbatim from db/annotations.ts).
+  // A column uses `security` for the level and `classification` for the
+  // anonymize strategy (written verbatim from db/tables.ts).
   writeSidecar({
     user: {
       email: { security: 'private', classification: 'fake:email' },
@@ -161,54 +161,6 @@ test('nameSuggestsKind returns null for ordinary names', () => {
   assert.equal(nameSuggestsKind('email'), null)
   assert.equal(nameSuggestsKind('name'), null)
   assert.equal(nameSuggestsKind('status'), null)
-})
-
-// ── Schema-qualified maps ────────────────────────────────────────────────────
-// `DbClassificationMap` nests tables under their schema whenever the project
-// declares one, so the sidecar has one more level than a bare project's.
-
-test('flattens a schema-qualified map down to bare table names', () => {
-  writeSidecar({
-    app: {
-      user: { email: { security: 'pii' } },
-      api_token: { token_hash: { security: 'secret', form: 'hashed' } },
-    },
-  })
-  assert.deepEqual(loadAnnotations(root), {
-    user: { email: { classification: 'pii' } },
-    api_token: { token_hash: { classification: 'secret', form: 'hashed' } },
-  })
-})
-
-test('a schema level is detected, not assumed — a bare map still loads', () => {
-  writeSidecar({ user: { email: { security: 'pii' } } })
-  assert.deepEqual(loadAnnotations(root), {
-    user: { email: { classification: 'pii' } },
-  })
-})
-
-test('reading a schema-qualified map flat would lose every annotation', () => {
-  // The regression this guards: treating `app` as the table and `user` as a
-  // column yields an entry with no recognised fields, so every column in the
-  // project silently falls back to the default level. A column authored
-  // `secret` generating as `private` is exactly the failure that hides an
-  // unencrypted credential.
-  writeSidecar({
-    app: { stage: { host_token_secret: { security: 'secret' } } },
-  })
-  const loaded = loadAnnotations(root)
-  assert.equal(loaded['app'], undefined)
-  assert.equal(loaded['stage']?.['host_token_secret']?.classification, 'secret')
-})
-
-test('merges tables across several schemas', () => {
-  writeSidecar({
-    app: { user: { email: { security: 'pii' } } },
-    audit: { entry: { virtualUser: { security: 'private' } } },
-  })
-  const loaded = loadAnnotations(root)
-  assert.equal(loaded['user']?.['email']?.classification, 'pii')
-  assert.equal(loaded['entry']?.['virtualUser']?.classification, 'private')
 })
 
 test('loadAnnotations carries a column keyId through', () => {

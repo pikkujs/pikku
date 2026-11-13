@@ -55,12 +55,15 @@ engines store some types as others (sqlite dates as text, MySQL uuids as
 `char(36)`, booleans as integers). A table that moves from generated to
 `declareOnly` is not treated as dropped.
 
-## Until db/annotations.ts is removed
+## Annotations live only on the columns
 
-While a project still has `db/annotations.ts`, the declaration's annotations merge
-in under it and `db/annotations.ts` wins a field both set (`mergeAnnotations`). That
-file goes away next, so the precedence is about not changing what an existing
-project's columns are classified as in the meantime.
+`db/tables.ts` is the one place column annotations are declared; the old
+`db/annotations.ts` is gone. A project that still has it is refused with one
+sentence pointing at `docs/MIGRATION.md` (`retiredAnnotationsMessage` in
+`table-declaration.ts`, and `retired-annotations-file` in `pikku validate`),
+because nothing reads it and its classifications would otherwise stop applying
+silently. A table only the migrations create carries its annotations through
+`declareOnly`.
 
 **What this rules out:** generate dropping or renaming anything, builder statements
 in `db/tables.ts`, and a second way of declaring tables beside `TablesDeclaration`.

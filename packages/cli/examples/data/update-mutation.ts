@@ -78,8 +78,8 @@ export const updateTodo = pikkuFunc({
     //~ .returning(...) gets the row back in one round-trip (SQLite/libSQL and Postgres).
     //~ Dates/booleans: the generated db schema type is the source of truth. Default:
     //~ a SQLite date column types as string — write `new Date().toISOString()`. Want
-    //~ real Date/boolean types? Declare the kind in db/annotations.ts
-    //~ (`todos: { created_at: { kind: 'date' }, done: { kind: 'bool' } }`) before
+    //~ real Date/boolean types? Give the column its kind in db/tables.ts
+    //~ (`createdAt: { type: 'timestamp', kind: 'date' }`, `done: { type: 'boolean', kind: 'bool' }`) before
     //~ pikku-db — the wired coercion plugin then converts storage both ways. Never
     //~ write `new Date()` against a string-typed column or cast around it.
     const row = await kysely

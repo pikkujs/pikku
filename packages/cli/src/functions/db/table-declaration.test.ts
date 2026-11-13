@@ -23,8 +23,8 @@ import {
 import { readMigrationProvenance } from './migration-provenance.js'
 import {
   loadTableDeclaration,
-  mergeAnnotations,
   recordedDeclaredTables,
+  TABLES_FILE,
 } from './table-declaration.js'
 import { databaseContext } from './db-context.js'
 
@@ -394,12 +394,9 @@ describe('annotations on the declaration', () => {
       readFileSync(join(root, '.pikku', 'db', 'coercion.gen.ts'), 'utf8'),
       /created_at|createdAt/
     )
-    assert.match(
-      readFileSync(
-        join(root, '.pikku', 'db', 'classification-map.gen.d.ts'),
-        'utf8'
-      ),
-      /"item"\?: \{/
+    assert.ok(
+      !existsSync(join(root, '.pikku', 'db', 'classification-map.gen.d.ts')),
+      'no classification map is generated'
     )
   })
 
@@ -434,24 +431,34 @@ describe('annotations on the declaration', () => {
     })
   })
 
-  test('merges with db/annotations.ts and keeps a schema-nested column', () => {
-    const merged = mergeAnnotations(
-      { app: { item: { name: { security: 'public' } } } },
-      { item: { email: { security: 'pii' } } }
+  test('a leftover db/annotations.ts is refused with where its entries went', async () => {
+    declare(ANNOTATED)
+    writeFileSync(
+      join(root, 'db', 'annotations.ts'),
+      'export const classifications = {}\n'
     )
-    assert.deepEqual(merged.item, {
-      name: { security: 'public' },
-      email: { security: 'pii' },
-    })
+    await assert.rejects(
+      () => loadTableDeclaration(root),
+      /db\/annotations\.ts is no longer read: .*docs\/MIGRATION\.md/
+    )
   })
 
-  test('db/annotations.ts wins a field both set, the rest merges in under it', () => {
+  test('the sidecar holds only what the declaration says', async () => {
+    declare(ANNOTATED)
+    const resolved = sqliteProject()
+    await generate(resolved)
+    await migrateAndCodegen(resolved)
     assert.deepEqual(
-      mergeAnnotations(
-        { item: { email: { security: 'public' } } },
-        { item: { email: { security: 'pii', format: 'email' } } }
-      ).item,
-      { email: { security: 'public', format: 'email' } }
+      JSON.parse(
+        readFileSync(join(root, 'db', 'annotations.gen.json'), 'utf8')
+      ),
+      (await loadTableDeclaration(root))!.annotations
+    )
+    rmSync(join(root, TABLES_FILE))
+    await migrateAndCodegen(resolved)
+    assert.ok(
+      !existsSync(join(root, 'db', 'annotations.gen.json')),
+      'a sidecar nothing declares is removed'
     )
   })
 })

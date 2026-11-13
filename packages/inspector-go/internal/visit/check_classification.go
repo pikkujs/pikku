@@ -297,7 +297,7 @@ func (s *Context) checkClassification(name string, handler *ast.Node, sessionles
 		s.Log.Diagnostic(diag.Error, diag.PiiInOutput, fmt.Sprintf(
 			"Sessionless function '%s' exposes private-classified field(s) in its return type: %s.\n  "+
 				"Private fields are only safe to return from authenticated (sessioned) functions. "+
-				"Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly.",
+				"Either require a session (use pikkuFunc) or set security: 'public' on the column in db/tables.ts if it is safe to expose publicly.",
 			name, strings.Join(privatePaths, ", ")))
 	}
 }

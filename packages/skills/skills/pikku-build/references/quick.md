@@ -168,9 +168,9 @@ than they save:
 - A `z.date()` **input** arrives over RPC as an ISO string, not a `Date`.
   `new Date(value)` before calling date methods, or it throws
   `.getTime is not a function` at runtime.
-- On SQLite, `db/annotations.ts` is where a `DATETIME` becomes a `Date` and a
-  `JSON` column becomes a typed object. Without an entry they are `string` and
-  `unknown` (PKU481). Add the annotation rather than casting.
+- On SQLite, the column's `kind` in `db/tables.ts` is where a `DATETIME`
+  becomes a `Date` and a `JSON` column becomes a typed object. Without one they
+  are `string` and `unknown` (PKU481). Set it on the column rather than casting.
 - Surface errors inline next to the control that failed. No empty catch.
 - Every user-facing string is a translation key, not a literal. It is one extra
   keystroke now and a rewrite later.

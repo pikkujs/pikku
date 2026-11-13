@@ -2,12 +2,11 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 
 /**
- * Canonical map of `format` tokens (authored in `db/annotations.ts`) to the zod
+ * Canonical map of `format` tokens (declared on columns in `db/tables.ts`) to the zod
  * expression they emit. These are all *string* refinements — they do not change
  * the column's TypeScript type (it stays `string`), only the runtime validator.
- * This is the single source of truth: `annotation-parser` imports it to validate
- * authored values and `db-codegen` imports the key list to emit the `format`
- * union in `ColumnEntry`. All confirmed present in zod 4.
+ * This is the single source of truth: `annotation-parser` imports it to drop a
+ * token it does not know. All confirmed present in zod 4.
  */
 export const ZOD_FORMATS = {
   email: 'z.email()',

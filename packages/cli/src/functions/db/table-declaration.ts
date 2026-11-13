@@ -8,13 +8,21 @@ import type {
 } from '@pikku/core/db'
 import { compileTables, type PikkuSchema } from '@pikku/kysely'
 import { loadFreshUserModule } from '../commands/load-user-project.js'
-import { flattenAnnotationTables } from './annotation-parser.js'
 import type { ColumnInfo } from './db-introspector.js'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'
 import { ZOD_FORMATS } from './zod-codegen.js'
 
 /** Where a project declares its own tables, relative to its root. */
 export const TABLES_FILE = 'db/tables.ts'
+
+/**
+ * Where column annotations used to live, relative to a project's root. Nothing
+ * reads it any more; a project that still has one is told where they went.
+ */
+export const RETIRED_ANNOTATIONS_FILE = 'db/annotations.ts'
+
+/** Said wherever a project still has {@link RETIRED_ANNOTATIONS_FILE}. */
+export const retiredAnnotationsMessage = `${RETIRED_ANNOTATIONS_FILE} is no longer read: move each entry onto its column in db/tables.ts (a table your migrations create is declared \`declareOnly: true\`) and delete the file, as docs/MIGRATION.md shows.`
 
 /** The export of {@link TABLES_FILE} that holds the declaration. */
 const TABLES_EXPORT = 'tables'
@@ -75,10 +83,10 @@ const TABLE_FIELDS = new Set([
 /**
  * Check one column's annotations and return what is wrong with them.
  *
- * `db/annotations.ts` parses leniently: an unknown value is dropped. Here that
- * would mean a typo in `security: 'pi'` leaves a column with personal data at
- * the default level with nothing said, so every field is checked, and a field
- * that is neither an annotation nor part of the column's shape is refused.
+ * Dropping an unknown value would mean a typo in `security: 'pi'` leaves a
+ * column with personal data at the default level with nothing said, so every
+ * field is checked, and a field that is neither an annotation nor part of the
+ * column's shape is refused.
  */
 function columnProblems(at: string, column: Record<string, unknown>): string[] {
   const problems: string[] = []
@@ -112,7 +120,9 @@ const annotationOf = (column: Record<string, unknown>): ColumnAnnotation =>
   ) as ColumnAnnotation
 
 /**
- * Read `db/tables.ts`, or `null` when the project declares nothing.
+ * Read `db/tables.ts`, or `null` when the project declares nothing. A
+ * project that still has `db/annotations.ts` is refused, because those
+ * annotations would otherwise be dropped without a word.
  *
  * The file's presence is the opt-in, so its absence changes nothing for a
  * project on hand-written migrations. A file that is present and cannot be read
@@ -122,6 +132,9 @@ const annotationOf = (column: Record<string, unknown>): ColumnAnnotation =>
 export async function loadTableDeclaration(
   rootDir: string
 ): Promise<LoadedDeclaration | null> {
+  if (existsSync(join(rootDir, RETIRED_ANNOTATIONS_FILE))) {
+    throw new Error(retiredAnnotationsMessage)
+  }
   const file = join(rootDir, TABLES_FILE)
   if (!existsSync(file)) return null
 
@@ -450,37 +463,4 @@ export function declareOnlyProblems(
     }
   }
   return problems
-}
-
-// ─── Annotations ─────────────────────────────────────────────────────────────
-
-/**
- * `db/annotations.ts` with the declaration's annotations folded in underneath.
- *
- * The result is what the sidecar holds, so every reader — codegen, the console,
- * the audit — keeps one place to look. Where both annotate the same field,
- * `db/annotations.ts` wins: it is the file a project has been editing, and it
- * goes away entirely once the declaration is the only place annotations live.
- */
-export function mergeAnnotations(
-  authored: Record<string, Record<string, unknown>>,
-  declared: TableAnnotations
-): Record<string, Record<string, unknown>> {
-  const flat = new Map(flattenAnnotationTables(authored))
-  const merged: Record<string, Record<string, unknown>> = structuredClone(
-    authored
-  )
-
-  for (const [table, columns] of Object.entries(declared)) {
-    const existing = flat.get(table) ?? {}
-    // From the flattened view, so a table nested under its schema keeps the
-    // columns only `db/annotations.ts` names: the reader takes the last copy.
-    const entry: Record<string, unknown> = { ...existing }
-    for (const [column, annotation] of Object.entries(columns)) {
-      const other = (existing[column] ?? {}) as Record<string, unknown>
-      entry[column] = { ...annotation, ...other }
-    }
-    merged[table] = entry
-  }
-  return merged
 }

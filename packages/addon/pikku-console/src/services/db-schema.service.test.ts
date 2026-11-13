@@ -38,8 +38,8 @@ const classifications = async (annotations: unknown) => {
 
 describe('DbSchemaService.getSchema', () => {
   test('reads the privacy level from `security`, as annotations.gen.json writes it', async () => {
-    // The sidecar is a verbatim dump of db/annotations.ts, so this is the shape
-    // a project actually has. Reading the wrong key here is invisible: every
+    // The sidecar holds the column annotations of db/tables.ts as written, so
+    // this is the shape a project actually has. Reading the wrong key here is invisible: every
     // column silently falls back to `private` and the console looks like it is
     // working.
     assert.deepEqual(

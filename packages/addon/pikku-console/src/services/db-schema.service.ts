@@ -64,8 +64,8 @@ function bareTableName(name: string): string {
 
 interface AnnotationEntry {
   /**
-   * The privacy level, named as `db/annotations.ts` authors it. The sidecar is a
-   * verbatim JSON dump of that file, so this is the key that is actually there.
+   * The privacy level, named as a column in `db/tables.ts` declares it. The
+   * sidecar carries those fields as written, so this is the key that is there.
    */
   security?: 'public' | 'private' | 'pii' | 'secret'
   /**

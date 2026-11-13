@@ -6,8 +6,9 @@
  * PGlite is API-compatible with pg.Client for the query/connect/end surface
  * that PostgresIntrospector and PostgresMigrationExecutor use.
  *
- * Classification is authored in `db/annotations.ts`; here we write the compiled
- * `db/annotations.gen.json` sidecar directly (the codegen reads it via rootDir).
+ * Classification is declared on the columns in `db/tables.ts`; here we write
+ * the `db/annotations.gen.json` sidecar `db migrate` makes from it directly
+ * (the codegen reads it via rootDir).
  */
 
 import { mkdtemp, mkdir, writeFile, rm, readFile } from 'fs/promises'
@@ -22,14 +23,7 @@ import { PostgresIntrospector } from '../../../../packages/cli/src/functions/db/
 import { migrate } from '../../../../packages/migrator-sql/src/index.js'
 import { generateSchemaTypes } from '../../../../packages/cli/src/functions/db/db-codegen.js'
 
-type ColumnEntry = {
-  security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'
-  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
-  kind?: 'date' | 'bool' | 'json' | 'uuid'
-  tsType?: string
-  format?: string
-}
-type Annotations = Record<string, Record<string, ColumnEntry>>
+import type { Annotations } from './declare-tables.js'
 
 // ── PGlite adapter ────────────────────────────────────────────────────────────
 // PGlite's query() surface matches what PostgresMigrationExecutor and
@@ -55,7 +49,7 @@ async function setup(
     await writeFile(join(migrationsDir, name), sql)
   }
 
-  // rootDir holds the compiled annotations sidecar the codegen reads.
+  // rootDir holds the annotations sidecar the codegen reads.
   const rootDir = await mkdtemp(join(tmpdir(), 'pikku-pg-root-'))
   if (annotations) {
     await mkdir(join(rootDir, 'db'), { recursive: true })
@@ -75,7 +69,6 @@ async function setup(
     outFile: join(outDir, 'schema.gen.d.ts'),
     coercionFile: join(outDir, 'coercion.gen.ts'),
     manifestFile: join(outDir, 'classification.gen.ts'),
-    classificationMapFile: join(outDir, 'classification-map.gen.d.ts'),
     camelCase: true,
     rootDir,
     dialect: 'postgres',
@@ -276,40 +269,6 @@ describe('DB codegen (Postgres) — classification brands', () => {
     assert.match(manifest, /"phone"/)
     assert.match(manifest, /classification: 'private'/)
     assert.match(manifest, /'fake:name'/)
-  })
-
-  test('classification-map.gen.d.ts lists all tables and columns', async (t) => {
-    const { outDir, migrationsDir, rootDir, db } = await setup({
-      '001_mixed.sql': `
-        CREATE TABLE mixed (
-          id    SERIAL PRIMARY KEY,
-          pub   TEXT NOT NULL,
-          priv  TEXT NOT NULL,
-          sec   TEXT NOT NULL
-        );
-      `,
-    })
-    t.after(async () => {
-      await db.close()
-      await rm(outDir, { recursive: true, force: true })
-      await rm(migrationsDir, { recursive: true, force: true })
-      await rm(rootDir, { recursive: true, force: true })
-    })
-
-    const map = await readFile(
-      join(outDir, 'classification-map.gen.d.ts'),
-      'utf-8'
-    )
-    assert.match(
-      map,
-      /DbClassificationMap/,
-      'should export DbClassificationMap'
-    )
-    assert.match(map, /"mixed"/, 'mixed table should be present')
-    assert.match(map, /"pub"/, 'pub column should be present')
-    assert.match(map, /"priv"/, 'priv column should be present')
-    assert.match(map, /"sec"/, 'sec column should be present')
-    assert.match(map, /ColumnEntry/, 'columns should reference ColumnEntry')
   })
 
   test('BOOLEAN columns map to boolean type', async (t) => {

@@ -52,8 +52,8 @@ export const listTechnicians = pikkuFunc({
       technicians: rows.map((r) => ({
         technicianId: r.technicianId,
         name: r.name,
-        // `skills` is a TEXT column holding JSON. Annotating it as
-        // `{ kind: 'json' }` in db/annotations.ts would have the generated type
+        // `skills` is a TEXT column holding JSON. Declaring it with
+        // `kind: 'json'` in db/tables.ts would have the generated type
         // parse it; parsing here keeps the example readable with one fewer
         // moving part, at the cost of this line.
         skills: JSON.parse(r.skills) as string[],

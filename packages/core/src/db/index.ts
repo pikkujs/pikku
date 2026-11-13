@@ -14,8 +14,8 @@
  */
 
 /**
- * What `db/annotations.ts` says about one column: how private it is, how it is
- * held at rest, and how it is typed. Carried on the column declaration too, so
+ * What a column says about itself beyond its shape: how private it is, how it
+ * is held at rest, and how it is typed. Carried on the column declaration, so
  * one place gives a table's shape and its classification.
  */
 export interface ColumnAnnotation {
