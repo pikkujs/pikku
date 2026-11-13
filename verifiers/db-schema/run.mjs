@@ -40,6 +40,9 @@
  *   12. app:   tsc + runtime                   → addon reads its table, boot does no DDL
  *   13. app:   pikku db baseline               → adopts a database that already has it
  *   14. app:   pikku db baseline               → refuses one that is actually behind
+ *   15. app:   pikku db generate               → refuses a mispackaged addon
+ *   16. app:   db/tables.ts                    → a generated table beside a declareOnly
+ *                                                one Better Auth owns; the old shape refused
  */
 import { execFileSync, spawnSync } from 'node:child_process'
 import { DatabaseSync } from 'node:sqlite'
@@ -337,6 +340,9 @@ for (const other of ['sqlite', 'postgres', 'mysql']) {
   rmSync(join(here, 'db', other), { recursive: true, force: true })
 }
 rmSync(join(here, '.pikku'), { recursive: true, force: true })
+// Step 16 writes the declaration; every step before it runs without one.
+const TABLES_TS = join(here, 'db', 'tables.ts')
+rmSync(TABLES_TS, { force: true })
 rmSync(join(addonDir, '.pikku'), { recursive: true, force: true })
 rmSync(join(remoteAddonDir, '.pikku'), { recursive: true, force: true })
 // Generated, but outside `.pikku` — and left behind, the next run inspects a
@@ -902,6 +908,126 @@ check(
   'an empty artifact still means "this addon needs no tables"'
 )
 writeFileSync(linkedArtifact, savedArtifact)
+
+// 16. The app's own declaration, from the real binary. `user` is Better Auth's:
+//     declared only for its types and annotations, so its migration stays the
+//     auth source's and its columns are checked against what that one made.
+//     `bookmark` is the app's: generated, with its foreign key typed from
+//     `user.id` — uuid on postgres — without anyone spelling that type.
+console.log('\n▶ db/tables.ts: a generated table beside a declareOnly one')
+const declareTables = (body) => writeFileSync(TABLES_TS, body)
+const TABLES_SOURCE = (
+  userColumns
+) => `import { defineTables } from '@pikku/core/db'
+
+export const tables = defineTables({
+  user: {
+    declareOnly: true,
+    columns: {
+      ${userColumns}
+    },
+  },
+  bookmark: {
+    columns: {
+      id: { type: 'key', primaryKey: true },
+      userId: { references: 'user.id', onDelete: 'cascade', required: true },
+      url: { type: 'text', required: true, security: 'pii' },
+    },
+  },
+})
+`
+const USER_COLUMNS = `id: { type: 'id', primaryKey: true },
+      email: { type: 'text', security: 'pii', format: 'email' },
+      emailVerified: { type: 'boolean', kind: 'bool' },`
+declareTables(TABLES_SOURCE(USER_COLUMNS))
+capture('app: pikku db generate (declared tables)', 'node', [
+  PIKKU,
+  'db',
+  'generate',
+])
+const tablesFile = readdirSync(MIGRATIONS_DIR).find((f) =>
+  f.includes('app-tables')
+)
+check(
+  Boolean(tablesFile),
+  `a migration was written for db/tables.ts (${tablesFile})`
+)
+const tablesSql = tablesFile ? sqlOf(tablesFile) : ''
+contains(
+  tablesSql,
+  '-- pikku:tables bookmark\n',
+  'the marker names only the generated table'
+)
+check(
+  new RegExp(`create table ${q('bookmark')}`, 'i').test(tablesSql),
+  'bookmark is created'
+)
+check(
+  !new RegExp(`create table ${q('user')}`, 'i').test(tablesSql),
+  'the declareOnly user table is not created again'
+)
+check(
+  new RegExp(`${q('user_id')} ${userIdType} not null`, 'i').test(tablesSql),
+  `bookmark.user_id took user.id's type (${userIdType.replace(/\\/g, '')})`
+)
+run('app: pikku db migrate (declared tables)', 'node', [PIKKU, 'db', 'migrate'])
+const sidecar = JSON.parse(
+  readFileSync(join(here, 'db', 'annotations.gen.json'), 'utf8')
+)
+check(
+  sidecar.user?.email?.security === 'pii' &&
+    sidecar.bookmark?.url?.security === 'pii',
+  'the column annotations of both tables reached the sidecar'
+)
+check(
+  /email: ColumnType<Pii</.test(
+    readFileSync(join(here, '.pikku', 'db', 'schema.gen.ts'), 'utf8')
+  ),
+  'user.email is typed Pii<...> from its declareOnly annotation'
+)
+const tablesAgain = capture(
+  'app: pikku db generate (declared, again)',
+  'node',
+  [PIKKU, 'db', 'generate']
+)
+check(
+  readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).length === 4 &&
+    tablesAgain.includes('already covered by existing migrations'),
+  'a second generate writes nothing for the declaration'
+)
+
+const refusedBy = (label) => {
+  console.log(`\n▶ ${label}`)
+  const result = spawnSync('node', [PIKKU, 'db', 'generate'], {
+    cwd: here,
+    encoding: 'utf8',
+    env,
+  })
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`
+  process.stdout.write(output)
+  return { status: result.status, output }
+}
+declareTables(
+  TABLES_SOURCE(`id: { type: 'id', primaryKey: true },
+      email: { type: 'integer' },`)
+)
+const mismatch = refusedBy('app: pikku db generate (declareOnly type mismatch)')
+check(
+  mismatch.status !== 0 &&
+    mismatch.output.includes(
+      "does not hold the 'integer' db/tables.ts declares"
+    ),
+  'a declareOnly column typed unlike the real one is refused'
+)
+declareTables(
+  `export const tables = { statements: [(db) => db.schema.createTable('x')] }\n`
+)
+const oldShape = refusedBy('app: pikku db generate (old statements shape)')
+check(
+  oldShape.status !== 0 && oldShape.output.includes('docs/MIGRATION.md'),
+  'the old statements shape is refused with a pointer to MIGRATION.md'
+)
+rmSync(TABLES_TS, { force: true })
 
 await store.close()
 

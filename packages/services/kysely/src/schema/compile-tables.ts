@@ -13,13 +13,12 @@ import type {
   TableDeclaration,
   TablesDeclaration,
 } from '@pikku/core/db'
-import {
-  requiredType,
-  type ForeignKeyTarget,
-  type RequiredTypes,
-  type SchemaContext,
-  type SchemaRequirement,
-  type SchemaStatementFactory,
+import type {
+  ForeignKeyTarget,
+  RequiredTypes,
+  SchemaContext,
+  SchemaRequirement,
+  SchemaStatementFactory,
 } from './pikku-schema.types.js'
 
 type DataTypeExpression = Parameters<
@@ -302,7 +301,11 @@ const createTable = (
       const type =
         resolved.kind === 'declared'
           ? dataType(resolved.type, keyed.has(name), ctx, postgres)
-          : requiredType(types, snake(resolved.table), snake(resolved.column))
+          : // Compiled without a database there is no type to read; only the shape matters.
+            sql.raw(
+              types[`${snake(resolved.table)}.${snake(resolved.column)}`] ??
+                'text'
+            )
       builder = builder.addColumn(name, type, (col) => {
         if (column.primaryKey) col = col.primaryKey()
         if (column.required) col = col.notNull()

@@ -1209,16 +1209,67 @@ Created by `pikku db generate`:
 
 ### Declaring tables in `db/tables.ts`
 
-An app can now declare its tables in `db/tables.ts`, with `defineTables` from `@pikku/kysely`, and `pikku db generate` writes the SQL. See [Declaring tables](./db-tables.md). It is opt-in: an app with no `db/tables.ts` and hand-written migrations behaves as before.
+`db/tables.ts` now holds a plain declaration: `defineTables` from `@pikku/core/db`, one entry per table with its `columns`, and the annotations on the columns. See [Declaring tables](./db-tables.md). It is opt-in: an app with no `db/tables.ts` and hand-written migrations behaves as before.
 
-One thing changes for an app that already has a file at that path. `pikku db generate`, `migrate` and `check` now load `db/tables.ts` and stop if it does not export `tables`, so rename a file you keep there for another purpose.
+The earlier shape is gone, with no fallback. `pikku db generate`, `migrate` and `check` stop on a `db/tables.ts` that exports `statements`, and say so. The pieces that shape used are removed from `@pikku/kysely`: `defineTables`, `requiredType`, and the `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` types. `PikkuSchema`, `compileTables`, `tableRequirements`, `pikkuSchemas`, `applyPikkuSchemas` and `requiredPikkuSchemas` stay.
 
-To move an app over:
+Before:
+
+```ts
+import { defineTables, requiredType } from '@pikku/kysely'
+
+export const tables = defineTables({
+  requires: [{ table: 'user', column: 'id', owner: 'Better Auth' }],
+  statements: [
+    (db, types, ctx) =>
+      db.schema
+        .createTable('note')
+        .addColumn('noteId', ctx.key, (col) => col.primaryKey())
+        .addColumn('body', ctx.text, (col) => col.notNull())
+        .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
+          col.notNull().references('user.id').onDelete('cascade')
+        ),
+    (db) => db.schema.createIndex('note_user_id_idx').on('note').column('userId'),
+  ],
+  annotations: { note: { body: { security: 'pii' } } },
+})
+```
+
+After:
+
+```ts
+import { defineTables } from '@pikku/core/db'
+
+export const tables = defineTables({
+  note: {
+    columns: {
+      noteId: { type: 'key', primaryKey: true },
+      body: { type: 'text', required: true, security: 'pii' },
+      userId: { references: 'user.id', onDelete: 'cascade', required: true },
+    },
+    indexes: [{ columns: ['userId'] }],
+  },
+})
+```
+
+- `ctx.key` is `type: 'key'`, `ctx.text` is `type: 'text'`; `.notNull()` is `required: true`.
+- `requires` and `requiredType` go: a `references` without a `type` takes the target's type from the migrations.
+- `annotations.<table>.<column>` moves onto the column itself.
+- An index keeps its name if you give it one (`indexes: [{ columns: ['userId'], name: 'note_user_id_idx' }]`); the default is `<table>_<columns>_idx`. Name it whenever a deployed index already has another name, or generate writes a second one.
+- A foreign key's `onDelete` defaults to `restrict`; write `cascade` where the old statement did.
+- A statement the declaration cannot express (a view, an expression index) has no place in `db/tables.ts`. It goes in a hand-written migration.
+- A table something else creates, which the old shape could only reach through `annotations`, is declared with `declareOnly: true`: it gets types and annotations, and no SQL.
+
+Run `pikku db generate` after converting. A declaration that matches the existing migrations writes nothing and reports `app-tables` as covered; a difference is refused with the column and the change named, so fix the declaration until it is covered.
+
+To move an app that has no `db/tables.ts` yet:
 
 1. Create `db/tables.ts` and declare the existing tables as they stand, one at a time if you like. A table you leave out stays hand-written.
-2. Run `pikku db generate`. A table that matches its migrations is adopted and not created again, and the command reports it as covered. If it differs, generate refuses and names the column and the difference. Fix the declaration, not the migration.
-3. Move the table's entries from `db/annotations.ts` into `annotations` on the declaration, and run `pikku db migrate`. Declared tables are optional in `db/annotations.ts`, and a value the two files disagree on is an error.
+2. Run `pikku db generate`. A table that matches its migrations is adopted and not created again. If it differs, generate refuses and names the column and the difference. Fix the declaration, not the migration.
+3. Move the table's entries from `db/annotations.ts` onto its columns, and run `pikku db migrate`. Declared tables are optional in `db/annotations.ts`; while a field is set in both, `db/annotations.ts` wins.
 4. From here on, change the declaration and run `pikku db generate`. Existing migration files stay as they are.
+
+**Find:** search for `statements:` and for `defineTables`, `requiredType`, `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` imported from `@pikku/kysely`.
 
 ### Column annotation types moved to `@pikku/core/db`
 
@@ -1230,7 +1281,7 @@ import type { ColumnAnnotation, TableAnnotations } from '@pikku/core/db'
 
 Find affected code by searching for `ColumnAnnotation` and `TableAnnotations` imported from `@pikku/kysely`.
 
-`SchemaContext.references` and `foreignKeys` in `@pikku/kysely` now take an `onDelete` and default to `restrict` instead of always cascading. A hand-written `PikkuSchema` statement that relied on the cascade passes it: `ctx.references(col, 'parent.id', 'cascade')`, and `ctx.foreignKeys('child', { parentId: { target: 'parent.id', onDelete: 'cascade' } })`.
+A declared foreign key now defaults to `onDelete: 'restrict'` instead of always cascading. Write `onDelete: 'cascade'` on a column that relied on it.
 
 ### `PikkuSchema` is a table declaration, not a list of statements
 

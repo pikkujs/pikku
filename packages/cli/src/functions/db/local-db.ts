@@ -30,6 +30,7 @@ import {
   pikkuSchemas,
   requiredPikkuSchemas,
   resolveRequirements,
+  tableRequirements,
   withUserTable,
   createCoercionPlugin,
   type PikkuSchema,
@@ -48,14 +49,15 @@ import {
 } from '@pikku/migrator-sql'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'
 import {
+  declaredTableNames,
   declaredTablesMarker,
+  declareOnlyProblems,
   loadTableDeclaration,
   mergeAnnotations,
   recordedDeclaredTables,
   refuseTableChanges,
-  strayAnnotations,
   TABLES_FILE,
-  type TableDeclaration,
+  type LoadedDeclaration,
 } from './table-declaration.js'
 import { SqliteMigrationExecutor } from '@pikku/migrator-sql/sqlite'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'
@@ -710,11 +712,13 @@ export async function migrateAndCodegen(
     resolved.classificationsGenJsonFile,
     declaration
   )
-  // Tables with no annotations are declared too, and only the migrations can
-  // say so without materializing the declaration.
+  // A table the declaration has since dropped is still declared until a
+  // migration says otherwise, and only the migrations remember it.
   const declaredTables = new Set([
     ...recordedDeclaredTables(resolved.migrationsDir),
-    ...Object.keys(declaration?.annotations ?? {}),
+    ...(declaration
+      ? Object.values(declaredTableNames(declaration)).flat()
+      : []),
   ])
 
   if (resolved.dialect === 'sqlite') {
@@ -1034,7 +1038,7 @@ function scaffoldClassificationsFile(
 function compileClassifications(
   classificationsFile: string,
   genJsonFile: string,
-  declaration: TableDeclaration | null = null
+  declaration: LoadedDeclaration | null = null
 ): boolean {
   const hasAuthored = existsSync(classificationsFile)
   if (!hasAuthored && !declaration) return false
@@ -2068,27 +2072,28 @@ const coveredTable = (
  * Apply a declaration to an empty database and read back what it creates.
  *
  * A declaration may point a foreign key at a table outside itself: one a
- * hand-written migration made, or Better Auth's `user`. Those have to exist for
- * the engine to accept the DDL, so each one named in `requires` is created here
- * first, with the type the migrations gave it, and left out of the result.
+ * hand-written migration made, a `declareOnly` table, or Better Auth's `user`.
+ * Those have to exist for the engine to accept the DDL, so each one the
+ * declaration references is created here first, with the type the migrations
+ * gave it, and left out of the result.
  *
  * A stand-in instead of the real tables, because the real ones can't be here:
  * the migrations may already create the very tables being declared.
  */
 async function materializeDeclaration(
   resolved: ResolvedDb,
-  { schema }: TableDeclaration,
+  { schema }: LoadedDeclaration,
   covered: SchemaMap,
   schemaName: string | undefined
 ): Promise<{ desired?: DesiredSchema; refusals: string[] }> {
   const refusals: string[] = []
   const standIns = new Map<string, ColumnInfo[]>()
 
-  for (const { table, column, owner } of schema.requires ?? []) {
+  for (const { table, column } of tableRequirements(schema.tables)) {
     const info = coveredTable(covered, table, schemaName)?.get(column)
     if (!info) {
       refusals.push(
-        `${TABLES_FILE} requires ${table}.${column}, which no migration creates yet. ${owner} owns it.`
+        `${TABLES_FILE} references ${table}.${column}, which neither it nor any migration creates.`
       )
       continue
     }
@@ -2118,8 +2123,7 @@ async function materializeDeclaration(
     } catch (error: any) {
       return {
         refusals: [
-          `${TABLES_FILE} does not apply on ${resolved.dialect}: ${error.message}. ` +
-            'A foreign key onto a table outside the declaration has to be listed in `requires`.',
+          `${TABLES_FILE} does not apply on ${resolved.dialect}: ${error.message}.`,
         ],
       }
     }
@@ -2203,7 +2207,13 @@ export async function planDeclaredTables(
       )
     }
   }
-  refusals.push(...strayAnnotations(declaration.annotations, desired.tables))
+  refusals.push(
+    ...declareOnlyProblems(
+      declaration.declareOnly,
+      (table) => coveredTable(covered, table, schemaName),
+      resolved.dialect
+    )
+  )
 
   for (const source of otherSources) {
     for (const table of tables.filter((t) => source.desired.tables.has(t))) {
@@ -2228,9 +2238,11 @@ export async function planDeclaredTables(
     })
 
   refusals.push(...comparable(covered))
+  const declaredOnly = new Set(declaredTableNames(declaration).declareOnly)
   for (const table of recorded) {
     if (
       !desired.tables.has(table) &&
+      !declaredOnly.has(table) &&
       coveredTable(covered, table, schemaName)
     ) {
       refusals.push(
