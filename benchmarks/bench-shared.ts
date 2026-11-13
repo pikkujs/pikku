@@ -5,11 +5,24 @@ import { wireHTTP } from '@pikku/core/http'
 import { httpRouter } from '@pikku/core/http'
 import { pikkuState, resetPikkuState } from '@pikku/core/state'
 
-const noopLogger = {
+export const noopLogger = {
   info: () => {},
   warn: () => {},
   error: () => {},
   debug: () => {},
+}
+
+export type BenchmarkSetupOptions = {
+  /** Replaces the default `{ logger: noopLogger }` singleton services (the telemetry bench injects a tracer and an OTLP logger). */
+  singletonServices?: Record<string, unknown>
+  /** Each function writes one `services.logger.info` line, so a request has a log record to export. */
+  logPerRequest?: boolean
+}
+
+let userCounter = 0
+
+export const distinctUsers = (on: boolean) => {
+  userCounter = on ? 1 : 0
 }
 
 const sessionMiddleware: CorePikkuMiddleware = async (
@@ -17,17 +30,39 @@ const sessionMiddleware: CorePikkuMiddleware = async (
   wire,
   next
 ) => {
-  await wire.setSession?.({ userId: 'bench-user' } as any)
+  const userId = userCounter > 0 ? `user-${userCounter++}` : 'bench-user'
+  await wire.setSession?.({ userId } as any)
   await next()
 }
 
 const alwaysAllowPermission = async () => true
 
-const bareFunc = async () => ({ ok: true })
-const schemaFunc = async (_services: any, data: any) => ({ echo: data.name })
-const middlewareFunc = async () => ({ ok: true })
-const fullFunc = async (_services: any, data: any) => ({ echo: data.name })
-const paramFunc = async (_services: any, data: any) => ({ id: data.id })
+let logPerRequest = false
+
+const logLine = (services: any) => {
+  if (logPerRequest) services.logger.info('request handled')
+}
+
+const bareFunc = async (services: any) => {
+  logLine(services)
+  return { ok: true }
+}
+const schemaFunc = async (services: any, data: any) => {
+  logLine(services)
+  return { echo: data.name }
+}
+const middlewareFunc = async (services: any) => {
+  logLine(services)
+  return { ok: true }
+}
+const fullFunc = async (services: any, data: any) => {
+  logLine(services)
+  return { echo: data.name }
+}
+const paramFunc = async (services: any, data: any) => {
+  logLine(services)
+  return { id: data.id }
+}
 
 export type Scenario = {
   name: string
@@ -65,13 +100,19 @@ export const scenarios: Scenario[] = [
   { name: 'param', method: 'get', route: 'items/:id', url: '/items/42' },
 ]
 
-export function setupBenchmarkRoutes() {
+export function setupBenchmarkRoutes(options: BenchmarkSetupOptions = {}) {
   resetPikkuState()
   httpRouter.reset()
+  logPerRequest = options.logPerRequest === true
 
-  pikkuState(null, 'package', 'singletonServices', {
-    logger: noopLogger,
-  } as any)
+  pikkuState(
+    null,
+    'package',
+    'singletonServices',
+    (options.singletonServices ?? {
+      logger: noopLogger,
+    }) as any
+  )
   pikkuState(null, 'package', 'factories', {
     createWireServices: async () => ({}),
   } as any)
@@ -103,11 +144,11 @@ export function setupBenchmarkRoutes() {
   }
 
   const functionMeta: Record<string, any> = {
-    bare: { pikkuFuncId: 'bare', services: [] },
-    schema: { pikkuFuncId: 'schema', services: [] },
+    bare: { pikkuFuncId: 'bare', services: [], sessionless: true },
+    schema: { pikkuFuncId: 'schema', services: [], sessionless: true },
     middleware: { pikkuFuncId: 'middleware', services: ['userSession'] },
     full: { pikkuFuncId: 'full', services: ['userSession'] },
-    param: { pikkuFuncId: 'param', services: [] },
+    param: { pikkuFuncId: 'param', services: [], sessionless: true },
   }
 
   pikkuState(null, 'function', 'meta', functionMeta as any)
@@ -137,7 +178,6 @@ export function setupBenchmarkRoutes() {
     route: 'middleware',
     method: 'get',
     func: { func: middlewareFunc, middleware: [sessionMiddleware] },
-    auth: false,
   })
 
   wireHTTP({
@@ -148,7 +188,6 @@ export function setupBenchmarkRoutes() {
       middleware: [sessionMiddleware, sessionMiddleware],
       permissions: { canAccess: alwaysAllowPermission },
     },
-    auth: false,
   })
 
   wireHTTP({
