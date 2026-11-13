@@ -17,6 +17,7 @@ const ALLOW_LIST_KINDS: Record<string, AttributeKind> = {
   'pikku.package': 'string',
   'pikku.addon.namespace': 'string',
   'pikku.trace.root': 'bool',
+  'pikku.trace.unrecorded_parent_span_id': 'string',
   'pikku.function.duration_ms': 'int',
   'pikku.user.id': 'string',
   'pikku.org.id': 'string',
