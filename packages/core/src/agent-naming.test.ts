@@ -1,11 +1,16 @@
-import { describe, test } from 'node:test'
+import { before, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { join, dirname } from 'node:path'
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
-const reportPath = join(packageRoot, 'api-report.md')
+const reportPath = join(
+  mkdtempSync(join(tmpdir(), 'pikku-core-api-report-')),
+  'api-report.md'
+)
 
 /**
  * `AI` described the model provider, never the agent runtime, so #596 renamed
@@ -37,6 +42,21 @@ const PROVIDER_SYMBOLS = new Set([
 ])
 
 describe('the agent runtime is not exported under the AI name', () => {
+  before(
+    () => {
+      execFileSync(
+        'npx',
+        [
+          'tsx',
+          join(packageRoot, 'scripts', 'generate-api-report.mts'),
+          reportPath,
+        ],
+        { cwd: packageRoot, stdio: 'pipe' }
+      )
+    },
+    { timeout: 180_000 }
+  )
+
   test('every AI* symbol in the public surface is a provider wrapper', () => {
     const report = readFileSync(reportPath, 'utf-8')
     const found = new Set(report.match(/\bAI[A-Z][A-Za-z]*/g) ?? [])
