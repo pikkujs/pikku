@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3759 observable things**: 1236 exported names, plus
-2523 members on the classes and interfaces among them, reachable
+**3792 observable things**: 1240 exported names, plus
+2552 members on the classes and interfaces among them, reachable
 through 68 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -20,11 +20,11 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scenario` | 50 | 48 | 157 |
 | `./agent` | 54 | 52 | 81 |
 | `./channel` | 33 | 33 | 92 |
+| `./telemetry-store` | 18 | 18 | 100 |
 | `./types` | 24 | 21 | 84 |
 | `./queue` | 28 | 28 | 75 |
 | `./otlp` | 19 | 19 | 74 |
 | `./errors` | 55 | 55 | 34 |
-| `./telemetry-store` | 14 | 14 | 74 |
 | `./http` | 27 | 27 | 58 |
 | `./analytics` | 26 | 26 | 40 |
 | `./trigger` | 43 | 43 | 13 |
@@ -48,9 +48,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./utils` | 24 | 21 | 2 |
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
+| `./telemetry-store/testing` | 4 | 4 | 17 |
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./scheduler` | 10 | 10 | 8 |
-| `./telemetry-store/testing` | 4 | 4 | 14 |
 | `./scope` | 17 | 17 | 0 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./addon` | 14 | 14 | 2 |
@@ -6963,6 +6963,19 @@ export interface FailureRow {
   count: number
   last: number | null
   sampleTraceId: string | null
+  firstSeen?: number | null
+  httpPath?: string | null
+  httpMethod?: string | null
+  httpStatus?: number | null
+}
+export interface FunctionMetricsRow {
+  functionId: string
+  wireType: string | null
+  requests: number
+  errors: number
+  avgMs: number | null
+  lastRun: number | null
+  buckets: Array<{ at: number; requests: number; errors: number }>
 }
 export interface LogFacets {
   severities: Record<Severity, number>
@@ -6980,6 +6993,7 @@ export interface LogRecord {
   wireId?: string
   source: string
   attributes?: TelemetryAttributes
+  durationMs?: number
 }
 export interface LogsQuery {
   since?: number
@@ -6992,6 +7006,7 @@ export interface LogsQuery {
   wireType?: string
   wireId?: string
   source?: string
+  tenant?: TenantFilter
 }
 export interface MetricPoint {
   at: number
@@ -7049,11 +7064,30 @@ export interface TelemetryStore {
   logFacets(scope: TelemetryScope, q: { since?: number }): Promise<LogFacets>
   failures(scope: TelemetryScope, q: { since: number; limit?: number }): Promise<FailureRow[]>
   metrics(scope: TelemetryScope, q: { name?: string; since: number; until?: number; limit?: number }): Promise<MetricPoint[]>
-  metricsSummary(scope: TelemetryScope, q: { since: number; until: number; buckets?: number }): Promise<MetricsSummaryRow>
-  trace(scope: TelemetryScope, traceId: string): Promise<SpanRecord[]>
+  metricsSummary(scope: TelemetryScope, q: { since: number; until: number; buckets?: number; functionId?: string; tenant?: TenantFilter }): Promise<MetricsSummaryRow>
+  trace(scope: TelemetryScope, traceId: string, q?: { tenant?: TenantFilter }): Promise<SpanRecord[]>
   queueJobs(scope: TelemetryScope, q: { since: number; limit?: number }): Promise<QueueJobRow[]>
+  functionMetrics(scope: TelemetryScope, q: { since: number; until: number; buckets?: number; limit?: number; tenant?: TenantFilter }): Promise<FunctionMetricsRow[]>
+  wireTypes(scope: TelemetryScope, q: { since: number; until?: number; tenant?: TenantFilter }): Promise<WireTypeRow[]>
+  wireRuns(scope: TelemetryScope, q: { wireType: string; since: number; limit?: number }): Promise<WireRunRow[]>
   tail(scope: TelemetryScope, cursor: TailCursor | null, q: { limit?: number }): Promise<{ records: LogRecord[]; cursor: TailCursor }>
   close?(): Promise<void>
+}
+export interface TenantFilter {
+  org?: string
+  user?: string
+}
+export interface WireRunRow {
+  name: string
+  wireType: string
+  completed: number
+  failed: number
+  lastRun: number | null
+  recent: Array<{ at: number; outcome: string; durationMs: number | null; error: string | null }>
+}
+export interface WireTypeRow {
+  wireType: string
+  requests: number
 }
 ```
 
@@ -7075,8 +7109,11 @@ export class MemoryTelemetryStore implements TelemetryStore {
   async logFacets(scope: TelemetryScope, q: { since?: number }): Promise<LogFacets>
   async failures(scope: TelemetryScope, q: { since: number; limit?: number }): Promise<FailureRow[]>
   async metrics(scope: TelemetryScope, q: { name?: string; since: number; until?: number; limit?: number }): Promise<MetricPoint[]>
-  async metricsSummary(scope: TelemetryScope, q: { since: number; until: number; buckets?: number }): Promise<MetricsSummaryRow>
-  async trace(scope: TelemetryScope, traceId: string): Promise<SpanRecord[]>
+  async metricsSummary(scope: TelemetryScope, q: { since: number; until: number; buckets?: number; functionId?: string; tenant?: TenantFilter }): Promise<MetricsSummaryRow>
+  async functionMetrics(scope: TelemetryScope, q: { since: number; until: number; buckets?: number; limit?: number; tenant?: TenantFilter }): Promise<FunctionMetricsRow[]>
+  async wireTypes(scope: TelemetryScope, q: { since: number; until?: number; tenant?: TenantFilter }): Promise<WireTypeRow[]>
+  async wireRuns(scope: TelemetryScope, q: { wireType: string; since: number; limit?: number }): Promise<WireRunRow[]>
+  async trace(scope: TelemetryScope, traceId: string, q?: { tenant?: TenantFilter }): Promise<SpanRecord[]>
   async queueJobs(scope: TelemetryScope, q: { since: number; limit?: number }): Promise<QueueJobRow[]>
   async tail(scope: TelemetryScope, cursor: TailCursor | null, q: { limit?: number }): Promise<{ records: LogRecord[]; cursor: TailCursor }>
   async close(): Promise<void>
