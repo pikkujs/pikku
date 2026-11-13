@@ -88,6 +88,8 @@
     "benchmark:baseline:uws": "tsx benchmarks/bench-baseline-uws.ts",
     "benchmark:flame": "npx 0x -- npx tsx benchmarks/bench-express.ts --flame",
     "benchmark:workflow": "tsx benchmarks/bench-workflow.ts",
+    "benchmark:telemetry": "tsx benchmarks/bench-telemetry.ts",
+    "benchmark:telemetry:stress": "tsx benchmarks/bench-telemetry-stress.ts",
     "knip": "knip"
   },
   "packageManager": "bun@1.4.3",
