@@ -14,45 +14,55 @@ import { rawStatement, type PikkuSchema } from './pikku-schema.types.js'
 export const credentialSchema: PikkuSchema = {
   name: 'credential',
   ownedBy: ['credentialService'],
-  statements: [
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('credentials')
-        .addColumn('name', 'varchar(255)', (col) => col.notNull())
-        .addColumn('userId', 'varchar(255)')
-        .addColumn('ciphertext', ctx.text, (col) => col.notNull())
-        .addColumn('wrappedDek', ctx.text, (col) => col.notNull())
-        .addColumn('keyVersion', 'integer', (col) => col.notNull())
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addColumn('updatedAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        ),
-
+  tables: {
+    credentials: {
+      columns: {
+        name: { type: 'string(255)', required: true },
+        userId: { type: 'string(255)' },
+        ciphertext: { type: 'text', required: true },
+        wrappedDek: { type: 'text', required: true },
+        keyVersion: { type: 'integer', required: true },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+        updatedAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+    },
+    credentialKekSalts: {
+      columns: {
+        keyVersion: { type: 'integer', primaryKey: true },
+        salt: { type: 'string(64)', required: true },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+    },
+    credentialsAudit: {
+      columns: {
+        id: { type: 'string(36)', primaryKey: true },
+        credentialName: { type: 'string(255)', required: true },
+        userId: { type: 'string(255)' },
+        action: { type: 'string(20)', required: true },
+        performedAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+    },
+  },
+  extraStatements: [
     rawStatement(
       ({ table, mysql }) =>
         sql`CREATE UNIQUE INDEX credentials_name_user_id_unique ON ${table('credentials')} (name, ${mysql ? sql`(COALESCE(user_id, ''))` : sql`COALESCE(user_id, '')`})`
     ),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('credentialKekSalts')
-        .addColumn('keyVersion', 'integer', (col) => col.primaryKey())
-        .addColumn('salt', 'varchar(64)', (col) => col.notNull())
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        ),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('credentialsAudit')
-        .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
-        .addColumn('credentialName', 'varchar(255)', (col) => col.notNull())
-        .addColumn('userId', 'varchar(255)')
-        .addColumn('action', 'varchar(20)', (col) => col.notNull())
-        .addColumn('performedAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        ),
   ],
 }

@@ -1,4 +1,3 @@
-import { sql } from 'kysely'
 import type { PikkuSchema } from './pikku-schema.types.js'
 
 /**
@@ -14,161 +13,157 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 export const agentSchema: PikkuSchema = {
   name: 'agent',
   ownedBy: ['agentStorage', 'agentRunState', 'agentRunService'],
-  statements: [
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('agentThreads')
-        .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
-        .addColumn('resourceId', 'varchar(255)', (col) => col.notNull())
-        .addColumn('title', ctx.text)
-        .addColumn('metadata', ctx.text)
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addColumn('updatedAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        ),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_agent_threads_resource')
-        .on('agentThreads')
-        .column('resourceId'),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('agentMessage')
-        .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
-        .addColumn('threadId', 'varchar(36)', (col) =>
-          ctx.references(col.notNull(), 'agentThreads.id')
-        )
-        .addColumn('role', 'varchar(50)', (col) => col.notNull())
-        .addColumn('content', ctx.text)
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .$call(
-          ctx.foreignKeys('agentMessage', { threadId: 'agentThreads.id' })
-        ),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_agent_message_thread')
-        .on('agentMessage')
-        .columns(['threadId', 'createdAt']),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('agentToolCall')
-        .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
-        .addColumn('threadId', 'varchar(36)', (col) =>
-          ctx.references(col.notNull(), 'agentThreads.id')
-        )
-        .addColumn('messageId', 'varchar(36)', (col) =>
-          ctx.references(col.notNull(), 'agentMessage.id')
-        )
-        .addColumn('runId', 'varchar(36)')
-        .addColumn('toolName', 'varchar(255)', (col) => col.notNull())
-        .addColumn('args', ctx.text, (col) => col.notNull())
-        .addColumn('result', ctx.text)
-        .addColumn('approvalStatus', 'varchar(50)')
-        .addColumn('approvalType', 'varchar(50)')
-        .addColumn('agentRunId', 'varchar(36)')
-        .addColumn('displayToolName', 'varchar(255)')
-        .addColumn('displayArgs', ctx.text)
-        .addColumn('approvalExpiresAt', 'bigint')
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .$call(
-          ctx.foreignKeys('agentToolCall', {
-            threadId: 'agentThreads.id',
-            messageId: 'agentMessage.id',
-          })
-        ),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_agent_tool_call_thread')
-        .on('agentToolCall')
-        .column('threadId'),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_agent_tool_call_message')
-        .on('agentToolCall')
-        .column('messageId'),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('agentWorkingMemory')
-        .addColumn('id', 'varchar(255)', (col) => col.notNull())
-        .addColumn('scope', 'varchar(50)', (col) => col.notNull())
-        .addColumn('data', ctx.text, (col) => col.notNull())
-        .addColumn('updatedAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addPrimaryKeyConstraint('agent_working_memory_pk', ['id', 'scope']),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('agentRun')
-        .addColumn('runId', 'varchar(36)', (col) => col.primaryKey())
-        .addColumn('agentName', 'varchar(255)', (col) => col.notNull())
-        .addColumn('threadId', 'varchar(36)', (col) =>
-          ctx.references(col.notNull(), 'agentThreads.id')
-        )
-        .addColumn('resourceId', 'varchar(255)', (col) => col.notNull())
-        .addColumn('status', 'varchar(50)', (col) =>
-          col.notNull().defaultTo(ctx.defaultText('running'))
-        )
-        .addColumn('errorMessage', ctx.text)
-        .addColumn('suspendReason', ctx.text)
-        .addColumn('missingRpcs', ctx.text)
-        .addColumn('pendingApprovals', ctx.text)
-        .addColumn('usageInputTokens', 'integer', (col) =>
-          col.notNull().defaultTo(0)
-        )
-        .addColumn('usageOutputTokens', 'integer', (col) =>
-          col.notNull().defaultTo(0)
-        )
-        .addColumn('usageModel', 'varchar(255)', (col) =>
-          col.notNull().defaultTo(ctx.defaultText(''))
-        )
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addColumn('updatedAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .$call(ctx.foreignKeys('agentRun', { threadId: 'agentThreads.id' })),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_agent_run_thread')
-        .on('agentRun')
-        .columns(['threadId', 'createdAt']),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('agentRunScore')
-        .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
-        .addColumn('runId', 'varchar(36)', (col) =>
-          ctx.references(col.notNull(), 'agentRun.runId')
-        )
-        .addColumn('scorerName', 'varchar(255)', (col) => col.notNull())
-        .addColumn('score', 'real', (col) => col.notNull())
-        .addColumn('reason', ctx.text)
-        .addColumn('metadata', ctx.text)
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .$call(ctx.foreignKeys('agentRunScore', { runId: 'agentRun.runId' })),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_agent_run_score_run')
-        .on('agentRunScore')
-        .columns(['runId', 'createdAt']),
-  ],
+  tables: {
+    agentThreads: {
+      columns: {
+        id: { type: 'string(36)', primaryKey: true },
+        resourceId: { type: 'string(255)', required: true },
+        title: { type: 'text' },
+        metadata: { type: 'text' },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+        updatedAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+      indexes: [
+        { name: 'idx_agent_threads_resource', columns: ['resourceId'] },
+      ],
+    },
+    agentMessage: {
+      columns: {
+        id: { type: 'string(36)', primaryKey: true },
+        threadId: {
+          type: 'string(36)',
+          required: true,
+          references: 'agentThreads.id',
+          onDelete: 'cascade',
+        },
+        role: { type: 'string(50)', required: true },
+        content: { type: 'text' },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+      indexes: [
+        {
+          name: 'idx_agent_message_thread',
+          columns: ['threadId', 'createdAt'],
+        },
+      ],
+    },
+    agentToolCall: {
+      columns: {
+        id: { type: 'string(36)', primaryKey: true },
+        threadId: {
+          type: 'string(36)',
+          required: true,
+          references: 'agentThreads.id',
+          onDelete: 'cascade',
+        },
+        messageId: {
+          type: 'string(36)',
+          required: true,
+          references: 'agentMessage.id',
+          onDelete: 'cascade',
+        },
+        runId: { type: 'string(36)' },
+        toolName: { type: 'string(255)', required: true },
+        args: { type: 'text', required: true },
+        result: { type: 'text' },
+        approvalStatus: { type: 'string(50)' },
+        approvalType: { type: 'string(50)' },
+        agentRunId: { type: 'string(36)' },
+        displayToolName: { type: 'string(255)' },
+        displayArgs: { type: 'text' },
+        approvalExpiresAt: { type: 'bigint' },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+      indexes: [
+        { name: 'idx_agent_tool_call_thread', columns: ['threadId'] },
+        { name: 'idx_agent_tool_call_message', columns: ['messageId'] },
+      ],
+    },
+    agentWorkingMemory: {
+      columns: {
+        id: { type: 'string(255)', required: true },
+        scope: { type: 'string(50)', required: true },
+        data: { type: 'text', required: true },
+        updatedAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+      primaryKey: ['id', 'scope'],
+    },
+    agentRun: {
+      columns: {
+        runId: { type: 'string(36)', primaryKey: true },
+        agentName: { type: 'string(255)', required: true },
+        threadId: {
+          type: 'string(36)',
+          required: true,
+          references: 'agentThreads.id',
+          onDelete: 'cascade',
+        },
+        resourceId: { type: 'string(255)', required: true },
+        status: { type: 'string(50)', required: true, default: 'running' },
+        errorMessage: { type: 'text' },
+        suspendReason: { type: 'text' },
+        missingRpcs: { type: 'text' },
+        pendingApprovals: { type: 'text' },
+        usageInputTokens: { type: 'integer', required: true, default: 0 },
+        usageOutputTokens: { type: 'integer', required: true, default: 0 },
+        usageModel: { type: 'string(255)', required: true, default: '' },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+        updatedAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+      indexes: [
+        { name: 'idx_agent_run_thread', columns: ['threadId', 'createdAt'] },
+      ],
+    },
+    agentRunScore: {
+      columns: {
+        id: { type: 'string(36)', primaryKey: true },
+        runId: {
+          type: 'string(36)',
+          required: true,
+          references: 'agentRun.runId',
+          onDelete: 'cascade',
+        },
+        scorerName: { type: 'string(255)', required: true },
+        score: { type: 'real', required: true },
+        reason: { type: 'text' },
+        metadata: { type: 'text' },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+      indexes: [
+        { name: 'idx_agent_run_score_run', columns: ['runId', 'createdAt'] },
+      ],
+    },
+  },
 }

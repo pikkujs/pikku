@@ -18,38 +18,34 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 export const analyticsSchema: PikkuSchema = {
   name: 'analytics',
   ownedBy: ['analyticsService'],
-  statements: [
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('pikkuAnalyticsEvents')
-        .addColumn('eventId', ctx.key, (col) => col.primaryKey())
-        .addColumn('name', ctx.key, (col) => col.notNull())
-        .addColumn('occurredAt', ctx.key, (col) => col.notNull())
-        .addColumn('source', ctx.text, (col) => col.notNull())
-        .addColumn('functionId', ctx.text)
-        .addColumn('wireType', ctx.text)
-        .addColumn('traceId', ctx.text)
-        .addColumn('userId', ctx.text)
-        .addColumn('orgId', ctx.text)
-        .addColumn('pikkuUserId', ctx.text)
+  tables: {
+    pikkuAnalyticsEvents: {
+      columns: {
+        eventId: { type: 'key', primaryKey: true },
+        name: { type: 'key', required: true },
+        occurredAt: { type: 'key', required: true },
+        source: { type: 'text', required: true },
+        functionId: { type: 'text' },
+        wireType: { type: 'text' },
+        traceId: { type: 'text' },
+        userId: { type: 'text' },
+        orgId: { type: 'text' },
+        pikkuUserId: { type: 'text' },
         // The device id for a visitor with no session. Its own column beside
         // `userId` and not folded into it: the whole point of the anonymous id
         // is the traffic that has no user to be attributed to yet.
-        .addColumn('anonymousId', ctx.text)
-        .addColumn('vendorIds', ctx.text)
-        .addColumn('consent', ctx.text)
-        .addColumn('props', ctx.text),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_pikku_analytics_events_occurred_at')
-        .on('pikkuAnalyticsEvents')
-        .column('occurredAt'),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_pikku_analytics_events_name')
-        .on('pikkuAnalyticsEvents')
-        .column('name'),
-  ],
+        anonymousId: { type: 'text' },
+        vendorIds: { type: 'text' },
+        consent: { type: 'text' },
+        props: { type: 'text' },
+      },
+      indexes: [
+        {
+          name: 'idx_pikku_analytics_events_occurred_at',
+          columns: ['occurredAt'],
+        },
+        { name: 'idx_pikku_analytics_events_name', columns: ['name'] },
+      ],
+    },
+  },
 }

@@ -1224,6 +1224,42 @@ To move an app over:
 3. Move the table's entries from `db/annotations.ts` into `annotations` on the declaration, and run `pikku db migrate`. Declared tables are optional in `db/annotations.ts`, and a value the two files disagree on is an error.
 4. From here on, change the declaration and run `pikku db generate`. Existing migration files stay as they are.
 
+### Column annotation types moved to `@pikku/core/db`
+
+`ColumnAnnotation` and `TableAnnotations` are no longer exported from `@pikku/kysely`. Import them from `@pikku/core/db`, which also holds the new plain table declaration types (`defineTables`, `TablesDeclaration`, `ColumnDeclaration`, `OnDelete`):
+
+```ts
+import type { ColumnAnnotation, TableAnnotations } from '@pikku/core/db'
+```
+
+Find affected code by searching for `ColumnAnnotation` and `TableAnnotations` imported from `@pikku/kysely`.
+
+`SchemaContext.references` and `foreignKeys` in `@pikku/kysely` now take an `onDelete` and default to `restrict` instead of always cascading. A hand-written `PikkuSchema` statement that relied on the cascade passes it: `ctx.references(col, 'parent.id', 'cascade')`, and `ctx.foreignKeys('child', { parentId: { target: 'parent.id', onDelete: 'cascade' } })`.
+
+### `PikkuSchema` is a table declaration, not a list of statements
+
+A `PikkuSchema` from `@pikku/kysely` now holds `tables` (a `TablesDeclaration` from `@pikku/core/db`) where it held `statements`. `compileTables` turns the declaration into DDL, and its `requires` are read off any `references` that point outside it. DDL a declaration cannot express goes in `extraStatements`, which run after the tables and their indexes:
+
+```ts
+const schema: PikkuSchema = {
+  name: 'orders',
+  tables: {
+    orders: {
+      columns: {
+        id: { type: 'key', primaryKey: true },
+        userId: { references: 'user.id', onDelete: 'cascade', required: true },
+      },
+      indexes: [{ name: 'idx_orders_user', columns: ['userId'] }],
+    },
+  },
+  foreignOwner: 'Better Auth',
+}
+```
+
+A schema that still has builder statements moves them to `extraStatements` with `tables: {}`, and keeps any `requires` they need. A declaration emits its tables first, then their indexes, so a schema that interleaved them now writes the same statements in that order.
+
+**Find:** search for `statements:` in objects typed `PikkuSchema`.
+
 ### `pikku db migrate` warns about sensitive-looking column names
 
 `pikku db migrate` (and `reset`) now warns, with PKU486 and PKU487, about a column whose name reads like personal data or a credential and that has no `security` annotation. These are warnings only: nothing fails unless you pass `--fail-on-warn`. Nothing else changes. A column with no annotation was already `private` and still is, so the generated types and the manifest are the same as before.

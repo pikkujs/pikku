@@ -1,10 +1,13 @@
 import { CamelCasePlugin, sql, type Kysely } from 'kysely'
+import type { TablesDeclaration } from '@pikku/core/db'
+import { compileTables, tableRequirements } from './compile-tables.js'
 import {
   schemaContext,
   type PikkuSchema,
   type RequiredTypes,
   type SchemaContext,
   type SchemaRequirement,
+  type SchemaStatementFactory,
 } from './pikku-schema.types.js'
 import { agentSchema } from './agent.schema.js'
 import { analyticsSchema } from './analytics.schema.js'
@@ -24,24 +27,38 @@ import { workflowSchema } from './workflow.schema.js'
 import { virtualUserSchema } from './virtual-user.schema.js'
 import { virtualUserScheduleSchema } from './virtual-user-schedule.schema.js'
 
+export { compileTables, tableRequirements } from './compile-tables.js'
+
 export type {
   AppTables,
-  ColumnAnnotation,
+  ForeignKeyTarget,
   PikkuSchema,
   RequiredTypes,
   SchemaContext,
   SchemaRequirement,
   SchemaStatement,
   SchemaStatementFactory,
-  TableAnnotations,
 } from './pikku-schema.types.js'
 export {
   defineTables,
+  onDeleteAction,
   rawStatement,
   requiredType,
   schemaContext,
   unqualifiedContext,
 } from './pikku-schema.types.js'
+
+/** A schema's DDL: its tables, then their indexes, then its extra statements. */
+const statementsOf = (schema: PikkuSchema): SchemaStatementFactory[] => [
+  ...compileTables(schema.tables),
+  ...(schema.extraStatements ?? []),
+]
+
+/** What a schema needs created first: inferred from its tables, plus any it states. */
+const requirementsOf = (schema: PikkuSchema): SchemaRequirement[] => [
+  ...tableRequirements(schema.tables, schema.foreignOwner),
+  ...(schema.requires ?? []),
+]
 
 /**
  * Re-point the schemas that reference Better Auth's `user` table at the table
@@ -49,50 +66,36 @@ export {
  *
  * Better Auth's `user.modelName` decides the physical name: an app on a legacy
  * `users` table has no `user` for the declaration to point at, so the scope
- * schema read as unmet and was silently left out. The requirement, the column
- * type lookup and every foreign key target are rewritten together, because they
- * name the table three different ways.
+ * schema read as unmet and was silently left out. Rewriting the declaration's
+ * references moves the inferred requirement, the column type lookup and every
+ * foreign key target together.
  */
 export const withUserTable = (
   schemas: PikkuSchema[],
   userTable: string
 ): PikkuSchema[] => {
   if (userTable === 'user') return schemas
-  const retarget = (target: string) =>
-    target.startsWith('user.') ? `${userTable}.${target.slice(5)}` : target
   return schemas.map((schema) => ({
     ...schema,
-    requires: schema.requires?.map((r) =>
-      r.table === 'user' ? { ...r, table: userTable } : r
-    ),
-    statements: schema.statements.map(
-      (statement) => (db, types, ctx) =>
-        statement(
-          db,
-          Object.fromEntries(
-            Object.entries(types).flatMap(([key, value]) =>
-              key.startsWith(`${userTable}.`)
-                ? [
-                    [key, value],
-                    [`user.${key.slice(userTable.length + 1)}`, value],
-                  ]
-                : [[key, value]]
-            )
+    tables: Object.fromEntries(
+      Object.entries(schema.tables).map(([table, declaration]) => [
+        table,
+        {
+          ...declaration,
+          columns: Object.fromEntries(
+            Object.entries(declaration.columns).map(([name, column]) => [
+              name,
+              column.references?.startsWith('user.')
+                ? {
+                    ...column,
+                    references: `${userTable}.${column.references.slice(5)}`,
+                  }
+                : column,
+            ])
           ),
-          {
-            ...ctx,
-            references: (column, target) =>
-              ctx.references(column, retarget(target)),
-            foreignKeys: (table, keys) =>
-              ctx.foreignKeys(
-                table,
-                Object.fromEntries(
-                  Object.entries(keys).map(([k, v]) => [k, retarget(v)])
-                )
-              ),
-          }
-        )
-    ),
+        },
+      ])
+    ) as TablesDeclaration,
   }))
 }
 
@@ -253,7 +256,7 @@ export const resolveRequirements = async (
   const types: RequiredTypes = {}
   const unmet: UnmetRequirement[] = []
   for (const schema of schemas) {
-    for (const requirement of schema.requires ?? []) {
+    for (const requirement of requirementsOf(schema)) {
       const column = tables
         .get(requirement.table)
         ?.columns.find((c) => c.name === requirement.column)
@@ -293,6 +296,10 @@ export const unsatisfiedRequirements = async (
  * failure the check cannot foresee: a statement that dies mid-list takes the
  * ones before it with it. On an engine without transactional DDL the rollback
  * is the engine's to give, not ours.
+ *
+ * Every statement is built before any runs, so one its factory refuses (a
+ * partial index on MySQL, say) stops the whole list with nothing applied,
+ * where MySQL's implicit DDL commit would otherwise keep the tables before it.
  */
 export const applyPikkuSchemas = async (
   db: Kysely<any>,
@@ -314,14 +321,17 @@ export const applyPikkuSchemas = async (
   await db.transaction().execute(async (trx) => {
     const bound = bind(trx)
     const ctx = contextFor(bound)
-    for (const schema of schemas) {
-      for (const statement of schema.statements) {
-        const query = statement(bound, types, ctx)
-        try {
-          await query.execute()
-        } catch (error) {
-          throw explain(error, query.compile().sql, schema)
-        }
+    const queries = schemas.flatMap((schema) =>
+      statementsOf(schema).map((statement) => ({
+        schema,
+        query: statement(bound, types, ctx),
+      }))
+    )
+    for (const { schema, query } of queries) {
+      try {
+        await query.execute()
+      } catch (error) {
+        throw explain(error, query.compile().sql, schema)
       }
     }
   })
@@ -414,7 +424,7 @@ export const declaredTables = (
   const bound = bind(db)
   const ctx = contextFor(bound)
   const tables: DeclaredTable[] = []
-  for (const statement of schema.statements) {
+  for (const statement of statementsOf(schema)) {
     const match = CREATE_TABLE.exec(statement(bound, {}, ctx).compile().sql)
     if (match) tables.push({ schema: match[1], name: match[2]! })
   }
@@ -530,7 +540,7 @@ export const compilePikkuSchemas = (
   const ctx = contextFor(bound)
   return schemas
     .flatMap((schema) =>
-      schema.statements.map(
+      statementsOf(schema).map(
         (statement) => `${statement(bound, types, ctx).compile().sql};`
       )
     )
