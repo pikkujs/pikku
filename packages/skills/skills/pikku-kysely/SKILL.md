@@ -289,7 +289,7 @@ pikku db migrate    # applies it and regenerates the types
 - **The declaration is plain data**, named in camelCase. Types are `id`, `key`,
   `text`, `string(n)`, `integer`, `bigint`, `real`, `boolean`, `timestamp`,
   `timestamptz`, `uuid`, `json`. A column takes `required`, `default`,
-  `primaryKey`, `unique`, `index`, `references` + `onDelete`; a table takes
+  `primaryKey`, `unique`, `index`, `references: 'table.column'` + `onDelete`; a table takes
   composite `primaryKey`, `unique` and `indexes`. No Kysely builder calls: the
   old `statements` shape is refused.
 - **Change a table by editing its entry** in place and running `generate`
@@ -299,7 +299,7 @@ pikku db migrate    # applies it and regenerates the types
   reason, and nothing is written. Declare a new column nullable or with a
   default. Taking data away is a person's decision, so stop and ask.
 - **A foreign key onto a table outside this file** (Better Auth's `user`, a
-  hand-written table) is a `references` with no `type`: it takes the type the
+  hand-written table) is a `references: 'user.id'` with no `type`: it takes the type the
   migrations gave the target. `onDelete` defaults to `restrict`.
 
   ```typescript
