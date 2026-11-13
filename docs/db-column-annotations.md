@@ -53,6 +53,43 @@ export const tables = defineTables({
 An unknown value is refused when `db/tables.ts` is loaded. A column the
 declaration does not list is `private`.
 
+## Built-in annotations for the framework's own tables
+
+Tables you did not declare still carry annotations, so `pikku db migrate`
+brands them without you writing anything. The codegen puts them **under** your
+own: a column you annotate in `db/tables.ts` (a `declareOnly: true` entry for a
+table Better Auth created, say) replaces the built-in column outright, with none
+of its fields kept.
+
+A built-in applies only to a table a generated migration created for the
+framework (the `better-auth` and `pikku-runtime` migrations `pikku db generate`
+writes), so a table of your own that happens to be called `user` or `secrets` is
+never touched. It works with no `db/tables.ts` at all.
+
+Better Auth's tables (`builtin-annotations.ts`; a renamed model, `modelName` or
+`usePlural`, is not matched):
+
+| Column                                                              | Annotation                             | Why                                                                                                                                                                                   |
+| ------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user.email`                                                        | `security: 'pii'`, `format: 'email'`   | personal data; the zod validator becomes `z.email()`                                                                                                                                  |
+| `session.token`                                                     | `security: 'secret'`, `form: 'plain'`  | the bearer token, stored as issued: whoever reads the row can act as the user                                                                                                         |
+| `session.ip_address`                                                | `security: 'pii'`                      | an address identifies a person                                                                                                                                                        |
+| `account.password`                                                  | `security: 'secret'`, `form: 'hashed'` | Better Auth stores a scrypt hash, never the password                                                                                                                                  |
+| `account.access_token`, `account.refresh_token`, `account.id_token` | `security: 'secret'`, `form: 'plain'`  | as the provider issued them. With `account.encryptOAuthTokens` Better Auth encrypts them under its own key, which Pikku cannot open, so they are `plain` from Pikku's side either way |
+| `verification.value`                                                | `security: 'secret'`, `form: 'plain'`  | a one-time code or link token, stored as issued                                                                                                                                       |
+
+No built-in is `wrapped` or `sealed`: those make the kysely plugin decrypt on
+read and refuse plaintext writes, and Better Auth writes these tables through
+its own adapter. Every built-in secret states its `form`, so none raises
+PKU483.
+
+The runtime tables (`@pikku/kysely`) annotate their columns on the declaration
+itself, like any table. `secrets` and `credentials` mark `ciphertext` and
+`wrapped_dek` as `security: 'secret'`, `form: 'plain'`: the services seal those
+values with their own envelope encryption before they reach the row, and
+`wrapped` here would have the column plugin decrypt them again and refuse the
+services' own writes.
+
 ## The pipeline
 
 ```
@@ -177,7 +214,8 @@ data or a credential, `pikku db migrate` warns until you say what it is:
 Names are split into whole tokens, so `zip` and `description` never match `ip`.
 Booleans, dates and numbers are skipped, and so are names that end `_at`,
 `_count`, `_id`, `_type`, `_ref`, `_verified` or start `is_` / `has_`. Tables
-that Better Auth, the runtime or an addon create are skipped. Any explicit
+that Better Auth, the runtime or an addon create are skipped (their built-in
+annotations are above). Any explicit
 `security` ends the warning, `private` included, except `public` on a pii-looking
 name. There is no config switch. `--fail-on-warn` turns both into failures.
 

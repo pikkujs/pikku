@@ -16,6 +16,7 @@ import {
 import type { CodedDiagnostic } from '@pikku/inspector'
 import { ErrorCode } from '@pikku/inspector'
 import { suggestSecurityForColumn } from './sensitive-names.js'
+import { withBuiltinAnnotations } from './builtin-annotations.js'
 import type { ColumnKind, CoercionMap } from '@pikku/kysely'
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────
@@ -672,9 +673,10 @@ export async function generateSchemaTypes(
     columns: columnsByTable.get(name) ?? [],
   }))
 
-  const explicitAnnotations = options.rootDir
-    ? loadAnnotations(options.rootDir)
-    : {}
+  const explicitAnnotations = withBuiltinAnnotations(
+    options.rootDir ? loadAnnotations(options.rootDir) : {},
+    options.migrationsDir
+  )
 
   // Enum types — used to auto-type enum columns as string-literal unions. Keyed
   // by both bare and schema-qualified name; `udtName` is bare so the bare key

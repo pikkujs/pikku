@@ -330,6 +330,16 @@ pikku db migrate    # applies it and regenerates the types
   pii-looking name. Booleans, dates and numbers, and names ending `_at`,
   `_count`, `_id`, `_type`, `_ref`, `_verified`, are never flagged. Framework
   tables are skipped. There is no config opt-out: annotate the column.
+- **Better Auth's and the runtime's own tables come annotated.** `user.email` is
+  `pii` (+ `format: 'email'`), `session.token`, `account.access_token` /
+  `refresh_token` / `id_token` and `verification.value` are `secret` + `form:
+'plain'`, `account.password` is `secret` + `form: 'hashed'`, and the
+  `secrets`/`credentials` ciphertext columns are `secret` + `form: 'plain'`.
+  They apply with no `db/tables.ts`. To change one, declare the table
+  `declareOnly: true` and annotate the column: yours replaces the built-in
+  column whole. A secret column comes back `Secret<...>`, so a function that
+  returns it fails PKU910: strip it. A direct write to `account.password`
+  needs `unsafeAsHashed(hash)` from `@pikku/core/classification`.
 - **An annotation typo is an error**, as is any field a column or table does
   not have. `security` is `public`, `private`, `pii` or `secret`.
 - **`db check` and `db migrate` stop** when `db/tables.ts` is ahead of the

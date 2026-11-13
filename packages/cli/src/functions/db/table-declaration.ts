@@ -112,7 +112,9 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
 /** The annotation fields of a column, without its shape. */
-const annotationOf = (column: Record<string, unknown>): ColumnAnnotation =>
+export const annotationOf = (
+  column: Record<string, unknown>
+): ColumnAnnotation =>
   Object.fromEntries(
     Object.entries(column).filter(
       ([field, value]) => field in ALLOWED_VALUES && value !== undefined

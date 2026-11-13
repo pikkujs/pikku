@@ -75,7 +75,7 @@ function parseStrategy(s: string | undefined): AnonymizeStrategy {
     : null
 }
 
-interface RawEntry {
+export interface RawEntry {
   security?: string
   classification?: string
   form?: string
@@ -87,6 +87,41 @@ interface RawEntry {
 }
 
 type RawTable = Record<string, RawEntry | null>
+
+/**
+ * One sidecar entry, as the codegen reads it: spelled `security` and
+ * `classification` (the anonymize strategy) on the wire, `classification` and
+ * `anonymize` once parsed. An unknown value is dropped, not carried.
+ */
+export function toColAnnotation(ann: RawEntry): ColAnnotation {
+  const entry: ColAnnotation = {}
+  if (
+    ann.kind === 'bool' ||
+    ann.kind === 'date' ||
+    ann.kind === 'json' ||
+    ann.kind === 'uuid'
+  )
+    entry.kind = ann.kind
+  if (ann.tsType) entry.tsType = ann.tsType
+  if (ann.format && ann.format in ZOD_FORMATS)
+    entry.format = ann.format as ZodFormat
+  // `security` is the privacy level; `form` is how it is held at rest.
+  switch (ann.security) {
+    case 'public':
+    case 'private':
+    case 'pii':
+    case 'secret':
+      entry.classification = ann.security
+      break
+  }
+  if (ann.form && (COLUMN_FORMS as readonly string[]).includes(ann.form)) {
+    entry.form = ann.form as ColumnForm
+  }
+  if (ann.keyId) entry.keyId = ann.keyId
+  const strategy = parseStrategy(ann.classification)
+  if (strategy !== null) entry.anonymize = strategy
+  return entry
+}
 
 /**
  * Load annotations from the `db/annotations.gen.json` sidecar, which `pikku db
@@ -114,35 +149,7 @@ export function loadAnnotations(rootDir: string): AnnotationMap {
       result[table] = {}
       for (const [col, ann] of Object.entries(cols)) {
         if (!ann) continue
-        const entry: ColAnnotation = {}
-        if (
-          ann.kind === 'bool' ||
-          ann.kind === 'date' ||
-          ann.kind === 'json' ||
-          ann.kind === 'uuid'
-        )
-          entry.kind = ann.kind
-        if (ann.tsType) entry.tsType = ann.tsType
-        if (ann.format && ann.format in ZOD_FORMATS)
-          entry.format = ann.format as ZodFormat
-        // `security` is the privacy level; `form` is how it is held at rest.
-        switch (ann.security) {
-          case 'public':
-          case 'private':
-          case 'pii':
-          case 'secret':
-            entry.classification = ann.security
-            break
-        }
-        if (
-          ann.form &&
-          (COLUMN_FORMS as readonly string[]).includes(ann.form)
-        ) {
-          entry.form = ann.form as ColumnForm
-        }
-        if (ann.keyId) entry.keyId = ann.keyId
-        const strategy = parseStrategy(ann.classification)
-        if (strategy !== null) entry.anonymize = strategy
+        const entry = toColAnnotation(ann)
         result[table][col] = entry
       }
     }
