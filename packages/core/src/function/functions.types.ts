@@ -1,3 +1,4 @@
+import type { FunctionTelemetry } from './function-telemetry.js'
 import type {
   CoreServices,
   CoreSecretlessSingletonServices,
@@ -426,6 +427,7 @@ export type CorePikkuFunctionConfig<
   node?: CoreNodeConfig
   /** Error classes this may throw, so each one's registered HTTP status is used instead of a 500. */
   errors?: Array<typeof PikkuError>
+  telemetry?: FunctionTelemetry
 }
 
 /**

@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3785 observable things**: 1261 exported names, plus
+**3787 observable things**: 1263 exported names, plus
 2524 members on the classes and interfaces among them, reachable
 through 68 entry points.
 
@@ -35,7 +35,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./cli` | 17 | 15 | 27 |
 | `./addon` | 39 | 39 | 2 |
 | `./trace` | 19 | 19 | 21 |
-| `./function` | 32 | 27 | 10 |
+| `./function` | 34 | 29 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
 | `./contributors` | 14 | 14 | 20 |
@@ -628,6 +628,7 @@ export type CorePikkuFunctionConfig<
   output?: OutputSchema
   node?: CoreNodeConfig
   errors?: Array<typeof PikkuError>
+  telemetry?: FunctionTelemetry
 }
 export type CorePikkuFunctionSessionless<
   In,
@@ -724,6 +725,7 @@ export type FunctionRuntimeMeta = {
   scopes?: string[]
   liveScopes?: boolean
   featureFlag?: string
+  telemetry?: FunctionTelemetry
   expose?: boolean
   auth?: boolean
   permissionsInBody?: boolean
@@ -761,7 +763,11 @@ export interface FunctionServicesMeta {
   services: string[]
 }
 export type FunctionsMeta = Record<string, FunctionMeta>
+export type FunctionSpans = 'off' | 'on' | 'always' | { sample: number }
 export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>
+export type FunctionTelemetry = {
+  spans?: FunctionSpans
+}
 export interface FunctionWiresMeta {
   optimized: boolean
   wires: string[]
