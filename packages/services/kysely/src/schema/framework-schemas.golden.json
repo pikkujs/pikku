@@ -1,0 +1,926 @@
+{
+  "sqlite": {
+    "plain": {
+      "channel": [
+        "create table \"channels\" (\"channel_id\" text primary key, \"channel_name\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"opening_data\" text default '{}' not null, \"traceparent\" text, \"pikku_user_id\" text, \"state\" text, \"last_wire\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"channel_subscriptions\" (\"channel_id\" text not null references \"channels\" (\"channel_id\") on delete cascade, \"topic\" text not null, constraint \"channel_subscriptions_pk\" primary key (\"channel_id\", \"topic\"))"
+      ],
+      "session": [
+        "create table \"pikku_user_sessions\" (\"pikku_user_id\" text primary key, \"session\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "secret": [
+        "create table \"secrets\" (\"key\" varchar(255) primary key, \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"secret_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"secrets_audit\" (\"id\" varchar(36) primary key, \"secret_key\" varchar(255) not null, \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "credential": [
+        "create table \"credentials\" (\"name\" varchar(255) not null, \"user_id\" varchar(255), \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "CREATE UNIQUE INDEX credentials_name_user_id_unique ON \"credentials\" (name, COALESCE(user_id, ''))",
+        "create table \"credential_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"credentials_audit\" (\"id\" varchar(36) primary key, \"credential_name\" varchar(255) not null, \"user_id\" varchar(255), \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "deployment": [
+        "create table \"pikku_deployments\" (\"deployment_id\" text primary key, \"endpoint\" text not null, \"last_heartbeat\" timestamp default CURRENT_TIMESTAMP not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_deployment_functions\" (\"deployment_id\" text not null references \"pikku_deployments\" (\"deployment_id\") on delete cascade, \"function_name\" text not null, constraint \"pikku_deployment_functions_pk\" primary key (\"deployment_id\", \"function_name\"))",
+        "create index \"idx_pikku_deployments_heartbeat\" on \"pikku_deployments\" (\"last_heartbeat\")",
+        "create index \"idx_pikku_deployment_functions_name\" on \"pikku_deployment_functions\" (\"function_name\")"
+      ],
+      "webhook": [
+        "create table \"webhook_delivery\" (\"delivery_id\" text primary key, \"organization_id\" text, \"url\" text not null, \"event\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create table \"webhook_delivery_attempt\" (\"attempt_id\" text primary key, \"delivery_id\" text not null references \"webhook_delivery\" (\"delivery_id\") on delete cascade, \"attempt_number\" integer not null, \"status_code\" integer, \"response_body\" text, \"error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_webhook_delivery_org\" on \"webhook_delivery\" (\"organization_id\")",
+        "create index \"idx_webhook_delivery_attempt_delivery\" on \"webhook_delivery_attempt\" (\"delivery_id\")"
+      ],
+      "incoming-webhook": [
+        "create table \"webhook_receipt\" (\"receipt_id\" text primary key, \"source\" text not null, \"event\" text not null, \"provider_event_id\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"last_error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create unique index \"idx_webhook_receipt_provider_event\" on \"webhook_receipt\" (\"source\", \"event\", \"provider_event_id\")",
+        "create index \"idx_webhook_receipt_source_created\" on \"webhook_receipt\" (\"source\", \"created_at\")"
+      ],
+      "workflow": [
+        "create table \"workflow_runs\" (\"workflow_run_id\" text primary key, \"workflow\" text not null, \"status\" text not null, \"input\" text not null, \"output\" text, \"error\" text, \"state\" text default '{}', \"inline\" boolean default false, \"graph_hash\" text, \"deterministic\" boolean default false, \"planned_steps\" text, \"wire\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"workflow_step\" (\"workflow_step_id\" text primary key, \"workflow_run_id\" text not null references \"workflow_runs\" (\"workflow_run_id\") on delete cascade, \"step_name\" text not null, \"rpc_name\" text, \"data\" text, \"status\" text default 'pending' not null, \"result\" text, \"error\" text, \"child_run_id\" text, \"branch_taken\" text, \"retries\" integer, \"retry_delay\" text, \"from_step_name\" text, \"current_attempt\" integer, \"lease_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_step_run_name_unique\" unique (\"workflow_run_id\", \"step_name\"))",
+        "create table \"workflow_step_history\" (\"history_id\" text primary key, \"workflow_step_id\" text not null references \"workflow_step\" (\"workflow_step_id\") on delete cascade, \"status\" text not null, \"result\" text, \"error\" text, \"attempt\" integer, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"running_at\" timestamp, \"scheduled_at\" timestamp, \"succeeded_at\" timestamp, \"failed_at\" timestamp)",
+        "create table \"workflow_versions\" (\"workflow_name\" text not null, \"graph_hash\" text not null, \"graph\" text not null, \"source\" text not null, \"status\" text default 'active' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_versions_pk\" primary key (\"workflow_name\", \"graph_hash\"))",
+        "create index \"idx_workflow_runs_status_created\" on \"workflow_runs\" (\"status\", \"created_at\")",
+        "create index \"idx_workflow_runs_workflow_created\" on \"workflow_runs\" (\"workflow\", \"created_at\")",
+        "create index \"idx_workflow_step_run_status\" on \"workflow_step\" (\"workflow_run_id\", \"status\")",
+        "create index \"idx_workflow_step_history_step\" on \"workflow_step_history\" (\"workflow_step_id\", \"created_at\")",
+        "create index \"idx_workflow_versions_source_status\" on \"workflow_versions\" (\"source\", \"status\")"
+      ],
+      "agent": [
+        "create table \"agent_threads\" (\"id\" varchar(36) primary key, \"resource_id\" varchar(255) not null, \"title\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_threads_resource\" on \"agent_threads\" (\"resource_id\")",
+        "create table \"agent_message\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"role\" varchar(50) not null, \"content\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_message_thread\" on \"agent_message\" (\"thread_id\", \"created_at\")",
+        "create table \"agent_tool_call\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"message_id\" varchar(36) not null references \"agent_message\" (\"id\") on delete cascade, \"run_id\" varchar(36), \"tool_name\" varchar(255) not null, \"args\" text not null, \"result\" text, \"approval_status\" varchar(50), \"approval_type\" varchar(50), \"agent_run_id\" varchar(36), \"display_tool_name\" varchar(255), \"display_args\" text, \"approval_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_tool_call_thread\" on \"agent_tool_call\" (\"thread_id\")",
+        "create index \"idx_agent_tool_call_message\" on \"agent_tool_call\" (\"message_id\")",
+        "create table \"agent_working_memory\" (\"id\" varchar(255) not null, \"scope\" varchar(50) not null, \"data\" text not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"agent_working_memory_pk\" primary key (\"id\", \"scope\"))",
+        "create table \"agent_run\" (\"run_id\" varchar(36) primary key, \"agent_name\" varchar(255) not null, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"resource_id\" varchar(255) not null, \"status\" varchar(50) default 'running' not null, \"error_message\" text, \"suspend_reason\" text, \"missing_rpcs\" text, \"pending_approvals\" text, \"usage_input_tokens\" integer default 0 not null, \"usage_output_tokens\" integer default 0 not null, \"usage_model\" varchar(255) default '' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_thread\" on \"agent_run\" (\"thread_id\", \"created_at\")",
+        "create table \"agent_run_score\" (\"id\" varchar(36) primary key, \"run_id\" varchar(36) not null references \"agent_run\" (\"run_id\") on delete cascade, \"scorer_name\" varchar(255) not null, \"score\" real not null, \"reason\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_score_run\" on \"agent_run_score\" (\"run_id\", \"created_at\")"
+      ],
+      "scope": [
+        "create table \"pikku_scopes\" (\"name\" text primary key, \"description\" text, \"declared\" boolean default true not null)",
+        "create table \"pikku_roles\" (\"name\" text primary key, \"description\" text, \"system\" boolean default false not null, \"declared\" boolean default true not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_role_scopes\" (\"role\" text not null references \"pikku_roles\" (\"name\") on delete cascade, \"scope\" text not null references \"pikku_scopes\" (\"name\") on delete cascade, constraint \"pikku_role_scopes_pk\" primary key (\"role\", \"scope\"))",
+        "create table \"pikku_user_role\" (\"user_id\" text not null references \"user\" (\"id\") on delete cascade, \"role\" text not null references \"pikku_roles\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_role_pk\" primary key (\"user_id\", \"role\"))",
+        "create table \"pikku_user_scope\" (\"user_id\" text not null references \"user\" (\"id\") on delete cascade, \"scope\" text not null references \"pikku_scopes\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_scope_pk\" primary key (\"user_id\", \"scope\"))",
+        "create index \"pikku_role_scopes_scope_idx\" on \"pikku_role_scopes\" (\"scope\")",
+        "create index \"pikku_user_role_role_idx\" on \"pikku_user_role\" (\"role\")"
+      ],
+      "flag": [
+        "create table \"pikku_feature_flags\" (\"name\" text primary key, \"description\" text, \"any_of\" text, \"enabled\" boolean default false not null, \"rollout_percent\" integer, \"declared\" boolean default true not null, \"updated_by\" text, \"note\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_feature_flag_overrides\" (\"flag\" text not null references \"pikku_feature_flags\" (\"name\") on delete cascade, \"subject_id\" text not null, \"subject_kind\" text not null, \"enabled\" boolean not null, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_feature_flag_overrides_pk\" primary key (\"flag\", \"subject_id\"))"
+      ],
+      "trigger-source": [
+        "create table \"pikku_trigger_source\" (\"name\" text primary key, \"kind\" text not null, \"base_url\" text, \"label_prefix\" text, \"declared\" boolean default true not null, \"enabled\" boolean default false not null, \"status\" text, \"state\" text, \"detail\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "lease": [
+        "create table \"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
+      ],
+      "audit": [
+        "create table \"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
+        "create index \"idx_audit_occurred_at\" on \"audit\" (\"occurred_at\")",
+        "create index \"idx_audit_user_id\" on \"audit\" (\"user_id\")",
+        "create index \"idx_audit_type\" on \"audit\" (\"type\")"
+      ],
+      "analytics": [
+        "create table \"pikku_analytics_events\" (\"event_id\" text primary key, \"name\" text not null, \"occurred_at\" text not null, \"source\" text not null, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"anonymous_id\" text, \"vendor_ids\" text, \"consent\" text, \"props\" text)",
+        "create index \"idx_pikku_analytics_events_occurred_at\" on \"pikku_analytics_events\" (\"occurred_at\")",
+        "create index \"idx_pikku_analytics_events_name\" on \"pikku_analytics_events\" (\"name\")"
+      ],
+      "virtual-user": [
+        "create table \"virtual_user_run\" (\"run_id\" varchar(36) primary key, \"virtual_user_id\" varchar(255) not null, \"disposition\" varchar(50) not null, \"seed\" bigint not null, \"status\" varchar(50) default 'running' not null, \"goals\" text default '[]' not null, \"memory\" text default '{}' not null, \"findings\" text default '[]' not null, \"intents\" text default '[]' not null, \"tally\" text, \"stopped_by\" varchar(255), \"error\" text, \"started_by\" varchar(255), \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"finished_at\" timestamp)",
+        "create index \"idx_virtual_user_run_created\" on \"virtual_user_run\" (\"created_at\")",
+        "create index \"idx_virtual_user_run_virtual_user_id\" on \"virtual_user_run\" (\"virtual_user_id\", \"created_at\")",
+        "create table \"virtual_user_run_step\" (\"run_id\" varchar(36) not null, \"step_index\" integer not null, \"intent_id\" varchar(255), \"action\" text not null, \"status\" integer, \"ok\" integer, \"response\" text, \"finding_kinds\" text, \"tokens_in\" integer default 0 not null, \"tokens_out\" integer default 0 not null, constraint \"pk_virtual_user_run_step\" primary key (\"run_id\", \"step_index\"))"
+      ],
+      "virtual-user-schedule": [
+        "create table \"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
+        "create index \"idx_virtual_user_schedule_due\" on \"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ]
+    },
+    "app": {
+      "channel": [
+        "create table \"app\".\"channels\" (\"channel_id\" text primary key, \"channel_name\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"opening_data\" text default '{}' not null, \"traceparent\" text, \"pikku_user_id\" text, \"state\" text, \"last_wire\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"channel_subscriptions\" (\"channel_id\" text not null references \"app\".\"channels\" (\"channel_id\") on delete cascade, \"topic\" text not null, constraint \"channel_subscriptions_pk\" primary key (\"channel_id\", \"topic\"))"
+      ],
+      "session": [
+        "create table \"app\".\"pikku_user_sessions\" (\"pikku_user_id\" text primary key, \"session\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "secret": [
+        "create table \"app\".\"secrets\" (\"key\" varchar(255) primary key, \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"secret_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"secrets_audit\" (\"id\" varchar(36) primary key, \"secret_key\" varchar(255) not null, \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "credential": [
+        "create table \"app\".\"credentials\" (\"name\" varchar(255) not null, \"user_id\" varchar(255), \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "CREATE UNIQUE INDEX credentials_name_user_id_unique ON \"app\".\"credentials\" (name, COALESCE(user_id, ''))",
+        "create table \"app\".\"credential_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"credentials_audit\" (\"id\" varchar(36) primary key, \"credential_name\" varchar(255) not null, \"user_id\" varchar(255), \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "deployment": [
+        "create table \"app\".\"pikku_deployments\" (\"deployment_id\" text primary key, \"endpoint\" text not null, \"last_heartbeat\" timestamp default CURRENT_TIMESTAMP not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"pikku_deployment_functions\" (\"deployment_id\" text not null references \"app\".\"pikku_deployments\" (\"deployment_id\") on delete cascade, \"function_name\" text not null, constraint \"pikku_deployment_functions_pk\" primary key (\"deployment_id\", \"function_name\"))",
+        "create index \"idx_pikku_deployments_heartbeat\" on \"app\".\"pikku_deployments\" (\"last_heartbeat\")",
+        "create index \"idx_pikku_deployment_functions_name\" on \"app\".\"pikku_deployment_functions\" (\"function_name\")"
+      ],
+      "webhook": [
+        "create table \"app\".\"webhook_delivery\" (\"delivery_id\" text primary key, \"organization_id\" text, \"url\" text not null, \"event\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create table \"app\".\"webhook_delivery_attempt\" (\"attempt_id\" text primary key, \"delivery_id\" text not null references \"app\".\"webhook_delivery\" (\"delivery_id\") on delete cascade, \"attempt_number\" integer not null, \"status_code\" integer, \"response_body\" text, \"error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_webhook_delivery_org\" on \"app\".\"webhook_delivery\" (\"organization_id\")",
+        "create index \"idx_webhook_delivery_attempt_delivery\" on \"app\".\"webhook_delivery_attempt\" (\"delivery_id\")"
+      ],
+      "incoming-webhook": [
+        "create table \"app\".\"webhook_receipt\" (\"receipt_id\" text primary key, \"source\" text not null, \"event\" text not null, \"provider_event_id\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"last_error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create unique index \"idx_webhook_receipt_provider_event\" on \"app\".\"webhook_receipt\" (\"source\", \"event\", \"provider_event_id\")",
+        "create index \"idx_webhook_receipt_source_created\" on \"app\".\"webhook_receipt\" (\"source\", \"created_at\")"
+      ],
+      "workflow": [
+        "create table \"app\".\"workflow_runs\" (\"workflow_run_id\" text primary key, \"workflow\" text not null, \"status\" text not null, \"input\" text not null, \"output\" text, \"error\" text, \"state\" text default '{}', \"inline\" boolean default false, \"graph_hash\" text, \"deterministic\" boolean default false, \"planned_steps\" text, \"wire\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"workflow_step\" (\"workflow_step_id\" text primary key, \"workflow_run_id\" text not null references \"app\".\"workflow_runs\" (\"workflow_run_id\") on delete cascade, \"step_name\" text not null, \"rpc_name\" text, \"data\" text, \"status\" text default 'pending' not null, \"result\" text, \"error\" text, \"child_run_id\" text, \"branch_taken\" text, \"retries\" integer, \"retry_delay\" text, \"from_step_name\" text, \"current_attempt\" integer, \"lease_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_step_run_name_unique\" unique (\"workflow_run_id\", \"step_name\"))",
+        "create table \"app\".\"workflow_step_history\" (\"history_id\" text primary key, \"workflow_step_id\" text not null references \"app\".\"workflow_step\" (\"workflow_step_id\") on delete cascade, \"status\" text not null, \"result\" text, \"error\" text, \"attempt\" integer, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"running_at\" timestamp, \"scheduled_at\" timestamp, \"succeeded_at\" timestamp, \"failed_at\" timestamp)",
+        "create table \"app\".\"workflow_versions\" (\"workflow_name\" text not null, \"graph_hash\" text not null, \"graph\" text not null, \"source\" text not null, \"status\" text default 'active' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_versions_pk\" primary key (\"workflow_name\", \"graph_hash\"))",
+        "create index \"idx_workflow_runs_status_created\" on \"app\".\"workflow_runs\" (\"status\", \"created_at\")",
+        "create index \"idx_workflow_runs_workflow_created\" on \"app\".\"workflow_runs\" (\"workflow\", \"created_at\")",
+        "create index \"idx_workflow_step_run_status\" on \"app\".\"workflow_step\" (\"workflow_run_id\", \"status\")",
+        "create index \"idx_workflow_step_history_step\" on \"app\".\"workflow_step_history\" (\"workflow_step_id\", \"created_at\")",
+        "create index \"idx_workflow_versions_source_status\" on \"app\".\"workflow_versions\" (\"source\", \"status\")"
+      ],
+      "agent": [
+        "create table \"app\".\"agent_threads\" (\"id\" varchar(36) primary key, \"resource_id\" varchar(255) not null, \"title\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_threads_resource\" on \"app\".\"agent_threads\" (\"resource_id\")",
+        "create table \"app\".\"agent_message\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"app\".\"agent_threads\" (\"id\") on delete cascade, \"role\" varchar(50) not null, \"content\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_message_thread\" on \"app\".\"agent_message\" (\"thread_id\", \"created_at\")",
+        "create table \"app\".\"agent_tool_call\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"app\".\"agent_threads\" (\"id\") on delete cascade, \"message_id\" varchar(36) not null references \"app\".\"agent_message\" (\"id\") on delete cascade, \"run_id\" varchar(36), \"tool_name\" varchar(255) not null, \"args\" text not null, \"result\" text, \"approval_status\" varchar(50), \"approval_type\" varchar(50), \"agent_run_id\" varchar(36), \"display_tool_name\" varchar(255), \"display_args\" text, \"approval_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_tool_call_thread\" on \"app\".\"agent_tool_call\" (\"thread_id\")",
+        "create index \"idx_agent_tool_call_message\" on \"app\".\"agent_tool_call\" (\"message_id\")",
+        "create table \"app\".\"agent_working_memory\" (\"id\" varchar(255) not null, \"scope\" varchar(50) not null, \"data\" text not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"agent_working_memory_pk\" primary key (\"id\", \"scope\"))",
+        "create table \"app\".\"agent_run\" (\"run_id\" varchar(36) primary key, \"agent_name\" varchar(255) not null, \"thread_id\" varchar(36) not null references \"app\".\"agent_threads\" (\"id\") on delete cascade, \"resource_id\" varchar(255) not null, \"status\" varchar(50) default 'running' not null, \"error_message\" text, \"suspend_reason\" text, \"missing_rpcs\" text, \"pending_approvals\" text, \"usage_input_tokens\" integer default 0 not null, \"usage_output_tokens\" integer default 0 not null, \"usage_model\" varchar(255) default '' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_thread\" on \"app\".\"agent_run\" (\"thread_id\", \"created_at\")",
+        "create table \"app\".\"agent_run_score\" (\"id\" varchar(36) primary key, \"run_id\" varchar(36) not null references \"app\".\"agent_run\" (\"run_id\") on delete cascade, \"scorer_name\" varchar(255) not null, \"score\" real not null, \"reason\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_score_run\" on \"app\".\"agent_run_score\" (\"run_id\", \"created_at\")"
+      ],
+      "scope": [
+        "create table \"app\".\"pikku_scopes\" (\"name\" text primary key, \"description\" text, \"declared\" boolean default true not null)",
+        "create table \"app\".\"pikku_roles\" (\"name\" text primary key, \"description\" text, \"system\" boolean default false not null, \"declared\" boolean default true not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"pikku_role_scopes\" (\"role\" text not null references \"app\".\"pikku_roles\" (\"name\") on delete cascade, \"scope\" text not null references \"app\".\"pikku_scopes\" (\"name\") on delete cascade, constraint \"pikku_role_scopes_pk\" primary key (\"role\", \"scope\"))",
+        "create table \"app\".\"pikku_user_role\" (\"user_id\" uuid not null references \"app\".\"user\" (\"id\") on delete cascade, \"role\" text not null references \"app\".\"pikku_roles\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_role_pk\" primary key (\"user_id\", \"role\"))",
+        "create table \"app\".\"pikku_user_scope\" (\"user_id\" uuid not null references \"app\".\"user\" (\"id\") on delete cascade, \"scope\" text not null references \"app\".\"pikku_scopes\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_scope_pk\" primary key (\"user_id\", \"scope\"))",
+        "create index \"pikku_role_scopes_scope_idx\" on \"app\".\"pikku_role_scopes\" (\"scope\")",
+        "create index \"pikku_user_role_role_idx\" on \"app\".\"pikku_user_role\" (\"role\")"
+      ],
+      "flag": [
+        "create table \"app\".\"pikku_feature_flags\" (\"name\" text primary key, \"description\" text, \"any_of\" text, \"enabled\" boolean default false not null, \"rollout_percent\" integer, \"declared\" boolean default true not null, \"updated_by\" text, \"note\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"pikku_feature_flag_overrides\" (\"flag\" text not null references \"app\".\"pikku_feature_flags\" (\"name\") on delete cascade, \"subject_id\" text not null, \"subject_kind\" text not null, \"enabled\" boolean not null, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_feature_flag_overrides_pk\" primary key (\"flag\", \"subject_id\"))"
+      ],
+      "trigger-source": [
+        "create table \"app\".\"pikku_trigger_source\" (\"name\" text primary key, \"kind\" text not null, \"base_url\" text, \"label_prefix\" text, \"declared\" boolean default true not null, \"enabled\" boolean default false not null, \"status\" text, \"state\" text, \"detail\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "lease": [
+        "create table \"app\".\"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
+      ],
+      "audit": [
+        "create table \"app\".\"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
+        "create index \"idx_audit_occurred_at\" on \"app\".\"audit\" (\"occurred_at\")",
+        "create index \"idx_audit_user_id\" on \"app\".\"audit\" (\"user_id\")",
+        "create index \"idx_audit_type\" on \"app\".\"audit\" (\"type\")"
+      ],
+      "analytics": [
+        "create table \"app\".\"pikku_analytics_events\" (\"event_id\" text primary key, \"name\" text not null, \"occurred_at\" text not null, \"source\" text not null, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"anonymous_id\" text, \"vendor_ids\" text, \"consent\" text, \"props\" text)",
+        "create index \"idx_pikku_analytics_events_occurred_at\" on \"app\".\"pikku_analytics_events\" (\"occurred_at\")",
+        "create index \"idx_pikku_analytics_events_name\" on \"app\".\"pikku_analytics_events\" (\"name\")"
+      ],
+      "virtual-user": [
+        "create table \"app\".\"virtual_user_run\" (\"run_id\" varchar(36) primary key, \"virtual_user_id\" varchar(255) not null, \"disposition\" varchar(50) not null, \"seed\" bigint not null, \"status\" varchar(50) default 'running' not null, \"goals\" text default '[]' not null, \"memory\" text default '{}' not null, \"findings\" text default '[]' not null, \"intents\" text default '[]' not null, \"tally\" text, \"stopped_by\" varchar(255), \"error\" text, \"started_by\" varchar(255), \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"finished_at\" timestamp)",
+        "create index \"idx_virtual_user_run_created\" on \"app\".\"virtual_user_run\" (\"created_at\")",
+        "create index \"idx_virtual_user_run_virtual_user_id\" on \"app\".\"virtual_user_run\" (\"virtual_user_id\", \"created_at\")",
+        "create table \"app\".\"virtual_user_run_step\" (\"run_id\" varchar(36) not null, \"step_index\" integer not null, \"intent_id\" varchar(255), \"action\" text not null, \"status\" integer, \"ok\" integer, \"response\" text, \"finding_kinds\" text, \"tokens_in\" integer default 0 not null, \"tokens_out\" integer default 0 not null, constraint \"pk_virtual_user_run_step\" primary key (\"run_id\", \"step_index\"))"
+      ],
+      "virtual-user-schedule": [
+        "create table \"app\".\"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
+        "create index \"idx_virtual_user_schedule_due\" on \"app\".\"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ]
+    },
+    "users": {
+      "channel": [
+        "create table \"channels\" (\"channel_id\" text primary key, \"channel_name\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"opening_data\" text default '{}' not null, \"traceparent\" text, \"pikku_user_id\" text, \"state\" text, \"last_wire\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"channel_subscriptions\" (\"channel_id\" text not null references \"channels\" (\"channel_id\") on delete cascade, \"topic\" text not null, constraint \"channel_subscriptions_pk\" primary key (\"channel_id\", \"topic\"))"
+      ],
+      "session": [
+        "create table \"pikku_user_sessions\" (\"pikku_user_id\" text primary key, \"session\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "secret": [
+        "create table \"secrets\" (\"key\" varchar(255) primary key, \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"secret_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"secrets_audit\" (\"id\" varchar(36) primary key, \"secret_key\" varchar(255) not null, \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "credential": [
+        "create table \"credentials\" (\"name\" varchar(255) not null, \"user_id\" varchar(255), \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "CREATE UNIQUE INDEX credentials_name_user_id_unique ON \"credentials\" (name, COALESCE(user_id, ''))",
+        "create table \"credential_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"credentials_audit\" (\"id\" varchar(36) primary key, \"credential_name\" varchar(255) not null, \"user_id\" varchar(255), \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "deployment": [
+        "create table \"pikku_deployments\" (\"deployment_id\" text primary key, \"endpoint\" text not null, \"last_heartbeat\" timestamp default CURRENT_TIMESTAMP not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_deployment_functions\" (\"deployment_id\" text not null references \"pikku_deployments\" (\"deployment_id\") on delete cascade, \"function_name\" text not null, constraint \"pikku_deployment_functions_pk\" primary key (\"deployment_id\", \"function_name\"))",
+        "create index \"idx_pikku_deployments_heartbeat\" on \"pikku_deployments\" (\"last_heartbeat\")",
+        "create index \"idx_pikku_deployment_functions_name\" on \"pikku_deployment_functions\" (\"function_name\")"
+      ],
+      "webhook": [
+        "create table \"webhook_delivery\" (\"delivery_id\" text primary key, \"organization_id\" text, \"url\" text not null, \"event\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create table \"webhook_delivery_attempt\" (\"attempt_id\" text primary key, \"delivery_id\" text not null references \"webhook_delivery\" (\"delivery_id\") on delete cascade, \"attempt_number\" integer not null, \"status_code\" integer, \"response_body\" text, \"error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_webhook_delivery_org\" on \"webhook_delivery\" (\"organization_id\")",
+        "create index \"idx_webhook_delivery_attempt_delivery\" on \"webhook_delivery_attempt\" (\"delivery_id\")"
+      ],
+      "incoming-webhook": [
+        "create table \"webhook_receipt\" (\"receipt_id\" text primary key, \"source\" text not null, \"event\" text not null, \"provider_event_id\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"last_error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create unique index \"idx_webhook_receipt_provider_event\" on \"webhook_receipt\" (\"source\", \"event\", \"provider_event_id\")",
+        "create index \"idx_webhook_receipt_source_created\" on \"webhook_receipt\" (\"source\", \"created_at\")"
+      ],
+      "workflow": [
+        "create table \"workflow_runs\" (\"workflow_run_id\" text primary key, \"workflow\" text not null, \"status\" text not null, \"input\" text not null, \"output\" text, \"error\" text, \"state\" text default '{}', \"inline\" boolean default false, \"graph_hash\" text, \"deterministic\" boolean default false, \"planned_steps\" text, \"wire\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"workflow_step\" (\"workflow_step_id\" text primary key, \"workflow_run_id\" text not null references \"workflow_runs\" (\"workflow_run_id\") on delete cascade, \"step_name\" text not null, \"rpc_name\" text, \"data\" text, \"status\" text default 'pending' not null, \"result\" text, \"error\" text, \"child_run_id\" text, \"branch_taken\" text, \"retries\" integer, \"retry_delay\" text, \"from_step_name\" text, \"current_attempt\" integer, \"lease_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_step_run_name_unique\" unique (\"workflow_run_id\", \"step_name\"))",
+        "create table \"workflow_step_history\" (\"history_id\" text primary key, \"workflow_step_id\" text not null references \"workflow_step\" (\"workflow_step_id\") on delete cascade, \"status\" text not null, \"result\" text, \"error\" text, \"attempt\" integer, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"running_at\" timestamp, \"scheduled_at\" timestamp, \"succeeded_at\" timestamp, \"failed_at\" timestamp)",
+        "create table \"workflow_versions\" (\"workflow_name\" text not null, \"graph_hash\" text not null, \"graph\" text not null, \"source\" text not null, \"status\" text default 'active' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_versions_pk\" primary key (\"workflow_name\", \"graph_hash\"))",
+        "create index \"idx_workflow_runs_status_created\" on \"workflow_runs\" (\"status\", \"created_at\")",
+        "create index \"idx_workflow_runs_workflow_created\" on \"workflow_runs\" (\"workflow\", \"created_at\")",
+        "create index \"idx_workflow_step_run_status\" on \"workflow_step\" (\"workflow_run_id\", \"status\")",
+        "create index \"idx_workflow_step_history_step\" on \"workflow_step_history\" (\"workflow_step_id\", \"created_at\")",
+        "create index \"idx_workflow_versions_source_status\" on \"workflow_versions\" (\"source\", \"status\")"
+      ],
+      "agent": [
+        "create table \"agent_threads\" (\"id\" varchar(36) primary key, \"resource_id\" varchar(255) not null, \"title\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_threads_resource\" on \"agent_threads\" (\"resource_id\")",
+        "create table \"agent_message\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"role\" varchar(50) not null, \"content\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_message_thread\" on \"agent_message\" (\"thread_id\", \"created_at\")",
+        "create table \"agent_tool_call\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"message_id\" varchar(36) not null references \"agent_message\" (\"id\") on delete cascade, \"run_id\" varchar(36), \"tool_name\" varchar(255) not null, \"args\" text not null, \"result\" text, \"approval_status\" varchar(50), \"approval_type\" varchar(50), \"agent_run_id\" varchar(36), \"display_tool_name\" varchar(255), \"display_args\" text, \"approval_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_tool_call_thread\" on \"agent_tool_call\" (\"thread_id\")",
+        "create index \"idx_agent_tool_call_message\" on \"agent_tool_call\" (\"message_id\")",
+        "create table \"agent_working_memory\" (\"id\" varchar(255) not null, \"scope\" varchar(50) not null, \"data\" text not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"agent_working_memory_pk\" primary key (\"id\", \"scope\"))",
+        "create table \"agent_run\" (\"run_id\" varchar(36) primary key, \"agent_name\" varchar(255) not null, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"resource_id\" varchar(255) not null, \"status\" varchar(50) default 'running' not null, \"error_message\" text, \"suspend_reason\" text, \"missing_rpcs\" text, \"pending_approvals\" text, \"usage_input_tokens\" integer default 0 not null, \"usage_output_tokens\" integer default 0 not null, \"usage_model\" varchar(255) default '' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_thread\" on \"agent_run\" (\"thread_id\", \"created_at\")",
+        "create table \"agent_run_score\" (\"id\" varchar(36) primary key, \"run_id\" varchar(36) not null references \"agent_run\" (\"run_id\") on delete cascade, \"scorer_name\" varchar(255) not null, \"score\" real not null, \"reason\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_score_run\" on \"agent_run_score\" (\"run_id\", \"created_at\")"
+      ],
+      "scope": [
+        "create table \"pikku_scopes\" (\"name\" text primary key, \"description\" text, \"declared\" boolean default true not null)",
+        "create table \"pikku_roles\" (\"name\" text primary key, \"description\" text, \"system\" boolean default false not null, \"declared\" boolean default true not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_role_scopes\" (\"role\" text not null references \"pikku_roles\" (\"name\") on delete cascade, \"scope\" text not null references \"pikku_scopes\" (\"name\") on delete cascade, constraint \"pikku_role_scopes_pk\" primary key (\"role\", \"scope\"))",
+        "create table \"pikku_user_role\" (\"user_id\" text not null references \"users\" (\"id\") on delete cascade, \"role\" text not null references \"pikku_roles\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_role_pk\" primary key (\"user_id\", \"role\"))",
+        "create table \"pikku_user_scope\" (\"user_id\" text not null references \"users\" (\"id\") on delete cascade, \"scope\" text not null references \"pikku_scopes\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_scope_pk\" primary key (\"user_id\", \"scope\"))",
+        "create index \"pikku_role_scopes_scope_idx\" on \"pikku_role_scopes\" (\"scope\")",
+        "create index \"pikku_user_role_role_idx\" on \"pikku_user_role\" (\"role\")"
+      ],
+      "flag": [
+        "create table \"pikku_feature_flags\" (\"name\" text primary key, \"description\" text, \"any_of\" text, \"enabled\" boolean default false not null, \"rollout_percent\" integer, \"declared\" boolean default true not null, \"updated_by\" text, \"note\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_feature_flag_overrides\" (\"flag\" text not null references \"pikku_feature_flags\" (\"name\") on delete cascade, \"subject_id\" text not null, \"subject_kind\" text not null, \"enabled\" boolean not null, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_feature_flag_overrides_pk\" primary key (\"flag\", \"subject_id\"))"
+      ],
+      "trigger-source": [
+        "create table \"pikku_trigger_source\" (\"name\" text primary key, \"kind\" text not null, \"base_url\" text, \"label_prefix\" text, \"declared\" boolean default true not null, \"enabled\" boolean default false not null, \"status\" text, \"state\" text, \"detail\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "lease": [
+        "create table \"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
+      ],
+      "audit": [
+        "create table \"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
+        "create index \"idx_audit_occurred_at\" on \"audit\" (\"occurred_at\")",
+        "create index \"idx_audit_user_id\" on \"audit\" (\"user_id\")",
+        "create index \"idx_audit_type\" on \"audit\" (\"type\")"
+      ],
+      "analytics": [
+        "create table \"pikku_analytics_events\" (\"event_id\" text primary key, \"name\" text not null, \"occurred_at\" text not null, \"source\" text not null, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"anonymous_id\" text, \"vendor_ids\" text, \"consent\" text, \"props\" text)",
+        "create index \"idx_pikku_analytics_events_occurred_at\" on \"pikku_analytics_events\" (\"occurred_at\")",
+        "create index \"idx_pikku_analytics_events_name\" on \"pikku_analytics_events\" (\"name\")"
+      ],
+      "virtual-user": [
+        "create table \"virtual_user_run\" (\"run_id\" varchar(36) primary key, \"virtual_user_id\" varchar(255) not null, \"disposition\" varchar(50) not null, \"seed\" bigint not null, \"status\" varchar(50) default 'running' not null, \"goals\" text default '[]' not null, \"memory\" text default '{}' not null, \"findings\" text default '[]' not null, \"intents\" text default '[]' not null, \"tally\" text, \"stopped_by\" varchar(255), \"error\" text, \"started_by\" varchar(255), \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"finished_at\" timestamp)",
+        "create index \"idx_virtual_user_run_created\" on \"virtual_user_run\" (\"created_at\")",
+        "create index \"idx_virtual_user_run_virtual_user_id\" on \"virtual_user_run\" (\"virtual_user_id\", \"created_at\")",
+        "create table \"virtual_user_run_step\" (\"run_id\" varchar(36) not null, \"step_index\" integer not null, \"intent_id\" varchar(255), \"action\" text not null, \"status\" integer, \"ok\" integer, \"response\" text, \"finding_kinds\" text, \"tokens_in\" integer default 0 not null, \"tokens_out\" integer default 0 not null, constraint \"pk_virtual_user_run_step\" primary key (\"run_id\", \"step_index\"))"
+      ],
+      "virtual-user-schedule": [
+        "create table \"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
+        "create index \"idx_virtual_user_schedule_due\" on \"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ]
+    }
+  },
+  "postgres": {
+    "plain": {
+      "channel": [
+        "create table \"channels\" (\"channel_id\" text primary key, \"channel_name\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"opening_data\" text default '{}' not null, \"traceparent\" text, \"pikku_user_id\" text, \"state\" text, \"last_wire\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"channel_subscriptions\" (\"channel_id\" text not null references \"channels\" (\"channel_id\") on delete cascade, \"topic\" text not null, constraint \"channel_subscriptions_pk\" primary key (\"channel_id\", \"topic\"))"
+      ],
+      "session": [
+        "create table \"pikku_user_sessions\" (\"pikku_user_id\" text primary key, \"session\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "secret": [
+        "create table \"secrets\" (\"key\" varchar(255) primary key, \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"secret_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"secrets_audit\" (\"id\" varchar(36) primary key, \"secret_key\" varchar(255) not null, \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "credential": [
+        "create table \"credentials\" (\"name\" varchar(255) not null, \"user_id\" varchar(255), \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "CREATE UNIQUE INDEX credentials_name_user_id_unique ON \"credentials\" (name, COALESCE(user_id, ''))",
+        "create table \"credential_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"credentials_audit\" (\"id\" varchar(36) primary key, \"credential_name\" varchar(255) not null, \"user_id\" varchar(255), \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "deployment": [
+        "create table \"pikku_deployments\" (\"deployment_id\" text primary key, \"endpoint\" text not null, \"last_heartbeat\" timestamp default CURRENT_TIMESTAMP not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_deployment_functions\" (\"deployment_id\" text not null references \"pikku_deployments\" (\"deployment_id\") on delete cascade, \"function_name\" text not null, constraint \"pikku_deployment_functions_pk\" primary key (\"deployment_id\", \"function_name\"))",
+        "create index \"idx_pikku_deployments_heartbeat\" on \"pikku_deployments\" (\"last_heartbeat\")",
+        "create index \"idx_pikku_deployment_functions_name\" on \"pikku_deployment_functions\" (\"function_name\")"
+      ],
+      "webhook": [
+        "create table \"webhook_delivery\" (\"delivery_id\" text primary key, \"organization_id\" text, \"url\" text not null, \"event\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create table \"webhook_delivery_attempt\" (\"attempt_id\" text primary key, \"delivery_id\" text not null references \"webhook_delivery\" (\"delivery_id\") on delete cascade, \"attempt_number\" integer not null, \"status_code\" integer, \"response_body\" text, \"error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_webhook_delivery_org\" on \"webhook_delivery\" (\"organization_id\")",
+        "create index \"idx_webhook_delivery_attempt_delivery\" on \"webhook_delivery_attempt\" (\"delivery_id\")"
+      ],
+      "incoming-webhook": [
+        "create table \"webhook_receipt\" (\"receipt_id\" text primary key, \"source\" text not null, \"event\" text not null, \"provider_event_id\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"last_error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create unique index \"idx_webhook_receipt_provider_event\" on \"webhook_receipt\" (\"source\", \"event\", \"provider_event_id\")",
+        "create index \"idx_webhook_receipt_source_created\" on \"webhook_receipt\" (\"source\", \"created_at\")"
+      ],
+      "workflow": [
+        "create table \"workflow_runs\" (\"workflow_run_id\" text primary key, \"workflow\" text not null, \"status\" text not null, \"input\" text not null, \"output\" text, \"error\" text, \"state\" text default '{}', \"inline\" boolean default false, \"graph_hash\" text, \"deterministic\" boolean default false, \"planned_steps\" text, \"wire\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"workflow_step\" (\"workflow_step_id\" text primary key, \"workflow_run_id\" text not null references \"workflow_runs\" (\"workflow_run_id\") on delete cascade, \"step_name\" text not null, \"rpc_name\" text, \"data\" text, \"status\" text default 'pending' not null, \"result\" text, \"error\" text, \"child_run_id\" text, \"branch_taken\" text, \"retries\" integer, \"retry_delay\" text, \"from_step_name\" text, \"current_attempt\" integer, \"lease_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_step_run_name_unique\" unique (\"workflow_run_id\", \"step_name\"))",
+        "create table \"workflow_step_history\" (\"history_id\" text primary key, \"workflow_step_id\" text not null references \"workflow_step\" (\"workflow_step_id\") on delete cascade, \"status\" text not null, \"result\" text, \"error\" text, \"attempt\" integer, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"running_at\" timestamp, \"scheduled_at\" timestamp, \"succeeded_at\" timestamp, \"failed_at\" timestamp)",
+        "create table \"workflow_versions\" (\"workflow_name\" text not null, \"graph_hash\" text not null, \"graph\" text not null, \"source\" text not null, \"status\" text default 'active' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_versions_pk\" primary key (\"workflow_name\", \"graph_hash\"))",
+        "create index \"idx_workflow_runs_status_created\" on \"workflow_runs\" (\"status\", \"created_at\")",
+        "create index \"idx_workflow_runs_workflow_created\" on \"workflow_runs\" (\"workflow\", \"created_at\")",
+        "create index \"idx_workflow_step_run_status\" on \"workflow_step\" (\"workflow_run_id\", \"status\")",
+        "create index \"idx_workflow_step_history_step\" on \"workflow_step_history\" (\"workflow_step_id\", \"created_at\")",
+        "create index \"idx_workflow_versions_source_status\" on \"workflow_versions\" (\"source\", \"status\")"
+      ],
+      "agent": [
+        "create table \"agent_threads\" (\"id\" varchar(36) primary key, \"resource_id\" varchar(255) not null, \"title\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_threads_resource\" on \"agent_threads\" (\"resource_id\")",
+        "create table \"agent_message\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"role\" varchar(50) not null, \"content\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_message_thread\" on \"agent_message\" (\"thread_id\", \"created_at\")",
+        "create table \"agent_tool_call\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"message_id\" varchar(36) not null references \"agent_message\" (\"id\") on delete cascade, \"run_id\" varchar(36), \"tool_name\" varchar(255) not null, \"args\" text not null, \"result\" text, \"approval_status\" varchar(50), \"approval_type\" varchar(50), \"agent_run_id\" varchar(36), \"display_tool_name\" varchar(255), \"display_args\" text, \"approval_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_tool_call_thread\" on \"agent_tool_call\" (\"thread_id\")",
+        "create index \"idx_agent_tool_call_message\" on \"agent_tool_call\" (\"message_id\")",
+        "create table \"agent_working_memory\" (\"id\" varchar(255) not null, \"scope\" varchar(50) not null, \"data\" text not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"agent_working_memory_pk\" primary key (\"id\", \"scope\"))",
+        "create table \"agent_run\" (\"run_id\" varchar(36) primary key, \"agent_name\" varchar(255) not null, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"resource_id\" varchar(255) not null, \"status\" varchar(50) default 'running' not null, \"error_message\" text, \"suspend_reason\" text, \"missing_rpcs\" text, \"pending_approvals\" text, \"usage_input_tokens\" integer default 0 not null, \"usage_output_tokens\" integer default 0 not null, \"usage_model\" varchar(255) default '' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_thread\" on \"agent_run\" (\"thread_id\", \"created_at\")",
+        "create table \"agent_run_score\" (\"id\" varchar(36) primary key, \"run_id\" varchar(36) not null references \"agent_run\" (\"run_id\") on delete cascade, \"scorer_name\" varchar(255) not null, \"score\" real not null, \"reason\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_score_run\" on \"agent_run_score\" (\"run_id\", \"created_at\")"
+      ],
+      "scope": [
+        "create table \"pikku_scopes\" (\"name\" text primary key, \"description\" text, \"declared\" boolean default true not null)",
+        "create table \"pikku_roles\" (\"name\" text primary key, \"description\" text, \"system\" boolean default false not null, \"declared\" boolean default true not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_role_scopes\" (\"role\" text not null references \"pikku_roles\" (\"name\") on delete cascade, \"scope\" text not null references \"pikku_scopes\" (\"name\") on delete cascade, constraint \"pikku_role_scopes_pk\" primary key (\"role\", \"scope\"))",
+        "create table \"pikku_user_role\" (\"user_id\" text not null references \"user\" (\"id\") on delete cascade, \"role\" text not null references \"pikku_roles\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_role_pk\" primary key (\"user_id\", \"role\"))",
+        "create table \"pikku_user_scope\" (\"user_id\" text not null references \"user\" (\"id\") on delete cascade, \"scope\" text not null references \"pikku_scopes\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_scope_pk\" primary key (\"user_id\", \"scope\"))",
+        "create index \"pikku_role_scopes_scope_idx\" on \"pikku_role_scopes\" (\"scope\")",
+        "create index \"pikku_user_role_role_idx\" on \"pikku_user_role\" (\"role\")"
+      ],
+      "flag": [
+        "create table \"pikku_feature_flags\" (\"name\" text primary key, \"description\" text, \"any_of\" text, \"enabled\" boolean default false not null, \"rollout_percent\" integer, \"declared\" boolean default true not null, \"updated_by\" text, \"note\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_feature_flag_overrides\" (\"flag\" text not null references \"pikku_feature_flags\" (\"name\") on delete cascade, \"subject_id\" text not null, \"subject_kind\" text not null, \"enabled\" boolean not null, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_feature_flag_overrides_pk\" primary key (\"flag\", \"subject_id\"))"
+      ],
+      "trigger-source": [
+        "create table \"pikku_trigger_source\" (\"name\" text primary key, \"kind\" text not null, \"base_url\" text, \"label_prefix\" text, \"declared\" boolean default true not null, \"enabled\" boolean default false not null, \"status\" text, \"state\" text, \"detail\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "lease": [
+        "create table \"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
+      ],
+      "audit": [
+        "create table \"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
+        "create index \"idx_audit_occurred_at\" on \"audit\" (\"occurred_at\")",
+        "create index \"idx_audit_user_id\" on \"audit\" (\"user_id\")",
+        "create index \"idx_audit_type\" on \"audit\" (\"type\")"
+      ],
+      "analytics": [
+        "create table \"pikku_analytics_events\" (\"event_id\" text primary key, \"name\" text not null, \"occurred_at\" text not null, \"source\" text not null, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"anonymous_id\" text, \"vendor_ids\" text, \"consent\" text, \"props\" text)",
+        "create index \"idx_pikku_analytics_events_occurred_at\" on \"pikku_analytics_events\" (\"occurred_at\")",
+        "create index \"idx_pikku_analytics_events_name\" on \"pikku_analytics_events\" (\"name\")"
+      ],
+      "virtual-user": [
+        "create table \"virtual_user_run\" (\"run_id\" varchar(36) primary key, \"virtual_user_id\" varchar(255) not null, \"disposition\" varchar(50) not null, \"seed\" bigint not null, \"status\" varchar(50) default 'running' not null, \"goals\" text default '[]' not null, \"memory\" text default '{}' not null, \"findings\" text default '[]' not null, \"intents\" text default '[]' not null, \"tally\" text, \"stopped_by\" varchar(255), \"error\" text, \"started_by\" varchar(255), \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"finished_at\" timestamp)",
+        "create index \"idx_virtual_user_run_created\" on \"virtual_user_run\" (\"created_at\")",
+        "create index \"idx_virtual_user_run_virtual_user_id\" on \"virtual_user_run\" (\"virtual_user_id\", \"created_at\")",
+        "create table \"virtual_user_run_step\" (\"run_id\" varchar(36) not null, \"step_index\" integer not null, \"intent_id\" varchar(255), \"action\" text not null, \"status\" integer, \"ok\" integer, \"response\" text, \"finding_kinds\" text, \"tokens_in\" integer default 0 not null, \"tokens_out\" integer default 0 not null, constraint \"pk_virtual_user_run_step\" primary key (\"run_id\", \"step_index\"))"
+      ],
+      "virtual-user-schedule": [
+        "create table \"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
+        "create index \"idx_virtual_user_schedule_due\" on \"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ]
+    },
+    "app": {
+      "channel": [
+        "create table \"app\".\"channels\" (\"channel_id\" text primary key, \"channel_name\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"opening_data\" text default '{}' not null, \"traceparent\" text, \"pikku_user_id\" text, \"state\" text, \"last_wire\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"channel_subscriptions\" (\"channel_id\" text not null references \"app\".\"channels\" (\"channel_id\") on delete cascade, \"topic\" text not null, constraint \"channel_subscriptions_pk\" primary key (\"channel_id\", \"topic\"))"
+      ],
+      "session": [
+        "create table \"app\".\"pikku_user_sessions\" (\"pikku_user_id\" text primary key, \"session\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "secret": [
+        "create table \"app\".\"secrets\" (\"key\" varchar(255) primary key, \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"secret_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"secrets_audit\" (\"id\" varchar(36) primary key, \"secret_key\" varchar(255) not null, \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "credential": [
+        "create table \"app\".\"credentials\" (\"name\" varchar(255) not null, \"user_id\" varchar(255), \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "CREATE UNIQUE INDEX credentials_name_user_id_unique ON \"app\".\"credentials\" (name, COALESCE(user_id, ''))",
+        "create table \"app\".\"credential_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"credentials_audit\" (\"id\" varchar(36) primary key, \"credential_name\" varchar(255) not null, \"user_id\" varchar(255), \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "deployment": [
+        "create table \"app\".\"pikku_deployments\" (\"deployment_id\" text primary key, \"endpoint\" text not null, \"last_heartbeat\" timestamp default CURRENT_TIMESTAMP not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"pikku_deployment_functions\" (\"deployment_id\" text not null references \"app\".\"pikku_deployments\" (\"deployment_id\") on delete cascade, \"function_name\" text not null, constraint \"pikku_deployment_functions_pk\" primary key (\"deployment_id\", \"function_name\"))",
+        "create index \"idx_pikku_deployments_heartbeat\" on \"app\".\"pikku_deployments\" (\"last_heartbeat\")",
+        "create index \"idx_pikku_deployment_functions_name\" on \"app\".\"pikku_deployment_functions\" (\"function_name\")"
+      ],
+      "webhook": [
+        "create table \"app\".\"webhook_delivery\" (\"delivery_id\" text primary key, \"organization_id\" text, \"url\" text not null, \"event\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create table \"app\".\"webhook_delivery_attempt\" (\"attempt_id\" text primary key, \"delivery_id\" text not null references \"app\".\"webhook_delivery\" (\"delivery_id\") on delete cascade, \"attempt_number\" integer not null, \"status_code\" integer, \"response_body\" text, \"error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_webhook_delivery_org\" on \"app\".\"webhook_delivery\" (\"organization_id\")",
+        "create index \"idx_webhook_delivery_attempt_delivery\" on \"app\".\"webhook_delivery_attempt\" (\"delivery_id\")"
+      ],
+      "incoming-webhook": [
+        "create table \"app\".\"webhook_receipt\" (\"receipt_id\" text primary key, \"source\" text not null, \"event\" text not null, \"provider_event_id\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"last_error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create unique index \"idx_webhook_receipt_provider_event\" on \"app\".\"webhook_receipt\" (\"source\", \"event\", \"provider_event_id\")",
+        "create index \"idx_webhook_receipt_source_created\" on \"app\".\"webhook_receipt\" (\"source\", \"created_at\")"
+      ],
+      "workflow": [
+        "create table \"app\".\"workflow_runs\" (\"workflow_run_id\" text primary key, \"workflow\" text not null, \"status\" text not null, \"input\" text not null, \"output\" text, \"error\" text, \"state\" text default '{}', \"inline\" boolean default false, \"graph_hash\" text, \"deterministic\" boolean default false, \"planned_steps\" text, \"wire\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"workflow_step\" (\"workflow_step_id\" text primary key, \"workflow_run_id\" text not null references \"app\".\"workflow_runs\" (\"workflow_run_id\") on delete cascade, \"step_name\" text not null, \"rpc_name\" text, \"data\" text, \"status\" text default 'pending' not null, \"result\" text, \"error\" text, \"child_run_id\" text, \"branch_taken\" text, \"retries\" integer, \"retry_delay\" text, \"from_step_name\" text, \"current_attempt\" integer, \"lease_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_step_run_name_unique\" unique (\"workflow_run_id\", \"step_name\"))",
+        "create table \"app\".\"workflow_step_history\" (\"history_id\" text primary key, \"workflow_step_id\" text not null references \"app\".\"workflow_step\" (\"workflow_step_id\") on delete cascade, \"status\" text not null, \"result\" text, \"error\" text, \"attempt\" integer, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"running_at\" timestamp, \"scheduled_at\" timestamp, \"succeeded_at\" timestamp, \"failed_at\" timestamp)",
+        "create table \"app\".\"workflow_versions\" (\"workflow_name\" text not null, \"graph_hash\" text not null, \"graph\" text not null, \"source\" text not null, \"status\" text default 'active' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_versions_pk\" primary key (\"workflow_name\", \"graph_hash\"))",
+        "create index \"idx_workflow_runs_status_created\" on \"app\".\"workflow_runs\" (\"status\", \"created_at\")",
+        "create index \"idx_workflow_runs_workflow_created\" on \"app\".\"workflow_runs\" (\"workflow\", \"created_at\")",
+        "create index \"idx_workflow_step_run_status\" on \"app\".\"workflow_step\" (\"workflow_run_id\", \"status\")",
+        "create index \"idx_workflow_step_history_step\" on \"app\".\"workflow_step_history\" (\"workflow_step_id\", \"created_at\")",
+        "create index \"idx_workflow_versions_source_status\" on \"app\".\"workflow_versions\" (\"source\", \"status\")"
+      ],
+      "agent": [
+        "create table \"app\".\"agent_threads\" (\"id\" varchar(36) primary key, \"resource_id\" varchar(255) not null, \"title\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_threads_resource\" on \"app\".\"agent_threads\" (\"resource_id\")",
+        "create table \"app\".\"agent_message\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"app\".\"agent_threads\" (\"id\") on delete cascade, \"role\" varchar(50) not null, \"content\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_message_thread\" on \"app\".\"agent_message\" (\"thread_id\", \"created_at\")",
+        "create table \"app\".\"agent_tool_call\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"app\".\"agent_threads\" (\"id\") on delete cascade, \"message_id\" varchar(36) not null references \"app\".\"agent_message\" (\"id\") on delete cascade, \"run_id\" varchar(36), \"tool_name\" varchar(255) not null, \"args\" text not null, \"result\" text, \"approval_status\" varchar(50), \"approval_type\" varchar(50), \"agent_run_id\" varchar(36), \"display_tool_name\" varchar(255), \"display_args\" text, \"approval_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_tool_call_thread\" on \"app\".\"agent_tool_call\" (\"thread_id\")",
+        "create index \"idx_agent_tool_call_message\" on \"app\".\"agent_tool_call\" (\"message_id\")",
+        "create table \"app\".\"agent_working_memory\" (\"id\" varchar(255) not null, \"scope\" varchar(50) not null, \"data\" text not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"agent_working_memory_pk\" primary key (\"id\", \"scope\"))",
+        "create table \"app\".\"agent_run\" (\"run_id\" varchar(36) primary key, \"agent_name\" varchar(255) not null, \"thread_id\" varchar(36) not null references \"app\".\"agent_threads\" (\"id\") on delete cascade, \"resource_id\" varchar(255) not null, \"status\" varchar(50) default 'running' not null, \"error_message\" text, \"suspend_reason\" text, \"missing_rpcs\" text, \"pending_approvals\" text, \"usage_input_tokens\" integer default 0 not null, \"usage_output_tokens\" integer default 0 not null, \"usage_model\" varchar(255) default '' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_thread\" on \"app\".\"agent_run\" (\"thread_id\", \"created_at\")",
+        "create table \"app\".\"agent_run_score\" (\"id\" varchar(36) primary key, \"run_id\" varchar(36) not null references \"app\".\"agent_run\" (\"run_id\") on delete cascade, \"scorer_name\" varchar(255) not null, \"score\" real not null, \"reason\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_score_run\" on \"app\".\"agent_run_score\" (\"run_id\", \"created_at\")"
+      ],
+      "scope": [
+        "create table \"app\".\"pikku_scopes\" (\"name\" text primary key, \"description\" text, \"declared\" boolean default true not null)",
+        "create table \"app\".\"pikku_roles\" (\"name\" text primary key, \"description\" text, \"system\" boolean default false not null, \"declared\" boolean default true not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"pikku_role_scopes\" (\"role\" text not null references \"app\".\"pikku_roles\" (\"name\") on delete cascade, \"scope\" text not null references \"app\".\"pikku_scopes\" (\"name\") on delete cascade, constraint \"pikku_role_scopes_pk\" primary key (\"role\", \"scope\"))",
+        "create table \"app\".\"pikku_user_role\" (\"user_id\" uuid not null references \"app\".\"user\" (\"id\") on delete cascade, \"role\" text not null references \"app\".\"pikku_roles\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_role_pk\" primary key (\"user_id\", \"role\"))",
+        "create table \"app\".\"pikku_user_scope\" (\"user_id\" uuid not null references \"app\".\"user\" (\"id\") on delete cascade, \"scope\" text not null references \"app\".\"pikku_scopes\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_scope_pk\" primary key (\"user_id\", \"scope\"))",
+        "create index \"pikku_role_scopes_scope_idx\" on \"app\".\"pikku_role_scopes\" (\"scope\")",
+        "create index \"pikku_user_role_role_idx\" on \"app\".\"pikku_user_role\" (\"role\")"
+      ],
+      "flag": [
+        "create table \"app\".\"pikku_feature_flags\" (\"name\" text primary key, \"description\" text, \"any_of\" text, \"enabled\" boolean default false not null, \"rollout_percent\" integer, \"declared\" boolean default true not null, \"updated_by\" text, \"note\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"app\".\"pikku_feature_flag_overrides\" (\"flag\" text not null references \"app\".\"pikku_feature_flags\" (\"name\") on delete cascade, \"subject_id\" text not null, \"subject_kind\" text not null, \"enabled\" boolean not null, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_feature_flag_overrides_pk\" primary key (\"flag\", \"subject_id\"))"
+      ],
+      "trigger-source": [
+        "create table \"app\".\"pikku_trigger_source\" (\"name\" text primary key, \"kind\" text not null, \"base_url\" text, \"label_prefix\" text, \"declared\" boolean default true not null, \"enabled\" boolean default false not null, \"status\" text, \"state\" text, \"detail\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "lease": [
+        "create table \"app\".\"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
+      ],
+      "audit": [
+        "create table \"app\".\"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
+        "create index \"idx_audit_occurred_at\" on \"app\".\"audit\" (\"occurred_at\")",
+        "create index \"idx_audit_user_id\" on \"app\".\"audit\" (\"user_id\")",
+        "create index \"idx_audit_type\" on \"app\".\"audit\" (\"type\")"
+      ],
+      "analytics": [
+        "create table \"app\".\"pikku_analytics_events\" (\"event_id\" text primary key, \"name\" text not null, \"occurred_at\" text not null, \"source\" text not null, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"anonymous_id\" text, \"vendor_ids\" text, \"consent\" text, \"props\" text)",
+        "create index \"idx_pikku_analytics_events_occurred_at\" on \"app\".\"pikku_analytics_events\" (\"occurred_at\")",
+        "create index \"idx_pikku_analytics_events_name\" on \"app\".\"pikku_analytics_events\" (\"name\")"
+      ],
+      "virtual-user": [
+        "create table \"app\".\"virtual_user_run\" (\"run_id\" varchar(36) primary key, \"virtual_user_id\" varchar(255) not null, \"disposition\" varchar(50) not null, \"seed\" bigint not null, \"status\" varchar(50) default 'running' not null, \"goals\" text default '[]' not null, \"memory\" text default '{}' not null, \"findings\" text default '[]' not null, \"intents\" text default '[]' not null, \"tally\" text, \"stopped_by\" varchar(255), \"error\" text, \"started_by\" varchar(255), \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"finished_at\" timestamp)",
+        "create index \"idx_virtual_user_run_created\" on \"app\".\"virtual_user_run\" (\"created_at\")",
+        "create index \"idx_virtual_user_run_virtual_user_id\" on \"app\".\"virtual_user_run\" (\"virtual_user_id\", \"created_at\")",
+        "create table \"app\".\"virtual_user_run_step\" (\"run_id\" varchar(36) not null, \"step_index\" integer not null, \"intent_id\" varchar(255), \"action\" text not null, \"status\" integer, \"ok\" integer, \"response\" text, \"finding_kinds\" text, \"tokens_in\" integer default 0 not null, \"tokens_out\" integer default 0 not null, constraint \"pk_virtual_user_run_step\" primary key (\"run_id\", \"step_index\"))"
+      ],
+      "virtual-user-schedule": [
+        "create table \"app\".\"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
+        "create index \"idx_virtual_user_schedule_due\" on \"app\".\"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ]
+    },
+    "users": {
+      "channel": [
+        "create table \"channels\" (\"channel_id\" text primary key, \"channel_name\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"opening_data\" text default '{}' not null, \"traceparent\" text, \"pikku_user_id\" text, \"state\" text, \"last_wire\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"channel_subscriptions\" (\"channel_id\" text not null references \"channels\" (\"channel_id\") on delete cascade, \"topic\" text not null, constraint \"channel_subscriptions_pk\" primary key (\"channel_id\", \"topic\"))"
+      ],
+      "session": [
+        "create table \"pikku_user_sessions\" (\"pikku_user_id\" text primary key, \"session\" text not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "secret": [
+        "create table \"secrets\" (\"key\" varchar(255) primary key, \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"secret_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"secrets_audit\" (\"id\" varchar(36) primary key, \"secret_key\" varchar(255) not null, \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "credential": [
+        "create table \"credentials\" (\"name\" varchar(255) not null, \"user_id\" varchar(255), \"ciphertext\" text not null, \"wrapped_dek\" text not null, \"key_version\" integer not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "CREATE UNIQUE INDEX credentials_name_user_id_unique ON \"credentials\" (name, COALESCE(user_id, ''))",
+        "create table \"credential_kek_salts\" (\"key_version\" integer primary key, \"salt\" varchar(64) not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"credentials_audit\" (\"id\" varchar(36) primary key, \"credential_name\" varchar(255) not null, \"user_id\" varchar(255), \"action\" varchar(20) not null, \"performed_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "deployment": [
+        "create table \"pikku_deployments\" (\"deployment_id\" text primary key, \"endpoint\" text not null, \"last_heartbeat\" timestamp default CURRENT_TIMESTAMP not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_deployment_functions\" (\"deployment_id\" text not null references \"pikku_deployments\" (\"deployment_id\") on delete cascade, \"function_name\" text not null, constraint \"pikku_deployment_functions_pk\" primary key (\"deployment_id\", \"function_name\"))",
+        "create index \"idx_pikku_deployments_heartbeat\" on \"pikku_deployments\" (\"last_heartbeat\")",
+        "create index \"idx_pikku_deployment_functions_name\" on \"pikku_deployment_functions\" (\"function_name\")"
+      ],
+      "webhook": [
+        "create table \"webhook_delivery\" (\"delivery_id\" text primary key, \"organization_id\" text, \"url\" text not null, \"event\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create table \"webhook_delivery_attempt\" (\"attempt_id\" text primary key, \"delivery_id\" text not null references \"webhook_delivery\" (\"delivery_id\") on delete cascade, \"attempt_number\" integer not null, \"status_code\" integer, \"response_body\" text, \"error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_webhook_delivery_org\" on \"webhook_delivery\" (\"organization_id\")",
+        "create index \"idx_webhook_delivery_attempt_delivery\" on \"webhook_delivery_attempt\" (\"delivery_id\")"
+      ],
+      "incoming-webhook": [
+        "create table \"webhook_receipt\" (\"receipt_id\" text primary key, \"source\" text not null, \"event\" text not null, \"provider_event_id\" text, \"status\" text default 'pending' not null, \"attempts\" integer default 0 not null, \"last_error\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"delivered_at\" timestamp)",
+        "create unique index \"idx_webhook_receipt_provider_event\" on \"webhook_receipt\" (\"source\", \"event\", \"provider_event_id\")",
+        "create index \"idx_webhook_receipt_source_created\" on \"webhook_receipt\" (\"source\", \"created_at\")"
+      ],
+      "workflow": [
+        "create table \"workflow_runs\" (\"workflow_run_id\" text primary key, \"workflow\" text not null, \"status\" text not null, \"input\" text not null, \"output\" text, \"error\" text, \"state\" text default '{}', \"inline\" boolean default false, \"graph_hash\" text, \"deterministic\" boolean default false, \"planned_steps\" text, \"wire\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"workflow_step\" (\"workflow_step_id\" text primary key, \"workflow_run_id\" text not null references \"workflow_runs\" (\"workflow_run_id\") on delete cascade, \"step_name\" text not null, \"rpc_name\" text, \"data\" text, \"status\" text default 'pending' not null, \"result\" text, \"error\" text, \"child_run_id\" text, \"branch_taken\" text, \"retries\" integer, \"retry_delay\" text, \"from_step_name\" text, \"current_attempt\" integer, \"lease_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_step_run_name_unique\" unique (\"workflow_run_id\", \"step_name\"))",
+        "create table \"workflow_step_history\" (\"history_id\" text primary key, \"workflow_step_id\" text not null references \"workflow_step\" (\"workflow_step_id\") on delete cascade, \"status\" text not null, \"result\" text, \"error\" text, \"attempt\" integer, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"running_at\" timestamp, \"scheduled_at\" timestamp, \"succeeded_at\" timestamp, \"failed_at\" timestamp)",
+        "create table \"workflow_versions\" (\"workflow_name\" text not null, \"graph_hash\" text not null, \"graph\" text not null, \"source\" text not null, \"status\" text default 'active' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"workflow_versions_pk\" primary key (\"workflow_name\", \"graph_hash\"))",
+        "create index \"idx_workflow_runs_status_created\" on \"workflow_runs\" (\"status\", \"created_at\")",
+        "create index \"idx_workflow_runs_workflow_created\" on \"workflow_runs\" (\"workflow\", \"created_at\")",
+        "create index \"idx_workflow_step_run_status\" on \"workflow_step\" (\"workflow_run_id\", \"status\")",
+        "create index \"idx_workflow_step_history_step\" on \"workflow_step_history\" (\"workflow_step_id\", \"created_at\")",
+        "create index \"idx_workflow_versions_source_status\" on \"workflow_versions\" (\"source\", \"status\")"
+      ],
+      "agent": [
+        "create table \"agent_threads\" (\"id\" varchar(36) primary key, \"resource_id\" varchar(255) not null, \"title\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_threads_resource\" on \"agent_threads\" (\"resource_id\")",
+        "create table \"agent_message\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"role\" varchar(50) not null, \"content\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_message_thread\" on \"agent_message\" (\"thread_id\", \"created_at\")",
+        "create table \"agent_tool_call\" (\"id\" varchar(36) primary key, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"message_id\" varchar(36) not null references \"agent_message\" (\"id\") on delete cascade, \"run_id\" varchar(36), \"tool_name\" varchar(255) not null, \"args\" text not null, \"result\" text, \"approval_status\" varchar(50), \"approval_type\" varchar(50), \"agent_run_id\" varchar(36), \"display_tool_name\" varchar(255), \"display_args\" text, \"approval_expires_at\" bigint, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_tool_call_thread\" on \"agent_tool_call\" (\"thread_id\")",
+        "create index \"idx_agent_tool_call_message\" on \"agent_tool_call\" (\"message_id\")",
+        "create table \"agent_working_memory\" (\"id\" varchar(255) not null, \"scope\" varchar(50) not null, \"data\" text not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"agent_working_memory_pk\" primary key (\"id\", \"scope\"))",
+        "create table \"agent_run\" (\"run_id\" varchar(36) primary key, \"agent_name\" varchar(255) not null, \"thread_id\" varchar(36) not null references \"agent_threads\" (\"id\") on delete cascade, \"resource_id\" varchar(255) not null, \"status\" varchar(50) default 'running' not null, \"error_message\" text, \"suspend_reason\" text, \"missing_rpcs\" text, \"pending_approvals\" text, \"usage_input_tokens\" integer default 0 not null, \"usage_output_tokens\" integer default 0 not null, \"usage_model\" varchar(255) default '' not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_thread\" on \"agent_run\" (\"thread_id\", \"created_at\")",
+        "create table \"agent_run_score\" (\"id\" varchar(36) primary key, \"run_id\" varchar(36) not null references \"agent_run\" (\"run_id\") on delete cascade, \"scorer_name\" varchar(255) not null, \"score\" real not null, \"reason\" text, \"metadata\" text, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create index \"idx_agent_run_score_run\" on \"agent_run_score\" (\"run_id\", \"created_at\")"
+      ],
+      "scope": [
+        "create table \"pikku_scopes\" (\"name\" text primary key, \"description\" text, \"declared\" boolean default true not null)",
+        "create table \"pikku_roles\" (\"name\" text primary key, \"description\" text, \"system\" boolean default false not null, \"declared\" boolean default true not null, \"created_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_role_scopes\" (\"role\" text not null references \"pikku_roles\" (\"name\") on delete cascade, \"scope\" text not null references \"pikku_scopes\" (\"name\") on delete cascade, constraint \"pikku_role_scopes_pk\" primary key (\"role\", \"scope\"))",
+        "create table \"pikku_user_role\" (\"user_id\" text not null references \"users\" (\"id\") on delete cascade, \"role\" text not null references \"pikku_roles\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_role_pk\" primary key (\"user_id\", \"role\"))",
+        "create table \"pikku_user_scope\" (\"user_id\" text not null references \"users\" (\"id\") on delete cascade, \"scope\" text not null references \"pikku_scopes\" (\"name\") on delete cascade, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_user_scope_pk\" primary key (\"user_id\", \"scope\"))",
+        "create index \"pikku_role_scopes_scope_idx\" on \"pikku_role_scopes\" (\"scope\")",
+        "create index \"pikku_user_role_role_idx\" on \"pikku_user_role\" (\"role\")"
+      ],
+      "flag": [
+        "create table \"pikku_feature_flags\" (\"name\" text primary key, \"description\" text, \"any_of\" text, \"enabled\" boolean default false not null, \"rollout_percent\" integer, \"declared\" boolean default true not null, \"updated_by\" text, \"note\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)",
+        "create table \"pikku_feature_flag_overrides\" (\"flag\" text not null references \"pikku_feature_flags\" (\"name\") on delete cascade, \"subject_id\" text not null, \"subject_kind\" text not null, \"enabled\" boolean not null, \"granted_by\" text, \"granted_at\" timestamp default CURRENT_TIMESTAMP not null, constraint \"pikku_feature_flag_overrides_pk\" primary key (\"flag\", \"subject_id\"))"
+      ],
+      "trigger-source": [
+        "create table \"pikku_trigger_source\" (\"name\" text primary key, \"kind\" text not null, \"base_url\" text, \"label_prefix\" text, \"declared\" boolean default true not null, \"enabled\" boolean default false not null, \"status\" text, \"state\" text, \"detail\" text, \"updated_at\" timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "lease": [
+        "create table \"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
+      ],
+      "audit": [
+        "create table \"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
+        "create index \"idx_audit_occurred_at\" on \"audit\" (\"occurred_at\")",
+        "create index \"idx_audit_user_id\" on \"audit\" (\"user_id\")",
+        "create index \"idx_audit_type\" on \"audit\" (\"type\")"
+      ],
+      "analytics": [
+        "create table \"pikku_analytics_events\" (\"event_id\" text primary key, \"name\" text not null, \"occurred_at\" text not null, \"source\" text not null, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"anonymous_id\" text, \"vendor_ids\" text, \"consent\" text, \"props\" text)",
+        "create index \"idx_pikku_analytics_events_occurred_at\" on \"pikku_analytics_events\" (\"occurred_at\")",
+        "create index \"idx_pikku_analytics_events_name\" on \"pikku_analytics_events\" (\"name\")"
+      ],
+      "virtual-user": [
+        "create table \"virtual_user_run\" (\"run_id\" varchar(36) primary key, \"virtual_user_id\" varchar(255) not null, \"disposition\" varchar(50) not null, \"seed\" bigint not null, \"status\" varchar(50) default 'running' not null, \"goals\" text default '[]' not null, \"memory\" text default '{}' not null, \"findings\" text default '[]' not null, \"intents\" text default '[]' not null, \"tally\" text, \"stopped_by\" varchar(255), \"error\" text, \"started_by\" varchar(255), \"created_at\" timestamp default CURRENT_TIMESTAMP not null, \"finished_at\" timestamp)",
+        "create index \"idx_virtual_user_run_created\" on \"virtual_user_run\" (\"created_at\")",
+        "create index \"idx_virtual_user_run_virtual_user_id\" on \"virtual_user_run\" (\"virtual_user_id\", \"created_at\")",
+        "create table \"virtual_user_run_step\" (\"run_id\" varchar(36) not null, \"step_index\" integer not null, \"intent_id\" varchar(255), \"action\" text not null, \"status\" integer, \"ok\" integer, \"response\" text, \"finding_kinds\" text, \"tokens_in\" integer default 0 not null, \"tokens_out\" integer default 0 not null, constraint \"pk_virtual_user_run_step\" primary key (\"run_id\", \"step_index\"))"
+      ],
+      "virtual-user-schedule": [
+        "create table \"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
+        "create index \"idx_virtual_user_schedule_due\" on \"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ]
+    }
+  },
+  "mysql": {
+    "plain": {
+      "channel": [
+        "create table `channels` (`channel_id` varchar(255) primary key, `channel_name` longtext not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `opening_data` longtext default ('{}') not null, `traceparent` longtext, `pikku_user_id` longtext, `state` longtext, `last_wire` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `channel_subscriptions` (`channel_id` varchar(255) not null, `topic` varchar(255) not null, constraint `channel_subscriptions_pk` primary key (`channel_id`, `topic`), constraint `channel_subscriptions_channel_id_fk` foreign key (`channel_id`) references `channels` (`channel_id`) on delete cascade)"
+      ],
+      "session": [
+        "create table `pikku_user_sessions` (`pikku_user_id` varchar(255) primary key, `session` longtext not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "secret": [
+        "create table `secrets` (`key` varchar(255) primary key, `ciphertext` longtext not null, `wrapped_dek` longtext not null, `key_version` integer not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `secret_kek_salts` (`key_version` integer primary key, `salt` varchar(64) not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `secrets_audit` (`id` varchar(36) primary key, `secret_key` varchar(255) not null, `action` varchar(20) not null, `performed_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "credential": [
+        "create table `credentials` (`name` varchar(255) not null, `user_id` varchar(255), `ciphertext` longtext not null, `wrapped_dek` longtext not null, `key_version` integer not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "CREATE UNIQUE INDEX credentials_name_user_id_unique ON `credentials` (name, (COALESCE(user_id, '')))",
+        "create table `credential_kek_salts` (`key_version` integer primary key, `salt` varchar(64) not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `credentials_audit` (`id` varchar(36) primary key, `credential_name` varchar(255) not null, `user_id` varchar(255), `action` varchar(20) not null, `performed_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "deployment": [
+        "create table `pikku_deployments` (`deployment_id` varchar(255) primary key, `endpoint` longtext not null, `last_heartbeat` timestamp default CURRENT_TIMESTAMP not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `pikku_deployment_functions` (`deployment_id` varchar(255) not null, `function_name` varchar(255) not null, constraint `pikku_deployment_functions_pk` primary key (`deployment_id`, `function_name`), constraint `pikku_deployment_functions_deployment_id_fk` foreign key (`deployment_id`) references `pikku_deployments` (`deployment_id`) on delete cascade)",
+        "create index `idx_pikku_deployments_heartbeat` on `pikku_deployments` (`last_heartbeat`)",
+        "create index `idx_pikku_deployment_functions_name` on `pikku_deployment_functions` (`function_name`)"
+      ],
+      "webhook": [
+        "create table `webhook_delivery` (`delivery_id` varchar(255) primary key, `organization_id` varchar(255), `url` longtext not null, `event` longtext, `status` longtext default ('pending') not null, `attempts` integer default 0 not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, `delivered_at` timestamp)",
+        "create table `webhook_delivery_attempt` (`attempt_id` varchar(255) primary key, `delivery_id` varchar(255) not null, `attempt_number` integer not null, `status_code` integer, `response_body` longtext, `error` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `webhook_delivery_attempt_delivery_id_fk` foreign key (`delivery_id`) references `webhook_delivery` (`delivery_id`) on delete cascade)",
+        "create index `idx_webhook_delivery_org` on `webhook_delivery` (`organization_id`)",
+        "create index `idx_webhook_delivery_attempt_delivery` on `webhook_delivery_attempt` (`delivery_id`)"
+      ],
+      "incoming-webhook": [
+        "create table `webhook_receipt` (`receipt_id` varchar(255) primary key, `source` varchar(255) not null, `event` varchar(255) not null, `provider_event_id` varchar(255), `status` longtext default ('pending') not null, `attempts` integer default 0 not null, `last_error` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, `delivered_at` timestamp)",
+        "create unique index `idx_webhook_receipt_provider_event` on `webhook_receipt` (`source`, `event`, `provider_event_id`)",
+        "create index `idx_webhook_receipt_source_created` on `webhook_receipt` (`source`, `created_at`)"
+      ],
+      "workflow": [
+        "create table `workflow_runs` (`workflow_run_id` varchar(255) primary key, `workflow` varchar(255) not null, `status` varchar(255) not null, `input` longtext not null, `output` longtext, `error` longtext, `state` longtext default ('{}'), `inline` boolean default false, `graph_hash` varchar(255), `deterministic` boolean default false, `planned_steps` longtext, `wire` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `workflow_step` (`workflow_step_id` varchar(255) primary key, `workflow_run_id` varchar(255) not null, `step_name` varchar(255) not null, `rpc_name` longtext, `data` longtext, `status` varchar(255) default ('pending') not null, `result` longtext, `error` longtext, `child_run_id` longtext, `branch_taken` longtext, `retries` integer, `retry_delay` longtext, `from_step_name` longtext, `current_attempt` integer, `lease_expires_at` bigint, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, constraint `workflow_step_run_name_unique` unique (`workflow_run_id`, `step_name`), constraint `workflow_step_workflow_run_id_fk` foreign key (`workflow_run_id`) references `workflow_runs` (`workflow_run_id`) on delete cascade)",
+        "create table `workflow_step_history` (`history_id` varchar(255) primary key, `workflow_step_id` varchar(255) not null, `status` varchar(255) not null, `result` longtext, `error` longtext, `attempt` integer, `created_at` timestamp default CURRENT_TIMESTAMP not null, `running_at` timestamp, `scheduled_at` timestamp, `succeeded_at` timestamp, `failed_at` timestamp, constraint `workflow_step_history_workflow_step_id_fk` foreign key (`workflow_step_id`) references `workflow_step` (`workflow_step_id`) on delete cascade)",
+        "create table `workflow_versions` (`workflow_name` varchar(255) not null, `graph_hash` varchar(255) not null, `graph` longtext not null, `source` varchar(255) not null, `status` varchar(255) default ('active') not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `workflow_versions_pk` primary key (`workflow_name`, `graph_hash`))",
+        "create index `idx_workflow_runs_status_created` on `workflow_runs` (`status`, `created_at`)",
+        "create index `idx_workflow_runs_workflow_created` on `workflow_runs` (`workflow`, `created_at`)",
+        "create index `idx_workflow_step_run_status` on `workflow_step` (`workflow_run_id`, `status`)",
+        "create index `idx_workflow_step_history_step` on `workflow_step_history` (`workflow_step_id`, `created_at`)",
+        "create index `idx_workflow_versions_source_status` on `workflow_versions` (`source`, `status`)"
+      ],
+      "agent": [
+        "create table `agent_threads` (`id` varchar(36) primary key, `resource_id` varchar(255) not null, `title` longtext, `metadata` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create index `idx_agent_threads_resource` on `agent_threads` (`resource_id`)",
+        "create table `agent_message` (`id` varchar(36) primary key, `thread_id` varchar(36) not null, `role` varchar(50) not null, `content` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_message_thread_id_fk` foreign key (`thread_id`) references `agent_threads` (`id`) on delete cascade)",
+        "create index `idx_agent_message_thread` on `agent_message` (`thread_id`, `created_at`)",
+        "create table `agent_tool_call` (`id` varchar(36) primary key, `thread_id` varchar(36) not null, `message_id` varchar(36) not null, `run_id` varchar(36), `tool_name` varchar(255) not null, `args` longtext not null, `result` longtext, `approval_status` varchar(50), `approval_type` varchar(50), `agent_run_id` varchar(36), `display_tool_name` varchar(255), `display_args` longtext, `approval_expires_at` bigint, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_tool_call_thread_id_fk` foreign key (`thread_id`) references `agent_threads` (`id`) on delete cascade, constraint `agent_tool_call_message_id_fk` foreign key (`message_id`) references `agent_message` (`id`) on delete cascade)",
+        "create index `idx_agent_tool_call_thread` on `agent_tool_call` (`thread_id`)",
+        "create index `idx_agent_tool_call_message` on `agent_tool_call` (`message_id`)",
+        "create table `agent_working_memory` (`id` varchar(255) not null, `scope` varchar(50) not null, `data` longtext not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_working_memory_pk` primary key (`id`, `scope`))",
+        "create table `agent_run` (`run_id` varchar(36) primary key, `agent_name` varchar(255) not null, `thread_id` varchar(36) not null, `resource_id` varchar(255) not null, `status` varchar(50) default ('running') not null, `error_message` longtext, `suspend_reason` longtext, `missing_rpcs` longtext, `pending_approvals` longtext, `usage_input_tokens` integer default 0 not null, `usage_output_tokens` integer default 0 not null, `usage_model` varchar(255) default ('') not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_run_thread_id_fk` foreign key (`thread_id`) references `agent_threads` (`id`) on delete cascade)",
+        "create index `idx_agent_run_thread` on `agent_run` (`thread_id`, `created_at`)",
+        "create table `agent_run_score` (`id` varchar(36) primary key, `run_id` varchar(36) not null, `scorer_name` varchar(255) not null, `score` real not null, `reason` longtext, `metadata` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_run_score_run_id_fk` foreign key (`run_id`) references `agent_run` (`run_id`) on delete cascade)",
+        "create index `idx_agent_run_score_run` on `agent_run_score` (`run_id`, `created_at`)"
+      ],
+      "scope": [
+        "create table `pikku_scopes` (`name` varchar(255) primary key, `description` longtext, `declared` boolean default true not null)",
+        "create table `pikku_roles` (`name` varchar(255) primary key, `description` longtext, `system` boolean default false not null, `declared` boolean default true not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `pikku_role_scopes` (`role` varchar(255) not null, `scope` varchar(255) not null, constraint `pikku_role_scopes_pk` primary key (`role`, `scope`), constraint `pikku_role_scopes_role_fk` foreign key (`role`) references `pikku_roles` (`name`) on delete cascade, constraint `pikku_role_scopes_scope_fk` foreign key (`scope`) references `pikku_scopes` (`name`) on delete cascade)",
+        "create table `pikku_user_role` (`user_id` text not null, `role` varchar(255) not null, `granted_by` longtext, `granted_at` timestamp default CURRENT_TIMESTAMP not null, constraint `pikku_user_role_pk` primary key (`user_id`, `role`), constraint `pikku_user_role_user_id_fk` foreign key (`user_id`) references `user` (`id`) on delete cascade, constraint `pikku_user_role_role_fk` foreign key (`role`) references `pikku_roles` (`name`) on delete cascade)",
+        "create table `pikku_user_scope` (`user_id` text not null, `scope` varchar(255) not null, `granted_by` longtext, `granted_at` timestamp default CURRENT_TIMESTAMP not null, constraint `pikku_user_scope_pk` primary key (`user_id`, `scope`), constraint `pikku_user_scope_user_id_fk` foreign key (`user_id`) references `user` (`id`) on delete cascade, constraint `pikku_user_scope_scope_fk` foreign key (`scope`) references `pikku_scopes` (`name`) on delete cascade)",
+        "create index `pikku_role_scopes_scope_idx` on `pikku_role_scopes` (`scope`)",
+        "create index `pikku_user_role_role_idx` on `pikku_user_role` (`role`)"
+      ],
+      "flag": [
+        "create table `pikku_feature_flags` (`name` varchar(255) primary key, `description` longtext, `any_of` longtext, `enabled` boolean default false not null, `rollout_percent` integer, `declared` boolean default true not null, `updated_by` longtext, `note` longtext, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `pikku_feature_flag_overrides` (`flag` varchar(255) not null, `subject_id` varchar(255) not null, `subject_kind` longtext not null, `enabled` boolean not null, `granted_by` longtext, `granted_at` timestamp default CURRENT_TIMESTAMP not null, constraint `pikku_feature_flag_overrides_pk` primary key (`flag`, `subject_id`), constraint `pikku_feature_flag_overrides_flag_fk` foreign key (`flag`) references `pikku_feature_flags` (`name`) on delete cascade)"
+      ],
+      "trigger-source": [
+        "create table `pikku_trigger_source` (`name` varchar(255) primary key, `kind` longtext not null, `base_url` longtext, `label_prefix` longtext, `declared` boolean default true not null, `enabled` boolean default false not null, `status` longtext, `state` longtext, `detail` longtext, `updated_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "lease": [
+        "create table `pikku_lease` (`key` varchar(255) primary key, `holder` longtext not null, `token` integer not null, `expires_at` bigint not null)"
+      ],
+      "audit": [
+        "create table `audit` (`audit_id` varchar(255) primary key, `occurred_at` varchar(255) not null, `type` varchar(255) not null, `source` longtext default ('auto') not null, `outcome` longtext, `function_id` longtext, `wire_type` longtext, `trace_id` longtext, `transaction_id` longtext, `query_id` longtext, `user_id` varchar(255), `org_id` longtext, `pikku_user_id` longtext, `tables` longtext, `changed_cols` longtext, `event` longtext, `old` longtext, `data` longtext)",
+        "create index `idx_audit_occurred_at` on `audit` (`occurred_at`)",
+        "create index `idx_audit_user_id` on `audit` (`user_id`)",
+        "create index `idx_audit_type` on `audit` (`type`)"
+      ],
+      "analytics": [
+        "create table `pikku_analytics_events` (`event_id` varchar(255) primary key, `name` varchar(255) not null, `occurred_at` varchar(255) not null, `source` longtext not null, `function_id` longtext, `wire_type` longtext, `trace_id` longtext, `user_id` longtext, `org_id` longtext, `pikku_user_id` longtext, `anonymous_id` longtext, `vendor_ids` longtext, `consent` longtext, `props` longtext)",
+        "create index `idx_pikku_analytics_events_occurred_at` on `pikku_analytics_events` (`occurred_at`)",
+        "create index `idx_pikku_analytics_events_name` on `pikku_analytics_events` (`name`)"
+      ],
+      "virtual-user": [
+        "create table `virtual_user_run` (`run_id` varchar(36) primary key, `virtual_user_id` varchar(255) not null, `disposition` varchar(50) not null, `seed` bigint not null, `status` varchar(50) default ('running') not null, `goals` longtext default ('[]') not null, `memory` longtext default ('{}') not null, `findings` longtext default ('[]') not null, `intents` longtext default ('[]') not null, `tally` longtext, `stopped_by` varchar(255), `error` longtext, `started_by` varchar(255), `created_at` timestamp default CURRENT_TIMESTAMP not null, `finished_at` timestamp)",
+        "create index `idx_virtual_user_run_created` on `virtual_user_run` (`created_at`)",
+        "create index `idx_virtual_user_run_virtual_user_id` on `virtual_user_run` (`virtual_user_id`, `created_at`)",
+        "create table `virtual_user_run_step` (`run_id` varchar(36) not null, `step_index` integer not null, `intent_id` varchar(255), `action` longtext not null, `status` integer, `ok` integer, `response` longtext, `finding_kinds` longtext, `tokens_in` integer default 0 not null, `tokens_out` integer default 0 not null, constraint `pk_virtual_user_run_step` primary key (`run_id`, `step_index`))"
+      ],
+      "virtual-user-schedule": [
+        "create table `virtual_user_schedule` (`virtual_user_id` varchar(255) primary key, `enabled` integer default 0 not null, `disposition` varchar(50) not null, `goals` longtext default ('[]') not null, `budget` longtext, `min_interval_ms` bigint not null, `max_interval_ms` bigint not null, `next_run_at` timestamp not null, `last_run_id` varchar(36), `last_run_at` timestamp)",
+        "create index `idx_virtual_user_schedule_due` on `virtual_user_schedule` (`enabled`, `next_run_at`)"
+      ]
+    },
+    "app": {
+      "channel": [
+        "create table `app`.`channels` (`channel_id` varchar(255) primary key, `channel_name` longtext not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `opening_data` longtext default ('{}') not null, `traceparent` longtext, `pikku_user_id` longtext, `state` longtext, `last_wire` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `app`.`channel_subscriptions` (`channel_id` varchar(255) not null, `topic` varchar(255) not null, constraint `channel_subscriptions_pk` primary key (`channel_id`, `topic`), constraint `channel_subscriptions_channel_id_fk` foreign key (`channel_id`) references `app`.`channels` (`channel_id`) on delete cascade)"
+      ],
+      "session": [
+        "create table `app`.`pikku_user_sessions` (`pikku_user_id` varchar(255) primary key, `session` longtext not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "secret": [
+        "create table `app`.`secrets` (`key` varchar(255) primary key, `ciphertext` longtext not null, `wrapped_dek` longtext not null, `key_version` integer not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `app`.`secret_kek_salts` (`key_version` integer primary key, `salt` varchar(64) not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `app`.`secrets_audit` (`id` varchar(36) primary key, `secret_key` varchar(255) not null, `action` varchar(20) not null, `performed_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "credential": [
+        "create table `app`.`credentials` (`name` varchar(255) not null, `user_id` varchar(255), `ciphertext` longtext not null, `wrapped_dek` longtext not null, `key_version` integer not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "CREATE UNIQUE INDEX credentials_name_user_id_unique ON `app`.`credentials` (name, (COALESCE(user_id, '')))",
+        "create table `app`.`credential_kek_salts` (`key_version` integer primary key, `salt` varchar(64) not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `app`.`credentials_audit` (`id` varchar(36) primary key, `credential_name` varchar(255) not null, `user_id` varchar(255), `action` varchar(20) not null, `performed_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "deployment": [
+        "create table `app`.`pikku_deployments` (`deployment_id` varchar(255) primary key, `endpoint` longtext not null, `last_heartbeat` timestamp default CURRENT_TIMESTAMP not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `app`.`pikku_deployment_functions` (`deployment_id` varchar(255) not null, `function_name` varchar(255) not null, constraint `pikku_deployment_functions_pk` primary key (`deployment_id`, `function_name`), constraint `pikku_deployment_functions_deployment_id_fk` foreign key (`deployment_id`) references `app`.`pikku_deployments` (`deployment_id`) on delete cascade)",
+        "create index `idx_pikku_deployments_heartbeat` on `app`.`pikku_deployments` (`last_heartbeat`)",
+        "create index `idx_pikku_deployment_functions_name` on `app`.`pikku_deployment_functions` (`function_name`)"
+      ],
+      "webhook": [
+        "create table `app`.`webhook_delivery` (`delivery_id` varchar(255) primary key, `organization_id` varchar(255), `url` longtext not null, `event` longtext, `status` longtext default ('pending') not null, `attempts` integer default 0 not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, `delivered_at` timestamp)",
+        "create table `app`.`webhook_delivery_attempt` (`attempt_id` varchar(255) primary key, `delivery_id` varchar(255) not null, `attempt_number` integer not null, `status_code` integer, `response_body` longtext, `error` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `webhook_delivery_attempt_delivery_id_fk` foreign key (`delivery_id`) references `app`.`webhook_delivery` (`delivery_id`) on delete cascade)",
+        "create index `idx_webhook_delivery_org` on `app`.`webhook_delivery` (`organization_id`)",
+        "create index `idx_webhook_delivery_attempt_delivery` on `app`.`webhook_delivery_attempt` (`delivery_id`)"
+      ],
+      "incoming-webhook": [
+        "create table `app`.`webhook_receipt` (`receipt_id` varchar(255) primary key, `source` varchar(255) not null, `event` varchar(255) not null, `provider_event_id` varchar(255), `status` longtext default ('pending') not null, `attempts` integer default 0 not null, `last_error` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, `delivered_at` timestamp)",
+        "create unique index `idx_webhook_receipt_provider_event` on `app`.`webhook_receipt` (`source`, `event`, `provider_event_id`)",
+        "create index `idx_webhook_receipt_source_created` on `app`.`webhook_receipt` (`source`, `created_at`)"
+      ],
+      "workflow": [
+        "create table `app`.`workflow_runs` (`workflow_run_id` varchar(255) primary key, `workflow` varchar(255) not null, `status` varchar(255) not null, `input` longtext not null, `output` longtext, `error` longtext, `state` longtext default ('{}'), `inline` boolean default false, `graph_hash` varchar(255), `deterministic` boolean default false, `planned_steps` longtext, `wire` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `app`.`workflow_step` (`workflow_step_id` varchar(255) primary key, `workflow_run_id` varchar(255) not null, `step_name` varchar(255) not null, `rpc_name` longtext, `data` longtext, `status` varchar(255) default ('pending') not null, `result` longtext, `error` longtext, `child_run_id` longtext, `branch_taken` longtext, `retries` integer, `retry_delay` longtext, `from_step_name` longtext, `current_attempt` integer, `lease_expires_at` bigint, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, constraint `workflow_step_run_name_unique` unique (`workflow_run_id`, `step_name`), constraint `workflow_step_workflow_run_id_fk` foreign key (`workflow_run_id`) references `app`.`workflow_runs` (`workflow_run_id`) on delete cascade)",
+        "create table `app`.`workflow_step_history` (`history_id` varchar(255) primary key, `workflow_step_id` varchar(255) not null, `status` varchar(255) not null, `result` longtext, `error` longtext, `attempt` integer, `created_at` timestamp default CURRENT_TIMESTAMP not null, `running_at` timestamp, `scheduled_at` timestamp, `succeeded_at` timestamp, `failed_at` timestamp, constraint `workflow_step_history_workflow_step_id_fk` foreign key (`workflow_step_id`) references `app`.`workflow_step` (`workflow_step_id`) on delete cascade)",
+        "create table `app`.`workflow_versions` (`workflow_name` varchar(255) not null, `graph_hash` varchar(255) not null, `graph` longtext not null, `source` varchar(255) not null, `status` varchar(255) default ('active') not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `workflow_versions_pk` primary key (`workflow_name`, `graph_hash`))",
+        "create index `idx_workflow_runs_status_created` on `app`.`workflow_runs` (`status`, `created_at`)",
+        "create index `idx_workflow_runs_workflow_created` on `app`.`workflow_runs` (`workflow`, `created_at`)",
+        "create index `idx_workflow_step_run_status` on `app`.`workflow_step` (`workflow_run_id`, `status`)",
+        "create index `idx_workflow_step_history_step` on `app`.`workflow_step_history` (`workflow_step_id`, `created_at`)",
+        "create index `idx_workflow_versions_source_status` on `app`.`workflow_versions` (`source`, `status`)"
+      ],
+      "agent": [
+        "create table `app`.`agent_threads` (`id` varchar(36) primary key, `resource_id` varchar(255) not null, `title` longtext, `metadata` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create index `idx_agent_threads_resource` on `app`.`agent_threads` (`resource_id`)",
+        "create table `app`.`agent_message` (`id` varchar(36) primary key, `thread_id` varchar(36) not null, `role` varchar(50) not null, `content` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_message_thread_id_fk` foreign key (`thread_id`) references `app`.`agent_threads` (`id`) on delete cascade)",
+        "create index `idx_agent_message_thread` on `app`.`agent_message` (`thread_id`, `created_at`)",
+        "create table `app`.`agent_tool_call` (`id` varchar(36) primary key, `thread_id` varchar(36) not null, `message_id` varchar(36) not null, `run_id` varchar(36), `tool_name` varchar(255) not null, `args` longtext not null, `result` longtext, `approval_status` varchar(50), `approval_type` varchar(50), `agent_run_id` varchar(36), `display_tool_name` varchar(255), `display_args` longtext, `approval_expires_at` bigint, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_tool_call_thread_id_fk` foreign key (`thread_id`) references `app`.`agent_threads` (`id`) on delete cascade, constraint `agent_tool_call_message_id_fk` foreign key (`message_id`) references `app`.`agent_message` (`id`) on delete cascade)",
+        "create index `idx_agent_tool_call_thread` on `app`.`agent_tool_call` (`thread_id`)",
+        "create index `idx_agent_tool_call_message` on `app`.`agent_tool_call` (`message_id`)",
+        "create table `app`.`agent_working_memory` (`id` varchar(255) not null, `scope` varchar(50) not null, `data` longtext not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_working_memory_pk` primary key (`id`, `scope`))",
+        "create table `app`.`agent_run` (`run_id` varchar(36) primary key, `agent_name` varchar(255) not null, `thread_id` varchar(36) not null, `resource_id` varchar(255) not null, `status` varchar(50) default ('running') not null, `error_message` longtext, `suspend_reason` longtext, `missing_rpcs` longtext, `pending_approvals` longtext, `usage_input_tokens` integer default 0 not null, `usage_output_tokens` integer default 0 not null, `usage_model` varchar(255) default ('') not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_run_thread_id_fk` foreign key (`thread_id`) references `app`.`agent_threads` (`id`) on delete cascade)",
+        "create index `idx_agent_run_thread` on `app`.`agent_run` (`thread_id`, `created_at`)",
+        "create table `app`.`agent_run_score` (`id` varchar(36) primary key, `run_id` varchar(36) not null, `scorer_name` varchar(255) not null, `score` real not null, `reason` longtext, `metadata` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_run_score_run_id_fk` foreign key (`run_id`) references `app`.`agent_run` (`run_id`) on delete cascade)",
+        "create index `idx_agent_run_score_run` on `app`.`agent_run_score` (`run_id`, `created_at`)"
+      ],
+      "scope": [
+        "create table `app`.`pikku_scopes` (`name` varchar(255) primary key, `description` longtext, `declared` boolean default true not null)",
+        "create table `app`.`pikku_roles` (`name` varchar(255) primary key, `description` longtext, `system` boolean default false not null, `declared` boolean default true not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `app`.`pikku_role_scopes` (`role` varchar(255) not null, `scope` varchar(255) not null, constraint `pikku_role_scopes_pk` primary key (`role`, `scope`), constraint `pikku_role_scopes_role_fk` foreign key (`role`) references `app`.`pikku_roles` (`name`) on delete cascade, constraint `pikku_role_scopes_scope_fk` foreign key (`scope`) references `app`.`pikku_scopes` (`name`) on delete cascade)",
+        "create table `app`.`pikku_user_role` (`user_id` uuid not null, `role` varchar(255) not null, `granted_by` longtext, `granted_at` timestamp default CURRENT_TIMESTAMP not null, constraint `pikku_user_role_pk` primary key (`user_id`, `role`), constraint `pikku_user_role_user_id_fk` foreign key (`user_id`) references `app`.`user` (`id`) on delete cascade, constraint `pikku_user_role_role_fk` foreign key (`role`) references `app`.`pikku_roles` (`name`) on delete cascade)",
+        "create table `app`.`pikku_user_scope` (`user_id` uuid not null, `scope` varchar(255) not null, `granted_by` longtext, `granted_at` timestamp default CURRENT_TIMESTAMP not null, constraint `pikku_user_scope_pk` primary key (`user_id`, `scope`), constraint `pikku_user_scope_user_id_fk` foreign key (`user_id`) references `app`.`user` (`id`) on delete cascade, constraint `pikku_user_scope_scope_fk` foreign key (`scope`) references `app`.`pikku_scopes` (`name`) on delete cascade)",
+        "create index `pikku_role_scopes_scope_idx` on `app`.`pikku_role_scopes` (`scope`)",
+        "create index `pikku_user_role_role_idx` on `app`.`pikku_user_role` (`role`)"
+      ],
+      "flag": [
+        "create table `app`.`pikku_feature_flags` (`name` varchar(255) primary key, `description` longtext, `any_of` longtext, `enabled` boolean default false not null, `rollout_percent` integer, `declared` boolean default true not null, `updated_by` longtext, `note` longtext, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `app`.`pikku_feature_flag_overrides` (`flag` varchar(255) not null, `subject_id` varchar(255) not null, `subject_kind` longtext not null, `enabled` boolean not null, `granted_by` longtext, `granted_at` timestamp default CURRENT_TIMESTAMP not null, constraint `pikku_feature_flag_overrides_pk` primary key (`flag`, `subject_id`), constraint `pikku_feature_flag_overrides_flag_fk` foreign key (`flag`) references `app`.`pikku_feature_flags` (`name`) on delete cascade)"
+      ],
+      "trigger-source": [
+        "create table `app`.`pikku_trigger_source` (`name` varchar(255) primary key, `kind` longtext not null, `base_url` longtext, `label_prefix` longtext, `declared` boolean default true not null, `enabled` boolean default false not null, `status` longtext, `state` longtext, `detail` longtext, `updated_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "lease": [
+        "create table `app`.`pikku_lease` (`key` varchar(255) primary key, `holder` longtext not null, `token` integer not null, `expires_at` bigint not null)"
+      ],
+      "audit": [
+        "create table `app`.`audit` (`audit_id` varchar(255) primary key, `occurred_at` varchar(255) not null, `type` varchar(255) not null, `source` longtext default ('auto') not null, `outcome` longtext, `function_id` longtext, `wire_type` longtext, `trace_id` longtext, `transaction_id` longtext, `query_id` longtext, `user_id` varchar(255), `org_id` longtext, `pikku_user_id` longtext, `tables` longtext, `changed_cols` longtext, `event` longtext, `old` longtext, `data` longtext)",
+        "create index `idx_audit_occurred_at` on `app`.`audit` (`occurred_at`)",
+        "create index `idx_audit_user_id` on `app`.`audit` (`user_id`)",
+        "create index `idx_audit_type` on `app`.`audit` (`type`)"
+      ],
+      "analytics": [
+        "create table `app`.`pikku_analytics_events` (`event_id` varchar(255) primary key, `name` varchar(255) not null, `occurred_at` varchar(255) not null, `source` longtext not null, `function_id` longtext, `wire_type` longtext, `trace_id` longtext, `user_id` longtext, `org_id` longtext, `pikku_user_id` longtext, `anonymous_id` longtext, `vendor_ids` longtext, `consent` longtext, `props` longtext)",
+        "create index `idx_pikku_analytics_events_occurred_at` on `app`.`pikku_analytics_events` (`occurred_at`)",
+        "create index `idx_pikku_analytics_events_name` on `app`.`pikku_analytics_events` (`name`)"
+      ],
+      "virtual-user": [
+        "create table `app`.`virtual_user_run` (`run_id` varchar(36) primary key, `virtual_user_id` varchar(255) not null, `disposition` varchar(50) not null, `seed` bigint not null, `status` varchar(50) default ('running') not null, `goals` longtext default ('[]') not null, `memory` longtext default ('{}') not null, `findings` longtext default ('[]') not null, `intents` longtext default ('[]') not null, `tally` longtext, `stopped_by` varchar(255), `error` longtext, `started_by` varchar(255), `created_at` timestamp default CURRENT_TIMESTAMP not null, `finished_at` timestamp)",
+        "create index `idx_virtual_user_run_created` on `app`.`virtual_user_run` (`created_at`)",
+        "create index `idx_virtual_user_run_virtual_user_id` on `app`.`virtual_user_run` (`virtual_user_id`, `created_at`)",
+        "create table `app`.`virtual_user_run_step` (`run_id` varchar(36) not null, `step_index` integer not null, `intent_id` varchar(255), `action` longtext not null, `status` integer, `ok` integer, `response` longtext, `finding_kinds` longtext, `tokens_in` integer default 0 not null, `tokens_out` integer default 0 not null, constraint `pk_virtual_user_run_step` primary key (`run_id`, `step_index`))"
+      ],
+      "virtual-user-schedule": [
+        "create table `app`.`virtual_user_schedule` (`virtual_user_id` varchar(255) primary key, `enabled` integer default 0 not null, `disposition` varchar(50) not null, `goals` longtext default ('[]') not null, `budget` longtext, `min_interval_ms` bigint not null, `max_interval_ms` bigint not null, `next_run_at` timestamp not null, `last_run_id` varchar(36), `last_run_at` timestamp)",
+        "create index `idx_virtual_user_schedule_due` on `app`.`virtual_user_schedule` (`enabled`, `next_run_at`)"
+      ]
+    },
+    "users": {
+      "channel": [
+        "create table `channels` (`channel_id` varchar(255) primary key, `channel_name` longtext not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `opening_data` longtext default ('{}') not null, `traceparent` longtext, `pikku_user_id` longtext, `state` longtext, `last_wire` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `channel_subscriptions` (`channel_id` varchar(255) not null, `topic` varchar(255) not null, constraint `channel_subscriptions_pk` primary key (`channel_id`, `topic`), constraint `channel_subscriptions_channel_id_fk` foreign key (`channel_id`) references `channels` (`channel_id`) on delete cascade)"
+      ],
+      "session": [
+        "create table `pikku_user_sessions` (`pikku_user_id` varchar(255) primary key, `session` longtext not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "secret": [
+        "create table `secrets` (`key` varchar(255) primary key, `ciphertext` longtext not null, `wrapped_dek` longtext not null, `key_version` integer not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `secret_kek_salts` (`key_version` integer primary key, `salt` varchar(64) not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `secrets_audit` (`id` varchar(36) primary key, `secret_key` varchar(255) not null, `action` varchar(20) not null, `performed_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "credential": [
+        "create table `credentials` (`name` varchar(255) not null, `user_id` varchar(255), `ciphertext` longtext not null, `wrapped_dek` longtext not null, `key_version` integer not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "CREATE UNIQUE INDEX credentials_name_user_id_unique ON `credentials` (name, (COALESCE(user_id, '')))",
+        "create table `credential_kek_salts` (`key_version` integer primary key, `salt` varchar(64) not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `credentials_audit` (`id` varchar(36) primary key, `credential_name` varchar(255) not null, `user_id` varchar(255), `action` varchar(20) not null, `performed_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "deployment": [
+        "create table `pikku_deployments` (`deployment_id` varchar(255) primary key, `endpoint` longtext not null, `last_heartbeat` timestamp default CURRENT_TIMESTAMP not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `pikku_deployment_functions` (`deployment_id` varchar(255) not null, `function_name` varchar(255) not null, constraint `pikku_deployment_functions_pk` primary key (`deployment_id`, `function_name`), constraint `pikku_deployment_functions_deployment_id_fk` foreign key (`deployment_id`) references `pikku_deployments` (`deployment_id`) on delete cascade)",
+        "create index `idx_pikku_deployments_heartbeat` on `pikku_deployments` (`last_heartbeat`)",
+        "create index `idx_pikku_deployment_functions_name` on `pikku_deployment_functions` (`function_name`)"
+      ],
+      "webhook": [
+        "create table `webhook_delivery` (`delivery_id` varchar(255) primary key, `organization_id` varchar(255), `url` longtext not null, `event` longtext, `status` longtext default ('pending') not null, `attempts` integer default 0 not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, `delivered_at` timestamp)",
+        "create table `webhook_delivery_attempt` (`attempt_id` varchar(255) primary key, `delivery_id` varchar(255) not null, `attempt_number` integer not null, `status_code` integer, `response_body` longtext, `error` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `webhook_delivery_attempt_delivery_id_fk` foreign key (`delivery_id`) references `webhook_delivery` (`delivery_id`) on delete cascade)",
+        "create index `idx_webhook_delivery_org` on `webhook_delivery` (`organization_id`)",
+        "create index `idx_webhook_delivery_attempt_delivery` on `webhook_delivery_attempt` (`delivery_id`)"
+      ],
+      "incoming-webhook": [
+        "create table `webhook_receipt` (`receipt_id` varchar(255) primary key, `source` varchar(255) not null, `event` varchar(255) not null, `provider_event_id` varchar(255), `status` longtext default ('pending') not null, `attempts` integer default 0 not null, `last_error` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, `delivered_at` timestamp)",
+        "create unique index `idx_webhook_receipt_provider_event` on `webhook_receipt` (`source`, `event`, `provider_event_id`)",
+        "create index `idx_webhook_receipt_source_created` on `webhook_receipt` (`source`, `created_at`)"
+      ],
+      "workflow": [
+        "create table `workflow_runs` (`workflow_run_id` varchar(255) primary key, `workflow` varchar(255) not null, `status` varchar(255) not null, `input` longtext not null, `output` longtext, `error` longtext, `state` longtext default ('{}'), `inline` boolean default false, `graph_hash` varchar(255), `deterministic` boolean default false, `planned_steps` longtext, `wire` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `workflow_step` (`workflow_step_id` varchar(255) primary key, `workflow_run_id` varchar(255) not null, `step_name` varchar(255) not null, `rpc_name` longtext, `data` longtext, `status` varchar(255) default ('pending') not null, `result` longtext, `error` longtext, `child_run_id` longtext, `branch_taken` longtext, `retries` integer, `retry_delay` longtext, `from_step_name` longtext, `current_attempt` integer, `lease_expires_at` bigint, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, constraint `workflow_step_run_name_unique` unique (`workflow_run_id`, `step_name`), constraint `workflow_step_workflow_run_id_fk` foreign key (`workflow_run_id`) references `workflow_runs` (`workflow_run_id`) on delete cascade)",
+        "create table `workflow_step_history` (`history_id` varchar(255) primary key, `workflow_step_id` varchar(255) not null, `status` varchar(255) not null, `result` longtext, `error` longtext, `attempt` integer, `created_at` timestamp default CURRENT_TIMESTAMP not null, `running_at` timestamp, `scheduled_at` timestamp, `succeeded_at` timestamp, `failed_at` timestamp, constraint `workflow_step_history_workflow_step_id_fk` foreign key (`workflow_step_id`) references `workflow_step` (`workflow_step_id`) on delete cascade)",
+        "create table `workflow_versions` (`workflow_name` varchar(255) not null, `graph_hash` varchar(255) not null, `graph` longtext not null, `source` varchar(255) not null, `status` varchar(255) default ('active') not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `workflow_versions_pk` primary key (`workflow_name`, `graph_hash`))",
+        "create index `idx_workflow_runs_status_created` on `workflow_runs` (`status`, `created_at`)",
+        "create index `idx_workflow_runs_workflow_created` on `workflow_runs` (`workflow`, `created_at`)",
+        "create index `idx_workflow_step_run_status` on `workflow_step` (`workflow_run_id`, `status`)",
+        "create index `idx_workflow_step_history_step` on `workflow_step_history` (`workflow_step_id`, `created_at`)",
+        "create index `idx_workflow_versions_source_status` on `workflow_versions` (`source`, `status`)"
+      ],
+      "agent": [
+        "create table `agent_threads` (`id` varchar(36) primary key, `resource_id` varchar(255) not null, `title` longtext, `metadata` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create index `idx_agent_threads_resource` on `agent_threads` (`resource_id`)",
+        "create table `agent_message` (`id` varchar(36) primary key, `thread_id` varchar(36) not null, `role` varchar(50) not null, `content` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_message_thread_id_fk` foreign key (`thread_id`) references `agent_threads` (`id`) on delete cascade)",
+        "create index `idx_agent_message_thread` on `agent_message` (`thread_id`, `created_at`)",
+        "create table `agent_tool_call` (`id` varchar(36) primary key, `thread_id` varchar(36) not null, `message_id` varchar(36) not null, `run_id` varchar(36), `tool_name` varchar(255) not null, `args` longtext not null, `result` longtext, `approval_status` varchar(50), `approval_type` varchar(50), `agent_run_id` varchar(36), `display_tool_name` varchar(255), `display_args` longtext, `approval_expires_at` bigint, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_tool_call_thread_id_fk` foreign key (`thread_id`) references `agent_threads` (`id`) on delete cascade, constraint `agent_tool_call_message_id_fk` foreign key (`message_id`) references `agent_message` (`id`) on delete cascade)",
+        "create index `idx_agent_tool_call_thread` on `agent_tool_call` (`thread_id`)",
+        "create index `idx_agent_tool_call_message` on `agent_tool_call` (`message_id`)",
+        "create table `agent_working_memory` (`id` varchar(255) not null, `scope` varchar(50) not null, `data` longtext not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_working_memory_pk` primary key (`id`, `scope`))",
+        "create table `agent_run` (`run_id` varchar(36) primary key, `agent_name` varchar(255) not null, `thread_id` varchar(36) not null, `resource_id` varchar(255) not null, `status` varchar(50) default ('running') not null, `error_message` longtext, `suspend_reason` longtext, `missing_rpcs` longtext, `pending_approvals` longtext, `usage_input_tokens` integer default 0 not null, `usage_output_tokens` integer default 0 not null, `usage_model` varchar(255) default ('') not null, `created_at` timestamp default CURRENT_TIMESTAMP not null, `updated_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_run_thread_id_fk` foreign key (`thread_id`) references `agent_threads` (`id`) on delete cascade)",
+        "create index `idx_agent_run_thread` on `agent_run` (`thread_id`, `created_at`)",
+        "create table `agent_run_score` (`id` varchar(36) primary key, `run_id` varchar(36) not null, `scorer_name` varchar(255) not null, `score` real not null, `reason` longtext, `metadata` longtext, `created_at` timestamp default CURRENT_TIMESTAMP not null, constraint `agent_run_score_run_id_fk` foreign key (`run_id`) references `agent_run` (`run_id`) on delete cascade)",
+        "create index `idx_agent_run_score_run` on `agent_run_score` (`run_id`, `created_at`)"
+      ],
+      "scope": [
+        "create table `pikku_scopes` (`name` varchar(255) primary key, `description` longtext, `declared` boolean default true not null)",
+        "create table `pikku_roles` (`name` varchar(255) primary key, `description` longtext, `system` boolean default false not null, `declared` boolean default true not null, `created_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `pikku_role_scopes` (`role` varchar(255) not null, `scope` varchar(255) not null, constraint `pikku_role_scopes_pk` primary key (`role`, `scope`), constraint `pikku_role_scopes_role_fk` foreign key (`role`) references `pikku_roles` (`name`) on delete cascade, constraint `pikku_role_scopes_scope_fk` foreign key (`scope`) references `pikku_scopes` (`name`) on delete cascade)",
+        "create table `pikku_user_role` (`user_id` text not null, `role` varchar(255) not null, `granted_by` longtext, `granted_at` timestamp default CURRENT_TIMESTAMP not null, constraint `pikku_user_role_pk` primary key (`user_id`, `role`), constraint `pikku_user_role_user_id_fk` foreign key (`user_id`) references `users` (`id`) on delete cascade, constraint `pikku_user_role_role_fk` foreign key (`role`) references `pikku_roles` (`name`) on delete cascade)",
+        "create table `pikku_user_scope` (`user_id` text not null, `scope` varchar(255) not null, `granted_by` longtext, `granted_at` timestamp default CURRENT_TIMESTAMP not null, constraint `pikku_user_scope_pk` primary key (`user_id`, `scope`), constraint `pikku_user_scope_user_id_fk` foreign key (`user_id`) references `users` (`id`) on delete cascade, constraint `pikku_user_scope_scope_fk` foreign key (`scope`) references `pikku_scopes` (`name`) on delete cascade)",
+        "create index `pikku_role_scopes_scope_idx` on `pikku_role_scopes` (`scope`)",
+        "create index `pikku_user_role_role_idx` on `pikku_user_role` (`role`)"
+      ],
+      "flag": [
+        "create table `pikku_feature_flags` (`name` varchar(255) primary key, `description` longtext, `any_of` longtext, `enabled` boolean default false not null, `rollout_percent` integer, `declared` boolean default true not null, `updated_by` longtext, `note` longtext, `updated_at` timestamp default CURRENT_TIMESTAMP not null)",
+        "create table `pikku_feature_flag_overrides` (`flag` varchar(255) not null, `subject_id` varchar(255) not null, `subject_kind` longtext not null, `enabled` boolean not null, `granted_by` longtext, `granted_at` timestamp default CURRENT_TIMESTAMP not null, constraint `pikku_feature_flag_overrides_pk` primary key (`flag`, `subject_id`), constraint `pikku_feature_flag_overrides_flag_fk` foreign key (`flag`) references `pikku_feature_flags` (`name`) on delete cascade)"
+      ],
+      "trigger-source": [
+        "create table `pikku_trigger_source` (`name` varchar(255) primary key, `kind` longtext not null, `base_url` longtext, `label_prefix` longtext, `declared` boolean default true not null, `enabled` boolean default false not null, `status` longtext, `state` longtext, `detail` longtext, `updated_at` timestamp default CURRENT_TIMESTAMP not null)"
+      ],
+      "lease": [
+        "create table `pikku_lease` (`key` varchar(255) primary key, `holder` longtext not null, `token` integer not null, `expires_at` bigint not null)"
+      ],
+      "audit": [
+        "create table `audit` (`audit_id` varchar(255) primary key, `occurred_at` varchar(255) not null, `type` varchar(255) not null, `source` longtext default ('auto') not null, `outcome` longtext, `function_id` longtext, `wire_type` longtext, `trace_id` longtext, `transaction_id` longtext, `query_id` longtext, `user_id` varchar(255), `org_id` longtext, `pikku_user_id` longtext, `tables` longtext, `changed_cols` longtext, `event` longtext, `old` longtext, `data` longtext)",
+        "create index `idx_audit_occurred_at` on `audit` (`occurred_at`)",
+        "create index `idx_audit_user_id` on `audit` (`user_id`)",
+        "create index `idx_audit_type` on `audit` (`type`)"
+      ],
+      "analytics": [
+        "create table `pikku_analytics_events` (`event_id` varchar(255) primary key, `name` varchar(255) not null, `occurred_at` varchar(255) not null, `source` longtext not null, `function_id` longtext, `wire_type` longtext, `trace_id` longtext, `user_id` longtext, `org_id` longtext, `pikku_user_id` longtext, `anonymous_id` longtext, `vendor_ids` longtext, `consent` longtext, `props` longtext)",
+        "create index `idx_pikku_analytics_events_occurred_at` on `pikku_analytics_events` (`occurred_at`)",
+        "create index `idx_pikku_analytics_events_name` on `pikku_analytics_events` (`name`)"
+      ],
+      "virtual-user": [
+        "create table `virtual_user_run` (`run_id` varchar(36) primary key, `virtual_user_id` varchar(255) not null, `disposition` varchar(50) not null, `seed` bigint not null, `status` varchar(50) default ('running') not null, `goals` longtext default ('[]') not null, `memory` longtext default ('{}') not null, `findings` longtext default ('[]') not null, `intents` longtext default ('[]') not null, `tally` longtext, `stopped_by` varchar(255), `error` longtext, `started_by` varchar(255), `created_at` timestamp default CURRENT_TIMESTAMP not null, `finished_at` timestamp)",
+        "create index `idx_virtual_user_run_created` on `virtual_user_run` (`created_at`)",
+        "create index `idx_virtual_user_run_virtual_user_id` on `virtual_user_run` (`virtual_user_id`, `created_at`)",
+        "create table `virtual_user_run_step` (`run_id` varchar(36) not null, `step_index` integer not null, `intent_id` varchar(255), `action` longtext not null, `status` integer, `ok` integer, `response` longtext, `finding_kinds` longtext, `tokens_in` integer default 0 not null, `tokens_out` integer default 0 not null, constraint `pk_virtual_user_run_step` primary key (`run_id`, `step_index`))"
+      ],
+      "virtual-user-schedule": [
+        "create table `virtual_user_schedule` (`virtual_user_id` varchar(255) primary key, `enabled` integer default 0 not null, `disposition` varchar(50) not null, `goals` longtext default ('[]') not null, `budget` longtext, `min_interval_ms` bigint not null, `max_interval_ms` bigint not null, `next_run_at` timestamp not null, `last_run_id` varchar(36), `last_run_at` timestamp)",
+        "create index `idx_virtual_user_schedule_due` on `virtual_user_schedule` (`enabled`, `next_run_at`)"
+      ]
+    }
+  }
+}

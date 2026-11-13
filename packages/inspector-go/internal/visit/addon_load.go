@@ -427,6 +427,17 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	return nil
 }
 
+// studioManifestDeclaresUI is whether a screens meta declares anything Studio
+// can show: a screen, an arranged screen, a thing or a widget.
+func studioManifestDeclaresUI(manifest *ojson) bool {
+	for _, key := range []string{"screens", "arrangedScreens", "things", "widgets"} {
+		if list := manifest.get(key); list != nil && len(list.arr) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Context) loadAddonStudio(ns string, decl *addonDecl, req addonResolver) error {
 	var manifest *ojson
 	if path := resolveAddonMeta(req, decl.pkg, "screens/pikku-screens-meta"); path != "" {
@@ -447,9 +458,9 @@ func (s *Context) loadAddonStudio(ns string, decl *addonDecl, req addonResolver)
 			return errors.New("Cannot read properties of undefined (reading 'length')")
 		}
 	}
-	if manifest == nil || len(manifest.get("screens").arr) == 0 {
+	if manifest == nil || !studioManifestDeclaresUI(manifest) {
 		s.Log.Critical(diag.AddonUiHasNoScreens, fmt.Sprintf(
-			"wireAddon('%s') sets ui: true, but %s declares no screens. Add a definePlugin call to the package, or drop ui.", ns, decl.pkg))
+			"wireAddon('%s') sets ui: true, but %s declares no screens, arranged screens, things or widgets. Add a definePlugin call to the package, or drop ui.", ns, decl.pkg))
 		return nil
 	}
 	seen := map[string]bool{}

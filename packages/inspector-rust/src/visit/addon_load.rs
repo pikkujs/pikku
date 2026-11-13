@@ -639,14 +639,20 @@ impl Loader<'_> {
                 Some(_) => {}
             }
         }
-        let has_screens = manifest
-            .as_ref()
-            .and_then(|m| m.get("screens"))
-            .is_some_and(|s| matches!(s, OJson::Arr(a) if !a.is_empty()));
+        // A screen, an arranged screen, a thing or a widget is something Studio
+        // can show.
+        let has_screens = manifest.as_ref().is_some_and(|m| {
+            ["screens", "arrangedScreens", "things", "widgets"]
+                .iter()
+                .any(|key| m.get(key).is_some_and(|s| matches!(s, OJson::Arr(a) if !a.is_empty())))
+        });
         if !has_screens {
             self.log.critical(
                 codes::ADDON_UI_HAS_NO_SCREENS,
-                format!("wireAddon('{ns}') sets ui: true, but {} declares no screens. Add a definePlugin call to the package, or drop ui.", decl.pkg),
+                format!(
+                    "wireAddon('{ns}') sets ui: true, but {} declares no screens, arranged screens, things or widgets. Add a definePlugin call to the package, or drop ui.",
+                    decl.pkg
+                ),
             );
             return Ok(());
         }

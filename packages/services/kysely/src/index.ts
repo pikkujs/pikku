@@ -95,16 +95,12 @@ export {
   requirePikkuSchema,
   resolveRequirements,
   withUserTable,
-  defineTables,
-  requiredType,
-  type AppTables,
-  type ColumnAnnotation,
+  compileTables,
+  tableRequirements,
   type PikkuSchema,
   type RequiredTypes,
   type SchemaRequirement,
-  type TableAnnotations,
   type UnmetRequirement,
-  type SchemaStatementFactory,
 } from './schema/index.js'
 
 export type { KyselyPikkuDB } from './kysely-tables.js'

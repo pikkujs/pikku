@@ -43,6 +43,7 @@ export const leafEntries = [
   ['utils', ['utilsTypesFile']],
   ['variables', ['variableTypesFile', 'variablesFile']],
   ['auth', ['authGuardsFile', 'authTypesFile']],
+  ['screens', ['pluginTypesFile']],
 ] as const
 
 /**

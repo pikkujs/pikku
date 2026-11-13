@@ -1452,3 +1452,358 @@ describe('generated sources parse', () => {
     })
   }
 })
+
+// ---------------------------------------------------------------------------
+// HTTP route contract
+// ---------------------------------------------------------------------------
+describe('HTTP route contract', () => {
+  const flags = { oauth: false, secret: true, credential: 'bearer' as const }
+  const generate = (
+    operations: ParsedOperation[],
+    overrides: Partial<typeof flags & { camelCase: boolean }> = {}
+  ) =>
+    generateAddonFromOpenAPI(makeSpec({ operations }), makeVars(), {
+      ...flags,
+      ...overrides,
+    })
+
+  test('emits one route per operation, pointing at its function', () => {
+    const files = generate([
+      makeOp({
+        method: 'get',
+        path: '/items/{id}',
+        operationId: 'getItem',
+        tags: ['items'],
+        pathParams: [
+          { name: 'id', required: true, schema: { type: 'string' } },
+        ],
+      }),
+      makeOp({
+        method: 'post',
+        path: '/items',
+        operationId: 'createItem',
+        requestBody: {
+          type: 'object',
+          properties: { name: { type: 'string' } },
+          required: ['name'],
+        },
+      }),
+    ])
+    const source = files['src/test-api.http.ts']
+    assert.ok(source, 'the contract file is generated')
+    assert.match(
+      source,
+      /import \{ defineHTTPRoutes \} from '#pikku\/addon\/http\/pikku-http-types\.gen\.js'/
+    )
+    assert.match(source, /export const testApiRoutes = defineHTTPRoutes\(\{/)
+    assert.match(
+      source,
+      /getItem: \{ method: "get", route: "\/items\/:id", func: getItem \}/
+    )
+    // Route-level tags would be readonly in the host's const-inferred view of
+    // the contract and break its type-check against core's `tags?: string[]`.
+    assert.doesNotMatch(source, /\btags:/)
+    assert.match(
+      source,
+      /createItem: \{ method: "post", route: "\/items", func: createItem \}/
+    )
+    assert.match(
+      source,
+      /import \{ getItem \} from '\.\/functions\/getItem\.function\.js'/
+    )
+  })
+
+  test('is exported from the addon index', () => {
+    const files = generate([makeOp({ operationId: 'listItems' })])
+    assert.match(
+      files['src/index.ts'],
+      /export \{ testApiRoutes \} from '\.\/test-api\.http\.js'/
+    )
+  })
+
+  test('route params are named like the input keys the function expects', () => {
+    const files = generate([
+      makeOp({
+        path: '/orgs/{org_id}/items/{id}',
+        operationId: 'getOrgItem',
+        pathParams: [
+          { name: 'org_id', required: true, schema: { type: 'string' } },
+          { name: 'id', required: true, schema: { type: 'string' } },
+        ],
+      }),
+    ])
+    assert.match(
+      files['src/test-api.http.ts'],
+      /route: "\/orgs\/:org_id\/items\/:id"/
+    )
+    const schemas = files['src/functions/getOrgItem.schemas.ts']
+    assert.match(schemas, /org_id: z\.string\(\)/)
+    assert.match(schemas, /id: z\.string\(\)/)
+  })
+
+  test('routes an array body under the key Pikku delivers it as', () => {
+    const files = generate([
+      makeOp({
+        method: 'post',
+        path: '/items/{id}/bulk-delete',
+        operationId: 'bulkDelete',
+        pathParams: [
+          { name: 'id', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: { type: 'array', items: { type: 'string' } },
+      }),
+    ])
+    // Pikku wraps a non-object body as `{ data }`, so that is the input key.
+    assert.match(
+      files['src/functions/bulkDelete.schemas.ts'],
+      /data: z\.array\(z\.string\(\)\)/
+    )
+    assert.doesNotMatch(files['src/functions/bulkDelete.schemas.ts'], /body:/)
+    assert.match(
+      files['src/test-api.http.ts'],
+      /bulkDelete: \{ method: "post", route: "\/items\/:id\/bulk-delete"/
+    )
+  })
+
+  test('a parameter already named data keeps the body under `body`, unrouted', () => {
+    const files = generate([
+      makeOp({ operationId: 'listItems' }),
+      makeOp({
+        method: 'post',
+        path: '/items/{data}/bulk',
+        operationId: 'bulkItems',
+        pathParams: [
+          { name: 'data', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: { type: 'array', items: { type: 'string' } },
+      }),
+    ])
+    assert.match(files['src/functions/bulkItems.schemas.ts'], /body: z\.array/)
+    const source = files['src/test-api.http.ts']
+    assert.doesNotMatch(source, /bulkItems: \{/)
+    assert.match(source, /1 of 2 operations/)
+    assert.match(
+      source,
+      /POST \/items\/\{data\}\/bulk \(bulkItems\): request body is not an object and a parameter is already named "data"/
+    )
+  })
+
+  test('routes an operation with a required header parameter', () => {
+    const files = generate([
+      makeOp({
+        path: '/audit',
+        operationId: 'getAudit',
+        headerParams: [
+          { name: 'accept', required: true, schema: { type: 'string' } },
+        ],
+      }),
+    ])
+    assert.match(files['src/test-api.http.ts'], /getAudit: \{ method: "get"/)
+    assert.match(files['src/test-api.http.ts'], /1 of 1 operations/)
+    // Not a required input: over HTTP the header is not part of the input.
+    assert.match(
+      files['src/functions/getAudit.schemas.ts'],
+      /"?accept"?: z\.string\(\)\.optional\(\)/
+    )
+  })
+
+  test('is omitted under camelCase, where input keys differ from the wire names', () => {
+    const warn = console.warn
+    const warnings: string[] = []
+    console.warn = (message: string) => warnings.push(String(message))
+    try {
+      const files = generate([makeOp({ operationId: 'listItems' })], {
+        camelCase: true,
+      })
+      assert.equal(files['src/test-api.http.ts'], undefined)
+      assert.doesNotMatch(files['src/index.ts'], /\.http\.js/)
+      assert.ok(
+        warnings.some((w) => /Skipping the HTTP route contract/.test(w))
+      )
+    } finally {
+      console.warn = warn
+    }
+  })
+
+  test('is omitted when nothing can be routed', () => {
+    const files = generate([
+      makeOp({ method: 'trace', operationId: 'traceItems' }),
+    ])
+    assert.equal(files['src/test-api.http.ts'], undefined)
+    assert.doesNotMatch(files['src/index.ts'], /\.http\.js/)
+  })
+
+  test('the generated file parses', () => {
+    const files = generate([
+      makeOp({ operationId: 'listItems', tags: ['items'] }),
+    ])
+    const { diagnostics } = ts.transpileModule(files['src/test-api.http.ts'], {
+      reportDiagnostics: true,
+      fileName: 'src/test-api.http.ts',
+    })
+    assert.deepEqual(diagnostics, [])
+  })
+})
+
+describe('non-object request bodies reach the upstream as themselves', () => {
+  const sent: Array<{ method: string; url: string; body: unknown }> = []
+  const load = () => {
+    const files = generateAddonFromOpenAPI(
+      makeSpec({
+        operations: [
+          makeOp({
+            method: 'post',
+            path: '/items/{id}/bulk-delete',
+            operationId: 'bulkDelete',
+            pathParams: [
+              { name: 'id', required: true, schema: { type: 'string' } },
+            ],
+            requestBody: { type: 'array', items: { type: 'string' } },
+          }),
+          makeOp({
+            method: 'post',
+            path: '/items',
+            operationId: 'createItem',
+            requestBody: {
+              type: 'object',
+              properties: { name: { type: 'string' } },
+            },
+          }),
+        ],
+      }),
+      makeVars(),
+      { oauth: false, secret: false }
+    )
+    const source = files['src/test-api-api.service.ts']!.replace(
+      /^import .*$/gm,
+      ''
+    ).replace('export class', 'class')
+    const js = ts.transpileModule(source, {
+      compilerOptions: { target: ts.ScriptTarget.ES2022 },
+    }).outputText
+    const stubErrors = [
+      'BadRequestError',
+      'ConflictError',
+      'ForbiddenError',
+      'InternalServerError',
+      'MethodNotAllowedError',
+      'NotFoundError',
+      'TooManyRequestsError',
+      'UnauthorizedError',
+      'UnprocessableContentError',
+    ]
+      .map((name) => `class ${name} extends Error {}`)
+      .join('\n')
+    const fakeFetch = async (url: string, init: any) => {
+      sent.push({ method: init.method, url, body: init.body })
+      return new Response('{}', {
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+    const Service = new Function(
+      'fetch',
+      `${stubErrors}\n${js}\nreturn TestApiService`
+    )(fakeFetch)
+    return new Service({ get: async () => 'https://api.example.com' }) as {
+      call: (method: string, path: string, data?: unknown) => Promise<unknown>
+    }
+  }
+
+  test('an array body is sent as the array, not wrapped', async () => {
+    sent.length = 0
+    await load().call('POST', '/items/{id}/bulk-delete', {
+      id: '7',
+      data: ['a', 'b'],
+    })
+    assert.equal(sent.length, 1)
+    assert.equal(sent[0].url, 'https://api.example.com/items/7/bulk-delete')
+    assert.equal(sent[0].body, JSON.stringify(['a', 'b']))
+  })
+
+  test('an object body is still sent as an object', async () => {
+    sent.length = 0
+    await load().call('POST', '/items', { name: 'x' })
+    assert.equal(sent[0].body, JSON.stringify({ name: 'x' }))
+  })
+})
+
+describe('declared header parameters are forwarded from the request on the wire', () => {
+  const load = () => {
+    const files = generateAddonFromOpenAPI(
+      makeSpec({
+        operations: [
+          makeOp({
+            path: '/audit',
+            operationId: 'getAudit',
+            headerParams: [
+              { name: 'accept', required: true, schema: { type: 'string' } },
+              { name: 'X-Tenant', required: false, schema: { type: 'string' } },
+            ],
+          }),
+        ],
+      }),
+      makeVars(),
+      { oauth: false, secret: false }
+    )
+    const source = files['src/functions/getAudit.function.ts']!.replace(
+      /^import .*$/gm,
+      ''
+    ).replace('export const getAudit = pikkuSessionlessFunc(', 'return (')
+    const js = ts.transpileModule(source, {
+      compilerOptions: { target: ts.ScriptTarget.ES2022 },
+    }).outputText
+    // Stand-in for the `Input`/`Output` schemas the real file imports.
+    return new Function('GetAuditInput', 'GetAuditOutput', js)(
+      undefined,
+      undefined
+    ) as { func: (services: any, data: any, wire: any) => Promise<unknown> }
+  }
+  const wireWith = (headers: Record<string, string>) => ({
+    http: {
+      request: {
+        header: (name: string) =>
+          Object.entries(headers).find(
+            ([k]) => k.toLowerCase() === name.toLowerCase()
+          )?.[1] ?? null,
+      },
+    },
+  })
+
+  test('forwards only the headers the spec declares', async () => {
+    const calls: unknown[][] = []
+    const services = {
+      testApi: { call: async (...args: unknown[]) => void calls.push(args) },
+    }
+    await load().func(
+      services,
+      {},
+      wireWith({
+        accept: 'application/pdf',
+        'x-tenant': 'acme',
+        authorization: 'Bearer for-the-proxy-not-the-upstream',
+        cookie: 'session=1',
+      })
+    )
+    assert.deepEqual(calls[0], [
+      'GET',
+      '/audit',
+      { accept: 'application/pdf', 'X-Tenant': 'acme' },
+    ])
+  })
+
+  test('a caller with no request supplies them as input, and the wire wins when both exist', async () => {
+    const calls: unknown[][] = []
+    const services = {
+      testApi: { call: async (...args: unknown[]) => void calls.push(args) },
+    }
+    const fn = load()
+    await fn.func(services, { accept: 'text/csv' }, { http: undefined })
+    assert.deepEqual(calls[0][2], { accept: 'text/csv' })
+    await fn.func(
+      services,
+      { accept: 'text/csv' },
+      wireWith({ accept: 'application/pdf' })
+    )
+    assert.deepEqual(calls[1][2], { accept: 'application/pdf' })
+  })
+})

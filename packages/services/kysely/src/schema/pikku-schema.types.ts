@@ -6,6 +6,7 @@ import {
   type Kysely,
   type RawBuilder,
 } from 'kysely'
+import type { OnDelete, TablesDeclaration } from '@pikku/core/db'
 
 type DataTypeExpression = Parameters<
   CreateTableBuilder<any, any>['addColumn']
@@ -71,7 +72,8 @@ export interface SchemaContext {
    */
   defaultText: (value: string) => string | RawBuilder<unknown>
   /**
-   * An inline `references ... on delete cascade` on a column.
+   * An inline `references ... on delete <onDelete>` on a column. `onDelete`
+   * defaults to `restrict`.
    *
    * A no-op on MySQL, which parses an inline `REFERENCES` and discards it — the
    * constraint never exists. There the same relationship is declared once, at
@@ -79,26 +81,37 @@ export interface SchemaContext {
    */
   references: (
     column: ColumnDefinitionBuilder,
-    target: string
+    target: string,
+    onDelete?: OnDelete
   ) => ColumnDefinitionBuilder
   /**
    * The table-level foreign keys MySQL needs in place of inline `references`,
-   * keyed by local column to `table.column` target. Identity everywhere else,
-   * where `references` has already done the work.
+   * keyed by local column to its `table.column` target and `onDelete` (default
+   * `restrict`). Identity everywhere else, where
+   * `references` has already done the work.
    */
   foreignKeys: (
     table: string,
-    keys: Record<string, string>
+    keys: Record<string, ForeignKeyTarget>
   ) => <T extends CreateTableBuilder<any, any>>(builder: T) => T
 }
 
-/**
- * The `SchemaContext` for DDL that names no schema.
- *
- * The default everywhere a schema has not been asked for, which is every engine
- * but postgres and most postgres projects too.
- */
-export const unqualifiedContext: SchemaContext = buildContext(undefined, false)
+/** A foreign key target: `table.column`, with `onDelete` when it is not `restrict`. */
+export interface ForeignKeyTarget {
+  target: string
+  onDelete?: OnDelete
+}
+
+const ON_DELETE_SQL = {
+  cascade: 'cascade',
+  setNull: 'set null',
+  restrict: 'restrict',
+  noAction: 'no action',
+} as const satisfies Record<OnDelete, string>
+
+/** `onDelete` as the schema builder spells it. */
+const onDeleteAction = (onDelete: OnDelete = 'restrict') =>
+  ON_DELETE_SQL[onDelete]
 
 function buildContext(
   schema: string | undefined,
@@ -115,12 +128,14 @@ function buildContext(
     key: mysql ? sql.raw('varchar(255)') : 'text',
     text: mysql ? sql.raw('longtext') : 'text',
     defaultText: (value) => (mysql ? sql`(${sql.lit(value)})` : value),
-    references: (column, target) =>
-      mysql ? column : column.references(target).onDelete('cascade'),
+    references: (column, target, onDelete) =>
+      mysql
+        ? column
+        : column.references(target).onDelete(onDeleteAction(onDelete)),
     foreignKeys: (table, keys) => (builder) =>
       mysql
         ? (Object.entries(keys).reduce(
-            (acc, [column, target]) => {
+            (acc, [column, { target, onDelete }]) => {
               const [targetTable, targetColumn] = target.split('.') as [
                 string,
                 string,
@@ -130,7 +145,7 @@ function buildContext(
                 [column],
                 targetTable,
                 [targetColumn],
-                (fk) => fk.onDelete('cascade')
+                (fk) => fk.onDelete(onDeleteAction(onDelete))
               )
             },
             builder as CreateTableBuilder<any, any>
@@ -160,19 +175,6 @@ export const schemaContext = (
 export type RequiredTypes = Record<string, string>
 
 /**
- * The declared type for a foreign key onto a column another source owns.
- *
- * Falls back to `text` when nothing has been introspected — the case when the
- * declaration is compiled without a database, where the real type is unknowable
- * and only the shape of the statement is being inspected.
- */
-export const requiredType = (
-  types: RequiredTypes,
-  table: string,
-  column: string
-): RawBuilder<unknown> => sql.raw(types[`${table}.${column}`] ?? 'text')
-
-/**
  * The tables one part of the pikku runtime needs, declared rather than created.
  *
  * `name` labels the generated migration and the drift report, so it is part of
@@ -181,10 +183,22 @@ export const requiredType = (
  */
 export interface PikkuSchema {
   name: string
-  statements: SchemaStatementFactory[]
+  /** The tables, as a plain declaration `compileTables` turns into DDL. */
+  tables: TablesDeclaration
   /**
-   * Tables this schema references but does not create, which something else
-   * must have created first.
+   * DDL the declaration cannot express, run after its tables and indexes — an
+   * index over an expression, say.
+   */
+  extraStatements?: SchemaStatementFactory[]
+  /**
+   * Who creates the tables `tables` references outside itself, named in the
+   * refusal when one is missing. The requirements themselves are read off the
+   * declaration.
+   */
+  foreignOwner?: string
+  /**
+   * Columns `extraStatements` reference but this schema does not create. The
+   * declaration's own are inferred and do not belong here.
    *
    * Declared rather than discovered so the failure arrives as a sentence naming
    * what is missing and who owns it, instead of a foreign key error from the
@@ -212,52 +226,6 @@ export interface PikkuSchema {
    */
   ownedBy?: string[]
 }
-
-/**
- * What a project says about one column of a table it declares.
- *
- * The same entry `db/annotations.ts` takes, moved onto the declaration so one
- * file gives a table's shape, its types and its classification.
- */
-export interface ColumnAnnotation {
-  /** Privacy level: can the value leave the process? Defaults to `private`. */
-  security?: 'public' | 'private' | 'pii' | 'secret'
-  /** How the value is held at rest, independent of `security`. Defaults to `plain`. */
-  form?: 'plain' | 'hashed' | 'wrapped' | 'sealed'
-  /** Which key protects a `wrapped` or `sealed` column. */
-  keyId?: string
-  /** Anonymize strategy. */
-  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
-  /** Column kind, for coercion and typing. */
-  kind?: 'date' | 'bool' | 'json' | 'uuid'
-  /** TypeScript type override, e.g. `string[]`. Wins over `kind`. */
-  tsType?: string
-  /** Zod string format, e.g. `email`. Keeps the TypeScript type as `string`. */
-  format?: string
-  /** What the column holds, for people and agents reading the schema. */
-  description?: string
-}
-
-/** Annotations keyed by table, then column, spelled the way the statements spell them. */
-export type TableAnnotations = Record<string, Record<string, ColumnAnnotation>>
-
-/**
- * A project's own tables, declared in `db/tables.ts`.
- *
- * A `PikkuSchema` without the parts that only mean something for the runtime,
- * plus the annotations. `pikku db generate` writes the migrations for it, so a
- * project that declares a table never spells its SQL.
- */
-export interface AppTables {
-  /** `db.schema.createTable(...)` and `createIndex(...)`, and nothing else. */
-  statements: SchemaStatementFactory[]
-  /** Columns outside this declaration that a foreign key here points at. */
-  requires?: SchemaRequirement[]
-  annotations?: TableAnnotations
-}
-
-/** Declare a project's tables. The export has to be named `tables`. */
-export const defineTables = (tables: AppTables): AppTables => tables
 
 /**
  * A column another source owns, which one of these schemas depends on.
@@ -295,7 +263,7 @@ export function rawStatement(
 export function rawStatement(
   source: RawBuilder<unknown> | ((ctx: SchemaContext) => RawBuilder<unknown>)
 ): SchemaStatementFactory {
-  return (db, _types, ctx = unqualifiedContext) => {
+  return (db, _types, ctx) => {
     const fragment = typeof source === 'function' ? source(ctx) : source
     return {
       execute: () => fragment.execute(db),

@@ -220,7 +220,8 @@ describe('pikku runtime schema — prerequisites', () => {
       // second statement simply collides with a table the database already has.
       const collides: PikkuSchema = {
         name: 'collides',
-        statements: [
+        tables: {},
+        extraStatements: [
           (db) => db.schema.createTable('first').addColumn('id', 'text'),
           (db) => db.schema.createTable('taken').addColumn('id', 'text'),
         ],
