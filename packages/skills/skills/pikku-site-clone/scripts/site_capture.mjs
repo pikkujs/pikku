@@ -1,0 +1,194 @@
+#!/usr/bin/env node
+// site_capture.mjs: capture and compare the reference of a website you are cloning, from the RENDERED page.
+//   node site_capture.mjs pages <root-url>                          page list: sitemap(s), else internal links
+//   node site_capture.mjs capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file-with-urls> ...
+//   node site_capture.mjs compare <reference-dir> <clone-dir>       layout + pixel scores per page and viewport
+// Needs a Chromium and playwright-core: PIKKU_CHROMIUM = path of the chrome binary, PLAYWRIGHT_CORE = path of the playwright-core
+// module (default: `playwright-core` resolved from the current directory). Browser profile, tmp and downloads stay under <out-dir>/.browser.
+// Tiles and pixel scores use ImageMagick (`convert`, `compare`) when it is installed.
+import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { join, resolve } from 'node:path'
+import { createRequire } from 'node:module'
+
+const sh = (cmd, args) => { try { return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) } catch (e) { return String(e.stderr || '') + String(e.stdout || '') } }
+const idOf = (url) => { const p = new URL(url).pathname.replace(/^\/+|\/+$/g, ''); return p ? p.replace(/\//g, '__') : 'index' }
+const UA = 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+
+// ---------------------------------------------------------------- pages
+async function pages(root) {
+  const base = new URL(root).origin
+  const seen = new Set(), out = []
+  const add = (u) => { try { const x = new URL(u, base); x.hash = ''; x.search = ''; if (x.origin === base && !/\.(jpe?g|png|gif|webp|svg|pdf|css|js|xml|json|ico|txt)$/i.test(x.pathname)) { const k = x.origin + (x.pathname.replace(/\/+$/, '') || '/'); if (!seen.has(k)) { seen.add(k); out.push(k) } } } catch {} }
+  const get = async (u) => { try { return await (await fetch(u, { headers: { 'user-agent': UA } })).text() } catch { return '' } }
+  const maps = [`${base}/sitemap.xml`]
+  const robots = await get(`${base}/robots.txt`)
+  for (const m of robots.matchAll(/^\s*sitemap:\s*(\S+)/gim)) maps.push(m[1])
+  const done = new Set()
+  while (maps.length) {
+    const m = maps.shift(); if (done.has(m)) continue; done.add(m)
+    const x = await get(m)
+    for (const l of x.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)) (l[1].endsWith('.xml') ? maps : { push: add }).push(l[1])
+  }
+  // the sitemap is the list; internal links catch what it misses
+  const queue = [base + '/', ...out]
+  for (let i = 0; i < queue.length && i < 200; i++) {
+    const html = await get(queue[i])
+    for (const h of html.matchAll(/href="([^"#]+)/g)) { const before = out.length; add(h[1].replace(/&amp;/g, '&')); if (out.length > before) queue.push(out[out.length - 1]) }
+  }
+  console.log(out.join('\n'))
+}
+
+// ---------------------------------------------------------------- in-page extraction (runs in the browser)
+function extractInPage() {
+  const W = document.documentElement.scrollWidth, H = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)
+  const vis = (el) => { const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return false; const r = el.getBoundingClientRect(); return r.width > 4 && r.height > 4 }
+  const box = (r) => ({ x: (r.left + scrollX) / W, y: (r.top + scrollY) / H, w: r.width / W, h: r.height / H })
+  const images = [], texts = []
+  for (const el of document.querySelectorAll('*')) {
+    if (!vis(el)) continue
+    const r = el.getBoundingClientRect()
+    if (el.tagName === 'IMG' || el.tagName === 'VIDEO' || el.tagName === 'PICTURE') { if (r.width >= 40 && r.height >= 40) images.push({ ...box(r), src: (el.currentSrc || el.src || el.poster || '').slice(0, 300), natural: [el.naturalWidth || 0, el.naturalHeight || 0] }); continue }
+    const bg = getComputedStyle(el).backgroundImage
+    if (bg && bg !== 'none' && /url\(/.test(bg) && r.width >= 40 && r.height >= 40) images.push({ ...box(r), src: (bg.match(/url\(["']?([^"')]+)/) || [])[1]?.slice(0, 300) || '', background: true })
+    let own = ''; const rects = []
+    for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) { own += n.textContent.trim() + ' '; const rg = document.createRange(); rg.selectNodeContents(n); for (const q of rg.getClientRects()) if (q.width > 2) rects.push(q) }
+    if (own.trim().length >= (/^H[1-6]$/.test(el.tagName) ? 1 : 12) && rects.length) {
+      const l = Math.min(...rects.map((q) => q.left)), t = Math.min(...rects.map((q) => q.top)), rr = Math.max(...rects.map((q) => q.right)), b = Math.max(...rects.map((q) => q.bottom))
+      texts.push({ ...box({ left: l, top: t, width: rr - l, height: b - t }), tag: el.tagName.toLowerCase(), size: parseFloat(getComputedStyle(el).fontSize), text: own.trim().slice(0, 80) })
+    }
+  }
+  const all = [...images.map((b) => ({ ...b, kind: 'img' })), ...texts.map((b) => ({ ...b, kind: 'text' }))].filter((b) => b.w > 0.01 && b.h > 0.002).sort((a, b) => a.y - b.y)
+  // bands: vertical runs of boxes (a gap of 1.2% of the page or more starts a new band)
+  const bands = []
+  for (const b of all) {
+    const last = bands[bands.length - 1]
+    if (last && b.y <= last.y1 + 0.012) { last.items.push(b); last.y1 = Math.max(last.y1, b.y + b.h) } else bands.push({ y0: b.y, y1: b.y + b.h, items: [b] })
+  }
+  const outBands = bands.map((bd) => {
+    // columns: horizontally disjoint groups of boxes, ignoring slivers
+    const iv = bd.items.map((b) => [b.x, b.x + b.w]).sort((a, b) => a[0] - b[0]); const groups = []
+    for (const v of iv) { const g = groups[groups.length - 1]; if (g && v[0] < g[1] - 0.02) g[1] = Math.max(g[1], v[1]); else groups.push([...v]) }
+    const cols = groups.filter((g) => g[1] - g[0] > 0.06).length || 1
+    const txt = bd.items.filter((b) => b.kind === 'text'), imgs = bd.items.filter((b) => b.kind === 'img')
+    const tx = txt.length ? txt.reduce((s, b) => s + b.x + b.w / 2, 0) / txt.length : 0.5
+    return { y0: +bd.y0.toFixed(4), y1: +bd.y1.toFixed(4), cols, fullBleed: imgs.some((b) => b.w > 0.9), images: imgs.map((b) => ({ x: +b.x.toFixed(4), y: +b.y.toFixed(4), w: +b.w.toFixed(4), h: +b.h.toFixed(4), side: cols >= 2 ? (b.x + b.w / 2 < tx ? 'left' : 'right') : 'inline' })), textBlocks: txt.length }
+  })
+  return { doc: { w: W, h: H }, bands: outBands, images: images.map((b) => ({ x: +b.x.toFixed(4), y: +b.y.toFixed(4), w: +b.w.toFixed(4), h: +b.h.toFixed(4), src: b.src, natural: b.natural })), counts: { sections: outBands.length, images: images.length, textBlocks: texts.length, multiColumnSections: outBands.filter((b) => b.cols >= 2).length } }
+}
+
+function extractStructure() {
+  const text = (e) => (e.innerText || '').replace(/\s+/g, ' ').trim()
+  const headings = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].map((h) => ({ level: +h.tagName[1], text: text(h), size: Math.round(parseFloat(getComputedStyle(h).fontSize)) })).filter((h) => h.text)
+  const nav = document.querySelector('nav') || document.querySelector('header')
+  const menu = nav ? [...nav.querySelectorAll('a')].map(text).filter(Boolean) : []
+  const colours = {}, fonts = {}
+  for (const el of document.querySelectorAll('body *')) {
+    const cs = getComputedStyle(el), r = el.getBoundingClientRect(); const area = Math.min(r.width * r.height, 2e6) / 1e4
+    for (const p of ['backgroundColor', 'color', 'borderTopColor']) { const v = cs[p]; if (v && !/rgba\(0, 0, 0, 0\)|transparent/.test(v)) colours[v] = (colours[v] || 0) + (p === 'backgroundColor' ? area : 1) }
+    if (text(el) && el.children.length === 0) { const f = cs.fontFamily.split(',')[0].trim().replace(/["']/g, '').toLowerCase(); fonts[f] = (fonts[f] || 0) + 1 }
+  }
+  const bps = {}
+  for (const sh of document.styleSheets) { let rules; try { rules = sh.cssRules } catch { continue } for (const r of rules) if (r.type === 4 && r.conditionText) for (const m of r.conditionText.matchAll(/\((min|max)-width:\s*([\d.]+px)/g)) bps[`${m[1]}-width ${m[2]}`] = (bps[`${m[1]}-width ${m[2]}`] || 0) + 1 }
+  const top = (o, n) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => [k, Math.round(v)])
+  return { title: document.title, description: document.querySelector('meta[name=description]')?.content || '', menu, headings, text: text(document.body), coloursByUse: top(colours, 14), fontsByUse: top(fonts, 6), breakpoints: top(bps, 12), bodyBackground: getComputedStyle(document.body).backgroundColor }
+}
+
+// ---------------------------------------------------------------- capture
+async function launch(out) {
+  const require = createRequire(resolve('.') + '/')
+  const pw = require(process.env.PLAYWRIGHT_CORE ? resolve(process.env.PLAYWRIGHT_CORE) : 'playwright-core')
+  const home = resolve(out, '.browser'); mkdirSync(join(home, 'tmp'), { recursive: true })
+  return pw.chromium.launch({
+    executablePath: process.env.PIKKU_CHROMIUM || undefined, headless: true, downloadsPath: join(home, 'downloads'),
+    args: ['--no-sandbox', '--disable-dev-shm-usage'],
+    env: { ...process.env, HOME: home, TMPDIR: join(home, 'tmp'), XDG_CONFIG_HOME: join(home, 'config'), XDG_CACHE_HOME: join(home, 'cache') },
+  })
+}
+
+async function capture(out, urls, vps, tiles) {
+  mkdirSync(out, { recursive: true })
+  const browser = await launch(out)
+  const index = []
+  for (const url of urls) {
+    const id = idOf(url); const rec = { id, url, viewports: {} }
+    try { writeFileSync(join(out, `${id}.html`), await (await fetch(url, { headers: { 'user-agent': UA } })).text()) } catch {}
+    for (const w of vps) {
+      const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, userAgent: UA, deviceScaleFactor: 1, isMobile: w < 600 })
+      const page = await ctx.newPage()
+      try {
+        await page.goto(url, { waitUntil: 'networkidle', timeout: 90000 }).catch(() => {})
+        // scroll through the page so lazy pictures load, then back to the top
+        await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 700) { scrollTo(0, y); await new Promise((r) => setTimeout(r, 120)) } scrollTo(0, 0); await new Promise((r) => setTimeout(r, 400)) })
+        const layout = await page.evaluate(extractInPage)
+        writeFileSync(join(out, `${id}-${w}.layout.json`), JSON.stringify({ viewport: w, ...layout }))
+        if (w === vps[0]) writeFileSync(join(out, `${id}.json`), JSON.stringify({ id, url, ...(await page.evaluate(extractStructure)) }, null, 1))
+        await page.screenshot({ path: join(out, `${id}-${w}.png`), fullPage: true })
+        rec.viewports[w] = layout.counts
+        if (tiles) makeTiles(join(out, `${id}-${w}.png`), join(out, 'small'), `${id}-${w}`, w)
+      } catch (e) { rec.viewports[w] = { error: String(e).slice(0, 120) } }
+      await ctx.close()
+    }
+    index.push(rec); console.log(id, JSON.stringify(rec.viewports))
+  }
+  await browser.close()
+  writeFileSync(join(out, 'index.json'), JSON.stringify(index, null, 1))
+}
+
+/** Agent-sized copies: about 768 px wide (390 for a phone), cut into tiles about 1024 px tall: each costs roughly 1000 image tokens or less. */
+function makeTiles(png, dir, name, w) {
+  mkdirSync(dir, { recursive: true })
+  const width = w <= 600 ? 390 : 768
+  sh('convert', [png, '-resize', `${width}x`, '-crop', `${width}x1024`, '+repage', join(dir, `${name}-%d.png`)])
+}
+
+// ---------------------------------------------------------------- compare
+const iou = (a, b) => { const x = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)), y = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)); const i = x * y; return i / (a.w * a.h + b.w * b.h - i || 1) }
+const colsAt = (bands, y) => (bands.find((b) => y >= b.y0 && y <= b.y1)?.cols) || 0
+export function layoutScore(ref, mine) {
+  const n = 20; let agree = 0, multi = 0
+  for (let i = 0; i < n; i++) { const y = (i + 0.5) / n, a = colsAt(ref.bands, y), b = colsAt(mine.bands, y); agree += 1 - Math.abs(a - b) / Math.max(a, b, 1); multi += (a >= 2) === (b >= 2) ? 1 : 0 }
+  const columns = (agree / n) * 0.5 + (multi / n) * 0.5
+  const R = ref.images.filter((b) => b.w >= 0.05), M = mine.images.filter((b) => b.w >= 0.05); const used = new Set(); let sum = 0
+  for (const r of R) { let best = 0, bi = -1; M.forEach((m, i) => { if (used.has(i)) return; const v = iou(r, m); if (v > best) { best = v; bi = i } }); if (bi >= 0) used.add(bi); sum += best }
+  const images = R.length || M.length ? sum / Math.max(R.length, M.length) : 1
+  const sections = Math.min(ref.bands.length, mine.bands.length) / Math.max(ref.bands.length, mine.bands.length, 1)
+  const height = Math.min(ref.doc.h, mine.doc.h) / Math.max(ref.doc.h, mine.doc.h, 1)
+  const multiSections = ref.counts.multiColumnSections === 0 && mine.counts.multiColumnSections === 0 ? 1 : Math.min(ref.counts.multiColumnSections, mine.counts.multiColumnSections) / Math.max(ref.counts.multiColumnSections, mine.counts.multiColumnSections, 1)
+  // fixed weights: columns agreement 0.25, multi-column section count 0.15, picture placement (IoU) 0.25, section count 0.15, page height 0.20
+  const layout = 0.25 * columns + 0.15 * multiSections + 0.25 * images + 0.15 * sections + 0.2 * height
+  return { layout: +layout.toFixed(3), columns: +columns.toFixed(3), multi: +multiSections.toFixed(3), images: +images.toFixed(3), sections: +sections.toFixed(3), height: +height.toFixed(3), refMulti: ref.counts.multiColumnSections, mineMulti: mine.counts.multiColumnSections }
+}
+function pixelScore(a, b) {
+  if (!existsSync(a) || !existsSync(b)) return null
+  const dims = (f) => sh('identify', ['-format', '%w %h', f]).trim().split(' ').map(Number)
+  const [wa, ha] = dims(a), [wb, hb] = dims(b); const W = 240, H = Math.max(Math.round((ha * W) / wa), Math.round((hb * W) / wb))
+  const norm = (f, o) => sh('convert', [f, '-resize', `${W}x`, '-background', 'white', '-gravity', 'north', '-extent', `${W}x${H}`, o])
+  const tmp = join(process.env.TMPDIR || '/tmp', `px-${process.pid}`); mkdirSync(tmp, { recursive: true }); norm(a, join(tmp, 'a.png')); norm(b, join(tmp, 'b.png'))
+  const r = sh('compare', ['-metric', 'RMSE', join(tmp, 'a.png'), join(tmp, 'b.png'), 'null:']).match(/\(([\d.]+)\)/)
+  return r ? +(1 - parseFloat(r[1])).toFixed(3) : null
+}
+function compare(refDir, mineDir) {
+  const rows = []
+  for (const f of readdirSync(refDir).filter((x) => /-\d+\.layout\.json$/.test(x)).sort()) {
+    const mp = join(mineDir, f); const [, id, vp] = f.match(/^(.*)-(\d+)\.layout\.json$/)
+    if (!existsSync(mp)) { rows.push({ id, viewport: +vp, missing: true }); continue }
+    const s = layoutScore(JSON.parse(readFileSync(join(refDir, f))), JSON.parse(readFileSync(mp)))
+    rows.push({ id, viewport: +vp, ...s, pixel: pixelScore(join(refDir, `${id}-${vp}.png`), join(mineDir, `${id}-${vp}.png`)) })
+  }
+  const out = { rows, mean: {} }
+  for (const vp of [...new Set(rows.map((r) => r.viewport))]) { const rs = rows.filter((r) => r.viewport === vp); const m = (k) => +(rs.reduce((a, r) => a + (r.missing ? 0 : r[k] ?? 0), 0) / rs.length).toFixed(3); out.mean[vp] = { layout: m('layout'), columns: m('columns'), multi: m('multi'), images: m('images'), sections: m('sections'), height: m('height'), pixel: m('pixel') } }
+  return out
+}
+
+// ---------------------------------------------------------------- cli
+const [cmd, ...rest] = process.argv.slice(2)
+if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) {
+  if (cmd === 'pages') await pages(rest[0])
+  else if (cmd === 'capture') {
+    const out = rest.shift(); let vps = [1440, 390, 1920], tiles = false, urls = []
+    while (rest.length) { const a = rest.shift(); if (a === '--viewports') vps = rest.shift().split(',').map(Number); else if (a === '--tiles') tiles = true; else if (a.startsWith('@')) urls.push(...readFileSync(a.slice(1), 'utf8').split(/\s+/).filter(Boolean)); else urls.push(a) }
+    await capture(out, urls, vps, tiles)
+  } else if (cmd === 'compare') { const r = compare(rest[0], rest[1]); console.log(JSON.stringify(r.mean)); if (rest[2]) writeFileSync(rest[2], JSON.stringify(r, null, 1)) }
+  else console.log('usage: pages <root-url> | capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file>... | compare <reference-dir> <clone-dir> [report.json]')
+}
