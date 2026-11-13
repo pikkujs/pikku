@@ -1560,6 +1560,11 @@ export const conformance = (
             ),
             [1]
           )
+          const facets = await store.logFacets(s, { since })
+          assert.equal(
+            Object.values(facets.severities).reduce((sum, n) => sum + n, 0),
+            1
+          )
         }
       )
 
