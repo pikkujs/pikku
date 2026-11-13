@@ -1,18 +1,24 @@
-import { sql, type CreateTableBuilder, type Kysely, type SqlBool } from 'kysely'
+import {
+  CamelCasePlugin,
+  sql,
+  type CreateTableBuilder,
+  type Kysely,
+  type SqlBool,
+} from 'kysely'
 import type {
   ColumnDeclaration,
   ColumnDefault,
   ColumnType,
+  NamedConstraint,
   TableDeclaration,
   TablesDeclaration,
 } from '@pikku/core/db'
-import {
-  requiredType,
-  type ForeignKeyTarget,
-  type RequiredTypes,
-  type SchemaContext,
-  type SchemaRequirement,
-  type SchemaStatementFactory,
+import type {
+  ForeignKeyTarget,
+  RequiredTypes,
+  SchemaContext,
+  SchemaRequirement,
+  SchemaStatementFactory,
 } from './pikku-schema.types.js'
 
 type DataTypeExpression = Parameters<
@@ -34,9 +40,16 @@ const SIMPLE_TYPES = new Set<string>([
 ])
 const BOUNDED_STRING = /^string\((\d+)\)$/
 
+/** Exposes the conversion `CamelCasePlugin` applies, so names match it exactly (`apiURL` is `api_url`). */
+class PhysicalNames extends CamelCasePlugin {
+  physical(name: string): string {
+    return this.snakeCase(name)
+  }
+}
+const physicalNames = new PhysicalNames()
+
 /** The physical name `CamelCasePlugin` gives a logical one. */
-const snake = (name: string) =>
-  name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
+const snake = (name: string) => physicalNames.physical(name)
 
 /**
  * Whether `db` compiles for postgres. Placeholders are the tell: `$1` there,
@@ -49,6 +62,12 @@ const isPostgres = (db: Kysely<any>): boolean =>
     .where('probe', '=', 1)
     .compile()
     .sql.includes('$1')
+
+/** A table constraint's columns and, when it keeps an existing one, its name. */
+const constraint = (
+  declared: readonly string[] | NamedConstraint
+): { columns: readonly string[]; name?: string } =>
+  'columns' in declared ? declared : { columns: declared }
 
 const splitTarget = (target: string, where: string): [string, string] => {
   const parts = target.split('.')
@@ -98,8 +117,10 @@ const keyedColumns = (
 ): Set<string> => {
   const declaration = tables[table]!
   const keyed = new Set<string>([
-    ...(declaration.primaryKey ?? []),
-    ...(declaration.unique ?? []).flat(),
+    ...(declaration.primaryKey
+      ? constraint(declaration.primaryKey).columns
+      : []),
+    ...(declaration.unique ?? []).flatMap((group) => constraint(group).columns),
     ...(declaration.indexes ?? []).flatMap((index) => index.columns),
   ])
   for (const [name, column] of Object.entries(declaration.columns)) {
@@ -147,17 +168,11 @@ const dataType = (
   }
 }
 
-const defaultValue = (
-  value: ColumnDefault,
-  type: ResolvedType,
-  ctx: SchemaContext
-) => {
+const defaultValue = (value: ColumnDefault, ctx: SchemaContext) => {
   if (typeof value === 'object') {
     return 'now' in value ? sql`CURRENT_TIMESTAMP` : sql.raw(value.sql)
   }
-  const textual =
-    type.kind === 'declared' && (type.type === 'text' || type.type === 'json')
-  return typeof value === 'string' && textual ? ctx.defaultText(value) : value
+  return typeof value === 'string' ? ctx.defaultText(value) : value
 }
 
 const validate = (tables: TablesDeclaration): void => {
@@ -172,9 +187,12 @@ const validate = (tables: TablesDeclaration): void => {
         }
       }
     }
-    known(declaration.primaryKey ?? [], 'primary key')
+    const primaryKey = declaration.primaryKey
+      ? constraint(declaration.primaryKey).columns
+      : []
+    known(primaryKey, 'primary key')
     for (const group of declaration.unique ?? [])
-      known(group, 'unique constraints')
+      known(constraint(group).columns, 'unique constraints')
     for (const index of declaration.indexes ?? [])
       known(index.columns, 'indexes')
 
@@ -192,13 +210,15 @@ const validate = (tables: TablesDeclaration): void => {
 
     for (const [name, column] of Object.entries(columns)) {
       const here = `${table}.${name}`
-      if (
-        column.type &&
-        !SIMPLE_TYPES.has(column.type) &&
-        !BOUNDED_STRING.test(column.type)
-      ) {
+      const bounded = column.type ? BOUNDED_STRING.exec(column.type) : null
+      if (column.type && !SIMPLE_TYPES.has(column.type) && !bounded) {
         throw new Error(
           `'${here}' has type '${column.type}', which is not a column type.`
+        )
+      }
+      if (bounded && Number(bounded[1]) < 1) {
+        throw new Error(
+          `'${here}' has type '${column.type}'. A bounded string needs a length of at least 1.`
         )
       }
       if (!column.type && !column.references) {
@@ -213,7 +233,7 @@ const validate = (tables: TablesDeclaration): void => {
       }
       if (
         column.onDelete === 'setNull' &&
-        (column.required || column.primaryKey)
+        (column.required || column.primaryKey || primaryKey.includes(name))
       ) {
         throw new Error(
           `'${here}' is required, so onDelete 'setNull' could never succeed. Make it optional, or choose another onDelete.`
@@ -281,13 +301,17 @@ const createTable = (
       const type =
         resolved.kind === 'declared'
           ? dataType(resolved.type, keyed.has(name), ctx, postgres)
-          : requiredType(types, snake(resolved.table), snake(resolved.column))
+          : // Compiled without a database there is no type to read; only the shape matters.
+            sql.raw(
+              types[`${snake(resolved.table)}.${snake(resolved.column)}`] ??
+                'text'
+            )
       builder = builder.addColumn(name, type, (col) => {
         if (column.primaryKey) col = col.primaryKey()
         if (column.required) col = col.notNull()
         if (column.unique) col = col.unique()
         if (column.default !== undefined) {
-          col = col.defaultTo(defaultValue(column.default, resolved, ctx))
+          col = col.defaultTo(defaultValue(column.default, ctx))
         }
         if (column.references) {
           col = ctx.references(col, column.references, column.onDelete)
@@ -302,14 +326,16 @@ const createTable = (
       }
     }
     if (declaration.primaryKey) {
-      builder = builder.addPrimaryKeyConstraint(`${snake(table)}_pk`, [
-        ...declaration.primaryKey,
+      const { columns, name } = constraint(declaration.primaryKey)
+      builder = builder.addPrimaryKeyConstraint(name ?? `${snake(table)}_pk`, [
+        ...columns,
       ] as never)
     }
     for (const group of declaration.unique ?? []) {
+      const { columns, name } = constraint(group)
       builder = builder.addUniqueConstraint(
-        `${snake(table)}_${group.map(snake).join('_')}_key`,
-        [...group] as never
+        name ?? `${snake(table)}_${columns.map(snake).join('_')}_key`,
+        [...columns] as never
       )
     }
     return builder.$call(ctx.foreignKeys(table, foreignKeys))

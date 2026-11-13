@@ -1,4 +1,3 @@
-import { sql } from 'kysely'
 import type { PikkuSchema } from './pikku-schema.types.js'
 
 /**
@@ -19,151 +18,139 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 export const workflowSchema: PikkuSchema = {
   name: 'workflow',
   ownedBy: ['workflowService', 'workflowRunService'],
-  statements: [
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('workflowRuns')
-        .addColumn('workflowRunId', ctx.key, (col) => col.primaryKey())
-        .addColumn('workflow', ctx.key, (col) => col.notNull())
-        .addColumn('status', ctx.key, (col) => col.notNull())
-        .addColumn('input', ctx.text, (col) => col.notNull())
-        .addColumn('output', ctx.text)
-        .addColumn('error', ctx.text)
-        .addColumn('state', ctx.text, (col) =>
-          col.defaultTo(ctx.defaultText('{}'))
-        )
-        .addColumn('inline', 'boolean', (col) => col.defaultTo(false))
-        .addColumn('graphHash', ctx.key)
-        .addColumn('deterministic', 'boolean', (col) => col.defaultTo(false))
-        .addColumn('plannedSteps', ctx.text)
-        .addColumn('wire', ctx.text)
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addColumn('updatedAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        ),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('workflowStep')
-        .addColumn('workflowStepId', ctx.key, (col) => col.primaryKey())
-        .addColumn('workflowRunId', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'workflowRuns.workflowRunId', 'cascade')
-        )
-        .addColumn('stepName', ctx.key, (col) => col.notNull())
-        .addColumn('rpcName', ctx.text)
-        .addColumn('data', ctx.text)
-        .addColumn('status', ctx.key, (col) =>
-          col.notNull().defaultTo(ctx.defaultText('pending'))
-        )
-        .addColumn('result', ctx.text)
-        .addColumn('error', ctx.text)
-        .addColumn('childRunId', ctx.text)
-        .addColumn('branchTaken', ctx.text)
-        .addColumn('retries', 'integer')
-        .addColumn('retryDelay', ctx.text)
-        .addColumn('fromStepName', ctx.text)
-        .addColumn('currentAttempt', 'integer')
-        .addColumn('leaseExpiresAt', 'bigint')
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addColumn('updatedAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addUniqueConstraint('workflow_step_run_name_unique', [
-          'workflowRunId',
-          'stepName',
-        ])
-        .$call(
-          ctx.foreignKeys('workflowStep', {
-            workflowRunId: {
-              target: 'workflowRuns.workflowRunId',
-              onDelete: 'cascade',
-            },
-          })
-        ),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('workflowStepHistory')
-        .addColumn('historyId', ctx.key, (col) => col.primaryKey())
-        .addColumn('workflowStepId', ctx.key, (col) =>
-          ctx.references(
-            col.notNull(),
-            'workflowStep.workflowStepId',
-            'cascade'
-          )
-        )
-        .addColumn('status', ctx.key, (col) => col.notNull())
-        .addColumn('result', ctx.text)
-        .addColumn('error', ctx.text)
-        .addColumn('attempt', 'integer')
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addColumn('runningAt', 'timestamp')
-        .addColumn('scheduledAt', 'timestamp')
-        .addColumn('succeededAt', 'timestamp')
-        .addColumn('failedAt', 'timestamp')
-        .$call(
-          ctx.foreignKeys('workflowStepHistory', {
-            workflowStepId: {
-              target: 'workflowStep.workflowStepId',
-              onDelete: 'cascade',
-            },
-          })
-        ),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('workflowVersions')
-        .addColumn('workflowName', ctx.key, (col) => col.notNull())
-        .addColumn('graphHash', ctx.key, (col) => col.notNull())
-        .addColumn('graph', ctx.text, (col) => col.notNull())
-        .addColumn('source', ctx.key, (col) => col.notNull())
-        .addColumn('status', ctx.key, (col) =>
-          col.notNull().defaultTo(ctx.defaultText('active'))
-        )
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addPrimaryKeyConstraint('workflow_versions_pk', [
-          'workflowName',
-          'graphHash',
-        ]),
-
-    // The indexes trail the tables so that a table is never indexed before it
-    // exists, whatever order the declarations are read in.
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_workflow_runs_status_created')
-        .on('workflowRuns')
-        .columns(['status', 'createdAt']),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_workflow_runs_workflow_created')
-        .on('workflowRuns')
-        .columns(['workflow', 'createdAt']),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_workflow_step_run_status')
-        .on('workflowStep')
-        .columns(['workflowRunId', 'status']),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_workflow_step_history_step')
-        .on('workflowStepHistory')
-        .columns(['workflowStepId', 'createdAt']),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_workflow_versions_source_status')
-        .on('workflowVersions')
-        .columns(['source', 'status']),
-  ],
+  tables: {
+    workflowRuns: {
+      columns: {
+        workflowRunId: { type: 'key', primaryKey: true },
+        workflow: { type: 'key', required: true },
+        status: { type: 'key', required: true },
+        input: { type: 'text', required: true },
+        output: { type: 'text' },
+        error: { type: 'text' },
+        state: { type: 'text', default: '{}' },
+        inline: { type: 'boolean', default: false },
+        graphHash: { type: 'key' },
+        deterministic: { type: 'boolean', default: false },
+        plannedSteps: { type: 'text' },
+        wire: { type: 'text' },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+        updatedAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+      indexes: [
+        {
+          name: 'idx_workflow_runs_status_created',
+          columns: ['status', 'createdAt'],
+        },
+        {
+          name: 'idx_workflow_runs_workflow_created',
+          columns: ['workflow', 'createdAt'],
+        },
+      ],
+    },
+    workflowStep: {
+      columns: {
+        workflowStepId: { type: 'key', primaryKey: true },
+        workflowRunId: {
+          type: 'key',
+          required: true,
+          references: 'workflowRuns.workflowRunId',
+          onDelete: 'cascade',
+        },
+        stepName: { type: 'key', required: true },
+        rpcName: { type: 'text' },
+        data: { type: 'text' },
+        status: { type: 'key', required: true, default: 'pending' },
+        result: { type: 'text' },
+        error: { type: 'text' },
+        childRunId: { type: 'text' },
+        branchTaken: { type: 'text' },
+        retries: { type: 'integer' },
+        retryDelay: { type: 'text' },
+        fromStepName: { type: 'text' },
+        currentAttempt: { type: 'integer' },
+        leaseExpiresAt: { type: 'bigint' },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+        updatedAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+      unique: [
+        {
+          name: 'workflow_step_run_name_unique',
+          columns: ['workflowRunId', 'stepName'],
+        },
+      ],
+      indexes: [
+        {
+          name: 'idx_workflow_step_run_status',
+          columns: ['workflowRunId', 'status'],
+        },
+      ],
+    },
+    workflowStepHistory: {
+      columns: {
+        historyId: { type: 'key', primaryKey: true },
+        workflowStepId: {
+          type: 'key',
+          required: true,
+          references: 'workflowStep.workflowStepId',
+          onDelete: 'cascade',
+        },
+        status: { type: 'key', required: true },
+        result: { type: 'text' },
+        error: { type: 'text' },
+        attempt: { type: 'integer' },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+        runningAt: { type: 'timestamp' },
+        scheduledAt: { type: 'timestamp' },
+        succeededAt: { type: 'timestamp' },
+        failedAt: { type: 'timestamp' },
+      },
+      indexes: [
+        {
+          name: 'idx_workflow_step_history_step',
+          columns: ['workflowStepId', 'createdAt'],
+        },
+      ],
+    },
+    workflowVersions: {
+      columns: {
+        workflowName: { type: 'key', required: true },
+        graphHash: { type: 'key', required: true },
+        graph: { type: 'text', required: true },
+        source: { type: 'key', required: true },
+        status: { type: 'key', required: true, default: 'active' },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+      primaryKey: ['workflowName', 'graphHash'],
+      indexes: [
+        {
+          name: 'idx_workflow_versions_source_status',
+          columns: ['source', 'status'],
+        },
+      ],
+    },
+  },
 }

@@ -1,7 +1,12 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import type { ColumnAnnotation, TableAnnotations } from '@pikku/core/db'
-import type { AppTables, PikkuSchema } from '@pikku/kysely'
+import type {
+  ColumnAnnotation,
+  ColumnType,
+  TableAnnotations,
+  TablesDeclaration,
+} from '@pikku/core/db'
+import { compileTables, type PikkuSchema } from '@pikku/kysely'
 import { loadFreshUserModule } from '../commands/load-user-project.js'
 import { flattenAnnotationTables } from './annotation-parser.js'
 import type { ColumnInfo } from './db-introspector.js'
@@ -17,9 +22,13 @@ const TABLES_EXPORT = 'tables'
 const snakeCase = (name: string): string =>
   name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
 
-/** A loaded `db/tables.ts`, in the physical names the generator compares on. */
-export interface TableDeclaration {
+/** A loaded `db/tables.ts`. */
+export interface LoadedDeclaration {
+  /** The tables `pikku db generate` writes SQL for. */
   schema: PikkuSchema
+  /** The `declareOnly` tables: described here, created by something else. */
+  declareOnly: TablesDeclaration
+  /** Every column's annotations, keyed by physical table, then column. */
   annotations: TableAnnotations
 }
 
@@ -37,22 +46,47 @@ const ALLOWED_VALUES: Record<
   description: 'string',
 }
 
+/** The column fields that are not annotations. */
+const COLUMN_FIELDS = new Set([
+  'type',
+  'required',
+  'default',
+  'primaryKey',
+  'unique',
+  'index',
+  'references',
+  'onDelete',
+  'enum',
+  'min',
+  'max',
+  'minLength',
+  'maxLength',
+  'pattern',
+])
+
+const TABLE_FIELDS = new Set([
+  'columns',
+  'primaryKey',
+  'unique',
+  'indexes',
+  'declareOnly',
+])
+
 /**
- * Check one annotation entry and return what is wrong with it.
+ * Check one column's annotations and return what is wrong with them.
  *
  * `db/annotations.ts` parses leniently: an unknown value is dropped. Here that
  * would mean a typo in `security: 'pi'` leaves a column with personal data at
- * the default level with nothing said, so every field is checked.
+ * the default level with nothing said, so every field is checked, and a field
+ * that is neither an annotation nor part of the column's shape is refused.
  */
-function annotationProblems(
-  at: string,
-  entry: Record<string, unknown>
-): string[] {
+function columnProblems(at: string, column: Record<string, unknown>): string[] {
   const problems: string[] = []
-  for (const [field, value] of Object.entries(entry)) {
+  for (const [field, value] of Object.entries(column)) {
+    if (COLUMN_FIELDS.has(field)) continue
     const allowed = ALLOWED_VALUES[field as keyof ColumnAnnotation]
     if (!allowed) {
-      problems.push(`${at} has an unknown annotation '${field}'`)
+      problems.push(`${at} has an unknown field '${field}'`)
     } else if (allowed === 'string') {
       if (typeof value !== 'string') {
         problems.push(`${at}.${field} must be a string`)
@@ -66,38 +100,16 @@ function annotationProblems(
   return problems
 }
 
-function physicalAnnotations(raw: unknown, file: string): TableAnnotations {
-  if (raw === undefined) return {}
-  if (typeof raw !== 'object' || raw === null) {
-    throw new Error(`${file}: annotations must be keyed by table, then column.`)
-  }
-  const annotations: TableAnnotations = {}
-  const problems: string[] = []
-  for (const [table, columns] of Object.entries(raw)) {
-    if (typeof columns !== 'object' || columns === null) {
-      problems.push(`${table} must be an object of columns`)
-      continue
-    }
-    const physical = (annotations[snakeCase(table)] ??= {})
-    for (const [column, entry] of Object.entries(columns)) {
-      if (typeof entry !== 'object' || entry === null) {
-        problems.push(`${table}.${column} must be an object`)
-        continue
-      }
-      problems.push(
-        ...annotationProblems(
-          `${table}.${column}`,
-          entry as Record<string, unknown>
-        )
-      )
-      physical[snakeCase(column)] = entry as ColumnAnnotation
-    }
-  }
-  if (problems.length > 0) {
-    throw new Error(`${file}: ${problems.join('; ')}.`)
-  }
-  return annotations
-}
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+/** The annotation fields of a column, without its shape. */
+const annotationOf = (column: Record<string, unknown>): ColumnAnnotation =>
+  Object.fromEntries(
+    Object.entries(column).filter(
+      ([field, value]) => field in ALLOWED_VALUES && value !== undefined
+    )
+  ) as ColumnAnnotation
 
 /**
  * Read `db/tables.ts`, or `null` when the project declares nothing.
@@ -109,7 +121,7 @@ function physicalAnnotations(raw: unknown, file: string): TableAnnotations {
  */
 export async function loadTableDeclaration(
   rootDir: string
-): Promise<TableDeclaration | null> {
+): Promise<LoadedDeclaration | null> {
   const file = join(rootDir, TABLES_FILE)
   if (!existsSync(file)) return null
 
@@ -120,22 +132,74 @@ export async function loadTableDeclaration(
     throw new Error(`${TABLES_FILE} could not be loaded: ${error.message}`)
   }
 
-  const tables = exported as Partial<AppTables> | undefined
-  if (!tables || !Array.isArray(tables.statements)) {
+  if (isObject(exported) && Array.isArray(exported.statements)) {
     throw new Error(
-      `${TABLES_FILE} must export \`const ${TABLES_EXPORT} = defineTables({ statements: [...] })\`.`
+      `${TABLES_FILE} exports the old \`defineTables({ statements })\` shape, which is gone: declare each table as \`{ columns }\` with \`defineTables\` from @pikku/core/db, as docs/MIGRATION.md shows.`
+    )
+  }
+  if (!isObject(exported)) {
+    throw new Error(
+      `${TABLES_FILE} must export \`const ${TABLES_EXPORT} = defineTables({ ... })\`, with \`defineTables\` from @pikku/core/db.`
     )
   }
 
+  const problems: string[] = []
+  const annotations: TableAnnotations = {}
+  const managed: TablesDeclaration = {}
+  const declareOnly: TablesDeclaration = {}
+  for (const [table, declaration] of Object.entries(exported)) {
+    if (!isObject(declaration) || !isObject(declaration.columns)) {
+      problems.push(`${table} must be an object with its columns`)
+      continue
+    }
+    for (const field of Object.keys(declaration)) {
+      if (!TABLE_FIELDS.has(field)) {
+        problems.push(`${table} has an unknown field '${field}'`)
+      }
+    }
+    const physical: Record<string, ColumnAnnotation> = {}
+    for (const [column, entry] of Object.entries(declaration.columns)) {
+      if (!isObject(entry)) {
+        problems.push(`${table}.${column} must be an object`)
+        continue
+      }
+      problems.push(...columnProblems(`${table}.${column}`, entry))
+      const annotation = annotationOf(entry)
+      if (Object.keys(annotation).length > 0) {
+        physical[snakeCase(column)] = annotation
+      }
+    }
+    if (Object.keys(physical).length > 0) {
+      annotations[snakeCase(table)] = physical
+    }
+    const target = declaration.declareOnly === true ? declareOnly : managed
+    target[table] = declaration as unknown as TablesDeclaration[string]
+  }
+  if (problems.length > 0) {
+    throw new Error(`${TABLES_FILE}: ${problems.join('; ')}.`)
+  }
+
+  try {
+    // Checks the whole declaration, references between both kinds included.
+    compileTables({ ...managed, ...declareOnly })
+  } catch (error: any) {
+    throw new Error(`${TABLES_FILE}: ${error.message}`)
+  }
+
   return {
-    schema: {
-      name: APP_TABLES_SOURCE,
-      statements: tables.statements,
-      requires: tables.requires,
-    },
-    annotations: physicalAnnotations(tables.annotations, TABLES_FILE),
+    schema: { name: APP_TABLES_SOURCE, tables: managed },
+    declareOnly,
+    annotations,
   }
 }
+
+/** Every table a declaration names, managed or not, in physical names. */
+export const declaredTableNames = (
+  declaration: LoadedDeclaration
+): { managed: string[]; declareOnly: string[] } => ({
+  managed: Object.keys(declaration.schema.tables).map(snakeCase),
+  declareOnly: Object.keys(declaration.declareOnly).map(snakeCase),
+})
 
 // ─── The record of what was declared ─────────────────────────────────────────
 
@@ -275,48 +339,133 @@ export function refuseTableChanges(
   return refusals
 }
 
-/** Annotations that name a table or column the declaration does not have. */
-export function strayAnnotations(
-  annotations: TableAnnotations,
-  tables: Map<string, Map<string, ColumnInfo>>
+type TypeFamily =
+  'text' | 'integer' | 'real' | 'boolean' | 'timestamp' | 'uuid' | 'json'
+
+/** What an introspected type holds, or `undefined` when it is not one this can judge. */
+const familyOf = (type: string): TypeFamily | undefined => {
+  const t = type.toLowerCase()
+  if (/bool/.test(t)) return 'boolean'
+  if (/uuid/.test(t)) return 'uuid'
+  if (/json/.test(t)) return 'json'
+  if (/int/.test(t)) return 'integer'
+  if (/real|double|float|numeric|decimal/.test(t)) return 'real'
+  if (/timestamp|datetime|date|time/.test(t)) return 'timestamp'
+  if (/char|text|clob|user-defined/.test(t)) return 'text'
+  return undefined
+}
+
+/**
+ * The families a declared type may be found as. Loose where an engine has no
+ * such type and stores it as another: sqlite keeps dates as text or numbers,
+ * MySQL a uuid as `char(36)`, and both a boolean as an integer.
+ */
+const acceptedFamilies = (type: ColumnType, dialect: string): TypeFamily[] => {
+  const dates: TypeFamily[] =
+    dialect === 'sqlite' ? ['timestamp', 'text', 'integer'] : ['timestamp']
+  switch (type) {
+    case 'id':
+      return ['text', 'uuid', 'integer']
+    case 'key':
+      return ['text', 'uuid']
+    case 'integer':
+    case 'bigint':
+      return ['integer']
+    case 'real':
+      return ['real']
+    case 'boolean':
+      return ['boolean', 'integer']
+    case 'timestamp':
+    case 'timestamptz':
+      return dates
+    case 'uuid':
+      return ['uuid', 'text']
+    case 'json':
+      return ['json', 'text']
+    default:
+      return ['text']
+  }
+}
+
+const KIND_FAMILIES: Record<
+  NonNullable<ColumnAnnotation['kind']>,
+  (dialect: string) => TypeFamily[]
+> = {
+  date: (dialect) =>
+    dialect === 'sqlite' ? ['timestamp', 'text', 'integer'] : ['timestamp'],
+  bool: () => ['boolean', 'integer'],
+  json: () => ['json', 'text'],
+  uuid: () => ['uuid', 'text'],
+}
+
+/**
+ * Where a `declareOnly` table disagrees with the table the migrations made.
+ *
+ * Nothing is generated for these, so nothing else would notice: a column that
+ * is not there, or holds something other than what the declaration types it as,
+ * would only surface as a wrong type in the generated schema.
+ */
+export function declareOnlyProblems(
+  declareOnly: TablesDeclaration,
+  existing: (table: string) => Map<string, ColumnInfo> | undefined,
+  dialect: string
 ): string[] {
-  const stray: string[] = []
-  for (const [table, columns] of Object.entries(annotations)) {
-    const declared = tables.get(table)
-    if (!declared) {
-      stray.push(
-        `${TABLES_FILE} annotates ${table}, which it does not declare.`
+  const problems: string[] = []
+  for (const [logical, declaration] of Object.entries(declareOnly)) {
+    const table = snakeCase(logical)
+    const actual = existing(table)
+    if (!actual) {
+      problems.push(
+        `${TABLES_FILE} declares ${table} as declareOnly, but no migration creates it. ` +
+          'Something else has to create a declareOnly table; drop declareOnly to have generate write it.'
       )
       continue
     }
-    for (const column of Object.keys(columns)) {
-      if (!declared.has(column)) {
-        stray.push(
-          `${TABLES_FILE} annotates ${table}.${column}, which ${table} does not declare, ` +
-            'so the column it means has no classification.'
+    for (const [name, column] of Object.entries(declaration.columns)) {
+      const at = `${table}.${snakeCase(name)}`
+      const info = actual.get(snakeCase(name))
+      if (!info) {
+        problems.push(
+          `${TABLES_FILE} declares ${at}, which the migrations do not create.`
+        )
+        continue
+      }
+      const family = familyOf(typeOf(info))
+      if (!family) continue
+      if (
+        column.type &&
+        !acceptedFamilies(column.type, dialect).includes(family)
+      ) {
+        problems.push(
+          `${at} is ${info.type} in the migrations, which does not hold the '${column.type}' ${TABLES_FILE} declares.`
+        )
+      } else if (
+        column.kind &&
+        !KIND_FAMILIES[column.kind](dialect).includes(family)
+      ) {
+        problems.push(
+          `${at} is ${info.type} in the migrations, which does not hold the kind '${column.kind}' ${TABLES_FILE} gives it.`
         )
       }
     }
   }
-  return stray
+  return problems
 }
 
 // ─── Annotations ─────────────────────────────────────────────────────────────
 
 /**
- * `db/annotations.ts` with the declaration's annotations folded in.
+ * `db/annotations.ts` with the declaration's annotations folded in underneath.
  *
  * The result is what the sidecar holds, so every reader — codegen, the console,
- * the audit — keeps one place to look. A column annotated in both is fine while
- * they agree (`pikku db annotate` writes a `kind` the declaration may also
- * state). When they disagree this stops: picking one would let an old file
- * quietly lower a column's classification.
+ * the audit — keeps one place to look. Where both annotate the same field,
+ * `db/annotations.ts` wins: it is the file a project has been editing, and it
+ * goes away entirely once the declaration is the only place annotations live.
  */
 export function mergeAnnotations(
   authored: Record<string, Record<string, unknown>>,
   declared: TableAnnotations
 ): Record<string, Record<string, unknown>> {
-  const conflicts: string[] = []
   const flat = new Map(flattenAnnotationTables(authored))
   const merged: Record<string, Record<string, unknown>> = structuredClone(
     authored
@@ -329,22 +478,9 @@ export function mergeAnnotations(
     const entry: Record<string, unknown> = { ...existing }
     for (const [column, annotation] of Object.entries(columns)) {
       const other = (existing[column] ?? {}) as Record<string, unknown>
-      for (const [field, value] of Object.entries(annotation)) {
-        if (other[field] !== undefined && other[field] !== value) {
-          conflicts.push(
-            `${table}.${column}.${field} is '${String(other[field])}' in db/annotations.ts and '${String(value)}' in ${TABLES_FILE}`
-          )
-        }
-      }
-      entry[column] = { ...other, ...annotation }
+      entry[column] = { ...annotation, ...other }
     }
     merged[table] = entry
-  }
-
-  if (conflicts.length > 0) {
-    throw new Error(
-      `Annotations disagree: ${conflicts.join('; ')}. Keep them in ${TABLES_FILE} and remove them from db/annotations.ts.`
-    )
   }
   return merged
 }

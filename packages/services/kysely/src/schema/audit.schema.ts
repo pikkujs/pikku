@@ -18,43 +18,35 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 export const auditSchema: PikkuSchema = {
   name: 'audit',
   ownedBy: ['audit', 'auditLog'],
-  statements: [
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('audit')
-        .addColumn('auditId', ctx.key, (col) => col.primaryKey())
-        .addColumn('occurredAt', ctx.key, (col) => col.notNull())
-        .addColumn('type', ctx.key, (col) => col.notNull())
-        .addColumn('source', ctx.text, (col) =>
-          col.defaultTo(ctx.defaultText('auto')).notNull()
-        )
-        .addColumn('outcome', ctx.text)
-        .addColumn('functionId', ctx.text)
-        .addColumn('wireType', ctx.text)
-        .addColumn('traceId', ctx.text)
-        .addColumn('transactionId', ctx.text)
-        .addColumn('queryId', ctx.text)
-        .addColumn('userId', ctx.key)
-        .addColumn('orgId', ctx.text)
-        .addColumn('pikkuUserId', ctx.text)
-        .addColumn('tables', ctx.text)
-        .addColumn('changedCols', ctx.text)
-        .addColumn('event', ctx.text)
-        .addColumn('old', ctx.text)
-        .addColumn('data', ctx.text),
-
-    // The trail is only ever read newest-first, and the two filters the console
-    // offers are user and type.
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_audit_occurred_at')
-        .on('audit')
-        .column('occurredAt'),
-
-    (db, _types, ctx) =>
-      db.schema.createIndex('idx_audit_user_id').on('audit').column('userId'),
-
-    (db, _types, ctx) =>
-      db.schema.createIndex('idx_audit_type').on('audit').column('type'),
-  ],
+  tables: {
+    audit: {
+      columns: {
+        auditId: { type: 'key', primaryKey: true },
+        occurredAt: { type: 'key', required: true },
+        type: { type: 'key', required: true },
+        source: { type: 'text', required: true, default: 'auto' },
+        outcome: { type: 'text' },
+        functionId: { type: 'text' },
+        wireType: { type: 'text' },
+        traceId: { type: 'text' },
+        transactionId: { type: 'text' },
+        queryId: { type: 'text' },
+        userId: { type: 'key' },
+        orgId: { type: 'text' },
+        pikkuUserId: { type: 'text' },
+        tables: { type: 'text' },
+        changedCols: { type: 'text' },
+        event: { type: 'text' },
+        old: { type: 'text' },
+        data: { type: 'text' },
+      },
+      // The trail is only ever read newest-first, and the two filters the
+      // console offers are user and type.
+      indexes: [
+        { name: 'idx_audit_occurred_at', columns: ['occurredAt'] },
+        { name: 'idx_audit_user_id', columns: ['userId'] },
+        { name: 'idx_audit_type', columns: ['type'] },
+      ],
+    },
+  },
 }

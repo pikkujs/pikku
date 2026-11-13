@@ -253,34 +253,28 @@ All implement standard Pikku interfaces from `@pikku/core`.
 
 ## Declaring tables
 
-Declare the app's tables in `db/tables.ts`, and put their annotations beside
-them. One declaration gives the SQL, the types and the classification.
+Declare the app's tables in `db/tables.ts`, with their annotations on the
+columns. One declaration gives the SQL, the types and the classification.
 `pikku meta db` says where the file is and what it already declares. You never
 need to know where migrations live.
 
 ```typescript
 // db/tables.ts
-import { defineTables } from '@pikku/kysely'
+import { defineTables } from '@pikku/core/db'
 
 export const tables = defineTables({
-  statements: [
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('invoice')
-        .addColumn('invoiceId', ctx.key, (col) => col.primaryKey())
-        .addColumn('customerEmail', ctx.text, (col) => col.notNull())
-        .addColumn('paidAt', 'timestamp'),
-    (db) =>
-      db.schema
-        .createIndex('invoice_customer_email_idx')
-        .on('invoice')
-        .column('customerEmail'),
-  ],
-  annotations: {
-    invoice: {
-      customerEmail: { security: 'pii', format: 'email' },
-      paidAt: { kind: 'date' },
+  invoice: {
+    columns: {
+      invoiceId: { type: 'key', primaryKey: true },
+      customerEmail: {
+        type: 'text',
+        required: true,
+        security: 'pii',
+        format: 'email',
+      },
+      paidAt: { type: 'timestamp', kind: 'date' },
     },
+    indexes: [{ columns: ['customerEmail'] }],
   },
 })
 ```
@@ -292,35 +286,35 @@ pikku db generate   # writes the SQL
 pikku db migrate    # applies it and regenerates the types
 ```
 
-- **`statements` are `db.schema` calls**, tables and indexes only, written in
-  camelCase. `ctx.key` and `ctx.text` are the dialect's key and text types.
-- **Change a table by editing its statement** in place and running `generate`
+- **The declaration is plain data**, named in camelCase. Types are `id`, `key`,
+  `text`, `string(n)`, `integer`, `bigint`, `real`, `boolean`, `timestamp`,
+  `timestamptz`, `uuid`, `json`. A column takes `required`, `default`,
+  `primaryKey`, `unique`, `index`, `references: 'table.column'` + `onDelete`; a table takes
+  composite `primaryKey`, `unique` and `indexes`. No Kysely builder calls: the
+  old `statements` shape is refused.
+- **Change a table by editing its entry** in place and running `generate`
   again. It writes only the difference: new tables, new columns, new indexes.
 - **`generate` adds and nothing else.** A dropped column or table, a rename, a
   changed type, and a new `NOT NULL` column with no default are refused with the
   reason, and nothing is written. Declare a new column nullable or with a
   default. Taking data away is a person's decision, so stop and ask.
 - **A foreign key onto a table outside this file** (Better Auth's `user`, a
-  hand-written table) has to be named in `requires`, and `requiredType` gives
-  the column its type:
+  hand-written table) is a `references: 'user.id'` with no `type`: it takes the type the
+  migrations gave the target. `onDelete` defaults to `restrict`.
 
   ```typescript
-  import { defineTables, requiredType } from '@pikku/kysely'
-
-  export const tables = defineTables({
-    requires: [{ table: 'user', column: 'id', owner: 'Better Auth' }],
-    statements: [
-      (db, types, ctx) =>
-        db.schema
-          .createTable('note')
-          .addColumn('noteId', ctx.key, (col) => col.primaryKey())
-          .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
-            col.notNull().references('user.id').onDelete('cascade')
-          ),
-    ],
-  })
+  note: {
+    columns: {
+      noteId: { type: 'key', primaryKey: true },
+      userId: { references: 'user.id', onDelete: 'cascade', required: true },
+    },
+  },
   ```
 
+- **A table something else creates** (Better Auth's `user`, a hand-written
+  one) can be declared with `declareOnly: true` to give it types and
+  annotations. No SQL is written for it; its declared columns must exist in
+  the migrations with a type that matches, or `generate` refuses.
 - **A column named like personal data or a credential, with no `security`,
   warns** (PKU486 pii, PKU487 secret) on `pikku db migrate`. The column is
   still `private`, which is the default for every unannotated column; the
@@ -336,8 +330,8 @@ pikku db migrate    # applies it and regenerates the types
   pii-looking name. Booleans, dates and numbers, and names ending `_at`,
   `_count`, `_id`, `_type`, `_ref`, `_verified`, are never flagged. Framework
   tables are skipped. There is no config opt-out: annotate the column.
-- **An annotation typo is an error**, as is annotating a column the declaration
-  doesn't have. `security` is `public`, `private`, `pii` or `secret`.
+- **An annotation typo is an error**, as is any field a column or table does
+  not have. `security` is `public`, `private`, `pii` or `secret`.
 - **`db check` and `db migrate` stop** when `db/tables.ts` is ahead of the
   migrations, and tell you to run `generate`.
 

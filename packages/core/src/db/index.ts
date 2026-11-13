@@ -133,14 +133,36 @@ export interface IndexDeclaration {
   name?: string
 }
 
+/**
+ * A table-level constraint that keeps a name it already has in a deployed
+ * database, so declaring it does not rename it.
+ */
+export interface NamedConstraint {
+  columns: readonly string[]
+  name: string
+}
+
 /** One table. */
 export interface TableDeclaration {
   columns: Record<string, ColumnDeclaration>
-  /** A composite primary key, instead of `primaryKey` on a column. */
-  primaryKey?: readonly string[]
-  /** Composite unique constraints, one list of columns each. */
-  unique?: readonly (readonly string[])[]
+  /**
+   * A composite primary key, instead of `primaryKey` on a column. Named
+   * `<table>_pk` unless given a name.
+   */
+  primaryKey?: readonly string[] | NamedConstraint
+  /**
+   * Composite unique constraints, one list of columns each. Named
+   * `<table>_<columns>_key` unless given a name.
+   */
+  unique?: readonly (readonly string[] | NamedConstraint)[]
   indexes?: readonly IndexDeclaration[]
+  /**
+   * The table is created by something else — a hand-written migration, or
+   * another package such as Better Auth — and declared here only for its types
+   * and annotations. No SQL is generated for it; its columns are checked
+   * against the table the migrations create.
+   */
+  declareOnly?: boolean
 }
 
 /** An app's tables, keyed by table name. */
