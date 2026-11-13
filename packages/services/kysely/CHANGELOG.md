@@ -1,3 +1,28 @@
+## 0.13.44
+
+### Patch Changes
+
+- 5181138: `AgentRunStateService.resolveApproval` takes one claim object, `{ runId, toolCallId, status }` (`ApprovalClaim` from `@pikku/core/services`), and claims only an approval pending on that run. The two-argument form is removed. The stores used to claim by tool call id alone, and `resumeAgentSync` claimed whatever ids its caller sent, so a caller authorized for one run could claim and run another run's approved tool. `resumeAgentSync` now refuses an approval list naming a tool call that is not pending on the run, before claiming any of it. A custom store must add the run to its compare-and-swap; see `docs/MIGRATION.md`.
+- 5181138: Agent approvals expire. A run suspended for an approval or a credential stamps `expiresAt` on each `PendingApproval`, from the agent's new `approvalTtlMs` (a finite number above zero; `addAgent` refuses anything else) or `DEFAULT_AGENT_APPROVAL_TTL_MS`, 10 minutes. `resumeAgent`, `resumeAgentSync` and `approveAgent` refuse an expired approval with a `GoneError` (410) before claiming it or calling the tool or the model, and fail the run with `errorMessage: 'approval expired'`; a delegating parent run fails with its sub-agent. Every store also refuses an expired approval in `resolveApproval`. An approval with no expiry, including any saved before this release, is refused.
+
+  `@pikku/kysely`: `agentToolCall` gains a nullable `approvalExpiresAt bigint` column; run `pikku db generate` then `pikku db migrate`. `KyselyAgentRunStateService` now reads its JSON columns through a serializing plugin (SQLite, D1), compares its claim as text so the compare-and-swap matches there, and creates run ids that fit the `varchar(36)` column on Postgres.
+
+- 5c3e091: Follow-up to the table declaration compiler. Physical names in `tableRequirements` and generated constraint names now use `CamelCasePlugin`'s own conversion (`apiURL` is `api_url`). `compileTables` refuses `string(0)`, and `onDelete: 'setNull'` on a column in a composite primary key. `applyPikkuSchemas` builds every statement before running any, so a refused statement (a partial index on MySQL) leaves nothing applied. `ForeignKeyTarget`'s `onDelete` is optional, defaulting to `restrict`.
+- 8d0c2d4: New `@pikku/core/db` entry point with the plain table declaration vocabulary (`defineTables`, `TablesDeclaration`, `ColumnDeclaration`, `OnDelete`, and `ColumnAnnotation` / `TableAnnotations`, which move here: `@pikku/kysely` no longer exports them, see docs/MIGRATION.md). `@pikku/kysely` gains `compileTables(decl)`, which compiles a declaration into schema statements for sqlite, postgres and MySQL, and `tableRequirements(decl)`. `SchemaContext.references` and `foreignKeys` take an `onDelete` (`cascade`, `setNull`, `restrict`, `noAction`), defaulting to `restrict` instead of always cascading; the framework's own schemas pass `cascade` explicitly, so the SQL they compile is unchanged. Nothing reads the new declaration yet: `db/tables.ts` still takes `defineTables` from `@pikku/kysely`.
+- 166e343: The 17 framework schemas in `@pikku/kysely` are now plain table declarations compiled by `compileTables`, and their SQL is unchanged on sqlite, postgres and MySQL. `PikkuSchema` carries `tables` (plus `extraStatements` for DDL a declaration cannot express) instead of `statements`, and its `requires` are inferred from the declaration. In `@pikku/core/db`, a table's `primaryKey` and `unique` entries can name the constraint (`{ name, columns }`), and a string default on any text-like column compiles as an expression on MySQL.
+- 5ea64ad: `db/tables.ts` is now the plain declaration: `defineTables({ table: { columns } })` from `@pikku/core/db`, with annotations on the columns. The old `{ statements, requires, annotations }` shape is refused with a pointer to `docs/MIGRATION.md`, and `defineTables`, `requiredType`, `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` are removed from `@pikku/kysely`. A table marked `declareOnly: true` is typed and annotated from the declaration without any SQL generated for it, and its columns are checked against the table the migrations create. `pikku meta db` lists those tables separately.
+- Updated dependencies [5181138]
+- Updated dependencies [5181138]
+- Updated dependencies [71ba80d]
+- Updated dependencies [8d0c2d4]
+- Updated dependencies [b8f3da8]
+- Updated dependencies [b829a15]
+- Updated dependencies [166e343]
+- Updated dependencies [8006227]
+- Updated dependencies [5ea64ad]
+- Updated dependencies [fa3cad1]
+  - @pikku/core@0.12.157
+
 ## 0.13.43
 
 ### Patch Changes
