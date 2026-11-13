@@ -41,12 +41,26 @@ Postgres and MySQL all work from the same declaration.
 | `primaryKey`, `unique`, `index`                           | Single-column key, constraint or index. Composite ones go on the table                                               |
 | `references`                                              | `table.column`. Without a `type`, the column takes its target's type                                                 |
 | `onDelete`                                                | `cascade`, `setNull`, `restrict` (the default) or `noAction`                                                         |
-| `enum`, `min`, `max`, `minLength`, `maxLength`, `pattern` | Value constraints. Recorded on the declaration; not yet in the SQL or the generated types                            |
+| `enum`, `min`, `max`, `minLength`, `maxLength`, `pattern` | Value constraints: `CHECK`s in the SQL (not `pattern`), and bounds in the generated zod schema                       |
 | Annotation fields                                         | `security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`                             |
 
 A table takes `columns`, and optionally `primaryKey` (composite), `unique`
 (composite constraints), `indexes` (with `unique`, a partial `where`, and a `name`),
 and `declareOnly`.
+
+### Constraints
+
+`enum`, `min`, `max`, `minLength` and `maxLength` become inline `CHECK`
+constraints named `<table>_<column>_<kind>_check` (`kind` is `enum`, `min`,
+`max`, `minlength` or `maxlength`); `enum` also types the column as a union.
+`pattern` is checked by the generated zod schema only, never in SQL, because
+regex dialects differ. A `CHECK` is written on `CREATE TABLE` and on a column
+added later, which is what lets sqlite add one with `ADD COLUMN`. Adding or
+changing a constraint on a column that already exists is refused, naming the
+check: write that migration by hand (`ALTER TABLE ... ADD CONSTRAINT` on
+postgres and MySQL, a rebuilt table on sqlite) or take it out of
+`db/tables.ts`. A bound on a column of the wrong kind (`min` on text,
+`minLength` on a number) is an error when the file loads.
 
 A field that is not one of these is an error, as is an invalid annotation value:
 `security: 'pi'` is refused rather than left at the default.
@@ -137,7 +151,8 @@ columns. See [DB column annotations](./db-column-annotations.md) and
 
 ## What it does not detect
 
-- A changed foreign key, `UNIQUE` or `CHECK` on an existing column.
+- A changed foreign key or `UNIQUE` on an existing column. A changed declared
+  constraint on one is refused rather than ignored (see Constraints).
 - A removed index, or a changed definition under the same index name.
 - A table adopted from a hand-written migration and later removed from the
   declaration. It goes back to being hand-written, and nothing is dropped.

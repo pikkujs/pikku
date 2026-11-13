@@ -39,6 +39,8 @@ const SIMPLE_TYPES = new Set<string>([
   'json',
 ])
 const BOUNDED_STRING = /^string\((\d+)\)$/
+const NUMERIC_TYPES = new Set<string>(['integer', 'bigint', 'real'])
+const TEXT_TYPES = new Set<string>(['id', 'key', 'text'])
 
 /** Exposes the conversion `CamelCasePlugin` applies, so names match it exactly (`apiURL` is `api_url`). */
 class PhysicalNames extends CamelCasePlugin {
@@ -175,6 +177,150 @@ const defaultValue = (value: ColumnDefault, ctx: SchemaContext) => {
   return typeof value === 'string' ? ctx.defaultText(value) : value
 }
 
+/** The kind of a `CHECK` a column constraint compiles to, which names it. */
+type CheckKind = 'enum' | 'min' | 'max' | 'minlength' | 'maxlength'
+
+/** The deterministic name of a column's check, so a later diff finds it again. */
+const checkName = (table: string, column: string, kind: CheckKind): string =>
+  `${snake(table)}_${snake(column)}_${kind}_check`
+
+/**
+ * The `CHECK`s a column's constraints compile to, as the SQL each one tests.
+ *
+ * The value is quoted by the engine's own rules (`sql.lit`), because DDL cannot
+ * take bound parameters. `pattern` is not here: it never reaches SQL.
+ */
+const columnChecks = (
+  table: string,
+  name: string,
+  column: ColumnDeclaration,
+  postgres: boolean,
+  mysql: boolean
+): { name: string; test: ReturnType<typeof sql> }[] => {
+  const col = sql.id(name)
+  const length =
+    postgres || mysql ? sql`char_length(${col})` : sql`length(${col})`
+  const checks: { name: string; test: ReturnType<typeof sql> }[] = []
+  const add = (kind: CheckKind, test: ReturnType<typeof sql>) =>
+    checks.push({ name: checkName(table, name, kind), test })
+  if (column.enum) {
+    add(
+      'enum',
+      sql`${col} in (${sql.join(column.enum.map((v) => sql.lit(v)))})`
+    )
+  }
+  if (column.min !== undefined)
+    add('min', sql`${col} >= ${sql.lit(column.min)}`)
+  if (column.max !== undefined)
+    add('max', sql`${col} <= ${sql.lit(column.max)}`)
+  if (column.minLength !== undefined) {
+    add('minlength', sql`${length} >= ${sql.lit(column.minLength)}`)
+  }
+  if (column.maxLength !== undefined) {
+    add('maxlength', sql`${length} <= ${sql.lit(column.maxLength)}`)
+  }
+  return checks
+}
+
+const isCount = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0
+
+/** What is wrong with a column's constraints, if anything. */
+const constraintProblems = (
+  tables: TablesDeclaration,
+  table: string,
+  name: string,
+  column: ColumnDeclaration
+): string[] => {
+  const here = `${table}.${name}`
+  const problems: string[] = []
+  const { enum: values, min, max, minLength, maxLength, pattern } = column
+  const has = (value: unknown) => value !== undefined
+
+  const resolved = resolveType(tables, table, name)
+  // A column typed by a table outside the declaration has no type to judge yet.
+  const type = resolved.kind === 'declared' ? resolved.type : undefined
+  const numeric = type === undefined || NUMERIC_TYPES.has(type)
+  const text =
+    type === undefined || TEXT_TYPES.has(type) || BOUNDED_STRING.test(type)
+
+  if ((has(min) || has(max)) && !numeric) {
+    problems.push(
+      `'${here}' is ${type}, so it cannot have a min or max. They are for integer, bigint and real columns.`
+    )
+  }
+  for (const [field, value] of [
+    ['min', min],
+    ['max', max],
+  ] as const) {
+    if (has(value) && !(typeof value === 'number' && Number.isFinite(value))) {
+      problems.push(`'${here}' ${field} must be a finite number.`)
+    }
+  }
+  if (typeof min === 'number' && typeof max === 'number' && min > max) {
+    problems.push(`'${here}' has a min (${min}) above its max (${max}).`)
+  }
+
+  if (
+    (has(values) || has(minLength) || has(maxLength) || has(pattern)) &&
+    !text
+  ) {
+    problems.push(
+      `'${here}' is ${type}, so it cannot have an enum, minLength, maxLength or pattern. They are for text columns.`
+    )
+  }
+  for (const [field, value] of [
+    ['minLength', minLength],
+    ['maxLength', maxLength],
+  ] as const) {
+    if (has(value) && !isCount(value)) {
+      problems.push(`'${here}' ${field} must be a whole number, 0 or more.`)
+    }
+  }
+  if (isCount(minLength) && isCount(maxLength) && minLength > maxLength) {
+    problems.push(
+      `'${here}' has a minLength (${minLength}) above its maxLength (${maxLength}).`
+    )
+  }
+  const bounded = type ? BOUNDED_STRING.exec(type) : null
+  if (bounded && isCount(maxLength) && maxLength > Number(bounded[1])) {
+    problems.push(
+      `'${here}' is ${type}, so a maxLength of ${maxLength} could never be reached. Lower it or widen the type.`
+    )
+  }
+  if (has(values)) {
+    if (
+      !Array.isArray(values) ||
+      values.length === 0 ||
+      values.some((v) => typeof v !== 'string')
+    ) {
+      problems.push(`'${here}' enum must be a non-empty list of strings.`)
+    } else {
+      if (new Set(values).size !== values.length) {
+        problems.push(`'${here}' enum lists a value more than once.`)
+      }
+      if (
+        typeof column.default === 'string' &&
+        !values.includes(column.default)
+      ) {
+        problems.push(
+          `'${here}' defaults to '${column.default}', which is not in its enum.`
+        )
+      }
+    }
+  }
+  if (has(pattern)) {
+    try {
+      new RegExp(pattern!)
+    } catch {
+      problems.push(
+        `'${here}' pattern '${pattern}' is not a valid regular expression.`
+      )
+    }
+  }
+  return problems
+}
+
 const validate = (tables: TablesDeclaration): void => {
   for (const [table, declaration] of Object.entries(tables)) {
     const columns = declaration.columns
@@ -251,6 +397,8 @@ const validate = (tables: TablesDeclaration): void => {
         }
         resolveType(tables, table, name)
       }
+      const problems = constraintProblems(tables, table, name, column)
+      if (problems.length > 0) throw new Error(problems.join(' '))
     }
   }
 }
@@ -315,6 +463,19 @@ const createTable = (
         }
         if (column.references) {
           col = ctx.references(col, column.references, column.onDelete)
+        }
+        // Inline, not at the table level, so the same text is what `ADD COLUMN`
+        // takes on sqlite, which cannot add a table-level constraint later.
+        for (const check of columnChecks(
+          table,
+          name,
+          column,
+          postgres,
+          ctx.mysql
+        )) {
+          col = col.modifyEnd(
+            sql`constraint ${sql.id(check.name)} check (${check.test})`
+          )
         }
         return col
       })

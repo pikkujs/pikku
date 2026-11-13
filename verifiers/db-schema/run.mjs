@@ -936,6 +936,9 @@ export const tables = defineTables({
       id: { type: 'key', primaryKey: true },
       userId: { references: 'user.id', onDelete: 'cascade', required: true },
       url: { type: 'text', required: true, security: 'pii' },
+      rating: { type: 'integer', min: 1, max: 5 },
+      visibility: { type: 'text', default: 'private', enum: ['private', 'shared'] },
+      label: { type: 'string(32)', minLength: 2, pattern: '^[a-z]+$' },
     },
   },
 })
@@ -1011,6 +1014,49 @@ const refusedBy = (label) => {
   process.stdout.write(output)
   return { status: result.status, output }
 }
+// Constraints: named CHECKs in the SQL, types and zod from the sidecar, and the
+// introspector of this engine reads them back as what generate wrote, which is
+// the only reason the second generate above found nothing to do.
+for (const name of [
+  'bookmark_rating_min_check',
+  'bookmark_rating_max_check',
+  'bookmark_visibility_enum_check',
+  'bookmark_label_minlength_check',
+]) {
+  contains(tablesSql, name, `${name} is in the generated migration`)
+}
+check(!tablesSql.includes('a-z'), 'a pattern never reaches SQL')
+check(
+  sidecar.bookmark?.rating?.min === 1 &&
+    sidecar.bookmark?.visibility?.enum?.length === 2,
+  'constraints reached the sidecar'
+)
+check(
+  /'private' \| 'shared'/.test(
+    readFileSync(join(here, '.pikku', 'db', 'schema.gen.ts'), 'utf8')
+  ),
+  'the enum check types visibility as a union (the CHECK round-trips)'
+)
+const zodGen = readFileSync(join(here, '.pikku', 'db', 'zod.gen.ts'), 'utf8')
+check(
+  /rating: z\.number\(\)\.min\(1\)\.max\(5\)/.test(zodGen) &&
+    /label: z\.string\(\)\.min\(2\)\.regex\(/.test(zodGen),
+  'the generated zod schema carries min/max, length and pattern'
+)
+declareTables(
+  TABLES_SOURCE(USER_COLUMNS).replace(
+    "rating: { type: 'integer', min: 1, max: 5 }",
+    "rating: { type: 'integer', min: 1, max: 10 }"
+  )
+)
+const changedCheck = refusedBy('app: pikku db generate (changed constraint)')
+check(
+  changedCheck.status !== 0 &&
+    changedCheck.output.includes('bookmark.rating already exists') &&
+    changedCheck.output.includes('bookmark_rating_max_check'),
+  'changing a constraint on an existing column is refused, by name'
+)
+
 declareTables(
   TABLES_SOURCE(`id: { type: 'id', primaryKey: true },
       email: { type: 'integer' },`)

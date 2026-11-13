@@ -2,13 +2,15 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import type {
   ColumnAnnotation,
+  ColumnConstraints,
   ColumnType,
   TableAnnotations,
   TablesDeclaration,
 } from '@pikku/core/db'
 import { compileTables, type PikkuSchema } from '@pikku/kysely'
 import { loadFreshUserModule } from '../commands/load-user-project.js'
-import type { ColumnInfo } from './db-introspector.js'
+import { checkFingerprint } from './check-enums.js'
+import type { ColumnCheck, ColumnInfo } from './db-introspector.js'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'
 import { ZOD_FORMATS } from './zod-codegen.js'
 
@@ -54,8 +56,19 @@ const ALLOWED_VALUES: Record<
   description: 'string',
 }
 
+/** The constraint fields of a column, which the sidecar carries beside its annotations. */
+const CONSTRAINT_FIELDS = new Set<string>([
+  'enum',
+  'min',
+  'max',
+  'minLength',
+  'maxLength',
+  'pattern',
+])
+
 /** The column fields that are not annotations. */
 const COLUMN_FIELDS = new Set([
+  ...CONSTRAINT_FIELDS,
   'type',
   'required',
   'default',
@@ -64,12 +77,6 @@ const COLUMN_FIELDS = new Set([
   'index',
   'references',
   'onDelete',
-  'enum',
-  'min',
-  'max',
-  'minLength',
-  'maxLength',
-  'pattern',
 ])
 
 const TABLE_FIELDS = new Set([
@@ -111,13 +118,20 @@ function columnProblems(at: string, column: Record<string, unknown>): string[] {
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
-/** The annotation fields of a column, without its shape. */
-const annotationOf = (column: Record<string, unknown>): ColumnAnnotation =>
+/**
+ * What a column says about itself beyond its shape: its annotations and its
+ * constraints, which is what the codegen and the console read from the sidecar.
+ */
+const annotationOf = (
+  column: Record<string, unknown>
+): ColumnAnnotation & ColumnConstraints =>
   Object.fromEntries(
     Object.entries(column).filter(
-      ([field, value]) => field in ALLOWED_VALUES && value !== undefined
+      ([field, value]) =>
+        (field in ALLOWED_VALUES || CONSTRAINT_FIELDS.has(field)) &&
+        value !== undefined
     )
-  ) as ColumnAnnotation
+  ) as ColumnAnnotation & ColumnConstraints
 
 /**
  * Read `db/tables.ts`, or `null` when the project declares nothing. A
@@ -170,7 +184,7 @@ export async function loadTableDeclaration(
         problems.push(`${table} has an unknown field '${field}'`)
       }
     }
-    const physical: Record<string, ColumnAnnotation> = {}
+    const physical: TableAnnotations[string] = {}
     for (const [column, entry] of Object.entries(declaration.columns)) {
       if (!isObject(entry)) {
         problems.push(`${table}.${column} must be an object`)
@@ -292,6 +306,65 @@ function columnChanges(desired: ColumnInfo, actual: ColumnInfo): string[] {
 }
 
 /**
+ * The `CHECK` names a declaration generates: `<table>_<column>_<kind>_check`.
+ * A check named like this that the declaration no longer asks for was generated
+ * from it once, so its removal is a constraint change; one named otherwise is a
+ * person's, and the declaration says nothing about it.
+ */
+const GENERATED_CHECK = /_(enum|min|max|minlength|maxlength)_check$/
+
+/**
+ * How the constraints on an existing column differ from its declaration.
+ *
+ * A check counts as present when the migrations hold one of the same name and
+ * condition, or the same condition under another name, since a person who
+ * hand-wrote the migration this refusal asked for may have named it as they
+ * liked.
+ */
+function constraintChanges(
+  table: string,
+  column: string,
+  desired: ColumnInfo,
+  actual: ColumnInfo
+): string[] {
+  const wanted: ColumnCheck[] = desired.checks ?? []
+  const held: ColumnCheck[] = actual.checks ?? []
+  const changes: string[] = []
+  for (const check of wanted) {
+    const sameName = held.find((h) => h.name === check.name)
+    if (sameName) {
+      if (
+        checkFingerprint(sameName.expression) !==
+        checkFingerprint(check.expression)
+      ) {
+        changes.push(
+          `${check.name} is (${sameName.expression}) in the migrations and (${check.expression}) in the declaration`
+        )
+      }
+    } else if (
+      !held.some(
+        (h) =>
+          checkFingerprint(h.expression) === checkFingerprint(check.expression)
+      )
+    ) {
+      changes.push(
+        `${check.name} (${check.expression}) is not in the migrations`
+      )
+    }
+  }
+  for (const check of held) {
+    if (
+      check.name.startsWith(`${table}_${column}_`) &&
+      GENERATED_CHECK.test(check.name) &&
+      !wanted.some((w) => w.name === check.name)
+    ) {
+      changes.push(`${check.name} (${check.expression}) is no longer declared`)
+    }
+  }
+  return changes
+}
+
+/**
  * Why a declared table cannot be brought into line by adding to it, if it can't.
  *
  * Everything here is either destructive or a guess. Dropping loses data; a
@@ -340,6 +413,16 @@ export function refuseTableChanges(
         )
       }
       continue
+    }
+    const constraints = constraintChanges(table, name, column, existing)
+    if (constraints.length > 0) {
+      refusals.push(
+        `${table}.${name} already exists, and its constraints differ from the migrations: ${constraints.join('; ')}. ` +
+          `generate puts constraints on new tables and new columns only, because rows already in ${table} ` +
+          `may break a new one. Write that migration by hand in ${where} ` +
+          `(ALTER TABLE ... ADD CONSTRAINT on postgres and MySQL, a rebuilt table on sqlite), ` +
+          `or take the constraint out of ${TABLES_FILE}.`
+      )
     }
     const changes = columnChanges(column, existing)
     if (changes.length > 0) {

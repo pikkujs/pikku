@@ -35,8 +35,9 @@ function row(
 
 function fakeClient(rows: PgColumnRow[]) {
   return {
-    async query<T = unknown>(): Promise<{ rows: T[] }> {
-      return { rows: rows as unknown as T[] }
+    async query<T = unknown>(sql: string): Promise<{ rows: T[] }> {
+      // Only the column query has rows; the constraint sweep finds no checks.
+      return { rows: (/pg_constraint/.test(sql) ? [] : rows) as unknown as T[] }
     },
     async end(): Promise<void> {},
   }
@@ -258,6 +259,40 @@ test('getAllColumns types CHECK enums across every table in one sweep', async ()
     assert.deepEqual(status!.enumValues, ['draft', 'final'])
     assert.deepEqual(band!.enumValues, ['low', 'mid', 'high'])
     assert.equal(note!.enumValues, undefined)
+  } finally {
+    await client.end()
+  }
+})
+
+test('getColumns and getAllColumns read each single-column CHECK by name', async () => {
+  const client = await pgliteClient(`
+    CREATE TABLE invoice (
+      invoice_id text PRIMARY KEY,
+      status text NOT NULL CONSTRAINT invoice_status_enum_check CHECK (status IN ('draft', 'sent')),
+      qty integer CONSTRAINT invoice_qty_min_check CHECK (qty >= 0),
+      lo integer,
+      hi integer,
+      CHECK (lo <= hi)
+    )`)
+  try {
+    const introspector = new PostgresIntrospector(client)
+    const one = await introspector.getColumns('invoice')
+    const all = (await introspector.getAllColumns()).get('invoice')!
+    for (const cols of [one, all]) {
+      const byName = Object.fromEntries(cols.map((c) => [c.name, c]))
+      assert.deepEqual(byName.qty!.checks, [
+        { name: 'invoice_qty_min_check', expression: 'qty >= 0' },
+      ])
+      assert.equal(byName.status!.checks![0]!.name, 'invoice_status_enum_check')
+      assert.match(
+        byName.status!.checks![0]!.expression,
+        /ANY \(ARRAY\['draft'/
+      )
+      assert.deepEqual(byName.status!.enumValues, ['draft', 'sent'])
+      // across two columns: belongs to neither
+      assert.equal(byName.lo!.checks, undefined)
+      assert.equal(byName.invoice_id!.checks, undefined)
+    }
   } finally {
     await client.end()
   }

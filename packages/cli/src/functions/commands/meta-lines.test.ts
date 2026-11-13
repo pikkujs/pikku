@@ -15,6 +15,7 @@ import {
   matchMetaRows,
   metaWords,
   parseDbSchema,
+  withConstraints,
   parseMetaTerms,
   routesDirOf,
   rpcsReachedFrom,
@@ -396,5 +397,37 @@ describe('formatting', () => {
     assert.ok(lines.includes('plain'))
     assert.ok(!map.includes('workflows'))
     assert.ok(lines[5]!.length < 60)
+  })
+})
+
+describe('withConstraints', () => {
+  test('adds declared bounds from the sidecar, keyed by physical names', () => {
+    const [table] = withConstraints(
+      [
+        {
+          table: 'practiceUser',
+          columns: [
+            {
+              name: 'ageYears',
+              type: 'number',
+              nullable: false,
+              generated: false,
+              classification: null,
+            },
+            {
+              name: 'id',
+              type: 'string',
+              nullable: false,
+              generated: false,
+              classification: null,
+            },
+          ],
+        },
+      ],
+      { practice_user: { age_years: { min: 0, max: 120 } } }
+    )
+    assert.equal(table!.columns[0]!.constraints, 'min 0, max 120')
+    assert.equal(table!.columns[1]!.constraints, undefined)
+    assert.equal(dbColumnRows(table!)[0]!.detail, 'number [min 0, max 120]')
   })
 })

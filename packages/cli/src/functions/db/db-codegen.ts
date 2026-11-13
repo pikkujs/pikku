@@ -8,7 +8,7 @@ import {
   type AnnotationMap,
   type ColAnnotation,
 } from './annotation-parser.js'
-import type { ZodFormat } from './zod-codegen.js'
+import type { ZodConstraints, ZodFormat } from './zod-codegen.js'
 import {
   bareUnquotedTableName,
   readMigrationProvenance,
@@ -264,6 +264,28 @@ function bareTableName(name: string): string {
   return dot >= 0 ? name.slice(dot + 1) : name
 }
 
+/** The bounds a column declares that its resolved select type can take, if any. */
+function zodConstraintsFor(
+  ann: ColAnnotation | null,
+  base: string
+): ZodConstraints | undefined {
+  if (!ann) return undefined
+  const picked: ZodConstraints =
+    base === 'number'
+      ? { min: ann.min, max: ann.max }
+      : base === 'string'
+        ? {
+            minLength: ann.minLength,
+            maxLength: ann.maxLength,
+            pattern: ann.pattern,
+          }
+        : {}
+  const defined = Object.entries(picked).filter(([, v]) => v !== undefined)
+  return defined.length > 0
+    ? (Object.fromEntries(defined) as ZodConstraints)
+    : undefined
+}
+
 function emitInterface(
   table: TableSchema & { displayName?: string },
   camelCase: boolean,
@@ -271,6 +293,7 @@ function emitInterface(
   dialect: Dialect,
   enumByName: Map<string, string[]>,
   formatHints: Record<string, Record<string, ZodFormat>>,
+  constraintHints: Record<string, Record<string, ZodConstraints>>,
   warnings: CodedDiagnostic[],
   frameworkTables: ReadonlySet<string> = new Set()
 ): string {
@@ -324,7 +347,8 @@ function emitInterface(
       // parsed onto `col.enumValues`.
       const enumValues =
         col.enumValues ??
-        (col.udtName ? enumByName.get(col.udtName) : undefined)
+        (col.udtName ? enumByName.get(col.udtName) : undefined) ??
+        ann?.enum
       const enumUnion =
         enumValues && enumValues.length > 0
           ? enumValues.map((v) => `'${escapeTsString(v)}'`).join(' | ')
@@ -376,6 +400,12 @@ function emitInterface(
           })
         }
       }
+
+      // Declared bounds refine the zod schema the same way: `min`/`max` on a
+      // number, the length bounds and `pattern` on a string. On any other
+      // resolved type (an enum union, a Date) they have nothing to refine.
+      const bounds = zodConstraintsFor(ann, selectBase(typeAnn, col))
+      if (bounds) (constraintHints[ifaceName] ??= {})[fieldName] = bounds
 
       const classification: Classification = ann?.classification ?? 'private'
 
@@ -611,6 +641,8 @@ export interface CodegenResult {
    * shapes the zod emitter parses out of `schema.gen.ts`.
    */
   zodFormats: Record<string, Record<string, ZodFormat>>
+  /** Per-interface, per-field bounds for the zod codegen, keyed like `zodFormats`. */
+  zodConstraints: Record<string, Record<string, ZodConstraints>>
 }
 
 /**
@@ -720,6 +752,7 @@ export async function generateSchemaTypes(
       : []
   )
   const zodFormats: Record<string, Record<string, ZodFormat>> = {}
+  const zodConstraints: Record<string, Record<string, ZodConstraints>> = {}
   const interfaces = tables
     .map((t) =>
       emitInterface(
@@ -729,6 +762,7 @@ export async function generateSchemaTypes(
         dialect,
         enumByName,
         zodFormats,
+        zodConstraints,
         warnings,
         frameworkTables
       )
@@ -986,5 +1020,6 @@ export async function generateSchemaTypes(
     tables: tables.map((t) => t.name),
     warnings,
     zodFormats,
+    zodConstraints,
   }
 }

@@ -330,6 +330,11 @@ pikku db migrate    # applies it and regenerates the types
   pii-looking name. Booleans, dates and numbers, and names ending `_at`,
   `_count`, `_id`, `_type`, `_ref`, `_verified`, are never flagged. Framework
   tables are skipped. There is no config opt-out: annotate the column.
+- **Constraints are real.** `enum`, `min`, `max`, `minLength`, `maxLength`
+  become named `CHECK`s (`<table>_<col>_<kind>_check`) on a new table or a new
+  column, and the zod schema carries them; `pattern` is zod only. Adding or
+  changing one on an existing column makes `generate` refuse, naming the check:
+  say so and ask for a hand-written migration rather than editing around it.
 - **An annotation typo is an error**, as is any field a column or table does
   not have. `security` is `public`, `private`, `pii` or `secret`.
 - **`db check` and `db migrate` stop** when `db/tables.ts` is ahead of the

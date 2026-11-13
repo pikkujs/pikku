@@ -671,3 +671,49 @@ describe('mysql typing', () => {
     assert.match(out, /body: ColumnType<Private<string>/)
   })
 })
+
+describe('declared constraints', () => {
+  const columns = [
+    col({ name: 'qty', type: 'integer', notNull: false }),
+    col({ name: 'code', type: 'varchar(8)', notNull: false }),
+    col({ name: 'kind', type: 'text', notNull: false }),
+    col({ name: 'at', type: 'timestamp', notNull: false }),
+  ]
+
+  test('bounds become zod hints on the columns they can refine', async () => {
+    const result = await run(columns, {
+      widget: {
+        qty: { min: 0, max: 9, minLength: 3 },
+        code: { minLength: 2, maxLength: 8, pattern: '^[a-z]+$', min: 1 },
+        at: { min: 1 },
+      },
+    })
+    assert.deepEqual(result.zodConstraints, {
+      AppWidget: {
+        qty: { min: 0, max: 9 },
+        code: { minLength: 2, maxLength: 8, pattern: '^[a-z]+$' },
+      },
+    })
+  })
+
+  test('an enum declared but not in the database types the column as a union', async () => {
+    const result = await run(columns, {
+      widget: { kind: { enum: ['a', 'b'] } },
+    })
+    assert.match(readFileSync(result.outFile, 'utf8'), /kind: .*'a' \| 'b'/)
+    assert.deepEqual(result.zodConstraints, {})
+  })
+
+  test('the database enum wins over the declared one', async () => {
+    const result = await run(
+      [col({ name: 'kind', type: 'text', enumValues: ['x', 'y'] })],
+      { widget: { kind: { enum: ['a', 'b'] } } }
+    )
+    assert.match(readFileSync(result.outFile, 'utf8'), /'x' \| 'y'/)
+  })
+
+  test('nothing is emitted for a table with no constraints', async () => {
+    const result = await run(columns)
+    assert.deepEqual(result.zodConstraints, {})
+  })
+})

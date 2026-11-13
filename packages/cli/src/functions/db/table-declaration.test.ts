@@ -621,6 +621,212 @@ describe('declared tables on postgres', () => {
   })
 })
 
+describe('constraints on the declaration', () => {
+  const CONSTRAINED = item(`
+    status: { type: 'text', required: true, default: 'draft', enum: ['draft', 'sent'] },
+    qty: { type: 'integer', min: 0, max: 99 },
+    slug: { type: 'string(16)', minLength: 2, maxLength: 16, pattern: '^[a-z-]+$', format: 'email' },
+    ratio: { type: 'real', min: 0.5 },`)
+
+  test('a new table gets named checks, and the sidecar, types and zod carry them', async () => {
+    declare(CONSTRAINED)
+    const resolved = sqliteProject()
+    const { written, refusals } = await generate(resolved)
+    assert.deepEqual(refusals, [])
+    const sql = readFileSync(written[0]!.file, 'utf8')
+    assert.match(sql, /constraint "item_status_enum_check" check/)
+    assert.match(sql, /constraint "item_qty_max_check" check \("qty" <= 99\)/)
+    assert.doesNotMatch(sql, /a-z/, 'pattern never reaches SQL')
+
+    await migrateAndCodegen(resolved, { scratch: true })
+    const sidecar = JSON.parse(
+      readFileSync(join(root, 'db', 'annotations.gen.json'), 'utf8')
+    )
+    assert.deepEqual(sidecar.item.qty, { min: 0, max: 99 })
+    assert.deepEqual(sidecar.item.status, { enum: ['draft', 'sent'] })
+    assert.equal(sidecar.item.slug.pattern, '^[a-z-]+$')
+
+    const schema = readFileSync(
+      join(root, '.pikku', 'db', 'schema.gen.ts'),
+      'utf8'
+    )
+    assert.match(schema, /'draft' \| 'sent'/)
+    const zod = readFileSync(join(root, '.pikku', 'db', 'zod.gen.ts'), 'utf8')
+    assert.match(zod, /status: z\.enum\(\['draft', 'sent'\]\)/)
+    assert.match(zod, /qty: z\.number\(\)\.min\(0\)\.max\(99\)\.nullable\(\)/)
+    assert.match(
+      zod,
+      /slug: z\.email\(\)\.min\(2\)\.max\(16\)\.regex\(new RegExp\("\^\[a-z-\]\+\$"\)\)\.nullable\(\)/
+    )
+    assert.match(zod, /ratio: z\.number\(\)\.min\(0\.5\)\.nullable\(\)/)
+  })
+
+  test('running it twice writes nothing the second time', async () => {
+    declare(CONSTRAINED)
+    const resolved = sqliteProject()
+    await generate(resolved)
+    const again = await generate(resolved)
+    assert.deepEqual(again.refusals, [])
+    assert.deepEqual(again.written, [])
+  })
+
+  test('a new constrained column is added to a populated sqlite table', async () => {
+    declare(ITEM)
+    const resolved = sqliteProject()
+    await generate(resolved)
+    await migrateAndCodegen(resolved)
+    const { DatabaseSync } = await import('node:sqlite')
+    const db = new DatabaseSync(join(root, 'dev.db'))
+    db.exec(`insert into item (id, name) values ('a', 'one'), ('b', 'two')`)
+    db.close()
+
+    declare(
+      item(`qty: { type: 'integer', min: 0 },
+        kind: { type: 'text', required: true, default: 'x', enum: ['x', 'y'] },`)
+    )
+    const { written, refusals } = await generate(resolved)
+    assert.deepEqual(refusals, [])
+    assert.match(
+      readFileSync(written[0]!.file, 'utf8'),
+      /ADD COLUMN "qty" integer constraint "item_qty_min_check" check \("qty" >= 0\);/
+    )
+    await migrateAndCodegen(resolved)
+
+    const after = new DatabaseSync(join(root, 'dev.db'))
+    assert.equal(
+      (after.prepare('select count(*) n from item').get() as any).n,
+      2
+    )
+    assert.throws(() =>
+      after.exec(`insert into item (id, name, qty) values ('c', 'x', -1)`)
+    )
+    assert.throws(() =>
+      after.exec(`insert into item (id, name, kind) values ('c', 'x', 'z')`)
+    )
+    after.close()
+    assert.deepEqual((await generate(resolved)).written, [])
+  })
+
+  test('a column that is new on postgres gets its check with ADD COLUMN', async () => {
+    declare(ITEM)
+    const resolved = postgresProject()
+    await generate(resolved)
+    declare(item(`qty: { type: 'integer', min: 0 },`))
+    const { written, refusals } = await generate(resolved)
+    assert.deepEqual(refusals, [])
+    assert.match(
+      readFileSync(written[0]!.file, 'utf8'),
+      /ADD COLUMN "qty" integer constraint "item_qty_min_check" check \("qty" >= 0\);/
+    )
+    assert.deepEqual((await generate(resolved)).refusals, [])
+  })
+
+  for (const dialect of ['sqlite', 'postgres'] as const) {
+    const project = () =>
+      dialect === 'sqlite' ? sqliteProject() : postgresProject()
+
+    test(`${dialect}: adding a constraint to an existing column is refused with what to do`, async () => {
+      declare(ITEM)
+      const resolved = project()
+      await generate(resolved)
+      const before = migrations(dialect)
+
+      declare(`item: { columns: {
+        id: { type: 'key', primaryKey: true },
+        name: { type: 'text', required: true, maxLength: 20 },
+      } }`)
+      const { written, refusals } = await generate(resolved)
+      assert.deepEqual(written, [])
+      assert.equal(refusals.length, 1)
+      assert.match(
+        refusals[0]!,
+        /item\.name already exists, and its constraints differ/
+      )
+      assert.match(refusals[0]!, /item_name_maxlength_check/)
+      assert.match(refusals[0]!, /Write that migration by hand in db\/\w+/)
+      assert.deepEqual(migrations(dialect), before)
+    })
+
+    test(`${dialect}: changing and removing a generated constraint are refused`, async () => {
+      declare(item(`qty: { type: 'integer', max: 10 },`))
+      const resolved = project()
+      await generate(resolved)
+
+      declare(item(`qty: { type: 'integer', max: 20 },`))
+      const changed = await generate(resolved)
+      assert.match(
+        changed.refusals[0]!,
+        /item_qty_max_check is \(.*10\) in the migrations and \(.*20\)/
+      )
+
+      declare(item(`qty: { type: 'integer' },`))
+      const removed = await generate(resolved)
+      assert.match(
+        removed.refusals[0]!,
+        /item_qty_max_check .* is no longer declared/
+      )
+    })
+  }
+
+  test('a check a person wrote by hand, under any name, satisfies the declaration', async () => {
+    handWritten(
+      'sqlite',
+      `CREATE TABLE item (id TEXT PRIMARY KEY, qty INTEGER CONSTRAINT my_rule CHECK (qty >= 0), n INTEGER CHECK (n <= 5));`
+    )
+    declare(`item: { columns: {
+      id: { type: 'text', primaryKey: true },
+      qty: { type: 'integer', min: 0 },
+      n: { type: 'integer', max: 5 },
+    } }`)
+    const { refusals } = await generate(sqliteProject())
+    assert.deepEqual(refusals, [])
+  })
+
+  test('a hand-written check the declaration does not mention is left alone', async () => {
+    handWritten(
+      'sqlite',
+      `CREATE TABLE item (id TEXT PRIMARY KEY, qty INTEGER CONSTRAINT my_rule CHECK (qty >= 0));`
+    )
+    declare(`item: { columns: {
+      id: { type: 'text', primaryKey: true },
+      qty: { type: 'integer' },
+    } }`)
+    assert.deepEqual((await generate(sqliteProject())).refusals, [])
+  })
+
+  test('a constraint the column type cannot hold is an error naming the column', async () => {
+    declare(item(`flag: { type: 'boolean', min: 1 },`))
+    await assert.rejects(
+      generate(sqliteProject()),
+      /'item\.flag' is boolean, so it cannot have a min or max/
+    )
+  })
+
+  test('on a declareOnly table they type the column and are not generated', async () => {
+    handWritten(
+      'sqlite',
+      `CREATE TABLE item (id TEXT PRIMARY KEY, kind TEXT, n INTEGER);`
+    )
+    declare(`item: { declareOnly: true, columns: {
+      id: { type: 'text', primaryKey: true },
+      kind: { type: 'text', enum: ['a', 'b'] },
+      n: { type: 'integer', min: 1 },
+    } }`)
+    const resolved = sqliteProject()
+    const { written, refusals } = await generate(resolved)
+    assert.deepEqual([written, refusals], [[], []])
+    await migrateAndCodegen(resolved, { scratch: true })
+    assert.match(
+      readFileSync(join(root, '.pikku', 'db', 'schema.gen.ts'), 'utf8'),
+      /'a' \| 'b'/
+    )
+    assert.match(
+      readFileSync(join(root, '.pikku', 'db', 'zod.gen.ts'), 'utf8'),
+      /n: z\.number\(\)\.min\(1\)\.nullable\(\)/
+    )
+  })
+})
+
 describe('database context', () => {
   test('says where tables are declared, and not where migrations live', async () => {
     declare(ITEM)

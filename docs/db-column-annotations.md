@@ -39,16 +39,18 @@ export const tables = defineTables({
 })
 ```
 
-| Field            | Values                                           | Effect                                                   |
-| ---------------- | ------------------------------------------------ | -------------------------------------------------------- |
-| `security`       | `public`, `private` (default), `pii`, `secret`   | the brand on the generated type; who may read the value  |
-| `form`           | `plain` (default), `hashed`, `wrapped`, `sealed` | what the stored bytes are (see below)                    |
-| `keyId`          | any string                                       | which key a `wrapped`/`sealed` column is encrypted under |
-| `classification` | `fake:email`, `fake:name`, `hash`, `keep`        | how the anonymizer rewrites the value                    |
-| `kind`           | `date`, `bool`, `json`, `uuid`                   | the TypeScript type and runtime coercion                 |
-| `tsType`         | a TypeScript type                                | overrides the type outright; wins over `kind`            |
-| `format`         | a `ZOD_FORMATS` key (`email`, `url`, …)          | refines the zod validator only; the type stays `string`  |
-| `description`    | any string                                       | carried into the schema metadata                         |
+| Field                                             | Values                                           | Effect                                                                                             |
+| ------------------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `security`                                        | `public`, `private` (default), `pii`, `secret`   | the brand on the generated type; who may read the value                                            |
+| `form`                                            | `plain` (default), `hashed`, `wrapped`, `sealed` | what the stored bytes are (see below)                                                              |
+| `keyId`                                           | any string                                       | which key a `wrapped`/`sealed` column is encrypted under                                           |
+| `classification`                                  | `fake:email`, `fake:name`, `hash`, `keep`        | how the anonymizer rewrites the value                                                              |
+| `kind`                                            | `date`, `bool`, `json`, `uuid`                   | the TypeScript type and runtime coercion                                                           |
+| `tsType`                                          | a TypeScript type                                | overrides the type outright; wins over `kind`                                                      |
+| `format`                                          | a `ZOD_FORMATS` key (`email`, `url`, …)          | refines the zod validator only; the type stays `string`                                            |
+| `description`                                     | any string                                       | carried into the schema metadata                                                                   |
+| `min`, `max`, `minLength`, `maxLength`, `pattern` | numbers, a regex string                          | `CHECK`s in SQL (not `pattern`) and zod bounds; see [Declaring tables](./db-tables.md#constraints) |
+| `enum`                                            | a list of strings                                | a `CHECK ... IN (...)` and a union type                                                            |
 
 An unknown value is refused when `db/tables.ts` is loaded. A column the
 declaration does not list is `private`.
@@ -115,6 +117,11 @@ This distinction drives every extension decision.
   validator (`z.email()`). There is nothing in `schema.gen.d.ts` to key off, so it
   travels as a **structured hint** from `db-codegen` → `zod-codegen`
   (`CodegenResult.zodFormats`), not via the type string.
+
+- **`min` / `max` / `minLength` / `maxLength` / `pattern`** also leave the TS
+  type alone. They travel the same way, as `CodegenResult.zodConstraints`, and
+  are skipped for columns that are an enum union, a date, or an array. The
+  sidecar carries them to the console's form hints and to `pikku meta db`.
 
 When adding something new, first decide which axis it's on. If it changes the
 type, it's `kind`/`tsType`/auto-detect. If it's a pure string refinement, it's a

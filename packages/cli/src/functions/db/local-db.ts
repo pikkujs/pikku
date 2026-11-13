@@ -791,6 +791,7 @@ export async function migrateAndCodegen(
     schemaFile: resolved.schemaFile,
     outFile: resolved.zodFile,
     formats: codegenResult.zodFormats,
+    constraints: codegenResult.zodConstraints,
   })
 
   return {
