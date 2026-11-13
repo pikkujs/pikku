@@ -107,7 +107,10 @@ describe('runPikkuFunc - spans', () => {
     addTestFunction('foo', { func: async () => 1 })
     await run('foo@v2', recording)
     await run('foo', recording)
-    assert.strictEqual(recording.spans[0]!.attributes['pikku.function.version'], 2)
+    assert.strictEqual(
+      recording.spans[0]!.attributes['pikku.function.version'],
+      2
+    )
     assert.ok(!('pikku.function.version' in recording.spans[1]!.attributes))
 
     await run('foo@v2', telemetry.tracer)
