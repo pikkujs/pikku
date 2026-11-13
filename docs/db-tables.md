@@ -8,30 +8,48 @@ file, what it declares, and the commands.
 
 ```ts
 // db/tables.ts
-import { defineTables } from '@pikku/kysely'
+import { defineTables } from '@pikku/core/db'
 
 export const tables = defineTables({
-  statements: [
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('invoice')
-        .addColumn('invoiceId', ctx.key, (col) => col.primaryKey())
-        .addColumn('customerEmail', ctx.text, (col) => col.notNull())
-        .addColumn('paidAt', 'timestamp'),
-  ],
-  annotations: {
-    invoice: {
-      customerEmail: { security: 'pii', format: 'email' },
-      paidAt: { kind: 'date' },
+  invoice: {
+    columns: {
+      invoiceId: { type: 'key', primaryKey: true },
+      customerEmail: {
+        type: 'text',
+        required: true,
+        security: 'pii',
+        format: 'email',
+      },
+      paidAt: { type: 'timestamp', kind: 'date' },
     },
+    indexes: [{ columns: ['customerEmail'] }],
   },
 })
 ```
 
-Each statement is a function from a Kysely instance to a `db.schema` builder, the
-same `PikkuSchema` that `@pikku/kysely` declares its own tables with. It runs
-through the camelCase plugin, so names are written as the query builder sees them.
-SQLite, Postgres and MySQL all work.
+The declaration is plain data: no Kysely, no functions. Tables and columns are
+named the way queries name them (camelCase); the SQL gets snake_case. SQLite,
+Postgres and MySQL all work from the same declaration.
+
+## Columns
+
+| Field                                                     | Meaning                                                                                                              |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `type`                                                    | `id`, `key`, `text`, `string(n)`, `integer`, `bigint`, `real`, `boolean`, `timestamp`, `timestamptz`, `uuid`, `json` |
+| `required`                                                | `NOT NULL`                                                                                                           |
+| `default`                                                 | A literal, `{ now: true }`, or `{ sql: '...' }` passed through verbatim                                              |
+| `primaryKey`, `unique`, `index`                           | Single-column key, constraint or index. Composite ones go on the table                                               |
+| `references`                                              | `table.column`. Without a `type`, the column takes its target's type                                                 |
+| `onDelete`                                                | `cascade`, `setNull`, `restrict` (the default) or `noAction`                                                         |
+| `enum`, `min`, `max`, `minLength`, `maxLength`, `pattern` | Value constraints. Recorded on the declaration; not yet in the SQL or the generated types                            |
+| Annotation fields                                         | `security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`                             |
+
+A table takes `columns`, and optionally `primaryKey` (composite), `unique`
+(composite constraints), `indexes` (with `unique`, a partial `where`, and a `name`),
+and `declareOnly`.
+
+A field that is not one of these is an error, as is an invalid annotation value:
+`security: 'pi'` is refused rather than left at the default.
 
 ## What `pikku db generate` does
 
@@ -50,7 +68,6 @@ the existing migrations build, and writes the next migration with what is missin
 | Type, `NOT NULL`, default or key changed | Refused                                               |
 | New `NOT NULL` column without a default  | Refused                                               |
 | New primary key column                   | Refused                                               |
-| View, enum, trigger                      | Refused: tables and indexes only                      |
 
 A refusal writes nothing and the command exits non-zero with the reason. Taking
 data away is a person's decision: they write that migration by hand, and generate
@@ -66,36 +83,54 @@ migrations.
 
 ## Tables outside the declaration
 
-A foreign key can point at a table the declaration does not own, such as Better
-Auth's `user` or a hand-written table. Name it in `requires`, and take the
-column's type from `requiredType`, so it matches whatever the migrations gave it:
+A foreign key can point at a table the declaration does not create, such as Better
+Auth's `user` or a hand-written table. Leave out the column's `type` and it takes
+the type the migrations gave the target, `uuid` on a Postgres `user.id` included:
 
 ```ts
-import { defineTables, requiredType } from '@pikku/kysely'
-
 export const tables = defineTables({
-  requires: [{ table: 'user', column: 'id', owner: 'Better Auth' }],
-  statements: [
-    (db, types, ctx) =>
-      db.schema
-        .createTable('note')
-        .addColumn('noteId', ctx.key, (col) => col.primaryKey())
-        .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
-          col.notNull().references('user.id').onDelete('cascade')
-        ),
-  ],
+  note: {
+    columns: {
+      noteId: { type: 'key', primaryKey: true },
+      userId: { references: 'user.id', onDelete: 'cascade', required: true },
+    },
+  },
 })
 ```
 
-Generate refuses when a required column does not exist yet. A table owned by Better
-Auth, the Pikku runtime or an addon cannot be declared here.
+Generate refuses when the target does not exist yet. A table owned by Better Auth,
+the Pikku runtime or an addon cannot be generated from here, but it can be declared
+with `declareOnly`.
+
+## `declareOnly` tables
+
+A table something else creates can still be declared, for its types and
+annotations, with `declareOnly: true`:
+
+```ts
+export const tables = defineTables({
+  user: {
+    declareOnly: true,
+    columns: {
+      id: { type: 'id', primaryKey: true },
+      email: { type: 'text', security: 'pii', format: 'email' },
+    },
+  },
+})
+```
+
+No SQL is generated for it and generate never changes it. Its columns are checked
+against the table the migrations create instead: a declared column the table does
+not have, or a `type` or `kind` the real column cannot hold, is refused. Columns
+the declaration leaves out are not checked. `pikku meta db` lists these tables
+apart from the generated ones.
 
 ## Annotations
 
-`annotations` takes the same fields as `db/annotations.ts`, keyed by table and
-column, and merges into `db/annotations.gen.json`. Unlike that file it is strict:
-an unknown field, an invalid value, or a column the declaration does not have is an
-error. A value the two files disagree on is an error as well. See
+The annotation fields on a column reach `db/annotations.gen.json`, the generated
+types and the anonymizer, the same as entries in `db/annotations.ts`. While a
+project still has `db/annotations.ts`, both are read: where both set the same
+field on the same column, `db/annotations.ts` wins. See
 [DB column annotations](./db-column-annotations.md).
 
 ## What it does not detect

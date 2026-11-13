@@ -30,22 +30,9 @@ import { virtualUserScheduleSchema } from './virtual-user-schedule.schema.js'
 export { compileTables, tableRequirements } from './compile-tables.js'
 
 export type {
-  AppTables,
-  ForeignKeyTarget,
   PikkuSchema,
   RequiredTypes,
-  SchemaContext,
   SchemaRequirement,
-  SchemaStatement,
-  SchemaStatementFactory,
-} from './pikku-schema.types.js'
-export {
-  defineTables,
-  onDeleteAction,
-  rawStatement,
-  requiredType,
-  schemaContext,
-  unqualifiedContext,
 } from './pikku-schema.types.js'
 
 /** A schema's DDL: its tables, then their indexes, then its extra statements. */

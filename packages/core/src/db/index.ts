@@ -156,6 +156,13 @@ export interface TableDeclaration {
    */
   unique?: readonly (readonly string[] | NamedConstraint)[]
   indexes?: readonly IndexDeclaration[]
+  /**
+   * The table is created by something else — a hand-written migration, or
+   * another package such as Better Auth — and declared here only for its types
+   * and annotations. No SQL is generated for it; its columns are checked
+   * against the table the migrations create.
+   */
+  declareOnly?: boolean
 }
 
 /** An app's tables, keyed by table name. */

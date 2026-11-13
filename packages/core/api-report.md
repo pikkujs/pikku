@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3759 observable things**: 1236 exported names, plus
-2523 members on the classes and interfaces among them, reachable
+**3760 observable things**: 1236 exported names, plus
+2524 members on the classes and interfaces among them, reachable
 through 68 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -30,7 +30,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./trigger` | 43 | 43 | 13 |
 | `./testing` | 18 | 18 | 35 |
 | `./services/local-meta` | 22 | 2 | 43 |
-| `./db` | 12 | 12 | 31 |
+| `./db` | 12 | 12 | 32 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 17 | 15 | 27 |
 | `./trace` | 19 | 19 | 21 |
@@ -6681,7 +6681,7 @@ export type LocalContentRequestHandlerOptions = {
 }
 export type SignedContentVerification =
   { ok: true } | { ok: false; status: number; body: string }
-verifySignedContentRequest: (requestUrl: URL, jwt: JWTService | undefined, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
+verifySignedContentRequest: (requestUrl: URL, jwt: any, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
 ```
 
 ## ./services/temporary-file-service
@@ -7178,6 +7178,7 @@ export interface TableDeclaration {
   primaryKey?: readonly string[] | NamedConstraint
   unique?: readonly (readonly string[] | NamedConstraint)[]
   indexes?: readonly IndexDeclaration[]
+  declareOnly?: boolean
 }
 export type TablesDeclaration = Record<string, TableDeclaration>
 ```
