@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3719 observable things**: 1224 exported names, plus
-2495 members on the classes and interfaces among them, reachable
+**3720 observable things**: 1224 exported names, plus
+2496 members on the classes and interfaces among them, reachable
 through 67 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -32,7 +32,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 17 | 15 | 27 |
-| `./trace` | 19 | 19 | 21 |
+| `./trace` | 19 | 19 | 22 |
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
@@ -6025,6 +6025,7 @@ resolveHTTPTrace: (readHeader: () => unknown, logger: Logger, { traceId, trustIn
 export interface Span {
   readonly context: TraceContext
   setAttribute(key: string, value: SpanAttributeValue): void
+  removeAttribute?(key: string): void
   addEvent(name: string, attributes?: Record<string, SpanAttributeValue>): void
   end(status?: { code: 'ok' } | { code: 'error'; error: unknown }): void
 }
