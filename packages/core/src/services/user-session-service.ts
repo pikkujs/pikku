@@ -51,6 +51,14 @@ export class PikkuSessionService<
   }
 
   public async set(session: UserSession) {
+    // `impersonated` marks the request, never the user: a session written back
+    // through `set` (to the store, or by a transport as a cookie) must not make
+    // the target's later requests look impersonated. The invocation's own
+    // `wire.session`, frozen at its start, keeps the marker.
+    if (session && typeof session === 'object' && 'impersonated' in session) {
+      const { impersonated: _marker, ...rest } = session
+      session = rest as UserSession
+    }
     this.sessionChanged = true
     this.session = session
     // A session set before anyone was resolved — the usual case for

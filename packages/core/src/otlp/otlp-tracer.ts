@@ -38,6 +38,12 @@ export class OtlpTracer implements Tracer {
   /** Spans started, and attributes or events dropped by the span limits. */
   readonly stats = { started: 0, dropped: 0 }
 
+  /** The attributes of the span of each context, for as long as the context lives: what a log line written inside the span inherits. */
+  private readonly attributesByContext = new WeakMap<
+    TraceContext,
+    Record<string, SpanAttributeValue>
+  >()
+
   constructor(
     private readonly exporter: OtlpHttpExporter,
     private readonly options: OtlpTracerOptions = {}
@@ -67,11 +73,15 @@ export class OtlpTracer implements Tracer {
     for (const [key, value] of Object.entries(options.attributes ?? {})) {
       set(attributes, key, value)
     }
+    this.attributesByContext.set(context, attributes)
     let ended = false
     return {
       context,
       setAttribute: (key, value) => {
         if (!ended) set(attributes, key, value)
+      },
+      removeAttribute: (key) => {
+        if (!ended) delete attributes[key]
       },
       addEvent: (eventName, eventAttributes) => {
         if (ended) return
@@ -127,6 +137,13 @@ export class OtlpTracer implements Tracer {
   /** The context of the span whose work is running, if a context storage was given. */
   currentContext(): TraceContext | undefined {
     return this.options.contextStorage?.get()
+  }
+
+  /** What the span of `context` has recorded so far (live: it grows as the span does). */
+  attributesOf(
+    context: TraceContext
+  ): Readonly<Record<string, SpanAttributeValue>> | undefined {
+    return this.attributesByContext.get(context)
   }
 
   flush(): Promise<void> {
