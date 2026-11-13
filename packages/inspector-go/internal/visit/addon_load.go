@@ -86,11 +86,15 @@ func hasLegacyContributors(dirs []string, pkg string) bool {
 // skip: the project asked for a service and would otherwise build without it.
 func (s *Context) recordOptedInContributors(ns string, decl *addonDecl, req addonResolver) {
 	registered := newOObject()
+	via := "wireAddon('" + ns + "')"
+	if decl.contributorsOnly {
+		via = "wireContributors('" + ns + "')"
+	}
 	if path := resolveAddonMeta(req, decl.pkg, "contributors/pikku-contributors-meta"); path != "" {
 		meta, err := readJSONFile(path)
 		if err != nil {
 			s.Log.Critical(diag.AddonContributorUnknown, fmt.Sprintf(
-				"wireAddon('%s') opts in to contributors, but the contributors manifest of %s could not be read: %s", ns, decl.pkg, err.Error()))
+				"%s opts in to contributors, but the contributors manifest of %s could not be read: %s", via, decl.pkg, err.Error()))
 			return
 		}
 		if meta.get("contributors").isObject() {
@@ -107,7 +111,7 @@ func (s *Context) recordOptedInContributors(ns string, decl *addonDecl, req addo
 				hint = "It registers: " + strings.Join(known, ", ") + "."
 			}
 			s.Log.Critical(diag.AddonContributorUnknown, fmt.Sprintf(
-				"wireAddon('%s') opts in to contributor '%s', but %s registers no such contributor. %s", ns, name, decl.pkg, hint))
+				"%s opts in to contributor '%s', but %s registers no such contributor. %s", via, name, decl.pkg, hint))
 			continue
 		}
 		selected.set(name, registered.get(name))
@@ -118,6 +122,9 @@ func (s *Context) recordOptedInContributors(ns string, decl *addonDecl, req addo
 	entry := newOObject()
 	entry.set("packageName", ojsonString(decl.pkg))
 	entry.set("contributors", selected)
+	if decl.contributorsOnly {
+		entry.set("file", ojsonString(decl.file))
+	}
 
 	all := newOObject()
 	if len(s.State.OptedInContributors) > 0 && string(s.State.OptedInContributors) != "null" {
@@ -289,6 +296,10 @@ func readRequiredParentServices(path string) ([]string, bool) {
 // read each wired addon's generated metadata so the routes sweep can resolve
 // addon functions.
 func (s *Context) LoadAddonFunctionsMeta() {
+	for _, decl := range s.contributorWirings {
+		req := addonResolver(addonResolutionDirs(s.RootDir, decl.file))
+		s.recordOptedInContributors(decl.pkg, decl, req)
+	}
 	for _, ns := range s.addonOrder {
 		decl := s.addons[ns]
 		if decl.remote {

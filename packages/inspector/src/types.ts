@@ -695,6 +695,12 @@ export type OptedInContributorsMeta = {
   packageName: string
   /** Each opted-in name with the variants the addon recorded; `module` is relative to the addon package. */
   contributors: ContributorsManifestMeta
+  /**
+   * The file that called `wireContributors`, set only for that route: the
+   * package is not a wired addon, so there is no wireAddon declaration to find
+   * where it resolves from.
+   */
+  file?: string
 }
 
 export interface InspectorServiceTypes {

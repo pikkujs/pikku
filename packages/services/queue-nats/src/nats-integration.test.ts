@@ -386,8 +386,10 @@ it('drain waits for an in-flight handler to ack instead of killing it', async ()
       config: mapPikkuWorkerToNats({ batchSize: 10, lockDuration: 1_000 }),
       handler: async (msg) => {
         await delay(600)
+        // ackAck waits for the server to confirm: a plain ack() is fire and
+        // forget, so the stream-info check below could race the ack.
+        await msg.ackAck()
         finished = true
-        msg.ack()
       },
     })
 
@@ -666,6 +668,87 @@ it('a TZ-prefixed cron is accepted once parsed, and rejected when it is not', as
     )
   } finally {
     await jsm.streams.delete(streamName).catch(() => {})
+    await nc.close()
+  }
+})
+
+it('attach mode refuses a stream whose subjects only lookalike the stage prefix', async () => {
+  const nc = await connect({ servers: SERVER! })
+  const jsm = await jetstreamManager(nc)
+  const stream = `pikku_lookalike_${Math.random().toString(16).slice(2, 8)}`
+  const attach = () =>
+    new NatsServiceFactory({
+      servers: SERVER!,
+      streamName: stream,
+      subjectPrefix: 'pikku.acme.alpha',
+      attachToStream: true,
+    })
+  try {
+    // `pikku.ac.>` shares a string prefix with `pikku.acme.alpha` but is
+    // another token, so it does not hold the stage's subjects.
+    await jsm.streams.add({
+      name: stream,
+      subjects: ['pikku.ac.>'],
+      retention: RetentionPolicy.Workqueue,
+      allow_msg_schedules: true,
+    })
+    await assert.rejects(attach().init(), /does not hold subjects/)
+    await jsm.streams.update(stream, {
+      subjects: ['pikku.acme.>'],
+      retention: RetentionPolicy.Workqueue,
+      allow_msg_schedules: true,
+    } as any)
+    const ok = attach()
+    await ok.init()
+    await ok.close()
+  } finally {
+    await jsm.streams.delete(stream).catch(() => {})
+    await nc.close()
+  }
+})
+
+it('only attach mode skips the $JS.API.INFO probe: a normal factory still makes it', async () => {
+  const nc = await connect({ servers: SERVER! })
+  const jsm = await jetstreamManager(nc)
+  const id = Math.random().toString(16).slice(2, 8)
+  const stream = `pikku_probe_${id}`
+  let probes = 0
+  const sub = nc.subscribe('$JS.API.INFO')
+  void (async () => {
+    for await (const _ of sub) probes++
+  })()
+  try {
+    const normal = new NatsServiceFactory({
+      servers: SERVER!,
+      streamName: `${stream}_normal`,
+      subjectPrefix: `probe_${id}_normal`,
+    })
+    await normal.init()
+    await normal.close()
+    await delay(200)
+    assert.ok(probes > 0, 'a non-attach factory must probe $JS.API.INFO')
+
+    probes = 0
+    await jsm.streams.add({
+      name: stream,
+      subjects: [`pikku.probe.${id}.>`],
+      retention: RetentionPolicy.Workqueue,
+      allow_msg_schedules: true,
+    })
+    const attached = new NatsServiceFactory({
+      servers: SERVER!,
+      streamName: stream,
+      subjectPrefix: `pikku.probe.${id}`,
+      attachToStream: true,
+    })
+    await attached.init()
+    await attached.close()
+    await delay(200)
+    assert.equal(probes, 0, 'attach mode must not probe $JS.API.INFO')
+  } finally {
+    sub.unsubscribe()
+    await jsm.streams.delete(stream).catch(() => {})
+    await jsm.streams.delete(`${stream}_normal`).catch(() => {})
     await nc.close()
   }
 })

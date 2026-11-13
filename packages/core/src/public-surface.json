@@ -639,7 +639,8 @@
     "defineContributors",
     "orderContributors",
     "resolveContributors",
-    "selectContributors"
+    "selectContributors",
+    "wireContributors"
   ],
   "./telemetry-store": [],
   "./telemetry-store/testing": ["MemoryTelemetryStore", "conformance"],

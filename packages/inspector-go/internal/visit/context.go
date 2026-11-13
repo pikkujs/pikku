@@ -56,6 +56,9 @@ type Context struct {
 	// (addWireAddon): just what the ported groups read back.
 	addons     map[string]*addonDecl
 	addonOrder []string
+	// contributorWirings are the wireContributors calls: build-time opt-ins to
+	// a package's contributors that are not an addon.
+	contributorWirings []*addonDecl
 
 	// typesLookup is InspectorState.typesLookup: live checker types, read
 	// only during analysis. What finalize needs from it is serialized as

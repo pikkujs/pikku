@@ -85,7 +85,7 @@ export const optedInVariants = (
     state.optedInContributors ?? {}
   )) {
     const declaration = state.rpc.wireAddonDeclarations.get(namespace)
-    const dirs = addonResolutionDirs(rootDir, declaration?.file)
+    const dirs = addonResolutionDirs(rootDir, opted.file ?? declaration?.file)
     const packageDir = findInstalledPackageDir(dirs, opted.packageName)
     for (const [name, byTarget] of Object.entries(opted.contributors)) {
       const ref = byTarget[target]
@@ -232,7 +232,7 @@ export const resolveTargetContributors = async <
       })
       .join('; ')
     throw new Error(
-      `${options.targetLabel ?? `The ${options.target} target`} cannot supply what ${unsupported.length === 1 ? 'a contributor' : 'contributors'} the project opted in to with wireAddon need${unsupported.length === 1 ? 's' : ''}: ${detail}. Remove it from wireAddon({ contributors }), or give the addon a variant for this target.`
+      `${options.targetLabel ?? `The ${options.target} target`} cannot supply what ${unsupported.length === 1 ? 'a contributor' : 'contributors'} the project opted in to with wireAddon or wireContributors need${unsupported.length === 1 ? 's' : ''}: ${detail}. Remove it from wireAddon({ contributors }) or wireContributors({ contributors }), or give the addon a variant for this target.`
     )
   }
   const runsServerLifecycle = options.runsServerLifecycle ?? true

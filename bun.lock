@@ -1212,8 +1212,11 @@
         "@nats-io/nats-core": "^3.4.0",
         "@nats-io/transport-node": "^3.4.0",
       },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+      },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.151",
       },
     },
     "packages/services/queue-pg-boss": {
@@ -2228,6 +2231,28 @@
         "@pikku/deploy-standalone": "workspace:*",
         "@types/node": "^26",
         "@verifier/contrib-marker": "workspace:*",
+      },
+    },
+    "verifiers/deploy-standalone-nats": {
+      "name": "@pikku/verifiers-deploy-standalone-nats",
+      "dependencies": {
+        "@pikku/bun-server": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@pikku/queue-nats": "workspace:*",
+        "@pikku/schedule": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+      },
+      "devDependencies": {
+        "@nats-io/jetstream": "^3.4.0",
+        "@nats-io/transport-node": "^3.4.0",
+        "@pikku/cli": "workspace:*",
+        "@pikku/cloudflare": "workspace:*",
+        "@pikku/deploy-cloudflare": "workspace:*",
+        "@pikku/deploy-standalone": "workspace:*",
+        "@pikku/fetch": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "tsx": "^4.23.15",
       },
     },
     "verifiers/deploy-standalone/contrib-marker": {
@@ -3688,6 +3713,8 @@
     "@pikku/verifiers-deploy-serverless": ["@pikku/verifiers-deploy-serverless@workspace:verifiers/deploy-serverless"],
 
     "@pikku/verifiers-deploy-standalone": ["@pikku/verifiers-deploy-standalone@workspace:verifiers/deploy-standalone"],
+
+    "@pikku/verifiers-deploy-standalone-nats": ["@pikku/verifiers-deploy-standalone-nats@workspace:verifiers/deploy-standalone-nats"],
 
     "@pikku/verifiers-dev-bun": ["@pikku/verifiers-dev-bun@workspace:verifiers/dev-bun"],
 

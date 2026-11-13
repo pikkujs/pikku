@@ -15,7 +15,12 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-const DEDICATED = new Set(['binary', 'db-vectors', 'fullstack'])
+const DEDICATED = new Set([
+  'binary',
+  'db-vectors',
+  'deploy-standalone-nats',
+  'fullstack',
+])
 
 const WORKFLOWS = ['.github/workflows/full.yml']
 

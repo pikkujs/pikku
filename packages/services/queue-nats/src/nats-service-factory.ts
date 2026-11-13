@@ -40,6 +40,20 @@ export interface NatsServiceFactoryOptions {
    * means the server's own zone.
    */
   schedulerTimezone?: string
+  /**
+   * The stream already exists and is owned by whoever runs the broker: never
+   * create or modify it.
+   *
+   * The caller's credentials then need no stream-level write permission. Boot
+   * checks the stream is there, holds `subjectPrefix`'s subjects and allows
+   * message schedules, and fails with a message naming what is missing.
+   */
+  attachToStream?: boolean
+  /**
+   * Prefix for this connection's reply inboxes, in place of `_INBOX`. Lets a
+   * broker permission subscribe to one tenant's inbox only.
+   */
+  inboxPrefix?: string
   /** Credentials/auth passthrough. */
   user?: string
   pass?: string
@@ -129,6 +143,9 @@ export class NatsServiceFactory {
       pass: this.options.pass,
       token: this.options.token,
       name: this.options.name,
+      ...(this.options.inboxPrefix
+        ? { inboxPrefix: this.options.inboxPrefix }
+        : {}),
       // RECONNECT FOREVER. The client default is 10 attempts, 2s apart, so about
       // twenty seconds of NATS being unreachable CLOSES the connection for good —
       // and `init()` runs once at boot, so nothing ever reopens it. The process
@@ -160,7 +177,12 @@ export class NatsServiceFactory {
 
     assertSchedulerSupport(this.connection.info?.version)
 
-    const jsm = await jetstreamManager(this.connection)
+    // In attach mode `checkAPI: false` skips the `$JS.API.INFO` probe, which a tenant with
+    // narrow permissions is not given.
+    const jsm = await jetstreamManager(
+      this.connection,
+      this.options.attachToStream ? { checkAPI: false } : undefined
+    )
     const js = jetstream(this.connection)
     this.js = js
     this.jsm = jsm
@@ -193,20 +215,24 @@ export class NatsServiceFactory {
         : {}),
     }
 
-    // `add` is STREAM.CREATE, which errors if the stream exists with a different
-    // config — so the first deploy that changes duplicate_window or replicas
-    // would fail at boot rather than converge. Try create, then update. Update
-    // is the right call for a stream that exists: it applies the new config in
-    // place without touching the messages already in it.
-    try {
-      await jsm.streams.add(streamConfig)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      // Only "already exists" is recoverable this way; anything else (no
-      // JetStream enabled, bad subject, insufficient replicas for the cluster
-      // size) must surface, not be papered over by a second failing call.
-      if (!/already in use|already exists/i.test(message)) throw err
-      await jsm.streams.update(this.options.streamName, streamConfig)
+    if (this.options.attachToStream) {
+      await this.assertStageStream(jsm)
+    } else {
+      // `add` is STREAM.CREATE, which errors if the stream exists with a different
+      // config — so the first deploy that changes duplicate_window or replicas
+      // would fail at boot rather than converge. Try create, then update. Update
+      // is the right call for a stream that exists: it applies the new config in
+      // place without touching the messages already in it.
+      try {
+        await jsm.streams.add(streamConfig)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        // Only "already exists" is recoverable this way; anything else (no
+        // JetStream enabled, bad subject, insufficient replicas for the cluster
+        // size) must surface, not be papered over by a second failing call.
+        if (!/already in use|already exists/i.test(message)) throw err
+        await jsm.streams.update(this.options.streamName, streamConfig)
+      }
     }
 
     // Wired at construction rather than via setDelayedPublisher: the pg-boss
@@ -233,6 +259,47 @@ export class NatsServiceFactory {
       this.options.schedulerTimezone
     )
     this.initialized = true
+  }
+
+  /**
+   * Attach mode: the stage's stream is created and owned by someone else, so
+   * boot only reads it, and refuses a stream this package could not work in.
+   */
+  private async assertStageStream(jsm: JetStreamManager): Promise<void> {
+    const name = this.options.streamName
+    let info
+    try {
+      info = await jsm.streams.info(name)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      throw new Error(
+        `NATS stream '${name}' is not available (${message}). It is created up front by whoever runs the broker; this process never creates or changes it.`
+      )
+    }
+    const { config } = info
+    const prefix = this.options.subjectPrefix
+    // Token-aligned: `pikku.ac.>` must not cover `pikku.acme.alpha`.
+    const covered = (config.subjects ?? []).some((subject) => {
+      if (subject === '>') return true
+      if (!subject.endsWith('.>')) return false
+      const base = subject.slice(0, -2)
+      return prefix === base || prefix.startsWith(`${base}.`)
+    })
+    if (!covered) {
+      throw new Error(
+        `NATS stream '${name}' does not hold subjects under '${this.options.subjectPrefix}' (it holds ${(config.subjects ?? []).join(', ') || 'none'}).`
+      )
+    }
+    if (config.retention !== RetentionPolicy.Workqueue) {
+      throw new Error(
+        `NATS stream '${name}' uses ${config.retention} retention; the queue needs workqueue.`
+      )
+    }
+    if (!config.allow_msg_schedules) {
+      throw new Error(
+        `NATS stream '${name}' has allow_msg_schedules off, so cron and delayed jobs cannot work. Create it with allow_msg_schedules.`
+      )
+    }
   }
 
   /**

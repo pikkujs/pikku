@@ -27,7 +27,8 @@ how a worker deploy fails at runtime instead of at build.
 
 Platform services an addon builds for the bundle come from contributors the
 project opted in to with `wireAddon({ contributors: [...] })`; the addon
-registers them with `defineContributors`. `plan` and `apply` select the `deploy`
+registers them with `defineContributors` (a plain package opts in with
+`wireContributors({ package, contributors })`). `plan` and `apply` select the `deploy`
 variant of each, drop what `when` rules out, order them by `needs`/`provides`
 and, on standalone, run them after the database is open, with `runtime.logger`
 and `runtime.kysely` in reach. Standalone, the generic server entry and the

@@ -21,6 +21,7 @@ const (
 	OrderAddWireAddon               = 110
 	OrderAddPikkuStudio             = 120
 	OrderAddDefineContributors      = 125
+	OrderAddWireContributors        = 126
 	OrderAddWireRemoteAddon         = 130
 	OrderAddMiddleware              = 140
 	OrderAddPermission              = 150
