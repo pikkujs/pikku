@@ -73,6 +73,10 @@ import {
 import type { AddonInstance } from '../wirings/addon/addon-runner.js'
 import { closeWireServices } from '../utils.js'
 import {
+  assertFunctionTelemetry,
+  decideFunctionTrace,
+} from './function-telemetry.js'
+import {
   endFunctionSpan,
   openFunctionSpan,
   recordFunctionSpanIdentity,
@@ -138,6 +142,7 @@ export const addFunction = (
         ' and cannot be registered.'
     )
   }
+  assertFunctionTelemetry(funcName, funcConfig.telemetry)
   pikkuState(packageName, 'function', 'functions').set(funcName, funcConfig)
 }
 
@@ -409,6 +414,16 @@ export const runPikkuFunc = async <In = any, Out = any>(
     invocationWire.trace = createTrace(invocationWire.traceId)
     invocationWire.traceId = invocationWire.trace.traceId
   }
+  const callerTrace = invocationWire.trace!
+  const spans = funcConfig.telemetry?.spans ?? funcMeta.telemetry?.spans
+  let forcedUnderParent: string | undefined
+  if (spans !== undefined) {
+    const decided = decideFunctionTrace(spans, callerTrace)
+    if (decided.sampled && !callerTrace.sampled) {
+      forcedUnderParent = callerTrace.parentSpanId
+    }
+    invocationWire.trace = decided
+  }
   const previousFunctionId = invocationWire.functionId
   const previousAudit = invocationWire.audit
   const previousAddonNamespace = invocationWire.addonNamespace
@@ -425,6 +440,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
     restoreField('functionId', previousFunctionId)
     restoreField('audit', previousAudit)
     restoreField('addonNamespace', previousAddonNamespace)
+    if (invocationWire.trace !== callerTrace) {
+      invocationWire.trace = callerTrace
+    }
   }
 
   function restoreField<K extends 'functionId' | 'audit' | 'addonNamespace'>(
@@ -733,6 +751,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
         ? { 'pikku.addon.namespace': addonInstance.namespace }
         : {}),
       'pikku.trace.root': rootTrace,
+      ...(forcedUnderParent
+        ? { 'pikku.trace.unrecorded_parent_span_id': forcedUnderParent }
+        : {}),
     }
   )
   let failure: { error: unknown } | undefined
