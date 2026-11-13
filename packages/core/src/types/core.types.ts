@@ -169,7 +169,7 @@ export interface CoreUserSession {
    * the id of the real user doing the impersonating. Absent means not
    * impersonated. Never read from client input; whoever builds the session sets
    * it, and the tracer records it as `pikku.impersonated` and
-   * `pikku.impersonated.by`.
+   * `pikku.impersonator.id`.
    */
   impersonated?: { by: string }
 }

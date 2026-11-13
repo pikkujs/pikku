@@ -17,16 +17,18 @@ exports whatever an object holds, which is why it is off by default.
 `contextAttributes(context)` and, when a record is written inside a span of its
 own trace, copies `CONTEXT_ATTRIBUTES` from it: `pikku.function.id`,
 `pikku.function.version`, `pikku.wire.type`, `pikku.wire.id`, `pikku.user.id`,
-`pikku.org.id`, `pikku.impersonated`, `pikku.impersonated.by`. They are the span's own names so one column serves both. The
+`pikku.org.id`, `pikku.impersonated`, `pikku.impersonator.id`. They are the span's own names so one column serves both. The
 list is fixed: a span's other attributes (a route, a duration, a queue) are not
 part of a log line.
 
 Limits. A session a middleware establishes after the span opened is not in its start
 attributes; the runner writes the identity (`pikku.user.id`, `pikku.org.id`,
-`pikku.impersonated`, `pikku.impersonated.by`) onto the span again just before the
+`pikku.impersonated`, `pikku.impersonator.id`) onto the span again just before the
 function body, so a line logged in the body has it, while a line logged by a
 middleware before the session is set does not. A logger
 `scope`d to another trace carries nothing of the current span. `pikku.function.version`
 is the `vN` of a versioned function id and is absent for an unversioned one.
 
 A log written inside a child span that is not a function span (for example a `db.select` span a service opens) carries the attributes of that span, which has no `pikku.function.id`, so such a line has no function or wire attributes. Only a line written in the function's own span, or with no inner span open, carries them.
+
+A logged field never sets one of these: with `PIKKU_OTLP_LOG_FIELDS=1` the logger drops any field named like a context attribute, so the span's value wins and, with none, the attribute is absent.

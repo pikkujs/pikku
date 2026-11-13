@@ -44,7 +44,7 @@ export const CONTEXT_ATTRIBUTES = [
   'pikku.user.id',
   'pikku.org.id',
   'pikku.impersonated',
-  'pikku.impersonated.by',
+  'pikku.impersonator.id',
 ] as const
 
 const clip = (text: string, max: number) =>
@@ -222,6 +222,10 @@ export class OtlpLogger implements Logger {
         meta,
         this.options.fields === true
       )
+      // A field of the record never sets what the span's context owns: with
+      // `fields` on, app code could otherwise forge an identity. The span's value
+      // wins, and with none the attribute stays absent.
+      for (const key of CONTEXT_ATTRIBUTES) delete attributes[key]
       // Only when the record is of the span's own trace: a `scope(traceId)` for another trace is not inside this span.
       const span =
         context && (!this.options.traceId || context.traceId === traceId)

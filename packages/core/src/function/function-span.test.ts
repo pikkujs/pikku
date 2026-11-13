@@ -345,9 +345,9 @@ describe('runPikkuFunc - spans', () => {
       session: { userId: 'u_target' },
     })
     assert.strictEqual(started[0]!['pikku.impersonated'], true)
-    assert.strictEqual(started[0]!['pikku.impersonated.by'], 'u_admin')
+    assert.strictEqual(started[0]!['pikku.impersonator.id'], 'u_admin')
     assert.ok(!('pikku.impersonated' in started[1]!))
-    assert.ok(!('pikku.impersonated.by' in started[1]!))
+    assert.ok(!('pikku.impersonator.id' in started[1]!))
     assert.strictEqual(tracer.spans[0]!.attributes['pikku.impersonated'], true)
     assert.ok(!('pikku.impersonated' in tracer.spans[1]!.attributes))
   })
@@ -387,7 +387,58 @@ describe('runPikkuFunc - spans', () => {
     await run('late', tracer, { trace: createTrace() })
     assert.equal(seenInBody['pikku.user.id'], 'u_target')
     assert.equal(seenInBody['pikku.impersonated'], true)
-    assert.equal(seenInBody['pikku.impersonated.by'], 'u_admin')
+    assert.equal(seenInBody['pikku.impersonator.id'], 'u_admin')
+  })
+
+  test('a session swapped by middleware drops the identity the span opened with', async () => {
+    class LiveTracer extends RecordingTracer {
+      live: Record<string, unknown> = {}
+      override startSpan(
+        ...args: Parameters<RecordingTracer['startSpan']>
+      ): ReturnType<RecordingTracer['startSpan']> {
+        const span = super.startSpan(...args)
+        this.live = { ...(args[2]?.attributes ?? {}) }
+        const set = span.setAttribute.bind(span)
+        const remove = span.removeAttribute!.bind(span)
+        span.setAttribute = (key, value) => {
+          this.live[key] = value
+          set(key, value)
+        }
+        span.removeAttribute = (key) => {
+          delete this.live[key]
+          remove(key)
+        }
+        return span
+      }
+    }
+    const tracer = new LiveTracer()
+    let seenInBody: Record<string, unknown> = {}
+    addTestFunction('swapped', {
+      func: async () => {
+        seenInBody = { ...tracer.live }
+      },
+      middleware: [
+        async (_s: unknown, wire: any, next: () => Promise<void>) => {
+          wire.session = { userId: 'u_plain' }
+          await next()
+        },
+      ],
+    })
+    await run('swapped', tracer, {
+      trace: createTrace(),
+      session: {
+        userId: 'u_target',
+        orgId: 'org_1',
+        impersonated: { by: 'u_admin' },
+      },
+    })
+    assert.equal(seenInBody['pikku.user.id'], 'u_plain')
+    assert.ok(!('pikku.org.id' in seenInBody))
+    assert.ok(!('pikku.impersonated' in seenInBody))
+    assert.ok(!('pikku.impersonator.id' in seenInBody))
+    const [span] = tracer.spans
+    assert.ok(!('pikku.impersonated' in span!.attributes))
+    assert.ok(!('pikku.impersonator.id' in span!.attributes))
   })
 
   test('an http span carries method, route and status; a nested call on its wire does not', async () => {

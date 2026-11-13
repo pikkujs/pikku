@@ -173,13 +173,13 @@ describe('OtlpLogger', () => {
       currentContext: () => context,
       contextAttributes: () => ({
         'pikku.impersonated': true,
-        'pikku.impersonated.by': 'u_admin',
+        'pikku.impersonator.id': 'u_admin',
       }),
     })
     impersonated.logger.info('inside')
     const [record] = await impersonated.sent()
     assert.deepEqual(record!.attributes['pikku.impersonated'], { bool: true })
-    assert.deepEqual(record!.attributes['pikku.impersonated.by'], {
+    assert.deepEqual(record!.attributes['pikku.impersonator.id'], {
       string: 'u_admin',
     })
     const normal = setup({
@@ -189,7 +189,50 @@ describe('OtlpLogger', () => {
     normal.logger.info('inside')
     const [plain] = await normal.sent()
     assert.equal(plain!.attributes['pikku.impersonated'], undefined)
-    assert.equal(plain!.attributes['pikku.impersonated.by'], undefined)
+    assert.equal(plain!.attributes['pikku.impersonator.id'], undefined)
+  })
+
+  test('a logged field can not set what the span owns: the span wins, and with none the attribute stays absent', async () => {
+    const context = {
+      traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+      spanId: '00f067aa0ba902b7',
+      sampled: true,
+    }
+    const forged = {
+      message: 'forged',
+      'pikku.impersonated': true,
+      'pikku.impersonator.id': 'u_evil',
+      'pikku.user.id': 'u_evil',
+      'pikku.org.id': 'org_evil',
+      'pikku.function.id': 'evil',
+      'pikku.wire.type': 'evil',
+      'pikku.wire.id': 'evil',
+      note: 'kept',
+    }
+    const withSpan = setup({
+      fields: true,
+      currentContext: () => context,
+      contextAttributes: () => ({ 'pikku.user.id': 'u1' }),
+    })
+    withSpan.logger.info(forged)
+    const [a] = await withSpan.sent()
+    assert.deepEqual(a!.attributes['pikku.user.id'], { string: 'u1' })
+    for (const key of [
+      'pikku.impersonated',
+      'pikku.impersonator.id',
+      'pikku.org.id',
+      'pikku.function.id',
+      'pikku.wire.type',
+      'pikku.wire.id',
+    ]) {
+      assert.equal(a!.attributes[key], undefined, key)
+    }
+    assert.deepEqual(a!.attributes['note'], { string: 'kept' })
+    const noSpan = setup({ fields: true })
+    noSpan.logger.info(forged)
+    const [b] = await noSpan.sent()
+    assert.equal(b!.attributes['pikku.impersonated'], undefined)
+    assert.equal(b!.attributes['pikku.user.id'], undefined)
   })
 
   test('a record outside any span, or scoped to another trace, carries none of it', async () => {

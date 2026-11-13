@@ -377,7 +377,7 @@ describe('createRuntimeTelemetry', () => {
       attributes: {
         'pikku.function.id': 'acting',
         'pikku.impersonated': true,
-        'pikku.impersonated.by': 'u_admin',
+        'pikku.impersonator.id': 'u_admin',
       },
     })
     ;(
@@ -397,7 +397,7 @@ describe('createRuntimeTelemetry', () => {
     ).items
     for (const { attributes } of [logs[0]!, spans[0]!]) {
       assert.deepEqual(attributes['pikku.impersonated'], { bool: true })
-      assert.deepEqual(attributes['pikku.impersonated.by'], {
+      assert.deepEqual(attributes['pikku.impersonator.id'], {
         string: 'u_admin',
       })
     }
