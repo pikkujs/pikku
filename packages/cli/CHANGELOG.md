@@ -1,3 +1,32 @@
+## 0.12.211
+
+### Patch Changes
+
+- 308da72: `pikku dev` now sends logs, traces and metrics over OTLP when `PIKKU_OTLP_ENDPOINT` is set, exactly as `pikku serve` does (same `PIKKU_OTLP_*` variables, loopback-only unless `PIKKU_OTLP_ALLOW_REMOTE=1`, inert when unset or `PIKKU_TELEMETRY=0`). Until now only `serve` built the runtime telemetry, so a dev server ignored the variables and a host that sets them for it (Pikku Studio) got no data. With several backends the parent process serves nothing and leaves it to its backends.
+- 71ba80d: The generated metadata now says how things are reached. Each CLI program lists its `entrypoints` from `cli.entrypoints` in pikku.config: `{ type: 'local' }` for a CLI that runs the app in-process, `{ type: 'channel', channel, route }` for one that talks to a running app, with the same default name (`<program>-cli`) and route (`<globalHTTPPrefix>/cli/<program>`) the generated channel registers. A webhook source with `verify`, written out or as a shorthand `verify,`, records it as `verify: { kind, header?, algorithm? }` (`hmac`, `token`, `publicKey` or `function`; header and algorithm only when written as string literals) beside the `credential` that holds its secret. A shorthand `verify,` now also declares that secret credential, which it previously skipped. Behaviour change for apps that set `globalHTTPPrefix`: a channel CLI client generated without a configured `route` now connects to `<globalHTTPPrefix>/cli/<program>`, the route its channel is registered on. It previously left the prefix out and connected to the wrong URL. Apps without `globalHTTPPrefix`, or with an explicit `route`, are unaffected.
+- 8d0c2d4: New `@pikku/core/db` entry point with the plain table declaration vocabulary (`defineTables`, `TablesDeclaration`, `ColumnDeclaration`, `OnDelete`, and `ColumnAnnotation` / `TableAnnotations`, which move here: `@pikku/kysely` no longer exports them, see docs/MIGRATION.md). `@pikku/kysely` gains `compileTables(decl)`, which compiles a declaration into schema statements for sqlite, postgres and MySQL, and `tableRequirements(decl)`. `SchemaContext.references` and `foreignKeys` take an `onDelete` (`cascade`, `setNull`, `restrict`, `noAction`), defaulting to `restrict` instead of always cascading; the framework's own schemas pass `cascade` explicitly, so the SQL they compile is unchanged. Nothing reads the new declaration yet: `db/tables.ts` still takes `defineTables` from `@pikku/kysely`.
+- b829a15: `definePlugin` takes optional `widgets`, `things` and `arrangedScreens`: an addon's own widgets, cards it can open beside a screen, and screens Studio lays out from widgets fed by a `source` function. A `source` or action `run` names a function of the addon or a project RPC (`'console:listAgents'`). Sources return data only (`variant`, `values`); the words are message keys declared per variant in `copy`. Actions take `label`, `confirm` and `destructive` (which requires `confirm`); arranged screens take `redirect` and `poll`. `pikku all` writes `#pikku/addon/screens` for an addon: `definePlugin` typed against its functions and `messages/en.json` keys, so a wrong `source`, `from`, variant or key fails tsc; core widgets are typed through `WidgetRegistry`, an empty interface Studio fills by augmentation. The inspectors read the new fields statically (PKU345, PKU357, PKU358 cover them), the screens meta and the host's installed addons carry them, and `ui: true` accepts an addon declaring only these. Copy entries nest (numeric names place list items), a value naming a variant is worded by its `$`, and a head's or slot's `figures` are worded by `{ label, note?, value? }`; an action's `run` may be `go:/<path>`. The inspectors follow same-file top-level `const`s and their spreads (not calls or imports), and PKU358 checks nested, `$` and figure keys. The host's `installedAddons` carries widgets, things, arranged screens and their actions as records keyed by id. Nothing existing changes; see docs/MIGRATION.md.
+- 166e343: The 17 framework schemas in `@pikku/kysely` are now plain table declarations compiled by `compileTables`, and their SQL is unchanged on sqlite, postgres and MySQL. `PikkuSchema` carries `tables` (plus `extraStatements` for DDL a declaration cannot express) instead of `statements`, and its `requires` are inferred from the declaration. In `@pikku/core/db`, a table's `primaryKey` and `unique` entries can name the constraint (`{ name, columns }`), and a string default on any text-like column compiles as an expression on MySQL.
+- 5ea64ad: `db/tables.ts` is now the plain declaration: `defineTables({ table: { columns } })` from `@pikku/core/db`, with annotations on the columns. The old `{ statements, requires, annotations }` shape is refused with a pointer to `docs/MIGRATION.md`, and `defineTables`, `requiredType`, `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` are removed from `@pikku/kysely`. A table marked `declareOnly: true` is typed and annotated from the declaration without any SQL generated for it, and its columns are checked against the table the migrations create. `pikku meta db` lists those tables separately.
+- Updated dependencies [5181138]
+- Updated dependencies [5181138]
+- Updated dependencies [71ba80d]
+- Updated dependencies [5c3e091]
+- Updated dependencies [8d0c2d4]
+- Updated dependencies [b8f3da8]
+- Updated dependencies [b829a15]
+- Updated dependencies [166e343]
+- Updated dependencies [42ec9d2]
+- Updated dependencies [8006227]
+- Updated dependencies [5ea64ad]
+- Updated dependencies [fa3cad1]
+  - @pikku/core@0.12.157
+  - @pikku/kysely@0.13.44
+  - @pikku/skills@0.12.75
+  - @pikku/inspector-go@0.12.14
+  - @pikku/inspector@0.12.120
+  - @pikku/openapi-parser@0.12.27
+
 ## 0.12.210
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # @pikku/skills
 
+## 0.12.75
+
+### Patch Changes
+
+- 5181138: Agent approvals expire. A run suspended for an approval or a credential stamps `expiresAt` on each `PendingApproval`, from the agent's new `approvalTtlMs` (a finite number above zero; `addAgent` refuses anything else) or `DEFAULT_AGENT_APPROVAL_TTL_MS`, 10 minutes. `resumeAgent`, `resumeAgentSync` and `approveAgent` refuse an expired approval with a `GoneError` (410) before claiming it or calling the tool or the model, and fail the run with `errorMessage: 'approval expired'`; a delegating parent run fails with its sub-agent. Every store also refuses an expired approval in `resolveApproval`. An approval with no expiry, including any saved before this release, is refused.
+
+  `@pikku/kysely`: `agentToolCall` gains a nullable `approvalExpiresAt bigint` column; run `pikku db generate` then `pikku db migrate`. `KyselyAgentRunStateService` now reads its JSON columns through a serializing plugin (SQLite, D1), compares its claim as text so the compare-and-swap matches there, and creates run ids that fit the `varchar(36)` column on Postgres.
+
+- b8f3da8: `safeFetch` no longer lets an `allowedHosts` match skip its private-address and DNS checks: they run on every hop unless the host matches the new `privateHosts` option, so an allowlisted name resolving to `10.0.0.1` or `169.254.169.254` is refused. `allowedHosts` and secret `allowedHosts` share a new matcher (`hostMatches`, `validateHostPattern` in `@pikku/core/safe-fetch`) with `host:port` and a single leading `*.` wildcard (at least two labels, never over an IP). New `safeFetch` options `fetch` (injected transport), `allowHttp` (which hosts may use plain `http:`) and `caller` (named in refusals). Refusals throw `NetworkHostNotAllowedError` (`host`, `reason`: `not-declared` | `private-address` | `scheme` | `redirect`), whose message names hosts only. `config.webhook.privateHosts` lets webhook delivery reach an internal receiver.
+
+  Breaking: a private host listed only in `allowedHosts` (webhook config, `voiceInput` `allowedAudioHosts`, `safeDownload`) is now refused; invalid `allowedHosts` entries throw. See docs/MIGRATION.md.
+
+- b829a15: `definePlugin` takes optional `widgets`, `things` and `arrangedScreens`: an addon's own widgets, cards it can open beside a screen, and screens Studio lays out from widgets fed by a `source` function. A `source` or action `run` names a function of the addon or a project RPC (`'console:listAgents'`). Sources return data only (`variant`, `values`); the words are message keys declared per variant in `copy`. Actions take `label`, `confirm` and `destructive` (which requires `confirm`); arranged screens take `redirect` and `poll`. `pikku all` writes `#pikku/addon/screens` for an addon: `definePlugin` typed against its functions and `messages/en.json` keys, so a wrong `source`, `from`, variant or key fails tsc; core widgets are typed through `WidgetRegistry`, an empty interface Studio fills by augmentation. The inspectors read the new fields statically (PKU345, PKU357, PKU358 cover them), the screens meta and the host's installed addons carry them, and `ui: true` accepts an addon declaring only these. Copy entries nest (numeric names place list items), a value naming a variant is worded by its `$`, and a head's or slot's `figures` are worded by `{ label, note?, value? }`; an action's `run` may be `go:/<path>`. The inspectors follow same-file top-level `const`s and their spreads (not calls or imports), and PKU358 checks nested, `$` and figure keys. The host's `installedAddons` carries widgets, things, arranged screens and their actions as records keyed by id. Nothing existing changes; see docs/MIGRATION.md.
+
 ## 0.12.74
 
 ### Patch Changes
