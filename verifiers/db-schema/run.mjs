@@ -1049,13 +1049,45 @@ declareTables(
     "rating: { type: 'integer', min: 1, max: 10 }"
   )
 )
-const changedCheck = refusedBy('app: pikku db generate (changed constraint)')
-check(
-  changedCheck.status !== 0 &&
-    changedCheck.output.includes('bookmark.rating already exists') &&
-    changedCheck.output.includes('bookmark_rating_max_check'),
-  'changing a constraint on an existing column is refused, by name'
+const filesBefore = new Set(readdirSync(MIGRATIONS_DIR))
+capture('app: pikku db generate (changed constraint)', 'node', [
+  PIKKU,
+  'db',
+  'generate',
+])
+const changeFile = readdirSync(MIGRATIONS_DIR).find(
+  (f) => !filesBefore.has(f) && f.includes('app-tables')
 )
+check(
+  Boolean(changeFile),
+  'changing a constraint on an existing column writes a migration'
+)
+const changeSql = changeFile ? sqlOf(changeFile) : ''
+if (dialect === 'sqlite') {
+  contains(
+    changeSql,
+    '-- pikku:destructive',
+    'sqlite rebuilds the table, flagged'
+  )
+  contains(
+    changeSql,
+    '-- pikku:foreign-keys-off',
+    'sqlite runs it with foreign keys off'
+  )
+  contains(
+    changeSql,
+    'pikku_rebuild_bookmark',
+    'sqlite copies into a new table'
+  )
+} else if (dialect === 'postgres') {
+  contains(changeSql, 'DROP CONSTRAINT', 'postgres drops the old check')
+  contains(changeSql, 'NOT VALID', 'postgres adds the new one NOT VALID')
+  contains(changeSql, 'VALIDATE CONSTRAINT', 'and validates it separately')
+} else {
+  contains(changeSql, 'DROP CHECK', 'mysql drops the old check')
+  contains(changeSql, '-- pikku:check-probe', 'the added check carries a probe')
+}
+if (changeFile) rmSync(join(MIGRATIONS_DIR, changeFile), { force: true })
 
 declareTables(
   TABLES_SOURCE(`id: { type: 'id', primaryKey: true },

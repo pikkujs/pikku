@@ -9,7 +9,6 @@ import type {
 } from '@pikku/core/db'
 import { compileTables, type PikkuSchema } from '@pikku/kysely'
 import { loadFreshUserModule } from '../commands/load-user-project.js'
-import { planConstraints } from './check-migration.js'
 import type { ColumnInfo } from './db-introspector.js'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'
 import { ZOD_FORMATS } from './zod-codegen.js'
@@ -320,8 +319,7 @@ export function refuseTableChanges(
   desired: Map<string, ColumnInfo>,
   actual: Map<string, ColumnInfo>,
   migrationsDir: string,
-  rootDir: string,
-  dialect: string
+  rootDir: string
 ): string[] {
   const refusals: string[] = []
   const where = relative(rootDir, migrationsDir)
@@ -355,18 +353,6 @@ export function refuseTableChanges(
         )
       }
       continue
-    }
-    // Postgres and MySQL alter a constraint in place; sqlite has to rebuild the table.
-    const constraints =
-      dialect === 'sqlite'
-        ? planConstraints(table, name, column, existing).reasons
-        : []
-    if (constraints.length > 0) {
-      refusals.push(
-        `${table}.${name} already exists, and its constraints differ from the migrations: ${constraints.join('; ')}. ` +
-          `sqlite cannot alter a constraint, so generate puts them on new tables and new columns only. ` +
-          `Write that migration by hand in ${where} (a rebuilt table), or take the constraint out of ${TABLES_FILE}.`
-      )
     }
     const changes = columnChanges(column, existing)
     if (changes.length > 0) {

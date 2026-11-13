@@ -67,3 +67,7 @@ silently. A table only the migrations create carries its annotations through
 
 **What this rules out:** generate dropping or renaming anything, builder statements
 in `db/tables.ts`, and a second way of declaring tables beside `TablesDeclaration`.
+
+## Constraints on existing columns
+
+Adding, changing or removing a declared `CHECK` on a column that exists is written, not refused. Postgres adds `NOT VALID` then `VALIDATE`s; MySQL needs 8.0.16 (older servers parse and ignore `CHECK`, so generate refuses); each added check carries a `-- pikku:check-probe` comment so a deploy can look for offending rows first. sqlite rebuilds the table from its own `CREATE TABLE` with only the named checks edited, runs under `-- pikku:foreign-keys-off`, and is marked `-- pikku:destructive`. The rebuild runs statement by statement because bun:sqlite drops the error of a statement that something follows, which would let a failed copy go on to drop the source table.

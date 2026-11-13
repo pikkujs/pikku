@@ -335,7 +335,7 @@ pikku db migrate    # applies it and regenerates the types
   column, and the zod schema carries them; `pattern` is zod only. On an
   existing column, postgres and MySQL (8.0.16+) get `ADD`/`DROP CONSTRAINT`
   (postgres `NOT VALID` then `VALIDATE`), each added check preceded by a
-  `-- pikku:check-probe` comment a deploy runs against existing rows. A table
+  `-- pikku:check-probe` comment a deploy runs against existing rows. On sqlite the table is rebuilt (marked `-- pikku:destructive`, rows copied; rows that break the check fail the migration and roll it back). A table
   too large to validate, or data that breaks the check, is for a person to
   migrate; say so rather than editing around it.
 - **An annotation typo is an error**, as is any field a column or table does

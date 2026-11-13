@@ -63,7 +63,16 @@ lets sqlite add one with `ADD COLUMN`. On a column that already exists:
   `<table>_<column>_<kind>_check`; one you wrote yourself is left alone).
 - **MySQL** uses `ADD CONSTRAINT ... CHECK` and `DROP CHECK`, which need 8.0.16
   or later. An older server parses a `CHECK` and ignores it, so generate refuses.
-- **sqlite** cannot alter a constraint; it is refused until the table is rebuilt.
+- **sqlite** cannot alter a constraint, so the table is rebuilt: a new table with
+  the new definition, the rows copied, the old one dropped and the new one
+  renamed, then its indexes, triggers and views put back. The migration is
+  marked `-- pikku:destructive`, and `-- pikku:foreign-keys-off` makes the
+  migrator switch foreign key enforcement off around the transaction (so
+  `ON DELETE CASCADE` children are not deleted) and refuse to commit if a key is
+  left broken. Only the named checks are edited in the table's existing
+  definition, so a foreign key, `UNIQUE` or check you wrote by hand survives.
+  Rows that break the new check make the migration fail and roll back, leaving
+  the original table untouched.
 
 Each added check is preceded by a `-- pikku:check-probe SELECT 1 FROM t WHERE NOT
 (...) LIMIT 1` comment. A deploy runs that probe first: any row back means the
@@ -164,8 +173,7 @@ columns. See [DB column annotations](./db-column-annotations.md) and
 
 ## What it does not detect
 
-- A changed foreign key or `UNIQUE` on an existing column. A changed declared
-  constraint on one is refused rather than ignored (see Constraints).
+- A changed foreign key or `UNIQUE` on an existing column.
 - A removed index, or a changed definition under the same index name.
 - A table adopted from a hand-written migration and later removed from the
   declaration. It goes back to being hand-written, and nothing is dropped.

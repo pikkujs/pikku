@@ -79,6 +79,11 @@ import {
   mysqlEnforcesChecks,
   planConstraints,
 } from './check-migration.js'
+import {
+  sqliteRebuildMigration,
+  type SqliteObject,
+  type TableRebuild,
+} from './sqlite-rebuild.js'
 import { MysqlIntrospector } from './mysql/mysql-introspector.js'
 import {
   createMysqlKysely,
@@ -2105,8 +2110,7 @@ export async function planDeclaredTables(
             desired.tables.get(table)!,
             actual,
             resolved.migrationsDir,
-            resolved.rootDir,
-            resolved.dialect
+            resolved.rootDir
           )
         : []
     })
@@ -2167,53 +2171,95 @@ export async function planDeclaredTables(
     }
   }
 
-  if (resolved.dialect !== 'sqlite') {
-    const dialect = resolved.dialect
-    for (const table of tables) {
-      const actual = coveredTable(covered, table, schemaName)
-      if (!actual) continue
-      const { columns: definitions } = tableDefinitions(desired.sql, table)
-      for (const [column, info] of desired.tables.get(table)!) {
-        const existing = actual.get(column)
-        if (!existing) continue
-        const plan = planConstraints(table, column, info, existing)
-        if (plan.drop.length + plan.add.length === 0) continue
-        if (dialect === 'mysql' && !(await mysqlChecksEnforced(resolved))) {
-          refusals.push(
-            `${table}.${column}: ${plan.reasons.join('; ')}. This MySQL server is older than ` +
-              `${MYSQL_MIN_CHECK_VERSION}, which parses a CHECK and ignores it, so generate will not write one. ` +
-              `Upgrade the server, or take the constraint out of ${TABLES_FILE}.`
-          )
+  const rebuilds = new Map<string, TableRebuild>()
+  const sqliteObjects =
+    resolved.dialect === 'sqlite' ? await coveredSqliteObjects(resolved) : []
+  for (const table of tables) {
+    const actual = coveredTable(covered, table, schemaName)
+    if (!actual) continue
+    const { columns: definitions } = tableDefinitions(desired.sql, table)
+    for (const [column, info] of desired.tables.get(table)!) {
+      const existing = actual.get(column)
+      if (!existing) continue
+      const plan = planConstraints(table, column, info, existing)
+      if (plan.drop.length + plan.add.length === 0) continue
+
+      const added = plan.add.map((check) => ({
+        column,
+        name: check.name,
+        expression: inlineCheckExpression(
+          definitions.get(column) ?? '',
+          check.name
+        ),
+      }))
+      const lost = added.find((check) => !check.expression)
+      if (lost) {
+        refusals.push(
+          `${table}.${column}: ${lost.name} is not written inline on the column, so generate cannot lift its text.`
+        )
+        continue
+      }
+
+      if (resolved.dialect === 'sqlite') {
+        const ddl = sqliteObjects.find(
+          (o) =>
+            o.type === 'table' && o.name.toLowerCase() === table.toLowerCase()
+        )?.sql
+        if (!ddl) {
+          refusals.push(`${table} has no definition to rebuild from.`)
           continue
         }
-        for (const name of plan.drop) {
-          statements.push(
-            dropCheckStatement(dialect, qualify(table), name, quote)
-          )
+        const rebuild = rebuilds.get(table) ?? {
+          table,
+          ddl,
+          columns: [...actual.values()]
+            .filter((c) => !c.generated)
+            .map((c) => c.name),
+          drop: [],
+          add: [],
         }
-        for (const check of plan.add) {
-          const expression = inlineCheckExpression(
-            definitions.get(column) ?? '',
-            check.name
+        rebuild.drop.push(...plan.drop.map((name) => ({ column, name })))
+        rebuild.add.push(
+          ...added.map((a) => ({ ...a, expression: a.expression! }))
+        )
+        rebuilds.set(table, rebuild)
+        continue
+      }
+
+      const dialect = resolved.dialect
+      if (dialect === 'mysql' && !(await mysqlChecksEnforced(resolved))) {
+        refusals.push(
+          `${table}.${column}: ${plan.reasons.join('; ')}. This MySQL server is older than ` +
+            `${MYSQL_MIN_CHECK_VERSION}, which parses a CHECK and ignores it, so generate will not write one. ` +
+            `Upgrade the server, or take the constraint out of ${TABLES_FILE}.`
+        )
+        continue
+      }
+      for (const name of plan.drop) {
+        statements.push(
+          dropCheckStatement(dialect, qualify(table), name, quote)
+        )
+      }
+      for (const check of added) {
+        statements.push(
+          ...addCheckStatements(
+            dialect,
+            qualify(table),
+            check.name,
+            check.expression!,
+            quote
           )
-          if (!expression) {
-            refusals.push(
-              `${table}.${column}: ${check.name} is not written inline on the column, so generate cannot lift its text.`
-            )
-            continue
-          }
-          statements.push(
-            ...addCheckStatements(
-              dialect,
-              qualify(table),
-              check.name,
-              expression,
-              quote
-            )
-          )
-        }
+        )
       }
     }
+  }
+  if (rebuilds.size > 0) {
+    const migration = sqliteRebuildMigration(
+      [...rebuilds.values()],
+      sqliteObjects
+    )
+    if ('problem' in migration) refusals.push(migration.problem)
+    else statements.unshift(migration.sql)
   }
 
   // An index on a new table came with its `CREATE TABLE` above.
@@ -2242,6 +2288,24 @@ export async function planDeclaredTables(
     ]
   })
   return { tables, body: rehearsal.length ? '' : body, refusals: rehearsal }
+}
+
+/** Everything the migrations define on sqlite, in the order it was created. */
+async function coveredSqliteObjects(
+  resolved: Extract<ResolvedDb, { dialect: 'sqlite' }>
+): Promise<SqliteObject[]> {
+  const db = await openSqlite(resolved, ':memory:')
+  try {
+    await migrate(new SqliteMigrationExecutor(db), resolved.migrationsDir)
+    return db
+      .prepare(
+        `select type, name, tbl_name, sql from sqlite_master
+         where name not like 'sqlite\\_%' escape '\\' order by rowid`
+      )
+      .all() as unknown as SqliteObject[]
+  } finally {
+    db.close()
+  }
 }
 
 /** Whether the configured MySQL server enforces `CHECK`, which it does from 8.0.16. */

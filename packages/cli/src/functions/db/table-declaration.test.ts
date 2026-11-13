@@ -721,51 +721,198 @@ describe('constraints on the declaration', () => {
     assert.deepEqual((await generate(resolved)).refusals, [])
   })
 
-  for (const dialect of ['sqlite'] as const) {
-    const project = () => sqliteProject()
-
-    test(`${dialect}: adding a constraint to an existing column is refused with what to do`, async () => {
-      declare(ITEM)
-      const resolved = project()
-      await generate(resolved)
-      const before = migrations(dialect)
-
-      declare(`item: { columns: {
+  describe('sqlite rebuilds the table to change a constraint', () => {
+    const NAME_ONLY = `item: { columns: {
         id: { type: 'key', primaryKey: true },
-        name: { type: 'text', required: true, maxLength: 20 },
-      } }`)
-      const { written, refusals } = await generate(resolved)
-      assert.deepEqual(written, [])
-      assert.equal(refusals.length, 1)
-      assert.match(
-        refusals[0]!,
-        /item\.name already exists, and its constraints differ/
-      )
-      assert.match(refusals[0]!, /item_name_maxlength_check/)
-      assert.match(refusals[0]!, /Write that migration by hand in db\/\w+/)
-      assert.deepEqual(migrations(dialect), before)
-    })
+        name: { type: 'text', required: true },
+      } }`
+    const bounded = (n: number) => `item: { columns: {
+        id: { type: 'key', primaryKey: true },
+        name: { type: 'text', required: true, maxLength: ${n} },
+      } }`
+    const open = async () => {
+      const { DatabaseSync } = await import('node:sqlite')
+      return new DatabaseSync(join(root, 'dev.db'))
+    }
 
-    test(`${dialect}: changing and removing a generated constraint are refused`, async () => {
-      declare(item(`qty: { type: 'integer', max: 10 },`))
-      const resolved = project()
+    test('rows, indexes, triggers and views survive, and the check is enforced', async () => {
+      declare(
+        `owner: { columns: { id: { type: 'key', primaryKey: true } } }`,
+        `item: { columns: {
+          id: { type: 'key', primaryKey: true },
+          name: { type: 'text', required: true, index: true },
+          ownerId: { references: 'owner.id', onDelete: 'cascade' },
+        } }`,
+        `child: { columns: {
+          id: { type: 'key', primaryKey: true },
+          itemId: { references: 'item.id', onDelete: 'cascade', required: true },
+        } }`
+      )
+      const resolved = sqliteProject()
       await generate(resolved)
-
-      declare(item(`qty: { type: 'integer', max: 20 },`))
-      const changed = await generate(resolved)
-      assert.match(
-        changed.refusals[0]!,
-        /item_qty_max_check is \(.*10\) in the migrations and \(.*20\)/
+      writeFileSync(
+        join(migrationDir('sqlite'), '9000-extras.sql'),
+        `CREATE VIEW item_names AS SELECT name FROM item;
+CREATE TABLE audit (note TEXT);
+CREATE TRIGGER item_audit AFTER INSERT ON item BEGIN INSERT INTO audit VALUES (new.name); END;`
       )
+      await migrateAndCodegen(resolved)
+      let db = await open()
+      db.exec(`insert into owner values ('o');
+        insert into item (id, name, owner_id) values ('a', 'one', 'o'), ('b', 'two', 'o');
+        insert into child (id, item_id) values ('c1', 'a'), ('c2', 'b')`)
+      db.close()
 
-      declare(item(`qty: { type: 'integer' },`))
-      const removed = await generate(resolved)
-      assert.match(
-        removed.refusals[0]!,
-        /item_qty_max_check .* is no longer declared/
+      declare(
+        `owner: { columns: { id: { type: 'key', primaryKey: true } } }`,
+        `item: { columns: {
+          id: { type: 'key', primaryKey: true },
+          name: { type: 'text', required: true, index: true, maxLength: 5 },
+          ownerId: { references: 'owner.id', onDelete: 'cascade' },
+        } }`,
+        `child: { columns: {
+          id: { type: 'key', primaryKey: true },
+          itemId: { references: 'item.id', onDelete: 'cascade', required: true },
+        } }`
       )
+      const { written, refusals } = await generate(resolved)
+      assert.deepEqual(refusals, [])
+      const sql = readFileSync(written[0]!.file, 'utf8')
+      assert.match(sql, /^-- pikku:destructive rebuilds "item"/m)
+      assert.match(sql, /^-- pikku:foreign-keys-off$/m)
+      await migrateAndCodegen(resolved)
+
+      db = await open()
+      const count = (table: string) =>
+        (db.prepare(`select count(*) n from ${table}`).get() as any).n
+      assert.equal(count('item'), 2)
+      assert.equal(count('child'), 2, 'cascade did not fire during the rebuild')
+      assert.equal(db.prepare('pragma foreign_key_check').all().length, 0)
+      assert.throws(() =>
+        db.exec(`insert into item (id, name) values ('z', 'toolong')`)
+      )
+      assert.ok(
+        db
+          .prepare(
+            `select 1 from sqlite_master where type = 'index' and tbl_name = 'item' and sql is not null`
+          )
+          .get(),
+        'the index is back'
+      )
+      db.exec(`insert into item (id, name) values ('d', 'ok')`)
+      assert.equal(count('audit'), 3, 'the trigger fires again')
+      assert.equal(count('item_names'), 3, 'the view works again')
+      assert.throws(() =>
+        db.exec(`insert into child (id, item_id) values ('c9', 'nope')`)
+      )
+      db.close()
+      assert.deepEqual((await generate(resolved)).written, [])
     })
-  }
+
+    test('existing rows that break the new check fail cleanly and leave the table as it was', async () => {
+      declare(NAME_ONLY)
+      const resolved = sqliteProject()
+      await generate(resolved)
+      await migrateAndCodegen(resolved)
+      let db = await open()
+      db.exec(`insert into item (id, name) values ('a', 'much too long')`)
+      db.close()
+
+      declare(bounded(5))
+      const planned = await generate(resolved)
+      assert.equal(planned.written.length, 1)
+      await assert.rejects(
+        migrateAndCodegen(resolved),
+        /CHECK constraint failed/i
+      )
+
+      db = await open()
+      assert.equal(
+        (db.prepare('select name from item').get() as any).name,
+        'much too long'
+      )
+      assert.equal(
+        db
+          .prepare(
+            `select 1 from sqlite_master where name like 'pikku_rebuild%'`
+          )
+          .all().length,
+        0
+      )
+      assert.equal(
+        (db.prepare('pragma foreign_keys').get() as any).foreign_keys,
+        1
+      )
+      db.close()
+    })
+
+    test('changing a check rebuilds it and removing one takes it out', async () => {
+      declare(bounded(5))
+      const resolved = sqliteProject()
+      await generate(resolved)
+      await migrateAndCodegen(resolved)
+
+      declare(bounded(8))
+      assert.deepEqual((await generate(resolved)).refusals, [])
+      await migrateAndCodegen(resolved)
+      let db = await open()
+      db.exec(`insert into item (id, name) values ('a', '12345678')`)
+      assert.throws(() =>
+        db.exec(`insert into item (id, name) values ('b', '123456789')`)
+      )
+      db.close()
+      assert.deepEqual((await generate(resolved)).written, [])
+
+      declare(NAME_ONLY)
+      assert.deepEqual((await generate(resolved)).refusals, [])
+      await migrateAndCodegen(resolved)
+      db = await open()
+      db.exec(`insert into item (id, name) values ('c', '1234567890')`)
+      db.close()
+    })
+
+    test('a hand-written check, unique and foreign key on the table survive the rebuild', async () => {
+      handWritten(
+        'sqlite',
+        `CREATE TABLE owner (id TEXT PRIMARY KEY);
+CREATE TABLE item (id TEXT PRIMARY KEY, name TEXT NOT NULL, rank INTEGER CHECK (rank > 0), owner_id TEXT REFERENCES owner (id), UNIQUE (name));
+INSERT INTO owner VALUES ('o');
+INSERT INTO item VALUES ('a', 'one', 1, 'o');`
+      )
+      const columns = (extra: string) => `item: { columns: {
+        id: { type: 'key', primaryKey: true },
+        name: { type: 'text', required: true, unique: true${extra} },
+        rank: { type: 'integer' },
+        ownerId: { references: 'owner.id' },
+      } }`
+      declare(columns(''))
+      const resolved = sqliteProject()
+      const first = await generate(resolved)
+      assert.deepEqual(first.refusals, [])
+      await migrateAndCodegen(resolved)
+      declare(columns(', maxLength: 5'))
+      const { refusals, written } = await generate(resolved)
+      assert.deepEqual(refusals, [])
+      assert.equal(written.length, 1)
+      await migrateAndCodegen(resolved)
+
+      const db = await open()
+      const insert = (id: string, name: string, rank: number, owner: string) =>
+        db.exec(
+          `insert into item values ('${id}', '${name}', ${rank}, '${owner}')`
+        )
+      assert.equal(
+        (db.prepare('select count(*) n from item').get() as any).n,
+        1
+      )
+      assert.throws(() => insert('b', 'two', 0, 'o'), /CHECK/)
+      assert.throws(() => insert('b', 'one', 1, 'o'), /UNIQUE/)
+      assert.throws(() => insert('b', 'two', 1, 'nobody'), /FOREIGN KEY/)
+      assert.throws(() => insert('b', 'toolong', 1, 'o'), /CHECK/)
+      insert('b', 'two', 1, 'o')
+      db.close()
+    })
+  })
 
   describe('postgres alters constraints in place', () => {
     const NAME_ONLY = `item: { columns: {

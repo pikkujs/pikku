@@ -211,7 +211,7 @@ export function statementShape(statement: string): StatementShape {
 }
 
 /** Split `body` on commas that sit outside quotes and parentheses. */
-function splitTopLevel(body: string): string[] {
+export function splitTopLevel(body: string): string[] {
   const parts: string[] = []
   let depth = 0
   let start = 0
@@ -243,7 +243,7 @@ function splitTopLevel(body: string): string[] {
 }
 
 /** The body of a `CREATE TABLE`: what sits between its outermost parentheses. */
-function createTableBody(statement: string): string {
+export function createTableBody(statement: string): string {
   const open = statement.indexOf('(')
   const close = statement.lastIndexOf(')')
   return open >= 0 && close > open ? statement.slice(open + 1, close) : ''
