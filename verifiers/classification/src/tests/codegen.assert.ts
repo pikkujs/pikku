@@ -2,8 +2,9 @@
  * Verifies that `pikku db migrate` emits correct Private<T>/Secret<T> brands
  * in schema.gen.ts and a well-formed classification.gen.ts manifest.
  *
- * Classification + type info is authored in `db/annotations.ts` (the single
- * source) — there is no SQL-comment annotation path anymore.
+ * Classification + type info is declared on the columns in `db/tables.ts`
+ * (the single source), here as `declareOnly` tables over the migrations —
+ * there is no SQL-comment annotation path.
  */
 
 import { mkdtemp, mkdir, writeFile, rm, readFile } from 'fs/promises'
@@ -12,21 +13,12 @@ import { tmpdir } from 'os'
 import { spawnSync } from 'child_process'
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
+import { declareAnnotations, type Annotations } from './declare-tables.js'
 
 const PIKKU_BIN = join(
   import.meta.dirname!,
   '../../../../packages/cli/dist/bin/pikku.js'
 )
-
-/** Authored `db/annotations.ts` shape: table → column → ColumnEntry. */
-type ColumnEntry = {
-  security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'
-  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
-  kind?: 'date' | 'bool' | 'json' | 'uuid'
-  tsType?: string
-  format?: string
-}
-type Annotations = Record<string, Record<string, ColumnEntry>>
 
 function runPikkuDbMigrate(dir: string): { exitCode: number; output: string } {
   // spawnSync (not execFileSync) so we capture stderr on *success* too — codegen
@@ -74,12 +66,13 @@ async function createProject(
     await writeFile(join(tmpDir, 'db', 'sqlite', name), sql)
   }
 
-  // The codegen compiles db/annotations.ts → annotations.gen.json before
-  // introspection, so authored classification applies in a single migrate.
+  // `db migrate` writes the declaration's annotations to annotations.gen.json
+  // before introspection, so they apply in a single migrate.
   if (annotations) {
-    await writeFile(
-      join(tmpDir, 'db', 'annotations.ts'),
-      `export const classifications = ${JSON.stringify(annotations, null, 2)}\n`
+    await declareAnnotations(
+      tmpDir,
+      annotations,
+      Object.values(migrations).join('\n')
     )
   }
 

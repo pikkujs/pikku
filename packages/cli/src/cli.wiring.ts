@@ -29,7 +29,6 @@ import {
   webhooksTeardown,
 } from './functions/commands/webhooks.js'
 import { dbCheck } from './functions/commands/db-check.js'
-import { dbAnnotate } from './functions/commands/db-annotate.js'
 import { dbBaseline } from './functions/commands/db-baseline.js'
 import { dbExport } from './functions/commands/db-export.js'
 import { dbReset } from './functions/commands/db-reset.js'
@@ -832,11 +831,6 @@ wireCLI({
           func: dbCheck,
           description:
             'Report how the configured database differs from the schema its migrations define',
-        }),
-        annotate: pikkuCLICommand({
-          func: dbAnnotate,
-          description:
-            'Add a kind to db/annotations.ts for each SQLite column declared BOOLEAN, DATE/TIMESTAMP or JSON, so it types as boolean, Date or parsed JSON',
         }),
         baseline: pikkuCLICommand({
           func: dbBaseline,

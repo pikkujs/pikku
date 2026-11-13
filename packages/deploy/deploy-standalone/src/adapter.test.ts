@@ -291,7 +291,7 @@ describe(`StandaloneProviderAdapter postgres wiring`, () => {
       withPostgres
     )
 
-    // The map comes from db/annotations.ts, not from the dialect: an
+    // The map comes from db/tables.ts, not from the dialect: an
     // annotated column needs coercing whichever database holds it.
     assert.match(source, /withPlugin\(\s*createCoercionPlugin/)
   })

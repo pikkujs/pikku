@@ -73,23 +73,25 @@ Rules that are not optional:
   `variables` / `secrets` services; `process.env` belongs only in bootstrap. Every
   secret a function reads needs a matching `defineSecret`, or `pikku all` reports
   PKU951 and nobody knows what to provision at deploy.
-- Let the database type your values, via `db/annotations.ts`. A `BOOLEAN` column
-  is derived for you. On SQLite the other two are **not** — add them by hand,
-  once, and they are typed AND coerced end-to-end:
+- Let the database type your values, via the column in `db/tables.ts`. A
+  `BOOLEAN` column is derived for you. On SQLite the other two are **not** —
+  give the column a `kind`, once, and it is typed AND coerced end-to-end:
 
   ```typescript
-  export const classifications = {
+  export const tables = defineTables({
     payment: {
-      paid_at: { kind: 'date' }, // -> Date, not an ISO string
-      metadata: { kind: 'json', tsType: 'PaymentMeta' }, // -> parsed object, not unknown
+      columns: {
+        paidAt: { type: 'timestamp', kind: 'date' }, // -> Date, not an ISO string
+        metadata: { type: 'json', kind: 'json', tsType: 'PaymentMeta' }, // -> parsed object, not unknown
+      },
     },
-  }
+  })
   ```
 
-  A `TIMESTAMP`/`DATETIME`/`DATE` column with no entry types as `string`, and a
-  `JSON` column with no entry types as `unknown` (the CLI warns PKU481). Add the
-  annotation rather than casting around the generated type. Once the file carries
-  manual fields, `db migrate` stops overwriting it.
+  A `TIMESTAMP`/`DATETIME`/`DATE` column with no `kind` types as `string`, and a
+  `JSON` column with none types as `unknown` (the CLI warns PKU481). Set it on
+  the column rather than casting around the generated type. A table a
+  hand-written migration creates is declared `declareOnly: true` to carry it.
 
 - A `z.date()` on a function's **input** arrives over RPC as an ISO string, not a
   `Date`. Normalise before calling date methods on it (`new Date(value)`), or it

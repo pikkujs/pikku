@@ -19,7 +19,7 @@ The middle answer already exists in the repo. `classification.gen.ts` is a
 per-column manifest of `private` / `secret` / `public` with a `form` of `plain`,
 `hashed`, `wrapped` or `sealed`. Only `wrapped` and `sealed` columns are
 encrypted; everything else stays queryable, which is most of the schema. The
-manifest is generated from the hand-authored `db/annotations.ts` by
+manifest is generated from the column annotations in `db/tables.ts` by
 `pikku db migrate`, so the decision about a column is made once, in one place,
 and the query layer follows it.
 
@@ -43,7 +43,7 @@ forgotten call site is a loud error rather than a silent plaintext row — but
 Two alternatives were rejected to get there. Node's synchronous `crypto` would
 fork crypto away from core and break every non-Node runtime. Proxying the query
 builder is the kind of workaround the repo bans. A **`Driver` wrapper**
-encrypting compiled-query parameters *would* deliver full write transparency and
+encrypting compiled-query parameters _would_ deliver full write transparency and
 reuses the manifest walk and resolver verbatim, so it stays open — but it needs
 a parameter-index-to-column mapping recovered after compilation, and that
 mapping goes fragile exactly where inserts get interesting (multi-row,
@@ -58,7 +58,7 @@ the same reason to protect them. Putting it beside the dialect would mean
 writing it twice.
 
 The `hashed` form must never be encrypted, and the existing `ColumnForm` JSDoc
-already says why: a token hash *is* the lookup key, so encrypting it makes the
+already says why: a token hash _is_ the lookup key, so encrypting it makes the
 lookup impossible.
 
 The cost was measured on an M-series Mac rather than estimated: envelope

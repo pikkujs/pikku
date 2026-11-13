@@ -127,11 +127,13 @@ apart from the generated ones.
 
 ## Annotations
 
-The annotation fields on a column reach `db/annotations.gen.json`, the generated
-types and the anonymizer, the same as entries in `db/annotations.ts`. While a
-project still has `db/annotations.ts`, both are read: where both set the same
-field on the same column, `db/annotations.ts` wins. See
-[DB column annotations](./db-column-annotations.md).
+The annotation fields on a column (`security`, `form`, `keyId`,
+`classification`, `kind`, `tsType`, `format`, `description`) are the only place
+annotations come from. `pikku db migrate` writes them to `db/annotations.gen.json`,
+which the generated types, the anonymizer and the console read. A project that
+still has the old `db/annotations.ts` is refused until its entries move onto the
+columns. See [DB column annotations](./db-column-annotations.md) and
+[MIGRATION.md](./MIGRATION.md#dbannotationsts-is-removed).
 
 ## What it does not detect
 

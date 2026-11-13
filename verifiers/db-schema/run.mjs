@@ -343,6 +343,10 @@ rmSync(join(here, '.pikku'), { recursive: true, force: true })
 // Step 16 writes the declaration; every step before it runs without one.
 const TABLES_TS = join(here, 'db', 'tables.ts')
 rmSync(TABLES_TS, { force: true })
+// A db/annotations.ts left by an older CLI now stops every db command, and the
+// sidecar is written from the declaration, so neither survives a run.
+rmSync(join(here, 'db', 'annotations.ts'), { force: true })
+rmSync(join(here, 'db', 'annotations.gen.json'), { force: true })
 rmSync(join(addonDir, '.pikku'), { recursive: true, force: true })
 rmSync(join(remoteAddonDir, '.pikku'), { recursive: true, force: true })
 // Generated, but outside `.pikku` — and left behind, the next run inspects a
