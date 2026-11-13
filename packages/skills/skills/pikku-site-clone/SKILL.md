@@ -33,7 +33,7 @@ links. That list is your to-do list: a page not on it is a page you will miss.
 ## 2. Capture the original, once, before you build
 
 ```bash
-node $SC capture reference --tiles @reference/pages.txt        # 1440, 390 and 1920 wide by default
+node $SC capture reference --tiles @reference/pages.txt        # 1440, 390 and 1920 wide by default; slow (a minute or two per page): run it in the background
 ```
 
 For every page this writes into `reference/`: `<page>.html` (as served), `<page>.json` (title, description, menu in order,
@@ -61,19 +61,28 @@ text it is on, and which pictures run edge to edge. That is the layout; the tile
 ## 4. Compare after every page
 
 ```bash
-node $SC capture mine --tiles http://localhost:<port>/<path>      # your page, same three widths, into mine/
-node $SC compare reference mine                                    # layout and pixel scores per page and width
+node $SC shot mine http://localhost:<port>/<path> --width 1440      # one page, one width: a screenshot and tiles, in seconds
+node $SC compare reference mine --page <page> --width 1440          # section-by-section differences and a match score
 ```
 
-`compare` prints, per width, a layout score from 0 to 1 and its parts: `columns` (columns per stretch of the page),
-`multi` (how many multi-column sections), `images` (how well the pictures' boxes overlap), `sections`, `height`, and a
-`pixel` score. A page built as one long column against a multi-column original scores low on `columns`, `multi`, `images`
-and `height`. Then look: open the original's tiles `reference/small/<page>-1440-0.png ...` and yours `mine/small/<page>-1440-0.png ...`
-with your file reader. Fix the differences you see, run it again, and move on when the scores are close and the tiles
-look alike.
+`compare` lines up the original's sections with yours from the top of the page and says, in words, where they differ:
+sections that are one column in yours and two in the original, a picture on the wrong side or much smaller or larger, sections
+yours lacks or has extra, and how much taller or shorter your page is. The `match` number (0 to 1) goes up as those differences
+go away. Fix the biggest differences first; they are almost always the layout (columns, picture size and side), not the colours.
+Run `shot` at 390 and 1920 too (`--width 390`) before you move on: the phone layout is its own layout.
 
-Looking costs tokens, so: read at most 4 tiles per check, only the page you just built (the original's tile and yours,
-two at a time), and about 40 tile reads in the whole job. Use the numbers for everything else.
+Then look at the tiles to see what the numbers mean: open the original's `reference/small/<page>-1440-0.png` and yours
+`mine/small/<page>-1440-0.png` with your file reader. Looking costs tokens: at most 4 tiles per check, only the page you just
+built, and about 40 tile reads in the whole job; use `compare` for everything else.
+
+When all pages are built, run the site check once and fix what it lists:
+
+```bash
+node $SC check http://localhost:<port> reference
+```
+
+It fetches every page of the original's list from your site and reports pages that do not answer 200, pages with almost no
+text in the server-rendered HTML (blank, or filled in by script), and links on the page that lead nowhere.
 
 ## If there is no browser
 

@@ -2,7 +2,10 @@
 // site_capture.mjs: capture and compare the reference of a website you are cloning, from the RENDERED page.
 //   node site_capture.mjs pages <root-url>                          page list: sitemap(s), else internal links
 //   node site_capture.mjs capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file-with-urls> ...
-//   node site_capture.mjs compare <reference-dir> <clone-dir>       layout + pixel scores per page and viewport
+//   node site_capture.mjs shot <out-dir> <url> [--width 1440]       one page, one width: screenshot + tiles, quick (use after each change)
+//   node site_capture.mjs compare <reference-dir> <clone-dir> [--page id] [--width 1440]
+//                                                                   section-by-section differences (columns, pictures, height) and a match score
+//   node site_capture.mjs check <base-url> <reference-dir>          every page answers 200, has its content in the server-rendered HTML, no console errors, links resolve
 // Needs a Chromium and playwright-core: PIKKU_CHROMIUM = path of the chrome binary, PLAYWRIGHT_CORE = path of the playwright-core
 // module (default: `playwright-core` resolved from the current directory). Browser profile, tmp and downloads stay under <out-dir>/.browser.
 // Tiles and pixel scores use ImageMagick (`convert`, `compare`) when it is installed.
@@ -110,8 +113,9 @@ async function capture(out, urls, vps, tiles) {
   mkdirSync(out, { recursive: true })
   const browser = await launch(out)
   const index = []
-  for (const url of urls) {
-    const id = idOf(url); const rec = { id, url, viewports: {} }
+  for (const entry of urls) {
+    const [url, idOverride] = entry.split('|')   // `url|id` names the page's id (a clone whose paths differ from the original's)
+    const id = idOverride || idOf(url); const rec = { id, url, viewports: {} }
     try { writeFileSync(join(out, `${id}.html`), await (await fetch(url, { headers: { 'user-agent': UA } })).text()) } catch {}
     for (const w of vps) {
       const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, userAgent: UA, deviceScaleFactor: 1, isMobile: w < 600 })
@@ -142,43 +146,67 @@ function makeTiles(png, dir, name, w) {
   sh('convert', [png, '-resize', `${width}x`, '-crop', `${width}x1024`, '+repage', join(dir, `${name}-%d.png`)])
 }
 
-// ---------------------------------------------------------------- compare
-const iou = (a, b) => { const x = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)), y = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)); const i = x * y; return i / (a.w * a.h + b.w * b.h - i || 1) }
-const colsAt = (bands, y) => (bands.find((b) => y >= b.y0 && y <= b.y1)?.cols) || 0
-export function layoutScore(ref, mine) {
-  const n = 20; let agree = 0, multi = 0
-  for (let i = 0; i < n; i++) { const y = (i + 0.5) / n, a = colsAt(ref.bands, y), b = colsAt(mine.bands, y); agree += 1 - Math.abs(a - b) / Math.max(a, b, 1); multi += (a >= 2) === (b >= 2) ? 1 : 0 }
-  const columns = (agree / n) * 0.5 + (multi / n) * 0.5
-  const R = ref.images.filter((b) => b.w >= 0.05), M = mine.images.filter((b) => b.w >= 0.05); const used = new Set(); let sum = 0
-  for (const r of R) { let best = 0, bi = -1; M.forEach((m, i) => { if (used.has(i)) return; const v = iou(r, m); if (v > best) { best = v; bi = i } }); if (bi >= 0) used.add(bi); sum += best }
-  const images = R.length || M.length ? sum / Math.max(R.length, M.length) : 1
-  const sections = Math.min(ref.bands.length, mine.bands.length) / Math.max(ref.bands.length, mine.bands.length, 1)
-  const height = Math.min(ref.doc.h, mine.doc.h) / Math.max(ref.doc.h, mine.doc.h, 1)
-  const multiSections = ref.counts.multiColumnSections === 0 && mine.counts.multiColumnSections === 0 ? 1 : Math.min(ref.counts.multiColumnSections, mine.counts.multiColumnSections) / Math.max(ref.counts.multiColumnSections, mine.counts.multiColumnSections, 1)
-  // fixed weights: columns agreement 0.25, multi-column section count 0.15, picture placement (IoU) 0.25, section count 0.15, page height 0.20
-  const layout = 0.25 * columns + 0.15 * multiSections + 0.25 * images + 0.15 * sections + 0.2 * height
-  return { layout: +layout.toFixed(3), columns: +columns.toFixed(3), multi: +multiSections.toFixed(3), images: +images.toFixed(3), sections: +sections.toFixed(3), height: +height.toFixed(3), refMulti: ref.counts.multiColumnSections, mineMulti: mine.counts.multiColumnSections }
-}
-function pixelScore(a, b) {
-  if (!existsSync(a) || !existsSync(b)) return null
-  const dims = (f) => sh('identify', ['-format', '%w %h', f]).trim().split(' ').map(Number)
-  const [wa, ha] = dims(a), [wb, hb] = dims(b); const W = 240, H = Math.max(Math.round((ha * W) / wa), Math.round((hb * W) / wb))
-  const norm = (f, o) => sh('convert', [f, '-resize', `${W}x`, '-background', 'white', '-gravity', 'north', '-extent', `${W}x${H}`, o])
-  const tmp = join(process.env.TMPDIR || '/tmp', `px-${process.pid}`); mkdirSync(tmp, { recursive: true }); norm(a, join(tmp, 'a.png')); norm(b, join(tmp, 'b.png'))
-  const r = sh('compare', ['-metric', 'RMSE', join(tmp, 'a.png'), join(tmp, 'b.png'), 'null:']).match(/\(([\d.]+)\)/)
-  return r ? +(1 - parseFloat(r[1])).toFixed(3) : null
-}
-function compare(refDir, mineDir) {
-  const rows = []
-  for (const f of readdirSync(refDir).filter((x) => /-\d+\.layout\.json$/.test(x)).sort()) {
-    const mp = join(mineDir, f); const [, id, vp] = f.match(/^(.*)-(\d+)\.layout\.json$/)
-    if (!existsSync(mp)) { rows.push({ id, viewport: +vp, missing: true }); continue }
-    const s = layoutScore(JSON.parse(readFileSync(join(refDir, f))), JSON.parse(readFileSync(mp)))
-    rows.push({ id, viewport: +vp, ...s, pixel: pixelScore(join(refDir, `${id}-${vp}.png`), join(mineDir, `${id}-${vp}.png`)) })
+// ---------------------------------------------------------------- compare (section by section)
+const pct = (x) => `${Math.round(x * 100)}%`
+const sideOf = (band) => (band.images[0] ? band.images[0].side : 'none')
+const bandDesc = (b) => `${b.cols} column${b.cols === 1 ? '' : 's'}${b.images.length ? `, ${b.images.length} picture${b.images.length === 1 ? '' : 's'} (${b.images.map((i) => `${pct(i.w)} wide, ${i.side}`).join('; ')})` : ''}${b.fullBleed ? ', full-width picture' : ''}`
+/** Align the reference's sections with yours in order (dynamic programming on how alike two sections are), then list the biggest differences. */
+export function sectionDiff(ref, mine) {
+  const A = ref.bands, B = mine.bands
+  const alike = (a, b) => 0.5 * (a.cols === b.cols ? 1 : Math.min(a.cols, b.cols) / Math.max(a.cols, b.cols)) + 0.3 * (a.images.length === b.images.length ? 1 : Math.min(a.images.length, b.images.length) / Math.max(a.images.length, b.images.length, 1)) + 0.2 * (sideOf(a) === sideOf(b) ? 1 : 0)
+  const n = A.length, m = B.length
+  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0)), from = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))
+  for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++) { const d = dp[i - 1][j - 1] + alike(A[i - 1], B[j - 1]); const u = dp[i - 1][j], l = dp[i][j - 1]; if (d >= u && d >= l) { dp[i][j] = d; from[i][j] = 0 } else if (u >= l) { dp[i][j] = u; from[i][j] = 1 } else { dp[i][j] = l; from[i][j] = 2 } }
+  const pairs = []; let i = n, j = m
+  while (i > 0 && j > 0) { if (from[i][j] === 0) { pairs.push([i - 1, j - 1]); i--; j-- } else if (from[i][j] === 1) i--; else j-- }
+  pairs.reverse()
+  const matched = new Set(pairs.map((p) => p[0])), notes = []
+  for (const [ia, ib] of pairs) {
+    const a = A[ia], b = B[ib], sc = alike(a, b)
+    if (sc < 0.85) notes.push({ weight: 1 - sc, text: `section ${ia + 1} of ${n} (${pct(a.y0)}-${pct(a.y1)} down the page): original has ${bandDesc(a)}; yours (section ${ib + 1}) has ${bandDesc(b)}` })
+    const ai = a.images[0], bi = b.images[0]
+    if (ai && bi && Math.abs(ai.w - bi.w) > 0.12) notes.push({ weight: 0.4, text: `section ${ia + 1}: the picture is ${pct(ai.w)} of the page width in the original, ${pct(bi.w)} in yours` })
   }
-  const out = { rows, mean: {} }
-  for (const vp of [...new Set(rows.map((r) => r.viewport))]) { const rs = rows.filter((r) => r.viewport === vp); const m = (k) => +(rs.reduce((a, r) => a + (r.missing ? 0 : r[k] ?? 0), 0) / rs.length).toFixed(3); out.mean[vp] = { layout: m('layout'), columns: m('columns'), multi: m('multi'), images: m('images'), sections: m('sections'), height: m('height'), pixel: m('pixel') } }
-  return out
+  for (let k = 0; k < n; k++) if (!matched.has(k)) notes.push({ weight: 0.9, text: `section ${k + 1} of the original (${bandDesc(A[k])}) has no counterpart in your page` })
+  if (m > pairs.length) notes.push({ weight: 0.5, text: `your page has ${m - pairs.length} section(s) the original does not have` })
+  const hr = mine.doc.h / ref.doc.h
+  if (hr < 0.85 || hr > 1.15) notes.push({ weight: Math.min(1, Math.abs(1 - hr)), text: `page height: original ${ref.doc.h} px, yours ${mine.doc.h} px (${hr.toFixed(2)}x): ${hr > 1 ? 'too much space or a layout that is too narrow/too stacked' : 'content missing or too compact'}` })
+  const rm = ref.counts.multiColumnSections, mm = mine.counts.multiColumnSections
+  if (rm !== mm) notes.push({ weight: 0.7, text: `multi-column sections: original ${rm}, yours ${mm}` })
+  const score = n ? dp[n][m] / Math.max(n, m) : 1
+  return { match: +(score * 0.7 + 0.3 * Math.min(hr, 1 / hr)).toFixed(2), notes: notes.sort((x, y) => y.weight - x.weight).slice(0, 6).map((x) => x.text) }
+}
+function compare(refDir, mineDir, only, width) {
+  const files = readdirSync(refDir).filter((x) => /-\d+\.layout\.json$/.test(x)).sort()
+  for (const f of files) {
+    const [, id, vp] = f.match(/^(.*)-(\d+)\.layout\.json$/)
+    if ((only && id !== only) || (width && +vp !== +width)) continue
+    const mp = join(mineDir, f)
+    if (!existsSync(mp)) { if (only) console.log(`${id} @${vp}: not captured yet in ${mineDir}`); continue }
+    const d = sectionDiff(JSON.parse(readFileSync(join(refDir, f))), JSON.parse(readFileSync(mp)))
+    console.log(`${id} @${vp}: match ${d.match}${d.notes.length ? '\n  - ' + d.notes.join('\n  - ') : '  (sections line up)'}`)
+  }
+}
+
+// ---------------------------------------------------------------- check (does the site work as a whole)
+async function check(base, refDir) {
+  const ids = readdirSync(refDir).filter((x) => /\.layout\.json$/.test(x)).map((x) => x.replace(/-\d+\.layout\.json$/, '')).filter((v, i, a) => a.indexOf(v) === i)
+  const pageUrl = (id) => { try { return JSON.parse(readFileSync(join(refDir, `${id}.json`))).url } catch { return null } }
+  const bad = []
+  for (const id of ids) {
+    const orig = pageUrl(id); const path = orig ? new URL(orig).pathname : id === 'index' ? '/' : `/${id}`
+    let status = 0, text = '', links = []
+    try { const r = await fetch(base + path, { headers: { 'user-agent': UA }, redirect: 'follow' }); status = r.status; const html = await r.text(); text = html.replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); links = [...html.matchAll(/<a\b[^>]*href="(\/[^"#?]*)"/g)].map((m) => m[1]) } catch {}
+    const problems = []
+    if (status !== 200) problems.push(`status ${status}`)
+    if (status === 200 && text.length < 200) problems.push(`only ${text.length} characters of text in the server-rendered HTML (blank or loaded by script)`)
+    const broken = []
+    for (const l of [...new Set(links)].slice(0, 40)) { try { const r = await fetch(base + l, { method: 'GET', redirect: 'follow' }); if (r.status >= 400) broken.push(`${l} (${r.status})`) } catch { broken.push(l) } }
+    if (broken.length) problems.push(`broken links: ${broken.slice(0, 5).join(', ')}`)
+    console.log(`${id.padEnd(30)} ${path.padEnd(34)} ${problems.length ? 'PROBLEM: ' + problems.join('; ') : 'ok'}`)
+    if (problems.length) bad.push(id)
+  }
+  console.log(`${ids.length - bad.length} of ${ids.length} pages ok${bad.length ? `; fix: ${bad.join(', ')}` : ''}`)
 }
 
 // ---------------------------------------------------------------- cli
@@ -189,6 +217,13 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()
     const out = rest.shift(); let vps = [1440, 390, 1920], tiles = false, urls = []
     while (rest.length) { const a = rest.shift(); if (a === '--viewports') vps = rest.shift().split(',').map(Number); else if (a === '--tiles') tiles = true; else if (a.startsWith('@')) urls.push(...readFileSync(a.slice(1), 'utf8').split(/\s+/).filter(Boolean)); else urls.push(a) }
     await capture(out, urls, vps, tiles)
-  } else if (cmd === 'compare') { const r = compare(rest[0], rest[1]); console.log(JSON.stringify(r.mean)); if (rest[2]) writeFileSync(rest[2], JSON.stringify(r, null, 1)) }
-  else console.log('usage: pages <root-url> | capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file>... | compare <reference-dir> <clone-dir> [report.json]')
+  } else if (cmd === 'compare') {
+    let only = null, width = null; const pos = []
+    for (let k = 0; k < rest.length; k++) { if (rest[k] === '--page') only = rest[++k]; else if (rest[k] === '--width') width = rest[++k]; else pos.push(rest[k]) }
+    compare(pos[0], pos[1], only, width)
+  } else if (cmd === 'shot') {
+    const out = rest[0], url = rest[1]; const w = rest.includes('--width') ? Number(rest[rest.indexOf('--width') + 1]) : 1440
+    await capture(out, [url], [w], true)
+  } else if (cmd === 'check') await check(rest[0], rest[1])
+  else console.log('usage: pages <root-url> | capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file>... | shot <out-dir> <url> [--width 1440] | compare <reference-dir> <clone-dir> [--page id] [--width 1440] | check <base-url> <reference-dir>')
 }
