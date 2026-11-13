@@ -316,3 +316,86 @@ test('data() works when only body has values', async () => {
   const result = await r.data()
   assert.deepEqual(result, { test: 'ok' })
 })
+
+test('data() passes an application/x-protobuf body through as raw bytes', async () => {
+  const bytes = new Uint8Array([0x0a, 0x00, 0xff, 0x80, 0x01])
+  const req = new Request('http://localhost', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-protobuf' },
+    body: bytes,
+  })
+  const result = await new PikkuFetchHTTPRequest<any>(req).data()
+  assert(result.data instanceof ArrayBuffer)
+  assert.deepEqual(new Uint8Array(result.data), bytes)
+})
+
+test('data() passes a gzip body through as raw bytes', async () => {
+  const bytes = new Uint8Array([0x1f, 0x8b, 0x08, 0x00, 0xff, 0x00])
+  const req = new Request('http://localhost', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-protobuf',
+      'Content-Encoding': 'gzip',
+    },
+    body: bytes,
+  })
+  const result = await new PikkuFetchHTTPRequest<any>(req).data()
+  assert.deepEqual(new Uint8Array(result.data), bytes)
+})
+
+test('data() leaves gzip-encoded JSON as raw bytes instead of parsing it', async () => {
+  const bytes = new Uint8Array([0x1f, 0x8b, 0x08, 0x00, 0x7b, 0x7d])
+  const req = new Request('http://localhost', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' },
+    body: bytes,
+  })
+  const result = await new PikkuFetchHTTPRequest<any>(req).data()
+  assert(result.data instanceof ArrayBuffer)
+  assert.deepEqual(new Uint8Array(result.data), bytes)
+})
+
+test('data() still parses plain JSON', async () => {
+  const req = new Request('http://localhost', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ a: 1 }),
+  })
+  assert.deepEqual(await new PikkuFetchHTTPRequest<any>(req).data(), { a: 1 })
+})
+
+test('data() treats content-encoding identity as unencoded', async () => {
+  const req = new Request('http://localhost', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Encoding': 'identity',
+    },
+    body: JSON.stringify({ a: 1 }),
+  })
+  assert.deepEqual(await new PikkuFetchHTTPRequest<any>(req).data(), { a: 1 })
+})
+
+test('arrayBuffer() still works after data() on a passed-through body', async () => {
+  const bytes = new Uint8Array([1, 2, 3, 4])
+  const req = new Request('http://localhost', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-protobuf' },
+    body: bytes,
+  })
+  const pikkuReq = new PikkuFetchHTTPRequest<any>(req)
+  await pikkuReq.data()
+  assert.deepEqual(new Uint8Array(await pikkuReq.arrayBuffer()), bytes)
+})
+
+test('a gzip body over the size limit is still rejected', async () => {
+  const req = new Request('http://localhost', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' },
+    body: new Uint8Array(64),
+  })
+  const pikkuReq = new PikkuFetchHTTPRequest<any>(req, { maxBodySize: 8 })
+  await assert.rejects(async () => await pikkuReq.data(), {
+    name: 'PayloadTooLargeError',
+  })
+})
