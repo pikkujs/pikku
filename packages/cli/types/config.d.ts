@@ -350,6 +350,9 @@ export interface PikkuCLICoreOutputFiles {
   // Addon screens (lazy imports of each screen) — what the host imports
   screensFile: string
 
+  // Addon: definePlugin typed against the addon's functions and message keys (#pikku/screens)
+  pluginTypesFile: string
+
   // Host: the addons wired with ui: true and their screens (lazy imports)
   installedAddonsFile: string
 

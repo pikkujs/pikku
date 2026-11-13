@@ -145,6 +145,12 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'Wires a function as a command, with its flags and arguments derived from the function input.',
   },
+  screens: {
+    step: 'enhance it',
+    skill: 'pikku-addon',
+    summary:
+      "An addon's definePlugin, typed against its own functions and message keys: the screens, widgets, things and arranged screens it brings to Pikku Studio.",
+  },
   auth: {
     step: 'guard it',
     skill: 'pikku-auth',

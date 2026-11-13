@@ -547,6 +547,25 @@ naming no function of the addon (PKU359) and any non-literal field (PKU345).
 `pikku new addon-ui` scaffolds the new form. Search:
 `rg -n "defineScreens|ScreensManifest|AddonScreen"`.
 
+### `definePlugin` takes widgets, things and arranged screens
+
+Nothing to change: `widgets`, `things` and `arrangedScreens` are optional, and a
+manifest with only `title` and `screens` builds as before. To use them, import
+`definePlugin` from `#pikku/addon/screens`, which `pikku all` now writes for an
+addon, instead of `@pikku/core/addon`: it is the same function, typed against
+the addon's functions and the keys of its `messages/en.json`, so a wrong
+`source`, `from`, variant or message key fails tsc. `wireAddon({ ui: true })`
+now also accepts an addon that declares only arranged screens, things or
+widgets. See [pikku-studio-screens.md](./pikku-studio-screens.md#widgets-things-and-arranged-screens).
+
+The inspector now reads a top-level `const` of the same file, and spreads of
+one, where `definePlugin` (and its screens) previously failed with PKU345; a
+cast (`as`, `satisfies`) is read through. A function call, an import or a `let`
+still fails with PKU345: inline those values. Copy entries may nest and take
+`$` and figure wording, and an action's `run` may be `go:/<path>`. The host's
+`installedAddons` carries `widgets`, `things` and `arrangedScreens` (and their
+`actions`) as records keyed by id, not arrays.
+
 ### Platform-service contributors are declared in code and opted in with `wireAddon`
 
 Contributors are now plain `Contributor` objects an addon registers with `defineContributors`, and a project opts in by name. The string-emitting `PlatformServiceContributor` is gone. The full reference is [`contributors.md`](./contributors.md).
