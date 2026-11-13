@@ -38,7 +38,7 @@ node $SC capture reference --tiles @reference/pages.txt        # 1440, 390 and 1
 
 For every page this writes into `reference/`: `<page>.html` (as served), `<page>.json` (title, description, menu in order,
 headings with computed sizes, text, colours by use, fonts by use, CSS breakpoints), `<page>-<width>.layout.json` (the
-layout, see `references/layout.md`), `<page>-<width>.png` (the full-page screenshot) and `small/<page>-<width>-<n>.png`
+layout, see `references/layout.md`), `<page>-<width>.jpg` (the full-page screenshot) and `small/<page>-<width>-<n>.jpg`
 (the screenshot cut into tiles about 1024 px tall and 768 px wide, 390 for the phone: about 1000 image tokens each or
 less). Capturing takes a minute or two per page and width: run it in the background and carry on reading.
 
@@ -71,18 +71,24 @@ yours lacks or has extra, and how much taller or shorter your page is. The `matc
 go away. Fix the biggest differences first; they are almost always the layout (columns, picture size and side), not the colours.
 Run `shot` at 390 and 1920 too (`--width 390`) before you move on: the phone layout is its own layout.
 
-Then look at the tiles to see what the numbers mean: open the original's `reference/small/<page>-1440-0.png` and yours
-`mine/small/<page>-1440-0.png` with your file reader. Looking costs tokens: at most 4 tiles per check, only the page you just
+Then look at the tiles to see what the numbers mean: open the original's `reference/small/<page>-1440-0.jpg` and yours
+`mine/small/<page>-1440-0.jpg` with your file reader. Looking costs tokens: at most 4 tiles per check, only the page you just
 built, and about 40 tile reads in the whole job; use `compare` for everything else.
 
-When all pages are built, run the site check once and fix what it lists:
+The site check has two parts. The quick one (no browser) runs on every page of the original's list:
 
 ```bash
 node $SC check http://localhost:<port> reference
 ```
 
-It fetches every page of the original's list from your site and reports pages that do not answer 200, pages with almost no
-text in the server-rendered HTML (blank, or filled in by script), and links on the page that lead nowhere.
+it reports pages that do not answer 200, pages with almost no text in the server-rendered HTML (blank, or filled in by script), and
+links that lead nowhere. The browser one opens a page at 390, 1440 and 1920 px and reports horizontal overflow (a sideways scrollbar),
+broken pictures and script errors, and prints only problems:
+
+```bash
+node $SC check http://localhost:<port> reference --page <page>          # one page, a few seconds
+node $SC check http://localhost:<port> reference --all > check.txt &    # every page, 4 at a time: run it in the background, read check.txt later
+```
 
 ## If there is no browser
 

@@ -5,7 +5,10 @@
 //   node site_capture.mjs shot <out-dir> <url> [--width 1440]       one page, one width: screenshot + tiles, quick (use after each change)
 //   node site_capture.mjs compare <reference-dir> <clone-dir> [--page id] [--width 1440]
 //                                                                   section-by-section differences (columns, pictures, height) and a match score
-//   node site_capture.mjs check <base-url> <reference-dir>          every page answers 200, has its content in the server-rendered HTML, no console errors, links resolve
+//   node site_capture.mjs check <base-url> <reference-dir> [--page id | --all]
+//       no flag: every page answers 200, has its content in the server-rendered HTML, its links resolve (no browser, quick)
+//       --page id: also open that page in the browser at 390/1440/1920 and report horizontal overflow, broken pictures, script errors
+//       --all: the same for every page, 4 at a time (slow: run it in the background, output to a file); prints only problems
 // Needs a Chromium and playwright-core: PIKKU_CHROMIUM = path of the chrome binary, PLAYWRIGHT_CORE = path of the playwright-core
 // module (default: `playwright-core` resolved from the current directory). Browser profile, tmp and downloads stay under <out-dir>/.browser.
 // Tiles and pixel scores use ImageMagick (`convert`, `compare`) when it is installed.
@@ -127,9 +130,9 @@ async function capture(out, urls, vps, tiles) {
         const layout = await page.evaluate(extractInPage)
         writeFileSync(join(out, `${id}-${w}.layout.json`), JSON.stringify({ viewport: w, ...layout }))
         if (w === vps[0]) writeFileSync(join(out, `${id}.json`), JSON.stringify({ id, url, ...(await page.evaluate(extractStructure)) }, null, 1))
-        await page.screenshot({ path: join(out, `${id}-${w}.png`), fullPage: true })
+        await page.screenshot({ path: join(out, `${id}-${w}.jpg`), fullPage: true, type: 'jpeg', quality: 80 })
         rec.viewports[w] = layout.counts
-        if (tiles) makeTiles(join(out, `${id}-${w}.png`), join(out, 'small'), `${id}-${w}`, w)
+        if (tiles) makeTiles(join(out, `${id}-${w}.jpg`), join(out, 'small'), `${id}-${w}`, w)
       } catch (e) { rec.viewports[w] = { error: String(e).slice(0, 120) } }
       await ctx.close()
     }
@@ -143,7 +146,7 @@ async function capture(out, urls, vps, tiles) {
 function makeTiles(png, dir, name, w) {
   mkdirSync(dir, { recursive: true })
   const width = w <= 600 ? 390 : 768
-  sh('convert', [png, '-resize', `${width}x`, '-crop', `${width}x1024`, '+repage', join(dir, `${name}-%d.png`)])
+  sh('convert', [png, '-resize', `${width}x`, '-crop', `${width}x1024`, '+repage', '-quality', '80', join(dir, `${name}-%d.jpg`)])
 }
 
 // ---------------------------------------------------------------- compare (section by section)
@@ -209,6 +212,39 @@ async function check(base, refDir) {
   console.log(`${ids.length - bad.length} of ${ids.length} pages ok${bad.length ? `; fix: ${bad.join(', ')}` : ''}`)
 }
 
+// ---------------------------------------------------------------- browser audit: horizontal overflow, broken pictures, script errors
+async function auditPage(browser, base, path, widths) {
+  const problems = []
+  for (const w of widths) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, userAgent: UA })
+    const page = await ctx.newPage(); const bad = new Set(), errs = []
+    page.on('response', (r) => { if (r.request().resourceType() === 'image' && r.status() >= 400) bad.add(`${r.status()} ${r.url().slice(0, 100)}`) })
+    page.on('pageerror', (e) => errs.push(String(e).slice(0, 100)))
+    try {
+      await page.goto(base + path, { waitUntil: 'load', timeout: 30000 })
+      await page.waitForTimeout(500)
+      await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 900) { scrollTo(0, y); await new Promise((r) => setTimeout(r, 40)) } scrollTo(0, 0); await new Promise((r) => setTimeout(r, 300)) })
+      const r = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, broken: [...document.images].filter((i) => i.complete && i.naturalWidth === 0).map((i) => (i.currentSrc || i.src).slice(0, 100)) }))
+      if (r.sw > w + 4) problems.push(`${w}px: horizontal overflow (page is ${r.sw}px wide)`)
+      for (const b of r.broken.slice(0, 3)) problems.push(`${w}px: broken picture ${b}`)
+      for (const b of [...bad].slice(0, 3)) problems.push(`${w}px: picture request failed ${b}`)
+      for (const e of errs.slice(0, 2)) problems.push(`${w}px: script error ${e}`)
+    } catch (e) { problems.push(`${w}px: did not load (${String(e).slice(0, 60)})`) }
+    await ctx.close()
+  }
+  return problems
+}
+async function audit(base, refDir, only, all) {
+  const ids = readdirSync(refDir).filter((x) => /\.layout\.json$/.test(x)).map((x) => x.replace(/-\d+\.layout\.json$/, '')).filter((v, i, a) => a.indexOf(v) === i)
+  const pathOf = (id) => { try { return new URL(JSON.parse(readFileSync(join(refDir, `${id}.json`))).url).pathname } catch { return id === 'index' ? '/' : `/${id}` } }
+  const todo = all ? ids : [only]
+  const browser = await launch(resolve('.site-audit')); let bad = 0, next = 0
+  const worker = async () => { while (next < todo.length) { const id = todo[next++]; const p = await auditPage(browser, base, pathOf(id), [390, 1440, 1920]); if (p.length) { bad++; console.log(`${id} (${pathOf(id)})\n  - ${p.join('\n  - ')}`) } } }
+  await Promise.all(Array.from({ length: all ? 4 : 1 }, worker))
+  await browser.close()
+  console.log(`${todo.length - bad} of ${todo.length} page(s) clean at 390 / 1440 / 1920 px`)
+}
+
 // ---------------------------------------------------------------- cli
 const [cmd, ...rest] = process.argv.slice(2)
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) {
@@ -224,6 +260,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()
   } else if (cmd === 'shot') {
     const out = rest[0], url = rest[1]; const w = rest.includes('--width') ? Number(rest[rest.indexOf('--width') + 1]) : 1440
     await capture(out, [url], [w], true)
-  } else if (cmd === 'check') await check(rest[0], rest[1])
-  else console.log('usage: pages <root-url> | capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file>... | shot <out-dir> <url> [--width 1440] | compare <reference-dir> <clone-dir> [--page id] [--width 1440] | check <base-url> <reference-dir>')
+  } else if (cmd === 'check') {
+    const only = rest.includes('--page') ? rest[rest.indexOf('--page') + 1] : null, all = rest.includes('--all')
+    if (only || all) await audit(rest[0], rest[1], only, all); else await check(rest[0], rest[1])
+  }
+  else console.log('usage: pages <root-url> | capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file>... | shot <out-dir> <url> [--width 1440] | compare <reference-dir> <clone-dir> [--page id] [--width 1440] | check <base-url> <reference-dir> [--page id | --all]')
 }
