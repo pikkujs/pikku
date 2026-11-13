@@ -7,6 +7,7 @@ import type { AgentRunScore } from '@pikku/core/agent-scorer'
 import type {
   AgentRunStateService,
   AgentStorageService,
+  ApprovalClaim,
   CreateRunInput,
   SaveScoreInput,
 } from '@pikku/core/services'
@@ -17,6 +18,12 @@ import { getRunScores, saveRunScore } from './kysely-agent-run-scores.js'
 import { requirePikkuSchema } from './schema/index.js'
 import { upsert } from './kysely-upsert.js'
 import { agentSchema } from './schema/agent.schema.js'
+
+const toEpochMs = (date: Date | string | undefined): number | null =>
+  date == null ? null : new Date(date).getTime()
+
+const fromEpochMs = (ms: number | string | null): Date | undefined =>
+  ms == null ? undefined : new Date(Number(ms))
 
 export class KyselyAgentStorageService
   implements AgentStorageService, AgentRunStateService
@@ -388,6 +395,7 @@ export class KyselyAgentStorageService
           agentRunId: null,
           displayToolName: null,
           displayArgs: null,
+          approvalExpiresAt: null,
         })
         .where('runId', '=', runId)
         .where('approvalStatus', 'is not', null)
@@ -432,6 +440,7 @@ export class KyselyAgentStorageService
         'agentRunId',
         'displayToolName',
         'displayArgs',
+        'approvalExpiresAt',
       ])
       .where('runId', '=', runId)
       .where('approvalStatus', '=', 'pending')
@@ -474,6 +483,7 @@ export class KyselyAgentStorageService
           'agentRunId',
           'displayToolName',
           'displayArgs',
+          'approvalExpiresAt',
         ])
         .where('runId', '=', row.runId)
         .where('approvalStatus', '=', 'pending')
@@ -498,6 +508,7 @@ export class KyselyAgentStorageService
             agentRunId: a.agentRunId,
             displayToolName: a.displayToolName,
             displayArgs: JSON.stringify(a.displayArgs),
+            approvalExpiresAt: toEpochMs(a.expiresAt),
           })
           .where('id', '=', a.toolCallId)
           .execute()
@@ -508,6 +519,7 @@ export class KyselyAgentStorageService
             approvalStatus: 'pending',
             runId: runId,
             approvalType: 'tool-call',
+            approvalExpiresAt: toEpochMs(a.expiresAt),
           })
           .where('id', '=', a.toolCallId)
           .execute()
@@ -526,6 +538,7 @@ export class KyselyAgentStorageService
               agentRunId: a.agentRunId as string,
               displayToolName: a.displayToolName as string,
               displayArgs: parseJson(a.displayArgs) as unknown,
+              expiresAt: fromEpochMs(a.approvalExpiresAt),
             }
           }
           return {
@@ -533,6 +546,7 @@ export class KyselyAgentStorageService
             toolCallId: a.id as string,
             toolName: a.toolName as string,
             args: parseJson(a.args) as unknown,
+            expiresAt: fromEpochMs(a.approvalExpiresAt),
           }
         })
       : undefined
@@ -572,6 +586,7 @@ export class KyselyAgentStorageService
         'agentRunId',
         'displayToolName',
         'displayArgs',
+        'approvalExpiresAt',
       ])
       .where('id', '=', toolCallId)
       .where('approvalStatus', '=', 'pending')
@@ -591,6 +606,7 @@ export class KyselyAgentStorageService
         agentRunId: tc.agentRunId!,
         displayToolName: tc.displayToolName!,
         displayArgs: parseJson(tc.displayArgs) as unknown,
+        expiresAt: fromEpochMs(tc.approvalExpiresAt),
       }
     } else {
       approval = {
@@ -598,22 +614,27 @@ export class KyselyAgentStorageService
         toolCallId: tc.id,
         toolName: tc.toolName,
         args: parseJson(tc.args) as unknown,
+        expiresAt: fromEpochMs(tc.approvalExpiresAt),
       }
     }
 
     return { run, approval }
   }
 
-  async resolveApproval(
-    toolCallId: string,
-    status: 'approved' | 'denied'
-  ): Promise<boolean> {
-    // Only the caller that moves the tool call off 'pending' has claimed it.
+  async resolveApproval({
+    runId,
+    toolCallId,
+    status,
+  }: ApprovalClaim): Promise<boolean> {
+    // Only the caller that moves the tool call off 'pending' has claimed it. A
+    // NULL expiry never compares greater, so an approval with none is refused.
     const result = await this.db
       .updateTable('agentToolCall')
       .set({ approvalStatus: status })
       .where('id', '=', toolCallId)
+      .where('runId', '=', runId)
       .where('approvalStatus', '=', 'pending')
+      .where('approvalExpiresAt', '>', Date.now())
       .executeTakeFirst()
     return Number(result?.numUpdatedRows ?? 0) > 0
   }

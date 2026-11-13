@@ -27,6 +27,17 @@ await server.start()
 Pass `{ eventHub, mcpJson, mcpPath }` as the third argument to override the
 default `BunEventHubService` or enable MCP.
 
+## Idle timeout
+
+Bun closes a connection after 10 seconds without traffic. That cuts quiet SSE
+streams whose heartbeat is slower than that. Raise it with `idleTimeout`
+(seconds, max 255, `0` disables) in the server config; when unset Bun's default
+is kept:
+
+```typescript
+const server = new PikkuBunServer({ ...config, idleTimeout: 60 }, logger)
+```
+
 ## Docs
 
 https://pikku.dev/docs

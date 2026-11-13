@@ -1,24 +1,23 @@
 ---
 type: decision
-title: Outbound webhooks use an allowlist when one is configured, and block private hosts otherwise
-description: The webhook delivery reads allowedHosts from config and passes it to safeFetch; without an allowlist safeFetch refuses private hosts, and an allowlist replaces that check
+title: Outbound webhooks use an allowlist when one is configured, and block private hosts unless privateHosts names them
+description: The webhook delivery passes config.webhook.allowedHosts and privateHosts to safeFetch; an allowlist narrows delivery and never unlocks a private address on its own
 tags: core, webhooks, ssrf, security
 ---
 
-# Outbound webhooks use an allowlist when one is configured, and block private hosts otherwise
+# Outbound webhooks use an allowlist when one is configured, and block private hosts unless privateHosts names them
 
-`WebhookServiceConfig.allowedHosts` in `packages/core/src/services/webhook-service.ts:33-44`
-says that when it is set only those hostnames may be delivered to, and when it is
-omitted private and internal hosts are blocked.
+`WebhookServiceConfig` in `packages/core/src/services/webhook-service.ts` carries
+`allowedHosts` (when set, only matching hosts may be delivered to) and
+`privateHosts` (hosts allowed to be, or resolve to, a private address).
 
-`queue-webhook-service.ts:104-110` reads it from `config.webhook`, and falls back
-to no allowlist if the singletons are not initialised. The value is passed to
-`safeFetch` (`:112-122`).
+`pikkuWebhookWorkerFunc` in `queue-webhook-service.ts` reads both from
+`config.webhook`, falls back to neither if the singletons are not initialised,
+and passes them to `safeFetch`.
 
-In `packages/core/src/utils/safe-fetch.ts:265-273`, an allowlist makes the check an
-exact hostname match, and the private-host refusal is in the `else` branch that only
-runs without an allowlist. So with an allowlist, a listed host is not refused for
-being private.
+A receiver on an internal network needs to be listed in `privateHosts`; listing
+it in `allowedHosts` alone is refused. See
+[an allowlist narrows egress](an-allowlist-narrows-egress-and-never-unlocks-a-private-address.md).
 
 **What this rules out:** delivering to a host outside a configured allowlist, and
-delivering to a private host when no allowlist is configured.
+delivering to a private host that `privateHosts` does not name.

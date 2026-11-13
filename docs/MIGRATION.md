@@ -654,6 +654,28 @@ The two middleware (and the `__pikku_telemetry` log lines they wrote) are gone f
 
 To find affected code, search for `telemetryOuter|telemetryInner`.
 
+### `AgentRunStateService.resolveApproval` takes one claim object naming the run
+
+`resolveApproval(toolCallId, status)` is replaced by `resolveApproval({ runId, toolCallId, status })` (`ApprovalClaim`, from `@pikku/core/services`). There is no two-argument form any more. The stores used to claim by tool call id alone, so a caller authorized for one run could claim an approval pending on another. Now a store claims only an approval that is pending on `claim.runId`, and returns `false` for any other.
+
+- A custom `AgentRunStateService` (or `AgentStorageService`) must take the object and add the run to its claim: only remove the approval from, or move off `pending`, a row that belongs to `runId`. It is still a compare-and-swap, and still returns whether this caller won.
+- Callers pass the run the approval was read from: `resolveApproval({ runId: run.runId, toolCallId, status: 'approved' })`.
+- `resumeAgentSync` (and `rpc.agent.approve`) now refuse, before claiming anything, an approval list that names a tool call that is not pending on the run being resumed.
+
+To find affected code, search for `resolveApproval\(`.
+
+### Agent approvals expire, and a resume after that fails the run
+
+A run suspended for an approval or a credential now records `expiresAt` on each `PendingApproval`: 10 minutes after it suspended (`DEFAULT_AGENT_APPROVAL_TTL_MS`), or `approvalTtlMs` from the agent definition. `approvalTtlMs` must be a finite number above zero; `addAgent` refuses `Infinity`, `0` and `NaN`, so the expiry cannot be switched off.
+
+- `rpc.agent.resume`, `rpc.agent.approve` (`resumeAgentSync`) and `approveAgent` refuse an expired approval with a `GoneError` (410) naming the run, the tool call and when it expired. The tool and the model are not called. The run is set to `failed` with `errorMessage: 'approval expired'` and its pending list cleared; a delegating parent run is failed with it.
+- **Approvals saved before this release have no expiry and are refused.** Runs that were suspended at upgrade time cannot be resumed; start them again.
+- Every store refuses an expired approval inside its own claim as well. A custom `AgentRunStateService` must persist `expiresAt` and make `resolveApproval` return `false` for an approval past it, or with none.
+- Expired runs nobody resumes stay `suspended`; nothing sweeps them.
+- **Database:** `@pikku/kysely`'s `agentToolCall` table has a new nullable `approvalExpiresAt bigint` column (epoch milliseconds). Run `pikku db generate` and then `pikku db migrate` before deploying. `KyselyAgentRunStateService` keeps approvals in its JSON column and needs no migration; MongoDB needs none.
+
+To find affected code, search for `implements AgentRunStateService|PendingApproval`.
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.
@@ -926,6 +948,31 @@ Sessionless agent threads are no longer shared (core 0.12.74 `afef587`). Reading
 
 **Find:** `rg -n "hmacSha256Hex|hmacDigest|verifyHmacSignature|verifyPublicKeySignature|verifySlackSignature|webhookService\.(sign|verify)|WebhookSigningSecret|respond:"`. Also check every `wireTriggerWebhookSource` that passes `secret`.
 
+### Outbound fetches: an allowlist no longer unlocks a private host
+
+- **`safeFetch` runs its private-address and DNS checks even for a host in `allowedHosts`** (core after 0.12.156). Before, listing a host in `allowedHosts` skipped both checks, so an allowlisted name resolving to `10.x` or `169.254.169.254` was fetched. A host that is meant to be private (a self-hosted service, `localhost`, an in-cluster receiver) now goes in the new `privateHosts` option as well. It is affected wherever an allowlist reaches it:
+  - **Outgoing webhooks:** `config.webhook.allowedHosts: ['127.0.0.1']` alone no longer delivers to `127.0.0.1`. Add `privateHosts: ['127.0.0.1']`.
+  - **`voiceInput`:** an audio URL on a private host is refused even when it is in `allowedAudioHosts`. There is no private opt-in here; send that audio inline as `data`.
+  - **`@pikku/ai-vercel` attachment downloads** (`safeDownload(allowedHosts)`) behave the same way as `voiceInput`.
+  - **Direct `safeFetch` / `assertFetchableUrl` callers:** add `privateHosts` next to `allowedHosts`.
+
+  ```ts
+  // before
+  await safeFetch(url, init, { allowedHosts: ['billing.internal'] })
+
+  // after
+  await safeFetch(url, init, {
+    allowedHosts: ['billing.internal'],
+    privateHosts: ['billing.internal'],
+  })
+  ```
+
+- **Refusals are `NetworkHostNotAllowedError`** (from `@pikku/core/errors`) with `host` and `reason` (`'not-declared' | 'private-address' | 'scheme' | 'redirect'`), instead of a plain `Error`. It still extends `Error`. The messages changed wording, and name hosts only: code that matched on `'URL host is not in the allowlist: '` or the old `'Refusing to fetch from a private/internal host: <host>'` text should check `error.reason` instead.
+- **`allowedHosts` entries are host patterns, and an invalid one throws a `TypeError`.** An entry is `host`, `host:port`, an IP literal, or one leading `*.` with at least two labels after it (`*.example.com`). `*.com`, a bare `*`, a wildcard over an IP, empty labels, and anything with a scheme or path (`https://api.example.com`) used to be compared literally and never matched; they are now refused when the call is made. `hostMatches` and `validateHostPattern` are exported from `@pikku/core/safe-fetch`.
+- **A secret's `allowedHosts` uses the same matcher.** A wildcard entry no longer matches an IP literal, an entry `validateHostPattern` refuses matches nothing, and an entry with a port matches only that port.
+
+**Find:** `rg -n "allowedHosts|allowedAudioHosts|safeFetch|assertFetchableUrl|not in the allowlist|private/internal host"`
+
 ### Secrets, content and other removals
 
 - **Stored secrets and credentials must be set again** (core 0.12.74 `afef587`). The key derivation is now PBKDF2 with a salt. Values held by the Kysely, MongoDB and Redis secret services and by the Kysely credential service cannot be decrypted after the upgrade, and the app fails on the first read until each value is set again.
@@ -1172,6 +1219,42 @@ To move an app over:
 2. Run `pikku db generate`. A table that matches its migrations is adopted and not created again, and the command reports it as covered. If it differs, generate refuses and names the column and the difference. Fix the declaration, not the migration.
 3. Move the table's entries from `db/annotations.ts` into `annotations` on the declaration, and run `pikku db migrate`. Declared tables are optional in `db/annotations.ts`, and a value the two files disagree on is an error.
 4. From here on, change the declaration and run `pikku db generate`. Existing migration files stay as they are.
+
+### Column annotation types moved to `@pikku/core/db`
+
+`ColumnAnnotation` and `TableAnnotations` are no longer exported from `@pikku/kysely`. Import them from `@pikku/core/db`, which also holds the new plain table declaration types (`defineTables`, `TablesDeclaration`, `ColumnDeclaration`, `OnDelete`):
+
+```ts
+import type { ColumnAnnotation, TableAnnotations } from '@pikku/core/db'
+```
+
+Find affected code by searching for `ColumnAnnotation` and `TableAnnotations` imported from `@pikku/kysely`.
+
+`SchemaContext.references` and `foreignKeys` in `@pikku/kysely` now take an `onDelete` and default to `restrict` instead of always cascading. A hand-written `PikkuSchema` statement that relied on the cascade passes it: `ctx.references(col, 'parent.id', 'cascade')`, and `ctx.foreignKeys('child', { parentId: { target: 'parent.id', onDelete: 'cascade' } })`.
+
+### `PikkuSchema` is a table declaration, not a list of statements
+
+A `PikkuSchema` from `@pikku/kysely` now holds `tables` (a `TablesDeclaration` from `@pikku/core/db`) where it held `statements`. `compileTables` turns the declaration into DDL, and its `requires` are read off any `references` that point outside it. DDL a declaration cannot express goes in `extraStatements`, which run after the tables and their indexes:
+
+```ts
+const schema: PikkuSchema = {
+  name: 'orders',
+  tables: {
+    orders: {
+      columns: {
+        id: { type: 'key', primaryKey: true },
+        userId: { references: 'user.id', onDelete: 'cascade', required: true },
+      },
+      indexes: [{ name: 'idx_orders_user', columns: ['userId'] }],
+    },
+  },
+  foreignOwner: 'Better Auth',
+}
+```
+
+A schema that still has builder statements moves them to `extraStatements` with `tables: {}`, and keeps any `requires` they need. A declaration emits its tables first, then their indexes, so a schema that interleaved them now writes the same statements in that order.
+
+**Find:** search for `statements:` in objects typed `PikkuSchema`.
 
 ### `pikku db migrate` warns about sensitive-looking column names
 

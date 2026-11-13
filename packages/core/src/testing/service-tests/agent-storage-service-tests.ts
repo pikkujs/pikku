@@ -334,6 +334,7 @@ export const defineAiStorageServiceTests = (
             toolCallId: 'approval-tc',
             toolName: 'dangerous-tool',
             args: {},
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000),
           },
         ],
         usage: { inputTokens: 0, outputTokens: 0, model: 'test' },
@@ -346,19 +347,104 @@ export const defineAiStorageServiceTests = (
       assert.ok(run.pendingApprovals)
       assert.equal(run.pendingApprovals.length, 1)
 
-      const claimed = await storage.resolveApproval('approval-tc', 'approved')
+      const foreign = await storage.resolveApproval({
+        runId: 'run-that-does-not-own-it',
+        toolCallId: 'approval-tc',
+        status: 'approved',
+      })
+      assert.equal(
+        foreign,
+        false,
+        "a claim naming another run does not claim this run's approval"
+      )
+      run = await storage.getRun(runId)
+      assert.equal(run?.pendingApprovals?.length, 1, 'still pending')
+
+      const claimed = await storage.resolveApproval({
+        runId,
+        toolCallId: 'approval-tc',
+        status: 'approved',
+      })
       assert.equal(claimed, true, 'the first approver claims the approval')
 
       run = await storage.getRun(runId)
       assert.ok(run)
       assert.equal(run.pendingApprovals, undefined)
 
-      const second = await storage.resolveApproval('approval-tc', 'approved')
+      const second = await storage.resolveApproval({
+        runId,
+        toolCallId: 'approval-tc',
+        status: 'approved',
+      })
       assert.equal(
         second,
         false,
         'a second approver of the same tool call claims nothing'
       )
+    })
+
+    test('resolveApproval refuses an expired approval, and one with no expiry', async () => {
+      const thread = await storage.createThread('resource-expiry')
+      const now = new Date()
+
+      await storage.saveMessages(thread.id, [
+        {
+          id: 'expiry-msg',
+          role: 'assistant',
+          toolCalls: [
+            { id: 'expired-tc', name: 'dangerous-tool', args: {} },
+            { id: 'unstamped-tc', name: 'dangerous-tool', args: {} },
+          ],
+          createdAt: now,
+        },
+      ])
+
+      const runId = await storage.createRun({
+        agentName: 'approval-agent',
+        threadId: thread.id,
+        resourceId: 'resource-expiry',
+        status: 'suspended',
+        suspendReason: 'approval',
+        pendingApprovals: [
+          {
+            type: 'tool-call',
+            toolCallId: 'expired-tc',
+            toolName: 'dangerous-tool',
+            args: {},
+            expiresAt: new Date(Date.now() - 1000),
+          },
+          {
+            type: 'tool-call',
+            toolCallId: 'unstamped-tc',
+            toolName: 'dangerous-tool',
+            args: {},
+          },
+        ],
+        usage: { inputTokens: 0, outputTokens: 0, model: 'test' },
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      const run = await storage.getRun(runId)
+      const expired = run?.pendingApprovals?.find(
+        (a) => a.toolCallId === 'expired-tc'
+      )
+      assert.ok(
+        expired?.expiresAt instanceof Date,
+        'the expiry reads back as a Date'
+      )
+
+      for (const toolCallId of ['expired-tc', 'unstamped-tc']) {
+        assert.equal(
+          await storage.resolveApproval({
+            runId,
+            toolCallId,
+            status: 'approved',
+          }),
+          false,
+          `${toolCallId} cannot be claimed`
+        )
+      }
     })
 
     test('deleteThread cascades', async () => {

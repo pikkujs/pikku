@@ -6,6 +6,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { join } from 'node:path'
 import { serializeLocalCLIBootstrap } from './serialize-local-cli-bootstrap.js'
 import { serializeChannelCLI } from './serialize-channel-cli.js'
+import { normalizeCLIEntrypoints } from './cli-entrypoints.js'
 import {
   serializeChannelCLIClient,
   collectRendererNames,
@@ -45,31 +46,16 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
         continue
       }
 
-      // Normalize to array
-      const configs = Array.isArray(entrypointConfigs)
-        ? entrypointConfigs
-        : [entrypointConfigs]
+      const entrypoints = normalizeCLIEntrypoints(
+        programName,
+        entrypointConfigs,
+        config.globalHTTPPrefix || ''
+      )
 
-      for (const entrypointConfig of configs) {
-        // Normalize entrypoint config to get type
-        const entrypointType =
-          typeof entrypointConfig === 'string'
-            ? 'local'
-            : entrypointConfig.type || 'local'
-
-        // Handle channel type entrypoint
-        if (entrypointType === 'channel') {
-          if (
-            typeof entrypointConfig === 'string' ||
-            entrypointConfig.type !== 'channel'
-          ) {
-            throw new Error('Channel entrypoint must be a channel type object')
-          }
-
-          const channelWirePath = entrypointConfig.wirePath
-          const channelClientPath = entrypointConfig.path
-          const channelName = entrypointConfig.name
-          const channelRoute = entrypointConfig.route
+      for (const entrypoint of entrypoints) {
+        if (entrypoint.type === 'channel') {
+          const channelWirePath = entrypoint.wirePath
+          const channelClientPath = entrypoint.path
 
           // Validate wirePath is not inside the output directory
           const resolvedWirePath = join(config.rootDir, channelWirePath)
@@ -93,8 +79,8 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
             config.channelsTypesFile,
             config.functionTypesFile,
             config.middlewareTypesFile,
-            channelName,
-            channelRoute,
+            entrypoint.name,
+            entrypoint.route,
             config.globalHTTPPrefix || '',
             visitState.rpc?.wireAddonDeclarations
           )
@@ -161,7 +147,7 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
               channelClientFile,
               config,
               config.bootstrapFile,
-              channelRoute,
+              entrypoint.route,
               visitState.cli.meta.renderers
             )
 
@@ -180,20 +166,7 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
         }
 
         // Handle local CLI type entrypoint (default)
-        const entrypointPath =
-          typeof entrypointConfig === 'string'
-            ? entrypointConfig
-            : entrypointConfig.type === 'local'
-              ? entrypointConfig.path
-              : undefined
-
-        if (!entrypointPath) {
-          throw new Error(
-            `CLI entrypoint must have a path: ${JSON.stringify(entrypointConfig)}`
-          )
-        }
-
-        const bootstrapFile = join(config.rootDir, entrypointPath)
+        const bootstrapFile = join(config.rootDir, entrypoint.path)
 
         // Get service factories for local mode
         // Check for required types

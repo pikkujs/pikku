@@ -1,5 +1,19 @@
 # @pikku/deploy-standalone
 
+## 0.12.32
+
+### Patch Changes
+
+- cedc84c: The generated standalone entry builds runtime telemetry from `PIKKU_OTLP_*` (per-signal headers, process metrics, OTLP log sink) and passes the tracer to the logger, the Kysely factory and the services. No endpoint means no exporter. The loopback guard is unchanged.
+- Updated dependencies [60f3aa7]
+- Updated dependencies [70ee10a]
+- Updated dependencies [42f4280]
+- Updated dependencies [cedc84c]
+- Updated dependencies [996d0af]
+- Updated dependencies [de7d8cf]
+  - @pikku/core@0.12.156
+  - @pikku/deploy@0.12.21
+
 ## 0.12.31
 
 ### Patch Changes

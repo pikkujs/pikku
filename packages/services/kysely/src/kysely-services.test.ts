@@ -16,6 +16,7 @@ import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 import { KyselyDeploymentService } from './kysely-deployment-service.js'
 import { KyselyAgentStorageService } from './kysely-agent-storage-service.js'
 import { KyselyAgentRunService } from './kysely-agent-run-service.js'
+import { KyselyAgentRunStateService } from './kysely-agent-run-state-service.js'
 import { KyselySecretService } from './kysely-secret-service.js'
 import { KyselyCredentialService } from './kysely-credential-service.js'
 import { KyselySessionStore } from './kysely-session-store.js'
@@ -139,6 +140,69 @@ function registerTests(
   getDb: () => Kysely<KyselyPikkuDB>,
   workflowServices: Partial<ReturnType<typeof sqliteWorkflowServices>> = {}
 ) {
+  describe(`KyselyAgentRunStateService.resolveApproval [${dialectName}]`, () => {
+    const suspend = async (
+      store: KyselyAgentRunStateService,
+      toolCallId: string,
+      expiresAt?: Date
+    ) => {
+      const storage = new KyselyAgentStorageService(getDb())
+      const thread = await storage.createThread('resource')
+      const runId = await store.createRun({
+        agentName: 'agent',
+        threadId: thread.id,
+        resourceId: 'resource',
+        status: 'suspended',
+        usage: { inputTokens: 0, outputTokens: 0, model: 'test' },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      await store.updateRun(runId, {
+        status: 'suspended',
+        suspendReason: 'approval',
+        pendingApprovals: [
+          {
+            type: 'tool-call',
+            toolCallId,
+            toolName: 'refund',
+            args: {},
+            expiresAt,
+          },
+        ],
+      })
+      return runId
+    }
+
+    test('claims once, only on the named run, and only inside the expiry', async () => {
+      const store = new KyselyAgentRunStateService(getDb())
+      await store.init()
+      const live = new Date(Date.now() + 60 * 60 * 1000)
+      const runA = await suspend(store, 'state-tc-a', live)
+      const runB = await suspend(store, 'state-tc-b', live)
+      const expired = await suspend(
+        store,
+        'state-tc-expired',
+        new Date(Date.now() - 1000)
+      )
+      const unstamped = await suspend(store, 'state-tc-unstamped')
+
+      const run = await store.getRun(runA)
+      assert.ok(
+        run?.pendingApprovals?.[0]?.expiresAt instanceof Date,
+        'the expiry reads back as a Date'
+      )
+
+      const claim = (runId: string, toolCallId: string) =>
+        store.resolveApproval({ runId, toolCallId, status: 'approved' })
+
+      assert.equal(await claim(runA, 'state-tc-b'), false, 'not across runs')
+      assert.equal(await claim(runB, 'state-tc-b'), true)
+      assert.equal(await claim(runB, 'state-tc-b'), false, 'not twice')
+      assert.equal(await claim(expired, 'state-tc-expired'), false)
+      assert.equal(await claim(unstamped, 'state-tc-unstamped'), false)
+    })
+  })
+
   defineServiceTests({
     name: dialectName,
     services: {

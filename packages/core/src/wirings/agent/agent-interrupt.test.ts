@@ -617,6 +617,7 @@ describe('streaming resume interruption', () => {
           toolName: 'deleteTodo',
           args: {},
           reason: 'Delete the todo called "Buy milk"',
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         } as any,
       ],
       usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },

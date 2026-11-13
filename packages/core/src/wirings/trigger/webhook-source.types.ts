@@ -161,6 +161,21 @@ export type WebhookSourceMeta = {
   check?: string
   setup?: string
   teardown?: string
+  /**
+   * How requests are verified, when the source declares `verify`. `header` and
+   * `algorithm` are present only when written as string literals; a function
+   * is recorded as `function` without its details.
+   */
+  verify?: WebhookVerifyMeta
+  /** The credential holding the signing secret. Present when `verify` is declared. */
+  credential?: string
+}
+
+/** What the generated metadata records about a webhook source's `verify`. */
+export type WebhookVerifyMeta = {
+  kind: 'hmac' | 'token' | 'publicKey' | 'function'
+  header?: string
+  algorithm?: string
 }
 
 /** Generated metadata for every webhook source, keyed by name. */

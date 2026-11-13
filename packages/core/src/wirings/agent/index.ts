@@ -47,6 +47,10 @@ export {
   threadOwnerConstraint,
 } from './agent-prepare.js'
 export { addAgent } from './agent-registry.js'
+export {
+  APPROVAL_EXPIRED_MESSAGE,
+  DEFAULT_AGENT_APPROVAL_TTL_MS,
+} from './agent-approval-expiry.js'
 export type {
   AgentInput,
   AgentsMeta,

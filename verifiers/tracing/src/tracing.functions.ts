@@ -36,14 +36,14 @@ export const traceRpcLeaf = pikkuSessionlessFunc<void, Hop>({
 
 export const traceRpcMiddle = pikkuSessionlessFunc<void, Hop>({
   func: async (_services, _data, { rpc, trace, traceId }) => {
-    await rpc.invoke('traceRpcLeaf', undefined)
+    await rpc.invoke('traceRpcLeaf')
     return { at: 'rpc-middle', traceId, parentSpanId: trace?.parentSpanId }
   },
 })
 
 export const traceRpcChain = pikkuSessionlessFunc<void, Hop>({
   func: async (_services, _data, { rpc, traceId }) => {
-    await rpc.invoke('traceRpcMiddle', undefined)
+    await rpc.invoke('traceRpcMiddle')
     return { at: 'rpc-chain', traceId }
   },
 })

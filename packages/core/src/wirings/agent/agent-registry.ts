@@ -1,5 +1,9 @@
 import type { CoreAgent, AgentRunState } from './agent.types.js'
 import { pikkuState } from '../../pikku-state.js'
+import {
+  assertValidApprovalTtl,
+  refuseExpiredApprovals,
+} from './agent-approval-expiry.js'
 import type { AgentRunStateService } from '../../services/agent-run-state-service.js'
 import {
   agentSessionScope,
@@ -30,6 +34,7 @@ export const addAgent = (
     )
     return
   }
+  assertValidApprovalTtl(agentName, agent.approvalTtlMs)
   const agents = pikkuState(packageName, 'agent', 'agents')
   if (agents.has(agentName)) {
     throw new Error(`AI agent already exists: ${agentName}`)
@@ -64,6 +69,13 @@ export async function approveAgent(
 
   const { agent, packageName } = resolveAgent(run.agentName)
   await assertAgentAuthorized(agent, params, packageName)
+
+  const answeredIds = new Set(approvals.map((a) => a.toolCallId))
+  await refuseExpiredApprovals(
+    agentRunState,
+    runId,
+    (run.pendingApprovals ?? []).filter((p) => answeredIds.has(p.toolCallId))
+  )
 
   const approvedIds = new Set(
     approvals.filter((a) => a.approved).map((a) => a.toolCallId)

@@ -5,38 +5,39 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3686 observable things**: 1214 exported names, plus
-2472 members on the classes and interfaces among them, reachable
-through 67 entry points.
+**3759 observable things**: 1236 exported names, plus
+2523 members on the classes and interfaces among them, reachable
+through 68 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 170 | 144 | 439 |
+| `./services` | 171 | 145 | 443 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./workflow` | 99 | 47 | 165 |
 | `./scenario` | 50 | 48 | 157 |
-| `./agent` | 52 | 50 | 81 |
+| `./agent` | 54 | 52 | 81 |
 | `./channel` | 33 | 33 | 92 |
 | `./types` | 24 | 21 | 84 |
 | `./queue` | 28 | 28 | 75 |
 | `./otlp` | 19 | 19 | 74 |
+| `./errors` | 55 | 55 | 34 |
 | `./telemetry-store` | 14 | 14 | 74 |
 | `./http` | 27 | 27 | 58 |
-| `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
-| `./trigger` | 42 | 42 | 13 |
-| `./testing` | 18 | 18 | 32 |
+| `./trigger` | 43 | 43 | 13 |
+| `./testing` | 18 | 18 | 35 |
 | `./services/local-meta` | 22 | 2 | 43 |
+| `./db` | 12 | 12 | 31 |
 | `./mcp` | 25 | 25 | 17 |
-| `./cli` | 16 | 14 | 27 |
-| `./trace` | 19 | 19 | 20 |
+| `./cli` | 17 | 15 | 27 |
+| `./trace` | 19 | 19 | 21 |
 | `./function` | 32 | 27 | 10 |
 | `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
-| `./contributors` | 15 | 15 | 21 |
+| `./contributors` | 14 | 14 | 20 |
 | `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
@@ -53,13 +54,13 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scope` | 17 | 17 | 0 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./addon` | 14 | 14 | 2 |
+| `./safe-fetch` | 9 | 9 | 7 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./rpc` | 9 | 9 | 6 |
 | `./workflow/types` | 48 | 1 | 13 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./secret` | 10 | 10 | 0 |
-| `./safe-fetch` | 6 | 6 | 3 |
 | `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
 | `./webhook` | 7 | 7 | 1 |
@@ -3428,6 +3429,8 @@ export type WebhookSourceMeta = {
   check?: string
   setup?: string
   teardown?: string
+  verify?: WebhookVerifyMeta
+  credential?: string
 }
 export type WebhookSourceMethod = 'post' | 'put' | 'get' | 'head'
 export type WebhookSourceOutcome = {
@@ -3474,6 +3477,11 @@ export type WebhookVerify<Services = any> =
       secret: string,
       services: Services
     ) => boolean | Promise<boolean>)
+export type WebhookVerifyMeta = {
+  kind: 'hmac' | 'token' | 'publicKey' | 'function'
+  header?: string
+  algorithm?: string
+}
 wireTrigger: (trigger: CoreTrigger<any>) => void
 wireTriggerSource: <TInput = unknown, TOutput = unknown>(source: CoreTriggerSource<TInput, TOutput>) => void
 wireTriggerWebhookSource: <Events extends Record<string, StandardSchemaV1>>(source: CoreTriggerWebhookSource<Events>) => void
@@ -3656,15 +3664,23 @@ export type WireRemoteAddonConfig = {
 
 ```ts
 assertFetchableUrl: (url: string, options?: SafeFetchOptions) => URL
+hostMatches: (host: string, port: string | number | undefined, pattern: string) => boolean
+export type HostPatternValidation =
+  { valid: true } | { valid: false; reason: string }
 export type HostResolver = (hostname: string) => Promise<string[]>
 isPrivateHost: (hostname: string) => boolean
 safeFetch: (url: string, init?: RequestInit, options?: SafeFetchOptions) => Promise<Response>
 export interface SafeFetchOptions {
   allowedHosts?: string[]
+  privateHosts?: string[]
+  allowHttp?: (host: string) => boolean
+  fetch?: typeof fetch
+  caller?: { addon?: string; package?: string }
   maxRedirects?: number
   resolveHost?: HostResolver | null
 }
 setDefaultHostResolver: (resolver: HostResolver | undefined) => void
+validateHostPattern: (pattern: string) => HostPatternValidation
 ```
 
 ## ./node-host-resolver
@@ -4058,6 +4074,7 @@ export interface AgentThread {
   createdAt: Date
   updatedAt: Date
 }
+APPROVAL_EXPIRED_MESSAGE: "approval expired"
 canAccessThread: (storedResourceId: string, session: { userId?: string | undefined; orgId?: string | undefined; } | undefined) => boolean
 export type CoreAgent<
   PikkuPermission = CorePikkuPermission<any, any>,
@@ -4082,6 +4099,7 @@ export type CoreAgent<
   agentMode?: 'delegate' | 'supervise'
   memory?: AgentMemoryConfig
   maxSteps?: number
+  approvalTtlMs?: number
   toolChoice?: 'auto' | 'required' | 'none'
   providerOptions?: AIProviderOptions
   input?: unknown
@@ -4103,6 +4121,7 @@ export type CoreAgent<
   scopes?: Scope[]
   permissions?: CorePermissionGroup<PikkuPermission>
 }
+DEFAULT_AGENT_APPROVAL_TTL_MS: number
 interruptAgent: (input: { runId: string; reason?: "speech" | "user" | "timeout" | undefined; }, params: RunAgentParams) => Promise<AgentInterruptResult>
 export interface InterruptibleRunHandle {
   readonly signal: AbortSignal
@@ -4122,6 +4141,7 @@ export type PendingApproval =
       toolCallId: string
       toolName: string
       args: unknown
+      expiresAt?: Date
     }
   | {
       type: 'agent-call'
@@ -4130,6 +4150,7 @@ export type PendingApproval =
       agentRunId: string
       displayToolName: string
       displayArgs: unknown
+      expiresAt?: Date
     }
   | {
       type: 'credential-request'
@@ -4139,6 +4160,7 @@ export type PendingApproval =
       credentialName: string
       credentialType: 'oauth2' | 'apikey'
       connectUrl?: string
+      expiresAt?: Date
     }
 export interface PikkuAgentMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, SingletonServices extends CoreSingletonServices = CoreSingletonServices, > {
   modifyInput?: (services: SingletonServices, ctx: { messages: AgentMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AgentMessage[]; instructions: string }> | { messages: AgentMessage[]; instructions: string }
@@ -4450,12 +4472,15 @@ export interface CLIMeta {
   programs: Record<string, CLIProgramMeta>
   renderers: RenderersMeta
 }
+export type CLIProgramEntrypoint =
+  { type: 'local' } | { type: 'channel'; channel: string; route: string }
 export type CLIProgramMeta = {
   program: string
   commands: Record<string, CLICommandMeta>
   options: Record<string, CLIOption>
   defaultRenderName?: string
   auth?: boolean
+  entrypoints?: CLIProgramEntrypoint[]
 }
 export interface CoreCLI< Commands extends Record<string, CoreCLICommandConfig<any, any, any>>, Options, PikkuMiddleware, PikkuCLIRender, > {
   program: string
@@ -4866,6 +4891,21 @@ export class MissingScopeError extends PikkuError {
 }
 export class MissingServiceError extends PikkuError {}
 export class MissingSessionError extends PikkuError {}
+export class NetworkHostNotAllowedError extends PikkuError {
+  public readonly host: string
+  public readonly reason: NetworkRefusalReason
+  public readonly addon?: string
+  public readonly package?: string
+  constructor(refusal: NetworkHostRefusal, explanation: string)
+}
+export interface NetworkHostRefusal {
+  host: string
+  reason: NetworkRefusalReason
+  addon?: string
+  package?: string
+}
+export type NetworkRefusalReason =
+  'not-declared' | 'private-address' | 'scheme' | 'redirect'
 export class NotAcceptableError extends PikkuError {}
 export class NotFoundError extends PikkuError {}
 export class NotImplementedError extends PikkuError {}
@@ -4945,7 +4985,7 @@ export interface AgentRunStateService {
   updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
   getRun(runId: string): Promise<AgentRunState | null>
   getRunsByThread(threadId: string): Promise<AgentRunState[]>
-  resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
+  resolveApproval(claim: ApprovalClaim): Promise<boolean>
   findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
   saveScore(score: SaveScoreInput): Promise<void>
   getScores(runId: string): Promise<AgentRunScore[]>
@@ -5007,6 +5047,11 @@ export interface AIEmbeddingService {
   readonly dimensions?: number
   embedDocuments(values: string[]): Promise<number[][]>
   embedQuery(value: string): Promise<number[]>
+}
+export interface ApprovalClaim {
+  runId: string
+  toolCallId: string
+  status: 'approved' | 'denied'
 }
 assertSecretAllowedForHost: (secretId: string, url: string | URL, secretDefinitions: SecretDefinitionsMeta | undefined, requireAllowedHosts?: boolean) => void
 export type AuditConfig =
@@ -5329,7 +5374,7 @@ export class InMemoryAgentRunStateService implements AgentRunStateService {
   async updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
   async getRun(runId: string): Promise<AgentRunState | null>
   async getRunsByThread(threadId: string): Promise<AgentRunState[]>
-  async resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
+  async resolveApproval(claim: ApprovalClaim): Promise<boolean>
   async findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
   async saveScore(score: SaveScoreInput): Promise<void>
   async getScores(runId: string): Promise<AgentRunScore[]>
@@ -5944,6 +5989,7 @@ export interface WebhookServiceConfig {
   secret?: string
   signatureHeader?: string
   allowedHosts?: string[]
+  privateHosts?: string[]
 }
 withoutSecrets: <T extends object>(services: T, context: string) => SecretlessServices<T>
 export interface WriteFileArgs< TBucket extends string = string, > extends BucketKeyArgs<TBucket> {
@@ -5999,6 +6045,7 @@ tracedLogger: (logger: Logger, traceId?: string | undefined) => Logger
 export interface Tracer {
   startSpan(name: string, context: TraceContext, options?: { kind?: SpanKind; attributes?: Record<string, SpanAttributeValue>; startTimeUnixNano?: bigint }): Span
   runInSpan?<T>(span: Span, fn: () => T): T
+  currentContext?(): TraceContext | undefined
   flush?(): Promise<void>
   close?(): Promise<void>
 }
@@ -6885,7 +6932,6 @@ export interface ContributorPlatform {
   needsAgent: boolean
   runtimeServices?: string[]
   db?: ContributorDb
-  provider?: string
 }
 export type ContributorTarget = 'dev' | 'deploy'
 export interface ContributorVariants< TServices = any, TPlatform extends ContributorPlatform = ContributorPlatform, > {
@@ -6905,7 +6951,6 @@ export interface SkippedContributor {
   name: string
   reason: 'when' | 'requires' | 'needs'
 }
-wireContributors: (config: { package: string; contributors: string[]; }) => void
 ```
 
 ## ./telemetry-store
@@ -7070,6 +7115,73 @@ getSchema: (name: string, packageName?: string | null) => Record<string, unknown
 validateSchema: (logger: Logger, schemaService: SchemaService | undefined, schemaName: string | null | undefined, data: any, packageName?: string | null) => Promise<void>
 ```
 
+## ./db
+
+```ts
+export interface ColumnAnnotation {
+  security?: 'public' | 'private' | 'pii' | 'secret'
+  form?: 'plain' | 'hashed' | 'wrapped' | 'sealed'
+  keyId?: string
+  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
+  kind?: 'date' | 'bool' | 'json' | 'uuid'
+  tsType?: string
+  format?: string
+  description?: string
+}
+export type ColumnDeclaration = ColumnFields &
+  ({ type: ColumnType } | { type?: ColumnType; references: string })
+export type ColumnDefault =
+  string | number | boolean | { now: true } | { sql: string }
+export interface ColumnFields extends ColumnAnnotation {
+  required?: boolean
+  default?: ColumnDefault
+  primaryKey?: boolean
+  unique?: boolean
+  index?: boolean
+  references?: string
+  onDelete?: OnDelete
+  enum?: readonly string[]
+  min?: number
+  max?: number
+  minLength?: number
+  maxLength?: number
+  pattern?: string
+}
+export type ColumnType =
+  | 'id'
+  | 'key'
+  | 'text'
+  | `string(${number})`
+  | 'integer'
+  | 'bigint'
+  | 'real'
+  | 'boolean'
+  | 'timestamp'
+  | 'timestamptz'
+  | 'uuid'
+  | 'json'
+defineTables: <const T extends TablesDeclaration>(tables: T) => T
+export interface IndexDeclaration {
+  columns: readonly string[]
+  unique?: boolean
+  where?: string
+  name?: string
+}
+export interface NamedConstraint {
+  columns: readonly string[]
+  name: string
+}
+export type OnDelete = 'cascade' | 'setNull' | 'restrict' | 'noAction'
+export type TableAnnotations = Record<string, Record<string, ColumnAnnotation>>
+export interface TableDeclaration {
+  columns: Record<string, ColumnDeclaration>
+  primaryKey?: readonly string[] | NamedConstraint
+  unique?: readonly (readonly string[] | NamedConstraint)[]
+  indexes?: readonly IndexDeclaration[]
+}
+export type TablesDeclaration = Record<string, TableDeclaration>
+```
+
 ## ./testing
 
 ```ts
@@ -7130,6 +7242,9 @@ export type QueueTraceAdapter = {
 export class RecordingTracer implements Tracer {
   readonly spans: FinishedSpan[]
   readonly stats: { dropped: number; started: number; }
+  constructor(private readonly options: { contextStorage?: ContextStorage } = {})
+  runInSpan<T>(span: Span, fn: () => T): T
+  currentContext(): TraceContext | undefined
   startSpan(name: string, context: TraceContext, options: { kind?: SpanKind; attributes?: Record<string, SpanAttributeValue>; startTimeUnixNano?: bigint } = {}): Span
 }
 export interface ServiceTestConfig {

@@ -66,7 +66,8 @@ Behaviours that decide how a voice loop should be written:
   better than the real sentence beside it). Pick an ASR that returns an empty
   string on silence rather than trying to filter one that doesn't.
 - Audio arrives either inline (base64 `data`) or as a `url` fetched through
-  `safeFetch`; either way 50MB is the ceiling.
+  `safeFetch`; either way 50MB is the ceiling. A URL on a private or internal
+  host is refused even when it is in `allowedAudioHosts`; send such audio inline.
 
 ### `voiceOutput` — sentence-at-a-time synthesis
 

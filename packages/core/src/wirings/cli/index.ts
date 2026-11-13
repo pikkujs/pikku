@@ -20,6 +20,7 @@ export type {
   CLIMeta,
   CLICommandMeta,
   CLIProgramMeta,
+  CLIProgramEntrypoint,
   CoreCLI,
   CoreCLICommandConfig,
   CorePikkuCLIRender,

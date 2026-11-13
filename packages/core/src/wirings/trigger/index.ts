@@ -38,6 +38,7 @@ export type {
   WebhookTeardownInput,
   WebhookTeardownResult,
   WebhookVerify,
+  WebhookVerifyMeta,
 } from './webhook-source.types.js'
 export { PikkuTriggerService } from './pikku-trigger-service.js'
 export type {

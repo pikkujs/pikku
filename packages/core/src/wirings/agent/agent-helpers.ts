@@ -127,6 +127,8 @@ export function agentInterrupt(): {
  * @returns A `{ func }` taking `{ runId, approvals }`.
  * @throws ForbiddenError when the run belongs to a different agent.
  * @throws Error when every approval in the batch was already resolved by another caller.
+ * @throws Error when a `toolCallId` is not pending on this run.
+ * @throws GoneError (410) when an approval expired; the run is failed.
  * @example snippet: agentApproval
  */
 export function agentApprove<TAgentMap extends Record<string, { output: any }>>(

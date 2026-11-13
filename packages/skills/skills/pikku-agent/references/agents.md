@@ -61,6 +61,7 @@ pikkuAgent({
   },
 
   maxSteps?: number,             // Max tool-call rounds per invocation
+  approvalTtlMs?: number,        // How long a suspended run waits for approval (default 10 min, finite > 0)
   toolChoice?: 'auto' | 'required' | 'none',
   prepareStep?: (ctx) => void,   // See "Narrowing tools per step"
   input?: ZodSchema,
@@ -266,6 +267,12 @@ A tool that should pause for a human sets `approvalRequired: true` (with an
 optional `approvalDescription`) on the _function_, not on the agent. The run then
 resolves with `status: 'suspended'` and `pendingApprovals`, and streaming emits
 `approval-request`. Answer with `rpc.agent.approve(runId, approvals)`.
+
+An approval expires `approvalTtlMs` after the run suspended (10 minutes unless
+the agent sets it). Approving or resuming after that answers 410 (`GoneError`)
+and fails the run with `errorMessage: 'approval expired'`; the tool never runs.
+Start a new run instead. `approve` and `resume` also refuse a `toolCallId` that is
+not pending on the `runId` they were given.
 
 Authorization around tools is two-layer: an agent only sees tools its session can
 reach, and the function's own `permissions` still guard the call when the model

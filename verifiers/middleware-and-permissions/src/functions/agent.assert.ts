@@ -5,6 +5,7 @@ import type {
   AgentRunnerParams,
   AgentStepResult,
   AgentRunStateService,
+  ApprovalClaim,
   CreateRunInput,
   SaveScoreInput,
   AgentStorageService,
@@ -69,10 +70,7 @@ class MockAgentRunState implements AgentRunStateService {
   async getRunsByThread(_threadId: string): Promise<AgentRunState[]> {
     return []
   }
-  async resolveApproval(
-    _toolCallId: string,
-    _status: 'approved' | 'denied'
-  ): Promise<boolean> {
+  async resolveApproval(_claim: ApprovalClaim): Promise<boolean> {
     return true
   }
   async findRunByToolCallId(_toolCallId: string): Promise<null> {

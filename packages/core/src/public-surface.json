@@ -252,9 +252,11 @@
   ],
   "./safe-fetch": [
     "assertFetchableUrl",
+    "hostMatches",
     "isPrivateHost",
     "safeFetch",
-    "setDefaultHostResolver"
+    "setDefaultHostResolver",
+    "validateHostPattern"
   ],
   "./node-host-resolver": ["installNodeHostResolver", "nodeHostResolver"],
   "./mcp": [
@@ -274,7 +276,9 @@
     "wireMCPResource"
   ],
   "./agent": [
+    "APPROVAL_EXPIRED_MESSAGE",
     "AgentInterruptedError",
+    "DEFAULT_AGENT_APPROVAL_TTL_MS",
     "NoSpeechDetectedError",
     "SPOKEN_TRANSCRIPT",
     "SPOKEN_TURN",
@@ -409,6 +413,7 @@
     "MissingScopeError",
     "MissingServiceError",
     "MissingSessionError",
+    "NetworkHostNotAllowedError",
     "NotAcceptableError",
     "NotFoundError",
     "NotImplementedError",
@@ -653,6 +658,7 @@
     "getSchema",
     "validateSchema"
   ],
+  "./db": ["defineTables"],
   "./testing": [
     "clearPikkuRuntimeState",
     "decodeLogs",

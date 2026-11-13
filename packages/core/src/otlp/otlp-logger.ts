@@ -1,6 +1,6 @@
 import { LogLevel, type Logger } from '../services/logger.js'
 import type { TraceContext } from '../trace.js'
-import { SPAN_LIMITS } from '../tracer.js'
+import { nowUnixNano, SPAN_LIMITS } from '../tracer.js'
 import type { SpanAttributeValue } from '../tracer.js'
 import type { OtlpHttpExporter } from './otlp-http-exporter.js'
 import type { OtlpSeverity } from './otlp-types.js'
@@ -191,6 +191,9 @@ export class OtlpLogger implements Logger {
 
   private forward(level: LogLevel, messageOrObj: unknown, meta: unknown[]) {
     if (level < this.minLevel) return
+    // Stamped here: left unset, the encoder would use the flush time and every
+    // record in one batch would share it.
+    const timeUnixNano = nowUnixNano()
     try {
       const context = this.options.currentContext?.()
       const traceId = this.options.traceId ?? context?.traceId
@@ -201,6 +204,7 @@ export class OtlpLogger implements Logger {
       )
       this.exporter.exportLogs([
         {
+          timeUnixNano,
           severity: SEVERITY[level],
           body,
           attributes,

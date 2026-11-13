@@ -59,6 +59,10 @@ import {
 import { resolveModelConfig } from './agent-model-config.js'
 import { validateAgentOutput } from './agent-output.js'
 import { deniedToolResult, randomUUID } from './agent-utils.js'
+import {
+  approvalExpiresAt,
+  refuseExpiredApprovals,
+} from './agent-approval-expiry.js'
 
 function stripNulls(obj: unknown): unknown {
   if (obj === null) return undefined
@@ -255,6 +259,7 @@ export async function runAgent(
       if (approvalsNeeded.length > 0) {
         await describeApprovals(approvalsNeeded, runnerParams.tools)
 
+        const expiresAt = approvalExpiresAt(agent)
         const pendingApprovals = approvalsNeeded.map((a) =>
           a.agentRunId
             ? {
@@ -264,12 +269,14 @@ export async function runAgent(
                 agentRunId: a.agentRunId,
                 displayToolName: a.displayToolName ?? a.toolName,
                 displayArgs: a.displayArgs ?? a.args,
+                expiresAt,
               }
             : {
                 type: 'tool-call' as const,
                 toolCallId: a.toolCallId,
                 toolName: a.toolName,
                 args: a.args,
+                expiresAt,
               }
         )
 
@@ -470,15 +477,33 @@ export async function resumeAgentSync(
 
   const savedPendingApprovals = [...(run.pendingApprovals ?? [])]
 
+  const pendingIds = new Set(savedPendingApprovals.map((p) => p.toolCallId))
+  const foreignIds = approvals
+    .map((a) => a.toolCallId)
+    .filter((toolCallId) => !pendingIds.has(toolCallId))
+  if (foreignIds.length > 0) {
+    throw new Error(
+      `No pending approval for toolCallId ${foreignIds.join(', ')} on run ${runId}`
+    )
+  }
+
+  const answeredIds = new Set(approvals.map((a) => a.toolCallId))
+  await refuseExpiredApprovals(
+    agentRunState,
+    runId,
+    savedPendingApprovals.filter((p) => answeredIds.has(p.toolCallId))
+  )
+
   // The read above is not a claim — concurrent resumes all see the same pending
   // list. `resolveApproval` is the claim, and only the caller it returns true
   // for may run the tool.
   const claimedIds = new Set<string>()
   for (const { toolCallId, approved } of approvals) {
-    const claimed = await agentRunState.resolveApproval(
+    const claimed = await agentRunState.resolveApproval({
+      runId,
       toolCallId,
-      approved ? 'approved' : 'denied'
-    )
+      status: approved ? 'approved' : 'denied',
+    })
     if (claimed) {
       claimedIds.add(toolCallId)
     }
@@ -733,6 +758,7 @@ async function continueAfterToolResultSync(
       if (approvalsNeeded.length > 0) {
         await describeApprovals(approvalsNeeded, runnerParams.tools)
 
+        const expiresAt = approvalExpiresAt(agent)
         const pendingApprovals = approvalsNeeded.map((a) =>
           a.agentRunId
             ? {
@@ -742,12 +768,14 @@ async function continueAfterToolResultSync(
                 agentRunId: a.agentRunId,
                 displayToolName: a.displayToolName ?? a.toolName,
                 displayArgs: a.displayArgs ?? a.args,
+                expiresAt,
               }
             : {
                 type: 'tool-call' as const,
                 toolCallId: a.toolCallId,
                 toolName: a.toolName,
                 args: a.args,
+                expiresAt,
               }
         )
 

@@ -477,6 +477,24 @@ export const expectsApprovalState = pikkuScenarioStep<
   },
 })
 
+/** The HTTP status an approval was answered with, and the run status it reported. */
+export const expectsApprovalAnswer = pikkuScenarioStep<
+  { resolution: { status: number }; status: number },
+  { status: number }
+>({
+  name: 'expectsApprovalAnswer',
+  description: 'expects the HTTP status an approval was answered with',
+  template: 'expects status={status}',
+  default: async (_services, { resolution, status }) => {
+    if (resolution.status !== status) {
+      throw new Error(
+        `Expected the approval to be answered ${status}, got ${resolution.status}`
+      )
+    }
+    return { status: resolution.status }
+  },
+})
+
 /**
  * What the thread persisted, read back through `getAgentThreadMessages` or
  * `getAgentThreadRuns`.

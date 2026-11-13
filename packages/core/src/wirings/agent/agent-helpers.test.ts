@@ -14,6 +14,9 @@ import { InMemoryAgentRunStateService } from '../../services/in-memory-agent-run
 import { ForbiddenError } from '../../errors/errors.js'
 import { wireAddon } from '../addon/wire-addon.js'
 
+/** An approval expiry far enough ahead that no test outlives it. */
+const LIVE = new Date(Date.now() + 60 * 60 * 1000)
+
 describe('agent helpers', () => {
   describe('agent', () => {
     test('should return an object with func', () => {
@@ -195,6 +198,7 @@ describe('agentApprove is scoped to the agent its route was built for', () => {
           toolCallId: `tc-${agentName}`,
           toolName: 'deploy',
           args: { env: 'prod' },
+          expiresAt: LIVE,
         },
       ],
       usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },

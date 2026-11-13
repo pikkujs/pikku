@@ -15,8 +15,13 @@ scheduler task, workflow name, run id and step, channel id, MCP tool. Boundary
 spans (a queue publish, a scheduled RPC, a webhook send, a remote RPC) add
 `messaging.system`, `messaging.destination.name` (a queue name, an RPC name or a
 webhook event name, never a payload or URL) and `rpc.service` (the addon
-namespace of a remote call). Every value is an id or a number the framework
-already holds. `otlp/attribute-types.ts` fixes each key's column type.
+namespace of a remote call). An outbound HTTP client span (an addon's scoped
+`http` service) adds `server.address` (the hostname alone, never a URL),
+`server.port`, `pikku.network.rule` (the allow-list pattern that matched) and
+`pikku.network.blocked`. `url.full`, `url.path`, `url.query` and request headers
+are deliberately not listed: a path or query string carries ids and tokens, so
+the exporter drops them even when an implementation sets them. Every value is an
+id or a number the framework already holds. `otlp/attribute-types.ts` fixes each key's column type.
 
 The exporter enforces the list too: `AttributeTypes.coerce` drops any key that is
 neither listed nor under a plugin prefix (`db.`, the Kysely plugin's open-ended

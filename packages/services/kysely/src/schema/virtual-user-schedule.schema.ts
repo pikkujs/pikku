@@ -16,35 +16,34 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 export const virtualUserScheduleSchema: PikkuSchema = {
   name: 'virtual-user-schedule',
   ownedBy: ['virtualUserScheduleStore'],
-  statements: [
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('virtualUserSchedule')
-        .addColumn('virtualUserId', 'varchar(255)', (col) => col.primaryKey())
+  tables: {
+    virtualUserSchedule: {
+      columns: {
+        virtualUserId: { type: 'string(255)', primaryKey: true },
         // 0 or 1 rather than a boolean, matching the run tables: a bare sqlite
         // driver cannot bind one, and `SerializePlugin` is not installed
         // everywhere. Off by default, so creating the table spends nothing.
-        .addColumn('enabled', 'integer', (col) => col.defaultTo(0).notNull())
-        .addColumn('disposition', 'varchar(50)', (col) => col.notNull())
-        .addColumn('goals', ctx.text, (col) =>
-          col.defaultTo(ctx.defaultText('[]')).notNull()
-        )
-        .addColumn('budget', ctx.text)
+        enabled: { type: 'integer', required: true, default: 0 },
+        disposition: { type: 'string(50)', required: true },
+        goals: { type: 'text', required: true, default: '[]' },
+        budget: { type: 'text' },
         // The gap to the next run is drawn between these rather than fixed, so
         // the virtual user does not keep an appointment.
-        .addColumn('minIntervalMs', 'bigint', (col) => col.notNull())
-        .addColumn('maxIntervalMs', 'bigint', (col) => col.notNull())
+        minIntervalMs: { type: 'bigint', required: true },
+        maxIntervalMs: { type: 'bigint', required: true },
         // The entire schedule. Written before a run is dispatched, so a tick
         // that dies halfway cannot leave the row due for the next one.
-        .addColumn('nextRunAt', 'timestamp', (col) => col.notNull())
-        .addColumn('lastRunId', 'varchar(36)')
-        .addColumn('lastRunAt', 'timestamp'),
-
-    // The only read that matters at speed: which rows are due, on every tick.
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_virtual_user_schedule_due')
-        .on('virtualUserSchedule')
-        .columns(['enabled', 'nextRunAt']),
-  ],
+        nextRunAt: { type: 'timestamp', required: true },
+        lastRunId: { type: 'string(36)' },
+        lastRunAt: { type: 'timestamp' },
+      },
+      // The only read that matters at speed: which rows are due, on every tick.
+      indexes: [
+        {
+          name: 'idx_virtual_user_schedule_due',
+          columns: ['enabled', 'nextRunAt'],
+        },
+      ],
+    },
+  },
 }

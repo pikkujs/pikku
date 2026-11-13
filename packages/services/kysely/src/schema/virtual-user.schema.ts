@@ -1,4 +1,3 @@
-import { sql } from 'kysely'
 import type { PikkuSchema } from './pikku-schema.types.js'
 
 /**
@@ -22,93 +21,82 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 export const virtualUserSchema: PikkuSchema = {
   name: 'virtual-user',
   ownedBy: ['virtualUserRunStore'],
-  statements: [
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('virtualUserRun')
-        .addColumn('runId', 'varchar(36)', (col) => col.primaryKey())
-        .addColumn('virtualUserId', 'varchar(255)', (col) => col.notNull())
-        .addColumn('disposition', 'varchar(50)', (col) => col.notNull())
-        .addColumn('seed', 'bigint', (col) => col.notNull())
+  tables: {
+    virtualUserRun: {
+      columns: {
+        runId: { type: 'string(36)', primaryKey: true },
+        virtualUserId: { type: 'string(255)', required: true },
+        disposition: { type: 'string(50)', required: true },
+        seed: { type: 'bigint', required: true },
         // running | completed | failed. Not derived from `finishedAt` being
         // null: a crashed run has no finish time either, and "crashed" and
         // "still going" are not the same answer.
-        .addColumn('status', 'varchar(50)', (col) =>
-          col.defaultTo(ctx.defaultText('running')).notNull()
-        )
-        .addColumn('goals', ctx.text, (col) =>
-          col.defaultTo(ctx.defaultText('[]')).notNull()
-        )
-        .addColumn('memory', ctx.text, (col) =>
-          col.defaultTo(ctx.defaultText('{}')).notNull()
-        )
-        .addColumn('findings', ctx.text, (col) =>
-          col.defaultTo(ctx.defaultText('[]')).notNull()
-        )
+        status: { type: 'string(50)', required: true, default: 'running' },
+        goals: { type: 'text', required: true, default: '[]' },
+        memory: { type: 'text', required: true, default: '{}' },
+        findings: { type: 'text', required: true, default: '[]' },
         // What the user set out to do and how far each one got. On the run row
         // rather than beside the steps: there are a handful of them, and every
         // read of the run wants them.
-        .addColumn('intents', ctx.text, (col) =>
-          col.defaultTo(ctx.defaultText('[]')).notNull()
-        )
+        intents: { type: 'text', required: true, default: '[]' },
         // Counts the engine kept: steps, calls, mutations, tokens, elapsed.
-        .addColumn('tally', ctx.text)
-        .addColumn('stoppedBy', 'varchar(255)')
+        tally: { type: 'text' },
+        stoppedBy: { type: 'string(255)' },
         // Why the run itself failed, as opposed to what it found.
-        .addColumn('error', ctx.text)
-        .addColumn('startedBy', 'varchar(255)')
-        .addColumn('createdAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addColumn('finishedAt', 'timestamp'),
-
-    // The two reads: the run list newest-first, and one virtual user's history when
-    // a finding needs comparing against what that virtual user found before.
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_virtual_user_run_created')
-        .on('virtualUserRun')
-        .column('createdAt'),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createIndex('idx_virtual_user_run_virtual_user_id')
-        .on('virtualUserRun')
-        .columns(['virtualUserId', 'createdAt']),
-
+        error: { type: 'text' },
+        startedBy: { type: 'string(255)' },
+        createdAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+        finishedAt: { type: 'timestamp' },
+      },
+      // The two reads: the run list newest-first, and one virtual user's history
+      // when a finding needs comparing against what that virtual user found
+      // before.
+      indexes: [
+        { name: 'idx_virtual_user_run_created', columns: ['createdAt'] },
+        {
+          name: 'idx_virtual_user_run_virtual_user_id',
+          columns: ['virtualUserId', 'createdAt'],
+        },
+      ],
+    },
     // One row per turn, kept out of `virtualUserRun` so that listing runs does
     // not drag a budget's worth of transcript along with it. No foreign key
     // onto the run for the same reason `virtualUserId` is not one: this table is
     // created by the store at boot on whatever engine the project uses, and a
     // cascade that half the engines enforce differently is worse than the read
     // rule that a step with no run is orphaned.
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('virtualUserRunStep')
-        .addColumn('runId', 'varchar(36)', (col) => col.notNull())
+    virtualUserRunStep: {
+      columns: {
+        runId: { type: 'string(36)', required: true },
         // The engine's own step number, which is what the intent records point
         // at — not a surrogate key, so a transcript reads the same after paging.
         // Spelled `stepIndex` because `index` is a reserved word in mysql.
-        .addColumn('stepIndex', 'integer', (col) => col.notNull())
-        .addColumn('intentId', 'varchar(255)')
+        stepIndex: { type: 'integer', required: true },
+        intentId: { type: 'string(255)' },
         // The action as the engine scheduled it, including the `invalid` shape
         // for a turn the model got wrong — that turn is the interesting one.
-        .addColumn('action', ctx.text, (col) => col.notNull())
-        .addColumn('status', 'integer')
+        action: { type: 'text', required: true },
+        status: { type: 'integer' },
         // 0 or 1 rather than a boolean, because a bare sqlite driver cannot
         // bind one at all and `SerializePlugin` is not installed everywhere.
-        .addColumn('ok', 'integer')
+        ok: { type: 'integer' },
         // Already truncated by the engine, and stored JSON-encoded rather than
         // raw: a truncated API response usually starts with a brace, which
         // `SerializePlugin` would read back as an object rather than the string
         // the engine actually saw.
-        .addColumn('response', ctx.text)
-        .addColumn('findingKinds', ctx.text)
-        .addColumn('tokensIn', 'integer', (col) => col.defaultTo(0).notNull())
-        .addColumn('tokensOut', 'integer', (col) => col.defaultTo(0).notNull())
-        .addPrimaryKeyConstraint('pk_virtual_user_run_step', [
-          'runId',
-          'stepIndex',
-        ]),
-  ],
+        response: { type: 'text' },
+        findingKinds: { type: 'text' },
+        tokensIn: { type: 'integer', required: true, default: 0 },
+        tokensOut: { type: 'integer', required: true, default: 0 },
+      },
+      primaryKey: {
+        name: 'pk_virtual_user_run_step',
+        columns: ['runId', 'stepIndex'],
+      },
+    },
+  },
 }

@@ -19,5 +19,13 @@ span, so `db.select` lands under the function span in the same trace. Without a
 rather than parented wrongly. A test in `@pikku/kysely` drives a real
 `OtlpTracer` and decodes the export to prove the parenting.
 
+The same context is on the tracer itself as the optional
+`Tracer.currentContext()`, implemented by `OtlpTracer` and `RecordingTracer`
+(given a `contextStorage`). It is for services built at startup that never see a
+wire, such as an addon's scoped `http` service: they read it per call and open a
+client span under the running function, or open none when it is `undefined`. A
+tracer that wraps another one must forward `currentContext` along with
+`runInSpan`; one that drops it silently loses every such span.
+
 A disabled run (no `PIKKU_OTLP_ENDPOINT`, or `PIKKU_TELEMETRY=0`) gets the inert
 telemetry and the plain dialect: no exporter, no timer, no connection.

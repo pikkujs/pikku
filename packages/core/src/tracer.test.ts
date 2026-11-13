@@ -1,15 +1,112 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import {
   NOOP_TRACER,
   SPAN_LIMITS,
   nowUnixNano,
   redactSpanError,
   setBoundedAttribute,
+  type Tracer,
 } from './tracer.js'
 import { NOOP_TRACER as FromTrace } from './trace.js'
-import { createTrace } from './trace.js'
+import { childTraceWire, createTrace, type TraceContext } from './trace.js'
 import { RecordingTracer } from './testing/recording-tracer.js'
+import { asContextStorage } from './otlp/runtime-telemetry.js'
+
+const alsTracer = () =>
+  new RecordingTracer({
+    contextStorage: asContextStorage(new AsyncLocalStorage<TraceContext>()),
+  })
+
+/**
+ * What a service built at startup does: no wire in hand, so it parents its
+ * client span on whatever the tracer says is current, and opens none without.
+ */
+const startupClientCall = async (tracer: Tracer) => {
+  const parent = tracer.currentContext?.()
+  if (!parent) return
+  const span = tracer.startSpan('HTTP GET', childTraceWire(parent).trace, {
+    kind: 'client',
+  })
+  await Promise.resolve()
+  span.end({ code: 'ok' })
+}
+
+describe('Tracer.currentContext', () => {
+  test('is the active context inside runInSpan, across awaits, and undefined outside', async () => {
+    const tracer = alsTracer()
+    const context = createTrace()
+    const span = tracer.startSpan('fn', context)
+    assert.equal(tracer.currentContext(), undefined)
+    const seen = await tracer.runInSpan(span, async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1))
+      return tracer.currentContext()
+    })
+    assert.deepEqual(seen, context)
+    assert.equal(tracer.currentContext(), undefined)
+  })
+
+  test('without a storage, RecordingTracer runs the function and has no context', () => {
+    const tracer = new RecordingTracer()
+    const span = tracer.startSpan('fn', createTrace())
+    assert.equal(
+      tracer.runInSpan(span, () => tracer.currentContext()),
+      undefined
+    )
+    assert.equal(
+      tracer.runInSpan(span, () => 42),
+      42
+    )
+  })
+
+  test('the no-op tracer has none, so a startup service opens no span', async () => {
+    assert.equal('currentContext' in NOOP_TRACER, false)
+    await startupClientCall(NOOP_TRACER)
+  })
+
+  test('a startup service parents its client span on the current span', async () => {
+    const tracer = alsTracer()
+    const context = createTrace()
+    const span = tracer.startSpan('fn', context, { kind: 'server' })
+    await tracer.runInSpan(span, () => startupClientCall(tracer))
+    span.end({ code: 'ok' })
+    await startupClientCall(tracer)
+    assert.equal(tracer.spans.length, 2)
+    const [client, server] = tracer.spans
+    assert.equal(client!.kind, 'client')
+    assert.equal(client!.traceId, context.traceId)
+    assert.equal(client!.parentSpanId, context.spanId)
+    assert.equal(server!.spanId, context.spanId)
+  })
+
+  test('a wrapping tracer that forwards currentContext keeps the parenting', async () => {
+    const inner = alsTracer()
+    const forwarding: Tracer = {
+      startSpan: (name, context, options) =>
+        inner.startSpan(name, context, options),
+      runInSpan: (span, fn) => inner.runInSpan(span, fn),
+      currentContext: () => inner.currentContext(),
+    }
+    const context = createTrace()
+    const span = forwarding.startSpan('fn', context)
+    await forwarding.runInSpan!(span, () => startupClientCall(forwarding))
+    assert.equal(inner.spans.length, 1)
+    assert.equal(inner.spans[0]!.parentSpanId, context.spanId)
+  })
+
+  test('a wrapping tracer that drops currentContext loses the span', async () => {
+    const inner = alsTracer()
+    const dropping: Tracer = {
+      startSpan: (name, context, options) =>
+        inner.startSpan(name, context, options),
+      runInSpan: (span, fn) => inner.runInSpan(span, fn),
+    }
+    const span = dropping.startSpan('fn', createTrace())
+    await dropping.runInSpan!(span, () => startupClientCall(dropping))
+    assert.equal(inner.spans.length, 0)
+  })
+})
 
 describe('NOOP_TRACER', () => {
   test('is exported from @pikku/core/trace and records nothing', () => {

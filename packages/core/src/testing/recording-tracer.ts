@@ -10,15 +10,32 @@ import {
   type Tracer,
 } from '../tracer.js'
 import type { TraceContext } from '../trace.js'
+import type { ContextStorage } from '../otlp/otlp-tracer.js'
 
 /**
  * A `Tracer` that keeps every finished span in memory, under the same limits
  * and redaction a real tracer applies. For tests and verifiers that assert one
- * span per hop.
+ * span per hop. Given a `contextStorage`, `runInSpan` and `currentContext`
+ * behave as `OtlpTracer`'s do.
  */
 export class RecordingTracer implements Tracer {
   readonly spans: FinishedSpan[] = []
   readonly stats = { dropped: 0, started: 0 }
+
+  constructor(
+    private readonly options: { contextStorage?: ContextStorage } = {}
+  ) {}
+
+  /** Runs `fn` with `span` as the current context, when a context storage was given. */
+  runInSpan<T>(span: Span, fn: () => T): T {
+    const storage = this.options.contextStorage
+    return storage ? storage.run(span.context, fn) : fn()
+  }
+
+  /** The context of the span whose work is running, if a context storage was given. */
+  currentContext(): TraceContext | undefined {
+    return this.options.contextStorage?.get()
+  }
 
   startSpan(
     name: string,

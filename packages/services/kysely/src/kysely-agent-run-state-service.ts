@@ -5,6 +5,7 @@ import type { AgentRunState } from '@pikku/core/agent'
 import type { AgentRunScore } from '@pikku/core/agent-scorer'
 import type {
   AgentRunStateService,
+  ApprovalClaim,
   CreateRunInput,
   SaveScoreInput,
 } from '@pikku/core/services'
@@ -12,6 +13,20 @@ import type { PendingApproval } from '@pikku/core/agent'
 import { requirePikkuSchema } from './schema/index.js'
 import { agentSchema } from './schema/agent.schema.js'
 import { getRunScores, saveRunScore } from './kysely-agent-run-scores.js'
+import { parseJson } from './kysely-json.js'
+
+/** `expiresAt` is stored inside the JSON column, so it reads back as a string. */
+const reviveExpiry = (approvals: PendingApproval[]): PendingApproval[] =>
+  approvals.map((a) =>
+    a.expiresAt == null ? a : { ...a, expiresAt: new Date(a.expiresAt) }
+  )
+
+/** An approval with no expiry recorded is refused, like one past it. */
+const isClaimable = (approval: PendingApproval): boolean => {
+  const expiresAt =
+    approval.expiresAt == null ? NaN : new Date(approval.expiresAt).getTime()
+  return expiresAt > Date.now()
+}
 
 export class KyselyAgentRunStateService implements AgentRunStateService {
   private initialized = false
@@ -25,7 +40,7 @@ export class KyselyAgentRunStateService implements AgentRunStateService {
   }
 
   async createRun(run: CreateRunInput): Promise<string> {
-    const runId = `run-${crypto.randomUUID()}`
+    const runId = crypto.randomUUID()
     await this.db
       .insertInto('agentRun')
       .values({
@@ -93,50 +108,56 @@ export class KyselyAgentRunStateService implements AgentRunStateService {
     return rows.map((r) => this.toRunState(r))
   }
 
-  async resolveApproval(
-    toolCallId: string,
-    status: 'approved' | 'denied'
-  ): Promise<boolean> {
-    const rows = await this.db
+  async resolveApproval({
+    runId,
+    toolCallId,
+    status,
+  }: ApprovalClaim): Promise<boolean> {
+    const row = await this.db
       .selectFrom('agentRun')
       .select(['runId', 'pendingApprovals'])
+      .where('runId', '=', runId)
       .where('status', '=', 'suspended')
-      .execute()
+      .executeTakeFirst()
+    if (!row) return false
 
-    for (const row of rows) {
-      let approvals: PendingApproval[] = []
-      if (row.pendingApprovals) {
-        try {
-          approvals = JSON.parse(row.pendingApprovals)
-        } catch {
-          console.warn(
-            `Failed to parse pendingApprovals for run ${row.runId}, treating as empty`
-          )
-        }
-      }
-      const filtered = approvals.filter((a) => a.toolCallId !== toolCallId)
-      if (filtered.length !== approvals.length) {
-        const updates: Record<string, unknown> = {
-          pendingApprovals:
-            filtered.length > 0 ? JSON.stringify(filtered) : null,
-          updatedAt: sql`CURRENT_TIMESTAMP`,
-        }
-        if (filtered.length === 0) {
-          updates.status = status
-        }
-        // Compare-and-swap on the list we read: a concurrent approver that got
-        // there first has already rewritten it, and this update matches no row.
-        const result = await this.db
-          .updateTable('agentRun')
-          .set(updates as any)
-          .where('runId', '=', row.runId)
-          .where('status', '=', 'suspended')
-          .where('pendingApprovals', '=', row.pendingApprovals)
-          .executeTakeFirst()
-        return Number(result?.numUpdatedRows ?? 0) > 0
+    let approvals: PendingApproval[] = []
+    if (row.pendingApprovals) {
+      try {
+        approvals = parseJson(row.pendingApprovals)
+      } catch {
+        console.warn(
+          `Failed to parse pendingApprovals for run ${row.runId}, treating as empty`
+        )
       }
     }
-    return false
+    const approval = approvals.find((a) => a.toolCallId === toolCallId)
+    if (!approval || !isClaimable(approval)) return false
+    const filtered = approvals.filter((a) => a.toolCallId !== toolCallId)
+
+    const updates: Record<string, unknown> = {
+      pendingApprovals: filtered.length > 0 ? JSON.stringify(filtered) : null,
+      updatedAt: sql`CURRENT_TIMESTAMP`,
+    }
+    if (filtered.length === 0) {
+      updates.status = status
+    }
+    // Compare-and-swap on the list we read: a concurrent approver that got
+    // there first has already rewritten it, and this update matches no row.
+    // Compared as text, because a serializing plugin hands the column back
+    // parsed and Kysely binds an array operand as a value list.
+    const readText =
+      typeof row.pendingApprovals === 'string'
+        ? row.pendingApprovals
+        : JSON.stringify(row.pendingApprovals)
+    const result = await this.db
+      .updateTable('agentRun')
+      .set(updates as any)
+      .where('runId', '=', row.runId)
+      .where('status', '=', 'suspended')
+      .where('pendingApprovals', '=', readText)
+      .executeTakeFirst()
+    return Number(result?.numUpdatedRows ?? 0) > 0
   }
 
   async findRunByToolCallId(
@@ -152,14 +173,16 @@ export class KyselyAgentRunStateService implements AgentRunStateService {
       let approvals: PendingApproval[] = []
       if (row.pendingApprovals) {
         try {
-          approvals = JSON.parse(row.pendingApprovals)
+          approvals = parseJson(row.pendingApprovals)
         } catch {
           console.warn(
             `Failed to parse pendingApprovals for run ${row.runId}, treating as empty`
           )
         }
       }
-      const approval = approvals.find((a) => a.toolCallId === toolCallId)
+      const approval = reviveExpiry(approvals).find(
+        (a) => a.toolCallId === toolCallId
+      )
       if (approval) {
         return { run: this.toRunState(row), approval }
       }
@@ -184,9 +207,9 @@ export class KyselyAgentRunStateService implements AgentRunStateService {
       status: row.status,
       errorMessage: row.errorMessage ?? undefined,
       suspendReason: row.suspendReason ?? undefined,
-      missingRpcs: row.missingRpcs ? JSON.parse(row.missingRpcs) : undefined,
+      missingRpcs: row.missingRpcs ? parseJson(row.missingRpcs) : undefined,
       pendingApprovals: row.pendingApprovals
-        ? JSON.parse(row.pendingApprovals)
+        ? reviveExpiry(parseJson(row.pendingApprovals))
         : undefined,
       usage: {
         inputTokens: row.usageInputTokens ?? 0,

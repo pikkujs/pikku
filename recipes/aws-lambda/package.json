@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@pikku/aws-services": "^0.12.19",
-    "@pikku/core": "^0.12.155",
+    "@pikku/core": "^0.12.156",
     "@pikku/jose": "^0.12.10",
     "@pikku/lambda": "^0.12.15",
     "@pikku/schema-cfworker": "^0.12.9",

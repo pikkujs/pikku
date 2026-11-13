@@ -69,6 +69,15 @@ export interface Tracer {
    * what it returns.
    */
   runInSpan?<T>(span: Span, fn: () => T): T
+  /**
+   * Optional. The context of the span whose work is running (the one
+   * `runInSpan` made current), or `undefined` outside any span or when the
+   * tracer has no storage. A service created at startup, with no wire in hand
+   * (the scoped `http` service of an addon), parents its client span on this.
+   * A tracer that wraps another one MUST forward it, or every span such a
+   * service would open goes missing.
+   */
+  currentContext?(): TraceContext | undefined
   /** Flush what is buffered; called by `onServerStop` and `pikku serve` shutdown. */
   flush?(): Promise<void>
   close?(): Promise<void>

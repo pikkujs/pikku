@@ -1,6 +1,6 @@
 {
   "name": "@pikku/core",
-  "version": "0.12.155",
+  "version": "0.12.156",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -100,6 +100,7 @@
     "./telemetry-store/testing": "./dist/telemetry-store/testing/index.js",
     "./lifecycle": "./dist/lifecycle.js",
     "./schema": "./dist/schema.js",
+    "./db": "./dist/db/index.js",
     "./testing": "./dist/testing/index.js",
     "./dev": "./dist/dev/hot-reload.js",
     "./package.json": "./package.json"
@@ -124,7 +125,7 @@
   },
   "devDependencies": {
     "@ag-ui/core": "0.0.59",
-    "@pikku/deploy": "^0.12.20",
+    "@pikku/deploy": "^0.12.21",
     "@types/node": "^26.6.5",
     "esbuild": "~0.28.2",
     "tsx": "^4.23.15"

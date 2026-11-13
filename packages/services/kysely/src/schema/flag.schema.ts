@@ -1,4 +1,3 @@
-import { sql } from 'kysely'
 import type { PikkuSchema } from './pikku-schema.types.js'
 
 /**
@@ -18,65 +17,61 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 export const flagSchema: PikkuSchema = {
   name: 'flag',
   ownedBy: ['featureFlags'],
-  statements: [
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('pikkuFeatureFlags')
-        .addColumn('name', ctx.key, (col) => col.primaryKey())
-        .addColumn('description', ctx.text)
+  tables: {
+    pikkuFeatureFlags: {
+      columns: {
+        name: { type: 'key', primaryKey: true },
+        description: { type: 'text' },
         // The declared `anyOf` scope list, as JSON. Read by the console to say
         // who would see the feature; never read on the request path, where the
         // capability half comes from the session's own scopes.
-        .addColumn('anyOf', ctx.text)
+        anyOf: { type: 'text' },
         // Off until somebody turns it on. A flag exists so a feature can ship
         // dark, so the row a deploy creates has to start closed — the opposite
         // default would make merging the declaration the moment of launch.
-        .addColumn('enabled', 'boolean', (col) =>
-          col.defaultTo(false).notNull()
-        )
+        enabled: { type: 'boolean', required: true, default: false },
         // 0-100, or null for no rollout constraint. Null and 100 are not the
         // same statement: null says the percentage is not part of this flag's
         // story, 100 says a rollout reached everyone and could be wound back.
-        .addColumn('rolloutPercent', 'integer')
+        rolloutPercent: { type: 'integer' },
         // False once the declaration has gone from code: still switchable, no
         // longer offered, awaiting `admin:flagPrune`. The same additive
         // contract as `pikkuScopes.declared`.
-        .addColumn('declared', 'boolean', (col) =>
-          col.defaultTo(true).notNull()
-        )
-        .addColumn('updatedBy', ctx.text)
+        declared: { type: 'boolean', required: true, default: true },
+        updatedBy: { type: 'text' },
         // Why it was flipped. A kill switch is pulled during an incident, and
         // the one question afterwards is always who turned it off and why.
-        .addColumn('note', ctx.text)
-        .addColumn('updatedAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        ),
-
-    (db, _types, ctx) =>
-      db.schema
-        .createTable('pikkuFeatureFlagOverrides')
-        .addColumn('flag', ctx.key, (col) =>
-          ctx.references(col.notNull(), 'pikkuFeatureFlags.name')
-        )
-        .addColumn('subjectId', ctx.key, (col) => col.notNull())
+        note: { type: 'text' },
+        updatedAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+    },
+    pikkuFeatureFlagOverrides: {
+      columns: {
+        flag: {
+          type: 'key',
+          required: true,
+          references: 'pikkuFeatureFlags.name',
+          onDelete: 'cascade',
+        },
+        subjectId: { type: 'key', required: true },
         // Which id this is, for the console to render. Resolution keys on the
         // id alone, because that is all the resolver has: it prefers the
         // organization and falls back to the user, and by then the two are one
         // string.
-        .addColumn('subjectKind', ctx.text, (col) => col.notNull())
-        .addColumn('enabled', 'boolean', (col) => col.notNull())
-        .addColumn('grantedBy', ctx.text)
-        .addColumn('grantedAt', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .addPrimaryKeyConstraint('pikku_feature_flag_overrides_pk', [
-          'flag',
-          'subjectId',
-        ])
-        .$call(
-          ctx.foreignKeys('pikkuFeatureFlagOverrides', {
-            flag: 'pikkuFeatureFlags.name',
-          })
-        ),
-  ],
+        subjectKind: { type: 'text', required: true },
+        enabled: { type: 'boolean', required: true },
+        grantedBy: { type: 'text' },
+        grantedAt: {
+          type: 'timestamp',
+          required: true,
+          default: { now: true },
+        },
+      },
+      primaryKey: ['flag', 'subjectId'],
+    },
+  },
 }
