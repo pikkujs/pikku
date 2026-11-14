@@ -1,4 +1,4 @@
-import type { PikkuSchema } from './pikku-schema.types.js'
+import { ENVELOPE_CIPHERTEXT, type PikkuSchema } from './pikku-schema.types.js'
 
 /**
  * Encrypted secrets and their audit trail.
@@ -15,8 +15,16 @@ export const secretSchema: PikkuSchema = {
     secrets: {
       columns: {
         key: { type: 'string(255)', primaryKey: true },
-        ciphertext: { type: 'text', required: true },
-        wrappedDek: { type: 'text', required: true },
+        ciphertext: {
+          type: 'text',
+          required: true,
+          ...ENVELOPE_CIPHERTEXT,
+        },
+        wrappedDek: {
+          type: 'text',
+          required: true,
+          ...ENVELOPE_CIPHERTEXT,
+        },
         keyVersion: { type: 'integer', required: true },
         createdAt: {
           type: 'timestamp',

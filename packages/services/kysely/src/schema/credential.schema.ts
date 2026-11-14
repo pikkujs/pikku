@@ -1,5 +1,9 @@
 import { sql } from 'kysely'
-import { rawStatement, type PikkuSchema } from './pikku-schema.types.js'
+import {
+  ENVELOPE_CIPHERTEXT,
+  rawStatement,
+  type PikkuSchema,
+} from './pikku-schema.types.js'
 
 /**
  * Encrypted per-user credentials and their audit trail.
@@ -19,8 +23,16 @@ export const credentialSchema: PikkuSchema = {
       columns: {
         name: { type: 'string(255)', required: true },
         userId: { type: 'string(255)' },
-        ciphertext: { type: 'text', required: true },
-        wrappedDek: { type: 'text', required: true },
+        ciphertext: {
+          type: 'text',
+          required: true,
+          ...ENVELOPE_CIPHERTEXT,
+        },
+        wrappedDek: {
+          type: 'text',
+          required: true,
+          ...ENVELOPE_CIPHERTEXT,
+        },
         keyVersion: { type: 'integer', required: true },
         createdAt: {
           type: 'timestamp',
