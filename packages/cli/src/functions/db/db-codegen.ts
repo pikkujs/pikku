@@ -266,14 +266,14 @@ function bareTableName(name: string): string {
 }
 
 /** Two enum lists hold the same values, in any order. */
-function sameValues(a: string[], b: string[]): boolean {
+function sameValues(a: readonly string[], b: readonly string[]): boolean {
   return (
     a.length === b.length &&
     [...a].sort().every((value, i) => value === [...b].sort()[i])
   )
 }
 
-const enumLabel = (values: string[]): string =>
+const enumLabel = (values: readonly string[]): string =>
   values.map((v) => `'${v}'`).join(' | ')
 
 /** The bounds a column declares that its resolved select type can take, if any. */
