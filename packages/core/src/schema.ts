@@ -193,7 +193,14 @@ export const coerceTopLevelDataFromSchema = (
     }
     if (type === 'array' && typeof data[key] === 'string') {
       data[key] = data[key].split(',')
-    } else if (type === 'string' && property.format === 'date-time') {
+    } else if (
+      type === 'string' &&
+      property.format === 'date-time' &&
+      typeof data[key] === 'string'
+    ) {
+      // Only a value that arrived: `new Date(undefined)` is an Invalid Date and
+      // `new Date(null)` is 1970, so an omitted optional property used to be
+      // filled in with something the caller never sent.
       data[key] = new Date(data[key])
     } else if (
       (type === 'integer' || type === 'number') &&
