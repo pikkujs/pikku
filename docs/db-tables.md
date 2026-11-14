@@ -33,20 +33,126 @@ Postgres and MySQL all work from the same declaration.
 
 ## Columns
 
-| Field                                                     | Meaning                                                                                                              |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `type`                                                    | `id`, `key`, `text`, `string(n)`, `integer`, `bigint`, `real`, `boolean`, `timestamp`, `timestamptz`, `uuid`, `json` |
-| `required`                                                | `NOT NULL`                                                                                                           |
-| `default`                                                 | A literal, `{ now: true }`, or `{ sql: '...' }` passed through verbatim                                              |
-| `primaryKey`, `unique`, `index`                           | Single-column key, constraint or index. Composite ones go on the table                                               |
-| `references`                                              | `table.column`. Without a `type`, the column takes its target's type                                                 |
-| `onDelete`                                                | `cascade`, `setNull`, `restrict` (the default) or `noAction`                                                         |
-| `enum`, `min`, `max`, `minLength`, `maxLength`, `pattern` | Value constraints. Recorded on the declaration; not yet in the SQL or the generated types                            |
-| Annotation fields                                         | `security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`                             |
+| Field                                                     | Meaning                                                                                                                |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `type`                                                    | `id`, `key`, `text`, `string(n)`, `integer`, `bigint`, `real`, `boolean`, `timestamp`, `timestamptz`, `uuid`, `json`   |
+| `required`                                                | `NOT NULL`                                                                                                             |
+| `default`                                                 | A literal, `{ now: true }`, or `{ sql: '...' }` passed through verbatim                                                |
+| `primaryKey`, `unique`, `index`                           | Single-column key, constraint or index. Composite ones go on the table                                                 |
+| `references`                                              | `table.column`. Without a `type`, the column takes its target's type                                                   |
+| `onDelete`                                                | `cascade`, `setNull`, `restrict` (the default) or `noAction`                                                           |
+| `enum`, `min`, `max`, `minLength`, `maxLength`, `pattern` | Value constraints: `CHECK`s in the SQL on Postgres and MySQL (never `pattern`), and bounds in the generated zod schema |
+| Annotation fields                                         | `security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`                               |
 
 A table takes `columns`, and optionally `primaryKey` (composite), `unique`
 (composite constraints), `indexes` (with `unique`, a partial `where`, and a `name`),
 and `declareOnly`.
+
+### Constraints
+
+`enum`, `min`, `max`, `minLength` and `maxLength` always drive the generated zod
+schema, the generated union types (`enum`) and the console's column hints.
+`pattern` is checked by the generated zod schema only, never in SQL, because
+regex dialects differ.
+
+Whether the database enforces them depends on the engine:
+
+- **Postgres and MySQL**: real inline `CHECK` constraints, named
+  `<table>_<column>_<kind>_check` (`kind` is `enum`, `min`, `max`, `minlength` or
+  `maxlength`), written on `CREATE TABLE` and on a column added later. A name
+  that would pass the engine's limit (63 bytes on Postgres, 64 characters on
+  MySQL) keeps its `_<kind>_check` ending and swaps the middle for a short hash
+  of the full name, so two bounds on one column stay distinct.
+- **SQLite**: validation only. SQLite cannot drop or change a `CHECK` without
+  rebuilding the table, so Pikku generates none, for new tables, new columns or
+  existing ones. `pikku db generate` and `pikku db check` print one notice
+  listing each declared constraint with the `CHECK` you could add in a
+  hand-written migration, or you can use Postgres or MySQL, where Pikku manages
+  them. A `CHECK` you wrote by hand in a SQLite migration is left alone, and an
+  `IN (...)` one still types the column as a union. Silence the notice with
+  `validate.rules["db-sqlite-unenforced-constraints"] = "off"` in the Pikku
+  config.
+
+#### Where a constraint is actually enforced
+
+A declared constraint is enforced at runtime only where a function uses the
+generated zod schema (`<Table>InsertZ`, `<Table>PatchZ` or `<Table>Z`, from
+`.pikku/db/zod.gen.ts`) as its `input`. A Kysely write that skips such a
+function (a direct `db.insertInto(...)`, a script, a migration, another
+service) is guarded only by the database's `CHECK`s: on Postgres and MySQL
+those, and on SQLite nothing at all. If a value must never be wrong, put it
+behind a function whose `input` is the generated schema, and on SQLite add the
+`CHECK` yourself.
+
+Two details of the generated zod schema and types:
+
+- A whole-number column (`integer`, `bigint`, `smallint`, `serial` and the other
+  `INT` types) is emitted as `z.number().int()`, so `1.5` is rejected before it
+  reaches the database. A float, `numeric` or `decimal` column stays
+  `z.number()`, and so does a column with a `tsType` override.
+- The declaration is the source of truth for an `enum`. When the declared values
+  and the values the database holds differ (a Postgres enum or a `CHECK ... IN`
+  on a column whose declaration changed), the generated union follows the
+  declaration and `pikku db generate`/`migrate`/`codegen` warn once per column
+  (`PKU488`): `Column "table.column": declared 'a' | 'b' but the database has
+'x' | 'y'`. Run `pikku db generate` for the migration that brings the database
+  in line. The same values in a different order are not a mismatch.
+
+On a Postgres or MySQL column that already exists:
+
+- **Postgres** adds it `NOT VALID` and then `VALIDATE`s it in a second
+  statement. Be clear about what that buys: the migrator runs a whole migration
+  in one transaction, and `ADD CONSTRAINT` takes an `ACCESS EXCLUSIVE` lock that
+  lasts until the commit, so writes to the table wait through the validating
+  scan anyway. The split only shortens the lock for a runner that applies the
+  statements one at a time. Pikku does not run them that way; the guard against
+  a long lock is the probe below, which refuses before the migration starts.
+  Changing a check drops and re-adds it (atomic, in that transaction); removing
+  it from the declaration drops it (only checks named
+  `<table>_<column>_<kind>_check`; one you wrote yourself is left alone).
+- **MySQL** uses `ADD CONSTRAINT ... CHECK` and `DROP CHECK`, from 8.0.16.
+  An older server parses a `CHECK` and ignores it, so generate refuses as soon
+  as the declaration has a constraint. DDL
+  commits as it goes there, so a changed check is added under an interim name
+  first, the old one dropped, the final name added and the interim one dropped:
+  rows that break the new check refuse the first step and leave the old check in
+  place. A migration that stops after that step still has to be finished by hand.
+  This sequence has been tested only as statements, not against a running MySQL
+  server.
+
+#### Markers a migration carries
+
+- `-- pikku:destructive [what it does]`: `migrate` refuses a pending migration
+  with this line unless it is told to allow it, before applying anything.
+  `pikku db migrate --allowDestructive` and the standalone bundle's
+  `db migrate --allow-destructive` do; `db status` on the bundle marks such
+  migrations. `pikku db reset` and scratch databases allow it, since there is
+  nothing to lose. `pikku ci` passes it only in its throwaway worktree, never in
+  your own tree. The line may be bare, indented, in any case, or written
+  `--pikku:destructive`; `db generate` writes the canonical form.
+- `-- pikku:check-probe {json}`, above each added check: `schema`, `table` and
+  the `SELECT` that returns a row only if one breaks the check. `migrate` can be
+  given a `beforeMigration` hook, and `checkProbeHook` is the one that runs
+  these against the live database, just before that migration (so a table the
+  migration before it creates is there to be probed; a probe that follows an
+  `UPDATE`, `DELETE`, `INSERT` or `TRUNCATE` in the same file is not run, since
+  that statement changes the rows it would read). A refusal says which
+  migrations of the run had already applied. It refuses on a breaking
+  row, on a table estimated above 10 million rows (`CHECK_PROBE_MAX_ROWS`), and
+  on a scan that takes over 30 seconds (`CHECK_PROBE_TIMEOUT_MS`), which the
+  server itself cancels (`statement_timeout` on Postgres, `max_execution_time`
+  on MySQL). A table never
+  analysed (Postgres reports `-1` rows) is counted up to the cap, not trusted.
+  A local `pikku db migrate` on postgres or MySQL and the standalone bundle's
+  Postgres `db migrate` both use it.
+
+A deploy runner outside this repository that applies these migrations has to do
+the same two things: refuse a migration with a `-- pikku:destructive` line
+unless a person approved it, and run the `-- pikku:check-probe` queries (or
+equivalent) before applying a migration that has them.
+
+A bound on a column of the wrong kind (`min` on text,
+`minLength` on a number) is an error when the file loads.
 
 A field that is not one of these is an error, as is an invalid annotation value:
 `security: 'pi'` is refused rather than left at the default.
@@ -137,7 +243,7 @@ columns. See [DB column annotations](./db-column-annotations.md) and
 
 ## What it does not detect
 
-- A changed foreign key, `UNIQUE` or `CHECK` on an existing column.
+- A changed foreign key or `UNIQUE` on an existing column.
 - A removed index, or a changed definition under the same index name.
 - A table adopted from a hand-written migration and later removed from the
   declaration. It goes back to being hand-written, and nothing is dropped.

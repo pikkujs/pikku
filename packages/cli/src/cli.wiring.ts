@@ -820,6 +820,11 @@ wireCLI({
               description: 'Refuse any database that is not on this machine',
               default: false,
             },
+            allowDestructive: {
+              description:
+                'Apply migrations marked `-- pikku:destructive` (a migration that drops or rewrites data). Refused without it',
+              default: false,
+            },
           },
         }),
         generate: pikkuCLICommand({

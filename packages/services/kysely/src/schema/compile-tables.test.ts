@@ -690,3 +690,211 @@ describe('compileTables applied to a real database', () => {
     })
   })
 })
+
+const checkNames = (dialect: Dialect, t: ReturnType<typeof defineTables>) =>
+  [
+    ...compile(dialect, t)
+      .join('\n')
+      .matchAll(/constraint [`"]([^`"]+)[`"] check/g),
+  ].map((m) => m[1]!)
+
+describe('compileTables: constraints', () => {
+  const tables = defineTables({
+    invoice: {
+      columns: {
+        invoiceId: { type: 'id', primaryKey: true },
+        status: {
+          type: 'text',
+          required: true,
+          default: 'draft',
+          enum: ['draft', 'sent', "it's paid"],
+        },
+        amountCents: { type: 'integer', required: true, min: 0, max: 100 },
+        slug: {
+          type: 'string(64)',
+          minLength: 2,
+          maxLength: 64,
+          pattern: '^[a-z0-9-]+$',
+        },
+      },
+    },
+  })
+
+  test('sqlite gets no CHECK, which it could not change later without a rebuild', () => {
+    assert.deepEqual(compile('sqlite', tables), [
+      `create table "invoice" ("invoice_id" text primary key, "status" text default 'draft' not null, "amount_cents" integer not null, "slug" varchar(64));`,
+    ])
+  })
+
+  test('postgres', () => {
+    assert.deepEqual(compile('postgres', tables), [
+      `create table "invoice" ("invoice_id" text primary key, "status" text default 'draft' not null constraint "invoice_status_enum_check" check ("status" in ('draft', 'sent', 'it''s paid')), "amount_cents" integer not null constraint "invoice_amount_cents_min_check" check ("amount_cents" >= 0) constraint "invoice_amount_cents_max_check" check ("amount_cents" <= 100), "slug" varchar(64) constraint "invoice_slug_minlength_check" check (char_length("slug") >= 2) constraint "invoice_slug_maxlength_check" check (char_length("slug") <= 64));`,
+    ])
+  })
+
+  test('mysql (compile only)', () => {
+    const [statement] = compile('mysql', tables)
+    assert.match(
+      statement!,
+      /`amount_cents` integer not null constraint `invoice_amount_cents_min_check` check \(`amount_cents` >= 0\)/
+    )
+    assert.match(
+      statement!,
+      /constraint `invoice_slug_maxlength_check` check \(char_length\(`slug`\) <= 64\)/
+    )
+    assert.match(statement!, /in \('draft', 'sent', 'it''s paid'\)/)
+  })
+
+  test('long names keep the checks distinct, within the engine limit, ending _check', () => {
+    const long = defineTables({
+      a_table_with_a_really_long_name_for_testing_limits: {
+        columns: {
+          id: { type: 'id', primaryKey: true },
+          a_column_with_an_equally_long_name_for_testing: {
+            type: 'integer',
+            min: 0,
+            max: 5,
+          },
+        },
+      },
+    })
+    for (const dialect of ['postgres', 'mysql'] as const) {
+      const names = checkNames(dialect, long)
+      assert.equal(names.length, 2)
+      assert.equal(new Set(names).size, 2)
+      for (const name of names) {
+        assert.ok(Buffer.byteLength(name) <= 63, name)
+        assert.match(name, /_(min|max)_check$/)
+      }
+      assert.deepEqual(names, checkNames(dialect, long))
+    }
+  })
+
+  test('pattern never reaches SQL', () => {
+    for (const dialect of ['sqlite', 'postgres', 'mysql'] as const) {
+      assert.doesNotMatch(compile(dialect, tables).join('\n'), /a-z0-9/)
+    }
+  })
+
+  test('a column that takes its type from a reference can be constrained', () => {
+    const statements = compile('postgres', {
+      parent: { columns: { id: { type: 'integer', primaryKey: true } } },
+      child: { columns: { parentId: { references: 'parent.id', min: 1 } } },
+    })
+    assert.match(
+      statements.join('\n'),
+      /constraint "child_parent_id_min_check" check \("parent_id" >= 1\)/
+    )
+  })
+
+  const refused = (columns: Record<string, any>, message: RegExp) =>
+    assert.throws(() => compileTables({ t: { columns } }), message)
+
+  test('refuses a constraint the column type cannot hold', () => {
+    refused(
+      { a: { type: 'text', min: 1 } },
+      /'t.a' is text, so it cannot have a min or max/
+    )
+    refused(
+      { a: { type: 'integer', maxLength: 3 } },
+      /'t.a' is integer, so it cannot have an enum, minLength, maxLength or pattern/
+    )
+    refused(
+      { a: { type: 'boolean', enum: ['a'] } },
+      /'t.a' is boolean, so it cannot have an enum/
+    )
+  })
+
+  test('refuses values that contradict each other', () => {
+    refused(
+      { a: { type: 'integer', min: 5, max: 1 } },
+      /min \(5\) above its max \(1\)/
+    )
+    refused(
+      { a: { type: 'text', minLength: 5, maxLength: 1 } },
+      /minLength \(5\) above its maxLength \(1\)/
+    )
+    refused(
+      { a: { type: 'string(8)', maxLength: 9 } },
+      /could never be reached/
+    )
+    refused({ a: { type: 'text', enum: [] } }, /non-empty list of strings/)
+    refused({ a: { type: 'text', enum: ['a', 'a'] } }, /more than once/)
+    refused(
+      { a: { type: 'text', enum: ['a'], default: 'b' } },
+      /defaults to 'b', which is not in its enum/
+    )
+    refused(
+      { a: { type: 'text', pattern: '(' } },
+      /not a valid regular expression/
+    )
+    refused({ a: { type: 'integer', min: Number.NaN } }, /finite number/)
+    refused({ a: { type: 'text', minLength: -1 } }, /whole number/)
+  })
+})
+
+describe('compileTables: constraints on a real database', () => {
+  const tables = defineTables({
+    item: {
+      columns: {
+        id: { type: 'id', primaryKey: true },
+        kind: { type: 'text', enum: ['a', 'b'] },
+        qty: { type: 'integer', min: 0, max: 10 },
+        code: { type: 'string(8)', minLength: 2, maxLength: 4 },
+      },
+    },
+  })
+
+  const exercise = async (db: Kysely<any>) => {
+    await applyPikkuSchemas(db, [{ name: 'app', tables }])
+    await sql`insert into item (id, kind, qty, code) values ('ok', 'a', 5, 'abc')`.execute(
+      db
+    )
+    await sql`insert into item (id) values ('nulls-pass')`.execute(db)
+    for (const bad of [
+      `insert into item (id, kind) values ('x', 'c')`,
+      `insert into item (id, qty) values ('x', -1)`,
+      `insert into item (id, qty) values ('x', 11)`,
+      `insert into item (id, code) values ('x', 'a')`,
+      `insert into item (id, code) values ('x', 'abcde')`,
+    ]) {
+      await assert.rejects(sql.raw(bad).execute(db), bad)
+    }
+  }
+
+  describe('postgres (pglite)', () => {
+    let pglite: PGlite
+    let db: Kysely<any>
+    before(() => {
+      pglite = new PGlite()
+      db = new Kysely<any>({
+        dialect: {
+          createAdapter: () => new PostgresAdapter(),
+          createDriver: () => new PGliteDriver(pglite),
+          createIntrospector: (i) => new PostgresIntrospector(i),
+          createQueryCompiler: () => new PostgresQueryCompiler(),
+        },
+      })
+    })
+    after(async () => {
+      await pglite.close()
+    })
+
+    test('enforces them under the names it was given', async () => {
+      await exercise(db)
+      const { rows } = await sql<{ conname: string }>`
+        select conname from pg_constraint where conrelid = 'item'::regclass and contype = 'c'
+        order by conname`.execute(db)
+      assert.deepEqual(
+        rows.map((r) => r.conname),
+        [
+          'item_code_maxlength_check',
+          'item_code_minlength_check',
+          'item_kind_enum_check',
+          'item_qty_max_check',
+          'item_qty_min_check',
+        ]
+      )
+    })
+  })
+})

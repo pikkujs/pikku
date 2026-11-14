@@ -6,6 +6,11 @@ import type {
 } from '../db-introspector.js'
 import { MIGRATION_TRACKING_TABLE } from '@pikku/migrator-sql'
 import type { MysqlQueryClient } from './mysql-client.js'
+import {
+  mysqlCheckColumn,
+  mysqlCheckEnumValues,
+  normaliseCheck,
+} from '../check-enums.js'
 
 interface MysqlColumnRow {
   table_name: string
@@ -15,6 +20,12 @@ interface MysqlColumnRow {
   column_default: string | null
   extra: string
   column_key: string
+}
+
+interface MysqlCheckRow {
+  table_name: string
+  constraint_name: string
+  check_clause: string
 }
 
 interface MysqlForeignKeyRow {
@@ -103,7 +114,56 @@ export class MysqlIntrospector implements DbIntrospector {
       columns.push(toColumn(row))
       byTable.set(row.table_name, columns)
     }
+    await this.attachChecks(byTable)
     return byTable
+  }
+
+  /**
+   * Reads each `CHECK` back from `information_schema.check_constraints` and
+   * gives it to the one column its condition names, as {@link ColumnInfo.checks}
+   * and, for a `` `col` in ('a', 'b') ``, as the column's enum values.
+   *
+   * A server without that view (MySQL before 8.0.16 parses `CHECK` and ignores
+   * it) has no checks to read, so the columns are left as they are.
+   */
+  private async attachChecks(
+    byTable: Map<string, ColumnInfo[]>
+  ): Promise<void> {
+    let rows: MysqlCheckRow[]
+    try {
+      ;({ rows } = await this.client.query<MysqlCheckRow>(
+        `SELECT tc.table_name AS table_name,
+                cc.constraint_name AS constraint_name,
+                cc.check_clause AS check_clause
+         FROM information_schema.check_constraints cc
+         JOIN information_schema.table_constraints tc
+           ON tc.constraint_schema = cc.constraint_schema
+          AND tc.constraint_name = cc.constraint_name
+          AND tc.constraint_type = 'CHECK'
+         WHERE tc.table_schema = DATABASE()
+         ORDER BY tc.table_name, cc.constraint_name`
+      ))
+    } catch {
+      return
+    }
+    for (const row of rows) {
+      const columns = byTable.get(row.table_name)
+      if (!columns) continue
+      const owner = mysqlCheckColumn(
+        row.check_clause,
+        columns.map((c) => c.name)
+      )
+      const column = columns.find((c) => c.name === owner)
+      if (!column) continue
+      column.checks = [
+        ...(column.checks ?? []),
+        {
+          name: row.constraint_name,
+          expression: normaliseCheck(row.check_clause),
+        },
+      ]
+      column.enumValues ??= mysqlCheckEnumValues(row.check_clause)
+    }
   }
 
   async getAllForeignKeys(): Promise<Map<string, ForeignKeyInfo[]>> {

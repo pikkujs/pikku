@@ -1,8 +1,14 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  checkFingerprint,
+  mysqlCheckColumn,
+  mysqlCheckEnumValues,
+  normaliseCheck,
   parseCheckEnumValues,
   parseCheckEnumsFromDdl,
+  parseSqliteChecks,
+  postgresCheckExpression,
   stripSqlComments,
 } from './check-enums.js'
 
@@ -79,4 +85,116 @@ test('parseCheckEnumValues rejects a constraint that is not an enumeration', () 
     undefined
   )
   assert.equal(parseCheckEnumValues(`CHECK ((kind = 'only'::text))`), undefined)
+})
+
+test('normaliseCheck collapses whitespace and unwraps the whole condition only', () => {
+  assert.equal(normaliseCheck('  ((a  >=\n 0))  '), 'a >= 0')
+  assert.equal(normaliseCheck('(a >= 0) AND (b <= 1)'), '(a >= 0) AND (b <= 1)')
+  assert.equal(normaliseCheck("(a IN ('(', ')'))"), "a IN ('(', ')')")
+})
+
+test('postgresCheckExpression strips the CHECK keyword and its parentheses', () => {
+  assert.equal(postgresCheckExpression('CHECK ((qty >= 0))'), 'qty >= 0')
+  assert.equal(
+    postgresCheckExpression(
+      "CHECK ((status = ANY (ARRAY['a'::text, 'b'::text])))"
+    ),
+    "status = ANY (ARRAY['a'::text, 'b'::text])"
+  )
+  assert.equal(postgresCheckExpression('CHECK ((a > 0)) NOT VALID'), 'a > 0')
+})
+
+test('parseSqliteChecks attaches a check to the column it restricts', () => {
+  const checks = parseSqliteChecks(
+    `CREATE TABLE t (
+       id TEXT PRIMARY KEY, -- (CHECK (fake))
+       a INTEGER CONSTRAINT t_a_min_check CHECK ("a" >= 0),
+       "b" TEXT DEFAULT 'CHECK (x)' CHECK (length(b) < 3),
+       c INTEGER,
+       d INTEGER,
+       UNIQUE (c, d),
+       CONSTRAINT t_c_check CHECK (c > 1),
+       CHECK (c < d)
+     )`,
+    ['id', 'a', 'b', 'c', 'd']
+  )
+  assert.deepEqual(checks.get('a'), [
+    { name: 't_a_min_check', expression: '"a" >= 0' },
+  ])
+  assert.deepEqual(checks.get('b'), [{ name: '', expression: 'length(b) < 3' }])
+  assert.deepEqual(checks.get('c'), [
+    { name: 't_c_check', expression: 'c > 1' },
+  ])
+  assert.equal(checks.has('d'), false)
+  assert.equal(checks.has('id'), false)
+})
+
+test('checkFingerprint equates quoting and case but not string values', () => {
+  assert.equal(
+    checkFingerprint(`"status" IN ('a', 'b')`),
+    checkFingerprint(`status in ('a','b')`)
+  )
+  assert.notEqual(
+    checkFingerprint(`status IN ('A')`),
+    checkFingerprint(`status IN ('a')`)
+  )
+})
+
+test('checkFingerprint keeps the case of a quoted identifier and of whitespace inside a string', () => {
+  assert.notEqual(
+    checkFingerprint(`"Qty" >= 0`),
+    checkFingerprint(`"qty" >= 0`)
+  )
+  assert.equal(checkFingerprint(`"Qty" >= 0`), checkFingerprint(`"Qty"  >=  0`))
+  assert.equal(checkFingerprint('`Qty` >= 0'), checkFingerprint('qty >= 0'))
+  assert.notEqual(
+    checkFingerprint(`p <> 'a  b'`),
+    checkFingerprint(`p <> 'a b'`)
+  )
+})
+
+test('mysqlCheckColumn and mysqlCheckEnumValues read what MySQL stores', () => {
+  const clause = "(`status` in (_utf8mb4'draft',_utf8mb4'it''s'))"
+  assert.equal(mysqlCheckColumn(clause, ['status', 'draft']), 'status')
+  assert.deepEqual(mysqlCheckEnumValues(clause), ['draft', "it's"])
+  assert.equal(mysqlCheckColumn('(`a` <= `b`)', ['a', 'b']), undefined)
+  assert.equal(mysqlCheckEnumValues('(`qty` >= 0)'), undefined)
+})
+
+test('a ) inside an enum value does not end the list', () => {
+  assert.deepEqual(
+    mysqlCheckEnumValues("(`s` in (_utf8mb4'a)',_utf8mb4'b'))"),
+    ['a)', 'b']
+  )
+  assert.deepEqual(
+    parseCheckEnumsFromDdl(
+      `CREATE TABLE t (s TEXT CHECK (s IN ('a)', 'b')))`
+    ).get('s'),
+    ['a)', 'b']
+  )
+  assert.deepEqual(
+    parseCheckEnumValues("CHECK ((s = ANY (ARRAY['a]'::text, 'b'::text])))"),
+    ['a]', 'b']
+  )
+})
+
+test('a table-level check names its column whatever the case', () => {
+  const checks = parseSqliteChecks(
+    'CREATE TABLE t (id TEXT, qty INTEGER, CONSTRAINT t_qty_min_check CHECK (QTY >= 0))',
+    ['id', 'qty']
+  )
+  assert.deepEqual(checks.get('qty'), [
+    { name: 't_qty_min_check', expression: 'QTY >= 0' },
+  ])
+  assert.equal(mysqlCheckColumn('(`QTY` >= 0)', ['qty']), 'qty')
+})
+
+test("a column-level check that names another column is that column's, not the one it is written on", () => {
+  const checks = parseSqliteChecks(
+    'CREATE TABLE t (a INTEGER CHECK (b > 0), b INTEGER, c INTEGER CHECK (c < b))',
+    ['a', 'b', 'c']
+  )
+  assert.deepEqual(checks.get('b'), [{ name: '', expression: 'b > 0' }])
+  assert.equal(checks.has('a'), false)
+  assert.equal(checks.has('c'), false, "a check across two columns is no one's")
 })

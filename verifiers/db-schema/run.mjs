@@ -936,6 +936,9 @@ export const tables = defineTables({
       id: { type: 'key', primaryKey: true },
       userId: { references: 'user.id', onDelete: 'cascade', required: true },
       url: { type: 'text', required: true, security: 'pii' },
+      rating: { type: 'integer', min: 1, max: 5 },
+      visibility: { type: 'text', default: 'private', enum: ['private', 'shared'] },
+      label: { type: 'string(32)', minLength: 2, pattern: '^[a-z]+$' },
     },
   },
 })
@@ -1011,6 +1014,117 @@ const refusedBy = (label) => {
   process.stdout.write(output)
   return { status: result.status, output }
 }
+// Constraints: named CHECKs in the SQL on postgres and MySQL (sqlite gets none),
+// types and zod from the sidecar, and the introspector of this engine reads them
+// back as what generate wrote, which is the only reason the second generate
+// above found nothing to do.
+for (const name of [
+  'bookmark_rating_min_check',
+  'bookmark_rating_max_check',
+  'bookmark_visibility_enum_check',
+  'bookmark_label_minlength_check',
+]) {
+  if (dialect === 'sqlite') {
+    check(
+      !tablesSql.includes(name),
+      `${name} is not generated on sqlite, which cannot change a CHECK later`
+    )
+  } else {
+    contains(tablesSql, name, `${name} is in the generated migration`)
+  }
+}
+if (dialect === 'sqlite') {
+  const notice = captureAll('app: pikku db generate (sqlite notice)', 'node', [
+    PIKKU,
+    'db',
+    'generate',
+  ])
+  contains(
+    notice,
+    'not enforced by the database on SQLite',
+    'db generate says the declared constraints are not enforced'
+  )
+  contains(
+    notice,
+    'CHECK ("rating" >= 1)',
+    'and suggests the CHECK to add by hand'
+  )
+}
+check(!tablesSql.includes('a-z'), 'a pattern never reaches SQL')
+check(
+  sidecar.bookmark?.rating?.min === 1 &&
+    sidecar.bookmark?.visibility?.enum?.length === 2,
+  'constraints reached the sidecar'
+)
+check(
+  /'private' \| 'shared'/.test(
+    readFileSync(join(here, '.pikku', 'db', 'schema.gen.ts'), 'utf8')
+  ),
+  'the enum check types visibility as a union (the CHECK round-trips)'
+)
+const zodGen = readFileSync(join(here, '.pikku', 'db', 'zod.gen.ts'), 'utf8')
+check(
+  /rating: z\.number\(\)\.int\(\)\.min\(1\)\.max\(5\)/.test(zodGen) &&
+    /label: z\.string\(\)\.min\(2\)\.regex\(/.test(zodGen),
+  'the generated zod schema carries min/max, length and pattern'
+)
+declareTables(
+  TABLES_SOURCE(USER_COLUMNS).replace(
+    "rating: { type: 'integer', min: 1, max: 5 }",
+    "rating: { type: 'integer', min: 1, max: 10 }"
+  )
+)
+const filesBefore = new Set(readdirSync(MIGRATIONS_DIR))
+capture('app: pikku db generate (changed constraint)', 'node', [
+  PIKKU,
+  'db',
+  'generate',
+])
+const changeFile = readdirSync(MIGRATIONS_DIR).find(
+  (f) => !filesBefore.has(f) && f.includes('app-tables')
+)
+if (dialect === 'sqlite') {
+  check(
+    !changeFile,
+    'changing a constraint on an existing sqlite column writes no migration (no CHECK to change)'
+  )
+  // The declaration now differs from the database only in a constraint sqlite
+  // never enforces, so migrate, codegen and check must all go through.
+  const flow = []
+  for (const sub of ['migrate', 'codegen', 'check']) {
+    const out = captureAll(
+      `app: pikku db ${sub} (constraint-only drift)`,
+      'node',
+      [PIKKU, 'db', sub]
+    )
+    flow.push(out)
+    check(
+      !out.includes('do not cover db/tables.ts'),
+      `db ${sub} does not refuse when only a declared constraint differs`
+    )
+  }
+  check(
+    flow.filter((o) => o.includes('not enforced by the database on SQLite'))
+      .length <= 1,
+    'the unenforced-constraints warning is the only notice, and appears at most once'
+  )
+} else {
+  check(
+    Boolean(changeFile),
+    'changing a constraint on an existing column writes a migration'
+  )
+}
+const changeSql = changeFile ? sqlOf(changeFile) : ''
+if (dialect === 'postgres') {
+  contains(changeSql, 'DROP CONSTRAINT', 'postgres drops the old check')
+  contains(changeSql, 'NOT VALID', 'postgres adds the new one NOT VALID')
+  contains(changeSql, 'VALIDATE CONSTRAINT', 'and validates it separately')
+} else if (dialect === 'mysql') {
+  contains(changeSql, 'DROP CHECK', 'mysql drops the old check')
+  contains(changeSql, '-- pikku:check-probe', 'the added check carries a probe')
+}
+if (changeFile) rmSync(join(MIGRATIONS_DIR, changeFile), { force: true })
+
 declareTables(
   TABLES_SOURCE(`id: { type: 'id', primaryKey: true },
       email: { type: 'integer' },`)

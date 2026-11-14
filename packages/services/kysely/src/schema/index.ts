@@ -27,7 +27,11 @@ import { workflowSchema } from './workflow.schema.js'
 import { virtualUserSchema } from './virtual-user.schema.js'
 import { virtualUserScheduleSchema } from './virtual-user-schedule.schema.js'
 
-export { compileTables, tableRequirements } from './compile-tables.js'
+export {
+  checkName,
+  compileTables,
+  tableRequirements,
+} from './compile-tables.js'
 
 export type {
   PikkuSchema,

@@ -8,7 +8,7 @@ import {
   type AnnotationMap,
   type ColAnnotation,
 } from './annotation-parser.js'
-import type { ZodFormat } from './zod-codegen.js'
+import type { ZodConstraints, ZodFormat } from './zod-codegen.js'
 import {
   bareUnquotedTableName,
   readMigrationProvenance,
@@ -265,6 +265,39 @@ function bareTableName(name: string): string {
   return dot >= 0 ? name.slice(dot + 1) : name
 }
 
+/** Two enum lists hold the same values, in any order. */
+function sameValues(a: readonly string[], b: readonly string[]): boolean {
+  return (
+    a.length === b.length &&
+    [...a].sort().every((value, i) => value === [...b].sort()[i])
+  )
+}
+
+const enumLabel = (values: readonly string[]): string =>
+  values.map((v) => `'${v}'`).join(' | ')
+
+/** The bounds a column declares that its resolved select type can take, if any. */
+function zodConstraintsFor(
+  ann: ColAnnotation | null,
+  base: string,
+  integer: boolean
+): ZodConstraints | undefined {
+  const picked: ZodConstraints =
+    base === 'number'
+      ? { int: integer ? true : undefined, min: ann?.min, max: ann?.max }
+      : base === 'string'
+        ? {
+            minLength: ann?.minLength,
+            maxLength: ann?.maxLength,
+            pattern: ann?.pattern,
+          }
+        : {}
+  const defined = Object.entries(picked).filter(([, v]) => v !== undefined)
+  return defined.length > 0
+    ? (Object.fromEntries(defined) as ZodConstraints)
+    : undefined
+}
+
 function emitInterface(
   table: TableSchema & { displayName?: string },
   camelCase: boolean,
@@ -272,6 +305,7 @@ function emitInterface(
   dialect: Dialect,
   enumByName: Map<string, string[]>,
   formatHints: Record<string, Record<string, ZodFormat>>,
+  constraintHints: Record<string, Record<string, ZodConstraints>>,
   warnings: CodedDiagnostic[],
   frameworkTables: ReadonlySet<string> = new Set()
 ): string {
@@ -323,9 +357,25 @@ function emitInterface(
       // from a Postgres enum (`type` is 'USER-DEFINED', real values via `udtName`)
       // or, on SQLite, from a `CHECK (col IN (…))` constraint the introspector
       // parsed onto `col.enumValues`.
-      const enumValues =
+      // The declaration is the source of truth, so when it and the database
+      // disagree the union follows the declaration (the migration that brings
+      // the database in line is the pending side). That is said, once per
+      // column, rather than done silently.
+      const databaseEnum =
         col.enumValues ??
         (col.udtName ? enumByName.get(col.udtName) : undefined)
+      const enumValues = ann?.enum ?? databaseEnum
+      if (ann?.enum && databaseEnum && !sameValues(ann.enum, databaseEnum)) {
+        warnings.push({
+          severity: 'warn',
+          code: ErrorCode.DB_ENUM_DECLARATION_MISMATCH,
+          message:
+            `Column "${bare}.${col.name}": declared ${enumLabel(ann.enum)} but the ` +
+            `database has ${enumLabel(databaseEnum)}. The generated types follow the ` +
+            `declaration. Run \`pikku db generate\` for the migration that brings the ` +
+            `database in line.`,
+        })
+      }
       const enumUnion =
         enumValues && enumValues.length > 0
           ? enumValues.map((v) => `'${escapeTsString(v)}'`).join(' | ')
@@ -377,6 +427,18 @@ function emitInterface(
           })
         }
       }
+
+      // Declared bounds refine the zod schema the same way: `min`/`max` on a
+      // number, the length bounds and `pattern` on a string. On any other
+      // resolved type (an enum union, a Date) they have nothing to refine.
+      // An integer column (INT, BIGINT, SMALLINT, SERIAL, ...) also asks zod for
+      // `.int()`, but only while its type is still the number the DB gave it.
+      const bounds = zodConstraintsFor(
+        ann,
+        selectBase(typeAnn, col),
+        !typeAnn?.tsType && /INT|SERIAL/i.test(col.type)
+      )
+      if (bounds) (constraintHints[ifaceName] ??= {})[fieldName] = bounds
 
       const classification: Classification = ann?.classification ?? 'private'
 
@@ -612,6 +674,8 @@ export interface CodegenResult {
    * shapes the zod emitter parses out of `schema.gen.ts`.
    */
   zodFormats: Record<string, Record<string, ZodFormat>>
+  /** Per-interface, per-field bounds for the zod codegen, keyed like `zodFormats`. */
+  zodConstraints: Record<string, Record<string, ZodConstraints>>
 }
 
 /**
@@ -629,15 +693,20 @@ export interface CodegenResult {
  */
 function emitEnumsModule(
   tables: TableSchema[],
-  enumByName: Map<string, string[]>
+  enumByName: Map<string, string[]>,
+  explicitAnnotations: AnnotationMap
 ): string {
   const pascal = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
   const seen = new Set<string>()
   const lines: string[] = []
   for (const t of tables) {
     const tablePart = pascal(snakeToCamel(bareTableName(t.name)))
+    const tableCols = explicitAnnotations[bareTableName(t.name)] ?? {}
     for (const col of t.columns) {
+      // The same order the schema types use, so a column the declaration
+      // restricts (SQLite carries no CHECK for it) gets its union here too.
       const values =
+        tableCols[col.name]?.enum ??
         col.enumValues ??
         (col.udtName ? enumByName.get(col.udtName) : undefined)
       if (!values || values.length === 0) continue
@@ -722,6 +791,7 @@ export async function generateSchemaTypes(
       : []
   )
   const zodFormats: Record<string, Record<string, ZodFormat>> = {}
+  const zodConstraints: Record<string, Record<string, ZodConstraints>> = {}
   const interfaces = tables
     .map((t) =>
       emitInterface(
@@ -731,6 +801,7 @@ export async function generateSchemaTypes(
         dialect,
         enumByName,
         zodFormats,
+        zodConstraints,
         warnings,
         frameworkTables
       )
@@ -906,7 +977,7 @@ export async function generateSchemaTypes(
 
   // ── enums.gen.ts ─────────────────────────────────────────────────────────────
   const enumsBody = options.enumsFile
-    ? emitEnumsModule(tables, enumByName)
+    ? emitEnumsModule(tables, enumByName, explicitAnnotations)
     : null
 
   // ── write files ───────────────────────────────────────────────────────────────
@@ -988,5 +1059,6 @@ export async function generateSchemaTypes(
     tables: tables.map((t) => t.name),
     warnings,
     zodFormats,
+    zodConstraints,
   }
 }

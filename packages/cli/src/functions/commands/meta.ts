@@ -5,6 +5,7 @@ import type { CodeEditOperation } from '@pikku/code-edit'
 import { existsSync, readdirSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
+import { loadAnnotations } from '../db/annotation-parser.js'
 import { databaseContext } from '../db/db-context.js'
 import { workspaceRoot } from '../../utils/workspace-root.js'
 import {
@@ -27,6 +28,7 @@ import {
   interfaceRows,
   matchMetaRows,
   parseDbSchema,
+  withConstraints,
   parseMetaTerms,
   screenRows,
   translationRows,
@@ -51,7 +53,10 @@ const printRows = (
 const readDbTables = async (config: any): Promise<DbTable[] | null> => {
   const schemaFile = join(config.outDir, 'db', 'schema.gen.ts')
   if (!existsSync(schemaFile)) return null
-  return parseDbSchema(await readFile(schemaFile, 'utf8'))
+  return withConstraints(
+    parseDbSchema(await readFile(schemaFile, 'utf8')),
+    loadAnnotations(config.rootDir)
+  )
 }
 
 /** The frontends the config names; a project that names none has them under `apps/`. */

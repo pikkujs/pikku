@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
+import type { ColumnConstraints } from '@pikku/core/db'
 import type { ColumnKind } from '@pikku/kysely'
 import { ZOD_FORMATS, type ZodFormat } from './zod-codegen.js'
 
@@ -23,7 +24,7 @@ export const COLUMN_FORMS = [
   'sealed',
 ] as const satisfies readonly ColumnForm[]
 
-export interface ColAnnotation {
+export interface ColAnnotation extends ColumnConstraints {
   /** Column kind override: `date`, `bool`, `json`, or `uuid`. */
   kind?: AnnotationKind
   /** TypeScript type string that overrides the inferred column type, e.g. `string[]`. */
@@ -84,6 +85,12 @@ export interface RawEntry {
   tsType?: string
   format?: string
   description?: string
+  enum?: unknown
+  min?: unknown
+  max?: unknown
+  minLength?: unknown
+  maxLength?: unknown
+  pattern?: unknown
 }
 
 type RawTable = Record<string, RawEntry | null>
@@ -118,6 +125,20 @@ export function toColAnnotation(ann: RawEntry): ColAnnotation {
     entry.form = ann.form as ColumnForm
   }
   if (ann.keyId) entry.keyId = ann.keyId
+  if (
+    Array.isArray(ann.enum) &&
+    ann.enum.length > 0 &&
+    ann.enum.every((v) => typeof v === 'string')
+  ) {
+    entry.enum = ann.enum
+  }
+  for (const field of ['min', 'max', 'minLength', 'maxLength'] as const) {
+    const value = ann[field]
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      entry[field] = value
+    }
+  }
+  if (typeof ann.pattern === 'string') entry.pattern = ann.pattern
   const strategy = parseStrategy(ann.classification)
   if (strategy !== null) entry.anonymize = strategy
   return entry
@@ -130,7 +151,8 @@ export function toColAnnotation(ann: RawEntry): ColAnnotation {
  * there is no SQL-comment fallback.
  *
  * Each entry is `{ security?, classification?: <anonymize strategy>, kind?,
- * tsType?, format?, form?, keyId?, description? }`, keyed by the bare physical
+ * tsType?, format?, form?, keyId?, description?, enum?, min?, max?, minLength?,
+ * maxLength?, pattern? }`, keyed by the bare physical
  * table name and then the physical column name, which is how the codegen looks
  * columns up. Returns `{}` when there is no sidecar (a project that declares no
  * tables).

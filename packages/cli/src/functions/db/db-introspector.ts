@@ -1,3 +1,14 @@
+/**
+ * One `CHECK` constraint that restricts a single column, as the database holds
+ * it. `expression` is the tested condition without the `CHECK` keyword or its
+ * outer parentheses, whitespace collapsed (see `normaliseCheck`).
+ */
+export interface ColumnCheck {
+  /** The constraint's name; empty for one written without a name. */
+  name: string
+  expression: string
+}
+
 export interface ColumnInfo {
   name: string
   /** Raw SQL/DB type string, e.g. 'INTEGER', 'TEXT', 'boolean', 'timestamp without time zone' */
@@ -19,6 +30,11 @@ export interface ColumnInfo {
    * *is* the enum definition. Typed as a union, mirroring a Postgres enum column.
    */
   enumValues?: string[]
+  /**
+   * The `CHECK` constraints that restrict only this column. Absent when there
+   * are none. A check across several columns belongs to none of them.
+   */
+  checks?: ColumnCheck[]
 }
 
 export interface ForeignKeyInfo {
