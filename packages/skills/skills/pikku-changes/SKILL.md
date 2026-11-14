@@ -47,6 +47,10 @@ the work is a page, screen or view (including the owner's lists of orders or boo
 functions, tables and rules, `emails` only for the sending of a message. Screens that only read
 the data can run side by side, so depend on the data change, not on each other.
 
+While filing, do not run `pikku changes ask` at all: nobody is there to answer, and a change left
+waiting on an answer is a change nobody can build. Where you are unsure, write "Decision: ..." in
+the body and file it. When the last change is filed, stop.
+
 ## The loop
 
 **Never poll.** No `sleep` loops, no repeated `list`, no re-running `show` to see if
