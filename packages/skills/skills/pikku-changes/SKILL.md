@@ -13,6 +13,9 @@ Empty the queue without making them regret filing.
 Run every command from the checkout. The queue lives in it (`.git/pikku-changes.json`, shared by every
 worktree). `--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
 
+**Filing a plan from a request (no work file from `next`)?** Go to "Filing a plan from a brief" and stop
+after filing: the claim-and-build steps below are for agents `next` launches, not for you.
+
 **Launched by `pikku changes next`?** `pikku changes next` picks one agent: a merge conflict or a changeset with no plan
 goes back to a changes agent; open changes go to a changes agent; a pikku version bump goes to an
 upgrade agent, and knowledge no change builds yet (`pikku knowledge gaps`) to a knowledge agent — both
