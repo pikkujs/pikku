@@ -20,7 +20,8 @@
  *
  * Besides building, each addon is checked for what a consumer needs from it:
  * the `addon` block and icon the console lists it by, forceRequiredServices so
- * its service survives tree-shaking, a base URL that is a url() with the
+ * a shared-secret or no-auth addon's service survives tree-shaking (a per-user
+ * addon builds its client per request and writes none), a base URL that is a url() with the
  * spec's first server as default, and z.unknown() where the spec's response
  * is missing or too vague to validate against.
  */
@@ -365,10 +366,19 @@ try {
       config.addon?.icon && existsSync(join(addonDir, config.addon.icon)),
       `${addon.name}: the icon ${config.addon?.icon} was not written`
     )
-    check(
-      config.forceRequiredServices?.includes(camelName),
-      `${addon.name}: forceRequiredServices must include ${camelName}, got ${JSON.stringify(config.forceRequiredServices)}`
-    )
+    const perUser =
+      addon.delegated || addon.credential || addon.args.includes('--credential')
+    if (perUser) {
+      check(
+        config.forceRequiredServices === undefined,
+        `${addon.name}: a per-user addon builds its client per request, so it must not write forceRequiredServices, got ${JSON.stringify(config.forceRequiredServices)}`
+      )
+    } else {
+      check(
+        config.forceRequiredServices?.includes(camelName),
+        `${addon.name}: forceRequiredServices must include ${camelName}, got ${JSON.stringify(config.forceRequiredServices)}`
+      )
+    }
 
     const variable = read(join(addonDir, 'src', `${addon.name}.variable.ts`))
     check(
