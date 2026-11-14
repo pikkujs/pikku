@@ -61,6 +61,7 @@ pub const DB_FORM_ON_NON_STRING: &str = "PKU484";
 pub const DB_DEFAULT_SCHEMA_NAME_COLLISION: &str = "PKU485";
 pub const DB_PII_NAME_NOT_ANNOTATED: &str = "PKU486";
 pub const DB_SECRET_NAME_NOT_ANNOTATED: &str = "PKU487";
+pub const DB_ENUM_DECLARATION_MISMATCH: &str = "PKU488";
 pub const SCHEMA_GENERATION_ERROR: &str = "PKU456";
 pub const SCHEMA_REFERENCE_UNRESOLVED: &str = "PKU463";
 pub const INLINE_SCHEMA: &str = "PKU489";

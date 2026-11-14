@@ -658,7 +658,10 @@ describe('constraints on the declaration', () => {
     )
     const zod = readFileSync(join(root, '.pikku', 'db', 'zod.gen.ts'), 'utf8')
     assert.match(zod, /status: z\.enum\(\['draft', 'sent'\]\)/)
-    assert.match(zod, /qty: z\.number\(\)\.min\(0\)\.max\(99\)\.nullable\(\)/)
+    assert.match(
+      zod,
+      /qty: z\.number\(\)\.int\(\)\.min\(0\)\.max\(99\)\.nullable\(\)/
+    )
     assert.match(
       zod,
       /slug: z\.email\(\)\.min\(2\)\.max\(16\)\.regex\(new RegExp\("\^\[a-z-\]\+\$"\)\)\.nullable\(\)/
@@ -673,6 +676,33 @@ describe('constraints on the declaration', () => {
     const again = await generate(resolved)
     assert.deepEqual(again.refusals, [])
     assert.deepEqual(again.written, [])
+  })
+
+  test('sqlite: generate, migrate, codegen and drift all agree when only constraints are declared', async () => {
+    declare(
+      item(`status: { type: 'text', enum: ['draft', 'sent'] },
+        qty: { type: 'integer', min: 0, max: 9 },
+        slug: { type: 'string(16)', maxLength: 16 },`)
+    )
+    const resolved = sqliteProject()
+    const { refusals } = await generate(resolved)
+    assert.deepEqual(refusals, [])
+    await migrateAndCodegen(resolved)
+    const drift = await computeDeclaredTablesDrift(resolved)
+    assert.deepEqual([drift.pending, drift.refusals], [false, []])
+    assert.deepEqual((await generate(resolved)).written, [])
+    // a constraint changed, and a constrained column added, on the existing table
+    declare(
+      item(`status: { type: 'text', enum: ['draft', 'sent', 'void'] },
+        qty: { type: 'integer', min: 0, max: 99 },
+        slug: { type: 'string(16)', maxLength: 8 },
+        kind: { type: 'text', enum: ['a', 'b'] },`)
+    )
+    const added = await generate(resolved)
+    assert.deepEqual(added.refusals, [])
+    await migrateAndCodegen(resolved)
+    const after = await computeDeclaredTablesDrift(resolved)
+    assert.deepEqual([after.pending, after.refusals], [false, []])
   })
 
   test('a column that is new on postgres gets its check with ADD COLUMN', async () => {
@@ -854,7 +884,7 @@ describe('constraints on the declaration', () => {
     )
     assert.match(
       readFileSync(join(root, '.pikku', 'db', 'zod.gen.ts'), 'utf8'),
-      /n: z\.number\(\)\.min\(1\)\.nullable\(\)/
+      /n: z\.number\(\)\.int\(\)\.min\(1\)\.nullable\(\)/
     )
   })
 })

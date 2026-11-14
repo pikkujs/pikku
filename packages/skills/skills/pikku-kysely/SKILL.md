@@ -342,8 +342,15 @@ pikku db migrate    # applies it and regenerates the types
   `migrate` runs against existing rows first. **SQLite gets no CHECK at all**:
   validation only, and `db generate`/`db check` print one notice with the
   `CHECK` SQL to add by hand (silence: `validate.rules["db-sqlite-unenforced-constraints"]
-  = "off"`). A table too large to validate, or data that breaks the check, is for
-  a person to migrate; say so rather than editing around it.
+= "off"`). A table too large to validate, or data that breaks the check, is for
+  a person to migrate; say so rather than editing around it. **A declared
+  constraint is enforced at runtime only where a function uses the generated zod
+  (`<Table>InsertZ` / `PatchZ` / `Z`) as its `input`**; a Kysely write that skips
+  such a function is guarded only by the DB `CHECK`s (Postgres/MySQL), and on
+  SQLite not at all, so route values that must be right through a function with
+  that input. Integer columns are generated as `z.number().int()`. When a
+  declared `enum` differs from the database's, the generated union follows the
+  declaration and codegen warns `PKU488` per column; run `pikku db generate`.
 - **Better Auth's and the runtime's own tables come annotated.** `user.email` is
   `pii` (+ `format: 'email'`), `session.token`, `account.access_token` /
   `refresh_token` / `id_token` and `verification.value` are `secret` + `form:

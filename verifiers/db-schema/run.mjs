@@ -1064,7 +1064,7 @@ check(
 )
 const zodGen = readFileSync(join(here, '.pikku', 'db', 'zod.gen.ts'), 'utf8')
 check(
-  /rating: z\.number\(\)\.min\(1\)\.max\(5\)/.test(zodGen) &&
+  /rating: z\.number\(\)\.int\(\)\.min\(1\)\.max\(5\)/.test(zodGen) &&
     /label: z\.string\(\)\.min\(2\)\.regex\(/.test(zodGen),
   'the generated zod schema carries min/max, length and pattern'
 )
@@ -1087,6 +1087,26 @@ if (dialect === 'sqlite') {
   check(
     !changeFile,
     'changing a constraint on an existing sqlite column writes no migration (no CHECK to change)'
+  )
+  // The declaration now differs from the database only in a constraint sqlite
+  // never enforces, so migrate, codegen and check must all go through.
+  const flow = []
+  for (const sub of ['migrate', 'codegen', 'check']) {
+    const out = captureAll(
+      `app: pikku db ${sub} (constraint-only drift)`,
+      'node',
+      [PIKKU, 'db', sub]
+    )
+    flow.push(out)
+    check(
+      !out.includes('do not cover db/tables.ts'),
+      `db ${sub} does not refuse when only a declared constraint differs`
+    )
+  }
+  check(
+    flow.filter((o) => o.includes('not enforced by the database on SQLite'))
+      .length <= 1,
+    'the unenforced-constraints warning is the only notice, and appears at most once'
   )
 } else {
   check(

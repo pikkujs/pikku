@@ -690,7 +690,7 @@ describe('declared constraints', () => {
     })
     assert.deepEqual(result.zodConstraints, {
       AppWidget: {
-        qty: { min: 0, max: 9 },
+        qty: { int: true, min: 0, max: 9 },
         code: { minLength: 2, maxLength: 8, pattern: '^[a-z]+$' },
       },
     })
@@ -701,19 +701,75 @@ describe('declared constraints', () => {
       widget: { kind: { enum: ['a', 'b'] } },
     })
     assert.match(readFileSync(result.outFile, 'utf8'), /kind: .*'a' \| 'b'/)
-    assert.deepEqual(result.zodConstraints, {})
+    assert.deepEqual(result.zodConstraints, {
+      AppWidget: { qty: { int: true } },
+    })
   })
 
-  test('the database enum wins over the declared one', async () => {
+  test('a declared enum that differs from the database wins, and warns once per column', async () => {
     const result = await run(
       [col({ name: 'kind', type: 'text', enumValues: ['x', 'y'] })],
       { widget: { kind: { enum: ['a', 'b'] } } }
     )
-    assert.match(readFileSync(result.outFile, 'utf8'), /'x' \| 'y'/)
+    assert.match(readFileSync(result.outFile, 'utf8'), /'a' \| 'b'/)
+    assert.doesNotMatch(readFileSync(result.outFile, 'utf8'), /'x'/)
+    const mismatches = byCode(result, ErrorCode.DB_ENUM_DECLARATION_MISMATCH)
+    assert.equal(mismatches.length, 1, JSON.stringify(result.warnings))
+    const message = mismatches[0]!.message
+    assert.match(message, /widget\.kind/)
+    assert.match(message, /declared 'a' \| 'b'/)
+    assert.match(message, /database has 'x' \| 'y'/)
+    assert.match(message, /pikku db generate/)
   })
 
-  test('nothing is emitted for a table with no constraints', async () => {
+  test('the same enum in another order is not a mismatch', async () => {
+    const result = await run(
+      [col({ name: 'kind', type: 'text', enumValues: ['b', 'a'] })],
+      { widget: { kind: { enum: ['a', 'b'] } } }
+    )
+    assert.equal(
+      byCode(result, ErrorCode.DB_ENUM_DECLARATION_MISMATCH).length,
+      0
+    )
+  })
+
+  test('an enum on one side only is not a mismatch', async () => {
+    const declaredOnly = await run(columns, {
+      widget: { kind: { enum: ['a', 'b'] } },
+    })
+    const databaseOnly = await run([
+      col({ name: 'kind', type: 'text', enumValues: ['x', 'y'] }),
+    ])
+    for (const result of [declaredOnly, databaseOnly]) {
+      assert.equal(
+        byCode(result, ErrorCode.DB_ENUM_DECLARATION_MISMATCH).length,
+        0
+      )
+    }
+  })
+
+  test('a table with no declared constraints hints only its integer columns', async () => {
     const result = await run(columns)
-    assert.deepEqual(result.zodConstraints, {})
+    assert.deepEqual(result.zodConstraints, {
+      AppWidget: { qty: { int: true } },
+    })
+  })
+
+  test('whole-number types hint int; floats, text and a tsType override do not', async () => {
+    const result = await run(
+      [
+        col({ name: 'a', type: 'integer' }),
+        col({ name: 'b', type: 'bigint' }),
+        col({ name: 'c', type: 'smallint' }),
+        col({ name: 'd', type: 'real' }),
+        col({ name: 'e', type: 'numeric' }),
+        col({ name: 'f', type: 'text' }),
+        col({ name: 'g', type: 'integer' }),
+      ],
+      { widget: { g: { tsType: 'number' } } }
+    )
+    assert.deepEqual(result.zodConstraints, {
+      AppWidget: { a: { int: true }, b: { int: true }, c: { int: true } },
+    })
   })
 })

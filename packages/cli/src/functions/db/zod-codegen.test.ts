@@ -202,3 +202,18 @@ test('a pattern with a quote and a backslash is emitted as a string, not a liter
   )
   assert.match(out, /\.regex\(new RegExp\("\^\\"\\\\d\+'\/\$"\)\)/)
 })
+
+test('an integer hint puts .int() before the bounds and .nullable()', () => {
+  const out = generate(
+    `
+export interface Item {
+  qty: number | null
+  rate: number
+}
+`,
+    {},
+    { Item: { qty: { int: true, min: 0 }, rate: { min: 0.5 } } }
+  )
+  assert.match(out, /qty: z\.number\(\)\.int\(\)\.min\(0\)\.nullable\(\),/)
+  assert.match(out, /rate: z\.number\(\)\.min\(0\.5\),/)
+})

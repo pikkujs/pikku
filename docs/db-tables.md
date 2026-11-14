@@ -33,16 +33,16 @@ Postgres and MySQL all work from the same declaration.
 
 ## Columns
 
-| Field                                                     | Meaning                                                                                                              |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `type`                                                    | `id`, `key`, `text`, `string(n)`, `integer`, `bigint`, `real`, `boolean`, `timestamp`, `timestamptz`, `uuid`, `json` |
-| `required`                                                | `NOT NULL`                                                                                                           |
-| `default`                                                 | A literal, `{ now: true }`, or `{ sql: '...' }` passed through verbatim                                              |
-| `primaryKey`, `unique`, `index`                           | Single-column key, constraint or index. Composite ones go on the table                                               |
-| `references`                                              | `table.column`. Without a `type`, the column takes its target's type                                                 |
-| `onDelete`                                                | `cascade`, `setNull`, `restrict` (the default) or `noAction`                                                         |
+| Field                                                     | Meaning                                                                                                                |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `type`                                                    | `id`, `key`, `text`, `string(n)`, `integer`, `bigint`, `real`, `boolean`, `timestamp`, `timestamptz`, `uuid`, `json`   |
+| `required`                                                | `NOT NULL`                                                                                                             |
+| `default`                                                 | A literal, `{ now: true }`, or `{ sql: '...' }` passed through verbatim                                                |
+| `primaryKey`, `unique`, `index`                           | Single-column key, constraint or index. Composite ones go on the table                                                 |
+| `references`                                              | `table.column`. Without a `type`, the column takes its target's type                                                   |
+| `onDelete`                                                | `cascade`, `setNull`, `restrict` (the default) or `noAction`                                                           |
 | `enum`, `min`, `max`, `minLength`, `maxLength`, `pattern` | Value constraints: `CHECK`s in the SQL on Postgres and MySQL (never `pattern`), and bounds in the generated zod schema |
-| Annotation fields                                         | `security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`                             |
+| Annotation fields                                         | `security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`                               |
 
 A table takes `columns`, and optionally `primaryKey` (composite), `unique`
 (composite constraints), `indexes` (with `unique`, a partial `where`, and a `name`),
@@ -72,6 +72,31 @@ Whether the database enforces them depends on the engine:
   `IN (...)` one still types the column as a union. Silence the notice with
   `validate.rules["db-sqlite-unenforced-constraints"] = "off"` in the Pikku
   config.
+
+#### Where a constraint is actually enforced
+
+A declared constraint is enforced at runtime only where a function uses the
+generated zod schema (`<Table>InsertZ`, `<Table>PatchZ` or `<Table>Z`, from
+`.pikku/db/zod.gen.ts`) as its `input`. A Kysely write that skips such a
+function (a direct `db.insertInto(...)`, a script, a migration, another
+service) is guarded only by the database's `CHECK`s: on Postgres and MySQL
+those, and on SQLite nothing at all. If a value must never be wrong, put it
+behind a function whose `input` is the generated schema, and on SQLite add the
+`CHECK` yourself.
+
+Two details of the generated zod schema and types:
+
+- A whole-number column (`integer`, `bigint`, `smallint`, `serial` and the other
+  `INT` types) is emitted as `z.number().int()`, so `1.5` is rejected before it
+  reaches the database. A float, `numeric` or `decimal` column stays
+  `z.number()`, and so does a column with a `tsType` override.
+- The declaration is the source of truth for an `enum`. When the declared values
+  and the values the database holds differ (a Postgres enum or a `CHECK ... IN`
+  on a column whose declaration changed), the generated union follows the
+  declaration and `pikku db generate`/`migrate`/`codegen` warn once per column
+  (`PKU488`): `Column "table.column": declared 'a' | 'b' but the database has
+'x' | 'y'`. Run `pikku db generate` for the migration that brings the database
+  in line. The same values in a different order are not a mismatch.
 
 On a Postgres or MySQL column that already exists:
 

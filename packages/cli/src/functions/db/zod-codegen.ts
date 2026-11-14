@@ -38,6 +38,8 @@ export type ZodFormat = keyof typeof ZOD_FORMATS
  * here, because its values already make the column's type a union of literals.
  */
 export interface ZodConstraints {
+  /** The column holds whole numbers only: `z.number().int()`. */
+  int?: boolean
   min?: number
   max?: number
   minLength?: number
@@ -304,7 +306,7 @@ function scalarSchema(
 
 /** The chained refinements for a column's bounds, on a string or a number. */
 function zodBounds(constraints: ZodConstraints, isString: boolean): string {
-  let chain = ''
+  let chain = !isString && constraints.int ? '.int()' : ''
   const [low, high] = isString
     ? [constraints.minLength, constraints.maxLength]
     : [constraints.min, constraints.max]

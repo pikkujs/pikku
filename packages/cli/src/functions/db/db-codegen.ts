@@ -265,20 +265,31 @@ function bareTableName(name: string): string {
   return dot >= 0 ? name.slice(dot + 1) : name
 }
 
+/** Two enum lists hold the same values, in any order. */
+function sameValues(a: string[], b: string[]): boolean {
+  return (
+    a.length === b.length &&
+    [...a].sort().every((value, i) => value === [...b].sort()[i])
+  )
+}
+
+const enumLabel = (values: string[]): string =>
+  values.map((v) => `'${v}'`).join(' | ')
+
 /** The bounds a column declares that its resolved select type can take, if any. */
 function zodConstraintsFor(
   ann: ColAnnotation | null,
-  base: string
+  base: string,
+  integer: boolean
 ): ZodConstraints | undefined {
-  if (!ann) return undefined
   const picked: ZodConstraints =
     base === 'number'
-      ? { min: ann.min, max: ann.max }
+      ? { int: integer ? true : undefined, min: ann?.min, max: ann?.max }
       : base === 'string'
         ? {
-            minLength: ann.minLength,
-            maxLength: ann.maxLength,
-            pattern: ann.pattern,
+            minLength: ann?.minLength,
+            maxLength: ann?.maxLength,
+            pattern: ann?.pattern,
           }
         : {}
   const defined = Object.entries(picked).filter(([, v]) => v !== undefined)
@@ -346,10 +357,25 @@ function emitInterface(
       // from a Postgres enum (`type` is 'USER-DEFINED', real values via `udtName`)
       // or, on SQLite, from a `CHECK (col IN (…))` constraint the introspector
       // parsed onto `col.enumValues`.
-      const enumValues =
+      // The declaration is the source of truth, so when it and the database
+      // disagree the union follows the declaration (the migration that brings
+      // the database in line is the pending side). That is said, once per
+      // column, rather than done silently.
+      const databaseEnum =
         col.enumValues ??
-        (col.udtName ? enumByName.get(col.udtName) : undefined) ??
-        ann?.enum
+        (col.udtName ? enumByName.get(col.udtName) : undefined)
+      const enumValues = ann?.enum ?? databaseEnum
+      if (ann?.enum && databaseEnum && !sameValues(ann.enum, databaseEnum)) {
+        warnings.push({
+          severity: 'warn',
+          code: ErrorCode.DB_ENUM_DECLARATION_MISMATCH,
+          message:
+            `Column "${bare}.${col.name}": declared ${enumLabel(ann.enum)} but the ` +
+            `database has ${enumLabel(databaseEnum)}. The generated types follow the ` +
+            `declaration. Run \`pikku db generate\` for the migration that brings the ` +
+            `database in line.`,
+        })
+      }
       const enumUnion =
         enumValues && enumValues.length > 0
           ? enumValues.map((v) => `'${escapeTsString(v)}'`).join(' | ')
@@ -405,7 +431,13 @@ function emitInterface(
       // Declared bounds refine the zod schema the same way: `min`/`max` on a
       // number, the length bounds and `pattern` on a string. On any other
       // resolved type (an enum union, a Date) they have nothing to refine.
-      const bounds = zodConstraintsFor(ann, selectBase(typeAnn, col))
+      // An integer column (INT, BIGINT, SMALLINT, SERIAL, ...) also asks zod for
+      // `.int()`, but only while its type is still the number the DB gave it.
+      const bounds = zodConstraintsFor(
+        ann,
+        selectBase(typeAnn, col),
+        !typeAnn?.tsType && /INT|SERIAL/i.test(col.type)
+      )
       if (bounds) (constraintHints[ifaceName] ??= {})[fieldName] = bounds
 
       const classification: Classification = ann?.classification ?? 'private'
@@ -674,9 +706,9 @@ function emitEnumsModule(
       // The same order the schema types use, so a column the declaration
       // restricts (SQLite carries no CHECK for it) gets its union here too.
       const values =
+        tableCols[col.name]?.enum ??
         col.enumValues ??
-        (col.udtName ? enumByName.get(col.udtName) : undefined) ??
-        tableCols[col.name]?.enum
+        (col.udtName ? enumByName.get(col.udtName) : undefined)
       if (!values || values.length === 0) continue
       const name = `${tablePart}${pascal(snakeToCamel(col.name))}`
       if (seen.has(name)) continue
