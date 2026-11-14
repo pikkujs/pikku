@@ -263,7 +263,7 @@
     },
     "packages/addon/pikku-console": {
       "name": "@pikku/addon-console",
-      "version": "0.12.69",
+      "version": "0.12.70",
       "dependencies": {
         "@pikku/code-edit": "^0.12.13",
         "@pikku/knowledge": "^0.12.21",
@@ -328,7 +328,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.211",
+      "version": "0.12.212",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -430,7 +430,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.157",
+      "version": "0.12.158",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -491,7 +491,7 @@
     },
     "packages/deploy/deploy-core": {
       "name": "@pikku/deploy",
-      "version": "0.12.21",
+      "version": "0.12.22",
       "dependencies": {
         "semver": "^7.8.5",
       },
@@ -605,7 +605,7 @@
     },
     "packages/inspector-go": {
       "name": "@pikku/inspector-go",
-      "version": "0.12.14",
+      "version": "0.12.15",
       "dependencies": {
         "@pikku/inspector": "^0.12.119",
         "tsx": "^4.23.15",
@@ -1020,7 +1020,7 @@
     },
     "packages/services/better-auth": {
       "name": "@pikku/better-auth",
-      "version": "0.12.64",
+      "version": "0.12.65",
       "dependencies": {
         "@pikku/jose": "^0.12.10",
       },
@@ -1071,7 +1071,7 @@
     },
     "packages/services/kysely": {
       "name": "@pikku/kysely",
-      "version": "0.13.44",
+      "version": "0.13.45",
       "bin": {
         "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js",
       },
@@ -1263,7 +1263,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.75",
+      "version": "0.12.76",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",
