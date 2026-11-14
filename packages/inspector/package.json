@@ -8,7 +8,7 @@
   },
   "description": "The state Pikku's inspection produces \u2014 its types, serialization and the data helpers the CLI and the native inspector share",
   "author": "yasser.fadl@gmail.com",
-  "license": "BUSL-1.1",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "module": "dist/index.js",
   "main": "dist/index.js",
