@@ -3,6 +3,7 @@ name = "pikku-inspect-rs"
 version = "0.0.0"
 edition = "2024"
 publish = false
+license = "AGPL-3.0-only"
 description = "Rust port of pikku-inspect (the Go inspector), built on tsrs"
 
 [lib]

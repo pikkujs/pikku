@@ -3,7 +3,7 @@
 Read, validate and index a project's `knowledge/` directory — the notes that say
 **what an app is**, in the language its users use. **MIT licensed**, deliberately:
 the format is the open core, so any tool can adopt it without taking on the Pikku
-CLI's Business Source License.
+CLI's AGPL-3.0 licence.
 
 The format is the [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog):
 a note is a markdown file whose **path is its identity**, carrying YAML frontmatter

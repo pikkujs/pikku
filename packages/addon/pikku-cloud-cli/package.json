@@ -60,7 +60,7 @@
     "@standard-schema/spec": "^1.1.0",
     "zod": "^4"
   },
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "pikku": {
     "uses": {
       "cloud": "@pikkustudio/addon-cloud-api@^0.0.2"

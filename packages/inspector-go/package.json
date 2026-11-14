@@ -8,7 +8,7 @@
   },
   "description": "Native inspector engine for Pikku, the CLI's default \u2014 runs analysis and finalize in the pikku-inspect binary, built on typescript-go",
   "author": "yasser.fadl@gmail.com",
-  "license": "BUSL-1.1",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "module": "dist/index.js",
   "main": "dist/index.js",
