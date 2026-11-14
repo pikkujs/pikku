@@ -691,6 +691,13 @@ describe('compileTables applied to a real database', () => {
   })
 })
 
+const checkNames = (dialect: Dialect, t: ReturnType<typeof defineTables>) =>
+  [
+    ...compile(dialect, t)
+      .join('\n')
+      .matchAll(/constraint [`"]([^`"]+)[`"] check/g),
+  ].map((m) => m[1]!)
+
 describe('compileTables: constraints', () => {
   const tables = defineTables({
     invoice: {
@@ -713,9 +720,9 @@ describe('compileTables: constraints', () => {
     },
   })
 
-  test('sqlite', () => {
+  test('sqlite gets no CHECK, which it could not change later without a rebuild', () => {
     assert.deepEqual(compile('sqlite', tables), [
-      `create table "invoice" ("invoice_id" text primary key, "status" text default 'draft' not null constraint "invoice_status_enum_check" check ("status" in ('draft', 'sent', 'it''s paid')), "amount_cents" integer not null constraint "invoice_amount_cents_min_check" check ("amount_cents" >= 0) constraint "invoice_amount_cents_max_check" check ("amount_cents" <= 100), "slug" varchar(64) constraint "invoice_slug_minlength_check" check (length("slug") >= 2) constraint "invoice_slug_maxlength_check" check (length("slug") <= 64));`,
+      `create table "invoice" ("invoice_id" text primary key, "status" text default 'draft' not null, "amount_cents" integer not null, "slug" varchar(64));`,
     ])
   })
 
@@ -738,6 +745,31 @@ describe('compileTables: constraints', () => {
     assert.match(statement!, /in \('draft', 'sent', 'it''s paid'\)/)
   })
 
+  test('long names keep the checks distinct, within the engine limit, ending _check', () => {
+    const long = defineTables({
+      a_table_with_a_really_long_name_for_testing_limits: {
+        columns: {
+          id: { type: 'id', primaryKey: true },
+          a_column_with_an_equally_long_name_for_testing: {
+            type: 'integer',
+            min: 0,
+            max: 5,
+          },
+        },
+      },
+    })
+    for (const dialect of ['postgres', 'mysql'] as const) {
+      const names = checkNames(dialect, long)
+      assert.equal(names.length, 2)
+      assert.equal(new Set(names).size, 2)
+      for (const name of names) {
+        assert.ok(Buffer.byteLength(name) <= 63, name)
+        assert.match(name, /_(min|max)_check$/)
+      }
+      assert.deepEqual(names, checkNames(dialect, long))
+    }
+  })
+
   test('pattern never reaches SQL', () => {
     for (const dialect of ['sqlite', 'postgres', 'mysql'] as const) {
       assert.doesNotMatch(compile(dialect, tables).join('\n'), /a-z0-9/)
@@ -745,7 +777,7 @@ describe('compileTables: constraints', () => {
   })
 
   test('a column that takes its type from a reference can be constrained', () => {
-    const statements = compile('sqlite', {
+    const statements = compile('postgres', {
       parent: { columns: { id: { type: 'integer', primaryKey: true } } },
       child: { columns: { parentId: { references: 'parent.id', min: 1 } } },
     })
@@ -829,43 +861,6 @@ describe('compileTables: constraints on a real database', () => {
       await assert.rejects(sql.raw(bad).execute(db), bad)
     }
   }
-
-  test('sqlite enforces them', async () => {
-    const db = new Kysely<any>({
-      dialect: new SqliteDialect({ database: new Database(':memory:') }),
-    })
-    await exercise(db)
-    await db.destroy()
-  })
-
-  test('sqlite adds a named inline check to a populated table', async () => {
-    const database = new Database(':memory:')
-    database.exec(
-      `create table old (id text primary key); insert into old values ('a'), ('b')`
-    )
-    const [statement] = compile('sqlite', {
-      old: {
-        columns: {
-          id: { type: 'id', primaryKey: true },
-          qty: { type: 'integer', min: 0 },
-          kind: { type: 'text', enum: ['x', 'y'] },
-        },
-      },
-    })
-    const definitions = /\((.*)\);$/.exec(statement!)![1]!.split(/, (?=")/)
-    const column = (name: string) =>
-      definitions.find((d) => d.startsWith(`"${name}" `))!
-    database.exec(`alter table old add column ${column('qty')}`)
-    database.exec(`alter table old add column ${column('kind')}`)
-    assert.equal(database.prepare('select count(*) n from old').get().n, 2)
-    assert.throws(() =>
-      database.exec(`insert into old (id, qty) values ('c', -1)`)
-    )
-    assert.throws(() =>
-      database.exec(`insert into old (id, kind) values ('c', 'z')`)
-    )
-    database.close()
-  })
 
   describe('postgres (pglite)', () => {
     let pglite: PGlite

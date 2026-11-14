@@ -330,19 +330,20 @@ pikku db migrate    # applies it and regenerates the types
   pii-looking name. Booleans, dates and numbers, and names ending `_at`,
   `_count`, `_id`, `_type`, `_ref`, `_verified`, are never flagged. Framework
   tables are skipped. There is no config opt-out: annotate the column.
-- **Constraints are real.** `enum`, `min`, `max`, `minLength`, `maxLength`
-  become named `CHECK`s (`<table>_<col>_<kind>_check`) on a new table or a new
-  column, and the zod schema carries them; `pattern` is zod only. On an
-  existing column, postgres and MySQL (8.0.16+) get
+- **Constraints drive validation everywhere, the database on Postgres and
+  MySQL.** `enum`, `min`, `max`, `minLength`, `maxLength` reach the zod schema,
+  the generated union types and the console hints; `pattern` is zod only. On
+  Postgres and MySQL (8.0.16+, older is refused) they become named `CHECK`s
+  (`<table>_<col>_<kind>_check`, hashed in the middle when too long for the
+  engine) on a new table, a new column, or an existing column via
   `ADD`/`DROP CONSTRAINT` (postgres `NOT VALID` then `VALIDATE`, though one
   transaction still holds the lock; MySQL swaps a changed check in under an
   interim name), each added check preceded by a `-- pikku:check-probe` line that
-  `migrate` runs against existing rows first. On sqlite the table is rebuilt
-  (rows, rowids and the AUTOINCREMENT sequence copied; marked
-  `-- pikku:destructive`, so `db migrate` needs `--allowDestructive`; rows that
-  break the check fail the migration and roll it back). A table too large to
-  validate, or data that breaks the check, is for a person to migrate; say so
-  rather than editing around it.
+  `migrate` runs against existing rows first. **SQLite gets no CHECK at all**:
+  validation only, and `db generate`/`db check` print one notice with the
+  `CHECK` SQL to add by hand (silence: `validate.rules["db-sqlite-unenforced-constraints"]
+  = "off"`). A table too large to validate, or data that breaks the check, is for
+  a person to migrate; say so rather than editing around it.
 - **Better Auth's and the runtime's own tables come annotated.** `user.email` is
   `pii` (+ `format: 'email'`), `session.token`, `account.access_token` /
   `refresh_token` / `id_token` and `verification.value` are `secret` + `form:

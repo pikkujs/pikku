@@ -267,7 +267,10 @@ export const withConstraints = (
     ...table,
     columns: table.columns.map((column) => {
       const annotation =
-        annotations[snakeCase(table.table)]?.[snakeCase(column.name)]
+        // `app.item` is `item` in the sidecar, which is keyed by bare name.
+        annotations[snakeCase(table.table.replace(/^.*\./, ''))]?.[
+          snakeCase(column.name)
+        ]
       const constraints = annotation ? describeConstraints(annotation) : ''
       return constraints ? { ...column, constraints } : column
     }),

@@ -160,3 +160,41 @@ test('mysqlCheckColumn and mysqlCheckEnumValues read what MySQL stores', () => {
   assert.equal(mysqlCheckColumn('(`a` <= `b`)', ['a', 'b']), undefined)
   assert.equal(mysqlCheckEnumValues('(`qty` >= 0)'), undefined)
 })
+
+test('a ) inside an enum value does not end the list', () => {
+  assert.deepEqual(
+    mysqlCheckEnumValues("(`s` in (_utf8mb4'a)',_utf8mb4'b'))"),
+    ['a)', 'b']
+  )
+  assert.deepEqual(
+    parseCheckEnumsFromDdl(
+      `CREATE TABLE t (s TEXT CHECK (s IN ('a)', 'b')))`
+    ).get('s'),
+    ['a)', 'b']
+  )
+  assert.deepEqual(
+    parseCheckEnumValues("CHECK ((s = ANY (ARRAY['a]'::text, 'b'::text])))"),
+    ['a]', 'b']
+  )
+})
+
+test('a table-level check names its column whatever the case', () => {
+  const checks = parseSqliteChecks(
+    'CREATE TABLE t (id TEXT, qty INTEGER, CONSTRAINT t_qty_min_check CHECK (QTY >= 0))',
+    ['id', 'qty']
+  )
+  assert.deepEqual(checks.get('qty'), [
+    { name: 't_qty_min_check', expression: 'QTY >= 0' },
+  ])
+  assert.equal(mysqlCheckColumn('(`QTY` >= 0)', ['qty']), 'qty')
+})
+
+test("a column-level check that names another column is that column's, not the one it is written on", () => {
+  const checks = parseSqliteChecks(
+    'CREATE TABLE t (a INTEGER CHECK (b > 0), b INTEGER, c INTEGER CHECK (c < b))',
+    ['a', 'b', 'c']
+  )
+  assert.deepEqual(checks.get('b'), [{ name: '', expression: 'b > 0' }])
+  assert.equal(checks.has('a'), false)
+  assert.equal(checks.has('c'), false, "a check across two columns is no one's")
+})

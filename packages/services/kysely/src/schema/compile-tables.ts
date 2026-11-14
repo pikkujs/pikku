@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import {
   CamelCasePlugin,
   sql,
@@ -178,14 +179,37 @@ const defaultValue = (value: ColumnDefault, ctx: SchemaContext) => {
 }
 
 /** The kind of a `CHECK` a column constraint compiles to, which names it. */
-type CheckKind = 'enum' | 'min' | 'max' | 'minlength' | 'maxlength'
+export type CheckKind = 'enum' | 'min' | 'max' | 'minlength' | 'maxlength'
 
-/** The deterministic name of a column's check, so a later diff finds it again. */
-const checkName = (table: string, column: string, kind: CheckKind): string =>
-  `${snake(table)}_${snake(column)}_${kind}_check`
+/** Postgres keeps 63 bytes of an identifier and MySQL 64 characters. */
+const MAX_NAME_BYTES = 63
 
 /**
- * The `CHECK`s a column's constraints compile to, as the SQL each one tests.
+ * The deterministic name of a column's check, so a later diff finds it again:
+ * `<table>_<column>_<kind>_check`. When that is too long for the engine, the
+ * table and column part is cut and a short hash of the whole name goes in its
+ * place, so two bounds on the same column stay distinct (a plain cut would
+ * make `_min_check` and `_max_check` collide) and the name still ends in
+ * `_<kind>_check`, which is how a removed bound is recognised as generated.
+ */
+export const checkName = (
+  table: string,
+  column: string,
+  kind: CheckKind
+): string => {
+  const owner = `${snake(table)}_${snake(column)}`
+  const full = `${owner}_${kind}_check`
+  if (Buffer.byteLength(full) <= MAX_NAME_BYTES) return full
+  const tail = `_${createHash('sha1').update(full).digest('hex').slice(0, 8)}_${kind}_check`
+  let head = owner
+  while (Buffer.byteLength(head) + Buffer.byteLength(tail) > MAX_NAME_BYTES) {
+    head = head.slice(0, -1)
+  }
+  return `${head}${tail}`
+}
+
+/**
+ * The `CHECK`s a column's constraints compile to on postgres and MySQL, as the SQL each one tests.
  *
  * The value is quoted by the engine's own rules (`sql.lit`), because DDL cannot
  * take bound parameters. `pattern` is not here: it never reaches SQL.
@@ -193,13 +217,10 @@ const checkName = (table: string, column: string, kind: CheckKind): string =>
 const columnChecks = (
   table: string,
   name: string,
-  column: ColumnDeclaration,
-  postgres: boolean,
-  mysql: boolean
+  column: ColumnDeclaration
 ): { name: string; test: ReturnType<typeof sql> }[] => {
   const col = sql.id(name)
-  const length =
-    postgres || mysql ? sql`char_length(${col})` : sql`length(${col})`
+  const length = sql`char_length(${col})`
   const checks: { name: string; test: ReturnType<typeof sql> }[] = []
   const add = (kind: CheckKind, test: ReturnType<typeof sql>) =>
     checks.push({ name: checkName(table, name, kind), test })
@@ -464,15 +485,11 @@ const createTable = (
         if (column.references) {
           col = ctx.references(col, column.references, column.onDelete)
         }
-        // Inline, not at the table level, so the same text is what `ADD COLUMN`
-        // takes on sqlite, which cannot add a table-level constraint later.
-        for (const check of columnChecks(
-          table,
-          name,
-          column,
-          postgres,
-          ctx.mysql
-        )) {
+        // SQLite gets none: it cannot drop or change a CHECK without rebuilding
+        // the table, so Pikku leaves enforcement there to the app's validation.
+        for (const check of postgres || ctx.mysql
+          ? columnChecks(table, name, column)
+          : []) {
           col = col.modifyEnd(
             sql`constraint ${sql.id(check.name)} check (${check.test})`
           )

@@ -41,8 +41,6 @@ export {
   tablesInSourceOrder,
   statementShape,
   tableDefinitions,
-  splitTopLevel,
-  createTableBody,
   type StatementShape,
   type TableDefinitions,
 } from './schema-sql.js'

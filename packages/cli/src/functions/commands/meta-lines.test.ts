@@ -401,6 +401,27 @@ describe('formatting', () => {
 })
 
 describe('withConstraints', () => {
+  test('finds a schema-qualified table under its bare name', () => {
+    const [table] = withConstraints(
+      [
+        {
+          table: 'app.item',
+          columns: [
+            {
+              name: 'qty',
+              type: 'number',
+              nullable: true,
+              generated: false,
+              classification: null,
+            },
+          ],
+        },
+      ],
+      { item: { qty: { min: 0 } } }
+    )
+    assert.equal(table!.columns[0]!.constraints, 'min 0')
+  })
+
   test('adds declared bounds from the sidecar, keyed by physical names', () => {
     const [table] = withConstraints(
       [

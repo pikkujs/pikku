@@ -157,8 +157,9 @@ export class PostgresIntrospector implements DbIntrospector {
     )
 
     const columnChecks =
-      (await this.getColumnChecks({ schema, name: tableName })).get(table) ??
-      new Map<string, ColumnChecks>()
+      (await this.getColumnChecks({ schema, name: tableName })).get(
+        tableKey(schema, tableName)
+      ) ?? new Map<string, ColumnChecks>()
 
     return result.rows.map((r) => ({
       name: r.column_name,

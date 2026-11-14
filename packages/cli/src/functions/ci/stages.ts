@@ -24,8 +24,16 @@ const stageCommand = (stage: CiStage, run: CiRun): CiCommand => {
       return { args: ['bootstrap'] }
     case 'dbMigrate':
       return {
-        // A CI database is built from nothing on this machine and thrown away.
-        args: ['db', 'migrate', '--localOnly', '--allowDestructive'],
+        // Only a throwaway worktree is a CI database built from nothing and
+        // thrown away. Without `-p` the run is in the user's own tree, against
+        // their own .env, where `--localOnly` only means loopback, so a
+        // destructive migration must not be allowed there.
+        args: [
+          'db',
+          'migrate',
+          '--localOnly',
+          ...(run.inWorktree ? ['--allowDestructive'] : []),
+        ],
         dropDatabaseUrl: true,
       }
     case 'emails':

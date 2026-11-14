@@ -268,11 +268,20 @@ export const postgresProbeExecutor =
   }
 
 /**
- * A `ProbeExecutor` over a MySQL migration client. MySQL gives a plain client
- * no way to cancel a running `SELECT` from outside, so a probe that times out is
- * abandoned, not stopped; the connection is closed when the run ends.
+ * A `ProbeExecutor` over a MySQL migration client. The scan runs under
+ * `SET SESSION max_execution_time`, so the server cancels a `SELECT` that runs
+ * past the limit instead of leaving it running after the probe has given up.
+ * The session value is put back afterwards: the connection is the migration's.
  */
 export const mysqlProbeExecutor =
   (client: QueryClient): ProbeExecutor =>
-  async (sql) =>
-    (await client.query<Record<string, unknown>>(sql)).rows
+  async (sql, timeoutMs) => {
+    await client.query(
+      `SET SESSION max_execution_time = ${Math.max(1, Math.floor(timeoutMs))}`
+    )
+    try {
+      return (await client.query<Record<string, unknown>>(sql)).rows
+    } finally {
+      await client.query('SET SESSION max_execution_time = DEFAULT')
+    }
+  }

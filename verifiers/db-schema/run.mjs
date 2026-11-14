@@ -1014,16 +1014,41 @@ const refusedBy = (label) => {
   process.stdout.write(output)
   return { status: result.status, output }
 }
-// Constraints: named CHECKs in the SQL, types and zod from the sidecar, and the
-// introspector of this engine reads them back as what generate wrote, which is
-// the only reason the second generate above found nothing to do.
+// Constraints: named CHECKs in the SQL on postgres and MySQL (sqlite gets none),
+// types and zod from the sidecar, and the introspector of this engine reads them
+// back as what generate wrote, which is the only reason the second generate
+// above found nothing to do.
 for (const name of [
   'bookmark_rating_min_check',
   'bookmark_rating_max_check',
   'bookmark_visibility_enum_check',
   'bookmark_label_minlength_check',
 ]) {
-  contains(tablesSql, name, `${name} is in the generated migration`)
+  if (dialect === 'sqlite') {
+    check(
+      !tablesSql.includes(name),
+      `${name} is not generated on sqlite, which cannot change a CHECK later`
+    )
+  } else {
+    contains(tablesSql, name, `${name} is in the generated migration`)
+  }
+}
+if (dialect === 'sqlite') {
+  const notice = captureAll('app: pikku db generate (sqlite notice)', 'node', [
+    PIKKU,
+    'db',
+    'generate',
+  ])
+  contains(
+    notice,
+    'not enforced by the database on SQLite',
+    'db generate says the declared constraints are not enforced'
+  )
+  contains(
+    notice,
+    'CHECK ("rating" >= 1)',
+    'and suggests the CHECK to add by hand'
+  )
 }
 check(!tablesSql.includes('a-z'), 'a pattern never reaches SQL')
 check(
@@ -1058,32 +1083,23 @@ capture('app: pikku db generate (changed constraint)', 'node', [
 const changeFile = readdirSync(MIGRATIONS_DIR).find(
   (f) => !filesBefore.has(f) && f.includes('app-tables')
 )
-check(
-  Boolean(changeFile),
-  'changing a constraint on an existing column writes a migration'
-)
-const changeSql = changeFile ? sqlOf(changeFile) : ''
 if (dialect === 'sqlite') {
-  contains(
-    changeSql,
-    '-- pikku:destructive',
-    'sqlite rebuilds the table, flagged'
+  check(
+    !changeFile,
+    'changing a constraint on an existing sqlite column writes no migration (no CHECK to change)'
   )
-  contains(
-    changeSql,
-    '-- pikku:foreign-keys-off',
-    'sqlite runs it with foreign keys off'
+} else {
+  check(
+    Boolean(changeFile),
+    'changing a constraint on an existing column writes a migration'
   )
-  contains(
-    changeSql,
-    'pikku_rebuild_bookmark',
-    'sqlite copies into a new table'
-  )
-} else if (dialect === 'postgres') {
+}
+const changeSql = changeFile ? sqlOf(changeFile) : ''
+if (dialect === 'postgres') {
   contains(changeSql, 'DROP CONSTRAINT', 'postgres drops the old check')
   contains(changeSql, 'NOT VALID', 'postgres adds the new one NOT VALID')
   contains(changeSql, 'VALIDATE CONSTRAINT', 'and validates it separately')
-} else {
+} else if (dialect === 'mysql') {
   contains(changeSql, 'DROP CHECK', 'mysql drops the old check')
   contains(changeSql, '-- pikku:check-probe', 'the added check carries a probe')
 }

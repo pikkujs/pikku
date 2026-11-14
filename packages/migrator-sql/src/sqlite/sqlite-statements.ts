@@ -125,6 +125,12 @@ export function splitSqliteStatements(sql: string): string[] {
     }
 
     if (ch === ';') {
+      // A separator with nothing before it is no statement: bun:sqlite refuses
+      // an empty one ("no valid SQL statement") where node:sqlite lets it pass.
+      if (start === -1) {
+        i++
+        continue
+      }
       token(i, i + 1)
       i++
       previous = ';'
@@ -137,46 +143,5 @@ export function splitSqliteStatements(sql: string): string[] {
     i++
   }
   finish()
-  return out
-}
-
-/**
- * `sql` without its comments, literals and quoted identifiers kept as written.
- * A `--` comment ends at its newline, which stays; a block comment becomes a
- * space so the tokens either side of it do not join.
- */
-export function stripSqliteComments(sql: string): string {
-  let out = ''
-  let i = 0
-  while (i < sql.length) {
-    const ch = sql[i]!
-    if (ch === '-' && sql[i + 1] === '-') {
-      const nl = sql.indexOf('\n', i)
-      i = nl === -1 ? sql.length : nl
-    } else if (ch === '/' && sql[i + 1] === '*') {
-      const close = sql.indexOf('*/', i + 2)
-      i = close === -1 ? sql.length : close + 2
-      out += ' '
-    } else if (ch === "'" || ch === '"' || ch === '`' || ch === '[') {
-      const from = i
-      const closer = ch === '[' ? ']' : ch
-      i++
-      while (i < sql.length) {
-        if (sql[i] === closer) {
-          if (closer !== ']' && sql[i + 1] === closer) {
-            i += 2
-            continue
-          }
-          i++
-          break
-        }
-        i++
-      }
-      out += sql.slice(from, i)
-    } else {
-      out += ch
-      i++
-    }
-  }
   return out
 }

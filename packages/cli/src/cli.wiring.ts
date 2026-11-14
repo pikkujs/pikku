@@ -822,7 +822,7 @@ wireCLI({
             },
             allowDestructive: {
               description:
-                'Apply migrations marked `-- pikku:destructive` (a table rebuild that rewrites its rows). Refused without it',
+                'Apply migrations marked `-- pikku:destructive` (a migration that drops or rewrites data). Refused without it',
               default: false,
             },
           },

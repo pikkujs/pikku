@@ -16,6 +16,7 @@ import {
   type CheckProbe,
 } from '@pikku/migrator-sql'
 import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
+import { checkName } from '@pikku/kysely'
 import {
   addCheckStatements,
   checkChangeStatements,
@@ -23,6 +24,7 @@ import {
   dropCheckStatement,
   inlineCheckExpression,
   interimCheckName,
+  mysqlCheckRefusal,
   mysqlCheckSupport,
   planConstraints,
   singleSpaced,
@@ -33,6 +35,29 @@ import type { ColumnInfo } from './db-introspector.js'
 const q = (n: string) => `"${n}"`
 const col = (checks: { name: string; expression: string }[]): ColumnInfo =>
   ({ name: 'qty', type: 'integer', notNull: false, pk: false, checks }) as never
+
+describe('planConstraints with names too long for the engine', () => {
+  const table = 'a_table_with_a_really_long_name_for_testing_limits'
+  const column = 'a_column_with_an_equally_long_name_for_testing'
+  test('the min and max names differ, fit 63 bytes, and a removed bound is still dropped', () => {
+    const min = checkName(table, column, 'min')
+    const max = checkName(table, column, 'max')
+    assert.notEqual(min, max)
+    for (const name of [min, max]) {
+      assert.ok(Buffer.byteLength(name) <= 63, name)
+    }
+    const plan = planConstraints(
+      table,
+      column,
+      col([{ name: min, expression: '"x" >= 0' }]),
+      col([
+        { name: min, expression: '"x" >= 0' },
+        { name: max, expression: '"x" <= 5' },
+      ])
+    )
+    assert.deepEqual(plan.drop, [max])
+  })
+})
 
 describe('planConstraints', () => {
   const min0 = { name: 'item_qty_min_check', expression: '"qty" >= 0' }
@@ -528,5 +553,23 @@ describe('the generated postgres statements on a populated table', () => {
     assert.equal(rows.length, 1)
     await db.exec('COMMIT')
     await db.close()
+  })
+})
+
+describe('mysqlCheckRefusal', () => {
+  test('a server that ignores CHECK is refused from the declaration, one that enforces it is not', () => {
+    assert.match(
+      mysqlCheckRefusal('too-old', ['item.qty: min 0'], 'db/tables.ts')!,
+      /declares constraints \(item\.qty: min 0\).*older than 8\.0\.16/
+    )
+    assert.match(
+      mysqlCheckRefusal('mariadb', ['item.qty: min 0'], 'db/tables.ts')!,
+      /MariaDB is not supported/
+    )
+    assert.equal(
+      mysqlCheckRefusal('ok', ['item.qty: min 0'], 'db/tables.ts'),
+      undefined
+    )
+    assert.equal(mysqlCheckRefusal('too-old', [], 'db/tables.ts'), undefined)
   })
 })

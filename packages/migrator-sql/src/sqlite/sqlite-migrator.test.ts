@@ -5,15 +5,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { migrate } from '../sql-migrator.js'
-import {
-  SQLITE_FOREIGN_KEYS_OFF_MARKER,
-  SqliteMigrationExecutor,
-} from './sqlite-migrator.js'
+import { SqliteMigrationExecutor } from './sqlite-migrator.js'
 import { splitSqliteStatements } from './sqlite-statements.js'
 import type { SqliteRuntime } from './sqlite-runtime.js'
 import { createNodeSqliteRuntime } from './sqlite-runtime-node.js'
-
-const MARKER = SQLITE_FOREIGN_KEYS_OFF_MARKER
 
 /**
  * Every runtime this process can load. The two differ in exactly the way that
@@ -34,9 +29,6 @@ try {
 }
 
 type Db = ReturnType<SqliteRuntime['open']>
-const pragma = (db: Db) =>
-  (db.prepare('PRAGMA foreign_keys').get() as { foreign_keys: number })
-    .foreign_keys
 const count = (db: Db, table: string) =>
   (db.prepare(`SELECT count(*) n FROM ${table}`).get() as { n: number }).n
 const names = (db: Db) =>
@@ -48,12 +40,6 @@ const SCHEMA = `CREATE TABLE parent (id TEXT PRIMARY KEY, n INTEGER);
 CREATE TABLE child (id TEXT PRIMARY KEY, parent_id TEXT NOT NULL REFERENCES parent (id) ON DELETE CASCADE);
 INSERT INTO parent VALUES ('p', 1);
 INSERT INTO child VALUES ('c', 'p');`
-
-const REBUILD = `${MARKER}
-CREATE TABLE parent_new (id TEXT PRIMARY KEY, n INTEGER CHECK (n > 0));
-INSERT INTO parent_new SELECT id, n FROM parent;
-DROP TABLE parent;
-ALTER TABLE parent_new RENAME TO parent;`
 
 for (const [label, runtime] of runtimes) {
   /** A real sqlite file with `0001` applied, then `body` run with `run` for more. */
@@ -78,95 +64,6 @@ for (const [label, runtime] of runtimes) {
       rmSync(dir, { recursive: true, force: true })
     }
   }
-
-  test(`${label}: a rebuild with the marker keeps cascading children, and enforcement comes back on`, async () => {
-    await withFile(SCHEMA, async (db, run) => {
-      assert.equal(pragma(db), 1)
-      await run('0002-rebuild.sql', REBUILD)
-      assert.equal(pragma(db), 1)
-      assert.equal(count(db, 'child'), 1)
-      assert.equal(db.prepare('PRAGMA foreign_key_check').all().length, 0)
-      assert.throws(() => db.exec(`INSERT INTO parent VALUES ('q', 0)`))
-    })
-  })
-
-  test(`${label}: without the marker, the same rebuild cascades the children away`, async () => {
-    await withFile(SCHEMA, async (db, run) => {
-      await run('0002-rebuild.sql', REBUILD.replace(MARKER, ''))
-      assert.equal(count(db, 'child'), 0)
-    })
-  })
-
-  test(`${label}: a migration that leaves a foreign key broken is rolled back whole`, async () => {
-    await withFile(SCHEMA, async (db, run) => {
-      await assert.rejects(
-        run(
-          '0002-break.sql',
-          `${MARKER}\nCREATE TABLE marker (x INTEGER);\nDELETE FROM parent;`
-        ),
-        /foreign keys broken/
-      )
-      assert.equal(pragma(db), 1)
-      assert.equal(count(db, 'parent'), 1)
-      assert.equal(
-        db.prepare(`SELECT 1 FROM sqlite_master WHERE name = 'marker'`).all()
-          .length,
-        0
-      )
-    })
-  })
-
-  test(`${label}: a violation that was there before the migration does not block it`, async () => {
-    await withFile(SCHEMA, async (db, run) => {
-      db.exec('PRAGMA foreign_keys = OFF')
-      db.exec(`INSERT INTO child VALUES ('orphan', 'nobody')`)
-      db.exec('PRAGMA foreign_keys = ON')
-      await run('0002-ok.sql', `${MARKER}\nCREATE TABLE extra (x INTEGER);`)
-      assert.equal(
-        db.prepare(`SELECT 1 FROM sqlite_master WHERE name = 'extra'`).all()
-          .length,
-        1
-      )
-    })
-  })
-
-  test(`${label}: a rebuild that moves a pre-existing orphan's rowid is not blamed for it`, async () => {
-    await withFile(SCHEMA, async (db, run) => {
-      db.exec('PRAGMA foreign_keys = OFF')
-      db.exec(`INSERT INTO child VALUES ('orphan', 'nobody')`)
-      db.exec('PRAGMA foreign_keys = ON')
-      // The copy leaves out rowid 1, so every child row moves down one.
-      await run(
-        '0002-rebuild.sql',
-        `${MARKER}
-CREATE TABLE child_new (id TEXT PRIMARY KEY, parent_id TEXT NOT NULL REFERENCES parent (id) ON DELETE CASCADE);
-INSERT INTO child_new SELECT id, parent_id FROM child ORDER BY id DESC;
-DROP TABLE child;
-ALTER TABLE child_new RENAME TO child;`
-      )
-      assert.equal(count(db, 'child'), 2)
-    })
-  })
-
-  test(`${label}: a pragma that was off stays off`, async () => {
-    await withFile(SCHEMA, async (db, run) => {
-      db.exec('PRAGMA foreign_keys = OFF')
-      await run('0002-ok.sql', `${MARKER}\nCREATE TABLE extra (x INTEGER);`)
-      assert.equal(pragma(db), 0)
-    })
-  })
-
-  test(`${label}: a migration that would lose an index, trigger or view only this database has is refused`, async () => {
-    await withFile(SCHEMA, async (db, run) => {
-      db.exec('CREATE INDEX parent_by_n ON parent (n)')
-      await assert.rejects(
-        run('0002-rebuild.sql', REBUILD),
-        /would lose index parent_by_n/
-      )
-      assert.equal(count(db, 'parent'), 1)
-      assert.equal(count(db, 'child'), 1)
-    })
-  })
 
   test(`${label}: a failing statement in a migration is not recorded as applied`, async () => {
     const cases: Array<[string, string]> = [
@@ -201,15 +98,14 @@ ALTER TABLE child_new RENAME TO child;`
     }
   })
 
-  test(`${label}: a failing statement under the marker stops the migration before the DROP`, async () => {
+  test(`${label}: a failing copy stops the migration before the DROP that would lose the source rows`, async () => {
     await withFile(
       `CREATE TABLE t (id INTEGER PRIMARY KEY, n INTEGER);\nINSERT INTO t VALUES (1, -5), (2, 3);`,
       async (db, run) => {
         await assert.rejects(
           run(
             '0002-rebuild.sql',
-            `${MARKER}
-CREATE TABLE pikku_rebuild_t (id INTEGER PRIMARY KEY, n INTEGER CONSTRAINT t_n_min CHECK (n >= 0));
+            `CREATE TABLE pikku_rebuild_t (id INTEGER PRIMARY KEY, n INTEGER CONSTRAINT t_n_min CHECK (n >= 0));
 INSERT INTO pikku_rebuild_t (id, n) SELECT id, n FROM t;
 DROP TABLE t;
 ALTER TABLE pikku_rebuild_t RENAME TO t;`
@@ -236,8 +132,7 @@ ALTER TABLE pikku_rebuild_t RENAME TO t;`
         await assert.rejects(
           run(
             '0002-rebuild.sql',
-            `${MARKER}
-CREATE TABLE pikku_rebuild_t (id INTEGER PRIMARY KEY, n INTEGER CHECK (n >= 0 AND 'a_b' NOT LIKE '%x\\_%' ESCAPE '\\'), p TEXT DEFAULT 'C:\\');
+            `CREATE TABLE pikku_rebuild_t (id INTEGER PRIMARY KEY, n INTEGER CHECK (n >= 0 AND 'a_b' NOT LIKE '%x\\_%' ESCAPE '\\'), p TEXT DEFAULT 'C:\\');
 INSERT INTO pikku_rebuild_t (id, n, p) SELECT id, n, p FROM t;
 DROP TABLE t;
 ALTER TABLE pikku_rebuild_t RENAME TO t;`
@@ -347,6 +242,34 @@ for (const [label, runtime] of runtimes) {
         /no such module/
       )
       assert.deepEqual(names(db), [])
+    } finally {
+      db.close()
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+}
+
+test('splitSqliteStatements skips a stray ; and a script of only separators', () => {
+  assert.deepEqual(
+    splitSqliteStatements(
+      'CREATE TABLE a (x);;INSERT INTO a VALUES (1); ; -- c\n;'
+    ),
+    ['CREATE TABLE a (x);', 'INSERT INTO a VALUES (1);']
+  )
+  assert.deepEqual(splitSqliteStatements(' ; ;; '), [])
+})
+
+for (const [label, runtime] of runtimes) {
+  test(`${label}: a migration with a stray ; applies`, async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-sqlite-semi-'))
+    const db = runtime.open(join(dir, 'app.db'))
+    try {
+      writeFileSync(
+        join(dir, '0001-a.sql'),
+        'CREATE TABLE a (x INTEGER);;\nINSERT INTO a VALUES (1);\n;\n'
+      )
+      await migrate(new SqliteMigrationExecutor(db), dir)
+      assert.equal(count(db, 'a'), 1)
     } finally {
       db.close()
       rmSync(dir, { recursive: true, force: true })

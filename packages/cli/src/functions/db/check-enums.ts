@@ -65,6 +65,20 @@ export function closingQuote(sql: string, start: number): number {
   return sql.length
 }
 
+/**
+ * The text inside the parenthesis that opens at `open`, or `undefined` when it
+ * never closes. Quoted text is skipped, so a `)` inside a value does not end it.
+ */
+function parenthesised(
+  text: string,
+  open: number
+): { inside: string; end: number } | undefined {
+  const close = closingParen(text, open)
+  return close === -1
+    ? undefined
+    : { inside: text.slice(open + 1, close), end: close + 1 }
+}
+
 /** The single-quoted literals in `text`, with doubled quotes unescaped. */
 export function quotedValues(text: string): string[] {
   return [...text.matchAll(/'((?:[^']|'')*)'/g)].map((m) =>
@@ -81,10 +95,12 @@ export function quotedValues(text: string): string[] {
 export function parseCheckEnumsFromDdl(ddl: string): Map<string, string[]> {
   const out = new Map<string, string[]>()
   const sql = stripSqlComments(ddl)
-  const checkIn = /CHECK\s*\(\s*"?(\w+)"?\s+IN\s*\(([^)]*)\)/gi
+  const checkIn = /CHECK\s*\(\s*"?(\w+)"?\s+IN\s*\(/gi
   let m: RegExpExecArray | null
   while ((m = checkIn.exec(sql))) {
-    const values = quotedValues(m[2]!)
+    const list = parenthesised(sql, m.index + m[0].length - 1)
+    if (!list) continue
+    const values = quotedValues(list.inside)
     if (values.length > 0) out.set(m[1]!, values)
   }
   return out
@@ -102,9 +118,15 @@ export function parseCheckEnumsFromDdl(ddl: string): Map<string, string[]> {
 export function parseCheckEnumValues(
   constraintDef: string
 ): string[] | undefined {
-  const any = /=\s*ANY\s*\(\s*\(?\s*ARRAY\s*\[([^\]]*)\]/i.exec(constraintDef)
+  const any = /=\s*ANY\s*\(\s*\(?\s*ARRAY\s*\[/i.exec(constraintDef)
   if (!any) return undefined
-  const values = quotedValues(any[1]!)
+  // To the `]` that closes the array, skipping quoted values: one may hold `]`.
+  const from = any.index + any[0].length
+  let i = from
+  while (i < constraintDef.length && constraintDef[i] !== ']') {
+    i = constraintDef[i] === "'" ? closingQuote(constraintDef, i) : i + 1
+  }
+  const values = quotedValues(constraintDef.slice(from, i))
   return values.length > 0 ? values : undefined
 }
 
@@ -208,6 +230,15 @@ function findChecks(text: string): { name: string; expression: string }[] {
   return found
 }
 
+/** The table's own spelling of the column `name` is, or `undefined`: identifiers are not case-sensitive in SQLite and MySQL. */
+const columnNamed = (
+  name: string,
+  columns: readonly string[]
+): string | undefined => {
+  const lower = name.toLowerCase()
+  return columns.find((column) => column.toLowerCase() === lower)
+}
+
 /**
  * The `CHECK` constraints on each column of a SQLite `CREATE TABLE`, read from
  * the statement SQLite stores verbatim.
@@ -235,23 +266,31 @@ export function parseSqliteChecks(
     if (!first) continue
     const keyword = first[1]!.toLowerCase()
     if (['primary', 'unique', 'foreign'].includes(keyword)) continue
-    if (keyword === 'constraint' || keyword === 'check') {
-      for (const check of findChecks(definition)) {
-        const named = new Set(
-          [
-            ...stripStrings(check.expression).matchAll(
-              /"((?:[^"]|"")+)"|`([^`]+)`|\[([^\]]+)\]|\b(\w+)\b/g
-            ),
-          ]
-            .map((m) => (m[1] ?? m[2] ?? m[3] ?? m[4])!.replace(/""/g, '"'))
-            .filter((name) => columns.includes(name))
-        )
-        if (named.size === 1) add([...named][0]!, check)
-      }
-      continue
-    }
+    const own =
+      keyword === 'constraint' || keyword === 'check'
+        ? undefined
+        : columnNamed(unquoteIdentifier(first[1]!), columns)
+    if (keyword !== 'constraint' && keyword !== 'check' && !own) continue
     for (const check of findChecks(definition)) {
-      add(unquoteIdentifier(first[1]!), check)
+      const named = new Set(
+        [
+          ...stripStrings(check.expression).matchAll(
+            /"((?:[^"]|"")+)"|`([^`]+)`|\[([^\]]+)\]|\b(\w+)\b/g
+          ),
+        ]
+          .map((m) =>
+            columnNamed(
+              (m[1] ?? m[2] ?? m[3] ?? m[4])!.replace(/""/g, '"'),
+              columns
+            )
+          )
+          .filter((name): name is string => name !== undefined)
+      )
+      // The column a check names is the one it restricts, wherever it is
+      // written: a column-level check on `qty` that names only `other` is
+      // `other`'s. One that names several belongs to none.
+      if (named.size === 1) add([...named][0]!, check)
+      else if (named.size === 0 && own) add(own, check)
     }
   }
   return out
@@ -268,8 +307,8 @@ export function mysqlCheckColumn(
 ): string | undefined {
   const named = new Set(
     [...stripStrings(clause).matchAll(/`([^`]+)`/g)]
-      .map((m) => m[1]!)
-      .filter((name) => columns.includes(name))
+      .map((m) => columnNamed(m[1]!, columns))
+      .filter((name): name is string => name !== undefined)
   )
   return named.size === 1 ? [...named][0] : undefined
 }
@@ -281,9 +320,12 @@ function stripStrings(text: string): string {
 
 /** The allowed values of a MySQL `` `col` in ('a', 'b') `` check, or `undefined` when it is not one. */
 export function mysqlCheckEnumValues(clause: string): string[] | undefined {
-  const match = /^\(?\s*`[^`]+`\s+in\s*\(([^)]*)\)\s*\)?$/i.exec(clause.trim())
+  const text = clause.trim()
+  const match = /^\(?\s*`[^`]+`\s+in\s*\(/i.exec(text)
   if (!match) return undefined
-  const values = quotedValues(match[1]!)
+  const list = parenthesised(text, match[0].length - 1)
+  if (!list || !/^\s*\)?$/.test(text.slice(list.end))) return undefined
+  const values = quotedValues(list.inside)
   return values.length > 0 ? values : undefined
 }
 

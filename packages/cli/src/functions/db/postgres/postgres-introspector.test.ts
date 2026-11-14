@@ -369,3 +369,23 @@ test('getAllColumns keeps the primary-key CTE out of the join', async () => {
     await client.end()
   }
 })
+
+test('getColumns finds the checks of a table asked for as public.<table>', async () => {
+  const client = await pgliteClient(
+    `CREATE TABLE gadget (qty int CONSTRAINT gadget_qty_min_check CHECK (qty >= 0))`
+  )
+  try {
+    for (const name of ['gadget', 'public.gadget']) {
+      const qty = (
+        await new PostgresIntrospector(client).getColumns(name)
+      ).find((c) => c.name === 'qty')
+      assert.deepEqual(
+        qty!.checks,
+        [{ name: 'gadget_qty_min_check', expression: 'qty >= 0' }],
+        name
+      )
+    }
+  } finally {
+    await client.end()
+  }
+})

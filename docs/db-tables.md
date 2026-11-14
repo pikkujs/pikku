@@ -41,7 +41,7 @@ Postgres and MySQL all work from the same declaration.
 | `primaryKey`, `unique`, `index`                           | Single-column key, constraint or index. Composite ones go on the table                                               |
 | `references`                                              | `table.column`. Without a `type`, the column takes its target's type                                                 |
 | `onDelete`                                                | `cascade`, `setNull`, `restrict` (the default) or `noAction`                                                         |
-| `enum`, `min`, `max`, `minLength`, `maxLength`, `pattern` | Value constraints: `CHECK`s in the SQL (not `pattern`), and bounds in the generated zod schema                       |
+| `enum`, `min`, `max`, `minLength`, `maxLength`, `pattern` | Value constraints: `CHECK`s in the SQL on Postgres and MySQL (never `pattern`), and bounds in the generated zod schema |
 | Annotation fields                                         | `security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`                             |
 
 A table takes `columns`, and optionally `primaryKey` (composite), `unique`
@@ -50,12 +50,30 @@ and `declareOnly`.
 
 ### Constraints
 
-`enum`, `min`, `max`, `minLength` and `maxLength` become inline `CHECK`
-constraints named `<table>_<column>_<kind>_check` (`kind` is `enum`, `min`,
-`max`, `minlength` or `maxlength`); `enum` also types the column as a union.
+`enum`, `min`, `max`, `minLength` and `maxLength` always drive the generated zod
+schema, the generated union types (`enum`) and the console's column hints.
 `pattern` is checked by the generated zod schema only, never in SQL, because
-regex dialects differ. A `CHECK` is written on `CREATE TABLE` and on a column added later, which is what
-lets sqlite add one with `ADD COLUMN`. On a column that already exists:
+regex dialects differ.
+
+Whether the database enforces them depends on the engine:
+
+- **Postgres and MySQL**: real inline `CHECK` constraints, named
+  `<table>_<column>_<kind>_check` (`kind` is `enum`, `min`, `max`, `minlength` or
+  `maxlength`), written on `CREATE TABLE` and on a column added later. A name
+  that would pass the engine's limit (63 bytes on Postgres, 64 characters on
+  MySQL) keeps its `_<kind>_check` ending and swaps the middle for a short hash
+  of the full name, so two bounds on one column stay distinct.
+- **SQLite**: validation only. SQLite cannot drop or change a `CHECK` without
+  rebuilding the table, so Pikku generates none, for new tables, new columns or
+  existing ones. `pikku db generate` and `pikku db check` print one notice
+  listing each declared constraint with the `CHECK` you could add in a
+  hand-written migration, or you can use Postgres or MySQL, where Pikku manages
+  them. A `CHECK` you wrote by hand in a SQLite migration is left alone, and an
+  `IN (...)` one still types the column as a union. Silence the notice with
+  `validate.rules["db-sqlite-unenforced-constraints"] = "off"` in the Pikku
+  config.
+
+On a Postgres or MySQL column that already exists:
 
 - **Postgres** adds it `NOT VALID` and then `VALIDATE`s it in a second
   statement. Be clear about what that buys: the migrator runs a whole migration
@@ -68,38 +86,24 @@ lets sqlite add one with `ADD COLUMN`. On a column that already exists:
   it from the declaration drops it (only checks named
   `<table>_<column>_<kind>_check`; one you wrote yourself is left alone).
 - **MySQL** uses `ADD CONSTRAINT ... CHECK` and `DROP CHECK`, from 8.0.16.
-  An older server parses a `CHECK` and ignores it, so generate refuses. DDL
+  An older server parses a `CHECK` and ignores it, so generate refuses as soon
+  as the declaration has a constraint. DDL
   commits as it goes there, so a changed check is added under an interim name
   first, the old one dropped, the final name added and the interim one dropped:
   rows that break the new check refuse the first step and leave the old check in
   place. A migration that stops after that step still has to be finished by hand.
   This sequence has been tested only as statements, not against a running MySQL
   server.
-- **sqlite** cannot alter a constraint, so the table is rebuilt: a new table with
-  the new definition, the rows copied (rowids too, so a TEXT-keyed table, an
-  external-content FTS index or a vec0 table still point at their rows, and an
-  `AUTOINCREMENT` sequence keeps its highest id), the old one dropped and the
-  new one renamed, then its indexes, triggers and views put back. Only the named
-  checks are edited in the table's existing definition, so a foreign key,
-  `UNIQUE` or check you wrote by hand survives. Rows that break the new check
-  make the migration fail and roll back, leaving the original table untouched.
-  The migration carries two marker lines, below.
 
 #### Markers a migration carries
 
-- `-- pikku:foreign-keys-off`: the sqlite migrator switches foreign key
-  enforcement off around the transaction (so `ON DELETE CASCADE` children are
-  not deleted), checks that it really went off, runs the statements one at a
-  time, and refuses to commit if a key is left broken that was not before, or
-  if an index, trigger or view that existed on the database is gone afterwards
-  (one made by hand and missing from the migrations would be). Every sqlite
-  runner in this repository uses that migrator.
 - `-- pikku:destructive [what it does]`: `migrate` refuses a pending migration
   with this line unless it is told to allow it, before applying anything.
   `pikku db migrate --allowDestructive` and the standalone bundle's
   `db migrate --allow-destructive` do; `db status` on the bundle marks such
   migrations. `pikku db reset` and scratch databases allow it, since there is
-  nothing to lose. The line may be bare, indented, in any case, or written
+  nothing to lose. `pikku ci` passes it only in its throwaway worktree, never in
+  your own tree. The line may be bare, indented, in any case, or written
   `--pikku:destructive`; `db generate` writes the canonical form.
 - `-- pikku:check-probe {json}`, above each added check: `schema`, `table` and
   the `SELECT` that returns a row only if one breaks the check. `migrate` can be
@@ -110,18 +114,17 @@ lets sqlite add one with `ADD COLUMN`. On a column that already exists:
   that statement changes the rows it would read). A refusal says which
   migrations of the run had already applied. It refuses on a breaking
   row, on a table estimated above 10 million rows (`CHECK_PROBE_MAX_ROWS`), and
-  on a scan that takes over 30 seconds (`CHECK_PROBE_TIMEOUT_MS`). A table never
+  on a scan that takes over 30 seconds (`CHECK_PROBE_TIMEOUT_MS`), which the
+  server itself cancels (`statement_timeout` on Postgres, `max_execution_time`
+  on MySQL). A table never
   analysed (Postgres reports `-1` rows) is counted up to the cap, not trusted.
   A local `pikku db migrate` on postgres or MySQL and the standalone bundle's
-  Postgres `db migrate` both use it. On MySQL a scan that times out is
-  abandoned rather than cancelled.
+  Postgres `db migrate` both use it.
 
 A deploy runner outside this repository that applies these migrations has to do
 the same two things: refuse a migration with a `-- pikku:destructive` line
 unless a person approved it, and run the `-- pikku:check-probe` queries (or
-equivalent) before applying a migration that has them. It must also run a
-sqlite migration marked `-- pikku:foreign-keys-off` with enforcement off
-outside a transaction, as `SqliteMigrationExecutor` does, or refuse it.
+equivalent) before applying a migration that has them.
 
 A bound on a column of the wrong kind (`min` on text,
 `minLength` on a number) is an error when the file loads.

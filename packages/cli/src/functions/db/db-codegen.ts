@@ -661,17 +661,22 @@ export interface CodegenResult {
  */
 function emitEnumsModule(
   tables: TableSchema[],
-  enumByName: Map<string, string[]>
+  enumByName: Map<string, string[]>,
+  explicitAnnotations: AnnotationMap
 ): string {
   const pascal = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
   const seen = new Set<string>()
   const lines: string[] = []
   for (const t of tables) {
     const tablePart = pascal(snakeToCamel(bareTableName(t.name)))
+    const tableCols = explicitAnnotations[bareTableName(t.name)] ?? {}
     for (const col of t.columns) {
+      // The same order the schema types use, so a column the declaration
+      // restricts (SQLite carries no CHECK for it) gets its union here too.
       const values =
         col.enumValues ??
-        (col.udtName ? enumByName.get(col.udtName) : undefined)
+        (col.udtName ? enumByName.get(col.udtName) : undefined) ??
+        tableCols[col.name]?.enum
       if (!values || values.length === 0) continue
       const name = `${tablePart}${pascal(snakeToCamel(col.name))}`
       if (seen.has(name)) continue
@@ -940,7 +945,7 @@ export async function generateSchemaTypes(
 
   // ── enums.gen.ts ─────────────────────────────────────────────────────────────
   const enumsBody = options.enumsFile
-    ? emitEnumsModule(tables, enumByName)
+    ? emitEnumsModule(tables, enumByName, explicitAnnotations)
     : null
 
   // ── write files ───────────────────────────────────────────────────────────────

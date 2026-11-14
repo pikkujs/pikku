@@ -75,18 +75,16 @@ import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
 import { createPGliteKysely } from './postgres/pglite-kysely.js'
 import { MysqlMigrationExecutor } from '@pikku/migrator-sql/mysql'
 import {
-  MYSQL_MIN_CHECK_VERSION,
   checkChangeStatements,
   inlineCheckExpression,
+  mysqlCheckRefusal,
   mysqlCheckSupport,
-  MARIADB_REFUSAL,
   planConstraints,
 } from './check-migration.js'
 import {
-  sqliteRebuildMigration,
-  type SqliteObject,
-  type TableRebuild,
-} from './sqlite-rebuild.js'
+  sqliteConstraintNotice,
+  declaredConstraints,
+} from './sqlite-constraint-notice.js'
 import { MysqlIntrospector } from './mysql/mysql-introspector.js'
 import {
   createMysqlKysely,
@@ -2109,6 +2107,17 @@ export async function planDeclaredTables(
   )
   if (!desired) return { tables: [], body: '', refusals }
 
+  if (resolved.dialect === 'mysql') {
+    const refusal = mysqlCheckRefusal(
+      await mysqlServerCheckSupport(resolved),
+      declaredConstraints(declaration.schema.tables).map(
+        (c) => `${c.where}: ${c.constraint}`
+      ),
+      TABLES_FILE
+    )
+    if (refusal) return { tables: [], body: '', refusals: [refusal] }
+  }
+
   const tables = [...desired.tables.keys()]
   const shapes = splitStatements(desired.sql).map((statement) => ({
     statement,
@@ -2208,10 +2217,8 @@ export async function planDeclaredTables(
     }
   }
 
-  const rebuilds = new Map<string, TableRebuild>()
-  const sqliteObjects =
-    resolved.dialect === 'sqlite' ? await coveredSqliteObjects(resolved) : []
-  for (const table of tables) {
+  // SQLite gets no generated CHECKs, so there is nothing to compare there.
+  for (const table of resolved.dialect === 'sqlite' ? [] : tables) {
     const actual = coveredTable(covered, table, schemaName)
     if (!actual) continue
     const { columns: definitions } = tableDefinitions(desired.sql, table)
@@ -2237,47 +2244,7 @@ export async function planDeclaredTables(
         continue
       }
 
-      if (resolved.dialect === 'sqlite') {
-        const ddl = sqliteObjects.find(
-          (o) =>
-            o.type === 'table' && o.name.toLowerCase() === table.toLowerCase()
-        )?.sql
-        if (!ddl) {
-          refusals.push(`${table} has no definition to rebuild from.`)
-          continue
-        }
-        const rebuild = rebuilds.get(table) ?? {
-          table,
-          ddl,
-          columns: [...actual.values()]
-            .filter((c) => !c.generated)
-            .map((c) => c.name),
-          drop: [],
-          add: [],
-        }
-        rebuild.drop.push(...plan.drop.map((name) => ({ column, name })))
-        rebuild.add.push(
-          ...added.map((a) => ({ ...a, expression: a.expression! }))
-        )
-        rebuilds.set(table, rebuild)
-        continue
-      }
-
-      let dialect: 'postgres' | 'mysql' = 'postgres'
-      if (resolved.dialect === 'mysql') {
-        const support = await mysqlServerCheckSupport(resolved)
-        if (support !== 'ok') {
-          refusals.push(
-            `${table}.${column}: ${plan.reasons.join('; ')}. ` +
-              (support === 'mariadb'
-                ? `${MARIADB_REFUSAL}.`
-                : `This MySQL server is older than ${MYSQL_MIN_CHECK_VERSION}, which parses a CHECK and ignores it, so generate will not write one. ` +
-                  `Upgrade the server, or take the constraint out of ${TABLES_FILE}.`)
-          )
-          continue
-        }
-        dialect = 'mysql'
-      }
+      const dialect = resolved.dialect === 'mysql' ? 'mysql' : 'postgres'
       statements.push(
         ...checkChangeStatements(
           dialect,
@@ -2291,15 +2258,6 @@ export async function planDeclaredTables(
       )
     }
   }
-  if (rebuilds.size > 0) {
-    const migration = sqliteRebuildMigration(
-      [...rebuilds.values()],
-      sqliteObjects
-    )
-    if ('problem' in migration) refusals.push(migration.problem)
-    else statements.unshift(migration.sql)
-  }
-
   // An index on a new table came with its `CREATE TABLE` above.
   const newIndexes = shapes.filter(
     ({ shape }) =>
@@ -2326,28 +2284,6 @@ export async function planDeclaredTables(
     ]
   })
   return { tables, body: rehearsal.length ? '' : body, refusals: rehearsal }
-}
-
-/** Everything the migrations define on sqlite, in the order it was created. */
-async function coveredSqliteObjects(
-  resolved: Extract<ResolvedDb, { dialect: 'sqlite' }>
-): Promise<SqliteObject[]> {
-  const db = await openSqlite(resolved, ':memory:')
-  try {
-    await migrate(
-      new SqliteMigrationExecutor(db),
-      resolved.migrationsDir,
-      REPLAY
-    )
-    return db
-      .prepare(
-        `select type, name, tbl_name, sql from sqlite_master
-         where name not like 'sqlite\\_%' escape '\\' order by rowid`
-      )
-      .all() as unknown as SqliteObject[]
-  } finally {
-    db.close()
-  }
 }
 
 /** Whether the configured MySQL-protocol server enforces a `CHECK`, or is refused. */
@@ -2407,6 +2343,16 @@ async function rehearseMigration(
 export interface DeclaredTablesDrift {
   pending: boolean
   refusals: string[]
+}
+
+export async function declaredSqliteConstraintNotice(
+  resolved: ResolvedDb
+): Promise<string | undefined> {
+  if (resolved.dialect !== 'sqlite') return undefined
+  const declaration = await loadTableDeclaration(resolved.rootDir)
+  return declaration
+    ? sqliteConstraintNotice(declaration.schema.tables)
+    : undefined
 }
 
 export async function computeDeclaredTablesDrift(

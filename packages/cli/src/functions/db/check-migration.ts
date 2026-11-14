@@ -4,8 +4,8 @@
  * the table satisfy a new check is in `@pikku/migrator-sql`, since the runners
  * that apply migrations are what read it.
  *
- * SQLite cannot alter a constraint at all, so it is not here (see
- * `sqlite-rebuild.ts`).
+ * SQLite cannot alter a constraint at all, so Pikku writes no CHECK there and
+ * it is not here (see `sqlite-constraint-notice.ts`).
  */
 import { checkProbeLine } from '@pikku/migrator-sql'
 import type { ColumnCheck, ColumnInfo } from './db-introspector.js'
@@ -37,6 +37,20 @@ export interface ConstraintPlan {
  * declaration says nothing about it.
  */
 const GENERATED_CHECK = /_(enum|min|max|minlength|maxlength)_check$/
+
+/**
+ * Whether `name` is one a declaration generated for this column. A name too
+ * long for the engine is cut and carries a hash in place of the cut, so it
+ * starts with only the front of `<table>_<column>`.
+ */
+const generatedFor = (name: string, table: string, column: string): boolean => {
+  if (!GENERATED_CHECK.test(name)) return false
+  const owner = `${table}_${column}`
+  if (name.startsWith(`${owner}_`)) return true
+  const hashed =
+    /^(.+)_[0-9a-f]{8}_(?:enum|min|max|minlength|maxlength)_check$/.exec(name)
+  return hashed !== null && owner.startsWith(hashed[1]!)
+}
 
 /**
  * How the constraints on an existing column differ from its declaration.
@@ -81,8 +95,7 @@ export function planConstraints(
   }
   for (const check of held) {
     if (
-      check.name.startsWith(`${table}_${column}_`) &&
-      GENERATED_CHECK.test(check.name) &&
+      generatedFor(check.name, table, column) &&
       !wanted.some((w) => w.name === check.name)
     ) {
       plan.drop.push(check.name)
@@ -317,4 +330,26 @@ export function mysqlCheckSupport(
   ]
   const enforces = a !== x ? a > x : b !== y ? b > y : c >= z
   return enforces ? 'ok' : 'too-old'
+}
+
+/**
+ * The refusal for a MySQL server that would silently ignore (or, for MariaDB,
+ * is not supported for) the constraints a declaration asks for, or `undefined`
+ * when the server enforces them. Said up front from the declaration: an older
+ * server reports no checks on either side, so nothing downstream would notice
+ * that none were ever applied.
+ */
+export function mysqlCheckRefusal(
+  support: ReturnType<typeof mysqlCheckSupport>,
+  declared: readonly string[],
+  tablesFile: string
+): string | undefined {
+  if (support === 'ok' || declared.length === 0) return undefined
+  return (
+    `${tablesFile} declares constraints (${declared.join(', ')}), ` +
+    (support === 'mariadb'
+      ? `${MARIADB_REFUSAL}.`
+      : `but this MySQL server is older than ${MYSQL_MIN_CHECK_VERSION}, which parses a CHECK and ignores it, so generate will not write one. ` +
+        `Upgrade the server, or take the constraints out of ${tablesFile}.`)
+  )
 }

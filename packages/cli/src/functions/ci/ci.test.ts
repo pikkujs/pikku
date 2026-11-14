@@ -77,6 +77,14 @@ describe('ciStageCommand', () => {
     assert.equal(migrate.dropDatabaseUrl, true)
   })
 
+  test("destructive migrations are allowed only in a throwaway worktree, never in the user's own tree", () => {
+    const own = ciStageCommand('dbMigrate', ciRun({ inWorktree: false }))
+    assert.ok(!own.args.includes('--allowDestructive'))
+    assert.ok(own.args.includes('--localOnly'))
+    const scratch = ciStageCommand('dbMigrate', ciRun({ inWorktree: true }))
+    assert.ok(scratch.args.includes('--allowDestructive'))
+  })
+
   test('the audit gates at high and passes a baseline only when there is one', () => {
     assert.equal(CI_AUDIT_THRESHOLD, 'high')
     assert.deepEqual(ciStageCommand('audit', ciRun()).args.slice(0, -1), [
