@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 // Fails if any publishable package's `license` field disagrees with the LICENSE
-// file shipped beside it, or if either is missing. Warns (loudly) when an MIT
-// package depends on or imports an AGPL package.
+// file shipped beside it, or if either is missing, or if an MIT package depends
+// on or imports an AGPL package.
 //
 // Why this is a gate and not a convention: the repo is deliberately mixed —
 // @pikku/cli, @pikku/inspector, @pikku/inspector-go and the Rust inspector are
-// AGPL-3.0-only, everything else (core, runtimes, services, clients, addons,
+// AGPL-3.0-only, and so is every package that depends on or imports them
+// (@pikku/addon-console, @pikku/code-edit, @pikku/n8n-import,
+// @pikku/addon-changes-cli, @pikku/addon-cloud-cli). Everything else (core, runtimes, services, clients, addons,
 // @pikku/skills) is MIT. npm renders the `license` field while lawyers read the
 // LICENSE file, so a package where the two disagree is a package whose terms
 // nobody can state. Every LICENSE file must be the canonical text in
@@ -13,9 +15,10 @@
 //
 // The dependency rule: an MIT package that depends on or imports an AGPL one is
 // MIT on paper only — whoever ships the two together is bound by the AGPL. Code
-// that ends up in a user's app must never reach an AGPL package. Known cases are
-// tooling (not runtime) and are reported as warnings so CI stays green; pass
-// --strict to make them errors.
+// that ends up in a user's app must never reach an AGPL package. Private
+// packages count too: they are checked like published ones. This is an error,
+// not a warning: fix it by moving the shared code to an MIT package or by
+// relicensing the dependant.
 //
 // Run with --fix to materialise missing or drifted LICENSE files from
 // scripts/licenses/.
@@ -31,7 +34,6 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const FIX = process.argv.includes('--fix')
-const STRICT = process.argv.includes('--strict')
 
 /** The one canonical text per identifier; every LICENSE file must equal it. */
 const TEXTS = {
@@ -205,15 +207,13 @@ if (fixed.length > 0) {
   console.log(`Wrote LICENSE for:\n  ${fixed.join('\n  ')}`)
 }
 if (warnings.length > 0) {
-  const banner = STRICT ? 'ERROR' : 'WARNING'
   console.error(
-    `\n${banner}: MIT packages that depend on or import an AGPL package ` +
+    `\nERROR: MIT packages that depend on or import an AGPL package ` +
       `(${warnings.length}):\n  ${warnings.join('\n  ')}\n` +
       `An MIT package must not reach AGPL code. Move the shared code to an MIT ` +
       `package, or relicense the dependant.\n`
   )
-  if (STRICT)
-    problems.push(`${warnings.length} MIT -> AGPL dependency violation(s)`)
+  problems.push(`${warnings.length} MIT -> AGPL dependency violation(s)`)
 }
 if (problems.length > 0) {
   console.error(
