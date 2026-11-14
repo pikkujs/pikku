@@ -1,6 +1,6 @@
 /**
  * Adding, dropping and changing a `CHECK` on a column that already exists, on
- * postgres, MySQL and MariaDB. The probe that asks whether the rows already in
+ * postgres and MySQL. The probe that asks whether the rows already in
  * the table satisfy a new check is in `@pikku/migrator-sql`, since the runners
  * that apply migrations are what read it.
  *
@@ -14,11 +14,8 @@ import { checkFingerprint } from './check-enums.js'
 /** The oldest MySQL that enforces a `CHECK`; before it the clause is parsed and ignored. */
 export const MYSQL_MIN_CHECK_VERSION = '8.0.16'
 
-/** MariaDB has enforced `CHECK` since 10.2.1. */
-const MARIADB_MIN_CHECK_VERSION = [10, 2] as const
-
-/** What a server's `version()` says it is, as far as `CHECK` syntax goes. */
-export type CheckDialect = 'postgres' | 'mysql' | 'mariadb'
+/** The databases whose `CHECK` syntax is written here. */
+export type CheckDialect = 'postgres' | 'mysql'
 
 type Quote = (name: string) => string
 
@@ -228,9 +225,9 @@ export function addCheckStatements(
 }
 
 /**
- * The statement that drops one named check. MariaDB spells it `DROP
- * CONSTRAINT`; MySQL, from 8.0.16, `DROP CHECK` (it accepts `DROP CONSTRAINT`
- * only from 8.0.19); postgres `DROP CONSTRAINT`.
+ * The statement that drops one named check. MySQL, from 8.0.16, spells it
+ * `DROP CHECK` (it accepts `DROP CONSTRAINT` only from 8.0.19); postgres
+ * `DROP CONSTRAINT`.
  */
 export function dropCheckStatement(
   dialect: CheckDialect,
@@ -251,7 +248,7 @@ export const interimCheckName = (name: string) =>
  * Every statement a column's constraint plan needs, in the order that is safe.
  *
  * Postgres runs the migration in one transaction, so dropping a check and
- * adding its replacement is atomic. MySQL and MariaDB commit each DDL
+ * adding its replacement is atomic. MySQL commits each DDL
  * statement, so doing the same there would leave the column with no check if
  * the replacement is refused by rows that break it, and a rerun would then fail
  * on the drop. A changed check therefore goes in first under an interim name
@@ -296,26 +293,22 @@ export function checkChangeStatements(
   return out
 }
 
+/** The one sentence a MariaDB server is refused with. */
+export const MARIADB_REFUSAL =
+  'MariaDB is not supported; use MySQL 8.0.16+ or Postgres'
+
 /**
- * What a server's `version()` string says it is, or `undefined` when it is too
- * old to enforce a `CHECK` (the clause is parsed and ignored there).
- * `8.0.36`, `8.0.36-0ubuntu1`, `11.4.2-MariaDB`, and the `5.5.5-10.11.6-MariaDB`
- * a MariaDB reports to a client that predates it, are all understood.
+ * What a MySQL-protocol server's `version()` string says about `CHECK`:
+ * `'mariadb'` for a server this does not support, `'too-old'` for a MySQL that
+ * parses a `CHECK` and ignores it, otherwise `'ok'`. `8.0.36` and
+ * `8.0.36-0ubuntu1` are understood.
  */
-export function mysqlCheckDialect(
+export function mysqlCheckSupport(
   version: string
-): 'mysql' | 'mariadb' | undefined {
-  if (/mariadb/i.test(version)) {
-    const found = /(?:^5\.5\.5-)?(\d+)\.(\d+)\.\d+/.exec(version)
-    if (!found) return undefined
-    const [major, minor] = [Number(found[1]), Number(found[2])]
-    const [needMajor, needMinor] = MARIADB_MIN_CHECK_VERSION
-    return major > needMajor || (major === needMajor && minor >= needMinor)
-      ? 'mariadb'
-      : undefined
-  }
+): 'ok' | 'too-old' | 'mariadb' {
+  if (/mariadb/i.test(version)) return 'mariadb'
   const found = /^(\d+)\.(\d+)\.(\d+)/.exec(version)
-  if (!found) return undefined
+  if (!found) return 'too-old'
   const [a, b, c] = found.slice(1).map(Number) as [number, number, number]
   const [x, y, z] = MYSQL_MIN_CHECK_VERSION.split('.').map(Number) as [
     number,
@@ -323,9 +316,5 @@ export function mysqlCheckDialect(
     number,
   ]
   const enforces = a !== x ? a > x : b !== y ? b > y : c >= z
-  return enforces ? 'mysql' : undefined
+  return enforces ? 'ok' : 'too-old'
 }
-
-/** Whether `version` enforces `CHECK`. */
-export const mysqlEnforcesChecks = (version: string): boolean =>
-  mysqlCheckDialect(version) !== undefined

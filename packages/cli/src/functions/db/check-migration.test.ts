@@ -23,8 +23,7 @@ import {
   dropCheckStatement,
   inlineCheckExpression,
   interimCheckName,
-  mysqlCheckDialect,
-  mysqlEnforcesChecks,
+  mysqlCheckSupport,
   planConstraints,
   singleSpaced,
   type CheckTable,
@@ -92,10 +91,6 @@ test('statements per dialect', () => {
     'ALTER TABLE `t` DROP CHECK `c`;'
   )
   assert.equal(
-    dropCheckStatement('mariadb', '`t`', 'c', myq),
-    'ALTER TABLE `t` DROP CONSTRAINT `c`;'
-  )
-  assert.equal(
     dropCheckStatement('postgres', '"t"', 'c', q),
     'ALTER TABLE "t" DROP CONSTRAINT "c";'
   )
@@ -133,15 +128,6 @@ describe('a changed check', () => {
     ])
     // Nothing is dropped until the replacement has been accepted.
     assert.match(statements[0]!, /^-- pikku:check-probe /)
-  })
-
-  test('on mariadb uses DROP CONSTRAINT throughout', () => {
-    const statements = checkChangeStatements('mariadb', myTable, change, myq)
-    assert.ok(statements.every((s) => !s.includes('DROP CHECK')))
-    assert.equal(
-      statements.filter((s) => s.includes('DROP CONSTRAINT')).length,
-      2
-    )
   })
 
   test('on postgres is a drop then an add, which the migration transaction makes atomic', () => {
@@ -199,27 +185,21 @@ test('the probe SQL keeps whitespace inside a string and refuses a comment', () 
 })
 
 test('mysql version gate', () => {
-  assert.equal(mysqlEnforcesChecks('8.0.36'), true)
-  assert.equal(mysqlEnforcesChecks('8.0.16'), true)
-  assert.equal(mysqlEnforcesChecks('8.0.15'), false)
-  assert.equal(mysqlEnforcesChecks('5.7.44'), false)
-  assert.equal(mysqlEnforcesChecks('9.1.0'), true)
+  assert.equal(mysqlCheckSupport('8.0.36'), 'ok')
+  assert.equal(mysqlCheckSupport('8.0.16'), 'ok')
+  assert.equal(mysqlCheckSupport('8.0.15'), 'too-old')
+  assert.equal(mysqlCheckSupport('5.7.44'), 'too-old')
+  assert.equal(mysqlCheckSupport('9.1.0'), 'ok')
 })
 
-test('mariadb version gate: 10.2 and up enforce CHECK, nothing below does', () => {
-  for (const [version, expected] of [
-    ['10.11.2-MariaDB', 'mariadb'],
-    ['10.2.1-MariaDB', 'mariadb'],
-    ['11.4.2-MariaDB', 'mariadb'],
-    ['10.1.9-MariaDB', undefined],
-    ['10.0.38-MariaDB', undefined],
-    ['5.5.64-MariaDB', undefined],
-    ['5.5.5-10.11.6-MariaDB', 'mariadb'],
-    ['5.5.5-10.1.48-MariaDB', undefined],
-    ['8.0.36', 'mysql'],
-    ['5.7.44', undefined],
-  ] as const) {
-    assert.equal(mysqlCheckDialect(version), expected, version)
+test('a MariaDB server is refused, whatever its version', () => {
+  for (const version of [
+    '10.11.2-MariaDB',
+    '11.4.2-MariaDB',
+    '5.5.5-10.11.6-MariaDB',
+    '10.1.9-MariaDB',
+  ]) {
+    assert.equal(mysqlCheckSupport(version), 'mariadb', version)
   }
 })
 
@@ -396,7 +376,8 @@ describe('the probe in front of a migration', () => {
           }),
           (error) =>
             error instanceof MigrationFailedError &&
-            /rows in item already break the check/.test(error.message)
+            /rows in item already break the check/.test(error.message) &&
+            /Applied before it failed: 0001-init\.sql/.test(error.message)
         )
         const applied = await db.query(`select name from sql_migrations`)
         assert.deepEqual(applied.rows, [{ name: '0001-init.sql' }])
@@ -427,6 +408,52 @@ describe('the probe in front of a migration', () => {
         assert.deepEqual(result.applied, ['0001-init.sql', '0002-check.sql'])
       }
     )
+  })
+
+  test('a data fix earlier in the same file is not refused on the rows it is about to change', async () => {
+    await withMigrations(
+      `create table item (qty integer); insert into item values (0), (2);`,
+      `update item set qty = 1 where qty = 0;\n${migration('"qty" >= 1')}`,
+      async (db, dir) => {
+        const client = pgClient(db)
+        const result = await migrate(
+          new PostgresMigrationExecutor(client),
+          dir,
+          {
+            beforeMigration: checkProbeHook(
+              'postgres',
+              postgresProbeExecutor(client)
+            ),
+          }
+        )
+        assert.deepEqual(result.applied, ['0001-init.sql', '0002-check.sql'])
+      }
+    )
+  })
+
+  test('a failure with nothing applied before it says so', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-probe-'))
+    const db = new PGlite()
+    try {
+      writeFileSync(
+        join(dir, '0001-init.sql'),
+        `create table item (qty integer); insert into item values (0);\n${migration('"qty" >= 1')}`
+      )
+      // The table does not exist when the probe runs, so it passes and the
+      // database itself refuses; the message must not claim anything applied.
+      await assert.rejects(
+        migrate(new PostgresMigrationExecutor(pgClient(db)), dir, {
+          beforeMigration: checkProbeHook(
+            'postgres',
+            postgresProbeExecutor(pgClient(db))
+          ),
+        }),
+        /Nothing was applied in this run/
+      )
+    } finally {
+      await db.close()
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   test('refuses a table above the row cap', async () => {

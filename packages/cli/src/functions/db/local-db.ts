@@ -78,9 +78,9 @@ import {
   MYSQL_MIN_CHECK_VERSION,
   checkChangeStatements,
   inlineCheckExpression,
-  mysqlCheckDialect,
+  mysqlCheckSupport,
+  MARIADB_REFUSAL,
   planConstraints,
-  type CheckDialect,
 } from './check-migration.js'
 import {
   sqliteRebuildMigration,
@@ -2263,20 +2263,20 @@ export async function planDeclaredTables(
         continue
       }
 
-      let dialect: CheckDialect
+      let dialect: 'postgres' | 'mysql' = 'postgres'
       if (resolved.dialect === 'mysql') {
-        const flavour = await mysqlServerCheckDialect(resolved)
-        if (!flavour) {
+        const support = await mysqlServerCheckSupport(resolved)
+        if (support !== 'ok') {
           refusals.push(
-            `${table}.${column}: ${plan.reasons.join('; ')}. This MySQL server is older than ` +
-              `${MYSQL_MIN_CHECK_VERSION} (MariaDB: 10.2), which parses a CHECK and ignores it, so generate will not write one. ` +
-              `Upgrade the server, or take the constraint out of ${TABLES_FILE}.`
+            `${table}.${column}: ${plan.reasons.join('; ')}. ` +
+              (support === 'mariadb'
+                ? `${MARIADB_REFUSAL}.`
+                : `This MySQL server is older than ${MYSQL_MIN_CHECK_VERSION}, which parses a CHECK and ignores it, so generate will not write one. ` +
+                  `Upgrade the server, or take the constraint out of ${TABLES_FILE}.`)
           )
           continue
         }
-        dialect = flavour
-      } else {
-        dialect = 'postgres'
+        dialect = 'mysql'
       }
       statements.push(
         ...checkChangeStatements(
@@ -2350,16 +2350,13 @@ async function coveredSqliteObjects(
   }
 }
 
-/**
- * Which `CHECK` syntax the configured server speaks, or `undefined` when it
- * does not enforce one (MySQL before 8.0.16, MariaDB before 10.2).
- */
-async function mysqlServerCheckDialect(
+/** Whether the configured MySQL-protocol server enforces a `CHECK`, or is refused. */
+async function mysqlServerCheckSupport(
   resolved: ResolvedDb
-): Promise<'mysql' | 'mariadb' | undefined> {
+): Promise<ReturnType<typeof mysqlCheckSupport>> {
   return withThrowawayKysely(resolved, async (db) => {
     const { rows } = await sql<{ v: string }>`select version() as v`.execute(db)
-    return mysqlCheckDialect(String(rows[0]?.v ?? ''))
+    return mysqlCheckSupport(String(rows[0]?.v ?? ''))
   })
 }
 

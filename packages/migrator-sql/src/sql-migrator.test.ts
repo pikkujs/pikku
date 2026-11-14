@@ -9,6 +9,7 @@ import {
   migrate,
   MigrationDestructiveError,
   MigrationFailedError,
+  DESTRUCTIVE_MIGRATION_MARKER,
   destructiveReasons,
   pendingMigrations,
 } from './sql-migrator.js'
@@ -133,5 +134,40 @@ test('destructiveReasons reads only whole marker lines', () => {
       '-- pikku:destructive one\nSELECT 1; -- pikku:destructive nope\n-- pikku:destructivex\n-- pikku:destructive two  \n'
     ),
     ['one', 'two']
+  )
+})
+
+test('destructiveReasons also reads a bare, indented, upper-case or space-less marker', () => {
+  assert.deepEqual(destructiveReasons('-- pikku:destructive\nSELECT 1;'), [''])
+  assert.deepEqual(destructiveReasons('   -- pikku:destructive  why\n'), [
+    'why',
+  ])
+  assert.deepEqual(destructiveReasons('\t-- PIKKU:DESTRUCTIVE Why\n'), ['Why'])
+  assert.deepEqual(destructiveReasons('--pikku:destructive no space\n'), [
+    'no space',
+  ])
+  assert.deepEqual(destructiveReasons('--pikku:destructive\r\nSELECT 1;'), [''])
+  assert.deepEqual(destructiveReasons('-- pikku:destructive-ish\n'), [])
+})
+
+test('a bare marker stops the run like any other', async () => {
+  await withMigrations(
+    { '0001-a.sql': '  --PIKKU:Destructive\nCREATE TABLE a (id TEXT);' },
+    async (dir, executor) => {
+      await assert.rejects(
+        migrate(executor, dir),
+        (error) =>
+          error instanceof MigrationDestructiveError &&
+          error.migrations[0]!.name === '0001-a.sql'
+      )
+      assert.deepEqual(await executor.getApplied(), [])
+    }
+  )
+})
+
+test('the marker db generate writes is the one the gate reads', () => {
+  assert.deepEqual(
+    destructiveReasons(`${DESTRUCTIVE_MIGRATION_MARKER}rebuilds "t"\n`),
+    ['rebuilds "t"']
   )
 })

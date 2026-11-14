@@ -287,6 +287,24 @@ test('splitSqliteStatements keeps a CASE ... END inside a trigger from ending it
   ])
 })
 
+test('splitSqliteStatements: a column named end or begin does not end or start a trigger body', () => {
+  const trigger = `CREATE TRIGGER g AFTER UPDATE OF begin ON t WHEN new.begin > 0 BEGIN UPDATE t SET end = 1 WHERE end IS NULL; UPDATE t SET begin = CASE WHEN end > 1 THEN end ELSE 0 END; END;`
+  assert.deepEqual(splitSqliteStatements(`${trigger}\nSELECT 1;`), [
+    trigger,
+    'SELECT 1;',
+  ])
+})
+
+test('splitSqliteStatements: EXPLAIN CREATE TRIGGER is still one trigger', () => {
+  for (const prefix of ['EXPLAIN ', 'explain query plan ']) {
+    const trigger = `${prefix}CREATE TRIGGER g AFTER INSERT ON t BEGIN UPDATE t SET n = 1; UPDATE t SET m = 2; END;`
+    assert.deepEqual(splitSqliteStatements(`${trigger}\nSELECT 1;`), [
+      trigger,
+      'SELECT 1;',
+    ])
+  }
+})
+
 test('splitSqliteStatements reads a backslash as an ordinary character', () => {
   const a = `CREATE TABLE t (p TEXT DEFAULT 'C:\\');`
   const b = `CREATE TABLE u (n INTEGER CHECK (n NOT LIKE '%x\\_%' ESCAPE '\\'));`

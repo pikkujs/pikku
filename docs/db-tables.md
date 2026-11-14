@@ -67,15 +67,14 @@ lets sqlite add one with `ADD COLUMN`. On a column that already exists:
   Changing a check drops and re-adds it (atomic, in that transaction); removing
   it from the declaration drops it (only checks named
   `<table>_<column>_<kind>_check`; one you wrote yourself is left alone).
-- **MySQL and MariaDB** use `ADD CONSTRAINT ... CHECK`. Dropping is `DROP CHECK`
-  on MySQL (8.0.16 or later) and `DROP CONSTRAINT` on MariaDB (10.2 or later).
+- **MySQL** uses `ADD CONSTRAINT ... CHECK` and `DROP CHECK`, from 8.0.16.
   An older server parses a `CHECK` and ignores it, so generate refuses. DDL
   commits as it goes there, so a changed check is added under an interim name
   first, the old one dropped, the final name added and the interim one dropped:
   rows that break the new check refuse the first step and leave the old check in
   place. A migration that stops after that step still has to be finished by hand.
-  This sequence has been tested only as statements, not against a running
-  MySQL or MariaDB server.
+  This sequence has been tested only as statements, not against a running MySQL
+  server.
 - **sqlite** cannot alter a constraint, so the table is rebuilt: a new table with
   the new definition, the rows copied (rowids too, so a TEXT-keyed table, an
   external-content FTS index or a vec0 table still point at their rows, and an
@@ -95,17 +94,21 @@ lets sqlite add one with `ADD COLUMN`. On a column that already exists:
   if an index, trigger or view that existed on the database is gone afterwards
   (one made by hand and missing from the migrations would be). Every sqlite
   runner in this repository uses that migrator.
-- `-- pikku:destructive <what it does>`: `migrate` refuses a pending migration
+- `-- pikku:destructive [what it does]`: `migrate` refuses a pending migration
   with this line unless it is told to allow it, before applying anything.
   `pikku db migrate --allowDestructive` and the standalone bundle's
   `db migrate --allow-destructive` do; `db status` on the bundle marks such
   migrations. `pikku db reset` and scratch databases allow it, since there is
-  nothing to lose.
+  nothing to lose. The line may be bare, indented, in any case, or written
+  `--pikku:destructive`; `db generate` writes the canonical form.
 - `-- pikku:check-probe {json}`, above each added check: `schema`, `table` and
   the `SELECT` that returns a row only if one breaks the check. `migrate` can be
   given a `beforeMigration` hook, and `checkProbeHook` is the one that runs
   these against the live database, just before that migration (so a table the
-  migration before it creates is there to be probed). It refuses on a breaking
+  migration before it creates is there to be probed; a probe that follows an
+  `UPDATE`, `DELETE`, `INSERT` or `TRUNCATE` in the same file is not run, since
+  that statement changes the rows it would read). A refusal says which
+  migrations of the run had already applied. It refuses on a breaking
   row, on a table estimated above 10 million rows (`CHECK_PROBE_MAX_ROWS`), and
   on a scan that takes over 30 seconds (`CHECK_PROBE_TIMEOUT_MS`). A table never
   analysed (Postgres reports `-1` rows) is counted up to the cap, not trusted.

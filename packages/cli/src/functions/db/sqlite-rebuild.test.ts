@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { migrate } from '@pikku/migrator-sql'
+import { destructiveReasons, migrate } from '@pikku/migrator-sql'
 import {
   SqliteMigrationExecutor,
   loadSqliteRuntime,
@@ -91,6 +91,8 @@ test('the migration drops views and triggers first and puts them back last, in o
   assert.ok('sql' in result)
   const lines = (result as { sql: string }).sql.split('\n')
   assert.match(lines[0]!, /^-- pikku:destructive rebuilds "t"/)
+  // The gate reads back exactly what generate wrote.
+  assert.equal(destructiveReasons((result as { sql: string }).sql).length, 1)
   assert.equal(lines[1], '-- pikku:foreign-keys-off')
   assert.deepEqual(lines.slice(2, 4), ['DROP TRIGGER "g";', 'DROP VIEW "v";'])
   assert.match(lines[4]!, /^CREATE TABLE "pikku_rebuild_t"/)

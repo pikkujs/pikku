@@ -27,6 +27,7 @@ export function splitSqliteStatements(sql: string): string[] {
   let trigger = false
   let inBody = false
   let caseDepth = 0
+  let previous = '' // the last token read, lower-cased; a quoted one is its first character
   let i = 0
 
   const finish = () => {
@@ -37,6 +38,7 @@ export function splitSqliteStatements(sql: string): string[] {
     trigger = false
     inBody = false
     caseDepth = 0
+    previous = ''
   }
 
   const token = (from: number, to: number) => {
@@ -80,6 +82,7 @@ export function splitSqliteStatements(sql: string): string[] {
         i++
       }
       token(from, i)
+      previous = ch
       continue
     }
 
@@ -88,7 +91,13 @@ export function splitSqliteStatements(sql: string): string[] {
       while (isWordChar(sql[i])) i++
       const word = sql.slice(from, i).toLowerCase()
       token(from, i)
-      if (words.length < 4) {
+      const before = previous
+      previous = word
+      // `EXPLAIN [QUERY PLAN]` ahead of a statement does not change what it is.
+      const explained =
+        words.length === 0 &&
+        (word === 'explain' || word === 'query' || word === 'plan')
+      if (!explained && words.length < 4) {
         words.push(word)
         if (
           !trigger &&
@@ -101,11 +110,15 @@ export function splitSqliteStatements(sql: string): string[] {
         }
       }
       if (trigger) {
-        if (word === 'begin') inBody = true
-        else if (word === 'case') caseDepth++
+        // `of begin`, `, begin` and `new.begin` name a column, not the body.
+        if (word === 'begin') {
+          if (before !== 'of' && before !== ',' && before !== '.') inBody = true
+        } else if (word === 'case') caseDepth++
         else if (word === 'end') {
           if (caseDepth > 0) caseDepth--
-          else inBody = false
+          // A body's own END always follows the `;` ending its last statement;
+          // an `end` anywhere else in it is a column.
+          else if (before === ';') inBody = false
         }
       }
       continue
@@ -114,11 +127,13 @@ export function splitSqliteStatements(sql: string): string[] {
     if (ch === ';') {
       token(i, i + 1)
       i++
+      previous = ';'
       if (!inBody) finish()
       continue
     }
 
     token(i, i + 1)
+    previous = ch
     i++
   }
   finish()

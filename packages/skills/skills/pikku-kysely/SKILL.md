@@ -333,7 +333,7 @@ pikku db migrate    # applies it and regenerates the types
 - **Constraints are real.** `enum`, `min`, `max`, `minLength`, `maxLength`
   become named `CHECK`s (`<table>_<col>_<kind>_check`) on a new table or a new
   column, and the zod schema carries them; `pattern` is zod only. On an
-  existing column, postgres, MySQL (8.0.16+) and MariaDB (10.2+) get
+  existing column, postgres and MySQL (8.0.16+) get
   `ADD`/`DROP CONSTRAINT` (postgres `NOT VALID` then `VALIDATE`, though one
   transaction still holds the lock; MySQL swaps a changed check in under an
   interim name), each added check preceded by a `-- pikku:check-probe` line that

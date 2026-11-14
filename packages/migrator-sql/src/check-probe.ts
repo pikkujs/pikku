@@ -201,14 +201,32 @@ export class CheckProbeError extends Error {
         : result.reason === 'too-large'
           ? `${table} has about ${result.estimate} rows, more than the ${CHECK_PROBE_MAX_ROWS} the probe will scan; add the constraint by hand (NOT VALID, then VALIDATE) in a window that suits it`
           : `the scan of ${table} did not finish in time`
-    super(`[PKU-DB-CHECK-PROBE] ${migration}: ${why}. Nothing was applied.`)
+    super(`[PKU-DB-CHECK-PROBE] ${migration}: ${why}.`)
     this.name = 'CheckProbeError'
   }
 }
 
 /**
+ * The part of a migration the probes can speak for: everything ahead of its
+ * first `UPDATE`, `DELETE`, `INSERT` or `TRUNCATE`. The probe looks at the rows
+ * as they are before the file runs; a data fix earlier in the same file changes
+ * them, so a check added after one is left to the database to enforce (it does,
+ * and a failure rolls the migration back on Postgres), not refused on rows the
+ * fix is about to change.
+ */
+export function beforeDataChanges(migration: string): string {
+  const lines = migration.split('\n')
+  const at = lines.findIndex((line) =>
+    /^\s*(update|delete|insert|truncate)\b/i.test(line)
+  )
+  return at === -1 ? migration : lines.slice(0, at).join('\n')
+}
+
+/**
  * The `beforeMigration` hook for `migrate` that runs a migration's probes
- * against the live database and refuses the migration if any fails.
+ * against the live database, as it is just before that file runs (earlier
+ * migrations in the same run have applied), and refuses the migration if any
+ * fails. Probes after a data change in the same file are not run.
  */
 export const checkProbeHook =
   (
@@ -217,7 +235,7 @@ export const checkProbeHook =
     options?: CheckProbeOptions
   ) =>
   async (name: string, sql: string): Promise<void> => {
-    for (const probe of probesIn(sql)) {
+    for (const probe of probesIn(beforeDataChanges(sql))) {
       const result = await runCheckProbe(dialect, probe, execute, options)
       if (!result.ok) throw new CheckProbeError(name, probe, result)
     }

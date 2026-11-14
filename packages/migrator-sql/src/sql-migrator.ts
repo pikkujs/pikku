@@ -49,11 +49,15 @@ export class MigrationFailedError extends Error {
   constructor(
     public readonly file: string,
     migrationsDir: string,
-    cause: unknown
+    cause: unknown,
+    public readonly applied: string[] = []
   ) {
     super(
       `[PKU-DB-MIGRATE] ${migrationsDir}/${file}\n\n` +
-        (cause instanceof Error ? cause.message : String(cause)),
+        (cause instanceof Error ? cause.message : String(cause)) +
+        (applied.length > 0
+          ? `\n\nApplied before it failed: ${applied.join(', ')}.`
+          : `\n\nNothing was applied in this run.`),
       { cause }
     )
     this.name = 'MigrationFailedError'
@@ -61,17 +65,26 @@ export class MigrationFailedError extends Error {
 }
 
 /**
- * The line a migration carries to say it rewrites or removes data, followed by
- * what it does. `db generate` writes it for a table rebuild; a person can write
- * it on any migration that deserves the same stop.
+ * The line `db generate` writes on a migration that rewrites or removes data,
+ * followed by what it does.
  */
 export const DESTRUCTIVE_MIGRATION_MARKER = '-- pikku:destructive '
 
-/** What each `-- pikku:destructive` line in `sql` says, in order. */
+/**
+ * What the gate recognises: the marker as written above, and the looser forms a
+ * person typing it by hand produces: indented, any case, no space after `--`,
+ * and no reason at all. A person can write it on any migration that deserves
+ * the same stop.
+ */
+const DESTRUCTIVE_LINE =
+  /^[ \t]*--[ \t]*pikku:destructive(?![\w-])[ \t]*(.*?)[ \t]*$/gim
+
+/**
+ * What each destructive marker line in `sql` says, in order. A bare marker
+ * yields an empty string, so it still counts.
+ */
 export function destructiveReasons(sql: string): string[] {
-  return [...sql.matchAll(/^-- pikku:destructive[ \t]+(.*?)[ \t]*$/gm)].map(
-    (m) => m[1]!
-  )
+  return [...sql.matchAll(DESTRUCTIVE_LINE)].map((m) => m[1]!)
 }
 
 export interface DestructiveMigration {
@@ -249,7 +262,7 @@ export async function migrate(
       await options.beforeMigration?.(name, raw.toString('utf8'))
       await executor.runMigration(raw.toString('utf8'), name, hash)
     } catch (error) {
-      throw new MigrationFailedError(name, migrationsDir, error)
+      throw new MigrationFailedError(name, migrationsDir, error, result.applied)
     }
     result.applied.push(name)
   }
