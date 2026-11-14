@@ -157,8 +157,16 @@ because of a running changeset, claim one that does not clash, or stop.
 
 Ask when the item admits more than one reasonable implementation and you would be
 picking for them — "make the total stand out" (bigger? bolder? moved?), anything that
-changes stored data, what an existing user sees, or what something costs. Do not ask
-what the item already says, or implementation choices that are yours.
+changes data that already exists, what an existing user sees, or what something costs.
+Do not ask what the item already says, or implementation choices that are yours.
+
+**A brief for something new is not a reason to ask.** When the request describes an app or
+feature that does not exist yet (a booking site, a shop, a tracker), the person wants the
+plan, not a questionnaire: tables, screens, who can see what and which fields to keep are
+yours to decide. File each change with your decisions written in its body ("Decision: ...")
+so they can be corrected later, and leave no change waiting on an answer. Ask only about
+money, deleting existing data, or a choice that the person's words leave truly open and
+that would be costly to reverse.
 
 One decision, in their vocabulary, with the choices as `--option` flags — each becomes
 a button. Include "hold until I check" when it is real. Batch questions per group.
