@@ -222,7 +222,7 @@ Pikku uses a dual licensing approach:
 
 See [LICENSE](LICENSE) for full details. The BSL restriction only prohibits offering commercial visual development tools for Pikku. Free and open source alternatives are welcome!
 
-Contributors: By submitting a pull request, you agree to our [CLA](CLA.md).
+Contributors: you sign our [CLA](CLA.md) with one comment on your first pull request (see [CONTRIBUTING](docs/CONTRIBUTING.md)). Draft pending legal review.
 
 ---
 

@@ -74,7 +74,9 @@ The Husky pre-commit hook runs `bun install` and checks that `bun.lock` did not 
 
 ## Contributor License Agreement
 
-By submitting a pull request, you agree to the terms of our [Contributor License Agreement](../CLA.md). This allows the project to accept your contributions while maintaining licensing flexibility.
+Before we can merge a pull request you must sign our [Contributor License Agreement](../CLA.md). You keep the copyright in your contribution; the CLA gives the project owner a broad licence to it, including the right to relicense, so the project can also be offered under commercial terms. A bot comments on your first pull request and asks you to sign by posting one comment. The signature is stored in `signatures/cla.json` on the `cla-signatures` branch. If your employer has rights in your work, see the corporate note in the CLA.
+
+The CLA is a draft pending legal review.
 
 ## Pull Request Guidelines
 
