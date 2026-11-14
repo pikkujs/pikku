@@ -1,5 +1,21 @@
 # @pikku/better-auth
 
+## 0.12.65
+
+### Patch Changes
+
+- e825b1a: A session can carry `impersonated?: { by: string }`, the id of the real user acting as the session's user. better-auth's impersonation sets it from the caller it resolves, after `mapSession`. A function span records `pikku.impersonated` (boolean `true`) and `pikku.impersonator.id` when it opens (and again just before the function body, for a session a middleware sets later), and a log line written inside the span carries them too; a session that is not impersonated has neither. `Span` gains an optional `removeAttribute`; `PikkuSessionService.set` never stores `impersonated`; the OTLP logger drops logged fields named like its context attributes.
+- Updated dependencies [681b92b]
+- Updated dependencies [5679af0]
+- Updated dependencies [3b07a5b]
+- Updated dependencies [4c2f5c4]
+- Updated dependencies [cc1735d]
+- Updated dependencies [be8a952]
+- Updated dependencies [e825b1a]
+- Updated dependencies [36d5004]
+- Updated dependencies [5d1ce7a]
+  - @pikku/core@0.12.158
+
 ## 0.12.64
 
 ### Patch Changes
