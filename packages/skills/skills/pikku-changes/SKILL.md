@@ -164,9 +164,9 @@ Do not ask what the item already says, or implementation choices that are yours.
 feature that does not exist yet (a booking site, a shop, a tracker), the person wants the
 plan, not a questionnaire: tables, screens, who can see what and which fields to keep are
 yours to decide. File each change with your decisions written in its body ("Decision: ...")
-so they can be corrected later, and leave no change waiting on an answer. Ask only about
-money, deleting existing data, or a choice that the person's words leave truly open and
-that would be costly to reverse.
+so they can be corrected later, and leave no change waiting on an answer. That holds for
+money too (prices, payment, stock): pick the simplest option, write it as a decision, and
+carry on. Ask only about deleting data that already exists.
 
 One decision, in their vocabulary, with the choices as `--option` flags — each becomes
 a button. Include "hold until I check" when it is real. Batch questions per group.
