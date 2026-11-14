@@ -119,6 +119,23 @@ describe('Schema', () => {
       assert.ok(data.createdAt instanceof Date)
     })
 
+    test('should leave an omitted or null date-time property as it is', () => {
+      const omitted = {} as any
+      coerceTopLevelDataFromSchema('dateSchema', omitted)
+      assert.ok(!('createdAt' in omitted))
+
+      const nulled = { createdAt: null } as any
+      coerceTopLevelDataFromSchema('dateSchema', nulled)
+      assert.strictEqual(nulled.createdAt, null)
+    })
+
+    test('should keep a date-time value that is already a Date', () => {
+      const date = new Date('2024-01-01T00:00:00Z')
+      const data = { createdAt: date } as any
+      coerceTopLevelDataFromSchema('dateSchema', data)
+      assert.strictEqual(data.createdAt, date)
+    })
+
     test('should coerce a whole-number string for integer and number', () => {
       const data = { year: '2027', ratio: '2027' } as any
       coerceTopLevelDataFromSchema('numericSchema', data)
