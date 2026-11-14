@@ -1,20 +1,24 @@
 #!/usr/bin/env node
 // Fails if any publishable package's `license` field disagrees with the LICENSE
-// file shipped beside it, or if either is missing.
+// file shipped beside it, or if either is missing. Warns (loudly) when an MIT
+// package depends on or imports an AGPL package.
 //
 // Why this is a gate and not a convention: the repo is deliberately mixed —
-// @pikku/cli, @pikku/inspector and @pikku/console are BUSL-1.1, everything else
-// (notably @pikku/skills, the agent instruction set other harnesses are meant to
-// adopt) is MIT. npm renders the `license` field while lawyers read the LICENSE
-// file, so a package where the two disagree is a package whose terms nobody can
-// state. Before this check existed, eight publishable packages had no `license`
-// field at all, one said UNLICENSED by accident, and no package carried a
-// LICENSE file — the grant lived only in the repo root, which npm tarballs
-// never include.
+// @pikku/cli, @pikku/inspector, @pikku/inspector-go and the Rust inspector are
+// AGPL-3.0-only, everything else (core, runtimes, services, clients, addons,
+// @pikku/skills) is MIT. npm renders the `license` field while lawyers read the
+// LICENSE file, so a package where the two disagree is a package whose terms
+// nobody can state. Every LICENSE file must be the canonical text in
+// scripts/licenses/ byte for byte, so drift is visible as drift.
 //
-// Run with --fix to materialise the missing or drifted MIT LICENSE files from
-// scripts/licenses/MIT. BUSL packages are never written for you: their
-// Licensed Work clause names the package and is a legal decision, not a copy.
+// The dependency rule: an MIT package that depends on or imports an AGPL one is
+// MIT on paper only — whoever ships the two together is bound by the AGPL. Code
+// that ends up in a user's app must never reach an AGPL package. Known cases are
+// tooling (not runtime) and are reported as warnings so CI stays green; pass
+// --strict to make them errors.
+//
+// Run with --fix to materialise missing or drifted LICENSE files from
+// scripts/licenses/.
 import {
   readFileSync,
   writeFileSync,
@@ -22,120 +26,202 @@ import {
   readdirSync,
   statSync,
 } from 'node:fs'
-import { join, dirname, relative } from 'node:path'
+import { join, dirname, relative, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const FIX = process.argv.includes('--fix')
+const STRICT = process.argv.includes('--strict')
 
-/** Distinctive text that must appear in a LICENSE file for each identifier. */
-const FINGERPRINTS = {
-  MIT: 'Permission is hereby granted, free of charge',
-  'BUSL-1.1': 'Business Source License 1.1',
+/** The one canonical text per identifier; every LICENSE file must equal it. */
+const TEXTS = {
+  MIT: readFileSync(join(ROOT, 'scripts', 'licenses', 'MIT'), 'utf8'),
+  'AGPL-3.0-only': readFileSync(
+    join(ROOT, 'scripts', 'licenses', 'AGPL-3.0'),
+    'utf8'
+  ),
 }
 
-/** The one MIT text every MIT package ships, so drift is visible as drift. */
-const MIT_TEXT = readFileSync(join(ROOT, 'scripts', 'licenses', 'MIT'), 'utf8')
+const SKIP_DIRS = new Set([
+  'node_modules',
+  'dist',
+  '.deploy',
+  '.pikku',
+  '.next',
+  'target',
+  'testdata',
+])
 
-function findPackageJsons(dir, out = []) {
+function walk(dir, match, out = []) {
   for (const entry of readdirSync(dir)) {
-    if (
-      ['node_modules', 'dist', '.deploy', '.pikku', '.next'].includes(entry)
-    ) {
-      continue
-    }
+    if (SKIP_DIRS.has(entry)) continue
     const full = join(dir, entry)
-    if (statSync(full).isDirectory()) findPackageJsons(full, out)
-    else if (entry === 'package.json') out.push(full)
+    if (statSync(full).isDirectory()) walk(full, match, out)
+    else if (match(entry)) out.push(full)
   }
   return out
 }
 
 const problems = []
+const warnings = []
 const fixed = []
 let checked = 0
 
 // The root manifest is private, but a single SPDX id there would misdescribe a
-// deliberately mixed repo — it used to say MIT while the root LICENSE is BUSL.
+// deliberately mixed repo.
 const rootPkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
 if (rootPkg.license !== 'SEE LICENSE IN LICENSE') {
   problems.push(
     `package.json: root license should be "SEE LICENSE IN LICENSE" (the repo is ` +
-      `mixed BUSL/MIT), not "${rootPkg.license}"`
+      `mixed AGPL/MIT), not "${rootPkg.license}"`
   )
 }
 
-for (const file of findPackageJsons(join(ROOT, 'packages'))) {
-  let pkg
-  try {
-    pkg = JSON.parse(readFileSync(file, 'utf8'))
-  } catch {
-    continue
-  }
-  if (pkg.private || !pkg.name) continue
-  checked++
-
-  const dir = dirname(file)
-  const where = relative(ROOT, file)
+/** Checks (and with --fix writes) the LICENSE beside a manifest. */
+function checkLicenseFile(dir, license, where) {
   const licensePath = join(dir, 'LICENSE')
-
-  if (!pkg.license) {
-    problems.push(`${where}: no "license" field`)
-  } else if (!FINGERPRINTS[pkg.license]) {
-    problems.push(
-      `${where}: license "${pkg.license}" is not one this repo uses ` +
-        `(${Object.keys(FINGERPRINTS).join(', ')})`
-    )
+  const canonical = TEXTS[license]
+  if (!license) {
+    problems.push(`${where}: no license field`)
+    return
   }
-
+  if (!canonical) {
+    problems.push(
+      `${where}: license "${license}" is not one this repo uses ` +
+        `(${Object.keys(TEXTS).join(', ')})`
+    )
+    return
+  }
   if (!existsSync(licensePath)) {
-    if (FIX && pkg.license === 'MIT') {
-      writeFileSync(licensePath, MIT_TEXT)
+    if (FIX) {
+      writeFileSync(licensePath, canonical)
       fixed.push(relative(ROOT, licensePath))
     } else {
       problems.push(
         `${where}: no LICENSE file beside it — npm always ships LICENSE, and ` +
           `the root one is not in the tarball`
       )
-      continue
     }
+    return
   }
-
-  const text = readFileSync(licensePath, 'utf8')
-  const fingerprint = FINGERPRINTS[pkg.license]
-  if (pkg.license === 'MIT' && text !== MIT_TEXT) {
+  if (readFileSync(licensePath, 'utf8') !== canonical) {
     if (FIX) {
-      writeFileSync(licensePath, MIT_TEXT)
+      writeFileSync(licensePath, canonical)
       fixed.push(relative(ROOT, licensePath))
     } else {
       problems.push(
-        `${relative(ROOT, licensePath)}: differs from scripts/licenses/MIT — ` +
-          `every MIT package ships the same text`
+        `${relative(ROOT, licensePath)}: differs from the canonical ${license} ` +
+          `text in scripts/licenses/`
       )
     }
-  } else if (fingerprint && !text.includes(fingerprint)) {
-    problems.push(
-      `${where}: declares "${pkg.license}" but its LICENSE file does not read as ${pkg.license}`
-    )
   }
-  if (pkg.license === 'BUSL-1.1' && !text.includes(pkg.name)) {
-    problems.push(
-      `${relative(ROOT, licensePath)}: BUSL Licensed Work must name ${pkg.name}`
+}
+
+const packages = []
+for (const file of walk(join(ROOT, 'packages'), (e) => e === 'package.json')) {
+  let pkg
+  try {
+    pkg = JSON.parse(readFileSync(file, 'utf8'))
+  } catch {
+    continue
+  }
+  if (!pkg.name) continue
+  packages.push({ pkg, dir: dirname(file) })
+  if (pkg.private) continue
+  checked++
+  checkLicenseFile(dirname(file), pkg.license, relative(ROOT, file))
+}
+
+// Rust crates declare their licence in Cargo.toml; same rule.
+for (const file of walk(join(ROOT, 'packages'), (e) => e === 'Cargo.toml')) {
+  const toml = readFileSync(file, 'utf8')
+  const pkgSection = toml.split(/^\[(?!package\])/m)[0]
+  const m = pkgSection.match(/^license\s*=\s*"([^"]+)"/m)
+  checked++
+  checkLicenseFile(dirname(file), m?.[1], relative(ROOT, file))
+}
+
+// ── The dependency rule: MIT must not reach AGPL ──────────────────────────
+const agpl = new Set(
+  packages
+    .filter(({ pkg }) => pkg.license === 'AGPL-3.0-only')
+    .map(({ pkg }) => pkg.name)
+)
+const SHIPPED_DEPS = [
+  'dependencies',
+  'peerDependencies',
+  'optionalDependencies',
+]
+const SOURCE_EXT = new Set([
+  '.ts',
+  '.tsx',
+  '.mts',
+  '.cts',
+  '.js',
+  '.mjs',
+  '.cjs',
+])
+const isTestFile = (p) =>
+  /\.(test|spec)\.[cm]?[jt]sx?$/.test(p) ||
+  /(^|\/)(test|tests|__tests__)\//.test(p)
+// `import … from 'x'`, `export … from 'x'`, `import 'x'`, `import('x')`,
+// `require('x')`. Group 1 is set for `import type` / `export type`.
+const IMPORT_RE =
+  /(?:\b(?:import|export)\s+(type\s+)?[\w*{}\s,$]*?\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)['"]((?:@[^'"/]+\/)?[^'"/]+)(?:\/[^'"]*)?['"]/g
+
+for (const { pkg, dir } of packages) {
+  if (pkg.license !== 'MIT') continue
+  const where = relative(ROOT, dir)
+  for (const field of SHIPPED_DEPS) {
+    for (const dep of Object.keys(pkg[field] ?? {})) {
+      if (agpl.has(dep)) {
+        warnings.push(`${where} (${pkg.name}): ${field} on AGPL ${dep}`)
+      }
+    }
+  }
+  const srcDir = join(dir, 'src')
+  if (!existsSync(srcDir)) continue
+  const seen = new Map()
+  for (const file of walk(srcDir, (e) => SOURCE_EXT.has(extname(e)))) {
+    const rel = relative(ROOT, file)
+    if (isTestFile(rel)) continue
+    const text = readFileSync(file, 'utf8')
+    for (const m of text.matchAll(IMPORT_RE)) {
+      const target = m[2]
+      if (!agpl.has(target)) continue
+      const typeOnly = Boolean(m[1])
+      const key = `${target}${typeOnly ? ' (type-only)' : ''}`
+      seen.set(key, (seen.get(key) ?? 0) + 1)
+    }
+  }
+  for (const [key, count] of seen) {
+    warnings.push(
+      `${where} (${pkg.name}): source imports AGPL ${key} in ${count} place(s)`
     )
   }
 }
 
 if (fixed.length > 0) {
-  console.log(`Wrote MIT LICENSE for:\n  ${fixed.join('\n  ')}`)
+  console.log(`Wrote LICENSE for:\n  ${fixed.join('\n  ')}`)
+}
+if (warnings.length > 0) {
+  const banner = STRICT ? 'ERROR' : 'WARNING'
+  console.error(
+    `\n${banner}: MIT packages that depend on or import an AGPL package ` +
+      `(${warnings.length}):\n  ${warnings.join('\n  ')}\n` +
+      `An MIT package must not reach AGPL code. Move the shared code to an MIT ` +
+      `package, or relicense the dependant.\n`
+  )
+  if (STRICT)
+    problems.push(`${warnings.length} MIT -> AGPL dependency violation(s)`)
 }
 if (problems.length > 0) {
   console.error(
     `License metadata does not match the LICENSE files:\n  ${problems.join('\n  ')}\n` +
-      `Run \`yarn check:licenses --fix\` to write the MIT ones; BUSL packages ` +
-      `need their LICENSE authored by hand.`
+      `Run \`bun run check:licenses --fix\` to write the canonical LICENSE files.`
   )
   process.exit(1)
 }
 console.log(
-  `✓ ${checked} publishable packages: license field matches LICENSE file`
+  `✓ ${checked} publishable packages and crates: license field matches LICENSE file`
 )

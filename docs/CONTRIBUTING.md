@@ -2,12 +2,25 @@
 
 Thank you for your interest in contributing to Pikku! We welcome contributions from the community and appreciate your help in making Pikku better.
 
+## Pull requests are paused
+
+We are **not accepting code pull requests for now**. We are still finishing our contributor licence agreement, and we do not have the capacity to review outside code. A bot replies to pull requests from outside contributors with this message.
+
+What helps most is an **issue**. Ask your AI assistant to write it with as much detail as possible:
+
+- what you saw, and what you expected
+- steps to reproduce
+- the relevant code, logs or error output
+- your suggested fix
+
+We will pick it up and fix it ourselves.
+
 ## Ways to Contribute
 
 You can contribute to Pikku in several ways:
 
 - **Create an Issue** - Report bugs, propose new features, or suggest improvements
-- **Submit Pull Requests** - Fix bugs, add features, improve documentation, or refactor code
+- **Submit Pull Requests** - Not for now: see [Pull requests are paused](#pull-requests-are-paused)
 - **Create Runtime Adapters** - Build adapters for new runtime environments
 - **Write Documentation** - Help improve our docs, examples, and tutorials
 - **Share Your Experience** - Write blog posts, create tutorials, or share on social media
@@ -74,9 +87,7 @@ The Husky pre-commit hook runs `bun install` and checks that `bun.lock` did not 
 
 ## Contributor License Agreement
 
-Before we can merge a pull request you must sign our [Contributor License Agreement](../CLA.md). You keep the copyright in your contribution; the CLA gives the project owner a broad licence to it, including the right to relicense, so the project can also be offered under commercial terms. A bot comments on your first pull request and asks you to sign by posting one comment. The signature is stored in `signatures/cla.json` on the `cla-signatures` branch. If your employer has rights in your work, see the corporate note in the CLA.
-
-The CLA is a draft pending legal review.
+A contributor licence agreement will be introduced later, before we accept outside pull requests again. The [draft](../CLA.md) is not in force and is pending legal review. Until then nobody is asked to sign anything.
 
 ## Pull Request Guidelines
 

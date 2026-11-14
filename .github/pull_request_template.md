@@ -1,3 +1,12 @@
+<!--
+We are not accepting code pull requests from outside contributors for now: the
+contributor licence agreement is not in force yet, and we do not have the
+capacity to review outside code. Please open an issue instead, written with your
+AI assistant in as much detail as possible (what you saw, what you expected,
+steps to reproduce, relevant code or logs, your suggested fix). We will fix it
+ourselves. See docs/CONTRIBUTING.md.
+-->
+
 ## Summary
 
 <!-- What does this change and why? -->
@@ -6,4 +15,3 @@
 
 - [ ] Tests pass and I added tests for new behaviour
 - [ ] I added a changeset for every publishable package I changed (pikku repo)
-- [ ] I have read the [Contributor License Agreement](../CLA.md). On your first pull request the CLA bot asks you to sign it by posting one comment; the check stays red until you do.

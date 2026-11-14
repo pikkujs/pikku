@@ -1,3 +1,11 @@
+# ============================================================================
+# DISABLED. The CLA is a draft and is NOT in force (see CLA.md). While it is
+# drafted we do not accept outside pull requests at all: .github/workflows/
+# pr-decline.yml replies to them instead. This workflow is kept ready: the
+# `cla-signatures` branch already holds an empty signatures/cla.json. To turn it
+# on, remove `if: false` below, fill in the CLA placeholders after legal review,
+# and remove or narrow pr-decline.yml.
+# ============================================================================
 name: CLA Assistant
 
 # Contributor License Agreement check. The text is CLA.md. Signatures are stored in
@@ -37,6 +45,8 @@ permissions:
 
 jobs:
   CLAAssistant:
+    # Disabled: see the note at the top of this file.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: CLA Assistant

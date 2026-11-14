@@ -8,6 +8,7 @@ Version numbers in brackets are the release of the named package that shipped th
 
 ## Contents
 
+- [Licence change: CLI and inspectors are AGPL-3.0-only](#licence-change-cli-and-inspectors-are-agpl-30-only)
 - [0.13.0 changes](#0130-changes)
 - [How to upgrade](#how-to-upgrade)
 - [`@pikku/core`](#pikkucore)
@@ -17,6 +18,16 @@ Version numbers in brackets are the release of the named package that shipped th
 - [`@pikku/better-auth`](#pikkubetter-auth)
 - [Frontend and removed packages](#frontend-and-removed-packages)
 - [Database changes](#database-changes)
+
+## Licence change: CLI and inspectors are AGPL-3.0-only
+
+`@pikku/cli`, `@pikku/inspector` and `@pikku/inspector-go` (and the unpublished Rust inspector) move from the Business Source License 1.1 to **AGPL-3.0-only**. Every other package (`@pikku/core`, the runtimes, services, clients, addons and skills) stays **MIT**.
+
+- **What changes for you:** usually nothing. You run the CLI to build your app; your app depends on the MIT packages. The AGPL matters if you modify the CLI or the inspectors and distribute them, or let others use a modified version over a network: then you must share your changes under the AGPL. The old BUSL ban on commercial visual Pikku tools is gone.
+- **Generated code:** *[LAWYER: draft, not yet reviewed]* the code, types and files the CLI generates into your project are not meant to be covered by the AGPL. See [LICENSE](../LICENSE).
+- **Older versions:** releases published before this change keep the BUSL-1.1 terms they were published under, including `@pikku/console`.
+- **If the AGPL does not work for you:** other licensing is available. See [LICENSE-COMMERCIAL.md](../LICENSE-COMMERCIAL.md).
+- **How to find affected code:** if you vendor or fork `packages/cli`, `packages/inspector`, `packages/inspector-go` or `packages/inspector-rust`, those copies are now AGPL-3.0-only. Run `bun run check:licenses` in a fork: it warns when an MIT package depends on or imports an AGPL one.
 
 ## 0.13.0 changes
 
