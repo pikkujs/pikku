@@ -62,7 +62,12 @@ export type StandaloneDb = StandaloneSqliteDb | StandalonePostgresDb
 
 export type StandaloneCommand =
   | { kind: 'serve' }
-  | { kind: 'db'; action: 'migrate' | 'status' }
+  | {
+      kind: 'db'
+      action: 'migrate' | 'status'
+      /** Apply migrations marked `-- pikku:destructive`. */
+      allowDestructive?: boolean
+    }
   | { kind: 'backup'; destination: string }
   | { kind: 'exit'; code: number }
 
@@ -85,6 +90,7 @@ const usage = (hasDb: boolean, engine?: 'sqlite' | 'postgres'): string =>
       ? [
           '',
           '  db migrate       Apply pending migrations to the database this build opens.',
+          '                   A migration marked destructive is refused unless --allow-destructive is given.',
           '  db status        List applied and pending migrations.',
           ...(engine === 'sqlite'
             ? ['  backup <path>    Copy the database to <path>, consistently.']
@@ -126,7 +132,15 @@ export function parseStandaloneCommand(
   if (command === 'db') {
     const action = rest[0]
     if (action === 'migrate' || action === 'status') {
-      return { kind: 'db', action }
+      const flags = rest.slice(1)
+      const unknown = flags.filter((flag) => flag !== '--allow-destructive')
+      if (unknown.length > 0 || (action === 'status' && flags.length > 0)) {
+        write(`Unknown option for db ${action}: ${(unknown[0] ?? flags[0])!}.`)
+        return { kind: 'exit', code: 1 }
+      }
+      return flags.length > 0
+        ? { kind: 'db', action, allowDestructive: true }
+        : { kind: 'db', action }
     }
     write(
       action === undefined
@@ -181,7 +195,12 @@ export const resolveMigrationsDir = (
  */
 const executorFor = async (
   db: StandaloneDb
-): Promise<{ executor: MigrationExecutor; close: () => void }> => {
+): Promise<{
+  executor: MigrationExecutor
+  close: () => void
+  /** Checks a migration's preconditions against the database before it runs. */
+  beforeMigration?: (name: string, sql: string) => Promise<void>
+}> => {
   if (db.engine === 'sqlite') {
     const { SqliteMigrationExecutor, loadSqliteRuntime } =
       await import('@pikku/migrator-sql/sqlite')
@@ -197,9 +216,14 @@ const executorFor = async (
 
   const { PostgresMigrationExecutor } =
     await import('@pikku/migrator-sql/postgres')
+  const { checkProbeHook, postgresProbeExecutor } =
+    await import('@pikku/migrator-sql')
+  const client = postgresClient(db.sql)
   return {
-    executor: new PostgresMigrationExecutor(postgresClient(db.sql)),
+    executor: new PostgresMigrationExecutor(client),
     close: () => {},
+    // A check a migration adds is first tried on the rows the table has.
+    beforeMigration: checkProbeHook('postgres', postgresProbeExecutor(client)),
   }
 }
 
@@ -235,14 +259,19 @@ const stdout: CommandOutput = { write: (line) => console.log(line) }
 export async function runDbCommand(
   action: 'migrate' | 'status',
   db: StandaloneDb,
-  out: CommandOutput = stdout
+  out: CommandOutput = stdout,
+  options: { allowDestructive?: boolean } = {}
 ): Promise<void> {
-  const { migrate, pendingMigrations } = await import('@pikku/migrator-sql')
-  const { executor, close } = await executorFor(db)
+  const { migrate, pendingMigrations, pendingDestructive } =
+    await import('@pikku/migrator-sql')
+  const { executor, close, beforeMigration } = await executorFor(db)
 
   try {
     if (action === 'migrate') {
-      const { applied, skipped } = await migrate(executor, db.migrationsDir)
+      const { applied, skipped } = await migrate(executor, db.migrationsDir, {
+        allowDestructive: options.allowDestructive,
+        beforeMigration,
+      })
       for (const name of applied) out.write(`applied  ${name}`)
       out.write(
         applied.length === 0
@@ -259,7 +288,19 @@ export async function runDbCommand(
     for (const row of applied) {
       out.write(`applied  ${row.name}  ${row.applied_at}`)
     }
-    for (const name of pending) out.write(`pending  ${name}`)
+    const destructive = new Map(
+      pendingDestructive(db.migrationsDir, applied).map((m) => [
+        m.name,
+        m.reasons.join('; '),
+      ])
+    )
+    for (const name of pending) {
+      out.write(
+        destructive.has(name)
+          ? `pending  ${name}  DESTRUCTIVE: ${destructive.get(name)}`
+          : `pending  ${name}`
+      )
+    }
     out.write(`${applied.length} applied, ${pending.length} pending.`)
   } finally {
     close()
@@ -309,7 +350,9 @@ export async function runStandaloneCommand(
   }
 
   if (command.kind === 'db') {
-    await runDbCommand(command.action, db, out)
+    await runDbCommand(command.action, db, out, {
+      allowDestructive: command.allowDestructive,
+    })
     return 'done'
   }
 

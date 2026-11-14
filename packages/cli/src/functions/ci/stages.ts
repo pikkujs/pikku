@@ -24,7 +24,8 @@ const stageCommand = (stage: CiStage, run: CiRun): CiCommand => {
       return { args: ['bootstrap'] }
     case 'dbMigrate':
       return {
-        args: ['db', 'migrate', '--localOnly'],
+        // A CI database is built from nothing on this machine and thrown away.
+        args: ['db', 'migrate', '--localOnly', '--allowDestructive'],
         dropDatabaseUrl: true,
       }
     case 'emails':

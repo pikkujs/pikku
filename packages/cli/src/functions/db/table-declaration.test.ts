@@ -722,6 +722,8 @@ describe('constraints on the declaration', () => {
   })
 
   describe('sqlite rebuilds the table to change a constraint', () => {
+    // The rebuild is marked destructive, and a run has to say it may apply one.
+    const ALLOW = { allowDestructive: true }
     const NAME_ONLY = `item: { columns: {
         id: { type: 'key', primaryKey: true },
         name: { type: 'text', required: true },
@@ -756,7 +758,7 @@ describe('constraints on the declaration', () => {
 CREATE TABLE audit (note TEXT);
 CREATE TRIGGER item_audit AFTER INSERT ON item BEGIN INSERT INTO audit VALUES (new.name); END;`
       )
-      await migrateAndCodegen(resolved)
+      await migrateAndCodegen(resolved, ALLOW)
       let db = await open()
       db.exec(`insert into owner values ('o');
         insert into item (id, name, owner_id) values ('a', 'one', 'o'), ('b', 'two', 'o');
@@ -780,7 +782,7 @@ CREATE TRIGGER item_audit AFTER INSERT ON item BEGIN INSERT INTO audit VALUES (n
       const sql = readFileSync(written[0]!.file, 'utf8')
       assert.match(sql, /^-- pikku:destructive rebuilds "item"/m)
       assert.match(sql, /^-- pikku:foreign-keys-off$/m)
-      await migrateAndCodegen(resolved)
+      await migrateAndCodegen(resolved, ALLOW)
 
       db = await open()
       const count = (table: string) =>
@@ -813,7 +815,7 @@ CREATE TRIGGER item_audit AFTER INSERT ON item BEGIN INSERT INTO audit VALUES (n
       declare(NAME_ONLY)
       const resolved = sqliteProject()
       await generate(resolved)
-      await migrateAndCodegen(resolved)
+      await migrateAndCodegen(resolved, ALLOW)
       let db = await open()
       db.exec(`insert into item (id, name) values ('a', 'much too long')`)
       db.close()
@@ -822,7 +824,7 @@ CREATE TRIGGER item_audit AFTER INSERT ON item BEGIN INSERT INTO audit VALUES (n
       const planned = await generate(resolved)
       assert.equal(planned.written.length, 1)
       await assert.rejects(
-        migrateAndCodegen(resolved),
+        migrateAndCodegen(resolved, ALLOW),
         /CHECK constraint failed/i
       )
 
@@ -846,15 +848,36 @@ CREATE TRIGGER item_audit AFTER INSERT ON item BEGIN INSERT INTO audit VALUES (n
       db.close()
     })
 
+    test('applying the rebuild is refused unless destructive migrations are allowed, and nothing changes', async () => {
+      declare(NAME_ONLY)
+      const resolved = sqliteProject()
+      await generate(resolved)
+      await migrateAndCodegen(resolved)
+      let db = await open()
+      db.exec(`insert into item (id, name) values ('a', 'one')`)
+      db.close()
+
+      declare(bounded(5))
+      await generate(resolved)
+      await assert.rejects(migrateAndCodegen(resolved), /PKU-DB-DESTRUCTIVE/)
+      db = await open()
+      assert.equal(
+        (db.prepare('select count(*) n from item').get() as any).n,
+        1
+      )
+      db.close()
+      await migrateAndCodegen(resolved, ALLOW)
+    })
+
     test('changing a check rebuilds it and removing one takes it out', async () => {
       declare(bounded(5))
       const resolved = sqliteProject()
       await generate(resolved)
-      await migrateAndCodegen(resolved)
+      await migrateAndCodegen(resolved, ALLOW)
 
       declare(bounded(8))
       assert.deepEqual((await generate(resolved)).refusals, [])
-      await migrateAndCodegen(resolved)
+      await migrateAndCodegen(resolved, ALLOW)
       let db = await open()
       db.exec(`insert into item (id, name) values ('a', '12345678')`)
       assert.throws(() =>
@@ -865,7 +888,7 @@ CREATE TRIGGER item_audit AFTER INSERT ON item BEGIN INSERT INTO audit VALUES (n
 
       declare(NAME_ONLY)
       assert.deepEqual((await generate(resolved)).refusals, [])
-      await migrateAndCodegen(resolved)
+      await migrateAndCodegen(resolved, ALLOW)
       db = await open()
       db.exec(`insert into item (id, name) values ('c', '1234567890')`)
       db.close()
@@ -889,12 +912,12 @@ INSERT INTO item VALUES ('a', 'one', 1, 'o');`
       const resolved = sqliteProject()
       const first = await generate(resolved)
       assert.deepEqual(first.refusals, [])
-      await migrateAndCodegen(resolved)
+      await migrateAndCodegen(resolved, ALLOW)
       declare(columns(', maxLength: 5'))
       const { refusals, written } = await generate(resolved)
       assert.deepEqual(refusals, [])
       assert.equal(written.length, 1)
-      await migrateAndCodegen(resolved)
+      await migrateAndCodegen(resolved, ALLOW)
 
       const db = await open()
       const insert = (id: string, name: string, rank: number, owner: string) =>
@@ -934,7 +957,7 @@ INSERT INTO item VALUES ('a', 'one', 1, 'o');`
       const sql = readFileSync(written[0]!.file, 'utf8')
       assert.match(
         sql,
-        /-- pikku:check-probe SELECT 1 FROM "item" WHERE NOT \(.*length.*<= 20\) LIMIT 1\nALTER TABLE "item" ADD CONSTRAINT "item_name_maxlength_check" CHECK \(.*\) NOT VALID;/
+        /-- pikku:check-probe \{"table":"item","sql":"SELECT 1 FROM \\"item\\" WHERE NOT \(.*length.*<= 20\) LIMIT 1"\}\nALTER TABLE "item" ADD CONSTRAINT "item_name_maxlength_check" CHECK \(.*\) NOT VALID;/
       )
       assert.match(
         sql,

@@ -1,28 +1,24 @@
 /**
- * Adding and dropping a `CHECK` on a column that already exists, on postgres
- * and MySQL; and the probe a deploy runs first to learn whether the rows
- * already in the table satisfy a new one.
+ * Adding, dropping and changing a `CHECK` on a column that already exists, on
+ * postgres, MySQL and MariaDB. The probe that asks whether the rows already in
+ * the table satisfy a new check is in `@pikku/migrator-sql`, since the runners
+ * that apply migrations are what read it.
  *
  * SQLite cannot alter a constraint at all, so it is not here (see
  * `sqlite-rebuild.ts`).
  */
+import { checkProbeLine } from '@pikku/migrator-sql'
 import type { ColumnCheck, ColumnInfo } from './db-introspector.js'
 import { checkFingerprint } from './check-enums.js'
-
-/** How long a deploy lets the probe run before it gives up. */
-export const CHECK_PROBE_TIMEOUT_MS = 30_000
-
-/**
- * Above this many estimated rows, `generate` will not write an `ADD CONSTRAINT`
- * on its own. Validating a check scans the table, and a person should decide how.
- */
-export const CHECK_PROBE_MAX_ROWS = 10_000_000
 
 /** The oldest MySQL that enforces a `CHECK`; before it the clause is parsed and ignored. */
 export const MYSQL_MIN_CHECK_VERSION = '8.0.16'
 
-/** The comment a migration carries above each added check, followed by the probe's SQL. */
-export const CHECK_PROBE_MARKER = '-- pikku:check-probe '
+/** MariaDB has enforced `CHECK` since 10.2.1. */
+const MARIADB_MIN_CHECK_VERSION = [10, 2] as const
+
+/** What a server's `version()` says it is, as far as `CHECK` syntax goes. */
+export type CheckDialect = 'postgres' | 'mysql' | 'mariadb'
 
 type Quote = (name: string) => string
 
@@ -144,140 +140,192 @@ export function inlineCheckExpression(
   return undefined
 }
 
+/**
+ * `expression` made single-spaced where it is code, and untouched inside a
+ * string or a quoted identifier, where a run of spaces is part of the value.
+ * A comment in it is refused: it would swallow whatever follows on its line.
+ */
+export function singleSpaced(expression: string): string {
+  let out = ''
+  let i = 0
+  while (i < expression.length) {
+    const ch = expression[i]!
+    if (ch === "'" || ch === '"' || ch === '`') {
+      const from = i
+      i++
+      while (i < expression.length) {
+        if (expression[i] === ch) {
+          if (expression[i + 1] === ch) {
+            i += 2
+            continue
+          }
+          i++
+          break
+        }
+        i++
+      }
+      out += expression.slice(from, i)
+    } else if (
+      (ch === '-' && expression[i + 1] === '-') ||
+      (ch === '/' && expression[i + 1] === '*')
+    ) {
+      throw new Error(
+        `a comment in the check ${JSON.stringify(expression)} cannot be probed`
+      )
+    } else if (/\s/.test(ch)) {
+      while (/\s/.test(expression[i] ?? '') && i < expression.length) i++
+      out += ' '
+    } else {
+      out += ch
+      i++
+    }
+  }
+  return out.trim()
+}
+
 /** The `SELECT` that finds a row breaking `expression`, if the table has one. */
 export function checkProbeSql(qualifiedTable: string, expression: string) {
-  return `SELECT 1 FROM ${qualifiedTable} WHERE NOT (${expression.replace(/\s+/g, ' ')}) LIMIT 1`
+  return `SELECT 1 FROM ${qualifiedTable} WHERE NOT (${singleSpaced(expression)}) LIMIT 1`
+}
+
+/** Where a check is added: the names for the probe, the quoted form for the SQL. */
+export interface CheckTable {
+  schema?: string
+  table: string
+  qualified: string
 }
 
 /**
- * The statements that add one check to a table that exists.
+ * The statements that add one check to a table that exists, and the probe line
+ * that comes first.
  *
- * Postgres adds it `NOT VALID` and validates it in a second statement, so the
- * long scan holds a lock that lets writes through; the add itself takes only a
- * brief one. MySQL has no such split and scans while it adds.
+ * Postgres adds it `NOT VALID` and validates it in a second statement. That
+ * split only shortens the time writes are blocked when the two run in separate
+ * transactions; the migrator runs a whole migration in one, so there the table
+ * stays locked from the add to the commit, validating scan included. It is kept
+ * because it is the form a runner that does apply statements one at a time
+ * benefits from, and costs nothing otherwise. MySQL has no such split.
  */
 export function addCheckStatements(
-  dialect: 'postgres' | 'mysql',
-  qualifiedTable: string,
+  dialect: CheckDialect,
+  where: CheckTable,
   name: string,
   expression: string,
   quote: Quote
 ): string[] {
-  const probe = `${CHECK_PROBE_MARKER}${checkProbeSql(qualifiedTable, expression)}`
-  const add = `ALTER TABLE ${qualifiedTable} ADD CONSTRAINT ${quote(name)} CHECK (${expression})`
+  const probe = checkProbeLine({
+    ...(where.schema ? { schema: where.schema } : {}),
+    table: where.table,
+    sql: checkProbeSql(where.qualified, expression),
+  })
+  const add = `ALTER TABLE ${where.qualified} ADD CONSTRAINT ${quote(name)} CHECK (${expression})`
   return dialect === 'postgres'
     ? [
         `${probe}\n${add} NOT VALID;`,
-        `ALTER TABLE ${qualifiedTable} VALIDATE CONSTRAINT ${quote(name)};`,
+        `ALTER TABLE ${where.qualified} VALIDATE CONSTRAINT ${quote(name)};`,
       ]
     : [`${probe}\n${add};`]
 }
 
-/** The statement that drops one check; MySQL spells it `DROP CHECK`, from 8.0.16. */
+/**
+ * The statement that drops one named check. MariaDB spells it `DROP
+ * CONSTRAINT`; MySQL, from 8.0.16, `DROP CHECK` (it accepts `DROP CONSTRAINT`
+ * only from 8.0.19); postgres `DROP CONSTRAINT`.
+ */
 export function dropCheckStatement(
-  dialect: 'postgres' | 'mysql',
+  dialect: CheckDialect,
   qualifiedTable: string,
   name: string,
   quote: Quote
 ): string {
-  return dialect === 'postgres'
-    ? `ALTER TABLE ${qualifiedTable} DROP CONSTRAINT ${quote(name)};`
-    : `ALTER TABLE ${qualifiedTable} DROP CHECK ${quote(name)};`
+  return dialect === 'mysql'
+    ? `ALTER TABLE ${qualifiedTable} DROP CHECK ${quote(name)};`
+    : `ALTER TABLE ${qualifiedTable} DROP CONSTRAINT ${quote(name)};`
 }
 
-/** Whether `version` (`8.0.36`, `8.0.36-0ubuntu1`, `11.4.2-MariaDB`) enforces `CHECK`. */
-export function mysqlEnforcesChecks(version: string): boolean {
+/** The name a changed check is held under while its replacement goes in. */
+export const interimCheckName = (name: string) =>
+  `pikku_next_${name}`.slice(0, 64)
+
+/**
+ * Every statement a column's constraint plan needs, in the order that is safe.
+ *
+ * Postgres runs the migration in one transaction, so dropping a check and
+ * adding its replacement is atomic. MySQL and MariaDB commit each DDL
+ * statement, so doing the same there would leave the column with no check if
+ * the replacement is refused by rows that break it, and a rerun would then fail
+ * on the drop. A changed check therefore goes in first under an interim name
+ * (the step rows can fail), the old one is dropped, the final name added (it
+ * cannot fail: the interim check has held every row to it), and the interim one
+ * dropped. A rerun after any of the later steps still fails; the first leaves
+ * the table untouched.
+ */
+export function checkChangeStatements(
+  dialect: CheckDialect,
+  where: CheckTable,
+  plan: { drop: string[]; add: { name: string; expression: string }[] },
+  quote: Quote
+): string[] {
+  const drop = (name: string) =>
+    dropCheckStatement(dialect, where.qualified, name, quote)
+  const add = (name: string, expression: string) =>
+    addCheckStatements(dialect, where, name, expression, quote)
+  const changed = new Set(
+    plan.add.filter((c) => plan.drop.includes(c.name)).map((c) => c.name)
+  )
+  const out: string[] = []
+  if (dialect === 'postgres') {
+    for (const name of plan.drop) out.push(drop(name))
+    for (const check of plan.add) out.push(...add(check.name, check.expression))
+    return out
+  }
+  for (const name of plan.drop) if (!changed.has(name)) out.push(drop(name))
+  for (const check of plan.add) {
+    if (!changed.has(check.name)) {
+      out.push(...add(check.name, check.expression))
+      continue
+    }
+    const interim = interimCheckName(check.name)
+    out.push(
+      ...add(interim, check.expression),
+      drop(check.name),
+      `ALTER TABLE ${where.qualified} ADD CONSTRAINT ${quote(check.name)} CHECK (${check.expression});`,
+      drop(interim)
+    )
+  }
+  return out
+}
+
+/**
+ * What a server's `version()` string says it is, or `undefined` when it is too
+ * old to enforce a `CHECK` (the clause is parsed and ignored there).
+ * `8.0.36`, `8.0.36-0ubuntu1`, `11.4.2-MariaDB`, and the `5.5.5-10.11.6-MariaDB`
+ * a MariaDB reports to a client that predates it, are all understood.
+ */
+export function mysqlCheckDialect(
+  version: string
+): 'mysql' | 'mariadb' | undefined {
   if (/mariadb/i.test(version)) {
-    const major = /^(\d+)\.(\d+)/.exec(version)
-    // MariaDB has enforced CHECK since 10.2.1.
-    return major ? Number(major[1]) > 10 || Number(major[2]) >= 2 : false
+    const found = /(?:^5\.5\.5-)?(\d+)\.(\d+)\.\d+/.exec(version)
+    if (!found) return undefined
+    const [major, minor] = [Number(found[1]), Number(found[2])]
+    const [needMajor, needMinor] = MARIADB_MIN_CHECK_VERSION
+    return major > needMajor || (major === needMajor && minor >= needMinor)
+      ? 'mariadb'
+      : undefined
   }
   const found = /^(\d+)\.(\d+)\.(\d+)/.exec(version)
-  if (!found) return false
+  if (!found) return undefined
   const [a, b, c] = found.slice(1).map(Number) as [number, number, number]
   const [x, y, z] = MYSQL_MIN_CHECK_VERSION.split('.').map(Number) as [
     number,
     number,
     number,
   ]
-  return a !== x ? a > x : b !== y ? b > y : c >= z
+  const enforces = a !== x ? a > x : b !== y ? b > y : c >= z
+  return enforces ? 'mysql' : undefined
 }
 
-// ─── The deploy-time probe ───────────────────────────────────────────────────
-
-export interface CheckProbeTarget {
-  dialect: 'postgres' | 'mysql'
-  /** Schema (postgres) or database (mysql); omitted means the connection's own. */
-  schema?: string
-  table: string
-  /** The `SELECT` from `checkProbeSql`, as carried by the migration's marker. */
-  probeSql: string
-}
-
-export interface CheckProbeOptions {
-  timeoutMs?: number
-  maxRows?: number
-}
-
-export type CheckProbeResult =
-  | { ok: true }
-  | { ok: false; reason: 'too-large'; estimate: number }
-  | { ok: false; reason: 'timeout' }
-  | { ok: false; reason: 'violations' }
-
-/** Runs `sql` on the target database and returns its rows. Cancelling on timeout is the runner's business. */
-export type ProbeExecutor = (
-  sql: string,
-  timeoutMs: number
-) => Promise<Record<string, unknown>[]>
-
-/** The probes a migration body carries, one per added check. */
-export function probesIn(migration: string): string[] {
-  return migration
-    .split('\n')
-    .filter((line) => line.startsWith(CHECK_PROBE_MARKER))
-    .map((line) => line.slice(CHECK_PROBE_MARKER.length).trim())
-}
-
-const rowEstimateSql = ({ dialect, schema, table }: CheckProbeTarget) =>
-  dialect === 'postgres'
-    ? `SELECT reltuples::bigint AS estimate FROM pg_class WHERE oid = '${(schema ? `"${schema}".` : '') + `"${table}"`}'::regclass`
-    : `SELECT table_rows AS estimate FROM information_schema.tables WHERE table_schema = ${schema ? `'${schema}'` : 'DATABASE()'} AND table_name = '${table}'`
-
-/**
- * Whether the rows a table holds satisfy a check about to be added to it.
- *
- * Declines without scanning when the table is estimated larger than
- * `maxRows`, which is a decision for a person. Otherwise runs the probe under
- * `timeoutMs`; a probe that does not finish counts as a failure, since the
- * `VALIDATE`/`ADD` that follows would scan just as long.
- */
-export async function runCheckProbe(
-  target: CheckProbeTarget,
-  execute: ProbeExecutor,
-  {
-    timeoutMs = CHECK_PROBE_TIMEOUT_MS,
-    maxRows = CHECK_PROBE_MAX_ROWS,
-  }: CheckProbeOptions = {}
-): Promise<CheckProbeResult> {
-  const [row] = await execute(rowEstimateSql(target), timeoutMs)
-  const estimate = Number(row?.estimate ?? 0)
-  if (estimate > maxRows) return { ok: false, reason: 'too-large', estimate }
-
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const timedOut = new Promise<'timeout'>((resolve) => {
-    timer = setTimeout(() => resolve('timeout'), timeoutMs)
-  })
-  try {
-    const result = await Promise.race([
-      execute(target.probeSql, timeoutMs),
-      timedOut,
-    ])
-    if (result === 'timeout') return { ok: false, reason: 'timeout' }
-    return result.length > 0
-      ? { ok: false, reason: 'violations' }
-      : { ok: true }
-  } finally {
-    clearTimeout(timer)
-  }
-}
+/** Whether `version` enforces `CHECK`. */
+export const mysqlEnforcesChecks = (version: string): boolean =>
+  mysqlCheckDialect(version) !== undefined

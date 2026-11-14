@@ -13,11 +13,15 @@
  * with only the named checks edited, so a foreign key, a `UNIQUE` or a check a
  * person wrote by hand survives untouched.
  */
-import { SQLITE_FOREIGN_KEYS_OFF_MARKER } from '@pikku/migrator-sql/sqlite'
-import { createTableBody, splitTopLevel } from '@pikku/migrator-sql'
-
-/** The line that tells whoever reads a migration that it rewrites a table's rows. */
-export const DESTRUCTIVE_MARKER = '-- pikku:destructive '
+import {
+  SQLITE_FOREIGN_KEYS_OFF_MARKER,
+  stripSqliteComments,
+} from '@pikku/migrator-sql/sqlite'
+import {
+  DESTRUCTIVE_MIGRATION_MARKER,
+  createTableBody,
+  splitTopLevel,
+} from '@pikku/migrator-sql'
 
 export interface SqliteObject {
   type: string
@@ -89,8 +93,10 @@ export function rebuiltDefinition(
   rebuild: TableRebuild,
   newName: string
 ): { ddl: string } | { problem: string } {
-  const parts = splitTopLevel(createTableBody(rebuild.ddl))
-  const tail = rebuild.ddl.slice(rebuild.ddl.lastIndexOf(')') + 1)
+  // A `--` comment on the last column would swallow the constraint appended to it.
+  const ddl = stripSqliteComments(rebuild.ddl)
+  const parts = splitTopLevel(createTableBody(ddl))
+  const tail = ddl.slice(ddl.lastIndexOf(')') + 1)
   const edited = [...parts]
   const find = (column: string) =>
     edited.findIndex((part) => columnOf(part) === column.toLowerCase())
@@ -134,7 +140,7 @@ export function sqliteRebuildMigration(
     (o) => (o.type === 'view' || o.type === 'trigger') && o.sql
   )
   const steps: string[] = [
-    `${DESTRUCTIVE_MARKER}rebuilds ${rebuilds.map((r) => quote(r.table)).join(', ')}: rows are copied into a new table and the old one is dropped`,
+    `${DESTRUCTIVE_MIGRATION_MARKER}rebuilds ${rebuilds.map((r) => quote(r.table)).join(', ')}: rows are copied into a new table and the old one is dropped`,
     SQLITE_FOREIGN_KEYS_OFF_MARKER,
     ...[...dependents]
       .reverse()
@@ -148,9 +154,28 @@ export function sqliteRebuildMigration(
     const definition = rebuiltDefinition(rebuild, temp)
     if ('problem' in definition) return definition
     const columns = rebuild.columns.map(quote).join(', ')
+    // A table with a rowid keeps each row's: an external-content FTS index, a
+    // vec0 table or anything else keyed on it points at rowids, and a table
+    // with a TEXT primary key has no other stable handle.
+    const ddl = stripSqliteComments(rebuild.ddl)
+    const hasRowid =
+      !/\bwithout\s+rowid\b/i.test(ddl.slice(ddl.lastIndexOf(')'))) &&
+      !rebuild.columns.some((c) =>
+        ['rowid', 'oid', '_rowid_'].includes(c.toLowerCase())
+      )
+    const target = hasRowid ? `rowid, ${columns}` : columns
+    const sequence = /\bautoincrement\b/i.test(ddl)
     steps.push(
       definition.ddl,
-      `INSERT INTO ${quote(temp)} (${columns}) SELECT ${columns} FROM ${quote(rebuild.table)};`,
+      `INSERT INTO ${quote(temp)} (${target}) SELECT ${target} FROM ${quote(rebuild.table)};`,
+      // The copy leaves the sequence at the highest id still there; the old
+      // table's is the highest ever handed out, and ids must not be reused.
+      ...(sequence
+        ? [
+            `DELETE FROM sqlite_sequence WHERE name = '${temp.replace(/'/g, "''")}';`,
+            `INSERT INTO sqlite_sequence (name, seq) SELECT '${temp.replace(/'/g, "''")}', seq FROM sqlite_sequence WHERE name = '${rebuild.table.replace(/'/g, "''")}';`,
+          ]
+        : []),
       `DROP TABLE ${quote(rebuild.table)};`,
       `ALTER TABLE ${quote(temp)} RENAME TO ${quote(rebuild.table)};`,
       ...objects

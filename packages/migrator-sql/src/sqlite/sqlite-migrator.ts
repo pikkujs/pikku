@@ -1,7 +1,5 @@
 import type { MigrationExecutor, AppliedMigration } from '../sql-migrator.js'
 import { MIGRATION_TRACKING_TABLE as TRACKING_TABLE } from '../sql-migrator.js'
-import { splitStatements } from '../schema-sql.js'
-import { stripSqlComments } from '../migration-identifiers.js'
 import type { SyncSqliteDatabase } from './sqlite-runtime.js'
 
 /**
@@ -11,34 +9,23 @@ import type { SyncSqliteDatabase } from './sqlite-runtime.js'
  */
 export const SQLITE_FOREIGN_KEYS_OFF_MARKER = '-- pikku:foreign-keys-off'
 
-/**
- * `sql` as single statements, a trigger's body kept whole: its `;`s end its
- * inner statements, and only the `END;` ends the trigger.
- */
-export function splitSqliteStatements(sql: string): string[] {
-  const out: string[] = []
-  let open: string | undefined
-  for (const piece of splitStatements(sql)) {
-    const joined = open === undefined ? piece : `${open}\n${piece}`
-    const code = stripSqlComments(joined).trim()
-    if (
-      /^create\s+(?:temp(?:orary)?\s+)?trigger\b/i.test(code) &&
-      !/\bend\s*;?$/i.test(code)
-    ) {
-      open = joined
-    } else {
-      out.push(joined)
-      open = undefined
-    }
-  }
-  if (open !== undefined) out.push(open)
-  return out
-}
-
 type ForeignKeyViolation = Record<string, unknown>
 
+/**
+ * A violation by what is broken, not by which row: a rebuilt table's rows may
+ * change rowid, and a WITHOUT ROWID table reports none.
+ */
 const violationKey = (row: ForeignKeyViolation) =>
-  `${row.table}|${row.rowid}|${row.parent}|${row.fkid}`
+  `${row.table}|${row.parent}|${row.fkid}`
+
+function countByKey(rows: ForeignKeyViolation[]): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const row of rows) {
+    const key = violationKey(row)
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  return counts
+}
 
 export class SqliteMigrationExecutor implements MigrationExecutor {
   constructor(private readonly db: SyncSqliteDatabase) {}
@@ -88,18 +75,42 @@ export class SqliteMigrationExecutor implements MigrationExecutor {
    * or not the migration did.
    */
   private runWithForeignKeysOff(sql: string, name: string, hash: string) {
-    const was = (
-      this.db.prepare('PRAGMA foreign_keys').get() as { foreign_keys: number }
-    ).foreign_keys
+    const enforced = () =>
+      (this.db.prepare('PRAGMA foreign_keys').get() as { foreign_keys: number })
+        .foreign_keys === 1
+    const was = enforced()
     this.db.exec('PRAGMA foreign_keys = OFF')
     try {
-      const before = new Set(this.foreignKeyViolations().map(violationKey))
+      // SQLite ignores the pragma inside a transaction and says nothing, and
+      // a rebuild with enforcement on cascades the DROP into the child rows.
+      if (enforced()) {
+        throw new Error(
+          `${name} needs foreign key enforcement off, and it could not be switched off: a transaction is already open on this connection`
+        )
+      }
+      const before = countByKey(this.foreignKeyViolations())
+      const objectsBefore = this.dependentObjects()
       this.db.exec('BEGIN')
       try {
-        this.apply(sql, name, hash, true)
-        const broken = this.foreignKeyViolations().filter(
-          (row) => !before.has(violationKey(row))
-        )
+        this.apply(sql, name, hash)
+        // Dropping a table takes its indexes and triggers with it, and a rebuild
+        // only puts back the ones the migrations know. One that exists on this
+        // database alone (made by hand, or by another tool) would be lost.
+        const objectsAfter = new Set(this.dependentObjects())
+        const lost = objectsBefore.filter((o) => !objectsAfter.has(o))
+        if (lost.length > 0) {
+          throw new Error(
+            `${name} would lose ${lost.slice(0, 5).join(', ')}${lost.length > 5 ? `, and ${lost.length - 5} more` : ''}, which exist on this database and are not recreated by the migration. Recreate them in the migration or drop them first.`
+          )
+        }
+        const broken: ForeignKeyViolation[] = []
+        const seen = new Map<string, number>()
+        for (const row of this.foreignKeyViolations()) {
+          const key = violationKey(row)
+          const n = (seen.get(key) ?? 0) + 1
+          seen.set(key, n)
+          if (n > (before.get(key) ?? 0)) broken.push(row)
+        }
         if (broken.length > 0) {
           throw new Error(
             `the migration leaves foreign keys broken: ${broken
@@ -120,26 +131,26 @@ export class SqliteMigrationExecutor implements MigrationExecutor {
     }
   }
 
+  /** Indexes, triggers and views by kind and name, SQLite's own excepted. */
+  private dependentObjects(): string[] {
+    return (
+      this.db
+        .prepare(
+          `SELECT type, name FROM sqlite_master
+           WHERE type IN ('index', 'trigger', 'view') AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\'`
+        )
+        .all() as Array<{ type: string; name: string }>
+    ).map((o) => `${o.type} ${o.name}`)
+  }
+
   private foreignKeyViolations(): ForeignKeyViolation[] {
     return this.db
       .prepare('PRAGMA foreign_key_check')
       .all() as ForeignKeyViolation[]
   }
 
-  /**
-   * Whether `sql` runs as one `exec` or a statement at a time. The foreign-keys
-   * path runs them one at a time: bun:sqlite drops the error of a statement
-   * that something follows, so a failed copy would go on to drop the table it
-   * was copying from.
-   */
-  private apply(sql: string, name: string, hash: string, each = false): void {
-    if (each) {
-      for (const statement of splitSqliteStatements(sql)) {
-        this.db.exec(statement)
-      }
-    } else {
-      this.db.exec(sql)
-    }
+  private apply(sql: string, name: string, hash: string): void {
+    this.db.exec(sql)
     this.db
       .prepare(`INSERT INTO ${TRACKING_TABLE} (name, hash) VALUES (?, ?)`)
       .run(name, hash)

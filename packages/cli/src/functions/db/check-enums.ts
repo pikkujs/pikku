@@ -108,13 +108,20 @@ export function parseCheckEnumValues(
   return values.length > 0 ? values : undefined
 }
 
+/** A string, `"identifier"` or `` `identifier` ``, as one capturing group for `split`. */
+const QUOTED = /('(?:[^']|'')*'|"(?:[^"]|"")*"|`(?:[^`]|``)*`)/
+
 /**
  * A check's condition in one spelling, so two readings of the same constraint
  * compare equal: whitespace collapsed, and any parentheses wrapping the whole
  * condition removed.
  */
 export function normaliseCheck(expression: string): string {
-  let text = expression.replace(/\s+/g, ' ').trim()
+  let text = expression
+    .split(QUOTED)
+    .map((part, i) => (i % 2 === 1 ? part : part.replace(/\s+/g, ' ')))
+    .join('')
+    .trim()
   while (text.startsWith('(') && closingParen(text, 0) === text.length - 1) {
     text = text.slice(1, -1).trim()
   }
@@ -288,11 +295,17 @@ export function mysqlCheckEnumValues(clause: string): string[] | undefined {
  */
 export function checkFingerprint(expression: string): string {
   return normaliseCheck(expression)
-    .split(/('(?:[^']|'')*')/)
-    .map((part, i) =>
-      i % 2 === 1
-        ? part
-        : part.replace(/["`]/g, '').replace(/\s+/g, '').toLowerCase()
-    )
+    .split(QUOTED)
+    .map((part, i) => {
+      if (i % 2 === 0) return part.replace(/\s+/g, '').toLowerCase()
+      // A string value, and a `"quoted"` identifier, are exact: `'A'` is not
+      // `'a'`, and on postgres `"Qty"` is not `qty`. Backticks are MySQL's and
+      // sqlite's, whose identifiers do not distinguish case.
+      if (part.startsWith('`')) return part.slice(1, -1).toLowerCase()
+      if (!part.startsWith('"')) return part
+      // `"qty"` is what unquoted `qty` folds to, so the two are one name.
+      const name = part.slice(1, -1)
+      return /^[a-z_][a-z0-9_$]*$/.test(name) ? name : part
+    })
     .join('')
 }

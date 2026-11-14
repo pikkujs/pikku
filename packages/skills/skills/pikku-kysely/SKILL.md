@@ -333,11 +333,16 @@ pikku db migrate    # applies it and regenerates the types
 - **Constraints are real.** `enum`, `min`, `max`, `minLength`, `maxLength`
   become named `CHECK`s (`<table>_<col>_<kind>_check`) on a new table or a new
   column, and the zod schema carries them; `pattern` is zod only. On an
-  existing column, postgres and MySQL (8.0.16+) get `ADD`/`DROP CONSTRAINT`
-  (postgres `NOT VALID` then `VALIDATE`), each added check preceded by a
-  `-- pikku:check-probe` comment a deploy runs against existing rows. On sqlite the table is rebuilt (marked `-- pikku:destructive`, rows copied; rows that break the check fail the migration and roll it back). A table
-  too large to validate, or data that breaks the check, is for a person to
-  migrate; say so rather than editing around it.
+  existing column, postgres, MySQL (8.0.16+) and MariaDB (10.2+) get
+  `ADD`/`DROP CONSTRAINT` (postgres `NOT VALID` then `VALIDATE`, though one
+  transaction still holds the lock; MySQL swaps a changed check in under an
+  interim name), each added check preceded by a `-- pikku:check-probe` line that
+  `migrate` runs against existing rows first. On sqlite the table is rebuilt
+  (rows, rowids and the AUTOINCREMENT sequence copied; marked
+  `-- pikku:destructive`, so `db migrate` needs `--allowDestructive`; rows that
+  break the check fail the migration and roll it back). A table too large to
+  validate, or data that breaks the check, is for a person to migrate; say so
+  rather than editing around it.
 - **An annotation typo is an error**, as is any field a column or table does
   not have. `security` is `public`, `private`, `pii` or `secret`.
 - **`db check` and `db migrate` stop** when `db/tables.ts` is ahead of the

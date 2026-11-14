@@ -140,6 +140,19 @@ test('checkFingerprint equates quoting and case but not string values', () => {
   )
 })
 
+test('checkFingerprint keeps the case of a quoted identifier and of whitespace inside a string', () => {
+  assert.notEqual(
+    checkFingerprint(`"Qty" >= 0`),
+    checkFingerprint(`"qty" >= 0`)
+  )
+  assert.equal(checkFingerprint(`"Qty" >= 0`), checkFingerprint(`"Qty"  >=  0`))
+  assert.equal(checkFingerprint('`Qty` >= 0'), checkFingerprint('qty >= 0'))
+  assert.notEqual(
+    checkFingerprint(`p <> 'a  b'`),
+    checkFingerprint(`p <> 'a b'`)
+  )
+})
+
 test('mysqlCheckColumn and mysqlCheckEnumValues read what MySQL stores', () => {
   const clause = "(`status` in (_utf8mb4'draft',_utf8mb4'it''s'))"
   assert.equal(mysqlCheckColumn(clause, ['status', 'draft']), 'status')

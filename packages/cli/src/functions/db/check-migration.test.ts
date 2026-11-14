@@ -1,17 +1,33 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { PGlite } from '@electric-sql/pglite'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import {
   CHECK_PROBE_MAX_ROWS,
   CHECK_PROBE_TIMEOUT_MS,
+  MigrationFailedError,
+  checkProbeHook,
+  migrate,
+  postgresProbeExecutor,
+  probesIn,
+  runCheckProbe,
+  type CheckProbe,
+} from '@pikku/migrator-sql'
+import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
+import {
   addCheckStatements,
+  checkChangeStatements,
   checkProbeSql,
   dropCheckStatement,
   inlineCheckExpression,
+  interimCheckName,
+  mysqlCheckDialect,
   mysqlEnforcesChecks,
   planConstraints,
-  probesIn,
-  runCheckProbe,
+  singleSpaced,
+  type CheckTable,
 } from './check-migration.js'
 import type { ColumnInfo } from './db-introspector.js'
 
@@ -59,16 +75,25 @@ test('inlineCheckExpression lifts the condition, quotes and nested brackets incl
   assert.equal(inlineCheckExpression(def, 'other'), undefined)
 })
 
+const myq = (n: string) => `\`${n}\``
+const pgTable: CheckTable = {
+  schema: 'app',
+  table: 't',
+  qualified: '"app"."t"',
+}
+const myTable: CheckTable = { table: 't', qualified: '`t`' }
+
 test('statements per dialect', () => {
-  assert.deepEqual(
-    addCheckStatements('mysql', '`t`', 'c', '`a` > 0', (n) => `\`${n}\``),
-    [
-      '-- pikku:check-probe SELECT 1 FROM `t` WHERE NOT (`a` > 0) LIMIT 1\nALTER TABLE `t` ADD CONSTRAINT `c` CHECK (`a` > 0);',
-    ]
+  assert.deepEqual(addCheckStatements('mysql', myTable, 'c', '`a` > 0', myq), [
+    `-- pikku:check-probe {"table":"t","sql":"SELECT 1 FROM \`t\` WHERE NOT (\`a\` > 0) LIMIT 1"}\nALTER TABLE \`t\` ADD CONSTRAINT \`c\` CHECK (\`a\` > 0);`,
+  ])
+  assert.equal(
+    dropCheckStatement('mysql', '`t`', 'c', myq),
+    'ALTER TABLE `t` DROP CHECK `c`;'
   )
   assert.equal(
-    dropCheckStatement('mysql', '`t`', 'c', (n) => `\`${n}\``),
-    'ALTER TABLE `t` DROP CHECK `c`;'
+    dropCheckStatement('mariadb', '`t`', 'c', myq),
+    'ALTER TABLE `t` DROP CONSTRAINT `c`;'
   )
   assert.equal(
     dropCheckStatement('postgres', '"t"', 'c', q),
@@ -76,10 +101,101 @@ test('statements per dialect', () => {
   )
   assert.deepEqual(
     probesIn(
-      addCheckStatements('postgres', '"t"', 'c', '"a" > 0', q).join('\n')
+      addCheckStatements('postgres', pgTable, 'c', '"a" > 0', q).join('\n')
     ),
-    ['SELECT 1 FROM "t" WHERE NOT ("a" > 0) LIMIT 1']
+    [
+      {
+        schema: 'app',
+        table: 't',
+        sql: 'SELECT 1 FROM "app"."t" WHERE NOT ("a" > 0) LIMIT 1',
+      },
+    ]
   )
+})
+
+describe('a changed check', () => {
+  const change = { drop: ['c'], add: [{ name: 'c', expression: '`a` > 1' }] }
+  const kinds = (statements: string[]) =>
+    statements.map((s) =>
+      s
+        .split('\n')
+        .pop()!
+        .replace(/ CHECK \(.*$/, '')
+    )
+
+  test('on mysql goes in under an interim name first, so refused rows leave the old check in place', () => {
+    const statements = checkChangeStatements('mysql', myTable, change, myq)
+    assert.deepEqual(kinds(statements), [
+      `ALTER TABLE \`t\` ADD CONSTRAINT \`${interimCheckName('c')}\``,
+      'ALTER TABLE `t` DROP CHECK `c`;',
+      'ALTER TABLE `t` ADD CONSTRAINT `c`',
+      `ALTER TABLE \`t\` DROP CHECK \`${interimCheckName('c')}\`;`,
+    ])
+    // Nothing is dropped until the replacement has been accepted.
+    assert.match(statements[0]!, /^-- pikku:check-probe /)
+  })
+
+  test('on mariadb uses DROP CONSTRAINT throughout', () => {
+    const statements = checkChangeStatements('mariadb', myTable, change, myq)
+    assert.ok(statements.every((s) => !s.includes('DROP CHECK')))
+    assert.equal(
+      statements.filter((s) => s.includes('DROP CONSTRAINT')).length,
+      2
+    )
+  })
+
+  test('on postgres is a drop then an add, which the migration transaction makes atomic', () => {
+    const statements = checkChangeStatements(
+      'postgres',
+      pgTable,
+      { drop: ['c'], add: [{ name: 'c', expression: '"a" > 1' }] },
+      q
+    )
+    assert.match(statements[0]!, /DROP CONSTRAINT "c"/)
+    assert.match(
+      statements[1]!,
+      /ADD CONSTRAINT "c" CHECK \("a" > 1\) NOT VALID/
+    )
+    assert.match(statements[2]!, /VALIDATE CONSTRAINT "c"/)
+  })
+
+  test('a plain add or drop stays one statement', () => {
+    assert.equal(
+      checkChangeStatements('mysql', myTable, { drop: ['x'], add: [] }, myq)
+        .length,
+      1
+    )
+    assert.equal(
+      checkChangeStatements(
+        'mysql',
+        myTable,
+        { drop: [], add: [{ name: 'y', expression: '`a` > 0' }] },
+        myq
+      ).length,
+      1
+    )
+  })
+
+  test('the interim name stays within the 64 characters MySQL allows', () => {
+    assert.ok(interimCheckName('x'.repeat(64)).length <= 64)
+  })
+})
+
+test('the probe SQL keeps whitespace inside a string and refuses a comment', () => {
+  assert.equal(
+    singleSpaced(`"kind"   in ('a   b',\n  'c')`),
+    `"kind" in ('a   b', 'c')`
+  )
+  assert.equal(
+    checkProbeSql('"t"', `"p" <> 'two  spaces'`),
+    `SELECT 1 FROM "t" WHERE NOT ("p" <> 'two  spaces') LIMIT 1`
+  )
+  assert.equal(
+    singleSpaced(`"a" <> '-- not a comment'`),
+    `"a" <> '-- not a comment'`
+  )
+  assert.throws(() => singleSpaced(`"a" > 0 -- why`), /comment/)
+  assert.throws(() => singleSpaced(`"a" > 0 /* why */`), /comment/)
 })
 
 test('mysql version gate', () => {
@@ -88,11 +204,38 @@ test('mysql version gate', () => {
   assert.equal(mysqlEnforcesChecks('8.0.15'), false)
   assert.equal(mysqlEnforcesChecks('5.7.44'), false)
   assert.equal(mysqlEnforcesChecks('9.1.0'), true)
-  assert.equal(mysqlEnforcesChecks('10.11.2-MariaDB'), true)
-  assert.equal(mysqlEnforcesChecks('10.1.9-MariaDB'), false)
 })
 
-describe('runCheckProbe on a real postgres', () => {
+test('mariadb version gate: 10.2 and up enforce CHECK, nothing below does', () => {
+  for (const [version, expected] of [
+    ['10.11.2-MariaDB', 'mariadb'],
+    ['10.2.1-MariaDB', 'mariadb'],
+    ['11.4.2-MariaDB', 'mariadb'],
+    ['10.1.9-MariaDB', undefined],
+    ['10.0.38-MariaDB', undefined],
+    ['5.5.64-MariaDB', undefined],
+    ['5.5.5-10.11.6-MariaDB', 'mariadb'],
+    ['5.5.5-10.1.48-MariaDB', undefined],
+    ['8.0.36', 'mysql'],
+    ['5.7.44', undefined],
+  ] as const) {
+    assert.equal(mysqlCheckDialect(version), expected, version)
+  }
+})
+
+/** A PGlite as the migrator's client. */
+const pgClient = (db: PGlite) => ({
+  query: async <T = unknown>(sql: string, params?: unknown[]) => ({
+    rows: (await db.query<T>(sql, params)).rows,
+  }),
+  exec: (sql: string) => db.exec(sql),
+})
+
+describe('the probe on a real postgres', () => {
+  const probe = (expr: string): CheckProbe => ({
+    table: 'item',
+    sql: checkProbeSql('"item"', expr),
+  })
   const setup = async (rows: number) => {
     const db = new PGlite()
     await db.exec(`create table item (qty integer)`)
@@ -102,12 +245,7 @@ describe('runCheckProbe on a real postgres', () => {
       )
     const execute = async (sql: string) =>
       (await db.query<Record<string, unknown>>(sql)).rows
-    const target = (expr: string) => ({
-      dialect: 'postgres' as const,
-      table: 'item',
-      probeSql: checkProbeSql('"item"', expr),
-    })
-    return { db, execute, target }
+    return { db, execute }
   }
 
   test('defaults', () => {
@@ -116,49 +254,199 @@ describe('runCheckProbe on a real postgres', () => {
   })
 
   test('passes when every row satisfies it, reports violations when one does not', async () => {
-    const { db, execute, target } = await setup(5)
-    assert.deepEqual(await runCheckProbe(target('"qty" >= 1'), execute), {
-      ok: true,
-    })
-    assert.deepEqual(await runCheckProbe(target('"qty" >= 2'), execute), {
-      ok: false,
-      reason: 'violations',
-    })
-    await db.close()
-  })
-
-  test('a null passes, as it does for a real CHECK', async () => {
-    const { db, execute, target } = await setup(0)
-    await db.exec(`insert into item values (null)`)
-    assert.deepEqual(await runCheckProbe(target('"qty" >= 1'), execute), {
-      ok: true,
-    })
-    await db.close()
-  })
-
-  test('a probe that does not finish in time fails as a timeout', async () => {
-    const { db, target } = await setup(1)
-    const slow = async () =>
-      new Promise<never[]>((r) => setTimeout(() => r([]), 200))
-    const first = async (sql: string) =>
-      sql.includes('reltuples') ? [{ estimate: 0 }] : slow()
+    const { db, execute } = await setup(5)
     assert.deepEqual(
-      await runCheckProbe(target('"qty" >= 1'), first, { timeoutMs: 20 }),
-      { ok: false, reason: 'timeout' }
+      await runCheckProbe('postgres', probe('"qty" >= 1'), execute),
+      { ok: true }
+    )
+    assert.deepEqual(
+      await runCheckProbe('postgres', probe('"qty" >= 2'), execute),
+      {
+        ok: false,
+        reason: 'violations',
+      }
     )
     await db.close()
   })
 
+  test('a null passes, as it does for a real CHECK', async () => {
+    const { db, execute } = await setup(0)
+    await db.exec(`insert into item values (null)`)
+    assert.deepEqual(
+      await runCheckProbe('postgres', probe('"qty" >= 1'), execute),
+      { ok: true }
+    )
+    await db.close()
+  })
+
+  test('a table that does not exist has nothing to break the check', async () => {
+    const { db, execute } = await setup(0)
+    assert.deepEqual(
+      await runCheckProbe(
+        'postgres',
+        { table: 'nowhere', sql: 'SELECT 1 FROM nowhere' },
+        execute
+      ),
+      { ok: true }
+    )
+    await db.close()
+  })
+
+  test('a probe that does not finish in time fails as a timeout', async () => {
+    const slow = async (sql: string) =>
+      sql.includes('reltuples')
+        ? [{ estimate: 5 }]
+        : new Promise<never[]>((r) => setTimeout(() => r([]), 200))
+    assert.deepEqual(
+      await runCheckProbe('postgres', probe('"qty" >= 1'), slow, {
+        timeoutMs: 20,
+      }),
+      { ok: false, reason: 'timeout' }
+    )
+  })
+
   test('an estimate above the threshold is declined without scanning', async () => {
-    const { db, execute, target } = await setup(0)
+    const { db, execute } = await setup(0)
     await db.exec(`insert into item select g from generate_series(1, 50) g`)
     await db.exec(`analyze item`)
-    const result = await runCheckProbe(target('"qty" >= 1'), execute, {
-      maxRows: 10,
-    })
-    assert.equal(result.ok, false)
+    const result = await runCheckProbe(
+      'postgres',
+      probe('"qty" >= 1'),
+      execute,
+      { maxRows: 10 }
+    )
     assert.equal((result as { reason: string }).reason, 'too-large')
     await db.close()
+  })
+
+  test('a table never analysed (reltuples -1) is counted, not waved through', async () => {
+    const { db, execute } = await setup(50)
+    const { rows } = await db.query<{ e: number }>(
+      `select reltuples::bigint as e from pg_class where oid = 'item'::regclass`
+    )
+    assert.ok(
+      Number(rows[0]!.e) <= 0,
+      `precondition: reltuples is ${rows[0]!.e}`
+    )
+    const seen: string[] = []
+    const result = await runCheckProbe(
+      'postgres',
+      probe('"qty" >= 1'),
+      async (sql) => (seen.push(sql), execute(sql)),
+      { maxRows: 10 }
+    )
+    assert.equal((result as { reason: string }).reason, 'too-large')
+    assert.ok(seen.some((sql) => /count\(\*\)/.test(sql)))
+    await db.close()
+  })
+
+  test('a schema or table name with a quote in it cannot break out of the estimate', async () => {
+    const { db, execute } = await setup(0)
+    await db.exec(`create table "we'ird""t" (qty integer)`)
+    assert.deepEqual(
+      await runCheckProbe(
+        'postgres',
+        { table: `we'ird"t`, sql: `SELECT 1 FROM "we'ird""t" LIMIT 1` },
+        execute
+      ),
+      { ok: true }
+    )
+    await db.close()
+  })
+})
+
+describe('the probe in front of a migration', () => {
+  const withMigrations = async (
+    setupSql: string,
+    probes: string,
+    body: (db: PGlite, dir: string) => Promise<void>
+  ) => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-probe-'))
+    const db = new PGlite()
+    try {
+      writeFileSync(join(dir, '0001-init.sql'), setupSql)
+      writeFileSync(join(dir, '0002-check.sql'), probes)
+      await body(db, dir)
+    } finally {
+      await db.close()
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }
+  const migration = (expr: string) =>
+    addCheckStatements(
+      'postgres',
+      { table: 'item', qualified: '"item"' },
+      'item_qty_min_check',
+      expr,
+      q
+    ).join('\n')
+
+  test('refuses a migration whose rows break the check, before any of it runs', async () => {
+    await withMigrations(
+      `create table item (qty integer); insert into item values (0), (2);`,
+      `${migration('"qty" >= 1')}\ncreate table after_it (x integer);`,
+      async (db, dir) => {
+        const client = pgClient(db)
+        await assert.rejects(
+          migrate(new PostgresMigrationExecutor(client), dir, {
+            beforeMigration: checkProbeHook(
+              'postgres',
+              postgresProbeExecutor(client)
+            ),
+          }),
+          (error) =>
+            error instanceof MigrationFailedError &&
+            /rows in item already break the check/.test(error.message)
+        )
+        const applied = await db.query(`select name from sql_migrations`)
+        assert.deepEqual(applied.rows, [{ name: '0001-init.sql' }])
+        assert.equal(
+          (await db.query(`select to_regclass('after_it') as t`)).rows[0]!.t,
+          null
+        )
+      }
+    )
+  })
+
+  test('lets it through, and the table it creates in an earlier migration is probed after that migration ran', async () => {
+    await withMigrations(
+      `create table item (qty integer); insert into item values (1), (2);`,
+      migration('"qty" >= 1'),
+      async (db, dir) => {
+        const client = pgClient(db)
+        const result = await migrate(
+          new PostgresMigrationExecutor(client),
+          dir,
+          {
+            beforeMigration: checkProbeHook(
+              'postgres',
+              postgresProbeExecutor(client)
+            ),
+          }
+        )
+        assert.deepEqual(result.applied, ['0001-init.sql', '0002-check.sql'])
+      }
+    )
+  })
+
+  test('refuses a table above the row cap', async () => {
+    await withMigrations(
+      `create table item (qty integer); insert into item select g from generate_series(1, 30) g;`,
+      migration('"qty" >= 1'),
+      async (db, dir) => {
+        const client = pgClient(db)
+        await assert.rejects(
+          migrate(new PostgresMigrationExecutor(client), dir, {
+            beforeMigration: checkProbeHook(
+              'postgres',
+              postgresProbeExecutor(client),
+              { maxRows: 10 }
+            ),
+          }),
+          /more than the 10000000 the probe will scan/
+        )
+      }
+    )
   })
 })
 
@@ -170,7 +458,7 @@ describe('the generated postgres statements on a populated table', () => {
     )
     const [add, validate] = addCheckStatements(
       'postgres',
-      '"item"',
+      { table: 'item', qualified: '"item"' },
       'item_qty_min_check',
       '"qty" >= 1',
       q
@@ -195,6 +483,23 @@ describe('the generated postgres statements on a populated table', () => {
     await assert.rejects(db.exec(`insert into item values (-5)`))
     await assert.rejects(db.exec(validate), /violated by some row/)
     assert.equal((await db.query(`select * from item`)).rows.length, 2)
+    await db.close()
+  })
+
+  test('inside one transaction, which is how the migrator runs it, the lock is held to the commit', async () => {
+    // The honest version of the claim: the NOT VALID / VALIDATE split does not
+    // release the table's lock between the two statements here, because they
+    // share a transaction. PGlite is one connection, so this can only show the
+    // lock mode survives until the end of the transaction.
+    const { db, add, validate } = await run('(1)')
+    await db.exec('BEGIN')
+    await db.exec(add)
+    await db.exec(validate)
+    const { rows } = await db.query<{ mode: string }>(
+      `select mode from pg_locks where relation = 'item'::regclass and mode = 'AccessExclusiveLock'`
+    )
+    assert.equal(rows.length, 1)
+    await db.exec('COMMIT')
     await db.close()
   })
 })

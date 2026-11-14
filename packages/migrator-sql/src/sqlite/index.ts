@@ -1,9 +1,12 @@
 export {
   SQLITE_FOREIGN_KEYS_OFF_MARKER,
   SqliteMigrationExecutor,
-  splitSqliteStatements,
   dropTrackingTable,
 } from './sqlite-migrator.js'
+export {
+  splitSqliteStatements,
+  stripSqliteComments,
+} from './sqlite-statements.js'
 export { loadSqliteRuntime } from './sqlite-runtime.js'
 export type {
   SqliteOpenOptions,

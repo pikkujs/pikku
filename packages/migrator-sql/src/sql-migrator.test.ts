@@ -7,7 +7,9 @@ import { join } from 'node:path'
 import {
   baselineMigrations,
   migrate,
+  MigrationDestructiveError,
   MigrationFailedError,
+  destructiveReasons,
   pendingMigrations,
 } from './sql-migrator.js'
 import { SqliteMigrationExecutor } from './sqlite/sqlite-migrator.js'
@@ -91,5 +93,45 @@ test('a migration that fails names the file it came from', async () => {
         ['0001-animal.sql', '0002-owner.sql']
       )
     }
+  )
+})
+
+test('a pending migration marked destructive stops the whole run before anything is applied', async () => {
+  await withMigrations(
+    {
+      ...REAL_MIGRATIONS,
+      '0003-rebuild.sql':
+        '-- pikku:destructive rebuilds "animal"\nCREATE TABLE extra (id TEXT);',
+    },
+    async (dir, executor) => {
+      await assert.rejects(
+        migrate(executor, dir),
+        (error) =>
+          error instanceof MigrationDestructiveError &&
+          error.migrations[0]!.name === '0003-rebuild.sql'
+      )
+      assert.deepEqual(await executor.getApplied(), [])
+      const result = await migrate(executor, dir, { allowDestructive: true })
+      assert.equal(result.applied.length, 3)
+    }
+  )
+})
+
+test('a destructive migration that was already applied is not asked about again', async () => {
+  await withMigrations(
+    { '0001-a.sql': '-- pikku:destructive x\nCREATE TABLE a (id TEXT);' },
+    async (dir, executor) => {
+      await migrate(executor, dir, { allowDestructive: true })
+      assert.deepEqual((await migrate(executor, dir)).applied, [])
+    }
+  )
+})
+
+test('destructiveReasons reads only whole marker lines', () => {
+  assert.deepEqual(
+    destructiveReasons(
+      '-- pikku:destructive one\nSELECT 1; -- pikku:destructive nope\n-- pikku:destructivex\n-- pikku:destructive two  \n'
+    ),
+    ['one', 'two']
   )
 })
