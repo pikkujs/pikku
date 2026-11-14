@@ -38,6 +38,15 @@ addon reached through `rpc.invoke` inside a function of your own is not a step; 
 workflow. Knowledge notes (`knowledge/`, `pikku knowledge validate|gaps`), change
 requests and a second tour of the project are separate jobs: do them only when the request asks.
 
+## Filing a plan from a brief
+
+Break the brief into changes a person could check one by one, each saying what they can see or do
+when it is done. Put the tables and stored data in the first change; every change that stores or
+reads something depends on it (`--depends-on`). Give each change a `--specialist`: `frontend` when
+the work is a page, screen or view (including the owner's lists of orders or bookings), `build` for
+functions, tables and rules, `emails` only for the sending of a message. Screens that only read
+the data can run side by side, so depend on the data change, not on each other.
+
 ## The loop
 
 **Never poll.** No `sleep` loops, no repeated `list`, no re-running `show` to see if
