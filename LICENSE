@@ -13,6 +13,13 @@ AGPL-3.0-only (GNU Affero General Public License, version 3 only)
   @pikku/inspector-go   packages/inspector-go
   pikku-inspect-rs      packages/inspector-rust   (Rust inspector, not published)
 
+  Packages that depend on or import the CLI or the inspectors are AGPL too:
+  @pikku/addon-console      packages/addon/pikku-console
+  @pikku/code-edit          packages/code-edit
+  @pikku/n8n-import         packages/n8n-import
+  @pikku/addon-changes-cli  packages/addon/pikku-changes-cli  (not published)
+  @pikku/addon-cloud-cli    packages/addon/pikku-cloud-cli    (not published)
+
   The full text is in scripts/licenses/AGPL-3.0 and in each package's LICENSE.
 
   packages/inspector-go/internal/tsjg is a port of ts-json-schema-generator and
@@ -21,7 +28,7 @@ AGPL-3.0-only (GNU Affero General Public License, version 3 only)
 MIT
 ---
   Everything else: @pikku/core, the runtimes, the services, the clients
-  (@pikku/fetch, @pikku/websocket), @pikku/react, @pikku/vite, the addons
+  (@pikku/fetch, @pikku/websocket), @pikku/react, @pikku/vite, the other addons
   (@pikku/addon-*), @pikku/skills, @pikku/knowledge, create-pikku and every
   other package. The text is in scripts/licenses/MIT and in each package's
   LICENSE.

@@ -216,8 +216,8 @@ Thanks to [all contributors](https://github.com/pikkujs/pikku/graphs/contributor
 
 ## License
 
-- **MIT**: the framework and everything that ends up in your app: `@pikku/core`, the runtimes, the services, the clients, `@pikku/react`, `@pikku/vite`, the addons (`@pikku/addon-*`), `@pikku/skills` and every other package not listed below.
-- **AGPL-3.0-only**: the tools that build your app: the CLI (`@pikku/cli`), the inspectors (`@pikku/inspector`, `@pikku/inspector-go` and the Rust inspector) and Pikku Studio.
+- **MIT**: the framework and everything that ends up in your app: `@pikku/core`, the runtimes, the services, the clients, `@pikku/react`, `@pikku/vite`, the addons (`@pikku/addon-*`) except the ones listed below, `@pikku/skills` and every other package not listed below.
+- **AGPL-3.0-only**: the tools that build your app: the CLI (`@pikku/cli`), the inspectors (`@pikku/inspector`, `@pikku/inspector-go` and the Rust inspector) and Pikku Studio. Packages and addons that depend on the CLI or the inspectors are AGPL too: `@pikku/addon-console`, `@pikku/code-edit`, `@pikku/n8n-import`, `@pikku/addon-changes-cli` and `@pikku/addon-cloud-cli`. Not every addon is MIT: check the package's LICENSE.
 
 Each package ships its own LICENSE file, which governs it. [LICENSE](LICENSE) is the map.
 
