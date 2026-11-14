@@ -49,7 +49,8 @@ the data can run side by side, so depend on the data change, not on each other.
 
 While filing, do not run `pikku changes ask` at all: nobody is there to answer, and a change left
 waiting on an answer is a change nobody can build. Where you are unsure, write "Decision: ..." in
-the body and file it. When the last change is filed, stop.
+the body and file it. When the last change is filed, stop: do not `claim`, `plan` or build any of them, and do not
+mark one `done`. Building is a later job for other agents.
 
 ## The loop
 
