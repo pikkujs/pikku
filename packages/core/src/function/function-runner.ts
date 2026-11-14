@@ -73,8 +73,13 @@ import {
 import type { AddonInstance } from '../wirings/addon/addon-runner.js'
 import { closeWireServices } from '../utils.js'
 import {
+  assertFunctionTelemetry,
+  decideFunctionTrace,
+} from './function-telemetry.js'
+import {
   endFunctionSpan,
   openFunctionSpan,
+  recordFunctionSpanIdentity,
   runInFunctionSpan,
 } from './function-span.js'
 
@@ -137,6 +142,7 @@ export const addFunction = (
         ' and cannot be registered.'
     )
   }
+  assertFunctionTelemetry(funcName, funcConfig.telemetry)
   pikkuState(packageName, 'function', 'functions').set(funcName, funcConfig)
 }
 
@@ -408,6 +414,16 @@ export const runPikkuFunc = async <In = any, Out = any>(
     invocationWire.trace = createTrace(invocationWire.traceId)
     invocationWire.traceId = invocationWire.trace.traceId
   }
+  const callerTrace = invocationWire.trace!
+  const spans = funcConfig.telemetry?.spans ?? funcMeta.telemetry?.spans
+  let forcedUnderParent: string | undefined
+  if (spans !== undefined) {
+    const decided = decideFunctionTrace(spans, callerTrace)
+    if (decided.sampled && !callerTrace.sampled) {
+      forcedUnderParent = callerTrace.parentSpanId
+    }
+    invocationWire.trace = decided
+  }
   const previousFunctionId = invocationWire.functionId
   const previousAudit = invocationWire.audit
   const previousAddonNamespace = invocationWire.addonNamespace
@@ -424,6 +440,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
     restoreField('functionId', previousFunctionId)
     restoreField('audit', previousAudit)
     restoreField('addonNamespace', previousAddonNamespace)
+    if (invocationWire.trace !== callerTrace) {
+      invocationWire.trace = callerTrace
+    }
   }
 
   function restoreField<K extends 'functionId' | 'audit' | 'addonNamespace'>(
@@ -674,6 +693,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         configurable: true,
         enumerable: true,
       })
+      if (openSpan) recordFunctionSpanIdentity(openSpan)
       const functionStartedAt = performance.now()
       try {
         return await funcConfig.func(
@@ -713,6 +733,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   // knowledge: decisions/internals/the-function-runner-owns-the-span-middleware-cannot.md
   // The span wraps the middleware chain, so its duration is the whole
   // invocation; the function body alone is `pikku.function.duration_ms`.
+  const functionVersion = parseVersionedId(resolvedFunctionId).version
   const openSpan = openFunctionSpan(
     resolvedSingletonServices.tracer,
     resolvedSingletonServices.logger,
@@ -722,11 +743,17 @@ export const runPikkuFunc = async <In = any, Out = any>(
       'pikku.wire.type': wireType,
       'pikku.wire.id': wireId,
       'pikku.function.id': resolvedFunctionId,
+      ...(functionVersion !== null
+        ? { 'pikku.function.version': functionVersion }
+        : {}),
       ...(funcPackageName ? { 'pikku.package': funcPackageName } : {}),
       ...(addonInstance
         ? { 'pikku.addon.namespace': addonInstance.namespace }
         : {}),
       'pikku.trace.root': rootTrace,
+      ...(forcedUnderParent
+        ? { 'pikku.trace.unrecorded_parent_span_id': forcedUnderParent }
+        : {}),
     }
   )
   let failure: { error: unknown } | undefined

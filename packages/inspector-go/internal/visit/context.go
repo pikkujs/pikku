@@ -18,6 +18,7 @@ type (
 	WiresMeta       = state.WiresMeta
 	WireRef         = state.WireRef
 	AuditMeta       = state.AuditMeta
+	TelemetryMeta   = state.TelemetryMeta
 )
 
 // Types is InspectorOptions.types: the configured names of the core types.

@@ -70,6 +70,12 @@ pub struct AuditMeta {
     pub durability: String,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TelemetryMeta {
+    pub spans: Value,
+}
+
 /// Rewrites the JSON object `v` so that the keys in `first` lead, in that
 /// order, the keys in `last` close it, in that order, and every other key
 /// keeps its relative order in between. Keys absent from `v` are skipped.
@@ -135,6 +141,8 @@ pub struct FunctionMetaFields {
     pub permissions_in_body: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audit: Option<AuditMeta>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telemetry: Option<TelemetryMeta>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub remote: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

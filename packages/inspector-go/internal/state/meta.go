@@ -46,64 +46,69 @@ type AuditMeta struct {
 	Durability string `json:"durability"`
 }
 
+type TelemetryMeta struct {
+	Spans any `json:"spans"`
+}
+
 // FunctionMeta is FunctionsMeta[string] from @pikku/core.
 //
 // Fields written only by finalize (requiresSession is on routes; here:
 // singletonServicesOnly, contractHash, inputHash, outputHash) are pointers so an
 // analyze-only state omits them exactly as TS does.
 type FunctionMeta struct {
-	PikkuFuncId                     string       `json:"pikkuFuncId"`
-	FunctionType                    string       `json:"functionType"`
-	FuncWrapper                     string       `json:"funcWrapper,omitempty"`
-	Sessionless                     *bool        `json:"sessionless,omitempty"`
-	Name                            string       `json:"name"`
-	Services                        ServicesMeta `json:"services"`
-	Wires                           *WiresMeta   `json:"wires,omitempty"`
-	Invokes                         []string     `json:"invokes,omitempty"`
-	InputSchemaName                 *string      `json:"inputSchemaName"`
-	OutputSchemaName                *string      `json:"outputSchemaName"`
-	Inputs                          []string     `json:"inputs"`
-	Outputs                         []string     `json:"outputs"`
-	Expose                          *bool        `json:"expose,omitempty"`
-	Auth                            *bool        `json:"auth,omitempty"`
-	PermissionsInBody               *bool        `json:"permissionsInBody,omitempty"`
-	Audit                           *AuditMeta   `json:"audit,omitempty"`
-	Remote                          *bool        `json:"remote,omitempty"`
-	ScenarioStep                    *bool        `json:"scenarioStep,omitempty"`
-	WebhookReceive                  *bool        `json:"webhookReceive,omitempty"`
-	Scenario                        *bool        `json:"scenario,omitempty"`
-	MCP                             *bool        `json:"mcp,omitempty"`
-	Readonly                        *bool        `json:"readonly,omitempty"`
-	Deploy                          string       `json:"deploy,omitempty"`
-	ApprovalRequired                *bool        `json:"approvalRequired,omitempty"`
-	ApprovalDescription             string       `json:"approvalDescription,omitempty"`
-	WorkflowQueued                  *bool        `json:"workflowQueued,omitempty"`
-	WorkflowRetries                 *float64     `json:"workflowRetries,omitempty"`
-	WorkflowTimeout                 string       `json:"workflowTimeout,omitempty"`
-	Compensate                      *bool        `json:"compensate,omitempty"`
-	ScenarioStepSurfaces            []string     `json:"scenarioStepSurfaces,omitempty"`
-	ScenarioStepRequiresVirtualUser *bool        `json:"scenarioStepRequiresVirtualUser,omitempty"`
-	ScenarioStepKind                string       `json:"scenarioStepKind,omitempty"`
-	ScenarioStepAddon               string       `json:"scenarioStepAddon,omitempty"`
-	ScenarioStepTemplate            string       `json:"scenarioStepTemplate,omitempty"`
-	Scopes                          []string     `json:"scopes,omitempty"`
-	LiveScopes                      *bool        `json:"liveScopes,omitempty"`
-	ImplementationHash              string       `json:"implementationHash,omitempty"`
-	Version                         *int         `json:"version,omitempty"`
-	Title                           *string      `json:"title,omitempty"`
-	Tags                            []string     `json:"tags,omitzero"`
-	Summary                         *string      `json:"summary,omitempty"`
-	Description                     *string      `json:"description,omitempty"`
-	Errors                          []string     `json:"errors,omitempty"`
-	Middleware                      []WireRef    `json:"middleware,omitempty"`
-	Permissions                     []WireRef    `json:"permissions,omitempty"`
-	IsDirectFunction                *bool        `json:"isDirectFunction,omitempty"`
-	SourceFile                      string       `json:"sourceFile,omitempty"`
-	BodySourceFile                  string       `json:"bodySourceFile,omitempty"`
-	ExportedName                    string       `json:"exportedName,omitempty"`
-	BodyStart                       *int         `json:"bodyStart,omitempty"`
-	BodyEnd                         *int         `json:"bodyEnd,omitempty"`
-	StartsWorkflows                 []string     `json:"startsWorkflows,omitempty"`
+	PikkuFuncId                     string         `json:"pikkuFuncId"`
+	FunctionType                    string         `json:"functionType"`
+	FuncWrapper                     string         `json:"funcWrapper,omitempty"`
+	Sessionless                     *bool          `json:"sessionless,omitempty"`
+	Name                            string         `json:"name"`
+	Services                        ServicesMeta   `json:"services"`
+	Wires                           *WiresMeta     `json:"wires,omitempty"`
+	Invokes                         []string       `json:"invokes,omitempty"`
+	InputSchemaName                 *string        `json:"inputSchemaName"`
+	OutputSchemaName                *string        `json:"outputSchemaName"`
+	Inputs                          []string       `json:"inputs"`
+	Outputs                         []string       `json:"outputs"`
+	Expose                          *bool          `json:"expose,omitempty"`
+	Auth                            *bool          `json:"auth,omitempty"`
+	PermissionsInBody               *bool          `json:"permissionsInBody,omitempty"`
+	Audit                           *AuditMeta     `json:"audit,omitempty"`
+	Telemetry                       *TelemetryMeta `json:"telemetry,omitempty"`
+	Remote                          *bool          `json:"remote,omitempty"`
+	ScenarioStep                    *bool          `json:"scenarioStep,omitempty"`
+	WebhookReceive                  *bool          `json:"webhookReceive,omitempty"`
+	Scenario                        *bool          `json:"scenario,omitempty"`
+	MCP                             *bool          `json:"mcp,omitempty"`
+	Readonly                        *bool          `json:"readonly,omitempty"`
+	Deploy                          string         `json:"deploy,omitempty"`
+	ApprovalRequired                *bool          `json:"approvalRequired,omitempty"`
+	ApprovalDescription             string         `json:"approvalDescription,omitempty"`
+	WorkflowQueued                  *bool          `json:"workflowQueued,omitempty"`
+	WorkflowRetries                 *float64       `json:"workflowRetries,omitempty"`
+	WorkflowTimeout                 string         `json:"workflowTimeout,omitempty"`
+	Compensate                      *bool          `json:"compensate,omitempty"`
+	ScenarioStepSurfaces            []string       `json:"scenarioStepSurfaces,omitempty"`
+	ScenarioStepRequiresVirtualUser *bool          `json:"scenarioStepRequiresVirtualUser,omitempty"`
+	ScenarioStepKind                string         `json:"scenarioStepKind,omitempty"`
+	ScenarioStepAddon               string         `json:"scenarioStepAddon,omitempty"`
+	ScenarioStepTemplate            string         `json:"scenarioStepTemplate,omitempty"`
+	Scopes                          []string       `json:"scopes,omitempty"`
+	LiveScopes                      *bool          `json:"liveScopes,omitempty"`
+	ImplementationHash              string         `json:"implementationHash,omitempty"`
+	Version                         *int           `json:"version,omitempty"`
+	Title                           *string        `json:"title,omitempty"`
+	Tags                            []string       `json:"tags,omitzero"`
+	Summary                         *string        `json:"summary,omitempty"`
+	Description                     *string        `json:"description,omitempty"`
+	Errors                          []string       `json:"errors,omitempty"`
+	Middleware                      []WireRef      `json:"middleware,omitempty"`
+	Permissions                     []WireRef      `json:"permissions,omitempty"`
+	IsDirectFunction                *bool          `json:"isDirectFunction,omitempty"`
+	SourceFile                      string         `json:"sourceFile,omitempty"`
+	BodySourceFile                  string         `json:"bodySourceFile,omitempty"`
+	ExportedName                    string         `json:"exportedName,omitempty"`
+	BodyStart                       *int           `json:"bodyStart,omitempty"`
+	BodyEnd                         *int           `json:"bodyEnd,omitempty"`
+	StartsWorkflows                 []string       `json:"startsWorkflows,omitempty"`
 
 	// Finalize-only (contract-hashes.ts, post-process.ts).
 	ContractHash          string `json:"contractHash,omitempty"`

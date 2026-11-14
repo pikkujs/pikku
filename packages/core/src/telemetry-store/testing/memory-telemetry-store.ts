@@ -1,5 +1,6 @@
 import type {
   FailureRow,
+  FunctionMetricsRow,
   LogFacets,
   LogRecord,
   LogsQuery,
@@ -12,6 +13,9 @@ import type {
   TailCursor,
   TelemetryScope,
   TelemetryStore,
+  TenantFilter,
+  WireRunRow,
+  WireTypeRow,
 } from '../telemetry-store.types.js'
 
 const SEVERITIES: Severity[] = [
@@ -34,6 +38,59 @@ const str = (value: unknown): string | null =>
   typeof value === 'string' ? value : null
 
 const isRoot = (span: SpanRecord) => !span.parentSpanId
+
+const TENANT_KEYS = [
+  ['org', 'pikku.org.id'],
+  ['user', 'pikku.user.id'],
+] as const
+
+const tenantKeys = (tenant: TenantFilter | undefined) =>
+  TENANT_KEYS.filter(([field]) => tenant?.[field] !== undefined)
+
+const matchesTenant = (
+  attributes: Record<string, unknown> | undefined,
+  tenant: TenantFilter | undefined
+) =>
+  tenantKeys(tenant).every(
+    ([field, key]) => attributes?.[key] === tenant![field]
+  )
+
+const positive = (
+  value: number | undefined,
+  name: string,
+  fallback: number
+) => {
+  if (value === undefined) return fallback
+  if (!Number.isInteger(value) || value < 1) {
+    throw new RangeError(`${name} must be a positive integer`)
+  }
+  return value
+}
+
+const ordinal = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
+
+const average = (values: number[]) =>
+  values.reduce((sum, v) => sum + v, 0) / values.length
+
+const bucketsOf = (
+  spans: SpanRecord[],
+  since: number,
+  until: number,
+  buckets: number
+) => {
+  const width = Math.max(1, Math.ceil((until - since) / buckets))
+  const byBucket = new Map<number, SpanRecord[]>()
+  for (const span of spans) {
+    const index = Math.floor((span.startAt - since) / width)
+    byBucket.set(index, [...(byBucket.get(index) ?? []), span])
+  }
+  return [...byBucket.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([index, group]) => ({ at: since + index * width, group }))
+}
+
+const num = (value: unknown): number | null =>
+  typeof value === 'number' ? value : null
 
 /**
  * A `TelemetryStore` that keeps everything in process memory. It is the
@@ -93,8 +150,18 @@ export class MemoryTelemetryStore implements TelemetryStore {
 
   async logs(scope: TelemetryScope, q: LogsQuery): Promise<LogRecord[]> {
     const search = q.search?.toLowerCase()
-    const matches = this.bucket(scope)
-      .logs.map(({ record }) => record)
+    const bucket = this.bucket(scope)
+    const rootDuration = new Map<string, number>()
+    for (const span of bucket.spans) {
+      if (isRoot(span)) {
+        rootDuration.set(
+          span.traceId,
+          Math.max(rootDuration.get(span.traceId) ?? -Infinity, span.durationMs)
+        )
+      }
+    }
+    const matches = bucket.logs
+      .map(({ record }) => record)
       .filter(
         (r) =>
           (q.since === undefined || r.at >= q.since) &&
@@ -105,11 +172,20 @@ export class MemoryTelemetryStore implements TelemetryStore {
           (q.functionId === undefined || r.functionId === q.functionId) &&
           (q.wireType === undefined || r.wireType === q.wireType) &&
           (q.wireId === undefined || r.wireId === q.wireId) &&
-          (q.source === undefined || r.source === q.source)
+          (q.source === undefined || r.source === q.source) &&
+          matchesTenant(r.attributes, q.tenant)
       )
       // Stable, so records sharing a timestamp keep their ingestion order.
       .sort((a, b) => b.at - a.at)
-    return structuredClone(matches.slice(0, q.limit ?? 100))
+    return structuredClone(
+      matches.slice(0, q.limit ?? 100).map((record) => {
+        const durationMs =
+          record.traceId === undefined
+            ? undefined
+            : rootDuration.get(record.traceId)
+        return durationMs === undefined ? record : { ...record, durationMs }
+      })
+    )
   }
 
   async logFacets(
@@ -153,13 +229,21 @@ export class MemoryTelemetryStore implements TelemetryStore {
         count: 0,
         last: null,
         sampleTraceId: null,
+        firstSeen: null,
+        httpPath: null,
+        httpMethod: null,
+        httpStatus: null,
         lastAt: -Infinity,
       }
       group.count++
+      group.firstSeen = Math.min(group.firstSeen ?? Infinity, span.startAt)
       if (span.startAt >= group.lastAt) {
         group.lastAt = span.startAt
         group.last = span.startAt
         group.sampleTraceId = span.traceId
+        group.httpPath = str(span.attributes['pikku.http.path'])
+        group.httpMethod = str(span.attributes['pikku.http.method'])
+        group.httpStatus = num(span.attributes['http.response.status_code'])
       }
       groups.set(key, group)
     }
@@ -191,32 +275,32 @@ export class MemoryTelemetryStore implements TelemetryStore {
 
   async metricsSummary(
     scope: TelemetryScope,
-    q: { since: number; until: number; buckets?: number }
+    q: {
+      since: number
+      until: number
+      buckets?: number
+      functionId?: string
+      tenant?: TenantFilter
+    }
   ): Promise<MetricsSummaryRow> {
     const spans = this.bucket(scope).spans.filter(
-      (s) => isRoot(s) && s.startAt >= q.since && s.startAt < q.until
+      (s) =>
+        isRoot(s) &&
+        s.startAt >= q.since &&
+        s.startAt < q.until &&
+        matchesTenant(s.attributes, q.tenant) &&
+        (q.functionId === undefined ||
+          (str(s.attributes['pikku.function.id']) ?? s.name) === q.functionId)
     )
-    const avg = (values: number[]) =>
-      values.reduce((sum, v) => sum + v, 0) / values.length
-
-    const width = Math.max(
-      1,
-      Math.ceil((q.until - q.since) / (q.buckets ?? 30))
-    )
-    const byBucket = new Map<number, SpanRecord[]>()
-    for (const span of spans) {
-      const index = Math.floor((span.startAt - q.since) / width)
-      byBucket.set(index, [...(byBucket.get(index) ?? []), span])
-    }
-    const traffic = [...byBucket.entries()]
-      .sort(([a], [b]) => a - b)
-      .map(([index, group]) => ({
-        at: q.since + index * width,
+    const traffic = bucketsOf(spans, q.since, q.until, q.buckets ?? 30).map(
+      ({ at, group }) => ({
+        at,
         requests: group.length,
         errors: group.filter((s) => s.status === 'error').length,
-        avgMs: avg(group.map((s) => s.durationMs)),
+        avgMs: average(group.map((s) => s.durationMs)),
         maxMs: Math.max(...group.map((s) => s.durationMs)),
-      }))
+      })
+    )
 
     const byFunction = new Map<string, SpanRecord[]>()
     for (const span of spans) {
@@ -234,17 +318,17 @@ export class MemoryTelemetryStore implements TelemetryStore {
           wire,
           requests: group.length,
           errors: group.filter((s) => s.status === 'error').length,
-          avgMs: avg(group.map((s) => s.durationMs)),
+          avgMs: average(group.map((s) => s.durationMs)),
           lastRun: Math.max(...group.map((s) => s.startAt)),
         }
       })
-      .sort((a, b) => b.requests - a.requests || a.name.localeCompare(b.name))
+      .sort((a, b) => b.requests - a.requests || ordinal(a.name, b.name))
 
     return {
       totals: {
         requests: spans.length,
         errors: spans.filter((s) => s.status === 'error').length,
-        avgMs: spans.length ? avg(spans.map((s) => s.durationMs)) : null,
+        avgMs: spans.length ? average(spans.map((s) => s.durationMs)) : null,
         maxMs: spans.length
           ? Math.max(...spans.map((s) => s.durationMs))
           : null,
@@ -254,38 +338,148 @@ export class MemoryTelemetryStore implements TelemetryStore {
     }
   }
 
-  async trace(scope: TelemetryScope, traceId: string): Promise<SpanRecord[]> {
-    return structuredClone(
-      this.bucket(scope)
-        .spans.filter((s) => s.traceId === traceId)
-        .sort(
-          (a, b) =>
-            a.startAt - b.startAt ||
-            (a.spanId < b.spanId ? -1 : a.spanId > b.spanId ? 1 : 0)
-        )
-    )
-  }
-
-  async queueJobs(
+  async functionMetrics(
     scope: TelemetryScope,
-    q: { since: number; limit?: number }
-  ): Promise<QueueJobRow[]> {
-    const byQueue = new Map<string, SpanRecord[]>()
+    q: {
+      since: number
+      until: number
+      buckets?: number
+      limit?: number
+      tenant?: TenantFilter
+    }
+  ): Promise<FunctionMetricsRow[]> {
+    const limit = positive(q.limit, 'limit', 200)
+    const buckets = positive(q.buckets, 'buckets', 30)
+    const groups = new Map<string, SpanRecord[]>()
     for (const span of this.bucket(scope).spans) {
       if (
         !isRoot(span) ||
         span.startAt < q.since ||
-        span.attributes['pikku.wire.type'] !== 'queue'
+        span.startAt >= q.until ||
+        !matchesTenant(span.attributes, q.tenant)
       )
         continue
-      const queue = str(span.attributes['pikku.queue.name']) ?? span.name
-      byQueue.set(queue, [...(byQueue.get(queue) ?? []), span])
+      const key = JSON.stringify([
+        str(span.attributes['pikku.function.id']) ?? span.name,
+        str(span.attributes['pikku.wire.type']),
+      ])
+      groups.set(key, [...(groups.get(key) ?? []), span])
     }
-    return [...byQueue.entries()]
-      .map(([queue, group]): QueueJobRow => {
-        const newest = [...group].sort((a, b) => b.startAt - a.startAt)
+    return [...groups.entries()]
+      .map(([key, group]): FunctionMetricsRow => {
+        const [functionId, wireType] = JSON.parse(key) as [
+          string,
+          string | null,
+        ]
         return {
-          queue,
+          functionId,
+          wireType,
+          requests: group.length,
+          errors: group.filter((s) => s.status === 'error').length,
+          avgMs: average(group.map((s) => s.durationMs)),
+          lastRun: Math.max(...group.map((s) => s.startAt)),
+          buckets: bucketsOf(group, q.since, q.until, buckets).map(
+            ({ at, group: inBucket }) => ({
+              at,
+              requests: inBucket.length,
+              errors: inBucket.filter((s) => s.status === 'error').length,
+            })
+          ),
+        }
+      })
+      .sort(
+        (a, b) => b.requests - a.requests || ordinal(a.functionId, b.functionId)
+      )
+      .slice(0, limit)
+  }
+
+  async wireTypes(
+    scope: TelemetryScope,
+    q: { since: number; until?: number; tenant?: TenantFilter }
+  ): Promise<WireTypeRow[]> {
+    const counts = new Map<string, number>()
+    for (const span of this.bucket(scope).spans) {
+      if (
+        !isRoot(span) ||
+        span.startAt < q.since ||
+        (q.until !== undefined && span.startAt >= q.until) ||
+        !matchesTenant(span.attributes, q.tenant)
+      )
+        continue
+      const wireType = str(span.attributes['pikku.wire.type']) ?? 'unknown'
+      counts.set(wireType, (counts.get(wireType) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .map(([wireType, requests]) => ({ wireType, requests }))
+      .sort(
+        (a, b) => b.requests - a.requests || ordinal(a.wireType, b.wireType)
+      )
+  }
+
+  async wireRuns(
+    scope: TelemetryScope,
+    q: { wireType: string; since: number; limit?: number }
+  ): Promise<WireRunRow[]> {
+    return this.runs(
+      scope,
+      q.wireType,
+      q.since,
+      positive(q.limit, 'limit', 50),
+      (span) => str(span.attributes['pikku.function.id']) ?? span.name
+    ).map(({ name, ...rest }) => ({ name, wireType: q.wireType, ...rest }))
+  }
+
+  async trace(
+    scope: TelemetryScope,
+    traceId: string,
+    q?: { tenant?: TenantFilter }
+  ): Promise<SpanRecord[]> {
+    const spans = this.bucket(scope).spans.filter((s) => s.traceId === traceId)
+    const keys = tenantKeys(q?.tenant)
+    const visible = keys.every(
+      ([field, key]) =>
+        spans.some((s) => s.attributes[key] !== undefined) &&
+        spans.every(
+          (s) =>
+            s.attributes[key] === undefined ||
+            s.attributes[key] === q!.tenant![field]
+        )
+    )
+    if (!visible) return []
+    return structuredClone(
+      spans.sort(
+        (a, b) =>
+          a.startAt - b.startAt ||
+          (a.spanId < b.spanId ? -1 : a.spanId > b.spanId ? 1 : 0)
+      )
+    )
+  }
+
+  private runs(
+    scope: TelemetryScope,
+    wireType: string,
+    since: number,
+    limit: number,
+    nameOf: (span: SpanRecord) => string
+  ): Array<Omit<WireRunRow, 'wireType'>> {
+    const byName = new Map<string, SpanRecord[]>()
+    for (const span of this.bucket(scope).spans) {
+      if (
+        !isRoot(span) ||
+        span.startAt < since ||
+        span.attributes['pikku.wire.type'] !== wireType
+      )
+        continue
+      const name = nameOf(span)
+      byName.set(name, [...(byName.get(name) ?? []), span])
+    }
+    return [...byName.entries()]
+      .map(([name, group]) => {
+        const newest = [...group].sort(
+          (a, b) => b.startAt - a.startAt || ordinal(b.spanId, a.spanId)
+        )
+        return {
+          name,
           completed: group.filter((s) => s.status !== 'error').length,
           failed: group.filter((s) => s.status === 'error').length,
           lastRun: newest[0]!.startAt,
@@ -297,8 +491,23 @@ export class MemoryTelemetryStore implements TelemetryStore {
           })),
         }
       })
-      .sort((a, b) => (b.lastRun ?? 0) - (a.lastRun ?? 0))
-      .slice(0, q.limit ?? 50)
+      .sort(
+        (a, b) => (b.lastRun ?? 0) - (a.lastRun ?? 0) || ordinal(a.name, b.name)
+      )
+      .slice(0, limit)
+  }
+
+  async queueJobs(
+    scope: TelemetryScope,
+    q: { since: number; limit?: number }
+  ): Promise<QueueJobRow[]> {
+    return this.runs(
+      scope,
+      'queue',
+      q.since,
+      positive(q.limit, 'limit', 50),
+      (span) => str(span.attributes['pikku.queue.name']) ?? span.name
+    ).map(({ name, ...rest }) => ({ queue: name, ...rest }))
   }
 
   async tail(

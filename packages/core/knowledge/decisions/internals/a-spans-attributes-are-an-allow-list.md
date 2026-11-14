@@ -9,8 +9,10 @@ tags: core
 
 The function runner (`function/function-span.ts`) sets span attributes by name
 from a fixed table: wire type and id, function id, package, addon namespace,
-whether the trace is a root, `pikku.function.duration_ms`, `pikku.user.id`,
-`pikku.org.id`, the HTTP method, route and status, queue name and job id,
+whether the trace is a root, `pikku.trace.unrecorded_parent_span_id` (a span
+`telemetry.spans: 'always'` forced under a parent that was never exported),
+`pikku.function.duration_ms`, `pikku.user.id`,
+`pikku.org.id`, `pikku.impersonated` and `pikku.impersonator.id` (set only when the session carries `impersonated`), the HTTP method, route and status, queue name and job id,
 scheduler task, workflow name, run id and step, channel id, MCP tool. Boundary
 spans (a queue publish, a scheduled RPC, a webhook send, a remote RPC) add
 `messaging.system`, `messaging.destination.name` (a queue name, an RPC name or a

@@ -1,3 +1,4 @@
+import type { FunctionTelemetry } from './function-telemetry.js'
 import type { MiddlewareMetadata } from '../middleware/middleware.types.js'
 import type { AuditDurability } from '../services/audit-service.js'
 import type {
@@ -52,6 +53,7 @@ export type FunctionRuntimeMeta = {
   liveScopes?: boolean
   /** The feature this function belongs to. Checked for availability only. */
   featureFlag?: string
+  telemetry?: FunctionTelemetry
   expose?: boolean
   /**
    * A sessionless function's own `auth`, as written. `sessionless` carries the

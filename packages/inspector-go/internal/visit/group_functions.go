@@ -154,6 +154,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 				m.Audit = &AuditMeta{Durability: d}
 			}
 		}
+		m.Telemetry = readTelemetry(firstArg)
 		m.Readonly = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "readonly").Truthy())
 		m.Deploy = tsutil.GetPropertyValue(firstArg, "deploy").AsString()
 		m.ApprovalRequired = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "approvalRequired").Truthy())
@@ -829,4 +830,34 @@ func (s *Context) localFnOf(expr, handler *ast.Node) (*ast.Node, bool) {
 
 func isFunctionExprNode(n *ast.Node) bool {
 	return ast.IsArrowFunction(n) || ast.IsFunctionExpression(n) || ast.IsClassExpression(n)
+}
+
+func readTelemetry(config *ast.Node) *TelemetryMeta {
+	p := tsutil.FindPropertyAssignment(config, "telemetry")
+	if p == nil {
+		return nil
+	}
+	telemetry := tsutil.UnwrapAs(p.Initializer())
+	if !ast.IsObjectLiteralExpression(telemetry) {
+		return nil
+	}
+	sp := tsutil.FindPropertyAssignment(telemetry, "spans")
+	if sp == nil {
+		return nil
+	}
+	spans := tsutil.UnwrapAs(sp.Initializer())
+	if ast.IsStringLiteral(spans) || ast.IsNoSubstitutionTemplateLiteral(spans) {
+		switch spans.Text() {
+		case "off", "on", "always":
+			return &TelemetryMeta{Spans: spans.Text()}
+		}
+		return nil
+	}
+	if ast.IsObjectLiteralExpression(spans) && len(spans.Properties()) == 1 {
+		sample := tsutil.GetPropertyValue(spans, "sample")
+		if sample.Num != nil && *sample.Num >= 0 && *sample.Num <= 1 {
+			return &TelemetryMeta{Spans: map[string]float64{"sample": *sample.Num}}
+		}
+	}
+	return nil
 }

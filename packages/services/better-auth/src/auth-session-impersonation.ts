@@ -55,7 +55,7 @@ export type MapSession = (
  * ({@link betterAuthStatelessSession}) middlewares so both behave identically.
  *
  * Returns the session to set when the caller is authorized and the target
- * exists; returns `null` when impersonation does not apply (no header, a
+ * exists, carrying `impersonated: { by }` with the real caller's user id; returns `null` when impersonation does not apply (no header, a
  * self-target, the gate denies, or an unknown target) so the caller falls back
  * to the real session. An unknown target is logged at `warn` — it is NOT an
  * error. Hook errors (`canImpersonate`/`loadUser`) propagate by design.
@@ -102,9 +102,12 @@ export const resolveImpersonatedSession = async (
   services.logger?.info(
     `better-auth impersonation: ${caller.user.id} running as ${targetId}`
   )
-  return mapSession
+  const session = mapSession
     ? await mapSession({ user: targetUser, session: caller.session }, services)
     : ({ userId: targetUser.id } as CoreUserSession)
+  // Set after `mapSession` so an app's mapper can neither forge nor drop it:
+  // the real caller's id is known only here.
+  return { ...session, impersonated: { by: caller.user.id } }
 }
 
 let warnedUnconfigured = false

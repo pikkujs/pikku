@@ -1,0 +1,50 @@
+---
+type: decision
+title: An impersonated session names who is impersonating
+description: resolveImpersonatedSession sets impersonated: { by } to the real caller's id after mapSession, and the tracer and logger record it as pikku.impersonated and pikku.impersonator.id
+tags: better-auth, impersonation, sessions, tracing
+---
+
+# An impersonated session names who is impersonating
+
+An impersonated session runs as the target, so its `userId` and scopes are the
+target's and nothing in it said an admin was acting. A span or log line then
+looked identical to the target's own traffic.
+
+`CoreUserSession` has an optional `impersonated?: { by: string }`. `by` is the
+id of the real user doing the impersonating; absent means not impersonated.
+`resolveImpersonatedSession` sets it from the caller it already holds
+(`caller.user.id`), after `mapSession` runs, so an app's mapper can neither
+forge it nor drop it. It is set by the server on the session the middleware
+builds and is never read from request input.
+
+The function span writes `pikku.impersonated` (a boolean, `true`) and
+`pikku.impersonator.id` when it opens, beside `pikku.user.id` and
+`pikku.org.id`, and again just before the function body (a middleware such as
+the better-auth session one sets the session after the span opens) and at its
+end. Both are in the attribute allow-list and in
+the logger's `CONTEXT_ATTRIBUTES`, so a log line written inside the span carries
+them. A normal session has neither attribute: there is no `false` to write.
+
+Not decided here: with no `mapSession` the impersonated session is still just
+`{ userId }` plus the marker, without the `orgId` or `virtualUser` a normal
+session gets. An app that wants them returns them from `mapSession`.
+
+The marker is never persisted. `PikkuSessionService.set` strips `impersonated`
+before it stores the session or hands it to a transport (a cookie), so a function
+that calls `wire.setSession(wire.session)` cannot make the target's later requests
+look impersonated. The invocation's own `wire.session`, frozen at its start, keeps
+it for audit.
+
+The span reflects the session the body runs under. Just before the body the runner
+writes what the session carries and removes what it no longer carries (through the
+optional `Span.removeAttribute`), so a middleware that swaps in a non-impersonated
+session drops the attribute. With `PIKKU_OTLP_LOG_FIELDS=1` the logger drops any
+logged field named like a context attribute (`pikku.user.id`, `pikku.org.id`,
+`pikku.function.*`, `pikku.wire.*`, `pikku.impersonated`, `pikku.impersonator.id`),
+so app code cannot forge them on a log line; the span's value wins, and with none the
+attribute stays absent.
+
+**What this rules out:** reading `impersonated` from a header, cookie or token
+the client controls, persisting `impersonated` to a store or cookie, and an impersonated request that is indistinguishable from
+the target's own.

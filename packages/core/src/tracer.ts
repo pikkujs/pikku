@@ -36,6 +36,8 @@ export interface FinishedSpan {
 export interface Span {
   readonly context: TraceContext
   setAttribute(key: string, value: SpanAttributeValue): void
+  /** Removes an attribute set earlier. Optional: a span that cannot remove one keeps it. */
+  removeAttribute?(key: string): void
   addEvent(name: string, attributes?: Record<string, SpanAttributeValue>): void
   /**
    * Idempotent. `error` is the RAW thrown value: the runner does not redact it,
@@ -92,6 +94,7 @@ const INERT_SPAN_CONTEXT: TraceContext = {
 const NOOP_SPAN: Span = {
   context: INERT_SPAN_CONTEXT,
   setAttribute() {},
+  removeAttribute() {},
   addEvent() {},
   end() {},
 }

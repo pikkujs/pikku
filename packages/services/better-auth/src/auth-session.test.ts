@@ -97,6 +97,7 @@ describe('betterAuthSession impersonation', () => {
       userId: 'u_guest',
       memberRoles: [],
       scopes: [],
+      impersonated: { by: 'u_admin' },
     })
   })
 
@@ -171,6 +172,7 @@ describe('betterAuthSession impersonation', () => {
       userId: 'u_admin',
       memberRoles: ['admin'],
       scopes: ['admin'],
+      impersonated: { by: 'u_guest' },
     })
   })
 

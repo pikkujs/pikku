@@ -30,6 +30,45 @@ export type FunctionSpan = {
   tracer: Tracer
   logger: Logger
   wire: PikkuWire
+  /** What was already written from the session, so a re-stamp writes only what changed. */
+  stamped: Record<string, SpanAttributeValue>
+}
+
+/** `pikku.impersonated` (true) and `pikku.impersonator.id` only when the session carries `impersonated`; a normal session carries neither. */
+const setImpersonation = (
+  wire: PikkuWire,
+  attributes: Record<string, SpanAttributeValue>
+) => {
+  try {
+    const by = wire.session?.impersonated?.by
+    if (typeof by === 'string' && by) {
+      attributes['pikku.impersonated'] = true
+      attributes['pikku.impersonator.id'] = by
+    }
+  } catch {}
+}
+
+const readIdentity = (
+  wire: PikkuWire,
+  attributes: Record<string, SpanAttributeValue>
+) => {
+  const set = (key: string, read: () => unknown) => {
+    try {
+      const value = read()
+      if (typeof value === 'string') attributes[key] = value
+    } catch {}
+  }
+  set('pikku.user.id', () => readUserId(wire))
+  set('pikku.org.id', () => wire.session?.orgId)
+  setImpersonation(wire, attributes)
+}
+
+const identityAttributes = (
+  wire: PikkuWire
+): Record<string, SpanAttributeValue> => {
+  const attributes: Record<string, SpanAttributeValue> = {}
+  readIdentity(wire, attributes)
+  return attributes
 }
 
 /**
@@ -47,15 +86,16 @@ export const openFunctionSpan = (
   const trace = wire.trace
   if (!tracer || !trace?.sampled || isTracerDisabled(tracer)) return undefined
   try {
+    const stamped = identityAttributes(wire)
     const span = tracer.startSpan(wire.functionId ?? '', trace, {
       // A workflow step is a hop of a run, not a nested call: it consumes work.
       kind: workflowStepOfTrace(trace)
         ? 'consumer'
         : (KINDS[wireType] ?? 'internal'),
-      attributes,
+      attributes: { ...stamped, ...attributes },
       startTimeUnixNano: nowUnixNano(),
     })
-    return { span, wireType, tracer, logger, wire }
+    return { span, wireType, tracer, logger, wire, stamped }
   } catch (error) {
     disableTracer(tracer, logger, error)
     return undefined
@@ -136,6 +176,36 @@ const endAttributes = (
 const readUserId = (wire: PikkuWire): string | undefined => {
   const id = (wire as { pikkuUserId?: unknown }).pikkuUserId
   return typeof id === 'string' ? id : undefined
+}
+
+/**
+ * Writes the identity the session carries onto the span now. A session a
+ * middleware establishes after the span opened is not in its start attributes;
+ * the runner calls this just before the function body, so a log line written in
+ * the body (which inherits the span's attributes) carries it, not only the span
+ * once it ends. Writes what is new or changed and removes what the session no longer carries.
+ * Never throws.
+ */
+export const recordFunctionSpanIdentity = (open: FunctionSpan) => {
+  const { span, tracer, logger, wire } = open
+  if (isTracerDisabled(tracer)) return
+  try {
+    const now = identityAttributes(wire)
+    for (const [key, value] of Object.entries(now)) {
+      if (open.stamped[key] === value) continue
+      span.setAttribute(key, value)
+      open.stamped[key] = value
+    }
+    // The span reflects the session the body runs under: an identity the
+    // session no longer carries (a nested call whose middleware swapped it) goes.
+    for (const key of Object.keys(open.stamped)) {
+      if (key in now) continue
+      span.removeAttribute?.(key)
+      delete open.stamped[key]
+    }
+  } catch (error) {
+    disableTracer(tracer, logger, error)
+  }
 }
 
 /**
