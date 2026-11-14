@@ -14,7 +14,7 @@ export const agentCredentialCheck = pikkuFunc<
 >({
   title: 'Agent Credential Check',
   description:
-    'Checks which OAuth credentials an agent needs and whether the authenticated user has connected them.',
+    'Deprecated: use admin:agentCredentialCheck from @pikku/addon-admin. Checks which OAuth credentials an agent needs and whether the authenticated user has connected them.',
   expose: true,
   scopes: ['pikku:console:credentials:read'],
   func: async (

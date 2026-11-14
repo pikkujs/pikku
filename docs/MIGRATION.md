@@ -24,6 +24,12 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### `WiringService` moved to `@pikku/core`; `agentCredentialCheck` is in `@pikku/addon-admin`
+
+`WiringService`, `readAllMeta` and the `AllMeta` types now live in `@pikku/core/services/wiring-service` (MIT). `@pikku/addon-console` (and `@pikku/addon-console/services`) still re-export them, so nothing breaks yet, but new code should import from core, because the console is being removed.
+
+`@pikku/addon-admin` has `agentCredentialCheck` under `admin:credentials:read`. It reads the agent from the running app, not from `.pikku` files. The console's `agentCredentialCheck` (scope `pikku:console:credentials:read`) is deprecated; call `admin:agentCredentialCheck` instead and grant `admin:credentials:read`.
+
 ### Better Auth's tables and the runtime's secret columns come annotated
 
 `pikku db migrate` now gives the tables `pikku db generate` created for Better Auth (`user`, `session`, `account`, `verification`) and for the runtime (`secrets`, `credentials`) built-in column annotations, with or without a `db/tables.ts`. A table of your own that merely shares a name is untouched.
