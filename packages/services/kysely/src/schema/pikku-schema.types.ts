@@ -6,7 +6,11 @@ import {
   type Kysely,
   type RawBuilder,
 } from 'kysely'
-import type { OnDelete, TablesDeclaration } from '@pikku/core/db'
+import type {
+  ColumnAnnotation,
+  OnDelete,
+  TablesDeclaration,
+} from '@pikku/core/db'
 
 type DataTypeExpression = Parameters<
   CreateTableBuilder<any, any>['addColumn']
@@ -270,4 +274,21 @@ export function rawStatement(
       compile: () => fragment.compile(db),
     }
   }
+}
+
+/**
+ * What the secret and credential services keep in `ciphertext` and
+ * `wrapped_dek`: the output of their own envelope encryption, already opaque
+ * when it reaches the row.
+ *
+ * `secret`, so no function can hand the row back to a caller. `plain` is the
+ * honest form: `wrapped` would tell the column encryption plugin to decrypt
+ * these values on read and refuse the service's own writes, and none of the
+ * forms means "ciphertext produced by another layer".
+ */
+export const ENVELOPE_CIPHERTEXT: ColumnAnnotation = {
+  security: 'secret',
+  form: 'plain',
+  description:
+    "Sealed by the service's own envelope encryption; the column plugin must not wrap it again.",
 }

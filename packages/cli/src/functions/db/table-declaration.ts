@@ -121,7 +121,7 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
  * What a column says about itself beyond its shape: its annotations and its
  * constraints, which is what the codegen and the console read from the sidecar.
  */
-const annotationOf = (
+export const annotationOf = (
   column: Record<string, unknown>
 ): ColumnAnnotation & ColumnConstraints =>
   Object.fromEntries(
