@@ -63,7 +63,9 @@ export const authenticate = pikkuChannelFunc({
 export const subscribe = pikkuSubscribeFunc<
   { topic: 'created' | 'updated' | 'deleted' | 'completed' },
   `todo-${string}`
->(async ({ logger }, { topic }, { channel }) => {
-  logger.info(`WebSocket ${channel.channelId} subscribing to todo-${topic}`)
-  return `todo-${topic}`
+>({
+  func: async ({ logger }, { topic }) => {
+    logger.info(`WebSocket subscribing to todo-${topic}`)
+    return `todo-${topic}`
+  },
 })
