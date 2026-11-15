@@ -41,7 +41,7 @@ describe(`StandaloneProviderAdapter contributors`, () => {
     )
     assert.match(
       source,
-      /const platformServices = await createPlatformServices\(process\.env as Record<string, string \| undefined>, \{ logger, schedulerService, queueService, workflowService, triggerService, triggerSourceStore, eventHub \}\)/
+      /const platformServices = await createPlatformServices\(process\.env as Record<string, string \| undefined>, \{ logger, schedulerService, queueService, workflowService, triggerService, triggerSourceStore, eventHub, eventHubRegistry \}\)/
     )
     assert.match(
       source,

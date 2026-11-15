@@ -24,6 +24,17 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### The event hub is publish-only; a subscribe function decides the topic
+
+`services.eventHub` is now an `EventHubPublisher`: `publish(topic, data, options?)` and nothing else. The runtime creates the hub (the distributor) before `createSingletonServices` in `pikku dev`, `pikku serve` and a standalone build, and adds `services.eventHubRegistry` for relays. A client no longer names a topic: it calls a `pikkuSubscribeFunc`, whose body returns the topic after the normal session, scope and permission checks.
+
+**Removed from `@pikku/core`:** the `EventHubService` interface, `eventHub.subscribe` and `eventHub.unsubscribe`, `LocalEventHubService`, `defineEventHubServiceTests` (now `defineEventHubDeliveryBackendTests`), and the `realtimeEventHubTopicsImport` config key with its `eventhub-topics.d.ts` file (topics are now the generated `EventHubTopic` union).
+**Removed from the runtimes:** `BunEventHubService`, `UWSEventHubService`, `CloudflareEventHubService`, `LambdaEventHubService`, `PgEventHubService`, and the `eventHub` option of `PikkuBunServer`. The serverless and Postgres backends return in a later change; until then Lambda and Cloudflare have no `services.eventHub`.
+**Removed from the generated client and scaffold:** the open `/events` channel and `/events/:topic` SSE route, `PikkuRealtime.subscribe`, `unsubscribe` and `subscribeToTopic`. `subscribeToSSE` and `connectToChannel` remain.
+**Changed:** `publish(topic, channelId, data)` is now `publish(topic, data, { except })`. A publish to a topic no subscribe function can return is refused.
+
+**Find the code:** search for `eventHub.subscribe`, `eventHub.unsubscribe`, `LocalEventHubService`, `subscribeToTopic` and `eventhub-topics`.
+
 ### OTLP and analytics sinks are registries; `analyticsService` and `accepts` are gone
 
 Core now creates two singleton services, `otlpSinks` and `analyticsSinks`, before your `createSingletonServices` runs in `pikku dev`, `pikku serve` and a standalone build. Register sinks in plain code with `add(sink, map)`. See [telemetry-sinks.md](./telemetry-sinks.md).

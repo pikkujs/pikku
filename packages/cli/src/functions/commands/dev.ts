@@ -37,6 +37,7 @@ import { stopSingletonServices } from '@pikku/core/utils'
 import { composeServerLifecycle } from '@pikku/core/lifecycle'
 import { pikkuState } from '@pikku/core/state'
 import { createAnalyticsSinks } from '@pikku/core/analytics'
+import { installEventHubDistributor } from '@pikku/core/internal/event-hub'
 import { createDevTelemetry } from '../../server/dev-telemetry.js'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
@@ -244,6 +245,10 @@ export const dev = pikkuSessionlessFunc<
       version: resolveProjectVersion(config.rootDir),
     })
     const analyticsSinks = createAnalyticsSinks()
+    // Created before the app's services so a relay can be added from
+    // `createSingletonServices`; the distributor stays here and is reached by
+    // the transports, while services get the publisher and the registry.
+    const { services: eventHubServices } = installEventHubDistributor()
     const tracing = telemetry.enabled
       ? {
           tracer: telemetry.tracer,
@@ -567,6 +572,7 @@ export const dev = pikkuSessionlessFunc<
     // content store and credentials, the workflow service codegen already runs
     // through, and the gates read off the live inspector rather than the ones
     // baked in at the last codegen.
+    await devServerRunner.prepare()
     const baseLocalServices = await createLocalServices(
       userConfig,
       {
@@ -591,7 +597,7 @@ export const dev = pikkuSessionlessFunc<
         // DI in services.ts. Its EventHub is shared into the singleton
         // services so function-side broadcasts reach the sockets the
         // transport holds.
-        eventHub: await devServerRunner.createEventHub(),
+        ...eventHubServices,
         content: localContent,
         getInspectorState,
       },
@@ -626,11 +632,13 @@ export const dev = pikkuSessionlessFunc<
       localServices
     )
     // The runtime's own registries win: the tracer and the analytics fan-out
-    // read these instances, so an app that returned others would lose its sinks.
+    // read these instances, so an app that returned others would lose its sinks,
+    // and the event hub's publisher and registry are the distributor's own.
     const resolvedServices = {
       ...singletonServices,
       otlpSinks: telemetry.otlpSinks,
       analyticsSinks,
+      ...eventHubServices,
       getInspectorState,
       ...(coverageService ? { coverageService } : {}),
     }

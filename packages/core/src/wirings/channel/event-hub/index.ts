@@ -2,6 +2,8 @@ export {
   EventHubDistributor,
   createEventHubDistributor,
 } from './event-hub-distributor.js'
+export { installEventHubDistributor } from './host.js'
+export type { EventHubHostServices } from './host.js'
 export { createLocalDeliveryBackend } from './local-delivery-backend.js'
 export {
   getDeclaredEventHubTopics,

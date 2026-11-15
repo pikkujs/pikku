@@ -4,7 +4,6 @@ import type {
   CoreSingletonServices,
   CoreUserSession,
 } from '@pikku/core/types'
-import type { EventHubService } from '@pikku/core/channel'
 import type { QueueService } from '@pikku/core/queue'
 import type { JWTService } from '@pikku/core/services'
 import type {
@@ -37,7 +36,6 @@ export interface UserSession extends CoreUserSession {
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
   jwt?: JWTService
-  eventHub?: EventHubService<Record<string, any>>
   queueService?: QueueService
   todoStore: TodoStore
   agentStorage?: AgentStorageService

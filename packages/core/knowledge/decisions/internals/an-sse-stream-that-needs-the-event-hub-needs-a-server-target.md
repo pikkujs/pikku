@@ -10,8 +10,8 @@ tags: [channels, sse, event-hub, lambda, cloudflare, azure, deploy]
 An event hub delivers to an SSE stream by calling `send` on the response the
 runner opened for it. That only works if the code publishing and the code
 holding the response can reach each other: the same process, or a backplane
-between processes. Bun, uWS and the Node servers satisfy it, and
-`PgEventHubService` adds the backplane across instances.
+between processes. Bun, uWS and the Node servers satisfy it, and a relay
+registered on `eventHubRegistry` adds the backplane across instances.
 
 Lambda, Cloudflare and Azure Functions do not. The invocation holding the stream
 is one short-lived instance among many, and the publisher is a different
@@ -29,9 +29,9 @@ writes to directly, with no hub and no Durable Object. The deployment manifest
 marks every SSE route (`HttpRouteInfo.sse`), and the build warns for each one on a
 serverless unit that a published event will not reach it and that it costs more
 than a WebSocket. The mark is what lets the platform recommend a server target or
-polling later, without the CLI deciding for the user. `LambdaEventHubService` and
-`CloudflareEventHubService` accept the channel and log that warning rather than
-refuse it, because a stream that only the function itself writes to is valid.
+polling later, without the CLI deciding for the user. The serverless runtimes
+have no event-hub backend yet and so no subscribe route can be delivered to
+there; a stream that only the function itself writes to is still valid.
 Azure Functions has no event hub at all.
 
 Push on those platforms goes over WebSocket: API Gateway WebSocket on AWS and

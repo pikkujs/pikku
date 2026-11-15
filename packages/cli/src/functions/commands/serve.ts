@@ -48,6 +48,7 @@ import { resolveProjectVersion } from '../../deploy/build-pipeline.js'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { asContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'
 import { createAnalyticsSinks } from '@pikku/core/analytics'
+import { installEventHubDistributor } from '@pikku/core/internal/event-hub'
 
 export const serve = pikkuSessionlessFunc<
   { port?: string; model?: string; backend?: string },
@@ -78,6 +79,10 @@ export const serve = pikkuSessionlessFunc<
       contextStorage: asContextStorage(new AsyncLocalStorage()),
     })
     const analyticsSinks = createAnalyticsSinks()
+    // Created before the app's services so a relay can be added from
+    // `createSingletonServices`; the distributor stays here and is reached by
+    // the transports, while services get the publisher and the registry.
+    const { services: eventHubServices } = installEventHubDistributor()
     const tracing = telemetry.enabled
       ? {
           tracer: telemetry.tracer,
@@ -190,6 +195,7 @@ export const serve = pikkuSessionlessFunc<
     // (so sqlite extensions and embedded postgres apply), its event hub and
     // content store, and the gates read off the live inspector rather than the
     // ones baked in at the last codegen.
+    await devServerRunner.prepare()
     const baseLocalServices = await createLocalServices(
       userConfig,
       {
@@ -203,7 +209,7 @@ export const serve = pikkuSessionlessFunc<
         metaService: new LocalMetaService(pikkuDir),
         schedulerService: new InMemorySchedulerService(),
         triggerSourceStore: new InMemoryTriggerSourceStore(),
-        eventHub: await devServerRunner.createEventHub(),
+        ...eventHubServices,
         content: localContent,
         getInspectorState,
       },
@@ -238,11 +244,13 @@ export const serve = pikkuSessionlessFunc<
       localServices
     )
     // The runtime's own registries win: the tracer and the analytics fan-out
-    // read these instances, so an app that returned others would lose its sinks.
+    // read these instances, so an app that returned others would lose its sinks,
+    // and the event hub's publisher and registry are the distributor's own.
     const resolvedServices = {
       ...singletonServices,
       otlpSinks: telemetry.otlpSinks,
       analyticsSinks,
+      ...eventHubServices,
       getInspectorState,
     }
     pikkuState(null, 'package', 'singletonServices', resolvedServices)

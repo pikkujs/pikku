@@ -5,16 +5,12 @@
  * generated `PikkuFetch` (so server URL + auth come from one place) and
  * exposes:
  *
- *   - `subscribe(topic, handler)` / `unsubscribe(topic)` — typed pub/sub
- *     over the websocket at `/events`. Multi-topic per connection.
- *   - `subscribeToTopic(topic, handler)` — same shape but via SSE
- *     (one EventSource per topic, auto-cleanup on close).
- *   - `subscribeToSSE(path, handler)` — generic SSE subscribe for any
- *     `sse: true` route (workflow streams, agent streams, etc.).
+ *   - `subscribeToSSE(path, handler)` — subscribe to any `sse: true` route:
+ *     the route of a `pikkuSubscribeFunc`, a workflow stream, an agent stream.
+ *     The server decides, from the session, which topic the stream follows.
  *   - `connectToChannel(channelRoute, protocols?)` — open a raw WebSocket
  *     for any wireChannel route, ready to wrap in
  *     `PikkuWebSocket<'channel-name'>` for typed subscribe/send.
- *
  */
 export const serializeRealtimeClient = (fetchImportPath: string): string => {
   return `/**
@@ -23,18 +19,8 @@ export const serializeRealtimeClient = (fetchImportPath: string): string => {
  */
 import { CorePikkuFetch } from '@pikku/fetch'
 import { PikkuFetch } from '${fetchImportPath}'
-type EventHubTopics = Record<string, unknown>
 
 type Handler<T> = (data: T) => void
-
-interface RealtimeOptions {
-  /** Auto-reconnect with backoff (default: true) */
-  reconnect?: boolean
-  /** Initial reconnect delay in ms (default: 500) */
-  reconnectDelayMs?: number
-  /** Cap on reconnect delay (default: 10_000) */
-  reconnectMaxDelayMs?: number
-}
 
 /**
  * Realtime client. Mirrors the PikkuRPC pattern: wraps a PikkuFetch so
@@ -45,28 +31,16 @@ interface RealtimeOptions {
  * const realtime = new PikkuRealtime()
  * realtime.setPikkuFetch(pikku.fetch)
  *
- * const off = realtime.subscribe('todo-created', ({ todo }) => { ... })
- * // later: off(); realtime.close()
+ * // the route of a pikkuSubscribeFunc; the server picks the topic
+ * const stream = realtime.subscribeToSSE('/orders/events', (event) => { ... })
+ * // later: stream.close()
  * \`\`\`
  */
 export class PikkuRealtime {
   /** The underlying HTTP client used to derive server URL + auth */
   pikkuFetch = new PikkuFetch()
 
-  private ws: WebSocket | null = null
-  private readonly handlers = new Map<string, Set<Handler<any>>>()
-  private readonly options: Required<RealtimeOptions>
-  private reconnectAttempt = 0
-  private closed = false
-  private connectScheduled = false
-
-  constructor(options: RealtimeOptions = {}) {
-    this.options = {
-      reconnect: options.reconnect ?? true,
-      reconnectDelayMs: options.reconnectDelayMs ?? 500,
-      reconnectMaxDelayMs: options.reconnectMaxDelayMs ?? 10_000,
-    }
-  }
+  private readonly streams = new Set<{ close: () => void }>()
 
   /**
    * Use a shared PikkuFetch instance (typically from \`createPikku(...)\`).
@@ -90,53 +64,6 @@ export class PikkuRealtime {
   /** Sets the API key for auth on transports that send headers (SSE). */
   setAPIKey(apiKey: string | null): void {
     this.pikkuFetch.setAPIKey(apiKey)
-  }
-
-  /**
-   * Subscribe to a typed event topic over the websocket. Returns an
-   * \`unsubscribe\` function. Auto-reconnects re-send subscriptions.
-   */
-  subscribe<K extends keyof EventHubTopics & string>(
-    topic: K,
-    handler: Handler<EventHubTopics[K]>
-  ): () => void {
-    const set = this.handlers.get(topic) ?? new Set<Handler<any>>()
-    if (set.size === 0) {
-      this.send({ action: 'subscribe', topic })
-    }
-    set.add(handler)
-    this.handlers.set(topic, set)
-    this.ensureConnected()
-    return () => this.unsubscribe(topic, handler)
-  }
-
-  unsubscribe<K extends keyof EventHubTopics & string>(
-    topic: K,
-    handler?: Handler<EventHubTopics[K]>
-  ): void {
-    const set = this.handlers.get(topic)
-    if (!set) return
-    if (handler) set.delete(handler)
-    else set.clear()
-    if (set.size === 0) {
-      this.handlers.delete(topic)
-      this.send({ action: 'unsubscribe', topic })
-    }
-  }
-
-  /**
-   * SSE alternative for a single topic stream. One EventSource per topic;
-   * close the returned object to unsubscribe (the server cleans up
-   * automatically on disconnect).
-   */
-  subscribeToTopic<K extends keyof EventHubTopics & string>(
-    topic: K,
-    handler: Handler<EventHubTopics[K]>
-  ): { close: () => void } {
-    return this.subscribeToSSE<EventHubTopics[K]>(
-      \`/events/\${encodeURIComponent(topic)}\`,
-      handler
-    )
   }
 
   /**
@@ -211,12 +138,15 @@ export class PikkuRealtime {
 
     void run()
 
-    return {
+    const stream = {
       close: () => {
         closed.value = true
         controller.abort()
+        this.streams.delete(stream)
       },
     }
+    this.streams.add(stream)
+    return stream
   }
 
   /**
@@ -231,70 +161,9 @@ export class PikkuRealtime {
     return new WebSocket(this.resolveWsUrl(channelPath), protocols)
   }
 
-  /** Disconnect the events websocket and clear all subscriptions. */
+  /** Closes every stream opened through \`subscribeToSSE\`. */
   close(): void {
-    this.closed = true
-    this.handlers.clear()
-    this.ws?.close()
-    this.ws = null
-  }
-
-  private ensureConnected() {
-    if (this.ws || this.connectScheduled || this.closed) return
-    this.connect()
-  }
-
-  private connect() {
-    if (this.closed) return
-    this.connectScheduled = false
-    const url = this.resolveWsUrl('/events')
-    this.ws = new WebSocket(url)
-    this.ws.onopen = () => {
-      this.reconnectAttempt = 0
-      for (const topic of this.handlers.keys()) {
-        this.send({ action: 'subscribe', topic })
-      }
-    }
-    this.ws.onmessage = (e: MessageEvent) => {
-      let payload: unknown
-      try {
-        payload =
-          typeof e.data === 'string' ? JSON.parse(e.data) : (e.data as unknown)
-      } catch {
-        return
-      }
-      if (
-        payload &&
-        typeof payload === 'object' &&
-        'topic' in (payload as any) &&
-        typeof (payload as any).topic === 'string'
-      ) {
-        const { topic, data } = payload as { topic: string; data: unknown }
-        const set = this.handlers.get(topic)
-        if (set) for (const h of set) h(data)
-      }
-    }
-    this.ws.onclose = () => {
-      this.ws = null
-      if (this.closed || !this.options.reconnect) return
-      const delay = Math.min(
-        this.options.reconnectDelayMs * 2 ** this.reconnectAttempt,
-        this.options.reconnectMaxDelayMs
-      )
-      this.reconnectAttempt += 1
-      this.connectScheduled = true
-      setTimeout(() => this.connect(), delay)
-    }
-    this.ws.onerror = () => {
-      this.ws?.close()
-    }
-  }
-
-  private send(message: { action: 'subscribe' | 'unsubscribe'; topic: string }) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message))
-    }
-    // If not open, onopen replays current handler keys.
+    for (const stream of [...this.streams]) stream.close()
   }
 
   private resolveHttpUrl(path: string): string {

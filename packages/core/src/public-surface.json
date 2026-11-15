@@ -171,11 +171,7 @@
     "virtualUserTarget",
     "writeVirtualUserSchedule"
   ],
-  "./channel/local": [
-    "LocalEventHubService",
-    "PikkuLocalChannelHandler",
-    "runLocalChannel"
-  ],
+  "./channel/local": ["PikkuLocalChannelHandler", "runLocalChannel"],
   "./channel/serverless": [
     "runChannelConnect",
     "runChannelDisconnect",
@@ -665,15 +661,15 @@
   ],
   "./db": ["defineTables"],
   "./testing": [
+    "RecordingTracer",
     "clearPikkuRuntimeState",
     "decodeLogs",
     "decodeMetrics",
     "decodeTraces",
-    "defineEventHubServiceTests",
+    "defineEventHubDeliveryBackendTests",
     "defineQueueIdentityTransportTests",
     "defineQueueTraceConformance",
-    "defineServiceTests",
-    "RecordingTracer"
+    "defineServiceTests"
   ],
   "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
 }

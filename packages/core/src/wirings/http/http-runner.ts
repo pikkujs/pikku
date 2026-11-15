@@ -321,45 +321,12 @@ const executeRoute = async (
       remote: unsupportedChannelRemote,
     }
 
-    if (subscribe) {
-      // Attached after the subscribe function has run, below.
-    } else if (!singletonServices.eventHub) {
-      singletonServices.logger.warn(
-        `SSE route ${route.route} has no eventHub configured: the stream will open but never receive a published event`
-      )
-    } else {
-      const channelRef = channel
-      const channelHandler = {
-        getChannel: () => channelRef,
-        send: async (data: unknown, isBinary?: boolean) => {
-          if (isBinary) await channelRef.sendBinary(data as BinaryData)
-          else await channelRef.send(data)
-        },
-        sendBinary: (data: any) => channelRef.sendBinary(data),
-      }
-      try {
-        await singletonServices.eventHub.onChannelOpened(channelHandler)
-      } catch (error) {
-        // The stream is already open and `close` is not yet wrapped, so the
-        // error handler below has nothing to close it with: the client would
-        // hold an SSE connection that no hub will ever publish to.
-        try {
-          await channel.close()
-        } catch {
-          // the original failure is the one worth reporting
-        }
-        throw error
-      }
-      const originalClose = channel.close
-      channel.close = async () => {
-        singletonServices.eventHub!.onChannelClosed(channelId)
-        await originalClose()
-      }
-    }
+    // A subscribe function attaches the stream to the event hub after it has
+    // run, below. Any other SSE route is fed by its own function and never
+    // joins the hub.
     if (!subscribe) {
       response.onClose?.(() => {
         channel!.state = 'closed'
-        singletonServices.eventHub?.onChannelClosed(channelId)
       })
     }
   }
