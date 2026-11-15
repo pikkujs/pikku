@@ -55,6 +55,14 @@ const ALLOW_LIST_KINDS: Record<string, AttributeKind> = {
  */
 const PLUGIN_PREFIXES = ['db.']
 
+/**
+ * Whether a span attribute key may leave the process: allow-listed, or under a plugin prefix. The exporter and the run
+ * stitcher share it, so a key the store never sees never reaches a browser either.
+ */
+export const isAllowedAttributeKey = (key: string): boolean =>
+  key in ALLOW_LIST_KINDS ||
+  PLUGIN_PREFIXES.some((prefix) => key.startsWith(prefix))
+
 /** The only attributes a span event may carry: the redacted class and message of an error. */
 const EVENT_ATTRIBUTE_KEYS = ['exception.type', 'exception.message']
 

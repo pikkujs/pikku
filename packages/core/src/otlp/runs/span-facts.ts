@@ -1,4 +1,5 @@
 import type { FinishedSpan } from '../../tracer.js'
+import { isAllowedAttributeKey } from '../attribute-types.js'
 import type { Attrs, RunOutcome, SpanFrameStart, SpanRole } from './types.js'
 
 /** Unix nanoseconds to whole milliseconds, half up. */
@@ -70,16 +71,25 @@ export const MAX_ATTRS = 64
 export const MAX_ATTR_VALUE_LENGTH = 256
 
 /**
- * A bounded, JSON-safe copy of a span's attributes: at most {@link MAX_ATTRS} entries, keys over
- * {@link MAX_ATTR_KEY_LENGTH} and non-finite numbers dropped (JSON would turn them into null), strings cut to
- * {@link MAX_ATTR_VALUE_LENGTH}. Events and views both carry this, so a snapshot holds what the stream holds.
+ * A bounded, JSON-safe copy of a span's attributes, default-deny: only keys the OTLP exporter lets out
+ * (`isAllowedAttributeKey`: its allow-list and the `db.` plugin prefix) are kept, so a custom attribute never reaches
+ * a browser. `pikku.*` keys come first, so the {@link MAX_ATTRS} cap can never drop `pikku.wire.type` or
+ * `pikku.user.id` for the open-ended `db.*` family. Keys over {@link MAX_ATTR_KEY_LENGTH} and non-finite numbers
+ * (JSON would turn them into null) are dropped, strings cut to {@link MAX_ATTR_VALUE_LENGTH}. Events and views both
+ * carry this, so a snapshot holds what the stream holds.
  */
 export const boundAttrs = (attributes: Attrs): Attrs => {
   const out: Attrs = {}
   let count = 0
-  for (const key of Object.keys(attributes)) {
+  const keys = Object.keys(attributes)
+  const ordered = [
+    ...keys.filter((key) => key.startsWith('pikku.')),
+    ...keys.filter((key) => !key.startsWith('pikku.')),
+  ]
+  for (const key of ordered) {
     if (count >= MAX_ATTRS) break
-    if (key.length > MAX_ATTR_KEY_LENGTH) continue
+    if (key.length > MAX_ATTR_KEY_LENGTH || !isAllowedAttributeKey(key))
+      continue
     const value = attributes[key]
     if (typeof value === 'string') {
       out[key] =
