@@ -60,7 +60,7 @@ const PLUGIN_PREFIXES = ['db.']
  * stitcher share it, so a key the store never sees never reaches a browser either.
  */
 export const isAllowedAttributeKey = (key: string): boolean =>
-  key in ALLOW_LIST_KINDS ||
+  Object.hasOwn(ALLOW_LIST_KINDS, key) ||
   PLUGIN_PREFIXES.some((prefix) => key.startsWith(prefix))
 
 /** The only attributes a span event may carry: the redacted class and message of an error. */

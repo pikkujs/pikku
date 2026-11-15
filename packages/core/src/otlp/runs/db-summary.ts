@@ -44,8 +44,9 @@ export class DbAccumulator {
     this.dropped++
   }
 
+  /** Whether any db span was folded before the hop ended; late ones are announced by an update instead. */
   get hasData(): boolean {
-    return this.count > 0 || this.dropped > 0
+    return this.count > 0
   }
 
   summary(): DbSummary {

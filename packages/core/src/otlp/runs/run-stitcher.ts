@@ -3,6 +3,7 @@ import { DbAccumulator } from './db-summary.js'
 import { HealthWindow } from './health-window.js'
 import {
   boundAttrs,
+  cutName,
   defaultClassify,
   durationMsOf,
   errorNameOf,
@@ -68,6 +69,10 @@ interface SpanRec {
   db?: DbAccumulator
   parentHop?: string | null
   view?: HopView
+  /** A boundary under this hop failed: health counts the hop as an error, its own outcome stays. */
+  boundaryFailed?: boolean
+  /** A late db span changed `db` and the `update` event is not sent yet (the end time of the latest one). */
+  pendingUpdateAt?: number
 }
 
 interface Run {
@@ -90,6 +95,12 @@ interface Run {
   }
   openHops: number
   firstFailure?: {
+    spanId: string
+    functionId?: string
+    errorName: string | null
+  }
+  /** The first failed boundary: surfaced as `failure` on a run that finishes ok. */
+  boundaryFailure?: {
     spanId: string
     functionId?: string
     errorName: string | null
@@ -121,7 +132,18 @@ export const createRunStitcher = (
   let lastHealth = '[]'
   let lastEntries: HealthEntry[] | undefined
 
+  // Hops whose late db summary changed and whose `update` event is owed: one per hop, however many spans arrived.
+  const pending = new Set<{ run: Run; rec: SpanRec }>()
+  let flushing = false
+
   const emit = (run: Run | undefined, at: number, body: EventBody): number => {
+    if (
+      pending.size &&
+      !flushing &&
+      !(body.type === 'run.hop' && body.phase === 'update')
+    ) {
+      flushUpdates()
+    }
     if (run && at > run.lastAtMs) run.lastAtMs = at
     const event = { seq: ++seq, at, ...body } as RunEvent
     for (const listener of [...listeners]) {
@@ -195,24 +217,28 @@ export const createRunStitcher = (
 
   /**
    * A boundary is not drawn and is not a health key, so its failure would vanish. An error outcome (not a denial, as for
-   * a hop) becomes the run's first failure when none is set yet, naming the hop it hangs off (the one that was
-   * publishing) with the boundary's error. A boundary with no hop above it is the root, whose own outcome already
-   * decides the run.
+   * a hop) is a failure of the hop it hangs off (the one that was publishing), whether or not that hop caught it: the
+   * hop is marked, so its health sample counts as an error (its own outcome stays), and the run remembers the first
+   * one, which names the failure when the root fails and is carried as `failure` on a run that finishes ok. A boundary
+   * with no hop above it is the root, whose own outcome already decides the run.
    */
   const noteBoundaryFailure = (
     run: Run,
     rec: SpanRec,
     frame: FinishedSpan
   ): void => {
-    if (run.firstFailure || outcomeOf(frame) !== 'error') return
+    if (outcomeOf(frame) !== 'error') return
     const owner = hopParentOf(run, rec)
     const hop = owner ? run.spans.get(owner) : undefined
     if (!hop) return
-    run.firstFailure = {
+    hop.boundaryFailed = true
+    const failure = {
       spanId: hop.spanId,
       ...(hop.functionId ? { functionId: hop.functionId } : {}),
       errorName: errorNameOf(frame),
     }
+    run.boundaryFailure ??= failure
+    run.firstFailure ??= failure
   }
 
   const emitEnd = (run: Run, rec: SpanRec): void => {
@@ -244,7 +270,12 @@ export const createRunStitcher = (
     hop.outcome = outcome
     hop.errorName = errorName
     if (db) hop.db = db
-    health.record(rec.functionId ?? rec.name, endMs, durationMs, outcome)
+    health.record(
+      rec.functionId ?? rec.name,
+      endMs,
+      durationMs,
+      outcome === 'ok' && rec.boundaryFailed ? 'error' : outcome
+    )
     if (outcome === 'error' && !run.firstFailure) {
       run.firstFailure = {
         spanId: rec.spanId,
@@ -283,27 +314,50 @@ export const createRunStitcher = (
 
   /**
    * A db span that ended after its hop's end was emitted: the summary's counts are frozen, so it is counted in
-   * `dropped` and announced by a `run.hop` `update`, which keeps a snapshot plus the later events equal to the stream.
+   * `dropped`. The change is announced by one `run.hop` `update` per hop, sent before the next other event, the next
+   * sweep or the next snapshot, so a flood of late spans costs one event, not one each. The view is changed only when
+   * the update is sent, which keeps a snapshot plus the later events equal to the stream.
    */
   const lateDb = (run: Run, hop: SpanRec, frame: FinishedSpan): void => {
-    const view = hop.view
-    if (!view) return
-    const acc = (hop.db ??= new DbAccumulator())
-    acc.late()
-    const db = acc.summary()
-    view.db = { ...db, byOp: { ...db.byOp } }
-    emit(run, nsToMs(frame.endTimeUnixNano), {
-      type: 'run.hop',
-      phase: 'update',
-      traceId: run.traceId,
-      spanId: hop.spanId,
-      parentSpanId: view.parentSpanId,
-      name: hop.name,
-      kind: hop.kind,
-      ...(hop.functionId ? { functionId: hop.functionId } : {}),
-      attributes: { ...view.attributes },
-      db,
-    })
+    if (!hop.view) return
+    ;(hop.db ??= new DbAccumulator()).late()
+    const at = nsToMs(frame.endTimeUnixNano)
+    if (hop.pendingUpdateAt === undefined) pending.add({ run, rec: hop })
+    hop.pendingUpdateAt = Math.max(hop.pendingUpdateAt ?? at, at)
+  }
+
+  /** Sends the owed `update` events, one per hop; one whose run left the stitcher is dropped. */
+  function flushUpdates(): void {
+    if (flushing) return
+    flushing = true
+    try {
+      for (const entry of [...pending]) {
+        pending.delete(entry)
+        const { run, rec: hop } = entry
+        const at = hop.pendingUpdateAt
+        hop.pendingUpdateAt = undefined
+        const view = hop.view
+        const held =
+          open.get(run.traceId) === run || closed.get(run.traceId) === run
+        if (at === undefined || !view || !hop.db || !held) continue
+        const db = hop.db.summary()
+        view.db = { ...db, byOp: { ...db.byOp } }
+        emit(run, at, {
+          type: 'run.hop',
+          phase: 'update',
+          traceId: run.traceId,
+          spanId: hop.spanId,
+          parentSpanId: view.parentSpanId,
+          name: hop.name,
+          kind: hop.kind,
+          ...(hop.functionId ? { functionId: hop.functionId } : {}),
+          attributes: { ...view.attributes },
+          db,
+        })
+      }
+    } finally {
+      flushing = false
+    }
   }
 
   /** Handles one span's end once the run has its root. */
@@ -361,10 +415,14 @@ export const createRunStitcher = (
     }
   }
 
-  /** Drops a run the stitcher no longer holds; its trace id is remembered so late spans do not reopen it. */
+  /**
+   * Drops a run the stitcher no longer holds. A run that was announced (it started) has its trace id remembered, so a
+   * late span does not reopen it as a second run. One that never started is not remembered: nothing was reported for
+   * it, so a later span of the trace is a fresh trace, not a loss.
+   */
   const discard = (run: Run): void => {
     totalSpans -= run.spans.size
-    forget(run.traceId)
+    if (run.started) forget(run.traceId)
   }
 
   /** The closed run seen least recently; the earliest closed on a tie. */
@@ -444,11 +502,15 @@ export const createRunStitcher = (
       view.closedSeq = run.closedSeq
     } else {
       view.status = 'finished'
+      // The root did not fail, but a publish under it did: the run says so without changing its outcome.
+      const failure = run.boundaryFailure
+      if (failure) view.failure = { ...failure }
       run.closedSeq = emit(run, rootEnd.atMs, {
         type: 'run.finished',
         traceId: run.traceId,
         durationMs: rootEnd.durationMs,
         outcome: rootEnd.outcome,
+        ...(failure ? { failure: { ...failure } } : {}),
       })
       view.closedSeq = run.closedSeq
     }
@@ -463,6 +525,40 @@ export const createRunStitcher = (
       outcome: outcomeOf(frame),
       errorName: errorNameOf(frame),
     }
+  }
+
+  const resolveRoot = (run: Run): void => {
+    let pick: SpanRec | undefined
+    for (const rec of run.spans.values()) {
+      if (rec.parentSpanId && run.spans.has(rec.parentSpanId)) continue
+      if (!pick || rec.startNs < pick.startNs) pick = rec
+    }
+    pick ??= run.spans.values().next().value
+    if (pick) run.rootSpanId = pick.spanId
+  }
+
+  /** Picks the root of a trace that has none, and starts it. False when the trace holds no span. */
+  const settleRoot = (run: Run, nowMs: number): boolean => {
+    resolveRoot(run)
+    if (run.rootSpanId === undefined) return false
+    const root = run.spans.get(run.rootSpanId)!
+    if (root.ended && root.frame) noteRootEnd(run, root.frame, nowMs)
+    startRun(run)
+    return true
+  }
+
+  /**
+   * Removes the least recently seen open run to make room. A trace still waiting for its root is settled first (its
+   * best root is picked and what it holds is reported) rather than dropped, so nothing already seen is lost silently.
+   */
+  const evict = (run: Run, nowMs: number): void => {
+    if (!run.started && !settleRoot(run, nowMs)) {
+      open.delete(run.traceId)
+      discard(run)
+      return
+    }
+    maybeClose(run, nowMs)
+    if (!run.closed) expire(run)
   }
 
   /** The run for a trace, marked seen; undefined when the trace closed and left retention (the span is ignored). */
@@ -484,7 +580,7 @@ export const createRunStitcher = (
     while (open.size >= limits.maxOpenRuns) {
       const oldest = open.values().next().value
       if (!oldest) break
-      expire(oldest)
+      evict(oldest, nowMs)
     }
     const run: Run = {
       traceId,
@@ -504,7 +600,7 @@ export const createRunStitcher = (
   const recOf = (span: SpanFrameStart, hadStart: boolean): SpanRec => ({
     spanId: span.spanId,
     parentSpanId: span.parentSpanId ?? null,
-    name: span.name,
+    name: cutName(span.name),
     kind: span.kind,
     role: classify(span),
     ...(functionIdOf(span) ? { functionId: functionIdOf(span) } : {}),
@@ -566,10 +662,13 @@ export const createRunStitcher = (
     const run = runFor(span.traceId, nowMs)
     if (!run || run.spans.has(span.spanId)) return
     const rec = recOf(span, true)
-    // Only a span with no parent is a root at once. One with a parent may be a child of a request that began before
-    // this sink was registered, or the first span of a trace with a foreign parent: it waits for its root like an end
-    // frame does (the root's own end, or `settleMs`).
-    const isRoot = run.rootSpanId === undefined && !span.parentSpanId
+    // With start frames the first span seen for a trace is the root at once, a foreign parent or not (a queue worker,
+    // a trusted inbound traceparent): it is announced live. Only end frames wait for `settleMs`, because they cannot
+    // tell a foreign parent from one not yet arrived. Known limit: a sink registered mid-request sees a child first,
+    // and that child becomes the root.
+    const isRoot =
+      run.rootSpanId === undefined &&
+      (!span.parentSpanId || run.spans.size === 0)
     if (!remember(run, rec, isRoot)) return
     if (isRoot) run.rootSpanId = span.spanId
     if (rec.role === 'hop') {
@@ -582,6 +681,7 @@ export const createRunStitcher = (
   }
 
   const end = (span: SpanFrameEnd, nowMs: number): void => {
+    const priorSeen = closed.get(span.traceId)?.lastSeenNow
     const run = runFor(span.traceId, nowMs)
     if (!run) return
     let rec = run.spans.get(span.spanId)
@@ -592,6 +692,10 @@ export const createRunStitcher = (
       if (!remember(run, rec, isRoot)) return
       if (isRoot) run.rootSpanId = span.spanId
     }
+    // A db span after the run closed is folded and counted but does not refresh the run: a flood of them must not keep
+    // a closed run from being evicted.
+    if (run.closed && rec.role === 'db' && priorSeen !== undefined)
+      run.lastSeenNow = priorSeen
     rec.ended = true
     rec.frame = span
     if (rec.open) {
@@ -605,29 +709,16 @@ export const createRunStitcher = (
     maybeClose(run, nowMs)
   }
 
-  const resolveRoot = (run: Run): void => {
-    let pick: SpanRec | undefined
-    for (const rec of run.spans.values()) {
-      if (rec.parentSpanId && run.spans.has(rec.parentSpanId)) continue
-      if (!pick || rec.startNs < pick.startNs) pick = rec
-    }
-    pick ??= run.spans.values().next().value
-    if (pick) run.rootSpanId = pick.spanId
-  }
-
   const sweep = (nowMs: number): void => {
+    flushUpdates()
     for (const run of [...open.values()]) {
       if (run.rootSpanId === undefined) {
         if (nowMs - run.firstSeenNow < limits.settleMs) continue
-        resolveRoot(run)
-        if (run.rootSpanId === undefined) {
+        if (!settleRoot(run, nowMs)) {
           open.delete(run.traceId)
           discard(run)
           continue
         }
-        const root = run.spans.get(run.rootSpanId)!
-        if (root.ended && root.frame) noteRootEnd(run, root.frame, nowMs)
-        startRun(run)
       }
       maybeClose(run, nowMs)
       if (!run.closed && nowMs - run.lastSeenNow >= limits.ttlMs) expire(run)
@@ -661,6 +752,7 @@ export const createRunStitcher = (
   })
 
   const snapshot = (nowMs: number): RunSnapshot => {
+    flushUpdates()
     const healthEvent: HealthEvent = {
       type: 'health',
       windowMs: limits.healthWindowMs,

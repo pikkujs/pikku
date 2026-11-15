@@ -10,8 +10,15 @@ export const nsToMs = (ns: bigint): number =>
 export const durationMsOf = (startNs: bigint, endNs: bigint): number =>
   endNs > startNs ? Math.round(Number(endNs - startNs) / 1000) / 1000 : 0
 
+/** The longest span name, function id or error name kept; a longer one is cut, as attribute values are. */
+export const MAX_NAME_LENGTH = 256
+
+/** A string cut to {@link MAX_NAME_LENGTH}, so a name built from data cannot grow an event, a view or a health key. */
+export const cutName = (value: string): string =>
+  value.length > MAX_NAME_LENGTH ? value.slice(0, MAX_NAME_LENGTH) : value
+
 const str = (value: unknown): string | undefined =>
-  typeof value === 'string' && value ? value : undefined
+  typeof value === 'string' && value ? cutName(value) : undefined
 
 /** Error class names that mean the caller was refused, not that the code broke. */
 const DENIED_ERRORS = new Set([
@@ -34,7 +41,7 @@ export const functionIdOf = (
   if (!id) return undefined
   const namespace = str(span.attributes['pikku.addon.namespace'])
   return namespace && !id.startsWith(`${namespace}:`)
-    ? `${namespace}:${id}`
+    ? cutName(`${namespace}:${id}`)
     : id
 }
 
