@@ -5,6 +5,10 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeFunctionTypes } from './serialize-function-types.js'
 import { serializeAddonRefs } from './serialize-addon-refs.js'
+import {
+  collectEventHubTopicPatterns,
+  serializeEventHubTopics,
+} from './serialize-event-hub-topics.js'
 import { serializeMiddlewareTypes } from '../middleware/serialize-middleware-types.js'
 import { serializeSetupTypes } from '../setup/serialize-setup-types.js'
 import { serializeAuthGuards } from '../auth/serialize-auth-guards.js'
@@ -155,7 +159,15 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
       addonCli: visitState.exportedContracts.addonCli,
     })
 
-    await writeFileInDir(logger, functionTypesFile, `${content}\n${addonRefs}`)
+    const eventHubTopics = serializeEventHubTopics(
+      collectEventHubTopicPatterns(visitState.functions.meta)
+    )
+
+    await writeFileInDir(
+      logger,
+      functionTypesFile,
+      `${content}\n${eventHubTopics}\n${addonRefs}`
+    )
   },
   middleware: [
     logCommandInfoAndTime({

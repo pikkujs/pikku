@@ -24,6 +24,6 @@
     },
     "types": ["node"]
   },
-  "include": ["src/", ".pikku/*", "types/eventhub-topics.d.ts"],
+  "include": ["src/", ".pikku/*"],
   "files": []
 }

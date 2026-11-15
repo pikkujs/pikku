@@ -1,5 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { pikkuState, resetPikkuState } from '../../../pikku-state.js'
 import type { PikkuChannelHandler } from '../channel.types.js'
 import { createEventHubDistributor } from './event-hub-distributor.js'
 import { createLocalDeliveryBackend } from './local-delivery-backend.js'
@@ -442,5 +443,33 @@ describe('relays', () => {
 
     assert.equal(a.sent.length, 1)
     assert.equal(errors.length, 1)
+  })
+})
+
+describe('declared topics come from function meta', () => {
+  test('publish refuses a topic no subscribe function declared', async () => {
+    resetPikkuState()
+    const distributor = createEventHubDistributor()
+    await assert.rejects(
+      () => distributor.publish('order:1', {}),
+      /not a declared event hub topic/
+    )
+  })
+
+  test('publish accepts a topic a subscribe function declared', async () => {
+    resetPikkuState()
+    pikkuState(null, 'function', 'meta', {
+      orderEvents: {
+        pikkuFuncId: 'orderEvents',
+        subscribe: { topicPattern: 'order:${string}' },
+      },
+    } as never)
+    const distributor = createEventHubDistributor()
+    await distributor.publish('order:1', {})
+    await assert.rejects(
+      () => distributor.publish('board:1', {}),
+      /not a declared event hub topic/
+    )
+    resetPikkuState()
   })
 })

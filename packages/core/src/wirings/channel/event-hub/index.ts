@@ -4,6 +4,7 @@ export {
 } from './event-hub-distributor.js'
 export { createLocalDeliveryBackend } from './local-delivery-backend.js'
 export {
+  getDeclaredEventHubTopics,
   getEventHubDistributor,
   getSubscribeMeta,
   setEventHubDistributor,

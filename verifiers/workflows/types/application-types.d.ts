@@ -7,7 +7,6 @@ import type {
   CoreSingletonServices,
   CoreUserSession,
 } from '@pikku/core/types'
-import type { EventHubTopics } from './eventhub-topics.js'
 
 export interface Config extends CoreConfig {
   /** The postgres the db-backed runners share; `pikku db` reads it from here. */
@@ -20,7 +19,7 @@ export interface UserSession extends CoreUserSession {
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
   jwt?: JWTService
-  eventHub?: EventHubService<EventHubTopics>
+  eventHub?: EventHubService<Record<string, any>>
   queueService?: QueueService
 }
 

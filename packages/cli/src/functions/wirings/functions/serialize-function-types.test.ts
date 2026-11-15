@@ -22,6 +22,15 @@ const emit = (nodeCategories?: string[], credentialsTypeImport?: string) =>
   )
 
 describe('serializeFunctionTypes', () => {
+  test('emits pikkuSubscribeFunc typed by the input and the topic shape', () => {
+    const content = emit()
+    assert.match(
+      content,
+      /export function pikkuSubscribeFunc<In, TopicShape extends string>\(/
+    )
+    assert.match(content, /PikkuFunction<In, TopicShape, 'session' \| 'rpc'>/)
+  })
+
   // The permission and auth gates left for `#pikku/auth`. `PikkuPermission` is
   // still referenced by every function config, so it has to come back as a
   // type-only import — a value import would be a runtime cycle between the two
