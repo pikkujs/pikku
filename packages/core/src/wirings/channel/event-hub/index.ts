@@ -1,4 +1,5 @@
 export {
+  DEFAULT_SSE_HEARTBEAT_MS,
   EventHubDistributor,
   createEventHubDistributor,
 } from './event-hub-distributor.js'
