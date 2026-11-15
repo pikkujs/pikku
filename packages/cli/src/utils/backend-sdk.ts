@@ -132,6 +132,30 @@ const filesIn = (dir: string): string[] =>
     : []
 
 /**
+ * A relative `import.meta.glob('<dir>/*…')` (the mocks module globs the
+ * project's `.mocks/`) is not an import, so the specifier rewrite misses it;
+ * moving the file a level up would leave it globbing the wrong directory. Its
+ * static directory is re-pointed from the new place; the pattern is kept.
+ */
+const repointGlobs = (content: string, file: string, newFile: string) =>
+  content.replace(
+    /import\.meta\.glob\((['"])(\.\.?\/[^'"]*)\1/g,
+    (match, quote: string, pattern: string) => {
+      const parts = pattern.split('/')
+      const firstGlob = parts.findIndex((part) => /[*?{[]/.test(part))
+      if (firstGlob < 1) return match
+      const dir = resolve(dirname(file), parts.slice(0, firstGlob).join('/'))
+      let base = posix.relative(
+        dirname(newFile).split(sep).join('/'),
+        dir.split(sep).join('/')
+      )
+      if (!base) base = '.'
+      else if (!base.startsWith('.')) base = `./${base}`
+      return `import.meta.glob(${quote}${[base, ...parts.slice(firstGlob)].join('/')}${quote}`
+    }
+  )
+
+/**
  * Move the backend pass's `exposed/` files, and every file of the pass they
  * reach by relative import, to `<sdkDir>/exposed/`. Imports are re-pointed at
  * the new places; imports of project source (outside the pass) keep their
@@ -176,6 +200,7 @@ const relocateExposed = (backendOutDir: string, sdkDir: string): string[] => {
         (_m, quote) => `${quote}${next}${quote}`
       )
     }
+    content = repointGlobs(content, file, newFile)
     mkdirSync(dirname(newFile), { recursive: true })
     writeFileSync(newFile, content, 'utf-8')
     written.push(relative(sdkDir, newFile).split(sep).join('/'))
