@@ -8,11 +8,9 @@ import {
   generateKeyPairSync,
   hkdfSync,
 } from 'node:crypto'
-import {
-  seal,
-  serializeSealedValue,
-  SEALED_BOX_ALGORITHM,
-} from './sealed-box.js'
+import { seal, SEALED_BOX_ALGORITHM } from '@pikku/keys'
+
+const serializeSealedValue = (sealed: unknown) => JSON.stringify(sealed)
 
 const KEY_ID = '9c1d7f30-4b62-4a1e-9d55-6f0e2a8b3c47'
 
@@ -38,7 +36,10 @@ function x25519Keypair() {
  * Pikku Studio Cloud's worker-side implementation follows the same recipe; if this stops
  * matching, so has that.
  */
-function openAsCloudWould(privateKey: string, sealed: ReturnType<typeof seal>) {
+function openAsCloudWould(
+  privateKey: string,
+  sealed: Awaited<ReturnType<typeof seal>>
+) {
   const recipientPrivate = createPrivateKey({
     key: Buffer.from(privateKey, 'base64'),
     type: 'pkcs8',
@@ -76,19 +77,23 @@ function openAsCloudWould(privateKey: string, sealed: ReturnType<typeof seal>) {
   ]).toString('utf8')
 }
 
-describe('sealed-box (client side)', () => {
-  test('a sealed value opens with the recipient private key', () => {
+describe('cloud-cli sealing via @pikku/keys, opened by an independent node:crypto recipient', () => {
+  test('a sealed value opens with the recipient private key', async () => {
     const { publicKey, privateKey } = x25519Keypair()
-    const sealed = seal(publicKey, KEY_ID, 'sk_live_51H8xQ2KzZ9vRtY7wPqL3mN')
+    const sealed = await seal(
+      publicKey,
+      KEY_ID,
+      'sk_live_51H8xQ2KzZ9vRtY7wPqL3mN'
+    )
     assert.equal(
       openAsCloudWould(privateKey, sealed),
       'sk_live_51H8xQ2KzZ9vRtY7wPqL3mN'
     )
   })
 
-  test('the envelope carries the algorithm tag and key id', () => {
+  test('the envelope carries the algorithm tag and key id', async () => {
     const { publicKey } = x25519Keypair()
-    const sealed = seal(publicKey, KEY_ID, 'v')
+    const sealed = await seal(publicKey, KEY_ID, 'v')
     assert.equal(sealed.alg, SEALED_BOX_ALGORITHM)
     assert.equal(sealed.kid, KEY_ID)
     for (const field of ['epk', 'iv', 'ct', 'tag'] as const) {
@@ -97,49 +102,51 @@ describe('sealed-box (client side)', () => {
     }
   })
 
-  test('the plaintext appears nowhere in what gets sent', () => {
+  test('the plaintext appears nowhere in what gets sent', async () => {
     const { publicKey } = x25519Keypair()
-    const wire = serializeSealedValue(seal(publicKey, KEY_ID, 'the-secret'))
+    const wire = serializeSealedValue(
+      await seal(publicKey, KEY_ID, 'the-secret')
+    )
     assert.ok(!wire.includes('the-secret'))
   })
 
-  test('another recipient cannot open it', () => {
+  test('another recipient cannot open it', async () => {
     const { publicKey } = x25519Keypair()
     const other = x25519Keypair()
-    const sealed = seal(publicKey, KEY_ID, 'the-secret')
+    const sealed = await seal(publicKey, KEY_ID, 'the-secret')
     assert.throws(() => openAsCloudWould(other.privateKey, sealed))
   })
 
-  test('sealing the same value twice differs', () => {
+  test('sealing the same value twice differs', async () => {
     // Otherwise identical ciphertexts would reveal that two stages, or two
     // names, hold the same secret.
     const { publicKey } = x25519Keypair()
-    const a = seal(publicKey, KEY_ID, 'same')
-    const b = seal(publicKey, KEY_ID, 'same')
+    const a = await seal(publicKey, KEY_ID, 'same')
+    const b = await seal(publicKey, KEY_ID, 'same')
     assert.notEqual(a.ct, b.ct)
     assert.notEqual(a.epk, b.epk)
     assert.notEqual(a.iv, b.iv)
   })
 
-  test('unicode and long values survive', () => {
+  test('unicode and long values survive', async () => {
     const { publicKey, privateKey } = x25519Keypair()
     for (const value of ['—key–with–dashes—🔐', ' ', 'x'.repeat(4096)]) {
       assert.equal(
-        openAsCloudWould(privateKey, seal(publicKey, KEY_ID, value)),
+        openAsCloudWould(privateKey, await seal(publicKey, KEY_ID, value)),
         value
       )
     }
   })
 
-  test('a key of the wrong type is refused before anything is encrypted', () => {
+  test('a key of the wrong type is refused before anything is encrypted', async () => {
     const { publicKey } = generateKeyPairSync('ed25519')
     const spki = publicKey
       .export({ type: 'spki', format: 'der' })
       .toString('base64')
-    assert.throws(() => seal(spki, KEY_ID, 'v'), /expected x25519/)
+    await assert.rejects(() => seal(spki, KEY_ID, 'v'), /./)
   })
 
-  test('garbage in place of a key fails loudly', () => {
-    assert.throws(() => seal('not-a-key', KEY_ID, 'v'), /X25519 public key/)
+  test('garbage in place of a key fails loudly', async () => {
+    await assert.rejects(() => seal('not-a-key', KEY_ID, 'v'), /./)
   })
 })

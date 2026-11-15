@@ -5,7 +5,7 @@ import { getCloudRPC } from '../lib/http.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { promptSecret } from '../lib/prompt.js'
 import { resolveStage } from '../lib/stage.js'
-import { seal, serializeSealedValue } from '../lib/sealed-box.js'
+import { seal } from '@pikku/keys'
 
 export const CloudSecretsSetInput = z.object({
   name: z.string(),
@@ -58,12 +58,12 @@ export const CloudSecretsSet = pikkuSessionlessFunc({
     // sealed below can be opened by that worker and by nothing else — including
     // by the cloud process that stores it.
     const key = await rpc.invoke('cloud:getStageSealingKey', { stageId })
-    const sealed = seal(key.publicKey, key.keyId, plaintext)
+    const sealed = await seal(key.publicKey, key.keyId, plaintext)
 
     const result = await rpc.invoke('cloud:setStageSealedSecret', {
       stageId,
       name,
-      sealedValue: serializeSealedValue(sealed),
+      sealedValue: JSON.stringify(sealed),
     })
     console.log(
       `[cloud] ${name} sealed to ${result.keyId} and set on ${branch}.`
