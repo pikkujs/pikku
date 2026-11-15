@@ -52,8 +52,9 @@ says what each piece does for the person, and the agent that builds it reads the
 command is `pikku changes file`.
 
 Break the brief into changes a person could check one by one, each saying what they can see or do
-when it is done. Put the tables and stored data in the first change; every change that stores or
-reads something depends on it (`--depends-on`). Give each change a `--specialist`: `frontend` when
+when it is done. File the data first, as its own change named for the data ("The shop's products, orders and stock are
+kept"): what is stored, what each record holds. Every later change that stores or reads something
+depends on it with `--depends-on <its number>`; none is filed without that link. Give each change a `--specialist`: `frontend` when
 the work is a page, screen or view (including the owner's lists of orders or bookings), `build` for
 functions, tables and rules, `emails` only for the sending of a message. Screens that only read
 the data can run side by side, so depend on the data change, not on each other.
