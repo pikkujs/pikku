@@ -4,7 +4,7 @@ What OpenTelemetry-style telemetry costs a Pikku HTTP request in `@pikku/core`, 
 
 ## What core actually does
 
-- "Off" is the inert runtime telemetry: a no-op tracer, no exporter, no timers. `createRuntimeTelemetry` returns it unless `PIKKU_OTLP_ENDPOINT` is set (and `PIKKU_TELEMETRY` does not disable it). Off is the default.
+- "Off" (L0) is the inert runtime telemetry, returned only when `PIKKU_TELEMETRY` disables it. With no `PIKKU_OTLP_ENDPOINT` the tracer is real but the sink registry is empty (LE): the runner opens no span while `Tracer.active` is false, and the trace ids still flow. LE costs about +5.6 cpu-us/request on `bare` (42.0 -> 47.6, +13%) and +9.1 on `full` (59.5 -> 68.6, +15%) on a Mac, 7 interleaved runs; before the `active` check it was +17 and +18.6. The remainder is the logger wrapper, the metrics sampler timer and context creation.
 - There is no sampling. A tracer either exists or does not; inbound `traceparent` flags are not reachable through the HTTP runner. So there is no L4 sampling level, and none was invented.
 - There is no gzip in the exporter, so there is no gzip variant.
 - Exporter (`packages/core/src/otlp/otlp-http-exporter.ts`): per-signal queues (spans 2048, logs 4096, metrics 512). Overflow drops the oldest entries and counts them in `pikku.telemetry.dropped`. A batch goes out when the queue reaches `maxBatch` (256) or on the flush timer. One POST is retried once after 1 s, then dropped; repeated failures back off. Request timeout defaults to 10 s. `close()` flushes but is capped at 2 s. Batches are sent through a per-signal promise chain, one POST at a time.
