@@ -301,6 +301,48 @@ describe('JoseVirtualUserStatementVerifier', () => {
       )
     })
 
+    test('a derived kid that equals a literal kid fails closed at verify', async () => {
+      const [a, b] = [await keys(), await keys()]
+      const v = new JoseVirtualUserStatementVerifier(
+        [
+          { kid: await okpThumbprint(b.pem), publicKey: a.pem },
+          { publicKey: b.pem },
+        ],
+        () => NOW
+      )
+      for (const kid of [await okpThumbprint(b.pem), undefined]) {
+        await assert.rejects(
+          v.verify(await sign(b.privateKey, {}, 'EdDSA', kid), AUD),
+          /duplicate key id/
+        )
+      }
+    })
+
+    test('an escaped PEM inside a JSON list verifies (JSON escapes and literal \\n)', async () => {
+      const [a, b] = [await keys(), await keys()]
+      const literal = b.pem.trim().replace(/\n/g, '\\n')
+      for (const publicKey of [b.pem, literal]) {
+        const text = JSON.stringify([
+          { kid: 'one', publicKey: a.pem },
+          { kid: 'two', publicKey },
+        ])
+        const v = new JoseVirtualUserStatementVerifier(text, () => NOW)
+        const statement = await sign(b.privateKey, {}, 'EdDSA', 'two')
+        assert.equal((await v.verify(statement, AUD)).virtualUserId, 'dan')
+      }
+    })
+
+    test('an unknown field in a list entry throws at construction', async () => {
+      const a = await keys()
+      assert.throws(
+        () =>
+          new JoseVirtualUserStatementVerifier([
+            { publicKey: a.pem, x: 1 } as any,
+          ]),
+        /unknown field/
+      )
+    })
+
     test('a bad list stops construction', async () => {
       const a = await keys()
       assert.throws(() => new JoseVirtualUserStatementVerifier([]), /empty/)

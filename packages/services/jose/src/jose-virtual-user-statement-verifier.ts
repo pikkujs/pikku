@@ -85,6 +85,13 @@ export class JoseVirtualUserStatementVerifier implements VirtualUserStatementVer
       throw invalid(error)
     }
 
+    // A kid derived from a key may equal one given for another: the names are
+    // ambiguous, so fail closed. Thumbprints are memoised, so this hashes once.
+    const kids = await Promise.all(this.keys.map((held) => held.kid))
+    if (new Set(kids).size !== kids.length) {
+      throw invalid(new Error('duplicate key id in the verify keys'))
+    }
+
     let candidates = this.keys
     if (header.kid !== undefined) {
       candidates = []

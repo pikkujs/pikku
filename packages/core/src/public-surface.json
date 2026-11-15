@@ -491,6 +491,7 @@
     "isTestRun",
     "okpThumbprint",
     "parseVirtualUserVerifyKeys",
+    "rsaThumbprint",
     "pikkuWebhookWorkerFunc",
     "renderEmail",
     "spy",

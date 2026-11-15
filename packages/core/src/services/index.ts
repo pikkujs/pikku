@@ -109,6 +109,7 @@ export {
 export {
   VIRTUAL_USER_VERIFY_KEYS_MAX,
   okpThumbprint,
+  rsaThumbprint,
   parseVirtualUserVerifyKeys,
   type ParsedVirtualUserVerifyKey,
   type VirtualUserVerifyKeyEntry,
