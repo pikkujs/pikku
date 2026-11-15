@@ -6,6 +6,10 @@ description: >-
 
 # Working a changes queue
 
+**If the request is a brief to plan (an app or feature to build), your whole job is `pikku changes file`
+for each piece, then one closing message listing what you filed. Do not claim, plan, build or
+mark anything done; that is the next agents' work, and doing it here breaks their plan.**
+
 Someone walked the deployed app and circled things. Each item is their words, a
 screenshot of what they saw, and the elements the circle enclosed. You have the repo.
 Empty the queue without making them regret filing.
