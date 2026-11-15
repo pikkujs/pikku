@@ -823,7 +823,7 @@ describe('StandaloneProviderAdapter runtime telemetry', () => {
     )
     assert.match(
       source,
-      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, analyticsSinks: __pikkuAnalyticsSinks \}\)/
+      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, analyticsSinks: __pikkuAnalyticsSinks, \.\.\.eventHubServices \}\)/
     )
   })
 

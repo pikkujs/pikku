@@ -1,7 +1,9 @@
 package visit
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -40,9 +42,31 @@ func (s *Context) checkEventHubImports(node *ast.Node) {
 	if spec == nil || !ast.IsStringLiteralLike(spec) || !strings.HasPrefix(spec.Text(), eventHubInternalPath) {
 		return
 	}
+	file := ast.GetSourceFileOfNode(node).FileName()
+	if inFrameworkPackage(file) {
+		return
+	}
 	s.Log.Critical(diag.EventHubInternalAccess, fmt.Sprintf(
 		"'%s' imports '%s', the event hub's internal path. Functions get only the publisher (services.eventHub); subscribing is a pikkuSubscribeFunc.",
-		filepath.Base(ast.GetSourceFileOfNode(node).FileName()), spec.Text()))
+		filepath.Base(file), spec.Text()))
+}
+
+// inFrameworkPackage reports whether the file belongs to a `@pikku/*` package
+// (nearest package.json up the tree). Framework host code, such as the CLI's
+// dev and serve commands, owns the process and may install the distributor; a
+// user app's package is never named `@pikku/*`, so its functions stay refused.
+func inFrameworkPackage(file string) bool {
+	for dir := filepath.Dir(file); ; dir = filepath.Dir(dir) {
+		if raw, err := os.ReadFile(filepath.Join(dir, "package.json")); err == nil {
+			var pkg struct {
+				Name string `json:"name"`
+			}
+			return json.Unmarshal(raw, &pkg) == nil && strings.HasPrefix(pkg.Name, "@pikku/")
+		}
+		if parent := filepath.Dir(dir); parent == dir {
+			return false
+		}
+	}
 }
 
 // checkSubscribeWiring refuses a subscribe function wired where nothing can

@@ -41,6 +41,9 @@ fn check_event_hub_imports(ctx: &mut Context<'_>, node: P<Node>) {
     if !spec.text().starts_with(EVENT_HUB_INTERNAL_PATH) {
         return;
     }
+    if in_framework_package(file_name_of(node)) {
+        return;
+    }
     let file = Path::new(file_name_of(node)).file_name().map(|f| f.to_string_lossy().to_string()).unwrap_or_default();
     ctx.log.critical(
         codes::EVENT_HUB_INTERNAL_ACCESS,
@@ -49,6 +52,24 @@ fn check_event_hub_imports(ctx: &mut Context<'_>, node: P<Node>) {
             spec.text()
         ),
     );
+}
+
+/// Whether the file belongs to a `@pikku/*` package (nearest package.json up the
+/// tree). Framework host code, such as the CLI's dev and serve commands, owns
+/// the process and may install the distributor; a user app's package is never
+/// named `@pikku/*`, so its functions stay refused.
+fn in_framework_package(file: &str) -> bool {
+    let mut dir = Path::new(file).parent();
+    while let Some(d) = dir {
+        if let Ok(raw) = std::fs::read(d.join("package.json")) {
+            return serde_json::from_slice::<serde_json::Value>(&raw)
+                .ok()
+                .and_then(|v| v.get("name").and_then(|n| n.as_str()).map(|n| n.starts_with("@pikku/")))
+                .unwrap_or(false);
+        }
+        dir = d.parent();
+    }
+    false
 }
 
 impl Context<'_> {
