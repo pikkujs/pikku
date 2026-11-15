@@ -875,6 +875,26 @@ describe('compileTables: constraints', () => {
       /defaults to 'b', which is not in its enum/
     )
     refused(
+      { a: { type: 'text', enum: ['a', 'b'], pattern: '^[a-z]$' } },
+      /'t\.a' has both an enum and a pattern/
+    )
+    refused(
+      { a: { type: 'integer', min: 1, max: 5, default: 0 } },
+      /'t\.a' defaults to 0, which is below its min \(1\)/
+    )
+    refused(
+      { a: { type: 'integer', min: 1, max: 5, default: 6 } },
+      /'t\.a' defaults to 6, which is above its max \(5\)/
+    )
+    refused(
+      { a: { type: 'text', minLength: 3, default: 'ab' } },
+      /'t\.a' defaults to 'ab', which is shorter than its minLength \(3\)/
+    )
+    refused(
+      { a: { type: 'text', maxLength: 1, default: 'ab' } },
+      /'t\.a' defaults to 'ab', which is longer than its maxLength \(1\)/
+    )
+    refused(
       { a: { type: 'text', pattern: '(' } },
       /not a valid regular expression/
     )

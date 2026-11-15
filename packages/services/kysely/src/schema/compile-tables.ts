@@ -337,6 +337,38 @@ const constraintProblems = (
       }
     }
   }
+  if (has(values) && has(pattern)) {
+    problems.push(
+      `'${here}' has both an enum and a pattern. A pattern adds nothing to a fixed list of values, and the generated validator cannot carry both; drop the pattern, or the enum.`
+    )
+  }
+  // A default the column's own bounds would reject is a table that cannot take
+  // its own default row.
+  if (typeof column.default === 'number') {
+    if (typeof min === 'number' && column.default < min) {
+      problems.push(
+        `'${here}' defaults to ${column.default}, which is below its min (${min}).`
+      )
+    }
+    if (typeof max === 'number' && column.default > max) {
+      problems.push(
+        `'${here}' defaults to ${column.default}, which is above its max (${max}).`
+      )
+    }
+  }
+  if (typeof column.default === 'string') {
+    const length = [...column.default].length
+    if (isCount(minLength) && length < minLength) {
+      problems.push(
+        `'${here}' defaults to '${column.default}', which is shorter than its minLength (${minLength}).`
+      )
+    }
+    if (isCount(maxLength) && length > maxLength) {
+      problems.push(
+        `'${here}' defaults to '${column.default}', which is longer than its maxLength (${maxLength}).`
+      )
+    }
+  }
   if (has(pattern)) {
     try {
       new RegExp(pattern!)
