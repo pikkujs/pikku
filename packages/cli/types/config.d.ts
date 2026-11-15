@@ -301,6 +301,15 @@ export interface PikkuCLICoreOutputFiles {
   // Secrets metadata JSON
   secretsMetaJsonFile: string
 
+  // Key pairs (defineKeyPair)
+  keyPairTypesFile: string
+
+  // Key pairs (generated KeyPairsMap)
+  keyPairsFile: string
+
+  // Key pairs metadata JSON
+  keyPairsMetaJsonFile: string
+
   // Credentials (typed wrapper for CredentialService)
   credentialsFile: string
 

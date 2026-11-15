@@ -376,6 +376,10 @@
     "flattenSystemRoleDefinitions",
     "validateAndBuildSystemRoleDefinitionsMeta"
   ],
+  "./keypair": [
+    "defineKeyPair",
+    "validateAndBuildKeyPairDefinitionsMeta"
+  ],
   "./secret": [
     "SECRET_GENERATE_MIN_SIZE",
     "defineSecret",

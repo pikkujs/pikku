@@ -39,6 +39,7 @@ pub const ADD_SYSTEM_ROLE: i32 = 50;
 pub const ADD_FEATURE_FLAG: i32 = 60;
 pub const ADD_VIRTUAL_USERS: i32 = 70;
 pub const ADD_VARIABLE: i32 = 80;
+pub const ADD_KEY_PAIR: i32 = 85;
 pub const ADD_HTTP_ROUTE: i32 = 90;
 pub const ADD_HTTP_ROUTES: i32 = 100;
 pub const ADD_SCHEDULE: i32 = 110;

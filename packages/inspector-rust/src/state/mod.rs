@@ -71,6 +71,8 @@ pub struct State {
     pub secrets: Secrets,
     pub surface_usage: Record<Record<SurfaceUsage>>,
     pub credentials: Definitions,
+    #[serde(rename = "keyPairs")]
+    pub key_pairs: Definitions,
     pub scopes: Scopes,
     pub system_roles: Definitions,
     pub feature_flags: Definitions,

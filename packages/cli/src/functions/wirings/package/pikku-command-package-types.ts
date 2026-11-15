@@ -3,6 +3,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import {
   serializeAnalyticsDefinitionTypes,
+  serializeKeyPairDefinitionTypes,
   serializeScopeDefinitionTypes,
   serializeSecretDefinitionTypes,
   serializeUtilsTypes,
@@ -19,6 +20,20 @@ export const pikkuSecretDefinitionTypes = pikkuVoidFunc({
     logCommandInfoAndTime({
       commandStart: 'Creating Secret definition types',
       commandEnd: 'Created Secret definition types',
+    }),
+  ],
+})
+
+export const pikkuKeyPairDefinitionTypes = pikkuVoidFunc({
+  func: async ({ logger, config }) => {
+    const { keyPairTypesFile } = config
+    const content = serializeKeyPairDefinitionTypes()
+    await writeFileInDir(logger, keyPairTypesFile, content)
+  },
+  middleware: [
+    logCommandInfoAndTime({
+      commandStart: 'Creating Key pair definition types',
+      commandEnd: 'Created Key pair definition types',
     }),
   ],
 })

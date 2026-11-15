@@ -2,6 +2,7 @@ import { test, describe } from 'node:test'
 import * as assert from 'assert'
 import {
   serializeAnalyticsDefinitionTypes,
+  serializeKeyPairDefinitionTypes,
   serializeScopeDefinitionTypes,
   serializeSecretDefinitionTypes,
   serializeVariableDefinitionTypes,
@@ -17,6 +18,13 @@ describe('definition types', () => {
     assert.match(
       serializeSecretDefinitionTypes(),
       /export \{ defineSecret \} from '@pikku\/core\/secret'/
+    )
+  })
+
+  test('the keypairs leaf carries defineKeyPair', () => {
+    assert.match(
+      serializeKeyPairDefinitionTypes(),
+      /export \{ defineKeyPair \} from '@pikku\/core\/keypair'/
     )
   })
 

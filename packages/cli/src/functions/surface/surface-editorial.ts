@@ -86,6 +86,12 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'Small helpers a function body reaches for, such as `parseJson`, which turns text or bytes into JSON or refuses with a 400.',
   },
+  keypairs: {
+    step: 'enhance it',
+    skill: null,
+    summary:
+      'Asymmetric key pairs a project signs or seals with, declared by name with their algorithm, purpose, rotation and verify grace so the build can check them. The declaration never holds key material.',
+  },
   credentials: {
     step: 'enhance it',
     skill: null,

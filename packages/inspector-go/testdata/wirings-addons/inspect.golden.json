@@ -1074,6 +1074,10 @@
         "<fixture>/src/triggers.ts"
       ]
     },
+    "keyPairs": {
+      "definitions": [],
+      "files": []
+    },
     "scopes": {
       "definitions": [
         {

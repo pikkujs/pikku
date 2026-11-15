@@ -45,6 +45,7 @@ const (
 	OrderAddFeatureFlag    = 60
 	OrderAddVirtualUsers   = 70
 	OrderAddVariable       = 80
+	OrderAddKeyPair        = 85
 	OrderAddHTTPRoute      = 90
 	OrderAddHTTPRoutes     = 100
 	OrderAddSchedule       = 110

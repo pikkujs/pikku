@@ -61,6 +61,27 @@ pub fn register(r: &mut Registry) {
         order: order::ADD_VARIABLE,
         visit: |c, n| c.visit_keyed_wiring(n, VARIABLE_WIRING),
     });
+    r.register(Visitor {
+        name: "addKeyPair",
+        phase: Phase::Routes,
+        order: order::ADD_KEY_PAIR,
+        visit: |c, n| c.visit_key_pair(n),
+    });
+}
+
+/// Go `keyPairFields`: the properties of defineKeyPair that reach the state, in
+/// the order written. Values are passed through as read; validation is the
+/// build's (`validateAndBuildKeyPairDefinitionsMeta`). `rotationMode` and
+/// `signedFormat` are read only so validation can refuse them by name.
+const KEY_PAIR_FIELDS: &[&str] = &[
+    "name", "displayName", "description", "algorithm", "purpose", "rotationPeriod",
+    "verifyGrace", "signedLifetime", "scope", "custody", "public", "docsUrl",
+    "rotationMode", "signedFormat",
+];
+
+/// durationRe plus the literal `never`, which the validator tells users to write.
+fn valid_duration(v: &str) -> bool {
+    v == "never" || duration_re().is_match(v)
 }
 
 fn duration_re() -> Regex {
@@ -126,7 +147,7 @@ impl Context<'_> {
             self.log.critical(codes::MISSING_NAME, format!("{label} '{name_value}' is missing the required 'schema' property or schema is not a variable reference."));
             return;
         };
-        if rotation.truthy() && !duration_re().is_match(&rotation.as_string()) {
+        if rotation.truthy() && !valid_duration(&rotation.as_string()) {
             self.log.critical(codes::INVALID_VALUE, format!("{label} '{name_value}' has an invalid 'rotationPeriod': '{}'. Use a duration like '1d', '30day', or '1w'.", rotation.as_string()));
             return;
         }
@@ -158,6 +179,11 @@ impl Context<'_> {
             o.set("allowedHosts", Some(strs_value(h)));
         }
         o.set(cfg.id_field, or_undefined(&id));
+        if cfg.secrets {
+            if let Some(g) = generate_option(obj) {
+                o.set("generate", Some(g));
+            }
+        }
         if flag.bool == Some(true) {
             o.set(cfg.flag_field, Some(Value::Bool(true)));
         }
@@ -165,6 +191,25 @@ impl Context<'_> {
         o.set_str("sourceFile", &source_file);
         let defs = if cfg.secrets { &mut self.state.secrets.definitions } else { &mut self.state.variables.definitions };
         defs.push(o.raw());
+    }
+
+    /// `visitKeyPair` records `defineKeyPair({...})`; never reads key material.
+    fn visit_key_pair(&mut self, node: P<Node>) {
+        let Some(obj) = definition_call(node, "defineKeyPair") else { return };
+        self.assert_string_literal_property(obj, "name", "Key pair");
+        let name = tsutil::get_property_value(obj, "name");
+        if !name.truthy() {
+            self.log.critical(codes::MISSING_NAME, "Key pair is missing the required 'name' property.".to_string());
+            return;
+        }
+        let source_file = file_name_of(node).to_string();
+        self.state.key_pairs.files.add(source_file.clone());
+        let mut o = JsObject::new();
+        for f in KEY_PAIR_FIELDS {
+            o.set(f, or_undefined(&tsutil::get_property_value(obj, f)));
+        }
+        o.set_str("sourceFile", &source_file);
+        self.state.key_pairs.definitions.push(o.raw());
     }
 
     /// `visitCredential` ports add-credential.ts.
@@ -270,4 +315,15 @@ fn record_property_value(obj: P<Node>, name: &str) -> Option<Record<String>> {
         }
     }
     if rec.is_empty() { None } else { Some(rec) }
+}
+
+/// Go `generateOption`: defineSecret's `generate: { size: <number> }`.
+fn generate_option(obj: P<Node>) -> Option<Value> {
+    let p = tsutil::find_property_assignment(obj, "generate")?;
+    let init = p.initializer()?;
+    if !ast::is_object_literal_expression(init) {
+        return None;
+    }
+    let size = tsutil::get_property_value(init, "size").num?;
+    Some(serde_json::json!({ "size": size }))
 }
