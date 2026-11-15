@@ -103,25 +103,46 @@ const formatMetadata = (
 
 export type InfoInput = { limit?: string; verbose?: boolean }
 
-export const pikkuInfoFunctions = pikkuSessionlessFunc<InfoInput, void>({
+export type InfoFunctionsInput = InfoInput & { mock?: boolean }
+
+export const pikkuInfoFunctions = pikkuSessionlessFunc<
+  InfoFunctionsInput,
+  void
+>({
   func: async ({ getInspectorState }, data) => {
     const limit = parseInt(data?.limit ?? '50', 10)
     const verbose = !!data?.verbose
+    const onlyMocked = !!data?.mock
     const state = await getInspectorState()
     const meta = state.functions.meta
 
-    const entries = Object.entries(meta)
+    const entries = Object.entries(meta).filter(
+      ([, m]) => !onlyMocked || m.mock === true
+    )
     if (entries.length === 0) {
-      console.log('No functions found.')
+      console.log(
+        onlyMocked
+          ? 'No functions are declared mock: true.'
+          : 'No functions found.'
+      )
       return
     }
+    // Only a project with a mocked function grows the column.
+    const showMock = entries.some(([, m]) => m.mock === true)
+    const mockCell = (m: FunctionMeta) => (m.mock === true ? 'yes' : '')
 
     if (!verbose) {
-      const headers = ['pikkuFuncId', 'name', 'tags']
+      const headers = [
+        'pikkuFuncId',
+        'name',
+        'tags',
+        ...(showMock ? ['mock'] : []),
+      ]
       const rows = entries.map(([id, m]) => [
         id,
         m.name ?? '',
         (m.tags ?? []).join(', '),
+        ...(showMock ? [mockCell(m)] : []),
       ])
       printTable(headers, rows, limit)
     } else {
@@ -129,6 +150,7 @@ export const pikkuInfoFunctions = pikkuSessionlessFunc<InfoInput, void>({
         'pikkuFuncId',
         'name',
         'tags',
+        ...(showMock ? ['mock'] : []),
         'type',
         'middleware',
         'permissions',
@@ -138,6 +160,7 @@ export const pikkuInfoFunctions = pikkuSessionlessFunc<InfoInput, void>({
         id,
         m.name ?? '',
         (m.tags ?? []).join(', '),
+        ...(showMock ? [mockCell(m)] : []),
         getFunctionTypes(id, state).join(', '),
         formatMetadata(m.middleware),
         formatMetadata(m.permissions),

@@ -2515,6 +2515,11 @@ wireCLI({
               description: 'Show additional details (type, middleware, file)',
               default: false,
             },
+            mock: {
+              description:
+                'Only the functions declared `mock: true` (no implementation yet)',
+              default: false,
+            },
           },
         }),
         tags: pikkuCLICommand({

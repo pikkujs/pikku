@@ -154,6 +154,7 @@ impl Context<'_> {
         let mut expose = false;
         let mut mcp = false;
         let mut version: i64 = 0;
+        let mut mock = false;
         let mut input_schema_ref = None;
         let mut output_schema_ref = None;
 
@@ -206,6 +207,8 @@ impl Context<'_> {
             }
             m.telemetry = read_telemetry(first_arg);
             m.readonly = or_nil(tsutil::get_property_value(first_arg, "readonly").truthy());
+            mock = self.read_function_mock(first_arg, &name);
+            m.mock = or_nil(mock);
             m.deploy = tsutil::get_property_value(first_arg, "deploy").as_string();
             m.approval_required = or_nil(tsutil::get_property_value(first_arg, "approvalRequired").truthy());
             let v = tsutil::get_property_value(first_arg, "workflowQueued");
@@ -348,13 +351,16 @@ impl Context<'_> {
         let is_list_func = wrapper == "pikkuListFunc";
         let mcp_enabled = mcp || is_mcp_tool_func;
 
-        let mut handler = handler_node;
+        let mut handler_or_object = handler_node;
         if let Some(r) = resolved_func {
             if is_function_like(r) {
-                handler = r;
+                handler_or_object = r;
             }
         }
-        if !is_function_like(handler) {
+        // A mocked function has no body: its types come from `input`/`output`
+        // or the generics, and everything read off the handler is left empty.
+        let handler = if mock { None } else { Some(handler_or_object) };
+        if !mock && !is_function_like(handler_or_object) {
             let mut stub = FunctionMeta::default();
             stub.pikku_func_id = pikku_func_id.clone();
             stub.function_type = "user".into();
@@ -381,8 +387,11 @@ impl Context<'_> {
                 services.optimized = false;
             }
         }
-        add_services(&mut services, handler, false);
-        let mut wires = extract_used_wires(handler, 2);
+        let mut wires = WiresMeta { optimized: true, wires: vec![] };
+        if let Some(h) = handler {
+            add_services(&mut services, h, false);
+            wires = extract_used_wires(h, 2);
+        }
 
         let compensate_init = match object_node {
             Some(o) => self.get_property_assignment_initializer(o, "compensate", true),
@@ -404,23 +413,25 @@ impl Context<'_> {
             m.compensate = Some(true);
         }
 
-        let body = handler.body().expect("function with a body");
-        let invoked = tsutil::collect_invoked_rpc_names(body);
-        if !invoked.names.is_empty() {
-            m.invokes = invoked.names.clone();
-        }
-        let mut resolved: BTreeSet<String> = invoked.names.iter().cloned().collect();
-        for (call, arg) in invoked.dynamic.iter().zip(&invoked.dynamic_args) {
-            if let Some(v) = self.const_string_name(*arg) {
-                resolved.insert(v);
-                continue;
+        let body = handler.map(|h| h.body().expect("function with a body"));
+        if let Some(body) = body {
+            let invoked = tsutil::collect_invoked_rpc_names(body);
+            if !invoked.names.is_empty() {
+                m.invokes = invoked.names.clone();
             }
-            self.log.critical(codes::RPC_NAME_NOT_LITERAL, format!(
-                "• {pikku_func_id} calls {call} with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with \"No service binding\" if the two are deployed apart. Use a literal RPC name."
-            ));
-        }
-        if resolved.len() > invoked.names.len() {
-            m.invokes = resolved.into_iter().collect();
+            let mut resolved: BTreeSet<String> = invoked.names.iter().cloned().collect();
+            for (call, arg) in invoked.dynamic.iter().zip(&invoked.dynamic_args) {
+                if let Some(v) = self.const_string_name(*arg) {
+                    resolved.insert(v);
+                    continue;
+                }
+                self.log.critical(codes::RPC_NAME_NOT_LITERAL, format!(
+                    "• {pikku_func_id} calls {call} with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with \"No service binding\" if the two are deployed apart. Use a literal RPC name."
+                ));
+            }
+            if resolved.len() > invoked.names.len() {
+                m.invokes = resolved.into_iter().collect();
+            }
         }
 
         // --- Generics → types, unwrapped from Promise ---
@@ -448,7 +459,7 @@ impl Context<'_> {
                 &format!("{{ cursor?: string; limit?: number; sort?: Array<{{ column: string; direction: 'asc' | 'desc' }}>; filter?: unknown; search?: string; }} & {ts}"),
                 tsutil::dedupe(&refs),
             );
-            if let Some(p) = param_at(handler, 1) {
+            if let Some(p) = handler.and_then(|h| param_at(h, 1)) {
                 input_types = vec![self.checker.get_type_at_location(p)];
             } else {
                 input_types = vec![generics[0]];
@@ -457,7 +468,7 @@ impl Context<'_> {
             let (n, t) = self.get_names_and_types("Input", &name, Some(generics[0]));
             input_names = n;
             input_types = t;
-        } else if let Some(p) = param_at(handler, 1) {
+        } else if let Some(p) = handler.and_then(|h| param_at(h, 1)) {
             let t = self.checker.get_type_at_location(p);
             let (n, ty) = self.get_names_and_types("Input", &pikku_func_id, Some(t));
             input_names = n;
@@ -482,11 +493,13 @@ impl Context<'_> {
             );
         } else if !is_list_func && generics.len() >= 2 {
             output_names = self.get_names_and_types("Output", &name, Some(generics[1])).0;
-        } else {
-            let sig = self.checker.get_signature_from_declaration_exported(handler);
+        } else if let Some(h) = handler {
+            let sig = self.checker.get_signature_from_declaration_exported(h);
             let ret = self.checker.get_return_type_of_signature_exported(sig);
             let ret = self.unwrap_promise(ret);
             output_names = self.get_names_and_types("Output", &pikku_func_id, Some(ret)).0;
+        } else {
+            output_names = Vec::new();
         }
         let mcp_output_type = match wrapper.as_str() {
             "pikkuMCPResourceFunc" => Some("MCPResourceResponse"),
@@ -564,8 +577,8 @@ impl Context<'_> {
             }
         }
 
-        if self.options.classification_check {
-            self.check_classification(&name, handler, wrapper != "pikkuFunc");
+        if let (true, Some(h)) = (self.options.classification_check, handler) {
+            self.check_classification(&name, h, wrapper != "pikkuFunc");
         }
 
         // A subscribe function authorises like pikkuFunc: it wants a session until a
@@ -616,54 +629,56 @@ impl Context<'_> {
         m.implementation_hash = implementation_hash(&wrapper, handler, object_node, is_direct);
         m.is_direct_function = Some(is_direct);
         m.source_file = source_file.clone();
-        let handler_sf = tsutil::source_file_of(handler);
-        if handler_sf.file_name() != source_file {
-            m.body_source_file = handler_sf.file_name().to_string();
-        }
         m.exported_name = fn_name.exported_name.clone();
-        let line_of = |pos: usize| tsrs_scanner::get_ecma_line_of_position(handler_sf.get(), pos as u32) as i64 + 1;
-        let (bs, be);
-        if ast::is_block(body) && !body.statements().is_empty() {
-            let stmts = body.statements();
-            bs = line_of(tsutil::node_start(stmts[0]));
-            be = line_of(tsutil::node_end(stmts[stmts.len() - 1]));
-        } else {
-            bs = line_of(tsutil::node_start(body));
-            be = line_of(tsutil::node_end(body));
-        }
-        m.body_start = Some(bs);
-        m.body_end = Some(be);
-        let started = tsutil::collect_started_workflows(body);
-        if !started.names.is_empty() {
-            m.starts_workflows = started.names.clone();
-        }
-        // Generated scaffolds (the workflow start/run routes) take the name from the
-        // request by design, and are served by units that have every workflow.
-        if !is_generated_file(file_name_of(handler)) {
-            let mut started_names: BTreeSet<String> = started.names.iter().cloned().collect();
-            for (call, arg) in started.dynamic.iter().zip(&started.dynamic_args) {
-                if let Some(v) = self.const_string_name(*arg) {
-                    started_names.insert(v);
-                    continue;
-                }
-                self.log.critical(codes::RPC_NAME_NOT_LITERAL, format!(
-                    "• {pikku_func_id} calls {call} with a computed name — the deploy planner cannot bundle that workflow's meta into {pikku_func_id}'s unit, so the deployed call fails with \"Workflow not found\" unless the unit has it for another reason. Use a literal workflow name."
-                ));
+        if let (Some(handler), Some(body)) = (handler, body) {
+            let handler_sf = tsutil::source_file_of(handler);
+            if handler_sf.file_name() != source_file {
+                m.body_source_file = handler_sf.file_name().to_string();
             }
-            if started_names.len() > started.names.len() {
-                m.starts_workflows = started_names.into_iter().collect();
+            let line_of = |pos: usize| tsrs_scanner::get_ecma_line_of_position(handler_sf.get(), pos as u32) as i64 + 1;
+            let (bs, be);
+            if ast::is_block(body) && !body.statements().is_empty() {
+                let stmts = body.statements();
+                bs = line_of(tsutil::node_start(stmts[0]));
+                be = line_of(tsutil::node_end(stmts[stmts.len() - 1]));
+            } else {
+                bs = line_of(tsutil::node_start(body));
+                be = line_of(tsutil::node_end(body));
             }
-            let mut resolver = HandlerResolver { cx: &mut *self, handler };
-            let args = tsutil::collect_wire_args(handler, &mut resolver);
-            for c in args {
-                if self.is_framework_callee(c.expr) {
-                    continue;
+            m.body_start = Some(bs);
+            m.body_end = Some(be);
+            let started = tsutil::collect_started_workflows(body);
+            if !started.names.is_empty() {
+                m.starts_workflows = started.names.clone();
+            }
+            // Generated scaffolds (the workflow start/run routes) take the name from the
+            // request by design, and are served by units that have every workflow.
+            if !is_generated_file(file_name_of(handler)) {
+                let mut started_names: BTreeSet<String> = started.names.iter().cloned().collect();
+                for (call, arg) in started.dynamic.iter().zip(&started.dynamic_args) {
+                    if let Some(v) = self.const_string_name(*arg) {
+                        started_names.insert(v);
+                        continue;
+                    }
+                    self.log.critical(codes::RPC_NAME_NOT_LITERAL, format!(
+                        "• {pikku_func_id} calls {call} with a computed name — the deploy planner cannot bundle that workflow's meta into {pikku_func_id}'s unit, so the deployed call fails with \"Workflow not found\" unless the unit has it for another reason. Use a literal workflow name."
+                    ));
                 }
-                self.log.critical(codes::WIRE_PASSED_TO_HELPER, format!(
-                    "• {pikku_func_id} passes {} to {}() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data.",
-                    wire_label(&c.wire),
-                    c.callee
-                ));
+                if started_names.len() > started.names.len() {
+                    m.starts_workflows = started_names.into_iter().collect();
+                }
+                let mut resolver = HandlerResolver { cx: &mut *self, handler };
+                let args = tsutil::collect_wire_args(handler, &mut resolver);
+                for c in args {
+                    if self.is_framework_callee(c.expr) {
+                        continue;
+                    }
+                    self.log.critical(codes::WIRE_PASSED_TO_HELPER, format!(
+                        "• {pikku_func_id} passes {} to {}() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data.",
+                        wire_label(&c.wire),
+                        c.callee
+                    ));
+                }
             }
         }
 
@@ -829,7 +844,7 @@ fn go_json_string(s: &str, out: &mut String) {
 }
 
 /// `implementationHash`.
-pub fn implementation_hash(wrapper: &str, handler: P<Node>, object_node: Option<P<Node>>, is_direct: bool) -> String {
+pub fn implementation_hash(wrapper: &str, handler: Option<P<Node>>, object_node: Option<P<Node>>, is_direct: bool) -> String {
     let mut buf = String::from("{");
     buf.push_str("\"config\":");
     match object_node {
@@ -837,7 +852,10 @@ pub fn implementation_hash(wrapper: &str, handler: P<Node>, object_node: Option<
         None => buf.push_str("null"),
     }
     buf.push_str(",\"handler\":");
-    go_json_string(&tsutil::print::print_node(handler), &mut buf);
+    match handler {
+        Some(h) => go_json_string(&tsutil::print::print_node(h), &mut buf),
+        None => buf.push_str("null"),
+    }
     buf.push_str(",\"isDirectFunction\":");
     buf.push_str(if is_direct { "true" } else { "false" });
     buf.push_str(",\"wrapper\":");
