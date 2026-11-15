@@ -266,6 +266,19 @@ fn wired_incoming_webhooks_still_require_the_service() {
     assert!(st.service_aggregation.required_services.has("incomingWebhookService"));
 }
 
+#[test]
+fn subscribe_function_requires_the_event_hub() {
+    let mut st = State::new(".");
+    st.functions.meta.set("orderEvents", fn_meta(|m| {
+        m.subscribe = Some(crate::state::SubscribeMeta { topic_pattern: "order:${string}".into() });
+    }));
+    services::aggregate_required_services(&mut st);
+    assert!(st.service_aggregation.required_services.has("eventHub"));
+    let mut plain = State::new(".");
+    services::aggregate_required_services(&mut plain);
+    assert!(!plain.service_aggregation.required_services.has("eventHub"));
+}
+
 fn grant_state(decl: &str, with_auth: bool) -> State {
     let mut st = State::default();
     st.rpc.wire_addon_declarations.set("auth-addon", raw(decl));

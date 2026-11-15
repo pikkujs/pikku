@@ -59,6 +59,9 @@ func (s *Context) addWireTrigger(node, obj *ast.Node) {
 	}
 	s.ensureInlineWiringFunction(pikkuFuncId, name, funcInit, isHelper)
 	middleware := s.resolveMiddleware(obj, cm.tagsOrNil())
+	if !s.checkSubscribeWiring(pikkuFuncId, fmt.Sprintf("Trigger '%s'", name)) {
+		return
+	}
 	s.State.ServiceAggregation.UsedFunctions.Add(pikkuFuncId)
 	s.addUsedWires(&FunctionMeta{Middleware: middleware})
 

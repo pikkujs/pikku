@@ -348,6 +348,16 @@ func (s *Context) registerHTTPRoute(obj *ast.Node, sourceFile string, group grou
 		s.Log.Critical(diag.FunctionMetadataNotFound, fmt.Sprintf("No function metadata found for '%s'.", funcName))
 		return
 	}
+	if fnMeta.Subscribe != nil {
+		if sse := tsutil.GetPropertyValue(obj, "sse").Bool; sse == nil || !*sse {
+			s.checkSubscribeWiring(funcName, fmt.Sprintf("Route '%s %s'", strings.ToUpper(method), fullRoute))
+			return
+		}
+		// A subscribe function wired auth: false is a public topic.
+		if resolvedAuth != nil && !*resolvedAuth {
+			fnMeta.Sessionless = tsutil.BoolPtr(true)
+		}
+	}
 	if !s.validateAuthSessionless(obj, funcName, fmt.Sprintf("Route '%s'", fullRoute), group.auth) {
 		return
 	}
@@ -433,6 +443,9 @@ func (s *Context) addQueueWorker(obj *ast.Node, sourceFile string) {
 		return
 	}
 	s.ensureInlineWiringFunction(pikkuFuncId, name, funcInit, extracted.isHelper)
+	if !s.checkSubscribeWiring(pikkuFuncId, fmt.Sprintf("Queue worker '%s'", name)) {
+		return
+	}
 	var tags []string
 	if cm.hasTags {
 		tags = cm.tags
@@ -488,6 +501,14 @@ func (s *Context) ensureFunctionMetadata(pikkuFuncId, fallbackName string, funcI
 	}
 	if call == nil {
 		return
+	}
+	// A subscribe function written inline in its wiring never reaches addFunctions.
+	// (An exported one was read, and refused if bare, by addFunctions already.)
+	if call == funcInit && m.Subscribe == nil && ast.IsIdentifier(call.Expression()) && call.Expression().Text() == "pikkuSubscribeFunc" {
+		if pattern, ok := s.subscribeTopicPattern(call, pikkuFuncId); ok {
+			m.Subscribe = &state.SubscribeMeta{TopicPattern: pattern}
+			m.Sessionless = tsutil.BoolPtr(false)
+		}
 	}
 	a := call.Arguments()
 	if len(a) == 0 || !ast.IsObjectLiteralExpression(a[0]) {

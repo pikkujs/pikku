@@ -437,6 +437,9 @@ impl Context<'_> {
         if !pikku_func_id.is_empty() && !self.validate_auth_sessionless(node, &pikku_func_id, &format!("CLI command '{name}'"), None) {
             return None;
         }
+        if !pikku_func_id.is_empty() && !self.check_subscribe_wiring(&pikku_func_id, &format!("CLI command '{name}'")) {
+            return None;
+        }
         self.state.service_aggregation.used_functions.add(pikku_func_id);
         self.add_used_middleware(&middleware);
         Some(meta)

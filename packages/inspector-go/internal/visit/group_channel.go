@@ -440,6 +440,15 @@ func (s *Context) addChannel(node *ast.Node) {
 	s.addUsedMiddleware(middleware)
 
 	desc := fmt.Sprintf("Channel '%s'", name)
+	for _, slot := range []struct {
+		name string
+		ref  *channelFuncRef
+	}{{"onConnect", connectRef}, {"onDisconnect", disconnectRef}, {"onMessage", message}} {
+		slotName, ref := slot.name, slot.ref
+		if ref != nil && ref.PikkuFuncId != "" && !s.checkSubscribeWiring(ref.PikkuFuncId, desc+" "+slotName) {
+			return
+		}
+	}
 	for _, ref := range []*channelFuncRef{connectRef, disconnectRef, message} {
 		if ref != nil && ref.PikkuFuncId != "" && !s.validateAuthSessionless(obj, ref.PikkuFuncId, desc, nil) {
 			return

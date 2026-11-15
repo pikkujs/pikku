@@ -82,6 +82,13 @@ export type FunctionRuntimeMeta = {
    */
   webhookReceive?: boolean
   /**
+   * A `pikkuSubscribeFunc`: the body returns the event hub topic the stream is
+   * subscribed to. `topicPattern` is the declared shape of that topic in
+   * template-literal syntax (`order:${string}`); publish refuses topics no
+   * subscribe function could return. Never RPC-callable.
+   */
+  subscribe?: { topicPattern: string }
+  /**
    * The body of a `pikkuScenario(...)`. Only ever run by `pikku scenario run`,
    * so it is held back from the app bootstrap and from every deployed unit.
    */

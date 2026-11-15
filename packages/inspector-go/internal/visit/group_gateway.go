@@ -45,6 +45,9 @@ func (s *Context) addGateway(node *ast.Node) {
 	}
 	s.ensureInlineWiringFunction(pikkuFuncId, name, funcInit, isHelper)
 	middleware := s.resolveMiddleware(obj, cm.tagsOrNil())
+	if !s.checkSubscribeWiring(pikkuFuncId, fmt.Sprintf("Gateway '%s'", name)) {
+		return
+	}
 	s.State.ServiceAggregation.UsedFunctions.Add(pikkuFuncId)
 	s.addUsedWires(&FunctionMeta{Middleware: middleware})
 
