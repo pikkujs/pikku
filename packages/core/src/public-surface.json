@@ -319,10 +319,12 @@
     "wireAgentScorerQueueWorkers"
   ],
   "./analytics": [
+    "AnalyticsSinkRegistry",
     "LoggerAnalyticsService",
     "anonymousAnalyticsIdentity",
     "composeAnalyticsIdentity",
     "cookieAnalyticsIdentity",
+    "createAnalyticsSinks",
     "createInvocationAnalytics",
     "defineAnalyticsEvents",
     "fanOutAnalytics",
@@ -514,11 +516,14 @@
   ],
   "./otlp": [
     "asContextStorage",
+    "createOtlpSinks",
     "createRuntimeTelemetry",
+    "fanOutOtlp",
     "isLoopbackHost",
     "OTLP_QUEUE_LIMITS",
     "OtlpHttpExporter",
     "OtlpLogger",
+    "OtlpSinkRegistry",
     "OtlpTracer",
     "parseOtlpEndpoint",
     "parseOtlpHeaders",

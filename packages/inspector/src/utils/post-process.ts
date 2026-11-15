@@ -399,11 +399,11 @@ export function aggregateRequiredServices(state: InspectorState): void {
   }
 
   // A `defineAnalyticsEvents` declaration means events are emitted, and the
-  // invocation buffer flushes into `analyticsService`. Nothing destructures
+  // invocation buffer flushes into `analyticsSinks`. Nothing destructures
   // that either — functions are handed the request-scoped `analytics` — so the
   // declaration is again the only signal.
   if ((state.analytics?.length ?? 0) > 0) {
-    requiredServices.add('analyticsService')
+    requiredServices.add('analyticsSinks')
   }
 
   if ((state.credentials?.definitions?.length ?? 0) > 0) {
