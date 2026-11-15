@@ -105,3 +105,59 @@ export const runMocksChecks = async (dir: string): Promise<Finding[]> => {
   }
   return findings
 }
+
+export type MockedFunction = {
+  id: string
+  name: string
+  sourceFile?: string
+}
+
+type FunctionMetaJson = Record<
+  string,
+  { name?: string; mock?: boolean; sourceFile?: string }
+>
+
+const readFunctionMetaJson = (dir: string): FunctionMetaJson | undefined => {
+  const functionDir = join(dir, configOf(dir).outDir, 'function')
+  // The verbose meta keeps sourceFile, which the runtime meta strips.
+  for (const file of [
+    'pikku-functions-meta-verbose.gen.json',
+    'pikku-functions-meta.gen.json',
+  ]) {
+    try {
+      return JSON.parse(readFileSync(join(functionDir, file), 'utf8'))
+    } catch {
+      continue
+    }
+  }
+  return undefined
+}
+
+/**
+ * The functions a built project declares `mock: true`, read from its generated
+ * function meta. An unbuilt project has none to report.
+ */
+export const mockedFunctions = (dir: string): MockedFunction[] => {
+  const meta = readFunctionMetaJson(dir)
+  if (!meta) return []
+  return Object.entries(meta)
+    .filter(([, m]) => m?.mock === true)
+    .map(([id, m]) => ({ id, name: m.name ?? id, sourceFile: m.sourceFile }))
+}
+
+/**
+ * A function declared `mock: true` has no body, so it cannot be published. It
+ * is an error whenever the deploy checks run, like an unflagged stub hook, and
+ * a warning under `--skipDeployChecks`, where the project is still being built.
+ */
+export const runMockedFunctionChecks = (
+  dir: string,
+  options: { publish: boolean }
+): Finding[] =>
+  mockedFunctions(dir).map((fn) => ({
+    id: 'mock-function',
+    severity: options.publish ? 'error' : 'warn',
+    message: `${fn.name} is declared \`mock: true\`: it has no implementation, so it cannot be published`,
+    path: fn.sourceFile ?? join(dir, 'pikku.config.json'),
+    fixHint: `Implement ${fn.name}: write its \`func\` and remove \`mock: true\`.`,
+  }))
