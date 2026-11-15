@@ -317,6 +317,8 @@ export interface PikkuHTTPResponse<Out = unknown> {
   onClose?: (callback: () => void) => void
   setMode?: (mode: 'stream') => void
   flushHeaders?: () => void
+  /** Writes an SSE comment frame (`:`) to a streaming response, which keeps an idle connection open. */
+  heartbeat?: () => void
 }
 
 export type HTTPRouteConfig<

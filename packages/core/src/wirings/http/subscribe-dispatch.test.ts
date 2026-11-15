@@ -31,6 +31,7 @@ class SseResponse extends PikkuMockResponse {
   public flushed = false
   public onCloseHandler?: () => void
   public jsonBody: unknown
+  public heartbeats = 0
 
   header(name: string, value: string | string[]) {
     this.headersMap.set(name, value)
@@ -52,6 +53,9 @@ class SseResponse extends PikkuMockResponse {
   }
   onClose(handler: () => void) {
     this.onCloseHandler = handler
+  }
+  heartbeat() {
+    this.heartbeats++
   }
   close() {}
 }
@@ -237,5 +241,47 @@ describe('a subscribe function wired as an SSE route', () => {
     assert.strictEqual(distributor.subscriptionCount(), 1)
     response.onCloseHandler?.()
     assert.strictEqual(distributor.subscriptionCount(), 0)
+  })
+
+  describe('the SSE heartbeat', () => {
+    const useHeartbeat = (sseHeartbeatMs?: number) => {
+      distributor = createEventHubDistributor({
+        topics: () => ['order:${string}'],
+        sseHeartbeatMs,
+      })
+      distributor.registerDelivery(createLocalDeliveryBackend())
+      setEventHubDistributor(distributor)
+    }
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+    test('a quiet stream gets comment frames until it closes', async () => {
+      useHeartbeat(15)
+      wire()
+      const response = await open()
+      await sleep(80)
+      assert.ok(response.heartbeats >= 2, `got ${response.heartbeats}`)
+      response.onCloseHandler?.()
+      const atClose = response.heartbeats
+      await sleep(60)
+      assert.strictEqual(response.heartbeats, atClose)
+      assert.deepStrictEqual(
+        response.frames,
+        [],
+        'comments are not data frames'
+      )
+    })
+
+    test('0 turns the heartbeat off', async () => {
+      useHeartbeat(0)
+      wire()
+      const response = await open()
+      await sleep(50)
+      assert.strictEqual(response.heartbeats, 0)
+    })
+
+    test('the default is 5 s, well under a 10 s idle timeout', async () => {
+      useHeartbeat()
+      assert.strictEqual(distributor.sseHeartbeatMs, 5000)
+    })
   })
 })

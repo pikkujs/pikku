@@ -91,6 +91,23 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
     }
   }
 
+  /** Calls `callback` once when the client goes away or the response ends, so a stream can stop feeding it. */
+  public onClose(callback: () => void): void {
+    let called = false
+    this.res.on('close', () => {
+      if (called) return
+      called = true
+      callback()
+    })
+  }
+
+  /** An SSE comment frame: keeps an idle stream open and is ignored by the client. */
+  public heartbeat(): void {
+    if (!this.#streaming || this.#ended) return
+    this.#flushHeadersOnce()
+    this.res.write(':\n\n')
+  }
+
   public setMode(_mode: 'stream'): void {
     this.#streaming = true
   }

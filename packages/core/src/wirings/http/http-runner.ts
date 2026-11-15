@@ -56,6 +56,7 @@ import {
   getSubscribeMeta,
   subscribeChannelToTopic,
 } from '../channel/event-hub/runtime.js'
+import { DEFAULT_SSE_HEARTBEAT_MS } from '../channel/event-hub/event-hub-distributor.js'
 import { validateSchema } from '../../schema.js'
 import { runMiddleware } from '../../middleware-runner.js'
 
@@ -290,6 +291,7 @@ const executeRoute = async (
       response.setMode!('stream')
       response.header('Content-Type', 'text/event-stream')
       response.header('Cache-Control', 'no-cache')
+      startSseHeartbeat(response, () => channel)
     }
     if (!subscribe) openStream()
     let sseState: unknown
@@ -413,6 +415,33 @@ const executeRoute = async (
   }
 
   return { result }
+}
+
+/**
+ * Writes a comment frame to a quiet SSE stream until it closes, so an idle
+ * timeout (Bun's is 10 s) or a proxy does not cut it. The interval is the
+ * distributor's `sseHeartbeatMs`; a response without `heartbeat` gets none.
+ */
+const startSseHeartbeat = (
+  response: PikkuHTTPResponse,
+  getChannel: () => PikkuChannel<unknown, unknown> | undefined
+): void => {
+  const interval =
+    getEventHubDistributor()?.sseHeartbeatMs ?? DEFAULT_SSE_HEARTBEAT_MS
+  if (!response.heartbeat || !(interval > 0)) return
+  const timer = setInterval(() => {
+    if (getChannel()?.state === 'closed') {
+      clearInterval(timer)
+      return
+    }
+    try {
+      response.heartbeat!()
+    } catch {
+      clearInterval(timer)
+    }
+  }, interval)
+  timer.unref?.()
+  response.onClose?.(() => clearInterval(timer))
 }
 
 /**

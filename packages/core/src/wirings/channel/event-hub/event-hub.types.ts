@@ -128,4 +128,10 @@ export interface EventHubDistributorOptions {
   topics: () => readonly string[]
   /** Told about a relay or inbound failure that must not fail the publisher. */
   onError?: (error: unknown) => void
+  /**
+   * How often an open SSE stream gets a comment frame (`:`), in milliseconds, so
+   * a proxy or a runtime with an idle timeout (Bun closes a connection after 10 s)
+   * does not cut a quiet stream. Defaults to 5000; `0` turns it off.
+   */
+  sseHeartbeatMs?: number
 }

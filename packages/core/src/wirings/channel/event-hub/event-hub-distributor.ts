@@ -16,6 +16,9 @@ import type {
 import { getDeclaredEventHubTopics } from './runtime.js'
 import { matchesTopicPattern, topicPatternsOverlap } from './topic-pattern.js'
 
+/** Under Bun's 10 s idle timeout with room for one lost frame. */
+export const DEFAULT_SSE_HEARTBEAT_MS = 5000
+
 const bigintAsString = (_key: string, value: unknown) =>
   typeof value === 'bigint' ? value.toString() : value
 
@@ -68,6 +71,11 @@ export class EventHubDistributor {
   private readonly stored = new Map<string, Map<string, StoredSubscription>>()
 
   constructor(private readonly options: EventHubDistributorOptions) {}
+
+  /** The interval between SSE comment frames; `0` means none. */
+  get sseHeartbeatMs(): number {
+    return this.options.sseHeartbeatMs ?? DEFAULT_SSE_HEARTBEAT_MS
+  }
 
   /** Adds the backend that delivers to one transport's channels. Refused when its name or transport is already taken. */
   registerDelivery(backend: EventHubDeliveryBackend): void {
