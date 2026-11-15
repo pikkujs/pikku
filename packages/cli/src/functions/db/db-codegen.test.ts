@@ -40,7 +40,7 @@ function fakeIntrospector(columns: ColumnInfo[]): DbIntrospector {
 async function run(
   columns: ColumnInfo[],
   annotations?: Record<string, Record<string, unknown>>,
-  dialect: 'postgres' | 'mysql' = 'postgres'
+  dialect: 'postgres' | 'mysql' | 'sqlite' = 'postgres'
 ) {
   const dir = mkdtempSync(join(tmpdir(), 'db-codegen-'))
   if (annotations) {
@@ -722,6 +722,28 @@ describe('declared constraints', () => {
     assert.match(message, /pikku db generate/)
   })
 
+  test('the mismatch advice fits the engine: generate on postgres and mysql, a hand-written CHECK on sqlite', async () => {
+    const mismatch = async (dialect: 'postgres' | 'mysql' | 'sqlite') => {
+      const result = await run(
+        [col({ name: 'kind', type: 'text', enumValues: ['x', 'y'] })],
+        { widget: { kind: { enum: ['a', 'b'] } } },
+        dialect
+      )
+      return byCode(result, ErrorCode.DB_ENUM_DECLARATION_MISMATCH)[0]!.message
+    }
+    for (const dialect of ['postgres', 'mysql'] as const) {
+      const message = await mismatch(dialect)
+      assert.match(message, /Run `pikku db generate`/, dialect)
+    }
+    // `pikku db generate` writes no CHECK on SQLite, so it is no way out there.
+    const sqlite = await mismatch('sqlite')
+    assert.doesNotMatch(sqlite, /Run `pikku db generate`/)
+    assert.match(sqlite, /CHECK \("kind" IN \('a', 'b'\)\)/)
+    assert.match(sqlite, /by hand/)
+    assert.match(sqlite, /database has 'x' \| 'y'/)
+    assert.match(sqlite, /follow the declaration/)
+  })
+
   test('the same enum in another order is not a mismatch', async () => {
     const result = await run(
       [col({ name: 'kind', type: 'text', enumValues: ['b', 'a'] })],
@@ -772,4 +794,53 @@ describe('declared constraints', () => {
       AppWidget: { a: { int: true }, b: { int: true }, c: { int: true } },
     })
   })
+})
+
+test('a declared enum reaches the standalone enums module on a column the database holds no enum for', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'db-codegen-enums-'))
+  mkdirSync(join(dir, 'db'), { recursive: true })
+  writeFileSync(
+    join(dir, 'db', 'annotations.gen.json'),
+    JSON.stringify({ item: { status: { enum: ['open', 'closed'] } } }),
+    'utf8'
+  )
+  const columns = [
+    col({ name: 'id', type: 'text', pk: true }),
+    col({ name: 'status', type: 'text' }),
+  ]
+  const enumsFile = join(dir, 'enums.gen.ts')
+  await generateSchemaTypes(
+    {
+      async listTables() {
+        return ['item']
+      },
+      async getColumns() {
+        return columns
+      },
+      async getForeignKeys() {
+        return []
+      },
+      async getAllColumns() {
+        return new Map([['item', columns]])
+      },
+      async getAllForeignKeys() {
+        return new Map()
+      },
+      async listEnums() {
+        return []
+      },
+      async close() {},
+    },
+    {
+      outFile: join(dir, 'schema.gen.ts'),
+      coercionFile: join(dir, 'coercion.gen.ts'),
+      enumsFile,
+      dialect: 'sqlite',
+      rootDir: dir,
+    }
+  )
+  assert.match(
+    readFileSync(enumsFile, 'utf8'),
+    /export type ItemStatus = 'open' \| 'closed'/
+  )
 })

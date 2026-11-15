@@ -372,8 +372,13 @@ function emitInterface(
           message:
             `Column "${bare}.${col.name}": declared ${enumLabel(ann.enum)} but the ` +
             `database has ${enumLabel(databaseEnum)}. The generated types follow the ` +
-            `declaration. Run \`pikku db generate\` for the migration that brings the ` +
-            `database in line.`,
+            `declaration. ` +
+            (dialect === 'sqlite'
+              ? // `pikku db generate` writes no CHECK on SQLite, so it is no way out.
+                `SQLite cannot change a CHECK without rebuilding the table, so Pikku writes none: ` +
+                `add \`CHECK ("${col.name}" IN (${ann.enum.map((v) => `'${v.replace(/'/g, "''")}'`).join(', ')}))\` ` +
+                `by hand in a migration, or change the declaration to the database's values, or drop the stale CHECK by hand.`
+              : `Run \`pikku db generate\` for the migration that brings the database in line.`),
         })
       }
       const enumUnion =
