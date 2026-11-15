@@ -68,17 +68,9 @@ singletons — you write neither by hand):
 
 `pikku all` writes the client to `.pikku/sdk/<backend>/exposed/pikku-realtime.gen.ts`;
 import it through the `@sdk/<backend>` alias (a tsconfig `paths` entry,
-`"@sdk/api/*": [".pikku/sdk/api/exposed/*"]`). For full type inference on
-subscribe/unsubscribe, point the one optional key at your topics type in
-`pikku.config.json`:
-
-```jsonc
-{
-  "clientFiles": {
-    "realtimeEventHubTopicsImport": "../../../functions/types/eventhub-topics.js#EventHubTopics",
-  },
-}
-```
+`"@sdk/api/*": [".pikku/sdk/api/exposed/*"]`). Topics are plain strings on the client;
+the generated `EventHubTopic` type (in the function types) lists every topic a
+`pikkuSubscribeFunc` can return.
 
 Run `pikku all` to regenerate. Everything is
 on one class — both transports are methods, so switching from WebSocket to SSE is
@@ -122,10 +114,6 @@ export class PikkuRealtime {
   close(): void
 }
 ```
-
-Without `realtimeEventHubTopicsImport`, the client falls back to
-`Record<string, unknown>` — usable but untyped. Set the import for full typed
-subscribe/unsubscribe.
 
 ## 4. Publish events from a function
 

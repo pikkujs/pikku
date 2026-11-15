@@ -327,6 +327,25 @@ export function pikkuFunc(func: any) {
 }
 
 /**
+ * Declares the one way a stream subscribes to the event hub: the body decides
+ * which topic the caller may follow and returns it. It runs like any other
+ * function (session, scopes, \`pikkuPermission\` guards), and only when it
+ * returns is the stream subscribed; a throw means no subscription.
+ *
+ * \`TopicShape\` is the shape of the topic it can return, a literal or a
+ * template such as \`order:\${string}\`. A bare \`string\` is refused at build
+ * time because it names no topic. It is wired as an \`sse: true\` route or a
+ * channel action, never callable as an RPC, and a public topic is wired
+ * with \`auth: false\` like any public route.
+ */
+export function pikkuSubscribeFunc<In, TopicShape extends string>(
+  config: PikkuFunctionConfig<In, TopicShape, 'session' | 'rpc', PikkuFunction<In, TopicShape, 'session' | 'rpc'>>
+): PikkuFunctionConfig<In, TopicShape, 'session' | 'rpc'>
+export function pikkuSubscribeFunc(config: any) {
+  return config
+}
+
+/**
  * A \`pikkuFunc\` whose input and output are already the shared list shape —
  * filters, sort, paging in; rows and a total out — so a listing endpoint pages
  * the same way everywhere.

@@ -13,6 +13,7 @@ import type {
   EventHubSubscription,
   StoredSubscription,
 } from './event-hub.types.js'
+import { getDeclaredEventHubTopics } from './runtime.js'
 import { matchesTopicPattern, topicPatternsOverlap } from './topic-pattern.js'
 
 const bigintAsString = (_key: string, value: unknown) =>
@@ -360,5 +361,9 @@ export class EventHubDistributor {
  * distributor itself out of services.
  */
 export const createEventHubDistributor = (
-  options: EventHubDistributorOptions
-): EventHubDistributor => new EventHubDistributor(options)
+  options: Partial<EventHubDistributorOptions> = {}
+): EventHubDistributor =>
+  new EventHubDistributor({
+    ...options,
+    topics: options.topics ?? getDeclaredEventHubTopics,
+  })

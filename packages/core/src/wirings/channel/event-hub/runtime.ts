@@ -1,4 +1,4 @@
-import { pikkuState } from '../../../pikku-state.js'
+import { getAllPackageStates, pikkuState } from '../../../pikku-state.js'
 import type { EventHubDistributor } from './event-hub-distributor.js'
 import type { PikkuChannelHandler } from '../channel.types.js'
 import type { StoredSubscription } from './event-hub.types.js'
@@ -48,4 +48,20 @@ export const subscribeChannelToTopic = (
     topic,
     subscription
   )
+}
+
+/**
+ * Every topic pattern a subscribe function of any package declared, read from
+ * function meta at each call. This is what the distributor checks a publish
+ * and a subscription against when the host gives it no list of its own.
+ */
+export const getDeclaredEventHubTopics = (): string[] => {
+  const patterns = new Set<string>()
+  for (const state of getAllPackageStates().values()) {
+    for (const meta of Object.values(state.function.meta)) {
+      if (meta.subscribe?.topicPattern)
+        patterns.add(meta.subscribe.topicPattern)
+    }
+  }
+  return [...patterns]
 }

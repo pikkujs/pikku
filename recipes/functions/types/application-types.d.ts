@@ -14,7 +14,6 @@ import type {
 } from '@pikku/core/services'
 import type { AnalyticsLog } from '@pikku/core/analytics'
 import type { AnalyticsEvent } from '../pikku/analytics/analytics.gen.js'
-import type { EventHubTopics } from './eventhub-topics.js'
 import type { TodoStore } from '../src/services/store.service.ts'
 import type { auth } from '../src/auth.ts'
 import type { Kysely } from 'kysely'
@@ -38,7 +37,7 @@ export interface UserSession extends CoreUserSession {
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
   jwt?: JWTService
-  eventHub?: EventHubService<EventHubTopics>
+  eventHub?: EventHubService<Record<string, any>>
   queueService?: QueueService
   todoStore: TodoStore
   agentStorage?: AgentStorageService

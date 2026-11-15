@@ -1,5 +1,4 @@
 import { PikkuWebSocket } from '@sdk/app/pikku-websocket.gen.js'
-import type { EventHubTopics } from '../types/eventhub-topics.js'
 import WSWebsocket from 'ws'
 
 export const check = async (serverUrl: string, testUserId: string) => {
@@ -8,7 +7,7 @@ export const check = async (serverUrl: string, testUserId: string) => {
     .replace('http://', 'ws://')
     .replace('https://', 'wss://')
   const ws = new WSWebsocket(`${wsUrl}${wsPath}`)
-  const websocket = new PikkuWebSocket<'todos-live', EventHubTopics>(ws)
+  const websocket = new PikkuWebSocket<'todos-live'>(ws)
 
   ws.onopen = () => {
     ;(async () => {
