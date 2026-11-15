@@ -66,24 +66,26 @@ export interface SignStatementOptions {
   virtualUserId: string
   audience: string
   ttlSeconds?: number
+  /** Names the key in the header: the RFC 7638 thumbprint of its public half (see `okpThumbprint`, which is async). Omitted, the header has no `kid`. */
+  kid?: string
   now?: () => number
 }
 
-/**
- * One single-use statement: who to sign in as, for which app, for a few minutes.
- * Its header names the key by `kid`, the RFC 7638 thumbprint of the public key.
- * Async because the thumbprint is.
- */
-export const signVirtualUserStatement = async ({
+/** One single-use statement: who to sign in as, for which app, for a few minutes. */
+export const signVirtualUserStatement = ({
   signingKey,
   virtualUserId,
   audience,
   ttlSeconds = VIRTUAL_USER_STATEMENT_TTL_SECONDS,
+  kid,
   now = Date.now,
-}: SignStatementOptions): Promise<string> => {
+}: SignStatementOptions): string => {
   const iat = Math.floor(now() / 1000)
-  const kid = await okpThumbprint(verifyKeyFor(signingKey))
-  const head = b64url(JSON.stringify({ alg: 'EdDSA', typ: 'JWT', kid }))
+  const head = b64url(
+    JSON.stringify(
+      kid ? { alg: 'EdDSA', typ: 'JWT', kid } : { alg: 'EdDSA', typ: 'JWT' }
+    )
+  )
   const claims = b64url(
     JSON.stringify({
       sub: virtualUserId,
@@ -161,11 +163,13 @@ export const resolveStatementMint = async (
     )
   }
   const audience = new URL(apiUrl).origin
+  const kid = await okpThumbprint(verifyKeyFor(signingKey))
   return (virtualUser) =>
     signVirtualUserStatement({
       signingKey,
       virtualUserId: virtualUser.id,
       audience,
+      kid,
     })
 }
 
