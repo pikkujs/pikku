@@ -1,5 +1,33 @@
-import { join } from 'node:path'
+import { isAbsolute, join, relative } from 'node:path'
+import type { ResolvedDb } from '../db/local-db.js'
 import type { CiRun, CiStage } from './schemas.js'
+
+/**
+ * Whether the database a run would migrate belongs to the worktree: a SQLite
+ * file or embedded PGlite directory inside `dir`, which goes when the worktree
+ * does. A Postgres or MySQL server is not, however local its address, because
+ * the worktree uses whatever URL its committed config names, which may be the
+ * developer's own server; and a file outside `dir` is shared too.
+ */
+export const worktreeOwnsDatabase = (
+  resolved: ResolvedDb | null,
+  dir: string
+): boolean => {
+  const inside = (path: string) => {
+    const rel = relative(dir, path)
+    return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
+  }
+  if (!resolved) return false
+  if (resolved.dialect === 'sqlite') return inside(resolved.dbFile)
+  if (resolved.dialect === 'postgres') {
+    return (
+      resolved.mode === 'pglite' &&
+      !!resolved.pgliteDir &&
+      inside(resolved.pgliteDir)
+    )
+  }
+  return false
+}
 
 /** The threshold the audit stage gates on. */
 export const CI_AUDIT_THRESHOLD = 'high'
@@ -24,15 +52,16 @@ const stageCommand = (stage: CiStage, run: CiRun): CiCommand => {
       return { args: ['bootstrap'] }
     case 'dbMigrate':
       return {
-        // Only a throwaway worktree is a CI database built from nothing and
-        // thrown away. Without `-p` the run is in the user's own tree, against
-        // their own .env, where `--localOnly` only means loopback, so a
-        // destructive migration must not be allowed there.
+        // `--localOnly` only means loopback. A destructive migration is allowed
+        // only when the run has established that the database is disposable
+        // (the worktree's own file, or an explicit --allowDestructive); a
+        // worktree on its own proves nothing, since it uses whatever local
+        // URL the committed config names.
         args: [
           'db',
           'migrate',
           '--localOnly',
-          ...(run.inWorktree ? ['--allowDestructive'] : []),
+          ...(run.allowDestructive ? ['--allowDestructive'] : []),
         ],
         dropDatabaseUrl: true,
       }

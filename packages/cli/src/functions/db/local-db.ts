@@ -2100,9 +2100,10 @@ export async function planDeclaredTables(
   // Before the declaration is materialized: a server that cannot take a CHECK
   // (MariaDB) would only answer it with a raw syntax error.
   if (resolved.dialect === 'mysql') {
+    const mysql = resolved
     const refusal = mysqlCheckRefusal(
       mysqlCheckSupport(
-        await (options.serverVersion ?? (() => mysqlServerVersion(resolved)))()
+        await (options.serverVersion ?? (() => mysqlServerVersion(mysql)))()
       ),
       declaredConstraints(declaration.schema.tables).map(
         (c) => `${c.where}: ${c.constraint}`
@@ -2292,7 +2293,7 @@ export async function planDeclaredTables(
 }
 
 /** The `version()` the configured MySQL-protocol server reports. */
-async function mysqlServerVersion(resolved: ResolvedDb): Promise<string> {
+async function mysqlServerVersion(resolved: ResolvedMysqlDb): Promise<string> {
   return withMysqlClient(resolved, async (client) => {
     const { rows } = await client.query('select version() as v')
     return String((rows[0] as { v?: unknown } | undefined)?.v ?? '')

@@ -12,7 +12,13 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { ciEnv, ciStageCommand, CI_AUDIT_THRESHOLD } from './stages.js'
+import {
+  ciEnv,
+  ciStageCommand,
+  CI_AUDIT_THRESHOLD,
+  worktreeOwnsDatabase,
+} from './stages.js'
+import { resolveDb } from '../db/local-db.js'
 import { CiStage } from './schemas.js'
 import { assertCloudflareDeployReady } from './deploy-guard.js'
 import {
@@ -36,6 +42,7 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }))
 const ciRun = (overrides: Partial<CiRun> = {}): CiRun => ({
   dir,
   inWorktree: true,
+  allowDestructive: false,
   deploy: false,
   runTests: true,
   hasDb: false,
@@ -77,12 +84,76 @@ describe('ciStageCommand', () => {
     assert.equal(migrate.dropDatabaseUrl, true)
   })
 
-  test("destructive migrations are allowed only in a throwaway worktree, never in the user's own tree", () => {
+  test('destructive migrations are allowed only when the run says its database is disposable', () => {
+    const refused = ciStageCommand(
+      'dbMigrate',
+      ciRun({ inWorktree: true, allowDestructive: false })
+    )
+    // A worktree alone proves nothing: it uses whatever loopback URL is committed.
+    assert.ok(!refused.args.includes('--allowDestructive'))
+    assert.ok(refused.args.includes('--localOnly'))
     const own = ciStageCommand('dbMigrate', ciRun({ inWorktree: false }))
     assert.ok(!own.args.includes('--allowDestructive'))
-    assert.ok(own.args.includes('--localOnly'))
-    const scratch = ciStageCommand('dbMigrate', ciRun({ inWorktree: true }))
-    assert.ok(scratch.args.includes('--allowDestructive'))
+    const allowed = ciStageCommand(
+      'dbMigrate',
+      ciRun({ allowDestructive: true })
+    )
+    assert.ok(allowed.args.includes('--allowDestructive'))
+    assert.ok(allowed.args.includes('--localOnly'))
+  })
+
+  describe('worktreeOwnsDatabase', () => {
+    const resolved = (config: Record<string, string>, migrations?: string) => {
+      if (migrations)
+        mkdirSync(join(dir, 'db', migrations), { recursive: true })
+      return resolveDb(config, dir, join(dir, '.pikku'))
+    }
+
+    test('a database file or embedded database inside the worktree is its own', () => {
+      assert.equal(
+        worktreeOwnsDatabase(resolved({ sqliteDb: 'dev.db' }), dir),
+        true
+      )
+      assert.equal(
+        worktreeOwnsDatabase(resolved({}, 'sqlite'), dir),
+        true,
+        'sqlite found from db/sqlite defaults into .pikku-runtime'
+      )
+      assert.equal(
+        worktreeOwnsDatabase(resolved({}, 'postgres'), dir),
+        true,
+        'embedded PGlite lives in .pikku-runtime'
+      )
+    })
+
+    test('a server, however local, a file outside the tree, or no database is not', () => {
+      assert.equal(
+        worktreeOwnsDatabase(
+          resolved({ postgresUrl: 'postgres://localhost:5432/app' }),
+          dir
+        ),
+        false
+      )
+      assert.equal(
+        worktreeOwnsDatabase(
+          resolved({ mysqlUrl: 'mysql://root@127.0.0.1/app' }),
+          dir
+        ),
+        false
+      )
+      assert.equal(
+        worktreeOwnsDatabase(
+          resolved({ sqliteDb: '/var/lib/app/app.db' }),
+          dir
+        ),
+        false
+      )
+      assert.equal(
+        worktreeOwnsDatabase(resolved({ sqliteDb: '../shared.db' }), dir),
+        false
+      )
+      assert.equal(worktreeOwnsDatabase(resolved({}), dir), false)
+    })
   })
 
   test('the audit gates at high and passes a baseline only when there is one', () => {

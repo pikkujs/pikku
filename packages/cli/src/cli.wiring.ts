@@ -437,6 +437,11 @@ wireCLI({
             'Skip the Pikku Studio hosting conventions in the validate stage',
           default: false,
         },
+        allowDestructive: {
+          description:
+            'Let db migrate apply migrations marked -- pikku:destructive. Off unless the run is in a worktree with its own SQLite or embedded database; say so here for any other database you are sure is disposable',
+          default: false,
+        },
       },
     }),
     audit: pikkuCLICommand({
