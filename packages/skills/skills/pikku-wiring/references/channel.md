@@ -196,9 +196,9 @@ export const authenticate = pikkuSessionlessFunc({
   },
 })
 
-export const watchChat = pikkuSubscribeFunc<void, 'chat:message'>(
-  async () => 'chat:message'
-)
+export const watchChat = pikkuSubscribeFunc<void, 'chat:message'>({
+  func: async () => 'chat:message',
+})
 
 export const sendMessage = pikkuFunc({
   title: 'Send Message',
