@@ -48,6 +48,7 @@
     "@pikku/fetch": "^0.12.16",
     "@pikku/inspector": "^0.12.120",
     "@pikku/inspector-go": "^0.12.15",
+    "@pikku/keys": "^0.0.0",
     "@pikku/knowledge": "^0.12.22",
     "@pikku/kysely": "^0.13.45",
     "@pikku/migrator-sql": "^0.12.11",
