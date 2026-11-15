@@ -227,6 +227,24 @@ fn contracts_include_remote_functions() {
     assert!(built.entries.contains_key("remoteFunc") && !built.entries.contains_key("hook"), "{:?}", built.ids);
 }
 
+// A mocked function has no contract yet: its shape may change freely until it
+// is implemented, so the version manifest leaves it out (Go:
+// TestContractsLeaveOutMockedFunctions).
+#[test]
+fn contracts_leave_out_mocked_functions() {
+    let mut st = State::new("/tmp");
+    st.functions.meta.set("realFunc", fn_meta(|m| {
+        m.contract_hash = "realhash12345678".into();
+    }));
+    st.functions.meta.set("mockedFunc", fn_meta(|m| {
+        m.mock = Some(true);
+        m.contract_hash = "mockhash12345678".into();
+    }));
+    let extracted = extract_contracts_from_meta(&st);
+    assert!(extracted.entries.contains_key("realFunc"), "{:?}", extracted.ids);
+    assert!(!extracted.entries.contains_key("mockedFunc"), "a mocked function should not carry a contract");
+}
+
 fn admin_addon_state(blanket: bool) -> State {
     let mut st = State::new(".");
     let mut fns = crate::state::Record::new();

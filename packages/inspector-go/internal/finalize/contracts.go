@@ -242,11 +242,13 @@ func ComputeContractHashes(st *state.State) *Contracts {
 	return contracts
 }
 
-// ExtractContractsFromMeta ports extractContractsFromMeta.
+// ExtractContractsFromMeta ports extractContractsFromMeta. A mocked function
+// has no contract yet: its shape may change freely until it is implemented, so
+// it is left out of the version manifest.
 func ExtractContractsFromMeta(st *state.State) *Contracts {
 	result := &Contracts{}
 	st.Functions.Meta.Each(func(id string, meta *state.FunctionMeta) {
-		if meta == nil || boolPtrTrue(meta.WebhookReceive) || meta.ContractHash == "" {
+		if meta == nil || boolPtrTrue(meta.WebhookReceive) || boolPtrTrue(meta.Mock) || meta.ContractHash == "" {
 			return
 		}
 		key, version := contractVersion(id, meta)
