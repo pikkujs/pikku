@@ -24,6 +24,9 @@ export const VIRTUAL_USER_VERIFY_KEYS_MAX = 4
 // SubjectPublicKeyInfo of an Ed25519 key: this 12-byte prefix, then the 32-byte key.
 const ED25519_SPKI_PREFIX = '302a300506032b6570032100'
 const ED25519_SPKI_LENGTH = 44
+// The same layout for X25519 (OID 1.3.101.110): key pairs of purpose sealing
+// are named by the same RFC 7638 OKP thumbprint, with crv X25519.
+const X25519_SPKI_PREFIX = '302a300506032b656e032100'
 
 const fail = (message: string): never => {
   throw new VirtualUserStatementError(
@@ -62,11 +65,14 @@ const spkiBytes = (publicKey: string): Uint8Array => {
 }
 
 /** An Ed25519 SPKI, PEM or bare base64 DER, to base64 DER on one line. */
-const spkiBase64 = (publicKey: string): string => {
+const spkiBase64 = (
+  publicKey: string,
+  prefixes: string[] = [ED25519_SPKI_PREFIX]
+): string => {
   const bytes = spkiBytes(publicKey)
   if (
     bytes.length !== ED25519_SPKI_LENGTH ||
-    hex(bytes.subarray(0, 12)) !== ED25519_SPKI_PREFIX
+    !prefixes.includes(hex(bytes.subarray(0, 12)))
   ) {
     return fail('a public key is not an Ed25519 SPKI key')
   }
@@ -74,16 +80,20 @@ const spkiBase64 = (publicKey: string): string => {
 }
 
 /**
- * The RFC 7638 JWK thumbprint of an Ed25519 public key: the SHA-256 of
- * `{"crv":"Ed25519","kty":"OKP","x":"..."}` (members in canonical order),
+ * The RFC 7638 JWK thumbprint of an Ed25519 or X25519 public key: the SHA-256
+ * of `{"crv":"Ed25519","kty":"OKP","x":"..."}` (members in canonical order),
  * base64url. Async because core only has WebCrypto digests.
  *
- * `spki` is a PEM or base64 DER; anything but an Ed25519 SPKI throws.
+ * `spki` is a PEM or base64 DER; anything but an Ed25519 or X25519 SPKI throws.
  */
 export const okpThumbprint = async (spki: string): Promise<string> => {
-  const bytes = toBytes(spkiBase64(spki))
+  const bytes = toBytes(
+    spkiBase64(spki, [ED25519_SPKI_PREFIX, X25519_SPKI_PREFIX])
+  )
+  const crv =
+    hex(bytes.subarray(0, 12)) === X25519_SPKI_PREFIX ? 'X25519' : 'Ed25519'
   const x = toBase64(bytes.subarray(12), true)
-  const canonical = `{"crv":"Ed25519","kty":"OKP","x":"${x}"}`
+  const canonical = `{"crv":"${crv}","kty":"OKP","x":"${x}"}`
   const digest = await crypto.subtle.digest(
     'SHA-256',
     new TextEncoder().encode(canonical)

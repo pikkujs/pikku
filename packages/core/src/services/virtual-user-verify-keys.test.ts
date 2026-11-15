@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { createPublicKey, generateKeyPairSync } from 'node:crypto'
+import { createHash, createPublicKey, generateKeyPairSync } from 'node:crypto'
 
 import {
   okpThumbprint,
@@ -40,6 +40,40 @@ describe('okpThumbprint', () => {
       .toString('base64')
     await assert.rejects(okpThumbprint(rsa), /Ed25519/)
     await assert.rejects(okpThumbprint('not base64!'), /base64/)
+  })
+})
+
+describe('okpThumbprint for X25519 (sealing keys)', () => {
+  test('is the RFC 7638 thumbprint with crv X25519, as node computes it', async () => {
+    const { publicKey } = generateKeyPairSync('x25519')
+    const jwk = publicKey.export({ format: 'jwk' }) as { x: string }
+    const canonical = `{"crv":"X25519","kty":"OKP","x":"${jwk.x}"}`
+    const expected = createHash('sha256').update(canonical).digest('base64url')
+    const b64 = publicKey
+      .export({ format: 'der', type: 'spki' })
+      .toString('base64')
+    assert.equal(await okpThumbprint(b64), expected)
+  })
+
+  test('is not the thumbprint of an Ed25519 key with the same bytes', async () => {
+    const { publicKey } = generateKeyPairSync('x25519')
+    const der = publicKey.export({ format: 'der', type: 'spki' })
+    const asEd = Buffer.concat([
+      Buffer.from('302a300506032b6570032100', 'hex'),
+      der.subarray(12),
+    ]).toString('base64')
+    assert.notEqual(
+      await okpThumbprint(der.toString('base64')),
+      await okpThumbprint(asEd)
+    )
+  })
+
+  test('parseVirtualUserVerifyKeys still refuses an X25519 key', () => {
+    const { publicKey } = generateKeyPairSync('x25519')
+    const b64 = publicKey
+      .export({ format: 'der', type: 'spki' })
+      .toString('base64')
+    assert.throws(() => parseVirtualUserVerifyKeys(b64), /Ed25519/)
   })
 })
 

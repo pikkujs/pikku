@@ -229,6 +229,44 @@ const derToP1363 = (der: Uint8Array, size: number): Uint8Array => {
 }
 
 /**
+ * Imports an SPKI DER public key for {@link verifySpkiSignature}: the one place
+ * an Ed25519 or RS256 (RSASSA-PKCS1-v1_5, SHA-256) verify key is built. The
+ * algorithm is named by the caller, not sniffed from the key bytes. Not
+ * extractable. Callers that verify many times (a key service) cache the result.
+ */
+export async function importSpkiVerifyKey(
+  spki: Uint8Array,
+  algorithm: 'ed25519' | 'rs256'
+): Promise<CryptoKey> {
+  return subtle().importKey(
+    'spki',
+    spki as BufferSource,
+    algorithm === 'ed25519'
+      ? { name: 'Ed25519' }
+      : { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['verify']
+  )
+}
+
+/** Whether `signature` (raw bytes) is `payload` signed for a key from {@link importSpkiVerifyKey}. */
+export async function verifySpkiSignature(
+  key: CryptoKey,
+  algorithm: 'ed25519' | 'rs256',
+  signature: Uint8Array,
+  payload: WebhookPayload
+): Promise<boolean> {
+  return subtle().verify(
+    algorithm === 'ed25519' ? { name: 'Ed25519' } : 'RSASSA-PKCS1-v1_5',
+    key,
+    signature as BufferSource,
+    (typeof payload === 'string'
+      ? encoder.encode(payload)
+      : payload) as BufferSource
+  )
+}
+
+/**
  * Whether `signature` (base64) is `payload` signed by the private half of
  * `publicKey` (an RSA, EC or Ed25519 PEM `SPKI` key). RSA-PSS keys are not
  * supported and verify as false. Ed25519 ignores `algorithm` and `dsaEncoding`.
@@ -243,20 +281,11 @@ export async function verifyPublicKeySignature(
   try {
     const der0 = pemToDer(publicKey)
     if (bytesToHex(der0).includes(OID_ED25519)) {
-      const key = await subtle().importKey(
-        'spki',
-        der0 as BufferSource,
-        { name: 'Ed25519' },
-        false,
-        ['verify']
-      )
-      return await subtle().verify(
-        { name: 'Ed25519' },
-        key,
-        base64ToBytes(signature) as BufferSource,
-        (typeof payload === 'string'
-          ? encoder.encode(payload)
-          : payload) as BufferSource
+      return await verifySpkiSignature(
+        await importSpkiVerifyKey(der0, 'ed25519'),
+        'ed25519',
+        base64ToBytes(signature),
+        payload
       )
     }
     const hash =
