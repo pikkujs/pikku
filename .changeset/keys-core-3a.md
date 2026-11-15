@@ -1,0 +1,6 @@
+---
+'@pikku/keys': patch
+'@pikku/core': patch
+---
+
+New `@pikku/keys` package: the reference key service for `defineKeyPair` declarations. `createLocalKeyService` signs, verifies, seals-open, rotates, promotes, retires and revokes keys over a `KeyStore` ledger, with the private half in custody `secret`, `file`, `wrapped` or `external`. `signer()` returns a handle that fixes kid, alg and version and re-checks the version status on every sign. Names are `signedFormat: "domain"` by default (signed bytes are `domain || 0x00 || data`, exported as `prefixWithDomain`) or `"jws"` (`signJws` writes `alg` and `kid` from the handle); the wrong form throws `DomainPolicyError`. Custody `secret` is refused on `LocalSecretService` and on any service that does not declare `durable`. `@pikku/keys/file` adds `FileKeyStore` and `FileCustody` (mode 0600); the root entry uses WebCrypto only. `@pikku/core/keypair` gains the `KeyService`, `KeyStore` and related interfaces and the `KeyUnavailableError`, `KeyRetiredError`, `KeyCustodyLostError`, `KeyRotatedError` and `DomainPolicyError` errors; `@pikku/core/hmac` gains `importSpkiVerifyKey` and `verifySpkiSignature`; `okpThumbprint` also accepts X25519 keys.
