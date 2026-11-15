@@ -321,6 +321,15 @@ export type CorePikkuFunctionConfig<
    * back on.
    */
   disabled?: true | string
+  /**
+   * Declares the function without implementing it: it has `input` and
+   * `output` but no `func`, and the framework knows it is fake. Unlike
+   * `disabled` it stays in every map and generated client, so a front end
+   * can be built against it, but calling it on a real backend fails and
+   * `pikku validate` refuses to publish it. Implementing the body means
+   * writing `func` and deleting this marker.
+   */
+  mock?: true
   /** Makes the function callable from outside as `POST /rpc/<name>`. Without a session requirement, a permission or an addon gate, that means callable by anyone. */
   expose?: boolean
   /**

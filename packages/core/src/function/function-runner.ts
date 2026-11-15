@@ -42,7 +42,11 @@ import {
   PikkuSessionService,
   createFunctionSessionWireProps,
 } from '../services/user-session-service.js'
-import { MissingSessionError, ReadonlySessionError } from '../errors/errors.js'
+import {
+  MissingSessionError,
+  NotImplementedError,
+  ReadonlySessionError,
+} from '../errors/errors.js'
 import { verifyScopes, withLiveScopes } from '../scopes.js'
 import { assertFeatureAvailable } from '../wirings/flag/assert-feature-available.js'
 import {
@@ -565,6 +569,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
       data: actualData,
       packageName: funcPackageName,
     })
+
+    if (funcConfig.mock) {
+      throw new NotImplementedError(
+        `Function '${funcName}' is mocked: it has no implementation yet`
+      )
+    }
 
     let wireServices: Record<string, unknown> | undefined
     let invocationAuditLog: AuditLog | undefined

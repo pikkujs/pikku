@@ -593,6 +593,7 @@ export type CorePikkuFunctionConfig<
   version?: number
   tags?: string[]
   disabled?: true | string
+  mock?: true
   expose?: boolean
   permissionsInBody?: boolean
   remote?: boolean
@@ -730,6 +731,7 @@ export type FunctionRuntimeMeta = {
   scenario?: boolean
   mcp?: boolean
   readonly?: boolean
+  mock?: boolean
   deploy?: 'serverless' | 'server' | 'auto'
   sessionless?: boolean
   compensate?: boolean
