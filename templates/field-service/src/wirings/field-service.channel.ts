@@ -3,6 +3,7 @@ import {
   wireChannel,
   pikkuChannelConnectionFunc,
 } from '#pikku/channel/pikku-channel-types.gen.js'
+import { wireHTTP } from '#pikku/http'
 import { pikkuSubscribeFunc } from '#pikku/function'
 import { currentCompanyId } from '../lib/tenant.js'
 
@@ -41,4 +42,15 @@ wireChannel({
       watch: watchBoard,
     }),
   },
+})
+
+// The same subscribe function over SSE, for a browser that only reads: it
+// still runs the session, scope and tenant lookup above, so the stream follows
+// the caller's own company board and nothing a client names.
+wireHTTP({
+  method: 'get',
+  route: '/board/events',
+  func: watchBoard,
+  sse: true,
+  auth: true,
 })

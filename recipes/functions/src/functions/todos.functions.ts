@@ -1,4 +1,8 @@
-import { pikkuListFunc, pikkuSessionlessFunc } from '#pikku/function'
+import {
+  pikkuListFunc,
+  pikkuSessionlessFunc,
+  pikkuSubscribeFunc,
+} from '#pikku/function'
 import {
   ListTodosWithUserInputSchema,
   CreateTodoWithUserInputSchema,
@@ -167,5 +171,22 @@ export const listTodoRows = pikkuListFunc<
       nextCursor: null,
       totalCount: todos.length,
     }
+  },
+})
+
+/**
+ * Subscribe to todo update events. The function decides the topic, so a client
+ * can only follow a `todo-*` topic; there is no unsubscribe, a channel leaves
+ * on disconnect. It lives beside the functions that publish those topics, not
+ * with the channel wiring, because a template without a channel still publishes
+ * them and a publish is only accepted for a topic some subscribe function declares.
+ */
+export const subscribe = pikkuSubscribeFunc<
+  { topic: 'created' | 'updated' | 'deleted' | 'completed' },
+  `todo-${string}`
+>({
+  func: async ({ logger }, { topic }) => {
+    logger.info(`Subscribing to todo-${topic}`)
+    return `todo-${topic}`
   },
 })

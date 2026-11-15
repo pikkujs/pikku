@@ -3,7 +3,6 @@ import {
   pikkuChannelDisconnectionFunc,
   pikkuChannelFunc,
 } from '#pikku/channel'
-import { pikkuSubscribeFunc } from '#pikku/function'
 import { ChannelAuthInputSchema, ChannelAuthOutputSchema } from '../schemas.js'
 
 /**
@@ -52,20 +51,5 @@ export const authenticate = pikkuChannelFunc({
     await setSession({ userId: user.id })
     logger.info(`WebSocket authenticated as ${user.id}`)
     return { authenticated: true, userId: user.id }
-  },
-})
-
-/**
- * Subscribe to todo update events. The function decides the topic, so a client
- * can only follow a `todo-*` topic; there is no unsubscribe, a channel leaves
- * on disconnect.
- */
-export const subscribe = pikkuSubscribeFunc<
-  { topic: 'created' | 'updated' | 'deleted' | 'completed' },
-  `todo-${string}`
->({
-  func: async ({ logger }, { topic }) => {
-    logger.info(`WebSocket subscribing to todo-${topic}`)
-    return `todo-${topic}`
   },
 })
