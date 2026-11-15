@@ -6,8 +6,8 @@ description: >-
 
 # Working a changes queue
 
-**If the request is a brief to plan (an app or feature to build), your whole job is `pikku changes file`
-for each piece, then one closing message listing what you filed. Do not claim, plan, build or
+**If the request is a brief to plan (an app or feature to build), your whole job is one
+`pikku changes file --plan plan.json`, then one closing message listing what you filed. Do not claim, plan, build or
 mark anything done; that is the next agents' work, and doing it here breaks their plan.**
 
 Someone walked the deployed app and circled things. Each item is their words, a
@@ -48,27 +48,29 @@ requests and a second tour of the project are separate jobs: do them only when t
 ## Filing a plan from a brief
 
 File from the brief alone. Do not read the project, other skills or the knowledge notes first: the plan
-says what each piece does for the person, and the agent that builds it reads the code. Your first
-command is `pikku changes file`.
+says what each piece does for the person, and the agent that builds it reads the code. Write the whole
+plan as one JSON file and file it in one call: `pikku changes file --plan plan.json` (`--plan -` reads stdin).
 
-Break the brief into changes a person could check one by one, each saying what they can see or do
-when it is done. Plan in verticals: the data, the functions and the screens of one feature belong together, and the
-screens are not left to the end. So the first change declares the tables and the signatures (name,
-input, output) of every function the feature needs, each declared `mock: true` with a few `.mocks/` records
-(see the pikku-build skill, mocks reference), until its real change builds it. After that the screens and the real function bodies are separate changes that run
-side by side against those signatures, and neither waits for the other.
+Each change is one a person could check, and its body says what they see or do when it is done
+("Done when you can ..."). Plan in verticals: the first change is the data, and declares the
+signatures (name, input, output) of every function the screens call as `mock: true` with a few
+`.mocks/` records (pikku-build skill, mocks reference). Every later change depends on it; screens
+(`frontend`) and real function bodies (`build`) then run side by side. `emails` is only for sending a message.
 
-File the data first, as its own change named for the data ("The shop's products, orders and stock are
-kept"): what is stored, what each record holds. Every later change that stores or reads something
-depends on it with `--depends-on <its number>`; none is filed without that link. Give each change a `--specialist`: `frontend` when
-the work is a page, screen or view (including the owner's lists of orders or bookings), `build` for
-functions, tables and rules, `emails` only for the sending of a message. Screens that only read
-the data can run side by side, so depend on the data change, not on each other.
+```json
+[
+  { "ref": "data", "title": "Recipes and their ingredients are kept", "specialist": "build", "dependsOn": [],
+    "body": "Store recipes (title, steps, servings) and ingredients. Declare listRecipes and saveRecipe with mock: true and three .mocks/ recipes. Done when you can list the mocked recipes." },
+  { "ref": "list", "title": "The recipe box page", "specialist": "frontend", "dependsOn": ["data"],
+    "body": "A page listing each recipe with its servings, and a form to add one. Done when you can add a recipe and see it in the list." },
+  { "ref": "save", "title": "Recipes are saved for real", "specialist": "build", "dependsOn": ["data"],
+    "body": "Build listRecipes and saveRecipe on the database. Decision: no sharing yet. Done when a saved recipe is still there after a reload." }
+]
+```
 
-While filing, do not run `pikku changes ask` at all: nobody is there to answer, and a change left
-waiting on an answer is a change nobody can build. Where you are unsure, write "Decision: ..." in
-the body and file it. When the last change is filed, stop: do not `claim`, `plan` or build any of them, and do not
-mark one `done`. Building is a later job for other agents.
+The command checks the plan and, if it refuses, names every problem: fix those and run it again.
+There is no field for questions: where you are unsure, write "Decision: ..." in the body. When it
+prints that filing is complete, stop: do not `claim`, `plan`, build or mark anything `done`.
 
 ## The loop
 
