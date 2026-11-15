@@ -590,7 +590,8 @@ const createIndex = (
 
 /**
  * Compile a plain table declaration into the statements a `PikkuSchema`
- * carries: every table in declaration order, then every index.
+ * carries: every managed table in declaration order, then every index. A
+ * `declareOnly` table is validated but emits nothing.
  *
  * The declaration is checked up front, so a mistake in it is a sentence naming
  * the column rather than a database error. Dialect differences are settled when
@@ -605,10 +606,15 @@ export const compileTables = (
   tables: TablesDeclaration
 ): SchemaStatementFactory[] => {
   validate(tables)
-  const creates = Object.entries(tables).map(([table, declaration]) =>
+  // A `declareOnly` table is described for validation and for the types other
+  // tables reference, but something else creates it: nothing is emitted for it.
+  const managed = Object.entries(tables).filter(
+    ([, declaration]) => declaration.declareOnly !== true
+  )
+  const creates = managed.map(([table, declaration]) =>
     createTable(tables, table, declaration)
   )
-  const indexes = Object.entries(tables).flatMap(([table, declaration]) => [
+  const indexes = managed.flatMap(([table, declaration]) => [
     ...Object.entries(declaration.columns)
       .filter(([, column]) => column.index)
       .map(([name]) => createIndex(table, [name], {})),

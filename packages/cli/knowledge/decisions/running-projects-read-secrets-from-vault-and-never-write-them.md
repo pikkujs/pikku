@@ -1,23 +1,28 @@
 ---
 type: decision
 title: A running project reads secrets from Vault and cannot write them
-description: VaultSecretService authenticates with PIKKU_VAULT_TOKEN over a unix socket, reads values, and throws on set and delete, pointing at Pikku Studio
+description: VaultSecretService reads over HTTP using a host and token from a connection file, reads values, and throws on set and delete, pointing at Pikku Studio
 tags: cli, secrets, vault
 ---
 
 # A running project reads secrets from Vault and cannot write them
 
-`packages/cli/src/utils/vault-secret-service.ts` connects to Vault over a unix
-socket. `vaultConnectionFromEnv` returns a connection only when both
-`PIKKU_VAULT_SOCKET` and `PIKKU_VAULT_TOKEN` are set (`vault-secret-service.ts:12-18`).
-Each request carries the token as a bearer header (`vault-secret-service.ts:30`).
+`packages/cli/src/utils/vault-secret-service.ts` calls the vault host over HTTP
+with `CorePikkuFetch` from `@pikku/fetch` (not `wireRemoteAddon`: the CLI builds
+its secret service before the app services exist, and that would add a `vault`
+namespace to every project). `vaultConnectionFromEnv` returns a connection only
+when `PIKKU_VAULT_CONNECTION_FILE` is set; the old `PIKKU_VAULT_SOCKET` and
+`PIKKU_VAULT_TOKEN` are ignored. The file is JSON `{ url, token }` that Studio
+rewrites atomically.
 
-Reads are the only writes-free path. `getSecret` and `hasSecret` call
-`/v1/secrets/...` (`vault-secret-service.ts:63-83`). Every call has a 5-second
-deadline (`vault-secret-service.ts:5`, `vault-secret-service.ts:48-51`).
+Reads go to `POST /rpc/vault:secretGetOwn@v1` (and `secretHasOwn@v1`) with the
+`x-pikku-remote-contract` header and the token as a bearer. On a 401 or a
+connection error the file is read again once and the call retried, so a renewed
+token or a new host port reaches a running project. Every call has a 5-second
+deadline. Errors carry the key and a status, never the token or a value.
 
-`setSecret` and `deleteSecret` throw. Both messages say secrets are written
-through Pikku Studio, not from a running project (`vault-secret-service.ts:85-91`).
+`setSecret` and `deleteSecret` throw, and the service is never `durable`. Both
+messages say secrets are written through Pikku Studio, not from a running project.
 
 **What this rules out:** a deployed process rotating or removing its own secrets,
 and a second write path that bypasses Studio's audit.

@@ -198,6 +198,15 @@ export async function loadTableDeclaration(
     if (Object.keys(physical).length > 0) {
       annotations[snakeCase(table)] = physical
     }
+    if (
+      declaration.declareOnly !== undefined &&
+      typeof declaration.declareOnly !== 'boolean'
+    ) {
+      problems.push(
+        `${table} has declareOnly ${JSON.stringify(declaration.declareOnly)}, which must be true or false`
+      )
+      continue
+    }
     const target = declaration.declareOnly === true ? declareOnly : managed
     target[table] = declaration as unknown as TablesDeclaration[string]
   }
@@ -365,16 +374,31 @@ export function refuseTableChanges(
   return refusals
 }
 
+/**
+ * `array` and `interval` are families no declared type accepts: they are
+ * recognised so they are not mistaken for the element or the lookalike type.
+ */
 type TypeFamily =
-  'text' | 'integer' | 'real' | 'boolean' | 'timestamp' | 'uuid' | 'json'
+  | 'text'
+  | 'integer'
+  | 'real'
+  | 'boolean'
+  | 'timestamp'
+  | 'uuid'
+  | 'json'
+  | 'array'
+  | 'interval'
 
 /** What an introspected type holds, or `undefined` when it is not one this can judge. */
 const familyOf = (type: string): TypeFamily | undefined => {
   const t = type.toLowerCase()
+  // Postgres reports an array as `ARRAY` with a `_`-prefixed udt name.
+  if (/\barray\b|\[\]|(^|\s)_/.test(t)) return 'array'
+  if (/interval/.test(t)) return 'interval'
   if (/bool/.test(t)) return 'boolean'
   if (/uuid/.test(t)) return 'uuid'
   if (/json/.test(t)) return 'json'
-  if (/int/.test(t)) return 'integer'
+  if (/\b(tiny|small|medium|big)?int(eger)?[248]?\b/.test(t)) return 'integer'
   if (/real|double|float|numeric|decimal/.test(t)) return 'real'
   if (/timestamp|datetime|date|time/.test(t)) return 'timestamp'
   if (/char|text|clob|user-defined/.test(t)) return 'text'
