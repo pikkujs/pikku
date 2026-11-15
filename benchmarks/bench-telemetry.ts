@@ -11,7 +11,7 @@ import { LEVELS, stats, type Level } from './bench-telemetry-shared.js'
  * processes, pinned to different cores with taskset when it exists.
  *
  *   tsx benchmarks/bench-telemetry.ts [--tree name=path@hash ...] [--runs 5] [--warmup-ms 5000] [--measure-ms 5000]
- *        [--app-core N] [--sink-core N] [--scenarios bare,schema,middleware,full] [--out file] [--decode-check]
+ *        [--app-core N] [--sink-core N] [--levels L0,LE] [--scenarios bare,schema,middleware,full] [--out file] [--decode-check]
  *
  * With no --tree the repository this file lives in is the one build, named `local`.
  */
@@ -26,6 +26,7 @@ const warmupMs = one('warmup-ms', '5000')
 const measureMs = one('measure-ms', '5000')
 const appCore = one('app-core', '')
 const sinkCore = one('sink-core', '')
+const levelNames = one('levels', LEVELS.join(',')).split(',') as Level[]
 const scenarioNames = one('scenarios', 'bare,schema,middleware,full').split(',')
 const outFile = resolve(here, one('out', 'telemetry-results.json'))
 const trees = (
@@ -134,7 +135,7 @@ const METRICS: Record<string, (r: any) => number> = {
 
 const main = async () => {
   const cells = trees.flatMap((tree) =>
-    LEVELS.flatMap((level) =>
+    levelNames.flatMap((level) =>
       scenarioNames.map((scenario) => ({ tree, level, scenario }))
     )
   )

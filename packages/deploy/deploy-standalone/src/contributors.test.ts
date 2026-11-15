@@ -45,7 +45,7 @@ describe(`StandaloneProviderAdapter contributors`, () => {
     )
     assert.match(
       source,
-      /eventHub,\n    \.\.\.\(__pikkuTelemetry\.enabled \? \{ tracer: __pikkuTelemetry\.tracer \} : \{\}\),\n    \.\.\.platformServices,\n  \}\)/,
+      /analyticsSinks: __pikkuAnalyticsSinks,\n    \.\.\.platformServices,\n  \}\)/,
       'contributed services must be spread last so they override the defaults'
     )
     assert.doesNotMatch(source, /const createPlatformServices = async/)
