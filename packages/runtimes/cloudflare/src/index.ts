@@ -1,7 +1,6 @@
 export { runFetch } from './run-fetch.js'
 export * from './run-scheduled.js'
 export * from './cloudflare-hibernation-websocket-server.js'
-export * from './cloudflare-eventhub-service.js'
 export * from './handler-factories.js'
 export * from './cloudflare-queue-service.js'
 export * from './cloudflare-d1-services.js'
