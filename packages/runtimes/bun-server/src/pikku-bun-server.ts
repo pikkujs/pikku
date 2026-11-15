@@ -3,10 +3,7 @@ import type { Server as BunServer, ServerWebSocket } from 'bun'
 import type { MCPAuthOptions } from '@pikku/modelcontextprotocol'
 
 import type { CoreConfig } from '@pikku/core/types'
-import {
-  onShutdownSignals,
-  stopSingletonServices,
-} from '@pikku/core/lifecycle'
+import { onShutdownSignals, stopSingletonServices } from '@pikku/core/lifecycle'
 import type { JWTService, Logger } from '@pikku/core/services'
 import { pikkuState } from '@pikku/core/state'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'
@@ -30,7 +27,7 @@ import { compileAllSchemas } from '@pikku/core/schema'
 
 import { resolve } from 'node:path'
 
-import { BunEventHubService } from './bun-event-hub-service.js'
+import { getEventHubDistributor } from '@pikku/core/internal/event-hub'
 
 export type StaticMount = {
   urlPrefix: string
@@ -71,14 +68,6 @@ export type BunServerConfig = CoreConfig & {
 }
 
 export type PikkuBunServerOptions = RunHTTPWiringOptions & {
-  /**
-   * Event hub backing channel pub/sub. Inject the SAME instance passed to
-   * `createSingletonServices` so functions and the WebSocket transport share
-   * one hub — otherwise a function's `eventHub.publish(...)` goes to a
-   * different hub than the one holding the live sockets and never reaches
-   * connected clients. Defaults to a fresh `BunEventHubService`.
-   */
-  eventHub?: BunEventHubService
   /**
    * Parsed content of `.pikku/mcp/mcp.gen.json`. When provided and non-empty,
    * `@pikku/modelcontextprotocol` is dynamically imported and the MCP server is
@@ -153,7 +142,6 @@ export type ShutdownHooks = {
 
 export class PikkuBunServer {
   private server: BunServer<WsData> | null = null
-  private readonly eventHub: BunEventHubService
   private readonly options: RunHTTPWiringOptions
   private readonly mcpJson?: PikkuBunServerOptions['mcpJson']
   private readonly mcpPath: string
@@ -174,7 +162,6 @@ export class PikkuBunServer {
     options: PikkuBunServerOptions = {}
   ) {
     const {
-      eventHub,
       mcpJson,
       mcpPath,
       mcpSurfaces,
@@ -182,7 +169,6 @@ export class PikkuBunServer {
       contentSigningJWT,
       ...httpOptions
     } = options
-    this.eventHub = eventHub ?? new BunEventHubService()
     this.mcpJson = mcpJson
     this.mcpPath = mcpPath ?? '/mcp'
     this.mcpSurfaces = mcpSurfaces
@@ -261,7 +247,7 @@ export class PikkuBunServer {
   }
 
   public async start(): Promise<void> {
-    const { config, logger, options, eventHub } = this
+    const { config, logger, options } = this
 
     const handleMessage = async (
       ws: ServerWebSocket<WsData>,
@@ -374,10 +360,14 @@ export class PikkuBunServer {
           channelHandler.registerOnClose(() => {
             ws.close()
           })
-          Promise.all([
-            eventHub.registerSocket(channelHandler.channelId, ws),
-            channelHandler.open(),
-          ]).catch((error: unknown) => {
+          // Attached to the process's event hub, so a function's publish reaches
+          // this socket once a subscribe function has subscribed it.
+          const distributor = getEventHubDistributor()
+          const backend = distributor?.deliveryFor('local')
+          if (distributor && backend) {
+            distributor.attach(channelHandler, backend, undefined)
+          }
+          Promise.resolve(channelHandler.open()).catch((error: unknown) => {
             logger.error(`Error opening websocket channel: ${error}`)
           })
         },
@@ -390,17 +380,14 @@ export class PikkuBunServer {
 
         close: (ws: ServerWebSocket<WsData>) => {
           const { channelHandler } = ws.data
-          Promise.all([
-            eventHub.onChannelClosed(channelHandler.channelId),
-            channelHandler.close(),
-          ]).catch((error: unknown) => {
+          getEventHubDistributor()?.detach(channelHandler.channelId)
+          Promise.resolve(channelHandler.close()).catch((error: unknown) => {
             logger.error(`Error closing websocket channel: ${error}`)
           })
         },
       },
     })
 
-    eventHub.setServer(this.server as BunServer<unknown>)
     logger.info(
       `pikku-bun-server: listening on http://${config.hostname ?? 'localhost'}:${this.port}`
     )

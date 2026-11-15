@@ -4,7 +4,6 @@ import {
   onConnect,
   onDisconnect,
   subscribe,
-  unsubscribe,
 } from '../functions/channel.functions.js'
 import {
   listTodos,
@@ -25,9 +24,6 @@ wireChannel({
       },
       subscribe: {
         func: subscribe,
-      },
-      unsubscribe: {
-        func: unsubscribe,
       },
       list: {
         func: listTodos,

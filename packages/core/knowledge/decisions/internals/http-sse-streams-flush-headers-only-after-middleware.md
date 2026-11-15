@@ -17,16 +17,17 @@ and they can never be added afterwards. `PikkuFetchHTTPResponse.createStream` in
 the same reason on the client side: proxies and browsers do not surface the
 stream until some body bytes arrive.
 
-The SSE channel is also registered with `singletonServices.eventHub` when the
-service exposes `onChannelOpened`, wrapped in a minimal object that satisfies
-`PikkuChannelHandler`. That is what makes `eventHub.publish()` reach SSE
-subscribers and not just WebSocket ones, and `channel.close` is rewrapped so the
-eventHub is told about the close. On the delivery side,
-`LocalEventHubService.publish` treats a throwing `channel.send` as a disconnect
-and calls `onChannelClosed` — an SSE `ReadableStream` controller that the browser
-has already abandoned throws rather than reporting closure.
+A subscribe function wired as an SSE route runs before the stream opens, so a
+refusal is a real 401 or 403 and no stream is ever held. Once it returns, the SSE
+channel is attached to the runtime's event hub distributor, wrapped in a minimal
+object that satisfies `PikkuChannelHandler`, and subscribed to the returned topic.
+That is what makes `eventHub.publish()` reach SSE subscribers and not just
+WebSocket ones, and `channel.close` is rewrapped so the distributor detaches the
+channel. On the delivery side the local backend treats a throwing `channel.send`
+as a disconnect and detaches the channel — an SSE `ReadableStream` controller
+that the browser has already abandoned throws rather than reporting closure.
 
 **What this rules out:** hoisting `flushHeaders()` next to the other SSE header
-calls; dropping the `:\n\n` priming frame as dead output; treating the eventHub
-registration as WebSocket-only bookkeeping; and letting `publish` propagate a
-send error instead of unregistering the channel.
+calls; dropping the `:\n\n` priming frame as dead output; treating the event hub
+registration as WebSocket-only bookkeeping; and letting delivery propagate a
+send error instead of detaching the channel.

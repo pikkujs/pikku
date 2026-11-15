@@ -1,115 +1,27 @@
-export interface EventsGenOutput {
-  schemas: string
-  functions: string
-}
-
 /**
  * Generates the server-side `events.gen.ts` scaffold.
  *
- * This file lives in the user's project and wires two transports against the
- * project's `eventHub` service:
- *
- *   1. WebSocket channel at `/events` — bidirectional. Clients send
- *      `{action: 'subscribe' | 'unsubscribe', topic}` over the same socket;
- *      multiple topic subscriptions per connection. On disconnect the
- *      eventHub's onChannelClosed hook auto-cleans subscriptions.
- *
- *   2. SSE endpoint at `GET /events/:topic` — one connection = one topic.
- *      Subscribes the channel, returns; the eventHub fans out via
- *      `channel.send` until the client closes. onChannelClosed cleans up.
- *
- * Both routes call `eventHub.subscribe`/`unsubscribe` with the channel id;
- * publish-side ergonomics (envelope shape) are documented in the
- * pikku-wiring skill.
+ * It used to wire an open `/events` channel and a `GET /events/:topic` stream
+ * that subscribed any caller to any topic. A stream now subscribes only through
+ * a `pikkuSubscribeFunc`, which runs the caller's session, scopes and
+ * permissions and returns the one topic they may follow, so nothing here can
+ * safely wire that for you. The file is kept, empty of wiring, so a project's
+ * config and imports stay valid while the app wires its own subscribe
+ * functions.
  */
-export const serializeEventsScaffold = (
-  leaf: (name: string) => string
-): EventsGenOutput => {
-  const schemas = `/**
- * Auto-generated realtime event schemas
- * Do not edit manually - regenerate with 'npx pikku'
+export const serializeEventsScaffold = (): string => `/**
+ * Auto-generated, and deliberately wiring nothing.
+ *
+ * A stream subscribes to the event hub only through a pikkuSubscribeFunc that
+ * returns the topic the caller may follow. Declare one and wire it yourself:
+ *
+ *   export const orderEvents = pikkuSubscribeFunc<{ orderId: string }, \`order:\${string}\`>({
+ *     permissions: { owner: orderOwner },
+ *     func: async (_services, { orderId }) => \`order:\${orderId}\`,
+ *   })
+ *   wireHTTP({ method: 'get', route: '/orders/:orderId/events', func: orderEvents, sse: true })
+ *
+ * See the pikku-realtime skill.
  */
-import { z } from 'zod'
-
-export const TopicRef = z.object({ topic: z.string() })
+export {}
 `
-
-  const functions = `import { pikkuSessionlessFunc } from '${leaf('function')}'
-import { pikkuChannelFunc, wireChannel, defineChannelRoutes } from '${leaf('channel')}'
-import { wireHTTP } from '${leaf('http')}'
-import { TopicRef } from './events.schemas.gen.js'
-
-/**
- * Topic envelope clients receive: \`{ topic, data }\`. Functions that publish
- * events should send this shape:
- *
- *   await eventHub.publish('todo-created', null, { topic: 'todo-created', data: { todo } })
- *
- * The pikku-wiring skill covers a thin \`publishEvent\` helper to remove
- * the duplication; pick whichever style your project prefers.
- */
-
-export const realtimeSubscribe = pikkuChannelFunc({
-  tags: ['pikku'],
-  input: TopicRef,
-  func: async ({ eventHub }, { topic }, { channel }) => {
-    await eventHub?.subscribe(topic, channel.channelId)
-  },
-})
-
-export const realtimeUnsubscribe = pikkuChannelFunc({
-  tags: ['pikku'],
-  input: TopicRef,
-  func: async ({ eventHub }, { topic }, { channel }) => {
-    await eventHub?.unsubscribe(topic, channel.channelId)
-  },
-})
-
-// Pikku dispatches by the \`action\` field; client sends
-//   { action: 'subscribe',   topic: 'todo-created' }
-//   { action: 'unsubscribe', topic: 'todo-created' }
-export const realtimeRoutes = defineChannelRoutes({
-  subscribe: realtimeSubscribe,
-  unsubscribe: realtimeUnsubscribe,
-})
-
-wireChannel({
-  name: 'events',
-  route: '/events',
-  auth: false,
-  onMessageWiring: {
-    action: realtimeRoutes,
-  },
-  tags: ['pikku:realtime'],
-})
-
-/**
- * SSE per-topic stream. One connection = one subscription. The eventHub
- * cleans up automatically when the channel closes (onChannelClosed).
- */
-export const realtimeEventStream = pikkuSessionlessFunc({
-  tags: ['pikku'],
-  input: TopicRef,
-  description: 'Auto-generated SSE stream for a single event-hub topic',
-  func: async ({ eventHub }, { topic }, { channel }) => {
-    if (!channel) {
-      throw new Error('Realtime SSE handler invoked without a channel')
-    }
-    await eventHub?.subscribe(topic, channel.channelId)
-    // Function returns; eventHub continues pushing via channel.send until
-    // the client disconnects, at which point onChannelClosed unsubscribes.
-  },
-})
-
-wireHTTP({
-  method: 'get',
-  route: '/events/:topic',
-  func: realtimeEventStream,
-  auth: false,
-  sse: true,
-  tags: ['pikku:realtime', 'sse'],
-})
-`
-
-  return { schemas, functions }
-}

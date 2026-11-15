@@ -295,7 +295,7 @@ const CORE_DOORS: Array<{ name: string; subpath: string; only: string[] }> = [
     subpath: './services',
     only: ['EmailService', 'SendEmailResult', 'EmailAttachment'],
   },
-  { name: 'eventhub', subpath: './channel', only: ['EventHubService'] },
+  { name: 'eventhub', subpath: './channel', only: ['EventHubPublisher'] },
   {
     name: 'content',
     subpath: './services',

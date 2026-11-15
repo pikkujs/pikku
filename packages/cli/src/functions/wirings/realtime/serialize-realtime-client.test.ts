@@ -25,19 +25,13 @@ describe('serializeRealtimeClient', () => {
       assert.match(out, /setAPIKey\(apiKey: string \| null\): void/)
     })
 
-    test('exposes typed subscribe/unsubscribe over EventHubTopics keys', () => {
+    test('has no open any-topic subscribe: only an sse route can be followed', () => {
       const out = serializeRealtimeClient('./pikku-fetch.gen.js')
-      assert.match(out, /subscribe<K extends keyof EventHubTopics & string>/)
-      assert.match(out, /unsubscribe<K extends keyof EventHubTopics & string>/)
-    })
-
-    test('exposes subscribeToTopic (SSE per topic) and subscribeToSSE (generic)', () => {
-      const out = serializeRealtimeClient('./pikku-fetch.gen.js')
-      assert.match(
-        out,
-        /subscribeToTopic<K extends keyof EventHubTopics & string>/
-      )
       assert.match(out, /subscribeToSSE<T = unknown>/)
+      assert.doesNotMatch(out, /subscribeToTopic/)
+      assert.doesNotMatch(out, /EventHubTopics/)
+      assert.doesNotMatch(out, /action: 'subscribe'/)
+      assert.doesNotMatch(out, /'\/events'/)
     })
 
     test('exposes connectToChannel for raw wireChannel sockets', () => {
@@ -56,35 +50,9 @@ describe('serializeRealtimeClient', () => {
       )
     })
 
-    test('reconnect defaults are reflected in the constructor', () => {
-      const out = serializeRealtimeClient('./pikku-fetch.gen.js')
-      assert.match(out, /reconnect: options\.reconnect \?\? true/)
-      assert.match(out, /reconnectDelayMs: options\.reconnectDelayMs \?\? 500/)
-      assert.match(
-        out,
-        /reconnectMaxDelayMs: options\.reconnectMaxDelayMs \?\? 10_000/
-      )
-    })
-
-    test('replays handler subscriptions on websocket reconnect', () => {
-      const out = serializeRealtimeClient('./pikku-fetch.gen.js')
-      assert.match(
-        out,
-        /onopen = \(\) => \{[\s\S]*for \(const topic of this\.handlers\.keys\(\)\)/
-      )
-    })
-
     test('resolveWsUrl rewrites http(s) to ws(s)', () => {
       const out = serializeRealtimeClient('./pikku-fetch.gen.js')
       assert.match(out, /\.replace\(\/\^http\/i, 'ws'\)/)
-    })
-
-    test('event payload dispatch only fires when the envelope has a string topic', () => {
-      const out = serializeRealtimeClient('./pikku-fetch.gen.js')
-      assert.match(
-        out,
-        /'topic' in \(payload as any\)[\s\S]*typeof \(payload as any\)\.topic === 'string'/
-      )
     })
   })
 })

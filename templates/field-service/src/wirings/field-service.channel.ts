@@ -1,9 +1,10 @@
 import {
   defineChannelRoutes,
   wireChannel,
-  pikkuChannelFunc,
   pikkuChannelConnectionFunc,
 } from '#pikku/channel/pikku-channel-types.gen.js'
+import { pikkuSubscribeFunc } from '#pikku/function'
+import { currentCompanyId } from '../lib/tenant.js'
 
 /**
  * The dispatch board, live.
@@ -19,17 +20,16 @@ export const onConnect = pikkuChannelConnectionFunc(
   }
 )
 
-export const watchBoard = pikkuChannelFunc<{ companyId: string }, void>(
-  async ({ eventHub }, { companyId }, { channel }) => {
-    await eventHub?.subscribe(`board:${companyId}`, channel.channelId)
-  }
-)
-
-export const unwatchBoard = pikkuChannelFunc<{ companyId: string }, void>(
-  async ({ eventHub }, { companyId }, { channel }) => {
-    await eventHub?.unsubscribe(`board:${companyId}`, channel.channelId)
-  }
-)
+/**
+ * The company comes from the session, never from the client: a dispatcher
+ * names no board, so there is no id to swap for another tenant's. A channel
+ * leaves the board on disconnect, which is why there is no unwatch.
+ */
+export const watchBoard = pikkuSubscribeFunc<void, `board:${string}`>({
+  scopes: ['jobs:read'],
+  func: async ({ kysely }, _data, { session }) =>
+    `board:${await currentCompanyId(kysely, session.userId)}`,
+})
 
 wireChannel({
   name: 'dispatch-board',
@@ -39,7 +39,6 @@ wireChannel({
   onMessageWiring: {
     type: defineChannelRoutes({
       watch: watchBoard,
-      unwatch: unwatchBoard,
     }),
   },
 })

@@ -13,7 +13,10 @@ import type { SchemaService } from '../services/schema-service.js'
 import type { JWTService } from '../services/jwt-service.js'
 import type { PikkuHTTP } from '../wirings/http/http.types.js'
 import type { PikkuChannel } from '../wirings/channel/channel.types.js'
-import type { EventHubService } from '../wirings/channel/eventhub-service.js'
+import type {
+  EventHubPublisher,
+  EventHubRegistry,
+} from '../wirings/channel/event-hub/event-hub.types.js'
 import type { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import type { PikkuMCP } from '../wirings/mcp/mcp.types.js'
 import type { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
@@ -202,7 +205,10 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   tracer?: Tracer
   workflowService?: WorkflowService
   queueService?: QueueService
-  eventHub?: EventHubService<Record<string, any>>
+  /** Publishes to the subscribers of an event hub topic. Publish only: a stream subscribes through a `pikkuSubscribeFunc`, never from here. */
+  eventHub?: EventHubPublisher
+  /** Where an app or addon adds a relay (`eventHubRegistry.add(relay, { topics })`). Created by the runtime before `createSingletonServices`. */
+  eventHubRegistry?: EventHubRegistry
   schedulerService?: SchedulerService
   deploymentService?: DeploymentService
   agentStorage?: AgentStorageService

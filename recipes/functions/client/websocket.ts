@@ -17,14 +17,6 @@ export const check = async (serverUrl: string, testUserId: string) => {
         console.log(`${testUserId}: Global message:`, data)
       })
 
-      websocket.subscribeToEventHub('todo-created', (data) => {
-        console.log(`${testUserId}: Todo created event:`, data)
-      })
-
-      websocket.subscribeToEventHub('todo-completed', (data) => {
-        console.log(`${testUserId}: Todo completed event:`, data)
-      })
-
       const route = websocket.getRoute('action')
 
       route.subscribe('auth', (data) => {
@@ -47,8 +39,8 @@ export const check = async (serverUrl: string, testUserId: string) => {
 
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      route.send('subscribe', { topic: 'todo-created' })
-      route.send('subscribe', { topic: 'todo-completed' })
+      route.send('subscribe', { topic: 'created' })
+      route.send('subscribe', { topic: 'completed' })
 
       await new Promise((resolve) => setTimeout(resolve, 500))
 
