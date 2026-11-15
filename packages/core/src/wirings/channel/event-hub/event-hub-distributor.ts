@@ -124,6 +124,14 @@ export class EventHubDistributor {
     }
   }
 
+  /** The registered delivery backend for a transport, for a runtime that attaches its own channels. */
+  deliveryFor(transport: string): EventHubDeliveryBackend | undefined {
+    for (const backend of this.deliveries.values()) {
+      if (backend.transport === transport) return backend
+    }
+    return undefined
+  }
+
   isAttached(channelId: string): boolean {
     return this.channels.has(channelId)
   }
