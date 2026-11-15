@@ -47,6 +47,10 @@ requests and a second tour of the project are separate jobs: do them only when t
 
 ## Filing a plan from a brief
 
+File from the brief alone. Do not read the project, other skills or the knowledge notes first: the plan
+says what each piece does for the person, and the agent that builds it reads the code. Your first
+command is `pikku changes file`.
+
 Break the brief into changes a person could check one by one, each saying what they can see or do
 when it is done. Put the tables and stored data in the first change; every change that stores or
 reads something depends on it (`--depends-on`). Give each change a `--specialist`: `frontend` when
