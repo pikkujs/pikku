@@ -6,9 +6,14 @@ export {
 export { logChannels } from './log-channels.js'
 export { PikkuAbstractChannelHandler } from './pikku-abstract-channel-handler.js'
 export type {
+  EventHubInbound,
+  EventHubInboundEvent,
+  EventHubMessage,
   EventHubPublishOptions,
   EventHubPublisher,
   EventHubRegistry,
+  EventHubRelayBackend,
+  EventHubRelayMap,
 } from './event-hub/event-hub.types.js'
 export { ChannelStore } from './channel-store.js'
 export type { Channel } from './channel-store.js'

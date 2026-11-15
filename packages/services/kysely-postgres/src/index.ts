@@ -6,6 +6,11 @@ export { PgKyselyAgentRunService } from './pg-kysely-agent-run-service.js'
 export { PgKyselyWorkflowRunService } from './pg-kysely-workflow-run-service.js'
 export { PgKyselyChannelStore } from './pg-kysely-channel-store.js'
 export { PgKyselyEventHubStore } from './pg-kysely-eventhub-store.js'
+export { PgEventHubRelay, PG_NOTIFY_MAX_BYTES } from './pg-eventhub-relay.js'
+export type {
+  PgEventHubRelayOptions,
+  PgNotifyClient,
+} from './pg-eventhub-relay.js'
 export { PgKyselySecretService } from './pg-kysely-secret-service.js'
 export { PikkuKysely } from './pikku-kysely.js'
 export { jsonbText, jsonbValue, jsonbMerge } from './jsonb.js'
