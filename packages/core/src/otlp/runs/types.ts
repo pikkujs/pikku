@@ -102,6 +102,17 @@ export interface HopView {
   name: string
   kind: string
   functionId?: string
+  /**
+   * The attributes of the hop's latest event: the end frame's once it has ended, else the start frame's. Bounded
+   * (the same copy the `run.hop` events carry).
+   */
+  attributes: Attrs
+  /**
+   * A start frame arrived, so a `run.hop` start event was sent. False for a hop seen only at its end (the sink has no
+   * `onSpanStart`, or the end came first): a consumer rebuilding from a snapshot must not replay a start the stream
+   * never sent.
+   */
+  hadStart: boolean
   startedAt: number
   endedAt?: number
   durationMs?: number
@@ -114,7 +125,11 @@ export interface RunView {
   traceId: string
   rootSpanId: string
   service?: string
+  /** The root span's attributes, as `run.started` carries them (entry wire, user id, ...). Bounded. */
+  attributes: Attrs
   startedAt: number
+  /** When the run closed: the `at` of its `run.finished`, `run.failed` or `run.expired`. Absent while open. */
+  endedAt?: number
   status: 'open' | 'finished' | 'failed' | 'expired'
   outcome?: RunOutcome | 'expired'
   durationMs?: number

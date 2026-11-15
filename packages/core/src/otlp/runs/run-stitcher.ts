@@ -2,6 +2,7 @@ import type { FinishedSpan } from '../../tracer.js'
 import { DbAccumulator } from './db-summary.js'
 import { HealthWindow } from './health-window.js'
 import {
+  boundAttrs,
   defaultClassify,
   durationMsOf,
   errorNameOf,
@@ -51,7 +52,8 @@ interface SpanRec {
   functionId?: string
   startMs: number
   startNs: bigint
-  startAttrs: Attrs
+  /** Bounded; dropped once an event has carried it, so a closed run keeps nothing the views do not. */
+  startAttrs?: Attrs
   /** A start frame arrived, so a start phase is owed. */
   hadStart: boolean
   startEmitted: boolean
@@ -144,7 +146,7 @@ export const createRunStitcher = (
     return rec.parentHop
   }
 
-  const viewOf = (run: Run, rec: SpanRec): HopView => {
+  const viewOf = (run: Run, rec: SpanRec, attributes: Attrs): HopView => {
     if (!rec.view) {
       rec.view = {
         spanId: rec.spanId,
@@ -152,6 +154,8 @@ export const createRunStitcher = (
         name: rec.name,
         kind: rec.kind,
         ...(rec.functionId ? { functionId: rec.functionId } : {}),
+        attributes,
+        hadStart: rec.startEmitted,
         startedAt: rec.startMs,
       }
       if (run.spans.get(rec.spanId) === rec) run.view?.hops.push(rec.view)
@@ -162,7 +166,9 @@ export const createRunStitcher = (
   const emitStart = (run: Run, rec: SpanRec): void => {
     if (rec.startEmitted || rec.role !== 'hop') return
     rec.startEmitted = true
-    const hop = viewOf(run, rec)
+    const attributes = rec.startAttrs ?? {}
+    rec.startAttrs = undefined
+    const hop = viewOf(run, rec, { ...attributes })
     emit(run, rec.startMs, {
       type: 'run.hop',
       phase: 'start',
@@ -172,7 +178,7 @@ export const createRunStitcher = (
       name: rec.name,
       kind: rec.kind,
       ...(rec.functionId ? { functionId: rec.functionId } : {}),
-      attributes: { ...rec.startAttrs },
+      attributes,
     })
   }
 
@@ -180,7 +186,9 @@ export const createRunStitcher = (
     const frame = rec.frame
     if (rec.endEmitted || rec.role !== 'hop' || !frame) return
     rec.endEmitted = true
-    const hop = viewOf(run, rec)
+    const attributes = boundAttrs(frame.attributes)
+    rec.startAttrs = undefined
+    const hop = viewOf(run, rec, { ...attributes })
     const endMs = nsToMs(frame.endTimeUnixNano)
     const durationMs = durationMsOf(
       frame.startTimeUnixNano,
@@ -189,6 +197,7 @@ export const createRunStitcher = (
     const outcome = outcomeOf(frame)
     const errorName = outcome === 'ok' ? null : errorNameOf(frame)
     const db = rec.db && rec.db.size > 0 ? rec.db.summary() : undefined
+    hop.attributes = { ...attributes }
     hop.endedAt = endMs
     hop.durationMs = durationMs
     hop.outcome = outcome
@@ -211,7 +220,7 @@ export const createRunStitcher = (
       name: rec.name,
       kind: rec.kind,
       ...(rec.functionId ? { functionId: rec.functionId } : {}),
-      attributes: { ...frame.attributes },
+      attributes,
       durationMs,
       outcome,
       errorName,
@@ -225,6 +234,7 @@ export const createRunStitcher = (
     if (rec.role !== 'db' || !frame) return
     const hop = nearestHop(run, rec)
     rec.frame = undefined
+    if (run.rootSpanId !== rec.spanId) rec.startAttrs = undefined
     if (!hop || hop.endEmitted) return
     ;(hop.db ??= new DbAccumulator()).add(frame)
   }
@@ -243,6 +253,7 @@ export const createRunStitcher = (
       traceId: run.traceId,
       rootSpanId: root.spanId,
       ...(service ? { service } : {}),
+      attributes: { ...root.startAttrs },
       startedAt: root.startMs,
       status: 'open',
       hops: [],
@@ -270,6 +281,7 @@ export const createRunStitcher = (
           : 0
       )
     for (const rec of ended) emitEnd(run, rec)
+    root.startAttrs = undefined
   }
 
   const retire = (run: Run): void => {
@@ -290,6 +302,7 @@ export const createRunStitcher = (
     const rootStart = run.view.startedAt
     const durationMs = Math.max(0, run.lastAtMs - rootStart)
     run.closed = true
+    run.view.endedAt = run.lastAtMs
     run.view.status = 'expired'
     run.view.outcome = 'expired'
     run.view.durationMs = durationMs
@@ -309,6 +322,7 @@ export const createRunStitcher = (
     const root = run.spans.get(run.rootSpanId!)!
     const view = run.view!
     run.closed = true
+    view.endedAt = rootEnd.atMs
     view.durationMs = rootEnd.durationMs
     view.outcome = rootEnd.outcome
     if (rootEnd.outcome === 'error') {
@@ -382,7 +396,7 @@ export const createRunStitcher = (
     ...(functionIdOf(span) ? { functionId: functionIdOf(span) } : {}),
     startMs: nsToMs(span.startTimeUnixNano),
     startNs: span.startTimeUnixNano,
-    startAttrs: { ...span.attributes },
+    startAttrs: boundAttrs(span.attributes),
     hadStart,
     startEmitted: false,
     open: false,
@@ -479,9 +493,11 @@ export const createRunStitcher = (
 
   const cloneView = (view: RunView): RunView => ({
     ...view,
+    attributes: { ...view.attributes },
     ...(view.failure ? { failure: { ...view.failure } } : {}),
     hops: view.hops.map((hop) => ({
       ...hop,
+      attributes: { ...hop.attributes },
       ...(hop.db ? { db: { ...hop.db, byOp: { ...hop.db.byOp } } } : {}),
     })),
   })
