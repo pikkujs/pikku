@@ -4,6 +4,7 @@
   "srcDirectories": ["src", "bin", "types"],
   "ignoreFiles": [
     "**/serialize-*.ts",
+    "**/utils/host-event-hub.ts",
     "**/*.test.ts",
     "**/*.spec.ts",
     "**/*.js",
