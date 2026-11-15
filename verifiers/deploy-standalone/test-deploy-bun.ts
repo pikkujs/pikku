@@ -547,7 +547,7 @@ if (!BUN_AVAILABLE) {
               }
             })
 
-            // subscribe requires a session on this channel
+            // the subscribe function requires a session on this channel
             ws.send(
               JSON.stringify({
                 action: 'auth',
@@ -556,9 +556,9 @@ if (!BUN_AVAILABLE) {
               })
             )
             await sleep(300)
-            ws.send(
-              JSON.stringify({ action: 'subscribe', topic: 'todo-created' })
-            )
+            // the subscribe function (recipes/functions) picks the topic:
+            // `created` -> `todo-created`, which createTodo publishes to
+            ws.send(JSON.stringify({ action: 'subscribe', topic: 'created' }))
             await sleep(300)
 
             const res = await fetch(`http://${clientHost}:${port}/todos`, {
