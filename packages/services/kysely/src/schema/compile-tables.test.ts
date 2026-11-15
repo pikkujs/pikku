@@ -840,6 +840,21 @@ describe('compileTables: constraints', () => {
   const refused = (columns: Record<string, any>, message: RegExp) =>
     assert.throws(() => compileTables({ t: { columns } }), message)
 
+  test('accepts a default exactly at a bound, no default on a nullable column, and a default that is an expression', () => {
+    const accepted = (columns: Record<string, any>) =>
+      assert.doesNotThrow(() => compileTables({ t: { columns } }))
+    accepted({ a: { type: 'integer', min: 1, max: 5, default: 1 } })
+    accepted({ a: { type: 'integer', min: 1, max: 5, default: 5 } })
+    accepted({ a: { type: 'text', minLength: 3, default: 'abc' } })
+    accepted({ a: { type: 'text', maxLength: 3, default: 'abc' } })
+    accepted({ a: { type: 'text', minLength: 2, default: 'é😀' } })
+    accepted({ a: { type: 'integer', min: 1, max: 5 } })
+    accepted({ a: { type: 'text', enum: ['a', 'b'], minLength: undefined } })
+    accepted({
+      a: { type: 'integer', min: 1, default: { sql: 'floor(random() * 5)' } },
+    })
+  })
+
   test('refuses a constraint the column type cannot hold', () => {
     refused(
       { a: { type: 'text', min: 1 } },
@@ -967,4 +982,36 @@ describe('compileTables: constraints on a real database', () => {
       )
     })
   })
+})
+
+describe('checkName with multibyte names', () => {
+  const cases: [string, string][] = [
+    ['😀'.repeat(20), 'q'],
+    [
+      'tabelle_für_ärzte_und_größen_ä_ö_ü_ß_extra_lang',
+      'spaltenname_ä_ö_ü_ß_länge',
+    ],
+    ['日本語のテーブル名前日本語のテーブル名前日本語', '列名列名列名列名'],
+    ['a'.repeat(40), '𝒳'.repeat(12)],
+  ]
+  for (const kind of [
+    'enum',
+    'min',
+    'max',
+    'minlength',
+    'maxlength',
+  ] as const) {
+    test(`${kind}: within 63 bytes, 64 characters, well formed, ends with the kind`, () => {
+      for (const [table, column] of cases) {
+        const name = checkName(table, column, kind)
+        assert.ok(Buffer.byteLength(name) <= 63, `${name} is too long`)
+        assert.ok([...name].length <= 64, name)
+        assert.ok(
+          name.isWellFormed(),
+          `${JSON.stringify(name)} has a lone surrogate`
+        )
+        assert.ok(name.endsWith(`_${kind}_check`), name)
+      }
+    })
+  }
 })

@@ -49,8 +49,10 @@ import { DatabaseSync } from 'node:sqlite'
 import {
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -58,7 +60,9 @@ import {
 import { cpSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, relative, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { randomUUID } from 'node:crypto'
+import { tmpdir } from 'node:os'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import postgres from 'postgres'
 import mysql from 'mysql2/promise'
 
@@ -207,6 +211,24 @@ const store = useMysql
         clearHistory: async () => {
           await one(`DELETE FROM ${TRACKING_TABLE}`)
         },
+        exec: async (statement) => {
+          await one(statement)
+        },
+        /** The statement's error message, or undefined when the engine accepted it. */
+        tryExec: async (statement) => {
+          try {
+            await one(statement)
+          } catch (error) {
+            return String(error.message)
+          }
+        },
+        checkNames: async () => {
+          const rows = await one(
+            `SELECT constraint_name AS name FROM information_schema.table_constraints
+             WHERE constraint_schema = DATABASE() AND constraint_type = 'CHECK' ORDER BY 1`
+          )
+          return rows.map((r) => r.name)
+        },
         appliedCount: async () => {
           if (!(await store.hasTable(TRACKING_TABLE))) return 0
           const [row] = await one(`SELECT COUNT(*) AS n FROM ${TRACKING_TABLE}`)
@@ -232,6 +254,23 @@ const store = useMysql
           },
           clearHistory: async () => {
             await sql.unsafe(`DELETE FROM ${TRACKING_TABLE}`)
+          },
+          exec: async (statement) => {
+            await sql.unsafe(statement)
+          },
+          tryExec: async (statement) => {
+            try {
+              await sql.unsafe(statement)
+            } catch (error) {
+              return String(error.message)
+            }
+          },
+          checkNames: async () => {
+            const rows = await sql.unsafe(
+              `SELECT conname AS name FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace
+               WHERE n.nspname = 'public' AND contype = 'c' ORDER BY 1`
+            )
+            return rows.map((r) => r.name)
           },
           appliedCount: async () => {
             const [row] = await sql.unsafe(
@@ -1003,9 +1042,9 @@ check(
   'a second generate writes nothing for the declaration'
 )
 
-const refusedBy = (label) => {
+const refusedBy = (label, subcommand = 'generate') => {
   console.log(`\n▶ ${label}`)
-  const result = spawnSync('node', [PIKKU, 'db', 'generate'], {
+  const result = spawnSync('node', [PIKKU, 'db', subcommand], {
     cwd: here,
     encoding: 'utf8',
     env,
@@ -1071,6 +1110,64 @@ check(
     /label: z\.string\(\)\.min\(2\)\.regex\(/.test(zodGen),
   'the generated zod schema carries min/max, length and pattern'
 )
+// The generated insert schema, as the runtime uses it: turned into JSON Schema
+// and handed to the app's own schema service, which throws
+// UnprocessableContentError for input the declaration forbids.
+{
+  const { z } = await import(
+    pathToFileURL(join(here, 'node_modules', 'zod', 'index.js')).href
+  )
+  const { BookmarkInsertZ } = await import(
+    pathToFileURL(join(here, '.pikku', 'db', 'zod.gen.ts')).href
+  )
+  const { CFWorkerSchemaService } = await import('@pikku/schema-cfworker')
+  const { UnprocessableContentError } = await import('@pikku/core/errors')
+  const service = new CFWorkerSchemaService({
+    info() {},
+    warn() {},
+    error() {},
+    debug() {},
+  })
+  service.compileSchema('BookmarkInsert', z.toJSONSchema(BookmarkInsertZ))
+  const good = {
+    id: randomUUID(),
+    userId: randomUUID(),
+    url: 'https://x',
+    rating: 3,
+    visibility: 'shared',
+    label: 'ab',
+  }
+  const rejects = async (input, why) => {
+    try {
+      await service.validateSchema('BookmarkInsert', input)
+    } catch (error) {
+      check(
+        error instanceof UnprocessableContentError,
+        `${why}: rejected with UnprocessableContentError`
+      )
+      return
+    }
+    check(
+      false,
+      `${why}: rejected with UnprocessableContentError (it was accepted)`
+    )
+  }
+  await service.validateSchema('BookmarkInsert', good)
+  check(true, 'a valid insert passes the schema service')
+  await service.validateSchema('BookmarkInsert', { ...good, rating: 1 })
+  await service.validateSchema('BookmarkInsert', { ...good, rating: 5 })
+  await rejects({ ...good, rating: 0 }, 'rating below min')
+  await rejects({ ...good, rating: 6 }, 'rating above max')
+  await rejects({ ...good, rating: 2.5 }, 'a non-integer rating')
+  await rejects(
+    { ...good, visibility: 'public' },
+    'visibility outside the enum'
+  )
+  await rejects({ ...good, label: 'a' }, 'label shorter than minLength')
+  await rejects({ ...good, label: 'AB' }, 'label that breaks the pattern')
+  // (A string(32) is the column's width, not a declared maxLength: the zod
+  // schema leaves it to the database, so it is not asserted here.)
+}
 declareTables(
   TABLES_SOURCE(USER_COLUMNS).replace(
     "rating: { type: 'integer', min: 1, max: 5 }",
@@ -1164,7 +1261,309 @@ if (changeFile && dialect !== 'sqlite') {
     'and none of migrate, generate or check reports an enum mismatch'
   )
 }
-if (changeFile) rmSync(join(MIGRATIONS_DIR, changeFile), { force: true })
+// On an engine the replacement was applied there, so its file stays: the ledger
+// records it, and a migration later written under the same name would drift.
+if (changeFile && dialect === 'sqlite') {
+  rmSync(join(MIGRATIONS_DIR, changeFile), { force: true })
+}
+
+// 17. Real-engine behaviour of the generated checks that only a server settles.
+//     (Postgres and MySQL; sqlite writes no checks.)
+if (dialect !== 'sqlite') {
+  const baseDeclaration = TABLES_SOURCE(USER_COLUMNS).replace(
+    "rating: { type: 'integer', min: 1, max: 5 }",
+    "rating: { type: 'integer', min: 1, max: 10 }"
+  )
+  const withTables = (extra) =>
+    baseDeclaration.replace(/\}\)\n$/, `${extra}})\n`)
+  const newMigration = (before) =>
+    readdirSync(MIGRATIONS_DIR).find((f) => !before.has(f))
+  const generateNew = (label) => {
+    const before = new Set(readdirSync(MIGRATIONS_DIR))
+    const output = captureAll(label, 'node', [PIKKU, 'db', 'generate'])
+    const file = newMigration(before)
+    return { output, file, sql: file ? sqlOf(file) : '' }
+  }
+  const handMigration = (name, body) =>
+    writeFileSync(join(MIGRATIONS_DIR, name), body)
+
+  // 17a. Two tables whose joined names read the same: `sales_line.qty` and
+  //      `sales.line_qty`. MySQL keeps check names schema-wide, so a name built
+  //      by joining with `_` would be `sales_line_qty_min_check` twice and the
+  //      second migration would be refused as a duplicate.
+  declareTables(
+    withTables(`  sales_line: {
+    columns: {
+      id: { type: 'integer', primaryKey: true },
+      qty: { type: 'integer', min: 0, max: 9 },
+    },
+  },
+  sales: {
+    columns: {
+      id: { type: 'integer', primaryKey: true },
+      lineQty: { type: 'integer', min: 0, max: 9 },
+      kind: { type: 'text', enum: ['a', 'b'] },
+    },
+  },
+`)
+  )
+  const created = generateNew(
+    'app: pikku db generate (two tables, one joined name)'
+  )
+  check(
+    Boolean(created.file),
+    'both colliding tables were written to a migration'
+  )
+  const applied = captureAll(
+    'app: pikku db migrate (colliding names)',
+    'node',
+    [PIKKU, 'db', 'migrate']
+  )
+  check(
+    !/duplicate check constraint name/i.test(applied),
+    `${dialect}: both migrations apply, no duplicate check constraint name`
+  )
+  const names = await store.checkNames()
+  check(
+    names.filter((n) =>
+      /^sales(_line)?_(qty|line_qty)_[0-9a-f]{8}_(min|max)_check$/.test(n)
+    ).length === 4 && new Set(names).size === names.length,
+    `${dialect} holds four distinct generated names for the two tables (${names.join(', ')})`
+  )
+  check(
+    (await store.tryExec(
+      "INSERT INTO sales (id, line_qty, kind) VALUES (1, 5, 'a')"
+    )) === undefined &&
+      Boolean(
+        await store.tryExec('INSERT INTO sales_line (id, qty) VALUES (1, 10)')
+      ),
+    `${dialect} enforces each table's own bound (sales_line.qty rejects 10)`
+  )
+
+  // 17b. The checks of a table a person renamed by hand. The docs tell them to
+  //      write the rename; the generated checks keep the names the old table
+  //      hashed into, and they must not go on enforcing the old rule.
+  handMigration(
+    `${String(readdirSync(MIGRATIONS_DIR).length + 1).padStart(4, '0')}-hand-rename.sql`,
+    `ALTER TABLE ${q('sales')} RENAME TO ${q('orders')};\n` +
+      `ALTER TABLE ${q('orders')} ADD CONSTRAINT ${q('orders_not_thirteen')} CHECK (${q('line_qty')} <> 13);\n`
+  )
+  declareTables(
+    withTables(`  sales_line: {
+    columns: {
+      id: { type: 'integer', primaryKey: true },
+      qty: { type: 'integer', min: 0, max: 9 },
+    },
+  },
+  orders: {
+    columns: {
+      id: { type: 'integer', primaryKey: true },
+      lineQty: { type: 'integer', min: 0, max: 20 },
+      kind: { type: 'text', enum: ['a', 'b', 'c'] },
+    },
+  },
+`)
+  )
+  // The hand rename is applied but the checks keep their old names: db check
+  // must say so, with the reason, before generate writes anything.
+  // (migrate applies the rename, then reports the declaration is ahead.)
+  refusedBy('app: pikku db migrate (the hand rename only)', 'migrate')
+  const stale = refusedBy(
+    'app: pikku db check (stale generated checks)',
+    'check'
+  )
+  check(
+    stale.status !== 0 &&
+      /sales_line_qty_[0-9a-f]{8}_max_check|sales_.*_max_check/.test(
+        stale.output
+      ) &&
+      /has since been renamed/.test(stale.output),
+    `${dialect}: db check fails on a generated check named for the old table, and says why`
+  )
+  const renamed = generateNew(
+    'app: pikku db generate (after a hand-written rename)'
+  )
+  const drops = (column, kind) =>
+    new RegExp(
+      `DROP (?:CONSTRAINT|CHECK) ${q(`sales_${column}_[0-9a-f]{8}_${kind}_check`).replace(/[`"]/g, '[`"]')}`
+    ).test(renamed.sql)
+  check(
+    drops('line_qty', 'max') && drops('kind', 'enum'),
+    'generate drops the checks still named for sales, not only adds the new ones'
+  )
+  check(
+    !renamed.sql.includes('orders_not_thirteen'),
+    'a check named by hand is left alone'
+  )
+  captureAll('app: pikku db migrate (renamed table)', 'node', [
+    PIKKU,
+    'db',
+    'migrate',
+  ])
+  check(
+    (await store.tryExec(
+      "INSERT INTO orders (id, line_qty, kind) VALUES (11, 15, 'c')"
+    )) === undefined,
+    `${dialect}: line_qty 15 and kind 'c' are accepted once the stale checks are gone`
+  )
+  check(
+    Boolean(
+      await store.tryExec(
+        "INSERT INTO orders (id, line_qty, kind) VALUES (12, 25, 'a')"
+      )
+    ) &&
+      Boolean(
+        await store.tryExec(
+          "INSERT INTO orders (id, line_qty, kind) VALUES (13, 1, 'd')"
+        )
+      ),
+    `${dialect}: the widened bounds still refuse 25 and 'd'`
+  )
+  check(
+    Boolean(
+      await store.tryExec(
+        "INSERT INTO orders (id, line_qty, kind) VALUES (14, 13, 'a')"
+      )
+    ),
+    `${dialect}: the hand-written check still enforces`
+  )
+  const again = generateNew(
+    'app: pikku db generate (after the rename was applied)'
+  )
+  check(!again.file, 'a second generate writes nothing')
+  const checkedAfterRename = captureAll(
+    'app: pikku db check (after the rename)',
+    'node',
+    [PIKKU, 'db', 'check']
+  )
+  check(
+    !/stale|no longer declared/i.test(checkedAfterRename),
+    'db check reports no stale generated check'
+  )
+
+  // 17c. A populated table through every kind of change: each constraint
+  //      added on an existing column (validated against the rows already in
+  //      it), every bound changed (MySQL swaps through an interim name), and
+  //      every constraint removed again.
+  const ledgerDeclaration = (columns) =>
+    withTables(`  sales_line: {
+    columns: {
+      id: { type: 'integer', primaryKey: true },
+      qty: { type: 'integer', min: 0, max: 9 },
+    },
+  },
+  orders: {
+    columns: {
+      id: { type: 'integer', primaryKey: true },
+      lineQty: { type: 'integer', min: 0, max: 20 },
+      kind: { type: 'text', enum: ['a', 'b', 'c'] },
+    },
+  },
+  ledger: {
+    columns: {
+      id: { type: 'integer', primaryKey: true },
+      ${columns}
+    },
+  },
+`)
+  const ledgerNames = async () =>
+    (await store.checkNames()).filter((n) => n.startsWith('ledger_'))
+  const apply = (label) => captureAll(label, 'node', [PIKKU, 'db', 'migrate'])
+  const rejected = async (sql) => Boolean(await store.tryExec(sql))
+
+  declareTables(
+    ledgerDeclaration(`qty: { type: 'integer' },
+      kind: { type: 'text' },
+      code: { type: 'string(8)' },`)
+  )
+  generateNew('app: pikku db generate (a plain ledger)')
+  apply('app: pikku db migrate (a plain ledger)')
+  check(
+    (await store.tryExec(
+      "INSERT INTO ledger (id, qty, kind, code) VALUES (1, 3, 'a', 'abc')"
+    )) === undefined,
+    `${dialect}: the ledger is populated before any constraint exists`
+  )
+
+  declareTables(
+    ledgerDeclaration(`qty: { type: 'integer', min: 1, max: 5 },
+      kind: { type: 'text', enum: ['a'] },
+      code: { type: 'string(8)', minLength: 2, maxLength: 6 },`)
+  )
+  const added = generateNew(
+    'app: pikku db generate (constraints on a populated table)'
+  )
+  check(
+    dialect === 'postgres'
+      ? added.sql.includes('NOT VALID') &&
+          added.sql.includes('VALIDATE CONSTRAINT')
+      : added.sql.includes('-- pikku:check-probe'),
+    `${dialect}: the constraints are added the way this engine allows on a populated table`
+  )
+  apply('app: pikku db migrate (constraints on a populated table)')
+  check(
+    (await ledgerNames()).length === 5,
+    `${dialect}: all five kinds exist on the ledger (${(await ledgerNames()).join(', ')})`
+  )
+  for (const [why, sql] of [
+    ['qty above max', 'INSERT INTO ledger (id, qty) VALUES (2, 9)'],
+    ['qty below min', 'INSERT INTO ledger (id, qty) VALUES (3, 0)'],
+    ['kind outside the enum', "INSERT INTO ledger (id, kind) VALUES (4, 'z')"],
+    ['code too short', "INSERT INTO ledger (id, code) VALUES (5, 'x')"],
+    ['code too long', "INSERT INTO ledger (id, code) VALUES (6, 'abcdefg')"],
+  ]) {
+    check(
+      await rejected(sql),
+      `${dialect}: the added constraint refuses ${why}`
+    )
+  }
+
+  declareTables(
+    ledgerDeclaration(`qty: { type: 'integer', min: 0, max: 8 },
+      kind: { type: 'text', enum: ['a', 'b'] },
+      code: { type: 'string(8)', minLength: 1, maxLength: 7 },`)
+  )
+  generateNew('app: pikku db generate (every bound changed)')
+  apply('app: pikku db migrate (every bound changed)')
+  const changed = await ledgerNames()
+  check(
+    changed.length === 5 && !changed.some((n) => n.startsWith('pikku_next_')),
+    `${dialect}: the five checks were replaced in place, none left behind (${changed.join(', ')})`
+  )
+  check(
+    (await store.tryExec(
+      "INSERT INTO ledger (id, qty, kind, code) VALUES (7, 8, 'b', 'abcdefg')"
+    )) === undefined,
+    `${dialect}: the widened bounds accept what the old ones refused`
+  )
+  check(
+    (await rejected('INSERT INTO ledger (id, qty) VALUES (8, 9)')) &&
+      (await rejected("INSERT INTO ledger (id, kind) VALUES (9, 'c')")),
+    `${dialect}: the new bounds still refuse what is outside them`
+  )
+
+  declareTables(
+    ledgerDeclaration(`qty: { type: 'integer' },
+      kind: { type: 'text' },
+      code: { type: 'string(8)' },`)
+  )
+  generateNew('app: pikku db generate (every constraint removed)')
+  apply('app: pikku db migrate (every constraint removed)')
+  check(
+    (await ledgerNames()).length === 0,
+    `${dialect}: removing the declarations dropped all five checks`
+  )
+  check(
+    (await store.tryExec(
+      "INSERT INTO ledger (id, qty, kind, code) VALUES (10, 99, 'z', 'x')"
+    )) === undefined,
+    `${dialect}: and the column takes any value again`
+  )
+  check(
+    !generateNew('app: pikku db generate (ledger settled)').file,
+    `${dialect}: a further generate writes nothing`
+  )
+}
 
 declareTables(
   TABLES_SOURCE(`id: { type: 'id', primaryKey: true },
@@ -1187,6 +1586,55 @@ check(
   'the old statements shape is refused with a pointer to MIGRATION.md'
 )
 rmSync(TABLES_TS, { force: true })
+
+// 18. MariaDB cannot be the target: it would take a CHECK it enforces
+//     differently, so generate refuses before writing anything. In CI the
+//     server is a service container and its absence is a failure, not a skip.
+if (useMysql) {
+  const mariadbUrl = process.env.MARIADB_URL
+  if (!mariadbUrl) {
+    check(
+      !process.env.CI,
+      'MARIADB_URL must point at a MariaDB server in CI (the refusal is only proved against a real one)'
+    )
+    console.log('\n· MariaDB refusal not run here: set MARIADB_URL to run it')
+  } else {
+    // A project meeting MariaDB for the first time: the earlier migrations that
+    // carry CHECKs are set aside, so the declaration is new to this server.
+    const aside = mkdtempSync(join(tmpdir(), 'pikku-mariadb-aside-'))
+    const moved = readdirSync(MIGRATIONS_DIR).filter((f) =>
+      /app-tables|hand-/.test(f)
+    )
+    for (const f of moved) renameSync(join(MIGRATIONS_DIR, f), join(aside, f))
+    try {
+      declareTables(TABLES_SOURCE(USER_COLUMNS))
+      console.log('\n▶ app: pikku db generate (against MariaDB)')
+      const before = readdirSync(MIGRATIONS_DIR).length
+      const result = spawnSync('node', [PIKKU, 'db', 'generate'], {
+        cwd: here,
+        encoding: 'utf8',
+        env: { ...env, PIKKU_VERIFIER_MYSQL_URL: mariadbUrl },
+      })
+      const output = `${result.stdout ?? ''}${result.stderr ?? ''}`
+      process.stdout.write(output)
+      check(
+        result.status !== 0 &&
+          output.includes(
+            'MariaDB is not supported; use MySQL 8.0.16+ or Postgres'
+          ),
+        'a MariaDB server is refused with the one-sentence reason'
+      )
+      check(
+        readdirSync(MIGRATIONS_DIR).length === before,
+        'and nothing was written for it'
+      )
+    } finally {
+      for (const f of moved) renameSync(join(aside, f), join(MIGRATIONS_DIR, f))
+      rmSync(aside, { recursive: true, force: true })
+    }
+    rmSync(TABLES_TS, { force: true })
+  }
+}
 
 await store.close()
 

@@ -208,11 +208,16 @@ export const checkName = (
   const [t, c] = [snake(table), snake(column)]
   const hash = createHash('sha1').update(`${t}\0${c}`).digest('hex').slice(0, 8)
   const tail = `_${hash}_${kind}_check`
-  let head = `${t}_${c}`
-  while (Buffer.byteLength(head) + Buffer.byteLength(tail) > MAX_NAME_BYTES) {
-    head = head.slice(0, -1)
+  // Cut by code point, never through a surrogate pair, so the name stays valid
+  // text whatever the table and column are called.
+  const head = [...`${t}_${c}`]
+  while (
+    head.length > 0 &&
+    Buffer.byteLength(head.join('')) + Buffer.byteLength(tail) > MAX_NAME_BYTES
+  ) {
+    head.pop()
   }
-  return `${head}${tail}`
+  return `${head.join('')}${tail}`
 }
 
 /**

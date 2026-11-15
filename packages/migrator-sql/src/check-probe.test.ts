@@ -134,3 +134,45 @@ test('the Postgres probe runs under a local statement_timeout', async () => {
     'ROLLBACK',
   ])
 })
+
+describe('beforeDataChanges: statements that change data without starting UPDATE, DELETE or INSERT', () => {
+  const probe = '-- pikku:check-probe {"table":"item","sql":"SELECT 1"}\n'
+  const alter = 'ALTER TABLE item ADD CONSTRAINT c CHECK (qty >= 1);'
+  const stops = [
+    'REPLACE INTO item (id, qty) VALUES (1, 1);',
+    'replace into item select * from other;',
+    'CALL repair_quantities();',
+    'COPY item FROM STDIN;',
+    "COPY item (id, qty) FROM '/tmp/x.csv' WITH (FORMAT csv);",
+    "LOAD DATA INFILE '/tmp/x.csv' INTO TABLE item;",
+    'DO $$ BEGIN UPDATE item SET qty = 1 WHERE qty < 1; END $$;',
+    'DO $fix$ BEGIN IF true THEN DELETE FROM item; END IF; END $fix$ LANGUAGE plpgsql;',
+    'EXPLAIN ANALYZE UPDATE item SET qty = 1;',
+    'EXPLAIN (ANALYZE, BUFFERS) DELETE FROM item;',
+    'explain analyze with f as (insert into item values (1) returning *) select 1;',
+  ]
+  for (const body of stops) {
+    test(`stops at ${body.slice(0, 40)}`, () => {
+      assert.equal(
+        beforeDataChanges(`SELECT 1;\n${body}\n${probe}${alter}`),
+        'SELECT 1;\n'
+      )
+    })
+  }
+
+  const passes = [
+    'COPY item TO STDOUT;',
+    'COPY (SELECT * FROM item) TO STDOUT;',
+    'DO $$ BEGIN PERFORM 1; END $$;',
+    'EXPLAIN SELECT * FROM item;',
+    "SELECT replace(name, 'a', 'b') FROM item;",
+    'CREATE TABLE copy_of (a int);',
+    'CREATE TABLE replaced (a int);',
+  ]
+  for (const body of passes) {
+    test(`does not stop at ${body.slice(0, 40)}`, () => {
+      const sql = `${body}\n${probe}${alter}`
+      assert.equal(beforeDataChanges(sql), sql)
+    })
+  }
+})

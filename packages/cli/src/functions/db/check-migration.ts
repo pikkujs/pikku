@@ -9,7 +9,6 @@
  */
 import { checkProbeLine } from '@pikku/migrator-sql'
 import type { ColumnCheck, ColumnInfo } from './db-introspector.js'
-import { checkName } from '@pikku/kysely'
 import { checkFingerprint } from './check-enums.js'
 
 /** The oldest MySQL that enforces a `CHECK`; before it the clause is parsed and ignored. */
@@ -31,21 +30,20 @@ export interface ConstraintPlan {
   reasons: string[]
 }
 
-const GENERATED_KINDS = [
-  'enum',
-  'min',
-  'max',
-  'minlength',
-  'maxlength',
-] as const
-
 /**
- * Whether `name` is one a declaration generated for this column: exactly what
- * `checkName` gives it for some kind. One named otherwise is a person's, and the
- * declaration says nothing about it.
+ * The shape of a name `checkName` gives: `<readable front>_<8 hex>_<kind>_check`.
+ * The hash is of the table and column the check was generated for, so after a
+ * table or column is renamed by hand the check keeps a name that no longer
+ * matches `checkName` for where it sits. Recognising the shape, rather than the
+ * exact name, is what lets such a check be found and replaced; a name a person
+ * chose that does not have this shape is never touched.
  */
-const generatedFor = (name: string, table: string, column: string): boolean =>
-  GENERATED_KINDS.some((kind) => checkName(table, column, kind) === name)
+const GENERATED_NAME =
+  /_[0-9a-f]{8}_(?:enum|min|max|minlength|maxlength)_check$/
+
+/** Whether `name` is one a declaration generated, for this column or for where it was before a rename. */
+export const isGeneratedCheckName = (name: string): boolean =>
+  GENERATED_NAME.test(name)
 
 /**
  * How the constraints on an existing column differ from its declaration.
@@ -67,12 +65,18 @@ export function planConstraints(
   const plan: ConstraintPlan = { drop: [], add: [], reasons: [] }
   for (const check of held) {
     if (
-      generatedFor(check.name, table, column) &&
+      isGeneratedCheckName(check.name) &&
       !wanted.some((w) => w.name === check.name)
     ) {
       plan.drop.push(check.name)
       plan.reasons.push(
-        `${check.name} (${check.expression}) is no longer declared`
+        wanted.some(
+          (w) =>
+            checkFingerprint(w.expression) ===
+            checkFingerprint(check.expression)
+        )
+          ? `${check.name} (${check.expression}) is named for a table or column that has since been renamed`
+          : `${check.name} (${check.expression}) is no longer declared`
       )
     }
   }
@@ -261,9 +265,27 @@ export function dropCheckStatement(
     : `ALTER TABLE ${qualifiedTable} DROP CONSTRAINT ${quote(name)};`
 }
 
-/** The name a changed check is held under while its replacement goes in. */
-export const interimCheckName = (name: string) =>
-  `pikku_next_${name}`.slice(0, 64)
+/** What Postgres keeps of an identifier (bytes); MySQL's 64 characters is never more than this. */
+const MAX_CHECK_NAME_BYTES = 63
+
+/**
+ * The name a changed check is held under while its replacement goes in:
+ * `pikku_next_` and the name, with the readable front of the name cut, by code
+ * point, when that would not fit. The end of a generated name (its hash and
+ * `_<kind>_check`) is what is kept, so the interim name stays unique and ends
+ * the same way.
+ */
+export const interimCheckName = (name: string) => {
+  const marker = 'pikku_next_'
+  const chars = [...name]
+  while (
+    chars.length > 1 &&
+    Buffer.byteLength(marker + chars.join('')) > MAX_CHECK_NAME_BYTES
+  ) {
+    chars.shift()
+  }
+  return marker + chars.join('')
+}
 
 /**
  * Every statement a column's constraint plan needs, in the order that is safe.
@@ -297,7 +319,8 @@ export function checkChangeStatements(
     for (const check of plan.add) out.push(...add(check.name, check.expression))
     return out
   }
-  for (const name of plan.drop) if (!changed.has(name)) out.push(drop(name))
+  // A bound is never left unenforced: what is added goes in before what is
+  // dropped, so a replacement the rows refuse leaves the old check in place.
   for (const check of plan.add) {
     if (!changed.has(check.name)) {
       out.push(...add(check.name, check.expression))
@@ -311,6 +334,7 @@ export function checkChangeStatements(
       drop(interim)
     )
   }
+  for (const name of plan.drop) if (!changed.has(name)) out.push(drop(name))
   return out
 }
 
@@ -322,12 +346,17 @@ export const MARIADB_REFUSAL =
  * What a MySQL-protocol server's `version()` string says about `CHECK`:
  * `'mariadb'` for a server this does not support, `'too-old'` for a MySQL that
  * parses a `CHECK` and ignores it, otherwise `'ok'`. `8.0.36` and
- * `8.0.36-0ubuntu1` are understood.
+ * `8.0.36-0ubuntu1` and Aurora MySQL 3's `8.0.mysql_aurora.3.04.0` are understood.
  */
 export function mysqlCheckSupport(
   version: string
 ): 'ok' | 'too-old' | 'mariadb' {
   if (/mariadb/i.test(version)) return 'mariadb'
+  // Aurora MySQL 3 reports `8.0.mysql_aurora.3.04.0`: the engine is MySQL 8.0.23+
+  // compatible (its first release, 3.01.0, is 8.0.23), so it enforces CHECK.
+  // Aurora 2 is 5.7-compatible and reports `5.7.mysql_aurora.2.x`.
+  const aurora = /^8\.0\.mysql_aurora\.(\d+)\.\d+\.\d+/.exec(version)
+  if (aurora) return Number(aurora[1]) >= 3 ? 'ok' : 'too-old'
   const found = /^(\d+)\.(\d+)\.(\d+)/.exec(version)
   if (!found) return 'too-old'
   const [a, b, c] = found.slice(1).map(Number) as [number, number, number]

@@ -340,7 +340,12 @@ pikku db migrate    # applies it and regenerates the types
   `ADD`/`DROP CONSTRAINT` (postgres `NOT VALID` then `VALIDATE`, though one
   transaction still holds the lock; MySQL swaps a changed check in under an
   interim name), each added check preceded by a `-- pikku:check-probe` line that
-  `migrate` runs against existing rows first. **SQLite gets no CHECK at all**:
+  `migrate` runs against existing rows first. A generated-shape check
+  (`..._<8 hex>_<kind>_check`) the declaration no longer wants under that exact
+  name is dropped (add first, then drop, so a bound is never unenforced), which
+  is what removes the old rule after you rename a table or column by hand; `db
+  check` reports it, a check with a name of your own is left alone. Aurora MySQL 3.x is
+  accepted, MariaDB, Aurora 2.x and 5.7 are refused. **SQLite gets no CHECK at all**:
   validation only, and `db generate`/`db check` print one notice with the
   `CHECK` SQL to add by hand (constraints a hand-written check in the migrations
   already enforces are left out, so the notice goes once you add them) (silence: `validate.rules["db-sqlite-unenforced-constraints"]

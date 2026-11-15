@@ -2061,6 +2061,8 @@ export interface DeclaredTablesPlan {
   body: string
   /** Why nothing can be written. When present, `body` is empty. */
   refusals: string[]
+  /** What the migration changes about constraints that exist, and why: a stale check dropped, a changed bound. */
+  notes?: string[]
 }
 
 /**
@@ -2224,6 +2226,7 @@ export async function planDeclaredTables(
   }
 
   // SQLite gets no generated CHECKs, so there is nothing to compare there.
+  const notes: string[] = []
   for (const table of resolved.dialect === 'sqlite' ? [] : tables) {
     const actual = coveredTable(covered, table, schemaName)
     if (!actual) continue
@@ -2233,6 +2236,7 @@ export async function planDeclaredTables(
       if (!existing) continue
       const plan = planConstraints(table, column, info, existing)
       if (plan.drop.length + plan.add.length === 0) continue
+      notes.push(...plan.reasons.map((r) => `${table}.${column}: ${r}`))
 
       const added = plan.add.map((check) => ({
         column,
@@ -2289,7 +2293,12 @@ export async function planDeclaredTables(
       ...left.missingColumns.map((c) => `${c.table} still lacks ${c.columns}`),
     ]
   })
-  return { tables, body: rehearsal.length ? '' : body, refusals: rehearsal }
+  return {
+    tables,
+    body: rehearsal.length ? '' : body,
+    refusals: rehearsal,
+    notes,
+  }
 }
 
 /** The `version()` the configured MySQL-protocol server reports. */
@@ -2347,6 +2356,8 @@ async function rehearseMigration(
 export interface DeclaredTablesDrift {
   pending: boolean
   refusals: string[]
+  /** Why a pending migration changes constraints that exist (a stale check, a changed bound). */
+  notes: string[]
 }
 
 export async function declaredSqliteConstraintNotice(
@@ -2371,6 +2382,7 @@ export async function computeDeclaredTablesDrift(
   return {
     pending: Boolean(plan?.body),
     refusals: plan?.refusals ?? [],
+    notes: plan?.body ? (plan.notes ?? []) : [],
   }
 }
 

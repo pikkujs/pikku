@@ -78,18 +78,16 @@ describe('planConstraints and which checks are generated', () => {
     assert.deepEqual(plan.add, [])
   })
 
-  test("another table's check, or a hand-named one, is not read as generated", () => {
+  test('a hand-named check is not read as generated, whatever it says', () => {
     const plan = planConstraints(
       'item',
       'qty',
       col([]),
       col([
-        {
-          name: checkName('sales_item', 'qty', 'max'),
-          expression: '"qty" <= 9',
-        },
         { name: 'item_qty_min_check', expression: ge0 },
         { name: 'item_qty_previous_min_check', expression: '"qty" >= 1' },
+        { name: 'qty_8digits_min_check', expression: '"qty" >= 1' },
+        { name: 'item_qty_0b0cb5ff_other_check', expression: '"qty" >= 1' },
       ])
     )
     assert.deepEqual(plan.drop, [])
@@ -116,6 +114,58 @@ describe('planConstraints and which checks are generated', () => {
       col([{ name: 'item_qty_previous_min_check', expression: ge0 }])
     )
     assert.deepEqual(plan, { drop: [], add: [], reasons: [] })
+  })
+})
+
+describe('planConstraints after a hand-written rename', () => {
+  // `sales.line_qty` was renamed to `orders.line_qty` by hand: the checks keep
+  // the names the old table and column hashed into.
+  const stale = {
+    max: checkName('sales', 'line_qty', 'max'),
+    enum: checkName('sales', 'kind', 'enum'),
+  }
+
+  test('a generated-shape check under the old name is dropped and the widened bound added', () => {
+    const plan = planConstraints(
+      'orders',
+      'line_qty',
+      col([
+        {
+          name: checkName('orders', 'line_qty', 'max'),
+          expression: '"line_qty" <= 20',
+        },
+      ]),
+      col([{ name: stale.max, expression: '"line_qty" <= 9' }])
+    )
+    assert.deepEqual(plan.drop, [stale.max])
+    assert.deepEqual(plan.add, [
+      {
+        name: checkName('orders', 'line_qty', 'max'),
+        expression: '"line_qty" <= 20',
+      },
+    ])
+  })
+
+  test('the same condition under the old name is only a rename: added under the new name, old dropped', () => {
+    const next = checkName('orders', 'kind', 'enum')
+    const expression = `"kind" IN ('a', 'b')`
+    const plan = planConstraints(
+      'orders',
+      'kind',
+      col([{ name: next, expression }]),
+      col([{ name: stale.enum, expression }])
+    )
+    assert.deepEqual(plan.drop, [stale.enum])
+    assert.deepEqual(plan.add, [{ name: next, expression }])
+  })
+
+  test('a plan that is already in line is idempotent', () => {
+    const name = checkName('orders', 'line_qty', 'max')
+    const check = { name, expression: '"line_qty" <= 20' }
+    assert.deepEqual(
+      planConstraints('orders', 'line_qty', col([check]), col([check])),
+      { drop: [], add: [], reasons: [] }
+    )
   })
 })
 
@@ -674,4 +724,61 @@ describe('mysqlCheckRefusal', () => {
     )
     assert.equal(mysqlCheckRefusal('too-old', [], 'db/tables.ts'), undefined)
   })
+})
+
+describe('interimCheckName', () => {
+  const names = [
+    checkName('item', 'qty', 'min'),
+    checkName(
+      'a_table_with_a_really_long_name_for_testing_limits',
+      'a_column_with_an_equally_long_name_for_testing',
+      'maxlength'
+    ),
+    checkName('😀'.repeat(20), 'q', 'enum'),
+    checkName(
+      '日本語のテーブル名前日本語のテーブル名前日本語',
+      '列名列名列名列名',
+      'minlength'
+    ),
+  ]
+  test('fits the engines, is well formed, differs from the final name and keeps its ending', () => {
+    for (const name of names) {
+      const interim = interimCheckName(name)
+      assert.ok(Buffer.byteLength(interim) <= 63, interim)
+      assert.ok([...interim].length <= 64, interim)
+      assert.ok(interim.isWellFormed(), JSON.stringify(interim))
+      assert.notEqual(interim, name)
+      assert.match(interim, /_[0-9a-f]{8}_[a-z]+_check$/)
+      assert.ok(interim.startsWith('pikku_next_'), interim)
+    }
+  })
+  test('two different checks never share an interim name', () => {
+    assert.equal(new Set(names.map(interimCheckName)).size, names.length)
+  })
+})
+
+describe('mysqlCheckSupport on real version strings', () => {
+  const cases: [string, 'ok' | 'too-old' | 'mariadb'][] = [
+    ['8.4.13', 'ok'],
+    ['8.0.36-0ubuntu1', 'ok'],
+    ['8.0.16', 'ok'],
+    ['8.0.15', 'too-old'],
+    ['5.7.44-log', 'too-old'],
+    ['8.0.mysql_aurora.3.04.0', 'ok'],
+    ['8.0.mysql_aurora.3.10.1', 'ok'],
+    ['5.7.mysql_aurora.2.11.4', 'too-old'],
+    ['8.0.mysql_aurora.2.12.0', 'too-old'],
+    ['10.11.6-MariaDB', 'mariadb'],
+    ['11.8.2-MariaDB-ubu2404', 'mariadb'],
+    ['', 'too-old'],
+    ['garbage', 'too-old'],
+    ['8.0', 'too-old'],
+    ['8.0.mysql_aurora.', 'too-old'],
+    ['8.0.mysql_aurora.x.y.z', 'too-old'],
+  ]
+  for (const [version, expected] of cases) {
+    test(`${JSON.stringify(version)} is ${expected}`, () => {
+      assert.equal(mysqlCheckSupport(version), expected)
+    })
+  }
 })

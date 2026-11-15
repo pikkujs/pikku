@@ -209,15 +209,38 @@ export class CheckProbeError extends Error {
 const DATA_CHANGE = new Set(['update', 'delete', 'insert', 'truncate', 'merge'])
 
 /**
+ * Statements that start with a word of their own and change data all the same:
+ * MySQL's `REPLACE` and `LOAD DATA`, and `CALL` (a procedure can do anything).
+ */
+const DATA_CHANGE_FIRST_WORD = new Set(['replace', 'call', 'load'])
+
+/** A word anywhere in the body of a `DO` block that could be a data change. */
+const DO_BODY_CHANGE =
+  /\b(?:update|delete|insert|truncate|merge|replace|call|copy|execute)\b/i
+
+/**
  * Where the first statement that can change data starts, or -1. Read as SQL
  * rather than as lines: a statement need not start a line, a `WITH` can carry a
  * data-changing CTE (`WITH f AS (UPDATE ... RETURNING *) SELECT ...`) or end in
  * one (`WITH s AS (...) UPDATE ...`), and `ON DELETE`, `FOR UPDATE`, strings,
  * comments, quoted names and `$$` bodies are not statements.
+ *
+ * Also read as a data change: `REPLACE`, `CALL` and `LOAD DATA` as a statement,
+ * `COPY ... FROM` (not `COPY ... TO`), a `DO` block whose body has an `UPDATE`,
+ * `DELETE`, `INSERT`, `TRUNCATE`, `MERGE`, `REPLACE`, `CALL`, `COPY` or `EXECUTE`
+ * anywhere in it, and `EXPLAIN` of a statement that changes data (which runs it
+ * under `ANALYZE`). The last two over-read on purpose: a `FOR UPDATE` in a `DO`
+ * body, or a plain `EXPLAIN UPDATE`, stops the probes, which is a probe that
+ * does not run, never a probe that ran on rows a statement had changed. What no
+ * scan can see is a function with side effects called from a `SELECT`.
  */
 function firstDataChange(sql: string): number {
   let statement = -1 // the first word of the statement being read
   let isWith = false
+  let isCopy = false
+  let isExplain = false
+  let isDo = false
+  let depth = 0
   let previous = ''
   let i = 0
   while (i < sql.length) {
@@ -253,6 +276,12 @@ function firstDataChange(sql: string): number {
       const tag = /^\$[A-Za-z_]*\$/.exec(sql.slice(i))
       if (tag) {
         const close = sql.indexOf(tag[0], i + tag[0].length)
+        if (
+          isDo &&
+          DO_BODY_CHANGE.test(sql.slice(i, close === -1 ? sql.length : close))
+        ) {
+          return statement
+        }
         i = close === -1 ? sql.length : close + tag[0].length
         previous = '$'
         continue
@@ -265,20 +294,35 @@ function firstDataChange(sql: string): number {
       if (statement === -1) {
         statement = from
         isWith = word === 'with'
-        if (DATA_CHANGE.has(word)) return from
+        isCopy = word === 'copy'
+        isExplain = word === 'explain'
+        isDo = word === 'do'
+        if (DATA_CHANGE.has(word) || DATA_CHANGE_FIRST_WORD.has(word)) {
+          return from
+        }
       } else if (
         isWith &&
         DATA_CHANGE.has(word) &&
         (previous === '(' || previous === ')')
       ) {
         return statement
+      } else if (isCopy && depth === 0 && word === 'from') {
+        return statement
+      } else if (isExplain && DATA_CHANGE.has(word)) {
+        return statement
       }
       previous = word
       continue
     }
+    if (ch === '(') depth++
+    if (ch === ')') depth = Math.max(0, depth - 1)
     if (ch === ';') {
       statement = -1
       isWith = false
+      isCopy = false
+      isExplain = false
+      isDo = false
+      depth = 0
     }
     if (!/\s/.test(ch)) previous = ch
     i++
