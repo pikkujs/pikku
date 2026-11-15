@@ -306,7 +306,7 @@ export function mysqlCheckColumn(
   columns: readonly string[]
 ): string | undefined {
   const named = new Set(
-    [...stripStrings(clause).matchAll(/`([^`]+)`/g)]
+    [...stripStrings(mysqlCheckClause(clause)).matchAll(/`([^`]+)`/g)]
       .map((m) => columnNamed(m[1]!, columns))
       .filter((name): name is string => name !== undefined)
   )
@@ -318,15 +318,106 @@ function stripStrings(text: string): string {
   return text.replace(/'(?:[^']|'')*'/g, "''")
 }
 
+/**
+ * The text of a MySQL check, as `information_schema.check_constraints` hands it
+ * back, rewritten as the SQL Pikku writes: no charset introducers, each string
+ * literal single-quoted with `'` and `\\` doubled.
+ *
+ * What a real MySQL 8.4 returns for `` `color` IN ('red','blue') `` is
+ * `` (`color` in (_utf8mb4\'red\',_utf8mb4\'blue\')) ``: the clause is stored
+ * as escaped text, so every literal is wrapped in `\'`, a quote or a backslash
+ * inside a value is escaped a second time (`it's` is `it\\\'s`), a charset
+ * introducer sits in front of each literal, and non-ASCII text comes back as
+ * latin1 mojibake. `SHOW CREATE TABLE`'s form (`_utf8mb4'it\'s'`) and a plain
+ * one with doubled quotes are read as well.
+ */
+export function mysqlCheckClause(raw: string): string {
+  return lexMysqlClause(raw).text
+}
+
+/** Undo the latin1-read-as-utf8 mangling of non-ASCII text, when that is what this is. */
+function repairMojibake(text: string): string {
+  // Only the bytes a latin1 read can produce, and only when they decode.
+  // eslint-disable-next-line no-control-regex
+  if (/^[\u0000-\u007f]*$/.test(text) || /[^\u0000-\u00ff]/.test(text)) {
+    return text
+  }
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(
+      Uint8Array.from(text, (c) => c.charCodeAt(0))
+    )
+  } catch {
+    return text
+  }
+}
+
+const MYSQL_ESCAPES: Record<string, string> = {
+  n: '\n',
+  r: '\r',
+  t: '\t',
+  b: '\b',
+  '0': '\0',
+  Z: '\x1a',
+}
+
+function lexMysqlClause(raw: string): { text: string; values: string[] } {
+  let clause = repairMojibake(raw)
+  // The first quote of the stored form is the `\'` that opens a literal; in
+  // `SHOW CREATE TABLE`'s and a hand-written form it is a bare `'`.
+  const firstQuote = clause.indexOf("'")
+  if (firstQuote > 0 && clause[firstQuote - 1] === '\\') {
+    clause = clause.replace(/\\(["'\\])/g, '$1')
+  }
+  let text = ''
+  const values: string[] = []
+  let i = 0
+  while (i < clause.length) {
+    const c = clause[i]!
+    if (c === '`') {
+      const end = closingQuote(clause, i)
+      text += clause.slice(i, end)
+      i = end
+      continue
+    }
+    if (c !== "'") {
+      text += c
+      i++
+      continue
+    }
+    // A literal. Drop the charset introducer that stands in front of it.
+    text = text.replace(/(^|[^\w`$])_[a-z0-9]+$/i, '$1')
+    let value = ''
+    i++
+    while (i < clause.length) {
+      const d = clause[i]!
+      if (d === '\\' && i + 1 < clause.length) {
+        const next = clause[i + 1]!
+        value += MYSQL_ESCAPES[next] ?? next
+        i += 2
+      } else if (d === "'" && clause[i + 1] === "'") {
+        value += "'"
+        i += 2
+      } else if (d === "'") {
+        i++
+        break
+      } else {
+        value += d
+        i++
+      }
+    }
+    values.push(value)
+    text += `'${value.replace(/\\/g, '\\\\').replace(/'/g, "''")}'`
+  }
+  return { text, values }
+}
+
 /** The allowed values of a MySQL `` `col` in ('a', 'b') `` check, or `undefined` when it is not one. */
 export function mysqlCheckEnumValues(clause: string): string[] | undefined {
-  const text = clause.trim()
-  const match = /^\(?\s*`[^`]+`\s+in\s*\(/i.exec(text)
-  if (!match) return undefined
-  const list = parenthesised(text, match[0].length - 1)
-  if (!list || !/^\s*\)?$/.test(text.slice(list.end))) return undefined
-  const values = quotedValues(list.inside)
-  return values.length > 0 ? values : undefined
+  const { text, values } = lexMysqlClause(clause)
+  // Nothing but `col in ('a', 'b', …)`: the list holds only literals and commas.
+  const shape =
+    /^\(?\s*`[^`]+`\s+in\s*\(\s*('(?:[^'\\]|\\.|'')*'\s*,?\s*)+\)\s*\)?$/i
+  return values.length > 0 && shape.test(text.trim()) ? values : undefined
 }
 
 /**

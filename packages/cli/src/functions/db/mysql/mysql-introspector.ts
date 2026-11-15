@@ -7,6 +7,7 @@ import type {
 import { MIGRATION_TRACKING_TABLE } from '@pikku/migrator-sql'
 import type { MysqlQueryClient } from './mysql-client.js'
 import {
+  mysqlCheckClause,
   mysqlCheckColumn,
   mysqlCheckEnumValues,
   normaliseCheck,
@@ -159,7 +160,7 @@ export class MysqlIntrospector implements DbIntrospector {
         ...(column.checks ?? []),
         {
           name: row.constraint_name,
-          expression: normaliseCheck(row.check_clause),
+          expression: normaliseCheck(mysqlCheckClause(row.check_clause)),
         },
       ]
       column.enumValues ??= mysqlCheckEnumValues(row.check_clause)

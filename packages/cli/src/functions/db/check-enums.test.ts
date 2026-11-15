@@ -1,7 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   checkFingerprint,
+  mysqlCheckClause,
   mysqlCheckColumn,
   mysqlCheckEnumValues,
   normaliseCheck,
@@ -153,17 +157,126 @@ test('checkFingerprint keeps the case of a quoted identifier and of whitespace i
   )
 })
 
-test('mysqlCheckColumn and mysqlCheckEnumValues read what MySQL stores', () => {
-  const clause = "(`status` in (_utf8mb4'draft',_utf8mb4'it''s'))"
-  assert.equal(mysqlCheckColumn(clause, ['status', 'draft']), 'status')
-  assert.deepEqual(mysqlCheckEnumValues(clause), ['draft', "it's"])
+/**
+ * `check_clause` rows exactly as a real MySQL 8.4.13 returns them through mysql2
+ * (see the fixture's own header). The server wraps every literal in `\\'`,
+ * escapes a quote or a backslash inside a value a second time, puts a charset
+ * introducer before each literal, and hands back non-ASCII text as latin1
+ * mojibake.
+ */
+const real = JSON.parse(
+  readFileSync(
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      'mysql/fixtures/mysql-8.4-check-clauses.json'
+    ),
+    'utf8'
+  )
+) as { version: string; rows: { name: string; clause: string }[] }
+const realClause = (name: string): string => {
+  const row = real.rows.find((r) => r.name === name)
+  assert.ok(row, `the fixture has no ${name}`)
+  return row.clause
+}
+
+test('the fixture is real MySQL output, not a hand-written imitation', () => {
+  assert.match(real.version, /^8\.4\./)
+  assert.equal(
+    realClause('item_color_enum_check'),
+    "(`color` in (_utf8mb4\\'red\\',_utf8mb4\\'blue\\'))"
+  )
+})
+
+test('mysqlCheckEnumValues reads a real MySQL enum check', () => {
+  assert.deepEqual(mysqlCheckEnumValues(realClause('item_color_enum_check')), [
+    'red',
+    'blue',
+  ])
+})
+
+test('mysqlCheckEnumValues keeps a quote, comma, bracket, backslash, double quote, unicode and the empty string', () => {
+  assert.deepEqual(mysqlCheckEnumValues(realClause('item_tricky_enum_check')), [
+    "it's",
+    'a,b',
+    'a)b',
+    '(x',
+    'back\\slash',
+    'say "hi"',
+    'é日本',
+    '',
+  ])
+})
+
+test('a real min, max or length check is not an enum', () => {
+  for (const name of [
+    'item_qty_min_check',
+    'item_qty_max_check',
+    'item_slug_minlength_check',
+    'item_slug_maxlength_check',
+    'item_ratio_min_check',
+  ]) {
+    assert.equal(mysqlCheckEnumValues(realClause(name)), undefined, name)
+  }
+})
+
+test('mysqlCheckClause turns a real clause into the SQL Pikku writes, so fingerprints agree', () => {
+  assert.equal(
+    mysqlCheckClause(realClause('item_color_enum_check')),
+    "(`color` in ('red','blue'))"
+  )
+  assert.equal(
+    checkFingerprint(mysqlCheckClause(realClause('item_color_enum_check'))),
+    checkFingerprint("`color` IN ('red', 'blue')")
+  )
+  assert.equal(
+    checkFingerprint(mysqlCheckClause(realClause('item_tricky_enum_check'))),
+    checkFingerprint(
+      "`tricky` IN ('it''s', 'a,b', 'a)b', '(x', 'back\\\\slash', 'say \"hi\"', 'é日本', '')"
+    )
+  )
+  assert.equal(
+    mysqlCheckClause(realClause('item_qty_min_check')),
+    '(`qty` >= 0)'
+  )
+})
+
+test('every real clause names the column it restricts', () => {
+  const columns = ['id', 'color', 'tricky', 'qty', 'slug', 'ratio']
+  const owners = Object.fromEntries(
+    real.rows.map((r) => [r.name, mysqlCheckColumn(r.clause, columns)])
+  )
+  assert.deepEqual(owners, {
+    item_color_enum_check: 'color',
+    item_qty_max_check: 'qty',
+    item_qty_min_check: 'qty',
+    item_ratio_min_check: 'ratio',
+    item_slug_maxlength_check: 'slug',
+    item_slug_minlength_check: 'slug',
+    item_tricky_enum_check: 'tricky',
+  })
+})
+
+test('a value that looks like a column does not name one', () => {
+  assert.equal(mysqlCheckColumn("(`a` in (_utf8mb4\\'b\\'))", ['a', 'b']), 'a')
+})
+
+test('the older forms of a MySQL clause are still read: doubled quotes, no introducer, SHOW CREATE TABLE escapes', () => {
+  assert.deepEqual(
+    mysqlCheckEnumValues("(`status` in (_utf8mb4'draft',_utf8mb4'it''s'))"),
+    ['draft', "it's"]
+  )
+  assert.deepEqual(mysqlCheckEnumValues("(`s` in ('a','b'))"), ['a', 'b'])
+  assert.deepEqual(
+    mysqlCheckEnumValues("(`s` in (_utf8mb4'it\\'s',_utf8mb4'back\\\\slash'))"),
+    ["it's", 'back\\slash']
+  )
   assert.equal(mysqlCheckColumn('(`a` <= `b`)', ['a', 'b']), undefined)
   assert.equal(mysqlCheckEnumValues('(`qty` >= 0)'), undefined)
 })
 
 test('a ) inside an enum value does not end the list', () => {
   assert.deepEqual(
-    mysqlCheckEnumValues("(`s` in (_utf8mb4'a)',_utf8mb4'b'))"),
+    mysqlCheckEnumValues("(`s` in (_utf8mb4\\'a)\\',_utf8mb4\\'b\\'))"),
     ['a)', 'b']
   )
   assert.deepEqual(
