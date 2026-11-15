@@ -63,6 +63,36 @@ describe('assembleBackendSdk', () => {
     assert.ok(!existsSync(join(result.dir, 'remote')))
   })
 
+  test('re-points the glob of the mocks module, which is not an import, at the same .mocks folder', () => {
+    const { root, outDir } = project({ exposed: ['a'], remote: [] })
+    const mocksFile = join(outDir, 'sdk', 'exposed', 'mocks.gen.ts')
+    put(
+      mocksFile,
+      "import { registerMocks } from './pikku-react-query.gen.js'\n" +
+        "registerMocks([{ files: import.meta.glob('../../../../../.mocks/*/*.json', { import: 'default' }), meta: import.meta.glob(\"../../../../../.mocks/*/*.meta.json\", { eager: true }) }])\n"
+    )
+    const result = assembleBackendSdk({
+      projectDir: root,
+      rootDir: root,
+      backend: 'api',
+      backendOutDir: outDir,
+      publish: false,
+    })
+    const mocks = readFileSync(
+      join(result.dir, 'exposed', 'mocks.gen.ts'),
+      'utf-8'
+    )
+    // .pikku/backends/api/sdk/exposed -> .pikku/sdk/api/exposed: one level up
+    assert.match(
+      mocks,
+      /import\.meta\.glob\('\.\.\/\.\.\/\.\.\/\.\.\/\.mocks\/\*\/\*\.json'/
+    )
+    assert.match(
+      mocks,
+      /import\.meta\.glob\("\.\.\/\.\.\/\.\.\/\.\.\/\.mocks\/\*\/\*\.meta\.json"/
+    )
+  })
+
   test('publish is refused when the backend has no remote functions', () => {
     const { root, outDir } = project({ exposed: ['a'], remote: [] })
     assert.throws(
