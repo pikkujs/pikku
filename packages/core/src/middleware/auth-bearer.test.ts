@@ -564,3 +564,148 @@ describe('authBearer middleware', () => {
     assert.deepEqual(SessionService.get(), mockUserSession)
   })
 })
+
+describe('authBearer custom verifier', () => {
+  const run = async (
+    options: Parameters<typeof authBearer>[0],
+    services: any = {},
+    header: Record<string, string> = {
+      authorization: 'Bearer opaque-secret-token',
+    }
+  ) => {
+    const SessionService = new PikkuSessionService<CoreUserSession>()
+    let nextCalled = false
+    await authBearer(options)(
+      services,
+      {
+        ...createMiddlewareSessionWireProps(SessionService),
+        http: {
+          request: createMockHTTPRequest(header),
+          response: createMockHTTPResponse(),
+        },
+      } as any,
+      async () => {
+        nextCalled = true
+      }
+    )
+    return { session: SessionService.get(), nextCalled }
+  }
+
+  test('sets the session the verifier returns, passing the token and services', async () => {
+    const services = {
+      marker: true,
+      jwt: { decode: async () => assert.fail('jwt used') },
+    }
+    const { session, nextCalled } = await run(
+      {
+        verify: async (token, s) => {
+          assert.equal(token, 'opaque-secret-token')
+          assert.equal(s, services)
+          return { userId: 'svc-1', scopes: ['a'] }
+        },
+      },
+      services
+    )
+    assert.deepEqual(session, { userId: 'svc-1', scopes: ['a'] })
+    assert.equal(nextCalled, true)
+  })
+
+  test('a null result answers 401 and does not continue', async () => {
+    let nextCalled = false
+    await assert.rejects(
+      async () => {
+        const r = await run({ verify: async () => null })
+        nextCalled = r.nextCalled
+      },
+      (e: any) => e instanceof InvalidSessionError
+    )
+    assert.equal(nextCalled, false)
+  })
+
+  test('a throwing verifier answers 401 and the error does not leak the token', async () => {
+    await assert.rejects(
+      () =>
+        run({
+          verify: async (token) => {
+            throw new Error(`db down while checking ${token}`)
+          },
+        }),
+      (e: any) => {
+        assert(e instanceof InvalidSessionError)
+        assert.equal(e.cause, undefined)
+        assert(!String(e.message).includes('opaque-secret-token'))
+        assert(!String(e.stack).includes('opaque-secret-token'))
+        return true
+      }
+    )
+  })
+
+  test('never logs the token, on success or failure', async () => {
+    const logged: unknown[][] = []
+    const logger: any = new Proxy(
+      {},
+      {
+        get:
+          () =>
+          (...args: unknown[]) =>
+            logged.push(args),
+      }
+    )
+    await run({ verify: async () => ({ userId: 'u' }) }, { logger })
+    await run({ verify: async () => null }, { logger }).catch(() => {})
+    await run(
+      {
+        verify: async () => {
+          throw new Error('x')
+        },
+      },
+      { logger }
+    ).catch(() => {})
+    assert(!JSON.stringify(logged).includes('opaque-secret-token'))
+  })
+
+  test('without an Authorization header the verifier is not called', async () => {
+    const { session, nextCalled } = await run(
+      { verify: async () => assert.fail('called') },
+      {},
+      {}
+    )
+    assert.equal(session, undefined)
+    assert.equal(nextCalled, true)
+  })
+
+  test('verify and token together are rejected at wiring time', () => {
+    assert.throws(() =>
+      authBearer({
+        token: { value: 'x', userSession: { userId: 'u' } },
+        verify: async () => null,
+      })
+    )
+  })
+
+  test('JWT and static modes are unchanged when verify is absent', async () => {
+    const jwt = {
+      encode: async () => 't',
+      decode: async () => ({ userId: 'jwt-u' }),
+    }
+    assert.deepEqual((await run(undefined, { jwt })).session, {
+      userId: 'jwt-u',
+    })
+    const stat = await run(
+      {
+        token: {
+          value: 'opaque-secret-token',
+          userSession: { userId: 'static-u' },
+        },
+      },
+      { jwt }
+    )
+    assert.deepEqual(stat.session, { userId: 'static-u' })
+    const wrong = await run(
+      { token: { value: 'other', userSession: { userId: 'static-u' } } },
+      { jwt }
+    )
+    assert.equal(wrong.session, undefined)
+    assert.equal(wrong.nextCalled, true)
+  })
+})

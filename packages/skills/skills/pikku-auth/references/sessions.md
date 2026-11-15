@@ -6,7 +6,6 @@
 - [Built-in Auth Strategies](#built-in-auth-strategies)
 - [Complete Example](#complete-example)
 
-
 ## Session Management
 
 `session`, `setSession` and `clearSession` live on the **wire** — the function's
@@ -100,6 +99,26 @@ An unset secret leaves the middleware inert rather than erroring, so a template
 that ships this is safe until someone provides the secret. A malformed
 `Authorization` header (no `Bearer ` scheme) throws `InvalidSessionError` in
 either mode.
+
+**`authBearer` with a custom verifier.** Pass `verify` to look an opaque,
+hashed or revocable token up yourself (for example a remote addon host checking
+its own token table). It receives the raw token and the singleton services and
+returns the session, or `null` to refuse:
+
+```typescript
+authBearer({
+  verify: async (token, { kysely }) => {
+    const row = await findActiveTokenByHash(kysely, sha256(token))
+    return row ? { userId: row.userId, scopes: row.scopes } : null
+  },
+})
+```
+
+It fails closed: `null` or a throw answers 401 (`InvalidSessionError`) rather
+than falling through as anonymous, and the thrown error is not passed on, so it
+cannot leak the token. Pikku never logs the token; do not log it in the
+verifier. `verify` cannot be combined with `token`; without either, behaviour is
+unchanged.
 
 **`authCookie` options.** `name`, `expiresIn` and `options` are all part of the
 config; `options` merges over the defaults `{ httpOnly: true, secure: true,
