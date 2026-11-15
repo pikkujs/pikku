@@ -9,7 +9,10 @@ import {
 } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
-export const dbMigrate = pikkuSessionlessFunc<{ localOnly?: boolean }, void>({
+export const dbMigrate = pikkuSessionlessFunc<
+  { localOnly?: boolean; allowDestructive?: boolean },
+  void
+>({
   remote: true,
   func: async ({ logger, config }, data) => {
     const userConfig = await loadUserConfigForDb({ config, logger })
@@ -31,7 +34,9 @@ export const dbMigrate = pikkuSessionlessFunc<{ localOnly?: boolean }, void>({
 
     if (data?.localOnly) assertLocalDatabase(resolved)
 
-    const { migrate, codegen, zod } = await migrateAndCodegen(resolved)
+    const { migrate, codegen, zod } = await migrateAndCodegen(resolved, {
+      allowDestructive: data?.allowDestructive,
+    })
 
     for (const warning of codegen.warnings) {
       logger.diagnostic(warning)

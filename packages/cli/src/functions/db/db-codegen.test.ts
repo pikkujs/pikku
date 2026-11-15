@@ -40,7 +40,7 @@ function fakeIntrospector(columns: ColumnInfo[]): DbIntrospector {
 async function run(
   columns: ColumnInfo[],
   annotations?: Record<string, Record<string, unknown>>,
-  dialect: 'postgres' | 'mysql' = 'postgres'
+  dialect: 'postgres' | 'mysql' | 'sqlite' = 'postgres'
 ) {
   const dir = mkdtempSync(join(tmpdir(), 'db-codegen-'))
   if (annotations) {
@@ -670,4 +670,177 @@ describe('mysql typing', () => {
     const out = await generated([col({ name: 'body', type: 'varchar(255)' })])
     assert.match(out, /body: ColumnType<Private<string>/)
   })
+})
+
+describe('declared constraints', () => {
+  const columns = [
+    col({ name: 'qty', type: 'integer', notNull: false }),
+    col({ name: 'code', type: 'varchar(8)', notNull: false }),
+    col({ name: 'kind', type: 'text', notNull: false }),
+    col({ name: 'at', type: 'timestamp', notNull: false }),
+  ]
+
+  test('bounds become zod hints on the columns they can refine', async () => {
+    const result = await run(columns, {
+      widget: {
+        qty: { min: 0, max: 9, minLength: 3 },
+        code: { minLength: 2, maxLength: 8, pattern: '^[a-z]+$', min: 1 },
+        at: { min: 1 },
+      },
+    })
+    assert.deepEqual(result.zodConstraints, {
+      AppWidget: {
+        qty: { int: true, min: 0, max: 9 },
+        code: { minLength: 2, maxLength: 8, pattern: '^[a-z]+$' },
+      },
+    })
+  })
+
+  test('an enum declared but not in the database types the column as a union', async () => {
+    const result = await run(columns, {
+      widget: { kind: { enum: ['a', 'b'] } },
+    })
+    assert.match(readFileSync(result.outFile, 'utf8'), /kind: .*'a' \| 'b'/)
+    assert.deepEqual(result.zodConstraints, {
+      AppWidget: { qty: { int: true } },
+    })
+  })
+
+  test('a declared enum that differs from the database wins, and warns once per column', async () => {
+    const result = await run(
+      [col({ name: 'kind', type: 'text', enumValues: ['x', 'y'] })],
+      { widget: { kind: { enum: ['a', 'b'] } } }
+    )
+    assert.match(readFileSync(result.outFile, 'utf8'), /'a' \| 'b'/)
+    assert.doesNotMatch(readFileSync(result.outFile, 'utf8'), /'x'/)
+    const mismatches = byCode(result, ErrorCode.DB_ENUM_DECLARATION_MISMATCH)
+    assert.equal(mismatches.length, 1, JSON.stringify(result.warnings))
+    const message = mismatches[0]!.message
+    assert.match(message, /widget\.kind/)
+    assert.match(message, /declared 'a' \| 'b'/)
+    assert.match(message, /database has 'x' \| 'y'/)
+    assert.match(message, /pikku db generate/)
+  })
+
+  test('the mismatch advice fits the engine: generate on postgres and mysql, a hand-written CHECK on sqlite', async () => {
+    const mismatch = async (dialect: 'postgres' | 'mysql' | 'sqlite') => {
+      const result = await run(
+        [col({ name: 'kind', type: 'text', enumValues: ['x', 'y'] })],
+        { widget: { kind: { enum: ['a', 'b'] } } },
+        dialect
+      )
+      return byCode(result, ErrorCode.DB_ENUM_DECLARATION_MISMATCH)[0]!.message
+    }
+    for (const dialect of ['postgres', 'mysql'] as const) {
+      const message = await mismatch(dialect)
+      assert.match(message, /Run `pikku db generate`/, dialect)
+    }
+    // `pikku db generate` writes no CHECK on SQLite, so it is no way out there.
+    const sqlite = await mismatch('sqlite')
+    assert.doesNotMatch(sqlite, /Run `pikku db generate`/)
+    assert.match(sqlite, /CHECK \("kind" IN \('a', 'b'\)\)/)
+    assert.match(sqlite, /by hand/)
+    assert.match(sqlite, /database has 'x' \| 'y'/)
+    assert.match(sqlite, /follow the declaration/)
+  })
+
+  test('the same enum in another order is not a mismatch', async () => {
+    const result = await run(
+      [col({ name: 'kind', type: 'text', enumValues: ['b', 'a'] })],
+      { widget: { kind: { enum: ['a', 'b'] } } }
+    )
+    assert.equal(
+      byCode(result, ErrorCode.DB_ENUM_DECLARATION_MISMATCH).length,
+      0
+    )
+  })
+
+  test('an enum on one side only is not a mismatch', async () => {
+    const declaredOnly = await run(columns, {
+      widget: { kind: { enum: ['a', 'b'] } },
+    })
+    const databaseOnly = await run([
+      col({ name: 'kind', type: 'text', enumValues: ['x', 'y'] }),
+    ])
+    for (const result of [declaredOnly, databaseOnly]) {
+      assert.equal(
+        byCode(result, ErrorCode.DB_ENUM_DECLARATION_MISMATCH).length,
+        0
+      )
+    }
+  })
+
+  test('a table with no declared constraints hints only its integer columns', async () => {
+    const result = await run(columns)
+    assert.deepEqual(result.zodConstraints, {
+      AppWidget: { qty: { int: true } },
+    })
+  })
+
+  test('whole-number types hint int; floats, text and a tsType override do not', async () => {
+    const result = await run(
+      [
+        col({ name: 'a', type: 'integer' }),
+        col({ name: 'b', type: 'bigint' }),
+        col({ name: 'c', type: 'smallint' }),
+        col({ name: 'd', type: 'real' }),
+        col({ name: 'e', type: 'numeric' }),
+        col({ name: 'f', type: 'text' }),
+        col({ name: 'g', type: 'integer' }),
+      ],
+      { widget: { g: { tsType: 'number' } } }
+    )
+    assert.deepEqual(result.zodConstraints, {
+      AppWidget: { a: { int: true }, b: { int: true }, c: { int: true } },
+    })
+  })
+})
+
+test('a declared enum reaches the standalone enums module on a column the database holds no enum for', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'db-codegen-enums-'))
+  mkdirSync(join(dir, 'db'), { recursive: true })
+  writeFileSync(
+    join(dir, 'db', 'annotations.gen.json'),
+    JSON.stringify({ item: { status: { enum: ['open', 'closed'] } } }),
+    'utf8'
+  )
+  const columns = [
+    col({ name: 'id', type: 'text', pk: true }),
+    col({ name: 'status', type: 'text' }),
+  ]
+  const enumsFile = join(dir, 'enums.gen.ts')
+  await generateSchemaTypes(
+    {
+      async listTables() {
+        return ['item']
+      },
+      async getColumns() {
+        return columns
+      },
+      async getForeignKeys() {
+        return []
+      },
+      async getAllColumns() {
+        return new Map([['item', columns]])
+      },
+      async getAllForeignKeys() {
+        return new Map()
+      },
+      async listEnums() {
+        return []
+      },
+      async close() {},
+    },
+    {
+      outFile: join(dir, 'schema.gen.ts'),
+      coercionFile: join(dir, 'coercion.gen.ts'),
+      enumsFile,
+      dialect: 'sqlite',
+      rootDir: dir,
+    }
+  )
+  assert.match(
+    readFileSync(enumsFile, 'utf8'),
+    /export type ItemStatus = 'open' \| 'closed'/
+  )
 })

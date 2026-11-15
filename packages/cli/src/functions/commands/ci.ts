@@ -18,7 +18,14 @@ import {
   removeConsoleScaffold,
 } from '../ci/console-removal.js'
 import { assertCloudflareDeployReady } from '../ci/deploy-guard.js'
-import { ciEnv, ciStageCommand, planResultFile } from '../ci/stages.js'
+import {
+  ciEnv,
+  ciStageCommand,
+  planResultFile,
+  worktreeOwnsDatabase,
+} from '../ci/stages.js'
+import { resolveDb } from '../db/local-db.js'
+import { loadUserConfigForDb } from './db-shared.js'
 import {
   assertWorktreeReady,
   createWorktree,
@@ -121,6 +128,34 @@ const copyOutputs = (run: CiRun, rootDir: string, passed: boolean) => {
 
 const DB_DIRS = ['sqlite', 'postgres', 'mysql']
 
+/**
+ * Whether the database the worktree would migrate goes when the worktree does.
+ * Read from the project's own `createConfig`, as `db migrate` reads it; one that
+ * cannot be read or resolved is not known to be disposable.
+ */
+const ownsDatabase = async (
+  config: Parameters<typeof loadUserConfigForDb>[0]['config'] & {
+    runtimeDir?: string
+    db?: Parameters<typeof resolveDb>[4]
+  },
+  logger: Parameters<typeof loadUserConfigForDb>[0]['logger'],
+  dir: string,
+  outDir: string
+): Promise<boolean> => {
+  try {
+    const userConfig = await loadUserConfigForDb({ config, logger })
+    return (
+      !!userConfig &&
+      worktreeOwnsDatabase(
+        resolveDb(userConfig, dir, outDir, config.runtimeDir, config.db),
+        dir
+      )
+    )
+  } catch {
+    return false
+  }
+}
+
 export const pikkuCi = pikkuSessionlessFunc({
   description: 'Run the whole path from a commit to a deployable build.',
   input: CiInput,
@@ -189,6 +224,11 @@ export const pikkuCi = pikkuSessionlessFunc({
         run = {
           dir,
           inWorktree: !!worktree,
+          // The caller's say-so, or a database that goes with the worktree.
+          allowDestructive:
+            !!data.allowDestructive ||
+            (!!worktree &&
+              (await ownsDatabase(config, logger, dir, moved(outDir)))),
           provider: data.provider,
           deploy: !!data.deploy,
           runTests: !data.skipTests,

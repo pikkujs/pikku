@@ -3,8 +3,10 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   resolveDb,
   computeDeclaredTablesDrift,
+  declaredSqliteConstraintNotice,
   computeSchemaDrift,
 } from '../db/local-db.js'
+import { SQLITE_UNENFORCED_RULE } from '../db/sqlite-constraint-notice.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
 /**
@@ -87,10 +89,16 @@ export const dbCheck = pikkuSessionlessFunc<{}, void>({
     if (declared.pending || declared.refusals.length > 0) {
       logger.error('db check: the migrations do not cover db/tables.ts:')
       for (const refusal of declared.refusals) logger.error(`  ${refusal}`)
+      for (const note of declared.notes) logger.error(`  ${note}`)
       if (declared.pending) {
         logger.error('  Run `pikku db generate`, then `pikku db migrate`.')
       }
       throw new CLIError('db/tables.ts is ahead of the migrations')
+    }
+
+    if (config.validate?.rules?.[SQLITE_UNENFORCED_RULE] !== 'off') {
+      const notice = await declaredSqliteConstraintNotice(resolved)
+      if (notice) logger.warn(`db check: ${notice}`)
     }
 
     if (drift.inSync) {

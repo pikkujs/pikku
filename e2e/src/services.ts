@@ -261,6 +261,8 @@ export const createSingletonServices = pikkuServices(
     analyticsSinks.add(analyticsRecorder, {
       report_viewed: true,
       page_viewed: true,
+      // The native smoke jobs look for this one; a sink takes only what its map names.
+      native_opened: true,
     })
     analyticsSinks.add(analyticsConversions, { report_viewed: true })
 
