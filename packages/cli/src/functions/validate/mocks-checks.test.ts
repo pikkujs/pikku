@@ -3,7 +3,12 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, test } from 'node:test'
-import { runMocksChecks, usesMocks } from './mocks-checks.js'
+import {
+  mockedFunctions,
+  runMockedFunctionChecks,
+  runMocksChecks,
+  usesMocks,
+} from './mocks-checks.js'
 import { planValidation } from './validate-registry.js'
 
 const write = async (root: string, rel: string, text: string) => {
@@ -208,5 +213,68 @@ describe('validate and mocks', () => {
         await rm(root, { recursive: true, force: true })
       }
     })
+  })
+})
+
+describe('validate and functions declared mock: true', () => {
+  const builtMeta = JSON.stringify({
+    getTodo: { pikkuFuncId: 'getTodo', name: 'getTodo' },
+    listTodos: {
+      pikkuFuncId: 'listTodos',
+      name: 'listTodos',
+      mock: true,
+      sourceFile: '/app/src/todos.functions.ts',
+    },
+  })
+
+  test('a mocked function is an error when validating for publish', async () => {
+    const root = await project({
+      '.pikku/function/pikku-functions-meta.gen.json': builtMeta,
+    })
+    try {
+      assert.ok((await ids(root)).includes('mock-functions:.'))
+      assert.deepStrictEqual(
+        mockedFunctions(root).map((fn) => fn.id),
+        ['listTodos']
+      )
+      const findings = runMockedFunctionChecks(root, { publish: true })
+      assert.deepStrictEqual(
+        findings.map((f) => [f.id, f.severity, f.path]),
+        [['mock-function', 'error', '/app/src/todos.functions.ts']]
+      )
+      assert.ok(findings[0]!.message.startsWith('listTodos is declared'))
+      assert.ok(findings[0]!.fixHint.includes('remove `mock: true`'))
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test('a mocked function is only a warning under --skipDeployChecks', async () => {
+    const root = await project({
+      '.pikku/function/pikku-functions-meta.gen.json': builtMeta,
+    })
+    try {
+      assert.deepStrictEqual(
+        runMockedFunctionChecks(root, { publish: false }).map(
+          (f) => f.severity
+        ),
+        ['warn']
+      )
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test('a project with no mocked function reports nothing', async () => {
+    const root = await project({})
+    try {
+      assert.ok(!(await ids(root)).includes('mock-functions:.'))
+      assert.deepStrictEqual(
+        runMockedFunctionChecks(root, { publish: true }),
+        []
+      )
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 })
