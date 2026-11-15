@@ -12,6 +12,7 @@ export const full = defineKeyPair({
   scope: 'keyed',
   custody: 'wrapped',
   public: 'jwks',
+  signedFormat: 'jws',
   docsUrl: 'https://example.com/keys',
 })
 
@@ -24,7 +25,6 @@ defineKeyPair({
   verifyGrace: '14day',
   scope: 'deployment',
   rotationMode: 'pinned',
-  signedFormat: 'jws',
 })
 
 const ALGORITHM = 'ed25519'

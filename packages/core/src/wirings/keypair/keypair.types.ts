@@ -30,6 +30,13 @@ export const KEY_ALGORITHM_PURPOSE: Record<KeyAlgorithm, KeyPurpose> = {
  * The declaration {@link defineKeyPair} takes. It describes a key pair, never
  * its key material: no field here can carry a private key.
  */
+/** How a signing key's bytes are framed. See {@link CoreKeyPair.signedFormat}. */
+export type KeySignedFormat = 'domain' | 'jws'
+export const KEY_SIGNED_FORMATS = [
+  'domain',
+  'jws',
+] as const satisfies readonly KeySignedFormat[]
+
 export type CoreKeyPair = {
   /** kebab-case; the name `keys.sign('name', ...)` and `keys.open('name', ...)` autocomplete. */
   name: string
@@ -54,6 +61,14 @@ export type CoreKeyPair = {
   custody?: KeyCustody
   /** `internal` (default) keeps the public half to key service callers; `jwks` lets it be rendered as a JWKS. */
   public?: KeyPublic
+  /**
+   * Signing keys only. `'domain'` (the default when absent): every sign and
+   * verify call on this name passes a `domain` the service prefixes. `'jws'`:
+   * the bytes are a JWS signing input and a `domain` is refused. A name is one
+   * or the other for its whole life. Declared here and recorded in meta; the
+   * service enforces it, not this package.
+   */
+  signedFormat?: KeySignedFormat
   docsUrl?: string
 }
 
@@ -70,6 +85,7 @@ export const KEY_PAIR_FIELDS = [
   'scope',
   'custody',
   'public',
+  'signedFormat',
   'docsUrl',
 ] as const satisfies readonly (keyof CoreKeyPair)[]
 
@@ -82,13 +98,14 @@ export const _keyPairFieldsAreComplete: AssertAllFields = true
 /** A key pair declaration as recorded in generated meta. Values are what the inspector read, unchecked. */
 export type KeyPairDefinitionMeta = Omit<
   CoreKeyPair,
-  'algorithm' | 'purpose' | 'scope' | 'custody' | 'public'
+  'algorithm' | 'purpose' | 'scope' | 'custody' | 'public' | 'signedFormat'
 > & {
   algorithm: string
   purpose: string
   scope: string
   custody?: string
   public?: string
+  signedFormat?: string
   sourceFile?: string
 }
 

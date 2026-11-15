@@ -11,6 +11,7 @@ export type {
   KeyPublic,
   KeyPurpose,
   KeyScope,
+  KeySignedFormat,
   SealingKeyName,
   SigningKeyName,
 } from './keypair.types.js'

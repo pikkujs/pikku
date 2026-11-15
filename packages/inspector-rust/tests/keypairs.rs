@@ -46,14 +46,14 @@ fn every_key_pair_field_reaches_state() {
         ("scope", "keyed"),
         ("custody", "wrapped"),
         ("public", "jwks"),
+        ("signedFormat", "jws"),
         ("docsUrl", "https://example.com/keys"),
     ] {
         assert_eq!(full[k], v, "field {k} lost");
     }
-    // read so that validation can refuse them by name
+    // rotationMode is read so that validation can refuse it by name
     assert_eq!(defs[1]["rotationPeriod"], "never");
     assert_eq!(defs[1]["rotationMode"], "pinned");
-    assert_eq!(defs[1]["signedFormat"], "jws");
     // a non-literal is passed as its text for validation to refuse
     assert_eq!(defs[2]["algorithm"], "ALGORITHM");
     assert_eq!(st["keyPairs"]["files"].as_array().unwrap().len(), 1);

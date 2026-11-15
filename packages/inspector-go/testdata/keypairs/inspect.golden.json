@@ -204,6 +204,7 @@
           "custody": "wrapped",
           "public": "jwks",
           "docsUrl": "https://example.com/keys",
+          "signedFormat": "jws",
           "sourceFile": "<fixture>/src/keys.ts"
         },
         {
@@ -215,7 +216,6 @@
           "verifyGrace": "14day",
           "scope": "deployment",
           "rotationMode": "pinned",
-          "signedFormat": "jws",
           "sourceFile": "<fixture>/src/keys.ts"
         },
         {

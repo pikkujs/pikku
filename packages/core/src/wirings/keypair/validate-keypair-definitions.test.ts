@@ -33,6 +33,7 @@ describe('every declared field reaches meta', () => {
       rotationPeriod: '90day',
       verifyGrace: '1d',
       signedLifetime: '1h',
+      signedFormat: 'jws',
       scope: 'keyed',
       custody: 'wrapped',
       public: 'jwks',
@@ -61,6 +62,7 @@ describe('every declared field reaches meta', () => {
       'purpose',
       'rotationPeriod',
       'scope',
+      'signedFormat',
       'signedLifetime',
       'verifyGrace',
     ])
@@ -183,9 +185,47 @@ describe('other validation', () => {
     assert.throws(() => build({ algorithm: 'ALGORITHM_CONST' }), /algorithm/)
   })
 
-  test('rotationMode and signedFormat name the stage that adds them', () => {
+  test('rotationMode names the stage that adds it', () => {
     assert.throws(() => build({ rotationMode: 'pinned' }), /stage 3b/)
-    assert.throws(() => build({ signedFormat: 'jws' }), /signedFormat.*O1/)
+  })
+
+  describe('signedFormat', () => {
+    test("'jws' and 'domain' reach meta on a signing key", () => {
+      assert.equal(
+        build({ signedFormat: 'jws' })['vault-audit'].signedFormat,
+        'jws'
+      )
+      assert.equal(
+        build({ signedFormat: 'domain' })['vault-audit'].signedFormat,
+        'domain'
+      )
+    })
+
+    test("absent means 'domain' on a signing key, recorded explicitly", () => {
+      assert.equal(build()['vault-audit'].signedFormat, 'domain')
+    })
+
+    test('any other value is refused', () => {
+      assert.throws(
+        () => build({ signedFormat: 'jwt' }),
+        /'signedFormat' must be one of 'domain', 'jws'/
+      )
+    })
+
+    test('a sealing key refuses it, for either value', () => {
+      for (const signedFormat of ['domain', 'jws']) {
+        assert.throws(
+          () =>
+            build({ algorithm: 'x25519', purpose: 'sealing', signedFormat }),
+          /'signedFormat' is for signing keys; this is a sealing key/
+        )
+      }
+    })
+
+    test('a sealing key without it carries none', () => {
+      const meta = build({ algorithm: 'x25519', purpose: 'sealing' })
+      assert.equal('signedFormat' in meta['vault-audit'], false)
+    })
   })
 
   test('errors name the declaring file', () => {

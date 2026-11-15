@@ -6,6 +6,7 @@ import {
   KEY_PAIR_FIELDS,
   KEY_PUBLICS,
   KEY_PURPOSES,
+  KEY_SIGNED_FORMATS,
   KEY_SCOPES,
 } from './keypair.types.js'
 import type {
@@ -24,8 +25,6 @@ const KEBAB = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/
 const NOT_YET: Record<string, string> = {
   rotationMode:
     "'rotationMode' is not supported yet: pinned mode arrives in stage 3b of the key pair rollout",
-  signedFormat:
-    "'signedFormat' is not supported: it is an unapproved proposal (O1); 'domain' is an optional per-call argument instead",
 }
 
 const fail = (def: KeyPairDefinitionMeta, message: string): never => {
@@ -105,6 +104,13 @@ const validateOne = (def: KeyPairDefinitionMeta): void => {
     )
   }
 
+  if (def.signedFormat !== undefined) {
+    if (def.purpose === 'sealing') {
+      fail(def, `'signedFormat' is for signing keys; this is a sealing key.`)
+    }
+    oneOf(def, 'signedFormat', def.signedFormat, KEY_SIGNED_FORMATS)
+  }
+
   const grace = duration(def, 'verifyGrace', def.verifyGrace, false)
   if (grace < MIN_VERIFY_GRACE_MS) {
     fail(def, `'verifyGrace' is ${def.verifyGrace}; it must be at least 1h.`)
@@ -159,7 +165,12 @@ export function validateAndBuildKeyPairDefinitionsMeta(
 
   const meta: KeyPairDefinitionsMeta = {}
   for (const name of [...seen.keys()].sort()) {
-    const def = seen.get(name) as Record<string, unknown>
+    const def = { ...seen.get(name) } as Record<string, unknown>
+    // Absent means 'domain' for a signing key; meta records it so a reader
+    // never has to know the default.
+    if (def.purpose === 'signing' && def.signedFormat === undefined) {
+      def.signedFormat = 'domain'
+    }
     const entry: Record<string, unknown> = {}
     for (const field of KEY_PAIR_FIELDS) {
       if (def[field] !== undefined) entry[field] = def[field]

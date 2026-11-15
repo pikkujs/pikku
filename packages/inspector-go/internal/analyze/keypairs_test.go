@@ -35,7 +35,7 @@ func TestKeyPairFixtureCarriesEveryField(t *testing.T) {
 	for _, want := range []string{
 		`"name":"console-auth"`, `"displayName":"Console auth"`, `"description":"Signs console tokens"`,
 		`"algorithm":"rs256"`, `"purpose":"signing"`, `"rotationPeriod":"90day"`, `"verifyGrace":"1d"`,
-		`"signedLifetime":"1h"`, `"scope":"keyed"`, `"custody":"wrapped"`, `"public":"jwks"`,
+		`"signedLifetime":"1h"`, `"scope":"keyed"`, `"custody":"wrapped"`, `"public":"jwks"`, `"signedFormat":"jws"`,
 		`"docsUrl":"https://example.com/keys"`,
 	} {
 		if !strings.Contains(full, want) {
@@ -43,7 +43,7 @@ func TestKeyPairFixtureCarriesEveryField(t *testing.T) {
 		}
 	}
 	sealing := string(defs[1])
-	for _, want := range []string{`"rotationPeriod":"never"`, `"rotationMode":"pinned"`, `"signedFormat":"jws"`} {
+	for _, want := range []string{`"rotationPeriod":"never"`, `"rotationMode":"pinned"`} {
 		if !strings.Contains(sealing, want) {
 			t.Errorf("%s not in %s", want, sealing)
 		}
