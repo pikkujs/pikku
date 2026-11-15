@@ -440,6 +440,14 @@ impl Context<'_> {
         self.add_used_middleware(&middleware);
 
         let desc = format!("Channel '{name}'");
+        for (slot, r) in [("onConnect", &connect_ref), ("onDisconnect", &disconnect_ref), ("onMessage", &message)] {
+            if let Some(r) = r
+                && !r.pikku_func_id.is_empty()
+                && !self.check_subscribe_wiring(&r.pikku_func_id, &format!("{desc} {slot}"))
+            {
+                return;
+            }
+        }
         for r in [&connect_ref, &disconnect_ref, &message].into_iter().flatten() {
             if !r.pikku_func_id.is_empty() && !self.validate_auth_sessionless(obj, &r.pikku_func_id, &desc, None) {
                 return;

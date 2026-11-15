@@ -30,7 +30,7 @@ var pikkuFuncPattern = regexp.MustCompile(`(?i)pikku.*func`)
 
 func isFunctionHelper(name string) bool {
 	_, isScenarioStep := scenarioStepKinds[name]
-	return pikkuFuncPattern.MatchString(name) || name == "pikkuScenario" || name == "pikkuWebhookReceive" || isScenarioStep
+	return pikkuFuncPattern.MatchString(name) || name == "pikkuScenario" || name == "pikkuWebhookReceive" || name == "pikkuSubscribeFunc" || isScenarioStep
 }
 
 func isWorkflowWrapper(name string) bool {
@@ -69,6 +69,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 	scenarioStepKind, isScenarioStep := scenarioStepKinds[wrapper]
 	isScenario := wrapper == "pikkuScenario"
 	isWebhookReceive := wrapper == "pikkuWebhookReceive"
+	isSubscribe := wrapper == "pikkuSubscribeFunc"
 	if !strings.HasPrefix(wrapper, "pikku") {
 		return
 	}
@@ -474,7 +475,9 @@ func (s *Context) addFunctions(node *ast.Node) {
 		s.checkClassification(name, handler, wrapper != "pikkuFunc")
 	}
 
-	sessionless := wrapper != "pikkuFunc"
+	// A subscribe function authorises like pikkuFunc: it wants a session until a
+	// route wires it auth: false (a public topic).
+	sessionless := wrapper != "pikkuFunc" && !isSubscribe
 	if isWorkflowWrapper(wrapper) {
 		// A workflow is a function, so unset auth wants a session. Only an explicit
 		// `auth: false` opens it.
@@ -499,6 +502,13 @@ func (s *Context) addFunctions(node *ast.Node) {
 	}
 	m.ScenarioStep = tsutil.OrNil(isScenarioStep)
 	m.WebhookReceive = tsutil.OrNil(isWebhookReceive)
+	if isSubscribe {
+		pattern, ok := s.subscribeTopicPattern(node, pikkuFuncId)
+		if !ok {
+			return
+		}
+		m.Subscribe = &state.SubscribeMeta{TopicPattern: pattern}
+	}
 	m.Scenario = tsutil.OrNil(isScenario)
 	m.MCP = tsutil.OrNil(mcpEnabled)
 	if scenarioStepKind != "" && scenarioStepKind != "virtualUser" {
@@ -573,7 +583,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 		wrapper: wrapper, pikkuFuncId: pikkuFuncId, name: name,
 		exportedName: fn.exportedName, explicitName: fn.explicitName,
 		sourceFile: sourceFile, expose: expose, remote: m.Remote != nil && *m.Remote,
-		mcpEnabled: mcpEnabled, notRpc: isScenarioStep || isWebhookReceive, versioned: version != 0,
+		mcpEnabled: mcpEnabled, notRpc: isScenarioStep || isWebhookReceive || isSubscribe, versioned: version != 0,
 	})
 }
 

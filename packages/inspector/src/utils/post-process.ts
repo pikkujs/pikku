@@ -377,8 +377,12 @@ export function aggregateRequiredServices(state: InspectorState): void {
     requiredServices.add('agentRunner')
   }
 
-  // Channels need eventHub for pub/sub
-  if (Object.keys(state.channels.meta).length > 0) {
+  // Channels need eventHub for pub/sub, and so does a subscribe function (an
+  // `sse: true` route has no channel)
+  if (
+    Object.keys(state.channels.meta).length > 0 ||
+    Object.values(state.functions.meta).some((m) => m.subscribe)
+  ) {
     requiredServices.add('eventHub')
   }
 

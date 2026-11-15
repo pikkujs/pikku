@@ -12,7 +12,7 @@ use super::util_props::extract_used_wires;
 use super::{Context, Phase, Registry, Visitor, order};
 use crate::diag::{Level, codes};
 use crate::state::{
-    AuditMeta, DisabledFunctionMeta, FileExport, FunctionMeta, ServicesMeta, TelemetryMeta, WireRef, WiresMeta,
+    AuditMeta, DisabledFunctionMeta, FileExport, FunctionMeta, ServicesMeta, SubscribeMeta, TelemetryMeta, WireRef, WiresMeta,
 };
 use crate::tsutil::{self, file_name_of, first_decl, is_function_like, param_at};
 
@@ -49,6 +49,7 @@ pub fn is_function_helper(name: &str) -> bool {
     matches_pikku_func_pattern(name)
         || name == "pikkuScenario"
         || name == "pikkuWebhookReceive"
+        || name == "pikkuSubscribeFunc"
         || scenario_step_kind(name).is_some()
 }
 
@@ -105,6 +106,7 @@ impl Context<'_> {
         let is_scenario_step = scenario_step_kind_v.is_some();
         let is_scenario = wrapper == "pikkuScenario";
         let is_webhook_receive = wrapper == "pikkuWebhookReceive";
+        let is_subscribe = wrapper == "pikkuSubscribeFunc";
         if !wrapper.starts_with("pikku") {
             return;
         }
@@ -566,7 +568,9 @@ impl Context<'_> {
             self.check_classification(&name, handler, wrapper != "pikkuFunc");
         }
 
-        let mut sessionless = wrapper != "pikkuFunc";
+        // A subscribe function authorises like pikkuFunc: it wants a session until a
+        // route wires it auth: false (a public topic).
+        let mut sessionless = wrapper != "pikkuFunc" && !is_subscribe;
         if is_workflow_wrapper(&wrapper) {
             // A workflow is a function, so unset auth wants a session. Only an
             // explicit `auth: false` opens it.
@@ -587,6 +591,10 @@ impl Context<'_> {
         }
         m.scenario_step = or_nil(is_scenario_step);
         m.webhook_receive = or_nil(is_webhook_receive);
+        if is_subscribe {
+            let Some(pattern) = self.subscribe_topic_pattern(node, &pikku_func_id) else { return };
+            m.subscribe = Some(SubscribeMeta { topic_pattern: pattern });
+        }
         m.scenario = or_nil(is_scenario);
         m.mcp = or_nil(mcp_enabled);
         if let Some(k) = scenario_step_kind_v {
@@ -679,7 +687,7 @@ impl Context<'_> {
             expose,
             remote,
             mcp_enabled,
-            not_rpc: is_scenario_step || is_webhook_receive,
+            not_rpc: is_scenario_step || is_webhook_receive || is_subscribe,
             versioned: version != 0,
         });
     }
