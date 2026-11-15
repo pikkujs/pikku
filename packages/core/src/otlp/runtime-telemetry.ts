@@ -3,6 +3,7 @@ import type { TraceContext } from '../trace.js'
 import { NOOP_TRACER, type Tracer } from '../tracer.js'
 import { parseOtlpEndpoint } from './loopback.js'
 import { OtlpHttpExporter } from './otlp-http-exporter.js'
+import { fanOutOtlp, OtlpSinkRegistry } from './otlp-sink.js'
 import { OtlpLogger } from './otlp-logger.js'
 import { OtlpTracer, type ContextStorage } from './otlp-tracer.js'
 import { startProcessMetrics } from './process-metrics.js'
@@ -20,8 +21,13 @@ export interface RuntimeTelemetryOptions {
 }
 
 export interface RuntimeTelemetry {
-  /** False when telemetry is off: everything below is inert. */
+  /** False only when `PIKKU_TELEMETRY` turns telemetry off: the tracer, logger and sampler are then inert. */
   enabled: boolean
+  /**
+   * The sinks spans, logs and metrics go to. Hand it to `createSingletonServices`
+   * as `otlpSinks`. It exists, and accepts `add`, even when telemetry is off.
+   */
+  otlpSinks: OtlpSinkRegistry
   tracer: Tracer
   logger: Logger
   /**
@@ -99,6 +105,7 @@ export const parseOtlpHeaders = (
 
 const inert = (logger: Logger): RuntimeTelemetry => ({
   enabled: false,
+  otlpSinks: new OtlpSinkRegistry(),
   tracer: NOOP_TRACER,
   logger,
   currentTrace: () => undefined,
@@ -113,21 +120,23 @@ const telemetryDisabled = (value: string | undefined): boolean =>
   ['0', 'false', 'off'].includes(value?.trim().toLowerCase() ?? '')
 
 /**
- * Builds the tracer, OTLP logger and process-metrics sampler a runtime injects,
- * from `PIKKU_OTLP_*` (see the table in the Tracing docs). Unset endpoint or
- * `PIKKU_TELEMETRY=0|false|off` gives the no-op tracer and the plain logger. A
- * non-loopback endpoint throws unless `PIKKU_OTLP_ALLOW_REMOTE=1`: this is read
- * at boot, never by app code.
+ * Builds the tracer, OTLP logger and process-metrics sampler a runtime injects.
+ * They always write to the {@link RuntimeTelemetry.otlpSinks} registry. The HTTP
+ * exporter is registered as a sink only when `PIKKU_OTLP_ENDPOINT` is set (see
+ * the table in the Tracing docs); `PIKKU_TELEMETRY=0|false|off` gives the no-op
+ * tracer and the plain logger instead. A non-loopback endpoint throws unless
+ * `PIKKU_OTLP_ALLOW_REMOTE=1`: this is read at boot, never by app code.
  */
 export const createRuntimeTelemetry = (
   env: Env,
   options: RuntimeTelemetryOptions
 ): RuntimeTelemetry => {
-  const endpoint = env.PIKKU_OTLP_ENDPOINT?.trim()
-  if (telemetryDisabled(env.PIKKU_TELEMETRY) || !endpoint)
-    return inert(options.logger)
+  if (telemetryDisabled(env.PIKKU_TELEMETRY)) return inert(options.logger)
 
-  const url = parseOtlpEndpoint(endpoint, env.PIKKU_OTLP_ALLOW_REMOTE === '1')
+  const endpoint = env.PIKKU_OTLP_ENDPOINT?.trim()
+  const url = endpoint
+    ? parseOtlpEndpoint(endpoint, env.PIKKU_OTLP_ALLOW_REMOTE === '1')
+    : undefined
   const headers = parseOtlpHeaders(env.PIKKU_OTLP_HEADERS)
   const headersBySignal = {
     traces: parseOtlpHeaders(
@@ -157,27 +166,36 @@ export const createRuntimeTelemetry = (
 
   const stage = env.PIKKU_STAGE?.trim() || undefined
   const project = env.PIKKU_PROJECT?.trim() || undefined
-  const exporter = new OtlpHttpExporter({
-    endpoint: url.href,
-    headers,
-    headersBySignal,
-    resource: {
-      serviceName:
-        env.PIKKU_OTLP_SERVICE_NAME?.trim() || project || options.serviceName,
-      ...(options.version ? { serviceVersion: options.version } : {}),
-      ...(stage ? { environment: stage, stage } : {}),
-      ...(project ? { project } : {}),
-    },
-    logger: options.logger,
-    ...(options.fetch ? { fetch: options.fetch } : {}),
-  })
+  const resource = {
+    serviceName:
+      env.PIKKU_OTLP_SERVICE_NAME?.trim() || project || options.serviceName,
+    ...(options.version ? { serviceVersion: options.version } : {}),
+    ...(stage ? { environment: stage, stage } : {}),
+    ...(project ? { project } : {}),
+  }
 
-  const tracer = new OtlpTracer(exporter, {
+  const otlpSinks = new OtlpSinkRegistry()
+  otlpSinks.setResource(resource)
+  if (url) {
+    otlpSinks.add(
+      new OtlpHttpExporter({
+        endpoint: url.href,
+        headers,
+        headersBySignal,
+        resource,
+        logger: options.logger,
+        ...(options.fetch ? { fetch: options.fetch } : {}),
+      })
+    )
+  }
+  const fanOut = fanOutOtlp(otlpSinks)
+
+  const tracer = new OtlpTracer(fanOut, {
     ...(options.contextStorage
       ? { contextStorage: options.contextStorage }
       : {}),
   })
-  const logger = new OtlpLogger(options.logger, exporter, {
+  const logger = new OtlpLogger(options.logger, fanOut, {
     minLevel,
     fields: env.PIKKU_OTLP_LOG_FIELDS === '1',
     ...(options.contextStorage
@@ -187,19 +205,20 @@ export const createRuntimeTelemetry = (
         }
       : {}),
   })
-  const metrics = startProcessMetrics(exporter)
+  const metrics = startProcessMetrics(fanOut)
 
   return {
     enabled: true,
+    otlpSinks,
     tracer,
     logger,
     currentTrace: () => options.contextStorage?.get(),
     recordSqlText: env.PIKKU_OTLP_SQL_TEXT === '1',
     stopMetrics: () => metrics.stop(),
-    flush: () => exporter.flush(),
+    flush: () => fanOut.flush(),
     close: async () => {
       metrics.stop()
-      await exporter.close()
+      await fanOut.close()
     },
   }
 }

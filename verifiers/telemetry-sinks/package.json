@@ -1,0 +1,26 @@
+{
+  "name": "@pikku/verifiers-telemetry-sinks",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/fetch": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "tsx": "^4.23.15"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit",
+    "pikku": "pikku",
+    "test": "pikku && tsc --noEmit && node --import tsx --test src/telemetry-sinks.assert.ts"
+  }
+}

@@ -73,7 +73,7 @@ const identityAttributes = (
 
 /**
  * Opens the span of one invocation. Returns undefined when nothing is recorded:
- * no tracer, an unsampled trace, a tracer already disabled, or a tracer that
+ * no tracer, an unsampled trace, a tracer nothing is listening to, a tracer already disabled, or a tracer that
  * threw while opening. Never throws.
  */
 export const openFunctionSpan = (
@@ -84,7 +84,14 @@ export const openFunctionSpan = (
   attributes: Record<string, SpanAttributeValue>
 ): FunctionSpan | undefined => {
   const trace = wire.trace
-  if (!tracer || !trace?.sampled || isTracerDisabled(tracer)) return undefined
+  if (
+    !tracer ||
+    !trace?.sampled ||
+    tracer.active === false ||
+    isTracerDisabled(tracer)
+  ) {
+    return undefined
+  }
   try {
     const stamped = identityAttributes(wire)
     const span = tracer.startSpan(wire.functionId ?? '', trace, {
