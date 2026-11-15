@@ -31,3 +31,8 @@ that the browser has already abandoned throws rather than reporting closure.
 calls; dropping the `:\n\n` priming frame as dead output; treating the event hub
 registration as WebSocket-only bookkeeping; and letting delivery propagate a
 send error instead of detaching the channel.
+
+An open stream gets a `:` comment frame every `sseHeartbeatMs` (default 5 s, `0`
+off), because Bun closes a connection after 10 s of silence and proxies do the
+same. The response reports `onClose`, so Express, Fastify and uWS detach a
+disconnected channel from the distributor like the fetch response does.
