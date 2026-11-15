@@ -40,13 +40,22 @@ import { pikkuState } from '../../pikku-state.js'
 import { streamErrorFrames } from './http-stream-protocol.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
-import type { BinaryData, PikkuChannel } from '../channel/channel.types.js'
+import type {
+  BinaryData,
+  PikkuChannel,
+  PikkuChannelHandler,
+} from '../channel/channel.types.js'
 // The leaf module, not the channel-rpc barrel: http needs one refusal
 // function, and the barrel drags in 4,932 lines of channel RPC runtime.
 import { unsupportedChannelRemote } from '../channel/channel-rpc.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { applyWebResponse } from './web-request.js'
 import { httpRouter } from './routers/http-router.js'
+import {
+  getEventHubDistributor,
+  getSubscribeMeta,
+  subscribeChannelToTopic,
+} from '../channel/event-hub/runtime.js'
 import { validateSchema } from '../../schema.js'
 import { runMiddleware } from '../../middleware-runner.js'
 
@@ -261,6 +270,14 @@ const executeRoute = async (
   }
   let channel: PikkuChannel<unknown, unknown> | undefined
 
+  // A subscribe function decides what the stream receives, so it runs before
+  // the stream opens: a refusal is then an honest 401/403 rather than a 200
+  // carrying an error frame.
+  const subscribe = matchedRoute.route.sse
+    ? getSubscribeMeta(meta.pikkuFuncId, meta.packageName)
+    : undefined
+  let openStream = () => {}
+
   if (matchedRoute.route.sse) {
     const response = http?.response
     if (!response) {
@@ -269,9 +286,12 @@ const executeRoute = async (
     if (!response.setMode) {
       throw new Error('Response object does not support SSE mode')
     }
-    response.setMode('stream')
-    response.header('Content-Type', 'text/event-stream')
-    response.header('Cache-Control', 'no-cache')
+    openStream = () => {
+      response.setMode!('stream')
+      response.header('Content-Type', 'text/event-stream')
+      response.header('Cache-Control', 'no-cache')
+    }
+    if (!subscribe) openStream()
     let sseState: unknown
     const channelId = createWeakUID()
     channel = {
@@ -301,7 +321,9 @@ const executeRoute = async (
       remote: unsupportedChannelRemote,
     }
 
-    if (!singletonServices.eventHub) {
+    if (subscribe) {
+      // Attached after the subscribe function has run, below.
+    } else if (!singletonServices.eventHub) {
       singletonServices.logger.warn(
         `SSE route ${route.route} has no eventHub configured: the stream will open but never receive a published event`
       )
@@ -334,10 +356,12 @@ const executeRoute = async (
         await originalClose()
       }
     }
-    response.onClose?.(() => {
-      channel!.state = 'closed'
-      singletonServices.eventHub?.onChannelClosed(channelId)
-    })
+    if (!subscribe) {
+      response.onClose?.(() => {
+        channel!.state = 'closed'
+        singletonServices.eventHub?.onChannelClosed(channelId)
+      })
+    }
   }
 
   const wire: PikkuRawWire = {
@@ -370,7 +394,7 @@ const executeRoute = async (
       }
     )
   } catch (e: any) {
-    if (matchedRoute.route.sse) {
+    if (matchedRoute.route.sse && !subscribe) {
       singletonServices.logger.error(e instanceof Error ? e.message : e)
       try {
         const errorResponse = getErrorResponse(e)
@@ -386,6 +410,21 @@ const executeRoute = async (
       return { result }
     }
     throw e
+  }
+  if (subscribe) {
+    await openSubscribedStream({
+      distributor: getEventHubDistributor(),
+      channel: channel!,
+      topic: result,
+      response: http!.response!,
+      openStream,
+      userSession,
+      pikkuFuncId: meta.pikkuFuncId,
+      wireId: `${meta.method}:${meta.route}`,
+      input: await data(),
+    })
+    // The topic is the function's answer to the framework, not to the client.
+    return { result: undefined as never }
   }
   if (matchedRoute.route.sse) {
     http?.response?.flushHeaders?.()
@@ -407,6 +446,78 @@ const executeRoute = async (
   }
 
   return { result }
+}
+
+/**
+ * Joins an SSE stream to the topic its subscribe function returned and then
+ * opens it. Every failure here happens before the first byte is written, so it
+ * propagates as an ordinary error response.
+ */
+const openSubscribedStream = async ({
+  distributor,
+  channel,
+  topic,
+  response,
+  openStream,
+  userSession,
+  pikkuFuncId,
+  wireId,
+  input,
+}: {
+  distributor: ReturnType<typeof getEventHubDistributor>
+  channel: PikkuChannel<unknown, unknown>
+  topic: unknown
+  response: PikkuHTTPResponse
+  openStream: () => void
+  userSession: PikkuSessionService<CoreUserSession>
+  pikkuFuncId: string
+  wireId: string
+  input: unknown
+}): Promise<void> => {
+  if (!distributor) {
+    throw new Error(
+      `Subscribe function '${pikkuFuncId}' needs an event hub distributor, and none was set by the runtime`
+    )
+  }
+  const backend = distributor.deliveryFor('local')
+  if (!backend) {
+    throw new Error(
+      `No event hub delivery backend is registered for SSE streams (transport "local")`
+    )
+  }
+  const channelHandler = {
+    getChannel: () => channel,
+    send: async (data: unknown, isBinary?: boolean) => {
+      if (isBinary) await channel.sendBinary(data as BinaryData)
+      else await channel.send(data)
+    },
+    sendBinary: (data: any) => channel.sendBinary(data),
+  } as unknown as PikkuChannelHandler
+  const session = userSession.get()
+  distributor.attach(channelHandler, backend, session)
+  try {
+    subscribeChannelToTopic(distributor, channelHandler, topic, {
+      pikkuFuncId,
+      wireType: 'http',
+      wireId,
+      input,
+      session,
+    })
+  } catch (error) {
+    distributor.detach(channel.channelId)
+    throw error
+  }
+  const originalClose = channel.close
+  channel.close = async () => {
+    distributor.detach(channel.channelId)
+    await originalClose()
+  }
+  openStream()
+  response.onClose?.(() => {
+    channel.state = 'closed'
+    distributor.detach(channel.channelId)
+  })
+  response.flushHeaders?.()
 }
 
 /**
