@@ -135,6 +135,10 @@ export interface HopView {
    * never sent.
    */
   hadStart: boolean
+  /** The `seq` of this hop's `run.hop` start event; absent when none was sent (the same as `hadStart` false). */
+  startSeq?: number
+  /** The `seq` of its `run.hop` end event; absent while the hop is open. */
+  endSeq?: number
   startedAt: number
   endedAt?: number
   durationMs?: number
@@ -150,8 +154,16 @@ export interface RunView {
   /** The root span's attributes, as `run.started` carries them (entry wire, user id, ...). Bounded. */
   attributes: Attrs
   startedAt: number
+  /**
+   * The `seq` of the run's `run.started` event. With the hops' `startSeq` and `endSeq` and `closedSeq` it lets a client
+   * rebuilding from a snapshot replay the run's events in exactly the order the stream sent them: event times are whole
+   * milliseconds and tie, seqs do not.
+   */
+  startedSeq: number
   /** When the run closed: the `at` of its `run.finished`, `run.failed` or `run.expired`. Absent while open. */
   endedAt?: number
+  /** The `seq` of the closing event. Absent while open. */
+  closedSeq?: number
   status: 'open' | 'finished' | 'failed' | 'expired'
   outcome?: RunOutcome | 'expired'
   durationMs?: number
