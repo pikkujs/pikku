@@ -889,13 +889,13 @@ describe('views carry what the events carry', () => {
     const stitcher = createRunStitcher()
     const events = collect(stitcher)
     const attributes: Record<string, string | number | boolean> = {
-      long: 'x'.repeat(10_000),
-      nan: Number.NaN,
-      inf: Number.POSITIVE_INFINITY,
-      fine: 3,
-      flag: true,
+      'pikku.wire.id': 'x'.repeat(10_000),
+      'pikku.function.duration_ms': Number.NaN,
+      'server.port': Number.POSITIVE_INFINITY,
+      'pikku.function.version': 3,
+      'pikku.impersonated': true,
     }
-    for (let i = 0; i < 500; i++) attributes[`k${i}`] = i
+    for (let i = 0; i < 500; i++) attributes[`db.k${i}`] = i
     const root = syn({ id: 'root', startMs: T0, endMs: T0 + 5, attributes })
     stitcher.start(toOpen(root), T0)
     stitcher.end(root, T0 + 5)
@@ -915,9 +915,9 @@ describe('views carry what the events carry', () => {
       }
       assert.deepEqual(JSON.parse(JSON.stringify(attrs)), attrs)
     }
-    assert.equal(view.attributes['fine'], 3)
-    assert.equal(view.attributes['flag'], true)
-    assert.equal(view.attributes['nan'], undefined)
+    assert.equal(view.attributes['pikku.function.version'], 3)
+    assert.equal(view.attributes['pikku.impersonated'], true)
+    assert.equal(view.attributes['pikku.function.duration_ms'], undefined)
     assert.deepEqual(view.attributes, started.attributes)
     assert.deepEqual(view.hops[0]!.attributes, end.attributes)
   })
@@ -928,15 +928,15 @@ describe('views carry what the events carry', () => {
       id: 'root',
       startMs: T0,
       endMs: T0 + 5,
-      attributes: { a: 1 },
+      attributes: { 'pikku.wire.id': 'one' },
     })
     stitcher.end(root, T0 + 5)
     const first = stitcher.snapshot(T0 + 5)
-    first.recent[0]!.attributes['a'] = 99
-    first.recent[0]!.hops[0]!.attributes['a'] = 99
+    first.recent[0]!.attributes['pikku.wire.id'] = 'changed'
+    first.recent[0]!.hops[0]!.attributes['pikku.wire.id'] = 'changed'
     const second = stitcher.snapshot(T0 + 5)
-    assert.equal(second.recent[0]!.attributes['a'], 1)
-    assert.equal(second.recent[0]!.hops[0]!.attributes['a'], 1)
+    assert.equal(second.recent[0]!.attributes['pikku.wire.id'], 'one')
+    assert.equal(second.recent[0]!.hops[0]!.attributes['pikku.wire.id'], 'one')
   })
 })
 
@@ -1313,6 +1313,57 @@ describe('health window: order and the clock domain', () => {
     const entries = stitcher.snapshot(10).health.entries
     assert.ok(entries.length <= 2000)
     assert.ok(entries.some((e) => e.key === 'hot'))
+  })
+})
+
+describe('attributes: default-deny, the exporter allow-list', () => {
+  test('a custom attribute never reaches an event or a view; the allow-listed ones do', () => {
+    const stitcher = createRunStitcher()
+    const events = collect(stitcher)
+    const root = syn({
+      id: 'root',
+      startMs: T0,
+      endMs: T0 + 5,
+      attributes: {
+        'pikku.wire.type': 'http',
+        'pikku.user.id': 'user-7',
+        'customer.email': 'someone@example.com',
+        password: 'hunter2',
+        'db.namespace': 'main',
+      },
+    })
+    stitcher.start(toOpen(root), T0)
+    stitcher.end(root, T0 + 5)
+    const attrs = [
+      ofType(events, 'run.started')[0]!.attributes,
+      ofType(events, 'run.hop').find((h) => h.phase === 'start')!.attributes,
+      ofType(events, 'run.hop').find((h) => h.phase === 'end')!.attributes,
+      stitcher.snapshot(T0 + 5).recent[0]!.attributes,
+    ]
+    for (const a of attrs) {
+      assert.equal(a['customer.email'], undefined)
+      assert.equal(a['password'], undefined)
+      assert.equal(a['pikku.user.id'], 'user-7')
+      assert.equal(a['pikku.wire.type'], 'http')
+      // the exporter's plugin prefix (db.*) is kept, as it is there
+      assert.equal(a['db.namespace'], 'main')
+    }
+  })
+
+  test('the 64-entry cap cannot drop a pikku.* key, however many other keys come first', () => {
+    const stitcher = createRunStitcher()
+    const events = collect(stitcher)
+    const attributes: Record<string, string | number | boolean> = {}
+    for (let i = 0; i < 200; i++) attributes[`db.k${i}`] = i
+    attributes['pikku.wire.type'] = 'http'
+    attributes['pikku.user.id'] = 'user-9'
+    const root = syn({ id: 'root', startMs: T0, endMs: T0 + 5, attributes })
+    stitcher.start(toOpen(root), T0)
+    stitcher.end(root, T0 + 5)
+    const started = ofType(events, 'run.started')[0]!.attributes
+    assert.ok(Object.keys(started).length <= 64)
+    assert.equal(started['pikku.wire.type'], 'http')
+    assert.equal(started['pikku.user.id'], 'user-9')
   })
 })
 
