@@ -313,6 +313,7 @@
       "version": "0.12.2",
       "dependencies": {
         "@pikku/fetch": "^0.12.16",
+        "@pikku/keys": "workspace:*",
       },
       "devDependencies": {
         "@pikku/addon-changes-cli": "workspace:*",
@@ -416,6 +417,7 @@
         "@pikku/fetch": "^0.12.16",
         "@pikku/inspector": "^0.12.120",
         "@pikku/inspector-go": "^0.12.15",
+        "@pikku/keys": "^0.0.0",
         "@pikku/knowledge": "^0.12.22",
         "@pikku/kysely": "^0.13.45",
         "@pikku/migrator-sql": "^0.12.11",
@@ -683,6 +685,16 @@
         "@types/node": "^24.13.3",
         "ajv": "^8.20.0",
         "tinyglobby": "^0.2.17",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.158",
+      },
+    },
+    "packages/keys": {
+      "name": "@pikku/keys",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/node": "^26.6.5",
       },
       "peerDependencies": {
         "@pikku/core": "^0.12.158",
@@ -3680,6 +3692,8 @@
     "@pikku/inspector-go": ["@pikku/inspector-go@workspace:packages/inspector-go"],
 
     "@pikku/jose": ["@pikku/jose@workspace:packages/services/jose"],
+
+    "@pikku/keys": ["@pikku/keys@workspace:packages/keys"],
 
     "@pikku/knowledge": ["@pikku/knowledge@workspace:packages/knowledge"],
 

@@ -16,3 +16,31 @@ export type {
   SigningKeyName,
 } from './keypair.types.js'
 export { validateAndBuildKeyPairDefinitionsMeta } from './validate-keypair-definitions.js'
+export type {
+  Jwk,
+  KeyCustodyKind,
+  KeyHealth,
+  KeyHealthState,
+  KeyOptions,
+  KeyPlacer,
+  KeyPublisher,
+  KeyRecord,
+  KeyRecordStatus,
+  KeyService,
+  KeySigner,
+  KeyStatus,
+  KeyStore,
+  KeyVerifyOptions,
+  PrivateKeyWrapper,
+  PublicKeyInfo,
+  PublicKeySet,
+  ReconcileSummary,
+  StoreContext,
+} from './key-service.types.js'
+export {
+  DomainPolicyError,
+  KeyCustodyLostError,
+  KeyRetiredError,
+  KeyRotatedError,
+  KeyUnavailableError,
+} from './key-errors.js'

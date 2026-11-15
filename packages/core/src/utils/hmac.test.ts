@@ -1,8 +1,16 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createHmac, createSign, generateKeyPairSync, sign } from 'node:crypto'
+import {
+  createHmac,
+  createSign,
+  generateKeyPairSync,
+  sign,
+  type KeyObject,
+} from 'node:crypto'
 import {
   hmacDigest,
+  importSpkiVerifyKey,
+  verifySpkiSignature,
   timingSafeStringEqual,
   verifyHmacSignature,
   verifyPublicKeySignature,
@@ -214,5 +222,52 @@ describe('parity with node:crypto', () => {
     )
     assert.equal(await verifyPublicKeySignature(pem, 'garbage', body), false)
     assert.equal(await verifyPublicKeySignature('', signature, body), false)
+  })
+})
+
+describe('importSpkiVerifyKey and verifySpkiSignature', () => {
+  const spkiOf = (publicKey: KeyObject) =>
+    new Uint8Array(publicKey.export({ format: 'der', type: 'spki' }))
+
+  test('verifies an Ed25519 signature made by node, and refuses a tampered payload', async () => {
+    const { publicKey, privateKey } = generateKeyPairSync('ed25519')
+    const sig = new Uint8Array(sign(null, Buffer.from(body), privateKey))
+    const key = await importSpkiVerifyKey(spkiOf(publicKey), 'ed25519')
+    assert.equal(await verifySpkiSignature(key, 'ed25519', sig, body), true)
+    assert.equal(
+      await verifySpkiSignature(key, 'ed25519', sig, body + 'x'),
+      false
+    )
+  })
+
+  test('verifies an RS256 signature made by node, and takes bytes as well as strings', async () => {
+    const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+    })
+    const sig = new Uint8Array(sign('sha256', Buffer.from(body), privateKey))
+    const key = await importSpkiVerifyKey(spkiOf(publicKey), 'rs256')
+    assert.equal(
+      await verifySpkiSignature(
+        key,
+        'rs256',
+        sig,
+        new TextEncoder().encode(body)
+      ),
+      true
+    )
+    assert.equal(await verifySpkiSignature(key, 'rs256', sig, 'other'), false)
+  })
+
+  test("the algorithm is the caller's, not sniffed: an Ed25519 key does not import as RS256", async () => {
+    const { publicKey } = generateKeyPairSync('ed25519')
+    await assert.rejects(importSpkiVerifyKey(spkiOf(publicKey), 'rs256'))
+  })
+
+  test('verifyPublicKeySignature still verifies Ed25519 through the shared helper', async () => {
+    const { publicKey, privateKey } = generateKeyPairSync('ed25519')
+    const pem = publicKey.export({ format: 'pem', type: 'spki' }) as string
+    const sig = sign(null, Buffer.from(body), privateKey).toString('base64')
+    assert.equal(await verifyPublicKeySignature(pem, sig, body), true)
+    assert.equal(await verifyPublicKeySignature(pem, sig, body + '!'), false)
   })
 })

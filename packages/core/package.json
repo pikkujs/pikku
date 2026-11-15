@@ -31,7 +31,8 @@
     "./dist/wirings/workflow/pikku-scenario-service.js",
     "./dist/wirings/workflow/workflow-approval-policy.js",
     "./dist/wirings/workflow/workflow-errors.js",
-    "./dist/wirings/workflow/workflow-run-ownership.js"
+    "./dist/wirings/workflow/workflow-run-ownership.js",
+    "./dist/wirings/keypair/key-errors.js"
   ],
   "types": "./dist/bootstrap-compat/root.d.ts",
   "exports": {

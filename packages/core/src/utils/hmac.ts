@@ -4,6 +4,8 @@
  * Promise; `timingSafeStringEqual` is plain JS and stays synchronous.
  */
 
+import { bytesToBase64, spkiToDer } from './base64.js'
+
 const encoder = new TextEncoder()
 
 const subtle = (): SubtleCrypto => {
@@ -18,12 +20,6 @@ const bytesToHex = (bytes: Uint8Array): string => {
   return out
 }
 
-const bytesToBase64 = (bytes: Uint8Array): string => {
-  let binary = ''
-  for (const b of bytes) binary += String.fromCharCode(b)
-  return btoa(binary)
-}
-
 /** Lenient like Node's `Buffer.from(_, 'hex')`: stops at the first bad pair. */
 const hexToBytes = (hex: string): Uint8Array => {
   const out: number[] = []
@@ -35,8 +31,12 @@ const hexToBytes = (hex: string): Uint8Array => {
   return Uint8Array.from(out)
 }
 
-/** Lenient like Node's `Buffer.from(_, 'base64')`: accepts base64url, ignores junk. */
-const base64ToBytes = (value: string): Uint8Array => {
+/**
+ * Lenient like Node's `Buffer.from(_, 'base64')`: accepts base64url, ignores junk.
+ * Webhook signatures arrive in either alphabet, so this is deliberately not the
+ * strict `base64ToBytes` of `./base64.js`.
+ */
+const lenientBase64ToBytes = (value: string): Uint8Array => {
   let clean = value
     .replace(/-/g, '+')
     .replace(/_/g, '/')
@@ -83,7 +83,7 @@ const rawSecretBytes = (
   encoding === 'hex'
     ? hexToBytes(secret)
     : encoding === 'base64'
-      ? base64ToBytes(secret)
+      ? lenientBase64ToBytes(secret)
       : encoder.encode(secret)
 
 const secretBytes = (secret: string, encoding: SecretEncoding): Uint8Array => {
@@ -160,7 +160,9 @@ export async function verifyHmacSignature(
       return false
     }
     const sig =
-      encoding === 'hex' ? hexToBytes(signature) : base64ToBytes(signature)
+      encoding === 'hex'
+        ? hexToBytes(signature)
+        : lenientBase64ToBytes(signature)
     if (!sig.length) return false
     const key = await subtle().importKey(
       'raw',
@@ -198,8 +200,7 @@ const SIGNATURE_HASH: Record<string, string> = {
   sha512: 'SHA-512',
 }
 
-const pemToDer = (pem: string): Uint8Array =>
-  base64ToBytes(pem.replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, ''))
+const pemToDer = spkiToDer
 
 /** Reads an ASN.1 DER length at `offset`; returns [length, bytesUsed]. */
 const readLength = (der: Uint8Array, offset: number): [number, number] => {
@@ -229,6 +230,45 @@ const derToP1363 = (der: Uint8Array, size: number): Uint8Array => {
 }
 
 /**
+ * Imports an SPKI DER public key for {@link verifySpkiSignature}: the one place
+ * an Ed25519 or RS256 (RSASSA-PKCS1-v1_5, SHA-256) verify key is built. The
+ * algorithm is named by the caller, not sniffed from the key bytes. Not
+ * extractable. Callers that verify many times (a key service) cache the result.
+ */
+export async function importSpkiVerifyKey(
+  spki: Uint8Array,
+  algorithm: 'ed25519' | 'rs256',
+  hash: 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512' = 'SHA-256'
+): Promise<CryptoKey> {
+  return subtle().importKey(
+    'spki',
+    spki as BufferSource,
+    algorithm === 'ed25519'
+      ? { name: 'Ed25519' }
+      : { name: 'RSASSA-PKCS1-v1_5', hash },
+    true,
+    ['verify']
+  )
+}
+
+/** Whether `signature` (raw bytes) is `payload` signed for a key from {@link importSpkiVerifyKey}. */
+export async function verifySpkiSignature(
+  key: CryptoKey,
+  algorithm: 'ed25519' | 'rs256',
+  signature: Uint8Array,
+  payload: WebhookPayload
+): Promise<boolean> {
+  return subtle().verify(
+    algorithm === 'ed25519' ? { name: 'Ed25519' } : 'RSASSA-PKCS1-v1_5',
+    key,
+    signature as BufferSource,
+    (typeof payload === 'string'
+      ? encoder.encode(payload)
+      : payload) as BufferSource
+  )
+}
+
+/**
  * Whether `signature` (base64) is `payload` signed by the private half of
  * `publicKey` (an RSA, EC or Ed25519 PEM `SPKI` key). RSA-PSS keys are not
  * supported and verify as false. Ed25519 ignores `algorithm` and `dsaEncoding`.
@@ -243,20 +283,11 @@ export async function verifyPublicKeySignature(
   try {
     const der0 = pemToDer(publicKey)
     if (bytesToHex(der0).includes(OID_ED25519)) {
-      const key = await subtle().importKey(
-        'spki',
-        der0 as BufferSource,
-        { name: 'Ed25519' },
-        false,
-        ['verify']
-      )
-      return await subtle().verify(
-        { name: 'Ed25519' },
-        key,
-        base64ToBytes(signature) as BufferSource,
-        (typeof payload === 'string'
-          ? encoder.encode(payload)
-          : payload) as BufferSource
+      return await verifySpkiSignature(
+        await importSpkiVerifyKey(der0, 'ed25519'),
+        'ed25519',
+        lenientBase64ToBytes(signature),
+        payload
       )
     }
     const hash =
@@ -270,20 +301,17 @@ export async function verifyPublicKeySignature(
     const der = pemToDer(publicKey)
     const hex = bytesToHex(der)
     const data = typeof payload === 'string' ? encoder.encode(payload) : payload
-    const sig = base64ToBytes(signature)
+    const sig = lenientBase64ToBytes(signature)
     if (hex.includes(OID_RSA)) {
-      const key = await subtle().importKey(
-        'spki',
-        der as BufferSource,
-        { name: 'RSASSA-PKCS1-v1_5', hash },
-        false,
-        ['verify']
-      )
-      return await subtle().verify(
-        'RSASSA-PKCS1-v1_5',
-        key,
-        sig as BufferSource,
-        data as BufferSource
+      return await verifySpkiSignature(
+        await importSpkiVerifyKey(
+          der,
+          'rs256',
+          hash as 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512'
+        ),
+        'rs256',
+        sig,
+        data
       )
     }
     const curve = hex.includes(OID_EC)

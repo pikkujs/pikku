@@ -375,6 +375,11 @@
     "validateAndBuildSystemRoleDefinitionsMeta"
   ],
   "./keypair": [
+    "DomainPolicyError",
+    "KeyCustodyLostError",
+    "KeyRetiredError",
+    "KeyRotatedError",
+    "KeyUnavailableError",
     "defineKeyPair",
     "validateAndBuildKeyPairDefinitionsMeta"
   ],
@@ -485,6 +490,8 @@
     "VirtualUserStatementError",
     "WebhookService",
     "assertSecretAllowedForHost",
+    "base64ToBytes",
+    "bytesToBase64",
     "createInvocationAudit",
     "createMiddlewareSessionWireProps",
     "createStubProxy",
@@ -493,9 +500,10 @@
     "isTestRun",
     "okpThumbprint",
     "parseVirtualUserVerifyKeys",
-    "rsaThumbprint",
     "pikkuWebhookWorkerFunc",
     "renderEmail",
+    "rsaThumbprint",
+    "spkiToDer",
     "spy",
     "stub",
     "withoutSecrets"
@@ -599,9 +607,11 @@
   "./hmac": [
     "hmacDigest",
     "hmacSha256Hex",
+    "importSpkiVerifyKey",
     "timingSafeStringEqual",
     "verifyHmacSignature",
-    "verifyPublicKeySignature"
+    "verifyPublicKeySignature",
+    "verifySpkiSignature"
   ],
   "./state": [
     "addPackageServiceFactories",
