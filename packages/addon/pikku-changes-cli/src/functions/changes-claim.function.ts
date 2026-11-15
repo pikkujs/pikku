@@ -7,7 +7,7 @@ import {
   httpStatus,
   idList,
   requireProjectId,
-  refuseWhenFilingOnly,
+  refuseWhileFiling,
 } from '../lib/changes.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { dim, safe } from '@pikku/cli/addon-support'
@@ -45,7 +45,7 @@ export const ChangesClaim = pikkuSessionlessFunc({
   input: ChangesClaimInput,
   output: ChangesClaimOutput,
   func: async (_services, input) => {
-    refuseWhenFilingOnly('claim')
+    await refuseWhileFiling('claim')
     const { rpc, projectId } = await changesContext(
       input.apiUrl,
       input.projectId

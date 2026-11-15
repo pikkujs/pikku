@@ -1,10 +1,6 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/addon/function'
-import {
-  changeRef,
-  changesContext,
-  refuseWhenFilingOnly,
-} from '../lib/changes.js'
+import { changeRef, changesContext, refuseWhileFiling } from '../lib/changes.js'
 import {
   currentBranch,
   git,
@@ -50,7 +46,7 @@ export const ChangesDone = pikkuSessionlessFunc({
   input: ChangesDoneInput,
   output: ChangesDoneOutput,
   func: async (_services, input) => {
-    refuseWhenFilingOnly('finish')
+    await refuseWhileFiling('finish')
     let branch = input.branch
     let headCommit = input.headCommit
 

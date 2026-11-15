@@ -30,6 +30,7 @@ import {
 import { currentBranch, git } from '@pikku/cli/addon-support'
 import { NextInput, NextOutput } from './next.schemas.js'
 import { LIST_CHANGES_MAX } from '../lib/list-limit.js'
+import { markFiling } from '../lib/filing-guard.js'
 
 type Route = z.infer<typeof NextOutput>
 type Harness = 'pi' | 'claude'
@@ -54,6 +55,7 @@ export const next = pikkuSessionlessFunc({
     const root =
       config.rootDir ?? (await git(['rev-parse', '--show-toplevel'])).trim()
     let current = input.prompt ? intake(input.prompt) : await route(root, input)
+    if (input.prompt) await markFiling(current.agent!)
     if (!input.exec) return current
     const merged = [...current.merged]
     for (;;) {
@@ -350,8 +352,15 @@ async function launch(
           message,
         ]
   return new Promise((resolve, reject) => {
+    // Builders get past the intake marker `next --prompt` leaves; the intake
+    // agent itself never inherits the pass.
+    const { PIKKU_CHANGES_BUILDER: _, ...env } = process.env
     const child = spawn(harness, args, {
       stdio: 'inherit',
+      env:
+        current.agent === 'intake'
+          ? env
+          : { ...env, PIKKU_CHANGES_BUILDER: '1' },
     })
     child.on('error', reject)
     child.on('exit', (code) => resolve(code ?? 1))
