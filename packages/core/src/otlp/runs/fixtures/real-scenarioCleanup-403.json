@@ -31,7 +31,7 @@
     "message": "ForbiddenError: An error occurred"
    },
    "attributes": {
-    "pikku.user.id": "actor_admin_seminarhof",
+    "pikku.user.id": "virtual_admin_seminarhof",
     "pikku.wire.type": "rpc",
     "pikku.wire.id": "scenarioCleanup",
     "pikku.function.id": "scenarioCleanup"
@@ -62,7 +62,7 @@
     "pikku.wire.type": "http",
     "pikku.wire.id": "post:/rpc/:rpcName",
     "pikku.function.id": "rpcCaller",
-    "pikku.user.id": "actor_admin_seminarhof",
+    "pikku.user.id": "virtual_admin_seminarhof",
     "http.route": "post:/rpc/:rpcName",
     "http.response.status_code": 403
    },
