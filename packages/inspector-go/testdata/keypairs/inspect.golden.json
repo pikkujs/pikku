@@ -41,34 +41,12 @@
         []
       ]
     ],
-    "schemaLookup": [
-      [
-        "SecretSchema_SESSION_SALT",
-        {
-          "variableName": "tokenSchema",
-          "sourceFile": "<fixture>/src/secrets.ts",
-          "vendor": "zod"
-        }
-      ]
-    ],
-    "schemas": {
-      "SecretSchema_SESSION_SALT": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "string"
-      }
-    },
+    "schemaLookup": [],
+    "schemas": {},
     "functions": {
       "typesMap": {
         "map": [],
-        "customTypes": [
-          [
-            "SecretSchema_SESSION_SALT",
-            {
-              "type": "string",
-              "references": []
-            }
-          ]
-        ]
+        "customTypes": []
       },
       "meta": {},
       "files": [],
@@ -166,22 +144,8 @@
       "definition": null
     },
     "secrets": {
-      "definitions": [
-        {
-          "name": "SESSION_SALT",
-          "displayName": "Session salt",
-          "rotationPeriod": "never",
-          "generate": {
-            "size": 32
-          },
-          "secretId": "session-salt",
-          "schema": "SecretSchema_SESSION_SALT",
-          "sourceFile": "<fixture>/src/secrets.ts"
-        }
-      ],
-      "files": [
-        "<fixture>/src/secrets.ts"
-      ],
+      "definitions": [],
+      "files": [],
       "usage": {}
     },
     "surfaceUsage": {},
@@ -308,9 +272,7 @@
     "permissionsGroupsMeta": {
       "definitions": {}
     },
-    "requiredSchemas": [
-      "SecretSchema_SESSION_SALT"
-    ],
+    "requiredSchemas": [],
     "openAPISpec": null,
     "diagnostics": [],
     "addonFunctions": {},

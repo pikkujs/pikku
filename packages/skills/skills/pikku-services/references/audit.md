@@ -117,6 +117,7 @@ usually far more volume than it is worth. `eventType`, `transactionId` and
 
 - **`NoopAuditService`** (`@pikku/core/services`) — default; discards events. Fine when audit isn't needed.
 - **`KyselyAuditService`** (`@pikku/kysely`) — durable: persists events to an `audit` table via kysely. Use as the local/dev sink so events are queryable without a platform queue: `new KyselyAuditService(kysely)`.
+- **Tamper evidence (optional)** — a sink that chains or signs its events can implement `verify(): Promise<{ intact: boolean; checked: number; firstBadId?: string }>`. When it does, `admin:getAudits` adds `intact` to its response so an operator can see tampering; when it does not, the field is absent (not verifiable is not the same as intact). `NoopAuditService` and `KyselyAuditService` do not implement it.
 - **Platform-injected sink** — a deploy platform may inject its own queue-backed `audit` (hence the `existing?.audit ??` fallback above). Its rows land in the same `audit` table shape.
 
 ### The `audit` table (add this migration if you persist audit)

@@ -1,4 +1,4 @@
-//! The `keypairs` fixture is shared with Go (`inspector-go/testdata/keypairs`).
+//! The `keypairs` and `secret-generate` fixtures are shared with Go (`inspector-go/testdata`).
 //! Every `defineKeyPair` field has to reach `state.keyPairs`, and
 //! `defineSecret` has to carry `generate` and accept `rotationPeriod: 'never'`.
 
@@ -8,12 +8,12 @@ use pikku_inspect::analyze;
 use pikku_inspect::protocol::{Options, Request, Response};
 use serde_json::Value;
 
-fn root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../inspector-go/testdata/keypairs").canonicalize().unwrap()
+fn root(fixture: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../inspector-go/testdata").join(fixture).canonicalize().unwrap()
 }
 
-fn inspect(files: &[&str]) -> (Response, Value) {
-    let root = root();
+fn inspect(fixture: &str, files: &[&str]) -> (Response, Value) {
+    let root = root(fixture);
     let req = Request {
         route_files: files.iter().map(|f| root.join(f).to_string_lossy().to_string()).collect(),
         options: Options {
@@ -30,7 +30,7 @@ fn inspect(files: &[&str]) -> (Response, Value) {
 
 #[test]
 fn every_key_pair_field_reaches_state() {
-    let (res, st) = inspect(&["src/keys.ts"]);
+    let (res, st) = inspect("keypairs", &["src/keys.ts"]);
     let defs = st["keyPairs"]["definitions"].as_array().expect("state.keyPairs.definitions");
     assert_eq!(defs.len(), 3, "the nameless one is an error: {defs:?}");
     let full = &defs[0];
@@ -62,7 +62,7 @@ fn every_key_pair_field_reaches_state() {
 
 #[test]
 fn define_secret_carries_generate_and_accepts_never() {
-    let (res, st) = inspect(&["src/secrets.ts"]);
+    let (res, st) = inspect("secret-generate", &["src/secrets.ts"]);
     assert!(res.diagnostics.is_empty(), "rotationPeriod 'never' was refused: {:?}", res.diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>());
     let defs = st["secrets"]["definitions"].as_array().unwrap();
     assert_eq!(defs.len(), 1);

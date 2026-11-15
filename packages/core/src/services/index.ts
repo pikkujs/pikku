@@ -219,6 +219,7 @@ export {
 } from './secret-host-binding.js'
 export type {
   AuditFacets,
+  AuditVerifyResult,
   AuditQuery,
   AuditQueryResult,
 } from './audit-service.js'
