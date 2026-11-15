@@ -6,6 +6,9 @@ import {
   okpThumbprint,
   rsaThumbprint,
   parseVirtualUserVerifyKeys,
+  spkiToDer,
+  base64ToBytes,
+  bytesToBase64,
 } from './virtual-user-verify-keys.js'
 
 const spki = () =>
@@ -196,5 +199,23 @@ describe('parseVirtualUserVerifyKeys', () => {
         ),
       /Ed25519/
     )
+  })
+})
+
+describe('spkiToDer and the base64 helpers', () => {
+  test('PEM, escaped PEM and bare base64 give the same DER; junk throws', () => {
+    const key = generateKeyPairSync('ed25519').publicKey
+    const der = key.export({ format: 'der', type: 'spki' })
+    const pem = key.export({ format: 'pem', type: 'spki' }) as string
+    assert.deepEqual(Buffer.from(spkiToDer(pem)), der)
+    assert.deepEqual(Buffer.from(spkiToDer(pem.replace(/\n/g, '\\n'))), der)
+    assert.deepEqual(Buffer.from(spkiToDer(der.toString('base64'))), der)
+    assert.throws(() => spkiToDer('not a key!'))
+  })
+
+  test('bytesToBase64 and base64ToBytes round trip, url form is unpadded', () => {
+    const bytes = Uint8Array.from([251, 255, 0, 1])
+    assert.deepEqual(base64ToBytes(bytesToBase64(bytes)), bytes)
+    assert.equal(bytesToBase64(bytes, true), '-_8AAQ')
   })
 })

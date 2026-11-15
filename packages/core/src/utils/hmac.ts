@@ -4,6 +4,8 @@
  * Promise; `timingSafeStringEqual` is plain JS and stays synchronous.
  */
 
+import { spkiToDer } from '../services/virtual-user-verify-keys.js'
+
 const encoder = new TextEncoder()
 
 const subtle = (): SubtleCrypto => {
@@ -198,8 +200,7 @@ const SIGNATURE_HASH: Record<string, string> = {
   sha512: 'SHA-512',
 }
 
-const pemToDer = (pem: string): Uint8Array =>
-  base64ToBytes(pem.replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, ''))
+const pemToDer = spkiToDer
 
 /** Reads an ASN.1 DER length at `offset`; returns [length, bytesUsed]. */
 const readLength = (der: Uint8Array, offset: number): [number, number] => {
@@ -236,15 +237,16 @@ const derToP1363 = (der: Uint8Array, size: number): Uint8Array => {
  */
 export async function importSpkiVerifyKey(
   spki: Uint8Array,
-  algorithm: 'ed25519' | 'rs256'
+  algorithm: 'ed25519' | 'rs256',
+  hash: 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512' = 'SHA-256'
 ): Promise<CryptoKey> {
   return subtle().importKey(
     'spki',
     spki as BufferSource,
     algorithm === 'ed25519'
       ? { name: 'Ed25519' }
-      : { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
+      : { name: 'RSASSA-PKCS1-v1_5', hash },
+    true,
     ['verify']
   )
 }
@@ -301,18 +303,15 @@ export async function verifyPublicKeySignature(
     const data = typeof payload === 'string' ? encoder.encode(payload) : payload
     const sig = base64ToBytes(signature)
     if (hex.includes(OID_RSA)) {
-      const key = await subtle().importKey(
-        'spki',
-        der as BufferSource,
-        { name: 'RSASSA-PKCS1-v1_5', hash },
-        false,
-        ['verify']
-      )
-      return await subtle().verify(
-        'RSASSA-PKCS1-v1_5',
-        key,
-        sig as BufferSource,
-        data as BufferSource
+      return await verifySpkiSignature(
+        await importSpkiVerifyKey(
+          der,
+          'rs256',
+          hash as 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512'
+        ),
+        'rs256',
+        sig,
+        data
       )
     }
     const curve = hex.includes(OID_EC)
