@@ -1238,3 +1238,67 @@ describe('revoked keys, custody errors and the jws helper', () => {
     assert.match(await signJws(ok, {}, { a: 1 }), /^[\w-]+\.[\w-]+\.[\w-]+$/)
   })
 })
+
+describe('revoke fails closed', () => {
+  const raced = async (mode: 'once' | 'always') => {
+    const store = new MemoryKeyStore()
+    const real = store.updateCustody.bind(store)
+    let losses = 0
+    store.updateCustody = async (kid, expect, patch, ctx) => {
+      const marking =
+        patch.metadata &&
+        (patch.metadata as Record<string, unknown>).revokedAt !== undefined
+      if (marking && (mode === 'always' || losses === 0)) {
+        losses++
+        return false
+      }
+      return real(kid, expect, patch, ctx)
+    }
+    const a = await setup({ store, publishDelayMs: 0 })
+    await a.svc.generate('audit')
+    const h = await a.svc.signer('audit', { domain: 'd' })
+    return {
+      a,
+      store,
+      kid: h.kid,
+      sig: await h.sign('doc'),
+      losses: () => losses,
+    }
+  }
+  const verifyAll = (
+    a: Awaited<ReturnType<typeof setup>>,
+    kid: string,
+    sig: string,
+    historical: boolean
+  ) => a.svc.verify('audit', 'doc', sig, { domain: 'd', kid, historical })
+
+  test('a lost revokedAt write is retried and the key ends up refused', async () => {
+    const r = await raced('once')
+    await r.a.svc.revoke('audit', r.kid)
+    assert.equal(r.losses(), 1)
+    assert.equal(await verifyAll(r.a, r.kid, r.sig, true), false)
+    assert.equal(await verifyAll(r.a, r.kid, r.sig, false), false)
+  })
+
+  test('a revokedAt write that always loses makes revoke throw before retiring', async () => {
+    const r = await raced('always')
+    await assert.rejects(r.a.svc.revoke('audit', r.kid))
+    assert.notEqual((await r.store.get(r.kid))!.status, 'retired')
+  })
+
+  test('a revokedAt mark refuses the key even outside historical and before the retire lands', async () => {
+    const store = new MemoryKeyStore()
+    const a = await setup({ store, publishDelayMs: 0 })
+    await a.svc.generate('audit')
+    const h = await a.svc.signer('audit', { domain: 'd' })
+    const sig = await h.sign('doc')
+    store.retire = async () => {
+      throw new Error('store went away')
+    }
+    await assert.rejects(a.svc.revoke('audit', h.kid))
+    const row = (await store.get(h.kid))!
+    assert.notEqual(row.status, 'retired')
+    assert.ok(row.metadata?.revokedAt)
+    assert.equal(await verifyAll(a, h.kid, sig, false), false)
+  })
+})

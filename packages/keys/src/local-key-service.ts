@@ -364,6 +364,9 @@ export class LocalKeyService implements KeyService {
     historical = false,
     sealing = false
   ): boolean {
+    // A revocation mark refuses the key in every state, including `previous`
+    // inside its grace window if the retire step did not land.
+    if (revokedAtOf(rec)) return false
     if (rec.status === 'active') return true
     if (rec.status === 'previous') {
       // A sealing key stays `previous` until its rows are re-sealed, past verifyUntil too.
@@ -375,7 +378,7 @@ export class LocalKeyService implements KeyService {
     // `historical` serves routine retirement only. A revoked key (compromised) is
     // never accepted, even for old signatures: without an independent anchor they
     // cannot be told from forgeries by whoever holds the stolen key.
-    return rec.status === 'retired' && historical && !revokedAtOf(rec)
+    return rec.status === 'retired' && historical
   }
 
   private info(rec: KeyRecord): PublicKeyInfo {
@@ -1027,13 +1030,21 @@ export class LocalKeyService implements KeyService {
       let current = (await this.store.get(kid)) ?? rec
       // Marked BEFORE the retire CAS, so there is no instant at which the key is
       // retired but not yet known to be revoked. `historical` refuses this mark.
-      if (!revokedAtOf(current)) {
-        await this.store.updateCustody(
+      // A lost compare-and-set (another instance wrote the row) is retried a few
+      // times; if the mark still cannot be written, revoke throws BEFORE retiring.
+      for (let attempt = 0; !revokedAtOf(current); attempt++) {
+        if (attempt === 3) {
+          throw new Error(
+            `Could not record the revocation of ${kid}: the ledger row kept changing. Nothing was retired; run revoke again.`
+          )
+        }
+        const ok = await this.store.updateCustody(
           kid,
           { rev: current.rev },
           { metadata: { ...current.metadata, revokedAt: iso(now) } }
         )
         current = (await this.store.get(kid)) ?? current
+        if (!ok && !revokedAtOf(current)) continue
         this.verifyCache.delete(kid)
         await this.load(decl.name, scopeKey)
       }

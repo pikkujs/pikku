@@ -233,6 +233,11 @@ export interface KeyRecord {
   privateRef?: string | null
   /** Custody `wrapped` only: ciphertext written by the host's {@link PrivateKeyWrapper}. */
   privateWrapped?: string | null
+  /**
+   * Free-form ledger data. A store MUST persist and return it unchanged:
+   * revocation lives here (`revokedAt`), so a store that drops `metadata` would
+   * accept revoked keys.
+   */
   metadata?: Record<string, unknown> | null
   /** Compare-and-set token for `updateCustody`, starts at 0. */
   rev: number
