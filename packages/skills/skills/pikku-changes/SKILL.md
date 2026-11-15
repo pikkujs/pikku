@@ -22,6 +22,31 @@ group them into changesets, and take one: claim it, build it, mark its items don
 starts a fresh agent for the next one, so nothing you hold in context carries over — whatever the next
 changeset needs to know goes in a commit or a `reply`.
 
+## Filing a plan from a brief
+
+File from the brief alone. Do not read the project, other skills or the knowledge notes first: the plan
+says what each piece does for the person, and the agent that builds it reads the code. Your first
+command is `pikku changes file`.
+
+Break the brief into changes a person could check one by one, each saying what they can see or do
+when it is done. Plan in verticals: the data, the functions and the screens of one feature belong together, and the
+screens are not left to the end. So the first change declares the tables and the signatures (name,
+input, output) of every function the feature needs, each declared `mock: true` with a few `.mocks/` records
+(see the pikku-build skill, mocks reference), until its real change builds it. After that the screens and the real function bodies are separate changes that run
+side by side against those signatures, and neither waits for the other.
+
+File the data first, as its own change named for the data ("The shop's products, orders and stock are
+kept"): what is stored, what each record holds. Every later change that stores or reads something
+depends on it with `--depends-on <its number>`; none is filed without that link. Give each change a `--specialist`: `frontend` when
+the work is a page, screen or view (including the owner's lists of orders or bookings), `build` for
+functions, tables and rules, `emails` only for the sending of a message. Screens that only read
+the data can run side by side, so depend on the data change, not on each other.
+
+While filing, do not run `pikku changes ask` at all: nobody is there to answer, and a change left
+waiting on an answer is a change nobody can build. Where you are unsure, write "Decision: ..." in
+the body and file it. When the last change is filed, stop: do not `claim`, `plan` or build any of them, and do not
+mark one `done`. Building is a later job for other agents.
+
 ## The loop
 
 **Never poll.** No `sleep` loops, no repeated `list`, no re-running `show` to see if
