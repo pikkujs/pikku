@@ -57,6 +57,11 @@ export interface DbSummary {
   byOp: Record<string, number>
   /** Calls beyond the first with the same `db.query.text`. Present only when a span carried the text. */
   repeated?: number
+  /**
+   * Db spans that ended after their hop's end was reported: counted here, not in `count`, `totalMs` or `byOp`. Present
+   * only when there were some; each one is announced by a `run.hop` event with phase `update`.
+   */
+  dropped?: number
 }
 
 export type RunOutcome = 'ok' | 'error' | 'denied'
@@ -85,7 +90,8 @@ export type RunEvent = { seq: number; at: number } & (
     }
   | {
       type: 'run.hop'
-      phase: 'start' | 'end'
+      /** `update`: the hop's `db` changed after its end (a late db span); nothing else did. */
+      phase: 'start' | 'end' | 'update'
       traceId: string
       spanId: string
       parentSpanId: string | null

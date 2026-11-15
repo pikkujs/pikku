@@ -193,9 +193,39 @@ export const createRunStitcher = (
     })
   }
 
+  /**
+   * A boundary is not drawn and is not a health key, so its failure would vanish. An error outcome (not a denial, as for
+   * a hop) becomes the run's first failure when none is set yet, naming the hop it hangs off (the one that was
+   * publishing) with the boundary's error. A boundary with no hop above it is the root, whose own outcome already
+   * decides the run.
+   */
+  const noteBoundaryFailure = (
+    run: Run,
+    rec: SpanRec,
+    frame: FinishedSpan
+  ): void => {
+    if (run.firstFailure || outcomeOf(frame) !== 'error') return
+    const owner = hopParentOf(run, rec)
+    const hop = owner ? run.spans.get(owner) : undefined
+    if (!hop) return
+    run.firstFailure = {
+      spanId: hop.spanId,
+      ...(hop.functionId ? { functionId: hop.functionId } : {}),
+      errorName: errorNameOf(frame),
+    }
+  }
+
   const emitEnd = (run: Run, rec: SpanRec): void => {
     const frame = rec.frame
-    if (rec.endEmitted || rec.role !== 'hop' || !frame) return
+    if (rec.endEmitted || !frame) return
+    if (rec.role === 'boundary') {
+      rec.endEmitted = true
+      rec.startAttrs = undefined
+      rec.frame = undefined
+      noteBoundaryFailure(run, rec, frame)
+      return
+    }
+    if (rec.role !== 'hop') return
     rec.endEmitted = true
     const attributes = boundAttrs(frame.attributes)
     rec.startAttrs = undefined
@@ -207,7 +237,7 @@ export const createRunStitcher = (
     )
     const outcome = outcomeOf(frame)
     const errorName = outcome === 'ok' ? null : errorNameOf(frame)
-    const db = rec.db && rec.db.size > 0 ? rec.db.summary() : undefined
+    const db = rec.db && rec.db.hasData ? rec.db.summary() : undefined
     hop.attributes = { ...attributes }
     hop.endedAt = endMs
     hop.durationMs = durationMs
@@ -246,8 +276,34 @@ export const createRunStitcher = (
     const hop = nearestHop(run, rec)
     rec.frame = undefined
     if (run.rootSpanId !== rec.spanId) rec.startAttrs = undefined
-    if (!hop || hop.endEmitted) return
-    ;(hop.db ??= new DbAccumulator()).add(frame)
+    if (!hop) return
+    if (hop.endEmitted) lateDb(run, hop, frame)
+    else (hop.db ??= new DbAccumulator()).add(frame)
+  }
+
+  /**
+   * A db span that ended after its hop's end was emitted: the summary's counts are frozen, so it is counted in
+   * `dropped` and announced by a `run.hop` `update`, which keeps a snapshot plus the later events equal to the stream.
+   */
+  const lateDb = (run: Run, hop: SpanRec, frame: FinishedSpan): void => {
+    const view = hop.view
+    if (!view) return
+    const acc = (hop.db ??= new DbAccumulator())
+    acc.late()
+    const db = acc.summary()
+    view.db = { ...db, byOp: { ...db.byOp } }
+    emit(run, nsToMs(frame.endTimeUnixNano), {
+      type: 'run.hop',
+      phase: 'update',
+      traceId: run.traceId,
+      spanId: hop.spanId,
+      parentSpanId: view.parentSpanId,
+      name: hop.name,
+      kind: hop.kind,
+      ...(hop.functionId ? { functionId: hop.functionId } : {}),
+      attributes: { ...view.attributes },
+      db,
+    })
   }
 
   /** Handles one span's end once the run has its root. */

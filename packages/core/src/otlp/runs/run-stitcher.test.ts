@@ -1210,6 +1210,8 @@ const fold = (state: FoldState, events: RunEvent[]): FoldState => {
       if (e.phase === 'start') {
         hop.hadStart = true
         hop.attributes = e.attributes
+      } else if (e.phase === 'update') {
+        hop.db = e.db
       } else {
         hop.attributes = e.attributes
         hop.endedAt = e.at
@@ -1617,6 +1619,173 @@ describe('a sink registered mid-request (start frames, the first span has a pare
     assert.equal(events.length, 0)
     stitcher.sweep(T0 + 200)
     assert.equal(ofType(events, 'run.started')[0]!.rootSpanId, 'c')
+  })
+})
+
+describe('a db span that ends after its hop ended', () => {
+  const dbAttrs = {
+    'db.system': 'pg',
+    'db.operation.name': 'select',
+    'db.collection.name': 'booking',
+  }
+
+  test('is counted in db.dropped, announced by a run.hop update, and the view agrees', () => {
+    const stitcher = createRunStitcher()
+    const events = collect(stitcher)
+    const root = syn({ id: 'r', startMs: T0, endMs: T0 + 50 })
+    const hop = syn({ id: 'h', parent: 'r', startMs: T0 + 1, endMs: T0 + 10 })
+    stitcher.start(toOpen(root), T0)
+    stitcher.start(toOpen(hop), T0 + 1)
+    stitcher.end(
+      syn({
+        id: 'd0',
+        parent: 'h',
+        startMs: T0 + 2,
+        endMs: T0 + 4,
+        attributes: dbAttrs,
+      }),
+      T0 + 4
+    )
+    stitcher.end(hop, T0 + 10)
+    stitcher.end(
+      syn({
+        id: 'd1',
+        parent: 'h',
+        startMs: T0 + 5,
+        endMs: T0 + 20,
+        attributes: dbAttrs,
+      }),
+      T0 + 20
+    )
+    stitcher.end(
+      syn({
+        id: 'd2',
+        parent: 'h',
+        startMs: T0 + 5,
+        endMs: T0 + 21,
+        attributes: dbAttrs,
+      }),
+      T0 + 21
+    )
+    stitcher.end(root, T0 + 50)
+    const view = stitcher
+      .snapshot(T0 + 60)
+      .recent[0]!.hops.find((x) => x.spanId === 'h')!
+    assert.equal(view.db?.count, 1)
+    assert.equal(view.db?.dropped, 2)
+    const updates = ofType(events, 'run.hop').filter(
+      (e) => e.phase === 'update'
+    )
+    assert.equal(updates.length, 2)
+    assert.deepEqual(updates[1]!.db, view.db)
+  })
+
+  test('a hop whose only db spans came late still gets a summary with the count', () => {
+    const stitcher = createRunStitcher()
+    const root = syn({ id: 'r', startMs: T0, endMs: T0 + 50 })
+    stitcher.start(toOpen(root), T0)
+    stitcher.end(
+      syn({ id: 'h', parent: 'r', startMs: T0 + 1, endMs: T0 + 10 }),
+      T0 + 10
+    )
+    stitcher.end(
+      syn({
+        id: 'd',
+        parent: 'h',
+        startMs: T0 + 5,
+        endMs: T0 + 20,
+        attributes: dbAttrs,
+      }),
+      T0 + 20
+    )
+    stitcher.end(root, T0 + 50)
+    const view = stitcher
+      .snapshot(T0 + 60)
+      .recent[0]!.hops.find((x) => x.spanId === 'h')!
+    assert.deepEqual(view.db, { count: 0, totalMs: 0, byOp: {}, dropped: 1 })
+  })
+
+  test('a db span before the end carries no dropped key', () => {
+    const stitcher = createRunStitcher()
+    const root = syn({ id: 'r', startMs: T0, endMs: T0 + 50 })
+    stitcher.start(toOpen(root), T0)
+    stitcher.end(
+      syn({
+        id: 'd',
+        parent: 'r',
+        startMs: T0 + 5,
+        endMs: T0 + 20,
+        attributes: dbAttrs,
+      }),
+      T0 + 20
+    )
+    stitcher.end(root, T0 + 50)
+    const view = stitcher.snapshot(T0 + 60).recent[0]!.hops[0]!
+    assert.equal(view.db?.count, 1)
+    assert.equal('dropped' in view.db!, false)
+  })
+})
+
+describe('a failed producer span (a boundary)', () => {
+  test('is the failure the run names, though it is not a hop and not a health key', () => {
+    const stitcher = createRunStitcher()
+    const events = collect(stitcher)
+    stitcher.start(
+      toOpen(syn({ id: 'r', name: 'checkout', startMs: T0, endMs: T0 + 50 })),
+      T0
+    )
+    const pub = syn({
+      id: 'p',
+      name: 'publish mail',
+      parent: 'r',
+      kind: 'producer',
+      startMs: T0 + 1,
+      endMs: T0 + 5,
+      error: 'QueueDownError',
+    })
+    stitcher.start(toOpen(pub), T0 + 1)
+    stitcher.end(pub, T0 + 5)
+    stitcher.end(
+      syn({
+        id: 'r',
+        name: 'checkout',
+        startMs: T0,
+        endMs: T0 + 50,
+        error: 'Boom',
+      }),
+      T0 + 50
+    )
+    const failed = ofType(events, 'run.failed')[0]!
+    // the hop that was publishing, with the publish's error
+    assert.deepEqual(failed.failure, {
+      spanId: 'r',
+      functionId: 'checkout',
+      errorName: 'QueueDownError',
+    })
+    assert.ok(!ofType(events, 'run.hop').some((e) => e.spanId === 'p'))
+    const keys = stitcher.snapshot(T0 + 60).health.entries.map((e) => e.key)
+    assert.ok(!keys.includes('publish mail'))
+  })
+
+  test('a denied boundary is not a failure, as for a hop', () => {
+    const stitcher = createRunStitcher()
+    const events = collect(stitcher)
+    stitcher.start(toOpen(syn({ id: 'r', startMs: T0, endMs: T0 + 50 })), T0)
+    const pub = syn({
+      id: 'p',
+      parent: 'r',
+      kind: 'producer',
+      startMs: T0 + 1,
+      endMs: T0 + 5,
+      error: 'ForbiddenError',
+    })
+    stitcher.start(toOpen(pub), T0 + 1)
+    stitcher.end(pub, T0 + 5)
+    stitcher.end(
+      syn({ id: 'r', startMs: T0, endMs: T0 + 50, error: 'Boom' }),
+      T0 + 50
+    )
+    assert.equal(ofType(events, 'run.failed')[0]!.failure!.errorName, 'Boom')
   })
 })
 
