@@ -194,6 +194,12 @@ Related changes:
 
 To find affected code, search for `pikkuWorkflowFunc`, `pikkuWorkflowGraph`, `pikkuAgent(`, `rpc.startWorkflow`, `workflow.approval(` and `assertWorkflowRunOwner`, and run `pikku validate`.
 
+### `pikku dev` and `pikku serve` read vault secrets over HTTP from a connection file
+
+The vault client in `@pikku/cli` no longer talks to a unix socket. `PIKKU_VAULT_SOCKET` and `PIKKU_VAULT_TOKEN` are deleted and ignored, with no fallback. Set `PIKKU_VAULT_CONNECTION_FILE` to the path of a JSON file `{ "url": "http://...", "token": "..." }` (mode 0600). The CLI calls `POST /rpc/vault:secretGetOwn@v1` on that host with the token as a bearer; on a 401 or a connection error it re-reads the file once and retries, so a renewed token or a new host port reaches a running project. The client stays read-only.
+
+To find affected setups, search for `PIKKU_VAULT_SOCKET` and `PIKKU_VAULT_TOKEN` in scripts and process managers.
+
 ### `pikku cloud report` is now `pikku report`, and findings are no longer anonymous
 
 `pikku cloud report` is gone, with no alias. Use `pikku report`, with the same flags.
