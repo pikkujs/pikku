@@ -1,0 +1,23 @@
+{
+  "jobs": [
+    {
+      "jobId": "job_leak",
+      "title": "Fix the leaking tap",
+      "status": "scheduled",
+      "priority": "urgent",
+      "scheduledFor": "2026-11-16T09:00:00.000Z",
+      "customerName": "Northwind Cafe",
+      "technicianName": "Sam Okafor"
+    },
+    {
+      "jobId": "job_boiler",
+      "title": "Annual boiler service",
+      "status": "scheduled",
+      "priority": "normal",
+      "scheduledFor": "2026-11-17T13:30:00.000Z",
+      "customerName": "Harbour Dental",
+      "technicianName": null
+    }
+  ],
+  "nextCursor": null
+}
