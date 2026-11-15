@@ -688,6 +688,16 @@
         "@pikku/core": "^0.12.158",
       },
     },
+    "packages/keys": {
+      "name": "@pikku/keys",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/node": "^26.6.5",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.158",
+      },
+    },
     "packages/knowledge": {
       "name": "@pikku/knowledge",
       "version": "0.12.22",
@@ -3674,6 +3684,8 @@
     "@pikku/inspector-go": ["@pikku/inspector-go@workspace:packages/inspector-go"],
 
     "@pikku/jose": ["@pikku/jose@workspace:packages/services/jose"],
+
+    "@pikku/keys": ["@pikku/keys@workspace:packages/keys"],
 
     "@pikku/knowledge": ["@pikku/knowledge@workspace:packages/knowledge"],
 
