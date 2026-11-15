@@ -180,7 +180,7 @@ export const createRunStitcher = (
     const attributes = rec.startAttrs ?? {}
     rec.startAttrs = undefined
     const hop = viewOf(run, rec, { ...attributes })
-    emit(run, rec.startMs, {
+    hop.startSeq = emit(run, rec.startMs, {
       type: 'run.hop',
       phase: 'start',
       traceId: run.traceId,
@@ -252,7 +252,7 @@ export const createRunStitcher = (
         errorName,
       }
     }
-    emit(run, endMs, {
+    hop.endSeq = emit(run, endMs, {
       type: 'run.hop',
       phase: 'end',
       traceId: run.traceId,
@@ -322,10 +322,11 @@ export const createRunStitcher = (
       ...(service ? { service } : {}),
       attributes: { ...root.startAttrs },
       startedAt: root.startMs,
+      startedSeq: 0,
       status: 'open',
       hops: [],
     }
-    emit(run, root.startMs, {
+    run.view.startedSeq = emit(run, root.startMs, {
       type: 'run.started',
       traceId: run.traceId,
       rootSpanId: root.spanId,
@@ -411,6 +412,7 @@ export const createRunStitcher = (
       durationMs,
       outcome: 'expired',
     })
+    run.view.closedSeq = run.closedSeq
     retire(run)
   }
 
@@ -439,6 +441,7 @@ export const createRunStitcher = (
         outcome: 'error',
         failure,
       })
+      view.closedSeq = run.closedSeq
     } else {
       view.status = 'finished'
       run.closedSeq = emit(run, rootEnd.atMs, {
@@ -447,6 +450,7 @@ export const createRunStitcher = (
         durationMs: rootEnd.durationMs,
         outcome: rootEnd.outcome,
       })
+      view.closedSeq = run.closedSeq
     }
     retire(run)
   }

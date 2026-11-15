@@ -1124,6 +1124,8 @@ interface FoldHop {
   functionId?: string
   attributes: Record<string, string | number | boolean>
   hadStart: boolean
+  startSeq?: number
+  endSeq?: number
   endedAt?: number
   durationMs?: number
   outcome?: string
@@ -1134,6 +1136,8 @@ interface FoldRun {
   traceId: string
   rootSpanId: string
   startedAt: number
+  startedSeq: number
+  closedSeq?: number
   attributes: Record<string, string | number | boolean>
   endedAt?: number
   status: string
@@ -1153,6 +1157,8 @@ const fromSnapshot = (snapshot: RunSnapshot): FoldState => {
       traceId: view.traceId,
       rootSpanId: view.rootSpanId,
       startedAt: view.startedAt,
+      startedSeq: view.startedSeq,
+      closedSeq: view.closedSeq,
       attributes: view.attributes,
       endedAt: view.endedAt,
       status: view.status,
@@ -1170,6 +1176,8 @@ const fromSnapshot = (snapshot: RunSnapshot): FoldState => {
             functionId: h.functionId,
             attributes: h.attributes,
             hadStart: h.hadStart,
+            startSeq: h.startSeq,
+            endSeq: h.endSeq,
             endedAt: h.endedAt,
             durationMs: h.durationMs,
             outcome: h.outcome,
@@ -1190,6 +1198,7 @@ const fold = (state: FoldState, events: RunEvent[]): FoldState => {
         traceId: e.traceId,
         rootSpanId: e.rootSpanId,
         startedAt: e.at,
+        startedSeq: e.seq,
         attributes: e.attributes,
         status: 'open',
         hops: new Map(),
@@ -1209,11 +1218,13 @@ const fold = (state: FoldState, events: RunEvent[]): FoldState => {
       hop.parentSpanId = e.parentSpanId
       if (e.phase === 'start') {
         hop.hadStart = true
+        hop.startSeq = e.seq
         hop.attributes = e.attributes
       } else if (e.phase === 'update') {
         hop.db = e.db
       } else {
         hop.attributes = e.attributes
+        hop.endSeq = e.seq
         hop.endedAt = e.at
         hop.durationMs = e.durationMs
         hop.outcome = e.outcome
@@ -1225,6 +1236,7 @@ const fold = (state: FoldState, events: RunEvent[]): FoldState => {
       const run = state.get(e.traceId)
       if (!run) continue
       run.status = e.type.slice('run.'.length)
+      run.closedSeq = e.seq
       run.endedAt = e.at
       run.outcome = e.outcome
       run.durationMs = e.durationMs
@@ -1786,6 +1798,70 @@ describe('a failed producer span (a boundary)', () => {
       T0 + 50
     )
     assert.equal(ofType(events, 'run.failed')[0]!.failure!.errorName, 'Boom')
+  })
+})
+
+describe('views carry the seq of the events they stand for', () => {
+  test('startedSeq, closedSeq, startSeq and endSeq equal the seqs of the events, so a rebuild can order exactly', () => {
+    const stitcher = createRunStitcher({ limits: { maxRetained: 1000 } })
+    const events = collect(stitcher)
+    const batches = frames(sample).map((f) => [f])
+    let last = 0
+    for (const [{ at, kind, span }] of batches.map((b) => b)) {
+      last = nsToMs(at)
+      if (kind === 0) stitcher.start(toOpen(span), last)
+      else stitcher.end(span, last)
+    }
+    stitcher.sweep(last + 600_000)
+    const snapshot = stitcher.snapshot(last + 600_000)
+    const views = [...snapshot.open, ...snapshot.recent]
+    assert.ok(views.length > 0)
+    for (const view of views) {
+      const started = events.find(
+        (e) => e.type === 'run.started' && e.traceId === view.traceId
+      )!
+      assert.equal(view.startedSeq, started.seq)
+      const close = events.find(
+        (e) =>
+          (e.type === 'run.finished' ||
+            e.type === 'run.failed' ||
+            e.type === 'run.expired') &&
+          e.traceId === view.traceId
+      )
+      assert.equal(view.closedSeq, close?.seq)
+      for (const hop of view.hops) {
+        const start = events.find(
+          (e) =>
+            e.type === 'run.hop' &&
+            e.phase === 'start' &&
+            e.spanId === hop.spanId &&
+            e.traceId === view.traceId
+        )
+        const end = events.find(
+          (e) =>
+            e.type === 'run.hop' &&
+            e.phase === 'end' &&
+            e.spanId === hop.spanId &&
+            e.traceId === view.traceId
+        )
+        assert.equal(hop.startSeq, start?.seq)
+        assert.equal(hop.endSeq, end?.seq)
+        assert.equal(hop.hadStart, start !== undefined)
+      }
+    }
+  })
+
+  test('an open run has no closedSeq and an open hop no endSeq', () => {
+    const stitcher = createRunStitcher()
+    stitcher.start(toOpen(syn({ id: 'r', startMs: T0 })), T0)
+    stitcher.start(
+      toOpen(syn({ id: 'h', parent: 'r', startMs: T0 + 1 })),
+      T0 + 1
+    )
+    const view = stitcher.snapshot(T0 + 2).open[0]!
+    assert.equal(view.closedSeq, undefined)
+    assert.equal(view.hops[0]!.endSeq, undefined)
+    assert.equal(typeof view.hops[0]!.startSeq, 'number')
   })
 })
 
