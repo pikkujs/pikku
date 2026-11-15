@@ -86,6 +86,7 @@ type FunctionMeta struct {
 	Scenario                        *bool          `json:"scenario,omitempty"`
 	MCP                             *bool          `json:"mcp,omitempty"`
 	Readonly                        *bool          `json:"readonly,omitempty"`
+	Mock                            *bool          `json:"mock,omitempty"`
 	Deploy                          string         `json:"deploy,omitempty"`
 	ApprovalRequired                *bool          `json:"approvalRequired,omitempty"`
 	ApprovalDescription             string         `json:"approvalDescription,omitempty"`

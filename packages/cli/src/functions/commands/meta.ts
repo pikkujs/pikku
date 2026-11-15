@@ -188,6 +188,7 @@ export const pikkuMetaFunctionsList = pikkuSessionlessFunc<{}, void>({
       name: m.name ?? id,
       description: m.description ?? null,
       tags: m.tags ?? [],
+      ...(m.mock === true ? { mock: true } : {}),
     }))
     out({ functions })
   },
@@ -211,6 +212,7 @@ export const pikkuMetaFunctionsGet = pikkuSessionlessFunc<
       tags: m.tags ?? [],
       expose: m.expose === true,
       readonly: m.readonly === true,
+      mock: m.mock === true,
       input: { name: m.inputSchemaName ?? null, jsonSchema: null },
       output: { name: m.outputSchemaName ?? null, jsonSchema: null },
     })

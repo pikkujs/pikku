@@ -1,0 +1,493 @@
+{
+  "state": {
+    "rootDir": "<fixture>",
+    "singletonServicesTypeImportMap": [],
+    "wireServicesTypeImportMap": [],
+    "userSessionTypeImportMap": [],
+    "configTypeImportMap": [],
+    "singletonServicesFactories": [],
+    "wireServicesFactories": [],
+    "wireServicesMeta": [],
+    "addonRequiredParentServices": [],
+    "addonCreatedServices": [],
+    "addonServicesFactorySeen": false,
+    "addonServerlessIncompatible": [],
+    "configFactories": [],
+    "serverLifecycleFactories": [],
+    "filesAndMethods": {},
+    "filesAndMethodsErrors": [
+      [
+        "No CoreUserSession found",
+        []
+      ],
+      [
+        "No CoreSingletonServices found",
+        []
+      ],
+      [
+        "No CoreServices found",
+        []
+      ],
+      [
+        "No CoreConfig found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {\n  return {}\n})\n\nPossible issues:\n- srcDirectories in pikku.config.json doesn't include the file with the createConfig method",
+        []
+      ],
+      [
+        "No CreateSingletonServices found",
+        []
+      ],
+      [
+        "No CreateWireServices found",
+        []
+      ]
+    ],
+    "schemaLookup": [],
+    "schemas": {
+      "GetTodoInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "ListTodosInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "limit"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "ListTodosOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Todo"
+        },
+        "definitions": {
+          "Todo": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "title"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "Todo": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      }
+    },
+    "functions": {
+      "typesMap": {
+        "map": [
+          [
+            "Todo",
+            {
+              "originalName": "Todo",
+              "path": "<fixture>/src/func.ts"
+            }
+          ]
+        ],
+        "customTypes": [
+          [
+            "GetTodoInput",
+            {
+              "type": "{ id: string; }",
+              "references": []
+            }
+          ],
+          [
+            "ListTodosInput",
+            {
+              "type": "{ limit: number; }",
+              "references": []
+            }
+          ],
+          [
+            "ListTodosOutput",
+            {
+              "type": "Todo[]",
+              "references": [
+                "Todo",
+                "Todo"
+              ]
+            }
+          ]
+        ]
+      },
+      "meta": {
+        "getTodo": {
+          "pikkuFuncId": "getTodo",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "getTodo",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "GetTodoInput",
+          "outputSchemaName": "Todo",
+          "inputs": [
+            "GetTodoInput"
+          ],
+          "outputs": [
+            "Todo"
+          ],
+          "expose": true,
+          "implementationHash": "02822924cc96c2d8",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/func.ts",
+          "exportedName": "getTodo",
+          "bodyStart": 7,
+          "bodyEnd": 7,
+          "contractHash": "cb917a01ab9cf04e",
+          "inputHash": "f59a5d53",
+          "outputHash": "a4656629"
+        },
+        "listTodos": {
+          "pikkuFuncId": "listTodos",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "listTodos",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "ListTodosInput",
+          "outputSchemaName": "ListTodosOutput",
+          "inputs": [
+            "ListTodosInput"
+          ],
+          "outputs": [
+            "ListTodosOutput"
+          ],
+          "expose": true,
+          "mock": true,
+          "implementationHash": "5c057b2a58ddedd1",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/func.ts",
+          "exportedName": "listTodos",
+          "contractHash": "b2ffe124efeec863",
+          "inputHash": "8e4b6624",
+          "outputHash": "6aaef782"
+        }
+      },
+      "files": [
+        [
+          "getTodo",
+          {
+            "path": "<fixture>/src/func.ts",
+            "exportedName": "getTodo"
+          }
+        ],
+        [
+          "listTodos",
+          {
+            "path": "<fixture>/src/func.ts",
+            "exportedName": "listTodos"
+          }
+        ]
+      ],
+      "approvalDescriptions": {},
+      "dynamicImportIds": []
+    },
+    "http": {
+      "metaInputTypes": [],
+      "meta": {
+        "get": {},
+        "post": {},
+        "put": {},
+        "delete": {},
+        "head": {},
+        "patch": {},
+        "options": {}
+      },
+      "files": [],
+      "routeMiddleware": []
+    },
+    "channels": {
+      "files": [],
+      "meta": {}
+    },
+    "gateways": {
+      "meta": {},
+      "files": []
+    },
+    "triggers": {
+      "meta": {},
+      "sourceMeta": {},
+      "webhookSourceMeta": {},
+      "files": []
+    },
+    "scheduledTasks": {
+      "meta": {},
+      "files": []
+    },
+    "queueWorkers": {
+      "meta": {},
+      "files": []
+    },
+    "workflows": {
+      "meta": {},
+      "files": [],
+      "graphMeta": {},
+      "graphFiles": [],
+      "featureFiles": [],
+      "invokedWorkflows": []
+    },
+    "rpc": {
+      "internalMeta": {
+        "getTodo": "getTodo",
+        "listTodos": "listTodos"
+      },
+      "internalFiles": [
+        [
+          "getTodo",
+          {
+            "path": "<fixture>/src/func.ts",
+            "exportedName": "getTodo"
+          }
+        ],
+        [
+          "listTodos",
+          {
+            "path": "<fixture>/src/func.ts",
+            "exportedName": "listTodos"
+          }
+        ]
+      ],
+      "exposedMeta": {
+        "getTodo": "getTodo",
+        "listTodos": "listTodos"
+      },
+      "exposedFiles": [
+        [
+          "getTodo",
+          {
+            "path": "<fixture>/src/func.ts",
+            "exportedName": "getTodo"
+          }
+        ],
+        [
+          "listTodos",
+          {
+            "path": "<fixture>/src/func.ts",
+            "exportedName": "listTodos"
+          }
+        ]
+      ],
+      "remoteMeta": {},
+      "remoteFiles": [],
+      "invokedFunctions": [],
+      "invokedFunctionsByFile": [],
+      "usedAddons": [],
+      "wireAddonDeclarations": [],
+      "wireAddonFiles": []
+    },
+    "mcpEndpoints": {
+      "resourcesMeta": {},
+      "toolsMeta": {},
+      "promptsMeta": {},
+      "files": [],
+      "surfaces": {}
+    },
+    "agents": {
+      "agentsMeta": {},
+      "files": [],
+      "invokedAgentsByFile": []
+    },
+    "scorers": {
+      "scorersMeta": {},
+      "files": []
+    },
+    "cli": {
+      "meta": {
+        "programs": {},
+        "renderers": {}
+      },
+      "files": []
+    },
+    "nodes": {
+      "meta": {},
+      "files": []
+    },
+    "auth": {
+      "providers": [],
+      "plugins": [],
+      "files": [],
+      "definition": null
+    },
+    "secrets": {
+      "definitions": [],
+      "files": [],
+      "usage": {}
+    },
+    "surfaceUsage": {},
+    "credentials": {
+      "definitions": [],
+      "files": []
+    },
+    "scopes": {
+      "definitions": [],
+      "files": []
+    },
+    "systemRoles": {
+      "definitions": [],
+      "files": []
+    },
+    "featureFlags": {
+      "definitions": [],
+      "files": []
+    },
+    "virtualUsers": {
+      "definitions": [],
+      "files": []
+    },
+    "variables": {
+      "definitions": [],
+      "files": []
+    },
+    "manifest": {
+      "initial": {
+        "manifestVersion": 1,
+        "contracts": {}
+      },
+      "current": {
+        "manifestVersion": 1,
+        "contracts": {
+          "getTodo": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "f59a5d53",
+                "outputHash": "a4656629"
+              }
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    "middleware": {
+      "definitions": {},
+      "instances": {},
+      "globalFiles": [],
+      "tagMiddleware": []
+    },
+    "channelMiddleware": {
+      "definitions": {},
+      "instances": {},
+      "tagMiddleware": []
+    },
+    "agentMiddleware": {
+      "definitions": {}
+    },
+    "permissions": {
+      "definitions": {},
+      "instances": {},
+      "global": []
+    },
+    "serviceAggregation": {
+      "requiredServices": [],
+      "usedFunctions": [
+        "getTodo",
+        "listTodos"
+      ],
+      "usedMiddleware": [],
+      "usedPermissions": [],
+      "allSingletonServices": [],
+      "allWireServices": []
+    },
+    "serviceTypes": {
+      "singletonServices": null,
+      "services": null,
+      "secretAliases": []
+    },
+    "resolvedIOTypes": {
+      "getTodo": {
+        "inputType": "GetTodoInput",
+        "outputType": "Todo"
+      },
+      "listTodos": {
+        "inputType": "ListTodosInput",
+        "outputType": "ListTodosOutput"
+      }
+    },
+    "middlewareGroupsMeta": {
+      "definitions": {},
+      "instances": {},
+      "httpGroups": {},
+      "tagGroups": {},
+      "channelMiddleware": {
+        "definitions": {},
+        "instances": {},
+        "tagGroups": {}
+      }
+    },
+    "permissionsGroupsMeta": {
+      "definitions": {}
+    },
+    "requiredSchemas": [
+      "GetTodoInput",
+      "Todo",
+      "ListTodosInput",
+      "ListTodosOutput"
+    ],
+    "openAPISpec": null,
+    "diagnostics": [],
+    "addonFunctions": {},
+    "exportedContracts": {
+      "http": {},
+      "cli": {},
+      "channel": {},
+      "addonHttp": {},
+      "addonCli": {},
+      "addonChannel": {}
+    }
+  },
+  "diagnostics": [],
+  "validationPass": {
+    "start": 0,
+    "end": 0
+  }
+}
