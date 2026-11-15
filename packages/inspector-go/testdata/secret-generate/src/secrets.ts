@@ -1,6 +1,9 @@
 import { z } from 'zod'
 import { defineSecret } from '@pikku/core/secret'
 
+// Not a golden fixture (no pikku.config.json): schema generation needs the real
+// zod at runtime, and this only checks what the visitor reads. `zod` here is a
+// stand-in under node_modules, so no install is needed.
 export const tokenSchema = z.string()
 
 export const generated = defineSecret({

@@ -68,7 +68,7 @@ func TestKeyPairFixtureCarriesEveryField(t *testing.T) {
 // defineSecret reads `generate` and accepts rotationPeriod 'never', as its
 // own validator tells users to write.
 func TestSecretFixtureCarriesGenerate(t *testing.T) {
-	root, _ := filepath.Abs("../../testdata/keypairs")
+	root, _ := filepath.Abs("../../testdata/secret-generate")
 	res, err := Run(protocol.Request{RouteFiles: []string{filepath.Join(root, "src/secrets.ts")}, Options: protocol.Options{
 		RootDir: root, Tsconfig: filepath.Join(root, "tsconfig.json"),
 	}}, nil)
