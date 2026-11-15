@@ -1,6 +1,12 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createHmac, createSign, generateKeyPairSync, sign } from 'node:crypto'
+import {
+  createHmac,
+  createSign,
+  generateKeyPairSync,
+  sign,
+  type KeyObject,
+} from 'node:crypto'
 import {
   hmacDigest,
   importSpkiVerifyKey,
@@ -220,7 +226,7 @@ describe('parity with node:crypto', () => {
 })
 
 describe('importSpkiVerifyKey and verifySpkiSignature', () => {
-  const spkiOf = (publicKey: import('node:crypto').KeyObject) =>
+  const spkiOf = (publicKey: KeyObject) =>
     new Uint8Array(publicKey.export({ format: 'der', type: 'spki' }))
 
   test('verifies an Ed25519 signature made by node, and refuses a tampered payload', async () => {
