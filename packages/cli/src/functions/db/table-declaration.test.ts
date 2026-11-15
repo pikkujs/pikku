@@ -18,6 +18,7 @@ import {
   declaredSqliteConstraintNotice,
   generateMigrations,
   migrateAndCodegen,
+  planDeclaredTables,
   resolveDb,
   type ResolvedDb,
 } from './local-db.js'
@@ -714,7 +715,7 @@ describe('constraints on the declaration', () => {
     assert.deepEqual(refusals, [])
     assert.match(
       readFileSync(written[0]!.file, 'utf8'),
-      /ADD COLUMN "qty" integer constraint "item_qty_min_check" check \("qty" >= 0\);/
+      /ADD COLUMN "qty" integer constraint "item_qty_eff50b35_min_check" check \("qty" >= 0\);/
     )
     assert.deepEqual((await generate(resolved)).refusals, [])
   })
@@ -762,6 +763,76 @@ describe('constraints on the declaration', () => {
     )
   })
 
+  describe('the sqlite notice leaves out what the migrations already enforce', () => {
+    const QTY_KIND = `qty: { type: 'integer', min: 0 },
+        kind: { type: 'text', enum: ['x', 'y'] },`
+
+    /** A table with qty and kind that the generated migrations created without checks. */
+    const withoutChecks = async () => {
+      declare(item(QTY_KIND))
+      const resolved = sqliteProject()
+      await generate(resolved)
+      await migrateAndCodegen(resolved)
+      return resolved
+    }
+
+    /** What the notice's own option 2 asks for: a hand-written migration rebuilding the table with the checks. */
+    const rebuild = (resolved: ResolvedDb, checks: Record<string, string>) => {
+      const dir = resolved.migrationsDir
+      const files = readdirSync(dir).sort()
+      const last = files[files.length - 1]!
+      const next = String(Number(/^(\d+)/.exec(last)![1]) + 1).padStart(
+        /^(\d+)/.exec(last)![1]!.length,
+        '0'
+      )
+      writeFileSync(
+        join(dir, `${next}-add-checks.sql`),
+        `CREATE TABLE "item_new" ("id" text PRIMARY KEY, "name" text NOT NULL, "qty" integer ${checks.qty ?? ''}, "kind" text ${checks.kind ?? ''});
+INSERT INTO "item_new" SELECT "id", "name", "qty", "kind" FROM "item";
+DROP TABLE "item";
+ALTER TABLE "item_new" RENAME TO "item";
+`
+      )
+    }
+
+    test('lists every declared constraint when none is enforced', async () => {
+      const notice = (await declaredSqliteConstraintNotice(
+        await withoutChecks()
+      ))!
+      assert.match(notice, /item\.qty: min 0/)
+      assert.match(notice, /item\.kind: one of x, y/)
+    })
+
+    test('a matching hand-written check is not listed, the unmatched ones still are', async () => {
+      const resolved = await withoutChecks()
+      rebuild(resolved, { kind: `CHECK (kind IN ('x','y'))` })
+      const notice = (await declaredSqliteConstraintNotice(resolved))!
+      assert.doesNotMatch(notice, /item\.kind/)
+      assert.match(notice, /item\.qty: min 0/)
+      assert.match(notice, /item\.qty: CHECK \("qty" >= 0\)/)
+    })
+
+    test('following the notice (rebuild with the suggested CHECKs) silences it', async () => {
+      const resolved = await withoutChecks()
+      rebuild(resolved, {
+        qty: `CHECK ("qty" >= 0)`,
+        kind: `CHECK ("kind" IN ('x', 'y'))`,
+      })
+      assert.equal(await declaredSqliteConstraintNotice(resolved), undefined)
+    })
+
+    test('a check that differs from the declaration still gets the notice', async () => {
+      const resolved = await withoutChecks()
+      rebuild(resolved, {
+        qty: `CHECK ("qty" >= 1)`,
+        kind: `CHECK ("kind" IN ('x', 'y', 'z'))`,
+      })
+      const notice = (await declaredSqliteConstraintNotice(resolved))!
+      assert.match(notice, /item\.qty: min 0/)
+      assert.match(notice, /item\.kind: one of x, y/)
+    })
+  })
+
   describe('postgres alters constraints in place', () => {
     const NAME_ONLY = `item: { columns: {
         id: { type: 'key', primaryKey: true },
@@ -782,11 +853,11 @@ describe('constraints on the declaration', () => {
       const sql = readFileSync(written[0]!.file, 'utf8')
       assert.match(
         sql,
-        /-- pikku:check-probe \{"table":"item","sql":"SELECT 1 FROM \\"item\\" WHERE NOT \(.*length.*<= 20\) LIMIT 1"\}\nALTER TABLE "item" ADD CONSTRAINT "item_name_maxlength_check" CHECK \(.*\) NOT VALID;/
+        /-- pikku:check-probe \{"table":"item","sql":"SELECT 1 FROM \\"item\\" WHERE NOT \(.*length.*<= 20\) LIMIT 1"\}\nALTER TABLE "item" ADD CONSTRAINT "item_name_cfa0169f_maxlength_check" CHECK \(.*\) NOT VALID;/
       )
       assert.match(
         sql,
-        /ALTER TABLE "item" VALIDATE CONSTRAINT "item_name_maxlength_check";/
+        /ALTER TABLE "item" VALIDATE CONSTRAINT "item_name_cfa0169f_maxlength_check";/
       )
       assert.deepEqual((await generate(resolved)).written, [])
     })
@@ -802,7 +873,7 @@ describe('constraints on the declaration', () => {
       const sql = readFileSync(changed.written[0]!.file, 'utf8')
       assert.match(
         sql,
-        /DROP CONSTRAINT "item_name_maxlength_check";[\s\S]*ADD CONSTRAINT "item_name_maxlength_check" CHECK \(.*30\) NOT VALID;/
+        /DROP CONSTRAINT "item_name_cfa0169f_maxlength_check";[\s\S]*ADD CONSTRAINT "item_name_cfa0169f_maxlength_check" CHECK \(.*30\) NOT VALID;/
       )
       assert.deepEqual((await generate(resolved)).written, [])
 
@@ -811,7 +882,7 @@ describe('constraints on the declaration', () => {
       assert.deepEqual(removed.refusals, [])
       assert.match(
         readFileSync(removed.written[0]!.file, 'utf8'),
-        /ALTER TABLE "item" DROP CONSTRAINT "item_name_maxlength_check";/
+        /ALTER TABLE "item" DROP CONSTRAINT "item_name_cfa0169f_maxlength_check";/
       )
       assert.deepEqual((await generate(resolved)).written, [])
     })
@@ -929,5 +1000,44 @@ describe('database context', () => {
     })
     assert.equal(context.tables.exists, false)
     assert.deepEqual(context.tables.declared, [])
+  })
+})
+
+describe('a MySQL-protocol server that cannot take a CHECK', () => {
+  const resolved = () =>
+    resolveDb(
+      { mysqlUrl: 'mysql://u:p@127.0.0.1:1/never_reached' },
+      root,
+      join(root, '.pikku')
+    )!
+
+  test('MariaDB is refused first, before anything is run against the server', async () => {
+    declare(item(`qty: { type: 'integer', min: 0 },`))
+    const plan = await planDeclaredTables(resolved(), [], {
+      serverVersion: async () => '11.4.2-MariaDB-ubu2404',
+    })
+    assert.deepEqual(plan!.body, '')
+    assert.equal(plan!.refusals.length, 1)
+    assert.match(plan!.refusals[0]!, /MariaDB is not supported/)
+    assert.match(plan!.refusals[0]!, /item\.qty: min 0/)
+  })
+
+  test('a MySQL older than 8.0.16 is refused the same way, with its own reason', async () => {
+    declare(item(`qty: { type: 'integer', min: 0 },`))
+    const plan = await planDeclaredTables(resolved(), [], {
+      serverVersion: async () => '8.0.15',
+    })
+    assert.match(plan!.refusals.join(), /older than 8\.0\.16/)
+  })
+
+  test('a declaration with no constraints is not refused for the server', async () => {
+    declare(ITEM)
+    // The server is never reached for the version; materializing would need one,
+    // so this only proves the refusal is not raised.
+    await assert.rejects(
+      planDeclaredTables(resolved(), [], {
+        serverVersion: async () => '11.4.2-MariaDB',
+      })
+    )
   })
 })

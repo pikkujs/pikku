@@ -2080,7 +2080,8 @@ export interface DeclaredTablesPlan {
  */
 export async function planDeclaredTables(
   resolved: ResolvedDb,
-  otherSources: SchemaSource[] = []
+  otherSources: SchemaSource[] = [],
+  options: { serverVersion?: () => Promise<string> } = {}
 ): Promise<DeclaredTablesPlan | null> {
   const recorded = recordedDeclaredTables(resolved.migrationsDir)
   const declaration = await loadTableDeclaration(resolved.rootDir)
@@ -2096,6 +2097,21 @@ export async function planDeclaredTables(
     }
   }
 
+  // Before the declaration is materialized: a server that cannot take a CHECK
+  // (MariaDB) would only answer it with a raw syntax error.
+  if (resolved.dialect === 'mysql') {
+    const refusal = mysqlCheckRefusal(
+      mysqlCheckSupport(
+        await (options.serverVersion ?? (() => mysqlServerVersion(resolved)))()
+      ),
+      declaredConstraints(declaration.schema.tables).map(
+        (c) => `${c.where}: ${c.constraint}`
+      ),
+      TABLES_FILE
+    )
+    if (refusal) return { tables: [], body: '', refusals: [refusal] }
+  }
+
   const schemaName =
     resolved.dialect === 'postgres' ? resolved.schema : undefined
   const covered = await coveredSchema(resolved)
@@ -2106,17 +2122,6 @@ export async function planDeclaredTables(
     schemaName
   )
   if (!desired) return { tables: [], body: '', refusals }
-
-  if (resolved.dialect === 'mysql') {
-    const refusal = mysqlCheckRefusal(
-      await mysqlServerCheckSupport(resolved),
-      declaredConstraints(declaration.schema.tables).map(
-        (c) => `${c.where}: ${c.constraint}`
-      ),
-      TABLES_FILE
-    )
-    if (refusal) return { tables: [], body: '', refusals: [refusal] }
-  }
 
   const tables = [...desired.tables.keys()]
   const shapes = splitStatements(desired.sql).map((statement) => ({
@@ -2286,13 +2291,11 @@ export async function planDeclaredTables(
   return { tables, body: rehearsal.length ? '' : body, refusals: rehearsal }
 }
 
-/** Whether the configured MySQL-protocol server enforces a `CHECK`, or is refused. */
-async function mysqlServerCheckSupport(
-  resolved: ResolvedDb
-): Promise<ReturnType<typeof mysqlCheckSupport>> {
-  return withThrowawayKysely(resolved, async (db) => {
-    const { rows } = await sql<{ v: string }>`select version() as v`.execute(db)
-    return mysqlCheckSupport(String(rows[0]?.v ?? ''))
+/** The `version()` the configured MySQL-protocol server reports. */
+async function mysqlServerVersion(resolved: ResolvedDb): Promise<string> {
+  return withMysqlClient(resolved, async (client) => {
+    const { rows } = await client.query('select version() as v')
+    return String((rows[0] as { v?: unknown } | undefined)?.v ?? '')
   })
 }
 
@@ -2350,9 +2353,14 @@ export async function declaredSqliteConstraintNotice(
 ): Promise<string | undefined> {
   if (resolved.dialect !== 'sqlite') return undefined
   const declaration = await loadTableDeclaration(resolved.rootDir)
-  return declaration
-    ? sqliteConstraintNotice(declaration.schema.tables)
-    : undefined
+  if (!declaration) return undefined
+  // What the migrations already enforce comes from replaying them, as the
+  // declaration is compared with elsewhere.
+  const covered = await coveredSchema(resolved)
+  return sqliteConstraintNotice(
+    declaration.schema.tables,
+    (table, column) => covered.get(table)?.get(column)?.checks
+  )
 }
 
 export async function computeDeclaredTablesDrift(
