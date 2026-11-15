@@ -10,7 +10,12 @@ import { runCoreImportChecks } from './core-import-checks.js'
 import { declaredBlockPackages, runBlockChecks } from './block-checks.js'
 import { isShadcnApp, runComponentChecks } from './component-checks.js'
 import { hasInlangProject, runI18nChecks } from './i18n-checks.js'
-import { runMocksChecks, usesMocks } from './mocks-checks.js'
+import {
+  mockedFunctions,
+  runMockedFunctionChecks,
+  runMocksChecks,
+  usesMocks,
+} from './mocks-checks.js'
 import {
   hasPlaceholderSurface,
   runPlaceholderBrandChecks,
@@ -269,6 +274,18 @@ export const CHECKS: ValidateCheck[] = [
       !existsSync(join(dir, ADDON_MARKER)) &&
       (await usesMocks(dir)),
     run: async ({ dir }) => runMocksChecks(dir),
+  },
+  {
+    id: 'mock-functions',
+    subject: 'mocked-function check',
+    // Any built Pikku project, addon included (an addon publishes its
+    // functions too), that declares a mocked function. A project without one
+    // sees no change.
+    applies: async ({ dir }) =>
+      existsSync(join(dir, 'pikku.config.json')) &&
+      mockedFunctions(dir).length > 0,
+    run: async ({ dir }, options) =>
+      runMockedFunctionChecks(dir, { publish: !options.skipDeployChecks }),
   },
   {
     id: 'placeholder-brand',
