@@ -54,8 +54,8 @@ command is `pikku changes file`.
 Break the brief into changes a person could check one by one, each saying what they can see or do
 when it is done. Plan in verticals: the data, the functions and the screens of one feature belong together, and the
 screens are not left to the end. So the first change declares the tables and the signatures (name,
-input, output) of every function the feature needs, each returning typed sample data until its real
-change builds it. After that the screens and the real function bodies are separate changes that run
+input, output) of every function the feature needs, each declared `mock: true` with a few `.mocks/` records
+(see the pikku-build skill, mocks reference), until its real change builds it. After that the screens and the real function bodies are separate changes that run
 side by side against those signatures, and neither waits for the other.
 
 File the data first, as its own change named for the data ("The shop's products, orders and stock are

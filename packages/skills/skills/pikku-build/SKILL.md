@@ -30,7 +30,7 @@ agent:
 - Writing or fixing the scenarios that prove a changeset (app §7, §7a): `references/scenarios.md`
 - Before the first screen is built, a picture of the screens or a design direction: `references/design.md`
 - Authoring or changing the theme (app §8a): `references/theming.md`
-- A screen needs data no function returns yet: `references/mocks.md`
+- A function is declared but not built yet (`mock: true`), or a screen needs data no function returns yet: `references/mocks.md`
 - Adding a second frontend (app §4), at the changeset that needs it: `references/multi-app.md`
 - Shipping as a desktop or Android app: `references/native-app.md`
 - Deploying, and the deploy-readiness contract (app §9): `references/ship.md`
