@@ -1019,13 +1019,13 @@ const refusedBy = (label) => {
 // back as what generate wrote, which is the only reason the second generate
 // above found nothing to do.
 // Generated names carry a hash of the table and column pair: <table>_<column>_<8 hex>_<kind>_check.
-const generated = (column, kind) =>
+const checkNamed = (column, kind) =>
   new RegExp(`bookmark_${column}_[0-9a-f]{8}_${kind}_check`)
 for (const name of [
-  generated('rating', 'min'),
-  generated('rating', 'max'),
-  generated('visibility', 'enum'),
-  generated('label', 'minlength'),
+  checkNamed('rating', 'min'),
+  checkNamed('rating', 'max'),
+  checkNamed('visibility', 'enum'),
+  checkNamed('label', 'minlength'),
 ]) {
   if (dialect === 'sqlite') {
     check(
@@ -1078,11 +1078,18 @@ declareTables(
   )
 )
 const filesBefore = new Set(readdirSync(MIGRATIONS_DIR))
-capture('app: pikku db generate (changed constraint)', 'node', [
-  PIKKU,
-  'db',
-  'generate',
-])
+const changedOut = captureAll(
+  'app: pikku db generate (changed constraint)',
+  'node',
+  [PIKKU, 'db', 'generate']
+)
+// The declared enum round-trips through the engine's own CHECK, so the
+// declaration and the database agree and the mismatch warning stays quiet.
+check(
+  !changedOut.includes('PKU488') &&
+    !changedOut.includes('but the database has'),
+  `no enum mismatch warning against the real ${dialect} CHECKs`
+)
 const changeFile = readdirSync(MIGRATIONS_DIR).find(
   (f) => !filesBefore.has(f) && f.includes('app-tables')
 )
@@ -1125,6 +1132,37 @@ if (dialect === 'postgres') {
 } else if (dialect === 'mysql') {
   contains(changeSql, 'DROP CHECK', 'mysql drops the old check')
   contains(changeSql, '-- pikku:check-probe', 'the added check carries a probe')
+}
+if (changeFile && dialect !== 'sqlite') {
+  // Apply the replacement on the real engine, then confirm introspection
+  // recognises it: nothing further to generate, no drift, no enum warning.
+  const applied = captureAll(
+    'app: pikku db migrate (changed constraint)',
+    'node',
+    [PIKKU, 'db', 'migrate']
+  )
+  const regenerated = captureAll(
+    'app: pikku db generate (after the replacement applied)',
+    'node',
+    [PIKKU, 'db', 'generate']
+  )
+  const checked = captureAll(
+    'app: pikku db check (after the replacement)',
+    'node',
+    [PIKKU, 'db', 'check']
+  )
+  check(
+    !readdirSync(MIGRATIONS_DIR).some(
+      (f) => !filesBefore.has(f) && f !== changeFile && f.includes('app-tables')
+    ),
+    'after the replacement is applied, generate has nothing more to write'
+  )
+  check(
+    ![applied, regenerated, checked].some(
+      (o) => o.includes('PKU488') || o.includes('but the database has')
+    ),
+    'and none of migrate, generate or check reports an enum mismatch'
+  )
 }
 if (changeFile) rmSync(join(MIGRATIONS_DIR, changeFile), { force: true })
 

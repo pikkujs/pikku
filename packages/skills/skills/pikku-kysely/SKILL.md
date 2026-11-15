@@ -334,14 +334,16 @@ pikku db migrate    # applies it and regenerates the types
   MySQL.** `enum`, `min`, `max`, `minLength`, `maxLength` reach the zod schema,
   the generated union types and the console hints; `pattern` is zod only. On
   Postgres and MySQL (8.0.16+, older is refused) they become named `CHECK`s
-  (`<table>_<col>_<kind>_check`, hashed in the middle when too long for the
-  engine) on a new table, a new column, or an existing column via
+  (`<table>_<col>_<hash>_<kind>_check`, the hash being of the table+column
+  pair so names stay unique schema-wide on MySQL, readable front cut when too
+  long for the engine) on a new table, a new column, or an existing column via
   `ADD`/`DROP CONSTRAINT` (postgres `NOT VALID` then `VALIDATE`, though one
   transaction still holds the lock; MySQL swaps a changed check in under an
   interim name), each added check preceded by a `-- pikku:check-probe` line that
   `migrate` runs against existing rows first. **SQLite gets no CHECK at all**:
   validation only, and `db generate`/`db check` print one notice with the
-  `CHECK` SQL to add by hand (silence: `validate.rules["db-sqlite-unenforced-constraints"]
+  `CHECK` SQL to add by hand (constraints a hand-written check in the migrations
+  already enforces are left out, so the notice goes once you add them) (silence: `validate.rules["db-sqlite-unenforced-constraints"]
 = "off"`). A table too large to validate, or data that breaks the check, is for
   a person to migrate; say so rather than editing around it. **A declared
   constraint is enforced at runtime only where a function uses the generated zod

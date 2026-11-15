@@ -58,18 +58,28 @@ regex dialects differ.
 Whether the database enforces them depends on the engine:
 
 - **Postgres and MySQL**: real inline `CHECK` constraints, named
-  `<table>_<column>_<kind>_check` (`kind` is `enum`, `min`, `max`, `minlength` or
-  `maxlength`), written on `CREATE TABLE` and on a column added later. A name
-  that would pass the engine's limit (63 bytes on Postgres, 64 characters on
-  MySQL) keeps its `_<kind>_check` ending and swaps the middle for a short hash
-  of the full name, so two bounds on one column stay distinct.
+  `<table>_<column>_<hash>_<kind>_check` (`kind` is `enum`, `min`, `max`,
+  `minlength` or `maxlength`), written on `CREATE TABLE` and on a column added
+  later. `<hash>` is eight hex digits of a hash of the table and column taken as
+  a pair: MySQL keeps check names schema-wide, and joining names with `_` is
+  ambiguous (`sales_line.qty` and `sales.line_qty` would both read
+  `sales_line_qty`), so the pair, not the joined text, decides. A name that
+  would pass the engine's limit (63 bytes on Postgres, 64 characters on MySQL)
+  has its readable front cut, never the hash or the ending, so two bounds on one
+  column stay distinct. This scheme has not shipped, so there are no deployed
+  names of another form to carry; a check you named yourself is never read as
+  generated.
 - **SQLite**: validation only. SQLite cannot drop or change a `CHECK` without
   rebuilding the table, so Pikku generates none, for new tables, new columns or
   existing ones. `pikku db generate` and `pikku db check` print one notice
   listing each declared constraint with the `CHECK` you could add in a
   hand-written migration, or you can use Postgres or MySQL, where Pikku manages
-  them. A `CHECK` you wrote by hand in a SQLite migration is left alone, and an
-  `IN (...)` one still types the column as a union. Silence the notice with
+  them. A `CHECK` you wrote by hand in a SQLite migration is left alone, an
+  `IN (...)` one still types the column as a union, and a constraint the
+  migrations already enforce (a hand-written check whose condition says the same
+  thing, under any name) is left out of the notice: write the suggested `CHECK`
+  in a migration and the notice goes. One that differs from the declaration is
+  still listed. Silence the notice with
   `validate.rules["db-sqlite-unenforced-constraints"] = "off"` in the Pikku
   config.
 
@@ -95,8 +105,10 @@ Two details of the generated zod schema and types:
   on a column whose declaration changed), the generated union follows the
   declaration and `pikku db generate`/`migrate`/`codegen` warn once per column
   (`PKU488`): `Column "table.column": declared 'a' | 'b' but the database has
-'x' | 'y'`. Run `pikku db generate` for the migration that brings the database
-  in line. The same values in a different order are not a mismatch.
+'x' | 'y'`. On Postgres and MySQL, run `pikku db generate` for the migration
+  that brings the database in line; on SQLite, which gets no generated CHECK,
+  the warning says to add the `CHECK` by hand, change the declaration to match,
+  or drop the stale CHECK by hand. The same values in a different order are not a mismatch.
 
 On a Postgres or MySQL column that already exists:
 
@@ -109,7 +121,9 @@ On a Postgres or MySQL column that already exists:
   a long lock is the probe below, which refuses before the migration starts.
   Changing a check drops and re-adds it (atomic, in that transaction); removing
   it from the declaration drops it (only checks named
-  `<table>_<column>_<kind>_check`; one you wrote yourself is left alone).
+  named by the scheme above for this table and column; one you wrote yourself
+  is left alone, and a bound the declaration keeps is never dropped because an
+  equal check under another name is going).
 - **MySQL** uses `ADD CONSTRAINT ... CHECK` and `DROP CHECK`, from 8.0.16.
   An older server parses a `CHECK` and ignores it, so generate refuses as soon
   as the declaration has a constraint. DDL
@@ -117,8 +131,12 @@ On a Postgres or MySQL column that already exists:
   first, the old one dropped, the final name added and the interim one dropped:
   rows that break the new check refuse the first step and leave the old check in
   place. A migration that stops after that step still has to be finished by hand.
-  This sequence has been tested only as statements, not against a running MySQL
-  server.
+  MariaDB is refused up front, before anything runs against it. A check MySQL
+  holds `NOT ENFORCED` is read as not enforcing: it is dropped and added again
+  rather than counted as the bound, and no enum is read from it. The checks are
+  read back from `information_schema` as a real MySQL 8.4 stores them
+  (charset introducers, escaped quotes and backslashes), and that read-back is
+  tested against output captured from one.
 
 #### Markers a migration carries
 
@@ -127,21 +145,24 @@ On a Postgres or MySQL column that already exists:
   `pikku db migrate --allowDestructive` and the standalone bundle's
   `db migrate --allow-destructive` do; `db status` on the bundle marks such
   migrations. `pikku db reset` and scratch databases allow it, since there is
-  nothing to lose. `pikku ci` passes it only in its throwaway worktree, never in
-  your own tree. The line may be bare, indented, in any case, or written
+  nothing to lose. `pikku ci` passes it only when its worktree's database is its own
+  (a SQLite file or embedded Postgres inside the worktree), or when you pass
+  `pikku ci --allowDestructive`; a worktree whose committed config points at a
+  local server does not get it, and never your own tree. The line may be bare, indented, in any case, or written
   `--pikku:destructive`; `db generate` writes the canonical form.
 - `-- pikku:check-probe {json}`, above each added check: `schema`, `table` and
   the `SELECT` that returns a row only if one breaks the check. `migrate` can be
   given a `beforeMigration` hook, and `checkProbeHook` is the one that runs
   these against the live database, just before that migration (so a table the
   migration before it creates is there to be probed; a probe that follows an
-  `UPDATE`, `DELETE`, `INSERT` or `TRUNCATE` in the same file is not run, since
-  that statement changes the rows it would read). A refusal says which
+  data-changing statement in the same file is not run, since that statement
+  changes the rows it would read: `UPDATE`, `DELETE`, `INSERT`, `TRUNCATE` or
+  `MERGE`, wherever it starts on a line, and including one inside a `WITH`). A refusal says which
   migrations of the run had already applied. It refuses on a breaking
   row, on a table estimated above 10 million rows (`CHECK_PROBE_MAX_ROWS`), and
   on a scan that takes over 30 seconds (`CHECK_PROBE_TIMEOUT_MS`), which the
   server itself cancels (`statement_timeout` on Postgres, `max_execution_time`
-  on MySQL). A table never
+  on MySQL; the MySQL probe puts the session's previous limit back afterwards). A table never
   analysed (Postgres reports `-1` rows) is counted up to the cap, not trusted.
   A local `pikku db migrate` on postgres or MySQL and the standalone bundle's
   Postgres `db migrate` both use it.
@@ -152,7 +173,9 @@ unless a person approved it, and run the `-- pikku:check-probe` queries (or
 equivalent) before applying a migration that has them.
 
 A bound on a column of the wrong kind (`min` on text,
-`minLength` on a number) is an error when the file loads.
+`minLength` on a number) is an error when the file loads, as is a column with
+both an `enum` and a `pattern` (a pattern adds nothing to a fixed list), and a
+`default` outside the column's own `min`/`max`/`minLength`/`maxLength`.
 
 A field that is not one of these is an error, as is an invalid annotation value:
 `security: 'pi'` is refused rather than left at the default.
