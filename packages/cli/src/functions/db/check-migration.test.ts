@@ -252,6 +252,7 @@ test('inlineCheckExpression lifts the condition, quotes and nested brackets incl
 })
 
 const myq = (n: string) => `\`${n}\``
+const pgq = (n: string) => `"${n}"`
 const pgTable: CheckTable = {
   schema: 'app',
   table: 't',
@@ -305,6 +306,41 @@ describe('a changed check', () => {
     ])
     // Nothing is dropped until the replacement has been accepted.
     assert.match(statements[0]!, /^-- pikku:check-probe /)
+  })
+
+  describe('a stale check dropped beside a new check under another name', () => {
+    const stale = {
+      drop: ['old_aaaaaaaa_min_check'],
+      add: [{ name: 'new_bbbbbbbb_min_check', expression: '`a` > 1' }],
+    }
+    const at = (statements: string[], re: RegExp) =>
+      statements.findIndex((s) => re.test(s))
+
+    test('on mysql the add comes before the drop, so a bound is never unenforced', () => {
+      const statements = checkChangeStatements('mysql', myTable, stale, myq)
+      const add = at(statements, /ADD CONSTRAINT `new_bbbbbbbb_min_check`/)
+      const drop = at(statements, /DROP CHECK `old_aaaaaaaa_min_check`/)
+      assert.ok(add >= 0 && drop >= 0, statements.join('\n'))
+      assert.ok(
+        add < drop,
+        'the new check is added before the stale one is dropped'
+      )
+    })
+
+    test('on postgres both are in the one statement list the migration transaction runs atomically', () => {
+      const statements = checkChangeStatements(
+        'postgres',
+        pgTable,
+        {
+          drop: stale.drop,
+          add: [{ name: stale.add[0]!.name, expression: '"a" > 1' }],
+        },
+        pgq
+      )
+      const add = at(statements, /ADD CONSTRAINT "new_bbbbbbbb_min_check"/)
+      const drop = at(statements, /DROP CONSTRAINT "old_aaaaaaaa_min_check"/)
+      assert.ok(add >= 0 && drop >= 0, statements.join('\n'))
+    })
   })
 
   test('on postgres is a drop then an add, which the migration transaction makes atomic', () => {
