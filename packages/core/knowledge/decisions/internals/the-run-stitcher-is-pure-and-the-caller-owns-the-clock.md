@@ -32,7 +32,19 @@ types.
 - **`rpcCaller` stays an ordinary hop.** In the real dumps the parentless span
   is the `rpcCaller` http span and it carries the user and the status, so
   treating it as a boundary was not needed to root a run correctly. `classify`
-  can still return `boundary` for any span.
+  can still return `boundary` for any span. The default does so for `producer`
+  spans (queue publish, schedule, webhook send): they have no function, the
+  consumer is the hop, and the city's former assembler did not draw them.
+- **Views carry what events carry.** `RunView` has `attributes` (the root's, as
+  `run.started`), `endedAt` and `outcome`; `HopView` has `attributes` (latest
+  event's), `kind`, `functionId`, `db` and `hadStart` (a start event was sent).
+  A snapshot rebuild is therefore equal to the live path, and a property test
+  proves it with and without start frames. Attributes are bounded once
+  (`boundAttrs`: 64 entries, 256-char values, JSON-safe) and events and views
+  share that copy, so views never hold more than events carried.
+- **Start frames are the sink's job.** The stitcher does not guess: with ends
+  only a trace arrives as one burst at its root's end. Feed `onSpanStart` to get
+  per-hop start events live.
 - **Output is JSON-safe**: ms numbers, no bigint, no undefined keys.
 - **Bounds.** Open runs, spans per run, retained closed runs, health keys and
   samples are capped. A span past `maxSpansPerRun` is still reported but is not
