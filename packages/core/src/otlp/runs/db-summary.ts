@@ -12,6 +12,7 @@ export class DbAccumulator {
   private readonly texts = new Map<string, number>()
   private sawText = false
   private repeated = 0
+  private dropped = 0
 
   add(span: FinishedSpan): void {
     this.count++
@@ -38,8 +39,13 @@ export class DbAccumulator {
     }
   }
 
-  get size(): number {
-    return this.count
+  /** A db span that ended after its hop's summary was sent: counted, not folded. */
+  late(): void {
+    this.dropped++
+  }
+
+  get hasData(): boolean {
+    return this.count > 0 || this.dropped > 0
   }
 
   summary(): DbSummary {
@@ -48,6 +54,7 @@ export class DbAccumulator {
       totalMs: Math.round(Number(this.totalNs) / 1000) / 1000,
       byOp: Object.fromEntries(this.byOp),
       ...(this.sawText ? { repeated: this.repeated } : {}),
+      ...(this.dropped ? { dropped: this.dropped } : {}),
     }
   }
 }
