@@ -397,14 +397,22 @@ describe('createRunStitcher', () => {
     const events = collect(open)
     for (let i = 0; i < 25; i++) {
       open.start(
-        toOpen(syn({ id: `r${i}`, trace: `trace${i}`, startMs: T0 + i })),
+        toOpen(
+          syn({
+            id: `r${i}`,
+            trace: `trace${String(i).padStart(2, '0')}`,
+            startMs: T0 + i,
+          })
+        ),
         T0 + i
       )
     }
     const expired = ofType(events, 'run.expired')
     assert.deepEqual(
       expired.map((e) => e.traceId),
-      Array.from({ length: 15 }, (_, i) => `trace${i}`.padEnd(32, '0'))
+      Array.from({ length: 15 }, (_, i) =>
+        `trace${String(i).padStart(2, '0')}`.padEnd(32, '0')
+      )
     )
     assert.equal(open.snapshot(T0 + 30).open.length, 10)
 
@@ -699,14 +707,18 @@ describe('the stitcher behind the otlpSinks registry', () => {
     })
     assert.equal(ofType(events, 'run.started').length, 1)
     assert.equal(ofType(events, 'run.finished').length, 0)
-    const db = tracer.startSpan('db.select', trace, {
-      kind: 'client',
-      attributes: {
-        'db.system': 'sqlite',
-        'db.operation.name': 'select',
-        'db.collection.name': 'room',
-      },
-    })
+    const db = tracer.startSpan(
+      'db.select',
+      { ...createTrace(trace.traceId), parentSpanId: trace.spanId },
+      {
+        kind: 'client',
+        attributes: {
+          'db.system': 'sqlite',
+          'db.operation.name': 'select',
+          'db.collection.name': 'room',
+        },
+      }
+    )
     db.end()
     root.end()
 

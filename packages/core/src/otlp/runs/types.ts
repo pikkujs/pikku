@@ -132,6 +132,12 @@ export interface RunSnapshot {
   health: Extract<RunEvent, { type: 'health' }>
 }
 
+/**
+ * What {@link createRunStitcher} returns. `seq` rises by one per event; a snapshot carries the seq it reflects, so a
+ * client applies the events after it.
+ *
+ * @example snippet: stitchRuns
+ */
 export interface RunStitcher {
   start(span: SpanFrameStart, nowMs: number): void
   end(span: SpanFrameEnd, nowMs: number): void

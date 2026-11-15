@@ -525,6 +525,7 @@
     "parseOtlpHeaders",
     "startProcessMetrics"
   ],
+  "./otlp/runs": ["createRunStitcher"],
   "./flag": [
     "CachedFlagSource",
     "assertFeatureAvailable",
