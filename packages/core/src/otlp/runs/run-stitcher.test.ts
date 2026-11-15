@@ -1333,7 +1333,8 @@ describe('health window: order and the clock domain', () => {
       stitcher.end(
         syn({
           id: `k${i}`,
-          trace: `k${i}`,
+          // fixed width: syn pads trace ids with zeros, so `k1` and `k10` would otherwise be one trace
+          trace: `k${String(i).padStart(5, '0')}`,
           startMs: 0,
           endMs: 2,
           attributes: { 'pikku.function.id': `k${i}` },
@@ -1344,7 +1345,7 @@ describe('health window: order and the clock domain', () => {
         stitcher.end(
           syn({
             id: `h${i}`,
-            trace: `h${i}`,
+            trace: `h${String(i).padStart(5, '0')}`,
             startMs: 0,
             endMs: 3,
             attributes: { 'pikku.function.id': 'hot' },
@@ -1353,8 +1354,12 @@ describe('health window: order and the clock domain', () => {
         )
     }
     const entries = stitcher.snapshot(10).health.entries
-    assert.ok(entries.length <= 2000)
+    // the cap was really reached, and the busy key survived it
+    assert.equal(entries.length, 2000)
     assert.ok(entries.some((e) => e.key === 'hot'))
+    // the oldest never-refreshed key went; the newest stayed
+    assert.ok(!entries.some((e) => e.key === 'k0'))
+    assert.ok(entries.some((e) => e.key === 'k2099'))
   })
 })
 
@@ -1519,12 +1524,24 @@ describe('a closed trace stays closed', () => {
       stitcher.end(root, T0 + 1)
     }
     const before = events.length
-    // 'e' is retained, 'b'..'d' are remembered as closed, 'a' is forgotten: documented as the bound's edge.
-    stitcher.end(
-      syn({ id: 'late', trace: 'c', parent: 'rc', startMs: T0, endMs: T0 + 2 }),
-      T0 + 2
+    // 'e' is retained, 'b'..'d' are remembered as closed, 'a' is forgotten: the bound's edge.
+    const late = (trace: string, id: string, parent?: string) =>
+      stitcher.end(
+        syn({ id, trace, parent, startMs: T0, endMs: T0 + 2 }),
+        T0 + 2
+      )
+    late('c', 'late-c', 'rc')
+    assert.equal(events.length, before, 'a remembered trace is still ignored')
+    late('a', 'late-a')
+    assert.ok(
+      events.length > before,
+      'past the bound the oldest id is accepted again (a new run)'
     )
-    assert.equal(events.length, before)
+    assert.ok(
+      ofType(events, 'run.started').some(
+        (e) => e.traceId === 'a'.padEnd(32, '0') && e.rootSpanId === 'late-a'
+      )
+    )
   })
 })
 
@@ -1598,34 +1615,45 @@ describe('eviction by recency and total size', () => {
   })
 })
 
-describe('a sink registered mid-request (start frames, the first span has a parent)', () => {
-  test('the child does not become the root: it waits, and the root that ends later is the root', () => {
+describe('start frames: the first span seen for a trace is the root at once, parent or not', () => {
+  test('a foreign-parent root (a worker, a trusted inbound traceparent) starts and streams live, never waiting for settleMs', () => {
+    const stitcher = createRunStitcher()
+    const events = collect(stitcher)
+    const root = syn({
+      id: 'w',
+      parent: 'other-process',
+      startMs: T0,
+      endMs: T0 + 20,
+    })
+    stitcher.start(toOpen(root), T0)
+    assert.deepEqual(
+      events.map((e) => e.type),
+      ['run.started', 'run.hop']
+    )
+    assert.equal(ofType(events, 'run.started')[0]!.rootSpanId, 'w')
+    stitcher.end(root, T0 + 20)
+    assert.equal(ofType(events, 'run.finished').length, 1)
+  })
+
+  test('known limit: a sink registered mid-request makes the first-seen child the root', () => {
     const stitcher = createRunStitcher()
     const events = collect(stitcher)
     const child = syn({ id: 'c', parent: 'r', startMs: T0 + 1, endMs: T0 + 10 })
     stitcher.start(toOpen(child), T0 + 1)
+    assert.equal(ofType(events, 'run.started')[0]!.rootSpanId, 'c')
     stitcher.end(child, T0 + 10)
-    assert.equal(
-      events.length,
-      0,
-      'nothing is reported while the root is unknown'
-    )
+    // the request's own root arrives later: a trace that closed with a root already, so it is ignored or attached,
+    // never a second run
     stitcher.end(syn({ id: 'r', startMs: T0, endMs: T0 + 20 }), T0 + 20)
-    const started = ofType(events, 'run.started')
-    assert.equal(started.length, 1)
-    assert.equal(started[0]!.rootSpanId, 'r')
-    const hop = ofType(events, 'run.hop').find(
-      (h) => h.spanId === 'c' && h.phase === 'end'
-    )!
-    assert.equal(hop.parentSpanId, 'r')
+    assert.equal(ofType(events, 'run.started').length, 1)
   })
 
-  test('with no root ever, the earliest span without a stored parent becomes the root once settleMs passed', () => {
+  test('end-only input still waits: a parent not yet seen is not a root before settleMs', () => {
     const stitcher = createRunStitcher({ limits: { settleMs: 100 } })
     const events = collect(stitcher)
-    stitcher.start(
-      toOpen(syn({ id: 'c', parent: 'gone', startMs: T0 + 1 })),
-      T0 + 1
+    stitcher.end(
+      syn({ id: 'c', parent: 'gone', startMs: T0 + 1, endMs: T0 + 3 }),
+      T0 + 3
     )
     stitcher.sweep(T0 + 50)
     assert.equal(events.length, 0)
@@ -1688,8 +1716,9 @@ describe('a db span that ends after its hop ended', () => {
     const updates = ofType(events, 'run.hop').filter(
       (e) => e.phase === 'update'
     )
-    assert.equal(updates.length, 2)
-    assert.deepEqual(updates[1]!.db, view.db)
+    // two late spans, one update: coalesced, carrying the final count
+    assert.equal(updates.length, 1)
+    assert.deepEqual(updates[0]!.db, view.db)
   })
 
   test('a hop whose only db spans came late still gets a summary with the count', () => {
@@ -1862,6 +1891,323 @@ describe('views carry the seq of the events they stand for', () => {
     assert.equal(view.closedSeq, undefined)
     assert.equal(view.hops[0]!.endSeq, undefined)
     assert.equal(typeof view.hops[0]!.startSeq, 'number')
+  })
+})
+
+describe('eviction never forgets a trace that was not announced', () => {
+  test('foreign-parent traces past maxOpenRuns each yield a run; an evicted one that started is expired and its later spans are ignored (the bound)', () => {
+    const stitcher = createRunStitcher({ limits: { maxOpenRuns: 10 } })
+    const events = collect(stitcher)
+    const roots = Array.from({ length: 20 }, (_, i) =>
+      syn({
+        id: `r${i}`,
+        trace: `t${String(i).padStart(2, '0')}`,
+        parent: 'remote',
+        startMs: T0 + i,
+        endMs: T0 + 100 + i,
+      })
+    )
+    for (const [i, root] of roots.entries())
+      stitcher.start(toOpen(root), T0 + i)
+    for (const [i, root] of roots.entries()) stitcher.end(root, T0 + 100 + i)
+    stitcher.sweep(T0 + 10_000)
+    // every trace was announced once; the first ten expired when the cap hit, so their ends arrived at a forgotten id
+    assert.equal(ofType(events, 'run.started').length, 20)
+    assert.equal(ofType(events, 'run.expired').length, 10)
+    assert.equal(ofType(events, 'run.finished').length, 10)
+  })
+
+  test('an end-only trace still waiting for its root when the cap evicts it is settled, not lost: its spans are reported', () => {
+    const stitcher = createRunStitcher({ limits: { maxOpenRuns: 2 } })
+    const events = collect(stitcher)
+    for (let i = 0; i < 6; i++) {
+      stitcher.end(
+        syn({
+          id: `r${i}`,
+          trace: `t${i}`,
+          parent: 'remote',
+          startMs: T0 + i,
+          endMs: T0 + 5 + i,
+        }),
+        T0 + 5 + i
+      )
+    }
+    stitcher.sweep(T0 + 100_000)
+    assert.equal(ofType(events, 'run.started').length, 6)
+    assert.equal(ofType(events, 'run.finished').length, 6)
+  })
+
+  test('a root-less trace dropped under memory pressure is not forgotten: its later spans start a fresh run', () => {
+    const stitcher = createRunStitcher({ limits: { maxTotalSpans: 3 } })
+    const events = collect(stitcher)
+    // end-only children whose parent never shows: root-less, so they are the first victims
+    for (let i = 0; i < 3; i++)
+      stitcher.end(
+        syn({
+          id: `c${i}`,
+          trace: 'lost',
+          parent: 'gone',
+          startMs: T0 + i,
+          endMs: T0 + 5,
+        }),
+        T0 + 5
+      )
+    for (let i = 0; i < 4; i++)
+      stitcher.end(
+        syn({
+          id: `o${i}`,
+          trace: 'other',
+          parent: 'gone2',
+          startMs: T0 + i,
+          endMs: T0 + 6,
+        }),
+        T0 + 6
+      )
+    stitcher.end(
+      syn({ id: 'again', trace: 'lost', startMs: T0 + 7, endMs: T0 + 8 }),
+      T0 + 8
+    )
+    assert.ok(
+      ofType(events, 'run.started').some(
+        (e) => e.traceId === 'lost'.padEnd(32, '0') && e.rootSpanId === 'again'
+      )
+    )
+  })
+})
+
+describe('attribute keys on the allow-list are own keys', () => {
+  test('object prototype names are not allowed', async () => {
+    const { isAllowedAttributeKey } = await import('../attribute-types.js')
+    for (const key of [
+      'toString',
+      'constructor',
+      'hasOwnProperty',
+      '__proto__',
+      'valueOf',
+    ])
+      assert.equal(isAllowedAttributeKey(key), false, key)
+    assert.equal(isAllowedAttributeKey('pikku.function.id'), true)
+  })
+
+  test('a custom attribute named like a prototype member never reaches an event', () => {
+    const stitcher = createRunStitcher()
+    const events = collect(stitcher)
+    stitcher.start(
+      toOpen(
+        syn({
+          id: 'r',
+          startMs: T0,
+          attributes: { toString: 'a', constructor: 'b', hasOwnProperty: 'c' },
+        })
+      ),
+      T0
+    )
+    assert.deepEqual(
+      Object.keys(ofType(events, 'run.started')[0]!.attributes).sort(),
+      ['pikku.function.id']
+    )
+  })
+})
+
+describe('a failed producer under a root that ends ok', () => {
+  const run = (rootError?: string) => {
+    const stitcher = createRunStitcher({
+      limits: { healthWindowMs: 1_000_000 },
+    })
+    const events = collect(stitcher)
+    stitcher.start(
+      toOpen(syn({ id: 'r', name: 'checkout', startMs: T0, endMs: T0 + 50 })),
+      T0
+    )
+    const pub = syn({
+      id: 'p',
+      name: 'publish mail',
+      parent: 'r',
+      kind: 'producer',
+      startMs: T0 + 1,
+      endMs: T0 + 5,
+      error: 'QueueDownError',
+    })
+    stitcher.start(toOpen(pub), T0 + 1)
+    stitcher.end(pub, T0 + 5)
+    stitcher.end(
+      syn({
+        id: 'r',
+        name: 'checkout',
+        startMs: T0,
+        endMs: T0 + 50,
+        ...(rootError ? { error: rootError } : {}),
+      }),
+      T0 + 50
+    )
+    return { stitcher, events }
+  }
+
+  test('run.finished stays ok and carries the failure of the hop that was publishing', () => {
+    const { stitcher, events } = run()
+    const finished = ofType(events, 'run.finished')[0]!
+    assert.equal(finished.outcome, 'ok')
+    assert.deepEqual(finished.failure, {
+      spanId: 'r',
+      functionId: 'checkout',
+      errorName: 'QueueDownError',
+    })
+    assert.equal(ofType(events, 'run.failed').length, 0)
+    const view = stitcher.snapshot(T0 + 60).recent[0]!
+    assert.equal(view.status, 'finished')
+    assert.equal(view.outcome, 'ok')
+    assert.deepEqual(view.failure, finished.failure)
+  })
+
+  test('the hop keeps its own outcome, but health counts the failed publish against it', () => {
+    const { stitcher, events } = run()
+    const end = ofType(events, 'run.hop').find(
+      (e) => e.phase === 'end' && e.spanId === 'r'
+    )!
+    assert.equal(end.outcome, 'ok')
+    const entry = stitcher
+      .snapshot(T0 + 60)
+      .health.entries.find((e) => e.key === 'checkout')!
+    assert.equal(entry.runs, 1)
+    assert.equal(entry.errors, 1)
+  })
+
+  test('a run with no failed boundary has no failure on run.finished', () => {
+    const stitcher = createRunStitcher()
+    const events = collect(stitcher)
+    const r = syn({ id: 'r', startMs: T0, endMs: T0 + 5 })
+    stitcher.start(toOpen(r), T0)
+    stitcher.end(r, T0 + 5)
+    assert.equal(ofType(events, 'run.finished')[0]!.failure, undefined)
+  })
+})
+
+describe('late db spans are coalesced per hop', () => {
+  const dbAttrs = { 'db.system': 'pg', 'db.operation.name': 'select' }
+  const setup = () => {
+    const stitcher = createRunStitcher({ limits: { maxRetained: 2 } })
+    const events = collect(stitcher)
+    const root = syn({ id: 'r', startMs: T0, endMs: T0 + 5 })
+    stitcher.start(toOpen(root), T0)
+    stitcher.end(root, T0 + 5)
+    return { stitcher, events }
+  }
+  const late = (i: number) =>
+    syn({
+      id: `d${i}`,
+      parent: 'r',
+      startMs: T0 + 1,
+      endMs: T0 + 6 + (i % 50),
+      attributes: dbAttrs,
+    })
+
+  test('five hundred late db spans make one update per flush, with the final count', () => {
+    const { stitcher, events } = setup()
+    for (let i = 0; i < 500; i++) stitcher.end(late(i), T0 + 6)
+    const snap = stitcher.snapshot(T0 + 10)
+    assert.equal(
+      ofType(events, 'run.hop').filter((e) => e.phase === 'update').length,
+      1
+    )
+    assert.equal(snap.recent[0]!.hops[0]!.db?.dropped, 500)
+    const update = ofType(events, 'run.hop').find((e) => e.phase === 'update')!
+    assert.deepEqual(update.db, snap.recent[0]!.hops[0]!.db)
+  })
+
+  test('a snapshot always equals the events up to its seq, pending updates included', () => {
+    const { stitcher, events } = setup()
+    for (let i = 0; i < 5; i++) stitcher.end(late(i), T0 + 6)
+    const snap = stitcher.snapshot(T0 + 10)
+    assert.equal(snap.seq, events[events.length - 1]!.seq)
+    const update = ofType(events, 'run.hop').filter((e) => e.phase === 'update')
+    assert.deepEqual(update[update.length - 1]!.db, snap.recent[0]!.hops[0]!.db)
+  })
+
+  test('a pending update is flushed by the next sweep', () => {
+    const { stitcher, events } = setup()
+    stitcher.end(late(0), T0 + 6)
+    assert.equal(
+      ofType(events, 'run.hop').filter((e) => e.phase === 'update').length,
+      0
+    )
+    stitcher.sweep(T0 + 7)
+    assert.equal(
+      ofType(events, 'run.hop').filter((e) => e.phase === 'update').length,
+      1
+    )
+  })
+
+  test('late db spans do not keep a closed run alive against eviction (a late child of another kind does)', () => {
+    const closeRun = (
+      stitcher: RunStitcher,
+      trace: string,
+      at: number
+    ): void => {
+      const r = syn({ id: `r${trace}`, trace, startMs: at, endMs: at + 5 })
+      stitcher.start(toOpen(r), at)
+      stitcher.end(r, at + 5)
+    }
+    const survivors = (kind: 'db' | 'hop'): string[] => {
+      const stitcher = createRunStitcher({ limits: { maxRetained: 2 } })
+      closeRun(stitcher, 'a', T0)
+      closeRun(stitcher, 'b', T0 + 60_000)
+      stitcher.end(
+        syn({
+          id: 'x',
+          trace: 'a',
+          parent: 'ra',
+          startMs: T0 + 1,
+          endMs: T0 + 6,
+          attributes: kind === 'db' ? dbAttrs : {},
+        }),
+        T0 + 120_000
+      )
+      closeRun(stitcher, 'c', T0 + 130_000)
+      return stitcher.snapshot(T0 + 140_000).recent.map((r) => r.rootSpanId)
+    }
+    assert.deepEqual(survivors('db'), ['rc', 'rb'])
+    assert.deepEqual(survivors('hop'), ['rc', 'ra'])
+  })
+})
+
+describe('span names and health keys are bounded', () => {
+  test('a 100 KB name is cut in events, views and health keys', () => {
+    const big = 'x'.repeat(100_000)
+    const stitcher = createRunStitcher({
+      limits: { healthWindowMs: 1_000_000 },
+    })
+    const events = collect(stitcher)
+    const root = {
+      ...syn({ id: 'r', startMs: T0, endMs: T0 + 5, name: big }),
+      attributes: {},
+    }
+    stitcher.start(toOpen(root), T0)
+    stitcher.end(root, T0 + 5)
+    for (const e of ofType(events, 'run.hop')) assert.ok(e.name.length <= 256)
+    const view = stitcher.snapshot(T0 + 10)
+    assert.ok(view.recent[0]!.hops[0]!.name.length <= 256)
+    for (const entry of view.health.entries) assert.ok(entry.key.length <= 256)
+    assert.ok(JSON.stringify(events).length < 10_000)
+  })
+
+  test('a 100 KB function id and error name are cut too', () => {
+    const big = 'y'.repeat(100_000)
+    const stitcher = createRunStitcher({
+      limits: { healthWindowMs: 1_000_000 },
+    })
+    const events = collect(stitcher)
+    const root = syn({
+      id: 'r',
+      startMs: T0,
+      endMs: T0 + 5,
+      attributes: { 'pikku.function.id': big },
+      error: big,
+    })
+    stitcher.start(toOpen(root), T0)
+    stitcher.end(root, T0 + 5)
+    assert.ok(JSON.stringify(events).length < 10_000)
+    for (const entry of stitcher.snapshot(T0 + 10).health.entries)
+      assert.ok(entry.key.length <= 256)
   })
 })
 

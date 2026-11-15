@@ -14,7 +14,11 @@ export type Attrs = Record<string, SpanAttributeValue>
 export type SpanRole = 'hop' | 'boundary' | 'db'
 
 export interface StitcherLimits {
-  /** Runs open at once, and traces still waiting for their root. The least recently seen is expired. Default 1000. */
+  /**
+   * Runs open at once, and traces still waiting for their root. The least recently seen is evicted: a started run
+   * expires (its later spans are then ignored), a trace still waiting for its root is settled and reported first.
+   * Default 1000.
+   */
   maxOpenRuns: number
   /**
    * Spans remembered per run. A span past it is ignored entirely: no event, no view, no health, and a duplicate of it
@@ -26,7 +30,7 @@ export interface StitcherLimits {
    */
   maxRetained: number
   /**
-   * Trace ids remembered after their run left retention (or was dropped), so a late span of one is recognised and
+   * Trace ids of runs that started and then left retention (or were evicted), so a late span of one is recognised and
    * ignored, never a second run rooted on itself. Bounded and separate from `maxRetained`; the oldest is forgotten
    * first, and a span of a forgotten trace starts a new one. Default 10000.
    */
@@ -167,6 +171,7 @@ export interface RunView {
   status: 'open' | 'finished' | 'failed' | 'expired'
   outcome?: RunOutcome | 'expired'
   durationMs?: number
+  /** The first failed hop of a failed run, or the hop whose publish (a boundary span) failed in a run that finished ok. */
   failure?: { spanId: string; functionId?: string; errorName: string | null }
   hops: HopView[]
 }

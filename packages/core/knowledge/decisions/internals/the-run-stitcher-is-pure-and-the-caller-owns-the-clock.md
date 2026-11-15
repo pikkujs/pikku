@@ -1,7 +1,7 @@
 ---
 type: decision
 title: The run stitcher is pure and the caller owns the clock
-description: '@pikku/core/otlp/runs takes nowMs on every call, stamps every event with seq and at, folds db spans into a hop summary, and roots a run on a parentless span'
+description: '@pikku/core/otlp/runs takes nowMs on every call, stamps every event with seq and at, folds db spans into a hop summary, and roots a run on the first span seen (start frames) or a parentless span (ends only)'
 tags: core, observability
 ---
 
@@ -25,17 +25,27 @@ types.
   one and a dropped event is repaired by fetching the snapshot again. `at` is the
   span's time in ms, so a browser renders by event time. The exception is
   `health`, stamped with the `nowMs` of the sweep.
-- **Roots.** Real traces end children first, so first-span-is-root is wrong for
-  ends-only input (every run rooted on a database span), and with start frames a
-  sink registered mid-request sees a child first. So a span with no parent is the
-  root, with or without start frames; a span with a parent waits, and the span
-  whose parent never arrives becomes the root once `settleMs` has passed.
-  Nothing is emitted for a trace until its root is known.
+- **Roots.** Real traces end children first, so for ends-only input
+  first-span-is-root is wrong (every run rooted on a database span): a span with
+  no parent is the root, one with a parent waits for the root's own frame, else
+  the earliest span whose parent never arrives becomes the root once `settleMs`
+  has passed. With start frames the first span seen for a trace is the root
+  immediately, parent or not: a queue worker in another process or a trusted
+  inbound `traceparent` has a legitimate foreign parent, and making it wait
+  would deliver it late in one burst, against the point of feeding start frames.
+  Known limit, accepted: a sink registered mid-request sees a child first, and
+  that child becomes the root; the real root, arriving later, is attached to the
+  closed run and never makes a second one. Nothing is emitted for an ends-only
+  trace until its root is known.
 - **Database spans** (`db.system`, checked before span kind) are folded into the
   nearest hop's `DbSummary` and are never hops or health keys. The summary is
   frozen when the hop's end is emitted; a later database span is counted in
-  `DbSummary.dropped` and announced by a `run.hop` event with phase `update`, so
-  a snapshot plus later events still equals the stream.
+  `DbSummary.dropped` and announced by a `run.hop` event with phase `update`.
+  Updates are coalesced per hop: one is owed, and sent before the next other
+  event, the next sweep or the next snapshot, so a flood costs one event; the
+  view changes only when it is sent, so a snapshot plus later events still
+  equals the stream. A late database span does not refresh its closed run's
+  recency, so a flood cannot keep a run from being evicted.
   `repeated` exists only when `db.query.text` was present.
 - **`rpcCaller` stays an ordinary hop.** In the real dumps the parentless span
   is the `rpcCaller` http span and it carries the user and the status, so
@@ -59,17 +69,29 @@ types.
   per-hop start events live.
 - **Output is JSON-safe**: ms numbers, no bigint, no undefined keys.
 - **Bounds.** Open runs, spans per run, spans in total, retained closed runs,
-  remembered closed trace ids, health keys and samples are capped. A span past
+  remembered closed trace ids, health keys and samples are capped; span names,
+  function ids and error names are cut to 256 characters. A span past
   `maxSpansPerRun` is ignored entirely (no event, view or health sample, so
   nothing is reported that a rebuild could not show, and a duplicate cannot
-  double-count). Eviction is by recency, not creation. Once a run leaves
-  retention its trace id lives in a separate bounded set (`maxClosedTraces`), so
-  a late span is recognised and ignored, never a second run rooted on itself;
-  only past that bound is a very old trace treated as new.
+  double-count). Eviction is by recency, not creation. Only a run that
+  *started* (an event was sent) has its trace id remembered when it leaves
+  retention, in a separate bounded set (`maxClosedTraces`): a late span is then
+  recognised and ignored, never a second run rooted on itself; only past that
+  bound is a very old trace treated as new. A trace never announced is not
+  remembered, because forgetting it would drop real spans for nothing. When
+  `maxOpenRuns` evicts a trace still waiting for its root it is settled first
+  (best root picked, what it holds reported) rather than dropped; under
+  `maxTotalSpans` pressure such traces are dropped unreported, the documented
+  cost of bounded memory, and their later spans start a fresh run.
 - **Boundary failures.** A failed boundary span (a failed publish) is not a hop
   and not a health key (counting only failures would read as a 100% error rate).
-  Its error becomes the run's `failure` when no hop failed first, naming the hop
-  it hangs off. A boundary root is covered by the run's own outcome.
+  It is a real failure of the hop it hangs off, caught or not. That hop is
+  marked: its health sample counts as an error (its own hop events keep their
+  outcome; if it had already ended, its sample is not amended). The run keeps
+  the first such failure: `run.failed` names it when no hop failed first, and a
+  run whose root ends ok still ends `run.finished` with `outcome: ok` plus
+  `failure` (the publishing hop, the publish's error). A boundary root is
+  covered by the run's own outcome.
 - **Verifier.** The test that drives a real `OtlpTracer` through `fanOutOtlp`
   into the stitcher stands in for the verifier the design asked for. A suite
   under `verifiers/` that feeds a generated project's spans is not built: it
