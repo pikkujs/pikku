@@ -31,6 +31,8 @@ const DEFAULT_LIMITS: StitcherLimits = {
   maxOpenRuns: 1000,
   maxSpansPerRun: 1000,
   maxRetained: 50,
+  maxClosedTraces: 10_000,
+  maxTotalSpans: 50_000,
   settleMs: 5_000,
   ttlMs: 120_000,
   healthWindowMs: 60_000,
@@ -75,6 +77,8 @@ interface Run {
   firstSeenNow: number
   lastSeenNow: number
   lastAtMs: number
+  /** The seq of the event that closed the run; orders `recent`. */
+  closedSeq: number
   started: boolean
   closed: boolean
   rootEnd?: {
@@ -109,11 +113,15 @@ export const createRunStitcher = (
   const listeners = new Set<(event: RunEvent) => void>()
   const open = new Map<string, Run>()
   const closed = new Map<string, Run>()
+  // Trace ids whose run left retention: a late span of one is ignored, never a second run rooted on itself.
+  const forgotten = new Set<string>()
+  // Spans held across every run, open or closed, root-less or not.
+  let totalSpans = 0
   let seq = 0
   let lastHealth = '[]'
   let lastEntries: HealthEntry[] | undefined
 
-  const emit = (run: Run | undefined, at: number, body: EventBody): void => {
+  const emit = (run: Run | undefined, at: number, body: EventBody): number => {
     if (run && at > run.lastAtMs) run.lastAtMs = at
     const event = { seq: ++seq, at, ...body } as RunEvent
     for (const listener of [...listeners]) {
@@ -123,6 +131,7 @@ export const createRunStitcher = (
         // A subscriber's bug never reaches the span path.
       }
     }
+    return event.seq
   }
 
   const nearestHop = (run: Run, rec: SpanRec): SpanRec | undefined => {
@@ -286,19 +295,51 @@ export const createRunStitcher = (
     root.startAttrs = undefined
   }
 
+  const forget = (traceId: string): void => {
+    forgotten.add(traceId)
+    while (forgotten.size > limits.maxClosedTraces) {
+      const oldest = forgotten.values().next().value
+      if (oldest === undefined) break
+      forgotten.delete(oldest)
+    }
+  }
+
+  /** Drops a run the stitcher no longer holds; its trace id is remembered so late spans do not reopen it. */
+  const discard = (run: Run): void => {
+    totalSpans -= run.spans.size
+    forget(run.traceId)
+  }
+
+  /** The closed run seen least recently; the earliest closed on a tie. */
+  const leastRecentlyClosed = (): Run | undefined => {
+    let pick: Run | undefined
+    for (const run of closed.values()) {
+      if (
+        !pick ||
+        run.lastSeenNow < pick.lastSeenNow ||
+        (run.lastSeenNow === pick.lastSeenNow && run.closedSeq < pick.closedSeq)
+      ) {
+        pick = run
+      }
+    }
+    return pick
+  }
+
   const retire = (run: Run): void => {
     open.delete(run.traceId)
     closed.set(run.traceId, run)
     while (closed.size > limits.maxRetained) {
-      const oldest = closed.keys().next().value
-      if (oldest === undefined) break
-      closed.delete(oldest)
+      const victim = leastRecentlyClosed()
+      if (!victim) break
+      closed.delete(victim.traceId)
+      discard(victim)
     }
   }
 
   const expire = (run: Run): void => {
     if (!run.started || !run.view) {
       open.delete(run.traceId)
+      discard(run)
       return
     }
     const rootStart = run.view.startedAt
@@ -308,7 +349,7 @@ export const createRunStitcher = (
     run.view.status = 'expired'
     run.view.outcome = 'expired'
     run.view.durationMs = durationMs
-    emit(run, run.lastAtMs, {
+    run.closedSeq = emit(run, run.lastAtMs, {
       type: 'run.expired',
       traceId: run.traceId,
       durationMs,
@@ -335,7 +376,7 @@ export const createRunStitcher = (
       }
       view.status = 'failed'
       view.failure = failure
-      emit(run, rootEnd.atMs, {
+      run.closedSeq = emit(run, rootEnd.atMs, {
         type: 'run.failed',
         traceId: run.traceId,
         durationMs: rootEnd.durationMs,
@@ -344,7 +385,7 @@ export const createRunStitcher = (
       })
     } else {
       view.status = 'finished'
-      emit(run, rootEnd.atMs, {
+      run.closedSeq = emit(run, rootEnd.atMs, {
         type: 'run.finished',
         traceId: run.traceId,
         durationMs: rootEnd.durationMs,
@@ -364,12 +405,22 @@ export const createRunStitcher = (
     }
   }
 
-  const runFor = (traceId: string, nowMs: number): Run => {
-    const existing = open.get(traceId) ?? closed.get(traceId)
+  /** The run for a trace, marked seen; undefined when the trace closed and left retention (the span is ignored). */
+  const runFor = (traceId: string, nowMs: number): Run | undefined => {
+    const existing = open.get(traceId)
     if (existing) {
       existing.lastSeenNow = nowMs
+      // Most recently seen goes to the back: the front of `open` is the one to evict.
+      open.delete(traceId)
+      open.set(traceId, existing)
       return existing
     }
+    const retained = closed.get(traceId)
+    if (retained) {
+      retained.lastSeenNow = nowMs
+      return retained
+    }
+    if (forgotten.has(traceId)) return undefined
     while (open.size >= limits.maxOpenRuns) {
       const oldest = open.values().next().value
       if (!oldest) break
@@ -381,6 +432,7 @@ export const createRunStitcher = (
       firstSeenNow: nowMs,
       lastSeenNow: nowMs,
       lastAtMs: 0,
+      closedSeq: 0,
       started: false,
       closed: false,
       openHops: 0,
@@ -406,23 +458,61 @@ export const createRunStitcher = (
     endEmitted: false,
   })
 
-  /** Stores the record unless the run is full; the root is always stored. */
+  /** Frees room when the stitcher holds more spans than `maxTotalSpans`: root-less traces first, then closed runs, then open ones. */
+  const enforceTotal = (current: Run): void => {
+    while (totalSpans > limits.maxTotalSpans) {
+      let victim: Run | undefined
+      for (const run of open.values()) {
+        if (run !== current && !run.started) {
+          victim = run
+          break
+        }
+      }
+      if (victim) {
+        open.delete(victim.traceId)
+        discard(victim)
+        continue
+      }
+      const stale = leastRecentlyClosed()
+      if (stale && stale !== current) {
+        closed.delete(stale.traceId)
+        discard(stale)
+        continue
+      }
+      for (const run of open.values()) {
+        if (run !== current) {
+          victim = run
+          break
+        }
+      }
+      if (!victim) return
+      expire(victim)
+    }
+  }
+
+  /**
+   * Stores the record, or returns false when the run is full: a span past `maxSpansPerRun` is ignored entirely (no
+   * event, no view, no health), so it cannot be reported once and then lost. The root is always stored.
+   */
   const remember = (run: Run, rec: SpanRec, isRoot: boolean): boolean => {
     if (!isRoot && run.spans.size >= limits.maxSpansPerRun) return false
     run.spans.set(rec.spanId, rec)
+    totalSpans++
+    enforceTotal(run)
     return true
   }
 
   const start = (span: SpanFrameStart, nowMs: number): void => {
     const run = runFor(span.traceId, nowMs)
-    if (run.spans.has(span.spanId)) return
+    if (!run || run.spans.has(span.spanId)) return
     const rec = recOf(span, true)
-    const isRoot =
-      run.rootSpanId === undefined &&
-      (!span.parentSpanId || run.spans.size === 0)
+    // Only a span with no parent is a root at once. One with a parent may be a child of a request that began before
+    // this sink was registered, or the first span of a trace with a foreign parent: it waits for its root like an end
+    // frame does (the root's own end, or `settleMs`).
+    const isRoot = run.rootSpanId === undefined && !span.parentSpanId
+    if (!remember(run, rec, isRoot)) return
     if (isRoot) run.rootSpanId = span.spanId
-    const stored = remember(run, rec, isRoot)
-    if (stored && rec.role === 'hop') {
+    if (rec.role === 'hop') {
       rec.open = true
       run.openHops++
     }
@@ -433,14 +523,14 @@ export const createRunStitcher = (
 
   const end = (span: SpanFrameEnd, nowMs: number): void => {
     const run = runFor(span.traceId, nowMs)
+    if (!run) return
     let rec = run.spans.get(span.spanId)
     if (rec?.ended) return
     if (!rec) {
       rec = recOf(span, false)
-      if (run.rootSpanId === undefined && !span.parentSpanId) {
-        run.rootSpanId = span.spanId
-      }
-      remember(run, rec, run.rootSpanId === span.spanId)
+      const isRoot = run.rootSpanId === undefined && !span.parentSpanId
+      if (!remember(run, rec, isRoot)) return
+      if (isRoot) run.rootSpanId = span.spanId
     }
     rec.ended = true
     rec.frame = span
@@ -472,6 +562,7 @@ export const createRunStitcher = (
         resolveRoot(run)
         if (run.rootSpanId === undefined) {
           open.delete(run.traceId)
+          discard(run)
           continue
         }
         const root = run.spans.get(run.rootSpanId)!
@@ -521,7 +612,9 @@ export const createRunStitcher = (
       open: [...open.values()]
         .filter((r) => r.view)
         .map((r) => cloneView(r.view!)),
-      recent: [...closed.values()].reverse().map((r) => cloneView(r.view!)),
+      recent: [...closed.values()]
+        .sort((a, b) => b.closedSeq - a.closedSeq)
+        .map((r) => cloneView(r.view!)),
       health: { seq, at: nowMs, ...healthEvent },
     }
   }

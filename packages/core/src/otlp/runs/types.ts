@@ -14,12 +14,28 @@ export type Attrs = Record<string, SpanAttributeValue>
 export type SpanRole = 'hop' | 'boundary' | 'db'
 
 export interface StitcherLimits {
-  /** Runs open at once, and traces still waiting for their root. The oldest is expired. Default 1000. */
+  /** Runs open at once, and traces still waiting for their root. The least recently seen is expired. Default 1000. */
   maxOpenRuns: number
-  /** Spans remembered per run; more are still reported but hang off the root. Default 1000. */
+  /**
+   * Spans remembered per run. A span past it is ignored entirely: no event, no view, no health, and a duplicate of it
+   * is ignored too. Its run still closes on its root. Default 1000.
+   */
   maxSpansPerRun: number
-  /** Closed runs kept for late children and for `snapshot().recent`. Default 50. */
+  /**
+   * Closed runs kept for late children and for `snapshot().recent`; the least recently seen is dropped. Default 50.
+   */
   maxRetained: number
+  /**
+   * Trace ids remembered after their run left retention (or was dropped), so a late span of one is recognised and
+   * ignored, never a second run rooted on itself. Bounded and separate from `maxRetained`; the oldest is forgotten
+   * first, and a span of a forgotten trace starts a new one. Default 10000.
+   */
+  maxClosedTraces: number
+  /**
+   * Spans held across all runs, open, closed and root-less. Over it, root-less traces go first, then closed runs, then
+   * the least recently seen open runs (which expire). Default 50000.
+   */
+  maxTotalSpans: number
   /** How long a trace waits for a root, and how long a run lingers for open hops after its root ended. Default 5000. */
   settleMs: number
   /** An open run with no activity for this long expires. Default 120000. */

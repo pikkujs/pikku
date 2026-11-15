@@ -810,6 +810,34 @@ describe('views carry what the events carry', () => {
     assert.ok(hops.some((h) => !h.hadStart))
   })
 
+  test('the same holds past maxSpansPerRun, with every end delivered twice', () => {
+    const doubled = frames(sample).flatMap((f) => (f.kind === 1 ? [f, f] : [f]))
+    const batches = shuffledBatches(doubled, 6, mulberry32(5))
+    const stitcher = createRunStitcher({
+      limits: { maxRetained: 1000, maxSpansPerRun: 4 },
+    })
+    const { events, whole } = assertSnapshotsRebuild(
+      stitcher,
+      batches,
+      () => true
+    )
+    // the cap really bit: some trace has more spans than 4
+    const bySpan = new Map<string, Set<string>>()
+    for (const span of sample) {
+      const set = bySpan.get(span.traceId) ?? new Set()
+      set.add(span.spanId)
+      bySpan.set(span.traceId, set)
+    }
+    assert.ok([...bySpan.values()].some((set) => set.size > 4))
+    for (const run of whole.values()) assert.ok(run.hops.size <= 4)
+    // no hop is reported twice
+    const ends = ofType(events, 'run.hop').filter((e) => e.phase === 'end')
+    assert.equal(
+      new Set(ends.map((e) => `${e.traceId}|${e.spanId}`)).size,
+      ends.length
+    )
+  })
+
   test('hadStart is true only for a hop whose start event was sent', () => {
     const stitcher = createRunStitcher()
     const events = collect(stitcher)
@@ -1364,6 +1392,231 @@ describe('attributes: default-deny, the exporter allow-list', () => {
     assert.ok(Object.keys(started).length <= 64)
     assert.equal(started['pikku.wire.type'], 'http')
     assert.equal(started['pikku.user.id'], 'user-9')
+  })
+})
+
+describe('the span cap', () => {
+  const hopIds = (events: RunEvent[]) =>
+    ofType(events, 'run.hop').map((e) => `${e.phase}:${e.spanId}`)
+
+  test('a span past maxSpansPerRun is ignored: no event for it, none in the views, a duplicate end counts once', () => {
+    const stitcher = createRunStitcher({ limits: { maxSpansPerRun: 2 } })
+    const events = collect(stitcher)
+    const root = syn({ id: 'r', startMs: T0, endMs: T0 + 100 })
+    const a = syn({ id: 'a', parent: 'r', startMs: T0 + 1, endMs: T0 + 10 })
+    const b = syn({ id: 'b', parent: 'r', startMs: T0 + 2, endMs: T0 + 10 })
+    stitcher.start(toOpen(root), T0)
+    stitcher.start(toOpen(a), T0 + 1)
+    stitcher.start(toOpen(b), T0 + 2)
+    stitcher.end(b, T0 + 10)
+    stitcher.end(b, T0 + 10)
+    stitcher.end(a, T0 + 10)
+    stitcher.end(a, T0 + 10)
+    stitcher.end(root, T0 + 100)
+    assert.deepEqual(hopIds(events), ['start:r', 'start:a', 'end:a', 'end:r'])
+    const view = stitcher.snapshot(T0 + 200).recent[0]!
+    assert.deepEqual(view.hops.map((h) => h.spanId).sort(), ['a', 'r'])
+    const health = stitcher.snapshot(T0 + 200).health.entries
+    assert.deepEqual(
+      health.map((e) => [e.key, e.runs]),
+      [
+        ['a', 1],
+        ['r', 1],
+      ]
+    )
+  })
+
+  test('an end past the cap in an end-only trace is ignored the same way', () => {
+    const stitcher = createRunStitcher({ limits: { maxSpansPerRun: 2 } })
+    const events = collect(stitcher)
+    stitcher.end(
+      syn({ id: 'x', parent: 'r', startMs: T0 + 1, endMs: T0 + 2 }),
+      T0 + 2
+    )
+    stitcher.end(
+      syn({ id: 'y', parent: 'r', startMs: T0 + 1, endMs: T0 + 3 }),
+      T0 + 3
+    )
+    stitcher.end(
+      syn({ id: 'z', parent: 'r', startMs: T0 + 1, endMs: T0 + 4 }),
+      T0 + 4
+    )
+    stitcher.end(
+      syn({ id: 'z', parent: 'r', startMs: T0 + 1, endMs: T0 + 4 }),
+      T0 + 4
+    )
+    stitcher.end(syn({ id: 'r', startMs: T0, endMs: T0 + 9 }), T0 + 9)
+    assert.deepEqual(
+      ofType(events, 'run.hop').filter((e) => e.spanId === 'z'),
+      []
+    )
+    assert.equal(
+      ofType(events, 'run.hop').filter((e) => e.phase === 'end').length,
+      new Set(
+        ofType(events, 'run.hop')
+          .filter((e) => e.phase === 'end')
+          .map((e) => e.spanId)
+      ).size
+    )
+  })
+})
+
+describe('a closed trace stays closed', () => {
+  test('a late child after the closed run left retention is ignored, never a second run rooted on itself', () => {
+    const stitcher = createRunStitcher({ limits: { maxRetained: 1 } })
+    const events = collect(stitcher)
+    for (const t of ['t1', 't2']) {
+      const root = syn({ id: `r${t}`, trace: t, startMs: T0, endMs: T0 + 5 })
+      stitcher.start(toOpen(root), T0)
+      stitcher.end(root, T0 + 5)
+    }
+    const before = events.length
+    const late = syn({
+      id: 'late',
+      trace: 't1',
+      parent: 'rt1',
+      startMs: T0 + 6,
+      endMs: T0 + 9,
+    })
+    stitcher.start(toOpen(late), T0 + 6)
+    stitcher.end(late, T0 + 9)
+    stitcher.sweep(T0 + 1_000_000)
+    assert.equal(
+      events.slice(before).filter((e) => e.type !== 'health').length,
+      0
+    )
+    assert.equal(stitcher.snapshot(T0 + 1_000_000).open.length, 0)
+    assert.equal(
+      ofType(events, 'run.started').filter(
+        (e) => e.traceId === 't1'.padEnd(32, '0')
+      ).length,
+      1
+    )
+  })
+
+  test('the closed-trace memory is bounded: past maxClosedTraces the oldest id is forgotten', () => {
+    const stitcher = createRunStitcher({
+      limits: { maxRetained: 1, maxClosedTraces: 3 },
+    })
+    const events = collect(stitcher)
+    for (const t of ['a', 'b', 'c', 'd', 'e']) {
+      const root = syn({ id: `r${t}`, trace: t, startMs: T0, endMs: T0 + 1 })
+      stitcher.start(toOpen(root), T0)
+      stitcher.end(root, T0 + 1)
+    }
+    const before = events.length
+    // 'e' is retained, 'b'..'d' are remembered as closed, 'a' is forgotten: documented as the bound's edge.
+    stitcher.end(
+      syn({ id: 'late', trace: 'c', parent: 'rc', startMs: T0, endMs: T0 + 2 }),
+      T0 + 2
+    )
+    assert.equal(events.length, before)
+  })
+})
+
+describe('eviction by recency and total size', () => {
+  test('the open run evicted is the least recently seen, not the oldest created', () => {
+    const stitcher = createRunStitcher({ limits: { maxOpenRuns: 2 } })
+    const events = collect(stitcher)
+    const open = (t: string, now: number) =>
+      stitcher.start(toOpen(syn({ id: `r${t}`, trace: t, startMs: now })), now)
+    open('a', T0)
+    open('b', T0 + 1)
+    stitcher.start(
+      toOpen(syn({ id: 'child', trace: 'a', parent: 'ra', startMs: T0 + 2 })),
+      T0 + 2
+    )
+    open('c', T0 + 3)
+    assert.deepEqual(
+      ofType(events, 'run.expired').map((e) => e.traceId),
+      ['b'.padEnd(32, '0')]
+    )
+  })
+
+  test('closed runs are evicted least recently seen too: a late child keeps its run', () => {
+    const stitcher = createRunStitcher({ limits: { maxRetained: 2 } })
+    const close = (t: string, now: number) => {
+      const root = syn({ id: `r${t}`, trace: t, startMs: now, endMs: now + 1 })
+      stitcher.start(toOpen(root), now)
+      stitcher.end(root, now + 1)
+    }
+    close('a', T0)
+    close('b', T0 + 10)
+    stitcher.end(
+      syn({
+        id: 'late',
+        trace: 'a',
+        parent: 'ra',
+        startMs: T0 + 20,
+        endMs: T0 + 21,
+      }),
+      T0 + 21
+    )
+    close('c', T0 + 30)
+    const kept = stitcher.snapshot(T0 + 40).recent.map((r) => r.traceId)
+    assert.ok(kept.includes('a'.padEnd(32, '0')))
+    assert.ok(!kept.includes('b'.padEnd(32, '0')))
+  })
+
+  test('traces that never find a root are bounded in total frames, least recently seen first', () => {
+    const stitcher = createRunStitcher({
+      limits: { maxTotalSpans: 10, settleMs: 100 },
+    })
+    const events = collect(stitcher)
+    const rootless = (t: string, now: number) => {
+      for (let i = 0; i < 6; i++)
+        stitcher.end(
+          syn({
+            id: `${t}${i}`,
+            trace: t,
+            parent: `gone${t}`,
+            startMs: now,
+            endMs: now + 1,
+          }),
+          now + 1
+        )
+    }
+    rootless('p', T0)
+    rootless('q', T0 + 1)
+    stitcher.sweep(T0 + 1000)
+    const started = ofType(events, 'run.started').map((e) => e.traceId)
+    assert.deepEqual(started, ['q'.padEnd(32, '0')])
+  })
+})
+
+describe('a sink registered mid-request (start frames, the first span has a parent)', () => {
+  test('the child does not become the root: it waits, and the root that ends later is the root', () => {
+    const stitcher = createRunStitcher()
+    const events = collect(stitcher)
+    const child = syn({ id: 'c', parent: 'r', startMs: T0 + 1, endMs: T0 + 10 })
+    stitcher.start(toOpen(child), T0 + 1)
+    stitcher.end(child, T0 + 10)
+    assert.equal(
+      events.length,
+      0,
+      'nothing is reported while the root is unknown'
+    )
+    stitcher.end(syn({ id: 'r', startMs: T0, endMs: T0 + 20 }), T0 + 20)
+    const started = ofType(events, 'run.started')
+    assert.equal(started.length, 1)
+    assert.equal(started[0]!.rootSpanId, 'r')
+    const hop = ofType(events, 'run.hop').find(
+      (h) => h.spanId === 'c' && h.phase === 'end'
+    )!
+    assert.equal(hop.parentSpanId, 'r')
+  })
+
+  test('with no root ever, the earliest span without a stored parent becomes the root once settleMs passed', () => {
+    const stitcher = createRunStitcher({ limits: { settleMs: 100 } })
+    const events = collect(stitcher)
+    stitcher.start(
+      toOpen(syn({ id: 'c', parent: 'gone', startMs: T0 + 1 })),
+      T0 + 1
+    )
+    stitcher.sweep(T0 + 50)
+    assert.equal(events.length, 0)
+    stitcher.sweep(T0 + 200)
+    assert.equal(ofType(events, 'run.started')[0]!.rootSpanId, 'c')
   })
 })
 
