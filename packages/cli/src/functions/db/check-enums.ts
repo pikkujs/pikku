@@ -87,6 +87,23 @@ export function quotedValues(text: string): string[] {
 }
 
 /**
+ * The values of a list that holds nothing but string literals (each optionally
+ * cast, `'a'::text`), or `undefined` when any element is anything else: a call
+ * such as `concat('dr', 'aft')`, a `||`, a column. The literals inside such an
+ * element are not the values the column allows.
+ */
+function literalList(list: string): string[] | undefined {
+  const values: string[] = []
+  for (const element of splitTopLevel(list)) {
+    const literal =
+      /^\s*'((?:[^']|'')*)'(?:\s*::\s*[\w."\s]+(?:\[\])?)?\s*$/.exec(element)
+    if (!literal) return undefined
+    values.push(literal[1]!.replace(/''/g, "'"))
+  }
+  return values.length > 0 ? values : undefined
+}
+
+/**
  * Map each column constrained by a `CHECK (col IN (…))` in a `CREATE TABLE`
  * statement to its allowed values. Only the positive `col IN (…)` form is
  * recognised (the convention); `NOT IN`, ranges and boolean expressions are
@@ -100,8 +117,8 @@ export function parseCheckEnumsFromDdl(ddl: string): Map<string, string[]> {
   while ((m = checkIn.exec(sql))) {
     const list = parenthesised(sql, m.index + m[0].length - 1)
     if (!list) continue
-    const values = quotedValues(list.inside)
-    if (values.length > 0) out.set(m[1]!, values)
+    const values = literalList(list.inside)
+    if (values) out.set(m[1]!, values)
   }
   return out
 }
@@ -126,8 +143,7 @@ export function parseCheckEnumValues(
   while (i < constraintDef.length && constraintDef[i] !== ']') {
     i = constraintDef[i] === "'" ? closingQuote(constraintDef, i) : i + 1
   }
-  const values = quotedValues(constraintDef.slice(from, i))
-  return values.length > 0 ? values : undefined
+  return literalList(constraintDef.slice(from, i))
 }
 
 /** A string, `"identifier"` or `` `identifier` ``, as one capturing group for `split`. */

@@ -119,6 +119,45 @@ describe('planConstraints and which checks are generated', () => {
   })
 })
 
+describe('planConstraints and a MySQL NOT ENFORCED check', () => {
+  const min = checkName('item', 'qty', 'min')
+  const ge0 = '"qty" >= 0'
+  const off = { enforced: false } as const
+
+  test('the declared name held but not enforced is dropped and added again', () => {
+    const plan = planConstraints(
+      'item',
+      'qty',
+      col([{ name: min, expression: ge0 }]),
+      col([{ name: min, expression: ge0, ...off }])
+    )
+    assert.deepEqual(plan.drop, [min])
+    assert.deepEqual(plan.add, [{ name: min, expression: ge0 }])
+    assert.match(plan.reasons.join(), /NOT ENFORCED/)
+  })
+
+  test('an equal condition under another name that is not enforced does not count as the bound', () => {
+    const plan = planConstraints(
+      'item',
+      'qty',
+      col([{ name: min, expression: ge0 }]),
+      col([{ name: 'mine', expression: ge0, ...off }])
+    )
+    assert.deepEqual(plan.add, [{ name: min, expression: ge0 }])
+    assert.deepEqual(plan.drop, [])
+  })
+
+  test('an enforced one still counts', () => {
+    const plan = planConstraints(
+      'item',
+      'qty',
+      col([{ name: min, expression: ge0 }]),
+      col([{ name: 'mine', expression: ge0 }])
+    )
+    assert.deepEqual(plan, { drop: [], add: [], reasons: [] })
+  })
+})
+
 describe('planConstraints', () => {
   const min0 = {
     name: checkName('item', 'qty', 'min'),

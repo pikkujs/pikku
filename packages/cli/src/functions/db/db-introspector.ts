@@ -7,6 +7,8 @@ export interface ColumnCheck {
   /** The constraint's name; empty for one written without a name. */
   name: string
   expression: string
+  /** `false` for a MySQL `NOT ENFORCED` check: held by the table, ignored by the server. Absent means enforced. */
+  enforced?: false
 }
 
 export interface ColumnInfo {

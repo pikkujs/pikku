@@ -27,6 +27,8 @@ interface MysqlCheckRow {
   table_name: string
   constraint_name: string
   check_clause: string
+  /** `YES` or `NO`; absent from MariaDB's view. */
+  enforced?: string
 }
 
 interface MysqlForeignKeyRow {
@@ -130,23 +132,41 @@ export class MysqlIntrospector implements DbIntrospector {
   private async attachChecks(
     byTable: Map<string, ColumnInfo[]>
   ): Promise<void> {
-    let rows: MysqlCheckRow[]
-    try {
-      ;({ rows } = await this.client.query<MysqlCheckRow>(
-        `SELECT tc.table_name AS table_name,
-                cc.constraint_name AS constraint_name,
-                cc.check_clause AS check_clause
-         FROM information_schema.check_constraints cc
+    // MySQL keeps check names schema-wide and says whether each is enforced
+    // (8.0.16+); MariaDB lets a name repeat across tables, has no such column,
+    // and names the table on both views, so it is asked the second way.
+    const from = `FROM information_schema.check_constraints cc
          JOIN information_schema.table_constraints tc
            ON tc.constraint_schema = cc.constraint_schema
-          AND tc.constraint_name = cc.constraint_name
+          AND tc.constraint_name = cc.constraint_name`
+    const queries = [
+      `SELECT tc.table_name AS table_name,
+                cc.constraint_name AS constraint_name,
+                cc.check_clause AS check_clause,
+                tc.enforced AS enforced
+         ${from}
           AND tc.constraint_type = 'CHECK'
          WHERE tc.table_schema = DATABASE()
-         ORDER BY tc.table_name, cc.constraint_name`
-      ))
-    } catch {
-      return
+         ORDER BY tc.table_name, cc.constraint_name`,
+      `SELECT tc.table_name AS table_name,
+                cc.constraint_name AS constraint_name,
+                cc.check_clause AS check_clause
+         ${from}
+          AND tc.table_name = cc.table_name
+          AND tc.constraint_type = 'CHECK'
+         WHERE tc.table_schema = DATABASE()
+         ORDER BY tc.table_name, cc.constraint_name`,
+    ]
+    let rows: MysqlCheckRow[] | undefined
+    for (const query of queries) {
+      try {
+        ;({ rows } = await this.client.query<MysqlCheckRow>(query))
+        break
+      } catch {
+        // Try the other server's spelling; neither means no such view.
+      }
     }
+    if (!rows) return
     for (const row of rows) {
       const columns = byTable.get(row.table_name)
       if (!columns) continue
@@ -156,14 +176,20 @@ export class MysqlIntrospector implements DbIntrospector {
       )
       const column = columns.find((c) => c.name === owner)
       if (!column) continue
+      // `NOT ENFORCED` keeps the check and ignores it: it is not a constraint
+      // the column has, and no enum is read from it.
+      const enforced = String(row.enforced ?? 'YES').toUpperCase() !== 'NO'
       column.checks = [
         ...(column.checks ?? []),
         {
           name: row.constraint_name,
           expression: normaliseCheck(mysqlCheckClause(row.check_clause)),
+          ...(enforced ? {} : { enforced: false }),
         },
       ]
-      column.enumValues ??= mysqlCheckEnumValues(row.check_clause)
+      if (enforced) {
+        column.enumValues ??= mysqlCheckEnumValues(row.check_clause)
+      }
     }
   }
 

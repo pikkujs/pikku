@@ -76,10 +76,20 @@ export function planConstraints(
       )
     }
   }
-  const staying = held.filter((h) => !plan.drop.includes(h.name))
+  // A check MySQL holds `NOT ENFORCED` is ignored by the server, so it never
+  // stands in for a declared bound.
+  const staying = held.filter(
+    (h) => !plan.drop.includes(h.name) && h.enforced !== false
+  )
   for (const check of wanted) {
     const sameName = held.find((h) => h.name === check.name)
-    if (sameName) {
+    if (sameName?.enforced === false) {
+      plan.drop.push(check.name)
+      plan.add.push(check)
+      plan.reasons.push(
+        `${check.name} is NOT ENFORCED in the migrations, so the server ignores it`
+      )
+    } else if (sameName) {
       if (
         checkFingerprint(sameName.expression) !==
         checkFingerprint(check.expression)

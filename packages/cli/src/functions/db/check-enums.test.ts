@@ -1,4 +1,4 @@
-import { test } from 'node:test'
+import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -310,4 +310,55 @@ test("a column-level check that names another column is that column's, not the o
   assert.deepEqual(checks.get('b'), [{ name: '', expression: 'b > 0' }])
   assert.equal(checks.has('a'), false)
   assert.equal(checks.has('c'), false, "a check across two columns is no one's")
+})
+
+describe('an enum list holds only literals; a function call or expression in it is not an enum', () => {
+  test('mysql: concat() and other calls in the list', () => {
+    assert.equal(
+      mysqlCheckEnumValues("(`s` in (concat('dr','aft'),'sent'))"),
+      undefined
+    )
+    assert.equal(
+      mysqlCheckEnumValues(
+        "(`s` in (_utf8mb4\\'a\\',concat(_utf8mb4\\'b\\',_utf8mb4\\'c\\')))"
+      ),
+      undefined
+    )
+    assert.equal(mysqlCheckEnumValues("(`s` in (lower('A'),'b'))"), undefined)
+    assert.deepEqual(mysqlCheckEnumValues("(`s` in ('a','b'))"), ['a', 'b'])
+  })
+
+  test('sqlite: a call or a concatenation in the list', () => {
+    for (const list of ["lower('A'), 'b'", "'a' || 'b', 'c'"]) {
+      assert.equal(
+        parseCheckEnumsFromDdl(`CREATE TABLE t (s TEXT CHECK (s IN (${list})))`)
+          .size,
+        0,
+        list
+      )
+    }
+    assert.deepEqual(
+      [
+        ...parseCheckEnumsFromDdl(
+          `CREATE TABLE t (s TEXT CHECK (s IN ('a', 'it''s')))`
+        ),
+      ],
+      [['s', ['a', "it's"]]]
+    )
+  })
+
+  test('postgres: a call in the ARRAY', () => {
+    assert.equal(
+      parseCheckEnumValues(
+        "CHECK ((s = ANY (ARRAY[concat('dr'::text, 'aft'::text), 'sent'::text])))"
+      ),
+      undefined
+    )
+    assert.deepEqual(
+      parseCheckEnumValues(
+        "CHECK ((s = ANY (ARRAY['draft'::text, 'sent'::text])))"
+      ),
+      ['draft', 'sent']
+    )
+  })
 })

@@ -89,3 +89,102 @@ test('the checks a real MySQL stores come back as enum values and as the SQL Pik
     ]
   )
 })
+
+const twoTableColumns = (table: string) => ({
+  table_name: table,
+  column_name: 'status',
+  column_type: 'varchar(10)',
+  is_nullable: 'YES',
+  column_default: null,
+  extra: '',
+  column_key: '',
+})
+
+test('a NOT ENFORCED check is read as not enforcing: flagged, and no enum is taken from it', async () => {
+  const client = {
+    async query(sql: string) {
+      if (/information_schema\.columns/.test(sql)) {
+        return {
+          rows: [
+            ...['color', 'qty'].map((c) => ({
+              ...twoTableColumns('item'),
+              column_name: c,
+            })),
+          ],
+        }
+      }
+      if (/information_schema\.check_constraints/.test(sql)) {
+        return {
+          rows: [
+            {
+              table_name: 'item',
+              constraint_name: 'item_color_enum_check',
+              check_clause: "(`color` in ('red','blue'))",
+              enforced: 'NO',
+            },
+            {
+              table_name: 'item',
+              constraint_name: 'item_qty_min_check',
+              check_clause: '(`qty` >= 0)',
+              enforced: 'YES',
+            },
+          ],
+        }
+      }
+      return { rows: [] }
+    },
+  } as unknown as MysqlQueryClient
+  const byName = new Map(
+    (await new MysqlIntrospector(client).getColumns('item'))!.map((c) => [
+      c.name,
+      c,
+    ])
+  )
+  assert.equal(byName.get('color')!.enumValues, undefined)
+  assert.deepEqual(byName.get('color')!.checks, [
+    {
+      name: 'item_color_enum_check',
+      expression: "`color` in ('red','blue')",
+      enforced: false,
+    },
+  ])
+  assert.equal(byName.get('qty')!.checks![0]!.enforced, undefined)
+})
+
+test('on MariaDB, which has no ENFORCED and lets a check name repeat across tables, checks join on the table too', async () => {
+  const queries: string[] = []
+  const client = {
+    async query(sql: string) {
+      queries.push(sql)
+      if (/information_schema\.columns/.test(sql)) {
+        return { rows: [twoTableColumns('a'), twoTableColumns('b')] }
+      }
+      if (/information_schema\.check_constraints/.test(sql)) {
+        // MariaDB has no ENFORCED column on table_constraints.
+        if (/enforced/i.test(sql))
+          throw new Error("Unknown column 'tc.enforced'")
+        assert.match(sql, /tc\.table_name\s*=\s*cc\.table_name/)
+        return {
+          rows: [
+            {
+              table_name: 'a',
+              constraint_name: 'chk_status',
+              check_clause: "`status` in ('x','y')",
+            },
+            {
+              table_name: 'b',
+              constraint_name: 'chk_status',
+              check_clause: "`status` in ('p','q')",
+            },
+          ],
+        }
+      }
+      return { rows: [] }
+    },
+  } as unknown as MysqlQueryClient
+  const intro = new MysqlIntrospector(client)
+  const a = (await intro.getColumns('a'))!
+  const b = (await intro.getColumns('b'))!
+  assert.deepEqual(a[0]!.enumValues, ['x', 'y'])
+  assert.deepEqual(b[0]!.enumValues, ['p', 'q'])
+})
