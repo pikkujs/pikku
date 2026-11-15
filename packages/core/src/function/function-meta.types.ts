@@ -95,6 +95,8 @@ export type FunctionRuntimeMeta = {
   scenario?: boolean
   mcp?: boolean
   readonly?: boolean
+  /** Declared with `mock: true`: input and output, no body yet. */
+  mock?: boolean
   deploy?: 'serverless' | 'server' | 'auto'
   sessionless?: boolean
   /** The function declares a `compensate`, run as the sibling `<id>:compensate` when a workflow unwinds. */

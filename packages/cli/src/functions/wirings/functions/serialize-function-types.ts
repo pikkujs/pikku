@@ -223,8 +223,10 @@ export type PikkuFunctionConfig<
   PikkuFunc extends PikkuFunction<In, Out, RequiredWires, any> | PikkuFunctionSessionless<In, Out, RequiredWires, any, any> = PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires>,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = Omit<CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, ScopeId, FeatureFlagName>, 'node'> & {
+> = Omit<CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, ScopeId, FeatureFlagName>, 'node' | 'mock'> & {
   node?: NodeConfig
+  /** A function with a body is not a mock: see \`PikkuMockFunctionConfig\`. */
+  mock?: never
 }
 
 /**
@@ -238,8 +240,10 @@ type PikkuFunctionSessionlessConfig<
   PikkuFunc extends PikkuFunctionSessionless<In, Out, RequiredWires, any> = PikkuFunctionSessionless<In, Out, RequiredWires>,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = Omit<CorePikkuSessionlessFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, FeatureFlagName>, 'node'> & {
+> = Omit<CorePikkuSessionlessFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, FeatureFlagName>, 'node' | 'mock'> & {
   node?: NodeConfig
+  /** A function with a body is not a mock: see \`PikkuMockFunctionConfig\`. */
+  mock?: never
 }
 
 /**
@@ -271,7 +275,7 @@ type PikkuFunctionConfigWithSchema<
     ScopeId,
     FeatureFlagName
   >,
-  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
+  'func' | 'mock' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
 > & {
   /** The function body: \`async (services, data, wire) => output\`. */
   func:
@@ -282,6 +286,8 @@ type PikkuFunctionConfigWithSchema<
   /** Zod schema for the output. The function's return type is inferred from it. */
   output?: OutputSchema
   node?: NodeConfig
+  /** A function with a body is not a mock: see \`PikkuMockFunctionConfigWithSchema\`. */
+  mock?: never
   /** \`pikkuPermission\` guards checked before the body runs. Pass one, an array, or groups of alternatives. */
   permissions?: InputSchema extends StandardSchemaV1
     ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
@@ -289,6 +295,45 @@ type PikkuFunctionConfigWithSchema<
   approvalDescription?: InputSchema extends StandardSchemaV1
     ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>>
     : never
+}
+
+/**
+ * A function declared but not implemented yet: its \`input\` and \`output\`,
+ * \`mock: true\`, and no \`func\`. It stays in every map and generated client,
+ * calling it on a real backend fails, and \`pikku validate\` refuses to publish
+ * it. Implementing it means writing \`func\` and deleting \`mock\`.
+ */
+type PikkuMockFunctionConfigWithSchema<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+> = Omit<PikkuFunctionConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>, 'func' | 'mock'> & {
+  /** Declared, not implemented: there is no body yet. */
+  mock: true
+  func?: never
+}
+
+/** {@link PikkuMockFunctionConfigWithSchema} for a function typed with generics. */
+type PikkuMockFunctionConfig<In, Out> = Omit<PikkuFunctionConfig<In, Out, 'session' | 'rpc'>, 'func' | 'mock'> & {
+  /** Declared, not implemented: there is no body yet. */
+  mock: true
+  func?: never
+}
+
+/** {@link PikkuMockFunctionConfigWithSchema} for a sessionless function. */
+type PikkuMockSessionlessFunctionConfigWithSchema<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+> = Omit<PikkuFunctionSessionlessConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>, 'func' | 'mock'> & {
+  /** Declared, not implemented: there is no body yet. */
+  mock: true
+  func?: never
+}
+
+/** {@link PikkuMockFunctionConfig} for a sessionless function. */
+type PikkuMockSessionlessFunctionConfig<In, Out> = Omit<PikkuFunctionSessionlessConfig<In, Out, 'session' | 'rpc'>, 'func' | 'mock'> & {
+  /** Declared, not implemented: there is no body yet. */
+  mock: true
+  func?: never
 }
 
 /**
@@ -321,6 +366,15 @@ export function pikkuFunc<In, Out = unknown>(
   func:
     | PikkuFunction<In, Out, 'session' | 'rpc'>
     | PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
+): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
+export function pikkuFunc<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  config: PikkuMockFunctionConfigWithSchema<InputSchema, OutputSchema>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+export function pikkuFunc<In, Out = unknown>(
+  config: PikkuMockFunctionConfig<In, Out>
 ): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
 export function pikkuFunc(func: any) {
   return typeof func === 'function' ? { func } : func
@@ -389,7 +443,7 @@ type PikkuFunctionSessionlessConfigWithSchema<
   CorePikkuSessionlessFunctionConfig<
     PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
   >,
-  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
+  'func' | 'mock' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
 > & {
   /** The function body: \`async (services, data, wire) => output\`. */
   func: PikkuFunctionSessionless<
@@ -403,6 +457,8 @@ type PikkuFunctionSessionlessConfigWithSchema<
   /** Zod schema for the output. The function's return type is inferred from it. */
   output?: OutputSchema
   node?: NodeConfig
+  /** A function with a body is not a mock: see \`PikkuMockFunctionConfigWithSchema\`. */
+  mock?: never
   /** \`pikkuPermission\` guards checked before the body runs. Pass one, an array, or groups of alternatives. */
   permissions?: InputSchema extends StandardSchemaV1
     ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
@@ -436,6 +492,15 @@ export function pikkuSessionlessFunc<In, Out = unknown, RequiredServices extends
   func:
     | PikkuFunctionSessionless<In, Out, 'session' | 'rpc', RequiredServices>
     | PikkuFunctionSessionlessConfig<In, Out, 'session' | 'rpc', PikkuFunctionSessionless<In, Out, 'session' | 'rpc', RequiredServices>>
+): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
+export function pikkuSessionlessFunc<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  config: PikkuMockSessionlessFunctionConfigWithSchema<InputSchema, OutputSchema>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+export function pikkuSessionlessFunc<In, Out = unknown>(
+  config: PikkuMockSessionlessFunctionConfig<In, Out>
 ): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
 export function pikkuSessionlessFunc(func: any) {
   return typeof func === 'function' ? { func } : func
