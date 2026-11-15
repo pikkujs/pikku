@@ -10,6 +10,18 @@ import { changesContext } from './context.js'
 export type { ChangesRPC }
 export { changesContext }
 
+/**
+ * A session that was told only to file changes sets PIKKU_CHANGES_FILING_ONLY=1.
+ * Claiming, finishing or merging is another agent's job, so those commands
+ * refuse instead of leaving a cheap model to obey one sentence in a prompt.
+ */
+export function refuseWhenFilingOnly(verb: string): void {
+  if (process.env.PIKKU_CHANGES_FILING_ONLY !== '1') return
+  throw new CloudPreconditionError(
+    `This session only files changes, so it cannot ${verb} one. You are done: stop here. Another agent builds what you filed.`
+  )
+}
+
 export function requireProjectId(projectId: string | null): string {
   if (!projectId)
     throw new CloudPreconditionError(

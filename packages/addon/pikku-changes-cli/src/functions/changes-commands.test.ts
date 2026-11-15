@@ -132,6 +132,22 @@ describe('changes claim', () => {
   })
 })
 
+describe('a session that only files changes', () => {
+  test('cannot claim, and nothing reaches the api', async () => {
+    const before = invoked.length
+    process.env.PIKKU_CHANGES_FILING_ONLY = '1'
+    try {
+      await assert.rejects(
+        ChangesClaim.func({} as any, { changeIds: ['chg_1'] } as any),
+        /only files changes/
+      )
+    } finally {
+      delete process.env.PIKKU_CHANGES_FILING_ONLY
+    }
+    assert.strictEqual(invoked.length, before)
+  })
+})
+
 describe('changes claim, refused', () => {
   const HELD = '5f0f6a4e-0000-4000-8000-000000000001'
   const TAKEN = '5f0f6a4e-0000-4000-8000-000000000002'
