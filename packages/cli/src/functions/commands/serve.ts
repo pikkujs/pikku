@@ -47,6 +47,7 @@ import { assertBackendToServe } from '../../utils/select-backends.js'
 import { resolveProjectVersion } from '../../deploy/build-pipeline.js'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { asContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'
+import { createAnalyticsSinks } from '@pikku/core/analytics'
 
 export const serve = pikkuSessionlessFunc<
   { port?: string; model?: string; backend?: string },
@@ -67,14 +68,16 @@ export const serve = pikkuSessionlessFunc<
     assertBackendToServe(config)
     disableDevVirtualUserSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
-    // PIKKU_OTLP_ENDPOINT unset (or PIKKU_TELEMETRY=0) is the inert case: no
-    // exporter, no connection. A non-loopback endpoint throws here, at boot.
+    // The tracer is always real and writes to the otlpSinks registry; an
+    // endpoint only adds the HTTP exporter as one sink, and PIKKU_TELEMETRY=0 is
+    // the inert case. A non-loopback endpoint throws here, at boot.
     const telemetry = createRuntimeTelemetry(process.env, {
       logger: new ConsoleLogger(),
       serviceName: basename(config.rootDir),
       version: resolveProjectVersion(config.rootDir),
       contextStorage: asContextStorage(new AsyncLocalStorage()),
     })
+    const analyticsSinks = createAnalyticsSinks()
     const tracing = telemetry.enabled
       ? {
           tracer: telemetry.tracer,
@@ -191,6 +194,8 @@ export const serve = pikkuSessionlessFunc<
       userConfig,
       {
         kysely: kysely ?? null,
+        otlpSinks: telemetry.otlpSinks,
+        analyticsSinks,
         logger: telemetry.enabled ? telemetry.logger : new ConsoleLogger(),
         ...(telemetry.enabled ? { tracer: telemetry.tracer } : {}),
         ...(vaultSecrets ? { secrets: vaultSecrets } : {}),
@@ -211,6 +216,9 @@ export const serve = pikkuSessionlessFunc<
         systemRoles: flattenSystemRoleDefinitions(
           inspectorState.systemRoles.definitions
         ),
+        analyticsEvents: (inspectorState.analytics ?? []).flatMap(
+          (declaration) => declaration.events
+        ),
       }
     )
 
@@ -229,8 +237,12 @@ export const serve = pikkuSessionlessFunc<
       userConfig,
       localServices
     )
+    // The runtime's own registries win: the tracer and the analytics fan-out
+    // read these instances, so an app that returned others would lose its sinks.
     const resolvedServices = {
       ...singletonServices,
+      otlpSinks: telemetry.otlpSinks,
+      analyticsSinks,
       getInspectorState,
     }
     pikkuState(null, 'package', 'singletonServices', resolvedServices)

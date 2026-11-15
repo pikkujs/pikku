@@ -38,7 +38,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   featureFlags: KyselyFeatureFlagStore
   /** Every event the app emitted, in order. */
   analyticsRecorder: RecordingAnalyticsService
-  /** Only the events the fan-out's `accepts` predicate let through. */
+  /** Only the events the sink's event map let through. */
   analyticsConversions: RecordingAnalyticsService
 }
 

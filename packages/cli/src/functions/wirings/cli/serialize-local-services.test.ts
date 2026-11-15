@@ -30,6 +30,7 @@ const emit = (overrides: Partial<SerializeLocalServicesOptions> = {}) =>
     requiredServices: [],
     scopes: [],
     systemRoles: [],
+    analyticsEvents: [],
     database: true,
     localCLI: withCLI(),
     ...overrides,
