@@ -294,7 +294,7 @@ pub fn aggregate_required_services(st: &mut State) {
         required.add("featureFlags");
     }
     if !st.analytics.is_empty() {
-        required.add("analyticsService");
+        required.add("analyticsSinks");
     }
     if !st.credentials.definitions.is_empty() {
         required.add("credentialService");

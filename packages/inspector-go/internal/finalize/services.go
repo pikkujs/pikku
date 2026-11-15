@@ -301,7 +301,7 @@ func aggregateRequiredServices(st *state.State) {
 		required.Add("featureFlags")
 	}
 	if len(st.Analytics) > 0 {
-		required.Add("analyticsService")
+		required.Add("analyticsSinks")
 	}
 	if len(st.Credentials.Definitions) > 0 {
 		required.Add("credentialService")

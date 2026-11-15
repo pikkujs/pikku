@@ -60,6 +60,7 @@ import {
   type AuditLog,
 } from '../services/audit-service.js'
 import { createInvocationAnalytics } from '../analytics/analytics.js'
+import { fanOutAnalytics } from '../analytics/fan-out-analytics.js'
 import { LoggerAnalyticsService } from '../analytics/logger-analytics-service.js'
 import type { AnalyticsLog } from '../analytics/analytics.types.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
@@ -661,8 +662,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
         Object.defineProperty(services, 'analytics', {
           get() {
             invocationAnalytics ??= createInvocationAnalytics(
-              resolvedSingletonServices.analyticsService ??
-                new LoggerAnalyticsService(resolvedSingletonServices.logger),
+              fanOutAnalytics(
+                resolvedSingletonServices.analyticsSinks,
+                new LoggerAnalyticsService(resolvedSingletonServices.logger)
+              ),
               invocationWire,
               resolvedSingletonServices.logger,
               resolvedSingletonServices.analyticsIdentity

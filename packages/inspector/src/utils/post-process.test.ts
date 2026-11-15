@@ -1553,14 +1553,14 @@ describe('aggregateRequiredServices — flags and analytics imply their services
     assert.ok(state.serviceAggregation.requiredServices.has('featureFlags'))
   })
 
-  test('declared events require analyticsService', () => {
+  test('declared events require analyticsSinks', () => {
     const state = makeState({
       analytics: [
         { file: 'events.ts', variable: 'events', events: ['signup'] },
       ],
     })
     aggregateRequiredServices(state)
-    assert.ok(state.serviceAggregation.requiredServices.has('analyticsService'))
+    assert.ok(state.serviceAggregation.requiredServices.has('analyticsSinks'))
   })
 
   test('a project that declares neither gets neither', () => {
@@ -1568,7 +1568,7 @@ describe('aggregateRequiredServices — flags and analytics imply their services
     aggregateRequiredServices(state)
     const required = state.serviceAggregation.requiredServices
     assert.ok(!required.has('featureFlags'))
-    assert.ok(!required.has('analyticsService'))
+    assert.ok(!required.has('analyticsSinks'))
     assert.ok(!required.has('credentialService'))
   })
 
