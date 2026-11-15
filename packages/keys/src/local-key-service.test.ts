@@ -768,7 +768,8 @@ describe('revoke', () => {
         kid: first.kid,
         historical: true,
       }),
-      true
+      false,
+      'a revoked key is refused even under historical'
     )
   })
 
@@ -1125,5 +1126,115 @@ describe('review fixes', () => {
       const summary = await a.svc.reconcile()
       assertClean(box, [thrown, JSON.stringify(summary), ...a.logs])
     })
+  })
+})
+
+describe('revoked keys, custody errors and the jws helper', () => {
+  const signedBy = async (
+    a: Awaited<ReturnType<typeof setup>>,
+    domain = 'd'
+  ) => {
+    const handle = await a.svc.signer('audit', { domain })
+    return { kid: handle.kid, sig: await handle.sign('doc') }
+  }
+  const historical = (
+    a: Awaited<ReturnType<typeof setup>>,
+    kid: string,
+    sig: string
+  ) => a.svc.verify('audit', 'doc', sig, { domain: 'd', kid, historical: true })
+
+  test('historical accepts a retired key and refuses a revoked one', async () => {
+    const a = await setup({ publishDelayMs: 0 })
+    await a.svc.generate('audit')
+    const retired = await signedBy(a)
+    await a.svc.rotate('audit').then((k) => a.svc.promote('audit', k.kid))
+    await a.svc.retire('audit', retired.kid)
+    assert.equal(await historical(a, retired.kid, retired.sig), true)
+
+    const revoked = await signedBy(a)
+    await a.svc.revoke('audit', revoked.kid)
+    assert.equal(await historical(a, revoked.kid, revoked.sig), false)
+    assert.equal(
+      await a.svc.verify('audit', 'doc', revoked.sig, {
+        domain: 'd',
+        kid: revoked.kid,
+      }),
+      false
+    )
+  })
+
+  test('revoking a key that is still previous, or already retired, is refused under historical too', async () => {
+    const a = await setup({ publishDelayMs: 0 })
+    await a.svc.generate('audit')
+    const first = await signedBy(a)
+    await a.svc.rotate('audit').then((k) => a.svc.promote('audit', k.kid))
+    // first is `previous` and inside its grace window: it still verifies
+    assert.equal(
+      await a.svc.verify('audit', 'doc', first.sig, { domain: 'd' }),
+      true
+    )
+    await a.svc.revoke('audit', first.kid)
+    assert.equal(
+      await a.svc.verify('audit', 'doc', first.sig, { domain: 'd' }),
+      false,
+      'revoked inside the grace window'
+    )
+    assert.equal(await historical(a, first.kid, first.sig), false)
+
+    // retired first, revoked afterwards: the revoke still wins
+    const second = await signedBy(a)
+    await a.svc.rotate('audit').then((k) => a.svc.promote('audit', k.kid))
+    await a.svc.retire('audit', second.kid)
+    assert.equal(await historical(a, second.kid, second.sig), true)
+    await a.svc.revoke('audit', second.kid)
+    assert.equal(await historical(a, second.kid, second.sig), false)
+  })
+
+  test('revoking the active key refuses its old signatures and mints a successor', async () => {
+    const a = await setup({ publishDelayMs: 0 })
+    await a.svc.generate('audit')
+    const old = await signedBy(a)
+    await a.svc.revoke('audit', old.kid)
+    assert.equal(await historical(a, old.kid, old.sig), false)
+    const fresh = await signedBy(a)
+    assert.notEqual(fresh.kid, old.kid)
+    assert.equal(await historical(a, fresh.kid, fresh.sig), true)
+  })
+
+  test('a backend that throws its own KeyCustodyLostError, or a hostile error name, leaks nothing', async () => {
+    for (const hostile of ['lost', 'name'] as const) {
+      const box: { value?: string } = {}
+      const a = await setup({ definitions: [DEFS[0]!] })
+      a.secrets.setSecret = async (_k, v) => {
+        box.value = typeof v === 'string' ? v : JSON.stringify(v)
+        if (hostile === 'lost') {
+          throw new KeyCustodyLostError(`refused ${box.value}`)
+        }
+        const e = new Error('x')
+        e.name = box.value
+        throw e
+      }
+      let thrown = ''
+      await assert.rejects(a.svc.generate('audit'), (e: Error) => {
+        thrown = `${e.name}\n${e.message}\n${e.stack}`
+        return true
+      })
+      a.clock.t += HOUR + 1
+      const summary = await a.svc.reconcile()
+      const fragment = box.value!.slice(20, 60)
+      for (const t of [thrown, JSON.stringify(summary), ...a.logs]) {
+        assert.ok(!t.includes(fragment), `${hostile}: private half leaked`)
+      }
+    }
+  })
+
+  test('signJws refuses a handle from a domain name', async () => {
+    const a = await setup()
+    await a.svc.generate('audit')
+    const handle = await a.svc.signer('audit', { domain: 'd' })
+    await assert.rejects(signJws(handle, {}, { a: 1 }), DomainPolicyError)
+    await a.svc.generate('token')
+    const ok = await a.svc.signer('token')
+    assert.match(await signJws(ok, {}, { a: 1 }), /^[\w-]+\.[\w-]+\.[\w-]+$/)
   })
 })

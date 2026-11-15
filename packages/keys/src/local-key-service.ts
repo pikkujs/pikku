@@ -1,4 +1,3 @@
-import { PikkuError } from '@pikku/core/errors'
 import { verifySpkiSignature } from '@pikku/core/hmac'
 import {
   DomainPolicyError,
@@ -111,6 +110,13 @@ type Signing = 'ed25519' | 'rs256'
 
 const keyOf = (name: string, scopeKey: string) => `${name}\u0000${scopeKey}`
 const iso = (ms: number) => new Date(ms).toISOString()
+
+const revokedAtOf = (rec: KeyRecord): string | undefined =>
+  (rec.metadata as { revokedAt?: string } | null | undefined)?.revokedAt
+
+/** A log label that cannot carry a value: the class, never `error.name` (a backend controls that). */
+const errorLabel = (error: unknown): string =>
+  error instanceof Error ? error.constructor.name : typeof error
 const publishedFlag = (rec: KeyRecord) =>
   (rec.metadata as { retiredPublished?: boolean } | null | undefined)
     ?.retiredPublished
@@ -325,7 +331,7 @@ export class LocalKeyService implements KeyService {
       records = await this.store.list(name, scopeKey)
     } catch (error) {
       this.options.logger?.warn(
-        `key store unreachable for '${name}': ${(error as Error).name}`
+        `key store unreachable for '${name}': ${errorLabel(error)}`
       )
       throw new KeyUnavailableError(
         `The key store is unreachable for '${name}'.`
@@ -366,7 +372,10 @@ export class LocalKeyService implements KeyService {
         (rec.verifyUntil !== undefined && now < Date.parse(rec.verifyUntil))
       )
     }
-    return rec.status === 'retired' && historical
+    // `historical` serves routine retirement only. A revoked key (compromised) is
+    // never accepted, even for old signatures: without an independent anchor they
+    // cannot be told from forgeries by whoever holds the stolen key.
+    return rec.status === 'retired' && historical && !revokedAtOf(rec)
   }
 
   private info(rec: KeyRecord): PublicKeyInfo {
@@ -446,7 +455,7 @@ export class LocalKeyService implements KeyService {
     } catch (error) {
       // The cause is logged by class only: a backend message may quote a path or a value.
       this.options.logger?.warn(
-        `private half of ${rec.name}/${rec.kid} unreadable: ${(error as Error).name}`
+        `private half of ${rec.name}/${rec.kid} unreadable: ${errorLabel(error)}`
       )
       this.signCache.delete(rec.kid)
       throw new KeyCustodyLostError(
@@ -551,6 +560,7 @@ export class LocalKeyService implements KeyService {
       alg: decl.algorithm,
       jwsAlg: JWS_ALG[decl.algorithm as Signing],
       version: active.version,
+      signedFormat: decl.signedFormat === 'jws' ? 'jws' : 'domain',
       sign: (data) => this.signWith(decl, scopeKey, kid, domain, data),
     }
   }
@@ -769,15 +779,19 @@ export class LocalKeyService implements KeyService {
       metadata: null,
       rev: 0,
     }
+    if (custody === 'external' && !this.placers.get(decl.name)) {
+      throw new KeyCustodyLostError(
+        `Key '${decl.name}' is custody 'external' but no placer is registered (onPlace).`
+      )
+    }
     await this.store.insertPending(row)
     try {
       await this.placePrivate(decl, row, pair.privateKey)
     } catch (error) {
       // The backend's message may quote the value it was given: log the class, throw a fixed text.
       this.options.logger?.warn(
-        `placing the private half of ${decl.name}/${pair.kid} failed: ${(error as Error).name}`
+        `placing the private half of ${decl.name}/${pair.kid} failed: ${errorLabel(error)}`
       )
-      if (error instanceof KeyCustodyLostError) throw error
       throw new KeyCustodyLostError(
         `The private half of key '${decl.name}' (${pair.kid}) could not be placed in custody '${custody}'.`
       )
@@ -867,7 +881,7 @@ export class LocalKeyService implements KeyService {
         })
       } catch (error) {
         this.options.logger?.warn(
-          `onPromoted hook for '${decl.name}' failed: ${(error as Error).name}`
+          `onPromoted hook for '${decl.name}' failed: ${errorLabel(error)}`
         )
       }
     }
@@ -892,7 +906,7 @@ export class LocalKeyService implements KeyService {
       } catch (error) {
         ok = false
         this.options.logger?.warn(
-          `publisher for '${decl.name}' failed: ${(error as Error).name}`
+          `publisher for '${decl.name}' failed: ${errorLabel(error)}`
         )
       }
     }
@@ -989,7 +1003,7 @@ export class LocalKeyService implements KeyService {
     if (decl.purpose === 'signing') {
       await this.removePrivate(rec).catch((error) =>
         this.options.logger?.warn(
-          `could not destroy retired half of ${rec.name}/${rec.kid}: ${(error as Error).name}`
+          `could not destroy retired half of ${rec.name}/${rec.kid}: ${errorLabel(error)}`
         )
       )
     }
@@ -1010,7 +1024,19 @@ export class LocalKeyService implements KeyService {
         await this.promoteRecord(decl, scopeKey, successor, rec, now)
       }
       this.signCache.delete(kid)
-      const current = (await this.store.get(kid)) ?? rec
+      let current = (await this.store.get(kid)) ?? rec
+      // Marked BEFORE the retire CAS, so there is no instant at which the key is
+      // retired but not yet known to be revoked. `historical` refuses this mark.
+      if (!revokedAtOf(current)) {
+        await this.store.updateCustody(
+          kid,
+          { rev: current.rev },
+          { metadata: { ...current.metadata, revokedAt: iso(now) } }
+        )
+        current = (await this.store.get(kid)) ?? current
+        this.verifyCache.delete(kid)
+        await this.load(decl.name, scopeKey)
+      }
       await this.retireRecord(decl, scopeKey, current, now)
     })
   }
@@ -1127,14 +1153,11 @@ export class LocalKeyService implements KeyService {
           } else {
             summary.failed.push({
               target,
-              // Only our own errors carry a message written here; anything else is named by class.
-              error:
-                error instanceof PikkuError
-                  ? `${error.name}: ${error.message}`
-                  : (error as Error).name,
+              // A class label only: a message may come from a backend that quotes values.
+              error: errorLabel(error),
             })
             this.options.logger?.warn(
-              `key reconcile failed for ${target}: ${(error as Error).name}`
+              `key reconcile failed for ${target}: ${errorLabel(error)}`
             )
           }
         }

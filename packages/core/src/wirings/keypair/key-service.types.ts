@@ -40,6 +40,8 @@ export interface KeySigner {
   /** The JWS `alg` header value: `'EdDSA'` for ed25519, `'RS256'` for rs256. Never write `alg` into a header. */
   readonly jwsAlg: 'EdDSA' | 'RS256'
   readonly version: number
+  /** How the name signs: `signJws` accepts only `'jws'` handles. */
+  readonly signedFormat: 'domain' | 'jws'
   /**
    * The base64url signature by this version. Allowed while the version is
    * `active`, or `previous` and before `verifyUntil`. Throws `KeyRetiredError`

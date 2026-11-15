@@ -58,7 +58,15 @@ export const CloudSecretsSet = pikkuSessionlessFunc({
     // sealed below can be opened by that worker and by nothing else — including
     // by the cloud process that stores it.
     const key = await rpc.invoke('cloud:getStageSealingKey', { stageId })
-    const sealed = await seal(key.publicKey, key.keyId, plaintext)
+    let sealed
+    try {
+      sealed = await seal(key.publicKey, key.keyId, plaintext)
+    } catch {
+      // A key that is not a usable X25519 key: most likely a newer stage key type.
+      throw new CloudPreconditionError(
+        'The stage sealing key is not an X25519 public key this CLI can use. It may be a newer key type: run `npm i -g @pikku/cli`.'
+      )
+    }
 
     const result = await rpc.invoke('cloud:setStageSealedSecret', {
       stageId,

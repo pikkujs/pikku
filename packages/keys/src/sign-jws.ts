@@ -1,4 +1,4 @@
-import type { KeySigner } from '@pikku/core/keypair'
+import { DomainPolicyError, type KeySigner } from '@pikku/core/keypair'
 import { toBase64Url, utf8 } from './base64.js'
 
 /**
@@ -14,6 +14,11 @@ export const signJws = async (
   header: Record<string, unknown>,
   payload: Record<string, unknown> | string
 ): Promise<string> => {
+  if (signer.signedFormat !== 'jws') {
+    throw new DomainPolicyError(
+      "signJws needs a handle from a signedFormat 'jws' name; this one signs domain-prefixed bytes."
+    )
+  }
   const head = toBase64Url(
     utf8(JSON.stringify({ ...header, alg: signer.jwsAlg, kid: signer.kid }))
   )
