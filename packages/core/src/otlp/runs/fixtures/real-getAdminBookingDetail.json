@@ -1,0 +1,229 @@
+{
+ "source": "REAL: seminarhof dev backend, OTLP dump 3, trace 113c7c (rpcCaller http root, getAdminBookingDetail, 10 db spans). Attributes trimmed; order = arrival (ends only).",
+ "spans": [
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "905e13b28232ed94",
+   "parentSpanId": "8ff5ff5806124a3f",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707024063000",
+   "endNs": "1794682707024103000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "pikku_user_role"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "607e04a7cb5d18bc",
+   "parentSpanId": "ab3887987268fab3",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707024426000",
+   "endNs": "1794682707024480000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "booking"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "ca35281a434c1c2d",
+   "parentSpanId": "ab3887987268fab3",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707024595000",
+   "endNs": "1794682707024610000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "enquiry"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "dfb222ce94a8fb4c",
+   "parentSpanId": "ab3887987268fab3",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707024655000",
+   "endNs": "1794682707024671000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "client"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "f940a09d78339a0c",
+   "parentSpanId": "ab3887987268fab3",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707024704000",
+   "endNs": "1794682707024719000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "booking"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "9ac2660e7a69301e",
+   "parentSpanId": "ab3887987268fab3",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707024771000",
+   "endNs": "1794682707024791000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "client_contact"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "10a0d9d0c47485c5",
+   "parentSpanId": "ab3887987268fab3",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707024879000",
+   "endNs": "1794682707024904000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "participant"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "1bed27097ad10e1e",
+   "parentSpanId": "ab3887987268fab3",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707024933000",
+   "endNs": "1794682707024985000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "room"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "cc38ddcc1d9c7373",
+   "parentSpanId": "ab3887987268fab3",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707025132000",
+   "endNs": "1794682707025163000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "room_assignment"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "08298344d3474d20",
+   "parentSpanId": "ab3887987268fab3",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707025205000",
+   "endNs": "1794682707025259000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "room_bed"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "1197234046a7a454",
+   "parentSpanId": "ab3887987268fab3",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707025442000",
+   "endNs": "1794682707025465000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "invoice"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "ab3887987268fab3",
+   "parentSpanId": "8ff5ff5806124a3f",
+   "name": "getAdminBookingDetail",
+   "kind": "internal",
+   "startNs": "1794682707024206000",
+   "endNs": "1794682707025506000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "pikku.user.id": "actor_admin_seminarhof",
+    "pikku.wire.type": "rpc",
+    "pikku.wire.id": "getAdminBookingDetail",
+    "pikku.function.id": "getAdminBookingDetail"
+   }
+  },
+  {
+   "traceId": "113c7cc391c9ff8478698ee020740ef4",
+   "spanId": "8ff5ff5806124a3f",
+   "name": "rpcCaller",
+   "kind": "server",
+   "startNs": "1794682707023762000",
+   "endNs": "1794682707025516000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "pikku.wire.type": "http",
+    "pikku.wire.id": "post:/rpc/:rpcName",
+    "pikku.function.id": "rpcCaller",
+    "pikku.user.id": "actor_admin_seminarhof",
+    "http.route": "post:/rpc/:rpcName",
+    "http.response.status_code": 200
+   }
+  }
+ ]
+}

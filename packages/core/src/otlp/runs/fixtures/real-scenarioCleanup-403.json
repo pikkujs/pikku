@@ -1,0 +1,81 @@
+{
+ "source": "REAL: seminarhof dev backend, OTLP dump 3, trace 7a758a (ForbiddenError, http 403). Attributes trimmed.",
+ "spans": [
+  {
+   "traceId": "7a758aa9ca78fbca33f6f2b31588c5c3",
+   "spanId": "d408e88a0d5a081d",
+   "parentSpanId": "fffcffeb5a14d847",
+   "name": "db.select",
+   "kind": "client",
+   "startNs": "1794682707122661000",
+   "endNs": "1794682707122737000",
+   "status": {
+    "code": "ok"
+   },
+   "attributes": {
+    "db.system": "sqlite",
+    "db.operation.name": "select",
+    "db.collection.name": "pikku_user_role"
+   }
+  },
+  {
+   "traceId": "7a758aa9ca78fbca33f6f2b31588c5c3",
+   "spanId": "3e7e76b83209138e",
+   "parentSpanId": "fffcffeb5a14d847",
+   "name": "scenarioCleanup",
+   "kind": "internal",
+   "startNs": "1794682707122890000",
+   "endNs": "1794682707123135000",
+   "status": {
+    "code": "error",
+    "message": "ForbiddenError: An error occurred"
+   },
+   "attributes": {
+    "pikku.user.id": "actor_admin_seminarhof",
+    "pikku.wire.type": "rpc",
+    "pikku.wire.id": "scenarioCleanup",
+    "pikku.function.id": "scenarioCleanup"
+   },
+   "events": [
+    {
+     "name": "exception",
+     "timeNs": "1794682707123131000",
+     "attributes": {
+      "exception.type": "ForbiddenError",
+      "exception.message": "An error occurred"
+     }
+    }
+   ]
+  },
+  {
+   "traceId": "7a758aa9ca78fbca33f6f2b31588c5c3",
+   "spanId": "fffcffeb5a14d847",
+   "name": "rpcCaller",
+   "kind": "server",
+   "startNs": "1794682707122299000",
+   "endNs": "1794682707123252000",
+   "status": {
+    "code": "error",
+    "message": "ForbiddenError: An error occurred"
+   },
+   "attributes": {
+    "pikku.wire.type": "http",
+    "pikku.wire.id": "post:/rpc/:rpcName",
+    "pikku.function.id": "rpcCaller",
+    "pikku.user.id": "actor_admin_seminarhof",
+    "http.route": "post:/rpc/:rpcName",
+    "http.response.status_code": 403
+   },
+   "events": [
+    {
+     "name": "exception",
+     "timeNs": "1794682707123250000",
+     "attributes": {
+      "exception.type": "ForbiddenError",
+      "exception.message": "An error occurred"
+     }
+    }
+   ]
+  }
+ ]
+}
