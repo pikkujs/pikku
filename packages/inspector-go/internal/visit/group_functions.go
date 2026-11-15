@@ -108,6 +108,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 	var tags []string
 	var expose, mcp bool
 	var version int
+	var mock bool
 	var inputSchemaRef, outputSchemaRef *state.SchemaRef
 
 	firstArg := args[0]
@@ -155,6 +156,8 @@ func (s *Context) addFunctions(node *ast.Node) {
 			}
 		}
 		m.Readonly = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "readonly").Truthy())
+		mock = s.readFunctionMock(firstArg, name)
+		m.Mock = tsutil.OrNil(mock)
 		m.Deploy = tsutil.GetPropertyValue(firstArg, "deploy").AsString()
 		m.ApprovalRequired = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "approvalRequired").Truthy())
 		if v := tsutil.GetPropertyValue(firstArg, "workflowQueued"); v.Bool != nil && *v.Bool {
@@ -291,7 +294,11 @@ func (s *Context) addFunctions(node *ast.Node) {
 	if resolvedFunc != nil && tsutil.IsFunctionLike(resolvedFunc) {
 		handler = resolvedFunc
 	}
-	if !tsutil.IsFunctionLike(handler) {
+	if mock {
+		// A mocked function has no body: its types come from `input`/`output`
+		// or the generics, and everything read off the handler is left empty.
+		handler = nil
+	} else if !tsutil.IsFunctionLike(handler) {
 		s.State.Functions.Meta.Set(pikkuFuncId, &FunctionMeta{
 			PikkuFuncId: pikkuFuncId, FunctionType: "user", Name: name,
 			Services: ServicesMeta{Optimized: false, Services: []string{}},
@@ -323,8 +330,11 @@ func (s *Context) addFunctions(node *ast.Node) {
 			services.Optimized = false
 		}
 	}
-	addServices(handler, false)
-	wires := extractUsedWires(handler, 2)
+	wires := WiresMeta{Optimized: true, Wires: []string{}}
+	if handler != nil {
+		addServices(handler, false)
+		wires = extractUsedWires(handler, 2)
+	}
 
 	var compensateInit *ast.Node
 	if objectNode != nil {
@@ -347,24 +357,27 @@ func (s *Context) addFunctions(node *ast.Node) {
 		m.Compensate = tsutil.BoolPtr(true)
 	}
 
-	body := handler.Body()
-	invoked := tsutil.CollectInvokedRpcNames(body)
-	if len(invoked.Names) > 0 {
-		m.Invokes = invoked.Names
-	}
-	resolved := map[string]bool{}
-	for _, n := range invoked.Names {
-		resolved[n] = true
-	}
-	for i, call := range invoked.Dynamic {
-		if v, ok := s.constStringName(invoked.DynamicArgs[i]); ok {
-			resolved[v] = true
-			continue
+	var body *ast.Node
+	if handler != nil {
+		body = handler.Body()
+		invoked := tsutil.CollectInvokedRpcNames(body)
+		if len(invoked.Names) > 0 {
+			m.Invokes = invoked.Names
 		}
-		s.Log.Critical(diag.RpcNameNotLiteral, fmt.Sprintf(`• %s calls %s with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with "No service binding" if the two are deployed apart. Use a literal RPC name.`, pikkuFuncId, call))
-	}
-	if len(resolved) > len(invoked.Names) {
-		m.Invokes = tsutil.SortedKeys(resolved)
+		resolved := map[string]bool{}
+		for _, n := range invoked.Names {
+			resolved[n] = true
+		}
+		for i, call := range invoked.Dynamic {
+			if v, ok := s.constStringName(invoked.DynamicArgs[i]); ok {
+				resolved[v] = true
+				continue
+			}
+			s.Log.Critical(diag.RpcNameNotLiteral, fmt.Sprintf(`• %s calls %s with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with "No service binding" if the two are deployed apart. Use a literal RPC name.`, pikkuFuncId, call))
+		}
+		if len(resolved) > len(invoked.Names) {
+			m.Invokes = tsutil.SortedKeys(resolved)
+		}
 	}
 
 	// --- Generics → types, unwrapped from Promise ---
@@ -387,7 +400,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 		inputNames = []string{capitalized + "Input"}
 		refs := s.resolveTypeImports(generics[0], true)
 		tm.AddCustomType(inputNames[0], "{ cursor?: string; limit?: number; sort?: Array<{ column: string; direction: 'asc' | 'desc' }>; filter?: unknown; search?: string; } & "+s.typeToString(generics[0]), tsutil.Dedupe(refs))
-		if p := tsutil.ParamAt(handler, 1); p != nil {
+		if p := paramOf(handler, 1); p != nil {
 			inputTypes = []*checker.Type{s.Checker.GetTypeAtLocation(p)}
 		} else {
 			inputTypes = []*checker.Type{generics[0]}
@@ -395,7 +408,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 	case !isChannelConnection && !isListFunc && len(generics) >= 1:
 		inputNames, inputTypes = s.getNamesAndTypes("Input", name, generics[0])
 	default:
-		if p := tsutil.ParamAt(handler, 1); p != nil {
+		if p := paramOf(handler, 1); p != nil {
 			inputNames, inputTypes = s.getNamesAndTypes("Input", pikkuFuncId, s.Checker.GetTypeAtLocation(p))
 		}
 	}
@@ -414,6 +427,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 		tm.AddCustomType(outputNames[0], "{ rows: Array<"+s.typeToString(generics[1])+">; nextCursor: string | null; totalCount?: number; }", tsutil.Dedupe(refs))
 	case !isListFunc && len(generics) >= 2:
 		outputNames, _ = s.getNamesAndTypes("Output", name, generics[1])
+	case handler == nil:
 	default:
 		if sig := s.Checker.GetSignatureFromDeclaration(handler); sig != nil {
 			ret := s.unwrapPromise(s.Checker.GetReturnTypeOfSignature(sig))
@@ -469,7 +483,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 		}
 	}
 
-	if s.Options.ClassificationCheck {
+	if s.Options.ClassificationCheck && handler != nil {
 		s.checkClassification(name, handler, wrapper != "pikkuFunc")
 	}
 
@@ -515,48 +529,50 @@ func (s *Context) addFunctions(node *ast.Node) {
 	m.ImplementationHash = implementationHash(wrapper, handler, objectNode, isDirect)
 	m.IsDirectFunction = tsutil.BoolPtr(isDirect)
 	m.SourceFile = sourceFile
-	handlerSF := ast.GetSourceFileOfNode(handler)
-	if handlerSF.FileName() != sourceFile {
-		m.BodySourceFile = handlerSF.FileName()
-	}
 	m.ExportedName = fn.exportedName
-	lineOf := func(pos int) int { return scanner.GetECMALineOfPosition(handlerSF, pos) + 1 }
-	var bs, be int
-	if ast.IsBlock(body) && len(body.Statements()) > 0 {
-		stmts := body.Statements()
-		bs = lineOf(tsutil.NodeStart(stmts[0]))
-		be = lineOf(stmts[len(stmts)-1].End())
-	} else {
-		bs = lineOf(tsutil.NodeStart(body))
-		be = lineOf(body.End())
-	}
-	m.BodyStart, m.BodyEnd = &bs, &be
-	started := tsutil.CollectStartedWorkflows(body)
-	if len(started.Names) > 0 {
-		m.StartsWorkflows = started.Names
-	}
-	// Generated scaffolds (the workflow start/run routes) take the name from the
-	// request by design, and are served by units that have every workflow.
-	if !generatedFileRe.MatchString(ast.GetSourceFileOfNode(handler).FileName()) {
-		startedNames := map[string]bool{}
-		for _, n := range started.Names {
-			startedNames[n] = true
+	if handler != nil {
+		handlerSF := ast.GetSourceFileOfNode(handler)
+		if handlerSF.FileName() != sourceFile {
+			m.BodySourceFile = handlerSF.FileName()
 		}
-		for i, call := range started.Dynamic {
-			if v, ok := s.constStringName(started.DynamicArgs[i]); ok {
-				startedNames[v] = true
-				continue
+		lineOf := func(pos int) int { return scanner.GetECMALineOfPosition(handlerSF, pos) + 1 }
+		var bs, be int
+		if ast.IsBlock(body) && len(body.Statements()) > 0 {
+			stmts := body.Statements()
+			bs = lineOf(tsutil.NodeStart(stmts[0]))
+			be = lineOf(stmts[len(stmts)-1].End())
+		} else {
+			bs = lineOf(tsutil.NodeStart(body))
+			be = lineOf(body.End())
+		}
+		m.BodyStart, m.BodyEnd = &bs, &be
+		started := tsutil.CollectStartedWorkflows(body)
+		if len(started.Names) > 0 {
+			m.StartsWorkflows = started.Names
+		}
+		// Generated scaffolds (the workflow start/run routes) take the name from the
+		// request by design, and are served by units that have every workflow.
+		if !generatedFileRe.MatchString(ast.GetSourceFileOfNode(handler).FileName()) {
+			startedNames := map[string]bool{}
+			for _, n := range started.Names {
+				startedNames[n] = true
 			}
-			s.Log.Critical(diag.RpcNameNotLiteral, fmt.Sprintf(`• %s calls %s with a computed name — the deploy planner cannot bundle that workflow's meta into %s's unit, so the deployed call fails with "Workflow not found" unless the unit has it for another reason. Use a literal workflow name.`, pikkuFuncId, call, pikkuFuncId))
-		}
-		if len(startedNames) > len(started.Names) {
-			m.StartsWorkflows = tsutil.SortedKeys(startedNames)
-		}
-		for _, c := range tsutil.CollectWireArgs(handler, s.declsOf, func(callee *ast.Node) (*ast.Node, bool) { return s.localFnOf(callee, handler) }) {
-			if s.isFrameworkCallee(c.Expr) {
-				continue
+			for i, call := range started.Dynamic {
+				if v, ok := s.constStringName(started.DynamicArgs[i]); ok {
+					startedNames[v] = true
+					continue
+				}
+				s.Log.Critical(diag.RpcNameNotLiteral, fmt.Sprintf(`• %s calls %s with a computed name — the deploy planner cannot bundle that workflow's meta into %s's unit, so the deployed call fails with "Workflow not found" unless the unit has it for another reason. Use a literal workflow name.`, pikkuFuncId, call, pikkuFuncId))
 			}
-			s.Log.Critical(diag.WirePassedToHelper, fmt.Sprintf(`• %s passes %s to %s() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data.`, pikkuFuncId, wireLabel(c.Wire), c.Callee))
+			if len(startedNames) > len(started.Names) {
+				m.StartsWorkflows = tsutil.SortedKeys(startedNames)
+			}
+			for _, c := range tsutil.CollectWireArgs(handler, s.declsOf, func(callee *ast.Node) (*ast.Node, bool) { return s.localFnOf(callee, handler) }) {
+				if s.isFrameworkCallee(c.Expr) {
+					continue
+				}
+				s.Log.Critical(diag.WirePassedToHelper, fmt.Sprintf(`• %s passes %s to %s() — a wire stays bound to the function. What the callee does with it is invisible to the inspector (gates, wiring, rpc and workflow edges), so nothing can check it. Make the call in the handler itself, or pass plain data.`, pikkuFuncId, wireLabel(c.Wire), c.Callee))
+			}
 		}
 	}
 	s.State.Functions.Meta.Set(pikkuFuncId, m)
@@ -684,13 +700,16 @@ var generatedFileRe = regexp.MustCompile(`\.gen\.[cm]?[jt]s$`)
 // --- implementationHash -----------------------------------------------------
 
 func implementationHash(wrapper string, handler, objectNode *ast.Node, isDirect bool) string {
-	var config any
+	var config, handlerText any
 	if objectNode != nil {
 		config = tsutil.PrintNode(objectNode)
 	}
+	if handler != nil {
+		handlerText = tsutil.PrintNode(handler)
+	}
 	// canonicalJSON: keys sorted; JSON.stringify does not HTML-escape.
 	payload := []any{
-		[2]any{"config", config}, [2]any{"handler", tsutil.PrintNode(handler)},
+		[2]any{"config", config}, [2]any{"handler", handlerText},
 		[2]any{"isDirectFunction", isDirect}, [2]any{"wrapper", wrapper},
 	}
 	var buf bytes.Buffer
@@ -829,4 +848,12 @@ func (s *Context) localFnOf(expr, handler *ast.Node) (*ast.Node, bool) {
 
 func isFunctionExprNode(n *ast.Node) bool {
 	return ast.IsArrowFunction(n) || ast.IsFunctionExpression(n) || ast.IsClassExpression(n)
+}
+
+// paramOf is tsutil.ParamAt for a handler that may be absent (a mocked function).
+func paramOf(fn *ast.Node, i int) *ast.Node {
+	if fn == nil {
+		return nil
+	}
+	return tsutil.ParamAt(fn, i)
 }

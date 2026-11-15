@@ -33,6 +33,7 @@ pub mod boundary;
 pub mod group_agent;
 pub mod check_classification;
 pub mod check_disabled;
+pub mod check_mock;
 pub mod check_indirect;
 pub mod group_addon_bans;
 pub mod group_approval_description;

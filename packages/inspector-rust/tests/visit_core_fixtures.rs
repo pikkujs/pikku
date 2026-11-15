@@ -170,6 +170,44 @@ fn wire_rules_fixture() {
     check_fixture("wire-rules", &["queueWorkers"]);
 }
 
+#[test]
+fn mock_functions_fixture() {
+    check_fixture("mock-functions", &[]);
+}
+
+/// A function declared `mock: true` that also has a body is refused, with the
+/// message Go writes into `mock-functions-invalid/inspect.golden.json`.
+#[test]
+fn mock_functions_invalid_diagnostics() {
+    let root = testdata().join("mock-functions-invalid").canonicalize().unwrap();
+    let req = Request {
+        route_files: source_files(&root, &["src".to_string()]),
+        options: Options {
+            root_dir: root.to_string_lossy().to_string(),
+            tsconfig: root.join("tsconfig.json").to_string_lossy().to_string(),
+            ..Default::default()
+        },
+        changed_files: vec![],
+    };
+    let res = analyze::run(&req, None).unwrap();
+    let got: Vec<String> = res
+        .diagnostics
+        .iter()
+        .filter(|d| d.code.as_deref() == Some("PKU124"))
+        .map(|d| format!("{:?} {}", d.level, d.message))
+        .collect();
+    let golden: Value = serde_json::from_slice(&std::fs::read(root.join("inspect.golden.json")).unwrap()).unwrap();
+    let want: Vec<String> = golden["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["code"] == "PKU124")
+        .map(|d| format!("Critical {}", d["message"].as_str().unwrap()))
+        .collect();
+    assert_eq!(want.len(), 1, "golden should hold the one refusal");
+    assert_eq!(got, want);
+}
+
 /// The diagnostics of `wire-rules` must match Go's byte for byte
 /// (inspector-go/internal/analyze/classification_test.go `wireRulesWant`).
 #[test]

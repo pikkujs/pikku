@@ -197,6 +197,7 @@ export const pikkuMetaFunctionsList = pikkuSessionlessFunc<{}, void>({
       name: m.name ?? id,
       description: m.description ?? null,
       tags: m.tags ?? [],
+      ...(m.mock === true ? { mock: true } : {}),
     }))
     // The wired addons' functions are not in this list (there are hundreds): `pikku meta grep <addon> <words>`
     // finds them and `pikku meta functions get <addon>:<function>` gives the input and output shapes.
@@ -235,6 +236,7 @@ export const pikkuMetaFunctionsGet = pikkuSessionlessFunc<
       tags: m.tags ?? [],
       expose: m.expose === true,
       readonly: m.readonly === true,
+      mock: m.mock === true,
       input: { name: m.inputSchemaName ?? null, jsonSchema: null },
       output: { name: m.outputSchemaName ?? null, jsonSchema: null },
     })

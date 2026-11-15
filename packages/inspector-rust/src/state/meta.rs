@@ -147,6 +147,8 @@ pub struct FunctionMetaFields {
     pub mcp: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub readonly: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mock: Option<bool>,
     #[serde(default, skip_serializing_if = "is_empty_str")]
     pub deploy: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
