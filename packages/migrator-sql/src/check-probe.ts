@@ -218,6 +218,14 @@ const DATA_CHANGE_FIRST_WORD = new Set(['replace', 'call', 'load'])
 const DO_BODY_CHANGE =
   /\b(?:update|delete|insert|truncate|merge|replace|call|copy|execute)\b/i
 
+/** `body` with comments, string literals and quoted names blanked, so a word in one is not read as a statement. */
+const withoutQuotedText = (body: string): string =>
+  body.replace(/--[^\n]*|\/\*[\s\S]*?\*\/|'(?:[^']|'')*'|"(?:[^"]|"")*"/g, ' ')
+
+/** Whether the text of a `DO` block could change data. */
+const doBodyChangesData = (body: string): boolean =>
+  DO_BODY_CHANGE.test(withoutQuotedText(body))
+
 /**
  * Where the first statement that can change data starts, or -1. Read as SQL
  * rather than as lines: a statement need not start a line, a `WITH` can carry a
@@ -257,6 +265,7 @@ function firstDataChange(sql: string): number {
       continue
     }
     if (ch === "'" || ch === '"' || ch === '`') {
+      const opened = i
       i++
       while (i < sql.length) {
         if (sql[i] === ch) {
@@ -269,16 +278,29 @@ function firstDataChange(sql: string): number {
         i++
       }
       i++
+      // `DO '...'`: the body is the string itself, with `''` for a quote.
+      if (
+        isDo &&
+        ch === "'" &&
+        doBodyChangesData(
+          sql.slice(opened + 1, Math.max(opened + 1, i - 1)).replace(/''/g, "'")
+        )
+      ) {
+        return statement
+      }
       previous = ch
       continue
     }
     if (ch === '$') {
-      const tag = /^\$[A-Za-z_]*\$/.exec(sql.slice(i))
+      // A dollar tag may hold digits, but not start with one: $f1$ is a tag, $1 a parameter.
+      const tag = /^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/.exec(sql.slice(i))
       if (tag) {
         const close = sql.indexOf(tag[0], i + tag[0].length)
         if (
           isDo &&
-          DO_BODY_CHANGE.test(sql.slice(i, close === -1 ? sql.length : close))
+          doBodyChangesData(
+            sql.slice(i + tag[0].length, close === -1 ? sql.length : close)
+          )
         ) {
           return statement
         }
