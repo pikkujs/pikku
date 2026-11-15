@@ -12,6 +12,7 @@ import {
 } from './span-facts.js'
 import type {
   Attrs,
+  HealthEntry,
   HealthEvent,
   HopView,
   RunEvent,
@@ -110,6 +111,7 @@ export const createRunStitcher = (
   const closed = new Map<string, Run>()
   let seq = 0
   let lastHealth = '[]'
+  let lastEntries: HealthEntry[] | undefined
 
   const emit = (run: Run | undefined, at: number, body: EventBody): void => {
     if (run && at > run.lastAtMs) run.lastAtMs = at
@@ -480,14 +482,19 @@ export const createRunStitcher = (
       if (!run.closed && nowMs - run.lastSeenNow >= limits.ttlMs) expire(run)
     }
     const entries = health.entries(nowMs)
-    const text = JSON.stringify(entries)
-    if (text !== lastHealth) {
-      lastHealth = text
-      emit(undefined, nowMs, {
-        type: 'health',
-        windowMs: limits.healthWindowMs,
-        entries,
-      })
+    // The same array object means nothing changed since the last sweep: no work. Otherwise compare the text, because
+    // a sample entering as another leaves can leave the entries as they were.
+    if (entries !== lastEntries) {
+      lastEntries = entries
+      const text = JSON.stringify(entries)
+      if (text !== lastHealth) {
+        lastHealth = text
+        emit(undefined, nowMs, {
+          type: 'health',
+          windowMs: limits.healthWindowMs,
+          entries: entries.map((entry) => ({ ...entry })),
+        })
+      }
     }
   }
 
@@ -506,7 +513,7 @@ export const createRunStitcher = (
     const healthEvent: HealthEvent = {
       type: 'health',
       windowMs: limits.healthWindowMs,
-      entries: health.entries(nowMs),
+      entries: health.entries(nowMs).map((entry) => ({ ...entry })),
     }
     return {
       seq,

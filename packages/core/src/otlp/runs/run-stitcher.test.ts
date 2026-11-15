@@ -1219,4 +1219,101 @@ const normalise = (state: FoldState) =>
     )
   )
 
+describe('health window: order and the clock domain', () => {
+  // Time base: `at` of a sample is the span's end time, `nowMs` is the caller's clock. They must be one domain (unix ms);
+  // these tests use it, and the docs say so.
+  const fn = { 'pikku.function.id': 'f' }
+
+  test('samples that arrive out of order never count a stale entry', () => {
+    const stitcher = createRunStitcher({ limits: { healthWindowMs: 1000 } })
+    stitcher.end(
+      syn({ id: 'ra', trace: 'a', startMs: 4900, endMs: 5000, attributes: fn }),
+      5000
+    )
+    stitcher.end(
+      syn({ id: 'rb', trace: 'b', startMs: 0, endMs: 10, attributes: fn }),
+      5000
+    )
+    stitcher.end(
+      syn({ id: 'rc', trace: 'c', startMs: 0, endMs: 10, attributes: fn }),
+      5000
+    )
+    const entries = stitcher.snapshot(5500).health.entries
+    assert.deepEqual(
+      entries.map((e) => [e.key, e.runs]),
+      [['f', 1]]
+    )
+  })
+
+  test('a sample in the future of the clock is not counted until the clock reaches it', () => {
+    const stitcher = createRunStitcher({ limits: { healthWindowMs: 1000 } })
+    stitcher.end(
+      syn({ id: 'ra', trace: 'a', startMs: 4000, endMs: 4100, attributes: fn }),
+      4100
+    )
+    stitcher.end(
+      syn({ id: 'rb', trace: 'b', startMs: 5000, endMs: 5100, attributes: fn }),
+      4100
+    )
+    assert.equal(stitcher.snapshot(4200).health.entries[0]!.runs, 1)
+    assert.equal(stitcher.snapshot(5100).health.entries[0]!.runs, 2)
+  })
+
+  test('an unchanged window is not re-emitted by sweep, and a change is', () => {
+    const stitcher = createRunStitcher({ limits: { healthWindowMs: 1000 } })
+    const events = collect(stitcher)
+    stitcher.end(
+      syn({ id: 'ra', trace: 'a', startMs: 100, endMs: 200, attributes: fn }),
+      200
+    )
+    for (const now of [210, 220, 230, 240]) stitcher.sweep(now)
+    assert.equal(ofType(events, 'health').length, 1)
+    stitcher.sweep(1300) // the sample leaves the window
+    assert.equal(ofType(events, 'health').length, 2)
+    assert.deepEqual(ofType(events, 'health')[1]!.entries, [])
+  })
+
+  test('the busiest-key bound drops the least recently recorded key, not the first one seen', () => {
+    const stitcher = createRunStitcher({
+      limits: { healthWindowMs: 1_000_000 },
+    })
+    stitcher.end(
+      syn({
+        id: 'hot',
+        trace: 'hot',
+        startMs: 0,
+        endMs: 1,
+        attributes: { 'pikku.function.id': 'hot' },
+      }),
+      1
+    )
+    for (let i = 0; i < 2100; i++) {
+      stitcher.end(
+        syn({
+          id: `k${i}`,
+          trace: `k${i}`,
+          startMs: 0,
+          endMs: 2,
+          attributes: { 'pikku.function.id': `k${i}` },
+        }),
+        2
+      )
+      if (i % 100 === 0 && i < 1600)
+        stitcher.end(
+          syn({
+            id: `h${i}`,
+            trace: `h${i}`,
+            startMs: 0,
+            endMs: 3,
+            attributes: { 'pikku.function.id': 'hot' },
+          }),
+          3
+        )
+    }
+    const entries = stitcher.snapshot(10).health.entries
+    assert.ok(entries.length <= 2000)
+    assert.ok(entries.some((e) => e.key === 'hot'))
+  })
+})
+
 type _Unused = OpenSpan
