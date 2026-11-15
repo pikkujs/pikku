@@ -324,7 +324,10 @@ test('the connection comes from PIKKU_VAULT_CONNECTION_FILE only; the old variab
     undefined
   )
   assert.equal(
-    vaultConnectionFromEnv({ PIKKU_VAULT_SOCKET: '/s', PIKKU_VAULT_TOKEN: 't' }),
+    vaultConnectionFromEnv({
+      PIKKU_VAULT_SOCKET: '/s',
+      PIKKU_VAULT_TOKEN: 't',
+    }),
     undefined
   )
   assert.deepEqual(
