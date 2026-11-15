@@ -1,9 +1,18 @@
 export {
+  DEFAULT_MAX_SUBSCRIPTION_LIFETIME_MS,
   DEFAULT_SSE_HEARTBEAT_MS,
   EventHubDistributor,
   createEventHubDistributor,
 } from './event-hub-distributor.js'
-export { installEventHubDistributor } from './host.js'
+export { createSubscriptionSweeper } from './subscription-sweeper.js'
+export type {
+  SubscriptionSweeper,
+  SubscriptionSweeperOptions,
+} from './subscription-sweeper.js'
+export {
+  DEFAULT_SUBSCRIPTION_RECHECK_MS,
+  installEventHubDistributor,
+} from './host.js'
 export type { EventHubHostServices } from './host.js'
 export { createLocalDeliveryBackend } from './local-delivery-backend.js'
 export {

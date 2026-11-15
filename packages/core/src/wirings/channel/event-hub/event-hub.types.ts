@@ -113,6 +113,8 @@ export interface StoredSubscription {
   wireId: string
   input: unknown
   session: unknown
+  /** The package the function belongs to, `null` for the app, so a re-run finds an addon's function. */
+  packageName?: string | null
   /** Unix milliseconds after which the subscription must be re-checked. */
   expiresAt?: number
 }
@@ -134,4 +136,13 @@ export interface EventHubDistributorOptions {
    * does not cut a quiet stream. Defaults to 5000; `0` turns it off.
    */
   sseHeartbeatMs?: number
+  /**
+   * How long a subscription lives when its session cannot be re-read: a session
+   * from `mapSession` or `mapKey` carries no resolved-scopes stamp, so the sweeper
+   * cannot see a revoked grant. It is dropped at this age and the client
+   * reconnects. Defaults to one hour; `0` or `Infinity` means no limit.
+   */
+  maxSubscriptionLifetime?: number
+  /** The clock, in Unix milliseconds. For tests. */
+  now?: () => number
 }

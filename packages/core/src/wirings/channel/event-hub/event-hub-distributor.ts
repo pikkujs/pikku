@@ -16,6 +16,9 @@ import type {
 import { getDeclaredEventHubTopics } from './runtime.js'
 import { matchesTopicPattern, topicPatternsOverlap } from './topic-pattern.js'
 
+/** One hour. */
+export const DEFAULT_MAX_SUBSCRIPTION_LIFETIME_MS = 3_600_000
+
 /** Under Bun's 10 s idle timeout with room for one lost frame. */
 export const DEFAULT_SSE_HEARTBEAT_MS = 5000
 
@@ -141,6 +144,11 @@ export class EventHubDistributor {
     return undefined
   }
 
+  /** The handler a channel was attached with, for a re-run that needs its wire. */
+  channelHandler(channelId: string): PikkuChannelHandler | undefined {
+    return this.channels.get(channelId)?.handler
+  }
+
   isAttached(channelId: string): boolean {
     return this.channels.has(channelId)
   }
@@ -160,13 +168,63 @@ export class EventHubDistributor {
       channelTopics = new Map()
       this.stored.set(channelId, channelTopics)
     }
-    channelTopics.set(topic, subscription)
+    channelTopics.set(topic, this.withExpiry(subscription))
     let ids = this.byTopic.get(topic)
     if (!ids) {
       ids = new Set()
       this.byTopic.set(topic, ids)
     }
     ids.add(channelId)
+  }
+
+  /**
+   * A session whose scopes were not resolved from the scope service (`mapSession`,
+   * `mapKey`, or none) can never be re-read, so the subscription is given a hard
+   * end instead of a re-check.
+   */
+  private withExpiry(subscription: StoredSubscription): StoredSubscription {
+    if (subscription.expiresAt !== undefined) return subscription
+    const max =
+      this.options.maxSubscriptionLifetime ??
+      DEFAULT_MAX_SUBSCRIPTION_LIFETIME_MS
+    if (!(max > 0) || max === Infinity) return subscription
+    const session = subscription.session as
+      { scopesResolvedAt?: number } | undefined
+    if (session?.scopesResolvedAt !== undefined) return subscription
+    return { ...subscription, expiresAt: this.now() + max }
+  }
+
+  /** The current time in Unix milliseconds. */
+  now(): number {
+    return (this.options.now ?? Date.now)()
+  }
+
+  /**
+   * Ends a subscription. A channel left with none is closed, so a client is not
+   * left on a stream that will never carry anything; it reconnects and its
+   * subscribe function runs again.
+   */
+  async dropSubscription(channelId: string, topic: string): Promise<void> {
+    this.removeSubscription(channelId, topic)
+    if (this.stored.has(channelId)) return
+    const attached = this.channels.get(channelId)
+    this.detach(channelId)
+    try {
+      await attached?.handler.getChannel().close()
+    } catch (error) {
+      this.options.onError?.(error)
+    }
+  }
+
+  /** Ends every subscription held by a user, for when their access is withdrawn. Returns how many were dropped. */
+  async dropSession(userId: string): Promise<number> {
+    const doomed = this.subscriptions().filter(
+      (sub) =>
+        (sub.session as { userId?: string } | undefined)?.userId === userId
+    )
+    for (const sub of doomed)
+      await this.dropSubscription(sub.channelId, sub.topic)
+    return doomed.length
   }
 
   /** Removes one topic from one channel. */
