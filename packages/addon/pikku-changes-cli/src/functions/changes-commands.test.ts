@@ -384,6 +384,89 @@ describe('changes file', () => {
     )
     assert.strictEqual(data.title, 'Drop the figure')
   })
+
+  test('--plan files every change, dependencies as the ids filed before', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-plan-'))
+    const path = join(dir, 'plan.json')
+    const outcome = 'Done when you can see it on the recipes page.'
+    await writeFile(
+      path,
+      JSON.stringify([
+        {
+          ref: 'data',
+          title: 'Recipes are kept',
+          body: `Store recipes. Declare listRecipes with mock: true. ${outcome}`,
+          specialist: 'build',
+          dependsOn: [],
+        },
+        {
+          ref: 'list',
+          title: 'The recipe list',
+          body: `A page listing every recipe. ${outcome}`,
+          specialist: 'frontend',
+          dependsOn: ['data'],
+        },
+      ])
+    )
+    let next = 0
+    respond = (name, data) =>
+      name === 'createChange'
+        ? {
+            change: {
+              changeId: `chg_${++next}`,
+              shortId: String(next),
+              title: data.title,
+            },
+          }
+        : { ok: true }
+    try {
+      invoked.length = 0
+      const result = (await ChangesFile.func(
+        {} as any,
+        { plan: path } as any
+      )) as any
+      assert.deepStrictEqual(
+        invoked.map((i) => [i.data.title, i.data.specialist, i.data.dependsOn]),
+        [
+          ['Recipes are kept', 'build', undefined],
+          ['The recipe list', 'frontend', ['chg_1']],
+        ]
+      )
+      assert.deepStrictEqual(
+        result.filed.map((f: any) => f.ref),
+        ['data', 'list']
+      )
+    } finally {
+      respond = () => ({ ok: true })
+    }
+  })
+
+  test('an invalid --plan files nothing', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-plan-'))
+    const path = join(dir, 'plan.json')
+    await writeFile(
+      path,
+      JSON.stringify([
+        { ref: 'list', title: 'The list', body: 'A page.', dependsOn: ['x'] },
+      ])
+    )
+    invoked.length = 0
+    await assert.rejects(
+      ChangesFile.func({} as any, { plan: path } as any),
+      /The plan was not filed[\s\S]*"specialist" must be one of/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('--plan refuses the single-change flags beside it', async () => {
+    await assert.rejects(
+      ChangesFile.func(
+        {} as any,
+        { plan: '/tmp/plan.json', title: 'x', dependsOn: ['1'] } as any
+      ),
+      /drop --title, --depends-on/
+    )
+  })
 })
 
 describe('changes shot', () => {

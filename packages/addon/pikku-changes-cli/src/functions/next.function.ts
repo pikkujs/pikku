@@ -15,7 +15,11 @@ import { takeBump, type PikkuBump } from '../lib/pikku-bump.js'
 import { localStorePath } from '../lib/changes-local.js'
 import { predictSkills } from '../lib/predict-skills.js'
 import { runnable } from '../lib/change-order.js'
-import { nextSpecialist, specialistOf } from '../lib/specialists.js'
+import {
+  SPECIALISTS,
+  nextSpecialist,
+  specialistOf,
+} from '../lib/specialists.js'
 import { knowledgeLine } from '@pikku/knowledge'
 import {
   finishedChangesets,
@@ -267,7 +271,7 @@ Switch to ${branch}, write its plan with the pikku-architect skill and \`pikku k
 `,
 })
 
-const intake = (prompt: string): Route => ({
+export const intake = (prompt: string): Route => ({
   agent: 'intake',
   skill: 'pikku-changes',
   refs: ['pikku-knowledge'],
@@ -279,7 +283,13 @@ ${prompt}
 
 # Turning it into changes
 
-Read the knowledge base for what the app already is, then file the request as changes: \`pikku changes file --title "<one line>" --body "<what the person sees when it is done>"\`. Each change is one commit's worth, written in the app's own words. Where the request leaves something open that changes the schema or a screen, \`pikku changes ask\` on the change it affects. File them and stop; another agent builds them.
+Read the knowledge base for what the app already is, then file the whole request in one call: write the plan as a JSON file and run \`pikku changes file --plan plan.json\` (or \`--plan -\` with the JSON on stdin).
+
+\`\`\`json
+[{ "ref": "data", "title": "<one line>", "body": "<what is built>. Done when you can <what the person sees>.", "specialist": "build", "dependsOn": [] }]
+\`\`\`
+
+The first change is the data change, and every other change depends on it. When the plan has screens, the first change's body lists the functions they call (name, input, output) declared \`mock: true\`. Each change is one commit's worth, in the app's own words; \`specialist\` is one of ${SPECIALISTS.join(', ')}. Where the request leaves something open, write "Decision: ..." in the body; do not ask. The command names every problem in a plan it refuses: fix them and run it again. When it says filing is complete, stop; another agent builds them.
 `,
 })
 
