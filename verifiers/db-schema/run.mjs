@@ -1563,6 +1563,98 @@ if (dialect !== 'sqlite') {
     !generateNew('app: pikku db generate (ledger settled)').file,
     `${dialect}: a further generate writes nothing`
   )
+
+  // 17d. A column a person renamed by hand (`RENAME COLUMN`) with the bounds
+  //      changed: the check named for the old column keeps enforcing the old
+  //      rule on the new column unless generate drops it.
+  const gadgetDeclaration = (column, bounds) =>
+    ledgerDeclaration(`qty: { type: 'integer' },
+      kind: { type: 'text' },
+      code: { type: 'string(8)' },`).replace(
+      /\}\)\n$/,
+      `  gadget: {
+    columns: {
+      id: { type: 'integer', primaryKey: true },
+      ${column}: { type: 'integer', ${bounds} },
+    },
+  },
+})
+`
+    )
+  declareTables(gadgetDeclaration('width', 'min: 0, max: 9'))
+  const gadgetFirst = generateNew('app: pikku db generate (gadget.width)')
+  apply('app: pikku db migrate (gadget.width)')
+  const renameName = `${String(readdirSync(MIGRATIONS_DIR).length + 1).padStart(4, '0')}-hand-rename-column.sql`
+  const renameSql = `ALTER TABLE ${q('gadget')} RENAME COLUMN ${q('width')} TO ${q('breadth')};\n`
+  declareTables(gadgetDeclaration('breadth', 'min: 0, max: 20'))
+  if (useMysql) {
+    // MySQL refuses to rename a column a CHECK still uses, so a hand-written
+    // rename there drops the checks first and generate adds the new ones.
+    handMigration(renameName, renameSql)
+    const refused = refusedBy(
+      'app: pikku db migrate (rename under a check)',
+      'migrate'
+    )
+    check(
+      refused.status !== 0 &&
+        /cannot be dropped or renamed/.test(refused.output),
+      'mysql: renaming a column a check uses is refused by the engine'
+    )
+    const names = [
+      ...gadgetFirst.sql.matchAll(
+        /gadget_width_[0-9a-f]{8}_(?:min|max)_check/g
+      ),
+    ].map((m) => m[0])
+    handMigration(
+      renameName,
+      `ALTER TABLE ${q('gadget')} ${[...new Set(names)].map((n) => `DROP CHECK ${q(n)}`).join(', ')};\n${renameSql}`
+    )
+    refusedBy(
+      'app: pikku db migrate (the column rename, checks dropped first)',
+      'migrate'
+    )
+    generateNew('app: pikku db generate (new bounds under breadth)')
+    apply('app: pikku db migrate (breadth bounds)')
+  } else {
+    handMigration(renameName, renameSql)
+    refusedBy('app: pikku db migrate (the column rename only)', 'migrate')
+    const staleColumn = refusedBy(
+      'app: pikku db check (gadget checks named for width)',
+      'check'
+    )
+    check(
+      staleColumn.status !== 0 &&
+        /gadget_width_[0-9a-f]{8}_max_check/.test(staleColumn.output),
+      `${dialect}: db check names the check still held under the old column name`
+    )
+    const columnRenamed = generateNew(
+      'app: pikku db generate (after the column rename)'
+    )
+    check(
+      /DROP (?:CONSTRAINT|CHECK) [`"]gadget_width_[0-9a-f]{8}_max_check[`"]/.test(
+        columnRenamed.sql
+      ) &&
+        /DROP (?:CONSTRAINT|CHECK) [`"]gadget_width_[0-9a-f]{8}_min_check[`"]/.test(
+          columnRenamed.sql
+        ),
+      'generate drops both checks still named for width'
+    )
+    apply('app: pikku db migrate (column renamed)')
+  }
+  check(
+    (await store.tryExec('INSERT INTO gadget (id, breadth) VALUES (1, 15)')) ===
+      undefined,
+    `${dialect}: breadth 15 is accepted, the old max of 9 no longer enforces`
+  )
+  check(
+    (await rejected('INSERT INTO gadget (id, breadth) VALUES (2, 25)')) &&
+      (await rejected('INSERT INTO gadget (id, breadth) VALUES (3, -1)')),
+    `${dialect}: the new bounds refuse 25 and -1`
+  )
+  check(
+    !generateNew('app: pikku db generate (gadget settled)').file,
+    `${dialect}: a further generate writes nothing`
+  )
 }
 
 declareTables(
