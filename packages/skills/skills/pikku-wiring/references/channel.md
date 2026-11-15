@@ -110,36 +110,27 @@ wireChannel({
 })
 ```
 
-### Pub/Sub with EventHub
+### Pub/Sub with the event hub
 
-Use EventHub for real-time broadcasting across connections:
+A client never names a topic. A `pikkuSubscribeFunc` returns it, after the
+normal session, scope and permission checks, and the channel then receives
+whatever is published to that topic. `services.eventHub` can only publish.
 
 ```typescript
-wireChannel({
-  name: 'todos',
-  route: '/todos',
-  // eventHub is a service (1st param); channel lives on the wire (3rd)
-  onConnect: async ({ eventHub }, _data, { channel }) => {
-    eventHub.subscribe('todos:updated', (data) => {
-      channel.send(data)
-    })
-  },
-  onMessageWiring: {
-    action: {
-      create: {
-        func: pikkuFunc({
-          title: 'Create Todo',
-          func: async ({ db, eventHub }, { text }) => {
-            const todo = await db.createTodo({ text })
-            eventHub.publish('todos:updated', {
-              event: 'created',
-              todo,
-            })
-            return { todo }
-          },
-        }),
-      },
-    },
+import { pikkuSubscribeFunc } from '#pikku/function'
+
+// Wired as a message route: { action: 'watchTodos' }. The channel leaves the
+// topic when it disconnects, so there is no unsubscribe.
+export const watchTodos = pikkuSubscribeFunc<void, `todos:${string}`>({
+  scopes: ['todos:read'],
+  func: async (_services, _data, { session }) => `todos:${session.userId}`,
+})
+
+export const createTodo = pikkuFunc({
+  func: async ({ db, eventHub }, { text }, { session }) => {
+    const todo = await db.createTodo({ text })
+    await eventHub.publish(`todos:${session.userId}`, { event: 'created', todo })
+    return { todo }
   },
 })
 ```
@@ -205,6 +196,10 @@ export const authenticate = pikkuSessionlessFunc({
   },
 })
 
+export const watchChat = pikkuSubscribeFunc<void, 'chat:message'>(
+  async () => 'chat:message'
+)
+
 export const sendMessage = pikkuFunc({
   title: 'Send Message',
   func: async ({ db, eventHub }, { text }, { session }) => {
@@ -212,7 +207,7 @@ export const sendMessage = pikkuFunc({
       text,
       userId: session.userId,
     })
-    eventHub.publish('chat:message', { message })
+    await eventHub.publish('chat:message', { message })
     return { message }
   },
 })
@@ -229,14 +224,10 @@ wireChannel({
   name: 'chat',
   route: '/chat',
   auth: true,
-  onConnect: async ({ eventHub }, _data, { channel }) => {
-    eventHub.subscribe('chat:message', (data) => {
-      channel.send(data)
-    })
-  },
   onMessageWiring: {
     action: {
       authenticate: { func: authenticate, auth: false },
+      watch: { func: watchChat },
       send: { func: sendMessage },
       history: { func: listMessages, auth: false },
     },

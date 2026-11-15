@@ -530,8 +530,11 @@ scenario run`, `pikku virtual-user run`, `pikku pages screenshot --as` and the
 `*`) and gives the app the public half, so local development needs no
 configuration. A deployed stage has one key pair: the deployer holds the private
 key (`VIRTUAL_USER_SIGNING_KEY`) and the app reads the public key from
-`VIRTUAL_USER_VERIFY_KEY`. A stage without a verify key refuses statements and
-logs why; it never falls back to anything weaker.
+`VIRTUAL_USER_VERIFY_KEY`: one public key, or, while a key is being rotated,
+a JSON list of `{ "kid": "...", "publicKey": "..." }` (at most 4). A statement
+naming a `kid` is checked against that key only and an unknown `kid` is refused;
+one without a `kid` is tried against each key. A stage without a verify key
+refuses statements and logs why; it never falls back to anything weaker.
 
 **Which command is running decides whether it works.** `pikku dev` sets
 `PIKKU_DEV_VIRTUAL_USER_SIGN_IN`. Everywhere else the endpoint refuses

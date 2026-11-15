@@ -1,4 +1,5 @@
-import { PikkuBunServer, BunEventHubService } from '@pikku/bun-server'
+import { PikkuBunServer } from '@pikku/bun-server'
+import { installEventHubDistributor } from '@pikku/core/internal/event-hub'
 import { InMemorySchedulerService } from '@pikku/schedule'
 import { createSingletonServices } from '../../functions/src/services.js'
 import { createConfig } from '../../functions/src/config.js'
@@ -8,16 +9,16 @@ async function main(): Promise<void> {
   try {
     const config = await createConfig()
     const schedulerService = new InMemorySchedulerService()
-    const eventHub = new BunEventHubService()
+    // Before the services, so they get the publisher; the server's sockets attach to the same hub.
+    const { services: eventHubServices } = installEventHubDistributor()
     const singletonServices = await createSingletonServices(config, {
       schedulerService,
-      eventHub,
+      ...eventHubServices,
     })
 
     const appServer = new PikkuBunServer(
       { ...config, port: 4002, hostname: 'localhost' },
-      singletonServices.logger,
-      { eventHub }
+      singletonServices.logger
     )
     appServer.enableExitOnSignals()
     await appServer.init()

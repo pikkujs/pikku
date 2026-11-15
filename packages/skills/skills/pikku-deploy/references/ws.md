@@ -63,10 +63,11 @@ written as a real HTTP response on the raw socket rather than a silent drop.
 ## Services and the event hub
 
 Services come from the bootstrap import and the global singleton registry, which
-is why nothing is passed in. The event hub is taken from
-`singletonServices.eventHub` when it is a `LocalEventHubService`, and a local one
-is created otherwise — so a single-process app gets pub/sub for free, while a
-multi-instance deployment must register a distributed hub.
+is why nothing is passed in. Each socket is attached to the process's event hub,
+which the host (`pikku dev`, `pikku serve`, or your own entry point through
+`installEventHubDistributor()`) creates before `createSingletonServices`. A
+single-process app gets pub/sub for free; a multi-instance deployment adds a
+relay through `services.eventHubRegistry`.
 
 The options type also extends `RunHTTPWiringOptions`, so per-request settings
 such as `respondWith404`, `coerceDataFromSchema` and `bubbleErrors` are accepted

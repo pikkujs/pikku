@@ -9,7 +9,6 @@
  * `services.ts` and injected — no `typeof Bun` checks in the dev command.
  */
 
-import type { EventHubService } from '@pikku/core/channel'
 import type { JWTService, Logger } from '@pikku/core/services'
 import type { NodeHTTPServerConfig } from '@pikku/node-http-server'
 
@@ -66,12 +65,12 @@ export type DevServerOptions = {
 
 export interface DevServerRunner {
   /**
-   * Create the EventHub for this runtime. Shared into singleton services so
-   * function-side broadcasts reach the transport's sockets. Must be called
-   * once before `createServer`.
+   * Load the transport modules this runtime serves with. Must be called once
+   * before `createServer`. Channels it serves attach to the process's event hub
+   * distributor, which the host creates and holds in package state.
    */
-  createEventHub(): Promise<EventHubService<any>>
-  /** Create the dev HTTP/WS server. Must be called after `createEventHub`. */
+  prepare(): Promise<void>
+  /** Create the dev HTTP/WS server. Must be called after `prepare`. */
   createServer(
     config: DevServerConfig,
     logger: Logger,

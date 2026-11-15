@@ -3,7 +3,7 @@
  *
  * The destinations are two in-memory recorders, so everything in front of them
  * is the real thing: the request-scoped buffer, the flush at the end of the
- * invocation, the composed identity resolvers, and the fan-out's `accepts`
+ * invocation, the composed identity resolvers, and the sink's event map
  * predicate. Only the vendor call is missing, and no vendor is what this suite
  * is about.
  *
@@ -77,7 +77,7 @@ export const analyticsServerEventCarriesItsInvocationScenario = pikkuScenario<
 })
 
 /**
- * `accepts` is the app's policy, not the sink's: which events a destination
+ * The event map is the app's policy, not the sink's: which events a destination
  * should receive is a decision about that destination, and it belongs beside
  * the fan-out rather than inside any one sink's mapper.
  */

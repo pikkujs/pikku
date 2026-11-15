@@ -40,6 +40,8 @@ export interface SerializeLocalServicesOptions {
   requiredServices: Iterable<string>
   scopes: FlatScope[]
   systemRoles: SystemRole[]
+  /** The events the project declares with `defineAnalyticsEvents`: the map the local database sink is registered with. */
+  analyticsEvents: string[]
   /**
    * Whether the project has a database, which is what brings in `@pikku/kysely`
    * and the services backed by it. Without one the file imports from
@@ -234,7 +236,7 @@ const inMemoryBody = (
   extras: LocalServicesExtras = {},
   options: LocalServicesOptions = {}
 ): Promise<Record<string, any>> => {
-  const { kysely, ...hostServices } = extras
+  const { kysely, analyticsSinks, ...hostServices } = extras
   if (kysely) {
     // Handed a database this file was generated without: the database-backed
     // services are only emitted for a project codegen saw a database in.
@@ -259,6 +261,7 @@ ${localCLI ? cliOnlyServices : ''}    queueService,
     agentStorage: undefined,
     agentRunState: new InMemoryAgentRunStateService(),
     agentRunService: undefined,
+    analyticsSinks: analyticsSinks ?? createAnalyticsSinks(),
     ...(kysely ? { kysely } : {}),
     ...hostServices,
   }
@@ -300,7 +303,8 @@ export const createLocalServices = async (
   extras: LocalServicesExtras = {},
   options: LocalServicesOptions = {}
 ): Promise<Record<string, any>> => {
-  const { kysely: hostKysely, ...hostServices } = extras
+  const { kysely: hostKysely, analyticsSinks: hostAnalyticsSinks, ...hostServices } =
+    extras
   const warnLogger = options.logger ?? stderr
   const isRequired = (name: GatedService): boolean =>
     options.requiredServices
@@ -336,9 +340,18 @@ export const createLocalServices = async (
   const featureFlags = kysely
     ? await initOrWarn(new KyselyFeatureFlagStore(kysely), 'featureFlags', warnLogger)
     : undefined
-  const analyticsService = kysely
-    ? await initOrWarn(new KyselyAnalyticsService(kysely), 'analyticsService', warnLogger)
+  const analyticsSinks = hostAnalyticsSinks ?? createAnalyticsSinks()
+  const analyticsDatabase = kysely
+    ? await initOrWarn(new KyselyAnalyticsService(kysely), 'analyticsSinks', warnLogger)
     : undefined
+  if (analyticsDatabase) {
+    analyticsSinks.add(
+      analyticsDatabase,
+      Object.fromEntries(
+        (options.analyticsEvents ?? declaredAnalyticsEvents).map((name) => [name, true])
+      )
+    )
+  }
 
   const scopeService =
     kysely && isRequired('scopeService') ? new KyselyScopeService(kysely) : undefined
@@ -391,7 +404,7 @@ ${localCLI ? cliOnlyServices : ''}    queueService,
     agentRunState,
     agentRunService,
     ...(featureFlags ? { featureFlags } : {}),
-    ...(analyticsService ? { analyticsService } : {}),
+    analyticsSinks,
     ...(kysely ? { kysely } : {}),
     ...hostServices,
   }
@@ -419,6 +432,7 @@ export const serializeLocalServices = ({
   requiredServices,
   scopes,
   systemRoles,
+  analyticsEvents,
   database,
   localCLI,
 }: SerializeLocalServicesOptions): string => {
@@ -460,6 +474,8 @@ export const serializeLocalServices = ({
   LocalEmailService,
   QueueWebhookService,
 } from '@pikku/core/services'`,
+    `import { createAnalyticsSinks } from '@pikku/core/analytics'`,
+    `import type { AnalyticsSinkRegistry } from '@pikku/core/analytics'`,
     `import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'`,
     `import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'`,
     `import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'`
@@ -502,6 +518,8 @@ const requiredServices: Record<GatedService, boolean> = ${json(gated)}
 const declaredScopes: FlatScope[] = ${json(scopes)}
 
 const declaredSystemRoles: SystemRole[] = ${json(systemRoles)}
+
+const declaredAnalyticsEvents: string[] = ${json(analyticsEvents)}
 `
     : ''
 
@@ -530,6 +548,8 @@ export interface LocalServicesExtras {
    }
    */
   kysely?: ${database ? 'Kysely<any>' : 'unknown'} | null
+  /** The registry the host created; the local analytics sink is added to it. Created here when the host has none. */
+  analyticsSinks?: AnalyticsSinkRegistry
   /** Anything else the host provides, which wins over what is assembled here. */
   [service: string]: unknown
 }
@@ -541,6 +561,7 @@ export interface LocalServicesOptions {
   requiredServices?: ReadonlySet<string>
   scopes?: FlatScope[]
   systemRoles?: SystemRole[]
+  analyticsEvents?: string[]
 }
 
 type DatabaseTarget = { sqliteDb?: string; postgresUrl?: string; mysqlUrl?: string }

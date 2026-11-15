@@ -11,7 +11,7 @@ import {
   type SpanKind,
   type Tracer,
 } from '../tracer.js'
-import type { OtlpHttpExporter } from './otlp-http-exporter.js'
+import type { OtlpSinkBase } from './otlp-sink.js'
 
 /**
  * Where the current trace context lives while a span's work runs. Core does not
@@ -27,10 +27,17 @@ export interface OtlpTracerOptions {
   contextStorage?: ContextStorage
 }
 
+const NOOP_SPAN_METHODS = {
+  setAttribute() {},
+  removeAttribute() {},
+  addEvent() {},
+  end() {},
+}
+
 type SpanEvent = NonNullable<FinishedSpan['events']>[number]
 
 /**
- * A `Tracer` that hands every ended span to an {@link OtlpHttpExporter}. Ids
+ * A `Tracer` that hands every ended span to an {@link OtlpSinkBase}. Ids
  * come from the wire; this class only records when a span started, ended and how.
  * An unsampled trace opens the shared inert span and exports nothing.
  */
@@ -45,9 +52,14 @@ export class OtlpTracer implements Tracer {
   >()
 
   constructor(
-    private readonly exporter: OtlpHttpExporter,
+    private readonly exporter: OtlpSinkBase,
     private readonly options: OtlpTracerOptions = {}
   ) {}
+
+  /** False while the sink behind this tracer has no listeners (an empty registry). */
+  get active(): boolean {
+    return this.exporter.active !== false
+  }
 
   startSpan(
     name: string,
@@ -59,6 +71,8 @@ export class OtlpTracer implements Tracer {
     } = {}
   ): Span {
     if (!context.sampled) return NOOP_TRACER.startSpan(name, context)
+    // Nothing is listening: record nothing, but keep the context so ids still flow to children, logs and outgoing calls.
+    if (this.exporter.active === false) return { ...NOOP_SPAN_METHODS, context }
     this.stats.started++
     const attributes: Record<string, SpanAttributeValue> = {}
     const events: SpanEvent[] = []
@@ -74,6 +88,15 @@ export class OtlpTracer implements Tracer {
       set(attributes, key, value)
     }
     this.attributesByContext.set(context, attributes)
+    this.exporter.onSpanStart?.({
+      traceId: context.traceId,
+      spanId: context.spanId,
+      ...(context.parentSpanId ? { parentSpanId: context.parentSpanId } : {}),
+      name,
+      kind: options.kind ?? 'internal',
+      startTimeUnixNano,
+      attributes: { ...attributes },
+    })
     let ended = false
     return {
       context,

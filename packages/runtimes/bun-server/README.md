@@ -24,8 +24,8 @@ await server.init()
 await server.start()
 ```
 
-Pass `{ eventHub, mcpJson, mcpPath }` as the third argument to override the
-default `BunEventHubService` or enable MCP.
+Pass `{ mcpJson, mcpPath }` as the third argument to enable MCP. Sockets attach
+to the process's event hub, which the host creates before `createSingletonServices`.
 
 ## Idle timeout
 

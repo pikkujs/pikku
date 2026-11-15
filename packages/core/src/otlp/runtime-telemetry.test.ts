@@ -136,17 +136,50 @@ describe('createRuntimeTelemetry', () => {
     ...extra,
   })
 
-  test('no endpoint: no-op tracer, the same logger, nothing running', async () => {
-    const plain = logger()
+  test('no endpoint: the tracer is real, no HTTP sink is registered, and a sink added later receives spans', async () => {
     const telemetry = createRuntimeTelemetry(
       {},
-      { logger: plain, serviceName: 'x' }
+      { logger: logger(), serviceName: 'x' }
+    )
+    assert.equal(telemetry.enabled, true)
+    assert.notEqual(telemetry.tracer, NOOP_TRACER)
+    assert.equal(telemetry.otlpSinks.list().length, 0)
+    const names: string[] = []
+    telemetry.otlpSinks.add({
+      exportSpans: (spans) => void names.push(...spans.map((s) => s.name)),
+      exportLogs() {},
+      exportMetrics() {},
+      flush: async () => {},
+      close: async () => {},
+    })
+    telemetry.tracer.startSpan('late', createTrace()).end()
+    assert.deepEqual(names, ['late'])
+    await telemetry.close()
+  })
+
+  test('an endpoint registers exactly one sink: the HTTP exporter', () => {
+    const telemetry = createRuntimeTelemetry(
+      { PIKKU_OTLP_ENDPOINT: 'http://127.0.0.1:4000/v1/otlp' },
+      options()
+    )
+    assert.equal(telemetry.otlpSinks.list().length, 1)
+  })
+
+  test('PIKKU_TELEMETRY=0 still hands out a registry that accepts sinks', () => {
+    const telemetry = createRuntimeTelemetry(
+      { PIKKU_TELEMETRY: '0' },
+      options()
     )
     assert.equal(telemetry.enabled, false)
-    assert.equal(telemetry.tracer, NOOP_TRACER)
-    assert.equal(telemetry.logger, plain)
-    await telemetry.flush()
-    await telemetry.close()
+    assert.doesNotThrow(() =>
+      telemetry.otlpSinks.add({
+        exportSpans() {},
+        exportLogs() {},
+        exportMetrics() {},
+        flush: async () => {},
+        close: async () => {},
+      })
+    )
   })
 
   test('PIKKU_TELEMETRY=0 turns everything off even with an endpoint', () => {

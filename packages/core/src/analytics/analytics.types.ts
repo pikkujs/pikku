@@ -131,19 +131,22 @@ export interface AnalyticsService {
   write(batch: AnalyticsRecord[]): Promise<void>
 }
 
+/** What an analytics sink is given at registration: event names as keys, whatever the sink needs per event as values. */
+export type AnalyticsEventMap = Record<string, unknown>
+
 /**
- * One destination in a fan-out, with the events it is allowed to receive.
+ * A destination for accepted events. It receives only the events named in the
+ * map it was registered with: an event absent from the map never reaches it,
+ * so a new event is invisible to a destination until someone adds it there.
  *
- * `accepts` is the app's, not the sink's: which events a destination should get
- * is policy — a product-analytics tool wants everything, an ad platform wants
- * three conversions, and a consent gate reads the same way. What each event
- * should look like once it gets there is the sink's, and lives in its mapper.
+ * `setMap` is optional and a property, so a sink that needs its map typed
+ * (`CityMap`, a vendor's event table) declares it and is checked against the
+ * map passed to `analyticsSinks.add`.
  */
-export interface AnalyticsSink {
-  /** The destination the filtered records are written to. */
-  service: AnalyticsService
-  /** Returns true for the records this destination should get; omit to send everything. */
-  accepts?: (record: AnalyticsRecord) => boolean
+export interface AnalyticsEventSink<
+  TMap extends AnalyticsEventMap = AnalyticsEventMap,
+> extends AnalyticsService {
+  readonly setMap?: (map: TMap) => void
 }
 
 /**

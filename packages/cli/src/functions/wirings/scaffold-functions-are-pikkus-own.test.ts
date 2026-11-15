@@ -9,7 +9,6 @@ import { serializePublicAgent } from './agent/serialize-public-agent.js'
 import { serializeWorkflowRoutes } from './workflow/serialize-workflow-routes.js'
 import { serializeConsoleFunctions } from './console/serialize-console-functions.js'
 import { serializeVirtualUserFunctions } from './virtual-user/serialize-virtual-user-functions.js'
-import { serializeEventsScaffold } from './realtime/serialize-events-scaffold.js'
 import { serializeAnalytics } from './analytics/serialize-analytics.js'
 import { serializeFeatureFlagsScaffold } from './flags/serialize-feature-flags-scaffold.js'
 import { serializeChannelCLI } from './cli/serialize-channel-cli.js'
@@ -68,7 +67,6 @@ describe("every function a scaffold generates is tagged as pikku's own", () => {
       'virtual user',
       serializeVirtualUserFunctions(leaf, '#virtualUsers').functions,
     ],
-    ['events', serializeEventsScaffold(leaf).functions],
     [
       'analytics',
       serializeAnalytics(leaf, [

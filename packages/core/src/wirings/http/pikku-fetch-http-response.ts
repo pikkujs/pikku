@@ -12,6 +12,7 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   #responseMode: 'stream' | null = null
   #send: ((data: string) => void) | null = null
   #close: (() => void) | null = null
+  #heartbeat: (() => void) | null = null
   #cancelStream: (() => void) | null = null
   #onClose: Array<() => void> = []
 
@@ -117,6 +118,10 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
     return this
   }
 
+  public heartbeat(): void {
+    this.#heartbeat?.()
+  }
+
   public onClose(callback: () => void): void {
     this.#onClose.push(callback)
   }
@@ -164,6 +169,10 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
         }
 
         this.#send = send
+        this.#heartbeat = () => {
+          if (closed) return
+          controller.enqueue(encoder.encode(':\n\n'))
+        }
         this.#close = close
 
         controller.enqueue(encoder.encode(':\n\n'))

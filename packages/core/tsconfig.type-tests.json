@@ -7,6 +7,8 @@
     "declarationMap": false
   },
   "files": [
+    "src/analytics/analytics-sink.types.test.ts",
+    "src/otlp/otlp-sink.types.test.ts",
     "src/classification/secret-value.test.ts",
     "src/services/email-service.test.ts",
     "src/types/typed-credentials.test.ts",

@@ -1,5 +1,4 @@
 import { PikkuWebSocket } from '@sdk/app/pikku-websocket.gen.js'
-import type { EventHubTopics } from '../types/eventhub-topics.js'
 import WSWebsocket from 'ws'
 
 export const check = async (serverUrl: string, testUserId: string) => {
@@ -8,7 +7,7 @@ export const check = async (serverUrl: string, testUserId: string) => {
     .replace('http://', 'ws://')
     .replace('https://', 'wss://')
   const ws = new WSWebsocket(`${wsUrl}${wsPath}`)
-  const websocket = new PikkuWebSocket<'todos-live', EventHubTopics>(ws)
+  const websocket = new PikkuWebSocket<'todos-live'>(ws)
 
   ws.onopen = () => {
     ;(async () => {
@@ -16,14 +15,6 @@ export const check = async (serverUrl: string, testUserId: string) => {
 
       websocket.subscribe((data) => {
         console.log(`${testUserId}: Global message:`, data)
-      })
-
-      websocket.subscribeToEventHub('todo-created', (data) => {
-        console.log(`${testUserId}: Todo created event:`, data)
-      })
-
-      websocket.subscribeToEventHub('todo-completed', (data) => {
-        console.log(`${testUserId}: Todo completed event:`, data)
       })
 
       const route = websocket.getRoute('action')
@@ -48,8 +39,8 @@ export const check = async (serverUrl: string, testUserId: string) => {
 
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      route.send('subscribe', { topic: 'todo-created' })
-      route.send('subscribe', { topic: 'todo-completed' })
+      route.send('subscribe', { topic: 'created' })
+      route.send('subscribe', { topic: 'completed' })
 
       await new Promise((resolve) => setTimeout(resolve, 500))
 

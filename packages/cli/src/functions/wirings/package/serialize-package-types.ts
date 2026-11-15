@@ -24,7 +24,7 @@ export const serializeUtilsTypes = () => {
 export const serializeAnalyticsDefinitionTypes = () => {
   return `export {
   defineAnalyticsEvents,
-  fanOutAnalytics,
+  createAnalyticsSinks,
   cookieAnalyticsIdentity,
   composeAnalyticsIdentity,
   anonymousAnalyticsIdentity,
@@ -42,7 +42,9 @@ export type {
   AnalyticsLog,
   AnalyticsRecord,
   AnalyticsService,
-  AnalyticsSink,
+  AnalyticsEventMap,
+  AnalyticsEventSink,
+  AnalyticsSinkRegistry,
 } from '@pikku/core/analytics'
 `
 }

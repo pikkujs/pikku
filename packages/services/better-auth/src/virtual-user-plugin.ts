@@ -5,6 +5,7 @@ import type { BetterAuthPlugin } from 'better-auth'
 import {
   VIRTUAL_USER_IN_PROCESS_ENDPOINT,
   VirtualUserStatementError,
+  type VirtualUserVerifyKeys,
 } from '@pikku/core/services'
 import type {
   FeatureFlagSource,
@@ -48,11 +49,12 @@ export interface VirtualUserPluginOptions {
   allowSignIn?: string
   /**
    * The stage's virtual user public key, as the variable
-   * `VIRTUAL_USER_VERIFY_KEY` holds it. Statements from outside the app are
-   * checked against it. Without a key (or a `statementVerifier`) there is no
-   * statement endpoint, and the switcher is open under `pikku dev` only.
+   * `VIRTUAL_USER_VERIFY_KEY` holds it: one key, or a list of
+   * `{ kid, publicKey }` (as an array or a JSON string) while a key is being
+   * rotated. Statements from outside the app are checked against it. Without a
+   * key (or a `statementVerifier`) there is no statement endpoint, and the switcher is open under `pikku dev` only.
    */
-  verifyKey?: string
+  verifyKey?: VirtualUserVerifyKeys
   /** A verifier of your own, for a key held somewhere other than a variable. */
   statementVerifier?: VirtualUserStatementVerifier
   /**
@@ -287,7 +289,7 @@ export const pikkuVirtualUser = (
     if (!statementVerifier) {
       throw new APIError('UNAUTHORIZED', {
         message:
-          'This app has no verify key for virtual user statements — set the VIRTUAL_USER_VERIFY_KEY variable and pass it to pikkuVirtualUser as verifyKey',
+          'This app has no verify key for virtual user statements — set the VIRTUAL_USER_VERIFY_KEY variable (a public key, or a JSON list of {kid, publicKey}) and pass it to pikkuVirtualUser as verifyKey',
       })
     }
     const audience =

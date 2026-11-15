@@ -284,7 +284,9 @@ pub fn aggregate_required_services(st: &mut State) {
             required.add(s);
         }
     }
-    if st.channels.meta.len() > 0 {
+    // Channels and subscribe functions (an `sse: true` route has no channel)
+    // both need the event hub.
+    if st.channels.meta.len() > 0 || st.functions.meta.values().any(|m| m.subscribe.is_some()) {
         required.add("eventHub");
     }
     if !st.scopes.definitions.is_empty() {
@@ -294,7 +296,7 @@ pub fn aggregate_required_services(st: &mut State) {
         required.add("featureFlags");
     }
     if !st.analytics.is_empty() {
-        required.add("analyticsService");
+        required.add("analyticsSinks");
     }
     if !st.credentials.definitions.is_empty() {
         required.add("credentialService");

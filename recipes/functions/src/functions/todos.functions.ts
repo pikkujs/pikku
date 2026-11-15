@@ -64,7 +64,7 @@ export const createTodo = pikkuSessionlessFunc({
     logger.info(`Created todo ${todo.id} for user ${uid}`)
 
     if (eventHub) {
-      await eventHub.publish('todo-created', null, { todo })
+      await eventHub.publish('todo-created', { todo })
     }
 
     await analytics?.record({
@@ -98,7 +98,7 @@ export const updateTodo = pikkuSessionlessFunc({
     if (todo) {
       logger.info(`Updated todo ${id}`)
       if (eventHub) {
-        await eventHub.publish('todo-updated', null, { todo })
+        await eventHub.publish('todo-updated', { todo })
       }
     }
 
@@ -119,7 +119,7 @@ export const deleteTodo = pikkuSessionlessFunc({
     logger.info(`Deleted todo ${id}: ${success}`)
 
     if (eventHub && success) {
-      await eventHub.publish('todo-deleted', null, { todoId: id })
+      await eventHub.publish('todo-deleted', { todoId: id })
     }
 
     return { success }
@@ -140,7 +140,7 @@ export const completeTodo = pikkuSessionlessFunc({
     if (todo) {
       logger.info(`Completed todo ${id}`)
       if (eventHub) {
-        await eventHub.publish('todo-completed', null, { todo })
+        await eventHub.publish('todo-completed', { todo })
       }
     }
 

@@ -52,6 +52,12 @@ type TelemetryMeta struct {
 
 // FunctionMeta is FunctionsMeta[string] from @pikku/core.
 //
+// SubscribeMeta marks a pikkuSubscribeFunc: topicPattern is the declared shape
+// of the topics it can return, in TS template-literal syntax.
+type SubscribeMeta struct {
+	TopicPattern string `json:"topicPattern"`
+}
+
 // Fields written only by finalize (requiresSession is on routes; here:
 // singletonServicesOnly, contractHash, inputHash, outputHash) are pointers so an
 // analyze-only state omits them exactly as TS does.
@@ -76,6 +82,7 @@ type FunctionMeta struct {
 	Remote                          *bool          `json:"remote,omitempty"`
 	ScenarioStep                    *bool          `json:"scenarioStep,omitempty"`
 	WebhookReceive                  *bool          `json:"webhookReceive,omitempty"`
+	Subscribe                       *SubscribeMeta `json:"subscribe,omitempty"`
 	Scenario                        *bool          `json:"scenario,omitempty"`
 	MCP                             *bool          `json:"mcp,omitempty"`
 	Readonly                        *bool          `json:"readonly,omitempty"`

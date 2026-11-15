@@ -3,14 +3,8 @@ import {
   pikkuChannelDisconnectionFunc,
   pikkuChannelFunc,
 } from '#pikku/channel'
-import {
-  ChannelAuthInputSchema,
-  ChannelAuthOutputSchema,
-  SubscribeInputSchema,
-  SubscribeOutputSchema,
-  UnsubscribeInputSchema,
-  UnsubscribeOutputSchema,
-} from '../schemas.js'
+import { pikkuSubscribeFunc } from '#pikku/function'
+import { ChannelAuthInputSchema, ChannelAuthOutputSchema } from '../schemas.js'
 
 /**
  * Handle new WebSocket connection.
@@ -24,7 +18,7 @@ export const onConnect = pikkuChannelConnectionFunc<{ connected: true }>(
 
 /**
  * Handle WebSocket disconnection.
- * Note: EventHub automatically unsubscribes on disconnect.
+ * Note: the event hub drops a channel's subscriptions on disconnect.
  */
 export const onDisconnect = pikkuChannelDisconnectionFunc(
   async ({ logger }, _, { channel }) => {
@@ -62,33 +56,14 @@ export const authenticate = pikkuChannelFunc({
 })
 
 /**
- * Subscribe to todo update events via EventHub.
+ * Subscribe to todo update events. The function decides the topic, so a client
+ * can only follow a `todo-*` topic; there is no unsubscribe, a channel leaves
+ * on disconnect.
  */
-export const subscribe = pikkuChannelFunc({
-  input: SubscribeInputSchema,
-  output: SubscribeOutputSchema,
-  func: async ({ eventHub, logger }, { topic }, { channel }) => {
-    if (eventHub) {
-      await eventHub.subscribe(topic, channel.channelId)
-      logger.info(`WebSocket ${channel.channelId} subscribed to ${topic}`)
-      return { subscribed: true, topic }
-    }
-    return { subscribed: false, topic }
-  },
-})
-
-/**
- * Unsubscribe from todo update events.
- */
-export const unsubscribe = pikkuChannelFunc({
-  input: UnsubscribeInputSchema,
-  output: UnsubscribeOutputSchema,
-  func: async ({ eventHub, logger }, { topic }, { channel }) => {
-    if (eventHub) {
-      await eventHub.unsubscribe(topic, channel.channelId)
-      logger.info(`WebSocket ${channel.channelId} unsubscribed from ${topic}`)
-      return { unsubscribed: true, topic }
-    }
-    return { unsubscribed: false, topic }
-  },
+export const subscribe = pikkuSubscribeFunc<
+  { topic: 'created' | 'updated' | 'deleted' | 'completed' },
+  `todo-${string}`
+>(async ({ logger }, { topic }, { channel }) => {
+  logger.info(`WebSocket ${channel.channelId} subscribing to todo-${topic}`)
+  return `todo-${topic}`
 })
