@@ -119,6 +119,7 @@ export const useSession = <Session = unknown>(
 
   return `import { useQuery, useInfiniteQuery, useMutation, type UseQueryOptions, type UseInfiniteQueryOptions, type UseMutationOptions, type InfiniteData } from '@tanstack/react-query'
 import { usePikkuRPC${sessionImport} } from '@pikku/react'
+import type { PikkuInstance } from '@pikku/react'
 import type { FlattenedRPCMap, AgentName, AgentOutputOf } from '${rpcMapPath}'${workflowImport}
 
 // Tells \`usePikkuAgent\` from @pikku/react which agents exist and what each returns.
@@ -155,22 +156,39 @@ const metaOf = (value: unknown) => {
   return (inner !== null && typeof inner === 'object' ? inner : value) as { default?: boolean } | undefined
 }
 
-const mockFileFor = (name: string) => {
-  const scenarios = new Map<string, { file: () => Promise<unknown>; isDefault: boolean; app: boolean }>()
+/** What a scenario's \`<scenario>.meta.json\` may say. */
+export type MockScenarioMeta = { default?: boolean; state?: string; status?: number; delayMs?: number }
+
+type MockScenario = { key: string; file: () => Promise<unknown>; meta?: MockScenarioMeta; app: boolean }
+
+/* Every scenario of one function, keyed by file name without \`.json\`. An app
+   scenario replaces an addon one of the same name (app sources come last). */
+const mockScenariosFor = (name: string) => {
+  const scenarios = new Map<string, MockScenario>()
   for (const source of mockSources) {
     const prefix = source.namespace ? source.namespace + ':' : ''
     if (prefix && !name.startsWith(prefix)) continue
     const dir = '/.mocks/' + (prefix ? name.slice(prefix.length) : name.replace(/:/g, '.')) + '/'
-    for (const key of Object.keys(source.meta)) {
-      if (!key.includes(dir)) continue
-      const file = source.files[key.replace(/\\.meta\\.json$/, '.json')]
-      if (!file) continue
-      scenarios.set(key.slice(key.lastIndexOf('/') + 1), { file, isDefault: metaOf(source.meta[key])?.default === true, app: !prefix })
+    for (const key of Object.keys(source.files)) {
+      if (!key.includes(dir) || key.endsWith('.meta.json')) continue
+      const metaKey = key.replace(/\\.json$/, '.meta.json')
+      const scenario = key.slice(key.lastIndexOf('/') + 1).replace(/\\.json$/, '')
+      scenarios.set(scenario, { key: scenario, file: source.files[key]!, meta: metaKey in source.meta ? metaOf(source.meta[metaKey]) as MockScenarioMeta : undefined, app: !prefix })
     }
   }
-  const all = [...scenarios.values()]
-  return (all.find((s) => s.app && s.isDefault) ?? all.find((s) => s.isDefault) ?? (all.length === 1 ? all[0] : undefined))?.file
+  return [...scenarios.values()]
 }
+
+/* The named scenario when one is given, else the default: only scenarios with a
+   meta file compete for it, app before addon, a lone one wins. */
+const mockScenarioFor = (name: string, scenario?: string | null) => {
+  const all = mockScenariosFor(name)
+  if (scenario != null) return all.find((s) => s.key === scenario.replace(/\\.json$/, ''))
+  const described = all.filter((s) => s.meta !== undefined)
+  return described.find((s) => s.app && s.meta?.default === true) ?? described.find((s) => s.meta?.default === true) ?? (described.length === 1 ? described[0] : undefined)
+}
+
+const mockFileFor = (name: string, scenario?: string | null) => mockScenarioFor(name, scenario)?.file
 
 const hasMock = (name: string) => !!mockFileFor(name)
 
@@ -178,6 +196,125 @@ export const defaultMock = async (name: string) => {
   const file = mockFileFor(name)
   if (!file) throw new Error('No default mock for ' + name + ' in .mocks/')
   return unwrapDefault(await file())
+}
+
+/* Which scenario each function answers with on the mock client. A story sets
+   these and clears them afterwards; a function with none answers its default. */
+const selectedScenarios = new Map<string, string>()
+const scenarioListeners = new Set<(names: string[]) => void>()
+const scenariosChanged = (names: string[]) => {
+  for (const listener of scenarioListeners) listener(names)
+}
+
+type MockName = (keyof FlattenedRPCMap & string) | (string & {})
+
+/** Answer \`name\` with \`scenario\` (a \`.mocks/<function>/<scenario>.json\` file name) on the mock client, or with its default again when \`null\`. */
+export const setMockScenario = (name: MockName, scenario: string | null) => {
+  if (scenario === null) selectedScenarios.delete(name)
+  else selectedScenarios.set(name, scenario)
+  scenariosChanged([name])
+}
+
+/** Several at once: \`setMockScenarios({ listJobs: 'empty', getJob: 'error' })\`. */
+export const setMockScenarios = (scenarios: Partial<Record<MockName, string | null>>) => {
+  for (const [name, scenario] of Object.entries(scenarios)) {
+    if (scenario == null) selectedScenarios.delete(name)
+    else selectedScenarios.set(name, scenario)
+  }
+  scenariosChanged(Object.keys(scenarios))
+}
+
+/** Every function back to its default scenario, for the end of a story. */
+export const clearMockScenarios = () => {
+  const names = [...selectedScenarios.keys()]
+  selectedScenarios.clear()
+  scenariosChanged(names)
+}
+
+const mockDirOf = (name: string) => '.mocks/' + name.replace(/:/g, '.') + '/'
+
+/**
+ * The answer \`name\` gets on the mock client: the selected scenario, else the
+ * default. Waits \`delayMs\` from the scenario's meta, and rejects with an Error
+ * carrying \`status\` (and the file as \`body\`) when the meta says
+ * \`state: 'error'\` or a \`status\` of 400 or more.
+ */
+export const mockResponse = async (name: string, scenario: string | null = selectedScenarios.get(name) ?? null) => {
+  const found = mockScenarioFor(name, scenario)
+  if (!found) {
+    throw new Error(scenario != null ? 'No mock scenario "' + scenario + '" for ' + name + ' in ' + mockDirOf(name) : 'No default mock for ' + name + ' in ' + mockDirOf(name))
+  }
+  const meta = found.meta ?? {}
+  if (meta.delayMs) await new Promise((resolve) => setTimeout(resolve, meta.delayMs))
+  const body = unwrapDefault(await found.file())
+  const status = meta.status ?? (meta.state === 'error' ? 500 : 200)
+  if (meta.state === 'error' || status >= 400) {
+    const message = (body as { message?: unknown })?.message
+    throw Object.assign(new Error(typeof message === 'string' ? message : name + ' failed (mock scenario "' + found.key + '", status ' + status + ')'), { status, body, scenario: found.key })
+  }
+  return body
+}
+
+type QueryResetter = { resetQueries: (filters: { predicate: (query: { queryKey: readonly unknown[] }) => boolean }) => unknown }
+
+export type MockPikkuOptions = {
+  /** The real client. Without one every call is mocked. */
+  fallback?: PikkuInstance
+  /** \`all\` mocks every call (the default without a fallback); \`flagged\` mocks only the functions declared \`mock: true\` (the default with one). */
+  mode?: 'all' | 'flagged'
+  /** Reset this client's queries of a function whenever its scenario changes, so a screen shows the new one. */
+  queryClient?: QueryResetter
+}
+
+/** Drop and refetch the cached queries of \`names\` (all of them without \`names\`). */
+export const resetMockQueries = (queryClient: QueryResetter, names?: string[]) =>
+  queryClient.resetQueries({ predicate: (query) => !names || names.includes(query.queryKey[0] as string) })
+
+const delegate = (target: Record<string | symbol, unknown>, fallback: Record<string | symbol, unknown> | undefined, missing: (prop: string) => unknown) =>
+  new Proxy(target, {
+    get: (own, prop) => {
+      if (prop in own) return own[prop]
+      if (fallback) {
+        const value = fallback[prop]
+        return typeof value === 'function' ? value.bind(fallback) : value
+      }
+      // Never look like a promise, or awaiting the client would call this.
+      return typeof prop === 'symbol' || prop === 'then' ? undefined : missing(prop)
+    },
+  })
+
+/**
+ * A Pikku instance that answers from the \`.mocks/\` library, for
+ * \`PikkuProvider\`. Use \`createMockPikku\` from the generated mocks module,
+ * which registers the library and knows which functions are \`mock: true\`.
+ */
+export const createMockPikkuClient = (flagged: Iterable<string>, options: MockPikkuOptions = {}): PikkuInstance & { dispose: () => void } => {
+  const { fallback, queryClient } = options
+  const mode = options.mode ?? (fallback ? 'flagged' : 'all')
+  if (mode === 'flagged' && !fallback) throw new Error("createMockPikku: mode 'flagged' needs a fallback client for the functions that are not mocked")
+  const flaggedNames = new Set(flagged)
+
+  const invoke = (name: string, data: unknown) => {
+    if (mode === 'flagged' && !flaggedNames.has(name)) return fallback!.rpc.invoke(name, data)
+    if (!selectedScenarios.has(name) && !mockScenarioFor(name)) {
+      return Promise.reject(new Error('function ' + name + (flaggedNames.has(name) ? ' is mocked' : ' is called on the mock client') + ' but has no mock data (' + mockDirOf(name) + ')'))
+    }
+    return mockResponse(name)
+  }
+
+  // Signed out: the session hook reads a null body, not an error.
+  const mockFetch = async (path: string, method?: string) =>
+    path.replace(/\\?.*$/, '').endsWith('/auth/get-session')
+      ? new Response('null', { status: 200, headers: { 'content-type': 'application/json' } })
+      : new Response(JSON.stringify({ message: (method ?? 'GET') + ' ' + path + ' is not mocked' }), { status: 404, headers: { 'content-type': 'application/json' } })
+
+  const rpc = delegate({ invoke }, fallback?.rpc, (prop) => () => Promise.reject(new Error('rpc.' + prop + ' is not mocked')))
+  const fetch = mode === 'flagged' ? fallback!.fetch : delegate({ fetch: mockFetch }, fallback?.fetch as unknown as Record<string, unknown>, () => undefined)
+
+  const listener = (names: string[]) => void (queryClient && resetMockQueries(queryClient, names))
+  if (queryClient) scenarioListeners.add(listener)
+
+  return { ...fallback, rpc, fetch: fetch as PikkuInstance['fetch'], dispose: () => void scenarioListeners.delete(listener) }
 }
 
 export const usePikkuQuery = <Name extends keyof FlattenedRPCMap>(
