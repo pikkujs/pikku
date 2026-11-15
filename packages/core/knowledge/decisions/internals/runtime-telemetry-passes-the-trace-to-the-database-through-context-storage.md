@@ -27,5 +27,6 @@ client span under the running function, or open none when it is `undefined`. A
 tracer that wraps another one must forward `currentContext` along with
 `runInSpan`; one that drops it silently loses every such span.
 
-A disabled run (no `PIKKU_OTLP_ENDPOINT`, or `PIKKU_TELEMETRY=0`) gets the inert
-telemetry and the plain dialect: no exporter, no timer, no connection.
+A disabled run (`PIKKU_TELEMETRY=0`) gets the inert telemetry and the plain
+dialect. With no `PIKKU_OTLP_ENDPOINT` the tracer is real and fans out to the
+sink registry; there is no exporter, timer or connection until a sink is added.

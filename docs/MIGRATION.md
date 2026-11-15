@@ -24,6 +24,21 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### OTLP and analytics sinks are registries; `analyticsService` and `accepts` are gone
+
+Core now creates two singleton services, `otlpSinks` and `analyticsSinks`, before your `createSingletonServices` runs in `pikku dev`, `pikku serve` and a standalone build. Register sinks in plain code with `add(sink, map)`. See [telemetry-sinks.md](./telemetry-sinks.md).
+
+**Removed from `@pikku/core`:**
+
+- The `analyticsService` singleton service. Register a sink with `analyticsSinks.add(sink, { event_name: true })` instead.
+- `AnalyticsSink` (`{ service, accepts }`) and its `accepts` predicate. A sink now carries a map of the events it receives; an event not in the map never reaches it (fail closed).
+- The old `fanOutAnalytics(sinks)` signature. It is now `fanOutAnalytics(registry, fallback)`.
+- `OtlpTracer`, `OtlpLogger` and `startProcessMetrics` no longer take an `OtlpHttpExporter`; they take an `OtlpSinkBase`.
+
+**Behaviour change:** with no `PIKKU_OTLP_ENDPOINT` the tracer is now real, not inert. The endpoint only decides whether the HTTP exporter is registered. `PIKKU_TELEMETRY=0` still turns it all off. Callers that passed `{}` as the environment to `createRuntimeTelemetry` and want it off must pass `{ PIKKU_TELEMETRY: '0' }`.
+
+**Find the code:** search for `analyticsService`, `AnalyticsSink` and `accepts`.
+
 ### Better Auth's tables and the runtime's secret columns come annotated
 
 `pikku db migrate` now gives the tables `pikku db generate` created for Better Auth (`user`, `session`, `account`, `verification`) and for the runtime (`secrets`, `credentials`) built-in column annotations, with or without a `db/tables.ts`. A table of your own that merely shares a name is untouched.
