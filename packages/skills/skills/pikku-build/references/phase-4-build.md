@@ -82,7 +82,15 @@ Rules that are not optional:
     payment: {
       columns: {
         paidAt: { type: 'timestamp', kind: 'date' }, // -> Date, not an ISO string
-        metadata: { type: 'json', kind: 'json', tsType: 'PaymentMeta' }, // -> parsed object, not unknown
+        // -> parsed object, not unknown. tsType is written verbatim into
+        // .pikku/db/schema.gen.ts, which imports nothing of yours, so a bare
+        // name does not resolve: use an inline type, or an import() type
+        // relative to that file (here '../../src/payment.types.js').
+        metadata: {
+          type: 'json',
+          kind: 'json',
+          tsType: '{ method: string; reference: string }',
+        },
       },
     },
   })

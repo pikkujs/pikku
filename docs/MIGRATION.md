@@ -1353,8 +1353,8 @@ Run `pikku db generate` after converting. A declaration that matches the existin
 To move an app that has no `db/tables.ts` yet:
 
 1. Create `db/tables.ts` and declare the existing tables as they stand, one at a time if you like. A table you leave out stays hand-written.
-2. Run `pikku db generate`. A table that matches its migrations is adopted and not created again. If it differs, generate refuses and names the column and the difference. Fix the declaration, not the migration.
-3. Move the table's entries from `db/annotations.ts` onto its columns, delete that file, and run `pikku db migrate`. See [`db/annotations.ts` is removed](#dbannotationsts-is-removed).
+2. If the project has a `db/annotations.ts`, move each table's entries onto its columns in `db/tables.ts`, then delete that file. `pikku db generate` refuses to run while it exists. See [`db/annotations.ts` is removed](#dbannotationsts-is-removed).
+3. Run `pikku db generate`. A table that matches its migrations is adopted and not created again. If it differs, generate refuses and names the column and the difference. Fix the declaration, not the migration. Then run `pikku db migrate`.
 4. From here on, change the declaration and run `pikku db generate`. Existing migration files stay as they are.
 
 **Find:** search for `statements:` and for `defineTables`, `requiredType`, `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` imported from `@pikku/kysely`.
