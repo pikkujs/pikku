@@ -9,6 +9,7 @@
  */
 import { checkProbeLine } from '@pikku/migrator-sql'
 import type { ColumnCheck, ColumnInfo } from './db-introspector.js'
+import { checkName } from '@pikku/kysely'
 import { checkFingerprint } from './check-enums.js'
 
 /** The oldest MySQL that enforces a `CHECK`; before it the clause is parsed and ignored. */
@@ -30,34 +31,30 @@ export interface ConstraintPlan {
   reasons: string[]
 }
 
-/**
- * A generated check's name is `<table>_<column>_<kind>_check`. One named like
- * this that the declaration no longer asks for was generated from it once, so
- * its removal is a constraint change; one named otherwise is a person's, and the
- * declaration says nothing about it.
- */
-const GENERATED_CHECK = /_(enum|min|max|minlength|maxlength)_check$/
+const GENERATED_KINDS = [
+  'enum',
+  'min',
+  'max',
+  'minlength',
+  'maxlength',
+] as const
 
 /**
- * Whether `name` is one a declaration generated for this column. A name too
- * long for the engine is cut and carries a hash in place of the cut, so it
- * starts with only the front of `<table>_<column>`.
+ * Whether `name` is one a declaration generated for this column: exactly what
+ * `checkName` gives it for some kind. One named otherwise is a person's, and the
+ * declaration says nothing about it.
  */
-const generatedFor = (name: string, table: string, column: string): boolean => {
-  if (!GENERATED_CHECK.test(name)) return false
-  const owner = `${table}_${column}`
-  if (name.startsWith(`${owner}_`)) return true
-  const hashed =
-    /^(.+)_[0-9a-f]{8}_(?:enum|min|max|minlength|maxlength)_check$/.exec(name)
-  return hashed !== null && owner.startsWith(hashed[1]!)
-}
+const generatedFor = (name: string, table: string, column: string): boolean =>
+  GENERATED_KINDS.some((kind) => checkName(table, column, kind) === name)
 
 /**
  * How the constraints on an existing column differ from its declaration.
  *
  * A check counts as present when the migrations hold one of the same name and
- * condition, or the same condition under another name, since a person who
- * hand-wrote a migration may have named it as they liked.
+ * condition, or the same condition under another name that stays, since a person
+ * who hand-wrote a migration may have named it as they liked. A check this plan
+ * drops never counts as present, so the declared bound is always left enforced
+ * under its expected name.
  */
 export function planConstraints(
   table: string,
@@ -68,6 +65,18 @@ export function planConstraints(
   const wanted: ColumnCheck[] = desired.checks ?? []
   const held: ColumnCheck[] = actual.checks ?? []
   const plan: ConstraintPlan = { drop: [], add: [], reasons: [] }
+  for (const check of held) {
+    if (
+      generatedFor(check.name, table, column) &&
+      !wanted.some((w) => w.name === check.name)
+    ) {
+      plan.drop.push(check.name)
+      plan.reasons.push(
+        `${check.name} (${check.expression}) is no longer declared`
+      )
+    }
+  }
+  const staying = held.filter((h) => !plan.drop.includes(h.name))
   for (const check of wanted) {
     const sameName = held.find((h) => h.name === check.name)
     if (sameName) {
@@ -82,7 +91,7 @@ export function planConstraints(
         )
       }
     } else if (
-      !held.some(
+      !staying.some(
         (h) =>
           checkFingerprint(h.expression) === checkFingerprint(check.expression)
       )
@@ -90,17 +99,6 @@ export function planConstraints(
       plan.add.push(check)
       plan.reasons.push(
         `${check.name} (${check.expression}) is not in the migrations`
-      )
-    }
-  }
-  for (const check of held) {
-    if (
-      generatedFor(check.name, table, column) &&
-      !wanted.some((w) => w.name === check.name)
-    ) {
-      plan.drop.push(check.name)
-      plan.reasons.push(
-        `${check.name} (${check.expression}) is no longer declared`
       )
     }
   }

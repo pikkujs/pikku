@@ -186,22 +186,29 @@ const MAX_NAME_BYTES = 63
 
 /**
  * The deterministic name of a column's check, so a later diff finds it again:
- * `<table>_<column>_<kind>_check`. When that is too long for the engine, the
- * table and column part is cut and a short hash of the whole name goes in its
- * place, so two bounds on the same column stay distinct (a plain cut would
- * make `_min_check` and `_max_check` collide) and the name still ends in
- * `_<kind>_check`, which is how a removed bound is recognised as generated.
+ * `<table>_<column>_<hash>_<kind>_check`, where `<hash>` is eight hex digits of
+ * a hash of the table and column taken as a pair.
+ *
+ * The hash is what keeps names apart. MySQL keeps check names schema-wide, and
+ * joining names with `_` is ambiguous (`sales_line.qty` and `sales.line_qty`
+ * both read `sales_line_qty`), so the pair itself is hashed, with a separator
+ * neither name can hold. When the readable part is too long for the engine it is
+ * cut instead, which also keeps `_min_check` and `_max_check` from colliding.
+ * The name always ends in `_<kind>_check`, which is how a removed bound is
+ * recognised as generated.
+ *
+ * This scheme has not shipped, so there are no deployed names of an older form
+ * to carry. A check a person named by hand is never read as generated.
  */
 export const checkName = (
   table: string,
   column: string,
   kind: CheckKind
 ): string => {
-  const owner = `${snake(table)}_${snake(column)}`
-  const full = `${owner}_${kind}_check`
-  if (Buffer.byteLength(full) <= MAX_NAME_BYTES) return full
-  const tail = `_${createHash('sha1').update(full).digest('hex').slice(0, 8)}_${kind}_check`
-  let head = owner
+  const [t, c] = [snake(table), snake(column)]
+  const hash = createHash('sha1').update(`${t}\0${c}`).digest('hex').slice(0, 8)
+  const tail = `_${hash}_${kind}_check`
+  let head = `${t}_${c}`
   while (Buffer.byteLength(head) + Buffer.byteLength(tail) > MAX_NAME_BYTES) {
     head = head.slice(0, -1)
   }

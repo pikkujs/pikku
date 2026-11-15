@@ -59,8 +59,71 @@ describe('planConstraints with names too long for the engine', () => {
   })
 })
 
+describe('planConstraints and which checks are generated', () => {
+  const min = checkName('item', 'qty', 'min')
+  const max = checkName('item', 'qty', 'max')
+  const ge0 = '"qty" >= 0'
+
+  test('a removed bound is dropped by the name the generator gave it', () => {
+    const plan = planConstraints(
+      'item',
+      'qty',
+      col([{ name: min, expression: ge0 }]),
+      col([
+        { name: min, expression: ge0 },
+        { name: max, expression: '"qty" <= 9' },
+      ])
+    )
+    assert.deepEqual(plan.drop, [max])
+    assert.deepEqual(plan.add, [])
+  })
+
+  test("another table's check, or a hand-named one, is not read as generated", () => {
+    const plan = planConstraints(
+      'item',
+      'qty',
+      col([]),
+      col([
+        {
+          name: checkName('sales_item', 'qty', 'max'),
+          expression: '"qty" <= 9',
+        },
+        { name: 'item_qty_min_check', expression: ge0 },
+        { name: 'item_qty_previous_min_check', expression: '"qty" >= 1' },
+      ])
+    )
+    assert.deepEqual(plan.drop, [])
+  })
+
+  test('a declared bound is added when the check holding its condition is about to be dropped', () => {
+    // The column holds the declared condition only under the name of a bound
+    // the declaration no longer has, which the same plan drops.
+    const plan = planConstraints(
+      'item',
+      'qty',
+      col([{ name: min, expression: ge0 }]),
+      col([{ name: max, expression: ge0 }])
+    )
+    assert.deepEqual(plan.drop, [max])
+    assert.deepEqual(plan.add, [{ name: min, expression: ge0 }])
+  })
+
+  test('a hand-named check with the declared condition stays, and the bound is not added twice', () => {
+    const plan = planConstraints(
+      'item',
+      'qty',
+      col([{ name: min, expression: ge0 }]),
+      col([{ name: 'item_qty_previous_min_check', expression: ge0 }])
+    )
+    assert.deepEqual(plan, { drop: [], add: [], reasons: [] })
+  })
+})
+
 describe('planConstraints', () => {
-  const min0 = { name: 'item_qty_min_check', expression: '"qty" >= 0' }
+  const min0 = {
+    name: checkName('item', 'qty', 'min'),
+    expression: '"qty" >= 0',
+  }
   test('adds a missing check, drops a changed one first, drops an undeclared generated one', () => {
     assert.deepEqual(planConstraints('item', 'qty', col([min0]), col([])).add, [
       min0,

@@ -24,6 +24,7 @@ import { PGlite } from '@electric-sql/pglite'
 import { defineTables, type TablesDeclaration } from '@pikku/core/db'
 import {
   applyPikkuSchemas,
+  checkName,
   compilePikkuSchemas,
   compileTables,
   pikkuSchemas,
@@ -728,7 +729,7 @@ describe('compileTables: constraints', () => {
 
   test('postgres', () => {
     assert.deepEqual(compile('postgres', tables), [
-      `create table "invoice" ("invoice_id" text primary key, "status" text default 'draft' not null constraint "invoice_status_enum_check" check ("status" in ('draft', 'sent', 'it''s paid')), "amount_cents" integer not null constraint "invoice_amount_cents_min_check" check ("amount_cents" >= 0) constraint "invoice_amount_cents_max_check" check ("amount_cents" <= 100), "slug" varchar(64) constraint "invoice_slug_minlength_check" check (char_length("slug") >= 2) constraint "invoice_slug_maxlength_check" check (char_length("slug") <= 64));`,
+      `create table "invoice" ("invoice_id" text primary key, "status" text default 'draft' not null constraint "invoice_status_c7c04ef7_enum_check" check ("status" in ('draft', 'sent', 'it''s paid')), "amount_cents" integer not null constraint "invoice_amount_cents_6e4f0e7c_min_check" check ("amount_cents" >= 0) constraint "invoice_amount_cents_6e4f0e7c_max_check" check ("amount_cents" <= 100), "slug" varchar(64) constraint "invoice_slug_df6a5011_minlength_check" check (char_length("slug") >= 2) constraint "invoice_slug_df6a5011_maxlength_check" check (char_length("slug") <= 64));`,
     ])
   })
 
@@ -736,11 +737,11 @@ describe('compileTables: constraints', () => {
     const [statement] = compile('mysql', tables)
     assert.match(
       statement!,
-      /`amount_cents` integer not null constraint `invoice_amount_cents_min_check` check \(`amount_cents` >= 0\)/
+      /`amount_cents` integer not null constraint `invoice_amount_cents_6e4f0e7c_min_check` check \(`amount_cents` >= 0\)/
     )
     assert.match(
       statement!,
-      /constraint `invoice_slug_maxlength_check` check \(char_length\(`slug`\) <= 64\)/
+      /constraint `invoice_slug_df6a5011_maxlength_check` check \(char_length\(`slug`\) <= 64\)/
     )
     assert.match(statement!, /in \('draft', 'sent', 'it''s paid'\)/)
   })
@@ -770,6 +771,55 @@ describe('compileTables: constraints', () => {
     }
   })
 
+  test('two tables whose joined names agree still get distinct check names (MySQL keeps them schema-wide)', () => {
+    const colliding = defineTables({
+      sales_line: {
+        columns: {
+          id: { type: 'id', primaryKey: true },
+          qty: { type: 'integer', min: 0 },
+        },
+      },
+      sales: {
+        columns: {
+          id: { type: 'id', primaryKey: true },
+          line_qty: { type: 'integer', min: 0 },
+        },
+      },
+    })
+    assert.notEqual(
+      checkName('sales_line', 'qty', 'min'),
+      checkName('sales', 'line_qty', 'min')
+    )
+    for (const dialect of ['postgres', 'mysql'] as const) {
+      const names = checkNames(dialect, colliding)
+      assert.equal(names.length, 2)
+      assert.equal(new Set(names).size, 2, names.join(', '))
+      for (const name of names) {
+        assert.ok(Buffer.byteLength(name) <= 63, name)
+        assert.match(name, /^sales_(line_qty|line_qty)_[0-9a-f]{8}_min_check$/)
+      }
+    }
+  })
+
+  test('a name is the same on every run and ends _<kind>_check', () => {
+    for (const kind of [
+      'enum',
+      'min',
+      'max',
+      'minlength',
+      'maxlength',
+    ] as const) {
+      assert.equal(
+        checkName('item', 'qty', kind),
+        checkName('Item', 'qty', kind)
+      )
+      assert.match(
+        checkName('item', 'qty', kind),
+        new RegExp(`^item_qty_[0-9a-f]{8}_${kind}_check$`)
+      )
+    }
+  })
+
   test('pattern never reaches SQL', () => {
     for (const dialect of ['sqlite', 'postgres', 'mysql'] as const) {
       assert.doesNotMatch(compile(dialect, tables).join('\n'), /a-z0-9/)
@@ -783,7 +833,7 @@ describe('compileTables: constraints', () => {
     })
     assert.match(
       statements.join('\n'),
-      /constraint "child_parent_id_min_check" check \("parent_id" >= 1\)/
+      /constraint "child_parent_id_96d7196d_min_check" check \("parent_id" >= 1\)/
     )
   })
 
@@ -888,11 +938,11 @@ describe('compileTables: constraints on a real database', () => {
       assert.deepEqual(
         rows.map((r) => r.conname),
         [
-          'item_code_maxlength_check',
-          'item_code_minlength_check',
-          'item_kind_enum_check',
-          'item_qty_max_check',
-          'item_qty_min_check',
+          'item_code_b70b39b5_maxlength_check',
+          'item_code_b70b39b5_minlength_check',
+          'item_kind_967b7879_enum_check',
+          'item_qty_eff50b35_max_check',
+          'item_qty_eff50b35_min_check',
         ]
       )
     })

@@ -1018,19 +1018,22 @@ const refusedBy = (label) => {
 // types and zod from the sidecar, and the introspector of this engine reads them
 // back as what generate wrote, which is the only reason the second generate
 // above found nothing to do.
+// Generated names carry a hash of the table and column pair: <table>_<column>_<8 hex>_<kind>_check.
+const generated = (column, kind) =>
+  new RegExp(`bookmark_${column}_[0-9a-f]{8}_${kind}_check`)
 for (const name of [
-  'bookmark_rating_min_check',
-  'bookmark_rating_max_check',
-  'bookmark_visibility_enum_check',
-  'bookmark_label_minlength_check',
+  generated('rating', 'min'),
+  generated('rating', 'max'),
+  generated('visibility', 'enum'),
+  generated('label', 'minlength'),
 ]) {
   if (dialect === 'sqlite') {
     check(
-      !tablesSql.includes(name),
+      !name.test(tablesSql),
       `${name} is not generated on sqlite, which cannot change a CHECK later`
     )
   } else {
-    contains(tablesSql, name, `${name} is in the generated migration`)
+    check(name.test(tablesSql), `${name} is in the generated migration`)
   }
 }
 if (dialect === 'sqlite') {
