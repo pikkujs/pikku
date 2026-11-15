@@ -10,9 +10,7 @@
  * over plain HTTP — `pikku validate` reports the missing packages.
  */
 
-import type { EventHubService } from '@pikku/core/channel'
 import type { Logger } from '@pikku/core/services'
-import { LocalEventHubService } from '@pikku/core/channel/local'
 import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
 import type * as PikkuWs from '@pikku/ws'
 import type * as Ws from 'ws'
@@ -34,14 +32,13 @@ export class NodeServerRunner implements DevServerRunner {
 
   constructor(private readonly rootDir: string) {}
 
-  async createEventHub(): Promise<EventHubService<any>> {
+  async prepare(): Promise<void> {
     this.pikkuWs = await importFromProject<typeof PikkuWs>(
       this.rootDir,
       '@pikku/ws'
     )
     const ws = await importFromProject<typeof Ws>(this.rootDir, 'ws')
     this.ws = ws && cjsInterop(ws, 'WebSocketServer')
-    return new LocalEventHubService()
   }
 
   createServer(

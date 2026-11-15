@@ -31,6 +31,7 @@ pub const ADD_FUNCTIONS: i32 = 0;
 
 // visitRoutes
 pub const CHECK_ADDON_BANS: i32 = 0;
+pub const CHECK_EVENT_HUB_IMPORTS: i32 = 5;
 pub const ADD_AUTH: i32 = 10;
 pub const ADD_SECRET: i32 = 20;
 pub const ADD_CREDENTIAL: i32 = 30;

@@ -34,7 +34,7 @@ export const sweepOverdueJobs = pikkuVoidFunc({
     }
 
     for (const [companyId, count] of byCompany) {
-      await eventHub?.publish(`board:${companyId}`, null, {
+      await eventHub?.publish(`board:${companyId}`, {
         type: 'jobs.overdue',
         count,
       })

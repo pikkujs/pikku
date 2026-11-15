@@ -1,11 +1,11 @@
 import {
   defineChannelRoutes,
   wireChannel,
-  pikkuChannelFunc,
   pikkuChannelConnectionFunc,
   pikkuChannelDisconnectionFunc,
 } from '#pikku/channel/pikku-channel-types.gen.js'
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc, pikkuSubscribeFunc } from '#pikku/function'
+import { isOrderOwner } from './shop.security.js'
 
 // @snippet start channelLifecycle
 export const onConnect = pikkuChannelConnectionFunc(
@@ -23,17 +23,16 @@ export const onDisconnect = pikkuChannelDisconnectionFunc(
 
 // @snippet start orderStatusChannel
 // @snippet start wireChannel
-export const subscribeToOrder = pikkuChannelFunc<{ orderId: string }, void>(
-  async ({ eventHub }, { orderId }, { channel }) => {
-    await eventHub?.subscribe(`order:${orderId}`, channel.channelId)
-  }
-)
-
-export const unsubscribeFromOrder = pikkuChannelFunc<{ orderId: string }, void>(
-  async ({ eventHub }, { orderId }, { channel }) => {
-    await eventHub?.unsubscribe(`order:${orderId}`, channel.channelId)
-  }
-)
+// The function returns the topic, so a client can only follow an order the
+// permission lets it see. A channel leaves the topic on disconnect.
+export const subscribeToOrder = pikkuSubscribeFunc<
+  { orderId: string },
+  `order:${string}`
+>({
+  scopes: ['orders:read'],
+  permissions: { owner: isOrderOwner },
+  func: async (_services, { orderId }) => `order:${orderId}`,
+})
 // @snippet end wireChannel
 // @snippet end orderStatusChannel
 
@@ -48,7 +47,6 @@ wireChannel({
     // @snippet start channelRoutes
     type: defineChannelRoutes({
       subscribe: subscribeToOrder,
-      unsubscribe: unsubscribeFromOrder,
     }),
     // @snippet end channelRoutes
   },
@@ -66,7 +64,7 @@ export const notifyOrderShipped = pikkuFunc<{ orderId: string }, void>({
       .where('orderId', '=', orderId)
       .execute()
 
-    await eventHub?.publish(`order:${orderId}`, null, {
+    await eventHub?.publish(`order:${orderId}`, {
       orderId,
       status: 'shipped',
     })

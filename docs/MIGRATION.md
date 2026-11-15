@@ -24,6 +24,33 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### The event hub is publish-only; a subscribe function decides the topic
+
+`services.eventHub` is now an `EventHubPublisher`: `publish(topic, data, options?)` and nothing else. The runtime creates the hub (the distributor) before `createSingletonServices` in `pikku dev`, `pikku serve` and a standalone build, and adds `services.eventHubRegistry` for relays. A client no longer names a topic: it calls a `pikkuSubscribeFunc`, whose body returns the topic after the normal session, scope and permission checks.
+
+**Removed from `@pikku/core`:** the `EventHubService` interface, `eventHub.subscribe` and `eventHub.unsubscribe`, `LocalEventHubService`, `defineEventHubServiceTests` (now `defineEventHubDeliveryBackendTests`), and the `realtimeEventHubTopicsImport` config key with its `eventhub-topics.d.ts` file (topics are now the generated `EventHubTopic` union).
+**Removed from the runtimes:** `BunEventHubService`, `UWSEventHubService`, `CloudflareEventHubService`, `LambdaEventHubService`, `PgEventHubService`, and the `eventHub` option of `PikkuBunServer`. `PgEventHubService` is replaced by `PgEventHubRelay`: `services.eventHubRegistry.add(new PgEventHubRelay(url), { topics: ['order:${string}'] })`. A Postgres NOTIFY payload of 8 kB or more is refused with the topic named. The serverless backends return in a later change; until then Lambda and Cloudflare have no `services.eventHub`.
+**Added:** an open SSE stream gets a `:` comment frame every `sseHeartbeatMs` (default 5 s, `0` off; set on `createEventHubDistributor`). Open subscriptions are re-checked every `subscriptionRecheckMs` (default one minute, `0` off) by re-running the subscribe function on the session's refreshed scopes, and a subscription whose session cannot be re-read (`mapSession`, `mapKey`) ends after `maxSubscriptionLifetime` (default one hour), so a client must reconnect. A subscribe function must therefore compute a topic and not write. Express, Fastify and uWS responses now report `onClose`, and a custom `PikkuHTTPResponse` can add `heartbeat()`.
+**Removed from the generated client and scaffold:** the open `/events` channel and `/events/:topic` SSE route, `PikkuRealtime.subscribe`, `unsubscribe` and `subscribeToTopic`. `subscribeToSSE` and `connectToChannel` remain.
+**Changed:** `publish(topic, channelId, data)` is now `publish(topic, data, { except })`. A publish to a topic no subscribe function can return is refused.
+
+**Find the code:** search for `eventHub.subscribe`, `eventHub.unsubscribe`, `LocalEventHubService`, `subscribeToTopic` and `eventhub-topics`.
+
+### OTLP and analytics sinks are registries; `analyticsService` and `accepts` are gone
+
+Core now creates two singleton services, `otlpSinks` and `analyticsSinks`, before your `createSingletonServices` runs in `pikku dev`, `pikku serve` and a standalone build. Register sinks in plain code with `add(sink, map)`. See [telemetry-sinks.md](./telemetry-sinks.md).
+
+**Removed from `@pikku/core`:**
+
+- The `analyticsService` singleton service. Register a sink with `analyticsSinks.add(sink, { event_name: true })` instead.
+- `AnalyticsSink` (`{ service, accepts }`) and its `accepts` predicate. A sink now carries a map of the events it receives; an event not in the map never reaches it (fail closed).
+- The old `fanOutAnalytics(sinks)` signature. It is now `fanOutAnalytics(registry, fallback)`.
+- `OtlpTracer`, `OtlpLogger` and `startProcessMetrics` no longer take an `OtlpHttpExporter`; they take an `OtlpSinkBase`.
+
+**Behaviour change:** with no `PIKKU_OTLP_ENDPOINT` the tracer is now real, not inert. The endpoint only decides whether the HTTP exporter is registered. `PIKKU_TELEMETRY=0` still turns it all off. Callers that passed `{}` as the environment to `createRuntimeTelemetry` and want it off must pass `{ PIKKU_TELEMETRY: '0' }`.
+
+**Find the code:** search for `analyticsService`, `AnalyticsSink` and `accepts`.
+
 ### Better Auth's tables and the runtime's secret columns come annotated
 
 `pikku db migrate` now gives the tables `pikku db generate` created for Better Auth (`user`, `session`, `account`, `verification`) and for the runtime (`secrets`, `credentials`) built-in column annotations, with or without a `db/tables.ts`. A table of your own that merely shares a name is untouched.
@@ -1199,6 +1226,15 @@ Declare `VIRTUAL_USER_VERIFY_KEY` as an optional variable. Delete the `SCENARIO_
 - `user.role` and `session.impersonatedBy` are no longer declared. `pikku db generate` writes the migration. No code checks `user.role` as a fallback any more.
 
 **Find:** `rg -n "\badmin\(\)|callAdminApi|AdminApiHttpWire|ProjectedAdminRole|ADMIN_ROLE_SCOPES|role\s*===\s*'admin'"`
+
+### Virtual user verify key: checked at start-up, statements carry a `kid`
+
+**What:** `VIRTUAL_USER_VERIFY_KEY` may now be a single key (unchanged) or a JSON list of `{ kid, publicKey }`. Two behaviours change for existing apps:
+
+- A verify key that is not an Ed25519 SPKI (PEM or base64) now throws when `pikkuVirtualUser` or `JoseVirtualUserStatementVerifier` is constructed, instead of failing each sign-in. A valid key behaves exactly as before, and statements without a `kid` still verify.
+- Statements minted by the CLI (`resolveStatementMint`) carry a `kid` header (the RFC 7638 thumbprint of the public key). `signVirtualUserStatement` stays synchronous and takes an optional precomputed `kid`. A verifier holding several keys rejects an unknown `kid`.
+
+**Find:** `rg -n "signVirtualUserStatement|VIRTUAL_USER_VERIFY_KEY"`
 
 ### better-auth 1.7
 

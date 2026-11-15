@@ -38,7 +38,7 @@ import {
   anonymousAnalyticsIdentity,
   composeAnalyticsIdentity,
   cookieAnalyticsIdentity,
-  fanOutAnalytics,
+  createAnalyticsSinks,
 } from '@pikku/core/analytics'
 import { RecordingAnalyticsService } from './recording-analytics-service.js'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
@@ -52,7 +52,10 @@ const sqliteFileExists = (path: string): Promise<boolean> =>
   ).copyFile({ bucket: 'sqlite', key: 'probe.sqlite', fromAbsolutePath: path })
 
 export const createSingletonServices = pikkuServices(
-  async (config, { variables, secrets, metaService, emailService }) => {
+  async (
+    config,
+    { variables, secrets, metaService, emailService, analyticsSinks: hostSinks }
+  ) => {
     const logger = new ConsoleLogger()
 
     if (config.logLevel) {
@@ -248,19 +251,18 @@ export const createSingletonServices = pikkuServices(
     const featureFlags = new KyselyFeatureFlagStore(scopeDb)
     await featureFlags.init()
 
-    // Two destinations rather than one, so the fan-out's `accepts` predicate
-    // is under test and not just the transport: everything reaches the first
-    // recorder and only a conversion reaches the second. `accepts` is the
-    // app's policy, which is why it is written here and not in a sink.
+    // Two destinations rather than one, so the sink map is under test and
+    // not just the transport: everything reaches the first recorder and only
+    // a conversion reaches the second. The map is the app's policy, which is
+    // why it is written here and not in a sink.
     const analyticsRecorder = new RecordingAnalyticsService()
     const analyticsConversions = new RecordingAnalyticsService()
-    const analyticsService = fanOutAnalytics([
-      { service: analyticsRecorder },
-      {
-        service: analyticsConversions,
-        accepts: (record) => record.name === 'report_viewed',
-      },
-    ])
+    const analyticsSinks = hostSinks ?? createAnalyticsSinks()
+    analyticsSinks.add(analyticsRecorder, {
+      report_viewed: true,
+      page_viewed: true,
+    })
+    analyticsSinks.add(analyticsConversions, { report_viewed: true })
 
     // Ordered, not merged: the cookie resolver reads what the consent banner
     // wrote, and the minting one is handed that answer. Storing an id on a
@@ -376,7 +378,7 @@ export const createSingletonServices = pikkuServices(
       scopeService,
       sessionStore: new InMemorySessionStore(),
       featureFlags,
-      analyticsService,
+      analyticsSinks,
       analyticsIdentity,
       analyticsRecorder,
       analyticsConversions,

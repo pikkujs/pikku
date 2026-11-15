@@ -4,7 +4,10 @@ import { defineVariable } from '#pikku/variables/pikku-variable-types.gen.js'
 // @snippet start variables
 export const DatabaseUrlSchema = z.string()
 export const LowStockThresholdSchema = z.number().int().positive()
-export const VirtualUserVerifyKeySchema = z.string()
+export const VirtualUserVerifyKeySchema = z.union([
+  z.string(),
+  z.array(z.object({ kid: z.string().optional(), publicKey: z.string() })),
+])
 export const BetterAuthUrlSchema = z.string().url()
 
 defineVariable({

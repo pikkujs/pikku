@@ -17,7 +17,8 @@ const expected: Record<string, string[]> = JSON.parse(
 // `./package.json` is metadata, not a module, so only code entry points count.
 const subpaths = Object.fromEntries(
   Object.entries(packageJson.exports as Record<string, string>).filter(
-    ([, target]) => target.endsWith('.js')
+    ([subpath, target]) =>
+      target.endsWith('.js') && !subpath.startsWith('./internal/')
   )
 )
 

@@ -32,7 +32,12 @@
       "verifiers/dev-platform-contributors/contrib-notify",
       "verifiers/dev-platform-contributors/contrib-select",
       "verifiers/dev-platform-contributors/contrib-bad",
-      "verifiers/deploy-standalone/contrib-marker"
+      "verifiers/deploy-standalone/contrib-marker",
+      "benchmarks/http-app",
+      "benchmarks/frameworks/shared",
+      "benchmarks/frameworks/pikku",
+      "benchmarks/frameworks/raw-bun",
+      "benchmarks/frameworks/elysia"
     ]
   },
   "scripts": {
@@ -90,6 +95,8 @@
     "benchmark:workflow": "tsx benchmarks/bench-workflow.ts",
     "benchmark:telemetry": "tsx benchmarks/bench-telemetry.ts",
     "benchmark:telemetry:stress": "tsx benchmarks/bench-telemetry-stress.ts",
+    "benchmark:telemetry:http": "tsx benchmarks/bench-telemetry-http.ts",
+    "benchmark:frameworks": "tsx benchmarks/frameworks/run.ts",
     "knip": "knip"
   },
   "packageManager": "bun@1.4.3",

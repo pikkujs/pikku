@@ -1,4 +1,4 @@
-import type { OtlpHttpExporter } from './otlp-http-exporter.js'
+import type { OtlpSinkBase } from './otlp-sink.js'
 
 const SAMPLE_EVERY_MS = 2000
 const LOOP_RESOLUTION_MS = 20
@@ -47,7 +47,7 @@ const eventLoopMonitor = (proc: ProcessLike): LoopDelay | undefined => {
  * resolution). A runtime without `process` samples nothing.
  */
 export const startProcessMetrics = (
-  exporter: OtlpHttpExporter,
+  exporter: OtlpSinkBase,
   options: { everyMs?: number } = {}
 ): { stop(): void } => {
   const proc = (globalThis as { process?: ProcessLike }).process

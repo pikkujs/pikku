@@ -70,6 +70,15 @@ pub struct AuditMeta {
     pub durability: String,
 }
 
+/// A `pikkuSubscribeFunc`: `topic_pattern` is the declared shape of the topics it
+/// can return, in TS template-literal syntax.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+#[serde(rename_all = "camelCase")]
+pub struct SubscribeMeta {
+    pub topic_pattern: String,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TelemetryMeta {
@@ -149,6 +158,8 @@ pub struct FunctionMetaFields {
     pub scenario_step: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub webhook_receive: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subscribe: Option<SubscribeMeta>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scenario: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

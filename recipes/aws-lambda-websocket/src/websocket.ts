@@ -4,7 +4,6 @@ import type { APIGatewayEvent, APIGatewayProxyHandler } from 'aws-lambda'
 import {
   connectWebsocket,
   disconnectWebsocket,
-  LambdaEventHubService,
   processWebsocketMessage,
 } from '@pikku/lambda/websocket'
 
@@ -16,11 +15,7 @@ import type {
 } from '../../functions/types/application-types.d.js'
 import { createSingletonServices } from '../../functions/src/services.js'
 import { createConfig } from '../../functions/src/config.js'
-import {
-  PikkuKysely,
-  PgKyselyChannelStore,
-  PgKyselyEventHubStore,
-} from '@pikku/kysely-postgres'
+import { PikkuKysely, PgKyselyChannelStore } from '@pikku/kysely-postgres'
 import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
 
 let state:
@@ -49,16 +44,8 @@ const getParams = async (event: APIGatewayEvent) => {
     const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(logger, databaseUrl)
     await pikkuKysely.init()
     const channelStore = new PgKyselyChannelStore(pikkuKysely.kysely)
-    const eventHubStore = new PgKyselyEventHubStore(pikkuKysely.kysely)
 
     await channelStore.init()
-    await eventHubStore.init()
-    singletonServices.eventHub = new LambdaEventHubService(
-      logger,
-      event,
-      channelStore,
-      eventHubStore
-    )
     state = {
       config,
       singletonServices,

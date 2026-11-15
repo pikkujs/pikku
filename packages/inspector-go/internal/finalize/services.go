@@ -291,7 +291,13 @@ func aggregateRequiredServices(st *state.State) {
 		required.Add("agentRunService")
 		required.Add("agentRunner")
 	}
-	if st.Channels.Meta.Len() > 0 {
+	// Channels and subscribe functions (an `sse: true` route has no channel)
+	// both need the event hub.
+	hasSubscribe := false
+	st.Functions.Meta.Each(func(_ string, m *state.FunctionMeta) {
+		hasSubscribe = hasSubscribe || (m != nil && m.Subscribe != nil)
+	})
+	if st.Channels.Meta.Len() > 0 || hasSubscribe {
 		required.Add("eventHub")
 	}
 	if len(st.Scopes.Definitions) > 0 {
@@ -301,7 +307,7 @@ func aggregateRequiredServices(st *state.State) {
 		required.Add("featureFlags")
 	}
 	if len(st.Analytics) > 0 {
-		required.Add("analyticsService")
+		required.Add("analyticsSinks")
 	}
 	if len(st.Credentials.Definitions) > 0 {
 		required.Add("credentialService")

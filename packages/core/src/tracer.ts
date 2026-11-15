@@ -80,6 +80,11 @@ export interface Tracer {
    * service would open goes missing.
    */
   currentContext?(): TraceContext | undefined
+  /**
+   * False while nothing would read a span, so a caller may skip building one. Absent means spans are read.
+   * The trace ids still flow through the wire either way.
+   */
+  readonly active?: boolean
   /** Flush what is buffered; called by `onServerStop` and `pikku serve` shutdown. */
   flush?(): Promise<void>
   close?(): Promise<void>

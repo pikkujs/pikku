@@ -551,13 +551,6 @@ export const SubscribesToChannelInput = z.object({
   route: z.string(),
   /** The action that subscribes the channel to its event hub. */
   action: z.string(),
-  /**
-   * The action that unsubscribes again. Optional: not every channel has one,
-   * but where it exists it is half the lifecycle, and a step that only ever
-   * subscribes leaves it untested — which is how `unsubscribeFromOrder` stayed
-   * wired and uncalled.
-   */
-  unsubscribeAction: z.string().optional(),
 })
 
 export const SubscribesToChannelOutput = z.object({
@@ -582,14 +575,10 @@ export const subscribesToChannel = pikkuScenarioStep({
   template: 'subscribes to {route}',
   input: SubscribesToChannelInput,
   output: SubscribesToChannelOutput,
-  browser: async (
-    _services,
-    { route, action, unsubscribeAction },
-    { browser }
-  ) => {
+  browser: async (_services, { route, action }, { browser }) => {
     const virtualUser = session(browser)
     const connected = await virtualUser.page.evaluate(
-      async ([path, act, unsub]) => {
+      async ([path, act]) => {
         const url = `${location.origin.replace(/^http/, 'ws')}/api${path}`
         return await new Promise<boolean>((resolve) => {
           let socket: WebSocket
@@ -611,11 +600,8 @@ export const subscribesToChannel = pikkuScenarioStep({
             socket.send(JSON.stringify({ action: act }))
             clearTimeout(timer)
             // Close deliberately: the disconnect handler is half the channel's
-            // lifecycle and nothing had ever run it.
+            // lifecycle, and the hub drops the subscription with the socket.
             setTimeout(() => {
-              if (unsub) {
-                socket.send(JSON.stringify({ action: unsub }))
-              }
               try {
                 socket.close()
               } catch {
@@ -630,7 +616,7 @@ export const subscribesToChannel = pikkuScenarioStep({
           })
         })
       },
-      [route, action, unsubscribeAction ?? null]
+      [route, action]
     )
     if (!connected) {
       throw new Error(`channel ${route} did not accept a connection`)

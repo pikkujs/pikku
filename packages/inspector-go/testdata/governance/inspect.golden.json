@@ -609,7 +609,7 @@
       "requiredServices": [
         "scopeService",
         "featureFlags",
-        "analyticsService"
+        "analyticsSinks"
       ],
       "usedFunctions": [],
       "usedMiddleware": [],

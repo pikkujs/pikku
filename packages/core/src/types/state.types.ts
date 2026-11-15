@@ -1,3 +1,4 @@
+import type { EventHubDistributor } from '../wirings/channel/event-hub/event-hub-distributor.js'
 import type {
   CoreTriggerWebhookSource,
   WebhookSourcesMeta,
@@ -255,5 +256,9 @@ export interface PikkuPackageState {
      *  what the package declares and is seen to read. `null` when the package
      *  was never analysed, which scopes it to nothing. */
     declaredSecrets: string[] | null
+    /** The event hub distributor, held by the runtime and never handed to a
+     *  function: they get `services.eventHub`, publish only. Set by the host
+     *  through `@pikku/core/internal/event-hub`. */
+    eventHubDistributor: EventHubDistributor | null
   }
 }

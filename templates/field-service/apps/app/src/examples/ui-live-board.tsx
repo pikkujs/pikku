@@ -9,9 +9,7 @@
 //~ The event invalidates; it does not carry the row. That is the whole trick. A push that
 //~ patches the cache directly needs the payload to match the query's shape forever, and it
 //~ drifts the first time the backend adds a field — whereas invalidating makes the server
-//~ the single source of truth and costs one cheap refetch. Topics are plain strings unless
-//~ you set `clientFiles.realtimeEventHubTopicsImport`, which makes subscribe/unsubscribe
-//~ fully typed.
+//~ the single source of truth and costs one cheap refetch. Topics are plain strings.
 // ===== FILE: src/components/live-board.tsx =====
 import { useEffect } from 'react'
 import { usePikkuRealtime } from '@pikku/react'

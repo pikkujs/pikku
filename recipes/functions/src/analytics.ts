@@ -9,8 +9,7 @@ import { defineAnalyticsEvents } from '#pikku/analytics'
  * Measure outcomes rather than clicks, and keep props low-cardinality: they
  * become queryable columns, and identity is already stamped server-side.
  *
- * With nothing wired the events are logged; set `analyticsService` in
- * `services.ts` to send them elsewhere.
+ * With nothing wired the events are logged; X * `services.ts` to send them elsewhere.
  */
 export const analyticsEvents = defineAnalyticsEvents({
   page_viewed: z.object({

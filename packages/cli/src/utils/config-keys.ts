@@ -86,7 +86,6 @@ const SHAPE: Shape = obj({
     envFile: 'any',
     rpcFile: 'any',
     authClientFile: 'any',
-    realtimeEventHubTopicsImport: 'any',
     nextBackendFile: 'any',
     nextHTTPFile: 'any',
     nextBackendTransport: 'any',

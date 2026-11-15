@@ -106,6 +106,15 @@ export {
   VirtualUserStatementError,
   type VirtualUserStatementVerifier,
 } from './virtual-user-statement.js'
+export {
+  VIRTUAL_USER_VERIFY_KEYS_MAX,
+  okpThumbprint,
+  rsaThumbprint,
+  parseVirtualUserVerifyKeys,
+  type ParsedVirtualUserVerifyKey,
+  type VirtualUserVerifyKeyEntry,
+  type VirtualUserVerifyKeys,
+} from './virtual-user-verify-keys.js'
 export type { Logger } from './logger.js'
 export type { SecretService, SecretValues } from './secret-service.js'
 export type { VariablesService } from './variables-service.js'

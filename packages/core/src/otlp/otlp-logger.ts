@@ -2,7 +2,7 @@ import { LogLevel, type Logger } from '../services/logger.js'
 import type { TraceContext } from '../trace.js'
 import { nowUnixNano, SPAN_LIMITS } from '../tracer.js'
 import type { SpanAttributeValue } from '../tracer.js'
-import type { OtlpHttpExporter } from './otlp-http-exporter.js'
+import type { OtlpSinkBase } from './otlp-sink.js'
 import type { OtlpSeverity } from './otlp-types.js'
 
 export interface OtlpLoggerOptions {
@@ -195,7 +195,7 @@ const toRecord = (
 
 /**
  * A `Logger` that writes through `inner` unchanged and also forwards each record
- * at or above `minLevel` to an {@link OtlpHttpExporter}. Forwarding is
+ * at or above `minLevel` to an {@link OtlpSinkBase}. Forwarding is
  * enqueue-only and cannot throw into the caller.
  */
 export class OtlpLogger implements Logger {
@@ -203,7 +203,7 @@ export class OtlpLogger implements Logger {
 
   constructor(
     private readonly inner: Logger,
-    private readonly exporter: OtlpHttpExporter,
+    private readonly exporter: OtlpSinkBase,
     private readonly options: OtlpLoggerOptions = {}
   ) {
     this.minLevel = options.minLevel ?? LogLevel.info

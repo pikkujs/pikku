@@ -377,6 +377,9 @@ func (s *Context) processCLICommand(name string, node *ast.Node, program cliProg
 	if pikkuFuncId != "" && !s.validateAuthSessionless(node, pikkuFuncId, fmt.Sprintf("CLI command '%s'", name), nil) {
 		return nil
 	}
+	if pikkuFuncId != "" && !s.checkSubscribeWiring(pikkuFuncId, fmt.Sprintf("CLI command '%s'", name)) {
+		return nil
+	}
 	s.State.ServiceAggregation.UsedFunctions.Add(pikkuFuncId)
 	s.addUsedMiddleware(middleware)
 	return meta
