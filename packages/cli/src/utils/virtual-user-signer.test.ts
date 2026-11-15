@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
 
-import { LocalVariablesService } from '@pikku/core/services'
+import { LocalVariablesService, okpThumbprint } from '@pikku/core/services'
 
 import {
   devSigningKeyPath,
@@ -20,9 +20,9 @@ const decode = (part: string) =>
   JSON.parse(Buffer.from(part, 'base64url').toString())
 
 describe('signVirtualUserStatement', () => {
-  test('is an EdDSA token the matching public key verifies', () => {
+  test('is an EdDSA token the matching public key verifies', async () => {
     const { signingKey, verifyKey } = generateVirtualUserKeyPair()
-    const statement = signVirtualUserStatement({
+    const statement = await signVirtualUserStatement({
       signingKey,
       virtualUserId: 'susan',
       audience: 'http://localhost:3000',
@@ -33,7 +33,11 @@ describe('signVirtualUserStatement', () => {
       string,
       string,
     ]
-    assert.deepEqual(decode(head), { alg: 'EdDSA', typ: 'JWT' })
+    assert.deepEqual(decode(head), {
+      alg: 'EdDSA',
+      typ: 'JWT',
+      kid: await okpThumbprint(verifyKey),
+    })
     const body = decode(claims)
     assert.equal(body.sub, 'susan')
     assert.equal(body.aud, 'http://localhost:3000')
@@ -55,13 +59,13 @@ describe('signVirtualUserStatement', () => {
     )
   })
 
-  test('every statement carries its own one-time id', () => {
+  test('every statement carries its own one-time id', async () => {
     const { signingKey } = generateVirtualUserKeyPair()
     const options = { signingKey, virtualUserId: 'susan', audience: 'a' }
     const jti = (s: string) => decode(s.split('.')[1]!).jti
     assert.notEqual(
-      jti(signVirtualUserStatement(options)),
-      jti(signVirtualUserStatement(options))
+      jti(await signVirtualUserStatement(options)),
+      jti(await signVirtualUserStatement(options))
     )
   })
 
@@ -70,6 +74,20 @@ describe('signVirtualUserStatement', () => {
     const pem = `-----BEGIN PRIVATE KEY-----\n${signingKey.match(/.{1,64}/g)!.join('\n')}\n-----END PRIVATE KEY-----`
     const escaped = pem.replace(/\n/g, '\\n')
     assert.equal(verifyKeyFor(escaped), verifyKeyFor(signingKey))
+  })
+})
+
+describe('the statement kid', () => {
+  test('the header kid is the RFC 7638 thumbprint of the public key', async () => {
+    const { signingKey, verifyKey } = generateVirtualUserKeyPair()
+    const statement = await signVirtualUserStatement({
+      signingKey,
+      virtualUserId: 'susan',
+      audience: 'a',
+    })
+    const { kid } = decode(statement.split('.')[0]!)
+    assert.equal(kid, await okpThumbprint(verifyKey))
+    assert.match(kid, /^[A-Za-z0-9_-]{43}$/)
   })
 })
 

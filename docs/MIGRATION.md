@@ -1200,6 +1200,15 @@ Declare `VIRTUAL_USER_VERIFY_KEY` as an optional variable. Delete the `SCENARIO_
 
 **Find:** `rg -n "\badmin\(\)|callAdminApi|AdminApiHttpWire|ProjectedAdminRole|ADMIN_ROLE_SCOPES|role\s*===\s*'admin'"`
 
+### Virtual user verify key: checked at start-up, statements carry a `kid`
+
+**What:** `VIRTUAL_USER_VERIFY_KEY` may now be a single key (unchanged) or a JSON list of `{ kid, publicKey }`. Two behaviours change for existing apps:
+
+- A verify key that is not an Ed25519 SPKI (PEM or base64) now throws when `pikkuVirtualUser` or `JoseVirtualUserStatementVerifier` is constructed, instead of failing each sign-in. A valid key behaves exactly as before, and statements without a `kid` still verify.
+- `signVirtualUserStatement` (CLI util) is async, and the statements it signs carry a `kid` header (the RFC 7638 thumbprint of the public key). A verifier holding several keys rejects an unknown `kid`.
+
+**Find:** `rg -n "signVirtualUserStatement|VIRTUAL_USER_VERIFY_KEY"`
+
 ### better-auth 1.7
 
 `@pikku/better-auth` now uses better-auth 1.7.5 (`dfd7019`). Code that calls better-auth's internal adapter directly needs these changes: `findAccountByProviderId(accountId, providerId)` → `findAccountByKey({ providerId, accountId })`, `createUser` takes the provisioning source as its second argument, and `generateState` takes its link target by name.
