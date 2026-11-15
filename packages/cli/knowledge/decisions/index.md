@@ -123,5 +123,6 @@ A rule that was chosen, and what it rules out.
 - [The loader accepts only the keys of the CLI input type](the-loader-accepts-only-the-keys-of-the-cli-input-type.md) — unknown or moved keys are refused naming their home; environments name backends and frontends
 - [Product hooks are generated into the backend SDK](product-hooks-are-generated-into-the-sdk.md) — useAnalytics and useFlag land in exposed/pikku-product.gen.ts, each only when its declaration and scaffold exist
 - [A column named like sensitive data warns until it is annotated](a-column-named-like-sensitive-data-warns-until-it-is-annotated.md) — PKU486 pii / PKU487 secret on whole-token name matches in db codegen; default stays private; only an annotation silences; framework tables skipped
+- [Mock mode is a client given to PikkuProvider, not a branch in the hooks](mock-mode-is-a-client-not-a-hook.md) — createMockPikku answers rpc.invoke from .mocks/ with a selectable scenario; flagged mode mocks only `mock: true` functions and sends the rest to a real fallback
 
 <!-- /pikku:knowledge-index -->
