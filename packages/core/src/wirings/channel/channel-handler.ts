@@ -176,6 +176,7 @@ export const processMessageHandlers = (
       }
       subscribeChannelToTopic(distributor, channelHandler, result, {
         pikkuFuncId,
+        packageName,
         wireType: 'channel',
         wireId: cacheKey,
         input: data,

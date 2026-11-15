@@ -389,6 +389,7 @@ const executeRoute = async (
       openStream,
       userSession,
       pikkuFuncId: meta.pikkuFuncId,
+      packageName: meta.packageName,
       wireId: `${meta.method}:${meta.route}`,
       input: await data(),
     })
@@ -457,6 +458,7 @@ const openSubscribedStream = async ({
   openStream,
   userSession,
   pikkuFuncId,
+  packageName,
   wireId,
   input,
 }: {
@@ -467,6 +469,7 @@ const openSubscribedStream = async ({
   openStream: () => void
   userSession: PikkuSessionService<CoreUserSession>
   pikkuFuncId: string
+  packageName?: string | null
   wireId: string
   input: unknown
 }): Promise<void> => {
@@ -494,6 +497,7 @@ const openSubscribedStream = async ({
   try {
     subscribeChannelToTopic(distributor, channelHandler, topic, {
       pikkuFuncId,
+      packageName,
       wireType: 'http',
       wireId,
       input,

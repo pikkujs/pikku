@@ -41,4 +41,46 @@ describe('installEventHubDistributor', () => {
     )
     setEventHubDistributor(undefined)
   })
+
+  const attachAndSubscribe = (
+    distributor: ReturnType<typeof installEventHubDistributor>['distributor']
+  ) => {
+    const handler = {
+      getChannel: () => ({ channelId: 'a', close() {} }) as any,
+      send() {},
+      sendBinary() {},
+    } as any
+    distributor.attach(handler, distributor.deliveryFor('local')!, undefined)
+    distributor.addSubscription('a', 'news', {
+      pikkuFuncId: 'news',
+      wireType: 'http',
+      wireId: 'GET:/news',
+      input: {},
+      session: undefined,
+    })
+  }
+
+  test('starts the sweeper: an open subscription whose re-run fails is dropped', async () => {
+    const { distributor, sweeper } = installEventHubDistributor({
+      topics: () => ['news'],
+      subscriptionRecheckMs: 10,
+    })
+    attachAndSubscribe(distributor)
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    sweeper.stop()
+    assert.equal(distributor.subscriptionCount(), 0)
+    setEventHubDistributor(undefined)
+  })
+
+  test('a recheck interval of 0 leaves the sweeper off', async () => {
+    const { distributor, sweeper } = installEventHubDistributor({
+      topics: () => ['news'],
+      subscriptionRecheckMs: 0,
+    })
+    attachAndSubscribe(distributor)
+    await new Promise((resolve) => setTimeout(resolve, 40))
+    sweeper.stop()
+    assert.equal(distributor.subscriptionCount(), 1)
+    setEventHubDistributor(undefined)
+  })
 })
