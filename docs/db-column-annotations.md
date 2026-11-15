@@ -32,7 +32,7 @@ export const tables = defineTables({
         form: 'wrapped',
         keyId: 'api',
       },
-      settings: { type: 'json', kind: 'json', tsType: 'UserSettings' },
+      settings: { type: 'json', kind: 'json', tsType: '{ theme: string; locale: string }' },
       createdAt: { type: 'timestamp', kind: 'date' },
     },
   },
