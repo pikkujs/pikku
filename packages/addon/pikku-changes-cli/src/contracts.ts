@@ -155,6 +155,10 @@ export const changesCommands = defineCLICommands({
         description: 'The requirement, in one line',
         short: 't',
       },
+      plan: {
+        description:
+          'File a whole plan in one call from a JSON file (or - for stdin): [{ "ref", "title", "body", "specialist", "dependsOn": [refs] }]. The first change is the data change every other one depends on. The plan is checked whole and refused with every problem named, or filed whole',
+      },
       body: { description: 'The detail, if a line is not enough' },
       bodyFile: {
         description:
