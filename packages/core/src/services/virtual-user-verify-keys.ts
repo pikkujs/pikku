@@ -34,36 +34,12 @@ const fail = (message: string): never => {
   )
 }
 
-/** Standard base64 (padded or not) to bytes; throws on anything else. */
-export const base64ToBytes = (base64: string): Uint8Array =>
-  Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+import { base64ToBytes, bytesToBase64, spkiToDer } from '../utils/base64.js'
 
-/** Bytes to standard base64, or to unpadded base64url with `url`. */
-export const bytesToBase64 = (bytes: Uint8Array, url = false): string => {
-  const base64 = btoa(String.fromCharCode(...bytes))
-  return url
-    ? base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-    : base64
-}
+export { base64ToBytes, bytesToBase64, spkiToDer }
 
 const hex = (bytes: Uint8Array) =>
   Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
-
-/**
- * An SPKI PEM, or bare base64 DER, to its DER bytes: the one normaliser of
- * public keys. Throws if it is neither.
- */
-export const spkiToDer = (publicKey: string): Uint8Array => {
-  const text = publicKey
-    .trim()
-    .replace(/\\n/g, '\n')
-    .replace(/-----(BEGIN|END) PUBLIC KEY-----/g, '')
-    .replace(/\s+/g, '')
-  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(text)) {
-    throw new Error('a public key is not valid base64 SPKI')
-  }
-  return base64ToBytes(text)
-}
 
 const spkiBytes = (publicKey: string): Uint8Array => {
   try {

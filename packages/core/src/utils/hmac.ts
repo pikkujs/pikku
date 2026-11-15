@@ -4,7 +4,7 @@
  * Promise; `timingSafeStringEqual` is plain JS and stays synchronous.
  */
 
-import { spkiToDer } from '../services/virtual-user-verify-keys.js'
+import { bytesToBase64, spkiToDer } from './base64.js'
 
 const encoder = new TextEncoder()
 
@@ -20,12 +20,6 @@ const bytesToHex = (bytes: Uint8Array): string => {
   return out
 }
 
-const bytesToBase64 = (bytes: Uint8Array): string => {
-  let binary = ''
-  for (const b of bytes) binary += String.fromCharCode(b)
-  return btoa(binary)
-}
-
 /** Lenient like Node's `Buffer.from(_, 'hex')`: stops at the first bad pair. */
 const hexToBytes = (hex: string): Uint8Array => {
   const out: number[] = []
@@ -37,8 +31,12 @@ const hexToBytes = (hex: string): Uint8Array => {
   return Uint8Array.from(out)
 }
 
-/** Lenient like Node's `Buffer.from(_, 'base64')`: accepts base64url, ignores junk. */
-const base64ToBytes = (value: string): Uint8Array => {
+/**
+ * Lenient like Node's `Buffer.from(_, 'base64')`: accepts base64url, ignores junk.
+ * Webhook signatures arrive in either alphabet, so this is deliberately not the
+ * strict `base64ToBytes` of `./base64.js`.
+ */
+const lenientBase64ToBytes = (value: string): Uint8Array => {
   let clean = value
     .replace(/-/g, '+')
     .replace(/_/g, '/')
@@ -85,7 +83,7 @@ const rawSecretBytes = (
   encoding === 'hex'
     ? hexToBytes(secret)
     : encoding === 'base64'
-      ? base64ToBytes(secret)
+      ? lenientBase64ToBytes(secret)
       : encoder.encode(secret)
 
 const secretBytes = (secret: string, encoding: SecretEncoding): Uint8Array => {
@@ -162,7 +160,9 @@ export async function verifyHmacSignature(
       return false
     }
     const sig =
-      encoding === 'hex' ? hexToBytes(signature) : base64ToBytes(signature)
+      encoding === 'hex'
+        ? hexToBytes(signature)
+        : lenientBase64ToBytes(signature)
     if (!sig.length) return false
     const key = await subtle().importKey(
       'raw',
@@ -286,7 +286,7 @@ export async function verifyPublicKeySignature(
       return await verifySpkiSignature(
         await importSpkiVerifyKey(der0, 'ed25519'),
         'ed25519',
-        base64ToBytes(signature),
+        lenientBase64ToBytes(signature),
         payload
       )
     }
@@ -301,7 +301,7 @@ export async function verifyPublicKeySignature(
     const der = pemToDer(publicKey)
     const hex = bytesToHex(der)
     const data = typeof payload === 'string' ? encoder.encode(payload) : payload
-    const sig = base64ToBytes(signature)
+    const sig = lenientBase64ToBytes(signature)
     if (hex.includes(OID_RSA)) {
       return await verifySpkiSignature(
         await importSpkiVerifyKey(
