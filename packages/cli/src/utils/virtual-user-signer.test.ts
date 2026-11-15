@@ -20,9 +20,9 @@ const decode = (part: string) =>
   JSON.parse(Buffer.from(part, 'base64url').toString())
 
 describe('signVirtualUserStatement', () => {
-  test('is an EdDSA token the matching public key verifies', async () => {
+  test('is an EdDSA token the matching public key verifies', () => {
     const { signingKey, verifyKey } = generateVirtualUserKeyPair()
-    const statement = await signVirtualUserStatement({
+    const statement = signVirtualUserStatement({
       signingKey,
       virtualUserId: 'susan',
       audience: 'http://localhost:3000',
@@ -33,11 +33,7 @@ describe('signVirtualUserStatement', () => {
       string,
       string,
     ]
-    assert.deepEqual(decode(head), {
-      alg: 'EdDSA',
-      typ: 'JWT',
-      kid: await okpThumbprint(verifyKey),
-    })
+    assert.deepEqual(decode(head), { alg: 'EdDSA', typ: 'JWT' })
     const body = decode(claims)
     assert.equal(body.sub, 'susan')
     assert.equal(body.aud, 'http://localhost:3000')
@@ -59,13 +55,13 @@ describe('signVirtualUserStatement', () => {
     )
   })
 
-  test('every statement carries its own one-time id', async () => {
+  test('every statement carries its own one-time id', () => {
     const { signingKey } = generateVirtualUserKeyPair()
     const options = { signingKey, virtualUserId: 'susan', audience: 'a' }
     const jti = (s: string) => decode(s.split('.')[1]!).jti
     assert.notEqual(
-      jti(await signVirtualUserStatement(options)),
-      jti(await signVirtualUserStatement(options))
+      jti(signVirtualUserStatement(options)),
+      jti(signVirtualUserStatement(options))
     )
   })
 
@@ -78,15 +74,33 @@ describe('signVirtualUserStatement', () => {
 })
 
 describe('the statement kid', () => {
-  test('the header kid is the RFC 7638 thumbprint of the public key', async () => {
-    const { signingKey, verifyKey } = generateVirtualUserKeyPair()
-    const statement = await signVirtualUserStatement({
-      signingKey,
-      virtualUserId: 'susan',
-      audience: 'a',
+  test('a precomputed kid goes in the protected header, and only then', () => {
+    const { signingKey } = generateVirtualUserKeyPair()
+    const options = { signingKey, virtualUserId: 'susan', audience: 'a' }
+    const head = (s: string) => decode(s.split('.')[0]!)
+    assert.deepEqual(
+      head(signVirtualUserStatement({ ...options, kid: 'k1' })),
+      {
+        alg: 'EdDSA',
+        typ: 'JWT',
+        kid: 'k1',
+      }
+    )
+    assert.deepEqual(head(signVirtualUserStatement(options)), {
+      alg: 'EdDSA',
+      typ: 'JWT',
     })
-    const { kid } = decode(statement.split('.')[0]!)
-    assert.equal(kid, await okpThumbprint(verifyKey))
+  })
+
+  test('resolveStatementMint signs with the RFC 7638 thumbprint of the public key', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-vu-'))
+    const stage = generateVirtualUserKeyPair()
+    const mint = await resolveStatementMint(
+      new LocalVariablesService({ VIRTUAL_USER_SIGNING_KEY: stage.signingKey }),
+      { apiUrl: 'https://stage.example.com/api', runtimeDir: dir, what: 'x' }
+    )
+    const { kid } = decode((await mint({ id: 'susan' } as any)).split('.')[0]!)
+    assert.equal(kid, await okpThumbprint(stage.verifyKey))
     assert.match(kid, /^[A-Za-z0-9_-]{43}$/)
   })
 })
