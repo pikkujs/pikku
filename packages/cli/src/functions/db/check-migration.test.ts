@@ -159,6 +159,30 @@ describe('planConstraints after a hand-written rename', () => {
     assert.deepEqual(plan.add, [{ name: next, expression }])
   })
 
+  test('a column renamed by hand: the check still named for the old column is dropped, the new bound added', () => {
+    // ALTER TABLE gadget RENAME COLUMN width TO breadth: the database keeps
+    // gadget_width_<hash>_max_check, now enforcing breadth <= 9.
+    const old = checkName('gadget', 'width', 'max')
+    const next = checkName('gadget', 'breadth', 'max')
+    const plan = planConstraints(
+      'gadget',
+      'breadth',
+      col([{ name: next, expression: '"breadth" <= 20' }]),
+      col([{ name: old, expression: '"breadth" <= 9' }])
+    )
+    assert.deepEqual(plan.drop, [old])
+    assert.deepEqual(plan.add, [{ name: next, expression: '"breadth" <= 20' }])
+    assert.match(plan.reasons.join(' '), /is no longer declared/)
+    // And a bound dropped from the declaration is dropped too, never left enforcing.
+    const removed = planConstraints(
+      'gadget',
+      'breadth',
+      col([]),
+      col([{ name: old, expression: '"breadth" <= 9' }])
+    )
+    assert.deepEqual(removed.drop, [old])
+  })
+
   test('a plan that is already in line is idempotent', () => {
     const name = checkName('orders', 'line_qty', 'max')
     const check = { name, expression: '"line_qty" <= 20' }
