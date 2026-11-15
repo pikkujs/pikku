@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/addon/function'
 import {
   changesContext,
-  refuseWhenFilingOnly,
+  refuseWhileFiling,
   requireProjectId,
 } from '../lib/changes.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
@@ -34,7 +34,7 @@ export const ChangesMerge = pikkuSessionlessFunc({
   input: ChangesMergeInput,
   output: ChangesMergeOutput,
   func: async (_services, input) => {
-    refuseWhenFilingOnly('merge')
+    await refuseWhileFiling('merge')
     const { rpc, projectId, storePath } = await changesContext(
       input.apiUrl,
       input.projectId
