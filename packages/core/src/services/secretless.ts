@@ -33,3 +33,31 @@ export const withoutSecrets = <T extends object>(
   })
   return stripped as SecretlessServices<T>
 }
+
+const viewsByServices = new WeakMap<object, Map<string, object>>()
+
+/**
+ * {@link withoutSecrets} for a long-lived services object, built once per
+ * object and context. A view is a snapshot: only use it for singleton services,
+ * never for an object assembled per invocation.
+ *
+ * knowledge: decisions/internals/a-secretless-view-of-the-singleton-services-is-built-once.md
+ */
+export const secretlessView = <T extends object>(
+  services: T,
+  context: string
+): SecretlessServices<T> => {
+  let byContext = viewsByServices.get(services)
+  if (byContext === undefined) {
+    byContext = new Map()
+    viewsByServices.set(services, byContext)
+  }
+  let view = byContext.get(context)
+  if (view === undefined) {
+    view = withoutSecrets(services, context)
+    // A pass-through (no `secrets` yet) is the services object itself: caching
+    // it would keep handing out the raw object once `secrets` is attached.
+    if (view !== services) byContext.set(context, view)
+  }
+  return view as SecretlessServices<T>
+}

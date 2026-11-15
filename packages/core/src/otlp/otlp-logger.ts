@@ -210,7 +210,7 @@ export class OtlpLogger implements Logger {
   }
 
   private forward(level: LogLevel, messageOrObj: unknown, meta: unknown[]) {
-    if (level < this.minLevel) return
+    if (level < this.minLevel || this.exporter.active === false) return
     // Stamped here: left unset, the encoder would use the flush time and every
     // record in one batch would share it.
     const timeUnixNano = nowUnixNano()
