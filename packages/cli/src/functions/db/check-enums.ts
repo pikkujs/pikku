@@ -246,13 +246,17 @@ function findChecks(text: string): { name: string; expression: string }[] {
   return found
 }
 
-/** The table's own spelling of the column `name` is, or `undefined`: identifiers are not case-sensitive in SQLite and MySQL. */
+/** SQLite folds the case of ASCII letters only; `ä` and `Ä` are two names. */
+const asciiLower = (text: string): string =>
+  text.replace(/[A-Z]/g, (letter) => letter.toLowerCase())
+
+/** The table's own spelling of the column `name` is, or `undefined`: SQLite identifiers are case-insensitive for ASCII letters only. */
 const columnNamed = (
   name: string,
   columns: readonly string[]
 ): string | undefined => {
-  const lower = name.toLowerCase()
-  return columns.find((column) => column.toLowerCase() === lower)
+  const lower = asciiLower(name)
+  return columns.find((column) => asciiLower(column) === lower)
 }
 
 /**

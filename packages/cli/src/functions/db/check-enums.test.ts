@@ -362,3 +362,18 @@ describe('an enum list holds only literals; a function call or expression in it 
     )
   })
 })
+
+test('parseSqliteChecks folds only ASCII case, as SQLite does: a check on ä is not a check on Ä', () => {
+  const ddl = `CREATE TABLE t (
+       "Ä" INTEGER,
+       "ä" INTEGER CHECK ("ä" > 0)
+     )`
+  const checks = parseSqliteChecks(ddl, ['Ä', 'ä'])
+  assert.deepEqual(checks.get('ä'), [{ name: '', expression: '"ä" > 0' }])
+  assert.equal(checks.has('Ä'), false)
+  // ASCII still folds: SQLite treats a and A as one column.
+  const ascii = parseSqliteChecks('CREATE TABLE t (a INTEGER, CHECK (A > 0))', [
+    'a',
+  ])
+  assert.deepEqual(ascii.get('a'), [{ name: '', expression: 'A > 0' }])
+})
