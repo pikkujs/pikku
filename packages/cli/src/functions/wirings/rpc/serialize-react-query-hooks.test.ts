@@ -323,7 +323,7 @@ declare module '@tanstack/react-query' {
   export const useInfiniteQuery: (o: any) => any
   export const useMutation: <T, E, V>(o: { mutationFn: (v: V) => Promise<T> | T; [k: string]: unknown }) => { data?: T }
 }
-declare module '@pikku/react' { export const usePikkuRPC: <T>() => T }
+declare module '@pikku/react' { export const usePikkuRPC: <T>() => T; export type PikkuInstance = { rpc: any; fetch: any; [k: string]: unknown } }
 interface ImportMeta { env: Record<string, any> }
 `
       )
