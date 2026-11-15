@@ -142,3 +142,21 @@ describe('PikkuFetchHTTPResponse onClose', () => {
     assert.equal(closed, 1)
   })
 })
+
+describe('PikkuFetchHTTPResponse heartbeat', () => {
+  test('writes a comment frame, not a data frame', async () => {
+    const response = new PikkuFetchHTTPResponse()
+    response.setMode('stream')
+    response.heartbeat()
+    response.close()
+    assert.equal(await response.toResponse().text(), ':\n\n:\n\n')
+  })
+
+  test('does nothing after the stream closed', async () => {
+    const response = new PikkuFetchHTTPResponse()
+    response.setMode('stream')
+    response.close()
+    response.heartbeat()
+    assert.equal(await response.toResponse().text(), ':\n\n')
+  })
+})

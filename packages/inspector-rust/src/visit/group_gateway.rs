@@ -39,6 +39,9 @@ impl Context<'_> {
         }
         self.ensure_inline_wiring_function(&pikku_func_id, &name, Some(func_init), is_helper);
         let middleware = self.resolve_middleware(obj, cm.tags_or_nil());
+        if !self.check_subscribe_wiring(&pikku_func_id, &format!("Gateway '{name}'")) {
+            return;
+        }
         self.state.service_aggregation.used_functions.add(pikku_func_id.clone());
         self.add_used_wires(&middleware, &[]);
 

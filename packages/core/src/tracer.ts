@@ -36,6 +36,8 @@ export interface FinishedSpan {
 export interface Span {
   readonly context: TraceContext
   setAttribute(key: string, value: SpanAttributeValue): void
+  /** Removes an attribute set earlier. Optional: a span that cannot remove one keeps it. */
+  removeAttribute?(key: string): void
   addEvent(name: string, attributes?: Record<string, SpanAttributeValue>): void
   /**
    * Idempotent. `error` is the RAW thrown value: the runner does not redact it,
@@ -78,6 +80,11 @@ export interface Tracer {
    * service would open goes missing.
    */
   currentContext?(): TraceContext | undefined
+  /**
+   * False while nothing would read a span, so a caller may skip building one. Absent means spans are read.
+   * The trace ids still flow through the wire either way.
+   */
+  readonly active?: boolean
   /** Flush what is buffered; called by `onServerStop` and `pikku serve` shutdown. */
   flush?(): Promise<void>
   close?(): Promise<void>
@@ -92,6 +99,7 @@ const INERT_SPAN_CONTEXT: TraceContext = {
 const NOOP_SPAN: Span = {
   context: INERT_SPAN_CONTEXT,
   setAttribute() {},
+  removeAttribute() {},
   addEvent() {},
   end() {},
 }

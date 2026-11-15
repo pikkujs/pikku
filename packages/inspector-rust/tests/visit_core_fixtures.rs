@@ -224,3 +224,57 @@ fn wire_rules_diagnostics() {
     want.sort();
     assert_eq!(got, want);
 }
+
+/// `subscribe-func`: pikkuSubscribeFunc diagnostics and meta must match Go's
+/// (inspector-go/internal/analyze/subscribe_func_test.go).
+#[test]
+fn subscribe_func_fixture() {
+    let root = testdata().join("subscribe-func").canonicalize().unwrap();
+    let root_s = root.to_string_lossy().to_string();
+    let req = Request {
+        route_files: source_files(&root, &["src".to_string()]),
+        options: Options {
+            root_dir: root_s.clone(),
+            tsconfig: root.join("tsconfig.json").to_string_lossy().to_string(),
+            ..Default::default()
+        },
+        changed_files: vec![],
+    };
+    let res = analyze::run(&req, None).unwrap();
+    let mut got: Vec<String> = res
+        .diagnostics
+        .iter()
+        .filter(|d| matches!(d.code.as_deref(), Some("PKU955" | "PKU956" | "PKU957")))
+        .map(|d| {
+            assert_eq!(format!("{:?}", d.level), "Critical", "{:?} must be critical", d.code);
+            format!("{} {}", d.code.as_deref().unwrap(), d.message)
+        })
+        .collect();
+    got.sort();
+    let hint = "A subscribe function is wired only as an `sse: true` HTTP route or a channel `onMessageWiring` action, because only those streams can be subscribed to a topic.";
+    let mut want = vec![
+        "PKU955 Subscribe function 'bareEvents' declares the topic type 'string', which names no shape. Declare a string literal or a template literal such as `order:${string}` as its second type argument, so publish can refuse topics no subscribe function returns.".to_string(),
+        format!("PKU956 Subscribe function 'plainGetEvents' is wired as Route 'GET /plain'. {hint}"),
+        format!("PKU956 Subscribe function 'connectEvents' is wired as Channel 'live' onConnect. {hint}"),
+        "PKU957 'rogue.ts' imports '@pikku/core/internal/event-hub', the event hub's internal path. Functions get only the publisher (services.eventHub); subscribing is a pikkuSubscribeFunc.".to_string(),
+    ];
+    want.sort();
+    assert_eq!(got, want);
+
+    let text = pikku_inspect::jsjson::to_string(res.state.as_ref().unwrap().as_ref()).unwrap();
+    let state: Value = serde_json::from_str(&text).unwrap();
+    let meta = |id: &str| state["functions"]["meta"][id].clone();
+    for (id, pattern) in [
+        ("orderEvents", "order:${string}"),
+        ("aliasedEvents", "order:${string}"),
+        ("newsEvents", "news"),
+        ("messageEvents", "board:${string}"),
+        ("http:get:/inline", "inline"),
+    ] {
+        assert_eq!(meta(id)["subscribe"]["topicPattern"], pattern, "{id} topicPattern");
+        assert!(state["rpc"]["internalMeta"].get(id).is_none(), "{id} is registered as an RPC");
+    }
+    assert_eq!(meta("orderEvents")["sessionless"], false, "a subscribe function wants a session");
+    assert_eq!(meta("newsEvents")["sessionless"], true, "auth: false makes the topic public");
+    assert!(state["rpc"]["internalMeta"].get("ordinary").is_some(), "an ordinary pikkuFunc stays an RPC");
+}

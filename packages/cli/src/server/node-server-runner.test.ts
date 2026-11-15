@@ -24,7 +24,7 @@ const startRunner = async (port: number) => {
   } as any)
 
   const runner = new NodeServerRunner(process.cwd())
-  await runner.createEventHub()
+  await runner.prepare()
   const server = runner.createServer(
     { port, hostname: '127.0.0.1' } as any,
     silentLogger as any

@@ -171,11 +171,7 @@
     "virtualUserTarget",
     "writeVirtualUserSchedule"
   ],
-  "./channel/local": [
-    "LocalEventHubService",
-    "PikkuLocalChannelHandler",
-    "runLocalChannel"
-  ],
+  "./channel/local": ["PikkuLocalChannelHandler", "runLocalChannel"],
   "./channel/serverless": [
     "runChannelConnect",
     "runChannelDisconnect",
@@ -319,10 +315,12 @@
     "wireAgentScorerQueueWorkers"
   ],
   "./analytics": [
+    "AnalyticsSinkRegistry",
     "LoggerAnalyticsService",
     "anonymousAnalyticsIdentity",
     "composeAnalyticsIdentity",
     "cookieAnalyticsIdentity",
+    "createAnalyticsSinks",
     "createInvocationAnalytics",
     "defineAnalyticsEvents",
     "fanOutAnalytics",
@@ -478,6 +476,7 @@
     "VIRTUAL_USER_STATEMENT_ALGORITHM",
     "VIRTUAL_USER_STATEMENT_MAX_TTL_SECONDS",
     "VIRTUAL_USER_STATEMENT_TTL_SECONDS",
+    "VIRTUAL_USER_VERIFY_KEYS_MAX",
     "VIRTUAL_USER_VERIFY_KEY_VARIABLE",
     "VirtualUserStatementError",
     "WebhookService",
@@ -488,6 +487,9 @@
     "getStubTracker",
     "holdLease",
     "isTestRun",
+    "okpThumbprint",
+    "parseVirtualUserVerifyKeys",
+    "rsaThumbprint",
     "pikkuWebhookWorkerFunc",
     "renderEmail",
     "spy",
@@ -510,16 +512,20 @@
   ],
   "./otlp": [
     "asContextStorage",
+    "createOtlpSinks",
     "createRuntimeTelemetry",
+    "fanOutOtlp",
     "isLoopbackHost",
     "OTLP_QUEUE_LIMITS",
     "OtlpHttpExporter",
     "OtlpLogger",
+    "OtlpSinkRegistry",
     "OtlpTracer",
     "parseOtlpEndpoint",
     "parseOtlpHeaders",
     "startProcessMetrics"
   ],
+  "./otlp/runs": ["createRunStitcher"],
   "./flag": [
     "CachedFlagSource",
     "assertFeatureAvailable",
@@ -659,15 +665,15 @@
   ],
   "./db": ["defineTables"],
   "./testing": [
+    "RecordingTracer",
     "clearPikkuRuntimeState",
     "decodeLogs",
     "decodeMetrics",
     "decodeTraces",
-    "defineEventHubServiceTests",
+    "defineEventHubDeliveryBackendTests",
     "defineQueueIdentityTransportTests",
     "defineQueueTraceConformance",
-    "defineServiceTests",
-    "RecordingTracer"
+    "defineServiceTests"
   ],
   "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
 }

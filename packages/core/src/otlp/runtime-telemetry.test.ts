@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import type { Logger } from '../services/logger.js'
 import { NOOP_TRACER } from '../tracer.js'
 import { decodeLogs, decodeTraces } from '../testing/otlp-decoder.js'
-import { createTrace } from '../trace.js'
+import { createTrace, type TraceContext } from '../trace.js'
 import { isLoopbackHost, parseOtlpEndpoint } from './loopback.js'
 import {
   createRuntimeTelemetry,
@@ -136,17 +136,50 @@ describe('createRuntimeTelemetry', () => {
     ...extra,
   })
 
-  test('no endpoint: no-op tracer, the same logger, nothing running', async () => {
-    const plain = logger()
+  test('no endpoint: the tracer is real, no HTTP sink is registered, and a sink added later receives spans', async () => {
     const telemetry = createRuntimeTelemetry(
       {},
-      { logger: plain, serviceName: 'x' }
+      { logger: logger(), serviceName: 'x' }
+    )
+    assert.equal(telemetry.enabled, true)
+    assert.notEqual(telemetry.tracer, NOOP_TRACER)
+    assert.equal(telemetry.otlpSinks.list().length, 0)
+    const names: string[] = []
+    telemetry.otlpSinks.add({
+      exportSpans: (spans) => void names.push(...spans.map((s) => s.name)),
+      exportLogs() {},
+      exportMetrics() {},
+      flush: async () => {},
+      close: async () => {},
+    })
+    telemetry.tracer.startSpan('late', createTrace()).end()
+    assert.deepEqual(names, ['late'])
+    await telemetry.close()
+  })
+
+  test('an endpoint registers exactly one sink: the HTTP exporter', () => {
+    const telemetry = createRuntimeTelemetry(
+      { PIKKU_OTLP_ENDPOINT: 'http://127.0.0.1:4000/v1/otlp' },
+      options()
+    )
+    assert.equal(telemetry.otlpSinks.list().length, 1)
+  })
+
+  test('PIKKU_TELEMETRY=0 still hands out a registry that accepts sinks', () => {
+    const telemetry = createRuntimeTelemetry(
+      { PIKKU_TELEMETRY: '0' },
+      options()
     )
     assert.equal(telemetry.enabled, false)
-    assert.equal(telemetry.tracer, NOOP_TRACER)
-    assert.equal(telemetry.logger, plain)
-    await telemetry.flush()
-    await telemetry.close()
+    assert.doesNotThrow(() =>
+      telemetry.otlpSinks.add({
+        exportSpans() {},
+        exportLogs() {},
+        exportMetrics() {},
+        flush: async () => {},
+        close: async () => {},
+      })
+    )
   })
 
   test('PIKKU_TELEMETRY=0 turns everything off even with an endpoint', () => {
@@ -295,6 +328,112 @@ describe('createRuntimeTelemetry', () => {
       logs.items.map((l) => l.body),
       [{ string: 'over the floor' }]
     )
+  })
+
+  test("a log written inside a function span carries that span's function and wire; one outside carries none", async () => {
+    const { requests, fetchImpl } = capture()
+    let current: TraceContext | undefined
+    const telemetry = createRuntimeTelemetry(
+      { PIKKU_OTLP_ENDPOINT: 'http://127.0.0.1:4000/v1/otlp' },
+      options({
+        fetch: fetchImpl,
+        contextStorage: {
+          run: (context: TraceContext, fn: () => unknown) => {
+            const before = current
+            current = context
+            try {
+              return fn()
+            } finally {
+              current = before
+            }
+          },
+          get: () => current,
+        },
+      })
+    )
+    const span = telemetry.tracer.startSpan('invoices', createTrace(), {
+      attributes: {
+        'pikku.function.id': 'invoices',
+        'pikku.wire.type': 'http',
+        'http.route': '/invoices',
+      },
+    })
+    ;(
+      telemetry.tracer as unknown as {
+        runInSpan: (s: typeof span, fn: () => void) => void
+      }
+    ).runInSpan(span, () => telemetry.logger.info('inside'))
+    span.setAttribute('pikku.org.id', 'late')
+    telemetry.logger.info('outside')
+    telemetry.stopMetrics()
+    await telemetry.flush()
+    await telemetry.close()
+    const logs = decodeLogs(
+      requests.find((r) => r.url.endsWith('/v1/logs'))!.body
+    ).items
+    const inside = logs.find(
+      (l) => (l.body as { string: string }).string === 'inside'
+    )!
+    const outside = logs.find(
+      (l) => (l.body as { string: string }).string === 'outside'
+    )!
+    assert.deepEqual(inside.attributes['pikku.function.id'], {
+      string: 'invoices',
+    })
+    assert.deepEqual(inside.attributes['pikku.wire.type'], { string: 'http' })
+    assert.equal(inside.attributes['http.route'], undefined)
+    assert.equal(outside.attributes['pikku.function.id'], undefined)
+  })
+
+  test('a span and a log inside it carry pikku.impersonated as a bool and who by', async () => {
+    const { requests, fetchImpl } = capture()
+    let current: TraceContext | undefined
+    const telemetry = createRuntimeTelemetry(
+      { PIKKU_OTLP_ENDPOINT: 'http://127.0.0.1:4000/v1/otlp' },
+      options({
+        fetch: fetchImpl,
+        contextStorage: {
+          run: (context: TraceContext, fn: () => unknown) => {
+            const before = current
+            current = context
+            try {
+              return fn()
+            } finally {
+              current = before
+            }
+          },
+          get: () => current,
+        },
+      })
+    )
+    const span = telemetry.tracer.startSpan('acting', createTrace(), {
+      attributes: {
+        'pikku.function.id': 'acting',
+        'pikku.impersonated': true,
+        'pikku.impersonator.id': 'u_admin',
+      },
+    })
+    ;(
+      telemetry.tracer as unknown as {
+        runInSpan: (s: typeof span, fn: () => void) => void
+      }
+    ).runInSpan(span, () => telemetry.logger.info('inside'))
+    span.end()
+    telemetry.stopMetrics()
+    await telemetry.flush()
+    await telemetry.close()
+    const logs = decodeLogs(
+      requests.find((r) => r.url.endsWith('/v1/logs'))!.body
+    ).items
+    const spans = decodeTraces(
+      requests.find((r) => r.url.endsWith('/v1/traces'))!.body
+    ).items
+    for (const { attributes } of [logs[0]!, spans[0]!]) {
+      assert.deepEqual(attributes['pikku.impersonated'], { bool: true })
+      assert.deepEqual(attributes['pikku.impersonator.id'], {
+        string: 'u_admin',
+      })
+    }
   })
 
   test('service name falls back to the explicit override, then project, then the package', () => {

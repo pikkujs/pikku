@@ -197,7 +197,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     step: 'wire it up',
     skill: null,
     summary:
-      'Publish and subscribe across channels through the `eventHub` service.',
+      'Publish to the subscribers of a topic through the `eventHub` service; a `pikkuSubscribeFunc` decides who subscribes.',
   },
   react: {
     step: 'wire it up',

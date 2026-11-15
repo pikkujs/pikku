@@ -107,4 +107,4 @@ export const virtualUserSignInNearMissMessage = (): string =>
 
 export const VIRTUAL_USER_NO_VERIFY_KEY_MESSAGE =
   'Virtual user sign-in is on but this app has no VIRTUAL_USER_VERIFY_KEY, so the CLI, scenarios and the dev switcher cannot sign in from outside. ' +
-  "Set the variable to this stage's virtual user public key (pikku dev sets it for you); runs inside the app are not affected."
+  "Set the variable to this stage's virtual user public key, or a JSON list of {kid, publicKey} during a rotation (pikku dev sets it for you); runs inside the app are not affected."

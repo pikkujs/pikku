@@ -238,7 +238,7 @@ reads that only needed `Promise.all`.
 Pikku provides SQL database services through six packages:
 
 - `@pikku/kysely` — Base service implementations (database-agnostic), the serialize plugins, `createAuditedKysely` and the `pikkuSchemas` helpers
-- `@pikku/kysely-postgres` — PostgreSQL-specific implementations + the `PikkuKysely` connection wrapper and `PgEventHubService` (LISTEN/NOTIFY-backed)
+- `@pikku/kysely-postgres` — PostgreSQL-specific implementations + the `PikkuKysely` connection wrapper
 - `@pikku/kysely-mysql` — MySQL-specific implementations
 - `@pikku/kysely-sqlite` — SQLite-specific implementations, `createSQLiteKysely`, and the `LibsqlWebDialect`
 - `@pikku/kysely-node-sqlite` — `createNodeSqliteKysely` over `node:sqlite`, plus user-defined SQL functions and the coercion plugin

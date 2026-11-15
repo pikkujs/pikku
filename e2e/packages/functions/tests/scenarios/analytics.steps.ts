@@ -144,7 +144,7 @@ interface RecordedEvent {
  *
  * Names rather than whole records because the two lists are compared against
  * each other — the difference between everything the app emitted and what the
- * fan-out's `accepts` let through IS the policy under test.
+ * sink's event map lets through IS the policy under test.
  */
 export const expectsRecordedEvents = pikkuScenarioStep<
   {

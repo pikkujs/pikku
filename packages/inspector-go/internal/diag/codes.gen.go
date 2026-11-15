@@ -124,4 +124,7 @@ const (
 	SecretKeyNotStatic                Code = "PKU952"
 	SecretRevealedIntoSink            Code = "PKU953"
 	PiiIntoSink                       Code = "PKU954"
+	SubscribeTopicNotDeclared         Code = "PKU955"
+	SubscribeWiringNotStreaming       Code = "PKU956"
+	EventHubInternalAccess            Code = "PKU957"
 )

@@ -1,0 +1,11 @@
+{
+  "name": "@pikku/bench-frameworks-raw-bun",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@pikku/bench-frameworks-shared": "workspace:*",
+    "@cfworker/json-schema": "^4.1.1",
+    "better-auth": "1.7.5",
+    "kysely": "0.29.6"
+  }
+}

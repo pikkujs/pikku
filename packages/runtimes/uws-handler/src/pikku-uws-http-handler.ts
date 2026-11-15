@@ -45,6 +45,7 @@ export const pikkuHTTPHandler = ({
 
   return (res: uWS.HttpResponse, req: uWS.HttpRequest): void => {
     let aborted = false
+    const abortListeners: Array<() => void> = []
 
     const method = req.getMethod() as HTTPMethod
     const path = req.getUrl()
@@ -56,9 +57,13 @@ export const pikkuHTTPHandler = ({
 
     res.onAborted(() => {
       aborted = true
+      for (const listener of abortListeners.splice(0)) listener()
     })
 
     const isAborted = () => aborted
+    const onAbort = (listener: () => void) => {
+      abortListeners.push(listener)
+    }
 
     const handleError = (err: any) => {
       logger.error(`uWS HTTP error: ${err.message}`)
@@ -75,7 +80,7 @@ export const pikkuHTTPHandler = ({
 
     if (method === 'get' || method === 'head' || method === 'options') {
       const request = new UWSPikkuHTTPRequest(method, path, query, headers)
-      const response = new UWSPikkuHTTPResponse(res, isAborted)
+      const response = new UWSPikkuHTTPResponse(res, isAborted, onAbort)
 
       fetchData(request, response, runOptions)
         .then(() => response.flush())
@@ -91,7 +96,7 @@ export const pikkuHTTPHandler = ({
       let oversized = Number.isFinite(declared) && declared > maxBodySize
 
       const rejectOversized = () => {
-        const response = new UWSPikkuHTTPResponse(res, isAborted)
+        const response = new UWSPikkuHTTPResponse(res, isAborted, onAbort)
         const error = new PayloadTooLargeError(
           `Request body exceeds the maximum size of ${maxBodySize} bytes`
         )
@@ -126,7 +131,7 @@ export const pikkuHTTPHandler = ({
             headers,
             buffer
           )
-          const response = new UWSPikkuHTTPResponse(res, isAborted)
+          const response = new UWSPikkuHTTPResponse(res, isAborted, onAbort)
 
           fetchData(request, response, runOptions)
             .then(() => response.flush())

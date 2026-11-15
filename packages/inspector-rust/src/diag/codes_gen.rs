@@ -120,3 +120,6 @@ pub const SECRET_NOT_DECLARED: &str = "PKU951";
 pub const SECRET_KEY_NOT_STATIC: &str = "PKU952";
 pub const SECRET_REVEALED_INTO_SINK: &str = "PKU953";
 pub const PII_INTO_SINK: &str = "PKU954";
+pub const SUBSCRIBE_TOPIC_NOT_DECLARED: &str = "PKU955";
+pub const SUBSCRIBE_WIRING_NOT_STREAMING: &str = "PKU956";
+pub const EVENT_HUB_INTERNAL_ACCESS: &str = "PKU957";

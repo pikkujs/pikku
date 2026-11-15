@@ -6,7 +6,6 @@ import {
   LocalVariablesService,
   QueueWebhookService,
 } from '@pikku/core/services'
-import { LocalEventHubService } from '@pikku/core/channel/local'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { JoseJWTService } from '@pikku/jose'
 import { pikkuServices, pikkuWireServices } from '#pikku/setup'
@@ -61,7 +60,9 @@ export const createSingletonServices = pikkuServices(
       agentRunner: existingServices?.agentRunner,
       agentRunState: existingServices?.agentRunState,
       agentRunService: existingServices?.agentRunService,
-      eventHub: existingServices?.eventHub || new LocalEventHubService(),
+      // The runtime installs the event hub's publisher and registry.
+      eventHub: existingServices?.eventHub,
+      eventHubRegistry: existingServices?.eventHubRegistry,
       workflowService: existingServices?.workflowService,
       workflowRunService: existingServices?.workflowRunService,
       queueService,

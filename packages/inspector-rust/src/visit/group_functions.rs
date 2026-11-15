@@ -12,7 +12,7 @@ use super::util_props::extract_used_wires;
 use super::{Context, Phase, Registry, Visitor, order};
 use crate::diag::{Level, codes};
 use crate::state::{
-    AuditMeta, DisabledFunctionMeta, FileExport, FunctionMeta, ServicesMeta, WireRef, WiresMeta,
+    AuditMeta, DisabledFunctionMeta, FileExport, FunctionMeta, ServicesMeta, SubscribeMeta, TelemetryMeta, WireRef, WiresMeta,
 };
 use crate::tsutil::{self, file_name_of, first_decl, is_function_like, param_at};
 
@@ -49,6 +49,7 @@ pub fn is_function_helper(name: &str) -> bool {
     matches_pikku_func_pattern(name)
         || name == "pikkuScenario"
         || name == "pikkuWebhookReceive"
+        || name == "pikkuSubscribeFunc"
         || scenario_step_kind(name).is_some()
 }
 
@@ -105,6 +106,7 @@ impl Context<'_> {
         let is_scenario_step = scenario_step_kind_v.is_some();
         let is_scenario = wrapper == "pikkuScenario";
         let is_webhook_receive = wrapper == "pikkuWebhookReceive";
+        let is_subscribe = wrapper == "pikkuSubscribeFunc";
         if !wrapper.starts_with("pikku") {
             return;
         }
@@ -202,6 +204,7 @@ impl Context<'_> {
                     m.audit = Some(AuditMeta { durability: d });
                 }
             }
+            m.telemetry = read_telemetry(first_arg);
             m.readonly = or_nil(tsutil::get_property_value(first_arg, "readonly").truthy());
             m.deploy = tsutil::get_property_value(first_arg, "deploy").as_string();
             m.approval_required = or_nil(tsutil::get_property_value(first_arg, "approvalRequired").truthy());
@@ -565,7 +568,9 @@ impl Context<'_> {
             self.check_classification(&name, handler, wrapper != "pikkuFunc");
         }
 
-        let mut sessionless = wrapper != "pikkuFunc";
+        // A subscribe function authorises like pikkuFunc: it wants a session until a
+        // route wires it auth: false (a public topic).
+        let mut sessionless = wrapper != "pikkuFunc" && !is_subscribe;
         if is_workflow_wrapper(&wrapper) {
             // A workflow is a function, so unset auth wants a session. Only an
             // explicit `auth: false` opens it.
@@ -586,6 +591,10 @@ impl Context<'_> {
         }
         m.scenario_step = or_nil(is_scenario_step);
         m.webhook_receive = or_nil(is_webhook_receive);
+        if is_subscribe {
+            let Some(pattern) = self.subscribe_topic_pattern(node, &pikku_func_id) else { return };
+            m.subscribe = Some(SubscribeMeta { topic_pattern: pattern });
+        }
         m.scenario = or_nil(is_scenario);
         m.mcp = or_nil(mcp_enabled);
         if let Some(k) = scenario_step_kind_v {
@@ -678,7 +687,7 @@ impl Context<'_> {
             expose,
             remote,
             mcp_enabled,
-            not_rpc: is_scenario_step || is_webhook_receive,
+            not_rpc: is_scenario_step || is_webhook_receive || is_subscribe,
             versioned: version != 0,
         });
     }
@@ -981,4 +990,29 @@ impl Context<'_> {
             !dir.is_empty() && dir != own
         })
     }
+}
+
+fn read_telemetry(config: P<Node>) -> Option<TelemetryMeta> {
+    let p = tsutil::find_property_assignment(config, "telemetry")?;
+    let telemetry = tsutil::unwrap_as(tsutil::initializer_of(p));
+    if !ast::is_object_literal_expression(telemetry) {
+        return None;
+    }
+    let sp = tsutil::find_property_assignment(telemetry, "spans")?;
+    let spans = tsutil::unwrap_as(tsutil::initializer_of(sp));
+    if ast::is_string_literal(spans) || ast::is_no_substitution_template_literal(spans) {
+        return match spans.text() {
+            "off" | "on" | "always" => Some(TelemetryMeta { spans: serde_json::Value::from(spans.text().to_string()) }),
+            _ => None,
+        };
+    }
+    if ast::is_object_literal_expression(spans) && spans.properties().len() == 1 {
+        let sample = tsutil::get_property_value(spans, "sample").num?;
+        if (0.0..=1.0).contains(&sample) {
+            let mut value = serde_json::Map::new();
+            value.insert("sample".to_string(), super::util_wire_meta::num_value(sample));
+            return Some(TelemetryMeta { spans: serde_json::Value::Object(value) });
+        }
+    }
+    None
 }

@@ -387,6 +387,7 @@ jobs:
             scopes,
             tracing,
             otlp,
+            telemetry-sinks,
             feature-flags,
             product-hooks,
             product-hooks-none,

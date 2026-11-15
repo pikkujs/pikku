@@ -17,19 +17,20 @@ export interface DevTelemetryOptions {
 
 /**
  * The runtime telemetry of `pikku dev`, built from `PIKKU_OTLP_*` exactly as `pikku serve` builds its own. A process that only
- * supervises gets an empty environment, so it is inert and sends nothing; the backends it starts inherit the variables and send.
+ * supervises gets `PIKKU_TELEMETRY=0`, so it is inert and sends nothing; the backends it starts inherit the variables and send.
  * When one of several backends is served, its service name carries the backend (`<name>.<backend>`), so the backends of one dev
  * server can be told apart in the store; `PIKKU_PROJECT` and `PIKKU_STAGE` still name the project and stage for all of them.
  */
 export const createDevTelemetry = (
   options: DevTelemetryOptions
 ): RuntimeTelemetry => {
-  const env: NodeJS.ProcessEnv = options.mode === 'inline' ? { ...options.env } : {}
+  const env: NodeJS.ProcessEnv =
+    options.mode === 'inline' ? { ...options.env } : { PIKKU_TELEMETRY: '0' }
   const name =
     env.PIKKU_OTLP_SERVICE_NAME?.trim() ||
     env.PIKKU_PROJECT?.trim() ||
     basename(options.rootDir)
-  if (options.backend && env.PIKKU_OTLP_ENDPOINT) {
+  if (options.backend) {
     env.PIKKU_OTLP_SERVICE_NAME = `${name}.${options.backend}`
   }
   return createRuntimeTelemetry(env, {

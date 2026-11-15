@@ -198,4 +198,24 @@ describe('createFunctionSessionWireProps', () => {
     const props = createFunctionSessionWireProps(service)
     assert.deepStrictEqual(props.session, { userId: 'user-1' })
   })
+
+  test('set never persists impersonated; the frozen function session keeps it', async () => {
+    const stored: Array<[string, unknown]> = []
+    const store = {
+      set: async (id: string, session: unknown) => {
+        stored.push([id, session])
+      },
+      clear: async () => {},
+    } as any
+    const service = new PikkuSessionService<any>(store)
+    service.setInitial({ userId: 'u_target', impersonated: { by: 'u_admin' } })
+    const props = createFunctionSessionWireProps(service)
+    await props.setSession(props.session as any)
+    assert.deepStrictEqual(stored, [['u_target', { userId: 'u_target' }]])
+    assert.deepStrictEqual(service.get(), { userId: 'u_target' })
+    assert.deepStrictEqual(props.session, {
+      userId: 'u_target',
+      impersonated: { by: 'u_admin' },
+    })
+  })
 })

@@ -84,7 +84,7 @@ export const noticeQuoteDecided = pikkuFunc({
       .executeTakeFirst()
     if (!quote) return
 
-    await eventHub?.publish(`board:${quote.companyId}`, null, {
+    await eventHub?.publish(`board:${quote.companyId}`, {
       type: 'quote.decided',
       quoteId,
       jobId: quote.jobId,
