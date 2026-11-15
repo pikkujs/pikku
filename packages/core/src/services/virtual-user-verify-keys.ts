@@ -44,8 +44,8 @@ const toBase64 = (bytes: Uint8Array, url = false): string => {
 const hex = (bytes: Uint8Array) =>
   Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 
-/** An SPKI PEM, or bare base64 DER, to base64 DER on one line. */
-const spkiBase64 = (publicKey: string): string => {
+/** An SPKI PEM, or bare base64 DER, to its DER bytes. Throws if it is neither. */
+const spkiBytes = (publicKey: string): Uint8Array => {
   const text = publicKey
     .trim()
     .replace(/\\n/g, '\n')
@@ -54,12 +54,16 @@ const spkiBase64 = (publicKey: string): string => {
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(text)) {
     return fail('a public key is not valid base64 SPKI')
   }
-  let bytes: Uint8Array
   try {
-    bytes = toBytes(text)
+    return toBytes(text)
   } catch {
     return fail('a public key is not valid base64 SPKI')
   }
+}
+
+/** An Ed25519 SPKI, PEM or bare base64 DER, to base64 DER on one line. */
+const spkiBase64 = (publicKey: string): string => {
+  const bytes = spkiBytes(publicKey)
   if (
     bytes.length !== ED25519_SPKI_LENGTH ||
     hex(bytes.subarray(0, 12)) !== ED25519_SPKI_PREFIX
@@ -80,6 +84,34 @@ export const okpThumbprint = async (spki: string): Promise<string> => {
   const bytes = toBytes(spkiBase64(spki))
   const x = toBase64(bytes.subarray(12), true)
   const canonical = `{"crv":"Ed25519","kty":"OKP","x":"${x}"}`
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(canonical)
+  )
+  return toBase64(new Uint8Array(digest), true)
+}
+
+/**
+ * The RFC 7638 JWK thumbprint of an RSA public key: the SHA-256 of
+ * `{"e":"...","kty":"RSA","n":"..."}` (members in canonical order), base64url.
+ * Async (WebCrypto). `spki` is a PEM or base64 DER; anything but an RSA SPKI throws.
+ */
+export const rsaThumbprint = async (spki: string): Promise<string> => {
+  let jwk: JsonWebKey
+  try {
+    const key = await crypto.subtle.importKey(
+      'spki',
+      spkiBytes(spki) as BufferSource,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      true,
+      ['verify']
+    )
+    jwk = await crypto.subtle.exportKey('jwk', key)
+  } catch (error) {
+    if (error instanceof VirtualUserStatementError) throw error
+    return fail('a public key is not an RSA SPKI key')
+  }
+  const canonical = `{"e":"${jwk.e}","kty":"RSA","n":"${jwk.n}"}`
   const digest = await crypto.subtle.digest(
     'SHA-256',
     new TextEncoder().encode(canonical)

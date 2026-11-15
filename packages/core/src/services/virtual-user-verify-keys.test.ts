@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { generateKeyPairSync } from 'node:crypto'
+import { createPublicKey, generateKeyPairSync } from 'node:crypto'
 
 import {
   okpThumbprint,
+  rsaThumbprint,
   parseVirtualUserVerifyKeys,
 } from './virtual-user-verify-keys.js'
 
@@ -39,6 +40,30 @@ describe('okpThumbprint', () => {
       .toString('base64')
     await assert.rejects(okpThumbprint(rsa), /Ed25519/)
     await assert.rejects(okpThumbprint('not base64!'), /base64/)
+  })
+})
+
+// RFC 7638 section 3.1: the example RSA key and its thumbprint.
+const RFC7638_N =
+  '0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw'
+const RFC7638_THUMBPRINT = 'NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs'
+const rfc7638Spki = () =>
+  createPublicKey({
+    key: { kty: 'RSA', n: RFC7638_N, e: 'AQAB' },
+    format: 'jwk',
+  })
+    .export({ format: 'der', type: 'spki' })
+    .toString('base64')
+
+describe('rsaThumbprint', () => {
+  test('matches the RFC 7638 section 3.1 known answer (members e, kty, n)', async () => {
+    assert.equal(await rsaThumbprint(rfc7638Spki()), RFC7638_THUMBPRINT)
+  })
+
+  test('takes a PEM, and refuses an Ed25519 key or garbage', async () => {
+    assert.equal(await rsaThumbprint(pem(rfc7638Spki())), RFC7638_THUMBPRINT)
+    await assert.rejects(rsaThumbprint(spkiFromX(RFC8037_X)))
+    await assert.rejects(rsaThumbprint('not a key!'), /base64/)
   })
 })
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { LocalVariablesService } from '@pikku/core/services'
 import { afterEach, beforeEach, describe, test } from 'node:test'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
@@ -978,6 +979,27 @@ describe('verifyKey: one key or a list (pikkuVirtualUser option)', () => {
         await signIn(
           text,
           await statementWithKid(a.privateKey, 'customer', 'one')
+        )
+      ).status,
+      200
+    )
+  })
+
+  test('a JSON list read through LocalVariablesService (which parses it into an array) verifies', async () => {
+    const [a, b] = [await keyPair(), await keyPair()]
+    const variables = new LocalVariablesService({
+      VIRTUAL_USER_VERIFY_KEY: JSON.stringify([
+        { kid: 'one', publicKey: a.publicKey },
+        { kid: 'two', publicKey: b.publicKey },
+      ]),
+    })
+    const value = await variables.get('VIRTUAL_USER_VERIFY_KEY')
+    assert.ok(Array.isArray(value))
+    assert.equal(
+      (
+        await signIn(
+          value,
+          await statementWithKid(b.privateKey, 'customer', 'two')
         )
       ).status,
       200
