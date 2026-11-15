@@ -31,3 +31,21 @@ func TestContractsIncludeRemoteFunctions(t *testing.T) {
 		t.Fatalf("BuildCurrentContracts ids = %v", built.IDs())
 	}
 }
+
+// A mocked function has no contract yet: its shape may change freely until it
+// is implemented, so the version manifest leaves it out. The Rust inspector
+// asserts the same in finalize/tests.rs.
+func TestContractsLeaveOutMockedFunctions(t *testing.T) {
+	yes := true
+	st := state.New(t.TempDir())
+	st.Functions.Meta.Set("realFunc", &state.FunctionMeta{ContractHash: "realhash12345678"})
+	st.Functions.Meta.Set("mockedFunc", &state.FunctionMeta{Mock: &yes, ContractHash: "mockhash12345678"})
+
+	extracted := ExtractContractsFromMeta(st)
+	if extracted.Get("realFunc") == nil {
+		t.Fatalf("realFunc missing from extracted contracts: %v", extracted.IDs())
+	}
+	if extracted.Get("mockedFunc") != nil {
+		t.Fatalf("a mocked function should not carry a contract")
+	}
+}

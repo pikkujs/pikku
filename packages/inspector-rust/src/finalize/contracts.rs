@@ -197,11 +197,13 @@ pub fn compute_contract_hashes(st: &mut State) {
     }
 }
 
-/// `extractContractsFromMeta`.
+/// `extractContractsFromMeta`. A mocked function has no contract yet: its
+/// shape may change freely until it is implemented, so it is left out of the
+/// version manifest.
 pub fn extract_contracts_from_meta(st: &State) -> Contracts {
     let mut result = Contracts::default();
     for (id, meta) in st.functions.meta.iter() {
-        if is_webhook_receive(meta) || meta.contract_hash.is_empty() {
+        if is_webhook_receive(meta) || meta.mock == Some(true) || meta.contract_hash.is_empty() {
             continue;
         }
         let (key, version) = contract_version(id, meta);
