@@ -35,6 +35,20 @@
         "zod": "^4",
       },
     },
+    "benchmarks/http-app": {
+      "name": "@pikku/benchmarks-http-app",
+      "dependencies": {
+        "@pikku/bun-server": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@pikku/schedule": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/deploy-standalone": "workspace:*",
+        "@types/node": "^26",
+      },
+    },
     "e2e": {
       "name": "@pikku/e2e",
       "version": "0.0.27",
@@ -3483,6 +3497,8 @@
     "@pikku/azure-functions": ["@pikku/azure-functions@workspace:packages/runtimes/azure-functions"],
 
     "@pikku/backblaze": ["@pikku/backblaze@workspace:packages/services/backblaze"],
+
+    "@pikku/benchmarks-http-app": ["@pikku/benchmarks-http-app@workspace:benchmarks/http-app"],
 
     "@pikku/better-auth": ["@pikku/better-auth@workspace:packages/services/better-auth"],
 

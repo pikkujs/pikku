@@ -33,6 +33,27 @@ Latency, branch, full scenario (p99): L0 314 us, L1 374, L2 474, L3 1727 (p99.9 
 
 In-process numbers (this matrix) have no network between client and app: requests go straight into the runner. They exclude HTTP parsing and socket cost, so the percentages are an upper bound on what a client sees. The stress runs below do use real HTTP (autocannon).
 
+## Over real HTTP, against the standalone deploy output
+
+`bun run benchmark:telemetry:http` (`benchmarks/bench-telemetry-http.ts`) builds `benchmarks/http-app` with `pikku all` and `pikku deploy plan --provider standalone`, compiles the bundle with `bun build --compile` (the standalone output is a Bun server, not Node), and runs the executable as a real HTTP server. Per cell: a fresh process, 4 s warm-up, an 8 s unthrottled autocannon window (req/s, saturated CPU) and an 8 s window at a fixed 8000 req/s (p50/p99 from every response time, CPU per request); cells interleaved in shuffled rounds. CPU is the server process's `ps` cputime (user + system, all threads). `bare` and `full` have the same bodies as `bench-shared.ts`; console output is silenced (`BENCH_QUIET=0` to restore it) because the entry's base logger is a ConsoleLogger. Other commands: `trace` prints the L3 spans of a `full` request, `profile` writes `bun --cpu-prof` profiles at L0 and LE.
+
+Run on an Apple M4 (10 cores) with Bun 1.4.3, **not idle**: other sessions kept the load average at 7-8, so spread is large (see the sd column in `telemetry-http-results.json`). Median of 7, the unthrottled saturated-CPU column also shown as best-of-7 in brackets:
+
+| level | scenario | req/s (saturated) | p50 us @8k/s | p99 us @8k/s | cpu us/req @8k/s | cpu us/req saturated (best) |
+| ----- | -------- | ----------------- | ------------ | ------------ | ---------------- | --------------------------- |
+| L0    | bare     | 70658             | 182          | 1682         | 17.0             | 14.1 (12.1)                 |
+| LE    | bare     | 51206             | 207          | 906          | 18.1             | 17.8 (14.4)                 |
+| L3    | bare     | 32150             | 365          | 2529         | 38.1             | 33.6 (32.1)                 |
+| L0    | full     | 37637             | 391          | 2424         | 37.8             | 31.2 (27.6)                 |
+| LE    | full     | 33118             | 407          | 1430         | 36.4             | 34.1 (31.3)                 |
+| L3    | full     | 17958             | 693          | 2837         | 62.2             | 64.3 (54.1)                 |
+
+LE over L0 is +2 to +4 cpu-us/request saturated (bare +19% best-of-7, full +13%), matching the in-process +13%/+15%; at the fixed rate the difference is inside the noise. The load generator (autocannon, same machine) tops out near 80k req/s, so L0 `bare` req/s is partly generator-bound.
+
+A traced L3 `full` request is one span, `full` (no child spans for middleware, permission or validation); over 2000 sequential requests its duration was p50 33 us, p90 182 us, p99 927 us. A span resolves a function's wall time with microsecond timestamps, but at tens of microseconds it also contains scheduling and GC noise, so it cannot attribute cost inside the function or separate telemetry's own cost from the work.
+
+CPU profile (`bun --cpu-prof`, `full` under load, L0 vs LE, 1 ms sampling, one run each so shares are indicative): the top self-time frames are the same in both (the minified request path, Bun stream and Response internals). The frames that appear only at LE are the OTLP logger wrapper: `toRecord`, `OtlpLogger.forward`, `String.replace` and the `scrubText` URL-userinfo regex, about 2-3% of samples each in total, plus more `copyDataProperties`. `OtlpLogger.forward` runs for every `logger.info` even though the sink registry is empty and nothing can receive the record, while the tracer already skips work when `Tracer.active` is false. Skipping the logger forward while the registry is empty is the likely way to close most of the LE gap; this was inferred from the profile and not tried.
+
 ## Where L3 spends the extra CPU (cpu-prof, branch, full scenario, pinned core)
 
 Difference vs L0 per request, by file: protobuf-writer +65 us, undici fetch +46, otlp-logger +27, text encoding +24, GC +21, function-span +16, otlp-encode +13, otlp-tracer +7.5.

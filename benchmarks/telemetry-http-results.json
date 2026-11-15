@@ -1,0 +1,843 @@
+{
+  "machine": {
+    "platform": "darwin 25.6.0 arm64",
+    "cpu": "Apple M4",
+    "cores": 10,
+    "memGB": 16,
+    "node": "v24.18.1",
+    "bun": "1.4.3",
+    "loadavgAtStart": [
+      6.71,
+      8.18,
+      7.57
+    ],
+    "commit": "46e492a2c"
+  },
+  "settings": {
+    "runs": 7,
+    "warmupS": 4,
+    "durationS": 8,
+    "connections": 16,
+    "rate": 8000
+  },
+  "summary": [
+    {
+      "level": "L0",
+      "scenario": "bare",
+      "runs": 7,
+      "reqPerSec": {
+        "n": 7,
+        "median": 70658,
+        "mean": 64177.82142857143,
+        "stddev": 24873.582600620302,
+        "min": 12802.75,
+        "max": 84240
+      },
+      "cpuUsPerRequestSaturated": {
+        "n": 7,
+        "median": 14.081616767738238,
+        "mean": 16.584825792420986,
+        "stddev": 7.604792769848997,
+        "min": 12.122668945787783,
+        "max": 33.488571902795265
+      },
+      "p50Ms": {
+        "n": 7,
+        "median": 0.182166,
+        "mean": 0.23089871428571426,
+        "stddev": 0.09773065171124544,
+        "min": 0.173625,
+        "max": 0.433125
+      },
+      "p99Ms": {
+        "n": 7,
+        "median": 1.682,
+        "mean": 3.057119,
+        "stddev": 3.2187905253964053,
+        "min": 0.796167,
+        "max": 8.92925
+      },
+      "cpuUsPerRequest": {
+        "n": 7,
+        "median": 17.031249999999996,
+        "mean": 19.481834158145023,
+        "stddev": 5.1312864434774195,
+        "min": 15.312500000000007,
+        "max": 29.843750000000004
+      }
+    },
+    {
+      "level": "L0",
+      "scenario": "full",
+      "runs": 7,
+      "reqPerSec": {
+        "n": 7,
+        "median": 37637,
+        "mean": 33591.28571428572,
+        "stddev": 12606.149500862475,
+        "min": 8667,
+        "max": 43928
+      },
+      "cpuUsPerRequestSaturated": {
+        "n": 7,
+        "median": 31.15016504938197,
+        "mean": 37.57988263920199,
+        "stddev": 17.054927302141884,
+        "min": 27.627610538894896,
+        "max": 75.42761544896017
+      },
+      "p50Ms": {
+        "n": 7,
+        "median": 0.390875,
+        "mean": 0.47165485714285715,
+        "stddev": 0.2492152449847511,
+        "min": 0.347917,
+        "max": 1.035583
+      },
+      "p99Ms": {
+        "n": 7,
+        "median": 2.423583,
+        "mean": 16.203755857142855,
+        "stddev": 36.95548389945032,
+        "min": 0.8965,
+        "max": 99.964958
+      },
+      "cpuUsPerRequest": {
+        "n": 7,
+        "median": 37.81250000000003,
+        "mean": 41.899992896026916,
+        "stddev": 16.685385901541824,
+        "min": 30.46874999999999,
+        "max": 79.06658688776824
+      }
+    },
+    {
+      "level": "LE",
+      "scenario": "bare",
+      "runs": 7,
+      "reqPerSec": {
+        "n": 7,
+        "median": 51205.5,
+        "mean": 53731.21428571428,
+        "stddev": 13056.24692710078,
+        "min": 32970,
+        "max": 70294
+      },
+      "cpuUsPerRequestSaturated": {
+        "n": 7,
+        "median": 17.795896446923553,
+        "mean": 18.718855206585395,
+        "stddev": 4.594070040116626,
+        "min": 14.405147439351662,
+        "max": 27.86096053978242
+      },
+      "p50Ms": {
+        "n": 7,
+        "median": 0.206625,
+        "mean": 0.22273228571428572,
+        "stddev": 0.048305862617679184,
+        "min": 0.191333,
+        "max": 0.329125
+      },
+      "p99Ms": {
+        "n": 7,
+        "median": 0.905584,
+        "mean": 1.1885,
+        "stddev": 0.515084722193673,
+        "min": 0.761125,
+        "max": 2.000416
+      },
+      "cpuUsPerRequest": {
+        "n": 7,
+        "median": 18.124999999999975,
+        "mean": 19.28571428571428,
+        "stddev": 3.3968442659712745,
+        "min": 16.562499999999982,
+        "max": 25.937500000000004
+      }
+    },
+    {
+      "level": "LE",
+      "scenario": "full",
+      "runs": 7,
+      "reqPerSec": {
+        "n": 7,
+        "median": 33118,
+        "mean": 30649.428571428572,
+        "stddev": 7928.056147992034,
+        "min": 16810,
+        "max": 38624
+      },
+      "cpuUsPerRequestSaturated": {
+        "n": 7,
+        "median": 34.12312256768948,
+        "mean": 38.613873363047375,
+        "stddev": 9.538787510594219,
+        "min": 31.267397749783136,
+        "max": 57.262694470059785
+      },
+      "p50Ms": {
+        "n": 7,
+        "median": 0.407042,
+        "mean": 0.437988,
+        "stddev": 0.07995536004963437,
+        "min": 0.393416,
+        "max": 0.616333
+      },
+      "p99Ms": {
+        "n": 7,
+        "median": 1.429667,
+        "mean": 1.874869142857143,
+        "stddev": 0.8156616300356884,
+        "min": 1.0645,
+        "max": 3.1095
+      },
+      "cpuUsPerRequest": {
+        "n": 7,
+        "median": 36.40625000000003,
+        "mean": 39.97767857142858,
+        "stddev": 6.411601278337637,
+        "min": 35.937500000000014,
+        "max": 53.74999999999999
+      }
+    },
+    {
+      "level": "L3",
+      "scenario": "bare",
+      "runs": 7,
+      "reqPerSec": {
+        "n": 7,
+        "median": 32150,
+        "mean": 28199.64285714286,
+        "stddev": 8442.202648570088,
+        "min": 12511.5,
+        "max": 34311
+      },
+      "cpuUsPerRequestSaturated": {
+        "n": 7,
+        "median": 33.55900435139349,
+        "mean": 41.252191125533564,
+        "stddev": 14.771242472097423,
+        "min": 32.09717318993439,
+        "max": 70.637132951673
+      },
+      "p50Ms": {
+        "n": 7,
+        "median": 0.364583,
+        "mean": 0.44286899999999996,
+        "stddev": 0.16143163636557326,
+        "min": 0.358,
+        "max": 0.797667
+      },
+      "p99Ms": {
+        "n": 7,
+        "median": 2.528875,
+        "mean": 3.2888212857142856,
+        "stddev": 2.0506189390706497,
+        "min": 2.034792,
+        "max": 7.862333
+      },
+      "cpuUsPerRequest": {
+        "n": 7,
+        "median": 38.12440430618271,
+        "mean": 44.36414673169369,
+        "stddev": 13.091315843557359,
+        "min": 36.09375000000001,
+        "max": 73.04962281567308
+      }
+    },
+    {
+      "level": "L3",
+      "scenario": "full",
+      "runs": 7,
+      "reqPerSec": {
+        "n": 7,
+        "median": 17958.25,
+        "mean": 14429.66142857143,
+        "stddev": 9588.66773322799,
+        "min": 285.13,
+        "max": 22384
+      },
+      "cpuUsPerRequestSaturated": {
+        "n": 7,
+        "median": 64.31897757884991,
+        "mean": 116.59074382608924,
+        "stddev": 105.1609988216391,
+        "min": 54.09644623557429,
+        "max": 328.8031565103025
+      },
+      "p50Ms": {
+        "n": 7,
+        "median": 0.692917,
+        "mean": 1.0706845714285715,
+        "stddev": 0.7142742490917751,
+        "min": 0.661166,
+        "max": 2.518209
+      },
+      "p99Ms": {
+        "n": 7,
+        "median": 2.837375,
+        "mean": 17.191339428571432,
+        "stddev": 35.21281207190426,
+        "min": 2.259584,
+        "max": 96.774583
+      },
+      "cpuUsPerRequest": {
+        "n": 7,
+        "median": 62.18749999999998,
+        "mean": 87.61158323980445,
+        "stddev": 51.41789967436863,
+        "min": 58.12500000000001,
+        "max": 195.890824856481
+      }
+    }
+  ],
+  "samples": [
+    {
+      "level": "L0",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 43928,
+      "cpuUsPerRequestSaturated": 27.627610538894896,
+      "rateAchieved": 8001.5,
+      "p50Ms": 0.372459,
+      "p99Ms": 1.368542,
+      "cpuUsPerRequest": 34.68750000000001
+    },
+    {
+      "level": "L3",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 32011,
+      "cpuUsPerRequestSaturated": 33.660830040143075,
+      "rateAchieved": 8002,
+      "p50Ms": 0.3615,
+      "p99Ms": 2.034792,
+      "cpuUsPerRequest": 37.34375000000001
+    },
+    {
+      "level": "L3",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 21840,
+      "cpuUsPerRequestSaturated": 54.09644623557429,
+      "rateAchieved": 8001.5,
+      "p50Ms": 0.686542,
+      "p99Ms": 3.015667,
+      "cpuUsPerRequest": 62.81249999999999
+    },
+    {
+      "level": "LE",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 37904,
+      "cpuUsPerRequestSaturated": 31.326771199155825,
+      "rateAchieved": 8002,
+      "p50Ms": 0.40175,
+      "p99Ms": 1.0645,
+      "cpuUsPerRequest": 35.937500000000014
+    },
+    {
+      "level": "L0",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 78496,
+      "cpuUsPerRequestSaturated": 12.772612461100865,
+      "rateAchieved": 8002,
+      "p50Ms": 0.175709,
+      "p99Ms": 0.797583,
+      "cpuUsPerRequest": 16.406249999999982
+    },
+    {
+      "level": "LE",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 69198,
+      "cpuUsPerRequestSaturated": 14.468721550266615,
+      "rateAchieved": 8002,
+      "p50Ms": 0.207375,
+      "p99Ms": 0.905584,
+      "cpuUsPerRequest": 18.906250000000014
+    },
+    {
+      "level": "LE",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 70294,
+      "cpuUsPerRequestSaturated": 14.405147439351662,
+      "rateAchieved": 8002,
+      "p50Ms": 0.191333,
+      "p99Ms": 0.761125,
+      "cpuUsPerRequest": 16.562499999999982
+    },
+    {
+      "level": "L3",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 22384,
+      "cpuUsPerRequestSaturated": 54.56637326303561,
+      "rateAchieved": 8002,
+      "p50Ms": 0.661166,
+      "p99Ms": 2.283541,
+      "cpuUsPerRequest": 58.12500000000001
+    },
+    {
+      "level": "L0",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 84240,
+      "cpuUsPerRequestSaturated": 12.122668945787783,
+      "rateAchieved": 8002,
+      "p50Ms": 0.174,
+      "p99Ms": 0.811333,
+      "cpuUsPerRequest": 15.312500000000007
+    },
+    {
+      "level": "LE",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 34426,
+      "cpuUsPerRequestSaturated": 32.464584914499035,
+      "rateAchieved": 8002,
+      "p50Ms": 0.393416,
+      "p99Ms": 1.429667,
+      "cpuUsPerRequest": 36.40625000000003
+    },
+    {
+      "level": "L0",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 40820,
+      "cpuUsPerRequestSaturated": 29.337637003396182,
+      "rateAchieved": 8001.5,
+      "p50Ms": 0.390875,
+      "p99Ms": 2.423583,
+      "cpuUsPerRequest": 37.81250000000003
+    },
+    {
+      "level": "L3",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 32150,
+      "cpuUsPerRequestSaturated": 33.55900435139349,
+      "rateAchieved": 8002,
+      "p50Ms": 0.390833,
+      "p99Ms": 2.764666,
+      "cpuUsPerRequest": 42.03124999999999
+    },
+    {
+      "level": "LE",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 33118,
+      "cpuUsPerRequestSaturated": 34.12312256768948,
+      "rateAchieved": 8002,
+      "p50Ms": 0.396083,
+      "p99Ms": 1.287875,
+      "cpuUsPerRequest": 36.25000000000001
+    },
+    {
+      "level": "L3",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 34311,
+      "cpuUsPerRequestSaturated": 32.09717318993439,
+      "rateAchieved": 8002,
+      "p50Ms": 0.358,
+      "p99Ms": 2.4145,
+      "cpuUsPerRequest": 36.09375000000001
+    },
+    {
+      "level": "L0",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 54432,
+      "cpuUsPerRequestSaturated": 16.260013228485338,
+      "rateAchieved": 8001.5,
+      "p50Ms": 0.192208,
+      "p99Ms": 1.682,
+      "cpuUsPerRequest": 17.031249999999996
+    },
+    {
+      "level": "LE",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 48181,
+      "cpuUsPerRequestSaturated": 18.73315119105998,
+      "rateAchieved": 8002,
+      "p50Ms": 0.226084,
+      "p99Ms": 2.000416,
+      "cpuUsPerRequest": 21.562499999999986
+    },
+    {
+      "level": "L0",
+      "scenario": "full",
+      "requests": 59898,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 25407,
+      "cpuUsPerRequestSaturated": 38.18052104602819,
+      "rateAchieved": 7489.13,
+      "p50Ms": 0.390917,
+      "p99Ms": 4.39025,
+      "cpuUsPerRequest": 39.23336338442017
+    },
+    {
+      "level": "L3",
+      "scenario": "full",
+      "requests": 56210,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 1198.75,
+      "cpuUsPerRequestSaturated": 187.69551616266943,
+      "rateAchieved": 7027.5,
+      "p50Ms": 1.545541,
+      "p99Ms": 10.389334,
+      "cpuUsPerRequest": 112.07970112079703
+    },
+    {
+      "level": "LE",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 56374,
+      "cpuUsPerRequestSaturated": 17.2292982331654,
+      "rateAchieved": 8001.5,
+      "p50Ms": 0.192584,
+      "p99Ms": 0.780541,
+      "cpuUsPerRequest": 16.875
+    },
+    {
+      "level": "L0",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 82152,
+      "cpuUsPerRequestSaturated": 12.339273732561836,
+      "rateAchieved": 8002,
+      "p50Ms": 0.173625,
+      "p99Ms": 0.796167,
+      "cpuUsPerRequest": 16.250000000000014
+    },
+    {
+      "level": "L0",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 42784,
+      "cpuUsPerRequestSaturated": 28.602063205008722,
+      "rateAchieved": 8002,
+      "p50Ms": 0.347917,
+      "p99Ms": 0.8965,
+      "cpuUsPerRequest": 30.46874999999999
+    },
+    {
+      "level": "LE",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 38624,
+      "cpuUsPerRequestSaturated": 31.267397749783136,
+      "rateAchieved": 8002,
+      "p50Ms": 0.414875,
+      "p99Ms": 2.608959,
+      "cpuUsPerRequest": 41.093749999999986
+    },
+    {
+      "level": "L3",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 33170,
+      "cpuUsPerRequestSaturated": 33.234609210734554,
+      "rateAchieved": 8001,
+      "p50Ms": 0.358417,
+      "p99Ms": 2.234,
+      "cpuUsPerRequest": 37.96874999999999
+    },
+    {
+      "level": "L3",
+      "scenario": "full",
+      "requests": 64002,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 20898,
+      "cpuUsPerRequestSaturated": 56.111217457886674,
+      "rateAchieved": 8002,
+      "p50Ms": 0.692917,
+      "p99Ms": 2.779292,
+      "cpuUsPerRequest": 62.18555670135306
+    },
+    {
+      "level": "L0",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 37637,
+      "cpuUsPerRequestSaturated": 31.15016504938197,
+      "rateAchieved": 8002,
+      "p50Ms": 0.394833,
+      "p99Ms": 3.128833,
+      "cpuUsPerRequest": 38.593749999999986
+    },
+    {
+      "level": "L3",
+      "scenario": "bare",
+      "requests": 64001,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 33116,
+      "cpuUsPerRequestSaturated": 33.40656354041628,
+      "rateAchieved": 8002,
+      "p50Ms": 0.364583,
+      "p99Ms": 2.528875,
+      "cpuUsPerRequest": 38.12440430618271
+    },
+    {
+      "level": "L3",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 16443.5,
+      "cpuUsPerRequestSaturated": 70.54351957430636,
+      "rateAchieved": 8002,
+      "p50Ms": 0.70875,
+      "p99Ms": 2.837375,
+      "cpuUsPerRequest": 62.18749999999998
+    },
+    {
+      "level": "L0",
+      "scenario": "bare",
+      "requests": 63581,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 70658,
+      "cpuUsPerRequestSaturated": 14.081616767738238,
+      "rateAchieved": 7949,
+      "p50Ms": 0.182166,
+      "p99Ms": 8.92925,
+      "cpuUsPerRequest": 19.34540192824901
+    },
+    {
+      "level": "LE",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 51205.5,
+      "cpuUsPerRequestSaturated": 17.795896446923553,
+      "rateAchieved": 8001.5,
+      "p50Ms": 0.206625,
+      "p99Ms": 1.324209,
+      "cpuUsPerRequest": 18.124999999999975
+    },
+    {
+      "level": "LE",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 23680,
+      "cpuUsPerRequestSaturated": 44.28796148689309,
+      "rateAchieved": 8002,
+      "p50Ms": 0.436417,
+      "p99Ms": 3.1095,
+      "cpuUsPerRequest": 40.00000000000001
+    },
+    {
+      "level": "L0",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 35896,
+      "cpuUsPerRequestSaturated": 32.733566182743836,
+      "rateAchieved": 8002,
+      "p50Ms": 0.369,
+      "p99Ms": 1.253625,
+      "cpuUsPerRequest": 33.43750000000001
+    },
+    {
+      "level": "L0",
+      "scenario": "bare",
+      "requests": 64011,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 66464,
+      "cpuUsPerRequestSaturated": 15.029023508477575,
+      "rateAchieved": 8002.5,
+      "p50Ms": 0.285458,
+      "p99Ms": 2.197375,
+      "cpuUsPerRequest": 22.18368717876615
+    },
+    {
+      "level": "LE",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 47896,
+      "cpuUsPerRequestSaturated": 20.53881104554814,
+      "rateAchieved": 8002,
+      "p50Ms": 0.206,
+      "p99Ms": 0.78875,
+      "cpuUsPerRequest": 17.031249999999996
+    },
+    {
+      "level": "LE",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 29984,
+      "cpuUsPerRequestSaturated": 39.56458115325125,
+      "rateAchieved": 8002,
+      "p50Ms": 0.407042,
+      "p99Ms": 1.211292,
+      "cpuUsPerRequest": 36.40625000000003
+    },
+    {
+      "level": "L3",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 20128,
+      "cpuUsPerRequestSaturated": 52.170024594440164,
+      "rateAchieved": 8002,
+      "p50Ms": 0.469083,
+      "p99Ms": 3.182583,
+      "cpuUsPerRequest": 45.93750000000002
+    },
+    {
+      "level": "L3",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 17958.25,
+      "cpuUsPerRequestSaturated": 64.31897757884991,
+      "rateAchieved": 8002,
+      "p50Ms": 0.681667,
+      "p99Ms": 2.259584,
+      "cpuUsPerRequest": 60.00000000000003
+    },
+    {
+      "level": "L3",
+      "scenario": "bare",
+      "requests": 62834,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 12511.5,
+      "cpuUsPerRequestSaturated": 70.637132951673,
+      "rateAchieved": 7854,
+      "p50Ms": 0.797667,
+      "p99Ms": 7.862333,
+      "cpuUsPerRequest": 73.04962281567308
+    },
+    {
+      "level": "L0",
+      "scenario": "full",
+      "requests": 23398,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 8667,
+      "cpuUsPerRequestSaturated": 75.42761544896017,
+      "rateAchieved": 2925.38,
+      "p50Ms": 1.035583,
+      "p99Ms": 99.964958,
+      "cpuUsPerRequest": 79.06658688776824
+    },
+    {
+      "level": "L3",
+      "scenario": "full",
+      "requests": 19858,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 285.13,
+      "cpuUsPerRequestSaturated": 328.8031565103025,
+      "rateAchieved": 2482.63,
+      "p50Ms": 2.518209,
+      "p99Ms": 96.774583,
+      "cpuUsPerRequest": 195.890824856481
+    },
+    {
+      "level": "L0",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 12802.75,
+      "cpuUsPerRequestSaturated": 33.488571902795265,
+      "rateAchieved": 8001.5,
+      "p50Ms": 0.433125,
+      "p99Ms": 6.186125,
+      "cpuUsPerRequest": 29.843750000000004
+    },
+    {
+      "level": "LE",
+      "scenario": "full",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 16810,
+      "cpuUsPerRequestSaturated": 57.262694470059785,
+      "rateAchieved": 8001.5,
+      "p50Ms": 0.616333,
+      "p99Ms": 2.412291,
+      "cpuUsPerRequest": 53.74999999999999
+    },
+    {
+      "level": "LE",
+      "scenario": "bare",
+      "requests": 64000,
+      "non2xx": 0,
+      "errors": 0,
+      "reqPerSec": 32970,
+      "cpuUsPerRequestSaturated": 27.86096053978242,
+      "rateAchieved": 8002,
+      "p50Ms": 0.329125,
+      "p99Ms": 1.758875,
+      "cpuUsPerRequest": 25.937500000000004
+    }
+  ]
+}
