@@ -1,3 +1,4 @@
+import { PikkuError } from '@pikku/core/errors'
 import { verifySpkiSignature } from '@pikku/core/hmac'
 import {
   DomainPolicyError,
@@ -40,7 +41,12 @@ import {
   publicJwk,
   signBytes,
 } from './algorithms.js'
-import { fromBase64, sha256Hex, toBase64Url, utf8 } from './base64.js'
+import {
+  fromCanonicalBase64Url,
+  sha256Hex,
+  toBase64Url,
+  utf8,
+} from './base64.js'
 import type { KeyFileCustody } from './custody.js'
 import { assertDomain, prefixWithDomain } from './domain.js'
 import {
@@ -514,7 +520,9 @@ export class LocalKeyService implements KeyService {
     return key
   }
 
-  private async verifyKey(rec: KeyRecord): Promise<CryptoKey> {
+  private async verifyKey(
+    rec: Pick<KeyRecord, 'kid' | 'publicKey' | 'algorithm'>
+  ): Promise<CryptoKey> {
     const cached = this.verifyCache.get(rec.kid)
     if (cached) return cached
     const key = await importVerifyKey(rec.publicKey!, rec.algorithm as Signing)
@@ -589,6 +597,12 @@ export class LocalKeyService implements KeyService {
     data: Uint8Array | string,
     opts?: KeyOptions & { domain?: string }
   ): Promise<{ kid: string; alg: KeyAlgorithm; signature: string }> {
+    const decl = this.decl(name, 'signing')
+    if (decl.signedFormat === 'jws') {
+      throw new DomainPolicyError(
+        `Key pair '${name}' is signedFormat 'jws': it has only signer(), which carries the kid for the header.`
+      )
+    }
     const handle = await this.signer(name, opts)
     return {
       kid: handle.kid,
@@ -618,12 +632,8 @@ export class LocalKeyService implements KeyService {
     } else {
       candidates = view.records
     }
-    let sig: Uint8Array
-    try {
-      sig = fromBase64(signature)
-    } catch {
-      return false
-    }
+    const sig = fromCanonicalBase64Url(signature)
+    if (!sig) return false
     const bytes = this.signedBytes(domain, data)
     for (const rec of candidates) {
       if (rec.status === 'pending' || !rec.publicKey) continue
@@ -716,12 +726,13 @@ export class LocalKeyService implements KeyService {
       throw new Error(`Key pair '${name}' is not declared public: 'jwks'.`)
     }
     const keys = await this.publicKeys(name, { ...opts, includePending: true })
+    const alg = decl.algorithm as Signing
     return {
       keys: await Promise.all(
         keys.map(async (k) => ({
-          ...(await publicJwk(k.publicKey, decl.algorithm as Signing)),
+          ...(await publicJwk(await this.verifyKey(k), alg)),
           kid: k.kid,
-          alg: JWS_ALG[decl.algorithm as Signing],
+          alg: JWS_ALG[alg],
           use: 'sig',
         }))
       ),
@@ -759,7 +770,18 @@ export class LocalKeyService implements KeyService {
       rev: 0,
     }
     await this.store.insertPending(row)
-    await this.placePrivate(decl, row, pair.privateKey)
+    try {
+      await this.placePrivate(decl, row, pair.privateKey)
+    } catch (error) {
+      // The backend's message may quote the value it was given: log the class, throw a fixed text.
+      this.options.logger?.warn(
+        `placing the private half of ${decl.name}/${pair.kid} failed: ${(error as Error).name}`
+      )
+      if (error instanceof KeyCustodyLostError) throw error
+      throw new KeyCustodyLostError(
+        `The private half of key '${decl.name}' (${pair.kid}) could not be placed in custody '${custody}'.`
+      )
+    }
     if (custody === 'external') {
       await this.placers
         .get(decl.name)
@@ -1105,7 +1127,11 @@ export class LocalKeyService implements KeyService {
           } else {
             summary.failed.push({
               target,
-              error: `${(error as Error).name}: ${(error as Error).message}`,
+              // Only our own errors carry a message written here; anything else is named by class.
+              error:
+                error instanceof PikkuError
+                  ? `${error.name}: ${error.message}`
+                  : (error as Error).name,
             })
             this.options.logger?.warn(
               `key reconcile failed for ${target}: ${(error as Error).name}`

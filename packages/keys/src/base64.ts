@@ -1,28 +1,34 @@
-/**
- * Base64 and base64url over plain `btoa`/`atob`, so the root entry loads on
- * Workers and Bun as well as Node. `@pikku/core` keeps its equivalents private.
- */
+import { base64ToBytes, bytesToBase64 } from '@pikku/core/services'
+
+/** One base64 implementation: core's. This file adds only the strict signature form and two digests. */
+export {
+  base64ToBytes as fromBase64,
+  bytesToBase64 as toBase64,
+} from '@pikku/core/services'
+
 const encoder = new TextEncoder()
 
 export const utf8 = (value: string): Uint8Array => encoder.encode(value)
 
-export const toBase64 = (bytes: Uint8Array): string => {
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
-}
-
 export const toBase64Url = (bytes: Uint8Array): string =>
-  toBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  bytesToBase64(bytes, true)
 
-/** Accepts base64 and base64url, padded or not. Throws on anything else. */
-export const fromBase64 = (value: string): Uint8Array => {
-  const normal = value.replace(/-/g, '+').replace(/_/g, '/')
-  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(normal)) {
-    throw new Error('not base64')
+/**
+ * Decodes a signature only if it is the canonical unpadded base64url encoding
+ * of its bytes: no standard alphabet, padding, whitespace or non-zero trailing
+ * bits, so one signature has exactly one accepted string (a replay cache or
+ * dedupe keyed on the string cannot be bypassed by re-encoding).
+ */
+export const fromCanonicalBase64Url = (
+  value: string
+): Uint8Array | undefined => {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) return undefined
+  try {
+    const bytes = base64ToBytes(value.replace(/-/g, '+').replace(/_/g, '/'))
+    return bytesToBase64(bytes, true) === value ? bytes : undefined
+  } catch {
+    return undefined
   }
-  const padded = normal + '='.repeat((4 - (normal.length % 4)) % 4)
-  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
 }
 
 export const sha256Hex = async (value: string): Promise<string> => {

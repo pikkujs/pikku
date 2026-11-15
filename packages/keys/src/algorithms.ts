@@ -106,21 +106,12 @@ export const importVerifyKey = (
   algorithm: 'ed25519' | 'rs256'
 ): Promise<CryptoKey> => importSpkiVerifyKey(fromBase64(publicKey), algorithm)
 
-/** The public half as an RFC 7517 JWK (without `kid`, `alg` and `use`). */
+/** The public half as an RFC 7517 JWK (without `kid`, `alg` and `use`), from an already imported verify key. */
 export const publicJwk = async (
-  publicKey: string,
+  verifyKey: CryptoKey,
   algorithm: 'ed25519' | 'rs256'
 ): Promise<{ kty: string } & Record<string, string>> => {
-  const key = await subtle().importKey(
-    'spki',
-    fromBase64(publicKey) as BufferSource,
-    algorithm === 'ed25519'
-      ? { name: 'Ed25519' }
-      : { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    true,
-    ['verify']
-  )
-  const jwk = await subtle().exportKey('jwk', key)
+  const jwk = await subtle().exportKey('jwk', verifyKey)
   return algorithm === 'ed25519'
     ? { kty: 'OKP', crv: 'Ed25519', x: jwk.x! }
     : { kty: 'RSA', n: jwk.n!, e: jwk.e! }

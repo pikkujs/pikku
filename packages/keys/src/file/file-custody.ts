@@ -1,18 +1,7 @@
-import {
-  chmodSync,
-  closeSync,
-  existsSync,
-  fsyncSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeSync,
-} from 'node:fs'
+import { chmodSync, existsSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { KeyFileCustody } from '../custody.js'
+import { writeFileAtomic } from './atomic-write.js'
 
 /**
  * Custody `file`: the private half as `<keysDir>/<name>/<kid>.key`, mode 0600,
@@ -31,18 +20,8 @@ export class FileCustody implements KeyFileCustody {
   }
 
   async write(ref: string, privateKey: string) {
-    mkdirSync(dirname(ref), { recursive: true, mode: 0o700 })
+    writeFileAtomic(ref, privateKey)
     chmodSync(dirname(ref), 0o700)
-    const tmp = `${ref}.${process.pid}.tmp`
-    const fd = openSync(tmp, 'w', 0o600)
-    try {
-      writeSync(fd, privateKey)
-      fsyncSync(fd)
-    } finally {
-      closeSync(fd)
-    }
-    chmodSync(tmp, 0o600)
-    renameSync(tmp, ref)
   }
 
   async read(ref: string) {

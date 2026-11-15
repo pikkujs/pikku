@@ -997,3 +997,133 @@ describe('MemoryKeyStore invariants', () => {
     assert.equal((await store.list('n', 'default')).length, 1)
   })
 })
+
+describe('review fixes', () => {
+  test('sign() on a signedFormat jws name is refused, as is a domain on it; a domain name still needs one', async () => {
+    const { svc } = await setup()
+    await svc.generate('token')
+    await svc.generate('audit')
+    await assert.rejects(svc.sign('token', 'raw'), DomainPolicyError)
+    await assert.rejects(
+      svc.sign('token', 'raw', { domain: 'd' }),
+      DomainPolicyError
+    )
+    await assert.rejects(svc.sign('audit', 'raw'), DomainPolicyError)
+    // the handle path stays the one way to sign a jws name
+    const signer = await svc.signer('token')
+    await signer.sign('ok')
+  })
+
+  test('verify rejects a signature made by a different kid when both are accepted', async () => {
+    const { svc } = await setup({ publishDelayMs: 0 })
+    await svc.generate('audit')
+    const old = await svc.signer('audit', { domain: 'd' })
+    const sig = await old.sign('doc')
+    const next = await svc.rotate('audit')
+    await svc.promote('audit', next.kid)
+    assert.equal(
+      await svc.verify('audit', 'doc', sig, { domain: 'd', kid: old.kid }),
+      true
+    )
+    assert.equal(
+      await svc.verify('audit', 'doc', sig, { domain: 'd', kid: next.kid }),
+      false
+    )
+  })
+
+  test('only the canonical base64url form of a signature verifies', async () => {
+    const { svc } = await setup()
+    await svc.generate('audit')
+    const { signature } = await svc.sign('audit', 'x', { domain: 'd' })
+    const verify = (s: string) => svc.verify('audit', 'x', s, { domain: 'd' })
+    assert.equal(await verify(signature), true)
+    const std =
+      signature.replace(/-/g, '+').replace(/_/g, '/') +
+      '='.repeat((4 - (signature.length % 4)) % 4)
+    assert.equal(await verify(std), false, 'padded standard base64')
+    assert.equal(await verify(signature + '='), false, 'padded')
+    assert.equal(await verify(` ${signature}\n`), false, 'whitespace')
+    const alphabet =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+    const last = alphabet.indexOf(signature.at(-1)!)
+    const variant = signature.slice(0, -1) + alphabet[(last + 1) % 64]
+    assert.notEqual(variant, signature)
+    assert.equal(await verify(variant), false, 'non-zero trailing bits')
+  })
+
+  describe('placement errors never carry private material', () => {
+    const quoting = (box: { value?: string }) => (v: unknown) => {
+      box.value = typeof v === 'string' ? v : JSON.stringify(v)
+      return new Error(`backend refused ${box.value}`)
+    }
+    const assertClean = (box: { value?: string }, texts: string[]) => {
+      assert.ok(
+        box.value && box.value.length > 40,
+        'the backend saw a private half'
+      )
+      const raw = box.value!
+      const fragment = raw.replace(/^\{"privateKey":"/, '').slice(10, 50)
+      for (const t of texts) {
+        assert.ok(!t.includes(raw), 'private half leaked')
+        assert.ok(!t.includes(fragment), 'private fragment leaked')
+      }
+    }
+
+    test('secret custody: setSecret error is replaced, in the throw and in reconcile', async () => {
+      const box: { value?: string } = {}
+      const a = await setup({ definitions: [DEFS[0]!] })
+      a.secrets.setSecret = async (_k, v) => {
+        throw quoting(box)(v)
+      }
+      let thrown = ''
+      await assert.rejects(a.svc.generate('audit'), (e: Error) => {
+        thrown = `${e.message}\n${e.stack}`
+        return e instanceof KeyCustodyLostError
+      })
+      a.clock.t += HOUR + 1
+      const summary = await a.svc.reconcile()
+      assert.equal(summary.failed.length, 1)
+      assertClean(box, [thrown, JSON.stringify(summary), ...a.logs])
+    })
+
+    test('wrapped custody: a wrapper error that quotes the value is replaced', async () => {
+      const box: { value?: string } = {}
+      const a = await setup({
+        secrets: undefined,
+        definitions: [def({ name: 'audit', custody: 'wrapped' })],
+        wrapper: {
+          wrap: async (v: string) => {
+            throw quoting(box)(v)
+          },
+          unwrap: async () => '',
+        },
+      })
+      let thrown = ''
+      await assert.rejects(a.svc.generate('audit'), (e: Error) => {
+        thrown = `${e.message}\n${e.stack}`
+        return true
+      })
+      const summary = await a.svc.reconcile()
+      assertClean(box, [thrown, JSON.stringify(summary), ...a.logs])
+    })
+
+    test('external custody: a placer error that quotes the bytes is replaced', async () => {
+      const box: { value?: string } = {}
+      const a = await setup({
+        definitions: [def({ name: 'audit', custody: 'external' })],
+      })
+      a.svc.onPlace('audit', {
+        place: async (_n, _s, _k, bytes) => {
+          throw quoting(box)(toBase64(bytes))
+        },
+      })
+      let thrown = ''
+      await assert.rejects(a.svc.generate('audit'), (e: Error) => {
+        thrown = `${e.message}\n${e.stack}`
+        return true
+      })
+      const summary = await a.svc.reconcile()
+      assertClean(box, [thrown, JSON.stringify(summary), ...a.logs])
+    })
+  })
+})

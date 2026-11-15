@@ -313,6 +313,7 @@
       "version": "0.12.2",
       "dependencies": {
         "@pikku/fetch": "^0.12.16",
+        "@pikku/keys": "workspace:*",
       },
       "devDependencies": {
         "@pikku/addon-changes-cli": "workspace:*",

@@ -14,7 +14,12 @@ import {
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { DomainPolicyError } from '@pikku/core/keypair'
-import { fromBase64, toBase64, toBase64Url } from './base64.js'
+import {
+  fromBase64,
+  fromCanonicalBase64Url,
+  toBase64,
+  toBase64Url,
+} from './base64.js'
 import { assertDomain, prefixWithDomain } from './domain.js'
 import {
   generateKeyPair,
@@ -39,11 +44,19 @@ const rfc7638 = (jwk: Record<string, string>) => {
 }
 
 describe('base64', () => {
-  test('round trips, accepts base64url and unpadded input, refuses junk', () => {
+  test('round trips; the canonical form accepts only the unpadded base64url encoding', () => {
     const bytes = Uint8Array.from([251, 255, 0, 1, 2, 250])
     assert.deepEqual(fromBase64(toBase64(bytes)), bytes)
-    assert.deepEqual(fromBase64(toBase64Url(bytes)), bytes)
+    assert.deepEqual(fromCanonicalBase64Url(toBase64Url(bytes)), bytes)
     assert.throws(() => fromBase64('not base64 !!'))
+    assert.equal(
+      fromCanonicalBase64Url(toBase64(bytes)),
+      undefined,
+      'padded standard'
+    )
+    assert.equal(fromCanonicalBase64Url('-_8AAQ='), undefined, 'padded')
+    assert.equal(fromCanonicalBase64Url('-_8AAR'), undefined, 'trailing bits')
+    assert.equal(fromCanonicalBase64Url(''), undefined)
   })
 })
 
@@ -102,7 +115,10 @@ describe('algorithms', () => {
 
     test(`${algorithm}: the JWK matches node's own export`, async () => {
       const pair = await generateKeyPair(algorithm)
-      const ours = await publicJwk(pair.publicKey, algorithm)
+      const ours = await publicJwk(
+        await importVerifyKey(pair.publicKey, algorithm),
+        algorithm
+      )
       const node = createPublicKey({
         key: Buffer.from(pair.publicKey, 'base64'),
         format: 'der',
