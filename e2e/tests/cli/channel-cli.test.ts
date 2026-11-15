@@ -37,7 +37,7 @@ const signIn = async (id: string): Promise<string> => {
     method: 'POST',
     headers: { 'content-type': 'application/json', origin: apiUrl },
     body: JSON.stringify({
-      statement: signVirtualUserStatement({
+      statement: await signVirtualUserStatement({
         signingKey,
         virtualUserId: id,
         audience: new URL(apiUrl).origin,

@@ -194,8 +194,8 @@ export const runVirtualUserChecks = async (
         'nothing to configure locally. A deployed stage that must run scenarios',
         'opts in with',
         'PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN=passwordless-virtual-user-sign-in and is',
-        'given VIRTUAL_USER_VERIFY_KEY (a public key; whoever deploys keeps the',
-        'private one). Everywhere else the endpoints are not registered at all.'
+        'given VIRTUAL_USER_VERIFY_KEY (a public key, or a JSON list of',
+        '{kid, publicKey}; whoever deploys keeps the private one). Everywhere else the endpoints are not registered at all.'
       )
     )
   }

@@ -17,6 +17,7 @@ import { dirname, join } from 'node:path'
 import {
   VIRTUAL_USER_STATEMENT_TTL_SECONDS,
   VIRTUAL_USER_SIGNING_KEY_VARIABLE,
+  okpThumbprint,
   type VariablesService,
 } from '@pikku/core/services'
 import type { VirtualUserStatementMint } from '@pikku/core/virtual-user'
@@ -68,16 +69,21 @@ export interface SignStatementOptions {
   now?: () => number
 }
 
-/** One single-use statement: who to sign in as, for which app, for a few minutes. */
-export const signVirtualUserStatement = ({
+/**
+ * One single-use statement: who to sign in as, for which app, for a few minutes.
+ * Its header names the key by `kid`, the RFC 7638 thumbprint of the public key.
+ * Async because the thumbprint is.
+ */
+export const signVirtualUserStatement = async ({
   signingKey,
   virtualUserId,
   audience,
   ttlSeconds = VIRTUAL_USER_STATEMENT_TTL_SECONDS,
   now = Date.now,
-}: SignStatementOptions): string => {
+}: SignStatementOptions): Promise<string> => {
   const iat = Math.floor(now() / 1000)
-  const head = b64url(JSON.stringify({ alg: 'EdDSA', typ: 'JWT' }))
+  const kid = await okpThumbprint(verifyKeyFor(signingKey))
+  const head = b64url(JSON.stringify({ alg: 'EdDSA', typ: 'JWT', kid }))
   const claims = b64url(
     JSON.stringify({
       sub: virtualUserId,

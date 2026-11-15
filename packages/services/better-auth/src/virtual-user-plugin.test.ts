@@ -106,6 +106,18 @@ const statementFor = (
     .setJti(jti)
     .sign(privateKey)
 
+const statementWithKid = (privateKey: CryptoKey, id: string, kid?: string) =>
+  new SignJWT({})
+    .setProtectedHeader(
+      kid === undefined ? { alg: 'EdDSA' } : { alg: 'EdDSA', kid }
+    )
+    .setSubject(id)
+    .setAudience(ORIGIN)
+    .setIssuedAt()
+    .setExpirationTime('3m')
+    .setJti(crypto.randomUUID())
+    .sign(privateKey)
+
 const post = (
   auth: ReturnType<typeof makeAuth>,
   path: string,
@@ -895,5 +907,102 @@ describe('virtual user upstream credentials', () => {
     assert.equal(res.status, 500)
     assert.match(await res.text(), /VIRTUAL_USER_CREDENTIAL_DAN_CALENDAR/)
     assert.deepEqual(stored, [])
+  })
+})
+
+describe('verifyKey: one key or a list (pikkuVirtualUser option)', () => {
+  beforeEach(() => {
+    process.env[DEV_VIRTUAL_USER_SIGN_IN_ENV] = 'true'
+  })
+  afterEach(clearGateEnv)
+
+  const signIn = async (verifyKey: any, statement: string) => {
+    const auth = makeAuth(emptyDb(), {
+      verifyKey,
+      virtualUserSignIn: { virtualUsers },
+    })
+    return post(auth, '/sign-in/virtual-user', { statement })
+  }
+
+  test('a single PEM and a single base64 SPKI still work, with or without kid', async () => {
+    const { privateKey, publicKey } = await keyPair()
+    const der = publicKey.replace(/-----[A-Z ]+-----|\s+/g, '')
+    for (const key of [publicKey, der]) {
+      assert.equal(
+        (await signIn(key, await statementWithKid(privateKey, 'customer')))
+          .status,
+        200
+      )
+    }
+  })
+
+  test("an array of keys: the second key's kid verifies, an unknown kid is 401", async () => {
+    const [a, b] = [await keyPair(), await keyPair()]
+    const list = [
+      { kid: 'one', publicKey: a.publicKey },
+      { kid: 'two', publicKey: b.publicKey },
+    ]
+    assert.equal(
+      (
+        await signIn(
+          list,
+          await statementWithKid(b.privateKey, 'customer', 'two')
+        )
+      ).status,
+      200
+    )
+    assert.equal(
+      (await signIn(list, await statementWithKid(b.privateKey, 'customer')))
+        .status,
+      200
+    )
+    assert.equal(
+      (
+        await signIn(
+          list,
+          await statementWithKid(b.privateKey, 'customer', 'three')
+        )
+      ).status,
+      401
+    )
+  })
+
+  test('a JSON-list string (as the env variable carries it) works', async () => {
+    const [a, b] = [await keyPair(), await keyPair()]
+    const text = JSON.stringify([
+      { kid: 'one', publicKey: a.publicKey },
+      { kid: 'two', publicKey: b.publicKey },
+    ])
+    assert.equal(
+      (
+        await signIn(
+          text,
+          await statementWithKid(a.privateKey, 'customer', 'one')
+        )
+      ).status,
+      200
+    )
+  })
+
+  test('replay is still rejected with a list', async () => {
+    const [a, b] = [await keyPair(), await keyPair()]
+    const auth = makeAuth(emptyDb(), {
+      verifyKey: [{ publicKey: a.publicKey }, { publicKey: b.publicKey }],
+      virtualUserSignIn: { virtualUsers },
+    })
+    const statement = await statementWithKid(b.privateKey, 'customer')
+    assert.equal(
+      (await post(auth, '/sign-in/virtual-user', { statement })).status,
+      200
+    )
+    assert.equal(
+      (await post(auth, '/sign-in/virtual-user', { statement })).status,
+      401
+    )
+  })
+
+  test('a bad list throws at construction', () => {
+    assert.throws(() => pikkuVirtualUser({ verifyKey: [] }), /empty/)
+    assert.throws(() => pikkuVirtualUser({ verifyKey: '[{' }), /JSON/)
   })
 })
