@@ -2741,6 +2741,9 @@ export async function generateMigrations(
   addons: AddonDeclaration[] = [],
   services?: ReadonlySet<string>
 ): Promise<GenerateResult> {
+  // Read and checked first: a retired or unreadable declaration refuses the
+  // whole command, so no source's migration may be written before it does.
+  await loadTableDeclaration(resolved.rootDir)
   const sources = await schemaSources(
     resolved,
     rootDir,
