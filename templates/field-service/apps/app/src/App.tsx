@@ -26,7 +26,7 @@ export const App = () => (
         <h1>Field Service</h1>
         <RaiseJobForm />
         <JobList />
-        <LiveBoard companyId="co_northwind" />
+        <LiveBoard />
         <JobHistory />
         <QuoteForm jobId="job_leak" />
         <QuoteGate quoteId="quote_boiler" />

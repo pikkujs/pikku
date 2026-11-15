@@ -3,12 +3,12 @@ import {
   authenticate,
   onConnect,
   onDisconnect,
-  subscribe,
 } from '../functions/channel.functions.js'
 import {
   listTodos,
   createTodo,
   completeTodo,
+  subscribe,
 } from '../functions/todos.functions.js'
 
 wireChannel({
