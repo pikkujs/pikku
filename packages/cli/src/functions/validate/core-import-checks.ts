@@ -46,6 +46,7 @@ const LEAF_FOR_SUBPATH = new Map<string, string>([
   ['@pikku/core/cli', 'cli'],
   ['@pikku/core/contributors', 'contributor'],
   ['@pikku/core/credential', 'credentials'],
+  ['@pikku/core/keypair', 'keypairs'],
   ['@pikku/core/errors', 'error'],
   ['@pikku/core/flag', 'scopes'],
   ['@pikku/core/function', 'function'],

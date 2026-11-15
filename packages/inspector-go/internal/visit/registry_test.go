@@ -32,7 +32,7 @@ func TestRegisteredGroups(t *testing.T) {
 		PhaseFunctions: {"addFunctions"},
 		PhaseRoutes: {
 			"checkAddonBans", "checkEventHubImports", "addAuth", "addSecret", "addCredential", "addScope", "addSystemRole", "addFeatureFlag", "addVirtualUsers",
-			"addVariable", "addHTTPRoute", "addHTTPRoutes", "addSchedule", "addTrigger", "addQueueWorker", "addChannel",
+			"addVariable", "addKeyPair", "addHTTPRoute", "addHTTPRoutes", "addSchedule", "addTrigger", "addQueueWorker", "addChannel",
 			"addGateway", "addCLI", "addCLIRenderers",
 			"addMCPResource", "addMCPPrompt", "addWorkflowGraph", "addFeature", "addAgent", "addAgentScorer",
 			"checkDisabledReferences",

@@ -17,6 +17,8 @@ export type SecretValues<T> = { [K in keyof T]: SecretValue<T[K]> }
  * @example snippet: shopServices
  */
 export interface SecretService {
+  /** True only when `setSecret` survives a restart and is visible to every instance. Absent means unknown, which callers treat as not durable. */
+  readonly durable?: boolean
   /**
    * Throws if the secret is not found, unless `defineSecret` declared it
    * `optional` — then absence resolves `undefined`. Unwrap the result with

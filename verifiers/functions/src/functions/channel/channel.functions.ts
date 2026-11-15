@@ -42,7 +42,9 @@ export const logout = pikkuSessionlessFunc<void, void>({
 // The function decides the topic, so a client can only follow a topic this
 // function returns. There is no unsubscribe: a channel leaves on disconnect.
 export const subscribe = pikkuSubscribeFunc<{ name: string }, `room:${string}`>(
-  async (_services, { name }) => `room:${name}`
+  {
+    func: async (_services, { name }) => `room:${name}`,
+  }
 )
 
 export const unsubscribe = pikkuChannelFunc<{ name: string }, 'valid'>(
