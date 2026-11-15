@@ -798,7 +798,8 @@ describe('views carry what the events carry', () => {
 
   test('the same holds when half the spans never send a start frame', () => {
     const batches = shuffledBatches(frames(sample), 6, mulberry32(99))
-    const hasStart = (span: FinishedSpan) => parseInt(span.spanId, 16) % 2 === 0
+    const hasStart = (span: FinishedSpan) =>
+      parseInt(span.spanId.slice(-1), 16) % 2 === 0
     const { whole } = assertSnapshotsRebuild(
       createRunStitcher({ limits: { maxRetained: 1000 } }),
       batches,
