@@ -190,6 +190,21 @@ test('splitSqliteStatements: a column named end or begin does not end or start a
   ])
 })
 
+test('splitSqliteStatements: a table named of does not hide the trigger body', () => {
+  for (const trigger of [
+    'CREATE TRIGGER g AFTER INSERT ON of BEGIN SELECT 1; SELECT 2; END;',
+    'CREATE TRIGGER g AFTER UPDATE OF n, of ON of BEGIN SELECT 1; SELECT 2; END;',
+    'CREATE TRIGGER g AFTER UPDATE OF of ON t BEGIN SELECT 1; SELECT 2; END;',
+    'CREATE TRIGGER g AFTER UPDATE OF begin, n ON t WHEN new.begin > 0 BEGIN SELECT 1; SELECT 2; END;',
+  ]) {
+    assert.deepEqual(
+      splitSqliteStatements(`CREATE TABLE of(n);\n${trigger}\nSELECT 3;`),
+      ['CREATE TABLE of(n);', trigger, 'SELECT 3;'],
+      trigger
+    )
+  }
+})
+
 test('splitSqliteStatements: EXPLAIN CREATE TRIGGER is still one trigger', () => {
   for (const prefix of ['EXPLAIN ', 'explain query plan ']) {
     const trigger = `${prefix}CREATE TRIGGER g AFTER INSERT ON t BEGIN UPDATE t SET n = 1; UPDATE t SET m = 2; END;`

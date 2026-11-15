@@ -27,6 +27,7 @@ export function splitSqliteStatements(sql: string): string[] {
   let trigger = false
   let inBody = false
   let caseDepth = 0
+  let updateOf = false // inside `UPDATE OF <columns>`, up to its `ON`
   let previous = '' // the last token read, lower-cased; a quoted one is its first character
   let i = 0
 
@@ -38,6 +39,7 @@ export function splitSqliteStatements(sql: string): string[] {
     trigger = false
     inBody = false
     caseDepth = 0
+    updateOf = false
     previous = ''
   }
 
@@ -110,9 +112,13 @@ export function splitSqliteStatements(sql: string): string[] {
         }
       }
       if (trigger) {
-        // `of begin`, `, begin` and `new.begin` name a column, not the body.
+        // `UPDATE OF a, begin ON t` lists columns, and `new.begin` is one; a
+        // `begin` there is a name, not the body. `of` elsewhere (a table named
+        // `of`) is only a name, so the body after `ON of` still starts.
+        if (word === 'of' && before === 'update') updateOf = true
+        else if (word === 'on') updateOf = false
         if (word === 'begin') {
-          if (before !== 'of' && before !== ',' && before !== '.') inBody = true
+          if (!updateOf && before !== '.') inBody = true
         } else if (word === 'case') caseDepth++
         else if (word === 'end') {
           if (caseDepth > 0) caseDepth--

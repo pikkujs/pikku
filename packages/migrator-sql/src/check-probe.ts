@@ -206,20 +206,98 @@ export class CheckProbeError extends Error {
   }
 }
 
+const DATA_CHANGE = new Set(['update', 'delete', 'insert', 'truncate', 'merge'])
+
+/**
+ * Where the first statement that can change data starts, or -1. Read as SQL
+ * rather than as lines: a statement need not start a line, a `WITH` can carry a
+ * data-changing CTE (`WITH f AS (UPDATE ... RETURNING *) SELECT ...`) or end in
+ * one (`WITH s AS (...) UPDATE ...`), and `ON DELETE`, `FOR UPDATE`, strings,
+ * comments, quoted names and `$$` bodies are not statements.
+ */
+function firstDataChange(sql: string): number {
+  let statement = -1 // the first word of the statement being read
+  let isWith = false
+  let previous = ''
+  let i = 0
+  while (i < sql.length) {
+    const ch = sql[i]!
+    const next = sql[i + 1]
+    if (ch === '-' && next === '-') {
+      const nl = sql.indexOf('\n', i)
+      i = nl === -1 ? sql.length : nl + 1
+      continue
+    }
+    if (ch === '/' && next === '*') {
+      const close = sql.indexOf('*/', i + 2)
+      i = close === -1 ? sql.length : close + 2
+      continue
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      i++
+      while (i < sql.length) {
+        if (sql[i] === ch) {
+          if (sql[i + 1] === ch) {
+            i += 2
+            continue
+          }
+          break
+        }
+        i++
+      }
+      i++
+      previous = ch
+      continue
+    }
+    if (ch === '$') {
+      const tag = /^\$[A-Za-z_]*\$/.exec(sql.slice(i))
+      if (tag) {
+        const close = sql.indexOf(tag[0], i + tag[0].length)
+        i = close === -1 ? sql.length : close + tag[0].length
+        previous = '$'
+        continue
+      }
+    }
+    if (/[A-Za-z_]/.test(ch)) {
+      const from = i
+      while (i < sql.length && /[A-Za-z0-9_$]/.test(sql[i]!)) i++
+      const word = sql.slice(from, i).toLowerCase()
+      if (statement === -1) {
+        statement = from
+        isWith = word === 'with'
+        if (DATA_CHANGE.has(word)) return from
+      } else if (
+        isWith &&
+        DATA_CHANGE.has(word) &&
+        (previous === '(' || previous === ')')
+      ) {
+        return statement
+      }
+      previous = word
+      continue
+    }
+    if (ch === ';') {
+      statement = -1
+      isWith = false
+    }
+    if (!/\s/.test(ch)) previous = ch
+    i++
+  }
+  return -1
+}
+
 /**
  * The part of a migration the probes can speak for: everything ahead of its
- * first `UPDATE`, `DELETE`, `INSERT` or `TRUNCATE`. The probe looks at the rows
- * as they are before the file runs; a data fix earlier in the same file changes
- * them, so a check added after one is left to the database to enforce (it does,
- * and a failure rolls the migration back on Postgres), not refused on rows the
- * fix is about to change.
+ * first statement that can change data (`UPDATE`, `DELETE`, `INSERT`,
+ * `TRUNCATE`, `MERGE`, including one inside a `WITH`). The probe looks at the
+ * rows as they are before the file runs; a data fix earlier in the same file
+ * changes them, so a check added after one is left to the database to enforce
+ * (it does, and a failure rolls the migration back on Postgres), not refused on
+ * rows the fix is about to change.
  */
 export function beforeDataChanges(migration: string): string {
-  const lines = migration.split('\n')
-  const at = lines.findIndex((line) =>
-    /^\s*(update|delete|insert|truncate)\b/i.test(line)
-  )
-  return at === -1 ? migration : lines.slice(0, at).join('\n')
+  const at = firstDataChange(migration)
+  return at === -1 ? migration : migration.slice(0, at)
 }
 
 /**
@@ -271,17 +349,24 @@ export const postgresProbeExecutor =
  * A `ProbeExecutor` over a MySQL migration client. The scan runs under
  * `SET SESSION max_execution_time`, so the server cancels a `SELECT` that runs
  * past the limit instead of leaving it running after the probe has given up.
- * The session value is put back afterwards: the connection is the migration's.
+ * The session's previous value is put back afterwards: the connection is the migration's.
  */
 export const mysqlProbeExecutor =
   (client: QueryClient): ProbeExecutor =>
   async (sql, timeoutMs) => {
+    // Read before it is changed, so the connection ends as it began: a session
+    // that had its own limit keeps it, and one that had none (0) has none.
+    const { rows: before } = await client.query<{ previous: unknown }>(
+      'SELECT @@SESSION.max_execution_time AS previous'
+    )
+    const previous =
+      Math.max(0, Math.floor(Number(before[0]?.previous ?? 0))) || 0
     await client.query(
       `SET SESSION max_execution_time = ${Math.max(1, Math.floor(timeoutMs))}`
     )
     try {
       return (await client.query<Record<string, unknown>>(sql)).rows
     } finally {
-      await client.query('SET SESSION max_execution_time = DEFAULT')
+      await client.query(`SET SESSION max_execution_time = ${previous}`)
     }
   }
