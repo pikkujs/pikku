@@ -418,10 +418,13 @@ export const pagesCompare = pikkuSessionlessFunc({
             try {
               const oursFile = join(dir, `${shot.id}-${width}.png`)
               writeFileSync(oursFile, got.png)
-              const { diff, referenceHeight, ourHeight } = compareShot(
-                shot,
-                got.png
-              )
+              const {
+                diff,
+                referenceHeight,
+                ourHeight,
+                referenceImageWidth,
+                ourImageWidth,
+              } = compareShot(shot, got.png)
               const diffFile = join(dir, `${shot.id}-${width}.diff.png`)
               writeFileSync(diffFile, diff.png)
               let sections: CompareRow['sections'] = null
@@ -443,6 +446,10 @@ export const pagesCompare = pikkuSessionlessFunc({
                 referenceHeight,
                 ourHeight,
                 heightDiff: ourHeight - referenceHeight,
+                ...(referenceImageWidth !== width
+                  ? { referenceImageWidth }
+                  : {}),
+                ...(ourImageWidth !== width ? { ourImageWidth } : {}),
                 diff: rel(diffFile),
                 ours: rel(oursFile),
                 sections,
@@ -520,7 +527,7 @@ export const renderPagesCompare = (
     const pct = `${row.changedPercent!.toFixed(1)}%`.padStart(6)
     const over = threshold !== null && row.changedPercent! > threshold
     process.stdout.write(
-      `  ${over ? changed(pct) : pct} ${label}  height ${row.ourHeight} vs ${row.referenceHeight} (${signed(row.heightDiff!)})${row.sections ? `  sections match ${row.sections.match}` : ''}\n`
+      `  ${over ? changed(pct) : pct} ${label}  height ${row.ourHeight} vs ${row.referenceHeight} (${signed(row.heightDiff!)})${row.sections ? `  sections match ${row.sections.match}` : ''}${row.referenceImageWidth ? dim(`  original ${row.referenceImageWidth} px wide`) : ''}${row.ourImageWidth ? dim(`  ours ${row.ourImageWidth} px wide`) : ''}\n`
     )
     for (const note of row.sections?.notes.slice(0, 2) ?? [])
       process.stdout.write(`        ${dim(note)}\n`)
