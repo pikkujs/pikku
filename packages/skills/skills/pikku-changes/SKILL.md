@@ -252,6 +252,8 @@ human to dismiss.
 In a project with a reference (`artifacts/references/<site>/`), a change that touched pages is done
 only when `pikku ui pages compare --reference artifacts/references/<site> --page <ids>`, run after
 your last commit, has every touched page at every width within the threshold; otherwise `done`
-refuses and says which pages, by how much, and the command. Open the `<id>-<width>.diff.png` it
-names (original | red where pixels differ | yours), fix, commit, compare again. A page that cannot
-match: `done ... --waive "<why it cannot match>"`, and the reason goes in the done note.
+refuses and says which pages, by how much, and the command. Fix the `style` lines of the compare
+first (they name the size, weight, colour and alignment that differ), then open the
+`<id>-<width>.diff.png` of the worst page (original | red where pixels differ | yours); commit,
+compare again. A waiver is only for phone widths (under 1000 px):
+`done ... --waive "<why it cannot match, 30+ characters>"`; desktop widths must pass.
