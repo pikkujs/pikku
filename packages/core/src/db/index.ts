@@ -127,6 +127,13 @@ export interface ColumnFields extends ColumnAnnotation, ColumnConstraints {
   references?: string
   /** Only meaningful with `references`. Defaults to `restrict`. */
   onDelete?: OnDelete
+  /**
+   * The name this column had in the migrations, so `pikku db generate` writes
+   * `RENAME COLUMN` and the rows stay, instead of dropping the old column and
+   * adding an empty one. Delete it once the migration is applied. Refused on a
+   * column that is part of a key or an index, which a person renames by hand.
+   */
+  renamedFrom?: string
 }
 
 /**

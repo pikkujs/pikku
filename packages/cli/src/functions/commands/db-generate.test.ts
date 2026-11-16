@@ -15,6 +15,7 @@ const result = (patch: Partial<GenerateResult> = {}): GenerateResult => ({
   written: [],
   refusals: [],
   destructive: [],
+  notes: [],
   ...patch,
 })
 

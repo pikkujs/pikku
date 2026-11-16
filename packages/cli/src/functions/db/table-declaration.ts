@@ -39,6 +39,15 @@ export interface LoadedDeclaration {
   declareOnly: TablesDeclaration
   /** Every column's annotations, keyed by physical table, then column. */
   annotations: TableAnnotations
+  /** The columns declared with `renamedFrom`, in physical names. */
+  renames: ColumnRename[]
+}
+
+/** A column that is the old one under a new name. */
+export interface ColumnRename {
+  table: string
+  from: string
+  to: string
 }
 
 const ALLOWED_VALUES: Record<
@@ -76,6 +85,7 @@ const COLUMN_FIELDS = new Set([
   'index',
   'references',
   'onDelete',
+  'renamedFrom',
 ])
 
 const TABLE_FIELDS = new Set([
@@ -112,6 +122,76 @@ function columnProblems(at: string, column: Record<string, unknown>): string[] {
     }
   }
   return problems
+}
+
+/**
+ * What `renamedFrom` on the columns of one table asks for, and what is wrong
+ * with it. A rename keeps the column's rows and nothing else, so it is refused
+ * wherever the old name could still be in play: another column that has that
+ * name, a second column renamed from it, and a column that a key or an index
+ * names, because the key or index would keep its old name.
+ */
+export function tableRenames(
+  table: string,
+  declaration: {
+    columns: Record<string, Record<string, unknown>>
+    primaryKey?: unknown
+    unique?: unknown
+    indexes?: unknown
+  }
+): { renames: ColumnRename[]; problems: string[] } {
+  const renames: ColumnRename[] = []
+  const problems: string[] = []
+  const named = new Set(Object.keys(declaration.columns).map(snakeCase))
+  const inKeys = new Set(
+    [
+      declaration.primaryKey,
+      ...(Array.isArray(declaration.unique) ? declaration.unique : []),
+      ...(Array.isArray(declaration.indexes) ? declaration.indexes : []),
+    ].flatMap((key) => {
+      const columns = Array.isArray(key)
+        ? key
+        : isObject(key) && Array.isArray(key.columns)
+          ? key.columns
+          : []
+      return columns.map((c) => snakeCase(String(c)))
+    })
+  )
+  for (const [column, entry] of Object.entries(declaration.columns)) {
+    if (entry.renamedFrom === undefined) continue
+    const at = `${table}.${column}`
+    const to = snakeCase(column)
+    if (typeof entry.renamedFrom !== 'string' || !entry.renamedFrom) {
+      problems.push(`${at}.renamedFrom must be the column's old name`)
+      continue
+    }
+    const from = snakeCase(entry.renamedFrom)
+    if (from === to) {
+      problems.push(`${at}.renamedFrom is the column's own name`)
+    } else if (named.has(from)) {
+      problems.push(
+        `${at}.renamedFrom is '${entry.renamedFrom}', but ${table} still declares a column of that name`
+      )
+    } else if (renames.some((r) => r.from === from)) {
+      problems.push(
+        `${table} renames '${entry.renamedFrom}' to two columns; a column can only be renamed once`
+      )
+    } else if (
+      entry.primaryKey ||
+      entry.unique ||
+      entry.index ||
+      entry.references ||
+      inKeys.has(to)
+    ) {
+      problems.push(
+        `${at}.renamedFrom is refused on a column that is part of a key, an index or a reference: ` +
+          `their names would keep the old one. A person writes that rename in a migration.`
+      )
+    } else {
+      renames.push({ table: snakeCase(table), from, to })
+    }
+  }
+  return { renames, problems }
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -172,6 +252,7 @@ export async function loadTableDeclaration(
   const problems: string[] = []
   const annotations: TableAnnotations = {}
   const managed: TablesDeclaration = {}
+  const renames: ColumnRename[] = []
   const declareOnly: TablesDeclaration = {}
   for (const [table, declaration] of Object.entries(exported)) {
     if (!isObject(declaration) || !isObject(declaration.columns)) {
@@ -208,6 +289,20 @@ export async function loadTableDeclaration(
       continue
     }
     const target = declaration.declareOnly === true ? declareOnly : managed
+    const asked = tableRenames(
+      table,
+      declaration as Parameters<typeof tableRenames>[1]
+    )
+    if (declaration.declareOnly === true) {
+      if (asked.renames.length + asked.problems.length > 0) {
+        problems.push(
+          `${table} is declareOnly, so nothing generated renames its columns: renamedFrom has no effect there`
+        )
+      }
+    } else {
+      problems.push(...asked.problems)
+      renames.push(...asked.renames)
+    }
     target[table] = declaration as unknown as TablesDeclaration[string]
   }
   if (problems.length > 0) {
@@ -225,6 +320,7 @@ export async function loadTableDeclaration(
     schema: { name: APP_TABLES_SOURCE, tables: managed },
     declareOnly,
     annotations,
+    renames,
   }
 }
 
@@ -315,9 +411,9 @@ function columnChanges(desired: ColumnInfo, actual: ColumnInfo): string[] {
 
 /** A change a migration makes that loses data or breaks what runs against it. */
 export interface DestructiveChange {
-  kind: 'dropColumn' | 'dropTable' | 'renameColumn'
+  kind: 'dropColumn' | 'dropTable'
   table: string
-  /** The column dropped, or the one renamed (its old name). */
+  /** The column dropped. */
   column?: string
   /** What a person approves, one line: `DROP COLUMN note.legacy_flag: its data is lost`. */
   what: string

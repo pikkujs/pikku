@@ -31,6 +31,7 @@ import { readMigrationProvenance } from './migration-provenance.js'
 import {
   loadTableDeclaration,
   recordedDeclaredTables,
+  tableRenames,
   TABLES_FILE,
 } from './table-declaration.js'
 import { databaseContext } from './db-context.js'
@@ -748,7 +749,7 @@ describe('destructive changes on postgres', () => {
 })
 
 describe('declared tables on postgres', () => {
-  test('writes, adds a column and refuses a drop', async () => {
+  test('writes, adds a column and drops it once approved', async () => {
     declare(ITEM)
     const resolved = postgresProject()
     const first = await generate(resolved)
@@ -1247,5 +1248,203 @@ describe('a MySQL-protocol server that cannot take a CHECK', () => {
         serverVersion: async () => '11.4.2-MariaDB',
       })
     )
+  })
+})
+
+describe('renamedFrom', () => {
+  const columns = (entries: Record<string, Record<string, unknown>>) => ({
+    columns: entries,
+  })
+
+  test('is read as physical names, one rename per column', () => {
+    assert.deepEqual(
+      tableRenames(
+        'userNote',
+        columns({
+          id: { type: 'key', primaryKey: true },
+          fullName: { type: 'text', renamedFrom: 'name' },
+        })
+      ),
+      {
+        renames: [{ table: 'user_note', from: 'name', to: 'full_name' }],
+        problems: [],
+      }
+    )
+  })
+
+  test('is refused where the old name could still be in play', () => {
+    const problems = (
+      renamedFrom: unknown,
+      extra: Record<string, unknown> = {},
+      table = {}
+    ) =>
+      tableRenames('note', {
+        ...columns({
+          id: { type: 'key', primaryKey: true },
+          title: { type: 'text', renamedFrom, ...extra },
+          other: { type: 'text' },
+        }),
+        ...table,
+      }).problems.join(' | ')
+    assert.match(problems(''), /must be the column's old name/)
+    assert.match(problems('title'), /the column's own name/)
+    assert.match(problems('other'), /still declares a column of that name/)
+    assert.match(
+      problems('old', { index: true }),
+      /part of a key, an index or a reference/
+    )
+    assert.match(problems('old', { unique: true }), /part of a key/)
+    assert.match(
+      problems('old', {}, { indexes: [{ columns: ['title'] }] }),
+      /part of a key/
+    )
+    assert.match(
+      problems('old', {}, { unique: [['id', 'title']] }),
+      /part of a key/
+    )
+    assert.equal(problems('old'), '')
+  })
+
+  test('two columns cannot both come from the same one', () => {
+    assert.match(
+      tableRenames(
+        'note',
+        columns({
+          a: { type: 'text', renamedFrom: 'old' },
+          b: { type: 'text', renamedFrom: 'old' },
+        })
+      ).problems.join(),
+      /renames 'old' to two columns/
+    )
+  })
+
+  test('a declareOnly table cannot carry it', async () => {
+    declare(
+      `note: { declareOnly: true, columns: { id: { type: 'key', primaryKey: true }, b: { type: 'text', renamedFrom: 'a' } } }`
+    )
+    await assert.rejects(
+      loadTableDeclaration(root),
+      /declareOnly, so nothing generated renames/
+    )
+  })
+
+  describe('on sqlite', () => {
+    const start = async (...tables: string[]) => {
+      declare(...tables)
+      const resolved = sqliteProject()
+      await generate(resolved)
+      await migrateAndCodegen(resolved)
+      return resolved
+    }
+
+    test('renames the column, keeps the rows, and asks nobody', async () => {
+      const resolved = await start(USER_COLUMNS(`label: { type: 'text' },`))
+      await sqliteRun(
+        resolved,
+        `INSERT INTO note (id, title, label) VALUES ('1', 't', 'keep me')`
+      )
+
+      declare(USER_COLUMNS(`caption: { type: 'text', renamedFrom: 'label' },`))
+      const { written, refusals, destructive } = await generate(resolved)
+      assert.deepEqual(refusals, [])
+      assert.deepEqual(destructive, [])
+      assert.equal(written.length, 1)
+      const sql = readFileSync(written[0]!.file, 'utf8')
+      assert.match(
+        sql,
+        /ALTER TABLE "note" RENAME COLUMN "label" TO "caption";/
+      )
+      assert.doesNotMatch(sql, /DROP|pikku:destructive|ADD COLUMN/)
+
+      await migrateAndCodegen(resolved)
+      assert.deepEqual(
+        await sqliteRows(resolved, 'SELECT id, caption FROM note'),
+        [{ id: '1', caption: 'keep me' }]
+      )
+    })
+
+    test('once applied, it says to delete renamedFrom and writes nothing more', async () => {
+      const resolved = await start(USER_COLUMNS(`label: { type: 'text' },`))
+      declare(USER_COLUMNS(`caption: { type: 'text', renamedFrom: 'label' },`))
+      await generate(resolved)
+      await migrateAndCodegen(resolved)
+
+      const again = await generate(resolved)
+      assert.deepEqual(again.written, [])
+      assert.deepEqual(again.refusals, [])
+      assert.deepEqual(again.destructive, [])
+      assert.match(
+        again.notes.join(),
+        /already renamed from 'label'.*delete renamedFrom/
+      )
+      assert.equal((await computeDeclaredTablesDrift(resolved)).pending, false)
+    })
+
+    test('a rename and an addition go in separate files, the rename first', async () => {
+      const resolved = await start(USER_COLUMNS(`label: { type: 'text' },`))
+      declare(
+        USER_COLUMNS(
+          `caption: { type: 'text', renamedFrom: 'label' }, extra: { type: 'text' },`
+        )
+      )
+      const { written } = await generate(resolved)
+      const files = written.map((w) => readFileSync(w.file, 'utf8'))
+      assert.equal(files.length, 2)
+      assert.match(files[0]!, /RENAME COLUMN/)
+      assert.match(files[1]!, /ADD COLUMN "extra"/)
+      await migrateAndCodegen(resolved)
+      assert.equal((await computeDeclaredTablesDrift(resolved)).pending, false)
+    })
+
+    test('a column that is in both names is refused', async () => {
+      const resolved = await start(
+        USER_COLUMNS(`label: { type: 'text' }, caption: { type: 'text' },`)
+      )
+      const before = migrations('sqlite')
+      declare(USER_COLUMNS(`caption: { type: 'text', renamedFrom: 'label' },`))
+      const { written, refusals } = await generate(resolved)
+      assert.deepEqual(written, [])
+      assert.match(refusals.join(), /have both columns/)
+      assert.deepEqual(migrations('sqlite'), before)
+    })
+
+    test('a name that matches nothing is a new column, and says so', async () => {
+      const resolved = await start(USER_COLUMNS(''))
+      declare(USER_COLUMNS(`caption: { type: 'text', renamedFrom: 'typo' },`))
+      const { written, notes } = await generate(resolved)
+      assert.match(
+        readFileSync(written[0]!.file, 'utf8'),
+        /ADD COLUMN "caption"/
+      )
+      assert.match(
+        notes.join(),
+        /no column of that name exists, so it is a new column/
+      )
+    })
+  })
+
+  describe('on postgres', () => {
+    const STATUS = (name: string, extra = '') =>
+      item(`${name}: { type: 'text', enum: ['draft', 'sent'], ${extra} },`)
+
+    test('the old checks leave in the rename file, the new ones come in the next', async () => {
+      declare(STATUS('status'))
+      const resolved = postgresProject()
+      await generate(resolved)
+
+      declare(STATUS('state', `renamedFrom: 'status'`))
+      const { written, refusals, destructive } = await generate(resolved)
+      assert.deepEqual(refusals, [])
+      assert.deepEqual(destructive, [])
+      const files = written.map((w) => readFileSync(w.file, 'utf8'))
+      assert.equal(files.length, 2)
+      assert.match(
+        files[0]!,
+        /DROP CONSTRAINT[^\n]*item_status_\w+_enum_check[^]*RENAME COLUMN "status" TO "state"/i
+      )
+      assert.doesNotMatch(files[0]!, /ADD CONSTRAINT/i)
+      assert.match(files[1]!, /ADD CONSTRAINT "item_state_\w+_enum_check"/i)
+      assert.equal((await computeDeclaredTablesDrift(resolved)).pending, false)
+    })
   })
 })
