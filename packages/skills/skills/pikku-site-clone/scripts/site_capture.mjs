@@ -9,6 +9,8 @@
 //       no flag: every page answers 200, has its content in the server-rendered HTML, its links resolve (no browser, quick)
 //       --page id: also open that page in the browser at 390/1440/1920 and report horizontal overflow, broken pictures, script errors
 //       --all: the same for every page, 4 at a time (slow: run it in the background, output to a file); prints only problems
+//   capture writes per page and width: <id>-<width>.jpg (screenshot), .layout.json (sections), .style.json (computed style of the
+//   page background, header, h1/h2/h3, first paragraph, primary button, text column: pikku ui pages compare diffs it against yours)
 // <out-dir>/<reference-dir> is the project's reference artifact: artifacts/references/<site> (site = the original's host name).
 // To compare your pages with it use `pikku ui pages compare --reference artifacts/references/<site> --baseUrl <url>`.
 // Needs a Chromium and playwright-core: PIKKU_CHROMIUM = path of the chrome binary, PLAYWRIGHT_CORE = path of the playwright-core
@@ -85,6 +87,60 @@ export function extractInPage() {
   return { doc: { w: W, h: H }, bands: outBands, images: images.map((b) => ({ x: +b.x.toFixed(4), y: +b.y.toFixed(4), w: +b.w.toFixed(4), h: +b.h.toFixed(4), src: b.src, natural: b.natural })), counts: { sections: outBands.length, images: images.length, textBlocks: texts.length, multiColumnSections: outBands.filter((b) => b.cols >= 2).length } }
 }
 
+/**
+ * The computed style of the elements a reader notices first, the same on the original and on the clone
+ * (pikku ui pages compare runs it on our page): page background, the header, h1/h2/h3, the first paragraph,
+ * the primary button or link, and the width of the text column. Colours are left as the browser gives them.
+ */
+export function extractStyleInPage() {
+  const clear = (c) => !c || c === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(c)
+  const vis = (el) => { const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return false; const r = el.getBoundingClientRect(); return r.width > 4 && r.height > 4 }
+  const chrome = 'header, nav, footer, [role=banner], [role=navigation], [role=contentinfo], #SITE_HEADER, #SITE_FOOTER'
+  const inChrome = (el) => !!el.closest(chrome)
+  const bgOf = (el) => { for (let e = el; e; e = e.parentElement) { const c = getComputedStyle(e).backgroundColor; if (!clear(c)) return c } return 'rgb(255, 255, 255)' }
+  const alignOf = (cs) => { const a = cs.textAlign; return a === 'start' ? (cs.direction === 'rtl' ? 'right' : 'left') : a === 'end' ? (cs.direction === 'rtl' ? 'left' : 'right') : a.replace(/^-webkit-/, '') }
+  const fam = (cs) => cs.fontFamily.split(',')[0].trim().replace(/["']/g, '').toLowerCase()
+  const words = (el) => (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim()
+  // size, weight and colour from the element holding the first words (a site builder puts them on nested spans)
+  const textHolder = (el) => { const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); for (let n = w.nextNode(); n; n = w.nextNode()) if (n.textContent.trim() && n.parentElement && vis(n.parentElement)) return n.parentElement; return el }
+  const describe = (el) => {
+    if (!el) return null
+    const cs = getComputedStyle(textHolder(el)), own = getComputedStyle(el)
+    const weight = Number(cs.fontWeight) || (cs.fontWeight === 'bold' ? 700 : 400)
+    return { text: words(el).slice(0, 60), size: Math.round(parseFloat(cs.fontSize) * 10) / 10, weight, color: cs.color, align: alignOf(own), family: fam(cs), background: bgOf(el) }
+  }
+  const first = (sel, ok = () => true) => [...document.querySelectorAll(sel)].find((el) => vis(el) && !inChrome(el) && words(el) && ok(el)) || null
+  const vw = document.documentElement.clientWidth || innerWidth, docH = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)
+  // the page background: the deepest full-width box with a colour that covers most of the page (or the window, when fixed)
+  let pageBg = null, depth = -1
+  for (const el of [document.documentElement, document.body, ...document.body.querySelectorAll('div, main, section')]) {
+    const cs = getComputedStyle(el); if (clear(cs.backgroundColor) || !vis(el)) continue
+    const r = el.getBoundingClientRect()
+    if (r.width < vw * 0.95 || !(r.height >= docH * 0.5 || (cs.position === 'fixed' && r.height >= innerHeight * 0.9))) continue
+    let d = 0; for (let e = el; e; e = e.parentElement) d++
+    if (d > depth) { depth = d; pageBg = cs.backgroundColor }
+  }
+  const header = [...document.querySelectorAll('header, [role=banner], #SITE_HEADER')].find((el) => vis(el) && el.getBoundingClientRect().width >= vw * 0.8) || null
+  let headerBg = null
+  if (header) {
+    headerBg = getComputedStyle(header).backgroundColor
+    if (clear(headerBg)) { const r = header.getBoundingClientRect(); const layer = [...header.querySelectorAll('*')].find((e) => { const q = e.getBoundingClientRect(); return !clear(getComputedStyle(e).backgroundColor) && q.width * q.height >= r.width * r.height * 0.9 }); headerBg = layer ? getComputedStyle(layer).backgroundColor : bgOf(header) }
+  }
+  const paras = [...document.querySelectorAll('p')].filter((p) => vis(p) && !inChrome(p) && words(p).length >= 40)
+  const widths = paras.map((p) => Math.round(p.getBoundingClientRect().width)).sort((a, b) => a - b)
+  const isButton = (el) => { const cs = getComputedStyle(el); const t = words(el); return t.length >= 2 && t.length <= 40 && (!clear(cs.backgroundColor) || (parseFloat(cs.borderTopWidth) >= 1 && !clear(cs.borderTopColor) && el.tagName !== 'INPUT')) }
+  const button = first('button, [role=button], input[type=submit], a', isButton) || first('a[class*=btn i], a[class*=button i], button')
+  const btn = describe(button)
+  if (btn && button) { const cs = getComputedStyle(button); btn.background = clear(cs.backgroundColor) ? bgOf(button) : cs.backgroundColor }
+  return {
+    viewport: innerWidth,
+    pageBackground: pageBg || bgOf(document.body),
+    header: header ? { height: Math.round(header.getBoundingClientRect().height), background: headerBg } : null,
+    contentWidth: widths.length ? widths[Math.floor(widths.length / 2)] : null,
+    elements: { h1: describe(first('h1')), h2: describe(first('h2')), h3: describe(first('h3')), p: describe(paras[0] || null), button: btn },
+  }
+}
+
 function extractStructure() {
   const text = (e) => (e.innerText || '').replace(/\s+/g, ' ').trim()
   const headings = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].map((h) => ({ level: +h.tagName[1], text: text(h), size: Math.round(parseFloat(getComputedStyle(h).fontSize)) })).filter((h) => h.text)
@@ -147,6 +203,7 @@ async function capturePage(browser, out, entry, vps, tiles) {
       await settle(page).catch(() => {})
       const layout = await page.evaluate(extractInPage)
       writeFileSync(join(out, `${id}-${w}.layout.json`), JSON.stringify({ viewport: w, ...layout }))
+      writeFileSync(join(out, `${id}-${w}.style.json`), JSON.stringify(await page.evaluate(extractStyleInPage), null, 1))
       if (w === vps[0]) writeFileSync(join(out, `${id}.json`), JSON.stringify({ id, url, ...(await page.evaluate(extractStructure)) }, null, 1))
       await page.screenshot({ path: join(out, `${id}-${w}.jpg`), fullPage: true, type: 'jpeg', quality: 80 })
       rec.viewports[w] = layout.counts

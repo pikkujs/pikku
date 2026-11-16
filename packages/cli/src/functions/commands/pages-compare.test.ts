@@ -14,7 +14,10 @@ import {
   readReference,
   routeExists,
   routeFor,
+  styleDiff,
+  toHex,
   worstFirst,
+  type StyleSummary,
   type CompareRow,
   type Rgba,
 } from './pages-compare.js'
@@ -109,6 +112,7 @@ describe('pages compare', () => {
     for (const name of [
       'index-1440.jpg',
       'index-1440.layout.json',
+      'index-1440.style.json',
       'index-390.png',
       'blog__post-1440.jpeg',
       'index-1440.diff.png',
@@ -117,11 +121,11 @@ describe('pages compare', () => {
     ])
       writeFileSync(join(dir, name), '')
     assert.deepEqual(
-      readReference(dir).map((s) => [s.id, s.width, !!s.layout]),
+      readReference(dir).map((s) => [s.id, s.width, !!s.layout, !!s.style]),
       [
-        ['blog__post', 1440, false],
-        ['index', 1440, true],
-        ['index', 390, false],
+        ['blog__post', 1440, false, false],
+        ['index', 1440, true, true],
+        ['index', 390, false, false],
       ]
     )
     assert.throws(() => readReference(join(dir, 'nope')), /does not exist/)
@@ -186,5 +190,199 @@ describe('gitStamp', () => {
       }),
       { gitSha: null, dirty: null }
     )
+  })
+
+  test('normalises colours to hex: rgb, rgba over white, short hex', () => {
+    assert.equal(toHex('rgb(163, 19, 47)'), '#a3132f')
+    assert.equal(toHex('rgba(0, 0, 0, 0)'), '#ffffff')
+    assert.equal(toHex('rgba(0, 0, 0, 0.5)'), '#808080')
+    assert.equal(toHex('rgb(17 17 17 / 100%)'), '#111111')
+    assert.equal(toHex('#FFF'), '#ffffff')
+    assert.equal(toHex(null), null)
+  })
+
+  test('reports the style differences that matter, worst first, in plain words', () => {
+    const el = (over: Partial<StyleSummary['elements'] & object> = {}) => over
+    const ref: StyleSummary = {
+      pageBackground: 'rgb(255, 255, 255)',
+      header: { height: 120, background: 'rgb(255, 255, 255)' },
+      contentWidth: 980,
+      elements: el({
+        h1: {
+          size: 56,
+          weight: 700,
+          color: 'rgb(163, 19, 47)',
+          align: 'center',
+          family: 'playfair display',
+          background: 'rgb(255, 255, 255)',
+        },
+        h2: {
+          size: 32,
+          weight: 400,
+          color: 'rgb(17, 17, 17)',
+          align: 'left',
+          family: 'lato',
+        },
+        p: {
+          size: 16,
+          weight: 400,
+          color: 'rgb(51, 51, 51)',
+          align: 'left',
+          family: 'lato',
+        },
+      }),
+    }
+    const mine: StyleSummary = {
+      pageBackground: 'rgb(253, 243, 241)',
+      header: { height: 116, background: 'rgb(255, 255, 255)' },
+      contentWidth: 960,
+      elements: el({
+        h1: {
+          size: 40,
+          weight: 300,
+          color: 'rgb(17, 17, 17)',
+          align: 'left',
+          family: 'playfair display',
+          background: 'rgb(255, 255, 255)',
+        },
+        // within the limits: 1.5px (under 10%), weight 0, a near colour
+        h2: {
+          size: 33.5,
+          weight: 400,
+          color: 'rgb(20, 20, 20)',
+          align: 'left',
+          family: 'lato',
+        },
+        p: {
+          size: 16,
+          weight: 400,
+          color: 'rgb(51, 51, 51)',
+          align: 'left',
+          family: 'lato',
+        },
+      }),
+    }
+    const diffs = styleDiff(ref, mine)
+    assert.deepEqual(
+      diffs.map((d) => d.text),
+      ['h1: original 56px 700 #a3132f center; yours 40px 300 #111111 left']
+    )
+    // the cream background only counts once it is noticeably far from white
+    const cream = styleDiff(ref, {
+      ...mine,
+      pageBackground: 'rgb(245, 222, 200)',
+    })
+    assert.ok(
+      cream.some(
+        (d) => d.text === 'page background: original #ffffff; yours #f5dec8'
+      )
+    )
+    assert.equal(cream[0]!.what, 'h1')
+  })
+
+  test('an element the original has and ours lacks, a header, the text column; at most six lines', () => {
+    const ref: StyleSummary = {
+      header: { height: 120, background: 'rgb(0, 0, 0)' },
+      contentWidth: 980,
+      elements: {
+        h1: {
+          size: 56,
+          weight: 700,
+          color: '#000',
+          align: 'center',
+          family: 'a',
+          text: 'Wild Woman Reborn',
+        },
+        h2: {
+          size: 30,
+          weight: 700,
+          color: '#000',
+          align: 'center',
+          family: 'a',
+        },
+        h3: {
+          size: 20,
+          weight: 700,
+          color: '#000',
+          align: 'center',
+          family: 'a',
+        },
+        p: {
+          size: 18,
+          weight: 400,
+          color: '#000',
+          align: 'center',
+          family: 'a',
+        },
+        button: {
+          size: 16,
+          weight: 700,
+          color: '#fff',
+          align: 'center',
+          family: 'a',
+          background: 'rgb(163, 19, 47)',
+        },
+      },
+    }
+    const mine: StyleSummary = {
+      header: { height: 60, background: 'rgb(255, 255, 255)' },
+      contentWidth: 640,
+      elements: {
+        h2: {
+          size: 30,
+          weight: 700,
+          color: '#000',
+          align: 'left',
+          family: 'b',
+        },
+        h3: {
+          size: 20,
+          weight: 700,
+          color: '#000',
+          align: 'left',
+          family: 'a',
+        },
+        p: {
+          size: 14,
+          weight: 400,
+          color: '#000',
+          align: 'center',
+          family: 'a',
+        },
+        button: {
+          size: 16,
+          weight: 700,
+          color: '#fff',
+          align: 'center',
+          family: 'a',
+          background: 'rgb(255, 255, 255)',
+        },
+      },
+    }
+    const texts = styleDiff(ref, mine).map((d) => d.text)
+    assert.equal(texts.length, 6)
+    assert.ok(
+      texts.includes(
+        'h1: original 56px 700 #000000 center "a" ("Wild Woman Reborn"); yours has no visible h1'
+      )
+    )
+    assert.ok(
+      texts.includes(
+        'header: original 120px tall, #000000; yours 60px tall, #ffffff'
+      )
+    )
+    assert.ok(
+      texts.includes(
+        'primary button/link: original 16px 700 #ffffff center on #a3132f; yours 16px 700 #ffffff center on #ffffff'
+      )
+    )
+    assert.ok(
+      texts.some((t) =>
+        t.startsWith(
+          'h2: original 30px 700 #000000 center "a"; yours 30px 700 #000000 left "b"'
+        )
+      )
+    )
+    assert.deepEqual(styleDiff(ref, ref), [])
   })
 })

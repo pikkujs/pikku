@@ -26,7 +26,9 @@ import {
   readReference,
   routeExists,
   routeFor,
+  styleDiff,
   worstFirst,
+  type StyleSummary,
   type CompareRow,
 } from './pages-compare.js'
 import {
@@ -347,6 +349,12 @@ export const pagesCompare = pikkuSessionlessFunc({
       : siteCapture
         ? null
         : 'Section differences left out: the pikku-site-clone capture script (in @pikku/skills) could not be loaded to read our layout.'
+    const withStyle = shots.some((shot) => shot.style)
+    const stylesNote = !withStyle
+      ? 'The reference has no <id>-<width>.style.json (captured before styles were recorded), so there are no style differences; capture it again with site_capture.mjs to get them.'
+      : siteCapture?.extractStyleInPage
+        ? null
+        : 'Style differences left out: the pikku-site-clone capture script (in @pikku/skills) could not be loaded to read our styles.'
 
     const rows: CompareRow[] = []
     const blank = {
@@ -416,11 +424,18 @@ export const pagesCompare = pikkuSessionlessFunc({
             inspect: async (pwPage) => {
               if (!siteCapture) return null
               await siteCapture.settle(pwPage).catch(() => {})
-              return withLayout
+              const layout = withLayout
                 ? await pwPage
                     .evaluate(siteCapture.extractInPage)
                     .catch(() => null)
                 : null
+              const style =
+                withStyle && siteCapture.extractStyleInPage
+                  ? await pwPage
+                      .evaluate(siteCapture.extractStyleInPage)
+                      .catch(() => null)
+                  : null
+              return { layout, style }
             },
           })
           atWidth.forEach((shot, i) => {
@@ -456,9 +471,13 @@ export const pagesCompare = pikkuSessionlessFunc({
               } = compareShot(shot, got.png)
               const diffFile = join(dir, `${shot.id}-${width}.diff.png`)
               writeFileSync(diffFile, diff.png)
+              const inspected = got.inspected as {
+                layout: object | null
+                style: StyleSummary | null
+              } | null
               let sections: CompareRow['sections'] = null
-              if (siteCapture && shot.layout && got.inspected) {
-                const mine = { viewport: width, ...(got.inspected as object) }
+              if (siteCapture && shot.layout && inspected?.layout) {
+                const mine = { viewport: width, ...inspected.layout }
                 writeFileSync(
                   join(dir, `${shot.id}-${width}.layout.json`),
                   JSON.stringify(mine)
@@ -466,6 +485,17 @@ export const pagesCompare = pikkuSessionlessFunc({
                 sections = siteCapture.sectionDiff(
                   JSON.parse(readFileSync(shot.layout, 'utf8')),
                   mine
+                )
+              }
+              let styles: CompareRow['styles'] = null
+              if (shot.style && inspected?.style) {
+                writeFileSync(
+                  join(dir, `${shot.id}-${width}.style.json`),
+                  JSON.stringify(inspected.style, null, 1)
+                )
+                styles = styleDiff(
+                  JSON.parse(readFileSync(shot.style, 'utf8')),
+                  inspected.style
                 )
               }
               rows.push({
@@ -482,6 +512,7 @@ export const pagesCompare = pikkuSessionlessFunc({
                 diff: rel(diffFile),
                 ours: rel(oursFile),
                 sections,
+                styles,
               })
             } catch (err) {
               rows.push({
@@ -523,6 +554,7 @@ export const pagesCompare = pikkuSessionlessFunc({
       ...stamp,
       generatedAt: new Date().toISOString(),
       sectionsNote,
+      stylesNote,
       rows: sorted,
       failed,
     }
@@ -545,6 +577,7 @@ export const renderPagesCompare = (
     threshold,
     failed,
     sectionsNote,
+    stylesNote,
     server,
   }: z.infer<typeof PagesCompareOutput>
 ): void => {
@@ -572,6 +605,9 @@ export const renderPagesCompare = (
     process.stdout.write(
       `  ${over ? changed(pct) : pct} ${label}  height ${row.ourHeight} vs ${row.referenceHeight} (${signed(row.heightDiff!)})${row.sections ? `  sections match ${row.sections.match}` : ''}${row.referenceImageWidth ? dim(`  original ${row.referenceImageWidth} px wide`) : ''}${row.ourImageWidth ? dim(`  ours ${row.ourImageWidth} px wide`) : ''}\n`
     )
+    // style first: it names what to change without opening an image
+    for (const style of row.styles ?? [])
+      process.stdout.write(`        style  ${style.text}\n`)
     for (const note of row.sections?.notes.slice(0, 2) ?? [])
       process.stdout.write(`        ${dim(note)}\n`)
   }
@@ -581,6 +617,7 @@ export const renderPagesCompare = (
     )
   if (server?.apiNote) process.stdout.write(`${changed(server.apiNote)}\n`)
   if (sectionsNote) process.stdout.write(`${dim(sectionsNote)}\n`)
+  if (stylesNote) process.stdout.write(`${dim(stylesNote)}\n`)
   process.stdout.write(`Report: ${report}\n`)
   if (threshold !== null)
     process.stdout.write(

@@ -172,6 +172,8 @@ export interface ReferenceShot {
   width: number
   file: string
   layout: string | null
+  /** `<id>-<width>.style.json`, when the capture wrote one. */
+  style: string | null
 }
 
 const SHOT = /^(.+)-(\d+)\.(jpe?g|png)$/i
@@ -183,11 +185,13 @@ export function readReference(dir: string): ReferenceShot[] {
     const m = name.match(SHOT)
     if (!m || name.endsWith('.diff.png')) continue
     const layout = join(dir, `${m[1]}-${m[2]}.layout.json`)
+    const style = join(dir, `${m[1]}-${m[2]}.style.json`)
     shots.push({
       id: m[1]!,
       width: Number(m[2]),
       file: join(dir, name),
       layout: existsSync(layout) ? layout : null,
+      style: existsSync(style) ? style : null,
     })
   }
   if (!shots.length)
@@ -227,8 +231,221 @@ export interface SectionDiff {
   notes: string[]
 }
 
+/** One element's look, as the capture script's `extractStyleInPage` reads it. */
+export interface ElementStyle {
+  text?: string
+  size: number
+  weight: number
+  color: string
+  align: string
+  family: string
+  background?: string
+}
+
+/** `<id>-<width>.style.json`: what a reader notices first on a page. */
+export interface StyleSummary {
+  viewport?: number
+  pageBackground?: string | null
+  header?: { height: number; background: string | null } | null
+  contentWidth?: number | null
+  elements?: Partial<Record<StyleElement, ElementStyle | null>>
+}
+
+export type StyleElement = 'h1' | 'h2' | 'h3' | 'p' | 'button'
+
+/** One difference worth fixing, in plain words. */
+export interface StyleDifference {
+  what: string
+  text: string
+  weight: number
+}
+
+const STYLE_LABEL: Record<StyleElement, string> = {
+  h1: 'h1',
+  h2: 'h2',
+  h3: 'h3',
+  p: 'first paragraph',
+  button: 'primary button/link',
+}
+const STYLE_IMPORTANCE: Record<StyleElement, number> = {
+  h1: 1,
+  h2: 0.8,
+  button: 0.7,
+  p: 0.6,
+  h3: 0.5,
+}
+
+/**
+ * A CSS colour as `#rrggbb` (`rgb()`, `rgba()` laid over white, `#rgb`,
+ * `#rrggbb`); anything else comes back as given, lower case.
+ */
+export function toHex(colour: string | null | undefined): string | null {
+  if (!colour) return null
+  const c = colour.trim().toLowerCase()
+  const hex = (n: number) =>
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, '0')
+  const rgb = c.match(
+    /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?\s*\)$/
+  )
+  if (rgb) {
+    const raw = rgb[4]
+    const a =
+      raw === undefined
+        ? 1
+        : raw.endsWith('%')
+          ? parseFloat(raw) / 100
+          : parseFloat(raw)
+    const over = (v: string) => Number(v) * a + 255 * (1 - a)
+    return `#${hex(over(rgb[1]!))}${hex(over(rgb[2]!))}${hex(over(rgb[3]!))}`
+  }
+  if (/^#[0-9a-f]{3}$/.test(c))
+    return `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}`
+  if (/^#[0-9a-f]{6}$/.test(c)) return c
+  if (/^#[0-9a-f]{8}$/.test(c)) return c.slice(0, 7)
+  if (c === 'transparent') return '#ffffff'
+  if (c === 'white') return '#ffffff'
+  if (c === 'black') return '#000000'
+  return c
+}
+
+/** Distance between two colours, 0 (same) to about 765; a colour that is not plain RGB is 0 when equal, else 100. */
+export function colourDistance(a: string | null, b: string | null): number {
+  const x = toHex(a)
+  const y = toHex(b)
+  if (!x || !y) return 0
+  if (!/^#[0-9a-f]{6}$/.test(x) || !/^#[0-9a-f]{6}$/.test(y))
+    return x === y ? 0 : 100
+  const ch = (h: string, i: number) =>
+    parseInt(h.slice(1 + i * 2, 3 + i * 2), 16)
+  // "redmean": a cheap weighting close to how far apart the eye puts them
+  const r = (ch(x, 0) + ch(y, 0)) / 2
+  const dr = ch(x, 0) - ch(y, 0)
+  const dg = ch(x, 1) - ch(y, 1)
+  const db = ch(x, 2) - ch(y, 2)
+  return Math.sqrt(
+    (2 + r / 256) * dr * dr + 4 * dg * dg + (2 + (255 - r) / 256) * db * db
+  )
+}
+
+/** Colours further apart than this are a difference a reader notices. */
+export const NOTICEABLE_COLOUR = 60
+
+const sizeOff = (a: number, b: number) =>
+  a > 0 && b > 0 ? Math.max(a, b) / Math.min(a, b) - 1 : 0
+
+/**
+ * The style differences that matter between the original and our page, worst
+ * first, at most `max`: a font size off by more than 10%, a weight 100 or more
+ * apart, a noticeably different colour, another alignment or font, a header or
+ * text column more than 10% off, and the page background.
+ */
+export function styleDiff(
+  ref: StyleSummary,
+  mine: StyleSummary,
+  max = 6
+): StyleDifference[] {
+  const out: StyleDifference[] = []
+  const far = (a?: string | null, b?: string | null) =>
+    !!a && !!b && colourDistance(a, b) > NOTICEABLE_COLOUR
+
+  if (far(ref.pageBackground, mine.pageBackground))
+    out.push({
+      what: 'page background',
+      text: `page background: original ${toHex(ref.pageBackground)}; yours ${toHex(mine.pageBackground)}`,
+      weight:
+        0.9 *
+        Math.min(
+          2,
+          colourDistance(ref.pageBackground!, mine.pageBackground!) / 150
+        ),
+    })
+
+  if (ref.header) {
+    const h = mine.header
+    if (!h)
+      out.push({
+        what: 'header',
+        text: `header: original ${ref.header.height}px tall, ${toHex(ref.header.background)}; yours has no <header>`,
+        weight: 0.6,
+      })
+    else {
+      const off = sizeOff(ref.header.height, h.height)
+      const bg = far(ref.header.background, h.background)
+      if (off > 0.15 || bg)
+        out.push({
+          what: 'header',
+          text: `header: original ${ref.header.height}px tall, ${toHex(ref.header.background)}; yours ${h.height}px tall, ${toHex(h.background)}`,
+          weight:
+            0.6 *
+            (Math.min(1, off) +
+              (bg
+                ? Math.min(
+                    2,
+                    colourDistance(ref.header.background, h.background) / 150
+                  )
+                : 0)),
+        })
+    }
+  }
+
+  if (
+    ref.contentWidth &&
+    mine.contentWidth &&
+    sizeOff(ref.contentWidth, mine.contentWidth) > 0.1
+  )
+    out.push({
+      what: 'text column',
+      text: `text column: original ${ref.contentWidth}px wide; yours ${mine.contentWidth}px`,
+      weight: 0.6 * Math.min(1.5, sizeOff(ref.contentWidth, mine.contentWidth)),
+    })
+
+  for (const key of Object.keys(STYLE_LABEL) as StyleElement[]) {
+    const a = ref.elements?.[key]
+    if (!a) continue
+    const b = mine.elements?.[key]
+    const label = STYLE_LABEL[key]
+    const look = (e: ElementStyle, family: boolean, bg: boolean) =>
+      `${+e.size.toFixed(1)}px ${e.weight} ${toHex(e.color)} ${e.align}${family ? ` "${e.family}"` : ''}${bg && e.background ? ` on ${toHex(e.background)}` : ''}`
+    if (!b) {
+      out.push({
+        what: key,
+        text: `${label}: original ${look(a, true, false)}${a.text ? ` ("${a.text.slice(0, 30)}")` : ''}; yours has no visible ${key === 'button' ? 'button' : key}`,
+        weight: STYLE_IMPORTANCE[key] * 1.2,
+      })
+      continue
+    }
+    const size = sizeOff(a.size, b.size)
+    const weight = Math.abs(a.weight - b.weight)
+    const colour = colourDistance(a.color, b.color)
+    const align = a.align !== b.align
+    const family = !!a.family && !!b.family && a.family !== b.family
+    const bg = far(a.background, b.background)
+    const score =
+      (size > 0.1 ? Math.min(1.5, size * 2) : 0) +
+      (weight >= 100 ? weight / 300 : 0) +
+      (colour > NOTICEABLE_COLOUR ? Math.min(2, colour / 150) : 0) +
+      (align ? 0.5 : 0) +
+      (family ? 0.3 : 0) +
+      (bg ? Math.min(2, colourDistance(a.background!, b.background!) / 150) : 0)
+    if (score === 0) continue
+    out.push({
+      what: key,
+      text: `${label}: original ${look(a, family, bg)}; yours ${look(b, family, bg)}`,
+      weight: STYLE_IMPORTANCE[key] * score,
+    })
+  }
+  return out
+    .sort((x, y) => y.weight - x.weight)
+    .slice(0, max)
+    .map((d) => ({ ...d, weight: +d.weight.toFixed(2) }))
+}
+
 export interface SiteCapture {
   extractInPage: () => unknown
+  /** Older capture scripts have none. */
+  extractStyleInPage?: () => unknown
   settle: (page: unknown) => Promise<void>
   sectionDiff: (ref: unknown, mine: unknown) => SectionDiff
 }
@@ -273,6 +490,8 @@ export interface CompareRow {
   diff: string | null
   ours: string | null
   sections: SectionDiff | null
+  /** Style differences that matter, worst first; null when there was no style to compare. */
+  styles?: StyleDifference[] | null
   error?: string
 }
 
