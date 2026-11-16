@@ -11,6 +11,7 @@
     "@pikku/cloudflare": "workspace:*",
     "@pikku/core": "^0.12.158",
     "@pikku/fetch": "^0.12.16",
+    "@pikku/jose": "^0.12.10",
     "@pikku/kysely": "workspace:^",
     "@pikku/schema-cfworker": "^0.12.9",
     "@pikku/websocket": "^0.12.7",

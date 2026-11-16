@@ -46,6 +46,7 @@
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.158",
+    "@pikku/jose": "^0.12.10",
     "zod": "^4",
     "@pikku/cli": "^0.12.212",
     "@pikku/addon-changes-cli": "^0.12.2"
@@ -57,6 +58,7 @@
     "@pikku/addon-changes-cli": "workspace:*",
     "@pikku/cli": "workspace:*",
     "@pikku/core": "workspace:*",
+    "@pikku/jose": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
     "zod": "^4"
   },
