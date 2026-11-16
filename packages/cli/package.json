@@ -47,6 +47,7 @@
     "@pikku/deploy-standalone": "^0.12.32",
     "@pikku/fetch": "^0.12.16",
     "@pikku/inspector": "^0.12.120",
+    "@pikku/jose": "^0.12.10",
     "@pikku/inspector-go": "^0.12.15",
     "@pikku/knowledge": "^0.12.22",
     "@pikku/kysely": "^0.13.45",

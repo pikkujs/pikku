@@ -5,7 +5,7 @@ import { getCloudRPC } from '../lib/http.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { promptSecret } from '../lib/prompt.js'
 import { resolveStage } from '../lib/stage.js'
-import { seal } from '@pikku/core/keys'
+import { createJoseKeyCrypto } from '@pikku/jose/keys'
 
 export const CloudSecretsSetInput = z.object({
   name: z.string(),
@@ -60,7 +60,11 @@ export const CloudSecretsSet = pikkuSessionlessFunc({
     const key = await rpc.invoke('cloud:getStageSealingKey', { stageId })
     let sealed
     try {
-      sealed = await seal(key.publicKey, key.keyId, plaintext)
+      sealed = await createJoseKeyCrypto().seal(
+        key.publicKey,
+        key.keyId,
+        plaintext
+      )
     } catch {
       // A key that is not a usable X25519 key: most likely a newer stage key type.
       throw new CloudPreconditionError(
@@ -71,7 +75,7 @@ export const CloudSecretsSet = pikkuSessionlessFunc({
     const result = await rpc.invoke('cloud:setStageSealedSecret', {
       stageId,
       name,
-      sealedValue: JSON.stringify(sealed),
+      sealedValue: sealed,
     })
     console.log(
       `[cloud] ${name} sealed to ${result.keyId} and set on ${branch}.`
