@@ -35,9 +35,9 @@ runs:
           packages/**/tsconfig.tsbuildinfo
           packages/**/dist
           !packages/**/node_modules/**
-        key: ts-build-v3-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'bun.lock') }}
+        key: ts-build-v4-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'bun.lock') }}
         restore-keys: |
-          ts-build-v3-
+          ts-build-v4-
     # Codegen runs in the pikku-inspect binary, so this job builds the host copy
     # itself (inspector-go's build step). The cross-compiled copies other jobs
     # download come from the inspector-go-build job.
