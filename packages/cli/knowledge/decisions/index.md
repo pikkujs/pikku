@@ -9,6 +9,7 @@ description: Rules chosen in the pikku CLI, and what each one rules out
 A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
+- [A functions package below the config maps #pikku/* with tsconfig paths](a-functions-package-below-the-config-maps-pikku-with-tsconfig-paths.md) — When pikku.config.json sits at the workspace root and the code in packages/functions, #pikku/* is mapped by tsconfig paths in the tsconfig that governs the package, never by package.json imports or a .pikku symlink
 
 - [The CLI's native binaries are compiled only when asked for](native-binaries-are-compiled-only-when-asked-for.md) — a normal build compiles none; PIKKU_CLI_BINARIES=host or all opts in, and release sets all on both builds it runs
 - [pikku ci -p builds the commit in a throwaway worktree, and --deploy never picks a target](pikku-ci-builds-the-commit-and-never-picks-a-target.md) — With -p, pikku ci refuses a dirty tree, runs in a detached git worktree it always removes, copies only .deploy back, and --deploy without -p is an error; db migrate under ci refuses any non-loopback database

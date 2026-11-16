@@ -131,6 +131,121 @@ const pikkuDirOf = (target: string): string | undefined => {
   return at === -1 ? undefined : parts.slice(0, at + 1).join(sep)
 }
 
+type TsconfigJson = {
+  extends?: unknown
+  compilerOptions?: { baseUrl?: string; paths?: Record<string, unknown> }
+}
+
+/**
+ * The tsconfig.json that governs a package: its own, else the nearest one
+ * above it, never above `top`. tsc run from the package, bun, tsx and esbuild
+ * all pick it by the same directory lookup.
+ */
+const governingTsconfig = (pkg: string, top: string): string | undefined => {
+  let current = pkg
+  while (isInside(current, top)) {
+    const file = join(current, 'tsconfig.json')
+    if (existsSync(file)) return file
+    if (current === top) break
+    current = dirname(current)
+  }
+  return undefined
+}
+
+/**
+ * `compilerOptions.paths` as the compiler sees it, following relative
+ * `extends`: the nearest file that sets `paths` wins, and its targets resolve
+ * against the nearest `baseUrl`, else the directory of the file that set them.
+ */
+const readTsconfigPaths = async (
+  file: string
+): Promise<{ paths: Record<string, unknown>; base: string } | undefined> => {
+  let paths: { value: Record<string, unknown>; dir: string } | undefined
+  let baseUrl: string | undefined
+  const seen = new Set<string>()
+  let current: string | undefined = file
+  while (current && !seen.has(current) && existsSync(current)) {
+    seen.add(current)
+    const tsconfig = await readJsonSafe<TsconfigJson>(current).catch(
+      () => null
+    )
+    const options = tsconfig?.compilerOptions
+    if (!paths && options?.paths) {
+      paths = { value: options.paths, dir: dirname(current) }
+    }
+    if (!baseUrl && options?.baseUrl) {
+      baseUrl = resolve(dirname(current), options.baseUrl)
+    }
+    const parent = [tsconfig?.extends].flat()[0]
+    current =
+      typeof parent === 'string' && parent.startsWith('.')
+        ? resolve(
+            dirname(current),
+            parent.endsWith('.json') ? parent : `${parent}.json`
+          )
+        : undefined
+  }
+  return paths && { paths: paths.value, base: baseUrl ?? paths.dir }
+}
+
+export type PikkuMapping = {
+  /** Where it is declared, e.g. `tsconfig.json paths "#pikku/*"`. */
+  source: string
+  key: string
+  /** The absolute target, or undefined when it names a package we cannot place. */
+  target: string | undefined
+}
+
+/**
+ * Every `#pikku*` mapping that applies to the code in `pkg`: the package's own
+ * package.json `imports`, and the `paths` of the tsconfig that governs it (its
+ * own, or the nearest one above it up to `configDir`).
+ *
+ * A functions package below the config reaches `<config dir>/.pikku` through
+ * tsconfig `paths` — Node refuses an `imports` target that leaves the package
+ * (`../`), and the workspace root is not a package a member can depend on.
+ */
+export async function pikkuMappingsOf(
+  pkg: string,
+  configDir: string
+): Promise<PikkuMapping[]> {
+  const mappings: PikkuMapping[] = []
+  const tsconfigFile = governingTsconfig(pkg, configDir)
+  const tsconfig = tsconfigFile && (await readTsconfigPaths(tsconfigFile))
+  if (tsconfig && tsconfigFile) {
+    const name = relative(pkg, tsconfigFile) || 'tsconfig.json'
+    for (const [key, value] of Object.entries(tsconfig.paths)) {
+      if (!key.startsWith('#pikku')) continue
+      for (const target of stringTargets(value)) {
+        mappings.push({
+          source: `${name} paths "${key}"`,
+          key,
+          target: resolve(tsconfig.base, target),
+        })
+      }
+    }
+  }
+  const rootPkgName = (await readPkg(configDir))?.name
+  const pkgJson = await readPkg(pkg)
+  for (const [key, value] of Object.entries(pkgJson?.imports ?? {})) {
+    if (!key.startsWith('#pikku')) continue
+    for (const target of stringTargets(value)) {
+      let abs: string | undefined
+      if (target.startsWith('.')) {
+        abs = resolve(pkg, target)
+      } else if (rootPkgName && target.startsWith(rootPkgName + '/')) {
+        abs = join(configDir, target.slice(rootPkgName.length + 1))
+      }
+      mappings.push({
+        source: `package.json imports "${key}"`,
+        key,
+        target: abs,
+      })
+    }
+  }
+  return mappings
+}
+
 export async function runProjectLayoutChecks(
   configDir: string,
   options: { strict?: boolean } = {}
@@ -241,43 +356,30 @@ export async function runProjectLayoutChecks(
   }
 
   // 4. #pikku/* resolves to <config dir>/.pikku in every functions package.
+  // A package below the config reaches it through tsconfig `paths` (in its own
+  // tsconfig or the one above it); a package.json `imports` there can only
+  // name a `.pikku` inside the package, which is a copy or a symlink.
   const outDir = join(configDir, '.pikku')
-  const rootPkgName = ownPkg?.name
   for (const pkg of packages) {
     const wrong = new Set<string>()
-    const tsconfig = await readJsonSafe<{
-      compilerOptions?: { baseUrl?: string; paths?: Record<string, unknown> }
-    }>(join(pkg, 'tsconfig.json')).catch(() => null)
-    const paths = tsconfig?.compilerOptions?.paths ?? {}
-    const base = resolve(pkg, tsconfig?.compilerOptions?.baseUrl ?? '.')
-    for (const [key, value] of Object.entries(paths)) {
-      if (!key.startsWith('#pikku')) continue
-      for (const target of stringTargets(value)) {
-        const dir = pikkuDirOf(resolve(base, target))
-        if (dir && dir !== outDir) wrong.add(`tsconfig.json paths "${key}"`)
-      }
-    }
-    const pkgJson = await readPkg(pkg)
-    for (const [key, value] of Object.entries(pkgJson?.imports ?? {})) {
-      if (!key.startsWith('#pikku')) continue
-      for (const target of stringTargets(value)) {
-        let abs: string | undefined
-        if (target.startsWith('.')) {
-          abs = resolve(pkg, target)
-        } else if (rootPkgName && target.startsWith(rootPkgName + '/')) {
-          abs = join(configDir, target.slice(rootPkgName.length + 1))
-        }
-        const dir = abs && pikkuDirOf(abs)
-        if (dir && dir !== outDir) wrong.add(`package.json imports "${key}"`)
-      }
+    for (const mapping of await pikkuMappingsOf(pkg, configDir)) {
+      const dir = mapping.target && pikkuDirOf(mapping.target)
+      if (dir && dir !== outDir) wrong.add(mapping.source)
     }
     if (wrong.size === 0) continue
+    const tsconfigFile =
+      governingTsconfig(pkg, configDir) ?? join(pkg, 'tsconfig.json')
+    const toOut = relative(dirname(tsconfigFile), outDir)
+    const target = toOut.startsWith('.') ? toOut : `./${toOut}`
     findings.push({
       id: LAYOUT_PIKKU_IMPORT_NOT_ROOT,
       severity,
       message: `${rel(pkg) === '.' ? 'the project' : `the package ${rel(pkg)}`} resolves #pikku/* to a .pikku that is not the generated output (${[...wrong].join(', ')}); generated files are always written to ${outDir}`,
       path: pkg,
-      fixHint: `Point every #pikku/* mapping in ${rel(pkg)} at ${rel(outDir)} beside pikku.config.json${pkg === configDir ? '' : ` (for example "${relative(pkg, outDir)}/*" in tsconfig paths)`}.`,
+      fixHint:
+        pkg === configDir
+          ? 'Point every #pikku/* mapping at ./.pikku beside pikku.config.json.'
+          : `Map #pikku/* with tsconfig paths in ${rel(tsconfigFile)}: "#pikku/*.js": ["${target}/*.ts"], "#pikku/*": ["${target}/*/index.ts"]. Remove the #pikku entries from ${rel(pkg)}/package.json "imports" and any ${rel(pkg)}/.pikku symlink: Node refuses an imports target outside the package.`,
     })
   }
 
