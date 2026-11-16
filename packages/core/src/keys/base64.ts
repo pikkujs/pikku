@@ -1,10 +1,10 @@
-import { base64ToBytes, bytesToBase64 } from '@pikku/core/services'
+import { base64ToBytes, bytesToBase64 } from '../utils/base64.js'
 
 /** One base64 implementation: core's. This file adds only the strict signature form and two digests. */
 export {
   base64ToBytes as fromBase64,
   bytesToBase64 as toBase64,
-} from '@pikku/core/services'
+} from '../utils/base64.js'
 
 const encoder = new TextEncoder()
 

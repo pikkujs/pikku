@@ -1,4 +1,8 @@
-import type { KeyRecord, KeyStore, StoreContext } from '@pikku/core/keypair'
+import type {
+  KeyRecord,
+  KeyStore,
+  StoreContext,
+} from '../wirings/keypair/index.js'
 
 const copy = <T>(value: T): T => structuredClone(value)
 const slot = (r: KeyRecord) => `${r.name}\u0000${r.scopeKey}`

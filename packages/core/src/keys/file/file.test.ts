@@ -11,7 +11,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { CoreKeyPair } from '@pikku/core/keypair'
+import type { CoreKeyPair } from '../../wirings/keypair/index.js'
 import { createLocalKeyService } from '../local-key-service.js'
 import { FileCustody, FileKeyStore } from './index.js'
 

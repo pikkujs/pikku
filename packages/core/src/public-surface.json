@@ -383,6 +383,16 @@
     "defineKeyPair",
     "validateAndBuildKeyPairDefinitionsMeta"
   ],
+  "./keys": [
+    "LocalKeyService",
+    "MemoryKeyStore",
+    "SEALED_BOX_ALGORITHM",
+    "createLocalKeyService",
+    "prefixWithDomain",
+    "seal",
+    "signJws"
+  ],
+  "./keys/file": ["FileCustody", "FileKeyStore"],
   "./secret": [
     "SECRET_GENERATE_MIN_SIZE",
     "defineSecret",

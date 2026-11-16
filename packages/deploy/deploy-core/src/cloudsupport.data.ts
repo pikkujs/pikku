@@ -145,6 +145,12 @@ export const CLOUDSUPPORT: CloudSupportData = {
               serverless: false,
             },
           },
+          './keys/file': {
+            cloud: {
+              edge: false,
+              serverless: false,
+            },
+          },
           './services/temporary-file-service': {
             cloud: {
               edge: false,

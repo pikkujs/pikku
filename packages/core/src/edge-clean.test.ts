@@ -33,6 +33,7 @@ const serverSubpaths = new Set(
 // added here too, where a reviewer sees it.
 const EXPECTED_SERVER_SUBPATHS = [
   './dev',
+  './keys/file',
   './node-host-resolver',
   './services/file-scenario-run-store',
   './services/istanbul-coverage',
