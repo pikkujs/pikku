@@ -52,6 +52,28 @@ functions work through the internal adapter, and each is already gated by its
 own `admin:*` scope — `admin()` would only add a second check against a `role`
 column that has to be kept in step with the scopes it duplicates.
 
+### Inviting someone
+
+`admin:inviteUser` `{ email, name?, role? }` is the whole invite in one call:
+it creates the account without a password when the email has none, mails a
+sign-in link, then grants `role` if one is given. It answers
+`{ userId, created }`, and calling it again for the same email sends a new
+link. It needs better-auth's `magicLink()` plugin with sign-up disabled, so the
+link only admits the account the invite created:
+
+```ts
+import { magicLink } from 'better-auth/plugins'
+
+betterAuth({
+  plugins: [magicLink({ disableSignUp: true, sendMagicLink })],
+})
+```
+
+The call needs `admin:users:create`; granting a role also needs
+`admin:scopes:manage`. A refusal's message starts with a code a client can
+match on: `USER_BANNED` (422), `UNKNOWN_ROLE` (400, checked before anything is
+created) or `MAIL_FAILED` (422, the account is kept and no role is granted).
+
 `admin:audit:read` needs an audit sink that can be read back. Both report their
 absence rather than failing.
 

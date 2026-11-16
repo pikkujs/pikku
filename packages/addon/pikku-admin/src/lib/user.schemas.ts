@@ -95,6 +95,23 @@ export const SendSignInLinkInput = z.object({
   callbackURL: z.string().optional(),
 })
 
+/**
+ * The email is a plain string here and normalised in the function, so an
+ * address with stray spaces or capitals is trimmed and lowercased rather than
+ * refused. `role`, when given, is granted once the link has gone out.
+ */
+export const InviteUserInput = z.object({
+  email: z.string(),
+  name: z.string().optional(),
+  role: z.string().optional(),
+})
+
+/** `created` is false when the email already had an account and was reused. */
+export const InviteUserOutput = z.object({
+  userId: z.string(),
+  created: z.boolean(),
+})
+
 export const Success = z.object({
   success: z.boolean(),
 })
