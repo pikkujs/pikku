@@ -47,9 +47,7 @@ describe('SecretAdminService', () => {
   })
 
   test('reveals the value of an existing secret', async () => {
-    const admin = new SecretAdminService(
-      stubSecrets({ STRIPE_KEY: 'sk_live' }) as any
-    )
+    const admin = new SecretAdminService(stubSecrets({ STRIPE_KEY: 'sk_live' }) as any)
 
     assert.deepEqual(await admin.read('STRIPE_KEY'), {
       exists: true,

@@ -1,4 +1,5 @@
 import { pikkuAddonServices } from '#pikku/addon/setup'
+import { SecretAdminService } from './services/secret-admin.service.js'
 
 /**
  * Forwarded, never constructed. Every one of them is the application's choice:
@@ -13,6 +14,9 @@ export const createSingletonServices = pikkuAddonServices(
   async (
     _config,
     {
+      secrets,
+      variables,
+      metaService,
       scopeService,
       credentialService,
       audit,
@@ -30,6 +34,9 @@ export const createSingletonServices = pikkuAddonServices(
       virtualUserScheduleStore,
     }
   ) => ({
+    secretAdminService: new SecretAdminService(secrets),
+    variables,
+    metaService,
     scopeService,
     credentialService,
     audit,

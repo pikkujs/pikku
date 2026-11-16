@@ -20,7 +20,7 @@ test('variableGet refuses a holder of only the secrets read scope', () => {
     () =>
       verifyScopes(variableGet.scopes, {
         userId: 'alice',
-        scopes: ['pikku:console:secrets:read'],
+        scopes: ['admin:secrets:read'],
       }),
     MissingScopeError
   )
@@ -30,7 +30,7 @@ test('variableGet admits a holder of the variables read scope', () => {
   assert.doesNotThrow(() =>
     verifyScopes(variableGet.scopes, {
       userId: 'root',
-      scopes: ['pikku:console:variables:read'],
+      scopes: ['admin:variables:read'],
     })
   )
 })
@@ -40,7 +40,7 @@ test('variableSet refuses a holder of only the variables read scope', () => {
     () =>
       verifyScopes(variableSet.scopes, {
         userId: 'alice',
-        scopes: ['pikku:console:variables:read'],
+        scopes: ['admin:variables:read'],
       }),
     MissingScopeError
   )
@@ -50,16 +50,16 @@ test('variableSet admits a holder of the variables write scope', () => {
   assert.doesNotThrow(() =>
     verifyScopes(variableSet.scopes, {
       userId: 'root',
-      scopes: ['pikku:console:variables:write'],
+      scopes: ['admin:variables:write'],
     })
   )
 })
 
-test('variableSet admits a holder of the console root', () => {
+test('variableSet admits a holder of the admin root', () => {
   assert.doesNotThrow(() =>
     verifyScopes(variableSet.scopes, {
       userId: 'root',
-      scopes: ['pikku:console'],
+      scopes: ['admin'],
     })
   )
 })

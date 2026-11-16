@@ -20,22 +20,6 @@ defineScope({
         displayName: 'Console',
         description: 'Everything reachable through the console, by area',
         scopes: {
-          secrets: {
-            description: "The application's secrets",
-            scopes: {
-              read: {
-                description: 'Read secret values and check whether one is set',
-              },
-              write: { description: 'Set and overwrite secret values' },
-            },
-          },
-          variables: {
-            description: "The application's variables",
-            scopes: {
-              read: { description: 'Read variable values' },
-              write: { description: 'Set and overwrite variable values' },
-            },
-          },
           addons: {
             description: 'Installed and available addons',
             scopes: {
@@ -111,13 +95,6 @@ defineScope({
               read: {
                 description:
                   'Read what the virtual users found and every turn they took',
-              },
-              run: {
-                description: 'Turn a virtual user loose on this application',
-              },
-              schedule: {
-                description:
-                  'Decide which virtual users keep using this application on their own',
               },
             },
           },
